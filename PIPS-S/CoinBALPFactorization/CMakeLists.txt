@@ -1,0 +1,1 @@
+add_library(CoinBALP CoinBALPFactorization1.cpp CoinBALPFactorization2.cpp CoinBALPFactorization3.cpp CoinBALPFactorization4.cpp)
