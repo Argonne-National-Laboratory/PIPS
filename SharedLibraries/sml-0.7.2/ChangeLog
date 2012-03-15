@@ -1,0 +1,181 @@
+2011-02-18  Marco Colombo <m.colombo@ed.ac.uk>
+  * Version 0.7.2
+
+2011-01-28  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Introduced the PrintLevelValues enum to control the amount of printing 
+    required.
+
+2011-01-27  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Fixed a bug in StochModelComp::transcribeToModelComp() that didn't apply
+    the probability terms to the objective function of a stochastic model
+    unless it was formulated with Exp(). By design, objectives given within 
+    stochastic models are to be interpreted as expectation, so we apply the
+    probability terms to such objectives. This corrects the alm, alm_xi and
+    newsvendor models, which before this fix needed Exp() in the objective to
+    produce the correct solution. We now report an error if Exp() is used
+    explicitly inside an objective.
+
+2011-01-24  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Changed the NlFile class to store the pointer to the ASL_pfgh structure so
+    that the content of the *.nl file can be read only once (by readNlFile()
+    called from the constructor) and cached.
+  * Added a pointer to the ASL structure so that the reading of the *.nl file
+    through f_read() can be cached.
+
+2011-01-21  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Removed the calls to write_columnfile_for_submodel() that generated the
+    .acl files since they were not used.
+
+2011-01-20  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Improved the readability of the generated ampl models.
+  * Fixed a bug for which the expressions in the Exp() where not properly
+    parenthesised, which caused the probability to multiply only the first
+    term instead of the whole expression.
+
+2011-01-17  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Fixed a bug in ExpandedModel::setLocalVarInfo() that caused a repeated
+    entry to appear in the solution file if the name of a variable was a
+    proper substring of another one (such as 'slack' and 'slackTotal' in
+    test-01.mod).
+
+2011-01-11  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Introduced a virtual interface to be implemented by the StochModel and
+    StochModelComp classes. This allows to remove a number of dynamic_casts
+    to the derived classes.
+
+2011-01-02  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Moved some members of the StochModelComp class in the private section
+    and added accessors.
+
+2010-12-28  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Simplified the implementation of ListNode, now it reuses most methods
+    directly from SyntaxNode.
+
+2010-12-27  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Reimplemented SyntaxNode::findIDREF(list<SyntaxNode*> *lnd) by calling
+    findOpCode().
+  * Added SyntaxNode::front()/back() to provide direct access to the first/last
+    child.
+  * Used a vector<SyntaxNode*> to store the children of a SyntaxNode. This
+    allows the reuse of the STL vector::iterator.
+
+2010-12-22  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Declared more methods as const.
+
+2010-12-21  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Cleaned up the included headers, reducing the header dependencies by
+    forward-declaring the classes when possible.
+
+2009-12-28  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Made the member variables of the IDNode class private, and added the
+    corresponding getters and setters.
+  * Added AM_SILENT_RULES to produce a less verbose output from the makefiles,
+    which works from automake 1.11; for older versions the output is unchanged.
+
+2009-12-23  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Changed the IDNode class not to inherit from ValueNodeBase.
+  * Fixed warnings in the interface wrappers and made the help output more
+    consistent.
+
+2009-12-22  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Fixed a possible use of initialised value in createTmpDirIfNotPresent().
+  * Changed l_addIndex to store lists and structures directly rather than
+    pointers, to avoid memory leaks.
+
+2009-12-21  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Rewritten crush() in a way that doesn't use strtok_r(), which doesn't exist
+    on MinGW.
+
+2009-12-17  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Cleaned up createTmpDirIfNotPresent() and surrounding code.
+  * Made process_model() return an error code instead of calling exit().
+  * Defined a destructor for the ModelComp class.
+  * Changed the return type of ModelComp::getGlobalName[New](),
+    SyntaxNode::getValue() and SetElement::toCharA() to string to remove some
+    leaks caused by the use of strdup().
+  * Fix a major leak by adding a destructor to the ExpandedModel class.
+
+2009-12-11  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Added check for the presence of the asl_pfgh.h header for amplsolver.
+
+2009-12-10  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Removed the hardcoded -ldl from the makefiles, which used to break building
+    under MinGW. This is replaced by a check for the presence of this library
+    in acx_ampl.m4.
+  * Converted the oops interface to the C++ version of the library.
+  * Updated the user guide.
+
+2009-12-07  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Added the acx_cplex.m4 macro to configure the Cplex interface.
+
+2009-11-30  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Added the newsvendor test example.
+  * Improved the compilation under MinGW by adding appropriate header and
+    function checks in the configure step.
+
+2009-11-22  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Added a basic ALM test example.
+  * Fixes and reformatting to the alm_xi test example.
+  * Check for the existence of the data file before passing it to AMPL.
+  * Switch off the call to parse_data() since at the moment we use AMPL to
+    process the data file, and these calls only contribute to quite large
+    memory leaks.
+
+2009-11-21  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Compilation fixes for gcc 4.4.
+  * Fixed some portability problems to allow the compilation under MinGW
+    (which is still not automated and requires manual fiddling).
+
+2009-10-01  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Added the Cplex interface to SML.
+  * Added destructors for the NlFile and IndexListValue classes.
+  * Changed analyseOptions() in the mps and oops interfaces to return a failure
+    code rather than calling exit().
+
+2009-08-17  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Uniform the allocations of SyntaxNode objects to use new.
+  * Updates, reformatting and small corrections to the doxygen documentation.
+
+2009-08-14  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Fixed several memory leaks, including the largest one.
+
+2009-08-12  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Version 0.7.1
+
+2009-08-11  Marco Colombo  <m.colombo@ed.ac.uk>
+  * Improved the way the solution is printed.
+
+2009-08-11  Jonathan Hogg  <J.Hogg@ed.ac.uk>
+
+  * Fixed amplsolver.a/libamplsolver.a issue when configured with --with-ampl
+  * Propagate symbol table to stochastic models (needs done properly later)
+  * Add routines to return list of symbols that are objectives
+  * When reading row file skip dummy, objective and empty lines
+  * Remove output processing that used to to the above
+  * Fix unitialised parent value in ExpandedModelInterface
+
+2009-08-08  Jonathan Hogg  <J.Hogg@ed.ac.uk>
+
+  * Fix VPATH build by using $srcdir and fixing acx_oops.m4 to use absolute
+  src path.
+  * Remove -g -gstabs from build commands to improve portability. Use
+  CXXFLAGS=-g at configure time from now on for debugging.
+  * Modify README and userguide.tex to reflect that liboops.a is for 32-bit
+  linux only.
+  * Fix some spelling mistakes in various COPYING files
+
+2009-08-07  Jonathan Hogg  <J.Hogg@ed.ac.uk>
+
+  * Fix a bug that tried to output information for objFunc as a constraint
+
+2009-03-24  Marco Colombo  <m.colombo@ed.ac.uk>
+
+  * Version 0.7
+  * First public release.
+
+2009-03-11  Jonathan Hogg  <J.Hogg@ed.ac.uk>
+
+  * Version 0.7-RC1
+  * First release, works for example problems, but suffers from memory
+  leaks. ChangeLog started to track changes, copyright notices added for
+  LGPL release.

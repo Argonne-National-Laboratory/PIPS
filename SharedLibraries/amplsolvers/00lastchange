@@ -1,0 +1,8 @@
+20111018
+  mpec_adj.c:  adjust zerograds to reflect the number of variables
+after problem adjustments (to prevent out-of-bounds array references
+when zeroing gradient components of unused variables).  This only
+matters on problems with complementarity constraints when the .nl
+reader has ASL_cc_simplify set in its flags argument.
+  sphes.c: after sphsetup(-1,1,1,uptri), allow sphes(h,-1,ow,y)
+with ow == 0 or y == 0 (or both, giving all zeros in h).

@@ -1,0 +1,61 @@
+#ifndef BADATA_HPP
+#define BADATA_HPP
+
+#include <boost/shared_ptr.hpp>
+
+#include "BA.hpp"
+#include "BAVector.hpp"
+#include "stochasticInput.hpp"
+
+enum constraintType { Free, LB, UB, Range, Fixed };
+
+enum variableState { Basic, AtLower, AtUpper };
+
+
+
+
+// stores actual problem data
+// collect data into standard format for solver (introducing slacks),
+// and perform linear algebra (PRICE) here
+
+class BAData {
+public:
+	BAData(stochasticInput &input, BAContext &ctx);
+	BAData(const BAData&);
+	~BAData();
+
+	void getStartingBasis(BAFlagVector<variableState> &cols, bool &slackbasis) const;
+	void getCol(sparseBAVector &v, BAIndex i) const;
+	void addColToVec(sparseBAVector &v, BAIndex i, double mult) const;
+	
+	// pick out nonbasic elements from "in" and multiply them with nonbasic columns
+	// effectively same as multiplying with whole matrix assuming basic "in" are zero
+	// a bit strange for dense input and sparse output, but this is the most convenient presently
+	void multiply(const denseBAVector &in, sparseBAVector &out, const BAFlagVector<variableState>&) const; 
+
+	// multiply entire constraint matrix transpose by "in"
+	// taking linear combinations of the rows
+	void multiplyT(const sparseBAVector &in, sparseBAVector &out) const;
+
+	// make members easily accessable for use in solver
+	BADimensionsSlacks dims;
+	denseBAVector l,u,c;
+	BAFlagVector<constraintType> vartype;
+	BAFlagVector<std::string> names;
+	boost::shared_ptr<CoinPackedMatrix> Acol; 
+	boost::shared_ptr<CoinPackedMatrix> Arow;
+	std::vector<boost::shared_ptr<CoinPackedMatrix> > Tcol;
+	std::vector<boost::shared_ptr<CoinPackedMatrix> > Trow;
+	std::vector<boost::shared_ptr<CoinPackedMatrix> > Wcol; 
+	std::vector<boost::shared_ptr<CoinPackedMatrix> > Wrow; 
+	BAContext &ctx;
+
+protected:
+	bool slackbasis;
+	bool onlyBoundsVary;
+	mutable CoinIndexedVector out1Send; // buffer for multiplyT
+	BAFlagVector<variableState> stateCol, stateRow;
+
+};
+
+#endif

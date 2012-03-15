@@ -1,0 +1,7 @@
+20110913
+  cplex.c: adjust to use new indicator_constrs_ASL() function rather
+than having logic for sorting out indicator constraints in cplex.c
+Increase some array sizes that may have been too small for indicator
+constraints with an "else" clause, such as
+
+	s.t. bletch: y == 0 ==> z >= zlb else z <= -zub;

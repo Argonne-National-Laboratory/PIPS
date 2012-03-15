@@ -1,0 +1,16 @@
+SML - Structure-Conveying Modelling Language
+--------------------------------------------
+
+SML 0.7.2 (18 February 2011)
+- Added the interface to Cplex
+- Made SML compile with MinGW and run on Windows
+- Added a new example and reworked the existing ones
+- Several code clean-ups and corrections
+
+SML 0.7.1 (12 August 2009)
+- Fixed the way we deal with objectives
+- Improvements in the build process
+- Documentation updates and corrections
+
+SML 0.7 (24 March 2009)
+- First public release

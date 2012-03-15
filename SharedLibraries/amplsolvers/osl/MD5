@@ -1,0 +1,26 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+
+# netlib-bl master Mon Feb 10 10:36:10 EST 2003
+# http://cm.bell-labs.com/netlib/crc/netlib-bl.html
+dZcrxuex+Nw+hk4RNQhu2A	00lastchange
+v80YXpWhZkFKgkRtgTvWDw	README.1st
+ATnB3TuUUPqZZSncErbjmg	README.osl
+bzyVYn7R/WXeiBtb63782w	changes
+kiSZhkzfB9UNO9WtG5JvGg	index
+E9BNQN42Y3Poqww6/wEM7A	makefile.u
+s7hI3i8SpKRYqvPdwdBX7w	makefile.vc
+DmZ43wgPU3upONDXimLF3w	makefile.wat
+sCTn6hr/QCGYk1aX0rGO6Q	osl.c
+XcRCDB77wT4hSZPMRHKbew	osl.h
+01wSlRo9GZLMzWplxpVaew	version.c0
+eBDx6wDky1gXLOOXzhGtpQ	xsum0.out
+
+-----BEGIN PGP SIGNATURE-----
+Version: 2.6.2
+
+iQCVAwUBPkfG675pvxO9gjtZAQExqQP5AeeB84pQgLO3t2GwWnwsBQoS+Tz29HRN
+PBHJjkkJtNDraCjQaGKA6pgJQUsuZ7kW+D+iO4zd9Najd026m4DhNE/ahWwBOzOb
+64EWsyb/Vn0SIzRRW52AsHkdY/SmQT91i8+5hyMGb+HEr76sHxUo+4lvIzfQJ4bs
+Pu7ofLrIkPM=
+=j+4w
+-----END PGP SIGNATURE-----

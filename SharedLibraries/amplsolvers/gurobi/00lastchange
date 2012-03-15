@@ -1,0 +1,5 @@
+20110920
+  gurobi.c:  add "method"; move the "lpmethod" description to "method"
+and list lpmethod as a synonym for method.
+  README.gurobi, makefile.*: minor tweaks for less dependence on the
+particular version of Gurobi.

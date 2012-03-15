@@ -1,0 +1,37 @@
+# This file is (c) 2009 Andreas Grothey, Marco Colombo, University of Edinburgh.
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty.
+
+#
+# Basic ALM model data
+#
+
+param T := 2;
+
+set NODES := 1 2 3 4 5 6 7;
+param Parent := 1 "null"
+                2 1
+                3 1
+                4 2
+                5 2
+                6 3
+                7 3;
+param Probs := 1 1
+               2 0.6
+               3 0.4
+               4 0.6
+               5 0.4
+               6 0.6
+               7 0.4;
+
+param Gamma := 0.05;
+param InitialWealth := 1000;
+
+set ASSETS := risky safe;
+param Price := risky 12 safe 20;
+param Return : 1    2    3    4    5    6    7 :=
+      risky    0  0.3 -0.2  0.3 -0.2  0.3 -0.2
+      safe     0  0.2 -0.1  0.2 -0.1  0.2 -0.1;
+param Liability := 0 0
+                   1 80
+                   2 80;

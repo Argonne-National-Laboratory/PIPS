@@ -1,0 +1,287 @@
+/* (c) 2008,2009 Jonathan Hogg and Andreas Grothey, University of Edinburgh
+ *
+ * This file is part of SML.
+ *
+ * SML is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, using version 3 of the License.
+ *
+ * SML is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ */
+
+%debug
+%expect 20
+%{
+   #include "AmplModel.h"
+   #include "CompDescrParam.h"
+   #include "DataNodes.h"
+   #include "GlobalVariables.h"
+   #include "ModelComp.h"
+   #include "nodes.h"
+   #include <cassert>
+   #include <cstdlib>
+   #include <iostream>
+
+   #define YYERROR_VERBOSE
+
+   using namespace std;
+
+   int datalex(void);
+   static void dataerror(const char *s);
+   extern FILE *datain;
+   extern int datalineno;
+   static AmplModel *root;
+%}
+
+%union
+{
+   long *ival;
+   double *fval;
+   char *string;
+   SyntaxNode *opPtr;
+   SyntaxNodeIx *opPtrIx;
+}
+
+%type <opPtr> setspec_list setspec 
+%type <opPtr> set_template_opt templ_item_list templ_item object_list
+%type <opPtr> member_table_list member_table theader_row settablerow_list
+%type <opPtr> theader_list settablerow plusminuslist object
+%type <opPtr> paramspec_list paramspec paramtemplate_opt
+%type <opPtr> valuetable_list valuetable
+
+%token <string> ID 
+%token <ival> INT_VAL
+%token <fval> FLOAT_VAL 
+%token INFINITY COEFF COVER OBJ DEFAULT FROM TO TO_COME MODELTYPE
+%token NET_IN NET_OUT DIMEN ORDERED CIRCULAR REVERSED SYMBOLIC ARC
+%token INTEGER BINARY CHECK CLOSE DISPLAY DROP INCLUDE PRINT PRINTF QUIT RESET
+%token RESTORE SOLVE UPDATE WRITE SHELL MODEL DATA OPTION LET SOLUTION FIX
+%token UNFIX END FUNCTION PIPE FORMAT SETOF BY LESS MOD DIV MIN MAX IF THEN
+%token ELSE AND OR EXISTS FORALL NOT WITHIN WHILE REPEAT FOR CARD NEXT NEXTW
+%token PREV PREVW FIRST LAST MEMBER ORD ORD_ZERO VAR PARAM SET MAXIMIZE MINIMIZE
+%token OBJECTIVE SUBJECTTO SUM PROD IN POWER NE LE GE EQ LT GT UNION DIFF
+%token CROSS INTER SYMDIFF LBRACE RBRACE COMMA SEMICOLON LSBRACKET RSBRACKET
+%token COLON LBRACKET RBRACKET DEFINED LOGICAL_OR LOGICAL_AND ELLIPSE
+%token PUBLIC CORE DOT BEG TIMESTAGE RANDOM SUFFIX BLOCK IDREF IDREFM
+%token SBLOCK USING DETERMINISTIC EXPECTATION STOCHASTIC STAGES
+%token STAGE NODE
+%token TR ASSIGN
+%token TOKPARAMSPECLIST TOKPARAMTEMPLATE TOKVALUETABLELIST
+%token TOKVALUETABLE
+%token <string> CHARACTER_STRING
+
+%token TOKSETSPEC
+
+%nonassoc SEMICOLON
+
+%%
+
+statements: /* empty */
+          | statements statement 
+          ;
+
+statement:  paramdef
+         |  setdef
+         ;
+              
+
+setdef:  SET ID defined_opt setspec_list SEMICOLON {
+            // Find symbol
+            const SymbolTable::Entry *entry = root->symbol_table.findSymbol($2);
+            if (!entry) {
+               cerr << "Data given for set " << $2 << " which has not been"
+                  "declared at top level!" << endl;
+               exit(1);
+            }
+            if (!entry->isType(SymbolTable::ST_SET)) {
+               cerr << "Set data given for variable " << $2 << " which was "
+                  "not declared a set!" << endl;
+               exit(1);
+            }
+            assert($4->nchild() == 1);
+            SetSpec *tmp = (SetSpec*) $4->front();
+            entry->mc->setValue(new Set(*(tmp->list)));
+         }
+      ;
+
+defined_opt: /* empty */
+           | DEFINED
+           ;
+
+setspec_list:  /* empty */ { $$=NULL; }
+            |  setspec_list setspec { 
+                  $$ = addItemToListOrCreate(' ', (ListNode*)$1, $2); 
+               }
+            ;
+
+
+set_template_opt: /* empty */ { $$=NULL; }
+                | LBRACKET templ_item_list RBRACKET { $$ = $2; }
+                ;
+
+templ_item_list: templ_item
+               | templ_item_list COMMA templ_item
+               ;
+
+templ_item: object
+          | '*' { $$ = new SyntaxNode('*'); }
+          | COLON { $$ = new SyntaxNode(COLON); }
+          ;
+
+object_list: object { $$ = new ListNode(' ', $1); }
+           | object_list object { $$ = $1->push_back($2); }
+           ;
+
+member_table_list: member_table
+                 | member_table_list member_table
+                 ;
+
+setspec: set_template_opt object_list { $$ = new SetSpec($1, (ListNode*)$2); }
+       | set_template_opt member_table_list
+       ;
+
+member_table: theader_row DEFINED settablerow_list
+            ;
+
+theader_row:   TR theader_list {
+                  cerr << "TR not yet supported." << endl;
+                  $$ = $2;
+               }
+           |   theader_list
+           ;
+
+settablerow_list: settablerow
+                | settablerow_list settablerow
+                ;
+
+theader_list:  COLON object_list { $$ = $2; }
+            |  theader_list COLON object_list {
+                  cerr << "Multiple theaders not yet supported." << endl;
+                  $$ = $1;
+               }
+            ;
+
+settablerow:   object_list plusminuslist {
+                  cerr << "set table definitions not yet supported." << endl;
+                  $$ = NULL;
+               }
+           ;
+
+plusminuslist: plusminus { $$ = NULL; }
+             | plusminuslist plusminus { $$ = NULL; }
+             ;
+
+plusminus: '+'
+         | '-'
+         ;
+
+object: ID { $$ = new IDNode($1); }
+      | CHARACTER_STRING { $$ = new IDNode($1); }
+      | INT_VAL { $$ = new ValueNode<long>(*$1); }
+      | FLOAT_VAL { $$ = new ValueNode<double>(*$1); }
+      ;
+
+paramdef:   PARAM ID paramdefault_opt defined_opt paramspec_list SEMICOLON {
+               const SymbolTable::Entry *entry =
+                  root->symbol_table.findSymbol($2);
+                if (entry==NULL){
+                  cerr << "Data given for parameter " << $2 << " which has "
+                    "not beendeclared at top level!" << endl;
+                  exit(1);
+                }
+                if (!entry->isType(SymbolTable::ST_PARAM)) {
+                  cerr << "Param data given for variable " << $2 << " which "
+                    "was not delcared a param!" << endl;
+                    exit(1);
+                }
+                // reference has been found
+                entry->mc->setValue(new CompDescrParam(entry->mc, $5));
+            }
+        |   PARAM paramdefault_opt COLON object_list DEFINED object_list 
+               SEMICOLON
+        |   PARAM paramdefault_opt COLON object COLON object_list DEFINED
+               object_list SEMICOLON
+        ;
+
+paramdefault_opt: /* empty */
+                | DEFAULT INT_VAL {
+                     cerr << "Default values not yet supported." << endl;
+                  }
+                | DEFAULT FLOAT_VAL{
+                     cerr << "Default values not yet supported." << endl;
+                  }
+                ;
+
+paramspec_list: paramspec { $$ = new SyntaxNode(TOKPARAMSPECLIST, $1); }
+              | paramspec_list paramspec { $$ = $1->push_back($2); }
+              ;
+
+paramspec:  paramtemplate_opt object_list {
+               if($1) {
+                  $$ = new SyntaxNode(TOKPARAMTEMPLATE, $1, $2);
+               } else {
+                  $$ = $2;
+               }
+            }
+         |  paramtemplate_opt valuetable_list /*{
+               cerr << "Not properly supported yet \"paramtemplate_opt "
+                  "valuetable_list\"." << endl;
+            }*/
+         ;
+
+paramtemplate_opt: /* empty */ { $$=NULL; }
+                 | LSBRACKET templ_item_list RSBRACKET { $$=$2; }
+                 ;
+
+valuetable_list: valuetable { new SyntaxNode(TOKVALUETABLELIST, $1); }
+               | valuetable_list valuetable { $$ = $1->push_back($2); }
+               ;
+
+valuetable: theader_row DEFINED object_list {
+               if($3->nchild() % ($1->nchild()+1) != 0) {
+                  cerr << "DATA: error in line " << datalineno << ":" << endl;
+                  cerr << "Length of value table (" << $3->nchild() << ")" <<
+                     " not divisable by column labels +1 (" <<
+                     $1->nchild()+1 << ")" << endl;
+                  exit(1);
+               }
+               $$ = new SyntaxNode(TOKVALUETABLE, $1, $3);
+            }
+          ;
+
+
+%%
+
+void dataerror(const char *s) {
+  cerr << "DATA: " << s << " on line " << datalineno << "\n";
+  exit(1);
+}
+
+void parse_data(AmplModel *current_model, const string& datafilename) {
+        
+  if (GlobalVariables::prtLvl >= PRINT_LOG) {
+    cout << "===============================================================\n";
+    cout << " Start parsing data file: " << datafilename << "\n";
+    cout << "===============================================================\n";
+  }
+
+  datain = fopen(datafilename.c_str(), "r");
+  root = current_model;
+  if (datain==NULL){
+    cout << "ERROR: Data file '" << datafilename << "' not found\n";
+    exit(1);
+  }
+          
+  dataparse();
+  if (GlobalVariables::prtLvl >= PRINT_LOG) {
+    cout << "===============================================================\n";
+    cout << " Finished parsing data file\n";
+    cout << "===============================================================\n";
+  }
+}

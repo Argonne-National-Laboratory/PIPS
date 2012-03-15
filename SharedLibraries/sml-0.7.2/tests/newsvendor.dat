@@ -1,0 +1,34 @@
+# This file is (c) 2009 Marco Colombo, University of Edinburgh.
+# Copying and distribution of this file, with or without modification,
+# are permitted in any medium without royalty.
+
+#
+# Newsvendor model data
+#
+
+set NODES := 1 2 3 4 5 6;
+param Parent := 1 "null"
+                2 1
+                3 1
+                4 1
+                5 1
+                6 1;
+
+param Probs := 1 1
+               2 0.15
+               3 0.20
+               4 0.25
+               5 0.25
+               6 0.15;
+
+param InitBuyCost := 10;
+param ExtraBuyCost := 16;
+param SellingPrice := 18;
+
+param MaxInitBuy := 450;
+param Demand := 1 0
+                2 100
+                3 230
+                4 320
+                5 450
+                6 600;

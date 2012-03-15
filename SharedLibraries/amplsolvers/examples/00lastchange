@@ -1,0 +1,5 @@
+Sun Jul 12 23:08:18 MDT 2009
+  Adding source evalchk.c for "solver" evalchk that sets suffix .numerr
+on objectives and constraints to 0 if they can be evalated at the given
+starting point, to 1 if not, and to 2 if the entity but not its gradient
+can be evaluated.

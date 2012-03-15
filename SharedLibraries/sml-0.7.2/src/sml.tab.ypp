@@ -1,0 +1,1086 @@
+/* (c) 2008,2009 Jonathan Hogg and Andreas Grothey, University of Edinburgh
+ *
+ * This file is part of SML.
+ *
+ * SML is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, using version 3 of the License.
+ *
+ * SML is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ */
+%debug
+
+%{
+   #define YYERROR_VERBOSE
+   #include <stdio.h>
+   #include <stdlib.h>
+   #include <assert.h>
+   #include <iostream>
+   #include "nodes.h"
+   #include "GlobalVariables.h"
+   #include "StochModel.h"
+   #include "StochModelComp.h"
+   #include "symtab.h"
+   #include "SetNode.h"
+   #include "AmplModel.h"
+
+   #ifdef HAVE_DIRECT_H
+   #include <direct.h> // for chdir() under MinGW
+   #endif
+
+   using namespace std;
+
+   void add_indexing(SyntaxNodeIx *indexing);
+   void rem_indexing(SyntaxNodeIx *indexing);
+   void begin_model(char *name, SyntaxNode *indexing);
+   void end_model(char *name);
+   void begin_smodel(char *name, SyntaxNode *indexing, SyntaxNode *stochsets);
+   void end_smodel(char *name);
+
+   extern int yylineno;
+   int yylex(void);
+   void yyerror(const char *s);
+
+   static AmplModel *current_model;    /* this is the model currently active */
+                                       /* this is the GLOBAL context */
+   static AmplModel *local_context;    /* this is the LOCAL context */
+   SyntaxNodeIx *list_of_indexing[20];    /* list of currently applicable 
+                                                indexing expressions */
+   int n_indexing;
+   /* ---------------- stochastic global variables:------------------------ */
+   static bool is_stoch_model;      /* true if inside stochastic model def */
+   /* these are set by global stocastic modifier commands */
+   static bool is_deterministic_glo;
+   static SyntaxNode *stages_glo;
+   extern FILE *yyin;
+
+   void addStochInfo(ModelComp *newmc, SyntaxNode*);
+%}
+
+%union
+{
+  int optype;
+  long *ival;
+  double *fval;
+  char *string;
+  SyntaxNode *opPtr;
+  SyntaxNodeIx *opPtrIx;
+}
+
+%type <string> cnstr
+%type <opPtr> expr value  equation expr_list 
+%type <opPtr> setattributes setattribute setattributes_opt
+%type <opPtr> stochattr_opt
+%type <opPtr> paramattributes_opt paramattributes paramattribute 
+%type <opPtr> varattributes_opt varattributes varattribute 
+//%type <opPtr> csattributes_opt csattributes csattribute 
+%type <opPtr> setexpr_list lexpr 
+%type <opPtr> setexpression identifier iditem setexpr_item mdim_dummy_start
+%type <opPtr> mdim_dummy start_indexing
+/*%type <opPtr> commasepoptions optionlist*/
+%type <opPtrIx> indexing indexing_opt
+%type <optype> relop reduction_op func ubsetop bsetop
+
+%token <string> ID 
+%token <ival> INT_VAL
+%token <fval> FLOAT_VAL 
+%token INFINITY COEFF COVER OBJ DEFAULT FROM TO TO_COME MODELTYPE DOTDOT
+%token NET_IN NET_OUT DIMEN ORDERED CIRCULAR REVERSED SYMBOLIC ARC
+%token INTEGER BINARY CHECK CLOSE DISPLAY DROP INCLUDE PRINT PRINTF QUIT RESET
+%token RESTORE SOLVE UPDATE WRITE SHELL MODEL DATA OPTION LET SOLUTION FIX
+%token UNFIX END FUNCTION PIPE FORMAT SETOF BY LESS MOD DIV MIN MAX IF THEN
+%token ELSE AND OR EXISTS FORALL NOT WITHIN WHILE REPEAT FOR CARD NEXT NEXTW
+%token PREV PREVW FIRST LAST MEMBER ORD ORD_ZERO VAR PARAM SET MAXIMIZE MINIMIZE
+%token OBJECTIVE SUBJECTTO SUM PROD IN POWER NE LE GE EQ LT GT UNION DIFF
+%token CROSS INTER SYMDIFF LBRACE RBRACE COMMA SEMICOLON LSBRACKET RSBRACKET
+%token COLON LBRACKET RBRACKET DEFINED LOGICAL_OR LOGICAL_AND ELLIPSE
+%token DOT SUFFIX BLOCK IDREF IDREFM STAGE NODE
+/*%token PUBLIC RANDOM SBLOCK BEG TIMESTAGE */
+%token USING DETERMINISTIC EXPECTATION STOCHASTIC STAGES
+%token ANCESTOR
+
+%right ASSIGN
+%left LOGICAL_OR
+%left LOGICAL_AND
+%left EQ NE
+%left LT LE GT GE
+%left '+' '-'
+%left '*' '/'
+%right POWER
+%left '!'
+%left ELLIPSE
+
+%%
+statements: /* empty */
+          | statements statement 
+          ;
+
+block:   stochblock
+     |   blockblock
+     |   stageblock
+     ;
+             ;
+
+/*
+optionlist:*/ /*empty *//* {$$=NULL;}
+          | LBRACKET commasepoptions RBRACKET {$$=$2;}
+          ;
+
+commasepoptions:  identifier {
+                     $$ = new ListNode(COMMA, $1);}
+               |  commasepoptions COMMA identifier{
+                     $$ = $1->push_back($3);
+                  }
+               ;*/
+/* -------------------------------------------------------------------- 
+  blockblock
+------------------------------------------------------------------------- */
+/* A blockblock is a block definition of the form
+
+     block name{indexing}:
+       statements
+     end block;
+
+which means that all the statements within the block are repeated over the
+indexing expression 
+*/
+
+blockblock: blockblockbegin statements blockblockend
+          | blockblockbegin LBRACE statements RBRACE {
+               end_model(NULL);
+               rem_indexing(NULL);
+            }
+          ;
+
+blockblockbegin:  BLOCK ID indexing_opt COLON {
+                     add_indexing($3);
+                     begin_model((char*)$2, $3);
+                  }
+               ;
+
+blockblockend: END BLOCK SEMICOLON {
+                  end_model(NULL);
+                  rem_indexing(NULL);
+               }
+             | END BLOCK ID SEMICOLON {
+                  end_model((char*)$3);
+                  rem_indexing(NULL);
+               }
+             ;
+/* -------------------------------------------------------------------- 
+  stochblock
+------------------------------------------------------------------------- */
+/* A stochblock is a block definition of the form
+
+     [sblock/stochastic block] name{indexing} using (NODES,ANC,PROB,STAGES):
+       statements
+     end sblock;
+
+where 
+  NODES: set of nodes in the tree
+  ANC{NODES}: ancestor for every node
+  PROB{NODES}: conditional probability of reaching this node from parent
+  STAGES: set of time stages 
+
+  The whole block is repeated over all STAGES (actually over all NODES). 
+  Entities marked 'deterministic' are only repeated over STAGES
+
+--------------------------------------------------------------------
+Logic of stochastic qualifiers: deterministic/stages:
+ - if an sblock is started, then is_stoch_model is set to true
+ - if an sblock is closed, then is_stoch_model is set to false
+ - deterministc/stages are read in as attributes to param/set/var/etc defs
+ - their value is stored in global variables stages/is_deterministic
+
+
+
+
+*/
+
+stochblock: stochblockbegin statements stochblockend
+          | stochblockbegin LBRACE statements RBRACE {
+               end_smodel(NULL);
+               rem_indexing(NULL);
+            }
+          ;
+    
+/* FIXME: optionlist is of form '(ID COMMA ID ...)'
+     need to call new SyntaxNode and addToListItem functions in the 
+     processing of optionlist and its children */
+stochblockbegin:  BLOCK ID indexing_opt STOCHASTIC USING LBRACKET 
+                        setexpr_list RBRACKET COLON {
+                     add_indexing($3);
+                     begin_smodel((char*)$2, $3, $7);
+                  }
+               /*|  sblock_alias ID indexing_opt USING optionlist COLON {
+                     add_indexing($3);
+                     begin_smodel((char*)$2, $3, $5);
+                  }*/
+               ;
+
+stochblockend: END sblock_alias SEMICOLON {
+                  end_smodel(NULL);
+                  rem_indexing(NULL);
+               }
+             | END sblock_alias ID SEMICOLON {
+                  end_smodel((char*)$3);
+                  rem_indexing(NULL);
+               }
+             ;
+
+sblock_alias: STOCHASTIC BLOCK
+            /*| SBLOCK*/
+            ;
+
+/* -------------------------------------------------------------------- 
+  stageblock
+------------------------------------------------------------------------- */
+
+stageblock: stageblock_start LBRACE statements RBRACE {
+               stages_glo = NULL;
+            }
+/*          | stageblock_start statements END STAGE SEMICOLON {
+               stages_glo = NULL;
+            }*/
+          ;
+
+stageblock_start: STAGES setexpression COLON {              
+                     if (!is_stoch_model) { 
+                        cerr << "Syntax Error: keyword 'stages' can only be "
+                        "used in stochastic blocks" << endl;
+                        exit(1);
+                     }
+                     stages_glo = $2;
+                  }
+                ;
+
+/* -------------------------------------------------------------------- 
+  ``Standard'' AMPL
+------------------------------------------------------------------------- */
+
+
+statement:  setdef SEMICOLON
+         |  paramdef SEMICOLON
+         |  vardef SEMICOLON
+         |  cnstr SEMICOLON
+         |  command SEMICOLON
+         |  block
+         |  INCLUDE ID SEMICOLON
+/*         |  set_default COLON*/
+         ;
+
+/*set_default: TIMESTAGE INT_VAL
+           ;*/
+
+/* FIXME */
+command: SOLVE
+       | LET indexing identifier DEFINED expr
+       ;
+
+relop:   LE {$$=LE;}
+     |   GE {$$=GE;}
+     |   LT {$$=LT;}
+     |   GT {$$=GT;}
+     |   ASSIGN {$$=ASSIGN;}
+     |   EQ {$$=EQ;}
+     |   NE {$$=NE;}
+     ;
+
+equation:   expr ASSIGN expr { $$ = new OpNode(ASSIGN, $1, $3); }
+        |   expr LT expr { $$ = new OpNode(LT, $1, $3); }
+        |   expr LT expr LT expr { 
+               OpNode *temp = new OpNode(LT, $1, $3);
+               $$ = new OpNode(LT, temp, $5); 
+            }
+        |   expr LE expr { $$ = new OpNode(LE, $1, $3); }
+        |   expr LE expr LE expr { 
+               OpNode *temp = new OpNode(LE, $1, $3);
+               $$ = new OpNode(LE, temp, $5); 
+            }
+        |   expr GT expr { $$ = new OpNode(GT, $1, $3); }
+        |   expr GT expr GT expr { 
+               OpNode *temp = new OpNode(GT, $1, $3);
+               $$ = new OpNode(GT, temp, $5); 
+            }
+        |   expr GE expr { $$ = new OpNode(GE, $1, $3); }
+        |   expr GE expr GE expr { 
+               OpNode *temp = new OpNode(GE, $1, $3);
+               $$ = new OpNode(GE, temp, $5); 
+            }
+        |   expr EQ expr { $$ = new OpNode(EQ, $1, $3); }
+        ;
+
+cnstr:   MAXIMIZE ID indexing_opt {
+            if ($3) add_indexing($3);
+         } stochattr_opt COLON expr {
+            ModelComp *newmc;
+            if (is_stoch_model){
+               newmc = new StochModelComp($2, TMAX, $3, $7);
+               addStochInfo(newmc, $5);
+            }else{
+               newmc = new ModelComp($2, TMAX, $3, $7);
+            }
+
+            current_model->addComp(newmc);
+            current_model->symbol_table.defineSymbol(SymbolTable::ST_OBJ, $2,
+               newmc);
+            if ($3) rem_indexing($3);
+            $$=$2;
+         }
+     |   MINIMIZE ID indexing_opt {
+            if ($3) add_indexing($3);
+         } stochattr_opt COLON expr {
+            ModelComp *newmc;
+            if (is_stoch_model){
+               newmc = new StochModelComp($2, TMIN, $3, $7);
+               addStochInfo(newmc, $5);
+            }else{
+               newmc = new ModelComp($2, TMIN, $3, $7);
+            }
+
+            current_model->addComp(newmc);
+            current_model->symbol_table.defineSymbol(SymbolTable::ST_OBJ, $2,
+               newmc); 
+            if ($3) rem_indexing($3);
+            $$=$2;
+         }
+     |   SUBJECTTO ID indexing_opt {
+            if ($3) add_indexing($3);
+         } stochattr_opt COLON equation { 
+            ModelComp *newmc;
+            if (is_stoch_model){
+               newmc = new StochModelComp($2, TCON, $3, $7);
+               addStochInfo(newmc, $5);
+            }else{
+               newmc = new ModelComp($2, TCON, $3, $7);
+            }
+            current_model->addComp(newmc);
+            current_model->symbol_table.defineSymbol(SymbolTable::ST_CONS, $2,
+               newmc); 
+            if ($3) rem_indexing($3);
+            $$=$2;
+         }
+     ;
+
+indexing_opt: /* empty */ {$$=NULL;}
+            | indexing {$$=$1;}
+            ;
+
+start_indexing:   LBRACE setexpr_list { 
+                     SyntaxNodeIx *tmp = 
+                        new SyntaxNodeIx(new SyntaxNode(LBRACE, $2));
+                     add_indexing(tmp);
+                     $$ = $2;
+                  }
+              ;
+
+indexing:   start_indexing COLON lexpr RBRACE {
+               rem_indexing(NULL);
+               SyntaxNode *tmp = 
+                  new SyntaxNode(LBRACE, new SyntaxNode(COLON, $1, $3));
+               $$ = new SyntaxNodeIx(tmp);
+            }
+        |   start_indexing RBRACE {
+               rem_indexing(NULL);
+               SyntaxNodeIx *tmp = new SyntaxNodeIx(new SyntaxNode(LBRACE, $1));
+               $$=tmp;
+            }
+        ;
+
+/* FIXME: ID IN setexpression defines a dummy variable (?)
+   -> have this as a separate construct
+   -> how to deal with dummy variables? */
+setexpr_list:  setexpr_item
+            |  setexpr_list COMMA setexpr_item{
+                  if ($1->getOpCode() == COMMA)
+                     $$ = $1->push_back($3);
+                  else
+                     $$ = new ListNode(COMMA, $1, $3);
+               }
+            ;
+
+setexpr_item : setexpression
+             | ID IN setexpression {
+                  $$ = new OpNode(IN, new IDNode($1), $3);
+               }
+             | mdim_dummy IN setexpression {
+                  $$ = new OpNode(IN, $1, $3);
+               }
+             ;
+
+mdim_dummy: mdim_dummy_start RBRACKET { $$ = new SyntaxNode(LBRACKET, $1); }
+          ;
+
+mdim_dummy_start: LBRACKET ID { 
+                     $$ = new ListNode(COMMA, new IDNode($2));
+                  }
+                | mdim_dummy_start COMMA ID {
+                     $$ = $1->push_back(new IDNode($3));
+                  }
+                ;
+
+lexpr:   expr
+     |   LBRACKET lexpr RBRACKET {
+            $$ = new SyntaxNode(LBRACKET, $2); }
+     |   equation
+     ;
+
+setdef:  SET ID indexing_opt {
+            if ($3) add_indexing($3);
+         } stochattr_opt setattributes_opt {
+            ModelComp *newmc;
+            if (is_stoch_model){
+               newmc = new StochModelComp($2, TSET, $3, $6);
+               addStochInfo(newmc, $5);
+            }else{
+               newmc = new ModelComp($2, TSET, $3, $6);
+            }
+            current_model->addComp(newmc);
+            current_model->symbol_table.defineSymbol(SymbolTable::ST_SET, $2,
+               newmc); 
+            if (GlobalVariables::logParseModel) 
+               cout << "$6 = " << $6 << "\n";
+            if (GlobalVariables::logParseModel)
+               cout << "$5 = " << $5 << "\n";
+            if ($3) rem_indexing($3);
+            //$$=$2; 
+         }
+      ;
+
+/* qualifier can be public/random: is this redundant? */
+paramdef:   qualifier PARAM ID indexing_opt {
+               if ($4) add_indexing($4);
+            } stochattr_opt paramattributes_opt {
+               ModelComp *newmc;
+               if (is_stoch_model){
+                  StochModelComp *newmcs = new StochModelComp($3,TPARAM,$4,$7);
+                  addStochInfo(newmcs, $6);
+                  newmc = newmcs;
+               }else{
+                  newmc = new ModelComp($3, TPARAM, $4, $7);
+               }
+               current_model->addComp(newmc);
+               current_model->symbol_table.defineSymbol(
+                  SymbolTable::ST_PARAM, $3, newmc); 
+               if ($4) rem_indexing($4);
+               //$$=$2; 
+            }
+        ;
+
+vardef:  VAR ID indexing_opt {
+            if ($3) add_indexing($3);
+         } stochattr_opt varattributes_opt {
+            ModelComp *newmc;
+            if (is_stoch_model){
+               newmc = new StochModelComp($2, TVAR, $3, $6);
+               addStochInfo(newmc, $5);
+            }else{
+               newmc = new ModelComp($2, TVAR, $3, $6);
+            }
+
+            current_model->addComp(newmc);
+            current_model->symbol_table.defineSymbol(SymbolTable::ST_VAR, $2,
+               newmc); 
+            if ($3) rem_indexing($3);
+            //$$=$2; 
+         }
+      ;
+
+
+
+qualifier:  /* empty */
+         /*|  PUBLIC
+         |  RANDOM*/
+         ;
+
+/* these are SET definitions */
+
+setattributes_opt:   /* empty */ {$$=NULL;}
+                 | setattributes {$$=$1;}
+                 ;
+
+setattributes: setattribute {$$=$1;}
+             | setattributes setattribute {
+                  if ($2==NULL){
+                     $$ = $1;
+                  }else{
+                     if ($1==NULL){
+                        $$ = new ListNode(' ', $2);
+                     }else{
+                        if ($1->getOpCode() == ' ')
+                           $$ = $1->push_back($2);
+                        else
+                           $$ = new ListNode(' ', $1, $2);
+                     }
+                  }
+               }
+             ;
+
+setattribute:  DIMEN INT_VAL {
+                  $$ = new SyntaxNode(DIMEN, new ValueNode<long>(*$2));
+               }
+            |  WITHIN setexpression {
+                  $$ = new SyntaxNode(WITHIN, $2);
+               }
+            | DEFINED setexpression {
+                  $$ = new OpNode(DEFINED, $2);
+               }
+            |  DEFAULT setexpression {
+                  $$ = new SyntaxNode(DEFAULT, $2);
+               }
+            |  ORDERED { $$ = new SyntaxNode(ORDERED); }
+            ;
+
+paramattributes_opt: /* empty */ { $$ = NULL; }
+                   | paramattributes { $$ = $1; }
+                   ;
+
+paramattributes:  paramattribute {
+                     if ($1==NULL) {$$ = NULL;}
+                     else{$$ = new ListNode(COMMA, $1);}
+                  }
+               |  paramattributes COMMA paramattribute {
+                     if ($3==NULL){
+                        $$ = $1;
+                     }else{
+                        if ($1==NULL){
+                           $$ = new ListNode(COMMA, $3);
+                        }else{
+                           $$ = $1->push_back($3);
+                        }
+                     }
+                  }
+               ;
+
+paramattribute:   BINARY {$$ = new SyntaxNode(BINARY);}
+              |   INTEGER {$$ = new SyntaxNode(INTEGER);}
+              |   SYMBOLIC {$$ = new SyntaxNode(SYMBOLIC);}
+              |   relop expr {$$ = new OpNode($1, $2);}
+              |   IN setexpression {$$ = new OpNode(IN, $2);}
+              |   ASSIGN expr {$$ = new OpNode(ASSIGN, $2);}
+              |   DEFAULT expr {$$ = new SyntaxNode(DEFAULT, $2);}
+              |   DEFINED expr {$$ = new OpNode(DEFINED, $2);}
+              ;
+
+stochattr_opt: /* empty */ {$$ = NULL;}
+             | DETERMINISTIC {
+                  // check that this is in a stochastic model
+                  if (!is_stoch_model){ 
+                     cerr << "Syntax Error: keyword 'DETERMINISTIC' can only"
+                        "be used in stochastic blocks\n";
+                     exit(1);
+                  }
+                  $$ = new SyntaxNode(DETERMINISTIC);
+               }
+             | STAGES setexpression {
+                  // check that this is in a stochastic model
+                  if (!is_stoch_model){ 
+                     cerr << "Syntax Error: keyword 'STAGES' can only be used"
+                        "in stochastic blocks\n";
+                     exit(1);
+                  }
+                  $$ = $2;
+               }
+             ;
+
+varattributes_opt:   /* empty */ {$$=NULL;}
+                 |   varattributes {$$ = $1;}
+                 ;
+
+
+varattributes: varattribute {
+                  $$ = addItemToListOrCreate(COMMA, NULL, $1);}
+             | varattributes COMMA varattribute {
+                  $$ = addItemToListOrCreate(COMMA, (ListNode*)$1, $3);
+               }
+             ;
+
+/* FIXME: what to do about the ID in the last rule ? */
+varattribute:  BINARY {$$ = new SyntaxNode(BINARY);}
+            |  INTEGER {$$ = new SyntaxNode(INTEGER);}
+            |  SYMBOLIC {$$ = new SyntaxNode(SYMBOLIC);}
+            |  LE expr {$$ = new OpNode(LE, $2);}
+            |  GE expr {$$ = new OpNode(GE, $2);}
+            |  DEFINED expr {$$ = new OpNode(DEFINED, $2);}
+            |  ASSIGN expr {$$ = new OpNode(ASSIGN, $2);}
+            |  DEFAULT expr {$$ = new SyntaxNode(DEFAULT, $2);}
+         //| COEFF indexing_opt constraint expr
+         //| COVER indexing_opt constraint expr
+         //| OBJ indexing_opt objective expr
+            |  IN setexpression {$$ = new OpNode(IN, $2);}
+            |  SUFFIX ID expr {$$ = new SyntaxNode(SUFFIX, $3);}
+            ;
+
+/* this is anything that evaluates to a set */
+setexpression: LBRACE expr_list RBRACE  {$$ = new ListSet($2);}
+             | identifier    /* already defined identifier */ 
+             | setexpression bsetop setexpression {
+                  $$ = new CompositeSet($2, $1, $3);
+               }
+             | setexpression ubsetop setexpression {
+                  $$ = new CompositeSet($2, $1, $3);
+               }
+             | ubsetop indexing setexpression {
+                  cerr << "FIXME: ubsetop indexing setexpression\n";
+                  exit(2);
+               }
+             | expr DOTDOT expr {
+                  $$ = new SimpleSet($1, $3);
+               }
+             | SETOF indexing identifier {
+                  cerr << "FIXME: SETOF\n";
+                  exit(2);
+               }
+             //FIXME: | if lexpr then sexpr else sexpr
+             | LBRACKET setexpression RBRACKET {
+                  $$ = $2;
+               }
+             //FIXME: | interval
+             //FIXME: | infinite-set
+             //FIXME: | indexing
+             ;
+
+bsetop:  DIFF     { $$ = DIFF; }
+      |  SYMDIFF  { $$ = SYMDIFF; }
+      |  CROSS    { $$ = CROSS; }
+      ;
+
+ubsetop: UNION    { $$ = UNION; }
+      |  INTER    { $$ = INTER; }
+      ;
+      
+
+/* Identifier is any quotation of a predefined object:
+    RoutComm[j].Flow[k-3*j, k]#
+   An iditem is simply a tree of SyntaxNodes that serve as an identifier.
+   An 'identifer' is a SyntaxNode of type IDREF or IDREFM.
+*/
+identifier: iditem {
+               /* this is a simple identifier in global context */
+               $$ = find_var_ref_in_context(current_model, $1);
+            }
+          | identifier DOT iditem {
+               /* identifier sets the context for the iditem:
+                  The result of this is either a context setting or a
+                  complete description of a variable.
+
+                  Can implement this by simply adding context and argument lists
+                
+                  A variable reference should be represented internally as a
+                  pointer to the referenced object in the model list
+                  and a pointer to the list of arguments
+
+                  This can be represented as a SyntaxNode with
+                  ->opCode = ID;
+                  ->nval = # of arguments
+                  ->values[0] = pointer to entity in model list
+                  ->values[1 - n] = arguments 
+
+                  CONTEXT: iditems can be interpreted in two different contexts
+                  1) is the global context (i.e. referring from the model
+                     part that is currently defined)
+                  2) is a local context that can be set by preceeding bits
+                     of a dot'd expression. If a dot'd expression is 
+                     parsed the flag 'local_context' should be set and 
+                     'local_context' should be set to the current local
+                     context. 
+                  a context is expressed as a pointer to a model entity
+               */
+       
+               /* identifier sets the context for the idem */
+               /* this only works if the identifier is actually a reference 
+                  to a submodel */
+
+               if ($1->getOpCode() != IDREFM) {
+                  cerr << "Attempting to use dot specifier for something "
+                     "not an object:\n " << *($1) << "\n";
+                  exit(1);
+               }
+               local_context = (((SyntaxNodeIDREF*)$1)->ref)->other;
+
+               if (GlobalVariables::logParseModel) {
+                  cout << "Trying to merge \n identifier "<< *($1);
+                  cout << " and iditem " << *($3) << "\n";
+               }
+               $$ = find_var_ref_in_context(local_context, $3);
+
+               /* merge argument lists */
+               $$->merge($1);
+            }
+          ;
+
+
+
+
+iditem:  ID {                               /* simple identifier */
+            $$=new IDNode($1);
+         }
+      |  ID LSBRACKET expr_list RSBRACKET { /* subscripted id'fier */
+            if (GlobalVariables::logParseModel) 
+               cout << print_SyntaxNodesymb($3) << "\n";
+            $$ = new SyntaxNode(LSBRACKET, new IDNode($1), $3);
+            //printf("%s\n", print_SyntaxNodesymb($$));
+         }
+      |  ID LBRACKET INT_VAL SEMICOLON expr_list RBRACKET {
+            // This is of the type xh(-1,i) which is xh[i] at a previous stage
+            // the ancestor information is conveyed by an ID SyntaxNode with 
+            // two arguments, where the second argument is the ancestor
+            // $3 is (long int*) => change its sign
+            *$3 = -(*$3);
+            SyntaxNode *nd = new IDNode($1, *$3);
+            $$ = new SyntaxNode(LSBRACKET, nd, $5);
+         }      
+      |  ANCESTOR LBRACKET INT_VAL RBRACKET DOT iditem {
+            // the same as above, just different syntax "ancestor(1).xh[i]"
+            // => need to change the ID node in iditem into a binary node
+            //    with INT_VAL ($3) as the second argument
+   
+            // iditem is either an ID or a LSBRACKET node
+            SyntaxNode *node = $6;
+            IDNode *idnode;
+            if (node->getOpCode() == LSBRACKET)
+               idnode = (IDNode*) node->front();
+            else
+               idnode = (IDNode *) node;
+            assert(idnode->getOpCode() == ID);
+            assert(idnode->getStochParent() == 0);
+            idnode->setStochParent(*$3);
+            $$ = $6;
+         }
+      ;
+
+/* expr_list: is a comma separated list of expr's */
+/* used as argument list to functions 
+   RETURNS: 
+   *SyntaxNode of type COMMA representing a linked list of items
+*/
+
+expr_list:  expr {
+               $$ = new ListNode(COMMA, $1);
+            }
+         |  expr_list COMMA expr {      /* add item to list */
+               /* epxr_list could be a simple node or a comma separated
+                  list (CSL) already 
+                  - if it is a simple node, need to start a comma separated list
+                  - if it is a CSL need to add an item to it
+               */
+               //printf("join nodes >%s< >%s<\n",
+               //print_SyntaxNode($1),print_SyntaxNode($3));
+               assert($1->getOpCode() == COMMA);
+               $$ = $1->push_back($3);
+            }
+         ;
+
+expr: value
+    | LBRACKET expr_list RBRACKET { $$ = new SyntaxNode(LBRACKET, $2); }
+    | expr '+' expr { $$ = new OpNode('+', $1, $3); }
+    | expr '-' expr { $$ = new OpNode('-', $1, $3); }
+    | '-' expr { $$ = new OpNode('-', $2); }
+    | expr '*' expr { $$ = new OpNode('*', $1, $3); }
+    | expr '/' expr { $$ = new OpNode('/', $1, $3); }
+    | expr POWER expr { $$ = new OpNode(POWER, $1, $3); }
+    | expr ELLIPSE expr { $$ = new SyntaxNode(ELLIPSE, $1, $3); }
+    | expr LOGICAL_OR expr { $$ = new SyntaxNode(LOGICAL_OR, $1, $3); }
+    | expr LOGICAL_AND expr { $$ = new SyntaxNode(LOGICAL_AND, $1, $3); }
+    | '!' expr { $$ = new SyntaxNode('!', $2); }
+    | reduction_op indexing {add_indexing($2);} expr { 
+         /* reduction operator: do we need to keep track of the ID of the
+            dummy variable(s)? */
+         $$ = new SyntaxNode((int)$1, $2, $4);
+         rem_indexing($2);
+      }
+    | IF lexpr THEN expr { $$ = new SyntaxNode(IF, $2, $4); }
+    | IF lexpr THEN expr ELSE expr { $$ = new SyntaxNode(IF, $2, $4, $6); }
+    | FIRST LBRACKET setexpression RBRACKET { $$ = new SyntaxNode(FIRST, $3); }
+    | LAST LBRACKET setexpression RBRACKET { $$ = new SyntaxNode(LAST, $3); }
+    | EXPECTATION LBRACKET expr_list RBRACKET { 
+         //$$ = new SyntaxNode(EXPECTATION, new SyntaxNode(LBRACKET, $3));}
+         $$ = new SyntaxNode(EXPECTATION, $3);
+      }
+    | func LBRACKET expr_list RBRACKET { /* function definition */
+         $$ = new SyntaxNode($1, new SyntaxNode(LBRACKET, $3));
+      }
+    ;
+
+func :   ORD { $$=ORD; }
+     |   CARD { $$=CARD; }
+     ;
+
+reduction_op:  SUM { $$=SUM; }
+            |  MAX { $$=MAX; }
+            |  MIN { $$=MIN; }
+            |  PROD { $$=PROD; }
+            ;
+
+value:   INT_VAL {
+            $$=new ValueNode<long>(*$1);
+         }
+     |   FLOAT_VAL { 
+            $$=new ValueNode<double>(*$1);
+         }
+     |   identifier { 
+            $$=new SyntaxNode(0, $1);
+         }
+     |   INFINITY { 
+            $$ = new SyntaxNode(INFINITY);
+         }
+     /*|   STAGE { 
+            $$ = new StageNodeNode(STAGE);
+         }
+     |   NODE { 
+            $$ = new StageNodeNode(NODE);
+         }*/
+     ;
+
+/* ----------------------------------------------------------------------------
+ stuff for the data file reader to follow
+---------------------------------------------------------------------------- */
+//data_statements: /* empty */
+//          | data_statements data_statement 
+//          ;
+//
+//data_statement: data_paramdef SEMICOLON
+//              | data_setdef SEMICOLON
+//              ;
+//
+//data_setdef: SET ID ASSIGN setelements
+//
+//setelements: /* empty */
+//           | setelements setelement
+//           ;
+//
+//setelement: ID
+//         
+//data_paramdef: PARAM ID ASSIGN valuelist
+//
+//valuelist: value
+//         | valuelist value
+//         ;
+%%
+
+void yyerror(const char *s) {
+   cerr << "MODEL: " << s << " on line " << yylineno << "\n";
+   //fprintf(stderr, "%s\n", s);
+}
+
+
+/* ----------------------------------------------------------------------------
+yywrap
+---------------------------------------------------------------------------- */
+/* not sure if this is correct, found this somewhere on the internet
+   should open the data file and somehow tell the parser to carry on 
+   reading in "data mode"
+
+ */
+int yywrap(void) {
+   return 1;
+}
+
+/* ----------------------------------------------------------------------------
+begin_model
+---------------------------------------------------------------------------- */
+void
+begin_model(char *name, SyntaxNode *indexing) {
+  AmplModel *new_mod = new AmplModel(name);
+  ModelComp *newmc;
+  
+  cout << "Start Model: " << name << "\n";
+
+  /* FIXME: include attrib in definition */
+  newmc = new ModelComp(name, TMODEL, indexing, NULL);
+  newmc->other = new_mod;
+
+  new_mod->node = newmc;            /* add pointer-to-node to the model */
+  current_model->addComp(newmc);
+ 
+  new_mod->setGlobalName();    
+  /* and change current model */
+  current_model = new_mod;
+}
+
+/* ----------------------------------------------------------------------------
+begin_smodel
+---------------------------------------------------------------------------- */
+void
+begin_smodel(char *name, SyntaxNode *indexing, SyntaxNode *stochsets) {
+   StochModel *new_mod;
+   ModelComp *newmc;
+  
+   ListNode *stochsetsl = static_cast<ListNode*>(stochsets);
+
+   if (!stochsetsl || stochsetsl->nchild()!=4){
+      cerr << "Syntax error in Stochastic Block definition: \n";
+      cerr << " 'USING' needs 4 parameters \n";
+      exit(1);
+   }
+
+   if (GlobalVariables::logParseModel)
+      cout << "Start Stochastic Model: " << name << "\n";
+
+   ListNode::iterator i = stochsetsl->begin();
+   SyntaxNode *nodes = *i;
+   SyntaxNode *anc = *(++i);
+   SyntaxNode *prob = *(++i);
+   SyntaxNode *stages = *(++i);
+   /*cout << "BEG SMODEL " << name << endl << "   nodes = " << nodes << endl;
+   cout << "   anc = " << anc << endl << "   prob = " << prob << endl;
+   cout << "   stages = " << stages << endl;*/
+   new_mod = new StochModel(stages, nodes, anc, prob, current_model);
+   new_mod->name = name;
+  
+   /* Fixme: include attrib in definition */
+   newmc = new ModelComp(name, TMODEL, indexing, NULL);
+   newmc->other = new_mod;
+
+   new_mod->node = newmc;            /* add pointer-to-node to the model */
+   current_model->addComp(newmc);
+ 
+   new_mod->setGlobalName();    
+   /* and change current model */
+   current_model = new_mod;
+   is_stoch_model = true;
+}
+
+/* ----------------------------------------------------------------------------
+end_model
+---------------------------------------------------------------------------- */
+void
+end_model(char *name) {
+  // Check end block name matches block name
+  if (name && string(name) != current_model->name) {
+    cerr << "end block '" << name << "' encountered in block '" << 
+      current_model->name << "'" << endl;
+    exit(1);
+  }
+
+  current_model = current_model->parent;
+}
+
+/* ----------------------------------------------------------------------------
+end_smodel
+---------------------------------------------------------------------------- */
+void
+end_smodel(char *name){
+  // current_model is a StochModel -> convert this into a tree a FlatModels
+
+  // Check end block name matches block name
+  if (name && name != current_model->name) {
+    cerr << "end stochastic block '" << name << "' encountered in stochastic "
+      "block '" << current_model->name << "'" << endl;
+    exit(1);
+  }
+
+  // this is the ModelComp pointing to the StochModel
+  ModelComp *mc = current_model->node; 
+  
+  // point that to the expanded flat model tree
+  mc->other = current_model->expandToFlatModel();
+
+  // and change the name of the ModelComp of this model to the name of the 
+  // new (AmplModel) model. 
+  // (this is a concatenation of the StochModel name and the name of the 
+  // first stage)
+  mc->id = mc->other->name;
+
+  // and go back to the parent 
+  current_model = current_model->parent;
+  is_stoch_model = false;
+}
+
+/* ------------------------------------------------------------------------
+add_indexing/rem_indexing
+-------------------------------------------------------------------------- */
+void 
+add_indexing(SyntaxNodeIx *indexing){
+   list_of_indexing[n_indexing] = indexing;
+   if (GlobalVariables::logParseModel){
+      cout << "add indexing expression to list: " << *indexing << "\n";
+      cout << "Symbolic indexing: " << print_SyntaxNodesymb(indexing) << "\n";
+      cout << "length of indexing now: " << n_indexing+1 << "\n";
+   }
+   n_indexing++;
+}
+
+void
+rem_indexing(SyntaxNodeIx *indexing){
+   if (indexing){
+      assert(indexing==list_of_indexing[n_indexing-1]);
+      if (GlobalVariables::logParseModel) 
+         cout << "rem indexing expression to list: " << *indexing << "\n";
+   }
+   if (GlobalVariables::logParseModel) 
+      cout << "length of indexing now: " << n_indexing-1 << "\n";
+   n_indexing--;
+}
+
+/* ---------------------------------------------------------------------------
+Stochastic model helper functions
+---------------------------------------------------------------------------- */
+void 
+addStochInfo(ModelComp *newmcs, SyntaxNode *stochopt) {
+   if(stochopt) {
+     bool isDet = stochopt->getOpCode() == DETERMINISTIC;
+     newmcs->setDeterministic(isDet || is_deterministic_glo);
+     newmcs->setStageSet(isDet ? stages_glo : stochopt);
+   } else {
+      newmcs->setDeterministic(is_deterministic_glo);
+      newmcs->setStageSet(stages_glo);
+   }
+}
+
+int parse_model(const string& filename) {
+
+   yyin = fopen(filename.c_str(), "r");
+   if (!yyin) {
+     cerr << "ERROR: Cannot open file '" << filename << "'.\n";
+     return 1;
+   }
+
+   // check that we can access the datafile, otherwise we get an ugly message
+   // from amplsolver in case the file cannot be accessed
+   FILE *fin = fopen(GlobalVariables::datafilename.c_str(), "r");
+   if (!fin) {
+     cerr << "Cannot open file: '" << GlobalVariables::datafilename << "'.\n";
+     return 1;
+   }
+   fclose(fin);
+
+   // Change directory to make things work
+   int errcode = chdir("tmp");
+   if (errcode){
+      cerr << "Could not change working directory to 'tmp/'\n";
+      cerr << "Cannot continue\n";
+      return 1;
+   }
+
+
+   AmplModel::root = new AmplModel("root");
+   current_model = AmplModel::root;
+   is_stoch_model = false;
+   is_deterministic_glo = false;
+   stages_glo = NULL;
+
+   errcode = yyparse();
+   if (errcode!=0){
+      cerr << "yyparse returns " << errcode << endl;
+      return 1;
+   } 
+
+   fclose(yyin);
+
+   // Restore original directory
+   errcode = chdir("..");
+   if (errcode){
+      cerr << "Could not change working directory to 'tmp/'\n";
+      cerr << "Cannot continue\n";
+      return 1;
+   }
+
+   return 0;
+}

@@ -1,0 +1,251 @@
+/* (c) 2008,2009 Jonathan Hogg and Andreas Grothey, University of Edinburgh
+ *
+ * This file is part of SML.
+ *
+ * SML is free software: you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation, using version 3 of the License.
+ *
+ * SML is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ */
+%option   yylineno
+%{
+   #include "nodes.h"
+   #include "sml.tab.h"
+   /*#include "parser.h"*/
+   #include <errno.h>
+   #include <string.h>
+//#define myreturn(id) printf("%s\n",#id)
+#define myreturn(id) return(id)
+//  YYSTYPE yylval;
+%}
+
+DIGIT    [0-9]
+ID       [a-zA-Z][a-zA-Z0-9_]*
+
+%s accept_model_type
+
+/* TODO:
+   strings
+   */
+
+%%
+
+-?{DIGIT}+".." {
+                long *dummy = new long;
+                *dummy = strtol(yytext, NULL, 10);
+                yylval.ival = dummy;
+                
+                if(errno == ERANGE)
+                fprintf(stderr, "Value overflow on line %i with token:" \
+                     "\n\"%s\"\n", yylineno, yytext);
+                unput('.');unput('.');
+                myreturn(INT_VAL);
+               }
+".."  myreturn(DOTDOT);
+   /* Tokens with values */
+-?{DIGIT}+ {
+            long *dummy = new long;
+            *dummy = strtol(yytext, NULL, 10);
+            yylval.ival = dummy;
+            if(errno == ERANGE)
+               fprintf(stderr, "Value overflow on line %i with token:" \
+                     "\n\"%s\"\n", yylineno, yytext);
+            myreturn(INT_VAL);
+         }
+-?{DIGIT}+("."{DIGIT}*)?([eE]{DIGIT}+)?  {
+            double *dummy = new double;
+            *dummy = strtod(yytext, NULL);
+            yylval.fval = dummy;
+            if(errno == ERANGE)
+               fprintf(stderr, "Value overflow on line %i with token:" \
+                     "\n\"%s\"\n", yylineno, yytext);
+            myreturn(FLOAT_VAL);
+         }
+
+   /* Another type of value */
+inf                  myreturn(INFINITY);
+
+   /* comments */
+#[^\n]*             //printf("\n-->%s\n",yytext); /* nothing */
+  /* whitespace */
+[\n\t ]                /* nothing */ 
+
+   /* unknown */
+coeff?         myreturn(COEFF);
+cover          myreturn(COVER);
+obj            myreturn(OBJ);
+default        myreturn(DEFAULT);
+from           myreturn(FROM);
+to             myreturn(TO);
+to_come        myreturn(TO_COME);
+net_in         myreturn(NET_IN);
+net_out        myreturn(NET_OUT);
+dimen(sion)?   myreturn(DIMEN);
+using          myreturn(USING);
+
+ordered        myreturn(ORDERED);
+circular       myreturn(CIRCULAR);
+reversed       myreturn(REVERSED);
+symbolic       myreturn(SYMBOLIC);
+arc            myreturn(ARC);
+deterministic  myreturn(DETERMINISTIC);
+stochastic     myreturn(STOCHASTIC);
+
+   /*random         myreturn(RANDOM); */
+   /*public         myreturn(PUBLIC); */
+setof          myreturn(SETOF);
+by             myreturn(BY);
+less           myreturn(LESS);
+mod            myreturn(MOD);
+div            myreturn(DIV);
+min            myreturn(MIN); /*care function too*/
+max            myreturn(MAX); /*care fn too*/
+   
+   /* Types */
+integer        myreturn(INTEGER);
+binary         myreturn(BINARY);
+
+   /* Imperative commands */
+check          myreturn(CHECK);
+close          myreturn(CLOSE);
+display        myreturn(DISPLAY);
+drop           myreturn(DROP);
+include        myreturn(INCLUDE);
+print          myreturn(PRINT);
+printf         myreturn(PRINTF);
+quit           myreturn(QUIT);
+reset          myreturn(RESET);
+restore        myreturn(RESTORE);
+solve          myreturn(SOLVE);
+update         myreturn(UPDATE);
+write          myreturn(WRITE);
+shell          myreturn(SHELL);
+block          myreturn(BLOCK);
+   /*sblock         myreturn(SBLOCK);*/
+model          {
+                 BEGIN(accept_model_type);
+                 myreturn(MODEL);
+               }
+<accept_model_type>Network|Dynamic|Stochastic|Maximum {
+                 BEGIN(0);
+                 myreturn(MODELTYPE);
+               }
+   /*begin          myreturn(BEG);*/
+include        myreturn(INCLUDE);
+data           myreturn(DATA);
+option         myreturn(OPTION);
+let            myreturn(LET);
+solution       myreturn(SOLUTION);
+fix            myreturn(FIX);
+unfix          myreturn(UNFIX);
+end            myreturn(END);
+function       myreturn(FUNCTION);
+pipe           myreturn(PIPE);
+format         myreturn(FORMAT);
+
+   /* Conditionals */
+if             myreturn(IF);
+then           myreturn(THEN);
+else           myreturn(ELSE);
+and            myreturn(AND);
+or             myreturn(OR);
+exists         myreturn(EXISTS);
+forall         myreturn(FORALL);
+not            myreturn(NOT);
+within         myreturn(WITHIN);
+stages         myreturn(STAGES);
+   /*stage          myreturn(STAGE);*/
+   /*node           myreturn(NODE);*/
+
+   /* looping */
+while          myreturn(WHILE);
+repeat         myreturn(REPEAT);
+for            myreturn(FOR);
+
+   /* Set -> Scalar fns */
+card     myreturn(CARD);
+next     myreturn(NEXT);
+nextw    myreturn(NEXTW);
+prev     myreturn(PREV);
+prevw    myreturn(PREVW);
+first    myreturn(FIRST);
+last     myreturn(LAST);
+member   myreturn(MEMBER);
+ord      myreturn(ORD);
+ord0     myreturn(ORD_ZERO);
+
+   /* declarative */
+var               myreturn(VAR);
+param             myreturn(PARAM);
+set               myreturn(SET);
+maximi[sz]e       myreturn(MAXIMIZE);
+minimi[sz]e       myreturn(MINIMIZE);
+objective         myreturn(OBJECTIVE);
+subj(ect)?[ ]to   myreturn(SUBJECTTO);
+s\.t\.            myreturn(SUBJECTTO);
+
+   /* iterative sum */
+sum         myreturn(SUM);
+prod(uct)?  myreturn(PROD);
+in       myreturn(IN);
+
+   /* operators */
+:=       myreturn(DEFINED);
+\+       myreturn('+');
+-        myreturn('-');
+\*       myreturn('*');
+\/       myreturn('/');
+\*\*     myreturn(POWER);
+"^"      myreturn(POWER);
+"||"     myreturn(LOGICAL_OR);
+&&       myreturn(LOGICAL_AND);
+!        myreturn('!');
+!=       myreturn(NE);
+\<=      myreturn(LE);
+\>=      myreturn(GE);
+==       myreturn(EQ);
+\<       myreturn(LT);
+\>       myreturn(GT);
+\.\.     myreturn(ELLIPSE);
+=        myreturn(ASSIGN);
+
+   /* set operators */
+union                   myreturn(UNION);
+diff(erence)?           myreturn(DIFF);
+cross                   myreturn(CROSS);
+int(er(sect(ion)?)?)?   myreturn(INTER);
+symdiff                 myreturn(SYMDIFF);
+suffix                  myreturn(SUFFIX);
+
+   /* punctuation */
+"{"        myreturn(LBRACE);
+"}"        myreturn(RBRACE);
+"."        myreturn(DOT);
+","        myreturn(COMMA);
+";"        myreturn(SEMICOLON);
+"\["       myreturn(LSBRACKET);
+"\]"       myreturn(RSBRACKET);
+"\("       myreturn(LBRACKET);
+"\)"       myreturn(RBRACKET);
+":"        myreturn(COLON);
+
+  /* special stuff */
+
+Exp         myreturn(EXPECTATION);
+   /*TimeStage   myreturn(TIMESTAGE);*/
+ancestor    myreturn(ANCESTOR);
+
+   /* Else it mut be an identifyer */
+{ID}  {
+         yylval.string = strdup(yytext);
+         BEGIN(0);
+         myreturn(ID);
+      }
+%%
