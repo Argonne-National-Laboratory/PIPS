@@ -1,6 +1,9 @@
 #include "BAData.hpp"
 #include <cmath>
+//#include <boost/bind.hpp>
+//#include <boost/bind/placeholders.hpp>
 
+//using namespace boost;
 using namespace std;
 
 template<typename T1, typename T2> static void mergeColAndRow(T1& v, const T2 &col, const T2 &row) {
@@ -58,11 +61,38 @@ private:
 	stochasticInput &i;
 };
 
+static void checkConstraintType(const denseVector &L, const denseVector &U, denseFlagVector<constraintType> &T) {
+	int n = L.length();
+	assert(U.length() == n && T.length() == n);
 
-BAData::BAData(stochasticInput &input, BAContext &ctx) : dims(BADimensions(input,ctx)), ctx(ctx) {
+	for (int i = 0; i < n; i++) {
+		if (L[i] < -1e20) {
+			if (U[i] > 1e20) {
+				T[i] = Free;
+			} else {
+				T[i] = UB;
+			}
+		} else {
+			if (U[i] > 1e20) {
+				T[i] = LB;
+			} else {
+				T[i] = Range;
+			}
+		}
+		if (T[i] == Range && abs(L[i] - U[i]) < 1e-8) {
+			T[i] = Fixed;
+		}
+	}
 
-	int nscen = dims.numScenarios();
+}
+
+
+BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
+
+	int nscen = input.nScenarios();
 	ctx.initializeAssignment(nscen); // must do this first
+	dims = BADimensions(input,ctx); 
+	const vector<int> &localScen = ctx.localScenarios();
 	
 	l.allocate(dims, ctx, PrimalVector);
 	u.allocate(dims, ctx, PrimalVector);
@@ -72,14 +102,17 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : dims(BADimensions(input
 
 	
 	/*
+	// these two cause compiler barfs
 	formBAVector(l, bind1st(mem_fun(&stochasticInput::getFirstStageColLB),&input),
 			bind1st(mem_fun(&stochasticInput::getSecondStageColLB),&input),
 			bind1st(mem_fun(&stochasticInput::getFirstStageRowLB),&input),
 			bind1st(mem_fun(&stochasticInput::getSecondStageRowLB),&input),ctx);
-	formBAVector(l, boost::bind(&stochasticInput::getFirstStageColLB,&input),
-			boost::bind(&stochasticInput::getSecondStageColLB,&input),
-			boost::bind(&stochasticInput::getFirstStageRowLB,&input),
-			boost::bind(&stochasticInput::getSecondStageRowLB,&input),ctx);
+	
+	
+	formBAVector(l, bind(&stochasticInput::getFirstStageColLB,&input,_1),
+			bind(&stochasticInput::getSecondStageColLB,&input,_1),
+			bind(&stochasticInput::getFirstStageRowLB,&input,_1),
+			bind(&stochasticInput::getSecondStageRowLB,&input,_1),ctx);
 	*/
 
 	formBAVector(l, wrapper1<double>(input,&stochasticInput::getFirstStageColLB),
@@ -101,53 +134,27 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : dims(BADimensions(input
 			wrapper1<string>(input,&stochasticInput::getFirstStageRowNames),
 			wrapper2<string>(input,&stochasticInput::getSecondStageRowNames),ctx);
 
-	Acol = new CoinPackedMatrix(input.getFirstStageConstraints());
-	
-	/*
-	Acol = data.getAmat();
-	Arow = new CoinPackedMatrix();
+	for (unsigned i = 0; i < localScen.size(); i++) {
+		int scen = localScen[i];
+		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
+	}
+
+	Acol.reset(new CoinPackedMatrix(input.getFirstStageConstraints()));
+	Arow.reset(new CoinPackedMatrix());
 	Arow->reverseOrderedCopyOf(*Acol);
 
-	// add slacks to column copy
-	// only used for INVERT
-	int nslacks1 = nrows1;
-	vector<double> slackvals1(nslacks1,-1);
-	vector<int> start1(nslacks1), len1(nslacks1,1), ind1(nslacks1);
-	for (int i = 0; i < nslacks1; i++) { 
-		start1[i] = i;
-		ind1[i] = i;
-	}
-	CoinPackedMatrix slackMat1(true,nslacks1,nslacks1,nslacks1,&slackvals1[0],&ind1[0],&start1[0],&len1[0]);
-	if (appendSlacks) Acol->rightAppendPackedMatrix(slackMat1);
+	Tcol.resize(nscen); Trow.resize(nscen);
+	Wcol.resize(nscen); Wrow.resize(nscen);
 
-			
-	len1.assign(nslacks1,0);
-	start1.assign(nslacks1,0);
-
-	Tcol.resize(nscen,0); Trow.resize(nscen,0);
-	Wcol.resize(nscen,0); Wrow.resize(nscen,0);
-	onlyBoundsVary = data.onlyBoundsVary();
+	onlyBoundsVary = input.onlyBoundsVary();
 	if (onlyBoundsVary) {
-		Tcol[0] = data.getTmat(0);
-		Trow[0] = new CoinPackedMatrix();
+		Tcol[0].reset(new CoinPackedMatrix(input.getLinkingConstraints(0)));
+		Trow[0].reset(new CoinPackedMatrix());
 		Trow[0]->reverseOrderedCopyOf(*Tcol[0]);
 
-		Wcol[0] = data.getWmat(0);
-		Wrow[0] = new CoinPackedMatrix();
+		Wcol[0].reset(new CoinPackedMatrix(input.getSecondStageConstraints(0)));
+		Wrow[0].reset(new CoinPackedMatrix());
 		Wrow[0]->reverseOrderedCopyOf(*Wcol[0]);
-
-		int nslacks2 = dims.numSecondStageCons(0);
-		vector<double> slackvals2(nslacks2,-1);
-		vector<int> start2(nslacks2), len2(nslacks2,1), ind2(nslacks2);
-		for (int i = 0; i < nslacks2; i++) { 
-			start2[i] = i;
-			ind2[i] = i;
-		}
-		CoinPackedMatrix slackMat2(true,nslacks2,nslacks2,nslacks2,&slackvals2[0],&ind2[0],&start2[0],&len2[0]);
-		if (appendSlacks) Wcol[0]->rightAppendPackedMatrix(slackMat2);
-
-		CoinPackedMatrix emptyMat(true,nslacks2,nslacks1,0,0,0,&start1[0],&len1[0]);
-		if (appendSlacks) Tcol[0]->rightAppendPackedMatrix(emptyMat);
 
 		for (int i = 1; i < nscen; i++) {
 			Tcol[i] = Tcol[0];
@@ -158,38 +165,18 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : dims(BADimensions(input
 	} else {
 		for (int i = 0; i < nscen; i++) {
 			if (!ctx.assignedScenario(i)) continue;
-			Tcol[i] = data.getTmat(i);
-			Trow[i] = new CoinPackedMatrix();
+			Tcol[i].reset(new CoinPackedMatrix(input.getLinkingConstraints(i)));
+			Trow[i].reset(new CoinPackedMatrix());
 			Trow[i]->reverseOrderedCopyOf(*Tcol[i]);
 
-			Wcol[i] = data.getWmat(i);
-			Wrow[i] = new CoinPackedMatrix();
+			Wcol[i].reset(new CoinPackedMatrix(input.getSecondStageConstraints(i)));
+			Wrow[i].reset(new CoinPackedMatrix());
 			Wrow[i]->reverseOrderedCopyOf(*Wcol[i]);
-
-			int nslacks2 = dims.numSecondStageCons(i);
-			vector<double> slackvals2(nslacks2,-1);
-			vector<int> start2(nslacks2), len2(nslacks2,1), ind2(nslacks2);
-			for (int j = 0; j < nslacks2; j++) { 
-				start2[j] = j;
-				ind2[j] = j;
-			}
-			CoinPackedMatrix slackMat2(true,nslacks2,nslacks2,nslacks2,&slackvals2[0],&ind2[0],&start2[0],&len2[0]);
-			if (appendSlacks) Wcol[i]->rightAppendPackedMatrix(slackMat2);
-
-			CoinPackedMatrix emptyMat(true,nslacks2,nslacks1,0,0,0,&start1[0],&len1[0]);
-			if (appendSlacks) Tcol[i]->rightAppendPackedMatrix(emptyMat);
 		}
 
 	}
 
-	slackbasis = !data.hasStartingBasis();
-	if (!slackbasis) { 
-		stateCol.allocate(dims.inner, ctx, PrimalVector);
-		stateRow.allocate(dims.inner, ctx, DualVector);
-		data.getStartingBasis(stateCol,stateRow);
-	}
 	out1Send.reserve(dims.numFirstStageVars());
-	*/
 
 }
 
@@ -201,11 +188,8 @@ BAData::BAData(const BAData &d) : dims(d.dims.inner), ctx(d.ctx) {
 	vartype.allocate(dims, ctx, PrimalVector);
 	names.allocate(dims, ctx, PrimalVector);
 
-	slackbasis = d.slackbasis;
 	onlyBoundsVary = d.onlyBoundsVary;
 
-	// note that we make a SHALLOW copy of the constraint matrices
-	// this means that d cannot be deleted while this instance is being used
 	Acol = d.Acol;
 	Arow = d.Arow;
 	Tcol = d.Tcol;
@@ -219,39 +203,16 @@ BAData::BAData(const BAData &d) : dims(d.dims.inner), ctx(d.ctx) {
 	vartype.copyFrom(d.vartype);
 	names.copyFrom(d.names);
 
-	if (!slackbasis) { 
-		stateCol.allocate(dims.inner, ctx, PrimalVector);
-		stateRow.allocate(dims.inner, ctx, DualVector);
-		stateCol.copyFrom(d.stateCol);
-		stateRow.copyFrom(d.stateRow);
-	}
-
 	out1Send.reserve(dims.numFirstStageVars());
 
 
 }
 
 BAData::~BAData() {
-	/*
-	delete Acol;
-	delete Arow;
-	int nscen = dims.numScenarios();
-	if (onlyBoundsVary) {
-		delete Tcol[0];
-		delete Trow[0];
-		delete Wcol[0];
-		delete Wrow[0];
-	} else {
-		for (int i = 0; i < nscen; i++) {
-			if (Tcol[i]) {
-				delete Tcol[i];
-				delete Trow[i];
-				delete Wcol[i];
-				delete Wrow[i];
-			}
-		}
-	}*/
+	// shared_ptr handles the deletes
 }
+
+
 // assume v is cleared
 void BAData::getCol(sparseBAVector &v, BAIndex idx) const {
 	int scen = idx.scen;
@@ -262,34 +223,42 @@ void BAData::getCol(sparseBAVector &v, BAIndex idx) const {
 		CoinIndexedVector &v1 = v.getFirstStageVec().v;
 		double *v1Elts = v1.denseVector();
 		int *v1Idx = v1.getIndices();
-		int nnz = 0;
-		const double *AcolElts = Acol->getElements();
-		const int *AcolIdx = Acol->getIndices();
-		CoinBigIndex start = Acol->getVectorFirst(col);
-		CoinBigIndex end = Acol->getVectorLast(col);
-		for (CoinBigIndex q = start; q < end; q++) {
-			int row = AcolIdx[q];
-			v1Elts[row] = AcolElts[q];
-			v1Idx[nnz++] = row;
-		}
-		v1.setNumElements(nnz);
-
-		for (unsigned j = 1; j < localScen.size(); j++) {
-			int s = localScen[j];
-			const double *TcolElts = Tcol[s]->getElements();
-			const int *TcolIdx = Tcol[s]->getIndices();
-			CoinIndexedVector &v2 = v.getSecondStageVec(s).v;
-			double *v2Elts = v2.denseVector();
-			int *v2Idx = v2.getIndices();
-			nnz = 0;
-			start = Tcol[s]->getVectorFirst(col);
-			end = Tcol[s]->getVectorLast(col);
+		int nvarreal = dims.inner.numFirstStageVars();
+		if (col < nvarreal) {
+			int nnz = 0;
+			const double *AcolElts = Acol->getElements();
+			const int *AcolIdx = Acol->getIndices();
+			CoinBigIndex start = Acol->getVectorFirst(col);
+			CoinBigIndex end = Acol->getVectorLast(col);
 			for (CoinBigIndex q = start; q < end; q++) {
-				int row = TcolIdx[q];
-				v2Elts[row] = TcolElts[q];
-				v2Idx[nnz++] = row;
+				int row = AcolIdx[q];
+				v1Elts[row] = AcolElts[q];
+				v1Idx[nnz++] = row;
 			}
-			v2.setNumElements(nnz);
+			v1.setNumElements(nnz);
+
+			for (unsigned j = 1; j < localScen.size(); j++) {
+				int s = localScen[j];
+				const double *TcolElts = Tcol[s]->getElements();
+				const int *TcolIdx = Tcol[s]->getIndices();
+				CoinIndexedVector &v2 = v.getSecondStageVec(s).v;
+				double *v2Elts = v2.denseVector();
+				int *v2Idx = v2.getIndices();
+				nnz = 0;
+				start = Tcol[s]->getVectorFirst(col);
+				end = Tcol[s]->getVectorLast(col);
+				for (CoinBigIndex q = start; q < end; q++) {
+					int row = TcolIdx[q];
+					v2Elts[row] = TcolElts[q];
+					v2Idx[nnz++] = row;
+				}
+				v2.setNumElements(nnz);
+			}
+		} else {
+			int k = col - nvarreal;
+			v1Elts[k] = -1.0;
+			v1Idx[0] = k;
+			v1.setNumElements(1);
 		}
 	
 	} else {
@@ -297,21 +266,30 @@ void BAData::getCol(sparseBAVector &v, BAIndex idx) const {
 		CoinIndexedVector &v2 = v.getSecondStageVec(scen).v;
 		double *v2Elts = v2.denseVector();
 		int *v2Idx = v2.getIndices();
-		const double *WcolElts = Wcol[scen]->getElements();
-		const int *WcolIdx = Wcol[scen]->getIndices();
-		int nnz = 0;
-		CoinBigIndex start = Wcol[scen]->getVectorFirst(col);
-		CoinBigIndex end = Wcol[scen]->getVectorLast(col);
-		for (CoinBigIndex q = start; q < end; q++) {
-			int row = WcolIdx[q];
-			v2Elts[row] = WcolElts[q];
-			v2Idx[nnz++] = row;
+		int nvarreal = dims.inner.numSecondStageVars(scen);
+		if (col < nvarreal) {
+			const double *WcolElts = Wcol[scen]->getElements();
+			const int *WcolIdx = Wcol[scen]->getIndices();
+			int nnz = 0;
+			CoinBigIndex start = Wcol[scen]->getVectorFirst(col);
+			CoinBigIndex end = Wcol[scen]->getVectorLast(col);
+			for (CoinBigIndex q = start; q < end; q++) {
+				int row = WcolIdx[q];
+				v2Elts[row] = WcolElts[q];
+				v2Idx[nnz++] = row;
+			}
+			v2.setNumElements(nnz);
+		} else {
+			int k = col - nvarreal;
+			v2Elts[k] = -1.0;
+			v2Idx[0] = k;
+			v2.setNumElements(1);
 		}
-		v2.setNumElements(nnz);
 	}
 }
 
 void BAData::addColToVec(sparseBAVector &v, BAIndex idx, double mult) const {
+	assert(0); // need to fix handling of slacks
 	int scen = idx.scen;
 	int col = idx.idx;
 	const vector<int> &localScen = v.localScenarios();
@@ -557,44 +535,3 @@ void BAData::multiplyT(const sparseBAVector &in, sparseBAVector &out) const {
 #endif
 }
 
-void BAData::getStartingBasis(BAFlagVector<variableState> &cols, bool &slackbasis) const {
-	
-	slackbasis = this->slackbasis;
-	int nscen = dims.numScenarios();
-	if (slackbasis) {
-		for (int scen = -1; scen < nscen; scen++) {
-			if (!ctx.assignedScenario(scen)) continue;
-			denseFlagVector<variableState> &state = cols.getVec(scen);
-			const denseFlagVector<constraintType> &vartype1 = vartype.getVec(scen);
-			int ncols = dims.inner.numVars(scen);
-			int ncolsSlacks = dims.numVars(scen);
-			for (int i = 0; i < ncols; i++) {
-				if (vartype1[i] != UB) {
-					state[i] = AtLower;
-				} else {
-					state[i] = AtUpper;
-				}
-			}
-			for (int i = ncols; i < ncolsSlacks; i++) {
-				state[i] = Basic;
-			}
-		}
-	}
-	assert(slackbasis);
-	/*else {
-		// already filled stateCol and stateRow
-	
-		int nrows1 = dims.numFirstStageCons();
-		int ncols1 = dims.inner.numFirstStageVars();
-		mergeColAndRow(cols.getFirstStageVec(),stateCol.getFirstStageVec(),stateRow.getFirstStageVec(),nrows1,ncols1);
-
-		for (int i = 0; i < nscen; i++) {
-			if (!ctx.assignedScenario(i)) continue;
-			int nrows2 = dims.numSecondStageCons(i);
-			int ncols2 = dims.inner.numSecondStageVars(i);
-			
-			mergeColAndRow(cols.getSecondStageVec(i),stateCol.getSecondStageVec(i),stateRow.getSecondStageVec(i), nrows2, ncols2);
-		}
-	}*/
-
-}

@@ -22,6 +22,7 @@ int CoinBALPFactorization::factorizeRect (
     int *M1columnIsBasic,
     int *M1rowIsBasic,
     int *M2columnIsBasic,
+    int M2extracolumns,
     double areaFactor )
 {
   // maybe for speed will be better to leave as many regions as possible
@@ -44,7 +45,7 @@ int CoinBALPFactorization::factorizeRect (
   const int * columnLength2 = M2.getVectorLengths(); 
   const double * element2 = M2.getElements();
   int numberRows2=M2.getNumRows();
-  int numberColumns2=M2.getNumCols();
+  int numberColumns2=M2.getNumCols() + M2extracolumns;
 
   assert(numberRows1 == numberRows2);
 
@@ -74,7 +75,7 @@ int CoinBALPFactorization::factorizeRect (
     //printf("%d %d %d %d\n",i, numberColumns2, M2columnIsBasic[i],numberBasic2);
     if (M2columnIsBasic[i]>=0) {
       numberBasic2++;
-      numberElements += columnLength2[i];
+      if (i < M2.getNumCols()) numberElements += columnLength2[i];
     }
   }
   if ( numberBasic1 > numberRows1 ) {
@@ -115,11 +116,13 @@ int CoinBALPFactorization::factorizeRect (
   }
   for (i=0;i<numberColumns2;i++) {
     if (M2columnIsBasic[i]>=0) {
-      CoinBigIndex j;
-      for (j=columnStart2[i];j<columnStart2[i]+columnLength2[i];j++) {
-	indexRowU[numberElements]=row2[j];
-	indexColumnU[numberElements]=numberBasic;
-	elementU[numberElements++]=element2[j];
+      if (i < M2.getNumCols()) {
+        CoinBigIndex j;
+        for (j=columnStart2[i];j<columnStart2[i]+columnLength2[i];j++) {
+	  indexRowU[numberElements]=row2[j];
+	  indexColumnU[numberElements]=numberBasic;
+	  elementU[numberElements++]=element2[j];
+        }
       }
       numberBasic++;
     }
