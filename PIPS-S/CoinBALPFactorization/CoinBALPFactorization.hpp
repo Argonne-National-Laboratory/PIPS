@@ -34,6 +34,7 @@ public:
 		  int *M1columnIsBasic,
 		  int *M1rowIsBasic,
 		  int *M2columnIsBasic,
+		  int M2extracolumns,
 		  double areaFactor = 0.0 );
 
 	// like CoinFactorization, but keep the permutations internal

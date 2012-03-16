@@ -6,12 +6,7 @@
 #include "BA.hpp"
 #include "BAVector.hpp"
 #include "stochasticInput.hpp"
-
-enum constraintType { Free, LB, UB, Range, Fixed };
-
-enum variableState { Basic, AtLower, AtUpper };
-
-
+#include "BALPSolverInterface.hpp"
 
 
 // stores actual problem data
@@ -24,7 +19,6 @@ public:
 	BAData(const BAData&);
 	~BAData();
 
-	void getStartingBasis(BAFlagVector<variableState> &cols, bool &slackbasis) const;
 	void getCol(sparseBAVector &v, BAIndex i) const;
 	void addColToVec(sparseBAVector &v, BAIndex i, double mult) const;
 	
@@ -51,10 +45,9 @@ public:
 	BAContext &ctx;
 
 protected:
-	bool slackbasis;
 	bool onlyBoundsVary;
 	mutable CoinIndexedVector out1Send; // buffer for multiplyT
-	BAFlagVector<variableState> stateCol, stateRow;
+	//BAFlagVector<variableState> stateCol, stateRow;
 
 };
 

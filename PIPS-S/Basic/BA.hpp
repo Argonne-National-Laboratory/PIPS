@@ -111,6 +111,7 @@ protected:
 class BADimensionsSlacks : public BADimensions {
 public:
 	BADimensionsSlacks(const BADimensions &inner) : inner(inner) { }
+	BADimensionsSlacks() {}
 
 	virtual int numScenarios() const { return inner.numScenarios(); }
 	virtual int numFirstStageCons() const { return inner.numFirstStageCons(); }
@@ -118,7 +119,7 @@ public:
 	virtual int numSecondStageVars(int idx) const { return inner.numSecondStageVars(idx) + inner.numSecondStageCons(idx); }
 	virtual int numSecondStageCons(int idx) const { return inner.numSecondStageCons(idx); }
 
-	const BADimensions inner;
+	BADimensions inner;
 };
 
 

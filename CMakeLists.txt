@@ -119,12 +119,13 @@ set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
 #	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 #ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Input)
+include_directories(Input)
+include_directories(SolverInterface)
 
 include_directories(${COINUTILS_INCLUDE_DIRS})
 
 add_subdirectory(Input)
-
+#add_subdirectory(SolverInterface)
 add_subdirectory(PIPS-S)
 
 
