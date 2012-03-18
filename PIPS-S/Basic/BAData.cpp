@@ -1,9 +1,8 @@
 #include "BAData.hpp"
 #include <cmath>
-//#include <boost/bind.hpp>
-//#include <boost/bind/placeholders.hpp>
+#include <boost/bind.hpp>
 
-//using namespace boost;
+using boost::bind; // change to std::bind with C++11
 using namespace std;
 
 template<typename T1, typename T2> static void mergeColAndRow(T1& v, const T2 &col, const T2 &row) {
@@ -16,11 +15,11 @@ template<typename T1, typename T2> static void mergeColAndRow(T1& v, const T2 &c
 
 }
 
-template<typename BAVec, typename Col1, typename Col2, typename Row1, typename Row2> 
-	static void formBAVector(BAVec &v, Col1 c1, Col2 c2, Row1 r1, Row2 r2, const BAContext& ctx) {
+template<typename BAVec, typename T1, typename Col2, typename Row2> 
+	static void formBAVector(BAVec &v, const T1 &c1, Col2 c2, const T1 &r1, Row2 r2, const BAContext& ctx) {
 	
 	const vector<int> localScen = ctx.localScenarios();
-	mergeColAndRow(v.getFirstStageVec(), c1(), r1());
+	mergeColAndRow(v.getFirstStageVec(), c1, r1);
 
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
@@ -29,32 +28,10 @@ template<typename BAVec, typename Col1, typename Col2, typename Row1, typename R
 
 }
 
-// this mess is due to the magic and perveseness of C++
-// try cleaning it up when we can use C++11
-template<typename T> class wrapper1 {
-public:
-	wrapper1(stochasticInput& i, vector<T> (stochasticInput::*fun)()) : i(i), fun(fun) {}
-	vector<T> operator()() { return (i.*fun)(); }
-
-private:
-	stochasticInput &i;
-	vector<T> (stochasticInput::*fun)();
-};
-
-template<typename T> class wrapper2 {
-public:
-	wrapper2(stochasticInput& i, vector<T> (stochasticInput::*fun)(int)) : i(i), fun(fun) {}
-	vector<T> operator()(int k) { return (i.*fun)(k); }
-
-private:
-	stochasticInput &i;
-	vector<T> (stochasticInput::*fun)(int);
-};
-
+// use a lambda for this when we can use C++11
 class emptyRowVector {
 public:
 	emptyRowVector(stochasticInput &i) : i(i) {}
-	vector<double> operator()() { return vector<double>(i.nFirstStageCons(),0.0); }
 	vector<double> operator()(int s) { return vector<double>(i.nSecondStageCons(s),0.0); }
 
 private:
@@ -100,39 +77,26 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 	vartype.allocate(dims, ctx, PrimalVector);
 	names.allocate(dims, ctx, PrimalVector);
 
-	
-	/*
-	// these two cause compiler barfs
-	formBAVector(l, bind1st(mem_fun(&stochasticInput::getFirstStageColLB),&input),
-			bind1st(mem_fun(&stochasticInput::getSecondStageColLB),&input),
-			bind1st(mem_fun(&stochasticInput::getFirstStageRowLB),&input),
-			bind1st(mem_fun(&stochasticInput::getSecondStageRowLB),&input),ctx);
-	
-	
-	formBAVector(l, bind(&stochasticInput::getFirstStageColLB,&input,_1),
+
+	formBAVector(l, input.getFirstStageColLB(),
 			bind(&stochasticInput::getSecondStageColLB,&input,_1),
-			bind(&stochasticInput::getFirstStageRowLB,&input,_1),
+			input.getFirstStageRowLB(),
 			bind(&stochasticInput::getSecondStageRowLB,&input,_1),ctx);
-	*/
 
-	formBAVector(l, wrapper1<double>(input,&stochasticInput::getFirstStageColLB),
-			wrapper2<double>(input,&stochasticInput::getSecondStageColLB),
-			wrapper1<double>(input,&stochasticInput::getFirstStageRowLB),
-			wrapper2<double>(input,&stochasticInput::getSecondStageRowLB),ctx);
-	
-	formBAVector(u, wrapper1<double>(input,&stochasticInput::getFirstStageColUB),
-			wrapper2<double>(input,&stochasticInput::getSecondStageColUB),
-			wrapper1<double>(input,&stochasticInput::getFirstStageRowUB),
-			wrapper2<double>(input,&stochasticInput::getSecondStageRowUB),ctx);
+	formBAVector(u, input.getFirstStageColUB(),
+			bind(&stochasticInput::getSecondStageColUB,&input,_1),
+			input.getFirstStageRowUB(),
+			bind(&stochasticInput::getSecondStageRowUB,&input,_1),ctx);
 
-	formBAVector(c, wrapper1<double>(input,&stochasticInput::getFirstStageObj),
-			wrapper2<double>(input,&stochasticInput::getSecondStageObj),
-			emptyRowVector(input), emptyRowVector(input), ctx);
-	
-	formBAVector(names, wrapper1<string>(input,&stochasticInput::getFirstStageColNames),
-			wrapper2<string>(input,&stochasticInput::getSecondStageColNames),
-			wrapper1<string>(input,&stochasticInput::getFirstStageRowNames),
-			wrapper2<string>(input,&stochasticInput::getSecondStageRowNames),ctx);
+	formBAVector(c, input.getFirstStageObj(),
+			bind(&stochasticInput::getSecondStageObj,&input,_1),
+			vector<double>(input.nFirstStageCons(),0.0),
+			emptyRowVector(input), ctx);
+
+	formBAVector(names, input.getFirstStageColNames(),
+			bind(&stochasticInput::getSecondStageColNames,&input,_1),
+			input.getFirstStageRowNames(),
+			bind(&stochasticInput::getSecondStageRowNames,&input,_1),ctx);
 
 	for (unsigned i = 0; i < localScen.size(); i++) {
 		int scen = localScen[i];
