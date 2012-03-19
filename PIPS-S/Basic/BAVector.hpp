@@ -271,6 +271,7 @@ public:
 		vec2.resize(nScen);
 		if (t == PrimalVector) {
 			vec1 = new denseFlagVector<T>(dims.numFirstStageVars());
+			printf("CAPACITY %d\n",dims.numFirstStageVars());
 		} else {
 			vec1 = new denseFlagVector<T>(dims.numFirstStageCons());
 		}

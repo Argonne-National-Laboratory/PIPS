@@ -9,9 +9,8 @@ class BALPSolverDual;
 
 // public interface to the solver
 // handles switching between primal/dual solvers to clean up infeasibilities
-class PIPSSInterface : public BALPSolverInterface {
+class PIPSSInterface : public BALPSolverInterface<PIPSSInterface> {
 public:
-	enum solveType { usePrimal, useDual };
 	PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t);
 	PIPSSInterface(const BAData &d, solveType t);
 	~PIPSSInterface();
@@ -33,23 +32,26 @@ public:
 	//const denseBAVector& getPrimalSolution() const { return solver->getPrimalSolution(); }
 	std::vector<double> getFirstStagePrimalColSolution() const;
 
-	virtual void setFirstStageColState(int idx,variableState s); 
-	virtual void setFirstStageRowState(int idx,variableState);
-	virtual void setSecondStageColState(int scen, int idx,variableState);
-	virtual void setSecondStageRowState(int scen, int idx,variableState);
-	virtual void commitStates(); 
+	void setFirstStageColState(int idx,variableState s); 
+	void setFirstStageRowState(int idx,variableState);
+	void setSecondStageColState(int scen, int idx,variableState);
+	void setSecondStageRowState(int scen, int idx,variableState);
+	void commitStates(); 
 
-	virtual variableState getFirstStageColState(int idx) const;
-	virtual variableState getFirstStageRowState(int idx) const;
-	virtual variableState getSecondStageColState(int scen, int idx) const;
-	virtual variableState getSecondStageRowState(int scen, int idx) const;
+	variableState getFirstStageColState(int idx) const;
+	variableState getFirstStageRowState(int idx) const;
+	variableState getSecondStageColState(int scen, int idx) const;
+	variableState getSecondStageRowState(int scen, int idx) const;
+	
+	// override default
+	void setStates(const BAFlagVector<variableState> &s) { solver->setStates(s); }
 
 	// will dump current status every d iterations. zero to disable.
 	void setDumpFrequency(int d, const std::string &outputname) { solver->setDumpFrequency(d,outputname); }
 
 protected:
-	void setStates(const BAFlagVector<variableState> &s) { solver->setStates(s); }
-	const BAFlagVector<variableState>& getStates() const { return solver->getStates(); }
+	const BAFlagVector<variableState>& getStatesRef() const { return solver->getStates(); }
+	const BADimensions& getDims() const { return d.dims.inner; }
 	
 	BALPSolverBase *solver;
 	BAData d;
