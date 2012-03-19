@@ -125,7 +125,7 @@ include_directories(SolverInterface)
 include_directories(${COINUTILS_INCLUDE_DIRS})
 
 add_subdirectory(Input)
-#add_subdirectory(SolverInterface)
+add_subdirectory(SolverInterface)
 add_subdirectory(PIPS-S)
 
 

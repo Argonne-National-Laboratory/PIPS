@@ -4,7 +4,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <cstdlib>
 
-using boost::scoped_ptr; // replace with unique_ptr
+using boost::scoped_ptr; // replace with unique_ptr for C++11
 using namespace std;
 
 int main(int argc, char **argv) {

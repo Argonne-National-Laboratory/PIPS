@@ -1209,7 +1209,7 @@ void BALPSolverDual::makeFeasible() {
 		status = ProvenUnbounded; return;
 	}
 	// degeneracy in the solution could lead to invalid states, should check for this.
-	setStates(lp2.getStates());
+	setStates(lp2.getStatesRef());
 	initialize();
 
 }
@@ -1318,7 +1318,7 @@ void BALPSolverDual::writeStatus(const string &filebase, bool appendIterateNumbe
 		// first-stage is 0, second-stage uses 1-based indices
 		ss2 << s << scen+1;
 		//ofstream f(ss2.str().c_str(), writeBasisOnly ? ios_base::out : ios_base::binary);
-		ofstream f(ss2.str().c_str(), ios_base::binary);
+		ofstream f(ss2.str().c_str());
 		const denseVector &dse1 = dse.getVec(scen);
 		const vector<int> basicIdx1 = basicIdx.getVec(scen);
 		int nbasicThis = 0;
