@@ -144,8 +144,15 @@ void ClpBALPInterface::go() {
 	ClpSolve solvectl;
 	// disable presolve also for a fair comparison, and to make sure we get a valid basis as the solution
 	solvectl.setPresolveType(ClpSolve::presolveOff);
-	if (t == usePrimal) solvectl.setSolveType(ClpSolve::usePrimal);
-	else solvectl.setSolveType(ClpSolve::useDual);
+	
+	// specifying these just confuses Clp, let it choose by itself
+	/*
+	if (t == usePrimal) {
+		solvectl.setSolveType(ClpSolve::usePrimal);
+	} else {
+		solvectl.setSolveType(ClpSolve::useDual);
+	}*/
+
 
 	model.initialSolve(solvectl);
 
@@ -413,6 +420,7 @@ void ClpBALPInterface::loadStatus(const std::string &filebase) {
 	
 	int roffset = ncons1;
 	int coffset = nvar1real;
+	string line;
 
 	for (int k = 0; k < nscen; k++) {
 		stringstream fname;
@@ -420,15 +428,16 @@ void ClpBALPInterface::loadStatus(const std::string &filebase) {
 		ifstream f(fname.str().c_str());
 		f.exceptions(ifstream::failbit | ifstream::badbit);
 		int nbasicThis, r;
-		f >> nbasicThis;
-		double w;
+		getline(f,line);
+		assert(line.find("BasisOnly") != string::npos);
+		istringstream iss(line);
+		iss >> nbasicThis;
 		string status;
 		int nvar2real = dims.numSecondStageVars(k);
 		int ncons2 = dims.numSecondStageCons(k);
 		for (int i = 0; i < nvar2real; i++) {
 			f >> r;
 			f >> status;
-			f >> w;
 			assert(r == i);
 			model.setColumnStatus(r+coffset, statusFromString(status));
 
@@ -436,7 +445,6 @@ void ClpBALPInterface::loadStatus(const std::string &filebase) {
 		for (int i = 0; i < ncons2; i++) {
 			f >> r;
 			f >> status;
-			f >> w;
 			assert(r == i + nvar2real);
 			model.setRowStatus(i+roffset, statusFromString(status));
 		}
@@ -451,13 +459,15 @@ void ClpBALPInterface::loadStatus(const std::string &filebase) {
 	f.exceptions(ifstream::failbit | ifstream::badbit);
 
 	int nbasicThis, r;
-	f >> nbasicThis;
-	double w;
+	getline(f,line);
+	assert(line.find("BasisOnly") != string::npos);
+	istringstream iss(line);
+	iss >> nbasicThis;
+
 	string status;
 	for (int i = 0; i < nvar1real; i++) {
 		f >> r;
 		f >> status;
-		f >> w;
 		assert(r == i);
 		model.setColumnStatus(i, statusFromString(status));
 
@@ -465,7 +475,6 @@ void ClpBALPInterface::loadStatus(const std::string &filebase) {
 	for (int i = 0; i < ncons1; i++) {
 		f >> r;
 		f >> status;
-		f >> w;
 		assert(r == i + nvar1real);
 		model.setRowStatus(i, statusFromString(status));
 	}

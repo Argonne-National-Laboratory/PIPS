@@ -36,7 +36,8 @@ set(AMPL_DIR ${SHARED_DIR}/amplsolvers)
 
 # include CoinUtils
 #set(COIN_DIR ${Simplex_SOURCE_DIR}/CoinUtils-2.8.0)
-set(COIN_DIR ${SHARED_DIR}/Clp-1.14)
+#set(COIN_DIR ${SHARED_DIR}/Clp-1.14)
+set(COIN_DIR ${SHARED_DIR}/Cbc-2.7.6)
 
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in Clp-1.14")

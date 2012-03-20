@@ -1342,13 +1342,13 @@ void BALPSolverDual::writeStatus(const string &filebase, bool appendIterateNumbe
 		for (int i = 0; i < nvar; i++) {
 			f << i;
 			if (states1[i] == Basic) {
-				f << " Basic ";
+				f << " Basic";
 			} else if (states1[i] == AtLower) {
-				f << " AtLower ";
+				f << " AtLower";
 			} else { 
-				f << " AtUpper ";
+				f << " AtUpper";
 			}
-			if (!writeBasisOnly) f << tmpDse[i] << " " << l1[i] << " " << u1[i] << " " << c1[i];
+			if (!writeBasisOnly) f << " " << tmpDse[i] << " " << l1[i] << " " << u1[i] << " " << c1[i];
 			f << "\n";
 		}
 		f.close();

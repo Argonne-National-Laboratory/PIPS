@@ -35,14 +35,14 @@ public:
 	}
 
 
-	virtual void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
+	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
 		assert(this->dims == 0);
 		vecType = t;
 		nScen = dims.numScenarios();
 		vec2.resize(nScen);
 		this->dims = &dims;
 		this->ctx = &ctx;
-		localScen.reserve(nScen+1); // reduce this in the future
+		localScen.reserve(10); 
 		localScen.push_back(-1);
 		if (t == PrimalVector) {
 			vec1.allocate(dims.numFirstStageVars());
@@ -70,9 +70,9 @@ public:
 
 	}
 
-	virtual bool allocated() const { return (dims != 0); }
+	bool allocated() const { return (dims != 0); }
 
-	virtual void divideBy(double d) {
+	void divideBy(double d) {
 		assert(vecType == BasicVector); 
 		vec1.divideBy(d);
 		for (int i = 0; i < nScen; i++) {
@@ -80,7 +80,7 @@ public:
 		}
 	}
 
-	virtual void multiplyBy(double d) {
+	void multiplyBy(double d) {
 		assert(vecType == BasicVector);
 		vec1.multiplyBy(d);
 		for (int i = 0; i < nScen; i++) {
@@ -91,14 +91,14 @@ public:
 	// this could use some rethinking
 	// if we're basic and call negate, do we actually
 	// want to negate all vectors or only local vectors?
-	virtual void negate() {
+	void negate() {
 		vec1.negate();
 		for (int i = 0; i < nScen; i++) {
 			if (vec2[i]) vec2[i]->negate();
 		}
 	}
 
-	virtual void clear() {
+	void clear() {
 		vec1.clear();
 		for (int i = 0; i < nScen; i++) {
 			if (vec2[i]) vec2[i]->clear();
@@ -106,7 +106,7 @@ public:
 	}
 
 
-	virtual double dotWithSelf() const {
+	double dotWithSelf() const {
 		double d = 0;
 		for (unsigned i = 1; i < localScen.size(); i++) {
 			d += vec2[localScen[i]]->dotWithSelf();
@@ -175,7 +175,7 @@ public:
 
 	
 
-	virtual double dotWith(const denseBAVector &v) {
+	double dotWith(const denseBAVector &v) {
 		double dot = 0;
 		for (unsigned i = 1; i < localScen.size(); i++) {
 			int idx = localScen[i];
@@ -217,15 +217,6 @@ public:
 		}
 	}
 	
-	
-	virtual void copyFrom(const sparseBAVector &r) { 
-		assert(0);
-		/*assert(r.vecType == BasicVector);
-		for (int scen = -1; scen < nScen; scen++) {
-			getVec(scen).v = r.getVec(scen).v;
-		}*/
-	
-	}
 
 	void checkClean() {
 		assert(vecType == BasicVector);
@@ -271,7 +262,6 @@ public:
 		vec2.resize(nScen);
 		if (t == PrimalVector) {
 			vec1 = new denseFlagVector<T>(dims.numFirstStageVars());
-			printf("CAPACITY %d\n",dims.numFirstStageVars());
 		} else {
 			vec1 = new denseFlagVector<T>(dims.numFirstStageCons());
 		}
@@ -325,7 +315,7 @@ public:
 
 	bool hasScenario(int i) const { if (i == -1) return true; else return (vec2[i] != 0); }
 
-	virtual void copyFrom(const BAFlagVector<T> &r) {
+	void copyFrom(const BAFlagVector<T> &r) {
 		vec1->copyFrom(r.getFirstStageVec());
 		for (int scen = 0; scen < nScen; scen++) {
 			if (vec2[scen]) vec2[scen]->copyFrom(r.getSecondStageVec(scen));
@@ -357,7 +347,7 @@ public:
 		allocate(dims,ctx,t);
 	}
 
-	virtual void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
+	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
 		assert(this->dims == 0);
 		vecType = t;
 		nScen = dims.numScenarios();
@@ -387,7 +377,7 @@ public:
 
 	}
 
-	virtual void clear() {
+	void clear() {
 		vec1.clear();
 		for (unsigned i = 1; i < localScen.size(); i++) {
 			vec2[localScen[i]].clear();
