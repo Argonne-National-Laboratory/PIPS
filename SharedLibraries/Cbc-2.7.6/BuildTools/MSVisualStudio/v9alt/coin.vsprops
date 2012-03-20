@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="coin"
+	OutputDirectory="$(CoinRoot)\$(PlatformName)\$(ConfigurationName)"
+	IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		AdditionalIncludeDirectories="&quot;$(BuildToolsIncludeDir)&quot;"
+		PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;_CRT_SECURE_NO_WARNINGS"
+		RuntimeLibrary="2"
+	/>
+	<Tool
+		Name="VCLibrarianTool"
+		AdditionalLibraryDirectories="$(CoinLibDir)"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		ShowProgress="2"
+		AdditionalLibraryDirectories=""
+		GenerateDebugInformation="true"
+	/>
+	<UserMacro
+		Name="CoinRoot"
+		Value="%COIN_ROOT%"
+	/>
+	<UserMacro
+		Name="CoinBinDir"
+		Value="$(CoinRoot)\$(PlatformName)\$(ConfigurationName)\bin"
+	/>
+	<UserMacro
+		Name="CoinLibDir"
+		Value="$(CoinRoot)\$(PlatformName)\$(ConfigurationName)\lib"
+	/>
+	<UserMacro
+		Name="BuildToolsIncludeDir"
+		Value="$(CoinRoot)\BuildTools\headers"
+	/>
+	<UserMacro
+		Name="CoinRootEscaped"
+		Value="%COIN_ROOT_ESCAPED%"
+	/>
+</VisualStudioPropertySheet>

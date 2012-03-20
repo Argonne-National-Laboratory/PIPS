@@ -863,14 +863,14 @@ void BALPSolverPrimal::writeStatus(const string &filebase, bool appendIterateNum
 		for (int i = 0; i < nvar; i++) {
 			f << fixed << i;
 			if (states1[i] == Basic) {
-				f << " Basic ";
+				f << " Basic";
 			} else if (states1[i] == AtLower) {
-				f << " AtLower ";
+				f << " AtLower";
 			} else { 
-				f << " AtUpper ";
+				f << " AtUpper";
 			}
 			if (!writeBasisOnly) {
-				f << scientific << 1.0 << " " << l1[i] << " " << u1[i] << " " << c1[i];
+				f << " " << scientific << 1.0 << " " << l1[i] << " " << u1[i] << " " << c1[i];
 			}
 			f << "\n";
 			

@@ -1,0 +1,42 @@
+#!/bin/sh
+
+set -e
+
+wgetcmd=wget
+wgetcount=`which wget 2>/dev/null | wc -l`
+if test ! $wgetcount = 1; then
+  echo "Utility wget not found in your PATH."
+  if test `uname` = Darwin; then
+    wgetcmd=ftp
+    echo "Using ftp command instead."
+  else
+    exit -1
+  fi
+fi
+
+echo " "
+echo "Running script for downloading the source code for BLAS"
+echo " "
+
+rm -f blas.tgz
+
+echo "Downloading the source code from www.netlib.org..."
+$wgetcmd ftp://www.netlib.org/blas/blas.tgz
+
+echo "Uncompressing the tarball..."
+gunzip -f blas.tgz
+
+echo "Unpacking the source code..."
+tar xf blas.tar
+
+echo "Deleting the tar file..."
+rm blas.tar
+
+echo "Moving the source files from BLAS subdirectory"
+mv BLAS/*.f .
+rm -rf BLAS
+
+echo " "
+echo "Done downloading the source code for BLAS."
+echo " "
+

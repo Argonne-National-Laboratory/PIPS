@@ -1,0 +1,34 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="UserMacros">
+    <CoinRoot>$(COIN_ROOT)</CoinRoot>
+    <CoinBinDir>$(CoinRoot)\$(Platform)\$(Configuration)\bin</CoinBinDir>
+    <CoinLibDir>$(CoinRoot)\$(Platform)\$(Configuration)\lib</CoinLibDir>
+    <BuildToolsIncludeDir>$(CoinRoot)\BuildTools\headers</BuildToolsIncludeDir>
+    <CoinRootEscaped>$(COIN_ROOT_ESCAPED)</CoinRootEscaped>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir>$(CoinRoot)\$(PlatformName)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectName)\$(PlatformName)\$(Configuration)\</IntDir>
+    <IncludePath>$(BuildToolsIncludeDir);$(IncludePath)</IncludePath>
+    <LibraryPath>$(CoinLibDir);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <BuildMacro Include="CoinRoot">
+      <Value>$(CoinRoot)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CoinBinDir">
+      <Value>$(CoinBinDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CoinLibDir">
+      <Value>$(CoinLibDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="BuildToolsIncludeDir">
+      <Value>$(BuildToolsIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CoinRootEscaped">
+      <Value>$(CoinRootEscaped)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

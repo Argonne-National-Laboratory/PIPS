@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="cglbase"
+	InheritedPropertySheets="$(COIN_ROOT)\BuildTools\MSVisualStudio\v9alt\coin.vsprops;$(CoinRoot)\Osi\Osi\MSVisualStudio\v9alt\osi.vsprops"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		AdditionalIncludeDirectories="&quot;$(CglBaseIncludeDir)&quot;"
+	/>
+	<Tool
+		Name="VCLibrarianTool"
+		AdditionalLibraryDirectories=""
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		AdditionalDependencies="libCglBase.lib"
+		AdditionalLibraryDirectories=""
+	/>
+	<UserMacro
+		Name="CglBaseIncludeDir"
+		Value="$(CoinRoot)\Cgl\Cgl\src"
+	/>
+</VisualStudioPropertySheet>

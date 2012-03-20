@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(CoinRoot)\Cgl\Cgl\MSVisualStudio\v10alt\cglbase.props" Condition=" '$(Have_CglBase_Props)' != 'yes' " />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <Have_CglBase_Props>yes</Have_CglBase_Props>
+    <CglBaseIncludeDir>$(CoinRoot)\Cgl\Cgl\src</CglBaseIncludeDir>
+    <CglAllDifferentIncludeDir>$(CglBaseIncludeDir)\CglAllDifferent</CglAllDifferentIncludeDir>
+    <CglCliqueIncludeDir>$(CglBaseIncludeDir)\CglClique</CglCliqueIncludeDir>
+    <CglDuplicateRowIncludeDir>$(CglBaseIncludeDir)\CglDuplicateRow</CglDuplicateRowIncludeDir>
+    <CglFlowCoverIncludeDir>$(CglBaseIncludeDir)\CglFlowCover</CglFlowCoverIncludeDir>
+    <CglGomoryIncludeDir>$(CglBaseIncludeDir)\CglGomory</CglGomoryIncludeDir>
+    <CglKnapsackCoverIncludeDir>$(CglBaseIncludeDir)\CglKnapsackCover</CglKnapsackCoverIncludeDir>
+    <CglLandPIncludeDir>$(CglBaseIncludeDir)\CglLandP</CglLandPIncludeDir>
+    <CglLiftAndProjectIncludeDir>$(CglBaseIncludeDir)\CglLiftAndProject</CglLiftAndProjectIncludeDir>
+    <CglMixedIntegerRoundingIncludeDir>$(CglBaseIncludeDir)\CglMixedIntegerRounding</CglMixedIntegerRoundingIncludeDir>
+    <CglMixedIntegerRounding2IncludeDir>$(CglBaseIncludeDir)\CglMixedIntegerRounding2</CglMixedIntegerRounding2IncludeDir>
+    <CglOddHoleIncludeDir>$(CglBaseIncludeDir)\CglOddHole</CglOddHoleIncludeDir>
+    <CglPreProcessIncludeDir>$(CglBaseIncludeDir)\CglPreProcess</CglPreProcessIncludeDir>
+    <CglProbingIncludeDir>$(CglBaseIncludeDir)\CglProbing</CglProbingIncludeDir>
+    <CglRedSplitIncludeDir>$(CglBaseIncludeDir)\CglRedSplit</CglRedSplitIncludeDir>
+    <CglResidualCapacityIncludeDir>$(CglBaseIncludeDir)\CglResidualCapacity</CglResidualCapacityIncludeDir>
+    <CglSimpleRoundingIncludeDir>$(CglBaseIncludeDir)\CglSimpleRounding</CglSimpleRoundingIncludeDir>
+    <CglTwomirIncludeDir>$(CglBaseIncludeDir)\CglTwomir</CglTwomirIncludeDir>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(CglBaseIncludeDir);$(CglAllDifferentIncludeDir);$(CglCliqueIncludeDir);$(CglDuplicateRowIncludeDir);$(CglFlowCoverIncludeDir);$(CglGomoryIncludeDir);$(CglKnapsackCoverIncludeDir);$(CglLandPIncludeDir);$(CglLiftAndProjectIncludeDir);$(CglMixedIntegerRoundingIncludeDir);$(CglMixedIntegerRounding2IncludeDir);$(CglOddHoleIncludeDir);$(CglPreProcessIncludeDir);$(CglProbingIncludeDir);$(CglRedSplitIncludeDir);$(CglResidualCapacityIncludeDir);$(CglSimpleRoundingIncludeDir);$(CglTwomirIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>libCglBase.lib;libCglAllDifferent.lib;libCglClique.lib;libCglDuplicateRow.lib;libCglFlowCover.lib;libCglGomory.lib;libCglKnapsackCover.lib;libCglLandP.lib;libCglLiftAndProject.lib;libCglMixedIntegerRounding.lib;libCglMixedIntegerRounding2.lib;libCglOddHole.lib;libCglPreProcess.lib;libCglProbing.lib;libCglRedSplit.lib;libCglResidualCapacity.lib;libCglSimpleRounding.lib;libCglTwomir.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="CglBaseIncludeDir">
+      <Value>$(CglBaseIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglAllDifferentIncludeDir">
+      <Value>$(CglAllDifferentIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglCliqueIncludeDir">
+      <Value>$(CglCliqueIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglDuplicateRowIncludeDir">
+      <Value>$(CglDuplicateRowIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglFlowCoverIncludeDir">
+      <Value>$(CglFlowCoverIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglGomoryIncludeDir">
+      <Value>$(CglGomoryIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglKnapsackCoverIncludeDir">
+      <Value>$(CglKnapsackCoverIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglLandPIncludeDir">
+      <Value>$(CglLandPIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglLiftAndProjectIncludeDir">
+      <Value>$(CglLiftAndProjectIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglMixedIntegerRoundingIncludeDir">
+      <Value>$(CglMixedIntegerRoundingIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglMixedIntegerRounding2IncludeDir">
+      <Value>$(CglMixedIntegerRounding2IncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglOddHoleIncludeDir">
+      <Value>$(CglOddHoleIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglPreProcessIncludeDir">
+      <Value>$(CglPreProcessIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglProbingIncludeDir">
+      <Value>$(CglProbingIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglRedSplitIncludeDir">
+      <Value>$(CglRedSplitIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglResidualCapacityIncludeDir">
+      <Value>$(CglResidualCapacityIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglSimpleRoundingIncludeDir">
+      <Value>$(CglSimpleRoundingIncludeDir)</Value>
+    </BuildMacro>
+    <BuildMacro Include="CglTwomirIncludeDir">
+      <Value>$(CglTwomirIncludeDir)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>
