@@ -47,6 +47,7 @@ set(ENV{PKG_CONFIG_PATH} ${COIN_DIR}/lib/pkgconfig)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(COINUTILS REQUIRED coinutils)
 pkg_check_modules(CLP REQUIRED clp)
+pkg_check_modules(CBC REQUIRED cbc)
 find_library(CLP_LIB NAMES libClp.a Clp HINTS ${CLP_LIBRARY_DIRS})
 set(COIN_LIBS "")
 foreach(f ${COINUTILS_LIBRARIES})
@@ -59,6 +60,13 @@ endforeach(f)
 #message(STATUS "${COIN_LIBS}")
 
 
+find_library(CBCSolver_LIB NAMES libCbcSolver.a CbcSolver HINTS ${CBC_LIBRARY_DIRS})
+find_library(CBC_LIB NAMES libCbc.a Cbc HINTS ${CBC_LIBRARY_DIRS})
+find_library(OSICLP_LIB NAMES libOsiClp.a OsiClp HINTS ${CBC_LIBRARY_DIRS})
+find_library(OSI_LIB NAMES libOsi.a Osi HINTS ${CBC_LIBRARY_DIRS})
+find_library(CGL_LIB NAMES libCgl.a Cgl HINTS ${CBC_LIBRARY_DIRS})
+
+set(CBC_LIBS ${CBCSolver_LIB} ${CBC_LIB} ${CGL_LIB} ${OSICLP_LIB} ${OSI_LIB})
 
 find_library(AMPL_LIBRARY NAMES amplsolver.a PATHS ${AMPL_DIR})
 find_library(SML_LIBRARY NAMES libsml.a PATHS ${SML_DIR}/lib)
@@ -128,6 +136,7 @@ include_directories(${COINUTILS_INCLUDE_DIRS})
 add_subdirectory(Input)
 add_subdirectory(SolverInterface)
 add_subdirectory(PIPS-S)
+add_subdirectory(LagrangeBnC)
 
 
 #if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 

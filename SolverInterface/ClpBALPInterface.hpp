@@ -37,6 +37,10 @@ public:
 	variableState getSecondStageColState(int scen, int idx) const;
 	variableState getSecondStageRowState(int scen, int idx) const;
 
+	// add row that preserves block-angular structure
+	// e.g. lb <= elts1*x + elts2*y_i <= ub
+	void addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
+
 protected:
 	ClpSimplex model;
 	BADimensions dims;
