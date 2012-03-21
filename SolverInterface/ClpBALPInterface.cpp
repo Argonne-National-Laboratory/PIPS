@@ -14,7 +14,8 @@ template<typename T1, typename T2> static void concatenateAll(stochasticInput &d
 		out[k] = arr1[k];
 	}
 	unsigned r = arr1.size();
-	for (int i = 0; i < data.nScenarios(); i++) {
+	int nscen = data.nScenarios();
+	for (int i = 0; i < nscen; i++) {
 		const T2& arr2 = (data.*second)(i);
 		for (unsigned k = 0; k < arr2.size(); k++) {
 			out[r++] = arr2[k];
@@ -54,6 +55,7 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 	double const *Aelts = Amat.getElements();
 	int const nFirstStageVars = input.nFirstStageVars();
 	int const nFirstStageCons = input.nFirstStageCons();
+	CoinPackedMatrix const &Tmat0 = input.getLinkingConstraints(ctx.localScenarios().at(1));
 
 	for (int c = 0; c < nFirstStageVars; c++) {
 		starts[c] = nnz;
@@ -65,7 +67,8 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 		}
 		int rowOffset = nFirstStageCons;
 		for (int scen = 0; scen < nScenarios; scen++) {
-			CoinPackedMatrix const &Tmat = input.getLinkingConstraints(scen);
+			// this could be very inefficient if we make another copy of the T matrix for each column
+			CoinPackedMatrix const &Tmat = (input.onlyBoundsVary()) ? Tmat0 : input.getLinkingConstraints(scen);
 			int const *Tidx = Tmat.getIndices();
 			double const *Telts = Tmat.getElements();
 			start = Tmat.getVectorFirst(c);
@@ -478,5 +481,37 @@ void ClpBALPInterface::loadStatus(const std::string &filebase) {
 		assert(r == i + nvar1real);
 		model.setRowStatus(i, statusFromString(status));
 	}
+
+}
+
+
+void ClpBALPInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
+	
+	vector<double> elts;
+	vector<int> idx;
+	
+	int nvar1 = dims.numFirstStageVars();
+	assert(elts1.size() == static_cast<unsigned>(nvar1));
+
+	for (int i = 0; i < nvar1; i++) {
+		if (elts1[i]) {
+			elts.push_back(elts1[i]);
+			idx.push_back(i);
+		}
+	}
+	int nvar2 = dims.numSecondStageVars(scen);
+	assert(elts2.size() == static_cast<unsigned>(nvar2));
+
+	int offset = nvar1;
+	for (int i = 0; i < scen; i++) offset += dims.numSecondStageVars(i);
+
+	for (int i = 0; i < nvar2; i++) {
+		if (elts2[i]) {
+			elts.push_back(elts2[i]);
+			idx.push_back(offset+i);
+		}
+	}
+
+	model.addRow(elts.size(),&idx[0],&elts[0],lb,ub);
 
 }

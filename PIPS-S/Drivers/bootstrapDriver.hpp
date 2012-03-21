@@ -80,7 +80,7 @@ template <typename SolverInterface> void bootstrapDriver(const std::string &data
 	assert(Tmat.getNumCols() == nvar1real);
 	for (int scen = nscenIn; scen < nscen; scen++) {
 		if (!ctx.assignedScenario(scen)) continue;
-		vector<double> Tx(ncons2), lb(ncons2), ub(ncons2);
+		vector<double> Tx(ncons2);
 		Tmat.times(&firstStageSol[0],&Tx[0]);
 		const vector<double> &collb = s->getSecondStageColLB(scen),
 			&colub = s->getSecondStageColUB(scen),

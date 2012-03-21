@@ -93,7 +93,6 @@ template <typename Derived> void BALPSolverInterface<Derived>::getStates(BAFlagV
 		s1[i] = static_cast<Derived*>(this)->getFirstStageColState(i);
 	}
 	for (int i = 0; i < ncons1; i++) {
-		printf("var: %d cons: %d acc: %d\n",nvar1, ncons1, i+nvar1);
 		s1[i+nvar1] = static_cast<Derived*>(this)->getFirstStageRowState(i);
 	}
 	for (int scen = 0; scen < nscen; scen++) {
