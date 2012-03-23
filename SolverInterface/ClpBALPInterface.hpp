@@ -21,6 +21,7 @@ public:
 
 	void setPrimalTolerance(double val) { model.setCurrentPrimalTolerance(val); }
 	void setDualTolerance(double val) { model.setCurrentDualTolerance(val); }
+	void setDualObjectiveLimit(double val) { model.setDualObjectiveLimit(val); }
 	double getObjective() const { return model.objectiveValue(); }
 	solverState getStatus() const;
 
@@ -40,6 +41,9 @@ public:
 	// add row that preserves block-angular structure
 	// e.g. lb <= elts1*x + elts2*y_i <= ub
 	void addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
+
+	void setFirstStageColLB(int idx, double newLb);
+	void setFirstStageColUB(int idx, double newUb);
 
 protected:
 	ClpSimplex model;

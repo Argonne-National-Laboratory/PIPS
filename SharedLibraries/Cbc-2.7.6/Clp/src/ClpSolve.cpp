@@ -936,7 +936,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
                if (numberInfeasibilities) {
                     handler_->message(CLP_INFEASIBLE, messages_)
                               << CoinMessageEol;
-                    CoinMemcpyN(saveLower, numberColumns_, model2->columnLower());
+                    // should check infeasibleReturn here! -Miles
+		    CoinMemcpyN(saveLower, numberColumns_, model2->columnLower());
                     CoinMemcpyN(saveLower + numberColumns_, numberRows_, model2->rowLower());
                     delete [] saveLower;
                     saveLower = NULL;
@@ -944,6 +945,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     CoinMemcpyN(saveUpper + numberColumns_, numberRows_, model2->rowUpper());
                     delete [] saveUpper;
                     saveUpper = NULL;
+		    if (options.infeasibleReturn()) {
+		    	problemStatus_ = 1;
+		    	return -1;
+		    }
                }
           }
 #ifndef COIN_HAS_VOL
