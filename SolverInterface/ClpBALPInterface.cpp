@@ -31,7 +31,7 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 	// This disables Clp's internal rescaling of the problem.
 	// We do this for a fair comparison with PIPS-S.
 	// Uncomment for improved performance.
-	model.scaling(0);
+	//model.scaling(0);
 
 	int const totalVar = dims.totalVars();
 	int const totalCons = dims.totalCons();
@@ -147,6 +147,7 @@ void ClpBALPInterface::go() {
 	ClpSolve solvectl;
 	// disable presolve also for a fair comparison, and to make sure we get a valid basis as the solution
 	solvectl.setPresolveType(ClpSolve::presolveOff);
+	solvectl.setInfeasibleReturn(true);
 	
 	// specifying these just confuses Clp, let it choose by itself
 	/*
@@ -514,4 +515,14 @@ void ClpBALPInterface::addRow(const std::vector<double>& elts1, const std::vecto
 
 	model.addRow(elts.size(),&idx[0],&elts[0],lb,ub);
 
+}
+
+
+
+void ClpBALPInterface::setFirstStageColLB(int idx, double newLb) {
+	model.setColLower(idx, newLb);
+}
+
+void ClpBALPInterface::setFirstStageColUB(int idx, double newUb) {
+	model.setColUpper(idx, newUb);
 }

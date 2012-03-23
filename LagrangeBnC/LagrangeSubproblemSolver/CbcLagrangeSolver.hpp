@@ -14,7 +14,7 @@ public:
 	CbcLagrangeSolver(stochasticInput &input, int scenarioNumber, const std::vector<double>& lagrangeMults);
 
 	void go();
-	double getObjective() const;
+	double getBestPossibleObjective() const;
 	solverState getStatus() const;
 
 	// for setting states to warm-start the root node 
@@ -30,7 +30,7 @@ public:
 	variableState getSecondStageRowRootState(int idx) const;
 
 
-	std::vector<double> getFirstStagePrimalColSolution() const;
+	std::vector<double> getBestFirstStageSolution() const;
 
 
 protected:

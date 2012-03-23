@@ -1,0 +1,8 @@
+include_directories(../PIPS-S/Basic)
+include_directories(../LagrangeBnC/RecourseSubproblemSolver)
+
+set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
+
+add_executable(ucCoefficientDiving ucCoefficientDiving.cpp)
+
+target_link_libraries(ucCoefficientDiving pipss stochInput ClpBALPInterface ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})

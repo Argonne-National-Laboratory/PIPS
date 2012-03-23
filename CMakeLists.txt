@@ -137,6 +137,8 @@ add_subdirectory(Input)
 add_subdirectory(SolverInterface)
 add_subdirectory(PIPS-S)
 add_subdirectory(LagrangeBnC)
+add_subdirectory(Utilities)
+add_subdirectory(UCTests)
 
 
 #if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 

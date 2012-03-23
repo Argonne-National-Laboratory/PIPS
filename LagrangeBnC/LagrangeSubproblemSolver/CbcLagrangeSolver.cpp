@@ -129,7 +129,7 @@ CbcLagrangeSolver::CbcLagrangeSolver(stochasticInput &input, int scenarioNumber,
 	m.messageHandler()->setLogLevel(0);
 	cbcm.reset(new CbcModel(m));
 	CbcMain0(*cbcm);
-	cbcm->messageHandler()->setLogLevel(1);
+	cbcm->messageHandler()->setLogLevel(0);
 
 	//assert(CbcModel::haveMultiThreadSupport());
 	//cbcm->setNumberThreads(4); // this should be adjusted to the system	
@@ -142,11 +142,15 @@ void CbcLagrangeSolver::go() {
 	// TODO: are all the settings correct?
 	// preprocessing, cuts, heuristics all enabled?
 
-	cbcm->branchAndBound();
+	const char * argv2[]={"","-solve","-quit"};
+	cbcm->setMaximumNodes(1);
+	CbcMain1(3,argv2,*cbcm);
+    	cbcm->branchAndBound();
+   
 }
 
-double CbcLagrangeSolver::getObjective() const {
-	return cbcm->solver()->getObjValue();
+double CbcLagrangeSolver::getBestPossibleObjective() const {
+	return cbcm->getBestPossibleObjValue();
 }
 
 solverState CbcLagrangeSolver::getStatus() const {
@@ -164,7 +168,8 @@ solverState CbcLagrangeSolver::getStatus() const {
 }
 
 
-vector<double> CbcLagrangeSolver::getFirstStagePrimalColSolution() const {
-	const double *s = cbcm->solver()->getColSolution();
+vector<double> CbcLagrangeSolver::getBestFirstStageSolution() const {
+	//const double *s = cbcm->solver()->getColSolution();
+	const double *s = cbcm->bestSolution();
 	return vector<double>(s,s+nvar1);
 }
