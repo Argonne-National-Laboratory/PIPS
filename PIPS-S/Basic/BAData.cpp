@@ -5,7 +5,7 @@
 using boost::bind; // change to std::bind with C++11
 using namespace std;
 
-template<typename T1, typename T2> static void mergeColAndRow(T1& v, const T2 &col, const T2 &row) {
+template<typename T1, typename T2> void mergeColAndRow(T1& v, const T2 &col, const T2 &row) {
 	for (unsigned i = 0; i < col.size(); i++) {
 		v[i] = col[i];
 	}
@@ -16,7 +16,7 @@ template<typename T1, typename T2> static void mergeColAndRow(T1& v, const T2 &c
 }
 
 template<typename BAVec, typename T1, typename Col2, typename Row2> 
-	static void formBAVector(BAVec &v, const T1 &c1, Col2 c2, const T1 &r1, Row2 r2, const BAContext& ctx) {
+	void formBAVector(BAVec &v, const T1 &c1, Col2 c2, const T1 &r1, Row2 r2, const BAContext& ctx) {
 	
 	const vector<int> localScen = ctx.localScenarios();
 	mergeColAndRow(v.getFirstStageVec(), c1, r1);

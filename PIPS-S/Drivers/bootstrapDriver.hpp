@@ -8,7 +8,7 @@
 
 #include <cstdlib>
 
-static variableState convertClpStatus(ClpSimplex::Status s) {
+variableState convertClpStatus(ClpSimplex::Status s) {
 	if (s == ClpSimplex::basic) return Basic;
 	else if (s == ClpSimplex::atLowerBound || s == ClpSimplex::isFixed) return AtLower;
 	else if (s == ClpSimplex::atUpperBound) return AtUpper;
