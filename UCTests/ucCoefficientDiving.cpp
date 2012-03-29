@@ -66,6 +66,76 @@ template <typename BALPSolver> void ucCoefficientDiving(stochasticInput &input, 
 
 }
 
+template <typename BALPSolver> void ucFractionalDiving(stochasticInput &input, const std::string &LPBasis,
+	const vector<int> &fixed,
+	MPI_Comm comm = MPI_COMM_WORLD) {
+
+	using namespace std;
+
+	BAContext ctx(comm);
+	ctx.initializeAssignment(input.nScenarios());
+
+	int nvar1 = input.nFirstStageVars();
+	
+	BALPSolver solver(input, ctx, BALPSolver::useDual);
+	solver.loadStatus(LPBasis);
+	solver.setPrimalTolerance(1e-6);
+	solver.setDualTolerance(1e-6);
+	solver.setDualObjectiveLimit(1e9);
+	for (unsigned i = 0; i < fixed.size(); i++) {
+		solver.setFirstStageColLB(fixed[i],1.0);
+	}
+	solver.go();
+
+
+	int nIter = 0;
+	while (true) {
+		const vector<double>& firstSol = solver.getFirstStagePrimalColSolution();
+		int atZero = 0, atOne = 0, fractional = 0;
+		double bestDist = 1.;
+		int bestIdx = -1;
+		for (int i = 0; i < nvar1; i++) {
+			if (fabs(firstSol[i]-0.0) < 1e-5) {
+				atZero++;
+			} else if (fabs(firstSol[i]-1.0) < 1e-5) {
+				atOne++;
+			} else {
+				assert(solver.getFirstStageColState(i) == Basic);
+				fractional++;
+				double fractionality = fabs(firstSol[i]-floor(firstSol[i]+0.5)); 
+				if (fractionality < bestDist) {
+					bestDist = fractionality;
+					bestIdx = i;
+				}
+			}
+		}
+		printf("Iteration %d\n",nIter++);
+		printf("%d at zero, %d at one, %d fractional\n",atZero,atOne,fractional);
+		if (fractional == 0) break;
+		printf("Candidate for diving: %d %f\n",bestIdx,firstSol.at(bestIdx));
+		
+		if (firstSol[bestIdx] < 0.5) {
+			solver.setFirstStageColUB(bestIdx,0.0);
+		} else {
+			solver.setFirstStageColLB(bestIdx,1.0);
+		}	
+		solver.go();
+		if (solver.getStatus() == ProvenInfeasible) {
+			assert(firstSol[bestIdx] < 0.5);
+			solver.setFirstStageColUB(bestIdx,1.0);
+			solver.setFirstStageColLB(bestIdx,1.0);
+			solver.go();
+		}
+		assert(solver.getStatus() == Optimal);
+
+	}
+	printf("Objective from fractional diving: %f\n", solver.getObjective());
+
+
+
+}
+
+
 template <typename BALPSolver, typename RecourseSolver> void ucRounding(stochasticInput &input, const std::string &LPBasis,
 	const vector<int> &fixed,
 	MPI_Comm comm = MPI_COMM_WORLD) {
@@ -89,7 +159,7 @@ template <typename BALPSolver, typename RecourseSolver> void ucRounding(stochast
 
 	vector<double> firstSol = solver.getFirstStagePrimalColSolution();
 	for (int i = 0; i < nvar1; i++) {
-		if (fabs(firstSol[i]-0.0) < 0.15) {
+		if (firstSol[i] < 0.01) {
 			firstSol[i] = 0.0;
 		} else {
 			firstSol[i] = 1.0;
@@ -242,6 +312,7 @@ int main(int argc, char **argv) {
 	//ucFakeStrongBranching<ClpBALPInterface>(*s,LPBasis);
 	
 	//ucCoefficientDiving<ClpBALPInterface>(*s,LPBasis, vector<int>(fixed4h10s,fixed4h10s+194));
+	//ucFractionalDiving<ClpBALPInterface>(*s,LPBasis, vector<int>(fixed4h10s,fixed4h10s+194));
 	ucRounding<ClpBALPInterface,ClpRecourseSolver>(*s,LPBasis, vector<int>(fixed4h10s,fixed4h10s+194));
 
 	MPI_Finalize();
