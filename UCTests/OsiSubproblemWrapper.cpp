@@ -3,10 +3,14 @@
 
 using namespace std;
 
-static vector<double> concat(const vector<double>&a, const vector<double>&b) {
+namespace {
+
+vector<double> concat(const vector<double>&a, const vector<double>&b) {
 	vector<double> out(a);
 	out.insert(out.end(),b.begin(),b.end());
 	return out;
+}
+
 }
 
 OsiSubproblemWrapper::OsiSubproblemWrapper(stochasticInput& in, int scen) {
@@ -69,4 +73,8 @@ void OsiSubproblemWrapper::setCurrentSolution(const std::vector<double> stg1, co
 	colsol = concat(stg1, stg2);
 	rowActivity.resize(nvar1+nvar2);
 	cMat.times(&colsol[0], &rowActivity[0]);
+}
+
+void OsiSubproblemWrapper::setCurrentReducedCosts(const std::vector<double> stg1, const std::vector<double> stg2) {
+	coldualsol = concat(stg1, stg2);
 }

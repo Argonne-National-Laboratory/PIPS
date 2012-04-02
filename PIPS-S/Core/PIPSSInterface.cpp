@@ -2,7 +2,7 @@
 #include "BALPSolverDual.hpp"
 #include "BALPSolverPrimal.hpp"
 
-PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t) : d(in,ctx) {
+PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t) : d(in,ctx), boundsChanged(false) {
 
 	if (t == usePrimal) {
 		solver = new BALPSolverPrimal(d);
@@ -36,6 +36,17 @@ PIPSSInterface::~PIPSSInterface() {
 void PIPSSInterface::go() {
 	double t = MPI_Wtime();
 	int mype = d.ctx.mype();
+
+	if (boundsChanged) {
+		BALPSolverBase *solver2 = new BALPSolverDual(d);
+		solver2->setStates(solver->getStates());
+		solver2->setPrimalTolerance(solver->getPrimalTolerance());
+		solver2->setDualTolerance(solver->getDualTolerance());
+
+		delete solver;
+		solver = solver2;
+		boundsChanged = false;
+	}
 
 	solver->go();
 
@@ -99,6 +110,26 @@ std::vector<double> PIPSSInterface::getFirstStagePrimalColSolution() const {
 	return std::vector<double>(&x[0],&x[nvar1real]);
 }
 
+std::vector<double> PIPSSInterface::getSecondStagePrimalColSolution(int scen) const {
+	assert(d.ctx.assignedScenario(scen));
+	const denseVector &x = solver->getPrimalSolution().getSecondStageVec(scen);
+	int nvar2real = d.dims.inner.numSecondStageVars(scen);
+	return std::vector<double>(&x[0],&x[nvar2real]);
+}
+
+std::vector<double> PIPSSInterface::getFirstStageDualColSolution() const {
+	const denseVector &x = solver->getDualColSolution().getFirstStageVec();
+	int nvar1real = d.dims.inner.numFirstStageVars();
+	return std::vector<double>(&x[0],&x[nvar1real]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageDualColSolution(int scen) const {
+	assert(d.ctx.assignedScenario(scen));
+	const denseVector &x = solver->getDualColSolution().getSecondStageVec(scen);
+	int nvar2real = d.dims.inner.numSecondStageVars(scen);
+	return std::vector<double>(&x[0],&x[nvar2real]);
+}
+
 void PIPSSInterface::setFirstStageColState(int idx,variableState s) {
 	solver->states.getFirstStageVec()[idx] = s;
 }
@@ -137,4 +168,15 @@ variableState PIPSSInterface::getSecondStageColState(int scen, int idx) const {
 variableState PIPSSInterface::getSecondStageRowState(int scen, int idx) const {
 	int nvarreal = d.dims.inner.numSecondStageVars(scen);
 	return solver->states.getSecondStageVec(scen)[nvarreal+idx];
-}	
+}
+
+
+void PIPSSInterface::setFirstStageColLB(int idx, double newLb) {
+	d.l.getFirstStageVec()[idx] = newLb;
+	boundsChanged = true;
+}
+
+void PIPSSInterface::setFirstStageColUB(int idx, double newUb) {
+	d.u.getFirstStageVec()[idx] = newUb;
+	boundsChanged = true;
+}

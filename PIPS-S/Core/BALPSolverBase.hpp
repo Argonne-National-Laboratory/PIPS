@@ -34,6 +34,7 @@ public:
 	void writeBasis(const std::string &filebase);
 
 	const denseBAVector& getPrimalSolution() const { return x; }
+	const denseBAVector& getDualColSolution() const { return d; }
 	void setPrimalTolerance(double val) { primalTol = val; }
 	void setDualTolerance(double val) { dualTol = val; }
 	double getPrimalTolerance() const { return primalTol; }

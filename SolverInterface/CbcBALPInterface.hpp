@@ -1,28 +1,31 @@
-#ifndef CLPBALPINTERFACE_HPP
-#define CLPBALPINTERFACE_HPP
+#ifndef CBCBALPINTERFACE_HPP
+#define CBCBALPINTERFACE_HPP
 
 
 #include "stochasticInput.hpp"
 #include "BALPSolverInterface.hpp"
-#include "ClpSimplex.hpp"
+#include "OsiClpSolverInterface.hpp"
+#include "CbcModel.hpp"
 #include "BA.hpp"
 
-class ClpBALPInterface : public BALPSolverInterface<ClpBALPInterface> {
+#include <boost/scoped_ptr.hpp>
+
+class CbcBALPInterface : public BALPSolverInterface<CbcBALPInterface> {
 public:
 
-	ClpBALPInterface(stochasticInput &in, BAContext &,solveType t = useDual);
+	CbcBALPInterface(stochasticInput &in, BAContext &);
 	//ClpBALPInterface(const BAData &d, solveType t);
-	~ClpBALPInterface() {}
+	~CbcBALPInterface() {}
 
 	void writeStatus(const std::string &filebase);
 	void loadStatus(const std::string &filebase);
 
 	void go();
 
-	void setPrimalTolerance(double val) { model.setCurrentPrimalTolerance(val); }
-	void setDualTolerance(double val) { model.setCurrentDualTolerance(val); }
-	void setDualObjectiveLimit(double val) { model.setDualObjectiveLimit(val); }
-	double getObjective() const { return model.objectiveValue(); }
+	void setPrimalTolerance(double val) { assert(0); }
+	void setDualTolerance(double val) { assert(0); }
+	void setDualObjectiveLimit(double val) { assert(0); }
+	double getObjective() const { return model.getObjValue(); }
 	solverState getStatus() const;
 
 	std::vector<double> getFirstStagePrimalColSolution() const;
@@ -49,9 +52,10 @@ public:
 	void setFirstStageColUB(int idx, double newUb);
 
 protected:
-	ClpSimplex model;
+	OsiClpSolverInterface model;
+	
 	BADimensions dims;
-	solveType t;
+	boost::scoped_ptr<CbcModel> cbcm;
 
 	const BADimensions& getDims() const { return dims; }
 

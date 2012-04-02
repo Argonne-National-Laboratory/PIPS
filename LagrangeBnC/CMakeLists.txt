@@ -8,6 +8,6 @@ add_library(ClpRecourseSolver RecourseSubproblemSolver/ClpRecourseSolver.cpp)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
-add_executable(lagrangeRootNodeSerial Drivers/lagrangeRootNodeSerial.cpp)
+add_executable(lagrangeRootNode Drivers/lagrangeRootNode.cpp)
 
-target_link_libraries(lagrangeRootNodeSerial pipss stochInput ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(lagrangeRootNode pipss stochInput ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
