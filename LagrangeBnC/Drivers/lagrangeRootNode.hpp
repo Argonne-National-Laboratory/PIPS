@@ -15,20 +15,24 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 	
 	int nvar1 = input.nFirstStageVars();
 	int nscen = input.nScenarios();
+	int mype = ctx.mype();
 
 	const vector<int> &localScen = ctx.localScenarios();
 	vector<double> lagrangeObjs;
 	vector<vector<double> > lagrangeSolutions;
-	double objsum = 0.0;
+	double objsum_local = 0.0;
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
 		LagrangeSolver lsol(input, scen, vector<double>(nvar1,0.0));
 		lsol.go();
 		printf("Objective from scen %d: %f\n",scen,lsol.getBestPossibleObjective());
-		objsum += lsol.getBestPossibleObjective();
+		objsum_local += lsol.getBestPossibleObjective();
 		lagrangeObjs.push_back(lsol.getBestPossibleObjective());
 		lagrangeSolutions.push_back(lsol.getBestFirstStageSolution());
 	}
+	double lagrangelb;
+	MPI_Allreduce(&objsum_local,&lagrangelb,1,MPI_DOUBLE,MPI_SUM,comm);
+
 	const vector<double> &obj1 = input.getFirstStageObj();
 
 
@@ -44,12 +48,19 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 
 	vector<variableState> rowSave(ncons2), colSave(nvar2);
 	bool havesave = false;
-	for (unsigned i = 0; i < lagrangeSolutions.size(); i++) {
+	for (int scen_ = 0; scen_ < nscen; scen_++) {
+		vector<double> curSolution(nvar1);
+		
+		if (mype == ctx.owner(scen_)) {
+			int idx = find(localScen.begin(),localScen.end(),scen_)-localScen.begin()-1;
+			curSolution = lagrangeSolutions[idx];
+		}
+		MPI_Bcast(&curSolution[0],nvar1,MPI_DOUBLE,ctx.owner(scen_),comm);
+
 		double sum = 0.0;
 		bool infeas = false;
-		const vector<double> &curSolution = lagrangeSolutions[i]; 
-		for (int k = 0; k < nvar1; k++) sum += curSolution[k]*obj1[k];
-		for (int scen = 0; scen < nscen; scen++) {
+		for (unsigned q = 1; q < localScen.size(); q++) {
+			int scen = localScen[q];
 			RecourseSolver rsol(input, scen, curSolution);
 			rsol.setDualObjectiveLimit(1e7);
 			
@@ -80,21 +91,26 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 			}
 
 		}
-		if (infeas) { sumObj += COIN_DBL_MAX; continue; }
-		sumObj += sum;
+		if (infeas) { sum += COIN_DBL_MAX; }
+		double sum_all;
+		MPI_Allreduce(&sum,&sum_all,1,MPI_DOUBLE,MPI_SUM,comm);
+		for (int k = 0; k < nvar1; k++) sum_all += curSolution[k]*obj1[k];
+		
+		sumObj += sum_all;
 
-		if (sum < bestObj) {
-			bestObj = sum;
+		if (sum_all < bestObj) {
+			bestObj = sum_all;
 			bestSolution = curSolution;
 		}
 
 	}
-
-	printf("Lagrange LB: %f\n",objsum);
-	printf("Best UB: %f\n",bestObj);
-	printf("Average UB: %f\n",sumObj/lagrangeSolutions.size());
-	// formula for positive values
-	printf("Gap: %f%%\n",100*(bestObj-objsum)/objsum);
+	if (mype == 0) {
+		printf("Lagrange LB: %f\n",lagrangelb);
+		printf("Best UB: %f\n",bestObj);
+		printf("Average UB: %f\n",sumObj/nscen);
+		// formula for positive values
+		printf("Gap: %f%%\n",100*(bestObj-lagrangelb)/lagrangelb);
+	}
 
 
 }

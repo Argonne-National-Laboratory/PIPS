@@ -5,6 +5,8 @@
 using boost::bind; // change to std::bind with C++11
 using namespace std;
 
+namespace {
+
 template<typename T1, typename T2> void mergeColAndRow(T1& v, const T2 &col, const T2 &row) {
 	for (unsigned i = 0; i < col.size(); i++) {
 		v[i] = col[i];
@@ -25,6 +27,8 @@ template<typename BAVec, typename T1, typename Col2, typename Row2>
 		int scen = localScen[i];
 		mergeColAndRow(v.getSecondStageVec(scen), c2(scen), r2(scen));
 	}
+
+}
 
 }
 

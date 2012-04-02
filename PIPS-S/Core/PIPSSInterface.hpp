@@ -29,8 +29,10 @@ public:
 	double getObjective() const { return solver->objval; }
 	solverState getStatus() const { return solver->status; }
 
-	//const denseBAVector& getPrimalSolution() const { return solver->getPrimalSolution(); }
 	std::vector<double> getFirstStagePrimalColSolution() const;
+	std::vector<double> getSecondStagePrimalColSolution(int scen) const;
+	std::vector<double> getFirstStageDualColSolution() const;
+	std::vector<double> getSecondStageDualColSolution(int scen) const;
 
 	void setFirstStageColState(int idx,variableState s); 
 	void setFirstStageRowState(int idx,variableState);
@@ -49,12 +51,16 @@ public:
 	// will dump current status every d iterations. zero to disable.
 	void setDumpFrequency(int d, const std::string &outputname) { solver->setDumpFrequency(d,outputname); }
 
+	void setFirstStageColLB(int idx, double newLb);
+	void setFirstStageColUB(int idx, double newUb);
+
 protected:
 	const BAFlagVector<variableState>& getStatesRef() const { return solver->getStates(); }
 	const BADimensions& getDims() const { return d.dims.inner; }
 	
 	BALPSolverBase *solver;
 	BAData d;
+	bool boundsChanged;
 
 friend class BALPSolverDual;
 

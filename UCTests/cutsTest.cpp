@@ -3,6 +3,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <cmath>
 #include "ClpBALPInterface.hpp"
+#include "ClpRecourseSolver.hpp"
 #include "rawInput.hpp"
 #include "CglMixedIntegerRounding2.hpp"
 #include "CglProbing.hpp"
@@ -55,34 +56,12 @@ int main(int argc, char **argv) {
 
 
 	printf("LP Relaxation LB: %f\n",solver.getObjective());
-	/*
+	
 	vector<double> fixed(fixed4h10s,fixed4h10s+194);
 	for (unsigned i = 0; i < fixed.size(); i++) {
 		solver.setFirstStageColLB(fixed[i],1.0);
 	}
-	solver.go();*/
-	typedef CbcLagrangeSolver LagrangeSolver;
-
-	vector<double> lagrangeObjs;
-	//vector<vector<double> > lagrangeSolutions;
-	double objsum = 0.0;
-	for (int scen = 0; scen < s->nScenarios(); scen++) {
-		LagrangeSolver lsol(*s, scen, vector<double>(nvar1,0.0));
-		lsol.go();
-		printf("Objective from scen %d: %f\n",scen,lsol.getBestPossibleObjective());
-		objsum += lsol.getBestPossibleObjective();
-		lagrangeObjs.push_back(lsol.getBestPossibleObjective());
-		//lagrangeSolutions.push_back(lsol.getBestFirstStageSolution());
-		vector<double> obj1 = s->getFirstStageObj();
-		for (int i = 0; i < nvar1; i++) obj1[i] *= s->scenarioProbability(scen);
-		solver.addRow(obj1,s->getSecondStageObj(scen),scen,lsol.getBestPossibleObjective());
-
-	}
-
-	printf("Lagrange LB: %f\n",objsum);
 	solver.go();
-	printf("LP + lagrange cuts: %f\n",solver.getObjective());
-
 	
 
 	for(int scen = 0; scen < s->nScenarios(); scen++) {
@@ -92,6 +71,61 @@ int main(int argc, char **argv) {
 		OsiCuts cuts;
 		OsiSubproblemWrapper wrap(*s,scen);
 		wrap.setCurrentSolution(solver.getFirstStagePrimalColSolution(),solver.getSecondStagePrimalColSolution(scen));
+		wrap.setCurrentReducedCosts(solver.getFirstStageDualColSolution(),solver.getSecondStageDualColSolution(scen));
+		//round.generateCuts(wrap,cuts);
+		probing.generateCuts(wrap,cuts);
+		
+		printf("%d column cuts, %d row cuts\n",cuts.sizeColCuts(),cuts.sizeRowCuts());
+
+		int nvar2 = s->nSecondStageVars(scen);
+
+		for (int i = 0; i < cuts.sizeRowCuts(); i++) {
+			vector<double> elts1(nvar1,0.0), elts2(nvar2,0.0);
+			const OsiRowCut& cut = cuts.rowCut(i);
+			const CoinPackedVector &v = cut.row();
+			
+			int nnz = v.getNumElements();
+			const int* idx = v.getIndices();
+			const double* elts = v.getElements();
+			for (int r = 0; r < nnz; r++) {
+				if (idx[r] >= nvar1) {
+					elts2[idx[r]-nvar1] = elts[r];
+				} else {
+					elts1[idx[r]] = elts[r];
+				}
+			}
+			solver.addRow(elts1,elts2,scen,cut.lb(),cut.ub());
+		}
+
+		for (int i = 0; i < cuts.sizeColCuts(); i++) {
+			const OsiColCut& cut = cuts.colCut(i);
+			
+			const CoinPackedVector &lbs = cut.lbs();
+			{
+				int nnz = lbs.getNumElements();
+				const int* idx = lbs.getIndices();
+				const double* elts = lbs.getElements();
+				for (int r = 0; r < nnz; r++) {
+					if (idx[r] >= nvar1) {
+						printf("got second-stage column cut\n");
+					} else {
+						solver.setFirstStageColLB(idx[r],elts[r]);
+					}
+				}
+			}
+			
+		}
+	}
+	solver.go();
+
+	for(int scen = 0; scen < s->nScenarios(); scen++) {
+		CglMixedIntegerRounding2 round;
+		CglProbing probing;
+		probing.setUsingObjective(-1);
+		OsiCuts cuts;
+		OsiSubproblemWrapper wrap(*s,scen);
+		wrap.setCurrentSolution(solver.getFirstStagePrimalColSolution(),solver.getSecondStagePrimalColSolution(scen));
+		wrap.setCurrentReducedCosts(solver.getFirstStageDualColSolution(),solver.getSecondStageDualColSolution(scen));
 		round.generateCuts(wrap,cuts);
 		//probing.generateCuts(wrap,cuts);
 		
@@ -116,8 +150,88 @@ int main(int argc, char **argv) {
 			}
 			solver.addRow(elts1,elts2,scen,cut.lb(),cut.ub());
 		}
+
+		for (int i = 0; i < cuts.sizeColCuts(); i++) {
+			const OsiColCut& cut = cuts.colCut(i);
+			
+			const CoinPackedVector &lbs = cut.lbs();
+			{
+				int nnz = lbs.getNumElements();
+				const int* idx = lbs.getIndices();
+				const double* elts = lbs.getElements();
+				for (int r = 0; r < nnz; r++) {
+					if (idx[r] >= nvar1) {
+						printf("got second-stage column cut\n");
+					} else {
+						solver.setFirstStageColLB(idx[r],elts[r]);
+					}
+				}
+			}
+			
+		}
 	}
+
 	solver.go();
+	
+
+	/*
+	vector<double> firstSol = solver.getFirstStagePrimalColSolution();
+	for (int i = 0; i < nvar1; i++) {
+		if (firstSol[i] < 0.01) {
+			firstSol[i] = 0.0;
+		} else {
+			firstSol[i] = 1.0;
+		}
+	}
+
+	stochasticInput &input = *s;
+	int nvar2 = input.nSecondStageVars(0);
+	int ncons2 = input.nSecondStageCons(0);
+	
+	const vector<double> &obj1 = input.getFirstStageObj();
+
+	vector<variableState> rowSave(ncons2), colSave(nvar2);
+	bool havesave = false;
+	double sum = 0.0;
+	bool infeas = false;
+	typedef ClpRecourseSolver RecourseSolver;
+	for (int k = 0; k < nvar1; k++) sum += firstSol[k]*obj1[k];
+	for (int scen = 0; scen < nscen; scen++) {
+		RecourseSolver rsol(input, scen, firstSol);
+		rsol.setDualObjectiveLimit(1e7);
+		
+		if (havesave) {
+			for (int r = 0; r < nvar2; r++) {
+				rsol.setSecondStageColState(r,colSave[r]);
+			}
+			for (int r = 0; r < ncons2; r++) {
+				rsol.setSecondStageRowState(r,rowSave[r]);
+			}
+		}
+		rsol.go();
+		sum += rsol.getObjective();
+		
+		if (rsol.getStatus() == ProvenInfeasible) {
+			printf("got infeasible 1st stage\n");
+			sum = COIN_DBL_MAX;
+			infeas = true; break;
+		}
+		assert(rsol.getStatus() == Optimal);
+		if (!havesave) {
+			for (int r = 0; r < nvar2; r++) {
+				colSave[r] = rsol.getSecondStageColState(r);
+			}
+			for (int r = 0; r < ncons2; r++) {
+				rowSave[r] = rsol.getSecondStageRowState(r);
+			}
+			havesave = true;
+		}
+
+	}
+
+
+	printf("Rounding solution: %f\n", sum);
+	*/
 
 	MPI_Finalize();
 

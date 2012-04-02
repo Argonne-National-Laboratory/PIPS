@@ -1,10 +1,12 @@
-#include "ClpBALPInterface.hpp"
+#include "CbcBALPInterface.hpp"
 #include <sstream>
 #include <fstream>
 
 using namespace std;
 
-template<typename T1, typename T2> static void concatenateAll(stochasticInput &data, 
+
+namespace{
+template<typename T1, typename T2> void concatenateAll(stochasticInput &data, 
 			T1 &out, 
 			T2 (stochasticInput::*first)(),
 			T2 (stochasticInput::*second)(int)) {
@@ -23,15 +25,10 @@ template<typename T1, typename T2> static void concatenateAll(stochasticInput &d
 	}
 
 }
+}
 
-
-ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solveType t) : dims(input,ctx), t(t) {
+CbcBALPInterface::CbcBALPInterface(stochasticInput &input, BAContext &ctx) : dims(input,ctx) {
 	assert(ctx.nprocs() == 1);
-
-	// This disables Clp's internal rescaling of the problem.
-	// We do this for a fair comparison with PIPS-S.
-	// Uncomment for improved performance.
-	//model.scaling(0);
 
 	int const totalVar = dims.totalVars();
 	int const totalCons = dims.totalCons();
@@ -132,7 +129,22 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 	// don't copy names for now
 
 	model.loadProblem(constr,collb,colub,obj,rowlb,rowub);
-	model.createStatus();
+
+	for (int i = 0; i < nFirstStageVars; i++) {
+		if (input.isFirstStageColInteger(i)) {
+			model.setInteger(i);
+		}
+	}
+	int offset = nFirstStageVars;
+	for (int scen = 0; scen < nScenarios; scen++) {
+		int nSecondStageVars = input.nSecondStageVars(scen);
+		for (int i = 0; i < nSecondStageVars; i++) {
+			if (input.isSecondStageColInteger(scen,i)) {
+				model.setInteger(i+offset);
+			}
+		}
+		offset += nSecondStageVars;
+	}
 
 	delete [] collb;
 	delete [] colub;
@@ -140,49 +152,38 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 	delete [] rowlb;
 	delete [] rowub;
 
+	model.messageHandler()->setLogLevel(0);
+	cbcm.reset(new CbcModel(model));
+	CbcMain0(*cbcm);
+	cbcm->messageHandler()->setLogLevel(0);
+
 }
 
-void ClpBALPInterface::go() {
+void CbcBALPInterface::go() {
 	
-	ClpSolve solvectl;
-	// disable presolve also for a fair comparison, and to make sure we get a valid basis as the solution
-	solvectl.setPresolveType(ClpSolve::presolveOff);
-	solvectl.setInfeasibleReturn(true);
-	
-	// specifying these just confuses Clp, let it choose by itself
-	
-	if (t == usePrimal) {
-		solvectl.setSolveType(ClpSolve::usePrimal);
-	} else {
-		solvectl.setSolveType(ClpSolve::useDual);
+	const char * argv2[]={"","-solve","-quit"};
+	//cbcm->setMaximumNodes(1);
+	cbcm->setNumberThreads(2);
+	CbcMain1(3,argv2,*cbcm);
+	//cbcm->branchAndBound();
+
+
+}
+
+solverState CbcBALPInterface::getStatus() const {
+
+	if (cbcm->isProvenOptimal()) {
+		return Optimal;
+	} 
+	if (cbcm->isProvenInfeasible()) {
+		return ProvenInfeasible;
 	}
+	assert(!cbcm->isAbandoned());
 
-
-	model.initialSolve(solvectl);
-
+	return Initialized;
 }
 
-solverState ClpBALPInterface::getStatus() const {
-
-	switch (model.status()) {
-		case -1:
-			return Initialized; // unknown
-		case 0:
-			return Optimal;
-		case 1:
-			return ProvenInfeasible;
-		case 2:
-			return ProvenUnbounded;
-		case 3:
-		case 4:
-		case 5:
-			return Stopped;
-		default:
-			assert(0 && "Unknown clp status\n");
-			return Uninitialized;
-	}
-}
-
+/*
 static variableState clpStatusToState(ClpSimplex::Status s) {
 	switch (s) {
 		case ClpSimplex::basic:
@@ -218,55 +219,54 @@ static ClpSimplex::Status stateToClpStatus(variableState s) {
 	
 }
 
-
-variableState ClpBALPInterface::getFirstStageColState(int idx) const {
+variableState CbcBALPInterface::getFirstStageColState(int idx) const {
 	return clpStatusToState(model.getColumnStatus(idx));
 }
 
-variableState ClpBALPInterface::getFirstStageRowState(int idx) const {
+variableState CbcBALPInterface::getFirstStageRowState(int idx) const {
 	return clpStatusToState(model.getRowStatus(idx));
 }
 
-variableState ClpBALPInterface::getSecondStageColState(int scen, int idx) const {
+variableState CbcBALPInterface::getSecondStageColState(int scen, int idx) const {
 	int offset = dims.numFirstStageVars();
 	for (int i = 0; i < scen; i++) offset += dims.numSecondStageVars(i);
 	return clpStatusToState(model.getColumnStatus(offset+idx));
 }
 
-variableState ClpBALPInterface::getSecondStageRowState(int scen, int idx) const {
+variableState CbcBALPInterface::getSecondStageRowState(int scen, int idx) const {
 	int offset = dims.numFirstStageCons();
 	for (int i = 0; i < scen; i++) offset += dims.numSecondStageCons(i);
 	return clpStatusToState(model.getRowStatus(offset+idx));
 }
 
-void ClpBALPInterface::setFirstStageColState(int idx,variableState s) {
+void CbcBALPInterface::setFirstStageColState(int idx,variableState s) {
 	model.setColumnStatus(idx, stateToClpStatus(s));
 }
 
-void ClpBALPInterface::setFirstStageRowState(int idx,variableState s) {
+void CbcBALPInterface::setFirstStageRowState(int idx,variableState s) {
 	model.setRowStatus(idx,stateToClpStatus(s));
 }
 
-void ClpBALPInterface::setSecondStageColState(int scen, int idx,variableState s) {
+void CbcBALPInterface::setSecondStageColState(int scen, int idx,variableState s) {
 	int offset = dims.numFirstStageVars();
 	for (int i = 0; i < scen; i++) offset += dims.numSecondStageVars(i);
 	model.setColumnStatus(offset+idx,stateToClpStatus(s));
 }
 
-void ClpBALPInterface::setSecondStageRowState(int scen, int idx,variableState s) {
+void CbcBALPInterface::setSecondStageRowState(int scen, int idx,variableState s) {
 	int offset = dims.numFirstStageCons();
 	for (int i = 0; i < scen; i++) offset += dims.numSecondStageCons(i);
 	model.setRowStatus(offset+idx,stateToClpStatus(s));
 }
 
 
-vector<double> ClpBALPInterface::getFirstStagePrimalColSolution() const {
+vector<double> CbcBALPInterface::getFirstStagePrimalColSolution() const {
 	const double *sol = model.primalColumnSolution();
 	int nvar1 = dims.numFirstStageVars();
 	return vector<double>(sol,sol+nvar1);
 }
 
-vector<double> ClpBALPInterface::getSecondStagePrimalColSolution(int scen) const {
+vector<double> CbcBALPInterface::getSecondStagePrimalColSolution(int scen) const {
 	const double *sol = model.primalColumnSolution();
 	int offset = dims.numFirstStageVars();
 	for (int i = 0; i < scen; i++) {
@@ -275,13 +275,13 @@ vector<double> ClpBALPInterface::getSecondStagePrimalColSolution(int scen) const
 	return vector<double>(sol+offset,sol+offset+dims.numSecondStageVars(scen));
 }
 
-vector<double> ClpBALPInterface::getFirstStageDualColSolution() const {
+vector<double> CbcBALPInterface::getFirstStageDualColSolution() const {
 	const double *sol = model.dualColumnSolution();
 	int nvar1 = dims.numFirstStageVars();
 	return vector<double>(sol,sol+nvar1);
 }
 
-vector<double> ClpBALPInterface::getSecondStageDualColSolution(int scen) const {
+vector<double> CbcBALPInterface::getSecondStageDualColSolution(int scen) const {
 	const double *sol = model.dualColumnSolution();
 	int offset = dims.numFirstStageVars();
 	for (int i = 0; i < scen; i++) {
@@ -310,7 +310,7 @@ static const char* statusString(ClpSimplex::Status s) {
 	}
 }
 
-void ClpBALPInterface::writeStatus(const std::string &filebase) {
+void CbcBALPInterface::writeStatus(const std::string &filebase) {
 	
 	int nscen = dims.numScenarios();
 	int nvar1real = dims.numFirstStageVars();
@@ -439,7 +439,7 @@ static ClpSimplex::Status statusFromString(const string& s) {
 	}
 }
 
-void ClpBALPInterface::loadStatus(const std::string &filebase) {
+void CbcBALPInterface::loadStatus(const std::string &filebase) {
 
 	int nscen = dims.numScenarios();
 	int nvar1real = dims.numFirstStageVars();
@@ -509,7 +509,7 @@ void ClpBALPInterface::loadStatus(const std::string &filebase) {
 }
 
 
-void ClpBALPInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
+void CbcBALPInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
 	
 	vector<double> elts;
 	vector<int> idx;
@@ -542,10 +542,11 @@ void ClpBALPInterface::addRow(const std::vector<double>& elts1, const std::vecto
 
 
 
-void ClpBALPInterface::setFirstStageColLB(int idx, double newLb) {
+void CbcBALPInterface::setFirstStageColLB(int idx, double newLb) {
 	model.setColLower(idx, newLb);
 }
 
-void ClpBALPInterface::setFirstStageColUB(int idx, double newUb) {
+void CbcBALPInterface::setFirstStageColUB(int idx, double newUb) {
 	model.setColUpper(idx, newUb);
 }
+*/

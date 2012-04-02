@@ -12,6 +12,7 @@ class OsiSubproblemWrapper : public OsiSolverInterface {
 public:
 
 	void setCurrentSolution(const std::vector<double> stg1, const std::vector<double> stg2);
+	void setCurrentReducedCosts(const std::vector<double> stg1, const std::vector<double> stg2);
 
   //---------------------------------------------------------------------------
 
@@ -160,7 +161,7 @@ public:
     /*! \brief Get a pointer to an array[getNumCols()] of objective
 	       function coefficients.
     */
-    virtual const double * getObjCoefficients() const {printf("warning: asked for objective coefficients\n"); return 0;}
+    virtual const double * getObjCoefficients() const {/*printf("warning: asked for objective coefficients\n");*/ return 0;}
 
     /*! \brief Get the objective function sense
     
@@ -197,7 +198,7 @@ public:
     virtual const double * getRowPrice() const {assert(0); return 0; }
 
     /// Get a pointer to an array[getNumCols()] of reduced costs
-    virtual const double * getReducedCost() const {assert(0); return 0;}
+    virtual const double * getReducedCost() const {assert(coldualsol.size()); return &coldualsol[0];}
 
     /** Get a pointer to array[getNumRows()] of row activity levels.
     
@@ -207,7 +208,7 @@ public:
     virtual const double * getRowActivity() const { assert(colsol.size()); return &rowActivity[0];} // TODO
 
     /// Get the objective function value.
-    virtual double getObjValue() const {assert(0); return 0;}
+    virtual double getObjValue() const {/*printf("warning, asked for objective value\n");*/ return 0;}
 
     /** Get the number of iterations it took to solve the problem (whatever
 	`iteration' means to the solver).
@@ -566,7 +567,7 @@ public:
 private:
  
 	CoinPackedMatrix rMat, cMat;
-	std::vector<double> collb, colub, rowlb, rowub, rhs, colsol;
+	std::vector<double> collb, colub, rowlb, rowub, rhs, colsol, coldualsol;
 	std::vector<double> rowActivity;
 	std::vector<bool> isInteger;
 	std::vector<char> rowSense;

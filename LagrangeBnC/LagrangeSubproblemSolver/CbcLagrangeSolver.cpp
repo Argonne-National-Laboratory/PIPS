@@ -2,7 +2,8 @@
 
 using namespace std;
 
-template<typename T1, typename T2> static void concatenateOne(stochasticInput &data, 
+namespace{
+template<typename T1, typename T2> void concatenateOne(stochasticInput &data, 
 			T1 &out, 
 			T2 (stochasticInput::*first)(),
 			T2 (stochasticInput::*second)(int), int scen) {
@@ -17,6 +18,7 @@ template<typename T1, typename T2> static void concatenateOne(stochasticInput &d
 		out[r++] = arr2[k];
 	}
 
+}
 }
 
 CbcLagrangeSolver::CbcLagrangeSolver(stochasticInput &input, int scenarioNumber, const vector<double> &lagrangeDiff) {
