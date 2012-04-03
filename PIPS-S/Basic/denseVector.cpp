@@ -60,6 +60,7 @@ void denseVector::print() const {
 
 void denseVector::copyFrom(const double *b, int n) {
 	if (allocated() && len != n) {
+		assert(0);
 		deallocate(); printf("wrong size input buffer\n"); 
 		allocate(n);
 	} else if (!allocated()) {
@@ -71,6 +72,7 @@ void denseVector::copyFrom(const double *b, int n) {
 void denseVector::copyFrom(const denseVector &v) {
 	int n = v.length();
 	if (allocated() && len != n) {
+		assert(0);
 		deallocate(); printf("wrong size input buffer\n"); 
 		allocate(n);
 	} else if (!allocated()) {

@@ -31,6 +31,9 @@ public:
 	// taking linear combinations of the rows
 	void multiplyT(const sparseBAVector &in, sparseBAVector &out) const;
 
+
+	void addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
+
 	// make members easily accessable for use in solver
 	BADimensionsSlacks dims;
 	denseBAVector l,u,c;

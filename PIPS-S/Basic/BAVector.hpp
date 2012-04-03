@@ -44,6 +44,7 @@ public:
 		this->ctx = &ctx;
 		localScen.reserve(10); 
 		localScen.push_back(-1);
+		if (vec1.allocated()) vec1.deallocate();
 		if (t == PrimalVector) {
 			vec1.allocate(dims.numFirstStageVars());
 		} else if (t == DualVector) {
@@ -52,6 +53,7 @@ public:
 			vec1.allocate(dims.numFirstStageVars()+MAX_UPDATES); // basic vars >= cons
 		}
 		for (int i = 0; i < nScen; i++) {
+			if (vec2[i]) delete vec2[i];
 			if (ctx.assignedScenario(i)) {
 				vec2[i] = new T2();
 				if (t == PrimalVector) {
@@ -248,10 +250,7 @@ public:
 	BAFlagVector() : dims(0), nScen(0), vec1(0) {}
 
 	~BAFlagVector() {
-		if (vec1) delete vec1;
-		for (int i = 0; i < nScen; i++) {
-			if (vec2[i]) delete vec2[i];
-		}
+		deallocate();	
 	}
 
 	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
@@ -277,6 +276,15 @@ public:
 			}
 		}
 	}
+
+	void deallocate() {
+		if (vec1) delete vec1;
+		for (unsigned i = 0; i < vec2.size(); i++) {
+			if (vec2[i]) delete vec2[i];
+		}
+		dims = 0;
+	}
+
 
 	denseFlagVector<T>& getFirstStageVec() { return *vec1; }
 	const denseFlagVector<T>& getFirstStageVec() const { return *vec1; }
@@ -348,11 +356,12 @@ public:
 	}
 
 	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
-		assert(this->dims == 0);
+		//assert(this->dims == 0);
 		vecType = t;
 		nScen = dims.numScenarios();
 		vec2.resize(nScen);
 		this->dims = &dims;
+		localScen.clear();
 		localScen.push_back(-1);
 		if (t == PrimalVector) {
 			vec1.reserve(dims.numFirstStageVars());

@@ -54,19 +54,22 @@ int BAContext::owner(int scen) const {
 }
 
 
-BADimensions::BADimensions(stochasticInput &in, const BAContext &ctx) {
+BADimensions::BADimensions(stochasticInput &in, const BAContext &ctx) : ctx(&ctx) {
 	
-	same = in.scenarioDimensionsEqual();
 	nScen = in.nScenarios();
 	nFirstStageVars_ = in.nFirstStageVars();
 	nFirstStageCons_ = in.nFirstStageCons();
 
 	const std::vector<int> &localScen = ctx.localScenarios();
-
+	same = false;
+	/*
+	See BAData.cpp for why we don't exploit this.
+	
+	same = in.scenarioDimensionsEqual();
 	if (same) {
 		nSecondStageVars_ = in.nSecondStageVars(localScen.at(1));
 		nSecondStageCons_ = in.nSecondStageCons(localScen.at(1));
-	} else {
+	} else {*/
 		nSecondStageVars_v.resize(nScen);
 		nSecondStageCons_v.resize(nScen);
 		// we don't know dimensions of scenarios not assigned to us
@@ -75,7 +78,7 @@ BADimensions::BADimensions(stochasticInput &in, const BAContext &ctx) {
 			nSecondStageVars_v[i] = in.nSecondStageVars(i);
 			nSecondStageCons_v[i] = in.nSecondStageCons(i);
 		}
-	}
+	/*}*/
 
 }
 
