@@ -66,9 +66,9 @@ protected:
 class BADimensions {
 
 public:
-	BADimensions() {}
+	BADimensions() : ctx(0) {}
 	BADimensions(stochasticInput &i, const BAContext&);
-	BADimensions(const BADimensions& d) { *this = d; } 
+	BADimensions(const BADimensions& d) { this->operator=(d); } 
 	virtual ~BADimensions() {}
 	virtual int numFirstStageVars() const { return nFirstStageVars_; }
 	virtual int numFirstStageCons() const { return nFirstStageCons_; }
@@ -76,6 +76,7 @@ public:
 	virtual int numSecondStageCons(int idx) const { if (same) return nSecondStageCons_; else return nSecondStageCons_v[idx]; }
 	virtual int numScenarios() const { return nScen; }
 	virtual int totalVars() const {
+		assert(ctx->nprocs() == 1);
 		int v = this->numFirstStageVars();
 		for (int i = 0; i < numScenarios(); i++) {
 			v += this->numSecondStageVars(i);
@@ -83,11 +84,13 @@ public:
 		return v;
 	}
 	virtual int totalCons() const {
-		int v = this->numFirstStageCons();
-		
-		for (int i = 0; i < numScenarios(); i++) {
-			v += this->numSecondStageCons(i);
+		int v = 0;
+		assert(ctx);
+		std::vector<int> const &localScen = ctx->localScenarios();
+		for (unsigned i = 1; i < localScen.size(); i++) {
+			v += this->numSecondStageCons(localScen[i]);
 		}
+		v = ctx->reduce(v) + this->numFirstStageCons();
 		return v;
 	}
 	virtual int numVars(int idx) const {
@@ -99,6 +102,12 @@ public:
 		else return this->numSecondStageCons(idx);
 	}
 
+	virtual void addSecondStageRow(int idx) {
+		assert(!same);
+		nSecondStageCons_v[idx]++;
+	}
+
+	const BAContext *ctx; // this is ugly
 protected:
 	int nFirstStageVars_, nFirstStageCons_, nScen;
 	int nSecondStageVars_, nSecondStageCons_;
@@ -110,7 +119,7 @@ protected:
 // add slacks
 class BADimensionsSlacks : public BADimensions {
 public:
-	BADimensionsSlacks(const BADimensions &inner) : inner(inner) { }
+	BADimensionsSlacks(const BADimensions &inner) : inner(inner) { this->ctx = inner.ctx; }
 	BADimensionsSlacks() {}
 
 	virtual int numScenarios() const { return inner.numScenarios(); }
@@ -118,6 +127,10 @@ public:
 	virtual int numFirstStageVars() const { return inner.numFirstStageVars() + inner.numFirstStageCons(); }
 	virtual int numSecondStageVars(int idx) const { return inner.numSecondStageVars(idx) + inner.numSecondStageCons(idx); }
 	virtual int numSecondStageCons(int idx) const { return inner.numSecondStageCons(idx); }
+	
+	virtual void addSecondStageRow(int idx) {
+		inner.addSecondStageRow(idx);
+	}
 
 	BADimensions inner;
 };

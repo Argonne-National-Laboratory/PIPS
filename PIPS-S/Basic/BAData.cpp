@@ -30,7 +30,6 @@ template<typename BAVec, typename T1, typename Col2, typename Row2>
 
 }
 
-}
 
 // use a lambda for this when we can use C++11
 class emptyRowVector {
@@ -42,7 +41,7 @@ private:
 	stochasticInput &i;
 };
 
-static void checkConstraintType(const denseVector &L, const denseVector &U, denseFlagVector<constraintType> &T) {
+void checkConstraintType(const denseVector &L, const denseVector &U, denseFlagVector<constraintType> &T) {
 	int n = L.length();
 	assert(U.length() == n && T.length() == n);
 
@@ -67,6 +66,7 @@ static void checkConstraintType(const denseVector &L, const denseVector &U, dens
 
 }
 
+}
 
 BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 
@@ -114,6 +114,12 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 	Tcol.resize(nscen); Trow.resize(nscen);
 	Wcol.resize(nscen); Wrow.resize(nscen);
 
+	/*
+	We can save memory by not duplicating the constraint matrices, but
+	as soon as we add individual scenario cuts these need to be duplicated anyway.
+	One could think about adding identical cuts (with different RHSs)
+	to each scenario to restore this optimization.
+	
 	onlyBoundsVary = input.onlyBoundsVary();
 	if (onlyBoundsVary) {
 		Tcol[0].reset(new CoinPackedMatrix(input.getLinkingConstraints(0)));
@@ -130,7 +136,7 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 			Wcol[i] = Wcol[0];
 			Wrow[i] = Wrow[0];
 		}
-	} else {
+	} else {*/
 		for (int i = 0; i < nscen; i++) {
 			if (!ctx.assignedScenario(i)) continue;
 			Tcol[i].reset(new CoinPackedMatrix(input.getLinkingConstraints(i)));
@@ -141,8 +147,8 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 			Wrow[i].reset(new CoinPackedMatrix());
 			Wrow[i]->reverseOrderedCopyOf(*Wcol[i]);
 		}
-
-	}
+	/*
+	}*/
 
 	out1Send.reserve(dims.numFirstStageVars());
 
@@ -503,3 +509,57 @@ void BAData::multiplyT(const sparseBAVector &in, sparseBAVector &out) const {
 #endif
 }
 
+
+void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb, double ub) {
+
+	// don't (yet) support first-stage cuts
+	assert(scen >= 0 && scen < dims.numScenarios());
+	if (ctx.assignedScenario(scen)) {
+		Trow[scen]->appendRow(elts1);
+		Tcol[scen]->reverseOrderedCopyOf(*Trow[scen]);
+		Wrow[scen]->appendRow(elts2);
+		Wcol[scen]->reverseOrderedCopyOf(*Wrow[scen]);
+
+		int nvar2 = dims.inner.numSecondStageVars(scen);
+		int ncons2 = dims.numSecondStageCons(scen);
+		denseVector newL(nvar2+ncons2+1);
+		denseVector &oldL = l.getSecondStageVec(scen);
+		newL.copyBeginning(&oldL[0],nvar2+ncons2);
+		newL[nvar2+ncons2] = lb;
+		oldL.swap(newL);
+
+		denseVector newU(nvar2+ncons2+1);
+		denseVector &oldU = u.getSecondStageVec(scen);
+		newU.copyBeginning(&oldU[0],nvar2+ncons2);
+		newU[nvar2+ncons2] = ub;
+		oldU.swap(newU);
+
+		denseVector newC(nvar2+ncons2+1);
+		denseVector &oldC = c.getSecondStageVec(scen);
+		newC.copyBeginning(&oldC[0],nvar2+ncons2);
+		newC[nvar2+ncons2] = 0.0;
+		oldC.swap(newC);
+
+		dims.addSecondStageRow(scen);
+
+		assert(oldU.length() == nvar2+ncons2+1);
+		assert(oldL.length() == nvar2+ncons2+1);
+
+	}
+
+	vartype.deallocate();
+	names.deallocate();
+
+	vartype.allocate(dims, ctx, PrimalVector);
+
+	// we're dropping the names here by not copying them
+	// TODO: fix this
+	names.allocate(dims, ctx, PrimalVector);
+
+	const vector<int> &localScen = ctx.localScenarios();
+	for (unsigned i = 0; i < localScen.size(); i++) {
+		int scen = localScen[i];
+		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
+	}
+
+}

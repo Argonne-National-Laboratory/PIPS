@@ -8,7 +8,7 @@ class denseVector {
 public:
 	denseVector() : d(0), own(true), len(0) {}
 	denseVector(int len) : own(true), len(len) { d = new double[len]; }
-	denseVector(int len, double *buf) : d(buf), own(false), len(len) {}
+	//denseVector(int len, double *buf) : d(buf), own(false), len(len) {}
 	denseVector(const denseVector& v) : own(true), len(v.len) { 
 		d = new double[len];
 		std::copy(v.d,v.d+len,d);
@@ -23,8 +23,6 @@ public:
 	void allocate(int n) { assert(d == 0); d = new double[n]; len = n; }
 	// zero out
 	void clear() { assert(d); std::fill(d,d+len,0.0); }
-	double * data() { assert(d != 0); return d; }
-	const double * data() const { assert(d != 0); return d; }
 
 	inline double& operator[](int idx) { /*assert(d); assert(idx < len);*/ return d[idx]; }
 	inline const double& operator[](int idx) const { /*assert(d); assert(idx < len);*/ return d[idx]; }

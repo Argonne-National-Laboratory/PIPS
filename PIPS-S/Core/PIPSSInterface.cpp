@@ -1,6 +1,9 @@
 #include "PIPSSInterface.hpp"
 #include "BALPSolverDual.hpp"
 #include "BALPSolverPrimal.hpp"
+#include "CoinPackedVector.hpp"
+
+using namespace std;
 
 PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t) : d(in,ctx), boundsChanged(false) {
 
@@ -180,3 +183,48 @@ void PIPSSInterface::setFirstStageColUB(int idx, double newUb) {
 	d.u.getFirstStageVec()[idx] = newUb;
 	boundsChanged = true;
 }
+
+void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
+
+	CoinPackedVector e1;
+	CoinPackedVector e2;
+	if (d.ctx.assignedScenario(scen)) {
+		e1.setFullNonZero(elts1.size(),&elts1[0]);
+		e2.setFullNonZero(elts2.size(),&elts2[0]);
+	}
+	d.addRow(e1,e1,scen,lb,ub);
+
+
+}
+
+void PIPSSInterface::commitNewRows() {
+	
+	const vector<int> &localScen = d.ctx.localScenarios();
+	
+	assert(solver->status == Optimal);
+
+	BALPSolverDual* solver2 = new BALPSolverDual(d);
+	solver2->setPrimalTolerance(solver->getPrimalTolerance());
+	solver2->setDualTolerance(solver->getDualTolerance());
+	
+	solver2->states.getFirstStageVec().copyFrom(solver->states.getFirstStageVec());
+	for (unsigned i = 1; i < localScen.size(); i++) {
+		int scen = localScen[i];
+		
+		denseFlagVector<variableState> &oldStates = solver->states.getSecondStageVec(scen), &newStates = solver2->states.getSecondStageVec(scen);
+
+		copy(&oldStates[0],&oldStates[oldStates.length()],&newStates[0]);
+		printf("%d new rows in scenario %d\n",newStates.length()-oldStates.length(),scen);
+		for (int k = oldStates.length(); k < newStates.length(); k++) {
+			newStates[k] = Basic;
+		}
+	}
+
+	delete solver;
+	solver = solver2;
+
+	commitStates();
+
+
+}
+

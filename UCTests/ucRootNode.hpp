@@ -67,7 +67,27 @@ template<typename BALPSolver> void ucRootNode(stochasticInput &input,
 				}
 			}
 		}
+		/*
+		int nvar2 = input.nSecondStageVars(scen);
+		for (int i = 0; i < cuts.sizeRowCuts(); i++) {
+			vector<double> elts1(nvar1,0.0), elts2(nvar2,0.0);
+			const OsiRowCut& cut = cuts.rowCut(i);
+			const CoinPackedVector &v = cut.row();
+			
+			int nnz = v.getNumElements();
+			const int* idx = v.getIndices();
+			const double* elts = v.getElements();
+			for (int r = 0; r < nnz; r++) {
+				if (idx[r] >= nvar1) {
+					elts2[idx[r]-nvar1] = elts[r];
+				} else {
+					elts1[idx[r]] = elts[r];
+				}
+			}
+			solver.addRow(elts1,elts2,scen,cut.lb(),cut.ub());
+		}*/
 	}
+	//solver.commitNewRows();
 
 	MPI_Allreduce(&fixstg1[0],&fixstg1_all[0],nvar1,MPI_INT,MPI_SUM,comm);
 	for (int i = 0; i < nvar1; i++) {
@@ -137,7 +157,7 @@ template<typename BALPSolver> void ucRootNode(stochasticInput &input,
 
 
 	if (mype == 0) printf("LP Relaxation: %f\n",lprelax);
-	if (mype == 0) printf("LP Relaxation + Probing Column Cuts: %f\n",lpcuts);
+	if (mype == 0) printf("LP Relaxation + Probing Cuts: %f\n",lpcuts);
 	if (mype == 0) printf("Rounding solution: %f\n", allsum);
 	if (mype == 0) printf("Gap: %f%%\n",100*(allsum-lpcuts)/lpcuts);
 

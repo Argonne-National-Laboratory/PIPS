@@ -21,13 +21,14 @@ OsiSubproblemWrapper::OsiSubproblemWrapper(stochasticInput& in, int scen) {
 
 	// first-stage variables first
 	cMat = in.getLinkingConstraints(scen);
+	assert(cMat.getNumCols() == nvar1);
 	cMat.rightAppendPackedMatrix(in.getSecondStageConstraints(scen));
 	rMat.reverseOrderedCopyOf(cMat);
 
 	collb = concat(in.getFirstStageColLB(),in.getSecondStageColLB(scen));
 	colub = concat(in.getFirstStageColUB(),in.getSecondStageColUB(scen));
-	rowlb = concat(in.getFirstStageRowLB(),in.getSecondStageRowLB(scen));
-	rowub = concat(in.getFirstStageRowUB(),in.getSecondStageRowUB(scen));
+	rowlb = in.getSecondStageRowLB(scen);
+	rowub = in.getSecondStageRowUB(scen);
 
 	for (int i = 0; i < nvar1; i++) {
 		isInteger.push_back(in.isFirstStageColInteger(i));
@@ -36,9 +37,9 @@ OsiSubproblemWrapper::OsiSubproblemWrapper(stochasticInput& in, int scen) {
 		isInteger.push_back(in.isSecondStageColInteger(scen,i));
 	}
 
-	rhs.resize(nvar1+nvar2);
+	rhs.resize(ncons2);
 
-	for (int i = 0; i < nvar1 + nvar2; i++) {
+	for (int i = 0; i < ncons2; i++) {
 		if (rowlb[i] < -1e-20) {
 			rowlb[i] = -COIN_DBL_MAX;
 			if (rowub[i] > 1e20) {
