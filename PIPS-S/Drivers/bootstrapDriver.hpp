@@ -41,8 +41,8 @@ template <typename SolverInterface> void bootstrapDriver(const std::string &data
 
 	int nvar1real = dims.numFirstStageVars();
 	//int ncons1 = dims.numFirstStageCons();
-	int nvar2real = dims.numSecondStageVars(0);
-	int ncons2 = dims.numSecondStageCons(0);
+	int nvar2real = dims.numSecondStageVars(ctx.localScenarios()[1]);
+	int ncons2 = dims.numSecondStageCons(ctx.localScenarios()[1]);
 
 	BAFlagVector<variableState> states;
 	
