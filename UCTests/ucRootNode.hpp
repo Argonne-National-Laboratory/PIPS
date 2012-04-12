@@ -33,22 +33,26 @@ template<typename BALPSolver> void ucRootNode(stochasticInput &input,
 
 	double lprelax = solver.getObjective();
 
+	vector<double> firstSol = solver.getFirstStagePrimalColSolution();
+
 	vector<int> fixstg1(nvar1,0), fixstg1_all(nvar1);
 
 	for(unsigned i = 1; i < localScen.size(); i++) {
-		//CglMixedIntegerRounding2 round;
+		CglMixedIntegerRounding2 round;
 		int scen = localScen[i];
 		CglProbing probing;
 		probing.setUsingObjective(-1);
 		OsiCuts cuts;
 		OsiSubproblemWrapper wrap(input,scen);
-		wrap.setCurrentSolution(solver.getFirstStagePrimalColSolution(),solver.getSecondStagePrimalColSolution(scen));
+
+		vector<double> secondSol = solver.getSecondStagePrimalColSolution(scen);
+		wrap.setCurrentSolution(firstSol,secondSol);
 		wrap.setCurrentReducedCosts(solver.getFirstStageDualColSolution(),solver.getSecondStageDualColSolution(scen));
-		//round.generateCuts(wrap,cuts);
+		round.generateCuts(wrap,cuts);
 		probing.generateCuts(wrap,cuts);
 		
 		//printf("%d column cuts, %d row cuts\n",cuts.sizeColCuts(),cuts.sizeRowCuts());
-
+		
 		for (int i = 0; i < cuts.sizeColCuts(); i++) {
 			const OsiColCut& cut = cuts.colCut(i);
 			
@@ -67,28 +71,36 @@ template<typename BALPSolver> void ucRootNode(stochasticInput &input,
 				}
 			}
 		}
-		/*
+	
 		int nvar2 = input.nSecondStageVars(scen);
 		for (int i = 0; i < cuts.sizeRowCuts(); i++) {
 			vector<double> elts1(nvar1,0.0), elts2(nvar2,0.0);
 			const OsiRowCut& cut = cuts.rowCut(i);
+			//cut.print();
 			const CoinPackedVector &v = cut.row();
 			
 			int nnz = v.getNumElements();
 			const int* idx = v.getIndices();
 			const double* elts = v.getElements();
+			int nelts2 = 0;
+			double value = 0.;
 			for (int r = 0; r < nnz; r++) {
 				if (idx[r] >= nvar1) {
 					elts2[idx[r]-nvar1] = elts[r];
+					value += elts[r]*secondSol[idx[r]-nvar1];
+					nelts2++;
 				} else {
 					elts1[idx[r]] = elts[r];
+					value += elts[r]*firstSol[idx[r]];
 				}
 			}
+			if (!nelts2) { /*printf("got first-stage only cut\n");*/ continue; }
+			//if (value < cut.lb()) continue; // printf("got inactive cut\n");
 			solver.addRow(elts1,elts2,scen,cut.lb(),cut.ub());
-		}*/
+		}
 	}
-	//solver.commitNewRows();
-
+	solver.commitNewRows();
+	
 	MPI_Allreduce(&fixstg1[0],&fixstg1_all[0],nvar1,MPI_INT,MPI_SUM,comm);
 	for (int i = 0; i < nvar1; i++) {
 		if (fixstg1_all[i]) solver.setFirstStageColLB(i,1.0);
@@ -96,12 +108,13 @@ template<typename BALPSolver> void ucRootNode(stochasticInput &input,
 	solver.commitStates();
 	solver.go();
 
+	//printf("Primal error: %f\n", solver.primalError());
+
 	double lpcuts = solver.getObjective();
 
 	
-	vector<double> firstSol = solver.getFirstStagePrimalColSolution();
 	for (int i = 0; i < nvar1; i++) {
-		if (firstSol[i] < 0.01) {
+		if (firstSol[i] < 0.0001) {
 			firstSol[i] = 0.0;
 		} else {
 			firstSol[i] = 1.0;
@@ -112,12 +125,13 @@ template<typename BALPSolver> void ucRootNode(stochasticInput &input,
 	int ncons2 = input.nSecondStageCons(0);
 	
 	const vector<double> &obj1 = input.getFirstStageObj();
-
+	
 	vector<variableState> rowSave(ncons2), colSave(nvar2);
 	bool havesave = false;
 	double sum = 0.0;
 	bool infeas = false;
 	typedef ClpRecourseSolver RecourseSolver;
+	
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
 		RecourseSolver rsol(input, scen, firstSol);

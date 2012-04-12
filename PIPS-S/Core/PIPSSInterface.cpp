@@ -192,7 +192,7 @@ void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<
 		e1.setFullNonZero(elts1.size(),&elts1[0]);
 		e2.setFullNonZero(elts2.size(),&elts2[0]);
 	}
-	d.addRow(e1,e1,scen,lb,ub);
+	d.addRow(e1,e2,scen,lb,ub);
 
 
 }

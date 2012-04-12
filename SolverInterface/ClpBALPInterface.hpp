@@ -49,6 +49,9 @@ public:
 	void setFirstStageColLB(int idx, double newLb);
 	void setFirstStageColUB(int idx, double newUb);
 
+
+	double primalError() { return model.largestPrimalError(); }
+
 protected:
 	ClpSimplex model;
 	BADimensions dims;
