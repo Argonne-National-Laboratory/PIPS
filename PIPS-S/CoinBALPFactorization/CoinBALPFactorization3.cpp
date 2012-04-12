@@ -8,7 +8,7 @@ void CoinBALPFactorization::getRowOfT(CoinIndexedVector &v, int row) {
 	assert(v.getNumElements() == 0);
 	assert(!v.packedMode());
 	assert(v.capacity() >= numberColumnsT_);
-	if (row <= numberRows_ - numberColumns_) printf("asked for XT row, why?\n");
+	if (row < numberColumns_) printf("asked for XT row, why?\n");
 	int nElts = numberInRowT_.array()[row];
 	double *elts = v.denseVector();
 	int *idx = v.getIndices();

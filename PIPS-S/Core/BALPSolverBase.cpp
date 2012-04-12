@@ -90,6 +90,7 @@ void BALPSolverBase::setupIndices() {
 
 	int nbasic1 = basicIdx.getFirstStageVec().size();
 	nbasic = data.ctx.reduce(nbasic-nbasic1) + nbasic1;
+	//printf("nbasic: %d total cons: %d\n", nbasic, data.dims.totalCons());
 	assert(nbasic == data.dims.totalCons());
 	//if (data.ctx.mype() == 0) cout << "nbasic first stage: " << nbasic1 << endl;
 

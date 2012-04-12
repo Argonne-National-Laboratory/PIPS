@@ -59,6 +59,8 @@ public:
 	void addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
 	void commitNewRows();
 
+	double primalError() { return solver->calculateLargestPrimalError(); }
+
 protected:
 	const BAFlagVector<variableState>& getStatesRef() const { return solver->getStates(); }
 	const BADimensions& getDims() const { return d.dims.inner; }
