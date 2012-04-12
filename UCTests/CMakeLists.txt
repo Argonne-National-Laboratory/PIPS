@@ -22,5 +22,3 @@ include_directories(../PIPS-S/CoinBALPFactorization)
 add_executable(ucRootNodePIPSS ucRootNodePIPSS.cpp OsiSubproblemWrapper.cpp)
 target_link_libraries(ucRootNodePIPSS pipss stochInput ClpBALPInterface ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
-add_executable(cuts1 cuts1.cpp)
-target_link_libraries(cuts1 pipss stochInput ClpBALPInterface ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
