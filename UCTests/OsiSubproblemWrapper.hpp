@@ -556,7 +556,7 @@ public:
     /// Default Constructor
     OsiSubproblemWrapper(stochasticInput& in, int whichScenario); 
     
-    virtual OsiSolverInterface * clone(bool copyData = true) const { assert(0); }
+    virtual OsiSolverInterface * clone(bool copyData = true) const { assert(0); return 0; }
   
     /// Destructor 
     virtual ~OsiSubproblemWrapper() {}
