@@ -48,6 +48,10 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 
 	vector<variableState> rowSave(ncons2), colSave(nvar2);
 	bool havesave = false;
+
+	vector<vector<double> > uniqueSolutions;
+	vector<double> objs;
+	vector<int> freqCount;
 	for (int scen_ = 0; scen_ < nscen; scen_++) {
 		vector<double> curSolution(nvar1);
 		
@@ -56,6 +60,29 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 			curSolution = lagrangeSolutions[idx];
 		}
 		MPI_Bcast(&curSolution[0],nvar1,MPI_DOUBLE,ctx.owner(scen_),comm);
+
+		bool diff = true;
+		for (unsigned r = 0; r < uniqueSolutions.size(); r++) {
+			const vector<double>& v = uniqueSolutions[r];
+			diff = false;
+			for (int i = 0; i < nvar1; i++) {
+				if (fabs(v[i]-curSolution[i]) > 1e-5) {
+					diff = true;
+					break;
+				}
+			}
+			if (!diff) {
+				freqCount[r]++;
+				break;
+			} else {
+				diff = true;
+			}
+		}
+		if (!diff) continue;
+
+		uniqueSolutions.push_back(curSolution);
+		freqCount.push_back(1);
+
 
 		double sum = 0.0;
 		bool infeas = false;
@@ -98,6 +125,9 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 		
 		sumObj += sum_all;
 
+		objs.push_back(sum_all);
+
+
 		if (sum_all < bestObj) {
 			bestObj = sum_all;
 			bestSolution = curSolution;
@@ -105,9 +135,17 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 
 	}
 	if (mype == 0) {
+		printf("%lu unique solutions\nCount\tObj\n", uniqueSolutions.size());
+		for (unsigned r = 0; r < uniqueSolutions.size(); r++) {
+			printf("%d\t", freqCount[r]);
+			if (objs[r] > 1e20) {
+				printf("inf\n");
+			} else {
+				printf("%f\n",objs[r]);
+			}
+		}
 		printf("Lagrange LB: %f\n",lagrangelb);
 		printf("Best UB: %f\n",bestObj);
-		printf("Average UB: %f\n",sumObj/nscen);
 		// formula for positive values
 		printf("Gap: %f%%\n",100*(bestObj-lagrangelb)/lagrangelb);
 	}
