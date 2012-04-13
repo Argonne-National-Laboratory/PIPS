@@ -40,7 +40,6 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 	// evaluate solutions
 	vector<double> bestSolution;
 	double bestObj = COIN_DBL_MAX;
-	double sumObj = 0.0;
 
 	assert(input.scenarioDimensionsEqual());
 	int nvar2 = input.nSecondStageVars(0);
@@ -123,8 +122,6 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 		MPI_Allreduce(&sum,&sum_all,1,MPI_DOUBLE,MPI_SUM,comm);
 		for (int k = 0; k < nvar1; k++) sum_all += curSolution[k]*obj1[k];
 		
-		sumObj += sum_all;
-
 		objs.push_back(sum_all);
 
 
