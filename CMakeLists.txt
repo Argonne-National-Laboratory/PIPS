@@ -139,7 +139,7 @@ add_subdirectory(PIPS-S)
 add_subdirectory(LagrangeBnC)
 add_subdirectory(Utilities)
 add_subdirectory(UCTests)
-
+add_subdirectory(UCRolling)
 
 #if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 
 #add_subdirectory(src/Tests)
