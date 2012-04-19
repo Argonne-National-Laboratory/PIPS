@@ -10,13 +10,20 @@
 // all it does it keep a map of the indices
 // assumes variables are indexed by a zero-based index and by a template parameter T,
 // which is a key to a given map
-template <typename T, typename Tstruct> class variableSet {
-	void initialize(int nIndex1, int offset, std::map<T,Tstruct> const& Tmap) {
-		idxmap = &Tmap; this->offset = offset; this->nIndex1 = nIndex1;
+template <typename T, typename Tmap> class variableSet {
+public:
+	void initialize(int nIndex1, int offset, Tmap const& map) {
+		idxmap = &map; this->offset = offset; this->nIndex1 = nIndex1;
 	}
 
-	int operator()(int i1, T i2) {
-		return i1+ nIndex1*(*idxmap)[i2].idx;
+	// given zero-based index
+	int operator()(int i1, int i2) {
+		return i1+ nIndex1*i2 + offset;
+	}
+
+	// given key
+	int lookup(int i1, T i2) {
+		return i1+ nIndex1*idxmap->find(i2)->second + offset;
 	}
 
 	int totalVars() {
@@ -26,7 +33,7 @@ template <typename T, typename Tstruct> class variableSet {
 private:
 	int nIndex1; // first index is 0,1,..,nIndex1-1 (doesn't include nIndex1)
 	int offset;
-	std::map<T,Tstruct> const *idxmap;
+	Tmap const *idxmap;
 };
 
 class ucRollingModel : public stochasticInput {
@@ -82,14 +89,16 @@ public:
 private:
 
 	void readData(std::string const& dataRoot, MPI_Comm);
+	void generateWind(int scen, double sigma);
+	void initializeVariables();
 
 	/* PROBLEM DATA */
 	int nscen;
 	int timeOffset; // offset from time zero
-	int horizon; // horizon length
+	int horizon; // horizon length (number of time periods in the future, not including now)
+	double sigma;
 
 	struct genStruct {
-		int idx; // zero-based index
 		int bus_gen;
 		double np_cap;
 		double sum_cap;
@@ -104,7 +113,8 @@ private:
 		double Pgen_init;
 	};
 
-	std::map<int,genStruct> genData;
+	std::vector<genStruct> genData;
+	std::map<int,int> genMap;
 
 	struct linStruct {
 		int idx;
@@ -115,62 +125,63 @@ private:
 		double Pmax;
 	};
 
-	std::map<std::string,linStruct> linData;
+	std::vector<linStruct> linData;
+	std::map<std::string,int> linMap;
 
 	struct fuelStruct {
-		int idx;
 		double HV;
 		double Unitprice;
 	};
-
-	std::map<std::string,fuelStruct> fuelData;
 	
-	struct busStruct {
+	std::vector<fuelStruct> fuelData;
+	std::map<std::string,int> fuelMap;
+	
+	/*struct busStruct {
 		int idx;
-	};
-
-	std::map<int,busStruct> busData;
+	};*/
+	std::map<int,int> busMap;
+	//std::map<int,busStruct> busData;
 	int ref_bus;
 
 	struct loadStruct {
-		int idx;
 		int bus_load;
 		double SOCcap;
 		double SOC_init;
 	};
 
-	std::map<int,loadStruct> loadData;
+	std::map<int,int> loadMap;
+	std::vector<loadStruct> loadData;
 
-	// outer index is time, inner is LOAD
-	std::vector<std::map<int,double> > loads;
+	// outer index is time, inner is LOAD index
+	std::vector<std::vector<double> > loads;
 
 	struct windStruct {
-		int idx;
 		int bus_wind;
 		double wind_share;
 	};
-
-	std::map<int,windStruct> windData;
+	
+	std::map<int,int> windMap;
+	std::vector<windStruct> windData;
 	
 	// indexed by time
 	std::vector<double> wind_total_determ;
 	std::vector<double> SOCprof_determ;
 
 	/* VARIABLES */
-	variableSet<int,genStruct> yuc; // these are the only first stage variables
-	variableSet<int,genStruct> Pgen, dPgen;
-	variableSet<int,windStruct> Pwind;
-	variableSet<int,busStruct> theta, slackp, slackm;
-	variableSet<std::string,linStruct> P;
-	variableSet<int,loadStruct> SOC, Psto;
+	variableSet<int,std::map<int,int> > yuc; // these are the only first stage variables
+	variableSet<int,std::map<int,int> > Pgen, dPgen;
+	variableSet<int,std::map<int,int> > Pwind;
+	variableSet<int,std::map<int,int> > theta, slackp, slackm;
+	variableSet<std::string,std::map<std::string,int> > P;
+	variableSet<int,std::map<int,int> > SOC, Psto;
 	
 
 	/* Instance data */
 	int nvar1, nvar2, ncons2;
 	bool givenInitial;
 	// randomly generated winds for each scenario
-	// outer index is scenario, inner index is time (0 corresponds to timeOffset)
-	std::map<int,std::vector<int> > wind_total;
+	// outer index is scenario, inner index is time (global index)
+	std::vector<std::vector<double> > wind_total;
 
 };
 
