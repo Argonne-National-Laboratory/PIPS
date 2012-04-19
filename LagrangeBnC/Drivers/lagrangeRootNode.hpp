@@ -51,6 +51,8 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 	vector<vector<double> > uniqueSolutions;
 	vector<double> objs;
 	vector<int> freqCount;
+
+	vector<double> unionSolution(nvar1,0.0);
 	for (int scen_ = 0; scen_ < nscen; scen_++) {
 		vector<double> curSolution(nvar1);
 		
@@ -65,6 +67,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 			const vector<double>& v = uniqueSolutions[r];
 			diff = false;
 			for (int i = 0; i < nvar1; i++) {
+				if (fabs(v[i]-1.0) < 1e-5) unionSolution[i] = 1.0;
 				if (fabs(v[i]-curSolution[i]) > 1e-5) {
 					diff = true;
 					break;
@@ -131,6 +134,49 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 		}
 
 	}
+
+	double unionobj;
+	{
+		double sum = 0.0;
+		bool infeas = false;
+		for (unsigned q = 1; q < localScen.size(); q++) {
+			int scen = localScen[q];
+			RecourseSolver rsol(input, scen, unionSolution);
+			rsol.setDualObjectiveLimit(1e7);
+			
+			if (havesave) {
+				for (int r = 0; r < nvar2; r++) {
+					rsol.setSecondStageColState(r,colSave[r]);
+				}
+				for (int r = 0; r < ncons2; r++) {
+					rsol.setSecondStageRowState(r,rowSave[r]);
+				}
+			}
+			rsol.go();
+			sum += rsol.getObjective();
+			
+			if (rsol.getStatus() == ProvenInfeasible) {
+				printf("got infeasible 1st stage\n");
+				infeas = true; break;
+			}
+			assert(rsol.getStatus() == Optimal);
+			if (!havesave) {
+				for (int r = 0; r < nvar2; r++) {
+					colSave[r] = rsol.getSecondStageColState(r);
+				}
+				for (int r = 0; r < ncons2; r++) {
+					rowSave[r] = rsol.getSecondStageRowState(r);
+				}
+				havesave = true;
+			}
+
+		}
+		if (infeas) { sum += COIN_DBL_MAX; }
+		double sum_all;
+		MPI_Allreduce(&sum,&sum_all,1,MPI_DOUBLE,MPI_SUM,comm);
+		for (int k = 0; k < nvar1; k++) sum_all += unionSolution[k]*obj1[k];
+		unionobj = sum_all;
+	}
 	if (mype == 0) {
 		printf("%lu unique solutions\nCount\tObj\n", uniqueSolutions.size());
 		for (unsigned r = 0; r < uniqueSolutions.size(); r++) {
@@ -143,6 +189,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 		}
 		printf("Lagrange LB: %f\n",lagrangelb);
 		printf("Best UB: %f\n",bestObj);
+		printf("Union UB: %f\n",unionobj);
 		// formula for positive values
 		printf("Gap: %f%%\n",100*(bestObj-lagrangelb)/lagrangelb);
 	}
