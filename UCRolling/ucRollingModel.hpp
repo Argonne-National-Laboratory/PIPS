@@ -17,16 +17,18 @@ public:
 	}
 
 	// given zero-based index
-	int operator()(int i1, int i2) {
+	int operator()(int i1, int i2) const {
 		return i1+ nIndex1*i2 + offset;
 	}
 
 	// given key
-	int lookup(int i1, T i2) {
-		return i1+ nIndex1*idxmap->find(i2)->second + offset;
+	int lookup(int i1, T i2) const {
+		typename Tmap::const_iterator it = idxmap->find(i2);
+		assert(it != idxmap->end());
+		return i1+ nIndex1*it->second + offset;
 	}
 
-	int totalVars() {
+	int totalVars() const {
 		return nIndex1*idxmap->size();
 	}
 
@@ -86,7 +88,7 @@ public:
 	virtual bool allProbabilitiesEqual() { return true; }
 	virtual bool continuousRecourse() { return true; }
 
-private:
+//private:
 
 	void readData(std::string const& dataRoot, MPI_Comm);
 	void generateWind(int scen, double sigma);
@@ -166,15 +168,15 @@ private:
 	// indexed by time
 	std::vector<double> wind_total_determ;
 	std::vector<double> SOCprof_determ;
-
+public:
 	/* VARIABLES */
 	variableSet<int,std::map<int,int> > yuc; // these are the only first stage variables
-	variableSet<int,std::map<int,int> > Pgen, dPgen;
+	variableSet<int,std::map<int,int> > Pgen;//, dPgen;
 	variableSet<int,std::map<int,int> > Pwind;
 	variableSet<int,std::map<int,int> > theta, slackp, slackm;
 	variableSet<std::string,std::map<std::string,int> > P;
 	variableSet<int,std::map<int,int> > SOC, Psto;
-	
+private:	
 
 	/* Instance data */
 	int nvar1, nvar2, ncons2;

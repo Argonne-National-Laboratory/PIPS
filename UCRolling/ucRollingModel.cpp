@@ -199,7 +199,7 @@ void ucRollingModel::readData(string const& dataRoot, MPI_Comm comm) {
 	{
 		istringstream ss(readFile(dataRoot+"/wind_data.dat",comm));
 		double w;
-		ss >> w; // seems that first one should be skipped
+		//ss >> w; // seems that first one should be skipped??
 		ss >> w;
 		while (!ss.fail()) {
 			wind_total_determ.push_back(w);
@@ -239,8 +239,8 @@ void ucRollingModel::initializeVariables() {
 	Pgen.initialize(horizon+1,nvar2,genMap);
 	nvar2 += Pgen.totalVars();
 
-	dPgen.initialize(horizon,nvar2,genMap);
-	nvar2 += dPgen.totalVars();
+	//dPgen.initialize(horizon,nvar2,genMap);
+	//nvar2 += dPgen.totalVars();
 
 	Pwind.initialize(horizon+1,nvar2,windMap);
 	nvar2 += Pwind.totalVars();
@@ -303,6 +303,7 @@ double gaussian(double mean, double stdev, uint64_t &state) {
 void ucRollingModel::generateWind(int scen, double sigma) {
 	vector<double> &v = wind_total[scen];
 	if (v.size()) return; // already generated
+	if (scen == 0) { v = wind_total_determ; return; }
 	uint64_t seed = scen;
 	for (unsigned i = 0; i < wind_total_determ.size(); i++) {
 		v.push_back(gaussian(wind_total_determ[i],wind_total_determ[i]*sigma/100.,seed));
@@ -374,11 +375,9 @@ vector<double> ucRollingModel::getSecondStageColLB(int scen) {
 	for (it = genMap.begin(); it != genMap.end(); ++it) {
 		int idx = it->second;
 		const genStruct &g = genData[idx];
-		for (int i = 0; i < horizon; i++) {
+		for (int i = 0; i <= horizon; i++) {
 			lb[Pgen(i,idx)] = 0.;
-			lb[dPgen(i,idx)] = -g.max_dr;
 		}
-		lb[Pgen(horizon,idx)] = 0.;
 		if (givenInitial) lb[Pgen(0,idx)] = g.Pgen_init;
 	}
 
@@ -416,6 +415,7 @@ vector<double> ucRollingModel::getSecondStageColLB(int scen) {
 			lb[SOC(i,idx)] = 0.;
 			lb[Psto(i,idx)] = -numeric_limits<double>::infinity();
 		}
+		lb[SOC(0,idx)] = loadData[idx].SOC_init;
 	}
 
 	return lb;
@@ -431,11 +431,9 @@ vector<double> ucRollingModel::getSecondStageColUB(int scen) {
 	for (it = genMap.begin(); it != genMap.end(); ++it) {
 		int idx = it->second;
 		const genStruct &g = genData[idx];
-		for (int i = 0; i < horizon; i++) {
+		for (int i = 0; i <= horizon; i++) {
 			ub[Pgen(i,idx)] = g.np_cap; // *yuc
-			ub[dPgen(i,idx)] = g.max_ur;
 		}
-		ub[Pgen(horizon,idx)] = g.np_cap;
 		if (givenInitial) ub[Pgen(0,idx)] = g.Pgen_init;
 	}
 
@@ -474,6 +472,7 @@ vector<double> ucRollingModel::getSecondStageColUB(int scen) {
 			ub[SOC(i,idx)] = l.SOCcap*SOCprof_determ[i+timeOffset]; // in AMPL SOCprof data is per scenario but actually all the same
 			ub[Psto(i,idx)] = numeric_limits<double>::infinity();
 		}
+		ub[SOC(0,idx)] = loadData[idx].SOC_init;
 	}
 
 	return ub;
@@ -488,7 +487,7 @@ vector<double> ucRollingModel::getSecondStageObj(int scen) {
 	for (it = genMap.begin(); it != genMap.end(); ++it) {
 		int idx = it->second;
 		const genStruct &g = genData[idx];
-		for (int i = 0; i < horizon; i++) {
+		for (int i = 0; i <= horizon; i++) {
 			obj[Pgen(i,idx)] = g.gen_cost/nscen;
 		}
 	}
@@ -519,41 +518,40 @@ vector<string> ucRollingModel::getSecondStageColNames(int scen) {
 	map<int,int>::const_iterator it;
 	for (it = genMap.begin(); it != genMap.end(); ++it) {
 		int idx = it->second;
-		for (int i = 0; i < horizon; i++) {
-			s[Pgen(i,idx)] = toStr("Pgen",i,idx,scen);
-			s[dPgen(i,idx)] = toStr("dPgen",i,idx,scen);
+		for (int i = 0; i <= horizon; i++) {
+			s[Pgen(i,idx)] = toStr("Pgen",i,it->first,scen);
+			//s[dPgen(i,idx)] = toStr("dPgen",i,it->first,scen);
 		}
-		s[Pgen(horizon,idx)] = toStr("Pgen",horizon,idx,scen);
 	}
 
 	for (it = windMap.begin(); it != windMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			s[Pwind(i,idx)] = toStr("Pwind",i,idx,scen);
+			s[Pwind(i,idx)] = toStr("Pwind",i,it->first,scen);
 		}
 	}
 	
 	for (it = busMap.begin(); it != busMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			s[theta(i,idx)] = toStr("theta",i,idx,scen);
-			s[slackp(i,idx)] = toStr("slackp",i,idx,scen);
-			s[slackm(i,idx)] = toStr("slackm",i,idx,scen);
+			s[theta(i,idx)] = toStr("theta",i,it->first,scen);
+			s[slackp(i,idx)] = toStr("slackp",i,it->first,scen);
+			s[slackm(i,idx)] = toStr("slackm",i,it->first,scen);
 		}
 	}
 	
 	for (map<string,int>::const_iterator it = linMap.begin(); it != linMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			s[P(i,idx)] = toStr("P",i,idx,scen);
+			s[P(i,idx)] = toStr("P",i,it->first,scen);
 		}
 	}
 
 	for (it = loadMap.begin(); it != loadMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			s[SOC(i,idx)] = toStr("SOC",i,idx,scen);
-			s[Psto(i,idx)] = toStr("Psto",i,idx,scen);
+			s[SOC(i,idx)] = toStr("SOC",i,it->first,scen);
+			s[Psto(i,idx)] = toStr("Psto",i,it->first,scen);
 		}
 	}
 
@@ -572,6 +570,7 @@ vector<double> ucRollingModel::getSecondStageRowUB(int scen) {
 
 	// pfeq
 	for (it = busMap.begin(); it != busMap.end(); ++it) {
+		//cout << it->first << "\t";
 		for (int i = 0; i <= horizon; i++) {
 			// = load on this bus - wind to this bus
 			double sum = 0.;
@@ -586,7 +585,10 @@ vector<double> ucRollingModel::getSecondStageRowUB(int scen) {
 				}
 			}
 			ub[r++] = sum;
+			//cout << sum << "\t";
+
 		}
+		//cout << endl;
 	}	
 	
 	// Peq
@@ -603,10 +605,13 @@ vector<double> ucRollingModel::getSecondStageRowUB(int scen) {
 		}
 	}
 
-	// rampdynamics
-	for (unsigned genidx = 0; genidx < genData.size(); genidx++) {
+	// rampdynamics: -max_dr[i] <=  Pgen[s,t+1,i] - Pgen[s,t,i] <= max_ur[i]
+	// we've presolved out dPgen
+	for (it = genMap.begin(); it != genMap.end(); ++it) {
+		int idx = it->second;
+		const genStruct &g = genData[idx];
 		for (int i = 0; i < horizon; i++) {
-			ub[r++] = 0.;
+			ub[r++] = g.max_ur;
 		}
 	}
 
@@ -637,6 +642,10 @@ vector<double> ucRollingModel::getSecondStageRowLB(int scen) {
 	map<int,int>::const_iterator it;
 	
 	int r = 0;
+	/*
+	for (int i = 0; i <= horizon; i++) {
+		cout << "wind_total[" << i << "] = " << wind_total[0][i] << endl;
+	}*/
 
 	// pfeq
 	for (it = busMap.begin(); it != busMap.end(); ++it) {
@@ -674,9 +683,11 @@ vector<double> ucRollingModel::getSecondStageRowLB(int scen) {
 	}
 
 	// rampdynamics
-	for (unsigned genidx = 0; genidx < genData.size(); genidx++) {
+	for (it = genMap.begin(); it != genMap.end(); ++it) {
+		int idx = it->second;
+		const genStruct &g = genData[idx];
 		for (int i = 0; i < horizon; i++) {
-			lb[r++] = 0.;
+			lb[r++] = -g.max_dr;
 		}
 	}
 
@@ -828,9 +839,9 @@ CoinPackedMatrix ucRollingModel::getSecondStageConstraints(int scen) {
 	// rampdynamics
 	for (it = genMap.begin(); it != genMap.end(); ++it) {
 		for (int i = 0; i < horizon; i++) {
-			double elts[] = {1.0,-1.0,-1.0};
-			int idx[] = {Pgen(i+1,it->second),Pgen(i,it->second),dPgen(i,it->second)};
-			rows[r++] = new CoinPackedVector(3,idx,elts);
+			double elts[] = {1.0,-1.0};
+			int idx[] = {Pgen(i+1,it->second),Pgen(i,it->second)};
+			rows[r++] = new CoinPackedVector(2,idx,elts);
 		}
 	}
 
@@ -887,9 +898,9 @@ CoinPackedMatrix ucRollingModel::getLinkingConstraints(int scen) {
 	// Pgenequb -- linking constraint
 	for (it = genMap.begin(); it != genMap.end(); ++it) {
 		for (int i = 0; i <= horizon; i++) {
-			double one = -1.0;
+			double cap = -genData[it->second].np_cap;
 			int idx = yuc(i,it->second);
-			rows[r++] = new CoinPackedVector(1,&idx,&one);
+			rows[r++] = new CoinPackedVector(1,&idx,&cap);
 		}
 	}
 
