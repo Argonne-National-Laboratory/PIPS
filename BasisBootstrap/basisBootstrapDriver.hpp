@@ -164,6 +164,26 @@ public:
 		return solver->getObjective();
 	}
 
+	int countSquare() {
+		assert(masterIsValid);
+		int count = 0;
+		for (unsigned k = 0; k < scenariosInMaster.size(); k++) {
+			int scen = scenariosInMaster[k];
+			int nvar2 = input.nSecondStageVars(scen);
+			int ncons2 = input.nSecondStageCons(scen);
+			int nbasic = 0;
+			for (int i = 0; i < nvar2; i++) {
+				if (colStates2[scen][i] == Basic) nbasic++;
+			}
+			for (int i = 0; i < ncons2; i++) {
+				if (rowStates2[scen][i] == Basic) nbasic++;
+			}
+			if (nbasic == ncons2) count++;
+		}
+		printf("%d of %d are square\n",count,(int)scenariosInMaster.size());
+		return count;
+	}
+
 protected:
 	std::vector<variableState> rowStates1, colStates1;
 	std::vector<variableState> goodRowStates, goodColStates; // basis from a feasible recourse problem, for hot starting
