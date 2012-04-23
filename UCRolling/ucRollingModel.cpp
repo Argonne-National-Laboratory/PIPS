@@ -9,6 +9,8 @@
 
 using namespace std;
 
+const double THETASCALE = 1.;//1e5;
+
 ucRollingModel::ucRollingModel(string const& dataRoot, int nscen, int tOffset, int tHorizon,
 		MPI_Comm comm) {
 	this->nscen = nscen;
@@ -205,7 +207,7 @@ void ucRollingModel::readData(string const& dataRoot, MPI_Comm comm) {
 			wind_total_determ.push_back(w);
 			ss >> w;
 		}
-		assert(wind_total_determ.size() == loads.size());
+		//assert(wind_total_determ.size() == loads.size());
 	}
 
 	{
@@ -216,7 +218,7 @@ void ucRollingModel::readData(string const& dataRoot, MPI_Comm comm) {
 			SOCprof_determ.push_back(w);
 			ss >> w;
 		}
-		assert(wind_total_determ.size() == SOCprof_determ.size());
+		assert(loads.size() == SOCprof_determ.size());
 	}
 
 	for (unsigned i = 0; i < loadData.size(); i++) {
@@ -333,7 +335,7 @@ vector<double> ucRollingModel::getFirstStageColUB() {
 
 
 vector<double> ucRollingModel::getFirstStageObj() { 
-	return vector<double>(nvar1,1e3); // TODO: vary per generator
+	return vector<double>(nvar1,1e-2*1e3); // TODO: vary per generator
 }
 
 namespace{
@@ -368,6 +370,7 @@ vector<string> ucRollingModel::getFirstStageRowNames() {
 }
 
 vector<double> ucRollingModel::getSecondStageColLB(int scen) {
+	generateWind(scen,sigma);
 	vector<double> lb(nvar2);
 
 	map<int,int>::const_iterator it;
@@ -391,7 +394,7 @@ vector<double> ucRollingModel::getSecondStageColLB(int scen) {
 	for (it = busMap.begin(); it != busMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			lb[theta(i,idx)] = -3.14/2.;
+			lb[theta(i,idx)] = -THETASCALE*3.14/2.;
 			lb[slackp(i,idx)] = 0.;
 			lb[slackm(i,idx)] = 0.;
 		}
@@ -447,7 +450,7 @@ vector<double> ucRollingModel::getSecondStageColUB(int scen) {
 	for (it = busMap.begin(); it != busMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			ub[theta(i,idx)] = 3.14/2.;
+			ub[theta(i,idx)] = THETASCALE*3.14/2.;
 			ub[slackp(i,idx)] = numeric_limits<double>::infinity();
 			ub[slackm(i,idx)] = numeric_limits<double>::infinity();
 		}
@@ -488,15 +491,15 @@ vector<double> ucRollingModel::getSecondStageObj(int scen) {
 		int idx = it->second;
 		const genStruct &g = genData[idx];
 		for (int i = 0; i <= horizon; i++) {
-			obj[Pgen(i,idx)] = g.gen_cost/nscen;
+			obj[Pgen(i,idx)] = 1e-2*g.gen_cost/nscen;
 		}
 	}
 
 	for (it = busMap.begin(); it != busMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			obj[slackp(i,idx)] = 1e3/nscen;
-			obj[slackm(i,idx)] = 1e3/nscen;
+			obj[slackp(i,idx)] = 1e-2*1e3/nscen;
+			obj[slackm(i,idx)] = 1e-2*1e3/nscen;
 		}
 	}
 	
@@ -561,6 +564,7 @@ vector<string> ucRollingModel::getSecondStageColNames(int scen) {
 
 
 vector<double> ucRollingModel::getSecondStageRowUB(int scen) {
+	generateWind(scen,sigma);
 
 	vector<double> ub(ncons2);
 	
@@ -636,6 +640,7 @@ vector<double> ucRollingModel::getSecondStageRowUB(int scen) {
 }
 
 vector<double> ucRollingModel::getSecondStageRowLB(int scen) {
+	generateWind(scen,sigma);
 
 	vector<double> lb(ncons2);
 	
@@ -821,7 +826,7 @@ CoinPackedMatrix ucRollingModel::getSecondStageConstraints(int scen) {
 	for (map<string,int>::const_iterator linit = linMap.begin(); linit != linMap.end(); ++linit) {
 		linStruct const &l = linData[linit->second];
 		for (int i = 0; i <= horizon; i++) {
-			double elts[] = {l.X, -l.V*l.V, l.V*l.V};
+			double elts[] = {l.X, -l.V*l.V/THETASCALE, l.V*l.V/THETASCALE};
 			int idx[] = {P(i,linit->second),theta.lookup(i,l.snd_bus),theta.lookup(i,l.rec_bus)};
 			rows[r++] = new CoinPackedVector(3,idx,elts);
 		}
@@ -927,7 +932,7 @@ CoinPackedMatrix ucRollingModel::getLinkingConstraints(int scen) {
 
 	CoinPackedMatrix mat;
 	assert(mat.isColOrdered());
-	mat.setDimensions(0,nvar2);
+	mat.setDimensions(0,nvar1);
 	mat.appendRows(ncons2,&rows[0]);
 
 	assert(mat.getNumRows() == ncons2);
