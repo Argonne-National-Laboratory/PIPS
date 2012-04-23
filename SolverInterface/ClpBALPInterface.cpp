@@ -55,7 +55,7 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 	double const *Aelts = Amat.getElements();
 	int const nFirstStageVars = input.nFirstStageVars();
 	int const nFirstStageCons = input.nFirstStageCons();
-	CoinPackedMatrix const &Tmat0 = input.getLinkingConstraints(ctx.localScenarios().at(1));
+	CoinPackedMatrix const &Tmat0 = input.getLinkingConstraints(0);
 
 	for (int c = 0; c < nFirstStageVars; c++) {
 		starts[c] = nnz;
@@ -150,12 +150,12 @@ void ClpBALPInterface::go() {
 	solvectl.setInfeasibleReturn(true);
 	
 	// specifying these just confuses Clp, let it choose by itself
-	
+	/*	
 	if (t == usePrimal) {
 		solvectl.setSolveType(ClpSolve::usePrimal);
 	} else {
 		solvectl.setSolveType(ClpSolve::useDual);
-	}
+	}*/
 
 
 	model.initialSolve(solvectl);

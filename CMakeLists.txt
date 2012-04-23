@@ -40,7 +40,7 @@ set(AMPL_DIR ${SHARED_DIR}/amplsolvers)
 set(COIN_DIR ${SHARED_DIR}/Cbc-2.7.6)
 
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
-	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in Clp-1.14")
+	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in SharedLibraries/Cbc-2.7.6")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
 set(ENV{PKG_CONFIG_PATH} ${COIN_DIR}/lib/pkgconfig)
@@ -140,6 +140,7 @@ add_subdirectory(LagrangeBnC)
 add_subdirectory(Utilities)
 add_subdirectory(UCTests)
 add_subdirectory(UCRolling)
+add_subdirectory(BasisBootstrap)
 
 #if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 
 #add_subdirectory(src/Tests)
