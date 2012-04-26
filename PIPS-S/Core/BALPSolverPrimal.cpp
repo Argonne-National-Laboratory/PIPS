@@ -662,7 +662,7 @@ void BALPSolverPrimal::go() {
 			}
 			if (status == Initialized || status == DualFeasible) {
 				lastBadReinvert = nIter;
-				int nSteps = nIter - lastGoodReinvert;
+				int nSteps = nIter - lastReinvert;
 				if (reinvertFrequency_backup > 1) {
 					if (reinvertFrequency == reinvertFrequency_backup) reinvertFrequency /= 2;
 					else if (nSteps > 2) reinvertFrequency = nSteps - 2;

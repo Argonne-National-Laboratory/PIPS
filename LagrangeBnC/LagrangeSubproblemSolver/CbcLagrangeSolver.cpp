@@ -145,14 +145,18 @@ void CbcLagrangeSolver::go() {
 	// preprocessing, cuts, heuristics all enabled?
 
 	const char * argv2[]={"","-solve","-quit"};
-	cbcm->setMaximumNodes(1);
+	//cbcm->setMaximumNodes(1000);
 	CbcMain1(3,argv2,*cbcm);
-    	cbcm->branchAndBound();
+    	//cbcm->branchAndBound();
    
 }
 
 double CbcLagrangeSolver::getBestPossibleObjective() const {
 	return cbcm->getBestPossibleObjValue();
+}
+
+double CbcLagrangeSolver::getBestFeasibleObjective() const {
+	return cbcm->getObjValue();
 }
 
 solverState CbcLagrangeSolver::getStatus() const {

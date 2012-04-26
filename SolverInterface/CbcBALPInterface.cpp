@@ -183,6 +183,21 @@ solverState CbcBALPInterface::getStatus() const {
 	return Initialized;
 }
 
+vector<double> CbcBALPInterface::getFirstStagePrimalColSolution() const {
+	const double *sol = model.getColSolution();
+	int nvar1 = dims.numFirstStageVars();
+	return vector<double>(sol,sol+nvar1);
+}
+
+vector<double> CbcBALPInterface::getSecondStagePrimalColSolution(int scen) const {
+	const double *sol = model.getColSolution();
+	int offset = dims.numFirstStageVars();
+	for (int i = 0; i < scen; i++) {
+		offset += dims.numSecondStageVars(i);
+	}
+	return vector<double>(sol+offset,sol+offset+dims.numSecondStageVars(scen));
+}
+
 /*
 static variableState clpStatusToState(ClpSimplex::Status s) {
 	switch (s) {
@@ -260,20 +275,9 @@ void CbcBALPInterface::setSecondStageRowState(int scen, int idx,variableState s)
 }
 
 
-vector<double> CbcBALPInterface::getFirstStagePrimalColSolution() const {
-	const double *sol = model.primalColumnSolution();
-	int nvar1 = dims.numFirstStageVars();
-	return vector<double>(sol,sol+nvar1);
-}
 
-vector<double> CbcBALPInterface::getSecondStagePrimalColSolution(int scen) const {
-	const double *sol = model.primalColumnSolution();
-	int offset = dims.numFirstStageVars();
-	for (int i = 0; i < scen; i++) {
-		offset += dims.numSecondStageVars(i);
-	}
-	return vector<double>(sol+offset,sol+offset+dims.numSecondStageVars(scen));
-}
+
+
 
 vector<double> CbcBALPInterface::getFirstStageDualColSolution() const {
 	const double *sol = model.dualColumnSolution();

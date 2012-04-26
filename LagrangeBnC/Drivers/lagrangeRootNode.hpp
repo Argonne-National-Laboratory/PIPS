@@ -25,7 +25,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 		int scen = localScen[i];
 		LagrangeSolver lsol(input, scen, vector<double>(nvar1,0.0));
 		lsol.go();
-		printf("Objective from scen %d: %f\n",scen,lsol.getBestPossibleObjective());
+		printf("Objective from scen %d: %f %f\n",scen,lsol.getBestPossibleObjective(),lsol.getBestFeasibleObjective());
 		objsum_local += lsol.getBestPossibleObjective();
 		lagrangeObjs.push_back(lsol.getBestPossibleObjective());
 		lagrangeSolutions.push_back(lsol.getBestFirstStageSolution());
@@ -61,6 +61,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 			curSolution = lagrangeSolutions[idx];
 		}
 		MPI_Bcast(&curSolution[0],nvar1,MPI_DOUBLE,ctx.owner(scen_),comm);
+		for (int i =0 ; i < nvar1; i++) cout <<curSolution[i] << " "; cout << endl;
 
 		bool diff = true;
 		for (unsigned r = 0; r < uniqueSolutions.size(); r++) {
@@ -93,7 +94,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 			RecourseSolver rsol(input, scen, curSolution);
 			rsol.setDualObjectiveLimit(1e7);
 			
-			if (havesave) {
+			if (input.continuousRecourse() && havesave) {
 				for (int r = 0; r < nvar2; r++) {
 					rsol.setSecondStageColState(r,colSave[r]);
 				}
@@ -109,7 +110,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 				infeas = true; break;
 			}
 			assert(rsol.getStatus() == Optimal);
-			if (!havesave) {
+			if (input.continuousRecourse() && !havesave) {
 				for (int r = 0; r < nvar2; r++) {
 					colSave[r] = rsol.getSecondStageColState(r);
 				}
@@ -144,7 +145,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 			RecourseSolver rsol(input, scen, unionSolution);
 			rsol.setDualObjectiveLimit(1e7);
 			
-			if (havesave) {
+			if (input.continuousRecourse() && havesave) {
 				for (int r = 0; r < nvar2; r++) {
 					rsol.setSecondStageColState(r,colSave[r]);
 				}
@@ -160,7 +161,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 				infeas = true; break;
 			}
 			assert(rsol.getStatus() == Optimal);
-			if (!havesave) {
+			if (input.continuousRecourse() && !havesave) {
 				for (int r = 0; r < nvar2; r++) {
 					colSave[r] = rsol.getSecondStageColState(r);
 				}

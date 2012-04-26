@@ -15,6 +15,7 @@ public:
 
 	void go();
 	double getBestPossibleObjective() const;
+	double getBestFeasibleObjective() const;
 	solverState getStatus() const;
 
 	// for setting states to warm-start the root node 
