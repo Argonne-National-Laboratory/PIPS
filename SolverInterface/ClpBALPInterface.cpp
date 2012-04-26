@@ -4,7 +4,8 @@
 
 using namespace std;
 
-template<typename T1, typename T2> static void concatenateAll(stochasticInput &data, 
+namespace {
+template<typename T1, typename T2> void concatenateAll(stochasticInput &data, 
 			T1 &out, 
 			T2 (stochasticInput::*first)(),
 			T2 (stochasticInput::*second)(int)) {
@@ -23,7 +24,7 @@ template<typename T1, typename T2> static void concatenateAll(stochasticInput &d
 	}
 
 }
-
+}
 
 ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solveType t) : dims(input,ctx), t(t) {
 	assert(ctx.nprocs() == 1);
@@ -128,11 +129,18 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 
 	concatenateAll(input, rowub, &stochasticInput::getFirstStageRowUB,
 			&stochasticInput::getSecondStageRowUB);
+
+	vector<string> colnames(totalVar), rownames(totalCons);
+	concatenateAll(input, colnames, &stochasticInput::getFirstStageColNames,
+			&stochasticInput::getSecondStageColNames);
+	concatenateAll(input, rownames, &stochasticInput::getFirstStageRowNames,
+			&stochasticInput::getSecondStageRowNames);
 	
-	// don't copy names for now
 
 	model.loadProblem(constr,collb,colub,obj,rowlb,rowub);
 	model.createStatus();
+
+	model.copyNames(rownames,colnames);
 
 	delete [] collb;
 	delete [] colub;

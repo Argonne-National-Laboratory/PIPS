@@ -1,24 +1,29 @@
 #include "ucRollingModel.hpp"
 #include "CbcBALPInterface.hpp"
 #include "ClpBALPInterface.hpp"
+#include "PIPSSInterface.hpp"
 
 using namespace std;
 
 int main(int argc, char **argv) {
 	MPI_Init(&argc,&argv);
 
-	int nscen = 1;
-	int T = 3;
+	int nscen = 10;
+	int T = 24;
 	ucRollingModel model("/sandbox/vzavala/Illinois",nscen,0,T);
 
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(nscen);
 
 	ClpBALPInterface cbc(model, ctx);
+	//PIPSSInterface cbc(model, ctx, PIPSSInterface::useDual);
 
 	
 	cbc.go();
 
+	cbc.writeStatus("rolling24h/10sStart");
+
+	/*
 	vector<double> sol = cbc.getFirstStagePrimalColSolution();
 	vector<double> sol2 = cbc.getSecondStagePrimalColSolution(0);
 	
@@ -38,6 +43,8 @@ int main(int argc, char **argv) {
 	}
 
 	printf("Gen cost: %f\nOn/off cost: %f\n",gencost,oncost);
+	*/
+	
 	/*
 	for (it = model.busMap.begin(); it != model.busMap.end(); ++it) {
 		int idx = it->second;

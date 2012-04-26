@@ -4,7 +4,7 @@
 #include "basisBootstrapDriver.hpp"
 #include "ScenarioReduction/scenarioReduction.hpp"
 
-// select scenarios by number only
+// select the first group of scenarios by scenario reduction
 template<typename BALPSolver, typename RecourseSolver>
 class basisBootstrapScenRedDriver : public basisBootstrapDriver<BALPSolver,RecourseSolver> {
 public:

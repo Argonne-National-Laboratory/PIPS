@@ -25,7 +25,7 @@ public:
 	void setPrimalTolerance(double val) { assert(0); }
 	void setDualTolerance(double val) { assert(0); }
 	void setDualObjectiveLimit(double val) { assert(0); }
-	double getObjective() const { return model.getObjValue(); }
+	double getObjective() const { return cbcm->getObjValue(); }
 	solverState getStatus() const;
 
 	std::vector<double> getFirstStagePrimalColSolution() const;

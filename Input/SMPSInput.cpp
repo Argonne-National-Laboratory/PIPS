@@ -95,7 +95,6 @@ SMPSInput::SMPSInput(string const& cor, string const& tim, string const& sto) :
 	for (int i = 0; i < nvar1; i++) cols[i] = i;
 	for (int i = 0; i < ncons1; i++) rows[i] = i;
 	
-	// inefficient copy
 	firstStageData.mat = CoinPackedMatrix(*reader.getMatrixByCol(),
 			ncons1, &rows[0], nvar1, &cols[0]);
 	
@@ -131,6 +130,13 @@ SMPSInput::SMPSInput(string const& cor, string const& tim, string const& sto) :
 	copySubset(reader, &CoinMpsIO::columnName, nvar1, nvar, secondStageTemplate.colname);
 	copySubset(reader, &CoinMpsIO::rowName, ncons1, ncons, secondStageTemplate.rowname);
 	copySubset(reader, &CoinMpsIO::isInteger, nvar1, nvar, secondStageTemplate.isColInteger);
+
+	continuousrecourse = true;
+	for (int i = 0; i < nvar2; i++) {
+		if (secondStageTemplate.isColInteger[i]) {
+			continuousrecourse = false; break;
+		}
+	}
 
 	cols.resize(nvar1);
 	for (int i = 0; i < nvar1; i++) cols[i] = i;
@@ -213,7 +219,10 @@ vector<double> SMPSInput::getSecondStageColUB(int scen) {
 
 vector<double> SMPSInput::getSecondStageObj(int scen) { 
 	cacheScenario(scen);
-	return scenarioData.at(scen).obj;
+	vector<double> obj = scenarioData.at(scen).obj;
+	double scale = scenarioProbability(scen);
+	for (unsigned i = 0; i < obj.size(); i++) obj[i] *= scale;
+	return obj;
 
 }
 
