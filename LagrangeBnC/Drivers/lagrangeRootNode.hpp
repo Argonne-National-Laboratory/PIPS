@@ -36,7 +36,6 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 	const vector<double> &obj1 = input.getFirstStageObj();
 
 
-	
 	// evaluate solutions
 	vector<double> bestSolution;
 	double bestObj = COIN_DBL_MAX;
@@ -53,6 +52,8 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 	vector<int> freqCount;
 
 	vector<double> unionSolution(nvar1,0.0);
+	double unionobj;
+	
 	for (int scen_ = 0; scen_ < nscen; scen_++) {
 		vector<double> curSolution(nvar1);
 		
@@ -136,7 +137,6 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 
 	}
 
-	double unionobj;
 	{
 		double sum = 0.0;
 		bool infeas = false;
@@ -192,7 +192,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 		printf("Best UB: %f\n",bestObj);
 		printf("Union UB: %f\n",unionobj);
 		// formula for positive values
-		printf("Gap: %f%%\n",100*(bestObj-lagrangelb)/lagrangelb);
+		printf("Gap: %f%%\n",100*fabs(bestObj-lagrangelb)/fabs(lagrangelb));
 	}
 
 
