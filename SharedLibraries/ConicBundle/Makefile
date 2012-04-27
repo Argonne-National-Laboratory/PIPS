@@ -13,8 +13,8 @@ OSTYPE		:=	$(shell uname -s | tr A-Z a-z)
 CXX		=	g++
 CC		=	gcc
 
-MODE            =       DEBU
-#MODE           =       OPTI
+#MODE            =       DEBU
+MODE           =       OPTI
 
 CONICBUNDLE	=	.
 CPPFLAGS	=	-I$(CONICBUNDLE)/include -I$(CONICBUNDLE)/CBsources \
