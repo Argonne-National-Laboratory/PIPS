@@ -41,22 +41,44 @@ double vectorDiff2(vector<double> const &v1, vector<double> const &v2) {
 	return sum;
 
 }
+double vectorDiff2(double const *v1, double const *v2, unsigned len) {
+	double sum = 0;
+	for (unsigned i = 0; i < len; i++) {
+		double diff = v1[i]-v2[i];
+		sum += diff*diff;
+	}
+	return sum;
+
+}
 double calculateDistance(stochasticInput &input, int s1, int s2) {
 
 	assert(input.scenarioDimensionsEqual());
-	assert(input.onlyBoundsVary());
 	// skipping second-stage objective
 	vector<double> const &l1 = input.getSecondStageColLB(s1), 
-		l2 = input.getSecondStageColLB(s2),
-		u1 = input.getSecondStageColUB(s1), 
-		u2 = input.getSecondStageColUB(s2), 
-		bl1 = input.getSecondStageRowLB(s1), 
-		bl2 = input.getSecondStageRowLB(s2),
-		bu1 = input.getSecondStageRowUB(s1),
-		bu2 = input.getSecondStageRowUB(s2);
+		&l2 = input.getSecondStageColLB(s2),
+		&u1 = input.getSecondStageColUB(s1), 
+		&u2 = input.getSecondStageColUB(s2), 
+		&bl1 = input.getSecondStageRowLB(s1), 
+		&bl2 = input.getSecondStageRowLB(s2),
+		&bu1 = input.getSecondStageRowUB(s1),
+		&bu2 = input.getSecondStageRowUB(s2);
 
 	double d = vectorDiff2(l1,l2) + vectorDiff2(u1,u2) + 
 		vectorDiff2(bl1,bl2) + vectorDiff2(bu1,bu2);
+	
+	if (!input.onlyBoundsVary()) {
+		const CoinPackedMatrix &t1 = input.getLinkingConstraints(s1),
+			&t2 = input.getLinkingConstraints(s2),
+			&w1 = input.getSecondStageConstraints(s1),
+			&w2 = input.getSecondStageConstraints(s2);
+			// assumes that nonzero pattern is identical
+			// SMPS "requires" this
+			assert(t1.getNumElements() == t2.getNumElements());
+			assert(w1.getNumElements() == w2.getNumElements());
+			d += vectorDiff2(t1.getElements(),t2.getElements(),t1.getNumElements());
+			d += vectorDiff2(w1.getElements(),w2.getElements(),w1.getNumElements());
+	}
+
 	return sqrt(d);
 }
 }

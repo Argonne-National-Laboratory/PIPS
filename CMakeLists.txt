@@ -110,7 +110,14 @@ else(IS_DIRECTORY $ENV{GUROBI_DIR})
 	message(STATUS "Building without Gurobi")
 endif(IS_DIRECTORY $ENV{GUROBI_DIR})
 
-
+set(CB_DIR "${SHARED_DIR}/ConicBundle")
+set(CB_LIB "${CB_DIR}/lib/libcb.a")
+if(EXISTS ${CB_LIB})
+	set(HAVE_CB TRUE)
+else(EXISTS ${CB_LIB})
+	set(HAVE_CB FALSE)
+	message(STATUS "Building without ConicBundle library")
+endif(EXISTS ${CB_LIB})
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
