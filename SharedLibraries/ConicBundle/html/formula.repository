@@ -1,0 +1,6 @@
+\form#0:\[ min_{y\in\mathbf{R}^m}\quad f_1(y) + ... + f_k(y) \]
+\form#1:$ f_j:\mathbf{R}^n\to\mathbf{R}$
+\form#2:$j=1,...,k$
+\form#3:$ l_i\le y_i \le u_i $
+\form#4:$f_j$
+\form#5:$min_{y\in\mathbf{R}^m} f_0(y) + f_1(y) + ... + f_k(y)$

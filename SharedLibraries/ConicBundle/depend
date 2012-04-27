@@ -1,0 +1,331 @@
+$(OBJDIR)/CBSolver.o $(OBJDIR)/CBSolver.d : CBsources/CBSolver.cxx CBsources/MatFCBSolver.hxx \
+  CBsources/MatBSolver.hxx CBsources/MatCBSolver.hxx include/CBSolver.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx CBsources/MatNBSolver.hxx
+$(OBJDIR)/CB_CSolver.o $(OBJDIR)/CB_CSolver.d : CBsources/CB_CSolver.cxx CBsources/CB_CSolver.hxx \
+  include/cb_cinterface.h CBsources/MatBSolver.hxx \
+  CBsources/MatCBSolver.hxx include/CBSolver.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  CBsources/CFunction.hxx CBsources/MatFCBSolver.hxx \
+  CBsources/MatNBSolver.hxx
+$(OBJDIR)/CFunction.o $(OBJDIR)/CFunction.d : CBsources/CFunction.cxx CBsources/CFunction.hxx \
+  CBsources/MatCBSolver.hxx include/CBSolver.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  include/cb_cinterface.h
+$(OBJDIR)/MatCBSolver.o $(OBJDIR)/MatCBSolver.d : CBsources/MatCBSolver.cxx CBsources/MatCBSolver.hxx \
+  include/CBSolver.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx CBsources/MatFCBSolver.hxx \
+  CBsources/MatBSolver.hxx CBsources/MatNBSolver.hxx CBsources/bundle.hxx \
+  Tools/clock.hxx CBsources/sumproblem.hxx CBsources/qp_solver.hxx \
+  CBsources/qp_block.hxx Matrix/symmat.hxx CBsources/qp_sumblock.hxx \
+  CBsources/problem.hxx CBsources/funproblem.hxx \
+  CBsources/qp_sdpblock.hxx CBsources/lmaxproblem.hxx \
+  CBsources/BaseSDPOracle.hxx CBsources/socproblem.hxx \
+  CBsources/BaseSOCOracle.hxx CBsources/coneproblem.hxx \
+  CBsources/BaseConeOracle.hxx
+$(OBJDIR)/MatConcavefun.o $(OBJDIR)/MatConcavefun.d : CBsources/MatConcavefun.cxx CBsources/MatConcavefun.hxx \
+  CBsources/MatCBSolver.hxx include/CBSolver.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Matrix/sparsmat.hxx
+$(OBJDIR)/MatConefun.o $(OBJDIR)/MatConefun.d : CBsources/MatConefun.cxx CBsources/MatConefun.hxx \
+  CBsources/BaseConeOracle.hxx CBsources/MatCBSolver.hxx \
+  include/CBSolver.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Matrix/sparsmat.hxx
+$(OBJDIR)/MatFCBSolver.o $(OBJDIR)/MatFCBSolver.d : CBsources/MatFCBSolver.cxx CBsources/MatFCBSolver.hxx \
+  CBsources/MatBSolver.hxx CBsources/MatCBSolver.hxx include/CBSolver.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx CBsources/bundle.hxx Tools/clock.hxx \
+  CBsources/sumproblem.hxx CBsources/qp_solver.hxx CBsources/qp_block.hxx \
+  Matrix/symmat.hxx CBsources/qp_sumblock.hxx CBsources/problem.hxx \
+  CBsources/funproblem.hxx CBsources/qp_sdpblock.hxx \
+  CBsources/lmaxproblem.hxx CBsources/BaseSDPOracle.hxx \
+  CBsources/socproblem.hxx CBsources/BaseSOCOracle.hxx \
+  CBsources/coneproblem.hxx CBsources/BaseConeOracle.hxx \
+  CBsources/idscaling.hxx CBsources/diagscaling.hxx \
+  CBsources/diagtrscaling.hxx CBsources/fullscaling.hxx \
+  CBsources/fulltrscaling.hxx CBsources/lowrankscaling.hxx \
+  CBsources/lowranktrscaling.hxx CBsources/lowrankSMscaling.hxx \
+  CBsources/lowranktrSMscaling.hxx
+$(OBJDIR)/MatLPBCfun.o $(OBJDIR)/MatLPBCfun.d : CBsources/MatLPBCfun.cxx CBsources/MatLPBCfun.hxx \
+  CBsources/MatCBSolver.hxx include/CBSolver.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Matrix/sparsmat.hxx Matrix/symmat.hxx
+$(OBJDIR)/MatLPfun.o $(OBJDIR)/MatLPfun.d : CBsources/MatLPfun.cxx CBsources/MatLPfun.hxx \
+  CBsources/MatCBSolver.hxx include/CBSolver.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Matrix/sparsmat.hxx
+$(OBJDIR)/MatNBSolver.o $(OBJDIR)/MatNBSolver.d : CBsources/MatNBSolver.cxx CBsources/MatNBSolver.hxx \
+  CBsources/MatBSolver.hxx CBsources/MatCBSolver.hxx include/CBSolver.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx CBsources/Nbundle.hxx Tools/clock.hxx \
+  CBsources/bundle.hxx CBsources/Nsumproblem.hxx CBsources/Nproblem.hxx \
+  CBsources/Nfunproblem.hxx
+$(OBJDIR)/MatSDPfun.o $(OBJDIR)/MatSDPfun.d : CBsources/MatSDPfun.cxx CBsources/MatSDPfun.hxx \
+  CBsources/BaseSDPOracle.hxx include/CBSolver.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Matrix/sparssym.hxx CBsources/coeffmat.hxx Matrix/memarray.hxx \
+  Matrix/symmat.hxx CBsources/bigmat.hxx Matrix/lanczos.hxx \
+  CBsources/cmsymspa.hxx CBsources/cmsymden.hxx Matrix/lanczpol.hxx \
+  Tools/clock.hxx
+$(OBJDIR)/MatSOCfun.o $(OBJDIR)/MatSOCfun.d : CBsources/MatSOCfun.cxx CBsources/MatSOCfun.hxx \
+  CBsources/BaseSOCOracle.hxx CBsources/MatCBSolver.hxx \
+  include/CBSolver.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Matrix/sparsmat.hxx
+$(OBJDIR)/Nbundle.o $(OBJDIR)/Nbundle.d : CBsources/Nbundle.cxx CBsources/Nbundle.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Tools/clock.hxx include/CBSolver.hxx CBsources/bundle.hxx \
+  CBsources/hkweight.hxx Matrix/mymath.hxx
+$(OBJDIR)/Nfunproblem.o $(OBJDIR)/Nfunproblem.d : CBsources/Nfunproblem.cxx Matrix/mymath.hxx \
+  CBsources/Nfunproblem.hxx CBsources/MatNBSolver.hxx \
+  CBsources/MatBSolver.hxx CBsources/MatCBSolver.hxx include/CBSolver.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx CBsources/Nproblem.hxx CBsources/Nbundle.hxx \
+  Tools/clock.hxx CBsources/bundle.hxx
+$(OBJDIR)/Nsumproblem.o $(OBJDIR)/Nsumproblem.d : CBsources/Nsumproblem.cxx Matrix/mymath.hxx \
+  CBsources/Nsumproblem.hxx CBsources/Nproblem.hxx CBsources/Nbundle.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx Tools/clock.hxx include/CBSolver.hxx \
+  CBsources/bundle.hxx
+$(OBJDIR)/bigmat.o $(OBJDIR)/bigmat.d : CBsources/bigmat.cxx Matrix/mymath.hxx CBsources/bigmat.hxx \
+  Matrix/lanczos.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx CBsources/coeffmat.hxx \
+  Matrix/memarray.hxx Matrix/symmat.hxx Matrix/sparssym.hxx \
+  CBsources/lmaxproblem.hxx CBsources/qp_solver.hxx \
+  CBsources/qp_block.hxx CBsources/qp_sdpblock.hxx CBsources/problem.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Tools/clock.hxx \
+  include/CBSolver.hxx CBsources/BaseSDPOracle.hxx
+$(OBJDIR)/bundle.o $(OBJDIR)/bundle.d : CBsources/bundle.cxx CBsources/bundle.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Tools/clock.hxx include/CBSolver.hxx CBsources/hkweight.hxx \
+  CBsources/idscaling.hxx CBsources/diagscaling.hxx Matrix/mymath.hxx
+$(OBJDIR)/c_main.o $(OBJDIR)/c_main.d : c_main.c include/cb_cinterface.h
+$(OBJDIR)/chol.o $(OBJDIR)/chol.d : Matrix/chol.cxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx
+$(OBJDIR)/coeffmat.o $(OBJDIR)/coeffmat.d : CBsources/coeffmat.cxx CBsources/coeffmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/mymath.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx Matrix/sparssym.hxx CBsources/cmsymden.hxx \
+  CBsources/cmsymspa.hxx CBsources/cmgramde.hxx CBsources/cmgramsp.hxx \
+  CBsources/cmrankdd.hxx CBsources/cmranksd.hxx CBsources/cmrankss.hxx \
+  CBsources/cmsingle.hxx
+$(OBJDIR)/coneproblem.o $(OBJDIR)/coneproblem.d : CBsources/coneproblem.cxx Matrix/mymath.hxx \
+  CBsources/coneproblem.hxx CBsources/BaseConeOracle.hxx \
+  CBsources/MatCBSolver.hxx include/CBSolver.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  CBsources/qp_solver.hxx CBsources/qp_block.hxx Matrix/symmat.hxx \
+  CBsources/qp_sdpblock.hxx CBsources/problem.hxx CBsources/bundle.hxx \
+  Tools/clock.hxx
+$(OBJDIR)/cxx_main.o $(OBJDIR)/cxx_main.d : cxx_main.cxx include/CBSolver.hxx
+$(OBJDIR)/diagscaling.o $(OBJDIR)/diagscaling.d : CBsources/diagscaling.cxx CBsources/diagscaling.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/clock.hxx \
+  include/CBSolver.hxx Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/diagtrscaling.o $(OBJDIR)/diagtrscaling.d : CBsources/diagtrscaling.cxx CBsources/diagtrscaling.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/clock.hxx \
+  include/CBSolver.hxx Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/eigval.o $(OBJDIR)/eigval.d : Matrix/eigval.cxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx
+$(OBJDIR)/fullscaling.o $(OBJDIR)/fullscaling.d : CBsources/fullscaling.cxx CBsources/fullscaling.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/clock.hxx \
+  include/CBSolver.hxx Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/fulltrscaling.o $(OBJDIR)/fulltrscaling.d : CBsources/fulltrscaling.cxx CBsources/fulltrscaling.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/clock.hxx \
+  include/CBSolver.hxx Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/funproblem.o $(OBJDIR)/funproblem.d : CBsources/funproblem.cxx Matrix/mymath.hxx \
+  CBsources/funproblem.hxx CBsources/MatCBSolver.hxx include/CBSolver.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx CBsources/qp_solver.hxx CBsources/qp_block.hxx \
+  Matrix/symmat.hxx CBsources/qp_sdpblock.hxx CBsources/problem.hxx \
+  CBsources/bundle.hxx Tools/clock.hxx
+$(OBJDIR)/hkweight.o $(OBJDIR)/hkweight.d : CBsources/hkweight.cxx CBsources/hkweight.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/clock.hxx \
+  include/CBSolver.hxx Matrix/mymath.hxx
+$(OBJDIR)/idscaling.o $(OBJDIR)/idscaling.d : CBsources/idscaling.cxx CBsources/idscaling.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/clock.hxx \
+  include/CBSolver.hxx Matrix/mymath.hxx
+$(OBJDIR)/indexmat.o $(OBJDIR)/indexmat.d : Matrix/indexmat.cxx Tools/heapsort.hxx Matrix/mymath.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/matrix.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx
+$(OBJDIR)/lanczpol.o $(OBJDIR)/lanczpol.d : Matrix/lanczpol.cxx Matrix/mymath.hxx Matrix/lanczpol.hxx \
+  Matrix/lanczos.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx Tools/clock.hxx
+$(OBJDIR)/ldl.o $(OBJDIR)/ldl.d : Matrix/ldl.cxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx
+$(OBJDIR)/lmaxproblem.o $(OBJDIR)/lmaxproblem.d : CBsources/lmaxproblem.cxx Matrix/mymath.hxx \
+  CBsources/lmaxproblem.hxx CBsources/qp_solver.hxx \
+  CBsources/qp_block.hxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx CBsources/qp_sdpblock.hxx \
+  CBsources/problem.hxx CBsources/bundle.hxx Matrix/matrix.hxx \
+  Tools/clock.hxx include/CBSolver.hxx CBsources/BaseSDPOracle.hxx \
+  CBsources/coeffmat.hxx Matrix/memarray.hxx Matrix/sparssym.hxx \
+  CBsources/MatSDPfun.hxx CBsources/bigmat.hxx Matrix/lanczos.hxx
+$(OBJDIR)/lowrankSMscaling.o $(OBJDIR)/lowrankSMscaling.d : CBsources/lowrankSMscaling.cxx \
+  CBsources/lowrankSMscaling.hxx CBsources/bundle.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Tools/clock.hxx include/CBSolver.hxx CBsources/idscaling.hxx \
+  Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/lowrankscaling.o $(OBJDIR)/lowrankscaling.d : CBsources/lowrankscaling.cxx \
+  CBsources/lowrankscaling.hxx CBsources/bundle.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Tools/clock.hxx include/CBSolver.hxx CBsources/idscaling.hxx \
+  Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/lowranktrSMscaling.o $(OBJDIR)/lowranktrSMscaling.d : CBsources/lowranktrSMscaling.cxx \
+  CBsources/lowranktrSMscaling.hxx CBsources/bundle.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Tools/clock.hxx include/CBSolver.hxx CBsources/idscaling.hxx \
+  Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/lowranktrscaling.o $(OBJDIR)/lowranktrscaling.d : CBsources/lowranktrscaling.cxx \
+  CBsources/lowranktrscaling.hxx CBsources/bundle.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/symmat.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  Tools/clock.hxx include/CBSolver.hxx CBsources/idscaling.hxx \
+  Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/mat_main.o $(OBJDIR)/mat_main.d : mat_main.cxx CBsources/MatCBSolver.hxx include/CBSolver.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/symmat.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx
+$(OBJDIR)/matrix.o $(OBJDIR)/matrix.d : Matrix/matrix.cxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/symmat.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/heapsort.hxx \
+  Matrix/mymath.hxx
+$(OBJDIR)/memarray.o $(OBJDIR)/memarray.d : Matrix/memarray.cxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx
+$(OBJDIR)/nnls.o $(OBJDIR)/nnls.d : Matrix/nnls.cxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/heapsort.hxx \
+  Matrix/mymath.hxx
+$(OBJDIR)/problem.o $(OBJDIR)/problem.d : CBsources/problem.cxx Matrix/mymath.hxx CBsources/problem.hxx \
+  CBsources/qp_solver.hxx CBsources/qp_block.hxx Matrix/symmat.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Tools/clock.hxx \
+  include/CBSolver.hxx
+$(OBJDIR)/qp_sdpblock.o $(OBJDIR)/qp_sdpblock.d : CBsources/qp_sdpblock.cxx Matrix/mymath.hxx \
+  CBsources/qp_sdpblock.hxx CBsources/qp_block.hxx Matrix/symmat.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/sparsmat.hxx Matrix/sparssym.hxx
+$(OBJDIR)/qp_solver.o $(OBJDIR)/qp_solver.d : CBsources/qp_solver.cxx CBsources/qp_solver.hxx \
+  CBsources/qp_block.hxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx
+$(OBJDIR)/qr.o $(OBJDIR)/qr.d : Matrix/qr.cxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/heapsort.hxx \
+  Matrix/mymath.hxx
+$(OBJDIR)/socproblem.o $(OBJDIR)/socproblem.d : CBsources/socproblem.cxx Matrix/mymath.hxx \
+  CBsources/socproblem.hxx CBsources/qp_solver.hxx CBsources/qp_block.hxx \
+  Matrix/symmat.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx CBsources/qp_sdpblock.hxx CBsources/problem.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Tools/clock.hxx \
+  include/CBSolver.hxx CBsources/BaseSOCOracle.hxx \
+  CBsources/MatCBSolver.hxx
+$(OBJDIR)/sparsmat.o $(OBJDIR)/sparsmat.d : Matrix/sparsmat.cxx Matrix/sparsmat.hxx Matrix/symmat.hxx \
+  Matrix/matrix.hxx Matrix/indexmat.hxx Matrix/memarray.hxx \
+  Matrix/matop.hxx Tools/gb_rand.hxx include/CBconfig.hxx \
+  Matrix/mymath.hxx Matrix/sparssym.hxx
+$(OBJDIR)/sparssym.o $(OBJDIR)/sparssym.d : Matrix/sparssym.cxx Matrix/sparssym.hxx Matrix/sparsmat.hxx \
+  Matrix/symmat.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Tools/heapsort.hxx \
+  Matrix/mymath.hxx
+$(OBJDIR)/sumproblem.o $(OBJDIR)/sumproblem.d : CBsources/sumproblem.cxx Matrix/mymath.hxx \
+  CBsources/sumproblem.hxx CBsources/qp_solver.hxx CBsources/qp_block.hxx \
+  Matrix/symmat.hxx Matrix/matrix.hxx Matrix/indexmat.hxx \
+  Matrix/memarray.hxx Matrix/matop.hxx Tools/gb_rand.hxx \
+  include/CBconfig.hxx Matrix/mymath.hxx Matrix/sparsmat.hxx \
+  Matrix/sparssym.hxx CBsources/qp_sumblock.hxx CBsources/problem.hxx \
+  CBsources/bundle.hxx Matrix/matrix.hxx Tools/clock.hxx \
+  include/CBSolver.hxx
+$(OBJDIR)/symmat.o $(OBJDIR)/symmat.d : Matrix/symmat.cxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx
+$(OBJDIR)/trisolve.o $(OBJDIR)/trisolve.d : Matrix/trisolve.cxx Matrix/symmat.hxx Matrix/matrix.hxx \
+  Matrix/indexmat.hxx Matrix/memarray.hxx Matrix/matop.hxx \
+  Tools/gb_rand.hxx include/CBconfig.hxx Matrix/mymath.hxx \
+  Matrix/sparsmat.hxx Matrix/sparssym.hxx Tools/heapsort.hxx \
+  Matrix/mymath.hxx

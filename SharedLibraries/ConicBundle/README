@@ -1,0 +1,138 @@
+/* ****************************************************************************
+
+    Copyright (C) 2004-2011  Christoph Helmberg
+
+    ConicBundle, Version 0.3.10
+    File:  README
+
+    This file is part of ConciBundle, a C/C++ library for convex optimization.
+
+    ConicBundle is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    ConicBundle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Foobar; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+***************************************************************************** */
+
+
+This file tells you how to compile ConicBundle
+
+(It does not explain how to use it, please read the Manual for this.)
+
+It is assumed that
+ - Linux (or Unix) is your operating system,
+ - you have access to a sufficiently recent version of g++ (other C++ 
+   compilers may work as well) having available  the standard template
+   library (STL)
+ - you are using gnu make (other make programs may have difficulties 
+   with certain macros).
+
+In the same directory as the README file you will find a
+
+Makefile
+
+In this Makefile the compilers are currently set to
+
+CXX             =       g++
+CC              =       gcc
+
+If you want to use other compilers, you have to replace g++ and gcc 
+by the appropriate names.
+
+Choose one of the two compliation modes corresponding to a mode for 
+debugging and an optimized mode without range and dimension checks.
+
+MODE            =       DEBU
+#MODE           =       OPTI
+
+It is recommended to start with the DEBU mode first. 
+Note, upon any modification of Makefile a full recompilation
+will be initiated. 
+
+The Makefile is set up to allow the use of distinct compiler flags for 
+each (operating_system.cpu.compiler)-configuration. You will find a 
+few examples in the Makefile; we illustrate the concept for a Linux 
+system with an "i686"-cpu and compiler g++,
+
+#--- linux.i686.g++ settings ---------------------------------------------------
+DEBU.linux.i686.g++ =   -g
+OPTI.linux.i686.g++ =   -DNDEBUG -O3
+WARN.linux.i686.g++ =   $(GCCWARN)
+DEPD.linux.i686.g++ =   -MM
+LINK.linux.i686.g++ =   -lm
+AR.linux.i686.g++   =   ar
+ARFLAGS.linux.i686.g++ =        cr
+RANLIB.linux.i686.g++ = ranlib
+DEBU.linux.i686.gcc =   -g
+OPTI.linux.i686.gcc =   -DNDEBUG -O3
+WARN.linux.i686.gcc =   $(GCCWARN)
+DEPD.linux.i686.gcc =   -MM
+LINK.linux.i686.gcc =   -lm
+
+These have the following purpose:
+ - DEBU.*.*.* collects flags that should be switched on for debug mode.
+ - OPTI.*.*.* collects flag used when optimizing.
+ - WARN.*.*.* collects flags for warnings during compilation.
+ - DEPD.*.*.* specifies the flag that forces the compiler to output a 
+      list of header files that the current file depends on. This is 
+      needed for automatic generation of dependencies in the Makefile.
+ - LINK.*.*.* collects options to be used in linking.
+ - AR.*.*.* gives the program building the archive for the library.
+ - ARFLAGS.*.*.* collects options for the archive program.
+ - RANLIB.*.*.* gives the program building the index to the library.
+
+You may have to generate your own set if your configuration is not 
+present. To find out your configuration simply plug in your compiler 
+at CXX and run (gnu) make. Besides printing a lot of nonsense, make 
+will create a subdirectory "<mode>.<os>.<cpu>.<CXX>". The last three 
+terms of the subdirectory give you the names you have to use in order
+to add your options in the Makefile as in the example above.
+
+After having adapted the Makefile to your needs run make by typing
+
+ make
+
+After this you should find the library at
+
+ lib/libcb.a
+
+and some small example programs showing the use of the ConicBundle 
+interfaces,
+
+ t_c
+ t_cxx
+ t_mat
+
+generated from the files
+
+ c_main.c
+ cxx_main.cxx
+ mat_main.cxx
+
+If you only plan to use the standard C or C++ interfaces, then all 
+headers that you need can be found in the subdirectory include
+
+ include/cb_cinterface.h
+ include/CBSolver.hxx
+
+If you plan to use the full interface with matrix classes, you will 
+certainly need the subdirectory CBsources (with the main interface 
+MatCBsolver.hxx) and most likely the subdirectories Matrix and 
+Tools, as well.
+
+The starting point for the html Manual is
+
+  html/index.html
+
+Much success!
+
+
