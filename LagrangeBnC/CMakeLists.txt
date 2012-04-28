@@ -6,7 +6,7 @@ include_directories(../BasisBootstrap/ScenarioReduction)
 add_library(CbcLagrangeSolver LagrangeSubproblemSolver/CbcLagrangeSolver.cpp)
 add_library(ClpRecourseSolver RecourseSubproblemSolver/ClpRecourseSolver.cpp)
 add_library(CbcRecourseSolver RecourseSubproblemSolver/CbcRecourseSolver.cpp)
-
+add_library(combine Drivers/combineScenarios.cpp)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
@@ -16,13 +16,15 @@ add_executable(lagrangeCombinedSMPS Drivers/lagrangeCombinedScenRedRootNodeSMPS.
 add_executable(lagrangeRootNodeSMPS Drivers/lagrangeRootNodeSMPS.cpp)
 
 target_link_libraries(lagrangeRootNode pipss stochInput ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
-target_link_libraries(lagrangeCombinedScenRedRootNode pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
-target_link_libraries(lagrangeCombinedSMPS pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(lagrangeCombinedScenRedRootNode pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(lagrangeCombinedSMPS pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(lagrangeRootNodeSMPS pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
 if(HAVE_CB)
 	include_directories("${CB_DIR}/include")
 	add_executable(conicBundleSMPS Drivers/conicBundleDriverSMPS.cpp)
+	add_executable(conicBundleCombinedSMPS Drivers/conicBundleDriverCombinedSMPS.cpp)
 	target_link_libraries(conicBundleSMPS pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
+	target_link_libraries(conicBundleCombinedSMPS pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
 endif(HAVE_CB)
 
