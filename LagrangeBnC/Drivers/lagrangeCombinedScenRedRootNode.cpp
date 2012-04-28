@@ -2,7 +2,8 @@
 #include "rawInput.hpp"
 #include "CbcLagrangeSolver.hpp"
 #include "ClpRecourseSolver.hpp"
-#include "lagrangeCombinedScenRedRootNode.hpp"
+#include "combineScenarios.hpp"
+#include "lagrangeRootNode.hpp"
 #include <boost/scoped_ptr.hpp>
 
 using namespace std;
@@ -37,9 +38,10 @@ int main(int argc, char **argv) {
 
 	if (mype == 0) printf("Initializing data interface\n");
 	scoped_ptr<fakeIntegerWrapper> s(new fakeIntegerWrapper(datarootname,nscen));
+	combinedInput in = combineScenarios(*s,nper,true);
+	//combinedInput in = combineScenarios(*s,nper,false);
 
-	lagrangeCombinedScenRedRootNode<CbcLagrangeSolver,ClpRecourseSolver>(*s,nper,false);
-	lagrangeCombinedScenRedRootNode<CbcLagrangeSolver,ClpRecourseSolver>(*s,nper,true);
+	lagrangeRootNode<CbcLagrangeSolver,ClpRecourseSolver>(in);
 
 	MPI_Finalize();
 

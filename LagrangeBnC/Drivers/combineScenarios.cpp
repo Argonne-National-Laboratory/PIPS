@@ -1,9 +1,6 @@
-#ifndef LAGRANGECOMBINEDSCENREDROOTNODEHPP
-#define LAGRANGECOMBINEDSCENREDROOTNODEHPP
-
-#include "combinedInput.hpp"
-#include "lagrangeRootNode.hpp"
 #include "scenarioReduction.hpp"
+#include "combineScenarios.hpp"
+#include <algorithm>
 
 // dummy wrapper so we can send successively smaller problems to scenario reduction
 
@@ -61,9 +58,8 @@ private:
 	double rescale;
 };
 
-template <typename LagrangeSolver, typename RecourseSolver> void lagrangeCombinedScenRedRootNode(stochasticInput &input, 
-	int nper, bool scenred,
-	MPI_Comm comm = MPI_COMM_WORLD) {
+combinedInput combineScenarios(stochasticInput &input, 
+	int nper, bool scenred) {
 
 	int nscen = input.nScenarios(); 
 	stochasticInputSubsetWrapper wrapper(input);
@@ -92,10 +88,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeCombine
 		nsubproblems++;
 	}
 
-	combinedInput combined(input,scenarioMap);
-
-	lagrangeRootNode<LagrangeSolver,RecourseSolver>(combined,comm);
+	return combinedInput(input,scenarioMap);
 
 }
 
-#endif

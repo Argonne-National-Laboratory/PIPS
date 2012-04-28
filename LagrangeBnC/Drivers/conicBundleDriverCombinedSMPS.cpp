@@ -2,8 +2,8 @@
 #include "SMPSInput.hpp"
 #include "CbcLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
+#include "conicBundleDriver.hpp"
 #include "combineScenarios.hpp"
-#include "lagrangeRootNode.hpp"
 #include <boost/scoped_ptr.hpp>
 
 using namespace std;
@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 
 	if (argc != 3) {
-		if (mype == 0) printf("Usage: %s [SMPS root name] [number per subproblem]\n",argv[0]);
+		if (mype == 0) printf("Usage: %s [SMPS root name] [scenarios per subproblem]\n",argv[0]);
 		return 1;
 	}
 
@@ -26,9 +26,10 @@ int main(int argc, char **argv) {
 	int nper = atoi(argv[2]);
 
 	SMPSInput input(smpsrootname+".cor",smpsrootname+".tim",smpsrootname+".sto");
-	combinedInput in = combineScenarios(input,nper,true);
 
-	lagrangeRootNode<CbcLagrangeSolver,CbcRecourseSolver>(in);
+
+	combinedInput in = combineScenarios(input,nper,true);
+	conicBundleDriver<CbcLagrangeSolver,CbcRecourseSolver>(in);
 
 	MPI_Finalize();
 

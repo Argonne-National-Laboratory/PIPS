@@ -94,11 +94,11 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 		solver.add_function(funcs[i]);
 	}
 	solver.set_out(&cout,1);
-	solver.set_term_relprec(1e-6);
-
+	solver.set_term_relprec(1e-4);
+	double t = MPI_Wtime();
 	do {
 		solver.do_descent_step();
-		cout << "Lagrange Objective: " << -solver.get_objval() << endl;
+		cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
 	} while (!solver.termination_code());
 
 	solver.print_termination_code(cout);
