@@ -40,7 +40,6 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 	vector<double> bestSolution;
 	double bestObj = COIN_DBL_MAX;
 
-	assert(input.scenarioDimensionsEqual());
 	int nvar2 = input.nSecondStageVars(0);
 	int ncons2 = input.nSecondStageCons(0);
 
@@ -53,7 +52,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 
 	vector<double> unionSolution(nvar1,0.0);
 	double unionobj;
-	
+		
 	for (int scen_ = 0; scen_ < nscen; scen_++) {
 		vector<double> curSolution(nvar1);
 		
@@ -95,7 +94,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 			RecourseSolver rsol(input, scen, curSolution);
 			rsol.setDualObjectiveLimit(1e7);
 			
-			if (input.continuousRecourse() && havesave) {
+			if (input.scenarioDimensionsEqual() && input.continuousRecourse() && havesave) {
 				for (int r = 0; r < nvar2; r++) {
 					rsol.setSecondStageColState(r,colSave[r]);
 				}
@@ -111,7 +110,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 				infeas = true; break;
 			}
 			assert(rsol.getStatus() == Optimal);
-			if (input.continuousRecourse() && !havesave) {
+			if (input.scenarioDimensionsEqual() && input.continuousRecourse() && !havesave) {
 				for (int r = 0; r < nvar2; r++) {
 					colSave[r] = rsol.getSecondStageColState(r);
 				}
@@ -138,6 +137,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void lagrangeRootNod
 	}
 
 	{
+		assert(input.scenarioDimensionsEqual());
 		double sum = 0.0;
 		bool infeas = false;
 		for (unsigned q = 1; q < localScen.size(); q++) {
