@@ -23,6 +23,7 @@ template<typename T1, typename T2> void concatenateOne(stochasticInput &data,
 
 CbcLagrangeSolver::CbcLagrangeSolver(stochasticInput &input, int scenarioNumber, const vector<double> &lagrangeDiff) {
 
+	ratio = 0.;
 	nvar1 = input.nFirstStageVars();
 	int nvar2 = input.nSecondStageVars(scenarioNumber);
 	int ncons1 = input.nFirstStageCons();
@@ -145,7 +146,8 @@ void CbcLagrangeSolver::go() {
 	// preprocessing, cuts, heuristics all enabled?
 
 	const char * argv2[]={"","-solve","-quit"};
-	//cbcm->setMaximumNodes(1000);
+	if (ratio != 0.) cbcm->setDblParam(CbcModel::CbcAllowableFractionGap,ratio);
+	//cbcm->setMaximumNodes(1);
 	CbcMain1(3,argv2,*cbcm);
     	//cbcm->branchAndBound();
    
