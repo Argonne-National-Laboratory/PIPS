@@ -163,7 +163,7 @@ void CbcBALPInterface::go() {
 	
 	const char * argv2[]={"","-solve","-quit"};
 	//cbcm->setMaximumNodes(1);
-	cbcm->setNumberThreads(2);
+	//cbcm->setNumberThreads(2);
 	CbcMain1(3,argv2,*cbcm);
 	//cbcm->branchAndBound();
 

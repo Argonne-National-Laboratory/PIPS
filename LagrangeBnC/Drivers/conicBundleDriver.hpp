@@ -19,6 +19,7 @@ public:
 			 std::vector<PrimalData*>&     primal_solutions,
 			 PrimalExtender*&
 		      ) {
+		std::cout << "RELPREC: " << relprec << std::endl;
 		int nvar1 = input->nFirstStageVars();
 		int nscen = input->nScenarios();
 		std::vector<double> lagrangeDiff(nvar1, 0.0);
@@ -38,8 +39,9 @@ public:
 		}
 
 		LagrangeSolver lsol(*input,scen,lagrangeDiff);
+		lsol.setRatio(100*fabs(relprec));
 		lsol.go();
-		assert(lsol.getStatus() == Optimal);
+		//assert(lsol.getStatus() == Optimal);
 		objective_value = -lsol.getBestPossibleObjective();
 
 		std::vector<double> subgrad(nvar1*(nscen-1),0.0);
@@ -94,7 +96,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 		solver.add_function(funcs[i]);
 	}
 	solver.set_out(&cout,1);
-	solver.set_term_relprec(1e-4);
+	solver.set_term_relprec(1e-3);
 	double t = MPI_Wtime();
 	do {
 		solver.do_descent_step();

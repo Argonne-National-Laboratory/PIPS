@@ -30,6 +30,9 @@ public:
 	variableState getSecondStageColRootState(int idx) const;
 	variableState getSecondStageRowRootState(int idx) const;
 
+	// optimality gap ratio to terminate branch and bound, zero to disable
+	void setRatio(double rel) { ratio = rel; }
+
 
 	std::vector<double> getBestFirstStageSolution() const;
 
@@ -38,6 +41,7 @@ protected:
 	OsiClpSolverInterface m;
 	boost::scoped_ptr<CbcModel> cbcm;
 	int nvar1;
+	double ratio;
 
 };
 
