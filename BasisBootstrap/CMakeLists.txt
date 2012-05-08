@@ -1,7 +1,7 @@
 include_directories(../PIPS-S/Basic)
 include_directories(../PIPS-S/Core)
 include_directories(../PIPS-S/CoinBALPFactorization)
-include_directories(../LagrangeBnC/RecourseSubproblemSolver)
+include_directories(../Lagrange/RecourseSubproblemSolver)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 

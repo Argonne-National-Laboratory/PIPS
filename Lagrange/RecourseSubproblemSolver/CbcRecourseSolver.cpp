@@ -46,10 +46,10 @@ CbcRecourseSolver::CbcRecourseSolver(stochasticInput &input, int scen, const vec
 }
 
 void CbcRecourseSolver::go() {
-	const char * argv2[]={"","-solve","-quit"};
+	const char * argv2[]={"","-log","0","-solve","-quit"};
 	//cbcm->setMaximumNodes(1);
 	//cbcm->setNumberThreads(2);
-	//CbcMain1(3,argv2,*cbcm);
+	//CbcMain1(5,argv2,*cbcm);
 	cbcm->branchAndBound();
 
 }	

@@ -129,9 +129,9 @@ CbcLagrangeSolver::CbcLagrangeSolver(stochasticInput &input, int scenarioNumber,
 		if (input.isSecondStageColInteger(scenarioNumber,i)) m.setInteger(i+nvar1);
 	}
 
-	m.messageHandler()->setLogLevel(0);
 	cbcm.reset(new CbcModel(m));
 	CbcMain0(*cbcm);
+	//m.messageHandler()->setLogLevel(0);
 	cbcm->messageHandler()->setLogLevel(0);
 
 	//assert(CbcModel::haveMultiThreadSupport());
@@ -145,10 +145,10 @@ void CbcLagrangeSolver::go() {
 	// TODO: are all the settings correct?
 	// preprocessing, cuts, heuristics all enabled?
 
-	const char * argv2[]={"","-solve","-quit"};
+	const char * argv2[]={"","-solve","-log","0","-quit"};
 	if (ratio != 0.) cbcm->setDblParam(CbcModel::CbcAllowableFractionGap,ratio);
-	//cbcm->setMaximumNodes(1);
-	CbcMain1(3,argv2,*cbcm);
+	//cbcm->setMaximumNodes(10);
+	CbcMain1(5,argv2,*cbcm);
     	//cbcm->branchAndBound();
    
 }
