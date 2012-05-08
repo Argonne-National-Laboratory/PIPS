@@ -19,7 +19,7 @@ public:
 			 std::vector<PrimalData*>&     primal_solutions,
 			 PrimalExtender*&
 		      ) {
-		std::cout << "RELPREC: " << relprec << std::endl;
+		using namespace std;
 		int nvar1 = input->nFirstStageVars();
 		int nscen = input->nScenarios();
 		std::vector<double> lagrangeDiff(nvar1, 0.0);
@@ -37,15 +37,24 @@ public:
 				lagrangeDiff[i] += dual[i+offset];
 			}
 		}
+		double t = MPI_Wtime();
+		/*for (unsigned i = 0; i < dual.size(); i++) {
+			cout << dual[i] << " ";
+		}
+		cout << endl;*/
 
 		LagrangeSolver lsol(*input,scen,lagrangeDiff);
-		lsol.setRatio(100*fabs(relprec));
+		//lsol.setRatio(100*fabs(relprec));
 		lsol.go();
+		cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
+
 		//assert(lsol.getStatus() == Optimal);
+		assert(lsol.getStatus() != ProvenInfeasible);
 		objective_value = -lsol.getBestPossibleObjective();
 
 		std::vector<double> subgrad(nvar1*(nscen-1),0.0);
 		std::vector<double> sol = lsol.getBestFirstStageSolution();
+		sols.push_back(sol);
 		if (scen > 0) {
 			int offset = nvar1*(scen-1);
 			for (int i = 0; i < nvar1; i++) {
@@ -63,10 +72,12 @@ public:
 
 		return 0;
 	}
+	std::vector<std::vector<double> > const& getSavedSolutions() const { return sols; }
 			
 private:
 	stochasticInput *input;
 	int scen;
+	std::vector<std::vector<double> > sols;
 };
 
 template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriver(stochasticInput &input, 
@@ -96,7 +107,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 		solver.add_function(funcs[i]);
 	}
 	solver.set_out(&cout,1);
-	solver.set_term_relprec(1e-3);
+	solver.set_term_relprec(1e-6);
 	double t = MPI_Wtime();
 	do {
 		solver.do_descent_step();
@@ -105,7 +116,33 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 
 	solver.print_termination_code(cout);
 
+	
+	const vector<double> &obj1 = input.getFirstStageObj();
+	// test last solutions (only)
+	double best = COIN_DBL_MAX;
+	for (int i = 0; i < nscen; i++) {
+		
+		const vector<double> &sol = *(funcs[i].getSavedSolutions().end()-1);
+		double obj = 0.;
+		bool infeas = false;
+		for (int s = 0; s < nscen; s++) {
+			RecourseSolver rsol(input,s,sol);
+			rsol.go();
+			obj += rsol.getObjective();
+			
+			if (rsol.getStatus() == ProvenInfeasible) {
+				printf("got infeasible 1st stage\n");
+				infeas = true; break;
+			}
+		}
+		if (infeas) obj += COIN_DBL_MAX;
+		for (int k = 0; k < nvar1; k++) {
+			obj += sol[k]*obj1[k];
+		}
+		best = min(obj,best);
+	}
 
+	cout << "Best LB: " << -solver.get_objval() << " Best UB: " << best << endl;
 
 }
 

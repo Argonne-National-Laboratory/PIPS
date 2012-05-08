@@ -23,8 +23,12 @@ target_link_libraries(lagrangeRootNodeSMPS pipss stochInput scenred ClpBALPInter
 if(HAVE_CB)
 	include_directories("${CB_DIR}/include")
 	add_executable(conicBundleSMPS Drivers/conicBundleDriverSMPS.cpp)
+	add_executable(conicBundleRaw Drivers/conicBundleDriverRaw.cpp)
+	add_executable(conicBundleParRaw Drivers/conicBundleParDriver1Raw.cpp)
 	add_executable(conicBundleCombinedSMPS Drivers/conicBundleDriverCombinedSMPS.cpp)
 	target_link_libraries(conicBundleSMPS pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
+	target_link_libraries(conicBundleRaw pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
+	target_link_libraries(conicBundleParRaw pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
 	target_link_libraries(conicBundleCombinedSMPS pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
 endif(HAVE_CB)
 

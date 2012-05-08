@@ -3,9 +3,9 @@
 include_directories(../PIPS-S/Basic)
 include_directories(../PIPS-S/Core)
 include_directories(../PIPS-S/CoinBALPFactorization)
-include_directories(../LagrangeBnC/LagrangeSubproblemSolver)
-include_directories(../LagrangeBnC/RecourseSubproblemSolver)
-include_directories(../LagrangeBnC/Drivers)
+include_directories(../Lagrange/LagrangeSubproblemSolver)
+include_directories(../Lagrange/RecourseSubproblemSolver)
+include_directories(../Lagrange/Drivers)
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
 add_library(ucRolling ucRollingModel.cpp)
