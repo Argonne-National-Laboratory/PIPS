@@ -58,7 +58,7 @@ public:
 				ctx.owner(scen),ctx.comm());
 
 		}
-		std::cout << "Solving all subproblems took " << MPI_Wtime() - t << " sec\n";
+		if (ctx.mype() == 0) std::cout << "Solving all subproblems took " << MPI_Wtime() - t << " sec\n";
 
 		return dummies[0].evaluate(dual,relprec,objective_value,cut_vals,
 			subgradients,primal_solutions,e);
@@ -128,7 +128,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleParD
 	double t = MPI_Wtime();
 	do {
 		solver.do_descent_step();
-		cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
+		if (mype == 0) cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
 	} while (!solver.termination_code());
 
 	solver.print_termination_code(cout);
