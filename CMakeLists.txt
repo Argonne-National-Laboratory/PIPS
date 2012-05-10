@@ -74,6 +74,7 @@ set(CBC_LIBS ${CBCSolver_LIB} ${CBC_LIB} ${CGL_LIB} ${OSICLP_LIB} ${OSI_LIB})
 
 find_library(AMPL_LIBRARY NAMES amplsolver.a PATHS ${AMPL_DIR})
 find_library(SML_LIBRARY NAMES libsml.a PATHS ${SML_DIR}/lib)
+find_library(MA27_LIBRARY NAME libMA27.a PATHS ${MA27_DIR})
 find_library(DL_LIBRARY NAMES dl)
 find_library(FL_LIBRARY NAMES fl)
 set(HAVE_SML TRUE)
@@ -144,6 +145,7 @@ include_directories(SolverInterface)
 
 include_directories(${COINUTILS_INCLUDE_DIRS})
 
+add_subdirectory(PIPS-IPM)
 add_subdirectory(Input)
 add_subdirectory(SolverInterface)
 add_subdirectory(PIPS-S)
