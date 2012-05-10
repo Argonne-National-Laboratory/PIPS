@@ -43,6 +43,10 @@ if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in SharedLibraries/Cbc-2.7.6")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
+if(NOT EXISTS "${MA27_DIR}/libMA27.a")
+	message(FATAL_ERROR "Please run \"make\" in SharedLibraries/MA27")
+endif(NOT EXISTS "${MA27_DIR}/libMA27.a")
+
 set(ENV{PKG_CONFIG_PATH} ${COIN_DIR}/lib/pkgconfig)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(COINUTILS REQUIRED coinutils)
