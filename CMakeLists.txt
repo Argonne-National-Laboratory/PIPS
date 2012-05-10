@@ -33,7 +33,7 @@ endif(NEED_MATH)
 set(SHARED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SharedLibraries)
 set(SML_DIR ${SHARED_DIR}/sml-0.7.2)
 set(AMPL_DIR ${SHARED_DIR}/amplsolvers)
-
+set(MA27_DIR ${SHARED_DIR}/MA27)
 # include CoinUtils
 #set(COIN_DIR ${Simplex_SOURCE_DIR}/CoinUtils-2.8.0)
 #set(COIN_DIR ${SHARED_DIR}/Clp-1.14)
