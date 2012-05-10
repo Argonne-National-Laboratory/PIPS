@@ -29,11 +29,11 @@ endif(NEED_MATH)
 
 
 
-
 set(SHARED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SharedLibraries)
 set(SML_DIR ${SHARED_DIR}/sml-0.7.2)
 set(AMPL_DIR ${SHARED_DIR}/amplsolvers)
 set(MA27_DIR ${SHARED_DIR}/MA27)
+set(MA57_DIR ${SHARED_DIR}/MA57)
 # include CoinUtils
 #set(COIN_DIR ${Simplex_SOURCE_DIR}/CoinUtils-2.8.0)
 #set(COIN_DIR ${SHARED_DIR}/Clp-1.14)
@@ -43,9 +43,9 @@ if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in SharedLibraries/Cbc-2.7.6")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
-if(NOT EXISTS "${MA27_DIR}/libMA27.a")
-	message(FATAL_ERROR "Please run \"make\" in SharedLibraries/MA27")
-endif(NOT EXISTS "${MA27_DIR}/libMA27.a")
+if(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a") 
+	message(FATAL_ERROR "Could not find MA27 or MA57. Please run \"make\" in SharedLibraries/MA27 or in SharedLibraries/MA57")
+endif(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
 
 set(ENV{PKG_CONFIG_PATH} ${COIN_DIR}/lib/pkgconfig)
 find_package(PkgConfig REQUIRED)
@@ -74,9 +74,12 @@ set(CBC_LIBS ${CBCSolver_LIB} ${CBC_LIB} ${CGL_LIB} ${OSICLP_LIB} ${OSI_LIB})
 
 find_library(AMPL_LIBRARY NAMES amplsolver.a PATHS ${AMPL_DIR})
 find_library(SML_LIBRARY NAMES libsml.a PATHS ${SML_DIR}/lib)
-find_library(MA27_LIBRARY NAME libMA27.a PATHS ${MA27_DIR})
 find_library(DL_LIBRARY NAMES dl)
 find_library(FL_LIBRARY NAMES fl)
+
+find_library(MA27_LIBRARY NAME libMA27.a PATHS ${MA27_DIR})
+find_library(MA57_LIBRARY NAME libMA57.a PATHS ${MA57_DIR})
+
 set(HAVE_SML TRUE)
 if(${AMPL_LIBRARY} MATCHES "AMPL_LIBRARY-NOTFOUND")
 	message(STATUS "amplsolver library not found. Won't build code that requires SML.")
@@ -98,6 +101,18 @@ endif(${FL_LIBRARY} MATCHES "FL_LIBRARY-NOTFOUND" AND ${HAVE_SML})
 if(HAVE_SML)
 	include_directories(${SML_DIR}/include)
 endif(HAVE_SML)
+
+set(HAVE_MA27 TRUE)
+set(HAVE_MA57 TRUE)
+#message(STATUS ${MA27_LIBRARY})
+if(${MA27_LIBRARY} MATCHES "MA27_LIBRARY-NOTFOUND")
+  message(STATUS "MA27 library not found. Won't build code that requires MA27")
+  set(HAVE_MA27 FALSE)
+endif(${MA27_LIBRARY} MATCHES "MA27_LIBRARY-NOTFOUND")
+if(${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
+  message(STATUS "MA57 library not found. Won't build code that requires MA57")
+  set(HAVE_MA57 FALSE)
+endif(${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
 
 
 # see if we have gurobi
