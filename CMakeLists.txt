@@ -34,6 +34,7 @@ set(SML_DIR ${SHARED_DIR}/sml-0.7.2)
 set(AMPL_DIR ${SHARED_DIR}/amplsolvers)
 set(MA27_DIR ${SHARED_DIR}/MA27)
 set(MA57_DIR ${SHARED_DIR}/MA57)
+set(METIS_DIR ${SHARED_DIR}/metis-4.0.1)
 # include CoinUtils
 #set(COIN_DIR ${Simplex_SOURCE_DIR}/CoinUtils-2.8.0)
 #set(COIN_DIR ${SHARED_DIR}/Clp-1.14)
@@ -46,6 +47,9 @@ endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 if(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a") 
 	message(FATAL_ERROR "Could not find MA27 or MA57. Please run \"make\" in SharedLibraries/MA27 or in SharedLibraries/MA57")
 endif(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
+if(EXISTS "${MA57_DIR}/libMA57.a" AND NOT EXISTS "$(METIS_DIR/libmetis.a")
+  message(FATAL_ERROR "Could not find metis needed by MA57. Pleae run \"make\" in SharedLibraries/metis-4.0.1")
+endif(EXISTS "${MA57_DIR}/libMA57.a" AND NOT EXISTS "$(METIS_DIR/libmetis.a")
 
 set(ENV{PKG_CONFIG_PATH} ${COIN_DIR}/lib/pkgconfig)
 find_package(PkgConfig REQUIRED)
@@ -79,6 +83,7 @@ find_library(FL_LIBRARY NAMES fl)
 
 find_library(MA27_LIBRARY NAME libMA27.a PATHS ${MA27_DIR})
 find_library(MA57_LIBRARY NAME libMA57.a PATHS ${MA57_DIR})
+find_library(METIS_LIBRARY NAME libmetis.a PATHS ${METIS_DIR})
 
 set(HAVE_SML TRUE)
 if(${AMPL_LIBRARY} MATCHES "AMPL_LIBRARY-NOTFOUND")
@@ -113,7 +118,10 @@ if(${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
   message(STATUS "MA57 library not found. Won't build code that requires MA57")
   set(HAVE_MA57 FALSE)
 endif(${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
-
+if(${METIS_LIBRARY} MATCHES "METIS_LIBRARY-NOTFOUND" AND ${HAVE_MA57})
+  message(STATUS "metis library not found. Won't build code that requires MA57")
+  set(HAVE_MA57 FALSE)
+endif(${METIS_LIBRARY} MATCHES "METIS_LIBRARY-NOTFOUND" AND ${HAVE_MA57})
 
 # see if we have gurobi
 # must set GUROBI_DIR environmental variable with root of gurobi architecture directory

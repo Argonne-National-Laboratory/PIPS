@@ -6,5 +6,15 @@ add_subdirectory(Core)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
-add_executable(qpgen-sparse-mehrotra.exe Core/QpGen/QpGenSparseMehrotraDriver.C)
-target_link_libraries(qpgen-sparse-mehrotra.exe ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra ${MA27_LIBRARY} ${MATH_LIBS})
+if(HAVE_MA27)
+  add_executable(qpgen-sparse-mehrotra.exe Core/QpGen/QpGenSparseMehrotraDriver.C)
+  target_link_libraries(qpgen-sparse-mehrotra.exe 
+    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra 
+    ${MA27_LIBRARY} ${MATH_LIBS})
+endif(HAVE_MA27)
+if(HAVE_MA57)
+  add_executable(qpgen-sparse-ma57-gondzio.exe Core/QpGen/QpGenSparseGondzioDriver.C)
+  target_link_libraries(qpgen-sparse-ma57-gondzio.exe 
+    ooqpgensparse ooqpsparse ooqpbase ooqpgondzio 
+    ${MA57_LIBRARY} $(METIS_LIBRARY) ${MATH_LIBS})
+endif(HAVE_MA57)
