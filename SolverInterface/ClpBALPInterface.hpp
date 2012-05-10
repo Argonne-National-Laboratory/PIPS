@@ -29,6 +29,7 @@ public:
 	std::vector<double> getSecondStagePrimalColSolution(int scen) const;
 	std::vector<double> getFirstStageDualColSolution() const;
 	std::vector<double> getSecondStageDualColSolution(int scen) const;
+	std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
 	void setFirstStageColState(int idx,variableState); 
 	void setFirstStageRowState(int idx,variableState);
