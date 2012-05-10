@@ -1,0 +1,24 @@
+
+# Which compiler to use
+CC       = gcc
+#CC 				= mpixlc_r
+#CC       =/soft/mvapich2/1.4-gcc-4.4.2/bin/mpicc
+
+# What optimization level to use - default 02
+OPTFLAGS = -O2
+
+# What options to be used by the compiler
+COPTIONS = 
+
+# What options to be used by the loader
+LDOPTIONS = 
+
+# What archiving to use
+AR = ar rv
+
+# What to use for indexing the archive
+RANLIB = ranlib
+#RANLIB = ar -ts
+#RANLIB = 
+
+
