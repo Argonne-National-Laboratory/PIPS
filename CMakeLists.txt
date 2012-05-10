@@ -18,7 +18,7 @@ endif(MATH_LIBS)
 
 if(NEED_MATH)
 	if(IS_DIRECTORY $ENV{MKLROOT})
-		set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_gnu_thread.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -fopenmp -lpthread")
+		set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_gnu_thread.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -fopenmp -lpthread -lgfortran")
 	else(IS_DIRECTORY $ENV{MKLROOT})
 		enable_language( Fortran )
 		find_package(LAPACK REQUIRED)

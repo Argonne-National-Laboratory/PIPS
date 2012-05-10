@@ -298,6 +298,15 @@ vector<double> ClpBALPInterface::getSecondStageDualColSolution(int scen) const {
 	return vector<double>(sol+offset,sol+offset+dims.numSecondStageVars(scen));
 }
 
+vector<double> ClpBALPInterface::getSecondStageDualRowSolution(int scen) const {
+	const double *sol = model.getRowPrice();
+	int offset = dims.numFirstStageCons();
+	for (int i = 0; i < scen; i++) {
+		offset += dims.numSecondStageCons(i);
+	}
+	return vector<double>(sol+offset,sol+offset+dims.numSecondStageCons(scen));
+}
+
 static const char* statusString(ClpSimplex::Status s) {
 	if (s == ClpSimplex::basic) {
 		return "Basic";

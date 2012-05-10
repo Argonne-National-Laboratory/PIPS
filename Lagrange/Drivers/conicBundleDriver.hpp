@@ -46,7 +46,7 @@ public:
 		LagrangeSolver lsol(*input,scen,lagrangeDiff);
 		//lsol.setRatio(100*fabs(relprec));
 		lsol.go();
-		cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
+		//cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
 
 		//assert(lsol.getStatus() == Optimal);
 		assert(lsol.getStatus() != ProvenInfeasible);
@@ -106,12 +106,12 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 		funcs.push_back(lagrangeSubproblem<LagrangeSolver>(&input,i));
 		solver.add_function(funcs[i]);
 	}
-	solver.set_out(&cout,1);
+	if (mype == 0) solver.set_out(&cout,1);
 	solver.set_term_relprec(1e-6);
 	double t = MPI_Wtime();
 	do {
 		solver.do_descent_step();
-		cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
+		if (mype == 0) cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
 	} while (!solver.termination_code());
 
 	solver.print_termination_code(cout);
@@ -142,7 +142,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 		best = min(obj,best);
 	}
 
-	cout << "Best LB: " << -solver.get_objval() << " Best UB: " << best << endl;
+	if (mype == 0) cout << "Best LB: " << -solver.get_objval() << " Best UB: " << best << endl;
 
 }
 
