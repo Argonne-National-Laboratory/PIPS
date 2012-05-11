@@ -4,7 +4,7 @@
 #include "ClpRecourseSolver.hpp"
 #include "ClpBALPInterface.hpp"
 #include "PIPSSInterface.hpp"
-#include "cuttingPlaneManager.hpp"
+#include "proxLevelManager.hpp"
 
 using namespace std;
 
@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	cuttingPlaneManager<ClpBALPInterface,CbcLagrangeSolver,CbcRecourseSolver> manager(input,ctx);
+	proxLevelManager<PIPSSInterface,CbcLagrangeSolver,CbcRecourseSolver> manager(input,ctx,0.95);
 
 	while(!manager.terminated()) {
 		manager.iterate();

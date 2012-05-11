@@ -3,30 +3,49 @@
 
 #include "BA.hpp"
 #include "BALPSolverInterface.hpp"
+#include "CoinFinite.hpp"
 
-// TODO: remove?
-#include "cuttingPlaneBALP.hpp"
 
+struct cutInfo {
+	std::vector<double> evaluatedAt, subgradient, primalSol;
+	double objval;
+	double computeC() const; // compute component of c as defined above
+	// could include error estimates here later
+};
+
+
+// outer dimension is scenario, inner is list of cuts.
+// this allows bundle to be distributed per scenario, i.e,
+// if a scenario s isn't assigned, bundle[s] will be empty. 
+typedef std::vector<std::vector<cutInfo> > bundle_t; 
 
 
 // this is specialized particularly for lagrangian relaxation of nonanticipativity constraints, not general bundle solver
 template<typename BALPSolver, typename LagrangeSolver, typename RecourseSolver> class bundleManager {
 public:
 	bundleManager(stochasticInput &input, BAContext & ctx) : ctx(ctx), input(input) {
+		int nscen = input.nScenarios();
 		// use zero as initial iterate
-		currentSolution.resize(input.nScenarios(),std::vector<double>(input.nFirstStageVars(),0.));
+		currentSolution.resize(nscen,std::vector<double>(input.nFirstStageVars(),0.));
 		nIter = -1;
-		bundle.resize(input.nScenarios());
+		bundle.resize(nscen);
 		bestPrimalObj = COIN_DBL_MAX;
+		relativeConvergenceTol = 1e-6;
+		terminated_ = false;
 	}
 
-	cutInfo solveSubproblem(std::vector<double> const& at, int scen); 
-	
-	double testPrimal(std::vector<double> const& primal); // test a primal solution and return objective (COIN_DBL_MAX) if infeasible
 
-	virtual void iterate();
+	void setRelConvergenceTol(double t) { relativeConvergenceTol = t; }
+	bool terminated() { return terminated_; }
+	void iterate();
 
 protected:
+
+	virtual void doStep() = 0;
+	cutInfo solveSubproblem(std::vector<double> const& at, int scen); 
+	double testPrimal(std::vector<double> const& primal); // test a primal solution and return objective (COIN_DBL_MAX) if infeasible
+	// evaluates trial solution and updates the bundle
+	double evaluateSolution(std::vector<std::vector<double> > const& sol);
 
 	void evaluateAndUpdate();
 	void checkLastPrimals();
@@ -39,6 +58,9 @@ protected:
 	BAContext &ctx;
 	stochasticInput &input;
 	int nIter;
+	double relativeConvergenceTol;
+	bool terminated_;
+	
 
 
 };
@@ -47,7 +69,7 @@ protected:
 template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveSubproblem(std::vector<double> const& at, int scen) {
 	using namespace std;	
 	int nvar1 = input.nFirstStageVars();
-	double t = MPI_Wtime();
+	//double t = MPI_Wtime();
 	
 
 	L lsol(input,scen,at);
@@ -99,22 +121,28 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::testPr
 
 }
 
+template<typename B, typename L, typename R> double bundleManager<B,L,R>::evaluateSolution(std::vector<std::vector<double> > const& sol) {
+
+	int nscen = input.nScenarios();
+	double obj = 0.;
+	for (int i = 0; i < nscen; i++) {
+		cutInfo cut = solveSubproblem(sol[i],i);
+		bundle[i].push_back(cut);
+		obj -= cut.objval; // note cut has obj flipped
+	}
+	return obj;
+}
 
 template<typename B, typename L, typename R> void bundleManager<B,L,R>::evaluateAndUpdate() {
 
-	int nscen = input.nScenarios();
-	currentObj = 0.;
-	for (int i = 0; i < nscen; i++) {
-		cutInfo cut = solveSubproblem(currentSolution[i],i);
-		bundle[i].push_back(cut);
-		currentObj -= cut.objval; // note cut has obj flipped
-	}
+	currentObj = evaluateSolution(currentSolution);
 }
 
 template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLastPrimals() {
 
 	int nscen = input.nScenarios();
-	for (int i = 0; i < nscen; i++) {
+	for (int i = 0; i < 10; i++) {
+	//for (int i = 0; i < nscen; i++) {
 		assert(bundle[i].size());
 		std::vector<double> const& p = bundle[i][bundle[i].size()-1].primalSol;
 		double o = testPrimal(p);
@@ -127,32 +155,18 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLas
 
 
 template<typename B, typename L, typename R> void bundleManager<B,L,R>::iterate() {
-	using namespace std;
 
-	int nscen = input.nScenarios();
-	int nvar1 = input.nFirstStageVars();
+	assert(!terminated_);
+	
 
 	if (nIter++ == -1) { // just evaluate and generate subgradients
 		evaluateAndUpdate();
 		checkLastPrimals();
+		return;
 	}
 
-	printf("Iter %d Current Objective: %f Best Primal: %f\n",nIter-1,currentObj,bestPrimalObj);
+	doStep();
 	
-	// use cutting plane model for now
-	cuttingPlaneModel cpm(nvar1,bundle,-bestPrimalObj);
-	
-	B solver(cpm,ctx);
-	solver.go();
-	cout << "Model objective: " << solver.getObjective() << endl;
-
-	for (int i = 0; i < nscen; i++) {
-		std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(i);
-		for (int k = 0; k < nvar1; k++) {
-			currentSolution[i][k] = -iterate[k+1];
-		}
-	}
-	evaluateAndUpdate();
 }
 
 #endif

@@ -2,13 +2,15 @@ include_directories(LagrangeSubproblemSolver)
 include_directories(RecourseSubproblemSolver)
 include_directories(Bundle)
 include_directories(../PIPS-S/Basic)
+include_directories(../PIPS-S/Core)
+include_directories(../PIPS-S/CoinBALPFactorization)
 include_directories(../BasisBootstrap/ScenarioReduction)
 
 add_library(CbcLagrangeSolver LagrangeSubproblemSolver/CbcLagrangeSolver.cpp)
 add_library(ClpRecourseSolver RecourseSubproblemSolver/ClpRecourseSolver.cpp)
 add_library(CbcRecourseSolver RecourseSubproblemSolver/CbcRecourseSolver.cpp)
 add_library(combine Drivers/combineScenarios.cpp)
-add_library(bundle Bundle/cuttingPlaneBALP.cpp)
+add_library(bundle Bundle/cuttingPlaneBALP.cpp Bundle/levelBALP.cpp)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
@@ -17,12 +19,16 @@ add_executable(lagrangeCombinedScenRedRootNode Drivers/lagrangeCombinedScenRedRo
 add_executable(lagrangeCombinedSMPS Drivers/lagrangeCombinedScenRedRootNodeSMPS.cpp)
 add_executable(lagrangeRootNodeSMPS Drivers/lagrangeRootNodeSMPS.cpp)
 add_executable(cpmSMPS Drivers/cpmSMPS.cpp)
+add_executable(levelSMPS Drivers/levelSMPS.cpp)
+add_executable(proxLevelSMPS Drivers/proxLevelSMPS.cpp)
 
 target_link_libraries(lagrangeRootNode pipss stochInput ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(lagrangeCombinedScenRedRootNode pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(lagrangeCombinedSMPS pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(lagrangeRootNodeSMPS pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(cpmSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(levelSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(proxLevelSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
 if(HAVE_CB)
 	include_directories("${CB_DIR}/include")
