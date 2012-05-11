@@ -13,6 +13,8 @@
 #include "QpStochAugRedPrCG.h"
 #include "QpStochAugRedPrPCG.h"
 
+#include "sFactoryAug.h"
+
 #include "StochResourcePlanner.h"
 
 #include "randUtils.h"

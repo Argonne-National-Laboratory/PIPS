@@ -7,9 +7,9 @@
 #include "QpGenSparseMa27.h"
 #include "MehrotraStochSolver.h"
 #include "sFactoryAug.h"
-#include "sFactoryAugSca.h"
-#include "sFactoryAugEmtl.h"
-#include "sFactoryAugEmtlSym.h"
+//#include "sFactoryAugSca.h"
+//#include "sFactoryAugEmtl.h"
+//#include "sFactoryAugEmtlSym.h"
 #include "QpGenStochAugExt.h"
 #include "QpGenStochAugRed.h"
 #include "QpGenStochAugRedPr.h"
@@ -364,7 +364,7 @@ void stochSolve(int argc, char *argv[], PbData& pbData, int printx, int solveWit
   } else if(solveWith==2) {
     sFactoryAug* formulation=NULL;
     qpgenstoch_solve( root, params, method, formulation);
-  } else if(solveWith==4) {
+  } /*else if(solveWith==4) {
     sFactoryAugSca* formulation=NULL;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==5) {
@@ -373,7 +373,7 @@ void stochSolve(int argc, char *argv[], PbData& pbData, int printx, int solveWit
   } else if(solveWith==6) {
     sFactoryAugEmtlSym* formulation=NULL;
     qpgenstoch_solve( root, params, method, formulation);
-  }
+    }*/
   
   
   delete params;
@@ -716,6 +716,7 @@ int fC(void* user_data, int id, int* krowM, int* jcolM, double* M)
   int N=data->N; int T=data->T; int NW=data->NW; int ND=data->ND; int S = data->S;
   double** K = data->K;
   int NT=N*T;
+  int nnz=0;
 
   if(id==0) {
     ////////////////////////////////////
@@ -796,7 +797,7 @@ int fC(void* user_data, int id, int* krowM, int* jcolM, double* M)
     } // end outer 'for' t=0,...,ND-1
 
 #ifdef DEBUG
-    int nnz = 2*N*ND*T + N*( (2*T-1)*ND*(ND+1)/2 - ND*(ND+1)*(2*ND+1)/6 ) / 2;
+    nnz = 2*N*ND*T + N*( (2*T-1)*ND*(ND+1)/2 - ND*(ND+1)*(2*ND+1)/6 ) / 2;
     for(int j=0; j<nnz; j++) if(jcolM[j]>=2*N*T) assert(false);
     assert(colind==nnz); int nnz0=nnz;
 #endif
@@ -958,7 +959,9 @@ int fC(void* user_data, int id, int* krowM, int* jcolM, double* M)
 	}
 
 	krowM[rowind+1] = colind; rowind++;
-	assert(colind<nnz);
+#ifdef DEBUG
+	assert(colind<nnz);	
+#endif
       }
     }
     
@@ -983,7 +986,9 @@ int fC(void* user_data, int id, int* krowM, int* jcolM, double* M)
 	  colind++;
 	}
 	krowM[rowind+1] = colind; rowind++;
+#ifdef DEBUG
 	assert(colind<nnz);
+#endif
       }
     }
 
@@ -1012,7 +1017,9 @@ int fC(void* user_data, int id, int* krowM, int* jcolM, double* M)
 	}
 
 	krowM[rowind+1] = colind; rowind++;
+#ifdef DEBUG
 	assert(colind<nnz);
+#endif
       }
     }
     // ------- 21 -------
@@ -1034,7 +1041,9 @@ int fC(void* user_data, int id, int* krowM, int* jcolM, double* M)
 	  colind++;
 	}
 	krowM[rowind+1] = colind; rowind++;
+#ifdef DEBUG
 	assert(colind<=nnz);
+#endif
       }
     }
     fnnzC(data, id, &nnz);
@@ -2245,18 +2254,18 @@ void qpgenSolve(PbData& data, int printx)
   MehrotraSolver * s            = new MehrotraSolver( qp, prob );
   s->monitorSelf();
   
-  rusage before_solve;
-  getrusage( RUSAGE_SELF, &before_solve );
+  //rusage before_solve;
+  //getrusage( RUSAGE_SELF, &before_solve );
 
   int result = s->solve(prob,vars, resid);
 
-  rusage  after_solve;
-  getrusage( RUSAGE_SELF, &after_solve );  
+  //rusage  after_solve;
+  //getrusage( RUSAGE_SELF, &after_solve );  
 
-  double solve_time =
-    (after_solve.ru_utime.tv_sec - before_solve.ru_utime.tv_sec)
-    + (after_solve.ru_utime.tv_usec - before_solve.ru_utime.tv_usec)
-    / 1000000.0;
+  //double solve_time =
+  //  (after_solve.ru_utime.tv_sec - before_solve.ru_utime.tv_sec)
+  //  + (after_solve.ru_utime.tv_usec - before_solve.ru_utime.tv_usec)
+  //  / 1000000.0;
   
   double objective = prob->objectiveValue(vars);
 
@@ -2273,7 +2282,7 @@ void qpgenSolve(PbData& data, int printx)
        <<",    Optimal Solution:  " << objective;
   cout << ".\n";
 
-  cout  << "QP solved in " << solve_time << " seconds.\n";
+  //cout  << "QP solved in " << solve_time << " seconds.\n";
 
   delete s;
   delete vars;  

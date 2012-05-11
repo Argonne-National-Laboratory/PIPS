@@ -1,7 +1,7 @@
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers 
   Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver)
-include_directories(Core/StochLinearAlgebra)
+include_directories(Core/StochLinearAlgebra Core/QpStoch)
 add_subdirectory(Core)
 
 
@@ -13,9 +13,18 @@ if(HAVE_MA27)
     ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra 
     ${MA27_LIBRARY} ${MATH_LIBS})
 endif(HAVE_MA27)
+
 if(HAVE_MA57)
   add_executable(qpgen-sparse-ma57-gondzio.exe Core/QpGen/QpGenSparseGondzioDriver.C)
   target_link_libraries(qpgen-sparse-ma57-gondzio.exe 
     ooqpgensparse ooqpsparse ooqpbase ooqpgondzio 
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 endif(HAVE_MA57)
+
+if(HAVE_MA57 AND HAVE_METIS)
+  add_executable(qpstoch-unitcommit.exe Core/QpGen/QpGenStochDriverUC.C)
+  target_link_libraries(qpstoch-unitcommit.exe
+    ooqpstoch ooqpstochla ooqpmehrotrastoch
+    ooqpgensparse ooqpbase ooqpsparse
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+endif(HAVE_MA57 AND HAVE_METIS)
