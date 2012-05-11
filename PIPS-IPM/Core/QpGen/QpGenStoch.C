@@ -7,7 +7,7 @@
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 
-#include "QpGenStochVars.h"
+#include "sVars.h"
 #include "QpGenResiduals2.h"
 #include "QpGenStochLinsysLeaf.h"
 
@@ -101,13 +101,13 @@ Variables* QpGenStoch::makeVariables( Data * prob_in )
   OoqpVector * icupp  = tree->newDualZVector();
 
   //vars = new QpGenVars( x, s, y, z,
-  QpGenStochVars* vars = new QpGenStochVars( tree, x, s, y, z,
-			     v, gamma, w, phi,
-			     t, lambda, u, pi, 
-			     prob->ixlow, prob->ixlow->numberOfNonzeros(),
-			     prob->ixupp, prob->ixupp->numberOfNonzeros(),
-			     prob->iclow, prob->iclow->numberOfNonzeros(),
-			     prob->icupp, prob->icupp->numberOfNonzeros());
+  sVars* vars = new sVars( tree, x, s, y, z,
+			   v, gamma, w, phi,
+			   t, lambda, u, pi, 
+			   prob->ixlow, prob->ixlow->numberOfNonzeros(),
+			   prob->ixupp, prob->ixupp->numberOfNonzeros(),
+			   prob->iclow, prob->iclow->numberOfNonzeros(),
+			   prob->icupp, prob->icupp->numberOfNonzeros());
   registeredVars.push_back(vars);
 
   return vars;

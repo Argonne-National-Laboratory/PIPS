@@ -1,4 +1,4 @@
-#include "QpGenStochVars.h"
+#include "sVars.h"
 #include "QpGenData.h"
 #include "OoqpVector.h"
 #include "Data.h"
@@ -14,9 +14,9 @@
 using namespace std;
 
 
-QpGenStochVars::QpGenStochVars(StochTree* tree, 
-			       OoqpVector * ixlow_in, OoqpVector * ixupp_in,
-			       OoqpVector * iclow_in, OoqpVector * icupp_in)
+sVars::sVars(StochTree* tree, 
+	     OoqpVector * ixlow_in, OoqpVector * ixupp_in,
+	     OoqpVector * iclow_in, OoqpVector * icupp_in)
   : QpGenVars()
 {
   SpReferTo( ixlow, ixlow_in );
@@ -71,16 +71,16 @@ QpGenStochVars::QpGenStochVars(StochTree* tree,
   createChildren();
 }
 
-QpGenStochVars::QpGenStochVars( StochTree* tree, OoqpVector * x_in, OoqpVector * s_in,
-				OoqpVector * y_in, OoqpVector * z_in,
-				OoqpVector * v_in, OoqpVector * gamma_in,
-				OoqpVector * w_in, OoqpVector * phi_in,
-				OoqpVector * t_in, OoqpVector * lambda_in,
-				OoqpVector * u_in, OoqpVector * pi_in,
-				OoqpVector * ixlow_in, int nxlowGlobal,
-				OoqpVector * ixupp_in, int nxuppGlobal,
-				OoqpVector * iclow_in, int mclowGlobal,
-				OoqpVector * icupp_in, int mcuppGlobal)
+sVars::sVars( StochTree* tree, OoqpVector * x_in, OoqpVector * s_in,
+	      OoqpVector * y_in, OoqpVector * z_in,
+	      OoqpVector * v_in, OoqpVector * gamma_in,
+	      OoqpVector * w_in, OoqpVector * phi_in,
+	      OoqpVector * t_in, OoqpVector * lambda_in,
+	      OoqpVector * u_in, OoqpVector * pi_in,
+	      OoqpVector * ixlow_in, int nxlowGlobal,
+	      OoqpVector * ixupp_in, int nxuppGlobal,
+	      OoqpVector * iclow_in, int mclowGlobal,
+	      OoqpVector * icupp_in, int mcuppGlobal)
   : QpGenVars()
 {
 
@@ -134,18 +134,16 @@ QpGenStochVars::QpGenStochVars( StochTree* tree, OoqpVector * x_in, OoqpVector *
   createChildren();
 }
 
+sVars::~sVars()
+{ }
 
-QpGenStochVars::~QpGenStochVars()
-{
-}
-
-void QpGenStochVars::AddChild(QpGenStochVars* child)
+void sVars::AddChild(sVars* child)
 {
   children.push_back(child);
 }
 
 
-void QpGenStochVars::createChildren()
+void sVars::createChildren()
 {
   StochVector& xst     = dynamic_cast<StochVector&>(*x);
   StochVector& sst     = dynamic_cast<StochVector&>(*s);
@@ -166,22 +164,22 @@ void QpGenStochVars::createChildren()
     
 
   for (int it=0; it<xst.children.size(); it++) {
-    AddChild( new QpGenStochVars( stochNode->children[it],
-				  xst.children[it],     sst.children[it],
-				  yst.children[it],     zst.children[it],
-				  vst.children[it],     gammast.children[it],
-				  wst.children[it],     phist.children[it],
-				  tst.children[it],     lambdast.children[it],
-				  ust.children[it],     pist.children[it],
-				  ixlowst.children[it], nxlow,
-				  ixuppst.children[it], nxupp,
-				  iclowst.children[it], mclow,
-				  icuppst.children[it], mcupp));
+    AddChild( new sVars( stochNode->children[it],
+			 xst.children[it],     sst.children[it],
+			 yst.children[it],     zst.children[it],
+			 vst.children[it],     gammast.children[it],
+			 wst.children[it],     phist.children[it],
+			 tst.children[it],     lambdast.children[it],
+			 ust.children[it],     pist.children[it],
+			 ixlowst.children[it], nxlow,
+			 ixuppst.children[it], nxupp,
+			 iclowst.children[it], mclow,
+			 icuppst.children[it], mcupp));
   }
 
 }
 
-void QpGenStochVars::sync()
+void sVars::sync()
 {
   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*x));
 

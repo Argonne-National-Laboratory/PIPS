@@ -16,7 +16,7 @@ class StochInputTree;
 class StochTree;
 class StochSymMatrix;
 class QpGenResiduals2;
-class QpGenStochVars;
+class sVars;
 class sLinsys;
 class sLinsysRoot;
 class sLinsysLeaf;
@@ -54,13 +54,13 @@ class sFactory : public QpGen {
 
   virtual sLinsysRoot* newLinsysRoot() = 0;
   virtual sLinsysRoot* newLinsysRoot(QpGenStochData* prob,
-					      OoqpVector* dd,OoqpVector* dq,
-					      OoqpVector* nomegaInv, OoqpVector* rhs) = 0;
-
+				     OoqpVector* dd,OoqpVector* dq,
+				     OoqpVector* nomegaInv, OoqpVector* rhs) = 0;
+  
   virtual sLinsysLeaf* newLinsysLeaf();
   virtual sLinsysLeaf* newLinsysLeaf(QpGenStochData* prob,
-					      OoqpVector* dd,OoqpVector* dq,
-					      OoqpVector* nomegaInv, OoqpVector* rhs);
+				     OoqpVector* dd,OoqpVector* dq,
+				     OoqpVector* nomegaInv, OoqpVector* rhs);
   
 
   StochTree* tree;
@@ -71,7 +71,7 @@ class sFactory : public QpGen {
   virtual void iterateEnded();
 
   QpGenResiduals2 *resid;
-  vector<QpGenStochVars*> registeredVars;
+  vector<sVars*> registeredVars;
  
   sLinsysRoot* linsys;
 
