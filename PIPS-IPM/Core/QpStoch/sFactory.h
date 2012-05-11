@@ -15,7 +15,7 @@ class QpGenVars;
 class StochInputTree;
 class StochTree;
 class StochSymMatrix;
-class QpGenResiduals2;
+class sResiduals;
 class sVars;
 class sLinsys;
 class sLinsysRoot;
@@ -70,7 +70,7 @@ class sFactory : public QpGen {
   virtual void iterateStarted();
   virtual void iterateEnded();
 
-  QpGenResiduals2 *resid;
+  sResiduals *resid;
   vector<sVars*> registeredVars;
  
   sLinsysRoot* linsys;

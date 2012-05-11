@@ -1,35 +1,31 @@
-#include "QpGenResiduals2.h"
+#include "sResiduals.h"
 #include "StochTree.h"
 #include "StochVector.h"
 
-QpGenResiduals2::QpGenResiduals2( StochTree* tree, 
-				  OoqpVector * rQ_,    OoqpVector * rA_, 
-				  OoqpVector * rC_,    OoqpVector * rz_, 
-				  OoqpVector * rt_,    OoqpVector * rlambda_, 
-				  OoqpVector * ru_,    OoqpVector * rpi_, 
-				  OoqpVector * rv_,    OoqpVector * rgamma_, 
-				  OoqpVector * rw_,    OoqpVector * rphi_, 
-				  OoqpVector * ixlow_, double nxlowGlobal,
-				  OoqpVector * ixupp_, double nxuppGlobal,
-				  OoqpVector * iclow_, double mclowGlobal, 
-				  OoqpVector * icupp_, double mcuppGlobal)
+sResiduals::sResiduals( StochTree* tree, 
+			OoqpVector * rQ_,    OoqpVector * rA_, 
+			OoqpVector * rC_,    OoqpVector * rz_, 
+			OoqpVector * rt_,    OoqpVector * rlambda_, 
+			OoqpVector * ru_,    OoqpVector * rpi_, 
+			OoqpVector * rv_,    OoqpVector * rgamma_, 
+			OoqpVector * rw_,    OoqpVector * rphi_, 
+			OoqpVector * ixlow_, double nxlowGlobal,
+			OoqpVector * ixupp_, double nxuppGlobal,
+			OoqpVector * iclow_, double mclowGlobal, 
+			OoqpVector * icupp_, double mcuppGlobal)
   :QpGenResiduals()
 {
   assert(false);
   SpReferTo( ixlow, ixlow_ );
-  //ixlow =  OoqpVectorHandle( ixlow_ );
   nxlow = nxlowGlobal;
 
   SpReferTo( ixupp, ixupp_ );
-  //ixupp =  OoqpVectorHandle( ixupp_ );
   nxupp = nxuppGlobal;
 
   SpReferTo( iclow, iclow_ );
-  //iclow =  OoqpVectorHandle( iclow_ );
   mclow = mclowGlobal;
 
   SpReferTo( icupp, icupp_ );
-  //icupp =  OoqpVectorHandle( icupp_ );
   mcupp = mcuppGlobal;
 
   SpReferTo( rQ, rQ_ );
@@ -44,58 +40,27 @@ QpGenResiduals2::QpGenResiduals2( StochTree* tree,
   SpReferTo( rgamma, rgamma_ );
   SpReferTo( rw  , rw_ );
   SpReferTo( rphi, rphi_ );
-  
-
-  /*  rQ = OoqpVectorHandle( rQ_ );
-  rA = OoqpVectorHandle( rA_ );
-  rC = OoqpVectorHandle( rC_ );
-
-  rz = OoqpVectorHandle( rz_ );
-  //if ( mclow > 0 ) {
-    rt      = OoqpVectorHandle( rt_ );
-    rlambda = OoqpVectorHandle( rlambda_ );
-    //} 
-
-  //if ( mcupp > 0 ) {
-    ru     = OoqpVectorHandle( ru_ );
-    rpi    = OoqpVectorHandle( rpi_ );
-  //}
-
-  //if( nxlow > 0 ) {
-    rv     = OoqpVectorHandle( rpi_ );
-    rgamma = OoqpVectorHandle( rgamma_ );
-   //} 
-
-  //if( nxupp > 0 ) {
-    rw   = OoqpVectorHandle( rw_ );
-    rphi = OoqpVectorHandle( rphi_ );
-  //} 
-  */
 
   stochNode = tree;
   createChildren();
 }
 
 
-QpGenResiduals2::QpGenResiduals2( StochTree* tree,
-				  OoqpVector * ixlow_, OoqpVector * ixupp_,
-				  OoqpVector * iclow_, OoqpVector * icupp_ )
+sResiduals::sResiduals( StochTree* tree,
+			OoqpVector * ixlow_, OoqpVector * ixupp_,
+			OoqpVector * iclow_, OoqpVector * icupp_ )
   :QpGenResiduals()
 {
 
-  //ixlow =  OoqpVectorHandle( ixlow_ );//
   SpReferTo( ixlow, ixlow_ );
   nxlow = ixlow->numberOfNonzeros();
 
-  //ixupp =  OoqpVectorHandle( ixupp_ ); 
   SpReferTo( ixupp, ixupp_ );
   nxupp = ixupp->numberOfNonzeros();
 
-  //iclow =  OoqpVectorHandle( iclow_ );// 
   SpReferTo( iclow, iclow_ );
   mclow = iclow->numberOfNonzeros();
 
-  //icupp =  OoqpVectorHandle( icupp_ );
   SpReferTo( icupp, icupp_ );
   mcupp = icupp->numberOfNonzeros();
 
@@ -137,16 +102,15 @@ QpGenResiduals2::QpGenResiduals2( StochTree* tree,
   }
   
   stochNode = tree;
-  //createChildren();
 }
 
 
-void QpGenResiduals2::AddChild(QpGenResiduals2* child)
+void sResiduals::AddChild(sResiduals* child)
 {
   children.push_back(child);
 }
 
-void QpGenResiduals2::createChildren()
+void sResiduals::createChildren()
 {
   assert(false);
   StochVector& rQSt = dynamic_cast<StochVector&>(*rQ);
@@ -189,22 +153,22 @@ void QpGenResiduals2::createChildren()
     assert(nChildren==iclowSt.children.size());
     assert(nChildren==icuppSt.children.size());
  
-    AddChild(new QpGenResiduals2(stochNode->children[it], 
-				 rQSt.children[it],    rASt.children[it], 
-				 rCSt.children[it],    rzSt.children[it], 
-				 rtSt.children[it],    rlambdaSt.children[it], 
-				 ruSt.children[it],    rpiSt.children[it], 
-				 rvSt.children[it],    rgammaSt.children[it], 
-				 rwSt.children[it],    rphiSt.children[it], 
-				 ixlowSt.children[it], nxlow,
-				 ixuppSt.children[it], nxupp,
-				 iclowSt.children[it], mclow, 
-				 icuppSt.children[it], mcupp));
+    AddChild(new sResiduals(stochNode->children[it], 
+			    rQSt.children[it],    rASt.children[it], 
+			    rCSt.children[it],    rzSt.children[it], 
+			    rtSt.children[it],    rlambdaSt.children[it], 
+			    ruSt.children[it],    rpiSt.children[it], 
+			    rvSt.children[it],    rgammaSt.children[it], 
+			    rwSt.children[it],    rphiSt.children[it], 
+			    ixlowSt.children[it], nxlow,
+			    ixuppSt.children[it], nxupp,
+			    iclowSt.children[it], mclow, 
+			    icuppSt.children[it], mcupp));
   }
 }
 
 
-void QpGenResiduals2::sync()
+void sResiduals::sync()
 {
   //int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*rQ));
@@ -226,18 +190,18 @@ void QpGenResiduals2::sync()
   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*rphi));
 }
 
-void QpGenResiduals2::destroyChildren()
+void sResiduals::destroyChildren()
 {
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   for (size_t it=0; it<children.size(); it++) {
-    printf("CPU[%d] destroy %d\n", myRank, it);
+    //printf("CPU[%d] destroy %d\n", myRank, it);
     children[it]->destroyChildren(); 
   }
   
   for (size_t it=0; it<children.size(); it++) {
     
     delete children[it];
-    printf("deleted %d\n", it);
+    //printf("deleted %d\n", it);
   }
   children.clear();
 }

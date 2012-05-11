@@ -12,7 +12,7 @@
 #include "StochVector.h"
 
 #include "sVars.h"
-#include "QpGenResiduals2.h"
+#include "sResiduals.h"
 
 #include "sLinsysRoot.h"
 #include "sLinsysLeaf.h"
@@ -146,10 +146,10 @@ Variables* sFactory::makeVariables( Data * prob_in )
 Residuals* sFactory::makeResiduals( Data * prob_in )
 {
   QpGenStochData* prob = dynamic_cast<QpGenStochData*>(prob_in);
-  resid =  new QpGenResiduals2(tree, 
-			       prob->ixlow, prob->ixupp,
-			       prob->iclow, prob->icupp);
-  return resid;
+  resid =  new sResiduals(tree, 
+			  prob->ixlow, prob->ixupp,
+			  prob->iclow, prob->icupp);
+  return resid; 
 }
 
 

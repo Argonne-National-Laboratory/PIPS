@@ -1,5 +1,5 @@
-#ifndef QPGENRESIDUALS2
-#define QPGENRESIDUALS2
+#ifndef STOCHRESIDUALS
+#define STOCHRESIDUALS
 
 #include "QpGenResiduals.h"
 #include <vector>
@@ -14,37 +14,36 @@ class StochVector;
  * @ingroup QpGen
  */
 
-class QpGenResiduals2 : public QpGenResiduals {
+class sResiduals : public QpGenResiduals {
 public:
   /**
    * Constructor
    */
-  QpGenResiduals2(StochTree* tree,OoqpVector * rQ, 
-		  OoqpVector * rA, OoqpVector * rC, 
-		  OoqpVector * rz, 
-		  OoqpVector * rt, OoqpVector * rlambda, 
-		  OoqpVector * ru, OoqpVector * rpi, 
-		  OoqpVector * rv, OoqpVector * rgamma, 
-		  OoqpVector * rw, OoqpVector * rphi, 
-		  OoqpVector * ixlow, double nxlowGlobal,
-		  OoqpVector * ixupp, double nxuppGlobal,
-		  OoqpVector * iclow, double mclowGlobal, 
-		  OoqpVector * icupp, double mcuppGlobal );
-
-  QpGenResiduals2(StochTree* tree,
-		  OoqpVector * ixlow_, OoqpVector * ixupp_,
-		  OoqpVector * iclow_, OoqpVector * icupp_ );
-
+  sResiduals(StochTree* tree,OoqpVector * rQ, 
+	     OoqpVector * rA, OoqpVector * rC, 
+	     OoqpVector * rz, 
+	     OoqpVector * rt, OoqpVector * rlambda, 
+	     OoqpVector * ru, OoqpVector * rpi, 
+	     OoqpVector * rv, OoqpVector * rgamma, 
+	     OoqpVector * rw, OoqpVector * rphi, 
+	     OoqpVector * ixlow, double nxlowGlobal,
+	     OoqpVector * ixupp, double nxuppGlobal,
+	     OoqpVector * iclow, double mclowGlobal, 
+	     OoqpVector * icupp, double mcuppGlobal );
+  
+  sResiduals(StochTree* tree,
+	     OoqpVector * ixlow_, OoqpVector * ixupp_,
+	     OoqpVector * iclow_, OoqpVector * icupp_ );
+  
   virtual void sync();
  private:
-  std::vector<QpGenResiduals2*> children;
+  std::vector<sResiduals*> children;
   void createChildren();
   void destroyChildren();
-  void AddChild(QpGenResiduals2* child);
+  void AddChild(sResiduals* child);
 
   
  protected:
-  //QpGenResiduals* residuals;
   StochTree* stochNode;
 };
 
