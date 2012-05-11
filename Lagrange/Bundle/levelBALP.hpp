@@ -1,61 +1,57 @@
-#ifndef CUTTINGPLANEBALP_HPP
-#define CUTTINGPLANEBALP_HPP
+#ifndef LEVELBALP_HPP
+#define LEVELBALP_HPP
 
 #include "stochasticInput.hpp"
 #include "bundleManager.hpp"
 
-/*
+/* This is the l1 level regularization problem for the cutting plane model:
 
-Consider the problem
-min \sum_i f_i(\gamma_i)
-s.t. \sum_i \gamma_i = 0,
+min \sum_i |\gamma_i-\gamma_i^+|_1
+s.t.\sum_i \theta_i <= l
+    \sum_i \gamma_i = 0
+    \theta_i e_K - G^i\gamma_i >= c_i, i = 1, ..., N
 
-where each f_i is convex nonsmooth.
+using the notation from cuttingPlaneBALP.hpp. \gamma_i^+ and l are given.
+This problem finds the closest point to (\gamma_1^+,...,\gamma_N^+) in an l1 sense
+s.t. the objective of the model function is below (well, equal to) the level l.
 
-The disaggregated or multicut cutting-plane model of the objective function is
-min (wrt. \theta_i,\gamma_i) \sum_i \theta_i
-s.t. 
-\sum_i \gamma_i = 0,
-\theta_i e_K - G^i\gamma_i >= c_i, i = 1, ..., N
+To model the l1 norm minimization, we introduce
+z_i s.t. z_i >= \gamma_i - \gamma_i^+
+         z_i >= \gamma_i^+ - \gamma_i
+and the objective is \sum_i e^Tz_i.
 
-where G^i is a matrix with subgradients of f_i on the rows.
-This comes from the subgradient inequality:
-f_i(\gamma_i) >= f_i(\gamma_i^r) + g^T(\gamma_i - \gamma_i^r),
-where g is a subgradient of f_i at the point \gamma_i^r.
-From this we derive that the rth component of c_i is
-f_i(\gamma_i^r) - g^T\gamma_i^r.
-
-This cutting-plane LP has a primal block angular structure:
+This LP has a primal block angular structure:
 
 
-     (t) (g)  (t) (g)         (t) (g)
-min [ 1     ][ 1     ]       [ 1     ]
-s.t.[ 1      [ 1             [ 1        >= LB   (v)
-          I ]      I ]             I ]   = 0    (l)
-    [ e -G_1]                           >= c_1  (u_1)
-             [ e -G_2]                  >= c_2  (u_2)
-                        ...
-                             [ e -G_N]  >= c_N  (u_N)
+      (t)(g)(z)
+min [         e][         e]   ... [         e]
+s.t.[ -1        [ -1               [ -1         >= -l 
+          I    ]      I    ]   ...       I    ]  = 0
+    [     I   I                                 >= \gamma_1^+
+         -I   I                                 >= -\gamma_1^+
+      e -G_1   ]                                >= c_1
+                [     I   I                     >= \gamma_2^+
+		     -I   I                     >= -\gamma_2^+
+                  e -G_2   ]                    >= c_2
+		               ...
+			          [     I   I   >= \gamma_N^+
+				       -I   I   >= -\gamma_N^+
+				    e -G_N   ]  >= c_N
 
-All variables (columns) are free. 
-The first constraint puts a (given) lower bound on the objective for boundedness and dual feasibility.
-We formulate and solve the *dual* of the cutting plane LP as a dual block-angular problem, 
-because we have a solver for those!
+We formulate and solve the *dual* of the above as a dual block-angular LP.
 
 */
 
-
-
 // note that the dual is a maximization problem, but input format assumes minimization.
 // so, sign of objective is flipped!!
-class cuttingPlaneModel : public stochasticInput {
+class levelModel : public stochasticInput {
 public:
-	cuttingPlaneModel(int nvar1, bundle_t const &cuts, double LB);
+	levelModel(int nvar1, bundle_t const &cuts, double l, std::vector<std::vector<double> > const& center);
 	virtual int nScenarios() { return cuts.size(); }
 	virtual int nFirstStageVars() { return nvar1 + 1; }
 	virtual int nFirstStageCons() { return 0; }
-	virtual int nSecondStageVars(int scen) { return cuts[scen].size(); }
-	virtual int nSecondStageCons(int scen) { return nvar1 + 1; }
+	virtual int nSecondStageVars(int scen) { return cuts[scen].size() + 2*nvar1; }
+	virtual int nSecondStageCons(int scen) { return 2*nvar1 + 1; }
 
 	virtual std::vector<double> getFirstStageColLB();
 	virtual std::vector<double> getFirstStageColUB();
@@ -91,11 +87,11 @@ public:
 private:
 	int nvar1; // dimension of each \gamma
 	bundle_t const & cuts;
-	double LB;
+	std::vector<std::vector<double> > const& center;
+	double l;
 
 
 };
-
 
 
 #endif

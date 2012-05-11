@@ -21,7 +21,7 @@ PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t)
 
 }
 
-PIPSSInterface::PIPSSInterface(const BAData& d, solveType t) : d(d) {
+PIPSSInterface::PIPSSInterface(const BAData& d, solveType t) : d(d), boundsChanged(false) {
 
 	if (t == usePrimal) {
 		solver = new BALPSolverPrimal(d);
@@ -45,7 +45,7 @@ void PIPSSInterface::go() {
 		solver2->setStates(solver->getStates());
 		solver2->setPrimalTolerance(solver->getPrimalTolerance());
 		solver2->setDualTolerance(solver->getDualTolerance());
-
+		solver2->phase1 = solver->phase1;
 		delete solver;
 		solver = solver2;
 		boundsChanged = false;
@@ -90,6 +90,7 @@ void PIPSSInterface::go() {
 		solver2->replaceSecondOther = solver->replaceSecondOther;
 
 		solver2->nIter = solver->nIter;
+		solver2->phase1 = solver->phase1;
 
 		delete solver; // free memory
 		solver2->go();
@@ -131,6 +132,13 @@ std::vector<double> PIPSSInterface::getSecondStageDualColSolution(int scen) cons
 	const denseVector &x = solver->getDualColSolution().getSecondStageVec(scen);
 	int nvar2real = d.dims.inner.numSecondStageVars(scen);
 	return std::vector<double>(&x[0],&x[nvar2real]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageDualRowSolution(int scen) const {
+	assert(d.ctx.assignedScenario(scen));
+	const sparseVector &x = solver->btranVec.getSecondStageVec(scen);
+	int ncons2 = d.dims.inner.numSecondStageCons(scen);
+	return std::vector<double>(&x[0],&x[ncons2]);
 }
 
 void PIPSSInterface::setFirstStageColState(int idx,variableState s) {

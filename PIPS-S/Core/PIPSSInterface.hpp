@@ -33,6 +33,7 @@ public:
 	std::vector<double> getSecondStagePrimalColSolution(int scen) const;
 	std::vector<double> getFirstStageDualColSolution() const;
 	std::vector<double> getSecondStageDualColSolution(int scen) const;
+	std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
 	void setFirstStageColState(int idx,variableState s); 
 	void setFirstStageRowState(int idx,variableState);
@@ -61,7 +62,9 @@ public:
 
 	double primalError() { return solver->calculateLargestPrimalError(); }
 
+
 protected:
+	void setPhase1() { solver->phase1 = true; boundsChanged = true; }
 	const BAFlagVector<variableState>& getStatesRef() const { return solver->getStates(); }
 	const BADimensions& getDims() const { return d.dims.inner; }
 	

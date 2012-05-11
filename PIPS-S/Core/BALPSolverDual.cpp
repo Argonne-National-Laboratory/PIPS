@@ -106,7 +106,7 @@ void BALPSolverDual::flipBounds() {
 				if (states1[idx] == AtLower) states1[idx] = AtUpper;
 				else if (states1[idx] == AtUpper) states1[idx] = AtLower;
 				didflip++;
-			}
+			} 
 		}
 	}
 	didflip = data.ctx.reduce(didflip);
@@ -1150,7 +1150,7 @@ void BALPSolverDual::makeFeasible() {
 	if (phase1) {
 		// phase 1 infeasible, shouldn't get here
 		assert(0);
-	}
+	} 
 	/* From one of Julian Hall's students:
 
 	Assuming one is using the computation form of LP model:
@@ -1178,7 +1178,7 @@ void BALPSolverDual::makeFeasible() {
 		int scen = localScen[k];
 		denseVector &l = dCopy.l.getVec(scen);
 		denseVector &u = dCopy.u.getVec(scen);
-		denseFlagVector<constraintType> vartype = dCopy.vartype.getVec(scen);
+		denseFlagVector<constraintType> &vartype = dCopy.vartype.getVec(scen);
 		int nvar = data.dims.numVars(scen);
 		for (int i = 0; i < nvar; i++) {
 			constraintType t = vartype[i];
@@ -1202,6 +1202,7 @@ void BALPSolverDual::makeFeasible() {
 	
 	lp2.setStates(states);
 	if (data.ctx.mype() == 0) printf("Starting phase 1\n");
+	lp2.setPhase1();
 	lp2.go();
 	assert(lp2.getStatus() == Optimal);
 	if (fabs(lp2.getObjective()) > 1e-5) {

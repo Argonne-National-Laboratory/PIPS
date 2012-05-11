@@ -106,17 +106,17 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 		funcs.push_back(lagrangeSubproblem<LagrangeSolver>(&input,i));
 		solver.add_function(funcs[i]);
 	}
-	if (mype == 0) solver.set_out(&cout,1);
+	solver.set_out(&cout,1);
 	solver.set_term_relprec(1e-6);
 	double t = MPI_Wtime();
 	do {
 		solver.do_descent_step();
-		if (mype == 0) cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
+		cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
 	} while (!solver.termination_code());
 
 	solver.print_termination_code(cout);
 
-	
+	/*	
 	const vector<double> &obj1 = input.getFirstStageObj();
 	// test last solutions (only)
 	double best = COIN_DBL_MAX;
@@ -142,8 +142,8 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 		best = min(obj,best);
 	}
 
-	if (mype == 0) cout << "Best LB: " << -solver.get_objval() << " Best UB: " << best << endl;
-
+	cout << "Best LB: " << -solver.get_objval() << " Best UB: " << best << endl;
+*/
 }
 
 

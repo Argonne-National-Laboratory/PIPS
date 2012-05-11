@@ -12,7 +12,6 @@ vector<double> cuttingPlaneModel::getFirstStageColLB() {
 	vector<double> l(nvar1 + 1);
 	l[0] = 0.;
 	std::fill(l.begin()+1,l.end(),-COIN_DBL_MAX);
-	//std::fill(l.begin()+1,l.end(),0.);
 
 	return l;
 }
@@ -110,9 +109,9 @@ CoinPackedMatrix cuttingPlaneModel::getSecondStageConstraints(int scen) {
 	   So each column starts with 1 and then has a (negative) subgradient. */
 	
 	CoinBigIndex nnz = 0;
-	vector<double> elts;
-	vector<int> idx;
 	unsigned ncol = cuts[scen].size();
+	vector<double> elts; elts.reserve(ncol*(nvar1+1));
+	vector<int> idx; idx.reserve(ncol*(nvar1+1));
 	vector<CoinBigIndex> starts(ncol+1);
 	for (unsigned col = 0; col < ncol; col++) {
 		elts.push_back(1.);
@@ -137,8 +136,8 @@ CoinPackedMatrix cuttingPlaneModel::getLinkingConstraints(int scen) {
 	// this is easy, (nvar+1)x(nvar+1) identity matrix!
 	
 	vector<double> elts(nvar1+1,1.);
-	vector<int> idx;
-	vector<CoinBigIndex> starts;
+	vector<int> idx; idx.reserve(nvar1+1);
+	vector<CoinBigIndex> starts; starts.reserve(nvar1+2);
 	for (int i = 0; i < nvar1+1; i++) {
 		starts.push_back(i);
 		idx.push_back(i);
