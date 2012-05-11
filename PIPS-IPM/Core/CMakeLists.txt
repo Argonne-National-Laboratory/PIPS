@@ -1,7 +1,7 @@
 add_subdirectory(QpSolvers)
 add_subdirectory(SparseLinearAlgebra)
 add_subdirectory(DenseLinearAlgebra)
-
+add_subdirectory(StochLinearAlgebra)
 add_library(ooqpbase Abstract/OoqpVersion.C Abstract/Variables.C Abstract/Data.C Abstract/Solver.C Abstract/Status.C 
   Abstract/OoqpMonitor.C Abstract/IotrRefCount.C Abstract/DoubleLinearSolver.C 
   Vector/OoqpVector.C Vector/SimpleVector.C Vector/VectorUtilities.C
