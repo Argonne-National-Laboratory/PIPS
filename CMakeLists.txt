@@ -107,21 +107,30 @@ if(HAVE_SML)
 	include_directories(${SML_DIR}/include)
 endif(HAVE_SML)
 
+#see if we have METIS
+#if we don't, also set HAVE_MA57 to false.
+set(HAVE_METIS TRUE)
+if(${METIS_LIBRARY} MATCHES "METIS_LIBRARY-NOTFOUND")
+  message(STATUS "metis library not found. Won't build code that requires METIS (i.e. QpStoch and code that requires MA57).")
+  set(HAVE_METIS FALSE)
+endif(${METIS_LIBRARY} MATCHES "METIS_LIBRARY-NOTFOUND")
+if(HAVE_METIS)
+  include_directories(${SHARED_DIR}/metis-4.0.1/Lib)
+endif(HAVE_METIS)
+
+# see if we have MA27 or MA57
 set(HAVE_MA27 TRUE)
-set(HAVE_MA57 TRUE)
+set(HAVE_MA57 HAVE_METIS)
 #message(STATUS ${MA27_LIBRARY})
 if(${MA27_LIBRARY} MATCHES "MA27_LIBRARY-NOTFOUND")
   message(STATUS "MA27 library not found. Won't build code that requires MA27.")
   set(HAVE_MA27 FALSE)
 endif(${MA27_LIBRARY} MATCHES "MA27_LIBRARY-NOTFOUND")
-if(${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
+if(HAVE_MA57 AND ${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
   message(STATUS "MA57 library not found. Won't build code that requires MA57.")
   set(HAVE_MA57 FALSE)
 endif(${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
-if(${METIS_LIBRARY} MATCHES "METIS_LIBRARY-NOTFOUND" AND ${HAVE_MA57})
-  message(STATUS "metis library not found. Won't build code that requires MA57.")
-  set(HAVE_MA57 FALSE)
-endif(${METIS_LIBRARY} MATCHES "METIS_LIBRARY-NOTFOUND" AND ${HAVE_MA57})
+
 
 # see if we have gurobi
 # must set GUROBI_DIR environmental variable with root of gurobi architecture directory
