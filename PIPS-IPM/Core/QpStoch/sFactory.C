@@ -11,7 +11,7 @@
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 
-#include "QpGenStochVars.h"
+#include "sVars.h"
 #include "QpGenResiduals2.h"
 
 #include "sLinsysRoot.h"
@@ -20,7 +20,7 @@
 #include "Ma57Solver.h"
 
 sFactory::sFactory( StochInputTree* inputTree)
-  :QpGen(0,0,0), m_tmTotal(0.0)
+  :QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
 {
   
   tree = new StochTree(inputTree);
@@ -30,11 +30,12 @@ sFactory::sFactory( StochInputTree* inputTree)
   //decide how the CPUs are assigned 
   tree->assignProcesses();
 }
-
+ 
 sFactory::sFactory( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
   : QpGen( nx_, my_, mz_ ),
-    data(NULL),tree(NULL), resid(NULL), linsys(NULL),
-    nnzQ(nnzQ_), nnzA(nnzA_), nnzC(nnzC_), m_tmTotal(0.0)
+    nnzQ(nnzQ_), nnzA(nnzA_), nnzC(nnzC_),
+    tree(NULL), data(NULL), resid(NULL), linsys(NULL),
+    m_tmTotal(0.0)
 { };
 
 sFactory::sFactory()
@@ -129,19 +130,14 @@ Variables* sFactory::makeVariables( Data * prob_in )
   OoqpVector * lambda = tree->newDualZVector();
   OoqpVector * u      = tree->newDualZVector(); 
   OoqpVector * pi     = tree->newDualZVector();
-  OoqpVector * ixlow  = tree->newPrimalVector(); 
-  OoqpVector * ixupp  = tree->newPrimalVector();
-  OoqpVector * iclow  = tree->newDualZVector(); 
-  OoqpVector * icupp  = tree->newDualZVector();
-
-  //vars = new QpGenVars( x, s, y, z,
-  QpGenStochVars* vars = new QpGenStochVars( tree, x, s, y, z,
-			     v, gamma, w, phi,
-			     t, lambda, u, pi, 
-			     prob->ixlow, prob->ixlow->numberOfNonzeros(),
-			     prob->ixupp, prob->ixupp->numberOfNonzeros(),
-			     prob->iclow, prob->iclow->numberOfNonzeros(),
-			     prob->icupp, prob->icupp->numberOfNonzeros());
+  
+  sVars* vars = new sVars( tree, x, s, y, z,
+			   v, gamma, w, phi,
+			   t, lambda, u, pi, 
+			   prob->ixlow, prob->ixlow->numberOfNonzeros(),
+			   prob->ixupp, prob->ixupp->numberOfNonzeros(),
+			   prob->iclow, prob->iclow->numberOfNonzeros(),
+			   prob->icupp, prob->icupp->numberOfNonzeros());
   registeredVars.push_back(vars);
   return vars;
 }
@@ -160,7 +156,6 @@ Residuals* sFactory::makeResiduals( Data * prob_in )
 
 LinearSystem* sFactory::makeLinsys( Data * prob_in )
 {  
-  QpGenStochData* prob = dynamic_cast<QpGenStochData*>(prob_in);
   linsys = newLinsysRoot();
   return linsys; 
 }
@@ -206,7 +201,7 @@ void sFactory::iterateEnded()
     // balance needed
     data->sync();
       
-    for(int i=0; i<registeredVars.size(); i++)
+    for(size_t i=0; i<registeredVars.size(); i++)
       registeredVars[i]->sync();
     
     resid->sync();
