@@ -25,6 +25,6 @@ if(HAVE_MA57 AND HAVE_METIS)
   add_executable(qpstoch-unitcommit.exe Core/QpGen/QpGenStochDriverUC.C)
   target_link_libraries(qpstoch-unitcommit.exe
     ooqpstoch ooqpstochla ooqpmehrotrastoch
-    ooqpgensparse ooqpbase ooqpsparse
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 endif(HAVE_MA57 AND HAVE_METIS)
