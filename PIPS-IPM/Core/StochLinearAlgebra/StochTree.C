@@ -1,4 +1,4 @@
- #include "StochTree.h"
+#include "StochTree.h"
 #include "QpGenStoch.h"
 #include "QpGenStochData.h"
 #include "QpGenStochLinsys.h"
@@ -6,7 +6,6 @@
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 #include "SimpleVector.h"
-#include "Ma57Solver.h"
 #include "DoubleMatrixTypes.h"
 #include "StochResourcePlanner.h"
 #include <cmath>
@@ -30,20 +29,22 @@ int StochTree::rankPrcnd =-1;
 int StochTree::numProcs  =-1;
 
 StochTree::StochTree() 
-  : data(NULL), commP2ZeroW(MPI_COMM_NULL), np(-1), IPMIterExecTIME(-1), fakedata(NULL),tree(NULL)
+  : commP2ZeroW(MPI_COMM_NULL), data(NULL), tree(NULL), fakedata(NULL), 
+     np(-1), IPMIterExecTIME(-1)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 }
 
 StochTree::StochTree(StochInputTree* inputTree)
-  : commP2ZeroW(MPI_COMM_NULL), np(-1), IPMIterExecTIME(-1), fakedata(NULL),tree(NULL)
+  : commP2ZeroW(MPI_COMM_NULL), tree(NULL), fakedata(NULL), 
+    np(-1), IPMIterExecTIME(-1)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
   data = inputTree->nodeInput;
 #ifndef POOLSCEN
-  for(int it=0; it<inputTree->children.size(); it++)
+  for(size_t it=0; it<inputTree->children.size(); it++)
     children.push_back(new StochTree(inputTree->children[it]));
 #else
 	tree = inputTree;
@@ -52,20 +53,21 @@ StochTree::StochTree(StochInputTree* inputTree)
 
 // np==-1 is used to indicate the root node. these can't be root nodes
 StochTree::StochTree(const vector<StochInputTree::StochInputNode*> &localscens)
-  : commP2ZeroW(MPI_COMM_NULL), np(0), IPMIterExecTIME(-1), data(NULL), scens(localscens), tree(NULL)
+  : commP2ZeroW(MPI_COMM_NULL), data(NULL), tree(NULL), scens(localscens), 
+    np(0), IPMIterExecTIME(-1) 
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 	fakedata = new StochInputTree::StochInputNode();
 	real_children.reserve(scens.size());
-	for (int i = 0; i < scens.size(); i++) {
+	for(size_t i = 0; i < scens.size(); i++) {
 		real_children.push_back(new StochTree(scens[i]));
 
 	}
 }
 StochTree::StochTree(StochInputTree::StochInputNode* data_)
-  : data(data_), commP2ZeroW(MPI_COMM_NULL), np(0), IPMIterExecTIME(-1),  tree(NULL), fakedata(NULL)
-
+  : commP2ZeroW(MPI_COMM_NULL), data(data_), tree(NULL), fakedata(NULL),
+    np(0), IPMIterExecTIME(-1)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -75,10 +77,10 @@ StochTree::StochTree(StochInputTree::StochInputNode* data_)
 
 StochTree::~StochTree() 
 {
-  for (int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     delete children[it];
 	if (fakedata) delete fakedata;
-	for (int i = 0; i < real_children.size(); i++)
+	for(size_t i = 0; i < real_children.size(); i++)
 		delete real_children[i];
 }
 
@@ -99,7 +101,7 @@ void StochTree::computeGlobalSizes()
 		N = MY = MZ = NNZQ = NNZA = NNZB = NNZC = NNZD = 0;
 	}
 	if (tree && np == -1) {
-    for (int it=0; it<tree->children.size();it++) {
+    for(size_t it=0; it<tree->children.size();it++) {
 			N += tree->children[it]->nodeInput->n;
 			MY += tree->children[it]->nodeInput->my;
 			MZ += tree->children[it]->nodeInput->mz;
@@ -112,7 +114,7 @@ void StochTree::computeGlobalSizes()
 		}
 	} else if (fakedata) {
 		fakedata->n = fakedata->my = fakedata->mz = fakedata->nnzQ = fakedata->nnzA = fakedata->nnzB = fakedata->nnzC = fakedata->nnzD = 0;	
-		for (int it=0; it<scens.size();it++) {
+		for(size_t it=0; it<scens.size();it++) {
 			fakedata->n += scens[it]->n;
 			fakedata->my += scens[it]->my;
 			fakedata->mz += scens[it]->mz;
@@ -132,7 +134,7 @@ void StochTree::computeGlobalSizes()
 		NNZC += fakedata->nnzC;
 		NNZD += fakedata->nnzD;
 	}
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->np = this->data->n;
     children[it]->computeGlobalSizes();
     N  += children[it]->N;
@@ -177,7 +179,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     return;
   }
   if(1==noProcs) {
-    for(int c=0; c<children.size(); c++)
+    for(size_t c=0; c<children.size(); c++)
       children[c]->assignProcesses(world, processes);
     return;
   }
@@ -185,7 +187,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   //what is the load for each children
   vector<double> vecChildNodesLoad(children.size()); 
-  for (int i=0; i<children.size(); i++) {
+  for(size_t i=0; i<children.size(); i++) {
     vecChildNodesLoad[i] = children[i]->processLoad();
   }
 
@@ -200,20 +202,20 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 			  mapChildNodesToProcs, balance);
   // override the planner in the trivial case of equal loads
   bool eq = true;
-  for (int i=0; i < children.size(); i++) {
+  for(size_t i=0; i < children.size(); i++) {
     if (fabs(vecChildNodesLoad[i]-vecChildNodesLoad[0]) > 1E-4) {
       eq = false; break;
     }
   }
   if (eq && (children.size() % noProcs == 0)) {
-    for (int i=0; i<mapChildNodesToProcs.size();i++) {
+    for(size_t i=0; i<mapChildNodesToProcs.size();i++) {
       mapChildNodesToProcs[i][0] = i % noProcs;
     }
   }
 #else
   assert(children.size() % noProcs == 0);
   mapChildNodesToProcs.resize(children.size());
-  for (int i=0; i<children.size(); i++) {
+  for(size_t i=0; i<children.size(); i++) {
     mapChildNodesToProcs[i].resize(1);
     mapChildNodesToProcs[i][0] = i % noProcs;
   }
@@ -227,7 +229,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     int* noduri = new int[noProcs];
     for(int i=0; i<noProcs; i++) noduri[i]=0;
     
-    for(int i=0; i<mapChildNodesToProcs.size(); i++)
+    for(size_t i=0; i<mapChildNodesToProcs.size(); i++)
       noduri[mapChildNodesToProcs[i][0]]++;
     
     printf("Nodes: ");
@@ -242,7 +244,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   MPI_Group mpiWorldGroup; 
   ierr = MPI_Comm_group(MPI_COMM_WORLD, &mpiWorldGroup); assert(ierr==MPI_SUCCESS);
-  for (int i=0; i<children.size(); i++) {
+  for(size_t i=0; i<children.size(); i++) {
 
     int isChildInThisProcess=0;
     int noRanks4ThisChild = mapChildNodesToProcs[i].size();
@@ -300,7 +302,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
   int noProcs = processes.size();
 
 	if (1 == noProcs && tree==NULL) {
-    for (int i = 0; i < real_children.size(); i++) {
+    for(size_t i = 0; i < real_children.size(); i++) {
       real_children[i]->assignProcesses(commWrkrs, myProcs);
     }
     return;
@@ -310,7 +312,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   //what is the load for each children
   vector<double> vecChildNodesLoad(tree->children.size()); 
-  for (int i=0; i<tree->children.size(); i++) {
+  for(size_t i=0; i<tree->children.size(); i++) {
     //vecChildNodesLoad[i] = data->children[i]->processLoad();
   	vecChildNodesLoad[i] = 1;
 	}
@@ -326,20 +328,20 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 			  mapChildNodesToProcs, balance);
   // override the planner in the trivial case of equal loads
   bool eq = true;
-  for (int i=0; i < tree->children.size(); i++) {
+  for(size_t i=0; i < tree->children.size(); i++) {
     if (fabs(vecChildNodesLoad[i]-vecChildNodesLoad[0]) > 1E-4) {
       eq = false; break;
     }
   }
   if (eq && (tree->children.size() % noProcs == 0)) {
-    for (int i=0; i<mapChildNodesToProcs.size();i++) {
+    for(size_t i=0; i<mapChildNodesToProcs.size();i++) {
       mapChildNodesToProcs[i][0] = i % noProcs;
     }
   }
 #else
   assert(tree->children.size() % noProcs == 0);
   mapChildNodesToProcs.resize(tree->children.size());
-  for (int i=0; i<tree->children.size(); i++) {
+  for(size_t i=0; i<tree->children.size(); i++) {
     mapChildNodesToProcs[i].resize(1);
     mapChildNodesToProcs[i][0] = i % noProcs;
   }
@@ -354,7 +356,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     int* noduri = new int[noProcs];
     for(int i=0; i<noProcs; i++) noduri[i]=0;
     
-    for(int i=0; i<mapChildNodesToProcs.size(); i++)
+    for(size_t i=0; i<mapChildNodesToProcs.size(); i++)
       noduri[mapChildNodesToProcs[i][0]]++;
     
     printf("Nodes: ");
@@ -370,7 +372,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 	
  	vector<vector<int> > mapProcsToChildNodes(noProcs);
 
-  for (int i=0; i<tree->children.size(); i++) {
+  for(size_t i=0; i<tree->children.size(); i++) {
 
     int noRanks4ThisChild = mapChildNodesToProcs[i].size();
 		assert(noRanks4ThisChild == 1); // don't support splitting a child over procs
@@ -379,9 +381,9 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 	}
 	assert(children.size() == 0);
 	children.reserve(noProcs);
-	for (int p=0; p<noProcs;p++) {
+	for(int p=0; p<noProcs;p++) {
 		vector<StochInputTree::StochInputNode*> scenarios(mapProcsToChildNodes[p].size());
-		for (int i=0; i<mapProcsToChildNodes[p].size();i++) {
+		for(size_t i=0; i<mapProcsToChildNodes[p].size();i++) {
 			scenarios[i] = tree->children[mapProcsToChildNodes[p][i]]->nodeInput;
 		}
     children.push_back(new StochTree(scenarios));
@@ -419,7 +421,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   //if this tree non-leaf node runs in only one process then so do the children
   if(1==noProcs) {
-    for (int i=0; i<children.size(); i++)
+    for(size_t i=0; i<children.size(); i++)
       children[i]->assignProcesses(myWorld);
     return;
   }
@@ -428,7 +430,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   //what is the load for each children
   vector<double> vecChildNodesLoad(children.size()); 
-  for (int i=0; i<children.size(); i++) {
+  for(size_t i=0; i<children.size(); i++) {
     vecChildNodesLoad[i] = children[i]->processLoad();
   }
   
@@ -450,7 +452,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   //also get the rank of the current process
  
-  for (int i=0; i<children.size(); i++) {
+  for(size_t i=0; i<children.size(); i++) {
     //create a sub-group by using MPI_Group_incl and assign it to
     //child IF THE CHILD BELONGS TO THIS PROCESS.
 
@@ -538,7 +540,7 @@ StochSymMatrix* StochTree::createQ() const
        Q->mat->jcolM(),
        Q->mat->M());  
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochSymMatrix* child = children[it]->createQ();
       Q->AddChild(child);
     }
@@ -546,11 +548,11 @@ StochSymMatrix* StochTree::createQ() const
   } else {
     assert(real_children.size() > 0);
     vector<StochSymMatrix*> v(real_children.size());
-    for (int i = 0; i<real_children.size(); i++) {
+    for(size_t i = 0; i<real_children.size(); i++) {
       v[i] = real_children[i]->createQ();
     }
     StochSymMatrix *out = new StochSymMatrix(v);
-    for (int i = 0; i<real_children.size(); i++) delete v[i];
+    for(size_t i = 0; i<real_children.size(); i++) delete v[i];
     return out;
   }
 }
@@ -602,7 +604,7 @@ StochGenMatrix* StochTree::createA() const
       data->fB(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
     }
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochGenMatrix* child = children[it]->createA();
       A->AddChild(child);
     }
@@ -610,9 +612,9 @@ StochGenMatrix* StochTree::createA() const
     vector<StochGenMatrix*> v(real_children.size());
 #ifdef UCTRANS
     v[0] = real_children[0]->createA();
-    for (int i = 1; i<real_children.size();i++) v[i] = v[0];
+    for(size_t i = 1; i<real_children.size();i++) v[i] = v[0];
 #else
-    for (int i = 0; i<real_children.size(); i++) {
+    for(size_t i = 0; i<real_children.size(); i++) {
       v[i] = real_children[i]->createA();
     }
 #endif
@@ -620,7 +622,7 @@ StochGenMatrix* StochTree::createA() const
 #ifdef UCTRANS
     delete v[0];
 #else
-    for (int i = 0; i<real_children.size(); i++) delete v[i];
+    for(size_t i = 0; i<real_children.size(); i++) delete v[i];
 #endif
 
   }
@@ -668,7 +670,7 @@ StochGenMatrix* StochTree::createC() const
       data->fD(data->user_data, data->id, C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M());
     }
       
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochGenMatrix* child = children[it]->createC();
       C->AddChild(child);
     }
@@ -676,9 +678,9 @@ StochGenMatrix* StochTree::createC() const
     vector<StochGenMatrix*> v(real_children.size());
 #ifdef UCTRANS
     v[0] = real_children[0]->createC();
-    for (int i = 1; i<real_children.size();i++) v[i] = v[0];
+    for(size_t i = 1; i<real_children.size();i++) v[i] = v[0];
 #else
-    for (int i = 0; i<real_children.size(); i++) {
+    for(size_t i = 0; i<real_children.size(); i++) {
       v[i] = real_children[i]->createC();
     }
 #endif
@@ -686,7 +688,7 @@ StochGenMatrix* StochTree::createC() const
 #ifdef UCTRANS
     delete v[0];
 #else
-    for (int i = 0; i<real_children.size(); i++) delete v[i];
+    for(size_t i = 0; i<real_children.size(); i++) delete v[i];
 #endif
   }
   return C;
@@ -745,7 +747,7 @@ void StochTree::syncStochSymMatrix(StochSymMatrix& mat)
   int ierr; int syncChildren=0;
   char* marked4Del = new char[children.size()];
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     marked4Del[it]=0;
     
     int syncNeeded; int sending; int partner; 
@@ -795,13 +797,13 @@ void StochTree::syncStochSymMatrix(StochSymMatrix& mat)
     }
   }
   if(syncChildren)
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       assert(mat.children.size()==children.size());
       children[it]->syncStochSymMatrix(*mat.children[it]);
     }
 
   //delete the children marked for deletion
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     if( marked4Del[it]==1) {
       delete mat.children[it];
       mat.children[it] = new StochSymDummyMatrix(children[it]->id());
@@ -817,7 +819,7 @@ void StochTree::syncStochGenMatrix(StochGenMatrix& mat)
   int ierr; int syncChildren=0;
   char* marked4Del = new char[children.size()];
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     marked4Del[it]=0;
     
     int syncNeeded; int sending; int partner; 
@@ -889,13 +891,13 @@ void StochTree::syncStochGenMatrix(StochGenMatrix& mat)
     }
   }
   if(syncChildren)
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       assert(mat.children.size()==children.size());
       children[it]->syncStochGenMatrix(*mat.children[it]);
     }
 
   //delete the children marked for deletion
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     if( marked4Del[it]==1) {
       delete mat.children[it];
       mat.children[it] = new StochGenDummyMatrix(children[it]->id());
@@ -909,7 +911,7 @@ void StochTree::syncStochVector(StochVector& stVec)
   int ierr; int syncChildren=0;
 
   char* marked4Del = new char[children.size()];
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     marked4Del[it] = 0;
 
     int syncNeeded; int sending; int partner; 
@@ -970,13 +972,13 @@ void StochTree::syncStochVector(StochVector& stVec)
 
 
   if(syncChildren)
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       assert(stVec.children.size()==children.size());
       children[it]->syncStochVector(*stVec.children[it]);
     }
 
   //delete the children marked for deletion
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     if( marked4Del[it]==1) {
       delete stVec.children[it];
       stVec.children[it] = new StochDummyVector();
@@ -995,7 +997,7 @@ void StochTree::syncStochVector_old(StochVector& stVec, int which)
 
 
   char* marked4Del = new char[children.size()];
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     marked4Del[it] = 0;
 
     int syncNeeded; int sending; int partner; 
@@ -1058,13 +1060,13 @@ void StochTree::syncStochVector_old(StochVector& stVec, int which)
 
 
   if(syncChildren)
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       assert(stVec.children.size()==children.size());
       children[it]->syncStochVector_old(*stVec.children[it], which);
     }
 
   //delete the children marked for deletion
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     if( marked4Del[it]==1) {
       delete stVec.children[it];
       stVec.children[it] = new StochDummyVector();
@@ -1089,7 +1091,7 @@ StochVector* StochTree::createc() const
     data->fc(data->user_data, data->id, 
        vData, data->n);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createc();
       c->AddChild(child);
     }
@@ -1098,12 +1100,12 @@ StochVector* StochTree::createc() const
     int n = scens[0]->n;
     scens[0]->fc(scens[0]->user_data,scens[0]->id,
         vData, scens[0]->n);
-    for (int i = 1; i < scens.size(); i++) {
+    for(size_t i = 1; i < scens.size(); i++) {
       memcpy(vData+i*n,vData,n*sizeof(double));
     }
 #else
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fc(scens[i]->user_data,scens[i]->id,
         vData+pos, scens[i]->n);
       pos += scens[i]->n;
@@ -1126,13 +1128,13 @@ StochVector* StochTree::createb() const
     data->fb(data->user_data, data->id, 
        vData, data->my);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createb();
       b->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fb(scens[i]->user_data,scens[i]->id,
         vData+pos, scens[i]->my);
       pos += scens[i]->my;
@@ -1154,13 +1156,13 @@ StochVector* StochTree::createxlow() const
     data->fxlow(data->user_data, data->id, 
        vData, data->n);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createxlow();
       xlow->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fxlow(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->n);
       pos += scens[i]->n;
@@ -1181,13 +1183,13 @@ StochVector* StochTree::createixlow() const
     data->fixlow(data->user_data, data->id, 
        vData, data->n);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createixlow();
       ixlow->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fixlow(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->n);
       pos += scens[i]->n;
@@ -1208,13 +1210,13 @@ StochVector* StochTree::createxupp() const
     data->fxupp(data->user_data, data->id, 
        vData, data->n);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createxupp();
       xupp->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fxupp(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->n);
       pos += scens[i]->n;
@@ -1235,13 +1237,13 @@ StochVector* StochTree::createixupp() const
     data->fixupp(data->user_data, data->id, 
        vData, data->n);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createixupp();
       ixupp->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fixupp(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->n);
       pos += scens[i]->n;
@@ -1264,13 +1266,13 @@ StochVector* StochTree::createclow() const
     data->fclow(data->user_data, data->id, 
          vData, data->mz);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createclow();
       clow->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fclow(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->mz);
       pos += scens[i]->mz;
@@ -1291,13 +1293,13 @@ StochVector* StochTree::createiclow() const
     data->ficlow(data->user_data, data->id, 
        vData, data->mz);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createiclow();
       iclow->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->ficlow(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->mz);
       pos += scens[i]->mz;
@@ -1318,13 +1320,13 @@ StochVector* StochTree::createcupp() const
     data->fcupp(data->user_data, data->id, 
        vData, data->mz);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createcupp();
       cupp->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->fcupp(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->mz);
       pos += scens[i]->mz;
@@ -1346,13 +1348,13 @@ StochVector* StochTree::createicupp() const
     data->ficupp(data->user_data, data->id, 
        vData, data->mz);
 
-    for (int it=0; it<children.size(); it++) {
+    for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createicupp();
       icupp->AddChild(child);
     }
   } else {
     int pos = 0;
-    for (int i = 0; i < scens.size(); i++) {
+    for(size_t i = 0; i < scens.size(); i++) {
       scens[i]->ficupp(scens[i]->user_data, scens[i]->id,
         vData+pos, scens[i]->mz);
       pos += scens[i]->mz;
@@ -1370,7 +1372,7 @@ StochVector* StochTree::newPrimalVector() const
 
   StochVector* x = new StochVector(nx(), commWrkrs);
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newPrimalVector();
     x->AddChild(child);
   }
@@ -1385,7 +1387,7 @@ StochVector* StochTree::newDualYVector() const
 
   StochVector* y = new StochVector(my(), commWrkrs);
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualYVector();
     y->AddChild(child);
   }
@@ -1400,7 +1402,7 @@ StochVector* StochTree::newDualZVector() const
 
   StochVector* z = new StochVector(mz(), commWrkrs);
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualZVector();
     z->AddChild(child);
   }
@@ -1416,7 +1418,7 @@ StochVector* StochTree::newPrimalVectorEmpty() const
 
   StochVector* x = new StochVector(0, commWrkrs);
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newPrimalVector();
     x->AddChild(child);
   }
@@ -1431,7 +1433,7 @@ StochVector* StochTree::newDualYVectorEmpty() const
 
   StochVector* y = new StochVector(0, commWrkrs);
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualYVector();
     y->AddChild(child);
   }
@@ -1446,7 +1448,7 @@ StochVector* StochTree::newDualZVectorEmpty() const
 
   StochVector* z = new StochVector(0, commWrkrs);
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualZVector();
     z->AddChild(child);
   }
@@ -1462,7 +1464,7 @@ StochVector* StochTree::newRhs()
 
   StochVector* rhs = new StochVector(nx() + my() + mz(), commWrkrs);
 
-  for (int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newRhs();
     rhs->AddChild(child);
   }
@@ -1485,13 +1487,13 @@ void StochTree::stopMonitors()
 void StochTree::startNodeMonitors()
 {
   resMon.reset();
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->startNodeMonitors();
 }
 
 void StochTree::stopNodeMonitors()
 {
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->stopNodeMonitors();
 
   resMon.computeTotal();
@@ -1501,7 +1503,7 @@ void StochTree::toMonitorsList(list<NodeExecEntry>& lstExecTm)
 {
   lstExecTm.push_back(resMon.eTotal);
 
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->toMonitorsList(lstExecTm);
 }
 
@@ -1510,7 +1512,7 @@ void StochTree::fromMonitorsList(list<NodeExecEntry>& lstExecTm)
   resMon.eTotal = lstExecTm.front();
   lstExecTm.pop_front();
 
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->fromMonitorsList(lstExecTm);
 }
 
@@ -1811,7 +1813,7 @@ void StochTree::displayProcessInfo(int rank)
 void StochTree::displayProcessInfo(char* tab)
 {
   printf("%sNode[%d] -> Procs", tab, id());
-  for(int i=0; i<myProcs.size(); i++) {
+  for(size_t i=0; i<myProcs.size(); i++) {
     printf("%4d ", myProcs[i]);
   }
   printf("\n");
@@ -1819,7 +1821,7 @@ void StochTree::displayProcessInfo(char* tab)
   int len=strlen(tab);
   tab[len] = tab[len+1] = tab[len+2] = tab[len+3] = ' ';
 
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->displayProcessInfo(tab);
 
   tab[len]= '\0';
@@ -1855,7 +1857,7 @@ void StochTree::displayVectorVsTreeStructure(StochVector& stVec, int myRank, cha
   int len=strlen(tab);
   tab[len] = tab[len+1] = tab[len+2] = tab[len+3] = ' ';
 
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->displayVectorVsTreeStructure(*stVec.children[i], myRank, tab);
 
   tab[len]= '\0';
@@ -1892,7 +1894,7 @@ void StochTree::displayMatVsTreeStructure(StochGenMatrix& mat, int myRank, char*
   int len=strlen(tab);
   tab[len] = tab[len+1] = tab[len+2] = tab[len+3] = ' ';
 
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->displayMatVsTreeStructure(*mat.children[i], myRank, tab);
 
   tab[len]= '\0';
@@ -1928,7 +1930,7 @@ void StochTree::displayMatVsTreeStructure(StochSymMatrix& mat, int myRank, char*
   int len=strlen(tab);
   tab[len] = tab[len+1] = tab[len+2] = tab[len+3] = ' ';
 
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->displayMatVsTreeStructure(*mat.children[i], myRank, tab);
 
   tab[len]= '\0';
@@ -1960,7 +1962,7 @@ void StochTree::displayExecTimes(char* tab)
   int len=strlen(tab);
   tab[len] = tab[len+1] = tab[len+2] = tab[len+3] = ' ';
   
-  for(int i=0; i<children.size(); i++)
+  for(size_t i=0; i<children.size(); i++)
     children[i]->displayExecTimes(tab);
   
   tab[len]= 0;

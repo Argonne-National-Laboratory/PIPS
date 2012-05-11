@@ -1,6 +1,6 @@
 #include "StochInputTree.h"
 #include "QpGenDriver.h"
-#include "QpGenStochDriver.h"
+#include "sDriver.h"
 #include "MehrotraSolver.h"
 #include "GondzioSolver.h"
 #include "QpGenSparseMa57.h"
@@ -363,7 +363,7 @@ void stochSolve(int argc, char *argv[], PbData& pbData, int printx, int solveWit
     //qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==2) {
     sFactoryAug* formulation=NULL;
-    qpgenstoch_solve( root, params, method, formulation);
+    qpstoch_solve( root, params, method, formulation);
   } /*else if(solveWith==4) {
     sFactoryAugSca* formulation=NULL;
     qpgenstoch_solve( root, params, method, formulation);

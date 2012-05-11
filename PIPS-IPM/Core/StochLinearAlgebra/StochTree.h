@@ -23,9 +23,9 @@ class StochTree {
  public:
 
   StochTree(StochInputTree* root);
-	StochTree(const std::vector<StochInputTree::StochInputNode*> &localscens);
-	StochTree(StochInputTree::StochInputNode* data_);
-	virtual ~StochTree();
+  StochTree(const std::vector<StochInputTree::StochInputNode*> &localscens);
+  StochTree(StochInputTree::StochInputNode* data_);
+  virtual ~StochTree();
 
   int NumberOfChildren() const { return children.size(); }
 
@@ -58,7 +58,6 @@ class StochTree {
   void syncDualZVector(StochVector& vec);
   void syncStochVector_old(StochVector& vec, int whatType);
   void syncStochVector(StochVector& vec);
-
 
   void syncStochGenMatrix(StochGenMatrix& mat);
   void syncStochSymMatrix(StochSymMatrix& mat);
