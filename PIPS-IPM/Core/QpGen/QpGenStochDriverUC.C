@@ -10,12 +10,12 @@
 //#include "sFactoryAugSca.h"
 //#include "sFactoryAugEmtl.h"
 //#include "sFactoryAugEmtlSym.h"
-#include "QpGenStochAugExt.h"
-#include "QpGenStochAugRed.h"
-#include "QpGenStochAugRedPr.h"
-#include "QpGenStochNrmEqn.h"
-#include "QpStochAugRedPrCG.h"
-#include "QpStochAugRedPrPCG.h"
+//#include "QpGenStochAugExt.h"
+//#include "QpGenStochAugRed.h"
+//#include "QpGenStochAugRedPr.h"
+//#include "QpGenStochNrmEqn.h"
+//#include "QpStochAugRedPrCG.h"
+//#include "QpStochAugRedPrPCG.h"
 
 
 #include "StochResourcePlanner.h"
@@ -344,23 +344,23 @@ void stochSolve(int argc, char *argv[], PbData& pbData, int printx, int solveWit
 
   MehrotraStochSolver* method=NULL;
   if(solveWith==3) {
-    QpGenStochAugExt* formulation=NULL;
-    qpgenstoch_solve( root, params, method, formulation);
+    //QpGenStochAugExt* formulation=NULL;
+    //qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==11) {
-    QpGenStochAugRedPr* formulation=NULL;
-    qpgenstoch_solve( root, params, method, formulation);
+    //QpGenStochAugRedPr* formulation=NULL;
+    //qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==12) {
-    QpStochAugRedPrPCG* formulation=NULL;
-    qpgenstoch_solve( root, params, method, formulation);
+    //QpStochAugRedPrPCG* formulation=NULL;
+    //qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==13) {
-    QpStochAugRedPrCG* formulation=NULL;
-    qpgenstoch_solve( root, params, method, formulation);
+    //QpStochAugRedPrCG* formulation=NULL;
+    //qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==20) {
-    QpGenStochNrmEqn* formulation=NULL;
-    qpgenstoch_solve( root, params, method, formulation);
+    //QpGenStochNrmEqn* formulation=NULL;
+    //qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==1) {
-    QpGenStochAugRed* formulation=NULL;
-    qpgenstoch_solve( root, params, method, formulation);
+    //QpGenStochAugRed* formulation=NULL;
+    //qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==2) {
     sFactoryAug* formulation=NULL;
     qpgenstoch_solve( root, params, method, formulation);
