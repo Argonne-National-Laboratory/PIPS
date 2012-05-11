@@ -11,7 +11,7 @@
 #include "SparseGenMatrix.h"
 #include "Ma57Solver.h"
 #include "Ma27Solver.h"
-#include "WSMPSolver.h"
+//#include "WSMPSolver.h"
 
 static void mySymAtPutSubmatrix(SymMatrix& kkt, 
 			 GenMatrix& B, GenMatrix& D, 

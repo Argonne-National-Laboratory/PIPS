@@ -169,8 +169,8 @@ void QpGenResiduals2::createChildren()
 
   //copy the structure of one of the vectors and create children of
   //this
-  int nChildren=rQSt.children.size();
-  for (int it=0; it<nChildren; it++) {
+  size_t nChildren=rQSt.children.size();
+  for (size_t it=0; it<nChildren; it++) {
 
     assert(nChildren==stochNode->children.size());
     assert(nChildren==rASt.children.size());
@@ -229,12 +229,12 @@ void QpGenResiduals2::sync()
 void QpGenResiduals2::destroyChildren()
 {
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  for (int it=0; it<children.size(); it++) {
+  for (size_t it=0; it<children.size(); it++) {
     printf("CPU[%d] destroy %d\n", myRank, it);
     children[it]->destroyChildren(); 
   }
   
-  for (int it=0; it<children.size(); it++) {
+  for (size_t it=0; it<children.size(); it++) {
     
     delete children[it];
     printf("deleted %d\n", it);
