@@ -57,7 +57,7 @@ extern int gOoqpPrintLevel;
  * The function does NOT need the MPI environment to be initialized.
  */
 template<class SOLVER, class FORMULATION>
-int qpgenstoch_solve( int argc, char *argv[], 
+int qpstoch_solve( int argc, char *argv[], 
 		      StochInputTree* tree, 
 		      StochRunParams* params,
 		      SOLVER* s, 
@@ -65,7 +65,7 @@ int qpgenstoch_solve( int argc, char *argv[],
 {
   MPI_Init(&argc, &argv);
 
-  int iRet = qpgenstoch_solve(tree, params, s, qp);
+  int iRet = qpstoch_solve(tree, params, s, qp);
 
   MPI_Finalize(); 
 
@@ -79,7 +79,7 @@ int qpgenstoch_solve( int argc, char *argv[],
  * MPI_COMM_WORLD are used in solving the problem.
  */
 template<class SOLVER, class FORMULATION>
-int qpgenstoch_solve( StochInputTree* tree, 
+int qpstoch_solve( StochInputTree* tree, 
 		      StochRunParams* params,
 		      SOLVER * , 
 		      FORMULATION * )

@@ -20,7 +20,7 @@ StochInputTree::StochInputTree(StochInputNode* root)
 StochInputTree::~StochInputTree() 
 {
   if (nodeInput) delete nodeInput;
-  for (int it=0; it<children.size(); it++) delete children[it];
+  for (size_t it=0; it<children.size(); it++) delete children[it];
 }
 
 void StochInputTree::AddChild(const StochInputNode  &node)
@@ -50,22 +50,21 @@ StochInputNode(void* user_data_, int id_,
 	       FVEC fxlow_, FVEC fixlow_, 
 	       FVEC fxupp_, FVEC fixupp_,
 	       bool deleteUserData_/*=false*/)
-  : user_data(user_data_), 
-    id(id_), n(n_), my(my_), mz(mz_), 
-    fQ(fQ_), fnnzQ(fnnzQ_), 
-    fA(fA_), fnnzA(fnnzA_), fB(fB_), fnnzB(fnnzB_), 
-    fC(fC_),  fnnzC(fnnzC_), fD(fD_),  fnnzD(fnnzD_),
-    fc(fc_), fb(fb_), 
-    fxlow(fxlow_),  fixlow(fixlow_), fxupp(fxupp_),  fixupp(fixupp_), 
-    fclow(fclow_),  ficlow(ficlow_), fcupp(fcupp_),  ficupp(ficupp_),
+  : id(id_), n(n_), my(my_), mz(mz_), 
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzC(-1), nnzD(-1),
+    fnnzQ(fnnzQ_), fnnzA(fnnzA_), fnnzB(fnnzB_), fnnzC(fnnzC_), fnnzD(fnnzD_),
+    fQ(fQ_), fA(fA_), fB(fB_), fC(fC_), fD(fD_),
+    fc(fc_), fb(fb_), 
+    fclow(fclow_), fcupp(fcupp_), ficlow(ficlow_), ficupp(ficupp_),
+    fxlow(fxlow_), fxupp(fxupp_), fixlow(fixlow_), fixupp(fixupp_), 
+    user_data(user_data_), 
     deleteUserData(deleteUserData_)
 { };
 
 StochInputTree::StochInputNode::StochInputNode()
-  : user_data(NULL), 
-    id(-1), n(-1), my(-1), mz(-1), 
+  : id(-1), n(-1), my(-1), mz(-1), 
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzC(-1), nnzD(-1),
+    user_data(NULL), 
     deleteUserData(false)
 { };
 
