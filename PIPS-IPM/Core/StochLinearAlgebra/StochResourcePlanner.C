@@ -484,7 +484,7 @@ LoadBalancing::lastSweepNLP(vector<int>& nodes,
   do{
     nMaxOne=-1; nMinMany=-1; howMany=0; maxOne=0.0; minMany=1.0e10;
 
-    for(int n=0; n<nodes.size(); n++) {
+    for(size_t n=0; n<nodes.size(); n++) {
       if(gMapping[n].size()==level) {
 	if(maxOne<nodesLoad[n]) {maxOne = nodesLoad[n]; nMaxOne=n;}
       } else { //gMapping[n].size>=1
@@ -693,7 +693,7 @@ void LoadBalancing::preAssignNodesToProcs(const vector<int>& nodes,
  
   availNodesLoad.clear();
   availNodesLoad.resize(availNodes.size());
-  for(int i=0; i<availNodes.size(); i++) availNodesLoad[i] = nodesLoad[availNodes[i]];
+  for(size_t i=0; i<availNodes.size(); i++) availNodesLoad[i] = nodesLoad[availNodes[i]];
 }
 
 
@@ -716,7 +716,7 @@ void LoadBalancing::preAssignProcsToNodes(const vector<int>& nodes,
   //identify those nodes who should get less than 1 CPU and partition
   //this using NGP strategy
   vector<double> preAssNodesLoad; double preAssCPUTotal=0.0;
-  for(int i=0; i<nodes.size(); i++) {
+  for(size_t i=0; i<nodes.size(); i++) {
     if(noProcs*nodesLoad[i]<1.0) {
       preAssNodes.push_back(nodes[i]);
       preAssNodesLoad.push_back(nodesLoad[i]);
@@ -728,7 +728,7 @@ void LoadBalancing::preAssignProcsToNodes(const vector<int>& nodes,
   }
 
   int preAssNoProcs = (int)ceil(preAssCPUTotal); assert(preAssNoProcs<noProcs);
-  for(int i=0; i<ranks.size(); i++)
+  for(size_t i=0; i<ranks.size(); i++)
     if(i<preAssNoProcs) preAssRanks.push_back(ranks[i]);
     else availRanks.push_back(ranks[i]);
 
@@ -752,8 +752,8 @@ void LoadBalancing::preAssignProcsToNodes(const vector<int>& nodes,
 void LoadBalancing::normalizeVec(vector<double>& vec)
 {
   double total=0.0;
-  for(int i=0; i<vec.size(); i++) total += vec[i];
-  for(int i=0; i<vec.size(); i++) vec[i] /= total;;
+  for(size_t i=0; i<vec.size(); i++) total += vec[i];
+  for(size_t i=0; i<vec.size(); i++) vec[i] /= total;;
 }
 
 void LoadBalancing::computeBalance(const vector<vector<int> >& mapPart, int noSubParts, 
@@ -766,7 +766,7 @@ void LoadBalancing::computeBalance(const vector<vector<int> >& mapPart, int noSu
   double* parts = new double[noSubParts];
   for(int i=0; i<noSubParts; i++) parts[i] = 0.0;
 
-  for(int i=0; i<mapPart.size(); i++) {
+  for(size_t i=0; i<mapPart.size(); i++) {
 
     int CPUsPerThisNode = mapPart[i].size();
     
@@ -801,13 +801,13 @@ void LoadBalancing::computeBalanceW(const vector<vector<int> >& mapPart, const v
   assert(mapPart.size() == nodeWeights.size());
 
   double total = 0.0;
-  for(int i=0; i<nodeWeights.size(); i++) total += nodeWeights[i];
+  for(size_t i=0; i<nodeWeights.size(); i++) total += nodeWeights[i];
   
 
   double* parts = new double[noSubParts];
   for(int i=0; i<noSubParts; i++) {parts[i] = 0.0;}
 
-  for(int i=0; i<mapPart.size(); i++) {
+  for(size_t i=0; i<mapPart.size(); i++) {
 
     int CPUsPerThisNode = mapPart[i].size();
     if(0==CPUsPerThisNode) {
@@ -934,13 +934,13 @@ LoadBalancing::extractElems(const vector<int>& nodes,
   assert(noNodes == nodes.size());
 
   
-  for(int j=0; j<nodesSubSet.size(); j++)
+  for(size_t j=0; j<nodesSubSet.size(); j++)
     for(int i=0; i<noNodes; i++) {
       if(nodes[i]==nodesSubSet[j])
 	ret[j] = nodesLoad[i];
   }
 #ifdef DEBUG
-  for(int j=0; j<nodesSubSet.size(); j++)
+  for(size_t j=0; j<nodesSubSet.size(); j++)
     assert(ret[j]==0);
 #endif
   return ret;
@@ -993,11 +993,10 @@ LoadBalancing::updateMapping_N2P_PIdx(vector<vector<int> >& parts,
     int ip = nodes[isp];
 
     //!log 
-    if(parts[ip].size()>0) {
-      printf("size(parts[%d])=%d\n",ip, parts[ip].size());
-      for(int j=0; j<parts[ip].size(); j++) printf("%d\n", parts[ip][j]);
-
-    }
+    //if(parts[ip].size()>0) {
+    //  printf("size(parts[%d])=%d\n",ip, parts[ip].size());
+    //  for(size_t j=0; j<parts[ip].size(); j++) printf("%d\n", parts[ip][j]);
+    //}
 
     assert(parts[ip].size()==0); //this node should not have been
 				 //assigned before
@@ -1006,7 +1005,7 @@ LoadBalancing::updateMapping_N2P_PIdx(vector<vector<int> >& parts,
 
     parts[nodes[isp]].resize(subParts[isp].size());
 
-    for(int r=0; r<subParts[isp].size(); r++) {
+    for(size_t r=0; r<subParts[isp].size(); r++) {
       parts[nodes[isp]][r] = ranks[ subParts[isp][r] ];
     }
   } 
@@ -1024,11 +1023,11 @@ LoadBalancing::updateMapping_N2P_NIdx(vector<vector<int> >& parts,
   assert(subParts.size()==ranks.size());
   //printMap(subParts, "parts\n", "[%d][%d]=%d", "\n\n");
 
-  for(int p=0; p<ranks.size(); p++) {
+  for(size_t p=0; p<ranks.size(); p++) {
     
     assert(0!=subParts[p].size());
 
-    for(int n=0; n<subParts[p].size(); n++) {
+    for(size_t n=0; n<subParts[p].size(); n++) {
       parts[nodes[subParts[p][n]]].push_back( ranks[p] );
       //parts[nodes[subParts[p][n]]].push_back( subParts[p][n] );
     }
@@ -1073,7 +1072,7 @@ void LoadBalancing::computePartitionWeights(const vector<vector<int> >& partitio
   for(i=0; i<nparts; i++) weights[i] = 0.0;
 
   double total=0.0;
-  for(int i=0; i<partition.size(); i++) {
+  for(size_t i=0; i<partition.size(); i++) {
     //for(int c=0; c<partition[i].size(); c++)
     assert(partition[i].size() == 1);
     weights[partition[i][0]] += (1 / (1.0*noNodes)); 
@@ -1255,7 +1254,7 @@ void LoadBalancing::partitionVert(const vector<int>& nodes, const vector<double>
     if(iMax<idM.size()) {
       if(inode == idM[iMax].idx) {
 	//one of the maxs -> add edges to the mins
-	for(int j=0; j<idm.size(); j++)
+	for(size_t j=0; j<idm.size(); j++)
 	  if( abs(idm[j].idx-inode)!=1 && idm[j].idx!=inode ) {
 	    adjncy[edges] = idm[j].idx; edges++;
 	  }
@@ -1266,7 +1265,7 @@ void LoadBalancing::partitionVert(const vector<int>& nodes, const vector<double>
     if(iMin<idm.size()) {
       if(inode==idm[iMin].idx) {
 	//is one of the mins -> add edges to maxs
-	for(int j=0; j<idM.size(); j++)
+	for(size_t j=0; j<idM.size(); j++)
 	  if( abs(idM[j].idx-inode)!=1 && idM[j].idx!=inode ) {  
 	    //the max and min not the same and also they are not
 	    //neighbours (i.e. avoid adding the same edge twice)
@@ -1433,7 +1432,7 @@ void LoadBalancing::partitionWeightVert(const vector<int>& nodes, const vector<d
     if(iMax<idM.size()) {
       if(inode == idM[iMax].idx) {
 	//one of the maxs -> add edges to the mins
-	for(int j=0; j<idm.size(); j++)
+	for(size_t j=0; j<idm.size(); j++)
 	  if( abs(idm[j].idx-inode)!=1 && idm[j].idx!=inode ) {
 	    adjncy[edges] = idm[j].idx; edges++;
 	  }
@@ -1444,7 +1443,7 @@ void LoadBalancing::partitionWeightVert(const vector<int>& nodes, const vector<d
     if(iMin<idm.size()) {
       if(inode==idm[iMin].idx) {
 	//is one of the mins -> add edges to maxs
-	for(int j=0; j<idM.size(); j++)
+	for(size_t j=0; j<idM.size(); j++)
 	  if( abs(idM[j].idx-inode)!=1 && idM[j].idx!=inode ) {  
 	    //the max and min not the same and also they are not
 	    //neighbours (i.e. avoid adding the same edge twice)
@@ -1558,11 +1557,11 @@ void LoadBalancing::faPartition2(const vector<int>& nodes, const vector<double>&
   assert(nodes.size()==nodesLoad.size());
 
   vector<Node> vNodesS(nodes.size());
-  for(int i=0;i<nodes.size(); i++){vNodesS[i].n=nodes[i]; vNodesS[i].load=nodesLoad[i]*ranks.size();}
+  for(size_t i=0;i<nodes.size(); i++){vNodesS[i].n=nodes[i]; vNodesS[i].load=nodesLoad[i]*ranks.size();}
   
   sort(vNodesS.begin(), vNodesS.end(), NodeDecrPred);
 
-  //!log for(int i=0;i<nodes.size(); i++) printf("v[%d]=%g\n", vNodesS[i].n, vNodesS[i].load);
+  //!log for(size_t i=0;i<nodes.size(); i++) printf("v[%d]=%g\n", vNodesS[i].n, vNodesS[i].load);
 
   int n=0;
   for(; n<ranks.size(); n++)
@@ -1678,7 +1677,7 @@ void LoadBalancing::faPartition(const vector<int>& nodes, const vector<double>& 
 {
   assert(nodes.size()>=nparts);
   assert(partitions.size()==nodes.size());
-  int p,n;
+  size_t p,n;
 
   int*    parts = new int[nparts];
   double* loads = new double[nparts];
@@ -1724,7 +1723,7 @@ void LoadBalancing::faPartition(const vector<int>& nodes, const vector<double>& 
 
       //get the maximum load node from this partition
       int nMax=nodesPmax[0];
-      for(int i=1; i<nodesPmax.size(); i++)
+      for(size_t i=1; i<nodesPmax.size(); i++)
 	if(nodesLoad[nodesPmax[i]]>nodesLoad[nMax]) nMax = nodesPmax[i];
 
       //put nMax in the partition p0
