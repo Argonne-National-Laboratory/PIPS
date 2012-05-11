@@ -11,7 +11,7 @@
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "Ma57Solver.h"
-#include "WSMPSolver.h"
+//#include "WSMPSolver.h"
 #include "SparseLinearAlgebraPackage.h"
 
 
