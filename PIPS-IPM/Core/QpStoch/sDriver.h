@@ -1,4 +1,4 @@
-#ifndef QPGENDSTOCHRIVER
+#ifndef QPGENSTOCHDRIVER
 #define QPGENSTOCHDRIVER
 
 #include <memory>
@@ -43,7 +43,7 @@ struct ScaParams
   int nb;
 };
 
-StochRunParams* defaultStochRunParams()
+inline StochRunParams* defaultStochRunParams()
 {
   StochRunParams* params = new StochRunParams();
   params->scale=0; params->printx=0; params->printLevel=0;

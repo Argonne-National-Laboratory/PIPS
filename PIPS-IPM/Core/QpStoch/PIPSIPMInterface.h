@@ -12,6 +12,7 @@ class PIPSIPMInterface //: public BALPSolverInterface<PIPSIPMInterface>
   PIPSIPMInterface(stochasticInput &in);
   ~PIPSIPMInterface();
 
+  void loadData();
   void go();
 
   double getObjective() const;
@@ -25,6 +26,13 @@ class PIPSIPMInterface //: public BALPSolverInterface<PIPSIPMInterface>
   std::vector<double> getFirstStageDualColSolution() const;
   std::vector<double> getSecondStageDualColSolution(int scen) const;
   //more get methods to follow here
+
+ protected:
+  //count the number eq and ineq
+  void getNum1stStgEqIneq(int& my, int &mz);
+  void getNum2ndStgEqIneq(int scens, int& my, int &mz);
+  
+  StochInputTree* inputTree;
 };
 
 #endif

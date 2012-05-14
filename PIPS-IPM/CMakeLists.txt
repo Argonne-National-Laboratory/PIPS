@@ -28,8 +28,9 @@ if(HAVE_MA57 AND HAVE_METIS)
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 
-  add_executable(pipsipmFromRaw Drivers/fromRaw.cpp)
+  add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
   target_link_libraries(pipsipmFromRaw
+    stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
