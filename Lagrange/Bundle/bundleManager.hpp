@@ -141,7 +141,7 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::evaluate
 template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLastPrimals() {
 
 	int nscen = input.nScenarios();
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 5; i++) {
 	//for (int i = 0; i < nscen; i++) {
 		assert(bundle[i].size());
 		std::vector<double> const& p = bundle[i][bundle[i].size()-1].primalSol;
