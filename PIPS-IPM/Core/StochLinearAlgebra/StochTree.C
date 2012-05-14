@@ -301,15 +301,15 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   int noProcs = processes.size();
 
-	if (1 == noProcs && tree==NULL) {
+  if (1 == noProcs && tree==NULL) {
     for(size_t i = 0; i < real_children.size(); i++) {
       real_children[i]->assignProcesses(commWrkrs, myProcs);
     }
     return;
   }
   
-	//here noProcs >=2 so we have to assign children to them
-
+  //here noProcs >=2 so we have to assign children to them
+  
   //what is the load for each children
   vector<double> vecChildNodesLoad(tree->children.size()); 
   for(size_t i=0; i<tree->children.size(); i++) {
@@ -370,32 +370,32 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
   //~log
 
 	
- 	vector<vector<int> > mapProcsToChildNodes(noProcs);
-
+  vector<vector<int> > mapProcsToChildNodes(noProcs);
+  
   for(size_t i=0; i<tree->children.size(); i++) {
-
+    
     int noRanks4ThisChild = mapChildNodesToProcs[i].size();
-		assert(noRanks4ThisChild == 1); // don't support splitting a child over procs
+    assert(noRanks4ThisChild == 1); // don't support splitting a child over procs
     int childRank = mapChildNodesToProcs[i][0];
-		mapProcsToChildNodes[childRank].push_back(i);
-	}
-	assert(children.size() == 0);
-	children.reserve(noProcs);
-	for(int p=0; p<noProcs;p++) {
-		vector<StochInputTree::StochInputNode*> scenarios(mapProcsToChildNodes[p].size());
-		for(size_t i=0; i<mapProcsToChildNodes[p].size();i++) {
-			scenarios[i] = tree->children[mapProcsToChildNodes[p][i]]->nodeInput;
-		}
+    mapProcsToChildNodes[childRank].push_back(i);
+  }
+  assert(children.size() == 0);
+  children.reserve(noProcs);
+  for(int p=0; p<noProcs;p++) {
+    vector<StochInputTree::StochInputNode*> scenarios(mapProcsToChildNodes[p].size());
+    for(size_t i=0; i<mapProcsToChildNodes[p].size();i++) {
+      scenarios[i] = tree->children[mapProcsToChildNodes[p][i]]->nodeInput;
+    }
     children.push_back(new StochTree(scenarios));
-		vector<int> s(1,p);
-		if (p == rankMe) {
-			children[p]->assignProcesses(MPI_COMM_SELF, s);
-		} else {
-			children[p]->assignProcesses(MPI_COMM_NULL, s);
-		}
-	}
+    vector<int> s(1,p);
+    if (p == rankMe) {
+      children[p]->assignProcesses(MPI_COMM_SELF, s);
+    } else {
+      children[p]->assignProcesses(MPI_COMM_NULL, s);
+    }
+  }
   tree = NULL;
-	computeGlobalSizes(); // recompute so children nodes have values
+  computeGlobalSizes(); // recompute so children nodes have values
 }
 #endif
 
@@ -523,23 +523,23 @@ StochSymMatrix* StochTree::createQ() const
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
     return new StochSymDummyMatrix(id());
-
+  
   if (!fakedata) {
     if(data->nnzQ<0)
       data->fnnzQ(data->user_data, data->id, &data->nnzQ);
-
+    
     StochSymMatrix* Q = 
       new StochSymMatrix(data->id, 
-             N, 
-             data->n, 
-             data->nnzQ,
-             commWrkrs);
-
+			 N, 
+			 data->n, 
+			 data->nnzQ,
+			 commWrkrs);
+    
     data->fQ(data->user_data, data->id, 
-       Q->mat->krowM(), 
-       Q->mat->jcolM(),
-       Q->mat->M());  
-
+	     Q->mat->krowM(), 
+	     Q->mat->jcolM(),
+	     Q->mat->M());  
+    
     for(size_t it=0; it<children.size(); it++) {
       StochSymMatrix* child = children[it]->createQ();
       Q->AddChild(child);
@@ -1088,6 +1088,7 @@ StochVector* StochTree::createc() const
   double* vData = ((SimpleVector*)c->vec)->elements();  
   if (!fakedata) {
     // populate the node's data with data from user.
+
     data->fc(data->user_data, data->id, 
        vData, data->n);
 
