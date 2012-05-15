@@ -10,7 +10,8 @@ add_library(CbcLagrangeSolver LagrangeSubproblemSolver/CbcLagrangeSolver.cpp)
 add_library(ClpRecourseSolver RecourseSubproblemSolver/ClpRecourseSolver.cpp)
 add_library(CbcRecourseSolver RecourseSubproblemSolver/CbcRecourseSolver.cpp)
 add_library(combine Drivers/combineScenarios.cpp)
-add_library(bundle Bundle/cuttingPlaneBALP.cpp Bundle/levelBALP.cpp Bundle/l1bundleBALP.cpp)
+add_library(bundle Bundle/cuttingPlaneBALP.cpp Bundle/levelBALP.cpp
+	Bundle/l1bundleBALP.cpp Bundle/lInfTrustBALP.cpp)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
@@ -22,6 +23,7 @@ add_executable(cpmSMPS Drivers/cpmSMPS.cpp)
 add_executable(levelSMPS Drivers/levelSMPS.cpp)
 add_executable(proxLevelSMPS Drivers/proxLevelSMPS.cpp)
 add_executable(proxL1SMPS Drivers/l1bundleSMPS.cpp)
+add_executable(proxLinfTrustSMPS Drivers/linftrustSMPS.cpp)
 
 target_link_libraries(lagrangeRootNode pipss stochInput ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(lagrangeCombinedScenRedRootNode pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
@@ -31,6 +33,7 @@ target_link_libraries(cpmSMPS bundle pipss stochInput scenred ClpBALPInterface C
 target_link_libraries(levelSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(proxLevelSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(proxL1SMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(proxLinfTrustSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
 if(HAVE_CB)
 	include_directories("${CB_DIR}/include")
