@@ -22,7 +22,7 @@ if(NEED_MATH)
 	else(IS_DIRECTORY $ENV{MKLROOT})
 		enable_language( Fortran )
 		find_package(LAPACK REQUIRED)
-		set(MATH_LIBS "${LAPACK_LIBRARIES}")
+		set(MATH_LIBS ${LAPACK_LIBRARIES};${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
 	endif(IS_DIRECTORY $ENV{MKLROOT})
 endif(NEED_MATH)
 
