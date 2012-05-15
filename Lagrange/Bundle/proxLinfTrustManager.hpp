@@ -34,7 +34,7 @@ protected:
 		
 
 		{
-			lInfTrustModel lm(nvar1,this->bundle,1,this->currentSolution);
+			lInfTrustModel lm(nvar1,this->bundle,0.02,this->currentSolution);
 			BALPSolver solver(lm,this->ctx, BALPSolver::useDual);
 			
 			if (this->nIter > 1) {
@@ -46,7 +46,7 @@ protected:
 						solver.setSecondStageRowState(i,k,rows2l[i][k]);
 					}
 					cols2l[i].push_back(AtLower);
-					for (unsigned k = 0; k < lm.nSecondStageVars(i); k++) {
+					for (int k = 0; k < lm.nSecondStageVars(i); k++) {
 						solver.setSecondStageColState(i,k,cols2l[i][k]);
 					}
 				}
@@ -67,7 +67,7 @@ protected:
 					rows2l[i][k] = solver.getSecondStageRowState(i,k);
 				}
 				cols2l[i].resize(lm.nSecondStageVars(i));
-				for (unsigned k = 0; k < lm.nSecondStageVars(i); k++) {
+				for (int k = 0; k < lm.nSecondStageVars(i); k++) {
 					cols2l[i][k] = solver.getSecondStageColState(i,k);
 				}
 			}

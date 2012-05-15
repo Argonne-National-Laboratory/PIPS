@@ -49,7 +49,7 @@ vector<double> lInfTrustModel::getSecondStageColLB(int scen) {
 }
 
 vector<double> lInfTrustModel::getSecondStageColUB(int scen) {
-	vector<double> ub(cuts[scen].size(),COIN_DBL_MAX);
+	vector<double> ub(cuts[scen].size()+2*nvar1,COIN_DBL_MAX);
 	fill(ub.begin()+nvar1,ub.begin()+2*nvar1,0.);
 	return ub;
 }
