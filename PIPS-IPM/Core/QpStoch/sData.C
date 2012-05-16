@@ -84,7 +84,7 @@ void sData::createChildren()
   StochVector& icuppSt = dynamic_cast<StochVector&>(*icupp); 
   
 
-  for(int it=0; it<gSt.children.size(); it++) {
+  for(size_t it=0; it<gSt.children.size(); it++) {
     AddChild(new sData(stochNode->children[it],
 	       gSt.children[it], QSt.children[it],
 	       xlowSt.children[it], ixlowSt.children[it], nxlow,
@@ -99,7 +99,7 @@ void sData::createChildren()
 
 void sData::destroyChildren()
 {
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->destroyChildren();
     delete children[it];
   }
@@ -179,6 +179,7 @@ int sData::getLocalSizes(int& nx, int& my, int& mz)
 
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
   Cst.Bmat->getSize(mz, nx);
+  return 0;
 }
 
 
@@ -191,6 +192,7 @@ int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
   nnzQ = Qst. mat->getStorage()->len;
   nnzB = Ast.Bmat->getStorage()->len;
   nnzD = Cst.Bmat->getStorage()->len;
+  return 0;
 }
 
 
