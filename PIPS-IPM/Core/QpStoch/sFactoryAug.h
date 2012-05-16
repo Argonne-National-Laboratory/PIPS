@@ -17,7 +17,7 @@ class sFactoryAug : public sFactory {
   virtual ~sFactoryAug();
 
   virtual sLinsysRoot* newLinsysRoot();
-  virtual sLinsysRoot* newLinsysRoot(QpGenStochData* prob,
+  virtual sLinsysRoot* newLinsysRoot(sData* prob,
 				     OoqpVector* dd,OoqpVector* dq,
 				     OoqpVector* nomegaInv, OoqpVector* rhs);
 };

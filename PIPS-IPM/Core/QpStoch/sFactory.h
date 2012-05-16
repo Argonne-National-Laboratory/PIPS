@@ -9,7 +9,7 @@
 #include "mpi.h"
 
 class QpGenData;
-class QpGenStochData;
+class sData;
 
 class QpGenVars;
 class StochInputTree;
@@ -53,18 +53,18 @@ class sFactory : public QpGen {
 			     OoqpVector& z_in, OoqpVector& vars_in );
 
   virtual sLinsysRoot* newLinsysRoot() = 0;
-  virtual sLinsysRoot* newLinsysRoot(QpGenStochData* prob,
+  virtual sLinsysRoot* newLinsysRoot(sData* prob,
 				     OoqpVector* dd,OoqpVector* dq,
 				     OoqpVector* nomegaInv, OoqpVector* rhs) = 0;
   
   virtual sLinsysLeaf* newLinsysLeaf();
-  virtual sLinsysLeaf* newLinsysLeaf(QpGenStochData* prob,
+  virtual sLinsysLeaf* newLinsysLeaf(sData* prob,
 				     OoqpVector* dd,OoqpVector* dq,
 				     OoqpVector* nomegaInv, OoqpVector* rhs);
   
 
   StochTree* tree;
-  QpGenStochData * data;
+  sData * data;
   //  Variables
 
   virtual void iterateStarted();

@@ -9,7 +9,7 @@
 class sDummyLinsys : public sLinsys
 {
  public:
-  sDummyLinsys(sFactory* factory, QpGenStochData* prob)
+  sDummyLinsys(sFactory* factory, sData* prob)
     : sLinsys(factory, prob, NULL, NULL, NULL, NULL) 
     {
       mpiComm = MPI_COMM_NULL;
@@ -18,12 +18,12 @@ class sDummyLinsys : public sLinsys
 
   virtual ~sDummyLinsys(){};
 
-  virtual void factor2( QpGenStochData *prob, Variables *vars){};
-  virtual void Lsolve ( QpGenStochData *prob, OoqpVector& x ){};
-  virtual void Dsolve ( QpGenStochData *prob, OoqpVector& x ){};
-  virtual void Ltsolve( QpGenStochData *prob, OoqpVector& x ){};
+  virtual void factor2( sData *prob, Variables *vars){};
+  virtual void Lsolve ( sData *prob, OoqpVector& x ){};
+  virtual void Dsolve ( sData *prob, OoqpVector& x ){};
+  virtual void Ltsolve( sData *prob, OoqpVector& x ){};
 
-  virtual void Ltsolve2( QpGenStochData *prob, StochVector& x, SimpleVector& xp){};
+  virtual void Ltsolve2( sData *prob, StochVector& x, SimpleVector& xp){};
 
   virtual void putZDiagonal( OoqpVector& zdiag ){};
   virtual void solveCompressed( OoqpVector& rhs ){};
@@ -36,16 +36,16 @@ class sDummyLinsys : public sLinsys
 		     OoqpVector& z_in, OoqpVector& vars_in ){};
   
 
-  virtual void addLnizi(QpGenStochData *prob, OoqpVector& z0, OoqpVector& zi){};
+  virtual void addLnizi(sData *prob, OoqpVector& z0, OoqpVector& zi){};
 
   /** y += alpha * Lni^T * x */
-  void LniTransMult(QpGenStochData *prob, 
+  void LniTransMult(sData *prob, 
 		    SimpleVector& y, 
 		    double alpha, SimpleVector& x){};
 
   virtual void allocU(DenseGenMatrix ** Ut, int np){};
   virtual void allocV (DenseGenMatrix ** V, int np){};
-  virtual void computeU_V(QpGenStochData *prob, DenseGenMatrix* U, DenseGenMatrix* V){};
+  virtual void computeU_V(sData *prob, DenseGenMatrix* U, DenseGenMatrix* V){};
   void sync(){};
   virtual void deleteChildren(){};
 }; 

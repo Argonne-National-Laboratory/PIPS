@@ -5,7 +5,7 @@
 #include "sLinsysLeaf.h"
 #include "StochTree.h"
 #include "sFactory.h"
-#include "QpGenStochData.h"
+#include "sData.h"
 //#include "QpGenSparseLinsys.h"
 #include "SparseSymMatrix.h"
 #include "SparseGenMatrix.h"
@@ -17,7 +17,7 @@ static void mySymAtPutSubmatrix(SymMatrix& kkt,
 			 GenMatrix& B, GenMatrix& D, 
 			 int locnx, int locmy, int locmz);
 
-sLinsysLeaf::sLinsysLeaf(sFactory *factory_, QpGenStochData* prob,
+sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
 					   OoqpVector* dd_, 
 					   OoqpVector* dq_,
 					   OoqpVector* nomegaInv_,
@@ -68,7 +68,7 @@ sLinsysLeaf::~sLinsysLeaf()
 
 }
 
-void sLinsysLeaf::factor2(QpGenStochData *prob, Variables *vars)
+void sLinsysLeaf::factor2(sData *prob, Variables *vars)
 {
   // Diagonals were already updated, so
   // just trigger a local refactorization (if needed, depends on the type of lin solver).
@@ -112,7 +112,7 @@ void sLinsysLeaf::putZDiagonal( OoqpVector& zdiag_)
   kkt->atPutDiagonal( locnx+locmy, *zdiag.vec );
 }
 
-void sLinsysLeaf::Lsolve  (  QpGenStochData *prob, OoqpVector& x_in )
+void sLinsysLeaf::Lsolve  (  sData *prob, OoqpVector& x_in )
 {
   StochVector& x = dynamic_cast<StochVector&>(x_in);
   assert(x.children.size()==0);
@@ -123,7 +123,7 @@ void sLinsysLeaf::Lsolve  (  QpGenStochData *prob, OoqpVector& x_in )
 
 }
 
-void sLinsysLeaf::Dsolve  (  QpGenStochData *prob, OoqpVector& x_in )
+void sLinsysLeaf::Dsolve  (  sData *prob, OoqpVector& x_in )
 {
   StochVector& x = dynamic_cast<StochVector&>(x_in);
   assert(x.children.size()==0);
@@ -132,7 +132,7 @@ void sLinsysLeaf::Dsolve  (  QpGenStochData *prob, OoqpVector& x_in )
   stochNode->resMon.recDsolveTmChildren_stop();
 }
 
-void sLinsysLeaf::Ltsolve (  QpGenStochData *prob, OoqpVector& x_in )
+void sLinsysLeaf::Ltsolve (  sData *prob, OoqpVector& x_in )
 {
   StochVector& x = dynamic_cast<StochVector&>(x_in);
   assert(x.children.size()==0);
@@ -141,7 +141,7 @@ void sLinsysLeaf::Ltsolve (  QpGenStochData *prob, OoqpVector& x_in )
   stochNode->resMon.recLtsolveTmChildren_stop();
 }
 
-void sLinsysLeaf::Ltsolve2( QpGenStochData *prob, StochVector& x, SimpleVector& xp)
+void sLinsysLeaf::Ltsolve2( sData *prob, StochVector& x, SimpleVector& xp)
 {
 
   StochVector& b   = dynamic_cast<StochVector&>(x);

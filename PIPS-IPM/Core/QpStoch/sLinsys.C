@@ -5,14 +5,14 @@
 #include "sLinsys.h"
 #include "StochTree.h"
 #include "sFactory.h"
-#include "QpGenStochData.h"
+#include "sData.h"
 #include "SparseLinearAlgebraPackage.h"
 
 #ifndef MIN
 #define MIN(a,b) ((a > b) ? b : a)
 #endif
 
-sLinsys::sLinsys(sFactory* factory_, QpGenStochData* prob)
+sLinsys::sLinsys(sFactory* factory_, sData* prob)
   : QpGenLinsys(), kkt(NULL), solver(NULL)
 {
   factory = factory_;
@@ -42,7 +42,7 @@ sLinsys::sLinsys(sFactory* factory_, QpGenStochData* prob)
 }
 
 sLinsys::sLinsys(sFactory* factory_,
-				   QpGenStochData* prob,				    
+				   sData* prob,				    
 				   OoqpVector* dd_, 
 				   OoqpVector* dq_,
 				   OoqpVector* nomegaInv_,
@@ -120,7 +120,7 @@ void sLinsys::factor(Data *prob_, Variables *vars)
 
   // now DO THE LINEAR ALGEBRA!
   
-  QpGenStochData* prob = dynamic_cast<QpGenStochData*>(prob_);
+  sData* prob = dynamic_cast<sData*>(prob_);
   // in order to avoid a call to QpGenLinsys::factor, call factor2 method.
   factor2(prob, vars);
 }
@@ -139,7 +139,7 @@ void sLinsys::factor(Data *prob_, Variables *vars)
  *
  *   V = Di\U
  */
-void sLinsys::computeU_V(QpGenStochData *prob, 
+void sLinsys::computeU_V(sData *prob, 
 			 DenseGenMatrix* U, DenseGenMatrix* V)
 {
   U->scalarMult(0.0);
@@ -212,7 +212,7 @@ void sLinsys::allocV(DenseGenMatrix ** V, int n0)
  *
  * Changes only the first n0 entries of b0
  */
-void sLinsys::addLnizi(QpGenStochData *prob, OoqpVector& z0_, OoqpVector& zi_)
+void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 {
   SimpleVector& z0 = dynamic_cast<SimpleVector&>(z0_);
   SimpleVector& zi = dynamic_cast<SimpleVector&>(zi_);
@@ -303,7 +303,7 @@ void sLinsys::solveCompressed( OoqpVector& rhs_ )
  *  y = beta*y + Di\Li\ (  [ A 0 0 ] * x )
  *                      (  [ C 0 0 ]    )
  */
-void sLinsys::LniTransMult(QpGenStochData *prob, 
+void sLinsys::LniTransMult(sData *prob, 
 				    SimpleVector& y, 
 				    double alpha, SimpleVector& x)
 {
@@ -349,7 +349,7 @@ void sLinsys::LniTransMult(QpGenStochData *prob,
  *
  */
 
-void sLinsys::addTermToDenseSchurCompl(QpGenStochData *prob, 
+void sLinsys::addTermToDenseSchurCompl(sData *prob, 
 				       DenseSymMatrix& SC) 
 {
   SparseGenMatrix& A = prob->getLocalA();
@@ -414,7 +414,7 @@ void sLinsys::addTermToDenseSchurCompl(QpGenStochData *prob,
 // we load the calculated columns into rows of out
 // to match the column-major scalapack format
 
-void sLinsys::addColsToDenseSchurCompl(QpGenStochData *prob, 
+void sLinsys::addColsToDenseSchurCompl(sData *prob, 
 				       DenseGenMatrix& out, 
 				       int startcol, int endcol) 
 {
@@ -476,7 +476,7 @@ void sLinsys::addColsToDenseSchurCompl(QpGenStochData *prob,
 }
 
 /*
-void sLinsys::addColsToDenseSchurCompl(QpGenStochData *prob, 
+void sLinsys::addColsToDenseSchurCompl(sData *prob, 
 				       DenseGenMatrix& out, 
 				       int startcol, int endcol) 
 {
@@ -524,7 +524,7 @@ void sLinsys::addColsToDenseSchurCompl(QpGenStochData *prob,
 
 // adds only lower triangular elements to out
 
-void sLinsys::symAddColsToDenseSchurCompl(QpGenStochData *prob, 
+void sLinsys::symAddColsToDenseSchurCompl(sData *prob, 
 				       double *out, 
 				       int startcol, int endcol) 
 {
@@ -610,7 +610,7 @@ void sLinsys::symAddColsToDenseSchurCompl(QpGenStochData *prob,
 
 /*
 
-void sLinsys::symAddColsToDenseSchurCompl(QpGenStochData *prob, 
+void sLinsys::symAddColsToDenseSchurCompl(sData *prob, 
 				       double *out, 
 				       int startcol, int endcol) 
 {
