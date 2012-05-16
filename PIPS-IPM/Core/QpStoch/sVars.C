@@ -13,7 +13,6 @@
 #include <fstream>
 using namespace std;
 
-
 sVars::sVars(StochTree* tree, 
 	     OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 	     OoqpVector * iclow_in, OoqpVector * icupp_in)
@@ -163,7 +162,7 @@ void sVars::createChildren()
   StochVector& icuppst = dynamic_cast<StochVector&>(*icupp); 
     
 
-  for (int it=0; it<xst.children.size(); it++) {
+  for (size_t it=0; it<xst.children.size(); it++) {
     AddChild( new sVars( stochNode->children[it],
 			 xst.children[it],     sst.children[it],
 			 yst.children[it],     zst.children[it],
