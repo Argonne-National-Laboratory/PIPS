@@ -143,14 +143,23 @@ extern "C" int fnnzQ(void* user_data, int id, int* nnz)
   return 0;
 }
 
-inline bool   eq_comp(const double lb, const double ub) { return (lb==ub); }
-inline bool ineq_comp(const double lb, const double ub) { return (lb!=ub); }
+class eq_comp
+{
+public:
+  inline bool   operator()(const double& lb, const double& ub) const { return (lb==ub); }
+};
+class ineq_comp
+{
+public:
+  inline bool   operator()(const double& lb, const double& ub) const { return (lb!=ub); }
+};
 
 /** Counts the nnz in Mcol's rows corresponding to entries in lb and ub 
  * satisfying 'compFun' condition. */
-int countNNZ(CoinPackedMatrix Mcol, 
-	      vector<double> lb, vector<double> ub, 
-	      bool (*compFun)(const double, const double))
+template<typename Compare>
+int countNNZ(const CoinPackedMatrix& Mcol, 
+	     const vector<double>& lb, const vector<double>& ub, 
+	     const Compare& compFun)
 {
   int nnz=0;
 
@@ -171,10 +180,10 @@ int countNNZ(CoinPackedMatrix Mcol,
 /** Extracts the in Mcol's rows corresponding to entries in lb and ub 
  * satisfying 'compFun' condition. Mcol is in column-major format, the
  * output krowM,jcolM,dM represent a row-major submatrix of Mcol. */
-
-void extractRows(CoinPackedMatrix Mcol, 
-		 vector<double> lb, vector<double> ub, 
-		 bool (*compFun)(const double, const double), 
+template<typename Compare>
+void extractRows(const CoinPackedMatrix& Mcol, 
+		 const vector<double>& lb, const vector<double>& ub, 
+		 const Compare& compFun,
 		 int* krowM, int* jcolM, double* dM)
 {
   //convert to row-major, extracting rows is probably faster 
@@ -223,13 +232,13 @@ void extractRows(CoinPackedMatrix Mcol,
 }		 
 
 extern "C" int fnnzA(void* user_data, int id, int* nnz){
-
+  eq_comp compFun;
   if(id==0) {
     CoinPackedMatrix Mcol=callbackData->in.getFirstStageConstraints();
     (*nnz)=countNNZ(Mcol,
 		    callbackData->in.getFirstStageRowLB(), 
 		    callbackData->in.getFirstStageRowUB(), 
-		    eq_comp);
+		    compFun);
   } else {
     int scen=id-1;
     CoinPackedMatrix Mcol=callbackData->in.getLinkingConstraints(scen);
@@ -237,21 +246,22 @@ extern "C" int fnnzA(void* user_data, int id, int* nnz){
     (*nnz)=countNNZ(Mcol,
 		    callbackData->in.getSecondStageRowLB(scen), 
 		    callbackData->in.getSecondStageRowUB(scen), 
-		    eq_comp);
+		    compFun);
   }
   //printf("nnzA = %d\n", *nnz);
   return 0;
 }
 
 extern "C" int fnnzB(void* user_data, int id, int* nnz){
+
   assert(id>=1);    
   int scen=id-1;
   CoinPackedMatrix Mcol=callbackData->in.getSecondStageConstraints(scen);
-
+  eq_comp compFun;
   (*nnz)=countNNZ(Mcol,
 		  callbackData->in.getSecondStageRowLB(scen),
 		  callbackData->in.getSecondStageRowUB(scen),
-		  eq_comp);
+		  compFun);
   //printf("nnzB = %d\n", *nnz);
 
   return 0;
@@ -264,7 +274,7 @@ extern "C" int fnnzC(void* user_data, int id, int* nnz){
     (*nnz)=countNNZ(Mcol,
 		    callbackData->in.getFirstStageRowLB(), 
 		    callbackData->in.getFirstStageRowUB(), 
-		    ineq_comp);
+		    ineq_comp());
   } else {
     int scen=id-1;
     CoinPackedMatrix Mcol=callbackData->in.getLinkingConstraints(scen);
@@ -272,7 +282,7 @@ extern "C" int fnnzC(void* user_data, int id, int* nnz){
     (*nnz)=countNNZ(Mcol,
 		    callbackData->in.getSecondStageRowLB(scen), 
 		    callbackData->in.getSecondStageRowUB(scen), 
-		    ineq_comp);
+		    ineq_comp());
   }
   //printf("nnzC = %d\n", *nnz);
   return 0;
@@ -286,7 +296,7 @@ extern "C" int fnnzD(void* user_data, int id, int* nnz){
   (*nnz)=countNNZ(Mcol,
 		  callbackData->in.getSecondStageRowLB(scen),
 		  callbackData->in.getSecondStageRowUB(scen),
-		  ineq_comp);
+		  ineq_comp());
   //printf("nnzD = %d\n", *nnz);
 
   return 0;
@@ -312,7 +322,7 @@ extern "C" int fA(void* user_data, int id, int* krowM, int* jcolM, double* M){
     extractRows(Mcol,
 		callbackData->in.getFirstStageRowLB(), 
 		callbackData->in.getFirstStageRowUB(), 
-		eq_comp,
+		eq_comp(),
 		krowM, jcolM, M);
 
   } else {
@@ -322,7 +332,7 @@ extern "C" int fA(void* user_data, int id, int* krowM, int* jcolM, double* M){
     extractRows(Mcol,
 		callbackData->in.getSecondStageRowLB(scen), 
 		callbackData->in.getSecondStageRowUB(scen), 
-		eq_comp,
+		eq_comp(),
 		krowM, jcolM, M);
   }  
   return 0;
@@ -335,7 +345,7 @@ extern "C" int fB(void* user_data, int id, int* krowM, int* jcolM, double* M){
   extractRows(Mcol,
 	      callbackData->in.getSecondStageRowLB(id-1),
 	      callbackData->in.getSecondStageRowUB(id-1),
-	      eq_comp,
+	      eq_comp(),
 	      krowM, jcolM, M);
   return 0;
 }
@@ -347,7 +357,7 @@ extern "C" int fC(void* user_data, int id, int* krowM, int* jcolM, double* M){
     extractRows(Mcol,
 		callbackData->in.getFirstStageRowLB(), 
 		callbackData->in.getFirstStageRowUB(), 
-		ineq_comp,
+		ineq_comp(),
 		krowM, jcolM, M);
 
   } else {
@@ -357,7 +367,7 @@ extern "C" int fC(void* user_data, int id, int* krowM, int* jcolM, double* M){
     extractRows(Mcol,
 		callbackData->in.getSecondStageRowLB(scen), 
 		callbackData->in.getSecondStageRowUB(scen), 
-		ineq_comp,
+		ineq_comp(),
 		krowM, jcolM, M);
   }
   return 0;
@@ -370,7 +380,7 @@ extern "C" int fD(void* user_data, int id, int* krowM, int* jcolM, double* M){
   extractRows(Mcol,
 	      callbackData->in.getSecondStageRowLB(id-1),
 	      callbackData->in.getSecondStageRowUB(id-1),
-	      ineq_comp,
+	      ineq_comp(),
 	      krowM, jcolM, M);
   return 0;
 }
