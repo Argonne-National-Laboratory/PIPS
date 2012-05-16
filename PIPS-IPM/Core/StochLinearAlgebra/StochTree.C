@@ -1,7 +1,7 @@
 #include "StochTree.h"
 #include "QpGenStoch.h"
-#include "QpGenStochData.h"
-#include "QpGenStochLinsys.h"
+#include "sData.h"
+
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"

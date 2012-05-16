@@ -10,7 +10,9 @@ StochGenMatrix::StochGenMatrix(int id,
 			       int A_m, int A_n, int A_nnz,
 			       int B_m, int B_n, int B_nnz,
 			       MPI_Comm mpiComm_)
-  : id(id), n(global_n), m(global_m), workPrimalVec(NULL), mpiComm(mpiComm_), iAmDistrib(0)
+  : id(id), m(global_m), n(global_n), 
+    mpiComm(mpiComm_), iAmDistrib(0),
+    workPrimalVec(NULL)
 {
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
@@ -21,8 +23,8 @@ StochGenMatrix::StochGenMatrix(int id,
   }
 }
 
-StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) :
-  workPrimalVec(NULL), iAmDistrib(0)
+StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) 
+  : iAmDistrib(0), workPrimalVec(NULL)
 {
   mpiComm = blocks[0]->mpiComm;
   n = blocks[0]->n;
@@ -36,9 +38,9 @@ StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) :
 
   vector<SparseGenMatrix*> v(blocks.size());
 
-  for (int i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Amat;
+  for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Amat;
   Amat = new SparseGenMatrix(v, false);
-  for (int i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Bmat;
+  for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Bmat;
   Bmat = new SparseGenMatrix(v, true);
   /*
   int m1, n1,m2,n2;
@@ -60,7 +62,7 @@ StochGenMatrix::~StochGenMatrix()
   if (Bmat)
     delete Bmat;
 
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     delete children[it];
 
   if(workPrimalVec)
@@ -78,6 +80,7 @@ OoqpVector* StochGenMatrix::getWorkPrimalVec(const StochVector& origin)
     workPrimalVec = origin.dataClone();
   else
     assert(workPrimalVec->length() == origin.vec->length());
+  return workPrimalVec;
 }
 
 int StochGenMatrix::isKindOf( int type )
@@ -125,7 +128,7 @@ void StochGenMatrix::scalarMult( double num)
 {
   Amat->scalarMult(num);
   Bmat->scalarMult(num);
-  for (int it=0; it<children.size(); it++) 
+  for (size_t it=0; it<children.size(); it++) 
     children[it]->scalarMult(num);
 }
 
@@ -168,7 +171,7 @@ void StochGenMatrix::getDiagonal( OoqpVector& vec_ )
   Bmat->getDiagonal(*vec.vec);
 
   //do it recursively
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->getDiagonal(*vec.children[it]);
 }
  
@@ -179,7 +182,7 @@ void StochGenMatrix::setToDiagonal( OoqpVector& vec_ )
 
   Bmat->setToDiagonal( *vec.vec);
 
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->setToDiagonal(*vec.children[it]);
 }
 
@@ -192,8 +195,8 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 
   //check the tree compatibility
   int nChildren = children.size();
-  assert(y.children.size() == nChildren);
-  assert(x.children.size() == nChildren);
+  assert(y.children.size() - nChildren == 0);
+  assert(x.children.size() - nChildren == 0);
 
   if (0.0 == alpha) {
     y.vec->scale( beta );
@@ -217,7 +220,7 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
     //}
   }
 
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->mult(beta, *y.children[it], alpha, *x.children[it]);
 }
 
@@ -255,7 +258,7 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   //!children when MPI_Allreduce
 
   //let the children compute their contribution
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
       children[it]->transMult2(beta, *y.children[it], alpha, *x.children[it], yvec);
   }
 
@@ -276,8 +279,8 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
 {
   //check the tree compatibility
   int nChildren = children.size();
-  assert(y.children.size() == nChildren);
-  assert(x.children.size() == nChildren);
+  assert(y.children.size() - nChildren == 0);
+  assert(x.children.size() - nChildren == 0);
 
   SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
@@ -307,7 +310,7 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
   else
     yvec.setToZero();
   
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->transMult2(beta, *y.children[it], 
 			     alpha, *x.children[it],
 			     yvec);
@@ -330,7 +333,7 @@ double StochGenMatrix::abmaxnorm()
 {
   double nrm = 0.0;
   
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     nrm = max(nrm, children[it]->abmaxnorm());
 
   if(iAmDistrib) {
@@ -380,7 +383,7 @@ int StochGenMatrix::numberOfNonZeros()
 {
   int nnz = 0;
 
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     nnz += children[it]->numberOfNonZeros();
 
   if(iAmDistrib) {

@@ -175,8 +175,6 @@ void SimpleVector::scalarMult( double num)
 // Useful for debugging purposes...
 void SimpleVector::printSolutionToStdErr( OoqpVector &vec)
 {
-  SimpleVector & sv = dynamic_cast<SimpleVector &>(vec);
-  double * y = sv.v;
   int i;
   for( i = 0; i < 10; i++ )
     {
