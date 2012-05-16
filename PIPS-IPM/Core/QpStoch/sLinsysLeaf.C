@@ -6,7 +6,6 @@
 #include "StochTree.h"
 #include "sFactory.h"
 #include "sData.h"
-//#include "QpGenSparseLinsys.h"
 #include "SparseSymMatrix.h"
 #include "SparseGenMatrix.h"
 #include "Ma57Solver.h"
@@ -72,29 +71,7 @@ void sLinsysLeaf::factor2(sData *prob, Variables *vars)
 {
   // Diagonals were already updated, so
   // just trigger a local refactorization (if needed, depends on the type of lin solver).
-  
-
-  //!log
-  SparseSymMatrix* kktsp = (SparseSymMatrix*) kkt;
-  int* krow = kktsp->krowM();
-  int* jcol = kktsp->jcolM();
-  double* M = kktsp->M();
-  int N = kktsp->size();
-  int nnz = krow[N];
-  /*
-  printf("KKT of size %d follows:\n", N);
-  for(int i=0; i<=N; i++)
-    printf("%d ", krow[i]);
-  printf("\n");
-  
-  for(int j=0; j<nnz; j++)
-    printf("%d ", jcol[j]);
-  printf("\n");
-  */
-  //for(int j=0; j<nnz; j++)
-  //  printf("%5d %6.2f\n", jcol[j], M[j]);
-  //printf("\n");
-  
+    
   stochNode->resMon.recFactTmLocal_start();
   solver->matrixChanged();
   stochNode->resMon.recFactTmLocal_stop();
@@ -152,7 +129,6 @@ void sLinsysLeaf::Ltsolve2( sData *prob, StochVector& x, SimpleVector& xp)
   //b_i -= Lni^T x0
   this->LniTransMult(prob, bi, -1.0, xp);
   solver->Ltsolve(bi);
-  SimpleVector& xi = bi;
   stochNode->resMon.recLtsolveTmChildren_stop();
 }
 
@@ -169,10 +145,10 @@ static void mySymAtPutSubmatrix(SymMatrix& kkt_,
 {
   SparseSymMatrix& kkt = reinterpret_cast<SparseSymMatrix&>(kkt_);
   SparseGenMatrix& B   = reinterpret_cast<SparseGenMatrix&>(B_);
-  SparseGenMatrix& D   = reinterpret_cast<SparseGenMatrix&>(D_);
+  //SparseGenMatrix& D   = reinterpret_cast<SparseGenMatrix&>(D_);
 
-  int* jcolK = kkt.jcolM(); int* jcolB = B.jcolM(); int* jcolD = D.jcolM(); 
-  int* krowK = kkt.krowM(); int* krowB = B.krowM(); int* krowD =  D.krowM();
+  int* jcolK = kkt.jcolM(); int* jcolB = B.jcolM(); //int* jcolD = D.jcolM(); 
+  int* krowK = kkt.krowM(); int* krowB = B.krowM(); //int* krowD =  D.krowM();
   double* MK = kkt.M();     double* MB = B.M();
 
   for(int i=0; i<locmy; i++) {
