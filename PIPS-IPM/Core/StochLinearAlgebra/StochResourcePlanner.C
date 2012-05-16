@@ -116,7 +116,7 @@ StochResourcePlanner::assignProcesses(vector<int>& vRanks,
  
 
   if(printLevel>0) {
-    printf("ResPlanner: assigned %d CPUs for %d NODEs (%g,%d)\n",
+    printf("ResPlanner: assigned %d CPUs for %lu NODEs (%g,%d)\n",
 	   noProcs, nodesLoad.size(), balance, allAssigned);
   }
 }
@@ -228,7 +228,7 @@ void LoadBalancing::assignNEP(vector<vector<int> >& mapping, double& balancing, 
 
   if(printLevel>9) {
     printf("============================================\n");
-    printf("  NEP Assign %d NODES to %d CPUs (%d,%d)\n", 
+    printf("  NEP Assign %d NODES to %lu CPUs (%d,%d)\n", 
 	   noNodes, ranksW.size(), maxNoParts, minElemsInSubpart);
     printf("===========================================\n");
   }
@@ -264,7 +264,7 @@ void LoadBalancing::assignNLP(vector<vector<int> >& mapping, double& balance, in
 
   if(printLevel>9) {
     printf("===========================================\n");
-    printf("  NLP Assign %d NODES to %d CPUs (%d,%d)\n", 
+    printf("  NLP Assign %d NODES to %lu CPUs (%d,%d)\n", 
 	   noNodes, ranksW.size(), maxNoParts, minElemsInSubpart);
     printf("===========================================\n");
   }
@@ -287,11 +287,11 @@ void LoadBalancing::assignNLP(vector<vector<int> >& mapping, double& balance, in
 	    preAssNodes, preAssRanks, mapping);
 
   if(printLevel>9) 
-    printf("NLP: %d NODES were pre-assigned to %d CPUS\n", 
+    printf("NLP: %lu NODES were pre-assigned to %lu CPUS\n", 
 	   preAssNodes.size(), preAssRanks.size());
 
   if(availNodes.size()>availRanks.size()) {
-    if(printLevel>9) printf("NLP NOT APLIC. Aborting! %d NODES %d CPUs\n",
+    if(printLevel>9) printf("NLP NOT APLIC. Aborting! %lu NODES %lu CPUs\n",
 			    availNodes.size(),availRanks.size());
     balance=1e10;
     allAssigned=0;
@@ -317,7 +317,7 @@ void LoadBalancing::assignNGP(vector<vector<int> >& mapping, double& balance, in
   
   if(printLevel>9) {
     printf("============================================\n");
-    printf("  NGP Assign %d NODES to %d CPUs (%d,%d)\n", 
+    printf("  NGP Assign %d NODES to %lu CPUs (%d,%d)\n", 
 	   noNodes, ranksW.size(), maxNoParts, minElemsInSubpart);
     printf("===========================================\n");
   }
@@ -341,11 +341,11 @@ void LoadBalancing::assignNGP(vector<vector<int> >& mapping, double& balance, in
 	    preAssNodes, preAssRanks, mapping);
 
   if(printLevel>9) 
-    printf("NGP: %d NODES were pre-assigned to %d CPUS\n", 
+    printf("NGP: %lu NODES were pre-assigned to %lu CPUS\n", 
 	   preAssNodes.size(), preAssRanks.size());
 	
   if(availNodes.size()<availRanks.size()) {
-    if(printLevel>9) printf("NGP NOT APLIC. Aborting! %d NODES %d CPUs\n",
+    if(printLevel>9) printf("NGP NOT APLIC. Aborting! %lu NODES %lu CPUs\n",
 			    availNodes.size(),availRanks.size());
     balance=1e10;
     allAssigned=0;
@@ -399,7 +399,7 @@ LoadBalancing::assignProcsToNodes(vector<int>& nodes,
 		    noSubParts, nodePartBalance, allNodesAssigned);
     if(printLevel>9) {
       printf("----------------------------------------------------------------------------------\n");
-      printf("SUBPARTITION NLP: %d NODES (w%5.3f,%d) %d CPUs(%5.3f,%d) in %d partitions.\n",
+      printf("SUBPARTITION NLP: %lu NODES (w%5.3f,%d) %d CPUs(%5.3f,%d) in %d partitions.\n",
 	     nodes.size(), nodePartBalance, allNodesAssigned, noProcs,
 	     procPartBalance, allProcsAssigned, noSubParts);
       printf("----------------------------------------------------------------------------------\n");
@@ -445,7 +445,7 @@ LoadBalancing::assignProcsToNodes(vector<int>& nodes,
 		     cpuWeights, nodesLoad, 
 		     nodesLoad.size(),balance, allAssigned);
 
-    if(printLevel>99) printf("Partitioned NLP %d CPUS into %d parts (ww%g,%d) \n", 
+    if(printLevel>99) printf("Partitioned NLP %lu CPUS into %lu parts (ww%g,%d) \n", 
 			     ranks.size(), nodesLoad.size(),balance, allAssigned); 
     
     if(0==allAssigned) {
@@ -459,7 +459,7 @@ LoadBalancing::assignProcsToNodes(vector<int>& nodes,
 		       cpuWeights, nodesLoad, 
 		       nodesLoad.size(),balance, allAssigned);
       
-     if(printLevel>999) printf("faPartition3 AFTER  %d NODES to %d CPUS (%6.3f,%d)\n", 
+     if(printLevel>999) printf("faPartition3 AFTER  %lu NODES to %lu CPUS (%6.3f,%d)\n", 
 			     nodes.size(), ranks.size(), balance, allAssigned);
     }
     updateMapping_N2P_NIdx(globMappingN2P, ranks, nodes, mapP2NIdx);
@@ -478,24 +478,23 @@ LoadBalancing::lastSweepNLP(vector<int>& nodes,
   double maxOne=0.0; double minMany=1.0e10;
   int level=1;
 
-  int levelIncreased=0;
   int maxCPU=0;
 
   do{
     nMaxOne=-1; nMinMany=-1; howMany=0; maxOne=0.0; minMany=1.0e10;
 
     for(size_t n=0; n<nodes.size(); n++) {
-      if(gMapping[n].size()==level) {
+      if(gMapping[n].size()-level==0) {
 	if(maxOne<nodesLoad[n]) {maxOne = nodesLoad[n]; nMaxOne=n;}
       } else { //gMapping[n].size>=1
 
-	if(gMapping[n].size()==level+1)
+	if(gMapping[n].size()-level==1)
 	  if(minMany>nodesLoad[n]) {
 	    minMany=nodesLoad[n]; 
 	    nMinMany=n; howMany=gMapping[n].size();
 	  }
 
-	if(maxCPU<gMapping[n].size()) maxCPU=gMapping[n].size();
+	if(maxCPU-gMapping[n].size()<0) maxCPU=gMapping[n].size();
       }
     }
     //do we have to switch?
@@ -505,7 +504,7 @@ LoadBalancing::lastSweepNLP(vector<int>& nodes,
       gMapping[nMinMany] = aux;
 
       if(printLevel>999)
-	printf("sweeping level=%2d: n(%3d,%6.4f) %2d CPU <---> n(%3d,%6.4f) %2d CPUs\n",
+	printf("sweeping level=%2d: n(%3d,%6.4f) %2lu CPU <---> n(%3d,%6.4f) %2d CPUs\n",
 	       level, nMaxOne, maxOne, aux.size(), nMinMany, minMany, howMany);
 
     } else {level++;}
@@ -518,7 +517,6 @@ LoadBalancing::assignNodesToProcs(vector<int>& nodes,
 			      vector<int>& ranks, 
 			      vector<vector<int> >& globMappingN2P)
 {
-  int noNodes = nodesLoad.size();
   int noProcs = ranks.size();
 
   int noSubParts = decideNoSubPartitions(noProcs);
@@ -549,7 +547,7 @@ LoadBalancing::assignNodesToProcs(vector<int>& nodes,
 		    noSubParts, nodePartBalance, allNodesAssigned);
     if(printLevel>9) {
       printf("----------------------------------------------------------------------------------\n");
-      printf("SUBPARTITION NGP: %d NODES (w%5.3f,%d) %d CPUs(%5.3f,%d) in %d partitions.\n",
+      printf("SUBPARTITION NGP: %lu NODES (w%5.3f,%d) %d CPUs(%5.3f,%d) in %d partitions.\n",
 	     nodes.size(), nodePartBalance, allNodesAssigned, noProcs,
 	     procPartBalance, allProcsAssigned, noSubParts);
       printf("----------------------------------------------------------------------------------\n");
@@ -598,7 +596,7 @@ LoadBalancing::assignNodesToProcs(vector<int>& nodes,
 	//!log
 	if(printLevel>99) {
 	  printf("Some CPUs node NOT assigned -> forcing full assignment ....\n");
-	  printf("faPartition BEFORE %d NODES to %d CPUS (%6.3f,%d)\n", 
+	  printf("faPartition BEFORE %lu NODES to %lu CPUS (%6.3f,%d)\n", 
 		 nodes.size(), ranks.size(), balance, allAssigned);
 	}	
 	
@@ -606,7 +604,7 @@ LoadBalancing::assignNodesToProcs(vector<int>& nodes,
 	
 
 	computeBalance(mapN2PIdx, ranks.size(), balance, allAssigned);
-	if(printLevel>99) printf("faPartition AFTER  %d NODES to %d CPUS (%6.3f,%d)\n", 
+	if(printLevel>99) printf("faPartition AFTER  %lu NODES to %lu CPUS (%6.3f,%d)\n", 
 				nodes.size(), ranks.size(), balance, allAssigned);
       }
       updateMapping_N2P_PIdx(globMappingN2P, nodes, ranks, mapN2PIdx);
@@ -711,7 +709,7 @@ void LoadBalancing::preAssignProcsToNodes(const vector<int>& nodes,
   //identify those nodes who should get less than 1 CPU and partition
   //them using NGP strategy
   int noProcs = ranks.size();
-  int noNodes = nodes.size(); assert(nodesLoad.size()==noNodes);
+  int noNodes = nodes.size(); assert(nodesLoad.size()-noNodes==0);
   
   //identify those nodes who should get less than 1 CPU and partition
   //this using NGP strategy
@@ -729,19 +727,19 @@ void LoadBalancing::preAssignProcsToNodes(const vector<int>& nodes,
 
   int preAssNoProcs = (int)ceil(preAssCPUTotal); assert(preAssNoProcs<noProcs);
   for(size_t i=0; i<ranks.size(); i++)
-    if(i<preAssNoProcs) preAssRanks.push_back(ranks[i]);
+    if(i-preAssNoProcs<0) preAssRanks.push_back(ranks[i]);
     else availRanks.push_back(ranks[i]);
 
   if(preAssNoProcs>0) {
     if(preAssNodes.size() >= preAssRanks.size()) {
       if(printLevel>9) 
-	printf("preAssignNLP: NGP a total of %d nodes will be NGPed to %d CPUs.\n",
+	printf("preAssignNLP: NGP a total of %lu nodes will be NGPed to %d CPUs.\n",
 	       preAssNodes.size(), preAssNoProcs);
       
       assignNodesToProcs(preAssNodes, preAssNodesLoad, preAssRanks, gMapping);
     } else {
       
-      printf("preAssignNLP: warning:  a total of %d nodes will be NLPed to %d CPUs.\n",
+      printf("preAssignNLP: warning:  a total of %lu nodes will be NLPed to %d CPUs.\n",
 	     preAssNodes.size(), preAssNoProcs);
 
       assignProcsToNodes(preAssNodes, preAssNodesLoad, preAssRanks, gMapping);
@@ -812,7 +810,7 @@ void LoadBalancing::computeBalanceW(const vector<vector<int> >& mapPart, const v
     int CPUsPerThisNode = mapPart[i].size();
     if(0==CPUsPerThisNode) {
       if(printLevel>0) 
-	printf("[%d] has nothing assigned. subparts=%d\n", i, noSubParts);
+	printf("[%lu] has nothing assigned. subparts=%d\n", i, noSubParts);
       assert(0!=CPUsPerThisNode);
     } 
 
@@ -853,21 +851,21 @@ LoadBalancing::computeBalanceWW(const vector<vector<int> >& mapPart,
   allAssigned=1;  balance = 0.0;
 
   assert(mapPart.size()    == nodeWeights.size());
-  assert(partWeights.size()== noSubParts);
+  assert(partWeights.size() - noSubParts == 0);
 
-  int i; double total = 0.0;
-  for(i=0; i<mapPart.size(); i++) total += nodeWeights[i];
+  double total = 0.0;
+  for(size_t i=0; i<mapPart.size(); i++) total += nodeWeights[i];
 
   double* parts = new double[noSubParts];
   for(int i=0; i<noSubParts; i++) parts[i] = 0.0;
 
-  for(i=0; i<mapPart.size(); i++) {
+  for(size_t i=0; i<mapPart.size(); i++) {
     assert(mapPart[i].size()==1);
     parts[mapPart[i][0]] += (nodeWeights[i] / total);
 
     //printf("Proc[%d] holds node[%d] of weight %g\n", i,  mapPart[i][0], partWeights[mapPart[i][0]]);
   }
-  for(i=0; i<noSubParts; i++) {
+  for(int i=0; i<noSubParts; i++) {
     double received = parts[i];
     if(received==0) {balance=1.0e10; allAssigned=0; break;}
 
@@ -884,15 +882,14 @@ LoadBalancing::computeBalanceWW(const vector<vector<int> >& mapPart,
 vector<int> 
 LoadBalancing::extractNodesForPart(int ipart, const vector<int>& nodes, const vector<vector<int> >& parts)
 {
-  int i,p;
   vector<int> ret;
 
   assert(nodes.size() == parts.size());
 
-  for(i=0; i<parts.size(); i++) {
+  for(size_t i=0; i<parts.size(); i++) {
     
     assert(parts[i].size()==1);
-    for(p=0; p<parts[i].size(); p++) {
+    for(size_t p=0; p<parts[i].size(); p++) {
       if(parts[i][p] == ipart)
 	ret.push_back(nodes[i]);
     }
@@ -905,7 +902,7 @@ LoadBalancing::extractNodesForPart(int ipart, const vector<int>& nodes, const ve
 vector<int> 
 LoadBalancing::extractIndxForPart(int ipart, const vector<int>& nodes, const vector<vector<int> >& parts)
 {
-  int i,p;
+  size_t i,p;
   vector<int> ret;
 
   assert(nodes.size() == parts.size());
@@ -930,8 +927,8 @@ LoadBalancing::extractElems(const vector<int>& nodes,
 {
   vector<double> ret(nodesSubSet.size(), 0.0);;
   int noNodes = nodesLoad.size();
-  assert(noNodes >= nodesSubSet.size());
-  assert(noNodes == nodes.size());
+  assert(noNodes - nodesSubSet.size() >= 0);
+  assert(noNodes - nodes.size() == 0);
 
   
   for(size_t j=0; j<nodesSubSet.size(); j++)
@@ -964,7 +961,7 @@ LoadBalancing::updateMapping_N2P_N2P(vector<vector<int> >& parts, const vector<i
 				 const vector<vector<int> >& subParts, 
 				 const vector<int>& subNodes, const vector<int>& subRanks)
 {
-  int isp;
+  size_t isp;
   assert(subParts.size()==subNodes.size());
   assert(parts.size()==nodes.size());
 
@@ -986,7 +983,7 @@ LoadBalancing::updateMapping_N2P_PIdx(vector<vector<int> >& parts,
 				  const vector<int>& nodes, const vector<int>& ranks,
 				  const vector<vector<int> >& subParts)
 {
-  int isp;
+  size_t isp;
   assert(subParts.size()==nodes.size());
 
   for(isp=0; isp<nodes.size(); isp++) {
@@ -1071,7 +1068,6 @@ void LoadBalancing::computePartitionWeights(const vector<vector<int> >& partitio
   weights.clear(); weights.resize(nparts);
   for(i=0; i<nparts; i++) weights[i] = 0.0;
 
-  double total=0.0;
   for(size_t i=0; i<partition.size(); i++) {
     //for(int c=0; c<partition[i].size(); c++)
     assert(partition[i].size() == 1);
@@ -1217,8 +1213,8 @@ void LoadBalancing::partitionVert(const vector<int>& nodes, const vector<double>
 	}
       
     }
-    assert(idM.size()==noMaxs);
-    assert(idm.size()==noMins);
+    assert(idM.size()-noMaxs==0);
+    assert(idm.size()-noMins==0);
   }
 
   //! check to not be bogus
@@ -1251,7 +1247,7 @@ void LoadBalancing::partitionVert(const vector<int>& nodes, const vector<double>
     edges++;
     assert(edges<=noEdges);
 
-    if(iMax<idM.size()) {
+    if(iMax-idM.size()<0) {
       if(inode == idM[iMax].idx) {
 	//one of the maxs -> add edges to the mins
 	for(size_t j=0; j<idm.size(); j++)
@@ -1262,7 +1258,7 @@ void LoadBalancing::partitionVert(const vector<int>& nodes, const vector<double>
       }
     }
     assert(edges<=noEdges);
-    if(iMin<idm.size()) {
+    if(iMin-idm.size()<0) {
       if(inode==idm[iMin].idx) {
 	//is one of the mins -> add edges to maxs
 	for(size_t j=0; j<idM.size(); j++)
@@ -1324,8 +1320,7 @@ void LoadBalancing::partitionVert(const vector<int>& nodes, const vector<double>
 
   partitions.clear(); partitions.resize(noNodes);
 
-  double totalLoad = 0.0; vector<double> partLoad(nparts, 0.0);
-
+  vector<double> partLoad(nparts, 0.0);
   for(int itn=0; itn<noNodes; itn++) {
     vector<int> vCPUs(1); vCPUs[0] =  part[itn] ;
     
@@ -1359,7 +1354,7 @@ void LoadBalancing::partitionWeightVert(const vector<int>& nodes, const vector<d
   //printf("partitionWV: assigning %d nodes to %d partitions\n", noNodes, nparts);
   // printf("%d Maxs will be connected to %d mins\n", noMaxs, noMins);
 
-  assert(nparts==partWeights.size());
+  assert(nparts-partWeights.size()==0);
 
   vector<IdxLoad> idM;
   vector<IdxLoad> idm;
@@ -1393,8 +1388,8 @@ void LoadBalancing::partitionWeightVert(const vector<int>& nodes, const vector<d
 	}
       
     }
-    assert(idM.size()==noMaxs);
-    assert(idm.size()==noMins);
+    assert(idM.size()-noMaxs==0);
+    assert(idm.size()-noMins==0);
   }
 
   //! check to not be bogus
@@ -1429,7 +1424,7 @@ void LoadBalancing::partitionWeightVert(const vector<int>& nodes, const vector<d
     edges++;
     assert(edges<=noEdges);
 
-    if(iMax<idM.size()) {
+    if(iMax-idM.size()<0) {
       if(inode == idM[iMax].idx) {
 	//one of the maxs -> add edges to the mins
 	for(size_t j=0; j<idm.size(); j++)
@@ -1440,8 +1435,8 @@ void LoadBalancing::partitionWeightVert(const vector<int>& nodes, const vector<d
       }
     }
     assert(edges<=noEdges);
-    if(iMin<idm.size()) {
-      if(inode==idm[iMin].idx) {
+    if(iMin-idm.size()<0) {
+      if(inode-idm[iMin].idx==0) {
 	//is one of the mins -> add edges to maxs
 	for(size_t j=0; j<idM.size(); j++)
 	  if( abs(idM[j].idx-inode)!=1 && idM[j].idx!=inode ) {  
@@ -1499,7 +1494,7 @@ void LoadBalancing::partitionWeightVert(const vector<int>& nodes, const vector<d
 
   partitions.clear(); partitions.resize(noNodes);
 
-  double totalLoad = 0.0; vector<double> partLoad(nparts, 0.0);
+  vector<double> partLoad(nparts, 0.0);
 
   for(int itn=0; itn<noNodes; itn++) {
     vector<int> vCPUs(1); vCPUs[0] = part[itn];
@@ -1563,7 +1558,7 @@ void LoadBalancing::faPartition2(const vector<int>& nodes, const vector<double>&
 
   //!log for(size_t i=0;i<nodes.size(); i++) printf("v[%d]=%g\n", vNodesS[i].n, vNodesS[i].load);
 
-  int n=0;
+  size_t n=0;
   for(; n<ranks.size(); n++)
     partitions[ vNodesS[n].n ].push_back(ranks[n]);
 
@@ -1600,7 +1595,7 @@ void LoadBalancing::faPartition3(const vector<int>& nodes, const vector<double>&
 
     //find the number of cpus each node is assigned to.
     for(int r=0; r<ncpus; r++) 
-      for(int n=0; n<partitions[r].size(); n++)
+      for(size_t n=0; n<partitions[r].size(); n++)
 	noCPUs[ partitions[r][n]  ] ++;
 
     //Find the node n0 not present on any CPU
@@ -1675,22 +1670,21 @@ void LoadBalancing::faPartition4(const vector<int>& nodes, const vector<double>&
 void LoadBalancing::faPartition(const vector<int>& nodes, const vector<double>& nodesLoad, 
 			    int nparts, vector<vector<int> >& partitions)
 {
-  assert(nodes.size()>=nparts);
+  assert(nodes.size()-nparts>=0);
   assert(partitions.size()==nodes.size());
-  size_t p,n;
 
   int*    parts = new int[nparts];
   double* loads = new double[nparts];
 
   int allAssigned=0;
   while(!allAssigned) {
-    for(p=0; p<nparts; p++) {parts[p]=0; loads[p]=0.0;}
+    for(int p=0; p<nparts; p++) {parts[p]=0; loads[p]=0.0;}
 
     //populate parts with number of nodes assigned to each part
     //populate loads with total load assigned to part  
     
-    for(n=0; n<nodes.size(); n++) {
-      for(p=0; p<partitions[n].size(); p++) {
+    for(size_t n=0; n<nodes.size(); n++) {
+      for(size_t p=0; p<partitions[n].size(); p++) {
 	parts[partitions[n][p]]++;
 	loads[partitions[n][p]] += nodesLoad[n]/partitions.size();
       } 
@@ -1700,7 +1694,7 @@ void LoadBalancing::faPartition(const vector<int>& nodes, const vector<double>& 
     //which part has no node assigned and which part has the max load
     //and at least two nodes
     int pMax=-1; int p0 =-1; double maxLoad=0.0;
-    for(p=0; p<nparts; p++) {
+    for(int p=0; p<nparts; p++) {
 
       if(parts[p]==0) p0=p;
 

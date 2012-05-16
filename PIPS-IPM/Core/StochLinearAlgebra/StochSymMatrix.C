@@ -22,7 +22,7 @@ StochSymMatrix::StochSymMatrix(const vector<StochSymMatrix*> &blocks)
   id = blocks[0]->id;
 
   vector<SparseSymMatrix*> v(blocks.size());
-  for(int i = 0; i < blocks.size(); i++) v[i] = blocks[i]->mat;
+  for(size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->mat;
   mat = new SparseSymMatrix(v);
 
 }
@@ -35,7 +35,7 @@ void StochSymMatrix::AddChild(StochSymMatrix* child)
 
 StochSymMatrix::~StochSymMatrix()
 {
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     delete children[it];
 
   if (mat) delete mat;
@@ -113,8 +113,8 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
 
   //check the tree compatibility
   int nChildren = children.size();
-  assert(y.children.size() == nChildren);
-  assert(x.children.size() == nChildren);
+  assert(y.children.size() - nChildren ==0);
+  assert(x.children.size() - nChildren ==0);
 
   //check the node size compatibility
   assert(this->mat->size() == y.vec->length());
@@ -161,7 +161,7 @@ double StochSymMatrix::abmaxnorm()
   localMaxNorm = mat->abmaxnorm();
   maxNorm = max(localMaxNorm, maxNorm);
   
-  for (int it=0; it<children.size(); it++) {
+  for (size_t it=0; it<children.size(); it++) {
     childMaxNorm = children[it]->abmaxnorm();
     maxNorm = max(childMaxNorm, maxNorm);
   }
@@ -187,7 +187,7 @@ void StochSymMatrix::getDiagonal( OoqpVector& vec_ )
 
   mat->getDiagonal( *vec.vec);
 
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->getDiagonal(*vec.children[it]);
 }
 
@@ -198,7 +198,7 @@ void StochSymMatrix::setToDiagonal( OoqpVector& vec_ )
 
   mat->setToDiagonal( *vec.vec);
 
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->setToDiagonal(*vec.children[it]);
 }
 
@@ -208,7 +208,7 @@ void StochSymMatrix::atPutDiagonal( int idiag, OoqpVector& v_ )
 
   //check the tree compatibility
   int nChildren = children.size();
-  assert(v.children.size() == nChildren);
+  assert(v.children.size() - nChildren==0);
 
   //check the node size compatibility
   assert(this->mat->size() == v.vec->length());
@@ -228,7 +228,7 @@ void StochSymMatrix::fromGetDiagonal( int idiag, OoqpVector& x_ )
 
   mat->getDiagonal(*x.vec);
 
-  for (int it=0; it<children.size(); it++) 
+  for (size_t it=0; it<children.size(); it++) 
     children[it]->getDiagonal(*x.children[it]);
 }
 
@@ -245,7 +245,7 @@ void StochSymMatrix::SymmetricScale( OoqpVector& vec_ )
 
   mat->SymmetricScale(*vec.vec);
 
-  for (int it=0; it<children.size(); it++) 
+  for (size_t it=0; it<children.size(); it++) 
     children[it]->SymmetricScale(*vec.children[it]);
 }
 
@@ -256,7 +256,7 @@ void StochSymMatrix::ColumnScale( OoqpVector& vec_ )
 
   mat->ColumnScale(*vec.vec);
 
-  for (int it=0; it<children.size(); it++) 
+  for (size_t it=0; it<children.size(); it++) 
     children[it]->ColumnScale(*vec.children[it]);
 }
 
@@ -267,7 +267,7 @@ void StochSymMatrix::RowScale ( OoqpVector& vec_ )
 
   mat->RowScale(*vec.vec);
 
-  for (int it=0; it<children.size(); it++) 
+  for (size_t it=0; it<children.size(); it++) 
     children[it]->RowScale(*vec.children[it]);
 }
 
@@ -275,7 +275,7 @@ void StochSymMatrix::RowScale ( OoqpVector& vec_ )
 void StochSymMatrix::scalarMult( double num )
 {
   mat->scalarMult(num);
-  for (int it=0; it<children.size(); it++) 
+  for (size_t it=0; it<children.size(); it++) 
     children[it]->scalarMult(num);
 }
 

@@ -83,7 +83,7 @@ void StochTreePrecond::assignProcesses(MPI_Comm workersComm, vector<int>& procs)
 
   //what is the load for each children
   vector<double> vChildsLoad(children.size()); 
-  for (int i=0; i<children.size(); i++) {
+  for (size_t i=0; i<children.size(); i++) {
     vChildsLoad[i] = children[i]->processLoad();
   }
 
@@ -128,7 +128,7 @@ void StochTreePrecond::assignProcesses(MPI_Comm workersComm, vector<int>& procs)
 
   MPI_Group mpiWorldGroup; 
   ierr = MPI_Comm_group(MPI_COMM_WORLD, &mpiWorldGroup); assert(ierr==MPI_SUCCESS);
-  for (int i=0; i<children.size(); i++) {
+  for (size_t i=0; i<children.size(); i++) {
 
     int isChildInProc=0;
     int noRanksOfChild = mChilds2Procs[i].size();
@@ -193,7 +193,7 @@ StochTreePrecond::assignToPreconditioner(vector<double>& vChildsLoad,
     int minPos=-1; double minVal=1.0e9; int totalChilds=0;
 
     do {
-      for(int nod=0; nod<mChilds2Procs.size(); nod++) {
+      for(size_t nod=0; nod<mChilds2Procs.size(); nod++) {
 	
 	if(mChilds2Procs[nod][0]==rankToTakeFrom) {
 	  totalChilds++;

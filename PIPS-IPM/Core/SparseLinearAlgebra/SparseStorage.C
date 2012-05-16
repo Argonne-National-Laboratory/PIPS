@@ -64,7 +64,7 @@ SparseStorage::SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal
   assert(blocks.size() > 0);
   m = n = len = 0;
   neverDeleteElts = 0;
-  for (int i = 0; i < blocks.size(); i++) {
+  for (size_t i = 0; i < blocks.size(); i++) {
     m += blocks[i]->m;
     len += blocks[i]->len;
     if (diagonal) {
@@ -84,7 +84,7 @@ SparseStorage::SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal
   
   int curnnz = 0, curn = 0, curm = 0;
 
-  for (int i = 0; i < blocks.size(); i++) {
+  for (size_t i = 0; i < blocks.size(); i++) {
     int lnnz = blocks[i]->len;
     int ln = blocks[i]->n;
     int lm = blocks[i]->m;
@@ -1130,7 +1130,7 @@ void SparseStorage::atPutDiagonal( int idiag,
 
 void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
 {
-  int ind, pend,ptend;
+  int ind, pend;//,ptend;
   /////////////////////////////////////////////////////
   // form the transpose 
   /////////////////////////////////////////////////////
@@ -1141,7 +1141,7 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
   for(int i=0; i<n;   i++) w[i]=0;
   for(int i=0; i<nnz; i++) w[ jcolM[i] ]++;
   
-  krowMt[0]=0; double sum=0.0;
+  krowMt[0]=0; //double sum=0.0;
   for(int i=1; i<=n; i++) {
     krowMt[i] = krowMt[i-1]+w[i-1];
     w[i-1] = krowMt[i-1];
@@ -1166,7 +1166,7 @@ void SparseStorage::matTransDSymbMultMat(double* d,
 					 int** krowAtDA, int** jcolAtDA, double** AtDA)
 					 
 {
-  int k,j, ind, nnzAtA=0, pend,ptend;
+  int k,j, nnzAtA=0, pend,ptend;
 
   ////////////////////////////////////////////////////
   // count the number of entries in the result AtA  //

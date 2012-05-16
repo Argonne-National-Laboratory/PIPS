@@ -38,7 +38,7 @@ SparseGenMatrix::SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bo
   : m_Mt(NULL)
 {
   vector<SparseStorage*> v(blocks.size());
-  for (int i = 0; i < blocks.size(); i++) v[i] = blocks[i]->mStorage;
+  for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->mStorage;
   mStorage = SparseStorageHandle(new SparseStorage(v,diagonal));
 }
 

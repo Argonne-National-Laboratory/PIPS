@@ -11,7 +11,7 @@
 class Data;
 class QpGen;
 class QpGenStoch;
-class QpGenStochData;
+class sData;
 class StochSymMatrix;
 class StochGenMatrix;
 class StochVector;
