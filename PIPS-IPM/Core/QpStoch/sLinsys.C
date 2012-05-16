@@ -531,22 +531,21 @@ void sLinsys::symAddColsToDenseSchurCompl(QpGenStochData *prob,
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
 
-	int ncols = endcol-startcol;
   int N, nxP, NP;
   A.getSize(N, nxP); assert(N==locmy);
   //out.getSize(ncols, N); assert(N == nxP);
   assert(endcol <= nxP);
 
   if(nxP==-1) C.getSize(N,nxP);
-  if(nxP==-1) nxP = NP;
+  if(nxP==-1) {assert(false); nxP = NP;} //petra - found that NP may be unitialized; initialized NP (to remove the compile warning) but added an assert
 
   N = locnx+locmy+locmz;
 
-	const int BLOCKSIZE = 40;
-
-	DenseGenMatrix cols(BLOCKSIZE,N);
-	int outi = 0;
-
+  const int BLOCKSIZE = 40;
+  
+  DenseGenMatrix cols(BLOCKSIZE,N);
+  int outi = 0;
+  
   
   // get list of completely zero columns
   /*
@@ -570,34 +569,34 @@ void sLinsys::symAddColsToDenseSchurCompl(QpGenStochData *prob,
     go = false;
   }*/
 
-	for (int col = startcol; col < endcol; col += BLOCKSIZE) {
-		int ecol = MIN(col+BLOCKSIZE,endcol);
-		int nbcols = ecol-col;
-
-
-		memset(cols[0],0,BLOCKSIZE*N*sizeof(double));
+  for (int col = startcol; col < endcol; col += BLOCKSIZE) {
+    int ecol = MIN(col+BLOCKSIZE,endcol);
+    int nbcols = ecol-col;
+    
+    
+    memset(cols[0],0,BLOCKSIZE*N*sizeof(double));
     
     //for (int c = col; c < ecol; c++) {
     //    A.fromGetDense(0,c,&cols[c-col][locnx],1,locmy,1);
     //    C.fromGetDense(0,c,&cols[c-col][locnx+locmy],1,locmz,1);
     //}
     bool allzero = true;
-
+    
     A.getStorage()->fromGetColBlock(col, &cols[0][locnx], N, nbcols, allzero);
-		C.getStorage()->fromGetColBlock(col, &cols[0][locnx+locmy], N, nbcols, allzero);
+    C.getStorage()->fromGetColBlock(col, &cols[0][locnx+locmy], N, nbcols, allzero);
     
     if (!allzero) {
       solver->solve(cols);
       
       
       A.getStorage()->transMultMatLower(out+outi, nbcols, col,
-                 -1.0, &cols[0][locnx], N);
+					-1.0, &cols[0][locnx], N);
       C.getStorage()->transMultMatLower(out+outi, nbcols, col,
-                 -1.0, &cols[0][locnx+locmy], N);
+					-1.0, &cols[0][locnx+locmy], N);
     }
-		for (int c = col; c < ecol; c++) {
-			outi += nxP-c;
-		}
+    for (int c = col; c < ecol; c++) {
+      outi += nxP-c;
+    }
     //
     //for (int c = col; c < ecol; c++) {
     //  A.getStorage()->transMultLower(1.0, out+outi,
@@ -606,10 +605,7 @@ void sLinsys::symAddColsToDenseSchurCompl(QpGenStochData *prob,
     //       -1.0, &cols[c-col][locnx+locmy],c);
     //  outi += nxP - c;
     //}
-	}
-
-  
-
+  }
 }
 
 /*

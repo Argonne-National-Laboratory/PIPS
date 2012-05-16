@@ -36,5 +36,5 @@ sFactoryAug::newLinsysRoot(QpGenStochData* prob,
 			   OoqpVector* dd,OoqpVector* dq,
 			   OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-  new sLinsysRootAug(this, prob, dd, dq, nomegaInv, rhs);
+  return new sLinsysRootAug(this, prob, dd, dq, nomegaInv, rhs);
 }
