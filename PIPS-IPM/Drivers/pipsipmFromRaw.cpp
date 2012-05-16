@@ -20,6 +20,7 @@ int main(int argc, char ** argv) {
   
   PIPSIPMInterface pipsIpm(*s);
   pipsIpm.loadData();
+
   pipsIpm.go();
 
   delete s;
