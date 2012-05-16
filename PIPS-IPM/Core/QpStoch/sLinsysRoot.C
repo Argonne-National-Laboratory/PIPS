@@ -6,7 +6,7 @@
 #include "sLinsysRoot.h"
 #include "StochTree.h"
 #include "sFactory.h"
-#include "QpGenStochData.h"
+#include "sData.h"
 #include "sDummyLinsys.h"
 #include "sLinsysLeaf.h"
 /*********************************************************************/
@@ -17,14 +17,14 @@
 extern double g_iterNumber;
 #endif
 
-sLinsysRoot::sLinsysRoot(sFactory * factory_, QpGenStochData * prob_)
+sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   : sLinsys(factory_, prob_), iAmDistrib(0)
 {
   createChildren(prob_);
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
-			 QpGenStochData* prob_,
+			 sData* prob_,
 			 OoqpVector* dd_, 
 			 OoqpVector* dq_,
 			 OoqpVector* nomegaInv_,
@@ -39,18 +39,18 @@ sLinsysRoot::~sLinsysRoot()
 
 }
 
-void sLinsysRoot::factor2(QpGenStochData *prob, Variables *vars)
+void sLinsysRoot::factor2(sData *prob, Variables *vars)
 {
   DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
 
   initializeKKT(prob, vars);
   
   // First tell children to factorize.
-  for(int c=0; c<children.size(); c++) {
+  for(size_t c=0; c<children.size(); c++) {
     children[c]->factor2(prob->children[c], vars);
   }
   
-  for(int c=0; c<children.size(); c++) {
+  for(size_t c=0; c<children.size(); c++) {
 
     if(children[c]->mpiComm == MPI_COMM_NULL)
       continue;
@@ -101,13 +101,13 @@ void sLinsysRoot::afterFactor()
 }
 #endif
 
-void sLinsysRoot::Lsolve(QpGenStochData *prob, OoqpVector& x)
+void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
 {
   StochVector& b = dynamic_cast<StochVector&>(x);
   assert(children.size() == b.children.size() );
 
   // children compute their part
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->Lsolve(prob->children[it], *b.children[it]);  
   }
 
@@ -126,7 +126,7 @@ void sLinsysRoot::Lsolve(QpGenStochData *prob, OoqpVector& x)
   } //else b0.writeToStream(cout);
 
 
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->stochNode->resMon.recLsolveTmChildren_start();
 
     SimpleVector& zi = dynamic_cast<SimpleVector&>(*b.children[it]->vec);
@@ -160,7 +160,7 @@ void sLinsysRoot::Lsolve(QpGenStochData *prob, OoqpVector& x)
 }
 
 
-void sLinsysRoot::Ltsolve2( QpGenStochData *prob, StochVector& x, SimpleVector& xp)
+void sLinsysRoot::Ltsolve2( sData *prob, StochVector& x, SimpleVector& xp)
 {
   StochVector& b   = dynamic_cast<StochVector&>(x);
   SimpleVector& bi = dynamic_cast<SimpleVector&>(*b.vec);
@@ -175,12 +175,12 @@ void sLinsysRoot::Ltsolve2( QpGenStochData *prob, StochVector& x, SimpleVector& 
 
   SimpleVector& xi = bi;
   //recursive call in order to get the children to do their part
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->Ltsolve2(prob->children[it], *b.children[it], xi);
   }
 }
 
-void sLinsysRoot::Ltsolve( QpGenStochData *prob, OoqpVector& x )
+void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
 {
   StochVector& b   = dynamic_cast<StochVector&>(x);
   SimpleVector& b0 = dynamic_cast<SimpleVector&>(*b.vec);
@@ -195,16 +195,16 @@ void sLinsysRoot::Ltsolve( QpGenStochData *prob, OoqpVector& x )
   
   // Li^T\bi for each child i. The backsolve needs z0
 
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->Ltsolve2(prob->children[it], *b.children[it], x0);
   }
 }
 
-void sLinsysRoot::Dsolve( QpGenStochData *prob, OoqpVector& x )
+void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
 {
   StochVector& b = dynamic_cast<StochVector&>(x);
 
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->Dsolve(prob->children[it], *b.children[it]);
   }
 
@@ -214,7 +214,7 @@ void sLinsysRoot::Dsolve( QpGenStochData *prob, OoqpVector& x )
 
 
 
-void sLinsysRoot::createChildren(QpGenStochData* prob)
+void sLinsysRoot::createChildren(sData* prob)
 {
 	sLinsys* child=NULL;
   StochVector& ddst = dynamic_cast<StochVector&>(*dd);
@@ -225,7 +225,7 @@ void sLinsysRoot::createChildren(QpGenStochData* prob)
   //get the communicator from one of the vectors
   this->mpiComm = ddst.mpiComm;
   this->iAmDistrib = ddst.iAmDistrib;
-  for(int it=0; it<prob->children.size(); it++) {
+  for(size_t it=0; it<prob->children.size(); it++) {
 		if(MPI_COMM_NULL == ddst.children[it]->mpiComm) {
       child = new sDummyLinsys(dynamic_cast<sFactory*>(factory), prob->children[it]);
     } else {
@@ -253,7 +253,7 @@ void sLinsysRoot::createChildren(QpGenStochData* prob)
 
 void sLinsysRoot::deleteChildren()
 {
-  for(int it=0; it<children.size(); it++) {
+  for(size_t it=0; it<children.size(); it++) {
     children[it]->deleteChildren();
     delete children[it];
   }
@@ -269,7 +269,7 @@ void sLinsysRoot::putXDiagonal( OoqpVector& xdiag_ )
   xDiag = xdiag.vec;
  
   // propagate it to the subtree
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->putXDiagonal(*xdiag.children[it]);
 }
 
@@ -283,7 +283,7 @@ void sLinsysRoot::putZDiagonal( OoqpVector& zdiag_ )
   zDiag = zdiag.vec;
 
   // propagate it to the subtree
-  for(int it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++)
     children[it]->putZDiagonal(*zdiag.children[it]);
 }
 
@@ -333,7 +333,7 @@ void sLinsysRoot::sync()
 // ATOMS of FACTOR 2
 //////////////////////////////////////////////////////////
   /* Atoms methods of FACTOR2 for a non-leaf linear system */
-void sLinsysRoot::initializeKKT(QpGenStochData* prob, Variables* vars)
+void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 {
   DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt); 
   myAtPutZeros(kktd);

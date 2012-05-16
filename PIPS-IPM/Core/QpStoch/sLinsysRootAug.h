@@ -6,7 +6,7 @@
 #define SAUGLINSYS
 
 #include "sLinsysRoot.h"
-class QpGenStochData;
+class sData;
 /** 
  * ROOT (= NON-leaf) linear system in reduced augmented form
  */
@@ -14,27 +14,27 @@ class sLinsysRootAug : public sLinsysRoot {
  protected:
   sLinsysRootAug() {};
 
-  virtual SymMatrix*   createKKT     (QpGenStochData* prob);
+  virtual SymMatrix*   createKKT     (sData* prob);
   virtual DoubleLinearSolver* 
-                       createSolver  (QpGenStochData* prob, 
+                       createSolver  (sData* prob, 
 				      SymMatrix* kktmat);
 
-  //virtual void         createChildren(QpGenStochData* prob) 
+  //virtual void         createChildren(sData* prob) 
   //{sLinsysRootAug::createChildren(prob);};
  public:
 
-  sLinsysRootAug(sFactory * factory_, QpGenStochData * prob_);
+  sLinsysRootAug(sFactory * factory_, sData * prob_);
   sLinsysRootAug(sFactory* factory,
-			     QpGenStochData* prob_,				    
-			     OoqpVector* dd_, OoqpVector* dq_, 
-			     OoqpVector* nomegaInv_,
-			     OoqpVector* rhs_);
+		 sData* prob_,				    
+		 OoqpVector* dd_, OoqpVector* dq_, 
+		 OoqpVector* nomegaInv_,
+		 OoqpVector* rhs_);
   virtual ~sLinsysRootAug();
 
  public:
-  virtual void finalizeKKT(QpGenStochData* prob, Variables* vars);
+  virtual void finalizeKKT( sData* prob, Variables* vars);
  protected:
-  virtual void solveReduced( QpGenStochData *prob, SimpleVector& b);
+  virtual void solveReduced( sData *prob, SimpleVector& b);
 
 
   SymMatrix* CtDC;

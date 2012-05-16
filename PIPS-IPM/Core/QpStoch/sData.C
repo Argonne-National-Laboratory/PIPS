@@ -1,4 +1,4 @@
-#include "QpGenStochData.h"
+#include "sData.h"
 #include "StochTree.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
@@ -6,7 +6,7 @@
 #include "QpGenVars.h"
 #include "SparseLinearAlgebraPackage.h"
 
-QpGenStochData::QpGenStochData(StochTree* tree)
+sData::sData(StochTree* tree)
 //  : QpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
 {
   stochNode = tree;
@@ -39,8 +39,8 @@ QpGenStochData::QpGenStochData(StochTree* tree)
   createChildren();
 }
 
-QpGenStochData::
-QpGenStochData(StochTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
+sData::
+sData(StochTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
 	       OoqpVector * xlow_in, OoqpVector * ixlow_in, int nxlow_,
 	       OoqpVector * xupp_in, OoqpVector * ixupp_in, int nxupp_,
 	       GenMatrix  * A_in, OoqpVector * bA_in,
@@ -63,7 +63,7 @@ QpGenStochData(StochTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
 }
 
 
-void QpGenStochData::createChildren()
+void sData::createChildren()
 {
   //follow the structure of one of the tree objects and create the same
   //structure for this class, and link this object with the corresponding 
@@ -85,7 +85,7 @@ void QpGenStochData::createChildren()
   
 
   for(int it=0; it<gSt.children.size(); it++) {
-    AddChild(new QpGenStochData(stochNode->children[it],
+    AddChild(new sData(stochNode->children[it],
 	       gSt.children[it], QSt.children[it],
 	       xlowSt.children[it], ixlowSt.children[it], nxlow,
 	       xuppSt.children[it], ixuppSt.children[it], nxupp,
@@ -97,7 +97,7 @@ void QpGenStochData::createChildren()
 
 }
 
-void QpGenStochData::destroyChildren()
+void sData::destroyChildren()
 {
   for(int it=0; it<children.size(); it++) {
     children[it]->destroyChildren();
@@ -106,12 +106,12 @@ void QpGenStochData::destroyChildren()
   children.clear();
 }
 
-void QpGenStochData::AddChild(QpGenStochData* child)
+void sData::AddChild(sData* child)
 {
   children.push_back(child);
 }
 
-double QpGenStochData::objectiveValue( QpGenVars * vars )
+double sData::objectiveValue( QpGenVars * vars )
 {
   StochVector& x = dynamic_cast<StochVector&>(*vars->x);
   OoqpVectorHandle temp( x.clone() );
@@ -122,7 +122,7 @@ double QpGenStochData::objectiveValue( QpGenVars * vars )
   return temp->dotProductWith( *vars->x );
 }
 
-void QpGenStochData::createScaleFromQ()
+void sData::createScaleFromQ()
 {
 
   assert("Not implemented!" && 0);
@@ -146,17 +146,17 @@ void QpGenStochData::createScaleFromQ()
 
 
 
-QpGenStochData::~QpGenStochData()
+sData::~sData()
 {
 }
 
-int QpGenStochData::getLocalnx()
+int sData::getLocalnx()
 {
   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
   return Qst.mat->size();
 }
 
-int QpGenStochData::getLocalmy()
+int sData::getLocalmy()
 {
   int my, nx;
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
@@ -164,7 +164,7 @@ int QpGenStochData::getLocalmy()
   return my;
 }
 
-int QpGenStochData::getLocalmz()
+int sData::getLocalmz()
 {
   int mz, nx;
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
@@ -172,7 +172,7 @@ int QpGenStochData::getLocalmz()
   return mz;
 }
 
-int QpGenStochData::getLocalSizes(int& nx, int& my, int& mz)
+int sData::getLocalSizes(int& nx, int& my, int& mz)
 {
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
   Ast.Bmat->getSize(my, nx);
@@ -182,7 +182,7 @@ int QpGenStochData::getLocalSizes(int& nx, int& my, int& mz)
 }
 
 
-int QpGenStochData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
+int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
 {
   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
@@ -194,7 +194,7 @@ int QpGenStochData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
 }
 
 
-SparseSymMatrix& QpGenStochData::getLocalQ()
+SparseSymMatrix& sData::getLocalQ()
 {
   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
   return *Qst.mat;
@@ -203,14 +203,14 @@ SparseSymMatrix& QpGenStochData::getLocalQ()
 // T_i x_0 + W_i x_i = b_i
 
 // This is T_i
-SparseGenMatrix& QpGenStochData::getLocalA()
+SparseGenMatrix& sData::getLocalA()
 {
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
   return *Ast.Amat;
 }
 
 // This is W_i:
-SparseGenMatrix& QpGenStochData::getLocalB()
+SparseGenMatrix& sData::getLocalB()
 {
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
   return *Ast.Bmat;
@@ -219,14 +219,14 @@ SparseGenMatrix& QpGenStochData::getLocalB()
 // low_i <= C_i x_0 + D_i x_i <= upp_i
 
 // This is C_i
-SparseGenMatrix& QpGenStochData::getLocalC()
+SparseGenMatrix& sData::getLocalC()
 {
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
   return *Cst.Amat;
 }
 
 // This is D_i
-SparseGenMatrix& QpGenStochData::getLocalD()
+SparseGenMatrix& sData::getLocalD()
 {
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
   return *Cst.Bmat;
@@ -234,7 +234,7 @@ SparseGenMatrix& QpGenStochData::getLocalD()
 
 
 
-void QpGenStochData::sync()
+void sData::sync()
 {
 
   

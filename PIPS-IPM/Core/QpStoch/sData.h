@@ -1,5 +1,5 @@
-#ifndef QPGENDATASTOCH
-#define QPGENDATASTOCH
+#ifndef DATAQPSTOCH
+#define DATAQPSTOCH
 
 #include "QpGenData.h"
 #include "StochTree.h"
@@ -14,24 +14,24 @@ class StochTree;
 class LinearAlgebraPackage;
 class QpGenVars;
 
-class QpGenStochData : public QpGenData {
+class sData : public QpGenData {
  public:
   /** constructor that makes data objects of the specified dimensions */
-  QpGenStochData(StochTree* tree);
+  sData(StochTree* tree);
 
   /** constructor that sets up pointers to the data objects that are
       passed as arguments */
-  QpGenStochData( StochTree* stochNode,
-		  OoqpVector * c, SymMatrix * Q,
-		  OoqpVector * xlow, OoqpVector * ixlow, int nxlow,
-		  OoqpVector * xupp, OoqpVector * ixupp, int nxupp,
-		  GenMatrix * A, OoqpVector * bA,
-		  GenMatrix * C,
-		  OoqpVector * clow, OoqpVector * iclow, int mclow,
-		  OoqpVector * cupp, OoqpVector * ciupp, int mcupp );
+  sData( StochTree* stochNode,
+	 OoqpVector * c, SymMatrix * Q,
+	 OoqpVector * xlow, OoqpVector * ixlow, int nxlow,
+	 OoqpVector * xupp, OoqpVector * ixupp, int nxupp,
+	 GenMatrix * A, OoqpVector * bA,
+	 GenMatrix * C,
+	 OoqpVector * clow, OoqpVector * iclow, int mclow,
+	 OoqpVector * cupp, OoqpVector * ciupp, int mcupp );
 
-  std::vector<QpGenStochData*> children;
-  void AddChild(QpGenStochData* child);
+  std::vector<sData*> children;
+  void AddChild(sData* child);
   StochTree* stochNode;
  public:
   int nxlow, nxupp, mclow, mcupp;
@@ -57,7 +57,7 @@ class QpGenStochData : public QpGenData {
   virtual void createScaleFromQ();
   virtual void datainput() {};
 
-  virtual ~QpGenStochData();
+  virtual ~sData();
 
 
  protected:

@@ -6,7 +6,7 @@
 #include "DeSymIndefSolver.h"
 #include "DeSymIndefSolver2.h"
 #include "DeSymPSDSolver.h"
-#include "QpGenStochData.h"
+#include "sData.h"
 
 #include <unistd.h>
 
@@ -14,7 +14,7 @@
 extern double g_iterNumber;
 #endif
 
-sLinsysRootAug::sLinsysRootAug(sFactory * factory_, QpGenStochData * prob_)
+sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
@@ -24,7 +24,7 @@ sLinsysRootAug::sLinsysRootAug(sFactory * factory_, QpGenStochData * prob_)
 };
 
 sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
-			       QpGenStochData* prob_,
+			       sData* prob_,
 			       OoqpVector* dd_, 
 			       OoqpVector* dq_,
 			       OoqpVector* nomegaInv_,
@@ -44,7 +44,7 @@ sLinsysRootAug::~sLinsysRootAug()
 
 
 SymMatrix* 
-sLinsysRootAug::createKKT(QpGenStochData* prob)
+sLinsysRootAug::createKKT(sData* prob)
 {
   int n = locnx+locmy;
   return new DenseSymMatrix(n);
@@ -52,7 +52,7 @@ sLinsysRootAug::createKKT(QpGenStochData* prob)
 
 
 DoubleLinearSolver*
-sLinsysRootAug::createSolver(QpGenStochData* prob, SymMatrix* kktmat_)
+sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
 
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
@@ -63,7 +63,7 @@ sLinsysRootAug::createSolver(QpGenStochData* prob, SymMatrix* kktmat_)
 
 
 
-void sLinsysRootAug::solveReduced( QpGenStochData *prob, SimpleVector& b)
+void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 {
   assert(locnx+locmy+locmz==b.length());
   SimpleVector& r = (*redRhs);
@@ -128,7 +128,7 @@ void sLinsysRootAug::solveReduced( QpGenStochData *prob, SimpleVector& b)
   
 }
 
-void sLinsysRootAug::finalizeKKT(QpGenStochData* prob, Variables* vars)
+void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 {
   int j, p, pend; double val;
 

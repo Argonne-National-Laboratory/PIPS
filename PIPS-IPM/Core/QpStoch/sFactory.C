@@ -4,7 +4,7 @@
 
 #include "sFactory.h"
 
-#include "QpGenStochData.h"
+#include "sData.h"
 #include "StochTree.h"
 #include "StochInputTree.h"
 #include "StochSymMatrix.h"
@@ -104,19 +104,19 @@ Data * sFactory::makeData()
     cout << "IO second part took " << t2 << " sec\n";
   }
 
-  data = new QpGenStochData( tree, 
-			     c, Q, 
-			     xlow, ixlow, ixlow->numberOfNonzeros(),
-			     xupp, ixupp, ixupp->numberOfNonzeros(),
-			     A, b,
-			     C, clow, iclow, iclow->numberOfNonzeros(),
-			     cupp, icupp, icupp->numberOfNonzeros() );
+  data = new sData( tree, 
+		    c, Q, 
+		    xlow, ixlow, ixlow->numberOfNonzeros(),
+		    xupp, ixupp, ixupp->numberOfNonzeros(),
+		    A, b,
+		    C, clow, iclow, iclow->numberOfNonzeros(),
+		    cupp, icupp, icupp->numberOfNonzeros() );
   return data;
 }
 
 Variables* sFactory::makeVariables( Data * prob_in )
 {
-  QpGenStochData* prob = dynamic_cast<QpGenStochData*>(prob_in);
+  sData* prob = dynamic_cast<sData*>(prob_in);
 
   OoqpVector * x      = tree->newPrimalVector();
   OoqpVector * s      = tree->newDualZVector();
@@ -145,7 +145,7 @@ Variables* sFactory::makeVariables( Data * prob_in )
 
 Residuals* sFactory::makeResiduals( Data * prob_in )
 {
-  QpGenStochData* prob = dynamic_cast<QpGenStochData*>(prob_in);
+  sData* prob = dynamic_cast<sData*>(prob_in);
   resid =  new sResiduals(tree, 
 			  prob->ixlow, prob->ixupp,
 			  prob->iclow, prob->icupp);
@@ -167,9 +167,9 @@ sFactory::newLinsysLeaf()
   return NULL;
 }
 sLinsysLeaf* 
-sFactory::newLinsysLeaf(QpGenStochData* prob,
-			  OoqpVector* dd, OoqpVector* dq,
-			  OoqpVector* nomegaInv, OoqpVector* rhs)
+sFactory::newLinsysLeaf(sData* prob,
+			OoqpVector* dd, OoqpVector* dq,
+			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
   return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs);
 }
@@ -182,7 +182,7 @@ void sFactory::joinRHS( OoqpVector& rhs_in,  OoqpVector& rhs1_in,
 
 void
 sFactory::separateVars( OoqpVector& x_in, OoqpVector& y_in,
-			  OoqpVector& z_in, OoqpVector& vars_in )
+			OoqpVector& z_in, OoqpVector& vars_in )
 {
   assert(0 && "not implemented here");
 }

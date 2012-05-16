@@ -4,7 +4,7 @@
 
 #include "sFactoryAug.h"
 
-#include "QpGenStochData.h"
+#include "sData.h"
 
 #include "StochTree.h"
 #include "StochInputTree.h"
@@ -32,7 +32,7 @@ sLinsysRoot* sFactoryAug::newLinsysRoot()
 }
 
 sLinsysRoot* 
-sFactoryAug::newLinsysRoot(QpGenStochData* prob,
+sFactoryAug::newLinsysRoot(sData* prob,
 			   OoqpVector* dd,OoqpVector* dq,
 			   OoqpVector* nomegaInv, OoqpVector* rhs)
 {
