@@ -193,14 +193,13 @@ void extractRows(CoinPackedMatrix Mcol,
 
   if (nRow==0) {
     krowM[0]=0;
+    delete[] indRow;
     return;
   }
 
   CoinPackedMatrix Msub;
 
   Msub.submatrixOf(M, nRow, indRow); //this seems to crash if nRow==0
-
-  delete[] indRow;
 
   assert(false==Msub.hasGaps());
 
