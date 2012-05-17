@@ -3,6 +3,7 @@
 
 #include "stochasticInput.hpp"
 #include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
 #include "CBSolver.hxx"
 
 using namespace ConicBundle;
@@ -44,9 +45,11 @@ public:
 		cout << endl;*/
 
 		LagrangeSolver lsol(*input,scen,lagrangeDiff);
+		if (ws) lsol.setWarmStart(ws.get());
 		//lsol.setRatio(100*fabs(relprec));
 		lsol.go();
-		//cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
+		ws.reset(lsol.getWarmStart());
+		if (scen == 0) cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
 
 		//assert(lsol.getStatus() == Optimal);
 		assert(lsol.getStatus() != ProvenInfeasible);
@@ -78,6 +81,7 @@ private:
 	stochasticInput *input;
 	int scen;
 	std::vector<std::vector<double> > sols;
+	boost::shared_ptr<typename LagrangeSolver::WarmStart> ws;
 };
 
 template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriver(stochasticInput &input, 

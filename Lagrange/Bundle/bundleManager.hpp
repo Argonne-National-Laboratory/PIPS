@@ -4,7 +4,9 @@
 #include "BA.hpp"
 #include "BALPSolverInterface.hpp"
 #include "CoinFinite.hpp"
+#include <boost/shared_ptr.hpp>
 
+using boost::shared_ptr;
 
 struct cutInfo {
 	std::vector<double> evaluatedAt, subgradient, primalSol;
@@ -29,6 +31,7 @@ public:
 		currentSolution.resize(nscen,std::vector<double>(input.nFirstStageVars(),0.));
 		nIter = -1;
 		bundle.resize(nscen);
+		hotstarts.resize(nscen);
 		bestPrimalObj = COIN_DBL_MAX;
 		relativeConvergenceTol = 1e-6;
 		terminated_ = false;
@@ -60,6 +63,7 @@ protected:
 	int nIter;
 	double relativeConvergenceTol;
 	bool terminated_;
+	std::vector<shared_ptr<typename LagrangeSolver::WarmStart> > hotstarts;
 	
 
 
@@ -73,8 +77,14 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 	
 
 	L lsol(input,scen,at);
+	if (hotstarts[scen]) {
+		lsol.setWarmStart(hotstarts[scen].get());
+	} else if (scen > 0) {
+		lsol.setWarmStart(hotstarts[scen-1].get());
+	}
 	//lsol.setRatio(100*fabs(relprec));
 	lsol.go();
+	hotstarts[scen].reset(lsol.getWarmStart());
 	//cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
 
 	//assert(lsol.getStatus() == Optimal);
@@ -161,7 +171,7 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::iterate(
 
 	if (nIter++ == -1) { // just evaluate and generate subgradients
 		evaluateAndUpdate();
-		checkLastPrimals();
+		//checkLastPrimals();
 		return;
 	}
 

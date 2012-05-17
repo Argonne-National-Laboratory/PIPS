@@ -42,15 +42,13 @@ vector<string> lInfTrustModel::getFirstStageRowNames() {
 
 
 vector<double> lInfTrustModel::getSecondStageColLB(int scen) {
-	// >= 0, <=0 >= 0 (first two are from multipliers on box constraints for gamma)
+	// >= 0, >=0 >= 0 (first two are from multipliers on box constraints for gamma)
 	vector<double> lb(cuts[scen].size()+2*nvar1,0.);
-	fill(lb.begin()+nvar1,lb.begin()+2*nvar1,-COIN_DBL_MIN);
 	return lb;
 }
 
 vector<double> lInfTrustModel::getSecondStageColUB(int scen) {
 	vector<double> ub(cuts[scen].size()+2*nvar1,COIN_DBL_MAX);
-	fill(ub.begin()+nvar1,ub.begin()+2*nvar1,0.);
 	return ub;
 }
 
@@ -59,10 +57,10 @@ vector<double> lInfTrustModel::getSecondStageObj(int scen) {
 	vector<double> obj;
 	obj.reserve(cuts[scen].size()+2*nvar1);
 	for (int i = 0; i < nvar1; i++) {
-		obj.push_back(-center[scen][i]+trustRadius);
+		obj.push_back(center[scen][i]+trustRadius);
 	}
 	for (int i = 0; i < nvar1; i++) {
-		obj.push_back(-center[scen][i]-trustRadius);
+		obj.push_back(-center[scen][i]+trustRadius);
 	}
 	for (unsigned i = 0; i < cuts[scen].size(); i++) {
 		obj.push_back(-cuts[scen][i].computeC());
@@ -95,15 +93,15 @@ vector<string> lInfTrustModel::getSecondStageRowNames(int scen) {
 }
 
 CoinPackedMatrix lInfTrustModel::getFirstStageConstraints() {
-	vector<CoinBigIndex> starts(nvar1+2,0);
-	return CoinPackedMatrix(true, 0, nvar1+1,0,0,0,&starts[0],0);
+	vector<CoinBigIndex> starts(nvar1+1,0);
+	return CoinPackedMatrix(true, 0, nvar1,0,0,0,&starts[0],0);
 }
 
 CoinPackedMatrix lInfTrustModel::getSecondStageConstraints(int scen) {
 	/* diagonal blocks are of the form:
 	   [       e^T   ] 
-	   [ I  I -G_i^T ]
-	   This is convenient for updating the basis when subgradients are added
+	   [-I  I -G_i^T ]
+	   This order is convenient for updating the basis when subgradients are added
 	 */
 	
 	CoinBigIndex nnz = 0;
@@ -112,7 +110,7 @@ CoinPackedMatrix lInfTrustModel::getSecondStageConstraints(int scen) {
 	vector<int> idx; idx.reserve(cuts[scen].size()*(nvar1+1)+2*nvar1);
 	vector<CoinBigIndex> starts(ncol+1);
 	for (int i = 0; i < nvar1; i++) {
-		elts.push_back(1.);
+		elts.push_back(-1.);
 		idx.push_back(i+1);
 		starts[i] = nnz++;
 	}

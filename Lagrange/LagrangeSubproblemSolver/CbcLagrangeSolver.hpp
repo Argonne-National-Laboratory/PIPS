@@ -36,6 +36,10 @@ public:
 
 	std::vector<double> getBestFirstStageSolution() const;
 
+	typedef CoinWarmStart WarmStart;
+	// caller must free!
+	WarmStart* getWarmStart() const;
+	void setWarmStart(const WarmStart*);
 
 protected:
 	OsiClpSolverInterface m;

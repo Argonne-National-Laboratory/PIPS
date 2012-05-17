@@ -1,24 +1,22 @@
-#ifndef PROXLINFTRUSTMANGAGER_HPP
-#define PROXLINFTRUSTMANGAGER_HPP
+#ifndef PROXL1TRUSTMANGAGER_HPP
+#define PROXL1TRUSTMANGAGER_HPP
 
 #include "bundleManager.hpp"
 
 #include "cuttingPlaneBALP.hpp"
-#include "lInfTrustBALP.hpp"
-#include "lInfTrustBALP2.hpp"
+#include "l1TrustBALP.hpp"
 
-// like levelManager, but only accept a step if it's in the right direction
 template<typename BALPSolver, typename LagrangeSolver, typename RecourseSolver>
-class proxLinfTrustManager : public bundleManager<BALPSolver,LagrangeSolver,RecourseSolver> {
+class proxL1TrustManager : public bundleManager<BALPSolver,LagrangeSolver,RecourseSolver> {
 public:
-	proxLinfTrustManager(stochasticInput &input, BAContext & ctx) : 
+	proxL1TrustManager(stochasticInput &input, BAContext & ctx) : 
 		bundleManager<BALPSolver,LagrangeSolver,RecourseSolver>(input,ctx) {
 		int nscen = input.nScenarios();
 		trialSolution.resize(nscen,std::vector<double>(input.nFirstStageVars(),0.));
 		rows2l.resize(nscen);
 		cols2l.resize(nscen);
-		maxRadius = 10.;
-		curRadius = maxRadius/10.;
+		maxRadius = input.nFirstStageVars()*nscen;
+		curRadius = maxRadius/1000.;
 		counter = 0;
 	}
 
@@ -35,7 +33,7 @@ protected:
 		
 
 		{
-			lInfTrustModel lm(nvar1,this->bundle,curRadius,this->currentSolution);
+			l1TrustModel lm(nvar1,this->bundle,curRadius,this->currentSolution);
 			BALPSolver solver(lm,this->ctx, (this->nIter > 1) ? BALPSolver::usePrimal : BALPSolver::useDual);
 			
 			if (this->nIter > 1) {
@@ -74,20 +72,21 @@ protected:
 				}
 			}
 
-			double maxdiff = 0.;
+			double sumdiff = 0.;
 			for (int i = 0; i < nscen; i++) {
 				std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(i);
 				for (int k = 0; k < nvar1; k++) {
 					trialSolution[i][k] = -iterate[k+1];
-					maxdiff = max(fabs(trialSolution[i][k]-this->currentSolution[i][k]),maxdiff);
+					sumdiff += fabs(trialSolution[i][k]-this->currentSolution[i][k]);
 				}
 			}
+			printf("trust radius: %f, l1 dist: %f\n",curRadius,sumdiff);
 
 			double newObj = this->evaluateSolution(trialSolution);
 			cout << "Trial solution has obj = " << newObj;
 			if (newObj > this->currentObj) {
 				cout << ", accepting\n";
-				if (maxdiff > curRadius - 1e-5 && newObj > this->currentObj + 0.5*(lastModelObj-this->currentObj)) {
+				if (sumdiff > curRadius - 1e-5 && newObj > this->currentObj + 0.5*(lastModelObj-this->currentObj)) {
 					curRadius = min(2.*curRadius,maxRadius);
 					cout << "Increased trust region radius to " << curRadius << endl;
 				}
