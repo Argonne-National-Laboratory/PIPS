@@ -1,12 +1,12 @@
-#ifndef LINFTRUSTBALP_HPP
-#define LINFTRUSTBALP_HPP
+#ifndef LINFTRUSTBALP2_HPP
+#define LINFTRUSTBALP2_HPP
 
 #include "stochasticInput.hpp"
 #include "bundleManager.hpp"
 
 /*
 
-This is the cutting plane model with an L_infinity trust region of radius \Delta around
+This is the cutting plane model with an L_inf trust region of radius \Delta around
 the \gamma's. That is:
 
 min (wrt. \theta_i,\gamma_i) \sum_i \theta_i
@@ -14,21 +14,33 @@ s.t.
 \sum_i \gamma_i = 0,
 \theta_i e_K - G^i\gamma_i >= c_i, i = 1, ..., N
 \gamma_i^+-\Delta e <= \gamma_i <= \gamma_i^+ + \Delta e
+z_i >= \gamma_i - \gamma_i^+
+z_i >= \gamma_i^+ - \gamma_i
+z_i <= \Delta
 
 \theta_i's are free.
 \gamma_i^+ and \Delta are given.
-
+This is an alternative formulation to that of linfTrustBALP.hpp
 
 This LP has a primal block angular structure:
 
 
-     (t) (g)  (t) (g)         (t) (g)
-min [ 1     ][ 1     ]       [ 1     ]
-s.t.[     I ][     I ]       [     I ]   = 0    (l)
-    [ e -G_1]                           >= c_1  (u_1)
-             [ e -G_2]                  >= c_2  (u_2)
-                        ...
-                             [ e -G_N]  >= c_N  (u_N)
+      (t)(g)(z)
+min [e          ][e          ]   ... [e          ]
+s.t.[     I     ][     I     ]   ... [      I    ]   = 0
+    [     I   I                                     >= \gamma_1^+
+         -I   I                                     >= -\gamma_1^+
+	     -I                                     >= -\Delta e
+      e -G_1    ]                                   >= c_1
+                 [     I   I                        >= \gamma_2^+
+		      -I   I                        >= -\gamma_2^+
+		          -I                        >= -\Delta e
+                   e -G_2    ]                      >= c_2
+		                 ...
+			            [      I   I    >= \gamma_N^+
+				          -I   I    >= -\gamma_N^+
+					      -I    >= -\Delta e
+				      e  -G_N    ]  >= c_N
 
 We formulate and solve the *dual* of the LP as a dual block-angular problem, 
 because we have a solver for those!
@@ -39,14 +51,14 @@ because we have a solver for those!
 
 // note that the dual is a maximization problem, but input format assumes minimization.
 // so, sign of objective is flipped!!
-class lInfTrustModel : public stochasticInput {
+class lInfTrustModel2 : public stochasticInput {
 public:
-	lInfTrustModel(int nvar1, bundle_t const &cuts, double trustRadius, std::vector<std::vector<double> > const& center);
+	lInfTrustModel2(int nvar1, bundle_t const &cuts, double trustRadius, std::vector<std::vector<double> > const& center);
 	virtual int nScenarios() { return cuts.size(); }
 	virtual int nFirstStageVars() { return nvar1 ; }
 	virtual int nFirstStageCons() { return 0; }
-	virtual int nSecondStageVars(int scen) { return cuts[scen].size()+2*nvar1; }
-	virtual int nSecondStageCons(int scen) { return nvar1 + 1; }
+	virtual int nSecondStageVars(int scen) { return cuts[scen].size()+3*nvar1; }
+	virtual int nSecondStageCons(int scen) { return 2*nvar1 + 1; }
 
 	virtual std::vector<double> getFirstStageColLB();
 	virtual std::vector<double> getFirstStageColUB();

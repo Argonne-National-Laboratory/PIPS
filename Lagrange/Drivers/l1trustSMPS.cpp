@@ -4,7 +4,7 @@
 #include "ClpRecourseSolver.hpp"
 #include "ClpBALPInterface.hpp"
 #include "PIPSSInterface.hpp"
-#include "cuttingPlaneManager.hpp"
+#include "proxL1TrustManager.hpp"
 
 using namespace std;
 
@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	cuttingPlaneManager<PIPSSInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	proxL1TrustManager<ClpBALPInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();

@@ -146,6 +146,7 @@ void CbcLagrangeSolver::go() {
 	// preprocessing, cuts, heuristics all enabled?
 
 	const char * argv2[]={"","-solve","-log","0","-quit"};
+	//const char * argv2[]={"","-solve","-quit"};
 	if (ratio != 0.) cbcm->setDblParam(CbcModel::CbcAllowableFractionGap,ratio);
 	//cbcm->setMaximumNodes(10);
 	CbcMain1(5,argv2,*cbcm);
@@ -180,4 +181,12 @@ vector<double> CbcLagrangeSolver::getBestFirstStageSolution() const {
 	//const double *s = cbcm->solver()->getColSolution();
 	const double *s = cbcm->bestSolution();
 	return vector<double>(s,s+nvar1);
+}
+
+CoinWarmStart* CbcLagrangeSolver::getWarmStart() const {
+	return cbcm->solver()->getWarmStart();
+}
+
+void CbcLagrangeSolver::setWarmStart(const CoinWarmStart* w) {
+	cbcm->solver()->setWarmStart(w);
 }

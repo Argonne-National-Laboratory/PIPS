@@ -1,52 +1,52 @@
-#ifndef LINFTRUSTBALP_HPP
-#define LINFTRUSTBALP_HPP
+#ifndef L1BUNDLEBALP_HPP
+#define L1BUNDLEBALP_HPP
 
 #include "stochasticInput.hpp"
 #include "bundleManager.hpp"
 
-/*
+/* This is the l_1 trust region problem:
 
-This is the cutting plane model with an L_infinity trust region of radius \Delta around
-the \gamma's. That is:
+min \sum_i \theta_i 
+s.t.\sum_i \gamma_i = 0
+    \theta_i e_K - G^i\gamma_i >= c_i, i = 1, ..., N
+    z_i >= \gamma_i - \gamma_i^+
+    z_i >= \gamma_i^+ - \gamma_i
+    \sum e^Tz_i <= \Delta
 
-min (wrt. \theta_i,\gamma_i) \sum_i \theta_i
-s.t. 
-\sum_i \gamma_i = 0,
-\theta_i e_K - G^i\gamma_i >= c_i, i = 1, ..., N
-\gamma_i^+-\Delta e <= \gamma_i <= \gamma_i^+ + \Delta e
-
-\theta_i's are free.
 \gamma_i^+ and \Delta are given.
-
 
 This LP has a primal block angular structure:
 
 
-     (t) (g)  (t) (g)         (t) (g)
-min [ 1     ][ 1     ]       [ 1     ]
-s.t.[     I ][     I ]       [     I ]   = 0    (l)
-    [ e -G_1]                           >= c_1  (u_1)
-             [ e -G_2]                  >= c_2  (u_2)
-                        ...
-                             [ e -G_N]  >= c_N  (u_N)
+      (t)(g)(z)
+min [e          ][e          ]   ... [e           ]
+s.t.[     I      [     I         ... [      I        = 0
+            -e^T]        -e^T]                -e^T] >= -\Delta
+    [     I   I                                     >= \gamma_1^+
+         -I   I                                     >= -\gamma_1^+
+      e -G_1    ]                                   >= c_1
+                 [     I   I                        >= \gamma_2^+
+		      -I   I                        >= -\gamma_2^+
+                   e -G_2    ]                      >= c_2
+		                 ...
+			            [      I   I    >= \gamma_N^+
+				          -I   I    >= -\gamma_N^+
+				      e  -G_N    ]  >= c_N
 
-We formulate and solve the *dual* of the LP as a dual block-angular problem, 
-because we have a solver for those!
+We formulate and solve the *dual* of the above as a dual block-angular LP.
 
 */
 
-
-
 // note that the dual is a maximization problem, but input format assumes minimization.
 // so, sign of objective is flipped!!
-class lInfTrustModel : public stochasticInput {
+class l1TrustModel : public stochasticInput {
 public:
-	lInfTrustModel(int nvar1, bundle_t const &cuts, double trustRadius, std::vector<std::vector<double> > const& center);
+	l1TrustModel(int nvar1, bundle_t const &cuts, double trustRadius, std::vector<std::vector<double> > const& center);
 	virtual int nScenarios() { return cuts.size(); }
-	virtual int nFirstStageVars() { return nvar1 ; }
+	virtual int nFirstStageVars() { return nvar1+1; }
 	virtual int nFirstStageCons() { return 0; }
-	virtual int nSecondStageVars(int scen) { return cuts[scen].size()+2*nvar1; }
-	virtual int nSecondStageCons(int scen) { return nvar1 + 1; }
+	virtual int nSecondStageVars(int scen) { return cuts[scen].size() + 2*nvar1; }
+	virtual int nSecondStageCons(int scen) { return 2*nvar1 + 1; }
 
 	virtual std::vector<double> getFirstStageColLB();
 	virtual std::vector<double> getFirstStageColUB();
@@ -82,12 +82,11 @@ public:
 private:
 	int nvar1; // dimension of each \gamma
 	bundle_t const & cuts;
-	double trustRadius;
 	std::vector<std::vector<double> > const& center;
+	double trustRadius;
 
 
 };
-
 
 
 #endif
