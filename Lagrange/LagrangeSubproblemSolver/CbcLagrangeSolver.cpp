@@ -132,7 +132,7 @@ CbcLagrangeSolver::CbcLagrangeSolver(stochasticInput &input, int scenarioNumber,
 	cbcm.reset(new CbcModel(m));
 	CbcMain0(*cbcm);
 	//m.messageHandler()->setLogLevel(0);
-	cbcm->messageHandler()->setLogLevel(0);
+	//cbcm->messageHandler()->setLogLevel(0);
 
 	//assert(CbcModel::haveMultiThreadSupport());
 	//cbcm->setNumberThreads(4); // this should be adjusted to the system	
@@ -145,10 +145,10 @@ void CbcLagrangeSolver::go() {
 	// TODO: are all the settings correct?
 	// preprocessing, cuts, heuristics all enabled?
 
-	const char * argv2[]={"","-solve","-log","0","-quit"};
+	const char * argv2[]={"","-log","0","-solve","-quit"};
 	//const char * argv2[]={"","-solve","-quit"};
 	if (ratio != 0.) cbcm->setDblParam(CbcModel::CbcAllowableFractionGap,ratio);
-	//cbcm->setMaximumNodes(10);
+	cbcm->setMaximumNodes(10);
 	CbcMain1(5,argv2,*cbcm);
     	//cbcm->branchAndBound();
    

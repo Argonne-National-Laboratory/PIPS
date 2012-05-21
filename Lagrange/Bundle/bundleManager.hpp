@@ -10,7 +10,8 @@ using boost::shared_ptr;
 
 struct cutInfo {
 	std::vector<double> evaluatedAt, subgradient, primalSol;
-	double objval;
+	double objval; // underestimate of convex objective
+	double objmax; // overestimate of convex objective
 	double computeC() const; // compute component of c as defined above
 	// could include error estimates here later
 };
@@ -32,6 +33,8 @@ public:
 		nIter = -1;
 		bundle.resize(nscen);
 		hotstarts.resize(nscen);
+		recourseRowStates.resize(nscen);
+		recourseColStates.resize(nscen);
 		bestPrimalObj = COIN_DBL_MAX;
 		relativeConvergenceTol = 1e-6;
 		terminated_ = false;
@@ -64,6 +67,7 @@ protected:
 	double relativeConvergenceTol;
 	bool terminated_;
 	std::vector<shared_ptr<typename LagrangeSolver::WarmStart> > hotstarts;
+	std::vector<std::vector<variableState> > recourseRowStates, recourseColStates;
 	
 
 
@@ -77,10 +81,11 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 	
 
 	L lsol(input,scen,at);
+	// hot start for root node LP
 	if (hotstarts[scen]) {
 		lsol.setWarmStart(hotstarts[scen].get());
-	} else if (scen > 0) {
-		lsol.setWarmStart(hotstarts[scen-1].get());
+	} else if (hotstarts[ctx.localScenarios().at(1)]) {
+		lsol.setWarmStart(hotstarts[ctx.localScenarios()[1]].get());
 	}
 	//lsol.setRatio(100*fabs(relprec));
 	lsol.go();
@@ -91,7 +96,8 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 	assert(lsol.getStatus() != ProvenInfeasible);
 	
 	cutInfo cut;
-	cut.objval = -lsol.getBestPossibleObjective();
+	cut.objval = -lsol.getBestFeasibleObjective();
+	cut.objmax = -lsol.getBestPossibleObjective();
 	cut.primalSol = lsol.getBestFirstStageSolution(); 
 	cut.evaluatedAt = at;
 	cut.subgradient.resize(nvar1);
@@ -104,41 +110,89 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 }
 
 
-// this won't work with distributed scenarios
 template<typename B, typename L, typename R> double bundleManager<B,L,R>::testPrimal(std::vector<double> const& primal) {
 
 	const std::vector<double> &obj1 = input.getFirstStageObj();
+	const std::vector<int> &localScen = ctx.localScenarios();
 	int nscen = input.nScenarios();
 	int nvar1 = input.nFirstStageVars();
 	double obj = 0.;
-	bool infeas = false;
-	for (int s = 0; s < nscen; s++) {
-		R rsol(input,s,primal);
+	for (unsigned i = 1; i < localScen.size(); i++) {
+		int scen = localScen[i];
+		int nvar2 = input.nSecondStageVars(scen);
+		int ncons2 = input.nSecondStageCons(scen);
+		R rsol(input,scen,primal);
+		rsol.setDualObjectiveLimit(1e10);
+		if (input.continuousRecourse() && recourseRowStates[scen].size()) {
+			for (int k = 0; k < nvar2; k++) {
+				rsol.setSecondStageColState(k,recourseColStates[scen][k]);
+			}
+			for (int k = 0; k < ncons2; k++) {
+				rsol.setSecondStageRowState(k,recourseRowStates[scen][k]);
+			}
+		}
+		
 		rsol.go();
+		if (input.continuousRecourse()) {
+			recourseColStates[scen].resize(nvar2);
+			for (int k = 0; k < nvar2; k++) {
+				recourseColStates[scen][k] = rsol.getSecondStageColState(k);
+			}
+			recourseRowStates[scen].resize(ncons2);
+			for (int k = 0; k < ncons2; k++) {
+				recourseRowStates[scen][k] = rsol.getSecondStageRowState(k);
+			}
+		}
+
 		obj += rsol.getObjective();
 		
 		if (rsol.getStatus() == ProvenInfeasible) {
 			printf("got infeasible 1st stage\n");
-			infeas = true; break;
+			obj = COIN_DBL_MAX;
+			break;
 		}
 	}
-	if (infeas) return COIN_DBL_MAX;
+	double allobj;
+	MPI_Allreduce(&obj,&allobj,1,MPI_DOUBLE,MPI_SUM,ctx.comm());
 	for (int k = 0; k < nvar1; k++) {
-		obj += primal[k]*obj1[k];
+		allobj += primal[k]*obj1[k];
 	}
 	
-	return obj;
+	return allobj;
 
 }
 
 template<typename B, typename L, typename R> double bundleManager<B,L,R>::evaluateSolution(std::vector<std::vector<double> > const& sol) {
 
+	std::vector<int> const& localScen = ctx.localScenarios();
 	int nscen = input.nScenarios();
+	for (unsigned i = 1; i < localScen.size(); i++) {
+		int scen = localScen[i];
+		cutInfo cut = solveSubproblem(sol[scen],scen);
+		bundle[scen].push_back(cut);
+	}
+
+
+	int nvar1 = input.nFirstStageVars();
 	double obj = 0.;
-	for (int i = 0; i < nscen; i++) {
-		cutInfo cut = solveSubproblem(sol[i],i);
-		bundle[i].push_back(cut);
-		obj -= cut.objval; // note cut has obj flipped
+	for (int scen = 0; scen < nscen; scen++) {
+		int proc = ctx.owner(scen);
+		int i;
+		if (ctx.mype() != proc) {
+			i = bundle[scen].size();
+			bundle[scen].push_back(cutInfo());
+			bundle[scen][i].primalSol.resize(nvar1);
+			bundle[scen][i].evaluatedAt.resize(nvar1);
+			bundle[scen][i].subgradient.resize(nvar1);
+		} else {
+			i = bundle[scen].size()-1;
+		}
+		MPI_Bcast(&bundle[scen][i].primalSol[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+		MPI_Bcast(&bundle[scen][i].evaluatedAt[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+		MPI_Bcast(&bundle[scen][i].subgradient[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+		MPI_Bcast(&bundle[scen][i].objval,1,MPI_DOUBLE,proc,ctx.comm());
+		MPI_Bcast(&bundle[scen][i].objmax,1,MPI_DOUBLE,proc,ctx.comm());
+		obj -= bundle[scen][i].objmax; // note cut has obj flipped
 	}
 	return obj;
 }
@@ -151,8 +205,8 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::evaluate
 template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLastPrimals() {
 
 	int nscen = input.nScenarios();
-	for (int i = 0; i < 5; i++) {
-	//for (int i = 0; i < nscen; i++) {
+	//for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < nscen; i++) {
 		assert(bundle[i].size());
 		std::vector<double> const& p = bundle[i][bundle[i].size()-1].primalSol;
 		double o = testPrimal(p);
@@ -171,10 +225,10 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::iterate(
 
 	if (nIter++ == -1) { // just evaluate and generate subgradients
 		evaluateAndUpdate();
-		//checkLastPrimals();
 		return;
 	}
 
+	checkLastPrimals();
 	doStep();
 	
 }

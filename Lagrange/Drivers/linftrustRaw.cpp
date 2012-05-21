@@ -8,6 +8,15 @@
 
 using namespace std;
 
+class fakeIntegerWrapper : public rawInput {
+public:
+	fakeIntegerWrapper(const std::string &datarootname, int overrideScenarioNumber = 0, MPI_Comm comm = MPI_COMM_WORLD) :
+		rawInput(datarootname, overrideScenarioNumber, comm) {}
+	
+	virtual bool isFirstStageColInteger(int col) { return true; }
+
+};
+
 int main(int argc, char **argv) {
 
 	
@@ -23,12 +32,12 @@ int main(int argc, char **argv) {
 	string datarootname(argv[1]);
 	int nscen = atoi(argv[2]);
 
-	rawInput input(datarootname,nscen);
+	fakeIntegerWrapper input(datarootname,nscen);
 	
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	proxLinfTrustManager<ClpBALPInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	proxLinfTrustManager<PIPSSInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();
