@@ -53,7 +53,7 @@ public:
 
 		//assert(lsol.getStatus() == Optimal);
 		assert(lsol.getStatus() != ProvenInfeasible);
-		objective_value = -lsol.getBestPossibleObjective();
+		objective_value = -lsol.getBestFeasibleObjective();
 
 		std::vector<double> subgrad(nvar1*(nscen-1),0.0);
 		std::vector<double> sol = lsol.getBestFirstStageSolution();

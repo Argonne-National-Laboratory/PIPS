@@ -20,6 +20,7 @@ public:
 		maxRadius = 10.;
 		curRadius = maxRadius/10.;
 		counter = 0;
+		t = MPI_Wtime();
 	}
 
 
@@ -29,8 +30,9 @@ protected:
 		
 		int nscen = this->input.nScenarios();
 		int nvar1 = this->input.nFirstStageVars();
+		vector<int> const &localScen = this->ctx.localScenarios();
 		
-		printf("Iter %d Current Objective: %f\n",this->nIter-1,this->currentObj);
+		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Best Primal: %f, Relerr: %g Elapsed: %f\n",this->nIter-1,this->currentObj,this->bestPrimalObj,fabs(lastModelObj-this->currentObj)/fabs(this->currentObj),MPI_Wtime()-t);
 		if (this->terminated_) return;	
 		
 
@@ -42,13 +44,14 @@ protected:
 				for (int k = 0; k < lm.nFirstStageVars(); k++) {
 					solver.setFirstStageColState(k,cols1l[k]);
 				}
-				for (int i = 0; i < nscen; i++) {
-					for (int k = 0; k < lm.nSecondStageCons(i); k++) {
-						solver.setSecondStageRowState(i,k,rows2l[i][k]);
+				for (unsigned r = 1; r < localScen.size(); r++) {
+					int scen = localScen[r];
+					for (int k = 0; k < lm.nSecondStageCons(scen); k++) {
+						solver.setSecondStageRowState(scen,k,rows2l[scen][k]);
 					}
-					cols2l[i].push_back(AtLower);
-					for (int k = 0; k < lm.nSecondStageVars(i); k++) {
-						solver.setSecondStageColState(i,k,cols2l[i][k]);
+					cols2l[scen].push_back(AtLower);
+					for (int k = 0; k < lm.nSecondStageVars(scen); k++) {
+						solver.setSecondStageColState(scen,k,cols2l[scen][k]);
 					}
 				}
 				solver.commitStates();
@@ -63,33 +66,37 @@ protected:
 			for (int k = 0; k < lm.nFirstStageVars(); k++) {
 				cols1l[k] = solver.getFirstStageColState(k);
 			}
-			for (int i = 0; i < nscen; i++) {
-				rows2l[i].resize(lm.nSecondStageCons(i));
-				for (int k = 0; k < lm.nSecondStageCons(i); k++) {
-					rows2l[i][k] = solver.getSecondStageRowState(i,k);
+			for (unsigned r = 1; r < localScen.size(); r++) {
+				int scen = localScen[r];
+				rows2l[scen].resize(lm.nSecondStageCons(scen));
+				for (int k = 0; k < lm.nSecondStageCons(scen); k++) {
+					rows2l[scen][k] = solver.getSecondStageRowState(scen,k);
 				}
-				cols2l[i].resize(lm.nSecondStageVars(i));
-				for (int k = 0; k < lm.nSecondStageVars(i); k++) {
-					cols2l[i][k] = solver.getSecondStageColState(i,k);
+				cols2l[scen].resize(lm.nSecondStageVars(scen));
+				for (int k = 0; k < lm.nSecondStageVars(scen); k++) {
+					cols2l[scen][k] = solver.getSecondStageColState(scen,k);
 				}
 			}
 
-			double maxdiff = 0.;
-			for (int i = 0; i < nscen; i++) {
-				std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(i);
+			double maxdifftemp = 0.;
+			for (unsigned r = 1; r < localScen.size(); r++) {
+				int scen = localScen[r];
+				std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(scen);
 				for (int k = 0; k < nvar1; k++) {
-					trialSolution[i][k] = -iterate[k+1];
-					maxdiff = max(fabs(trialSolution[i][k]-this->currentSolution[i][k]),maxdiff);
+					trialSolution[scen][k] = -iterate[k+1];
+					maxdifftemp = max(fabs(trialSolution[scen][k]-this->currentSolution[scen][k]),maxdifftemp);
 				}
 			}
+			double maxdiff;
+			MPI_Allreduce(&maxdifftemp,&maxdiff,1,MPI_DOUBLE,MPI_MAX,this->ctx.comm());
 
 			double newObj = this->evaluateSolution(trialSolution);
-			cout << "Trial solution has obj = " << newObj;
+			if (this->ctx.mype() == 0) cout << "Trial solution has obj = " << newObj;
 			if (newObj > this->currentObj) {
-				cout << ", accepting\n";
+				if (this->ctx.mype() == 0) cout << ", accepting\n";
 				if (maxdiff > curRadius - 1e-5 && newObj > this->currentObj + 0.5*(lastModelObj-this->currentObj)) {
 					curRadius = min(2.*curRadius,maxRadius);
-					cout << "Increased trust region radius to " << curRadius << endl;
+					if (this->ctx.mype() == 0) cout << "Increased trust region radius to " << curRadius << endl;
 				}
 				swap(this->currentSolution,trialSolution);
 				this->currentObj = newObj;
@@ -100,13 +107,13 @@ protected:
 				}
 
 			} else {
-				cout << ", null step\n";
+				if (this->ctx.mype() == 0) cout << ", null step\n";
 				double rho = min(1.,curRadius)*(newObj-this->currentObj)/(this->currentObj-lastModelObj);
-				cout << "Rho: " << rho << " counter: " << counter << endl;
+				if (this->ctx.mype() == 0) cout << "Rho: " << rho << " counter: " << counter << endl;
 				if (rho > 0) counter++;
 				if (rho > 3 || (counter >= 3 && 1. < rho && rho <= 3.)) {
 					curRadius *= 1./min(rho,4.);
-					cout << "Decreased trust region radius to " << curRadius << endl;
+					if (this->ctx.mype() == 0) cout << "Decreased trust region radius to " << curRadius << endl;
 					counter = 0;
 				}
 			}
@@ -118,6 +125,7 @@ protected:
 private:
 	double lastModelObj;
 	double maxRadius, curRadius;
+	double t;
 	int counter;
 	// saved states for regularized cutting plane lp
 	std::vector<std::vector<variableState> > rows2l, cols2l;
