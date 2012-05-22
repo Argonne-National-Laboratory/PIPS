@@ -28,7 +28,6 @@ protected:
 	virtual void doStep() {
 		using namespace std;
 		
-		int nscen = this->input.nScenarios();
 		int nvar1 = this->input.nFirstStageVars();
 		vector<int> const &localScen = this->ctx.localScenarios();
 		
@@ -36,86 +35,84 @@ protected:
 		if (this->terminated_) return;	
 		
 
-		{
-			lInfTrustModel lm(nvar1,this->bundle,curRadius,this->currentSolution);
-			BALPSolver solver(lm,this->ctx, (this->nIter > 1) ? BALPSolver::usePrimal : BALPSolver::useDual);
-			
-			if (this->nIter > 1) {
-				for (int k = 0; k < lm.nFirstStageVars(); k++) {
-					solver.setFirstStageColState(k,cols1l[k]);
-				}
-				for (unsigned r = 1; r < localScen.size(); r++) {
-					int scen = localScen[r];
-					for (int k = 0; k < lm.nSecondStageCons(scen); k++) {
-						solver.setSecondStageRowState(scen,k,rows2l[scen][k]);
-					}
-					cols2l[scen].push_back(AtLower);
-					for (int k = 0; k < lm.nSecondStageVars(scen); k++) {
-						solver.setSecondStageColState(scen,k,cols2l[scen][k]);
-					}
-				}
-				solver.commitStates();
-			}
-
-
-
-			solver.go();
-			lastModelObj = solver.getObjective();
-
-			cols1l.resize(lm.nFirstStageVars());
+		lInfTrustModel lm(nvar1,this->bundle,curRadius,this->currentSolution);
+		BALPSolver solver(lm,this->ctx, (this->nIter > 1) ? BALPSolver::usePrimal : BALPSolver::useDual);
+		
+		if (this->nIter > 1) {
 			for (int k = 0; k < lm.nFirstStageVars(); k++) {
-				cols1l[k] = solver.getFirstStageColState(k);
+				solver.setFirstStageColState(k,cols1l[k]);
 			}
 			for (unsigned r = 1; r < localScen.size(); r++) {
 				int scen = localScen[r];
-				rows2l[scen].resize(lm.nSecondStageCons(scen));
 				for (int k = 0; k < lm.nSecondStageCons(scen); k++) {
-					rows2l[scen][k] = solver.getSecondStageRowState(scen,k);
+					solver.setSecondStageRowState(scen,k,rows2l[scen][k]);
 				}
-				cols2l[scen].resize(lm.nSecondStageVars(scen));
+				cols2l[scen].push_back(AtLower);
 				for (int k = 0; k < lm.nSecondStageVars(scen); k++) {
-					cols2l[scen][k] = solver.getSecondStageColState(scen,k);
+					solver.setSecondStageColState(scen,k,cols2l[scen][k]);
 				}
 			}
+			solver.commitStates();
+		}
 
-			double maxdifftemp = 0.;
-			for (unsigned r = 1; r < localScen.size(); r++) {
-				int scen = localScen[r];
-				std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(scen);
-				for (int k = 0; k < nvar1; k++) {
-					trialSolution[scen][k] = -iterate[k+1];
-					maxdifftemp = max(fabs(trialSolution[scen][k]-this->currentSolution[scen][k]),maxdifftemp);
-				}
+
+
+		solver.go();
+		lastModelObj = solver.getObjective();
+
+		cols1l.resize(lm.nFirstStageVars());
+		for (int k = 0; k < lm.nFirstStageVars(); k++) {
+			cols1l[k] = solver.getFirstStageColState(k);
+		}
+		for (unsigned r = 1; r < localScen.size(); r++) {
+			int scen = localScen[r];
+			rows2l[scen].resize(lm.nSecondStageCons(scen));
+			for (int k = 0; k < lm.nSecondStageCons(scen); k++) {
+				rows2l[scen][k] = solver.getSecondStageRowState(scen,k);
 			}
-			double maxdiff;
-			MPI_Allreduce(&maxdifftemp,&maxdiff,1,MPI_DOUBLE,MPI_MAX,this->ctx.comm());
+			cols2l[scen].resize(lm.nSecondStageVars(scen));
+			for (int k = 0; k < lm.nSecondStageVars(scen); k++) {
+				cols2l[scen][k] = solver.getSecondStageColState(scen,k);
+			}
+		}
 
-			double newObj = this->evaluateSolution(trialSolution);
-			if (this->ctx.mype() == 0) cout << "Trial solution has obj = " << newObj;
-			if (newObj > this->currentObj) {
-				if (this->ctx.mype() == 0) cout << ", accepting\n";
-				if (maxdiff > curRadius - 1e-5 && newObj > this->currentObj + 0.5*(lastModelObj-this->currentObj)) {
-					curRadius = min(2.*curRadius,maxRadius);
-					if (this->ctx.mype() == 0) cout << "Increased trust region radius to " << curRadius << endl;
-				}
-				swap(this->currentSolution,trialSolution);
-				this->currentObj = newObj;
+		double maxdifftemp = 0.;
+		for (unsigned r = 1; r < localScen.size(); r++) {
+			int scen = localScen[r];
+			std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(scen);
+			for (int k = 0; k < nvar1; k++) {
+				trialSolution[scen][k] = -iterate[k+1];
+				maxdifftemp = max(fabs(trialSolution[scen][k]-this->currentSolution[scen][k]),maxdifftemp);
+			}
+		}
+		double maxdiff;
+		MPI_Allreduce(&maxdifftemp,&maxdiff,1,MPI_DOUBLE,MPI_MAX,this->ctx.comm());
+
+		double newObj = this->evaluateSolution(trialSolution);
+		if (this->ctx.mype() == 0) cout << "Trial solution has obj = " << newObj;
+		if (newObj > this->currentObj) {
+			if (this->ctx.mype() == 0) cout << ", accepting\n";
+			if (maxdiff > curRadius - 1e-5 && newObj > this->currentObj + 0.5*(lastModelObj-this->currentObj)) {
+				curRadius = min(2.*curRadius,maxRadius);
+				if (this->ctx.mype() == 0) cout << "Increased trust region radius to " << curRadius << endl;
+			}
+			swap(this->currentSolution,trialSolution);
+			this->currentObj = newObj;
+			counter = 0;
+			if (fabs(lastModelObj-this->currentObj)/fabs(this->currentObj) < this->relativeConvergenceTol) {
+				this->terminated_ = true;
+				//checkLastPrimals();
+			}
+
+		} else {
+			if (this->ctx.mype() == 0) cout << ", null step\n";
+			double rho = min(1.,curRadius)*(newObj-this->currentObj)/(this->currentObj-lastModelObj);
+			if (this->ctx.mype() == 0) cout << "Rho: " << rho << " counter: " << counter << endl;
+			if (rho > 0) counter++;
+			if (rho > 3 || (counter >= 3 && 1. < rho && rho <= 3.)) {
+				curRadius *= 1./min(rho,4.);
+				if (this->ctx.mype() == 0) cout << "Decreased trust region radius to " << curRadius << endl;
 				counter = 0;
-				if (fabs(lastModelObj-this->currentObj)/fabs(this->currentObj) < this->relativeConvergenceTol) {
-					this->terminated_ = true;
-					//checkLastPrimals();
-				}
-
-			} else {
-				if (this->ctx.mype() == 0) cout << ", null step\n";
-				double rho = min(1.,curRadius)*(newObj-this->currentObj)/(this->currentObj-lastModelObj);
-				if (this->ctx.mype() == 0) cout << "Rho: " << rho << " counter: " << counter << endl;
-				if (rho > 0) counter++;
-				if (rho > 3 || (counter >= 3 && 1. < rho && rho <= 3.)) {
-					curRadius *= 1./min(rho,4.);
-					if (this->ctx.mype() == 0) cout << "Decreased trust region radius to " << curRadius << endl;
-					counter = 0;
-				}
 			}
 		}
 
