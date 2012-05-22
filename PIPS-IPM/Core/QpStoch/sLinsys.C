@@ -421,8 +421,7 @@ void sLinsys::addColsToDenseSchurCompl(sData *prob,
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
 
-
-	int ncols = endcol-startcol;
+  int ncols = endcol-startcol;
   int N, nxP, NP, ncols_t, N_out;
   A.getSize(N, nxP); assert(N==locmy);
   out.getSize(ncols_t, N_out); 
@@ -433,46 +432,44 @@ void sLinsys::addColsToDenseSchurCompl(sData *prob,
   if(nxP==-1) nxP = NP;
 
   N = locnx+locmy+locmz;
-	DenseGenMatrix cols(ncols,N);
+  DenseGenMatrix cols(ncols,N);
   bool allzero = true;
   memset(cols[0],0,N*ncols*sizeof(double));
   A.getStorage()->fromGetColBlock(startcol, &cols[0][locnx], N, endcol-startcol, allzero);
   C.getStorage()->fromGetColBlock(startcol, &cols[0][locnx+locmy], N, endcol-startcol, allzero);
 
-
-
-	//int mype; MPI_Comm_rank(MPI_COMM_WORLD, &mype);
-	//printf("solving with multiple RHS %d \n", mype);	
-	solver->solve(cols);
-	//printf("done solving %d \n", mype);
-
-	
-	const int blocksize = 20;
-
-	for (int it=0; it < ncols; it += blocksize) {
-		int end = MIN(it+blocksize,ncols);
-		int numcols = end-it;
-		
-		// SC-=At*y
-		A.getStorage()->transMultMat( 1.0, out[it], numcols, N_out,  
-		-1.0, &cols[it][locnx], N);
-		// SC-=Ct*z
-		C.getStorage()->transMultMat( 1.0, out[it], numcols, N_out,
-		-1.0, &cols[it][locnx+locmy], N);
-	}
-	
-//for (int it=startcol; it<endcol; it++) {
-//  double* pcol = cols[it-startcol];
-// 	A.transMult( 1.0, out[it-startcol], 1,  
-//		-1.0, &pcol[locnx],       1);
-//    // SC-=Ct*z
-//   C.transMult( 1.0, out[it-startcol], 1,
-//		-1.0, &pcol[locnx+locmy], 1);
-//
-//	}
-
-	//printf("did transmult %d \n", mype);
-
+  //int mype; MPI_Comm_rank(MPI_COMM_WORLD, &mype);
+  //printf("solving with multiple RHS %d \n", mype);	
+  solver->solve(cols);
+  //printf("done solving %d \n", mype);
+  
+  
+  const int blocksize = 20;
+  
+  for (int it=0; it < ncols; it += blocksize) {
+    int end = MIN(it+blocksize,ncols);
+    int numcols = end-it;
+    
+    // SC-=At*y
+    A.getStorage()->transMultMat( 1.0, out[it], numcols, N_out,  
+				  -1.0, &cols[it][locnx], N);
+    // SC-=Ct*z
+    C.getStorage()->transMultMat( 1.0, out[it], numcols, N_out,
+				  -1.0, &cols[it][locnx+locmy], N);
+  }
+  
+  //for (int it=startcol; it<endcol; it++) {
+  //  double* pcol = cols[it-startcol];
+  // 	A.transMult( 1.0, out[it-startcol], 1,  
+  //		-1.0, &pcol[locnx],       1);
+  //    // SC-=Ct*z
+  //   C.transMult( 1.0, out[it-startcol], 1,
+  //		-1.0, &pcol[locnx+locmy], 1);
+  //
+  //	}
+  
+  //printf("did transmult %d \n", mype);
+  
 }
 
 /*
