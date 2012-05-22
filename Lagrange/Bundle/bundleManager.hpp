@@ -114,7 +114,6 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::testPr
 
 	const std::vector<double> &obj1 = input.getFirstStageObj();
 	const std::vector<int> &localScen = ctx.localScenarios();
-	int nscen = input.nScenarios();
 	int nvar1 = input.nFirstStageVars();
 	double obj = 0.;
 	for (unsigned i = 1; i < localScen.size(); i++) {

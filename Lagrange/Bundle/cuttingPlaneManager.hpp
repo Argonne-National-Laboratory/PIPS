@@ -15,6 +15,7 @@ public:
 		int nscen = input.nScenarios();
 		rows2.resize(nscen);
 		cols2.resize(nscen);
+		t = MPI_Wtime();
 	}
 
 
@@ -22,13 +23,12 @@ protected:
 	virtual void doStep() {
 		using namespace std;
 		
-		int nscen = this->input.nScenarios();
+		vector<int> const &localScen = this->ctx.localScenarios();
 		int nvar1 = this->input.nFirstStageVars();
 		if (fabs(lastModelObj-this->currentObj)/fabs(this->currentObj) < this->relativeConvergenceTol) {
 			this->terminated_ = true;
-			//checkLastPrimals();
 		}
-		printf("Iter %d Current Objective: %f Model Objective: %f Best Primal: %f\n",this->nIter-1,this->currentObj,lastModelObj,this->bestPrimalObj);
+		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Model Objective: %f Best Primal: %f Elapsed: %f\n",this->nIter-1,this->currentObj,lastModelObj,this->bestPrimalObj,MPI_Wtime()-t);
 		if (this->terminated_) return;	
 		
 		cuttingPlaneModel cpm(nvar1,this->bundle,-this->bestPrimalObj);
@@ -38,16 +38,17 @@ protected:
 		BALPSolver solver(cpm,this->ctx, (this->nIter == 1) ? BALPSolver::useDual : BALPSolver::usePrimal);
 
 		if (this->nIter > 1) {
-			for (int k = 0; k < nvar1+1; k++) {
+			for (int k = 0; k < cpm.nFirstStageVars(); k++) {
 				solver.setFirstStageColState(k,cols1[k]);
 			}
-			for (int i = 0; i < nscen; i++) {
-				for (int k = 0; k < nvar1+1; k++) {
-					solver.setSecondStageRowState(i,k,rows2[i][k]);
+			for (unsigned r = 1; r < localScen.size(); r++) {
+				int scen = localScen[r];
+				for (int k = 0; k < cpm.nSecondStageCons(scen); k++) {
+					solver.setSecondStageRowState(scen,k,rows2[scen][k]);
 				}
-				cols2[i].push_back(AtLower);
-				for (unsigned k = 0; k < this->bundle[i].size(); k++) {
-					solver.setSecondStageColState(i,k,cols2[i][k]);
+				cols2[scen].push_back(AtLower);
+				for (int k = 0; k < cpm.nSecondStageVars(scen); k++) {
+					solver.setSecondStageColState(scen,k,cols2[scen][k]);
 				}
 			}
 			solver.commitStates();
@@ -60,23 +61,26 @@ protected:
 		for (int k = 0; k < nvar1+1; k++) {
 			cols1[k] = solver.getFirstStageColState(k);
 		}
-		for (int i = 0; i < nscen; i++) {
-			rows2[i].resize(nvar1+1);
-			for (int k = 0; k < nvar1+1; k++) {
-				rows2[i][k] = solver.getSecondStageRowState(i,k);
+		for (unsigned r = 1; r < localScen.size(); r++) {
+			int scen = localScen[r];
+			rows2[scen].resize(cpm.nSecondStageCons(scen));
+			for (int k = 0; k < cpm.nSecondStageCons(scen); k++) {
+				rows2[scen][k] = solver.getSecondStageRowState(scen,k);
 			}
-			cols2[i].resize(this->bundle[i].size());
-			for (unsigned k = 0; k < this->bundle[i].size(); k++) {
-				cols2[i][k] = solver.getSecondStageColState(i,k);
+			cols2[scen].resize(cpm.nSecondStageVars(scen));
+			for (int k = 0; k < cpm.nSecondStageVars(scen); k++) {
+				cols2[scen][k] = solver.getSecondStageColState(scen,k);
 			}
 		}
 
-		for (int i = 0; i < nscen; i++) {
-			std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(i);
+		for (unsigned r = 1; r < localScen.size(); r++) {
+			int scen = localScen[r];
+			std::vector<double> const& iterate = solver.getSecondStageDualRowSolution(scen);
 			for (int k = 0; k < nvar1; k++) {
-				this->currentSolution[i][k] = -iterate[k+1];
+				this->currentSolution[scen][k] = -iterate[k+1];
 			}
 		}
+		
 		this->evaluateAndUpdate();
 
 
@@ -84,6 +88,7 @@ protected:
 
 private:
 	double lastModelObj;
+	double t;
 	// saved states for cutting plane lp
 	std::vector<std::vector<variableState> > rows2, cols2;
 	std::vector<variableState> cols1;
