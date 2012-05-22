@@ -256,13 +256,6 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
   
   A.transMult(1.0, z01, -1.0, zi2);
   C.transMult(1.0, z01, -1.0, zi3);
-
-
-  if(stochNode->id()==-12) {
-      printf("sleeping (why?)\n");
-      //sleep(10);
-      //usleep(10000000);
-  }
 }
 
 
