@@ -40,7 +40,7 @@ void ClpRecourseSolver::go() {
 	// disable presolve so we can re-use optimal bases
 	solvectl.setPresolveType(ClpSolve::presolveOff);
 	solvectl.setSolveType(ClpSolve::useDual);
-	solver.setMaximumSeconds(300)
+	solver.setMaximumSeconds(300);
 	solver.initialSolve(solvectl);
 
 }	
