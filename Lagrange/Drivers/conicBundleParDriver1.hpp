@@ -2,6 +2,8 @@
 #define CONICBUNDLEPARDRIVER1HPP
 
 #include "conicBundleDriver.hpp"
+#include <fstream>
+#include <sstream>
 
 // use static assignment of scenarios
 
@@ -22,6 +24,7 @@ public:
 		for (int i = 0; i < nscen; i++) {
 			dummies[i].subgrad.resize(ndual);
 		}
+		nIter = 0;
 			
 	}
 
@@ -33,7 +36,7 @@ public:
 			 std::vector<PrimalData*>&     primal_solutions,
 			 PrimalExtender*& e
 		      ) {
-		
+		nIter++;	
 		double t = MPI_Wtime();
 
 		const std::vector<int> &localScen = ctx.localScenarios();
@@ -47,8 +50,14 @@ public:
 				subgrads,primalsol,e);
 			std::swap(dummies[scen].subgrad,subgrads[0]);
 			dummies[scen].cutval = cut_vals[0];
+			dummies[scen].primalsol = inner[i-1].getSavedSolutions().at(nIter-1);
 		}
 		int nscen = input.nScenarios();
+		int nvar1 = input.nFirstStageVars();
+		std::ofstream f;
+		std::stringstream ss;
+		ss << "cbsols" << nIter;
+		if (ctx.mype() == 0) f.open(ss.str().c_str());
 		for (int scen = 0; scen < nscen; scen++) {
 			MPI_Bcast(&dummies[scen].subgrad[0],ndual,MPI_DOUBLE,
 				ctx.owner(scen),ctx.comm());
@@ -56,7 +65,17 @@ public:
 				ctx.owner(scen),ctx.comm());
 			MPI_Bcast(&dummies[scen].objval,1,MPI_DOUBLE,
 				ctx.owner(scen),ctx.comm());
-
+			std::vector<double> sol(nvar1);
+			if (ctx.mype() == ctx.owner(scen)) {
+				sol = dummies[scen].primalsol;
+			}
+			MPI_Bcast(&sol[0],nvar1,MPI_DOUBLE,ctx.owner(scen),ctx.comm());
+			if (ctx.mype() == 0) {
+				for (int k = 0; k < nvar1; k++) {
+					f << sol[k] << " ";
+				}
+				f << std::endl;
+			}
 		}
 		if (ctx.mype() == 0) std::cout << "Solving all subproblems took " << MPI_Wtime() - t << " sec\n";
 
@@ -87,6 +106,7 @@ public:
 		DVector subgrad;
 		double cutval;
 		double objval;
+		std::vector<double> primalsol;
 	
 	
 	};
@@ -98,6 +118,7 @@ private:
 	stochasticInput &input;
 	BAContext const &ctx;
 	int ndual;
+	int nIter;
 
 };
 
@@ -123,7 +144,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleParD
 	for (int i = 1; i < nscen; i++) {
 		solver.add_function(master.dummies[i]);
 	}
-	solver.set_out(&cout,1);
+	if (mype == 0) solver.set_out(&cout,1);
 	solver.set_term_relprec(1e-6);
 	double t = MPI_Wtime();
 	do {
@@ -131,9 +152,9 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleParD
 		if (mype == 0) cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
 	} while (!solver.termination_code());
 
-	solver.print_termination_code(cout);
+	if (mype == 0) solver.print_termination_code(cout);
 	
-	
+	/*	
 	
 	const vector<double> &obj1 = input.getFirstStageObj();
 	// test last solutions (only)
@@ -169,6 +190,7 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleParD
 	}
 
 	cout << "Best LB: " << -solver.get_objval() << " Best UB: " << best << endl;
+	*/
 
 }
 
