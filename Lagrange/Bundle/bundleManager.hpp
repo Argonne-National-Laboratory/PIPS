@@ -5,6 +5,8 @@
 #include "BALPSolverInterface.hpp"
 #include "CoinFinite.hpp"
 #include <boost/shared_ptr.hpp>
+#include <sstream>
+#include <fstream>
 
 using boost::shared_ptr;
 
@@ -202,18 +204,31 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::evaluate
 }
 
 template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLastPrimals() {
+	using namespace std;
 
 	int nscen = input.nScenarios();
+	int nvar1 = input.nFirstStageVars();
 	//for (int i = 0; i < 5; i++) {
+	ofstream f;
+	stringstream ss;
+	ss << "sols" << nIter;
+	if (ctx.mype() == 0) f.open(ss.str().c_str());
 	for (int i = 0; i < nscen; i++) {
 		assert(bundle[i].size());
 		std::vector<double> const& p = bundle[i][bundle[i].size()-1].primalSol;
-		double o = testPrimal(p);
+		if (ctx.mype() == 0) {
+			for (int k = 0; k < nvar1; k++) {
+				f << p[k] << " ";
+			}
+			f << endl;
+		}
+		double o = 0.;// = testPrimal(p);
 		if (o < bestPrimalObj) {
 			bestPrimalObj = o;
 			bestPrimal = p;
 		}
 	}
+	if (ctx.mype() == 0) f.close();
 }
 
 
