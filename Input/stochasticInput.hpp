@@ -79,7 +79,30 @@ public:
 	// all second-stage variables continuous
 	virtual bool continuousRecourse() = 0;
 
+	/* Quadratic terms:
+	We allow the input to specify quadratic objective in the form of:
+	(1/2)x^TQx + c^T + \sum_{i=1}^N p_i ((1/2)y_i^TQ_iy_i + x_i^T{\hat Q_i^T}y_i + c_i^Ty)
+
+	Q is the first-stage hessian
+	Q_i is the second-stage hessian
+	\hat Q_i is the second-stage cross hessian
+
+	Default implementations are provided so that these do not need to be implemented if not used
+	*/
+
+	// column-oriented *lower triangle only*
+	// Q
+	virtual CoinPackedMatrix getFirstStageHessian();
+	// Q_i
+	virtual CoinPackedMatrix getSecondStageHessian(int scen);
+	// column-oriented, \hat Q_i
+	// Note: this has the second-stage variables on the rows and first-stage on the columns
+	virtual CoinPackedMatrix getSecondStageCrossHessian(int scen);
+
+
 };
+
+
 
 #endif
 
