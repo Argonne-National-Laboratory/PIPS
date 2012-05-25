@@ -71,7 +71,7 @@ public:
 	
 	// all scenarios have the same number of variables and constraints
 	virtual bool scenarioDimensionsEqual() = 0;
-	// constraint matrices are identical for each scenario,
+	// constraint (and hessian) matrices are identical for each scenario,
 	// column and row bounds and objective are allowed to vary
 	virtual bool onlyBoundsVary() = 0;
 	// all scenarios equally likely
