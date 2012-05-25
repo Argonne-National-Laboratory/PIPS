@@ -35,4 +35,10 @@ if(HAVE_MA57 AND HAVE_METIS)
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 
+  add_executable(ooqpFromRaw Drivers/ooqpFromRaw.cpp)
+  target_link_libraries(ooqpFromRaw
+    stochInput ${COIN_LIBS}
+    ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+
 endif(HAVE_MA57 AND HAVE_METIS)
