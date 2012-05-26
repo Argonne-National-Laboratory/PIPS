@@ -5,7 +5,7 @@
 #include "sFactory.h"
 
 #include "sData.h"
-#include "StochTree.h"
+#include "sTreeCallbacks.h"
 #include "StochInputTree.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
@@ -23,7 +23,7 @@ sFactory::sFactory( StochInputTree* inputTree)
   :QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
 {
   
-  tree = new StochTree(inputTree);
+  tree = new sTreeCallbacks(inputTree);
   tree->computeGlobalSizes();
   //now the sizes of the problem are available, set them
   tree->GetGlobalSizes(nx, my, mz);

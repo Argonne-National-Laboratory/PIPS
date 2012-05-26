@@ -1,8 +1,8 @@
 #include "sResiduals.h"
-#include "StochTree.h"
+#include "sTree.h"
 #include "StochVector.h"
 
-sResiduals::sResiduals( StochTree* tree, 
+sResiduals::sResiduals( sTree* tree, 
 			OoqpVector * rQ_,    OoqpVector * rA_, 
 			OoqpVector * rC_,    OoqpVector * rz_, 
 			OoqpVector * rt_,    OoqpVector * rlambda_, 
@@ -46,7 +46,7 @@ sResiduals::sResiduals( StochTree* tree,
 }
 
 
-sResiduals::sResiduals( StochTree* tree,
+sResiduals::sResiduals( sTree* tree,
 			OoqpVector * ixlow_, OoqpVector * ixupp_,
 			OoqpVector * iclow_, OoqpVector * icupp_ )
   :QpGenResiduals()

@@ -7,6 +7,7 @@
 #include "DeSymIndefSolver2.h"
 #include "DeSymPSDSolver.h"
 #include "sData.h"
+#include "sTree.h"
 
 #include <unistd.h>
 

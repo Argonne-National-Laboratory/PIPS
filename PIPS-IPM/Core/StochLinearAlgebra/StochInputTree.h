@@ -23,13 +23,14 @@ typedef int (*FLEN)(void* user_data, int id, int* len);
 using namespace std;
 
 class StochInputTree {
+  friend class sTreeCallbacks;
  public:
 
   /** 
    * Inner class that contains the node related data.
    */
   class StochInputNode {
-    friend class StochInputTree; friend class StochTree;
+    friend class StochInputTree; friend class StochTree; friend class sTreeCallbacks;
   public:
   StochInputNode();
 	StochInputNode(void* user_data, int id, 

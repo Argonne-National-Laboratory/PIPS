@@ -1,12 +1,12 @@
 #include "sData.h"
-#include "StochTree.h"
+#include "sTree.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 #include "QpGenVars.h"
 #include "SparseLinearAlgebraPackage.h"
 
-sData::sData(StochTree* tree)
+sData::sData(sTree* tree)
 //  : QpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
 {
   stochNode = tree;
@@ -39,15 +39,14 @@ sData::sData(StochTree* tree)
   createChildren();
 }
 
-sData::
-sData(StochTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
-	       OoqpVector * xlow_in, OoqpVector * ixlow_in, int nxlow_,
-	       OoqpVector * xupp_in, OoqpVector * ixupp_in, int nxupp_,
-	       GenMatrix  * A_in, OoqpVector * bA_in,
-	       GenMatrix  * C_in,
-	       OoqpVector * clow_in, OoqpVector * iclow_in, int mclow_,
-	       OoqpVector * cupp_in, OoqpVector * icupp_in, int mcupp_ )
-
+sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
+	     OoqpVector * xlow_in, OoqpVector * ixlow_in, int nxlow_,
+	     OoqpVector * xupp_in, OoqpVector * ixupp_in, int nxupp_,
+	     GenMatrix  * A_in, OoqpVector * bA_in,
+	     GenMatrix  * C_in,
+	     OoqpVector * clow_in, OoqpVector * iclow_in, int mclow_,
+	     OoqpVector * cupp_in, OoqpVector * icupp_in, int mcupp_ )
+  
   : QpGenData(SparseLinearAlgebraPackage::soleInstance(),
 	      c_in, Q_in, 
 	      xlow_in, ixlow_in, xupp_in, ixupp_in,

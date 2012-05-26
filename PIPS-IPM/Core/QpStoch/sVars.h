@@ -8,17 +8,17 @@
 class QpGen;
 class QpGenData;
 class LinearAlgebraPackage;
-class StochTree;
+class sTree;
 
 class sVars : public QpGenVars {
  public:
-  sVars(StochTree* tree,
-	OoqpVector * ixlow_in, OoqpVector * ixupp_in,
-	OoqpVector * iclow_in, OoqpVector * icupp_in);
+  sVars( sTree* tree,
+	 OoqpVector * ixlow_in, OoqpVector * ixupp_in,
+	 OoqpVector * iclow_in, OoqpVector * icupp_in);
 
   /** constructor in which the data and variable pointers are set to
       point to the given arguments */
-  sVars( StochTree* tree,
+  sVars( sTree* tree,
 	 OoqpVector * x_in, OoqpVector * s_in,
 	 OoqpVector * y_in, OoqpVector * z_in,
 	 OoqpVector * v_in, OoqpVector * gamma_in,
@@ -38,7 +38,7 @@ class sVars : public QpGenVars {
   std::vector<sVars*> children;
   void AddChild(sVars* child);
 
-  StochTree* stochNode;
+  sTree* stochNode;
 };
 #endif
 

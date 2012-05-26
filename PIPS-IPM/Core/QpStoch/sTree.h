@@ -1,42 +1,32 @@
-#ifndef STOCH_TREE
-#define STOCH_TREE
+/* PIPS-IPM                                                           *
+ * Author:  Cosmin G. Petra                                           *
+ * (C) 2012 Argonne National Laboratory. See Copyright Notification.  */
 
-#include "StochInputTree.h"
+#ifndef STOCH_TREE_BASE
+#define STOCH_TREE_BASE
+
 #include "StochResourcesMonitor.h"
+#include "StochVector.h"
+#include "StochGenMatrix.h"
+#include "StochSymMatrix.h"
+
+#include "list"
 
 #include "mpi.h"
 
-#include <vector>
-#include <list>
-class Data;
-class QpGen;
-class QpGenStoch;
-class sData;
-class StochSymMatrix;
-class StochGenMatrix;
-class StochVector;
-class QpGenStochLinsys;
-
-//#define POOLSCEN 1
-
-class StochTree {
+class sTree
+{
  public:
-
-  StochTree(StochInputTree* root);
-  StochTree(const std::vector<StochInputTree::StochInputNode*> &localscens);
-  StochTree(StochInputTree::StochInputNode* data_);
-  virtual ~StochTree();
+  virtual ~sTree();
 
   int NumberOfChildren() const { return children.size(); }
 
-  void computeGlobalSizes();
+  virtual void computeGlobalSizes() = 0;
   void GetGlobalSizes(int& NXOut, int& MYOut, int& MZOut);
   void GetLocalSizes(int& nxOut, int& myOut, int& mzOut);
 
-
-  virtual void assignProcesses  ( );
-  virtual void assignProcesses  (MPI_Comm, vector<int>&);
-  //void assignProcesses  (MPI_Comm);
+  void assignProcesses  ( );
+  void assignProcesses  (MPI_Comm, vector<int>&);
 
   MPI_Comm commWrkrs, myOldMpiComm; //workers only
   vector<int> myProcs, myOldProcs;
@@ -56,30 +46,29 @@ class StochTree {
   void syncPrimalVector(StochVector& vec);
   void syncDualYVector(StochVector& vec);
   void syncDualZVector(StochVector& vec);
-  void syncStochVector_old(StochVector& vec, int whatType);
   void syncStochVector(StochVector& vec);
 
   void syncStochGenMatrix(StochGenMatrix& mat);
   void syncStochSymMatrix(StochSymMatrix& mat);
 
-  StochSymMatrix*   createQ() const;
-  StochVector*      createc() const;
+  virtual StochSymMatrix*   createQ() const = 0;
+  virtual StochVector*      createc() const = 0;
 
-  StochVector*      createxlow()  const;
-  StochVector*      createixlow() const;
-  StochVector*      createxupp()  const;
-  StochVector*      createixupp() const;
-
-
-  StochGenMatrix*   createA() const;
-  StochVector*      createb() const;
+  virtual StochVector*      createxlow()  const = 0;
+  virtual StochVector*      createixlow() const = 0;
+  virtual StochVector*      createxupp()  const = 0;
+  virtual StochVector*      createixupp() const = 0;
 
 
-  StochGenMatrix*   createC() const;
-  StochVector*      createclow()  const;
-  StochVector*      createiclow() const;
-  StochVector*      createcupp()  const;
-  StochVector*      createicupp() const;
+  virtual StochGenMatrix*   createA() const = 0;
+  virtual StochVector*      createb() const = 0;
+
+
+  virtual StochGenMatrix*   createC() const = 0;
+  virtual StochVector*      createclow()  const = 0;
+  virtual StochVector*      createiclow() const = 0;
+  virtual StochVector*      createcupp()  const = 0;
+  virtual StochVector*      createicupp() const = 0;
 
   StochVector*      newPrimalVector() const;
   StochVector*      newDualYVector()  const;
@@ -91,19 +80,10 @@ class StochTree {
   StochVector*      newRhs();
 
   int innerSize(int which);
-  int nx() const;
-  int my() const; 
-  int mz() const; 
-  int id() const; 
-
-  //void* user_data() const { return data->user_data; }
-  //FNNZ  fnnzQ() const { return data->fnnzQ; }
-  //FNNZ  fnnzA() const { return data->fnnzA; }
-  //FNNZ  fnnzC() const { return data->fnnzC; }
-
-  //FMAT  fQ() const { return data->fQ; };
-  //FMAT  fA() const { return data->fA; };
-  //FMAT  fC() const { return data->fC; };
+  virtual int nx() const = 0;
+  virtual int my() const = 0; 
+  virtual int mz() const = 0; 
+  virtual int id() const = 0; 
 
   //returns the global load, i.e. statistic based on the NNZs and
   //dimensions of the node (and subnodes) subproblem before any iteration or the CPU
@@ -111,7 +91,7 @@ class StochTree {
   double processLoad() const;
 
  protected:
-  StochTree();
+  sTree();
 
   void   toMonitorsList(list<NodeExecEntry>&);
   void fromMonitorsList(list<NodeExecEntry>&);
@@ -122,27 +102,15 @@ class StochTree {
 
   int isInVector(int elem, const vector<int>& vec);
 
- protected:
-  StochInputTree::StochInputNode* data; //input data
-  // in POOLSCEN case, only root node has non-null data
-  StochInputTree* tree;
-  std::vector<StochInputTree::StochInputNode*> scens;
-  StochInputTree::StochInputNode* fakedata; //convenient struct for holding n,my,mz etc
-  // holds stoch trees for each of the scenarios that are combined at this node
-  // this is just a convenience to reuse the create* and newVector* functions
-  std::vector<StochTree*> real_children;	
 
-
-	//function pointers are invalid
  public:
   int N,MY,MZ; //global sizes
   int NNZA,NNZQ,NNZB,NNZC,NNZD; //global nnz
   int np; //n for the parent
 
   double IPMIterExecTIME;
-  std::vector<StochTree*> children;
+  std::vector<sTree*> children;
   static int numProcs;
-  //std::vector<int> processes;
 
   StochNodeResourcesMonitor    resMon;
   static StochIterateResourcesMonitor iterMon;
@@ -164,4 +132,4 @@ class StochTree {
 #endif
 };
 
-#endif
+#endif 

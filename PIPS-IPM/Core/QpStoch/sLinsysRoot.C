@@ -4,7 +4,7 @@
 
 
 #include "sLinsysRoot.h"
-#include "StochTree.h"
+#include "sTree.h"
 #include "sFactory.h"
 #include "sData.h"
 #include "sDummyLinsys.h"
