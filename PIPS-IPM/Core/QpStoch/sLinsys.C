@@ -3,7 +3,7 @@
    See license and copyright information in the documentation */
 
 #include "sLinsys.h"
-#include "StochTree.h"
+#include "sTree.h"
 #include "sFactory.h"
 #include "sData.h"
 #include "SparseLinearAlgebraPackage.h"
@@ -415,14 +415,14 @@ void sLinsys::addColsToDenseSchurCompl(sData *prob,
   SparseGenMatrix& C = prob->getLocalC();
 
   int ncols = endcol-startcol;
-  int N, nxP, NP, ncols_t, N_out;
+  int N, nxP, ncols_t, N_out;
   A.getSize(N, nxP); assert(N==locmy);
   out.getSize(ncols_t, N_out); 
   assert(N_out == nxP);
   assert(endcol <= nxP &&  ncols_t >= ncols);
 
   if(nxP==-1) C.getSize(N,nxP);
-  if(nxP==-1) nxP = NP;
+  //if(nxP==-1) nxP = NP;
 
   N = locnx+locmy+locmz;
   DenseGenMatrix cols(ncols,N);

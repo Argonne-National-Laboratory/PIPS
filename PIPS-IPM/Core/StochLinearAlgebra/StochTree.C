@@ -1,3 +1,7 @@
+/* PIPS-IPM                                                           *
+ * Author:  Cosmin G. Petra                                           *
+ * (C) 2010 Argonne National Laboratory. See Copyright Notification.  */
+
 #include "StochTree.h"
 #include "QpGenStoch.h"
 #include "sData.h"
@@ -88,59 +92,59 @@ StochTree::~StochTree()
 void StochTree::computeGlobalSizes()
 {
   if (data) {
-		N  = data->n;
-		MY = data->my;
-		MZ = data->mz;
-
-		NNZQ = data->nnzQ;
-		NNZA = data->nnzA;
-		NNZB = data->nnzB;
-		NNZC = data->nnzC;
-		NNZD = data->nnzD;
-	} else {
-		N = MY = MZ = NNZQ = NNZA = NNZB = NNZC = NNZD = 0;
-	}
-	if (tree && np == -1) {
+    N  = data->n;
+    MY = data->my;
+    MZ = data->mz;
+    
+    NNZQ = data->nnzQ;
+    NNZA = data->nnzA;
+    NNZB = data->nnzB;
+    NNZC = data->nnzC;
+    NNZD = data->nnzD;
+  } else {
+    N = MY = MZ = NNZQ = NNZA = NNZB = NNZC = NNZD = 0;
+  }
+  if (tree && np == -1) {
     for(size_t it=0; it<tree->children.size();it++) {
-			N += tree->children[it]->nodeInput->n;
-			MY += tree->children[it]->nodeInput->my;
-			MZ += tree->children[it]->nodeInput->mz;
-
-			NNZQ += tree->children[it]->nodeInput->nnzQ;
-			NNZA += tree->children[it]->nodeInput->nnzA;
-			NNZB += tree->children[it]->nodeInput->nnzB;
-			NNZC += tree->children[it]->nodeInput->nnzC;
-			NNZD += tree->children[it]->nodeInput->nnzD;
-		}
-	} else if (fakedata) {
-		fakedata->n = fakedata->my = fakedata->mz = fakedata->nnzQ = fakedata->nnzA = fakedata->nnzB = fakedata->nnzC = fakedata->nnzD = 0;	
-		for(size_t it=0; it<scens.size();it++) {
-			fakedata->n += scens[it]->n;
-			fakedata->my += scens[it]->my;
-			fakedata->mz += scens[it]->mz;
-			fakedata->nnzQ += scens[it]->nnzQ;
-			fakedata->nnzA += scens[it]->nnzA;
-			fakedata->nnzB += scens[it]->nnzB;
-			fakedata->nnzC += scens[it]->nnzC;
-			fakedata->nnzD += scens[it]->nnzD;
+      N += tree->children[it]->nodeInput->n;
+      MY += tree->children[it]->nodeInput->my;
+      MZ += tree->children[it]->nodeInput->mz;
+      
+      NNZQ += tree->children[it]->nodeInput->nnzQ;
+      NNZA += tree->children[it]->nodeInput->nnzA;
+      NNZB += tree->children[it]->nodeInput->nnzB;
+      NNZC += tree->children[it]->nodeInput->nnzC;
+      NNZD += tree->children[it]->nodeInput->nnzD;
+    }
+  } else if (fakedata) {
+    fakedata->n = fakedata->my = fakedata->mz = fakedata->nnzQ = fakedata->nnzA = fakedata->nnzB = fakedata->nnzC = fakedata->nnzD = 0;	
+    for(size_t it=0; it<scens.size();it++) {
+      fakedata->n += scens[it]->n;
+      fakedata->my += scens[it]->my;
+      fakedata->mz += scens[it]->mz;
+      fakedata->nnzQ += scens[it]->nnzQ;
+      fakedata->nnzA += scens[it]->nnzA;
+      fakedata->nnzB += scens[it]->nnzB;
+      fakedata->nnzC += scens[it]->nnzC;
+      fakedata->nnzD += scens[it]->nnzD;
       real_children[it]->np = np;
-		}
-		N += fakedata->n;
-		MY += fakedata->my;
-		MZ += fakedata->mz;
-		NNZQ += fakedata->nnzQ;
-		NNZA += fakedata->nnzA;
-		NNZB += fakedata->nnzB;
-		NNZC += fakedata->nnzC;
-		NNZD += fakedata->nnzD;
-	}
+    }
+    N += fakedata->n;
+    MY += fakedata->my;
+    MZ += fakedata->mz;
+    NNZQ += fakedata->nnzQ;
+    NNZA += fakedata->nnzA;
+    NNZB += fakedata->nnzB;
+    NNZC += fakedata->nnzC;
+    NNZD += fakedata->nnzD;
+  }
   for(size_t it=0; it<children.size(); it++) {
     children[it]->np = this->data->n;
     children[it]->computeGlobalSizes();
     N  += children[it]->N;
     MY += children[it]->MY;
     MZ += children[it]->MZ;
-
+    
     //nnz stuff
     NNZQ += children[it]->NNZQ;
     NNZA += children[it]->NNZA;
@@ -704,7 +708,7 @@ int StochTree::innerSize(int which)
 }
 
 int StochTree::nx() const {
-	if (data) return data->n;
+  if (data) return data->n;
   else return fakedata->n;
 }
 

@@ -13,7 +13,7 @@ class sData;
 
 class QpGenVars;
 class StochInputTree;
-class StochTree;
+class sTree;
 class StochSymMatrix;
 class sResiduals;
 class sVars;
@@ -63,7 +63,7 @@ class sFactory : public QpGen {
 				     OoqpVector* nomegaInv, OoqpVector* rhs);
   
 
-  StochTree* tree;
+  sTree * tree;
   sData * data;
   //  Variables
 

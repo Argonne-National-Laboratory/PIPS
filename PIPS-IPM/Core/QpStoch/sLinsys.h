@@ -19,7 +19,7 @@
 
 
 
-class StochTree;
+class sTree;
 class sFactory;
 class sData;
 
@@ -59,6 +59,7 @@ class sLinsys : public QpGenLinsys
 
  protected:
   sLinsys(){};
+
   SymMatrix* kkt;
   DoubleLinearSolver* solver;
   int locnx, locmy, locmz;
@@ -96,7 +97,7 @@ class sLinsys : public QpGenLinsys
 
  public:
   MPI_Comm mpiComm;
-  StochTree* stochNode;
+  sTree* stochNode;
 };
 
 #endif

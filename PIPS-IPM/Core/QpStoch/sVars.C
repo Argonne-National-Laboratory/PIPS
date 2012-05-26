@@ -5,7 +5,7 @@
 #include "QpGenResiduals.h"
 #include "QpGenLinsys.h"
 #include "StochVector.h"
-#include "StochTree.h"
+#include "sTree.h"
 
 #include "LinearAlgebraPackage.h"
 
@@ -13,7 +13,7 @@
 #include <fstream>
 using namespace std;
 
-sVars::sVars(StochTree* tree, 
+sVars::sVars(sTree* tree, 
 	     OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 	     OoqpVector * iclow_in, OoqpVector * icupp_in)
   : QpGenVars()
@@ -70,7 +70,7 @@ sVars::sVars(StochTree* tree,
   createChildren();
 }
 
-sVars::sVars( StochTree* tree, OoqpVector * x_in, OoqpVector * s_in,
+sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
 	      OoqpVector * y_in, OoqpVector * z_in,
 	      OoqpVector * v_in, OoqpVector * gamma_in,
 	      OoqpVector * w_in, OoqpVector * phi_in,

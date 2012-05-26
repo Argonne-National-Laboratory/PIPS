@@ -3,7 +3,7 @@
    See license and copyright information in the documentation */
 
 #include "sLinsysLeaf.h"
-#include "StochTree.h"
+#include "sTree.h"
 #include "sFactory.h"
 #include "sData.h"
 #include "SparseSymMatrix.h"

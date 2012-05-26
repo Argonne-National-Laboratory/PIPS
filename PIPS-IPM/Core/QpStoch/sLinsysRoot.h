@@ -6,7 +6,7 @@
 #define SROOTLINSYS
 
 #include "sLinsys.h"
-class StochTree;
+
 class sFactory;
 class sData;
 

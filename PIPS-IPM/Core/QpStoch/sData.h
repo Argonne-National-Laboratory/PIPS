@@ -2,7 +2,6 @@
 #define DATAQPSTOCH
 
 #include "QpGenData.h"
-#include "StochTree.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
@@ -10,18 +9,18 @@
 
 #include <vector>
 
-class StochTree;
+class sTree;
 class LinearAlgebraPackage;
 class QpGenVars;
 
 class sData : public QpGenData {
  public:
   /** constructor that makes data objects of the specified dimensions */
-  sData(StochTree* tree);
+  sData( sTree* tree);
 
   /** constructor that sets up pointers to the data objects that are
       passed as arguments */
-  sData( StochTree* stochNode,
+  sData( sTree* stochNode,
 	 OoqpVector * c, SymMatrix * Q,
 	 OoqpVector * xlow, OoqpVector * ixlow, int nxlow,
 	 OoqpVector * xupp, OoqpVector * ixupp, int nxupp,
@@ -32,7 +31,7 @@ class sData : public QpGenData {
 
   std::vector<sData*> children;
   void AddChild(sData* child);
-  StochTree* stochNode;
+  sTree* stochNode;
  public:
   int nxlow, nxupp, mclow, mcupp;
 

@@ -17,7 +17,7 @@ using namespace std;
 #include <stdexcept>
 
 #include "StochInputTree.h"
-#include "StochTree.h"
+#include "sTree.h"
 #include "MehrotraSolver.h"
 
 #include "QpGenStoch.h"
@@ -147,7 +147,7 @@ int qpstoch_solve( StochInputTree* tree,
 	double objective = prob->objectiveValue(vars);
 	
 	if(0==rank) {
-	  StochTree* stTree = qp->tree;
+	  sTree* stTree = qp->tree;
 	  cout << stTree->N << " variables, " 
 	       << stTree->MY  << " equality constraints, " 
 	       << stTree->MZ  << " inequality constraints.\n";

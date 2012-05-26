@@ -4,7 +4,7 @@
 #include "QpGenResiduals.h"
 #include <vector>
 
-class StochTree;
+class sTree;
 class StochVector;
 /** 
  * Class added to supply a more generic constructor for its parent, QpGenResiduals.
@@ -19,21 +19,21 @@ public:
   /**
    * Constructor
    */
-  sResiduals(StochTree* tree,OoqpVector * rQ, 
-	     OoqpVector * rA, OoqpVector * rC, 
-	     OoqpVector * rz, 
-	     OoqpVector * rt, OoqpVector * rlambda, 
-	     OoqpVector * ru, OoqpVector * rpi, 
-	     OoqpVector * rv, OoqpVector * rgamma, 
-	     OoqpVector * rw, OoqpVector * rphi, 
-	     OoqpVector * ixlow, double nxlowGlobal,
-	     OoqpVector * ixupp, double nxuppGlobal,
-	     OoqpVector * iclow, double mclowGlobal, 
-	     OoqpVector * icupp, double mcuppGlobal );
+  sResiduals( sTree* tree,OoqpVector * rQ, 
+	      OoqpVector * rA, OoqpVector * rC, 
+	      OoqpVector * rz, 
+	      OoqpVector * rt, OoqpVector * rlambda, 
+	      OoqpVector * ru, OoqpVector * rpi, 
+	      OoqpVector * rv, OoqpVector * rgamma, 
+	      OoqpVector * rw, OoqpVector * rphi, 
+	      OoqpVector * ixlow, double nxlowGlobal,
+	      OoqpVector * ixupp, double nxuppGlobal,
+	      OoqpVector * iclow, double mclowGlobal, 
+	      OoqpVector * icupp, double mcuppGlobal );
   
-  sResiduals(StochTree* tree,
-	     OoqpVector * ixlow_, OoqpVector * ixupp_,
-	     OoqpVector * iclow_, OoqpVector * icupp_ );
+  sResiduals( sTree* tree,
+	      OoqpVector * ixlow_, OoqpVector * ixupp_,
+	      OoqpVector * iclow_, OoqpVector * icupp_ );
   
   virtual void sync();
  private:
@@ -44,7 +44,7 @@ public:
 
   
  protected:
-  StochTree* stochNode;
+  sTree* stochNode;
 };
 
 #endif
