@@ -14,7 +14,8 @@ struct cutInfo {
 	std::vector<double> evaluatedAt, subgradient, primalSol;
 	double objval; // underestimate of convex objective
 	double objmax; // overestimate of convex objective
-	double computeC() const; // compute component of c as defined above
+	double computeC() const; // compute component of c as defined in cuttingPlaneBALP.hpp
+	double computeC(std::vector<double> const& proxCenter) const; // alternate definition, see proximalBAQP.hpp
 	// could include error estimates here later
 };
 
