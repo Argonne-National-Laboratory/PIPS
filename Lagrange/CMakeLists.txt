@@ -5,13 +5,18 @@ include_directories(../PIPS-S/Basic)
 include_directories(../PIPS-S/Core)
 include_directories(../PIPS-S/CoinBALPFactorization)
 include_directories(../BasisBootstrap/ScenarioReduction)
+include_directories(../PIPS-IPM/Core/Abstract ../PIPS-IPM/Core/Vector ../PIPS-IPM/Core/Utilities ../PIPS-IPM/Core/QpSolvers ../PIPS-IPM/Core/QpGen
+  ../PIPS-IPM/Core/SparseLinearAlgebra ../PIPS-IPM/Core/DenseLinearAlgebra ../PIPS-IPM/Core/Readers 
+  ../PIPS-IPM/Core/LinearSolvers/Ma57Solver)
+include_directories(../PIPS-IPM/Core/StochLinearAlgebra ../PIPS-IPM/Core/QpStoch)
 
 add_library(CbcLagrangeSolver LagrangeSubproblemSolver/CbcLagrangeSolver.cpp)
 add_library(ClpRecourseSolver RecourseSubproblemSolver/ClpRecourseSolver.cpp)
 add_library(CbcRecourseSolver RecourseSubproblemSolver/CbcRecourseSolver.cpp)
 add_library(combine Drivers/combineScenarios.cpp)
 add_library(bundle Bundle/cuttingPlaneBALP.cpp Bundle/levelBALP.cpp
-	Bundle/l1bundleBALP.cpp Bundle/lInfTrustBALP.cpp Bundle/l1TrustBALP.cpp)
+	Bundle/l1bundleBALP.cpp Bundle/lInfTrustBALP.cpp Bundle/l1TrustBALP.cpp
+	Bundle/proximalBAQP.cpp)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
@@ -27,6 +32,7 @@ add_executable(proxL1SMPS Drivers/l1bundleSMPS.cpp)
 add_executable(proxLinfTrustSMPS Drivers/linftrustSMPS.cpp)
 add_executable(proxL1TrustSMPS Drivers/l1trustSMPS.cpp)
 add_executable(proxLinfTrustRaw Drivers/linftrustRaw.cpp)
+add_executable(proxBundleSMPS Drivers/proxBundleSMPS.cpp)
 add_executable(testSols Drivers/testSols.cpp)
 
 target_link_libraries(lagrangeRootNode pipss stochInput ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
@@ -41,6 +47,8 @@ target_link_libraries(proxL1SMPS bundle pipss stochInput scenred ClpBALPInterfac
 target_link_libraries(proxLinfTrustSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(proxL1TrustSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(proxLinfTrustRaw bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(proxBundleSMPS bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(testSols bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
 if(HAVE_CB)
