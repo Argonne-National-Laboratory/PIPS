@@ -71,6 +71,7 @@ protected:
 		if (v > -1e-2) {
 			this->terminated_ = true;
 			//checkLastPrimals();
+			return;
 		}
 		
 
