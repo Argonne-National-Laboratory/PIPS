@@ -21,6 +21,11 @@ public:
 	OOQPInterface(stochasticInput &);
 
 	void go();
+	double getObjective() const;
+	std::vector<double> getFirstStagePrimalColSolution() const;
+	std::vector<double> getSecondStagePrimalColSolution(int scen) const;
+	std::vector<double> getSecondStageDualRowSolution(int scen) const;
+
 
 
 protected:
@@ -29,13 +34,16 @@ protected:
 	scoped_ptr<QpGenVars> vars;
 	scoped_ptr<Residuals> resid;
 	scoped_ptr<SOLVER> s;
+	vector<int> primalOffsets;
+	vector<int> rowToEqIneqIdx;
+	vector<int> rowOffsets;
 
 };
 
 
 namespace{
 
-void scanRows(stochasticInput &input, int &my, int &mz, int &nnzA, int &nnzC) {
+void scanRows(stochasticInput &input, int &my, int &mz, int &nnzA, int &nnzC, vector<int> &rowToEqIneqIdx) {
 	
 	my = mz = nnzA = nnzC = 0;
 	{
@@ -55,6 +63,7 @@ void scanRows(stochasticInput &input, int &my, int &mz, int &nnzA, int &nnzC) {
 	}
 
 	int nscen = input.nScenarios();
+	int rowi = 0;
 	for (int i = 0; i < nscen; i++) {
 		CoinPackedMatrix Wrow, Trow;
 		Wrow.reverseOrderedCopyOf(input.getSecondStageConstraints(i));
@@ -63,11 +72,11 @@ void scanRows(stochasticInput &input, int &my, int &mz, int &nnzA, int &nnzC) {
 		int nrow2 = input.nSecondStageCons(i);
 		for (int k = 0; k < nrow2; k++) {
 			if (l[k] == u[k]) {
-				my++;
 				nnzA += Wrow.getVectorSize(k) + Trow.getVectorSize(k);
+				rowToEqIneqIdx[rowi++] = my++;
 			} else {
-				mz++;
 				nnzC += Wrow.getVectorSize(k) + Trow.getVectorSize(k);
+				rowToEqIneqIdx[rowi++] = -mz++-1;
 			}
 		}
 	}
@@ -180,7 +189,7 @@ void formQ(stochasticInput &input, SparseSymMatrix &Q) {
 		int nrow = input.nSecondStageVars(s);
 		for (int i = 0; i < nrow; i++) {
 			rowQ[nrowQ++] = nnzQ;
-			for (CoinBigIndex k = Qrow.getVectorFirst(i); k < Qrow.getVectorLast(k); k++) {
+			for (CoinBigIndex k = Qrow.getVectorFirst(i); k < Qrow.getVectorLast(i); k++) {
 				colidx[nnzQ] = Qrow.getIndices()[k]+offset;
 				elt[nnzQ++] = Qrow.getElements()[k];
 			}
@@ -220,14 +229,25 @@ OOQPInterface<SOLVER,FORMULATION>::OOQPInterface(stochasticInput &input) {
 	// we put the first-stage variables at the end to help with the sparse reordering
 	int nvar1 = input.nFirstStageVars();
 	int nscen = input.nScenarios();
-	int totalVars = nvar1;
+	int totalVars = 0;
 	for (int i = 0; i < nscen; i++) {
+		primalOffsets.push_back(totalVars);
 		totalVars += input.nSecondStageVars(i);
 	}
+	primalOffsets.push_back(totalVars);
+	totalVars += nvar1;
+	int totalCons = 0;
+	for (int i = 0; i < nscen; i++) {
+		rowOffsets.push_back(totalCons);
+		totalCons += input.nSecondStageCons(i);
+	}
+	rowOffsets.push_back(totalCons);
+	totalCons += input.nFirstStageCons();
+	rowToEqIneqIdx.resize(totalCons);
 
 	int my, mz, nnzA, nnzC;
 
-	scanRows(input, my, mz, nnzA, nnzC);
+	scanRows(input, my, mz, nnzA, nnzC, rowToEqIneqIdx);
 
 	int nnzQ = input.getFirstStageHessian().getNumElements();
 	for (int i = 0; i < nscen; i++) {
@@ -364,10 +384,10 @@ OOQPInterface<SOLVER,FORMULATION>::OOQPInterface(stochasticInput &input) {
 }
 
 
-template<typename SOLVER, typename FORMULATION>
-void OOQPInterface<SOLVER,FORMULATION>::go() {
+template<typename S, typename F>
+void OOQPInterface<S,F>::go() {
 
-	s->monitorSelf();
+	//s->monitorSelf();
 	int result = s->solve(prob.get(),vars.get(),resid.get());
 
 	if ( 0 == result ) {
@@ -385,4 +405,38 @@ void OOQPInterface<SOLVER,FORMULATION>::go() {
 
 }
 
+template<typename S, typename F>
+double OOQPInterface<S,F>::getObjective() const {
+	return prob->objectiveValue(vars.get());
+}
+
+
+template<typename S, typename F>
+std::vector<double> OOQPInterface<S,F>::getFirstStagePrimalColSolution() const {
+	double const *sol = &dynamic_cast<SimpleVector const&>(*vars->x)[0];
+	return std::vector<double>(sol+primalOffsets[primalOffsets.size()-1],sol+vars->x->length());
+
+}
+
+template<typename S, typename F>
+std::vector<double> OOQPInterface<S,F>::getSecondStagePrimalColSolution(int scen) const {
+	double const *sol = &dynamic_cast<SimpleVector const&>(*vars->x)[0];
+	return std::vector<double>(sol+primalOffsets[scen],sol+primalOffsets[scen+1]);
+}
+
+template<typename S, typename F>
+std::vector<double> OOQPInterface<S,F>::getSecondStageDualRowSolution(int scen) const {
+	std::vector<double> out; out.reserve(rowOffsets[scen+1]-rowOffsets[scen]);
+	double const *eqsol = &dynamic_cast<SimpleVector const&>(*vars->y)[0];
+	double const *ineqsol = &dynamic_cast<SimpleVector const&>(*vars->z)[0];
+	for (int idx = rowOffsets[scen]; idx < rowOffsets[scen+1]; idx++) {
+		int r = rowToEqIneqIdx[idx];
+		if (r >= 0) { // eq
+			out.push_back(eqsol[r]);
+		} else {
+			out.push_back(ineqsol[-r-1]);
+		}
+	}
+	return out;
+}
 #endif
