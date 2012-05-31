@@ -9,6 +9,12 @@
 
 using namespace std;
 
+// example:
+// ./proxBundleSMPS /homes/mlubin/sslp/sslp_5_25_50
+// compare with:
+// ./conicBundleSMPS /homes/mlubin/sslp/sslp_5_25_50
+// optimal value is -121.6
+
 int main(int argc, char **argv) {
 
 	
