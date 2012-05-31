@@ -51,10 +51,10 @@ public:
 protected:
 
 	virtual void doStep() = 0;
-	cutInfo solveSubproblem(std::vector<double> const& at, int scen); 
+	cutInfo solveSubproblem(std::vector<double> const& at, int scen, double eps_sol = 0.); 
 	double testPrimal(std::vector<double> const& primal); // test a primal solution and return objective (COIN_DBL_MAX) if infeasible
 	// evaluates trial solution and updates the bundle
-	double evaluateSolution(std::vector<std::vector<double> > const& sol);
+	double evaluateSolution(std::vector<std::vector<double> > const& sol, double eps_sol = 0.);
 
 	void evaluateAndUpdate();
 	void checkLastPrimals();
@@ -77,13 +77,14 @@ protected:
 };
 
 
-template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveSubproblem(std::vector<double> const& at, int scen) {
+template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveSubproblem(std::vector<double> const& at, int scen, double eps_sol) {
 	using namespace std;	
 	int nvar1 = input.nFirstStageVars();
 	//double t = MPI_Wtime();
 	
 
 	L lsol(input,scen,at);
+	lsol.setAbsoluteGap(eps_sol);
 	// hot start for root node LP
 	if (hotstarts[scen]) {
 		lsol.setWarmStart(hotstarts[scen].get());
@@ -164,13 +165,13 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::testPr
 
 }
 
-template<typename B, typename L, typename R> double bundleManager<B,L,R>::evaluateSolution(std::vector<std::vector<double> > const& sol) {
+template<typename B, typename L, typename R> double bundleManager<B,L,R>::evaluateSolution(std::vector<std::vector<double> > const& sol, double eps_sol) {
 
 	std::vector<int> const& localScen = ctx.localScenarios();
 	int nscen = input.nScenarios();
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
-		cutInfo cut = solveSubproblem(sol[scen],scen);
+		cutInfo cut = solveSubproblem(sol[scen],scen, eps_sol);
 		bundle[scen].push_back(cut);
 	}
 

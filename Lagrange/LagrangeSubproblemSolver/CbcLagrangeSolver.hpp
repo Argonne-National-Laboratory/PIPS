@@ -32,6 +32,8 @@ public:
 
 	// optimality gap ratio to terminate branch and bound, zero to disable
 	void setRatio(double rel) { ratio = rel; }
+	// absolute optimality gap for termination, zero to disable
+	void setAbsoluteGap(double g) { absgap = g; }
 
 
 	std::vector<double> getBestFirstStageSolution() const;
@@ -46,6 +48,7 @@ protected:
 	boost::scoped_ptr<CbcModel> cbcm;
 	int nvar1;
 	double ratio;
+	double absgap;
 
 };
 

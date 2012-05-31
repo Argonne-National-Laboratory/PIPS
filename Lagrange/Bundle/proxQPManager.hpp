@@ -17,6 +17,9 @@ public:
 		proxCenterModelObj.resize(nscen);
 		u = 1.;
 		t = MPI_Wtime();
+		mL = 0.1;
+		mR = 0.1;
+		eps_sol = 10.; // absolute scale, need to adjust
 	}
 
 
@@ -60,22 +63,26 @@ protected:
 			}
 			lastModelObj[scen] = -solver.getSecondStageDualRowSolution(scen)[0];
 			lastModelObjSum += -lastModelObj[scen];
-			v += lastModelObj[scen] - proxCenterModelObj[scen];
+			v += lastModelObj[scen] - proxCenterModelObj[scen] - eps_sol/nscen;
 		}
 		// reduce lastModelObjSum, v
-		printf("v^k = %g\n",v);
-
+		eps_sol = -(mR-mL)*v; 
+		if (this->ctx.mype() == 0) printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
+		if (v > -1e-2) {
+			this->terminated_ = true;
+			//checkLastPrimals();
+		}
 		
 
-		double newObj = this->evaluateSolution(trialSolution);
+		double newObj = this->evaluateSolution(trialSolution, eps_sol/nscen);
 		
 		// update tau according to p.536 of kiwiel's 1995 paper
 		double u_int = 2.*u*(1-(this->currentObj-newObj)/v);
-		//u = min(max(max(u_int,u/10.),1e-4),10.*u);
-		printf("updated u to %g\n",u);
+		u = min(max(max(u_int,u/10.),1e-4),10.*u);
+		if (this->ctx.mype() == 0) printf("updated u to %g\n",u);
 
 		if (this->ctx.mype() == 0) cout << "Trial solution has obj = " << newObj;
-		if (newObj > this->currentObj) {
+		if (newObj - this->currentObj > -mL*v) {
 			if (this->ctx.mype() == 0) cout << ", accepting\n";
 			swap(this->currentSolution,trialSolution);
 			for (unsigned r = 1; r < localScen.size(); r++) {
@@ -88,10 +95,7 @@ protected:
 		} else {
 			if (this->ctx.mype() == 0) cout << ", null step\n";
 		}
-		if (v > -1e-2) {
-			this->terminated_ = true;
-			//checkLastPrimals();
-		}
+		
 
 
 	}
@@ -102,6 +106,8 @@ private:
 	double lastModelObjSum;
 	double u;
 	double t;
+	double mL, mR;
+	double eps_sol; // allowable imprecision in the solution 
 
 	std::vector<std::vector<double> > trialSolution; 
 
