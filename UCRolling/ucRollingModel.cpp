@@ -9,7 +9,8 @@
 
 using namespace std;
 
-const double THETASCALE = 1.;//1e5;
+const double THETASCALE = 1e5;//1e5;
+const double OBJSCALE = 1e2;
 
 ucRollingModel::ucRollingModel(string const& dataRoot, int nscen, int tOffset, int tHorizon,
 		MPI_Comm comm) {
@@ -335,7 +336,7 @@ vector<double> ucRollingModel::getFirstStageColUB() {
 
 
 vector<double> ucRollingModel::getFirstStageObj() { 
-	return vector<double>(nvar1,1e-2*1e3); // TODO: vary per generator
+	return vector<double>(nvar1,OBJSCALE*1e3); // TODO: vary per generator
 }
 
 namespace{
@@ -491,15 +492,15 @@ vector<double> ucRollingModel::getSecondStageObj(int scen) {
 		int idx = it->second;
 		const genStruct &g = genData[idx];
 		for (int i = 0; i <= horizon; i++) {
-			obj[Pgen(i,idx)] = 1e-2*g.gen_cost/nscen;
+			obj[Pgen(i,idx)] = OBJSCALE*g.gen_cost/nscen;
 		}
 	}
 
 	for (it = busMap.begin(); it != busMap.end(); ++it) {
 		int idx = it->second;
 		for (int i = 0; i <= horizon; i++) {
-			obj[slackp(i,idx)] = 1e-2*1e3/nscen;
-			obj[slackm(i,idx)] = 1e-2*1e3/nscen;
+			obj[slackp(i,idx)] = OBJSCALE*1e3/nscen;
+			obj[slackm(i,idx)] = OBJSCALE*1e3/nscen;
 		}
 	}
 	
