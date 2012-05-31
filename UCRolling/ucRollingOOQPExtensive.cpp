@@ -1,6 +1,7 @@
 #include "ucRollingModel.hpp"
-#include "CbcBALPInterface.hpp"
-#include "ClpBALPInterface.hpp"
+#include "OOQPInterface.hpp"
+#include "QpGenSparseMa57.h"
+#include "MehrotraSolver.h"
 
 using namespace std;
 
@@ -16,13 +17,9 @@ int main(int argc, char **argv) {
 	int T = atoi(argv[2]);
 	ucRollingModel model("../../../apps/unitcommitment_rolling/Illinois",nscen,0,T);
 
-	BAContext ctx(MPI_COMM_WORLD);
-	ctx.initializeAssignment(nscen);
-
-	ClpBALPInterface cbc(model, ctx);
-
+	OOQPInterface<MehrotraSolver,QpGenSparseMa57> ooqp(model);
 	
-	cbc.go();
+	ooqp.go();
 
 	MPI_Finalize();
 
