@@ -174,7 +174,7 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::evalua
 		bundle[scen].push_back(cut);
 	}
 
-
+	// only need to do this if we have a serial solver
 	int nvar1 = input.nFirstStageVars();
 	double obj = 0.;
 	for (int scen = 0; scen < nscen; scen++) {
