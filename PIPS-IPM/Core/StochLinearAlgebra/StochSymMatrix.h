@@ -3,6 +3,7 @@
 
 #include "DoubleMatrix.h"
 #include "SparseSymMatrix.h"
+#include "SparseGenMatrix.h"
 
 #include <vector>
 #include <iostream>
@@ -11,22 +12,22 @@
 #include "mpi.h"
 
 class StochSymMatrix : public SymMatrix {
-protected:
-
 public:
   /** Constructs a matrix with local size 'local_n' having 'local_nnz' local nonzeros
       and set the global size and the id to to 'global_n' and 'id', respectively.
       The parameter 'id' is used for output/debug purposes only.
       The created matrix will have no children.*/
   StochSymMatrix(int id, int global_n, int local_n, int local_nnz, MPI_Comm mpiComm);
-  StochSymMatrix(const vector<StochSymMatrix*> &blocks);
+  //StochSymMatrix(const vector<StochSymMatrix*> &blocks); -- not needed anymore; petra
   virtual ~StochSymMatrix();
 
   std::vector<StochSymMatrix*> children;
   SparseSymMatrix* mat;
+  SparseGenMatrix* border;
   int id;
   int n;
   MPI_Comm mpiComm;
+  int iAmDistrib;
   
   virtual void AddChild(StochSymMatrix* child);
 
@@ -81,12 +82,12 @@ public:
   virtual void ColumnScale ( OoqpVector& vec );
   virtual void RowScale ( OoqpVector& vec );
   virtual void scalarMult( double num );
-  
-  
+ protected:
+  StochSymMatrix* parent;
 };
 
 /** 
- * Dummy stochastics symmetric matrix
+ * Dummy stochastic symmetric matrix
  */
 
 class StochSymDummyMatrix : public StochSymMatrix {

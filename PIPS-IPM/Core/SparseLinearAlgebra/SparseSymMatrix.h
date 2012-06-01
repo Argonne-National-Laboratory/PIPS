@@ -21,7 +21,7 @@ public:
   SparseSymMatrix( int size, int nnz );
   SparseSymMatrix( int size, int nnz,
 		   int krowM[], int jcolM[], double M[], int deleteElts=0);
-  SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks);
+  //SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks); not needed anymore; cpetra
 
   SparseStorage *  getStorage() { return mStorage.ptr(); }
   int * krowM() { return mStorage->krowM; }

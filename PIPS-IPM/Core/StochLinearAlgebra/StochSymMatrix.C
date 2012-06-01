@@ -9,27 +9,38 @@ using namespace std;
 
 StochSymMatrix::StochSymMatrix(int id, int global_n, int local_n, int local_nnz, 
 			       MPI_Comm mpiComm_)
-  :id(id), n(global_n), mpiComm(mpiComm_)
+  :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(NULL)
 {
   mat = new SparseSymMatrix(local_n, local_nnz);
+  border = NULL;
+
+  if(mpiComm!=MPI_COMM_NULL) {
+    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if(size>1) iAmDistrib=1;
+  }
 }
 
 
-StochSymMatrix::StochSymMatrix(const vector<StochSymMatrix*> &blocks) 
+/*StochSymMatrix::StochSymMatrix(const vector<StochSymMatrix*> &blocks) 
 {
   mpiComm = blocks[0]->mpiComm;
   n = blocks[0]->n;
   id = blocks[0]->id;
 
   vector<SparseSymMatrix*> v(blocks.size());
-  for(size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->mat;
+  for(size_t i = 0; i < blocks.size(); i++) 
+    v[i] = blocks[i]->mat;
+
   mat = new SparseSymMatrix(v);
 
-}
+  border = NULL;
 
+}
+*/
 
 void StochSymMatrix::AddChild(StochSymMatrix* child)
 {
+  child->parent=this;
   children.push_back(child);
 }
 
@@ -104,7 +115,16 @@ void StochSymMatrix::atPutZeros( int row, int col, int rowExtent, int colExtent 
   assert( "Not implemented" && 0 );
 }
 
-/** y = beta * y + alpha * this * x */
+/** y = beta * y + alpha * this * x 
+ * 
+ *           [ Q0*x0+ sum(Ri^T*xi) ]
+ *           [        .            ]
+ * this * x =[        .            ]
+ *           [        .            ]
+ *           [   Ri*x0 + Qi*xi     ]
+ *
+ * Here Qi are diagonal blocks, Ri are left bordering blocks
+ */
 void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
 			    double alpha, OoqpVector& x_ )
 {
@@ -112,7 +132,7 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
   //check the tree compatibility
-  int nChildren = children.size();
+  size_t nChildren = children.size();
   assert(y.children.size() - nChildren ==0);
   assert(x.children.size() - nChildren ==0);
 
@@ -120,24 +140,52 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
   assert(this->mat->size() == y.vec->length());
   assert(this->mat->size() == x.vec->length());
 
+  SimpleVector & yvec = dynamic_cast<SimpleVector&>(*y.vec);
+  SimpleVector & xvec = dynamic_cast<SimpleVector&>(*x.vec);
+
   if (0.0 == alpha) {
-    y.vec->scale( beta );
+    yvec.scale( beta );
     return;
   } else {
-    //if( alpha != 1.0 || beta != 1.0 ) {
-    //  y.vec->scale( beta/alpha );
-    //}
 
-    mat->mult( beta, *y.vec, alpha, *x.vec );
+    bool iAmRoot = (parent==NULL);
+    bool iAmSpecial = true; //the process that computes Q_0 * x_0
+    int rank; MPI_Comm_rank(mpiComm, &rank);
+    if (rank>0) iAmSpecial = false;
 
-    //if( 1.0 != alpha ) {
-    //  y.vec->scale(alpha);
-    //}
+    if (iAmRoot)
+      // y0=beta*y0 + alpha * Q0*x0
+      if (iAmSpecial)
+	mat->mult( beta, yvec, alpha, xvec ); 
+      else
+	yvec.setToZero();
+    else
+      // yi=beta*yi + alpha * Qi*xi
+      mat->mult( beta, yvec, alpha, xvec ); 
+    
+    // y0 = y0      + alpha*sum(Ri^T*xi)
+    for (size_t it=0; it<nChildren; it++) {
+      if (children[it]->border != NULL ) //compatibility with StochMatrix created by sTreeCallbacks
+	children[it]->border->transMult(0.0, yvec, alpha, *x.children[it]->vec);
+    }
+  
+    if(iAmDistrib && nChildren>0) {
+      int locn=yvec.length();
+      double* buffer = new double[locn];
+      
+      MPI_Allreduce(yvec.elements(), buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
+      yvec.copyFromArray(buffer);
+      
+      delete[] buffer;
+    } 
+
+    // yi = yi + alpha*Q_i*x_i
+    if (!iAmRoot) //this is a child, must add alpha*Ri*xi to yvec
+      if (border != NULL ) //compatibility with StochMatrix created by sTreeCallbacks
+	border->mult(0.0, yvec, alpha, xvec);
   }
-
-
   // reccursively multiply the children
-  for (int it=0; it<nChildren; it++) {
+  for (size_t it=0; it<nChildren; it++) {
     children[it]->mult(beta, *(y.children[it]), alpha, *(x.children[it]));
   }
 }

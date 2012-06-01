@@ -24,7 +24,7 @@ public:
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
 		   int deleteElts=0);
-  SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal);
+  //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
   
   virtual void getSize( int& m, int& n );
 
