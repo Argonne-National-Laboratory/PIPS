@@ -162,6 +162,9 @@ StochSymMatrix* sTreeCallbacks::createQ() const
     }
     return Q;
   } else {
+    assert(false);
+    return NULL;
+    /*
     assert(real_children.size() > 0);
     vector<StochSymMatrix*> v(real_children.size());
     for(size_t i = 0; i<real_children.size(); i++) {
@@ -170,6 +173,7 @@ StochSymMatrix* sTreeCallbacks::createQ() const
     StochSymMatrix *out = new StochSymMatrix(v);
     for(size_t i = 0; i<real_children.size(); i++) delete v[i];
     return out;
+    */
   }
 }
 
@@ -225,21 +229,24 @@ StochGenMatrix* sTreeCallbacks::createA() const
       A->AddChild(child);
     }
   } else {
-    vector<StochGenMatrix*> v(real_children.size());
-#ifdef UCTRANS
-    v[0] = real_children[0]->createA();
-    for(size_t i = 1; i<real_children.size();i++) v[i] = v[0];
-#else
-    for(size_t i = 0; i<real_children.size(); i++) {
-      v[i] = real_children[i]->createA();
-    }
-#endif
-    A = new StochGenMatrix(v);
-#ifdef UCTRANS
-    delete v[0];
-#else
-    for(size_t i = 0; i<real_children.size(); i++) delete v[i];
-#endif
+    assert(false);
+    return NULL;
+
+//     vector<StochGenMatrix*> v(real_children.size());
+// #ifdef UCTRANS
+//     v[0] = real_children[0]->createA();
+//     for(size_t i = 1; i<real_children.size();i++) v[i] = v[0];
+// #else
+//     for(size_t i = 0; i<real_children.size(); i++) {
+//       v[i] = real_children[i]->createA();
+//     }
+// #endif
+//     A = new StochGenMatrix(v);
+// #ifdef UCTRANS
+//     delete v[0];
+// #else
+//     for(size_t i = 0; i<real_children.size(); i++) delete v[i];
+// #endif
 
   }
   return A;
@@ -291,21 +298,23 @@ StochGenMatrix* sTreeCallbacks::createC() const
       C->AddChild(child);
     }
   } else {
-    vector<StochGenMatrix*> v(real_children.size());
-#ifdef UCTRANS
-    v[0] = real_children[0]->createC();
-    for(size_t i = 1; i<real_children.size();i++) v[i] = v[0];
-#else
-    for(size_t i = 0; i<real_children.size(); i++) {
-      v[i] = real_children[i]->createC();
-    }
-#endif
-    C = new StochGenMatrix(v);
-#ifdef UCTRANS
-    delete v[0];
-#else
-    for(size_t i = 0; i<real_children.size(); i++) delete v[i];
-#endif
+    assert(false);
+    return NULL;
+//     vector<StochGenMatrix*> v(real_children.size());
+// #ifdef UCTRANS
+//     v[0] = real_children[0]->createC();
+//     for(size_t i = 1; i<real_children.size();i++) v[i] = v[0];
+// #else
+//     for(size_t i = 0; i<real_children.size(); i++) {
+//       v[i] = real_children[i]->createC();
+//     }
+// #endif
+//     C = new StochGenMatrix(v);
+// #ifdef UCTRANS
+//     delete v[0];
+// #else
+//     for(size_t i = 0; i<real_children.size(); i++) delete v[i];
+// #endif
   }
   return C;
 }

@@ -8,6 +8,11 @@
 #include "sTree.h"
 #include "StochInputTree.h"
 
+/** This class creates objects when  the problem is specified by C callbacks.
+ *  Obsolete and present only to ensure compatibility with older versions of the code.
+ *  The new sTree implementation, C++-like is sTreeImpl.
+ */
+
 class sTreeCallbacks : public sTree
 {
  public:

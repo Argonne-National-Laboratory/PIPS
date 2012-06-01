@@ -23,7 +23,7 @@ StochGenMatrix::StochGenMatrix(int id,
   }
 }
 
-StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) 
+/*StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) 
   : iAmDistrib(0), workPrimalVec(NULL)
 {
   mpiComm = blocks[0]->mpiComm;
@@ -42,16 +42,8 @@ StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks)
   Amat = new SparseGenMatrix(v, false);
   for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Bmat;
   Bmat = new SparseGenMatrix(v, true);
-  /*
-  int m1, n1,m2,n2;
-  Amat->getSize(m1,n1);
-  Bmat->getSize(m2,n2);
-  printf("Amat %d %d Bmat %d %d\n",m1,n1,m2,n2);
-  blocks[0]->Amat->getSize(m1,n1);
-  blocks[0]->Bmat->getSize(m2,n2);
-  printf("original A: %d %d original B: %d %d\n",m1,n1,m2,n2);*/
-
 }
+*/
 
 StochGenMatrix::~StochGenMatrix()
 {

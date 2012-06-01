@@ -5,11 +5,14 @@
 #include "sFactory.h"
 
 #include "sData.h"
+#include "stochasticInput.hpp"
+#include "sTreeImpl.h"
 #include "sTreeCallbacks.h"
 #include "StochInputTree.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
+
 
 #include "sVars.h"
 #include "sResiduals.h"
@@ -19,8 +22,19 @@
 
 #include "Ma57Solver.h"
 
+sFactory::sFactory( stochasticInput& in)
+  : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
+{
+  tree = new sTreeImpl(in);
+  tree->computeGlobalSizes();
+  tree->GetGlobalSizes(nx, my, mz);
+  //decide how the CPUs are assigned 
+  tree->assignProcesses();
+}
+
+
 sFactory::sFactory( StochInputTree* inputTree)
-  :QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
+  : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
 {
   
   tree = new sTreeCallbacks(inputTree);

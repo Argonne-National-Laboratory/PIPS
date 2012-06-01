@@ -36,7 +36,7 @@ public:
   SparseStorage( int m_, int n_, int len_,
 		 int * krowM_, int * jcolM_, double * M_,
 		 int deleteElts=0);
-  SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal);
+  //SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal); -- not needed anymore; cpetra
 
   void shiftRows( int row, int shift, int& info );
   virtual void getSize( int& m, int& n );

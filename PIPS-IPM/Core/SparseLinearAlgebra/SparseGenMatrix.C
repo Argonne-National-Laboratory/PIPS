@@ -34,13 +34,14 @@ SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz,
 						     deleteElts) );
 }
 
-SparseGenMatrix::SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal)
+/*SparseGenMatrix::SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal)
   : m_Mt(NULL)
 {
   vector<SparseStorage*> v(blocks.size());
   for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->mStorage;
   mStorage = SparseStorageHandle(new SparseStorage(v,diagonal));
 }
+*/
 
 SparseGenMatrix::~SparseGenMatrix()
 {

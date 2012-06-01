@@ -59,7 +59,7 @@ SparseStorage::SparseStorage( int m_, int n_, int len_,
 // [ A ]
 // [ B ]
 // diagonal will be symmetric if the input is
-SparseStorage::SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal)
+/*SparseStorage::SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal)
 {
   assert(blocks.size() > 0);
   m = n = len = 0;
@@ -110,7 +110,7 @@ SparseStorage::SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal
 
   SparseStorage::instances++;
 }
-
+*/
 
 
 SparseStorage::~SparseStorage()

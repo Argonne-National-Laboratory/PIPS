@@ -23,8 +23,9 @@ public:
 		 int A_m, int A_n, int A_nnz,
 		 int B_m, int B_n, int B_nnz,
 		 MPI_Comm mpiComm_);
+
   // constructor for combining scenarios
-  StochGenMatrix(const vector<StochGenMatrix*> &blocks);
+  //StochGenMatrix(const vector<StochGenMatrix*> &blocks); -- not needed; cpetra
   virtual ~StochGenMatrix();
 
   virtual void AddChild(StochGenMatrix* child);

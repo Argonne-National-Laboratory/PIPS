@@ -21,12 +21,13 @@ SparseSymMatrix::SparseSymMatrix( int size, int nnz )
 }
 
 
-SparseSymMatrix::SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks)
+/*SparseSymMatrix::SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks)
 {
   vector<SparseStorage*> v(blocks.size());
   for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->mStorage;
   mStorage = SparseStorageHandle(new SparseStorage(v,true)); // must be diagonal
 }
+*/
 
 SparseSymMatrix::SparseSymMatrix( int size, int nnz,
 				  int krowM[], int jcolM[], double M[],
