@@ -17,12 +17,16 @@ public:
       and set the global size and the id to to 'global_n' and 'id', respectively.
       The parameter 'id' is used for output/debug purposes only.
       The created matrix will have no children.*/
-  StochSymMatrix(int id, int global_n, int local_n, int local_nnz, MPI_Comm mpiComm);
+  StochSymMatrix( int id, int global_n, int local_n, int local_nnz, MPI_Comm mpiComm );
+  StochSymMatrix( int id, int global_n, 
+		  int diag_n, int diag_nnz, 
+		  int border_n, int border_nnz,
+		  MPI_Comm mpiComm_);
   //StochSymMatrix(const vector<StochSymMatrix*> &blocks); -- not needed anymore; petra
   virtual ~StochSymMatrix();
 
   std::vector<StochSymMatrix*> children;
-  SparseSymMatrix* mat;
+  SparseSymMatrix* diag;
   SparseGenMatrix* border;
   int id;
   int n;

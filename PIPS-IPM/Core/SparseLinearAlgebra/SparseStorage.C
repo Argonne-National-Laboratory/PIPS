@@ -50,69 +50,6 @@ SparseStorage::SparseStorage( int m_, int n_, int len_,
   SparseStorage::instances++;
 }
 
-
-// concatenate matrices
-// if "diagonal", make a block diagonal matrix:
-// [ A 0 ]
-// [ 0 B ]
-// if not, stack the matrices:
-// [ A ]
-// [ B ]
-// diagonal will be symmetric if the input is
-/*SparseStorage::SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal)
-{
-  assert(blocks.size() > 0);
-  m = n = len = 0;
-  neverDeleteElts = 0;
-  for (size_t i = 0; i < blocks.size(); i++) {
-    m += blocks[i]->m;
-    len += blocks[i]->len;
-    if (diagonal) {
-      n += blocks[i]->n;
-    } else {
-      assert( blocks[i]->n == blocks[0]->n );
-    }
-  }
-  if (!diagonal) {
-    n = blocks[0]->n;
-  }
-
- 
-  M     = new double[len];
-  jcolM = new int[len];
-  krowM = new int[m+1];
-  
-  int curnnz = 0, curn = 0, curm = 0;
-
-  for (size_t i = 0; i < blocks.size(); i++) {
-    int lnnz = blocks[i]->len;
-    int ln = blocks[i]->n;
-    int lm = blocks[i]->m;
-
-    memcpy(M+curnnz, blocks[i]->M, lnnz*sizeof(double));
-    memcpy(jcolM+curnnz, blocks[i]->jcolM, lnnz*sizeof(int));
-    memcpy(krowM+curm, blocks[i]->krowM, lm*sizeof(int)); // skips last element
-
-    if (diagonal) {
-      for (int j = 0; j < lnnz; j++) {
-        jcolM[curnnz+j] += curn;
-      }
-    }
-    for (int j = 0; j < lm; j++) {
-      krowM[curm+j] += curnnz;
-    }
-    curnnz += lnnz;
-    curn += ln;
-    curm += lm;
-  }
-  assert(curm == m);
-  krowM[m] = len;
-
-  SparseStorage::instances++;
-}
-*/
-
-
 SparseStorage::~SparseStorage()
 {
   if ( !neverDeleteElts ) {
@@ -1357,6 +1294,66 @@ void SparseStorage::dump(const string& filename)
   for (i = 0; i < len; i++) {
     fd << M[i] << " ";
   }
-
-
 }
+
+
+// concatenate matrices
+// if "diagonal", make a block diagonal matrix:
+// [ A 0 ]
+// [ 0 B ]
+// if not, stack the matrices:
+// [ A ]
+// [ B ]
+// diagonal will be symmetric if the input is
+/*SparseStorage::SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal)
+{
+  assert(blocks.size() > 0);
+  m = n = len = 0;
+  neverDeleteElts = 0;
+  for (size_t i = 0; i < blocks.size(); i++) {
+    m += blocks[i]->m;
+    len += blocks[i]->len;
+    if (diagonal) {
+      n += blocks[i]->n;
+    } else {
+      assert( blocks[i]->n == blocks[0]->n );
+    }
+  }
+  if (!diagonal) {
+    n = blocks[0]->n;
+  }
+
+ 
+  M     = new double[len];
+  jcolM = new int[len];
+  krowM = new int[m+1];
+  
+  int curnnz = 0, curn = 0, curm = 0;
+
+  for (size_t i = 0; i < blocks.size(); i++) {
+    int lnnz = blocks[i]->len;
+    int ln = blocks[i]->n;
+    int lm = blocks[i]->m;
+
+    memcpy(M+curnnz, blocks[i]->M, lnnz*sizeof(double));
+    memcpy(jcolM+curnnz, blocks[i]->jcolM, lnnz*sizeof(int));
+    memcpy(krowM+curm, blocks[i]->krowM, lm*sizeof(int)); // skips last element
+
+    if (diagonal) {
+      for (int j = 0; j < lnnz; j++) {
+        jcolM[curnnz+j] += curn;
+      }
+    }
+    for (int j = 0; j < lm; j++) {
+      krowM[curm+j] += curnnz;
+    }
+    curnnz += lnnz;
+    curn += ln;
+    curm += lm;
+  }
+  assert(curm == m);
+  krowM[m] = len;
+
+  SparseStorage::instances++;
+}
+*/
