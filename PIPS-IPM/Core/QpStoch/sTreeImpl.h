@@ -51,11 +51,18 @@ class sTreeImpl : public sTree
  private:
   int m_id;
   stochasticInput& in;
-  
+
+  sTreeImpl* parent;
+
   size_t m_nx, m_my, m_mz;
+
+  template<typename Compare>
+  StochGenMatrix* createAorC(const Compare& compFun) const;
 
   int compute_nFirstStageEq();
   int compute_nSecondStageEq(int scen);
 };
+
+
 
 #endif
