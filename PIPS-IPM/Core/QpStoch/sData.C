@@ -152,7 +152,7 @@ sData::~sData()
 int sData::getLocalnx()
 {
   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
-  return Qst.mat->size();
+  return Qst.diag->size();
 }
 
 int sData::getLocalmy()
@@ -188,7 +188,7 @@ int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
 
-  nnzQ = Qst. mat->getStorage()->len;
+  nnzQ = Qst.diag->getStorage()->len + Qst.border->getStorage()->len;
   nnzB = Ast.Bmat->getStorage()->len;
   nnzD = Cst.Bmat->getStorage()->len;
   return 0;
@@ -198,7 +198,7 @@ int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
 SparseSymMatrix& sData::getLocalQ()
 {
   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
-  return *Qst.mat;
+  return *Qst.diag;
 }
 
 // T_i x_0 + W_i x_i = b_i

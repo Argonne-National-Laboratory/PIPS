@@ -28,14 +28,17 @@ sTreeCallbacks::~sTreeCallbacks()
 }
 
 sTreeCallbacks::sTreeCallbacks() 
-  : data(NULL), tree(NULL), fakedata(NULL)
+  : NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+    data(NULL), tree(NULL), fakedata(NULL)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 }
 
 sTreeCallbacks::sTreeCallbacks(StochInputTree* inputTree)
-  : sTree(), tree(NULL), fakedata(NULL)
+  : sTree(),
+    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+    tree(NULL), fakedata(NULL)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -50,7 +53,9 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree* inputTree)
 
 // np==-1 is used to indicate the root node. these can't be root nodes
 sTreeCallbacks::sTreeCallbacks(const vector<StochInputTree::StochInputNode*> &localscens)
-  : sTree(),  data(NULL), tree(NULL), scens(localscens)
+  : sTree(), 
+    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+    data(NULL), tree(NULL), scens(localscens)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -62,7 +67,9 @@ sTreeCallbacks::sTreeCallbacks(const vector<StochInputTree::StochInputNode*> &lo
 	}
 }
 sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
-  : sTree(), data(data_), tree(NULL), fakedata(NULL)
+  : sTree(), 
+    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+    data(data_), tree(NULL), fakedata(NULL)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -126,11 +133,11 @@ void sTreeCallbacks::computeGlobalSizes()
     MZ += children[it]->MZ;
     
     //nnz stuff
-    NNZQ += children[it]->NNZQ;
-    NNZA += children[it]->NNZA;
-    NNZB += children[it]->NNZB;
-    NNZC += children[it]->NNZC;
-    NNZD += children[it]->NNZD;
+    NNZQ += ((sTreeCallbacks*)children[it])->NNZQ;
+    NNZA += ((sTreeCallbacks*)children[it])->NNZA;
+    NNZB += ((sTreeCallbacks*)children[it])->NNZB;
+    NNZC += ((sTreeCallbacks*)children[it])->NNZC;
+    NNZD += ((sTreeCallbacks*)children[it])->NNZD;
   }
 }
 
@@ -152,9 +159,9 @@ StochSymMatrix* sTreeCallbacks::createQ() const
 			 commWrkrs);
     
     data->fQ(data->user_data, data->id, 
-	     Q->mat->krowM(), 
-	     Q->mat->jcolM(),
-	     Q->mat->M());  
+	     Q->diag->krowM(), 
+	     Q->diag->jcolM(),
+	     Q->diag->M());  
     
     for(size_t it=0; it<children.size(); it++) {
       StochSymMatrix* child = children[it]->createQ();

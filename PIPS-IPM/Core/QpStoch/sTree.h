@@ -23,7 +23,7 @@ class sTree
 
   virtual void computeGlobalSizes() = 0;
   void GetGlobalSizes(int& NXOut, int& MYOut, int& MZOut);
-  void GetLocalSizes(int& nxOut, int& myOut, int& mzOut);
+  //void GetLocalSizes(int& nxOut, int& myOut, int& mzOut);
 
   void assignProcesses  ( );
   void assignProcesses  (MPI_Comm, vector<int>&);
@@ -105,7 +105,6 @@ class sTree
 
  public:
   int N,MY,MZ; //global sizes
-  int NNZA,NNZQ,NNZB,NNZC,NNZD; //global nnz
   int np; //n for the parent
 
   double IPMIterExecTIME;

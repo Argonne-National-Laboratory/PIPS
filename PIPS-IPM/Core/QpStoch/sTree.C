@@ -155,7 +155,8 @@ double sTree::processLoad() const
 {
   //! need a recursive and also a collective call
   if (IPMIterExecTIME<0.0)
-    return (NNZQ+NNZA+NNZB+NNZC+NNZD + N+MY+MZ)/1000.0;
+    //return (NNZQ+NNZA+NNZB+NNZC+NNZD + N+MY+MZ)/1000.0;
+    return (N+MY+MZ)/1000;
   return IPMIterExecTIME;
 }
 
@@ -164,11 +165,11 @@ void sTree::GetGlobalSizes(int& NOut, int& MYOut, int& MZOut)
   NOut=N; MYOut=MY; MZOut=MZ;
 }
 
-void sTree::GetLocalSizes(int& nOut, int& myOut, int& mzOut)
+/*void sTree::GetLocalSizes(int& nOut, int& myOut, int& mzOut)
 {
   nOut=nx(); myOut=my(); mzOut=mz();
 }
-
+*/
 int sTree::innerSize(int which)
 {
   if(which==0) return nx();
@@ -199,6 +200,8 @@ void sTree::syncStochSymMatrix(StochSymMatrix& mat)
   int ierr; int syncChildren=0;
   char* marked4Del = new char[children.size()];
 
+  assert(false && "Code needs update to Sync also the Hessian bordering blocks");
+
   for(size_t it=0; it<children.size(); it++) {
     marked4Del[it]=0;
     
@@ -211,19 +214,19 @@ void sTree::syncStochSymMatrix(StochSymMatrix& mat)
 	marked4Del[it]=1;
 
 	int dims[3];
-	dims[0] = mat.children[it]->mat->size();
-	dims[1] = mat.children[it]->mat->getStorage()->numberOfNonZeros();
+	dims[0] = mat.children[it]->diag->size();
+	dims[1] = mat.children[it]->diag->getStorage()->numberOfNonZeros();
 	dims[2] = mat.children[it]->n;
 
 	MPI_Send(dims, 3, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD);
 	
-	MPI_Send(mat.children[it]->mat->krowM(), dims[0]+1, MPI_INT, partner, 
+	MPI_Send(mat.children[it]->diag->krowM(), dims[0]+1, MPI_INT, partner, 
 		 2*children[it]->id(), MPI_COMM_WORLD);
-	MPI_Send(mat.children[it]->mat->jcolM(), dims[1], MPI_INT, partner, 
+	MPI_Send(mat.children[it]->diag->jcolM(), dims[1], MPI_INT, partner, 
 		 3*children[it]->id(), MPI_COMM_WORLD);
-	MPI_Send(mat.children[it]->mat->M(), dims[1], MPI_DOUBLE, partner,
+	MPI_Send(mat.children[it]->diag->M(), dims[1], MPI_DOUBLE, partner,
 		 4*children[it]->id(), MPI_COMM_WORLD);
-
+	
       } else {
 	//receiving
 	int dims[3]; MPI_Status status;
@@ -239,11 +242,11 @@ void sTree::syncStochSymMatrix(StochSymMatrix& mat)
 					   children[it]->commWrkrs) );
 	}
 
-	MPI_Recv(mat.children[it]->mat->krowM(), dims[0]+1, MPI_INT, partner, 
+	MPI_Recv(mat.children[it]->diag->krowM(), dims[0]+1, MPI_INT, partner, 
 		 2*children[it]->id(), MPI_COMM_WORLD, &status);
-	MPI_Recv(mat.children[it]->mat->jcolM(), dims[1], MPI_INT, partner,
+	MPI_Recv(mat.children[it]->diag->jcolM(), dims[1], MPI_INT, partner,
 		 3*children[it]->id(), MPI_COMM_WORLD, &status);
-	MPI_Recv(mat.children[it]->mat->M(), dims[1], MPI_DOUBLE, partner,
+	MPI_Recv(mat.children[it]->diag->M(), dims[1], MPI_DOUBLE, partner,
 		 4*children[it]->id(), MPI_COMM_WORLD, &status);
       }
     }

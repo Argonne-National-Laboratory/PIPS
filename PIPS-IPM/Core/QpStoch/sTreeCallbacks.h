@@ -46,6 +46,8 @@ class sTreeCallbacks : public sTree
   int id() const; 
 
   void computeGlobalSizes();
+ public:
+  int NNZA,NNZQ,NNZB,NNZC,NNZD; //global nnz
 
  protected:
   sTreeCallbacks();

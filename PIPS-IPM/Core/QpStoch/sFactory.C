@@ -39,7 +39,7 @@ sFactory::sFactory( StochInputTree* inputTree)
   
   tree = new sTreeCallbacks(inputTree);
   tree->computeGlobalSizes();
-  //now the sizes of the problem are available, set them
+  //now the sizes of the problem are available, set them for the parent class
   tree->GetGlobalSizes(nx, my, mz);
   //decide how the CPUs are assigned 
   tree->assignProcesses();
