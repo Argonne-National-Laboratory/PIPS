@@ -22,11 +22,11 @@ if(HAVE_MA57)
 endif(HAVE_MA57)
 
 if(HAVE_MA57 AND HAVE_METIS)
-  add_executable(pipsipm-unitcommit.exe Drivers/unitCommitment.cpp)
-  target_link_libraries(pipsipm-unitcommit.exe
-    ooqpstoch ooqpstochla ooqpmehrotrastoch
-    ooqpgensparse ooqpbase ooqpsparse ooqpdense
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+  # add_executable(pipsipm-unitcommit.exe Drivers/unitCommitment.cpp)
+  # target_link_libraries(pipsipm-unitcommit.exe
+  #   ooqpstoch ooqpstochla ooqpmehrotrastoch
+  #   ooqpgensparse ooqpbase ooqpsparse ooqpdense
+  #   ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 
   add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
   target_link_libraries(pipsipmFromRaw
