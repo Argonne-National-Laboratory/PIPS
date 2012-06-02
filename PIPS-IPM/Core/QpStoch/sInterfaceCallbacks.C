@@ -1,4 +1,8 @@
-#include "PIPSIPMInterface.h"
+/* PIPS-IPM                                                           *
+ * Author:  Cosmin G. Petra                                           *
+ * (C) 2012 Argonne National Laboratory. See Copyright Notification.  */
+
+#include "sInterfaceCallbacks.h"
 #include "MehrotraStochSolver.h"
 #include "sFactoryAug.h"
 #include "mpi.h"
@@ -38,13 +42,13 @@ int fixupp (void* user_data, int id, double* vec, int len);
 }
 
 
-PIPSIPMInterface::PIPSIPMInterface(stochasticInput &in)
+sInterfaceCallbacks::sInterfaceCallbacks(stochasticInput &in)
   : inputTree(NULL)
 {
   callbackData=new CallbackData(in);
 }
 
-PIPSIPMInterface::~PIPSIPMInterface()
+sInterfaceCallbacks::~sInterfaceCallbacks()
 {
   if(callbackData)
     delete callbackData;
@@ -52,7 +56,7 @@ PIPSIPMInterface::~PIPSIPMInterface()
     delete inputTree;
 }
 
-void PIPSIPMInterface::loadData()
+void sInterfaceCallbacks::loadData()
 {  
   int nx0,my0,mz0;
   nx0=callbackData->in.nFirstStageVars();
@@ -92,7 +96,7 @@ void PIPSIPMInterface::loadData()
   }
 }
 
-void PIPSIPMInterface::go()
+void sInterfaceCallbacks::go()
 {
   double t = MPI_Wtime();
   StochRunParams* params = defaultStochRunParams();
@@ -105,7 +109,7 @@ void PIPSIPMInterface::go()
   t = MPI_Wtime() - t;
 }
 
-void PIPSIPMInterface::getNum1stStgEqIneq(int& my, int &mz)
+void sInterfaceCallbacks::getNum1stStgEqIneq(int& my, int &mz)
 {
   vector<double> lb=callbackData->in.getFirstStageRowLB();
   vector<double> ub=callbackData->in.getFirstStageRowUB();
@@ -120,7 +124,7 @@ void PIPSIPMInterface::getNum1stStgEqIneq(int& my, int &mz)
   //printf("1stStg:%d %d\n", my,mz);
 }
 
-void PIPSIPMInterface::getNum2ndStgEqIneq(int scen, int& my, int &mz)
+void sInterfaceCallbacks::getNum2ndStgEqIneq(int scen, int& my, int &mz)
 {
   vector<double> lb=callbackData->in.getSecondStageRowLB(scen);
   vector<double> ub=callbackData->in.getSecondStageRowUB(scen);

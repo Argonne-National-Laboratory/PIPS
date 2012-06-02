@@ -1,18 +1,29 @@
-#ifndef QPSTOCHINTERFACE
-#define QPSTOCHINTERFACE
+/* PIPS-IPM                                                           *
+ * Author:  Cosmin G. Petra                                           *
+ * (C) 2012 Argonne National Laboratory. See Copyright Notification.  */
 
-//#include "BALPSolverInterface.hpp"
+#ifndef QPSTOCHINTERFACE_CALLBACKS
+#define QPSTOCHINTERFACE_CALLBACKS
 
 #include "stochasticInput.hpp"
 #include "sDriver.h"
 
-class PIPSIPMInterface //: public BALPSolverInterface<PIPSIPMInterface>
+/**
+ * This class is an interface to PIPS-IPM which takes the problem from 
+ * stochasticInput and specify it to the solver using C-callbacks.
+ * 
+ * Implemented for backward compatibility. Callbacks are now obsolete,
+ * PIPSIPMInterface should be used instead.
+ * 
+ * TO DO: implement get..Solution methods.
+ */
+
+class sInterfaceCallbacks
 {
  public:
-  PIPSIPMInterface(stochasticInput &in);
-  ~PIPSIPMInterface();
+  sInterfaceCallbacks(stochasticInput &in);
+  ~sInterfaceCallbacks();
 
-  void loadData();
   void go();
 
   double getObjective() const;
@@ -33,6 +44,8 @@ class PIPSIPMInterface //: public BALPSolverInterface<PIPSIPMInterface>
   void getNum2ndStgEqIneq(int scens, int& my, int &mz);
   
   StochInputTree* inputTree;
+
+  void loadData();
 };
 
 #endif

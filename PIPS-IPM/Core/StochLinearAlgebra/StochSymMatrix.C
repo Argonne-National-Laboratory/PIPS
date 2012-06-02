@@ -6,13 +6,26 @@
 
 using namespace std;
 
-
+/**
+ * This the constructor is usually called for the root node. In this case
+ * parent is set to NULL; the cross Hessian does not exist, so
+ * border is set up to be an empty matrix. 
+ *
+ * If it is called to create a child, the calling code should call 
+ *   this->AddChild(c)
+ * 'AddChild' method correctly sets the parent and (re)creates an EMPTY
+ * border with correct sizes.
+ */
 StochSymMatrix::StochSymMatrix(int id, int global_n, int local_n, int local_nnz, 
 			       MPI_Comm mpiComm_)
   :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(NULL)
 {
   diag = new SparseSymMatrix(local_n, local_nnz);
-  border = new SparseGenMatrix(local_n,0,0);
+  // the cross Hessian is NULL for the root node; it may be also NULL for 
+  // children in the case when the Hessian does not have cross terms and
+  // the children are created with this constructor. The border will be 
+  // set up to correct sizes later for this case.
+  border = new SparseGenMatrix(0, 0, 0);
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -27,6 +40,7 @@ StochSymMatrix::StochSymMatrix( int id, int global_n,
   :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(NULL)
 {
   diag = new SparseSymMatrix(diag_n, diag_nnz);
+  //printf("Creating cross Hessian: m=%d n=%d  nnz=%d\n", border_n, diag_n, border_nnz);
   border = new SparseGenMatrix(border_n, diag_n, border_nnz);
 
   if(mpiComm!=MPI_COMM_NULL) {
@@ -56,6 +70,18 @@ StochSymMatrix::StochSymMatrix( int id, int global_n,
 void StochSymMatrix::AddChild(StochSymMatrix* child)
 {
   child->parent=this;
+
+  int m,n; child->border->getStorage()->getSize(m,n);
+
+  if (m==0 && n==0) {
+    // create an empty border for this children with correct dimensions
+    delete child->border;
+
+    //printf("(RE)Creating cross Hessian: m=%d n=%d  nnz=%d\n", this->diag->size(), child->diag->size(), 0);
+
+    child->border = new SparseGenMatrix(child->diag->size(), this->diag->size(), 0);
+  }
+
   children.push_back(child);
 }
 
@@ -179,10 +205,9 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
       // yi=beta*yi + alpha * Qi*xi
       diag->mult( beta, yvec, alpha, xvec ); 
     
-    // y0 = y0      + alpha*sum(Ri^T*xi)
+    // y0 = y0      + alpha*sum( Ri^T * xi)
     for (size_t it=0; it<nChildren; it++) {
-      if (children[it]->border != NULL ) //compatibility with StochMatrix created by sTreeCallbacks
-	children[it]->border->transMult(0.0, yvec, alpha, *x.children[it]->vec);
+      children[it]->border->transMult(1.0, yvec, alpha, *x.children[it]->vec);
     }
   
     if(iAmDistrib && nChildren>0) {
@@ -195,10 +220,14 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
       delete[] buffer;
     } 
 
-    // yi = yi + alpha*Q_i*x_i
-    if (!iAmRoot) //this is a child, must add alpha*Ri*xi to yvec
-      if (border != NULL ) //compatibility with StochMatrix created by sTreeCallbacks
-	border->mult(0.0, yvec, alpha, xvec);
+    // yi = yi + alpha*R0*x0
+    if (!iAmRoot) {
+
+      // this is a child, must add alpha*Ri*x0 to yvec
+      // yvec already contains beta*y + alpha*Qi*xi
+
+      border->mult(1.0, yvec, alpha, *x.parent->vec);
+    }
   }
   // reccursively multiply the children
   for (size_t it=0; it<nChildren; it++) {
