@@ -29,6 +29,7 @@ SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz,
 				  int deleteElts)
   : m_Mt(NULL)
 {
+  //cout << "SparseGenMatrix1  " << rows << " " << cols << " " << nnz << endl;
   mStorage = SparseStorageHandle( new SparseStorage( rows, cols,nnz, 
 						     krowM, jcolM, M,
 						     deleteElts) );
@@ -45,7 +46,9 @@ SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz,
 
 SparseGenMatrix::~SparseGenMatrix()
 {
+  //cout << "~~~~~~~~~SparseGenMatrix " << mStorage->mRefs  << endl;
   if(m_Mt) delete m_Mt;
+  
 }
 
 

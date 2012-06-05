@@ -43,6 +43,7 @@ class sData : public QpGenData {
   int getLocalNnz(int& nnzQ, int& nnzB, int& nnzD);
 
   SparseSymMatrix& getLocalQ();
+  SparseGenMatrix& getLocalCrossHessian();
   SparseGenMatrix& getLocalA();
   SparseGenMatrix& getLocalB();
   SparseGenMatrix& getLocalC();

@@ -46,11 +46,11 @@ int solve(const string& datarootname, int nscen) {
   
   rawInput* s = new rawInput(datarootname,nscen);
   PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(*s);
-
-
-
-
   delete s;
+
+  pipsIpm.go();
+
+
 
 
 

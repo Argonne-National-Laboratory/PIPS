@@ -21,6 +21,10 @@ int SimpleVector::numberOfNonzeros()
 
 void SimpleVector::min( double& m, int& index )
 {
+  if (n==0) {
+    m=1e20;
+    return;
+  }
   index = 0;
   m     = v[0];
   for( int i = 0; i < n; i++ ) {

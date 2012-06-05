@@ -229,6 +229,9 @@ StochGenMatrix* sTreeCallbacks::createA() const
       //populate the submatrices A and B
       data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fB(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
+
+      printf("  -- my=%d nx=%d   1st stg nx=%d nnzA=%d nnzB=%d\n", 
+	     data->my, data->n,  np, data->nnzA, data->nnzB);
     }
 
     for(size_t it=0; it<children.size(); it++) {
@@ -265,7 +268,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochGenDummyMatrix(id());
 
-
+  printf("Create C\n");
   StochGenMatrix* C = NULL;
   if (!fakedata) {
     if (np==-1) {
@@ -283,6 +286,9 @@ StochGenMatrix* sTreeCallbacks::createC() const
 
       data->fC(data->user_data, data->id, C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M());
 
+      printf("  -- mz=%d nx=%d   1st stg nx=%d nnzD=%d\n", 
+	     data->mz, data->n,  np, data->nnzC);
+     
     } else {
       if(data->nnzC<0)
         data->fnnzC(data->user_data, data->id, &data->nnzC);
@@ -298,6 +304,9 @@ StochGenMatrix* sTreeCallbacks::createC() const
       //populate the submatrices C and D
       data->fC(data->user_data, data->id, C->Amat->krowM(), C->Amat->jcolM(), C->Amat->M());
       data->fD(data->user_data, data->id, C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M());
+
+      printf("  -- mz=%d nx=%d   1st stg nx=%d nnzC=%d nnzD=%d\n", 
+	     data->mz, data->n,  np, data->nnzC, data->nnzD);
     }
       
     for(size_t it=0; it<children.size(); it++) {

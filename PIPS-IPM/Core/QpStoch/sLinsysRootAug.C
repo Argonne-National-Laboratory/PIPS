@@ -195,8 +195,9 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   /////////////////////////////////////////////////////////////
   // update the KKT with A (symmetric update forced)
   /////////////////////////////////////////////////////////////
-  kktd->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1);
-  //prob->getLocalB().getStorage()->dump("stage1eqmat2.dump");
+  if(locmy>0)
+    kktd->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1);
+  //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
 
   /////////////////////////////////////////////////////////////
   // update the KKT zeros for the lower right block 

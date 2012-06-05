@@ -37,7 +37,11 @@ sTreeImpl::sTreeImpl(int id, stochasticInput &in_)
 }
   
 sTreeImpl::~sTreeImpl()
-{ }
+{ 
+  // parent deallocates children
+  //for(size_t it=0; it<children.size(); it++)
+  //  delete children[it];
+}
 
 
 StochSymMatrix* sTreeImpl::createQ() const
@@ -47,6 +51,7 @@ StochSymMatrix* sTreeImpl::createQ() const
     return new StochSymDummyMatrix(m_id);
 
   StochSymMatrix* Q = NULL;
+
   if (m_id==0) {
     // get the Hessian from stochasticInput and get it in row-major
     // format by transposing it
@@ -69,11 +74,10 @@ StochSymMatrix* sTreeImpl::createQ() const
     Qi.reverseOrderedCopyOf( in.getSecondStageHessian(m_id-1) );
     Ri.reverseOrderedCopyOf( in.getSecondStageCrossHessian(m_id-1) );
 			     
-
     Q = new 
       StochSymMatrix( m_id,N, 
 		      m_nx, Qi.getNumElements(), //size and nnz of the diag block
-		      parent->m_nx, Ri.getNumElements(), //num of rows and nnz of the border
+		      parent->m_nx, Ri.getNumElements(), //num of cols and nnz of the border
 		      commWrkrs);
 
     memcpy( Q->diag->krowM(), 
@@ -161,6 +165,7 @@ StochVector* sTreeImpl::createb() const
   return svec;
 }
 
+namespace {
 // ------------------------------------------------------------
 // Internal code used to extract eq. and ineq. matrices from
 // stochasticInput (which stores all constraints in one matrix)
@@ -182,39 +187,36 @@ public:
 
 /** Counts the nnz in Mcol's rows corresponding to entries in lb and ub 
  * satisfying 'compFun' condition. */
+
 template<typename Compare>
-int countNNZ(const CoinPackedMatrix& Mcol, 
+int countNNZ(const CoinPackedMatrix& M, 
 	     const vector<double>& lb, const vector<double>& ub, 
 	     const Compare& compFun)
 {
+ 
   int nnz=0;
-
-  //convert to row-major, probably getting rows is faster 
-  CoinPackedMatrix M; M.reverseOrderedCopyOf(Mcol); 
-
-  assert(false==M.hasGaps());  
-
   size_t R=lb.size();
+  
   for(size_t i=0; i<R; i++) {
+    
     if (compFun(lb[i],ub[i])) {
       nnz += M.getVectorSize(i);
+      //cout << "i=" << i << "   nnz=" << nnz << endl;
     }
   }
+  
   return nnz;
 }		 
 
 /** Extracts the Mcol's rows corresponding to entries in lb and ub 
- * satisfying 'compFun' condition. Mcol is in column-major format, the
+ * satisfying 'compFun' condition. Mcol is in row-major format, the
  * output krowM,jcolM,dM represent a row-major submatrix of Mcol. */
 template<typename Compare>
-void extractRows(const CoinPackedMatrix& Mcol, 
+void extractRows(const CoinPackedMatrix& M, 
 		 const vector<double>& lb, const vector<double>& ub, 
 		 const Compare& compFun,
 		 int* krowM, int* jcolM, double* dM)
 {
-  //convert to row-major, extracting rows is probably faster 
-  CoinPackedMatrix M; M.reverseOrderedCopyOf(Mcol); 
-
   size_t R=lb.size();
 
   int nRow=0;
@@ -236,6 +238,7 @@ void extractRows(const CoinPackedMatrix& Mcol,
 
   Msub.submatrixOf(M, nRow, indRow); //this seems to crash if nRow==0
 
+  delete[] indRow;
   assert(false==Msub.hasGaps());
 
   memcpy(krowM,Msub.getVectorStarts(),(Msub.getNumRows()+1)*sizeof(int));
@@ -256,24 +259,70 @@ void extractRows(const CoinPackedMatrix& Mcol,
   //  r.getVectorStarts() returns a vector containing:
   //    0 5 7 9 11 14
 }		 
-
+} // end of the unnamed namespace
 
 StochGenMatrix* sTreeImpl::createA() const
 {
-  return createAorC(eq_comp());
+  //is this node a dead-end for this process?
+  if(commWrkrs==MPI_COMM_NULL)
+    return new StochGenDummyMatrix(m_id);
+
+  StochGenMatrix* A = NULL;
+  if (m_id==0) {
+    CoinPackedMatrix Arow; 
+    Arow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
+    assert(false==Arow.hasGaps());  
+
+    // number of nz in the rows corresponding to eq constraints
+    int nnzB=countNNZ( Arow, 
+		       in.getFirstStageRowLB(), 
+		       in.getFirstStageRowUB(), 
+		       eq_comp());
+    //printf("  -- 1st stage my=%lu nx=%lu nnzB=%d\n", m_my, m_nx, nnzB);
+    A = new StochGenMatrix( m_id, N, MZ, 
+			    m_my, 0,   0,    // A does not exist for the root
+			    m_my, m_nx, nnzB, // B is 1st stage eq matrix
+			    commWrkrs );
+    extractRows( Arow,
+		 in.getFirstStageRowLB(), in.getFirstStageRowUB(), eq_comp(),
+		 A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M() );
+
+  } else {
+    int scen=m_id-1;
+    CoinPackedMatrix Arow, Brow; 
+    Arow.reverseOrderedCopyOf( in.getLinkingConstraints(scen) );
+    Brow.reverseOrderedCopyOf( in.getSecondStageConstraints(scen) );
+
+    int nnzA=countNNZ( Arow, in.getSecondStageRowLB(scen), 
+		       in.getSecondStageRowUB(scen), eq_comp() );
+    int nnzB=countNNZ( Brow, in.getSecondStageRowLB(scen), 
+		       in.getSecondStageRowUB(scen), eq_comp() );
+
+    A = new StochGenMatrix( m_id, N, MZ, 
+			    m_my, parent->m_nx, nnzA, 
+			    m_my, m_nx,         nnzB,
+			    commWrkrs );
+    //cout << "  -- 2nd stage my=" << m_my << " nx=" << m_nx 
+    // << "  1st stage nx=" << parent->m_nx << "  nnzA=" << nnzA << " nnzB=" << nnzB << endl;
+    extractRows( Arow,
+		 in.getSecondStageRowLB(scen), 
+		 in.getSecondStageRowUB(scen), 
+		 eq_comp(),
+		 A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M() );
+    extractRows( Brow,
+		 in.getSecondStageRowLB(scen), 
+		 in.getSecondStageRowUB(scen), 
+		 eq_comp(),
+		 A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M() );
+  }
+  
+  for(size_t it=0; it<children.size(); it++) {
+    StochGenMatrix* child = ((sTreeImpl*)children[it])->createA();
+    A->AddChild(child);
+  }
+  return A;
 }
 StochGenMatrix* sTreeImpl::createC() const
-{
-  return createAorC(ineq_comp());
-}
-
-
-/**
- * Create A (when Compare is eq_comp) or C (when Compare is ineq_comp).
- * In this way we have only one messy code that is easier to debug.
- */
-template<typename Compare>
-StochGenMatrix* sTreeImpl::createAorC(const Compare& compFun) const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
@@ -281,43 +330,44 @@ StochGenMatrix* sTreeImpl::createAorC(const Compare& compFun) const
 
   StochGenMatrix* C = NULL;
   if (m_id==0) {
-    CoinPackedMatrix Ccol=in.getFirstStageConstraints();
+    CoinPackedMatrix Crow; 
+    Crow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
 
     // number of nz in the rows corresponding to ineq constraints
-    int nnzD=countNNZ( Ccol, 
+    int nnzD=countNNZ( Crow, 
 		       in.getFirstStageRowLB(), 
 		       in.getFirstStageRowUB(), 
-		       compFun);
-
+		       ineq_comp());
     C = new StochGenMatrix( m_id, N, MZ, 
 			    m_mz, -1,   0,    // C does not exist for the root
 			    m_mz, m_nx, nnzD, // D is 1st stage ineq matrix
 			    commWrkrs );
-
-    extractRows( Ccol,
+    extractRows( Crow,
 		 in.getFirstStageRowLB(), in.getFirstStageRowUB(), ineq_comp(),
 		 C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M() );
-
+    //printf("  -- 1st stage mz=%lu nx=%lu nnzD=%d\n", m_mz, m_nx, nnzD);
   } else {
     int scen=m_id-1;
-    CoinPackedMatrix Ccol = in.getLinkingConstraints(scen);
-    CoinPackedMatrix Dcol = in.getSecondStageConstraints(scen);
+    CoinPackedMatrix Crow, Drow; 
+    Crow.reverseOrderedCopyOf( in.getLinkingConstraints(scen) );
+    Drow.reverseOrderedCopyOf( in.getSecondStageConstraints(scen) );
 
-    int nnzC=countNNZ( Ccol, in.getSecondStageRowLB(scen), 
-		       in.getSecondStageRowUB(scen), compFun );
-    int nnzD=countNNZ( Dcol, in.getSecondStageRowLB(scen), 
-		       in.getSecondStageRowUB(scen), compFun );
+    int nnzC=countNNZ( Crow, in.getSecondStageRowLB(scen), 
+		       in.getSecondStageRowUB(scen), ineq_comp() );
+    int nnzD=countNNZ( Drow, in.getSecondStageRowLB(scen), 
+		       in.getSecondStageRowUB(scen), ineq_comp() );
 
     C = new StochGenMatrix( m_id, N, MZ, 
-			    m_mz, parent->m_mz, nnzC, 
+			    m_mz, parent->m_nx, nnzC, 
 			    m_mz, m_nx,         nnzD,
 			    commWrkrs );
-    extractRows( Ccol,
+    //printf("  -- 2nd stage mz=%lu nx=%lu   1st stage nx=%lu     nnzC=%d nnzD=%d\n", m_mz, m_nx, parent->m_nx, nnzC, nnzD);
+    extractRows( Crow,
 		 in.getSecondStageRowLB(scen), 
 		 in.getSecondStageRowUB(scen), 
 		 ineq_comp(),
 		 C->Amat->krowM(), C->Amat->jcolM(), C->Amat->M() );
-    extractRows( Dcol,
+    extractRows( Drow,
 		 in.getSecondStageRowLB(scen), 
 		 in.getSecondStageRowUB(scen), 
 		 ineq_comp(),
@@ -325,7 +375,7 @@ StochGenMatrix* sTreeImpl::createAorC(const Compare& compFun) const
   }
   
   for(size_t it=0; it<children.size(); it++) {
-    StochGenMatrix* child = ((sTreeImpl*)children[it])->createAorC(compFun);
+    StochGenMatrix* child = ((sTreeImpl*)children[it])->createC();
     C->AddChild(child);
   }
   return C;

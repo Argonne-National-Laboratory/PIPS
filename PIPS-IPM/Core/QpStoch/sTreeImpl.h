@@ -56,9 +56,6 @@ class sTreeImpl : public sTree
 
   size_t m_nx, m_my, m_mz;
 
-  template<typename Compare>
-  StochGenMatrix* createAorC(const Compare& compFun) const;
-
   int compute_nFirstStageEq();
   int compute_nSecondStageEq(int scen);
 };

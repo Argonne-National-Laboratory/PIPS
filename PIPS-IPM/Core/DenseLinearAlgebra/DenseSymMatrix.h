@@ -97,8 +97,8 @@ public:
   
   virtual int size();
 
-  DenseStorage& storage() { return *mStorage; }
-  DenseStorage *  getStorage() { return mStorage.ptr(); }
+  DenseStorage& getStorageRef() { return *mStorage; }
+  DenseStorage*  getStorage() { return mStorage.ptr(); }
 
   /* this = alpha * op(A)*op(B)  +   beta * this */
   void matMult(double alpha, 

@@ -94,6 +94,7 @@ public:
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
 
   SparseStorage * getStorage() { return mStorage.ptr(); }
+  SparseStorage& getStorageRef() { return *mStorage; }
   int * krowM() { return mStorage->krowM; }
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }

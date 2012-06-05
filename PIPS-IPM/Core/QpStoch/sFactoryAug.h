@@ -10,6 +10,7 @@
 class sFactoryAug : public sFactory {
  public:
   sFactoryAug( StochInputTree* );
+  sFactoryAug( stochasticInput& );
  private:
   sFactoryAug( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ );
   sFactoryAug();

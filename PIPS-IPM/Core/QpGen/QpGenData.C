@@ -79,7 +79,7 @@ QpGenData::QpGenData( LinearAlgebraPackage * la_in,
 
 QpGenData::QpGenData( )
 {
-  
+  printf("QPGenData ----");  
 }
 
 void QpGenData::Qmult( double beta,  OoqpVector& y,
@@ -570,8 +570,7 @@ void QpGenData::flipQ()
 
 
 QpGenData::~QpGenData()
-{
-}
+{ }
 
 
 

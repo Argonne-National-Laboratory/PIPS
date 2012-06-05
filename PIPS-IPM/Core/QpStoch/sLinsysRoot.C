@@ -36,7 +36,8 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 
 sLinsysRoot::~sLinsysRoot()
 {
-
+  for(size_t c=0; c<children.size(); c++)
+    delete children[c];
 }
 
 void sLinsysRoot::factor2(sData *prob, Variables *vars)
@@ -379,7 +380,7 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat,
   assert( row >= 0 && row + rowExtent <= nn );
   assert( col >= 0 && col + colExtent <= nn );
 
-  double ** M = mat->storage().M;
+  double ** M = mat->getStorageRef().M;
 
   for(int j=col; j<col+colExtent; j++) {
       M[row][j] = 0.0;

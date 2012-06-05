@@ -147,6 +147,8 @@ void sData::createScaleFromQ()
 
 sData::~sData()
 {
+  for(size_t it=0; it<children.size(); it++)
+    delete children[it];
 }
 
 int sData::getLocalnx()
@@ -188,9 +190,9 @@ int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
 
-  nnzQ = Qst.diag->getStorage()->len + Qst.border->getStorage()->len;
-  nnzB = Ast.Bmat->getStorage()->len;
-  nnzD = Cst.Bmat->getStorage()->len;
+  nnzQ = Qst.diag->getStorageRef().len + Qst.border->getStorageRef().len;
+  nnzB = Ast.Bmat->getStorageRef().len;
+  nnzD = Cst.Bmat->getStorageRef().len;
   return 0;
 }
 
@@ -199,6 +201,12 @@ SparseSymMatrix& sData::getLocalQ()
 {
   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
   return *Qst.diag;
+}
+
+SparseGenMatrix& sData::getLocalCrossHessian()
+{
+  StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
+  return *Qst.border;
 }
 
 // T_i x_0 + W_i x_i = b_i

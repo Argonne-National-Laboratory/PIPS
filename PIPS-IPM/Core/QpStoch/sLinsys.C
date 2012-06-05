@@ -144,7 +144,7 @@ void sLinsys::computeU_V(sData *prob,
 {
   U->scalarMult(0.0);
   V->scalarMult(0.0);
-
+  assert(false); //need code to deal with cross Hessian term
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
 
@@ -206,54 +206,36 @@ void sLinsys::allocV(DenseGenMatrix ** V, int n0)
 
 
 /**
- *       [ 0 Ai^T Ci^T ]          [    ]
- * b0 -= [ 0   0   0   ] * Li\Di\ [ zi ]
- *       [ 0   0   0   ]          [    ]
+ *       [ R^i^T Ai^T Ci^T ]          [    ]
+ * z0 -= [ 0      0   0   ] * Li\Di\ [ zi ]
+ *       [ 0      0   0   ]          [    ]
  *
- * Changes only the first n0 entries of b0
+ * 
  */
 void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 {
   SimpleVector& z0 = dynamic_cast<SimpleVector&>(z0_);
   SimpleVector& zi = dynamic_cast<SimpleVector&>(zi_);
-  /*
-  int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
-  static int c = 0;
-  if (mype == 0 && c == 0) {
-    printf("RHS IN\n");
-    for (int i = 0; i < zi.length(); i++) {
-      printf("%d %.10E\n",i,zi[i]);
-    }
-  }*/
 
-  solver->Dsolve (zi);
-  
-
-  
+  solver->Dsolve (zi);  
   solver->Ltsolve(zi);
-
-
-  /*if (mype == 0 && c == 0) {
-    printf("SOL OUT\n");
-    for (int i = 0; i < zi.length(); i++) {
-      printf("%d %.10E\n",i,zi[i]);
-    }
-  }
-  c++;*/
 
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   //get n0= nx(parent)= #cols of A or C
   int dummy, n0;
   A.getSize(dummy, n0);
 
-  // zi2 and zi3 are just references to fragements of zi
-  SimpleVector zi2 (&zi[locnx], locmy);
+  // zi2 and zi3 are just references to fragments of zi
+  SimpleVector zi1 (&zi[0],           locnx);
+  SimpleVector zi2 (&zi[locnx],       locmy);
   SimpleVector zi3 (&zi[locnx+locmy], locmz);
-  // same for z01
+  // same for z01 (only the first n0 entries in the output z0 are computed)
   SimpleVector z01 (&z0[0], n0);
-  
+
+  R.transMult(1.0, z01, -1.0, zi1);
   A.transMult(1.0, z01, -1.0, zi2);
   C.transMult(1.0, z01, -1.0, zi3);
 }
@@ -264,7 +246,7 @@ void sLinsys::solveCompressed( OoqpVector& rhs_ )
 {
   StochVector& rhs = dynamic_cast<StochVector&>(rhs_);
   //!log
-  int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  //int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   //int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
   
 
@@ -292,7 +274,7 @@ void sLinsys::solveCompressed( OoqpVector& rhs_ )
 /*
  *  y = alpha*Lni^T x + beta*y
  *
- *                       ( [ 0 0 0 ]     )
+ *                       ( [ R 0 0 ]     )
  *  y = beta*y + Di\Li\ (  [ A 0 0 ] * x )
  *                      (  [ C 0 0 ]    )
  */
@@ -302,7 +284,7 @@ void sLinsys::LniTransMult(sData *prob,
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
-
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
   int N, nx0;
 
   //get nx(parent) from the number of cols of A (or C). Use N as dummy
@@ -323,23 +305,25 @@ void sLinsys::LniTransMult(sData *prob,
   SimpleVector LniTx3(&LniTx[locnx+locmy], locmz);
   
   LniTx1.setToZero();
+  R.mult(0.0, LniTx1, 1.0, x1);
   A.mult(0.0, LniTx2, 1.0, x1);
   C.mult(0.0, LniTx3, 1.0, x1);
  
   solver->Lsolve(LniTx); 
   solver->Dsolve(LniTx);
 
-  //!execopt : does LniTx have the first nx entries zero ?
   y.axpy(alpha,LniTx); 
  
 }
 
 /**
  * Computes U = Gi * inv(H_i) * Gi^T.
- *        [ 0 0 0 ]
+ *        [ R 0 0 ]
  * Gi^T = [ A 0 0 ]
  *        [ C 0 0]
  *
+ * A and C are the recourse eq. and ineq. matrices, R is the cross
+ * Hessian term.
  */
 
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
@@ -347,6 +331,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   int N, nxP, NP;
   A.getSize(N, nxP); assert(N==locmy);
@@ -355,15 +340,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   if(nxP==-1) C.getSize(N,nxP);
   if(nxP==-1) nxP = NP;
   N = locnx+locmy+locmz;
-	
-/*
-	const int blocksize = 20;
-	for (int it=0; it<nxP; it += blocksize) {
-		DenseGenMatrix out(SC[it], blocksize, NP);
-		addColsToDenseSchurCompl(prob, out, it, MIN(it+blocksize,nxP));
-	}
-*/
-		
+
   SimpleVector col(N);
 
   for(int it=0; it<nxP; it++) {
@@ -371,32 +348,25 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     double* pcol = &col[0];
     for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
 
-    A.fromGetDense(0, it, &col[locnx],  1, locmy, 1);    
+    R.fromGetDense(0, it, &col[0],           1, locnx, 1);
+    A.fromGetDense(0, it, &col[locnx],       1, locmy, 1);    
     C.fromGetDense(0, it, &col[locnx+locmy], 1, locmz, 1);
 
     solver->solve(col);
 
     //here we have colGi = inv(H_i)* it-th col of Gi^t
-    
-    //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
-    //for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
-    
-    // SC+=At*y
-    //A.transMult( 1.0, &SC[0][it],       NP,  
-		//-1.0, &col[locnx],       1);
-    // SC+=Ct*z
-    //C.transMult( 1.0, &SC[0][it], NP,
-		//-1.0, &col[locnx+locmy], 1);
+     //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
+ 
+    // SC+=R*x
+    R.transMult( 1.0, &SC[0][0],     1,
+		 -1.0, &col[0],      1);
 
     // SC+=At*y
-    A.transMult( 1.0, &SC[it][0],       1,  
-		-1.0, &col[locnx],       1);
+    A.transMult( 1.0, &SC[it][0],   1,  
+		-1.0, &col[locnx],  1);
     // SC+=Ct*z
-    C.transMult( 1.0, &SC[it][0], 1,
+    C.transMult( 1.0, &SC[it][0],   1,
 		-1.0, &col[locnx+locmy], 1);
-
-    //SimpleVector a(&col[locnx+locmy], locmz);
-    //a.writeToStream(cout);assert(false);
   }
 
 }
@@ -413,6 +383,7 @@ void sLinsys::addColsToDenseSchurCompl(sData *prob,
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   int ncols = endcol-startcol;
   int N, nxP, ncols_t, N_out;
@@ -428,8 +399,13 @@ void sLinsys::addColsToDenseSchurCompl(sData *prob,
   DenseGenMatrix cols(ncols,N);
   bool allzero = true;
   memset(cols[0],0,N*ncols*sizeof(double));
-  A.getStorage()->fromGetColBlock(startcol, &cols[0][locnx], N, endcol-startcol, allzero);
-  C.getStorage()->fromGetColBlock(startcol, &cols[0][locnx+locmy], N, endcol-startcol, allzero);
+
+  R.getStorageRef().fromGetColBlock(startcol, &cols[0][0],
+				    N, endcol-startcol, allzero);
+  A.getStorageRef().fromGetColBlock(startcol, &cols[0][locnx], 
+				    N, endcol-startcol, allzero);
+  C.getStorageRef().fromGetColBlock(startcol, &cols[0][locnx+locmy], 
+				    N, endcol-startcol, allzero);
 
   //int mype; MPI_Comm_rank(MPI_COMM_WORLD, &mype);
   //printf("solving with multiple RHS %d \n", mype);	
@@ -442,74 +418,18 @@ void sLinsys::addColsToDenseSchurCompl(sData *prob,
   for (int it=0; it < ncols; it += blocksize) {
     int end = MIN(it+blocksize,ncols);
     int numcols = end-it;
-    
+    assert(false); //add Rt*x -- and test the code
     // SC-=At*y
-    A.getStorage()->transMultMat( 1.0, out[it], numcols, N_out,  
+    A.getStorageRef().transMultMat( 1.0, out[it], numcols, N_out,  
 				  -1.0, &cols[it][locnx], N);
     // SC-=Ct*z
-    C.getStorage()->transMultMat( 1.0, out[it], numcols, N_out,
+    C.getStorageRef().transMultMat( 1.0, out[it], numcols, N_out,
 				  -1.0, &cols[it][locnx+locmy], N);
   }
   
-  //for (int it=startcol; it<endcol; it++) {
-  //  double* pcol = cols[it-startcol];
-  // 	A.transMult( 1.0, out[it-startcol], 1,  
-  //		-1.0, &pcol[locnx],       1);
-  //    // SC-=Ct*z
-  //   C.transMult( 1.0, out[it-startcol], 1,
-  //		-1.0, &pcol[locnx+locmy], 1);
-  //
-  //	}
-  
-  //printf("did transmult %d \n", mype);
-  
+
 }
 
-/*
-void sLinsys::addColsToDenseSchurCompl(sData *prob, 
-				       DenseGenMatrix& out, 
-				       int startcol, int endcol) 
-{
-  SparseGenMatrix& A = prob->getLocalA();
-  SparseGenMatrix& C = prob->getLocalC();
-
-  int N, nxP, NP, ncols;
-  A.getSize(N, nxP); assert(N==locmy);
-  out.getSize(ncols, N); assert(N == nxP);
-  assert(endcol <= nxP &&  ncols >= endcol - startcol);
-
-  if(nxP==-1) C.getSize(N,nxP);
-  if(nxP==-1) nxP = NP;
-
-  N = locnx+locmy+locmz;
-  SimpleVector col(N);
-
-  for(int it=startcol; it<endcol; it++) {
-    
-    double* pcol = &col[0];
-    for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
-
-    A.fromGetDense(0, it, &col[locnx],  1, locmy, 1);    
-    C.fromGetDense(0, it, &col[locnx+locmy], 1, locmz, 1);
-
-    solver->solve(col);
-
-    //here we have colGi = inv(H_i)* it-th col of Gi^t
-    
-    //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
-    //for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
-
-    // SC-=At*y
-    A.transMult( 1.0, out[it-startcol], 1,  
-		-1.0, &col[locnx],       1);
-    // SC-=Ct*z
-    C.transMult( 1.0, out[it-startcol], 1,
-		-1.0, &col[locnx+locmy], 1);
-
-    //SimpleVector a(&col[locnx+locmy], locmz);
-    //a.writeToStream(cout);assert(false);
-  }
-}*/
 
 
 // adds only lower triangular elements to out
@@ -536,28 +456,6 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
   DenseGenMatrix cols(BLOCKSIZE,N);
   int outi = 0;
   
-  
-  // get list of completely zero columns
-  /*
-  static int go = true;
-    if (go) {
-    set<int> zeros;
-    for (int i = 0; i < nxP; i++) {
-      zeros.insert(i);
-    }
-    for (int i = 0; i < A.getStorage()->len; i++) {
-      zeros.erase(A.getStorage()->jcolM[i]);
-    }
-    for (int i = 0; i < C.getStorage()->len; i++) {
-      zeros.erase(C.getStorage()->jcolM[i]);
-    }
-    cout << "Zero columns: (of " << nxP << ")\n";
-    for (set<int>::iterator it=zeros.begin(); it != zeros.end(); it++) {
-      cout << *it << " ";
-    }
-    cout << endl;
-    go = false;
-  }*/
 
   for (int col = startcol; col < endcol; col += BLOCKSIZE) {
     int ecol = MIN(col+BLOCKSIZE,endcol);
@@ -566,35 +464,23 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
     
     memset(cols[0],0,BLOCKSIZE*N*sizeof(double));
     
-    //for (int c = col; c < ecol; c++) {
-    //    A.fromGetDense(0,c,&cols[c-col][locnx],1,locmy,1);
-    //    C.fromGetDense(0,c,&cols[c-col][locnx+locmy],1,locmz,1);
-    //}
+ 
     bool allzero = true;
-    
-    A.getStorage()->fromGetColBlock(col, &cols[0][locnx], N, nbcols, allzero);
-    C.getStorage()->fromGetColBlock(col, &cols[0][locnx+locmy], N, nbcols, allzero);
+    assert(false); //! code needs to consider the cross Hessian; fixme
+    A.getStorageRef().fromGetColBlock(col, &cols[0][locnx], N, nbcols, allzero);
+    C.getStorageRef().fromGetColBlock(col, &cols[0][locnx+locmy], N, nbcols, allzero);
     
     if (!allzero) {
       solver->solve(cols);
       
-      
-      A.getStorage()->transMultMatLower(out+outi, nbcols, col,
+      A.getStorageRef().transMultMatLower(out+outi, nbcols, col,
 					-1.0, &cols[0][locnx], N);
-      C.getStorage()->transMultMatLower(out+outi, nbcols, col,
-					-1.0, &cols[0][locnx+locmy], N);
+      C.getStorageRef().transMultMatLower(out+outi, nbcols, col,
+					  -1.0, &cols[0][locnx+locmy], N); 
     }
     for (int c = col; c < ecol; c++) {
       outi += nxP-c;
     }
-    //
-    //for (int c = col; c < ecol; c++) {
-    //  A.getStorage()->transMultLower(1.0, out+outi,
-    //       -1.0, &cols[c-col][locnx],c);
-    //  C.getStorage()->transMultLower(1.0, out+outi,
-    //       -1.0, &cols[c-col][locnx+locmy],c);
-    //  outi += nxP - c;
-    //}
   }
 }
 
@@ -636,10 +522,10 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
     //for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
     
     // SC-=At*y
-    A.getStorage()->transMultLower( 1.0, out+outi,
+    A.getStorageRef().transMultLower( 1.0, out+outi,
                         -1.0, &col[locnx], it);
     // SC-=Ct*z
-    C.getStorage()->transMultLower( 1.0, out+outi, 
+    C.getStorageRef().transMultLower( 1.0, out+outi, 
                         -1.0, &col[locnx+locmy], it);
 
     int nelts = nxP-it;

@@ -415,6 +415,9 @@ void DenseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
   rowExtent = ( destRow + rowExtent <= m ) ?  rowExtent : m - destRow;
   colExtent = ( destCol + colExtent <= n ) ?  colExtent : n - destCol;
 
+  cout << "m=" << m << "     n=" << n << endl;
+  cout << "dest row:"<<destRow << "  destcol:" << destCol << endl;
+
   Mat.fromGetDense( srcRow, srcCol, &M[destRow][destCol], n,
 		    rowExtent, colExtent );
 
@@ -469,7 +472,7 @@ void DenseSymMatrix::atRankkUpdate( double alpha, double beta, DenseGenMatrix& U
 
   dsyrk_(&UPLO, &TRANS,
 	 &n, &k,
-	 &beta,   &U.getStorage()->M[0][0], &ldu,
+	 &beta,   &U.getStorageRef().M[0][0], &ldu,
 	 &alpha,  &mStorage->M[0][0],       &lda);
 
 }

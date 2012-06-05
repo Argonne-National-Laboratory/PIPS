@@ -34,14 +34,14 @@ StochSymMatrix::StochSymMatrix(int id, int global_n, int local_n, int local_nnz,
 }
 
 StochSymMatrix::StochSymMatrix( int id, int global_n, 
-				int diag_n, int diag_nnz, 
-				int border_n, int border_nnz,
+				int nrows, int diag_nnz, 
+				int nbordercols, int border_nnz,
 				MPI_Comm mpiComm_)
   :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(NULL)
 {
-  diag = new SparseSymMatrix(diag_n, diag_nnz);
-  //printf("Creating cross Hessian: m=%d n=%d  nnz=%d\n", border_n, diag_n, border_nnz);
-  border = new SparseGenMatrix(border_n, diag_n, border_nnz);
+  diag = new SparseSymMatrix(nrows, diag_nnz);
+  //printf("Creating cross Hessian: m=%d n=%d  nnz=%d\n", nbordercols, nrows, border_nnz);
+  border = new SparseGenMatrix(nrows, nbordercols, border_nnz);
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -49,35 +49,17 @@ StochSymMatrix::StochSymMatrix( int id, int global_n,
   }
 }
 
-
-/*StochSymMatrix::StochSymMatrix(const vector<StochSymMatrix*> &blocks) 
-{
-  mpiComm = blocks[0]->mpiComm;
-  n = blocks[0]->n;
-  id = blocks[0]->id;
-
-  vector<SparseSymMatrix*> v(blocks.size());
-  for(size_t i = 0; i < blocks.size(); i++) 
-    v[i] = blocks[i]->mat;
-
-  mat = new SparseSymMatrix(v);
-
-  border = NULL;
-
-}
-*/
-
 void StochSymMatrix::AddChild(StochSymMatrix* child)
 {
   child->parent=this;
 
-  int m,n; child->border->getStorage()->getSize(m,n);
+  int m,n; child->border->getStorageRef().getSize(m,n);
 
   if (m==0 && n==0) {
     // create an empty border for this children with correct dimensions
     delete child->border;
 
-    //printf("(RE)Creating cross Hessian: m=%d n=%d  nnz=%d\n", this->diag->size(), child->diag->size(), 0);
+    printf("(RE)Creating cross Hessian: m=%d n=%d  nnz=%d\n", this->diag->size(), child->diag->size(), 0);
 
     child->border = new SparseGenMatrix(child->diag->size(), this->diag->size(), 0);
   }
@@ -205,9 +187,13 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
       // yi=beta*yi + alpha * Qi*xi
       diag->mult( beta, yvec, alpha, xvec ); 
     
-    // y0 = y0      + alpha*sum( Ri^T * xi)
+    // y0 = y0 + alpha*sum( Ri^T * xi)
     for (size_t it=0; it<nChildren; it++) {
+      int m,n;
+      children[it]->border->getStorageRef().getSize(m,n);
+      //printf(" child=%d ---- transMult mat=[%d %d %d]  y->%d  x->%d\n", it,m,n, children[it]->border->getStorageRef().length(), yvec.length(),  x.children[it]->vec->length());
       children[it]->border->transMult(1.0, yvec, alpha, *x.children[it]->vec);
+      //printf("transMult DONE\n");
     }
   
     if(iAmDistrib && nChildren>0) {
@@ -378,3 +364,20 @@ int StochSymDummyMatrix::isKindOf( int type )
 { 
   return type==kStochSymDummyMatrix;
 }
+
+/*StochSymMatrix::StochSymMatrix(const vector<StochSymMatrix*> &blocks) 
+{
+  mpiComm = blocks[0]->mpiComm;
+  n = blocks[0]->n;
+  id = blocks[0]->id;
+
+  vector<SparseSymMatrix*> v(blocks.size());
+  for(size_t i = 0; i < blocks.size(); i++) 
+    v[i] = blocks[i]->mat;
+
+  mat = new SparseSymMatrix(v);
+
+  border = NULL;
+
+}
+*/
