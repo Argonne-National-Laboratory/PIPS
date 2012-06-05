@@ -33,8 +33,9 @@ protected:
 		vector<int> const &localScen = this->ctx.localScenarios();
 
 		if (this->nIter == 1) {
-			for (unsigned r = 1; r < localScen.size(); r++) {
-				int scen = localScen[r];
+			for (int scen = 0; scen < nscen; scen++) {
+			//for (unsigned r = 1; r < localScen.size(); r++) {
+			//	int scen = localScen[r];
 				proxCenterModelObj[scen] = this->bundle[scen].at(0).objmax;
 			}
 		}
@@ -51,10 +52,11 @@ protected:
 		t2 += MPI_Wtime() - tstart;
 	
 		std::vector<double> const& y = solver.getFirstStagePrimalColSolution();
-		lastModelObjSum = 0.;
-		double v = 0.;
-		for (unsigned r = 1; r < localScen.size(); r++) {
-			int scen = localScen[r];
+		double lastModelObjSum_this = 0.;
+		double v_this = 0.;
+		//for (unsigned r = 1; r < localScen.size(); r++) { // for distributed solver
+		for (int scen = 0; scen < nscen; scen++) { // for serial solver
+			//int scen = localScen[r];
 			std::vector<double> const& z = solver.getSecondStagePrimalColSolution(scen);
 			for (int k = 0; k < nvar1; k++) {
 				double sum = y[k]/sqrt((double)nscen);
@@ -64,10 +66,16 @@ protected:
 				trialSolution[scen][k] = this->currentSolution[scen][k]+sum/u;
 			}
 			lastModelObj[scen] = -solver.getSecondStageDualRowSolution(scen)[0];
-			lastModelObjSum += -lastModelObj[scen];
-			v += lastModelObj[scen] - proxCenterModelObj[scen] - eps_sol/nscen;
+			lastModelObjSum_this += -lastModelObj[scen];
+			v_this += lastModelObj[scen] - proxCenterModelObj[scen] - eps_sol/nscen;
 		}
-		// reduce lastModelObjSum, v
+		double v;
+		v = v_this;
+		lastModelObjSum = lastModelObjSum_this;
+		/* if distributed solver:
+		MPI_Allreduce(&lastModelObjSum_this,&lastModelObjSum,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());
+		MPI_Allreduce(&v_this,&v,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());*/
+	
 		eps_sol = -(mR-mL)*v; 
 		if (this->ctx.mype() == 0) printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
 		if (v > -1e-2) {
@@ -88,8 +96,9 @@ protected:
 		if (newObj - this->currentObj > -mL*v) {
 			if (this->ctx.mype() == 0) cout << ", accepting\n";
 			swap(this->currentSolution,trialSolution);
-			for (unsigned r = 1; r < localScen.size(); r++) {
-				int scen = localScen[r];
+			for (int scen = 0; scen < nscen; scen++) {
+			//for (unsigned r = 1; r < localScen.size(); r++) {
+			//	int scen = localScen[r];
 				proxCenterModelObj[scen] = this->bundle[scen][this->bundle[scen].size()-1].objmax;
 			}
 			this->currentObj = newObj;
