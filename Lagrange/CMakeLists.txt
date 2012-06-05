@@ -33,6 +33,7 @@ add_executable(proxLinfTrustSMPS Drivers/linftrustSMPS.cpp)
 add_executable(proxL1TrustSMPS Drivers/l1trustSMPS.cpp)
 add_executable(proxLinfTrustRaw Drivers/linftrustRaw.cpp)
 add_executable(proxBundleSMPS Drivers/proxBundleSMPS.cpp)
+add_executable(proxBundleRaw Drivers/proxBundleRaw.cpp)
 add_executable(testSols Drivers/testSols.cpp)
 
 target_link_libraries(lagrangeRootNode pipss stochInput ClpBALPInterface CbcLagrangeSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
@@ -48,6 +49,8 @@ target_link_libraries(proxLinfTrustSMPS bundle pipss stochInput scenred ClpBALPI
 target_link_libraries(proxL1TrustSMPS bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(proxLinfTrustRaw bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(proxBundleSMPS bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(proxBundleRaw bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(testSols bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 

@@ -45,7 +45,7 @@ public:
 		cout << endl;*/
 
 		LagrangeSolver lsol(*input,scen,lagrangeDiff);
-		if (ws) lsol.setWarmStart(ws.get());
+		if (ws) lsol.setWarmStart(*ws.get());
 		//lsol.setRatio(100*fabs(relprec));
 		lsol.go();
 		ws.reset(lsol.getWarmStart());

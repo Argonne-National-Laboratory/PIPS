@@ -129,6 +129,8 @@ CbcLagrangeSolver::CbcLagrangeSolver(stochasticInput &input, int scenarioNumber,
 		if (input.isSecondStageColInteger(scenarioNumber,i)) m.setInteger(i+nvar1);
 	}
 
+	//m.writeMps("problem");
+
 	cbcm.reset(new CbcModel(m));
 	CbcMain0(*cbcm);
 	//m.messageHandler()->setLogLevel(0);
@@ -184,10 +186,12 @@ vector<double> CbcLagrangeSolver::getBestFirstStageSolution() const {
 	return vector<double>(s,s+nvar1);
 }
 
-CoinWarmStart* CbcLagrangeSolver::getWarmStart() const {
-	return cbcm->solver()->getWarmStart();
+CbcLagrangeSolver::WarmStart* CbcLagrangeSolver::getWarmStart() const {
+	
+	return new WarmStart(vector<double>(cbcm->bestSolution(),cbcm->bestSolution()+cbcm->getNumCols()), cbcm->solver()->getWarmStart());
 }
 
-void CbcLagrangeSolver::setWarmStart(const CoinWarmStart* w) {
-	cbcm->solver()->setWarmStart(w);
+void CbcLagrangeSolver::setWarmStart(const WarmStart& w) {
+	//cbcm->setBestSolution(&w.bestSol[0],w.bestSol.size(),COIN_DBL_MAX,true);
+	//cbcm->solver()->setWarmStart(w);
 }

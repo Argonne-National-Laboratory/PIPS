@@ -87,9 +87,9 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 	lsol.setAbsoluteGap(eps_sol);
 	// hot start for root node LP
 	if (hotstarts[scen]) {
-		lsol.setWarmStart(hotstarts[scen].get());
+		lsol.setWarmStart(*hotstarts[scen].get());
 	} else if (hotstarts[ctx.localScenarios().at(1)]) {
-		lsol.setWarmStart(hotstarts[ctx.localScenarios()[1]].get());
+		lsol.setWarmStart(*hotstarts[ctx.localScenarios()[1]].get());
 	}
 	//lsol.setRatio(100*fabs(relprec));
 	lsol.go();

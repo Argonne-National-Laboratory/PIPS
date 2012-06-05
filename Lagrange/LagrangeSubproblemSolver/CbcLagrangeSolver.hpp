@@ -5,6 +5,7 @@
 #include "OsiClpSolverInterface.hpp"
 #include "CbcModel.hpp"
 #include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
 
 class CbcLagrangeSolver : public LagrangeSubproblemInterface {
 public:
@@ -38,10 +39,15 @@ public:
 
 	std::vector<double> getBestFirstStageSolution() const;
 
-	typedef CoinWarmStart WarmStart;
-	// caller must free!
+	struct WarmStart{
+		WarmStart(std::vector<double> const& bestSol, CoinWarmStart* basis) :
+			bestSol(bestSol), basis(basis) {}
+		std::vector<double> bestSol; boost::shared_ptr<CoinWarmStart> basis;
+	};
+
+	// user must free!
 	WarmStart* getWarmStart() const;
-	void setWarmStart(const WarmStart*);
+	void setWarmStart(const WarmStart&);
 
 protected:
 	OsiClpSolverInterface m;
