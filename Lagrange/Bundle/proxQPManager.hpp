@@ -17,6 +17,7 @@ public:
 		proxCenterModelObj.resize(nscen);
 		u = 1.;
 		t = MPI_Wtime();
+		t2 = 0.;
 		mL = 0.1;
 		mR = 0.1;
 		eps_sol = 10.; // absolute scale, need to adjust
@@ -38,15 +39,16 @@ protected:
 			}
 		}
 		
-		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Best Primal: %f, Relerr: %g Elapsed: %f\n",this->nIter-1,this->currentObj,this->bestPrimalObj,fabs(lastModelObjSum-this->currentObj)/fabs(this->currentObj),MPI_Wtime()-t);
+		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Best Primal: %f, Relerr: %g Elapsed: %f (%f in QP solve)\n",this->nIter-1,this->currentObj,this->bestPrimalObj,fabs(lastModelObjSum-this->currentObj)/fabs(this->currentObj),MPI_Wtime()-t,t2);
 		if (this->terminated_) return;	
 		
 
 		proximalQPModel lm(nvar1,this->bundle,this->currentSolution,u);
 		BAQPSolver solver(lm);
 		
-
+		double tstart = MPI_Wtime();
 		solver.go();
+		t2 += MPI_Wtime() - tstart;
 	
 		std::vector<double> const& y = solver.getFirstStagePrimalColSolution();
 		lastModelObjSum = 0.;
@@ -106,7 +108,7 @@ private:
 	std::vector<double> proxCenterModelObj;
 	double lastModelObjSum;
 	double u;
-	double t;
+	double t, t2;
 	double mL, mR;
 	double eps_sol; // allowable imprecision in the solution 
 
