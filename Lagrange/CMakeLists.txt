@@ -13,6 +13,7 @@ include_directories(../PIPS-IPM/Core/StochLinearAlgebra ../PIPS-IPM/Core/QpStoch
 add_library(CbcLagrangeSolver LagrangeSubproblemSolver/CbcLagrangeSolver.cpp)
 add_library(ClpRecourseSolver RecourseSubproblemSolver/ClpRecourseSolver.cpp)
 add_library(CbcRecourseSolver RecourseSubproblemSolver/CbcRecourseSolver.cpp)
+
 add_library(combine Drivers/combineScenarios.cpp)
 add_library(bundle Bundle/cuttingPlaneBALP.cpp Bundle/levelBALP.cpp
 	Bundle/l1bundleBALP.cpp Bundle/lInfTrustBALP.cpp Bundle/l1TrustBALP.cpp
@@ -53,6 +54,17 @@ target_link_libraries(proxBundleSMPS bundle pipss ooqpgensparse ooqpbase ooqpmeh
 target_link_libraries(proxBundleRaw bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(testSols bundle pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+
+if(HAVE_SCIP)
+	include_directories("${SCIP_INCDIR}")
+	add_library(ScipLagrangeSolver LagrangeSubproblemSolver/ScipLagrangeSolver.cpp)
+	add_executable(proxBundleScipSMPS Drivers/proxBundleScipSMPS.cpp)
+	add_executable(proxBundleScipRaw Drivers/proxBundleScipRaw.cpp)
+	target_link_libraries(proxBundleScipSMPS bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+	target_link_libraries(proxBundleScipRaw bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+endif(HAVE_SCIP)
 
 if(HAVE_CB)
 	include_directories("${CB_DIR}/include")
