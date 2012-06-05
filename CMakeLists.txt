@@ -156,6 +156,18 @@ else(EXISTS ${CB_LIB})
 	message(STATUS "Building without ConicBundle library")
 endif(EXISTS ${CB_LIB})
 
+set(SCIP_DIR "${SHARED_DIR}/scip-2.1.1")
+set(SCIP_LIBDIR "${SCIP_DIR}/lib")
+set(SCIP_INCDIR "${SCIP_DIR}/src")
+if(EXISTS "${SCIP_LIBDIR}/libscip.a")
+	set(HAVE_SCIP TRUE)
+	set(SCIP_LIBS ${SCIP_LIBDIR}/libscip.a;${SCIP_LIBDIR}/libobjscip.a;${SCIP_LIBDIR}/liblpiclp.a;${SCIP_LIBDIR}/libnlpi.a;"readline")
+else(EXISTS "${SCIP_LIBDIR}/libscip.a")
+	set(HAVE_SCIP FALSE)
+	message(STATUS "Building without SCIP")
+endif(EXISTS "${SCIP_LIBDIR}/libscip.a")
+
+
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
