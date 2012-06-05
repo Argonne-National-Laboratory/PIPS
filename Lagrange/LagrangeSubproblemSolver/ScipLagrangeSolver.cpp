@@ -168,6 +168,7 @@ solverState ScipLagrangeSolver::getStatus() const {
 		case SCIP_STATUS_OPTIMAL:
 		case SCIP_STATUS_NODELIMIT:
 		case SCIP_STATUS_GAPLIMIT:
+		case SCIP_STATUS_TIMELIMIT:
 		   return Optimal;
 		case SCIP_STATUS_INFEASIBLE:
 		   return ProvenInfeasible;
