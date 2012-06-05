@@ -71,6 +71,29 @@ Data * sFactory::makeData()
   bool p = (mype == 0);
 
   // use the tree to get the data from user and to create OOQP objects
+
+  TIM;
+  StochGenMatrixHandle     A( tree->createA() );
+  REP("A");
+  TIM;
+  StochVectorHandle        b( tree->createb() );
+  REP("b");
+  TIM;
+  StochGenMatrixHandle     C( tree->createC() );  
+  REP("C");
+  TIM;
+  StochVectorHandle     clow( tree->createclow()  );
+  REP("clow");
+  TIM;
+  StochVectorHandle    iclow( tree->createiclow() );
+  REP("iclow");
+  TIM;
+  StochVectorHandle     cupp( tree->createcupp()  );
+  REP("cupp");
+  TIM;
+  StochVectorHandle    icupp( tree->createicupp() );
+  REP("icupp");
+
   TIM;
   StochSymMatrixHandle     Q( tree->createQ() );
   REP("Q");
@@ -89,28 +112,7 @@ Data * sFactory::makeData()
   TIM;
   StochVectorHandle    ixupp( tree->createixupp() );
   REP("ixupp");
-  TIM;
-  StochGenMatrixHandle     A( tree->createA() );
-  REP("A");
-  TIM;
-  StochVectorHandle        b( tree->createb() );
-  REP("b");
-  TIM;
 
-  StochGenMatrixHandle     C( tree->createC()     );  
-  REP("C");
-  TIM;
-  StochVectorHandle     clow( tree->createclow()  );
-  REP("clow");
-  TIM;
-  StochVectorHandle    iclow( tree->createiclow() );
-  REP("iclow");
-  TIM;
-  StochVectorHandle     cupp( tree->createcupp()  );
-  REP("cupp");
-  TIM;
-  StochVectorHandle    icupp( tree->createicupp() );
-  REP("icupp");
 
   MPI_Barrier(MPI_COMM_WORLD);
   t2 = MPI_Wtime() - t2;
@@ -132,19 +134,31 @@ Variables* sFactory::makeVariables( Data * prob_in )
 {
   sData* prob = dynamic_cast<sData*>(prob_in);
 
-  OoqpVector * x      = tree->newPrimalVector();
-  OoqpVector * s      = tree->newDualZVector();
-  OoqpVector * y      = tree->newDualYVector();
-  OoqpVector * z      = tree->newDualZVector();
-  OoqpVector * v      = tree->newPrimalVector(); 
-  OoqpVector * gamma  = tree->newPrimalVector();
-  OoqpVector * w      = tree->newPrimalVector(); 
-  OoqpVector * phi    = tree->newPrimalVector();
-  OoqpVector * t      = tree->newDualZVector();
-  OoqpVector * lambda = tree->newDualZVector();
-  OoqpVector * u      = tree->newDualZVector(); 
-  OoqpVector * pi     = tree->newDualZVector();
+  OoqpVectorHandle x      = OoqpVectorHandle( tree->newPrimalVector() );
+  OoqpVectorHandle s      = OoqpVectorHandle( tree->newDualZVector() );
+  OoqpVectorHandle y      = OoqpVectorHandle( tree->newDualYVector() );
+  OoqpVectorHandle z      = OoqpVectorHandle( tree->newDualZVector() );
+  OoqpVectorHandle v      = OoqpVectorHandle( tree->newPrimalVector() ); 
+  OoqpVectorHandle gamma  = OoqpVectorHandle( tree->newPrimalVector() );
+  OoqpVectorHandle w      = OoqpVectorHandle( tree->newPrimalVector() ); 
+  OoqpVectorHandle phi    = OoqpVectorHandle( tree->newPrimalVector() );
+  OoqpVectorHandle t      = OoqpVectorHandle( tree->newDualZVector() );
+  OoqpVectorHandle lambda = OoqpVectorHandle( tree->newDualZVector() );
+  OoqpVectorHandle u      = OoqpVectorHandle( tree->newDualZVector() ); 
+  OoqpVectorHandle pi     = OoqpVectorHandle( tree->newDualZVector() );
   
+  // OoqpVector * s      = tree->newDualZVector();
+  // OoqpVector * y      = tree->newDualYVector();
+  // OoqpVector * z      = tree->newDualZVector();
+  // OoqpVector * v      = tree->newPrimalVector(); 
+  // OoqpVector * gamma  = tree->newPrimalVector();
+  // OoqpVector * w      = tree->newPrimalVector(); 
+  // OoqpVector * phi    = tree->newPrimalVector();
+  // OoqpVector * t      = tree->newDualZVector();
+  // OoqpVector * lambda = tree->newDualZVector();
+  // OoqpVector * u      = tree->newDualZVector(); 
+  // OoqpVector * pi     = tree->newDualZVector();
+
   sVars* vars = new sVars( tree, x, s, y, z,
 			   v, gamma, w, phi,
 			   t, lambda, u, pi, 

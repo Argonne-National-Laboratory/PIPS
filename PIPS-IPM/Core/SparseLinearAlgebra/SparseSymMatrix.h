@@ -23,7 +23,8 @@ public:
 		   int krowM[], int jcolM[], double M[], int deleteElts=0);
   //SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks); not needed anymore; cpetra
 
-  SparseStorage *  getStorage() { return mStorage.ptr(); }
+  SparseStorage&  getStorageRef() { return *mStorage; }
+  SparseStorage*  getStorage() { return mStorage.ptr(); }
   int * krowM() { return mStorage->krowM; }
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }

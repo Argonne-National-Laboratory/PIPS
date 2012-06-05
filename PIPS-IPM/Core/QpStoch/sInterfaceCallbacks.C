@@ -46,6 +46,7 @@ sInterfaceCallbacks::sInterfaceCallbacks(stochasticInput &in)
   : inputTree(NULL)
 {
   callbackData=new CallbackData(in);
+  loadData();
 }
 
 sInterfaceCallbacks::~sInterfaceCallbacks()
@@ -147,6 +148,8 @@ extern "C" int fnnzQ(void* user_data, int id, int* nnz)
   return 0;
 }
 
+namespace {
+
 class eq_comp
 {
 public:
@@ -235,10 +238,14 @@ void extractRows(const CoinPackedMatrix& Mcol,
   //    0 5 7 9 11 14
 }		 
 
+}
+
 extern "C" int fnnzA(void* user_data, int id, int* nnz){
   eq_comp compFun;
   if(id==0) {
     CoinPackedMatrix Mcol=callbackData->in.getFirstStageConstraints();
+    cout << "StochInput constraints: nnz=" << Mcol.getNumElements() << endl;
+    
     (*nnz)=countNNZ(Mcol,
 		    callbackData->in.getFirstStageRowLB(), 
 		    callbackData->in.getFirstStageRowUB(), 
@@ -252,7 +259,7 @@ extern "C" int fnnzA(void* user_data, int id, int* nnz){
 		    callbackData->in.getSecondStageRowUB(scen), 
 		    compFun);
   }
-  //printf("nnzA = %d\n", *nnz);
+  printf("nnzA = %d\n", *nnz);
   return 0;
 }
 
@@ -266,7 +273,7 @@ extern "C" int fnnzB(void* user_data, int id, int* nnz){
 		  callbackData->in.getSecondStageRowLB(scen),
 		  callbackData->in.getSecondStageRowUB(scen),
 		  compFun);
-  //printf("nnzB = %d\n", *nnz);
+  printf("nnzB = %d\n", *nnz);
 
   return 0;
 }

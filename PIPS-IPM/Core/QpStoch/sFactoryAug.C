@@ -15,6 +15,10 @@ sFactoryAug::sFactoryAug( StochInputTree* inputTree)
   : sFactory(inputTree)
 { };
 
+sFactoryAug::sFactoryAug( stochasticInput& in)
+  : sFactory(in)
+{ }
+
 sFactoryAug::sFactoryAug( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
   : sFactory(nx, my, mz, nnzQ, nnzA, nnzC)
 { };

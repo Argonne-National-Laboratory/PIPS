@@ -25,7 +25,7 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
     //,    kkt(NULL), solver(NULL)
 {
   int rank; MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  double t = MPI_Wtime();
+  //double t = MPI_Wtime();
   
   // create the KKT system matrix
   // size = ?  nnz = ?
@@ -56,8 +56,8 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
   solver = new Ma57Solver(kktsp);
 	//solver = new WSMPSolver(kktsp);
 
-  t = MPI_Wtime() - t;
-  if (rank == 0) printf("new sLinsysLeaf took %f sec\n",t);
+  //t = MPI_Wtime() - t;
+  //if (rank == 0) printf("new sLinsysLeaf took %f sec\n",t);
 
   mpiComm = (dynamic_cast<StochVector*>(dd_))->mpiComm;
 }
@@ -154,11 +154,14 @@ static void mySymAtPutSubmatrix(SymMatrix& kkt_,
   for(int i=0; i<locmy; i++) {
     int itK = krowK[i+locnx];
     int j = krowB[i];
-    
-    for(; jcolB[j]<i+locnx && j<krowB[i+1]; j++) { 
-      jcolK[itK]=jcolB[j]; 
-      MK[itK]=MB[j]; 
-      itK++;
+
+    for(; j<krowB[i+1]; j++) { 
+
+      if(jcolB[j]<i+locnx) {
+	jcolK[itK]=jcolB[j]; 
+	MK[itK]=MB[j]; 
+	itK++;
+      }
     }
     jcolK[itK]=i+locnx; MK[itK] = 0.0; itK++;
 
@@ -168,14 +171,14 @@ static void mySymAtPutSubmatrix(SymMatrix& kkt_,
     krowK[i+locnx+1]=itK;
   }
 
+
   assert(locmz==0);
-  //12120
-  for(int i=0; i<-240; i++) {
-    for(int j=krowK[i]; j<krowK[i+1]; j++)
-      printf("%5d %5d    %8.3f\n", i, jcolK[j], MK[j]);
-  }
-  //printf("%d\n", krowK[24240]);
   //assert(false);
+  //12120
+  //for(int i=0; i<-240; i++) {
+  //  for(int j=krowK[i]; j<krowK[i+1]; j++)
+  //    printf("%5d %5d    %8.3f\n", i, jcolK[j], MK[j]);
+  //}
 }
 
 

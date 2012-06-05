@@ -95,8 +95,8 @@ public:
   /** Return mMat, an    */
   double **Mat() { return mStorage->M; };
 
-  DenseStorage& storage() { return *mStorage; }
-  DenseStorage *getStorage() { return mStorage.ptr(); }
+  DenseStorage& getStorageRef() { return *mStorage; }
+  DenseStorage* getStorage() { return mStorage.ptr(); }
 
   /* the following functions added by C.Petra 09/09 */
 

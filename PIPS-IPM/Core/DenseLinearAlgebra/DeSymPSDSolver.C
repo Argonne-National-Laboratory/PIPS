@@ -179,7 +179,7 @@ void DeSymPSDSolver::Lsolve( DenseGenMatrix& B)
 	 &n,     //number of cols of B, lie again 
  	 &one, 
 	 &mStorage->M[0][0], &n, 
-	 &B.getStorage()->M[0][0], 
+	 &B.getStorageRef().M[0][0], 
 	 &ldb);
 
   /*SimpleVector sol(n); 

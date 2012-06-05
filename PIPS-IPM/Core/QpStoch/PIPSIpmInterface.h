@@ -12,7 +12,7 @@
 #include "sVars.h"
 #include "StochMonitor.h"
 
-template<class IPMSOLVER, class FORMULATION> 
+template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
  public:
@@ -22,24 +22,26 @@ class PIPSIpmInterface
   void go();
 
   double getObjective() const;
-  //solverState getStatus();
+
 
   void setPrimalTolerance(double val);
   void setDualTolerance(double val);
 
-  std::vector<double> getFirstStagePrimalColSolution() const;
-  std::vector<double> getSecondStagePrimalColSolution(int scen) const;
-  std::vector<double> getFirstStageDualColSolution() const;
-  std::vector<double> getSecondStageDualColSolution(int scen) const;
+  std::vector<double> getFirstStagePrimalColSolution() const{};
+  std::vector<double> getSecondStagePrimalColSolution(int scen) const{};
+  std::vector<double> getFirstStageDualColSolution() const{};
+  std::vector<double> getSecondStageDualColSolution(int scen) const{};
+  std::vector<double> getSecondStageDualRowSolution(int scen) const {};
   //more get methods to follow here
 
  protected:
-  //count the number eq and ineq
-  void getNum1stStgEqIneq(int& my, int &mz);
-  void getNum2ndStgEqIneq(int scens, int& my, int &mz);
-  
-  FORMULATION* factory;
-  IPMSOLVER* solver;
+ 
+  FORMULATION * factory;
+  sData *        data;
+  sVars *   vars;
+  sResiduals *   resids;
+
+  IPMSOLVER *   solver;
 
   PIPSIpmInterface() {};
   
@@ -53,21 +55,58 @@ class PIPSIpmInterface
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in)
 {
-  
+  factory = new FORMULATION( in );
+  //printf("factory created\n");
 
-  FORMULATION * factory = new FORMULATION( in );
-  sData *       data    = factory->makeData();
-  sVars *       vars    = factory->makeVariables( data );
-  sResiduals *  resids  = factory->makeResiduals( data );
+  data   = dynamic_cast<sData*>     ( factory->makeData() );
+  //printf("data created\n");
 
-  IPMSOLVER*    solver  = new IPMSOLVER( factory, data );
+  vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
+  //printf("variables created\n");
 
+  resids = dynamic_cast<sResiduals*>( factory->makeResiduals( data ) );
+  //printf("resids created\n");
+
+  solver  = new IPMSOLVER( factory, data );
+  //printf("solver created\n");
   solver->addMonitor(new StochMonitor( factory ));
+
 }
+
+
+template<typename FORMULATION, typename IPMSOLVER>
+void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
+
+  //s->monitorSelf();
+  int result = solver->solve(data,vars,resids);
+  
+  if ( 0 == result ) {
+    double objective = getObjective();
+    
+    cout << " " << data->nx << " variables, " << data->my  
+	 << " equality constraints, " << data->mz << " inequality constraints.\n";
+    
+    cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
+	 << objective << endl;
+  }
+}
+
+template<typename FORMULATION, typename SOLVER>
+double PIPSIpmInterface<FORMULATION,SOLVER>::getObjective() const {
+  return data->objectiveValue(vars);
+}
+
+
 
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
-{ };
+{ 
+  delete solver;
+  delete resids;
+  delete vars;
+  delete data;
+  delete factory;
+};
 
 
 

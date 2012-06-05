@@ -60,7 +60,7 @@ sVars::sVars(sTree* tree,
     w   = OoqpVectorHandle( tree->newPrimalVector() );
     phi = OoqpVectorHandle( tree->newPrimalVector() );
   } 
-
+  assert(false);
   x = OoqpVectorHandle( tree->newPrimalVector() );
   y = OoqpVectorHandle( tree->newDualYVector() );
   z = OoqpVectorHandle( tree->newDualZVector() );
@@ -134,7 +134,10 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
 }
 
 sVars::~sVars()
-{ }
+{ 
+  for (size_t c=0; c<children.size(); c++)
+    delete children[c];
+}
 
 void sVars::AddChild(sVars* child)
 {
