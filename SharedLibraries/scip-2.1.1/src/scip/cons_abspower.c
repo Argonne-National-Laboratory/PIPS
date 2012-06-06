@@ -35,6 +35,12 @@
 #include "scip/heur_trysol.h"
 #include "scip/debug.h"
 
+/* temporary fix for XL on BG/P */
+#ifdef __bg__
+#undef pow
+double pow( double, double );
+#endif
+
 /* constraint handler properties */
 #define CONSHDLR_NAME          "abspower"
 #define CONSHDLR_DESC          "constraint handler for absolute power constraints lhs <= sign(x+offset)abs(x+offset)^n + c*z <= rhs"
