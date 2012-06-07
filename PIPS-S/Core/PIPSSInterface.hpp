@@ -33,6 +33,8 @@ public:
 	std::vector<double> getSecondStagePrimalColSolution(int scen) const;
 	std::vector<double> getFirstStageDualColSolution() const;
 	std::vector<double> getSecondStageDualColSolution(int scen) const;
+	// these are the multipliers on the rows, not the reduced costs for
+	// the slacks corresponding to the rows. We need to reconcile this with Clp.
 	std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
 	void setFirstStageColState(int idx,variableState s); 
