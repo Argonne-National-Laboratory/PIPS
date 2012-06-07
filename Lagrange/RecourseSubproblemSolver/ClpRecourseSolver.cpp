@@ -31,6 +31,7 @@ ClpRecourseSolver::ClpRecourseSolver(stochasticInput &input, int scen, const vec
 	}
 
 	solver.loadProblem(Wmat,&collb[0],&colub[0],&obj[0],&rowlb[0],&rowub[0]);
+	solver.copyNames(input.getSecondStageRowNames(scen),input.getSecondStageColNames(scen));
 	solver.createStatus();
 
 }
