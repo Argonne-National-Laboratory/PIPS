@@ -145,7 +145,7 @@ ScipLagrangeSolver::~ScipLagrangeSolver() {
 
 void ScipLagrangeSolver::go() {
 
-	SCIP_CALL_EXC( SCIPsetRealParam(scip, "limits/time", 600) ); // 10 minute time limit
+	SCIP_CALL_EXC( SCIPsetRealParam(scip, "limits/time", 1000) ); // time limit (seconds)
 	//SCIP_CALL_EXC( SCIPsetEmphasis(scip,SCIP_PARAMEMPHASIS_HARDLP,true) );
 	SCIP_CALL_EXC( SCIPsolve(scip) );
    
@@ -191,4 +191,6 @@ vector<double> ScipLagrangeSolver::getBestFirstStageSolution() const {
 	return s;
 }
 
-
+void ScipLagrangeSolver::setFirstStageColLB(int idx, double newlb) {
+	SCIP_CALL_EXC( SCIPchgVarLb(scip,vars1[idx],newlb) );
+}

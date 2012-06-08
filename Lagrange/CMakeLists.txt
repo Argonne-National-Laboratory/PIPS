@@ -57,12 +57,15 @@ target_link_libraries(testSols bundle pipss stochInput scenred ClpBALPInterface 
 
 if(HAVE_SCIP)
 	include_directories("${SCIP_INCDIR}")
+	add_executable(testSolsHeur1 Drivers/testSolsHeur1.cpp)
 	add_library(ScipLagrangeSolver LagrangeSubproblemSolver/ScipLagrangeSolver.cpp)
 	add_executable(proxBundleScipSMPS Drivers/proxBundleScipSMPS.cpp)
 	add_executable(proxBundleScipRaw Drivers/proxBundleScipRaw.cpp)
 	target_link_libraries(proxBundleScipSMPS bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(proxBundleScipRaw bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+	target_link_libraries(testSolsHeur1 bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 endif(HAVE_SCIP)
 
