@@ -1,5 +1,5 @@
 #include "ucRollingModel.hpp"
-#include "CbcLagrangeSolver.hpp"
+#include "ScipLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
 #include "ClpRecourseSolver.hpp"
 #include "OOQPInterface.hpp"
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	proxQPManager<OOQPInterface<MehrotraSolver,QpGenSparseMa57>,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	proxQPManager<OOQPInterface<MehrotraSolver,QpGenSparseMa57>,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();
