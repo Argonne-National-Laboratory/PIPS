@@ -26,6 +26,8 @@ public:
 	// absolute optimality gap for termination, zero to disable
 	void setAbsoluteGap(double g) { absgap = g; }
 
+	void setFirstStageColLB(int idx, double newLb);
+
 
 	std::vector<double> getBestFirstStageSolution() const;
 	/*

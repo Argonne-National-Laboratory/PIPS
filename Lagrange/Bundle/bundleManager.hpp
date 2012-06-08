@@ -126,12 +126,17 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::testPr
 		int ncons2 = input.nSecondStageCons(scen);
 		R rsol(input,scen,primal);
 		rsol.setDualObjectiveLimit(1e10);
-		if (input.continuousRecourse() && recourseRowStates[scen].size()) {
+		int statesFromScen = -1;
+		if (input.continuousRecourse()) {
+			if (recourseRowStates[scen].size()) statesFromScen = scen;
+			else if (recourseRowStates[localScen.at(1)].size()) statesFromScen = localScen[1];
+		}
+		if (statesFromScen != -1) {
 			for (int k = 0; k < nvar2; k++) {
-				rsol.setSecondStageColState(k,recourseColStates[scen][k]);
+				rsol.setSecondStageColState(k,recourseColStates[statesFromScen][k]);
 			}
 			for (int k = 0; k < ncons2; k++) {
-				rsol.setSecondStageRowState(k,recourseRowStates[scen][k]);
+				rsol.setSecondStageRowState(k,recourseRowStates[statesFromScen][k]);
 			}
 		}
 		
@@ -217,10 +222,11 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLas
 	if (ctx.mype() == 0) f.open(ss.str().c_str());
 	for (int i = 0; i < nscen; i++) {
 		assert(bundle[i].size());
+		std::vector<double> const& at = bundle[i][bundle[i].size()-1].evaluatedAt;
 		std::vector<double> const& p = bundle[i][bundle[i].size()-1].primalSol;
 		if (ctx.mype() == 0) {
 			for (int k = 0; k < nvar1; k++) {
-				f << p[k] << " ";
+				f << p[k] << " " << at[k] << " ";
 			}
 			f << endl;
 		}
