@@ -66,10 +66,10 @@ WSMPSolver::WSMPSolver( SparseSymMatrix * sgm ) : first(true)
 	perm = new int[n];
 	invp = new int[n];
 	diagmap = new int[2*n];
-  iparm[0] = 0;
+    iparm[0] = 0;
 	iparm[1] = 0;
 	iparm[2] = 0;
-
+	
 	nthreads = omp_get_max_threads();
 	// set default values
 #ifdef __bg__
@@ -98,7 +98,7 @@ WSMPSolver::WSMPSolver( SparseSymMatrix * sgm ) : first(true)
 	// C-style numbering
 	iparm[4] = 0;
 	// recommended values for interior-point systems
-  iparm[15] = 1;
+    iparm[15] = 1;
 	iparm[16] = 0;
 	iparm[17] = 1;
 	iparm[18] = 0;
@@ -177,6 +177,8 @@ void WSMPSolver::firstCall()
 	//printf("symbolic done\n");
   first = false;
 }  
+
+
 void WSMPSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 {
 	printf("diagonal changed\n");
