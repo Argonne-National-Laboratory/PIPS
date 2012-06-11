@@ -1,7 +1,7 @@
-/* OOQP                                                               *
- * Authors: E. Michael Gertz, Stephen J. Wright                       *
- * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
-
+/* PIPS-IPM                                                             
+ * Authors: Cosmin G. Petra, Miles Lubin, Murat Mut
+ * (C) 2012 Argonne National Laboratory, see documentation for copyright
+ */
 #ifndef PARDISOLINSYS_H
 #define PARDISOLINSYS_H
 
@@ -22,26 +22,18 @@
 #endif
 
 
-
-
-/** implements the linear solver class using the HSL Pardiso solver
- *
- * @ingroup LinearSolvers 
+/** implements the linear solver class using the Pardiso solver
  */
  
 class PardisoSolver : public DoubleLinearSolver {
 private:
   PardisoSolver() {};
   
-public:
+ public:
   virtual void firstCall();
-
-  /** sets mStorage to refer to the argument sgm */
-  PardisoSolver( SparseSymMatrix * sgm );
   
-  void pardisoInitMurat(SparseSymMatrix * sgm);
-  void pardisoMurat();
- 
+  /** sets mStorage to refer to the argument sgm */
+  PardisoSolver( SparseSymMatrix * sgm ); 
   
   
   virtual void diagonalChanged( int idiag, int extent );
@@ -54,38 +46,34 @@ public:
  // virtual void Ltsolve( OoqpVector& x );
   
  private:
- 	SparseSymMatrix * sgm_;
-    bool first;
-	void  *pt[64]; 
-	int mtype;
-	int solver;
-	int iparm[64];
-	
-	double b[8], x[8];
-	double dparm[64];
-	int error;
-	int nrhs;  //  Number of right-hand sides 
-	int maxfct;
-	int mnum;
-	int phase;
-	int n;
-	
+  SparseSymMatrix* Msys;
+  bool first;
+  void  *pt[64]; 
+  int mtype;
+  int solver;
+  int iparm[64];
+  
+  double b[8], x[8];
+  double dparm[64];
+  int error;
+  int nrhs;  //  Number of right-hand sides 
+  int maxfct;
+  int mnum;
+  int phase;
+  int n;
 
-
-
-SparseStorageHandle mStorage;  // Murat
-	
-	/** storage for the transpose */
-  int     *krowMt,    *jcolMt;
-  double  *Mt;
-
+  /** storage for the upper triangular (in row-major format) */
+  int     *krowM,    *jcolM;
+  double  *M;
+  
   
   /** number of nonzeros in the matrix */
   int      nnz;
-
+  
   /** temporary storage for the factorization process */
-  int     *perm, *invp, *diagmap;
-
+  //int     *perm, *invp, *diagmap;
+  double* nvec; //temporary vec
+  
   virtual ~PardisoSolver();
 };
 
