@@ -14,4 +14,5 @@ add_library(ooqpgensparse
   QpGen/QpGenSparseSeq.C QpGen/QpGenSparseLinsys.C #QpGenSparse
   Readers/MpsReader.C Readers/hash.C #Readers
   LinearSolvers/Ma27Solver/Ma27Solver.C QpGen/QpGenSparseMa27.C 
-  LinearSolvers/Ma57Solver/Ma57Solver.C QpGen/QpGenSparseMa57.C) #Linear solvers
+  LinearSolvers/Ma57Solver/Ma57Solver.C QpGen/QpGenSparseMa57.C
+  LinearSolvers/PardisoSolver/PardisoSolver.C) #Linear solvers

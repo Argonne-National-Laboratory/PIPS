@@ -10,6 +10,7 @@
 #include "SparseGenMatrix.h"
 #include "Ma57Solver.h"
 #include "Ma27Solver.h"
+#include "PardisoSolver.h"
 //#include "WSMPSolver.h"
 
 static void mySymAtPutSubmatrix(SymMatrix& kkt, 
@@ -53,8 +54,9 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
     mySymAtPutSubmatrix(*kkt, prob->getLocalB(), prob->getLocalD(), locnx, locmy, locmz);
 
   // create the solver for the linear system
-  solver = new Ma57Solver(kktsp);
-	//solver = new WSMPSolver(kktsp);
+  //solver = new Ma57Solver(kktsp);
+  solver = new PardisoSolver(kktsp);
+  //solver = new WSMPSolver(kktsp);
 
   //t = MPI_Wtime() - t;
   //if (rank == 0) printf("new sLinsysLeaf took %f sec\n",t);
