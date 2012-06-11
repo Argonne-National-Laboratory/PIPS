@@ -18,7 +18,7 @@ using boost::scoped_ptr;
 template<typename SOLVER, typename FORMULATION>
 class OOQPInterface {
 public:
-	OOQPInterface(stochasticInput &);
+	OOQPInterface(stochasticInput &, MPI_Comm = MPI_COMM_WORLD);
 
 	void go();
 	double getObjective() const;
@@ -37,6 +37,7 @@ protected:
 	vector<int> primalOffsets;
 	vector<int> rowToEqIneqIdx;
 	vector<int> rowOffsets;
+	MPI_Comm comm;
 
 };
 
@@ -224,7 +225,7 @@ void formQ(stochasticInput &input, SparseSymMatrix &Q) {
 
 
 template<typename SOLVER, typename FORMULATION>
-OOQPInterface<SOLVER,FORMULATION>::OOQPInterface(stochasticInput &input) {
+OOQPInterface<SOLVER,FORMULATION>::OOQPInterface(stochasticInput &input, MPI_Comm comm) : comm(comm) {
 
 	// we put the first-stage variables at the end to help with the sparse reordering
 	int nvar1 = input.nFirstStageVars();
@@ -386,11 +387,13 @@ OOQPInterface<SOLVER,FORMULATION>::OOQPInterface(stochasticInput &input) {
 
 template<typename S, typename F>
 void OOQPInterface<S,F>::go() {
+	int mype;
+	MPI_Comm_rank(comm,&mype);
 
 	//s->monitorSelf();
 	int result = s->solve(prob.get(),vars.get(),resid.get());
 
-	if ( 0 == result ) {
+	if ( 0 == result && mype == 0) {
 	 double objective = prob->objectiveValue(vars.get());
       
       cout << " " << prob->nx << " variables, " 
