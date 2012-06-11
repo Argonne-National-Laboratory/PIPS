@@ -49,8 +49,38 @@ DeSymIndefSolver::DeSymIndefSolver( DenseSymMatrix * dm )
   ipiv = new int[size];
   lwork = -1;
   work = NULL;
+  sparseMat = 0;
   
 }
+
+DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
+{
+  int size = sm->size();
+  mStorage = DenseStorageHandle( new DenseStorage(size,size) );
+
+  ipiv = new int[size];
+  lwork = -1;
+  work = NULL;
+  sparseMat = sm;
+
+  std::fill(mStorage->M[0],mStorage->M[0]+size*size,0.);
+
+  const double *sM = sm->M();
+  const int *jcolM = sm->jcolM();
+  for (int i = 0; i < size; i++) {
+    for (int k = sm->krowM()[i]; k < sm->krowM()[i+1]; k++) {
+      int col = jcolM[k];
+      mStorage->M[i][col] = sM[k];
+      if (i == col) {
+	sparseDiagMap.push_back(k);
+      }
+    }
+  }
+  assert(sparseDiagMap.size() == static_cast<size_t>(size));
+
+}
+
+
 //#include "mpi.h"
 void DeSymIndefSolver::matrixChanged()
 {
@@ -59,6 +89,11 @@ void DeSymIndefSolver::matrixChanged()
   int info;
 
   int n = mStorage->n;
+
+  if (sparseMat) {
+    const double *sM = sparseMat->M();
+    for (int i = 0; i < n; i++) mStorage->M[i][i] = sM[sparseDiagMap[i]];
+  }
 
   //!log 
   /*
