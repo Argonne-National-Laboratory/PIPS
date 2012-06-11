@@ -7,6 +7,7 @@
 
 #include "DoubleLinearSolver.h"
 #include "DenseSymMatrixHandle.h"
+#include "SparseSymMatrix.h"
 #include "DenseStorageHandle.h"
 
 /** A linear solver for dense, symmetric indefinite systems 
@@ -19,8 +20,11 @@ public:
 protected:
   double* work; int lwork;
   int *ipiv;
+  SparseSymMatrix *sparseMat;
+  std::vector<int> sparseDiagMap;
 public:
   DeSymIndefSolver( DenseSymMatrix * storage );
+  DeSymIndefSolver( SparseSymMatrix * storage );
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
   virtual void solve ( OoqpVector& vec );
