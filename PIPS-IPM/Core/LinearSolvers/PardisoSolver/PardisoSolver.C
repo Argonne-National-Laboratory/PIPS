@@ -1,7 +1,6 @@
-/* OOQP                                                               *
- * Authors: E. Michael Gertz, Stephen J. Wright                       *
- * (C) 2001 University of Chicago. See Copyright Notification in OOQP 
- * Modefied by Cosmin Petra to perform solves with the factors.
+/* PIPS-IPM                                                             
+ * Authors: Cosmin G. Petra, Miles Lubin, Murat Mut
+ * (C) 2012 Argonne National Laboratory, see documentation for copyright
  */
 
 #include <iostream>
@@ -35,107 +34,32 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
                            double *, int *);
 
 
-
-//PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
-//{
-//	first = true;
-// store sgm and call pardisoinit
-//}
-
-PardisoSolver::PardisoSolver( SparseSymMatrix * sgm_ )
+PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 {
-  cout << "Murat Mut Pardiso Solver ***************************************************" << endl;
+  Msys = sgm;
+  n = sgm->size();
+  nnz=sgm->numberOfNonZeros();
+
+  krowM = new int[n+1];
+  jcolM = new int[nnz];
+  M = new double[nnz];
+
   first = true;
-  // initialize each data element.
-  
-   pardisoInitMurat(sgm_);
-  
-  // store sgm and call pardisoinit
-  
- 
+  nvec=new double[n];
+   
+  error  = 0;
+  solver = 0;  /* use sparse direct solver */
+  mtype  = -2;
 }
-
-
-// We initialize Pardiso.
-void PardisoSolver::pardisoInitMurat(SparseSymMatrix * sgm)
-{
-    
-
-   sgm_ = sgm;
-   
-  // We need to initialize pt
-  //            mtype
-  
-  
-    n = sgm_->size();
-    nnz = sgm_->numberOfNonZeros();
-    mStorage = SparseStorageHandle( sgm_->getStorage() ); 
-    
-    cout << "what is n?" << n<< endl;  //Murat  
-    cout << "what is nnz?" << nnz << endl;  //Murat  
-    
-    
-    //krowMt = new int[n+1];
-	//jcolMt = new int[nnz];
-	//Mt     = new double[nnz];
-	
-	/* RHS and solution vectors. */
-    //  double   b[8], x[8];
-    // int      nrhs = 1;          /* Number of right hand sides. */
-
-    /* Internal solver memory pointer pt,                  */
-    /* 32-bit: int pt[64]; 64-bit: long int pt[64]         */
-    /* or void *pt[64] should be OK on both architectures  */ 
-    
-    // void    *pt[64]; 
-    
-    /* Pardiso control parameters. */
-    
-    
-    int      maxfct, mnum, phase, error, msglvl, solver, numRows,  numCols;
-
-    /* Number of processors. */
-    int      num_procs;
-
-    /* Auxiliary variables. */
-    char    *var;
-    int      i;
-
-    double   ddum;              /* Double dummy */
-    int      idum;              /* Integer dummy. */
-    
-    sgm_-> getSize(numRows, numCols);  //Murat
-   
-    cout << "numRCols = " <<  numCols << endl;  //Murat  
-   
-    cout << "numRows = "  <<  numRows << endl;            //Murat  
-    cout << "what is krow " <<   (mStorage->krowM)[5] << endl;  //Murat
-    cout << "what is jrow " <<   mStorage->jcolM[2] << endl;  //Murat
-    
-   
-    error = 0;
-    solver = 1;  /* use sparse direct solver */
- 
-}
-
-// We need to solve Pardiso. 
-void PardisoSolver::pardisoMurat()
-
-
-
-{
- // pardiso();
-}
-
 
 void PardisoSolver::firstCall()
 {
 
-pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
-
-cout << "enters firstCall??? " << endl;  //Murat  
-
-
+  pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
+  if (error!=0) {
+    cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
+    assert(false);
+  }
 } 
 
  
@@ -146,34 +70,97 @@ void PardisoSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 
 void PardisoSolver::matrixChanged()
 {
-	if (first) { firstCall(); first = false; }
-// compute numerical factorization
+  if (first) { firstCall(); first = false; }
+
+  //get the matrix in upper triangular
+  Msys->getStorageRef().transpose(krowM, jcolM, M);
+  // need Fortran indexes
+  for ( int i = 0; i < n+1; i++) krowM[i] += 1;
+  for ( int i = 0; i < nnz; i++) jcolM[i] += 1;
+
+
+  // for(int i=0; i<n+1; i++) cout << krowM[i] << " "; cout << endl;
+  // for(int i=0; i<nnz; i++) cout << jcolM[i] << " "; cout << endl;
+  // for(int i=0; i<nnz; i++) cout << M[i] << " ";  cout << endl;
+  // cout << endl << endl;
+
+  // compute numerical factorization
+  phase = 12;//Analysis, numerical factorization
+
+  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
+  int mnum=1; //actual matrix (as in index from 1 to maxfct)
+  int nrhs=1;
+  int msglvl=0; //messaging level
+
+
+  pardiso (pt , &maxfct , &mnum, &mtype , &phase ,
+	   &n, M, krowM, jcolM,
+	   NULL, &nrhs,
+	   iparm , &msglvl, NULL, NULL, &error, dparm );
+ 
+  if ( error != 0) {
+    printf ("PardisoSolver - ERROR during factorization: %d\n", error );
+    assert(false);
+  }
 }
  
 void PardisoSolver::solve( OoqpVector& rhs_in )
 {
     
-	SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
-	double * drhs = rhs.elements();
-	
-    double * rhscpy = new double[n];        //These two lines from Miles in WSMP
-    memcpy(rhscpy,drhs,n*sizeof(double));	//Miles in WSMP
-	
-// solve linear system with rhs_in
+  SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
+  double * drhs = rhs.elements();
+  
+  double * sol = nvec;
+
+  phase = 33; //solve and iterative refinement
+  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
+  int mnum=1; //actual matrix (as in index from 1 to maxfct)
+  int nrhs=1;
+  int msglvl=0;
+
+  iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+  //iparm[5] = 1; /* replace drhs with the solution */
+
+  pardiso (pt, &maxfct, &mnum, &mtype, &phase,
+	   &n, M, krowM, jcolM, 
+	   NULL, &nrhs ,
+	   iparm, &msglvl, 
+	   drhs, sol,
+	   &error, dparm );
+ 
+  if ( error != 0) {
+    printf ("PardisoSolver - ERROR during solve: %d", error ); 
+  }
+  rhs.copyFromArray(sol);
 }
 
 
 PardisoSolver::~PardisoSolver()
 {
+  phase = -1; /* Release internal memory . */
+  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
+  int mnum=1; //actual matrix (as in index from 1 to maxfct)
+  int nrhs=1;
+  int msglvl=0;
 
+  pardiso (pt, &maxfct, &mnum, &mtype, &phase,
+	   &n, NULL, krowM, jcolM, NULL, &nrhs,
+	   iparm, &msglvl, NULL, NULL, &error, dparm );
+  if ( error != 0) {
+    printf ("PardisoSolver - ERROR in pardiso release: %d", error ); 
+  }
+  delete[] jcolM;
+  delete[] krowM;
+  delete[] M;
+  delete[] nvec;
 }
 
 
 
 void PardisoSolver::solve(GenMatrix& rhs_in)
- {
- 
- }
+{
+  assert(false);
+}
 
 
 
