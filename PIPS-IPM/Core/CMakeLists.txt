@@ -9,10 +9,19 @@ add_library(ooqpbase Abstract/OoqpVersion.C Abstract/Variables.C Abstract/Data.C
   Vector/OoqpVector.C Vector/SimpleVector.C Vector/VectorUtilities.C
   Utilities/drand.C Utilities/sort.C)
 
+if(HAVE_MA27)
+	set(solvers LinearSolvers/Ma27Solver/Ma27Solver.C QpGen/QpGenSparseMa27.C)
+endif(HAVE_MA27)
+if(HAVE_MA57)
+	set(solvers ${solvers} LinearSolvers/Ma57Solver/Ma57Solver.C QpGen/QpGenSparseMa57.C)
+endif(HAVE_MA57)
+if(HAVE_PARDISO)
+	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C)
+endif(HAVE_PARDISO)
+message(STATUS ${solvers})
+
 add_library(ooqpgensparse 
   QpGen/QpGenVars.C QpGen/QpGenData.C QpGen/QpGenResiduals.C QpGen/QpGen.C QpGen/QpGenLinsys.C #QpGen
   QpGen/QpGenSparseSeq.C QpGen/QpGenSparseLinsys.C #QpGenSparse
   Readers/MpsReader.C Readers/hash.C #Readers
-  LinearSolvers/Ma27Solver/Ma27Solver.C QpGen/QpGenSparseMa27.C 
-  LinearSolvers/Ma57Solver/Ma57Solver.C QpGen/QpGenSparseMa57.C
-  LinearSolvers/PardisoSolver/PardisoSolver.C) #Linear solvers
+  ${solvers})

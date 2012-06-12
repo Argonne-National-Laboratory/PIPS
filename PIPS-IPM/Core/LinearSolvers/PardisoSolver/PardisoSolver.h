@@ -52,6 +52,7 @@ private:
   int mtype;
   int solver;
   int iparm[64];
+  int num_threads;
   
   double b[8], x[8];
   double dparm[64];
