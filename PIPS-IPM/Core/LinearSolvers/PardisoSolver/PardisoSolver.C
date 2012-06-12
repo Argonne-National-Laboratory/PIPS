@@ -49,7 +49,7 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
    
   error  = 0;
   solver = 0;  /* use sparse direct solver */
-  mtype  = -2;
+  mtype  = -2; /* real  symmetric with diagonal or Bunch-Kaufman */
 }
 
 void PardisoSolver::firstCall()
@@ -78,20 +78,22 @@ void PardisoSolver::matrixChanged()
   for ( int i = 0; i < n+1; i++) krowM[i] += 1;
   for ( int i = 0; i < nnz; i++) jcolM[i] += 1;
 
-
-  // for(int i=0; i<n+1; i++) cout << krowM[i] << " "; cout << endl;
+  //cout << "size " << n << endl;
+  //for(int i=0; i<n+1; i++) cout << krowM[i] << " "; cout << endl;
   // for(int i=0; i<nnz; i++) cout << jcolM[i] << " "; cout << endl;
   // for(int i=0; i<nnz; i++) cout << M[i] << " ";  cout << endl;
   // cout << endl << endl;
 
   // compute numerical factorization
-  phase = 12;//Analysis, numerical factorization
+  phase = 12; //Analysis, numerical factorization
 
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
   int msglvl=0; //messaging level
 
+  iparm[2] = 1; // num threads
+  //iparm[1] = 2; // 2 is for metis, 0 for min degree 
 
   pardiso (pt , &maxfct , &mnum, &mtype , &phase ,
 	   &n, M, krowM, jcolM,
@@ -118,6 +120,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int nrhs=1;
   int msglvl=0;
 
+  iparm[2] = 1; // num threads
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
 
@@ -159,7 +162,8 @@ PardisoSolver::~PardisoSolver()
 
 void PardisoSolver::solve(GenMatrix& rhs_in)
 {
-  assert(false);
+  DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
+assert(false);
 }
 
 
