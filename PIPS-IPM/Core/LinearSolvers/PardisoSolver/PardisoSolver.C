@@ -13,6 +13,8 @@ using namespace std;
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
 
+//#include "mpi.h"
+
 #ifdef HAVE_GETRUSAGE
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -72,17 +74,27 @@ void PardisoSolver::matrixChanged()
 {
   if (first) { firstCall(); first = false; }
 
+  
+  //double tt=MPI_Wtime();
   //get the matrix in upper triangular
   Msys->getStorageRef().transpose(krowM, jcolM, M);
-  // need Fortran indexes
-  for ( int i = 0; i < n+1; i++) krowM[i] += 1;
-  for ( int i = 0; i < nnz; i++) jcolM[i] += 1;
+ 
+  // pardiso requires diag elems even though they are exactly 0
+  for( int i = 0; i < n; i++) {
+    bool hasDiag=0;
+    for( int j=krowM[i]; j<krowM[i+1] && !hasDiag; j++ ) {
+      if( jcolM[j]==i ) hasDiag=true;
+    }
 
-  //cout << "size " << n << endl;
-  //for(int i=0; i<n+1; i++) cout << krowM[i] << " "; cout << endl;
-  // for(int i=0; i<nnz; i++) cout << jcolM[i] << " "; cout << endl;
-  // for(int i=0; i<nnz; i++) cout << M[i] << " ";  cout << endl;
-  // cout << endl << endl;
+    if (!hasDiag)
+      assert(false);
+      //cout << "NO diag elem in row " << i << endl;
+  }
+ 
+  // need Fortran indexes
+  for( int i = 0; i < n+1; i++) krowM[i] += 1;
+  for( int i = 0; i < nnz; i++) jcolM[i] += 1;
+
 
   // compute numerical factorization
   phase = 12; //Analysis, numerical factorization
@@ -100,6 +112,7 @@ void PardisoSolver::matrixChanged()
 	   NULL, &nrhs,
 	   iparm , &msglvl, NULL, NULL, &error, dparm );
  
+  //cout << "factorizing the matrix took:" << MPI_Wtime()-tt << endl;
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during factorization: %d\n", error );
     assert(false);
@@ -162,8 +175,8 @@ PardisoSolver::~PardisoSolver()
 
 void PardisoSolver::solve(GenMatrix& rhs_in)
 {
-  DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
-assert(false);
+  //DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
+  assert(false);
 }
 
 
