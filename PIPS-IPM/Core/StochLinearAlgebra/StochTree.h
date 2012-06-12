@@ -4,6 +4,9 @@
 #include "StochInputTree.h"
 #include "StochResourcesMonitor.h"
 
+#ifdef __bg__
+#define MPICH_SKIP_MPICXX
+#endif
 #include "mpi.h"
 
 #include <vector>

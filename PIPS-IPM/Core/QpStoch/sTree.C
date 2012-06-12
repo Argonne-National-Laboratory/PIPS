@@ -768,7 +768,7 @@ void sTree::saveCurrentCPUState()
     children[i]->saveCurrentCPUState();
 }
 
-#ifdef STOCH_TESTING
+#ifdef DEADCODE // STOCH_TESTING
 void sTree::displayProcessInfo(int rank)
 {
   char szTab[5000];
