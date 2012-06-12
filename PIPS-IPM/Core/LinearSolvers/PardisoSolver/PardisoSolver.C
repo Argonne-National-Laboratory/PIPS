@@ -106,7 +106,10 @@ void PardisoSolver::matrixChanged()
 
   iparm[2] = 1; // num threads
   //iparm[1] = 2; // 2 is for metis, 0 for min degree 
-
+  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+  iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
+                 // if needed, use 2 for advanced matchings and higer accuracy.
+  
   pardiso (pt , &maxfct , &mnum, &mtype , &phase ,
 	   &n, M, krowM, jcolM,
 	   NULL, &nrhs,
