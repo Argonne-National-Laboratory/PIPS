@@ -156,6 +156,13 @@ else(EXISTS ${CB_LIB})
 	message(STATUS "Building without ConicBundle library")
 endif(EXISTS ${CB_LIB})
 
+set(HAVE_PARDISO FALSE)
+if(EXISTS ${SHARED_DIR}/PARDISO/libpardiso412-GNU443-X86-64.so)
+	set(HAVE_PARDISO TRUE)
+	set(PARDISO_LIB ${SHARED_DIR}/PARDISO/libpardiso412-GNU443-X86-64.so)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+endif(EXISTS ${SHARED_DIR}/PARDISO/libpardiso412-GNU443-X86-64.so)
+
 set(SCIP_DIR "${SHARED_DIR}/scip-2.1.1")
 set(SCIP_LIBDIR "${SCIP_DIR}/lib")
 set(SCIP_INCDIR "${SCIP_DIR}/src")
