@@ -9,19 +9,6 @@
 */
 
 /**
-   Simple struct for variable-length data
-*/
-struct Data
-{
-  void* pointer;
-  int length;
-};
-
-struct Data* Data_make_test(void);
-double Data_double_get(struct Data* data, int index);
-void Data_free(struct Data*);
-
-/**
    "f" of inner loop in loops-*.swift
 */
 struct Data* makeFeasible(const char *dataPath, int nScen, int scen,

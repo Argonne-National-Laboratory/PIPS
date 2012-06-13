@@ -18,6 +18,9 @@ LEAF_O=${LEAF_PKG}-${IMPL}.o
 # The SWIG-generated file:
 WRAP_CXX=${LEAF_PKG}_wrap.cxx
 
+# Path to swig-data module
+SWIG_DATA=${HOME}/exm/apps/swig-data
+
 check()
 {
   CODE=${?}
@@ -46,7 +49,7 @@ check "Could not read tclConfig.sh!"
 source ${TCL_CONFIG}
 check "tclConfig.sh failed!"
 
-CFLAGS="-fPIC -g -I . -Wall"
+CFLAGS="-fPIC -g -I . -I ${SWIG_DATA} -Wall"
 
 # Compile the functions implementation
 g++ ${CFLAGS} -c ${LEAF_CXX} -o ${LEAF_O}
