@@ -80,6 +80,10 @@ protected:
 		if (this->ctx.mype() == 0) printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
 		if (v > -1e-2) {
 			this->terminated_ = true;
+			/*std::vector<double> y = solver.getFirstStagePrimalColSolution();
+			for (unsigned k = 0; k < y.size(); k++) y[k] /= -sqrt((double)nscen);
+			double val = this->testPrimal(y);
+			printf("Primal Obj: %.10g\n",val);*/
 			//checkLastPrimals();
 			return;
 		}
