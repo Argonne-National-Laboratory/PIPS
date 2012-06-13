@@ -18,7 +18,6 @@ endif(HAVE_MA57)
 if(HAVE_PARDISO)
 	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C)
 endif(HAVE_PARDISO)
-message(STATUS ${solvers})
 
 add_library(ooqpgensparse 
   QpGen/QpGenVars.C QpGen/QpGenData.C QpGen/QpGenResiduals.C QpGen/QpGen.C QpGen/QpGenLinsys.C #QpGen
