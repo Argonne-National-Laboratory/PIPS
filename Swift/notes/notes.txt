@@ -12,7 +12,7 @@ initial algorithm
 
 Photos from the whiteboard are in notes/2012-06-11-*.jpg
 
-Wozniak converted the photos into three Swift scripts:
+Wozniak converted the photos into four Swift scripts:
 
 loops-simple.swift: Simplest implementation.  Should work with
 existing Swift/T implementation.
@@ -23,3 +23,8 @@ loops-update.swift: As above with proposed updateable blob feature.
 
 loops-realtime.swift: As above with proposed timeout feature and
 data-aware scheduling feature.
+
+Lubin provided C++ function signatures.  These are in functions.h.
+
+Wozniak sketched noop C++ functions based on these signatures in
+functions-noop.C .
