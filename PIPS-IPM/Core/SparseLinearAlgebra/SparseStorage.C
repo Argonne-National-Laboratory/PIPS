@@ -259,7 +259,6 @@ void SparseStorage::fromGetColBlock(int col, double *A, int lda, int colExtent, 
       }
     }
   }
-
 }
 
 void SparseStorage::atPutSpRow( int row, double A[], int lenA,
@@ -693,6 +692,49 @@ void SparseStorage::transMult( double beta,  double y[], int incy,
   }
 }
 
+/* Y <- alpha* M^T X + beta*Y
+ * Computes only the elements in Y that are lower triangular
+ * elements in the larger matrix (Y contains a subset of the ny columns of 
+ * this matrix, starting at colStart)
+ *
+ * X  - dense matrix with columns in continuous memory**
+ * that is, along *rows* in C-style, but treated as columns
+ * Y - dense matrix with rows  in continuous memory that is
+ * a subset of ny columns of a larger dense matrix. The first column
+ * in Y is the colStart column in the larger matrix
+ * M - is 'this'
+ */
+void SparseStorage::transMultMatLower( double beta,  double* Y, int ny, int ldy,
+				       double alpha, double *X, int ldx, int colStart)
+{
+
+  //Note: Y[j+ldy*v] is Y(j,v)
+
+  int i, j, k;
+  if(beta!=1.0) {
+    for( int v = 0; v < ny; v++) {
+      int ldyv=ldy*v;
+      int startrow=v+colStart; assert(false);
+      for( j = startrow; j<n; j++ ) {
+	Y[j +ldyv] *= beta;
+      }
+    }
+  }
+  for( i = 0; i < m; i++ ) {
+    for( k = krowM[i]; k < krowM[i+1]; k++ ) {
+      j = jcolM[k];
+#ifdef DEBUG
+      assert(j<n);
+#endif
+      //int endcol=j+colStart;
+      for (int v = j+colStart; v<ny; v++) { 
+	Y[j+v*ldy] += alpha * M[k] * X[i+v*ldx];
+      }
+    }
+  }
+}
+
+
 // Y <- alpha*M^TX + beta*Y
 // X dense matrix with columns in continuous memory**
 // that is, along *rows* in C-style, but treated as columns
@@ -702,9 +744,9 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
   int i, j, k;
   if(beta!=1.0) {
     for( int v = 0; v < ny; v++)
-			for( j = 0; j < n; j++ ) {
-				Y[j +ldy*v] *= beta;
-			}
+      for( j = 0; j < n; j++ ) {
+	Y[j +ldy*v] *= beta;
+      }
   }
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
@@ -713,8 +755,8 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
       assert(j<n);
 #endif
       for (int v = 0; v<ny; v++) { 
-				Y[j+v*ldy] += alpha * M[k] * X[i+v*ldx];
-			}
+	Y[j+v*ldy] += alpha * M[k] * X[i+v*ldx];
+      }
     }
   }
 }

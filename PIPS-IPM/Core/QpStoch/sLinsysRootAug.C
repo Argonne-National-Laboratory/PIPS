@@ -178,7 +178,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     SparseGenMatrix& C = prob->getLocalD();
     C.matTransDinvMultMat(*zDiag, &CtDC);
     assert(CtDC->size() == locnx);
-    
+
     //aliases for internal buffers of CtDC
     SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
     int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();

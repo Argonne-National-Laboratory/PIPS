@@ -341,6 +341,66 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   if(nxP==-1) nxP = NP;
   N = locnx+locmy+locmz;
 
+  const int blocksize = 64;
+  DenseGenMatrix cols(blocksize,N);
+  
+  //cout << "N=" << N << "  locnx=" << locnx<< endl;
+  for (int it=0; it < nxP; it += blocksize) {
+
+    int start=it;
+    int end = MIN(it+blocksize,nxP);
+    int numcols = end-start;
+
+
+    bool allzero = true;
+    memset(&cols[0][0],0,N*blocksize*sizeof(double));
+
+    R.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
+    A.getStorageRef().fromGetColBlock(start, &cols[0][locnx], N, numcols, allzero);
+    C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, allzero);
+
+    if(!allzero) {
+	
+      solver->solve(cols);
+        
+
+      R.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
+       				      -1.0, &cols[0][0], N);
+      A.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
+       				      -1.0, &cols[0][locnx], N);
+      C.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,
+       				      -1.0, &cols[0][locnx+locmy], N);
+
+      // this code seems to have problems
+       //R.getStorageRef().transMultMatLower( 1.0, SC[start], numcols, NP,
+       //					   -1.0, &cols[0][0], N, start);
+       //A.getStorageRef().transMultMatLower( 1.0, SC[start], numcols, NP,
+       //					   -1.0, &cols[0][locnx], N, start);
+       //C.getStorageRef().transMultMatLower( 1.0, SC[start], numcols, NP,
+       //				   -1.0, &cols[0][locnx+locmy], N, start); 
+
+    } //end !allzero
+  }
+}
+
+
+/* this is the original code that was doing one column at the time. */
+ /*
+void sLinsys::addTermToDenseSchurCompl(sData *prob, 
+				       DenseSymMatrix& SC) 
+{
+  SparseGenMatrix& A = prob->getLocalA();
+  SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+  int N, nxP, NP;
+  A.getSize(N, nxP); assert(N==locmy);
+  NP = SC.size(); assert(NP>=nxP);
+
+  if(nxP==-1) C.getSize(N,nxP);
+  if(nxP==-1) nxP = NP;
+  N = locnx+locmy+locmz;
+
   SimpleVector col(N);
 
   for(int it=0; it<nxP; it++) {
@@ -367,10 +427,10 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     // SC+=Ct*z
     C.transMult( 1.0, &SC[it][0],   1,
 		-1.0, &col[locnx+locmy], 1);
+
   }
-
 }
-
+ */
 #include <set>
 #include <algorithm>
 

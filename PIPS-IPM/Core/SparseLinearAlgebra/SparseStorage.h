@@ -126,6 +126,13 @@ public:
   void transMultMatLower( double* Y, int ny, int firstrow,
 						 double alpha, double *X, int ldx);
 
+  /** Y <- alpha* M^T X + beta*Y, where M is this 
+   * Special update function, computes only the elements in Y that are lower
+   * triangular elements in a larger matrix that contains Y (see impl file for 
+   * more details)
+   */
+  void transMultMatLower( double beta,  double* Y, int ny, int ldy,
+			  double alpha, double *X, int ldx, int colStart);
 
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
 
