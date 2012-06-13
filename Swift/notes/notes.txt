@@ -1,0 +1,23 @@
+
+GENERAL NOTES
+
+The SVN repo for this work is:
+
+https://svn.mcs.anl.gov/repos/UNCERTAINTY/COD/STOCHPROG/src/PIPS/Swift
+
+6/11/2012
+
+At our meeting (Wozniak, Lubin, FORGOT LAST NAME) we sketched notes of the
+initial algorithm
+
+Photos from the whiteboard are in notes/2012-06-11-*.jpg
+
+Wozniak converted the photos into three Swift scripts:
+
+loops-simple.swift: Simplest implementation.  Should work with
+existing Swift/T implementation.
+
+loops-update.swift: As above with proposed updateable blob feature.
+
+loops-realtime.swift: As above with proposed timeout feature and
+data-aware scheduling feature.
