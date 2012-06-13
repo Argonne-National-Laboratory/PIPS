@@ -1,4 +1,13 @@
 
+/*
+   Lubin: The variables dataPath, nScen, and solutionPath are
+   effectively compile-time (or more nicely, command-line)
+   parameters.
+
+   Wozniak: Let's keep these in the API so you can control them easily
+   from Swift
+*/
+
 /**
    "f" of inner loop in loops-*.swift
 */
