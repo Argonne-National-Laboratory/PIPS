@@ -2,7 +2,7 @@
  * Authors: Cosmin G. Petra, Miles Lubin, Murat Mut
  * (C) 2012 Argonne National Laboratory, see documentation for copyright
  */
-
+#include <stdlib.h>
 #include <iostream>
 using namespace std;
 
@@ -91,16 +91,16 @@ void PardisoSolver::matrixChanged()
   Msys->getStorageRef().transpose(krowM, jcolM, M);
  
   // pardiso requires diag elems even though they are exactly 0
-  for( int i = 0; i < n; i++) {
-    bool hasDiag=0;
-    for( int j=krowM[i]; j<krowM[i+1] && !hasDiag; j++ ) {
-      if( jcolM[j]==i ) hasDiag=true;
-    }
+  // for( int i = 0; i < n; i++) {
+  //   bool hasDiag=0;
+  //   for( int j=krowM[i]; j<krowM[i+1] && !hasDiag; j++ ) {
+  //     if( jcolM[j]==i ) hasDiag=true;
+  //   }
 
-    if (!hasDiag)
-      assert(false);
-      //cout << "NO diag elem in row " << i << endl;
-  }
+  //   if (!hasDiag)
+  //     assert(false);
+  //     //cout << "NO diag elem in row " << i << endl;
+  // }
  
   // need Fortran indexes
   for( int i = 0; i < n+1; i++) krowM[i] += 1;
@@ -113,7 +113,7 @@ void PardisoSolver::matrixChanged()
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
-  int msglvl=1; //messaging level
+  int msglvl=0; //messaging level
 
 
   //iparm[1] = 2; // 2 is for metis, 0 for min degree 
@@ -137,7 +137,9 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
     
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
   double * drhs = rhs.elements();
-  
+  //cout << " in: ";
+  //for(int i=0; i<n; i++) cout << rhs[i] << " ";
+  //cout  << endl;  
   double * sol = nvec;
 
   phase = 33; //solve and iterative refinement
@@ -158,8 +160,63 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
   }
   rhs.copyFromArray(sol);
+  //cout << "out: ";
+  //for(int i=0; i<n; i++) cout << rhs[i] << " ";
+  //cout  << endl;
 }
 
+
+
+
+void PardisoSolver::solve(GenMatrix& rhs_in)
+{
+  DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
+
+  //cout << "Multiple dense rhs " << endl;
+
+  int nrows,ncols; rhs.getSize(ncols,nrows);
+  double* sol=new double[nrows*ncols];
+  assert(nrows==n);
+
+  /*
+  double* rrr=&rhs[0][0];
+  for(int j=0; j<ncols; j++) {
+    cout << " in: ";
+    for (int i=0;i<nrows; i++) cout << rrr[i+j*nrows] << " ";
+    cout  << endl;
+  }
+  */
+  phase = 33; //solve and iterative refinement
+  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
+  int mnum=1; //actual matrix (as in index from 1 to maxfct)
+  int nrhs=ncols;
+  int msglvl=0;
+
+  iparm[2] = 1; // num threads
+  iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+  //iparm[5] = 1; /* replace drhs with the solution */
+
+  pardiso (pt, &maxfct, &mnum, &mtype, &phase,
+	   &n, M, krowM, jcolM, 
+	   NULL, &nrhs ,
+	   iparm, &msglvl, 
+	   &rhs[0][0], sol,
+	   &error, dparm );
+ 
+  if ( error != 0) {
+    printf ("PardisoSolver - ERROR during solve: %d", error ); 
+  }
+  memcpy(&rhs[0][0], sol, nrows*ncols*sizeof(double));
+  delete[] sol; 
+
+  /*
+  for(int j=0; j<ncols; j++) {
+    cout << "out: ";
+    for (int i=0;i<nrows; i++) cout << rrr[i+j*nrows] << " ";
+    cout  << endl;
+  }
+  */
+}
 
 PardisoSolver::~PardisoSolver()
 {
@@ -179,14 +236,6 @@ PardisoSolver::~PardisoSolver()
   delete[] krowM;
   delete[] M;
   delete[] nvec;
-}
-
-
-
-void PardisoSolver::solve(GenMatrix& rhs_in)
-{
-  //DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
-  assert(false);
 }
 
 
