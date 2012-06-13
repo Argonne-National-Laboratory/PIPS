@@ -19,6 +19,9 @@ target_link_libraries(pipssFromRaw pipss stochInput ${COIN_LIBS} ${MATH_LIBS})
 add_executable(clpFromRaw Drivers/clpFromRaw.cpp)
 target_link_libraries(clpFromRaw pipss stochInput ClpBALPInterface ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
+add_executable(clpSMPS Drivers/clpSMPS.cpp)
+target_link_libraries(clpSMPS pipss stochInput ClpBALPInterface ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+
 add_executable(pipssBootstrap Drivers/pipssBootstrap.cpp)
 target_link_libraries(pipssBootstrap pipss stochInput ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
