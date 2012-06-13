@@ -53,7 +53,7 @@ g++ ${CFLAGS} -c ${LEAF_CXX} -o ${LEAF_O}
 check
 
 # Create the Tcl extension
-swig -c++ -tcl ${LEAF_I}
+swig -includeall -c++ -tcl ${LEAF_I}
 check
 
 # TODO: Figure out why this is necessary:

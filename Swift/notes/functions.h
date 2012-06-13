@@ -9,17 +9,29 @@
 */
 
 /**
+   Simple struct for variable-length data
+*/
+struct Data
+{
+  void* pointer;
+  int length;
+};
+
+struct Data* Data_make_test(void);
+double Data_double_get(struct Data* data, int index);
+void Data_free(struct Data*);
+
+/**
    "f" of inner loop in loops-*.swift
 */
-void makeFeasible(const char *dataPath, int nScen, int scen,
-                  const double *candidateSolution,
-                  double** result, int* result_length);
+struct Data* makeFeasible(const char *dataPath, int nScen, int scen,
+                          const double *candidateSolution);
 
 double evaluateSolution(const char *dataPath, int nScen,
                         const double *candidateSolution);
 
-void readSolution(const char *dataPath, const char *solutionPath,
-                  int scen, double** result, int* result_length);
+struct Data* readSolution(const char *dataPath, const char *solutionPath,
+                          int scen);
 
 /**
    Reduce for inner loop. I'm assuming we reduce into the
@@ -28,3 +40,6 @@ void readSolution(const char *dataPath, const char *solutionPath,
 */
 void customReduce(double *candidateSolution, const double *nextSolution,
                   int solutionLength);
+
+
+
