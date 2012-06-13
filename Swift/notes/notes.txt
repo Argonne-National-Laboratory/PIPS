@@ -17,6 +17,8 @@ Wozniak converted the photos into three Swift scripts:
 loops-simple.swift: Simplest implementation.  Should work with
 existing Swift/T implementation.
 
+loops-io.swift: As above, but separates I/O from compute function.
+
 loops-update.swift: As above with proposed updateable blob feature.
 
 loops-realtime.swift: As above with proposed timeout feature and
