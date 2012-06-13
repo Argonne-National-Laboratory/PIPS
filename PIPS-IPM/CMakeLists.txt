@@ -18,7 +18,7 @@ endif(HAVE_MA27)
 if(HAVE_MA57)
   add_executable(qpgen-sparse-ma57-gondzio.exe Core/QpGen/QpGenSparseGondzioDriver.C)
   target_link_libraries(qpgen-sparse-ma57-gondzio.exe 
-    ooqpgensparse ooqpsparse ooqpbase ooqpgondzio  ${PARDISO_LIB}
+    ooqpgensparse ooqpsparse ooqpbase ooqpgondzio ooqpdense  ${PARDISO_LIB}
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 endif(HAVE_MA57)
 
