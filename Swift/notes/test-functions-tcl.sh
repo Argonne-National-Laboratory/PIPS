@@ -2,7 +2,8 @@
 
 # User may set VALGRIND=/path/to/valgrind
 
-export TCLLIBPATH=${PWD}
+SWIG_DATA=${HOME}/exm/apps/swig-data
+export TCLLIBPATH="${SWIG_DATA} ${PWD}"
 
 ${VALGRIND} tclsh test-functions.tcl
 [[ ${?} == 0 ]] || exit 1

@@ -1,4 +1,5 @@
 
+package require data 0.0
 package require functions 0.0
 
 # readSolution "problem.data" "solution.data" 3
@@ -10,9 +11,10 @@ Data_free $d
 
 set d [ readSolution X X 3 ]
 
-
 set t [ Data_double_get $d 0 ]
 puts $t
 
-set L [ functions::double_list $d ]
+set L [ data::list_doubles $d ]
 puts $L
+
+Data_free $d

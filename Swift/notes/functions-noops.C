@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <data.h>
+
 #include "functions.h"
 
 struct Data*
@@ -50,29 +52,3 @@ customReduce(double *candidateSolution, const double *nextSolution,
 {
   return;
 }
-
-struct Data*
-Data_make_test(void)
-{
-  struct Data* d = (Data*) malloc(sizeof(Data));
-  char* t = (char*) malloc(64);
-  sprintf(t, "howdy");
-  d->pointer = t;
-  d->length = strlen(t)+1;
-  return d;
-}
-
-double
-Data_double_get(struct Data* data, int index)
-{
-  double* d = (double*) data->pointer;
-  return d[index];
-}
-
-void
-Data_free(struct Data* data)
-{
-  free(data->pointer);
-  free(data);
-}
-

@@ -3,32 +3,26 @@
 
 namespace eval functions {
 
-    proc readSolution { stack b dataPath solutionPath scen } {
+    proc readSolution_turbine { stack output inputs } {
 
-        rule "readSolution-$b" [ list $dataPath $solutionPath $scen ] \
+        set dataPath     [ lindex $inputs 0 ]
+        set solutionPath [ lindex $inputs 1 ]
+        set scen         [ lindex $inputs 2 ]
+
+        turbine::rule "readSolution-$output" $inputs \
             $turbine::WORK \
-            "readSolution_body $b $dataPath $solutionPath $scen"
+            "functions::readSolution_body $output $dataPath $solutionPath $scen"
     }
 
     proc readSolution_body { b dataPath solutionPath scen } {
+
+        puts readSolution_body
 
         set dp_value [ turbine::retrieve_string $dataPath ]
         # set sp_value [ turbine::retrieve_string $solutionPath ]
         set s_value [ turbine::retrieve_integer $scen ]
 
-        functions::readSolution
-    }
-
-    proc double_list { data } {
-        # length in bytes
-        set length [ Data_length_get $data ]
-        # divide to get count of doubles
-        set n [ expr $length / 8 ]
-        set result [ list ]
-        for { set i 0 } { $i < $n } { incr i } {
-            lappend result [ Data_double_get $data $i ]
-        }
-        return $result
+        set d [ readSolution X X 3 ]
+        puts OKAY
     }
 }
-
