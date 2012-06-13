@@ -246,7 +246,7 @@ vector<string> SMPSInput::getSecondStageColNames(int scen) {
 }
 
 vector<string> SMPSInput::getSecondStageRowNames(int scen) {
-	return scenarioData.at(scen).colname;
+	return scenarioData.at(scen).rowname;
 }
 
 
