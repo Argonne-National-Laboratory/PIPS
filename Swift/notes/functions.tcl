@@ -1,6 +1,8 @@
 
 # Turbine wrappers
 
+package require data 0.0
+
 namespace eval functions {
 
     proc readSolution_turbine { stack output inputs } {
@@ -23,6 +25,9 @@ namespace eval functions {
         set s_value [ turbine::retrieve_integer $scen ]
 
         set d [ readSolution X X 3 ]
-        puts OKAY
+        set pointer [ data::pointer $d ]
+        set length  [ data::length  $d ]
+        adlb::store_blob $b $pointer $length
+        Data_free $d
     }
 }
