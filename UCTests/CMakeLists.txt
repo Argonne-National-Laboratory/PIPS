@@ -17,6 +17,10 @@ target_link_libraries(cutsTest pipss stochInput ClpBALPInterface ClpRecourseSolv
 add_executable(ucRootNodeClp ucRootNodeClp.cpp OsiSubproblemWrapper.cpp)
 target_link_libraries(ucRootNodeClp pipss stochInput ClpBALPInterface ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
+
+add_executable(ucTestSol ucTestSol.cpp)
+target_link_libraries(ucTestSol pipss stochInput ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+
 include_directories(../PIPS-S/Core)
 include_directories(../PIPS-S/CoinBALPFactorization)
 add_executable(ucRootNodePIPSS ucRootNodePIPSS.cpp OsiSubproblemWrapper.cpp)
