@@ -50,7 +50,6 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   for(size_t c=0; c<children.size(); c++) {
     children[c]->factor2(prob->children[c], vars);
   }
-  cout << "factor2 " << endl;
   for(size_t c=0; c<children.size(); c++) {
 
     if(children[c]->mpiComm == MPI_COMM_NULL)
