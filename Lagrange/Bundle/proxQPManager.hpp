@@ -77,12 +77,22 @@ protected:
 		MPI_Allreduce(&v_this,&v,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());*/
 	
 		eps_sol = -(mR-mL)*v; 
-		if (this->ctx.mype() == 0) printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
+		if (this->ctx.mype() == 0) {
+			printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
+			stringstream ss;
+			ss << "primalconv" << this->nIter;
+			ofstream f(ss.str().c_str());
+			std::vector<double> y = solver.getFirstStagePrimalColSolution();
+			for (unsigned k = 0; k < y.size(); k++) {
+				y[k] /= -sqrt((double)nscen);
+				f << y[k] << " ";
+			}
+			f << endl;
+		}
 		if (v > -1e-2) {
 			this->terminated_ = true;
-			/*std::vector<double> y = solver.getFirstStagePrimalColSolution();
-			for (unsigned k = 0; k < y.size(); k++) y[k] /= -sqrt((double)nscen);
-			double val = this->testPrimal(y);
+			/*
+						double val = this->testPrimal(y);
 			printf("Primal Obj: %.10g\n",val);*/
 			//checkLastPrimals();
 			return;
