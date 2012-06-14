@@ -23,13 +23,14 @@ int main(int argc, char **argv) {
 	int mype;
 	MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 
-	if (argc != 4) {
-		if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [fractional solution file]\n",argv[0]);
+	if (argc != 5) {
+		if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [fractional solution file] [rounding cutoff]\n",argv[0]);
 		return 1;
 	}
 
 	string datarootname(argv[1]);
 	int nscen = atoi(argv[2]);
+	double cutoff = atof(argv[4]);
 
 	fakeIntegerWrapper s(datarootname,nscen);
 	int nvar1 = s.nFirstStageVars();
@@ -44,7 +45,7 @@ int main(int argc, char **argv) {
 	
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(nscen);
-	double obj = roundSolution<ClpRecourseSolver>(s,ctx,sol,0.01);
+	double obj = roundSolution<ClpRecourseSolver>(s,ctx,sol,cutoff);
 
 	printf("Primal objective: %g\n",obj);
 
