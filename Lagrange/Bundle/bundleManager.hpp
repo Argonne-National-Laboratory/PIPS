@@ -182,11 +182,11 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::evalua
 		cutInfo cut = solveSubproblem(sol[scen],scen, eps_sol);
 		bundle[scen].push_back(cut);
 		obj -= cut.objmax; // note cut has obj flipped
-		printf("scen %d has obj %g\n",scen,-cut.objmax);
 	}
 	if (!B::isDistributed()) {
 		// only need to do this if we have a serial solver
 		int nvar1 = input.nFirstStageVars();
+		obj = 0.;
 		for (int scen = 0; scen < nscen; scen++) {
 			int proc = ctx.owner(scen);
 			int i;
@@ -204,6 +204,7 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::evalua
 			MPI_Bcast(&bundle[scen][i].subgradient[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
 			MPI_Bcast(&bundle[scen][i].objval,1,MPI_DOUBLE,proc,ctx.comm());
 			MPI_Bcast(&bundle[scen][i].objmax,1,MPI_DOUBLE,proc,ctx.comm());
+			obj -= bundle[scen][i].objmax;
 		}
 	} else {
 		double locobj = obj;
