@@ -25,7 +25,8 @@ public:
 	std::vector<double> getFirstStagePrimalColSolution() const;
 	std::vector<double> getSecondStagePrimalColSolution(int scen) const;
 	std::vector<double> getSecondStageDualRowSolution(int scen) const;
-
+	
+	static bool isDistributed() { return false; }
 
 
 protected:

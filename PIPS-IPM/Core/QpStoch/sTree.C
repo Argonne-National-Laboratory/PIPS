@@ -44,6 +44,9 @@ void sTree::assignProcesses()
   assignProcesses(MPI_COMM_WORLD, processes);
 }
 
+#ifndef MIN
+#define MIN(a,b) ( (a>b) ? b : a )
+#endif
 
 void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 {
@@ -77,10 +80,19 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   assert(children.size() % noProcs == 0);
   mapChildNodesToProcs.resize(children.size());
+  /* old mapping
   for(size_t i=0; i<children.size(); i++) {
     mapChildNodesToProcs[i].resize(1);
     mapChildNodesToProcs[i][0] = i % noProcs;
   }
+  */
+  // new assignment to agree with BA.cpp. we'll see if this breaks anything
+  int nper = children.size()/noProcs;
+  for(size_t i=0; i<children.size(); i++) {
+    mapChildNodesToProcs[i].resize(1);
+    mapChildNodesToProcs[i][0] = MIN(i/nper,(size_t)noProcs-1);
+  }
+  
 
   //!log
   if(0==rankMe) {
@@ -653,14 +665,14 @@ bool sTree::balanceLoad()
   this->syncMonitoringData(cpuExecTm);
 
   //!log
+#if defined(STOCH_TESTING) && !defined(TIMING)
   if(!rankMe) {
     printf("Iteration times per process:\n");
     for(int it=0; it<nCPUs; it++) printf("%8.4f ", cpuExecTm[it]);
     printf("\n\n");
-#if defined(STOCH_TESTING) && !defined(TIMING)
     this->displayExecTimes(0);
-#endif
   }
+#endif
   if(nCPUs==1) return 0;
 
   double total = 0.0; double maxLoad=0, minLoad=1.e+10;

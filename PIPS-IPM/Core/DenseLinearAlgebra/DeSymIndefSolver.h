@@ -21,13 +21,13 @@ protected:
   double* work; int lwork;
   int *ipiv;
   SparseSymMatrix *sparseMat;
-  std::vector<int> sparseDiagMap;
 public:
   DeSymIndefSolver( DenseSymMatrix * storage );
   DeSymIndefSolver( SparseSymMatrix * storage );
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
   virtual void solve ( OoqpVector& vec );
+  virtual void solve ( GenMatrix& vec );
   virtual ~DeSymIndefSolver();
 };
 

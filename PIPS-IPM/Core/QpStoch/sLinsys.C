@@ -350,6 +350,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     int start=it;
     int end = MIN(it+blocksize,nxP);
     int numcols = end-start;
+    cols.getStorageRef().m = numcols; // avoid extra solves
 
 
     bool allzero = true;
@@ -384,8 +385,8 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 }
 
 
-/* this is the original code that was doing one column at the time. */
- /*
+/* this is the original code that was doing one column at a time. */
+/* 
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
 				       DenseSymMatrix& SC) 
 {
@@ -418,7 +419,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
      //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
  
     // SC+=R*x
-    R.transMult( 1.0, &SC[0][0],     1,
+    R.transMult( 1.0, &SC[it][0],     1,
 		 -1.0, &col[0],      1);
 
     // SC+=At*y
@@ -429,8 +430,8 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 		-1.0, &col[locnx+locmy], 1);
 
   }
-}
- */
+}*/
+ 
 #include <set>
 #include <algorithm>
 

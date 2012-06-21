@@ -129,21 +129,6 @@ public:
   void AddChild(StochVector* child){};
   void AddChild(OoqpVector* child){};
 
-  /** The data for this node. */
-  OoqpVector*               vec;
-
-  /** Children of this node */
-  std::vector<StochVector*> children;
-
-  /** Link to the parent of this node. Needed when we multiply a matrix 
-      with this vector
-  */
-  StochVector*              parent;
-
-
-  /* MPI communicator */
-  MPI_Comm mpiComm;
-
   /** Creates and returns a vector of the type used to store data in this node,
       i.e., same type as 'vec'.
       NO data is copied, for this use one of the 'copy...' functions.

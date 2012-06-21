@@ -187,8 +187,9 @@ void QpGenStoch::iterateEnded()
   //logging and monitoring
   iterTmMonitor.recIterateTm_stop();
   m_tmTotal += iterTmMonitor.tmIterate;
-
+#ifdef STOCH_TESTING
   if(tree->rankMe==tree->rankZeroW)
     printf("ITERATION WALLTIME: iter=%g  Total=%g\n", iterTmMonitor.tmIterate, m_tmTotal);
+#endif
 }
 

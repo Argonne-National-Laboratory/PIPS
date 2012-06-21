@@ -61,8 +61,13 @@ sFactory::~sFactory()
   if(tree) delete tree;
 }
 
+#ifdef TIMING
 #define TIM t = MPI_Wtime();
 #define REP(s) t = MPI_Wtime()-t;if (p) printf("makeData: %s took %f sec\n",s,t);
+#else
+#define TIM
+#define REP(s)
+#endif
 
 Data * sFactory::makeData()
 {
@@ -113,12 +118,13 @@ Data * sFactory::makeData()
   StochVectorHandle    ixupp( tree->createixupp() );
   REP("ixupp");
 
-
+#ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
   t2 = MPI_Wtime() - t2;
   if (mype == 0) {
     cout << "IO second part took " << t2 << " sec\n";
   }
+#endif
 
   data = new sData( tree, 
 		    c, Q, 
@@ -247,7 +253,7 @@ void sFactory::iterateEnded()
 #ifdef TIMING
     extern double g_iterNumber;
     printf("TIME %g SOFAR %g ITER %d\n", iterTmMonitor.tmIterate, m_tmTotal, (int)g_iterNumber);
-#else
+#elseif STOCH_TESTING
     printf("ITERATION WALLTIME: iter=%g  Total=%g\n", iterTmMonitor.tmIterate, m_tmTotal);
 #endif
   }
