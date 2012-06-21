@@ -64,6 +64,8 @@ public:
 
 	double primalError() { return solver->calculateLargestPrimalError(); }
 
+	static bool isDistributed() { return true; }
+
 
 protected:
 	void setPhase1() { solver->phase1 = true; boundsChanged = true; }
