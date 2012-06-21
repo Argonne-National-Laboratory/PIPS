@@ -101,7 +101,7 @@ protected:
 			f << endl;
 		}
 		if (v > -1e-2) {
-			this->terminated_ = true; nIter++; doStep(); // for printout
+			this->terminated_ = true; this->nIter++; doStep(); // for printout
 			/*
 						double val = this->testPrimal(y);
 			printf("Primal Obj: %.10g\n",val);*/
