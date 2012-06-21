@@ -38,8 +38,8 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	proxQPManager<OOQPInterface<MehrotraSolver,QpGenSparseMa57>,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
-	//proxQPManager<PIPSIpmInterface<sFactoryAug,MehrotraStochSolver>,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	//proxQPManager<OOQPInterface<MehrotraSolver,QpGenSparseMa57>,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	proxQPManager<PIPSIpmInterface<sFactoryAug,MehrotraStochSolver>,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();
