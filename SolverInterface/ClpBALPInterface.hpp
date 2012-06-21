@@ -53,6 +53,8 @@ public:
 
 	double primalError() { return model.largestPrimalError(); }
 
+	static bool isDistributed() { return false; }
+
 protected:
 	ClpSimplex model;
 	BADimensions dims;

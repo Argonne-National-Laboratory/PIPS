@@ -27,7 +27,11 @@ template<typename T1, typename T2> void concatenateAll(stochasticInput &data,
 }
 
 ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solveType t) : dims(input,ctx), t(t) {
-	assert(ctx.nprocs() == 1);
+	if (ctx.nprocs() != 1) {
+		if (ctx.mype() == 0) {
+			printf("Warning, using CLP BALP interface with multiple processes\n");
+		}
+	}
 
 	// This disables Clp's internal rescaling of the problem.
 	// We do this for a fair comparison with PIPS-S.
