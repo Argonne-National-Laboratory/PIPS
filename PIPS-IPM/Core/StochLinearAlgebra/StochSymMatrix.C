@@ -59,7 +59,7 @@ void StochSymMatrix::AddChild(StochSymMatrix* child)
     // create an empty border for this children with correct dimensions
     delete child->border;
 
-    printf("(RE)Creating cross Hessian: m=%d n=%d  nnz=%d\n", this->diag->size(), child->diag->size(), 0);
+    //printf("(RE)Creating cross Hessian: m=%d n=%d  nnz=%d\n", this->diag->size(), child->diag->size(), 0);
 
     child->border = new SparseGenMatrix(child->diag->size(), this->diag->size(), 0);
   }

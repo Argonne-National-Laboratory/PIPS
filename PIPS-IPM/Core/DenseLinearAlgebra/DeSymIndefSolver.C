@@ -7,6 +7,7 @@
 #include <cassert>
 
 #include "DenseSymMatrix.h"
+#include "DenseGenMatrix.h"
 
 
 #ifndef FNAME
@@ -63,20 +64,7 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
   work = NULL;
   sparseMat = sm;
 
-  std::fill(mStorage->M[0],mStorage->M[0]+size*size,0.);
-
-  const double *sM = sm->M();
-  const int *jcolM = sm->jcolM();
-  for (int i = 0; i < size; i++) {
-    for (int k = sm->krowM()[i]; k < sm->krowM()[i+1]; k++) {
-      int col = jcolM[k];
-      mStorage->M[i][col] = sM[k];
-      if (i == col) {
-	sparseDiagMap.push_back(k);
-      }
-    }
-  }
-  assert(sparseDiagMap.size() == static_cast<size_t>(size));
+  
 
 }
 
@@ -91,8 +79,17 @@ void DeSymIndefSolver::matrixChanged()
   int n = mStorage->n;
 
   if (sparseMat) {
+    std::fill(mStorage->M[0],mStorage->M[0]+n*n,0.);
+
     const double *sM = sparseMat->M();
-    for (int i = 0; i < n; i++) mStorage->M[i][i] = sM[sparseDiagMap[i]];
+    const int *jcolM = sparseMat->jcolM();
+    const int *krowM = sparseMat->krowM();
+    for (int i = 0; i < n; i++) {
+      for (int k = krowM[i]; k < krowM[i+1]; k++) {
+        int col = jcolM[k];
+        mStorage->M[i][col] = sM[k];
+      }
+    }
   }
 
   //!log 
@@ -145,6 +142,21 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
 
   FNAME(dsytrs)( &fortranUplo, &n, &one,	&mStorage->M[0][0],	&n,
 	   ipiv, &sv[0],	&n,	&info);
+
+  assert(info==0);
+}
+
+void DeSymIndefSolver::solve ( GenMatrix& rhs_in )
+{
+  DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
+  char fortranUplo = 'U';
+  int info;
+  int nrows,ncols; rhs.getSize(ncols,nrows);
+
+  int n = mStorage->n;
+
+  FNAME(dsytrs)( &fortranUplo, &n, &ncols,	&mStorage->M[0][0],	&n,
+	   ipiv, &rhs[0][0],	&n,	&info);
 
   assert(info==0);
 }

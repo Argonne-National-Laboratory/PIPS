@@ -1578,14 +1578,14 @@ bool StochTree::balanceLoad()
   this->syncMonitoringData(cpuExecTm);
 
   //!log
+#if defined(STOCH_TESTING) && !defined(TIMING)
   if(!rankMe) {
     printf("Iteration times per process:\n");
     for(int it=0; it<nCPUs; it++) printf("%8.4f ", cpuExecTm[it]);
     printf("\n\n");
-#if defined(STOCH_TESTING) && !defined(TIMING)
     this->displayExecTimes(0);
-#endif
   }
+#endif
   if(nCPUs==1) return 0;
 
   double total = 0.0; double maxLoad=0, minLoad=1.e+10;

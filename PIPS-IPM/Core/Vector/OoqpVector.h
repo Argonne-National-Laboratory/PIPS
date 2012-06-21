@@ -25,7 +25,7 @@ class OoqpVector : public IotrRefCount {
 public:
   int n;
   /** Return the length of this vector. */
-  int length() { return n; }
+  int length() const { return n; }
 
   OoqpVector( int n_ = 0 );
   virtual ~OoqpVector();
