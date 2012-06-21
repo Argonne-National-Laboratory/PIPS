@@ -32,6 +32,7 @@ public:
 	bundleManager(stochasticInput &input, BAContext & ctx) : ctx(ctx), input(input) {
 		int nscen = input.nScenarios();
 		// use zero as initial iterate
+		// TODO: don't need to allocate all if distributed solver
 		currentSolution.resize(nscen,std::vector<double>(input.nFirstStageVars(),0.));
 		nIter = -1;
 		bundle.resize(nscen);
@@ -174,33 +175,38 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::evalua
 
 	std::vector<int> const& localScen = ctx.localScenarios();
 	int nscen = input.nScenarios();
+	double obj = 0.;
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
+		assert(sol[scen].size());
 		cutInfo cut = solveSubproblem(sol[scen],scen, eps_sol);
 		bundle[scen].push_back(cut);
+		obj -= cut.objmax; // note cut has obj flipped
 	}
-
-	// only need to do this if we have a serial solver
-	int nvar1 = input.nFirstStageVars();
-	double obj = 0.;
-	for (int scen = 0; scen < nscen; scen++) {
-		int proc = ctx.owner(scen);
-		int i;
-		if (ctx.mype() != proc) {
-			i = bundle[scen].size();
-			bundle[scen].push_back(cutInfo());
-			bundle[scen][i].primalSol.resize(nvar1);
-			bundle[scen][i].evaluatedAt.resize(nvar1);
-			bundle[scen][i].subgradient.resize(nvar1);
-		} else {
-			i = bundle[scen].size()-1;
+	if (!B::isDistributed()) {
+		// only need to do this if we have a serial solver
+		int nvar1 = input.nFirstStageVars();
+		for (int scen = 0; scen < nscen; scen++) {
+			int proc = ctx.owner(scen);
+			int i;
+			if (ctx.mype() != proc) {
+				i = bundle[scen].size();
+				bundle[scen].push_back(cutInfo());
+				bundle[scen][i].primalSol.resize(nvar1);
+				bundle[scen][i].evaluatedAt.resize(nvar1);
+				bundle[scen][i].subgradient.resize(nvar1);
+			} else {
+				i = bundle[scen].size()-1;
+			}
+			MPI_Bcast(&bundle[scen][i].primalSol[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+			MPI_Bcast(&bundle[scen][i].evaluatedAt[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+			MPI_Bcast(&bundle[scen][i].subgradient[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+			MPI_Bcast(&bundle[scen][i].objval,1,MPI_DOUBLE,proc,ctx.comm());
+			MPI_Bcast(&bundle[scen][i].objmax,1,MPI_DOUBLE,proc,ctx.comm());
 		}
-		MPI_Bcast(&bundle[scen][i].primalSol[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
-		MPI_Bcast(&bundle[scen][i].evaluatedAt[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
-		MPI_Bcast(&bundle[scen][i].subgradient[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
-		MPI_Bcast(&bundle[scen][i].objval,1,MPI_DOUBLE,proc,ctx.comm());
-		MPI_Bcast(&bundle[scen][i].objmax,1,MPI_DOUBLE,proc,ctx.comm());
-		obj -= bundle[scen][i].objmax; // note cut has obj flipped
+	} else {
+		double locobj = obj;
+		MPI_Allreduce(&locobj,&obj,1,MPI_DOUBLE,MPI_SUM,ctx.comm());
 	}
 	return obj;
 }
@@ -215,15 +221,20 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLas
 
 	int nscen = input.nScenarios();
 	int nvar1 = input.nFirstStageVars();
-	//for (int i = 0; i < 5; i++) {
 	ofstream f;
 	stringstream ss;
 	ss << "sols" << nIter;
 	if (ctx.mype() == 0) f.open(ss.str().c_str());
 	for (int i = 0; i < nscen; i++) {
-		assert(bundle[i].size());
-		std::vector<double> const& at = bundle[i][bundle[i].size()-1].evaluatedAt;
-		std::vector<double> const& p = bundle[i][bundle[i].size()-1].primalSol;
+		int proc = ctx.owner(i);
+		std::vector<double> at(nvar1), p(nvar1);
+		if (proc == ctx.mype()) {
+			assert(bundle[i].size());
+			at = bundle[i][bundle[i].size()-1].evaluatedAt;
+			p = bundle[i][bundle[i].size()-1].primalSol;
+		}
+		MPI_Bcast(&at[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+		MPI_Bcast(&p[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
 		if (ctx.mype() == 0) {
 			for (int k = 0; k < nvar1; k++) {
 				f << p[k] << " " << at[k] << " ";
@@ -236,7 +247,6 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLas
 			bestPrimal = p;
 		}
 	}
-	if (ctx.mype() == 0) f.close();
 }
 
 

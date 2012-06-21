@@ -1,6 +1,7 @@
 
 #include "SMPSInput.hpp"
 #include "CbcLagrangeSolver.hpp"
+#include "ScipLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
 #include "conicBundleDriver.hpp"
 #include <boost/scoped_ptr.hpp>
@@ -25,7 +26,7 @@ int main(int argc, char **argv) {
 
 	SMPSInput input(smpsrootname+".cor",smpsrootname+".tim",smpsrootname+".sto");
 
-	conicBundleDriver<CbcLagrangeSolver,CbcRecourseSolver>(input);
+	conicBundleDriver<ScipLagrangeSolver,CbcRecourseSolver>(input);
 
 	MPI_Finalize();
 
