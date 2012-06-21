@@ -12,15 +12,25 @@ public:
 	proxQPManager(stochasticInput &input, BAContext & ctx) : 
 		bundleManager<BAQPSolver,LagrangeSolver,RecourseSolver>(input,ctx) {
 		int nscen = input.nScenarios();
-		trialSolution.resize(nscen,std::vector<double>(input.nFirstStageVars(),0.));
+		trialSolution.resize(nscen);//,std::vector<double>(input.nFirstStageVars(),0.));
 		lastModelObj.resize(nscen);
 		proxCenterModelObj.resize(nscen);
+		if (BAQPSolver::isDistributed()) {
+			localScen = ctx.localScenarios();
+		} else {
+			localScen.resize(nscen+1);
+			for (int i = -1; i < nscen; i++) localScen[i+1] = i;
+		}
+		for (unsigned i = 1; i < localScen.size(); i++) {
+			int scen = localScen[i];
+			trialSolution[scen].resize(input.nFirstStageVars());
+		}
 		u = 1.;
 		t = MPI_Wtime();
 		t2 = 0.;
 		mL = 0.1;
 		mR = 0.1;
-		eps_sol = 10.; // absolute scale, need to adjust
+		eps_sol = 0.; // absolute scale, need to adjust
 	}
 
 
@@ -30,12 +40,10 @@ protected:
 		
 		int nvar1 = this->input.nFirstStageVars();
 		int nscen = this->input.nScenarios();
-		vector<int> const &localScen = this->ctx.localScenarios();
 
 		if (this->nIter == 1) {
-			for (int scen = 0; scen < nscen; scen++) {
-			//for (unsigned r = 1; r < localScen.size(); r++) {
-			//	int scen = localScen[r];
+			for (unsigned r = 1; r < localScen.size(); r++) {
+				int scen = localScen[r];
 				proxCenterModelObj[scen] = this->bundle[scen].at(0).objmax;
 			}
 		}
@@ -54,10 +62,10 @@ protected:
 		std::vector<double> const& y = solver.getFirstStagePrimalColSolution();
 		double lastModelObjSum_this = 0.;
 		double v_this = 0.;
-		//for (unsigned r = 1; r < localScen.size(); r++) { // for distributed solver
-		for (int scen = 0; scen < nscen; scen++) { // for serial solver
-			//int scen = localScen[r];
+		for (unsigned r = 1; r < localScen.size(); r++) { // for distributed solver
+			int scen = localScen[r];
 			std::vector<double> const& z = solver.getSecondStagePrimalColSolution(scen);
+			assert(trialSolution[scen].size());
 			for (int k = 0; k < nvar1; k++) {
 				double sum = y[k]/sqrt((double)nscen);
 				for (unsigned i = 0; i < this->bundle[scen].size(); i++) {
@@ -70,12 +78,14 @@ protected:
 			v_this += lastModelObj[scen] - proxCenterModelObj[scen] - eps_sol/nscen;
 		}
 		double v;
-		v = v_this;
-		lastModelObjSum = lastModelObjSum_this;
-		/* if distributed solver:
-		MPI_Allreduce(&lastModelObjSum_this,&lastModelObjSum,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());
-		MPI_Allreduce(&v_this,&v,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());*/
-	
+		if (localScen.size() == (size_t)nscen) {
+			v = v_this;
+			lastModelObjSum = lastModelObjSum_this;
+		} else {
+			MPI_Allreduce(&lastModelObjSum_this,&lastModelObjSum,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());
+			MPI_Allreduce(&v_this,&v,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());
+		}
+
 		eps_sol = -(mR-mL)*v; 
 		if (this->ctx.mype() == 0) {
 			printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
@@ -90,7 +100,7 @@ protected:
 			f << endl;
 		}
 		if (v > -1e-2) {
-			this->terminated_ = true;
+			this->terminated_ = true; doStep(); // for printout
 			/*
 						double val = this->testPrimal(y);
 			printf("Primal Obj: %.10g\n",val);*/
@@ -110,9 +120,8 @@ protected:
 		if (newObj - this->currentObj > -mL*v) {
 			if (this->ctx.mype() == 0) cout << ", accepting\n";
 			swap(this->currentSolution,trialSolution);
-			for (int scen = 0; scen < nscen; scen++) {
-			//for (unsigned r = 1; r < localScen.size(); r++) {
-			//	int scen = localScen[r];
+			for (unsigned r = 1; r < localScen.size(); r++) {
+				int scen = localScen[r];
 				proxCenterModelObj[scen] = this->bundle[scen][this->bundle[scen].size()-1].objmax;
 			}
 			this->currentObj = newObj;
@@ -129,6 +138,7 @@ protected:
 private:
 	std::vector<double> lastModelObj;
 	std::vector<double> proxCenterModelObj;
+	std::vector<int> localScen;
 	double lastModelObjSum;
 	double u;
 	double t, t2;

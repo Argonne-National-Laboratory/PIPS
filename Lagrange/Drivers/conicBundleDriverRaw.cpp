@@ -1,6 +1,6 @@
 
 #include "rawInput.hpp"
-#include "CbcLagrangeSolver.hpp"
+#include "ScipLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
 #include "conicBundleDriver.hpp"
 #include <boost/scoped_ptr.hpp>
@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 
 	scoped_ptr<fakeIntegerWrapper> s(new fakeIntegerWrapper(datarootname,nscen));
 
-	conicBundleDriver<CbcLagrangeSolver,CbcRecourseSolver>(*s);
+	conicBundleDriver<ScipLagrangeSolver,CbcRecourseSolver>(*s);
 
 	MPI_Finalize();
 

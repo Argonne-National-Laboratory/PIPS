@@ -61,23 +61,23 @@ if(HAVE_SCIP)
 	add_library(ScipLagrangeSolver LagrangeSubproblemSolver/ScipLagrangeSolver.cpp)
 	add_executable(proxBundleScipSMPS Drivers/proxBundleScipSMPS.cpp)
 	add_executable(proxBundleScipRaw Drivers/proxBundleScipRaw.cpp)
-	target_link_libraries(proxBundleScipSMPS bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+	target_link_libraries(proxBundleScipSMPS bundle pipss ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
-	target_link_libraries(proxBundleScipRaw bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+	target_link_libraries(proxBundleScipRaw bundle pipss ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(testSolsHeur1 bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 endif(HAVE_SCIP)
 
-if(HAVE_CB)
+if(HAVE_CB AND HAVE_SCIP)
 	include_directories("${CB_DIR}/include")
 	add_executable(conicBundleSMPS Drivers/conicBundleDriverSMPS.cpp)
 	add_executable(conicBundleRaw Drivers/conicBundleDriverRaw.cpp)
 	add_executable(conicBundleParRaw Drivers/conicBundleParDriver1Raw.cpp)
 	add_executable(conicBundleCombinedSMPS Drivers/conicBundleDriverCombinedSMPS.cpp)
-	target_link_libraries(conicBundleSMPS pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
-	target_link_libraries(conicBundleRaw pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
+	target_link_libraries(conicBundleSMPS pipss stochInput scenred ClpBALPInterface ScipLagrangeSolver CbcRecourseSolver ${SCIP_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
+	target_link_libraries(conicBundleRaw pipss stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
 	target_link_libraries(conicBundleParRaw pipss stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
 	target_link_libraries(conicBundleCombinedSMPS pipss combine stochInput scenred ClpBALPInterface CbcLagrangeSolver CbcRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${CB_LIB} ${MATH_LIBS})
-endif(HAVE_CB)
+endif(HAVE_CB AND HAVE_SCIP)
 
