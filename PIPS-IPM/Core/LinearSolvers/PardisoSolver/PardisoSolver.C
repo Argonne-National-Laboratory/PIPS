@@ -72,7 +72,7 @@ void PardisoSolver::firstCall()
     cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
     assert(false);
   }
-  iparm[2] = num_threads; 
+  printf("using %d threads\n",num_threads);
 } 
 
  
@@ -116,6 +116,7 @@ void PardisoSolver::matrixChanged()
   int msglvl=0; //messaging level
 
 
+  iparm[2] = num_threads;
   //iparm[1] = 2; // 2 is for metis, 0 for min degree 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
@@ -148,6 +149,29 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int nrhs=1;
   int msglvl=0;
 
+  /*ofstream fd("/home/mlubin/gpfs/matdump.dat");
+  fd << scientific;
+  fd.precision(16);
+  fd << n << endl;
+  fd << nnz << endl;
+  int i;
+  for (i = 0; i <= n; i++)
+    fd << krowM[i] << " ";
+  fd << endl;
+  for (i = 0; i < nnz; i++)
+    fd << jcolM[i] << " ";
+  fd << endl;
+  for (i = 0; i < nnz; i++)
+    fd << M[i] << " ";
+  fd << endl;
+  for (i = 0; i < n; i++)
+    fd << rhs[i] << " ";
+  fd << endl;
+  fd.flush();
+  fd.close();
+  printf("finished dumping mat\n");*/
+
+  iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
@@ -192,7 +216,7 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   int nrhs=ncols;
   int msglvl=0;
 
-  iparm[2] = 1; // num threads
+  iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
 
