@@ -182,6 +182,7 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::evalua
 		cutInfo cut = solveSubproblem(sol[scen],scen, eps_sol);
 		bundle[scen].push_back(cut);
 		obj -= cut.objmax; // note cut has obj flipped
+		printf("scen %d has obj %g\n",scen,-cut.objmax);
 	}
 	if (!B::isDistributed()) {
 		// only need to do this if we have a serial solver

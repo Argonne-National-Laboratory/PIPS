@@ -49,6 +49,7 @@ protected:
 		}
 		
 		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Best Primal: %f, Relerr: %g Elapsed: %f (%f in QP solve)\n",this->nIter-1,this->currentObj,this->bestPrimalObj,fabs(lastModelObjSum-this->currentObj)/fabs(this->currentObj),MPI_Wtime()-t,t2);
+		this->terminated_ = true;
 		if (this->terminated_) return;	
 		
 
@@ -100,7 +101,7 @@ protected:
 			f << endl;
 		}
 		if (v > -1e-2) {
-			this->terminated_ = true; doStep(); // for printout
+			this->terminated_ = true; nIter++; doStep(); // for printout
 			/*
 						double val = this->testPrimal(y);
 			printf("Primal Obj: %.10g\n",val);*/
