@@ -32,8 +32,16 @@ public:
 	bundleManager(stochasticInput &input, BAContext & ctx) : ctx(ctx), input(input) {
 		int nscen = input.nScenarios();
 		// use zero as initial iterate
-		// TODO: don't need to allocate all if distributed solver
-		currentSolution.resize(nscen,std::vector<double>(input.nFirstStageVars(),0.));
+		if (!BALPSolver::isDistributed()) {
+			currentSolution.resize(nscen,std::vector<double>(input.nFirstStageVars(),0.));
+		} else {
+			currentSolution.resize(nscen);
+			std::vector<int> const& localScen = ctx.localScenarios();
+			for (unsigned i = 1; i < localScen.size(); i++) {
+				int scen = localScen[i];
+				currentSolution[scen].resize(input.nFirstStageVars());
+			}
+		}
 		nIter = -1;
 		bundle.resize(nscen);
 		hotstarts.resize(nscen);
