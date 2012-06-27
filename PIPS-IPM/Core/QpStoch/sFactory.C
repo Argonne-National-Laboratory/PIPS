@@ -69,6 +69,59 @@ sFactory::~sFactory()
 #define REP(s)
 #endif
 
+
+void dumpaug(int nx, SparseGenMatrix &A, SparseGenMatrix &C) {
+
+	int my, mz, nx_1, nx_2;
+	A.getSize(my,nx_1);
+	C.getSize(mz,nx_2);
+	assert(nx_1 == nx_2);
+	int nnzA = A.numberOfNonZeros();
+	int nnzC = C.numberOfNonZeros();
+	
+	vector<double> eltsA(nnzA), eltsC(nnzC), elts(nnzA+nnzC);
+	vector<int> colptrA(nx_1+1),colptrC(nx_1+1), colptr(nx_1+1), rowidxA(nnzA), rowidxC(nnzC), rowidx(nnzA+nnzC);
+	A.getStorageRef().transpose(&colptrA[0],&rowidxA[0],&eltsA[0]);
+	C.getStorageRef().transpose(&colptrC[0],&rowidxC[0],&eltsC[0]);
+	
+	int nnz = 0;
+	for (int col = 0; col < nx_1; col++) {
+		colptr[col] = nnz;
+		for (int r = colptrA[col]; r < colptrA[col+1]; r++) {
+			int row = rowidxA[r]+nx+1; // +1 for fortran
+			rowidx[nnz] = row;
+			elts[nnz++] = eltsA[r];
+		}
+		for (int r = colptrC[col]; r < colptrC[col+1]; r++) {
+			int row = rowidxC[r]+nx+my+1;
+			rowidx[nnz] = row;
+			elts[nnz++] = eltsC[r];
+		}
+	}
+	colptr[nx_1] = nnz;
+	assert(nnz==nnzA+nnzC);
+
+	ofstream fd("augdump.dat");
+	fd << scientific;
+	fd.precision(16);
+	fd << (nx + my + mz) << endl;
+	fd << nx_1 << endl;
+	fd << nnzA+nnzC << endl;
+	int i;
+	for (i = 0; i <= nx_1; i++)
+	fd << colptr[i] << " ";
+	fd << endl;
+	for (i = 0; i < nnz; i++)
+	fd << rowidx[i] << " ";
+	fd << endl;
+	for (i = 0; i < nnz; i++)
+	fd << elts[i] << " ";
+	fd << endl;
+	printf("finished dumping aug\n");
+
+
+}
+
 Data * sFactory::makeData()
 {
   double t,t2=MPI_Wtime();
@@ -98,6 +151,8 @@ Data * sFactory::makeData()
   TIM;
   StochVectorHandle    icupp( tree->createicupp() );
   REP("icupp");
+
+  dumpaug(tree->children[0]->nx(), *A->children[0]->Amat,*C->children[0]->Amat);
 
   TIM;
   StochSymMatrixHandle     Q( tree->createQ() );
