@@ -1,4 +1,8 @@
 
+////
+This file may be compiled with asciidoc.
+////
+
 = PIPS/Swift Development Manual
 
 == Configuration
@@ -6,16 +10,35 @@
 You currently need:
 
 * SWIG
-* Turbine
-* STC
++
+Install with:
++
+----
+apt-get install swig
+----
++
+* Swift/T
++
+Cf. http://www.mcs.anl.gov/~wozniak/stc.html#_installation
++
 * The swig-data app
++
+----
+svn co https://svn.mcs.anl.gov/repos/exm/apps/swig-data
+cd swig-data
+./build.sh
+----
++
+
+////
+////
 
 == Build
 
-Run ./build.sh
+Run +./build.sh+
 
 == Tests
 
 The following test scripts should be usable:
 
-./test-readSolution-swift.sh
+* +./test-readSolution-swift.sh+
