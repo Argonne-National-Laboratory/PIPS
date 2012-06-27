@@ -382,6 +382,10 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
     } //end !allzero
   }
+  for (int i = 0; i < NP*NP; i++) {
+      cout << SC[i] << " " << endl;
+  }
+  assert(0);
 }
 
 
