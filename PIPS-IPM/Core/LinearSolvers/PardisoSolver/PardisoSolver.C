@@ -149,7 +149,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int nrhs=1;
   int msglvl=0;
 
-  /*ofstream fd("/home/mlubin/gpfs/matdump.dat");
+  ofstream fd("Qdump.dat");
   fd << scientific;
   fd.precision(16);
   fd << n << endl;
@@ -164,12 +164,13 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   for (i = 0; i < nnz; i++)
     fd << M[i] << " ";
   fd << endl;
-  for (i = 0; i < n; i++)
-    fd << rhs[i] << " ";
-  fd << endl;
+  //for (i = 0; i < n; i++)
+  //  fd << rhs[i] << " ";
+  //fd << endl;
   fd.flush();
   fd.close();
-  printf("finished dumping mat\n");*/
+  printf("finished dumping mat\n");
+  assert(0);
 
   iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
