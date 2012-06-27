@@ -1,0 +1,21 @@
+
+= PIPS/Swift Development Manual
+
+== Configuration
+
+You currently need:
+
+* SWIG
+* Turbine
+* STC
+* The swig-data app
+
+== Build
+
+Run ./build.sh
+
+== Tests
+
+The following test scripts should be usable:
+
+./test-readSolution-swift.sh
