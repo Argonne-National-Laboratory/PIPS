@@ -219,7 +219,6 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   fd.flush();
   fd.close();
   printf("finished dumping mat\n");
-  assert(0);
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
