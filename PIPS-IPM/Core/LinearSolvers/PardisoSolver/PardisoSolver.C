@@ -149,29 +149,6 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int nrhs=1;
   int msglvl=0;
 
-  ofstream fd("Qdump.dat");
-  fd << scientific;
-  fd.precision(16);
-  fd << n << endl;
-  fd << nnz << endl;
-  int i;
-  for (i = 0; i <= n; i++)
-    fd << krowM[i] << " ";
-  fd << endl;
-  for (i = 0; i < nnz; i++)
-    fd << jcolM[i] << " ";
-  fd << endl;
-  for (i = 0; i < nnz; i++)
-    fd << M[i] << " ";
-  fd << endl;
-  //for (i = 0; i < n; i++)
-  //  fd << rhs[i] << " ";
-  //fd << endl;
-  fd.flush();
-  fd.close();
-  printf("finished dumping mat\n");
-  assert(0);
-
   iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
@@ -220,6 +197,29 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
+
+  ofstream fd("Qdump.dat");
+  fd << scientific;
+  fd.precision(16);
+  fd << n << endl;
+  fd << nnz << endl;
+  int i;
+  for (i = 0; i <= n; i++)
+    fd << krowM[i] << " ";
+  fd << endl;
+  for (i = 0; i < nnz; i++)
+    fd << jcolM[i] << " ";
+  fd << endl;
+  for (i = 0; i < nnz; i++)
+    fd << M[i] << " ";
+  fd << endl;
+  //for (i = 0; i < n; i++)
+  //  fd << rhs[i] << " ";
+  //fd << endl;
+  fd.flush();
+  fd.close();
+  printf("finished dumping mat\n");
+  assert(0);
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
