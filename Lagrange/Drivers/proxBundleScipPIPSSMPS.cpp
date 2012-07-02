@@ -2,7 +2,6 @@
 #include "ScipLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
 #include "ClpRecourseSolver.hpp"
-#include "OOQPInterface.hpp"
 #include "proxQPManager.hpp"
 #include "QpGenSparseMa57.h"
 #include "MehrotraSolver.h"
@@ -38,7 +37,6 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	//proxQPManager<OOQPInterface<MehrotraSolver,QpGenSparseMa57>,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 	proxQPManager<PIPSIpmInterface<sFactoryAug,MehrotraStochSolver>,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {

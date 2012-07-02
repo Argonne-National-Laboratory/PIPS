@@ -30,6 +30,7 @@ public:
 		t2 = 0.;
 		mL = 0.1;
 		mR = 0.1;
+		termeps = 1e-7;
 		eps_sol = 0.; // absolute scale, need to adjust
 	}
 
@@ -48,7 +49,7 @@ protected:
 			}
 		}
 		
-		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Best Primal: %f, Relerr: %g Elapsed: %f (%f in QP solve)\n",this->nIter-1,this->currentObj,this->bestPrimalObj,fabs(lastModelObjSum-this->currentObj)/fabs(this->currentObj),MPI_Wtime()-t,t2);
+		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Relerr: %g Elapsed: %f (%f in QP solve)\n",this->nIter-1,this->currentObj,fabs(lastModelObjSum-this->currentObj)/(1.+fabs(this->currentObj)),MPI_Wtime()-t,t2);
 		if (this->terminated_) return;	
 		
 
@@ -61,7 +62,7 @@ protected:
 	
 		std::vector<double> const& y = solver.getFirstStagePrimalColSolution();
 		double lastModelObjSum_this = 0.;
-		double v_this = 0.;
+		//double v_this = 0.;
 		for (unsigned r = 1; r < localScen.size(); r++) { // for distributed solver
 			int scen = localScen[r];
 			std::vector<double> const& z = solver.getSecondStagePrimalColSolution(scen);
@@ -75,17 +76,17 @@ protected:
 			}
 			lastModelObj[scen] = -solver.getSecondStageDualRowSolution(scen)[0];
 			lastModelObjSum_this += -lastModelObj[scen];
-			v_this += lastModelObj[scen] - proxCenterModelObj[scen] - eps_sol/nscen;
+			//v_this += lastModelObj[scen] - proxCenterModelObj[scen];// - eps_sol/nscen;
 		}
-		double v;
-		if (localScen.size() == (size_t)nscen) {
-			v = v_this;
+		//double v;
+		if (localScen.size() == (size_t)nscen+1) {
+			//v = v_this;
 			lastModelObjSum = lastModelObjSum_this;
 		} else {
 			MPI_Allreduce(&lastModelObjSum_this,&lastModelObjSum,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());
-			MPI_Allreduce(&v_this,&v,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());
+			//MPI_Allreduce(&v_this,&v,1,MPI_DOUBLE,MPI_SUM,this->ctx.comm());
 		}
-
+		double v = this->currentObj-lastModelObjSum; 
 		eps_sol = -(mR-mL)*v; 
 		if (this->ctx.mype() == 0) {
 			printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
@@ -99,7 +100,7 @@ protected:
 			}
 			f << endl;
 		}
-		if (v > -1e-2) {
+		if (-v/(1.+fabs(this->currentObj)) < termeps) {
 			this->terminated_ = true; this->nIter++; doStep(); // for printout
 			/*
 						double val = this->testPrimal(y);
@@ -144,6 +145,7 @@ private:
 	double t, t2;
 	double mL, mR;
 	double eps_sol; // allowable imprecision in the solution 
+	double termeps;
 
 	std::vector<std::vector<double> > trialSolution; 
 
