@@ -4,6 +4,7 @@
 #include "conicBundleDriver.hpp"
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 // use static assignment of scenarios
 
@@ -25,6 +26,9 @@ public:
 			dummies[i].subgrad.resize(ndual);
 		}
 		nIter = 0;
+		bestobj = -1e20;
+		startTime = MPI_Wtime();
+		subproblemTime = 0.;
 			
 	}
 
@@ -38,7 +42,6 @@ public:
 		      ) {
 		nIter++;	
 		double t = MPI_Wtime();
-
 		const std::vector<int> &localScen = ctx.localScenarios();
 		for (unsigned i = 1; i < localScen.size(); i++) {
 			int scen = localScen[i];
@@ -54,10 +57,11 @@ public:
 		}
 		int nscen = input.nScenarios();
 		int nvar1 = input.nFirstStageVars();
-		std::ofstream f;
+		/*std::ofstream f;
 		std::stringstream ss;
 		ss << "cbsols" << nIter;
-		if (ctx.mype() == 0) f.open(ss.str().c_str());
+		if (ctx.mype() == 0) f.open(ss.str().c_str());*/
+		double allobj = 0.;
 		for (int scen = 0; scen < nscen; scen++) {
 			MPI_Bcast(&dummies[scen].subgrad[0],ndual,MPI_DOUBLE,
 				ctx.owner(scen),ctx.comm());
@@ -65,20 +69,26 @@ public:
 				ctx.owner(scen),ctx.comm());
 			MPI_Bcast(&dummies[scen].objval,1,MPI_DOUBLE,
 				ctx.owner(scen),ctx.comm());
+			allobj -= dummies[scen].objval;
 			std::vector<double> sol(nvar1);
 			if (ctx.mype() == ctx.owner(scen)) {
 				sol = dummies[scen].primalsol;
 			}
 			MPI_Bcast(&sol[0],nvar1,MPI_DOUBLE,ctx.owner(scen),ctx.comm());
-			if (ctx.mype() == 0) {
+			/*if (ctx.mype() == 0) {
 				for (int k = 0; k < nvar1; k++) {
 					f << sol[k] << " ";
 				}
 				f << std::endl;
-			}
+			}*/
 		}
-		if (ctx.mype() == 0) std::cout << "Solving all subproblems took " << MPI_Wtime() - t << " sec\n";
-
+		subproblemTime += MPI_Wtime()-t;
+		bestobj = std::max(allobj,bestobj);
+		if (ctx.mype() == 0) {
+			double elap = MPI_Wtime()-startTime;
+			printf("Iter %d Current Objective: %g Elapsed: %f (%f in QP Solve)\n",
+				nIter-1,bestobj,elap,elap-subproblemTime);
+		}
 		return dummies[0].evaluate(dual,relprec,objective_value,cut_vals,
 			subgradients,primal_solutions,e);
 
@@ -119,6 +129,9 @@ private:
 	BAContext const &ctx;
 	int ndual;
 	int nIter;
+	double bestobj;
+	double startTime;
+	double subproblemTime;
 
 };
 
@@ -141,15 +154,15 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleParD
 	
 	lagrangeSubproblemMaster<LagrangeSolver> master(input,ctx);
 	solver.add_function(master);
+	//solver.set_max_bundlesize(master,5);
 	for (int i = 1; i < nscen; i++) {
 		solver.add_function(master.dummies[i]);
+		//solver.set_max_bundlesize(master.dummies[i],5);
 	}
 	if (mype == 0) solver.set_out(&cout,1);
-	solver.set_term_relprec(1e-6);
-	double t = MPI_Wtime();
+	solver.set_term_relprec(1e-7);
 	do {
 		solver.do_descent_step();
-		if (mype == 0) cout << "Lagrange Objective: " << -solver.get_objval() << " Elapsed: " << MPI_Wtime()-t << endl;
 	} while (!solver.termination_code());
 
 	if (mype == 0) solver.print_termination_code(cout);

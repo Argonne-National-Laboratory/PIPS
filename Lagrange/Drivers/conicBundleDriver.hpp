@@ -38,7 +38,7 @@ public:
 				lagrangeDiff[i] += dual[i+offset];
 			}
 		}
-		double t = MPI_Wtime();
+		//double t = MPI_Wtime();
 		/*for (unsigned i = 0; i < dual.size(); i++) {
 			cout << dual[i] << " ";
 		}
@@ -49,7 +49,7 @@ public:
 		//lsol.setRatio(100*fabs(relprec));
 		lsol.go();
 		ws.reset(lsol.getWarmStart());
-		if (scen == 0) cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
+		//if (scen == 0) cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
 
 		//assert(lsol.getStatus() == Optimal);
 		assert(lsol.getStatus() != ProvenInfeasible);
@@ -109,9 +109,10 @@ template <typename LagrangeSolver, typename RecourseSolver> void conicBundleDriv
 	for (int i = 0; i < nscen; i++) {
 		funcs.push_back(lagrangeSubproblem<LagrangeSolver>(&input,i));
 		solver.add_function(funcs[i]);
+		//solver.set_max_bundlesize(funcs[i],5);
 	}
 	solver.set_out(&cout,1);
-	solver.set_term_relprec(1e-6);
+	solver.set_term_relprec(1e-7);
 	double t = MPI_Wtime();
 	do {
 		solver.do_descent_step();
