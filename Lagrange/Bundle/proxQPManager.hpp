@@ -30,7 +30,6 @@ public:
 		t2 = 0.;
 		mL = 0.1;
 		mR = 0.1;
-		termeps = 1e-7;
 		eps_sol = 0.; // absolute scale, need to adjust
 	}
 
@@ -100,7 +99,7 @@ protected:
 			}
 			f << endl;
 		}
-		if (-v/(1.+fabs(this->currentObj)) < termeps) {
+		if (-v/(1.+fabs(this->currentObj)) < this->relativeConvergenceTol) {
 			this->terminated_ = true; this->nIter++; doStep(); // for printout
 			/*
 						double val = this->testPrimal(y);
@@ -145,7 +144,6 @@ private:
 	double t, t2;
 	double mL, mR;
 	double eps_sol; // allowable imprecision in the solution 
-	double termeps;
 
 	std::vector<std::vector<double> > trialSolution; 
 

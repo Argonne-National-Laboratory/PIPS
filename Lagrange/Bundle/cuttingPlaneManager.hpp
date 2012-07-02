@@ -25,7 +25,7 @@ protected:
 		
 		vector<int> const &localScen = this->ctx.localScenarios();
 		int nvar1 = this->input.nFirstStageVars();
-		if (fabs(lastModelObj-this->currentObj)/fabs(this->currentObj) < this->relativeConvergenceTol) {
+		if (fabs(lastModelObj-this->currentObj)/(1.+fabs(this->currentObj)) < this->relativeConvergenceTol) {
 			this->terminated_ = true;
 		}
 		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Model Objective: %f Best Primal: %f Elapsed: %f\n",this->nIter-1,this->currentObj,lastModelObj,this->bestPrimalObj,MPI_Wtime()-t);
