@@ -152,7 +152,7 @@ Data * sFactory::makeData()
   StochVectorHandle    icupp( tree->createicupp() );
   REP("icupp");
 
-  dumpaug(tree->children[0]->nx(), *A->children[0]->Amat,*C->children[0]->Amat);
+
 
   TIM;
   StochSymMatrixHandle     Q( tree->createQ() );

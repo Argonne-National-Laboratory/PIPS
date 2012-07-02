@@ -72,7 +72,6 @@ void PardisoSolver::firstCall()
     cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
     assert(false);
   }
-  printf("using %d threads\n",num_threads);
 } 
 
  
@@ -198,7 +197,7 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
 
-  ofstream fd("Qdump.dat");
+  /*ofstream fd("Qdump.dat");
   fd << scientific;
   fd.precision(16);
   fd << n << endl;
@@ -218,7 +217,7 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   //fd << endl;
   fd.flush();
   fd.close();
-  printf("finished dumping mat\n");
+  printf("finished dumping mat\n");*/
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
