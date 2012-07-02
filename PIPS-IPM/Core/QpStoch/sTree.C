@@ -78,9 +78,9 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
   //here we'll have the mapping of children to processes
   vector<vector<int> > mapChildNodesToProcs;
 
-  assert(children.size() % noProcs == 0);
   mapChildNodesToProcs.resize(children.size());
   /* old mapping
+  assert(children.size() % noProcs == 0);
   for(size_t i=0; i<children.size(); i++) {
     mapChildNodesToProcs[i].resize(1);
     mapChildNodesToProcs[i][0] = i % noProcs;
