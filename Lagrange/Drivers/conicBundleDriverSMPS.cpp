@@ -4,10 +4,8 @@
 #include "ScipLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
 #include "conicBundleDriver.hpp"
-#include <boost/scoped_ptr.hpp>
 
 using namespace std;
-using boost::scoped_ptr;
 
 int main(int argc, char **argv) {
 

@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
 	ctx.initializeAssignment(input.nScenarios());
 
 	cuttingPlaneManager<PIPSSInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	//cuttingPlaneManager<ClpBALPInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();

@@ -48,7 +48,7 @@ public:
 		recourseRowStates.resize(nscen);
 		recourseColStates.resize(nscen);
 		bestPrimalObj = COIN_DBL_MAX;
-		relativeConvergenceTol = 1e-6;
+		relativeConvergenceTol = 1e-7;
 		terminated_ = false;
 	}
 
