@@ -24,6 +24,7 @@ public:
 	void setDualObjectiveLimit(double val) { model.setDualObjectiveLimit(val); }
 	double getObjective() const { return model.objectiveValue(); }
 	solverState getStatus() const;
+	int getNumIterations() const { return model.getIterationCount(); }
 
 	std::vector<double> getFirstStagePrimalColSolution() const;
 	std::vector<double> getSecondStagePrimalColSolution(int scen) const;
