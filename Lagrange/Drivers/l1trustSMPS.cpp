@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	proxL1TrustManager<ClpBALPInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	proxL1TrustManager<PIPSSInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();
