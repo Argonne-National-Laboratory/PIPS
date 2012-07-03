@@ -88,7 +88,8 @@ protected:
 		double v = this->currentObj-lastModelObjSum; 
 		eps_sol = -(mR-mL)*v; 
 		if (this->ctx.mype() == 0) {
-			printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
+			//printf("v^k = %g, eps_sol = %g\n",v, eps_sol);
+			printf("v^k = %g\n",v);
 			stringstream ss;
 			ss << "primalconv" << this->nIter;
 			ofstream f(ss.str().c_str());

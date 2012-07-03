@@ -93,16 +93,16 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 	
 
 	L lsol(input,scen,at);
-	lsol.setAbsoluteGap(eps_sol);
+	//lsol.setAbsoluteGap(eps_sol);
 	// hot start for root node LP
-	if (hotstarts[scen]) {
+	/*if (hotstarts[scen]) {
 		lsol.setWarmStart(*hotstarts[scen].get());
 	} else if (hotstarts[ctx.localScenarios().at(1)]) {
 		lsol.setWarmStart(*hotstarts[ctx.localScenarios()[1]].get());
-	}
+	}*/
 	//lsol.setRatio(100*fabs(relprec));
 	lsol.go();
-	hotstarts[scen].reset(lsol.getWarmStart());
+	//hotstarts[scen].reset(lsol.getWarmStart());
 	//cout << "SCEN " << scen << " DONE, " << MPI_Wtime() - t << " SEC" << endl;
 
 	//assert(lsol.getStatus() == Optimal);
@@ -251,7 +251,7 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLas
 			}
 			f << endl;
 		}
-		double o = 0.;// = testPrimal(p);
+		double o = 5000.;// = testPrimal(p);
 		if (o < bestPrimalObj) {
 			bestPrimalObj = o;
 			bestPrimal = p;

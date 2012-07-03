@@ -1,4 +1,5 @@
 #include "SMPSInput.hpp"
+#include "ScipLagrangeSolver.hpp"
 #include "CbcLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
 #include "ClpRecourseSolver.hpp"
@@ -28,7 +29,7 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	proxLinfTrustManager<PIPSSInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	proxLinfTrustManager<ClpBALPInterface,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();
