@@ -47,6 +47,8 @@ public:
 	variableState getFirstStageRowState(int idx) const;
 	variableState getSecondStageColState(int scen, int idx) const;
 	variableState getSecondStageRowState(int scen, int idx) const;
+
+	int getNumIterations() const { return solver->nIter; }
 	
 	// override default
 	void setStates(const BAFlagVector<variableState> &s) { solver->setStates(s); }
