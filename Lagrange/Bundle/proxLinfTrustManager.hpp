@@ -21,6 +21,7 @@ public:
 		curRadius = maxRadius/10.;
 		counter = 0;
 		t = MPI_Wtime();
+		t2 = 0;
 	}
 
 
@@ -31,7 +32,7 @@ protected:
 		int nvar1 = this->input.nFirstStageVars();
 		vector<int> const &localScen = this->ctx.localScenarios();
 		
-		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Best Primal: %f, Relerr: %g Elapsed: %f\n",this->nIter-1,this->currentObj,this->bestPrimalObj,fabs(lastModelObj-this->currentObj)/fabs(this->currentObj),MPI_Wtime()-t);
+		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Relerr: %g Elapsed: %f (%f in LP solve)\n",this->nIter-1,this->currentObj,(lastModelObj-this->currentObj)/(1.+fabs(this->currentObj)),MPI_Wtime()-t,t2);
 		if (this->terminated_) return;	
 		
 
@@ -56,9 +57,17 @@ protected:
 		}
 
 
-
+		double tstart = MPI_Wtime();
 		solver.go();
+		t2 += MPI_Wtime() - tstart;
 		lastModelObj = solver.getObjective();
+
+		// sometimes we can get in a loop...
+		if (solver.getNumIterations() == 0) {
+			if (this->ctx.mype() == 0) printf("no iterations, slightly increasing radius\n");
+			curRadius *= 1.5;
+		}
+
 
 		cols1l.resize(lm.nFirstStageVars());
 		for (int k = 0; k < lm.nFirstStageVars(); k++) {
@@ -99,10 +108,7 @@ protected:
 			swap(this->currentSolution,trialSolution);
 			this->currentObj = newObj;
 			counter = 0;
-			if (fabs(lastModelObj-this->currentObj)/fabs(this->currentObj) < this->relativeConvergenceTol) {
-				this->terminated_ = true;
-				//checkLastPrimals();
-			}
+			
 
 		} else {
 			if (this->ctx.mype() == 0) cout << ", null step\n";
@@ -115,6 +121,11 @@ protected:
 				counter = 0;
 			}
 		}
+		if ((lastModelObj-this->currentObj)/(1.+fabs(this->currentObj)) < this->relativeConvergenceTol) {
+			this->terminated_ = true; this->nIter++;
+			doStep();
+			//checkLastPrimals();
+		}
 
 
 	}
@@ -122,7 +133,7 @@ protected:
 private:
 	double lastModelObj;
 	double maxRadius, curRadius;
-	double t;
+	double t,t2;
 	int counter;
 	// saved states for regularized cutting plane lp
 	std::vector<std::vector<variableState> > rows2l, cols2l;

@@ -1,5 +1,5 @@
 #include "SMPSInput.hpp"
-#include "CbcLagrangeSolver.hpp"
+#include "ScipLagrangeSolver.hpp"
 #include "CbcRecourseSolver.hpp"
 #include "ClpRecourseSolver.hpp"
 #include "ClpBALPInterface.hpp"
@@ -28,8 +28,7 @@ int main(int argc, char **argv) {
 	BAContext ctx(MPI_COMM_WORLD);
 	ctx.initializeAssignment(input.nScenarios());
 
-	cuttingPlaneManager<PIPSSInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
-	//cuttingPlaneManager<ClpBALPInterface,CbcLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
+	cuttingPlaneManager<ClpBALPInterface,ScipLagrangeSolver,ClpRecourseSolver> manager(input,ctx);
 
 	while(!manager.terminated()) {
 		manager.iterate();

@@ -16,6 +16,7 @@ public:
 		rows2.resize(nscen);
 		cols2.resize(nscen);
 		t = MPI_Wtime();
+		t2 = 0;
 	}
 
 
@@ -25,10 +26,10 @@ protected:
 		
 		vector<int> const &localScen = this->ctx.localScenarios();
 		int nvar1 = this->input.nFirstStageVars();
-		if (fabs(lastModelObj-this->currentObj)/(1.+fabs(this->currentObj)) < this->relativeConvergenceTol) {
+		if ((lastModelObj-this->currentObj)/(1.+fabs(this->currentObj)) < this->relativeConvergenceTol) {
 			this->terminated_ = true;
 		}
-		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Model Objective: %f Best Primal: %f Elapsed: %f\n",this->nIter-1,this->currentObj,lastModelObj,this->bestPrimalObj,MPI_Wtime()-t);
+		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Model Objective: %f Elapsed: %f (%f in LP solve)\n",this->nIter-1,this->currentObj,lastModelObj,MPI_Wtime()-t,t2);
 		if (this->terminated_) return;	
 		
 		cuttingPlaneModel cpm(nvar1,this->bundle,-this->bestPrimalObj);
@@ -53,8 +54,9 @@ protected:
 			}
 			solver.commitStates();
 		}
-
+		double tstart = MPI_Wtime();
 		solver.go();
+		t2 += MPI_Wtime() - tstart;
 		lastModelObj = solver.getObjective();
 
 		cols1.resize(nvar1+1);
@@ -88,7 +90,7 @@ protected:
 
 private:
 	double lastModelObj;
-	double t;
+	double t, t2;
 	// saved states for cutting plane lp
 	std::vector<std::vector<variableState> > rows2, cols2;
 	std::vector<variableState> cols1;
