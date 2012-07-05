@@ -145,8 +145,8 @@ ScipLagrangeSolver::~ScipLagrangeSolver() {
 
 void ScipLagrangeSolver::go() {
 
-	SCIP_CALL_EXC( SCIPsetRealParam(scip, "limits/time", 1000) ); // time limit (seconds)
-	//SCIP_CALL_EXC( SCIPsetRealParam(scip, "numerics/dualfeastol", 1e-7) ); // need this for UC model
+	SCIP_CALL_EXC( SCIPsetRealParam(scip, "limits/time", 1200) ); // time limit (seconds)
+	SCIP_CALL_EXC( SCIPsetRealParam(scip, "numerics/dualfeastol", 1e-7) ); // need this for UC model
 	//SCIP_CALL_EXC( SCIPsetBoolParam(scip, "display/lpinfo", TRUE) );
 	//SCIP_CALL_EXC( SCIPsetEmphasis(scip,SCIP_PARAMEMPHASIS_HARDLP,true) );
 	SCIP_CALL_EXC( SCIPsolve(scip) );
