@@ -33,4 +33,9 @@ public:
 };
 
 
+struct PrimalSolution {
+	std::vector<double> sol;
+	double objval;
+};
+
 #endif

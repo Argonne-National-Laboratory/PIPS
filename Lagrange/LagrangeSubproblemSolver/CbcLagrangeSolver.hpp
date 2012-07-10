@@ -38,6 +38,7 @@ public:
 
 
 	std::vector<double> getBestFirstStageSolution() const;
+	std::vector<PrimalSolution> getBestFirstStageSolutions(double relcutoff) const { assert(0 && "not implemented"); return std::vector<PrimalSolution>(); } 
 
 	struct WarmStart{
 		WarmStart(std::vector<double> const& bestSol, CoinWarmStart* basis) :

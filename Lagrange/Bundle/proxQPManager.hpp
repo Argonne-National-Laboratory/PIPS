@@ -5,6 +5,11 @@
 
 #include "proximalBAQP.hpp"
 
+class filter {
+public:
+	bool operator()(cutInfo const&c) { return c.z < 1e-7; }
+};
+
 // like levelManager, but only accept a step if it's in the right direction
 template<typename BAQPSolver, typename LagrangeSolver, typename RecourseSolver>
 class proxQPManager : public bundleManager<BAQPSolver,LagrangeSolver,RecourseSolver> {
@@ -14,7 +19,7 @@ public:
 		int nscen = input.nScenarios();
 		trialSolution.resize(nscen);//,std::vector<double>(input.nFirstStageVars(),0.));
 		lastModelObj.resize(nscen);
-		proxCenterModelObj.resize(nscen);
+		//proxCenterModelObj.resize(nscen);
 		if (BAQPSolver::isDistributed()) {
 			localScen = ctx.localScenarios();
 		} else {
@@ -41,12 +46,12 @@ protected:
 		int nvar1 = this->input.nFirstStageVars();
 		int nscen = this->input.nScenarios();
 
-		if (this->nIter == 1) {
+		/*if (this->nIter == 1) {
 			for (unsigned r = 1; r < localScen.size(); r++) {
 				int scen = localScen[r];
 				proxCenterModelObj[scen] = this->bundle[scen].at(0).objmax;
 			}
-		}
+		}*/
 		
 		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Relerr: %g Elapsed: %f (%f in QP solve)\n",this->nIter-1,this->currentObj,fabs(lastModelObjSum-this->currentObj)/(1.+fabs(this->currentObj)),MPI_Wtime()-t,t2);
 		if (this->terminated_) return;	
@@ -76,6 +81,12 @@ protected:
 			lastModelObj[scen] = -solver.getSecondStageDualRowSolution(scen)[0];
 			lastModelObjSum_this += -lastModelObj[scen];
 			//v_this += lastModelObj[scen] - proxCenterModelObj[scen];// - eps_sol/nscen;
+			for (unsigned i = 0; i < this->bundle[scen].size();i++) {
+				this->bundle[scen][i].z = z[i];
+			}
+		
+			//this->bundle[scen].erase(std::remove_if(this->bundle[scen].begin(),this->bundle[scen].end(),filter()),this->bundle[scen].end());
+				
 		}
 		//double v;
 		if (localScen.size() == (size_t)nscen+1) {
@@ -121,10 +132,10 @@ protected:
 		if (newObj - this->currentObj > -mL*v) {
 			if (this->ctx.mype() == 0) cout << ", accepting\n";
 			swap(this->currentSolution,trialSolution);
-			for (unsigned r = 1; r < localScen.size(); r++) {
+			/*for (unsigned r = 1; r < localScen.size(); r++) {
 				int scen = localScen[r];
 				proxCenterModelObj[scen] = this->bundle[scen][this->bundle[scen].size()-1].objmax;
-			}
+			}*/
 			this->currentObj = newObj;
 			
 
@@ -138,7 +149,7 @@ protected:
 
 private:
 	std::vector<double> lastModelObj;
-	std::vector<double> proxCenterModelObj;
+	//std::vector<double> proxCenterModelObj;
 	std::vector<int> localScen;
 	double lastModelObjSum;
 	double u;

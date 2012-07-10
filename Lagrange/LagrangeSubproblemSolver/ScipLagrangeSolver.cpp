@@ -150,7 +150,8 @@ void ScipLagrangeSolver::go() {
 	//SCIP_CALL_EXC( SCIPsetBoolParam(scip, "display/lpinfo", TRUE) );
 	//SCIP_CALL_EXC( SCIPsetEmphasis(scip,SCIP_PARAMEMPHASIS_HARDLP,true) );
 	SCIP_CALL_EXC( SCIPsolve(scip) );
-   
+
+	   
 }
 
 double ScipLagrangeSolver::getBestPossibleObjective() const {
@@ -191,6 +192,33 @@ vector<double> ScipLagrangeSolver::getBestFirstStageSolution() const {
 		s[i] = SCIPgetSolVal(scip, sol, vars1[i]);
 	}
 	return s;
+}
+
+vector<PrimalSolution> ScipLagrangeSolver::getBestFirstStageSolutions(double relcutoff) const {
+
+	vector<PrimalSolution> outsols;
+
+	int nsol = SCIPgetNSols(scip);
+	//printf("%d solutions\n",nsol);
+
+	SCIP_SOL **sols = SCIPgetSols(scip);
+	assert(sols);
+	double obj = SCIPgetPrimalbound(scip);
+	for (int i = 0; i < nsol; i++) {
+		double thisobj = SCIPgetSolOrigObj(scip,sols[i]);
+		if (100.*(thisobj-obj)/fabs(obj) < relcutoff) {
+			PrimalSolution s;
+			s.objval = thisobj;
+			s.sol.resize(nvar1);
+			for (int k = 0; k < nvar1; k++) {
+				s.sol[k] = SCIPgetSolVal(scip,sols[i],vars1[k]);
+			}
+			outsols.push_back(s);
+		}
+		//printf("sol %d has obj %f (%f%%)\n",i,thisobj,100.*(thisobj-obj)/fabs(obj));
+	}
+
+	return outsols;
 }
 
 void ScipLagrangeSolver::setFirstStageColLB(int idx, double newlb) {

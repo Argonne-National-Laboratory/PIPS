@@ -30,12 +30,14 @@ public:
 
 
 	std::vector<double> getBestFirstStageSolution() const;
+	std::vector<PrimalSolution> getBestFirstStageSolutions(double relcutoff) const; // return solutions within relcutoff percent of optimal (including the optimal solution)
 	/*
 	struct WarmStart{
 		WarmStart(std::vector<double> const& bestSol, CoinWarmStart* basis) :
 			bestSol(bestSol), basis(basis) {}
 		std::vector<double> bestSol; boost::shared_ptr<CoinWarmStart> basis;
 	};*/
+
 
 	// user must free!
 	typedef int WarmStart; // dummy

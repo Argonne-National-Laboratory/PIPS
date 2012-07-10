@@ -3,6 +3,7 @@
 
 #include "BA.hpp"
 #include "BALPSolverInterface.hpp"
+#include "LagrangeSubproblemInterface.hpp"
 #include "CoinFinite.hpp"
 #include <boost/shared_ptr.hpp>
 #include <sstream>
@@ -16,6 +17,8 @@ struct cutInfo {
 	double objmax; // overestimate of convex objective
 	double computeC() const; // compute component of c as defined in cuttingPlaneBALP.hpp
 	double computeC(std::vector<double> const& proxCenter) const; // alternate definition, see proximalBAQP.hpp
+	double baseobj; // "c^Tx" part of the objective, without multiplier contribution (\lambda^Tx)
+	double z; // for temporarily storing multiplier on this cut
 	// could include error estimates here later
 };
 
@@ -60,7 +63,7 @@ public:
 protected:
 
 	virtual void doStep() = 0;
-	cutInfo solveSubproblem(std::vector<double> const& at, int scen, double eps_sol = 0.); 
+	int solveSubproblem(std::vector<double> const& at, int scen, double &obj, double eps_sol = 0.); // returns number of cuts added
 	double testPrimal(std::vector<double> const& primal); // test a primal solution and return objective (COIN_DBL_MAX) if infeasible
 	// evaluates trial solution and updates the bundle
 	double evaluateSolution(std::vector<std::vector<double> > const& sol, double eps_sol = 0.);
@@ -86,7 +89,7 @@ protected:
 };
 
 
-template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveSubproblem(std::vector<double> const& at, int scen, double eps_sol) {
+template<typename B,typename L, typename R> int bundleManager<B,L,R>::solveSubproblem(std::vector<double> const& at, int scen, double &obj, double eps_sol) {
 	using namespace std;	
 	int nvar1 = input.nFirstStageVars();
 	//double t = MPI_Wtime();
@@ -107,8 +110,49 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 
 	//assert(lsol.getStatus() == Optimal);
 	assert(lsol.getStatus() != ProvenInfeasible);
+
+	std::vector<PrimalSolution> sols = lsol.getBestFirstStageSolutions(0.5); // 0.5% cutoff
+	int nadded = 0;
+	/*for (unsigned k = 0; k < sols.size(); k++) {
+		cutInfo cut;
+		cut.objmax = -lsol.getBestPossibleObjective();
+		cut.objval = -sols[k].objval;
+		cut.primalSol = sols[k].sol;
+		cut.evaluatedAt = at;
+		cut.subgradient.resize(nvar1);
+		cut.baseobj = cut.objval;
+		for (int i = 0; i < nvar1; i++) {
+			cut.subgradient[i] = -cut.primalSol[i];
+			cut.baseobj -= cut.subgradient[i]*cut.evaluatedAt[i];
+		}
+		bool foundDuplicate = false;
+		for (unsigned r = 0; r < bundle[scen].size(); r++) {
+			bool alleq = true;
+			for (int i = 0; i < nvar1; i++) {
+				if (fabs(cut.subgradient[i]-bundle[scen][r].subgradient[i]) > 1e-10) {
+					alleq = false;
+					break;
+				}
+			}
+			if (alleq) {
+				foundDuplicate = true;
+				// keep the tighter cut
+				if (bundle[scen][r].baseobj > cut.baseobj) {
+					cut = bundle[scen][r];
+				}
+				bundle[scen].erase(bundle[scen].begin()+r);
+				nadded--;
+				//printf("got duplicate cut\n");
+				break;
+			}
+		}
+		bundle[scen].push_back(cut);
+		nadded++;
+	}*/
+	obj += lsol.getBestPossibleObjective();
 	
 	cutInfo cut;
+	nadded = 1;
 	cut.objval = -lsol.getBestFeasibleObjective();
 	cut.objmax = -lsol.getBestPossibleObjective();
 	cut.primalSol = lsol.getBestFirstStageSolution(); 
@@ -117,8 +161,10 @@ template<typename B,typename L, typename R> cutInfo bundleManager<B,L,R>::solveS
 	for (int i = 0; i < nvar1; i++) {
 		cut.subgradient[i] = -cut.primalSol[i];
 	}
-
-	return cut;
+	bundle[scen].push_back(cut);
+	
+	
+	return nadded;
 
 }
 
@@ -184,40 +230,49 @@ template<typename B, typename L, typename R> double bundleManager<B,L,R>::evalua
 	std::vector<int> const& localScen = ctx.localScenarios();
 	int nscen = input.nScenarios();
 	double obj = 0.;
+	std::vector<int> cutsAdded(nscen,0);
+	int totalExtraCuts = 0;
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
 		assert(sol[scen].size());
-		cutInfo cut = solveSubproblem(sol[scen],scen, eps_sol);
-		bundle[scen].push_back(cut);
-		obj -= cut.objmax; // note cut has obj flipped
+		int ncuts = solveSubproblem(sol[scen],scen, obj, eps_sol);
+		cutsAdded[scen] = ncuts;
+		totalExtraCuts += ncuts-1;
 	}
+	double locobj = obj;
+	MPI_Allreduce(&locobj,&obj,1,MPI_DOUBLE,MPI_SUM,ctx.comm());
+	
 	if (!B::isDistributed()) {
 		// only need to do this if we have a serial solver
 		int nvar1 = input.nFirstStageVars();
-		obj = 0.;
 		for (int scen = 0; scen < nscen; scen++) {
 			int proc = ctx.owner(scen);
-			int i;
-			if (ctx.mype() != proc) {
-				i = bundle[scen].size();
-				bundle[scen].push_back(cutInfo());
-				bundle[scen][i].primalSol.resize(nvar1);
-				bundle[scen][i].evaluatedAt.resize(nvar1);
-				bundle[scen][i].subgradient.resize(nvar1);
-			} else {
-				i = bundle[scen].size()-1;
-			}
-			MPI_Bcast(&bundle[scen][i].primalSol[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
-			MPI_Bcast(&bundle[scen][i].evaluatedAt[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
-			MPI_Bcast(&bundle[scen][i].subgradient[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
-			MPI_Bcast(&bundle[scen][i].objval,1,MPI_DOUBLE,proc,ctx.comm());
-			MPI_Bcast(&bundle[scen][i].objmax,1,MPI_DOUBLE,proc,ctx.comm());
-			obj -= bundle[scen][i].objmax;
+			int cutsToAdd = cutsAdded[scen];
+			MPI_Bcast(&cutsToAdd,1,MPI_INT,proc,ctx.comm());
+			for (int k = 0; k < cutsToAdd; k++) {
+				int i;
+				if (ctx.mype() != proc) {
+					i = bundle[scen].size();
+					bundle[scen].push_back(cutInfo());
+					bundle[scen][i].primalSol.resize(nvar1);
+					bundle[scen][i].evaluatedAt.resize(nvar1);
+					bundle[scen][i].subgradient.resize(nvar1);
+				} else {
+					i = bundle[scen].size()-cutsToAdd+k;
+				}
+				MPI_Bcast(&bundle[scen][i].primalSol[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+				MPI_Bcast(&bundle[scen][i].evaluatedAt[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+				MPI_Bcast(&bundle[scen][i].subgradient[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
+				MPI_Bcast(&bundle[scen][i].objval,1,MPI_DOUBLE,proc,ctx.comm());
+				MPI_Bcast(&bundle[scen][i].objmax,1,MPI_DOUBLE,proc,ctx.comm());
+			}	
+			
 		}
-	} else {
-		double locobj = obj;
-		MPI_Allreduce(&locobj,&obj,1,MPI_DOUBLE,MPI_SUM,ctx.comm());
-	}
+		
+	} 
+	int tot = totalExtraCuts;
+	MPI_Allreduce(&tot,&totalExtraCuts,1,MPI_INT,MPI_SUM,ctx.comm());
+	if (ctx.mype() == 0) printf("Added %f extra cuts per scenario\n",totalExtraCuts/(double)nscen);
 	return obj;
 }
 
