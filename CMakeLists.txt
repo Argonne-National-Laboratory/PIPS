@@ -18,7 +18,7 @@ endif(MATH_LIBS)
 
 if(NEED_MATH)
 	if(IS_DIRECTORY $ENV{MKLROOT})
-		set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_gnu_thread.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -fopenmp -lpthread -lgfortran")
+		set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran")
 	else(IS_DIRECTORY $ENV{MKLROOT})
 		enable_language( Fortran )
 		find_package(LAPACK REQUIRED)
@@ -59,11 +59,11 @@ pkg_check_modules(CBC REQUIRED cbc)
 find_library(CLP_LIB NAMES libClp.a Clp HINTS ${CLP_LIBRARY_DIRS})
 set(COIN_LIBS "")
 foreach(f ${COINUTILS_LIBRARIES})
-	if(NOT ${f} MATCHES "m") # skip libm
+	if(NOT ${f} MATCHES "m" AND NOT ${f} MATCHES "blas" AND NOT ${f} MATCHES "lapack") # skip libm
 		find_library(X NAMES ${f} HINTS ${COINUTILS_LIBRARY_DIRS})
 		set(COIN_LIBS ${COIN_LIBS} ${X})
 		unset(X CACHE)
-	endif(NOT ${f} MATCHES "m")
+	endif(NOT ${f} MATCHES "m" AND NOT ${f} MATCHES "blas" AND NOT ${f} MATCHES "lapack")
 endforeach(f)
 #message(STATUS "${COIN_LIBS}")
 
