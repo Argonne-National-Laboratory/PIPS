@@ -111,10 +111,10 @@ template<typename B,typename L, typename R> int bundleManager<B,L,R>::solveSubpr
 	//assert(lsol.getStatus() == Optimal);
 	assert(lsol.getStatus() != ProvenInfeasible);
 	obj += lsol.getBestPossibleObjective();
+	int nadded = 0;
 	// Uncomment this block to return suboptimal solutions
 	/*
 	std::vector<PrimalSolution> sols = lsol.getBestFirstStageSolutions(0.5); // 0.5% cutoff
-	int nadded = 0;
 	for (unsigned k = 0; k < sols.size(); k++) {
 		cutInfo cut;
 		cut.objmax = -lsol.getBestPossibleObjective();
