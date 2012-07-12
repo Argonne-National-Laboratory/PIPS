@@ -17,6 +17,7 @@ public:
 		cols2.resize(nscen);
 		t = MPI_Wtime();
 		t2 = 0;
+		lastModelObj = COIN_DBL_MAX;
 	}
 
 
