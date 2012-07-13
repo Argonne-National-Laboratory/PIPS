@@ -210,7 +210,7 @@ void formQ(stochasticInput &input, SparseSymMatrix &Q) {
 		rowQ[nrowQ++] = nnzQ;
 		offset = 0;
 		for (int s = 0; s < nscen; s++) {
-			CoinPackedMatrix const& Qcross = *Qcrosses[s]; // this will make a new copy for each row, oops
+			CoinPackedMatrix const& Qcross = *Qcrosses[s]; 
 			for (CoinBigIndex k = Qcross.getVectorFirst(i); k < Qcross.getVectorLast(i); k++) {
 				colidx[nnzQ] = Qcross.getIndices()[k]+offset;
 				elt[nnzQ++] = Qcross.getElements()[k];
