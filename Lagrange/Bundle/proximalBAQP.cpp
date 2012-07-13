@@ -166,13 +166,13 @@ CoinPackedMatrix proximalQPModel::getSecondStageCrossHessian(int scen) {
 	vector<double> elts; elts.reserve(nrow*ncol);
 	vector<int> idx; idx.reserve(nrow*ncol);
 	vector<CoinBigIndex> starts(ncol+1);
-
+	double scal = -1./(tau*sqrt((double)cuts.size()));
 	for (int j = 0; j < ncol; j++) {
 		starts[j] = nnz;
 		for (int i = 0; i < nrow; i++) {
 			double elt = cuts[scen][i].subgradient[j];
 			if (fabs(elt) > 1e-12) {
-				elt /= -tau*sqrt((double)cuts.size());
+				elt *= scal;
 				elts.push_back(elt);
 				idx.push_back(i);
 				nnz++;
