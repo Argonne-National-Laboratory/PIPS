@@ -202,11 +202,15 @@ void formQ(stochasticInput &input, SparseSymMatrix &Q) {
 
 	CoinPackedMatrix Qrow;
 	Qrow.reverseOrderedCopyOf(input.getFirstStageHessian());
+	vector<CoinPackedMatrix*> Qcrosses(nscen);
+	for (int s = 0; s < nscen; s++) { 
+		Qcrosses[s] = new CoinPackedMatrix(input.getSecondStageCrossHessian(s));
+	}
 	for (int i = 0; i < nvar1; i++) {
 		rowQ[nrowQ++] = nnzQ;
 		offset = 0;
 		for (int s = 0; s < nscen; s++) {
-			CoinPackedMatrix const& Qcross = input.getSecondStageCrossHessian(s); // this will make a new copy for each row, oops
+			CoinPackedMatrix const& Qcross = *Qcrosses[s]; // this will make a new copy for each row, oops
 			for (CoinBigIndex k = Qcross.getVectorFirst(i); k < Qcross.getVectorLast(i); k++) {
 				colidx[nnzQ] = Qcross.getIndices()[k]+offset;
 				elt[nnzQ++] = Qcross.getElements()[k];
@@ -219,6 +223,11 @@ void formQ(stochasticInput &input, SparseSymMatrix &Q) {
 		}
 	}
 	rowQ[nrowQ] = nnzQ;
+
+	for (int s = 0; s < nscen; s++) { 
+		delete Qcrosses[s];
+	}
+
 
 }
 
