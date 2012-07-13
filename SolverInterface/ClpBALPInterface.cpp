@@ -62,6 +62,12 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 	int const nFirstStageCons = input.nFirstStageCons();
 	CoinPackedMatrix const &Tmat0 = input.getLinkingConstraints(0);
 
+	vector<const CoinPackedMatrix*> Tmats(nScenarios,&Tmat0);
+	if (!input.onlyBoundsVary()) {
+		for (int scen = 0; scen < nScenarios; scen++) {
+			Tmats[scen] = new CoinPackedMatrix(input.getLinkingConstraints(scen));	
+		}
+	}
 	for (int c = 0; c < nFirstStageVars; c++) {
 		starts[c] = nnz;
 		start = Amat.getVectorFirst(c);
@@ -72,8 +78,7 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 		}
 		int rowOffset = nFirstStageCons;
 		for (int scen = 0; scen < nScenarios; scen++) {
-			// this could be very inefficient if we make another copy of the T matrix for each column
-			CoinPackedMatrix const &Tmat = (input.onlyBoundsVary()) ? Tmat0 : input.getLinkingConstraints(scen);
+			CoinPackedMatrix const &Tmat = *Tmats[scen];
 			int const *Tidx = Tmat.getIndices();
 			double const *Telts = Tmat.getElements();
 			start = Tmat.getVectorFirst(c);
@@ -85,6 +90,11 @@ ClpBALPInterface::ClpBALPInterface(stochasticInput &input, BAContext &ctx, solve
 			rowOffset += input.nSecondStageCons(scen);
 		}
 	
+	}
+	if (!input.onlyBoundsVary()) {
+		for (int scen = 0; scen < nScenarios; scen++) {
+			delete Tmats[scen];	
+		}
 	}
 
 	// now W blocks
