@@ -60,7 +60,7 @@ swig -includeall -c++ -tcl ${LEAF_I}
 check
 
 # TODO: Figure out why this is necessary:
-sed -i 's/Functions_Init/Tclfunctions_Init/' ${WRAP_CXX}
+sed -i 's/Rounding_functions_Init/Tclrounding_functions_Init/' ${WRAP_CXX}
 
 # Compile the Tcl extension
 g++ ${CFLAGS} ${TCL_INCLUDE_SPEC} -c ${WRAP_CXX}
