@@ -19,6 +19,9 @@ makeFeasible(const char *dataPath, int nScen, int scen,
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
   data->pointer = result;
   data->length = length*sizeof(double);
+
+  makeFeasible( ... );
+
   return data;
 }
 
