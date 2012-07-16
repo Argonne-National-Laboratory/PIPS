@@ -39,4 +39,53 @@ namespace eval rounding_functions {
         adlb::store_blob $b $pointer $length
         Data_free $d
     }
+
+    proc readConvSolution_turbine { stack output inputs } {
+
+        set dataPath [ lindex $inputs 0 ]
+        set convPath [ lindex $inputs 1 ]
+
+        turbine::rule "readConvSolution-$output" $inputs \
+            $turbine::WORK \
+            "rounding_functions::readConvSolution_body $output $dataPath $convPath"
+    }
+
+    proc readConvSolution_body { b dataPath convPath } {
+
+        set dp_value [ turbine::retrieve_string $dataPath ]
+        set cp_value [ turbine::retrieve_string $convPath ]
+        set d [ readConvSolution $dp_value $cp_value ]
+        set pointer [ data::pointer $d ]
+        set length  [ data::length  $d ]
+        adlb::store_blob $b $pointer $length
+        Data_free $d
+    }
+
+    proc round_turbine { stack output inputs } {
+
+        set convSolution [ lindex $inputs 0 ]
+        set cutoff       [ lindex $inputs 1 ]
+
+        turbine::rule  "round-$output" $inputs \
+            $turbine::WORK \
+            "rounding_functions::round_body $output $convSolution $cutoff"
+    }
+
+    proc round_body { b convSolution cutoff } {
+
+        set cs        [ adlb::retrieve_blob $convSolution ]
+        puts "cs: $cs"
+        set pointerCS [ lindex $cs 0 ]
+        set pointerCS [ Data_cast_to_pointer $pointerCS ]
+        set lengthCS  [ lindex $cs 1 ]
+
+        set c_value [ turbine::retrieve_float $cutoff ]
+
+        set d [ round $pointerCS $lengthCS $c_value ]
+
+        set pointer [ data::pointer $d ]
+        set length  [ data::length  $d ]
+        adlb::store_blob $b $pointer $length
+        Data_free $d
+    }
 }
