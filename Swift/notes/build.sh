@@ -7,7 +7,7 @@
 
 # TODO: Get name for this leaf package from Lubin. -Justin
 
-LEAF_PKG=functions
+LEAF_PKG=rounding_functions
 LEAF_I=${LEAF_PKG}.i
 LEAF_SO=libtcl${LEAF_PKG}.so
 LEAF_TCL=${LEAF_PKG}.tcl
