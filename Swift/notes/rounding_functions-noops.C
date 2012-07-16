@@ -25,17 +25,20 @@ evaluateRecourseLP(const char *dataPath, int nScen,
 struct Data*
 readConvSolution(const char *dataPath, const char *solutionPath)
 {
+  int length = 10;
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
-  data->pointer = NULL;
-  data->length = -1;
+  data->pointer = calloc(length, sizeof(double));
+  data->length = length*sizeof(double);
   return data;
 }
 
-struct Data* round(const double *convSolution, double cutoff)
+struct Data*
+round(double *convSolution, int CS_length, double cutoff)
 {
+  int length = 10;
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
-  data->pointer = NULL;
-  data->length = -1;
+  data->pointer = calloc(length, sizeof(double));
+  data->length = length*sizeof(double);
   return data;
 }
 
