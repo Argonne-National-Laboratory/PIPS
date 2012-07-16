@@ -16,5 +16,12 @@ main
 
   result = evaluateRecourseLP("/path/to/data", 3, 2, candidateSolution);
 
+  blob result2;
+  result2 = readConvSolution("/path/to/data", "/path/to/solution");
+
+  blob result3;
+  result3 = round(result2, 0.3);
+
+
   printf("OK");
 }
