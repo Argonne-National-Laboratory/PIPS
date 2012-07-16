@@ -9,15 +9,16 @@
 
 struct Data*
 evaluateRecourseLP(const char *dataPath, int nScen,
-                   int scen, const double *candidateSolution)
+                   int scen, double *candidateSolution, int CS_length)
 {
   printf("evaluateRecourseLP(dataPath=%s)\n", dataPath);
 
   int length = 10;
 
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
-  data->pointer = NULL;
-  data->length = length*sizeof(double);
+  data->pointer = calloc(length, sizeof(double));
+  data->length = length * sizeof(double);
+
   return data;
 }
 

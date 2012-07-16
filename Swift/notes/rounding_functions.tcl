@@ -25,7 +25,15 @@ namespace eval rounding_functions {
         set ns_value [ turbine::retrieve_integer $nScen ]
         set s_value  [ turbine::retrieve_integer $scen ]
 
-        set d [ evaluateRecourseLP $dp_value $ns_value $s_value 0 ]
+        set cs        [ adlb::retrieve_blob $candidateSolution ]
+        puts "cs: $cs"
+        set pointerCS [ lindex $cs 0 ]
+        set pointerCS [ Data_cast_to_pointer $pointerCS ]
+        set lengthCS  [ lindex $cs 1 ]
+
+        puts "$dp_value $ns_value $s_value $pointerCS $lengthCS"
+
+        set d [ evaluateRecourseLP $dp_value $ns_value $s_value $pointerCS $lengthCS ]
         set pointer [ data::pointer $d ]
         set length  [ data::length  $d ]
         adlb::store_blob $b $pointer $length
