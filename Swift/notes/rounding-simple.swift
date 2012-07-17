@@ -1,6 +1,7 @@
 
 #include <builtins.swift>
 #include <swift/stdio.swift>
+#include <swift/stats.swift>
 
 #include "rounding_functions.swift"
 
@@ -14,7 +15,7 @@ main {
   // eventually we want to do a sweep over different values of cutoff
   // and possibly other functions in the place of "round"
   float cutoff = 0.5;
-  blob r = round(s,cutoff);
+  blob r = roundSolution(s,cutoff);
 
   // inner loop, given "r"
   float v[];
