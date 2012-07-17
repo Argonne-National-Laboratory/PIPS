@@ -20,7 +20,9 @@ LEAF_O=${LEAF_PKG}-${IMPL}.o
 WRAP_CXX=${LEAF_PKG}_wrap.cxx
 
 # Path to swig-data module
-SWIG_DATA=${HOME}/exm/apps/swig-data
+SWIG_DATA=/home/wozniak/Public/swig-data
+# Path to MPICH
+MPI=/home/wozniak/Public/mpich2-trunk-x86_64
 
 check()
 {
@@ -58,9 +60,9 @@ CFLAGS+="-I ${SWIG_DATA} "
 CFLAGS+="-I ../../Input "
 CFLAGS+="-I ../../SharedLibraries/Cbc-2.7.6/include/coin "
 CFLAGS+="-I ../../SolverInterface "
-CFLAGS+="-I ../../PIPS-S/Basic"
-CFLAGS+="-I ../../Lagrange/RecourseSubproblemSolver"
-# CFLAGS+=-I/usr/include/mpich2
+CFLAGS+="-I ../../PIPS-S/Basic "
+CFLAGS+="-I ../../Lagrange/RecourseSubproblemSolver "
+CFLAGS+="-I ${MPI}/include"
 
 # Compile the functions implementation
 g++ ${CFLAGS} -c ${LEAF_CXX} -o ${LEAF_O}
