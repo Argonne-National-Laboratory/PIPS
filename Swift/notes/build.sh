@@ -49,7 +49,17 @@ check "Could not read tclConfig.sh!"
 source ${TCL_CONFIG}
 check "tclConfig.sh failed!"
 
-CFLAGS="-fPIC -g -I . -I ${SWIG_DATA} -Wall"
+CFLAGS="-fPIC -g -Wall   "
+# Include our stuff:
+CFLAGS+="-I . "
+CFLAGS+="-I ${SWIG_DATA} "
+# Include the PIPS stuff:
+CFLAGS+="-I ../../Input "
+CFLAGS+="-I ../../SharedLibraries/Cbc-2.7.6/include/coin "
+CFLAGS+="-I ../../SolverInterface "
+CFLAGS+="-I ../../PIPS-S/Basic"
+CFLAGS+="-I ../../Lagrange/RecourseSubproblemSolver"
+# CFLAGS+=-I/usr/include/mpich2
 
 # Compile the functions implementation
 g++ ${CFLAGS} -c ${LEAF_CXX} -o ${LEAF_O}
