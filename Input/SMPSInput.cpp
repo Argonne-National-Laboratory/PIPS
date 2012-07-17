@@ -71,12 +71,12 @@ SMPSInput::SMPSInput(string const& cor, string const& tim, string const& sto) :
 
 	ft.close();
 
-	for (int i = 0; i < nvar; i++) {
+	/*for (int i = 0; i < nvar; i++) {
 		if (reader.isInteger(i)) {
 			assert(reader.getColLower()[i] == 0.0);
 			assert(reader.getColUpper()[i] == 1.0);
 		}
-	}	
+	}*/	
 
 	// find first column of second stage
 	nvar1 = reader.columnIndex(c.c_str());
