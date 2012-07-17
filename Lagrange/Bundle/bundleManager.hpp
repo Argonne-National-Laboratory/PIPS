@@ -289,10 +289,10 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLas
 
 	int nscen = input.nScenarios();
 	int nvar1 = input.nFirstStageVars();
-	ofstream f;
+	/*ofstream f;
 	stringstream ss;
 	ss << "sols" << nIter;
-	if (ctx.mype() == 0) f.open(ss.str().c_str());
+	if (ctx.mype() == 0) f.open(ss.str().c_str());*/
 	for (int i = 0; i < nscen; i++) {
 		int proc = ctx.owner(i);
 		std::vector<double> at(nvar1), p(nvar1);
@@ -303,12 +303,12 @@ template<typename B, typename L, typename R> void bundleManager<B,L,R>::checkLas
 		}
 		MPI_Bcast(&at[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
 		MPI_Bcast(&p[0],nvar1,MPI_DOUBLE,proc,ctx.comm());
-		if (ctx.mype() == 0) {
+		/*if (ctx.mype() == 0) {
 			for (int k = 0; k < nvar1; k++) {
 				f << p[k] << " " << at[k] << " ";
 			}
 			f << endl;
-		}
+		}*/
 		double o = 5000.;// = testPrimal(p);
 		if (o < bestPrimalObj) {
 			bestPrimalObj = o;
