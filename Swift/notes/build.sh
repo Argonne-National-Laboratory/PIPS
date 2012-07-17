@@ -11,8 +11,9 @@ LEAF_PKG=rounding_functions
 LEAF_I=${LEAF_PKG}.i
 LEAF_SO=libtcl${LEAF_PKG}.so
 LEAF_TCL=${LEAF_PKG}.tcl
-# Use the noop implementation
-IMPL=noops
+# Use the noop or real implementation
+# IMPL=noops
+IMPL=impl
 LEAF_CXX=${LEAF_PKG}-${IMPL}.C
 LEAF_O=${LEAF_PKG}-${IMPL}.o
 # The SWIG-generated file:
