@@ -7,7 +7,7 @@
 
 #include "functions.h"
 
-struct Data*
+double
 makeFeasible(const char *dataPath, int nScen, int scen,
              const double *candidateSolution)
 {

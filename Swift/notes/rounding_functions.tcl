@@ -17,7 +17,7 @@ namespace eval rounding_functions {
             "rounding_functions::evaluateRecourseLP_body $output $dataPath $nScen $scen $candidateSolution"
     }
 
-    proc evaluateRecourseLP_body { b dataPath nScen scen candidateSolution } {
+    proc evaluateRecourseLP_body { result dataPath nScen scen candidateSolution } {
 
         puts evaluateRecourseLP_body
 
@@ -26,18 +26,14 @@ namespace eval rounding_functions {
         set s_value  [ turbine::retrieve_integer $scen ]
 
         set cs        [ adlb::retrieve_blob $candidateSolution ]
-        puts "cs: $cs"
         set pointerCS [ lindex $cs 0 ]
         set pointerCS [ Data_cast_to_pointer $pointerCS ]
         set lengthCS  [ lindex $cs 1 ]
 
         puts "$dp_value $ns_value $s_value $pointerCS $lengthCS"
 
-        set d [ evaluateRecourseLP $dp_value $ns_value $s_value $pointerCS $lengthCS ]
-        set pointer [ data::pointer $d ]
-        set length  [ data::length  $d ]
-        adlb::store_blob $b $pointer $length
-        Data_free $d
+        set r_value [ evaluateRecourseLP $dp_value $ns_value $s_value $pointerCS $lengthCS ]
+        turbine::store_float $result $r_value
     }
 
     proc readConvSolution_turbine { stack output inputs } {
@@ -61,17 +57,17 @@ namespace eval rounding_functions {
         Data_free $d
     }
 
-    proc round_turbine { stack output inputs } {
+    proc roundSolution_turbine { stack output inputs } {
 
         set convSolution [ lindex $inputs 0 ]
         set cutoff       [ lindex $inputs 1 ]
 
         turbine::rule  "round-$output" $inputs \
             $turbine::WORK \
-            "rounding_functions::round_body $output $convSolution $cutoff"
+            "rounding_functions::roundSolution_body $output $convSolution $cutoff"
     }
 
-    proc round_body { b convSolution cutoff } {
+    proc roundSolution_body { b convSolution cutoff } {
 
         set cs        [ adlb::retrieve_blob $convSolution ]
         puts "cs: $cs"
@@ -81,7 +77,7 @@ namespace eval rounding_functions {
 
         set c_value [ turbine::retrieve_float $cutoff ]
 
-        set d [ round $pointerCS $lengthCS $c_value ]
+        set d [ roundSolution $pointerCS $lengthCS $c_value ]
 
         set pointer [ data::pointer $d ]
         set length  [ data::length  $d ]
