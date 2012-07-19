@@ -22,10 +22,12 @@ WRAP_CXX=${LEAF_PKG}_wrap.cxx
 PIPS_SRC=${HOME}/collab/PIPS
 PIPS_SHARED=${PIPS_SRC}/SharedLibraries
 PIPS_BUILD=/sandbox/wozniak/PIPS.build
-APP_LIB_DIRS=( ${PIPS_BUILD}/Input
-               ${PIPS_SHARED}/Cbc-2.7.6/lib
-               ${PIPS_SHARED}/PARDISO )
-APP_LIB_NAMES=( stochInput CoinUtils pardiso412-GNU443-X86-64 )
+APP_LIB_DIRS=( ${PIPS_SHARED}/Cbc-2.7.6/lib
+               ${PIPS_SHARED}/PARDISO
+               ${PIPS_BUILD}/Input
+               ${PIPS_BUILD}/Lagrange )
+APP_LIB_NAMES=( stochInput OsiClp Osi Clp ClpRecourseSolver
+                CoinUtils pardiso412-GNU443-X86-64 )
 
 # Path to swig-data module
 SWIG_DATA=/home/wozniak/Public/swig-data
