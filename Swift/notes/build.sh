@@ -19,6 +19,10 @@ LEAF_O=${LEAF_PKG}-${IMPL}.o
 # The SWIG-generated file:
 WRAP_CXX=${LEAF_PKG}_wrap.cxx
 
+PIPS_BUILD=/sandbox/wozniak/PIPS.build
+APP_LIB_DIRS=( ${PIPS_BUILD}/Input )
+APP_LIB_NAMES=( stochInput )
+
 # Path to swig-data module
 SWIG_DATA=/home/wozniak/Public/swig-data
 # Path to MPICH
@@ -79,8 +83,24 @@ sed -i 's/Rounding_functions_Init/Tclrounding_functions_Init/' ${WRAP_CXX}
 g++ ${CFLAGS} ${TCL_INCLUDE_SPEC} -c ${WRAP_CXX}
 check
 
+set -x
+
+LINK_ARGS=
+for D in ${APP_LIB_DIRS[@]}
+do
+  LINK_ARGS+="-L ${D} "
+done
+for N in ${APP_LIB_NAMES[@]}
+do
+  LINK_ARGS+="-l ${N} "
+done
+for D in ${APP_LIB_DIRS[@]}
+do
+  LINK_ARGS+="-Wl,-rpath -Wl,${D}"
+done
+
 # Build the Tcl extension as a shared library
-g++ -shared -o ${LEAF_SO} ${LEAF_PKG}_wrap.o ${LEAF_O}
+g++ -shared -o ${LEAF_SO} ${LEAF_PKG}_wrap.o ${LEAF_O} ${LINK_ARGS}
 check
 echo "created library: ${LEAF_SO}"
 
