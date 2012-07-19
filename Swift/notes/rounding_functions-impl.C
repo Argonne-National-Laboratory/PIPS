@@ -14,9 +14,9 @@
 #include "ClpRecourseSolver.hpp"
 
 
-extern "C" {
+// extern "C" {
 #include "rounding_functions.h"
-}
+// }
 
 /*
 g++ -c -I../../Input -I../../SharedLibraries/Cbc-2.7.6/include/coin -I../../SolverInterface -I../../PIPS-S/Basic -I../../Lagrange/RecourseSubproblemSolver -I/usr/include/mpich2 rounding_functions.cpp
@@ -25,7 +25,8 @@ g++ -c -I../../Input -I../../SharedLibraries/Cbc-2.7.6/include/coin -I../../Solv
 
 using namespace std;
 
-extern "C" double
+// extern "C"
+double
 evaluateRecourseLP(const char *dataPath, int nScen,
                    int scen, double *candidateSolution, int CS_length)
 {
@@ -42,7 +43,7 @@ evaluateRecourseLP(const char *dataPath, int nScen,
   rsol.go();
 
   double obj = rsol.getObjective();
-  if (rsol.getStatus() == ProvenInfeasible) { 
+  if (rsol.getStatus() == ProvenInfeasible) {
     return COIN_DBL_MAX;
   }
   assert(rsol.getStatus() == Optimal);
@@ -56,7 +57,8 @@ evaluateRecourseLP(const char *dataPath, int nScen,
 
 }
 
-extern "C" struct Data*
+//extern "C"
+struct Data*
 readConvSolution(const char *dataPath, const char *solutionPath)
 {
   string problemdata = string(dataPath) + "0";
@@ -78,13 +80,14 @@ readConvSolution(const char *dataPath, const char *solutionPath)
   return data;
 }
 
-extern "C" struct Data*
+// extern "C"
+struct Data*
 roundSolution(double *convSolution, int CS_length, double cutoff)
 {
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
   data->pointer = malloc(CS_length*sizeof(double));
   data->length = CS_length*sizeof(double);
-  
+
   double *vec = reinterpret_cast<double*>(data->pointer);
 
   for (int i = 0; i < CS_length; i++) {
@@ -94,7 +97,7 @@ roundSolution(double *convSolution, int CS_length, double cutoff)
       vec[i] = 0.;
     }
   }
-	
+
   return data;
 }
 
