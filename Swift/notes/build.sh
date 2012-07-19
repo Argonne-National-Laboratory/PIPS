@@ -19,9 +19,13 @@ LEAF_O=${LEAF_PKG}-${IMPL}.o
 # The SWIG-generated file:
 WRAP_CXX=${LEAF_PKG}_wrap.cxx
 
+PIPS_SRC=${HOME}/collab/PIPS
+PIPS_SHARED=${PIPS_SRC}/SharedLibraries
 PIPS_BUILD=/sandbox/wozniak/PIPS.build
-APP_LIB_DIRS=( ${PIPS_BUILD}/Input )
-APP_LIB_NAMES=( stochInput )
+APP_LIB_DIRS=( ${PIPS_BUILD}/Input
+               ${PIPS_SHARED}/Cbc-2.7.6/lib
+               ${PIPS_SHARED}/PARDISO )
+APP_LIB_NAMES=( stochInput CoinUtils pardiso412-GNU443-X86-64 )
 
 # Path to swig-data module
 SWIG_DATA=/home/wozniak/Public/swig-data
@@ -68,6 +72,8 @@ CFLAGS+="-I ../../PIPS-S/Basic "
 CFLAGS+="-I ../../Lagrange/RecourseSubproblemSolver "
 CFLAGS+="-I ${MPI}/include"
 
+set -x
+
 # Compile the functions implementation
 g++ ${CFLAGS} -c ${LEAF_CXX} -o ${LEAF_O}
 check
@@ -96,8 +102,13 @@ do
 done
 for D in ${APP_LIB_DIRS[@]}
 do
-  LINK_ARGS+="-Wl,-rpath -Wl,${D}"
+  LINK_ARGS+="-Wl,-rpath -Wl,${D} "
 done
+
+# Cbc CoinUtils uses libz, libbz2
+LINK_ARGS+="-l z -l bz2 "
+# PARDISO requires blas, lapack
+LINK_ARGS+="-l blas -l lapack"
 
 # Build the Tcl extension as a shared library
 g++ -shared -o ${LEAF_SO} ${LEAF_PKG}_wrap.o ${LEAF_O} ${LINK_ARGS}
