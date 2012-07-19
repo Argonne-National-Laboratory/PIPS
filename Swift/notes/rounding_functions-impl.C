@@ -13,10 +13,7 @@
 #include "rawInput.hpp"
 #include "ClpRecourseSolver.hpp"
 
-
-// extern "C" {
 #include "rounding_functions.h"
-// }
 
 /*
 g++ -c -I../../Input -I../../SharedLibraries/Cbc-2.7.6/include/coin -I../../SolverInterface -I../../PIPS-S/Basic -I../../Lagrange/RecourseSubproblemSolver -I/usr/include/mpich2 rounding_functions.cpp
@@ -61,10 +58,13 @@ evaluateRecourseLP(const char *dataPath, int nScen,
 struct Data*
 readConvSolution(const char *dataPath, const char *solutionPath)
 {
+  printf("dataPath: %s\n", dataPath);
   string problemdata = string(dataPath) + "0";
   ifstream datafd(problemdata.c_str());
+  assert(datafd.good());
   int nvar1;
   datafd >> nvar1; // read size of solution
+  printf("nvar1: %i\n", nvar1);
 
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
   data->pointer = malloc(nvar1*sizeof(double));
