@@ -197,6 +197,8 @@ set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
 #set(CMAKE_BUILD_TYPE RELEASE)
 #message("FLAGS: ${CMAKE_CXX_FLAGS_RELEASE}")
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
 # must set TAU_MAKEFILE, TAU_OPTIONS environment variables
 #set(CMAKE_CXX_COMPILER "tau_cxx.sh") 
 
@@ -218,6 +220,11 @@ add_subdirectory(Utilities)
 add_subdirectory(UCTests)
 add_subdirectory(UCRolling)
 add_subdirectory(BasisBootstrap)
+
+# this will print a warning message, should figure out how to silence it
+add_library(pipsForSwift SHARED)
+# add any libraries needed by swift app here
+target_link_libraries(pipsForSwift pipss stochInput ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
 #if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 
 #add_subdirectory(src/Tests)
