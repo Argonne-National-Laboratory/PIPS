@@ -5,9 +5,6 @@
 using namespace std;
 
 
-// solve extensive form with Cbc
-// assumes UC model
-
 int main(int argc, char **argv) {
 
 	
