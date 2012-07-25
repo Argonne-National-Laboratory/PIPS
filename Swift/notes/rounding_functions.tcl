@@ -53,7 +53,7 @@ namespace eval rounding_functions {
         set d [ readConvSolution $dp_value $cp_value ]
         set pointer [ data::pointer $d ]
         set length  [ data::length  $d ]
-        adlb::store_blob $b $pointer $length
+        turbine::store_blob $b $pointer $length
         Data_free $d
     }
 
@@ -70,8 +70,9 @@ namespace eval rounding_functions {
     proc roundSolution_body { b convSolution cutoff } {
 
         set cs        [ adlb::retrieve_blob $convSolution ]
-        puts "cs: $cs"
         set pointerCS [ lindex $cs 0 ]
+        set s [ format "0x%x" $pointerCS ]
+        puts "cs: $s"
         set pointerCS [ Data_cast_to_pointer $pointerCS ]
         set lengthCS  [ lindex $cs 1 ]
 
@@ -81,7 +82,7 @@ namespace eval rounding_functions {
 
         set pointer [ data::pointer $d ]
         set length  [ data::length  $d ]
-        adlb::store_blob $b $pointer $length
+        turbine::store_blob $b $pointer $length
         Data_free $d
     }
 }
