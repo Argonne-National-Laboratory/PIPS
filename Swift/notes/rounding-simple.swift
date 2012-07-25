@@ -10,7 +10,7 @@ main {
   string data = "/home/wozniak/Public/PIPS.data/";
   string dataPath = data + "uc_dumps/uc_raw-4h";
   string solutionPath = data + "primalsol_conv8";
-  int nScenarios = 3;
+  int nScenarios = 4;
   blob s = readConvSolution(dataPath,solutionPath);
 
   // eventually we want to do a sweep over different values of cutoff
