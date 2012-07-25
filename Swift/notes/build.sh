@@ -18,10 +18,11 @@ LEAF_CXX=${LEAF_PKG}-${IMPL}.C
 LEAF_O=${LEAF_PKG}-${IMPL}.o
 # The SWIG-generated file:
 WRAP_CXX=${LEAF_PKG}_wrap.cxx
+WRAP_O=${LEAF_PKG}_wrap.o
 
 PIPS_SRC=${HOME}/collab/PIPS
 PIPS_SHARED=${PIPS_SRC}/SharedLibraries
-PIPS_BUILD=/sandbox/wozniak/PIPS.build
+PIPS_BUILD=${HOME}/Public/PIPS.build
 APP_LIB_DIRS=( ${PIPS_SHARED}/Cbc-2.7.6/lib
                ${PIPS_SHARED}/PARDISO
                ${PIPS_BUILD}/Input
@@ -74,13 +75,13 @@ CFLAGS+="-I ../../PIPS-S/Basic "
 CFLAGS+="-I ../../Lagrange/RecourseSubproblemSolver "
 CFLAGS+="-I ${MPI}/include"
 
-set -x
-
 # Compile the functions implementation
+echo "g++ ${LEAF_CXX} ..."
 g++ ${CFLAGS} -c ${LEAF_CXX} -o ${LEAF_O}
 check
 
 # Create the Tcl extension
+echo "SWIG ${LEAF_I} ..."
 swig -includeall -c++ -tcl ${LEAF_I}
 check
 
@@ -88,10 +89,9 @@ check
 sed -i 's/Rounding_functions_Init/Tclrounding_functions_Init/' ${WRAP_CXX}
 
 # Compile the Tcl extension
-g++ ${CFLAGS} ${TCL_INCLUDE_SPEC} -c ${WRAP_CXX}
+echo "g++ ${WRAP_CXX}"
+g++ ${CFLAGS} ${TCL_INCLUDE_SPEC} -c ${WRAP_CXX} -o ${WRAP_O}
 check
-
-set -x
 
 LINK_ARGS=
 for D in ${APP_LIB_DIRS[@]}
@@ -113,6 +113,7 @@ LINK_ARGS+="-l z -l bz2 "
 LINK_ARGS+="-l blas -l lapack"
 
 # Build the Tcl extension as a shared library
+echo "LINK ${LEAF_SO} ..."
 g++ -shared -o ${LEAF_SO} ${LEAF_PKG}_wrap.o ${LEAF_O} ${LINK_ARGS}
 check
 echo "created library: ${LEAF_SO}"
