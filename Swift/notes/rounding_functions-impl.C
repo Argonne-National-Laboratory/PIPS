@@ -27,12 +27,22 @@ double
 evaluateRecourseLP(const char *dataPath, int nScen,
                    int scen, double *candidateSolution, int CS_length)
 {
+  printf("evaluateRecourseLP()...\n");
+  int N = CS_length/sizeof(double);
+  printf("N: %i\n", N);
+  vector<double> sol(candidateSolution,candidateSolution+N);
 
-  vector<double> sol(candidateSolution,candidateSolution+CS_length);
+  printf("ok0\n");
 
   rawInput input(string(dataPath),nScen);
+
+  printf("ok.5\n");
+
   int nvar1 = input.nFirstStageVars();
-  assert(nvar1 == CS_length);
+  printf("nvar1: %i\n", nvar1);
+  assert(nvar1 == N);
+
+  printf("ok1\n");
 
   ClpRecourseSolver rsol(input, scen, sol);
   rsol.setDualObjectiveLimit(1e7);
@@ -50,6 +60,7 @@ evaluateRecourseLP(const char *dataPath, int nScen,
 
   for (int k = 0; k < nvar1; k++) obj += prob*sol[k]*obj1[k];
 
+  printf("evaluateRecourseLP() done.\n");
   return obj;
 
 }
@@ -58,8 +69,10 @@ evaluateRecourseLP(const char *dataPath, int nScen,
 struct Data*
 readConvSolution(const char *dataPath, const char *solutionPath)
 {
+  printf("readConvSolution()...\n");
   printf("dataPath: %s\n", dataPath);
   string problemdata = string(dataPath) + "0";
+  printf("problemdata: %s\n", problemdata.c_str());
   ifstream datafd(problemdata.c_str());
   assert(datafd.good());
   int nvar1;
@@ -77,6 +90,7 @@ readConvSolution(const char *dataPath, const char *solutionPath)
     solfd >> vec[i];
   }
 
+  printf("readConvSolution() done.\n");
   return data;
 }
 
@@ -84,20 +98,24 @@ readConvSolution(const char *dataPath, const char *solutionPath)
 struct Data*
 roundSolution(double *convSolution, int CS_length, double cutoff)
 {
+  printf("roundSolution...\n");
+  printf("convSolution: %p\n", convSolution);
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
   data->pointer = malloc(CS_length*sizeof(double));
-  data->length = CS_length*sizeof(double);
+  data->length = CS_length;
 
   double *vec = reinterpret_cast<double*>(data->pointer);
+  int N = CS_length / sizeof(double);
 
-  for (int i = 0; i < CS_length; i++) {
+  for (int i = 0; i < N; i++) {
     if (convSolution[i] >= cutoff) {
-	    vec[i] = 1.;
+      vec[i] = 1.;
     } else {
       vec[i] = 0.;
     }
   }
 
+  printf("roundSolution() done.\n");
   return data;
 }
 
