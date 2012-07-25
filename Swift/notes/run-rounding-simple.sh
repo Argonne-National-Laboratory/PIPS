@@ -5,7 +5,14 @@ export TURBINE_HOME=/home/wozniak/Public/turbine-0.0.4-x86_64
 SWIG_DATA=${HOME}/exm/apps/swig-data
 export TURBINE_USER_LIB="${PWD} ${SWIG_DATA}"
 
+export ADLB_EXHAUST_TIME=1
+
 stc -u rounding-simple.{swift,tcl}
 [[ ${?} == 0 ]] || exit 1
 
-turbine -l -n 3 rounding-simple.tcl |& tee turbine.out
+START=$( date +%s )
+turbine -l -n 6 rounding-simple.tcl |& tee turbine.out
+[[ ${?} == 0 ]] || exit 1
+STOP=$( date +%s )
+DURATION=$(( ${STOP} - ${START} ))
+echo "TURBINE TIME: ${DURATION}"
