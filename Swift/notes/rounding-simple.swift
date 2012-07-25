@@ -7,8 +7,9 @@
 
 main {
   // problem data
-  string dataPath = "file.data";
-  string solutionPath = "file.solution";
+  string data = "/home/wozniak/Public/PIPS.data/";
+  string dataPath = data + "uc_dumps.tar.bz2";
+  string solutionPath = data + "primalsol_conv8";
   int nScenarios = 3;
   blob s = readConvSolution(dataPath,solutionPath);
 
