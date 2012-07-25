@@ -8,4 +8,4 @@ export TURBINE_USER_LIB="${PWD} ${SWIG_DATA}"
 stc -u rounding-simple.{swift,tcl}
 [[ ${?} == 0 ]] || exit 1
 
-turbine -l -n 3 rounding-simple.tcl
+turbine -l -n 3 rounding-simple.tcl |& tee turbine.out
