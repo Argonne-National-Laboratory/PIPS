@@ -8,7 +8,7 @@
 main {
   // problem data
   string data = "/home/wozniak/Public/PIPS.data/";
-  string dataPath = data + "uc_dumps.tar.bz2";
+  string dataPath = data + "uc_dumps/uc_raw-4h";
   string solutionPath = data + "primalsol_conv8";
   int nScenarios = 3;
   blob s = readConvSolution(dataPath,solutionPath);
@@ -22,7 +22,6 @@ main {
   float v[];
   foreach i in [0 : nScenarios-1]
   {
-    // TODO: Should this return a float or a blob?
     v[i] = evaluateRecourseLP(dataPath,nScenarios,i,r);
   }
   float result = sum_float(v);
