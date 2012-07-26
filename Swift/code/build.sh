@@ -18,7 +18,8 @@ WRAP_O=${LEAF_PKG}_wrap.o
 
 PIPS_SRC=${HOME}/collab/PIPS
 PIPS_SHARED=${PIPS_SRC}/SharedLibraries
-PIPS_BUILD=${HOME}/Public/PIPS.build
+# PIPS_BUILD=${HOME}/Public/PIPS.build
+PIPS_BUILD=/sandbox/wozniak/PIPS.build
 APP_LIB_DIRS=( ${PIPS_SHARED}/Cbc-2.7.6/lib
                ${PIPS_SHARED}/PARDISO
                ${PIPS_BUILD}/Input
@@ -29,7 +30,7 @@ APP_LIB_NAMES=( stochInput OsiClp Osi Clp ClpRecourseSolver
 # Path to swig-data module
 SWIG_DATA=/home/wozniak/exm/apps/swig-data
 # Path to MPICH
-MPI=/home/wozniak/sfw/mpich2-trunk
+MPI=/home/wozniak/sfw/mpich2-trunk-x86_64
 
 check()
 {
@@ -88,7 +89,8 @@ swig -includeall -c++ -tcl ${LEAF_I}
 check
 
 # TODO: Figure out why this is necessary:
-sed -i 's/Rounding_functions_Init/Tclrounding_functions_Init/' ${WRAP_CXX}
+sed -i 's/Rounding_Init/Tclrounding_Init/' ${WRAP_CXX}
+check
 
 # Compile the Tcl extension
 echo "g++ ${WRAP_CXX}"
