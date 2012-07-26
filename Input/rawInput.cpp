@@ -8,30 +8,46 @@ using namespace std;
 
 rawInput::rawInput(const string &datarootname, int overrideScenarioNumber, MPI_Comm comm) : datarootname(datarootname) {
 
-	unsigned filelen;
-	char *filedata;
-	MPI_Comm_rank(comm,&mype_);
+  unsigned filelen;
+  char *filedata;
+  MPI_Comm_rank(comm,&mype_);
+  
+  if (mype_ == 0) {
+    string f0name = datarootname + "0";
+    ifstream f0(f0name.c_str());
+    assert(f0.is_open());
+    
+    string data((istreambuf_iterator<char>(f0)),istreambuf_iterator<char>()); // read into string
+    f0.close();
+    filelen = data.length() + 1;
+    filedata = new char[filelen];
+    memcpy(filedata,data.c_str(),filelen);
+    MPI_Bcast(&filelen,1,MPI_UNSIGNED,0,comm);
+  } else {
+    MPI_Bcast(&filelen,1,MPI_UNSIGNED,0,comm);
+    filedata = new char[filelen];
+  }
+  MPI_Bcast(filedata,filelen,MPI_CHAR,0,comm);
+  
+  string data(filedata);
+  delete [] filedata;
+  
+  parseZeroData(data, overrideScenarioNumber);
 
-	if (mype_ == 0) {
-		string f0name = datarootname + "0";
-		ifstream f0(f0name.c_str());
-		assert(f0.is_open());
-		
-		string data((istreambuf_iterator<char>(f0)),istreambuf_iterator<char>()); // read into string
-		f0.close();
-		filelen = data.length() + 1;
-		filedata = new char[filelen];
-		memcpy(filedata,data.c_str(),filelen);
-		MPI_Bcast(&filelen,1,MPI_UNSIGNED,0,comm);
-	} else {
-		MPI_Bcast(&filelen,1,MPI_UNSIGNED,0,comm);
-		filedata = new char[filelen];
-	}
-	MPI_Bcast(filedata,filelen,MPI_CHAR,0,comm);
-	
-	string data(filedata);
-	delete [] filedata;
-	istringstream f1(data);
+}
+
+rawInput::rawInput(const std::string &datarootname, 
+		   const std::string& zerodata, 
+		   int overrideScenarioNumber /*= 0*/, 
+		   MPI_Comm comm /*= MPI_COMM_SELF*/)
+  : datarootname(datarootname)
+{
+  parseZeroData(zerodata, overrideScenarioNumber);
+}
+
+void rawInput::parseZeroData(const std::string &zerodata, int overrideScenarioNumber)
+{
+	istringstream f1(zerodata);
 	f1.exceptions(ifstream::failbit | ifstream::badbit);
 	
 	
@@ -136,8 +152,6 @@ rawInput::rawInput(const string &datarootname, int overrideScenarioNumber, MPI_C
 		f1 >> elts[i];
 	}
 	Tmat.copyOf(true, nSecondStageCons_, nFirstStageVars_, nnz, &elts[0], &rowIdx[0], &starts[0], 0);
-
-
 
 }
 
