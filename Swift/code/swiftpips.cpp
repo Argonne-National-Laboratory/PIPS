@@ -33,7 +33,7 @@ evaluateRecourseLP(const char *dataPath, int nScen,
 
   printf("ok0\n");
 
-  rawInput input(string(dataPath),nScen);
+  rawInput input(string(dataPath),nScen,MPI_COMM_SELF);
 
   printf("ok.5\n");
 
