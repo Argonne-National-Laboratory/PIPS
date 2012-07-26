@@ -8,7 +8,8 @@
 class rawInput : public stochasticInput {
 public:
 
-	rawInput(const std::string &datarootname, int overrideScenarioNumber = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  rawInput(const std::string &datarootname, int overrideScenarioNumber = 0, MPI_Comm comm = MPI_COMM_WORLD);
+  rawInput(const std::string &datarootname, const std::string& zerodata, int overrideScenarioNumber = 0, MPI_Comm comm = MPI_COMM_SELF);
 
 	virtual int nScenarios() { return nScenarios_; }
 	virtual int nFirstStageVars() { return nFirstStageVars_; }
@@ -64,7 +65,8 @@ protected:
 	int mype_;
 
 	int nScenarios_, nFirstStageVars_, nFirstStageCons_, nSecondStageVars_, nSecondStageCons_;
-
+private:
+  void parseZeroData(const std::string &zerodata, int overrideScenarioNumber);
 };
 
 
