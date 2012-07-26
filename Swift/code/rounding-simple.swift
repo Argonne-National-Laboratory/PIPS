@@ -9,7 +9,7 @@
 #include <swift/stdio.swift>
 #include <swift/stats.swift>
 
-#include "rounding_functions.swift"
+#include "rounding.swift"
 
 main {
   // problem data
