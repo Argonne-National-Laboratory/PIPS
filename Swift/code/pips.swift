@@ -10,12 +10,12 @@
 
 (float result) evaluateRecourseLP(string dataPath, int nScen,
                                    int scen, blob candidateSolution)
-"rounding" "0.0" "evaluateRecourseLP_turbine";
+"swiftpips" "0.0" "evaluateRecourseLP_turbine";
 
 (blob b) readConvSolution(string dataPath, string solutionPath)
-"rounding" "0.0" "readConvSolution_turbine";
+"swiftpips" "0.0" "readConvSolution_turbine";
 
 (blob b) roundSolution(blob convSolution, float cutoff)
-"rounding" "0.0" "roundSolution_turbine";
+"swiftpips" "0.0" "roundSolution_turbine";
 
 #endif

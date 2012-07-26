@@ -6,7 +6,7 @@
 # This could be a Makefile but I think it is better
 # to use bash as a reference example. -Justin
 
-LEAF_PKG=rounding
+LEAF_PKG=swiftpips
 LEAF_I=${LEAF_PKG}.i
 LEAF_SO=libtcl${LEAF_PKG}.so
 LEAF_TCL=${LEAF_PKG}.tcl
@@ -89,7 +89,7 @@ swig -includeall -c++ -tcl ${LEAF_I}
 check
 
 # TODO: Figure out why this is necessary:
-sed -i 's/Rounding_Init/Tclrounding_Init/' ${WRAP_CXX}
+sed -i 's/Swiftpips_Init/Tclswiftpips_Init/' ${WRAP_CXX}
 check
 
 # Compile the Tcl extension
