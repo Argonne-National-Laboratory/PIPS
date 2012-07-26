@@ -9,7 +9,7 @@
 #include <swift/stdio.swift>
 #include <swift/stats.swift>
 
-#include "rounding.swift"
+#include "pips.swift"
 
 main {
   // problem data

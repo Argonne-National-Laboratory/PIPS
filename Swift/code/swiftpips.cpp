@@ -1,6 +1,6 @@
 
 /*
- * ROUNDING.CPP
+ * SWIFTPIPS.CPP
  *
  * Swift/T C++ leaf functions
  */
@@ -18,7 +18,7 @@
 #include "rawInput.hpp"
 #include "ClpRecourseSolver.hpp"
 
-#include "rounding.h"
+#include "swiftpips.h"
 
 using namespace std;
 

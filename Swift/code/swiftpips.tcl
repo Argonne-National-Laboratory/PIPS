@@ -5,7 +5,7 @@
 
 package require data 0.0
 
-namespace eval rounding {
+namespace eval swiftpips {
 
     proc evaluateRecourseLP_turbine { stack output inputs } {
 
@@ -18,7 +18,7 @@ namespace eval rounding {
         # Issue data dependent function call
         turbine::rule "evaluateRecourseLP-$output" $inputs \
             $turbine::WORK \
-            "rounding::evaluateRecourseLP_body $output $dataPath $nScen $scen $candidateSolution"
+            "swiftpips::evaluateRecourseLP_body $output $dataPath $nScen $scen $candidateSolution"
     }
 
     proc evaluateRecourseLP_body { result dataPath nScen scen candidateSolution } {
@@ -48,7 +48,7 @@ namespace eval rounding {
         # Issue data dependent function call
         turbine::rule "readConvSolution-$output" $inputs \
             $turbine::WORK \
-            "rounding::readConvSolution_body $output $dataPath $convPath"
+            "swiftpips::readConvSolution_body $output $dataPath $convPath"
     }
 
     proc readConvSolution_body { b dataPath convPath } {
@@ -76,7 +76,7 @@ namespace eval rounding {
         # Issue data dependent function call
         turbine::rule  "round-$output" $inputs \
             $turbine::WORK \
-            "rounding::roundSolution_body $output $convSolution $cutoff"
+            "swiftpips::roundSolution_body $output $convSolution $cutoff"
     }
 
     proc roundSolution_body { b convSolution cutoff } {
