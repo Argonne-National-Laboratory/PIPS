@@ -9,7 +9,7 @@ include_directories(../Lagrange/Drivers)
 include_directories(../Lagrange/Bundle)
 
 include_directories(../PIPS-IPM/Core/Abstract ../PIPS-IPM/Core/Vector ../PIPS-IPM/Core/Utilities ../PIPS-IPM/Core/QpSolvers ../PIPS-IPM/Core/QpGen
-  ../PIPS-IPM/Core/SparseLinearAlgebra ../PIPS-IPM/Core/DenseLinearAlgebra ../PIPS-IPM/Core/Readers 
+  ../PIPS-IPM/Core/SparseLinearAlgebra ../PIPS-IPM/Core/DenseLinearAlgebra ../PIPS-IPM/Core/Readers
   ../PIPS-IPM/Core/LinearSolvers/Ma57Solver)
 include_directories(../PIPS-IPM/Core/StochLinearAlgebra ../PIPS-IPM/Core/QpStoch)
 
@@ -27,7 +27,7 @@ target_link_libraries(ucRollingTest ucRolling pipss stochInput CbcBALPInterface 
 target_link_libraries(ucRollingCbcExtensive ucRolling pipss stochInput CbcBALPInterface ClpBALPInterface ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(ucRollingOOQPExtensive ucRolling stochInput ${COIN_LIBS}
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS} ${PARDISO_LIBRARY})
 
 
 if(HAVE_SCIP)

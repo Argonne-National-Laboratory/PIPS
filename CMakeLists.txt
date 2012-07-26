@@ -2,11 +2,16 @@ cmake_minimum_required(VERSION 2.8)
 
 project(PIPSAll)
 
+if (BUILD_SHARED_LIBS)
+message(STATUS "Using shared libraries")
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a")
+endif (BUILD_SHARED_LIBS)
+
 #find_package(MPI REQUIRED)
-if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 
+if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 set(CMAKE_CXX_COMPILER "mpicxx")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0") # need this explicitly for mpicxx
-endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 
+endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
 # inspired by elemental-bgp
 if(MATH_LIBS)
@@ -39,14 +44,16 @@ set(METIS_DIR ${SHARED_DIR}/metis-4.0.1)
 #set(COIN_DIR ${Simplex_SOURCE_DIR}/CoinUtils-2.8.0)
 #set(COIN_DIR ${SHARED_DIR}/Clp-1.14)
 set(COIN_DIR ${SHARED_DIR}/Cbc-2.7.6)
+set(PARDISO_DIR ${SHARED_DIR}/PARDISO)
 
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in SharedLibraries/Cbc-2.7.6")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
-if(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a") 
-	message(FATAL_ERROR "Could not find MA27 or MA57. Please run \"make\" in SharedLibraries/MA27 or in SharedLibraries/MA57")
-endif(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
+# if(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
+# 	message(FATAL_ERROR "Could not find MA27 or MA57. Please run \"make\" in SharedLibraries/MA27 or in SharedLibraries/MA57")
+# endif(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
+
 if(EXISTS "${MA57_DIR}/libMA57.a" AND NOT EXISTS "${METIS_DIR}/libmetis.a")
   message(FATAL_ERROR "Could not find metis needed by MA57. Please run \"make\" in SharedLibraries/metis-4.0.1")
 endif(EXISTS "${MA57_DIR}/libMA57.a" AND NOT EXISTS "${METIS_DIR}/libmetis.a")
@@ -81,9 +88,10 @@ find_library(SML_LIBRARY NAMES libsml.a PATHS ${SML_DIR}/lib)
 find_library(DL_LIBRARY NAMES dl)
 find_library(FL_LIBRARY NAMES fl)
 
-find_library(MA27_LIBRARY NAME libMA27.a PATHS ${MA27_DIR})
-find_library(MA57_LIBRARY NAME libMA57.a PATHS ${MA57_DIR})
+find_library(MA27_LIBRARY MA27 PATHS ${MA27_DIR})
+find_library(MA57_LIBRARY MA57 PATHS ${MA57_DIR})
 find_library(METIS_LIBRARY NAME libmetis.a PATHS ${METIS_DIR})
+find_library(PARDISO_LIBRARY name libpardiso412-GNU443-X86-64.so PATHS ${PARDISO_DIR})
 
 set(HAVE_SML TRUE)
 if(${AMPL_LIBRARY} MATCHES "AMPL_LIBRARY-NOTFOUND")
@@ -200,7 +208,7 @@ set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 # must set TAU_MAKEFILE, TAU_OPTIONS environment variables
-#set(CMAKE_CXX_COMPILER "tau_cxx.sh") 
+#set(CMAKE_CXX_COMPILER "tau_cxx.sh")
 
 #IF(CMAKE_COMPILER_IS_GNUCXX)
 #	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
@@ -222,16 +230,16 @@ add_subdirectory(UCRolling)
 add_subdirectory(BasisBootstrap)
 
 # this will print a warning message, should figure out how to silence it
-add_library(pipsForSwift SHARED)
+#add_library(pipsForSwift SHARED)
 # add any libraries needed by swift app here
-target_link_libraries(pipsForSwift pipss stochInput ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+#target_link_libraries(pipsForSwift pipss stochInput ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
-#if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 
+#if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 #add_subdirectory(src/Tests)
 #add_subdirectory(src/SuboptimizationSerial)
 #add_subdirectory(src/Utilities)
 #add_subdirectory(src/SMPS)
-#endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static") 
+#endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
 
 #if(HAVE_SML)
