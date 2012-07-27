@@ -82,7 +82,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   int mype;
   MPI_Comm_rank(comm,&mype);
 
-  //s->monitorSelf();
+  solver->monitorSelf();
   int result = solver->solve(data,vars,resids);
  
   

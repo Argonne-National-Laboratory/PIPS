@@ -329,6 +329,7 @@ void sLinsys::LniTransMult(sData *prob,
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
 				       DenseSymMatrix& SC) 
 {
+
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
