@@ -13,57 +13,6 @@
 #include "PardisoSolver.h"
 #include "DeSymIndefSolver.h"
 
-static void mySymAtPutSubmatrix(SymMatrix& kkt, 
-			 GenMatrix& B, GenMatrix& D, 
-			 int locnx, int locmy, int locmz);
-
-sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
-					   OoqpVector* dd_, 
-					   OoqpVector* dq_,
-					   OoqpVector* nomegaInv_,
-					   OoqpVector* rhs_)
-  : sLinsys(factory_, prob, dd_, dq_, nomegaInv_, rhs_)
-    //,    kkt(NULL), solver(NULL)
-{
-  int rank; MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  //double t = MPI_Wtime();
-  
-  // create the KKT system matrix
-  // size = ?  nnz = ?
-  int nnzQ, nnzB, nnzD;
-
-  prob->getLocalSizes(locnx, locmy, locmz);
-  int n = locnx+locmy+locmz;
-
-  prob->getLocalNnz(nnzQ, nnzB, nnzD);
-
-  //alocate the matrix and copy the data into
-  SparseSymMatrix* kktsp = new SparseSymMatrix(n, n+nnzQ+nnzB+nnzD);
-  kkt = kktsp;
-
-  SimpleVectorHandle v( new SimpleVector(n) );
-  v->setToZero();
-  kkt->setToDiagonal(*v);
-
-  kkt->symAtPutSubmatrix( 0, 0, prob->getLocalQ(), 0, 0, locnx, locnx);
-  if(locmz>0) {
-    kkt->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx);
-    kkt->symAtPutSubmatrix( locnx+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx);
-    
-  } else
-    mySymAtPutSubmatrix(*kkt, prob->getLocalB(), prob->getLocalD(), locnx, locmy, locmz);
-
-  // create the solver for the linear system
-  solver = new Ma57Solver(kktsp);
-  //solver = new PardisoSolver(kktsp);
-  //solver = new DeSymIndefSolver(kktsp);
-
-  //t = MPI_Wtime() - t;
-  //if (rank == 0) printf("new sLinsysLeaf took %f sec\n",t);
-
-  mpiComm = (dynamic_cast<StochVector*>(dd_))->mpiComm;
-}
-
 sLinsysLeaf::~sLinsysLeaf()
 {
 
@@ -73,7 +22,6 @@ void sLinsysLeaf::factor2(sData *prob, Variables *vars)
 {
   // Diagonals were already updated, so
   // just trigger a local refactorization (if needed, depends on the type of lin solver).
-    
   stochNode->resMon.recFactTmLocal_start();
   solver->matrixChanged();
   stochNode->resMon.recFactTmLocal_stop();
@@ -141,9 +89,9 @@ void sLinsysLeaf::sync()
 void sLinsysLeaf::deleteChildren()
 { }
 
-static void mySymAtPutSubmatrix(SymMatrix& kkt_, 
-			 GenMatrix& B_, GenMatrix& D_, 
-			 int locnx, int locmy, int locmz)
+void sLinsysLeaf::mySymAtPutSubmatrix(SymMatrix& kkt_, 
+					     GenMatrix& B_, GenMatrix& D_, 
+					     int locnx, int locmy, int locmz)
 {
   SparseSymMatrix& kkt = reinterpret_cast<SparseSymMatrix&>(kkt_);
   SparseGenMatrix& B   = reinterpret_cast<SparseGenMatrix&>(B_);
@@ -168,19 +116,10 @@ static void mySymAtPutSubmatrix(SymMatrix& kkt_,
     jcolK[itK]=i+locnx; MK[itK] = 0.0; itK++;
 
     assert(j==krowB[i+1]);
-    //for(; j<krowB[i+1]; j++) { jcolK[itK]=jcolB[j]; MK[itK]=MB[j]; itK++; assert(false);}
 
     krowK[i+locnx+1]=itK;
   }
-
-
   assert(locmz==0);
-  //assert(false);
-  //12120
-  //for(int i=0; i<-240; i++) {
-  //  for(int j=krowK[i]; j<krowK[i+1]; j++)
-  //    printf("%5d %5d    %8.3f\n", i, jcolK[j], MK[j]);
-  //}
 }
 
 

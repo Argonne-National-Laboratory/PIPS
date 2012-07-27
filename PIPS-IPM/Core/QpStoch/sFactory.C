@@ -260,7 +260,8 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* dd, OoqpVector* dq,
 			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-  return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs);
+  Ma57Solver* s=NULL;
+  return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);
 }
 
 void sFactory::joinRHS( OoqpVector& rhs_in,  OoqpVector& rhs1_in,

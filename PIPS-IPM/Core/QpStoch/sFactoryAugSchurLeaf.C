@@ -15,6 +15,6 @@ sLinsysLeaf* sFactoryAugSchurLeaf::newLinsysLeaf(sData* prob,
 						 OoqpVector* dd,OoqpVector* dq,
 						 OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-  cout << "sFactoryAugSchurLeaf::newLinsysLeaf  returns  a sLinsysLeafSchurSlv" << endl;
+  //cout << "sFactoryAugSchurLeaf::newLinsysLeaf  returns  a sLinsysLeafSchurSlv" << endl;
   return new sLinsysLeafSchurSlv(this, prob, dd, dq, nomegaInv, rhs);
 }

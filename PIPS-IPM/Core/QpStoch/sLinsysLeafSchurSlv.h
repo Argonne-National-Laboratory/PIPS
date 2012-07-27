@@ -21,8 +21,7 @@ class sLinsysLeafSchurSlv : public sLinsysLeaf
   sLinsysLeafSchurSlv(sFactory* factory,
 		      sData* prob_,				    
 		      OoqpVector* dd_, OoqpVector* dq_, OoqpVector* nomegaInv_,
-		      OoqpVector* rhs_)
-    : sLinsysLeaf(factory, prob_, dd_, dq_, nomegaInv_, rhs_) {};
+		      OoqpVector* rhs_);
 
 
   void addTermToDenseSchurCompl(sData *prob, 
