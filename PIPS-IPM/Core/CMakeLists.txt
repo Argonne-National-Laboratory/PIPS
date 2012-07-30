@@ -16,7 +16,7 @@ if(HAVE_MA57)
 	set(solvers ${solvers} LinearSolvers/Ma57Solver/Ma57Solver.C QpGen/QpGenSparseMa57.C)
 endif(HAVE_MA57)
 if(HAVE_PARDISO)
-	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C)
+	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C LinearSolvers/PardisoSolver/PardisoSchurSolver.C)
 endif(HAVE_PARDISO)
 
 add_library(ooqpgensparse 
