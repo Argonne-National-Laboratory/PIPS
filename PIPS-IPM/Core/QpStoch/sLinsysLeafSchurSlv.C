@@ -8,7 +8,7 @@
 #include "sData.h"
 #include "SparseSymMatrix.h"
 #include "SparseGenMatrix.h"
-#include "PardisoSolver.h"
+#include "PardisoSchurSolver.h"
 #include "Ma57Solver.h"
 
 /**
@@ -29,11 +29,8 @@ void sLinsysLeafSchurSlv::addTermToDenseSchurCompl( sData *prob,
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
-  int tmp, nxP, NP;
-  A.getSize(tmp, nxP); assert(tmp==locmy);
-  NP = SC.size();      assert(NP>=nxP);
+  PardisoSchurSolver* scSolver=dynamic_cast<PardisoSchurSolver*>(solver);
 
-
-  
-
+  scSolver->schur_solve(R,A,C, SC);
+  cout << " sLinsysLeafSchurSlv::addTermToDenseSchurComp done" << endl;
 }
