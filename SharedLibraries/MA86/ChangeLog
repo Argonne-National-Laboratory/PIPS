@@ -1,0 +1,47 @@
+2012-02-01  Jonathan Hogg
+Version 1.3.0
+   * Fix bug on some symbolically structural matrices where analysis phase
+     reports allocation error rather than singular warning/error.
+   * Implement workarounds for various ifort bugs (particularly under windows).
+   * Fix crash bug relating to destruction of locks on allocation failure.
+
+2011-07-19  Jonathan Hogg
+Version 1.2.0
+   * Change C interface control.small to control.small_ to avoid collision
+     with Microsoft C reserved word.
+   * Add control%scaling
+   * Modify behaviour of optional scale parameter (see control%scaling)
+   * Fix bug where OpenMP locks were not destroyed properly in lfactor data
+     structure when running the factorize phase a second time.
+   * Numerous (mostly minor) performance enhacements based on comparison with
+     MA57 on small and rank deficient matrices:
+      * Remove lcol_new - always construct in colwork (rather than lcol), then
+        copy to lcol when done
+      * Optimise loops and variable naming in MA64 code for better performance
+      * Move test on second column so only performed if 2x2 pivot is good
+      * Cache value from scanning a column that is passed over in favour of
+        trying for a 2x2
+      * Avoid updates in MA64 code with zero columns
+      * Do ma64_update block columnwise to avoid ops with upper entries on
+        large columns
+      * Avoid passing arrays as allocatables to inner kernels by allocating to
+        correct size at top level [avoids Fortran datatype packing overheads]
+      * Store delays columnwise after rowwise factors
+      * Split handling of leafnodes away from non-leaf nodes, allowing
+        construction in a colwise fashion without worry about delays etc.
+
+2011-05-18  Jonathan Hogg
+Version 1.1.0
+   * Make members private by default.
+   * Add matlab interface.
+   * Add C interface.
+   * Add optional scale parameter.
+   * Fix missing argument in documentation.
+   * Several small performance improvements
+   * Reduce use of log function in calculating info%detlog (can be massive
+     performance overhead)
+   * Fix bug with info%flag values carried incorrectly between subsequent
+     calls to ma86_factor/ma86_factor_solve
+
+2010-12-13  Jonathan Hogg
+Version 1.0.0 Initial release.

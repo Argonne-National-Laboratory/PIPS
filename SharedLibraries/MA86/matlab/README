@@ -1,0 +1,243 @@
+-----------------------------------------------------------------
+1. Introduction
+-----------------------------------------------------------------
+HSL_MA86 solves the system
+                  A * X = B
+where A is a specified n x n symmetric or Hermitian matrix, B is an n x m
+specified right-hand side and X is an n x m unknown. If m=1, this simplifies
+to A * x = b.
+A direct method is used, performing the factorization PAP' = LDL' where P is
+a permutation matrix.
+
+If A is positive-definite, consider using HSL_MA87 instead.
+
+OpenMP is used to support parallel computation on multicore. For best
+performance an OpenMP supporting compiler should be used.
+
+-----------------------------------------------------------------
+2. Requirements
+-----------------------------------------------------------------
+
+These instructions are for linux-based systems (both 32-bit and 64-bit machines
+are supported).
+
+Requirements:
+ - Matlab 2008a or more recent version
+ - The gfortran or g95 compiler
+ - The MATLAB environment variable must point to your system matlab directory
+   (see INSTALL for further details)
+
+We note that gfortran compiler is NOT SUPPORTED by Mathworks on Linux prior
+to MATLAB 2011a, however g95 does not support OpenMP and has considerably
+poorer code optimization.
+
+
+-----------------------------------------------------------------
+3. Installation
+-----------------------------------------------------------------
+Instructions for installing the Matlab Interface for HSL_MA86 are located in
+INSTALL.
+
+-----------------------------------------------------------------
+4. Using the Matlab interface
+-----------------------------------------------------------------
+
+There are two approaches for using HSL_MA86 under Matlab.
+(a) Just use hsl_ma86_backslash in place of matlab's own X = A \ B.
+(b) Use the "expert" interface that allows a factorization to be preserved and
+    multiple solves to be performed using it.
+
+Approach (a) is offered as a subset of the functions implement (b).
+
+-----------------------------------------------------------------
+4(a). As a replacement backslash routine
+-----------------------------------------------------------------
+
+- If not already in the search paths, add the directory where you installed the
+  interface to the search paths, e.g.
+   >> addpath('ma86_matlab')
+   >> javaaddpath('ma86_matlab')
+   where ma86_matlab is the directory.
+   [ You can add these paths permanently (see 'help pathtool')]
+
+- To solve the equation AX = B for X:
+   >> X = ma86_backslash(A, B)
+  This will only work when A is symmetric. For Hermitian A, see the expert
+  interface.
+
+-----------------------------------------------------------------
+4(b). The "expert" interface
+-----------------------------------------------------------------
+The expert interface has the concept of handles. These are integers that refer
+to factorizations held in memory. The factorization will continue to take up
+memory until the 'destroy' call is used on that particular handle. The use
+of these handles allows for storing multiple matrix factors simultaneously
+without the inefficiency of translating internal data formats to MATLAB arrays.
+
+Complex matrices are assumed to be symmetric unless they are specified as
+Hermitian by setting the value control.hermitian=true.
+
+- If not already in the search paths, add the directory where you installed the
+  interface to the search paths, e.g.
+   >> addpath('ma86_matlab')
+   >> javaaddpath('ma86_matlab')
+  where ma86_matlab is the directory.
+  [ You can add these paths permanently (see 'help pathtool') ]
+
+- hsl_ma86_factor may be used to perform the factorization of a symmetric
+  matrix A. This is equivalent to calling the Fortran routines ma86_analyse
+  and ma86_factor.
+   >> handle = hsl_ma86_factor(A)
+  Optionally control and info structures may be used
+   >> [handle, info] = hsl_ma86_factor(A, control)
+  If the user wishes to provide a permutation P (rather than allow ma86 to find
+  its own), it should be specified as the fourth argument:
+   >> handle = hsl_ma86_factor(A, [], P)
+  where P is a vector as returned by symamd(A).
+
+- hsl_ma86_solve may be used to perform the solution of AX=B where A has
+  already been factorized by a previous call to hsl_ma86_factor or
+  hsl_ma86_backslash. This is equivalent to calling the Fortran routine
+  ma86_solve.
+   >> X = hsl_ma86_solve(handle, B)
+  Optionally control and info structures may be used
+   >> [X, info] = hsl_ma86_solve(handle, B, control)
+
+- hsl_ma86_backslash may be used to perform a combined factorization and
+   solve. This is equivalent to calling the Fortran routines ma86_analyse
+   and ma86_factor_solve.
+    >> X = hsl_ma86_backslash(A, b)
+   Optionally control and info structures may be used
+    >> [X, info] = hsl_ma86_backslash(A, b, control)
+   It is possible to preserve the factorization in memory by supplying an
+   output variable to store the handle
+    >> [X, info, handle] = hsl_ma86_backslash(A, b)
+   As in the 'factor' call a permutation P may be supplied by the user
+    >> X = hsl_ma86_backslash(A, b, [], P)
+
+-----------------------------------------------------------------
+5. Control and information structures
+-----------------------------------------------------------------
+A limited subset of the Fortran control and information parameters may be
+used through the expert MATLAB interface.
+
+
+-----------------------------------------------------------------
+5(a). The control structure
+-----------------------------------------------------------------
+The argument control may have any of the following components set. If
+unrecognised components are present a warning is issued. If a component
+is not present its default value is used.
+
+control.hermitian    - True or false. Determines if a complex matrix is
+                       treated as Hermitian (true) or symmetric (false).
+                       Default is false.
+control.nb           - Block size to be used. Default is 256.
+control.nemin        - Maximum number of columns in candidates for
+                       supernode amalgamation. Default is 32.
+control.num_threads  - Number of threads on which to run. Default is the
+                       maximum available.
+control.scaling      - Determines if scaling is to be used with values:
+                              1 : MC77 in the one norm
+                       otherwise:  no scaling
+                       Default is 1.
+control.small        - Pivots of modulus less than this are treated as zero.
+                       Default is 1e-20.
+control.static       - If greater than zero static pivoting is used.
+                       Default is 0.0.
+control.u            - Initial relative pivot tolerance threshold. Default
+                       is 0.01.
+control.umin         - Relaxed relative pivot tolerance threshold. Default
+                       is 1.0.
+
+A fuller description for many of the components is available in the Fortran
+documentation.
+
+-----------------------------------------------------------------
+5(b). The info structure
+-----------------------------------------------------------------
+On return from a routine, the output argument info is a structure that will
+have one or more of the following components set:
+
+info.matrix_rank        - Number of non-zero pivots.
+info.num_delay          - Number of delayed pivots.
+info.num_factor         - Number of entries in the factors (after supernode
+                          amalgamation).
+info.num_flops          - Number of floating point operations to form factors
+                          (after supernode amalgamation).
+info.num_neg            - Number of negative pivots in factors.
+info.num_perturbed      - Number of perturbed pivots when static pivoting is
+                          used.
+info.num_two            - Number of 2x2 pivots used in factorization.
+info.order              - Ordering used. One of 'MeTiS', 'AMD' or 'user'.
+                          If a user has provided a permutation that is used,
+                          otherwise a MeTiS ordering is used. Should MeTiS
+                          not be available then AMD is used instead.
+info.usmall             - Threshold parameter actually used. This will only
+                          differ from control.u if control.umin < control.u.
+info.order_time         - Wall clock time for Fortran ordering routine
+info.analyse_time       - Wall clock time for Fortran ma86_analyse call
+info.factor_time        - Wall clock time for Fortran ma86_factor call
+info.factor_solve_time  - Wall clock time for Fortran ma86_factor_solve call
+info.solve_time         - Wall clock time for Fortran ma86_solve call
+
+A fuller description for many of the components is available in the Fortran
+documentation.
+
+
+-----------------------------------------------------------------
+6. Example
+-----------------------------------------------------------------
+The following MATLAB session shows an example of using hsl_ma86 to solve a
+system using the expert 'backslash' action.
+
+>> A = sparse ([1 1 1 2 2 3 3 3 4 4], [2 3 4  1 3  1 2 3  1 4], [1.1-i 2.2-i 3.3-i, 1.1+i 4.4-i, 2.2+i 4.4+i 5.5, 3.3+i 6.6])
+
+
+A =
+
+   (2,1)      1.1000 + 1.0000i
+   (3,1)      2.2000 + 1.0000i
+   (4,1)      3.3000 + 1.0000i
+   (1,2)      1.1000 - 1.0000i
+   (3,2)      4.4000 + 1.0000i
+   (1,3)      2.2000 - 1.0000i
+   (2,3)      4.4000 - 1.0000i
+   (3,3)      5.5000          
+   (1,4)      3.3000 - 1.0000i
+   (4,4)      6.6000
+
+>> x = rand(size(A,1), 2)        
+
+x =
+
+    0.8092    0.3258
+    0.7486    0.5464
+    0.1202    0.3989
+    0.5250    0.4151
+
+>> b = A*x;
+>> control.hermitian = true;
+>> [soln, info] = hsl_ma86_backslash(A, b, control)
+
+soln =
+
+   0.8092             0.3258          
+   0.7486 - 0.0000i   0.5464 + 0.0000i
+   0.1202 - 0.0000i   0.3989          
+   0.5250             0.4151 + 0.0000i
+
+
+info = 
+
+          matrix_rank: 4
+            num_delay: 0
+           num_factor: 10
+            num_flops: 30
+              num_neg: 2
+        num_perturbed: 0
+              num_two: 1
+                order: 'AMD'
+           order_time: 0
+         analyse_time: 0
+    factor_solve_time: 0.0830

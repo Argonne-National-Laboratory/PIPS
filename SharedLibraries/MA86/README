@@ -1,0 +1,83 @@
+Legal Notice
+============
+ALL USAGE OF HSL IS SUBJECT TO LICENCE. PLEASE REFER TO THE FILE 'LICENCE'
+DISTRIBUTED WITH THIS SOFTWARE. THIS LICENCE APPLIES TO ALL FILES UNLESS
+OTHERWISE INDICATED. IF YOU OBTAINED A COPY OF THIS SOFTWARE WITHOUT THIS FILE,
+PLEASE CONTACT HSL@STFC.AC.UK TO OBTAIN ONE.
+
+In particular:
+1) You are obliged to cite HSL in any publication or report as:
+   "HSL, a collection of Fortran codes for large-scale scientific computation.
+    See http://www.hsl.rl.ac.uk/"
+2) You may not make available to others the software in any form, either as
+   source or as a precompiled object.
+
+Introduction
+============
+Thanks for downloading HSL software. You can find out more information about
+HSL by visiting our website: http://www.hsl.rl.ac.uk/
+
+We are trialling a new installation system, please send any feedback to
+hsl@stfc.ac.uk
+
+Installation
+============
+
+Compilation follows the standard process:
+   ./configure
+   make
+
+To install the library, module and any header files into /usr/local you may
+use the following command (this may require root permissions):
+   make install
+
+For further options, including installation in locations other than
+/usr/local and specifying the use of particular Fortran compilers and
+compile flags please run
+   ./configure --help
+
+External Libraries
+==================
+
+This package requires the following external libraries:
+BLAS     -  this library is usually supplied by your computer processor vendor
+            (eg Intel MKL), and using a good one is critical to performance.
+            If you are unable to locate a vendor BLAS then you should use either
+            the Goto or ATLAS BLAS (the latter is often available as part of
+            your linux distribution). If you cannot gain access to any of these,
+            you can obtain the relevant BLAS routines by visiting the following
+            URL: http://www.hsl.rl.ac.uk/blas/
+            Such routines obtained from the above url are at least ten times
+            slower than the other BLAS libraries mentioned.
+            If you wish to compile the example programs, you can specify a BLAS
+            library as an argument to configure using
+            --with-blas=/path/to/libblas.a
+LAPACK   -  You can obtain the latest LAPACK from http://www.netlib.org/lapack
+            For your convenience, we have included relevant implementations in
+            the file src/lapack_deps.f
+            If you wish to compile the example programs, you can specify a
+            LAPACK library as an argument to configure using
+            --with-lapack=/path/to/liblapack.a
+MeTiS    -  You can obtain the latest version of MeTiS from
+            http://glaros.dtc.umn.edu/gkhome/views/metis
+            Due to interface changes, VERSION 4 IS REQUIRED, NOT VERSION 5.
+            You can obtain older versions from the following url:
+            http://glaros.dtc.umn.edu/gkhome/fsroot/sw/metis/OLD
+            If you do not wish to use metis for obtaining an elimination
+            ordering, you can instead link against the library libfakemetis.a
+            that is built at the same time as this library.
+            If you wish to compile the example programs, you can specify a MeTiS
+            library as an argument to configure using
+            --with-metis=/path/to/libmetis.a
+
+
+Example Programs
+================
+
+The example/ subdirectory contains example programs. These may be compiled
+through the following command.
+   make check
+
+To successfully perform this check you will require the external libraries
+detailed in the previos section. The configure script will attempt to find
+these libraries, but you may need to explicitly specify their location.

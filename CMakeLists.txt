@@ -39,6 +39,7 @@ set(SML_DIR ${SHARED_DIR}/sml-0.7.2)
 set(AMPL_DIR ${SHARED_DIR}/amplsolvers)
 set(MA27_DIR ${SHARED_DIR}/MA27)
 set(MA57_DIR ${SHARED_DIR}/MA57)
+set(MA86_DIR ${SHARED_DIR}/MA86/src)
 set(METIS_DIR ${SHARED_DIR}/metis-4.0.1)
 # include CoinUtils
 #set(COIN_DIR ${Simplex_SOURCE_DIR}/CoinUtils-2.8.0)
