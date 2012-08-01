@@ -29,7 +29,7 @@ extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
                   double *, int    *,    int *, int *,   int *, int *,
                      int *, double *, double *, int *, double *);
-extern "C" void pardiso_schur(void*, int, int, int, double*, int*, int*);
+extern "C" void pardiso_schur(void*, int*, int*, int*, double*, int*, int*);
 
 extern "C" void pardiso_chkmatrix  (int *, int *, double *, int *, int *, int *);
 extern "C" void pardiso_chkvec     (int *, int *, double *, int *);
@@ -98,6 +98,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 				     SparseGenMatrix& C,
 				     DenseSymMatrix& SC)
 {
+  cout << "PardisoSchurSolver::schur_solve starts" << endl;
   if(firstSolve) {
     // create the augmented system
 
@@ -111,6 +112,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
     assert( Msys->size() == nx1+my1+mz1 );
     nnz += Msys->numberOfNonZeros();
 
+    cout << "Augmented system size=" << n << "  nnz=" << nnz << endl;
     SparseSymMatrix augSys( n, nnz);
       
     //setup the diagonal, as required by Pardiso.
@@ -119,29 +121,27 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
     augSys.setToDiagonal(*v);
     delete v;
     
-    cout << "Diagonals set" << endl;
+    cout << "K:    " << Msys->size() << "  nnz=" << Msys->numberOfNonZeros() << endl;
     
     //put the blocks in augmented system
     augSys.symAtPutSubmatrix( 0, 0, *Msys, 0, 0, Msys->size(), Msys->size());
 
     int nR, mR; R.getSize(nR,mR);
-    cout << "R: " << nR << " x " << mR << "   nnz=" << R.numberOfNonZeros() << endl;
+    cout << "R:" << nR << " x " << mR << "   nnz=" << R.numberOfNonZeros() << endl;
     if(R.numberOfNonZeros()>0) {
-      augSys.symAtPutSubmatrix( Msys->size(), 0, R, 0, 0, nR, mR);
+      augSys.symAtPutSubmatrix( 0, Msys->size(), R, 0, 0, nR, mR);
     }
  
-   int nA, mA; A.getSize(nA,mA);
-    cout << "A: " << nA << " x " << mA << "   nnz=" << A.numberOfNonZeros() << endl;
+    int nA, mA; A.getSize(nA,mA);
+    cout << "A:" << nA << " x " << mA << "   nnz=" << A.numberOfNonZeros() << endl;
     if(A.numberOfNonZeros()>0 && nA>0) {
-      augSys.symAtPutSubmatrix( Msys->size()+nR, 0, A, 0, 0, nA, mA);
+      augSys.symAtPutSubmatrix( 0, Msys->size()+nR, A, 0, 0, nA, mA);
     }
-
-    
-
+      
     int nC, mC; C.getSize(nC, mC);
-    cout << "C: " << nC << " x " << mC << "   nnz=" << C.numberOfNonZeros() << endl;
+    cout << "C:" << nC << " x " << mC << "   nnz=" << C.numberOfNonZeros() << endl;
     if(C.numberOfNonZeros()>0 && nC>0) {
-      augSys.symAtPutSubmatrix( Msys->size()+nR+nA, 0, C, 0, 0, nC, mC);
+      augSys.symAtPutSubmatrix( 0, Msys->size()+nR+nA, C, 0, 0, nC, mC);
     }
 
     cout << " AUG SYS nnz=" << augSys.numberOfNonZeros() << endl;
@@ -154,6 +154,10 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
     augSys.getStorageRef().transpose(krowM, jcolM, M);
     //save the indeces for diagonal entries ( first Msys->size() )
     // to do
+
+    //convert to Fortran indexing
+    for(int it=0; it<=n; it++)   krowM[it]++;
+    for(int it=0; it<nnz;it++)   jcolM[it]++;
   
     firstSolve=false; first = false;  // to do
   } //end of if(firstSolve)
@@ -179,7 +183,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
                  // if needed, use 2 for advanced matchings and higer accuracy.
   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 
-  int msglvl=1;  // with statistical information
+  int msglvl=0;  // with statistical information
   iparm[32] = 1; // compute determinant
   iparm[37] = Msys->size(); //compute Schur-complement
   int nr=n-Msys->size();
@@ -190,7 +194,6 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 	   NULL, &nrhs,
 	   iparm , &msglvl, NULL, NULL, &error, dparm );
 
-  cout << "Schur Factorization completed" << endl;
   //cout << "factorizing the matrix took:" << MPI_Wtime()-tt << endl;
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during factorization: %d\n", error );
@@ -200,7 +203,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   int* rowSC=new int[iparm[38]];
   double* mSC=new double[iparm[38]];
 
-  pardiso_schur(pt, maxfct, mnum, mtype, mSC, rowSC, colSC);
+  pardiso_schur(pt, &maxfct, &mnum, &mtype, mSC, rowSC, colSC);
 
   //Schur-complement extracted... updating dense SC matrix
   for(int j=0; j<nr; j++) {
@@ -221,6 +224,7 @@ void PardisoSchurSolver::solve(GenMatrix& rhs_in)
 
 PardisoSchurSolver::~PardisoSchurSolver()
 {
+  cout << "calling destructor PardisoSchurSolver" << endl;
   phase = -1; /* Release internal memory . */
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
