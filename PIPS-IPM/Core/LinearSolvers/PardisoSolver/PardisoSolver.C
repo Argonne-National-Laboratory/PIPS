@@ -80,6 +80,7 @@ void PardisoSolver::diagonalChanged( int /* idiag */, int /* extent */ )
   this->matrixChanged();
 }
 
+extern double g_iterNumber;
 void PardisoSolver::matrixChanged()
 {
   if (first) { firstCall(); first = false; }
@@ -112,7 +113,7 @@ void PardisoSolver::matrixChanged()
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
-  int msglvl=0; //messaging level
+  int msglvl=1; //messaging level
 
 
   iparm[2] = num_threads;
@@ -120,6 +121,32 @@ void PardisoSolver::matrixChanged()
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
+
+  // char szName[1024];
+  // sprintf(szName, "Qdump_4h_it%g.dat", g_iterNumber);
+  // ofstream fd(szName);
+  // cout << "QDUMP -----> to "<< szName << endl;
+  // fd << scientific;
+  // fd.precision(16);
+  // fd << n << endl;
+  // fd << nnz << endl;
+  // int i;
+  // for (i = 0; i <= n; i++)
+  //   fd << krowM[i] << " ";
+  // fd << endl;
+  // for (i = 0; i < nnz; i++)
+  //   fd << jcolM[i] << " ";
+  // fd << endl;
+  // for (i = 0; i < nnz; i++)
+  //   fd << M[i] << " ";
+  // fd << endl;
+  // //for (i = 0; i < n; i++)
+  // //  fd << rhs[i] << " ";
+  // //fd << endl;
+  // fd.flush();
+  // fd.close();
+  // printf("finished dumping mat\n");
+
   
   pardiso (pt , &maxfct , &mnum, &mtype , &phase ,
 	   &n, M, krowM, jcolM,
@@ -134,7 +161,7 @@ void PardisoSolver::matrixChanged()
  
 void PardisoSolver::solve( OoqpVector& rhs_in )
 {
-    
+  //cout << "PARDISO-single rhs" << endl;    
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
   double * drhs = rhs.elements();
   //cout << " in: ";
@@ -146,7 +173,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
-  int msglvl=0;
+  int msglvl=1;
 
   iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
@@ -166,11 +193,9 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   //cout  << endl;
 }
 
-
-
-
 void PardisoSolver::solve(GenMatrix& rhs_in)
 {
+  //cout << "PARDISO-multiple rhs" << endl;    
   DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
 
   //cout << "Multiple dense rhs " << endl;
@@ -191,33 +216,12 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=ncols;
-  int msglvl=0;
+  int msglvl=1;
 
   iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
 
-  /*ofstream fd("Qdump.dat");
-  fd << scientific;
-  fd.precision(16);
-  fd << n << endl;
-  fd << nnz << endl;
-  int i;
-  for (i = 0; i <= n; i++)
-    fd << krowM[i] << " ";
-  fd << endl;
-  for (i = 0; i < nnz; i++)
-    fd << jcolM[i] << " ";
-  fd << endl;
-  for (i = 0; i < nnz; i++)
-    fd << M[i] << " ";
-  fd << endl;
-  //for (i = 0; i < n; i++)
-  //  fd << rhs[i] << " ";
-  //fd << endl;
-  fd.flush();
-  fd.close();
-  printf("finished dumping mat\n");*/
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
@@ -247,7 +251,7 @@ PardisoSolver::~PardisoSolver()
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
-  int msglvl=0;
+  int msglvl=1;
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, NULL, krowM, jcolM, NULL, &nrhs,

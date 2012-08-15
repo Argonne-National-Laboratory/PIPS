@@ -21,6 +21,7 @@
 #include "sLinsysLeaf.h"
 
 #include "Ma57Solver.h"
+#include "PardisoSolver.h"
 
 sFactory::sFactory( stochasticInput& in)
   : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
@@ -76,8 +77,12 @@ void dumpaug(int nx, SparseGenMatrix &A, SparseGenMatrix &C) {
 	A.getSize(my,nx_1);
 	C.getSize(mz,nx_2);
 	assert(nx_1 == nx_2);
+	
 	int nnzA = A.numberOfNonZeros();
 	int nnzC = C.numberOfNonZeros();
+	cout << "augdump  nx=" << nx << endl;
+	cout << "A: " << my << "x" << nx_1 << "   nnz=" << nnzA << endl
+	     << "C: " << mz << "x" << nx_1 << "   nnz=" << nnzC << endl;
 	
 	vector<double> eltsA(nnzA), eltsC(nnzC), elts(nnzA+nnzC);
 	vector<int> colptrA(nx_1+1),colptrC(nx_1+1), colptr(nx_1+1), rowidxA(nnzA), rowidxC(nnzC), rowidx(nnzA+nnzC);
@@ -152,7 +157,7 @@ Data * sFactory::makeData()
   StochVectorHandle    icupp( tree->createicupp() );
   REP("icupp");
 
-
+  //dumpaug(((sTreeImpl*)tree)->nx(), *(A->children[1]->Amat), *(C->children[1]->Amat));
 
   TIM;
   StochSymMatrixHandle     Q( tree->createQ() );
@@ -261,6 +266,7 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
   Ma57Solver* s=NULL;
+  //PardisoSolver* s=NULL;
   return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);
 }
 

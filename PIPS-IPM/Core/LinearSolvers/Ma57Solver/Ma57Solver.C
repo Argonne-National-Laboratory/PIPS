@@ -1,7 +1,7 @@
 /* OOQP                                                               *
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP 
- * Modefied by Cosmin Petra to perform solves with the factors.
+ * Modified by Cosmin Petra to perform solves with the factors.
  */
 
 #include "Ma57Solver.h"
@@ -136,6 +136,7 @@ void Ma57Solver::matrixChanged()
     //!log
     //dumpdata(irowM, jcolM, M, n, nnz);
     //assert(false);
+
     FNAME(ma57bd)( &n,       &nnz,    M,     fact,  &lfact,  ifact,
 	     &lifact,  &lkeep,  keep,  iwork,  icntl,  cntl,
 	     info,     rinfo );
@@ -438,42 +439,42 @@ void Ma57Solver::solve(int solveType, OoqpVector& rhs_in)
 void Ma57Solver::solve(GenMatrix& rhs_in)
 {
   DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
-	int N,NRHS;
-	// rhs vectors are on the "rows", for continuous memory
-	rhs.getSize(NRHS,N);
-	assert(n==N);
-  
+  int N,NRHS;
+  // rhs vectors are on the "rows", for continuous memory
+  rhs.getSize(NRHS,N);
+  assert(n==N);
+
+  /*  
   // we need checks on the residuals, can't do that with multiple RHS
   for (int i = 0; i < NRHS; i++) {
     SimpleVector v(rhs[i],N);
     solve(v);
   }
-
+  */
   
-  /*
   int job = 1;
 
   const int BLOCKSIZE = 20;
-
+  
   double * dwork  = new_dworkn(n*BLOCKSIZE);
-	int dworksize = n*BLOCKSIZE;
+  int dworksize = n*BLOCKSIZE;
   int * iwork     = new_iworkn(n);
-
-	for (int startcol = 0; startcol < NRHS; startcol += BLOCKSIZE) {
-		double *drhs = rhs[startcol];
-		int endcol = MIN(startcol+BLOCKSIZE,NRHS);
-		int numcols = endcol-startcol;
-
-		FNAME(ma57cd)( &job,       &n,        
-	   fact,       &lfact,    ifact,  &lifact,  
-	   &numcols,       drhs,      &n,   
-	   dwork,      &dworksize,        iwork, 
-	   icntl,      info );
-		assert(info[0] >= 0);
-		if (info[0] > 0) {
-			printf("warning from ma57cd, info[0]=%d\n",info[0]);
-		}
-	}*/
+  
+  for (int startcol = 0; startcol < NRHS; startcol += BLOCKSIZE) {
+    double *drhs = rhs[startcol];
+    int endcol = MIN(startcol+BLOCKSIZE,NRHS);
+    int numcols = endcol-startcol;
+    //cout << "MA57 multiple RHS" << endl;    
+    FNAME(ma57cd)( &job,       &n,        
+		   fact,       &lfact,    ifact,  &lifact,  
+		   &numcols,       drhs,      &n,   
+		   dwork,      &dworksize,        iwork, 
+		   icntl,      info );
+    assert(info[0] >= 0);
+    if (info[0] > 0) {
+      printf("warning from ma57cd, info[0]=%d\n",info[0]);
+    }
+  }
 }
 
 

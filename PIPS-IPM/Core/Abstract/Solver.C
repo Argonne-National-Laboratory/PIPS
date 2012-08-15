@@ -254,7 +254,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     printf("hehe dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  if(rnorm / dnorm > artol && 
+  if(idx >= 70 && rnorm / dnorm > artol && 
      (rnorm_history[idx]/mu_history[idx]) / (rnorm_history[0]/mu_history[0]) 
      >= 1.e8) {
     stop_code = UNKNOWN;

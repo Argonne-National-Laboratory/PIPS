@@ -334,6 +334,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
+
   int N, nxP, NP;
   A.getSize(N, nxP); assert(N==locmy);
   NP = SC.size(); assert(NP>=nxP);
@@ -362,9 +363,8 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, allzero);
 
     if(!allzero) {
-	
-      solver->solve(cols);
-        
+      
+      solver->solve(cols);        
 
       R.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
        				      -1.0, &cols[0][0], N);
@@ -383,10 +383,6 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
     } //end !allzero
   }
-  /*for (int i = 0; i < NP*NP; i++) {
-      cout << *(SC[0]+i) << " " << endl;
-  }*/
-  /*assert(0);*/
 }
 
 

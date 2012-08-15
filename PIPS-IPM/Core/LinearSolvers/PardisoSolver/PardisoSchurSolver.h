@@ -12,7 +12,9 @@
 #include "OoqpVectorHandle.h"
 #include "SparseStorage.h"
 
+#include <map>
 
+using namespace std;
 
 #ifndef FNAME
 #ifndef __bg__
@@ -32,7 +34,9 @@ private:
   
  public:
   virtual void firstCall(); //first factorization call
-  void firstSolveCall(); //first solve call
+  void firstSolveCall(SparseGenMatrix& R, 
+		      SparseGenMatrix& A,
+		      SparseGenMatrix& C); //first solve call
   
   /** sets mStorage to refer to the argument sgm */
   PardisoSchurSolver( SparseSymMatrix * sgm ); 
@@ -62,31 +66,25 @@ private:
   bool first;
   bool firstSolve;
   void  *pt[64]; 
-  int mtype;
-  int solver;
   int iparm[64];
-  int num_threads;
-  
-  double b[8], x[8];
   double dparm[64];
-  int error;
-  int nrhs;  //  Number of right-hand sides 
-  int maxfct;
-  int mnum;
-  int phase;
-  int n;
+  int num_threads;
 
-  /** storage for the upper triangular (in row-major format) */
-  int     *krowM,    *jcolM;
-  double  *M;
-  
-  
-  /** number of nonzeros in the matrix */
+  /** dimension of the PARDISO augmented system */
+  int n; 
+  /** dimension of the Schur complement (# of rhs) */
+  int nSC; 
+  /** number of nonzeros in the PARDISO augmented matrix */
   int      nnz;
-  
-  /** temporary storage for the factorization process */
-  //int     *perm, *invp, *diagmap;
-  double* nvec; //temporary vec
+  /** storage for the upper triangular (in row-major format) */
+  int     *rowptrAug, *colidxAug;
+  double  *eltsAug;
+  /** mapping from from the diagonals of the PIPS linear systems to 
+      the diagonal elements of the (1,1) block  in the augmented system */
+  map<int,int> diagMap;
+
+  //temporary vector of size n
+  double* nvec;
   
   virtual ~PardisoSchurSolver();
 };

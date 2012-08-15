@@ -83,8 +83,12 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   MPI_Comm_rank(comm,&mype);
 
   solver->monitorSelf();
+
+  double tmElapsed=MPI_Wtime();
+  //---------------------------------------------
   int result = solver->solve(data,vars,resids);
- 
+  //---------------------------------------------
+  tmElapsed=MPI_Wtime()-tmElapsed;
   
   double objective = getObjective();
   if ( 0 == result && 0 == mype ) {
@@ -94,6 +98,15 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
     
     cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
 	 << objective << endl;
+
+    cout << "Solve time: " << tmElapsed << " seconds." << endl;
+
+    char *var = getenv("OMP_NUM_THREADS");
+    if(var != NULL) {
+      int num_threads;
+      sscanf( var, "%d", &num_threads );
+      cout << "Num threads: " << num_threads << endl;
+    }
   }
 }
 
