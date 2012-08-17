@@ -127,6 +127,14 @@ if(HAVE_METIS)
   include_directories(${SHARED_DIR}/metis-4.0.1/Lib)
 endif(HAVE_METIS)
 
+set(HAVE_MA86 HAVE_METIS)
+# Check if we have all libraries that Ma86 depends on exists.
+if(${MA86_LIB} MATCHES "MA86_LIB-NOTFOUND")
+  message(STATUS "MA86 library not found. Won't build code that requires MA86.")
+  set(HAVE_MA86 FALSE)
+endif(${MA86_LIB} MATCHES "MA86_LIB-NOTFOUND") 
+
+
 # see if we have MA27 or MA57
 set(HAVE_MA27 TRUE)
 set(HAVE_MA57 HAVE_METIS)
@@ -181,6 +189,10 @@ else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	endif(EXISTS ${PARDISO_LIB})
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
+
+set(MA86_DIR "${SHARED_DIR}/MA86")
+set(MA86_LIB "${MA86_DIR}/lib/libhsl_ma86.a")
+set(MA86_INC "${MA86_DIR}/include")
 
 set(SCIP_DIR "${SHARED_DIR}/scip-2.1.1")
 set(SCIP_LIBDIR "${SCIP_DIR}/lib")
