@@ -1,1 +1,1 @@
-./configure --with-metis=/sandbox/petra/work/pipsSrc/SharedLibraries/metis-4.0.1/libmetis.a FCFLAGS=-O2
+./configure --with-metis=/sandbox/petra/work/pipsSrc/SharedLibraries/metis-4.0.1/libmetis.a FCFLAGS=-O2 --prefix=/sandbox/petra/work/pipsSrc/SharedLibraries/MA86
