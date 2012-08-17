@@ -250,14 +250,14 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   iparm[2]=num_threads;
   iparm[7]=3;     //# iterative refinements
   //iparm[1] = 2; // 2 is for metis, 0 for min degree 
-  //iparm[ 9] =10; // pivot perturbation 10^{-xxx} 
+  //iparm[ 9] = 12; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 
   int msglvl=0;  // with statistical information
-  iparm[32] = 1; // compute determinant
+  //iparm[32] = 1; // compute determinant
   iparm[37] = Msys->size(); //compute Schur-complement
 
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
@@ -297,7 +297,6 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
 }
 
-#include "Ma57Solver.h"
 
 void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 {
@@ -308,7 +307,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   int maxfct=1, mnum=1, nrhs=1;
   iparm[2]=num_threads;
   //iparm[5]=1;    //replace rhs with sol 
-  iparm[7]=1;    // # of iterative refinements
+  iparm[7]=2;    // # of iterative refinements
   //iparm[1] = 2;// 2 is for metis, 0 for min degree 
   //iparm[ 9] =10; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
@@ -317,7 +316,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 
   int msglvl=0;  // with statistical information
-  iparm[32] = 1; // compute determinant
+  //iparm[32] = 1; // compute determinant
 
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
