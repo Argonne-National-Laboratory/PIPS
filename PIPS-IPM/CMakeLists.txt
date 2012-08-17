@@ -1,7 +1,8 @@
 #add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers 
-  Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver Core/LinearSolvers/PardisoSolver)
+  Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver 
+  Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver)
 include_directories(Core/StochLinearAlgebra Core/QpStoch)
 add_subdirectory(Core)
 
@@ -41,9 +42,20 @@ if(HAVE_MA57 AND HAVE_METIS)
     stochInput ${COIN_LIBS}
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense ${PARDISO_LIB}
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
-
+  
+  add_executable(qpgen-sparse-ma57-mehrotra.exe Core/QpGen/QpGenSparseMa57MehrotraDriver.C)
+  target_link_libraries(qpgen-sparse-ma57-mehrotra.exe 
+    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra ooqpdense 
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+  
 endif(HAVE_MA57 AND HAVE_METIS)
 
+if (HAVE_MA86 AND HAVE_METIS)
+  add_executable(qpgen-sparse-ma86-mehrotra.exe Core/QpGen/QpGenSparseMa86MehrotraDriver.C)
+  target_link_libraries(qpgen-sparse-ma86-mehrotra.exe
+    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra ooqpdense
+    ${MA86_LIB} ${METIS_LIBRARY} ${MATH_LIBS})
+endif(HAVE_MA86 AND HAVE_METIS)
 
 if(HAVE_PARDISO)
   add_executable(pipsipmFromRaw_schur Drivers/pipsipmFromRaw_schur.cpp)
