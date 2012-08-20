@@ -13,6 +13,8 @@ set(CMAKE_CXX_COMPILER "mpicxx")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0") # need this explicitly for mpicxx
 endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
+add_definitions(-DTIMING -DSTOCH_TESTING)
+
 # inspired by elemental-bgp
 if(MATH_LIBS)
 	set(NEED_MATH FALSE)
