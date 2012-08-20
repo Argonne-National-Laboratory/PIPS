@@ -315,8 +315,8 @@ void sFactory::iterateEnded()
 #ifdef TIMING
     extern double g_iterNumber;
     printf("TIME %g SOFAR %g ITER %d\n", iterTmMonitor.tmIterate, m_tmTotal, (int)g_iterNumber);
-#elseif STOCH_TESTING
-    printf("ITERATION WALLTIME: iter=%g  Total=%g\n", iterTmMonitor.tmIterate, m_tmTotal);
+    //#elseif STOCH_TESTING
+    //printf("ITERATION WALLTIME: iter=%g  Total=%g\n", iterTmMonitor.tmIterate, m_tmTotal);
 #endif
   }
 }

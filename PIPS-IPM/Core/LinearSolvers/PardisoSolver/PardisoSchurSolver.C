@@ -14,7 +14,7 @@ using namespace std;
 #include "DenseGenMatrix.h"
 #include <cstdlib>
 
-//#include "mpi.h"
+#include "mpi.h"
 
 #ifdef HAVE_GETRUSAGE
 #include <sys/time.h>
@@ -260,6 +260,10 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   //iparm[32] = 1; // compute determinant
   iparm[37] = Msys->size(); //compute Schur-complement
 
+#ifdef TIMING
+  double o=MPI_Wtime();
+#endif
+
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
@@ -268,7 +272,9 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
   int nnzSC=iparm[38];
 
-  //cout << "factorizing the matrix took:" << MPI_Wtime()-tt << endl;
+#ifdef TIMING
+  cout << " PARDISOSCHUR FACT(AUGMAT) " << MPI_Wtime()-o << endl;
+#endif
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during factorization: %d\n", error );
     assert(false);

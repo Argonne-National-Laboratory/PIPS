@@ -72,8 +72,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 
   solver  = new IPMSOLVER( factory, data );
   //printf("solver created\n");
-  //solver->addMonitor(new StochMonitor( factory ));
-
+  solver->addMonitor(new StochMonitor( factory ));
+  //solver->monitorSelf();
 }
 
 
@@ -81,8 +81,6 @@ template<typename FORMULATION, typename IPMSOLVER>
 void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   int mype;
   MPI_Comm_rank(comm,&mype);
-
-  solver->monitorSelf();
 
   double tmElapsed=MPI_Wtime();
   //---------------------------------------------

@@ -35,7 +35,7 @@ void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
 
   switch( level ) {
   case 0 : case 1: { 
-    cout << " *** Iteration " << i << " *** " << endl;
+    cout << " --- Iteration " << i << " --- " << endl;
     printf(" mu = %16.12e  relative residual norm = %16.12e\n", 
 	   mu, resids->residualNorm() / dnorm);
     //cout << " mu = " << mu << " relative residual norm = " 
