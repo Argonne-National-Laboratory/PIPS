@@ -23,11 +23,15 @@ else(MATH_LIBS)
 	set(NEED_MATH TRUE)
 endif(MATH_LIBS)
 
+#set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH} /soft/apps/libraries/alcf/current/gnu/BLAS/lib")
+
+
 if(NEED_MATH)
 	if(IS_DIRECTORY $ENV{MKLROOT})
 		set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran")
 	else(IS_DIRECTORY $ENV{MKLROOT})
 		enable_language( Fortran )
+		find_package(BLAS REQUIRED HINTS /soft/apps/libraries/alcf/current/xl/BLAS/lib/)
 		find_package(LAPACK REQUIRED)
 		set(MATH_LIBS ${LAPACK_LIBRARIES};${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
 	endif(IS_DIRECTORY $ENV{MKLROOT})
