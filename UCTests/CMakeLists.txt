@@ -19,7 +19,7 @@ target_link_libraries(ucRootNodeClp pipss stochInput ClpBALPInterface ClpRecours
 
 
 add_executable(ucTestSol ucTestSol.cpp)
-target_link_libraries(ucTestSol pipss stochInput ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(ucTestSol pipss stochInput ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
 include_directories(../PIPS-S/Core)
 include_directories(../PIPS-S/CoinBALPFactorization)
