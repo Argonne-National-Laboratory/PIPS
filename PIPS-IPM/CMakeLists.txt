@@ -12,15 +12,15 @@ set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 if(HAVE_MA27)
   add_executable(qpgen-sparse-mehrotra.exe Core/QpGen/QpGenSparseMehrotraDriver.C)
   target_link_libraries(qpgen-sparse-mehrotra.exe 
-    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra ${PARDISO_LIBRARY}
-    ${MA27_LIBRARY} ${MATH_LIBS})
+    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra
+    ${MA27_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 endif(HAVE_MA27)
 
 if(HAVE_MA57)
   add_executable(qpgen-sparse-ma57-gondzio.exe Core/QpGen/QpGenSparseGondzioDriver.C)
   target_link_libraries(qpgen-sparse-ma57-gondzio.exe 
-    ooqpgensparse ooqpsparse ooqpbase ooqpgondzio ooqpdense  ${PARDISO_LIBRARY}
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+    ooqpgensparse ooqpsparse ooqpbase ooqpgondzio ooqpdense 
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 endif(HAVE_MA57)
 
 if(HAVE_MA57 AND HAVE_METIS)
@@ -34,14 +34,14 @@ if(HAVE_MA57 AND HAVE_METIS)
   target_link_libraries(pipsipmFromRaw
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
-    ooqpgensparse ooqpbase ooqpsparse ooqpdense ${PARDISO_LIBRARY}
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense 
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS}  ${PARDISO_LIBRARY})
 
   add_executable(ooqpFromRaw Drivers/ooqpFromRaw.cpp)
   target_link_libraries(ooqpFromRaw
     stochInput ${COIN_LIBS}
-    ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense ${PARDISO_LIBRARY}
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+    ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
   
   add_executable(qpgen-sparse-ma57-mehrotra.exe Core/QpGen/QpGenSparseMa57MehrotraDriver.C)
   target_link_libraries(qpgen-sparse-ma57-mehrotra.exe 
@@ -62,7 +62,7 @@ if(HAVE_PARDISO)
   target_link_libraries(pipsipmFromRaw_schur
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
-    ooqpgensparse ooqpbase ooqpsparse ooqpdense ${PARDISO_LIBRARY}
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 endif(HAVE_PARDISO)
 
