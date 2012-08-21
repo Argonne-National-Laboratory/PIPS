@@ -27,7 +27,7 @@ target_link_libraries(ucRollingTest ucRolling pipss stochInput CbcBALPInterface 
 target_link_libraries(ucRollingCbcExtensive ucRolling pipss stochInput CbcBALPInterface ClpBALPInterface ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(ucRollingOOQPExtensive ucRolling stochInput ${COIN_LIBS}
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS} ${PARDISO_LIBRARY})
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
 
 if(HAVE_SCIP)
