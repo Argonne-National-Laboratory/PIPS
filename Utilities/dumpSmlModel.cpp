@@ -47,7 +47,7 @@ See the code that reads/writes these files if this isn't clear.
 
 void dumpSmlModelOnlyBoundsVary(const string &modelfilename, const string &datafilename, const string &outbasename) {
 	
-	ExpandedModelInterface *emroot = sml_generate(modelfilename, datafilename, false);
+  ExpandedModelInterface *emroot = sml_generate(modelfilename, datafilename, true); //last param is the debug flag
 	ExpandedModelInterface *em = emroot->children.at(0);
 	
 	int nScenarios = em->children.size();

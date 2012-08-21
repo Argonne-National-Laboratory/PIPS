@@ -447,7 +447,8 @@ process_model(AmplModel *model, const string& datafilename) {
     int n_other=0; // other ampl error
 
     // "2>&1" sends stderr to stdout
-    FILE *ain = popen("ampl script.scr 2>&1", "r");
+    //FILE *ain = popen("ampl script.scr 2>&1", "r"); //--original code
+    FILE *ain = popen("ampl script.scr", "r"); //--petra
     while(!feof(ain)){
       char *p;
       p = fgets(buffer, 256, ain);
