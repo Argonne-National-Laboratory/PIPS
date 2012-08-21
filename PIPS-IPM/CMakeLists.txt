@@ -19,7 +19,7 @@ endif(HAVE_MA27)
 if(HAVE_MA57)
   add_executable(qpgen-sparse-ma57-gondzio.exe Core/QpGen/QpGenSparseGondzioDriver.C)
   target_link_libraries(qpgen-sparse-ma57-gondzio.exe 
-    ooqpgensparse ooqpsparse ooqpbase ooqpgondzio ooqpdense  ${PARDISO_LIBRARY}}
+    ooqpgensparse ooqpsparse ooqpbase ooqpgondzio ooqpdense  ${PARDISO_LIBRARY}
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 endif(HAVE_MA57)
 
@@ -34,13 +34,13 @@ if(HAVE_MA57 AND HAVE_METIS)
   target_link_libraries(pipsipmFromRaw
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
-    ooqpgensparse ooqpbase ooqpsparse ooqpdense ${PARDISO_LIBRARY}}
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense ${PARDISO_LIBRARY}
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 
   add_executable(ooqpFromRaw Drivers/ooqpFromRaw.cpp)
   target_link_libraries(ooqpFromRaw
     stochInput ${COIN_LIBS}
-    ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense ${PARDISO_LIBRARY}}
+    ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense ${PARDISO_LIBRARY}
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
   
   add_executable(qpgen-sparse-ma57-mehrotra.exe Core/QpGen/QpGenSparseMa57MehrotraDriver.C)
@@ -62,7 +62,7 @@ if(HAVE_PARDISO)
   target_link_libraries(pipsipmFromRaw_schur
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
-    ooqpgensparse ooqpbase ooqpsparse ooqpdense ${PARDISO_LIBRARY}}
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense ${PARDISO_LIBRARY}
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
 endif(HAVE_PARDISO)
 
