@@ -8,11 +8,14 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a")
 endif (BUILD_SHARED_LIBS)
 
 #find_package(MPI REQUIRED)
-if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
-       set(CMAKE_CXX_COMPILER "mpicxx")
-       set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0") # need this explicitly for mpicxx
-       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
+if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
+	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a") #need this to find PARDISO
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-dy")
+else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
+	set(CMAKE_CXX_COMPILER "mpicxx")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0") # need this explicitly for mpicxx
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
 add_definitions(-DTIMING -DSTOCH_TESTING)
 
@@ -24,9 +27,6 @@ else(MATH_LIBS)
 	set(NEED_MATH TRUE)
 endif(MATH_LIBS)
 
-#set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH} /soft/apps/libraries/alcf/current/gnu/BLAS/lib")
-
-
 if(NEED_MATH)
 	if(IS_DIRECTORY $ENV{MKLROOT})
 		set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran")
@@ -37,21 +37,16 @@ if(NEED_MATH)
 	endif(IS_DIRECTORY $ENV{MKLROOT})
 endif(NEED_MATH)
 
-
-
-
 set(SHARED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SharedLibraries)
 set(SML_DIR ${SHARED_DIR}/sml-0.7.2)
 set(AMPL_DIR ${SHARED_DIR}/amplsolvers)
 set(MA27_DIR ${SHARED_DIR}/MA27)
 set(MA57_DIR ${SHARED_DIR}/MA57)
-set(MA86_DIR ${SHARED_DIR}/MA86/src)
 set(METIS_DIR ${SHARED_DIR}/metis-4.0.1)
 # include CoinUtils
 #set(COIN_DIR ${Simplex_SOURCE_DIR}/CoinUtils-2.8.0)
 #set(COIN_DIR ${SHARED_DIR}/Clp-1.14)
 set(COIN_DIR ${SHARED_DIR}/Cbc-2.7.6)
-set(PARDISO_DIR ${SHARED_DIR}/PARDISO)
 
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in SharedLibraries/Cbc-2.7.6")
@@ -97,6 +92,7 @@ find_library(FL_LIBRARY NAMES fl)
 
 find_library(MA27_LIBRARY MA27 PATHS ${MA27_DIR})
 find_library(MA57_LIBRARY MA57 PATHS ${MA57_DIR})
+find_library(MA86_LIBRARY MA86 PATHS ${MA86_DIR}/lib)
 find_library(METIS_LIBRARY NAME libmetis.a PATHS ${METIS_DIR})
 #find_library(PARDISO_LIBRARY name libpardiso490-GNU430-X86-64.so PATHS ${PARDISO_DIR})
 
@@ -135,20 +131,20 @@ endif(HAVE_METIS)
 
 set(HAVE_MA86 HAVE_METIS)
 # Check if we have all libraries that Ma86 depends on exists.
-if(${MA86_LIB} MATCHES "MA86_LIB-NOTFOUND")
+if(${MA86_LIBRARY} MATCHES "MA86_LIBRARY-NOTFOUND")
   message(STATUS "MA86 library not found. Won't build code that requires MA86.")
   set(HAVE_MA86 FALSE)
-endif(${MA86_LIB} MATCHES "MA86_LIB-NOTFOUND") 
+endif(${MA86_LIBRARY} MATCHES "MA86_LIBRARY-NOTFOUND") 
 
 
 # see if we have MA27 or MA57
 set(HAVE_MA27 TRUE)
-set(HAVE_MA57 HAVE_METIS)
-#message(STATUS ${MA27_LIBRARY})
 if(${MA27_LIBRARY} MATCHES "MA27_LIBRARY-NOTFOUND")
   message(STATUS "MA27 library not found. Won't build code that requires MA27.")
   set(HAVE_MA27 FALSE)
 endif(${MA27_LIBRARY} MATCHES "MA27_LIBRARY-NOTFOUND")
+
+set(HAVE_MA57 HAVE_METIS)
 if(HAVE_MA57 AND ${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
   message(STATUS "MA57 library not found. Won't build code that requires MA57.")
   set(HAVE_MA57 FALSE)
@@ -179,11 +175,16 @@ else(EXISTS ${CB_LIB})
 	message(STATUS "Building without ConicBundle library")
 endif(EXISTS ${CB_LIB})
 
+
+set(PARDISO_DIR ${SHARED_DIR}/PARDISO)
 set(HAVE_PARDISO FALSE)
 if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(HAVE_PARDISO TRUE)
-	set(PARDISO_LIBRARY ${SHARED_DIR}/PARDISO/libpardiso490-BGP_32.so)
-	#set(PARDISO_LIB ${SHARED_DIR}/PARDISO/libpardiso.a ${SHARED_DIR}/PARDISO/libmetis41_pardiso.a ${SHARED_DIR}/PARDISO/libmetis41-P_pardiso.a ${SHARED_DIR}/PARDISO/libpils_pardiso.a ${SHARED_DIR}/PARDISO/libpardiso.a)
+	#message(STATUS ${SHARED_DIR}/PARDISO)
+	find_library(PARDISO_LIBRARY NAMES libpardiso490-BGP_32.so PATHS ${PARDISO_DIR})
+	#message(STATUS ${PARDISO_LIBRARY})
+	#set(PARDISO_LIBRARY "${SHARED_DIR}/PARDISO/libpardiso490-BGP_32.so")
+	#set(PARDISO_LIBRARY "libpardiso490-BGP_32.so")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
