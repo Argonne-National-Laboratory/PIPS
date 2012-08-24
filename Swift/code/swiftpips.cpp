@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -131,16 +132,16 @@ readStg1Data(const char *dataPath)
   ifstream datafd(problemdata.c_str());
   assert(datafd.good());
 
-  string data((istreambuf_iterator<char>(datafd)),istreambuf_iterator<char>()); // read into string
+  string s((istreambuf_iterator<char>(datafd)),istreambuf_iterator<char>()); // read into string
   datafd.close();
 
-  size_t datalen = data.size()+1; //include trailing \0
+  size_t s_len = s.size()+1; //include trailing \0
 
   struct Data* data = (struct Data*) malloc(sizeof(struct Data));
-  data->pointer = malloc(datalen*sizeof(char));
-  data->length = datalen*sizeof(char);
+  data->pointer = malloc(s_len*sizeof(char));
+  data->length = s_len*sizeof(char);
 
-  memcpy(data->pointer, data.c_str(), datalen);
+  memcpy(data->pointer, s.c_str(), s_len);
 
   printf("read1StgData() done.\n");
   return data;
@@ -150,11 +151,11 @@ readStg1Data(const char *dataPath)
 struct Data*
 readConvSolution2(char* zerodata, int ZD_length,
 		  const char *solutionPath)
-		  
+
 {
   printf("readConvSolution2()...\n");
 
-  istringstream f1( string(zerodata) );
+  istringstream f1( string(zerodata), istringstream::in );
   f1.exceptions(ifstream::failbit | ifstream::badbit);
   int nvar1;
   f1 >> nvar1; // read size of solution
@@ -198,7 +199,7 @@ evaluateRecourseLP2(const char *dataPath, int nScen,
 
   printf("ok1\n");
 
-  ClpRecourseSolver rsol(input, scen, sol);
+  ClpRecourseSolver rsol(input, nScen, sol);
   rsol.setDualObjectiveLimit(1e7);
 
   rsol.go();
@@ -209,7 +210,7 @@ evaluateRecourseLP2(const char *dataPath, int nScen,
   }
   assert(rsol.getStatus() == Optimal);
 
-  double prob = input.scenarioProbability(scen);
+  double prob = input.scenarioProbability(nScen);
   const vector<double> &obj1 = input.getFirstStageObj();
 
   for (int k = 0; k < nvar1; k++) obj += prob*sol[k]*obj1[k];
