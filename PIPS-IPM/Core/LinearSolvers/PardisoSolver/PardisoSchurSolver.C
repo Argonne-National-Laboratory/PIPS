@@ -24,6 +24,7 @@ using namespace std;
 
 extern int gOoqpPrintLevel;
 
+using namespace std;
 
 extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
@@ -47,9 +48,6 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 
   first = true; firstSolve = true;
    
-  //solver = 0;  /* use sparse direct solver */
-  //mtype  = -2; /* real  symmetric with diagonal or Bunch-Kaufman */
-
   /* Numbers of processors, value of OMP_NUM_THREADS */
   char *var = getenv("OMP_NUM_THREADS");
   if(var != NULL)
@@ -201,7 +199,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 	   iparm , &msglvl, NULL, NULL, &error, dparm );
 
   if ( error != 0) {
-    printf ("PardisoSolver - ERROR during factorization: %d\n", error );
+    printf ("PardisoSolver - ERROR during symbolic factorization: %d\n", error );
     assert(false);
   }
 } 
@@ -273,13 +271,14 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   int nnzSC=iparm[38];
 
 #ifdef TIMING
-  cout << " PARDISOSCHUR FACT(AUGMAT) " << MPI_Wtime()-o << endl;
+  cout << "PARDISOSCHUR FACT(AUGMAT) " << MPI_Wtime()-o << endl;
+  //cout << "NNZ(SCHUR) " << nnzSC << "    SPARSITY " << nnzSC/(1.0*nSC*nSC) << endl;
 #endif
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during factorization: %d\n", error );
     assert(false);
   }
-  
+
   int* rowptrSC =new int[nSC+1];
   int* colidxSC =new int[nnzSC];
   double* eltsSC=new double[nnzSC];
@@ -290,6 +289,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   //convert back to C/C++ indexing
   for(int it=0; it<nSC+1; it++) rowptrSC[it]--;
   for(int it=0; it<nnzSC; it++) colidxSC[it]--;
+
 
   for(int r=0; r<nSC; r++) {
     for(int ci=rowptrSC[r]; ci<rowptrSC[r+1]; ci++) {

@@ -62,6 +62,23 @@ sFactory::~sFactory()
   if(tree) delete tree;
 }
 
+sLinsysLeaf* 
+sFactory::newLinsysLeaf()
+{
+  assert(false && "not supported");
+  return NULL;
+}
+sLinsysLeaf* 
+sFactory::newLinsysLeaf(sData* prob,
+			OoqpVector* dd, OoqpVector* dq,
+			OoqpVector* nomegaInv, OoqpVector* rhs)
+{
+  //Ma57Solver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
+  PardisoSolver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
+  return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);
+}
+
+
 #ifdef TIMING
 #define TIM t = MPI_Wtime();
 #define REP(s) t = MPI_Wtime()-t;if (p) printf("makeData: %s took %f sec\n",s,t);
@@ -254,21 +271,6 @@ LinearSystem* sFactory::makeLinsys( Data * prob_in )
   return linsys; 
 }
 
-sLinsysLeaf* 
-sFactory::newLinsysLeaf()
-{
-  assert(false && "not supported");
-  return NULL;
-}
-sLinsysLeaf* 
-sFactory::newLinsysLeaf(sData* prob,
-			OoqpVector* dd, OoqpVector* dq,
-			OoqpVector* nomegaInv, OoqpVector* rhs)
-{
-  Ma57Solver* s=NULL;
-  //PardisoSolver* s=NULL;
-  return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);
-}
 
 void sFactory::joinRHS( OoqpVector& rhs_in,  OoqpVector& rhs1_in,
 			  OoqpVector& rhs2_in, OoqpVector& rhs3_in )

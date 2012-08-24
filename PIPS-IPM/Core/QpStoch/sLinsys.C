@@ -279,8 +279,8 @@ void sLinsys::solveCompressed( OoqpVector& rhs_ )
  *                      (  [ C 0 0 ]    )
  */
 void sLinsys::LniTransMult(sData *prob, 
-				    SimpleVector& y, 
-				    double alpha, SimpleVector& x)
+			   SimpleVector& y, 
+			   double alpha, SimpleVector& x)
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
@@ -316,6 +316,7 @@ void sLinsys::LniTransMult(sData *prob,
  
 }
 
+#include "PardisoSolver.h"
 /**
  * Computes U = Gi * inv(H_i) * Gi^T.
  *        [ R 0 0 ]
@@ -329,7 +330,6 @@ void sLinsys::LniTransMult(sData *prob,
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
 				       DenseSymMatrix& SC) 
 {
-
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
@@ -343,12 +343,19 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   if(nxP==-1) nxP = NP;
   N = locnx+locmy+locmz;
 
-  const int blocksize = 64;
+  int blocksize = 64;
   DenseGenMatrix cols(blocksize,N);
-  
-  //cout << "N=" << N << "  locnx=" << locnx<< endl;
-  for (int it=0; it < nxP; it += blocksize) {
 
+  bool ispardiso=false;
+  PardisoSolver* pardisoSlv = dynamic_cast<PardisoSolver*>(solver);
+  int* colSparsity=NULL;
+  if(pardisoSlv) {
+    ispardiso=true;
+    colSparsity=new int[N];
+    //blocksize=32;
+  }
+
+  for (int it=0; it < nxP; it += blocksize) {
     int start=it;
     int end = MIN(it+blocksize,nxP);
     int numcols = end-start;
@@ -358,13 +365,24 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     bool allzero = true;
     memset(&cols[0][0],0,N*blocksize*sizeof(double));
 
-    R.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
-    A.getStorageRef().fromGetColBlock(start, &cols[0][locnx], N, numcols, allzero);
-    C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, allzero);
+    if(ispardiso) {
+      for(int i=0; i<N; i++) colSparsity[i]=0;
+      R.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, colSparsity, allzero);
+      A.getStorageRef().fromGetColBlock(start, &cols[0][locnx], N, numcols, colSparsity, allzero);
+      C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, colSparsity, allzero);
+
+    } else {
+      R.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
+      A.getStorageRef().fromGetColBlock(start, &cols[0][locnx], N, numcols, allzero);
+      C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, allzero);
+    }
 
     if(!allzero) {
       
-      solver->solve(cols);        
+      if(ispardiso)
+	pardisoSlv->solve(cols,colSparsity);
+      else 
+	solver->solve(cols);
 
       R.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
        				      -1.0, &cols[0][0], N);
@@ -383,6 +401,8 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
     } //end !allzero
   }
+
+  if(ispardiso) delete[] colSparsity;
 }
 
 

@@ -47,13 +47,12 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
   jcolM = new int[nnz];
   M = new double[nnz];
 
+  sol = NULL;
+  sz_sol = 0;
+
   first = true;
   nvec=new double[n];
    
-  error  = 0;
-  solver = 0;  /* use sparse direct solver */
-  mtype  = -2; /* real  symmetric with diagonal or Bunch-Kaufman */
-
   /* Numbers of processors, value of OMP_NUM_THREADS */
   char *var = getenv("OMP_NUM_THREADS");
   if(var != NULL)
@@ -66,10 +65,63 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 
 void PardisoSolver::firstCall()
 {
-
+  int solver=0, mtype=-2, error;
   pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
   if (error!=0) {
     cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
+    assert(false);
+  }
+
+  //get the matrix in upper triangular
+  Msys->getStorageRef().transpose(krowM, jcolM, M);
+
+   //save the indeces for diagonal entries for a streamlined later update
+  int* krowMsys = Msys->getStorageRef().krowM;
+  int* jcolMsys = Msys->getStorageRef().jcolM;
+  for(int r=0; r<n; r++) {
+    // Msys - find the index in jcol for the diagonal (r,r)
+    int idxDiagMsys=-1;
+    for(int idx=krowMsys[r]; idx<krowMsys[r+1]; idx++)
+      if(jcolMsys[idx]==r) {idxDiagMsys=idx; break;}
+    assert(idxDiagMsys>=0); //must have all diagonals entries
+
+    // aug  - find the index in jcol for the diagonal (r,r)
+    int idxDiagAug=-1;
+    for(int idx=krowM[r]; idx<krowM[r+1]; idx++)
+      if(jcolM[idx]==r) {idxDiagAug=idx; break;}
+    assert(idxDiagAug>=0);
+
+    diagMap.insert( pair<int,int>(idxDiagMsys,idxDiagAug) );
+  }
+
+  // need Fortran indexes
+  for( int i = 0; i < n+1; i++) krowM[i] += 1;
+  for( int i = 0; i < nnz; i++) jcolM[i] += 1;
+
+  //
+  // symbolic analysis
+  //
+  mtype=-2;
+  int phase=11; //analysis
+  int maxfct=1, mnum=1, nrhs=1;
+  iparm[2]=num_threads;
+  iparm[7]=3;     //# iterative refinements
+  iparm[1] = 2; // 2 is for metis, 0 for min degree 
+  //iparm[ 9] =10; // pivot perturbation 10^{-xxx} 
+  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
+                 // if needed, use 2 for advanced matchings and higer accuracy.
+  iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+
+  int msglvl=0;  // with statistical information
+ 
+  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+	   &n, M, krowM, jcolM,
+	   NULL, &nrhs,
+	   iparm , &msglvl, NULL, NULL, &error, dparm );
+
+  if ( error != 0) {
+    printf ("PardisoSolver - ERROR during symbolic factorization: %d\n", error );
     assert(false);
   }
 } 
@@ -84,75 +136,33 @@ extern double g_iterNumber;
 void PardisoSolver::matrixChanged()
 {
   if (first) { firstCall(); first = false; }
-
-  
-  //double tt=MPI_Wtime();
-  //get the matrix in upper triangular
-  Msys->getStorageRef().transpose(krowM, jcolM, M);
- 
-  // pardiso requires diag elems even though they are exactly 0
-  // for( int i = 0; i < n; i++) {
-  //   bool hasDiag=0;
-  //   for( int j=krowM[i]; j<krowM[i+1] && !hasDiag; j++ ) {
-  //     if( jcolM[j]==i ) hasDiag=true;
-  //   }
-
-  //   if (!hasDiag)
-  //     assert(false);
-  //     //cout << "NO diag elem in row " << i << endl;
-  // }
- 
-  // need Fortran indexes
-  for( int i = 0; i < n+1; i++) krowM[i] += 1;
-  for( int i = 0; i < nnz; i++) jcolM[i] += 1;
-
-
-  // compute numerical factorization
-  phase = 12; //Analysis, numerical factorization
-
+  else {
+    //update diagonal entries in the PARDISO aug sys
+    double* eltsMsys = Msys->getStorageRef().M;
+    map<int,int>::iterator it;
+    for(it=diagMap.begin(); it!=diagMap.end(); it++)
+      M[it->second] = eltsMsys[it->first];
+  }
+  //
+  // numerical factorization
+  //
+  int phase = 22; //Analysis, numerical factorization
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
-  int msglvl=1; //messaging level
-
+  int msglvl=0; //messaging level
+  int mtype=-2, error;
 
   iparm[2] = num_threads;
-  //iparm[1] = 2; // 2 is for metis, 0 for min degree 
+  iparm[1] = 2; // 2 is for metis, 0 for min degree 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
-
-  // char szName[1024];
-  // sprintf(szName, "Qdump_4h_it%g.dat", g_iterNumber);
-  // ofstream fd(szName);
-  // cout << "QDUMP -----> to "<< szName << endl;
-  // fd << scientific;
-  // fd.precision(16);
-  // fd << n << endl;
-  // fd << nnz << endl;
-  // int i;
-  // for (i = 0; i <= n; i++)
-  //   fd << krowM[i] << " ";
-  // fd << endl;
-  // for (i = 0; i < nnz; i++)
-  //   fd << jcolM[i] << " ";
-  // fd << endl;
-  // for (i = 0; i < nnz; i++)
-  //   fd << M[i] << " ";
-  // fd << endl;
-  // //for (i = 0; i < n; i++)
-  // //  fd << rhs[i] << " ";
-  // //fd << endl;
-  // fd.flush();
-  // fd.close();
-  // printf("finished dumping mat\n");
-
-  
-  pardiso (pt , &maxfct , &mnum, &mtype , &phase ,
+  iparm[30] = 0; // do not specify rhs at this point
+  pardiso (pt , &maxfct , &mnum, &mtype , &phase,
 	   &n, M, krowM, jcolM,
 	   NULL, &nrhs,
 	   iparm , &msglvl, NULL, NULL, &error, dparm );
-  //cout << "factorizing the matrix took:" << MPI_Wtime()-tt << endl;
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during factorization: %d\n", error );
     assert(false);
@@ -164,19 +174,18 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   //cout << "PARDISO-single rhs" << endl;    
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
   double * drhs = rhs.elements();
-  //cout << " in: ";
-  //for(int i=0; i<n; i++) cout << rhs[i] << " ";
-  //cout  << endl;  
   double * sol = nvec;
 
-  phase = 33; //solve and iterative refinement
+  int phase = 33; //solve and iterative refinement
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
-  int msglvl=1;
-
+  int msglvl=0;
+  int mtype=-2, error;
   iparm[2] = num_threads;
+  iparm[1] = 2; //metis
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+
   //iparm[5] = 1; /* replace drhs with the solution */
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
@@ -188,40 +197,34 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
   }
   rhs.copyFromArray(sol);
-  //cout << "out: ";
-  //for(int i=0; i<n; i++) cout << rhs[i] << " ";
-  //cout  << endl;
 }
+
+
 
 void PardisoSolver::solve(GenMatrix& rhs_in)
 {
-  //cout << "PARDISO-multiple rhs" << endl;    
   DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
-
   //cout << "Multiple dense rhs " << endl;
 
   int nrows,ncols; rhs.getSize(ncols,nrows);
-  double* sol=new double[nrows*ncols];
+  if(sz_sol<nrows*ncols) {
+    sz_sol=nrows*ncols;
+    if(sol) delete[] sol;
+    sol = new double[sz_sol];
+  }
   assert(nrows==n);
 
-  /*
-  double* rrr=&rhs[0][0];
-  for(int j=0; j<ncols; j++) {
-    cout << " in: ";
-    for (int i=0;i<nrows; i++) cout << rrr[i+j*nrows] << " ";
-    cout  << endl;
-  }
-  */
-  phase = 33; //solve and iterative refinement
+  int phase = 33; //solve and iterative refinement
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=ncols;
-  int msglvl=1;
-
+  int msglvl=0;
+  int mtype=-2, error;
+  iparm[1] = 2; //metis
   iparm[2] = num_threads;
   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
-
+  iparm[30]=0; //no sparse rhs
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
@@ -233,26 +236,55 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
   }
-  memcpy(&rhs[0][0], sol, nrows*ncols*sizeof(double));
-  delete[] sol; 
+  memcpy(&rhs[0][0], sol, sz_sol*sizeof(double));
+}
 
-  /*
-  for(int j=0; j<ncols; j++) {
-    cout << "out: ";
-    for (int i=0;i<nrows; i++) cout << rrr[i+j*nrows] << " ";
-    cout  << endl;
+void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
+{
+  //cout << "PARDISO-multiple sparse rhs" << endl;    
+  DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
+
+  int nrows,ncols; rhs.getSize(ncols,nrows);
+  if(sz_sol<nrows*ncols) {
+    sz_sol=nrows*ncols;
+    if(sol) delete[] sol;
+    sol = new double[sz_sol];
   }
-  */
+  assert(nrows==n);
+
+  int phase = 33; //solve and iterative refinement
+  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
+  int mnum=1; //actual matrix (as in index from 1 to maxfct)
+  int nrhs=ncols;
+  int msglvl=0;
+  int mtype=-2, error;
+  iparm[1] = 2; //metis
+  iparm[2] = num_threads;
+  iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+  iparm[30] = 1; //sparse rhs
+  //iparm[5] = 1; /* replace drhs with the solution */
+
+  pardiso (pt, &maxfct, &mnum, &mtype, &phase,
+	   &n, M, krowM, jcolM, 
+	   colSparsity, &nrhs,
+	   iparm, &msglvl, 
+	   &rhs[0][0], sol,
+	   &error, dparm );
+ 
+  if ( error != 0) {
+    printf ("PardisoSolver - ERROR during solve: %d", error ); 
+  }
+  memcpy(&rhs[0][0], sol, sz_sol*sizeof(double));
 }
 
 PardisoSolver::~PardisoSolver()
 {
-  phase = -1; /* Release internal memory . */
+  int phase = -1; /* Release internal memory . */
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
-  int msglvl=1;
-
+  int msglvl=0;
+  int mtype=-2, error;
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, NULL, krowM, jcolM, NULL, &nrhs,
 	   iparm, &msglvl, NULL, NULL, &error, dparm );
@@ -263,6 +295,7 @@ PardisoSolver::~PardisoSolver()
   delete[] krowM;
   delete[] M;
   delete[] nvec;
+  if(sol) delete[] sol;
 }
 
 
