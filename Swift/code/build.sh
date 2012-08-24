@@ -19,7 +19,8 @@ WRAP_O=${LEAF_PKG}_wrap.o
 PIPS_SRC=${HOME}/collab/PIPS
 PIPS_SHARED=${PIPS_SRC}/SharedLibraries
 # PIPS_BUILD=${HOME}/Public/PIPS.build
-PIPS_BUILD=/sandbox/wozniak/PIPS.build
+# PIPS_BUILD=/sandbox/wozniak/PIPS.build
+PIPS_BUILD=${HOME}/collab/PIPS/build
 APP_LIB_DIRS=( ${PIPS_SHARED}/Cbc-2.7.6/lib
                ${PIPS_SHARED}/PARDISO
                ${PIPS_BUILD}/Input
@@ -93,7 +94,7 @@ sed -i 's/Swiftpips_Init/Tclswiftpips_Init/' ${WRAP_CXX}
 check
 
 # Compile the Tcl extension
-echo "g++ ${WRAP_CXX}"
+echo "g++ ${WRAP_CXX} ..."
 g++ ${CFLAGS} ${TCL_INCLUDE_SPEC} -c ${WRAP_CXX} -o ${WRAP_O}
 check
 
