@@ -252,7 +252,8 @@ void SparseStorage::fromGetColBlock(int col, double *A, int lda, int colExtent, 
       if ( j >= col ) {
         if (j < col + colExtent) {
           A[i+(j-col)*lda] = M[k];
-          if (allzero) allzero = false;
+          //if (allzero) allzero = false;
+	  allzero=false;
         } else {
           break;
         }
@@ -260,6 +261,33 @@ void SparseStorage::fromGetColBlock(int col, double *A, int lda, int colExtent, 
     }
   }
 }
+
+
+// used in backsolves
+// get a dense block of columns *in column-major format*
+// A must be zero'd on input
+// allzero is true if there are actually no nonzero entries in this block
+// colSparsity contains on exit the sparsity pattern of union of columns
+void SparseStorage::fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero)
+{
+  int i,j,k;
+  for (i = 0; i < m; i++) {
+    for ( k = krowM[i]; k < krowM[i+1]; k++) {
+      j = jcolM[k];
+      if ( j >= col ) {
+        if (j < col + colExtent) {
+          A[i+(j-col)*lda] = M[k];
+          //if (allzero) allzero = false;
+	  allzero=false;
+	  colSparsity[i]=1;
+        } else {
+          break;
+        }
+      }
+    }
+  }
+}
+
 
 void SparseStorage::atPutSpRow( int row, double A[], int lenA,
 				    int jcolA[], int& info )

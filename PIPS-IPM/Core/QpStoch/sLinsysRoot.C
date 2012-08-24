@@ -43,7 +43,6 @@ sLinsysRoot::~sLinsysRoot()
 void sLinsysRoot::factor2(sData *prob, Variables *vars)
 {
   DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
-
   initializeKKT(prob, vars);
   
   // First tell children to factorize.
@@ -89,9 +88,9 @@ void sLinsysRoot::afterFactor()
 {
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
-  for (int c=0; c<children.size(); c++) {
+  for (size_t c=0; c<children.size(); c++) {
     if (children[c]->mpiComm == MPI_COMM_NULL) continue;
-    printf("NODE %4d SPFACT %g BACKSOLVE %g SEC PROC %d ITER %d\n", c,
+    printf("NODE %4zu SPFACT %g BACKSOLVE %g SEC PROC %d ITER %d\n", c,
      children[c]->stochNode->resMon.eFact.tmLocal,
 	   children[c]->stochNode->resMon.eFact.tmChildren, mype, (int)g_iterNumber);
   }

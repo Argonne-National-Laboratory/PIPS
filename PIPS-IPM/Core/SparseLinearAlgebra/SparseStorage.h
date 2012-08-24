@@ -135,6 +135,7 @@ public:
 			  double alpha, double *X, int ldx, int colStart);
 
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
+  void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
   void dump(const string& filename);
 

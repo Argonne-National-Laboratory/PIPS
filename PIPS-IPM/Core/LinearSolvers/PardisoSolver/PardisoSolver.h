@@ -11,6 +11,7 @@
 #include "OoqpVectorHandle.h"
 #include "SparseStorage.h"
 
+#include <map>
 
 
 #ifndef FNAME
@@ -40,7 +41,7 @@ private:
   virtual void matrixChanged();
   virtual void solve( OoqpVector& rhs );
   virtual void solve( GenMatrix& rhs);
-  
+  virtual void solve( GenMatrix& rhs, int *colSparsity);  
  // virtual void Lsolve( OoqpVector& x );
  // virtual void Dsolve( OoqpVector& x );
  // virtual void Ltsolve( OoqpVector& x );
@@ -49,32 +50,26 @@ private:
   SparseSymMatrix* Msys;
   bool first;
   void  *pt[64]; 
-  int mtype;
-  int solver;
   int iparm[64];
   int num_threads;
-  
-  double b[8], x[8];
   double dparm[64];
-  int error;
-  int nrhs;  //  Number of right-hand sides 
-  int maxfct;
-  int mnum;
-  int phase;
   int n;
 
   /** storage for the upper triangular (in row-major format) */
   int     *krowM,    *jcolM;
   double  *M;
   
-  
   /** number of nonzeros in the matrix */
   int      nnz;
-  
+
+  /** mapping from from the diagonals of the PIPS linear systems to 
+      the diagonal elements of the (1,1) block  in the augmented system */
+  std::map<int,int> diagMap;
+
   /** temporary storage for the factorization process */
-  //int     *perm, *invp, *diagmap;
   double* nvec; //temporary vec
-  
+  double* sol; //solution
+  int sz_sol; //allocated size
   virtual ~PardisoSolver();
 };
 
