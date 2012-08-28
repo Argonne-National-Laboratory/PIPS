@@ -40,12 +40,15 @@ sLinsysRoot::~sLinsysRoot()
     delete children[c];
 }
 
+//this variable is just reset in this file; children will default to the "safe" linear solver
+extern int gLackOfAccuracy;
+
 void sLinsysRoot::factor2(sData *prob, Variables *vars)
 {
   DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
   initializeKKT(prob, vars);
-  
-  // First tell children to factorize.
+
+  // First tell children to factorize. 
   for(size_t c=0; c<children.size(); c++) {
     children[c]->factor2(prob->children[c], vars);
   }
@@ -81,6 +84,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   afterFactor();
 #endif
 
+  gLackOfAccuracy=0;
 }
 
 #ifdef TIMING

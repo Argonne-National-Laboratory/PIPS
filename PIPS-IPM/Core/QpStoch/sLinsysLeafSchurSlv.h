@@ -24,9 +24,12 @@ class sLinsysLeafSchurSlv : public sLinsysLeaf
 		      OoqpVector* nomegaInv_,
 		      OoqpVector* rhs_, LINSOLVER* solver);
 
-
+  void factor2(sData *prob, Variables *vars);
   void addTermToDenseSchurCompl(sData *prob, 
 				DenseSymMatrix& SC);
+
+ private:
+  bool switchedToSafeSlv;
 
 }; 
 template<class LINSOLVER>
@@ -37,7 +40,8 @@ sLinsysLeafSchurSlv::sLinsysLeafSchurSlv(sFactory* factory,
 					 OoqpVector* nomegaInv_,
 					 OoqpVector* rhs_,
 					 LINSOLVER* s)
- : sLinsysLeaf(factory, prob, dd_, dq_, nomegaInv_, rhs_, s)
+: sLinsysLeaf(factory, prob, dd_, dq_, nomegaInv_, rhs_, s), 
+  switchedToSafeSlv(false)
 {
   
   

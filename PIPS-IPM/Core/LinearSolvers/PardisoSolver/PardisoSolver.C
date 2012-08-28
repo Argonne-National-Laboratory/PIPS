@@ -14,7 +14,7 @@ using namespace std;
 #include "DenseGenMatrix.h"
 #include <cstdlib>
 
-//#include "mpi.h"
+#include "mpi.h"
 
 #ifdef HAVE_GETRUSAGE
 #include <sys/time.h>
@@ -39,6 +39,7 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
 
 PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 {
+  cout << "PardisoSolver::PardisoSolver (sparse input)" << endl;
   Msys = sgm;
   n = sgm->size();
   nnz=sgm->numberOfNonZeros();
@@ -61,38 +62,124 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
     printf("Set environment OMP_NUM_THREADS");
     exit(1);
   }
+  Mdsys=NULL;
+}
+
+
+PardisoSolver::PardisoSolver( DenseSymMatrix * m )
+{
+  cout << "PardisoSolver created (dense input)" << endl;
+  Msys = NULL;
+  Mdsys = m;
+  n = m->size();
+  
+  nnz=0; //getNumberOfNonZeros(*Mdsys);
+
+  krowM = NULL;//new int[n+1];
+  jcolM = NULL;//new int[nnz];
+  M = NULL;//new double[nnz];
+
+  sol = NULL;
+  sz_sol = 0;
+
+  first = true;
+  nvec=new double[n];
+   
+  /* Numbers of processors, value of OMP_NUM_THREADS */
+  char *var = getenv("OMP_NUM_THREADS");
+  if(var != NULL)
+    sscanf( var, "%d", &num_threads );
+  else {
+    printf("Set environment OMP_NUM_THREADS");
+    exit(1);
+  }
+}
+int PardisoSolver::getNumberOfNonZeros(DenseSymMatrix& m)
+{
+  int nnz=0;
+  for(int i=0; i<n; i++) {
+    for(int j=i+1; j<n; j++) 
+      if(m[i][j]!=0.0) 
+	nnz++;
+    nnz++; //always have diags
+  }
+  return nnz;
 }
 
 void PardisoSolver::firstCall()
 {
+
   int solver=0, mtype=-2, error;
   pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
   if (error!=0) {
     cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
     assert(false);
   }
+  
+  if(Msys) {
 
-  //get the matrix in upper triangular
-  Msys->getStorageRef().transpose(krowM, jcolM, M);
+    //get the matrix in upper triangular
+    Msys->getStorageRef().transpose(krowM, jcolM, M);
+    
+    //save the indeces for diagonal entries for a streamlined later update
+    int* krowMsys = Msys->getStorageRef().krowM;
+    int* jcolMsys = Msys->getStorageRef().jcolM;
+    for(int r=0; r<n; r++) {
+      // Msys - find the index in jcol for the diagonal (r,r)
+      int idxDiagMsys=-1;
+      for(int idx=krowMsys[r]; idx<krowMsys[r+1]; idx++)
+	if(jcolMsys[idx]==r) {idxDiagMsys=idx; break;}
+      assert(idxDiagMsys>=0); //must have all diagonals entries
+      
+      // aug  - find the index in jcol for the diagonal (r,r)
+      int idxDiagAug=-1;
+      for(int idx=krowM[r]; idx<krowM[r+1]; idx++)
+	if(jcolM[idx]==r) {idxDiagAug=idx; break;}
+      assert(idxDiagAug>=0);
+      
+      diagMap.insert( pair<int,int>(idxDiagMsys,idxDiagAug) );
+    }
+  } else {
+    // the input is a dense matrix
+    // the dense matrix is also processed in matrixChanged everytime the method is called  
+    if(Mdsys) {
+      // the input is a dense matrix
+      DenseSymMatrix& Md = (*Mdsys);
+      nnz=getNumberOfNonZeros(Md);
+      cout << "detected " << nnz << endl;
 
-   //save the indeces for diagonal entries for a streamlined later update
-  int* krowMsys = Msys->getStorageRef().krowM;
-  int* jcolMsys = Msys->getStorageRef().jcolM;
-  for(int r=0; r<n; r++) {
-    // Msys - find the index in jcol for the diagonal (r,r)
-    int idxDiagMsys=-1;
-    for(int idx=krowMsys[r]; idx<krowMsys[r+1]; idx++)
-      if(jcolMsys[idx]==r) {idxDiagMsys=idx; break;}
-    assert(idxDiagMsys>=0); //must have all diagonals entries
+      delete[] krowM; delete[] jcolM; delete[] M;
+      krowM = new int[n+1];
+      jcolM = new int[nnz];
+      M = new double[nnz];
 
-    // aug  - find the index in jcol for the diagonal (r,r)
-    int idxDiagAug=-1;
-    for(int idx=krowM[r]; idx<krowM[r+1]; idx++)
-      if(jcolM[idx]==r) {idxDiagAug=idx; break;}
-    assert(idxDiagAug>=0);
+      int nzIt=0;
+      for(int i=0; i<n; i++) {
 
-    diagMap.insert( pair<int,int>(idxDiagMsys,idxDiagAug) );
+	krowM[i]=nzIt;
+	//cout << i << " " << krowM[i] << endl;
+	
+	jcolM[nzIt]=i; // the diagonal
+	M[nzIt]=Md[i][i];
+	assert(nzIt<nnz);
+	nzIt++;
+	
+	for(int j=i+1; j<n; j++) {
+	  if(Md[i][j]!=0.0) {
+	    jcolM[nzIt]=j;
+	    M[nzIt]=Md[i][j];
+	    assert(nzIt<nnz);
+	    nzIt++;
+	  }
+	}
+      }
+      cout << "PardisoSolver::first call nzit=" << nzIt << endl;
+      assert(nzIt==nnz);
+      krowM[n]=nzIt;
+
+    } else { assert(false); }
   }
+
 
   // need Fortran indexes
   for( int i = 0; i < n+1; i++) krowM[i] += 1;
@@ -114,11 +201,11 @@ void PardisoSolver::firstCall()
   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 
   int msglvl=0;  // with statistical information
- 
-  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+
+  pardiso (pt , &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM,
 	   NULL, &nrhs,
-	   iparm , &msglvl, NULL, NULL, &error, dparm );
+	   iparm, &msglvl, NULL, NULL, &error, dparm );
 
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during symbolic factorization: %d\n", error );
@@ -137,13 +224,46 @@ void PardisoSolver::matrixChanged()
 {
   if (first) { firstCall(); first = false; }
   else {
-    //update diagonal entries in the PARDISO aug sys
-    double* eltsMsys = Msys->getStorageRef().M;
-    map<int,int>::iterator it;
-    for(it=diagMap.begin(); it!=diagMap.end(); it++)
-      M[it->second] = eltsMsys[it->first];
+    if(Msys) {
+      //update diagonal entries in the PARDISO aug sys (if the input is sparse)
+      double* eltsMsys = Msys->getStorageRef().M;
+      map<int,int>::iterator it;
+      for(it=diagMap.begin(); it!=diagMap.end(); it++)
+	M[it->second] = eltsMsys[it->first];
+    }
   }
-  //
+
+  if(Mdsys) {
+    // the input is a dense matrix
+    DenseSymMatrix& Md = (*Mdsys);
+    //double tm=MPI_Wtime();
+    int nzIt=0;
+    for(int i=0; i<n; i++) {
+      
+      krowM[i]=nzIt;
+
+      jcolM[nzIt]=i; // the diagonal
+      M[nzIt]=Md[i][i];
+      nzIt++;
+
+      
+      for(int j=i+1; j<n; j++) {
+	if(Md[i][j]!=0.0) {
+	  jcolM[nzIt]=j;
+	  M[nzIt]=Md[i][j];
+	  nzIt++;
+	}
+      }
+    }
+    cout << "PardisoSolver::matrix changed nnzit=" << nzIt << endl;
+    krowM[n]=nzIt;
+    assert(nzIt==nnz);
+    // need Fortran indexes
+    for( int i = 0; i < n+1; i++) krowM[i] += 1;
+    for( int i = 0; i < nnz; i++) jcolM[i] += 1;
+    //cout << "Forming the matrix took:" << MPI_Wtime()-tm << endl;
+  }
+    //
   // numerical factorization
   //
   int phase = 22; //Analysis, numerical factorization
@@ -159,10 +279,11 @@ void PardisoSolver::matrixChanged()
   iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
   iparm[30] = 0; // do not specify rhs at this point
-  pardiso (pt , &maxfct , &mnum, &mtype , &phase,
+
+  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM,
 	   NULL, &nrhs,
-	   iparm , &msglvl, NULL, NULL, &error, dparm );
+	   iparm, &msglvl, NULL, NULL, &error, dparm );
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during factorization: %d\n", error );
     assert(false);
@@ -279,6 +400,8 @@ void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
 
 PardisoSolver::~PardisoSolver()
 {
+
+  cout << "PardisoSolver DESTRUCTOR" << endl;
   int phase = -1; /* Release internal memory . */
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)

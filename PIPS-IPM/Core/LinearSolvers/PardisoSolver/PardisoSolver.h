@@ -10,6 +10,7 @@
 #include "SparseStorageHandle.h"
 #include "OoqpVectorHandle.h"
 #include "SparseStorage.h"
+#include "DenseSymMatrix.h"
 
 #include <map>
 
@@ -35,7 +36,7 @@ private:
   
   /** sets mStorage to refer to the argument sgm */
   PardisoSolver( SparseSymMatrix * sgm ); 
-  
+  PardisoSolver( DenseSymMatrix* m);
   
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
@@ -45,9 +46,14 @@ private:
  // virtual void Lsolve( OoqpVector& x );
  // virtual void Dsolve( OoqpVector& x );
  // virtual void Ltsolve( OoqpVector& x );
+
+ private:
+  //Helper functions for when the input is a dense matrix
+  int getNumberOfNonZeros(DenseSymMatrix& m);
   
  private:
   SparseSymMatrix* Msys;
+  DenseSymMatrix* Mdsys;
   bool first;
   void  *pt[64]; 
   int iparm[64];
