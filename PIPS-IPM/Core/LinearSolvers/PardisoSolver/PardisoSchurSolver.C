@@ -343,6 +343,8 @@ void PardisoSchurSolver::solve(GenMatrix& rhs_in)
 
 PardisoSchurSolver::~PardisoSchurSolver()
 {
+
+  cout << "PardisoSchurSolver DESTRUCATAOR" << endl;
   int phase = -1; /* Release internal memory . */
   int mtype = -2;
   int maxfct=  1, mnum=1, nrhs=1, msglvl=0, error;

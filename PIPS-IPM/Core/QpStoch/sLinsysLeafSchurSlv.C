@@ -8,8 +8,11 @@
 #include "sData.h"
 #include "SparseSymMatrix.h"
 #include "SparseGenMatrix.h"
+#include "PardisoSolver.h"
 #include "PardisoSchurSolver.h"
 #include "Ma57Solver.h"
+
+extern int gLackOfAccuracy;
 
 /**
  * Computes U = Gi * inv(H_i) * Gi^T.
@@ -27,7 +30,28 @@ void sLinsysLeafSchurSlv::addTermToDenseSchurCompl( sData *prob,
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
-  PardisoSchurSolver* scSolver=dynamic_cast<PardisoSchurSolver*>(solver);
+  
+  if(!gLackOfAccuracy && !switchedToSafeSlv) {
+    PardisoSchurSolver* scSolver=dynamic_cast<PardisoSchurSolver*>(solver);
+    scSolver->schur_solve(R,A,C, SC);
+  } else {
+    cout << "\tdefaulting to sLinsysLeaf::addTermToDenseSchurCompl ...";
+    sLinsysLeaf::addTermToDenseSchurCompl(prob, SC);
+    cout << "done" << endl;
+  }
+}
 
-  scSolver->schur_solve(R,A,C, SC);
+void sLinsysLeafSchurSlv::factor2(sData *prob, Variables *vars)
+{
+  if(gLackOfAccuracy) {
+    cout << "sLinsysLeafSchurSlv -> accuracy lost, switching to vanilla PARDISO" << endl;
+    delete solver;
+    cout << "\tsolver deleted\n";
+    SparseSymMatrix* kktsp = dynamic_cast<SparseSymMatrix*>(kkt);
+    solver = new PardisoSolver(kktsp);
+    cout << "\tnew solver created." << endl;
+    switchedToSafeSlv=true;
+  }
+  
+  sLinsysLeaf::factor2(prob, vars);
 }

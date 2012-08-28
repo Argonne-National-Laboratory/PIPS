@@ -15,7 +15,8 @@
 #include <cmath>
 
 int gOoqpPrintLevel = 10;
-
+int gLackOfAccuracy=0;
+int onSafeSolver=0;
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0),
 		   mutol(5.0e-8), artol(1e-5), sys(0)
 {
@@ -261,6 +262,12 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
+  if(mu<500*rnorm/dnorm) {
+    if(!onSafeSolver) 
+      gLackOfAccuracy=1;
+    onSafeSolver=1;
+    cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
+  }
   return stop_code;
 }
 
