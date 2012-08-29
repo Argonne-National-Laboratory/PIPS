@@ -49,6 +49,7 @@ void sLinsysLeafSchurSlv::factor2(sData *prob, Variables *vars)
     //cout << "\tsolver deleted\n";
     SparseSymMatrix* kktsp = dynamic_cast<SparseSymMatrix*>(kkt);
     solver = new PardisoSolver(kktsp);
+    //solver = new Ma57Solver(kktsp);
     //cout << "\tnew solver created." << endl;
     switchedToSafeSlv=true;
   }

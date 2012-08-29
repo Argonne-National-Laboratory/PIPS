@@ -33,7 +33,7 @@ int main(int argc, char ** argv) {
   delete s;
 
   pipsIpm.go();
-
+/*
   for(int s=0; s<nscen; s++) {
 
     stringstream ss1; ss1<<"out_duals_scen"<<(s+1)<<".txt";
@@ -52,7 +52,7 @@ int main(int argc, char ** argv) {
       fileprimals << primals[i] << endl;
     fileprimals.close();
   }
-
+*/
   MPI_Finalize();
   return 0;
 }
