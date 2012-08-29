@@ -146,7 +146,6 @@ void PardisoSolver::firstCall()
       // the input is a dense matrix
       DenseSymMatrix& Md = (*Mdsys);
       nnz=getNumberOfNonZeros(Md);
-      cout << "detected " << nnz << endl;
 
       delete[] krowM; delete[] jcolM; delete[] M;
       krowM = new int[n+1];
@@ -173,7 +172,7 @@ void PardisoSolver::firstCall()
 	  }
 	}
       }
-      cout << "PardisoSolver::first call nzit=" << nzIt << endl;
+      //cout << "PardisoSolver::first call nzit=" << nzIt << endl;
       assert(nzIt==nnz);
       krowM[n]=nzIt;
 
@@ -255,7 +254,7 @@ void PardisoSolver::matrixChanged()
 	}
       }
     }
-    cout << "PardisoSolver::matrix changed nnzit=" << nzIt << endl;
+    //cout << "PardisoSolver::matrix changed nnzit=" << nzIt << endl;
     krowM[n]=nzIt;
     assert(nzIt==nnz);
     // need Fortran indexes
