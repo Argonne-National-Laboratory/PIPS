@@ -275,7 +275,7 @@ void PardisoSolver::matrixChanged()
   iparm[2] = num_threads;
   iparm[1] = 2; // 2 is for metis, 0 for min degree 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-  iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
+  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
   iparm[30] = 0; // do not specify rhs at this point
 
@@ -304,7 +304,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int mtype=-2, error;
   iparm[2] = num_threads;
   iparm[1] = 2; //metis
-  iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+  iparm[7] = 20; /* Max numbers of iterative refinement steps . */
 
   //iparm[5] = 1; /* replace drhs with the solution */
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
@@ -316,6 +316,8 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
   }
+  //iparm[6] //Number of performed iterative refinement steps.
+  cout << "Iter ref step " << iparm[6] << endl;
   rhs.copyFromArray(sol);
 }
 
@@ -342,7 +344,7 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   int mtype=-2, error;
   iparm[1] = 2; //metis
   iparm[2] = num_threads;
-  iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+  iparm[7] = 2; /* Max numbers of iterative refinement steps . */
   //iparm[5] = 1; /* replace drhs with the solution */
   iparm[30]=0; //no sparse rhs
 
@@ -400,7 +402,7 @@ void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
 PardisoSolver::~PardisoSolver()
 {
 
-  cout << "PardisoSolver DESTRUCTOR" << endl;
+  //cout << "PardisoSolver DESTRUCTOR" << endl;
   int phase = -1; /* Release internal memory . */
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
