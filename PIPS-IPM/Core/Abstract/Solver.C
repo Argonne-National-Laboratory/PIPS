@@ -262,7 +262,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  if(mu<500*rnorm/dnorm) {
+  if(mu<200*rnorm/dnorm) {
     if(!onSafeSolver) 
       gLackOfAccuracy=1;
     onSafeSolver=1;
