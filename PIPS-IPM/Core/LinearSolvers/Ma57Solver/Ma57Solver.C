@@ -444,13 +444,13 @@ void Ma57Solver::solve(GenMatrix& rhs_in)
   rhs.getSize(NRHS,N);
   assert(n==N);
 
-  /*  
+    
   // we need checks on the residuals, can't do that with multiple RHS
-  for (int i = 0; i < NRHS; i++) {
-    SimpleVector v(rhs[i],N);
-    solve(v);
-  }
-  */
+  //for (int i = 0; i < NRHS; i++) {
+  //  SimpleVector v(rhs[i],N);
+  //  solve(v);
+  //}
+  
   
   int job = 1;
 
@@ -475,6 +475,7 @@ void Ma57Solver::solve(GenMatrix& rhs_in)
       printf("warning from ma57cd, info[0]=%d\n",info[0]);
     }
   }
+  
 }
 
 

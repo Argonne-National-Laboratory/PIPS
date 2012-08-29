@@ -58,8 +58,8 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
 
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-  return new PardisoSolver(kktmat);
-  //return new DeSymIndefSolver(kktmat);
+  //return new PardisoSolver(kktmat);
+  return new DeSymIndefSolver(kktmat);
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
 }

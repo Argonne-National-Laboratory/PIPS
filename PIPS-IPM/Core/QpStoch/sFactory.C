@@ -73,8 +73,8 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* dd, OoqpVector* dq,
 			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-  //Ma57Solver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
-  PardisoSolver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
+  Ma57Solver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
+  //PardisoSolver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
   return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);
 }
 
