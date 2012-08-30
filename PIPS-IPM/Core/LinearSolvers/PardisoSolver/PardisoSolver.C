@@ -317,7 +317,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
   }
   //iparm[6] //Number of performed iterative refinement steps.
-  cout << "Iter ref step " << iparm[6] << endl;
+  //cout << "Iter ref step " << iparm[6] << endl;
   rhs.copyFromArray(sol);
 }
 
