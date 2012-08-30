@@ -18,7 +18,7 @@ int gOoqpPrintLevel = 10;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0),
-		   mutol(5.0e-8), artol(1e-5), sys(0)
+		   mutol(1.0e-7), artol(1e-5), sys(0)
 {
   // define parameters associated with the step length heuristic
   gamma_f = 0.99;
@@ -262,7 +262,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  if(mu<100*rnorm/dnorm || mu<1e-5) {
+  if(mu<50*rnorm/dnorm || mu<1e-5) {
     if(!onSafeSolver) {
       gLackOfAccuracy=1;
       cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
