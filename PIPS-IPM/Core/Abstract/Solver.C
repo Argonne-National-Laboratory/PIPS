@@ -263,18 +263,19 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   }
 
   //if(mu<50*rnorm/dnorm || mu<1e-5) {
-  if(mu<500*rnorm/dnorm) {
+  if(mu<1.0e3*rnorm/dnorm) {
     //if(!onSafeSolver) {
     gLackOfAccuracy=1;
     //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
   } else {
-    if(mu>1e7*rnorm/dnorm && mu>1.0e1)
-      gLackOfAccuracy=-1;
-    else
+      //if(mu>1e7*rnorm/dnorm && mu>1.0e4)
+      //gLackOfAccuracy=-1;
+      //else
       gLackOfAccuracy=0;
   }
   //onSafeSolver=1;
   //}  
+  //gLackOfAccuracy=-1; //disable iter refin in sLinsysRootAug
   
   return stop_code;
 }

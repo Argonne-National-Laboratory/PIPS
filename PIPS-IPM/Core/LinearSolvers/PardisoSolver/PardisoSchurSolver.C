@@ -346,9 +346,9 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
       break;
     }
     refinSteps++;
-  } while(refinSteps<=2);
+  } while(refinSteps<=3);
   
-  if(relResNorm>1e-6) cout << "PardisoSchurSolver::solve iter refinements: " << refinSteps << "   rel resid nrm=" << relResNorm << endl;
+  if(relResNorm>1e-7) cout << "PardisoSchurSolver::solve iter refinements: " << refinSteps << "   rel resid nrm=" << relResNorm << endl;
 
   rhs.copyFrom(x);
 }

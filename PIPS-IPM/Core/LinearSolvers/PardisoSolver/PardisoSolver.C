@@ -297,7 +297,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
   double * sol = nvec;
 
-  int maxRefinSteps=(gLackOfAccuracy==0?4:8);
+  //int maxRefinSteps=(gLackOfAccuracy==0?3:6);
 
   int phase = 33; //solve and iterative refinement
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
@@ -307,7 +307,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int mtype=-2, error;
   iparm[2] = num_threads;
   iparm[1] = 2; //metis
-  iparm[7] = 6; /* Max numbers of iterative refinement steps . */
+  iparm[7] = 4; /* Max numbers of iterative refinement steps . */
 
   //iparm[5] = 1; /* replace drhs with the solution */
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
@@ -356,7 +356,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
       }
       cout << "!!!after " << refinSteps << " steps - rel resid=" << res.twonorm()/rhs.twonorm() << endl;
       refinSteps++;
-    }while(refinSteps<=3);
+    }while(refinSteps<=8);
     rhs.copyFrom(x);
   } else */ 
   rhs.copyFromArray(sol);
