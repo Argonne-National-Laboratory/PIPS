@@ -446,35 +446,35 @@ void Ma57Solver::solve(GenMatrix& rhs_in)
 
     
   // we need checks on the residuals, can't do that with multiple RHS
-  //for (int i = 0; i < NRHS; i++) {
-  //  SimpleVector v(rhs[i],N);
-  //  solve(v);
-  //}
-  
-  
-  int job = 1;
-
-  const int BLOCKSIZE = 20;
-  
-  double * dwork  = new_dworkn(n*BLOCKSIZE);
-  int dworksize = n*BLOCKSIZE;
-  int * iwork     = new_iworkn(n);
-  
-  for (int startcol = 0; startcol < NRHS; startcol += BLOCKSIZE) {
-    double *drhs = rhs[startcol];
-    int endcol = MIN(startcol+BLOCKSIZE,NRHS);
-    int numcols = endcol-startcol;
-    //cout << "MA57 multiple RHS" << endl;    
-    FNAME(ma57cd)( &job,       &n,        
-		   fact,       &lfact,    ifact,  &lifact,  
-		   &numcols,       drhs,      &n,   
-		   dwork,      &dworksize,        iwork, 
-		   icntl,      info );
-    assert(info[0] >= 0);
-    if (info[0] > 0) {
-      printf("warning from ma57cd, info[0]=%d\n",info[0]);
-    }
+  for (int i = 0; i < NRHS; i++) {
+    SimpleVector v(rhs[i],N);
+    solve(v);
   }
+  
+  
+//   int job = 1;
+
+//   const int BLOCKSIZE = 20;
+  
+//   double * dwork  = new_dworkn(n*BLOCKSIZE);
+//   int dworksize = n*BLOCKSIZE;
+//   int * iwork     = new_iworkn(n);
+  
+//   for (int startcol = 0; startcol < NRHS; startcol += BLOCKSIZE) {
+//     double *drhs = rhs[startcol];
+//     int endcol = MIN(startcol+BLOCKSIZE,NRHS);
+//     int numcols = endcol-startcol;
+//     //cout << "MA57 multiple RHS" << endl;    
+//     FNAME(ma57cd)( &job,       &n,        
+// 		   fact,       &lfact,    ifact,  &lifact,  
+// 		   &numcols,       drhs,      &n,   
+// 		   dwork,      &dworksize,        iwork, 
+// 		   icntl,      info );
+//     assert(info[0] >= 0);
+//     if (info[0] > 0) {
+//       printf("warning from ma57cd, info[0]=%d\n",info[0]);
+//     }
+//   }
   
 }
 

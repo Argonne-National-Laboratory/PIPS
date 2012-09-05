@@ -58,8 +58,8 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
 
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-  return new PardisoSolver(kktmat);
-  //return new DeSymIndefSolver(kktmat);
+  //return new PardisoSolver(kktmat);
+  return new DeSymIndefSolver(kktmat);
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
 }
@@ -125,7 +125,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   SimpleVector   x(locnx+locmy); x.setToZero(); //solution
   SimpleVector  dx(locnx+locmy);                //update from iter refinement
   int refinSteps=0;
-  int maxRefinSteps=(gLackOfAccuracy>0?4:2);
+  int maxRefinSteps=(gLackOfAccuracy>0?5:3);
   do {
 #ifdef TIMING
     taux=MPI_Wtime();
@@ -201,7 +201,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 #endif
 
     double relResNorm=rxy.twonorm()/rhsNorm;
-    if(relResNorm<1.0e-8) {
+    if(relResNorm<1.0e-9) {
       break;
     } else {
       if(myRank==0)
