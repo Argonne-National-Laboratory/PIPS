@@ -315,6 +315,38 @@ void sLinsys::LniTransMult(sData *prob,
   y.axpy(alpha,LniTx); 
  
 }
+/*
+ * Computes res += [0 A^T C^T ]*inv(KKT)*[0;A;C] x
+ */
+
+void sLinsys::addTermToSchurResidual(sData* prob, 
+				     SimpleVector& res, 
+				     SimpleVector& x)
+{
+  SparseGenMatrix& A = prob->getLocalA();
+  SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+  int nxP, aux;
+  A.getSize(aux,nxP); assert(aux==locmy);
+  C.getSize(aux,nxP); assert(aux==locmz);
+  R.getSize(aux,nxP); assert(aux==locnx);
+  assert(nxP==x.length());
+  int N=locnx+locmy+locmz;
+  SimpleVector y(N);
+  //y.setToZero();
+
+  R.mult( 0.0,&y[0],1,           1.0,&x[0],1);
+  A.mult( 0.0,&y[locnx],1,       1.0,&x[0],1);
+  C.mult( 0.0,&y[locnx+locmy],1, 1.0,&x[0],1);
+  //cout << "4 - y norm:" << y.twonorm() << endl;
+  //printf("%g  %g  %g  %g\n", y[locnx+locmy+0], y[locnx+locmy+1], y[locnx+locmy+2], y[locnx+locmy+3]);
+  solver->solve(y);
+
+  R.transMult(1.0,&res[0],1, 1.0,&y[0],1);
+  A.transMult(1.0,&res[0],1, 1.0,&y[locnx],1);
+  C.transMult(1.0,&res[0],1, 1.0,&y[locnx+locmy],1);
+}
 
 #include "PardisoSolver.h"
 /**

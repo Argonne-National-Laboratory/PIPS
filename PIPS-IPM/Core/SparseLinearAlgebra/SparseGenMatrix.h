@@ -61,6 +61,8 @@ public:
 
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x );
+  virtual void mult ( double beta,  double y[], int incy,
+                      double alpha, double x[], int incx );
 
   virtual void transMult( double beta,   OoqpVector& y,
 			  double alpha,  OoqpVector& x );

@@ -94,7 +94,12 @@ class sLinsys : public QpGenLinsys
   virtual void symAddColsToDenseSchurCompl(sData *prob, 
 				       double *out, 
 				       int startcol, int endcol);
-
+  /** Used in the iterative refinement for the dense Schur complement systems
+   * Computes res += [0 A^T C^T ]*inv(KKT)*[0;A;C] x
+   */
+  virtual void addTermToSchurResidual(sData* prob, 
+				      SimpleVector& res, 
+				      SimpleVector& x);
  public:
   MPI_Comm mpiComm;
   sTree* stochNode;

@@ -43,6 +43,11 @@ class sDummyLinsys : public sLinsys
 		    SimpleVector& y, 
 		    double alpha, SimpleVector& x){};
 
+  void addTermToSchurResidual(sData* prob, 
+			      SimpleVector& res, 
+			      SimpleVector& x) {};
+
+
   virtual void allocU(DenseGenMatrix ** Ut, int np){};
   virtual void allocV (DenseGenMatrix ** V, int np){};
   virtual void computeU_V(sData *prob, DenseGenMatrix* U, DenseGenMatrix* V){};

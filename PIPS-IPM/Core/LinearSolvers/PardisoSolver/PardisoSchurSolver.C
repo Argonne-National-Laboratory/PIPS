@@ -305,35 +305,52 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
 
 void PardisoSchurSolver::solve( OoqpVector& rhs_in )
-{
+{ 
   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
 
   int mtype=-2, error;
-  int phase=33;      //Analysis, numerical factorization
+  int phase=33;      //solve and iterative refinement
   int maxfct=1, mnum=1, nrhs=1;
   iparm[2]=num_threads;
   //iparm[5]=1;    //replace rhs with sol 
-  iparm[7]=2;    // # of iterative refinements
+  iparm[7]=0;    // # of iterative refinements
   //iparm[1] = 2;// 2 is for metis, 0 for min degree 
   //iparm[ 9] =10; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-
   int msglvl=0;  // with statistical information
-  //iparm[32] = 1; // compute determinant
 
-  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-	   &n, eltsAug, rowptrAug, colidxAug, 
-	   NULL, &nrhs,
-	   iparm , &msglvl, rhs.elements(), nvec, &error, dparm );
+  int dim=rhs.length();
+  SimpleVector x(dim); x.setToZero();
+  SimpleVector dx(nvec, dim);  
+  SimpleVector b(dim); b.copyFrom(rhs);
+  double rhsNorm = b.twonorm(); double relResNorm;
+  int refinSteps=0;
+  do {
+    pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+	     &n, eltsAug, rowptrAug, colidxAug, 
+	     NULL, &nrhs,
+	     iparm , &msglvl, rhs.elements(), nvec, &error, dparm );   
+    if ( error != 0) {
+      printf ("PardisoSchurSolver - ERROR during single rhs: %d\n", error );
+      exit(0);
+    }
+    x.axpy(1.0,dx);
+    //residual
+    rhs.copyFrom(b);
+    Msys->mult(1.0, rhs.elements(), 1,  -1.0, x.elements(),1);
+    relResNorm = rhs.twonorm()/rhsNorm;
+    if(relResNorm<1e-9) {
+      break;
+    }
+    refinSteps++;
+  } while(refinSteps<=2);
+  
+  if(relResNorm>1e-6) cout << "PardisoSchurSolver::solve iter refinements: " << refinSteps << "   rel resid nrm=" << relResNorm << endl;
 
-  if ( error != 0) {
-    printf ("PardisoSolver - ERROR during single rhs: %d\n", error );
-    assert(false);
-  }
-  rhs.copyFromArray(nvec);
+  rhs.copyFrom(x);
 }
 
 void PardisoSchurSolver::solve(GenMatrix& rhs_in)
@@ -343,8 +360,6 @@ void PardisoSchurSolver::solve(GenMatrix& rhs_in)
 
 PardisoSchurSolver::~PardisoSchurSolver()
 {
-
-  cout << "PardisoSchurSolver DESTRUCTOR" << endl;
   int phase = -1; /* Release internal memory . */
   int mtype = -2;
   int maxfct=  1, mnum=1, nrhs=1, msglvl=0, error;
