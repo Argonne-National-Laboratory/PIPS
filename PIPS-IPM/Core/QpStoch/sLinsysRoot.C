@@ -84,7 +84,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   afterFactor();
 #endif
 
-  gLackOfAccuracy=0;
+  //gLackOfAccuracy=0;
 }
 
 #ifdef TIMING
@@ -220,7 +220,7 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
 
 void sLinsysRoot::createChildren(sData* prob)
 {
-	sLinsys* child=NULL;
+  sLinsys* child=NULL;
   StochVector& ddst = dynamic_cast<StochVector&>(*dd);
   StochVector& dqst = dynamic_cast<StochVector&>(*dq);
   StochVector& nomegaInvst = dynamic_cast<StochVector&>(*nomegaInv);
@@ -234,7 +234,6 @@ void sLinsysRoot::createChildren(sData* prob)
       child = new sDummyLinsys(dynamic_cast<sFactory*>(factory), prob->children[it]);
     } else {
       sFactory* stochFactory = dynamic_cast<sFactory*>(factory);
-
       if(prob->children[it]->children.size() == 0) {	
 	//child = new sLinsysLeaf(dynamic_cast<QpGenStoch*>(factory), 
 	child = stochFactory->newLinsysLeaf(prob->children[it],

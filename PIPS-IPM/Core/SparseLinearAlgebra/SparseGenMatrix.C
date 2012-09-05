@@ -176,6 +176,12 @@ void SparseGenMatrix::mult ( double beta,  OoqpVector& y_in,
   mStorage->mult( beta, yv, 1, alpha, xv, 1 );
 }
 
+void SparseGenMatrix::mult ( double beta,  double y[], int incy,
+			     double alpha, double x[], int incx )
+{
+  mStorage->mult( beta, y, incy, alpha, x, incx);
+}
+
 
 void SparseGenMatrix::transMult ( double beta,   OoqpVector& y_in,
 				  double alpha,  OoqpVector& x_in )

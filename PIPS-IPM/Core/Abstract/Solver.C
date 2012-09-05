@@ -262,14 +262,20 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  if(mu<50*rnorm/dnorm || mu<1e-5) {
-    if(!onSafeSolver) {
-      gLackOfAccuracy=1;
-      cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
-    }
-    onSafeSolver=1;
-    
+  //if(mu<50*rnorm/dnorm || mu<1e-5) {
+  if(mu<500*rnorm/dnorm) {
+    //if(!onSafeSolver) {
+    gLackOfAccuracy=1;
+    //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
+  } else {
+    if(mu>1e7*rnorm/dnorm && mu>1.0)
+      gLackOfAccuracy=-1;
+    else
+      gLackOfAccuracy=0;
   }
+  //onSafeSolver=1;
+  //}  
+  
   return stop_code;
 }
 

@@ -277,7 +277,7 @@ void PardisoSolver::matrixChanged()
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
-  iparm[30] = 0; // do not specify rhs at this point
+  iparm[30] = 0; // do not specify sparse rhs at this point
 
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM,
@@ -288,13 +288,16 @@ void PardisoSolver::matrixChanged()
     assert(false);
   }
 }
- 
+
+extern int gLackOfAccuracy; 
+
 void PardisoSolver::solve( OoqpVector& rhs_in )
 {
   //cout << "PARDISO-single rhs" << endl;    
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
-  double * drhs = rhs.elements();
   double * sol = nvec;
+
+  int maxRefinSteps=(gLackOfAccuracy==0?4:8);
 
   int phase = 33; //solve and iterative refinement
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
@@ -304,20 +307,58 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
   int mtype=-2, error;
   iparm[2] = num_threads;
   iparm[1] = 2; //metis
-  iparm[7] = 20; /* Max numbers of iterative refinement steps . */
+  iparm[7] = 6; /* Max numbers of iterative refinement steps . */
 
   //iparm[5] = 1; /* replace drhs with the solution */
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
 	   NULL, &nrhs ,
 	   iparm, &msglvl, 
-	   drhs, sol,
+	   rhs.elements(), sol,
 	   &error, dparm );
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
   }
   //iparm[6] //Number of performed iterative refinement steps.
-  //cout << "Iter ref step " << iparm[6] << endl;
+
+
+  /*  SimpleVector r(rhs.length());
+  r.copyFrom(rhs);
+  if(Mdsys) {
+    Mdsys->mult(1.0, r.elements(), 1, -1.0, sol,1);
+  } else {
+    Msys->mult(1.0, r.elements(), 1, -1.0, sol,1);
+  }
+  if(r.twonorm()/rhs.twonorm()>1e-8) {
+    cout << "!!!PardisoSolver - rel resid=" << r.twonorm()/rhs.twonorm() << endl;
+    cout << "PardisoSolver - Iter ref step " << iparm[6] << endl;
+  }
+  */
+  /*
+    SimpleVector x(n), dx(n), res(n);
+    x.setToZero();       res.copyFrom(rhs);    
+    int refinSteps=0;
+    do {
+      iparm[7] = 0; // Max numbers of iterative refinement steps . 
+      pardiso (pt, &maxfct, &mnum, &mtype, &phase,
+	       &n, M, krowM, jcolM,
+	       NULL, &nrhs ,
+	       iparm, &msglvl,
+	       res.elements(), dx.elements(),
+	       &error, dparm );
+      x.axpy(1.0,dx);
+
+      res.copyFrom(rhs);
+      if(Mdsys) {
+	Mdsys->mult(1.0, res.elements(), 1, -1.0, x.elements(),1);
+      } else {
+	Msys->mult(1.0, res.elements(), 1, -1.0, x.elements(),1);
+      }
+      cout << "!!!after " << refinSteps << " steps - rel resid=" << res.twonorm()/rhs.twonorm() << endl;
+      refinSteps++;
+    }while(refinSteps<=3);
+    rhs.copyFrom(x);
+  } else */ 
   rhs.copyFromArray(sol);
 }
 

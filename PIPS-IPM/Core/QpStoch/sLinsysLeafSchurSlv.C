@@ -31,28 +31,28 @@ void sLinsysLeafSchurSlv::addTermToDenseSchurCompl( sData *prob,
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   
-  if(!gLackOfAccuracy && !switchedToSafeSlv) {
+  //if(!gLackOfAccuracy && !switchedToSafeSlv) {
     PardisoSchurSolver* scSolver=dynamic_cast<PardisoSchurSolver*>(solver);
     scSolver->schur_solve(R,A,C, SC);
-  } else {
-    //cout << "\tdefaulting to sLinsysLeaf::addTermToDenseSchurCompl ...";
-    sLinsysLeaf::addTermToDenseSchurCompl(prob, SC);
-    //cout << "done" << endl;
-  }
+    //} else {
+    ////cout << "\tdefaulting to sLinsysLeaf::addTermToDenseSchurCompl ...";
+    //sLinsysLeaf::addTermToDenseSchurCompl(prob, SC);
+    ////cout << "done" << endl;
+    //}
 }
 
 void sLinsysLeafSchurSlv::factor2(sData *prob, Variables *vars)
 {
-  if(gLackOfAccuracy) {
-    cout << "sLinsysLeafSchurSlv -> accuracy lost, switching to vanilla PARDISO" << endl;
-    delete solver;
-    //cout << "\tsolver deleted\n";
-    SparseSymMatrix* kktsp = dynamic_cast<SparseSymMatrix*>(kkt);
-    solver = new PardisoSolver(kktsp);
-    //solver = new Ma57Solver(kktsp);
-    //cout << "\tnew solver created." << endl;
-    switchedToSafeSlv=true;
-  }
+  // if(gLackOfAccuracy) {
+  //   cout << "sLinsysLeafSchurSlv -> accuracy lost, switching to vanilla PARDISO" << endl;
+  //   delete solver;
+  //   //cout << "\tsolver deleted\n";
+  //   SparseSymMatrix* kktsp = dynamic_cast<SparseSymMatrix*>(kkt);
+  //   solver = new PardisoSolver(kktsp);
+  //   //solver = new Ma57Solver(kktsp);
+  //   //cout << "\tnew solver created." << endl;
+  //   switchedToSafeSlv=true;
+  // }
   
   sLinsysLeaf::factor2(prob, vars);
 }

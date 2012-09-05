@@ -65,9 +65,15 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 }
 
 
-
+extern int gLackOfAccuracy;
 void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 {
+#ifdef TIMING
+  double t_total=MPI_Wtime();
+  double troot_total=0.0;
+  double taux=MPI_Wtime();
+#endif
+
   assert(locnx+locmy+locmz==b.length());
   SimpleVector& r = (*redRhs);
   assert(r.length() <= b.length());
@@ -91,6 +97,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   // aliases to parts (no mem allocations)
   SimpleVector r3(&r[locnx+locmy], locmz); //r3 is used as a temp
                                            //buffer for b3
+  SimpleVector r2(&r[locnx],       locmy);
   SimpleVector r1(&r[0],           locnx);
 
   ///////////////////////////////////////////////////////////////////////
@@ -105,11 +112,112 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
 
-  SimpleVector realRhs(&r[0], locnx+locmy);
+  //SimpleVector realRhs(&r[0], locnx+locmy);
+#ifdef TIMING
+  troot_total += (MPI_Wtime()-taux);
+  double tchild_total=0.0;
+  double tcomm_total=0.0;
+#endif
+  double rhsNorm=r.twonorm(); //r== the initial rhs of the reduced system here
 
-  solver->Dsolve(realRhs);
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  SimpleVector rxy(locnx+locmy); rxy.copyFrom(r);
+  SimpleVector   x(locnx+locmy); x.setToZero(); //solution
+  SimpleVector  dx(locnx+locmy);                //update from iter refinement
+  int refinSteps=0;
+  int maxRefinSteps=(gLackOfAccuracy>0?4:2);
+  do {
+#ifdef TIMING
+    taux=MPI_Wtime();
+#endif
 
+    //dx = Ainv * r 
+    dx.copyFrom(rxy);
+    solver->Dsolve(dx);
+    //update x
+    x.axpy(1.0,dx);
 
+#ifdef TIMING
+    troot_total += (MPI_Wtime()-taux);
+#endif  
+
+    if(gLackOfAccuracy<0) break;
+    if(refinSteps==maxRefinSteps) break;
+
+    //////////////////////////////////////////////////////////////////////
+    //iterative refinement
+    //////////////////////////////////////////////////////////////////////
+    //compute residual
+    
+    //if (iAmDistrib) {
+    //only one process substracts [ (Q+Dx0+C'*Dz0*C)*xx + A'*xy ] from r
+    //                            [  A*xx                       ]
+    if(myRank==0) {
+      rxy.copyFrom(r);
+      if(locmz>0) {
+	SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
+	CtDC_sp->mult(1.0,&rxy[0],1, 1.0,&x[0],1);
+      }
+      SparseSymMatrix& Q = prob->getLocalQ();
+      Q.mult(1.0,&rxy[0],1, -1.0,&x[0],1);
+      
+      SimpleVector& xDiagv = dynamic_cast<SimpleVector&>(*xDiag);
+      assert(xDiagv.length() == locnx);
+      for(int i=0; i<xDiagv.length(); i++)
+	rxy[i] -= xDiagv[i]*x[i];
+      
+      SparseGenMatrix& A=prob->getLocalB();
+      A.transMult(1.0,&rxy[0],1, -1.0,&x[locnx],1);
+      A.mult(1.0,&rxy[locnx],1, -1.0,&x[0],1);
+    } else {
+      //other processes set r to zero since they will get this portion from process 0
+      rxy.setToZero();
+    }
+
+#ifdef TIMING
+    taux=MPI_Wtime();
+#endif  
+    // now children add [0 A^T C^T ]*inv(KKT)*[0;A;C] x
+    SimpleVector xx(&x[0], locnx);
+    for(size_t it=0; it<children.size(); it++) {
+      children[it]->addTermToSchurResidual(prob->children[it],rxy,xx);  
+    }
+#ifdef TIMING
+    tchild_total +=  (MPI_Wtime()-taux);
+#endif
+    //~done computing residual 
+
+#ifdef TIMING
+    taux=MPI_Wtime();
+#endif
+    //all-reduce residual
+    if(iAmDistrib) {
+      dx.setToZero(); //we use dx as the recv buffer
+      MPI_Allreduce(rxy.elements(), dx.elements(), locnx+locmy, MPI_DOUBLE, MPI_SUM, mpiComm);
+      rxy.copyFrom(dx);
+    }
+#ifdef TIMING
+    tcomm_total += (MPI_Wtime()-taux);
+#endif
+
+    double relResNorm=rxy.twonorm()/rhsNorm;
+    if(relResNorm<1.0e-8) {
+      break;
+    } else {
+      if(myRank==0)
+	cout << "1st stg sol does NOT  have enough accuracy (" << relResNorm << ") after " 
+	     << refinSteps << " refinement steps" << endl;
+    }
+    refinSteps++;
+  }while(refinSteps<=maxRefinSteps);
+
+#ifdef TIMING
+  taux = MPI_Wtime();
+#endif
+  r1.copyFrom(x);
+  r2.copyFromArray(&x[locnx]);
+
+  //aaa
   ///////////////////////////////////////////////////////////////////////
   // r is the sln to the reduced system
   // the sln to the aug system should be 
@@ -118,17 +226,24 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   SimpleVector b1(&b[0],           locnx);
   SimpleVector b2(&b[locnx],       locmy);
   SimpleVector b3(&b[locnx+locmy], locmz);
-  SimpleVector r2(&r[locnx],       locmy);
   b1.copyFrom(r1);
   b2.copyFrom(r2);
+
   if(locmz>0) {
     C.mult(1.0, b3, -1.0, r1);
     b3.componentDiv(*zDiag);
   }
+#ifdef TIMING
+  troot_total += (MPI_Wtime()-taux);
+  t_total = (MPI_Wtime()-t_total);
+  if(myRank==0)
+    cout << "ROOT solve+iter refin: " << t_total 
+	 << "  ROOT:" << troot_total << "  CHILD: " << tchild_total << "  COMM:" << tcomm_total << endl;
+#endif
   //--done
   stochNode->resMon.recDsolveTmLocal_stop();
 
-  
+
 }
 
 void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
