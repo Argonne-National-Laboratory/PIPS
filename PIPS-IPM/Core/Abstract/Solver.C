@@ -268,7 +268,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     gLackOfAccuracy=1;
     //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
   } else {
-    if(mu>1e7*rnorm/dnorm && mu>1.0)
+    if(mu>1e7*rnorm/dnorm && mu>1.0e1)
       gLackOfAccuracy=-1;
     else
       gLackOfAccuracy=0;
