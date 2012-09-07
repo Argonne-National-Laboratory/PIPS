@@ -328,11 +328,16 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   SimpleVector b(dim); b.copyFrom(rhs);
   double rhsNorm = b.twonorm(); double relResNorm;
   int refinSteps=0;
+  SimpleVector rhs_n(n);
   do {
+
+    memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
+    for(int i=dim; i<n; i++) rhs_n[i]=0.0;
+
     pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	     &n, eltsAug, rowptrAug, colidxAug, 
 	     NULL, &nrhs,
-	     iparm , &msglvl, rhs.elements(), nvec, &error, dparm );   
+	     iparm , &msglvl, rhs_n.elements(), nvec, &error, dparm );   
     if ( error != 0) {
       printf ("PardisoSchurSolver - ERROR during single rhs: %d\n", error );
       exit(0);
