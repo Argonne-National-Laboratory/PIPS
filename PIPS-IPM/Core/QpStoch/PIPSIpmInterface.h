@@ -58,20 +58,23 @@ class PIPSIpmInterface
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) : comm(comm)
 {
+  int mype;
+  MPI_Comm_rank(comm,&mype);
+
   factory = new FORMULATION( in );
-  //printf("factory created\n");
+  if(mype==0) printf("factory created\n");
 
   data   = dynamic_cast<sData*>     ( factory->makeData() );
-  //printf("data created\n");
+  if(mype==0) printf("data created\n");
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
-  //printf("variables created\n");
+  if(mype==0) printf("variables created\n");
 
   resids = dynamic_cast<sResiduals*>( factory->makeResiduals( data ) );
-  //printf("resids created\n");
+  if(mype==0) printf("resids created\n");
 
   solver  = new IPMSOLVER( factory, data );
-  //printf("solver created\n");
+  if(mype==0) printf("solver created\n");
   solver->addMonitor(new StochMonitor( factory ));
   //solver->monitorSelf();
 }
