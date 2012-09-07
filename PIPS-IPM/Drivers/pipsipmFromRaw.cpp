@@ -29,7 +29,7 @@ int main(int argc, char ** argv) {
     if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [solution output root name]\n",argv[0]);
     return 1;
   }
-  
+  if (mype == 0) cout << argv[0] << " starting..." << endl;  
   string datarootname(argv[1]);
   int nscen = atoi(argv[2]);
 
@@ -43,11 +43,14 @@ int main(int argc, char ** argv) {
 
 
 int solve(const string& datarootname, int nscen) {
-  
-  rawInput* s = new rawInput(datarootname,nscen);
-  PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(*s);
-  delete s;
+  int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 
+  rawInput* s = new rawInput(datarootname,nscen);
+  if (mype == 0) cout << "rawInput created .." << endl;
+  PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(*s);
+  if (mype == 0) cout << "PIPSIpmInterface created .." << endl;
+  delete s;
+  if (mype == 0) cout << "rawInput deleted ... solving" << endl;
   pipsIpm.go();
 
 
