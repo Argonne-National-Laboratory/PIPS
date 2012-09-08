@@ -21,10 +21,15 @@ sTreeImpl::sTreeImpl( stochasticInput &in_)
   if(0==rankMe) cout << "sTreeImpl3" << endl;
   m_mz = in.nFirstStageCons() - m_my;
   if(0==rankMe) cout << "sTreeImpl4" << endl;
+  if(0==rankMe) cout << "Total of " << in.nScenarios() << endl;
   for (int scen=0; scen<in.nScenarios(); scen++) {
+    if(0==rankMe) cout << "sTreeImpl for scen " << (scen+1) << endl;
     sTreeImpl* c = new sTreeImpl(scen+1,in);
+    if(0==rankMe) cout << "sTreeImpl for scen " << (scen+1) << " DONE" << endl;
     c->parent = this;
+    if(0==rankMe) cout << "sTreeImpl storing scen " << (scen+1) << endl;
     children.push_back( c );
+    if(0==rankMe) cout << "sTreeImpl storing scen " << (scen+1) << " DONE" << endl;
   }
   if(0==rankMe) cout << "sTreeImpl constructor done" << endl;
 }
