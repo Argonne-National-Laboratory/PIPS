@@ -14,16 +14,19 @@ sTreeImpl::sTreeImpl( stochasticInput &in_)
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
+  if(0==rankMe) cout << "sTreeImpl1" << endl;
   m_nx = in.nFirstStageVars();
+  if(0==rankMe) cout << "sTreeImpl2" << endl;
   m_my = compute_nFirstStageEq();
+  if(0==rankMe) cout << "sTreeImpl3" << endl;
   m_mz = in.nFirstStageCons() - m_my;
-
+  if(0==rankMe) cout << "sTreeImpl4" << endl;
   for (int scen=0; scen<in.nScenarios(); scen++) {
     sTreeImpl* c = new sTreeImpl(scen+1,in);
     c->parent = this;
     children.push_back( c );
   }
-
+  if(0==rankMe) cout << "sTreeImpl constructor done" << endl;
 }
 
 sTreeImpl::sTreeImpl(int id, stochasticInput &in_)
