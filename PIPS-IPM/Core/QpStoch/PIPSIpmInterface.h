@@ -85,6 +85,24 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   int mype;
   MPI_Comm_rank(comm,&mype);
   if(0 == mype) cout << "solving ..." << endl;
+
+  if(mype==0) {
+    cout << "1st stage " << data->getLocalnx() << " variables, " << data->getLocalmy() 
+	 << " equality constraints, " << data->getLocalmz() << " inequality constraints." << endl;
+    
+    int nscens=data->children.size();
+    if(nscens) {
+      cout << "2nd stage " << data->children[0]->getLocalnx() << " variables, " 
+	   << data->children[0]->getLocalmy() << " equality constraints, " 
+	   << data->children[0]->getLocalmz() << " inequality constraints." << endl;
+      
+      cout << nscens << " scenarios." << endl;
+      cout << "Total " << data->getLocalnx()+nscens*data->children[0]->getLocalnx() << " variables, " 
+	   << data->getLocalmy()+nscens*data->children[0]->getLocalmy()  << " equality constraints, " 
+	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
+    }
+  }
+
   double tmElapsed=MPI_Wtime();
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
@@ -93,9 +111,10 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   
   double objective = getObjective();
   if ( 0 == result && 0 == mype ) {
-    
-    cout << " " << data->nx << " variables, " << data->my  
-	 << " equality constraints, " << data->mz << " inequality constraints.\n";
+
+
+    //cout << " " << data->nx << " variables, " << data->my  
+    // << " equality constraints, " << data->mz << " inequality constraints.\n";
     
     cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
 	 << objective << endl;
