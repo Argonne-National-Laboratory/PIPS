@@ -137,6 +137,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 
   // -- to do
   //put A/R block in the augmented system as A^T/R^T in the lower triangular part
+  assert(A.numberOfNonZeros()==0);
   //
 
   nnz=augSys.numberOfNonZeros();
