@@ -129,6 +129,8 @@ class sTree
   void displayMatVsTreeStructure(StochSymMatrix& stVec, int myRank, char* tab);
   void displayMatVsTreeStructure(StochSymMatrix& stVec, int myRank);
 #endif
+//to be called after assignProcesses
+  virtual void loadLocalSizes()=0;
 };
 
 #endif 

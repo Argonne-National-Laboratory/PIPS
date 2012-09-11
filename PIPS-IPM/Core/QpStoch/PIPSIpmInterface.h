@@ -60,12 +60,9 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 {
   int mype;
   MPI_Comm_rank(comm,&mype);
-  if(mype==0) printf("PIPSIpmInterface constructor\n");
-  sleep(1);
 
   factory = new FORMULATION( in );
   if(mype==0) printf("factory created\n");
-  sleep(1);
 
   data   = dynamic_cast<sData*>     ( factory->makeData() );
   if(mype==0) printf("data created\n");
@@ -87,8 +84,7 @@ template<typename FORMULATION, typename IPMSOLVER>
 void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   int mype;
   MPI_Comm_rank(comm,&mype);
-  if(mype==0) printf("PIPSIpmInterface::go\n");
-
+  if(0 == mype) cout << "solving ..." << endl;
   double tmElapsed=MPI_Wtime();
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
