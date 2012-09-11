@@ -28,16 +28,13 @@
 sFactory::sFactory( stochasticInput& in)
   : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
 {
-  int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
-  if(mype==0) cout << "sFactory constr 1 -- creating tree impl" << endl;
+  //int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
   tree = new sTreeImpl(in);
-  if(mype==0) cout << "sFactory constr 2 -- created  tree impl" << endl;
-  tree->computeGlobalSizes();
-  tree->GetGlobalSizes(nx, my, mz);
-  if(mype==0) cout << "sFactory constr 3" << endl;
+  //tree->computeGlobalSizes();
+  //tree->GetGlobalSizes(nx, my, mz);
   //decide how the CPUs are assigned 
   tree->assignProcesses();
-  if(mype==0) cout << "sFactory constr 4" << endl;
+  tree->loadLocalSizes();
 }
 
 

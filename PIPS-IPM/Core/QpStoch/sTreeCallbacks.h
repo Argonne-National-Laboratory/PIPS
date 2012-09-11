@@ -48,7 +48,7 @@ class sTreeCallbacks : public sTree
   void computeGlobalSizes();
  public:
   int NNZA,NNZQ,NNZB,NNZC,NNZD; //global nnz
-
+  void loadLocalSizes();
  protected:
   sTreeCallbacks();
   StochInputTree::StochInputNode* data; //input data

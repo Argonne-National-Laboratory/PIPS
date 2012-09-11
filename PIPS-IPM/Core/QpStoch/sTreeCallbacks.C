@@ -75,6 +75,11 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 }
 
+void sTreeCallbacks::loadLocalSizes()
+{
+  //alredy in data structure
+}
+
 // this is usually called before assigning processes
 void sTreeCallbacks::computeGlobalSizes()
 {

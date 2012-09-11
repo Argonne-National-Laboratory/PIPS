@@ -47,7 +47,7 @@ class sTreeImpl : public sTree
   int id() const; 
 
   void computeGlobalSizes();
-
+  void loadLocalSizes();
  private:
   int m_id;
   stochasticInput& in;

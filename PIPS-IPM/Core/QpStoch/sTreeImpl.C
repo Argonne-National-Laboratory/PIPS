@@ -14,32 +14,25 @@ sTreeImpl::sTreeImpl( stochasticInput &in_)
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
-  if(0==rankMe) cout << "sTreeImpl1" << endl;
   m_nx = in.nFirstStageVars();
-  if(0==rankMe) cout << "sTreeImpl2" << endl;
   m_my = compute_nFirstStageEq();
-  if(0==rankMe) cout << "sTreeImpl3" << endl;
   m_mz = in.nFirstStageCons() - m_my;
-  if(0==rankMe) cout << "sTreeImpl4" << endl;
-  if(0==rankMe) cout << "Total of " << in.nScenarios() << endl;
+
   for (int scen=0; scen<in.nScenarios(); scen++) {
-    if(0==rankMe) cout << "sTreeImpl for scen " << (scen+1) << endl;
     sTreeImpl* c = new sTreeImpl(scen+1,in);
-    if(0==rankMe) cout << "sTreeImpl for scen " << (scen+1) << " DONE" << endl;
     c->parent = this;
-    if(0==rankMe) cout << "sTreeImpl storing scen " << (scen+1) << endl;
     children.push_back( c );
-    if(0==rankMe) cout << "sTreeImpl storing scen " << (scen+1) << " DONE" << endl;
   }
-  if(0==rankMe) cout << "sTreeImpl constructor done" << endl;
+  //if(0==rankMe) cout << "sTreeImpl constructor done" << endl;
 }
 
 sTreeImpl::sTreeImpl(int id, stochasticInput &in_)
   : sTree(), m_id(id), in(in_)
 { 
-  m_nx = in.nSecondStageVars(id-1);
-  m_my = compute_nSecondStageEq(id-1);
-  m_mz = in.nSecondStageCons(id-1) - m_my;
+  m_nx=0; m_my=0; m_mz=0;
+  //m_nx = in.nSecondStageVars(id-1);
+  //m_my = compute_nSecondStageEq(id-1);
+  //m_mz = in.nSecondStageCons(id-1) - m_my;
 
   // add children only if you have multi-stages
 }
@@ -51,7 +44,18 @@ sTreeImpl::~sTreeImpl()
   //  delete children[it];
 }
 
-
+//to be called after assignProcesses
+void sTreeImpl::loadLocalSizes()
+{
+  if(m_id>0) //root sizes alread loaded
+    if(commWrkrs!=MPI_COMM_NULL) {
+      m_nx = in.nSecondStageVars(m_id-1);
+      m_my = compute_nSecondStageEq(m_id-1);
+      m_mz = in.nSecondStageCons(m_id-1) - m_my;
+    }
+  for(size_t it=0; it<children.size(); it++)
+    children[it]->loadLocalSizes();
+}
 StochSymMatrix* sTreeImpl::createQ() const
 {
   //is this node a dead-end for this process?

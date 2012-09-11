@@ -11,8 +11,9 @@ rawInput::rawInput(const string &datarootname, int overrideScenarioNumber, MPI_C
   unsigned filelen;
   char *filedata;
   MPI_Comm_rank(comm,&mype_);
-  
+
   if (mype_ == 0) {
+
     string f0name = datarootname + "0";
     ifstream f0(f0name.c_str());
     assert(f0.is_open());
@@ -169,6 +170,9 @@ void rawInput::scenData::initialize(int nvar, int ncons) {
 
 void rawInput::loadLocalScenData(int scen) {
 	if (localData[scen].didLoad) return;
+
+	cout << "Proc " << mype_ << " rawInput::loadLocalScenData for scenario " << scen << endl;
+	
 
 	localData[scen].initialize(nSecondStageVars_,nSecondStageCons_);
 
