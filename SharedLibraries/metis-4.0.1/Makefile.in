@@ -1,7 +1,7 @@
 
 # Which compiler to use
-CC       = gcc
-#CC       = bgxlc_r
+#CC       = gcc
+CC       = bgxlc_r
 #CC	= mpixlc_r
 #CC       =/soft/mvapich2/1.4-gcc-4.4.2/bin/mpicc
 

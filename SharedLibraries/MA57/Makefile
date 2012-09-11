@@ -16,8 +16,8 @@ all: libMA57.a
 
 endif
 
-F77	= f95
-#F77	 = mpixlf77_r
+#F77	= f95
+F77	 = mpixlf77_r
 #F77     = /soft/mvapich2/1.4-gcc-4.4.2/bin/mpif77
 
 FC= $(F77)
