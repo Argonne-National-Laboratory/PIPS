@@ -17,7 +17,7 @@ else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
-add_definitions(-DTIMING -DSTOCH_TESTING)
+#add_definitions(-DTIMING -DSTOCH_TESTING)
 
 # inspired by elemental-bgp
 if(MATH_LIBS)

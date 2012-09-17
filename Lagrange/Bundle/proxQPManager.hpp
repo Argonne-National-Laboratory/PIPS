@@ -53,7 +53,11 @@ protected:
 			}
 		}*/
 		
-		if (this->ctx.mype() == 0) printf("Iter %d Current Objective: %f Relerr: %g Elapsed: %f (%f in QP solve)\n",this->nIter-1,this->currentObj,fabs(lastModelObjSum-this->currentObj)/(1.+fabs(this->currentObj)),MPI_Wtime()-t,t2);
+		if (this->ctx.mype() == 0) 
+		  printf("Iter %d Current Objective: %f Relerr: %g Elapsed: %f (%f in QP solve)\n",
+			 this->nIter-1,this->currentObj,
+			 fabs(lastModelObjSum-this->currentObj)/(1.+fabs(this->currentObj)),
+			 MPI_Wtime()-t,t2);
 		if (this->terminated_) return;	
 		
 

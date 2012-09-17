@@ -242,7 +242,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   } else if ( mu <= mutol && rnorm <= artol*dnorm ) {
     stop_code = SUCCESSFUL_TERMINATION;
   }
-  if(iterate>=50) stop_code = SUCCESSFUL_TERMINATION;
+  //if(iterate>=50) stop_code = SUCCESSFUL_TERMINATION;
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check infeasibility condition
@@ -276,7 +276,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   }
   //onSafeSolver=1;
   //}  
-  //gLackOfAccuracy=-1; //disable iter refin in sLinsysRootAug
+  gLackOfAccuracy=-1; //disable iter refin in sLinsysRootAug
   
   return stop_code;
 }
