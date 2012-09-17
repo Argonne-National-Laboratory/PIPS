@@ -58,26 +58,35 @@ class PIPSIpmInterface
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) : comm(comm)
 {
+#ifdef TIMING
   int mype;
   MPI_Comm_rank(comm,&mype);
+#endif
   
-  int commSize; MPI_Comm_size(comm, &commSize);
-  cout << "PIPSIpmInterface processes:" << commSize << endl;
-
   factory = new FORMULATION( in );
+#ifdef TIMING
   if(mype==0) printf("factory created\n");
+#endif
 
   data   = dynamic_cast<sData*>     ( factory->makeData() );
+#ifdef TIMING
   if(mype==0) printf("data created\n");
+#endif
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
+#ifdef TIMING
   if(mype==0) printf("variables created\n");
+#endif
 
   resids = dynamic_cast<sResiduals*>( factory->makeResiduals( data ) );
+#ifdef TIMING
   if(mype==0) printf("resids created\n");
+#endif
 
   solver  = new IPMSOLVER( factory, data );
+#ifdef TIMING
   if(mype==0) printf("solver created\n");
+#endif
   //solver->addMonitor(new StochMonitor( factory ));
   //solver->monitorSelf();
 }
@@ -85,8 +94,11 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 
 template<typename FORMULATION, typename IPMSOLVER>
 void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
+
+
   int mype;
   MPI_Comm_rank(comm,&mype);
+#ifdef TIMING
   if(0 == mype) cout << "solving ..." << endl;
 
   if(mype==0) {
@@ -105,6 +117,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
     }
   }
+#endif
 
   double tmElapsed=MPI_Wtime();
   //---------------------------------------------
@@ -112,10 +125,12 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   //---------------------------------------------
   tmElapsed=MPI_Wtime()-tmElapsed;
   
-  double objective = getObjective();
+
+
+  
   if ( 0 == result && 0 == mype ) {
-
-
+#ifdef TIMING
+    double objective = getObjective();
     //cout << " " << data->nx << " variables, " << data->my  
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
     
@@ -130,6 +145,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
       sscanf( var, "%d", &num_threads );
       cout << "Num threads: " << num_threads << endl;
     }
+#endif
   }
 }
 

@@ -22,6 +22,7 @@
 
 #include "Ma57Solver.h"
 #include "PardisoSolver.h"
+#include "DeSymIndefSolver.h"
 
 #include "mpi.h"
 
@@ -77,8 +78,20 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* dd, OoqpVector* dq,
 			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-  Ma57Solver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
-  //PardisoSolver* s=NULL; if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
+  Ma57Solver* s=NULL; 
+#ifdef TIMING
+  if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
+#endif
+  //PardisoSolver* s=NULL; 
+  //#ifdef TIMING
+  //if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
+  //#endif 
+
+//    DeSymIndefSolver* s=NULL;
+// #ifdef TIMING
+//    if(tree->rankMe==tree->rankZeroW) cout << "Using DeSymIndefSolver (dense) solver for 2nd stage." << endl;
+// #endif
+
   return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);
 }
 
