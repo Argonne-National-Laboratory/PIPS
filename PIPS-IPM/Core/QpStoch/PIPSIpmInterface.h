@@ -60,6 +60,9 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 {
   int mype;
   MPI_Comm_rank(comm,&mype);
+  
+  int commSize; MPI_Comm_size(comm, &commSize);
+  cout << "PIPSIpmInterface processes:" << commSize << endl;
 
   factory = new FORMULATION( in );
   if(mype==0) printf("factory created\n");
@@ -75,7 +78,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 
   solver  = new IPMSOLVER( factory, data );
   if(mype==0) printf("solver created\n");
-  solver->addMonitor(new StochMonitor( factory ));
+  //solver->addMonitor(new StochMonitor( factory ));
   //solver->monitorSelf();
 }
 
