@@ -124,13 +124,16 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   SimpleVector rxy(locnx+locmy); rxy.copyFrom(r);
   SimpleVector   x(locnx+locmy); x.setToZero(); //solution
   SimpleVector  dx(locnx+locmy);                //update from iter refinement
+  SimpleVector x_prev(locnx+locmy);
   int refinSteps=0;
-  int maxRefinSteps=(gLackOfAccuracy>0?5:3);
+  std::vector<double> histResid;
+  int maxRefinSteps=(gLackOfAccuracy>0?9:8);
   do {
 #ifdef TIMING
     taux=MPI_Wtime();
 #endif
 
+    x_prev.copyFrom(x);
     //dx = Ainv * r 
     dx.copyFrom(rxy);
     solver->Dsolve(dx);
@@ -201,11 +204,43 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 #endif
 
     double relResNorm=rxy.twonorm()/rhsNorm;
+    
     if(relResNorm<1.0e-9) {
       break;
     } else {
+      double prevRelResNorm=1.0e10;
+      if(histResid.size()) 
+	prevRelResNorm=histResid[histResid.size()-1];
+
+      //check for stop, divergence or slow convergence conditions
+      if(relResNorm>prevRelResNorm) {
+	// diverging; restore iteration
+	if(myRank==0) {
+	  cout << "1st stg - iter refinement diverges relResNorm=" << relResNorm 
+	       << "  before was " << prevRelResNorm << endl;
+	  cout << "Restoring iterate." << endl;
+	  x.copyFrom(x_prev);
+	}
+	break;
+      }else {
+	//check slow convergence for the last xxx iterates.
+	// xxx is 1 for now
+	//if(relResNorm>0.*prevRelResNorm) {
+
+	//  if(myRank==0) {
+	//    cout << "1st stg - iter refinement stuck relResNorm=" << relResNorm 
+	//	 << "  before was " << prevRelResNorm << endl;
+	//    cout << "exiting refinement." << endl;
+	//  }
+	//  break;
+	//
+	//} else {
+	//  //really nothing, continue
+	//}
+      }
+      histResid.push_back(relResNorm);
       if(myRank==0)
-	cout << "1st stg sol does NOT  have enough accuracy (" << relResNorm << ") after " 
+	cout << "1st stg - sol does NOT  have enough accuracy (" << relResNorm << ") after " 
 	     << refinSteps << " refinement steps" << endl;
     }
     refinSteps++;
