@@ -86,9 +86,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
   solver  = new IPMSOLVER( factory, data );
 #ifdef TIMING
   if(mype==0) printf("solver created\n");
-#endif
-  //solver->addMonitor(new StochMonitor( factory ));
+  solver->addMonitor(new StochMonitor( factory ));
   //solver->monitorSelf();
+#endif
+
 }
 
 
