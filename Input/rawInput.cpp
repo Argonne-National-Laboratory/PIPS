@@ -171,9 +171,7 @@ void rawInput::scenData::initialize(int nvar, int ncons) {
 void rawInput::loadLocalScenData(int scen) {
 	if (localData[scen].didLoad) return;
 
-	cout << "Proc " << mype_ << " rawInput::loadLocalScenData for scenario " << scen << endl;
-	
-
+	//cout << "Proc " << mype_ << " rawInput::loadLocalScenData for scenario " << scen << endl;
 	localData[scen].initialize(nSecondStageVars_,nSecondStageCons_);
 
 	stringstream fname;

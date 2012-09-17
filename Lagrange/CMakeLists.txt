@@ -64,13 +64,13 @@ if(HAVE_SCIP)
 	target_link_libraries(cpmSMPS bundle pipss stochInput scenred ScipLagrangeSolver ${SCIP_LIBS}  ClpBALPInterface CbcRecourseSolver ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(proxLinfTrustSMPS bundle pipss stochInput scenred ScipLagrangeSolver ${SCIP_LIBS} CbcLagrangeSolver ${CBC_LIBS} ClpBALPInterface CbcRecourseSolver ClpRecourseSolver ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(proxBundleScipPIPSSMPS bundle pipss ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
-    ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(proxBundleScipOOQPSMPS bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(proxBundleScipOOQPRaw bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(proxBundleScipPIPSRaw bundle pipss ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
-    ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 	target_link_libraries(testSolsHeur1 bundle pipss ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} stochInput scenred ClpBALPInterface ScipLagrangeSolver ${SCIP_LIBS} CbcRecourseSolver ClpRecourseSolver ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 endif(HAVE_SCIP)
