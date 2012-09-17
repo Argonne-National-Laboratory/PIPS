@@ -120,6 +120,8 @@ StochSymMatrix* sTreeImpl::createQ() const
   return NULL;
 }
 
+//#define RESCALE 200
+static double RESCALE=1.0;
 StochVector* sTreeImpl::createc() const
 {
   //is this node a dead-end for this process?
@@ -130,11 +132,18 @@ StochVector* sTreeImpl::createc() const
   double* vec = ((SimpleVector*)svec->vec)->elements();  
 
   if(m_id==0) {
+    RESCALE=children.size();
     vector<double> c = in.getFirstStageObj();
     copy(c.begin(), c.end(), vec);
+
+    for(int i=0; i<m_nx; i++)
+      vec[i] = vec[i]*RESCALE;
   }  else {
     vector<double> c = in.getSecondStageObj(m_id-1);
     copy(c.begin(), c.end(), vec);
+    assert(RESCALE!=0.0);
+    for(int i=0; i<m_nx; i++)
+      vec[i] = vec[i]*RESCALE;
   }
 
   for(size_t it=0; it<children.size(); it++) {
