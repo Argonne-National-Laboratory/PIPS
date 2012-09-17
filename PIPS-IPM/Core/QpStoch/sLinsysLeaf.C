@@ -11,7 +11,6 @@
 #include "Ma57Solver.h"
 #include "Ma27Solver.h"
 #include "PardisoSolver.h"
-#include "DeSymIndefSolver.h"
 
 sLinsysLeaf::~sLinsysLeaf()
 {
