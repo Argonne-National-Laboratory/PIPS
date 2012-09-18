@@ -18,7 +18,7 @@ int gOoqpPrintLevel = 10;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0),
-		   mutol(1.0e-7), artol(1e-5), sys(0)
+		   mutol(1.0e-7), artol(1e-4), sys(0)
 {
   // define parameters associated with the step length heuristic
   gamma_f = 0.99;
@@ -154,7 +154,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
 	// back off just a touch
-	alpha *= .99999999;
+	//alpha *= .99999999;
+	alpha *= 0.9995;
 	return alpha;
 }
 
@@ -251,12 +252,12 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check for unknown status: slow convergence first
-  if(idx >= 70 && phi_min_history[idx] >= .5 * phi_min_history[idx-30]) {
+  if(idx >= 300 && phi_min_history[idx] >= .5 * phi_min_history[idx-30]) {
     stop_code = UNKNOWN;
     printf("hehe dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  if(idx >= 70 && rnorm / dnorm > artol && 
+  if(idx >= 300 && rnorm / dnorm > artol && 
      (rnorm_history[idx]/mu_history[idx]) / (rnorm_history[0]/mu_history[0]) 
      >= 1.e8) {
     stop_code = UNKNOWN;
@@ -264,7 +265,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   }
 
   //if(mu<50*rnorm/dnorm || mu<1e-5) {
-  if(mu<1.0e3*rnorm/dnorm) {
+  if(mu<1.0e5*rnorm/dnorm) {
     //if(!onSafeSolver) {
     gLackOfAccuracy=1;
     //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;

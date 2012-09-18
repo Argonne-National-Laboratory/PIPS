@@ -141,7 +141,7 @@ StochVector* sTreeImpl::createc() const
   }  else {
     vector<double> c = in.getSecondStageObj(m_id-1);
     copy(c.begin(), c.end(), vec);
-    assert(RESCALE!=0.0);
+    assert(RESCALE!=1.0);
     for(int i=0; i<m_nx; i++)
       vec[i] = vec[i]*RESCALE;
   }
