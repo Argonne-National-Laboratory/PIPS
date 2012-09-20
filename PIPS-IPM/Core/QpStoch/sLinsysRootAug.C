@@ -205,7 +205,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 
     double relResNorm=rxy.twonorm()/rhsNorm;
     
-    if(relResNorm<1.0e-9) {
+    if(relResNorm<1.0e-10) {
       break;
     } else {
       double prevRelResNorm=1.0e10;

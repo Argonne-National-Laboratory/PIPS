@@ -335,14 +335,15 @@ OOQPInterface<SOLVER,FORMULATION>::OOQPInterface(stochasticInput &input, MPI_Com
 			}
 		}
 	}
-
+	double RESCALE=1/(4096*1000.);
 	int idx = 0;
 	for (int i = 0; i < nscen; i++) {
 		std::vector<double> const &l = input.getSecondStageColLB(i), &u = input.getSecondStageColUB(i),
 			&c = input.getSecondStageObj(i);
 		int ncol = input.nSecondStageVars(i);
 		for (int k = 0; k < ncol; k++) {
-			g[idx] = c[k];
+		  //g[idx] = RESCALE*c[k];
+		  g[idx] = c[k];
 			if (l[k] > -1e20) {
 				blx[idx] = l[k];
 				ixlow[idx] = 1.;
@@ -365,7 +366,7 @@ OOQPInterface<SOLVER,FORMULATION>::OOQPInterface(stochasticInput &input, MPI_Com
 			&c = input.getFirstStageObj();
 		int ncol = input.nFirstStageVars();
 		for (int k = 0; k < ncol; k++) {
-			g[idx] = c[k];
+			g[idx] = RESCALE*c[k];
 			if (l[k] > -1e20) {
 				blx[idx] = l[k];
 				ixlow[idx] = 1.;
@@ -400,7 +401,7 @@ void OOQPInterface<S,F>::go() {
 	int mype;
 	MPI_Comm_rank(comm,&mype);
 
-	//s->monitorSelf();
+	s->monitorSelf();
 	int result = s->solve(prob.get(),vars.get(),resid.get());
 
 	if ( 0 == result && mype == 0) {

@@ -154,8 +154,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
 	// back off just a touch
-	//alpha *= .99999999;
-	alpha *= 0.9995;
+	alpha *= .99999999;
+	//alpha *= 0.9995;
 	return alpha;
 }
 
@@ -273,7 +273,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
       //if(mu>1e7*rnorm/dnorm && mu>1.0e4)
       //gLackOfAccuracy=-1;
       //else
-      gLackOfAccuracy=0;
+      gLackOfAccuracy=1;
   }
   //onSafeSolver=1;
   //}  
