@@ -14,6 +14,8 @@ using namespace std;
 #include "DenseGenMatrix.h"
 #include <cstdlib>
 
+#include "Ma57Solver.h"
+
 #include "mpi.h"
 
 #ifdef HAVE_GETRUSAGE
@@ -249,7 +251,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   iparm[2]=num_threads;
   iparm[7]=3;     //# iterative refinements
   //iparm[1] = 2; // 2 is for metis, 0 for min degree 
-  //iparm[ 9] = 12; // pivot perturbation 10^{-xxx} 
+  //iparm[ 9] = 10; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
@@ -307,6 +309,12 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
 void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 { 
+
+  //Ma57Solver slv(Msys);
+  //slv.matrixChanged();
+  //slv.solve(rhs_in);
+  //return;
+  
   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
 
   int mtype=-2, error;
@@ -316,7 +324,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   //iparm[5]=1;    //replace rhs with sol 
   iparm[7]=0;    // # of iterative refinements
   //iparm[1] = 2;// 2 is for metis, 0 for min degree 
-  //iparm[ 9] =10; // pivot perturbation 10^{-xxx} 
+  //iparm[ 9] =12; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
@@ -352,9 +360,9 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
       break;
     }
     refinSteps++;
-  } while(refinSteps<=3);
+  } while(refinSteps<=5);
   
-  if(relResNorm>1e-7) cout << "PardisoSchurSolver::solve iter refinements: " << refinSteps << "   rel resid nrm=" << relResNorm << endl;
+  if(relResNorm>1e-8) cout << "PardisoSchurSolver::solve iter refinements: " << refinSteps << "   rel resid nrm=" << relResNorm << endl;
 
   rhs.copyFrom(x);
 }

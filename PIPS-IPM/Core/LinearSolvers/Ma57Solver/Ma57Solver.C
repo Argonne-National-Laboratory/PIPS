@@ -72,7 +72,7 @@ Ma57Solver::Ma57Solver( SparseSymMatrix * sgm )
   kThresholdPivotingFactor = 10.0;
 
   // set the required precision for each linear system solve
-  kPrecision = 1.e-7;
+  kPrecision = 1.e-9;
 
   mStorage = SparseStorageHandle( sgm->getStorage() );
   n        = mStorage->n;
