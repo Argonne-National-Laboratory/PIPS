@@ -35,12 +35,15 @@ class sLinsysRootAug : public sLinsysRoot {
   virtual void finalizeKKT( sData* prob, Variables* vars);
  protected:
   virtual void solveReduced( sData *prob, SimpleVector& b);
+  void solveWithIterRef( sData *prob, SimpleVector& b);
+  void solveWithBiCGStab( sData *prob, SimpleVector& b);
 
+  /** y = beta*y - alpha* SC * x */
+  void SCmult ( double beta, SimpleVector& y, double alpha, SimpleVector& x, sData* prob);
 
   SymMatrix* CtDC;
   SimpleVector* redRhs;
 };
-
 
 #endif
 
