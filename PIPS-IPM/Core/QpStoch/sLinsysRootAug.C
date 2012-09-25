@@ -11,6 +11,7 @@
 #include "sTree.h"
 
 #include <unistd.h>
+#include "math.h"
 
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
@@ -64,15 +65,16 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
   //return new DeSymPSDSolver(kktmat);
 }
 
+#ifdef TIMING
+double t_total, troot_total, taux, tchild_total, tcomm_total;
+#endif
+
 
 extern int gLackOfAccuracy;
 void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 {
-#ifdef TIMING
-  double t_total=MPI_Wtime();
-  double troot_total=0.0;
-  double taux=MPI_Wtime();
-#endif
+
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
   assert(locnx+locmy+locmz==b.length());
   SimpleVector& r = (*redRhs);
@@ -111,13 +113,104 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
+  //solver->Dsolve(r);
+  //solveWithIterRef(prob, r);
+  solveWithBiCGStab(prob, r);
+  ///////////////////////////////////////////////////////////////////////
+  // r is the sln to the reduced system
+  // the sln to the aug system should be 
+  //      x = [r1; r2;  (zDiag)^{-1} * (b3-C*r1);
+  ///////////////////////////////////////////////////////////////////////
+  SimpleVector b1(&b[0],           locnx);
+  SimpleVector b2(&b[locnx],       locmy);
+  SimpleVector b3(&b[locnx+locmy], locmz);
+  b1.copyFrom(r1);
+  b2.copyFrom(r2);
+
+  if(locmz>0) {
+    C.mult(1.0, b3, -1.0, r1);
+    b3.componentDiv(*zDiag);
+  }
+  //--done
+  stochNode->resMon.recDsolveTmLocal_stop();
+}
+
+/** rxy = beta*rxy + alpha * SC * x */
+void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy, 
+			     double alpha, SimpleVector& x, 
+			     sData* prob)
+{
+  //if (iAmDistrib) {
+  //only one process substracts [ (Q+Dx0+C'*Dz0*C)*xx + A'*xy ] from r
+  //                            [  A*xx                       ]
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  if(myRank==0) {
+    //only this proc substracts from rxy
+    rxy.scalarMult(beta);
+    SparseSymMatrix& Q = prob->getLocalQ();
+    Q.mult(1.0,&rxy[0],1, alpha,&x[0],1);
+
+    if(locmz>0) {
+      SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
+      CtDC_sp->mult(1.0,&rxy[0],1, alpha,&x[0],1);
+    }
+    
+    SimpleVector& xDiagv = dynamic_cast<SimpleVector&>(*xDiag);
+    assert(xDiagv.length() == locnx);
+    for(int i=0; i<xDiagv.length(); i++)
+      rxy[i] += alpha*xDiagv[i]*x[i];
+    
+    SparseGenMatrix& A=prob->getLocalB();
+    A.transMult(1.0,&rxy[0],1, alpha,&x[locnx],1);
+    A.mult(1.0,&rxy[locnx],1, alpha,&x[0],1);
+  } else {
+    //other processes set r to zero since they will get this portion from process 0
+    rxy.setToZero();
+  }
+  
+#ifdef TIMING
+    taux=MPI_Wtime();
+#endif  
+    // now children add [0 A^T C^T ]*inv(KKT)*[0;A;C] x
+    SimpleVector xx(locnx);
+    xx.copyFromArray(x.elements());
+    xx.scalarMult(-alpha);
+    for(size_t it=0; it<children.size(); it++) {
+      children[it]->addTermToSchurResidual(prob->children[it],rxy,xx);  
+    }
+#ifdef TIMING
+    tchild_total +=  (MPI_Wtime()-taux);
+#endif
+    //~done computing residual 
+
+#ifdef TIMING
+    taux=MPI_Wtime();
+#endif
+    //all-reduce residual
+    if(iAmDistrib) {
+      SimpleVector buf(rxy.length());
+      buf.setToZero(); //we use dx as the recv buffer
+      MPI_Allreduce(rxy.elements(), buf.elements(), locnx+locmy, MPI_DOUBLE, MPI_SUM, mpiComm);
+      rxy.copyFrom(buf);
+    }
+#ifdef TIMING
+    tcomm_total += (MPI_Wtime()-taux);
+#endif
+
+}
+
+void sLinsysRootAug::solveWithIterRef( sData *prob, SimpleVector& r)
+{
+  SimpleVector r2(&r[locnx],       locmy);
+  SimpleVector r1(&r[0],           locnx);
 
   //SimpleVector realRhs(&r[0], locnx+locmy);
 #ifdef TIMING
-  troot_total += (MPI_Wtime()-taux);
-  double tchild_total=0.0;
-  double tcomm_total=0.0;
+  t_total=MPI_Wtime();
+  troot_total=0.0;
+  taux=MPI_Wtime();
 #endif
+
   double rhsNorm=r.twonorm(); //r== the initial rhs of the reduced system here
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
@@ -128,7 +221,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   int refinSteps=0;
   std::vector<double> histResid;
   int maxRefinSteps=(gLackOfAccuracy>0?9:8);
-  do {
+  do { //iterative refinement
 #ifdef TIMING
     taux=MPI_Wtime();
 #endif
@@ -219,8 +312,8 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 	  cout << "1st stg - iter refinement diverges relResNorm=" << relResNorm 
 	       << "  before was " << prevRelResNorm << endl;
 	  cout << "Restoring iterate." << endl;
-	  x.copyFrom(x_prev);
 	}
+	x.copyFrom(x_prev);
 	break;
       }else {
 	//check slow convergence for the last xxx iterates.
@@ -251,23 +344,6 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 #endif
   r1.copyFrom(x);
   r2.copyFromArray(&x[locnx]);
-
-  //aaa
-  ///////////////////////////////////////////////////////////////////////
-  // r is the sln to the reduced system
-  // the sln to the aug system should be 
-  //      x = [r1; r2;  (zDiag)^{-1} * (b3-C*r1);
-  ///////////////////////////////////////////////////////////////////////
-  SimpleVector b1(&b[0],           locnx);
-  SimpleVector b2(&b[locnx],       locmy);
-  SimpleVector b3(&b[locnx+locmy], locmz);
-  b1.copyFrom(r1);
-  b2.copyFrom(r2);
-
-  if(locmz>0) {
-    C.mult(1.0, b3, -1.0, r1);
-    b3.componentDiv(*zDiag);
-  }
 #ifdef TIMING
   troot_total += (MPI_Wtime()-taux);
   t_total = (MPI_Wtime()-t_total);
@@ -275,11 +351,244 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
     cout << "ROOT solve+iter refin: " << t_total 
 	 << "  ROOT:" << troot_total << "  CHILD: " << tchild_total << "  COMM:" << tcomm_total << endl;
 #endif
-  //--done
-  stochNode->resMon.recDsolveTmLocal_stop();
-
-
 }
+
+void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
+{
+  int n = b.length();
+
+  const int maxit=100;
+  const double tol=5e-14, EPS=2e-16;
+  double iter=0.0;
+
+  SimpleVector r(n);           //residual
+  SimpleVector s(n);           //residual associated with half iterate
+  SimpleVector rt(n);          //shadow residual
+  SimpleVector xmin(n);        //minimal residual iterate
+  SimpleVector x(n);           //iterate
+  SimpleVector xhalf(n);       // half iterate of BiCG
+  SimpleVector p(n),paux(n);
+  SimpleVector v(n), t(n);
+  int flag; double imin;
+  double n2b;                  //norm of b 
+  double normr, normrmin;      //norm of the residual and norm of residual at min-resid iterate
+  double normr_act;
+  double tolb;                 //relative tolerance
+  double rho, omega, alpha;
+  int stag, maxmsteps, maxstagsteps, moresteps;
+  double relres;
+  //maxit = n/2+1;
+
+  //////////////////////////////////////////////////////////////////
+  //  Problem Setup and intialization
+  //////////////////////////////////////////////////////////////////
+  n2b = b.twonorm();
+  tolb = n2b*tol;
+
+  //initial guess
+  x.copyFrom(b);
+  solver->Dsolve(x);
+  //initial residual
+  r.copyFrom(b); 
+  //applyA(1.0, r, -1.0, x);
+  SCmult(1.0,r, -1.0,x, prob);
+
+  normr=r.twonorm();
+
+  cout << "BiCG: initial rel resid: " << normr/n2b << endl;
+
+  if(normr<tolb) {
+    //initial guess is good enough
+    b.copyFrom(x); flag=0; return;
+  }
+
+  rt.copyFrom(r); //Shadow residual
+  double* resvec = new double[2*maxit+1];
+  resvec[0] = normr; normrmin=normr;
+  rho=1.0; omega=1.0;
+  stag=0; maxmsteps=min(min(n/50, 5), n-maxit); 
+  maxstagsteps=3; moresteps=0;
+
+  //////////////////////////////////////////////////////////////////
+  // loop over maxit iterations
+  //////////////////////////////////////////////////////////////////
+  int ii=0; while(ii<maxit) {
+    flag=-1;
+    ///////////////////////////////
+    // First half of the iterate
+    ///////////////////////////////
+    double rho1=rho; double beta;
+    rho = rt.dotProductWith(r); 
+    //printf("rho=%g\n", rho);
+    if(0.0==rho) { flag=4;  break; }
+
+    if(ii==0) p.copyFrom(r);
+    else {
+      beta = (rho/rho1)*(alpha/omega);
+      if(beta==0.0) { flag=4;  break; }
+
+      //-------- p = r + beta*(p - omega*v) --------
+      p.axpy(-omega, v); p.scale(beta); p.axpy(1.0, r);
+    }
+
+    //------ v = A*(M2inv*(M1inv*p)) and ph=M2inv*(M1inv*p)
+    //first use v as temp storage
+    //applyM1(0.0, v,    1.0, p);
+    //applyM2(0.0, paux, 1.0, v);
+    //applyA (0.0, v,    1.0, paux); 
+    paux.copyFrom(p);
+    solver->solve(paux);
+    
+    SCmult(0.0,v, 1.0,paux, prob);
+    
+    SimpleVector& ph = paux;
+
+    double rtv = rt.dotProductWith(v);
+    if(rtv==0.0) { flag=4; break; }
+
+    alpha = rho/rtv;
+    if(fabs(alpha)*ph.twonorm()<EPS*x.twonorm()) stag++;
+    else                                         stag=0;
+
+    // xhalf = x + alpha*ph and the associated residual
+    xhalf.copyFrom(x); xhalf.axpy( alpha, ph);
+    s.    copyFrom(r);     s.axpy(-alpha, v);
+    normr = s.twonorm(); normr_act = normr;
+    resvec[2*ii] = normr;
+
+    //printf("iter %g normr=%g\n", ii+0.5, normr);
+    //-------- check for convergence in the middle of the iterate.  -------- 
+    if(normr<=tolb || stag>=maxstagsteps || moresteps) {
+      s.copyFrom(b);
+      //applyA(1.0, s, -1.0, xhalf); // s=b-Ax
+      SCmult(1.0,s, -1.0,xhalf, prob);
+      normr_act = s.twonorm();
+      
+      if(normr<=tolb) {
+	//converged
+	x.copyFrom(xhalf);	
+	flag = 0; iter = 0.5+ii;
+	break;
+      } else {
+	if(stag>=maxstagsteps && moresteps==0) {
+	  stag=0;
+	}
+	moresteps++;
+	if(moresteps>=maxmsteps) {
+	  //method stagnated
+	  flag=3; x.copyFrom(xhalf);
+	  break;
+	}
+      }
+    }
+    if(stag>=maxstagsteps) { flag=3; break;} //stagnation
+
+    //update quantities related to minimal norm iterate
+    if(normr_act<normrmin) {
+      xmin.copyFrom(xhalf); normrmin=normr_act;
+      imin=0.5+ii;
+    }
+
+    ///////////////////////////////
+    // Second half of the iterate
+    //////////////////////////////
+    //applyM1(0.0, t,    1.0, s); //applyM1(s,     stemp);
+    //applyM2(0.0, paux, 1.0, t); //applyM2(stemp, sh);
+    //applyA (0.0, t,    1.0, paux); //applyA (sh, t);
+    //kkt->mult(0.0,paux, 1.0,s);
+    paux.copyFrom(s);
+    solver->solve(paux);
+    SCmult(0.0,t, 1.0,paux, prob);
+
+    SimpleVector& sh = paux; 
+    double tt = t.dotProductWith(t);
+    if(tt==0.0) { flag=4; break;}
+
+    omega=t.dotProductWith(s); omega /= tt;
+
+    if(fabs(omega)*sh.twonorm() < EPS*xhalf.twonorm()) stag++;
+    else                                               stag=0;
+
+    x.copyFrom(xhalf); x.axpy( omega, sh); // x=xhalf+omega*sh
+    r.copyFrom(s);     r.axpy(-omega, t ); // r=s-omega*t
+
+    normr = r.twonorm(); normr_act = normr;
+    resvec[2*ii+1] = normr;
+
+    //printf("stag=%d  maxstagsteps=%d moresteps=%d  normr=%g\n",
+    //	   stag, maxstagsteps, moresteps, normr);    
+
+    //-------- check for convergence at the end of the iterate.  -------- 
+    if(normr<=tolb || stag>=maxstagsteps || moresteps) {
+      r.copyFrom(b); 
+      //applyA(1.0, r, -1.0, x); //r=b-Ax
+      SCmult(1.0,r, -1.0,x, prob);
+      normr_act=r.twonorm();
+
+      if(normr<=tolb) { flag = 0; iter = 1.0+ii; break; }
+      else {
+	if(stag>=maxstagsteps && moresteps==0) {
+	  stag = 0;
+	}
+	moresteps++;
+	if(moresteps>=maxmsteps) {
+	  //method stagnated
+	  flag=3; break;
+	}
+      }
+    } // end convergence check
+    if(stag>=maxstagsteps) { flag=3; break;} //stagnation
+
+    //update quantities related to minimal norm iterate
+    if(normr_act<normrmin) {
+      xmin.copyFrom(x); normrmin=normr_act;
+      imin=1.5+ii;
+    }
+    //printf("iter %g normr=%g\n", ii+1.0, normr);
+    ///////////////////////////////
+    // Next iterate
+    ///////////////////////////////
+    ii++;
+    
+  }//end while
+
+  
+  if(flag==0 || flag==-1) {
+
+    relres = normr_act/n2b;
+    //if(myRank==0) {
+      printf("---BiCGStabConvergence: normResid=%g relResid=%g iter=%g\n", 
+	     normr_act, relres, iter);
+      //}
+  } else {
+    if(ii==maxit) flag=10;//aaa
+    //FAILURE -> return minimum resid-norm iterate
+    r.copyFrom(b); 
+    //applyA(1.0, r, -1.0, xmin);
+    SCmult(1.0,r, -1.0,xmin, prob);
+
+    normr=r.twonorm();
+    if(normr >= normr_act) {
+      x.copyFrom(xmin);
+      //iter=imin;
+      relres=normr/n2b;
+    } else {
+      iter=1.0+ii;
+      relres = normr/n2b;
+    }
+  
+#ifdef TIMING
+    printf("BiCGStab did not NOT converged after %g[%d] iterations.\n", iter,ii);
+    printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g %g\n\n", 
+	   flag, normr, relres, normrmin);
+#endif
+  }
+
+  b.copyFrom(x);
+  delete[] resvec;
+}
+
+
 
 void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 {

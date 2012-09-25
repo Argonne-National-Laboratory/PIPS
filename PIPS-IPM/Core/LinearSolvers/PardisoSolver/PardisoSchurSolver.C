@@ -338,6 +338,9 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   double rhsNorm = b.twonorm(); double relResNorm;
   int refinSteps=0;
   SimpleVector rhs_n(n);
+
+  vector<double> histRelRes;
+  SimpleVector x_last(dim);
   do {
 
     memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
@@ -356,13 +359,51 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
     rhs.copyFrom(b);
     Msys->mult(1.0, rhs.elements(), 1,  -1.0, x.elements(),1);
     relResNorm = rhs.twonorm()/rhsNorm;
+
+    if(histRelRes.size()>0) {
+      if(histRelRes[histRelRes.size()-1] < relResNorm) {
+	cout << "PardisoSchurSolver::residual norm increase in iter refin, last="
+	     << histRelRes[histRelRes.size()-1] << " new=" << relResNorm 
+	     << ". Restoring iterate..." << endl;
+	x.copyFrom(x_last);
+	relResNorm=histRelRes[histRelRes.size()-1];
+	break;
+      }
+    }
+    x_last.copyFrom(x);
+    histRelRes.push_back(relResNorm);
     if(relResNorm<1e-9) {
       break;
     }
     refinSteps++;
-  } while(refinSteps<=5);
+  } while(refinSteps<=9);
   
-  if(relResNorm>1e-8) cout << "PardisoSchurSolver::solve iter refinements: " << refinSteps << "   rel resid nrm=" << relResNorm << endl;
+  if(relResNorm>1e-8) {
+
+    Ma57Solver slv(Msys);
+    slv.matrixChanged();
+    SimpleVector x_ma(dim); x_ma.copyFrom(b);
+    slv.solve(x_ma);
+    
+    Msys->mult(1.0, b.elements(), 1,  -1.0, x_ma.elements(),1);
+    double relResNorm_ma57 = b.twonorm()/rhsNorm;
+    //cout <<"Ma57 rel resid norm:" << relResNorm_ma57 << endl << endl;
+    if(relResNorm_ma57 < relResNorm) {
+      x.copyFrom(x_ma);
+      relResNorm=relResNorm_ma57;
+    }
+    if(relResNorm>1e-8) {
+
+      cout << "Pardiso iter refinements: " << refinSteps 
+	   << "   rel resid nrm=" << relResNorm 
+	   << "Ma57 rel resid =" << relResNorm_ma57 << endl;
+      //cout << "Pardiso conv history:";
+      //for(size_t it=0; it<histRelRes.size(); it++)
+      //cout << histRelRes[it] << " ";
+      //cout << endl;
+      // cout <<"Ma57 rel resid norm:" << relResNorm_ma57 << endl << endl; 
+    }
+  }
 
   rhs.copyFrom(x);
 }

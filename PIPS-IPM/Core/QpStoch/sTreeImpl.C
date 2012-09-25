@@ -132,7 +132,7 @@ StochVector* sTreeImpl::createc() const
   double* vec = ((SimpleVector*)svec->vec)->elements();  
 
   if(m_id==0) {
-    RESCALE=4096*1.;//400.0*children.size();
+    RESCALE=0.25*children.size();
     vector<double> c = in.getFirstStageObj();
     copy(c.begin(), c.end(), vec);
 
