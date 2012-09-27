@@ -66,15 +66,19 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 }
 
 #ifdef TIMING
-double t_total, troot_total, taux, tchild_total, tcomm_total;
+double t_start, troot_total, taux, tchild_total, tcomm_total;
 #endif
 
 
 extern int gLackOfAccuracy;
 void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 {
-
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+#ifdef TIMING
+  t_start=MPI_Wtime();
+  troot_total=tchild_total=tcomm_total=0.0; 
+#endif
 
   assert(locnx+locmy+locmz==b.length());
   SimpleVector& r = (*redRhs);
@@ -131,6 +135,11 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
     C.mult(1.0, b3, -1.0, r1);
     b3.componentDiv(*zDiag);
   }
+#ifdef TIMING
+  cout << "Refinement: child=" << tchild_total << " root=" << troot_total
+       << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
+#endif
+
   //--done
   stochNode->resMon.recDsolveTmLocal_stop();
 }
@@ -206,8 +215,6 @@ void sLinsysRootAug::solveWithIterRef( sData *prob, SimpleVector& r)
 
   //SimpleVector realRhs(&r[0], locnx+locmy);
 #ifdef TIMING
-  t_total=MPI_Wtime();
-  troot_total=0.0;
   taux=MPI_Wtime();
 #endif
 
@@ -342,15 +349,13 @@ void sLinsysRootAug::solveWithIterRef( sData *prob, SimpleVector& r)
 #ifdef TIMING
   taux = MPI_Wtime();
 #endif
+
   r1.copyFrom(x);
   r2.copyFromArray(&x[locnx]);
+
 #ifdef TIMING
   troot_total += (MPI_Wtime()-taux);
-  t_total = (MPI_Wtime()-t_total);
-  if(myRank==0)
-    cout << "ROOT solve+iter refin: " << t_total 
-	 << "  ROOT:" << troot_total << "  CHILD: " << tchild_total << "  COMM:" << tcomm_total << endl;
-#endif
+#endif  
 }
 
 void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
@@ -360,6 +365,8 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   const int maxit=100;
   const double tol=5e-14, EPS=2e-16;
   double iter=0.0;
+
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
   SimpleVector r(n);           //residual
   SimpleVector s(n);           //residual associated with half iterate
@@ -382,20 +389,37 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   //////////////////////////////////////////////////////////////////
   //  Problem Setup and intialization
   //////////////////////////////////////////////////////////////////
+
   n2b = b.twonorm();
   tolb = n2b*tol;
 
+
+#ifdef TIMING
+  taux = MPI_Wtime();
+#endif
   //initial guess
   x.copyFrom(b);
   solver->Dsolve(x);
   //initial residual
-  r.copyFrom(b); 
+  r.copyFrom(b);
+
+#ifdef TIMING
+  troot_total += (MPI_Wtime()-taux);
+  taux = MPI_Wtime();
+#endif 
+ 
   //applyA(1.0, r, -1.0, x);
   SCmult(1.0,r, -1.0,x, prob);
 
+#ifdef TIMING
+    tchild_total +=  (MPI_Wtime()-taux);
+#endif
+
   normr=r.twonorm();
 
-  cout << "BiCG: initial rel resid: " << normr/n2b << endl;
+  if(myRank==0)
+    cout << "BiCG: initial rel resid: " << normr/n2b << endl;
+
 
   if(normr<tolb) {
     //initial guess is good enough
@@ -409,10 +433,12 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   stag=0; maxmsteps=min(min(n/50, 5), n-maxit); 
   maxstagsteps=3; moresteps=0;
 
+
   //////////////////////////////////////////////////////////////////
   // loop over maxit iterations
   //////////////////////////////////////////////////////////////////
   int ii=0; while(ii<maxit) {
+
     flag=-1;
     ///////////////////////////////
     // First half of the iterate
@@ -431,6 +457,9 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
       p.axpy(-omega, v); p.scale(beta); p.axpy(1.0, r);
     }
 
+#ifdef TIMING
+    taux = MPI_Wtime();
+#endif
     //------ v = A*(M2inv*(M1inv*p)) and ph=M2inv*(M1inv*p)
     //first use v as temp storage
     //applyM1(0.0, v,    1.0, p);
@@ -438,8 +467,13 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     //applyA (0.0, v,    1.0, paux); 
     paux.copyFrom(p);
     solver->solve(paux);
+
+#ifdef TIMING
+  troot_total += (MPI_Wtime()-taux);
+#endif 
     
     SCmult(0.0,v, 1.0,paux, prob);
+
     
     SimpleVector& ph = paux;
 
@@ -489,6 +523,9 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
       imin=0.5+ii;
     }
 
+#ifdef TIMING
+    taux = MPI_Wtime();
+#endif
     ///////////////////////////////
     // Second half of the iterate
     //////////////////////////////
@@ -498,7 +535,12 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     //kkt->mult(0.0,paux, 1.0,s);
     paux.copyFrom(s);
     solver->solve(paux);
+#ifdef TIMING
+    troot_total += (MPI_Wtime()-taux);
+#endif
+
     SCmult(0.0,t, 1.0,paux, prob);
+
 
     SimpleVector& sh = paux; 
     double tt = t.dotProductWith(t);
@@ -556,10 +598,10 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   if(flag==0 || flag==-1) {
 
     relres = normr_act/n2b;
-    //if(myRank==0) {
-      printf("---BiCGStabConvergence: normResid=%g relResid=%g iter=%g\n", 
+    if(myRank==0) {
+      printf("BiCGStab converged: normResid=%g relResid=%g iter=%g\n", 
 	     normr_act, relres, iter);
-      //}
+      }
   } else {
     if(ii==maxit) flag=10;//aaa
     //FAILURE -> return minimum resid-norm iterate
@@ -578,9 +620,11 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     }
   
 #ifdef TIMING
-    printf("BiCGStab did not NOT converged after %g[%d] iterations.\n", iter,ii);
-    printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g %g\n\n", 
-	   flag, normr, relres, normrmin);
+    if(myRank==0) {
+      printf("BiCGStab did not NOT converged after %g[%d] iterations.\n", iter,ii);
+      printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g %g\n\n", 
+	     flag, normr, relres, normrmin);
+    }
 #endif
   }
 
