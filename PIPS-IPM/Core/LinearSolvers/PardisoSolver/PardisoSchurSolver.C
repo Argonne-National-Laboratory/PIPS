@@ -274,7 +274,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   int nnzSC=iparm[38];
 
 #ifdef TIMING
-  cout << "PARDISOSCHUR FACT(AUGMAT) " << MPI_Wtime()-o << endl;
+  //cout << "PARDISOSCHUR FACT(AUGMAT) " << MPI_Wtime()-o << endl;
   //cout << "NNZ(SCHUR) " << nnzSC << "    SPARSITY " << nnzSC/(1.0*nSC*nSC) << endl;
 #endif
   if ( error != 0) {
