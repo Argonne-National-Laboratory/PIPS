@@ -12,6 +12,8 @@
 #define MIN(a,b) ((a > b) ? b : a)
 #endif
 
+extern int gOuterIterRefin;
+
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
   : QpGenLinsys(), kkt(NULL), solver(NULL)
 {
@@ -36,17 +38,28 @@ sLinsys::sLinsys(sFactory* factory_, sData* prob)
   nomegaInv   = factory_->tree->newDualZVector();
   rhs         = factory_->tree->newRhs();
 
+  if(gOuterIterRefin) {
+    // stuff for iterative refimenent
+    sol  = factory_->tree->newRhs();
+    res  = factory_->tree->newRhs();
+    resx = factory_->tree->newPrimalVector();
+    resy = factory_->tree->newDualYVector();
+    resz = factory_->tree->newDualZVector();
+  } else {
+    sol  = res  = resx = resy = resz = NULL;
+  }
+
   useRefs=0;
   data = prob;
   stochNode = prob->stochNode;
 }
 
 sLinsys::sLinsys(sFactory* factory_,
-				   sData* prob,				    
-				   OoqpVector* dd_, 
-				   OoqpVector* dq_,
-				   OoqpVector* nomegaInv_,
-				   OoqpVector* rhs_)
+		 sData* prob,				    
+		 OoqpVector* dd_, 
+		 OoqpVector* dq_,
+		 OoqpVector* nomegaInv_,
+		 OoqpVector* rhs_)
   : QpGenLinsys(), kkt(NULL), solver(NULL)
 {
   factory = factory_;
@@ -77,6 +90,18 @@ sLinsys::sLinsys(sFactory* factory_,
   useRefs=1;
   data = prob;
   stochNode = prob->stochNode;
+
+  if(gOuterIterRefin) {
+    // stuff for iterative refimenent
+    sol  = factory_->tree->newRhs();
+    res  = factory_->tree->newRhs();
+    resx = factory_->tree->newPrimalVector();
+    resy = factory_->tree->newDualYVector();
+    resz = factory_->tree->newDualZVector();
+  } else {
+    sol  = res  = resx = resy = resz = NULL;
+  }
+
 }
 
 
@@ -245,29 +270,11 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 void sLinsys::solveCompressed( OoqpVector& rhs_ )
 {
   StochVector& rhs = dynamic_cast<StochVector&>(rhs_);
-  //!log
-  //int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  //int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
-  
 
-  //!opt - mix execution of the following calls
-
-  Lsolve (data, rhs); 
-  //sleep(rank);
-  //if(rank>=0)
-  //{printf("-----------------\n");rhs.writeToStream(cout);printf("~~~~~~~~~~~~~~~~~~~~~~~~~~\n");}
-  //!log
-
-  Dsolve(data,rhs);
-  //sleep(rank);
-  //if(rank>=0)
-  //{printf("-----------------\n");rhs.writeToStream(cout);printf("~~~~~~~~~~~~~~~~~~~~~~~~~~\n");}
-
- 
+  Lsolve (data,rhs); 
+  Dsolve (data,rhs);
   Ltsolve(data,rhs);
-  //if(rank==0) {
-    //printf("Lsolve\n");   rhs.writeToStream(cout);
-  //}
+ 
 }
 
 

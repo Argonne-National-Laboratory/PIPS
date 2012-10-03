@@ -18,6 +18,8 @@
 #include <fstream>
 using namespace std;
 
+extern int gOuterIterRefin;
+
 QpGenLinsys::QpGenLinsys( QpGen * factory_,
 			  QpGenData * prob,
 			  LinearAlgebraPackage * la ) 
@@ -42,10 +44,22 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_,
   }
   nomegaInv   = la->newVector( mz );
   rhs         = la->newVector( nx + my + mz );
+
+  if(gOuterIterRefin) {
+    //for iterative refinement
+    sol  = la->newVector( nx + my + mz );
+    res  = la->newVector( nx + my + mz );
+    resx = la->newVector( nx );
+    resy = la->newVector( my );
+    resz = la->newVector( mz );
+  } else {
+    sol = res = resx = resy = resz = NULL;
+  }
 }
 
 QpGenLinsys::QpGenLinsys()
-:factory( NULL), rhs(NULL), dd(NULL), dq(NULL), useRefs(0)
+ : factory( NULL), rhs(NULL), dd(NULL), dq(NULL), useRefs(0),
+   sol(NULL), res(NULL), resx(NULL), resy(NULL), resz(NULL)
 {
 }
 
@@ -56,6 +70,12 @@ QpGenLinsys::~QpGenLinsys()
     delete rhs;
     delete nomegaInv;
   }
+
+  if(sol)  delete sol;
+  if(res)  delete res;
+  if(resx) delete resx;
+  if(resy) delete resy;
+  if(resz) delete resz;
   
 }
 void QpGenLinsys::factor(Data * /* prob_in */, Variables *vars_in)
@@ -204,40 +224,95 @@ void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,
 
 }
 
+#ifdef TIMING
+#include "mpi.h"
+#endif
+
 void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
 			       OoqpVector& stepz, OoqpVector& steps,
 			       OoqpVector& /* ztemp */,
-			       QpGenData * /* prob */ )
+			       QpGenData* prob )
 {
 
   stepz.axzpy( -1.0, *nomegaInv, steps );
   this->joinRHS( *rhs, stepx, stepy, stepz );
-  /*printf("----------INPUT rhs-------------------\n");
-    rhs->writeToStream(cout);
-    printf("--------------------------------------\n");*/
-  this->solveCompressed( *rhs );
 
-  //printf("----------OUTPUT rhs-------------------\n");
-  //rhs->writeToStream(cout);
-  //printf("---------------------------------------\n");
+  if(gOuterIterRefin) {
 
-  this->separateVars( stepx, stepy, stepz, *rhs );
-
+#ifdef TIMING
+    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+#endif
+    
+    res->copyFrom(*rhs);
+    sol->setToZero();
+    double bnorm=rhs->twonorm();
+    int refinSteps=-1;  double resNorm;
+    
+    do{
+      this->solveCompressed( *res );
+      
+      //x = x+dx
+      sol->axpy(1.0, *res);
+      refinSteps++;
+      
+      res->copyFrom(*rhs);    
+      //  stepx, stepy, stepz are used as temporary buffers
+      
+      computeResidualXYZ( *sol, *res, stepx, stepy, stepz, prob );
+      
+      resNorm=res->twonorm(); 
+      //cout << "resid rel norm xyz: " << resNorm/bnorm << endl;
+      if(resNorm/bnorm<1e-9)
+	break;
+      
+    } while(true);
+#ifdef TIMING
+    if(0==myRank)  
+      cout << "SolveXYZS: " << refinSteps << " iterative steps. Norm rel res:" 
+	   << resNorm/bnorm << endl << endl;
+#endif
+    this->separateVars( stepx, stepy, stepz, *sol );
+  } else {
+    this->solveCompressed( *rhs );
+    this->separateVars( stepx, stepy, stepz, *rhs );
+  }
   stepy.negate();
   stepz.negate();
 	
   steps.axpy( -1.0, stepz );
   steps.componentMult( *nomegaInv );
   steps.negate();
-
-  //printf("----------OUTPUT3-------------------\n");
-  //printf("--- x ---\n"); stepx.writeToStream(cout);
-  //printf("--- y ---\n"); stepy.writeToStream(cout);
-  //printf("--- s ---\n"); steps.writeToStream(cout);
-  //printf("--- z ---\n"); stepz.writeToStream(cout);
-  //printf("-----------------------------\n");
 }
 
+/**
+ * res = res - mat*sol
+ * stepx, stepy, stepz are used as temporary buffers
+ */
+void QpGenLinsys::computeResidualXYZ(OoqpVector& sol, 
+				     OoqpVector& res, 
+				     OoqpVector& solx, 
+				     OoqpVector& soly, 
+				     OoqpVector& solz, 
+				     QpGenData* data)
+{
+  this->separateVars( solx, soly, solz, sol );
+  this->separateVars( *resx, *resy, *resz, res);
+
+  data->Qmult(1.0, *resx, -1.0, solx);
+  resx->axzpy(-1.0, *dd, solx);
+  data->ATransmult(1.0, *resx, -1.0, soly);
+  data->CTransmult(1.0, *resx, -1.0, solz);
+  cout << "resx norm: " << resx->twonorm() << endl;
+  
+  data->Amult(1.0, *resy, -1.0, solx);
+  cout << "resy norm: " << resy->twonorm() << endl;
+
+  data->Cmult(1.0, *resz, -1.0, solx);
+  resz->axzpy(-1.0, *nomegaInv, solz);
+  cout << "resz norm: " << resz->twonorm() << endl;
+
+  this->joinRHS( res, *resx, *resy, *resz );
+}
 
 void QpGenLinsys::joinRHS( OoqpVector& rhs_in,  OoqpVector& rhs1_in,
 			     OoqpVector& rhs2_in, OoqpVector& rhs3_in )

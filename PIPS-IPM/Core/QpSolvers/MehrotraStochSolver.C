@@ -34,9 +34,7 @@ int sleepFlag=0;
 MehrotraStochSolver::MehrotraStochSolver( ProblemFormulation * opt, Data * prob )
   : MehrotraSolver(opt, prob)
 {
-#ifdef TIMING
-  //maxit = 5;
-#endif
+
 }
 #include "StochVector.h"
 #include "mpi.h"
