@@ -17,6 +17,7 @@
 int gOoqpPrintLevel = 10;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
+int gOuterIterRefin=1; //external
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0),
 		   mutol(1.0e-7), artol(1e-4), sys(0)
 {

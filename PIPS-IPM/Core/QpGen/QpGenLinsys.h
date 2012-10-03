@@ -56,6 +56,11 @@ protected:
   /** dimensions of the upper and lower bound vectors */
   int nxupp, nxlow, mcupp, mclow;
   int useRefs;
+
+  /** Vectors used in iterative refinement of the XYZ linear system
+   *  Set them to null to disable iterative refinement
+   */
+  OoqpVector *sol, *res, *resx, *resy, *resz;
 public:
   QpGenLinsys(  QpGen * factory,
 		QpGenData * data,
@@ -138,6 +143,13 @@ public:
 				 OoqpVector& u,  OoqpVector& pi,
 				 OoqpVector& v,  OoqpVector& gamma,
 				 OoqpVector& w,  OoqpVector& phi );
+
+  virtual void computeResidualXYZ(OoqpVector& sol, 
+				  OoqpVector& res, 
+				  OoqpVector& solx, 
+				  OoqpVector& soly, 
+				  OoqpVector& solz,
+				  QpGenData* data);
 };
 
 #endif
