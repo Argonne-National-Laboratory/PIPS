@@ -63,7 +63,6 @@ protected:
 
 		proximalQPModel lm(nvar1,this->bundle,this->currentSolution,u);
 		BAQPSolver solver(lm);
-		
 		double tstart = MPI_Wtime();
 		solver.go();
 		t2 += MPI_Wtime() - tstart;
@@ -121,6 +120,8 @@ protected:
 						double val = this->testPrimal(y);
 			printf("Primal Obj: %.10g\n",val);*/
 			//checkLastPrimals();
+			cout << "returning ..... curr obj=" << this->currentObj 
+			     << "  v=" <<  v <<  endl;
 			return;
 		}
 		

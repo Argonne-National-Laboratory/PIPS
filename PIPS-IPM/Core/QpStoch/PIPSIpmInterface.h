@@ -124,14 +124,14 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
   //---------------------------------------------
+
   tmElapsed=MPI_Wtime()-tmElapsed;
-  
+#ifdef TIMING
+  double objective = getObjective();
+#endif
 
-
-  
   if ( 0 == result && 0 == mype ) {
 #ifdef TIMING
-    double objective = getObjective();
     //cout << " " << data->nx << " variables, " << data->my  
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
     

@@ -226,6 +226,7 @@ void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,
 
 #ifdef TIMING
 #include "mpi.h"
+#include <vector>
 #endif
 
 void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
@@ -241,13 +242,14 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
 
 #ifdef TIMING
     int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    std::vector<double> histRelResid;
 #endif
     
     res->copyFrom(*rhs);
     sol->setToZero();
     double bnorm=rhs->twonorm();
     int refinSteps=-1;  double resNorm;
-    
+
     do{
       this->solveCompressed( *res );
       
@@ -259,17 +261,21 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
       //  stepx, stepy, stepz are used as temporary buffers
       
       computeResidualXYZ( *sol, *res, stepx, stepy, stepz, prob );
-      
       resNorm=res->twonorm(); 
+#ifdef TIMING
+      histRelResid.push_back(resNorm/bnorm);
+#endif      
       //cout << "resid rel norm xyz: " << resNorm/bnorm << endl;
       if(resNorm/bnorm<1e-9)
 	break;
       
     } while(true);
 #ifdef TIMING
-    if(0==myRank)  
-      cout << "SolveXYZS: " << refinSteps << " iterative steps. Norm rel res:" 
-	   << resNorm/bnorm << endl << endl;
+    if(0==myRank && refinSteps>0)  {
+      cout << "Outer  " << refinSteps << " iterative steps. Rel resids: "; //Norm rel res:" 
+      for(size_t it=0; it<histRelResid.size(); it++) cout << histRelResid[it] << " ";
+      cout << endl;
+    }
 #endif
     this->separateVars( stepx, stepy, stepz, *sol );
   } else {
@@ -302,14 +308,14 @@ void QpGenLinsys::computeResidualXYZ(OoqpVector& sol,
   resx->axzpy(-1.0, *dd, solx);
   data->ATransmult(1.0, *resx, -1.0, soly);
   data->CTransmult(1.0, *resx, -1.0, solz);
-  cout << "resx norm: " << resx->twonorm() << endl;
+  //cout << "resx norm: " << resx->twonorm() << endl;
   
   data->Amult(1.0, *resy, -1.0, solx);
-  cout << "resy norm: " << resy->twonorm() << endl;
+  //cout << "resy norm: " << resy->twonorm() << endl;
 
   data->Cmult(1.0, *resz, -1.0, solx);
   resz->axzpy(-1.0, *nomegaInv, solz);
-  cout << "resz norm: " << resz->twonorm() << endl;
+  //cout << "resz norm: " << resz->twonorm() << endl;
 
   this->joinRHS( res, *resx, *resy, *resz );
 }
