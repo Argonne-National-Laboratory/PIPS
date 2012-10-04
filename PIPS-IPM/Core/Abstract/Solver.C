@@ -18,12 +18,20 @@ int gOoqpPrintLevel = 10;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
 int gOuterIterRefin=1; //external
+
+#ifdef TIMING
+#include "mpi.h"
+static int myRank=-1;
+#endif
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0),
 		   mutol(1.0e-7), artol(1e-4), sys(0)
 {
   // define parameters associated with the step length heuristic
   gamma_f = 0.99;
   gamma_a = 1.0 / (1.0 - gamma_f);
+#ifdef TIMING
+  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+#endif
 }
 
 void Solver::start( ProblemFormulation * formulation,
@@ -46,14 +54,20 @@ void Solver::defaultStart( ProblemFormulation * /* formulation */,
   double a  = sdatanorm;
   double b  = sdatanorm;
 
+  if(0==myRank) cout << "Default start" << endl;
   iterate->interiorPoint( a, b );
+  if(0==myRank) cout << "Default start - int point" << endl;
 
   resid->calcresids( prob, iterate );
+  if(0==myRank) cout << "Default start - calc resids" << endl;
   resid->set_r3_xz_alpha( iterate, 0.0 );
 
+  if(0==myRank) cout << "--------Default start - factoring" << endl;
   sys->factor( prob, iterate );
+  if(0==myRank) cout << "--------Default start - done factoring, solving" << endl;
   sys->solve( prob, iterate, resid, step );
 
+  if(0==myRank) cout << "--------Default start - done solving" << endl;
   step->negate();
  
   // Take the full affine scaling step
