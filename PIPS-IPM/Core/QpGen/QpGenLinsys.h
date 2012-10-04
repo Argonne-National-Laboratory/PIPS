@@ -37,10 +37,10 @@ protected:
   /** stores a critical diagonal matrix as a vector */
   OoqpVector* nomegaInv;
 
+  QpGen * factory;
+
   /** right-hand side of the system */
   OoqpVector* rhs;
-
-  QpGen * factory;
 
   QpGenLinsys();
 
