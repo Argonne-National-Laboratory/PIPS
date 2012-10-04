@@ -136,8 +136,9 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
     b3.componentDiv(*zDiag);
   }
 #ifdef TIMING
-  cout << "Refinement: child=" << tchild_total << " root=" << troot_total
-       << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
+  if(myRank==0)
+    cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
+	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
 #endif
 
   //--done
