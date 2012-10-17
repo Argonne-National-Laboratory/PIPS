@@ -109,18 +109,18 @@ void StochTreePrecond::assignProcesses(MPI_Comm workersComm, vector<int>& procs)
   assignToPreconditioner(vChildsLoad, mChilds2Procs);
 
   
-  //!log --------------------------------------------
-  if(0==rankMe) {
-    int* noduri = new int[noProcs]; int noCopii=children.size();
-    for(int i=0; i<noProcs; i++) noduri[i]=0;
+//   //!log --------------------------------------------
+//   if(0==rankMe) {
+//     int* noduri = new int[noProcs]; int noCopii=children.size();
+//     for(int i=0; i<noProcs; i++) noduri[i]=0;
     
-    for(int i=0; i<noCopii; i++) noduri[mChilds2Procs[i][0]]++;
+//     for(int i=0; i<noCopii; i++) noduri[mChilds2Procs[i][0]]++;
     
-    printf("Nodes: ");
-    for(int i=0; i<noProcs; i++) printf("CPU[%3d]=%3d  ", i, noduri[i]);
-    printf("\n");  delete[] noduri;
-  }
-  //~log --------------------------------------------
+//     printf("Nodes: ");
+//     for(int i=0; i<noProcs; i++) printf("CPU[%3d]=%3d  ", i, noduri[i]);
+//     printf("\n");  delete[] noduri;
+//   }
+//   //~log --------------------------------------------
 
   /////////////////////////////////////////////////////////////
   // recursively create communicators for each child

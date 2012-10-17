@@ -285,6 +285,7 @@ Residuals* sFactory::makeResiduals( Data * prob_in )
 LinearSystem* sFactory::makeLinsys( Data * prob_in )
 {  
   linsys = newLinsysRoot();
+
   return linsys; 
 }
 

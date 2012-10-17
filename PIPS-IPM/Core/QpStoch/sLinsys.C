@@ -32,31 +32,14 @@ sLinsys::sLinsys(sFactory* factory_, sData* prob)
 
   if( nxupp + nxlow > 0 ) {
     dd      = factory_->tree->newPrimalVector();
+    assert(dd!=NULL);
     dq      = factory_->tree->newPrimalVector();
+    assert(dq!=NULL);
     prob->getDiagonalOfQ( *dq );
   }
   nomegaInv   = factory_->tree->newDualZVector();
   rhs         = factory_->tree->newRhs();
 
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
-  if(gOuterIterRefin) {
-      if(myRank==0) cout << "sLinsys allocation" << endl;
-    // stuff for iterative refimenent
-    sol  = factory_->tree->newRhs();
-    if(myRank==0) cout << "sLinsys allocation sol" << endl;
-    res  = factory_->tree->newRhs();
-      if(myRank==0) cout << "sLinsys allocation res" << endl;
-    resx = factory_->tree->newPrimalVector();
-      if(myRank==0) cout << "sLinsys allocation resx" << endl;
-    resy = factory_->tree->newDualYVector();
-      if(myRank==0) cout << "sLinsys allocation resy" << endl;
-    resz = factory_->tree->newDualZVector();
-      if(myRank==0) cout << "sLinsys allocation resz" << endl;
-  } else {
-      if(myRank==0) cout << "sLinsys NO allocation" << endl;
-    sol  = res  = resx = resy = resz = NULL;
-  }
 
   useRefs=0;
   data = prob;
@@ -99,18 +82,6 @@ sLinsys::sLinsys(sFactory* factory_,
   useRefs=1;
   data = prob;
   stochNode = prob->stochNode;
-
-  if(gOuterIterRefin) {
-    // stuff for iterative refimenent
-    sol  = factory_->tree->newRhs();
-    res  = factory_->tree->newRhs();
-    resx = factory_->tree->newPrimalVector();
-    resy = factory_->tree->newDualYVector();
-    resz = factory_->tree->newDualZVector();
-  } else {
-    sol  = res  = resx = resy = resz = NULL;
-  }
-
 }
 
 

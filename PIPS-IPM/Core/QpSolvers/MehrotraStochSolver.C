@@ -41,8 +41,6 @@ MehrotraStochSolver::MehrotraStochSolver( ProblemFormulation * opt, Data * prob 
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
 
-static int myRank=0;
-
 int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 {
   int done;
@@ -50,15 +48,11 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
   int status_code;
   QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
   gmu = 1000;
   //  grnorm = 1000;
   dnorm = prob->datanorm();
   // initialization of (x,y,z) and factorization routine.
   sys = factory->makeLinsys( prob );
-
-  if(0==myRank) cout << "Linsys created" << endl;
 
   g_iterNumber=0.0;
 

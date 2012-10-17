@@ -93,25 +93,25 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     mapChildNodesToProcs[i][0] = MIN(i/nper,(size_t)noProcs-1);
   }
   
-#ifdef TIMING    
-  //!log
-  if(0==rankMe) {
+// #ifdef TIMING    
+//   //!log
+//   if(0==rankMe) {
 
-    int* noduri = new int[noProcs];
-    for(int i=0; i<noProcs; i++) noduri[i]=0;
+//     int* noduri = new int[noProcs];
+//     for(int i=0; i<noProcs; i++) noduri[i]=0;
     
-    for(size_t i=0; i<mapChildNodesToProcs.size(); i++)
-      noduri[mapChildNodesToProcs[i][0]]++;
+//     for(size_t i=0; i<mapChildNodesToProcs.size(); i++)
+//       noduri[mapChildNodesToProcs[i][0]]++;
 
-    printf("Nodes: ");
-    for(int i=0; i<noProcs; i++) {
-      printf("CPU[%5d]=%5d  ", i, noduri[i]);
-    }
-    printf("\n");   
-    delete[] noduri;
-  }
-  //~log
-#endif 
+//     printf("Nodes: ");
+//     for(int i=0; i<noProcs; i++) {
+//       printf("CPU[%5d]=%5d  ", i, noduri[i]);
+//     }
+//     printf("\n");   
+//     delete[] noduri;
+//   }
+//   //~log
+// #endif 
 
   MPI_Group mpiWorldGroup; 
   ierr = MPI_Comm_group(MPI_COMM_WORLD, &mpiWorldGroup); assert(ierr==MPI_SUCCESS);
