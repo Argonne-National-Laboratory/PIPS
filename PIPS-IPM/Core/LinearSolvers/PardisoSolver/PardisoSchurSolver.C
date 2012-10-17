@@ -376,7 +376,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
       break;
     }
     refinSteps++;
-  } while(refinSteps<=9);
+  } while(refinSteps<=5);
   
   if(relResNorm>1e-8) {
 

@@ -13,6 +13,8 @@
 #include <fstream>
 using namespace std;
 
+#include "mpi.h"
+
 QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
 				int nx_, int my_, int mz_,
 				OoqpVector * ixlow_in, OoqpVector * ixupp_in,
@@ -59,6 +61,7 @@ QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
 
 void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 {
+    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   QpGenVars * vars = (QpGenVars *) vars_in;
   QpGenData * prob = (QpGenData *) prob_in;
 
@@ -76,7 +79,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   if( nxlow > 0 ) rQ->axpy( -1.0, *vars->gamma );
   if( nxupp > 0 ) rQ->axpy(  1.0, *vars->phi );
   componentNorm = rQ->infnorm();
-  //  cout << " rQ norm = " << componentNorm << endl;
+  if(0==myRank)  cout << " rQ norm = " << componentNorm << endl;
   if( componentNorm > norm ) norm = componentNorm;
 
   prob->getbA( *rA );
@@ -88,12 +91,14 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   gap -= prob->bA->dotProductWith(*vars->y);
   
   componentNorm = rA->infnorm();
+  if(0==myRank) cout << " rA norm = " << componentNorm << endl;
   if( componentNorm > norm ) norm = componentNorm;
 
   rC->copyFrom( *vars->s );
   prob->Cmult( -1.0, *rC, 1.0, *vars->x );
 
   componentNorm = rC->infnorm();
+  if(0==myRank) cout << " rC norm = " << componentNorm << endl;
   //  cout << " rC norm = " << componentNorm << endl;
   if( componentNorm > norm ) norm = componentNorm;
 
@@ -109,6 +114,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     gap -= prob->bl->dotProductWith(*vars->lambda);
 	
     componentNorm = rt->infnorm();
+    if(0==myRank) cout << " rt norm = " << componentNorm << endl;
     //cout << " rt norm = " << componentNorm << endl;
     if( componentNorm > norm ) norm = componentNorm;
   }
@@ -123,11 +129,13 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     gap += prob->bu->dotProductWith(*vars->pi);
 
     componentNorm = ru->infnorm();
+    if(0==myRank) cout << " ru norm = " << componentNorm << endl;
     //    cout << " ru norm = " << componentNorm << endl;
     if( componentNorm > norm ) norm = componentNorm;
   }
   componentNorm = rz->infnorm();
   //  cout << " rz norm = " << componentNorm << endl;
+  if(0==myRank) cout << " rz norm = " << componentNorm << endl;
   if( componentNorm > norm ) norm = componentNorm;
 
   if( nxlow > 0 ) {
@@ -140,6 +148,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 
     componentNorm = rv->infnorm();
     //    cout << " rv norm = " << componentNorm << endl;
+    if(0==myRank) cout << " rv norm = " << componentNorm << endl;
     if( componentNorm > norm ) norm = componentNorm;
   }
   if( nxupp > 0 ) {
@@ -151,6 +160,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     gap += prob->bux->dotProductWith(*vars->phi);
 
     componentNorm = rw->infnorm();
+    if(0==myRank) cout << " rw norm = " << componentNorm << endl;
     //    cout << " rw norm = " << componentNorm << endl;
     if( componentNorm > norm ) norm = componentNorm;
   }

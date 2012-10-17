@@ -17,10 +17,23 @@
 extern double g_iterNumber;
 #endif
 
+extern int gOuterIterRefin;
+
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   : sLinsys(factory_, prob_), iAmDistrib(0)
 {
   createChildren(prob_);
+
+  if(gOuterIterRefin) {
+    // stuff for iterative refimenent
+    sol  = factory_->tree->newRhs();
+    res  = factory_->tree->newRhs();
+    resx = factory_->tree->newPrimalVector();
+    resy = factory_->tree->newDualYVector();
+    resz = factory_->tree->newDualZVector();
+  } else {
+    sol  = res  = resx = resy = resz = NULL;
+  }
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -32,6 +45,17 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0)
 {
   createChildren(prob_);
+
+  if(gOuterIterRefin) {
+      // stuff for iterative refimenent
+      sol  = factory_->tree->newRhs();
+      res  = factory_->tree->newRhs();
+      resx = factory_->tree->newPrimalVector();
+      resy = factory_->tree->newDualYVector();
+      resz = factory_->tree->newDualZVector();
+  } else {
+      sol  = res  = resx = resy = resz = NULL;
+  }
 }
 
 sLinsysRoot::~sLinsysRoot()
@@ -221,6 +245,7 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
 void sLinsysRoot::createChildren(sData* prob)
 {
   sLinsys* child=NULL;
+  assert(dynamic_cast<StochVector*>(dd) !=NULL);
   StochVector& ddst = dynamic_cast<StochVector&>(*dd);
   StochVector& dqst = dynamic_cast<StochVector&>(*dq);
   StochVector& nomegaInvst = dynamic_cast<StochVector&>(*nomegaInv);
