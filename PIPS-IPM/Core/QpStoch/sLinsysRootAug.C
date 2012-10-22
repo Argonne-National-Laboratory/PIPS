@@ -59,8 +59,8 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
 
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-  return new PardisoSolver(kktmat);
-  //return new DeSymIndefSolver(kktmat);
+  //return new PardisoSolver(kktmat);
+  return new DeSymIndefSolver(kktmat);
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
 }
@@ -117,9 +117,9 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
-  //solver->Dsolve(r);
+  solver->Dsolve(r);
   //solveWithIterRef(prob, r);
-  solveWithBiCGStab(prob, r);
+  //solveWithBiCGStab(prob, r);
   ///////////////////////////////////////////////////////////////////////
   // r is the sln to the reduced system
   // the sln to the aug system should be 
@@ -417,10 +417,10 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 #endif
 
   normr=r.twonorm();
-
+#ifdef TIMING
   if(myRank==0)
     cout << "BiCG: initial rel resid: " << normr/n2b << endl;
-
+#endif
 
   if(normr<tolb) {
     //initial guess is good enough
@@ -599,10 +599,12 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   if(flag==0 || flag==-1) {
 
     relres = normr_act/n2b;
+#ifdef TIMING
     if(myRank==0) {
       printf("BiCGStab converged: normResid=%g relResid=%g iter=%g\n", 
 	     normr_act, relres, iter);
       }
+#endif
   } else {
     if(ii==maxit) flag=10;//aaa
     //FAILURE -> return minimum resid-norm iterate
