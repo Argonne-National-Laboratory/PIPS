@@ -179,9 +179,12 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrim
 	SimpleVector const &v = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->x).children[scen]->vec);
 	int mype;
 	MPI_Comm_rank(comm,&mype);
-	if (!v.length()) printf("oops, asked for scen %d on proc %d\n", scen, mype);
-	assert(v.length());
-	return std::vector<double>(&v[0],&v[0]+v.length());
+	//if (!v.length()) printf("oops, asked for scen %d on proc %d\n", scen, mype);
+	//assert(v.length());
+	if(!v.length()) 
+	  return std::vector<double>(); //this vector is not on this processor
+	else
+	  return std::vector<double>(&v[0],&v[0]+v.length());
 }
 
 
@@ -193,7 +196,10 @@ Eventually need to keep a map of inequalities and equalities
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDualRowSolution(int scen) const {
 	SimpleVector const &v = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->y).children[scen]->vec);
-	assert(v.length());
+	//assert(v.length());
+	if(!v.length())
+          return std::vector<double>(); //this vector is not on this processor
+	else
 	return std::vector<double>(&v[0],&v[0]+v.length());
 }
 
