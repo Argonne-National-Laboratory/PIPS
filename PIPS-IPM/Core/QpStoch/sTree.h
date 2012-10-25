@@ -25,8 +25,8 @@ class sTree
   void GetGlobalSizes(int& NXOut, int& MYOut, int& MZOut);
   //void GetLocalSizes(int& nxOut, int& myOut, int& mzOut);
 
-  void assignProcesses  ( );
-  void assignProcesses  (MPI_Comm, vector<int>&);
+  void assignProcesses  ( MPI_Comm comm = MPI_COMM_WORLD);
+  void assignProcesses  ( MPI_Comm, vector<int>&);
 
   MPI_Comm commWrkrs, myOldMpiComm; //workers only
   vector<int> myProcs, myOldProcs;

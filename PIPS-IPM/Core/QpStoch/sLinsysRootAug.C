@@ -117,9 +117,9 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
-  solver->Dsolve(r);
+  //solver->Dsolve(r);
   //solveWithIterRef(prob, r);
-  //solveWithBiCGStab(prob, r);
+  solveWithBiCGStab(prob, r);
   ///////////////////////////////////////////////////////////////////////
   // r is the sln to the reduced system
   // the sln to the aug system should be 
