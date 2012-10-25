@@ -30,7 +30,7 @@ class sFactory : public QpGen {
   int nnzQ, nnzA, nnzC;
   
  public:
-  sFactory( stochasticInput& );
+  sFactory( stochasticInput&, MPI_Comm comm=MPI_COMM_WORLD );
 
   /** This is a obsolete constructor since it uses sTreeCallbacks to create 
    *   data objects
