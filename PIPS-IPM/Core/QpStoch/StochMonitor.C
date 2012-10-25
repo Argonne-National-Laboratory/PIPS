@@ -5,6 +5,7 @@
 #include "Solver.h"
 #include "QpGenData.h"
 #include "QpGenVars.h"
+#include "sTree.h"
 #include <iostream>
 #include <cstdio>
 
@@ -13,10 +14,16 @@ using namespace std;
 StochMonitor::StochMonitor(QpGenStoch* qp_) 
 {
   qp = qp_;
+  mpiComm=MPI_COMM_WORLD; //default for old version
+  MPI_Comm_rank(mpiComm, &myRank);
+  myGlobRank = myRank;
 }
 
 StochMonitor::StochMonitor(sFactory* qp_) 
 {
+  mpiComm = qp_->tree->commWrkrs;
+  MPI_Comm_rank(mpiComm, &myRank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &myGlobRank);
 }
 void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
 			 Residuals * resids,
@@ -25,17 +32,17 @@ void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
 			 int status_code,
 			 int level ) 
 {
-	double objective = dynamic_cast<QpGenData*>(data)->objectiveValue(dynamic_cast<QpGenVars*>(vars));
-  
+  double objective = dynamic_cast<QpGenData*>(data)->objectiveValue(dynamic_cast<QpGenVars*>(vars));
+
   //log only on the first proc
-  int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank>0) return;
+  if(myRank>0) return;
 
   double dnorm = solver->dataNorm();
 
   switch( level ) {
   case 0 : case 1: { 
-    cout << " --- Iteration " << i << " --- " << endl;
+    cout << " --- Iteration " << i << " --- (rank " << myGlobRank << ")" << endl;
+
     printf(" mu = %16.12e  relative residual norm = %16.12e\n", 
 	   mu, resids->residualNorm() / dnorm);
     //cout << " mu = " << mu << " relative residual norm = " 

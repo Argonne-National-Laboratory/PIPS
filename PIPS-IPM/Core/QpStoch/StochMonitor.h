@@ -22,6 +22,8 @@ class StochMonitor : public OoqpMonitor
 		     int level );
  protected:
   QpGenStoch* qp;
+  MPI_Comm mpiComm;
+  int myRank, myGlobRank;
 };
 
 #endif
