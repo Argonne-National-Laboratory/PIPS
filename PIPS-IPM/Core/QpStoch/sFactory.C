@@ -26,15 +26,18 @@
 
 #include "mpi.h"
 
-sFactory::sFactory( stochasticInput& in)
+#include <stdio.h>
+#include <stdlib.h>
+
+
+sFactory::sFactory( stochasticInput& in, MPI_Comm comm)
   : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
 {
-  //int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
-  tree = new sTreeImpl(in);
+  tree = new sTreeImpl(in, comm);
   //tree->computeGlobalSizes();
   //tree->GetGlobalSizes(nx, my, mz);
   //decide how the CPUs are assigned 
-  tree->assignProcesses();
+  tree->assignProcesses(comm);
   tree->loadLocalSizes();
 }
 
@@ -82,14 +85,14 @@ sFactory::newLinsysLeaf(sData* prob,
 #ifdef TIMING
     //if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
 #endif
-  PardisoSolver* s=NULL; 
+  //PardisoSolver* s=NULL; 
 #ifdef TIMING
-  if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
+  //if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
 #endif 
 
-  //DeSymIndefSolver* s=NULL;
+  DeSymIndefSolver* s=NULL;
 #ifdef TIMING
-//    if(tree->rankMe==tree->rankZeroW) cout << "Using DeSymIndefSolver (dense) solver for 2nd stage." << endl;
+  if(tree->rankMe==tree->rankZeroW) cout << "Using DeSymIndefSolver (dense) solver for 2nd stage." << endl;
 #endif
 
   return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);
@@ -164,7 +167,7 @@ void dumpaug(int nx, SparseGenMatrix &A, SparseGenMatrix &C) {
 Data * sFactory::makeData()
 {
   double t,t2=MPI_Wtime();
-  int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
+  int mype; MPI_Comm_rank(tree->commWrkrs,&mype);
   bool p = (mype == 0);
 
   // use the tree to get the data from user and to create OOQP objects
@@ -213,7 +216,7 @@ Data * sFactory::makeData()
   REP("ixupp");
 
 #ifdef TIMING
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(tree->commWrkrs);
   t2 = MPI_Wtime() - t2;
   if (mype == 0) {
     cout << "IO second part took " << t2 << " sec\n";
@@ -313,6 +316,7 @@ void sFactory::iterateStarted()
 void sFactory::iterateEnded()
 {
   tree->stopMonitors();
+
   if(tree->balanceLoad()) {
     // balance needed
     data->sync();
@@ -326,7 +330,6 @@ void sFactory::iterateEnded()
 
     printf("Should not get here! OMG OMG OMG\n");
   }
-
   //logging and monitoring
   iterTmMonitor.recIterateTm_stop();
   m_tmTotal += iterTmMonitor.tmIterate;
