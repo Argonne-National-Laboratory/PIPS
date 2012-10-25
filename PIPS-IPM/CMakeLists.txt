@@ -66,3 +66,12 @@ if(HAVE_PARDISO)
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 endif(HAVE_PARDISO)
 
+if(HAVE_PARDISO)
+  add_executable(pipsipmBatchFromRaw_schur Drivers/pipsipmBatchFromRaw_schur.cpp)
+  target_link_libraries(pipsipmBatchFromRaw_schur
+    stochInput ${COIN_LIBS}
+    ooqpstoch ooqpstochla ooqpmehrotrastoch
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+endif(HAVE_PARDISO)
+
