@@ -192,7 +192,7 @@ void sResiduals::sync()
 
 void sResiduals::destroyChildren()
 {
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  //int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   for (size_t it=0; it<children.size(); it++) {
     //printf("CPU[%d] destroy %d\n", myRank, it);
     children[it]->destroyChildren(); 
