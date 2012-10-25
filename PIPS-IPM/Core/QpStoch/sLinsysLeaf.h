@@ -62,7 +62,7 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
 			 LINSOLVER* thesolver)
   : sLinsys(factory_, prob, dd_, dq_, nomegaInv_, rhs_)
 {
-  int rank; MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+  //int rank; MPI_Comm_rank(MPI_COMM_WORLD,&rank);
   //double t = MPI_Wtime();
 
   // create the KKT system matrix
