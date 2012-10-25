@@ -58,12 +58,13 @@ class PIPSIpmInterface
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) : comm(comm)
 {
+
 #ifdef TIMING
   int mype;
   MPI_Comm_rank(comm,&mype);
 #endif
-  
-  factory = new FORMULATION( in );
+
+  factory = new FORMULATION( in, comm);
 #ifdef TIMING
   if(mype==0) printf("factory created\n");
 #endif
@@ -84,9 +85,9 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 #endif
 
   solver  = new IPMSOLVER( factory, data );
+  solver->addMonitor(new StochMonitor( factory ));
 #ifdef TIMING
   if(mype==0) printf("solver created\n");
-  solver->addMonitor(new StochMonitor( factory ));
   //solver->monitorSelf();
 #endif
 
@@ -99,7 +100,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
   int mype;
   MPI_Comm_rank(comm,&mype);
-#ifdef TIMING
+  //#ifdef TIMING
   if(0 == mype) cout << "solving ..." << endl;
 
   if(mype==0) {
@@ -118,15 +119,18 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
     }
   }
-#endif
+  //#endif
 
   double tmElapsed=MPI_Wtime();
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
   //---------------------------------------------
 
+
+
   tmElapsed=MPI_Wtime()-tmElapsed;
 #ifdef TIMING
+  cout << mype << " solve done" << endl;
   double objective = getObjective();
 #endif
 
@@ -177,8 +181,8 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStagePrima
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrimalColSolution(int scen) const {
 	SimpleVector const &v = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->x).children[scen]->vec);
-	int mype;
-	MPI_Comm_rank(comm,&mype);
+	//int mype;
+	//MPI_Comm_rank(comm,&mype);
 	//if (!v.length()) printf("oops, asked for scen %d on proc %d\n", scen, mype);
 	//assert(v.length());
 	if(!v.length()) 

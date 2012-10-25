@@ -32,16 +32,16 @@ sTree::~sTree()
     delete children[it];
 }
 
-void sTree::assignProcesses()
+void sTree::assignProcesses(MPI_Comm comm)
 {
   int size;
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_size(comm, &size);
 
   vector<int> processes(size);
   for(int p=0; p<size; p++)
     processes[p]=p;
 
-  assignProcesses(MPI_COMM_WORLD, processes);
+  assignProcesses(comm, processes);
 }
 
 #ifndef MIN
@@ -61,6 +61,7 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     assert(noProcs==1); 
     return;
   }
+
   if(1==noProcs) {
     for(size_t c=0; c<children.size(); c++)
       children[c]->assignProcesses(world, processes);
@@ -95,26 +96,27 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
   
 // #ifdef TIMING    
 //   //!log
-//   if(0==rankMe) {
+   // if(0==rankMe) {
 
-//     int* noduri = new int[noProcs];
-//     for(int i=0; i<noProcs; i++) noduri[i]=0;
+   //   int* noduri = new int[noProcs];
+   //   for(int i=0; i<noProcs; i++) noduri[i]=0;
     
-//     for(size_t i=0; i<mapChildNodesToProcs.size(); i++)
-//       noduri[mapChildNodesToProcs[i][0]]++;
+   //   for(size_t i=0; i<mapChildNodesToProcs.size(); i++)
+   //     noduri[mapChildNodesToProcs[i][0]]++;
 
-//     printf("Nodes: ");
-//     for(int i=0; i<noProcs; i++) {
-//       printf("CPU[%5d]=%5d  ", i, noduri[i]);
-//     }
-//     printf("\n");   
-//     delete[] noduri;
-//   }
-//   //~log
-// #endif 
+   //   printf("Nodes: ");
+   //   for(int i=0; i<noProcs; i++) {
+   //     printf("CPU[%5d]=%5d  ", i, noduri[i]);
+   //   }
+   //   printf("\n");   
+   //   delete[] noduri;
+   // }
+   //~log
+   // #endif 
+
 
   MPI_Group mpiWorldGroup; 
-  ierr = MPI_Comm_group(MPI_COMM_WORLD, &mpiWorldGroup); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup); assert(ierr==MPI_SUCCESS);
   for(size_t i=0; i<children.size(); i++) {
 
     int isChildInThisProcess=0;
@@ -652,11 +654,12 @@ void sTree::syncMonitoringData(vector<double>& vCPUTotal)
 
 bool sTree::balanceLoad()
 {
+  return false; //disabled for now
   //before synchronization, compute the total time recorded on this CPU
   //updates this->IPMIterExecTIME
   computeNodeTotal();
 
-  int nCPUs; MPI_Comm_size(MPI_COMM_WORLD, &nCPUs);
+  int nCPUs; MPI_Comm_size(commWrkrs, &nCPUs);
   vector<double> cpuExecTm(nCPUs, 0.0);
   cpuExecTm[rankMe] = this->IPMIterExecTIME;
 

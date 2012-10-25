@@ -8,11 +8,11 @@
 #include "StochGenMatrix.h"
 #include "StochSymMatrix.h"
 
-sTreeImpl::sTreeImpl( stochasticInput &in_)
+sTreeImpl::sTreeImpl( stochasticInput &in_, MPI_Comm comm /*=MPI_COMM_WORLD*/)
   : sTree(), m_id(0), in(in_), parent(NULL)
 {
-  if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
-  if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+  if(-1==rankMe) MPI_Comm_rank(comm, &rankMe);
+  if(-1==numProcs) MPI_Comm_size(comm, &numProcs);
 
   m_nx = in.nFirstStageVars();
   m_my = compute_nFirstStageEq();
@@ -139,13 +139,13 @@ StochVector* sTreeImpl::createc() const
     vector<double> c = in.getFirstStageObj();
     copy(c.begin(), c.end(), vec);
 
-    for(int i=0; i<m_nx; i++)
+    for(size_t i=0; i<m_nx; i++)
       vec[i] = vec[i]*RESCALE;
   }  else {
     vector<double> c = in.getSecondStageObj(m_id-1);
     copy(c.begin(), c.end(), vec);
 
-    for(int i=0; i<m_nx; i++)
+    for(size_t i=0; i<m_nx; i++)
       vec[i] = vec[i]*RESCALE;
   }
 
@@ -302,7 +302,7 @@ StochGenMatrix* sTreeImpl::createA() const
 		       in.getFirstStageRowLB(), 
 		       in.getFirstStageRowUB(), 
 		       eq_comp());
-    //printf("  -- 1st stage my=%lu nx=%lu nnzB=%d\n", m_my, m_nx, nnzB);
+    //printf("%d  -- 1st stage my=%lu nx=%lu nnzB=%d\n", commie, m_my, m_nx, nnzB);
     A = new StochGenMatrix( m_id, N, MZ, 
 			    m_my, 0,   0,    // A does not exist for the root
 			    m_my, m_nx, nnzB, // B is 1st stage eq matrix
@@ -326,7 +326,7 @@ StochGenMatrix* sTreeImpl::createA() const
 			    m_my, parent->m_nx, nnzA, 
 			    m_my, m_nx,         nnzB,
 			    commWrkrs );
-    //cout << "  -- 2nd stage my=" << m_my << " nx=" << m_nx 
+    //cout << commie << "  -- 2nd stage my=" << m_my << " nx=" << m_nx 
     // << "  1st stage nx=" << parent->m_nx << "  nnzA=" << nnzA << " nnzB=" << nnzB << endl;
     extractRows( Arow,
 		 in.getSecondStageRowLB(scen), 
