@@ -16,7 +16,7 @@
 class sTreeImpl : public sTree
 {
  public:
-  sTreeImpl(stochasticInput &in);
+  sTreeImpl(stochasticInput &in, MPI_Comm comm=MPI_COMM_WORLD);
  private: 
   sTreeImpl(int idx, stochasticInput &in);
  public:
