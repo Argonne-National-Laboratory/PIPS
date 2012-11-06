@@ -239,8 +239,8 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
 
 #ifdef TIMING
     int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    std::vector<double> histRelResid;
-    vector<double> histRelResidInf;
+    vector<double> histRelResid;
+    //vector<double> histRelResidInf;
 #endif
   stepz.axzpy( -1.0, *nomegaInv, steps );
   this->joinRHS( *rhs, stepx, stepy, stepz );
@@ -266,7 +266,7 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
       resNorm=res->twonorm(); 
 #ifdef TIMING
       histRelResid.push_back(resNorm/bnorm);
-      histRelResidInf.push_back(res->infnorm()/bnorm);
+      //histRelResidInf.push_back(res->infnorm()/bnorm);
 #endif      
       //cout << "resid rel norm xyz: " << resNorm/bnorm << endl;
       if(resNorm/bnorm<1e-10)
@@ -277,7 +277,7 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
     if(0==myRank) {// && refinSteps>0)  {
       cout << "Outer  " << refinSteps << " iterative steps. Rel resids: "; //Norm rel res:" 
       for(size_t it=0; it<histRelResid.size(); it++) 
-	  cout << histRelResid[it] << "-" << histRelResidInf[it] << " | ";
+	  cout << histRelResid[it] << " | ";
       cout << endl;
     }
 #endif

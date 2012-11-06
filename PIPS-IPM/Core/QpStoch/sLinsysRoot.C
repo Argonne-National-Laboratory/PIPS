@@ -15,6 +15,7 @@
 
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
+double g_scenNum;
 #endif
 
 extern int gOuterIterRefin;
@@ -78,7 +79,9 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   }
 
   for(size_t c=0; c<children.size(); c++) {
-
+#ifdef STOCH_TESTING
+    g_scenNum=c;
+#endif
     if(children[c]->mpiComm == MPI_COMM_NULL)
       continue;
 
