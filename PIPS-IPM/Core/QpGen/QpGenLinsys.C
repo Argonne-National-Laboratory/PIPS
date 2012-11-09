@@ -241,44 +241,67 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
     int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
     vector<double> histRelResid;
     //vector<double> histRelResidInf;
+    if(0==myRank) cout << "solveXYZS solve ---" << endl;
 #endif
   stepz.axzpy( -1.0, *nomegaInv, steps );
   this->joinRHS( *rhs, stepx, stepy, stepz );
 
   if(gOuterIterRefin) {
-
     
+#ifdef TIMING
+      double tTot=MPI_Wtime(), tSlv=0., tResid=0., tTmp;
+#endif
     res->copyFrom(*rhs);
     sol->setToZero();
     double bnorm=rhs->twonorm();
     int refinSteps=-1;  double resNorm;
 
     do{
+#ifdef TIMING
+      tTmp=MPI_Wtime();
+#endif
       this->solveCompressed( *res );
+#ifdef TIMING
+      tSlv += (MPI_Wtime()-tTmp);
+#endif
 
       //x = x+dx
       sol->axpy(1.0, *res);
       refinSteps++;
       
+
+#ifdef TIMING
+      tTmp=MPI_Wtime();
+#endif
       res->copyFrom(*rhs);    
       //  stepx, stepy, stepz are used as temporary buffers
       computeResidualXYZ( *sol, *res, stepx, stepy, stepz, prob );
+#ifdef TIMING
+      tResid += (MPI_Wtime()-tTmp);
+#endif 
+
       resNorm=res->twonorm(); 
 #ifdef TIMING
       histRelResid.push_back(resNorm/bnorm);
       //histRelResidInf.push_back(res->infnorm()/bnorm);
+      if(0==myRank) cout << "res norm xyz: " << resNorm 
+			 << "rhs norm xyz: " << bnorm << endl;
 #endif      
-      //cout << "resid rel norm xyz: " << resNorm/bnorm << endl;
-      if(resNorm/bnorm<1e-10)
+      
+      if(resNorm/bnorm<1e-12)
 	break;
 
     } while(true);
 #ifdef TIMING
+    tTot = MPI_Wtime() - tTot;
     if(0==myRank) {// && refinSteps>0)  {
-      cout << "Outer  " << refinSteps << " iterative steps. Rel resids: "; //Norm rel res:" 
+      cout << "Outer " << refinSteps << " iterative steps. Rel resids: "; //Norm rel res:" 
       for(size_t it=0; it<histRelResid.size(); it++) 
 	  cout << histRelResid[it] << " | ";
       cout << endl;
+      cout << "Outer times:  solve=" << tSlv 
+	   << "  resid=" << tResid 
+	   << "  total=" << tTot << endl; 
     }
 #endif
     this->separateVars( stepx, stepy, stepz, *sol );

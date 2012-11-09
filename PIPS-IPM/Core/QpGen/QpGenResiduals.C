@@ -80,7 +80,8 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   if( nxupp > 0 ) rQ->axpy(  1.0, *vars->phi );
   componentNorm = rQ->infnorm();
 #ifdef TIMING
-  if(0==myRank)  cout << " rQ norm = " << componentNorm << endl;
+  if(0==myRank)  cout << " rQ norm = " << componentNorm 
+		      << " | " << rQ->twonorm() << endl;
 #endif
   if( componentNorm > norm ) norm = componentNorm;
 

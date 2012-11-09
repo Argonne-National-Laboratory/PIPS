@@ -43,8 +43,8 @@ void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
   case 0 : case 1: { 
     cout << " --- Iteration " << i << " --- (rank " << myGlobRank << ")" << endl;
 
-    printf(" mu = %16.12e  relative residual norm = %16.12e\n", 
-	   mu, resids->residualNorm() / dnorm);
+    printf(" mu = %16.12e  rel.res.norm=%16.12e  datanorm=%16.12e\n", 
+	   mu, resids->residualNorm() / dnorm, dnorm);
     //cout << " mu = " << mu << " relative residual norm = " 
     //cout << resids->residualNorm() / dnorm << endl;
     cout << " Duality Gap:  " << resids->dualityGap() << endl;
