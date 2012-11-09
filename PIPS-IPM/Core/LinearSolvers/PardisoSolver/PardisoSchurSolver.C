@@ -28,7 +28,9 @@ using namespace std;
 
 extern int gOoqpPrintLevel;
 extern double g_iterNumber;
+#ifdef STOCH_TESTING
 extern double g_scenNum;
+#endif
 static int rhsCount=0;
 using namespace std;
 
@@ -345,7 +347,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   int phase=33;      //solve and iterative refinement
   int maxfct=1, mnum=1, nrhs=1;
   iparm[2]=num_threads;
-  iparm[7]=5;    // # of iterative refinements
+  iparm[7]=8;    // # of iterative refinements
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
@@ -359,7 +361,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
   for(int i=dim; i<n; i++) rhs_n[i]=0.0;
 
-  double start = MPI_Wtime();
+  //double start = MPI_Wtime();
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
@@ -390,7 +392,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   res_norm2 = sqrt(res_norm2);
 
   double rhsNorm=rhs.twonorm();
-  if(res_norm2/rhsNorm>1e-8)
+  if(res_norm2/rhsNorm>1e-9)
     cout << "--- rhs.nrm=" << rhsNorm 
 	 << " rel.res.nrm=" << res_norm2/rhsNorm
 	 << endl << endl;
@@ -556,6 +558,7 @@ PardisoSchurSolver::~PardisoSchurSolver()
   if(nvec) delete[] nvec;
 }
 
+#ifdef STOCH_TESTING
 int dumpAugMatrix(int n, int nnz, int nSys,
 		  double* elts, int* rowptr, int* colidx, 
 		  const char* fname)
@@ -599,6 +602,7 @@ int dumpRhs(SimpleVector& v)
   cout << "done!" << endl;
   return 0;
 }
+#endif
 // int dumpSysMatrix(SparseSymMatrix& M)
 // {
 //   int n=M.size(), nnz=M.numberOfNonZeros();

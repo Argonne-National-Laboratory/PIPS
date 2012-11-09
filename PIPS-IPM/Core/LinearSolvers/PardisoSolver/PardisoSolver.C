@@ -184,6 +184,7 @@ void PardisoSolver::firstCall()
   for( int i = 0; i < n+1; i++) krowM[i] += 1;
   for( int i = 0; i < nnz; i++) jcolM[i] += 1;
 
+  /*
   //
   // symbolic analysis
   //
@@ -210,6 +211,7 @@ void PardisoSolver::firstCall()
     printf ("PardisoSolver - ERROR during symbolic factorization: %d\n", error );
     assert(false);
   }
+  */
 } 
 
  
@@ -263,9 +265,9 @@ void PardisoSolver::matrixChanged()
     //cout << "Forming the matrix took:" << MPI_Wtime()-tm << endl;
   }
     //
-  // numerical factorization
+  // numerical factorization & symb.analysis
   //
-  int phase = 22; //Analysis, numerical factorization
+  int phase = 12; //Analysis, numerical factorization
   int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
   int mnum=1; //actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
