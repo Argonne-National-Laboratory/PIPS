@@ -284,8 +284,8 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
 #ifdef TIMING
       histRelResid.push_back(resNorm/bnorm);
       //histRelResidInf.push_back(res->infnorm()/bnorm);
-      if(0==myRank) cout << "res norm xyz: " << resNorm 
-			 << "rhs norm xyz: " << bnorm << endl;
+      if(0==myRank) cout << "resid.nrm xyz: " << resNorm << "   "
+			 << "rhs.nrm xyz: " << bnorm << endl;
 #endif      
       
       if(resNorm/bnorm<1e-12)
