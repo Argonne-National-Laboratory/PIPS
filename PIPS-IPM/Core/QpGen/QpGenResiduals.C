@@ -61,7 +61,7 @@ QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
 
 void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 {
-    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   QpGenVars * vars = (QpGenVars *) vars_in;
   QpGenData * prob = (QpGenData *) prob_in;
 
@@ -75,7 +75,11 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 
   prob->ATransmult( 1.0, *rQ, -1.0, *vars->y );
   prob->CTransmult( 1.0, *rQ, -1.0, *vars->z );
-  componentNorm = rQ->infnorm();
+  //componentNorm = rQ->infnorm();
+  
+  vars->gamma->selectNonZeros(*ixlow);
+  vars->phi->selectNonZeros( *ixupp );
+
   if( nxlow > 0 ) rQ->axpy( -1.0, *vars->gamma );
   if( nxupp > 0 ) rQ->axpy(  1.0, *vars->phi );
   componentNorm = rQ->infnorm();
