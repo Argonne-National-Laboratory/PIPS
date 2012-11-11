@@ -322,7 +322,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
 }
 
-
+static int totalSlv=0;
 void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 { 
   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
@@ -341,6 +341,12 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   */
   //------------------------------------------------------
 
+  //int myRank;
+  //MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  //if(myRank==0) {
+  //  totalSlv++;
+  //  cout << "Pardiso::solve=" << totalSlv << endl;
+  //}
   
 
   int mtype=-2, error;
