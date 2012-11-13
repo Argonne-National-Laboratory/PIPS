@@ -159,7 +159,7 @@ void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,
     tInvLambda.copyFrom( *vars->lambda );
     tInvLambda.divideSome( *vars->t, *iclow );
 
-    step->s-> axzpy( 1.0, tInvLambda, *res->rt );
+    step->s->axzpy( 1.0, tInvLambda, *res->rt );
     step->s->axdzpy( 1.0, *res->rlambda, *vars->t, *iclow );
   }
 
@@ -198,6 +198,8 @@ void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,
     step->lambda->copyFrom( *res->rlambda );
     step->lambda->axzpy( -1.0, *vars->lambda, *step->t );
     step->lambda->divideSome( *vars->t, *iclow );
+    //!
+    step->lambda->selectNonZeros( *iclow );
   }
   if( mcupp > 0 ) {
     step->u->copyFrom( *res->ru );
@@ -207,6 +209,8 @@ void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,
     step->pi->copyFrom( *res->rpi );
     step->pi->axzpy( -1.0, *vars->pi, *step->u );
     step->pi->divideSome( *vars->u, *icupp );
+    //!
+    step->pi->selectNonZeros( *icupp );
   }
   if( nxlow > 0 ) {
     step->v->copyFrom( *step->x );
@@ -216,6 +220,8 @@ void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,
     step->gamma->copyFrom( *res->rgamma );
     step->gamma->axzpy( -1.0, *vars->gamma, *step->v );
     step->gamma->divideSome( *vars->v, *ixlow );
+    //!
+    step->gamma->selectNonZeros( *ixlow );
   }
   if( nxupp > 0 ) {
     step->w->copyFrom( *res->rw );
@@ -225,6 +231,8 @@ void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,
     step->phi->copyFrom( *res->rphi );
     step->phi->axzpy( -1.0, *vars->phi, *step->w );
     step->phi->divideSome( *vars->w, *ixupp );
+    //!
+    step->phi->selectNonZeros( *ixupp );
   }
   assert( step->validNonZeroPattern() );
 
