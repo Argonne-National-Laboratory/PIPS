@@ -133,10 +133,6 @@ namespace{
 template<typename SOLVER, typename FORMULATION>
 OOQPRecourseInterface<SOLVER,FORMULATION>::OOQPRecourseInterface(stochasticInput &input, int scenNumber, const std::vector<double> &firstStageSolution)
 {
-
-  //Qrow.reverseOrderedCopyOf(input.getSecondStageHessian(s));
-  
-  int nvar1 = input.nFirstStageVars();
   int nvar2 = input.nSecondStageVars(scenNumber);
   int ncons2 = input.nSecondStageCons(scenNumber);
 
@@ -219,8 +215,7 @@ OOQPRecourseInterface<SOLVER,FORMULATION>::OOQPRecourseInterface(stochasticInput
     }
   }
   
-
-  double RESCALE=1.0;
+  //double RESCALE=1.0;
   int idx = 0;
   std::vector<double> const &l = input.getSecondStageColLB(scenNumber);
   std::vector<double> const &u = input.getSecondStageColUB(scenNumber);
@@ -256,19 +251,19 @@ OOQPRecourseInterface<SOLVER,FORMULATION>::OOQPRecourseInterface(stochasticInput
 template<typename S, typename F>
 void OOQPRecourseInterface<S,F>::go() 
 {
-  //s->monitorSelf();
+  s->monitorSelf();
   int result = s->solve(prob.get(),vars.get(),resid.get());
   
-  // if ( 0 == result ) {
-  //   double objective = prob->objectiveValue(vars.get());
+  if ( 0 == result ) {
+    double objective = prob->objectiveValue(vars.get());
     
-  //   cout << " " << prob->nx << " variables, " 
-  // 	 << prob->my  << " equality constraints, " 
-  // 	 << prob->mz  << " inequality constraints.\n";
+    cout << " " << prob->nx << " variables, " 
+   	 << prob->my  << " equality constraints, " 
+   	 << prob->mz  << " inequality constraints.\n";
     
-  //   cout << " Iterates: " << s->iter
-  // 	 <<",    Optimal Solution:  " << objective << endl;
-  // }
+    cout << " Iterates: " << s->iter
+   	 <<",    Optimal Solution:  " << objective << endl;
+  }
 }
 
 template<typename S, typename F>
@@ -286,7 +281,9 @@ std::vector<double> OOQPRecourseInterface<S,F>::getPrimalColSolution() const
 template<typename S, typename F>
 std::vector<double> OOQPRecourseInterface<S,F>::getDualRowSolution() const
 {
-  std::vector<double> out; out.reserve(vars->y->length()+vars->z->length());
+  std::vector<double> out; 
+  out.reserve(vars->y->length()+vars->z->length());
+  
   double const *eqsol = &dynamic_cast<SimpleVector const&>(*vars->y)[0];
   double const *ineqsol = &dynamic_cast<SimpleVector const&>(*vars->z)[0];
 
@@ -295,6 +292,7 @@ std::vector<double> OOQPRecourseInterface<S,F>::getDualRowSolution() const
     if(r>=0) out.push_back(eqsol[r]);
     else     out.push_back(ineqsol[-r-1]);
   }
+  return out;
 }
 
 #endif

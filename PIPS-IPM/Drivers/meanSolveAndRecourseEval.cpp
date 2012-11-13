@@ -7,6 +7,8 @@
 #include "rawInput.hpp"
 #include "PIPSIpmInterface.h"
 #include "OOQPRecourseInterface.hpp"
+#include "QpGenSparseMa57.h"
+#include "MehrotraSolver.h"
 #include "sFactoryAugSchurLeaf.h"
 #include "MehrotraStochSolver.h"
 
@@ -55,9 +57,8 @@ int main(int argc, char ** argv) {
   MPI_Comm commBatch;
   MPI_Comm_split(MPI_COMM_WORLD, color, 0, &commBatch);
   assert(commBatch!=MPI_COMM_NULL);
-
-  int mynewpe; MPI_Comm_rank(commBatch, &mynewpe);
-  //printf("mype=%d mynewpe=%d\n", mype, mynewpe);
+  int myBatchPe; MPI_Comm_rank(commBatch, &myBatchPe);
+  printf("mype=%d mynewpe=%d\n", mype, myBatchPe);
  
   {
     stringstream ss; ss << datadirname << (color+1) << "/" << datarootname;
@@ -68,20 +69,61 @@ int main(int argc, char ** argv) {
     datarootnameMean=ss.str();
   }
 
-  //printf("mype=%d datarootname=%s nscen=%d\n", mype, datarootname.c_str(), nscen);
-
-  rawInput* s = new rawInput(datarootnameMean, 1, MPI_COMM_SELF);
-  PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s, MPI_COMM_SELF);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
-  delete s;
-  //if(mype==0) cout <<  "rawInput deleted ... starting to solve" << endl;
-
-  pipsIpm.go();
+  printf("mype=%d mean prob.from [%s]\n", mype, datarootnameMean.c_str());
+  rawInput* sMean = new rawInput(datarootnameMean, 1, MPI_COMM_SELF);
+  //rawInput* sMean = new rawInput(datarootname, 4, MPI_COMM_SELF);
+  std::vector<double> firstStageSol;
+  /*
+  {
+    PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*sMean, MPI_COMM_SELF);
+    delete sMean;
     
-  if(mype==0) cout << "solving done" << endl;
+    pipsIpm.go();   
+
+    firstStageSol = pipsIpm.getFirstStagePrimalColSolution();
+  }
+
+  // save the 1st stage solution for each batch
+  if(myBatchPe==0) {
+    stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
+    string sFile=ss2.str();
+    cout << "saving 1st stage sol to " << sFile << endl;
+    ofstream file1stStg(sFile.c_str());
+    file1stStg << scientific; file1stStg.precision(16);
+    for(size_t i=0; i<firstStageSol.size(); i++)
+      file1stStg << firstStageSol[i] << endl;
+    file1stStg.close();
+  }
+
+  */
+  rawInput* s = new rawInput(datarootname, nscen, commBatch);
+
+  //code to load the solution
+  {
+    stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
+    string filename = ss2.str();
+    ifstream file(filename.c_str());
+    assert(file.is_open());
+
+    firstStageSol.resize(s->nFirstStageVars());
+    for(int d=0; d<s->nFirstStageVars(); d++)
+      file >> firstStageSol[d];
+    cout << "first stage sol loaded from file" << endl;
+  }
   
+  
+  for(int scen=0; scen<nscen; scen++) {
+    if( scen%nbatchprocs == myBatchPe ) {
+      printf("Proc [%d][%d] does scen [%d] in batch [%s]\n", 
+	     mype, myBatchPe, scen, datarootname.c_str());
+      
+      OOQPRecourseInterface<MehrotraSolver,QpGenSparseMa57> ooqpRecourse(*s, scen, firstStageSol);
+      ooqpRecourse.go();
+    }
+  }
+  delete s;
+
+
   // if(mype==0) cout << "Saving solution" << endl;
   // for(int s=0; s<nscen; s++) {
     
