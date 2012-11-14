@@ -32,17 +32,17 @@ evaluateRecourseLP(const char *dataPath, int nScen,
   printf("N: %i\n", N);
   vector<double> sol(candidateSolution,candidateSolution+N);
 
-  printf("ok0\n");
+  // printf("ok0\n");
 
   rawInput input(string(dataPath),nScen,MPI_COMM_SELF);
 
-  printf("ok.5\n");
+  // printf("ok.5\n");
 
   int nvar1 = input.nFirstStageVars();
   printf("nvar1: %i\n", nvar1);
   assert(nvar1 == N);
 
-  printf("ok1\n");
+  // printf("ok1\n");
 
   ClpRecourseSolver rsol(input, scen, sol);
   rsol.setDualObjectiveLimit(1e7);
