@@ -153,9 +153,44 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   }
 
   // -- to do
-  //put A/R block in the augmented system as A^T/R^T in the lower triangular part
-  assert(A.numberOfNonZeros()==0);
+  //put R block in the augmented system as R^T in the lower triangular part
+  assert(R.numberOfNonZeros()==0);
   //
+  if(A.numberOfNonZeros()>0 && nA>0) {
+    int nnzIt=Msys->numberOfNonZeros();
+    
+    SparseGenMatrix At(nSC,nA,A.numberOfNonZeros());
+    int* krowAt=At.getStorageRef().krowM;
+    int* jcolAt=At.getStorageRef().jcolM;
+    double *MAt=At.getStorageRef().M;
+    
+    A.getStorageRef().transpose(krowAt, jcolAt, MAt);
+    
+    int colShift=nR;
+    
+    int* krowAug= augSys.getStorageRef().krowM;
+    int* jcolAug = augSys.getStorageRef().jcolM;
+    double* MAug = augSys.getStorageRef().M;
+    
+    int row=Msize;
+    for(; row<n; row++) {
+      krowAug[row]=nnzIt;
+      
+      for(int c=krowAt[row-Msize]; c< krowAt[row-Msize+1]; c++) {
+	
+	int j=jcolAt[c];
+	  
+	jcolAug[nnzIt]=j+colShift;
+	MAug[nnzIt]   =MAt[c];
+	nnzIt++;
+      }
+      //add the zero from the diagonal
+      jcolAug[nnzIt]=row;
+      MAug[nnzIt]=0.0;
+      nnzIt++;
+    }
+    krowAug[row]=nnzIt;
+  }
 
   nnz=augSys.numberOfNonZeros();
   // we need to transpose to get the augmented system in the row-major upper triangular format of  PARDISO 
@@ -399,7 +434,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
   double rhsNorm=rhs.twonorm();
   if(res_norm2/rhsNorm>1e-9)
-    cout << "--- rhs.nrm=" << rhsNorm 
+    cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
 	 << " rel.res.nrm=" << res_norm2/rhsNorm
 	 << endl << endl;
   delete[] tmp_resid;
