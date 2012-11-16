@@ -8,7 +8,9 @@
 #include "PIPSIpmInterface.h"
 #include "OOQPRecourseInterface.hpp"
 #include "QpGenSparseMa57.h"
+#include "QpGenSparseMa27.h"
 #include "MehrotraSolver.h"
+#include "GondzioSolver.h"
 #include "sFactoryAugSchurLeaf.h"
 #include "MehrotraStochSolver.h"
 
@@ -17,7 +19,7 @@
 
 using namespace std;
 
-
+extern int gOuterIterRefin;
 int main(int argc, char ** argv) {
   MPI_Init(&argc, &argv);
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
@@ -73,7 +75,7 @@ int main(int argc, char ** argv) {
   rawInput* sMean = new rawInput(datarootnameMean, 1, MPI_COMM_SELF);
   //rawInput* sMean = new rawInput(datarootname, 4, MPI_COMM_SELF);
   std::vector<double> firstStageSol;
-  /*
+      
   {
     PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*sMean, MPI_COMM_SELF);
     delete sMean;
@@ -94,11 +96,11 @@ int main(int argc, char ** argv) {
       file1stStg << firstStageSol[i] << endl;
     file1stStg.close();
   }
+  
 
-  */
   rawInput* s = new rawInput(datarootname, nscen, commBatch);
 
-  //code to load the solution
+  //code to load 1st stage solution
   {
     stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
     string filename = ss2.str();
@@ -117,6 +119,7 @@ int main(int argc, char ** argv) {
       printf("Proc [%d][%d] does scen [%d] in batch [%s]\n", 
 	     mype, myBatchPe, scen, datarootname.c_str());
       
+      gOuterIterRefin=1;      
       OOQPRecourseInterface<MehrotraSolver,QpGenSparseMa57> ooqpRecourse(*s, scen, firstStageSol);
       ooqpRecourse.go();
     }

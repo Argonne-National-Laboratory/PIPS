@@ -296,7 +296,7 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
 			 << "rhs.nrm xyz: " << bnorm << endl;
 #endif      
       
-      if(resNorm/bnorm<1e-12)
+      if(resNorm/bnorm<1e-9)
 	break;
 
     } while(true);
