@@ -363,8 +363,8 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 {
   int n = b.length();
 
-  const int maxit=100;
-  const double tol=5e-14, EPS=2e-16;
+  const int maxit=500;
+  const double tol=7.5e-12, EPS=2e-16;
   double iter=0.0;
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
