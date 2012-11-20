@@ -275,7 +275,7 @@ template<typename S, typename F>
 std::vector<double> OOQPRecourseInterface<S,F>::getPrimalColSolution() const
 {
   double const *sol = &dynamic_cast<SimpleVector const&>(*vars->x)[0];
-  return std::vector<double>(sol, vars->x->length());
+  return std::vector<double>(sol, sol+vars->x->length());
 }
 
 template<typename S, typename F>

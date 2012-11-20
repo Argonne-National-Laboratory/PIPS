@@ -100,7 +100,7 @@ int main(int argc, char ** argv) {
 
   rawInput* s = new rawInput(datarootname, nscen, commBatch);
 
-  //code to load 1st stage solution
+  //load 1st stage solution
   {
     stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
     string filename = ss2.str();
@@ -122,50 +122,36 @@ int main(int argc, char ** argv) {
       gOuterIterRefin=1;      
       OOQPRecourseInterface<MehrotraSolver,QpGenSparseMa57> ooqpRecourse(*s, scen, firstStageSol);
       ooqpRecourse.go();
+
+      //////////////////////////////////////////////////////////
+      // save primal recourse solution
+      //////////////////////////////////////////////////////////
+      {
+	stringstream ss; ss << outputdir << "/batch-" << (1+color) << "-out_primals_recou" << (s+1) << ".txt";
+	cout << "saving recourse pb primals to " << ss.str() << endl;
+	ofstream fileprimals(ss.str().c_str());
+	std::vector<double> primals = ooqpRecourse.getPrimalColSolution();
+	for(size_t i=0; i<primals.size(); i++)
+	  fileprimals << primals[i] << endl;
+	fileprimals.close();
+      }
+      //////////////////////////////////////////////////////////
+      // save dual solution of the recourse problem
+      //////////////////////////////////////////////////////////
+      {
+	stringstream ss; ss << outputdir << "/batch-" << (1+color) << "-out_duals_recou" << (s+1) << ".txt";
+	cout << "saving recourse pb duals to " << ss.str() << endl;
+	ofstream fileduals(ss.str().c_str());
+	std::vector<double> duals = ooqpRecourse.getDualRowSolution();
+	for(size_t i=0; i<duals.size(); i++)
+	  fileduals << duals[i] << endl;
+	fileduals.close();
+      }
     }
   }
   delete s;
-
-
-  // if(mype==0) cout << "Saving solution" << endl;
-  // for(int s=0; s<nscen; s++) {
-    
-  //   std::vector<double> duals = pipsIpm.getSecondStageDualRowSolution(s);
-  //   if(duals.size()) {
-  //     stringstream ss1; ss1<<outputdir << "/batch-" << (1+color) << "-out_duals_scen"<<(s+1)<<".txt";
-  //     cout << "saving duals to " << ss1.str() << endl;
-  //     ofstream fileduals(ss1.str().c_str());
-      
-  //     for(size_t i=0; i<duals.size(); i++)
-  // 	fileduals << duals[i] << endl;
-  //     fileduals.close();
-  //   }
-    
-  //   std::vector<double> primals = pipsIpm.getSecondStagePrimalColSolution(s);
-  //   if(primals.size()) {
-  //     stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primals_scen"<<(s+1)<<".txt";
-  //     cout << "saving primals to " << ss2.str() << endl;
-  //     ofstream fileprimals(ss2.str().c_str());
-  //     std::vector<double> primals = pipsIpm.getSecondStagePrimalColSolution(s);
-  //     for(size_t i=0; i<primals.size(); i++)
-  // 	fileprimals << primals[i] << endl;
-  //     fileprimals.close();
-  //   }
-  // }
-  // if(mynewpe==0) {
-  //   std::vector<double> firstStageSol = pipsIpm.getFirstStagePrimalColSolution();
-  //   stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
-  //   string sFile=ss2.str();
-  //   cout << "saving 1st stage sol to " << sFile << endl;
-  //   ofstream file1stStg(sFile.c_str());
-  //   for(size_t i=0; i<firstStageSol.size(); i++)
-  //     file1stStg << firstStageSol[i] << endl;
-  //   file1stStg.close();
-  // }
-  // cout << "Solution saved" << endl;
  
 
   MPI_Finalize();
   return 0;
 }
-
