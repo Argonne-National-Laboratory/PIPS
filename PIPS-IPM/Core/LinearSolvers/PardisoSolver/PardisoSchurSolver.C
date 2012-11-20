@@ -428,15 +428,29 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
       }
     }
   }
-  double res_norm2=0.0; 
-  for(int i=0; i<dim; i++) res_norm2 += tmp_resid[i]*tmp_resid[i];
+  double res_norm2=0.0, res_nrmInf=0; 
+  for(int i=0; i<dim; i++) {
+      res_norm2 += tmp_resid[i]*tmp_resid[i];
+      if(res_nrmInf<fabs(tmp_resid[i]))
+	 res_nrmInf=tmp_resid[i];
+  }
   res_norm2 = sqrt(res_norm2);
 
   double rhsNorm=rhs.twonorm();
-  if(res_norm2/rhsNorm>1e-9)
-    cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
-	 << " rel.res.nrm=" << res_norm2/rhsNorm
-	 << endl << endl;
+  if(res_norm2/rhsNorm>1e-9) {
+
+      std::vector<int> idxLargeEntries;
+      for(int i=0; i<dim; i++) 
+	  if(tmp_resid[i]>res_nrmInf/100.0)
+	      idxLargeEntries.push_back(i);
+
+      cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
+	   << " rel.res.nrm2=" << res_norm2/rhsNorm
+	   << " rel.res.nrmInf=" << res_nrmInf/rhsNorm
+	   << "     Large entries indexes:";
+      for(int i=0; i<idxLargeEntries.size(); i++) cout << idxLargeEntries[i] << " ";
+      cout << endl;
+  }
   delete[] tmp_resid;
   
 
