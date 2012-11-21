@@ -120,14 +120,14 @@ int main(int argc, char ** argv) {
 	     mype, myBatchPe, scen, datarootname.c_str());
       
       gOuterIterRefin=1;      
-      OOQPRecourseInterface<MehrotraSolver,QpGenSparseMa57> ooqpRecourse(*s, scen, firstStageSol);
+      OOQPRecourseInterface<MehrotraSolver,QpGenSparseMa27> ooqpRecourse(*s, scen, firstStageSol);
       ooqpRecourse.go();
 
       //////////////////////////////////////////////////////////
       // save primal recourse solution
       //////////////////////////////////////////////////////////
       {
-	stringstream ss; ss << outputdir << "/batch-" << (1+color) << "-out_primals_recou" << (s+1) << ".txt";
+	stringstream ss; ss << outputdir << "/batch-" << (1+color) << "-out_primals_recou" << (scen+1) << ".txt";
 	cout << "saving recourse pb primals to " << ss.str() << endl;
 	ofstream fileprimals(ss.str().c_str());
 	std::vector<double> primals = ooqpRecourse.getPrimalColSolution();
@@ -139,7 +139,7 @@ int main(int argc, char ** argv) {
       // save dual solution of the recourse problem
       //////////////////////////////////////////////////////////
       {
-	stringstream ss; ss << outputdir << "/batch-" << (1+color) << "-out_duals_recou" << (s+1) << ".txt";
+	stringstream ss; ss << outputdir << "/batch-" << (1+color) << "-out_duals_recou" << (scen+1) << ".txt";
 	cout << "saving recourse pb duals to " << ss.str() << endl;
 	ofstream fileduals(ss.str().c_str());
 	std::vector<double> duals = ooqpRecourse.getDualRowSolution();

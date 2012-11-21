@@ -364,7 +364,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   int n = b.length();
 
   const int maxit=500;
-  const double tol=7.5e-12, EPS=2e-16;
+  const double tol=1e-12, EPS=2e-16;
   double iter=0.0;
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
@@ -439,7 +439,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   // loop over maxit iterations
   //////////////////////////////////////////////////////////////////
   int ii=0; while(ii<maxit) {
-
+    //cout << ii << " ";
     flag=-1;
     ///////////////////////////////
     // First half of the iterate
@@ -595,6 +595,10 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     
   }//end while
 
+  if(ii>=maxit) {
+    iter=ii;
+    flag=10;
+  }
   
   if(flag==0 || flag==-1) {
 
