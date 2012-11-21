@@ -1,6 +1,7 @@
 #include "rawInput.hpp"
 #include "OOQPInterface.hpp"
 #include "QpGenSparseMa57.h"
+#include "QpGenSparseMa27.h"
 #include "MehrotraSolver.h"
 
 using namespace std;
@@ -20,7 +21,8 @@ int main(int argc, char ** argv) {
 
   rawInput* s = new rawInput(datarootname,nscen);
   
-  OOQPInterface<MehrotraSolver,QpGenSparseMa57> ooqp(*s);
+  //OOQPInterface<MehrotraSolver,QpGenSparseMa57> ooqp(*s);
+  OOQPInterface<MehrotraSolver,QpGenSparseMa27> ooqp(*s);
 
   delete s;
 
