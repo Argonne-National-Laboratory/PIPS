@@ -11,11 +11,19 @@
 #include "OoqpVectorHandle.h"
 
 
+#ifndef FNAME
+#ifndef __bg__
+#define FNAME(f) f ## _ 
+#else
+#define FNAME(f) f // no underscores for fortran names on bgp
+#endif
+#endif
+
 
 extern "C" {
-  void ma27id_( int icntl[],    double cntl[] );
+  void FNAME(ma27id)( int icntl[],    double cntl[] );
 
-  void ma27ad_( int * n,        int * nz,       
+  void FNAME(ma27ad)( int * n,        int * nz,       
 		int irn[],      int icn[],      
 		int iw[],       int * liw,
 		int ikeep[],    int iw1[],      
@@ -23,7 +31,7 @@ extern "C" {
 		int icntl[],    double cntl[],
 		int info[],     double * ops );
 
-  void ma27bd_( int * n,        int * nz,
+  void FNAME(ma27bd)( int * n,        int * nz,
 		int irn[],      int icn[],
 		double a[],     int * la,
 		int iw[],       int * liw,
@@ -32,7 +40,7 @@ extern "C" {
 		int icntl[],    double cntl[], 
 		int  info[] );
 
-  void ma27cd_( int * n,        
+  void FNAME(ma27cd)( int * n,        
 		double a[],     int * la,
 		int iw[],       int * liw,
 		double w[],     int * maxfrt,

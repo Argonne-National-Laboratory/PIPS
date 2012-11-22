@@ -40,7 +40,7 @@ Ma27SolverBase::Ma27SolverBase( int n_in, int nnz_in ) :
   precision(kInitPrecision), irowM(0), jcolM(0), fact(0),
   n(n_in), nnz(nnz_in), ipessimism(1.2), rpessimism(1.2) 
 {
-  ma27id_(icntl, cntl);
+  FNAME(ma27id)(icntl, cntl);
   // set initial value of "Treat As Zero" parameter
   this->setTreatAsZero( kInitTreatAsZero );
 
@@ -72,7 +72,7 @@ void Ma27SolverBase::firstCall()
   int iflag = 0;
 
   double ops;
-  ma27ad_( &n, &nnz, irowM, jcolM, iw, &liw, ikeep, iw1, &nsteps, &iflag,
+  FNAME(ma27ad)( &n, &nnz, irowM, jcolM, iw, &liw, ikeep, iw1, &nsteps, &iflag,
 	   icntl, cntl, info, &ops);
 
   delete [] iw;
@@ -138,7 +138,7 @@ void Ma27SolverBase::matrixChanged()
       getrusage( RUSAGE_SELF, &before );
     }
 #endif
-    ma27bd_( &n,       &nnz,    irowM, jcolM, 
+    FNAME(ma27bd)( &n,       &nnz,    irowM, jcolM, 
 	     fact,     &la,
 	     iw,       &liw,
 	     ikeep,
@@ -249,7 +249,7 @@ void Ma27SolverBase::basicSolve( double * drhs, int nn )
     getrusage( RUSAGE_SELF, &before );
   }
 #endif
-  ma27cd_( &nn,     fact,     &la,
+  FNAME(ma27cd)( &nn,     fact,     &la,
 	   iw,     &liw,
 	   w,      &maxfrt,
 	   drhs,   iw1,
