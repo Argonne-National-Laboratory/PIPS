@@ -70,7 +70,7 @@ if(HAVE_PARDISO)
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
-    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 endif(HAVE_PARDISO)
 
 if(HAVE_PARDISO)
