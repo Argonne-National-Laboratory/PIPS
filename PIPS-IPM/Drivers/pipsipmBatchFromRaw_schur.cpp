@@ -66,29 +66,21 @@ int main(int argc, char ** argv) {
 
   stringstream ss; ss << datadirname << (color+1) << "/" << datarootname;
   datarootname=ss.str();
-  usleep(50000*(rand()/RAND_MAX+mype));
-  printf("mype=%d datarootname=%s nscen=%d\n", mype, datarootname.c_str(), nscen);
+  printf("mype=[%d][%d] datarootname=%s nscen=%d\n", mype, mynewpe, datarootname.c_str(), nscen);
 
   rawInput* s = new rawInput(datarootname,nscen, commBatch);
 
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s, commBatch);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
   delete s;
-  //if(mype==0) cout <<  "rawInput deleted ... starting to solve" << endl;
-
   pipsIpm.go();
     
-  if(mype==0) cout << "solving done" << endl;
-  
-  if(mype==0) cout << "Saving solution" << endl;
   for(int s=0; s<nscen; s++) {
     
     std::vector<double> duals = pipsIpm.getSecondStageDualRowSolution(s);
     if(duals.size()) {
       stringstream ss1; ss1<<outputdir << "/batch-" << (1+color) << "-out_duals_scen"<<(s+1)<<".txt";
-      cout << "saving duals to " << ss1.str() << endl;
+      cout << "pe[" << mype << "][" << mynewpe << "] " 
+	   << " saving duals to " << ss1.str() << endl;
       ofstream fileduals(ss1.str().c_str());
       
       for(size_t i=0; i<duals.size(); i++)
@@ -99,7 +91,8 @@ int main(int argc, char ** argv) {
     std::vector<double> primals = pipsIpm.getSecondStagePrimalColSolution(s);
     if(primals.size()) {
       stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primals_scen"<<(s+1)<<".txt";
-      cout << "saving primals to " << ss2.str() << endl;
+      cout << "pe[" << mype << "][" << mynewpe << "] "
+	   << " saving primals to " << ss2.str() << endl;
       ofstream fileprimals(ss2.str().c_str());
       std::vector<double> primals = pipsIpm.getSecondStagePrimalColSolution(s);
       for(size_t i=0; i<primals.size(); i++)
@@ -117,7 +110,8 @@ int main(int argc, char ** argv) {
       file1stStg << firstStageSol[i] << endl;
     file1stStg.close();
   }
-  cout << "Solution saved" << endl;
+  cout << "pe[" << mype << "][" << mynewpe << "] "
+       << "Solution saved, returning..." << endl;
  
 
   MPI_Finalize();
