@@ -322,7 +322,7 @@ void Ma27Solver::solve( OoqpVector& rhs_in )
       }
       done = 1;
     } else {
-      printf("Refactoring resNorm=%g rhsNorm=%g\n", rnorm, rhsnorm);;
+      //printf("Refactoring resNorm=%g rhsNorm=%g\n", rnorm, rhsnorm);;
       // refactor with a higher Threshold Pivoting parameter
       double tp = this->thresholdPivoting();
       tp *= kThresholdPivotingFactor;
