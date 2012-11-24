@@ -446,9 +446,9 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
       cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
 	   << " rel.res.nrm2=" << res_norm2/rhsNorm
-	   << " rel.res.nrmInf=" << res_nrmInf/rhsNorm
-	   << "     Large entries indexes:";
-      for(int i=0; i<idxLargeEntries.size(); i++) cout << idxLargeEntries[i] << " ";
+	   << " rel.res.nrmInf=" << res_nrmInf/rhsNorm << endl;
+      //	   << "     Large entries indexes:";
+      //for(int i=0; i<idxLargeEntries.size(); i++) cout << idxLargeEntries[i] << " ";
       cout << endl;
   }
   delete[] tmp_resid;
