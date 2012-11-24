@@ -22,6 +22,7 @@ class PIPSIpmInterface
   void go();
 
   double getObjective() const;
+  double getFirstStageObjective() const;
 
 
   void setPrimalTolerance(double val);
@@ -85,7 +86,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 #endif
 
   solver  = new IPMSOLVER( factory, data );
-  solver->addMonitor(new StochMonitor( factory ));
+  //solver->addMonitor(new StochMonitor( factory ));
 #ifdef TIMING
   if(mype==0) printf("solver created\n");
   //solver->monitorSelf();
@@ -100,7 +101,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
   int mype;
   MPI_Comm_rank(comm,&mype);
-  //#ifdef TIMING
+#ifdef TIMING
   if(0 == mype) cout << "solving ..." << endl;
 
   if(mype==0) {
@@ -119,15 +120,12 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
     }
   }
-  //#endif
+#endif
 
   double tmElapsed=MPI_Wtime();
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
   //---------------------------------------------
-
-
-
   tmElapsed=MPI_Wtime()-tmElapsed;
 #ifdef TIMING
   cout << mype << " solve done" << endl;
@@ -157,6 +155,14 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 template<typename FORMULATION, typename SOLVER>
 double PIPSIpmInterface<FORMULATION,SOLVER>::getObjective() const {
   return data->objectiveValue(vars);
+}
+
+
+template<typename FORMULATION, typename SOLVER>
+double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
+  OoqpVector& x = *(dynamic_cast<StochVector&>(*vars->x).vec);
+  OoqpVector& c = *(dynamic_cast<StochVector&>(*data->g).vec);
+  return c.dotProductWith(x);
 }
 
 
