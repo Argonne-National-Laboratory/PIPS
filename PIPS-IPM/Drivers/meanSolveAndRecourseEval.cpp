@@ -29,7 +29,7 @@ int main(int argc, char ** argv) {
     return 1;
   }
 
-  if(mype==0) cout << argv[0] << " starting ..." << endl;
+  //if(mype==0) cout << argv[0] << " starting ..." << endl;
   
   string datadirname(argv[1]);
   string datarootname(argv[2]);
@@ -60,7 +60,7 @@ int main(int argc, char ** argv) {
   MPI_Comm_split(MPI_COMM_WORLD, color, 0, &commBatch);
   assert(commBatch!=MPI_COMM_NULL);
   int myBatchPe; MPI_Comm_rank(commBatch, &myBatchPe);
-  printf("mype=%d mynewpe=%d\n", mype, myBatchPe);
+  //printf("mype=%d mynewpe=%d\n", mype, myBatchPe);
  
   {
     stringstream ss; ss << datadirname << (color+1) << "/" << datarootname;
@@ -71,7 +71,7 @@ int main(int argc, char ** argv) {
     datarootnameMean=ss.str();
   }
 
-  printf("mype=%d mean prob.from [%s]\n", mype, datarootnameMean.c_str());
+  printf("mype=%d mean batch %d  prob.from [%s]\n", mype, color+1, datarootnameMean.c_str());
   rawInput* sMean = new rawInput(datarootnameMean, 1, MPI_COMM_SELF);
   //rawInput* sMean = new rawInput(datarootname, 4, MPI_COMM_SELF);
   std::vector<double> firstStageSol;
@@ -83,6 +83,11 @@ int main(int argc, char ** argv) {
     pipsIpm.go();   
 
     firstStageSol = pipsIpm.getFirstStagePrimalColSolution();
+    if(myBatchPe==0)
+      printf("mype=%d mean batch %d   1stStageObjective=%20.12f TotalObjective=%20.12f\n", 
+	     mype, color+1, 
+	     pipsIpm.getFirstStageObjective(),
+	     pipsIpm.getObjective());
   }
 
   // save the 1st stage solution for each batch
@@ -96,6 +101,7 @@ int main(int argc, char ** argv) {
       file1stStg << firstStageSol[i] << endl;
     file1stStg.close();
   }
+  MPI_Barrier(commBatch);
   
 
   rawInput* s = new rawInput(datarootname, nscen, commBatch);
@@ -110,7 +116,7 @@ int main(int argc, char ** argv) {
     firstStageSol.resize(s->nFirstStageVars());
     for(int d=0; d<s->nFirstStageVars(); d++)
       file >> firstStageSol[d];
-    cout << "first stage sol loaded from file" << endl;
+    //cout << "first stage sol loaded from file" << endl;
   }
   
   
@@ -122,6 +128,9 @@ int main(int argc, char ** argv) {
       gOuterIterRefin=1;      
       OOQPRecourseInterface<MehrotraSolver,QpGenSparseMa27> ooqpRecourse(*s, scen, firstStageSol);
       ooqpRecourse.go();
+
+      printf("Proc [%d][%d] scen %d in batch %d    RecourseObjective=%g\n",
+	     mype, myBatchPe, scen, color+1, ooqpRecourse.getObjective());
 
       //////////////////////////////////////////////////////////
       // save primal recourse solution
