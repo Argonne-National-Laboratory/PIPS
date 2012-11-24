@@ -73,11 +73,16 @@ int main(int argc, char ** argv) {
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s, commBatch);
   delete s;
   pipsIpm.go();
-    
+
+  if(mynewpe==0)
+    printf("mype=[%d][%d] batch %d 1stStageObjective=%g TotalObjective=%g\n",
+	   mype, mynewpe, color+1, pipsIpm.getFirstStageObjective(), pipsIpm.getObjective());
+
   for(int s=0; s<nscen; s++) {
     
     std::vector<double> duals = pipsIpm.getSecondStageDualRowSolution(s);
     if(duals.size()) {
+      usleep(s*20000);
       stringstream ss1; ss1<<outputdir << "/batch-" << (1+color) << "-out_duals_scen"<<(s+1)<<".txt";
       cout << "pe[" << mype << "][" << mynewpe << "] " 
 	   << " saving duals to " << ss1.str() << endl;
@@ -110,10 +115,9 @@ int main(int argc, char ** argv) {
       file1stStg << firstStageSol[i] << endl;
     file1stStg.close();
   }
-  cout << "pe[" << mype << "][" << mynewpe << "] "
-       << "Solution saved, returning..." << endl;
+  //cout << "pe[" << mype << "][" << mynewpe << "] "
+  //     << "Solution saved, returning..." << endl;
  
-
   MPI_Finalize();
   return 0;
 }
