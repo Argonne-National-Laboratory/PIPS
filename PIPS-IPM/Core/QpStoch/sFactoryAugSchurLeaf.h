@@ -21,4 +21,19 @@ class sFactoryAugSchurLeaf : public sFactoryAug {
 			     OoqpVector* nomegaInv, OoqpVector* rhs);
 
 };
+class sFactoryAugSchur32Leaf : public sFactoryAug {
+ public:
+
+  sFactoryAugSchur32Leaf( StochInputTree* in)
+    : sFactoryAug(in) {};
+ sFactoryAugSchur32Leaf( stochasticInput& in, MPI_Comm comm=MPI_COMM_WORLD)
+   : sFactoryAug(in,comm) {};
+
+
+  sLinsysLeaf* newLinsysLeaf(sData* prob,
+			     OoqpVector* dd,OoqpVector* dq,
+			     OoqpVector* nomegaInv, OoqpVector* rhs);
+
+};
+
 #endif
