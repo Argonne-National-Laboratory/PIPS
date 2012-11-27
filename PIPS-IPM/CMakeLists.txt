@@ -65,6 +65,13 @@ if(HAVE_PARDISO)
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
+  add_executable(pipsipmFromRaw_schur32 Drivers/pipsipmFromRaw_schur32.cpp)
+  target_link_libraries(pipsipmFromRaw_schur32
+    stochInput ${COIN_LIBS}
+    ooqpstoch ooqpstochla ooqpmehrotrastoch
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY32} ${MATH_LIBS})
+
   add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
   target_link_libraries(meanSolveAndRecourseEval
     stochInput ${COIN_LIBS}
