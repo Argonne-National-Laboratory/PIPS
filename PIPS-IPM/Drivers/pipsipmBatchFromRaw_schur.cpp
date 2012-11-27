@@ -74,9 +74,11 @@ int main(int argc, char ** argv) {
   delete s;
   pipsIpm.go();
 
+  double totalObjective=pipsIpm.getObjective();
+  double stg1Objective=pipsIpm.getFirstStageObjective();
   if(mynewpe==0)
     printf("mype=[%d][%d] batch %d 1stStageObjective=%g TotalObjective=%g\n",
-	   mype, mynewpe, color+1, pipsIpm.getFirstStageObjective(), pipsIpm.getObjective());
+	   mype, mynewpe, color+1, stg1Objective, totalObjective);
 
   for(int s=0; s<nscen; s++) {
     
