@@ -29,7 +29,7 @@ using namespace std;
  */
  
 class PardisoSchurSolver : public DoubleLinearSolver {
-private:
+protected:
   PardisoSchurSolver() {};
   
  public:
@@ -61,7 +61,7 @@ private:
 			   /*const*/ SparseGenMatrix& C,
 			   DenseSymMatrix& SC);
   
- private:
+ protected:
   SparseSymMatrix* Msys; // this is the (1,1) block in the augmented system
   bool first;
   bool firstSolve;
@@ -87,6 +87,17 @@ private:
   double* nvec;
   
   virtual ~PardisoSchurSolver();
+};
+
+class PardisoSchur32Solver : public PardisoSchurSolver
+{
+ public:
+    PardisoSchur32Solver( SparseSymMatrix * sgm ); 
+ private: 
+    PardisoSchur32Solver () {};
+ public:
+    virtual void firstCall(); //first factorization call
+    
 };
 
 #endif
