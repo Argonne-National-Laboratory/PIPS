@@ -121,7 +121,8 @@ void sLinsysRoot::afterFactor()
 
   for (size_t c=0; c<children.size(); c++) {
     if (children[c]->mpiComm == MPI_COMM_NULL) continue;
-    printf("NODE %4zu SPFACT %g BACKSOLVE %g SEC PROC %d ITER %d\n", c,
+    if( (mype/8)*8==mype)
+	printf("NODE %4zu SPFACT %g BACKSOLVE %g SEC PROC %d ITER %d\n", c,
      children[c]->stochNode->resMon.eFact.tmLocal,
 	   children[c]->stochNode->resMon.eFact.tmChildren, mype, (int)g_iterNumber);
   }
@@ -395,7 +396,8 @@ void sLinsysRoot::factorizeKKT()
   MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  printf("FACT %g SEC ON PROC %d ITER %d\n", st, mype, (int)g_iterNumber);
+  if( (mype/32)*32==mype )
+      printf("FACT %g SEC ON PROC %d ITER %d\n", st, mype, (int)g_iterNumber);
 #endif
 }
 
