@@ -75,12 +75,27 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   }
 }
 
+PardisoSchur32Solver::PardisoSchur32Solver( SparseSymMatrix * sgm )
+    : PardisoSchurSolver( sgm )
+{}
+
 void PardisoSchurSolver::firstCall()
 {
   int solver=0, mtype=-2, error;
   pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
   if (error!=0) {
     cout << "PardisoSchurSolver ERROR during pardisoinit:" << error << "." << endl;
+    exit(1);
+  }
+} 
+
+void PardisoSchur32Solver::firstCall()
+{
+  int solver=0, mtype=-2, error;
+  iparm[28]=1; //32-bit factorization
+  pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
+  if (error!=0) {
+    cout << "PardisoSchur32Solver ERROR during pardisoinit:" << error << "." << endl;
     exit(1);
   }
 } 
