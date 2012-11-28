@@ -133,8 +133,9 @@ StochVector* sTreeImpl::createc() const
   double* vec = ((SimpleVector*)svec->vec)->elements();  
 
   if(m_id==0) {
+      RESCALE=0.25*children.size();
 #ifdef TIMING
-      RESCALE=1;//0.25*children.size();
+      //RESCALE=1;//0.25*children.size();
 #endif
     vector<double> c = in.getFirstStageObj();
     copy(c.begin(), c.end(), vec);

@@ -92,12 +92,12 @@ void PardisoSchurSolver::firstCall()
 void PardisoSchur32Solver::firstCall()
 {
   int solver=0, mtype=-2, error;
-  iparm[28]=1; //32-bit factorization
   pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
   if (error!=0) {
     cout << "PardisoSchur32Solver ERROR during pardisoinit:" << error << "." << endl;
     exit(1);
   }
+  iparm[28]=1; //32-bit factorization
 } 
 
 // this function is called only once and creates the augmented system
