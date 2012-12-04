@@ -454,17 +454,94 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   double rhsNorm=rhs.twonorm();
   if(res_norm2/rhsNorm>1e-9) {
 
-      std::vector<int> idxLargeEntries;
-      for(int i=0; i<dim; i++) 
-	  if(tmp_resid[i]>res_nrmInf/100.0)
-	      idxLargeEntries.push_back(i);
+      //std::vector<int> idxLargeEntries;
+      //for(int i=0; i<dim; i++) 
+      //  if(tmp_resid[i]>res_nrmInf/100.0)
+      //      idxLargeEntries.push_back(i);
 
       cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
 	   << " rel.res.nrm2=" << res_norm2/rhsNorm
 	   << " rel.res.nrmInf=" << res_nrmInf/rhsNorm << endl;
       //	   << "     Large entries indexes:";
       //for(int i=0; i<idxLargeEntries.size(); i++) cout << idxLargeEntries[i] << " ";
-      cout << endl;
+      //cout << endl;
+  }
+  delete[] tmp_resid;
+  
+
+  memcpy(&rhs[0], x_n.elements(), dim*sizeof(double));
+}
+
+void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
+{ 
+  SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
+
+  int mtype=-2, error;
+  int phase=33;      //solve and iterative refinement
+  int maxfct=1, mnum=1, nrhs=1;
+  iparm[2]=num_threads;
+  iparm[7]=8;    // # of iterative refinements
+  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
+                 // if needed, use 2 for advanced matchings and higer accuracy.
+  iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  int msglvl=0;  // with statistical information
+
+  
+  SimpleVector x_n(n);
+  SimpleVector rhs_n(n);
+  int dim=rhs.length();
+  memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
+  for(int i=dim; i<n; i++) rhs_n[i]=0.0;
+
+  //double start = MPI_Wtime();
+  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+	   &n, eltsAug, rowptrAug, colidxAug, 
+	   NULL, &nrhs,
+	   iparm , &msglvl, rhs_n.elements(), x_n.elements(), &error, dparm );   
+  //cout << "---pardiso:" << MPI_Wtime()-start << endl;
+
+
+  //compute residual (alternative)
+  
+  double* tmp_resid=new double[dim];
+  memcpy(tmp_resid, rhs.elements(), dim*sizeof(double));
+  for(int i=0; i<dim; i++) {
+    for(int p=rowptrAug[i]; p<rowptrAug[i+1]; p++) {
+      int j=colidxAug[p-1]-1;
+      if(j+1<=dim) {
+	//r[i] = r[i] + M(i,j)*x(j)
+	tmp_resid[i] -= eltsAug[p-1]*x_n[j];
+	
+	if(j!=i) {
+	  //r[j] = r[j] + M(j,i)*x(i)
+	  tmp_resid[j] -=  eltsAug[p-1]*x_n[i];
+	}
+      }
+    }
+  }
+  double res_norm2=0.0, res_nrmInf=0; 
+  for(int i=0; i<dim; i++) {
+      res_norm2 += tmp_resid[i]*tmp_resid[i];
+      if(res_nrmInf<fabs(tmp_resid[i]))
+	 res_nrmInf=tmp_resid[i];
+  }
+  res_norm2 = sqrt(res_norm2);
+
+  double rhsNorm=rhs.twonorm();
+  if(res_norm2/rhsNorm>1e-3) {
+
+      //std::vector<int> idxLargeEntries;
+      //for(int i=0; i<dim; i++) 
+      //  if(tmp_resid[i]>res_nrmInf/100.0)
+      //      idxLargeEntries.push_back(i);
+
+      cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
+	   << " rel.res.nrm2=" << res_norm2/rhsNorm
+	   << " rel.res.nrmInf=" << res_nrmInf/rhsNorm << endl;
+      //	   << "     Large entries indexes:";
+      //for(int i=0; i<idxLargeEntries.size(); i++) cout << idxLargeEntries[i] << " ";
+      //cout << endl;
   }
   delete[] tmp_resid;
   

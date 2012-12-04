@@ -97,6 +97,7 @@ class PardisoSchur32Solver : public PardisoSchurSolver
     PardisoSchur32Solver () {};
  public:
     virtual void firstCall(); //first factorization call
+    virtual void solve (OoqpVector& rhs );
     
 };
 

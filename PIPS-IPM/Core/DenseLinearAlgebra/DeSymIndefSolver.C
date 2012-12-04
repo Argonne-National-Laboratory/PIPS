@@ -92,21 +92,6 @@ void DeSymIndefSolver::matrixChanged()
     }
   }
 
-  //!log 
-  /*
-  int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank==0) {
-    //!log 
-    printf("DeSymIndefSolver::matrixChanged - matrix is:\n");
-    for(int i=0; i<n; i++) {
-      for(int j=0; j<n; j++) 
-	printf("%24.16f ", mStorage->M[i][j]);
-      printf(";\n");
-    }
-    //sv.writeToStream(cout);
-  } 
-  */
-
   //query the size of workspace
   lwork=-1;
   double lworkNew;
@@ -123,7 +108,9 @@ void DeSymIndefSolver::matrixChanged()
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, work, &lwork, &info );
 
-  assert(info==0);
+  if(info!=0)
+      printf("DeSymIndefSolver::matrixChanged : error - dsytrf returned info=%d\n", info);
+  //assert(info==0);
 
   //int piv2x2=0;
   //for(int i=0; i<n; i++)
