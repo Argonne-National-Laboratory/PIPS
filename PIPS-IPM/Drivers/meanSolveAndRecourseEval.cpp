@@ -19,7 +19,7 @@
 
 using namespace std;
 
-extern int gOuterIterRefin;
+extern int gOuterSolve;
 int main(int argc, char ** argv) {
   MPI_Init(&argc, &argv);
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
@@ -125,7 +125,7 @@ int main(int argc, char ** argv) {
       printf("Proc [%d][%d] does scen [%d] in batch [%s]\n", 
 	     mype, myBatchPe, scen, datarootname.c_str());
       
-      gOuterIterRefin=1;      
+      gOuterSolve=1; //iter.refin.      
       OOQPRecourseInterface<MehrotraSolver,QpGenSparseMa27> ooqpRecourse(*s, scen, firstStageSol);
       ooqpRecourse.go();
 
