@@ -143,17 +143,19 @@ void sLinsysRoot::afterFactor()
 {
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
-  for (size_t c=0; c<children.size(); c++) {
-    if (children[c]->mpiComm == MPI_COMM_NULL) continue;
-    if( (mype/128)*1288==mype)
-    printf("  rank %d NODE %4zu SPFACT %g BACKSOLVE %g SEC ITER %d\n", mype, c,
-	   children[c]->stochNode->resMon.eFact.tmLocal,
-	   children[c]->stochNode->resMon.eFact.tmChildren, (int)g_iterNumber);
+  if( (mype/128)*128==mype) {
+      for (size_t c=0; c<children.size(); c++) {
+	  if (children[c]->mpiComm == MPI_COMM_NULL) continue;
+	  
+	  printf("  rank %d NODE %4zu SPFACT %g BACKSOLVE %g SEC ITER %d\n", mype, c,
+		 children[c]->stochNode->resMon.eFact.tmLocal,
+		 children[c]->stochNode->resMon.eFact.tmChildren, (int)g_iterNumber);
+      }
+      double redall = stochNode->resMon.eReduce.tmLocal;
+      double redscat = stochNode->resMon.eReduceScatter.tmLocal;
+      printf("  rank %d REDUCE %g SEC ITER %d REDSCAT %g DIFF %g\n", mype, redall, 
+	     (int)g_iterNumber, redscat, redall-redscat);
   }
-  double redall = stochNode->resMon.eReduce.tmLocal;
-  double redscat = stochNode->resMon.eReduceScatter.tmLocal;
-  printf("  rank %d REDUCE %g SEC ITER %d REDSCAT %g DIFF %g\n", mype, redall, 
-    (int)g_iterNumber, redscat, redall-redscat);
 }
 #endif
 
