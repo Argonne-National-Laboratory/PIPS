@@ -22,20 +22,31 @@ int main(int argc, char ** argv) {
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 
   if(argc<3) {
-    if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [solution output root name] [eq mult root name]\n",argv[0]);
+    if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [outer solve (opt)] [inner solve (opt)]\n",argv[0]);
     return 1;
   }
-
-  if(mype==0) cout << argv[0] << " starting ..." << endl;
   
   string datarootname(argv[1]);
   int nscen = atoi(argv[2]);
 
+  int outerSolve=2;
+  if(argc>=4) {
+    outerSolve = atoi(argv[3]);
+    if(mype==0) cout << "Using option [" << outerSolve << "] for outer solve" << endl;
+  }
+
+  int innerSolve=0;
+  if(argc>=5) {
+    innerSolve = atoi(argv[4]);
+     if(mype==0) cout << "Using option [" << innerSolve << "] for inner solve" << endl;
+  }
+
+  if(mype==0) cout << argv[0] << " starting ..." << endl;
   rawInput* s = new rawInput(datarootname,nscen);
-  if(mype==0) cout <<  " raw input created ..." << endl;
+  if(mype==0) cout <<  " raw input created from " << datarootname<< endl;
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s);
-  gOuterSolve=2;
-  gInnerSCsolve=0;
+  gOuterSolve=outerSolve;
+  gInnerSCsolve=innerSolve;
 
   if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
   delete s;
