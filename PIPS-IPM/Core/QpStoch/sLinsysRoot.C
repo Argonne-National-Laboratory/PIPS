@@ -113,12 +113,15 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
+
+#ifdef TIMING
+  MPI_Barrier(MPI_COMM_WORLD);
   stochNode->resMon.recReduceTmLocal_start();
- 
+#endif 
   reduceKKT();
- 
+ #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
-  
+#endif  
   finalizeKKT(prob, vars);
   
   //printf("(%d, %d) --- %f\n", PROW,PCOL, kktd[PROW][PCOL]);
@@ -142,15 +145,15 @@ void sLinsysRoot::afterFactor()
 
   for (size_t c=0; c<children.size(); c++) {
     if (children[c]->mpiComm == MPI_COMM_NULL) continue;
-    //if( (mype/8)*8==mype)
-    printf("NODE %4zu SPFACT %g BACKSOLVE %g SEC PROC %d ITER %d\n", c,
+    if( (mype/128)*1288==mype)
+    printf("  rank %d NODE %4zu SPFACT %g BACKSOLVE %g SEC ITER %d\n", mype, c,
 	   children[c]->stochNode->resMon.eFact.tmLocal,
-	   children[c]->stochNode->resMon.eFact.tmChildren, mype, (int)g_iterNumber);
+	   children[c]->stochNode->resMon.eFact.tmChildren, (int)g_iterNumber);
   }
   double redall = stochNode->resMon.eReduce.tmLocal;
   double redscat = stochNode->resMon.eReduceScatter.tmLocal;
-  printf("REDUCE %g SEC ON PROC %d ITER %d REDSCAT %g DIFF %g\n", redall, 
-    mype, (int)g_iterNumber, redscat, redall-redscat);
+  printf("  rank %d REDUCE %g SEC ITER %d REDSCAT %g DIFF %g\n", mype, redall, 
+    (int)g_iterNumber, redscat, redall-redscat);
 }
 #endif
 
@@ -197,6 +200,7 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
   }
 
 #ifdef TIMING  
+  MPI_Barrier(MPI_COMM_WORLD);
   stochNode->resMon.eReduce.clear();//reset
   stochNode->resMon.recReduceTmLocal_start();
 #endif
@@ -224,21 +228,6 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
   stochNode->resMon.recLsolveTmLocal_stop();
 #endif
 
-#ifdef TIMING
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  if(0==myRank) {
-    double tTotChildren=0.0;
-    for(size_t it=0; it<children.size(); it++) {
-      tTotChildren += children[it]->stochNode->resMon.eLsolve.tmChildren;
-      tTotChildren += children[it]->stochNode->resMon.eLsolve.tmLocal;
-    }
-
-    double tComm=stochNode->resMon.eReduce.tmLocal;
-    double tStg1=stochNode->resMon.eLsolve.tmLocal;
-    cout << "  - Residual computation=" << tTotChildren << " " 
-	 << "reduce=" << tComm << endl;
-  }
-#endif
 }
 
 
@@ -288,15 +277,33 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
     children[it]->Ltsolve2(prob->children[it], *b.children[it], x0);
   }
 #ifdef TIMING
+
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  if(0==myRank) {
-    double tTotChildren=0.0;
+  if(128*(myRank/128) == myRank) {
+    double tTotResChildren=0.0;
     for(size_t it=0; it<children.size(); it++) {
-      tTotChildren += children[it]->stochNode->resMon.eLtsolve.tmChildren;
-      tTotChildren += children[it]->stochNode->resMon.eLtsolve.tmLocal;
+      tTotResChildren += children[it]->stochNode->resMon.eLsolve.tmChildren;
+      tTotResChildren += children[it]->stochNode->resMon.eLsolve.tmLocal;
     }
-    double tStg1=stochNode->resMon.eLtsolve.tmLocal;
-    cout << "  - 2ndStage solve=" << tTotChildren <<endl;
+    double tComm=stochNode->resMon.eReduce.tmLocal;
+
+
+    //double tTotChildren=0.0; 
+    //for(size_t it=0; it<children.size(); it++) {   
+    //  tTotChildren += children[it]->stochNode->resMon.eDsolve.tmChildren;
+    //  tTotChildren += children[it]->stochNode->resMon.eDsolve.tmLocal;
+    //} 
+    double tStg1=stochNode->resMon.eDsolve.tmLocal;  
+
+    double tTotStg2Children=0.0;
+    for(size_t it=0; it<children.size(); it++) {
+      tTotStg2Children += children[it]->stochNode->resMon.eLtsolve.tmChildren;
+      tTotStg2Children += children[it]->stochNode->resMon.eLtsolve.tmLocal;
+    }
+    cout << "  rank " << myRank << " "
+	 << "Resid comp " << tTotResChildren << " " << "reduce " << tComm << " "
+	 << "1stStage solve " << tStg1 << " "
+	 << "2ndStage solve " << tTotStg2Children <<endl;
   }
 #endif
 
@@ -320,19 +327,6 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
   solveReduced(prob, b0);
 #ifdef TIMING
   stochNode->resMon.recDsolveTmLocal_stop();
-
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank); 
-  if(0==myRank) {  
-    double tTotChildren=0.0; 
-    for(size_t it=0; it<children.size(); it++) {   
-      tTotChildren += children[it]->stochNode->resMon.eDsolve.tmChildren;
-      tTotChildren += children[it]->stochNode->resMon.eDsolve.tmLocal;
-    } 
-    double tStg1=stochNode->resMon.eDsolve.tmLocal;  
-    cout << "  - 1stStage solve=" << tStg1 <<endl;
-    //cout << "Dsolve  solveStg1=" << tStg1 << " "
-    //     << "solveStg2=" << tTotChildren <<endl; 
-  }
 #endif
 }
 
@@ -466,6 +460,7 @@ void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 void sLinsysRoot::reduceKKT()
 {
   DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt); 
+
   //parallel communication
   if(iAmDistrib) submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
 }
@@ -488,8 +483,8 @@ void sLinsysRoot::factorizeKKT()
   MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  //if( (mype/32)*32==mype )
-  printf("1stSTAGE FACT %g SEC ON PROC %d ITER %d\n", st, mype, (int)g_iterNumber);
+  if( (mype/128)*128==mype )
+    printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
 }
 
@@ -524,7 +519,7 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 }
 
 
-#define CHUNK_SIZE 1024*1024*16 //doubles  = 128 MBytes (maximum)
+#define CHUNK_SIZE 1024*1024*64 //doubles  = 128 MBytes (maximum)
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A, 
 				     int row, int col, int drow, int dcol,
 				     MPI_Comm comm)

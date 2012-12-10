@@ -344,9 +344,9 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
      tTot = MPI_Wtime() - tTot;
      if(0==myRank) {
        cout << "Outer BiCGStab 0 iterations. Rel.res.nrm:" << normr/n2b  << endl;
-       cout << "solveXYZS w/ BiCGStab times: solve=" << tSlv
-	    << "  matvec=" << tResid
-	    << "  total=" << tTot << endl; 
+       cout << "solveXYZS w/ BiCGStab times: solve " << tSlv
+	    << "  matvec " << tResid
+	    << "  total " << tTot << endl; 
      }
 #endif
      return;
