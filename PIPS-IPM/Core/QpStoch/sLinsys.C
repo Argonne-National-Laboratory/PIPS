@@ -265,7 +265,7 @@ void sLinsys::solveCompressed( OoqpVector& rhs_ )
   Dsolve (data,rhs);
   Ltsolve(data,rhs);
 #ifdef TIMING
-  //cout << "SolveCompressed took: " << (MPI_Wtime()-tTot) << " Sterge" << endl;
+  //cout << "SolveCompressed took: " << (MPI_Wtime()-tTot) << endl;
 #endif
 }
 
