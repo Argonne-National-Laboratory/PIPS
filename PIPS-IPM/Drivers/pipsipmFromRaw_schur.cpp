@@ -14,7 +14,8 @@
 #include <sstream>
 
 using namespace std;
-
+extern int gOuterSolve;
+extern int gInnerSCsolve;
 
 int main(int argc, char ** argv) {
   MPI_Init(&argc, &argv);
@@ -33,6 +34,9 @@ int main(int argc, char ** argv) {
   rawInput* s = new rawInput(datarootname,nscen);
   if(mype==0) cout <<  " raw input created ..." << endl;
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s);
+  gOuterSolve=2;
+  gInnerSCsolve=0;
+
   if(mype==0) cout <<  "PIPSIpmInterface created" << endl;
   delete s;
   if(mype==0) cout <<  "rawInput deleted ... starting to solve" << endl;
