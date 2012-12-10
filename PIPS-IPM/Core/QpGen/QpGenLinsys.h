@@ -57,10 +57,10 @@ protected:
   int nxupp, nxlow, mcupp, mclow;
   int useRefs;
 
-  /** Vectors used in iterative refinement of the XYZ linear system
-   *  Set them to null to disable iterative refinement
-   */
+  /** Work vectors for iterative refinement of the XYZ linear system */
   OoqpVector *sol, *res, *resx, *resy, *resz;
+  /** Work vectors for BiCGStab */
+  OoqpVector *sol2, *res2, *res3, *res4, *res5;
 public:
   QpGenLinsys(  QpGen * factory,
 		QpGenData * data,
@@ -143,13 +143,29 @@ public:
 				 OoqpVector& u,  OoqpVector& pi,
 				 OoqpVector& v,  OoqpVector& gamma,
 				 OoqpVector& w,  OoqpVector& phi );
-
+ protected:
   virtual void computeResidualXYZ(OoqpVector& sol, 
 				  OoqpVector& res, 
 				  OoqpVector& solx, 
 				  OoqpVector& soly, 
 				  OoqpVector& solz,
 				  QpGenData* data);
+  virtual void matXYZMult( double beta,  OoqpVector& res, 
+			   double alpha, OoqpVector& sol, 
+			   QpGenData* data,
+			   OoqpVector& solx, 
+			   OoqpVector& soly, 
+			   OoqpVector& solz);
+
+  virtual void solveCompressedBiCGStab(OoqpVector& stepx,
+				       OoqpVector& stepy,
+				       OoqpVector& stepz,
+				       QpGenData* data);
+  virtual void solveCompressedIterRefin(OoqpVector& stepx,
+					OoqpVector& stepy,
+					OoqpVector& stepz,
+					QpGenData* data);
+
 };
 
 #endif

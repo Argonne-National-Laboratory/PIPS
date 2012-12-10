@@ -118,6 +118,9 @@ void sLinsys::separateVars( OoqpVector& x_in, OoqpVector& y_in,
 
 void sLinsys::factor(Data *prob_, Variables *vars)
 {
+#ifdef TIMING
+  double tTot=MPI_Wtime();
+#endif
   // the call to the the parent's method takes care of all necessary updates
   // to the KKT system (updating diagonals mainly). This is done reccursevely,
   // we don't have to worry about it anymore. 
@@ -128,6 +131,11 @@ void sLinsys::factor(Data *prob_, Variables *vars)
   sData* prob = dynamic_cast<sData*>(prob_);
   // in order to avoid a call to QpGenLinsys::factor, call factor2 method.
   factor2(prob, vars);
+
+#ifdef TIMING
+  tTot = MPI_Wtime()-tTot;
+  cout << "FACTORIZATION PHASE time=" << tTot << endl;
+#endif
 }
  
 
@@ -250,11 +258,15 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 void sLinsys::solveCompressed( OoqpVector& rhs_ )
 {
   StochVector& rhs = dynamic_cast<StochVector&>(rhs_);
-
+#ifdef TIMING
+  //double tTot=MPI_Wtime();
+#endif
   Lsolve (data,rhs); 
   Dsolve (data,rhs);
   Ltsolve(data,rhs);
- 
+#ifdef TIMING
+  //cout << "SolveCompressed took: " << (MPI_Wtime()-tTot) << " Sterge" << endl;
+#endif
 }
 
 

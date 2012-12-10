@@ -16,6 +16,8 @@
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
 #endif
+extern int gInnerSCsolve;
+extern int gOuterSolve;
 
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
@@ -117,9 +119,18 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
-  //solver->Dsolve(r);
-  //solveWithIterRef(prob, r);
-  solveWithBiCGStab(prob, r);
+
+  if(gInnerSCsolve==0) {
+    // Option 1. - solve with the factors
+    solver->Dsolve(r);
+  } else if(gInnerSCsolve==1) {
+    // Option 2 - solve with the factors and perform iter. ref.
+    solveWithIterRef(prob, r);
+  } else {
+    assert(gInnerSCsolve==2);
+    // Option 3 - use the factors as preconditioner and apply BiCGStab
+    solveWithBiCGStab(prob, r);
+  }
   ///////////////////////////////////////////////////////////////////////
   // r is the sln to the reduced system
   // the sln to the aug system should be 
@@ -136,7 +147,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
     b3.componentDiv(*zDiag);
   }
 #ifdef TIMING
-  if(myRank==0)
+  if(myRank==0 && gInnerSCsolve>=1)
     cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
 	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
 #endif

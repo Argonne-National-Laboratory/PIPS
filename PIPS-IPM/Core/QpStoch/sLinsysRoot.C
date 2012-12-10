@@ -18,22 +18,33 @@ extern double g_iterNumber;
 double g_scenNum;
 #endif
 
-extern int gOuterIterRefin;
+extern int gOuterSolve;
 
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   : sLinsys(factory_, prob_), iAmDistrib(0)
 {
   createChildren(prob_);
 
-  if(gOuterIterRefin) {
-    // stuff for iterative refimenent
+  if(gOuterSolve) {
+    // stuff for iterative refimenent and BiCG
     sol  = factory_->tree->newRhs();
     res  = factory_->tree->newRhs();
     resx = factory_->tree->newPrimalVector();
     resy = factory_->tree->newDualYVector();
     resz = factory_->tree->newDualZVector();
+    if(gOuterSolve==2) {
+      //BiCGStab; additional vectors needed
+      sol2 = factory_->tree->newRhs();
+      res2 = factory_->tree->newRhs();
+      res3 = factory_->tree->newRhs();
+      res4 = factory_->tree->newRhs();
+      res5 = factory_->tree->newRhs();
+    } else {
+      sol2 = res2 = res3 = res4 = res5 = NULL;
+    }
   } else {
     sol  = res  = resx = resy = resz = NULL;
+    sol2 = res2 = res3 = res4 = res5 = NULL;
   }
 }
 
@@ -47,15 +58,26 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 {
   createChildren(prob_);
 
-  if(gOuterIterRefin) {
-      // stuff for iterative refimenent
+  if(gOuterSolve) {
+      // stuff for iterative refimenent and BiCG 
       sol  = factory_->tree->newRhs();
       res  = factory_->tree->newRhs();
       resx = factory_->tree->newPrimalVector();
       resy = factory_->tree->newDualYVector();
       resz = factory_->tree->newDualZVector();
+    if(gOuterSolve==2) {
+      //BiCGStab; additional vectors needed
+      sol2 = factory_->tree->newRhs();
+      res2 = factory_->tree->newRhs();
+      res3 = factory_->tree->newRhs();
+      res4 = factory_->tree->newRhs();
+      res5 = factory_->tree->newRhs();
+    } else {
+      sol2 = res2 = res3 = res4 = res5 = NULL;
+    }
   } else {
       sol  = res  = resx = resy = resz = NULL;
+      sol2 = res2 = res3 = res4 = res5 = NULL;
   }
 }
 
@@ -92,10 +114,9 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
   stochNode->resMon.recReduceTmLocal_start();
-  
+ 
   reduceKKT();
-
-
+ 
   stochNode->resMon.recReduceTmLocal_stop();
   
   finalizeKKT(prob, vars);
@@ -121,9 +142,9 @@ void sLinsysRoot::afterFactor()
 
   for (size_t c=0; c<children.size(); c++) {
     if (children[c]->mpiComm == MPI_COMM_NULL) continue;
-    if( (mype/8)*8==mype)
-	printf("NODE %4zu SPFACT %g BACKSOLVE %g SEC PROC %d ITER %d\n", c,
-     children[c]->stochNode->resMon.eFact.tmLocal,
+    //if( (mype/8)*8==mype)
+    printf("NODE %4zu SPFACT %g BACKSOLVE %g SEC PROC %d ITER %d\n", c,
+	   children[c]->stochNode->resMon.eFact.tmLocal,
 	   children[c]->stochNode->resMon.eFact.tmChildren, mype, (int)g_iterNumber);
   }
   double redall = stochNode->resMon.eReduce.tmLocal;
@@ -159,23 +180,29 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
 
 
   for(size_t it=0; it<children.size(); it++) {
+#ifdef TIMING
+    children[it]->stochNode->resMon.eLsolve.clear();
     children[it]->stochNode->resMon.recLsolveTmChildren_start();
-
+#endif
     SimpleVector& zi = dynamic_cast<SimpleVector&>(*b.children[it]->vec);
 
     //!memopt here
-    SimpleVector tmp(zi.length());
-    tmp.copyFromArray(zi.elements());
-
-    children[it]->addLnizi(prob->children[it], b0, tmp);
-
+    //SimpleVector tmp(zi.length());
+    //tmp.copyFromArray(zi.elements());
+    //children[it]->addLnizi(prob->children[it], b0, tmp);
+    children[it]->addLnizi(prob->children[it], b0, zi);
+#ifdef TIMING
     children[it]->stochNode->resMon.recLsolveTmChildren_stop();
+#endif
   }
 
+#ifdef TIMING  
+  stochNode->resMon.eReduce.clear();//reset
+  stochNode->resMon.recReduceTmLocal_start();
+#endif
   if (iAmDistrib) {
  
     double* buffer = new double[b0.length()];
-
     MPI_Allreduce(b0.elements(), buffer, b0.length(),
 		  MPI_DOUBLE, MPI_SUM, mpiComm);
 
@@ -183,12 +210,36 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
 
     delete[] buffer;
   }
-
+#ifdef TIMING 
+  stochNode->resMon.recReduceTmLocal_stop();
+#endif
   //dumpRhs(0, "rhs",  b0);
 
+#ifdef TIMING
+  stochNode->resMon.eLsolve.clear();
   stochNode->resMon.recLsolveTmLocal_start();
+#endif
   solver->Lsolve(b0);
+#ifdef TIMING
   stochNode->resMon.recLsolveTmLocal_stop();
+#endif
+
+#ifdef TIMING
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  if(0==myRank) {
+    double tTotChildren=0.0;
+    for(size_t it=0; it<children.size(); it++) {
+      tTotChildren += children[it]->stochNode->resMon.eLsolve.tmChildren;
+      tTotChildren += children[it]->stochNode->resMon.eLsolve.tmLocal;
+    }
+
+    double tComm=stochNode->resMon.eReduce.tmLocal;
+    double tStg1=stochNode->resMon.eLsolve.tmLocal;
+    cout << "Lsolve  solveStg1=" << tStg1 << " "
+	 << "solveStg2=" << tTotChildren << " " 
+	 << "reduce=" << tComm << endl;
+  }
+#endif
 }
 
 
@@ -196,15 +247,18 @@ void sLinsysRoot::Ltsolve2( sData *prob, StochVector& x, SimpleVector& xp)
 {
   StochVector& b   = dynamic_cast<StochVector&>(x);
   SimpleVector& bi = dynamic_cast<SimpleVector&>(*b.vec);
-  
-  stochNode->resMon.recLtsolveTmLocal_start();
 
+#ifdef TIMING
+  stochNode->resMon.eLtsolve.clear();
+  stochNode->resMon.recLtsolveTmLocal_start();
+#endif
   //b_i -= Lni^T x0
   this->LniTransMult(prob, bi, -1.0, xp);
   solver->Ltsolve(bi);
 
+#ifdef TIMING
   stochNode->resMon.recLtsolveTmLocal_stop();
-
+#endif
   SimpleVector& xi = bi;
   //recursive call in order to get the children to do their part
   for(size_t it=0; it<children.size(); it++) {
@@ -217,10 +271,14 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
   StochVector& b   = dynamic_cast<StochVector&>(x);
   SimpleVector& b0 = dynamic_cast<SimpleVector&>(*b.vec);
 
+#ifdef TIMING
+  stochNode->resMon.eLtsolve.clear();
   stochNode->resMon.recLtsolveTmLocal_start();
+#endif
   solver->Ltsolve(b0);
+#ifdef TIMING
   stochNode->resMon.recLtsolveTmLocal_stop();
-
+#endif
   //dumpRhs(0, "sol",  b0);
 
   SimpleVector& x0 = b0; //just another name, for clarity
@@ -230,18 +288,53 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
   for(size_t it=0; it<children.size(); it++) {
     children[it]->Ltsolve2(prob->children[it], *b.children[it], x0);
   }
+#ifdef TIMING
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  if(0==myRank) {
+    double tTotChildren=0.0;
+    for(size_t it=0; it<children.size(); it++) {
+      tTotChildren += children[it]->stochNode->resMon.eLtsolve.tmChildren;
+      tTotChildren += children[it]->stochNode->resMon.eLtsolve.tmLocal;
+    }
+    double tStg1=stochNode->resMon.eLtsolve.tmLocal;
+    cout << "Ltsolve solveStg1=" << tStg1 << " "
+	 << "solveStg2=" << tTotChildren <<endl;
+  }
+#endif
+
+
 }
 
 void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
 {
   StochVector& b = dynamic_cast<StochVector&>(x);
 
-  for(size_t it=0; it<children.size(); it++) {
-    children[it]->Dsolve(prob->children[it], *b.children[it]);
-  }
+  //! commented - already done in addLnizi - cpetra
+  //  for(size_t it=0; it<children.size(); it++) {
+  //  children[it]->Dsolve(prob->children[it], *b.children[it]);
+  //}
 
   SimpleVector& b0 = dynamic_cast<SimpleVector&>(*b.vec);
+#ifdef TIMING
+  stochNode->resMon.eDsolve.clear();
+  stochNode->resMon.recDsolveTmLocal_start();
+#endif
   solveReduced(prob, b0);
+#ifdef TIMING
+  stochNode->resMon.recDsolveTmLocal_stop();
+
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank); 
+  if(0==myRank) {  
+    double tTotChildren=0.0; 
+    for(size_t it=0; it<children.size(); it++) {   
+      tTotChildren += children[it]->stochNode->resMon.eDsolve.tmChildren;
+      tTotChildren += children[it]->stochNode->resMon.eDsolve.tmLocal;
+    } 
+    double tStg1=stochNode->resMon.eDsolve.tmLocal;  
+    cout << "Dsolve  solveStg1=" << tStg1 << " "
+         << "solveStg2=" << tTotChildren <<endl; 
+  }
+#endif
 }
 
 
@@ -396,8 +489,8 @@ void sLinsysRoot::factorizeKKT()
   MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  if( (mype/32)*32==mype )
-      printf("FACT %g SEC ON PROC %d ITER %d\n", st, mype, (int)g_iterNumber);
+  //if( (mype/32)*32==mype )
+  printf("1stSTAGE FACT %g SEC ON PROC %d ITER %d\n", st, mype, (int)g_iterNumber);
 #endif
 }
 

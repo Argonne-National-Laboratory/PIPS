@@ -72,13 +72,19 @@ void sLinsysLeaf::Ltsolve2( sData *prob, StochVector& x, SimpleVector& xp)
 
   StochVector& b   = dynamic_cast<StochVector&>(x);
   SimpleVector& bi = dynamic_cast<SimpleVector&>(*b.vec);
-
   assert(0==b.children.size());
-  stochNode->resMon.recLtsolveTmChildren_start();
+
+#ifdef TIMING
+  stochNode->resMon.eLtsolve.clear();
+  stochNode->resMon.recLtsolveTmLocal_start();
+#endif
+
   //b_i -= Lni^T x0
   this->LniTransMult(prob, bi, -1.0, xp);
   solver->Ltsolve(bi);
+#ifdef TIMING
   stochNode->resMon.recLtsolveTmChildren_stop();
+#endif
 }
 
 void sLinsysLeaf::sync()
