@@ -398,6 +398,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       
       //check for convergence
       normr=r.twonorm();
+
 #ifdef TIMING
       histRelResid.push_back(normr/n2b);
 #endif
@@ -475,13 +476,12 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 	} // else continue - To Do: detect stagnation (flag==3)
       } else {
 	//To Do: detect stagnation/divergence and rollback to min.norm. iterate
-	//for now we print a warning in case residual increases.
+	//for now we print a warning and exit in case residual increases.
 	if(normr>normr_min) {
 	  if(0==myRank) 
 	    cout << "Outer BiCG - Increase in BiCGStab residual. Old=" << normr_min
 		 << "  New=" << normr << endl;
-	  flag=5;
-	  break; 
+	  flag=5; iter=it+1.; break;
 	} else normr_min=normr;
 	
       } //~end of convergence test

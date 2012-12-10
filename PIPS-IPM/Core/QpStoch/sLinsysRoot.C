@@ -235,8 +235,7 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
 
     double tComm=stochNode->resMon.eReduce.tmLocal;
     double tStg1=stochNode->resMon.eLsolve.tmLocal;
-    cout << "Lsolve  solveStg1=" << tStg1 << " "
-	 << "solveStg2=" << tTotChildren << " " 
+    cout << "  - Residual computation=" << tTotChildren << " " 
 	 << "reduce=" << tComm << endl;
   }
 #endif
@@ -297,8 +296,7 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
       tTotChildren += children[it]->stochNode->resMon.eLtsolve.tmLocal;
     }
     double tStg1=stochNode->resMon.eLtsolve.tmLocal;
-    cout << "Ltsolve solveStg1=" << tStg1 << " "
-	 << "solveStg2=" << tTotChildren <<endl;
+    cout << "  - 2ndStage solve=" << tTotChildren <<endl;
   }
 #endif
 
@@ -331,8 +329,9 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
       tTotChildren += children[it]->stochNode->resMon.eDsolve.tmLocal;
     } 
     double tStg1=stochNode->resMon.eDsolve.tmLocal;  
-    cout << "Dsolve  solveStg1=" << tStg1 << " "
-         << "solveStg2=" << tTotChildren <<endl; 
+    cout << "  - 1stStage solve=" << tStg1 <<endl;
+    //cout << "Dsolve  solveStg1=" << tStg1 << " "
+    //     << "solveStg2=" << tTotChildren <<endl; 
   }
 #endif
 }
