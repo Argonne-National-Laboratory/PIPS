@@ -134,7 +134,7 @@ void sLinsys::factor(Data *prob_, Variables *vars)
 
 #ifdef TIMING
   tTot = MPI_Wtime()-tTot;
-  cout << "FACTORIZATION PHASE time=" << tTot << endl;
+  cout << "Factorization total time " << tTot << endl;
 #endif
 }
  
