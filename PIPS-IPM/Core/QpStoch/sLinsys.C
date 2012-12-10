@@ -134,7 +134,9 @@ void sLinsys::factor(Data *prob_, Variables *vars)
 
 #ifdef TIMING
   tTot = MPI_Wtime()-tTot;
-  cout << "Factorization total time " << tTot << endl;
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  if(128*(myRank/128)==0)
+      cout << "Outer fact. total time " << tTot << endl;
 #endif
 }
  
