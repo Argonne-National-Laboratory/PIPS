@@ -249,7 +249,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   int phase=11; //analysis
   int maxfct=1, mnum=1, nrhs=1;
   iparm[2]=num_threads;
-  iparm[7]=3;     //# iterative refinements
+  iparm[7]=8;     //# iterative refinements
   //iparm[1] = 2; // 2 is for metis, 0 for min degree 
   //iparm[ 9] =10; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
@@ -315,7 +315,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   int phase=12; //Numerical factorization & symb analysis
   int maxfct=1, mnum=1, nrhs=1;
   iparm[2]=num_threads;
-  iparm[7]=3;     //# iterative refinements
+  iparm[7]=8;     //# iterative refinements
   //iparm[1] = 2; // 2 is for metis, 0 for min degree 
   //iparm[ 9] = 10; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
@@ -806,7 +806,7 @@ int pardiso_stuff(int n, int nnz, int n0, int* rowptr, int* colidx, double* elts
   int phase=12; //analysis & fact
   int maxfct=1, mnum=1, nrhs=1;
   iparm[2]=num_threads;
-  iparm[7]=3;     //# iterative refinements
+  iparm[7]=8;     //# iterative refinements
   //iparm[1] = 2; // 2 is for metis, 0 for min degree
   //iparm[ 9] =10; // pivot perturbation 10^{-xxx}
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
@@ -877,7 +877,7 @@ int pardiso_stuff(int n, int nnz, int n0, int* rowptr, int* colidx, double* elts
     // solve
     //
     phase=33;
-    iparm[7]=2;    // # of iterative refinements
+    iparm[7]=8;    // # of iterative refinements
     int nrhs=1;
     msglvl=0;
 

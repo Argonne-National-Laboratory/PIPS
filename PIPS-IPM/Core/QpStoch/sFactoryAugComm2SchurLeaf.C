@@ -21,14 +21,14 @@ sFactoryAugComm2SchurLeaf::newLinsysLeaf(sData* prob,
 					 OoqpVector* nomegaInv, 
 					 OoqpVector* rhs)
 {
-  cout << "sFactoryAugComm2SchurLeaf::newLinsysLeaf  returns  a sLinsysLeafSchurSlv" << endl;
+    //cout << "sFactoryAugComm2SchurLeaf::newLinsysLeaf  returns  a sLinsysLeafSchurSlv" << endl;
   PardisoSchurSolver* linSolver=NULL;
   return new sLinsysLeafSchurSlv(this, prob, dd, dq, nomegaInv, rhs, linSolver);
 }
 
 sLinsysRoot* sFactoryAugComm2SchurLeaf::newLinsysRoot()
 {
-  cout << "sFactoryAugComm2SchurLeaf::newLinsysRoot()" << endl;
+    //cout << "sFactoryAugComm2SchurLeaf::newLinsysRoot()" << endl;
   return new sLinsysRootAugComm2(this, data);
 }
 
@@ -39,7 +39,7 @@ sFactoryAugComm2SchurLeaf::newLinsysRoot(sData* prob,
 					   OoqpVector* nomegaInv, 
 					   OoqpVector* rhs)
 {
-  cout << "sFactoryAugComm2SchurLeaf::newLinsysRoot(arguments)" << endl;
+    //cout << "sFactoryAugComm2SchurLeaf::newLinsysRoot(arguments)" << endl;
   return new sLinsysRootAugComm2(this, prob, dd, dq, nomegaInv, rhs);
 }
 
