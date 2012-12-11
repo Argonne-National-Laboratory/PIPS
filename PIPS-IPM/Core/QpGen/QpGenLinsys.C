@@ -315,10 +315,10 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   double n2b=b.twonorm(), tolb=n2b*tol;
   int flag; double iter=0.;
   double rho=1., omega=1., alpha;  
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
 
 #ifdef TIMING
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   tTmp=MPI_Wtime();
 #endif
   //starting guess/point

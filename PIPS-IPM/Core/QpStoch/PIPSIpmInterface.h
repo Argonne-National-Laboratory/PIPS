@@ -128,7 +128,6 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   //---------------------------------------------
   tmElapsed=MPI_Wtime()-tmElapsed;
 #ifdef TIMING
-  cout << mype << " solve done" << endl;
   double objective = getObjective();
 #endif
 

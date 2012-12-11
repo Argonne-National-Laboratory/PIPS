@@ -7,8 +7,7 @@
 #define MAX(a,b) ((a > b) ? a : b)
 
 StochNodeResourcesMonitor::StochNodeResourcesMonitor() 
-  : eFact(0,0), eLsolve(0,0), eDsolve(0,0), eLtsolve(0,0), eTotal(0,0), eMult(0,0), eReduce(0,0),
-    eReduceScatter(0,0)
+  : eFact(0,0), eLsolve(0,0), eDsolve(0,0), eLtsolve(0,0), eTotal(0,0), eMult(0,0), eReduce(0,0), eReduceScatter(0,0), eBcast(0,0)
 {
 
 
@@ -25,7 +24,7 @@ void StochNodeResourcesMonitor::reset()
   eMult.clear();
   eReduce.clear();
   eReduceScatter.clear();
-
+  eBcast.clear();
   vcSchur.clear(); vcLsolve.clear();
 }
 
@@ -166,6 +165,11 @@ void StochNodeResourcesMonitor::recReduceScatterTmLocal_start()
 void StochNodeResourcesMonitor::recReduceScatterTmLocal_stop()
 { eReduceScatter.recLocal_stop(); }
 
+void StochNodeResourcesMonitor::recBcastTmLocal_start()
+{ eBcast.recLocal_start(); }
+
+void StochNodeResourcesMonitor::recBcastTmLocal_stop()
+{ eBcast.recLocal_stop(); }
 
 //**************************************************
 //*************  NodeExecEntry   *******************

@@ -85,6 +85,8 @@ class StochNodeResourcesMonitor
   virtual void recReduceScatterTmLocal_start();
   virtual void recReduceScatterTmLocal_stop();
   
+  virtual void recBcastTmLocal_start();
+  virtual void recBcastTmLocal_stop();
   
 
  public:
@@ -92,7 +94,7 @@ class StochNodeResourcesMonitor
   NodeExecEntry eFact, eLsolve, eDsolve, eLtsolve;
   NodeExecEntry eTotal;
   NodeExecEntry eMult;
-  NodeExecEntry eReduce, eReduceScatter;
+  NodeExecEntry eReduce, eReduceScatter, eBcast;
   vector<NodeCommEntry> vcSchur, vcLsolve;
 
  private:
