@@ -143,7 +143,8 @@ void sLinsysRoot::afterFactor()
 {
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
-  if( (mype/128)*128==mype) {
+  //if( (mype/128)*128==mype) {
+  {
       for (size_t c=0; c<children.size(); c++) {
 	  if (children[c]->mpiComm == MPI_COMM_NULL) continue;
 	  
