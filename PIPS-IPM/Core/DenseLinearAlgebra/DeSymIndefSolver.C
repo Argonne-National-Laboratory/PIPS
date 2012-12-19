@@ -41,6 +41,19 @@ extern "C" void FNAME(dsytrs)(char *uplo,
 			double b[], 
 			int *ldb,
 			int *info);
+
+#ifdef TIMING_FLOPS
+extern "C" {
+    void HPM_Init(void);
+    void HPM_Start(char *);
+    void HPM_Stop(char *);
+    void HPM_Print(void);
+    void HPM_Print_Flops(void);
+    void HPM_Print_Flops_Agg(void);
+    void HPM_Terminate(char*);
+}
+#endif
+
   
 DeSymIndefSolver::DeSymIndefSolver( DenseSymMatrix * dm )
 {
@@ -102,12 +115,18 @@ void DeSymIndefSolver::matrixChanged()
   if(work) delete[] work;
   work = new double[lwork];
 
-  //printf("%d allocated, n being [%d]\n", lwork, n);
+
+#ifdef TIMING_FLOPS
+  HPM_Start("DSYTRFFact");
+#endif
 
   //factorize
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, work, &lwork, &info );
 
+#ifdef TIMING_FLOPS
+  HPM_Stop("DSYTRFFact");
+#endif
   if(info!=0)
       printf("DeSymIndefSolver::matrixChanged : error - dsytrf returned info=%d\n", info);
   //assert(info==0);
@@ -126,10 +145,16 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
   int one = 1;
 
   int n = mStorage->n; SimpleVector &  sv = dynamic_cast<SimpleVector &>(v);
+#ifdef TIMING_FLOPS
+  HPM_Start("DSYTRSSolve");
+#endif
 
   FNAME(dsytrs)( &fortranUplo, &n, &one,	&mStorage->M[0][0],	&n,
 	   ipiv, &sv[0],	&n,	&info);
 
+#ifdef TIMING_FLOPS
+  HPM_Stop("DSYTRSSolve");
+#endif
   assert(info==0);
 }
 

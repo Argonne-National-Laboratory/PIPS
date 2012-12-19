@@ -39,7 +39,11 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
 
 PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 {
-  cout << "PardisoSolver::PardisoSolver (sparse input)" << endl;
+#ifdef TIMING
+    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    if(myRank==0)
+	cout << "PardisoSolver::PardisoSolver (sparse input)" << endl;
+#endif
   Msys = sgm;
   n = sgm->size();
   nnz=sgm->numberOfNonZeros();
@@ -68,7 +72,11 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 
 PardisoSolver::PardisoSolver( DenseSymMatrix * m )
 {
-  cout << "PardisoSolver created (dense input)" << endl;
+#ifdef TIMING
+    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    if(myRank==0)
+	cout << "PardisoSolver created (dense input)" << endl;
+#endif
   Msys = NULL;
   Mdsys = m;
   n = m->size();
@@ -295,7 +303,6 @@ extern int gLackOfAccuracy;
 
 void PardisoSolver::solve( OoqpVector& rhs_in )
 {
-  //cout << "PARDISO-single rhs" << endl;    
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
   double * sol = nvec;
 

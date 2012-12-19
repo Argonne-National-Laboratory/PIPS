@@ -55,6 +55,20 @@ int dumpAugMatrix(int n, int nnz, int nSys, //size, nnz and size of the (1,1) bl
 
 int dumpRhs(SimpleVector& v);
 
+
+#ifdef TIMING_FLOPS
+extern "C" {
+    void HPM_Init(void);
+    void HPM_Start(char *);
+    void HPM_Stop(char *);
+    void HPM_Print(void);
+    void HPM_Print_Flops(void);
+    void HPM_Print_Flops_Agg(void);
+    void HPM_Terminate(char*);
+}
+#endif
+
+
 PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 {
   Msys = sgm;
@@ -329,17 +343,25 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
 #ifdef TIMING
   //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
-  double o=MPI_Wtime();
+  //double o=MPI_Wtime();
+#endif
+#ifdef TIMING_FLOPS
+  HPM_Start("PARDISOFact");
 #endif
 
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
 	   iparm , &msglvl, NULL, NULL, &error, dparm );
-
+#ifdef TIMING_FLOPS
+  HPM_Stop("PARDISOFact");
+#endif
   int nnzSC=iparm[38];
 
 #ifdef TIMING
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  if(256*(myRank/256)==myRank)
+      printf("rank %d perturbPiv %d peakmem %d\n", myRank, iparm[13], iparm[14]);
   //cout << "PARDISOSCHUR FACT(AUGMAT) " << MPI_Wtime()-o << endl;
   //cout << "NNZ(SCHUR) " << nnzSC << "    SPARSITY " << nnzSC/(1.0*nSC*nSC) << endl;
 #endif
@@ -395,13 +417,18 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
   for(int i=dim; i<n; i++) rhs_n[i]=0.0;
 
-  //double start = MPI_Wtime();
+#ifdef TIMING_FLOPS
+  HPM_Start("PARDISOSolve");
+#endif
+
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
 	   iparm , &msglvl, rhs_n.elements(), x_n.elements(), &error, dparm );   
-  //cout << "---pardiso:" << MPI_Wtime()-start << endl;
 
+#ifdef TIMING_FLOPS
+  HPM_Stop("PARDISOSolve");
+#endif
 
   //compute residual (alternative)  
   double* tmp_resid=new double[dim];
