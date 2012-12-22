@@ -35,13 +35,13 @@ class QpGen : public ProblemFormulation {
 protected:
   LinearAlgebraPackage * la;
   /** number of elements in x */
-  int nx;
+  long long nx;
 
   /** number of rows in A and b */
-  int my;
+  long long my;
 
   /** number of rows in C */
-  int mz;
+  long long mz;
 
   QpGen( int nx_, int my_, int mz_ );
 public:

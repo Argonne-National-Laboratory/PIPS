@@ -16,7 +16,7 @@ using namespace std;
  * 'AddChild' method correctly sets the parent and (re)creates an EMPTY
  * border with correct sizes.
  */
-StochSymMatrix::StochSymMatrix(int id, int global_n, int local_n, int local_nnz, 
+StochSymMatrix::StochSymMatrix(int id, long long global_n, int local_n, int local_nnz, 
 			       MPI_Comm mpiComm_)
   :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(NULL)
 {
@@ -33,7 +33,7 @@ StochSymMatrix::StochSymMatrix(int id, int global_n, int local_n, int local_nnz,
   }
 }
 
-StochSymMatrix::StochSymMatrix( int id, int global_n, 
+StochSymMatrix::StochSymMatrix( int id, long long global_n, 
 				int nrows, int diag_nnz, 
 				int nbordercols, int border_nnz,
 				MPI_Comm mpiComm_)
@@ -109,12 +109,18 @@ void StochSymMatrix::fsymAtPutSpRow( int row,
   assert( "Not implemented" && 0 );
 }
 
+void StochSymMatrix::getSize( long long& m_, long long& n_ )
+{
+  m_=n; n_=n;
+}
+
 void StochSymMatrix::getSize( int& m_, int& n_ )
 {
   m_=n; n_=n;
 }
 
-int StochSymMatrix::size()
+
+long long StochSymMatrix::size()
 {
   return n;
 }

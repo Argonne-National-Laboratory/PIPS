@@ -14,8 +14,8 @@
 
 
 QpGenData::QpGenData(LinearAlgebraPackage * la_,
-		     int nx_, int my_, int mz_,
-		     int nnzQ, int nnzA, int nnzC)
+		     long long nx_, long long my_, long long mz_,
+		     long long nnzQ, long long nnzA, long long nnzC)
 {
   la = la_;
 
@@ -62,7 +62,7 @@ QpGenData::QpGenData( LinearAlgebraPackage * la_in,
   SpReferTo( bu,    cupp_in  );
   SpReferTo( icupp, icupp_in );
 
-  int dummy;
+  long long dummy;
   la = la_in;
 
   nx = g->length();

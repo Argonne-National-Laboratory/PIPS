@@ -90,6 +90,12 @@ void DenseSymMatrix::fromGetSpRow( int row, int col,
 }
 
 
+void DenseSymMatrix::getSize( long long& m, long long& n )
+{
+  m = mStorage->m;
+  n = mStorage->n;
+}
+
 void DenseSymMatrix::getSize( int& m, int& n )
 {
   m = mStorage->m;
@@ -97,7 +103,7 @@ void DenseSymMatrix::getSize( int& m, int& n )
 }
 
 
-int DenseSymMatrix::size()
+long long DenseSymMatrix::size()
 { 
    return mStorage->m;
 }
@@ -332,11 +338,11 @@ void DenseSymMatrix::matMult(double alpha,
 
   int m,n,k,kB; int ldc = mStorage->m;
 
-  if(!transA) A.getSize(m,k);
-  else        A.getSize(k,m);
+  if(!transA) {A.getSize(m,k);}
+  else        {A.getSize(k,m);}
 
-  if(!transB) B.getSize(kB,n);
-  else        B.getSize(n,kB);
+  if(!transB) {B.getSize(kB,n);}
+  else        {B.getSize(n,kB);}
 
   assert(k==kB);
 
@@ -453,7 +459,7 @@ void DenseSymMatrix::atRankkUpdate( double alpha, double beta, DenseGenMatrix& U
   char TRANS = trans==0?'T':'N';  
 
   int m;
-  U.getSize(m,k); 
+  U.getSize(m,k);
   ldu=k; // change leading dim so that U in row-major  in col-major
   if(trans) k=m;
 
@@ -463,7 +469,7 @@ void DenseSymMatrix::atRankkUpdate( double alpha, double beta, DenseGenMatrix& U
 #ifdef DEBUG
   //TRANS = 'N', k specifies the number of columns of the matrix U
   //we pass U' instead of U, so k should be the number of rows of U
-  int r,c; U.getSize(r,c);
+  int r,c; U.getSize(rll,cll);
   if(TRANS=='N') assert(k==r);
   else if(TRANS=='T') assert(k==c);
   else assert(false);

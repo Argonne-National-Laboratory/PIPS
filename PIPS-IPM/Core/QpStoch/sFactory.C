@@ -110,16 +110,16 @@ sFactory::newLinsysLeaf(sData* prob,
 
 void dumpaug(int nx, SparseGenMatrix &A, SparseGenMatrix &C) {
 
-	int my, mz, nx_1, nx_2;
-	A.getSize(my,nx_1);
-	C.getSize(mz,nx_2);
-	assert(nx_1 == nx_2);
+    long long my, mz, nx_1, nx_2;
+    A.getSize(my,nx_1);
+    C.getSize(mz,nx_2);
+    assert(nx_1 == nx_2);
 	
-	int nnzA = A.numberOfNonZeros();
-	int nnzC = C.numberOfNonZeros();
-	cout << "augdump  nx=" << nx << endl;
-	cout << "A: " << my << "x" << nx_1 << "   nnz=" << nnzA << endl
-	     << "C: " << mz << "x" << nx_1 << "   nnz=" << nnzC << endl;
+    int nnzA = A.numberOfNonZeros();
+    int nnzC = C.numberOfNonZeros();
+    cout << "augdump  nx=" << nx << endl;
+    cout << "A: " << my << "x" << nx_1 << "   nnz=" << nnzA << endl
+	 << "C: " << mz << "x" << nx_1 << "   nnz=" << nnzC << endl;
 	
 	vector<double> eltsA(nnzA), eltsC(nnzC), elts(nnzA+nnzC);
 	vector<int> colptrA(nx_1+1),colptrC(nx_1+1), colptr(nx_1+1), rowidxA(nnzA), rowidxC(nnzC), rowidx(nnzA+nnzC);

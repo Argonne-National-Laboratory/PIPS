@@ -17,6 +17,18 @@ using namespace std;
 extern int gOuterSolve;
 extern int gInnerSCsolve;
 
+#ifdef TIMING_FLOPS
+extern "C" {
+    void HPM_Init(void);
+    void HPM_Start(char *);
+    void HPM_Stop(char *);
+    void HPM_Print(void);
+    void HPM_Print_Flops(void);
+    void HPM_Print_Flops_Agg(void);
+    void HPM_Terminate(char*);
+}
+#endif
+
 int main(int argc, char ** argv) {
   MPI_Init(&argc, &argv);
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
@@ -52,8 +64,20 @@ int main(int argc, char ** argv) {
   delete s;
   if(mype==0) cout <<  "rawInput deleted ... starting to solve" << endl;
 
+
+#ifdef TIMING_FLOPS
+  if(mype==0) cout << "FLOPS are being recorded using HPM library." << endl;
+  HPM_Init();
+  //HPM_Start("PIPSTotFlops");
+#endif
+
   pipsIpm.go();
 
+#ifdef TIMING_FLOPS
+  //HPM_Stop("PIPSTotFlops");
+  HPM_Print_Flops();
+  HPM_Print_Flops_Agg();
+#endif
 //   if(mype==0) cout << "solving done" << endl;
 
 //   if(mype==0) cout << "Saving solution" << endl;

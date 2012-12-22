@@ -211,12 +211,20 @@ void SparseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
 }
 
 // Pass these to storage
-void SparseSymMatrix::getSize( int& m, int& n )
+void SparseSymMatrix::getSize( long long& m, long long& n )
 {
-  mStorage->getSize( m, n );
+  int mint, nint;
+  mStorage->getSize( mint, nint );
+  m=mint; n=nint;
 }
 
-int SparseSymMatrix::size()
+void SparseSymMatrix::getSize( int& m, int& n )
+{
+  mStorage->getSize( m, n);
+}
+
+
+long long SparseSymMatrix::size()
 {
   return mStorage->rows();
 }
@@ -270,7 +278,7 @@ void SparseSymMatrix::mult ( double beta,  double y[], int incy,
 				 double alpha, double x[], int incx )
 {
   int m, n, i, j, k;
-  this->getSize(m, n);
+  this->getSize(m, n); 
 
   int * jcolM = mStorage->jcolM;
   int * krowM = mStorage->krowM;

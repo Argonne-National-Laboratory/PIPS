@@ -10,7 +10,7 @@
 #include <cmath>
 #include <cstdio>
 
-int SimpleVector::numberOfNonzeros()
+long long SimpleVector::numberOfNonzeros()
 {
   int i, count = 0;
   for( i = 0; i < n; i++ ) {

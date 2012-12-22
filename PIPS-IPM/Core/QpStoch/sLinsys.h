@@ -17,8 +17,6 @@
 
 #include "mpi.h"
 
-
-
 class sTree;
 class sFactory;
 class sData;

@@ -97,7 +97,7 @@ public:
 
   virtual int matchesNonZeroPattern( OoqpVector& select );
   virtual void selectNonZeros( OoqpVector& select );
-  virtual int numberOfNonzeros();
+  virtual long long numberOfNonzeros();
   virtual void addSomeConstants( double c, OoqpVector& select );
   virtual void writefSomeToStream( ostream& out,
 				   const char format[],
@@ -189,7 +189,7 @@ public:
 
   virtual int matchesNonZeroPattern( OoqpVector& select ){return 1;}
   virtual void selectNonZeros( OoqpVector& select ){};
-  virtual int numberOfNonzeros(){return 0;}
+  virtual long long numberOfNonzeros(){return 0;}
   virtual void addSomeConstants( double c, OoqpVector& select ){};
   virtual void writefSomeToStream( ostream& out,
 				   const char format[],

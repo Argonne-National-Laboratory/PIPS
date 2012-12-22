@@ -27,8 +27,7 @@ class sFactory : public QpGen {
  protected:
   int m_blocks;
   
-  int nnzQ, nnzA, nnzC;
-  
+  long long nnzQ, nnzA, nnzC;
  public:
   sFactory( stochasticInput&, MPI_Comm comm=MPI_COMM_WORLD );
 

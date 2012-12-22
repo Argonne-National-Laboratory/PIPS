@@ -39,7 +39,7 @@ int gInnerStg2solve=3;
 extern int g_myRank;
 
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0),
-		   mutol(2.50e-5), artol(1e-4), sys(0)
+		   mutol(1.e-8), artol(1e-4), sys(0)
 {
   // define parameters associated with the step length heuristic
   gamma_f = 0.99;

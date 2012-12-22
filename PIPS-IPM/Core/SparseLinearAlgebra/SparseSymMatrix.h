@@ -46,8 +46,9 @@ public:
   virtual void symAtPutSpRow( int col, double A[], int lenA, int jcolA[],
 			      int& info );
 
+  virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
-  virtual int size();
+  virtual long long size();
 
   virtual void getDiagonal( OoqpVector& vec );
   virtual void setToDiagonal( OoqpVector& vec );

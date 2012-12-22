@@ -22,7 +22,7 @@ class sTree
   int NumberOfChildren() const { return children.size(); }
 
   virtual void computeGlobalSizes() = 0;
-  void GetGlobalSizes(int& NXOut, int& MYOut, int& MZOut);
+  void GetGlobalSizes(long long& NXOut, long long& MYOut, long long& MZOut);
   //void GetLocalSizes(int& nxOut, int& myOut, int& mzOut);
 
   void assignProcesses  ( MPI_Comm comm = MPI_COMM_WORLD);
@@ -104,7 +104,7 @@ class sTree
 
 
  public:
-  int N,MY,MZ; //global sizes
+  long long N,MY,MZ; //global sizes
   int np; //n for the parent
 
   double IPMIterExecTIME;

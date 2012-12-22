@@ -523,17 +523,17 @@ void StochVector::selectNonZeros( OoqpVector& select_ )
     children[it]->selectNonZeros(*select.children[it]);
 }
 
-int StochVector::numberOfNonzeros()
+long long StochVector::numberOfNonzeros()
 {
   //!opt - store the number of nnz to avoid communication
-  int nnz = 0;
+  long long nnz = 0;
 
   for(size_t it=0; it<children.size(); it++) 
     nnz += children[it]->numberOfNonzeros();
 
   if(iAmDistrib) {
-    int nnzG = 0;
-    MPI_Allreduce(&nnz, &nnzG, 1, MPI_INT, MPI_SUM, mpiComm);
+    long long nnzG = 0;
+    MPI_Allreduce(&nnz, &nnzG, 1, MPI_LONG_LONG, MPI_SUM, mpiComm);
     nnz = nnzG;
   }
   nnz += vec->numberOfNonzeros();

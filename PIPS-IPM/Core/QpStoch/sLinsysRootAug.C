@@ -87,9 +87,6 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   assert(r.length() <= b.length());
   SparseGenMatrix& C = prob->getLocalD();
 
-  stochNode->resMon.recDsolveTmLocal_start();
-
-
   ///////////////////////////////////////////////////////////////////////
   // LOCAL SOLVE
   ///////////////////////////////////////////////////////////////////////
@@ -151,9 +148,6 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
     cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
 	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
 #endif
-
-  //--done
-  stochNode->resMon.recDsolveTmLocal_stop();
 }
 
 /** rxy = beta*rxy + alpha * SC * x */

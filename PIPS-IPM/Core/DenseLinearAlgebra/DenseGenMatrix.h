@@ -24,6 +24,7 @@ public:
   
   virtual int isKindOf( int matType );
 
+  virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 
   virtual void atPutDense( int row, int col, double * A, int lda,
