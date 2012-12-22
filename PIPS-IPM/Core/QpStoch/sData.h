@@ -22,18 +22,18 @@ class sData : public QpGenData {
       passed as arguments */
   sData( sTree* stochNode,
 	 OoqpVector * c, SymMatrix * Q,
-	 OoqpVector * xlow, OoqpVector * ixlow, int nxlow,
-	 OoqpVector * xupp, OoqpVector * ixupp, int nxupp,
+	 OoqpVector * xlow, OoqpVector * ixlow, long long nxlow,
+	 OoqpVector * xupp, OoqpVector * ixupp, long long nxupp,
 	 GenMatrix * A, OoqpVector * bA,
 	 GenMatrix * C,
-	 OoqpVector * clow, OoqpVector * iclow, int mclow,
-	 OoqpVector * cupp, OoqpVector * ciupp, int mcupp );
+	 OoqpVector * clow, OoqpVector * iclow, long long mclow,
+	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp );
 
   std::vector<sData*> children;
   void AddChild(sData* child);
   sTree* stochNode;
  public:
-  int nxlow, nxupp, mclow, mcupp;
+  long long nxlow, nxupp, mclow, mcupp;
 
   int getLocalnx();
   int getLocalmy();

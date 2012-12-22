@@ -6,7 +6,7 @@
 using namespace std;
 
 StochGenMatrix::StochGenMatrix(int id, 
-			       int global_m, int global_n,
+			       long long global_m, long long global_n,
 			       int A_m, int A_n, int A_nnz,
 			       int B_m, int B_n, int B_nnz,
 			       MPI_Comm mpiComm_)
@@ -86,10 +86,15 @@ int StochGenDummyMatrix::isKindOf( int type )
 {
   return type == kStochGenDummyMatrix;
 }
+void StochGenMatrix::getSize( long long& m_out, long long& n_out )
+{
+  m_out = m; n_out=n;
+}
 void StochGenMatrix::getSize( int& m_out, int& n_out )
 {
   m_out = m; n_out=n;
 }
+
 
 void StochGenMatrix::atPutDense( int row, int col, double * A, int lda,
 				 int rowExtent, int colExtent )
@@ -202,7 +207,7 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 
     Bmat->mult(beta, *y.vec, alpha, *x.vec);
 
-    int mA, nA; 
+    long long mA, nA; 
     Amat->getSize(mA,nA);
     if(nA>0) {
       //not the root

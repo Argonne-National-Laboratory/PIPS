@@ -23,6 +23,7 @@ extern int gOuterSolve;
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   : sLinsys(factory_, prob_), iAmDistrib(0)
 {
+  assert(dd!=NULL);
   createChildren(prob_);
 
   if(gOuterSolve) {
@@ -128,9 +129,8 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
   factorizeKKT();
 
-  //int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
   //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd); 
-  //MPI_Barrier(MPI_COMM_WORLD);
+
 #ifdef TIMING
   afterFactor();
 #endif
@@ -143,8 +143,8 @@ void sLinsysRoot::afterFactor()
 {
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
-  //if( (mype/128)*128==mype) {
-  {
+  if( (mype/256)*256==mype) {
+
       for (size_t c=0; c<children.size(); c++) {
 	  if (children[c]->mpiComm == MPI_COMM_NULL) continue;
 	  
@@ -280,13 +280,14 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
     children[it]->Ltsolve2(prob->children[it], *b.children[it], x0);
   }
 #ifdef TIMING
-
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  if(128*(myRank/128) == myRank) {
-    double tTotResChildren=0.0;
+
+  if(256*(myRank/256) == myRank) {
+      double tTotResChildren=0.0;
     for(size_t it=0; it<children.size(); it++) {
-      tTotResChildren += children[it]->stochNode->resMon.eLsolve.tmChildren;
-      tTotResChildren += children[it]->stochNode->resMon.eLsolve.tmLocal;
+	if (children[it]->mpiComm == MPI_COMM_NULL) continue;
+	tTotResChildren += children[it]->stochNode->resMon.eLsolve.tmChildren;
+	tTotResChildren += children[it]->stochNode->resMon.eLsolve.tmLocal;
     }
     double tComm=stochNode->resMon.eReduce.tmLocal;
 
@@ -300,6 +301,7 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
 
     double tTotStg2Children=0.0;
     for(size_t it=0; it<children.size(); it++) {
+      if (children[it]->mpiComm == MPI_COMM_NULL) continue;
       tTotStg2Children += children[it]->stochNode->resMon.eLtsolve.tmChildren;
       tTotStg2Children += children[it]->stochNode->resMon.eLtsolve.tmLocal;
     }
@@ -315,6 +317,9 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
 
 void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
 {
+//#ifdef TIMING
+//    double tTot = MPI_Wtime();
+//#endif
   StochVector& b = dynamic_cast<StochVector&>(x);
 
   //! commented - already done in addLnizi - cpetra
@@ -338,6 +343,7 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
 void sLinsysRoot::createChildren(sData* prob)
 {
   sLinsys* child=NULL;
+  assert(dd!=NULL);
   assert(dynamic_cast<StochVector*>(dd) !=NULL);
   StochVector& ddst = dynamic_cast<StochVector&>(*dd);
   StochVector& dqst = dynamic_cast<StochVector&>(*dq);
@@ -348,27 +354,28 @@ void sLinsysRoot::createChildren(sData* prob)
   this->mpiComm = ddst.mpiComm;
   this->iAmDistrib = ddst.iAmDistrib;
   for(size_t it=0; it<prob->children.size(); it++) {
-		if(MPI_COMM_NULL == ddst.children[it]->mpiComm) {
-      child = new sDummyLinsys(dynamic_cast<sFactory*>(factory), prob->children[it]);
-    } else {
-      sFactory* stochFactory = dynamic_cast<sFactory*>(factory);
-      if(prob->children[it]->children.size() == 0) {	
-	//child = new sLinsysLeaf(dynamic_cast<QpGenStoch*>(factory), 
-	child = stochFactory->newLinsysLeaf(prob->children[it],
-					     ddst.children[it],
-					     dqst.children[it],
-					     nomegaInvst.children[it],
-					     rhsst.children[it]);
+      assert(ddst.children[it]!=NULL); 
+      if(MPI_COMM_NULL == ddst.children[it]->mpiComm) {
+	  child = new sDummyLinsys(dynamic_cast<sFactory*>(factory), prob->children[it]);
       } else {
-	//child = new sLinsysRoot(dynamic_cast<QpGenStoch*>(factory), 
-	child = stochFactory->newLinsysRoot(prob->children[it],
-					     ddst.children[it],
-					     dqst.children[it],
-					     nomegaInvst.children[it],
-					     rhsst.children[it]);
+	  sFactory* stochFactory = dynamic_cast<sFactory*>(factory);
+	  if(prob->children[it]->children.size() == 0) {	
+	      //child = new sLinsysLeaf(dynamic_cast<QpGenStoch*>(factory),
+	      child = stochFactory->newLinsysLeaf(prob->children[it],
+						  ddst.children[it],
+						  dqst.children[it],
+						  nomegaInvst.children[it],
+						  rhsst.children[it]);
+	  } else {
+	      //child = new sLinsysRoot(dynamic_cast<QpGenStoch*>(factory), 
+	      child = stochFactory->newLinsysRoot(prob->children[it],
+						  ddst.children[it],
+						  dqst.children[it],
+						  nomegaInvst.children[it],
+						  rhsst.children[it]);
+	  }
       }
-    }
-    AddChild(child);
+      AddChild(child);
   }
 }
 
@@ -486,7 +493,7 @@ void sLinsysRoot::factorizeKKT()
   MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  if( (mype/128)*128==mype )
+  if( (mype/256)*256==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
 }

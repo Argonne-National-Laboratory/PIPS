@@ -45,7 +45,7 @@ protected:
   QpGenLinsys();
 
   /** dimensions of the vectors in the general QP formulation */
-  int nx, my, mz;
+  long long nx, my, mz;
 
   /** temporary storage vectors */
   OoqpVector* dd, *dq;
@@ -54,7 +54,7 @@ protected:
   OoqpVector* ixupp, *icupp, *ixlow, *iclow;
 
   /** dimensions of the upper and lower bound vectors */
-  int nxupp, nxlow, mcupp, mclow;
+  long long nxupp, nxlow, mcupp, mclow;
   int useRefs;
 
   /** Work vectors for iterative refinement of the XYZ linear system */

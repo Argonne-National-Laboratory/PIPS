@@ -81,7 +81,7 @@ public:
   virtual void negate();
   virtual void invert();
   virtual int allPositive();
-  virtual int numberOfNonzeros();
+  virtual long long numberOfNonzeros();
 
   virtual int matchesNonZeroPattern( OoqpVector& select );
   virtual void selectNonZeros( OoqpVector& select );

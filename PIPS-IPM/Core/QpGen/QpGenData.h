@@ -58,12 +58,12 @@ public:
   OoqpVectorHandle    iclow;
   OoqpVectorHandle    sc;
 
-  int nx, my, mz;
+  long long nx, my, mz;
 
   /** constructor that makes data objects of the specified dimensions */
   QpGenData(LinearAlgebraPackage * la,
-	    int nx_, int my_, int mz_,
-	    int nnzQ, int nnzA, int nnzC);
+	    long long nx_, long long my_, long long mz_,
+	    long long nnzQ, long long nnzA, long long nnzC);
 
   /** constructor that sets up pointers to the data objects that are
       passed as arguments */

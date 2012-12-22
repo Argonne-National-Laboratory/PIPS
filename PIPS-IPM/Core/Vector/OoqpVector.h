@@ -25,7 +25,7 @@ class OoqpVector : public IotrRefCount {
 public:
   int n;
   /** Return the length of this vector. */
-  int length() const { return n; }
+  long long length() const { return n; }
 
   OoqpVector( int n_ = 0 );
   virtual ~OoqpVector();
@@ -114,7 +114,7 @@ public:
   virtual int allPositive() = 0;
   
   /** Return the number of non-zero elements in this OoqpVector. */
-  virtual int numberOfNonzeros() = 0;
+  virtual long long numberOfNonzeros() = 0;
 
   /** True if this OoqpVector has the same non-zero pattern as select. */
   virtual int matchesNonZeroPattern( OoqpVector& select ) = 0;

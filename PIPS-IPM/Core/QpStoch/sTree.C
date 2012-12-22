@@ -174,7 +174,7 @@ double sTree::processLoad() const
   return IPMIterExecTIME;
 }
 
-void sTree::GetGlobalSizes(int& NOut, int& MYOut, int& MZOut)
+void sTree::GetGlobalSizes(long long& NOut, long long& MYOut, long long& MZOut)
 {
   NOut=N; MYOut=MY; MZOut=MZ;
 }
@@ -464,6 +464,7 @@ StochVector* sTree::newPrimalVector() const
     return new StochDummyVector();
 
   StochVector* x = new StochVector(nx(), commWrkrs);
+  assert(x!=NULL);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newPrimalVector();

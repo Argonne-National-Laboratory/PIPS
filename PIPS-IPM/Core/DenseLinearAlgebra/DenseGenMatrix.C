@@ -90,6 +90,12 @@ void DenseGenMatrix::setToDiagonal( OoqpVector& vec )
   mStorage->setToDiagonal( vec );
 }
 
+void DenseGenMatrix::getSize( long long& m, long long& n )
+{
+  m = mStorage->m;
+  n = mStorage->n;
+}
+
 void DenseGenMatrix::getSize( int& m, int& n )
 {
   m = mStorage->m;
@@ -316,6 +322,7 @@ void DenseGenMatrix::matMult(double alpha,
   DenseGenMatrix& C = *this;
 
   int m,n,k,tmp;
+
 
   if(transA) {
     // A^T op(B)

@@ -19,7 +19,7 @@ public:
       for output/debug purposes only.
       The matrix that will be created  has no children, just local data.*/
   StochGenMatrix(int id, 
-		 int global_m, int global_n,
+		 long long global_m, long long global_n,
 		 int A_m, int A_n, int A_nnz,
 		 int B_m, int B_n, int B_nnz,
 		 MPI_Comm mpiComm_);
@@ -34,7 +34,7 @@ public:
   SparseGenMatrix* Amat;
   SparseGenMatrix* Bmat;
   int id;
-  int m,n;
+  long long m,n;
   MPI_Comm mpiComm;
   int iAmDistrib;
  private:
@@ -46,6 +46,7 @@ public:
 		    OoqpVector& yvecParent);
 
  public:
+  virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 
   /** The actual number of structural non-zero elements in this sparse
@@ -124,6 +125,7 @@ public:
 
  public:
   virtual void getSize( int& m, int& n ){m=0; n=0;}
+  virtual void getSize( long long& m, long long& n ){m=0; n=0;}
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that

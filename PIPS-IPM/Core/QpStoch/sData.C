@@ -40,12 +40,12 @@ sData::sData(sTree* tree)
 }
 
 sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
-	     OoqpVector * xlow_in, OoqpVector * ixlow_in, int nxlow_,
-	     OoqpVector * xupp_in, OoqpVector * ixupp_in, int nxupp_,
+	     OoqpVector * xlow_in, OoqpVector * ixlow_in, long long nxlow_,
+	     OoqpVector * xupp_in, OoqpVector * ixupp_in, long long nxupp_,
 	     GenMatrix  * A_in, OoqpVector * bA_in,
 	     GenMatrix  * C_in,
-	     OoqpVector * clow_in, OoqpVector * iclow_in, int mclow_,
-	     OoqpVector * cupp_in, OoqpVector * icupp_in, int mcupp_ )
+	     OoqpVector * clow_in, OoqpVector * iclow_in, long long mclow_,
+	     OoqpVector * cupp_in, OoqpVector * icupp_in, long long mcupp_ )
   
   : QpGenData(SparseLinearAlgebraPackage::soleInstance(),
 	      c_in, Q_in, 
@@ -159,7 +159,7 @@ int sData::getLocalnx()
 
 int sData::getLocalmy()
 {
-  int my, nx;
+  long long my, nx;
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
   Ast.Bmat->getSize(my, nx);
   return my;
@@ -167,7 +167,7 @@ int sData::getLocalmy()
 
 int sData::getLocalmz()
 {
-  int mz, nx;
+  long long mz, nx;
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
   Cst.Bmat->getSize(mz, nx);
   return mz;
@@ -175,11 +175,15 @@ int sData::getLocalmz()
 
 int sData::getLocalSizes(int& nx, int& my, int& mz)
 {
+    long long nxll, myll, mzll;
+
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  Ast.Bmat->getSize(my, nx);
+  Ast.Bmat->getSize(myll, nxll);
 
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  Cst.Bmat->getSize(mz, nx);
+  Cst.Bmat->getSize(mzll, nxll);
+
+  nx=nxll; my=myll; mz=mzll;
   return 0;
 }
 

@@ -35,6 +35,7 @@ public:
   virtual void transMult ( double beta,  OoqpVector& y,
 			   double alpha, OoqpVector& x );
 
+  virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 
   virtual double abmaxnorm();
@@ -95,7 +96,7 @@ public:
   /** Return mMat, an    */
   double **Mat() { return mStorage->M; };
   
-  virtual int size();
+  virtual long long size();
 
   DenseStorage& getStorageRef() { return *mStorage; }
   DenseStorage*  getStorage() { return mStorage.ptr(); }

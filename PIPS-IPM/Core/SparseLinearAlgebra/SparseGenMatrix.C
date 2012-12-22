@@ -127,6 +127,11 @@ void SparseGenMatrix::symmetrize( int& info )
 }
 
 
+void SparseGenMatrix::getSize( long long& m, long long& n )
+{
+  m = mStorage->m;
+  n = mStorage->n;
+}
 void SparseGenMatrix::getSize( int& m, int& n )
 {
   m = mStorage->m;

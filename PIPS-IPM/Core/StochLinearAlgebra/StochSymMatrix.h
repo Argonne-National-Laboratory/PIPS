@@ -17,8 +17,8 @@ public:
       and set the global size and the id to to 'global_n' and 'id', respectively.
       The parameter 'id' is used for output/debug purposes only.
       The created matrix will have no children.*/
-  StochSymMatrix( int id, int global_n, int local_n, int local_nnz, MPI_Comm mpiComm );
-  StochSymMatrix( int id, int global_n, 
+  StochSymMatrix( int id, long long global_n, int local_n, int local_nnz, MPI_Comm mpiComm );
+  StochSymMatrix( int id, long long global_n, 
 		  int diag_n, int diag_nnz, 
 		  int border_n, int border_nnz,
 		  MPI_Comm mpiComm_);
@@ -29,7 +29,7 @@ public:
   SparseSymMatrix* diag;
   SparseGenMatrix* border;
   int id;
-  int n;
+  long long n;
   MPI_Comm mpiComm;
   int iAmDistrib;
   
@@ -48,9 +48,10 @@ public:
   virtual void fsymAtPutSpRow( int row, double A[], int lenA, int jcolA[],
 			       int& info );
 
+  virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 
-  virtual int size();
+  virtual long long size();
 
   virtual void symAtPutSubmatrix( int destRow, int destCol,
 				  DoubleMatrix& M,
@@ -119,9 +120,10 @@ public:
   virtual void fsymAtPutSpRow( int row, double A[], int lenA, int jcolA[],
 			       int& info ){};
 
+  virtual void getSize( long long& m, long long& n ){m=0;n=0;}
   virtual void getSize( int& m, int& n ){m=0;n=0;}
 
-  virtual int size(){return 0;}
+  virtual long long size(){return 0;}
 
   virtual void symAtPutSubmatrix( int destRow, int destCol,
 				  DoubleMatrix& M,

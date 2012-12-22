@@ -148,7 +148,8 @@ public:
   virtual void RowScale ( OoqpVector& vec ) = 0;
   virtual void scalarMult( double num) = 0;
 
-  virtual void getSize( int& m, int& n )  = 0;
+  virtual void getSize( long long& m, long long& n )  = 0;
+  virtual void getSize( int& m,       int& n )  = 0;
 
   virtual ~DoubleMatrix() {};
 };
@@ -195,7 +196,7 @@ public:
   virtual void symAtPutSpRow( int col, double A[], int lenA, int irowA[],
 			      int& info ) = 0;
   /** the size of this square matrix */
-  virtual int size() = 0;
+  virtual long long size() = 0;
 };
 
 /** Parent of all non-symmetric, possibly non-square, matrices.
