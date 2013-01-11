@@ -16,7 +16,7 @@ using namespace std;
 #include "mpi.h"
 
 QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
-				int nx_, int my_, int mz_,
+				long long nx_, long long my_, long long mz_,
 				OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 				OoqpVector * iclow_in, OoqpVector * icupp_in )
 {

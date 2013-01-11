@@ -25,10 +25,10 @@ class sVars : public QpGenVars {
 	 OoqpVector * w_in, OoqpVector * phi_in,
 	 OoqpVector * t_in, OoqpVector * lambda_in,
 	 OoqpVector * u_in, OoqpVector * pi_in,
-	 OoqpVector * ixlow_in, int nxlowGlobal,
-	 OoqpVector * ixupp_in, int nxuppGlobal,
-	 OoqpVector * iclow_in, int mclowGlobal,
-	 OoqpVector * icupp_in, int mcuppGlobal);
+	 OoqpVector * ixlow_in, long long nxlowGlobal,
+	 OoqpVector * ixupp_in, long long nxuppGlobal,
+	 OoqpVector * iclow_in, long long mclowGlobal,
+	 OoqpVector * icupp_in, long long mcuppGlobal);
 
   virtual ~sVars();
   

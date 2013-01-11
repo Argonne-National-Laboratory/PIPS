@@ -24,7 +24,7 @@ class Variables
 {
 public:
   /** number of complementary primal-dual variables. */
-  int nComplementaryVariables;
+  long long nComplementaryVariables;
   
   /** compute complementarity gap, obtained by taking the inner
       product of the complementary vectors and dividing by the total

@@ -27,9 +27,9 @@ class QpGenVars : public Variables {
   friend QpGenVarsTester;
 #endif
 protected:
-  int nx, nxupp, nxlow;
-  int my;
-  int mz, mcupp, mclow;
+  long long nx, nxupp, nxlow;
+  long long my;
+  long long mz, mcupp, mclow;
 
   OoqpVectorHandle ixlow;
   OoqpVectorHandle ixupp;
@@ -69,7 +69,7 @@ public:
   /** constructor that creates variables objects of specified
       dimensions. */
   QpGenVars( LinearAlgebraPackage * la,
-	     int nx_, int my_, int mz_,
+	     long long nx_, long long my_, long long mz_,
 	     OoqpVector * ixlow, OoqpVector * ixupp,
 	     OoqpVector * iclow, OoqpVector * icupp );
 

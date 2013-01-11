@@ -30,15 +30,15 @@ sLinsys::sLinsys(sFactory* factory_, sData* prob)
   mclow = prob->mclow;
   mcupp = prob->mcupp;
 
-  cout << "sLinsys1: nxupp=" << nxupp << " nxlow=" << nxlow << "  sum=" << (nxlow+nxupp) << endl;
+  //cout << "sLinsys1: nxupp=" << nxupp << " nxlow=" << nxlow << "  sum=" << (nxlow+nxupp) << endl;
 
   //if( nxupp + nxlow > 0 ) {
-    dd      = factory_->tree->newPrimalVector();
-    assert(dd!=NULL);
-
-    dq      = factory_->tree->newPrimalVector();
-    assert(dq!=NULL);
-    prob->getDiagonalOfQ( *dq );
+  dd      = factory_->tree->newPrimalVector();
+  assert(dd!=NULL);
+  
+  dq      = factory_->tree->newPrimalVector();
+  assert(dq!=NULL);
+  prob->getDiagonalOfQ( *dq );
     //}
   nomegaInv   = factory_->tree->newDualZVector();
   rhs         = factory_->tree->newRhs();
@@ -72,17 +72,12 @@ sLinsys::sLinsys(sFactory* factory_,
   mclow = prob->mclow;
   mcupp = prob->mcupp;
 
-  cout << "sLinsys2: nxupp=" << nxupp << " nxlow=" << nxlow << endl;
+  //cout << "sLinsys2: nxupp=" << nxupp << " nxlow=" << nxlow << endl;
 
-  if( nxupp + nxlow > 0 ) {
-    //dd      = OoqpVectorHandle(dd_);
-      assert(dd_!=NULL);
-    dd= dd_;
-    //dq      = OoqpVectorHandle(dq_);
-    dq = dq_;
-  }
-  //nomegaInv   = OoqpVectorHandle(nomegaInv_);
-  //rhs         = OoqpVectorHandle(rhs_);
+  //if( nxupp + nxlow > 0 ) {
+  dd= dd_;
+  dq = dq_;
+    //}
   nomegaInv = nomegaInv_;
   rhs = rhs_;
 
