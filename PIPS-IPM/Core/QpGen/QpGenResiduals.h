@@ -24,7 +24,7 @@ class LinearAlgebraPackage;
 
 class QpGenResiduals : public Residuals {
 protected:
-  int nx, my, mz;
+  long long nx, my, mz;
 
   double nxupp;
   OoqpVectorHandle ixupp;
@@ -55,7 +55,7 @@ public:
   OoqpVectorHandle rpi;
 
   QpGenResiduals( LinearAlgebraPackage * la,
-		  int nx, int my, int mz,
+		  long long nx, long long my, long long mz,
 		  OoqpVector * ixlow, OoqpVector * ixupp,
 		  OoqpVector * iclow, OoqpVector * icupp );
 
