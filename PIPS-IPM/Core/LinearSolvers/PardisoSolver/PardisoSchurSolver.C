@@ -52,7 +52,8 @@ int dumpAugMatrix(int n, int nnz, int nSys, //size, nnz and size of the (1,1) bl
 		  int* rowptr, 
 		  int* colidx, 
 		  const char* fname=NULL);
-
+int dumpSysMatrix(SparseSymMatrix* Msys,
+                  const char* fname=NULL);
 int dumpRhs(SimpleVector& v);
 
 
@@ -125,6 +126,11 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   A.getSize(nA,nSC); nnz += A.numberOfNonZeros();
   C.getSize(nC,nSC); nnz += C.numberOfNonZeros();
   int Msize=Msys->size();
+
+  //cout << "nR=" << nR << " nA=" << nA << " nC=" << nC << " nSC=" << nSC << " sizeKi=" << (nR+nA+nC)<< endl 
+  //     << "nnzR=" << R.numberOfNonZeros() 
+  //     << " nnzA=" << A.numberOfNonZeros()  
+  //     << " nnzC=" << C.numberOfNonZeros() << endl;
 
   n = nR+nA+nC+nSC;
   assert( Msize == nR+nA+nC );
@@ -299,6 +305,8 @@ void PardisoSchurSolver::matrixChanged()
 
   // we don't have the right hand-size, therefore we can't (re)factorize 
   // the augmented system at this point.
+
+  //dumpSysMatrix(Msys);
 }
  
 void PardisoSchurSolver::schur_solve(SparseGenMatrix& R, 
@@ -718,6 +726,42 @@ int dumpAugMatrix(int n, int nnz, int nSys,
   return 0;
 }
 
+int dumpSysMatrix(SparseSymMatrix* Msys, const char* fname)
+{
+  char filename[1024];
+  if(fname==NULL) 
+    sprintf(filename, "Qdump-%g-s%g.dat", g_iterNumber,  g_scenNum+1);
+  else 
+    sprintf(filename, "%s-%g-s%g.dat", fname, g_iterNumber,  g_scenNum+1);
+
+  cout << "saving to:" << filename << " ...";
+
+  int n  =Msys->size();
+  int nnz=Msys->numberOfNonZeros();
+
+  // we need to transpose to get the augmented system in the row-major upper triangular format of  PARDISO 
+  int* rowptr  = new int[n+1];
+  int* colidx  = new int[nnz];
+  double* elts = new double[nnz];
+  Msys->getStorageRef().transpose(rowptr,colidx,elts);
+
+
+  ofstream fd(filename);
+  fd << scientific;
+  fd.precision(16);
+
+  fd << n << endl << nnz << endl;
+  for(int it=0; it<n+1; it++) fd << rowptr[it]+1 << " ";  fd << endl;
+  for(int it=0; it<nnz; it++) fd << colidx[it]+1 << " ";  fd << endl;
+  for(int it=0; it<nnz; it++) fd << elts[it]   << " ";  fd << endl;
+
+  delete[] rowptr; delete[] colidx; delete[] elts;
+
+  cout << " Done!" << endl;
+  
+
+  return 0;
+}
 int dumpRhs(SimpleVector& v)
 {
   rhsCount++;
