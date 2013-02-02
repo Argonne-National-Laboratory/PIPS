@@ -133,7 +133,7 @@ StochVector* sTreeImpl::createc() const
   double* vec = ((SimpleVector*)svec->vec)->elements();  
 
   if(m_id==0) {
-      RESCALE=0.1*children.size();
+    //RESCALE=0.1*children.size();
 #ifdef TIMING
       //RESCALE=1;//0.25*children.size();
 #endif
@@ -423,8 +423,8 @@ StochVector* sTreeImpl::createxlow()  const
     x=in.getSecondStageColLB(m_id-1);
 
   for(size_t i=0; i<m_nx; i++)
-    if(x[i]>-1e20) vec[i]=x[i];
-    else           vec[i]=0.0;
+    if(x[i]>-1.0e20) vec[i]=x[i];
+    else             vec[i]=0.0;
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->createxlow();
@@ -450,8 +450,8 @@ StochVector* sTreeImpl::createixlow() const
     x=in.getSecondStageColLB(m_id-1);
 
   for(size_t i=0; i<m_nx; i++)
-    if(x[i]>-1e20) vec[i]=1.0;
-    else           vec[i]=0.0;
+    if(x[i]>-1.0e20) vec[i]=1.0;
+    else             vec[i]=0.0;
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->createixlow();
@@ -481,7 +481,7 @@ StochVector* sTreeImpl::createxupp()  const
     x=in.getSecondStageColUB(m_id-1);
     
   for(size_t i=0; i<m_nx; i++)
-    if(x[i]<1e+20) 
+    if(x[i]<1.0e+20) 
       vec[i]=x[i];
     else 
       vec[i]=0.0;
@@ -510,7 +510,7 @@ StochVector* sTreeImpl::createixupp() const
     x=in.getSecondStageColUB(m_id-1);
     
   for(size_t i=0; i<m_nx; i++)
-    if(x[i]<1e+20) 
+    if(x[i]<1.0e+20) 
       vec[i]=1.0;
     else 
       vec[i]=0.0;
@@ -543,7 +543,7 @@ StochVector* sTreeImpl::createclow()  const
   int ineq_cnt=0;
   for(size_t i=0; i<lb.size(); i++)
     if(lb[i]!=ub[i]) {
-      if(lb[i]>-1e20)
+      if(lb[i]>-1.0e20)
 	vec[ineq_cnt]=lb[i];  
       else
 	vec[ineq_cnt]=0.0;
@@ -580,7 +580,7 @@ StochVector* sTreeImpl::createiclow() const
   int ineq_cnt=0;
   for(size_t i=0; i<lb.size(); i++)
     if(lb[i]!=ub[i]) {
-      if(lb[i]>-1e20)
+      if(lb[i]>-1.0e20)
 	vec[ineq_cnt]=1.0;  
       else
 	vec[ineq_cnt]=0.0;
@@ -617,7 +617,7 @@ StochVector* sTreeImpl::createcupp()  const
   int ineq_cnt=0;
   for(size_t i=0; i<lb.size(); i++)
     if(lb[i]!=ub[i]) {
-      if(lb[i]<1e20)
+      if(lb[i]<1.0e20)
 	vec[ineq_cnt]=ub[i];  
       else
 	vec[ineq_cnt]=0.0;
@@ -654,7 +654,7 @@ StochVector* sTreeImpl::createicupp() const
   int ineq_cnt=0;
   for(size_t i=0; i<lb.size(); i++)
     if(lb[i]!=ub[i]) {
-      if(lb[i]<1e20)
+      if(lb[i]<1.0e20)
 	vec[ineq_cnt]=1.0;  
       else
 	vec[ineq_cnt]=0.0;
