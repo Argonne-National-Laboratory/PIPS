@@ -77,7 +77,8 @@ int main(int argc, char ** argv) {
   std::vector<double> firstStageSol;
       
   {
-    PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*sMean, MPI_COMM_SELF);
+    //PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*sMean, MPI_COMM_SELF);
+    PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(*sMean, MPI_COMM_SELF);
     delete sMean;
     
     pipsIpm.go();   
