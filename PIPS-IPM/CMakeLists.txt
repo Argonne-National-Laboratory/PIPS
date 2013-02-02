@@ -95,5 +95,13 @@ if(HAVE_PARDISO)
     ooqpstoch ooqpstochla ooqpmehrotrastoch
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+
+  add_executable(pipsipmBatchFromRaw Drivers/pipsipmBatchFromRaw.cpp)
+  target_link_libraries(pipsipmBatchFromRaw
+    stochInput ${COIN_LIBS}
+    ooqpstoch ooqpstochla ooqpmehrotrastoch
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+
 endif(HAVE_PARDISO)
 

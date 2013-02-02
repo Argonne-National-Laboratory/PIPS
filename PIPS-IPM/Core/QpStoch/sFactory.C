@@ -85,14 +85,14 @@ sFactory::newLinsysLeaf(sData* prob,
 #ifdef TIMING
     //if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
 #endif
-  //PardisoSolver* s=NULL; 
+  PardisoSolver* s=NULL; 
 #ifdef TIMING
-  //if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
+  if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
 #endif 
 
-  DeSymIndefSolver* s=NULL;
+  //DeSymIndefSolver* s=NULL;
 #ifdef TIMING
-  if(tree->rankMe==tree->rankZeroW) cout << "Using DeSymIndefSolver (dense) solver for 2nd stage." << endl;
+  //if(tree->rankMe==tree->rankZeroW) cout << "Using DeSymIndefSolver (dense) solver for 2nd stage." << endl;
 #endif
 
   return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);

@@ -452,8 +452,10 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       r.axpy(-omega, t);
       //check for convergence
       normr=r.twonorm();
-
+#ifdef TIMING
       histRelResid.push_back(normr/n2b);
+#endif
+
       if(normr<=tolb) {
 #ifdef TIMING
       tTmp=MPI_Wtime();
@@ -478,9 +480,11 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 	//To Do: detect stagnation/divergence and rollback to min.norm. iterate
 	//for now we print a warning and exit in case residual increases.
 	if(normr>normr_min) {
+#ifdef TIMING
 	  if(0==myRank) 
 	    cout << "Outer BiCG - Increase in BiCGStab residual. Old=" << normr_min
 		 << "  New=" << normr << endl;
+#endif
 	  flag=5; iter=it+1.; break;
 	} else normr_min=normr;
 	
@@ -492,10 +496,12 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   
   //warning/error messaging
   if(flag!=0) {
+#ifdef TIMING
     if(0==myRank) 
       cout << "Outer BiCG - convergence issues: flag=" << flag << ". "
 	   << iter << " iterations" 
 	   << " rel.res.norm=" << normr_act/n2b << endl;
+#endif
   }
   this->separateVars( stepx, stepy, stepz, x );
 
