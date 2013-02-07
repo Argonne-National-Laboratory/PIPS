@@ -12,10 +12,16 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a") #need this to find PARDISO
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-dy")
 else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
+  if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
+	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a") #need this to find PARDISO
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-dy")
+  else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
 	set(CMAKE_CXX_COMPILER "mpicxx")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O02") # need this explicitly for mpicxx
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+  endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
+
 
 add_definitions(-DTIMING -DSTOCH_TESTING)
 
@@ -188,6 +194,13 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
+  if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
+	set(HAVE_PARDISO TRUE)
+	set(PARDISO_LIBRARY "/home/cpetra/shared_libs/libpardiso490-BGQ_64.so")
+	set(PARDISO_LIBRARY32 "/home/cpetra/shared_libs/libpardiso490-BGQ_64.so")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+  else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
 	set(PARDISO_LIBRARY ${SHARED_DIR}/PARDISO/libpardiso490-GNU430-X86-64.so)
 	set(PARDISO_LIBRARY32 ${SHARED_DIR}/PARDISO/libpardiso490-GNU463-X86-64_32.so)
 	if(EXISTS ${PARDISO_LIBRARY})
@@ -196,6 +209,7 @@ else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 	endif(EXISTS ${PARDISO_LIBRARY})
+  endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
 
