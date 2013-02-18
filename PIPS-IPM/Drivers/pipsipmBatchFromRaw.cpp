@@ -1,6 +1,7 @@
 /* PIPS-IPM                                                           *
  * Author:  Cosmin G. Petra                                           *
  * (C) 2012 Argonne National Laboratory. See Copyright Notification.  */
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 

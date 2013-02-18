@@ -54,6 +54,9 @@ int main(int argc, char ** argv) {
   }
 
   if(mype==0) cout << argv[0] << " starting ..." << endl;
+  int nprocs; MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  if(0==mype) cout << "Using a total of " << nprocs << " MPI processes." << endl;
+
   rawInput* s = new rawInput(datarootname,nscen);
   if(mype==0) cout <<  " raw input created from " << datarootname<< endl;
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*s);

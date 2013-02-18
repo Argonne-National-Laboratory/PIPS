@@ -44,6 +44,8 @@ int main(int argc, char ** argv) {
 
 int solve(const string& datarootname, int nscen) {
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
+  int nprocs; MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+  if(0==mype) cout << "Using a total of " << nprocs << " MPI processes." << endl;
 
   rawInput* s = new rawInput(datarootname,nscen,MPI_COMM_WORLD);
   if (mype == 0) cout << "rawInput created .." << endl;
