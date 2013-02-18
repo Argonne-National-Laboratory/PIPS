@@ -16,9 +16,13 @@ else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a") #need this to find PARDISO
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-dy")
   else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
-	set(CMAKE_CXX_COMPILER "mpicxx")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O02") # need this explicitly for mpicxx
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+        if(IS_XE6)
+          set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -dynamic")
+	else(IS_XE6)
+	    set(CMAKE_CXX_COMPILER "mpicxx")
+	    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O02") # need this explicitly for mpicxx
+	    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+        endif(IS_XE6)
   endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
@@ -201,17 +205,22 @@ else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
   else(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
-	set(PARDISO_LIBRARY ${SHARED_DIR}/PARDISO/libpardiso490-GNU430-X86-64.so)
-	set(PARDISO_LIBRARY32 ${SHARED_DIR}/PARDISO/libpardiso490-GNU463-X86-64_32.so)
+        if(IS_XE6)
+          find_library(PARDISO_LIBRARY NAMES "libpardiso491-GNU430-X86-64.so"
+	  PATHS "/scratch/rosa/petra/shared_libs/")
+        else(IS_XE6)
+	  set(PARDISO_LIBRARY ${SHARED_DIR}/PARDISO/libpardiso490-GNU430-X86-64.so)
+	endif(IS_XE6)
+
 	if(EXISTS ${PARDISO_LIBRARY})
 		FIND_PACKAGE( OpenMP REQUIRED )
 		set(HAVE_PARDISO TRUE)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+		message(STATUS, "pardiso found")
 	endif(EXISTS ${PARDISO_LIBRARY})
   endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
-
 
 set(MA86_DIR "${SHARED_DIR}/MA86")
 set(MA86_LIB "${MA86_DIR}/lib/libhsl_ma86.a")
