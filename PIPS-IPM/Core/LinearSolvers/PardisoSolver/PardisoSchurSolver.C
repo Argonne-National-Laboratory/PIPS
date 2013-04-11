@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <iostream>
 using namespace std;
+#include <unistd.h>
 
 #include "PardisoSchurSolver.h"
 #include "SparseStorage.h"
@@ -28,6 +29,7 @@ using namespace std;
 
 extern int gOoqpPrintLevel;
 extern double g_iterNumber;
+extern int gOuterBiCGIter;
 #ifdef STOCH_TESTING
 extern double g_scenNum;
 #endif
@@ -82,8 +84,9 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
    
   /* Numbers of processors, value of OMP_NUM_THREADS */
   char *var = getenv("OMP_NUM_THREADS");
-  if(var != NULL)
+  if(var != NULL) {
     sscanf( var, "%d", &num_threads );
+  }
   else {
     printf("Set environment OMP_NUM_THREADS");
     exit(1);
@@ -314,8 +317,10 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 				     SparseGenMatrix& C,
 				     DenseSymMatrix& SC0)
 {
+  bool doSymbFact=false;
   if(firstSolve) { 
     firstSolveCall(R,A,C); firstSolve=false; 
+    doSymbFact=true;
   } else {
 
     //update diagonal entries in the PARDISO aug sys
@@ -327,28 +332,42 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
   // call PARDISO
   int mtype=-2, error;
-
   //pardiso_chkmatrix(&mtype,&n, eltsAug, rowptrAug, colidxAug, &error);
   //if(error != 0) {
   //  cout << "PARDISO check matrix error" << error << endl;
   //  exit(1);
   //}
 
-  int phase=12; //Numerical factorization & symb analysis
+  int nIter=(int)g_iterNumber;
+  const int symbEvery=5;
+  if( (nIter/symbEvery)*symbEvery==nIter )
+    doSymbFact=true;
+
+  int phase=22; // Numerical factorization
+  if(doSymbFact) {
+    phase =12;    //Numerical factorization & symb analysis
+  } 
+
   int maxfct=1, mnum=1, nrhs=1;
   iparm[2]=num_threads;
   iparm[7]=8;     //# iterative refinements
-  //iparm[1] = 2; // 2 is for metis, 0 for min degree 
+  iparm[1] = 2; // 2 is for metis, 0 for min degree 
+  //iparm[1] = 0; // 2 is for metis, 0 for min degree 
   //iparm[ 9] = 10; // pivot perturbation 10^{-xxx} 
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
-                 // if needed, use 2 for advanced matchings and higer accuracy.
-  iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-
+  // if needed, use 2 for advanced matchings and higer accuracy.
+  iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  //iparm[27] = 1; // Parallel metis
+  
   int msglvl=0;  // with statistical information
-  //iparm[32] = 1; // compute determinant
+  //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
+  //if (myRankp==0) msglvl=1;
+  iparm[32] = 1; // compute determinant
   iparm[37] = Msys->size(); //compute Schur-complement
-
+  
 #ifdef TIMING
   //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
   //double o=MPI_Wtime();
@@ -356,7 +375,6 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 #ifdef TIMING_FLOPS
   HPM_Start("PARDISOFact");
 #endif
-
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
@@ -365,25 +383,22 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   HPM_Stop("PARDISOFact");
 #endif
   int nnzSC=iparm[38];
-
+  
 #ifdef TIMING
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  if(256*(myRank/256)==myRank)
-      printf("rank %d perturbPiv %d peakmem %d\n", myRank, iparm[13], iparm[14]);
-  //cout << "PARDISOSCHUR FACT(AUGMAT) " << MPI_Wtime()-o << endl;
+  if(1001*(myRank/1001)==myRank)
+    printf("rank %d perturbPiv %d peakmem %d\n", myRank, iparm[13], iparm[14]);
   //cout << "NNZ(SCHUR) " << nnzSC << "    SPARSITY " << nnzSC/(1.0*nSC*nSC) << endl;
 #endif
   if ( error != 0) {
-    printf ("PardisoSolver - ERROR during factorization: %d\n", error );
+    printf ("PardisoSolver - ERROR during factorization: %d. Phase param=%d\n", error,phase);
     assert(false);
   }
-
   int* rowptrSC =new int[nSC+1];
   int* colidxSC =new int[nnzSC];
   double* eltsSC=new double[nnzSC];
 
   pardiso_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
-  //!cout << "Schur complement (2nd stage) n=" << nSC << "   nnz=" << nnzSC << endl;
 
   //convert back to C/C++ indexing
   for(int it=0; it<nSC+1; it++) rowptrSC[it]--;
@@ -415,8 +430,10 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
-  iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
   int msglvl=0;  // with statistical information
+  //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
+  //if (myRankp==0) msglvl=1;
 
   
   SimpleVector x_n(n);
@@ -468,7 +485,19 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
     cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
 	 << " iter.refin.=" << iparm[6] 
 	 << " rel.res.nrm2=" << res_norm2/rhsNorm
-	 << " rel.res.nrmInf=" << res_nrmInf/rhsNorm << endl;
+	 << " rel.res.nrmInf=" << res_nrmInf/rhsNorm 
+	 << " bicgiter=" << gOuterBiCGIter<< endl;
+
+    if(res_norm2/rhsNorm>1e-4 && 0==gOuterBiCGIter) {
+      int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+      char tmp[1024];
+      sprintf(tmp, "augMat-r%d-i%g-s%g-b%d.dat", myRank, g_iterNumber,  g_scenNum+1, gOuterBiCGIter);
+      
+      cout << "saving matrix to " << tmp << endl;
+      
+      dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
+      dumpRhs(rhs);
+    }
   }
   delete[] tmp_resid;
   
@@ -488,8 +517,12 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
-  iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
   int msglvl=0;  // with statistical information
+  //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
+  //if (myRankp==0) msglvl=1;
 
   
   SimpleVector x_n(n);
@@ -686,17 +719,18 @@ PardisoSchurSolver::~PardisoSchurSolver()
   int phase = -1; /* Release internal memory . */
   int mtype = -2;
   int maxfct=  1, mnum=1, nrhs=1, msglvl=0, error;
-
+  
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, NULL, rowptrAug, colidxAug, NULL, &nrhs,
 	   iparm, &msglvl, NULL, NULL, &error, dparm );
   if ( error != 0) {
     printf ("PardisoSchurSolver - ERROR in pardiso release: %d", error ); 
   }
+  
   if(rowptrAug) delete[] rowptrAug;
   if(colidxAug) delete[] colidxAug;
   if(eltsAug)   delete[] eltsAug;
-
+  
   if(nvec) delete[] nvec;
 }
 
@@ -706,10 +740,11 @@ int dumpAugMatrix(int n, int nnz, int nSys,
 		  const char* fname)
 {
   char filename[1024];
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   if(fname==NULL) 
-    sprintf(filename, "augMatDump-%g-s%g.dat", g_iterNumber,  g_scenNum+1);
+    sprintf(filename, "augMat-r%d-i%g-s%g.dat", myRank, g_iterNumber,  g_scenNum+1);
   else 
-    sprintf(filename, "%s-%g-s%g.dat", fname, g_iterNumber,  g_scenNum+1);
+    sprintf(filename, "%s-r%d-i%g-s%g.dat", fname, myRank, g_iterNumber,  g_scenNum+1);
 
   cout << "saving to:" << filename << " ...";
 
@@ -722,7 +757,7 @@ int dumpAugMatrix(int n, int nnz, int nSys,
   for(int it=0; it<nnz; it++) fd << colidx[it] << " ";  fd << endl;
   for(int it=0; it<nnz; it++) fd << elts[it]   << " ";  fd << endl;
 
-  cout << " Done!" << endl;
+  cout << filename << " done!" << endl;
   return 0;
 }
 
