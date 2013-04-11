@@ -18,6 +18,8 @@ int gOoqpPrintLevel = 10;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
 
+int gOuterBiCGIter=0; //use for dumping matrices
+
 //controls the type of error absortion at the outer level
 // - 0:no error absortion (OOQP works just fine)
 // - 1:iterative refinement (used when error absortion is 
