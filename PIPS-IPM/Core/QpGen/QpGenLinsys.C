@@ -25,6 +25,7 @@
 using namespace std;
 
 extern int gOuterSolve;
+extern int gOuterBiCGIter;
 
 QpGenLinsys::QpGenLinsys( QpGen * factory_,
 			  QpGenData * prob,
@@ -318,6 +319,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
 
 #ifdef TIMING
+  gOuterBiCGIter=0;
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   tTmp=MPI_Wtime();
 #endif
@@ -326,6 +328,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #ifdef TIMING
   tSlv += (MPI_Wtime()-tTmp);
   tTmp=MPI_Wtime();
+  gOuterBiCGIter++;
 #endif
   //initial residual: res=res-A*x
   r.copyFrom(b); matXYZMult(1.0,r, -1.0,x, data, stepx,stepy,stepz);
@@ -380,6 +383,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #ifdef TIMING
       tSlv += (MPI_Wtime()-tTmp);
       tTmp = MPI_Wtime();
+      gOuterBiCGIter++;
 #endif
       //mat-vec: v = K*ph
       matXYZMult(0.0,v, 1.0,dx, data, stepx,stepy,stepz);
@@ -435,6 +439,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #ifdef TIMING
       tSlv += (MPI_Wtime()-tTmp);
       tTmp=MPI_Wtime();
+      gOuterBiCGIter++;
 #endif
       //mat-vec
       matXYZMult(0.0,t, 1.0,dx, data, stepx,stepy,stepz);
