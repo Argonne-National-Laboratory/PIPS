@@ -144,18 +144,23 @@ void sLinsysRoot::afterFactor()
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
   if( (mype/256)*256==mype) {
-
-      for (size_t c=0; c<children.size(); c++) {
-	  if (children[c]->mpiComm == MPI_COMM_NULL) continue;
-	  
-	  printf("  rank %d NODE %4zu SPFACT %g BACKSOLVE %g SEC ITER %d\n", mype, c,
-		 children[c]->stochNode->resMon.eFact.tmLocal,
-		 children[c]->stochNode->resMon.eFact.tmChildren, (int)g_iterNumber);
-      }
+    for (size_t c=0; c<children.size(); c++) {
+      if (children[c]->mpiComm == MPI_COMM_NULL) continue;
+      
+      printf("  rank %d NODE %4zu SPFACT %g BACKSOLVE %g SEC ITER %d\n", mype, c,
+	     children[c]->stochNode->resMon.eFact.tmLocal,
+	     children[c]->stochNode->resMon.eFact.tmChildren, (int)g_iterNumber);
+    }
+  }
+  if( (mype/1024)*1024==mype) {
+    for (size_t c=0; c<children.size(); c++) {
+      if (children[c]->mpiComm == MPI_COMM_NULL) continue;
+      
       double redall = stochNode->resMon.eReduce.tmLocal;
       double redscat = stochNode->resMon.eReduceScatter.tmLocal;
       printf("  rank %d REDUCE %g SEC ITER %d REDSCAT %g DIFF %g\n", mype, redall, 
 	     (int)g_iterNumber, redscat, redall-redscat);
+    }
   }
 }
 #endif
@@ -283,7 +288,7 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
   if(256*(myRank/256) == myRank) {
-      double tTotResChildren=0.0;
+    double tTotResChildren=0.0;
     for(size_t it=0; it<children.size(); it++) {
 	if (children[it]->mpiComm == MPI_COMM_NULL) continue;
 	tTotResChildren += children[it]->stochNode->resMon.eLsolve.tmChildren;
@@ -493,7 +498,7 @@ void sLinsysRoot::factorizeKKT()
   MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  if( (mype/256)*256==mype )
+  if( (mype/512)*512==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
 }
