@@ -37,12 +37,13 @@ if(HAVE_MA57 AND HAVE_METIS)
     ooqpgensparse ooqpbase ooqpsparse ooqpdense 
     ${MA57_LIBRARY} ${METIS_LIBRARY}  ${PARDISO_LIBRARY} ${MATH_LIBS})
 
+if(HAVE_MA27)
   add_executable(ooqpFromRaw Drivers/ooqpFromRaw.cpp)
   target_link_libraries(ooqpFromRaw
     stochInput ${COIN_LIBS}
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
-  
+endif(HAVE_MA27)  
   add_executable(qpgen-sparse-ma57-mehrotra.exe Core/QpGen/QpGenSparseMa57MehrotraDriver.C)
   target_link_libraries(qpgen-sparse-ma57-mehrotra.exe 
     ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra ooqpdense 
@@ -79,13 +80,16 @@ if(HAVE_PARDISO)
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
-
+if(MAVE_MA27)
   add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
   target_link_libraries(meanSolveAndRecourseEval
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY}
+  ${MATH_LIBS})
+endif(MAVE_MA27)
+
 endif(HAVE_PARDISO)
 
 if(HAVE_PARDISO)
