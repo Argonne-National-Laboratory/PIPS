@@ -62,9 +62,9 @@ if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in SharedLibraries/Cbc-2.7.6")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
-# if(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
-# 	message(FATAL_ERROR "Could not find MA27 or MA57. Please run \"make\" in SharedLibraries/MA27 or in SharedLibraries/MA57")
-# endif(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
+if(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
+ 	message(FATAL_ERROR "Could not find MA27 or MA57. Please run \"make\" in SharedLibraries/MA27 or in SharedLibraries/MA57")
+endif(NOT EXISTS "${MA27_DIR}/libMA27.a" AND NOT EXISTS "${MA57_DIR}/libMA57.a")
 
 if(EXISTS "${MA57_DIR}/libMA57.a" AND NOT EXISTS "${METIS_DIR}/libmetis.a")
   message(FATAL_ERROR "Could not find metis needed by MA57. Please run \"make\" in SharedLibraries/metis-4.0.1")
