@@ -83,11 +83,11 @@ sFactory::newLinsysLeaf(sData* prob,
 {
     //Ma57Solver* s=NULL; 
 #ifdef TIMING
-    //if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver" << endl;
+    //if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver for 2nd stage systems." << endl;
 #endif
   PardisoSolver* s=NULL; 
 #ifdef TIMING
-  if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver" << endl;
+  if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver for 2nd stage systems." << endl;
 #endif 
 
   //DeSymIndefSolver* s=NULL;
