@@ -421,9 +421,6 @@ void DenseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
   rowExtent = ( destRow + rowExtent <= m ) ?  rowExtent : m - destRow;
   colExtent = ( destCol + colExtent <= n ) ?  colExtent : n - destCol;
 
-  cout << "m=" << m << "     n=" << n << endl;
-  cout << "dest row:"<<destRow << "  destcol:" << destCol << endl;
-
   Mat.fromGetDense( srcRow, srcCol, &M[destRow][destCol], n,
 		    rowExtent, colExtent );
 
