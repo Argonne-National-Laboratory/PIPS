@@ -33,7 +33,7 @@ int gOuterSolve=0;
 // - 0: no error correction
 // - 1: iter. refin.
 // - 2: BiCGStab
-int gInnerSCsolve=2;
+int gInnerSCsolve=0;
 
 //number of iterative refinements in the 2nd stage sparse systems
 int gInnerStg2solve=3;

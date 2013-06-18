@@ -488,16 +488,16 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 	 << " rel.res.nrmInf=" << res_nrmInf/rhsNorm 
 	 << " bicgiter=" << gOuterBiCGIter<< endl;
 
-    if(res_norm2/rhsNorm>1e-4 && 0==gOuterBiCGIter) {
-      int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-      char tmp[1024];
-      sprintf(tmp, "augMat-r%d-i%g-s%g-b%d.dat", myRank, g_iterNumber,  g_scenNum+1, gOuterBiCGIter);
+    //if(res_norm2/rhsNorm>1e-4 && 0==gOuterBiCGIter) {
+    //  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    //  char tmp[1024];
+    //  sprintf(tmp, "augMat-r%d-i%g-s%g-b%d.dat", myRank, g_iterNumber,  g_scenNum+1, gOuterBiCGIter);
       
-      cout << "saving matrix to " << tmp << endl;
+    //  cout << "saving matrix to " << tmp << endl;
       
-      dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
-      dumpRhs(rhs);
-    }
+    //  dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
+    //  dumpRhs(rhs);
+    //}
   }
   delete[] tmp_resid;
   
