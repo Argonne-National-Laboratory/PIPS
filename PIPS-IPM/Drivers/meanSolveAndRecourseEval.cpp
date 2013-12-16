@@ -75,7 +75,7 @@ int main(int argc, char ** argv) {
   rawInput* sMean = new rawInput(datarootnameMean, 1, MPI_COMM_SELF);
   //rawInput* sMean = new rawInput(datarootname, 4, MPI_COMM_SELF);
   std::vector<double> firstStageSol;
-      
+  std::vector<double> fstStageDual;
   {
     //PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(*sMean, MPI_COMM_SELF);
     PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(*sMean, MPI_COMM_SELF);
@@ -84,6 +84,7 @@ int main(int argc, char ** argv) {
     pipsIpm.go();   
 
     firstStageSol = pipsIpm.getFirstStagePrimalColSolution();
+    fstStageDual  = pipsIpm.getFirstStageDualRowSolution();
     if(myBatchPe==0)
       printf("mype=%d mean batch %d   1stStageObjective=%20.12f TotalObjective=%20.12f\n", 
 	     mype, color+1, 
@@ -93,14 +94,28 @@ int main(int argc, char ** argv) {
 
   // save the 1st stage solution for each batch
   if(myBatchPe==0) {
-    stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
-    string sFile=ss2.str();
-    cout << "saving 1st stage sol to " << sFile << endl;
-    ofstream file1stStg(sFile.c_str());
-    file1stStg << scientific; file1stStg.precision(16);
-    for(size_t i=0; i<firstStageSol.size(); i++)
-      file1stStg << firstStageSol[i] << endl;
-    file1stStg.close();
+    {
+	stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
+	string sFile=ss2.str();
+	cout << "saving 1st stage sol to " << sFile << endl;
+	ofstream file1stStg(sFile.c_str());
+	file1stStg << scientific; file1stStg.precision(16);
+	for(size_t i=0; i<firstStageSol.size(); i++)
+	    file1stStg << firstStageSol[i] << endl;
+	file1stStg.close();
+    }
+    sleep(2);
+    {
+	stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_dual_1stStage.txt";
+	string sFile=ss2.str();
+	cout << "saving 1st stage dual sol to " << sFile << endl;
+	ofstream file1stStg(sFile.c_str());
+	file1stStg << scientific; file1stStg.precision(16);
+	for(size_t i=0; i<firstStageSol.size(); i++)
+	    file1stStg << fstStageDual[i] << endl;
+	file1stStg.close();
+    }
+
   }
   MPI_Barrier(commBatch);
   
