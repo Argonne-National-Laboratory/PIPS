@@ -31,6 +31,7 @@ class PIPSIpmInterface
   std::vector<double> getFirstStagePrimalColSolution() const;
   std::vector<double> getSecondStagePrimalColSolution(int scen) const;
   //std::vector<double> getFirstStageDualColSolution() const{};
+  std::vector<double> getFirstStageDualRowSolution() const;
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
   //more get methods to follow here
@@ -194,6 +195,16 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrim
 	  return std::vector<double>(); //this vector is not on this processor
 	else
 	  return std::vector<double>(&v[0],&v[0]+v.length());
+}
+
+/* TODO:  quick hack; we return the multipliers of the equalities only */ //!
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const 
+{
+    SimpleVector const &v = *dynamic_cast<SimpleVector const*>( (dynamic_cast<StochVector const&>(*vars->y)).vec );
+    if(!v.length()) 
+	return std::vector<double>(); //this vector is not on this processor
+    else return std::vector<double>(&v[0],&v[0]+v.length());
 }
 
 
