@@ -21,6 +21,7 @@
 #include "sLinsysLeaf.h"
 
 #include "Ma57Solver.h"
+#include "Ma27Solver.h"
 #include "PardisoSolver.h"
 #include "DeSymIndefSolver.h"
 
@@ -85,10 +86,10 @@ sFactory::newLinsysLeaf(sData* prob,
 #ifdef TIMING
     //if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver for 2nd stage systems." << endl;
 #endif
-  PardisoSolver* s=NULL; 
-#ifdef TIMING
-  if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver for 2nd stage systems." << endl;
-#endif 
+    PardisoSolver* s=NULL; 
+//#ifdef TIMING
+    //if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver for 2nd stage systems." << endl;
+//#endif 
 
   //DeSymIndefSolver* s=NULL;
 #ifdef TIMING
@@ -172,48 +173,48 @@ Data * sFactory::makeData()
 
   // use the tree to get the data from user and to create OOQP objects
 
-  TIM;
+  //TIM;
   StochGenMatrixHandle     A( tree->createA() );
-  REP("A");
-  TIM;
+  //REP("A");
+  //TIM;
   StochVectorHandle        b( tree->createb() );
-  REP("b");
-  TIM;
+  //REP("b");
+  //TIM;
   StochGenMatrixHandle     C( tree->createC() );  
-  REP("C");
-  TIM;
+  //REP("C");
+  //TIM;
   StochVectorHandle     clow( tree->createclow()  );
-  REP("clow");
-  TIM;
+  //REP("clow");
+  //TIM;
   StochVectorHandle    iclow( tree->createiclow() );
-  REP("iclow");
-  TIM;
+  //REP("iclow");
+  //TIM;
   StochVectorHandle     cupp( tree->createcupp()  );
-  REP("cupp");
-  TIM;
+  //REP("cupp");
+  //TIM;
   StochVectorHandle    icupp( tree->createicupp() );
-  REP("icupp");
+  //REP("icupp");
 
   //dumpaug(((sTreeImpl*)tree)->nx(), *(A->children[1]->Amat), *(C->children[1]->Amat));
 
-  TIM;
+  //TIM;
   StochSymMatrixHandle     Q( tree->createQ() );
-  REP("Q");
-  TIM;
+  //REP("Q");
+  //TIM;
   StochVectorHandle        c( tree->createc() );
-  REP("c");
-  TIM;
+  //REP("c");
+  //TIM;
   StochVectorHandle     xlow( tree->createxlow()  );
-  REP("xlow");
-  TIM;
+  //REP("xlow");
+  //TIM;
   StochVectorHandle    ixlow( tree->createixlow() );
-  REP("ixlow");
-  TIM;
+  //REP("ixlow");
+  //TIM;
   StochVectorHandle     xupp( tree->createxupp()  );
-  REP("xupp");
-  TIM;
+  //REP("xupp");
+  //TIM;
   StochVectorHandle    ixupp( tree->createixupp() );
-  REP("ixupp");
+  //REP("ixupp");
 
 #ifdef TIMING
   MPI_Barrier(tree->commWrkrs);

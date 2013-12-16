@@ -63,7 +63,7 @@ sLinsysRootAugComm2::createSolver(sData* prob, SymMatrix* kktmat_)
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
   //return new PardisoSolver(kktmat);
 
-  cout << "Using LAPACK dsytrf for 1st stage systems - sLinsysRootAugComm2" << endl;
+  //cout << "Using LAPACK dsytrf for 1st stage systems - sLinsysRootAugComm2" << endl;
   return new DeSymIndefSolver(kktmat);
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
