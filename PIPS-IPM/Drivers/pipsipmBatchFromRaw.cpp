@@ -61,7 +61,7 @@ int main(int argc, char ** argv) {
 
   stringstream ss; ss << datadirname << (color+1) << "/" << datarootname;
   datarootname=ss.str();
-  printf("mype=[%d][%d] datarootname=%s nscen=%d\n", mype, mynewpe, datarootname.c_str(), nscen);
+  //printf("mype=[%d][%d] datarootname=%s nscen=%d\n", mype, mynewpe, datarootname.c_str(), nscen);
 
   rawInput* s = new rawInput(datarootname,nscen, commBatch);
 
@@ -76,10 +76,11 @@ int main(int argc, char ** argv) {
 	   mype, mynewpe, color+1, stg1Objective, totalObjective);
 
   for(int s=0; s<nscen; s++) {
-    
+
     std::vector<double> duals = pipsIpm.getSecondStageDualRowSolution(s);
     if(duals.size()) {
-      usleep(s*20000);
+      sleep(mynewpe);
+      usleep(s*50000);
       stringstream ss1; ss1<<outputdir << "/batch-" << (1+color) << "-out_duals_scen"<<(s+1)<<".txt";
       cout << "pe[" << mype << "][" << mynewpe << "] " 
 	   << " saving duals to " << ss1.str() << endl;
@@ -92,6 +93,8 @@ int main(int argc, char ** argv) {
     
     std::vector<double> primals = pipsIpm.getSecondStagePrimalColSolution(s);
     if(primals.size()) {
+	sleep(nbatchprocs-mynewpe);
+      usleep( (nscen-s)*200000);
       stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primals_scen"<<(s+1)<<".txt";
       cout << "pe[" << mype << "][" << mynewpe << "] "
 	   << " saving primals to " << ss2.str() << endl;
@@ -103,14 +106,28 @@ int main(int argc, char ** argv) {
     }
   }
   if(mynewpe==0) {
-    std::vector<double> firstStageSol = pipsIpm.getFirstStagePrimalColSolution();
-    stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
-    string sFile=ss2.str();
-    cout << "saving 1st stage sol to " << sFile << endl;
-    ofstream file1stStg(sFile.c_str());
-    for(size_t i=0; i<firstStageSol.size(); i++)
-      file1stStg << firstStageSol[i] << endl;
-    file1stStg.close();
+    {
+	std::vector<double> firstStageSol = pipsIpm.getFirstStagePrimalColSolution();
+	stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_primal_1stStage.txt";
+	string sFile=ss2.str();
+	cout << "saving 1st stage primals to " << sFile << endl;
+	ofstream file1stStg(sFile.c_str());
+	for(size_t i=0; i<firstStageSol.size(); i++)
+	    file1stStg << firstStageSol[i] << endl;
+	file1stStg.close();
+    }
+    {
+	std::vector<double> fstStageDuals = pipsIpm.getFirstStageDualRowSolution();
+	stringstream ss2; ss2<<outputdir << "/batch-" << (1+color) << "-out_dual_1stStage.txt";
+	string sFile=ss2.str();
+	cout << "saving 1st stage duals to " << sFile << endl;
+	ofstream file1stStg(sFile.c_str());
+	for(size_t i=0; i<fstStageDuals.size(); i++)
+	    file1stStg << fstStageDuals[i] << endl;
+	file1stStg.close();
+    }
+  } else {
+      sleep(10);
   }
   //cout << "pe[" << mype << "][" << mynewpe << "] "
   //     << "Solution saved, returning..." << endl;
