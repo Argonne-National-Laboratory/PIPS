@@ -26,7 +26,8 @@ class QpGenVars : public Variables {
 #ifdef TESTING
   friend QpGenVarsTester;
 #endif
-protected:
+  //protected:
+public:
   long long nx, nxupp, nxlow;
   long long my;
   long long mz, mcupp, mclow;
