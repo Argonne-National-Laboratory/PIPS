@@ -15,8 +15,9 @@ sTreeImpl::sTreeImpl( stochasticInput &in_, MPI_Comm comm /*=MPI_COMM_WORLD*/)
   if(-1==numProcs) MPI_Comm_size(comm, &numProcs);
 
   m_nx = in.nFirstStageVars();
-  m_my = compute_nFirstStageEq();
-  m_mz = in.nFirstStageCons() - m_my;
+  splitConstraints_stage1(); //updates m_my, m_mz and idx_EqIneq_Map
+  //- m_my = compute_nFirstStageEq();
+  //- m_mz = in.nFirstStageCons() - m_my;
 
   for (int scen=0; scen<in.nScenarios(); scen++) {
     sTreeImpl* c = new sTreeImpl(scen+1,in);
@@ -50,8 +51,9 @@ void sTreeImpl::loadLocalSizes()
   if(m_id>0) //root sizes alread loaded
     if(commWrkrs!=MPI_COMM_NULL) {
       m_nx = in.nSecondStageVars(m_id-1);
-      m_my = compute_nSecondStageEq(m_id-1);
-      m_mz = in.nSecondStageCons(m_id-1) - m_my;
+      splitConstraints_stage2(m_id-1); //updates m_my, m_mz and idx_EqIneq_Map
+      //- m_my = compute_nSecondStageEq(m_id-1);
+      //- m_mz = in.nSecondStageCons(m_id-1) - m_my;
     }
   for(size_t it=0; it<children.size(); it++)
     children[it]->loadLocalSizes();
@@ -704,6 +706,46 @@ void sTreeImpl::computeGlobalSizes()
 // -----------------------------------------------------
 // Helper methods
 // -----------------------------------------------------
+void sTreeImpl::splitConstraints_stage1()
+{
+  m_my=m_mz=0;
+  vector<double> lb=in.getFirstStageRowLB();
+  vector<double> ub=in.getFirstStageRowUB();
+
+  size_t m=lb.size();
+  idx_EqIneq_Map.resize(m);
+
+  for (size_t i=0;i<m; i++)
+    if (lb[i]==ub[i]) {
+      m_my++;
+      idx_EqIneq_Map[i]=-m_my;
+    } else {
+      idx_EqIneq_Map[i]= m_mz;
+      m_mz++;
+    }
+  //printf("splitConstraints_stg=1: found %d eq constr and %d ineq constr\n", m_my, m_mz);
+}
+void sTreeImpl::splitConstraints_stage2(int scen)
+{
+  m_my=m_mz=0;
+  vector<double> lb=in.getSecondStageRowLB(scen);
+  vector<double> ub=in.getSecondStageRowUB(scen);
+  
+  size_t m=lb.size();
+  idx_EqIneq_Map.resize(m);
+
+  for (size_t i=0;i<m; i++)
+    if (lb[i]==ub[i]) {
+      m_my++;
+      idx_EqIneq_Map[i]=-m_my;
+    } else {
+      idx_EqIneq_Map[i]= m_mz;
+      m_mz++;
+    }
+  //printf("splitConstraints_stg2: found %d eq constr and %d ineq constr\n", m_my, m_mz);
+}
+
+/* replaced by splitConstraints_stage1 and 2
 int sTreeImpl::compute_nFirstStageEq()
 {
   int num=0;
@@ -727,3 +769,4 @@ int sTreeImpl::compute_nSecondStageEq(int scen)
 
   return num;
 }
+*/

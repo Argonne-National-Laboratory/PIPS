@@ -56,8 +56,10 @@ class sTreeImpl : public sTree
 
   size_t m_nx, m_my, m_mz;
 
-  int compute_nFirstStageEq();
-  int compute_nSecondStageEq(int scen);
+  //int compute_nFirstStageEq();
+  void splitConstraints_stage1();
+  void splitConstraints_stage2(int scen);
+  //int compute_nSecondStageEq(int scen);
 };
 
 

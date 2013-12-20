@@ -109,6 +109,9 @@ class sTree
 
   double IPMIterExecTIME;
   std::vector<sTree*> children;
+
+  vector<int> idx_EqIneq_Map;
+
   static int numProcs;
 
   StochNodeResourcesMonitor    resMon;
