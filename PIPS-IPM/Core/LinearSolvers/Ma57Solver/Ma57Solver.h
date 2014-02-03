@@ -138,11 +138,11 @@ public:
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
   virtual void solve( OoqpVector& rhs );
-	virtual void solve( GenMatrix& rhs);
+  virtual void solve( GenMatrix& rhs);
 
-  virtual void Lsolve  ( OoqpVector& x );
-  virtual void Dsolve  ( OoqpVector& x );
-  virtual void Ltsolve ( OoqpVector& x );
+  //virtual void Lsolve  ( OoqpVector& x );
+  //virtual void Dsolve  ( OoqpVector& x );
+  //virtual void Ltsolve ( OoqpVector& x );
   //virtual void Refine  ( OoqpVector& x );
  private:
   void solve(int solveType, OoqpVector& rhs);
