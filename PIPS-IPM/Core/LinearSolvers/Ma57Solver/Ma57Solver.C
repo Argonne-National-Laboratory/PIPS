@@ -376,7 +376,7 @@ Ma57Solver::~Ma57Solver()
   if(dworkn) delete[] dworkn;
 }
 
-void Ma57Solver::Lsolve( OoqpVector& x )
+/*void Ma57Solver::Lsolve( OoqpVector& x )
 {
   solve(2,x);
 }
@@ -390,6 +390,7 @@ void Ma57Solver::Ltsolve( OoqpVector& x )
 {
   solve(4,x);
 }
+*/
 
 
 void Ma57Solver::solve(int solveType, OoqpVector& rhs_in)
