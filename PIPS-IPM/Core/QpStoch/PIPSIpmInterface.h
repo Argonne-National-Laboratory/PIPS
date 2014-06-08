@@ -13,15 +13,17 @@
 #include "sTree.h"
 #include "StochMonitor.h"
 
+#include <cstdlib>
+
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
  public:
   PIPSIpmInterface(stochasticInput &in, MPI_Comm = MPI_COMM_WORLD);
+  PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD);
   ~PIPSIpmInterface();
 
   void go();
-
   double getObjective() const;
   double getFirstStageObjective() const;
 
@@ -60,6 +62,44 @@ class PIPSIpmInterface
 
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) : comm(comm)
+{
+
+#ifdef TIMING
+  int mype;
+  MPI_Comm_rank(comm,&mype);
+#endif
+
+  factory = new FORMULATION( in, comm);
+#ifdef TIMING
+  if(mype==0) printf("factory created\n");
+#endif
+
+  data   = dynamic_cast<sData*>     ( factory->makeData() );
+#ifdef TIMING
+  if(mype==0) printf("data created\n");
+#endif
+
+  vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
+#ifdef TIMING
+  if(mype==0) printf("variables created\n");
+#endif
+
+  resids = dynamic_cast<sResiduals*>( factory->makeResiduals( data ) );
+#ifdef TIMING
+  if(mype==0) printf("resids created\n");
+#endif
+
+  solver  = new IPMSOLVER( factory, data );
+  solver->addMonitor(new StochMonitor( factory ));
+#ifdef TIMING
+  if(mype==0) printf("solver created\n");
+  //solver->monitorSelf();
+#endif
+
+}
+
+template<class FORMULATION, class IPMSOLVER>
+PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm) : comm(comm)
 {
 
 #ifdef TIMING

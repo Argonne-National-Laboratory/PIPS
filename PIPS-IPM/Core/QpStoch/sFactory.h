@@ -34,7 +34,7 @@ class sFactory : public QpGen {
   /** This is a obsolete constructor since it uses sTreeCallbacks to create 
    *   data objects
    */
-  sFactory( StochInputTree* );
+  sFactory( StochInputTree*, MPI_Comm comm=MPI_COMM_WORLD );
 
  protected:
   sFactory( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ );
