@@ -118,3 +118,6 @@ if(HAVE_PARDISO)
 
 endif(HAVE_PARDISO)
 
+
+add_library(pipsipm-shared SHARED Drivers/pipsipm_C_callbacks.cpp)
+
