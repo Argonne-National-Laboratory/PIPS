@@ -43,7 +43,7 @@ sFactory::sFactory( stochasticInput& in, MPI_Comm comm)
 }
 
 
-sFactory::sFactory( StochInputTree* inputTree)
+sFactory::sFactory( StochInputTree* inputTree, MPI_Comm comm)
   : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
 {
   
@@ -52,7 +52,7 @@ sFactory::sFactory( StochInputTree* inputTree)
   //now the sizes of the problem are available, set them for the parent class
   tree->GetGlobalSizes(nx, my, mz);
   //decide how the CPUs are assigned 
-  tree->assignProcesses();
+  tree->assignProcesses(comm);
 }
  
 sFactory::sFactory( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
@@ -82,11 +82,11 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* dd, OoqpVector* dq,
 			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-    //Ma57Solver* s=NULL; 
+  //Ma57Solver* s=NULL; 
 #ifdef TIMING
     //if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver for 2nd stage systems." << endl;
 #endif
-    PardisoSolver* s=NULL; 
+  PardisoSolver* s=NULL; 
 //#ifdef TIMING
     //if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver for 2nd stage systems." << endl;
 //#endif 

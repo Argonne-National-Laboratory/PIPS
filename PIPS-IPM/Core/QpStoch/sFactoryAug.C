@@ -11,8 +11,8 @@
 
 #include "sLinsysRootAug.h"
 
-sFactoryAug::sFactoryAug( StochInputTree* inputTree)
-  : sFactory(inputTree)
+sFactoryAug::sFactoryAug( StochInputTree* inputTree, MPI_Comm comm)
+  : sFactory(inputTree, comm)
 { };
 
 sFactoryAug::sFactoryAug( stochasticInput& in, MPI_Comm comm)
