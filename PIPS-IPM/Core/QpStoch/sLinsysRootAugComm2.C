@@ -70,7 +70,7 @@ sLinsysRootAugComm2::createSolver(sData* prob, SymMatrix* kktmat_)
 }
 
 #ifdef TIMING
-double t_start, troot_total, taux, tchild_total, tcomm_total;
+static double t_start, troot_total, taux, tchild_total, tcomm_total;
 #endif
 
 
