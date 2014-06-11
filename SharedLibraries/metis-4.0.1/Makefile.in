@@ -1,9 +1,9 @@
 
 # Which compiler to use
 #CC       = gcc
-CC = mpicc
 #CC       = bgxlc_r
 #CC	= mpixlc_r
+CC = mpicc
 #CC       =/soft/mvapich2/1.4-gcc-4.4.2/bin/mpicc
 
 # What optimization level to use - default 02

@@ -1,4 +1,4 @@
-F77      = f95
+F77      = mpif77
 FC       = $(F77)
 FFLAGS   = -O
 
