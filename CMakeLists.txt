@@ -76,15 +76,20 @@ pkg_check_modules(COINUTILS REQUIRED coinutils)
 pkg_check_modules(CLP REQUIRED clp)
 pkg_check_modules(CBC REQUIRED cbc)
 find_library(CLP_LIB NAMES libClp.a Clp HINTS ${CLP_LIBRARY_DIRS})
+
 set(COIN_LIBS "")
+
+message(Status "COINUTILS LIBRARIES ${COINUTILS_LIBRARIES} ${ZLIB_LIBRARY}")
 foreach(f ${COINUTILS_LIBRARIES})
 	if(NOT ${f} MATCHES "m" AND NOT ${f} MATCHES "blas" AND NOT ${f} MATCHES "lapack") # skip libm
-		find_library(X NAMES ${f} HINTS ${COINUTILS_LIBRARY_DIRS})
+	        message(STATUS "looking after ${f}")
+		find_library(X NAMES ${f} HINTS "${COINUTILS_LIBRARY_DIRS}" PATHS /usr/lib /usr/local/lib /usr/lib64/)
+		message(STATUS "found ${X}")
 		set(COIN_LIBS ${COIN_LIBS} ${X})
 		unset(X CACHE)
 	endif(NOT ${f} MATCHES "m" AND NOT ${f} MATCHES "blas" AND NOT ${f} MATCHES "lapack")
 endforeach(f)
-message(STATUS "${COIN_LIBS}")
+message(STATUS "Coin libraries: ${COIN_LIBS}")
 
 
 find_library(CBCSolver_LIB NAMES libCbcSolver.a CbcSolver HINTS ${CBC_LIBRARY_DIRS})
