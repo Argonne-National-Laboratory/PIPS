@@ -364,7 +364,7 @@ void sLinsys::addTermToSchurResidual(sData* prob,
  * Hessian term.
  */
 
-void sLinsys::addTermToDenseSchurCompl(sData *prob, 
+/*void sLinsys::addTermToDenseSchurCompl(sData *prob, 
 				       DenseSymMatrix& SC) 
 {
   SparseGenMatrix& A = prob->getLocalA();
@@ -442,9 +442,9 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   if(ispardiso) delete[] colSparsity;
 }
 
-
+*/
 /* this is the original code that was doing one column at a time. */
-/* 
+
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
 				       DenseSymMatrix& SC) 
 {
@@ -475,20 +475,23 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
     //here we have colGi = inv(H_i)* it-th col of Gi^t
      //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
+
+
  
     // SC+=R*x
     R.transMult( 1.0, &SC[it][0],     1,
-		 -1.0, &col[0],      1);
+     		 -1.0, &col[0],      1);
 
     // SC+=At*y
-    A.transMult( 1.0, &SC[it][0],   1,  
-		-1.0, &col[locnx],  1);
+     A.transMult( 1.0, &SC[it][0],   1,  
+		  -1.0, &col[locnx],  1);
+
     // SC+=Ct*z
     C.transMult( 1.0, &SC[it][0],   1,
-		-1.0, &col[locnx+locmy], 1);
+		 -1.0, &col[locnx+locmy], 1);
 
   }
-}*/
+}
  
 #include <set>
 #include <algorithm>
