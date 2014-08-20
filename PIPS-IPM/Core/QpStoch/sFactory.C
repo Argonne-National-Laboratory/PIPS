@@ -82,11 +82,11 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* dd, OoqpVector* dq,
 			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-  //Ma57Solver* s=NULL; 
+  Ma27Solver* s=NULL; 
 #ifdef TIMING
     //if(tree->rankMe==tree->rankZeroW) cout << "Using Ma57 solver for 2nd stage systems." << endl;
 #endif
-  PardisoSolver* s=NULL; 
+  //PardisoSolver* s=NULL;
 //#ifdef TIMING
     //if(tree->rankMe==tree->rankZeroW) cout << "Using PARDISO solver for 2nd stage systems." << endl;
 //#endif 
