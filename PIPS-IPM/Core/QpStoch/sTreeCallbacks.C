@@ -360,6 +360,7 @@ int sTreeCallbacks::id() const {
   else return 0;
 }
 
+static double RESCALE=1.0;
 StochVector* sTreeCallbacks::createc() const
 {
 
@@ -371,9 +372,14 @@ StochVector* sTreeCallbacks::createc() const
   double* vData = ((SimpleVector*)c->vec)->elements();  
   if (!fakedata) {
     // populate the node's data with data from user.
+    if(children.size()>0) RESCALE=0.001/1000;//children.size();
+    if(0==rankMe)
+      cout << "RESCALE set to " << RESCALE << endl;
 
     data->fc(data->user_data, data->id, 
        vData, data->n);
+    
+    for(int i=0; i<data->n; i++) vData[i]*=RESCALE;
 
     for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createc();
