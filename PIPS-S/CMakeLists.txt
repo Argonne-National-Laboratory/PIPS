@@ -11,15 +11,16 @@ add_library(pipss Core/BALinearAlgebra.cpp Core/BALPSolverBase.cpp Core/BALPSolv
 	CoinBALPFactorization/CoinBALPFactorization3.cpp CoinBALPFactorization/CoinBALPFactorization4.cpp
 	Basic/PIPSLogging.cpp)	
 	
-
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
 add_executable(pipssFromRaw Drivers/pipssFromRaw.cpp)
 target_link_libraries(pipssFromRaw pipss stochInput ${COIN_LIBS} ${MATH_LIBS} ${Boost_LIBRARIES})
 
+add_executable(pipssSMPS Drivers/pipssSMPS.cpp)
+target_link_libraries(pipssSMPS pipss stochInput ${COIN_LIBS} ${MATH_LIBS} ${Boost_LIBRARIES})
+
 add_executable(pipssmemleak Drivers/memleak.cpp)
 target_link_libraries(pipssmemleak pipss stochInput ${COIN_LIBS} ${MATH_LIBS} ${Boost_LIBRARIES})
-
 
 add_executable(clpFromRaw Drivers/clpFromRaw.cpp)
 target_link_libraries(clpFromRaw pipss stochInput ClpBALPInterface ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS} ${Boost_LIBRARIES})
