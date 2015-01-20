@@ -199,15 +199,14 @@ void PIPSSInterface::setFirstStageColUB(int idx, double newUb) {
 }
 
 void PIPSSInterface::setSecondStageColLB(int scen, int idx, double newLb) {
-  d.l.getSecondStageVec(scen)[idx] = newLb;
-  boundsChanged = true;
+        d.l.getSecondStageVec(scen)[idx] = newLb;
+        boundsChanged = true;
 }
 
 void PIPSSInterface::setSecondStageColUB(int scen, int idx, double newUb) {
-  d.u.getSecondStageVec(scen)[idx] = newUb;
-  boundsChanged = true;
+        d.u.getSecondStageVec(scen)[idx] = newUb;
+        boundsChanged = true;
 }
-
 
 void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
 
