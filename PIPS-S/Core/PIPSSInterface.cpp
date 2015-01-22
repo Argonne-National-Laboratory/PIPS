@@ -150,6 +150,8 @@ void PIPSSInterface::setFirstStageRowState(int idx,variableState s) {
 	solver->states.getFirstStageVec()[idx+nvarreal] = s;
 }
 
+
+
 void PIPSSInterface::setSecondStageColState(int scen, int idx,variableState s) {
 	solver->states.getSecondStageVec(scen)[idx] = s;
 }
@@ -183,14 +185,25 @@ variableState PIPSSInterface::getSecondStageRowState(int scen, int idx) const {
 
 
 void PIPSSInterface::setFirstStageColLB(int idx, double newLb) {
-	d.l.getFirstStageVec()[idx] = newLb;
-	boundsChanged = true;
+  d.l.getFirstStageVec()[idx] = newLb;
+  boundsChanged = true;
 }
 
 void PIPSSInterface::setFirstStageColUB(int idx, double newUb) {
-	d.u.getFirstStageVec()[idx] = newUb;
-	boundsChanged = true;
+  d.u.getFirstStageVec()[idx] = newUb;
+  boundsChanged = true;
 }
+
+void PIPSSInterface::setSecondStageColLB(int scen, int idx, double newLb) {
+  d.l.getSecondStageVec(scen)[idx] = newLb;
+  boundsChanged = true;
+}
+
+void PIPSSInterface::setSecondStageColUB(int scen, int idx, double newUb) {
+  d.u.getSecondStageVec(scen)[idx] = newUb;
+  boundsChanged = true;
+}
+
 
 void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
 
