@@ -214,6 +214,17 @@ void PIPSSInterface::setSecondStageColUB(int scen, int idx, double newUb) {
         boundsChanged = true;
 }
 
+void PIPSSInterface::setLB(const denseBAVector& lb) {
+        // use denseBAVector::copyFrom?
+        d.l.copyFrom(lb);
+	boundsChanged = true;
+}
+
+void PIPSSInterface::setUB(const denseBAVector& ub) {
+        d.u.copyFrom(ub);
+        boundsChanged = true;
+}
+
 void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
 
 	CoinPackedVector e1;

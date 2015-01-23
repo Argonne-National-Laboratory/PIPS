@@ -63,6 +63,9 @@ public:
         void setSecondStageColLB(int scen, int idx, double newLb);
         void setSecondStageColUB(int scen, int idx, double newUb);
 
+        void setLB(const denseBAVector& lb);
+        void setUB(const denseBAVector& ub);
+
         const denseBAVector& getLB() const { return solver->myLB(); }
         const denseBAVector& getUB() const { return solver->myUB(); }
 
