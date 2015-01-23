@@ -80,10 +80,11 @@ protected:
 	void setPhase1() { solver->phase1 = true; boundsChanged = true; }
 	const BAFlagVector<variableState>& getStatesRef() const { return solver->getStates(); }
 	const BADimensions& getDims() const { return d.dims.inner; }
-	
+
 	BALPSolverBase *solver;
 	BAData d;
 	bool boundsChanged;
+        solveType st;
 
 friend class BALPSolverDual;
 

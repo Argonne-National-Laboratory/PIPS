@@ -5,7 +5,7 @@
 
 using namespace std;
 
-PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t) : d(in,ctx), boundsChanged(false) {
+PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t) : d(in,ctx), boundsChanged(false), st(t) {
 
 	if (t == usePrimal) {
 		solver = new BALPSolverPrimal(d);
@@ -20,9 +20,11 @@ PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t)
 	  PIPS_APP_LOG_SEV(info)<<boost::format("reinvert every %d") % solver->reinvertFrequency;
 	}
 
+
+
 }
 
-PIPSSInterface::PIPSSInterface(const BAData& d, solveType t) : d(d), boundsChanged(false) {
+PIPSSInterface::PIPSSInterface(const BAData& d, solveType t) : d(d), boundsChanged(false), st(t) {
 
 	if (t == usePrimal) {
 		solver = new BALPSolverPrimal(d);
@@ -41,7 +43,8 @@ void PIPSSInterface::go() {
 	double t = MPI_Wtime();
 	int mype = d.ctx.mype();
 
-	if (boundsChanged) {
+	// Reallocate if bounds changed for primal solve, change to dual solve
+	if (boundsChanged && st == usePrimal) {
 		BALPSolverBase *solver2 = new BALPSolverDual(d);
 		solver2->setStates(solver->getStates());
 		solver2->setPrimalTolerance(solver->getPrimalTolerance());
@@ -50,6 +53,7 @@ void PIPSSInterface::go() {
 		delete solver;
 		solver = solver2;
 		boundsChanged = false;
+		st = useDual;
 	}
 
 	solver->go();
@@ -63,10 +67,12 @@ void PIPSSInterface::go() {
 		if (solver->getStatus() == DualFeasible) {
 			solver2 = new BALPSolverDual(d);
 			if (mype == 0) PIPS_APP_LOG_SEV(info)<<"Switching to dual";
+			st = useDual;
 		} else {
 			assert(solver->getStatus() == PrimalFeasible);
 			solver2 = new BALPSolverPrimal(d);
 			if (mype == 0) PIPS_APP_LOG_SEV(info)<<"Switching to primal";
+			st = usePrimal;
 		}
 		solver2->setStates(solver->getStates());
 		solver2->setPrimalTolerance(solver->getPrimalTolerance());
@@ -246,6 +252,7 @@ void PIPSSInterface::commitNewRows() {
 
 	delete solver;
 	solver = solver2;
+	st = useDual;
 
 	commitStates();
 
