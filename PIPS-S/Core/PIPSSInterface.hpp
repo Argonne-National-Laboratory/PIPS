@@ -39,6 +39,8 @@ public:
 	// the slacks corresponding to the rows. We need to reconcile this with Clp.
 	std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
+        const denseBAVector& getPrimalSolution() const { solver->getPrimalSolution(); }
+
 	void setFirstStageColState(int idx,variableState s); 
 	void setFirstStageRowState(int idx,variableState);
 	void setSecondStageColState(int scen, int idx,variableState);
