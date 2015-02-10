@@ -16,6 +16,10 @@ set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 add_executable(pipssFromRaw Drivers/pipssFromRaw.cpp)
 target_link_libraries(pipssFromRaw pipss stochInput ${COIN_LIBS} ${MATH_LIBS})
 
+add_executable(pipssmemleak Drivers/memleak.cpp)
+target_link_libraries(pipssmemleak pipss stochInput ${COIN_LIBS} ${MATH_LIBS})
+
+
 add_executable(clpFromRaw Drivers/clpFromRaw.cpp)
 target_link_libraries(clpFromRaw pipss stochInput ClpBALPInterface ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 
