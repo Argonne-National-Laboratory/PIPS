@@ -22,7 +22,9 @@ enum BAVectorType { DualVector, PrimalVector, BasicVector };
 template<typename T1, typename T2> class BAVector {
 public:
 
-	BAVector() : dims(0), nScen(0) {}
+  BAVector() : dims(0), nScen(0) {
+    
+  }
 
 	BAVector(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
 		allocate(dims,ctx,t);
@@ -34,54 +36,53 @@ public:
 		}
 	}
 
-
 	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
-		assert(this->dims == 0);
-		vecType = t;
-		nScen = dims.numScenarios();
-		vec2.resize(nScen);
-		this->dims = &dims;
-		this->ctx = &ctx;
-		localScen.reserve(10); 
-		localScen.push_back(-1);
-		if (vec1.allocated()) vec1.deallocate();
-		if (t == PrimalVector) {
-			vec1.allocate(dims.numFirstStageVars());
-		} else if (t == DualVector) {
-			vec1.allocate(dims.numFirstStageCons());
-		} else { // Basic
-			vec1.allocate(dims.numFirstStageVars()+MAX_UPDATES); // basic vars >= cons
-		}
-		for (int i = 0; i < nScen; i++) {
-			if (vec2[i]) delete vec2[i];
-			if (ctx.assignedScenario(i)) {
-				vec2[i] = new T2();
-				if (t == PrimalVector) {
-					vec2[i]->allocate(dims.numSecondStageVars(i));
-				} else if (t == DualVector) {
-					vec2[i]->allocate(dims.numSecondStageCons(i));
-				} else { // Basic
-					vec2[i]->allocate(dims.numSecondStageCons(i)+MAX_UPDATES); // cons >= basic vars
-				}
-				localScen.push_back(i);
-			} else {
-				vec2[i] = 0;
-			}
-		}
-
-
+	  assert(this->dims == 0);
+	  vecType = t;
+	  nScen = dims.numScenarios();
+	  vec2.resize(nScen);
+	  this->dims = &dims;
+	  this->ctx = &ctx;
+	  localScen.reserve(10); 
+	  localScen.push_back(-1);
+	  if (vec1.allocated()) vec1.deallocate();
+	  if (t == PrimalVector) {
+	    vec1.allocate(dims.numFirstStageVars());
+	  } else if (t == DualVector) {
+	    vec1.allocate(dims.numFirstStageCons());
+	  } else { // Basic
+	    vec1.allocate(dims.numFirstStageVars()+MAX_UPDATES); // basic vars >= cons
+	  }
+	  for (int i = 0; i < nScen; i++) {
+	    if (vec2[i]) delete vec2[i];
+	    if (ctx.assignedScenario(i)) {
+	      vec2[i] = new T2();
+	      if (t == PrimalVector) {
+		vec2[i]->allocate(dims.numSecondStageVars(i));
+	      } else if (t == DualVector) {
+		vec2[i]->allocate(dims.numSecondStageCons(i));
+	      } else { // Basic
+		vec2[i]->allocate(dims.numSecondStageCons(i)+MAX_UPDATES); // cons >= basic vars
+	      }
+	      localScen.push_back(i);
+	    } else {
+	      vec2[i] = 0;
+	    }
+	  }
+	  
+	  
 	}
-
-	bool allocated() const { return (dims != 0); }
-
-	void divideBy(double d) {
-		assert(vecType == BasicVector); 
-		vec1.divideBy(d);
-		for (int i = 0; i < nScen; i++) {
-			vec2[i]->divideBy(d);
-		}
-	}
-
+  
+  bool allocated() const { return (dims != 0); }
+  
+  void divideBy(double d) {
+    assert(vecType == BasicVector); 
+    vec1.divideBy(d);
+    for (int i = 0; i < nScen; i++) {
+      vec2[i]->divideBy(d);
+    }
+  }
+  
 	void multiplyBy(double d) {
 		assert(vecType == BasicVector);
 		vec1.multiplyBy(d);
@@ -129,7 +130,7 @@ public:
 
 	BAVectorType vectorType() const { return vecType; }
 
-
+  
 protected:
 	const BADimensions* dims;
 	int nScen;
@@ -146,8 +147,9 @@ protected:
 // special accessors when first and second stage are the same type
 template<typename T> class sameBAVector : public BAVector<T,T> {
 public:
-
-
+  sameBAVector() : BAVector<T,T>() {}
+  sameBAVector(const BADimensions &dims, const BAContext &ctx, BAVectorType t)
+    : BAVector<T,T>(dims,ctx,t) {}
 
 	// so we can iterate through first and second stages uniformly
 	T& getVec(int idx) {
@@ -165,17 +167,40 @@ public:
 
 class denseBAVector : public sameBAVector<denseVector> {
 public:
-	denseBAVector() {}
-	//denseBAVector(const BADimensions &dims, const BAContext &ctx, BAVectorType t) : BAVector<denseVector,denseVector>(dims,ctx,t) {}
-	void copyFrom(const denseBAVector &v) {
-		vec1.copyFrom(v.getFirstStageVec());
-		for (unsigned i = 1; i < localScen.size(); i++) {
-			int idx = localScen[i];
-			vec2[idx]->copyFrom(v.getSecondStageVec(idx));
-		}
-	}
+  denseBAVector() : sameBAVector<denseVector>() {}
+  //denseBAVector(const BADimensions &dims, const BAContext &ctx, BAVectorType t) : BAVector<denseVector,denseVector>(dims,ctx,t) {}
+  void copyFrom(const denseBAVector &v) {
+    vec1.copyFrom(v.getFirstStageVec());
+    for (unsigned i = 1; i < localScen.size(); i++) {
+      int idx = localScen[i];
+      vec2[idx]->copyFrom(v.getSecondStageVec(idx));
+    }
+  }
+  
+  denseBAVector(const denseBAVector& v)
+    : sameBAVector<denseVector>()
+  {
+    allocate(*v.dims,*v.ctx,v.vecType);
+    copyFrom(v);
+  }		 
 
 	
+  denseBAVector& operator=(const denseBAVector& v) {
+    std::cout<<"operator= called\n";
+    //    if(vec1.allocated()) vec1.deallocate();
+
+    //for (int i = 0; i < nScen; i++) {
+    //  if (vec2[i]) delete vec2[i];
+    //}
+    std::cout<<"operator= called 55555\n";
+    //these are required by "allocate" to work 
+    dims=0; nScen=0; localScen.clear();
+    allocate(*v.dims,*v.ctx,v.vecType);
+    std::cout<<"operator= called 666666\n";
+    copyFrom(v);
+
+    std::cout<<"operator= called\n";
+  }
 
 	double dotWith(const denseBAVector &v) {
 		double dot = 0;
