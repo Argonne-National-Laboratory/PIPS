@@ -26,7 +26,9 @@ public:
 
 	inline double& operator[](int idx) { /*assert(d); assert(idx < len);*/ return d[idx]; }
 	inline const double& operator[](int idx) const { /*assert(d); assert(idx < len);*/ return d[idx]; }
-	
+private:
+  denseVector& operator=(const denseVector&) {}
+public:
 	void divideBy(double pivot);
 	void multiplyBy(double x);
 	void negate();
@@ -61,6 +63,10 @@ template <class T> class denseFlagVector {
 	
 public:
 	denseFlagVector(int len) : len(len) { d = new T[len]; }
+private:
+  denseFlagVector(const denseFlagVector&) {}
+  denseFlagVector& operator=(const denseFlagVector&) {}
+public:
 	virtual ~denseFlagVector() { delete [] d; }
 
 	virtual int length() const { return len; }
