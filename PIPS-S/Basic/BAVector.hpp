@@ -7,6 +7,8 @@
 #include "memContainer.hpp"
 #include <cmath>
 
+//#include <iostream>
+
 const int MAX_UPDATES = 500;
 
 // would be nice to use "enum class" from C++11 here
@@ -25,7 +27,10 @@ public:
   BAVector() : dims(0), nScen(0) {
     
   }
-
+private:
+  BAVector(const BAVector&) { }
+  BAVector<T1,T2>& operator=(const BAVector<T1,T2>&) { }
+public:
 	BAVector(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
 		allocate(dims,ctx,t);
 	}
@@ -150,7 +155,11 @@ public:
   sameBAVector() : BAVector<T,T>() {}
   sameBAVector(const BADimensions &dims, const BAContext &ctx, BAVectorType t)
     : BAVector<T,T>(dims,ctx,t) {}
-
+private:
+private:
+  sameBAVector(const sameBAVector&) { }
+  sameBAVector<T>& operator=(const sameBAVector<T>&) { }
+public:
 	// so we can iterate through first and second stages uniformly
 	T& getVec(int idx) {
 		if (idx == -1) return this->vec1;
@@ -186,20 +195,11 @@ public:
 
 	
   denseBAVector& operator=(const denseBAVector& v) {
-    std::cout<<"operator= called\n";
-    //    if(vec1.allocated()) vec1.deallocate();
-
-    //for (int i = 0; i < nScen; i++) {
-    //  if (vec2[i]) delete vec2[i];
-    //}
-    std::cout<<"operator= called 55555\n";
     //these are required by "allocate" to work 
+    //also the dealocation of the local vectors is done in allocate
     dims=0; nScen=0; localScen.clear();
     allocate(*v.dims,*v.ctx,v.vecType);
-    std::cout<<"operator= called 666666\n";
     copyFrom(v);
-
-    std::cout<<"operator= called\n";
   }
 
 	double dotWith(const denseBAVector &v) {
@@ -235,7 +235,10 @@ public:
 class sparseBAVector : public sameBAVector<sparseVector> {
 public:
 	sparseBAVector()  {}
-	
+private:
+  sparseBAVector(const sparseBAVector&) {}
+  sparseBAVector& operator=(const sparseBAVector&) {}
+public:
 	inline double operator[](BAIndex i) const {
 		if (i.scen == -1) {
 			return this->vec1[i.idx];
@@ -274,6 +277,19 @@ public:
 
 	BAFlagVector() : dims(0), nScen(0), vec1(0) {}
 
+  BAFlagVector(const BAFlagVector& v) : dims(0),vec1(0), nScen(0) {
+    this->allocate(*v.dims, *v.ctx, v.vecType);
+    this->copyFrom(v);
+  }
+
+  BAFlagVector<T>& operator=(const BAFlagVector<T>& v) {
+    if(this==&v) return *this;
+    this->deallocate();
+    this->allocate(*v.dims, *v.ctx, v.vecType);
+    this->copyFrom(v);
+    return *this;
+  }  
+
 	~BAFlagVector() {
 		deallocate();	
 	}
@@ -281,6 +297,7 @@ public:
 	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
 		assert(this->dims == 0);
 		this->dims = &dims;
+		this->ctx = &ctx;
 		vecType = t;
 		nScen = dims.numScenarios();
 		vec2.resize(nScen);
@@ -356,15 +373,13 @@ public:
 	
 	}
 
-
-
 protected:
 	const BADimensions *dims;
 	int nScen;
 	denseFlagVector<T> *vec1;
 	std::vector<denseFlagVector<T>*> vec2;
 	BAVectorType vecType;
-
+	const BAContext *ctx;
 };
 
 // a bit different from BAVector.
@@ -379,6 +394,24 @@ public:
 	BAContainer(const BADimensions &dims, const BAContext &ctx, BAVectorType t) : dims(0) {
 		allocate(dims,ctx,t);
 	}
+  BAContainer(const BAContainer& v) : dims(0) {
+    allocate(*v.dims, *v.ctx, v.vecType);
+    vec1=v.vec1;
+    vec2=v.vec2;
+  }
+
+  BAContainer<T>& operator=(const BAContainer<T>& v) {
+    if(this==&v) return *this;
+    deallocate();
+    allocate(*v.dims, *v.ctx, v.vecType);
+
+    vec1=v.vec1;
+    vec2=v.vec2;
+
+    return *this;
+  }
+  
+
 
 	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
 		//assert(this->dims == 0);
@@ -386,6 +419,7 @@ public:
 		nScen = dims.numScenarios();
 		vec2.resize(nScen);
 		this->dims = &dims;
+		this->ctx = &ctx;
 		localScen.clear();
 		localScen.push_back(-1);
 		if (t == PrimalVector) {
@@ -393,7 +427,7 @@ public:
 		} else if (t == DualVector) {
 			vec1.reserve(dims.numFirstStageCons());
 		} else { // Basic
-			vec1.reserve(dims.numFirstStageVars()+MAX_UPDATES); // basic vars >= cons
+		  vec1.reserve(dims.numFirstStageVars()+MAX_UPDATES); // basic vars >= cons
 		}
 		for (int i = 0; i < nScen; i++) {
 			if (ctx.assignedScenario(i)) {
@@ -407,10 +441,12 @@ public:
 				}
 			} 
 		}
-
-
 	}
 
+  void deallocate() {
+    clear(); 
+    dims = 0;
+  }
 	void clear() {
 		vec1.clear();
 		for (unsigned i = 1; i < localScen.size(); i++) {
@@ -444,8 +480,7 @@ protected:
 	std::vector<T> vec2;
 	BAVectorType vecType;
 	std::vector<int> localScen;
-
-
+  const BAContext* ctx;
 };
 
 // second iteration of etaBAVector
