@@ -18,9 +18,15 @@ int main(int argc, char **argv) {
   int mype;
   MPI_Comm_rank(MPI_COMM_WORLD,&mype);
   
-  
-  string datarootname("/sandbox/petra/work/temp/rawinput/ssndata/problemdata");
-  int nscen = 4;
+  if (argc < 3) {
+    if (0 == mype) printf("Usage: %s [raw input root name] [num scenarios]\n", argv[0]);
+    return 1;
+  }
+
+  //  string datarootname("/sandbox/petra/work/temp/rawinput/ssndata/problemdata");
+  //  int nscen = 4;
+  string datarootname(argv[1]);
+  int nscen = atol(argv[2]);
   
   scoped_ptr<rawInput> s(new rawInput(datarootname,nscen));
 
