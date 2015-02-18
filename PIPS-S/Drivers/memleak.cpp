@@ -65,12 +65,25 @@ int main(int argc, char **argv) {
       v2.push_back(baVec3);
       v2.push_back(baVec1Copy);
       v2.push_back(baVec2);
+
+      // testing pop
+      if (0 == mype) cout << "Pop elements from vector1\n";
+      v1.pop_back();
+      v1.pop_back();
+
     }
     denseBAVector baVec;
     baVec.allocate(dims, ctx, PrimalVector);
     v2.push_back(baVec);
 
     cout << "vector2 has " << v2.size() << " elements\n";
+
+    if (0 == mype) cout << "Pop elements from vector2\n";
+    v2.pop_back();
+    v2.pop_back();
+    v2.pop_back();
+    v2.pop_back();
+
   }
 
   //test for BAFlag
@@ -87,18 +100,28 @@ int main(int argc, char **argv) {
 
     BAFlagVector<variableState> flagVec3 = flagVec2;
     BAFlagVector<variableState> flagVec4 = flagVec1;
-    
+
     v.push_back(flagVec3);
-    v.push_back(flagVec4); 
-    
+    v.push_back(flagVec4);
+
     {
       BAFlagVector<variableState> flagVec = v[2];
       BAFlagVector<variableState> flagVec5;
       flagVec5=flagVec;
     }
-    
+
     v2=v;
-    
+
+    v2.pop_back();
+    v2.pop_back();
+    v2.pop_back();
+    v2.pop_back();
+
+    v.pop_back();
+    v.pop_back();
+    v.pop_back();
+    v.pop_back();
+
   }
 
   //test for BAContainer
