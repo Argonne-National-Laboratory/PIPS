@@ -52,9 +52,9 @@ int main(int argc, char **argv) {
 
       baVec2.allocate(dims,ctx,PrimalVector);
       v1.push_back(baVec2);
-      
-      
-      cout << "vector1 has " << v1.size() << " elements\n";
+
+
+      if (0 == mype) cout << "vector1 has " << v1.size() << " elements\n";
       denseBAVector baVec3 = v1[0];
 
       //testing assignement operator
