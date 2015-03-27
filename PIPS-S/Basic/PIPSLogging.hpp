@@ -32,6 +32,11 @@
  * Author: Cosmin G. Petra - Argonne National Laboratory, March 2015.
  */
 
+#define BOOST_LOG_DYN_LINK 1
+
+#ifndef PIPSLOGGING
+#define PIPSLOGGING
+
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/core/null_deleter.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -71,57 +76,76 @@ inline std::basic_ostream< CharT, TraitsT >& operator<< (std::basic_ostream< Cha
     return strm;
 }
 
-void init_logging(int level)
+class PIPSLogging
 {
+private:
+  //hidden constructors; this class is not to be instantiated
+  PIPSLogging() {};
+public:
+  // severity logger instance
+  static src::severity_logger< severity_level > g_sev_log;
   
-  //for now the output will be only on the console
+  //logging functions, however, MACROS defined at the end of the file are faster
+  //and easier to use
+  static void AppLogSeverity(severity_level lvl, std::string msg) 
+  {
+    BOOST_LOG_SEV(PIPSLogging::g_sev_log, lvl) << msg;
+  }
+  static void AlgLogSeverity(severity_level lvl, std::string msg)
+  {
+    BOOST_LOG_SEV(PIPSLogging::g_sev_log, lvl) << logging::add_value("ALGORITHM", "on") << msg;
+  }
 
-  //create a text output sink:
-  typedef sinks::synchronous_sink< sinks::text_ostream_backend > text_sink;
-  shared_ptr< text_sink > pSink(new text_sink);
-  
-  // Here synchronous_sink is a sink frontend that performs thread synchronization
-  // before passing log records to the backend; this makes backend easier to implement
+  static void init_logging(int level)
+  {
+    
+    //for now the output will be only on the console
+    
+    //create a text output sink:
+    typedef sinks::synchronous_sink< sinks::text_ostream_backend > text_sink;
+    shared_ptr< text_sink > pSink(new text_sink);
+    
+    // Here synchronous_sink is a sink frontend that performs thread synchronization
+    // before passing log records to the backend; this makes backend easier to implement
+    
+    text_sink::locked_backend_ptr pBackend = pSink->locked_backend();
+    
+    // Add the stream corresponding to the console
+    shared_ptr< std::ostream > pStream(&std::clog, boost::null_deleter());
+    pBackend->add_stream(pStream);
+    
+    // More than one stream to the sink backend. For example to log to a file:
+    //shared_ptr< std::ofstream > pStream2(new std::ofstream("sample.log"));
+    //assert(pStream2->is_open());
+    //pBackend->add_stream(pStream2);
+    
+    // Add the sink to the logging library
+    logging::core::get()->add_sink(pSink);
+    //set the formatter for the sink's output
+    pSink->set_formatter(expr::stream << 
+			 expr::if_(expr::has_attr("ALGORITHM"))
+			 [ 
+			  expr::stream << "  " << expr::smessage//expr::attr< std::string >("ALGORITHM")
+			   ]
+			 .else_
+			 [
+			  expr::stream 
+			  << "[" 
+			  << expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%H:%M:%S.%f") 
+			  << "] [" << expr::attr< severity_level >("Severity") << "] "
+			  << expr::smessage
+			  ]);
+    
+    pSink->set_filter(expr::attr< severity_level >("Severity").or_default(info) >= level);
+    
+    //add a time stamp
+    attrs::local_clock TimeStamp;
+    logging::core::get()->add_global_attribute("TimeStamp", TimeStamp);    
+  };
+};
 
-  text_sink::locked_backend_ptr pBackend = pSink->locked_backend();
-  
-  // Add the stream corresponding to the console
-  shared_ptr< std::ostream > pStream(&std::clog, boost::null_deleter());
-  pBackend->add_stream(pStream);
-  
-  // More than one stream to the sink backend. For example to log to a file:
-  //shared_ptr< std::ofstream > pStream2(new std::ofstream("sample.log"));
-  //assert(pStream2->is_open());
-  //pBackend->add_stream(pStream2);
-
-  // Add the sink to the logging library
-  logging::core::get()->add_sink(pSink);
-  //set the formatter for the sink's output
-  pSink->set_formatter(expr::stream << 
-		       expr::if_(expr::has_attr("ALGORITHM"))
-		       [ 
-			expr::stream << "  " << expr::smessage//expr::attr< std::string >("ALGORITHM")
-		       ]
-		       .else_
-		       [
-			expr::stream 
-			<< "[" 
-			<< expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "%H:%M:%S.%f") 
-			<< "] [" << expr::attr< severity_level >("Severity") << "] "
-			<< expr::smessage
-		       ]);
-
-  pSink->set_filter(expr::attr< severity_level >("Severity").or_default(info) >= level);
-
-  //add a time stamp
-  attrs::local_clock TimeStamp;
-  logging::core::get()->add_global_attribute("TimeStamp", TimeStamp);
-
-}
-
-static src::severity_logger< severity_level > g_sev_log;
-
-#define PIPS_APP_LOG_SEV(lvl) BOOST_LOG_SEV(g_sev_log, lvl)
-#define PIPS_ALG_LOG_SEV(lvl) BOOST_LOG_SEV(g_sev_log, lvl) << logging::add_value("ALGORITHM", "on")
+#define PIPS_APP_LOG_SEV(lvl) BOOST_LOG_SEV(PIPSLogging::g_sev_log, lvl)
+#define PIPS_ALG_LOG_SEV(lvl) BOOST_LOG_SEV(PIPSLogging::g_sev_log, lvl) << logging::add_value("ALGORITHM", "on")
 //<< msg;
 
+#endif

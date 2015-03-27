@@ -23,7 +23,7 @@ add_executable(ucRollingCbcExtensive ucRollingCbcExtensive.cpp)
 add_executable(ucRollingOOQPExtensive ucRollingOOQPExtensive.cpp)
 
 
-target_link_libraries(ucRollingTest ucRolling pipss stochInput CbcBALPInterface ClpBALPInterface ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
+target_link_libraries(ucRollingTest ucRolling pipss stochInput CbcBALPInterface ClpBALPInterface ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS}  ${Boost_LIBRARIES})
 target_link_libraries(ucRollingCbcExtensive ucRolling pipss stochInput CbcBALPInterface ClpBALPInterface ${CBC_LIBS} ${CLP_LIB} ${COIN_LIBS} ${MATH_LIBS})
 target_link_libraries(ucRollingOOQPExtensive ucRolling stochInput ${COIN_LIBS}
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense

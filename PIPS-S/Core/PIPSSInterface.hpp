@@ -5,6 +5,8 @@
 #include "stochasticInput.hpp"
 #include "BALPSolverInterface.hpp"
 
+#include "PIPSLogging.hpp"
+
 class BALPSolverDual;
 
 // public interface to the solver

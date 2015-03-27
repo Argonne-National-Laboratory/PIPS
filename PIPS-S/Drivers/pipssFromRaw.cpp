@@ -19,6 +19,8 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
+	PIPSLogging::init_logging(0);
+
 	string datarootname(argv[1]);
 	int nscen = atoi(argv[2]);
 
@@ -38,9 +40,9 @@ int main(int argc, char **argv) {
 
 
 	if (argc >= 4 && argv[3][0] != '-') {
-		if (mype == 0) printf("Writing solution\n");
-		solver.writeStatus(argv[3]);
-		if (mype == 0) printf("Finished writing solution\n");
+	  if (mype == 0) PIPS_APP_LOG_SEV(info) << "Writing solution";
+	  solver.writeStatus(argv[3]);
+	  if (mype == 0) PIPS_APP_LOG_SEV(info) << "Finished writing solution";
 	}
 
 	MPI_Finalize();

@@ -89,7 +89,7 @@ foreach(f ${COINUTILS_LIBRARIES})
 		unset(X CACHE)
 	endif(NOT ${f} MATCHES "m" AND NOT ${f} MATCHES "blas" AND NOT ${f} MATCHES "lapack")
 endforeach(f)
-message(STATUS "Coin libraries: ${COIN_LIBS}")
+#message(STATUS "Coin libraries: ${COIN_LIBS}")
 
 
 find_library(CBCSolver_LIB NAMES libCbcSolver.a CbcSolver HINTS ${CBC_LIBRARY_DIRS})
@@ -108,7 +108,7 @@ find_library(FL_LIBRARY NAMES fl)
 find_library(MA27_LIBRARY MA27 PATHS ${MA27_DIR})
 find_library(MA57_LIBRARY MA57 PATHS ${MA57_DIR})
 find_library(MA86_LIBRARY MA86 PATHS ${MA86_DIR}/lib)
-find_library(METIS_LIBRARY NAME libmetis.a PATHS ${METIS_DIR})
+find_library(METIS_LIBRARY NAME libmetis.a HINTS ${METIS_DIR} PATHS ${METIS_DIR})
 #find_library(PARDISO_LIBRARY name libpardiso490-GNU430-X86-64.so PATHS ${PARDISO_DIR})
 
 set(HAVE_SML TRUE)
@@ -260,9 +260,16 @@ else(EXISTS "${SCIP_LIBDIR}/libscip.a")
 endif(EXISTS "${SCIP_LIBDIR}/libscip.a")
 
 
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS system filesystem thread log log_setup)
 include_directories(${Boost_INCLUDE_DIR})
-
+if (${Boost_FOUND}$ MATCHES "FALSE")
+  message("! A Boost version containing BOOST.LOG has NOT been found.")
+  message("! Please specify the location of the Boost library containing 'log' package.")
+  message("! For this create a 'Toolchain.cmake' file or edit the one from the root ")
+  message("! directory and use 'set(BOOST_ROOT \"/path/to/boost\")'.")
+  message("! Then run  'cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain.cmake ..' in the build directory.")
+  message(FATAL_ERROR "Configuration aborted due to missing BOOST libraries!")
+endif(${Boost_FOUND}$ MATCHES "FALSE")
 
 #set(CMAKE_BUILD_TYPE DEBUG)
 set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
