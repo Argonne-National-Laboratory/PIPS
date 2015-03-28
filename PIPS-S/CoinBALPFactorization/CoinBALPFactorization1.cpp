@@ -1,5 +1,6 @@
 #include "CoinBALPFactorization.hpp"
 
+#include "PIPSLogging.hpp"
 
 // changes to existing CoinFactorization auxiliary functions
 
@@ -222,8 +223,8 @@ CoinBALPFactorization::pivotOneOtherRow ( int pivotRow,
 
   if ( l + 1 > lengthAreaL_ ) {
     //need more memory
-    if ((messageLevel_&4)!=0) 
-      std::cout << "more memory needed in middle of invert" << std::endl;
+    //if ((messageLevel_&4)!=0) 
+    PIPS_APP_LOG_SEV(warning)  << "more memory needed in middle of invert";
     return false;
   }
   //l+=currentAreaL_->elementByColumn-elementL_;

@@ -15,11 +15,12 @@ int main(int argc, char **argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 
 	if (argc < 3) {
-		if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [solution output root name] [starting basis root name]\n",argv[0]);
+		if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [solution output root name] [starting basis root name] \n",argv[0]);
 		return 1;
 	}
+	
 
-	PIPSLogging::init_logging(0);
+	PIPSLogging::init_logging(1);
 
 	string datarootname(argv[1]);
 	int nscen = atoi(argv[2]);

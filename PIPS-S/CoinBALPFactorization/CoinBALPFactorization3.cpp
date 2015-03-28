@@ -1,5 +1,6 @@
 #include "CoinBALPFactorization.hpp"
 
+#include "PIPSLogging.hpp"
 // routines for T and FTRAN
 
 
@@ -8,7 +9,7 @@ void CoinBALPFactorization::getRowOfT(CoinIndexedVector &v, int row) {
 	assert(v.getNumElements() == 0);
 	assert(!v.packedMode());
 	assert(v.capacity() >= numberColumnsT_);
-	if (row < numberColumns_) printf("asked for XT row, why?\n");
+	if (row < numberColumns_) PIPS_ALG_LOG_SEV(warning) << "asked for XT row, why?";
 	int nElts = numberInRowT_.array()[row];
 	double *elts = v.denseVector();
 	int *idx = v.getIndices();
@@ -54,7 +55,8 @@ void CoinBALPFactorization::getRowOfT(int *colIdx,double *elts, int row) {
 }
 
 int CoinBALPFactorization::getNumberInRowOfT(int row) const {
-	if (row <= numberRows_ - numberColumns_) printf("asked for XT row, why?\n");
+	if (row <= numberRows_ - numberColumns_) 
+	  PIPS_ALG_LOG_SEV(warning) << "asked for XT row, why?";
 	assert(row >= 0 && row <= numberRows_);
 	return numberInRowT_.array()[row];
 }

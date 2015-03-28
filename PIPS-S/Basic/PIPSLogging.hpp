@@ -8,17 +8,17 @@
  * Usage: 
  *
  * Call init_logging(lvl) close to your application entry point. lvl indicates the verbosity level:
- *  0 - info: outputs all the messages
- *  1 - summary: less verbose than 'info'. It does NOT include algorithm iteration output and 
- *  any informational, application-related messages. Prints a summary of the solve process
- *  on exit.
- *  2 - warning: only messages with severity equal to or higher than warning
- *  3 - error: only errors and critical messages
- *  4 - critical: very compact, only critical messages. If execution is successfull, then 
+ *  0 - debug: high verbosity output, including debug
+ *  1 - info: allows informational, application-related messages  and output
+ *  2 - summary: less verbose than 'info'. It does NOT include algorithm iteration output and 
+ *  application informational logging. Prints a summary of the solve process on exit.
+ *  3 - warning: only messages with severity equal to or higher than warning
+ *  4 - error: only errors and critical messages
+ *  5 - critical: very compact, only critical messages. If execution is successfull, then 
  *  there is no logging.
  *
  * Use one the below  macros for logging. Other BOOST logging macros also will work, however
- * the output may not be formatted properly or logging info may be lost. 
+ * the output may not be formatted properly or some logging message may be lost. 
  * 
  * PIPS_ALG_LOG_SEV(lvl) << msg;
  *  - this macro is intended for ALGORITHM related messages and will simply output 'msg'
@@ -48,7 +48,7 @@
 #include <boost/log/utility/manipulators/add_value.hpp>
 #include <boost/log/attributes/scoped_attribute.hpp>
 #include <boost/log/support/date_time.hpp>
-
+#include <boost/format.hpp>
 
 namespace logging = boost::log;
 namespace expr = boost::log::expressions;
@@ -61,14 +61,14 @@ using boost::shared_ptr;
 
 enum severity_level
 {
-  info, summary,  warning,  error, fatal
+  debug, info, summary,  warning,  error, fatal
 };
 
 // The formatting logic for the severity level
 template< typename CharT, typename TraitsT >
 inline std::basic_ostream< CharT, TraitsT >& operator<< (std::basic_ostream< CharT, TraitsT >& strm, severity_level lvl)
 {
-    static const char* const str[] = {"info", "summary", "warning", "error", "critical"};
+  static const char* const str[] = {"debus", "info", "summary", "warning", "error", "critical"};
     if (static_cast< std::size_t >(lvl) < (sizeof(str) / sizeof(*str)))
         strm << str[lvl];
     else
@@ -146,6 +146,6 @@ public:
 
 #define PIPS_APP_LOG_SEV(lvl) BOOST_LOG_SEV(PIPSLogging::g_sev_log, lvl)
 #define PIPS_ALG_LOG_SEV(lvl) BOOST_LOG_SEV(PIPSLogging::g_sev_log, lvl) << logging::add_value("ALGORITHM", "on")
-//<< msg;
+
 
 #endif

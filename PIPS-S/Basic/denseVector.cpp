@@ -1,5 +1,7 @@
 #include "denseVector.hpp"
 
+#include "PIPSLogging.hpp"
+
 #include <iostream>
 #include <cstdio>
 
@@ -61,7 +63,8 @@ void denseVector::print() const {
 void denseVector::copyFrom(const double *b, int n) {
 	if (allocated() && len != n) {
 		assert(0);
-		deallocate(); printf("wrong size input buffer\n"); 
+		deallocate(); 
+		PIPS_APP_LOG_SEV(warning) << ("wrong size input buffer"); 
 		allocate(n);
 	} else if (!allocated()) {
 		allocate(n);
@@ -73,7 +76,8 @@ void denseVector::copyFrom(const denseVector &v) {
 	int n = v.length();
 	if (allocated() && len != n) {
 		assert(0);
-		deallocate(); printf("wrong size input buffer\n"); 
+		deallocate(); 
+		PIPS_APP_LOG_SEV(warning) << ("wrong size input buffer"); 
 		allocate(n);
 	} else if (!allocated()) {
 		allocate(n);

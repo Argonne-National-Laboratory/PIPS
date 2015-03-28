@@ -9,7 +9,7 @@
 // however, because we access internals, changes in CoinUtils could break this code.
 // designed with CoinUtils-2.8.0
 
-
+#include "PIPSLogging.hpp"
 class CoinBALPFactorization : protected CoinFactorization {
 // protected inheritance so we don't expose any functions that
 // might not have the desired effect
@@ -284,7 +284,7 @@ protected:
   if ( l + numberInPivotColumn > lengthAreaL_ ) {
     //need more memory
     if ((messageLevel_&4)!=0) 
-      printf("more memory needed in middle of invert\n");
+      PIPS_APP_LOG_SEV(info) << "more memory needed in middle of invert";
     return false;
   }
   //l+=currentAreaL_->elementByColumn-elementL;

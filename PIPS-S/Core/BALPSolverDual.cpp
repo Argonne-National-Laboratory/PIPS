@@ -158,9 +158,8 @@ void BALPSolverDual::initializeIndexedInfeasibilities() {
 	int ninfeas1 = primalInfeas.getFirstStageVec().getNumElements();
 	double allsuminf = data.ctx.reduce(suminf) + inf0;
 	ninfeas = data.ctx.reduce(ninfeas - ninfeas1) + ninfeas1;
-	if (data.ctx.mype() == 0) printf("Primal inf %.8g (%d) Elapsed %.1f\n",allsuminf,ninfeas,MPI_Wtime()-startTime);
-
-//	fclose(f);
+	if (data.ctx.mype() == 0) 
+	  PIPS_ALG_LOG_SEV(info)<<boost::format("PIPS-S %d  Obj: %.9g Primal inf %.8g (%d) Elapsed %.1f") % nIter % objval % allsuminf % ninfeas % (MPI_Wtime()-startTime);
 
 }
 
@@ -265,7 +264,7 @@ BAIndex BALPSolverDual::ratioHarris(const sparseBAVector& alpha2, double delta0)
 	BAIndex enter = { -1, -1 };
 	if (thetaMax == 1e20) {
 		//alpha2.print();
-		if (data.ctx.mype() == 0) printf("unbounded?\n");
+	  if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info) << "unbounded?";
 		return enter; // unbounded
 	}
 
@@ -498,7 +497,7 @@ BAIndex BALPSolverDual::ratioBFRT(const sparseBAVector& alpha2, double delta0) {
 
 	BAIndex enter = { -1, -1 };
 	if (thetaD == 1e20) {
-		printf("unbounded?\n");
+	  PIPS_ALG_LOG_SEV(info) << "unbounded?";
 		return enter;
 	}
 
@@ -600,12 +599,13 @@ void BALPSolverDual::iterate() {
 			assert(delta > 0.0);
 		}
 		if (data.ctx.owner(leave.scen) == data.ctx.mype() && doreport) {
-			printf("Selected %d,%d (%s) to leave (current: %e, delta: %e)\n", leaveGlobal.scen,leaveGlobal.idx,data.names[leaveGlobal].c_str(),x[leaveGlobal],delta);
-			if (leaveType == Below) {
-				printf("LB infeasible: l = %e\n",data.l[leaveGlobal]);
-			} else {
-				printf("UB infeasible: u = %e\n",data.u[leaveGlobal]);
-			}
+		  PIPS_ALG_LOG_SEV(info)<<boost::format("Selected %d,%d (%s) to leave (current: %e, delta: %e)") 
+		    % leaveGlobal.scen % leaveGlobal.idx % data.names[leaveGlobal].c_str() % x[leaveGlobal],delta;
+		  if (leaveType == Below) {
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("LB infeasible: l = %e") % data.l[leaveGlobal];
+		  } else {
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("UB infeasible: u = %e") % data.u[leaveGlobal];
+		  }
 		}
 
 	}
@@ -694,7 +694,7 @@ void BALPSolverDual::iterate() {
 			d[enterIdx] = thetad*alpha[enterIdx];
 			cPerturb[enterIdx] += diff;
 			if (doreport && data.ctx.mype() == data.ctx.owner(enterIdx.scen)) 
-				printf("did EXPAND\n");
+			  PIPS_ALG_LOG_SEV(info) << "did EXPAND";
 		} else {
 			if (delta < 0.0)
 				thetad = -d[enterIdx]/alpha[enterIdx];
@@ -702,7 +702,8 @@ void BALPSolverDual::iterate() {
 				thetad = d[enterIdx]/alpha[enterIdx];
 		}
 		if (doreport && data.ctx.mype() == data.ctx.owner(enterIdx.scen)) {
-			printf("Selected %d,%d (%s) to enter (d: %e, alpha: %e)\n",enterIdx.scen,enterIdx.idx,data.names[enterIdx].c_str(),d[enterIdx],alpha[enterIdx]);
+		  PIPS_ALG_LOG_SEV(info)<<boost::format("Selected %d,%d (%s) to enter (d: %e, alpha: %e)")
+		    % enterIdx.scen % enterIdx.idx % data.names[enterIdx].c_str() % d[enterIdx] % alpha[enterIdx];
 		}
 	}
 	if (delta < 0.0) alpha.negate(); // get alpha back
@@ -746,12 +747,14 @@ void BALPSolverDual::iterate() {
 
 	
 
-	if (doreport && data.ctx.mype() == data.ctx.owner(leave.scen)) printf("pivot from FTRAN: %e (%d,%d)\n",aq[leave],leave.scen,leave.idx);
-		if (fabs(ftranPivot) < 1e-5 && la->nUpdates() > 0) {
-		// drop iteration and reinvert
-		//if (data.ctx.mype() == 0) printf("Bad pivot value (%e), dropping and reinverting\n", ftranPivot);
-		initialize();
-		return;
+	if (doreport && data.ctx.mype() == data.ctx.owner(leave.scen)) 
+	  PIPS_ALG_LOG_SEV(info)<<boost::format("pivot from FTRAN: %e (%d,%d)") 
+	    % aq[leave] % leave.scen % leave.idx;
+	if (fabs(ftranPivot) < 1e-5 && la->nUpdates() > 0) {
+	  // drop iteration and reinvert
+	  //if (data.ctx.mype() == 0) printf("Bad pivot value (%e), dropping and reinverting\n", ftranPivot);
+	  initialize();
+	  return;
 	}
 
 	BAIndex enter = { enterIdx.scen, -1 };
@@ -874,7 +877,7 @@ void BALPSolverDual::updateDuals(const sparseBAVector &alpha, BAIndex leaveIdx, 
 							double delta = -dnew - dualTol;
 							c1[idx] += delta;
 							d1[idx] = -dualTol;
-							if (doreport) printf("did EXPAND lower\n");
+							if (doreport) PIPS_ALG_LOG_SEV(info) << "did EXPAND lower";
 						}
 					}
 					if (states1[idx] == AtUpper || vartype1[idx] == Free) {
@@ -884,7 +887,7 @@ void BALPSolverDual::updateDuals(const sparseBAVector &alpha, BAIndex leaveIdx, 
 							double delta = -dnew + dualTol;
 							c1[idx] += delta;
 							d1[idx] = dualTol;
-							if (doreport) printf("did EXPAND upper\n");
+							if (doreport) PIPS_ALG_LOG_SEV(info) << "did EXPAND upper";
 						}
 					}
 				//}
@@ -897,7 +900,8 @@ void BALPSolverDual::updateDuals(const sparseBAVector &alpha, BAIndex leaveIdx, 
 	//nFlipped = data.ctx.reduce(nFlipped);
 	if (nFlipped) {
 		// need to do an ftran
-		if (doreport && data.ctx.mype() == 0) printf("did %d flips\n", nFlipped);
+		if (doreport && data.ctx.mype() == 0) 
+		  PIPS_ALG_LOG_SEV(info) << boost::format("did %d flips") % nFlipped;
 		la->ftran(atilde);
 		for (unsigned k = 0; k < localScen.size(); k++) {
 			int scen = localScen[k];
@@ -920,7 +924,7 @@ void BALPSolverDual::updateDuals(const sparseBAVector &alpha, BAIndex leaveIdx, 
 		}
 
 	} else {
-		if (doreport && data.ctx.mype() == 0) printf("no flips\n");
+	  if (doreport && data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info) << "no flips";
 	}
 
 
@@ -981,15 +985,16 @@ void BALPSolverDual::go() {
 		for (; nIter < 100000000; nIter++) {
 			//if (nIter % reportFrequency == 0) doreport = 1;
 			if (phase1) {
-				if (doreport && data.ctx.mype() == 0) 
-					printf("Iteration %d (Phase I)\n---------\nObjval:\t%f\n",nIter,objval);
+			  if (doreport && data.ctx.mype() == 0) 
+			    PIPS_ALG_LOG_SEV(info)<<boost::format("Iteration %d (Phase I)\n---------\nObjval:\t%f\n")
+			      % nIter % objval;
 			} else {
-				if (doreport) {
-					//largestPrimalError = calculateLargestPrimalError();
-					if (data.ctx.mype() == 0) {
-						printf("Iteration %d\n---------\n",nIter);
-					}
-				}
+			  if (doreport) {
+			    //largestPrimalError = calculateLargestPrimalError();
+			    if (data.ctx.mype() == 0) {
+			      PIPS_ALG_LOG_SEV(info)<<boost::format("Iteration %d\n---------\n") % nIter;
+			    }
+			  }
 			}
 			if ( (nIter - lastReinvert >= reinvertFrequency) && nIter > 0) {
 					initialize(); // reinvert
@@ -1021,70 +1026,77 @@ void BALPSolverDual::go() {
 
 			if (status == ProvenInfeasible) {
 				// reinvert to make sure
-				if (data.ctx.mype() == 0) printf("Got unbounded, but going to retry\n");
+				if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info)<<"Got unbounded, but going to retry";
 				initialize();
 				iterate();
 				if (status == ProvenInfeasible) {
-					if (data.ctx.mype() == 0) printf("UNBOUNDED\n");
+					if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info)<<"UNBOUNDED";
 					return;
 				}
 			}
 			if (status == Optimal) {
 				if (wasOptimal != nIter) {
-					if (data.ctx.mype() == 0) printf("might be optimal, let's check\n");
-					wasOptimal = nIter;
-					nIter--;
-					initialize();
-					continue;
+				  if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info)<<"might be optimal, let's check";
+				  wasOptimal = nIter;
+				  nIter--;
+				  initialize();
+				  continue;
 				} else {
-					break; // really optimal
+				  break; // really optimal
 				}
 			}
 
-			if (doreport && data.ctx.mype() == 0) cout << endl;
+			//if (doreport && data.ctx.mype() == 0) cout << endl;
 			doreport = 0;
 			
 		}
 		if (status == Optimal) {
-			double execTime = MPI_Wtime() - startTime;
-			if (!phase1) removePerturbation();
-			//printf("Average FTRAN-DSE Result Density: %f\n",DSEDensity/nIter);
-			//printf("Average FTRAN Result Density: %f\n",ftranDensity/nIter);
-			//printf("Average BTRAN Result Density: %f\n",btranDensity/nIter);
-			if (data.ctx.mype() == 0 && status == Optimal) {
-				printf("Optimal!!! Objective value: %f Iterations: %d\n", objval,nIter);
-				//printf("Solution time: %f sec\n", execTime);
-				printf("Pivot record:\n");
-				printf("First replaces first: %d\n",replaceFirst);
-				printf("First replaces second: %d\n",firstReplaceSecond);
-				printf("Second replaces first: %d\n",secondReplaceFirst);
-				printf("Second replaces second (same scenario): %d\n",replaceSecondSelf);
-				printf("Second replaces second (other scenario): %d\n",replaceSecondOther);
+		  double execTime = MPI_Wtime() - startTime;
+		  if (!phase1) removePerturbation();
+		  //printf("Average FTRAN-DSE Result Density: %f\n",DSEDensity/nIter);
+		  //printf("Average FTRAN Result Density: %f\n",ftranDensity/nIter);
+		  //printf("Average BTRAN Result Density: %f\n",btranDensity/nIter);
+		  if (data.ctx.mype() == 0 && status == Optimal) {
+		    PIPS_ALG_LOG_SEV(summary)<<boost::format("Optimal!!! Objective value: %f Iterations: %d") 
+		      % objval % nIter;
+		    //printf("Solution time: %f sec\n", execTime);
+		    PIPS_ALG_LOG_SEV(info)<<("Pivot record:");
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("First replaces first: %d") % replaceFirst;
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("First replaces second: %d") % firstReplaceSecond;
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Second replaces first: %d") % secondReplaceFirst;
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Second replaces second (same scenario): %d") 
+		      % replaceSecondSelf;
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Second replaces second (other scenario): %d") 
+		      % replaceSecondOther;
 
-				printf("Time in FTRAN: %f sec (%.1f%%)\n",ftranTime,100*ftranTime/execTime);
-				printf("Time in BTRAN: %f sec (%.1f%%)\n",btranTime,100*btranTime/execTime);
-				printf("Time in INVERT: %f sec (%.1f%%)\n",invertTime,100*invertTime/execTime);
-				printf("Time in FTRAN-DSE: %f sec (%.1f%%)\n",ftranDSETime,100*ftranDSETime/execTime);
-				printf("Time in PRICE: %f sec (%.1f%%)\n",priceTime,100*priceTime/execTime);
-				printf("Time selecting entering variable: %f sec (%.1f%%)\n",selectEnteringTime,
-					100*selectEnteringTime/execTime);
-				printf("Time selecting leaving variable: %f sec (%.1f%%)\n",selectLeavingTime,
-					100*selectLeavingTime/execTime);
-				printf("Time updating iterates: %f sec (%.1f%%)\n",updateIteratesTime,
-					100*updateIteratesTime/execTime);
-				printf("Time replacing column in basis: %f sec (%.1f%%)\n",updateColumnTime,
-					100*updateColumnTime/execTime);
-				double recordedTime = ftranTime + btranTime + invertTime +
-					ftranDSETime + priceTime + selectEnteringTime +
-					selectLeavingTime + updateIteratesTime + updateColumnTime;
-				printf("Time in other: %f sec (%.1f%%)\n",execTime - recordedTime,
-					100*(execTime - recordedTime)/execTime);
-				
-			}
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time in FTRAN: %f sec (%.1f%%)") 
+		      % ftranTime % (100*ftranTime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time in BTRAN: %f sec (%.1f%%)") 
+		      % btranTime % (100*btranTime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time in INVERT: %f sec (%.1f%%)") 
+		      % invertTime % (100*invertTime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time in FTRAN-DSE: %f sec (%.1f%%)") 
+		      % ftranDSETime % (100*ftranDSETime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time in PRICE: %f sec (%.1f%%)")
+		      % priceTime % (100*priceTime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time selecting entering variable: %f sec (%.1f%%)") 
+		      % selectEnteringTime % (100*selectEnteringTime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time selecting leaving variable: %f sec (%.1f%%)")
+		      % selectLeavingTime  % (100*selectLeavingTime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time updating iterates: %f sec (%.1f%%)")
+		      % updateIteratesTime % (100*updateIteratesTime/execTime);
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time replacing column in basis: %f sec (%.1f%%)") 
+		      % updateColumnTime  % (100*updateColumnTime/execTime);
+		    double recordedTime = ftranTime + btranTime + invertTime +
+		      ftranDSETime + priceTime + selectEnteringTime +
+		      selectLeavingTime + updateIteratesTime + updateColumnTime;
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Time in other: %f sec (%.1f%%)")
+		      % (execTime - recordedTime) % (100*(execTime - recordedTime)/execTime);
+		  }
 
 		} else {
-			if (data.ctx.mype() == 0) 
-				printf("Didn't terminate after 100,000,000 iterations. Last objective: %f\n", objval);
+		  if (data.ctx.mype() == 0) 
+		    PIPS_ALG_LOG_SEV(info)<<boost::format("Didn't terminate after 100,000,000 iterations. Last objective: %f") % objval;
 		}
 	}
 	
@@ -1127,7 +1139,8 @@ void BALPSolverDual::forceDualFeasible() {
 
 	double allmax;
 	MPI_Allreduce(&maxperturb,&allmax,1,MPI_DOUBLE,MPI_MAX,data.ctx.comm());
-	if (data.ctx.mype() == 0) printf("Lost dual feasibility during reinversion. Added perterbations. Largest: %.7g\n",allmax);
+	if (data.ctx.mype() == 0) 
+	  PIPS_ALG_LOG_SEV(info)<<boost::format("Lost dual feasibility during reinversion. Added perterbations. Largest: %.7g") % allmax;
 	if (status == Initialized) {
 		status = DualFeasible;
 	} else {
@@ -1143,9 +1156,9 @@ void BALPSolverDual::makeFeasible() {
 	initialize(false); // make sure dual values are accurate
 	flipBounds();
 	if (checkDualFeasible(infeasList)) {
-		if (data.ctx.mype() == 0) printf("was infeasible but got feasible after bounds flipping\n");
-		status = DualFeasible; 
-		return;
+	  if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info)<< "was infeasible but got feasible after bounds flipping";
+	  status = DualFeasible; 
+	  return;
 	}
 	if (phase1) {
 		// phase 1 infeasible, shouldn't get here
@@ -1201,12 +1214,12 @@ void BALPSolverDual::makeFeasible() {
 	}
 	
 	lp2.setStates(states);
-	if (data.ctx.mype() == 0) printf("Starting phase 1\n");
+	if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info) << "Starting phase 1";
 	lp2.setPhase1();
 	lp2.go();
 	assert(lp2.getStatus() == Optimal);
 	if (fabs(lp2.getObjective()) > 1e-5) {
-		if (data.ctx.mype() == 0) printf("Problem appears dual infeasible\n");
+		if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info) << "Problem appears dual infeasible";
 		status = ProvenUnbounded; return;
 	}
 	// degeneracy in the solution could lead to invalid states, should check for this.
@@ -1280,20 +1293,20 @@ void BALPSolverDual::initializeDSE(bool slackbasis) {
 void BALPSolverDual::removePerturbation() {
 	didperturb = data.ctx.reduce(didperturb);
 	if (!didperturb) {
-		if (data.ctx.mype() == 0) printf("No perturbations used\n");
+	  if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info) << "No perturbations used";
 		return;
 	}
-	if (data.ctx.mype() == 0) printf("Did perturbations\n");
+	if (data.ctx.mype() == 0) PIPS_ALG_LOG_SEV(info) << "Did perturbations";
 
 	// may want to print some statistics on the perturbations
 	//perturb.print();
 	cPerturb.copyFrom(data.c);
 	initialize(false);
 	if (data.ctx.mype() == 0) {
-		printf("Objective after removing perturbations: %f\n", objval);
-		if (status == PrimalFeasible) {
-			printf("Became dual infeasible after removing perturbations, oops\n");
-		}
+	  PIPS_ALG_LOG_SEV(info) << boost::format("Objective after removing perturbations: %f") % objval;
+	  if (status == PrimalFeasible) {
+	    PIPS_ALG_LOG_SEV(info) << "Became dual infeasible after removing perturbations, oops";
+	  }
 	}
 }
 

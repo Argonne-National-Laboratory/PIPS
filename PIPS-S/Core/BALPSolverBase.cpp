@@ -1,5 +1,7 @@
 #include "BALPSolverBase.hpp"
 
+#include "PIPSLogging.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -229,9 +231,7 @@ void BALPSolverBase::initialize(bool reinvert) {
 	objval = objvalNew;
 
 	status = Initialized;
-	if (data.ctx.mype() == 0) {
-		printf("PIPS-S %d  Obj: %.9g ", nIter, objval);
-	}
+
 	initializeIndexedInfeasibilities();
 
 	if (checkDualFeasible(infeasList)) {

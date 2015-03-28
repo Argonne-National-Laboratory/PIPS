@@ -13,10 +13,11 @@ PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t)
 		solver = new BALPSolverDual(d);
 	}
 	if (d.ctx.mype() == 0) {
-		printf("First stage: %d cons %d vars\n", d.dims.numFirstStageCons(), d.dims.inner.numFirstStageVars());
-		printf("Second stage: %d cons %d vars %d scenarios\n", d.dims.numSecondStageCons(0), d.dims.inner.numSecondStageVars(0),
-			d.dims.numScenarios());
-		printf("reinvert every %d\n",solver->reinvertFrequency);
+	  PIPS_APP_LOG_SEV(summary)<<boost::format("First stage: %d cons %d vars") 
+	    % d.dims.numFirstStageCons() %  d.dims.inner.numFirstStageVars();
+	  PIPS_APP_LOG_SEV(summary)<<boost::format("Second stage: %d cons %d vars %d scenarios")
+	    % d.dims.numSecondStageCons(0) % d.dims.inner.numSecondStageVars(0) % d.dims.numScenarios();
+	  PIPS_APP_LOG_SEV(info)<<boost::format("reinvert every %d") % solver->reinvertFrequency;
 	}
 
 }
@@ -61,11 +62,11 @@ void PIPSSInterface::go() {
 		BALPSolverBase *solver2;
 		if (solver->getStatus() == DualFeasible) {
 			solver2 = new BALPSolverDual(d);
-			if (mype == 0) printf("Switching to dual\n");
+			if (mype == 0) PIPS_APP_LOG_SEV(info)<<"Switching to dual";
 		} else {
 			assert(solver->getStatus() == PrimalFeasible);
 			solver2 = new BALPSolverPrimal(d);
-			if (mype == 0) printf("Switching to primal\n");
+			if (mype == 0) PIPS_APP_LOG_SEV(info)<<"Switching to primal";
 		}
 		solver2->setStates(solver->getStates());
 		solver2->setPrimalTolerance(solver->getPrimalTolerance());
@@ -98,12 +99,15 @@ void PIPSSInterface::go() {
 	}
 
  	if (solver->getStatus() != Optimal) {
-		if (mype == 0) printf("Switched between primal and dual %d times, and still not optimal!\n", count);
-		MPI_Abort(MPI_COMM_WORLD,1);
+	  if (mype == 0) 
+	    PIPS_APP_LOG_SEV(fatal)<<boost::format("Switched between primal and dual %d times, and still not optimal!")
+	      % count;
+	  MPI_Abort(MPI_COMM_WORLD,1);
 	}
 	t = MPI_Wtime() - t;
 
-	if (mype == 0) printf("Solve took %f seconds\n",t);
+	if (mype == 0) 
+	  PIPS_APP_LOG_SEV(summary)<<boost::format("Solve took %f seconds") % t;
 
 
 }

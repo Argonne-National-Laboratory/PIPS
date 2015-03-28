@@ -16,6 +16,8 @@
 #include "CoinFinite.hpp"
 #include <iostream>
 
+#include "PIPSLogging.hpp"
+
 int CoinBALPFactorization::factorizeRect (
     const CoinPackedMatrix & M1,
     const CoinPackedMatrix & M2,
@@ -228,8 +230,8 @@ CoinBALPFactorization::factorRect ()
 	    pivotColumn[i] = lastColumn[i];
 	  }
 	  //if ((messageLevel_&4)!=0) 
-	    std::cout <<"Factorization has "<<numberRows_-k
-	      <<" singularities"<<std::endl;
+	  PIPS_APP_LOG_SEV(warning) <<"Factorization has "<<numberRows_-k
+				    <<" singularities";
 	  status_ = -1;
 	}
       }
@@ -241,16 +243,16 @@ CoinBALPFactorization::factorRect ()
 	break;
     default:
       //singular ? or some error
-      if ((messageLevel_&4)!=0) 
-	std::cout << "Error " << status_ << std::endl;
+      //if ((messageLevel_&4)!=0) 
+      PIPS_APP_LOG_SEV(error) << "CoinBALPFactorization::factorRect() Error " << status_ ;
       break;
   }				/* endswitch */
   //clean up
   //printf("end switch, status: %d\n",status_);
   if ( !status_ ) {
     if ( numberCompressions_)
-      std::cout<<"        Factorization did "<<numberCompressions_
-	<<" compressions"<<std::endl;
+      PIPS_APP_LOG_SEV(info) << "        Factorization did "<<numberCompressions_
+			     << " compressions";
     if ( numberCompressions_ > 10 ) {
       areaFactor_ *= 1.1;
     }
@@ -1287,12 +1289,13 @@ CoinBALPFactorization::cleanupRect (  )
 
 
 
-  if ( (messageLevel_ & 8)) {
-    std::cout<<"        length of U "<<totalElements_<<", length of L "<<lengthL_;
-    if (numberDense_)
-      std::cout<<" plus "<<numberDense_*numberDense_<<" from "<<numberDense_<<" dense rows";
-    std::cout<<std::endl;
-  }
+	//if ( (messageLevel_ & 8)) {
+	//PIPS_APP_LOG_SEV(info)
+	std::stringstream ss; ss <<"        length of U "<<totalElements_<<", length of L "<<lengthL_;
+	if (numberDense_)  ss<<" plus "<<numberDense_*numberDense_<<" from "<<numberDense_<<" dense rows";
+	PIPS_ALG_LOG_SEV(debug) << ss.str();
+	//std::cout<<std::endl;
+	//}
   // and add L and dense
   totalElements_ += numberDense_*numberDense_+lengthL_;
   int * nextColumn = nextColumn_.array();
@@ -1506,8 +1509,7 @@ CoinBALPFactorization::cleanupRect (  )
     elementR_ = elementL_.array() + lengthL_;
     indexRowR_ = indexRowL_.array() + lengthL_;
     if ((messageLevel_&4))
-      std::cout<<"Factorization may need some increasing area space"
-	       <<std::endl;
+      PIPS_APP_LOG_SEV(warning)<<"Factorization may need some increasing area space";
     if ( areaFactor_ ) {
       areaFactor_ *= 1.1;
     } else {
