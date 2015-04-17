@@ -71,6 +71,8 @@ public:
         const denseBAVector& getLB() const { return solver->myLB(); }
         const denseBAVector& getUB() const { return solver->myUB(); }
 
+        const BAData& getBAData() const { return d; }
+
 	// add row that preserves block-angular structure
 	// e.g. lb <= elts1*x + elts2*y_i <= ub
 	void addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
