@@ -3,6 +3,7 @@
 
 #include "stochasticInput.hpp"
 #include "CoinMpsIO.hpp"
+#include <cmath>
 
 // Only works with SMPS files with SCENARIO format!
 class SMPSInput : public stochasticInput {
@@ -23,6 +24,17 @@ public:
 	virtual std::vector<double> getFirstStageRowUB() { return firstStageData.rowub; }
 	virtual std::vector<std::string> getFirstStageRowNames() { return firstStageData.rowname; }
 	virtual bool isFirstStageColInteger(int col) { return firstStageData.isColInteger.at(col); }
+        virtual bool isFirstStageColBinary(int col) {
+	  bool isInteger = this->isFirstStageColInteger(col);
+	  // CoinMpsIO has no isBinary member function, but some preprocessing features require
+	  // knowledge of binary variables, so kludge in an "isBinary" member function by
+	  // relying on CoinMpsIO setting lower and upper bounds to zero and one, respectively.
+	  // Also note: CoinMpsIO uses a default tolerance of 1.0e-8 on integrality comparisons.
+	  const double intTol = 1.0e-8;
+	  bool isLBzero = (fabs(this->getFirstStageColLB().at(col)) < intTol);
+	  bool isUBone = (fabs(this->getFirstStageColUB().at(col) - 1.0) < intTol);
+	  return (isInteger && isLBzero && isUBone);
+	}
 
 	virtual std::vector<double> getSecondStageColLB(int scen);
 	virtual std::vector<double> getSecondStageColUB(int scen);
@@ -34,15 +46,26 @@ public:
 	virtual std::vector<std::string> getSecondStageRowNames(int scen);
 	virtual double scenarioProbability(int scen) { return (probabilitiesequal) ? 1.0/nscen : probabilities.at(scen); }
 	virtual bool isSecondStageColInteger(int scen, int col) { return secondStageTemplate.isColInteger.at(col); }
+        virtual bool isSecondStageColBinary(int scen, int col) {
+	  bool isInteger = this->isSecondStageColInteger(scen, col);
+	  // CoinMpsIO has no isBinary member function, but some preprocessing features require
+	  // knowledge of binary variables, so kludge in an "isBinary" member function by
+	  // relying on CoinMpsIO setting lower and upper bounds to zero and one, respectively.
+	  // Also note: CoinMpsIO uses a default tolerance of 1.0e-8 on integrality comparisons.
+	  const double intTol = 1.0e-8;
+	  bool isLBzero = (fabs(this->getSecondStageColLB(scen).at(col)) < intTol);
+	  bool isUBone = (fabs(this->getSecondStageColUB(scen).at(col) - 1.0) < intTol);
+	  return (isInteger && isLBzero && isUBone);
+	}
 
-	// returns the column-oriented first-stage constraint matrix (A matrix) 
-	virtual CoinPackedMatrix getFirstStageConstraints() { return firstStageData.mat; } 
+	// returns the column-oriented first-stage constraint matrix (A matrix)
+	virtual CoinPackedMatrix getFirstStageConstraints() { return firstStageData.mat; }
 	// returns the column-oriented second-stage constraint matrix (W matrix)
 	virtual CoinPackedMatrix getSecondStageConstraints(int scen);
 	// returns the column-oriented matrix linking the first-stage to the second (T matrix)
 	virtual CoinPackedMatrix getLinkingConstraints(int scen);
 
-	
+
 
 	virtual bool scenarioDimensionsEqual() { return true; }
 	virtual bool onlyBoundsVary() { return onlyboundsvary; }
@@ -52,7 +75,7 @@ public:
 
 private:
 	struct problemData {
-		
+
 		problemData() : ncol(-1), nrow(-1) {}
 		bool isInitialized() { return (ncol >= 0 && nrow >= 0); }
 
@@ -78,7 +101,7 @@ private:
 	};
 
 	void cacheScenario(int scen);
-	
+
 	int nscen, nvar1, ncons1, nvar2, ncons2;
 	int nvar, ncons; // total variables
 	std::vector<problemData> scenarioData;
