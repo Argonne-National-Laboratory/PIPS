@@ -50,7 +50,7 @@ public:
 		len = l; d = d2;
 	}
 
-	
+        double* getPointer() { return d; }
 
 private:
 	double *d;
