@@ -72,6 +72,7 @@ public:
         const denseBAVector& getUB() const { return solver->myUB(); }
 
         const BAData& getBAData() const { return d; }
+        solveType getSolveType() const { return st; }
 
 	// add row that preserves block-angular structure
 	// e.g. lb <= elts1*x + elts2*y_i <= ub
