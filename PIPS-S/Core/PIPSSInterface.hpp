@@ -83,6 +83,7 @@ public:
 
 	static bool isDistributed() { return true; }
 
+	BAData d;
 
 protected:
 	void setPhase1() { solver->phase1 = true; boundsChanged = true; }
@@ -90,7 +91,7 @@ protected:
 	const BADimensions& getDims() const { return d.dims.inner; }
 
 	BALPSolverBase *solver;
-	BAData d;
+
 	bool boundsChanged;
         solveType st;
 
