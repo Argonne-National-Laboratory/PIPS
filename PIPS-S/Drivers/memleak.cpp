@@ -1,5 +1,5 @@
 #include "BAData.hpp"
-#include "rawInput.hpp"
+#include "SMPSInput.hpp"
 #include "PIPSSInterface.hpp"
 #include <boost/scoped_ptr.hpp>
 #include <cstdlib>
@@ -18,17 +18,15 @@ int main(int argc, char **argv) {
   int mype;
   MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 
-  if (argc < 3) {
-    if (0 == mype) printf("Usage: %s [raw input root name] [num scenarios]\n", argv[0]);
+  if (argc < 2) {
+    if (0 == mype) printf("Usage: %s [SMPS input root name]\n", argv[0]);
     return 1;
   }
 
-  //  string datarootname("/sandbox/petra/work/temp/rawinput/ssndata/problemdata");
-  //  int nscen = 4;
-  string datarootname(argv[1]);
-  int nscen = atol(argv[2]);
+  string smpsrootname(argv[1]);
 
-  scoped_ptr<rawInput> s(new rawInput(datarootname,nscen));
+  scoped_ptr<SMPSInput> s(new SMPSInput(smpsrootname+".cor", smpsrootname+".tim", smpsrootname+".sto"));
+  int nscen = s->nScenarios();
 
   BAContext ctx(MPI_COMM_WORLD);
   ctx.initializeAssignment(nscen);
