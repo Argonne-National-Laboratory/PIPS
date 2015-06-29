@@ -64,7 +64,9 @@ void denseVector::copyFrom(const double *b, int n) {
 	if (allocated() && len != n) {
 		assert(0);
 		deallocate(); 
-		PIPS_APP_LOG_SEV(warning) << ("wrong size input buffer"); 
+		PIPS_APP_LOG_SEV(warning) << "wrong size input buffer: "
+					  << "source has length " << n
+					  << ", dest has length " << len;
 		allocate(n);
 	} else if (!allocated()) {
 		allocate(n);
@@ -77,7 +79,9 @@ void denseVector::copyFrom(const denseVector &v) {
 	if (allocated() && len != n) {
 		assert(0);
 		deallocate(); 
-		PIPS_APP_LOG_SEV(warning) << ("wrong size input buffer"); 
+		PIPS_APP_LOG_SEV(warning) << "wrong size input buffer: "
+					  << "source has length " << n
+					  << ", dest has length " << len;
 		allocate(n);
 	} else if (!allocated()) {
 		allocate(n);
