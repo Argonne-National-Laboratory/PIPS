@@ -83,8 +83,6 @@ public:
 
 	static bool isDistributed() { return true; }
 
-	BAData d;
-
 protected:
 	void setPhase1() { solver->phase1 = true; boundsChanged = true; }
 	const BAFlagVector<variableState>& getStatesRef() const { return solver->getStates(); }
@@ -94,6 +92,7 @@ protected:
 
 	bool boundsChanged;
         solveType st;
+	BAData d;
 
 friend class BALPSolverDual;
 
