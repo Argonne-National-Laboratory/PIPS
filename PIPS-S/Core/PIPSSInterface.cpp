@@ -24,7 +24,7 @@ PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t)
 
 }
 
-PIPSSInterface::PIPSSInterface(const BAData& d, solveType t) : d(d), boundsChanged(false), st(t) {
+PIPSSInterface::PIPSSInterface(const BAData& _d, solveType t) : d(_d), boundsChanged(false), st(t) {
 
 	if (t == usePrimal) {
 		solver = new BALPSolverPrimal(d);

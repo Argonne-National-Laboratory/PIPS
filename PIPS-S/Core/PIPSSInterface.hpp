@@ -14,7 +14,7 @@ class BALPSolverDual;
 class PIPSSInterface : public BALPSolverInterface<PIPSSInterface> {
 public:
 	PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t);
-	PIPSSInterface(const BAData &d, solveType t);
+	PIPSSInterface(const BAData &_d, solveType t);
 	~PIPSSInterface();
 
 
