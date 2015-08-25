@@ -1,7 +1,7 @@
 #include "BAData.hpp"
 #include <cmath>
 #include <boost/bind.hpp>
-
+#include "PIPSLogging.hpp"
 using boost::bind; // change to std::bind with C++11
 using namespace std;
 
@@ -69,10 +69,10 @@ void checkConstraintType(const denseVector &L, const denseVector &U, denseFlagVe
 }
 
 BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
-
 	int nscen = input.nScenarios();
 	ctx.initializeAssignment(nscen); // must do this first
 	dims = BADimensions(input,ctx); 
+
 	const vector<int> &localScen = ctx.localScenarios();
 	
 	l.allocate(dims, ctx, PrimalVector);
@@ -151,11 +151,10 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 	}*/
 
 	out1Send.reserve(dims.numFirstStageVars());
-
+	
 }
 
 BAData::BAData(const BAData &d) : dims(d.dims.inner), ctx(d.ctx) {
-
 	l.allocate(dims, ctx, PrimalVector);
 	u.allocate(dims, ctx, PrimalVector);
 	c.allocate(dims, ctx, PrimalVector);
