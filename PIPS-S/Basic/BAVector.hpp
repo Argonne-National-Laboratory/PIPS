@@ -320,9 +320,12 @@ public:
 	}
 
 	void deallocate() {
+		
 		if (vec1) delete vec1;
+		vec1=NULL;
 		for (unsigned i = 0; i < vec2.size(); i++) {
 			if (vec2[i]) delete vec2[i];
+			vec2[i]=NULL;
 		}
 		dims = 0;
 	}
