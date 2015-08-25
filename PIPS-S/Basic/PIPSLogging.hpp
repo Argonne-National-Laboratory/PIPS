@@ -79,7 +79,7 @@ inline std::basic_ostream< CharT, TraitsT >& operator<< (std::basic_ostream< Cha
 
 class PIPSLogging
 {
-private:
+protected:
   //hidden constructors; this class is not to be instantiated
   PIPSLogging() {};
 public:
