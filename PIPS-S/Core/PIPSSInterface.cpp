@@ -13,7 +13,7 @@ PIPSSInterface::PIPSSInterface(stochasticInput &in, BAContext &ctx, solveType t)
 		solver = new BALPSolverDual(d);
 	}
 	if (d.ctx.mype() == 0) {
-	  PIPS_APP_LOG_SEV(summary)<<boost::format("First stage: %d cons %d vars") 
+	  PIPS_APP_LOG_SEV(summary)<<boost::format("First stage: %d cons %d vars")
 	    % d.dims.numFirstStageCons() %  d.dims.inner.numFirstStageVars();
 	  PIPS_APP_LOG_SEV(summary)<<boost::format("Second stage: %d cons %d vars %d scenarios")
 	    % d.dims.numSecondStageCons(0) % d.dims.inner.numSecondStageVars(0) % d.dims.numScenarios();
@@ -89,7 +89,7 @@ void PIPSSInterface::go() {
 		solver2->priceTime = solver->priceTime;
 		solver2->updateColumnTime = solver->updateColumnTime;
 		solver2->startTime = solver->startTime;
-		
+
 		solver2->replaceFirst = solver->replaceFirst;
 		solver2->firstReplaceSecond = solver->firstReplaceSecond;
 		solver2->secondReplaceFirst = solver->secondReplaceFirst;
@@ -105,14 +105,14 @@ void PIPSSInterface::go() {
 	}
 
  	if (solver->getStatus() != Optimal) {
-	  if (mype == 0) 
-	    PIPS_APP_LOG_SEV(fatal)<<boost::format("Switched between primal and dual %d times, and still not optimal!")
-	      % count;
-	  MPI_Abort(MPI_COMM_WORLD,1);
+	  //if (mype == 0)
+	   // PIPS_APP_LOG_SEV(fatal)<<boost::format("Switched between primal and dual %d times, and still not optimal!")
+	     // % count;
+	 // MPI_Abort(MPI_COMM_WORLD,1);
 	}
 	t = MPI_Wtime() - t;
 
-	if (mype == 0) 
+	if (mype == 0)
 	  PIPS_APP_LOG_SEV(summary)<<boost::format("Solve took %f seconds") % t;
 
 
@@ -239,19 +239,19 @@ void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<
 }
 
 void PIPSSInterface::commitNewRows() {
-	
+
 	const vector<int> &localScen = d.ctx.localScenarios();
-	
+
 	assert(solver->status == Optimal);
 
 	BALPSolverDual* solver2 = new BALPSolverDual(d);
 	solver2->setPrimalTolerance(solver->getPrimalTolerance());
 	solver2->setDualTolerance(solver->getDualTolerance());
-	
+
 	solver2->states.getFirstStageVec().copyFrom(solver->states.getFirstStageVec());
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
-		
+
 		denseFlagVector<variableState> &oldStates = solver->states.getSecondStageVec(scen), &newStates = solver2->states.getSecondStageVec(scen);
 
 		copy(&oldStates[0],&oldStates[oldStates.length()],&newStates[0]);
