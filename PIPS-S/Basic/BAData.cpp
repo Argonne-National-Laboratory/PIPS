@@ -562,3 +562,33 @@ void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBas
 	}
 
 }
+
+
+	const CoinShallowPackedVector BAData::retrieveARow(int index)const{
+		return Arow->getVector(index);
+	
+	}
+
+	const CoinShallowPackedVector BAData::retrieveWRow(int index,int scen)const {
+		return Wrow[scen]->getVector(index);
+		
+	}
+
+	const CoinShallowPackedVector BAData::retrieveTRow(int index,int scen)const{
+		return Trow[scen]->getVector(index);
+		
+	}
+
+	const CoinShallowPackedVector BAData::retrieveACol(int index)const{
+		return Acol->getVector(index);
+	}
+
+	const CoinShallowPackedVector BAData::retrieveWCol(int index,int scen)const{
+		return Wcol[scen]->getVector(index);
+		
+	}
+
+	const CoinShallowPackedVector BAData::retrieveTCol (int index,int scen)const{
+		return Tcol[scen]->getVector(index);
+		
+	}

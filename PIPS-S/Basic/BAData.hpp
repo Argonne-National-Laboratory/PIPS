@@ -34,6 +34,21 @@ public:
 
 	void addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
 
+
+
+	const CoinShallowPackedVector retrieveARow(int index) const;
+
+	const CoinShallowPackedVector retrieveWRow(int index,int scen) const;
+
+	const CoinShallowPackedVector retrieveTRow(int index,int scen) const;
+
+	const CoinShallowPackedVector retrieveACol(int index) const;
+
+	const CoinShallowPackedVector retrieveWCol(int index,int scen) const;
+
+	const CoinShallowPackedVector retrieveTCol (int index,int scen) const;
+
+
 	// make members easily accessable for use in solver
 	BADimensionsSlacks dims;
 	denseBAVector l,u,c;

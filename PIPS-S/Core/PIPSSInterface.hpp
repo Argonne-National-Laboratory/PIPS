@@ -6,7 +6,7 @@
 #include "BALPSolverInterface.hpp"
 
 #include "PIPSLogging.hpp"
-
+#include "CoinShallowPackedVector.hpp"
 class BALPSolverDual;
 
 // public interface to the solver
@@ -71,6 +71,8 @@ public:
         const denseBAVector& getLB() const { return solver->myLB(); }
         const denseBAVector& getUB() const { return solver->myUB(); }
 
+        const denseBAVector& getVarObjective() const { return d.c; }
+        const BAFlagVector<constraintType>& getVariableTypes() const {return d.vartype;}
         const BAData& getBAData() const { return d; }
         solveType getSolveType() const { return st; }
 
@@ -82,6 +84,21 @@ public:
 	double primalError() { return solver->calculateLargestPrimalError(); }
 
 	static bool isDistributed() { return true; }
+
+	const CoinShallowPackedVector retrieveARow(int index) const;
+
+	const CoinShallowPackedVector retrieveWRow(int index,int scen) const;
+
+	const CoinShallowPackedVector retrieveTRow(int index,int scen) const;
+
+	const CoinShallowPackedVector retrieveACol(int index) const;
+
+	const CoinShallowPackedVector retrieveWCol(int index,int scen) const;
+
+	const CoinShallowPackedVector retrieveTCol (int index,int scen) const;
+
+
+	int isRowFeasible(int index, int scen,denseBAVector &solution);
 
 protected:
 	void setPhase1() { solver->phase1 = true; boundsChanged = true; }

@@ -270,3 +270,93 @@ void PIPSSInterface::commitNewRows() {
 
 }
 
+
+	const CoinShallowPackedVector PIPSSInterface::retrieveARow(int index ) const {
+		return d.retrieveARow(index);
+	}
+
+	const CoinShallowPackedVector PIPSSInterface::retrieveWRow(int index,int scen) const{
+		return d.retrieveWRow(index,scen);
+	}
+
+	const CoinShallowPackedVector PIPSSInterface::retrieveTRow(int index,int scen) const{
+		return d.retrieveTRow(index,scen);
+	}
+
+	const CoinShallowPackedVector PIPSSInterface::retrieveACol(int index) const{ 
+		return d.retrieveACol(index);
+	}
+
+	const CoinShallowPackedVector PIPSSInterface::retrieveWCol(int index,int scen) const{
+		return d.retrieveWCol(index,scen);
+	}
+
+	const CoinShallowPackedVector PIPSSInterface::retrieveTCol (int index,int scen) const{
+		return d.retrieveTCol(index,scen);
+	}
+
+	//returns 1 if feasible, returns -1 if upper bound broken, returns -2 if lower bound broken
+	int PIPSSInterface::isRowFeasible(int index, int scen, denseBAVector& solution){
+		//Calculate expression,
+		//TODO: Change the hardcoded tolerances for a centralized control variable
+		double intTol=10e-9;
+		double expression=0;
+		if (scen<0){
+			CoinShallowPackedVector row=d.retrieveARow(index);
+			int nElems=row.getNumElements();
+			const int *indices=row.getIndices();
+			const double *elems=row.getElements(); 
+
+	    	for (int el=0; el<nElems; el++){
+	    		expression+=(elems[el]*solution.getFirstStageVec()[indices[el]]);
+
+	    	}
+	    	double lb=d.l.getFirstStageVec()[d.dims.inner.numFirstStageVars()+index];
+	    	double ub=d.u.getFirstStageVec()[d.dims.inner.numFirstStageVars()+index];
+	    	//cout<< std::setprecision(15)<<" In the end our row "<<index<<" had "<<lb<<" "<<expression<<" "<<ub<<endl;
+	    	if (expression<lb-intTol) return -2;
+	    	if (expression>ub+intTol) return -1;
+	    	return 1;
+
+		}
+		else{
+			assert(scen >= 0 && scen < d.dims.numScenarios());
+			if (d.ctx.assignedScenario(scen)){
+				CoinShallowPackedVector row=d.retrieveTRow(index,scen);
+				int nElems=row.getNumElements();
+				const int *indices=row.getIndices();
+				const double *elems=row.getElements(); 
+
+		    	for (int el=0; el<nElems; el++){
+		    		//cout<<expression<<"+="<<elems[el]*solution.getFirstStageVec()[indices[el]]<<" "<<elems[el]<<" "<<solution.getFirstStageVec()[indices[el]]<<" "<<indices[el]<<endl;
+		    		expression+=(elems[el]*solution.getFirstStageVec()[indices[el]]);
+
+		    	}
+
+		    	CoinShallowPackedVector row2=d.retrieveWRow(index,scen);
+				int nElems2=row2.getNumElements();
+				const int *indices2=row2.getIndices();
+				const double *elems2=row2.getElements(); 
+
+		    	for (int el=0; el<nElems2; el++){
+		    		//cout<<expression<<"+="<<elems2[el]*solution.getSecondStageVec(scen)[indices2[el]]<<" "<<elems2[el]<<" "<<solution.getSecondStageVec(scen)[indices2[el]]<<" s"<<scen<<" "<<indices2[el]<<endl;
+		    		expression+=(elems2[el]*solution.getSecondStageVec(scen)[indices2[el]]);
+
+		    	}
+		    	double lb=d.l.getSecondStageVec(scen)[d.dims.inner.numSecondStageVars(scen)+index];
+		    	double ub=d.u.getSecondStageVec(scen)[d.dims.inner.numSecondStageVars(scen)+index];
+		    	//cout<<std::setprecision(15)<<" In the end our row "<<index<<" "<<scen<<" had "<<lb<<" "<<expression<<" "<<ub<<endl;
+	    	
+		    	if (expression<lb-intTol) return -2;
+		    	if (expression>ub+intTol) return -1;
+		    	return 1;
+
+		    }
+
+		    else return 1;
+
+		}
+
+
+		return 0;
+	}
