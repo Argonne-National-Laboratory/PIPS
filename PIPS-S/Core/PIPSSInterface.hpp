@@ -100,6 +100,31 @@ public:
 
 	int isRowFeasible(int index, int scen,denseBAVector &solution);
 
+	void commitNewColsAndRows();
+	
+	void generateBetas(sparseBAVector &beta);
+
+	void generateNonBasicRow(BAIndex in, sparseBAVector &row);
+
+	void addFirstStageRow(const std::vector<double>& elts1, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
+	
+	void addSecondStageRows(const std::vector< std::vector <double> >& elts1, const std::vector< std::vector <double> >&elts2, int scen, std::vector<double> &lb, std::vector<double> &ub, int nRows);
+	
+	void addFirstStageRows(const std::vector< std::vector <double> >& elts, std::vector<double> &lb, std::vector<double> &ub, int nRows);
+
+	int addFirstStageColumn(double lb, double ub, double c);
+
+	int addSecondStageColumn(int scen,double lb, double ub, double cobj);
+
+	void deleteLastFirstStageRows(int nRows);
+	
+	void deleteLastSecondStageConsecutiveRows(int scenario, int nRows);
+
+	void deleteLastFirstStageColumns(int nCols);
+
+	const BADimensionsSlacks& getSlackDims() const { return d.dims; }
+
+
 protected:
 	void setPhase1() { solver->phase1 = true; boundsChanged = true; }
 	const BAFlagVector<variableState>& getStatesRef() const { return solver->getStates(); }

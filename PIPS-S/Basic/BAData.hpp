@@ -7,7 +7,7 @@
 #include "BAVector.hpp"
 #include "stochasticInput.hpp"
 #include "BALPSolverInterface.hpp"
-
+#include "CoinPackedVector.hpp"
 
 // stores actual problem data
 // collect data into standard format for solver (introducing slacks),
@@ -34,7 +34,21 @@ public:
 
 	void addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
 
+	void addFirstStageRows(const std::vector<CoinPackedVector*> &v1, std::vector<double> &lb, std::vector<double> &ub, int nRows);
+	
+	void addSecondStageConsecutiveRows(const std::vector<CoinPackedVector*> &elts1, const std::vector<CoinPackedVector*> &elts2, int scenario, std::vector<double> &lb, std::vector<double> &ub, int nRows);
 
+	int addFirstStageColumn(double lb, double ub, double c);
+
+	void addFirstStageRow(const CoinPackedVectorBase& elts1, double lb, double ub);
+
+	int addSecondStageColumn(int scen,double lb, double ub, double cobj);
+
+	void deleteLastFirstStageRows(int nRows);
+
+	void deleteLastSecondStageConsecutiveRows(int scenario, int nRows);
+
+	void deleteLastFirstStageColumns(int nCols);
 
 	const CoinShallowPackedVector retrieveARow(int index) const;
 

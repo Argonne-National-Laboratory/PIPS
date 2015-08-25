@@ -186,6 +186,14 @@ public:
     }
   }
   
+ void copyBeginning(const denseBAVector &v) {
+    vec1.copyBeginning(v.getFirstStageVec());
+    for (unsigned i = 1; i < localScen.size(); i++) {
+      int idx = localScen[i];
+      vec2[idx]->copyBeginning(v.getSecondStageVec(idx));
+    }
+  }
+
   denseBAVector(const denseBAVector& v)
     : sameBAVector<denseVector>()
   {
@@ -235,8 +243,9 @@ public:
 class sparseBAVector : public sameBAVector<sparseVector> {
 public:
 	sparseBAVector()  {}
+
 private:
-  sparseBAVector(const sparseBAVector&) {}
+sparseBAVector(const sparseBAVector&) {}
   sparseBAVector& operator=(const sparseBAVector&) {}
 public:
 	inline double operator[](BAIndex i) const {
@@ -320,12 +329,9 @@ public:
 	}
 
 	void deallocate() {
-		
 		if (vec1) delete vec1;
-		vec1=NULL;
 		for (unsigned i = 0; i < vec2.size(); i++) {
 			if (vec2[i]) delete vec2[i];
-			vec2[i]=NULL;
 		}
 		dims = 0;
 	}

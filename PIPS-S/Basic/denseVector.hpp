@@ -42,7 +42,12 @@ public:
 	void copyFrom(const double *b,int n);
 	void copyFrom(const denseVector &);
 	void copyBeginning(const double *b,int n);
+	void copyBeginning(const denseVector &v, int n);
+	void copyToPosition(const double *b, int start, int n);
 
+	void copyToPosition(const denseVector &v, int start, int n);
+void copyBeginning(const denseVector &v);
+	
 	void swap(denseVector &v) {
 		assert(v.own == own);
 		int l = v.len; double *d2 = v.d;
@@ -50,7 +55,7 @@ public:
 		len = l; d = d2;
 	}
 
-        double* getPointer() { return d; }
+	  double* getPointer() { return d; }
 
 private:
 	double *d;
@@ -76,6 +81,16 @@ public:
 	void copyFrom(const denseFlagVector<T> &v) {
 		assert(v.len == len);
 		for (int i = 0; i < len; i++) d[i] = v.d[i];
+	}
+
+	void copyBeginning(const denseFlagVector<T> &v, int n){
+		assert(allocated() && len >= v.length());
+		copy(v.d,v.d+v.length(),d);
+	}
+
+	void copyToPosition(const T *b, int start, int n){
+		assert(allocated() && len >= start+n);
+		copy(b,b+n,&d[start]);
 	}
 
 private:

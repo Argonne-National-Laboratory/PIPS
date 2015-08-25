@@ -58,6 +58,10 @@ public:
 
 	friend class PIPSSInterface;
 
+	void generateBetas(sparseBAVector &beta);
+
+	void generateNonBasicRow(BAIndex in, sparseBAVector &row);
+
 protected:
 
 	int nIter;

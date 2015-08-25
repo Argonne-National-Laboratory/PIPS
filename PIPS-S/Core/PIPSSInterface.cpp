@@ -360,3 +360,83 @@ void PIPSSInterface::commitNewRows() {
 
 		return 0;
 	}
+
+
+	void PIPSSInterface::commitNewColsAndRows()  {
+	
+		assert(solver->status == Optimal);
+	
+		BALPSolverDual* solver2 = new BALPSolverDual(d);
+		solver2->setPrimalTolerance(solver->getPrimalTolerance());
+		solver2->setDualTolerance(solver->getDualTolerance());
+		delete solver;
+		solver = solver2;
+		st = useDual;
+		solver->status = Uninitialized;
+		
+	}
+	
+	void PIPSSInterface::generateBetas(sparseBAVector &beta){
+		solver->generateBetas(beta);
+	}
+
+	void PIPSSInterface::generateNonBasicRow(BAIndex in, sparseBAVector &row){
+		solver->generateNonBasicRow(in, row);
+	}
+
+	void PIPSSInterface::addFirstStageRow(const std::vector<double>& elts1, double lb , double ub ){
+		CoinPackedVector e1;
+		e1.setFullNonZero(elts1.size(),&elts1[0]);
+		d.addFirstStageRow(e1,lb,ub);
+		cout<<"Added first stage row "<<d.dims.inner.numFirstStageVars()<<" and cons "<<d.dims.numFirstStageCons()<<endl;
+	}
+		
+	void PIPSSInterface::addSecondStageRows(const std::vector< std::vector <double> >& elts1, const std::vector< std::vector <double> >&elts2, int scen, std::vector<double> &lb, std::vector<double> &ub, int nRows) {
+	 	std::vector<CoinPackedVector*> vectors1(nRows);
+		std::vector<CoinPackedVector*> vectors2(nRows);
+	 	for (int i=0; i< nRows; i++){
+	 		vectors1[i]= new CoinPackedVector();
+	 		vectors2[i]= new CoinPackedVector();
+	 		vectors1[i]->setFullNonZero(elts1[i].size(),&elts1[i][0]);
+			vectors2[i]->setFullNonZero(elts2[i].size(),&elts2[i][0]);
+	 	}
+		d.addSecondStageConsecutiveRows(vectors1, vectors2, scen, lb, ub, nRows);
+		for (int i=0; i< nRows; i++){
+			delete vectors1[i];
+			delete vectors2[i];
+		}
+	}
+
+	void PIPSSInterface::addFirstStageRows(const std::vector< std::vector <double> >& elts, std::vector<double> &lb, std::vector<double> &ub, int nRows) {
+	 	std::vector<CoinPackedVector*> vectors(nRows);
+	 	for (int i=0; i< nRows; i++){
+	 		vectors[i]= new CoinPackedVector();
+	 		vectors[i]->setFullNonZero(elts[i].size(),&elts[i][0]);	
+	 	}
+		d.addFirstStageRows(vectors, lb, ub, nRows);
+		for (int i=0; i< nRows; i++){
+			delete vectors[i];
+		}
+	}
+
+	void PIPSSInterface::deleteLastFirstStageRows(int nRows){
+		d.deleteLastFirstStageRows(nRows);
+	}
+		
+	void PIPSSInterface::deleteLastFirstStageColumns(int nCols){
+		d.deleteLastFirstStageColumns(nCols);
+	}
+
+	void PIPSSInterface::deleteLastSecondStageConsecutiveRows(int scenario, int nRows){
+		d.deleteLastSecondStageConsecutiveRows(scenario,nRows);
+	}
+
+	int PIPSSInterface::addFirstStageColumn(double lb, double ub, double c){
+		int out= d.addFirstStageColumn(lb,ub,c);
+		return out;
+	}
+
+	int PIPSSInterface::addSecondStageColumn(int scen,double lb, double ub, double cobj){
+		int out= d.addSecondStageColumn(scen,lb,ub,cobj);
+		return out;
+	}

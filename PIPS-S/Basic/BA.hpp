@@ -107,6 +107,41 @@ public:
 		nSecondStageCons_v[idx]++;
 	}
 
+	virtual void removeSecondStageRow(int idx) {
+		assert(!same);
+		nSecondStageCons_v[idx]--;
+	}
+
+	virtual void addFirstStageRow() {
+		assert(!same);
+		nFirstStageCons_++;
+	}
+
+	virtual void removeFirstStageRow() {
+		assert(!same);
+		nFirstStageCons_--;
+	}
+
+	virtual void addFirstStageVar(){
+		assert(!same);
+		nFirstStageVars_++;
+
+	}
+	virtual void removeFirstStageVar(){
+		assert(!same);
+		nFirstStageVars_--;
+	}
+
+	virtual void addSecondStageVar(int idx){
+		assert(!same);
+		nSecondStageVars_v[idx]++;
+	}
+	virtual void removeSecondStageVar(int idx){
+		assert(!same);
+		nSecondStageVars_v[idx]--;
+
+	}
+	
 	const BAContext *ctx; // this is ugly
 protected:
 	int nFirstStageVars_, nFirstStageCons_, nScen;

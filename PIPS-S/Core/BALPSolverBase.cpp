@@ -484,3 +484,96 @@ void BALPSolverBase::loadStatus(const string &filebase) {
 	status = LoadedFromFile;
 
 }
+
+
+void BALPSolverBase::generateBetas(sparseBAVector &beta){
+
+
+	const vector<int> &localScen = basicIdx.localScenarios();
+	beta.clear();
+	int ncons=data.dims.numFirstStageCons();
+	CoinIndexedVector &beta1 = beta.getFirstStageVec().v;
+	double *beta1Elts = beta1.denseVector();
+	int numVars=data.dims.inner.numFirstStageVars();
+	int *beta1Idx = beta1.getIndices();
+	int nnz=0;
+	for (int c=0; c<ncons; c++){
+		double b;
+		if(data.vartype.getFirstStageVec()[numVars+c]==LB)b=data.l.getFirstStageVec()[numVars+c];
+		else b=data.u.getFirstStageVec()[numVars+c];
+		if(b!=0){
+			beta1Elts[nnz]=b;
+			beta1Idx[nnz]=c;
+			nnz++;
+		}
+	}
+	beta1.setNumElements(nnz);
+
+	for (unsigned k = 1; k < localScen.size(); k++) {
+		int scen = localScen[k];
+		int nvar2 = data.dims.inner.numSecondStageVars(scen);
+		int ncons2=data.dims.numSecondStageCons(scen);
+		CoinIndexedVector &beta2 = beta.getSecondStageVec(scen).v;
+		double *beta2Elts = beta2.denseVector();
+		int *beta2Idx = beta2.getIndices();
+		int nnz2=0;
+		for (int c=0; c<ncons2; c++){
+			double b;
+			if(data.vartype.getSecondStageVec(scen)[nvar2+c]==LB)b=data.l.getSecondStageVec(scen)[nvar2+c];
+			else b=data.u.getSecondStageVec(scen)[nvar2+c];
+			if(b!=0){
+				beta2Elts[nnz2]=b;
+				beta2Idx[nnz2]=c;
+				nnz2++;
+			}
+		}
+		beta2.setNumElements(nnz2);
+	}
+	
+	la->ftran(beta);
+
+}
+
+void BALPSolverBase::generateNonBasicRow(BAIndex in, sparseBAVector &row){
+
+
+	const vector<int> &basicIdx1 = basicIdx.getVec(in.scen);
+	BAIndex btranInput;
+	btranInput.scen = in.scen; 
+	btranInput.idx = in.idx;//basicIdx1[in.idx];
+	sparseBAVector rho;
+	rho.allocate(data.dims,data.ctx,PrimalVector);
+	rho.clear();
+	
+	if (data.ctx.assignedScenario(btranInput.scen)) {
+		rho.getVec(btranInput.scen).v.insert(btranInput.idx,1.0);
+	}
+
+	la->btran(rho);
+	row.allocate(data.dims,data.ctx,PrimalVector);
+	row.clear();	
+			
+	data.multiplyT(rho,row);
+	
+
+	/*
+	const vector<int> &localScen = basicIdx.localScenarios();
+	for (unsigned i = 0; i < localScen.size(); i++) {
+		int scen = localScen[i];
+		const denseFlagVector<variableState> &states2 = states.getVec(scen);
+		const CoinIndexedVector &v = row.getVec(scen).v;
+		double *vElts = v.denseVector();
+		const int* vIdx = v.getIndices();
+		int nnz = v.getNumElements();
+		for (int j = 0; j < nnz; j++) {
+			int r = vIdx[j];
+			if (states2[r] == Basic ) {
+				vElts[r]=0;
+			}
+
+		}	
+	}*/
+	
+	
+
+}

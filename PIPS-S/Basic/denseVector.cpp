@@ -64,9 +64,7 @@ void denseVector::copyFrom(const double *b, int n) {
 	if (allocated() && len != n) {
 		assert(0);
 		deallocate(); 
-		PIPS_APP_LOG_SEV(warning) << "wrong size input buffer: "
-					  << "source has length " << n
-					  << ", dest has length " << len;
+		PIPS_APP_LOG_SEV(warning) << ("wrong size input buffer")<<len<<" "<<n; 
 		allocate(n);
 	} else if (!allocated()) {
 		allocate(n);
@@ -79,9 +77,7 @@ void denseVector::copyFrom(const denseVector &v) {
 	if (allocated() && len != n) {
 		assert(0);
 		deallocate(); 
-		PIPS_APP_LOG_SEV(warning) << "wrong size input buffer: "
-					  << "source has length " << n
-					  << ", dest has length " << len;
+		PIPS_APP_LOG_SEV(warning) << ("wrong size input buffer ")<<len<<" "<<n; 
 		allocate(n);
 	} else if (!allocated()) {
 		allocate(n);
@@ -92,6 +88,27 @@ void denseVector::copyFrom(const denseVector &v) {
 void denseVector::copyBeginning(const double *b, int n) {
 	assert(allocated() && len >= n);
 	copy(b,b+n,d);
+}
+
+void denseVector::copyToPosition(const double *b, int start, int n){
+	assert(allocated() && len >= start+n);
+	copy(b,b+n,&d[start]);
+}
+
+void denseVector::copyToPosition(const denseVector &v, int start, int n){
+	assert(allocated() && len >= start+n);
+	copy(v.d,v.d+n,&d[start]);
+}
+
+void denseVector::copyBeginning(const denseVector &v, int n){
+	assert(allocated() && len >= n);
+	copy(v.d,v.d+n,d);
+}
+
+
+void denseVector::copyBeginning(const denseVector &v){
+	assert(allocated() && len >= v.length());
+	copy(v.d,v.d+v.length(),d);
 }
 
 double denseVector::dotWithSelf() const {
