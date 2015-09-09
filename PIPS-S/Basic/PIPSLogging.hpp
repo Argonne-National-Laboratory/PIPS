@@ -59,6 +59,7 @@ namespace keywords = boost::log::keywords;
 
 using boost::shared_ptr;
 
+
 enum severity_level
 {
   debug, info, summary,  warning,  error, fatal
