@@ -831,7 +831,7 @@ int BAData::addFirstStageColumn( double lb, double ub, double cobj){
 	// TODO: fix this
 	names.allocate(dims, ctx, PrimalVector);
 	
-	assert(lb.size()==ub.size());
+	assert(l.getFirstStageVec().length()==u.getFirstStageVec.length());
 	
 	const vector<int> &localScen = ctx.localScenarios();
 	
@@ -1080,7 +1080,7 @@ void BAData::deleteLastFirstStageColumns(int nCols){
 	// TODO: fix this
 	names.allocate(dims, ctx, PrimalVector);
 	
-	assert(lb.size()==ub.size());
+	assert(l.getFirstStageVec().length()==u.getFirstStageVec().length());
 	
 
 	const vector<int> &localScen = ctx.localScenarios();
