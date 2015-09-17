@@ -831,7 +831,7 @@ int BAData::addFirstStageColumn( double lb, double ub, double cobj){
 	// TODO: fix this
 	names.allocate(dims, ctx, PrimalVector);
 	
-	assert(l.getFirstStageVec().length()==u.getFirstStageVec.length());
+	assert(l.getFirstStageVec().length()==u.getFirstStageVec().length());
 	
 	const vector<int> &localScen = ctx.localScenarios();
 	
