@@ -30,7 +30,7 @@ if these are equal for a column, then you have a fixed variable
 // Accessors not marked const because implementing class may need to
 // change internal data structures when called, e.g. for caching the answer.
 class stochasticInput {
-public:
+public:	
 	virtual ~stochasticInput() {}
 	virtual int nScenarios() = 0;
 	virtual int nFirstStageVars() = 0;
@@ -99,6 +99,10 @@ public:
 	// Note: this has the second-stage variables on the rows and first-stage on the columns
 	virtual CoinPackedMatrix getSecondStageCrossHessian(int scen);
 
+
+
+	std::string datarootname;
+    int useInputDate;
 
 };
 

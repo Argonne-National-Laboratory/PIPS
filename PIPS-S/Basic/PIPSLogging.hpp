@@ -38,7 +38,7 @@
 #define PIPSLOGGING
 
 #include <boost/smart_ptr/shared_ptr.hpp>
-#include <boost/core/null_deleter.hpp>
+//#include <boost/core/null_deleter.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/log/common.hpp>
 #include <boost/log/expressions.hpp>
@@ -56,6 +56,22 @@ namespace sinks = boost::log::sinks;
 namespace attrs = boost::log::attributes;
 namespace src = boost::log::sources;
 namespace keywords = boost::log::keywords;
+
+namespace boost {
+
+//! A function object that does nothing and can be used as an empty deleter for \c shared_ptr
+struct null_deleter
+{
+    //! Function object result type
+    typedef void result_type;
+    /*!
+     * Does nothing
+     */
+    template< typename T >
+    void operator() (T*) const BOOST_NOEXCEPT {}
+};
+
+}
 
 using boost::shared_ptr;
 

@@ -116,6 +116,8 @@ set(HAVE_AMPL TRUE)
 if(${AMPL_LIBRARY} MATCHES "AMPL_LIBRARY-NOTFOUND")
 	message(STATUS "amplsolver library not found. Won't build code that requires ASL.")
 	set(HAVE_AMPL FALSE)
+else(${AMPL_LIBRARY} MATCHES "AMPL_LIBRARY-NOTFOUND")
+  include_directories(${AMPL_DIR}) 
 endif(${AMPL_LIBRARY} MATCHES "AMPL_LIBRARY-NOTFOUND")
 
 
@@ -243,14 +245,13 @@ else(EXISTS "${SCIP_LIBDIR}/libscip.a")
 	message(STATUS "Building without SCIP")
 endif(EXISTS "${SCIP_LIBDIR}/libscip.a")
 
-set(Boost_INCLUDE_DIR "${SHARED_DIR}/BOOST/src")
-set(Boost_LIBRARY_DIR "${SHARED_DIR}/BOOST/src/stage/lib")
+#set(Boost_INCLUDE_DIR "${SHARED_DIR}/BOOST/src")
+#set(Boost_LIBRARY_DIR "${SHARED_DIR}/BOOST/src/stage/lib")
 #set(Boost_INCLUDE_DIR /usr/local/src/boost_1_46_1)
 #set(Boost_LIBRARY_DIR /usr/local/src/boost_1_46_1/stage/lib)
-find_package(Boost COMPONENTS system filesystem REQUIRED)
-include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIR})
-
+#find_package(Boost COMPONENTS system filesystem REQUIRED)
+#include_directories(${Boost_INCLUDE_DIR})
+#link_directories(${Boost_LIBRARY_DIR})
 
 find_package(Boost COMPONENTS system filesystem thread log log_setup)
 include_directories(${Boost_INCLUDE_DIR})
@@ -262,6 +263,42 @@ if (${Boost_FOUND}$ MATCHES "FALSE")
   message("! Then run  'cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain.cmake ..' in the build directory.")
   message(FATAL_ERROR "Configuration aborted due to missing BOOST libraries!")
 endif(${Boost_FOUND}$ MATCHES "FALSE")
+
+
+###############################################################################
+
+if(HAVE_MA27) 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA27") 
+else(HAVE_MA27) 
+  set(MA27_LIBRARY "") 
+endif(HAVE_MA27)
+
+if(HAVE_MA57) 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA57") 
+else(HAVE_MA57) 
+  set(MA57_LIBRARY "") 
+endif(HAVE_MA57)
+
+if(HAVE_MA86) 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA86") 
+else(HAVE_MA57) 
+  set(MA86_LIBRARY "") 
+endif(HAVE_MA86) 
+
+if(HAVE_PARDISO) 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO") 
+else(HAVE_PARDISO) 
+  set(PARDISO_LIBRARY "") 
+endif(HAVE_PARDISO)
+
+if(HAVE_UMFPACK) 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_UMFPACK") 
+else(HAVE_UMFPACK) 
+  set(UMF_ALLINONE_LIBRARY "") 
+endif(HAVE_UMFPACK)
+
+###############################################################################
+
 
 #set(CMAKE_BUILD_TYPE DEBUG)
 #set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
@@ -289,6 +326,7 @@ add_subdirectory(Utilities)
 add_subdirectory(UCTests)
 add_subdirectory(UCRolling)
 add_subdirectory(BasisBootstrap)
+add_subdirectory(PIPS-NLP)
 
 # this will print a warning message, should figure out how to silence it
 #add_library(pipsForSwift SHARED)
