@@ -13,4 +13,8 @@ tar -xzf Cbc-2.9.5.tgz
 mv Cbc-2.9.5 src
 rm Cbc-2.9.5.tgz
 
+cd src
+CWP_TEMP=$(pwd)
+./configure --enable-static --prefix=${CWP_TEMP}
 
+make install

@@ -2,8 +2,8 @@
 # Please Get MA57 from HSL (http://www.hsl.rl.ac.uk)
 # Note that we need double precision FORTRAN source code.
 #
-# After you have the MA57 source code, please use the following as the Makefile
-#
+# After you have the MA57 source code ma57.f, please put it in the folder src,
+# and use the attached Makefile to install MA57
 
 F77      = mpif77 
 FC       = $(F77)

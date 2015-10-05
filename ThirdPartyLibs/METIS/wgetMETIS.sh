@@ -15,4 +15,6 @@ rm metis-4.0.3.tar.gz
 
 sed -i  "s/\bCOPTIONS =/COPTIONS = -fPIC /g" src/Makefile.in
 
+cd src
+make
 

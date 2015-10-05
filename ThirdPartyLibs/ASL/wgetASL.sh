@@ -17,3 +17,6 @@ rm amplASL.tar
 chmod +x src/configure
 chmod +x src/configurehere
 
+cd src
+./configurehere
+make
