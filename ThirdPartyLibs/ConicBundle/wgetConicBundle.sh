@@ -15,4 +15,6 @@ rm CB_v0.3.11.tgz
 
 
 sed -i  "s/\bECHO.linux   = -e/ECHO.linux   =/g" src/Makefile
+cd src
+make
 
