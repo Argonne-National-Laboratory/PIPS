@@ -1,3 +1,7 @@
+/* PIPS-NLP                                                         	*
+ * Authors: Nai-Yuan Chiang                      		*
+ * (C) 2015 Argonne National Laboratory			*/
+
 #ifndef __PS_H
 #define __PS_H
 
@@ -72,6 +76,9 @@ class DCGEN{
   double   cost_gamma;
   double   cost_beta;
   double   cost_alpha;
+
+  
+  int partID;
   
 };
 
@@ -142,7 +149,14 @@ public:
   int Nparts;
   int Ncuts;
   int *num_LineInEachPart;
-  
+
+  int *num_BusInEachPart;
+
+  int *num_CutInEachPart;
+
+
+
+  int **BusInEachPart;
 
 private:
   void SetUpPS();

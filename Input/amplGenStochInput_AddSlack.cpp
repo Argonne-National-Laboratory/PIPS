@@ -20,7 +20,6 @@
 
 using namespace std;
 
-extern int gBuildSchurComp;
 extern int gUseReducedSpace;
 
 extern int gNP_Alg;
@@ -441,7 +440,6 @@ void amplGenStochInput_AddSlack::splitMatrices(const int scen)
   int findQele=0;
   int *defineEleID = new int[ nSecondStageVars_[scen]];
 
-  // FIXME: if there is any better way to do this?
   // ampl use upper triangle, but transpose to lower triangle for OOQP, both require col-wise form
   for( int j = 0; j < nSecondStageVars_[scen]; j++ ) {
 	for( int k = amplGoffColStarts[j]; k < amplGoffColStarts[j+1]; k++ ) {

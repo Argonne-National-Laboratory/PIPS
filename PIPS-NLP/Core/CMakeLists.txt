@@ -54,8 +54,7 @@ add_library(nlpgensparse
   NlpGen/NlpGenVars.C NlpGen/NlpGenData.C NlpGen/NlpGenResiduals.C 
   NlpGen/NlpGen.C NlpGen/NlpGenLinsys.C NlpInfo/NlpInfo.C #NlpGen
   NlpGen/NlpGenSparse.C NlpGen/NlpGenSparseLinsys.C #NlpGenSparseLinSys
-  Readers/MpsReader.C Readers/hash.C #Readers
-  ${solvers}
+  Readers/MpsReader.C Readers/hash.C ${solvers}
   )
 
 

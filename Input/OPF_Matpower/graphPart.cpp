@@ -9,10 +9,14 @@
 #include <iostream>
 #include <fstream>
 
+
 #include "math.h"
 
+//#include "metis.h"
+
 #include "graphPart.h"
-#include "assert.h"
+#include <assert.h>
+
 
 using namespace std;
 
@@ -66,11 +70,16 @@ graphPart::graphPart()
 
 graphPart::~graphPart()
 {
-  if(xadj) 		free(xadj);
-  if(adjncy) 	free(adjncy);
-  if(id_part) 	free(id_part);  
-  if(vwgt)		free(vwgt);  
-  if(adjwgt)	free(adjwgt);  
+  if(xadj) 		
+  	delete[] xadj;
+  if(adjncy) 	
+  	delete[] (adjncy);
+  if(id_part) 	
+  	delete[] (id_part);  
+  if(vwgt)		
+  	delete[] (vwgt);  
+  if(adjwgt)	
+  	delete[] (adjwgt);  
 }
 
 
@@ -109,9 +118,9 @@ graphPart::_ReadGraph(const char gfilename[])
   npartsReq = atoi(p);
   printf(" %s\n", p);
 
-  xadj = (int *)malloc((num_node+1)*sizeof(int));
-  adjncy = (int *)malloc(2*num_line*sizeof(int));
-  id_part= (int *)malloc((num_node)*sizeof(int));
+  xadj = new int[num_node+1];
+  adjncy = new int[2*num_line];
+  id_part= new int[num_node];
 
 
   /* ------------ scan graph file defined by METIS  -------------- */
@@ -226,8 +235,8 @@ graphPart::computeGPfromGraphFile(const char gfilename[])
   	
   //int ncon = 1; //
 
-  int *vwgt = NULL, *vsize = NULL;
-  double *ubvec = NULL, *tpwgts = NULL;
+//  int *vwgt = NULL, *vsize = NULL;
+//  double *ubvec = NULL, *tpwgts = NULL;
 
   std::string graphFile (gfilename);
 
@@ -367,10 +376,10 @@ for (i=0; i<num_node; i++) {
   actparts = npartsReq;
   
   if(npartsReq<=8)
-    METIS_PartGraphRecursive(&num_node, xadj, adjncy, vwgt, adjwgt, &useWgt, &idxFrom1, 
+    METIS_PartGraphRecursive(&num_node, xadj, adjncy, NULL, NULL, &useWgt, &idxFrom1, 
 	    				&npartsReq, options, &ncut_line, id_part);
   else
-  	METIS_PartGraphKway(&num_node, xadj, adjncy, vwgt, adjwgt, &useWgt, &idxFrom1, 
+  	METIS_PartGraphKway(&num_node, xadj, adjncy, NULL, NULL, &useWgt, &idxFrom1, 
 	    				&npartsReq, options, &ncut_line, id_part);
   
   if(npartsReq)

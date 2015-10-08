@@ -1,3 +1,7 @@
+/* PIPS-NLP                                                         	*
+ * Authors: Nai-Yuan Chiang                      		*
+ * (C) 2015 Argonne National Laboratory			*/
+
 #include "ps.h"
 #include "stdio.h"
 #include <cstdlib>
@@ -63,7 +67,7 @@ void DCLINE::DCLINEGetConnectedBuses(DCBUS ***connbuses)
 
 DCGEN::DCGEN()
 	: bus_i(0), pg(0.), pt(0.),pb(0.),
-	  cost_alpha(0.), cost_beta(0.), cost_gamma(0.)
+	  cost_alpha(0.), cost_beta(0.), cost_gamma(0.),partID(-1)
 {}
 
 
@@ -73,7 +77,7 @@ DCPS::DCPS()
 	  refBusID(0),
 	  bus(NULL), gen(NULL), line(NULL),
 	  setupcalled(false), 
-	  Nparts(1),Ncuts(0),num_LineInEachPart(NULL)
+	  Nparts(1),Ncuts(0),num_LineInEachPart(NULL),num_CutInEachPart(NULL),num_BusInEachPart(NULL),BusInEachPart(NULL)
 {}
 
 DCPS::~DCPS()
@@ -87,6 +91,20 @@ DCPS::~DCPS()
   if(num_LineInEachPart){
 	free(num_LineInEachPart);
   }	
+  if(num_BusInEachPart){
+	free(num_BusInEachPart);
+  }	  
+  if(num_CutInEachPart){
+	free(num_CutInEachPart);
+  }	 
+  
+
+  if (BusInEachPart){
+    for(int i=0;i<Nparts;i++){
+	  delete [] BusInEachPart[i];
+    }
+    delete [] BusInEachPart;
+  }
 }
 
 void DCPS::PSGetNumGenerators(int *Ngen_)
@@ -311,15 +329,21 @@ DCPS::setPartitioning(const int *partID_, const int actparts_, const int num_cut
 
   Nparts = actparts_;
 	
-  num_LineInEachPart = (int*) malloc((Nparts)*sizeof(int));
+  num_LineInEachPart 	= (int*) malloc((Nparts)*sizeof(int));
+  num_BusInEachPart 	= (int*) malloc((Nparts)*sizeof(int));  
+  num_CutInEachPart 	= (int*) malloc((Nparts)*sizeof(int));
+  
   for(int i=0;i<Nparts;i++){
 	num_LineInEachPart[i]=0;
+	num_BusInEachPart[i]=0;
+	num_CutInEachPart[i]=0;	
   }
 
   // assign partID to buses and lines  
   for(int i=0;i<Nbus;i++){
 	bus[i].DCBUSGetSupportingLines(&nLink,&connlines);
 	bus[i].partID = partID_[i];
+	num_BusInEachPart[partID_[i]]++;
 	
 	for(int k=0; k < nLink; k++) {
 	  linePt = connlines[k];
@@ -332,6 +356,7 @@ DCPS::setPartitioning(const int *partID_, const int actparts_, const int num_cut
 		num_LineInEachPart[partID_[i]]++;
 	  }else{
 		Ncuts++;
+		num_CutInEachPart[partID_[i]]++;	
 		linePt->partID = -1;
 		busf->haveCutLine = true;
 		bust->haveCutLine = true;		
@@ -349,9 +374,30 @@ DCPS::setPartitioning(const int *partID_, const int actparts_, const int num_cut
 
   for( int i=0; i < Nbus; i++ ){	
   	int partID = bus[i].partID;
-    bus[i].startloc = xloc[partID];
+    bus[i].startloc_Part = xloc[partID];
     xloc[partID] += 1 + bus[i].ngen;
   }
+
+  for( int i=0; i < Ngen; i++ ){	
+  	gen[i].partID = partID_[gen[i].bus_i];
+  }
+
+  BusInEachPart 		= new int*[Nparts];
+  for(int i=0;i<Nparts;i++){
+	BusInEachPart[i]	= new int[num_BusInEachPart[i]];
+  }
+  int *findbus_part = new int[Nparts];
+  for(int i=0;i<Nparts;i++) findbus_part[i]=0;
+  
+  for(int i=0;i<Nbus;i++){
+  	int partID_temp = bus[i].partID;
+  	BusInEachPart[partID_temp][findbus_part[partID_temp]++] = i;
+  }
+  for(int i=0;i<Nparts;i++){
+	assert( findbus_part[i] == num_BusInEachPart[i]); 
+  } 
+
+  delete [] findbus_part;
 
   delete [] xloc;
 }

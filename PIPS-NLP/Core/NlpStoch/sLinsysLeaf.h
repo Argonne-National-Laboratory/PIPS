@@ -17,7 +17,11 @@
 
 //#include "MtxSchurDecompSolver.h"
 //#include "ReducedSpaceSolver.h"
+
+#ifdef WITH_UMFPACK
 #include "ReducedSpaceSolverStateOnly.h"
+#endif
+
 //#include "PartitionAugSolver.h"
 
 
@@ -299,7 +303,9 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
   }
   else if(2==gUseReducedSpace && gNP_Alg==0){
   	// use reduced space schur solver, assume all the decition vars have already been moved
+#ifdef WITH_UMFPACK
 	solver = new ReducedSpaceSolverStateOnly(kktsp,locnx,locmy,locmz);
+#endif	
   }
   else if(gNP_Alg>0){
 //	solver = new PartitionAugSolver(kktsp,  

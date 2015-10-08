@@ -1,10 +1,9 @@
 /* PIPS-NLP                                                         	*
  * Authors: Nai-Yuan Chiang                      		*
  * (C) 2015 Argonne National Laboratory			*/
- 
 
-#ifndef OPFLOW_H
-#define OPFLOW_H
+#ifndef DCOPFLOW_H
+#define DCOPFLOW_H
 
 #include "ps.h"
 
@@ -48,9 +47,11 @@ public:
   
   bool setupcalled; 		/* OPFLOWSetUp called? */
   bool setupcalled_part; 	/* OPFLOWSetUp_part called? */
+  bool setupcalled_aggregation; /* SetUp_Aggregation called? */
 
 
   int Nvar_1st;
+  int Nslack_1st;
   int Ncon_1st;
   int Nconeq_1st;
   int Nconineq_1st;
@@ -68,7 +69,6 @@ public:
 
 
   int *busMap_AllTo1st;
-  int *varMap_AllTo2nd;
 
 
   int *numDummyVar;
@@ -76,6 +76,20 @@ public:
 
 
   int Nparts;
+
+  int **locVarMap_Agg;
+  int **dummyBusVarID;  /* the index of dummy phase angle in the local var vector */
+  int nvar_aggregation;
+  int ncon_aggregation;
+  
+  int *firstVarMap_Agg;
+
+  
+  int **locConMap_Agg;
+  int *firstConMap_Agg;
+  
+  int nnz_jac_Aggregation; 	/* Number of nonzeros in the jacobian of the aggregation matrix */
+  
 
   DCOPFLOW(const DCPS* ps_);  
   ~DCOPFLOW();
@@ -110,6 +124,15 @@ public:
   virtual void GetJac_1st_Partition(int *row, int *col, double *ele);
   virtual void GetJac_2nd_Link_Partition(	const int scen, int *row, int *col, double *ele, 
   												int *row_link, int *col_link, double *ele_link);
+
+  virtual void SetUp_Aggregation();
+  virtual void VarAndConBounds_Aggregation(double *xl,double *xu,double *gl,double *gu);
+  virtual void EqConBounds_Aggregation(double *b);
+  virtual void objLinGrad_Aggregation(double *obj_coef);
+  virtual int  GetAggregationJacNNZ();
+  virtual void GetPrecondMatrixJac_Aggregation(int *row, int *col, double *ele);
+  virtual int GetAggregationHesNNZ();
+  virtual void GetPrecondMatrixHes_Aggregation(int *row, int *col, double *ele);
   
 };
 

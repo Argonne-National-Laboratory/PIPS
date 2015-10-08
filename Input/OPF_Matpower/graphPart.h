@@ -5,6 +5,11 @@
 #ifndef graphPart_H
 #define graphPart_H
 
+//#include "metis.h"
+
+//typedef int idxtype;
+
+
 class graphPart{
 
   public:
