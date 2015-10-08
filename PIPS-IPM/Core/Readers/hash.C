@@ -18,6 +18,7 @@
 #include <fstream>
 
 // modified 5/21/04 based on the new primes in PCx
+/* 2015. Modified by Feng Qiang to support C++11*/
 
 #define NUMPRIMES      18
 static int prime[NUMPRIMES] = {29, 229, 883, 1669, 2791, 4801, 8629,
