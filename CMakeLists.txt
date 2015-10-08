@@ -59,7 +59,11 @@ set(AMPL_DIR ${SHARED_DIR}/ASL/src)
 set(MA27_DIR ${SHARED_DIR}/MA27/src)
 set(MA57_DIR ${SHARED_DIR}/MA57/src)
 set(METIS_DIR ${SHARED_DIR}/METIS/src)
+set(UMFPACK_DIR ${SHARED_DIR}/UMFPACK/src)
+
+# include CoinUtils
 set(COIN_DIR ${SHARED_DIR}/CBC/src)
+
 
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in ThirdPartyLib/CBC/src")
@@ -152,6 +156,36 @@ if(HAVE_MA57 AND ${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
   message(STATUS "MA57 library not found. Won't build code that requires MA57.")
   set(HAVE_MA57 FALSE)
 endif(HAVE_MA57 AND ${MA57_LIBRARY} MATCHES "MA57_LIBRARY-NOTFOUND")
+
+# see if we have Umfpack
+set(HAVE_UMFPACK TRUE)
+set(HAVE_AMD FALSE)
+if(${UMFPACK_LIBRARY_PIPS} MATCHES "UMFPACK_LIBRARY_PIPS-NOTFOUND")
+  message(STATUS "UMFPACK library not found. Won't build code that requires UMFPACK.")
+  set(HAVE_UMFPACK FALSE)
+else (${UMFPACK_LIBRARY_PIPS} MATCHES "UMFPACK_LIBRARY_PIPS-NOTFOUND")
+  message(STATUS "A library with UMFPACK found.")
+  include_directories(${SHARED_DIR}/UMFPACK/UMFPACK/Include)
+  find_library(AMD_LIBRARY NAMES libamd.a PATHS ${UMFPACK_DIR}/AMD/Lib)
+  message(STATUS "AMD library: ${AMD_LIBRARY}")
+  if(${AMD_LIBRARY} MATCHES "AMD_LIBRARY-NOTFOUND")
+    message(STATUS "AMD library not found. We require AMD to use UMFPACK.")
+    set(HAVE_UMFPACK FALSE)
+  else (${AMD_LIBRARY} MATCHES "AMD_LIBRARY-NOTFOUND")
+    set(HAVE_AMD TRUE)
+    include_directories(${SHARED_DIR}/UMFPACK/AMD/Include)
+    include_directories(${SHARED_DIR}/UMFPACK/SuiteSparse_config)
+    find_library(SUITESPARSE_LIBRARY NAMES libsuitesparseconfig.a PATHS ${UMFPACK_DIR}/SuiteSparse_config)
+    if(${SUITESPARSE_LIBRARY} MATCHES "SUITESPARSE_LIBRARY-NOTFOUND")
+      message(STATUS "SUITESPARSE_LIBRARY not found. We require SUITESPARSE_LIBRARY to use UMFPACK.")
+      set(HAVE_UMFPACK FALSE)
+    else (${SUITESPARSE_LIBRARY} MATCHES "SUITESPARSE_LIBRARY-NOTFOUND")
+      set(UMF_ALLINONE_LIBRARY  ${UMFPACK_LIBRARY_PIPS} ${AMD_LIBRARY} ${SUITESPARSE_LIBRARY})
+      message(STATUS "Find Umfpack: ${UMF_ALLINONE_LIBRARY}")
+    endif(${SUITESPARSE_LIBRARY} MATCHES "SUITESPARSE_LIBRARY-NOTFOUND")
+  endif(${AMD_LIBRARY} MATCHES "AMD_LIBRARY-NOTFOUND")
+endif(${UMFPACK_LIBRARY_PIPS} MATCHES "UMFPACK_LIBRARY_PIPS-NOTFOUND")
+
 
 
 # see if we have gurobi

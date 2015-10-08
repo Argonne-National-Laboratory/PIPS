@@ -284,7 +284,7 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
 	  assert("Not Implemented" &&0);
 	}
   }
-  else if (1==gUseReducedSpace && gNP_Alg==0 ){
+  else if (2==gUseReducedSpace && gNP_Alg==0 ){
   	// use reduced space schur solver, assume decition vars is inside kktsp
 	if(0==gBuildSchurComp){
 	  assert("Not Implemented" &&0);
@@ -301,7 +301,7 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
 	}
 	
   }
-  else if(2==gUseReducedSpace && gNP_Alg==0){
+  else if(1==gUseReducedSpace && gNP_Alg==0){
   	// use reduced space schur solver, assume all the decition vars have already been moved
 #ifdef WITH_UMFPACK
 	solver = new ReducedSpaceSolverStateOnly(kktsp,locnx,locmy,locmz);

@@ -163,7 +163,7 @@ LinearSystem * NlpGenSparseWithSolver::makeLinsys( Data * prob_in )
 	}
 
   }
-  else if (1==gUseReducedSpace){
+  else if (2==gUseReducedSpace){
 	assert(0==gBuildSchurComp);
 	if(0==gBuildSchurComp){
 	  int decisionVarSize = prob->schurSize;

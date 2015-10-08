@@ -33,8 +33,6 @@
 
 extern int gOuterSolve;
 
-extern int gRS_SchurSolver;
-
 extern double probGenTime;
 
 #ifndef MIN

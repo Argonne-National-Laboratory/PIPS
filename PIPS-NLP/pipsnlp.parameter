@@ -25,8 +25,8 @@ IRtol 1e-12
 !-------------------------------------------------------------------------
 !		linear solver
 !-------------------------------------------------------------------------
-! 	0:Ma27 	(1):Ma57  	2:pardiso
-LinearAlgSolver 1
+! 	0:Ma27 	(1):Ma57  	2:pardiso 3:Umfpack
+SymLinearSolver 1
 !  	HSL pivot level. range is (0,0.5],  0:fast, 0.5:stable 	(1e-4)
 HSL_PivotLV		1e-4
 ! MA57 Ordering method: (5) automatic choice(MA47 or Metis); 4 use Metis (ND); 3 min degree ordering as in MA27; 2 use MC47;
@@ -64,53 +64,21 @@ CheckSmallConstVio	1
 LineSearchMatStep	50
 
 
-
-
-
-
-
-!-------------------------------------------------------------------------
-!		PETSC
-!-------------------------------------------------------------------------
-! 	use petsc iterative solver or not (0)
-UsePetsc			0
-! 	use user defined PC or not. (0): use petsc's option 0, 1: use original sys, 2: use Jacek's idea
-User_Defined_PC		2
-!	use user defined symmetric form or not: (0): use petsc's form, 1: use user defined form
-User_Defined_SymMat	1
-! 	use petsc to do the outer solve. (0): do not perform    1: perform it
-UsePetscOuter		1
-
-
 !-------------------------------------------------------------------------
 !		Reduced space solver
 !-------------------------------------------------------------------------
-! (0): default, full space solver  1:reduced space  2:reduced space, but decision var are 1st var(with LinearAlgSolver=3)
-UseReducedSpace		0
-! (0): default, build Dense Schur from full space matrix  1: build Dense Schur from reduced space matrix 
-RS_SchurSolver		1
+! (0): default, full space solver  1:reduced space, but decision var are 1st var (not support if AddSlackParallelSetting=1) 
+UseReducedSpace		1
 ! (0): do iterative refinement from the linear solver, this is the max number of IR
 RS_MaxIR	5
 ! (0.0001)  Stable->Fast 1->0
 RS_LU_PivotLV	0.0001
 
-!-------------------------------------------------------------------------
-!		schur complement solver
-!-------------------------------------------------------------------------
-! (0): do not build SC(sparse solve)   1: use dense Schur	2: use sparse Schur  
-BuildSchurComp		1
-
-!how to compute Schur
-! (0): LDLt  2: BICG
-SolveSchurScheme	0
 
 !-------------------------------------------------------------------------
-     Use Partitioning Algorithm
+     How to compute dual regularization
 !-------------------------------------------------------------------------
-! (0) not use   1:use 
-NP_Alg	0
-
-
-
 ! method to update dual regularization	(0): ipopt way (1): vz way (10): ori obj
 UseDualRegAlg 0
+
+

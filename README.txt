@@ -1,4 +1,4 @@
-1. Install package wget, cmakem, mpich2, and boost.
+1. Install package wget, cmake, mpich2, and boost.
 You can get them via the following command (xxx stands for the name of the package):
 In Linux(Ubuntu): apt-get install xxxx
 In OSX: brew install xxxx

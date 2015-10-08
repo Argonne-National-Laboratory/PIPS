@@ -156,7 +156,7 @@ sNlpInfoFromNL::sNlpInfoFromNL(sData *data_in, amplGenStochInput& in, const int 
   LocCineqLinkJacGoffMap = &(in.JacCLinkGoff2nd[ChildIdx]);
   LocDineqLocJacGoffMap = &(in.JacCLocGoff2nd[ChildIdx]);
 
-  if(1==gUseReducedSpace){
+  if(2==gUseReducedSpace){
     data_in->schurVarConID = in.schurVarConIDinNL[ChildIdx];
     data_in->schurSize	 = in.decisionVarDim[ChildIdx];
   }
@@ -231,7 +231,7 @@ sNlpInfoFromNL::sNlpInfoFromNL(sData *data_in, amplGenStochInput_AddSlack& in, c
   LocCineqLinkJacGoffMap = &(in.JacCLinkGoff2nd[ChildIdx]);
   LocDineqLocJacGoffMap = &(in.JacCLocGoff2nd[ChildIdx]);
 
-  if(1==gUseReducedSpace){
+  if(2==gUseReducedSpace){
     data_in->schurVarConID = in.schurVarConIDinNL[ChildIdx];
     data_in->schurSize	 = in.decisionVarDim[ChildIdx];
   }

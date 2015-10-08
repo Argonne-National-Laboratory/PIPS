@@ -228,15 +228,6 @@ pipsOptions::copyFrom(pipsOptions &os)
 
 } 
 
-/**
- *  Read the global options file.
- *
- *  All options are described by an identifier and a value.
- *  Characters after the value are ignored.
- *
- *  WSFSTWA  1  !Do Forward Sensitivity analysis of ten worst components
- *  WSFSTWTS 1  !And take step suggested by analysis
- */
 void pipsOptions::readFile()
 {
   FILE *optfile;
@@ -245,8 +236,6 @@ void pipsOptions::readFile()
   int mype,doFlag;  FindMPI_ID(doFlag,mype);
   int prosize;	FindMPI_Size(doFlag,prosize);
 
-  /** The first time that the global option file is read, these options
-   *  are remembered in pipsOptions::defOpt */
   if (pipsOptions::defOpt==NULL){
     defOpt = this;
   }
@@ -288,6 +277,8 @@ void pipsOptions::readFile()
 	if(RS_MaxIR>10) RS_MaxIR=10;
 	if (mype == 0)printf("OPTION: Use Reduced Space Solver.\n");
 	if (mype == 0)printf("OPTION: Set Gen linear solver as UMFPACK.\n");
+	if (mype == 0)printf("OPTION: LU solver max IR:  %d \n", RS_MaxIR);
+	if (mype == 0)printf("OPTION: LU solver pivot tol:  %.2e \n", RS_LU_PivotLV);	
   }	
 
   if(SCOPF_precond==1){
@@ -343,15 +334,7 @@ void pipsOptions::readFile()
   }else if(this->SymLinearSolver==2){
 	if (mype == 0)printf("OPTION: Set Sym linear solver as PARDISO.\n");
   }else if(this->SymLinearSolver==3){
-	if (mype == 0)printf("OPTION: Set Sym linear solver as SaddlePoint.\n");
-	if (mype == 0)printf("OPTION: LU solver max IR:  %d \n", RS_MaxIR);
-	if (mype == 0)printf("OPTION: LU solver pivot tol:  %.2e \n", RS_LU_PivotLV);
-  }else if(this->SymLinearSolver==4){
-	if (mype == 0)printf("OPTION: Set Sym linear solver as PARDISO_Iter.\n");
-  }else if(this->SymLinearSolver==5){
-	if (mype == 0)printf("OPTION: Set Sym linear solver as PARDISO_Schur.\n");
-  }else if(this->SymLinearSolver==6){
-	if (mype == 0)printf("OPTION: Set Sym linear solver as Umfpack_symm.\n");
+	if (mype == 0)printf("OPTION: Set Sym linear solver as Umfpack.\n");
   }else {
 	assert("need one sym solver"&&0);
   }
@@ -423,32 +406,21 @@ bool pipsOptions::parseLine(char *buffer)
      ----------------------------------------------------------------------- */
   /* Printing level  */
   if (strcmp(label, "prtLvl")==0){
-//    if (mype == 0)printf("OPTION: Set printing level to %d\n",(int)dval);
     this->prtLvl = (int)dval;
     found = true;
   }    
   
   /* Set Iteration Limit */
   if (strcmp(label, "max_iter") == 0 && dval > 0.0) {
-//    if (mype == 0)printf("OPTION: Set Iteration Limit to %d\n",(int)dval);
     this->max_iter = (int)dval;
     found = true;
   }    
   
   /* Set Convergence Tolerance */
   if (strcmp(label, "conv_tol") == 0 && dval > 0.0) {
-//    if (mype == 0)printf("OPTION: Set Convergence Tolerance to %.2e\n", dval);
     this->conv_tol = dval;
     found = true;
   }    
-
-
-  /* The value to use for ro_reg in num_factAS (pdreg in qnmfct) */
-//  if (strcmp(label, "RO_REG") == 0 && dval >= 0.0) {
-//    printf("OPTION: Use RO_REG = %g\n", dval);
-//    this->ro_reg = dval;
-//    found = true;
-//  }    
 
   /* -----------------------------------------------------------------------
      Options About iterative refinement
@@ -467,13 +439,11 @@ bool pipsOptions::parseLine(char *buffer)
   }
 
   if (strcmp(label, "MaxIR") == 0 ) {
-//	if (mype == 0)printf("OPTION: Set MaxIR to %i\n", int(dval));
 	this->MaxIR = int(dval);
 	found = true;
   } 
 
   if (strcmp(label, "IRtol") == 0 ) {
-//	if (mype == 0)printf("OPTION: Set IRtol to %.2e\n", dval);
 	this->IRtol = dval;
 	found = true;
   }
@@ -537,10 +507,7 @@ bool pipsOptions::parseLine(char *buffer)
 	found = true;
   } 
   
-  if (strcmp(label, "SolveSchurScheme") == 0 ) {
-	this->SolveSchurScheme = int(dval);
-	found = true;
-  } 
+
 
 
   /* -----------------------------------------------------------------------
