@@ -48,3 +48,4 @@ slurm*
 
 # Ignore build directory
 build
+SharedLibraries
