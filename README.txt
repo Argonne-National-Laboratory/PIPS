@@ -20,11 +20,11 @@ PIPS-IPM
 PIPS-S
   Miles Lubin - Argonne National Laboratory
   Cosmin G. Petra - Argonne National Laboratory
-  Geoffrey Oxberry - Lawrance Livermore National Laboratory
+  Geoffrey Oxberry - Lawrence Livermore National Laboratory
 
 PIPS-NLP 
  Naiyuan Chiang - Argonne National Laboratory
- Victor Zavala - Argonne National Laboratory and Univ. of Madison-Wisconsin
+ Victor Zavala - Argonne National Laboratory and Univ. of Wisconsin-Madison
  Cosmin G. Petra - Argonne National Laboratory	 
 
 ###############################################################################################
@@ -56,4 +56,13 @@ make
 
 5. The build system will install executables from three resources: PIPS-IPM, PIPS-S and PIPS-NLP. 
 For the usages of these executables, please follow the README.txt files in the corresponding sub-folder.
+
+###############################################################################################
+# ACKNOWLEDGMENTS
+###############################################################################################
+
+PIPS has been developed under the financial support of: 
+- Department of Energy, Office of Advanced Scientific Computing Research
+- Department of Energy, Early Career Program 
+- Department of Energy, Office of Electricity Delivery and Energy Reliability
 
