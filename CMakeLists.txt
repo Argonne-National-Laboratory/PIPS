@@ -66,7 +66,7 @@ set(COIN_DIR ${SHARED_DIR}/CBC/src)
 
 
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
-	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in ${SHARED_DIR}/CBC/src")
+	message(FATAL_ERROR "Please run \"./wgetCBC.sh\" in ${SHARED_DIR}/CBC/src")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
 if(NOT EXISTS "${MA27_DIR}/lib/libma27.a" AND NOT EXISTS "${MA57_DIR}/lib/libma57.a")
