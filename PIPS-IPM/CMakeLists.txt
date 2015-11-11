@@ -118,6 +118,8 @@ if(HAVE_PARDISO)
 
 endif(HAVE_PARDISO)
 
+if (HAVE_CLANG)
+else()
 add_library(pipsipm-shared SHARED Drivers/pipsipm_C_callbacks.cpp)
 target_link_libraries(pipsipm-shared
   ${WHOLE_ARCHIVE}
@@ -127,3 +129,4 @@ target_link_libraries(pipsipm-shared
   ${MA57_LIBRARY} ${METIS_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS})
+endif (HAVE_CLANG)
