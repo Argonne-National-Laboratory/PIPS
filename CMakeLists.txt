@@ -116,7 +116,11 @@ find_library(CGL_LIB NAMES libCgl.a Cgl HINTS ${CBC_LIBRARY_DIRS})
 
 set(CBC_LIBS ${CBCSolver_LIB} ${CBC_LIB} ${CGL_LIB} ${OSICLP_LIB} ${OSI_LIB})
 
-find_library(AMPL_LIBRARY NAMES amplsolver.a PATHS ${AMPL_DIR})
+find_library(AMPL_LIBRARY NAMES amplsolver.a asl PATHS ${AMPL_DIR} /usr/lib /usr/local/lib /usr/lib64)
+find_path(AMPL_INCLUDE_DIR asl_pfgh.h HINTS ${AMPL_DIR} /usr/include/asl /usr/local/include/asl)
+message(STATUS "AMPL_LIBRARY = ${AMPL_LIBRARY}")
+message(STATUS "AMPL_INCLUDE_DIR = ${AMPL_INCLUDE_DIR}")
+
 find_library(DL_LIBRARY NAMES dl)
 find_library(FL_LIBRARY NAMES fl PATHS /usr/lib /usr/local/lib /usr/local/opt/flex)
 
