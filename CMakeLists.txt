@@ -75,7 +75,6 @@ set(UMFPACK_DIR ${SHARED_DIR}/UMFPACK/src)
 # include CoinUtils
 set(COIN_DIR ${SHARED_DIR}/CBC/src)
 
-
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 	message(FATAL_ERROR "Please run \"./wgetCBC.sh\" in ${COIN_DIR}")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
@@ -109,7 +108,6 @@ foreach(f ${COINUTILS_LIBRARIES})
 endforeach(f)
 #message(STATUS "Coin libraries: ${COIN_LIBS}")
 
-
 find_library(CBCSolver_LIB NAMES libCbcSolver.a CbcSolver HINTS ${CBC_LIBRARY_DIRS})
 find_library(CBC_LIB NAMES libCbc.a Cbc HINTS ${CBC_LIBRARY_DIRS})
 find_library(OSICLP_LIB NAMES libOsiClp.a OsiClp HINTS ${CBC_LIBRARY_DIRS})
@@ -120,7 +118,7 @@ set(CBC_LIBS ${CBCSolver_LIB} ${CBC_LIB} ${CGL_LIB} ${OSICLP_LIB} ${OSI_LIB})
 
 find_library(AMPL_LIBRARY NAMES amplsolver.a PATHS ${AMPL_DIR})
 find_library(DL_LIBRARY NAMES dl)
-find_library(FL_LIBRARY NAMES fl)
+find_library(FL_LIBRARY NAMES fl PATHS /usr/lib /usr/local/lib /usr/local/opt/flex)
 
 find_library(MA27_LIBRARY ma27 PATHS ${MA27_DIR}/lib)
 find_library(MA57_LIBRARY ma57 PATHS ${MA57_DIR}/lib)
