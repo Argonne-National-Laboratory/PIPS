@@ -1,9 +1,9 @@
 #add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
 
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpGen
-  Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers 
-  Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver 
-  Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver 
+  Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
+  Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver
+  Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver
   Core/LinearSolvers/BiCGStabSolver
   Core/LinearSolvers/UmfPackSolver)
 include_directories(Core/StochLinearAlgebra)
@@ -37,105 +37,103 @@ if(HAVE_PETSC)
 ### parallel filter line search IPM with MA57/Pardiso, use NL as the input, seperate Hessian
   add_executable(pipsnlp_parallel Drivers/parallelAmplDriver.cpp)
   target_link_libraries(pipsnlp_parallel
-    genNLparallel StochInfoFromAMPL nlpstoch 
-    pipsnlpFLSStoch 
+    genNLparallel StochInfoFromAMPL nlpstoch
+    pipsnlpFLSStoch
 #    ReducedSpaceSolver blockSCSolver
-	reducedSolverSpecial 
+	reducedSolverSpecial
 #    schurDecompSolver
-    nlpgensparse LU_solvers 
-    nlpbase nlpsparse nlpdense nlpstochla 
+    nlpgensparse LU_solvers
+    nlpbase nlpsparse nlpdense nlpstochla
     ${COIN_LIBS}
     ${MA27_LIBRARY} ${MA57_LIBRARY}
-    ${UMF_ALLINONE_LIBRARY} 
+    ${UMF_ALLINONE_LIBRARY}
     ${METIS_LIBRARY} ${AMPL_LIBRARY} ${MATH_LIBS}
 #    ${PETSC_LIBRARY}
-    ${PARDISO_LIBRARY} 
+    ${PARDISO_LIBRARY}
     )
 
 ### serial filter line search IPM with option to choose MA57/Pardiso. Schur-comp method is available
   add_executable(pipsnlp_serial Drivers/serialAmplDriver.cpp)
-  target_link_libraries(pipsnlp_serial      
-     genNLserial updateFromAMPL  nlpcNlpGenSparse  nlpwithsolver 
-     nlpgensparse  LU_solvers 
-#	schurDecompSolver  
-#     ReducedSpaceSolver 
-	reducedSolverSpecial 
+  target_link_libraries(pipsnlp_serial
+     genNLserial updateFromAMPL  nlpcNlpGenSparse  nlpwithsolver
+     nlpgensparse  LU_solvers
+#	schurDecompSolver
+#     ReducedSpaceSolver
+	reducedSolverSpecial
     petsc_solver_sparse
-    nlpsparse nlpdense 
-    pipsnlpFLS  nlpbase 
-    ${COIN_LIBS} 
-    ${AMPL_LIBRARY} 
-    ${MA57_LIBRARY}  ${MA27_LIBRARY} 
+    nlpsparse nlpdense
+    pipsnlpFLS  nlpbase
+    ${COIN_LIBS}
+    ${AMPL_LIBRARY}
+    ${MA57_LIBRARY}  ${MA27_LIBRARY}
     ${UMF_ALLINONE_LIBRARY}
-#    ${UMFPACK_LIBRARY_PIPS} 
+#    ${UMFPACK_LIBRARY_PIPS}
 #    ${AMD_LIBRARY}
-    ${METIS_LIBRARY} 
-    ${PARDISO_LIBRARY} 
+    ${METIS_LIBRARY}
+    ${PARDISO_LIBRARY}
     ${PETSC_LIBRARY}
-    ${MATH_LIBS} )    
+    ${MATH_LIBS} )
 else(HAVE_PETSC)
 
 ###  parallel filter line search IPM with MA57/Pardiso, use NL as the input, seperate Hessian
   add_executable(pipsnlp_parallel Drivers/parallelAmplDriver.cpp)
   target_link_libraries(pipsnlp_parallel
-    genNLparallel StochInfoFromAMPL 
+    genNLparallel StochInfoFromAMPL
     pipsnlpFLSStoch nlpstoch nlpstochla
-    nlpgensparse nlpbase nlpsparse nlpdense  
+    nlpgensparse nlpbase nlpsparse nlpdense
 #    schurDecompSolver
 #    ReducedSpaceSolver blockSCSolver
-	reducedSolverSpecial     
+	reducedSolverSpecial
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
-    ${PARDISO_LIBRARY} 
-    LU_solvers ${UMF_ALLINONE_LIBRARY} 
+    ${PARDISO_LIBRARY}
+    LU_solvers ${UMF_ALLINONE_LIBRARY}
     ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
     )
 
 ### serial filter line search IPM with option to choose MA57/Pardiso. Schur-comp method is available
   add_executable(pipsnlp_serial Drivers/serialAmplDriver.cpp)
-  target_link_libraries(pipsnlp_serial      
-    genNLserial updateFromAMPL  
-    pipsnlpFLS nlpcNlpGenSparse nlpwithsolver 
+  target_link_libraries(pipsnlp_serial
+    genNLserial updateFromAMPL
+    pipsnlpFLS nlpcNlpGenSparse nlpwithsolver
     nlpgensparse nlpbase nlpsparse nlpdense
-#	 schurDecompSolver 
-#     ReducedSpaceSolver reducedSolverSpecial     
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} 
-    ${PARDISO_LIBRARY}  
-    LU_solvers ${UMF_ALLINONE_LIBRARY}
-    ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS} 
-    )
-
-### parallel filter line search IPM with DCOPF network aggregation preconditioner 
-  add_executable(pipsqpFromDCOPF Drivers/parallelDcopfDriver.cpp) 
-  target_link_libraries(pipsqpFromDCOPF 
-    dcopfcinput nlpstochInputBase  aggregationstoch sInfoQPLP
-    pipsnlpFLSStoch nlpstoch nlpstochla 
-    reducedSolverSpecial
-    nlpgensparse nlpbase nlpsparse nlpdense  
+#	 schurDecompSolver
+#     ReducedSpaceSolver reducedSolverSpecial
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
-    ${PARDISO_LIBRARY} 
-    LU_solvers ${UMF_ALLINONE_LIBRARY} 
+    ${PARDISO_LIBRARY}
+    LU_solvers ${UMF_ALLINONE_LIBRARY}
     ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
     )
-    
+
+### parallel filter line search IPM with DCOPF network aggregation preconditioner
+  add_executable(pipsqpFromDCOPF Drivers/parallelDcopfDriver.cpp)
+  target_link_libraries(pipsqpFromDCOPF
+    dcopfcinput nlpstochInputBase  aggregationstoch sInfoQPLP
+    pipsnlpFLSStoch nlpstoch nlpstochla
+    reducedSolverSpecial
+    nlpgensparse nlpbase nlpsparse nlpdense
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
+    ${PARDISO_LIBRARY}
+    LU_solvers ${UMF_ALLINONE_LIBRARY}
+    ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
+    )
+
 endif(HAVE_PETSC)
 
 endif(HAVE_PARDISO OR HAVE_MA57)
 
-
 add_library(pipsnlp SHARED Drivers/pipsipmNlp_C_callbacks.cpp)
 target_link_libraries(pipsnlp
-  "-Wl,--whole-archive"     
-     updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver 
-	 nlpgensparse  
-	 LU_solvers  
-    nlpsparse nlpdense 
-    pipsnlpFLS  nlpbase 
-    ${COIN_LIBS} 
-    ${MA57_LIBRARY} 
-    ${MA27_LIBRARY}
-#    ${UMF_ALLINONE_LIBRARY}
-    ${METIS_LIBRARY} 
-    ${PARDISO_LIBRARY}
-    "-Wl,--no-whole-archive"
-    ${MATH_LIBS} )
-  
+  ${WHOLE_ARCHIVE}
+  updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
+  nlpgensparse
+  LU_solvers
+  nlpsparse nlpdense
+	 pipsnlpFLS  nlpbase
+	 ${COIN_LIBS}
+	 ${MA57_LIBRARY}
+	 ${MA27_LIBRARY}
+	 #    ${UMF_ALLINONE_LIBRARY}
+	 ${METIS_LIBRARY}
+	 ${PARDISO_LIBRARY}
+	 ${NO_WHOLE_ARCHIVE}
+	 ${MATH_LIBS} )

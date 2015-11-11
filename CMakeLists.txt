@@ -1,5 +1,16 @@
 project(PIPSAll)
 
+# include different "whole archive" linking options depending on compiler
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(WHOLE_ARCHIVE "-Wl,-all_load")
+  set(NO_WHOLE_ARCHIVE "-Wl,-noall_load")
+  message(STATUS "SETTING HAVE_CLANG")
+  set(HAVE_CLANG 1)
+else ()
+  set(WHOLE_ARCHIVE "-Wl,--whole-archive")
+  set(NO_WHOLE_ARCHIVE "-Wl,--no-whole-archive")
+endif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+
 cmake_minimum_required(VERSION 2.8)
     if(COMMAND cmake_policy)
       cmake_policy(SET CMP0003 NEW)
