@@ -75,7 +75,8 @@ public:
 	virtual ~denseFlagVector() { delete [] d; }
 
 	virtual int length() const { return len; }
-
+        virtual bool allocated() const { return (d != 0); }
+  
 	inline T& operator[](int idx) { /*assert(idx < len);*/ return d[idx]; }
 	inline const T& operator[](int idx) const { /*assert(idx < len);*/ return d[idx]; }
 	void copyFrom(const denseFlagVector<T> &v) {
@@ -84,7 +85,7 @@ public:
 	}
 
 	void copyBeginning(const denseFlagVector<T> &v, int n){
-		assert(allocated() && len >= v.length());
+	  assert(allocated() && len >= v.length());
 		copy(v.d,v.d+v.length(),d);
 	}
 
