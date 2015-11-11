@@ -9,7 +9,7 @@
 #include <string.h>
 
 #define w_s (2*M_PI*freq)
-#define epsilon 1E-8
+//#define epsilon 1E-8
 #define PS_MAXLINE 1000
 #define PV_BUS 2
 #define PQ_BUS 1
