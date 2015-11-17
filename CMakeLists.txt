@@ -52,6 +52,10 @@ else(MATH_LIBS)
 	message(STATUS "MATH_LIBS=${MATH_LIBS}")
 endif(MATH_LIBS)
 
+find_library(DL_LIBRARY NAMES dl)
+find_library(FL_LIBRARY NAMES fl
+  PATHS /usr/lib /usr/local/lib /usr/local/opt/flex/lib)
+
 if(NEED_MATH)
 	if(IS_DIRECTORY $ENV{MKLROOT})
 		set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
@@ -60,7 +64,16 @@ if(NEED_MATH)
 		find_package(LAPACK REQUIRED)
 		message(STATUS " LAPACK_LIBRARIE:  ${LAPACK_LIBRARIES}")
 		message(STATUS " CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES:  ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
-		set(MATH_LIBS ${LAPACK_LIBRARIES} -ldl -lfl -lgomp ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
+		if(HAVE_CLANG) # Disable OpenMP support if Clang detected, since OpenMP support starts with Clang 3.7.
+		  if (APPLE) # Use Apple vendor-provided LAPACK & BLAS, since CMake makes detecting gfortran hard
+		    execute_process(COMMAND gfortran --print-file-name libgfortran.dylib OUTPUT_VARIABLE FORTRAN_LIBRARY OUTPUT_STRIP_TRAILING_WHITESPACE)
+		    set(MATH_LIBS "-lveclibfort -ldl ${FL_LIBRARY} ${FORTRAN_LIBRARY}")
+		  else(APPLE)
+		    set(MATH_LIBS "${LAPACK_LIBRARIES} -ldl ${FL_LIBRARY} ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
+		  endif(APPLE)
+		else(HAVE_CLANG) # Clang does not support OpenMP until version 3.7; assume unsupported here
+		    set(MATH_LIBS "${LAPACK_LIBRARIES} -ldl ${FL_LIBRARY} -lgomp ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
+		endif(HAVE_CLANG)
 		message(STATUS " MATH_LIBS:  ${MATH_LIBS}")
 	endif(IS_DIRECTORY $ENV{MKLROOT})
 endif(NEED_MATH)
@@ -120,9 +133,6 @@ find_library(AMPL_LIBRARY NAMES amplsolver.a asl PATHS ${AMPL_DIR} /usr/lib /usr
 find_path(AMPL_INCLUDE_DIR asl_pfgh.h HINTS ${AMPL_DIR} /usr/include/asl /usr/local/include/asl)
 message(STATUS "AMPL_LIBRARY = ${AMPL_LIBRARY}")
 message(STATUS "AMPL_INCLUDE_DIR = ${AMPL_INCLUDE_DIR}")
-
-find_library(DL_LIBRARY NAMES dl)
-find_library(FL_LIBRARY NAMES fl PATHS /usr/lib /usr/local/lib /usr/local/opt/flex)
 
 find_library(MA27_LIBRARY ma27 PATHS ${MA27_DIR}/lib)
 find_library(MA57_LIBRARY ma57 PATHS ${MA57_DIR}/lib)
