@@ -245,8 +245,8 @@ public:
 	sparseBAVector()  {}
 
 private:
-sparseBAVector(const sparseBAVector&) {}
-  sparseBAVector& operator=(const sparseBAVector&) {}
+  sparseBAVector(const sparseBAVector&);
+  sparseBAVector& operator=(const sparseBAVector&);
 public:
 	inline double operator[](BAIndex i) const {
 		if (i.scen == -1) {

@@ -27,7 +27,7 @@ public:
 	inline double& operator[](int idx) { /*assert(d); assert(idx < len);*/ return d[idx]; }
 	inline const double& operator[](int idx) const { /*assert(d); assert(idx < len);*/ return d[idx]; }
 private:
-  denseVector& operator=(const denseVector&) {}
+  denseVector& operator=(const denseVector&);
 public:
 	void divideBy(double pivot);
 	void multiplyBy(double x);
