@@ -208,6 +208,7 @@ public:
     dims=0; nScen=0; localScen.clear();
     allocate(*v.dims,*v.ctx,v.vecType);
     copyFrom(v);
+    return *this;
   }
 
 	double dotWith(const denseBAVector &v) {
