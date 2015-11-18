@@ -15,6 +15,6 @@ rm Cbc-2.9.5.tgz
 
 cd src
 CWP_TEMP=$(pwd)
-./configure --enable-static --prefix=${CWP_TEMP}
+./configure --enable-static --disable-dependency-tracking --prefix=${CWP_TEMP}
 
 make install
