@@ -1,8 +1,8 @@
 PIPS - suite of parallel optimization solvers mainly for stochastic optimization problems
 consisting of the following solvers:
- i.   PIPS-IPM - parallel distributed memory interior-point for stochastic LPs and convex QPs
- ii.  PIPS-S   - distributed memory implementation of the revised simplex method
- iii. PIPS-NLP - parallel interior-point equipped with filter line-search for structured NLPs
+ i.   PIPS-IPM - parallel MPI+OpenMP interior-point for stochastic LPs and convex QPs
+ ii.  PIPS-S   - parallel MPI implementation of the revised simplex method
+ iii. PIPS-NLP - parallel MPI interior-point for structured NLPs
 
 ###############################################################################################
 # LICENSE
@@ -13,16 +13,22 @@ See LICENSE file.
 # CONTRIBUTIONS
 ###############################################################################################
 PIPS-IPM
+Developed by:
   Cosmin G. Petra - Argonne National Laboratory
+Contributions from:
   Miles Lubin - Argonne National Laboratory
   Naiyuan Chiang - Argonne National Laboratory
 
 PIPS-S
+Developed by: 
   Miles Lubin - Argonne National Laboratory
   Cosmin G. Petra - Argonne National Laboratory
+Contributions from:
   Geoffrey Oxberry - Lawrence Livermore National Laboratory
+  Julian Hall - U. of Edinburgh
 
 PIPS-NLP 
+Developed by:
  Naiyuan Chiang - Argonne National Laboratory
  Victor Zavala - Argonne National Laboratory and Univ. of Wisconsin-Madison
  Cosmin G. Petra - Argonne National Laboratory	 
@@ -65,4 +71,3 @@ PIPS has been developed under the financial support of:
 - Department of Energy, Office of Advanced Scientific Computing Research
 - Department of Energy, Early Career Program 
 - Department of Energy, Office of Electricity Delivery and Energy Reliability
-
