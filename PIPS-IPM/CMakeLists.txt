@@ -118,13 +118,15 @@ if(HAVE_PARDISO)
 
 endif(HAVE_PARDISO)
 
-
+if (HAVE_CLANG)
+else()
 add_library(pipsipm-shared SHARED Drivers/pipsipm_C_callbacks.cpp)
 target_link_libraries(pipsipm-shared
-  "-Wl,--whole-archive"
+  ${WHOLE_ARCHIVE}
   stochInput ${COIN_LIBS}
   ooqpstoch ooqpstochla ooqpmehrotrastoch
   ooqpgensparse ooqpbase ooqpsparse ooqpdense
   ${MA57_LIBRARY} ${METIS_LIBRARY}
-  "-Wl,--no-whole-archive"
+  ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS})
+endif (HAVE_CLANG)

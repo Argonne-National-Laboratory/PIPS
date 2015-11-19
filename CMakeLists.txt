@@ -1,5 +1,16 @@
 project(PIPSAll)
 
+# include different "whole archive" linking options depending on compiler
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(WHOLE_ARCHIVE "-Wl,-all_load")
+  set(NO_WHOLE_ARCHIVE "-Wl,-noall_load")
+  message(STATUS "SETTING HAVE_CLANG")
+  set(HAVE_CLANG 1)
+else ()
+  set(WHOLE_ARCHIVE "-Wl,--whole-archive")
+  set(NO_WHOLE_ARCHIVE "-Wl,--no-whole-archive")
+endif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+
 cmake_minimum_required(VERSION 2.8)
     if(COMMAND cmake_policy)
       cmake_policy(SET CMP0003 NEW)
@@ -64,9 +75,8 @@ set(UMFPACK_DIR ${SHARED_DIR}/UMFPACK/src)
 # include CoinUtils
 set(COIN_DIR ${SHARED_DIR}/CBC/src)
 
-
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
-	message(FATAL_ERROR "Please run \"./configure --enable-static; make install\" in ThirdPartyLib/CBC/src")
+	message(FATAL_ERROR "Please run \"./wgetCBC.sh\" in ${COIN_DIR}")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
 if(NOT EXISTS "${MA27_DIR}/lib/libma27.a" AND NOT EXISTS "${MA57_DIR}/lib/libma57.a")
@@ -98,7 +108,6 @@ foreach(f ${COINUTILS_LIBRARIES})
 endforeach(f)
 #message(STATUS "Coin libraries: ${COIN_LIBS}")
 
-
 find_library(CBCSolver_LIB NAMES libCbcSolver.a CbcSolver HINTS ${CBC_LIBRARY_DIRS})
 find_library(CBC_LIB NAMES libCbc.a Cbc HINTS ${CBC_LIBRARY_DIRS})
 find_library(OSICLP_LIB NAMES libOsiClp.a OsiClp HINTS ${CBC_LIBRARY_DIRS})
@@ -107,9 +116,13 @@ find_library(CGL_LIB NAMES libCgl.a Cgl HINTS ${CBC_LIBRARY_DIRS})
 
 set(CBC_LIBS ${CBCSolver_LIB} ${CBC_LIB} ${CGL_LIB} ${OSICLP_LIB} ${OSI_LIB})
 
-find_library(AMPL_LIBRARY NAMES amplsolver.a PATHS ${AMPL_DIR})
+find_library(AMPL_LIBRARY NAMES amplsolver.a asl PATHS ${AMPL_DIR} /usr/lib /usr/local/lib /usr/lib64)
+find_path(AMPL_INCLUDE_DIR asl_pfgh.h HINTS ${AMPL_DIR} /usr/include/asl /usr/local/include/asl)
+message(STATUS "AMPL_LIBRARY = ${AMPL_LIBRARY}")
+message(STATUS "AMPL_INCLUDE_DIR = ${AMPL_INCLUDE_DIR}")
+
 find_library(DL_LIBRARY NAMES dl)
-find_library(FL_LIBRARY NAMES fl)
+find_library(FL_LIBRARY NAMES fl PATHS /usr/lib /usr/local/lib /usr/local/opt/flex)
 
 find_library(MA27_LIBRARY ma27 PATHS ${MA27_DIR}/lib)
 find_library(MA57_LIBRARY ma57 PATHS ${MA57_DIR}/lib)

@@ -1,9 +1,8 @@
 ### install MA27
 
-rm *.tar *.tar.gz
-mv ma* src
-cd src
-CWP_TEMP=$(pwd)
+tar -x --strip-components 1 -v -f *.tar
+rm -f *.tar *.tar.gz
+CWP_TEMP=$(pwd)/src
 ./configure FFLAGS=-fPIC --prefix=${CWP_TEMP}
 make install
 
