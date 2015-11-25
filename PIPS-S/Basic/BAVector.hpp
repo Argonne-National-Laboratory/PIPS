@@ -204,10 +204,14 @@ public:
 	
   denseBAVector& operator=(const denseBAVector& v) {
     //these are required by "allocate" to work 
-    //also the dealocation of the local vectors is done in allocate
-    dims=0; nScen=0; localScen.clear();
-    allocate(*v.dims,*v.ctx,v.vecType);
-    copyFrom(v);
+    //also the deallocation of the local vectors is done in allocate
+
+    if (this != &v) {     //protect against invalid self-assignment
+      dims=0; nScen=0; localScen.clear();
+      allocate(*v.dims,*v.ctx,v.vecType);
+      copyFrom(v);
+    }
+
     return *this;
   }
 
