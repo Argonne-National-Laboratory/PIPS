@@ -63,11 +63,13 @@ if(NEED_MATH)
 		enable_language( Fortran )
 		find_package(LAPACK REQUIRED)
 		message(STATUS " LAPACK_LIBRARIE:  ${LAPACK_LIBRARIES}")
-		message(STATUS " CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES:  ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
 		if(HAVE_CLANG) # Disable OpenMP support if Clang detected, since OpenMP support starts with Clang 3.7.
 		  if (APPLE) # Use Apple vendor-provided LAPACK & BLAS, since CMake makes detecting gfortran hard
-		    execute_process(COMMAND gfortran --print-file-name libgfortran.dylib OUTPUT_VARIABLE FORTRAN_LIBRARY OUTPUT_STRIP_TRAILING_WHITESPACE)
-		    set(MATH_LIBS "-lveclibfort -ldl ${FL_LIBRARY} ${FORTRAN_LIBRARY}")
+		    # Use paths I know from homebrew for searching for libgfortran
+		    file(GLOB HOMEBREW_GCC_LIB_DIRS "/usr/local/lib/gcc/*")
+		    find_path(GCC_DIR NAMES libgfortran.a libgfortran.dylib PATHS /usr/lib /usr/local/lib ${HOMEBREW_GCC_LIB_DIRS})
+		    find_path(MPIFORT_DIR NAMES libmpifort.a libmpifort.dylib PATHS /usr/lib /usr/local/lib)
+		    set(MATH_LIBS "-framework Accelerate -ldl ${FL_LIBRARY} -L${MPIFORT_DIR} -L${GCC_DIR} -l${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
 		  else(APPLE)
 		    set(MATH_LIBS "${LAPACK_LIBRARIES} -ldl ${FL_LIBRARY} ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
 		  endif(APPLE)
@@ -350,7 +352,7 @@ endif(HAVE_UMFPACK)
 ###############################################################################
 
 
-#set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_BUILD_TYPE DEBUG)
 #set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
 #set(CMAKE_BUILD_TYPE RELEASE)
 #message("FLAGS: ${CMAKE_CXX_FLAGS_RELEASE}")
