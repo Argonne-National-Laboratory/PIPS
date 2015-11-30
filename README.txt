@@ -71,3 +71,5 @@ PIPS has been developed under the financial support of:
 - Department of Energy, Office of Advanced Scientific Computing Research
 - Department of Energy, Early Career Program 
 - Department of Energy, Office of Electricity Delivery and Energy Reliability
+
+PIPS-IPM and PIPS-NLP are derivative works of OOQP (http://pages.cs.wisc.edu/~swright/ooqp/) by E. Michael Gertz and Stephen. Wright
