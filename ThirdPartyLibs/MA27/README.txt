@@ -8,6 +8,6 @@
 
 # Double-precision source code for MA27 is required.
 
-#After you have download MA27, please decompress it in the current
-# folder. Then use the script installMa27.sh to install MA27
+# Please copy the .tar.gz file in the current folder. Then run 
+# the script installMa27.sh to install MA27. 
 
