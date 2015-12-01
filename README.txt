@@ -1,17 +1,16 @@
-PIPS - suite of parallel optimization solvers mainly for stochastic optimization problems
-consisting of the following solvers:
+PIPS - suite of parallel optimization solvers mainly for stochastic optimization problems consisting of the following solvers:
  i.   PIPS-IPM - parallel MPI+OpenMP interior-point for stochastic LPs and convex QPs
  ii.  PIPS-S   - parallel MPI implementation of the revised simplex method
  iii. PIPS-NLP - parallel MPI interior-point for structured NLPs
 
-####################################################################################
+###################################################################################
 # LICENSE
-####################################################################################
+###################################################################################
 See LICENSE file.
 
-#####################################################################################
+####################################################################################
 # CONTRIBUTIONS
-#####################################################################################
+####################################################################################
 PIPS-IPM
 Developed by:
   Cosmin G. Petra - Argonne National Laboratory
@@ -33,9 +32,9 @@ Developed by:
  Victor Zavala - Argonne National Laboratory and Univ. of Wisconsin-Madison
  Cosmin G. Petra - Argonne National Laboratory	 
 
-#####################################################################################
+####################################################################################
 # INSTALATION Instructions
-#####################################################################################
+####################################################################################
 
 1. Install package wget, cmake, mpich2, and boost.
 You can get them via the following command (xxx stands for the name of the package):
@@ -60,8 +59,7 @@ cd build_pips
 cmake ..
 make
 
-5. The build system will install executables from three resources: PIPS-IPM, PIPS-S and PIPS-NLP. 
-For the usages of these executables, please follow the README.txt files in the corresponding sub-folder.
+5. The build system will install executables from three sources: PIPS-IPM, PIPS-S and PIPS-NLP. 
 
 #####################################################################################
 # ACKNOWLEDGMENTS
@@ -73,3 +71,4 @@ PIPS has been developed under the financial support of:
 - Department of Energy, Office of Electricity Delivery and Energy Reliability
 
 PIPS-IPM and PIPS-NLP are derivative works of OOQP (http://pages.cs.wisc.edu/~swright/ooqp/) by E. Michael Gertz and Stephen. Wright
+
