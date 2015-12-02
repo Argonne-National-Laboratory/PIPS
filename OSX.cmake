@@ -6,7 +6,7 @@ SET(CMAKE_Fortran_COMPILER mpif90)
 set(OpenMP_CXX_FLAGS "-fopenmp")
 
 # Add Apple LAPACK/BLAS framework libraries
-set(MATH_LIBS "-framework Accelerate")
+#set(MATH_LIBS "-framework Accelerate")
 
 # use, i.e. don't skip the full RPATH for the build tree
 SET(CMAKE_SKIP_BUILD_RPATH FALSE)
