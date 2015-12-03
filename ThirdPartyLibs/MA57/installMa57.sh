@@ -1,10 +1,11 @@
 ### install MA57
 
-rm *.tar *.tar.gz
-mv ma* src
+#assume ma57 in tar.gz file
+fn=`ls ma57*.tar.gz`
+name=`basename ${fn} .tar.gz`
+tar -zxvf $fn
+ln -s ./${name} ./src
+
 cd src
-CWP_TEMP=$(pwd)
-./configure FFLAGS=-fPIC --with-metis=../../METIS/src/libmetis.a --prefix=${CWP_TEMP}
+./configure FFLAGS=-fPIC --with-metis=../../METIS/src/libmetis.a --prefix=`pwd`
 make install
-
-

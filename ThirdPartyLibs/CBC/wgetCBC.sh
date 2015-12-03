@@ -1,20 +1,23 @@
+fn=Cbc-2.9.5.tgz
+
 echo " "
 echo "##### Downloading the third party packages for PIPS-NLP:"
 echo " "
 
 echo "### Downloading Cbc:"
-if wget http://www.coin-or.org/download/source/Cbc/Cbc-2.9.5.tgz
+if wget http://www.coin-or.org/download/source/Cbc/${fn}
 then
-  echo "### Cbc: Download Successful.\n"
+  echo "### ${fn}: Download Successful.\n"
 else
-  echo "### Cbc: Download Failed.\n"
+  echo "### ${fn}: Download Failed.\n"
+  exit 1
 fi
-tar -xzf Cbc-2.9.5.tgz
-mv Cbc-2.9.5 src
-rm Cbc-2.9.5.tgz
+
+name=`basename ${fn} .tgz`
+tar -zxf $fn
+ln -s ./${name} ./src
 
 cd src
-CWP_TEMP=$(pwd)
-./configure --enable-static --prefix=${CWP_TEMP}
-
+./configure --enable-static --prefix=`pwd`
 make install
+

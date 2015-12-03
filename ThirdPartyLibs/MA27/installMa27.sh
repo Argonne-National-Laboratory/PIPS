@@ -1,13 +1,13 @@
 ### install MA27
 
 #we assume ma27 is in a tar.gz file
-tar xzvf *.tar.gz
+fn=`ls ma27*.tar.gz`
+name=`basename ${fn} .tar.gz`
+tar -zxvf $fn
+ln -s ./${name} ./src
 
-#copy everything from the newly created directory in the current directory
-mv ma27-1.0.0/* .
-rm -rf ma27-1.0.0
 #configure and build ma27
-CWP_TEMP=$(pwd)/src
-./configure FFLAGS=-fPIC --prefix=${CWP_TEMP}
+cd src
+./configure FFLAGS=-fPIC --prefix=`pwd`
 make install
 
