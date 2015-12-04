@@ -18,5 +18,6 @@ ln -s ./${name} ./src
 
 cd src
 #need to install openblas-dev pakcage
-LD_LIBRARY_PATH=/usr/local/lib/x86_64-linux-gnu
+#use LD_LIBRARY_PATH is not suggested
+#LD_LIBRARY_PATH=/usr/local/lib/x86_64-linux-gnu
 make
