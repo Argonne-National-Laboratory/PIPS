@@ -51,12 +51,13 @@ endif(HAVE_MA27)
   
 endif(HAVE_MA57 AND HAVE_METIS)
 
-if (HAVE_MA86 AND HAVE_METIS)
-  add_executable(qpgen-sparse-ma86-mehrotra.exe Core/QpGen/QpGenSparseMa86MehrotraDriver.C)
-  target_link_libraries(qpgen-sparse-ma86-mehrotra.exe
-    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra ooqpdense
-    ${MA86_LIB} ${METIS_LIBRARY} ${MATH_LIBS})
-endif(HAVE_MA86 AND HAVE_METIS)
+#missing linkage mc68 using metis.
+#if (HAVE_MA86 AND HAVE_METIS)
+#  add_executable(qpgen-sparse-ma86-mehrotra.exe Core/QpGen/QpGenSparseMa86MehrotraDriver.C)
+#  target_link_libraries(qpgen-sparse-ma86-mehrotra.exe
+#    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra ooqpdense
+#    ${MA86_LIB} ${METIS_LIBRARY} ${MATH_LIBS})
+#endif(HAVE_MA86 AND HAVE_METIS)
 
 if(HAVE_PARDISO)
   add_executable(pipsipmFromRaw_schur Drivers/pipsipmFromRaw_schur.cpp)
