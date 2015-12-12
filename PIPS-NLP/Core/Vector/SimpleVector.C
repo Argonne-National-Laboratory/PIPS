@@ -216,7 +216,7 @@ void SimpleVector::componentDiv ( OoqpVector& vec )
   for( ; pv < lv; pv++, y++ ) *pv /= *y;
 }
 
-void SimpleVector::writeToStream(ostream& out) const
+void SimpleVector::writeToStream(std::ostream& out) const
 {
   //this->writefToStream( out, "%{value}" );
   for(int i = 0; i < (10<n)?10:n; i++ ) {
@@ -224,14 +224,14 @@ void SimpleVector::writeToStream(ostream& out) const
   }
 }
 
-void SimpleVector::writefToStream( ostream& out,
+void SimpleVector::writefToStream( std::ostream& out,
 				       const char format[] ) const
 {
   SimpleVectorHandle empty( new SimpleVector(0) );
   this->writefSomeToStream( out, format, *empty );
 }
 
-void SimpleVector::writefSomeToStream( ostream& out,
+void SimpleVector::writefSomeToStream( std::ostream& out,
 					   const char format[],
 					   OoqpVector& select ) const
 {
@@ -264,7 +264,7 @@ void SimpleVector::writefSomeToStream( ostream& out,
 	}
 	j++;
       }
-      out << endl;
+      out << std::endl;
     }
   }
 }
@@ -575,7 +575,7 @@ int SimpleVector::somePositive( OoqpVector& select )
   int i;
   for( i = 0; i < n; i++ ) {
     if( 0.0 != map[i] && v[i] <= 0 ) {
-      cout << "Element " << i << " is nonpositive: " << v[i] << endl;
+      std::cout << "Element " << i << " is nonpositive: " << v[i] << std::endl;
       return 0;
     }
   }

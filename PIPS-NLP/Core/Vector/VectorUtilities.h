@@ -7,11 +7,11 @@
 
 #include <iostream>
 #include <fstream>
-using namespace std;
+//using namespace std;
 
 void set_to_zero( double v[], int n, int stride );
 void writef_to_stream( double v[], int n, int stride,
-		       ostream& out, const char format[] );
+		       std::ostream& out, const char format[] );
 void set_to_constant( double v[], int n, int stride, double c );
 void add_constant( double v[], int n, int stride, double c );
 double stepbound( double v[], int n, int incv,

@@ -7,10 +7,10 @@
 #ifndef STOCHVECTOR_H
 #define STOCHVECTOR_H
 
+#include "mpi.h"
 #include "StochVectorHandle.h"
 #include "OoqpVector.h"
 #include "SimpleVector.h"
-#include "mpi.h"
 
 #include <vector>
 
@@ -87,8 +87,8 @@ public:
   virtual void componentMult( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
   virtual void scalarMult( double num);
-  virtual void writeToStream(ostream& out) const;
-  virtual void writefToStream( ostream& out,
+  virtual void writeToStream(std::ostream& out) const;
+  virtual void writefToStream( std::ostream& out,
 			       const char format[] ) const;
 
   virtual void scale( double alpha );
@@ -116,7 +116,7 @@ public:
   virtual void selectNonZeros( OoqpVector& select );
   virtual long long numberOfNonzeros();
   virtual void addSomeConstants( double c, OoqpVector& select );
-  virtual void writefSomeToStream( ostream& out,
+  virtual void writefSomeToStream( std::ostream& out,
 				   const char format[],
 				   OoqpVector& select ) const;
   virtual void axdzpy( double alpha, OoqpVector& x,
@@ -237,8 +237,8 @@ public:
   virtual void componentMult( OoqpVector& v ){};
   virtual void componentDiv ( OoqpVector& v ){};
   virtual void scalarMult( double num){};
-  virtual void writeToStream(ostream& out) const{};
-  virtual void writefToStream( ostream& out,
+  virtual void writeToStream(std::ostream& out) const{};
+  virtual void writefToStream( std::ostream& out,
 			       const char format[] ) const{};
 
   virtual void scale( double alpha ){};
@@ -266,7 +266,7 @@ public:
   virtual void selectNonZeros( OoqpVector& select ){};
   virtual long long numberOfNonzeros(){return 0;}
   virtual void addSomeConstants( double c, OoqpVector& select ){};
-  virtual void writefSomeToStream( ostream& out,
+  virtual void writefSomeToStream( std::ostream& out,
 				   const char format[],
 				   OoqpVector& select ) const{};
   virtual void axdzpy( double alpha, OoqpVector& x,

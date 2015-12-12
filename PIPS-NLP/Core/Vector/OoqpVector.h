@@ -11,10 +11,10 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
-using namespace std;
 #include "IotrRefCount.h"
 #include "OoqpVectorHandle.h"
 
+//using namespace std;
 
 /** Norm types */
 enum PIPS_NormType {
@@ -72,7 +72,7 @@ public:
   /** Multiply the components of this OoqpVector by num. */
   virtual void scalarMult( double num) = 0;
 
-  virtual void writeToStream(ostream& out) const = 0;
+  virtual void writeToStream(std::ostream& out) const = 0;
   /** Write the components of this OoqpVector to a stream, subject to 
    *  a format.
    *  @param out a C++-style output stream
@@ -81,7 +81,7 @@ public:
    *         and the string %{value} will be substituted with the element's
    *         value.
    */
-  virtual void writefToStream( ostream& out,
+  virtual void writefToStream(std::ostream& out,
 			       const char format[] ) const = 0;
 
   /** Scale each element of this OoqpVector by the constant alpha */
@@ -151,7 +151,7 @@ public:
    *         written only if the corresponding element of selec is non-zero.
    */
 
-  virtual void writefSomeToStream( ostream& out,
+  virtual void writefSomeToStream( std::ostream& out,
 				   const char format[],
 				   OoqpVector& select ) const = 0;
   /** this += alpha * x / z

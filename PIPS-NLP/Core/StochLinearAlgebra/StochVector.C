@@ -269,7 +269,7 @@ double StochVector::infnorm()
   infnrm = 0.0;
 
   for(size_t it=0; it<children.size(); it++)
-    infnrm = max(infnrm, children[it]->infnorm());
+    infnrm = std::max(infnrm, children[it]->infnorm());
 
   if(iAmDistrib) {
     double infnrmG=0.0;
@@ -277,7 +277,7 @@ double StochVector::infnorm()
     infnrm = infnrmG;
   }
 
-  infnrm = max(vec->infnorm(), infnrm);
+  infnrm = std::max(vec->infnorm(), infnrm);
 
   return infnrm; 
 }
@@ -444,16 +444,16 @@ void StochVector::scalarMult( double num )
     children[it]->scalarMult(num);
 }
 
-void StochVector::writeToStream( ostream& out ) const
+void StochVector::writeToStream( std::ostream& out ) const
 {
-  out << "---" << endl;
+  out << "---" << std::endl;
   vec->writeToStream(out);
-  out << "~~~" << endl;
+  out << "~~~" << std::endl;
   //for(size_t it=0; it<children.size(); it++) 
   //  children[it]->writeToStream(out);
 }
 
-void StochVector::writefToStream( ostream& out,
+void StochVector::writefToStream( std::ostream& out,
 				  const char format[] ) const
 {
   vec->writefToStream(out, format);
@@ -724,7 +724,7 @@ void StochVector::addSomeConstants( double c, OoqpVector& select_ )
     children[it]->addSomeConstants(c, *select.children[it]);
 }
 
-void StochVector::writefSomeToStream( ostream& out,
+void StochVector::writefSomeToStream( std::ostream& out,
 			 const char format[],
 			 OoqpVector& select_ ) const
 {

@@ -254,15 +254,15 @@ MPI_Init(&argc, &argv);
   NlpInfoAMPL *updateNlpAmpl = new NlpInfoAMPL(nx,my,mz,nnzQ,nnzA,nnzC,nxL, nxU, nsL, nsU);
 
   if(0==gSymLinearSolver)
-	cout << "\n  Linear system solver ------	 Ma27.\n\n";
+	std::cout << "\n  Linear system solver ------	 Ma27.\n\n";
   else if(1==gSymLinearSolver)
-	cout << "\n  Linear system solver ------	 Ma57.\n\n";
+	std::cout << "\n  Linear system solver ------	 Ma57.\n\n";
   else if (2==gSymLinearSolver)
-	cout << "\n  Linear system solver ------	 Pardiso.\n\n";
+	std::cout << "\n  Linear system solver ------	 Pardiso.\n\n";
   else if (3==gSymLinearSolver)
-	cout << "\n  Linear system solver ------	 UMFPACK.\n\n";
+	std::cout << "\n  Linear system solver ------	 UMFPACK.\n\n";
   else{
-	cout << "\n  Linear system solver ------	 unknown linear solver! \n\n";  
+	std::cout << "\n  Linear system solver ------	 unknown linear solver! \n\n";  
 	assert("No linear solver!" && 0);
   }
 
@@ -310,7 +310,7 @@ MPI_Init(&argc, &argv);
 
 
   if(result !=0 ){
-	cout << "Could not solve the problem.\n";
+	std::cout << "Could not solve the problem.\n";
   } else {
     if( NlpPrintLevel >= 2) {
 
@@ -319,11 +319,11 @@ MPI_Init(&argc, &argv);
 	  if (objtype[0] == kMaximize)
 	    objectiveValue = -objectiveValue;
 
-      cout.precision(4);
-	  cout << "Optimal Objective: " << objectiveValue << endl;
+      std::cout.precision(4);
+	  std::cout << "Optimal Objective: " << objectiveValue << std::endl;
 
-	  cout << "Solution: \n"; 
-      vars->x->writefToStream( cout, "x[%{index}] = %{value}" );
+	  std::cout << "Solution: \n"; 
+      vars->x->writefToStream( std::cout, "x[%{index}] = %{value}" );
     } 
 	
   }
@@ -331,13 +331,13 @@ MPI_Init(&argc, &argv);
 
 #ifdef TIMING
 		tTot = MPI_Wtime()-tTot;
-		cout << "\n" << endl;
-		cout << "Problem Generation Time " << tGenTime << endl;
-		if(gUseReducedSpace!=0) cout << "Total Problem Generation Time (With Saddle-Point Solver))" << tGenTime + probGenTime<< endl;
-		cout << "Total Solve Time " << tSolTime << endl;
-		cout << "Total Running Time " << tTot << endl;
-		cout << "Total AMPL Time " << timeFromAMPL << endl;
-		cout << "\n" << endl;
+		std::cout << "\n" << std::endl;
+		std::cout << "Problem Generation Time " << tGenTime << std::endl;
+		if(gUseReducedSpace!=0) std::cout << "Total Problem Generation Time (With Saddle-Point Solver))" << tGenTime + probGenTime<< std::endl;
+		std::cout << "Total Solve Time " << tSolTime << std::endl;
+		std::cout << "Total Running Time " << tTot << std::endl;
+		std::cout << "Total AMPL Time " << timeFromAMPL << std::endl;
+		std::cout << "\n" << std::endl;
 #endif
 
 

@@ -2,9 +2,6 @@
  * Authors: Nai-Yuan Chiang                      		*
  * (C) 2015 Argonne National Laboratory			*/
 
-#include "asl_pfgh.h"
-#include "getstub.h"
-
 #include <cstdio>
 #include <cassert>
 #include <climits>

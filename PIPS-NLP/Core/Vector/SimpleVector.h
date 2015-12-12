@@ -59,8 +59,8 @@ public:
   virtual void scalarMult( double num);
   virtual void printSolutionToStdErr( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
-  virtual void writeToStream(ostream& out) const;
-  virtual void writefToStream( ostream& out,
+  virtual void writeToStream(std::ostream& out) const;
+  virtual void writefToStream( std::ostream& out,
 			       const char format[] ) const;
 
   virtual void scale( double alpha );
@@ -89,7 +89,7 @@ public:
   virtual int matchesNonZeroPattern( OoqpVector& select );
   virtual void selectNonZeros( OoqpVector& select );
   virtual void addSomeConstants( double c, OoqpVector& select );
-  virtual void writefSomeToStream( ostream& out,
+  virtual void writefSomeToStream( std::ostream& out,
 				   const char format[],
 				   OoqpVector& select ) const;
   virtual void axdzpy( double alpha, OoqpVector& x,

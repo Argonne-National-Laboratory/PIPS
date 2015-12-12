@@ -6,6 +6,7 @@
 #ifndef STOCHNLPINFO
 #define STOCHNLPINFO
 
+#include "mpi.h"
 #include "NlpInfo.h"
 
 #include "OoqpVectorHandle.h"
@@ -13,7 +14,6 @@
 #include "DoubleMatrixHandle.h"
 
 #include <vector>
-#include "mpi.h"
 
 
 class sData;

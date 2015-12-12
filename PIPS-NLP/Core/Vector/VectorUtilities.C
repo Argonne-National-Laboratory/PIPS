@@ -13,7 +13,7 @@ void set_to_zero( double v[], int n, int stride )
 }
 
 void writef_to_stream( double v[], int n, int stride,
-		       ostream& out, const char format[] )
+		       std::ostream& out, const char format[] )
 {
   int i;
   int lenv = n * stride;
@@ -39,7 +39,7 @@ void writef_to_stream( double v[], int n, int stride,
       }
       j++;
     }
-    out << endl;
+    out << std::endl;
   }
 }
 

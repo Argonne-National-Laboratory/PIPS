@@ -4,6 +4,7 @@
  */
 
 #include "sNlpInfoFromNL.h"
+#include "getAmplFunctionNew.h"
 #include "NlpGenVars.h"
 #include "OoqpVector.h"
 #include <cmath>
@@ -24,7 +25,6 @@
 #include "amplGenStochInput_AddSlack.hpp"
 
 
-#include "getAmplFunctionNew.h"
 
 #include <map>
 #include <vector>

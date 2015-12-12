@@ -174,7 +174,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	    dualStep;
 	  break;
 	default:
-	  cout << "Can't get here: firstOrSecond=" << firstOrSecond << endl;
+	  std::cout << "Can't get here: firstOrSecond=" << firstOrSecond << std::endl;
 	  assert( 0 && "Can't get here" );
           break;
 	}
@@ -297,7 +297,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   if(mu<1.0e5*rnorm/dnorm) {
     //if(!onSafeSolver) {
     gLackOfAccuracy=1;
-    //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << endl;
+    //cout << "Lack of accuracy detected ---->" << mu << ":" << rnorm/dnorm << std::endl;
   } else {
       //if(mu>1e7*rnorm/dnorm && mu>1.0e4)
       //gLackOfAccuracy=-1;
