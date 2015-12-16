@@ -10,7 +10,6 @@
 #include "sInfo.h"
 #include "OoqpVectorHandle.h"
 #include "OoqpVector.h"
-//#include "mpi.h"
 
 #include "AmplData_NL.hpp"
 

@@ -20,7 +20,7 @@ ScipLagrangeSolver::ScipLagrangeSolver(stochasticInput &input, int scenarioNumbe
 	SCIP_CALL_EXC( SCIPincludeDefaultPlugins(scip) );
 
 	// comment to enable output
-	SCIP_CALL_EXC( SCIPsetMessagehdlr(NULL) );
+	SCIP_CALL_EXC( SCIPsetMessagehdlr(NULL,NULL) );
 	
 	SCIP_CALL_EXC( SCIPcreateProb(scip, "lagrange", NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 

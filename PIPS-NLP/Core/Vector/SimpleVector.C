@@ -807,7 +807,7 @@ void SimpleVector::correctLargeVal( const double testVal, const double corVal, c
   int i;
   if(absFlag == 1){
 	for( i = 0; i < n; i++ ) {
-	 if(abs(this->v[i])>testVal) 
+	 if(std::abs(this->v[i])>testVal) 
 	   this->v[i] = corVal;
 	}
   }else{ 

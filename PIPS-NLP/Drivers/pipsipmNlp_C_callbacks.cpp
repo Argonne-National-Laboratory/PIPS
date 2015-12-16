@@ -295,11 +295,11 @@ int PipsNlpSolve( PipsNlpProblem retval, double* obj_val, double* sol_x, UserDat
 
 
   if(pipsnlp->pipsOpt->SymLinearSolver==0)
-	cout << "\n  Linear system solver ------	 Ma27.\n\n";
+	std::cout << "\n  Linear system solver ------	 Ma27.\n\n";
   else if(pipsnlp->pipsOpt->SymLinearSolver==1)
-	cout << "\n  Linear system solver ------	 Ma57.\n\n";
+	std::cout << "\n  Linear system solver ------	 Ma57.\n\n";
   else 
-	cout << "\n  Give me a linear system solver! Only support Ma27 or Ma57 \n\n";
+	std::cout << "\n  Give me a linear system solver! Only support Ma27 or Ma57 \n\n";
 
   nlp = new NlpGenSparseWithSolver( pipsnlp->nx, pipsnlp->my, pipsnlp->mz, pipsnlp->nnzQ, pipsnlp->nnzA, pipsnlp->nnzC);
   prob = (NlpGenData * ) nlp->copyDataFromSparseTriple(
@@ -328,12 +328,12 @@ int PipsNlpSolve( PipsNlpProblem retval, double* obj_val, double* sol_x, UserDat
   result = s->solve(prob,vars, resid);
 
   if(result !=0 ){
-	cout << "Could not solve the problem.\n";
+	std::cout << "Could not solve the problem.\n";
   } else {
 
       obj_val[0] = prob->objectiveValue(vars);
 	 
-	  cout << "Solution: \n"; 
+	  std::cout << "Solution: \n"; 
       vars->x->copyIntoArray(sol_x);	
   }
 

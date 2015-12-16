@@ -3,8 +3,8 @@
  * (C) 2015 Argonne National Laboratory
  */
 
+#include "mpi.h"
 #include "sNlpInfoFromNL.h"
-#include "getAmplFunctionNew.h"
 #include "NlpGenVars.h"
 #include "OoqpVector.h"
 #include <cmath>
@@ -23,6 +23,7 @@
 #include "AmplData_NL.hpp"
 #include "amplGenStochInput.hpp"
 #include "amplGenStochInput_AddSlack.hpp"
+#include "getAmplFunctionNew.h"
 
 
 
