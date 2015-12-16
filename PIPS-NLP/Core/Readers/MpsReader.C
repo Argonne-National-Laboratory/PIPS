@@ -14,6 +14,7 @@
 #include <cctype>
 #include <cmath>
 
+using namespace std;
 extern int gOoqpPrintLevel;
 
 enum{ DATALINE = 1, HEADERLINE };

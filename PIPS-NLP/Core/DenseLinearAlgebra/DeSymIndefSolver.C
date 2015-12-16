@@ -73,7 +73,7 @@ extern "C" {
 }
 #endif
 
-
+using namespace std;
 
 DeSymIndefSolver::DeSymIndefSolver( DenseSymMatrix * dm )
 {

@@ -14,7 +14,6 @@
 
 #include <map>
 
-using namespace std;
 
 #ifndef FNAME
 #ifndef __bg__

@@ -19,6 +19,7 @@ extern int gInnerSCsolve;
 extern int gOuterSolve;
 extern int separateHandDiag;
 
+using namespace std;
 
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)

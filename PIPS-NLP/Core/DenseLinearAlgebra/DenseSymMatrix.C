@@ -17,6 +17,9 @@
 
 #include "DoubleMatrixTypes.h"
 
+
+using namespace std;
+
 extern "C" void  dsyrk_(char* UPLO, char* TRANS,
 			int* N, int* K,
 			double* alpha, double* A, int* lda,

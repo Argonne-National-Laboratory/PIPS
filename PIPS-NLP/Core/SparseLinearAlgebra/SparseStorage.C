@@ -17,6 +17,7 @@
 #include <fstream>
 #include <climits>
 
+using namespace std;
 
 int SparseStorage::instances = 0;
 

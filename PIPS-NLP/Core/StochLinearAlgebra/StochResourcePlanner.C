@@ -18,6 +18,8 @@ extern "C" {
 #include "struct.h"
 };
 
+using namespace std;
+
 extern "C" 
 void metis_wpartgraphkway(int *, idxtype *, idxtype *, idxtype *, idxtype *, 
 			  int *, int *, int *, float *, int *, int *, idxtype *);

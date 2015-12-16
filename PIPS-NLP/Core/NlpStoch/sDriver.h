@@ -12,7 +12,6 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
-using namespace std;
 #include <cstdlib>
 
 #ifdef HAVE_GETRUSAGE

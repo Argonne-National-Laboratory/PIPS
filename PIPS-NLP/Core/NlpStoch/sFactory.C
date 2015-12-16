@@ -4,6 +4,7 @@
 
 /* 2015. Modified by Nai-Yuan Chiang for NLP*/
 
+#include "mpi.h"
 #include "sFactory.h"
 
 #include "sData.h"
@@ -40,7 +41,6 @@
 #include "UmfPackSolver.h"
 #endif 
 
-#include "mpi.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +50,8 @@
 
 #include "sInfo.h"
 #include "sData.h"
+
+using namespace std;
 
 extern int gSymLinearSolver;
 

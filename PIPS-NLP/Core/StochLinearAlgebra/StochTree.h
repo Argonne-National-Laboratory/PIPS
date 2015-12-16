@@ -7,13 +7,13 @@
 #ifndef STOCH_TREE
 #define STOCH_TREE
 
+#include "mpi.h"
 #include "StochInputTree.h"
 #include "StochResourcesMonitor.h"
 
 #ifdef __bg__
 #define MPICH_SKIP_MPICXX
 #endif
-#include "mpi.h"
 
 #include <vector>
 #include <list>
@@ -26,6 +26,7 @@ class StochGenMatrix;
 class StochVector;
 class QpGenStochLinsys;
 
+using namespace std;
 //#define POOLSCEN 1
 
 class StochTree {

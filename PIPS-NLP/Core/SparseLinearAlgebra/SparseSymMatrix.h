@@ -73,7 +73,7 @@ public:
 
   virtual double abmaxnorm();
   
-  virtual void writeToStream(ostream& out) const;
+  virtual void writeToStream(std::ostream& out) const;
   
   virtual void randomizePSD(double *);
 

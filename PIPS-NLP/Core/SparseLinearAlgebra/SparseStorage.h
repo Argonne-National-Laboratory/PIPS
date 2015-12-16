@@ -17,10 +17,6 @@
 #include <vector>
 
 
-
-
-using namespace std;
-
 /** A class for managing the matrix elements used by sparse matrices.
  *  @ingroup SparseLinearAlgebra
  */
@@ -93,7 +89,7 @@ public:
   virtual void atPutDiagonal( int idiag,
 			      double x[], int incx, int extent );
 
-  virtual void writeToStream(ostream& out) const;
+  virtual void writeToStream(std::ostream& out) const;
 
   virtual void symmetrize( int& info);
   virtual int* symmetrize_set( int& info);   
@@ -153,7 +149,7 @@ public:
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
-  void dump(const string& _filename);
+  void dump(const std::string& _filename);
 
   virtual void copyMtxFromDouble(int copyLength,double *values);
 

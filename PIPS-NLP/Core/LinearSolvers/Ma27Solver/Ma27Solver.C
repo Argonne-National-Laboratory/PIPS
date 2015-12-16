@@ -17,6 +17,7 @@
 #include <unistd.h>
 #endif
 
+using namespace std;
 extern double gHSL_PivotLV;
 
 extern int gOoqpPrintLevel;

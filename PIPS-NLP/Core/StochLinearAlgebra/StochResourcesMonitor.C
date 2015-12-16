@@ -9,6 +9,8 @@
 #include <fstream>
 #include <sstream>
 
+using namespace std;
+
 #define MAX(a,b) ((a > b) ? a : b)
 
 StochNodeResourcesMonitor::StochNodeResourcesMonitor() 

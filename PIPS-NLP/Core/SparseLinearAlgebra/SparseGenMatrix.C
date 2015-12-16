@@ -13,6 +13,7 @@
 
 #include "SparseSymMatrix.h"
 
+using namespace std;
 
 void SparseGenMatrix::printMatrixInMatlab(char *name)
 {

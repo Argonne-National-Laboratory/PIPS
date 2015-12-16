@@ -26,10 +26,10 @@ class sTree
   //void GetLocalSizes(int& nxOut, int& myOut, int& mzOut);
 
   void assignProcesses  ( MPI_Comm comm = MPI_COMM_WORLD);
-  void assignProcesses  ( MPI_Comm, vector<int>&);
+  void assignProcesses  ( MPI_Comm, std::vector<int>&);
 
   MPI_Comm commWrkrs, myOldMpiComm; //workers only
-  vector<int> myProcs, myOldProcs;
+  std::vector<int> myProcs, myOldProcs;
 
   MPI_Comm commP2ZeroW;   // preconditioner (rank P+1) and special (rank 0) worker
   static int rankPrcnd;   // rank of preconditioner
@@ -38,7 +38,7 @@ class sTree
 
   void startMonitors(); void startNodeMonitors();
   void stopMonitors();  void stopNodeMonitors();
-  void syncMonitoringData(vector<double>& vCPUTotal);
+  void syncMonitoringData(std::vector<double>& vCPUTotal);
   bool balanceLoad();
   bool balanceLoadPrecond();
 
@@ -98,14 +98,14 @@ class sTree
  protected:
   sTree();
 
-  void   toMonitorsList(list<NodeExecEntry>&);
-  void fromMonitorsList(list<NodeExecEntry>&);
+  void   toMonitorsList(std::list<NodeExecEntry>&);
+  void fromMonitorsList(std::list<NodeExecEntry>&);
 
   void computeNodeTotal();
 
   void saveCurrentCPUState();
 
-  int isInVector(int elem, const vector<int>& vec);
+  int isInVector(int elem, const std::vector<int>& vec);
 
 
  public:

@@ -16,6 +16,7 @@
 #include "sVars.h"
 #include "StochMonitor.h"
 
+using namespace std;
 
 template<class FORMULATION, class IPMSOLVER,class UPDATENLP> 
 class NlpPIPSIpmInterface 
@@ -129,7 +130,7 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
 	   << data->children[0]->getLocalmy() << " equality constraints, " 
 	   << data->children[0]->getLocalmz() << " inequality constraints." << endl;
   	 
-      cout << nscens << " scenarios." << endl;
+      std::cout << nscens << " scenarios." << endl;
   	}
 	int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
 	for(int j=0;j<nscens;j++){ 
@@ -143,7 +144,7 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
 	MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
 	if(mype==0) {  
-      cout << "Total " << data->getLocalnx() + total_var << " variables, " 
+      std::cout << "Total " << data->getLocalnx() + total_var << " variables, " 
 	   << data->getLocalmy()+total_econ  << " equality constraints, " 
 	   << data->getLocalmz()+total_icon << " inequality constraints. \n" << endl;
 	}
@@ -169,16 +170,16 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
     //cout << " " << data->nx << " variables, " << data->my  
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
     
-    cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
+    std::cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
 	 << objective << endl;
 
-    cout << "Solve time: " << tmElapsed << " seconds." << endl;
+    std::cout << "Solve time: " << tmElapsed << " seconds." << endl;
 
     char *var = getenv("OMP_NUM_THREADS");
     if(var != NULL) {
       int num_threads;
       sscanf( var, "%d", &num_threads );
-      cout << "Num threads: " << num_threads << endl;
+      std::cout << "Num threads: " << num_threads << endl;
     }
 #endif
   }

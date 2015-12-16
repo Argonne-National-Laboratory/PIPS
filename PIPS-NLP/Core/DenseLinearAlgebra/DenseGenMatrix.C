@@ -15,6 +15,7 @@
 
 #include "DoubleMatrixTypes.h"
 
+using namespace std;
 int DenseGenMatrix::isKindOf( int type )
 {
   return type == kDenseGenMatrix || type == kGenMatrix;

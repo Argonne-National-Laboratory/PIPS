@@ -86,7 +86,7 @@ class NlpGenStoch : public NlpGen {
 
 
   NlpGenResiduals2 *resid;
-  vector<NlpGenStochVars*> registeredVars;
+  std::vector<NlpGenStochVars*> registeredVars;
  
   NlpGenStochLinsys* linsys;
   NlpGenStochLinsys* linsys_2;

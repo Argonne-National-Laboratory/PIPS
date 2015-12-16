@@ -26,7 +26,6 @@ typedef int (*FVEC)(void* user_data, int id, double* vec, int len);
 extern "C"
 typedef int (*FLEN)(void* user_data, int id, int* len);
 
-using namespace std;
 
 class StochInputTree {
   friend class sTreeCallbacks;
@@ -92,7 +91,7 @@ class StochInputTree {
   // DATA members
   /////////////////////////
  public:
-  vector<StochInputTree*> children;
+  std::vector<StochInputTree*> children;
  protected:
   StochInputNode* nodeInput;
 

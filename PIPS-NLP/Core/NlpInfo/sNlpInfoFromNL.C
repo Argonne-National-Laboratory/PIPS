@@ -25,7 +25,7 @@
 #include "amplGenStochInput_AddSlack.hpp"
 #include "getAmplFunctionNew.h"
 
-
+using namespace std;
 
 #include <map>
 #include <vector>

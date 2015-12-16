@@ -87,7 +87,7 @@ public:
   
   virtual double abmaxnorm();
 
-  virtual void writeToStream(ostream& out) const;
+  virtual void writeToStream(std::ostream& out) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.

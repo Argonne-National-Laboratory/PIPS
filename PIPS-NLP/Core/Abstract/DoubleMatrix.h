@@ -13,7 +13,6 @@
 
 #include <cstring>
 #include <iostream>
-using namespace std;
 #include "OoqpVectorHandle.h"
 #include "DoubleMatrixHandle.h"
 #include <map>
@@ -120,7 +119,7 @@ public:
   virtual double abmaxnorm() = 0;
 
   /** Write this element to a C++ stream */
-  virtual void writeToStream(ostream& out) const = 0;
+  virtual void writeToStream(std::ostream& out) const = 0;
 
   /** Place the diagonal elements of this matrix in the vector vec */
   virtual void getDiagonal( OoqpVector& vec ) = 0;

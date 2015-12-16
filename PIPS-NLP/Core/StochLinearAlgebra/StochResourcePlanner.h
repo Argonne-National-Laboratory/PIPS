@@ -9,7 +9,6 @@
 #include <vector>
 #include <stdio.h>
 
-using namespace std;
 
 class StochResourcePlanner {
  public:
@@ -17,22 +16,22 @@ class StochResourcePlanner {
   virtual ~StochResourcePlanner();
 
   void assignProcesses(int noProcesses, 
-		       vector<double>& nodesLoad,
-		       vector<vector<int> >& mapping);
+		       std::vector<double>& nodesLoad,
+		       std::vector<std::vector<int> >& mapping);
 
   void assignProcesses(int noProcesses, 
-		       vector<double>& nodesLoad,
-		       vector<vector<int> >& mapping,
+		       std::vector<double>& nodesLoad,
+		       std::vector<std::vector<int> >& mapping,
 		       double& balance);
 
-  void assignProcesses(vector<int>& ranks,
-		       vector<double>& nodesLoad,
-		       vector<vector<int> >& mapping,
+  void assignProcesses(std::vector<int>& ranks,
+		       std::vector<double>& nodesLoad,
+		       std::vector<std::vector<int> >& mapping,
 		       double& balance);
 
-  void assignProcesses(vector<int>& ranks,
-		       vector<double>& nodesLoad,
-		       vector<vector<int> >& mapping);
+  void assignProcesses(std::vector<int>& ranks,
+		       std::vector<double>& nodesLoad,
+		       std::vector<std::vector<int> >& mapping);
   
   void setPrintLevel(int level);
   
@@ -48,8 +47,8 @@ class StochResourcePlanner {
 class LoadBalancing
 {
  public:
-  LoadBalancing(vector<double>& vNodesLoad, const int noProcs);
-  LoadBalancing(vector<double>& vNodesLoad, vector<int>& vRanks);
+  LoadBalancing(std::vector<double>& vNodesLoad, const int noProcs);
+  LoadBalancing(std::vector<double>& vNodesLoad, std::vector<int>& vRanks);
   virtual ~LoadBalancing();
 
   /**
@@ -266,8 +265,8 @@ class LoadBalancing
   int forceFullAssignment;
   int minElemsInSubpart;
 
-  vector<double>& nodesLoadW;
-  vector<int> ranksW;
+  std::vector<double>& nodesLoadW;
+  std::vector<int> ranksW;
 
   int printLevel;
 

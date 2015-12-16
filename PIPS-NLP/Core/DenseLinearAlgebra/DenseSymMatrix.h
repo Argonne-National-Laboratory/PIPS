@@ -40,7 +40,7 @@ public:
   virtual void getSize( int& m, int& n );
 
   virtual double abmaxnorm();
-  virtual void writeToStream(ostream& out) const;
+  virtual void writeToStream(std::ostream& out) const;
   virtual void randomizePSD(double * seed);
 
   virtual void fromGetDense( int row, int col, double * A, int lda,

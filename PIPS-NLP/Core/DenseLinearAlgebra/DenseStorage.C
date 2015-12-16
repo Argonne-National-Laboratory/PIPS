@@ -9,6 +9,7 @@
 #include "OoqpVector.h"
 #include "SimpleVector.h"
 
+using namespace std;
 extern "C" void dsyr_( char * uplo, int * n,
 		       double * alpha, double * x,
 		       int * incx, double * a,

@@ -14,6 +14,7 @@
 
 #include "SparseGenMatrix.h"
 
+using namespace std;
 
 void SparseSymMatrix::printMatrixInMatlab( char *name)
 {

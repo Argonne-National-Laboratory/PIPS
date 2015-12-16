@@ -95,7 +95,7 @@ class sFactory : public NlpGen {
 
 
   sResiduals *resid;
-  vector<sVars*> registeredVars;
+  std::vector<sVars*> registeredVars;
  
   sLinsysRoot* linsys;
 

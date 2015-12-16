@@ -26,13 +26,7 @@
 #endif
 #endif
 
-
-
-
-
-
-
-
+using namespace std;
 /** implements the linear solver class using the Pardiso solver
  */
  

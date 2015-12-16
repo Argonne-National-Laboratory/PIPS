@@ -7,6 +7,7 @@
 #include "StochVector.h"
 #include "StochGenMatrix.h"
 #include "StochSymMatrix.h"
+using namespace std;
 
 sTreeImpl::sTreeImpl( stochasticInput &in_, MPI_Comm comm /*=MPI_COMM_WORLD*/)
   : sTree(), m_id(0), in(in_), parent(NULL)

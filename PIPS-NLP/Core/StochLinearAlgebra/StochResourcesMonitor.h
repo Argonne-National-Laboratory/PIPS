@@ -39,7 +39,6 @@ class NodeCommEntry
   stCommType type;
 };
 
-using namespace std;
 
 class StochNodeResourcesMonitor
 {
@@ -99,7 +98,7 @@ class StochNodeResourcesMonitor
   NodeExecEntry eTotal;
   NodeExecEntry eMult;
   NodeExecEntry eReduce, eReduceScatter, eBcast;
-  vector<NodeCommEntry> vcSchur, vcLsolve;
+  std::vector<NodeCommEntry> vcSchur, vcLsolve;
 
  private:
   double tmOpStart;
@@ -120,7 +119,7 @@ class StochIterateResourcesMonitor
  protected:
   double tmIterateStart;
 
-  vector<double> tmHistory;
+  std::vector<double> tmHistory;
 
 };
 #endif
