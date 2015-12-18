@@ -53,8 +53,8 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(CMAKE_CXX_COMPILER "mpicxx")
 	
 	set(IS_MACOS TRUE)
-	find_library(FLEX_LIBRARY NAMES libfl.a PATHS /usr/local/lib)
-	message(STATUS "FLEX_LIB:=${FLEX_LIBRARY}")
+	#find_library(FLEX_LIBRARY NAMES libfl.a PATHS /usr/local/lib)
+	#message(STATUS "FLEX_LIB:=${FLEX_LIBRARY}")
 	find_library(GOMP_LIBRARY NAMES libgomp.a PATHS ${MAC_GCC_LIB_DIR})
 	message(STATUS "GMOP_LIB:=${GOMP_LIBRARY}")
 	find_path(GOMP_INC_PATH NAMES omp.h HINTS /usr/local/Cellar/gcc/5.3.0/lib/gcc/5/gcc/x86_64-apple-darwin15.0.0/5.3.0/include)
@@ -263,7 +263,7 @@ if (NOT Boost_FOUND)
 endif(NOT Boost_FOUND)
 
 find_library(DL_LIBRARY NAMES dl)
-find_library(FL_LIBRARY NAMES fl PATHS /usr/lib /usr/local/lib /usr/local/opt/flex)
+#find_library(FL_LIBRARY NAMES fl PATHS /usr/lib /usr/local/lib /usr/local/opt/flex)
 
 
 # see if we have gurobi
