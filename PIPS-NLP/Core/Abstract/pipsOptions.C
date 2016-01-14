@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cassert>
+#include <string>
 
 #include "pipsOptions.h"
 #include <mpi.h>
@@ -240,9 +241,15 @@ void pipsOptions::readFile()
     defOpt = this;
   }
 
-  optfile = fopen("pipsnlp.parameter","r");
+  std::string fileName("pipsnlp.parameter");
+  optfile = fopen(fileName.c_str(),"r");
   if (optfile==NULL) {
-    return;
+	  printf("not find option file: %s \n",fileName.c_str());
+	  return;
+  }
+  else
+  {
+	  printf("load option file: %s \n",fileName.c_str());
   }
   
   /* Read one line of the options file */

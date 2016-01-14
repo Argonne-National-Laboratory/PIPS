@@ -153,7 +153,8 @@ int PipsNlpSolve( PipsNlpProblem retval, double* obj_val, double* sol_x, UserDat
   int nnzJ;
   int ierr;
 
-
+  std::cout<<"pipsOpt->BuildSchurComp"<<pipsOpt->BuildSchurComp<<std::endl;
+  std::cout<<"pipsOpt->UseReducedSpace"<<pipsOpt->UseReducedSpace<<std::endl;
   assert(0==pipsOpt->BuildSchurComp && 0==pipsOpt->UseReducedSpace);
 
   nnzJ = retval->nele_jac;
