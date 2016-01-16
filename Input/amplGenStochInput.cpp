@@ -98,9 +98,9 @@ amplGenStochInput::amplGenStochInput(const string &datarootname_in,
 
   // Add suffixes   
   AmplSuffix *amplSuffix = new AmplSuffix();
-  amplSuffix->DefineSuffix("pipsNLP_DecisionVar_in", Suffix_Var, Suffix_Int);  
+  amplSuffix->DefineSuffix("pipsNLP_1stStageVar_in", Suffix_Var, Suffix_Int);  
   
-  if(1==gUseReducedSpace){	
+  if(gUseReducedSpace>0){	
   	amplSuffix->DefineSuffix("pipsNLP_DecisionVar_in", Suffix_Var, Suffix_Int);  
   }
 
@@ -144,7 +144,7 @@ amplGenStochInput::amplGenStochInput(const string &datarootname_in,
 
   map<int,int>::iterator it;
 
-  if(1==gUseReducedSpace){  
+  if(2==gUseReducedSpace){  
 	decisionVarDim.resize(nScenarios_,0);
 	schurVarConIDinNL.resize(nScenarios_); 
   }
@@ -181,7 +181,7 @@ amplGenStochInput::amplGenStochInput(const string &datarootname_in,
 	  localData[scen].didLoad=true;
 
 	  LocGloVarIdx[scen] = NULL;
-	  LocGloVarIdx[scen] = amplSuffix->GetSuffixVal_Int(asl_i[scen], "pipsNLP_DecisionVar_in", Suffix_Var);
+	  LocGloVarIdx[scen] = amplSuffix->GetSuffixVal_Int(asl_i[scen], "pipsNLP_1stStageVar_in", Suffix_Var);
 	  	  
 	  //we must have 1st stage variable
 	  assert(LocGloVarIdx[scen]);
@@ -206,7 +206,7 @@ amplGenStochInput::amplGenStochInput(const string &datarootname_in,
 	  }
 
 	  // define decision var
-	  if(1==gUseReducedSpace){  	
+	  if(gUseReducedSpace>0){  	
 	  	decisionVarDim[scen]=0;
 		int *decisionVarIDX = amplSuffix->GetSuffixVal_Int(asl_i[scen], "pipsNLP_DecisionVar_in", Suffix_Var);
 		//find correct index in C:	in ampl model, index of decision var starts from 1, here we correct it as zero;
@@ -951,8 +951,8 @@ void amplGenStochInput::		loadLocalNLdata(int scen)
 
   // Add the suffix  
   AmplSuffix *amplSuffix = new AmplSuffix();
-  amplSuffix->DefineSuffix("pipsNLP_DecisionVar_in", Suffix_Var, Suffix_Int);  
-  if(1==gUseReducedSpace){  
+  amplSuffix->DefineSuffix("pipsNLP_1stStageVar_in", Suffix_Var, Suffix_Int);  
+  if(gUseReducedSpace>0){  
 	  amplSuffix->DefineSuffix("pipsNLP_DecisionVar_in", Suffix_Var, Suffix_Int);   
   }
   if(gNP_Alg!=0){
@@ -992,7 +992,7 @@ void amplGenStochInput::		loadLocalNLdata(int scen)
   fname.clear();
 
   LocGloVarIdx[scen] = NULL;
-  LocGloVarIdx[scen] = amplSuffix->GetSuffixVal_Int(asl_i[scen], "pipsNLP_DecisionVar_in", Suffix_Var);
+  LocGloVarIdx[scen] = amplSuffix->GetSuffixVal_Int(asl_i[scen], "pipsNLP_1stStageVar_in", Suffix_Var);
 
   //we must have 1st stage variable
   assert(LocGloVarIdx[scen]);
@@ -1024,7 +1024,7 @@ void amplGenStochInput::		loadLocalNLdata(int scen)
   }
   
   // define decision var
-  if(1==gUseReducedSpace){	
+  if(gUseReducedSpace>0){	
 	decisionVarDim[scen]=0;
 	int *decisionVarIDX = amplSuffix->GetSuffixVal_Int(asl_i[scen], "pipsNLP_DecisionVar_in", Suffix_Var);
 	//find correct index in C:	in ampl model, index of decision var starts from 1, here we correct it as zero;

@@ -62,7 +62,8 @@ amplGenStochInput_AddSlack::amplGenStochInput_AddSlack(const string &datarootnam
   amplSuffix->DefineSuffix("pipsNLP_1stStageVar_in", Suffix_Var, Suffix_Int);  
 
   // no reduced space and graph partitioning  
-  assert(0==gUseReducedSpace && 0==gNP_Alg);
+  if (gUseReducedSpace!=0 || gNP_Alg!=0)
+  	assert("adding slack setting is not available in reduced space setting.");
   
   nFirstStageCons_ = 0;
   nFirstStageVars_ = 0;

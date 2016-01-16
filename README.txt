@@ -45,7 +45,6 @@ ThirdPartyLibs/ASL
 ThirdPartyLibs/CBC 
 ThirdPartyLibs/ConicBundle   
 ThirdPartyLibs/METIS
-ThirdPartyLibs/UMFPACK
 For an example, use command "sh wgetASL.sh" in the folder ThirdPartyLibs/ASL  
 
 3. Download MA27 and MA57 from HSL and put the source code in the correct folder. 

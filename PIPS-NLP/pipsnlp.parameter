@@ -63,22 +63,3 @@ CheckSmallConstVio	1
 ! max number of line search  (50)
 LineSearchMatStep	50
 
-
-!-------------------------------------------------------------------------
-!		Reduced space solver
-!-------------------------------------------------------------------------
-! (0): default, full space solver  1:reduced space, but decision var are 1st var (not support if AddSlackParallelSetting=1) 
-UseReducedSpace		1
-! (0): do iterative refinement from the linear solver, this is the max number of IR
-RS_MaxIR	5
-! (0.0001)  Stable->Fast 1->0
-RS_LU_PivotLV	0.0001
-
-
-!-------------------------------------------------------------------------
-     How to compute dual regularization
-!-------------------------------------------------------------------------
-! method to update dual regularization	(0): ipopt way (1): vz way (10): ori obj
-UseDualRegAlg 0
-
-
