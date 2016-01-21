@@ -75,4 +75,6 @@ ampl_count_sizes_SplitSlack(  fint irow[], fint kcol[],
 void 
 ampl_get_InitX0(double *varsX);
 
+void ampl_write_solution(double *varsX, double *Yelts, double *Zelts);
+
 #endif
