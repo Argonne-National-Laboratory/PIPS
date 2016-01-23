@@ -138,9 +138,44 @@ if (HAVE_CLANG)
   ${PARDISO_LIBRARY}
   #${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
+
+  add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
+  target_link_libraries(parpipsnlp
+  ${WHOLE_ARCHIVE}
+  updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
+  nlpgensparse
+  LU_solvers
+  nlpsparse nlpdense
+  pipsnlpFLS  nlpbase
+  ${COIN_LIBS}
+  ${MA57_LIBRARY}
+  ${MA27_LIBRARY}
+  ${UMF_ALLINONE_LIBRARY}
+  ${METIS_LIBRARY}
+  ${PARDISO_LIBRARY}
+  #${NO_WHOLE_ARCHIVE}
+  ${MATH_LIBS} )
+  
 else()
   add_library(pipsnlp SHARED Drivers/pipsipmNlp_C_callbacks.cpp)
   target_link_libraries(pipsnlp
+  ${WHOLE_ARCHIVE}
+  updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
+  nlpgensparse
+  LU_solvers
+  nlpsparse nlpdense
+  pipsnlpFLS  nlpbase
+  ${COIN_LIBS}
+  ${MA57_LIBRARY}
+  ${MA27_LIBRARY}
+  #    ${UMF_ALLINONE_LIBRARY}
+  ${METIS_LIBRARY}
+  ${PARDISO_LIBRARY}
+  ${NO_WHOLE_ARCHIVE}
+  ${MATH_LIBS} )
+
+  add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
+  target_link_libraries(parpipsnlp
   ${WHOLE_ARCHIVE}
   updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
   nlpgensparse
