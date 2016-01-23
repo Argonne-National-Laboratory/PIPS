@@ -328,6 +328,16 @@ MPI_Init(&argc, &argv);
 	
   }
 
+  double *solx = new double[nx];
+  double *soly = new double[my];
+  double *solz = new double[mz];
+  vars->x->copyIntoArray(solx);
+  vars->y->copyIntoArray(soly);
+  vars->z->copyIntoArray(solz);
+  ampl_write_solution( solx, soly, solz);
+  delete []solx;
+  delete []soly;
+  delete []solz;
 
 #ifdef TIMING
 		tTot = MPI_Wtime()-tTot;

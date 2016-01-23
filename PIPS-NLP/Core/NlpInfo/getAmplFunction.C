@@ -627,3 +627,26 @@ void ampl_get_matrices(  fint irow[], fint kcol[], double elts[],
   
 }
 
+
+void ampl_write_solution(double *varsX, double *Yelts,double *Zelts ) 
+{
+  double *dualWrk = new double[n_con]; 
+  int i;
+  
+  for( int iampl = 0; iampl < n_con; iampl++ ) {  
+    if( amplRowMap[iampl]<0 ) {
+      i = - ( amplRowMap[iampl] + 1 ); // Recover i from the negative value
+      if(Yelts)
+	dualWrk[iampl] = Yelts[i];
+      else
+	dualWrk[iampl] = 0;
+    } else {
+      i = amplRowMap[iampl];
+      if(Zelts)
+	dualWrk[iampl] = Zelts[i];
+      else
+	dualWrk[iampl] = 0;  
+    }
+  }
+  write_sol("\npipsnlp_serial:", varsX, dualWrk,NULL);
+}
