@@ -12,6 +12,10 @@ add_library(StochInfoFromAMPL
    getAmplFunctionNew.C sNlpInfoFromNL.C
 )
 
+add_library(StructStochInfo
+	StructJuMPsInfo.C
+)
+
 add_library(updateFromCallBack
    NlpInfoCallBack.C
 )
