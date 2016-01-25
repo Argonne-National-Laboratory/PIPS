@@ -1437,3 +1437,84 @@ void sNlpInfoFromNL::get_InitX0_DummyCon(OoqpVector* vX)
 }
 
 
+void sNlpInfoFromNL::writeSolution( NlpGenVars * vars_) 
+{
+#ifdef TIMING
+  double tTot=MPI_Wtime();
+#endif
+  ASL_pfgh *asl  = asl_local; 
+  sVars * vars = dynamic_cast<sVars*>(vars_);
+  StochVector& vars_X = dynamic_cast<StochVector&>(*vars->x);
+  OoqpVector& local_X = *(dynamic_cast<StochVector&>(*vars->x).vec);    
+  OoqpVector& local_Y = *(dynamic_cast<StochVector&>(*vars->y).vec);
+  OoqpVector& local_Z = *(dynamic_cast<StochVector&>(*vars->z).vec);
+
+  for(size_t it=0; it<children.size(); it++){
+     children[it]->writeSolution(vars->children[it]);
+  }
+  long long mA, nA, mC, nC; 
+  Amat->getSize(mA,nA);
+  Cmat->getSize(mC,nC);
+
+  if(mC+mA>0) {
+    //not the root
+    assert(asl_local);
+
+    double *tempX_Ampl = (double*) malloc(n_var*sizeof(double));
+
+    // form x in AMPL order
+    assert(parent->locNx + locNx == n_var);
+    OoqpVector* parent_X = (vars_X.parent->vec);
+    double *tempParX = (double*) malloc(parent->locNx*sizeof(double));
+    double *tempLocX = (double*) malloc(locNx*sizeof(double));
+
+    parent_X->copyIntoArray(tempParX);
+    local_X.copyIntoArray(tempLocX);
+    
+    map<int,int>::iterator it;
+    for(it=LocGloVarMap->begin(); it!=LocGloVarMap->end(); it++){
+      tempX_Ampl[it->first] = tempParX[it->second];
+    }
+    for(it=LocLocVarMap->begin(); it!=LocLocVarMap->end(); it++){
+      tempX_Ampl[it->first] = tempLocX[it->second];
+    }
+
+    double *tempY      = (double*) malloc(locMy*sizeof(double));
+    double *tempZ      = (double*) malloc(locMz*sizeof(double));
+    double *dualWrk = (double*) malloc(n_con*sizeof(double));
+    local_Y.copyIntoArray(tempY);
+    local_Z.copyIntoArray(tempZ);
+    int EqConIndex=0, IneqIndex=0, findEq=0, findIneq=0;
+    for( int iampl = 0; iampl < n_con; iampl++ ) {
+      if( amplRowMap[iampl]<0 ) {
+        EqConIndex = - ( amplRowMap[iampl] + 1 ); // Recover i from the negative value: equality constraint
+	if(tempY)
+	  dualWrk[iampl] = tempY[EqConIndex];
+	else
+	  dualWrk[iampl] = 0;
+	findEq++;
+      } else {
+        IneqIndex = amplRowMap[iampl]; // Inequality constraint
+	if(tempZ)
+	  dualWrk[iampl] = tempZ[IneqIndex];
+	else
+	  dualWrk[iampl] = 0;
+	findIneq++;
+      }
+    }
+    assert(findIneq == locMz && findEq == locMy);
+    ampl_write_solution(asl, tempX_Ampl, dualWrk);
+
+    free(dualWrk);
+    free(tempZ);
+    free(tempY);
+    free(tempLocX);
+    free(tempParX);
+    free(tempX_Ampl);
+  }
+
+#ifdef TIMING
+  timeFromAMPL += MPI_Wtime()-tTot;
+#endif 
+}
+

@@ -81,7 +81,7 @@ public:
 
   void createChildren(sData *data_in, amplGenStochInput& in);
   void createChildren(sData *data_in, amplGenStochInput_AddSlack& in);
-
+  
   virtual double ObjValue( NlpGenVars * vars) ;
   
   virtual void ConstraintBody( NlpGenVars * vars, OoqpVector *conEq, OoqpVector *conIneq);
@@ -100,6 +100,7 @@ public:
 
   virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad,double *tempFromParGrad );
 
+  virtual void writeSolution( NlpGenVars * vars_);
 private:
   double ObjValue_General( NlpGenVars * vars_);
   double ObjValue_DummyCon( NlpGenVars * vars_);
@@ -118,9 +119,7 @@ private:
 
   void get_InitX0_General(OoqpVector* vX);
   void get_InitX0_DummyCon(OoqpVector* vX);
-
-  
-
+ 
 };
 
 

@@ -42,7 +42,8 @@ class NlpPIPSIpmInterface
   //more get methods to follow here
 
   static bool isDistributed() { return true; }
-
+  
+  void writeSolution() const;
  protected:
  
   FORMULATION * factory;
@@ -182,6 +183,7 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
       std::cout << "Num threads: " << num_threads << endl;
     }
 #endif
+    
   }
 }
 
@@ -249,4 +251,10 @@ NlpPIPSIpmInterface<FORMULATION, IPMSOLVER,UPDATENLP>::getSecondStageDualRowSolu
 	return std::vector<double>(&v[0],&v[0]+v.length());
 }
 
+
+template<typename FORMULATION, typename SOLVER, typename UPDATENLP>
+  void NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::writeSolution() const {
+  updateNlpInfo->writeSolution(vars);
+}
 #endif
+

@@ -630,7 +630,7 @@ void ampl_get_matrices(  fint irow[], fint kcol[], double elts[],
 
 void ampl_write_solution(double *varsX, double *Yelts,double *Zelts ) 
 {
-  double *dualWrk = new double[n_con]; 
+  double *dualWrk = (double*) malloc(n_con*sizeof(double)); 
   int i;
   
   for( int iampl = 0; iampl < n_con; iampl++ ) {  
@@ -649,4 +649,5 @@ void ampl_write_solution(double *varsX, double *Yelts,double *Zelts )
     }
   }
   write_sol("\npipsnlp_serial:", varsX, dualWrk,NULL);
+  free(dualWrk);
 }
