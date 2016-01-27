@@ -17,6 +17,6 @@ void Ampl_Eval_Jac(ASL_pfgh *asl_, double *varsX, double *AmplJacElts);
 
 void Ampl_Eval_Hessian_Tri(ASL_pfgh *asl_, double *varDual, double *Helts, double ObjScale=1);
 	
-
+void ampl_write_solution(ASL_pfgh *asl_, double *varsX, double *dual);
 #endif
 

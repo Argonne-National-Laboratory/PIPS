@@ -1,0 +1,23 @@
+#option solver ipopt;
+option solver pipsnlp_serial;
+option presolve 0;
+option auxfiles rc;
+
+# set model
+model qp.mod;
+data qp.dat;
+
+# assign suffixes to each nl file
+suffix firstStageVar, IN;
+
+
+let    NS:=NS_ALL;
+let    SCEN:=SCEN_ALL;
+#write ("btestall");
+display bEw;
+solve;
+#solution testall.sol;
+display z;
+display w;
+display Econ.dual;
+display Icon.dual;

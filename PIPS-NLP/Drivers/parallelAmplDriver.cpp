@@ -205,7 +205,7 @@ int solve(const string& datarootname, int nscen)
 			cout << "Call Sol Times  " << call_sol_Times << endl;					
 		}
 #endif
-
+  pipsIpm.writeSolution();
   delete pipsOpt;
 //  delete s;
 

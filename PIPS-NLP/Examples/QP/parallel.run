@@ -1,0 +1,39 @@
+option solver ipopt;
+option presolve 0;
+option auxfiles rc;
+
+# set model
+model qp.mod;
+data qp.dat;
+
+# assign suffixes to each nl file
+suffix pipsNLP_1stStageVar_in, IN;
+
+param idx;
+for{k in SCEN_ALL}{ 
+  let    NS:=1;
+  let    SCEN := k..k;   
+  let idx:= 1; 
+  for{ i in FirstVar}
+  {
+	let z[i].pipsNLP_1stStageVar_in := idx;
+ 	let idx:= idx + 1;
+  }
+  for{ i in SecondVar}
+  {
+        let w[k,i].pipsNLP_1stStageVar_in := 0;
+  }
+  write ("btest"& k);
+}
+
+
+shell "mpirun -np 2 pipsnlp_parallel test 2";
+for{k in SCEN_ALL}{
+  let    NS:=1;	
+  let    SCEN := k..k;
+  solution ("test"&k&".sol");
+  display w;
+  display z;
+  display Econ.dual;
+  display Icon.dual;	
+}

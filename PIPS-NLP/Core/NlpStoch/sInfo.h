@@ -74,6 +74,7 @@ public:
 
   virtual void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ){assert("not yet"&&0);};
   virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ){assert("not yet"&&0);};
+  virtual void writeSolution( NlpGenVars * vars_){};
 
 protected:
   void createChildren( sData *data_in);
@@ -113,7 +114,9 @@ public:
 
   virtual void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ){};
   virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ){};   
+  virtual void writeSolution( NlpGenVars * vars_){};
 };
+
   
 
 #endif

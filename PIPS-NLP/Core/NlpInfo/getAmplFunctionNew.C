@@ -99,3 +99,9 @@ void Ampl_Eval_Hessian_Tri(ASL_pfgh *asl_, double *varDual, double *Helts, doubl
   sphes(Helts, -1, OW, varDual);
 }
 
+
+void ampl_write_solution(ASL_pfgh *asl_, double *varsX, double *dual)
+{
+  ASL_pfgh *asl = asl_;
+  write_sol("\pipsnlp_parallel:", varsX, dual,NULL);
+}

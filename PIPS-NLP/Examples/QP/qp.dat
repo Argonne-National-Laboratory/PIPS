@@ -1,0 +1,55 @@
+data;
+
+param NS_ALL := 2;
+param nz := 2;
+param:     dz   zl   zu :=
+   1	   1	0    10
+   2       1   	0    10;
+param Hz (tr):
+	1	 2 :=	
+   1	3	 2
+   2	2	 4;
+
+param nw := 2;
+param:     dw   wl   wu :=
+   1       10	-1    2
+   2       10   -1    2;
+
+param Hw (tr):
+        1	 2 :=
+   1	5	 3
+   2	3	 5;
+
+
+param nec := 1;
+param TEz (tr):
+        1	:=
+   1    1		
+   2    2;
+param TEw (tr):
+        1       :=
+   1    4        
+   2    3;
+
+param bEw (tr):
+        1	 2 :=
+   1    12   	 19;  
+
+
+param nic := 2;
+param TIz (tr):
+        1        2 :=
+   1    1        2
+   2    1        3;
+param TIw (tr):
+        1        2 :=
+   1    3        1
+   2    2        1;
+param cl (tr):
+        1        2 :=
+   1    8        10
+   2    8        10;
+param cu (tr):
+        1        2 :=
+   1    20       20
+   2    20       20;
