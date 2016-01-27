@@ -1,5 +1,7 @@
 #include "StructJuMPInput.h"
 
+#include "../PIPS-NLP/par_macro.h"
+
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -20,22 +22,24 @@ int StructJuMPInput::nScenarios() {
 
 void StructJuMPInput::get_prob_info(int nodeid)
 {
-	std::cout<<"call jump - prob_info - "<<nodeid<<std::endl;
-	int nv;
-	int mc;
-	double* col_ub;
-	double* col_lb;
-	double* row_lb;
-	double* row_ub;
+	PAR_DEBUG("ccall - prob_info - "<<nodeid);
+	int nv = 0;
+	int mc = 0;
 
-	CallBackData data={nodeid,nodeid};
-	prob->prob_info(&nv, col_lb, col_ub, &mc, row_lb, row_ub, &data);
+	CallBackData data={prob->userdata,nodeid,nodeid};
+//	PAR_DEBUG("data -"<<&data);
+	PAR_DEBUG("ccall callback data ptr - "<<&data);
+	PAR_DEBUG("ccall userdata ptr - "<<prob->userdata);
+	prob->prob_info(&nv,NULL,NULL,&mc,NULL,NULL,&data);
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
-	std::vector<double> collb; collb.assign(col_lb,col_lb+nv);
-	std::vector<double> colub; colub.assign(col_ub,col_ub+nv);
-	std::vector<double> rowlb; rowlb.assign(row_lb,row_lb+mc);
-	std::vector<double> rowub; colub.assign(col_ub,col_ub+mc);
+
+	std::vector<double> collb(nv);
+	std::vector<double> colub(nv);
+	std::vector<double> rowlb(mc);
+	std::vector<double> rowub(mc);
+	prob->prob_info(&nv, &collb[0], &colub[0], &mc, &rowlb[0], &rowub[0], &data);
+
 	collb_map[nodeid] = collb;
 	colub_map[nodeid] = colub;
 	rowlb_map[nodeid] = rowlb;
@@ -222,28 +226,46 @@ bool StructJuMPInput::isSecondStageColInteger(int scen, int col){
 CoinPackedMatrix StructJuMPInput::getFirstStageConstraints(){
 	int nvar = nvar_map[0];
 	int ncon = ncon_map[0];
-	std::vector<int> elements(nvar+1,0);
-	amat.copyOf(true,ncon,nvar,0,0,0,&elements[0],0);
+	std::vector<int> rowindx(0);
+	std::vector<int> colptr(nvar+1,0);
+	std::vector<double> elts(0);
+	amat.copyOf(true,ncon,nvar,0,&elts[0],&rowindx[0],&colptr[0],0);
 	assert(amat.getNumCols()==nvar);
 	assert(amat.getNumRows()==ncon);
 	return amat;
 }
 // returns the column-oriented second-stage constraint matrix (W matrix)
 CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen){
+	std::map<int,CoinPackedMatrix>::iterator it = wmat_map.find(scen);
+	if(it!=wmat_map.end())
+		return it->second;
+
 	int nvar = nvar_map[scen];
 	int ncon = ncon_map[scen];
-	std::vector<int> elements(nvar+1,0);
-	wmat.copyOf(true,ncon,nvar,0,0,0,&elements[0],0);
+	std::vector<int> rowidx(0);
+	std::vector<int> colptr(nvar+1,0);
+	std::vector<double> elts(0);
+	CoinPackedMatrix wmat;
+	wmat.copyOf(true,ncon,nvar,0,&elts[0],&rowidx[0],&colptr[0],0);
+	wmat_map[scen] = wmat;
 	assert(wmat.getNumCols()==nvar);
 	assert(wmat.getNumRows()==ncon);
 	return wmat;
 }
 // returns the column-oriented matrix linking the first-stage to the second (T matrix)
 CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen){
+	std::map<int,CoinPackedMatrix>::iterator it = tmat_map.find(scen);
+	if(it!=tmat_map.end())
+		return it->second;
+
 	int nvar = nvar_map[0];
 	int ncon = ncon_map[scen];
-	std::vector<int> elements(nvar+1,0);
-	tmat.copyOf(true,ncon,nvar,0,0,0,&elements[0],0);
+	std::vector<int> rowidx(0);
+	std::vector<int> colptr(nvar+1,0);
+	std::vector<double> elts(0);
+	CoinPackedMatrix tmat;
+	tmat.copyOf(true,ncon,nvar,0,&elts[0],&rowidx[0],&colptr[0],0);
+	tmat_map[scen] = tmat;
 	assert(tmat.getNumCols()==nvar);
 	assert(tmat.getNumRows()==ncon);
 	return tmat;

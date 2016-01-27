@@ -141,12 +141,12 @@ if (HAVE_CLANG)
 
   add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   target_link_libraries(parpipsnlp
-  ${WHOLE_ARCHIVE}
+  ${WHOLE_ARCHIVE} 
   updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
-  nlpgensparse
   LU_solvers
   nlpsparse nlpdense
-  pipsnlpFLS  nlpbase
+  pipsnlpFLSStoch nlpstoch nlpstochla  
+  nlpgensparse nlpbase nlpsparse nlpdense
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
@@ -178,10 +178,12 @@ else()
   target_link_libraries(parpipsnlp
   ${WHOLE_ARCHIVE}
   updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
-  nlpgensparse
   LU_solvers
   nlpsparse nlpdense
-  pipsnlpFLS  nlpbase
+  pipsnlpFLSStoch nlpstoch nlpstochla 
+  nlpgensparse nlpbase 
+  genStructparallel
+  #pipsnlpFLS  
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}

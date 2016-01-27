@@ -29,8 +29,13 @@
 
 #include "pipsOptions.h"
 
+#include "../par_macro.h"
+
+int gmyid;
+int gnprocs;
+
 extern "C"
-PipsNlpProblemStructPtr CreatePipsNlpProblem(
+PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	MPI_Comm comm,
 	int nnode,
 	int n, int m,
@@ -39,16 +44,17 @@ PipsNlpProblemStructPtr CreatePipsNlpProblem(
 	str_eval_g_cb eval_g,
 	str_eval_grad_f_cb eval_grad_f,
 	str_eval_jac_g_cb eval_jac_g,
-	str_eval_h_cb eval_h)
+	str_eval_h_cb eval_h,
+	UserDataPtr userdata)
 {
 	int myid;
 	MPI_Comm_rank(comm, &myid);
+	gmyid = myid;
 	int nprocs;
 	MPI_Comm_size(comm, &nprocs);
-
-	if(0==myid) {
-		std::cout << "Using a total of " << nprocs << " MPI processes." <<std::endl;
-	}
+	gnprocs = nprocs;
+	std::cout << "on proc ["<<myid<<"] of ["<< nprocs << "] MPI processes." <<std::endl;
+	PAR_DEBUG("CreatePipsNlpProblemStruct - C");
 
 	pipsOptions *pipsOpt = new pipsOptions();
 	pipsOpt->readFile();
@@ -66,6 +72,7 @@ PipsNlpProblemStructPtr CreatePipsNlpProblem(
 	retval->eval_grad_f = eval_grad_f;
 	retval->eval_jac_g = eval_jac_g;
 	retval->eval_h = eval_h;
+	retval->userdata = userdata;
 
 	return retval;
 }
@@ -78,7 +85,7 @@ extern int gSymLinearSolver;
 extern int gUseReducedSpace;
 
 extern "C"
-int PipsNlpSolve( PipsNlpProblemStruct* prob)
+int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
 {
 	int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 	int nprocs; MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
@@ -126,7 +133,7 @@ int PipsNlpSolve( PipsNlpProblemStruct* prob)
 
 
 extern "C"
-void FreePipsNlpProblem(PipsNlpProblemStruct* prob){
+void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob){
 
 }
 

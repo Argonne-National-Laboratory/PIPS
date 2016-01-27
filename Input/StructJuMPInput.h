@@ -27,8 +27,8 @@ protected:
 
 
 	CoinPackedMatrix amat;
-	CoinPackedMatrix wmat;
-	CoinPackedMatrix tmat;
+	std::map<int,CoinPackedMatrix> wmat_map;
+	std::map<int,CoinPackedMatrix> tmat_map;
 
 public:
 	StructJuMPInput(PipsNlpProblemStruct* prob);
