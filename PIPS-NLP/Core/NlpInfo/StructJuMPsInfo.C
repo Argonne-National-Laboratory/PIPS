@@ -259,6 +259,17 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 {
 //	note: no linking constraint handling
 	PAR_DEBUG("JacFull");
+
+	long long mA, nA, mC, nC, mB,nB,mD,nD;
+	Amat->getSize(mA,nA);
+	Cmat->getSize(mC,nC);
+	Bmat->getSize(mB,nB);
+	Dmat->getSize(mD,nD);
+	PAR_DEBUG(" Amat "<<mA<<"  "<<nA<<"  nz"<<Amat->numberOfNonZeros());
+	PAR_DEBUG(" Cmat "<<mC<<"  "<<nC<<"  nz"<<Cmat->numberOfNonZeros());
+	PAR_DEBUG(" Bmat "<<mB<<"  "<<nB<<"  nz"<<Bmat->numberOfNonZeros());
+	PAR_DEBUG(" Dmat "<<mD<<"  "<<nD<<"  nz"<<Dmat->numberOfNonZeros());
+
 	sVars * svars = dynamic_cast<sVars*>(vars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
 	OoqpVector* local_X = (vars_X.vec);
@@ -272,14 +283,13 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int e_nz = Bmat->numberOfNonZeros();
 		int i_nz = Dmat->numberOfNonZeros();
 		PAR_DEBUG("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);
-//		why the Bmat, Dmat structure is not saved?
 
-//		have to request the structure again
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
-		stochInput->prob->eval_jac_g(local_var,local_var,
-				&e_nz,NULL,NULL,NULL,
-				&i_nz,NULL,NULL,NULL,&cbd);
-		PAR_DEBUG("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);
+////		have to request the structure again
+//		stochInput->prob->eval_jac_g(local_var,local_var,
+//				&e_nz,NULL,NULL,NULL,
+//				&i_nz,NULL,NULL,NULL,&cbd);
+//		PAR_DEBUG("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);  //should fixed structure from stochcasticInput interface
 
 		std::vector<int> e_rowidx(e_nz);
 		std::vector<int> e_colptr(locNx+1,0);
@@ -305,16 +315,13 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 
 		int e_nz_Amat = Amat->numberOfNonZeros();
 		int i_nz_Cmat = Cmat->numberOfNonZeros();
-//		why the structure for Amat and Cmat is not saved!?
 
-		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
 		CallBackData cbd_link = {stochInput->prob->userdata,nodeId(),parent->stochNode->id()};
-		stochInput->prob->eval_jac_g(parent_var,local_var,
-					&e_nz_Amat,NULL,NULL,NULL,
-					&i_nz_Cmat,NULL,NULL,NULL,&cbd_link);
-		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
-
-//		I have to request the Amat nz structure every time.
+//		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
+//		stochInput->prob->eval_jac_g(parent_var,local_var,
+//					&e_nz_Amat,NULL,NULL,NULL,
+//					&i_nz_Cmat,NULL,NULL,NULL,&cbd_link);
+//		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);  //should fixed structure from stochcasticInput interface
 
 		int e_amat_rowidx[e_nz_Amat];
 		int e_amat_colptr[parent->locNx+1];
@@ -332,9 +339,9 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int i_nz_Dmat = Dmat->numberOfNonZeros();
 
 		CallBackData cbd_diag = {stochInput->prob->userdata,nodeId(),nodeId()};
-		stochInput->prob->eval_jac_g(parent_var,local_var,
-						&e_nz_Bmat,NULL,NULL,NULL,
-						&i_nz_Dmat,NULL,NULL,NULL,&cbd_diag);
+//		stochInput->prob->eval_jac_g(parent_var,local_var,
+//						&e_nz_Bmat,NULL,NULL,NULL,
+//						&i_nz_Dmat,NULL,NULL,NULL,&cbd_diag);
 
 		int e_bmat_rowidx[e_nz_Bmat];
 		int e_bmat_colptr[locNx+1];
