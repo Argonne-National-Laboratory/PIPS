@@ -36,6 +36,7 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	MPI_Comm comm,
 	int nnode,
 	int n, int m,
+	str_init_x0_cb init_x0,
 	str_prob_info_cb prob_info,
 	str_eval_f_cb eval_f,
 	str_eval_g_cb eval_g,
@@ -59,6 +60,7 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	retval->nnodes = nnode;
 	retval->n = n;
 	retval->m = m;
+	retval->init_x0 = init_x0;
 	retval->prob_info = prob_info;
 	retval->eval_f = eval_f;
 	retval->eval_g = eval_g;

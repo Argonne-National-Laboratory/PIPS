@@ -23,10 +23,17 @@ protected:
 	std::map<int,std::vector<double> > colub_map;
 	std::map<int,std::vector<double> > rowlb_map;
 	std::map<int,std::vector<double> > rowub_map;
+	std::map<int,int> e_ncon_map;
+	std::map<int,int> i_ncon_map;
 
 	CoinPackedMatrix amat;
 	std::map<int,CoinPackedMatrix> wmat_map;
 	std::map<int,CoinPackedMatrix> tmat_map;
+
+	CoinPackedMatrix qamat;
+	std::map<int,CoinPackedMatrix> qwmat_map;
+	std::map<int,CoinPackedMatrix> qtmat_map;
+
 
 public:
 	PipsNlpProblemStruct* prob;
@@ -69,7 +76,12 @@ public:
 	// returns the column-oriented matrix linking the first-stage to the second (T matrix)
 	virtual CoinPackedMatrix getLinkingConstraints(int scen) ;
 
-
+	virtual CoinPackedMatrix getFirstStageHessian();
+	// Q_i
+	virtual CoinPackedMatrix getSecondStageHessian(int scen);
+	// column-oriented, \hat Q_i
+	// Note: this has the second-stage variables on the rows and first-stage on the columns
+	virtual CoinPackedMatrix getSecondStageCrossHessian(int scen);
 
 	// some problem characteristics that could be helpful to know
 

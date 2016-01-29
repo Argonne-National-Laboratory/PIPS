@@ -47,6 +47,25 @@ void StructJuMPInput::get_prob_info(int nodeid)
 	colub_map[nodeid] = colub;
 	rowlb_map[nodeid] = rowlb;
 	rowub_map[nodeid] = rowub;
+
+	int e_mc=0;
+	int i_mc=0;
+	bool e=true; //equality constraint must be at front of list
+	for(int i=0;i<rowlb.size();i++)
+	{
+		if(rowlb[i] == rowub[i]){
+			e_mc++;
+			assert(e); //equality constraint must be at front of list
+		}
+		else{
+			e = false;
+			assert(rowlb[i]<rowub[i]);
+			i_mc++;
+		}
+	}
+	assert(i_mc+e_mc == mc);
+	e_ncon_map[nodeid] = e_mc;
+	i_ncon_map[nodeid] = i_mc;
 	PAR_DEBUG("get_prob_info - insert - "<<nodeid);
 }
 
@@ -241,55 +260,165 @@ bool StructJuMPInput::isSecondStageColInteger(int scen, int col){
 
 // returns the column-oriented first-stage constraint matrix (A matrix)
 CoinPackedMatrix StructJuMPInput::getFirstStageConstraints(){
+	PAR_DEBUG("getFirstStageConstraints - Amat -  ");
 	int nvar = nvar_map[0];
-	int ncon = ncon_map[0];
-	std::vector<int> rowindx(0);
-	std::vector<int> colptr(nvar+1,0);
-	std::vector<double> elts(0);
-	amat.copyOf(true,ncon,nvar,0,&elts[0],&rowindx[0],&colptr[0],0);
+	CallBackData cbd = {prob->userdata,0,0};
+	std::vector<double> x0(nvar,1.0);
+	int e_nz, i_nz;
+	prob->eval_jac_g(&x0[0],&x0[0],
+			&e_nz,NULL,NULL,NULL,
+			&i_nz,NULL,NULL,NULL,&cbd);
+
+	std::vector<int> e_rowidx(e_nz);
+	std::vector<int> e_colptr(nvar+1,0);
+	std::vector<double> e_elts(e_nz);
+
+	std::vector<int> i_rowidx(i_nz);
+	std::vector<int> i_colptr(nvar+1,0);
+	std::vector<double> i_elts(i_nz);
+
+	prob->eval_jac_g(&x0[0],&x0[0],
+				&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
+				&i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
+
+
+	int e_ncon = e_ncon_map[0];
+	int i_ncon = i_ncon_map[0];
+
+	CoinPackedMatrix e_amat;
+	amat.copyOf(true,e_ncon,nvar,0,&e_elts[0],&e_rowidx[0],&e_colptr[0],0);
+	CoinPackedMatrix i_amat;
+	i_amat.copyOf(true,i_ncon,nvar,0,&i_elts[0],&i_rowidx[0],&i_colptr[0],0);
+
+	amat.bottomAppendPackedMatrix(i_amat);
+
 	assert(amat.getNumCols()==nvar);
-	assert(amat.getNumRows()==ncon);
+	assert(amat.getNumRows()==ncon_map[0]);
+	PAR_DEBUG("getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols());
 	return amat;
 }
 // returns the column-oriented second-stage constraint matrix (W matrix)
 CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen){
 	int nodeid = scen + 1;
+	PAR_DEBUG("getSecondStageConstraints - Wmat -  "<<(scen+1));
+	//Bmat + Dmat  = Wmat
+
 	std::map<int,CoinPackedMatrix>::iterator it = wmat_map.find(nodeid);
-	if(it!=wmat_map.end())
+	if(it!=wmat_map.end()){
+		PAR_DEBUG("return (quick) getSecondStageConstraints - Wmat -  "<<it->second.getNumRows()<<" x "<<it->second.getNumCols());
 		return it->second;
+	}
 
 	int nvar = nvar_map[nodeid];
-	int ncon = ncon_map[nodeid];
-	std::vector<int> rowidx(0);
-	std::vector<int> colptr(nvar+1,0);
-	std::vector<double> elts(0);
+
+	CallBackData cbd = {prob->userdata,nodeid,nodeid};
+	std::vector<double> x0(nvar_map[0],1.0);
+	std::vector<double> x1(nvar,1.0);
+
+	int e_nz, i_nz;
+	prob->eval_jac_g(&x0[0],&x1[0],
+			&e_nz,NULL,NULL,NULL,
+			&i_nz,NULL,NULL,NULL,&cbd);
+
+	std::vector<int> e_rowidx(e_nz);
+	std::vector<int> e_colptr(nvar+1,0);
+	std::vector<double> e_elts(e_nz);
+
+	std::vector<int> i_rowidx(i_nz);
+	std::vector<int> i_colptr(nvar+1,0);
+	std::vector<double> i_elts(i_nz);
+
+	prob->eval_jac_g(&x0[0],&x1[0],
+			&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
+			&i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
+
+	int e_ncon = e_ncon_map[nodeid];
+	int i_ncon = i_ncon_map[nodeid];
+
 	CoinPackedMatrix wmat;
-	wmat.copyOf(true,ncon,nvar,0,&elts[0],&rowidx[0],&colptr[0],0);
+	CoinPackedMatrix i_wmat;
+	wmat.copyOf(true,e_ncon,nvar,0,&e_elts[0],&e_rowidx[0],&e_colptr[0],0);
+	i_wmat.copyOf(true,i_ncon,nvar,0,&i_elts[0],&i_rowidx[0],&i_colptr[0],0);
+
+	wmat.bottomAppendPackedMatrix(i_wmat);
+
 	wmat_map[scen] = wmat;
 	assert(wmat.getNumCols()==nvar);
-	assert(wmat.getNumRows()==ncon);
+	assert(wmat.getNumRows()==ncon_map[nodeid]);
+	PAR_DEBUG("return getSecondStageConstraints - Wmat -  "<<wmat.getNumRows()<<" x "<<nvar);
 	return wmat;
 }
 // returns the column-oriented matrix linking the first-stage to the second (T matrix)
 CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen){
+	PAR_DEBUG("getLinkingConstraints - Tmat -  "<<(scen+1));
 	int nodeid = scen + 1;
+
+	//Amat + Cmat  = Tmat
+
 	std::map<int,CoinPackedMatrix>::iterator it = tmat_map.find(nodeid);
-	if(it!=tmat_map.end())
+	if(it!=tmat_map.end()) {
+		PAR_DEBUG("return (quick) getLinkingConstraints - Tmat - "<<it->second.getNumRows()<<" x "<<it->second.getNumCols());
 		return it->second;
+	}
 
 	int nvar = nvar_map[0];
-	int ncon = ncon_map[nodeid];
-	std::vector<int> rowidx(0);
-	std::vector<int> colptr(nvar+1,0);
-	std::vector<double> elts(0);
+	CallBackData cbd = {prob->userdata,nodeid,0};
+	std::vector<double> x0(nvar_map[0],1.0);
+	std::vector<double> x1(nvar_map[nodeid],1.0);
+
+	int e_nz, i_nz;
+	prob->eval_jac_g(&x0[0],&x1[0],
+			&e_nz,NULL,NULL,NULL,
+			&i_nz,NULL,NULL,NULL,&cbd);
+
+	std::vector<int> e_rowidx(e_nz);
+	std::vector<int> e_colptr(nvar+1,0);
+	std::vector<double> e_elts(e_nz);
+
+	std::vector<int> i_rowidx(i_nz);
+	std::vector<int> i_colptr(nvar+1,0);
+	std::vector<double> i_elts(i_nz);
+
+
+	prob->eval_jac_g(&x0[0],&x1[0],
+			&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
+			&i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
+
+	int e_ncon = e_ncon_map[nodeid];
+	int i_ncon = i_ncon_map[nodeid];
+
 	CoinPackedMatrix tmat;
-	tmat.copyOf(true,ncon,nvar,0,&elts[0],&rowidx[0],&colptr[0],0);
+	CoinPackedMatrix i_tmat;
+	tmat.copyOf(true,e_ncon,nvar,0,&e_elts[0],&e_rowidx[0],&e_colptr[0],0);
+	i_tmat.copyOf(true,i_ncon,nvar,0,&i_elts[0],&i_rowidx[0],&i_colptr[0],0);
+
+	tmat.bottomAppendPackedMatrix(i_tmat);
+
 	tmat_map[nodeid] = tmat;
 	assert(tmat.getNumCols()==nvar);
-	assert(tmat.getNumRows()==ncon);
+	assert(tmat.getNumRows()==ncon_map[nodeid]);
+	PAR_DEBUG("return getLinkingConstraints - Tmat - "<<tmat.getNumRows()<<" x "<<nvar);
 	return tmat;
 }
 
+CoinPackedMatrix StructJuMPInput::getFirstStageHessian(){
+
+	return qamat;
+}
+// Q_i
+CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen){
+	int nodeid = scen + 1;
+
+	return qwmat_map[nodeid];
+}
+
+// column-oriented, \hat Q_i
+// Note: this has the second-stage variables on the rows and first-stage on the columns
+CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen){
+	int nodeid = scen + 1;
+
+	return qtmat_map[nodeid];
+}
 
 
 // some problem characteristics that could be helpful to know

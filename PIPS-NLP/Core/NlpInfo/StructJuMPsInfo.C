@@ -255,24 +255,135 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 
 }
 
+void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
+{
+//	note: no linking constraint handling
+	PAR_DEBUG("JacFull");
+	sVars * svars = dynamic_cast<sVars*>(vars);
+	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
+	OoqpVector* local_X = (vars_X.vec);
+	double local_var[locNx];
+	local_X->copyIntoArray(local_var);
+	//update A , B , C, D matrix
+	if(parent == NULL){
+		//only B D matrix
+		assert(nodeId() == 0);
+		PAR_DEBUG("JacFull -- parent is NULL");
+		int e_nz = Bmat->numberOfNonZeros();
+		int i_nz = Dmat->numberOfNonZeros();
+		PAR_DEBUG("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);
+//		why the Bmat, Dmat structure is not saved?
+
+//		have to request the structure again
+		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		stochInput->prob->eval_jac_g(local_var,local_var,
+				&e_nz,NULL,NULL,NULL,
+				&i_nz,NULL,NULL,NULL,&cbd);
+		PAR_DEBUG("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);
+
+		std::vector<int> e_rowidx(e_nz);
+		std::vector<int> e_colptr(locNx+1,0);
+		std::vector<double> e_elts(e_nz);
+
+		std::vector<int> i_rowidx(i_nz);
+		std::vector<int> i_colptr(locNx+1,0);
+		std::vector<double> i_elts(i_nz);
+
+		stochInput->prob->eval_jac_g(local_var,local_var,
+					&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
+					&i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
+
+		Bmat->copyMtxFromDouble(Bmat->numberOfNonZeros(),&e_elts[0]);
+		Dmat->copyMtxFromDouble(Dmat->numberOfNonZeros(),&i_elts[0]);
+	}
+	else{
+		//all A B C D
+		PAR_DEBUG("JacFull -- with parent - nodeid "<<nodeId());
+		double parent_var[parent->locNx];
+		OoqpVector* parent_X = (vars_X.parent->vec);
+		parent_X->copyIntoArray(parent_var);
+
+		int e_nz_Amat = Amat->numberOfNonZeros();
+		int i_nz_Cmat = Cmat->numberOfNonZeros();
+//		why the structure for Amat and Cmat is not saved!?
+
+		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
+		CallBackData cbd_link = {stochInput->prob->userdata,nodeId(),parent->stochNode->id()};
+		stochInput->prob->eval_jac_g(parent_var,local_var,
+					&e_nz_Amat,NULL,NULL,NULL,
+					&i_nz_Cmat,NULL,NULL,NULL,&cbd_link);
+		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
+
+//		I have to request the Amat nz structure every time.
+
+		int e_amat_rowidx[e_nz_Amat];
+		int e_amat_colptr[parent->locNx+1];
+		double e_amat_elts[e_nz_Amat];
+
+		int i_cmat_rowidx[i_nz_Cmat];
+		int i_cmat_colptr[parent->locNx+1];
+		double i_cmat_elts[i_nz_Cmat];
+
+		stochInput->prob->eval_jac_g(parent_var,local_var,
+				&e_nz_Amat,e_amat_elts,e_amat_rowidx,e_amat_colptr,
+				&i_nz_Cmat,i_cmat_elts,i_cmat_rowidx,i_cmat_colptr, &cbd_link);
+
+		int e_nz_Bmat = Bmat->numberOfNonZeros();
+		int i_nz_Dmat = Dmat->numberOfNonZeros();
+
+		CallBackData cbd_diag = {stochInput->prob->userdata,nodeId(),nodeId()};
+		stochInput->prob->eval_jac_g(parent_var,local_var,
+						&e_nz_Bmat,NULL,NULL,NULL,
+						&i_nz_Dmat,NULL,NULL,NULL,&cbd_diag);
+
+		int e_bmat_rowidx[e_nz_Bmat];
+		int e_bmat_colptr[locNx+1];
+		double e_bmat_elts[e_nz_Bmat];
+
+		int i_dmat_rowidx[i_nz_Dmat];
+		int i_dmat_colptr[locNx+1];
+		double i_dmat_elts[i_nz_Dmat];
+
+		stochInput->prob->eval_jac_g(parent_var,local_var,
+				&e_nz_Bmat,e_bmat_elts,e_bmat_rowidx,e_bmat_colptr,
+				&i_nz_Dmat,i_dmat_elts,i_dmat_rowidx,i_dmat_colptr, &cbd_diag);
+
+		Amat->copyMtxFromDouble(Amat->numberOfNonZeros(),e_amat_elts);
+		Bmat->copyMtxFromDouble(Bmat->numberOfNonZeros(),e_bmat_elts);
+		Cmat->copyMtxFromDouble(Cmat->numberOfNonZeros(),i_cmat_elts);
+		Dmat->copyMtxFromDouble(Dmat->numberOfNonZeros(),i_dmat_elts);
+	}
+
+	for(size_t it=0; it<children.size(); it++)
+		children[it]->JacFull(svars->children[it], NULL,NULL);
+}
+
+
 void StructJuMPsInfo::Hessian(NlpGenVars * vars, SymMatrix *Hess)
 {
 	PAR_DEBUG("Hessian");
-}
-
-void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
-{
-	PAR_DEBUG("JacFull");
-
-	//update A , B , C, D matrix
-}
-
-void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
-	PAR_DEBUG("get_InitX0"<<vX);
+	//update Qdiag and Qborder
 }
 
 void StructJuMPsInfo::Hessian_FromSon(NlpGenVars * vars, double *tempFromParH){
 	PAR_DEBUG("Hessian_FromSon");
+}
+
+void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
+	PAR_DEBUG("get_InitX0"<<vX);
+	StochVector* vars_X = dynamic_cast<StochVector*>(vX);
+	OoqpVector* local_X = vars_X->vec;
+	PAR_DEBUG("size of x "<<locNx);
+	assert(locNx == vX->n);
+	assert(children.size() == vars_X->children.size());
+
+	double temp_var[locNx];
+	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+	stochInput->prob->init_x0(temp_var,&cbd);
+	local_X->copyFromArray(temp_var);
+
+	for(size_t it=0; it<children.size(); it++)
+	    children[it]->get_InitX0(vars_X->children[it]);
 }
 
 void StructJuMPsInfo::writeSolution(NlpGenVars* vars)
