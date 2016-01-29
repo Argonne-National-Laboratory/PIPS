@@ -31,9 +31,6 @@
 
 #include "../par_macro.h"
 
-int gmyid;
-int gnprocs;
-
 extern "C"
 PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	MPI_Comm comm,
@@ -47,13 +44,9 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	str_eval_h_cb eval_h,
 	UserDataPtr userdata)
 {
-	int myid;
-	MPI_Comm_rank(comm, &myid);
-	gmyid = myid;
-	int nprocs;
-	MPI_Comm_size(comm, &nprocs);
-	gnprocs = nprocs;
-	std::cout << "on proc ["<<myid<<"] of ["<< nprocs << "] MPI processes." <<std::endl;
+	MPI_Comm_rank(comm, &gmyid);
+	MPI_Comm_size(comm, &gnprocs);
+	std::cout << "on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes." <<std::endl;
 	PAR_DEBUG("CreatePipsNlpProblemStruct - C");
 
 	pipsOptions *pipsOpt = new pipsOptions();
@@ -87,25 +80,26 @@ extern int gUseReducedSpace;
 extern "C"
 int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
 {
-	int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
-	int nprocs; MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-	if(0==mype) std::cout << "Using a total of " << nprocs << " MPI processes." <<std::endl;
+	PAR_DEBUG("PipsNlpSolveStruct  - "<<gnprocs);
+	MPI_Comm comm = prob->comm;
 
 	pipsOptions *pipsOpt = new pipsOptions();
 	pipsOpt->readFile();
 	pipsOpt->defGloOpt();
 	gInnerSCsolve=0;
 
-	StructJuMPInput *s;
-	s = new StructJuMPInput(prob);
+	StructJuMPInput *s = new StructJuMPInput(prob);
+	PAR_DEBUG("comm is "<<comm);
+	assert(comm == MPI_COMM_WORLD);
 
-	NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s);
+	PAR_DEBUG("before PIPSIpmInterface created .." );
+	NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
+	PAR_DEBUG("PIPSIpmInterface created .." );
 
-	if (mype == 0) std::cout << "PIPSIpmInterface created .." <<std::endl;
 	//  delete s;
-	if (mype == 0) std::cout << "AMPL NL  deleted ... solving" <<std::endl;
+	PAR_DEBUG("AMPL NL  deleted ... solving");
 
-	if (mype == 0) {
+	if (gmyid == 0) {
 		std::cout << "  \n  -----------------------------------------------\n"
 		<< "  NLP Solver \n"
 		<< "  Argonne National Laboratory, 2016\n"

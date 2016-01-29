@@ -8,11 +8,13 @@
 class StructJuMPsInfo : public sInfo
 {
 protected:
-
+	StructJuMPInput* stochInput;
+	int iAmDistrib;
 public:
 	StructJuMPsInfo();
 	StructJuMPsInfo(sData *data_in);
 	StructJuMPsInfo(sData *data_in, stochasticInput& in);
+	StructJuMPsInfo(sData *data_in, StructJuMPInput& in, const int idx);
 	~StructJuMPsInfo();
 
 	void createChildren(sData *data_in, StructJuMPInput& in);
@@ -32,7 +34,11 @@ public:
 
 	virtual void Hessian_FromSon(NlpGenVars * vars, double *tempFromParH);
 
-	virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad,double *tempFromParGrad );
+	virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad,double *pgrad );
+
+	virtual void writeSolution(NlpGenVars* vars);
+
+	int nodeId();
 };
 
 

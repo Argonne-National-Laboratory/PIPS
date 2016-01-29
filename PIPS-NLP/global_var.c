@@ -1,0 +1,2 @@
+int gmyid;
+int gnprocs;

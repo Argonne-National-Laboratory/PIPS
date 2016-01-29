@@ -23,6 +23,9 @@ add_subdirectory(Core)
 
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
+add_library(global_var 
+	global_var.c
+)
 
 #message("HAVE_PARDISO: ${HAVE_PARDISO}")
 #message("HAVE_MA57: ${HAVE_MA57}")
@@ -37,6 +40,7 @@ if(HAVE_PETSC)
 ### parallel filter line search IPM with MA57/Pardiso, use NL as the input, seperate Hessian
   add_executable(pipsnlp_parallel Drivers/parallelAmplDriver.cpp)
   target_link_libraries(pipsnlp_parallel
+	global_var
     genNLparallel StochInfoFromAMPL nlpstoch
     pipsnlpFLSStoch
 #    ReducedSpaceSolver blockSCSolver
@@ -78,6 +82,7 @@ else(HAVE_PETSC)
 ###  parallel filter line search IPM with MA57/Pardiso, use NL as the input, seperate Hessian
   add_executable(pipsnlp_parallel Drivers/parallelAmplDriver.cpp)
   target_link_libraries(pipsnlp_parallel
+	global_var
     genNLparallel StochInfoFromAMPL
     pipsnlpFLSStoch nlpstoch nlpstochla
     nlpgensparse nlpbase nlpsparse nlpdense
@@ -107,6 +112,7 @@ else(HAVE_PETSC)
 ### parallel filter line search IPM with DCOPF network aggregation preconditioner
   add_executable(pipsqpFromDCOPF Drivers/parallelDcopfDriver.cpp)
   target_link_libraries(pipsqpFromDCOPF
+	global_var
     dcopfcinput nlpstochInputBase  aggregationstoch sInfoQPLP
     pipsnlpFLSStoch nlpstoch nlpstochla
     reducedSolverSpecial
@@ -177,12 +183,20 @@ else()
   add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   target_link_libraries(parpipsnlp
   ${WHOLE_ARCHIVE}
-  updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
+  global_var
+  updateFromCallBack  
+  nlpcNlpGenSparse  
+  nlpwithsolver
   LU_solvers
-  nlpsparse nlpdense
-  pipsnlpFLSStoch nlpstoch nlpstochla 
-  nlpgensparse nlpbase 
+  nlpsparse 
+  nlpdense
+  pipsnlpFLSStoch 
+  nlpstoch 
+  nlpstochla 
+  nlpgensparse 
+  nlpbase 
   genStructparallel
+  structStochInfo
   #pipsnlpFLS  
   ${COIN_LIBS}
   ${MA57_LIBRARY}

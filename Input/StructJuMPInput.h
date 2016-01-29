@@ -17,7 +17,6 @@
 class StructJuMPInput : public stochasticInput {
 
 protected:
-	PipsNlpProblemStruct* prob;
 	std::map<int,int> nvar_map;
 	std::map<int,int> ncon_map;
 	std::map<int,std::vector<double> > collb_map;
@@ -25,10 +24,12 @@ protected:
 	std::map<int,std::vector<double> > rowlb_map;
 	std::map<int,std::vector<double> > rowub_map;
 
-
 	CoinPackedMatrix amat;
 	std::map<int,CoinPackedMatrix> wmat_map;
 	std::map<int,CoinPackedMatrix> tmat_map;
+
+public:
+	PipsNlpProblemStruct* prob;
 
 public:
 	StructJuMPInput(PipsNlpProblemStruct* prob);
