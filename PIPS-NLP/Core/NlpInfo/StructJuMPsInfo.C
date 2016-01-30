@@ -366,14 +366,121 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 }
 
 
-void StructJuMPsInfo::Hessian(NlpGenVars * vars, SymMatrix *Hess)
+void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 {
-	PAR_DEBUG("Hessian");
+	PAR_DEBUG("Hessian -- at root");
 	//update Qdiag and Qborder
+	long long mqi, nqi, mqb, nqb;
+	Qdiag->getSize(mqi,nqi);
+	Qborder->getSize(mqb,nqb);
+	PAR_DEBUG(" Qdiag "<<mqi<<"  "<<nqi<<"  nz"<<Qdiag->numberOfNonZeros());
+	PAR_DEBUG(" Qborder "<<mqb<<"  "<<nqb<<"  nz"<<Qborder->numberOfNonZeros());
+
+	sVars * vars = dynamic_cast<sVars*>(nlpvars);
+	StochVector& vars_X = dynamic_cast<StochVector&>(*vars->x);
+	StochVector& vars_Y = dynamic_cast<StochVector&>(*vars->y);
+	StochVector& vars_Z = dynamic_cast<StochVector&>(*vars->z);
+	OoqpVector* local_X = vars_X.vec;
+	OoqpVector* local_Y = vars_Y.vec; //eq con
+	OoqpVector* local_Z = vars_Z.vec; //ieq con
+
+	double local_var[locNx];
+	local_X->copyIntoArray(local_var);
+	double local_y[locMy];
+	double local_z[locMz];
+	local_Y->copyIntoArray(local_y);
+	local_Z->copyIntoArray(local_z);
+	std::vector<double> lam(locMy+locMz,0.0);
+	int i=0;
+	for(i=0;i<locMy;i++) lam[i] = -local_y[i];
+	for(;i<locMy+locMz;i++) lam[i] = -local_z[i];
+
+	int nzqd = Qdiag->numberOfNonZeros();
+	std::vector<double> elts(nzqd,0.0);
+
+	if(gmyid == 0) {
+		int rowidx[nzqd];
+		int colptr[locNx];
+		CallBackData cbd = {stochInput->prob->userdata,0,0};
+		stochInput->prob->eval_h(local_var,local_var,&lam[0],&nzqd,&elts[0],rowidx,colptr,&cbd);
+	}
+
+	for(size_t it=0; it<children.size(); it++){
+		children[it]->Hessian_FromSon(vars->children[it],&elts[0]);
+	}
+
+	//MPI ALL REDUCE
+	double g_elts[nzqd];
+	MPI_Allreduce(&elts[0], g_elts, nzqd, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+	Qdiag->copyMtxFromDouble(nzqd,g_elts);
 }
 
-void StructJuMPsInfo::Hessian_FromSon(NlpGenVars * vars, double *tempFromParH){
+void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 	PAR_DEBUG("Hessian_FromSon");
+	long long mqi, nqi, mqb, nqb;
+	Qdiag->getSize(mqi,nqi);
+	Qborder->getSize(mqb,nqb);
+	PAR_DEBUG(" Qdiag "<<mqi<<"  "<<nqi<<"  nz"<<Qdiag->numberOfNonZeros());
+	PAR_DEBUG(" Qborder "<<mqb<<"  "<<nqb<<"  nz"<<Qborder->numberOfNonZeros());
+
+	sVars * vars = dynamic_cast<sVars*>(nlpvars);
+	StochVector& vars_X = dynamic_cast<StochVector&>(*vars->x);
+	StochVector& vars_Y = dynamic_cast<StochVector&>(*vars->y);
+	StochVector& vars_Z = dynamic_cast<StochVector&>(*vars->z);
+	OoqpVector* local_X = vars_X.vec;
+	OoqpVector* local_Y = vars_Y.vec; //eq con
+	OoqpVector* local_Z = vars_Z.vec; //ieq con
+
+	double local_var[locNx];
+	local_X->copyIntoArray(local_var);
+	double local_y[locMy];
+	double local_z[locMz];
+	local_Y->copyIntoArray(local_y);
+	local_Z->copyIntoArray(local_z);
+	std::vector<double> lam(locMy+locMz,0.0);
+	int i=0;
+	for(i=0;i<locMy;i++) lam[i] = -local_y[i];
+	for(;i<locMy+locMz;i++) lam[i] = -local_z[i];
+
+	double parent_var[parent->locNx];
+	OoqpVector* parent_X = (vars_X.parent->vec);
+	parent_X->copyIntoArray(parent_var);
+
+
+	//pnzqd
+	{
+		int pnzqd = parent->Qdiag->numberOfNonZeros();
+		PAR_DEBUG("  -- Qdiag nz parent "<<pnzqd);
+		double elts[pnzqd];
+		int rowidx[pnzqd];
+		int colptr[parent->locNx+1];
+		CallBackData cbd_pnzqd = {stochInput->prob->userdata,nodeId(),0};
+		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&pnzqd,elts,rowidx,colptr,&cbd_pnzqd);
+		for(int i=0;i<pnzqd;i++) parent_hess[i] += elts[i];
+	}
+
+	//nzqd
+	{
+		int nzqd = Qdiag->numberOfNonZeros();
+		double elts[nzqd];
+		int rowidx[nzqd];
+		int colptr[locNx+1];
+		CallBackData cbd_nzqd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqd,elts,rowidx,colptr,&cbd_nzqd);
+		Qdiag->copyMtxFromDouble(nzqd,elts);
+	}
+
+	//nzqb
+	{
+		int nzqb = Qborder->numberOfNonZeros();
+		double elts[nzqb];
+		int rowidx[nzqb];
+		int colptr[parent->locNx+1];
+		CallBackData cbd_nzqb = {stochInput->prob->userdata,0,nodeId()};
+		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqb,elts,rowidx,colptr,&cbd_nzqb);
+		Qborder->copyMtxFromDouble(nzqb,elts);
+	}
 }
 
 void StructJuMPsInfo::get_InitX0(OoqpVector* vX){

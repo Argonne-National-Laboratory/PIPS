@@ -27,7 +27,9 @@ extern "C" typedef int (*str_eval_jac_g_cb)(double* x0, double* x1,
 		int* e_nz, double* e_elts, int* e_rowidx, int *e_colptr,
 		int* i_nz, double* i_elts, int* i_rowidx, int *i_colptr,
 		CallBackDataPtr user_data);
-extern "C" typedef int (*str_eval_h_cb)(double* x0, double* x1, double* vec_lambda, double* vec_Hes, int* iRows, int *kCols, CallBackDataPtr user_data);
+extern "C" typedef int (*str_eval_h_cb)(double* x0, double* x1, double* lamdba,
+		int* nz, double* elts, int* rowidx, int *colptr,
+		CallBackDataPtr user_data);
 
 extern "C"
 {
