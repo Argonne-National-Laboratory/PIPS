@@ -483,11 +483,11 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 }
 
 void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
-	PAR_DEBUG("get_InitX0"<<vX);
+	PAR_DEBUG("get_InitX0 - "<<nodeId());
 	StochVector* vars_X = dynamic_cast<StochVector*>(vX);
 	OoqpVector* local_X = vars_X->vec;
-	PAR_DEBUG("size of x "<<locNx);
-	assert(locNx == vX->n);
+	PAR_DEBUG("size of x "<<locNx<<" - vX->n"<<vX->n);
+//	assert(locNx == vX->n);
 	assert(children.size() == vars_X->children.size());
 
 	double temp_var[locNx];
