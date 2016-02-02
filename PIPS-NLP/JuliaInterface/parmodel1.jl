@@ -2,7 +2,7 @@ import MPI
 
 # min (x1+x2)^2+(x1+x2)*x3 + (x1+x2)*x4
 # st.
-#     x1 * x2 < 10
+#     x1 * x2 = 10
 #     x2^2 + x3*x1 < 5
 #     x2^2 + x4*x1 < 6
 # x1, x2 , x3, x4 free variables
@@ -32,7 +32,7 @@ function str_prob_info(nodeid,mode,col_lb,col_ub,row_lb,row_ub)
         if(nodeid==0)
             fill!(col_lb,-Inf)
             fill!(col_ub, Inf)
-            fill!(row_lb,-Inf)
+            fill!(row_lb, 10.0)
             fill!(row_ub, 10.0)
         elseif (nodeid == 1 )
             fill!(col_lb, -Inf)
@@ -91,11 +91,11 @@ end
 function str_eval_g(nodeid,x0,x1,new_eq_g, new_inq_g)
     if nodeid == 0
         assert(x0 == x1)
-        assert(length(new_inq_g) == 1 )
-        assert(length(new_eq_g) == 0)
+        assert(length(new_inq_g) == 0 )
+        assert(length(new_eq_g) == 1)
         x01 = x0[1]
         x02 = x0[2]
-        new_inq_g[1] = x01 * x02
+        new_eq_g[1] = x01 * x02
     elseif nodeid == 1
         x01 = x0[1]
         x02 = x0[2]
@@ -161,7 +161,7 @@ end
 function str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
     if(mode == :Structure)
         if (rowid,colid) == (0,0)
-            return (0,2)
+            return (2,0)
         elseif (rowid, colid) == (1,1)
             return (0,1)
         elseif (rowid, colid) == (2,2)
@@ -178,15 +178,15 @@ function str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowi
         x02 = x0[2]
         if (rowid,colid) == (0,0)
             assert(x1==x0)
-            assert(length(e_rowidx) == length(e_values) == 0)
-            assert(length(i_rowidx) == length(i_values) == 2)
-            i_rowidx[1] = 1
-            i_rowidx[2] = 1
-            i_colptr[1] = 1
-            i_colptr[2] = 2
-            i_colptr[3] = 3
-            i_values[1] = x02
-            i_values[2] = x01
+            assert(length(e_rowidx) == length(e_values) == 2)
+            assert(length(i_rowidx) == length(i_values) == 0)
+            e_rowidx[1] = 1
+            e_rowidx[2] = 1
+            e_colptr[1] = 1
+            e_colptr[2] = 2
+            e_colptr[3] = 3
+            e_values[1] = x02
+            e_values[2] = x01
         elseif (rowid, colid) == (1,1)
             assert(length(e_rowidx) == length(e_values) == 0)
             assert(length(i_rowidx) == length(i_values) == 1)
