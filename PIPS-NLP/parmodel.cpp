@@ -7,11 +7,11 @@
 #include <math.h>
 
 
-//# min (x1+x2)^2+(x1+x2)*x3 + (x1+x2)*x4
+//# min (x1 + x2)^2 + x1 + x2 + ( x1 + x2)x3 + x3 + ( x1 + x2)x4 + x4
 //# st.
-//#     x1 + x2 + x1 * x2 = 100
-//#     0< x2^2 + x3*x1 + x3^2 + x1 + x2 < 600
-//#     0< x1^2 + x4*x2 + x4^2 + x1 + x2 < 600
+//#     x1 + x2 + x1x2 = 100
+//#     0< x2^2 + x3*x1 + x3^2 + x3 + x1 + x2 < 600
+//#     0< x1^2 + x4*x2 + x4^2 + x4 + x1 + x2 < 600
 //# x1, x2 , x3, x4 free variables
 
 int str_init_x0(double* x0, CallBackDataPtr cbd) {
@@ -96,15 +96,15 @@ int str_eval_f(double* x0, double* x1, double* obj, CallBackDataPtr cbd) {
 	PAR_DEBUG("str_prob_info -- row " << row <<" col "<<col );
 	assert(row == col);
 	if(row == 0 )
-	{
+	{   // (x0 + x1) ^ 2 + x0 + x1
 		*obj =  ( x0[0] + x0[1] ) * ( x0[0] + x0[1] ) + x0[0] + x0[1];
 	}
 	else if(row == 1)
-	{
+	{   // (x0 + x1)x3 + x3
 		*obj = ( x0[0] + x0[1] ) * x1[0] + x1[0];
 	}
 	else if(row == 2)
-	{
+	{  // (x0 + x1)x4 + x4
 		*obj = ( x0[0] + x0[1] ) * x1[0] + x1[0];
 	}
 	else
@@ -119,16 +119,16 @@ int str_eval_g(double* x0, double* x1, double* eq_g, double* inq_g,
 	PAR_DEBUG("str_eval_g  -- row " << row <<" col "<<col);
 	assert(row == col);
 	if(row == 0)
-	{
-		eq_g[0] = x0[0] + x0[1];
+	{	//x1 + x2 + x1x2 = 100
+		eq_g[0] = x0[0] + x0[1] + x0[0]*x0[1];
 	}
 	else if(row == 1)
-	{
-		inq_g[0] = x0[1]*x0[1] + x1[0] * x0[1];
+	{   //0< x2^2 + x3x1 + x1 + x2 + x3^2 + x3<600
+		inq_g[0] = x0[1]*x0[1] + x1[0] * x0[0] + x0[0] + x0[1] + x1[0]*x1[0] + x1[0];
 	}
 	else if(row == 2)
-	{
-		inq_g[0] = x0[1]*x0[1] + x1[0] * x0[1];
+	{  //0< x1^2 + x4x2 + x1 + x2 + x4^2 + x4< 600
+		inq_g[0] = x0[0]*x0[0] + x1[0] * x0[1] + x0[0] + x0[1] + x1[0]*x1[0] + x1[0];
 	}
 	else
 		assert(false);
@@ -143,16 +143,16 @@ int str_eval_grad_f(double* x0, double* x1, double* grad, CallBackDataPtr cbd) {
 
 	if(row == 0 && col == 0)
 	{
-		grad[0] = 2*(x0[0]+x0[1]) + 1.0;
-		grad[1] = 2*(x0[0]+x0[1]) + 1.0;
+		grad[0] = 2.0 * (x0[0] + x0[1]) + 1.0;
+		grad[1] = 2.0 * (x0[0] + x0[1]) + 1.0;
 	}
 	else if(row == 1 && col == 1)
 	{
-		grad[0] = x0[0] + x0[1] + 1.0;
+		grad[0] = (x0[0] + x0[1]) + 1.0;
 	}
 	else if(row == 2 && col == 2)
 	{
-		grad[0] = x0[0] + x0[1] + 1.0;
+		grad[0] = (x0[0] + x0[1]) + 1.0;
 	}
 	else if(row == 1 && col == 0)
 	{
@@ -214,13 +214,13 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 			i_rowidx[0] = 0;
 			i_colptr[0] = 0;
 			i_colptr[1] = 1;
-			i_elts[0] = x0[0];
+			i_elts[0] = x0[0] + 2.0*x1[0] + 1.0;
 		} else if (row == 2 && col == 2) {
 			assert(*i_nz == 1 && *e_nz == 0);
 			i_rowidx[0] = 0;
 			i_colptr[0] = 0;
 			i_colptr[1] = 1;
-			i_elts[0] = x0[0];
+			i_elts[0] = x0[1] + 2.0*x1[0] + 1.0;
 		} else if (row == 1 && col == 0) {
 			assert(*i_nz == 2 && *e_nz == 0);
 			i_rowidx[0] = 0;
@@ -229,7 +229,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 			i_colptr[1] = 1;
 			i_colptr[2] = 2;
 			i_elts[0] = x1[0] + 1.0;
-			i_elts[1] = 2*x0[1] + 1.0;
+			i_elts[1] = 2.0*x0[1] + 1.0;
 		} else if (row == 2 && col == 0) {
 			assert(*i_nz == 2 && *e_nz == 0);
 			i_rowidx[0] = 0;
@@ -237,7 +237,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 			i_colptr[0] = 0;
 			i_colptr[1] = 1;
 			i_colptr[2] = 2;
-			i_elts[0] = 2*x0[0] + 1.0;
+			i_elts[0] = 2.0*x0[0] + 1.0;
 			i_elts[1] = x1[0] + 1.0;
 		} else
 			assert(false);
