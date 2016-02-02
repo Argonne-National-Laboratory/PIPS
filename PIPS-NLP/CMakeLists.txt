@@ -24,7 +24,7 @@ add_subdirectory(Core)
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
 add_library(global_var 
-	global_var.c
+	global_var.cpp
 )
 
 #message("HAVE_PARDISO: ${HAVE_PARDISO}")
@@ -40,7 +40,6 @@ if(HAVE_PETSC)
 ### parallel filter line search IPM with MA57/Pardiso, use NL as the input, seperate Hessian
   add_executable(pipsnlp_parallel Drivers/parallelAmplDriver.cpp)
   target_link_libraries(pipsnlp_parallel
-	global_var
     genNLparallel StochInfoFromAMPL nlpstoch
     pipsnlpFLSStoch
 #    ReducedSpaceSolver blockSCSolver
@@ -48,6 +47,7 @@ if(HAVE_PETSC)
 #    schurDecompSolver
     nlpgensparse LU_solvers
     nlpbase nlpsparse nlpdense nlpstochla
+	global_var
     ${COIN_LIBS}
     ${MA27_LIBRARY} ${MA57_LIBRARY}
     ${UMF_ALLINONE_LIBRARY}
@@ -67,6 +67,7 @@ if(HAVE_PETSC)
     petsc_solver_sparse
     nlpsparse nlpdense
     pipsnlpFLS  nlpbase
+	global_var
     ${COIN_LIBS}
     ${AMPL_LIBRARY}
     ${MA57_LIBRARY}  ${MA27_LIBRARY}
@@ -82,13 +83,13 @@ else(HAVE_PETSC)
 ###  parallel filter line search IPM with MA57/Pardiso, use NL as the input, seperate Hessian
   add_executable(pipsnlp_parallel Drivers/parallelAmplDriver.cpp)
   target_link_libraries(pipsnlp_parallel
-	global_var
     genNLparallel StochInfoFromAMPL
     pipsnlpFLSStoch nlpstoch nlpstochla
     nlpgensparse nlpbase nlpsparse nlpdense
 #    schurDecompSolver
 #    ReducedSpaceSolver blockSCSolver
 	reducedSolverSpecial
+	global_var
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
     ${PARDISO_LIBRARY}
     LU_solvers ${UMF_ALLINONE_LIBRARY}
@@ -101,6 +102,7 @@ else(HAVE_PETSC)
     genNLserial updateFromAMPL
     pipsnlpFLS nlpcNlpGenSparse nlpwithsolver
     nlpgensparse nlpbase nlpsparse nlpdense
+	global_var
 #	 schurDecompSolver
 #     ReducedSpaceSolver reducedSolverSpecial
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
@@ -145,21 +147,33 @@ if (HAVE_CLANG)
   #${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
 
+  
   add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   target_link_libraries(parpipsnlp
-  ${WHOLE_ARCHIVE} 
-  updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
+  reducedSolverSpecial
+  ${WHOLE_ARCHIVE}
+  global_var
+  updateFromCallBack  
+  nlpcNlpGenSparse  
+  nlpwithsolver
   LU_solvers
-  nlpsparse nlpdense
-  pipsnlpFLSStoch nlpstoch nlpstochla  
-  nlpgensparse nlpbase nlpsparse nlpdense
+  nlpsparse 
+  nlpdense
+  pipsnlpFLSStoch 
+  nlpstoch 
+  nlpstochla 
+  nlpgensparse 
+  nlpbase 
+  genStructparallel
+  structStochInfo
+  #pipsnlpFLS  
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
-  #${NO_WHOLE_ARCHIVE}
+  ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
   
 else()
@@ -182,6 +196,7 @@ else()
 
   add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   target_link_libraries(parpipsnlp
+  reducedSolverSpecial
   ${WHOLE_ARCHIVE}
   global_var
   updateFromCallBack  
@@ -201,9 +216,40 @@ else()
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
-  #    ${UMF_ALLINONE_LIBRARY}
+  ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
-endif (HAVE_CLANG)
+endif(HAVE_CLANG)
+
+# a testing example for PIPSNLP parallel structure interface
+add_executable(parmodel parmodel.cpp)
+target_link_libraries(parmodel
+  parpipsnlp
+  reducedSolverSpecial
+  ${WHOLE_ARCHIVE}
+  updateFromCallBack  
+  nlpcNlpGenSparse  
+  nlpwithsolver
+  LU_solvers
+  nlpsparse 
+  nlpdense
+  pipsnlpFLSStoch 
+  nlpstoch 
+  nlpstochla 
+  nlpgensparse 
+  nlpbase 
+  genStructparallel
+  structStochInfo
+  global_var
+  #pipsnlpFLS  
+  ${COIN_LIBS}
+  ${MA57_LIBRARY}
+  ${MA27_LIBRARY}
+  ${UMF_ALLINONE_LIBRARY}
+  ${METIS_LIBRARY}
+  ${PARDISO_LIBRARY}
+  ${NO_WHOLE_ARCHIVE}
+  ${MATH_LIBS} )
+  

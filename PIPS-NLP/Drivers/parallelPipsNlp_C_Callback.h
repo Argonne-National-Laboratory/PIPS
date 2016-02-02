@@ -13,8 +13,8 @@ typedef void * UserDataPtr;
 /*
  * prob points to the userdata field of the PipsNlpProblemStruct
  * row_node_id and col_node_id are of of the node id in the stochastic tree
- * When the requested data is vectors, the row and col node is must be equal.
- * When the requested data is a sub-matrix, the row and col node id are used to identify the block.
+ * When the requested data is vectors, the row and col node must be equal.
+ * When the requested data is a sub-matrix, the row and col node ids are used to identify the block.
  */
 typedef struct CallBackData
 {

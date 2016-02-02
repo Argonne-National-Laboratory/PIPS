@@ -15,6 +15,7 @@
 #include "sResiduals.h"
 #include "sVars.h"
 #include "StochMonitor.h"
+#include "../../par_macro.h"
 
 using namespace std;
 
@@ -67,17 +68,15 @@ class NlpPIPSIpmInterface
 template<class FORMULATION, class IPMSOLVER, class UPDATENLP>
 NlpPIPSIpmInterface<FORMULATION, IPMSOLVER,UPDATENLP>::NlpPIPSIpmInterface(stochasticInput &in, MPI_Comm comm) : comm(comm)
 {
-
   int mype; MPI_Comm_rank(comm,&mype);
-
-
+  PAR_DEBUG("enter constructor NlpPIPSIpmInterface "<<mype);
 #ifdef TIMING
 		double tGenTime=MPI_Wtime();
 		double tGenTime2,tGenTime3;
 #endif
 
   factory = new FORMULATION( in, comm);
-
+  PAR_DEBUG("factory created "<<comm);
 #ifdef TIMING
   tGenTime2 = MPI_Wtime();
   MPI_Barrier(MPI_COMM_WORLD);
@@ -94,10 +93,12 @@ NlpPIPSIpmInterface<FORMULATION, IPMSOLVER,UPDATENLP>::NlpPIPSIpmInterface(stoch
 //  data   = dynamic_cast<sData*>     ( factory->makeData(updateNlpInfo) );
 
   data   = dynamic_cast<sData*>	  ( factory->makeData() );
+  PAR_DEBUG("data created "<<comm);
   if(in.useInputDate == 0)
     updateNlpInfo = new UPDATENLP( data);
   else
   	updateNlpInfo = new UPDATENLP( data, in);
+  PAR_DEBUG("updateNlpInfo created");
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
 

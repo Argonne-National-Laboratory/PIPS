@@ -1,5 +1,4 @@
 
-#include "mpi.h"
 
 extern int gmyid;
 extern int gnprocs;

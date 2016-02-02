@@ -36,6 +36,7 @@ void StructJuMPInput::get_prob_info(int nodeid)
 	prob->prob_info(&nv,NULL,NULL,&mc,NULL,NULL,&data);
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
+	PAR_DEBUG("nv  "<<nv<<" mc "<<mc);
 
 	std::vector<double> collb(nv);
 	std::vector<double> colub(nv);
@@ -88,7 +89,7 @@ int StructJuMPInput::nFirstStageCons(){
 }
 int StructJuMPInput::nSecondStageVars(int scen){
 	int nodeid = scen + 1;
-	PAR_DEBUG("nSecondStageVars");
+	PAR_DEBUG("nSecondStageVars - "<<nodeid);
 	std::map<int,int>::iterator it = nvar_map.find(nodeid);
 	if(it!=nvar_map.end())
 		return  it->second;
@@ -97,7 +98,7 @@ int StructJuMPInput::nSecondStageVars(int scen){
 }
 int StructJuMPInput::nSecondStageCons(int scen){
 	int nodeid = scen + 1;
-	PAR_DEBUG("nSecondStageCons");
+	PAR_DEBUG("nSecondStageCons - "<<nodeid);
 	std::map<int,int>::iterator it = ncon_map.find(nodeid);
 	if(it!=ncon_map.end())
 		return  it->second;
@@ -207,6 +208,7 @@ std::vector<double> StructJuMPInput::getSecondStageObj(int scen){
 }
 std::vector<std::string> StructJuMPInput::getSecondStageColNames(int scen){
 	int nodeid = scen + 1;
+	PAR_DEBUG("getSecondStageColNames - nodeid"<<nodeid);
 	assert(nvar_map.find(nodeid)!=nvar_map.end());
 	assert(nvar_map.find(0)!=nvar_map.end());
 	int i0 = nvar_map[0];
@@ -222,6 +224,7 @@ std::vector<std::string> StructJuMPInput::getSecondStageColNames(int scen){
 }
 std::vector<double> StructJuMPInput::getSecondStageRowUB(int scen){
 	int nodeid = scen + 1;
+	PAR_DEBUG("getSecondStageRowUB - nodeid"<<nodeid);
 	std::map<int, std::vector<double> >::iterator it = rowub_map.find(nodeid);
 	if(it!=rowub_map.end())
 		return  it->second;
@@ -230,6 +233,7 @@ std::vector<double> StructJuMPInput::getSecondStageRowUB(int scen){
 }
 std::vector<double> StructJuMPInput::getSecondStageRowLB(int scen){
 	int nodeid = scen + 1;
+	PAR_DEBUG("getSecondStageRowLB - nodeid"<<nodeid);
 	std::map<int, std::vector<double> >::iterator it = rowlb_map.find(nodeid);
 	if(it!=rowlb_map.end())
 		return  it->second;
@@ -238,6 +242,7 @@ std::vector<double> StructJuMPInput::getSecondStageRowLB(int scen){
 }
 std::vector<std::string> StructJuMPInput::getSecondStageRowNames(int scen){
 	int nodeid = scen + 1;
+	PAR_DEBUG("getSecondStageRowNames - nodeid"<<nodeid);
 	assert(ncon_map.find(0)!=ncon_map.end());
 	assert(ncon_map.find(nodeid)!=ncon_map.end());
 	int ncon = ncon_map[nodeid];

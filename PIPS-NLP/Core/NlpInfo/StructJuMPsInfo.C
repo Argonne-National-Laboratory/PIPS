@@ -96,7 +96,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 
 	if(parent!=NULL)
 	{
-		PAR_DEBUG("StructJuMPsInfo - ObjValue - parent "<<parent);
+		PAR_DEBUG("StructJuMPsInfo - ObjValue - parent "<<parent<<" nodeid "<<nodeId());
 		int parid = parent->stochNode->id();
 		assert(parid == 0);
 		double parent_var[parent->locNx];
@@ -113,8 +113,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 	{
 		if(gmyid == 0)
 		{
-			PAR_DEBUG("StructJuMPsInfo - ObjValue - parent null ");
-			PAR_DEBUG("StructJuMPsInfo - ObjValue - "<<nodeId());
+			PAR_DEBUG("StructJuMPsInfo - ObjValue - parent null "<<" nodeid"<<nodeId());
 			assert(nodeId() == 0);
 			CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 			double obj;
@@ -126,7 +125,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 	for(size_t it=0;it<children.size();it++) {
 		objv += children[it]->ObjValue(svars->children[it]);
 	}
-	PAR_DEBUG("ObjValue "<<objv);
+	PAR_DEBUG("ObjValue local now is "<<objv);
 	if(iAmDistrib){
 		double robj;
 		MPI_Allreduce(&objv, &robj, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
