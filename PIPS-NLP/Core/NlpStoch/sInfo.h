@@ -70,14 +70,32 @@ public:
   virtual ~sInfo();
 
 
-  void AddChild(sInfo* child);
 
-  virtual void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ){assert("not yet"&&0);};
-  virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ){assert("not yet"&&0);};
+  virtual void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ) = 0;
+  virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ) = 0;
   virtual void writeSolution( NlpGenVars * vars_){};
 
+	virtual double ObjValue( NlpGenVars * vars)  = 0;
+
+	virtual void ConstraintBody( NlpGenVars * vars, OoqpVector *conEq, OoqpVector *conIneq) = 0;
+
+	virtual int ObjGrad( NlpGenVars * vars, OoqpVector *grad ) = 0;
+
+
+
+	virtual void Hessian( NlpGenVars * vars, SymMatrix *Hess ) = 0;
+
+	virtual void JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC) = 0;
+
+
+	virtual void get_InitX0(OoqpVector* vX) = 0;
+
+	virtual void createChildren( sData *data_in,stochasticInput& in) = 0;
+//	void createChildren( sData *data_in);
+
+	virtual void AddChild(sInfo* child);
+
 protected:
-  void createChildren( sData *data_in);
   void destroyChildren();
 
 };
@@ -95,7 +113,7 @@ public:
     : sInfo() {};
 
   virtual void AddChild(sInfo* child){};
-
+  virtual void createChildren(sData* data_in, stochasticInput& in) {};
 
   virtual double ObjValue( NlpGenVars * vars) { return 0;};
   

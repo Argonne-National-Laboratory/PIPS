@@ -71,14 +71,19 @@ int sNlpInfoFIX::ObjGrad( NlpGenVars * vars, OoqpVector *grad )
 }
 
 
- void sNlpInfoFIX::Hessian( NlpGenVars * vars, SymMatrix *Hess ){}
+void sNlpInfoFIX::Hessian( NlpGenVars * vars, SymMatrix *Hess ){}
 
- void sNlpInfoFIX::JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC) {}
+void sNlpInfoFIX::JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC) {}
 
- void sNlpInfoFIX::JacEq( NlpGenVars * vars, GenMatrix* JacA ) {}
-
- void sNlpInfoFIX::JacIneq( NlpGenVars * vars, GenMatrix* JacC ) {}
+//void sNlpInfoFIX::JacEq( NlpGenVars * vars, GenMatrix* JacA ) {}
+void sNlpInfoFIX::JacIneq( NlpGenVars * vars, GenMatrix* JacC ) {}
 
 void sNlpInfoFIX::get_InitX0(OoqpVector* vX){}
+
+void createChildren( sData *data_in,stochasticInput& in) {};
+
+void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ) {};
+
+void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ){};
 
 

@@ -119,11 +119,12 @@ sNlpInfoFromNL::sNlpInfoFromNL(sData *data_in, stochasticInput& in)
 }
 
 
-sNlpInfoFromNL::sNlpInfoFromNL(sData *data_in, amplGenStochInput& in, const int ChildIdx)
+sNlpInfoFromNL::sNlpInfoFromNL(sData *data_in, stochasticInput& in0, const int ChildIdx)
 	:sInfo(data_in)
 {
   data_in->inputNlp = this;
   datarootname = data_in->datarootname;
+  amplGenStochInput& in = dynamic_cast<amplGenStochInput&>(in0);
 
   asl_local = in.localData[ChildIdx].locASL;
   ObjScal = in.ObjScale;
@@ -178,7 +179,7 @@ sNlpInfoFromNL::sNlpInfoFromNL(sData *data_in, amplGenStochInput& in, const int 
   createChildren(data_in,in);
 }
 
-void sNlpInfoFromNL::createChildren(sData *data_in, amplGenStochInput& in)
+void sNlpInfoFromNL::createChildren(sData *data_in, stochasticInput& in)
 {
 	int mype_; 
 	MPI_Comm_rank(mpiComm/* MPI_COMM_WORLD*/, &mype_);

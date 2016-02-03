@@ -32,19 +32,19 @@ public:
 
   
 
-  virtual double ObjValue( NlpGenVars * vars) ;
+  virtual double ObjValue( NlpGenVars * vars) = 0;
   
-  virtual void ConstraintBody( NlpGenVars * vars, OoqpVector *conEq, OoqpVector *conIneq);
+  virtual void ConstraintBody( NlpGenVars * vars, OoqpVector *conEq, OoqpVector *conIneq) = 0;
 
-  virtual int ObjGrad( NlpGenVars * vars, OoqpVector *grad );
+  virtual int ObjGrad( NlpGenVars * vars, OoqpVector *grad ) = 0;
 
   
 
-  virtual void Hessian( NlpGenVars * vars, SymMatrix *Hess );
+  virtual void Hessian( NlpGenVars * vars, SymMatrix *Hess ) = 0;
 
-  virtual void JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC);
+  virtual void JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC) = 0;
 
-  virtual void get_InitX0(OoqpVector* vX);
+  virtual void get_InitX0(OoqpVector* vX) = 0;
 
 
   SymMatrix *Q;

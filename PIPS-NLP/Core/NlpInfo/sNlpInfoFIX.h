@@ -34,11 +34,16 @@ public:
 
   virtual void JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC);
 
-  virtual void JacEq( NlpGenVars * vars, GenMatrix* JacA );
+//  virtual void JacEq( NlpGenVars * vars, GenMatrix* JacA );
 
   virtual void JacIneq( NlpGenVars * vars, GenMatrix* JacC );
 
   virtual void get_InitX0(OoqpVector* vX);
+
+  virtual void createChildren( sData *data_in,stochasticInput& in) ;
+  virtual void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH );
+  virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH );
+
 
 };
 

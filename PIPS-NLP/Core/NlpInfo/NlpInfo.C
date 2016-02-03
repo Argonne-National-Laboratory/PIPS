@@ -52,18 +52,18 @@ NlpInfo::NlpInfo()
  }
 
 
- double NlpInfo::ObjValue( NlpGenVars * vars) {assert( "Not supported" && 0 );}
-
- //note that now ceqbody = c(x)
- void NlpInfo::ConstraintBody( NlpGenVars * vars, OoqpVector *conEq, OoqpVector *conIneq) {assert( "Not supported" && 0 );}
-
- int NlpInfo::ObjGrad( NlpGenVars * vars, OoqpVector *grad ) {assert( "Not supported" && 0 );}
-
-
- void NlpInfo::Hessian( NlpGenVars * vars, SymMatrix *Hess ){assert( "Not supported" && 0 );}
-
- void NlpInfo::JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC) {assert( "Not supported" && 0 );}
-
- void NlpInfo::get_InitX0(OoqpVector* vX)
-  {assert( "Not supported" && 0 );}
+// double NlpInfo::ObjValue( NlpGenVars * vars) {assert( "Not supported" && 0 );}
+//
+// //note that now ceqbody = c(x)
+// void NlpInfo::ConstraintBody( NlpGenVars * vars, OoqpVector *conEq, OoqpVector *conIneq) {assert( "Not supported" && 0 );}
+//
+// int NlpInfo::ObjGrad( NlpGenVars * vars, OoqpVector *grad ) {assert( "Not supported" && 0 );}
+//
+//
+// void NlpInfo::Hessian( NlpGenVars * vars, SymMatrix *Hess ){assert( "Not supported" && 0 );}
+//
+// void NlpInfo::JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC) {assert( "Not supported" && 0 );}
+//
+// void NlpInfo::get_InitX0(OoqpVector* vX)
+//  {assert( "Not supported" && 0 );}
  

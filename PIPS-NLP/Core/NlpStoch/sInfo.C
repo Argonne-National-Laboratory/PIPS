@@ -88,17 +88,16 @@ void sInfo::AddChild(sInfo* child)
 
 
 
-
-void sInfo::createChildren(sData *data_in)
-{
-
-  for (size_t it=0; it<data_in->children.size(); it++) {
-  	if(stochNode->children[it]->commWrkrs != MPI_COMM_NULL)
-      AddChild( new sInfo( data_in->children[it]));
-	else
-	  AddChild( new sInfoDummy()); 
-  }
-  
-}
+//
+//void sInfo::createChildren(sData *data_in)
+//{
+//
+//  for (size_t it=0; it<data_in->children.size(); it++) {
+//  	if(stochNode->children[it]->commWrkrs != MPI_COMM_NULL)
+//      AddChild( new sInfo( data_in->children[it]));
+//	else
+//	  AddChild( new sInfoDummy());
+//  }
+//}
 
 

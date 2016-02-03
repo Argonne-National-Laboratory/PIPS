@@ -5,6 +5,7 @@
 #include "NlpInfo.h"
 #include "OoqpVectorHandle.h"
 #include "OoqpVector.h"
+#include "SimpleVector.h"
 
 class NlpGenVars;
 	
@@ -31,7 +32,6 @@ public:
   virtual void JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC);
   	
   virtual void get_InitX0(OoqpVector* vX);
-
 
   SimpleVector *tempX;
 

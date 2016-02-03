@@ -76,10 +76,10 @@ public:
 
   sNlpInfoFromNL(sData *data_in){}
   sNlpInfoFromNL(sData *data_in, stochasticInput& in);
-  sNlpInfoFromNL(sData *data_in, amplGenStochInput& in, const int ChildIdx);
+  sNlpInfoFromNL(sData *data_in, stochasticInput& in, const int ChildIdx);
   sNlpInfoFromNL(sData *data_in, amplGenStochInput_AddSlack& in, const int ChildIdx);
 
-  void createChildren(sData *data_in, amplGenStochInput& in);
+  void createChildren(sData *data_in, stochasticInput& in);
   void createChildren(sData *data_in, amplGenStochInput_AddSlack& in);
   
   virtual double ObjValue( NlpGenVars * vars) ;

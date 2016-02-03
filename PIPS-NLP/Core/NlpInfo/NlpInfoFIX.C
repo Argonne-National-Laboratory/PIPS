@@ -64,9 +64,9 @@ void NlpInfoFIX::Hessian( NlpGenVars * vars, SymMatrix *Hess ){}
 
 void NlpInfoFIX::JacFull( NlpGenVars * vars, GenMatrix* JacA, GenMatrix* JacC) {}
 
-void NlpInfoFIX::JacEq( NlpGenVars * vars, GenMatrix* JacA ) {}
+//void NlpInfoFIX::JacEq( NlpGenVars * vars, GenMatrix* JacA ) {}
 
-void NlpInfoFIX::JacIneq( NlpGenVars * vars, GenMatrix* JacC ) {}
+//void NlpInfoFIX::JacIneq( NlpGenVars * vars, GenMatrix* JacC ) {}
 
 void NlpInfoFIX::get_InitX0(OoqpVector* vX){}
 
