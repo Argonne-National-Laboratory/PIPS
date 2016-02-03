@@ -219,8 +219,11 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
     colid = data.col_node_id
     n0 = prob.colmap[0]
     n1 = prob.colmap[colid]
+    @show n0, n1 
     x0 = pointer_to_array(x0_ptr, n0)
     x1 = pointer_to_array(x1_ptr, n1)
+    @show x0
+    @show x1 
     nrow = prob.rowmap[rowid]
     ncol = prob.colmap[colid]
     #@show prob
@@ -233,7 +236,7 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
 		i_values = pointer_to_array(i_values_ptr,0)
 		i_colptr = pointer_to_array(i_col_ptr,0)
 		i_rowidx = pointer_to_array(i_row_ptr,0)
-		(e_nz,i_nz) = prob.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
+        (e_nz,i_nz) = prob.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
 		unsafe_store!(e_nz_ptr,convert(Cint,e_nz)::Cint)
 		unsafe_store!(i_nz_ptr,convert(Cint,i_nz)::Cint)
 		@show "structure - ",(e_nz,i_nz)
@@ -247,6 +250,8 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
     	i_values = pointer_to_array(i_values_ptr,i_nz)
     	i_rowidx = pointer_to_array(i_row_ptr, i_nz)
     	i_colptr = pointer_to_array(i_col_ptr, ncol+1)
+        @show x0
+        @show x1 
     	prob.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
     end
     # Done
@@ -270,8 +275,12 @@ function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_p
     n1 = prob.colmap[high]
     x0 = pointer_to_array(x0_ptr, n0)
     x1 = pointer_to_array(x1_ptr, n1)
+    @show x0
+    @show x1
     ncol = prob.colmap[low]
     g0 = prob.rowmap[high]
+    @show g0
+    @show ncol
     lambda = pointer_to_array(lambda_ptr, g0)
     obj_factor = 1.0
     if prob.sense == :Max
