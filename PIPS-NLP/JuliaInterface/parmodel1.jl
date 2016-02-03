@@ -15,7 +15,7 @@ function str_init_x0(nodeid, x0)
     if(nodeid == 0)
         assert(length(x0) ==2)
         x0[1] = 1.0
-        x1[2] = 1.0
+        x0[2] = 1.0
     elseif nodeid == 1
         assert(length(x0) ==1)
         x0[1] = 1.0
@@ -355,8 +355,6 @@ function main()
 
     prob = create()
     
-
-    MPI.Barrier(prob.comm)
 
     solve(prob)
 
