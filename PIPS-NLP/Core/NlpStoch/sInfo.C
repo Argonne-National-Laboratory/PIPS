@@ -68,6 +68,8 @@ sInfo::sInfo(sData *data_in)
   my=data_in->my;
   mz=data_in->mz;
   
+  data_in->inputNlp = this;
+
 }
 
 void sInfo::destroyChildren()

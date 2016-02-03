@@ -27,6 +27,8 @@
 #include "NlpGenResiduals.h"
 #include "NlpGenLinsys.h"
 
+#include "../../par_macro.h"
+
 extern int gOoqpPrintLevel;
 extern int gdWd_test;
 extern int gUseFilter;
@@ -188,14 +190,16 @@ FilterIPMSolver::_initialVar(Variables * iterate_in, Data * prob_in, Residuals *
 {
 
   NlpGenVars *vars = (NlpGenVars *) iterate_in;
-  NlpGenData *prob = (NlpGenData *) prob_in;  
+  NlpGenData *prob = dynamic_cast<NlpGenData*>(prob_in);
   NlpGenResiduals *resid = (NlpGenResiduals *) resid_in;  
   
-  double k_1 = FilterIPMOpt->k_1,
-  		 k_2 = FilterIPMOpt->k_2;
+  double k_1 = FilterIPMOpt->k_1;
+  double k_2 = FilterIPMOpt->k_2;
 
   // initialize x and  push x from bounds 
+  PAR_DEBUG("_initalVar - before getting init x");
   prob->getInitX(vars->x);
+  PAR_DEBUG("_initalVar - after getting init x");
   vars->push_variables(vars->x, vars->v, vars->w, prob->blx, prob->bux,resid->priWrk,k_1,k_2,1);
 
   // initialize slack s, and t=s-lb, u=ub-s  note that Ci(x)-s =0, put primal var from bounds

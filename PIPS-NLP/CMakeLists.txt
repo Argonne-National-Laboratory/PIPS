@@ -68,6 +68,8 @@ if(HAVE_PETSC)
     nlpsparse nlpdense
     pipsnlpFLS  nlpbase
 	global_var
+	nlpstoch
+	nlpstochla
     ${COIN_LIBS}
     ${AMPL_LIBRARY}
     ${MA57_LIBRARY}  ${MA27_LIBRARY}
@@ -90,6 +92,7 @@ else(HAVE_PETSC)
 #    ReducedSpaceSolver blockSCSolver
 	reducedSolverSpecial
 	global_var
+	nlpstoch
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
     ${PARDISO_LIBRARY}
     LU_solvers ${UMF_ALLINONE_LIBRARY}
@@ -103,6 +106,8 @@ else(HAVE_PETSC)
     pipsnlpFLS nlpcNlpGenSparse nlpwithsolver
     nlpgensparse nlpbase nlpsparse nlpdense
 	global_var
+	nlpstoch
+	nlpstochla
 #	 schurDecompSolver
 #     ReducedSpaceSolver reducedSolverSpecial
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
@@ -114,11 +119,11 @@ else(HAVE_PETSC)
 ### parallel filter line search IPM with DCOPF network aggregation preconditioner
   add_executable(pipsqpFromDCOPF Drivers/parallelDcopfDriver.cpp)
   target_link_libraries(pipsqpFromDCOPF
-	global_var
-    dcopfcinput nlpstochInputBase  aggregationstoch sInfoQPLP
+	dcopfcinput nlpstochInputBase  aggregationstoch sInfoQPLP
     pipsnlpFLSStoch nlpstoch nlpstochla
     reducedSolverSpecial
     nlpgensparse nlpbase nlpsparse nlpdense
+    global_var
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
     ${PARDISO_LIBRARY}
     LU_solvers ${UMF_ALLINONE_LIBRARY}
@@ -129,15 +134,23 @@ endif(HAVE_PETSC)
 
 endif(HAVE_PARDISO OR HAVE_MA57)
 
-if (HAVE_CLANG)
-  add_library(pipsnlp SHARED Drivers/pipsipmNlp_C_callbacks.cpp)
-  target_link_libraries(pipsnlp
-  ${WHOLE_ARCHIVE}
-  updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
+
+add_library(pipsnlp SHARED Drivers/pipsipmNlp_C_callbacks.cpp)
+target_link_libraries(pipsnlp
+  #${WHOLE_ARCHIVE}
+  updateFromCallBack  
+  nlpcNlpGenSparse  
+  nlpwithsolver
   nlpgensparse
   LU_solvers
-  nlpsparse nlpdense
-  pipsnlpFLS  nlpbase
+  nlpsparse 
+  nlpdense
+  pipsnlpFLS  
+  nlpbase
+  global_var
+  nlpstoch
+  nlpstochla	
+  reducedSolverSpecial
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
@@ -147,8 +160,9 @@ if (HAVE_CLANG)
   #${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
 
-  
-  add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
+ 
+#parallel structure interface 
+add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   target_link_libraries(parpipsnlp
   reducedSolverSpecial
   ${WHOLE_ARCHIVE}
@@ -175,53 +189,6 @@ if (HAVE_CLANG)
   ${PARDISO_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
-  
-else()
-  add_library(pipsnlp SHARED Drivers/pipsipmNlp_C_callbacks.cpp)
-  target_link_libraries(pipsnlp
-  ${WHOLE_ARCHIVE}
-  updateFromCallBack  nlpcNlpGenSparse  nlpwithsolver
-  nlpgensparse
-  LU_solvers
-  nlpsparse nlpdense
-  pipsnlpFLS  nlpbase
-  ${COIN_LIBS}
-  ${MA57_LIBRARY}
-  ${MA27_LIBRARY}
-  #    ${UMF_ALLINONE_LIBRARY}
-  ${METIS_LIBRARY}
-  ${PARDISO_LIBRARY}
-  ${NO_WHOLE_ARCHIVE}
-  ${MATH_LIBS} )
-
-  add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
-  target_link_libraries(parpipsnlp
-  reducedSolverSpecial
-  ${WHOLE_ARCHIVE}
-  global_var
-  updateFromCallBack  
-  nlpcNlpGenSparse  
-  nlpwithsolver
-  LU_solvers
-  nlpsparse 
-  nlpdense
-  pipsnlpFLSStoch 
-  nlpstoch 
-  nlpstochla 
-  nlpgensparse 
-  nlpbase 
-  genStructparallel
-  structStochInfo
-  #pipsnlpFLS  
-  ${COIN_LIBS}
-  ${MA57_LIBRARY}
-  ${MA27_LIBRARY}
-  ${UMF_ALLINONE_LIBRARY}
-  ${METIS_LIBRARY}
-  ${PARDISO_LIBRARY}
-  ${NO_WHOLE_ARCHIVE}
-  ${MATH_LIBS} )
-endif(HAVE_CLANG)
 
 # a testing example for PIPSNLP parallel structure interface
 add_executable(parmodel parmodel.cpp)
@@ -252,4 +219,4 @@ target_link_libraries(parmodel
   ${PARDISO_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
-  
+
