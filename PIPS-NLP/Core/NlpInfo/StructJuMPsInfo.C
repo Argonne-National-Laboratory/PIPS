@@ -24,35 +24,37 @@ StructJuMPsInfo::StructJuMPsInfo(sData *data_in, stochasticInput& in)
 	PAR_DEBUG("StructJuMPsInfo ( data_in , stochasticInput)  - id "<< nodeId());
 	parent = NULL;
 	stochInput = &(dynamic_cast<StructJuMPInput&>(in));
-	data_in->inputNlp = this;
 
 	PAR_DEBUG("  in StructJuMPsInfo constr comm"<<data_in->stochNode->commWrkrs<<" "<<mpiComm<<"  "<<MPI_COMM_NULL);
 
-	iAmDistrib=0;
-	  if( MPI_COMM_NULL!=mpiComm) {
-	    int size;
-	    MPI_Comm_size(mpiComm, &size);
-	    PAR_DEBUG("size of parallel procs "<<size);
-	    iAmDistrib = size==1?0:1;
-	  }
+	//	iAmDistrib=0;
+	//	  if( MPI_COMM_NULL!=mpiComm) {
+	int size;
+	MPI_Comm_size(mpiComm, &size);
+	PAR_DEBUG("size of parallel procs "<<size);
+	//	    iAmDistrib = size==1?0:1;
+	//	  }
+	assert(MPI_COMM_NULL!=mpiComm);
+	assert(size == gnprocs);
 	createChildren(data_in,*stochInput);
 
+//	data_in->inputNlp = this;
 }
 
-StructJuMPsInfo::StructJuMPsInfo(sData *data_in, StructJuMPInput& in, const int idx)
+StructJuMPsInfo::StructJuMPsInfo(sData *data_in, stochasticInput& in, const int idx)
 	:sInfo(data_in)
 {
 	PAR_DEBUG("StructJuMPsInfo ( data_in , structJuMPInput, "<<idx<<") id ("<<nodeId()<<")");
 
 	stochInput = &(dynamic_cast<StructJuMPInput&>(in));
-	data_in->inputNlp = this;
+//	data_in->inputNlp = this;
 
-	iAmDistrib = 0;
-	if (MPI_COMM_NULL != mpiComm) {
+//	iAmDistrib = 0;
+//	if (MPI_COMM_NULL != mpiComm) {
 		int size;
 		MPI_Comm_size(mpiComm, &size);
-		iAmDistrib = size == 1 ? 0 : 1;
-	}
+//		iAmDistrib = size == 1 ? 0 : 1;
+//	}
 	PAR_DEBUG("number of children "<<data_in->children.size());
 	createChildren(data_in,*stochInput);
 }
@@ -68,7 +70,7 @@ int StructJuMPsInfo::nodeId()
 	return stochNode->id();
 }
 
-void StructJuMPsInfo::createChildren(sData *data_in, StructJuMPInput& in){
+void StructJuMPsInfo::createChildren(sData *data_in, stochasticInput& in){
 	PAR_DEBUG("createChildren");
 //	int mype_;
 //		MPI_Comm_rank(in.prob->comm/* MPI_COMM_WORLD*/, &mype_);
@@ -76,7 +78,9 @@ void StructJuMPsInfo::createChildren(sData *data_in, StructJuMPInput& in){
 	for (size_t it = 0; it < data_in->children.size(); it++) {
 		if (stochNode->children[it]->commWrkrs != MPI_COMM_NULL) {
 			AddChild(new StructJuMPsInfo(data_in->children[it], in, it));
-		} else {
+		}
+		else {
+			PAR_DEBUG("comm null "<<MPI_COMM_NULL<<" commwrk "<<stochNode->children[it]->commWrkrs);
 			AddChild(new sInfoDummy());
 		}
 		children[it]->parent = this;
@@ -90,27 +94,14 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
 	OoqpVector& local_X = *(dynamic_cast<StochVector&>(*svars->x).vec);
 
-	double objv = 0.0;
 	double local_var[locNx];
 	local_X.copyIntoArray(local_var);
 
-	if(parent!=NULL)
+	double robj = 0.0;
+	if(parent==NULL)
 	{
-		PAR_DEBUG("StructJuMPsInfo - ObjValue - parent "<<parent<<" nodeid "<<nodeId());
-		int parid = parent->stochNode->id();
-		assert(parid == 0);
-		double parent_var[parent->locNx];
-		OoqpVector* parent_X = (vars_X.parent->vec);
-		parent_X->copyIntoArray(parent_var);
-		double obj;
-		assert(nodeId() != 0);
-		PAR_DEBUG("StructJuMPsInfo - ObjValue - "<<nodeId());
-		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
-		stochInput->prob->eval_f(parent_var,local_var,&obj,&cbd);
-		objv += obj;
-	}
-	else
-	{
+
+		double objv = 0.0;
 		if(gmyid == 0)
 		{
 			PAR_DEBUG("StructJuMPsInfo - ObjValue - parent null "<<" nodeid"<<nodeId());
@@ -120,19 +111,28 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 			stochInput->prob->eval_f(local_var,local_var,&obj,&cbd);
 			objv += obj;
 		}
+		for(size_t it=0;it<children.size();it++) {
+			objv += children[it]->ObjValue(svars->children[it]);
+		}
+		MPI_Allreduce(&objv, &robj, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+		PAR_DEBUG(" local obj "<<objv<< "  global obj"<<robj);
+	}
+	else
+	{
+		PAR_DEBUG("StructJuMPsInfo - ObjValue - parent "<<parent<<" nodeid "<<nodeId());
+		int parid = parent->stochNode->id();
+		assert(parid == 0);
+		double parent_var[parent->locNx];
+		OoqpVector* parent_X = (vars_X.parent->vec);
+		parent_X->copyIntoArray(parent_var);
+		assert(nodeId() != 0);
+		PAR_DEBUG("StructJuMPsInfo - ObjValue - "<<nodeId());
+		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		stochInput->prob->eval_f(parent_var,local_var,&robj,&cbd);
 	}
 
-	for(size_t it=0;it<children.size();it++) {
-		objv += children[it]->ObjValue(svars->children[it]);
-	}
-	PAR_DEBUG("ObjValue local now is "<<objv);
-	if(iAmDistrib){
-		double robj;
-		MPI_Allreduce(&objv, &robj, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
-		objv = robj;
-	}
-	PAR_DEBUG("return ObjValue "<<objv);
-	return objv;
+	PAR_DEBUG("return ObjValue "<<robj);
+	return robj;
 }
 
 int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){

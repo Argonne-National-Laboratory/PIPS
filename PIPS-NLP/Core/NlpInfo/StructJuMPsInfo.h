@@ -9,15 +9,15 @@ class StructJuMPsInfo : public sInfo
 {
 protected:
 	StructJuMPInput* stochInput;
-	int iAmDistrib;
+//	int iAmDistrib;
 public:
 	StructJuMPsInfo();
 	StructJuMPsInfo(sData *data_in);
 	StructJuMPsInfo(sData *data_in, stochasticInput& in);
-	StructJuMPsInfo(sData *data_in, StructJuMPInput& in, const int idx);
+	StructJuMPsInfo(sData *data_in, stochasticInput& in, const int idx);
 	~StructJuMPsInfo();
 
-	void createChildren(sData *data_in, StructJuMPInput& in);
+	virtual void createChildren(sData *data_in, stochasticInput& in);
 
 	virtual double ObjValue(NlpGenVars * vars);
 
