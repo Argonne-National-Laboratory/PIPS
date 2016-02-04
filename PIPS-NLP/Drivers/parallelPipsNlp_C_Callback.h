@@ -71,7 +71,7 @@ extern "C" typedef int (*str_eval_g_cb)(double* x0, double* x1, double* eq_g,dou
  *
  * Note:
  * 	evaluating 1st stage objective gradient, x0 and x1 are the same and both point to the first stage variable values.
- * 	evaluating 2st stage objective gradient, x0 and x1 represents the variables values of first and second stage variable values respectively.
+ * 	evaluating 2st stage objective gradient, x0 and x1 represent the first and second stage variable values respectively.
  * 	the objective declared in the second stage node could contains a cross product term of first and second stage variables. This term can contribute
  * 		two gradient sub-vectors, where one is with respect to the first stage variables and the other is with respect to the second stage variables.
  * 		For example, let us look at the objective function declared in the node 1. By setting (1,0) in the CallBackData for row_node_id and col_node_id,
