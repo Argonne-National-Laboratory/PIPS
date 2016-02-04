@@ -3,7 +3,7 @@ module ParPipsNlp
 
 import MPI
 
-const libparpipsnlp=Libdl.dlopen("/Users/fqiang/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.dylib")
+const libparpipsnlp=Libdl.dlopen("/home/fqiang/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.so")
 
 type PipsNlpProblemStruct
     ref::Ptr{Void}
@@ -60,13 +60,13 @@ export createProblemStruct, solveProblemStruct, freeProblemStruct
 ###########################################################################
 
 function str_init_x0_wrapper(x0_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-	println(" julia - str_init_x0_wrapper ")
-    @show cbd
+	# println(" julia - str_init_x0_wrapper ")
+    # @show cbd
     data = unsafe_load(cbd)
     # @show data
     userdata = data.prob
     prob = unsafe_pointer_to_objref(userdata)::PipsNlpProblemStruct
-    @show prob
+    # @show prob
     # data = unsafe_pointer_to_objref(cbd)::CallBackData
     # out = Array(Ptr{CallBackData},1)
     rowid = data.row_node_id
@@ -81,13 +81,13 @@ end
 
 # prob info (prob_info)
 function str_prob_info_wrapper(n_ptr::Ptr{Cint}, col_lb_ptr::Ptr{Float64}, col_ub_ptr::Ptr{Float64}, m_ptr::Ptr{Cint}, row_lb_ptr::Ptr{Float64}, row_ub_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    println(" julia - str_prob_info_wrapper ")
-    @show cbd
+    # println(" julia - str_prob_info_wrapper ")
+    # @show cbd
     data = unsafe_load(cbd)
     # @show data
     userdata = data.prob
     prob = unsafe_pointer_to_objref(userdata)::PipsNlpProblemStruct
-    @show prob
+    # @show prob
     # data = unsafe_pointer_to_objref(cbd)::CallBackData
     # out = Array(Ptr{CallBackData},1)
     rowid = data.row_node_id
@@ -131,9 +131,9 @@ function str_prob_info_wrapper(n_ptr::Ptr{Cint}, col_lb_ptr::Ptr{Float64}, col_u
 end
 # Objective (eval_f)
 function str_eval_f_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, obj_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    println(" julia - eval_f_wrapper " ); 
+    # println(" julia - eval_f_wrapper " ); 
     data = unsafe_load(cbd)
-    @show data
+    # @show data
     # @show data
     userdata = data.prob
     prob = unsafe_pointer_to_objref(userdata)::PipsNlpProblemStruct
@@ -154,7 +154,7 @@ end
 
 # Constraints (eval_g)
 function str_eval_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, eq_g_ptr::Ptr{Float64}, inq_g_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    println(" julia - eval_g_wrapper " ); 
+    # println(" julia - eval_g_wrapper " ); 
     data = unsafe_load(cbd)
     # @show data
     userdata = data.prob
@@ -178,18 +178,18 @@ end
 
 # Objective gradient (eval_grad_f)
 function str_eval_grad_f_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, grad_f_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    println(" julia -  eval_grad_f_wrapper  - $(x0_ptr) ,$(x1_ptr)");    
+    # println(" julia -  eval_grad_f_wrapper  - $(x0_ptr) ,$(x1_ptr)");    
     # Extract Julia the problem from the pointer
-    @show cbd
+    # @show cbd
     data = unsafe_load(cbd)
-    @show data
+    # @show data
     userdata = data.prob
     prob = unsafe_pointer_to_objref(userdata)::PipsNlpProblemStruct
     rowid = data.row_node_id
     colid = data.col_node_id
     n0 = prob.colmap[0]
     n1 = prob.colmap[rowid]
-    @show n0,n1
+    # @show n0,n1
     x0 = pointer_to_array(x0_ptr, n0)
     x1 = pointer_to_array(x1_ptr, n1)
     # Calculate the gradient
@@ -209,21 +209,21 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
 	i_nz_ptr::Ptr{Cint}, i_values_ptr::Ptr{Float64}, i_row_ptr::Ptr{Cint}, i_col_ptr::Ptr{Cint},  
 	cbd::Ptr{CallBackData}
 	)
-    println(" julia -  eval_jac_g_wrapper " );
+    # println(" julia -  eval_jac_g_wrapper " );
     # Extract Julia the problem from the pointer  
     data = unsafe_load(cbd)
-    @show data
+    # @show data
     userdata = data.prob
     prob = unsafe_pointer_to_objref(userdata)::PipsNlpProblemStruct
     rowid = data.row_node_id
     colid = data.col_node_id
     n0 = prob.colmap[0]
     n1 = prob.colmap[colid]
-    @show n0, n1 
+    # @show n0, n1 
     x0 = pointer_to_array(x0_ptr, n0)
     x1 = pointer_to_array(x1_ptr, n1)
-    @show x0
-    @show x1 
+    # @show x0
+    # @show x1 
     nrow = prob.rowmap[rowid]
     ncol = prob.colmap[colid]
     #@show prob
@@ -239,19 +239,19 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
         (e_nz,i_nz) = prob.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
 		unsafe_store!(e_nz_ptr,convert(Cint,e_nz)::Cint)
 		unsafe_store!(i_nz_ptr,convert(Cint,i_nz)::Cint)
-		@show "structure - ",(e_nz,i_nz)
+		# @show "structure - ",(e_nz,i_nz)
     else
     	e_nz = unsafe_load(e_nz_ptr)
     	e_values = pointer_to_array(e_values_ptr,e_nz)
     	e_rowidx = pointer_to_array(e_row_ptr, e_nz)
     	e_colptr = pointer_to_array(e_col_ptr, ncol+1)
     	i_nz = unsafe_load(i_nz_ptr)
-    	@show "values - ",(e_nz,i_nz)
+    	# @show "values - ",(e_nz,i_nz)
     	i_values = pointer_to_array(i_values_ptr,i_nz)
     	i_rowidx = pointer_to_array(i_row_ptr, i_nz)
     	i_colptr = pointer_to_array(i_col_ptr, ncol+1)
-        @show x0
-        @show x1 
+        # @show x0
+        # @show x1 
     	prob.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
     end
     # Done
@@ -260,10 +260,10 @@ end
 
 # Hessian
 function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_ptr::Ptr{Float64}, nz_ptr::Ptr{Cint}, values_ptr::Ptr{Float64}, row_ptr::Ptr{Cint}, col_ptr::Ptr{Cint}, cbd::Ptr{CallBackData})
-    println(" julia - eval_h_wrapper " ); 
+    # println(" julia - eval_h_wrapper " ); 
     # Extract Julia the problem from the pointer
     data = unsafe_load(cbd)
-    @show data
+    # @show data
     userdata = data.prob
     prob = unsafe_pointer_to_objref(userdata)::PipsNlpProblemStruct
     rowid = data.row_node_id
@@ -275,12 +275,12 @@ function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_p
     n1 = prob.colmap[high]
     x0 = pointer_to_array(x0_ptr, n0)
     x1 = pointer_to_array(x1_ptr, n1)
-    @show x0
-    @show x1
+    # @show x0
+    # @show x1
     ncol = prob.colmap[low]
     g0 = prob.rowmap[high]
-    @show g0
-    @show ncol
+    # @show g0
+    # @show ncol
     lambda = pointer_to_array(lambda_ptr, g0)
     obj_factor = 1.0
     if prob.sense == :Max
@@ -294,13 +294,13 @@ function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_p
 		rowidx = pointer_to_array(row_ptr,0)
 		nz = prob.str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,values)
 		unsafe_store!(nz_ptr,convert(Cint,nz)::Cint)
-		@show "structure - ", nz
+		# @show "structure - ", nz
     else
     	nz = unsafe_load(nz_ptr)
     	values = pointer_to_array(values_ptr, nz)
     	rowidx = pointer_to_array(row_ptr, nz)
     	colptr = pointer_to_array(col_ptr, ncol+1)
-    	@show "value - ", nz
+    	# @show "value - ", nz
     	prob.str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,values)
     end
     # Done
@@ -312,7 +312,7 @@ end
 ###########################################################################
 function createProblemStruct(comm::MPI.Comm, nnodes::Int, n::Int,m::Int, 
     str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
-	println(" createProblemStruct  -- julia")
+	# println(" createProblemStruct  -- julia")
 	str_init_x0_cb = cfunction(str_init_x0_wrapper, Cint, (Ptr{Float64}, Ptr{CallBackData}) )
     str_prob_info_cb = cfunction(str_prob_info_wrapper, Cint, (Ptr{Cint}, Ptr{Float64}, Ptr{Float64}, Ptr{Cint}, Ptr{Float64}, Ptr{Float64}, Ptr{CallBackData}) )
     str_eval_f_cb = cfunction(str_eval_f_wrapper,Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{CallBackData}) )
@@ -324,10 +324,10 @@ function createProblemStruct(comm::MPI.Comm, nnodes::Int, n::Int,m::Int,
     	Ptr{CallBackData}))
     str_eval_h_cb = cfunction(str_eval_h_wrapper, Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Cint}, Ptr{Float64}, Ptr{Cint}, Ptr{Cint}, Ptr{CallBackData}))
     
-    println(" callback created ")
+    # println(" callback created ")
     prob = PipsNlpProblemStruct(comm, nnodes,n, m, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
-    @show prob
-    ret = ccall((:CreatePipsNlpProblemStruct,libparpipsnlp),Ptr{Void},
+    # @show prob
+    ret = ccall((:CreatePipsNlpProblemStruct,:libparpipsnlp),Ptr{Void},
             (MPI.Comm, 
             Cint, 
             Cint,
@@ -350,24 +350,24 @@ function createProblemStruct(comm::MPI.Comm, nnodes::Int, n::Int,m::Int,
             str_eval_h_cb,
             prob
             )
-    println(" ccall CreatePipsNlpProblemStruct done ")
-    @show ret   
+    # println(" ccall CreatePipsNlpProblemStruct done ")
+    # @show ret   
     
     if ret == C_NULL
         error("PIPS-NLP: Failed to construct problem.")
     else
         prob.ref = ret
     end
-    @show prob
+    # @show prob
     println("end createProblemStruct - julia")
     return prob
 end
 
 function solveProblemStruct(prob::PipsNlpProblemStruct)
-	println("solveProblemStruct - julia")
-    @show prob
+	# println("solveProblemStruct - julia")
+    # @show prob
     
-    ret = ccall((:PipsNlpSolveStruct, libparpipsnlp), Cint, 
+    ret = ccall((:PipsNlpSolveStruct,:libparpipsnlp), Cint, 
             (Ptr{Void},),
             prob.ref)
     
@@ -377,11 +377,11 @@ function solveProblemStruct(prob::PipsNlpProblemStruct)
 end
 
 function freeProblemStruct(prob::PipsNlpProblemStruct)
-    @show "freeProblemStruct"
-    ret = ccall((:FreePipsNlpProblemStruct, libparpipsnlp),
+    # @show "freeProblemStruct"
+    ret = ccall((:FreePipsNlpProblemStruct,:libparpipsnlp),
             Void, (Ptr{Void},),
             prob.ref)
-    @show ret
+    # @show ret
     return ret
 end
 

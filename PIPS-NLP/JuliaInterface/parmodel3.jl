@@ -1,6 +1,6 @@
 import MPI
 
-# min x1^2 + x2^2 + x3^2 + x4^2 + x5^2 + x6^2
+# min x1^2 + x2^2 +x1x2 + x3^2 + x4^2 +x3x4 + x5^2 + x6^2 +x5x6
 # st.
 #     x1 + x2 = 100
 #     0< x2 + x3 + x4  < 500
@@ -70,7 +70,7 @@ function str_prob_info(nodeid,mode,col_lb,col_ub,row_lb,row_ub)
 end
 
 function str_eval_f(nodeid,x0,x1)
-    @show nodeid
+    # @show nodeid
     # @show x0
     # @show x1
     fval = 0.0
@@ -242,9 +242,9 @@ function str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,value
         elseif (rowid,colid) == (2,0)
             return 2
         elseif (rowid,colid) == (0,1)
-            return 0
+            return 2
         elseif (rowid,colid) == (0,2)
-            return 0
+            return 2
         else
             assert(false)
         end
@@ -300,22 +300,22 @@ function str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,value
             values[2] = 0.0
         elseif (rowid,colid) == (0,1) #liking border
             # @show "linking border - 0 ,1 "
-            # colptr[1] = 1
-            # colptr[2] = 2
-            # colptr[3] = 3
-            # rowidx[1] = 1
-            # rowidx[2] = 1
-            # values[1] = 1.0 * obj_factor + 1.0 * lambda[1]
-            # values[2] = 1.0 * obj_factor  
+            colptr[1] = 1
+            colptr[2] = 2
+            colptr[3] = 3
+            rowidx[1] = 1
+            rowidx[2] = 2
+            values[1] = 1.0
+            values[2] = 1.0 
         elseif (rowid,colid) == (0,2) #liking border
             # @show "linking border - ", (rowid,colid)
-            # colptr[1] = 1
-            # colptr[2] = 2
-            # colptr[3] = 3
-            # rowidx[1] = 1
-            # rowidx[2] = 1
-            # values[1] = 1.0 * obj_factor + 1.0 * lambda[1]
-            # values[2] = 1.0 * obj_factor  
+            colptr[1] = 1
+            colptr[2] = 2
+            colptr[3] = 3
+            rowidx[1] = 1
+            rowidx[2] = 2
+            values[1] = 1.0
+            values[2] = 1.0  
         else
             assert(false)
         end
@@ -348,7 +348,7 @@ function create()
 end
 
 function solve(prob)
-    println("Solve problem")
+    # println("Solve problem")
     # @show prob
     ret = solveProblemStruct(prob)
     # println("end solve problem")
