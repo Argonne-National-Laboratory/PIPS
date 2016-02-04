@@ -3,7 +3,7 @@ module ParPipsNlp
 
 import MPI
 
-libparpipsnlp=Libdl.dlopen("/home/fqiang/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.so")
+const libparpipsnlp=Libdl.dlopen("/Users/fqiang/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.dylib")
 
 type PipsNlpProblemStruct
     ref::Ptr{Void}
@@ -327,7 +327,7 @@ function createProblemStruct(comm::MPI.Comm, nnodes::Int, n::Int,m::Int,
     println(" callback created ")
     prob = PipsNlpProblemStruct(comm, nnodes,n, m, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
     @show prob
-    ret = ccall((:CreatePipsNlpProblemStruct,:libparpipsnlp),Ptr{Void},
+    ret = ccall((:CreatePipsNlpProblemStruct,libparpipsnlp),Ptr{Void},
             (MPI.Comm, 
             Cint, 
             Cint,
@@ -367,7 +367,7 @@ function solveProblemStruct(prob::PipsNlpProblemStruct)
 	println("solveProblemStruct - julia")
     @show prob
     
-    ret = ccall((:PipsNlpSolveStruct, :libparpipsnlp), Cint, 
+    ret = ccall((:PipsNlpSolveStruct, libparpipsnlp), Cint, 
             (Ptr{Void},),
             prob.ref)
     
@@ -378,7 +378,7 @@ end
 
 function freeProblemStruct(prob::PipsNlpProblemStruct)
     @show "freeProblemStruct"
-    ret = ccall((:FreePipsNlpProblemStruct, :libparpipsnlp),
+    ret = ccall((:FreePipsNlpProblemStruct, libparpipsnlp),
             Void, (Ptr{Void},),
             prob.ref)
     @show ret

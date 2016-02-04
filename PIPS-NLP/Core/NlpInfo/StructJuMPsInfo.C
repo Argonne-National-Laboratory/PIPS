@@ -246,7 +246,7 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 	StochVector* sconinq = dynamic_cast<StochVector*>(conIneq);
 	PAR_DEBUG("sconinq size "<<sconinq->vec->n);
 	assert(sconinq->vec->n == locMz);
-	sconeq->vec->copyFromArray(coninq);
+	sconinq->vec->copyFromArray(coninq);
 
 	for(size_t it=0; it<children.size(); it++){
 		(children[it])->ConstraintBody(svars->children[it],sconeq->children[it],sconinq->children[it]);
@@ -486,15 +486,16 @@ void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
 	PAR_DEBUG("get_InitX0 - "<<nodeId());
 	StochVector* vars_X = dynamic_cast<StochVector*>(vX);
 	OoqpVector* local_X = vars_X->vec;
-	PAR_DEBUG("size of x "<<locNx<<" - vX->n"<<vX->n);
+	PAR_DEBUG("size of x "<<locNx<<" - vX->n "<<vX->n);
 //	assert(locNx == vX->n);
 	assert(children.size() == vars_X->children.size());
 
 	double temp_var[locNx];
 	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 	stochInput->prob->init_x0(temp_var,&cbd);
+//	local_X->print();
 	local_X->copyFromArray(temp_var);
-
+//	local_X->print();
 	for(size_t it=0; it<children.size(); it++)
 	    children[it]->get_InitX0(vars_X->children[it]);
 }
