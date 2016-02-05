@@ -1,5 +1,5 @@
 /* PIPS-NLP                                                         	*
- * Authors: Feng Qiang                      		*
+ * Author: Feng Qiang                      		*
  * (C) 2016 Argonne National Laboratory			*/
 
 #ifndef _PARALLELPIPSNLP_C_CALLBACK_H__
@@ -44,7 +44,7 @@ extern "C" typedef int (*str_init_x0_cb)(double* x0, CallBackDataPtr cbd);
  * The vectors of the corresponding node id is given in the CallBackData.
  *
  *  note: when providing the row_lb and row_ub vectors, it assumes that the equality constraints should be at the top of these vectors.
- *  	Therefore, it is wise to order the constraint in a way that always keep the equality constraints in front of the
+ *  	Therefore, it is wise to order the constraint in a way that always keeps the equality constraints in front of the
  *  	inequality constraints to keep everything else consistent.
  */
 extern "C" typedef int (*str_prob_info_cb)(int* n, double* col_lb, double* col_up, int* m, double* row_lb, double* row_up, CallBackDataPtr cbd);
@@ -67,7 +67,7 @@ extern "C" typedef int (*str_eval_g_cb)(double* x0, double* x1, double* eq_g,dou
 
 /*
  * This function evaluates the objective gradient sub-vector. The objective function to be considered is declared in node with node id equals to row_node_id
- * from the CallBackData. The gradient sub-vector is the one with respect to the variables declared in node id equals to col_node_id from the CallBackData.
+ * from the CallBackData. The gradient sub-vector is the one with respect to the variables declared in node id which equals to col_node_id from the CallBackData.
  *
  * Note:
  * 	evaluating 1st stage objective gradient, x0 and x1 are the same and both point to the first stage variable values.
@@ -83,13 +83,13 @@ extern "C" typedef int (*str_eval_g_cb)(double* x0, double* x1, double* eq_g,dou
 extern "C" typedef int (*str_eval_grad_f_cb)(double* x0, double* x1, double* vec_grad_f, CallBackDataPtr cbd);
 
 /*
- * This function evaluates the structure or values of the sub-matrix of the Jacobian in two separate CCS constructs. One is for the
+ * This function evaluates the structures or values of the sub-matrix of the Jacobian in two separate CCS constructs. One is for the
  * equality constraints and the other is for the inequality constraints.
  * The Jacobian sub-block is identified by the row_node_id and col_node_id given in the CallBackData.
  * When setting e_elts and i_elts to NULL, the function should write back the number of non-zeros to e_nz (for equality constraints)
  * and i_nz (for inequality constraints).
  * When e_elts or i_elts is not NULL, e_nz and i_nz should have the correct values set already by the solver. The function should
- * now computes the two Jacobian sub-blocks and write them to the values points triples whose memory is already allocated by the solver.
+ * now compute the two Jacobian sub-blocks and write them to the value points triples whose memory is already allocated by the solver.
  *
  * (e_elts, e_rowidx, e_colptr) represents the Jacobian block of the equality constraints
  * (i_elts, i_rowidx, i_colptr) represents the Jacobian block of the inequality constraints
@@ -100,14 +100,14 @@ extern "C" typedef int (*str_eval_jac_g_cb)(double* x0, double* x1,
 		CallBackDataPtr cbd);
 
 /*
- * This function evaluates the structure or values of the Hessian of the Lagrangian matrix in CCS format.
- * Since PIPS-NLP is not support for linking constraint, the root stage node only produces the diagonal sub-block for the Hessian
+ * This function evaluates the structure or values of the Hessian of the Lagrangian matrix in the CCS format.
+ * Since PIPS-NLP does not support linking constraint, the root stage node only produces the diagonal sub-block for the Hessian
  * of the Lagrangian matrix.
- * For example, by setting (0,0) pair for row and col node id in the CallBackData, this function should compute above mentioned diagonal block.
+ * For example, by setting (0,0) pair for row and col node id in the CallBackData, this function should compute the above mentioned diagonal block.
  *
  * Each second stage constraints can produce three sub-blocks for the Hessian of the Lagrangian matrix, i.e. the diagonal block,
  * the border block and the block that contributes to the root diagonal block.
- * For example, let us consider the Hessian of the Lagrangian matrix in following structure (for a two stage n scenario stochastic programming problem),
+ * For example, let us consider the Hessian of the Lagrangian matrix in the following structure (for a two stage n scenario stochastic programming problem),
  * where H_00 is called the root diagonal block and H_0i is called the border blocks for i \in {1...n}.
  *
  * H_00
@@ -118,12 +118,12 @@ extern "C" typedef int (*str_eval_jac_g_cb)(double* x0, double* x1,
  * 	.								.
  * H_0n									H_nn
  *
- * 		The diagonal block: this can be requested by setting (1,1), (2,2) and etc. in the CallBackData for row and col node id.
- * 		The border block  : this can be requested by setting (0,1), (0,2) and etc. in the CallBackData for row and col node id.
+ * 		The diagonal block: this can be requested by setting (1,1), (2,2) etc. in the CallBackData for row and col node id.
+ * 		The border block  : this can be requested by setting (0,1), (0,2) etc. in the CallBackData for row and col node id.
  * 		The root diagonal contribution: this can be requested by setting (1,0), (2,0) and etc. in the CallBackData for row and col node id.
  * 		Then, PIPS-NLP will use MPI_Allreduce to compute the final H_00 blocks.
  *
- * Of course, the nz values of the above mentioned blocks should be computed by setting elts to NULL pointer.
+ * Of course, the nz values of the above mentioned blocks should be computed when setting elts to NULL pointer.
  */
 extern "C" typedef int (*str_eval_h_cb)(double* x0, double* x1, double* lamdba,
 		int* nz, double* elts, int* rowidx, int *colptr,
