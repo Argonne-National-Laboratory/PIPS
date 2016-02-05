@@ -105,6 +105,7 @@ function str_eval_grad_f(rowid,colid,x0,x1,new_grad_f)
         new_grad_f[1] = 2.0*x33
         new_grad_f[2] = 2.0*x44
     else 
+    	assert(colid==0&&rowid!=0)
         assert(length(new_grad_f) == 2)
         new_grad_f[1] = 0.0
         new_grad_f[2] = 0.0
@@ -174,13 +175,13 @@ function str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,value
     assert(rowid<nnodes && colid<nnodes)
     # @show obj_factor
     if(mode == :Structure)
-        if rowid == colid
+        if rowid == colid   #diagonal block
             return 2
         else
-            if(colid == 0)
-                return 0
-            else
+            if(colid == 0)  #root diagonal contribution
                 return 2
+            else
+                return 0   #linker border
             end
         end
     else
@@ -188,7 +189,7 @@ function str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,value
         x11 = x0[1]
         x22 = x0[2]
         # @show (rowid,colid)
-        if rowid==colid
+        if rowid==colid			#diagonal block
             # @show "diag 0,0 "
             colptr[1] = 1
             colptr[2] = 2
@@ -198,7 +199,7 @@ function str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,value
             values[1] = 2.0 * obj_factor
             values[2] = 2.0 * obj_factor
         else
-            if(colid == 0) #parent contribution
+            if(colid == 0) 		#root diagonal contribution
                 colptr[1] = 1
                 colptr[2] = 2
                 colptr[3] = 3
