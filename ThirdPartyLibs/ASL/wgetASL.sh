@@ -3,7 +3,7 @@ echo "##### Downloading the third party packages for PIPS-NLP:"
 echo " "
 
 echo "### Downloading Ampl Solver Library (ASL):"
-if wget -O solvers.tar http://netlib.sandia.gov/cgi-bin/netlib/netlibfiles.tar?filename=netlib/ampl/solvers
+if wget -O solvers.tar.gz http://www.ampl.com/netlib/ampl/solvers.tgz
 then
   echo "### ASL: Download Successful.\n"
 else
@@ -11,9 +11,9 @@ else
   exit 1 
 fi
 
-fn=solvers.tar
-name=`basename ${fn} .tar`
-tar -xf $fn
+fn=solvers.tar.gz
+name=`basename ${fn} .tar.gz`
+tar -xzf $fn
 ln -s ./${name} ./src
 
 chmod +x src/configure
