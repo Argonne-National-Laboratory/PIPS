@@ -4,13 +4,13 @@ echo "##### Downloading the third party packages for PIPS-NLP:"
 echo " "
 
 echo "### Downloading SuiteSparse:"
-#if wget http://faculty.cse.tamu.edu/davis/SuiteSparse/${fn}
-#then
-#  echo "### SuiteSparse: Download Successful.\n"
-#else
-#  echo "### SuiteSparse: Download Failed.\n"
-#  exit 1
-#fi
+if wget http://faculty.cse.tamu.edu/davis/SuiteSparse/${fn}
+then
+  echo "### SuiteSparse: Download Successful.\n"
+else
+  echo "### SuiteSparse: Download Failed.\n"
+  exit 1
+fi
 
 name=`tar -ztf ${fn} |  cut -f1 -d"/" | uniq`
 tar -xf ${fn}
