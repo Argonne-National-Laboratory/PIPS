@@ -2,22 +2,62 @@ project(PIPSAll)
 
 cmake_minimum_required(VERSION 2.8)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+
 if(NOT PIPS_BUILD_TARGET)
     set(PIPS_BUILD_TARGET "ALL")
 endif(NOT PIPS_BUILD_TARGET)
 message(STATUS "PIPS_BUILD_TARGET:=${PIPS_BUILD_TARGET}")
 
+find_package(OpenMP)
+
 # include different "whole archive" linking options depending on compiler
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	set(WHOLE_ARCHIVE "-Wl,-all_load")
-	set(NO_WHOLE_ARCHIVE "-Wl,-noall_load")
-	message(STATUS "SETTING HAVE_CLANG")
-	set(HAVE_CLANG TRUE)
+if (CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
+  set(WHOLE_ARCHIVE "-Wl,-all_load")
+  set(NO_WHOLE_ARCHIVE "-Wl,-noall_load")
+  message(STATUS "SETTING HAVE_CLANG")
+  set(HAVE_CLANG TRUE)
+
+  # Clang doesn't have a Fortran compiler in its suite (yet),
+  # so detect libraries for gfortran; we need equivalents to
+  # libgfortran and libquadmath, which are implicitly
+  # linked by flags in CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES
+  find_package(GFortranLibs REQUIRED)
+
+  # Add directory containing libgfortran and libquadmath to
+  # linker. Should also contain libgomp, if not using
+  # Intel OpenMP runtime
+  link_directories(${GFORTRAN_LIBRARIES_DIR})
+  if(NOT OpenMP_FOUND)
+    message(STATUS "OpenMP not found!")
+
+    # Try to find Intel OpenMP library first, since this
+    # OpenMP runtime is the default in Clang 3.7
+    find_package(LibIomp)
+    if(LIBIOMP_FOUND)
+      if(APPLE)
+      # Apple clang's -fopenmp flag only works with -lgomp
+	set(OpenMP_CXX_FLAGS "-liomp5")
+      else()
+      # LLVM clang's trunk works with libiomp
+	set(OpenMP_CXX_FLAGS "-fopenmp -liomp5")
+      endif()
+      set(OpenMP_C_FLAGS "${OpenMP_CXX_FLAGS}")
+      include_directories(${LIBIOMP_INCLUDE_DIR})
+      link_directories(${LIBIOMP_LIBRARIES_DIR})
+      message(STATUS "Intel OpenMP libraries directory is ${LIBIOMP_LIBRARIES_DIR}")
+
+    else() # Otherwise, fall back to GOMP (gcc OpenMP) runtime
+      set(OpenMP_CXX_FLAGS "-fopenmp -lgomp")
+      set(OpenMP_C_FLAGS "${OpenMP_CXX_FLAGS}")
+      include_directories(${LIBGOMP_INCLUDE_DIR})
+    endif()
+  endif()
 else ()
-	set(HAVE_CLANG FALSE)
-  	set(WHOLE_ARCHIVE "-Wl,--whole-archive")
-  	set(NO_WHOLE_ARCHIVE "-Wl,--no-whole-archive")
-endif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(HAVE_CLANG FALSE)
+  set(WHOLE_ARCHIVE "-Wl,--whole-archive")
+  set(NO_WHOLE_ARCHIVE "-Wl,--no-whole-archive")
+endif (CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
 
 #if(COMMAND cmake_policy)
 #	cmake_policy(SET CMP0003 NEW)
@@ -29,7 +69,7 @@ endif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 #endif (BUILD_SHARED_LIBS)
 
 #find_package(MPI REQUIRED)
-#if (MPI_FOUND)	
+#if (MPI_FOUND)
 #	message(STATUS "MPI is found: ${MPI_CXX_INCLUDE_PATH}")
 #endif(MPI_FOUND)
 
@@ -51,24 +91,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	message(STATUS "running on mac")
 	set(CMAKE_CXX_COMPILER "mpicxx")
-	
 	set(IS_MACOS TRUE)
-	#find_library(FLEX_LIBRARY NAMES libfl.a PATHS /usr/local/lib)
-	#message(STATUS "FLEX_LIB:=${FLEX_LIBRARY}")
-	find_library(GOMP_LIBRARY NAMES libgomp.a PATHS ${MAC_GCC_LIB_DIR})
-	message(STATUS "GMOP_LIB:=${GOMP_LIBRARY}")
-	find_path(GOMP_INC_PATH NAMES omp.h HINTS /usr/local/Cellar/gcc/5.3.0/lib/gcc/5/gcc/x86_64-apple-darwin15.0.0/5.3.0/include)
-	message(STATUS "GOMP_INC_PATH=${GOMP_INC_PATH}")
-	#find_library(GFORTRAN_LIBRARY NAMES libgfortran.a PATHS ${MAC_GCC_LIB_DIR})
-	#message(STATUS "GFORTRAN_LIB:=${GFORTRAN_LIBRARY}")
-	#set(CMAKE_INCLUDE_PATH ${GOMP_INC_PATH})
-	#message(STATUS "RPATH:=${RPATH}")
-	link_directories(/usr/local/lib /usr/local/lib/gcc/5)
-    include_directories(${GOMP_INC_PATH})	
-	get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
-	message(STATUS "${inc_dirs}")
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
-	#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
 #add_definitions(-DTIMING -DSTOCH_TESTING)
@@ -78,18 +101,17 @@ if(MATH_LIBS)
 	message(STATUS "Using user-defined MATH_LIBS=${MATH_LIBS}")
 elseif(IS_DIRECTORY $ENV{MKLROOT})
     set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
-    message(STATUS "Using MKLROOT:$ENV{MKLROOT} MATH_LIBS=${MATH_LIBS}")  
+    message(STATUS "Using MKLROOT:$ENV{MKLROOT} MATH_LIBS=${MATH_LIBS}")
 else(MATH_LIBS)
     message(STATUS "Searching system path for MATH_LIBS")
     enable_language(Fortran)
+    message(STATUS "FC = ${FC}")
+    message(STATUS "Fortran compiler name is ${CMAKE_Fortran_COMPILER}")
+    message(STATUS "Fortran compiler ID is ${CMAKE_Fortran_COMPILER_ID}")
     find_package(LAPACK REQUIRED)
-    message(STATUS " LAPACK_LIBRARIE:  ${LAPACK_LIBRARIES}")
+    message(STATUS " LAPACK_LIBRARIES:  ${LAPACK_LIBRARIES}")
     message(STATUS " CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES:  ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}")
-	if(IS_MACOS)
-    	set(MATH_LIBS ${LAPACK_LIBRARIES} -ldl -lgomp ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
-	else()
-    	set(MATH_LIBS ${LAPACK_LIBRARIES} -ldl -lgomp ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
-	endif(IS_MACOS)
+    set(MATH_LIBS ${LAPACK_LIBRARIES} -ldl -l${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES} ${OpenMP_CXX_FLAGS})
     message(STATUS " MATH_LIBS:  ${MATH_LIBS}")
 endif(MATH_LIBS)
 
@@ -122,7 +144,7 @@ if(NOT MA27_LIBRARY AND NOT MA57_LIBRARY)
 endif(NOT MA27_LIBRARY AND NOT MA57_LIBRARY)
 if(MA27_LIBRARY)
     set(HAVE_MA27 TRUE)
-    message(STATUS "MA27_LIBRARY = ${MA27_LIBRARY}")    
+    message(STATUS "MA27_LIBRARY = ${MA27_LIBRARY}")
 endif(MA27_LIBRARY)
 
 set(METIS_DIR ${SHARED_DIR}/METIS/src)
@@ -132,7 +154,7 @@ if(METIS_INCLUDE_DIR)
   include_directories(${METIS_INCLUDE_DIR})
 endif(METIS_INCLUDE_DIR)
 if(MA57_LIBRARY)
-    message(STATUS "MA57_LIBRARY = ${MA57_LIBRARY}")    
+    message(STATUS "MA57_LIBRARY = ${MA57_LIBRARY}")
 endif(MA57_LIBRARY)
 if(MA57_LIBRARY AND NOT METIS_LIBRARY)
     message(Status "Could not find METIS needed by MA57.")
@@ -176,9 +198,9 @@ if(NOT SUITESPARSE_LIBRARY)
 endif(NOT SUITESPARSE_LIBRARY)
 
 
-set(UMF_ALLINONE_LIBRARY  ${UMFPACK_LIBRARY} ${AMD_LIBRARY} ${SUITESPARSE_LIBRARY} 
+set(UMF_ALLINONE_LIBRARY  ${UMFPACK_LIBRARY} ${AMD_LIBRARY} ${SUITESPARSE_LIBRARY}
 	${UMFPACK_LIBRARY_CHOLMOD} ${UMFPACK_LIBRARY_COLAMD} ${CAMD_LIBRARY} ${CCOLAMD_LIBRARY}
-	
+
 	)
 
 set(HAVE_UMFPACK TRUE)
@@ -255,7 +277,7 @@ endif(EXISTS ${CB_LIB})
 #############################################################
 #
 # end thirdparty libraries
-# 
+#
 #############################################################
 
 #Boost
@@ -345,34 +367,34 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 ###############################################################################
 
 #setting CXX_FLAGS
-if(HAVE_MA27) 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA27") 
-else(HAVE_MA27) 
-  set(MA27_LIBRARY "") 
+if(HAVE_MA27)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA27")
+else(HAVE_MA27)
+  set(MA27_LIBRARY "")
 endif(HAVE_MA27)
 
-if(HAVE_MA57) 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA57") 
-else(HAVE_MA57) 
-  set(MA57_LIBRARY "") 
+if(HAVE_MA57)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA57")
+else(HAVE_MA57)
+  set(MA57_LIBRARY "")
 endif(HAVE_MA57)
 
-#if(HAVE_MA86) 
-#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA86") 
-#else(HAVE_MA57) 
-#  set(MA86_LIBRARY "") 
-#endif(HAVE_MA86) 
+#if(HAVE_MA86)
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA86")
+#else(HAVE_MA57)
+#  set(MA86_LIBRARY "")
+#endif(HAVE_MA86)
 
-if(HAVE_PARDISO) 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO") 
-else(HAVE_PARDISO) 
-  set(PARDISO_LIBRARY "") 
+if(HAVE_PARDISO)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO")
+else(HAVE_PARDISO)
+  set(PARDISO_LIBRARY "")
 endif(HAVE_PARDISO)
 
-if(HAVE_UMFPACK) 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_UMFPACK") 
-else(HAVE_UMFPACK) 
-  set(UMF_ALLINONE_LIBRARY "") 
+if(HAVE_UMFPACK)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_UMFPACK")
+else(HAVE_UMFPACK)
+  set(UMF_ALLINONE_LIBRARY "")
 endif(HAVE_UMFPACK)
 
 ###############################################################################
