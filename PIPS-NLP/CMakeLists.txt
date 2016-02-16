@@ -168,8 +168,8 @@ add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   ${WHOLE_ARCHIVE}
   global_var
   updateFromCallBack  
-  nlpcNlpGenSparse  
-  nlpwithsolver
+  #nlpcNlpGenSparse  
+  #nlpwithsolver
   LU_solvers
   nlpsparse 
   nlpdense
@@ -197,8 +197,8 @@ target_link_libraries(parmodel
   reducedSolverSpecial
   ${WHOLE_ARCHIVE}
   updateFromCallBack  
-  nlpcNlpGenSparse  
-  nlpwithsolver
+  #nlpcNlpGenSparse  
+  #nlpwithsolver
   LU_solvers
   nlpsparse 
   nlpdense
@@ -227,8 +227,8 @@ target_link_libraries(parmodel2
   reducedSolverSpecial
   ${WHOLE_ARCHIVE}
   updateFromCallBack  
-  nlpcNlpGenSparse  
-  nlpwithsolver
+  #nlpcNlpGenSparse  
+  #nlpwithsolver
   LU_solvers
   nlpsparse 
   nlpdense
@@ -257,8 +257,8 @@ target_link_libraries(parmodel3
   reducedSolverSpecial
   ${WHOLE_ARCHIVE}
   updateFromCallBack  
-  nlpcNlpGenSparse  
-  nlpwithsolver
+  #nlpcNlpGenSparse  
+  #nlpwithsolver
   LU_solvers
   nlpsparse 
   nlpdense
