@@ -197,8 +197,6 @@ target_link_libraries(parmodel
   reducedSolverSpecial
   ${WHOLE_ARCHIVE}
   updateFromCallBack  
-  #nlpcNlpGenSparse  
-  #nlpwithsolver
   LU_solvers
   nlpsparse 
   nlpdense
@@ -210,7 +208,6 @@ target_link_libraries(parmodel
   genStructparallel
   structStochInfo
   global_var
-  #pipsnlpFLS  
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
@@ -227,8 +224,6 @@ target_link_libraries(parmodel2
   reducedSolverSpecial
   ${WHOLE_ARCHIVE}
   updateFromCallBack  
-  #nlpcNlpGenSparse  
-  #nlpwithsolver
   LU_solvers
   nlpsparse 
   nlpdense
@@ -240,7 +235,6 @@ target_link_libraries(parmodel2
   genStructparallel
   structStochInfo
   global_var
-  #pipsnlpFLS  
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
@@ -257,8 +251,6 @@ target_link_libraries(parmodel3
   reducedSolverSpecial
   ${WHOLE_ARCHIVE}
   updateFromCallBack  
-  #nlpcNlpGenSparse  
-  #nlpwithsolver
   LU_solvers
   nlpsparse 
   nlpdense
@@ -270,7 +262,6 @@ target_link_libraries(parmodel3
   genStructparallel
   structStochInfo
   global_var
-  #pipsnlpFLS  
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
