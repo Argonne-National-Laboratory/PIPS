@@ -90,7 +90,7 @@ if(HAVE_PARDISO)
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
-if(MAVE_MA27)
+if(HAVE_MA27)
   add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
   target_link_libraries(meanSolveAndRecourseEval
     stochInput ${COIN_LIBS}
@@ -98,7 +98,7 @@ if(MAVE_MA27)
     ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY}
   ${MATH_LIBS})
-endif(MAVE_MA27)
+endif(HAVE_MA27)
 
 endif(HAVE_PARDISO)
 
