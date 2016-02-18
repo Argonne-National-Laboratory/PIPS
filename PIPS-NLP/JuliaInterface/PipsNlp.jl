@@ -1,6 +1,7 @@
 
 module PipsNlp
 
+#update this to the path of the PIPS-NLP serial share library. 
 libpipsnlp=Libdl.dlopen("/home/fqiang/workspace/PIPS/build_pips/PIPS-NLP/libpipsnlp.so")
 
 type ProblemData
@@ -204,8 +205,6 @@ function freeProblem(prob::PipsNlpProblem)
     @show ret
     return ret
 end
-
-include("PipsNlpSolverInterface.jl")
 
 end
 
