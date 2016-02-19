@@ -5,7 +5,7 @@ add_library(updateFromAMPL
 )
 
 add_library(sInfoQPLP
-  sNlpInfoFIX.C
+  sNlpInfoFIX.C NlpInfoFIX.C NlpInfo.C
 )
 
 add_library(StochInfoFromAMPL

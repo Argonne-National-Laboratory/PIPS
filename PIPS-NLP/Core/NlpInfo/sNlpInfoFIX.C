@@ -80,10 +80,10 @@ void sNlpInfoFIX::JacIneq( NlpGenVars * vars, GenMatrix* JacC ) {}
 
 void sNlpInfoFIX::get_InitX0(OoqpVector* vX){}
 
-void createChildren( sData *data_in,stochasticInput& in) {};
+void sNlpInfoFIX::createChildren( sData *data_in,stochasticInput& in) {};
 
-void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ) {};
+void sNlpInfoFIX::Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ) {};
 
-void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ){};
+void sNlpInfoFIX::ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ){};
 
 

@@ -117,18 +117,19 @@ else(HAVE_PETSC)
     )
 
 ### parallel filter line search IPM with DCOPF network aggregation preconditioner
-#  add_executable(pipsqpFromDCOPF Drivers/parallelDcopfDriver.cpp)
-#  target_link_libraries(pipsqpFromDCOPF
-#	dcopfcinput nlpstochInputBase  aggregationstoch 
-#    pipsnlpFLSStoch nlpstoch nlpstochla sInfoQPLP
-#    reducedSolverSpecial
-#    nlpgensparse nlpbase nlpsparse nlpdense
-#    global_var
-#    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
-#    ${PARDISO_LIBRARY}
-#    LU_solvers ${UMF_ALLINONE_LIBRARY}
-#    ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
-#   )
+  add_executable(pipsqpFromDCOPF Drivers/parallelDcopfDriver.cpp)
+  target_link_libraries(pipsqpFromDCOPF
+	sInfoQPLP nlpstoch
+	dcopfcinput nlpstochInputBase  aggregationstoch 
+    pipsnlpFLSStoch nlpstochla
+    reducedSolverSpecial
+    nlpgensparse nlpbase nlpsparse nlpdense
+    global_var
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
+    ${PARDISO_LIBRARY}
+    LU_solvers ${UMF_ALLINONE_LIBRARY}
+    ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
+   )
 
 endif(HAVE_PETSC)
 
