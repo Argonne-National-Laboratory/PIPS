@@ -143,7 +143,7 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 	delete[] ranksToKeep;
 	
 	
-	ierr = MPI_Comm_create(mpiWorldGroup, childGroup, &childComm); assert(ierr==MPI_SUCCESS);
+	ierr = MPI_Comm_create(commWrkrs, childGroup, &childComm); assert(ierr==MPI_SUCCESS);
 	MPI_Group_free(&childGroup); //MPI_Group_free(&mpiWorldGroup);
 	
 	//!log printf("----Node [%d] is on proc [%d]\n", i, rankMe);fflush(stdout); 
