@@ -166,44 +166,45 @@ elseif(MA57_LIBRARY AND METIS_LIBRARY)
     include_directories(${METIS_DIR}/Lib)
 endif(MA57_LIBRARY AND NOT METIS_LIBRARY)
 
-##UMFPACK is not used at this time
-#set(UMFPACK_DIR ${SHARED_DIR}/UMFPACK/src)
-#include_directories(${UMFPACK_DIR}/UMFPACK/Include)
-#find_library(UMFPACK_LIBRARY NAMES libumfpack.a PATHS ${UMFPACK_DIR}/UMFPACK/Lib)
-#find_library(UMFPACK_LIBRARY_CHOLMOD NAMES libcholmod.a PATHS ${UMFPACK_DIR}/CHOLMOD/Lib)
+#UMFPACK
+set(UMFPACK_DIR ${SHARED_DIR}/UMFPACK/src)
+include_directories(${UMFPACK_DIR}/UMFPACK/Include)
+find_library(UMFPACK_LIBRARY NAMES libumfpack.a PATHS ${UMFPACK_DIR}/UMFPACK/Lib)
+find_library(UMFPACK_LIBRARY_CHOLMOD NAMES libcholmod.a PATHS ${UMFPACK_DIR}/CHOLMOD/Lib)
 
-##with CLANG CAMD_LIBRARY and CCOLAMD_LIBRARY are quired
-##if(IS_MACOS)
-#find_library(CAMD_LIBRARY NAMES libcamd.a PATHS ${UMFPACK_DIR}/CAMD/Lib)
-#find_library(CCOLAMD_LIBRARY NAMES libccolamd.a PATHS ${UMFPACK_DIR}/CCOLAMD/Lib)
-##endif(IS_MACOS)
+#with CLANG CAMD_LIBRARY and CCOLAMD_LIBRARY are quired
+#if(IS_MACOS)
+find_library(CAMD_LIBRARY NAMES libcamd.a PATHS ${UMFPACK_DIR}/CAMD/Lib)
+find_library(CCOLAMD_LIBRARY NAMES libccolamd.a PATHS ${UMFPACK_DIR}/CCOLAMD/Lib)
+#endif(IS_MACOS)
 
-##find_library(UMFPACK_LIBRARY_CCOLAMD NAMES libccolamd.a PATHS ${UMFPACK_DIR}/CCOLAMD/Lib)
-#find_library(UMFPACK_LIBRARY_COLAMD NAMES libcolamd.a PATHS ${UMFPACK_DIR}/COLAMD/Lib)
-#find_library(AMD_LIBRARY NAMES libamd.a PATHS ${UMFPACK_DIR}/AMD/Lib)
-#find_library(SUITESPARSE_LIBRARY NAMES libsuitesparseconfig.a PATHS ${UMFPACK_DIR}/SuiteSparse_config)
+#find_library(UMFPACK_LIBRARY_CCOLAMD NAMES libccolamd.a PATHS ${UMFPACK_DIR}/CCOLAMD/Lib)
+find_library(UMFPACK_LIBRARY_COLAMD NAMES libcolamd.a PATHS ${UMFPACK_DIR}/COLAMD/Lib)
+find_library(AMD_LIBRARY NAMES libamd.a PATHS ${UMFPACK_DIR}/AMD/Lib)
+find_library(SUITESPARSE_LIBRARY NAMES libsuitesparseconfig.a PATHS ${UMFPACK_DIR}/SuiteSparse_config)
 
-#include_directories(${UMFPACK_DIR}/AMD/Include)
-#include_directories(${UMFPACK_DIR}/SuiteSparse_config)
+include_directories(${UMFPACK_DIR}/AMD/Include)
+include_directories(${UMFPACK_DIR}/SuiteSparse_config)
 
-#if(NOT AMD_LIBRARY)
-#    set(HAVE_AMD FALSE)
-#    message(FATAL_ERROR "AMD library not found. We require AMD to use UMFPACK.")
-#endif(NOT AMD_LIBRARY)
-#set(HAVE_AMD TRUE)
-#message(STATUS "AMD_LIBRARY:=${AMD_LIBRARY}")
+if(NOT AMD_LIBRARY)
+    set(HAVE_AMD FALSE)
+    message(FATAL_ERROR "AMD library not found. We require AMD to use UMFPACK.")
+endif(NOT AMD_LIBRARY)
+set(HAVE_AMD TRUE)
+message(STATUS "AMD_LIBRARY:=${AMD_LIBRARY}")
 
-#if(NOT SUITESPARSE_LIBRARY)
-#    message(FATAL_ERROR "SUITESPARSE_LIBRARY not found. We require SUITESPARSE_LIBRARY to use UMFPACK.")
-#endif(NOT SUITESPARSE_LIBRARY)
+if(NOT SUITESPARSE_LIBRARY)
+    message(FATAL_ERROR "SUITESPARSE_LIBRARY not found. We require SUITESPARSE_LIBRARY to use UMFPACK.")
+endif(NOT SUITESPARSE_LIBRARY)
 
 
-#set(UMF_ALLINONE_LIBRARY  ${UMFPACK_LIBRARY} ${AMD_LIBRARY} ${SUITESPARSE_LIBRARY}
-#	${UMFPACK_LIBRARY_CHOLMOD} ${UMFPACK_LIBRARY_COLAMD} ${CAMD_LIBRARY} ${CCOLAMD_LIBRARY}
-#)
+set(UMF_ALLINONE_LIBRARY  ${UMFPACK_LIBRARY} ${AMD_LIBRARY} ${SUITESPARSE_LIBRARY}
+	${UMFPACK_LIBRARY_CHOLMOD} ${UMFPACK_LIBRARY_COLAMD} ${CAMD_LIBRARY} ${CCOLAMD_LIBRARY}
 
-#set(HAVE_UMFPACK TRUE)
-#message(STATUS "Find Umfpack: ${UMF_ALLINONE_LIBRARY}")
+	)
+
+set(HAVE_UMFPACK TRUE)
+message(STATUS "Find Umfpack: ${UMF_ALLINONE_LIBRARY}")
 
 #CBC
 set(COIN_DIR ${SHARED_DIR}/CBC/src)
@@ -282,14 +283,14 @@ endif(EXISTS ${CB_LIB})
 #Boost
 find_package(Boost COMPONENTS system filesystem thread log log_setup)
 include_directories(${Boost_INCLUDE_DIR})
-if (NOT Boost_FOUND AND (NOT ${PIPS_BUILD_TARGET} MATCHES "PIPS-NLP") )
+if (NOT Boost_FOUND)
   message("! A Boost version containing BOOST.LOG has NOT been found.")
   message("! Please specify the location of the Boost library containing 'log' package.")
   message("! For this create a 'Toolchain.cmake' file or edit the one from the root ")
   message("! directory and use 'set(BOOST_ROOT \"/path/to/boost\")'.")
   message("! Then run  'cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain.cmake ..' in the build directory.")
   message(FATAL_ERROR "Configuration aborted due to missing BOOST libraries!")
-endif(NOT Boost_FOUND AND (NOT ${PIPS_BUILD_TARGET} MATCHES "PIPS-NLP") )
+endif(NOT Boost_FOUND)
 
 find_library(DL_LIBRARY NAMES dl)
 #find_library(FL_LIBRARY NAMES fl PATHS /usr/lib /usr/local/lib /usr/local/opt/flex)
@@ -419,9 +420,6 @@ if(${PIPS_BUILD_TARGET} MATCHES "PIPS-S")
     add_subdirectory(Input)
     add_subdirectory(SolverInterface)
     add_subdirectory(PIPS-S)
-elseif(${PIPS_BUILD_TARGET} MATCHES "PIPS-NLP")
-    add_subdirectory(Input)
-    add_subdirectory(PIPS-NLP)
 elseif(${PIPS_BUILD_TARGET} MATCHES "ALL")
     add_subdirectory(PIPS-S)
     add_subdirectory(PIPS-IPM)

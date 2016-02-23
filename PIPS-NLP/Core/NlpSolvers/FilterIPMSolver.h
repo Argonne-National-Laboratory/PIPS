@@ -28,14 +28,12 @@ class FilterIPMSolver : public Solver
   protected:
 
 	double *dualRegQuantities;
-	double ALObj, ALPCon;
 	
   	double xWx_0, xWx_done;
 	double thd_0, thd_done;
 	
   	int printlevel;
 	
-	double rho; // penalty parameter
 	double mu, oldmu;
 	double scal_commerr, scal_dualerr;	
 	double alp_pri, alp_boundDual, alp_pri_max, alp_boundDual_max;
@@ -76,7 +74,6 @@ class FilterIPMSolver : public Solver
   	int StepAcceptDueTo_SWC_AC;
   	int StepAcceptDueTo_SRC_obj;
   	int StepAcceptDueTo_SRC_con;
-	int StepAcceptDueTo_SRC;
 
 	char info_xWx_type;
 	char info_PriAlpha_char;
@@ -87,9 +84,6 @@ class FilterIPMSolver : public Solver
 	PDRegularization *PD_Reg;
     ProblemFormulation * factory;  
 
-
-	double AugLagVaryPart;
-	
   public:
 
     FilterIPMSolver(ProblemFormulation * of, Data * prob );

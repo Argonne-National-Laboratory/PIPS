@@ -115,14 +115,10 @@ FilterIPMSolver::FilterIPMSolver( ProblemFormulation * of, Data * prob )
   StepAcceptDueTo_SWC_AC 	= 0;
   StepAcceptDueTo_SRC_obj 	= 0;
   StepAcceptDueTo_SRC_con 	= 0;
-  StepAcceptDueTo_SRC       = 0;
-  
   LastIterAcceptByCondition = 0;
 
   cumulative_small_step 	= 0;
   cumulative_reject_filter	= 0;
-
-  AugLagVaryPart = 0;
 }
 
 FilterIPMSolver::~FilterIPMSolver()
@@ -323,8 +319,7 @@ FilterIPMSolver::getAlphaMin(const double priAlaph_in)
   double dtmp;
 
   double augmented_BarrGradTimesD;
-//  augmented_BarrGradTimesD = curr_BarrObjGradTimesD + (1.0-priAlaph_in)*curr_ConTimesD;
-  augmented_BarrGradTimesD = curr_BarrObjGradTimesD + priAlaph_in*AugLagVaryPart;
+  augmented_BarrGradTimesD = curr_BarrObjGradTimesD + (1.0-priAlaph_in)*curr_ConTimesD;
 									
   if(augmented_BarrGradTimesD<0){
 	dtmp =  -FilterIPMOpt->r_phi*curr_ConNorm/augmented_BarrGradTimesD;
@@ -361,8 +356,7 @@ FilterIPMSolver::testStep( const double trialAlpha, const double trial_ConsNorm_
 {
   bool acceptStep=false;
 
-//  double augmented_BarrGradTimesD = curr_BarrGradTimesD_in - (1.0-trialAlpha)*curr_ConsTimesD_in;
-  double augmented_BarrGradTimesD = curr_BarrGradTimesD_in + trialAlpha*AugLagVaryPart;
+  double augmented_BarrGradTimesD = curr_BarrGradTimesD_in - (1.0-trialAlpha)*curr_ConsTimesD_in;
 
   // test switching condition
   if( testSwitchingCondition( trialAlpha, curr_ConsNorm_in, augmented_BarrGradTimesD, FilterIPMOpt) )
@@ -431,11 +425,8 @@ FilterIPMSolver::testSufficientReductionCondition( const double trial_ConsNorm_i
   bool SRC_con = 	trial_ConsNorm_in 
   				<=	(1-FilterIPMOpt->r_Q)*curr_ConsNorm_in;
 
-  if( SRC_obj && SRC_con)
+  if( SRC_obj )
   {
-   	SRChold = true;
-	LastIterAcceptByCondition=4; 
-  }else if( SRC_obj ){
 	SRChold = true;
 	LastIterAcceptByCondition=2;
   }else if( SRC_con ){
@@ -738,8 +729,6 @@ FilterIPMSolver::ifStepAccepted(Data *prob_in, Variables *vars_in, Residuals * r
 	  if (LastIterRejectByFilter){
 		cumulative_reject_filter++;
 		if (cumulative_reject_filter>=gFilterResetStep) {
-		  if(FilterIPMOpt->ConNorm_max > 0.1*test_ConNorm)
-			FilterIPMOpt->ConNorm_max *= 0.1;
 		  Filter->Initialize(FilterIPMOpt);
     	  cumulative_reject_filter = 0;
         }
@@ -756,8 +745,6 @@ FilterIPMSolver::ifStepAccepted(Data *prob_in, Variables *vars_in, Residuals * r
 	  StepAcceptDueTo_SRC_obj++;
     else if(LastIterAcceptByCondition==3)
 	  StepAcceptDueTo_SRC_con++;
-    else if(LastIterAcceptByCondition==4)
-	  StepAcceptDueTo_SRC++;
 
   }
   
@@ -853,14 +840,12 @@ FilterIPMSolver::UpdateFilter()
 {
   info_PriAlpha_char = 'f';
   
-  if( LastIterAcceptByCondition>1 )			 
+  if( LastIterAcceptByCondition==3 )			 
   {
     double addConNorm = (1-FilterIPMOpt->r_Q)*curr_ConNorm;
 	double addBarrObj = curr_BarrObj-FilterIPMOpt->r_phi*curr_ConNorm;
 	Filter->UpdateFilter(addConNorm,addBarrObj);
-	if( LastIterAcceptByCondition==2) info_PriAlpha_char = 'o';
-	else if( LastIterAcceptByCondition==3) info_PriAlpha_char = 'c';  
-	else if( LastIterAcceptByCondition==4) info_PriAlpha_char = 'b';  		
+	info_PriAlpha_char = 'h';  
   }
 }
 
@@ -883,7 +868,7 @@ FilterIPMSolver::use_TinyStep( Variables *step_in)
 	cumulative_small_step = 0;
   }
 	
-  if(cumulative_small_step == 5){
+  if(cumulative_small_step == 2){
 	DoFeasResto = true;
   }	
 }
@@ -984,40 +969,38 @@ FilterIPMSolver::defaultStatus(Data *  data_in, Variables * /* vars */,
 
   if ( fullErr <= FilterIPMOpt->opt_tol){ 
 	stop_code = SUCCESSFUL_TERMINATION;
-	if(printlevel>0){
-	  printf("\n\n  Find Optimal solution! In Iter: %d",iterate-1);
-	  printf("\n  Optimal solution is: %1.7e",pObj);
-	  printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);
-	}
+	printf("\n\n  Find Optimal solution! In Iter: %d",iterate-1);
+	printf("\n  Optimal solution is: %1.7e",pObj);
+	printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);
+
+	printf("  Iter is accecpted due to: \n");
+	printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
+	printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
+	printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);	
   } else if (
     iterate-1 >= maxit ) {
     stop_code = MAX_ITS_EXCEEDED;
-	if(printlevel>0){
-	  printf("\n\n  EXIT: Max Iter = %d \n", FilterIPMOpt->maxit);
-	  printf("\n  Last objective is: %1.7e",pObj);
-	  printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);	
-	}
+	printf("\n\n  EXIT: Max Iter = %d \n", FilterIPMOpt->maxit);
+	printf("\n  Last objective is: %1.7e",pObj);
+	printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);	
+	printf("  Iter is accecpted due to: \n");
+	printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
+	printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
+	printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
   } else if ( pObj/FilterIPMOpt->df <= -1e+15) { 
+  	printf("\n\n  EXIT: Iterations Diverging. Problem might be unbounded.\n");
 	stop_code = UNKNOWN;
-	if(printlevel>0){
-	  printf("\n\n  EXIT: Iterations Diverging. Problem might be unbounded.\n");
-	}	
+	printf("  Iter is accecpted due to: \n");
+	printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
+	printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
+	printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
   } else if ( pObj/FilterIPMOpt->df >= 1e+15   ) { 
+    printf("\n\n  EXIT: Iterations Diverging.\n");
     stop_code = UNKNOWN;
-	if(printlevel>0){
-	  printf("\n\n  EXIT: Iterations Diverging.\n");
-	}			
-  }
-
-  if ( stop_code != NOT_FINISHED){ 
-  	if(printlevel>0){
-		printf("  Iter is accecpted due to: \n");
-		printf("							SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
-		printf("							SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
-		printf("							SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
-		printf("							SRC (both): %d \n", StepAcceptDueTo_SRC);	
-
-	}
+	printf("  Iter is accecpted due to: \n");
+	printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
+	printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
+	printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
   }
 
   return stop_code;
