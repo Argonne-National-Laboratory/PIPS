@@ -286,42 +286,41 @@ FilterIPMStochSolver::defaultStatus(Data *  data_in, Variables * /* vars */,
 
   if ( fullErr <= FilterIPMOpt->opt_tol){ 
 	stop_code = SUCCESSFUL_TERMINATION;
-	if(0==myRank) printf("\n\n  Find Optimal solution! In Iter: %d \n",iterate-1);
-	if(0==myRank) printf("\n  Optimal solution is: %1.7e",pObj);
-	if(0==myRank) printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);
-
-	if(0==myRank) printf("  Iter is accecpted due to: \n");
-	if(0==myRank) printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
-	if(0==myRank) printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
-	if(0==myRank) printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
+	if(0==myRank && printlevel>0){
+	  printf("\n\n  Find Optimal solution! In Iter: %d",iterate-1);
+	  printf("\n  Optimal solution is: %1.7e",pObj);
+	  printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);
+	}
   } else if (
     iterate-1 >= maxit ) {
     stop_code = MAX_ITS_EXCEEDED;
-	if(0==myRank) printf("\n\n  EXIT: Max Iter = %d \n", FilterIPMOpt->maxit);
-	if(0==myRank) printf("\n  Last objective is: %1.7e",pObj);
-	if(0==myRank) printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);	
-	if(0==myRank) printf("  Iter us accecpted due to: \n");
-	if(0==myRank) printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
-	if(0==myRank) printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
-	if(0==myRank) printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
+	if(0==myRank && printlevel>0){
+	  printf("\n\n  EXIT: Max Iter = %d \n", FilterIPMOpt->maxit);
+	  printf("\n  Last objective is: %1.7e",pObj);
+	  printf("\n  Addition Fact due to reg: %d \n",numberOfPrimalReg);	
+	}
   } else if ( pObj/FilterIPMOpt->df <= -1e+15) { 
-  	if(0==myRank) printf("\n\n  EXIT: Iterations Diverging. Problem might be unbounded.\n");
 	stop_code = UNKNOWN;
-	if(0==myRank) printf("  Iter is accecpted due to: \n");
-	if(0==myRank) printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
-	if(0==myRank) printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
-	if(0==myRank) printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
+	if(0==myRank && printlevel>0){
+	  printf("\n\n  EXIT: Iterations Diverging. Problem might be unbounded.\n");
+	}	
   } else if ( pObj/FilterIPMOpt->df >= 1e+15   ) { 
-    if(0==myRank) printf("\n\n  EXIT: Iterations Diverging.\n");
     stop_code = UNKNOWN;
-	if(0==myRank) printf("  Iter is accecpted due to: \n");
-	if(0==myRank) printf("                            SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
-	if(0==myRank) printf("                            SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
-	if(0==myRank) printf("                            SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
+	if(0==myRank && printlevel>0){
+	  printf("\n\n  EXIT: Iterations Diverging.\n");
+	}			
   }
 
-//  if(stop_code != NOT_FINISHED)  
-//  	return stop_code;
+  if ( stop_code != NOT_FINISHED){ 
+  	if(0==myRank && printlevel>0){
+		printf("  Iter is accecpted due to: \n");
+		printf("							SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
+		printf("							SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
+		printf("							SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
+		printf("							SRC (both): %d \n", StepAcceptDueTo_SRC);	
+
+	}
+  }
 
   
   return stop_code;

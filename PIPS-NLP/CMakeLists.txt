@@ -68,12 +68,12 @@ if(HAVE_PETSC)
     nlpsparse nlpdense
     pipsnlpFLS  nlpbase
 	global_var
-	nlpstoch
-	nlpstochla
+#	nlpstoch
+#	nlpstochla
     ${COIN_LIBS}
     ${AMPL_LIBRARY}
     ${MA57_LIBRARY}  ${MA27_LIBRARY}
-    ${UMF_ALLINONE_LIBRARY}
+#    ${UMF_ALLINONE_LIBRARY}
 #    ${UMFPACK_LIBRARY_PIPS}
 #    ${AMD_LIBRARY}
     ${METIS_LIBRARY}
@@ -106,8 +106,8 @@ else(HAVE_PETSC)
     pipsnlpFLS nlpcNlpGenSparse nlpwithsolver
     nlpgensparse nlpbase nlpsparse nlpdense
 	global_var
-	nlpstoch
-	nlpstochla
+#	nlpstoch
+#	nlpstochla
 #	 schurDecompSolver
 #     ReducedSpaceSolver reducedSolverSpecial
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
