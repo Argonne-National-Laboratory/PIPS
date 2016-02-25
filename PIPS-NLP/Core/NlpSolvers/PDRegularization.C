@@ -167,14 +167,15 @@ PDRegularization::PriRegularization()
 double
 PDRegularization::DualRegularization()
 { 
-  double dual_reg_temp;
+  double dual_reg_temp=0.0;
 
   if(gUseDualRegAlg >= 1){
-	dual_reg_temp = computeDualRegFromCons();
-  }else {
+//	dual_reg_temp = computeDualRegFromCons();
+    dual_reg_temp = dual_reg_curr;
+
+  }else if(gUseDualRegAlg == 0) {
 	dual_reg_temp = dual_reg_scalar * pow(curr_mu, dual_reg_exp_scalar);
   }
-  dual_reg_temp = 1e-10;
   return dual_reg_temp;
 }
 
@@ -199,5 +200,4 @@ PDRegularization::computeDualRegFromCons()
 
   return dual_reg_temp;
 }
-
 
