@@ -27,7 +27,8 @@ sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   prob_->getLocalSizes(locnx, locmy, locmz);
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
-  redRhs = new SimpleVector(locnx+locmy+locmz);
+  assert(gOuterSolve>=3);
+  redRhs = new SimpleVector(locnx+locmz+locmy+locmz);
 };
 
 sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
@@ -43,7 +44,8 @@ sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
 
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
-  redRhs = new SimpleVector(locnx+locmy+locmz);
+  assert(gOuterSolve>=3);  
+  redRhs = new SimpleVector(locnx+locmz+locmy+locmz);
 };
 
 sLinsysRootAug::~sLinsysRootAug()
@@ -88,7 +90,8 @@ extern double t_start, troot_total, taux, tchild_total, tcomm_total;
 extern int gLackOfAccuracy;
 void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 {
-  assert(locmz==0||gOuterSolve<3);
+//  assert(locmz==0||gOuterSolve<3);
+  assert(gOuterSolve>=3);
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
@@ -97,9 +100,9 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   troot_total=tchild_total=tcomm_total=0.0; 
 #endif
 
-  assert(locnx+locmy+locmz==b.length());
+  assert(locnx+locmz+locmy+locmz==b.length());
   SimpleVector& r = (*redRhs);
-  assert(r.length() <= b.length());
+  assert(r.length() == b.length());
   SparseGenMatrix& C = prob->getLocalD();
 
   ///////////////////////////////////////////////////////////////////////
@@ -107,30 +110,16 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
  
   ///////////////////////////////////////////////////////////////////////
-  // b=[b1;b2;b3] is a locnx+locmy+locmz vector 
-  // the new rhs should be 
-  //           r = [b1-C^T*(zDiag)^{-1}*b3; b2]
+  // b=[b1;b2;b3;b4] is a locnx+locmz+locmy+locmz vector 
   ///////////////////////////////////////////////////////////////////////
 
-  r.copyFromArray(b.elements()); //will copy only as many elems as r has
-
-  // aliases to parts (no mem allocations)
-  SimpleVector r3(&r[locnx+locmy], locmz); //r3 is used as a temp
-                                           //buffer for b3
-  SimpleVector r2(&r[locnx],       locmy);
+  r.copyFromArray(b.elements());
+  // aliases to parts (no mem allocations)  
+  SimpleVector r4(&r[locnx+locmz+locmy], locmz);
+  SimpleVector r3(&r[locnx+locmz], locmy); //r3 is used as a temp buffer for b3
+  SimpleVector r2(&r[locnx],       locmz);
   SimpleVector r1(&r[0],           locnx);
 
-  ///////////////////////////////////////////////////////////////////////
-  // compute r1 = b1 - C^T*(zDiag)^{-1}*b3
-  ///////////////////////////////////////////////////////////////////////
-  if(locmz>0) {
-    assert(r3.length() == zDiag->length());
-    r3.componentDiv(*zDiag);//r3 is a copy of b3
-    C.transMult(1.0, r1, -1.0, r3);
-  }
-  ///////////////////////////////////////////////////////////////////////
-  // r contains all the stuff -> solve for it
-  ///////////////////////////////////////////////////////////////////////
 
   if(gInnerSCsolve==0) {
     // Option 1. - solve with the factors
@@ -145,19 +134,16 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   }
   ///////////////////////////////////////////////////////////////////////
   // r is the sln to the reduced system
-  // the sln to the aug system should be 
-  //      x = [r1; r2;  (zDiag)^{-1} * (b3-C*r1);
   ///////////////////////////////////////////////////////////////////////
   SimpleVector b1(&b[0],           locnx);
-  SimpleVector b2(&b[locnx],       locmy);
-  SimpleVector b3(&b[locnx+locmy], locmz);
+  SimpleVector b2(&b[locnx],       locmz);
+  SimpleVector b3(&b[locnx+locmz], locmy);
+  SimpleVector b4(&b[locnx+locmz+locmy], locmz);  
   b1.copyFrom(r1);
   b2.copyFrom(r2);
+  b3.copyFrom(r3);
+  b4.copyFrom(r4);
 
-  if(locmz>0) {
-    C.mult(1.0, b3, -1.0, r1);
-    b3.componentDiv(*zDiag);
-  }
 #ifdef TIMING
   if(myRank==0 && gInnerSCsolve>=1)
     cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
@@ -663,7 +649,8 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 
 void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 {
-  assert(locmz==0||gOuterSolve<3);
+//  assert(locmz==0||gOuterSolve<3);
+  assert(gOuterSolve>=3);
 
   int j, p, pend; double val;
 
@@ -676,7 +663,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
  
 
   //////////////////////////////////////////////////////
-  // compute Q+diag(xdiag) - C' * diag(zDiag) * C 
+  // compute Q+diag(xdiag)  
   // and update the KKT
   //////////////////////////////////////////////////////
 
@@ -702,30 +689,20 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   /////////////////////////////////////////////////////////////
   //kktd->atPutDiagonal( 0, *xDiag );
   SimpleVector& sxDiag = dynamic_cast<SimpleVector&>(*xDiag);
-  for(int i=0; i<locnx; i++) dKkt[i][i] += sxDiag[i];
   SimpleVector& syDiag = dynamic_cast<SimpleVector&>(*yDiag);
-  for(int i=locnx; i<locnx+locmy; i++) dKkt[i][i] += syDiag[i-locnx];
 
+  for(int i=0; i<locnx; i++) dKkt[i][i] += sxDiag[i];  
+  for(int i=locnx+locmz; i<locnx+locmz+locmy; i++) dKkt[i][i] += syDiag[i-locnx-locmz];
+
+  SimpleVector& ssDiag = dynamic_cast<SimpleVector&>(*sDiag);
+  SimpleVector& szDiag = dynamic_cast<SimpleVector&>(*zDiag);
 
   /////////////////////////////////////////////////////////////
-  // update the KKT with   - C' * diag(zDiag) *C
+  // update the KKT with  S part
   /////////////////////////////////////////////////////////////
   if(locmz>0) {
-    SparseGenMatrix& C = prob->getLocalD();
-    C.matTransDinvMultMat(*zDiag, &CtDC);
-    assert(CtDC->size() == locnx);
-
-    //aliases for internal buffers of CtDC
-    SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
-    int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();
-    
-    for(int i=0; i<locnx; i++) {
-      pend = krowCtDC[i+1];
-      for(p=krowCtDC[i]; p<pend; p++) {
-        j = jcolCtDC[p];
-        dKkt[i][j] -= dCtDC[p];
-	      //printf("%d %d %f\n", i,j,dCtDC[p]);
-      }
+    for(int i=locnx; i<locnx+locmz; i++) {
+        dKkt[i][i] += ssDiag[i-locnx];
     }
   } //~end if locmz>0
   /////////////////////////////////////////////////////////////
@@ -734,6 +711,19 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   if(locmy>0){
     kktd->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );
   }
+  /////////////////////////////////////////////////////////////
+  // update the KKT with C (symmetric update forced) ,  -I and dual reg
+  /////////////////////////////////////////////////////////////  
+  if(locmz>0){
+    kktd->symAtPutSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx, 1 );
+	for(int i=0; i<locmz; i++){
+		dKkt[i+locnx+locmz+locmy][i+locnx] -= 1.0;
+		dKkt[i+locnx][i+locnx+locmz+locmy] -= 1.0;
+		dKkt[i+locnx+locmz+locmy][i+locnx+locmz+locmy] += szDiag[i];
+	}
+  }
+
+
   //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
 
   /////////////////////////////////////////////////////////////
