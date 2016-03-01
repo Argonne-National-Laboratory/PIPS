@@ -9,7 +9,7 @@
 
 //# min x1^2 + x2^2 + x1x2 + x3^2 + x4^2 + x3x4 + x5^2 + x6^2 + x5x6
 //# st.
-//#     0<= x1 + x2 <= 100
+//#     x1 + x2 = 100
 //#     0< x2 + x3 + x4  < 500
 //#     0< x1 + x5 + x6  < 500
 //# x free variables
@@ -74,7 +74,7 @@ int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
 			col_lb[1] = -INFINITY;
 			col_ub[0] = INFINITY;
 			col_ub[1] = INFINITY;
-			row_lb[0] = 0;
+			row_lb[0] = 100;
 			row_ub[0] = 100;
 		}
 		else if(row ==1 || row == 2)
@@ -124,8 +124,7 @@ int str_eval_g(double* x0, double* x1, double* eq_g, double* inq_g,
 	assert(row == col);
 	if(row == 0)
 	{	//x1 + x2 = 100
-//		assert(eq_g==NULL);
-		inq_g[0] = x0[0] + x0[1];
+		eq_g[0] = x0[0] + x0[1];
 	}
 	else if(row == 1)
 	{   //x2 + x3 + x4
@@ -188,8 +187,8 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		assert(e_elts == NULL && e_rowidx == NULL && e_colptr == NULL);
 		assert(i_elts == NULL && i_rowidx == NULL && i_colptr == NULL);
 		if (row == 0 && col == 0) {
-			*e_nz = 0;
-			*i_nz = 2;
+			*e_nz = 2;
+			*i_nz = 0;
 		} else if (row == 1 && col == 1) {
 			*e_nz = 0;
 			*i_nz = 2;
@@ -208,14 +207,14 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 	else
 	{
 		if (row == 0 && col == 0) {
-			assert(*i_nz == 2 && *e_nz == 0);
-			i_rowidx[0] = 0;
-			i_rowidx[1] = 0;
-			i_colptr[0] = 0;
-			i_colptr[1] = 1;
-			i_colptr[2] = 2;
-			i_elts[0] = 1.0;
-			i_elts[1] = 1.0;
+			assert(*i_nz == 0 && *e_nz == 2);
+			e_rowidx[0] = 0;
+			e_rowidx[1] = 0;
+			e_colptr[0] = 0;
+			e_colptr[1] = 1;
+			e_colptr[2] = 2;
+			e_elts[0] = 1.0;
+			e_elts[1] = 1.0;
 		} else if (row == 1 && col == 1) {
 			assert(*i_nz == 2 && *e_nz == 0);
 			i_rowidx[0] = 0;
