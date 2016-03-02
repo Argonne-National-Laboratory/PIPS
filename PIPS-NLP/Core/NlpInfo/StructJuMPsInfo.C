@@ -399,7 +399,7 @@ void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 
 	if(gmyid == 0) {
 		int rowidx[nzqd];
-		int colptr[locNx];
+		int colptr[locNx+1];
 		CallBackData cbd = {stochInput->prob->userdata,0,0};
 		stochInput->prob->eval_h(local_var,local_var,&lam[0],&nzqd,&elts[0],rowidx,colptr,&cbd);
 	}
