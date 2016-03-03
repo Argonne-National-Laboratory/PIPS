@@ -3,7 +3,7 @@ module ParPipsNlp
 
 import MPI
 
-const libparpipsnlp=Libdl.dlopen("/home/fqiang/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.so")
+const libparpipsnlp=Libdl.dlopen(string(ENV["HOME"],"/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.so"))
 
 type PipsNlpProblemStruct
     ref::Ptr{Void}
@@ -209,7 +209,7 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
 	i_nz_ptr::Ptr{Cint}, i_values_ptr::Ptr{Float64}, i_row_ptr::Ptr{Cint}, i_col_ptr::Ptr{Cint},  
 	cbd::Ptr{CallBackData}
 	)
-    # println(" julia -  eval_jac_g_wrapper " );
+    # @show " julia -  eval_jac_g_wrapper " 
     # Extract Julia the problem from the pointer  
     data = unsafe_load(cbd)
     # @show data
@@ -218,7 +218,7 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
     rowid = data.row_node_id
     colid = data.col_node_id
     n0 = prob.colmap[0]
-    n1 = prob.colmap[colid]
+    n1 = prob.colmap[rowid] #we can do this because of 2-level and no linking constraint
     # @show n0, n1 
     x0 = pointer_to_array(x0_ptr, n0)
     x1 = pointer_to_array(x1_ptr, n1)
@@ -246,7 +246,7 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
     	e_rowidx = pointer_to_array(e_row_ptr, e_nz)
     	e_colptr = pointer_to_array(e_col_ptr, ncol+1)
     	i_nz = unsafe_load(i_nz_ptr)
-    	# @show "values - ",(e_nz,i_nz)
+    	# @show "values - ",(e_nz,i_nz), ncol
     	i_values = pointer_to_array(i_values_ptr,i_nz)
     	i_rowidx = pointer_to_array(i_row_ptr, i_nz)
     	i_colptr = pointer_to_array(i_col_ptr, ncol+1)

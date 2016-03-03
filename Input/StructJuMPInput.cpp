@@ -25,18 +25,18 @@ int StructJuMPInput::nScenarios() {
 
 void StructJuMPInput::get_prob_info(int nodeid)
 {
-	PAR_DEBUG("get_prob_info - prob_info - "<<nodeid);
+	PAR_DEBUG("get_prob_info  - nodeid "<<nodeid);
 	int nv = 0;
 	int mc = 0;
 
 	CallBackData data={prob->userdata,nodeid,nodeid};
 //	PAR_DEBUG("data -"<<&data);
-	PAR_DEBUG("get_prob_info callback data ptr - "<<&data);
+	PAR_DEBUG("get_prob_info callback data ptr - "<<data.row_node_id);
 	PAR_DEBUG("get_prob_info userdata ptr - "<<prob->userdata);
 	prob->prob_info(&nv,NULL,NULL,&mc,NULL,NULL,&data);
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
-	PAR_DEBUG("nv  "<<nv<<" mc "<<mc);
+	PAR_DEBUG("ncon,nvar"<<mc<<", "<<nv);
 
 	std::vector<double> collb(nv);
 	std::vector<double> colub(nv);
@@ -67,7 +67,7 @@ void StructJuMPInput::get_prob_info(int nodeid)
 	assert(i_mc+e_mc == mc);
 	e_ncon_map[nodeid] = e_mc;
 	i_ncon_map[nodeid] = i_mc;
-	PAR_DEBUG("get_prob_info - insert - "<<nodeid);
+	PAR_DEBUG("end get_prob_info  - nodeid "<<nodeid<< "(ncon,nvar)=("<<mc<<","<<nv<<") -- e_ncon "<<e_mc<< " i_ncon "<<i_mc);
 }
 
 int StructJuMPInput::nFirstStageVars()
@@ -384,6 +384,7 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen){
 	}
 
 	int nvar = nvar_map[0];
+	PAR_DEBUG(" nvar "<<nvar);
 	CallBackData cbd = {prob->userdata,nodeid,0};
 	std::vector<double> x0(nvar_map[0],1.0);
 	std::vector<double> x1(nvar_map[nodeid],1.0);
