@@ -348,7 +348,7 @@ int main(int argc, char* argv[]) {
 	str_eval_h_cb eval_h = &str_eval_h;
 
 	PipsNlpProblemStructPtr prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
-			4, 3, init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
+			init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
 			eval_h, NULL);
 
 	PAR_DEBUG("problem created");

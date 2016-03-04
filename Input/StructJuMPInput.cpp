@@ -20,7 +20,7 @@ StructJuMPInput::~StructJuMPInput() {
 }
 
 int StructJuMPInput::nScenarios() {
-	return prob->nnodes;
+	return prob->nscen;
 }
 
 void StructJuMPInput::get_prob_info(int nodeid)

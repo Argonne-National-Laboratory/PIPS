@@ -34,8 +34,7 @@
 extern "C"
 PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	MPI_Comm comm,
-	int nnode,
-	int n, int m,
+	int nscen,
 	str_init_x0_cb init_x0,
 	str_prob_info_cb prob_info,
 	str_eval_f_cb eval_f,
@@ -57,9 +56,7 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	PipsNlpProblemStructPtr retval = new PipsNlpProblemStruct;
 
 	retval->comm = comm;
-	retval->nnodes = nnode;
-	retval->n = n;
-	retval->m = m;
+	retval->nscen = nscen;
 	retval->init_x0 = init_x0;
 	retval->prob_info = prob_info;
 	retval->eval_f = eval_f;
@@ -133,3 +130,10 @@ void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob){
 
 }
 
+extern "C"
+int get_x(CallBackDataPtr data,double* x, double* lam_eq, double* lam_ieq)
+{
+
+
+	return 0;
+}

@@ -108,7 +108,7 @@ int str_eval_f(double* x0, double* x1, double* obj, CallBackDataPtr cbd) {
 	}
 	else if(row == 1 || row == 2)
 	{   //(x1+x2)*x3
-		*obj = (x1[0]+x1[0])*x1[0];
+		*obj = (x0[0]+x0[1])*x1[0];
 	}
 	else
 		assert(false);
@@ -347,7 +347,7 @@ int main(int argc, char* argv[]) {
 	str_eval_h_cb eval_h = &str_eval_h;
 
 	PipsNlpProblemStructPtr prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
-			4, 3, init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
+			init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
 			eval_h, NULL);
 
 	PAR_DEBUG("problem created");

@@ -29,7 +29,7 @@ typedef struct CallBackData
 typedef CallBackData * CallBackDataPtr;
 
 /*
- * This function is used to get the initial variable values to PIPS-NLP at the node Id specified in the CallBackData.
+ * This function is used to set the initial variable values to PIPS-NLP at the node Id specified in the CallBackData.
  * x0 should be already allocated for the size of declared variable in this node.
  * cbd is the call back data pointer.
  *
@@ -135,9 +135,7 @@ extern "C"
 	struct PipsNlpProblemStruct
 	{
 	  MPI_Comm comm;
-	  int nnodes;
-	  int n;
-	  int m;
+	  int nscen;
 	  str_init_x0_cb init_x0;
 	  str_prob_info_cb prob_info;
 	  str_eval_f_cb eval_f;
@@ -152,9 +150,7 @@ extern "C"
 
 	PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 		  MPI_Comm comm
-		, int nnodes /** number of nodes **/
-		, int n /** Number of variables **/
-		, int m /** Number of constraints. **/
+		, int nscen /** number of scenarios **/
 		, str_init_x0_cb init_x0
 		, str_prob_info_cb prob_info
 		, str_eval_f_cb eval_f /** Callback function of objective function **/
@@ -168,6 +164,14 @@ extern "C"
 	void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob);
 
 	int PipsNlpSolveStruct(PipsNlpProblemStruct* prob);
+
+	/*
+	 * This function is used to get the variable values from PIPS-NLP at the node Id specified in the CallBackData.
+	 * x should be already allocated for the size of declared variables in this node.
+	 * lam_eq should be already allocated for the size of declared equality constraints in this node, whereas
+	 * the lam_ieq is the counterparts for inequality constraints.
+	 */
+	int get_x(CallBackDataPtr cbd,double* x, double* lam_eq, double* lam_ieq);
 };
 #endif
 
