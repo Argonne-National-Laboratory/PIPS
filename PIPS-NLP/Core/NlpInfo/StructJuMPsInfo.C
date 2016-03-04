@@ -154,10 +154,10 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 
 	if(gmyid == 0) {
 //		PAR_DEBUG("S1 -- ----");
-		double grad_temp[locNx];
+		std::vector<double> grad_temp(locNx,0.0);
 		CallBackData cbd = {stochInput->prob->userdata, nodeId(), nodeId()};
 //		PAR_DEBUG("S2 -- ----");
-		stochInput->prob->eval_grad_f(local_var,local_var,grad_temp,&cbd);
+		stochInput->prob->eval_grad_f(local_var,local_var,&grad_temp[0],&cbd);
 		for(int i = 0;i<locNx;i++)
 			local_grad[i] += grad_temp[i];
 //		PAR_DEBUG("S3 -- ----");
@@ -192,16 +192,16 @@ void StructJuMPsInfo::ObjGrad_FromSon(NlpGenVars* vars, OoqpVector* grad, double
 	parent_X->copyIntoArray(parent_var);
 
 
-	double parent_part[parent->locNx];
-	double this_part[locNx];
+	std::vector<double> parent_part(parent->locNx,0.0);
+	std::vector<double> this_part(locNx,0.0);
 	CallBackData cbd_parent = {stochInput->prob->userdata, nodeId(), parent->stochNode->id()};
-	stochInput->prob->eval_grad_f(parent_var,local_var,parent_part,&cbd_parent);
+	stochInput->prob->eval_grad_f(parent_var,local_var,&parent_part[0],&cbd_parent);
 	CallBackData cbd_this = {stochInput->prob->userdata, nodeId(), nodeId()};
-	stochInput->prob->eval_grad_f(parent_var,local_var,this_part,&cbd_this);
+	stochInput->prob->eval_grad_f(parent_var,local_var,&this_part[0],&cbd_this);
 
 	StochVector* sGrad = dynamic_cast<StochVector*>(grad);
 	PAR_DEBUG("sGrad size "<<sGrad->vec->n);
-	sGrad->vec->copyFromArray(this_part);
+	sGrad->vec->copyFromArray(&this_part[0]);
 	for(int i = 0;i<parent->locNx;i++)
 		pgrad[i] += parent_part[i];
 }
