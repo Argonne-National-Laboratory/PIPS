@@ -262,12 +262,12 @@ function str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,value
         @show values
         if(rowid,colid) == (0,0)
             @show "diag 0,0 "
-            colptr[1] = 1
-            colptr[2] = 2
-            colptr[3] = 4
             rowidx[1] = 1
-            rowidx[2] = 1
+            rowidx[2] = 2
             rowidx[3] = 2
+            colptr[1] = 1
+            colptr[2] = 3
+            colptr[3] = 4
             values[1] = 2.0 * obj_factor
             values[2] = 2.0 * obj_factor + 1.0 * lambda[1]
             values[3] = 2.0 * obj_factor
@@ -277,26 +277,26 @@ function str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,value
             @show "2,2"
         elseif (rowid,colid) == (1,0) #the diagnal contribution to 1st stage
             @show "diag  contr - 1, 0 "
-            colptr[1] = 1
-            colptr[2] = 2
-            colptr[3] = 4
             rowidx[1] = 1
-            rowidx[2] = 1
+            rowidx[2] = 2
             rowidx[3] = 2
+            colptr[1] = 1
+            colptr[2] = 3
+            colptr[3] = 4
             values[1] = 0.0
             values[2] = 0.0
-            values[3] = 2 * lambda[1]
+            values[3] = 2.0 * lambda[1]
         elseif (rowid,colid) == (2,0) #the diagnal contribution  to 1st stage
             @show "diag contr - 2, 0 "
-            colptr[1] = 1
-            colptr[2] = 2
-            colptr[3] = 4
             rowidx[1] = 1
-            rowidx[2] = 1
+            rowidx[2] = 2
             rowidx[3] = 2
+            colptr[1] = 1
+            colptr[2] = 3
+            colptr[3] = 4
             values[1] = 0.0
             values[2] = 0.0
-            values[3] = 2 * lambda[1]
+            values[3] = 2.0 * lambda[1]
         elseif (rowid,colid) == (0,1) #liking border
             @show "linking border - 0 ,1 "
             colptr[1] = 1
