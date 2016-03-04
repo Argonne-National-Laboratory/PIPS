@@ -230,8 +230,6 @@ function create()
     # @show comm
     prob = createProblemStruct(comm,
         scen,  #number scen
-        2+2*scen,  #number var
-        1+1*scen,  #number cons
         str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f,
         str_eval_jac_g, str_eval_h) 
     # println("end create problem ")

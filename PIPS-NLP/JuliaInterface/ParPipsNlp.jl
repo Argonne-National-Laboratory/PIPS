@@ -8,9 +8,7 @@ const libparpipsnlp=Libdl.dlopen(string(ENV["HOME"],"/workspace/PIPS/build_pips/
 type PipsNlpProblemStruct
     ref::Ptr{Void}
     comm::MPI.Comm
-    n::Int
-    m::Int
-    nnodes::Int
+    nscen::Int
     # Callbacks
     str_init_x0::Function
     str_prob_info::Function
@@ -29,8 +27,8 @@ type PipsNlpProblemStruct
     eq_rowmap::Dict{Int,Int}
     inq_rowmap::Dict{Int,Int}
     
-    function PipsNlpProblemStruct(comm, n, m, nnodes, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
-        prob = new(C_NULL, comm, n, m, nnodes,
+    function PipsNlpProblemStruct(comm, nscen, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
+        prob = new(C_NULL, comm, nscen,
         str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h,
         :Min
         ,0
@@ -310,7 +308,7 @@ end
 ###########################################################################
 # C function wrappers
 ###########################################################################
-function createProblemStruct(comm::MPI.Comm, nnodes::Int, n::Int,m::Int, 
+function createProblemStruct(comm::MPI.Comm, nscen::Int, 
     str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
 	# println(" createProblemStruct  -- julia")
 	str_init_x0_cb = cfunction(str_init_x0_wrapper, Cint, (Ptr{Float64}, Ptr{CallBackData}) )
@@ -325,22 +323,18 @@ function createProblemStruct(comm::MPI.Comm, nnodes::Int, n::Int,m::Int,
     str_eval_h_cb = cfunction(str_eval_h_wrapper, Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Cint}, Ptr{Float64}, Ptr{Cint}, Ptr{Cint}, Ptr{CallBackData}))
     
     # println(" callback created ")
-    prob = PipsNlpProblemStruct(comm, nnodes,n, m, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
+    prob = PipsNlpProblemStruct(comm, nscen, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
     # @show prob
     ret = ccall((:CreatePipsNlpProblemStruct,:libparpipsnlp),Ptr{Void},
             (MPI.Comm, 
             Cint, 
-            Cint,
-            Cint,
             Ptr{Void}, 
             Ptr{Void}, Ptr{Void}, Ptr{Void},
             Ptr{Void}, Ptr{Void}, Ptr{Void}
             ,Any
             ),
             comm, 
-            nnodes,
-            n,
-            m, 
+            nscen,
             str_init_x0_cb,
             str_prob_info_cb,
             str_eval_f_cb, 
