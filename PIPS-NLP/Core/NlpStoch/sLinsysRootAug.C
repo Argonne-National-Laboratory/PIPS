@@ -692,7 +692,6 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   SimpleVector& syDiag = dynamic_cast<SimpleVector&>(*yDiag);
 
   for(int i=0; i<locnx; i++) dKkt[i][i] += sxDiag[i];  
-  for(int i=locnx+locmz; i<locnx+locmz+locmy; i++) dKkt[i][i] += syDiag[i-locnx-locmz];
 
   SimpleVector& ssDiag = dynamic_cast<SimpleVector&>(*sDiag);
   SimpleVector& szDiag = dynamic_cast<SimpleVector&>(*zDiag);
@@ -709,7 +708,8 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   // update the KKT with A (symmetric update forced)
   /////////////////////////////////////////////////////////////
   if(locmy>0){
-    kktd->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );
+    kktd->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );	
+	for(int i=locnx+locmz; i<locnx+locmz+locmy; i++) dKkt[i][i] += syDiag[i-locnx-locmz];
   }
   /////////////////////////////////////////////////////////////
   // update the KKT with C (symmetric update forced) ,  -I and dual reg

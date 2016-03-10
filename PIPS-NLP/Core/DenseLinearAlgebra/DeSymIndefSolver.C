@@ -241,12 +241,15 @@ if(gSymLinearAlgSolverForDense<=1){
 		   &lifactTemp,  &lkeepTemp,  keepTemp,  iworkTemp2,  icntlTemp,  cntlTemp,
 		   infoTemp,	 rinfoTemp );
 
-      if( infoTemp[0] != 0 ){ 
-  	    cout << "ma57bd: Factorization Fails: info[0]=: " << infoTemp[0] << endl;
-        assert(false);
+      if( infoTemp[0] == 0 ){
+		  negEigVal = infoTemp[24-1]; 
+	  }else if (infoTemp[0] == 4){
+		  negEigVal = -1; 
+	  }else{ 
+  	  	cout << "ma57bd: Factorization Fails: info[0]=: " << infoTemp[0] << endl;
+//        assert(false);
       }
-
-	  negEigVal = infoTemp[24-1];	  
+  
 #else
 	  assert("ma57 not defined"&&0);
 #endif
@@ -288,12 +291,14 @@ if(gSymLinearAlgSolverForDense<=1){
       FNAME(ma27bd)( &n, &nnzWrk, rowM, colM, factTemp, &lfactTemp, ifactTemp, &lifactTemp, ikeepTemp,
 	     &nsteps,  &maxfrt, iworkTemp2, icntlTemp, cntlTemp,  infoTemp );  
 	  
-      if( infoTemp[0] != 0 ){ 
+      if( infoTemp[0] == 0 ){
+		  negEigVal = infoTemp[15-1]; 
+	  }else if (infoTemp[0] == 4){
+		  negEigVal = -1; 
+	  }else{ 
   	  	cout << "ma27bd: Factorization Fails: info[0]=: " << infoTemp[0] << endl;
-        assert(false);
+//        assert(false);
       }	
-
-	  negEigVal = infoTemp[15-1];	
 	  
 	  delete [] ikeepTemp ;
 #else
