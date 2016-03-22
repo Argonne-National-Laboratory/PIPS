@@ -203,7 +203,7 @@ find_library(CGL_LIB NAMES libCgl.a Cgl HINTS ${CBC_LIBRARY_DIRS})
 set(CBC_LIBS ${CBCSolver_LIB} ${CBC_LIB} ${CGL_LIB} ${OSICLP_LIB} ${OSI_LIB})
 include_directories(${COINUTILS_INCLUDE_DIRS})
 message(STATUS "CBC_LIBS:=${CBC_LIBS}")
-message(STATUS "CBC_INC:=${COINUTILS_INCLODE_DIRS}")
+message(STATUS "CBC_INC:=${COINUTILS_INCLUDE_DIRS}")
 
 #MA86 is not needed at this time
 #find_library(MA86_LIBRARY hsl_ma86 PATHS ${MA86_DIR}/lib)
