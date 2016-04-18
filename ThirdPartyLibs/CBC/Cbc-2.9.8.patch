@@ -1,0 +1,102 @@
+ ThirdPartyLibs/CBC/Cbc-2.9.8/Clp/src/ClpSolve.cpp        |  4 ++++
+ .../CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.cpp    |  2 +-
+ .../CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.hpp    | 16 ++++++++--------
+ 3 files changed, 13 insertions(+), 9 deletions(-)
+
+diff --git a/ThirdPartyLibs/CBC/Cbc-2.9.8/Clp/src/ClpSolve.cpp b/ThirdPartyLibs/CBC/Cbc-2.9.8/Clp/src/ClpSolve.cpp
+index ab1171f..1978010 100644
+--- a/ThirdPartyLibs/CBC/Cbc-2.9.8/Clp/src/ClpSolve.cpp
++++ b/ThirdPartyLibs/CBC/Cbc-2.9.8/Clp/src/ClpSolve.cpp
+@@ -1761,6 +1761,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
+                     CoinMemcpyN(saveUpper + numberColumns_, numberRows_, model2->rowUpper());
+                     delete [] saveUpper;
+                     saveUpper = NULL;
++		    if (options.infeasibleReturn()) {
++		      problemStatus_ = 1;
++		      return -1;
++		    }
+                }
+           }
+ #ifndef COIN_HAS_VOL
+diff --git a/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.cpp b/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.cpp
+index c06bdcd..a6b5b6b 100644
+--- a/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.cpp
++++ b/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.cpp
+@@ -1894,7 +1894,7 @@ CoinArrayWithLength::conditionalNew(long sizeWanted)
+   if (size_==-1) {
+     getCapacity(static_cast<int>(sizeWanted));
+   } else {
+-    int newSize = static_cast<int> (sizeWanted*101/100)+64;
++    int newSize = static_cast<long> (sizeWanted*101/100)+64;
+     // round to multiple of 16
+     newSize -= newSize&15;
+     getCapacity(static_cast<int>(sizeWanted),newSize);
+diff --git a/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.hpp b/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.hpp
+index 9c386c5..2f76f3f 100644
+--- a/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.hpp
++++ b/ThirdPartyLibs/CBC/Cbc-2.9.8/CoinUtils/src/CoinIndexedVector.hpp
+@@ -230,7 +230,7 @@ public:
+ 		   if ((element > 0 ? element : -element) >= COIN_INDEXED_TINY_ELEMENT) {
+ 		     elements_[index] = element;
+ 		   } else {
+-		     elements_[index] = COIN_DBL_MIN;
++		     elements_[index] = COIN_INDEXED_REALLY_TINY_ELEMENT;
+ 		   }
+ 		 } else {
+ 		   indices_[nElements_++] = index;
+@@ -243,7 +243,7 @@ public:
+    inline void zero(int index)
+                {
+ 		 if (elements_[index]) 
+-		   elements_[index] = COIN_DBL_MIN;
++		   elements_[index] = COIN_INDEXED_REALLY_TINY_ELEMENT;
+ 	       }
+    /** set all small values to zero and return number remaining
+       - < tolerance => 0.0 */
+@@ -639,7 +639,7 @@ public:
+   /**@name Condition methods */
+   //@{
+   /// Conditionally gets new array
+-  inline double * conditionalNew(int sizeWanted)
++  inline double * conditionalNew(long sizeWanted)
+   { return reinterpret_cast<double *> ( CoinArrayWithLength::conditionalNew(sizeWanted>=0 ? static_cast<long> ((sizeWanted)*CoinSizeofAsInt(double)) : -1)); }
+   //@}
+   
+@@ -693,8 +693,8 @@ public:
+   /**@name Condition methods */
+   //@{
+   /// Conditionally gets new array
+-  inline CoinFactorizationDouble * conditionalNew(int sizeWanted)
+-  { return reinterpret_cast<CoinFactorizationDouble *> (CoinArrayWithLength::conditionalNew(sizeWanted>=0 ? static_cast<long> (( sizeWanted)*CoinSizeofAsInt(CoinFactorizationDouble)) : -1)); }
++  inline CoinFactorizationDouble * conditionalNew(long sizeWanted)
++  { return reinterpret_cast<CoinFactorizationDouble *> (CoinArrayWithLength::conditionalNew(sizeWanted>=0 ? static_cast<long> (( sizeWanted)*sizeof(CoinFactorizationDouble)) : -1)); }
+   //@}
+   
+   /**@name Constructors and destructors */
+@@ -801,7 +801,7 @@ public:
+   /**@name Condition methods */
+   //@{
+   /// Conditionally gets new array
+-  inline int * conditionalNew(int sizeWanted)
++  inline int * conditionalNew(long sizeWanted)
+   { return reinterpret_cast<int *> (CoinArrayWithLength::conditionalNew(sizeWanted>=0 ? static_cast<long> (( sizeWanted)*CoinSizeofAsInt(int)) : -1)); }
+   //@}
+   
+@@ -855,7 +855,7 @@ public:
+   /**@name Condition methods */
+   //@{
+   /// Conditionally gets new array
+-  inline CoinBigIndex * conditionalNew(int sizeWanted)
++  inline CoinBigIndex * conditionalNew(long sizeWanted)
+   { return reinterpret_cast<CoinBigIndex *> (CoinArrayWithLength::conditionalNew(sizeWanted>=0 ? static_cast<long> (( sizeWanted)*CoinSizeofAsInt(CoinBigIndex)) : -1)); }
+   //@}
+   
+@@ -909,7 +909,7 @@ public:
+   /**@name Condition methods */
+   //@{
+   /// Conditionally gets new array
+-  inline unsigned int * conditionalNew(int sizeWanted)
++  inline unsigned int * conditionalNew(long sizeWanted)
+   { return reinterpret_cast<unsigned int *> (CoinArrayWithLength::conditionalNew(sizeWanted>=0 ? static_cast<long> (( sizeWanted)*CoinSizeofAsInt(unsigned int)) : -1)); }
+   //@}
+   
