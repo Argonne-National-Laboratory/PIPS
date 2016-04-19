@@ -19,10 +19,16 @@ type FakeModel <: ModelInterface
     eq_rowmap::Dict{Int,Int}
     inq_rowmap::Dict{Int,Int}
 
+    get_num_scen::Function
+    get_sense::Function
+
+    get_status::Function
     get_num_rows::Function
     get_num_cols::Function
     get_num_eq_cons::Function
     get_num_ineq_cons::Function
+
+    set_status::Function
     set_num_rows::Function
     set_num_cols::Function
     set_num_eq_cons::Function
@@ -47,6 +53,16 @@ type FakeModel <: ModelInterface
         instance.str_eval_jac_g = str_eval_jac_g
         instance.str_eval_h = str_eval_h
 
+
+        instance.get_num_scen = function()
+            return instance.nscen
+        end
+        instance.get_sense = function()
+            return instance.sense
+        end
+        instance.get_status = function()
+            return instance.status
+        end
         instance.get_num_rows = function(id::Integer)
             return instance.rowmap[id]
         end
@@ -59,7 +75,9 @@ type FakeModel <: ModelInterface
         instance.get_num_ineq_cons = function(id::Integer)
             return instance.inq_rowmap[id]
         end
-
+        instance.set_status = function(s::Integer)
+            instance.status = s
+        end
         instance.set_num_rows = function(id::Integer, v::Integer)
             return instance.rowmap[id] = v
         end
@@ -386,7 +404,7 @@ function createProblemStruct(comm::MPI.Comm, model::ModelInterface)
             ,Any
             ),
             comm, 
-            model.nscen,
+            model.get_num_scen(),
             str_init_x0_cb,
             str_prob_info_cb,
             str_eval_f_cb, 
@@ -417,9 +435,9 @@ function solveProblemStruct(prob::PipsNlpProblemStruct)
             (Ptr{Void},),
             prob.ref)
     
-    prob.model.status = Int(ret)
+    prob.model.set_status(Int(ret))
 
-    return prob.model.status
+    return prob.model.get_status()
 end
 
 function freeProblemStruct(prob::PipsNlpProblemStruct)
