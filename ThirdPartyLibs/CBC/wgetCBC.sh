@@ -15,6 +15,7 @@ fi
 
 name=`basename ${fn} .tgz`
 tar -zxf $fn
+git apply ${name}.patch
 ln -s ./${name} ./src
 
 cd src
