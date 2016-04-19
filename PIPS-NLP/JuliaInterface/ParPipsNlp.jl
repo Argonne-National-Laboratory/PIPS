@@ -13,6 +13,7 @@ abstract ModelInterface
 type FakeModel <: ModelInterface
     sense::Symbol
     status::Int
+    nscen::Int
     rowmap::Dict{Int,Int}
     colmap::Dict{Int,Int}
     eq_rowmap::Dict{Int,Int}
@@ -27,8 +28,25 @@ type FakeModel <: ModelInterface
     set_num_eq_cons::Function
     set_num_ineq_cons::Function
 
-    function FakeModel(sense::Symbol,status::Int)
-        instance = new(sense,status,Dict{Int,Int}(),Dict{Int,Int}(),Dict{Int,Int}(),Dict{Int,Int}())
+    str_init_x0::Function
+    str_prob_info::Function
+    str_eval_f::Function
+    str_eval_g::Function
+    str_eval_grad_f::Function
+    str_eval_jac_g::Function
+    str_eval_h::Function
+           
+
+    function FakeModel(sense::Symbol,status::Int,nscen::Int, str_init_x0, str_prob_info, str_eval_f, str_eval_g,str_eval_grad_f,str_eval_jac_g, str_eval_h)
+        instance = new(sense,status,nscen,Dict{Int,Int}(),Dict{Int,Int}(),Dict{Int,Int}(),Dict{Int,Int}())
+        instance.str_init_x0 = str_init_x0
+        instance.str_prob_info = str_prob_info 
+        instance.str_eval_f = str_eval_f
+        instance.str_eval_g = str_eval_g
+        instance.str_eval_grad_f = str_eval_grad_f
+        instance.str_eval_jac_g = str_eval_jac_g
+        instance.str_eval_h = str_eval_h
+
         instance.get_num_rows = function(id::Integer)
             return instance.rowmap[id]
         end
@@ -67,24 +85,9 @@ type PipsNlpProblemStruct
     ref::Ptr{Void}
     model::ModelInterface
     comm::MPI.Comm
-    nscen::Int
-    # Callbacks
-    str_init_x0::Function
-    str_prob_info::Function
-    str_eval_f::Function
-    str_eval_g::Function
-    str_eval_grad_f::Function
-    str_eval_jac_g::Function
-    str_eval_h::Function
     
-    function PipsNlpProblemStruct(comm, nscen, model, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
-        prob = new(
-            C_NULL, 
-            model,
-            comm, 
-            nscen,     
-            str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h
-        )
+    function PipsNlpProblemStruct(comm, model)
+        prob = new(C_NULL, model, comm)
         # Free the internal PipsNlpProblem structure when
         # the Julia IpoptProblem instance goes out of scope
         finalizer(prob, freeProblemStruct)
@@ -99,7 +102,8 @@ immutable CallBackData
     col_node_id::Cint
 end
 
-export createProblemStruct, solveProblemStruct, freeProblemStruct
+export  ModelInterface, FakeModel,
+        createProblemStruct, solveProblemStruct, freeProblemStruct
 
 ###########################################################################
 # Callback wrappers
@@ -120,7 +124,7 @@ function str_init_x0_wrapper(x0_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
     assert(rowid == colid)
     n0 = prob.model.get_num_cols(colid)
     x0 = pointer_to_array(x0_ptr, n0)
-    prob.str_init_x0(colid,x0)
+    prob.model.str_init_x0(colid,x0)
 
     return Int32(1)
 end
@@ -146,7 +150,7 @@ function str_prob_info_wrapper(n_ptr::Ptr{Cint}, col_lb_ptr::Ptr{Float64}, col_u
 		col_ub = pointer_to_array(col_ub_ptr,0)
 		row_lb = pointer_to_array(row_lb_ptr,0)
 		row_ub = pointer_to_array(row_ub_ptr,0)
-		(n,m) = prob.str_prob_info(colid,mode,col_lb,col_ub,row_lb,row_ub)
+		(n,m) = prob.model.str_prob_info(colid,mode,col_lb,col_ub,row_lb,row_ub)
 		unsafe_store!(n_ptr,convert(Cint,n)::Cint)
 		unsafe_store!(m_ptr,convert(Cint,m)::Cint)
         # @show typeof(colid), typeof(m)
@@ -159,7 +163,7 @@ function str_prob_info_wrapper(n_ptr::Ptr{Cint}, col_lb_ptr::Ptr{Float64}, col_u
 		col_ub = pointer_to_array(col_ub_ptr,n)
 		row_lb = pointer_to_array(row_lb_ptr,m)
 		row_ub = pointer_to_array(row_ub_ptr,m)
-		prob.str_prob_info(colid,mode,col_lb,col_ub,row_lb,row_ub)
+		prob.model.str_prob_info(colid,mode,col_lb,col_ub,row_lb,row_ub)
 
 		neq = 0
 		nineq = 0
@@ -192,7 +196,7 @@ function str_eval_f_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, obj_ptr:
     # Calculate the new objective
     x0 = pointer_to_array(x0_ptr, n0)
     x1 = pointer_to_array(x1_ptr, n1)
-    new_obj = convert(Float64, prob.str_eval_f(colid,x0,x1))::Float64
+    new_obj = convert(Float64, prob.model.str_eval_f(colid,x0,x1))::Float64
     # Fill out the pointer
     unsafe_store!(obj_ptr, new_obj)
     # Done
@@ -218,7 +222,7 @@ function str_eval_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, eq_g_ptr
     nineq = prob.model.get_num_ineq_cons(rowid)
     new_eq_g = pointer_to_array(eq_g_ptr,neq)
     new_inq_g = pointer_to_array(inq_g_ptr, nineq)
-    prob.str_eval_g(colid,x0,x1,new_eq_g,new_inq_g)
+    prob.model.str_eval_g(colid,x0,x1,new_eq_g,new_inq_g)
     # Done
     return Int32(1)
 end
@@ -242,7 +246,7 @@ function str_eval_grad_f_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, gra
     # Calculate the gradient
     grad_len = prob.model.get_num_cols(colid)
     new_grad_f = pointer_to_array(grad_f_ptr, grad_len)
-    prob.str_eval_grad_f(rowid,colid,x0,x1,new_grad_f)
+    prob.model.str_eval_grad_f(rowid,colid,x0,x1,new_grad_f)
     if prob.model.sense == :Max
         new_grad_f *= -1.0
     end
@@ -283,7 +287,7 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
 		i_values = pointer_to_array(i_values_ptr,0)
 		i_colptr = pointer_to_array(i_col_ptr,0)
 		i_rowidx = pointer_to_array(i_row_ptr,0)
-        (e_nz,i_nz) = prob.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
+        (e_nz,i_nz) = prob.model.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
 		unsafe_store!(e_nz_ptr,convert(Cint,e_nz)::Cint)
 		unsafe_store!(i_nz_ptr,convert(Cint,i_nz)::Cint)
 		# @show "structure - ",(e_nz,i_nz)
@@ -299,7 +303,7 @@ function str_eval_jac_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64},
     	i_colptr = pointer_to_array(i_col_ptr, ncol+1)
         # @show x0
         # @show x1 
-    	prob.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
+    	prob.model.str_eval_jac_g(rowid,colid,x0,x1,mode,e_rowidx,e_colptr,e_values,i_rowidx,i_colptr,i_values)
     end
     # Done
     return Int32(1)
@@ -339,7 +343,7 @@ function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_p
     	values = pointer_to_array(values_ptr,0)
 		colptr = pointer_to_array(col_ptr,0)
 		rowidx = pointer_to_array(row_ptr,0)
-		nz = prob.str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,values)
+		nz = prob.model.str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,values)
 		unsafe_store!(nz_ptr,convert(Cint,nz)::Cint)
 		# @show "structure - ", nz
     else
@@ -348,7 +352,7 @@ function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_p
     	rowidx = pointer_to_array(row_ptr, nz)
     	colptr = pointer_to_array(col_ptr, ncol+1)
     	# @show "value - ", nz
-    	prob.str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,values)
+    	prob.model.str_eval_h(rowid,colid,x0,x1,obj_factor,lambda,mode,rowidx,colptr,values)
     end
     # Done
     return Int32(1)
@@ -357,10 +361,7 @@ end
 ###########################################################################
 # C function wrappers
 ###########################################################################
-function createProblemStruct(comm::MPI.Comm, nscen::Int, 
-    str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h;
-    model::ModelInterface = FakeModel(:Min, 0::Int)
-    )
+function createProblemStruct(comm::MPI.Comm, model::ModelInterface)
 	# println(" createProblemStruct  -- julia")
 	str_init_x0_cb = cfunction(str_init_x0_wrapper, Cint, (Ptr{Float64}, Ptr{CallBackData}) )
     str_prob_info_cb = cfunction(str_prob_info_wrapper, Cint, (Ptr{Cint}, Ptr{Float64}, Ptr{Float64}, Ptr{Cint}, Ptr{Float64}, Ptr{Float64}, Ptr{CallBackData}) )
@@ -374,7 +375,7 @@ function createProblemStruct(comm::MPI.Comm, nscen::Int,
     str_eval_h_cb = cfunction(str_eval_h_wrapper, Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Cint}, Ptr{Float64}, Ptr{Cint}, Ptr{Cint}, Ptr{CallBackData}))
     
     # println(" callback created ")
-    prob = PipsNlpProblemStruct(comm, nscen, model, str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
+    prob = PipsNlpProblemStruct(comm, model)
     # @show prob
     ret = ccall((:CreatePipsNlpProblemStruct,:libparpipsnlp),Ptr{Void},
             (MPI.Comm, 
@@ -385,7 +386,7 @@ function createProblemStruct(comm::MPI.Comm, nscen::Int,
             ,Any
             ),
             comm, 
-            nscen,
+            model.nscen,
             str_init_x0_cb,
             str_prob_info_cb,
             str_eval_f_cb, 

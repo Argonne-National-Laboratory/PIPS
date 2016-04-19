@@ -228,11 +228,11 @@ function create()
     comm = MPI.COMM_WORLD
     println("[$(MPI.Comm_rank(comm))/$(MPI.Comm_size(comm))] create problem ")
     # @show comm
-    prob = createProblemStruct(comm,
-        scen,  #number scen
-        str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f,
-        str_eval_jac_g, str_eval_h) 
-    # println("end create problem ")
+
+    model = FakeModel(:Min,0, scen,
+        str_init_x0, str_prob_info, str_eval_f, str_eval_g, str_eval_grad_f, str_eval_jac_g, str_eval_h)
+    prob = createProblemStruct(comm, model) 
+
     return prob
 end
 
