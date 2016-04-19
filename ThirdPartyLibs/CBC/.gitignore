@@ -1,3 +1,4 @@
 *
 !.gitignore
+!Cbc-2.9.8.patch
 !wgetCBC.sh
