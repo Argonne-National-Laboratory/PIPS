@@ -265,7 +265,7 @@ function str_eval_grad_f_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, gra
     grad_len = prob.model.get_num_cols(colid)
     new_grad_f = pointer_to_array(grad_f_ptr, grad_len)
     prob.model.str_eval_grad_f(rowid,colid,x0,x1,new_grad_f)
-    if prob.model.sense == :Max
+    if prob.model.get_sense() == :Max
         new_grad_f *= -1.0
     end
     # Done
@@ -352,7 +352,7 @@ function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_p
     # @show ncol
     lambda = pointer_to_array(lambda_ptr, g0)
     obj_factor = 1.0
-    if prob.model.sense == :Max
+    if prob.model.get_sense() == :Max
         obj_factor *= -1.0
     end
     # Did the user specify a Hessian
