@@ -1,0 +1,22 @@
+reset;
+option solver ipopt;
+option presolve 0;
+
+# set model
+include parmodel9.mod;
+
+# set problem dimensions
+let   d[1]:=200;
+let   d[2]:=300;
+
+
+# assign suffixes to each nl file
+suffix pipsNLP_1stStageVar_in, IN;
+
+for{k in 1..2}{
+  let    s := k;
+  let x[1].pipsNLP_1stStageVar_in := 1;
+  write ("btest"& k);
+}
+
+shell "mpirun -np 2 ./pipsnlp_parallel test 2";

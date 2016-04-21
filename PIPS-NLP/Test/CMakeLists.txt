@@ -107,3 +107,57 @@ target_link_libraries(parmodel3
   ${PARDISO_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
+
+# a testing example for PIPSNLP parallel structure interface
+add_executable(parmodel9 parmodel9.cpp)
+target_link_libraries(parmodel9
+  parpipsnlp
+  reducedSolverSpecial
+  ${WHOLE_ARCHIVE}
+  updateFromCallBack  
+  LU_solvers
+  nlpsparse 
+  nlpdense
+  pipsnlpFLSStoch 
+  nlpstoch 
+  nlpstochla 
+  nlpgensparse 
+  nlpbase 
+  genStructparallel
+  structStochInfo
+  global_var
+  ${COIN_LIBS}
+  ${MA57_LIBRARY}
+  ${MA27_LIBRARY}
+  ${UMF_ALLINONE_LIBRARY}
+  ${METIS_LIBRARY}
+  ${PARDISO_LIBRARY}
+  ${NO_WHOLE_ARCHIVE}
+  ${MATH_LIBS} )
+
+# a testing example for PIPSNLP parallel structure interface
+add_executable(parmodel9_yk parmodel9_yk.cpp)
+target_link_libraries(parmodel9_yk
+  parpipsnlp
+  reducedSolverSpecial
+  ${WHOLE_ARCHIVE}
+  updateFromCallBack  
+  LU_solvers
+  nlpsparse 
+  nlpdense
+  pipsnlpFLSStoch 
+  nlpstoch 
+  nlpstochla 
+  nlpgensparse 
+  nlpbase 
+  genStructparallel
+  structStochInfo
+  global_var
+  ${COIN_LIBS}
+  ${MA57_LIBRARY}
+  ${MA27_LIBRARY}
+  ${UMF_ALLINONE_LIBRARY}
+  ${METIS_LIBRARY}
+  ${PARDISO_LIBRARY}
+  ${NO_WHOLE_ARCHIVE}
+  ${MATH_LIBS} )

@@ -85,8 +85,8 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -dynamic")
     else(IS_XE6 OR IS_XK7 OR IS_XC30)
     	set(CMAKE_CXX_COMPILER "mpicxx")
-    	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O02") # need this explicitly for mpicxx
-    	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fPIC -fpermissive")
+    	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ") # need this explicitly for mpicxx
+    	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -fpermissive")
     endif(IS_XE6 OR IS_XK7 OR IS_XC30)
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	message(STATUS "running on mac")
@@ -353,6 +353,8 @@ else(HAVE_PARDISO)
 endif(HAVE_PARDISO)
 
 ###############################################################################
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 
 
 #set(CMAKE_BUILD_TYPE DEBUG)

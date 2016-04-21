@@ -413,13 +413,17 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen){
 	CoinPackedMatrix tmat;
 	CoinPackedMatrix i_tmat;
 	tmat.copyOf(true,e_ncon,nvar,e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],0);
-	PAR_DEBUG("e_tmat "<<tmat.getNumElements()<< " exp:"<<e_elts.size());
+	PAR_DEBUG("e_tmat: row"<<e_ncon<<" nz "<<tmat.getNumElements()<< " exp:"<<e_elts.size());
 	assert(e_elts.size() == tmat.getNumElements());
 	i_tmat.copyOf(true,i_ncon,nvar,i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],0);
-	PAR_DEBUG("i_tmat "<<i_tmat.getNumElements());
+	PAR_DEBUG("i_tmat: row"<<i_ncon<<" nz "<<i_tmat.getNumElements()<< " exp:"<<i_elts.size());
 	assert(i_elts.size() == i_tmat.getNumElements());
 
+	tmat.dumpMatrix();
+	i_tmat.dumpMatrix();
 	tmat.bottomAppendPackedMatrix(i_tmat);
+
+	tmat.dumpMatrix();
 	PAR_DEBUG("tmat "<<tmat.getNumElements());
 	assert(tmat.getNumElements() == (e_nz+i_nz));
 
@@ -521,7 +525,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen){
 	int nz;
 	CallBackData cbd = {prob->userdata,0,nodeid};
 	prob->eval_h(&x0[0],&x1[0],&lam[0],&nz, NULL,NULL,NULL,&cbd);
-	PAR_DEBUG(" nz "<<nz<< " - (0,"<<nodeid<<") - "<<n0<<" - "<<ncon);
+	PAR_DEBUG(" nz "<<nz<< " - (0,"<<nodeid<<") - "<<ncon<<" x "<<n0);
 	std::vector<int> rowidx(nz,0);
 	std::vector<int> colptr(n0+1,0);
 	std::vector<double> elts(nz,0.0);
