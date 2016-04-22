@@ -186,6 +186,9 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
 #endif
     
   }
+
+  if(mype==0)
+	  this->writeSolution();
 }
 
 template<typename FORMULATION, typename SOLVER, typename UPDATENLP>
