@@ -9,3 +9,4 @@ extern int gnprocs;
 
 extern void print_array(const std::string& msg, double* data, size_t len);
 extern void print_array(const std::string& msg, int* data, size_t len);
+void convert_to_csr(int m, int n, int* rowidx, int* colptr, double* elts, int nz, double* ret);

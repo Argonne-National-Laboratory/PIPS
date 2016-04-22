@@ -89,7 +89,6 @@ void StructJuMPsInfo::createChildren(sData *data_in, stochasticInput& in){
 }
 
 double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
-	double ObjScal = 0.5;
 	PAR_DEBUG("enter ObjValue -");
 	sVars* svars = dynamic_cast<sVars*>(vars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
@@ -110,7 +109,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 			CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 			double obj;
 			stochInput->prob->eval_f(local_var,local_var,&obj,&cbd);
-			objv += obj*ObjScal;
+			objv += obj;
 			print_array("local_var",local_var,locNx);
 			PAR_DEBUG("objv = "<<objv);
 		}
@@ -133,7 +132,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 		assert(nodeId() != 0);
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 		stochInput->prob->eval_f(parent_var,local_var,&robj,&cbd);
-		robj = robj*ObjScal;
+		robj = robj;
 		print_array("parent_var",parent_var,parent->locNx);
 		print_array("local_var",local_var, locNx);
 		PAR_DEBUG("robj="<<robj);
@@ -329,9 +328,13 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		print_array("i_colptr",&i_colptr[0],locNx+1);
 		print_array("i_elts",&i_elts[0],i_nz);
 
+		double e_csr_ret[e_nz];
+		double i_csr_ret[i_nz];
+		convert_to_csr(mB,nB,&e_rowidx[0],&e_colptr[0],&e_elts[0],e_nz,e_csr_ret);
+		convert_to_csr(mD,nD,&i_rowidx[0],&i_colptr[0],&i_elts[0],i_nz,i_csr_ret);
 
-		Bmat->copyMtxFromDouble(Bmat->numberOfNonZeros(),&e_elts[0]);
-		Dmat->copyMtxFromDouble(Dmat->numberOfNonZeros(),&i_elts[0]);
+		Bmat->copyMtxFromDouble(Bmat->numberOfNonZeros(),e_csr_ret);
+		Dmat->copyMtxFromDouble(Dmat->numberOfNonZeros(),i_csr_ret);
 	}
 	else{
 		//all A B C D
@@ -398,10 +401,19 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		print_array("i_dmat_colptr",&i_dmat_colptr[0],locNx+1);
 		print_array("i_dmat_elts",&i_dmat_elts[0],i_nz_Dmat);
 
-		Amat->copyMtxFromDouble(Amat->numberOfNonZeros(),e_amat_elts);
-		Bmat->copyMtxFromDouble(Bmat->numberOfNonZeros(),e_bmat_elts);
-		Cmat->copyMtxFromDouble(Cmat->numberOfNonZeros(),i_cmat_elts);
-		Dmat->copyMtxFromDouble(Dmat->numberOfNonZeros(),i_dmat_elts);
+		double e_amat_csr[e_nz_Amat];
+		double i_cmat_csr[i_nz_Cmat];
+		double e_bmat_csr[e_nz_Bmat];
+		double i_dmat_csr[i_nz_Dmat];
+		convert_to_csr(mA,nA,&e_amat_rowidx[0],&e_amat_colptr[0],&e_amat_elts[0],e_nz_Amat,e_amat_csr);
+		convert_to_csr(mC,nC,&i_cmat_rowidx[0],&i_cmat_colptr[0],&i_cmat_elts[0],i_nz_Cmat,i_cmat_csr);
+		convert_to_csr(mB,nB,&e_bmat_rowidx[0],&e_bmat_colptr[0],&e_bmat_elts[0],e_nz_Bmat,e_bmat_csr);
+		convert_to_csr(mD,nD,&i_dmat_rowidx[0],&i_dmat_colptr[0],&i_dmat_elts[0],i_nz_Dmat,i_dmat_csr);
+
+		Amat->copyMtxFromDouble(Amat->numberOfNonZeros(),e_amat_csr);
+		Bmat->copyMtxFromDouble(Bmat->numberOfNonZeros(),e_bmat_csr);
+		Cmat->copyMtxFromDouble(Cmat->numberOfNonZeros(),i_cmat_csr);
+		Dmat->copyMtxFromDouble(Dmat->numberOfNonZeros(),i_dmat_csr);
 	}
 
 	for(size_t it=0; it<children.size(); it++)
@@ -549,7 +561,6 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		print_array("elts",elts,nzqb);
 		Qborder->copyMtxFromDouble(nzqb,elts);
 	}
-
 	PAR_DEBUG("exit Hessian_FromSon");
 }
 

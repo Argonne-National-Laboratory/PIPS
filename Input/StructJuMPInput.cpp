@@ -419,11 +419,11 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen){
 	PAR_DEBUG("i_tmat: row"<<i_ncon<<" nz "<<i_tmat.getNumElements()<< " exp:"<<i_elts.size());
 	assert(i_elts.size() == i_tmat.getNumElements());
 
-	tmat.dumpMatrix();
-	i_tmat.dumpMatrix();
+//	tmat.dumpMatrix();
+//	i_tmat.dumpMatrix();
 	tmat.bottomAppendPackedMatrix(i_tmat);
 
-	tmat.dumpMatrix();
+//	tmat.dumpMatrix();
 	PAR_DEBUG("tmat "<<tmat.getNumElements());
 	assert(tmat.getNumElements() == (e_nz+i_nz));
 
