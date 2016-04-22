@@ -7,7 +7,7 @@ import MPI
 #     0< x1 + x5 + x6  < 500
 # x free variables
 
-include("./ParPipsNlp.jl")
+include("../../JuliaInterface/ParPipsNlp.jl")
 
 using ParPipsNlp
 

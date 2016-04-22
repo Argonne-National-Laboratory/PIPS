@@ -10,7 +10,7 @@ import MPI
 #     0<   .                                      ...   < 500
 # x free variables
 
-include("./ParPipsNlp.jl")
+include("../../JuliaInterface/ParPipsNlp.jl")
 
 const scen = 100
 const nnodes = scen + 1
