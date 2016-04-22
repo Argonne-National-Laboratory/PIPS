@@ -150,7 +150,6 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 	StochVector* sGrad = dynamic_cast<StochVector*>(grad);
 
 	assert(parent == NULL);
-	assert(gmyid == 0 );
 	assert(nodeId()==0);
 
 	double local_var[locNx];
@@ -158,11 +157,14 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 
 	std::vector<double> local_grad(locNx,0.0);
 //	PAR_DEBUG("gymyid ="<<gmyid);
-	CallBackData cbd = {stochInput->prob->userdata, nodeId(), nodeId()};
-	stochInput->prob->eval_grad_f(local_var,local_var,&local_grad[0],&cbd);
+	if(gmyid == 0)
+	{
+		CallBackData cbd = {stochInput->prob->userdata, nodeId(), nodeId()};
+		stochInput->prob->eval_grad_f(local_var,local_var,&local_grad[0],&cbd);
 
-	print_array("local_var",local_var,locNx);
-	print_array("local_grad",&local_grad[0],locNx);
+		print_array("local_var",local_var,locNx);
+		print_array("local_grad",&local_grad[0],locNx);
+	}
 
 	for(size_t it=0; it<children.size(); it++){
 		PAR_DEBUG("it - "<<it);
