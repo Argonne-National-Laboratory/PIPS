@@ -128,7 +128,7 @@ export  ModelInterface, FakeModel,
 ###########################################################################
 
 function str_init_x0_wrapper(x0_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-	# println(" julia - str_init_x0_wrapper ")
+	# @show " julia - str_init_x0_wrapper "
     # @show cbd
     data = unsafe_load(cbd)
     # @show data
@@ -149,7 +149,7 @@ end
 
 # prob info (prob_info)
 function str_prob_info_wrapper(n_ptr::Ptr{Cint}, col_lb_ptr::Ptr{Float64}, col_ub_ptr::Ptr{Float64}, m_ptr::Ptr{Cint}, row_lb_ptr::Ptr{Float64}, row_ub_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    # println(" julia - str_prob_info_wrapper ")
+    # @show " julia - str_prob_info_wrapper "
     # @show cbd
     data = unsafe_load(cbd)
     # @show data
@@ -200,7 +200,7 @@ function str_prob_info_wrapper(n_ptr::Ptr{Cint}, col_lb_ptr::Ptr{Float64}, col_u
 end
 # Objective (eval_f)
 function str_eval_f_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, obj_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    # println(" julia - eval_f_wrapper " ); 
+    # @show " julia - eval_f_wrapper "
     data = unsafe_load(cbd)
     # @show data
     # @show data
@@ -223,7 +223,7 @@ end
 
 # Constraints (eval_g)
 function str_eval_g_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, eq_g_ptr::Ptr{Float64}, inq_g_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    # println(" julia - eval_g_wrapper " ); 
+    # @show " julia - eval_g_wrapper " 
     data = unsafe_load(cbd)
     # @show data
     userdata = data.prob
@@ -247,7 +247,7 @@ end
 
 # Objective gradient (eval_grad_f)
 function str_eval_grad_f_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, grad_f_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
-    # println(" julia -  eval_grad_f_wrapper  - $(x0_ptr) ,$(x1_ptr)");    
+    # @show " julia -  eval_grad_f_wrapper "  
     # Extract Julia the problem from the pointer
     # @show cbd
     data = unsafe_load(cbd)
@@ -329,7 +329,7 @@ end
 
 # Hessian
 function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_ptr::Ptr{Float64}, nz_ptr::Ptr{Cint}, values_ptr::Ptr{Float64}, row_ptr::Ptr{Cint}, col_ptr::Ptr{Cint}, cbd::Ptr{CallBackData})
-    # println(" julia - eval_h_wrapper " ); 
+    # @show " julia - eval_h_wrapper " 
     # Extract Julia the problem from the pointer
     data = unsafe_load(cbd)
     # @show data
