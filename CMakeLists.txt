@@ -148,7 +148,7 @@ if(MA27_LIBRARY)
 endif(MA27_LIBRARY)
 
 set(METIS_DIR ${SHARED_DIR}/METIS/src)
-find_library(METIS_LIBRARY NAME libmetis.a PATHS ${METIS_DIR})
+find_library(METIS_LIBRARY NAME libmetis.a HINTS ${METIS_DIR} PATHS ${METIS_DIR})
 find_path(METIS_INCLUDE_DIR NAME metis.h HINTS ${METIS_DIR}/Lib)
 if(METIS_INCLUDE_DIR)
   include_directories(${METIS_INCLUDE_DIR})
@@ -165,7 +165,6 @@ elseif(MA57_LIBRARY AND METIS_LIBRARY)
     set(HAVE_METIS TRUE)
     include_directories(${METIS_DIR}/Lib)
 endif(MA57_LIBRARY AND NOT METIS_LIBRARY)
-
 
 #CBC
 set(COIN_DIR ${SHARED_DIR}/CBC/src)
