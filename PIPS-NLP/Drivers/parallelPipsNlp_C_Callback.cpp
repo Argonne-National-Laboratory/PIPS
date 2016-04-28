@@ -46,7 +46,7 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 {
 	MPI_Comm_rank(comm, &gmyid);
 	MPI_Comm_size(comm, &gnprocs);
-	std::cout << "on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes." <<std::endl;
+	PAR_DEBUG("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
 	PAR_DEBUG("CreatePipsNlpProblemStruct - C");
 
 	pipsOptions *pipsOpt = new pipsOptions();

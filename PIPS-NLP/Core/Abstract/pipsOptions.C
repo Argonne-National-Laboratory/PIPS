@@ -244,7 +244,7 @@ void pipsOptions::readFile()
   std::string fileName("pipsnlp.parameter");
   optfile = fopen(fileName.c_str(),"r");
   if (optfile==NULL) {
-	  printf("not find option file: %s \n",fileName.c_str());
+//	  printf("not find option file: %s \n",fileName.c_str());
 	  return;
   }
   else

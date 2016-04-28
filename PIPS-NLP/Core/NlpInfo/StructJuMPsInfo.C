@@ -589,5 +589,5 @@ void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
 void StructJuMPsInfo::writeSolution(NlpGenVars* vars)
 {
 	PAR_DEBUG("writeSolution");
-	vars->print();
+//	vars->print();
 }

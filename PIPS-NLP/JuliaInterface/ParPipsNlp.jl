@@ -428,7 +428,7 @@ function createProblemStruct(comm::MPI.Comm, model::ModelInterface)
         prob.ref = ret
     end
     # @show prob
-    println("end createProblemStruct - julia")
+    # println("end createProblemStruct - julia")
     return prob
 end
 
