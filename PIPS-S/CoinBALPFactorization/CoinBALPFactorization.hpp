@@ -1,3 +1,8 @@
+* $Id: CoinFactorization.hpp 1448 2011-06-19 15:34:41Z stefan $ */
+// Copyright (C) 2002, International Business Machines
+// Corporation and others.  All Rights Reserved.
+// This code is licensed under the terms of the Eclipse Public License (EPL).
+
 #ifndef COINBALP_HPP
 #define COINBALP_HPP
 
