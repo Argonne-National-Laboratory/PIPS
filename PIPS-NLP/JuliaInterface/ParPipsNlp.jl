@@ -1,9 +1,14 @@
-
 module ParPipsNlp
 
 import MPI
 
-const libparpipsnlp=Libdl.dlopen(string(ENV["HOME"],"/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.so"))
+try
+  const libparpipsnlp=Libdl.dlopen(string(ENV["HOME"],"/workspace/PIPS/build_pips/PIPS-NLP/libparpipsnlp.so"))
+catch 
+  warn("Could not load PIPS-NLP shared library. Make sure the ENV variable 'PIPS_NLP_PAR_SHARED_LIB' points to its location, usually in the PIPS repo at PIPS/build_pips/PIPS-NLP/libparpipsnlp.so")
+  rethrow()
+end
+
 
 # Struct Model interface
 abstract ModelInterface
