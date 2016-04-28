@@ -3,6 +3,11 @@ module ParPipsNlp
 import MPI
 
 try
+  sharedLib=ENV["PIPS_NLP_PAR_SHARED_LIB"]
+  #explicitly check if the file exists (because dlopen sometimes does not throw an error for invalid filenames, resulting in a seg fault)
+  if(!isfile(sharedLib))
+    error(string("The specified shared library ([", sharedLib, "]) does not exist"))
+  end  
   const libparpipsnlp=Libdl.dlopen(get(ENV,"PIPS_NLP_PAR_SHARED_LIB",""))
 catch 
   warn("Could not load PIPS-NLP shared library. Make sure the ENV variable 'PIPS_NLP_PAR_SHARED_LIB' points to its location, usually in the PIPS repo at PIPS/build_pips/PIPS-NLP/libparpipsnlp.so")
