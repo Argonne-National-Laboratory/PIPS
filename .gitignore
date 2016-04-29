@@ -49,6 +49,12 @@ slurm*
 # Ignore build directory
 build
 SharedLibraries
+build_pips
 
-# Ingore the OS X DS_Store
+# Ignore the OS X DS_Store
 .DS_Store
+
+# Ignore Eclipse files
+.metadata*
+.project
+RemoteSystemsTempFiles*
