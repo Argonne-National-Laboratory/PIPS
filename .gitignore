@@ -49,3 +49,6 @@ slurm*
 # Ignore build directory
 build
 SharedLibraries
+
+# Ingore the OS X DS_Store
+.DS_Store
