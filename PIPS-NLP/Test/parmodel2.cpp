@@ -332,6 +332,31 @@ int str_eval_h(double* x0, double* x1, double* lambda, int* nz, double* elts,
 	return 1;
 }
 
+int str_write_solution(double* x, double* lam_eq, double* lam_ieq,CallBackDataPtr cbd)
+{
+	int row = cbd->row_node_id;
+	int col = cbd->col_node_id;
+	assert(row == col);
+	PAR_DEBUG("write_solution  -- row " << row <<" col "<<col);
+	if(row == 0)
+	{
+		PRINT_ARRAY("node = 0 - x ", x, 2);
+		PRINT_ARRAY("node = 0 - eq ", lam_eq, 1);
+		PRINT_ARRAY("node = 0 - ieq ", lam_ieq , 0);
+	}
+	else if(row == 1 || row == 2)
+	{
+		PRINT_ARRAY("node = "<<row<<" - x ", x, 2);
+		PRINT_ARRAY("node = "<<row<<" - eq ", lam_eq, 0);
+		PRINT_ARRAY("node = "<<row<<" - ieq ", lam_ieq , 1);
+	}
+	else
+	{
+		assert(false);
+	}
+	return 1;
+}
+
 int main(int argc, char* argv[]) {
 	MPI_Init(&argc, &argv);
 	PAR_DEBUG("start");
@@ -346,10 +371,11 @@ int main(int argc, char* argv[]) {
 	str_eval_grad_f_cb eval_grad_f = &str_eval_grad_f;
 	str_eval_jac_g_cb eval_jac_g = &str_eval_jac_g;
 	str_eval_h_cb eval_h = &str_eval_h;
+	str_write_solution_cb write_solution = &str_write_solution;
 
 	PipsNlpProblemStructPtr prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
 			init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
-			eval_h, NULL);
+			eval_h, write_solution, NULL);
 
 	PAR_DEBUG("problem created");
 

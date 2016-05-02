@@ -129,6 +129,11 @@ extern "C" typedef int (*str_eval_h_cb)(double* x0, double* x1, double* lamdba,
 		int* nz, double* elts, int* rowidx, int *colptr,
 		CallBackDataPtr cbd);
 
+/*
+ * write solution when it is done.
+ */
+extern "C" typedef int (*str_write_solution_cb)(double* x, double* lam_eq, double* lam_ieq, CallBackDataPtr cbd);
+
 extern "C"
 {
 
@@ -143,6 +148,7 @@ extern "C"
 	  str_eval_grad_f_cb eval_grad_f;
 	  str_eval_jac_g_cb eval_jac_g;
 	  str_eval_h_cb eval_h;
+	  str_write_solution_cb write_solution;
 	  UserDataPtr userdata;
 	};
 
@@ -158,6 +164,7 @@ extern "C"
 		, str_eval_grad_f_cb eval_grad_f /** Callback function of objective gradient **/
 		, str_eval_jac_g_cb eval_jac_g /** Callback function of constraint Jacobian **/
 		, str_eval_h_cb eval_h /** Callback function of Lagrangian Hessian **/
+		, str_write_solution_cb write_solution /** Callback function to write back solution **/
 		, UserDataPtr userdata
 	);
 
@@ -172,6 +179,7 @@ extern "C"
 	 * the lam_ieq is the counterparts for inequality constraints.
 	 */
 	int get_x(CallBackDataPtr cbd,double* x, double* lam_eq, double* lam_ieq);
+
 };
 #endif
 

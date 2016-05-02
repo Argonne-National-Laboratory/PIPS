@@ -42,6 +42,7 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	str_eval_grad_f_cb eval_grad_f,
 	str_eval_jac_g_cb eval_jac_g,
 	str_eval_h_cb eval_h,
+	str_write_solution_cb write_solution,
 	UserDataPtr userdata)
 {
 	MPI_Comm_rank(comm, &gmyid);
@@ -64,6 +65,7 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	retval->eval_grad_f = eval_grad_f;
 	retval->eval_jac_g = eval_jac_g;
 	retval->eval_h = eval_h;
+	retval->write_solution = write_solution;
 	retval->userdata = userdata;
 
 	return retval;

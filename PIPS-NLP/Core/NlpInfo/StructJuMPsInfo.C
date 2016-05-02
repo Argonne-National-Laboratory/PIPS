@@ -586,8 +586,31 @@ void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
 	PAR_DEBUG("exit get_InitX0");
 }
 
-void StructJuMPsInfo::writeSolution(NlpGenVars* vars)
+void StructJuMPsInfo::writeSolution(NlpGenVars* nlpvars)
 {
 	PAR_DEBUG("writeSolution");
+	sVars * vars = dynamic_cast<sVars*>(nlpvars);
+	StochVector& vars_X = dynamic_cast<StochVector&>(*vars->x);
+	StochVector& vars_Y = dynamic_cast<StochVector&>(*vars->y);
+	StochVector& vars_Z = dynamic_cast<StochVector&>(*vars->z);
+	OoqpVector* local_X = vars_X.vec;
+	OoqpVector* local_Y = vars_Y.vec; //eq con
+	OoqpVector* local_Z = vars_Z.vec; //ieq con
+
+	double local_var[locNx];
+	local_X->copyIntoArray(local_var);
+	double local_y[locMy];
+	double local_z[locMz];
+	local_Y->copyIntoArray(local_y);
+	local_Z->copyIntoArray(local_z);
+
+	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+	stochInput->prob->write_solution(local_var,local_y,local_z, &cbd);
+
+	for(size_t it=0; it<children.size(); it++){
+		PAR_DEBUG("it - "<<it);
+		children[it]->writeSolution(vars->children[it]);
+	}
+	PAR_DEBUG("end writeSolution");
 //	vars->print();
 }
