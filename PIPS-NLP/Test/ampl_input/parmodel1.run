@@ -1,0 +1,19 @@
+reset;
+option solver ipopt;
+option presolve 0;
+
+# set model
+include parmodel1.mod;
+
+# assign suffixes to each nl file
+suffix pipsNLP_1stStageVar_in, IN;
+
+for{k in 1..2}{
+  let    s := k;
+  let x[1].pipsNLP_1stStageVar_in := 1;
+  let x[2].pipsNLP_1stStageVar_in := 2;
+  
+  write ("btest"& k);
+}
+
+shell "./pipsnlp_parallel test 2";
