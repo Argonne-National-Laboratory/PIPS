@@ -51,6 +51,7 @@ type FakeModel <: ModelInterface
     str_eval_grad_f::Function
     str_eval_jac_g::Function
     str_eval_h::Function
+    str_write_solution::Function
            
 
     function FakeModel(sense::Symbol,status::Int,nscen::Int, str_init_x0, str_prob_info, str_eval_f, str_eval_g,str_eval_grad_f,str_eval_jac_g, str_eval_h)
@@ -63,6 +64,10 @@ type FakeModel <: ModelInterface
         instance.str_eval_jac_g = str_eval_jac_g
         instance.str_eval_h = str_eval_h
 
+        instance.str_write_solution = function(id::Integer, x::Vector{Float64}, y_eq::Vector{Float64}, y_ieq::Vector{Float64})
+            @show id
+            @show x, y_eq, y_ieq
+        end
 
         instance.get_num_scen = function()
             return instance.nscen
@@ -386,6 +391,26 @@ function str_eval_h_wrapper(x0_ptr::Ptr{Float64}, x1_ptr::Ptr{Float64}, lambda_p
     return Int32(1)
 end
 
+#write solution
+function str_write_solution_wrapper(x_ptr::Ptr{Float64}, y_eq_ptr::Ptr{Float64}, y_ieq_ptr::Ptr{Float64}, cbd::Ptr{CallBackData})
+    data = unsafe_load(cbd)
+    # @show data
+    userdata = data.prob
+    prob = unsafe_pointer_to_objref(userdata)::PipsNlpProblemStruct
+    rowid = data.row_node_id
+    colid = data.col_node_id
+    @assert rowid == colid
+
+    nx = prob.model.get_num_cols(rowid)
+    neq = prob.model.get_num_eq_cons(rowid)
+    nieq = prob.model.get_num_ineq_cons(rowid)
+    x = pointer_to_array(x_ptr, nx)
+    y_eq = pointer_to_array(y_eq_ptr,neq)
+    y_ieq = pointer_to_array(y_ieq_ptr,nieq)
+    prob.model.str_write_solution(rowid,x,y_eq,y_ieq)
+
+    return Int32(1)
+end
 ###########################################################################
 # C function wrappers
 ###########################################################################
@@ -401,6 +426,7 @@ function createProblemStruct(comm::MPI.Comm, model::ModelInterface)
     	Ptr{Cint}, Ptr{Float64}, Ptr{Cint}, Ptr{Cint}, 
     	Ptr{CallBackData}))
     str_eval_h_cb = cfunction(str_eval_h_wrapper, Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{Cint}, Ptr{Float64}, Ptr{Cint}, Ptr{Cint}, Ptr{CallBackData}))
+    str_write_solution_cb = cfunction(str_write_solution_wrapper, Cint, (Ptr{Float64}, Ptr{Float64}, Ptr{Float64}, Ptr{CallBackData}))
     
     # println(" callback created ")
     prob = PipsNlpProblemStruct(comm, model)
@@ -410,7 +436,7 @@ function createProblemStruct(comm::MPI.Comm, model::ModelInterface)
             Cint, 
             Ptr{Void}, 
             Ptr{Void}, Ptr{Void}, Ptr{Void},
-            Ptr{Void}, Ptr{Void}, Ptr{Void}
+            Ptr{Void}, Ptr{Void}, Ptr{Void}, Ptr{Void}
             ,Any
             ),
             comm, 
@@ -422,6 +448,7 @@ function createProblemStruct(comm::MPI.Comm, model::ModelInterface)
             str_eval_grad_f_cb, 
             str_eval_jac_g_cb, 
             str_eval_h_cb,
+            str_write_solution_cb,
             prob
             )
     # println(" ccall CreatePipsNlpProblemStruct done ")
