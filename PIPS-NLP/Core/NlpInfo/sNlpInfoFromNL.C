@@ -24,6 +24,7 @@
 #include "amplGenStochInput.hpp"
 #include "amplGenStochInput_AddSlack.hpp"
 #include "getAmplFunctionNew.h"
+#include "../../par_macro.h"
 
 using namespace std;
 
@@ -337,6 +338,8 @@ double sNlpInfoFromNL::ObjValue_General( NlpGenVars * vars_)
 #ifdef TIMING
 		  timeFromAMPL += MPI_Wtime()-tTot;
 #endif 
+
+		  PAR_DEBUG("ObjValue_General - "<<locObj);
   
   return locObj;
 
@@ -381,7 +384,7 @@ double sNlpInfoFromNL::ObjValue_DummyCon( NlpGenVars * vars_)
 #ifdef TIMING
 		  timeFromAMPL += MPI_Wtime()-tTot;
 #endif 
-  
+
   return locObj;
 
 }
@@ -466,6 +469,9 @@ sNlpInfoFromNL::ConstraintBody_General( NlpGenVars * vars_, OoqpVector *conEq, O
 
     local_conEq->vec->copyFromArray(tempConEq);
     local_conIneq->vec->copyFromArray(tempConInEq);
+
+    PRINT_ARRAY("ConstraintBody_General - tempConEq ", tempConEq, locMy);
+    PRINT_ARRAY("ConstraintBody_General - tempConInEq", tempConInEq, locMz);
 
 
 	free(tempLocX);
@@ -650,6 +656,9 @@ void sNlpInfoFromNL::ObjGrad_FromSon( NlpGenVars * vars_, OoqpVector *grad_, dou
 	for(int j=0;j<parent->locNx;j++)
 	  tempfromPar[j] += tempParGrad[j];	
 
+	PRINT_ARRAY("ObjGrad_FromSon - tempGrad ",tempGrad, locNx);
+	PRINT_ARRAY("ObjGrad_FromSon - tempParGrad ",tempParGrad, parent->locNx);
+
 	free(tempParGrad);
     free(tempLocX);
 	free(tempParX);
@@ -701,13 +710,16 @@ void sNlpInfoFromNL::ObjGrad_FromSon( NlpGenVars * vars_, OoqpVector *grad_, dou
 
   sGrad->vec->copyFromArray(tempGrad);
 
+
   sGrad->vec->scale(ObjScal);
   
   free(tempGrad);
 
   assert(children.size()==0);
-  for(size_t it=0; it<children.size(); it++)
-   children[it]->ObjGrad(vars->children[it], sGrad->children[it]);
+  for(size_t it=0; it<children.size(); it++) {
+	  PAR_DEBUG("it - "<<it);
+	  children[it]->ObjGrad(vars->children[it], sGrad->children[it]);
+  }
 
 }
 
@@ -746,6 +758,10 @@ void sNlpInfoFromNL::ObjGrad_General( NlpGenVars * vars_, OoqpVector *grad_ )
   }
 
   MPI_Allreduce(tempFromSonGrad, tempGrad, locNx, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+  PRINT_ARRAY("ObjGrad_General - tempGrad - ",tempGrad,locNx);
+  PRINT_ARRAY("ObjGrad_General - tempFromSonGrad - ",tempFromSonGrad,locNx);
+
   
   sGrad->vec->copyFromArray(tempGrad);
   sGrad->vec->scale(ObjScal);
@@ -852,6 +868,9 @@ void sNlpInfoFromNL::JacFull_General( NlpGenVars * vars_, GenMatrix* JacA, GenMa
 	for(it=LocLocVarMap->begin(); it!=LocLocVarMap->end(); it++){
 	  tempX_Ampl[it->first] = tempLocX[it->second];
 	}
+	PRINT_ARRAY("JacFull_General - tempParX ",tempParX, parent->locNx);
+	PRINT_ARRAY("JacFull_General - tempLocX ",tempLocX, locNx);
+
 
 	Ampl_Eval_Jac(asl, tempX_Ampl, tempFullJac_Ampl);
 
@@ -878,6 +897,11 @@ void sNlpInfoFromNL::JacFull_General( NlpGenVars * vars_, GenMatrix* JacA, GenMa
 	Cmat->copyMtxFromDouble(Cmat->numberOfNonZeros(), tempCmat);
 	Dmat->copyMtxFromDouble(Dmat->numberOfNonZeros(), tempDmat);
 
+	PRINT_ARRAY("JacFull_General - tempAmat ",tempAmat,nnzAeqLink);
+	PRINT_ARRAY("JacFull_General - tempBmat ",tempBmat,nnzBeqLoc);
+	PRINT_ARRAY("JacFull_General - tempCmat ",tempCmat,nnzCineqLink);
+	PRINT_ARRAY("JacFull_General - tempDmat ",tempDmat,nnzDineqLoc);
+
 	free(tempDmat);	
 	free(tempCmat);
 	free(tempBmat);
@@ -893,8 +917,9 @@ void sNlpInfoFromNL::JacFull_General( NlpGenVars * vars_, GenMatrix* JacA, GenMa
   }
   
   for(size_t it=0; it<children.size(); it++)
+  {	PAR_DEBUG("it - "<<it);
 	children[it]->JacFull(vars->children[it], NULL,NULL);
-
+  }
 #ifdef TIMING
 		timeFromAMPL += MPI_Wtime()-tTot;
 #endif 
@@ -1068,6 +1093,10 @@ void sNlpInfoFromNL::Hessian_FromSon( NlpGenVars * vars_, double* tempfromPar )
 	for(int j=0;j<nnzQParent;j++)
 	  tempfromPar[j] += tempQPar[j];	
 
+	PRINT_ARRAY("Hessian_FromSon - tempQDiag - ",tempQDiag,nnzQDiag);
+	PRINT_ARRAY("Hessian_FromSon - tempQCross - ",tempQCross,nnzQCross);
+	PRINT_ARRAY("Hessian_FromSon - tempQPar - ",tempQPar,nnzQParent);
+
 	
     free(tempQPar);
 	free(tempQCross);
@@ -1126,6 +1155,7 @@ void sNlpInfoFromNL::Hessian_General( NlpGenVars * vars_, SymMatrix *Hess )
   }
 
   for(size_t it=0; it<children.size(); it++){
+	  PAR_DEBUG("it - "<<it);
     children[it]->Hessian_FromSon(vars->children[it],tempFromSonH);
   }
 
@@ -1194,6 +1224,9 @@ void sNlpInfoFromNL::Hessian_General( NlpGenVars * vars_, SymMatrix *Hess )
 
   assert(Qdiag->numberOfNonZeros()==nnzQDiag);
   Qdiag->copyMtxFromDouble(Qdiag->numberOfNonZeros(),tempQDiag);
+
+  PRINT_ARRAY("Hessian_General - tempFromSonH - ",tempFromSonH,nnzQDiag);
+  PRINT_ARRAY("Hessian_General - tempQDiag - ",tempQDiag,nnzQDiag);
 
   free(tempFromSonH);
   free(tempQDiag);
