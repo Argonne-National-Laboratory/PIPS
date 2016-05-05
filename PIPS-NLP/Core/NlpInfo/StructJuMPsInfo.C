@@ -110,7 +110,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 			double obj;
 			stochInput->prob->eval_f(local_var,local_var,&obj,&cbd);
 			objv += obj;
-			print_array("local_var",local_var,locNx);
+			PRINT_ARRAY("local_var",local_var,locNx);
 			PAR_DEBUG("objv = "<<objv);
 		}
 		for(size_t it=0;it<children.size();it++) {
@@ -133,8 +133,8 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 		stochInput->prob->eval_f(parent_var,local_var,&robj,&cbd);
 		robj = robj;
-		print_array("parent_var",parent_var,parent->locNx);
-		print_array("local_var",local_var, locNx);
+		PRINT_ARRAY("parent_var",parent_var,parent->locNx);
+		PRINT_ARRAY("local_var",local_var, locNx);
 		PAR_DEBUG("robj="<<robj);
 	}
 
@@ -162,20 +162,20 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 		CallBackData cbd = {stochInput->prob->userdata, nodeId(), nodeId()};
 		stochInput->prob->eval_grad_f(local_var,local_var,&local_grad[0],&cbd);
 
-		print_array("local_var",local_var,locNx);
-		print_array("local_grad",&local_grad[0],locNx);
+		PRINT_ARRAY("local_var",local_var,locNx);
+		PRINT_ARRAY("local_grad",local_grad,locNx);
 	}
 
 	for(size_t it=0; it<children.size(); it++){
 		PAR_DEBUG("it - "<<it);
 		(children[it])->ObjGrad_FromSon(svars->children[it],sGrad->children[it], &local_grad[0]);
 	}
-	print_array("local_grad",&local_grad[0],locNx);
+	PRINT_ARRAY("local_grad",local_grad,locNx);
 
 	double rgrad[locNx];
 	MPI_Allreduce(&local_grad[0], rgrad, locNx, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	sGrad->vec->copyFromArray(rgrad);
-	print_array("after reduce - rgrad", rgrad, locNx);
+	PRINT_ARRAY("after reduce - rgrad", rgrad, locNx);
 	PAR_DEBUG("exit ObjGrad ");
 	return 1;
 }
@@ -198,19 +198,19 @@ void StructJuMPsInfo::ObjGrad_FromSon(NlpGenVars* vars, OoqpVector* grad, double
 	parent_X->copyIntoArray(parent_var);
 
 
-	print_array("parent_var",parent_var,parent->locNx);
-	print_array("local_var",local_var,locNx);
+	PRINT_ARRAY("parent_var",parent_var,parent->locNx);
+	PRINT_ARRAY("local_var",local_var,locNx);
 	std::vector<double> parent_part(parent->locNx,0.0);
 	CallBackData cbd_parent = {stochInput->prob->userdata, nodeId(), parent->stochNode->id()};
 	stochInput->prob->eval_grad_f(parent_var,local_var,&parent_part[0],&cbd_parent);
 	PAR_DEBUG(" --- parent contribution -");
-	print_array("parent_part",&parent_part[0],parent->locNx);
+	PRINT_ARRAY("parent_part",parent_part,parent->locNx);
 
 	std::vector<double> this_part(locNx,0.0);
 	CallBackData cbd_this = {stochInput->prob->userdata, nodeId(), nodeId()};
 	stochInput->prob->eval_grad_f(parent_var,local_var,&this_part[0],&cbd_this);
 	PAR_DEBUG(" --- this node -");
-	print_array("this_part",&this_part[0],locNx);
+	PRINT_ARRAY("this_part",this_part,locNx);
 
 	StochVector* sGrad = dynamic_cast<StochVector*>(grad);
 	sGrad->vec->copyFromArray(&this_part[0]);
@@ -242,19 +242,19 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 		stochInput->prob->eval_g(parent_var,local_var,coneq,coninq,&cbd);
-		print_array("parent_var", parent_var, parent->locNx);
-		print_array("local_var", local_var, locNx);
-		print_array("coneq", coneq, locMy);
-		print_array("coninq", coninq, locMz);
+		PRINT_ARRAY("parent_var", parent_var, parent->locNx);
+		PRINT_ARRAY("local_var", local_var, locNx);
+		PRINT_ARRAY("coneq", coneq, locMy);
+		PRINT_ARRAY("coninq", coninq, locMz);
 	}
 	else
 	{
 		assert(nodeId()==0);
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 		stochInput->prob->eval_g(local_var,local_var,coneq,coninq,&cbd);
-		print_array("local_var", local_var, locNx);
-		print_array("coneq", coneq, locMy);
-		print_array("coninq", coninq, locMz);
+		PRINT_ARRAY("local_var", local_var, locNx);
+		PRINT_ARRAY("coneq", coneq, locMy);
+		PRINT_ARRAY("coninq", coninq, locMz);
 	}
 
 	StochVector* sconeq = dynamic_cast<StochVector*>(conEq);
@@ -322,13 +322,13 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 					&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
 					&i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
 
-		print_array("local_var",local_var,locNx);
-		print_array("e_rowidx",&e_rowidx[0],e_nz);
-		print_array("e_colptr",&e_colptr[0],locNx+1);
-		print_array("e_elts",&e_elts[0],e_nz);
-		print_array("i_rowidx",&i_rowidx[0],i_nz);
-		print_array("i_colptr",&i_colptr[0],locNx+1);
-		print_array("i_elts",&i_elts[0],i_nz);
+		PRINT_ARRAY("local_var",local_var,locNx);
+		PRINT_ARRAY("e_rowidx",e_rowidx,e_nz);
+		PRINT_ARRAY("e_colptr",e_colptr,locNx+1);
+		PRINT_ARRAY("e_elts",e_elts,e_nz);
+		PRINT_ARRAY("i_rowidx",i_rowidx,i_nz);
+		PRINT_ARRAY("i_colptr",i_colptr,locNx+1);
+		PRINT_ARRAY("i_elts",i_elts,i_nz);
 
 		double e_csr_ret[e_nz];
 		double i_csr_ret[i_nz];
@@ -367,14 +367,14 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 				&e_nz_Amat,e_amat_elts,e_amat_rowidx,e_amat_colptr,
 				&i_nz_Cmat,i_cmat_elts,i_cmat_rowidx,i_cmat_colptr, &cbd_link);
 
-		print_array("parent_var",parent_var,parent->locNx);
-		print_array("local_var",local_var,locNx);
-		print_array("e_amat_rowidx",&e_amat_rowidx[0],e_nz_Amat);
-		print_array("e_amat_colptr",&e_amat_colptr[0],parent->locNx+1);
-		print_array("e_amat_elts",&e_amat_elts[0],e_nz_Amat);
-		print_array("i_cmat_rowidx",&i_cmat_rowidx[0],i_nz_Cmat);
-		print_array("i_cmat_colptr",&i_cmat_colptr[0],parent->locNx+1);
-		print_array("i_cmat_elts",&i_cmat_elts[0],i_nz_Cmat);
+		PRINT_ARRAY("parent_var",parent_var,parent->locNx);
+		PRINT_ARRAY("local_var",local_var,locNx);
+		PRINT_ARRAY("e_amat_rowidx",e_amat_rowidx,e_nz_Amat);
+		PRINT_ARRAY("e_amat_colptr",e_amat_colptr,parent->locNx+1);
+		PRINT_ARRAY("e_amat_elts",e_amat_elts,e_nz_Amat);
+		PRINT_ARRAY("i_cmat_rowidx",i_cmat_rowidx,i_nz_Cmat);
+		PRINT_ARRAY("i_cmat_colptr",i_cmat_colptr,parent->locNx+1);
+		PRINT_ARRAY("i_cmat_elts",i_cmat_elts,i_nz_Cmat);
 
 		int e_nz_Bmat = Bmat->numberOfNonZeros();
 		int i_nz_Dmat = Dmat->numberOfNonZeros();
@@ -396,12 +396,12 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 				&e_nz_Bmat,e_bmat_elts,e_bmat_rowidx,e_bmat_colptr,
 				&i_nz_Dmat,i_dmat_elts,i_dmat_rowidx,i_dmat_colptr, &cbd_diag);
 
-		print_array("e_bmat_rowidx",&e_bmat_rowidx[0],e_nz_Bmat);
-		print_array("e_bmat_colptr",&e_bmat_colptr[0],locNx+1);
-		print_array("e_bmat_elts",&e_bmat_elts[0],e_nz_Bmat);
-		print_array("i_dmat_rowidx",&i_dmat_rowidx[0],i_nz_Dmat);
-		print_array("i_dmat_colptr",&i_dmat_colptr[0],locNx+1);
-		print_array("i_dmat_elts",&i_dmat_elts[0],i_nz_Dmat);
+		PRINT_ARRAY("e_bmat_rowidx",e_bmat_rowidx,e_nz_Bmat);
+		PRINT_ARRAY("e_bmat_colptr",e_bmat_colptr,locNx+1);
+		PRINT_ARRAY("e_bmat_elts",e_bmat_elts,e_nz_Bmat);
+		PRINT_ARRAY("i_dmat_rowidx",i_dmat_rowidx,i_nz_Dmat);
+		PRINT_ARRAY("i_dmat_colptr",i_dmat_colptr,locNx+1);
+		PRINT_ARRAY("i_dmat_elts",i_dmat_elts,i_nz_Dmat);
 
 		double e_amat_csr[e_nz_Amat];
 		double i_cmat_csr[i_nz_Cmat];
@@ -463,23 +463,23 @@ void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 		int colptr[locNx+1];
 		CallBackData cbd = {stochInput->prob->userdata,0,0};
 		stochInput->prob->eval_h(local_var,local_var,&lam[0],&nzqd,&elts[0],rowidx,colptr,&cbd);
-		print_array("local_var",local_var,locNx);
-		print_array("lam",&lam[0],locMy+locMz);
-		print_array("rowidx",rowidx,nzqd);
-		print_array("colptr",colptr,locNx+1);
-		print_array("elts",&elts[0],nzqd);
+		PRINT_ARRAY("local_var",local_var,locNx);
+		PRINT_ARRAY("lam",lam,locMy+locMz);
+		PRINT_ARRAY("rowidx",rowidx,nzqd);
+		PRINT_ARRAY("colptr",colptr,locNx+1);
+		PRINT_ARRAY("elts",elts,nzqd);
 	}
 
 	for(size_t it=0; it<children.size(); it++){
 		PAR_DEBUG("it - "<<it);
 		children[it]->Hessian_FromSon(vars->children[it],&elts[0]);
 	}
-	print_array("elts",&elts[0],nzqd);
+	PRINT_ARRAY("elts",elts,nzqd);
 
 	//MPI ALL REDUCE
 	double g_elts[nzqd];
 	MPI_Allreduce(&elts[0], g_elts, nzqd, MPI_DOUBLE, MPI_SUM, mpiComm);
-	print_array("after reudce - g_elts",g_elts,nzqd);
+	PRINT_ARRAY("after reudce - g_elts",g_elts,nzqd);
 
 	Qdiag->copyMtxFromDouble(nzqd,g_elts);
 	PAR_DEBUG("exit Hessian");
@@ -516,9 +516,9 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 	OoqpVector* parent_X = (vars_X.parent->vec);
 	parent_X->copyIntoArray(parent_var);
 
-	print_array("parent_var",parent_var,parent->locNx);
-	print_array("local_var",local_var,locNx);
-	print_array("lam",&lam[0],locMy+locMz);
+	PRINT_ARRAY("parent_var",parent_var,parent->locNx);
+	PRINT_ARRAY("local_var",local_var,locNx);
+	PRINT_ARRAY("lam",lam,locMy+locMz);
 	//pnzqd
 	{
 		PAR_DEBUG("  -- Parent contribution - ");
@@ -528,9 +528,9 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		int colptr[parent->locNx+1];
 		CallBackData cbd_pnzqd = {stochInput->prob->userdata,nodeId(),0};
 		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&pnzqd,elts,rowidx,colptr,&cbd_pnzqd);
-		print_array("rowidx",rowidx,pnzqd);
-		print_array("colptr",colptr,parent->locNx+1);
-		print_array("elts",elts,pnzqd);
+		PRINT_ARRAY("rowidx",rowidx,pnzqd);
+		PRINT_ARRAY("colptr",colptr,parent->locNx+1);
+		PRINT_ARRAY("elts",elts,pnzqd);
 		for(int i=0;i<pnzqd;i++) parent_hess[i] += elts[i];
 	}
 
@@ -543,9 +543,9 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		int colptr[locNx+1];
 		CallBackData cbd_nzqd = {stochInput->prob->userdata,nodeId(),nodeId()};
 		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqd,elts,rowidx,colptr,&cbd_nzqd);
-		print_array("rowidx",rowidx,nzqd);
-		print_array("colptr",colptr,locNx+1);
-		print_array("elts",elts,nzqd);
+		PRINT_ARRAY("rowidx",rowidx,nzqd);
+		PRINT_ARRAY("colptr",colptr,locNx+1);
+		PRINT_ARRAY("elts",elts,nzqd);
 		Qdiag->copyMtxFromDouble(nzqd,elts);
 	}
 
@@ -558,9 +558,9 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		int colptr[parent->locNx+1];
 		CallBackData cbd_nzqb = {stochInput->prob->userdata,0,nodeId()};
 		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqb,elts,rowidx,colptr,&cbd_nzqb);
-		print_array("rowidx",rowidx,nzqb);
-		print_array("colptr",colptr,parent->locNx+1);
-		print_array("elts",elts,nzqb);
+		PRINT_ARRAY("rowidx",rowidx,nzqb);
+		PRINT_ARRAY("colptr",colptr,parent->locNx+1);
+		PRINT_ARRAY("elts",elts,nzqb);
 
 		double	csr_ret[nzqb];
 		convert_to_csr(locNx,parent->locNx,&rowidx[0],&colptr[0],&elts[0],nzqb,csr_ret);
@@ -579,7 +579,7 @@ void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
 	double temp_var[locNx];
 	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 	stochInput->prob->init_x0(temp_var,&cbd);
-	print_array("temp_var",temp_var,locNx);
+	PRINT_ARRAY("temp_var",temp_var,locNx);
 //	local_X->print();
 	local_X->copyFromArray(temp_var);
 //	local_X->print();
