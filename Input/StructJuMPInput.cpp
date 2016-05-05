@@ -461,7 +461,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian(){
 	std::vector<double> elts(nz);
 
 	prob->eval_h(&x0[0],&x0[0],&lam[0],&nz,&elts[0],&rowidx[0],&colptr[0],&cbd);
-	CoinPackedMatrix tempmat(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
+	CoinPackedMatrix tempmat(false,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 	qamat.reverseOrderedCopyOf(tempmat);
 //	qamat.copyOf(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 
@@ -498,7 +498,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen){
 	std::vector<double> elts(nz);
 
 	prob->eval_h(&x0[0],&x1[0],&lam[0],&nz,&elts[0],&rowidx[0],&colptr[0],&cbd);
-	CoinPackedMatrix tempmat(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
+	CoinPackedMatrix tempmat(false,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 	CoinPackedMatrix qwmat;
 	qwmat.reverseOrderedCopyOf(tempmat);
 

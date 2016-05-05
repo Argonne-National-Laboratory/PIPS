@@ -17,7 +17,7 @@ struct SufDecl;
 struct SufDesc;
 
 #include "mpi.h"
-
+#include "../PIPS-NLP/par_macro.h"
 //  solve problem as general stochastic programming problem
 //  min f(x_0) + \sum f(x_i)
 //  st    g(x_i)  = 0

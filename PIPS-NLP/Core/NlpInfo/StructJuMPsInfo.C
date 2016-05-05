@@ -561,7 +561,10 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		print_array("rowidx",rowidx,nzqb);
 		print_array("colptr",colptr,parent->locNx+1);
 		print_array("elts",elts,nzqb);
-		Qborder->copyMtxFromDouble(nzqb,elts);
+
+		double	csr_ret[nzqb];
+		convert_to_csr(locNx,parent->locNx,&rowidx[0],&colptr[0],&elts[0],nzqb,csr_ret);
+		Qborder->copyMtxFromDouble(nzqb,csr_ret);
 	}
 	PAR_DEBUG("exit Hessian_FromSon");
 }
