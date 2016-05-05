@@ -32,11 +32,10 @@ void StructJuMPInput::get_prob_info(int nodeid)
 	CallBackData data={prob->userdata,nodeid,nodeid};
 //	PAR_DEBUG("data -"<<&data);
 	PAR_DEBUG("get_prob_info callback data ptr - "<<data.row_node_id);
-	PAR_DEBUG("get_prob_info userdata ptr - "<<prob->userdata);
 	prob->prob_info(&nv,NULL,NULL,&mc,NULL,NULL,&data);
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
-	PAR_DEBUG("ncon,nvar"<<mc<<", "<<nv);
+	PAR_DEBUG("ncon,nvar "<<mc<<", "<<nv);
 
 	std::vector<double> collb(nv);
 	std::vector<double> colub(nv);
@@ -67,6 +66,12 @@ void StructJuMPInput::get_prob_info(int nodeid)
 	assert(i_mc+e_mc == mc);
 	e_ncon_map[nodeid] = e_mc;
 	i_ncon_map[nodeid] = i_mc;
+
+	PRINT_ARRAY(" Col Lower - ",collb,nv);
+	PRINT_ARRAY(" Col Upper - ",colub,nv);
+	PRINT_ARRAY(" Row Lower - ",rowlb,mc);
+	PRINT_ARRAY(" Row Upper - ",rowub,mc);
+
 	PAR_DEBUG("end get_prob_info  - nodeid "<<nodeid<< "(ncon,nvar)=("<<mc<<","<<nv<<") -- e_ncon "<<e_mc<< " i_ncon "<<i_mc);
 }
 
@@ -265,7 +270,7 @@ bool StructJuMPInput::isSecondStageColInteger(int scen, int col){
 
 // returns the column-oriented first-stage constraint matrix (A matrix)
 CoinPackedMatrix StructJuMPInput::getFirstStageConstraints(){
-	PAR_DEBUG("getFirstStageConstraints - Amat -  ");
+	PAR_DEBUG("getFirstStageConstraints ");
 	int nvar = nvar_map[0];
 	CallBackData cbd = {prob->userdata,0,0};
 	std::vector<double> x0(nvar,1.0);
@@ -298,7 +303,8 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints(){
 
 	assert(amat.getNumCols()==nvar);
 	assert(amat.getNumRows()==ncon_map[0]);
-	PAR_DEBUG("return getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols()<<" nz "<<amat.getNumElements());
+	amat.dumpMatrix();
+	PAR_DEBUG("end getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols()<<" nz "<<amat.getNumElements());
 
 //	CoinPackedMatrix arow;
 //	arow.reverseOrderedCopyOf(amat);
@@ -366,6 +372,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen){
 	wmat_map[scen] = wmat;
 	assert(wmat.getNumCols()==nvar);
 	assert(wmat.getNumRows()==ncon_map[nodeid]);
+	wmat.dumpMatrix();
 	PAR_DEBUG("return getSecondStageConstraints - Wmat -  "<<wmat.getNumRows()<<" x "<<wmat.getNumCols()<<" nz "<<wmat.getNumElements());
 	return wmat;
 }
@@ -430,6 +437,7 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen){
 	tmat_map[nodeid] = tmat;
 	assert(tmat.getNumCols()==nvar);
 	assert(tmat.getNumRows()==ncon_map[nodeid]);
+	tmat.dumpMatrix();
 	PAR_DEBUG("return getLinkingConstraints - Tmat - "<<tmat.getNumRows()<<" x "<<tmat.getNumCols()<<" nz "<<tmat.getNumElements());
 	return tmat;
 }
@@ -452,12 +460,12 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian(){
 	std::vector<int> colptr(nvar+1,0);
 	std::vector<double> elts(nz);
 
-	PAR_DEBUG("getFirstStageHessian - before value");
 	prob->eval_h(&x0[0],&x0[0],&lam[0],&nz,&elts[0],&rowidx[0],&colptr[0],&cbd);
-	PAR_DEBUG("getFirstStageHessian - after value");
+	CoinPackedMatrix tempmat(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
+	qamat.reverseOrderedCopyOf(tempmat);
+//	qamat.copyOf(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 
-	qamat.copyOf(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
-
+	qamat.dumpMatrix();
 	PAR_DEBUG("return getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols()
 			<<" nz "<<qamat.getNumElements());
 	return qamat;
@@ -490,13 +498,14 @@ CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen){
 	std::vector<double> elts(nz);
 
 	prob->eval_h(&x0[0],&x1[0],&lam[0],&nz,&elts[0],&rowidx[0],&colptr[0],&cbd);
-
+	CoinPackedMatrix tempmat(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 	CoinPackedMatrix qwmat;
-	qwmat.copyOf(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
+	qwmat.reverseOrderedCopyOf(tempmat);
 
 	qwmat_map[nodeid] = qwmat;
 	PAR_DEBUG("return getSecondStageHessian - Qwmat - "<<qwmat.getNumRows()<<" x "<<qwmat.getNumCols()
 					<<" nz "<<qwmat.getNumElements());
+	qwmat.dumpMatrix();
 	return qwmat;
 }
 
@@ -537,6 +546,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen){
 	qtmat_map[nodeid] = qtmat;
 	PAR_DEBUG("return getSecondStageCrossHessian - Qtmat - "<<qtmat.getNumRows()<<" x "<<qtmat.getNumCols()
 						<<" nz "<<qtmat.getNumElements());
+	qtmat.dumpMatrix();
 	return qtmat;
 }
 
