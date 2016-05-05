@@ -126,32 +126,32 @@ public:
 
 	virtual CoinPackedMatrix getFirstStageConstraints() {
 		PAR_DEBUG("getFirstStageConstraints");
-		Amat.dumpMatrix();
+		DEBUG( Amat.dumpMatrix(); );
 		return Amat;
 	}
 	virtual CoinPackedMatrix getSecondStageConstraints(int scen) {
 		loadLocalNLdata(scen);
 		PAR_DEBUG("getSecondStageConstraints scen" << scen);
-		Wmat[scen].dumpMatrix();
+		DEBUG( Wmat[scen].dumpMatrix(); );
 		return Wmat[scen];
 	}
 	virtual CoinPackedMatrix getLinkingConstraints(int scen) {
 		loadLocalNLdata(scen);
 		PAR_DEBUG("getLinkingConstraints scen" << scen);
-		Tmat[scen].dumpMatrix();
+		DEBUG( Tmat[scen].dumpMatrix(); );
 		return Tmat[scen];
 	}
 
 	virtual CoinPackedMatrix getFirstStageHessian() {
 		PAR_DEBUG("getFirstStageHessian");
-		QAmat.dumpMatrix();
+		DEBUG( QAmat.dumpMatrix(); );
 		return QAmat;
 	}
 	// Q_i
 	virtual CoinPackedMatrix getSecondStageHessian(int scen) {
 		loadLocalNLdata(scen);
 		PAR_DEBUG("getSecondStageHessian scen" << scen);
-		QWmat[scen].dumpMatrix();
+		DEBUG( QWmat[scen].dumpMatrix(); );
 		return QWmat[scen];
 	}
 	// column-oriented, \hat Q_i
@@ -159,7 +159,7 @@ public:
 	virtual CoinPackedMatrix getSecondStageCrossHessian(int scen) {
 		loadLocalNLdata(scen);
 		PAR_DEBUG("getSecondStageCrossHessian scen" << scen);
-		QTmat[scen].dumpMatrix();
+		DEBUG( QTmat[scen].dumpMatrix(); );
 		return QTmat[scen];
 	}
 

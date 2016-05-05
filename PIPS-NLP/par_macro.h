@@ -8,8 +8,12 @@
 extern int gmyid;
 extern int gnprocs;
 
+#define DEBUG(X) do { \
+	if (0) { X } \
+} while (0)
+
 #define PAR_DEBUG(x) do { \
-  if (false) { std::cout<<"["<<gmyid<<"/"<<gnprocs<<"] "<< x << std::endl; } \
+  if (0) { std::cout<<"["<<gmyid<<"/"<<gnprocs<<"] "<< x << std::endl; } \
 } while (0)
 
 

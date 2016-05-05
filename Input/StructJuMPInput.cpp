@@ -303,7 +303,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints(){
 
 	assert(amat.getNumCols()==nvar);
 	assert(amat.getNumRows()==ncon_map[0]);
-	amat.dumpMatrix();
+	DEBUG( amat.dumpMatrix(); );
 	PAR_DEBUG("end getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols()<<" nz "<<amat.getNumElements());
 
 //	CoinPackedMatrix arow;
@@ -372,7 +372,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen){
 	wmat_map[scen] = wmat;
 	assert(wmat.getNumCols()==nvar);
 	assert(wmat.getNumRows()==ncon_map[nodeid]);
-	wmat.dumpMatrix();
+	DEBUG( wmat.dumpMatrix(); );
 	PAR_DEBUG("return getSecondStageConstraints - Wmat -  "<<wmat.getNumRows()<<" x "<<wmat.getNumCols()<<" nz "<<wmat.getNumElements());
 	return wmat;
 }
@@ -437,7 +437,7 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen){
 	tmat_map[nodeid] = tmat;
 	assert(tmat.getNumCols()==nvar);
 	assert(tmat.getNumRows()==ncon_map[nodeid]);
-	tmat.dumpMatrix();
+	DEBUG(tmat.dumpMatrix(); );
 	PAR_DEBUG("return getLinkingConstraints - Tmat - "<<tmat.getNumRows()<<" x "<<tmat.getNumCols()<<" nz "<<tmat.getNumElements());
 	return tmat;
 }
@@ -465,7 +465,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian(){
 	qamat.reverseOrderedCopyOf(tempmat);
 //	qamat.copyOf(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 
-	qamat.dumpMatrix();
+	DEBUG( qamat.dumpMatrix(); );
 	PAR_DEBUG("return getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols()
 			<<" nz "<<qamat.getNumElements());
 	return qamat;
@@ -505,7 +505,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen){
 	qwmat_map[nodeid] = qwmat;
 	PAR_DEBUG("return getSecondStageHessian - Qwmat - "<<qwmat.getNumRows()<<" x "<<qwmat.getNumCols()
 					<<" nz "<<qwmat.getNumElements());
-	qwmat.dumpMatrix();
+	DEBUG( qwmat.dumpMatrix(); );
 	return qwmat;
 }
 
@@ -546,7 +546,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen){
 	qtmat_map[nodeid] = qtmat;
 	PAR_DEBUG("return getSecondStageCrossHessian - Qtmat - "<<qtmat.getNumRows()<<" x "<<qtmat.getNumCols()
 						<<" nz "<<qtmat.getNumElements());
-	qtmat.dumpMatrix();
+	DEBUG( qtmat.dumpMatrix(); );
 	return qtmat;
 }
 
