@@ -11,6 +11,7 @@
 
 #include "stochasticInput.hpp"
 #include "AmplData_NL.hpp"
+#include "par_macro.h"
 
 struct ASL_pfgh;
 struct SufDecl;
