@@ -24,7 +24,7 @@
 #include "amplGenStochInput.hpp"
 #include "amplGenStochInput_AddSlack.hpp"
 #include "getAmplFunctionNew.h"
-#include "../../par_macro.h"
+#include "../../PIPS-NLP/par_macro.h"
 
 using namespace std;
 
