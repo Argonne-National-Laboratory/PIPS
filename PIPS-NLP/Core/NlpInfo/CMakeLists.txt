@@ -1,4 +1,4 @@
-
+include_directories(../..)
 
 add_library(updateFromAMPL
   getAmplFunction.C NlpInfoAMPL.C
