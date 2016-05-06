@@ -13,6 +13,7 @@ include_directories(Core/NlpStoch)
 include_directories(Core/CInterface)
 #include_directories(Core/MtxSchurDecomp)
 include_directories(Core/StructureSolver)
+include_directories(.)
 
 if(HAVE_PETSC)
 include_directories(Core/PetscLinearAlgebra)
