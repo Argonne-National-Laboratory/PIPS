@@ -229,7 +229,8 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 
 	double local_var[locNx];
 	local_X.copyIntoArray(local_var);
-	PAR_DEBUG("local_var set size "<<locNx);
+	DEBUG( local_X.print(); );
+	PRINT_ARRAY("local_var ",local_var, locNx);
 
 
 	double coneq[locMy];
@@ -580,9 +581,9 @@ void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
 	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 	stochInput->prob->init_x0(temp_var,&cbd);
 	PRINT_ARRAY("temp_var",temp_var,locNx);
-//	local_X->print();
+	DEBUG( local_X->print(); );
 	local_X->copyFromArray(temp_var);
-//	local_X->print();
+	DEBUG( local_X->print(); );
 	for(size_t it=0; it<children.size(); it++)
 	    children[it]->get_InitX0(vars_X->children[it]);
 

@@ -205,7 +205,7 @@ FilterIPMSolver::_initialVar(Variables * iterate_in, Data * prob_in, Residuals *
   prob->getInitX(vars->x);
   PAR_DEBUG("_initalVar - after getting init x");
   vars->push_variables(vars->x, vars->v, vars->w, prob->blx, prob->bux,resid->priWrk,k_1,k_2,1);
-
+  DEBUG( vars->x->print(); );
   // initialize slack s, and t=s-lb, u=ub-s  note that Ci(x)-s =0, put primal var from bounds
   prob->evalConstraintBody(vars);
   prob->getInEqCons(*vars->s);
