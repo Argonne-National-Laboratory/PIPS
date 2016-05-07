@@ -144,7 +144,7 @@ extern int gLackOfAccuracy;
 int sLinsysRoot::factor2(sData *prob, Variables *vars)
 {
   int negEVal=0, tempNegEVal=0;
-  int return_NegEval;  
+  int return_NegEval=-1;  
   int matIsSingular=0,matIsSingularAllReduce;
   int mype; MPI_Comm_rank(mpiComm, &mype);
   	

@@ -278,7 +278,7 @@ double sNlpInfoFromNL::ObjValue_General(NlpGenVars * vars_) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(asl_local);
 
@@ -344,7 +344,7 @@ double sNlpInfoFromNL::ObjValue_DummyCon(NlpGenVars * vars_) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		SimpleVector& simplelocal_X = dynamic_cast<SimpleVector&>(*vars_X.vec);
 		locObj += Ampl_Eval_Obj(asl, &simplelocal_X[0]) * ObjScal;
@@ -392,7 +392,7 @@ void sNlpInfoFromNL::ConstraintBody_General(NlpGenVars * vars_,
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(asl_local);
 
@@ -481,7 +481,7 @@ void sNlpInfoFromNL::ConstraintBody_DummyCon(NlpGenVars * vars_,
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(asl_local);
 
@@ -573,9 +573,9 @@ void sNlpInfoFromNL::ObjGrad_FromSon(NlpGenVars * vars_, OoqpVector *grad_,
 	long long mA, nA, mC, nC;
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
-	assert(mC + mA > 0);
+	assert(nA + nC > 0);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(asl_local);
 
@@ -748,7 +748,7 @@ void sNlpInfoFromNL::ObjGrad_DummyCon(NlpGenVars * vars_, OoqpVector *grad_) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(asl_local);
 		Ampl_Eval_ObjGrad(asl_local, &simplelocal_X[0], &simplelocal_Grad[0]);
@@ -791,7 +791,7 @@ void sNlpInfoFromNL::JacFull_General(NlpGenVars * vars_, GenMatrix* JacA,
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		double *tempFullJac_Ampl = (double*) malloc(nzc * sizeof(double));
 		double *tempX_Ampl = (double*) malloc(n_var * sizeof(double));
@@ -894,7 +894,7 @@ void sNlpInfoFromNL::JacFull_DummyCon(NlpGenVars * vars_, GenMatrix* JacA,
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(locNx == n_var);
 		assert(locMy + locMz == n_con + parent->locNx);
@@ -977,7 +977,7 @@ void sNlpInfoFromNL::Hessian_FromSon(NlpGenVars * vars_, double* tempfromPar) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mA + mC > 0) {
+	if (nA + nC> 0) {
 		//not the root
 		double *tempY = (double*) malloc(locMy * sizeof(double));
 		double *tempZ = (double*) malloc(locMz * sizeof(double));
@@ -1201,7 +1201,7 @@ void sNlpInfoFromNL::Hessian_DummyCon(NlpGenVars * vars_, SymMatrix *Hess) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mA + mC > 0) {
+	if (nA + nC> 0) {
 		//not the root
 		assert(locNx == n_var);
 		assert(locMy + locMz == n_con + parent->locNx);
@@ -1289,7 +1289,7 @@ void sNlpInfoFromNL::get_InitX0_General(OoqpVector* vX) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(asl_local);
 
@@ -1355,7 +1355,7 @@ void sNlpInfoFromNL::get_InitX0_DummyCon(OoqpVector* vX) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(locNx == n_var);
 		Ampl_Eval_InitX0(asl_local, tempX);
@@ -1416,7 +1416,7 @@ void sNlpInfoFromNL::writeSolution(NlpGenVars * vars_) {
 	Amat->getSize(mA, nA);
 	Cmat->getSize(mC, nC);
 
-	if (mC + mA > 0) {
+	if (nA + nC > 0) {
 		//not the root
 		assert(asl_local);
 
