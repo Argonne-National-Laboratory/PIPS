@@ -117,6 +117,7 @@ void Ma57Solver::firstCall()
 
   int * krowM = mStorage->krowM;
 
+  if(n==0) return; 
 
   if(separateHandDiag==0){
 
@@ -176,6 +177,8 @@ void Ma57Solver::diagonalChanged( int /* idiag */, int /* extent */ )
 
 int Ma57Solver::matrixChanged()
 {
+  if(n==0) return 0; 
+  
   if( !keep ) this->firstCall();
 
 #ifdef TIMING
@@ -269,6 +272,8 @@ int Ma57Solver::matrixChanged()
  
 void Ma57Solver::solve( OoqpVector& rhs_in )
 {
+  if(n==0) return; 
+  
 #ifdef TIMING
   call_sol_Times_MA57++;
 #endif
@@ -303,6 +308,8 @@ Ma57Solver::~Ma57Solver()
 
 void Ma57Solver::solve(int solveType, OoqpVector& rhs_in)
 {
+  if(n==0) return; 
+  
   if(solveType < 1 || solveType > 4) {
     assert("Unknown JOB assigned for use in MA57CD!" && 0);
   } else if(solveType==1) {
@@ -346,6 +353,8 @@ void Ma57Solver::solve(int solveType, OoqpVector& rhs_in)
 
 void Ma57Solver::solve(GenMatrix& rhs_in)
 {
+  if(n==0) return; 
+  
   DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
   int N,NRHS;
   // rhs vectors are on the "rows", for continuous memory
