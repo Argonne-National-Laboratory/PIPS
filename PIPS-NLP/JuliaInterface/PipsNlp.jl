@@ -63,7 +63,7 @@ end
 ###########################################################################
 # Objective (eval_f)
 function eval_f_wrapper(x_ptr::Ptr{Float64}, obj_ptr::Ptr{Float64}, user_data::Ptr{Void})
-    println(" julia - eval_f_wrapper " ); 
+    # println(" julia - eval_f_wrapper " ); 
     # Extract Julia the problem from the pointer
     prob = unsafe_pointer_to_objref(user_data)::PipsNlpProblem
     # Calculate the new objective
@@ -76,7 +76,7 @@ end
 
 # Constraints (eval_g)
 function eval_g_wrapper(x_ptr::Ptr{Float64}, g_ptr::Ptr{Float64}, user_data::Ptr{Void})
-    println(" julia - eval_g_wrapper " ); 
+    # println(" julia - eval_g_wrapper " ); 
     # Extract Julia the problem from the pointer
     prob = unsafe_pointer_to_objref(user_data)::PipsNlpProblem
     # Calculate the new constraint values
@@ -88,7 +88,7 @@ end
 
 # Objective gradient (eval_grad_f)
 function eval_grad_f_wrapper(x_ptr::Ptr{Float64}, grad_f_ptr::Ptr{Float64}, user_data::Ptr{Void})
-    println(" julia -  eval_grad_f_wrapper " );    
+    # println(" julia -  eval_grad_f_wrapper " );    
     # Extract Julia the problem from the pointer
     prob = unsafe_pointer_to_objref(user_data)::PipsNlpProblem
     # Calculate the gradient
@@ -103,7 +103,7 @@ end
 
 # Jacobian (eval_jac_g)
 function eval_jac_g_wrapper(x_ptr::Ptr{Float64}, values_ptr::Ptr{Float64}, iRow::Ptr{Cint}, jCol::Ptr{Cint},  user_data::Ptr{Void})
-    println(" julia -  eval_jac_g_wrapper " );
+    # println(" julia -  eval_jac_g_wrapper " );
     # Extract Julia the problem from the pointer  
     #@show user_data  
     prob = unsafe_pointer_to_objref(user_data)::PipsNlpProblem
@@ -125,7 +125,7 @@ end
 
 # Hessian
 function eval_h_wrapper(x_ptr::Ptr{Float64}, lambda_ptr::Ptr{Float64}, values_ptr::Ptr{Float64}, iRow::Ptr{Cint}, jCol::Ptr{Cint}, user_data::Ptr{Void})
-    println(" julia - eval_h_wrapper " ); 
+    # println(" julia - eval_h_wrapper " ); 
     # Extract Julia the problem from the pointer
     prob = unsafe_pointer_to_objref(user_data)::PipsNlpProblem
     # Did the user specify a Hessian
@@ -187,7 +187,7 @@ function createProblem(n::Int,m::Int,
             eval_f_cb, eval_g_cb,
             eval_grad_f_cb, eval_jac_g_cb, eval_h_cb
             )
-    println(" ccall CreatePipsNlpProblem done ")
+    # println(" ccall CreatePipsNlpProblem done ")
     @show ret   
     
     if ret == C_NULL
@@ -198,7 +198,7 @@ function createProblem(n::Int,m::Int,
 end
 
 function solveProblem(prob::PipsNlpProblem)
-    @show "solveProblem"    
+    # @show "solveProblem"    
     @show prob
     
     final_objval = [0.0]
@@ -212,7 +212,7 @@ function solveProblem(prob::PipsNlpProblem)
 end
 
 function freeProblem(prob::PipsNlpProblem)
-    @show "freeProblem"
+    # @show "freeProblem"
     ret = ccall((:FreePipsNlpProblem, :libpipsnlp),
             Void, (Ptr{Void},),
             prob.ref)
