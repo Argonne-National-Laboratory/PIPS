@@ -137,8 +137,6 @@ function eval_h_wrapper(x_ptr::Ptr{Float64}, lambda_ptr::Ptr{Float64}, values_pt
         mode = (values_ptr == C_NULL) ? (:Structure) : (:Values)
         x = pointer_to_array(x_ptr, prob.n)
         lambda = pointer_to_array(lambda_ptr, prob.m)
-        @show prob.nzHess
-        @show prob.n
         irows = pointer_to_array(iRow, Int(prob.nzHess))
         kcols = pointer_to_array(jCol, Int(prob.n+1))
         values = pointer_to_array(values_ptr, Int(prob.nzHess))
@@ -188,7 +186,6 @@ function createProblem(n::Int,m::Int,
             eval_grad_f_cb, eval_jac_g_cb, eval_h_cb
             )
     # println(" ccall CreatePipsNlpProblem done ")
-    @show ret   
     
     if ret == C_NULL
         error("PIPS-NLP: Failed to construct problem.")
@@ -199,7 +196,6 @@ end
 
 function solveProblem(prob::PipsNlpProblem)
     # @show "solveProblem"    
-    @show prob
     
     final_objval = [0.0]
     ret = ccall((:PipsNlpSolve, :libpipsnlp), Cint, 
