@@ -50,9 +50,9 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	PAR_DEBUG("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
 	PAR_DEBUG("CreatePipsNlpProblemStruct - C");
 
-	pipsOptions *pipsOpt = new pipsOptions();
-	pipsOpt->readFile();
-	pipsOpt->defGloOpt();
+//	pipsOptions *pipsOpt = new pipsOptions();
+//	pipsOpt->readFile();
+//	pipsOpt->defGloOpt();
 
 	PipsNlpProblemStructPtr retval = new PipsNlpProblemStruct;
 
