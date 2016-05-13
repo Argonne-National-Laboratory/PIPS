@@ -511,7 +511,7 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 	std::vector<double> lam(locMy+locMz,0.0);
 	int i=0;
 	for(i=0;i<locMy;i++) lam[i] = -local_y[i];
-	for(;i<locMy+locMz;i++) lam[i] = -local_z[i];
+	for(;i<locMy+locMz;i++) lam[i] = -local_z[i-locMy];
 
 	double parent_var[parent->locNx];
 	OoqpVector* parent_X = (vars_X.parent->vec);
