@@ -14,6 +14,12 @@ end
 
 export createProblem, solveProblem, freeProblem
 
+function convert_to_c_idx(indicies)
+    for i in 1:length(indicies)
+        indicies[i] = indicies[i] - 1
+    end
+end
+
 type PipsNlpProblem
     ref::Ptr{Void}
     n::Int
@@ -109,6 +115,10 @@ function eval_jac_g_wrapper(x_ptr::Ptr{Float64}, values_ptr::Ptr{Float64}, iRow:
     kcols = pointer_to_array(jCol, Int(prob.n+1))
     values = pointer_to_array(values_ptr, Int(prob.nzJac))
     prob.eval_jac_g(x, mode, irows, kcols, values)
+    if mode == :Structure 
+	    convert_to_c_idx(irows)
+	    convert_to_c_idx(kcols)
+	end
     # Done
     return Int32(1)
 end
@@ -137,6 +147,10 @@ function eval_h_wrapper(x_ptr::Ptr{Float64}, lambda_ptr::Ptr{Float64}, values_pt
             obj_factor *= -1.0
         end
         prob.eval_h(x, mode, irows, kcols, obj_factor, lambda, values)
+        if mode == :Structure
+	        convert_to_c_idx(irows)
+	        convert_to_c_idx(kcols)
+        end
         # Done
         return Int32(1)
     end
@@ -149,7 +163,7 @@ function createProblem(n::Int,m::Int,
     x_L::Vector{Float64},x_U::Vector{Float64},
     g_L::Vector{Float64},g_U::Vector{Float64},
     nzJac::Int, nzHess::Int,
-    eval_f, eval_g,eval_grad_f,eval_jac_g,eval_h = nothing)
+    eval_f, eval_g,eval_grad_f,eval_jac_g,eval_h)
 
     @assert n == length(x_L) == length(x_U)
     @assert m == length(g_L) == length(g_U)
