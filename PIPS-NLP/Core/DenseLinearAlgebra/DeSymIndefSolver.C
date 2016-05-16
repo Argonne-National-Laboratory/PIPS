@@ -237,6 +237,55 @@ if(gSymLinearAlgSolverForDense<=1){
       ifactTemp  = new int[lifactTemp ];
       iworkTemp2 = new int[n];
 	
+//      char *name = "matSt.m";
+//
+//       FILE* outfile = fopen( name, "wr" );
+//
+//		fprintf(outfile,"n_dim_%s = %d;\n\n", name,n);;
+//		fprintf(outfile,"nnz_%s = %d;\n\n", name, nnzWrk);
+//
+//		int findkk=0;
+//		fprintf(outfile,"rowId_%s = [ ",name);
+//		for(int kk=0;kk<nnzWrk;kk++)
+//			if(findkk%10==0){
+//			 fprintf(outfile,"%d, ... \n", rowM[kk]+1);
+//					 findkk++;
+//			}
+//			else{
+//			 fprintf(outfile,"%d,", rowM[kk]+1);
+//					 findkk++;
+//			}
+//		fprintf(outfile,"]; \n\n");
+//
+//		findkk=0;
+//		fprintf(outfile,"colId_%s = [ ",name);
+//		for(int kk=0;kk<nnzWrk;kk++)
+//			if(findkk%10==0){
+//			 fprintf(outfile,"%d, ... \n", colM[kk]+1);
+//					 findkk++;
+//			}
+//			else{
+//			 fprintf(outfile,"%d,", colM[kk]+1);
+//					 findkk++;
+//			}
+//		fprintf(outfile,"]; \n\n");
+//
+//		findkk=0;
+//		fprintf(outfile,"elts_%s = [ ",name);
+//		for(int kk=0;kk<nnzWrk;kk++)
+//			if(findkk%10==0){
+//			  fprintf(outfile,"%5.17g, ... \n", elesM[kk]);
+//					 findkk++;
+//			}
+//			else{
+//			  fprintf(outfile,"%5.17g,", elesM[kk]);
+//					 findkk++;
+//			}
+//		fprintf(outfile,"]; \n\n");
+//
+//		fclose(outfile);
+
+
       FNAME(ma57bd)( &n,	   &nnzWrk,	elesM,	   factTemp,  &lfactTemp,  ifactTemp,
 		   &lifactTemp,  &lkeepTemp,  keepTemp,  iworkTemp2,  icntlTemp,  cntlTemp,
 		   infoTemp,	 rinfoTemp );

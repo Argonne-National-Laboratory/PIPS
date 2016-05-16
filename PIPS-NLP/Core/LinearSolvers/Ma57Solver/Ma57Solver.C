@@ -203,7 +203,55 @@ int Ma57Solver::matrixChanged()
 	  memcpy( &M[mStorage->krowM[n]], &mStorage->additiveDiag[0], n * sizeof( double ) );  
 
   	}
- 
+
+//	char *name = "mat.m";
+//
+//   FILE* outfile = fopen( name, "wr" );
+//
+//		fprintf(outfile,"n_dim_%s = %d;\n\n", name,n);;
+//		fprintf(outfile,"nnz_%s = %d;\n\n", name,nnz);
+//
+//		int findkk=0;
+//		fprintf(outfile,"rowId_%s = [ ",name);
+//		for(int kk=0;kk<nnz;kk++)
+//			if(findkk%10==0){
+//			 fprintf(outfile,"%d, ... \n", irowM[kk]+1);
+//					 findkk++;
+//			}
+//			else{
+//			 fprintf(outfile,"%d,", irowM[kk]+1);
+//					 findkk++;
+//			}
+//		fprintf(outfile,"]; \n\n");
+//
+//		findkk=0;
+//		fprintf(outfile,"colId_%s = [ ",name);
+//		for(int kk=0;kk<nnz;kk++)
+//			if(findkk%10==0){
+//			 fprintf(outfile,"%d, ... \n", jcolM[kk]+1);
+//					 findkk++;
+//			}
+//			else{
+//			 fprintf(outfile,"%d,", jcolM[kk]+1);
+//					 findkk++;
+//			}
+//		fprintf(outfile,"]; \n\n");
+//
+//		findkk=0;
+//		fprintf(outfile,"elts_%s = [ ",name);
+//		for(int kk=0;kk<nnz;kk++)
+//			if(findkk%10==0){
+//			  fprintf(outfile,"%5.17g, ... \n", M[kk]);
+//					 findkk++;
+//			}
+//			else{
+//			  fprintf(outfile,"%5.17g,", M[kk]);
+//					 findkk++;
+//			}
+//		fprintf(outfile,"]; \n\n");
+//
+//	fclose(outfile);
+
     FNAME(ma57bd)( &n,       &nnz,    M,     fact,  &lfact,  ifact,
 	     &lifact,  &lkeep,  keep,  iwork,  icntl,  cntl,
 	     info,     rinfo );
