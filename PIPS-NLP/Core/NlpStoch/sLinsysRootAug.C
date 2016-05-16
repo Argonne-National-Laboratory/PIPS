@@ -723,6 +723,11 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 	}
   }
 
+  //(prob->getLocalQ()).printMatrixInMatlab("Q0.m");
+  //(prob->getLocalB()).printMatrixInMatlab("A0.m");
+  //(prob->getLocalD()).printMatrixInMatlab("C0.m");
+
+
 
   //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
 
