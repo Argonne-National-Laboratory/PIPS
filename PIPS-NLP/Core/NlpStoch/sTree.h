@@ -89,7 +89,9 @@ class sTree
   virtual int my() const = 0; 
   virtual int mz() const = 0; 
   virtual int id() const = 0; 
-
+  virtual int mle() const{return 0;};
+  virtual int mli() const{return 0;};
+  virtual void  get_FistStageSize(int& nx, int& my, int& mz){};
   //returns the global load, i.e. statistic based on the NNZs and
   //dimensions of the node (and subnodes) subproblem before any iteration or the CPU
   //time of this node and its subnodes  after the first iteration.

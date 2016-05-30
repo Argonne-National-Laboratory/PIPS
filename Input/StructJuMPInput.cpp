@@ -12,6 +12,35 @@ StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p) {
 	useInputDate = 1;
 	datarootname = "StructJuMP";
 	PAR_DEBUG("exit constructor StructJuMPInput - ");
+
+	//number of linking constraints
+        mlink = 0;
+        e_ml = 0;
+        i_ml = 0;
+        bool e=true; //equality constraint must be at front of list 
+        if(prob->link_info != NULL)
+	  {
+            CallBackData cbd = {prob->userdata,0,0};
+            prob->link_info(&mlink, NULL, NULL, &cbd);
+            linklb.resize(mlink);
+            linkub.resize(mlink);
+            prob->link_info(&mlink, &linklb[0], &linkub[0], &cbd);
+	  }
+        if(mlink != 0)
+	  {
+            for(int i=0;i<linklb.size();i++)
+	      {
+                if(linklb[i] == linkub[i]){
+		  e_ml++;
+		  assert(e); //equality constraint must be at front of list                                                                                                      
+                }
+                else{
+		  e = false;
+		  assert(linklb[i]<linkub[i]);
+		  i_ml++;
+		}
+	      }
+	  }
 }
 StructJuMPInput::~StructJuMPInput() {
 
@@ -34,11 +63,57 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	ncon_map[nodeid] = mc;
 	PAR_DEBUG("ncon,nvar "<<mc<<", "<<nv);
 
+        int temp = mc;
+        if (nodeid == 0 && mlink != 0)
+	  {
+            ncon_map[nodeid] += mlink;
+            temp += mlink;
+	  }
 	std::vector<double> collb(nv);
 	std::vector<double> colub(nv);
-	std::vector<double> rowlb(mc);
-	std::vector<double> rowub(mc);
+	std::vector<double> rowlb(temp);
+	std::vector<double> rowub(temp);
 	prob->prob_info(&nv, &collb[0], &colub[0], &mc, &rowlb[0], &rowub[0], &data);
+
+
+        if (nodeid == 0 && mlink != 0)
+	  {
+            mc = mc + mlink;
+            int e_mc = 0;
+            int i_mc = 0;
+            bool e=true; //equality constraint must be at front of list
+            for(int i=0;i<(mc-mlink);i++)
+	      {
+                if(rowlb[i] == rowub[i]){
+		  e_mc++;
+		  assert(e); //equality constraint must be at front of list
+                }
+                else{
+		  e = false;
+		  assert(rowlb[i]<rowub[i]);
+		  i_mc++;
+                }
+	      }
+	    // arrange bounds, c_equality, link_equality, c_ineqaulity, link_inequality
+            for(int i=i_mc-1; i>=0; i-- )
+	      {
+                rowlb[i+e_mc+e_ml] = rowlb[i+e_mc];
+                rowub[i+e_mc+e_ml] = rowub[i+e_mc];
+	      }
+            for(int i=0; i<e_ml; i++ )
+	      {
+                rowlb[i+e_mc] = linklb[i];
+                rowub[i+e_mc] = linkub[i];
+	      }
+            for(int i=0; i<i_ml; i++ )
+	      {
+                rowlb[i+e_mc+e_ml+i_mc] = linklb[i+e_ml];
+                rowub[i+e_mc+e_ml+i_mc] = linkub[i+e_ml];
+	      }
+            PRINT_ARRAY(" Row after combined Lower - ",rowlb,mc);
+            PRINT_ARRAY(" Row after combined Upper - ",rowub,mc);
+	  }
+
 
 	collb_map[nodeid] = collb;
 	colub_map[nodeid] = colub;
@@ -168,6 +243,15 @@ std::vector<std::string> StructJuMPInput::getFirstStageRowNames() {
 	}
 	return cnames;
 }
+
+std::vector<double> StructJuMPInput::getLinkRowLB(){
+  return linklb;
+}
+
+std::vector<double> StructJuMPInput::getLinkRowUB(){
+  return linkub;
+}
+
 bool StructJuMPInput::isFirstStageColInteger(int col) {
 	return false;
 }
@@ -357,6 +441,38 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	PAR_DEBUG("return getSecondStageConstraints - Wmat -  "<<wmat.getNumRows()<<" x "<<wmat.getNumCols()<<" nz "<<wmat.getNumElements());
 	return wmat;
 }
+
+
+
+CoinPackedMatrix StructJuMPInput::getLinkMatrix(int nodeid){
+  int e_nz, i_nz;
+  int nvar = nvar_map[nodeid];
+  CallBackData cbd = {prob->userdata,nodeid,nodeid};
+
+  prob->get_link_matrix(&e_nz,NULL,NULL,NULL,
+                        &i_nz,NULL,NULL,NULL,&cbd);
+
+  std::vector<int> e_rowidx(e_nz);
+  std::vector<int> e_colptr(nvar+1,0);
+  std::vector<double> e_elts(e_nz);
+
+  std::vector<int> i_rowidx(i_nz);
+  std::vector<int> i_colptr(nvar+1,0);
+  std::vector<double> i_elts(i_nz);
+
+  prob->get_link_matrix(&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
+                        &i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
+
+  Emat_map[nodeid].copyOf(true,e_ml,nvar,e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],0);
+  CoinPackedMatrix i_Emat;
+  i_Emat.copyOf(true,i_ml,nvar,i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],0);
+  Emat_map[nodeid].bottomAppendPackedMatrix(i_Emat);
+  return Emat_map[nodeid];
+}
+
+
+
+
 // returns the column-oriented matrix linking the first-stage to the second (T matrix)
 CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 	PAR_DEBUG("getLinkingConstraints - Tmat -  "<<(scen+1));

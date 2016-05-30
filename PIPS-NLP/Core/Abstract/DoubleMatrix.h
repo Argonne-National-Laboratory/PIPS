@@ -31,7 +31,7 @@ public:
 			   int rowExtent, int colExtent ) = 0;
   virtual void fromGetDense( int row, int col, double * A, int lda,
 			     int rowExtent, int colExtent ) = 0;
-  virtual void atPutSpRow( int row, double A[], int lenA, int jcolA[],
+    virtual void atPutSpRow( int row, double A[], int lenA, int jcolA[],
                            int& info ) = 0;
 
   virtual void fromGetSpRow( int row, int col,
@@ -78,7 +78,8 @@ public:
    */
   virtual void fromGetDense( int row, int col, double * A, int lda,
 			     int rowExtent, int colExtent ) = 0;
-
+  virtual void fromAddDense( int row, int col, double * A, int lda,
+                             int rowExtent, int colExtent ){};
   /** Get one sparse row from this matrix.
    *
    * @param row  get row number "row"

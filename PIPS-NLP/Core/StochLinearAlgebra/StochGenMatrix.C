@@ -16,7 +16,8 @@ StochGenMatrix::StochGenMatrix(int id,
 			       long long global_m, long long global_n,
 			       int A_m, int A_n, int A_nnz,
 			       int B_m, int B_n, int B_nnz,
-			       MPI_Comm mpiComm_)
+			       MPI_Comm mpiComm_,
+			       int C_m, int C_n, int C_nnz)
   : id(id), m(global_m), n(global_n), 
     mpiComm(mpiComm_), iAmDistrib(0),
     workPrimalVec(NULL)
@@ -25,7 +26,7 @@ StochGenMatrix::StochGenMatrix(int id,
 
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
-
+  Cmat = new SparseGenMatrix(C_m, C_n, C_nnz);
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
     if(size>1) iAmDistrib=1;
@@ -220,7 +221,6 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
       //not the root
       Amat->mult(1.0, *y.vec, alpha, *x.parent->vec);
     }
-
     //if( 1.0 != alpha ) {
     //  y.vec->scale(alpha);
     //}
@@ -228,6 +228,44 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 
   for(size_t it=0; it<children.size(); it++)
     children[it]->mult(beta, *y.children[it], alpha, *x.children[it]);
+
+  long long mC, nC;
+  Cmat->getSize(mC,nC);
+  long long mB, nB;
+  Bmat->getSize(mB,nB);
+  if (mC>0)
+    {
+      if (x.parent == NULL)
+        {
+	  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+	  SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
+          SimpleVector yCvec(&yvec[mB-mC], mC);
+
+
+	  int iAmSpecial = 1;
+	  if(iAmDistrib) {
+	    int rank; MPI_Comm_rank(mpiComm, &rank);
+	    if(rank>0) iAmSpecial = 0;
+	  }
+	  if(iAmSpecial)
+	    {
+	      Cmat->mult(1.0, yCvec, alpha, xvec);
+	    }
+	  else
+	    yCvec.setToZero();
+
+	  for(size_t it=0; it<children.size(); it++)
+	    children[it]->Cmat->mult(1.0, yCvec, alpha, dynamic_cast<SimpleVector&>(*x.children[it]->vec));
+
+	  if(iAmDistrib) {
+	    double* buffer = new double[mC];
+	    MPI_Allreduce(yCvec.elements(), buffer, mC, MPI_DOUBLE, MPI_SUM, mpiComm);
+	    yCvec.copyFromArray(buffer);
+	    delete[] buffer;
+	  }
+        }
+    }
+
 }
 
 void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
@@ -235,7 +273,10 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
 {
   StochVector & x = dynamic_cast<StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
-
+  long long mC, nC;
+  Cmat->getSize(mC,nC);
+  long long mB, nB;
+  Bmat->getSize(mB,nB);
 #ifdef DEBUG
   //check the tree compatibility
   int nChildren = children.size();
@@ -245,7 +286,6 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
 
   SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
-  
   //preparations for the parallel case
   int iAmSpecial = 1;
   if(iAmDistrib) {
@@ -254,8 +294,16 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   }
 
   if(iAmSpecial)
-    //y_i = beta* y_i  +  alpha* B_i^T* x_i
-    Bmat->transMult(beta, yvec, alpha, xvec);
+    {
+      //y_i = beta* y_i  +  alpha* B_i^T* x_i
+      Bmat->transMult(beta, yvec, alpha, xvec);
+
+      if (mC>0)
+      {
+	SimpleVector xCvec(&xvec[mB-mC], mC);
+	Cmat->transMult(1.0, yvec, alpha, xCvec);
+      }
+    }
   else
     yvec.setToZero();
 
@@ -266,6 +314,11 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   //let the children compute their contribution
   for(size_t it=0; it<children.size(); it++) {
       children[it]->transMult2(beta, *y.children[it], alpha, *x.children[it], yvec);
+      if (mC>0)
+	{
+	  SimpleVector xCvec(&xvec[mB-mC], mC);
+	  children[it]->Cmat->transMult(1.0, dynamic_cast<SimpleVector&>(*y.children[it]->vec), alpha, xCvec);
+	}
   }
 
   if(iAmDistrib) {

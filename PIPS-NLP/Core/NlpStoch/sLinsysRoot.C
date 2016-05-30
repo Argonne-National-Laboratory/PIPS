@@ -654,12 +654,25 @@ void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 
 void sLinsysRoot::reduceKKT()
 {
-  DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt); 
-
+  DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt);    
   //parallel communication
-  if(iAmDistrib) submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
-}
+  if(iAmDistrib)
+  {
+    int N;
+    if(gOuterSolve>=3 )
+    {
+        int locns = locmz;
+        N = locnx+locns+locmy+locmz;
+    }
+    else
+      N = locnx+locmy+locmz;
 
+    if( (stochNode->mle()+stochNode->mli())>0)
+      submatrixAllReduce(kktd, 0, 0, N, N, mpiComm);
+    else
+      submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
+  }
+}
 
 int sLinsysRoot::factorizeKKT()
 {

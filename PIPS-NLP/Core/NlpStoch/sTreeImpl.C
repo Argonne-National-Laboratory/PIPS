@@ -18,7 +18,8 @@ sTreeImpl::sTreeImpl( stochasticInput &in_, MPI_Comm comm /*=MPI_COMM_WORLD*/)
   m_nx = in.nFirstStageVars();
   m_my = compute_nFirstStageEq();
   m_mz = in.nFirstStageCons() - m_my;
-
+  m_mle = in.nLinkECons();
+  m_mli = in.nLinkICons();
   for (int scen=0; scen<in.nScenarios(); scen++) {
     sTreeImpl* c = new sTreeImpl(scen+1,in);
     c->parent = this;
@@ -35,7 +36,8 @@ sTreeImpl::sTreeImpl(int id, stochasticInput &in_)
   //m_nx = in.nSecondStageVars(id-1);
   //m_my = compute_nSecondStageEq(id-1);
   //m_mz = in.nSecondStageCons(id-1) - m_my;
-
+  m_mle = in.nLinkECons();
+  m_mli = in.nLinkICons();
   // add children only if you have multi-stages
 }
   
@@ -238,7 +240,7 @@ int countNNZ(const CoinPackedMatrix& M,
 
 /** Extracts the Mcol's rows corresponding to entries in lb and ub 
  * satisfying 'compFun' condition. Mcol is in row-major format, the
- * output krowM,jcolM,dM represent a row-major submatrix of Mcol. */
+ * output krowM,jcolM,dM rexepresent a row-major submatrix of Mcol. */
 template<typename Compare>
 void extractRows(const CoinPackedMatrix& M, 
 		 const vector<double>& lb, const vector<double>& ub, 
@@ -300,21 +302,41 @@ StochGenMatrix* sTreeImpl::createA()
     CoinPackedMatrix Arow; 
     Arow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
     assert(false==Arow.hasGaps());  
-
     // number of nz in the rows corresponding to eq constraints
     int nnzB=countNNZ( Arow, 
 		       in.getFirstStageRowLB(), 
 		       in.getFirstStageRowUB(), 
 		       eq_comp());
-    //printf("%d  -- 1st stage my=%lu nx=%lu nnzB=%d\n", commie, m_my, m_nx, nnzB);
-    A = new StochGenMatrix( m_id, MY, N, 
+    if (!m_mle)
+    {
+        A = new StochGenMatrix( m_id, MY, N, 
 			    m_my, 0,   0,    // A does not exist for the root
 			    m_my, m_nx, nnzB, // B is 1st stage eq matrix
 			    commWrkrs );
-    extractRows( Arow,
-		 in.getFirstStageRowLB(), in.getFirstStageRowUB(), eq_comp(),
+        extractRows( Arow,
+	    	 in.getFirstStageRowLB(), in.getFirstStageRowUB(), eq_comp(),
 		 A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M() );
-
+    }
+    else
+      { 
+	CoinPackedMatrix Erow;
+	Erow.reverseOrderedCopyOf( in.getLinkMatrix(m_id));
+	int nnzE=countNNZ( Erow,
+			   in.getLinkRowLB(),
+                           in.getLinkRowUB(),
+			   eq_comp());
+        A = new StochGenMatrix( m_id, MY, N,
+				m_my, 0,   0,    // A does not exist for the root
+				m_my, m_nx, nnzB, // B is 1st stage eq matrix
+				commWrkrs, m_mle, m_nx, nnzE );
+        extractRows( Arow,
+		     in.getFirstStageRowLB(), in.getFirstStageRowUB(), eq_comp(),
+		     A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M() );
+        extractRows( Erow,
+		     in.getLinkRowLB(), in.getLinkRowUB(), eq_comp(),
+		     A->Cmat->krowM(), A->Cmat->jcolM(), A->Cmat->M() );
+	//A->Bmat->atPutSubmatrix(m_my-m_mle, 0, *(A->Cmat), 0, 0, m_mle, m_nx); 
+      }
   } else {
     int scen=m_id-1;
     CoinPackedMatrix Arow, Brow; 
@@ -326,22 +348,51 @@ StochGenMatrix* sTreeImpl::createA()
     int nnzB=countNNZ( Brow, in.getSecondStageRowLB(scen), 
 		       in.getSecondStageRowUB(scen), eq_comp() );
 
-    A = new StochGenMatrix( m_id, MY, N, 
+    if (!m_mle)
+    {
+        A = new StochGenMatrix( m_id, MY, N, 
 			    m_my, parent->m_nx, nnzA, 
 			    m_my, m_nx,         nnzB,
 			    commWrkrs );
-    //cout << commie << "  -- 2nd stage my=" << m_my << " nx=" << m_nx 
-    // << "  1st stage nx=" << parent->m_nx << "  nnzA=" << nnzA << " nnzB=" << nnzB << endl;
-    extractRows( Arow,
+	extractRows( Arow,
 		 in.getSecondStageRowLB(scen), 
 		 in.getSecondStageRowUB(scen), 
 		 eq_comp(),
 		 A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M() );
-    extractRows( Brow,
+	extractRows( Brow,
 		 in.getSecondStageRowLB(scen), 
 		 in.getSecondStageRowUB(scen), 
 		 eq_comp(),
 		 A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M() );
+    }
+    else
+      {
+	CoinPackedMatrix Erow;
+        Erow.reverseOrderedCopyOf( in.getLinkMatrix(m_id));
+	int nnzE=countNNZ( Erow,
+			   in.getLinkRowLB(),
+                           in.getLinkRowUB(),
+                           eq_comp());
+
+        A = new StochGenMatrix( m_id, MY, N,
+				m_my, parent->m_nx, nnzA,
+				m_my, m_nx,         nnzB,
+				commWrkrs, m_mle, m_nx, nnzE);
+	extractRows( Arow,
+		     in.getSecondStageRowLB(scen),
+		     in.getSecondStageRowUB(scen),
+		     eq_comp(),
+		     A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M() );
+        extractRows( Brow,
+		     in.getSecondStageRowLB(scen),
+		     in.getSecondStageRowUB(scen),
+		     eq_comp(),
+		     A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M() );
+
+        extractRows( Erow,
+                     in.getLinkRowLB(), in.getLinkRowUB(), eq_comp(),
+                     A->Cmat->krowM(), A->Cmat->jcolM(), A->Cmat->M() );
+      }
   }
   
   for(size_t it=0; it<children.size(); it++) {
@@ -366,14 +417,37 @@ StochGenMatrix* sTreeImpl::createC()
 		       in.getFirstStageRowLB(), 
 		       in.getFirstStageRowUB(), 
 		       ineq_comp());
-    C = new StochGenMatrix( m_id, MZ, N, 
+
+    if (!m_mli)
+    {
+        C = new StochGenMatrix( m_id, MZ, N, 
 			    m_mz, 0,   0,    // C does not exist for the root
 			    m_mz, m_nx, nnzD, // D is 1st stage ineq matrix
 			    commWrkrs );
-    extractRows( Crow,
+	extractRows( Crow,
 		 in.getFirstStageRowLB(), in.getFirstStageRowUB(), ineq_comp(),
 		 C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M() );
-    //printf("  -- 1st stage mz=%lu nx=%lu nnzD=%d\n", m_mz, m_nx, nnzD);
+	//printf("  -- 1st stage mz=%lu nx=%lu nnzD=%d\n", m_mz, m_nx, nnzD);
+    }
+    else
+      {
+        CoinPackedMatrix Frow;
+        Frow.reverseOrderedCopyOf( in.getLinkMatrix(m_id));
+        int nnzF=countNNZ( Frow,
+                           in.getLinkRowLB(),
+                           in.getLinkRowUB(),
+                           ineq_comp());
+        C = new StochGenMatrix( m_id, MZ, N,
+				m_mz, 0,   0,    // C does not exist for the root
+				m_mz, m_nx, nnzD, // D is 1st stage ineq matrix
+				commWrkrs, m_mli, m_nx, nnzF );
+        extractRows( Crow,
+		     in.getFirstStageRowLB(), in.getFirstStageRowUB(), ineq_comp(),
+		     C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M() );
+	extractRows( Frow,
+                     in.getLinkRowLB(), in.getLinkRowUB(), ineq_comp(),
+                     C->Cmat->krowM(), C->Cmat->jcolM(), C->Cmat->M() );
+      }
   } else {
     int scen=m_id-1;
     CoinPackedMatrix Crow, Drow; 
@@ -385,21 +459,50 @@ StochGenMatrix* sTreeImpl::createC()
     int nnzD=countNNZ( Drow, in.getSecondStageRowLB(scen), 
 		       in.getSecondStageRowUB(scen), ineq_comp() );
 
-    C = new StochGenMatrix( m_id, MZ, N, 
+    if (!m_mli)
+    {
+        C = new StochGenMatrix( m_id, MZ, N, 
 			    m_mz, parent->m_nx, nnzC, 
 			    m_mz, m_nx,         nnzD,
 			    commWrkrs );
-    //printf("  -- 2nd stage mz=%lu nx=%lu   1st stage nx=%lu     nnzC=%d nnzD=%d\n", m_mz, m_nx, parent->m_nx, nnzC, nnzD);
-    extractRows( Crow,
+	extractRows( Crow,
 		 in.getSecondStageRowLB(scen), 
 		 in.getSecondStageRowUB(scen), 
 		 ineq_comp(),
 		 C->Amat->krowM(), C->Amat->jcolM(), C->Amat->M() );
-    extractRows( Drow,
+	extractRows( Drow,
 		 in.getSecondStageRowLB(scen), 
 		 in.getSecondStageRowUB(scen), 
 		 ineq_comp(),
 		 C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M() );
+    }
+    else
+    {
+        CoinPackedMatrix Frow;
+	Frow.reverseOrderedCopyOf( in.getLinkMatrix(m_id));
+	int nnzF=countNNZ( Frow,
+			   in.getLinkRowLB(),
+                           in.getLinkRowUB(),
+			 ineq_comp()); 
+	C = new StochGenMatrix( m_id, MZ, N,
+ 				m_mz, parent->m_nx, nnzC,
+				m_mz, m_nx,         nnzD,
+				commWrkrs , m_mli, m_nx, nnzF);
+        extractRows( Crow,
+		     in.getSecondStageRowLB(scen),
+		     in.getSecondStageRowUB(scen),
+		     ineq_comp(),
+		     C->Amat->krowM(), C->Amat->jcolM(), C->Amat->M() );
+        extractRows( Drow,
+		     in.getSecondStageRowLB(scen),
+		     in.getSecondStageRowUB(scen),
+		     ineq_comp(),
+		     C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M() );
+	extractRows( Frow,
+                     in.getLinkRowLB(), in.getLinkRowUB(), ineq_comp(),
+                     C->Cmat->krowM(), C->Cmat->jcolM(), C->Cmat->M() );
+
+    }
   }
   
   for(size_t it=0; it<children.size(); it++) {
@@ -741,7 +844,6 @@ int sTreeImpl::compute_nFirstStageEq()
 
   for (size_t i=0;i<lb.size(); i++)
     if (lb[i]==ub[i]) num++;
-
   return num;
 }
 
@@ -755,4 +857,20 @@ int sTreeImpl::compute_nSecondStageEq(int scen)
     if (lb[i]==ub[i]) num++;
 
   return num;
+}
+
+void sTreeImpl::get_FistStageSize(int& nx, int& my, int& mz)
+{
+  if (parent == NULL)
+  {
+    nx = m_nx;
+    my = m_my;
+    mz = m_mz;
+  }
+  else
+  {
+     nx = parent->m_nx;
+    my = parent->m_my;
+    mz = parent->m_mz;   
+  }
 }

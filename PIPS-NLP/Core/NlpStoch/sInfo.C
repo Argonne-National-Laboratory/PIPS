@@ -49,6 +49,8 @@ sInfo::sInfo(sData *data_in)
   C = data_in->Jineq;
   Cmat = &data_in->getLocalC();
   Dmat = &data_in->getLocalD();  
+  Emat = &data_in->getLocalE();
+  Fmat = &data_in->getLocalF();
   
   Q = data_in->H;
   Qdiag = &data_in->getLocalQ();

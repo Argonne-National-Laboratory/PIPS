@@ -46,6 +46,8 @@ public:
 			   int rowExtent, int colExtent );
   virtual void fromGetDense( int row, int col, double * A, int lda,
 			     int rowExtent, int colExtent );
+  virtual void fromAddDense( int row, int col, double * A, int lda,
+                             int rowExtent, int colExtent );
   virtual void ColumnScale( OoqpVector& vec );
   virtual void RowScale( OoqpVector& vec );
   virtual void SymmetricScale( OoqpVector &vec);
@@ -126,7 +128,7 @@ public:
 					int rowExtent, int colExtent, int const FirstCall, std::map<int,int> &ValIdxMap );
 
   virtual void printMatrixInMatlab(char *name);
-  	
+  virtual void transCopyof(SparseGenMatrix& from);
  protected:
   // in the case of A'*A we internally form the transpose only once
   SparseGenMatrix* m_Mt;

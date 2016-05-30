@@ -44,6 +44,8 @@ public:
 	virtual std::vector<std::string> getFirstStageColNames() = 0;
 	virtual std::vector<double> getFirstStageRowLB() = 0;
 	virtual std::vector<double> getFirstStageRowUB() = 0;
+        virtual std::vector<double> getLinkRowLB(){};
+        virtual std::vector<double> getLinkRowUB(){};
 	virtual std::vector<std::string> getFirstStageRowNames() = 0;
 	virtual bool isFirstStageColInteger(int col) = 0;
 
@@ -100,7 +102,10 @@ public:
 	virtual CoinPackedMatrix getSecondStageCrossHessian(int scen);
 
 
-
+        virtual int nLinkCons(){};
+        virtual int nLinkECons(){};
+        virtual int nLinkICons(){};
+        virtual CoinPackedMatrix getLinkMatrix(int nodeid){};
 	std::string datarootname;
     int useInputDate;
 

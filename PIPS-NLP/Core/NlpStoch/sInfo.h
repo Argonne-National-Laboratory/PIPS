@@ -30,12 +30,14 @@ class multiStageInputTree;
 //  Bmat
 //  Amat  Bmat
 //  Amat   0  	   Bmat
+//  E0     E1      E2
 
 // for Jineq
 //  x0        x1      x2
 //  Dmat
 //  Cmat  Dmat
 //  Cmat   0  	   Dmat
+// F0      F1      F2
 
 class sInfo : public NlpInfo
 {
@@ -47,6 +49,8 @@ public:
   SparseGenMatrix *Bmat;
   SparseGenMatrix *Cmat;
   SparseGenMatrix *Dmat;
+  SparseGenMatrix *Emat;
+  SparseGenMatrix *Fmat;
 
   int locNx,locMy,locMz;
 

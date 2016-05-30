@@ -51,6 +51,8 @@ public:
   int numberOfNonZeros() {	return krowM[m]; };
   virtual void fromGetDense( int row, int col, double * A, int lda,
 			     int rowExtent, int colExtent );
+  virtual void fromAddDense( int row, int col, double * A, int lda,
+                             int rowExtent, int colExtent );
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent );
 

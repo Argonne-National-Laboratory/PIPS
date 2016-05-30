@@ -51,16 +51,19 @@ class sTreeImpl : public sTree
   virtual int my() const; 
   virtual int mz() const; 
   virtual int id() const; 
-
+  virtual int mle() const{return m_mle;};
+  virtual int mli() const{return m_mli;};
   virtual void computeGlobalSizes();
   virtual void loadLocalSizes();
+  virtual void  get_FistStageSize(int& nx, int& my, int& mz);
+
  protected:
   int m_id;
   stochasticInput &in;
 
   sTreeImpl* parent;
 
-  size_t m_nx, m_my, m_mz;
+  size_t m_nx, m_my, m_mz, m_mle, m_mli;
 
   int compute_nFirstStageEq();
   int compute_nSecondStageEq(int scen);
