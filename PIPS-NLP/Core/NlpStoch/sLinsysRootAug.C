@@ -708,7 +708,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   // update the KKT with A (symmetric update forced)
   /////////////////////////////////////////////////////////////
   if(locmy>0){
-    kktd->symAtPutSubmatrix( locnx+locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );	
+    kktd->symAtAddSubmatrix( locnx+locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );
 	for(int i=locnx+locmz; i<locnx+locmz+locmy; i++) dKkt[i][i] += syDiag[i-locnx-locmz];
   }
   
@@ -720,7 +720,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   // update the KKT with C (symmetric update forced) ,  -I and dual reg
   /////////////////////////////////////////////////////////////  
   if(locmz>0){
-    kktd->symAtPutSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx, 1 );
+    kktd->symAtAddSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx, 1 );
 	for(int i=0; i<locmz; i++){
 		dKkt[i+locnx+locmz+locmy][i+locnx] -= 1.0;
 		dKkt[i+locnx][i+locnx+locmz+locmy] -= 1.0;
