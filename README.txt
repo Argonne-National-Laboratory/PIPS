@@ -36,6 +36,17 @@ Developed by:
 # INSTALATION Instructions
 ####################################################################################
 
+Building PIPS-S only can be achieved via 
+1) cmake -DBUILD_ALL=OFF -DBUILD_PIPS_S=ON <path_to_CMakeLists.txt>
+or 
+2) including "set(BUILD_ALL OFF); set(BUILD_PIPS_S ON)" in a toolchain file, then 
+invoking
+cmake -DCMAKE_TOOLCHAIN_FILE=<path_to_toolchain_file> <path_to_CMakeLists.txt>
+
+Same applies to PIPS-IPM and PIPS-NLP (option names BUILD_PIPS_IPM and BUILD_PIPS_NLP, 
+respectively).
+
+General instalation instructions
 1. Install package wget, cmake, mpich2, and boost.
 You can get them via the following command (xxx stands for the name of the package):
 In Linux(Ubuntu): apt-get install xxxx
