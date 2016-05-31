@@ -88,7 +88,17 @@ void sInfo::AddChild(sInfo* child)
   children.push_back(child);
 }
 
+void sInfo::Emult ( double beta,  OoqpVector& y,
+		     double alpha, OoqpVector& x )
+{
+  Emat->mult(beta, y, alpha, x);
+}
 
+void sInfo::Fmult ( double beta,  OoqpVector& y,
+		    double alpha, OoqpVector& x )
+{
+  Fmat->mult(beta, y, alpha, x);
+}
 
 //
 //void sInfo::createChildren(sData *data_in)

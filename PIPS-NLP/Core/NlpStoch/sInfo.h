@@ -99,6 +99,11 @@ public:
 
 	virtual void AddChild(sInfo* child);
 
+	virtual void Emult(double beta,  OoqpVector& y,
+			    double alpha, OoqpVector& x );
+	virtual void Fmult(double beta,  OoqpVector& y,
+			     double alpha, OoqpVector& x );
+
 protected:
   void destroyChildren();
 
@@ -137,6 +142,11 @@ public:
   virtual void Hessian_FromSon( NlpGenVars * vars, double *tempFromParH ){};
   virtual void ObjGrad_FromSon( NlpGenVars * vars, OoqpVector *grad, double *tempFromParH ){};   
   virtual void writeSolution( NlpGenVars * vars_){};
+
+  virtual void Emult(double beta,  OoqpVector& y,
+		     double alpha, OoqpVector& x ){};
+  virtual void Fmult(double beta,  OoqpVector& y,
+		     double alpha, OoqpVector& x ){};
 };
 
   

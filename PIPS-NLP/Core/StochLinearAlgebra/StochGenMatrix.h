@@ -61,6 +61,10 @@ public:
 		    double alpha,  StochVector& x,
 		    OoqpVector& yvecParent);
 
+  virtual void transMult2 ( double beta,   StochVector& y,
+		    double alpha,  StochVector& x,
+		    OoqpVector& yvecParent, OoqpVector& xCvecParent);
+
  public:
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
@@ -99,6 +103,9 @@ public:
   /** y = beta * y + alpha * this * x */
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x );
+
+  virtual void mult ( double beta,  OoqpVector& y,
+                      double alpha, OoqpVector& x, OoqpVector& yvecParent);
 
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x );
@@ -187,11 +194,18 @@ public:
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x ){};
 
+  virtual void mult ( double beta,  OoqpVector& y,
+                      double alpha, OoqpVector& x, OoqpVector& yvecParent){};
+
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x ){};
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
 		    OoqpVector& yvecParent){};
+
+  virtual void transMult2 ( double beta,   StochVector& y,
+		    double alpha,  StochVector& x,
+		    OoqpVector& yvecParent, OoqpVector& xCvecParent){};
 
   virtual double abmaxnorm(){return 0.0;};
 

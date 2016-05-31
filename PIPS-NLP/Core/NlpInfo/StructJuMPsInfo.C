@@ -254,22 +254,21 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 		{
 		    SimpleVector linkeq(e_ml);
 		    linkeq.setToZero();
-		   		    
 		    for(size_t it=0; it<children.size(); it++){
-		        int m,n;
-			children[it]->Emat->getSize( m, n );
-		        children[it]->Emat->mult(1.0, linkeq, 1.0, *(dynamic_cast<StochVector&>(*svars->children[it]->x).vec));
+		        //int m,n;
+			//children[it]->Emat->getSize( m, n );
+		        children[it]->Emult(1.0, linkeq, 1.0, *(dynamic_cast<StochVector&>(*svars->children[it]->x).vec));
 		    }
 		    double* buffer = new double[e_ml];
 		    MPI_Allreduce(linkeq.elements(), buffer, e_ml, MPI_DOUBLE, MPI_SUM, mpiComm);
-		    for(int i=0; i<e_ml; i++)
+       		    for(int i=0; i<e_ml; i++)
 		    {
 		        linkeq.elements()[i] = buffer[i];
 		    }  
-		    Emat->mult(1.0, linkeq, 1.0, *(dynamic_cast<StochVector&>(*svars->x).vec));
+		    Emult(1.0, linkeq, 1.0, *(dynamic_cast<StochVector&>(*svars->x).vec));
 		    for(int i=0; i<e_ml; i++)
 		    {
-		      coneq[i+locMy-e_ml] = linkeq.elements()[i];
+		        coneq[i+locMy-e_ml] = linkeq.elements()[i];
 		    }
 		    delete[] buffer;
 		}
@@ -278,7 +277,7 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
                     SimpleVector linkinq(i_ml);
                     linkinq.setToZero();
                     for(size_t it=0; it<children.size(); it++){
-		      children[it]->Fmat->mult(1.0, linkinq, 1.0, *(dynamic_cast<StochVector&>(*svars->children[it]->x).vec));
+		      children[it]->Fmult(1.0, linkinq, 1.0, *(dynamic_cast<StochVector&>(*svars->children[it]->x).vec));
 		    }		  
 		    double* buffer = new double[i_ml];
                     MPI_Allreduce(linkinq.elements(), buffer, i_ml, MPI_DOUBLE, MPI_SUM, mpiComm);
@@ -286,7 +285,7 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 		    {
                         linkinq.elements()[i] = buffer[i];
 		    }
-                    Fmat->mult(1.0, linkinq, 1.0, *(dynamic_cast<StochVector&>(*svars->x).vec));
+                    Fmult(1.0, linkinq, 1.0, *(dynamic_cast<StochVector&>(*svars->x).vec));
                     for(int i=0; i<i_ml; i++)
 		    {
 			coninq[i+locMz -i_ml] = linkinq.elements()[i];
