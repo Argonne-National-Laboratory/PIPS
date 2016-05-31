@@ -45,9 +45,9 @@ else(HAVE_UMFPACK)
 	add_library(LU_solvers Utilities/empty.cpp)
 endif(HAVE_UMFPACK)
 
-if(HAVE_PARDISO OR HAVE_MA57)
-	add_library(nlpwithsolver NlpGen/NlpGenSparseWithSolver.C)
-endif(HAVE_PARDISO OR HAVE_MA57)
+#if(HAVE_PARDISO OR HAVE_MA57)
+add_library(nlpwithsolver NlpGen/NlpGenSparseWithSolver.C)
+#endif(HAVE_PARDISO OR HAVE_MA57)
 
 
 add_library(nlpgensparse
