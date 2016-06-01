@@ -12,6 +12,10 @@ StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p) {
 	useInputDate = 1;
 	datarootname = "StructJuMP";
 	PAR_DEBUG("exit constructor StructJuMPInput - ");
+
+#ifdef PROF
+	report_timing(gprof);
+#endif
 }
 StructJuMPInput::~StructJuMPInput() {
 
@@ -29,7 +33,14 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	CallBackData data = { prob->userdata, nodeid, nodeid };
 //	PAR_DEBUG("data -"<<&data);
 	PAR_DEBUG("get_prob_info callback data ptr - "<<data.row_node_id);
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->prob_info(&nv, NULL, NULL, &mc, NULL, NULL, &data);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+	gprof.n_prob_info+=1;
+#endif
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
 	PAR_DEBUG("ncon,nvar "<<mc<<", "<<nv);
@@ -38,7 +49,14 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	std::vector<double> colub(nv);
 	std::vector<double> rowlb(mc);
 	std::vector<double> rowub(mc);
+#ifdef PROF
+	stime = MPI_Wtime();
+#endif
 	prob->prob_info(&nv, &collb[0], &colub[0], &mc, &rowlb[0], &rowub[0], &data);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+	gprof.n_prob_info+=1;
+#endif
 
 	collb_map[nodeid] = collb;
 	colub_map[nodeid] = colub;
@@ -68,7 +86,9 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	PRINT_ARRAY(" Row Lower - ", rowlb, mc);
 	PRINT_ARRAY(" Row Upper - ", rowub, mc);
 
+
 	PAR_DEBUG("end get_prob_info  - nodeid "<<nodeid<< "(ncon,nvar)=("<<mc<<","<<nv<<") -- e_ncon "<<e_mc<< " i_ncon "<<i_mc);
+
 }
 
 int StructJuMPInput::nFirstStageVars() {
@@ -76,7 +96,13 @@ int StructJuMPInput::nFirstStageVars() {
 	std::map<int, int>::iterator it = nvar_map.find(0);
 	if (it != nvar_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(0);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return nvar_map[0];
 }
 int StructJuMPInput::nFirstStageCons() {
@@ -84,7 +110,13 @@ int StructJuMPInput::nFirstStageCons() {
 	std::map<int, int>::iterator it = ncon_map.find(0);
 	if (it != ncon_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(0);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return ncon_map[0];
 }
 int StructJuMPInput::nSecondStageVars(int scen) {
@@ -93,7 +125,13 @@ int StructJuMPInput::nSecondStageVars(int scen) {
 	std::map<int, int>::iterator it = nvar_map.find(nodeid);
 	if (it != nvar_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(nodeid);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return nvar_map[nodeid];
 }
 int StructJuMPInput::nSecondStageCons(int scen) {
@@ -102,7 +140,13 @@ int StructJuMPInput::nSecondStageCons(int scen) {
 	std::map<int, int>::iterator it = ncon_map.find(nodeid);
 	if (it != ncon_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(nodeid);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return ncon_map[nodeid];
 }
 
@@ -110,14 +154,26 @@ std::vector<double> StructJuMPInput::getFirstStageColLB() {
 	std::map<int, std::vector<double> >::iterator it = collb_map.find(0);
 	if (it != collb_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(0);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return collb_map[0];
 }
 std::vector<double> StructJuMPInput::getFirstStageColUB() {
 	std::map<int, std::vector<double> >::iterator it = colub_map.find(0);
 	if (it != colub_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(0);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return colub_map[0];
 }
 
@@ -128,7 +184,13 @@ std::vector<double> StructJuMPInput::getFirstStageObj() {
 	double x0[nvar];
 	std::vector<double> grad(nvar);
 	CallBackData data = { prob->userdata, 0, 0 };
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_grad_f(x0, x0, &grad[0], &data);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	PAR_DEBUG("end getFirstStageObj - 0");
 	return grad;
 }
@@ -154,7 +216,13 @@ std::vector<double> StructJuMPInput::getFirstStageRowUB() {
 	std::map<int, std::vector<double> >::iterator it = rowub_map.find(0);
 	if (it != rowub_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(0);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return rowub_map[0];
 }
 std::vector<std::string> StructJuMPInput::getFirstStageRowNames() {
@@ -177,7 +245,14 @@ std::vector<double> StructJuMPInput::getSecondStageColLB(int scen) {
 	std::map<int, std::vector<double> >::iterator it = collb_map.find(nodeid);
 	if (it != collb_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(nodeid);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
+
 	return collb_map[nodeid];
 }
 std::vector<double> StructJuMPInput::getSecondStageColUB(int scen) {
@@ -185,7 +260,13 @@ std::vector<double> StructJuMPInput::getSecondStageColUB(int scen) {
 	std::map<int, std::vector<double> >::iterator it = colub_map.find(nodeid);
 	if (it != colub_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(nodeid);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return colub_map[nodeid];
 }
 // objective vector, already multiplied by probability
@@ -200,7 +281,13 @@ std::vector<double> StructJuMPInput::getSecondStageObj(int scen) {
 	double x1[n1];
 	std::vector<double> grad(n1);
 	CallBackData data = { prob->userdata, nodeid, nodeid };
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_grad_f(x0, x1, &grad[0], &data);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	PAR_DEBUG("end getSecondStageObj - nodeid"<<scen+1);
 	return grad;
 }
@@ -225,7 +312,13 @@ std::vector<double> StructJuMPInput::getSecondStageRowUB(int scen) {
 	std::map<int, std::vector<double> >::iterator it = rowub_map.find(nodeid);
 	if (it != rowub_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(nodeid);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return rowub_map[nodeid];
 }
 std::vector<double> StructJuMPInput::getSecondStageRowLB(int scen) {
@@ -234,7 +327,13 @@ std::vector<double> StructJuMPInput::getSecondStageRowLB(int scen) {
 	std::map<int, std::vector<double> >::iterator it = rowlb_map.find(nodeid);
 	if (it != rowlb_map.end())
 		return it->second;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	get_prob_info(nodeid);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	return rowlb_map[nodeid];
 }
 std::vector<std::string> StructJuMPInput::getSecondStageRowNames(int scen) {
@@ -266,7 +365,13 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	CallBackData cbd = { prob->userdata, 0, 0 };
 	std::vector<double> x0(nvar, 1.0);
 	int e_nz, i_nz;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_jac_g(&x0[0], &x0[0], &e_nz, NULL, NULL, NULL, &i_nz, NULL, NULL, NULL, &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 
 	std::vector<int> e_rowidx(e_nz);
 	std::vector<int> e_colptr(nvar + 1, 0);
@@ -275,8 +380,13 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	std::vector<int> i_rowidx(i_nz);
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
-
+#ifdef PROF
+	stime = MPI_Wtime();
+#endif
 	prob->eval_jac_g(&x0[0], &x0[0], &e_nz, &e_elts[0], &e_rowidx[0], &e_colptr[0], &i_nz, &i_elts[0], &i_rowidx[0], &i_colptr[0], &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 
 	int e_ncon = e_ncon_map[0];
 	int i_ncon = i_ncon_map[0];
@@ -290,7 +400,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	assert(amat.getNumCols() == nvar);
 	assert(amat.getNumRows() == ncon_map[0]);
 	DEBUG(amat.dumpMatrix(););
-		PAR_DEBUG("end getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols()<<" nz "<<amat.getNumElements());
+	PAR_DEBUG("end getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols()<<" nz "<<amat.getNumElements());
 
 //	CoinPackedMatrix arow;
 //	arow.reverseOrderedCopyOf(amat);
@@ -328,8 +438,13 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	std::vector<double> x1(nvar, 1.0);
 
 	int e_nz, i_nz;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, NULL, NULL, NULL, &i_nz, NULL, NULL, NULL, &cbd);
-
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	std::vector<int> e_rowidx(e_nz);
 	std::vector<int> e_colptr(nvar + 1, 0);
 	std::vector<double> e_elts(e_nz);
@@ -338,7 +453,13 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
 
+#ifdef PROF
+	stime = MPI_Wtime();
+#endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, &e_elts[0], &e_rowidx[0], &e_colptr[0], &i_nz, &i_elts[0], &i_rowidx[0], &i_colptr[0], &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 
 	int e_ncon = e_ncon_map[nodeid];
 	int i_ncon = i_ncon_map[nodeid];
@@ -355,6 +476,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	assert(wmat.getNumRows() == ncon_map[nodeid]);
 	DEBUG(wmat.dumpMatrix(););
 	PAR_DEBUG("return getSecondStageConstraints - Wmat -  "<<wmat.getNumRows()<<" x "<<wmat.getNumCols()<<" nz "<<wmat.getNumElements());
+
 	return wmat;
 }
 // returns the column-oriented matrix linking the first-stage to the second (T matrix)
@@ -377,8 +499,13 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 	std::vector<double> x1(nvar_map[nodeid], 1.0);
 
 	int e_nz, i_nz;
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, NULL, NULL, NULL, &i_nz, NULL, NULL, NULL, &cbd);
-
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	std::vector<int> e_rowidx(e_nz);
 	std::vector<int> e_colptr(nvar + 1, 0);
 	std::vector<double> e_elts(e_nz);
@@ -387,7 +514,13 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
 
+#ifdef PROF
+	stime = MPI_Wtime();
+#endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, &e_elts[0], &e_rowidx[0], &e_colptr[0], &i_nz, &i_elts[0], &i_rowidx[0], &i_colptr[0], &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 
 	int e_ncon = e_ncon_map[nodeid];
 	int i_ncon = i_ncon_map[nodeid];
@@ -428,20 +561,33 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 
 	int nz;
 	CallBackData cbd = { prob->userdata, 0, 0 };
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_h(&x0[0], &x0[0], &lam[0], &nz, NULL, NULL, NULL, &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	PAR_DEBUG("getFirstStageHessian - nz "<<nz);
 
 	std::vector<int> rowidx(nz);
 	std::vector<int> colptr(nvar + 1, 0);
 	std::vector<double> elts(nz);
 
+#ifdef PROF
+	stime = MPI_Wtime();
+#endif
 	prob->eval_h(&x0[0], &x0[0], &lam[0], &nz, &elts[0], &rowidx[0], &colptr[0], &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	CoinPackedMatrix tempmat(false, nvar, nvar, nz, &elts[0], &rowidx[0], &colptr[0], 0);
 	qamat.reverseOrderedCopyOf(tempmat);
 //	qamat.copyOf(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 
 	DEBUG(qamat.dumpMatrix(););
 	PAR_DEBUG("return getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols() <<" nz "<<qamat.getNumElements());
+
 	return qamat;
 }
 // Q_i
@@ -464,20 +610,31 @@ CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen) {
 
 	int nz;
 	CallBackData cbd = { prob->userdata, nodeid, nodeid };
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, NULL, NULL, NULL, &cbd);
-
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	std::vector<int> rowidx(nz);
 	std::vector<int> colptr(nvar + 1, 0);
 	std::vector<double> elts(nz);
 
+#ifdef PROF
+	stime = MPI_Wtime();
+#endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, &elts[0], &rowidx[0], &colptr[0], &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	CoinPackedMatrix tempmat(false, nvar, nvar, nz, &elts[0], &rowidx[0], &colptr[0], 0);
 	CoinPackedMatrix qwmat;
 	qwmat.reverseOrderedCopyOf(tempmat);
 
 	qwmat_map[nodeid] = qwmat;
 	PAR_DEBUG("return getSecondStageHessian - Qwmat - "<<qwmat.getNumRows()<<" x "<<qwmat.getNumCols() <<" nz "<<qwmat.getNumElements());
-	DEBUG(qwmat.dumpMatrix(););
+	DEBUG(qwmat.dumpMatrix();	);
 	return qwmat;
 }
 
@@ -503,19 +660,30 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen) {
 
 	int nz;
 	CallBackData cbd = { prob->userdata, 0, nodeid };
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, NULL, NULL, NULL, &cbd);
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	PAR_DEBUG(" nz "<<nz<< " - (0,"<<nodeid<<") - "<<ncon<<" x "<<n0);
 	std::vector<int> rowidx(nz, 0);
 	std::vector<int> colptr(n0 + 1, 0);
 	std::vector<double> elts(nz, 0.0);
-
+#ifdef PROF
+	stime = MPI_Wtime();
+#endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, &elts[0], &rowidx[0], &colptr[0], &cbd);
-
+#ifdef PROF
+	gprof.t_struct_building += MPI_Wtime() - stime;
+#endif
 	CoinPackedMatrix qtmat(true, n1, n0, nz, &elts[0], &rowidx[0], &colptr[0], 0);
 
 	qtmat_map[nodeid] = qtmat;
 	PAR_DEBUG("return getSecondStageCrossHessian - Qtmat - "<<qtmat.getNumRows()<<" x "<<qtmat.getNumCols() <<" nz "<<qtmat.getNumElements());
-	DEBUG(qtmat.dumpMatrix(););
+	DEBUG(qtmat.dumpMatrix();	);
+
 	return qtmat;
 }
 

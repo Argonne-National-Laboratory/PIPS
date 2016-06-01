@@ -81,6 +81,9 @@ extern int gUseReducedSpace;
 extern "C"
 int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
 {
+#ifdef PROF
+	double stime = MPI_Wtime();
+#endif
 	PAR_DEBUG("PipsNlpSolveStruct  - "<<gnprocs);
 	MPI_Comm comm = prob->comm;
 
@@ -123,6 +126,11 @@ int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
 
 	delete pipsOpt;
 
+#ifdef PROF
+	gprof.t_solver_lifetime = MPI_Wtime() - stime;
+	if(gmyid == 0)
+		report_timing(gprof);
+#endif
 	return 0;
 }
 

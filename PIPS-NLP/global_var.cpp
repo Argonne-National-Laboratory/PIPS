@@ -6,6 +6,7 @@
 
 int gmyid;
 int gnprocs;
+Profile gprof;
 
 void convert_to_csr(int m, int n, int* rowidx, int* colptr, double* elts, int nz, double* ret)
 {
@@ -26,3 +27,27 @@ void convert_to_csr(int m, int n, int* rowidx, int* colptr, double* elts, int nz
 		}
 	}
 }
+
+#ifdef PROF
+
+std::ostream& operator<<(std::ostream& os, const Profile& prof)
+{
+	return os<<"t_struct_building "<<prof.t_struct_building<<" "
+			<<"t_model_evaluation "<<prof.t_model_evaluation<<" "
+			<<"t_solver_lifetime "<<prof.t_solver_lifetime<<" "
+			<<"n_prob_info "<<prof.n_prob_info<<" "
+			<<"n_init_x0 "<<prof.n_init_x0<<" "
+			<<"n_feval "<<prof.n_feval<<" "
+			<<"n_eval_g "<<prof.n_eval_g<<" "
+			<<"n_grad_f "<<prof.n_grad_f<<" "
+			<<"n_jac_g "<<prof.n_jac_g<<" "
+			<<"n_laghess "<<prof.n_laghess<<" "
+			<<"n_write_solution "<<prof.n_write_solution<<" ";
+}
+
+void report_timing(Profile& p)
+{
+	std::cout<<"["<<gmyid<<"/"<<gnprocs<<"] " << " [ " <<p<<" ]"<< std::endl;
+}
+
+#endif
