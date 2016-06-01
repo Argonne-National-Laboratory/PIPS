@@ -388,4 +388,5 @@ int main(int argc, char* argv[]) {
 
 	PAR_DEBUG("end solve ");
 	MPI_Barrier(comm);
+    MPI_Finalize();
 }
