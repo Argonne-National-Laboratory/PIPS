@@ -7,7 +7,8 @@
 #include "sVars.h"
 #include "sTree.h"
 
-#include "../../PIPS-NLP/par_macro.h"
+#include "../../PIPS-NLP/global_var.h"
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
 
 StructJuMPsInfo::StructJuMPsInfo()
 {
@@ -21,17 +22,17 @@ StructJuMPsInfo::StructJuMPsInfo(sData *data_in):sInfo(data_in)
 StructJuMPsInfo::StructJuMPsInfo(sData *data_in, stochasticInput& in)
 	:sInfo(data_in)
 {
-	PAR_DEBUG("StructJuMPsInfo ( data_in , stochasticInput)  - id "<< nodeId());
+	MESSAGE("StructJuMPsInfo ( data_in , stochasticInput)  - id "<< nodeId());
 	parent = NULL;
 	stochInput = &(dynamic_cast<StructJuMPInput&>(in));
 
-	PAR_DEBUG("  in StructJuMPsInfo constr comm"<<data_in->stochNode->commWrkrs<<" "<<mpiComm<<"  "<<MPI_COMM_NULL);
+	MESSAGE("  in StructJuMPsInfo constr comm"<<data_in->stochNode->commWrkrs<<" "<<mpiComm<<"  "<<MPI_COMM_NULL);
 
 	//	iAmDistrib=0;
 	//	  if( MPI_COMM_NULL!=mpiComm) {
 	int size;
 	MPI_Comm_size(mpiComm, &size);
-	PAR_DEBUG("size of parallel procs "<<size);
+	MESSAGE("size of parallel procs "<<size);
 	//	    iAmDistrib = size==1?0:1;
 	//	  }
 	assert(MPI_COMM_NULL!=mpiComm);
@@ -44,7 +45,7 @@ StructJuMPsInfo::StructJuMPsInfo(sData *data_in, stochasticInput& in)
 StructJuMPsInfo::StructJuMPsInfo(sData *data_in, stochasticInput& in, const int idx)
 	:sInfo(data_in)
 {
-	PAR_DEBUG("StructJuMPsInfo ( data_in , structJuMPInput, "<<idx<<") id ("<<nodeId()<<")");
+	MESSAGE("StructJuMPsInfo ( data_in , structJuMPInput, "<<idx<<") id ("<<nodeId()<<")");
 
 	stochInput = &(dynamic_cast<StructJuMPInput&>(in));
 //	data_in->inputNlp = this;
@@ -55,7 +56,7 @@ StructJuMPsInfo::StructJuMPsInfo(sData *data_in, stochasticInput& in, const int 
 		MPI_Comm_size(mpiComm, &size);
 //		iAmDistrib = size == 1 ? 0 : 1;
 //	}
-	PAR_DEBUG("number of children "<<data_in->children.size());
+	MESSAGE("number of children "<<data_in->children.size());
 	createChildren(data_in,*stochInput);
 }
 
@@ -71,7 +72,7 @@ int StructJuMPsInfo::nodeId()
 }
 
 void StructJuMPsInfo::createChildren(sData *data_in, stochasticInput& in){
-	PAR_DEBUG("createChildren");
+	MESSAGE("createChildren");
 //	int mype_;
 //		MPI_Comm_rank(in.prob->comm/* MPI_COMM_WORLD*/, &mype_);
 
@@ -80,7 +81,7 @@ void StructJuMPsInfo::createChildren(sData *data_in, stochasticInput& in){
 			AddChild(new StructJuMPsInfo(data_in->children[it], in, it));
 		}
 		else {
-			PAR_DEBUG("comm null "<<MPI_COMM_NULL<<" commwrk "<<stochNode->children[it]->commWrkrs);
+			MESSAGE("comm null "<<MPI_COMM_NULL<<" commwrk "<<stochNode->children[it]->commWrkrs);
 			AddChild(new sInfoDummy());
 		}
 		children[it]->parent = this;
@@ -89,7 +90,7 @@ void StructJuMPsInfo::createChildren(sData *data_in, stochasticInput& in){
 }
 
 double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
-	PAR_DEBUG("enter ObjValue -");
+	MESSAGE("enter ObjValue -");
 	sVars* svars = dynamic_cast<sVars*>(vars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
 	OoqpVector& local_X = *(dynamic_cast<StochVector&>(*svars->x).vec);
@@ -100,37 +101,37 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 	double robj = 0.0;
 	if(parent==NULL)
 	{
-		PAR_DEBUG(" ObjValue - parent is NULL");
+		MESSAGE(" ObjValue - parent is NULL");
 		double objv = 0.0;
 		if(gmyid == 0)
 		{
-			PAR_DEBUG("ObjValue - gmyid=="<<gmyid);
+			MESSAGE("ObjValue - gmyid=="<<gmyid);
 			assert(nodeId() == 0);
 			CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 			double obj;
-#ifdef PROF
+#ifdef NLPTIMING
 			double stime = MPI_Wtime();
 #endif
 			stochInput->prob->eval_f(local_var,local_var,&obj,&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 			gprof.t_model_evaluation += MPI_Wtime()-stime;
 			gprof.n_feval += 1;
 #endif
 			objv += obj;
 			PRINT_ARRAY("local_var",local_var,locNx);
-			PAR_DEBUG("objv = "<<objv);
+			MESSAGE("objv = "<<objv);
 		}
 		for(size_t it=0;it<children.size();it++) {
-			PAR_DEBUG("it - "<<it );
+			MESSAGE("it - "<<it );
 			objv += children[it]->ObjValue(svars->children[it]);
 		}
-		PAR_DEBUG("objv = "<<objv);
+		MESSAGE("objv = "<<objv);
 		MPI_Allreduce(&objv, &robj, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
-		PAR_DEBUG("ObjValue - after reduce - global robj="<<robj);
+		MESSAGE("ObjValue - after reduce - global robj="<<robj);
 	}
 	else
 	{
-		PAR_DEBUG("ObjValue - parent  not NULL - "<<nodeId());
+		MESSAGE("ObjValue - parent  not NULL - "<<nodeId());
 		int parid = parent->stochNode->id();
 		assert(parid == 0);
 		double parent_var[parent->locNx];
@@ -138,26 +139,26 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 		parent_X->copyIntoArray(parent_var);
 		assert(nodeId() != 0);
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_f(parent_var,local_var,&robj,&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime()-stime;
 		gprof.n_feval += 1;
 #endif
 		robj = robj;
 		PRINT_ARRAY("parent_var",parent_var,parent->locNx);
 		PRINT_ARRAY("local_var",local_var, locNx);
-		PAR_DEBUG("robj="<<robj);
+		MESSAGE("robj="<<robj);
 	}
 
-	PAR_DEBUG("end ObjValue "<<robj);
+	MESSAGE("end ObjValue "<<robj);
 	return robj;
 }
 
 int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
-	PAR_DEBUG("enter ObjGrad");
+	MESSAGE("enter ObjGrad");
 	sVars * svars = dynamic_cast<sVars*>(vars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
 	OoqpVector& local_X = *(dynamic_cast<StochVector&>(*svars->x).vec);
@@ -170,15 +171,15 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 	local_X.copyIntoArray(local_var);
 
 	std::vector<double> local_grad(locNx,0.0);
-//	PAR_DEBUG("gymyid ="<<gmyid);
+//	MESSAGE("gymyid ="<<gmyid);
 	if(gmyid == 0)
 	{
 		CallBackData cbd = {stochInput->prob->userdata, nodeId(), nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_grad_f(local_var,local_var,&local_grad[0],&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_grad_f += 1;
 #endif
@@ -187,7 +188,7 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 	}
 
 	for(size_t it=0; it<children.size(); it++){
-		PAR_DEBUG("it - "<<it);
+		MESSAGE("it - "<<it);
 		(children[it])->ObjGrad_FromSon(svars->children[it],sGrad->children[it], &local_grad[0]);
 	}
 	PRINT_ARRAY("local_grad",local_grad,locNx);
@@ -196,13 +197,13 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 	MPI_Allreduce(&local_grad[0], rgrad, locNx, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 	sGrad->vec->copyFromArray(rgrad);
 	PRINT_ARRAY("after reduce - rgrad", rgrad, locNx);
-	PAR_DEBUG("exit ObjGrad ");
+	MESSAGE("exit ObjGrad ");
 	return 1;
 }
 
 void StructJuMPsInfo::ObjGrad_FromSon(NlpGenVars* vars, OoqpVector* grad, double* pgrad)
 {
-	PAR_DEBUG("enter ObjGrad_FromSon - "<<nodeId());
+	MESSAGE("enter ObjGrad_FromSon - "<<nodeId());
 	assert(parent!=NULL);
 //	assert(parent->locNx == pgrad.size());
 	sVars * svars = dynamic_cast<sVars*>(vars);
@@ -222,30 +223,30 @@ void StructJuMPsInfo::ObjGrad_FromSon(NlpGenVars* vars, OoqpVector* grad, double
 	PRINT_ARRAY("local_var",local_var,locNx);
 	std::vector<double> parent_part(parent->locNx,0.0);
 	CallBackData cbd_parent = {stochInput->prob->userdata, nodeId(), parent->stochNode->id()};
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	stochInput->prob->eval_grad_f(parent_var,local_var,&parent_part[0],&cbd_parent);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_model_evaluation += MPI_Wtime() - stime;
 	gprof.n_grad_f += 1;
 #endif
 
-	PAR_DEBUG(" --- parent contribution -");
+	MESSAGE(" --- parent contribution -");
 	PRINT_ARRAY("parent_part",parent_part,parent->locNx);
 
 	std::vector<double> this_part(locNx,0.0);
 	CallBackData cbd_this = {stochInput->prob->userdata, nodeId(), nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	stochInput->prob->eval_grad_f(parent_var,local_var,&this_part[0],&cbd_this);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_model_evaluation += MPI_Wtime() - stime;
 	gprof.n_grad_f += 1;
 #endif
 
-	PAR_DEBUG(" --- this node -");
+	MESSAGE(" --- this node -");
 	PRINT_ARRAY("this_part",this_part,locNx);
 
 	StochVector* sGrad = dynamic_cast<StochVector*>(grad);
@@ -256,16 +257,16 @@ void StructJuMPsInfo::ObjGrad_FromSon(NlpGenVars* vars, OoqpVector* grad, double
 
 
 void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVector *conIneq){
-	PAR_DEBUG("enter ConstraintBody  - nodeid - "<<nodeId());
-//	PAR_DEBUG("S1 -- ----");
+	MESSAGE("enter ConstraintBody  - nodeid - "<<nodeId());
+//	MESSAGE("S1 -- ----");
 	sVars * svars = dynamic_cast<sVars*>(vars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
 	OoqpVector& local_X = *(dynamic_cast<StochVector&>(*svars->x).vec);
-//	PAR_DEBUG("S2 -- ----");
+//	MESSAGE("S2 -- ----");
 
 	double local_var[locNx];
 	local_X.copyIntoArray(local_var);
-	DEBUG( local_X.print(); );
+	IF_VERBOSE_DO( local_X.print(); );
 	PRINT_ARRAY("local_var ",local_var, locNx);
 
 
@@ -278,11 +279,11 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 		parent_X->copyIntoArray(parent_var);
 
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_g(parent_var,local_var,coneq,coninq,&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime()-stime;
 		gprof.n_eval_g += 1;
 #endif
@@ -295,11 +296,11 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 	{
 		assert(nodeId()==0);
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_g(local_var,local_var,coneq,coninq,&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime()-stime;
 		gprof.n_eval_g += 1;
 #endif
@@ -309,36 +310,36 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 	}
 
 	StochVector* sconeq = dynamic_cast<StochVector*>(conEq);
-//	PAR_DEBUG("sconeq size "<<sconeq->vec->n);
+//	MESSAGE("sconeq size "<<sconeq->vec->n);
 	assert(sconeq->vec->n == locMy);
 	sconeq->vec->copyFromArray(coneq);
 
 	StochVector* sconinq = dynamic_cast<StochVector*>(conIneq);
-//	PAR_DEBUG("sconinq size "<<sconinq->vec->n);
+//	MESSAGE("sconinq size "<<sconinq->vec->n);
 	assert(sconinq->vec->n == locMz);
 	sconinq->vec->copyFromArray(coninq);
 
 	for(size_t it=0; it<children.size(); it++){
-		PAR_DEBUG("it - "<<it);
+		MESSAGE("it - "<<it);
 		(children[it])->ConstraintBody(svars->children[it],sconeq->children[it],sconinq->children[it]);
 	}
-	PAR_DEBUG("end ConstraintBody");
+	MESSAGE("end ConstraintBody");
 }
 
 void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 {
 //	note: no linking constraint handling
-	PAR_DEBUG("enter JacFull - "<<nodeId());
+	MESSAGE("enter JacFull - "<<nodeId());
 
 	long long mA, nA, mC, nC, mB,nB,mD,nD;
 	Amat->getSize(mA,nA);
 	Cmat->getSize(mC,nC);
 	Bmat->getSize(mB,nB);
 	Dmat->getSize(mD,nD);
-//	PAR_DEBUG(" Amat "<<mA<<"  "<<nA<<"  nz"<<Amat->numberOfNonZeros());
-//	PAR_DEBUG(" Cmat "<<mC<<"  "<<nC<<"  nz"<<Cmat->numberOfNonZeros());
-//	PAR_DEBUG(" Bmat "<<mB<<"  "<<nB<<"  nz"<<Bmat->numberOfNonZeros());
-//	PAR_DEBUG(" Dmat "<<mD<<"  "<<nD<<"  nz"<<Dmat->numberOfNonZeros());
+//	MESSAGE(" Amat "<<mA<<"  "<<nA<<"  nz"<<Amat->numberOfNonZeros());
+//	MESSAGE(" Cmat "<<mC<<"  "<<nC<<"  nz"<<Cmat->numberOfNonZeros());
+//	MESSAGE(" Bmat "<<mB<<"  "<<nB<<"  nz"<<Bmat->numberOfNonZeros());
+//	MESSAGE(" Dmat "<<mD<<"  "<<nD<<"  nz"<<Dmat->numberOfNonZeros());
 
 	sVars * svars = dynamic_cast<sVars*>(vars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*svars->x);
@@ -349,17 +350,17 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 	if(parent == NULL){
 		//only B D matrix
 		assert(nodeId() == 0);
-		PAR_DEBUG("JacFull -- parent is NULL");
+		MESSAGE("JacFull -- parent is NULL");
 		int e_nz = Bmat->numberOfNonZeros();
 		int i_nz = Dmat->numberOfNonZeros();
-//		PAR_DEBUG("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);
+//		MESSAGE("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);
 
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 ////		have to request the structure again
 //		stochInput->prob->eval_jac_g(local_var,local_var,
 //				&e_nz,NULL,NULL,NULL,
 //				&i_nz,NULL,NULL,NULL,&cbd);
-//		PAR_DEBUG("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);  //should fixed structure from stochcasticInput interface
+//		MESSAGE("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);  //should fixed structure from stochcasticInput interface
 
 		std::vector<int> e_rowidx(e_nz);
 		std::vector<int> e_colptr(locNx+1,0);
@@ -369,13 +370,13 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		std::vector<int> i_colptr(locNx+1,0);
 		std::vector<double> i_elts(i_nz);
 
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime =MPI_Wtime();
 #endif
 		stochInput->prob->eval_jac_g(local_var,local_var,
 					&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
 					&i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_jac_g += 1;
 #endif
@@ -398,7 +399,7 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 	}
 	else{
 		//all A B C D
-		PAR_DEBUG("JacFull -- with parent");
+		MESSAGE("JacFull -- with parent");
 		double parent_var[parent->locNx];
 		OoqpVector* parent_X = (vars_X.parent->vec);
 		parent_X->copyIntoArray(parent_var);
@@ -407,11 +408,11 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int i_nz_Cmat = Cmat->numberOfNonZeros();
 
 		CallBackData cbd_link = {stochInput->prob->userdata,nodeId(),parent->stochNode->id()};
-//		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
+//		MESSAGE("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
 //		stochInput->prob->eval_jac_g(parent_var,local_var,
 //					&e_nz_Amat,NULL,NULL,NULL,
 //					&i_nz_Cmat,NULL,NULL,NULL,&cbd_link);
-//		PAR_DEBUG("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);  //should fixed structure from stochcasticInput interface
+//		MESSAGE("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);  //should fixed structure from stochcasticInput interface
 
 		int e_amat_rowidx[e_nz_Amat];
 		int e_amat_colptr[parent->locNx+1];
@@ -421,13 +422,13 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int i_cmat_colptr[parent->locNx+1];
 		double i_cmat_elts[i_nz_Cmat];
 
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_jac_g(parent_var,local_var,
 				&e_nz_Amat,e_amat_elts,e_amat_rowidx,e_amat_colptr,
 				&i_nz_Cmat,i_cmat_elts,i_cmat_rowidx,i_cmat_colptr, &cbd_link);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_jac_g += 1;
 #endif
@@ -456,13 +457,13 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int i_dmat_colptr[locNx+1];
 		double i_dmat_elts[i_nz_Dmat];
 
-#ifdef PROF
+#ifdef NLPTIMING
 		stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_jac_g(parent_var,local_var,
 				&e_nz_Bmat,e_bmat_elts,e_bmat_rowidx,e_bmat_colptr,
 				&i_nz_Dmat,i_dmat_elts,i_dmat_rowidx,i_dmat_colptr, &cbd_diag);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_jac_g += 1;
 #endif
@@ -491,20 +492,20 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 	for(size_t it=0; it<children.size(); it++)
 		children[it]->JacFull(svars->children[it], NULL,NULL);
 
-	PAR_DEBUG("exit JacFull");
+	MESSAGE("exit JacFull");
 
 }
 
 
 void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 {
-	PAR_DEBUG("enter Hessian");
+	MESSAGE("enter Hessian");
 	//update Qdiag and Qborder
 	long long mqi, nqi, mqb, nqb;
 	Qdiag->getSize(mqi,nqi);
 	Qborder->getSize(mqb,nqb);
-//	PAR_DEBUG(" Qdiag "<<mqi<<"  "<<nqi<<"  nz"<<Qdiag->numberOfNonZeros());
-//	PAR_DEBUG(" Qborder "<<mqb<<"  "<<nqb<<"  nz"<<Qborder->numberOfNonZeros());
+//	MESSAGE(" Qdiag "<<mqi<<"  "<<nqi<<"  nz"<<Qdiag->numberOfNonZeros());
+//	MESSAGE(" Qborder "<<mqb<<"  "<<nqb<<"  nz"<<Qborder->numberOfNonZeros());
 
 	sVars * vars = dynamic_cast<sVars*>(nlpvars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*vars->x);
@@ -529,15 +530,15 @@ void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 	std::vector<double> elts(nzqd,0.0);
 
 	if(gmyid == 0) {
-		PAR_DEBUG("gmyid="<<gmyid);
+		MESSAGE("gmyid="<<gmyid);
 		int rowidx[nzqd];
 		int colptr[locNx+1];
 		CallBackData cbd = {stochInput->prob->userdata,0,0};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_h(local_var,local_var,&lam[0],&nzqd,&elts[0],rowidx,colptr,&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_laghess += 1;
 #endif
@@ -549,7 +550,7 @@ void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 	}
 
 	for(size_t it=0; it<children.size(); it++){
-		PAR_DEBUG("it - "<<it);
+		MESSAGE("it - "<<it);
 		children[it]->Hessian_FromSon(vars->children[it],&elts[0]);
 	}
 	PRINT_ARRAY("elts",elts,nzqd);
@@ -560,16 +561,16 @@ void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 	PRINT_ARRAY("after reudce - g_elts",g_elts,nzqd);
 
 	Qdiag->copyMtxFromDouble(nzqd,g_elts);
-	PAR_DEBUG("exit Hessian");
+	MESSAGE("exit Hessian");
 }
 
 void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
-	PAR_DEBUG("enter Hessian_FromSon - "<<nodeId());
+	MESSAGE("enter Hessian_FromSon - "<<nodeId());
 	long long mqi, nqi, mqb, nqb;
 	Qdiag->getSize(mqi,nqi);
 	Qborder->getSize(mqb,nqb);
-//	PAR_DEBUG(" Qdiag "<<mqi<<"  "<<nqi<<"  nz"<<Qdiag->numberOfNonZeros());
-//	PAR_DEBUG(" Qborder "<<mqb<<"  "<<nqb<<"  nz"<<Qborder->numberOfNonZeros());
+//	MESSAGE(" Qdiag "<<mqi<<"  "<<nqi<<"  nz"<<Qdiag->numberOfNonZeros());
+//	MESSAGE(" Qborder "<<mqb<<"  "<<nqb<<"  nz"<<Qborder->numberOfNonZeros());
 
 	sVars * vars = dynamic_cast<sVars*>(nlpvars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*vars->x);
@@ -599,17 +600,17 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 	PRINT_ARRAY("lam",lam,locMy+locMz);
 	//pnzqd
 	{
-		PAR_DEBUG("  -- Parent contribution - ");
+		MESSAGE("  -- Parent contribution - ");
 		int pnzqd = parent->Qdiag->numberOfNonZeros();
 		double elts[pnzqd];
 		int rowidx[pnzqd];
 		int colptr[parent->locNx+1];
 		CallBackData cbd_pnzqd = {stochInput->prob->userdata,nodeId(),0};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&pnzqd,elts,rowidx,colptr,&cbd_pnzqd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_laghess += 1;
 #endif
@@ -621,17 +622,17 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 
 	//nzqd
 	{
-		PAR_DEBUG(" --- Child diagonal");
+		MESSAGE(" --- Child diagonal");
 		int nzqd = Qdiag->numberOfNonZeros();
 		double elts[nzqd];
 		int rowidx[nzqd];
 		int colptr[locNx+1];
 		CallBackData cbd_nzqd = {stochInput->prob->userdata,nodeId(),nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqd,elts,rowidx,colptr,&cbd_nzqd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_laghess += 1;
 #endif
@@ -643,17 +644,17 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 
 	//nzqb
 	{
-		PAR_DEBUG(" --- linking border");
+		MESSAGE(" --- linking border");
 		int nzqb = Qborder->numberOfNonZeros();
 		double elts[nzqb];
 		int rowidx[nzqb];
 		int colptr[parent->locNx+1];
 		CallBackData cbd_nzqb = {stochInput->prob->userdata,0,nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqb,elts,rowidx,colptr,&cbd_nzqb);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_laghess += 1;
 #endif
@@ -665,11 +666,11 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		convert_to_csr(locNx,parent->locNx,&rowidx[0],&colptr[0],&elts[0],nzqb,csr_ret);
 		Qborder->copyMtxFromDouble(nzqb,csr_ret);
 	}
-	PAR_DEBUG("exit Hessian_FromSon");
+	MESSAGE("exit Hessian_FromSon");
 }
 
 void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
-	PAR_DEBUG("enter get_InitX0 - "<<nodeId());
+	MESSAGE("enter get_InitX0 - "<<nodeId());
 	StochVector* vars_X = dynamic_cast<StochVector*>(vX);
 	OoqpVector* local_X = vars_X->vec;
 //	assert(locNx == vX->n);
@@ -677,27 +678,27 @@ void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
 
 	double temp_var[locNx];
 	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	stochInput->prob->init_x0(temp_var,&cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_model_evaluation += MPI_Wtime() - stime;
 	gprof.n_init_x0 += 1;
 #endif
 	PRINT_ARRAY("temp_var",temp_var,locNx);
-	DEBUG( local_X->print(); );
+	IF_VERBOSE_DO( local_X->print(); );
 	local_X->copyFromArray(temp_var);
-	DEBUG( local_X->print(); );
+	IF_VERBOSE_DO( local_X->print(); );
 	for(size_t it=0; it<children.size(); it++)
 	    children[it]->get_InitX0(vars_X->children[it]);
 
-	PAR_DEBUG("exit get_InitX0");
+	MESSAGE("exit get_InitX0");
 }
 
 void StructJuMPsInfo::writeSolution(NlpGenVars* nlpvars)
 {
-	PAR_DEBUG("writeSolution");
+	MESSAGE("writeSolution");
 	sVars * vars = dynamic_cast<sVars*>(nlpvars);
 	StochVector& vars_X = dynamic_cast<StochVector&>(*vars->x);
 	StochVector& vars_Y = dynamic_cast<StochVector&>(*vars->y);
@@ -714,18 +715,18 @@ void StructJuMPsInfo::writeSolution(NlpGenVars* nlpvars)
 	local_Z->copyIntoArray(local_z);
 
 	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
-#ifdef PROF
+#ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 	stochInput->prob->write_solution(local_var,local_y,local_z, &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime() - stime;
 		gprof.n_write_solution += 1;
 #endif
 
 	for(size_t it=0; it<children.size(); it++){
-		PAR_DEBUG("it - "<<it);
+		MESSAGE("it - "<<it);
 		children[it]->writeSolution(vars->children[it]);
 	}
-	PAR_DEBUG("end writeSolution");
+	MESSAGE("end writeSolution");
 }

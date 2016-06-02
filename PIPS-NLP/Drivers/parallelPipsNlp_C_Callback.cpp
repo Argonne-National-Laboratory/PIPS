@@ -29,7 +29,8 @@
 
 #include "pipsOptions.h"
 
-#include "../par_macro.h"
+#include "../global_var.h"
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
 
 extern "C"
 PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
@@ -47,8 +48,8 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 {
 	MPI_Comm_rank(comm, &gmyid);
 	MPI_Comm_size(comm, &gnprocs);
-	PAR_DEBUG("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
-	PAR_DEBUG("CreatePipsNlpProblemStruct - C");
+	MESSAGE("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
+	MESSAGE("CreatePipsNlpProblemStruct - C");
 
 //	pipsOptions *pipsOpt = new pipsOptions();
 //	pipsOpt->readFile();
@@ -81,10 +82,10 @@ extern int gUseReducedSpace;
 extern "C"
 int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
 {
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
-	PAR_DEBUG("PipsNlpSolveStruct  - "<<gnprocs);
+	MESSAGE("PipsNlpSolveStruct  - "<<gnprocs);
 	MPI_Comm comm = prob->comm;
 
 	pipsOptions *pipsOpt = new pipsOptions();
@@ -93,15 +94,15 @@ int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
 	gInnerSCsolve=0;
 
 	StructJuMPInput *s = new StructJuMPInput(prob);
-	PAR_DEBUG("comm is "<<comm);
+	MESSAGE("comm is "<<comm);
 	assert(comm == MPI_COMM_WORLD);
 
-	PAR_DEBUG("before PIPSIpmInterface created .." );
+	MESSAGE("before PIPSIpmInterface created .." );
 	NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
-	PAR_DEBUG("PIPSIpmInterface created .." );
+	MESSAGE("PIPSIpmInterface created .." );
 
 	//  delete s;
-	PAR_DEBUG("AMPL NL  deleted ... solving");
+	MESSAGE("AMPL NL  deleted ... solving");
 
 	if (gmyid == 0) {
 		std::cout << "  \n  -----------------------------------------------\n"
@@ -126,10 +127,9 @@ int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
 
 	delete pipsOpt;
 
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_solver_lifetime = MPI_Wtime() - stime;
-	if(gmyid == 0)
-		report_timing(gprof);
+	gprof.report_timing();
 #endif
 	return 0;
 }

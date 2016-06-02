@@ -1,20 +1,20 @@
 #include "StructJuMPInput.h"
 
-#include "../PIPS-NLP/par_macro.h"
-
+#include "../PIPS-NLP/global_var.h"
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
 #include <string>
 #include <iostream>
 #include <sstream>
 
 StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p) {
-	PAR_DEBUG("enter constructor StructJuMPInput - "<<p);
+	MESSAGE("enter constructor StructJuMPInput - "<<p);
 	this->prob = p;
 	useInputDate = 1;
 	datarootname = "StructJuMP";
-	PAR_DEBUG("exit constructor StructJuMPInput - ");
+	MESSAGE("exit constructor StructJuMPInput - ");
 
-#ifdef PROF
-	report_timing(gprof);
+#ifdef NLPTIMING
+//	report_timing(gprof);
 #endif
 }
 StructJuMPInput::~StructJuMPInput() {
@@ -26,34 +26,34 @@ int StructJuMPInput::nScenarios() {
 }
 
 void StructJuMPInput::get_prob_info(int nodeid) {
-	PAR_DEBUG("get_prob_info  - nodeid "<<nodeid);
+	MESSAGE("get_prob_info  - nodeid "<<nodeid);
 	int nv = 0;
 	int mc = 0;
 
 	CallBackData data = { prob->userdata, nodeid, nodeid };
-//	PAR_DEBUG("data -"<<&data);
-	PAR_DEBUG("get_prob_info callback data ptr - "<<data.row_node_id);
-#ifdef PROF
+//	MESSAGE("data -"<<&data);
+	MESSAGE("get_prob_info callback data ptr - "<<data.row_node_id);
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->prob_info(&nv, NULL, NULL, &mc, NULL, NULL, &data);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 	gprof.n_prob_info+=1;
 #endif
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
-	PAR_DEBUG("ncon,nvar "<<mc<<", "<<nv);
+	MESSAGE("ncon,nvar "<<mc<<", "<<nv);
 
 	std::vector<double> collb(nv);
 	std::vector<double> colub(nv);
 	std::vector<double> rowlb(mc);
 	std::vector<double> rowub(mc);
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	prob->prob_info(&nv, &collb[0], &colub[0], &mc, &rowlb[0], &rowub[0], &data);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 	gprof.n_prob_info+=1;
 #endif
@@ -87,64 +87,64 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	PRINT_ARRAY(" Row Upper - ", rowub, mc);
 
 
-	PAR_DEBUG("end get_prob_info  - nodeid "<<nodeid<< "(ncon,nvar)=("<<mc<<","<<nv<<") -- e_ncon "<<e_mc<< " i_ncon "<<i_mc);
+	MESSAGE("end get_prob_info  - nodeid "<<nodeid<< "(ncon,nvar)=("<<mc<<","<<nv<<") -- e_ncon "<<e_mc<< " i_ncon "<<i_mc);
 
 }
 
 int StructJuMPInput::nFirstStageVars() {
-	PAR_DEBUG("nFirstStageVars");
+	MESSAGE("nFirstStageVars");
 	std::map<int, int>::iterator it = nvar_map.find(0);
 	if (it != nvar_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(0);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return nvar_map[0];
 }
 int StructJuMPInput::nFirstStageCons() {
-	PAR_DEBUG("nFirstStageCons");
+	MESSAGE("nFirstStageCons");
 	std::map<int, int>::iterator it = ncon_map.find(0);
 	if (it != ncon_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(0);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return ncon_map[0];
 }
 int StructJuMPInput::nSecondStageVars(int scen) {
 	int nodeid = scen + 1;
-	PAR_DEBUG("nSecondStageVars - "<<nodeid);
+	MESSAGE("nSecondStageVars - "<<nodeid);
 	std::map<int, int>::iterator it = nvar_map.find(nodeid);
 	if (it != nvar_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(nodeid);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return nvar_map[nodeid];
 }
 int StructJuMPInput::nSecondStageCons(int scen) {
 	int nodeid = scen + 1;
-	PAR_DEBUG("nSecondStageCons - "<<nodeid);
+	MESSAGE("nSecondStageCons - "<<nodeid);
 	std::map<int, int>::iterator it = ncon_map.find(nodeid);
 	if (it != ncon_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(nodeid);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return ncon_map[nodeid];
@@ -154,11 +154,11 @@ std::vector<double> StructJuMPInput::getFirstStageColLB() {
 	std::map<int, std::vector<double> >::iterator it = collb_map.find(0);
 	if (it != collb_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(0);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return collb_map[0];
@@ -167,31 +167,31 @@ std::vector<double> StructJuMPInput::getFirstStageColUB() {
 	std::map<int, std::vector<double> >::iterator it = colub_map.find(0);
 	if (it != colub_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(0);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return colub_map[0];
 }
 
 std::vector<double> StructJuMPInput::getFirstStageObj() {
-	PAR_DEBUG("getFirstStageObj - 0");
+	MESSAGE("getFirstStageObj - 0");
 	assert(nvar_map.find(0) != nvar_map.end());
 	int nvar = nvar_map[0];
 	double x0[nvar];
 	std::vector<double> grad(nvar);
 	CallBackData data = { prob->userdata, 0, 0 };
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_grad_f(x0, x0, &grad[0], &data);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
-	PAR_DEBUG("end getFirstStageObj - 0");
+	MESSAGE("end getFirstStageObj - 0");
 	return grad;
 }
 std::vector<std::string> StructJuMPInput::getFirstStageColNames() {
@@ -216,11 +216,11 @@ std::vector<double> StructJuMPInput::getFirstStageRowUB() {
 	std::map<int, std::vector<double> >::iterator it = rowub_map.find(0);
 	if (it != rowub_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(0);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return rowub_map[0];
@@ -245,11 +245,11 @@ std::vector<double> StructJuMPInput::getSecondStageColLB(int scen) {
 	std::map<int, std::vector<double> >::iterator it = collb_map.find(nodeid);
 	if (it != collb_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(nodeid);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 
@@ -260,18 +260,18 @@ std::vector<double> StructJuMPInput::getSecondStageColUB(int scen) {
 	std::map<int, std::vector<double> >::iterator it = colub_map.find(nodeid);
 	if (it != colub_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(nodeid);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return colub_map[nodeid];
 }
 // objective vector, already multiplied by probability
 std::vector<double> StructJuMPInput::getSecondStageObj(int scen) {
-	PAR_DEBUG("getSecondStageObj -  nodeid "<<scen+1);
+	MESSAGE("getSecondStageObj -  nodeid "<<scen+1);
 	int nodeid = scen + 1;
 	assert(nvar_map.find(nodeid) != nvar_map.end());
 	assert(nvar_map.find(0) != nvar_map.end());
@@ -281,19 +281,19 @@ std::vector<double> StructJuMPInput::getSecondStageObj(int scen) {
 	double x1[n1];
 	std::vector<double> grad(n1);
 	CallBackData data = { prob->userdata, nodeid, nodeid };
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_grad_f(x0, x1, &grad[0], &data);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
-	PAR_DEBUG("end getSecondStageObj - nodeid"<<scen+1);
+	MESSAGE("end getSecondStageObj - nodeid"<<scen+1);
 	return grad;
 }
 std::vector<std::string> StructJuMPInput::getSecondStageColNames(int scen) {
 	int nodeid = scen + 1;
-	PAR_DEBUG("getSecondStageColNames - nodeid"<<nodeid);
+	MESSAGE("getSecondStageColNames - nodeid"<<nodeid);
 	assert(nvar_map.find(nodeid) != nvar_map.end());
 	assert(nvar_map.find(0) != nvar_map.end());
 	int i0 = nvar_map[0];
@@ -308,37 +308,37 @@ std::vector<std::string> StructJuMPInput::getSecondStageColNames(int scen) {
 }
 std::vector<double> StructJuMPInput::getSecondStageRowUB(int scen) {
 	int nodeid = scen + 1;
-	PAR_DEBUG("getSecondStageRowUB - nodeid"<<nodeid);
+	MESSAGE("getSecondStageRowUB - nodeid"<<nodeid);
 	std::map<int, std::vector<double> >::iterator it = rowub_map.find(nodeid);
 	if (it != rowub_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(nodeid);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return rowub_map[nodeid];
 }
 std::vector<double> StructJuMPInput::getSecondStageRowLB(int scen) {
 	int nodeid = scen + 1;
-	PAR_DEBUG("getSecondStageRowLB - nodeid"<<nodeid);
+	MESSAGE("getSecondStageRowLB - nodeid"<<nodeid);
 	std::map<int, std::vector<double> >::iterator it = rowlb_map.find(nodeid);
 	if (it != rowlb_map.end())
 		return it->second;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	get_prob_info(nodeid);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	return rowlb_map[nodeid];
 }
 std::vector<std::string> StructJuMPInput::getSecondStageRowNames(int scen) {
 	int nodeid = scen + 1;
-	PAR_DEBUG("getSecondStageRowNames - nodeid"<<nodeid);
+	MESSAGE("getSecondStageRowNames - nodeid"<<nodeid);
 	assert(ncon_map.find(0) != ncon_map.end());
 	assert(ncon_map.find(nodeid) != ncon_map.end());
 	int ncon = ncon_map[nodeid];
@@ -360,16 +360,16 @@ bool StructJuMPInput::isSecondStageColInteger(int scen, int col) {
 
 // returns the column-oriented first-stage constraint matrix (A matrix)
 CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
-	PAR_DEBUG("getFirstStageConstraints ");
+	MESSAGE("getFirstStageConstraints ");
 	int nvar = nvar_map[0];
 	CallBackData cbd = { prob->userdata, 0, 0 };
 	std::vector<double> x0(nvar, 1.0);
 	int e_nz, i_nz;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_jac_g(&x0[0], &x0[0], &e_nz, NULL, NULL, NULL, &i_nz, NULL, NULL, NULL, &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 
@@ -380,11 +380,11 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	std::vector<int> i_rowidx(i_nz);
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	prob->eval_jac_g(&x0[0], &x0[0], &e_nz, &e_elts[0], &e_rowidx[0], &e_colptr[0], &i_nz, &i_elts[0], &i_rowidx[0], &i_colptr[0], &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 
@@ -399,12 +399,12 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 
 	assert(amat.getNumCols() == nvar);
 	assert(amat.getNumRows() == ncon_map[0]);
-	DEBUG(amat.dumpMatrix(););
-	PAR_DEBUG("end getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols()<<" nz "<<amat.getNumElements());
+	IF_VERBOSE_DO(amat.dumpMatrix(););
+	MESSAGE("end getFirstStageConstraints "<<amat.getNumRows()<<" x "<<amat.getNumCols()<<" nz "<<amat.getNumElements());
 
 //	CoinPackedMatrix arow;
 //	arow.reverseOrderedCopyOf(amat);
-//	PAR_DEBUG("arow "<<arow->getNumRows()<<" "<<arow->getNumCols()<<" "<<arow->getNumElements());
+//	MESSAGE("arow "<<arow->getNumRows()<<" "<<arow->getNumCols()<<" "<<arow->getNumElements());
 
 //	CoinPackedMatrix Arow, testmat;
 //	int m = 2, n = 3;
@@ -412,9 +412,9 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 //	int rowidx[4] ={1,1,2,1};
 //	double vals[4] = {1.1,1.2,1.3,1.4};
 //	testmat.copyOf(true,m,n,4,vals,rowidx,colptr,0);
-//	PAR_DEBUG("testmat "<<testmat.getNumRows()<<" "<<testmat.getNumCols()<<" "<<testmat.getNumElements());
+//	MESSAGE("testmat "<<testmat.getNumRows()<<" "<<testmat.getNumCols()<<" "<<testmat.getNumElements());
 //	Arow.reverseOrderedCopyOf( testmat );
-//	PAR_DEBUG("testmat "<<testmat.getNumRows()<<" "<<testmat.getNumCols()<<" "<<testmat.getNumElements()<<
+//	MESSAGE("testmat "<<testmat.getNumRows()<<" "<<testmat.getNumCols()<<" "<<testmat.getNumElements()<<
 //			" Arow -"<<Arow.getNumRows()<<" "<<Arow.getNumCols()<<" "<<Arow.getNumElements());
 
 	return amat;
@@ -422,12 +422,12 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 // returns the column-oriented second-stage constraint matrix (W matrix)
 CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	int nodeid = scen + 1;
-	PAR_DEBUG("getSecondStageConstraints - Wmat -  "<<(scen+1));
+	MESSAGE("getSecondStageConstraints - Wmat -  "<<(scen+1));
 	//Bmat + Dmat  = Wmat
 
 	std::map<int, CoinPackedMatrix>::iterator it = wmat_map.find(nodeid);
 	if (it != wmat_map.end()) {
-		PAR_DEBUG("return (quick) getSecondStageConstraints - Wmat -  "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
+		MESSAGE("return (quick) getSecondStageConstraints - Wmat -  "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
 		return it->second;
 	}
 
@@ -438,11 +438,11 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	std::vector<double> x1(nvar, 1.0);
 
 	int e_nz, i_nz;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, NULL, NULL, NULL, &i_nz, NULL, NULL, NULL, &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	std::vector<int> e_rowidx(e_nz);
@@ -453,11 +453,11 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
 
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, &e_elts[0], &e_rowidx[0], &e_colptr[0], &i_nz, &i_elts[0], &i_rowidx[0], &i_colptr[0], &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 
@@ -474,36 +474,36 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	wmat_map[scen] = wmat;
 	assert(wmat.getNumCols() == nvar);
 	assert(wmat.getNumRows() == ncon_map[nodeid]);
-	DEBUG(wmat.dumpMatrix(););
-	PAR_DEBUG("return getSecondStageConstraints - Wmat -  "<<wmat.getNumRows()<<" x "<<wmat.getNumCols()<<" nz "<<wmat.getNumElements());
+	IF_VERBOSE_DO(wmat.dumpMatrix(););
+	MESSAGE("return getSecondStageConstraints - Wmat -  "<<wmat.getNumRows()<<" x "<<wmat.getNumCols()<<" nz "<<wmat.getNumElements());
 
 	return wmat;
 }
 // returns the column-oriented matrix linking the first-stage to the second (T matrix)
 CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
-	PAR_DEBUG("getLinkingConstraints - Tmat -  "<<(scen+1));
+	MESSAGE("getLinkingConstraints - Tmat -  "<<(scen+1));
 	int nodeid = scen + 1;
 
 	//Amat + Cmat  = Tmat
 
 	std::map<int, CoinPackedMatrix>::iterator it = tmat_map.find(nodeid);
 	if (it != tmat_map.end()) {
-		PAR_DEBUG("return (quick) getLinkingConstraints - Tmat - "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
+		MESSAGE("return (quick) getLinkingConstraints - Tmat - "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
 		return it->second;
 	}
 
 	int nvar = nvar_map[0];
-	PAR_DEBUG(" nvar "<<nvar);
+	MESSAGE(" nvar "<<nvar);
 	CallBackData cbd = { prob->userdata, nodeid, 0 };
 	std::vector<double> x0(nvar_map[0], 1.0);
 	std::vector<double> x1(nvar_map[nodeid], 1.0);
 
 	int e_nz, i_nz;
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, NULL, NULL, NULL, &i_nz, NULL, NULL, NULL, &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	std::vector<int> e_rowidx(e_nz);
@@ -514,11 +514,11 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
 
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	prob->eval_jac_g(&x0[0], &x1[0], &e_nz, &e_elts[0], &e_rowidx[0], &e_colptr[0], &i_nz, &i_elts[0], &i_rowidx[0], &i_colptr[0], &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 
@@ -528,10 +528,10 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 	CoinPackedMatrix tmat;
 	CoinPackedMatrix i_tmat;
 	tmat.copyOf(true, e_ncon, nvar, e_nz, &e_elts[0], &e_rowidx[0], &e_colptr[0], 0);
-	PAR_DEBUG("e_tmat: row"<<e_ncon<<" nz "<<tmat.getNumElements()<< " exp:"<<e_elts.size());
+	MESSAGE("e_tmat: row"<<e_ncon<<" nz "<<tmat.getNumElements()<< " exp:"<<e_elts.size());
 	assert(e_elts.size() == tmat.getNumElements());
 	i_tmat.copyOf(true, i_ncon, nvar, i_nz, &i_elts[0], &i_rowidx[0], &i_colptr[0], 0);
-	PAR_DEBUG("i_tmat: row"<<i_ncon<<" nz "<<i_tmat.getNumElements()<< " exp:"<<i_elts.size());
+	MESSAGE("i_tmat: row"<<i_ncon<<" nz "<<i_tmat.getNumElements()<< " exp:"<<i_elts.size());
 	assert(i_elts.size() == i_tmat.getNumElements());
 
 //	tmat.dumpMatrix();
@@ -539,19 +539,19 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 	tmat.bottomAppendPackedMatrix(i_tmat);
 
 //	tmat.dumpMatrix();
-	PAR_DEBUG("tmat "<<tmat.getNumElements());
+	MESSAGE("tmat "<<tmat.getNumElements());
 	assert(tmat.getNumElements() == (e_nz + i_nz));
 
 	tmat_map[nodeid] = tmat;
 	assert(tmat.getNumCols() == nvar);
 	assert(tmat.getNumRows() == ncon_map[nodeid]);
-	DEBUG(tmat.dumpMatrix(););
-	PAR_DEBUG("return getLinkingConstraints - Tmat - "<<tmat.getNumRows()<<" x "<<tmat.getNumCols()<<" nz "<<tmat.getNumElements());
+	IF_VERBOSE_DO(tmat.dumpMatrix(););
+	MESSAGE("return getLinkingConstraints - Tmat - "<<tmat.getNumRows()<<" x "<<tmat.getNumCols()<<" nz "<<tmat.getNumElements());
 	return tmat;
 }
 
 CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
-	PAR_DEBUG("getFirstStageHessian - ");
+	MESSAGE("getFirstStageHessian - ");
 	assert(nvar_map.find(0) != nvar_map.end());
 
 	int nvar = nvar_map[0];
@@ -561,43 +561,43 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 
 	int nz;
 	CallBackData cbd = { prob->userdata, 0, 0 };
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_h(&x0[0], &x0[0], &lam[0], &nz, NULL, NULL, NULL, &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
-	PAR_DEBUG("getFirstStageHessian - nz "<<nz);
+	MESSAGE("getFirstStageHessian - nz "<<nz);
 
 	std::vector<int> rowidx(nz);
 	std::vector<int> colptr(nvar + 1, 0);
 	std::vector<double> elts(nz);
 
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	prob->eval_h(&x0[0], &x0[0], &lam[0], &nz, &elts[0], &rowidx[0], &colptr[0], &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	CoinPackedMatrix tempmat(false, nvar, nvar, nz, &elts[0], &rowidx[0], &colptr[0], 0);
 	qamat.reverseOrderedCopyOf(tempmat);
 //	qamat.copyOf(true,nvar,nvar,nz,&elts[0],&rowidx[0],&colptr[0],0);
 
-	DEBUG(qamat.dumpMatrix(););
-	PAR_DEBUG("return getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols() <<" nz "<<qamat.getNumElements());
+	IF_VERBOSE_DO(qamat.dumpMatrix(););
+	MESSAGE("return getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols() <<" nz "<<qamat.getNumElements());
 
 	return qamat;
 }
 // Q_i
 CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen) {
-	PAR_DEBUG("getSecondStageHessian - "<<scen+1);
+	MESSAGE("getSecondStageHessian - "<<scen+1);
 	int nodeid = scen + 1;
 	assert(nvar_map.find(nodeid) != nvar_map.end());
 	std::map<int, CoinPackedMatrix>::iterator it = qwmat_map.find(nodeid);
 	if (it != qwmat_map.end()) {
-		PAR_DEBUG("return (quick) getSecondStageHessian - Qwmat - "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
+		MESSAGE("return (quick) getSecondStageHessian - Qwmat - "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
 		return it->second;
 	}
 
@@ -610,22 +610,22 @@ CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen) {
 
 	int nz;
 	CallBackData cbd = { prob->userdata, nodeid, nodeid };
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, NULL, NULL, NULL, &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	std::vector<int> rowidx(nz);
 	std::vector<int> colptr(nvar + 1, 0);
 	std::vector<double> elts(nz);
 
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, &elts[0], &rowidx[0], &colptr[0], &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	CoinPackedMatrix tempmat(false, nvar, nvar, nz, &elts[0], &rowidx[0], &colptr[0], 0);
@@ -633,21 +633,21 @@ CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen) {
 	qwmat.reverseOrderedCopyOf(tempmat);
 
 	qwmat_map[nodeid] = qwmat;
-	PAR_DEBUG("return getSecondStageHessian - Qwmat - "<<qwmat.getNumRows()<<" x "<<qwmat.getNumCols() <<" nz "<<qwmat.getNumElements());
-	DEBUG(qwmat.dumpMatrix();	);
+	MESSAGE("return getSecondStageHessian - Qwmat - "<<qwmat.getNumRows()<<" x "<<qwmat.getNumCols() <<" nz "<<qwmat.getNumElements());
+	IF_VERBOSE_DO(qwmat.dumpMatrix();	);
 	return qwmat;
 }
 
 // column-oriented, \hat Q_i
 // Note: this has the second-stage variables on the rows and first-stage on the columns
 CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen) {
-	PAR_DEBUG("getSecondStageCrossHessian - "<<scen+1);
+	MESSAGE("getSecondStageCrossHessian - "<<scen+1);
 	int nodeid = scen + 1;
 	assert(nvar_map.find(nodeid) != nvar_map.end());
 	assert(nvar_map.find(0) != nvar_map.end());
 	std::map<int, CoinPackedMatrix>::iterator it = qtmat_map.find(nodeid);
 	if (it != qtmat_map.end()) {
-		PAR_DEBUG("return (quick) getSecondStageCrossHessian - Qtmat - "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
+		MESSAGE("return (quick) getSecondStageCrossHessian - Qtmat - "<<it->second.getNumRows()<<" x "<<it->second.getNumCols() <<" nz "<<it->second.getNumElements());
 		return it->second;
 	}
 
@@ -660,29 +660,29 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen) {
 
 	int nz;
 	CallBackData cbd = { prob->userdata, 0, nodeid };
-#ifdef PROF
+#ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, NULL, NULL, NULL, &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
-	PAR_DEBUG(" nz "<<nz<< " - (0,"<<nodeid<<") - "<<ncon<<" x "<<n0);
+	MESSAGE(" nz "<<nz<< " - (0,"<<nodeid<<") - "<<ncon<<" x "<<n0);
 	std::vector<int> rowidx(nz, 0);
 	std::vector<int> colptr(n0 + 1, 0);
 	std::vector<double> elts(nz, 0.0);
-#ifdef PROF
+#ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
 	prob->eval_h(&x0[0], &x1[0], &lam[0], &nz, &elts[0], &rowidx[0], &colptr[0], &cbd);
-#ifdef PROF
+#ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
 	CoinPackedMatrix qtmat(true, n1, n0, nz, &elts[0], &rowidx[0], &colptr[0], 0);
 
 	qtmat_map[nodeid] = qtmat;
-	PAR_DEBUG("return getSecondStageCrossHessian - Qtmat - "<<qtmat.getNumRows()<<" x "<<qtmat.getNumCols() <<" nz "<<qtmat.getNumElements());
-	DEBUG(qtmat.dumpMatrix();	);
+	MESSAGE("return getSecondStageCrossHessian - Qtmat - "<<qtmat.getNumRows()<<" x "<<qtmat.getNumCols() <<" nz "<<qtmat.getNumElements());
+	IF_VERBOSE_DO(qtmat.dumpMatrix();	);
 
 	return qtmat;
 }

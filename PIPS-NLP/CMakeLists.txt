@@ -26,6 +26,7 @@ set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
 add_library(global_var 
 	global_var.cpp
+	./Core/Utilities/PerfMetrics.cpp
 )
 
 #message("HAVE_PARDISO: ${HAVE_PARDISO}")
