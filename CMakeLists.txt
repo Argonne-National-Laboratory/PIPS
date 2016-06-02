@@ -4,6 +4,16 @@ cmake_minimum_required(VERSION 2.8)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
+#with NLP profile metric
+option(WITH_PROF "Build with PROF" OFF)
+option(WITH_DEBUG "Build with parallel debug message" OFF)
+if(WITH_PROF)
+	add_definitions(-DPROF)
+endif()
+if(WITH_DEBUG)
+	add_definitions(-DFQ_DEBUG)
+endif()
+
 option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)
 option(BUILD_PIPS_IPM "Build PIPS-IPM" OFF)
