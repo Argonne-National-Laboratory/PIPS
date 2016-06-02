@@ -11,14 +11,14 @@
 
 #include "stochasticInput.hpp"
 #include "AmplData_NL.hpp"
-#include "par_macro.h"
+#include "global_var.h"
 
 struct ASL_pfgh;
 struct SufDecl;
 struct SufDesc;
 
 #include "mpi.h"
-#include "../PIPS-NLP/par_macro.h"
+#include "../PIPS-NLP/global_var.h"
 //  solve problem as general stochastic programming problem
 //  min f(x_0) + \sum f(x_i)
 //  st    g(x_i)  = 0
@@ -126,41 +126,41 @@ public:
 	}
 
 	virtual CoinPackedMatrix getFirstStageConstraints() {
-		PAR_DEBUG("getFirstStageConstraints");
-		DEBUG( Amat.dumpMatrix(); );
+		MESSAGE("getFirstStageConstraints");
+		IF_VERBOSE_DO( Amat.dumpMatrix(); );
 		return Amat;
 	}
 	virtual CoinPackedMatrix getSecondStageConstraints(int scen) {
 		loadLocalNLdata(scen);
-		PAR_DEBUG("getSecondStageConstraints scen" << scen);
-		DEBUG( Wmat[scen].dumpMatrix(); );
+		MESSAGE("getSecondStageConstraints scen" << scen);
+		IF_VERBOSE_DO( Wmat[scen].dumpMatrix(); );
 		return Wmat[scen];
 	}
 	virtual CoinPackedMatrix getLinkingConstraints(int scen) {
 		loadLocalNLdata(scen);
-		PAR_DEBUG("getLinkingConstraints scen" << scen);
-		DEBUG( Tmat[scen].dumpMatrix(); );
+		MESSAGE("getLinkingConstraints scen" << scen);
+		IF_VERBOSE_DO( Tmat[scen].dumpMatrix(); );
 		return Tmat[scen];
 	}
 
 	virtual CoinPackedMatrix getFirstStageHessian() {
-		PAR_DEBUG("getFirstStageHessian");
-		DEBUG( QAmat.dumpMatrix(); );
+		MESSAGE("getFirstStageHessian");
+		IF_VERBOSE_DO( QAmat.dumpMatrix(); );
 		return QAmat;
 	}
 	// Q_i
 	virtual CoinPackedMatrix getSecondStageHessian(int scen) {
 		loadLocalNLdata(scen);
-		PAR_DEBUG("getSecondStageHessian scen" << scen);
-		DEBUG( QWmat[scen].dumpMatrix(); );
+		MESSAGE("getSecondStageHessian scen" << scen);
+		IF_VERBOSE_DO( QWmat[scen].dumpMatrix(); );
 		return QWmat[scen];
 	}
 	// column-oriented, \hat Q_i
 	// Note: this has the second-stage variables on the rows and first-stage on the columns
 	virtual CoinPackedMatrix getSecondStageCrossHessian(int scen) {
 		loadLocalNLdata(scen);
-		PAR_DEBUG("getSecondStageCrossHessian scen" << scen);
-		DEBUG( QTmat[scen].dumpMatrix(); );
+		MESSAGE("getSecondStageCrossHessian scen" << scen);
+		IF_VERBOSE_DO( QTmat[scen].dumpMatrix(); );
 		return QTmat[scen];
 	}
 

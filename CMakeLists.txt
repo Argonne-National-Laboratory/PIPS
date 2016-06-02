@@ -20,6 +20,16 @@ message(STATUS "BUILD_PIPS_S=${BUILD_PIPS_S}")
 message(STATUS "BUILD_PIPS_IPM=${BUILD_PIPS_IPM}")
 message(STATUS "BUILD_PIPS_NLP=${BUILD_PIPS_NLP}")
 
+#with NLP profile metric
+option(WITH_NLPTIMING "Build with timing for PIPS-NLP" OFF)
+option(WITH_VERBOSE "Build with extra verbosity level" OFF)
+if(WITH_NLPTIMING)
+	add_definitions(-DNLPTIMING)
+endif()
+if(WITH_VERBOSE)
+	add_definitions(-DVERBOSE)
+endif()
+
 # PIPS-IPM and PIPS-NLP require OpenMP
 if (BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   find_package(OpenMP)

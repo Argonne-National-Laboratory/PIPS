@@ -4,16 +4,24 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include "./Core/Utilities/PerfMetrics.h"
 
 extern int gmyid;
 extern int gnprocs;
+extern PerfMetrics gprof;
 
-#define DEBUG(X) do { \
-	if (0) { X } \
+#ifdef VERBOSE
+#define ENABLE_VERBOSE 1
+#else
+#define ENABLE_VERBOSE 0
+#endif
+
+#define IF_VERBOSE_DO(X) do { \
+	if (ENABLE_VERBOSE) { X } \
 } while (0)
 
-#define PAR_DEBUG(x) do { \
-  if (0) { std::cout<<"["<<gmyid<<"/"<<gnprocs<<"] "<< x << std::endl; } \
+#define MESSAGE(x) do { \
+  if (ENABLE_VERBOSE) { std::cout<<"["<<gmyid<<"/"<<gnprocs<<"] "<< x << std::endl; } \
 } while (0)
 
 
@@ -24,11 +32,11 @@ void print_array(const std::string& msg, T* data, size_t len)
 	for(size_t i=0;i<len;i++){
 		oss<<data[i]<<", ";
 	}
-	PAR_DEBUG(""<<msg<<" - "<<"Array [ "<<oss.str()<<"  ]");
+	MESSAGE(""<<msg<<" - "<<"Array [ "<<oss.str()<<"  ]");
 }
 
 #define PRINT_ARRAY(M, DATA, LEN) do { \
-  if (0) { 	std::ostringstream oss; 	\
+  if (ENABLE_VERBOSE) { 	std::ostringstream oss; 	\
 				for(size_t i=0;i<LEN;i++){ 	\
 					oss<<DATA[i]<<", ";    	\
 				} \
@@ -38,5 +46,6 @@ void print_array(const std::string& msg, T* data, size_t len)
 
 
 extern void convert_to_csr(int m, int n, int* rowidx, int* colptr, double* elts, int nz, double* ret);
+
 
 #endif

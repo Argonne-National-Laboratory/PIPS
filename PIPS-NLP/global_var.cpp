@@ -1,11 +1,13 @@
 
-#include "par_macro.h"
+#include "global_var.h"
 #include "CoinPackedMatrix.hpp"
 #include <sstream>
 #include <iostream>
+#include <fstream>
 
 int gmyid;
 int gnprocs;
+PerfMetrics gprof = PerfMetrics::getPerfMetrics();
 
 void convert_to_csr(int m, int n, int* rowidx, int* colptr, double* elts, int nz, double* ret)
 {
@@ -26,3 +28,4 @@ void convert_to_csr(int m, int n, int* rowidx, int* colptr, double* elts, int nz
 		}
 	}
 }
+

@@ -24,7 +24,7 @@
 #include "amplGenStochInput.hpp"
 #include "amplGenStochInput_AddSlack.hpp"
 #include "getAmplFunctionNew.h"
-#include "../../PIPS-NLP/par_macro.h"
+#include "../../PIPS-NLP/global_var.h"
 
 using namespace std;
 
@@ -316,7 +316,7 @@ double sNlpInfoFromNL::ObjValue_General(NlpGenVars * vars_) {
 	timeFromAMPL += MPI_Wtime()-tTot;
 #endif 
 
-	PAR_DEBUG("ObjValue_General - "<<locObj);
+	MESSAGE("ObjValue_General - "<<locObj);
 
 	return locObj;
 
@@ -673,7 +673,7 @@ void sNlpInfoFromNL::ObjGrad_FromSon(NlpGenVars * vars_, OoqpVector *grad_,
 
 	assert(children.size() == 0);
 	for (size_t it = 0; it < children.size(); it++) {
-		PAR_DEBUG("it - "<<it);
+		MESSAGE("it - "<<it);
 		children[it]->ObjGrad(vars->children[it], sGrad->children[it]);
 	}
 
@@ -866,7 +866,7 @@ void sNlpInfoFromNL::JacFull_General(NlpGenVars * vars_, GenMatrix* JacA,
 	}
 
 	for (size_t it = 0; it < children.size(); it++) {
-		PAR_DEBUG("it - "<<it);
+		MESSAGE("it - "<<it);
 		children[it]->JacFull(vars->children[it], NULL, NULL);
 	}
 #ifdef TIMING
@@ -1097,7 +1097,7 @@ void sNlpInfoFromNL::Hessian_General(NlpGenVars * vars_, SymMatrix *Hess) {
 	}
 
 	for (size_t it = 0; it < children.size(); it++) {
-		PAR_DEBUG("it - "<<it);
+		MESSAGE("it - "<<it);
 		children[it]->Hessian_FromSon(vars->children[it], tempFromSonH);
 	}
 
