@@ -8,4 +8,4 @@ ln -s ./${name} ./src
 
 cd src
 ./configure FFLAGS=-fPIC --with-metis=../../METIS/src/libmetis.a --prefix=`pwd`
-make install
+make -j4 install
