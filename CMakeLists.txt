@@ -20,6 +20,9 @@ message(STATUS "BUILD_PIPS_S=${BUILD_PIPS_S}")
 message(STATUS "BUILD_PIPS_IPM=${BUILD_PIPS_IPM}")
 message(STATUS "BUILD_PIPS_NLP=${BUILD_PIPS_NLP}")
 
+#with testing of (selected) executables
+option(WITH_MAKETEST "Enable 'make test'" ON)
+
 #with NLP profile metric
 option(WITH_NLPTIMING "Build with timing for PIPS-NLP" OFF)
 option(WITH_VERBOSE "Build with extra verbosity level" OFF)
@@ -432,6 +435,15 @@ endif(BUILD_PIPS_NLP)
 #add_subdirectory(src/SMPS)
 #endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
+### CMake Tests
+if (WITH_MAKETEST)
+enable_testing()
+
+if (BUILD_PIPS_S)
+  add_test(NAME PIPS-S-multipleTests COMMAND sh ${PROJECT_SOURCE_DIR}/PIPS-S/Test/pipssMultiTests.sh $<TARGET_FILE:pipssFromRaw> ${PROJECT_SOURCE_DIR}/PIPS-S/Test/rawInput)
+endif(BUILD_PIPS_S)
+
+endif(WITH_MAKETEST)
 
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
