@@ -9,5 +9,5 @@ ln -s ./${name} ./src
 #configure and build ma27
 cd src
 ./configure FFLAGS=-fPIC --prefix=`pwd`
-make install
+make -j4 install
 
