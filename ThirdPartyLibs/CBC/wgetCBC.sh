@@ -20,5 +20,5 @@ ln -s ./${name} ./src
 
 cd src
 ./configure --enable-static --prefix=`pwd`
-make install
+make -j4 install
 

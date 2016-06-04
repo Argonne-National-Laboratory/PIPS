@@ -2,7 +2,7 @@ project(PIPSAll)
 
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)

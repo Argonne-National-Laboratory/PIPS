@@ -73,8 +73,6 @@ struct null_deleter
 
 }
 
-using boost::shared_ptr;
-
 
 enum severity_level
 {
@@ -115,7 +113,7 @@ public:
 
   static void init_logging(int level)
   {
-    
+    using boost::shared_ptr;   
     //for now the output will be only on the console
     
     //create a text output sink:
