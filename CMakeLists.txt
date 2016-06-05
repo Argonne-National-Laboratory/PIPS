@@ -441,14 +441,19 @@ endif(BUILD_PIPS_NLP)
 if (WITH_MAKETEST)
 enable_testing()
 
-if (BUILD_PIPS_S)
+if(BUILD_PIPS_IPM)
+  add_test(NAME PIPS-IPM-multipleTests COMMAND sh ${PROJECT_SOURCE_DIR}/PIPS-IPM/Test/pipsipmMultiTests.sh $<TARGET_FILE:pipsipmFromRaw> ${PROJECT_SOURCE_DIR}/PIPS-S/Test/rawInput)
+endif(BUILD_PIPS_IPM)
+
+if(BUILD_PIPS_S)
   add_test(NAME PIPS-S-multipleTests COMMAND sh ${PROJECT_SOURCE_DIR}/PIPS-S/Test/pipssMultiTests.sh $<TARGET_FILE:pipssFromRaw> ${PROJECT_SOURCE_DIR}/PIPS-S/Test/rawInput)
 endif(BUILD_PIPS_S)
 
-if (BUILD_PIPS_NLP)
+if(BUILD_PIPS_NLP)
   add_test(NAME PIPS-NLP-simpleTest1 COMMAND $<TARGET_FILE:parmodel2> -objcheck)
   add_test(NAME PIPS-NLP-simpleTest2 COMMAND $<TARGET_FILE:parmodel3> -objcheck)
 endif(BUILD_PIPS_NLP)
+
 endif(WITH_MAKETEST)
 
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
