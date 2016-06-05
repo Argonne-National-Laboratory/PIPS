@@ -9,6 +9,8 @@
 #include "sFactoryAug.h"
 #include "MehrotraStochSolver.h"
 
+#include <limits>
+
 using namespace std;
 
 // two ways of solving
@@ -53,11 +55,12 @@ int solve(const string& datarootname, int nscen) {
   if (mype == 0) cout << "PIPSIpmInterface created .." << endl;
   delete s;
   if (mype == 0) cout << "rawInput deleted ... solving" << endl;
+
   pipsIpm.go();
 
-
-
-
+  double obj = pipsIpm.getObjective();
+  //cout << "PIPS-IPM: optimal objective: "  << obj << endl;
+  printf("PIPS-IPM: optimal objective: %.8f \n", obj);
 
   return 0;
 }
