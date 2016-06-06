@@ -251,6 +251,29 @@ void SparseStorage::fromGetDense( int row, int col, double * A, int lda,
 }
 
 
+void SparseStorage::fromAddDense( int row, int col, double * A, int lda,
+				  int rowExtent, int colExtent )
+{
+  int i, j, k, jcurrent;
+
+  assert( row >= 0 && row + rowExtent <= m );
+  assert( col >= 0 && col + colExtent <= n );
+
+  for ( i = row; i < row + rowExtent; i++ ) {
+    jcurrent = col - 1;
+    for( k = krowM[i]; k < krowM[i+1]; k++ ) {
+      j = jcolM[k];
+      if ( j >= col ) {
+	if ( j < col + colExtent ) {
+	  A[(i - row) * lda + j - col] += M[k];
+	} else { 
+	  break;
+	} 
+      } 
+    } 
+  } 
+}
+
 // used in backsolves
 // get a dense block of columns *in column-major format*
 // A must be zero'd on input
@@ -785,7 +808,7 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
   if(beta!=1.0) {
     for( int v = 0; v < ny; v++)
       for( j = 0; j < n; j++ ) {
-	Y[j +ldy*v] *= beta;
+	Y[v +ldy*j] *= beta;  //Y[j +ldy*v] *= beta;
       }
   }
   for( i = 0; i < m; i++ ) {
@@ -795,7 +818,7 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
       assert(j<n);
 #endif
       for (int v = 0; v<ny; v++) { 
-	Y[j+v*ldy] += alpha * M[k] * X[i+v*ldx];
+	Y[v+ldy*j] += alpha * M[k] * X[i+v*ldx];  //Y[j +ldy*v] *= beta;  
       }
     }
   }
