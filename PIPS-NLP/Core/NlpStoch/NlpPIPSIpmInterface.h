@@ -1,8 +1,6 @@
-/* PIPS-IPM                                                           *
- * Author:  Cosmin G. Petra                                           *
- * (C) 2012 Argonne National Laboratory. See Copyright Notification.  */
-
-/* 2015. Modified by Nai-Yuan Chiang for NLP*/
+/* PIPS-IPM                                                       *
+ * Author:  Cosmin G. Petra & Nai-Yuan Chiang                     *
+ * (C) 2012-2015 Argonne National Laboratory.                     */
 
 #ifndef NLPPIPSIPM_INTERFACE
 #define NLPPIPSIPM_INTERFACE
@@ -193,7 +191,8 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
 
 template<typename FORMULATION, typename SOLVER, typename UPDATENLP>
 double NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::getObjective() const {
-  return data->objectiveValue(vars);
+  //return data->objectiveValue(vars);
+  return updateNlpInfo->ObjValue(vars);
 }
 
 

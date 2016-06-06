@@ -372,7 +372,7 @@ StochVector* sTreeCallbacks::createc() const
   double* vData = ((SimpleVector*)c->vec)->elements();  
   if (!fakedata) {
     // populate the node's data with data from user.
-    if(children.size()>0) RESCALE=0.001/1000;//children.size();
+    //if(children.size()>0) RESCALE=0.001/1000;//children.size();
     if(0==rankMe)
       cout << "RESCALE set to " << RESCALE << endl;
 
