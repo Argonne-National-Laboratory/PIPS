@@ -1,7 +1,7 @@
 #include "./Drivers/parallelPipsNlp_C_Callback.h"
 
 #include "mpi.h"
-#include "par_macro.h"
+#include "global_var.h"
 #include <iostream>
 #include <cassert>
 #include <math.h>
@@ -20,7 +20,7 @@
 int str_init_x0(double* x0, CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	PAR_DEBUG("str_init_x0 -- row " << row <<" col "<<col);
+	MESSAGE("str_init_x0 -- row " << row <<" col "<<col);
 	assert(row == col);
 	if(row == 0)
 	{
@@ -48,7 +48,7 @@ int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
 		double* row_lb, double* row_ub, CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	PAR_DEBUG("str_prob_info -- row " << row <<" col "<<col);
+	MESSAGE("str_prob_info -- row " << row <<" col "<<col);
 	assert(row == col);
 	if(col_lb == NULL)
 	{
@@ -100,7 +100,7 @@ int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
 int str_eval_f(double* x0, double* x1, double* obj, CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	PAR_DEBUG("str_prob_info -- row " << row <<" col "<<col );
+	MESSAGE("str_prob_info -- row " << row <<" col "<<col );
 	assert(row == col);
 	if(row == 0 )
 	{   // x1^2 + x2^2 +x1x2
@@ -123,7 +123,7 @@ int str_eval_g(double* x0, double* x1, double* eq_g, double* inq_g,
 		CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	PAR_DEBUG("str_eval_g  -- row " << row <<" col "<<col);
+	MESSAGE("str_eval_g  -- row " << row <<" col "<<col);
 	assert(row == col);
 	if(row == 0)
 	{	//x1 + x2 = 100
@@ -147,7 +147,7 @@ int str_eval_g(double* x0, double* x1, double* eq_g, double* inq_g,
 int str_eval_grad_f(double* x0, double* x1, double* grad, CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	PAR_DEBUG("str_eval_grad_f -- row " << row <<" col "<<col );
+	MESSAGE("str_eval_grad_f -- row " << row <<" col "<<col );
 
 	if(row == 0 && col == 0)
 	{
@@ -185,7 +185,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		int* i_colptr, CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	PAR_DEBUG("str_eval_jac_g  -- row " << row <<" col "<<col);
+	MESSAGE("str_eval_jac_g  -- row " << row <<" col "<<col);
 	if(e_colptr==NULL && i_colptr == NULL)
 	{
 		assert(e_elts == NULL && e_rowidx == NULL && e_colptr == NULL);
@@ -263,7 +263,7 @@ int str_eval_h(double* x0, double* x1, double* lambda, int* nz, double* elts,
 		int* rowidx, int* colptr, CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	PAR_DEBUG("str_eval_h  -- row " << row <<" col "<<col);
+	MESSAGE("str_eval_h  -- row " << row <<" col "<<col);
 	if(colptr==NULL)
 	{
 		assert(rowidx == NULL);
@@ -370,7 +370,7 @@ int str_write_solution(double* x, double* lam_eq, double* lam_ieq,CallBackDataPt
   int row = cbd->row_node_id;
   int col = cbd->col_node_id;
   assert(row == col);
-  PAR_DEBUG("write_solution  -- row " << row <<" col "<<col);
+  MESSAGE("write_solution  -- row " << row <<" col "<<col);
   if(row == 0)
     {
       PRINT_ARRAY("node = 0 - x ", x, 2);
@@ -398,7 +398,7 @@ int str_get_link_matrix(int* e_nz, double* e_elts,
 		   int* i_colptr, CallBackDataPtr cbd) {
   int row = cbd->row_node_id;
   int col = cbd->col_node_id;
-  PAR_DEBUG("str_get_link_matrix  -- row " << row <<" col "<<col);
+  MESSAGE("str_get_link_matrix  -- row " << row <<" col "<<col);
   if(e_colptr==NULL && i_colptr == NULL)
     {
       assert(e_elts == NULL && e_rowidx == NULL && e_colptr == NULL);
@@ -504,7 +504,7 @@ int str_link_info(int* m, double* row_lb, double* row_ub, CallBackDataPtr cbd) {
 
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
-  PAR_DEBUG("start");
+  MESSAGE("start");
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm, &gmyid);
   MPI_Comm_size(comm, &gnprocs);
@@ -523,11 +523,11 @@ int main(int argc, char* argv[]) {
   PipsNlpProblemStructPtr prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
 							    init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
 							    eval_h, write_solution, NULL, get_link_matrix,link_info);
-  PAR_DEBUG("problem created");
+  MESSAGE("problem created");
 
   PipsNlpSolveStruct(prob);
 
-  PAR_DEBUG("end solve ");
+  MESSAGE("end solve ");
   MPI_Barrier(comm);
 }
 
