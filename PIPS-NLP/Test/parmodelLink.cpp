@@ -1,3 +1,8 @@
+/* This is a driver used for build and regression testing.
+ * Called by CMake CTest during the 'make test' phase of the build,
+ * and will return an error (-1) if the optimal objective differs from  17142.9.
+ */
+
 #include "./Drivers/parallelPipsNlp_C_Callback.h"
 
 #include "mpi.h"
@@ -6,6 +11,10 @@
 #include <cassert>
 #include <math.h>
 
+#include <string>
+
+static const double       optObj=17142.;
+static const std::string  objCheckArgName="-objcheck";
 
 //# min x1^2 + x2^2 + x1x2 + x3^2 + x4^2 + x3x4 + x5^2 + x6^2 + x5x6
 //# st.
@@ -520,12 +529,28 @@ int main(int argc, char* argv[]) {
   str_get_link_matrix_cb  get_link_matrix = &str_get_link_matrix;
   str_link_info_cb link_info = &str_link_info;
 
-  PipsNlpProblemStructPtr prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
-							    init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
-							    eval_h, write_solution, NULL, get_link_matrix,link_info);
+  PipsNlpProblemStructPtr 
+    prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
+				      init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
+				      eval_h, write_solution, NULL, get_link_matrix,link_info);
   MESSAGE("problem created");
 
   PipsNlpSolveStruct(prob);
+
+  // here is the 'TESTING' behaviour, when -objcheck is passed
+  int nreturn=0; //=OK, be optimistic
+  if(argc>1) {
+    if(objCheckArgName==argv[1]) {
+      double objective = PipsNlpProblemStructGetObjective(prob);
+      if(fabs((objective-optObj)/(1+optObj))>1e-5)
+	nreturn=-1; //failure, didn't get 5 common digits
+      std::cout << "Objective should be " <<  optObj << " and we got " << objective << std::endl;
+    } else {
+      std::cout << "Couldn't understand option option [" << argv[1] << "]" << std::endl;
+    }
+  }
+
+  //! should have a deallocation of 'prob' here...
 
   MESSAGE("end solve ");
   MPI_Barrier(comm);
