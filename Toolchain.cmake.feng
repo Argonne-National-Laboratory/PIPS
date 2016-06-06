@@ -1,0 +1,18 @@
+
+#if(PLATFORM)
+#	message(${PLATFORM})
+#	include(${PLATFORM}.cmake)
+#endif(PLATFORM)
+message("Using Toolchain.cmake file" )
+
+set( Boost_NO_BOOST_CMAKE ON)
+set( Boost_NO_SYSTEM_PATHS ON)
+#set( BOOST_ROOT "/home/fqiang/workspace/boost/boost_1_61_0") 
+#set( BOOST_LIBRARYDIR "/home/fqiang/workspace/boost_1_61_0_install/lib" )
+#set( BOOST_INCLUDEDIR "/home/fqiang/workspace/boost_1_61_0_install/include" )
+set( BOOST_ROOT "/home/fqiang/workspace/boost_1_54_0_install" ) 
+set( BOOST_LIBRARYDIR "/home/fqiang/workspace/boost_1_54_0_install/lib" )
+set( BOOST_INCLUDEDIR "/home/fqiang/workspace/boost_1_54_0_install/include" )
+
+#set(CMAKE_CXX_COMPILER "mpicxx.mpich2")
+
