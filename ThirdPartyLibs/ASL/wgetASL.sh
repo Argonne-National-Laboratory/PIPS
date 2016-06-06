@@ -21,4 +21,4 @@ chmod +x src/configurehere
 
 cd src
 ./configurehere
-make
+make -j4

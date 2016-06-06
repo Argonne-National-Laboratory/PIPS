@@ -2,7 +2,7 @@ project(PIPSAll)
 
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)
@@ -19,6 +19,9 @@ message(STATUS "BUILD_ALL=${BUILD_ALL}")
 message(STATUS "BUILD_PIPS_S=${BUILD_PIPS_S}")
 message(STATUS "BUILD_PIPS_IPM=${BUILD_PIPS_IPM}")
 message(STATUS "BUILD_PIPS_NLP=${BUILD_PIPS_NLP}")
+
+#with testing of (selected) executables
+option(WITH_MAKETEST "Enable 'make test'" ON)
 
 #with NLP profile metric
 option(WITH_NLPTIMING "Build with timing for PIPS-NLP" OFF)
@@ -432,6 +435,26 @@ endif(BUILD_PIPS_NLP)
 #add_subdirectory(src/SMPS)
 #endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
+##########################################################
+# CMake Tests
+##########################################################
+if (WITH_MAKETEST)
+enable_testing()
+
+if(BUILD_PIPS_IPM)
+  add_test(NAME PIPS-IPM-multipleTests COMMAND sh ${PROJECT_SOURCE_DIR}/PIPS-IPM/Test/pipsipmMultiTests.sh $<TARGET_FILE:pipsipmFromRaw> ${PROJECT_SOURCE_DIR}/PIPS-S/Test/rawInput)
+endif(BUILD_PIPS_IPM)
+
+if(BUILD_PIPS_S)
+  add_test(NAME PIPS-S-multipleTests COMMAND sh ${PROJECT_SOURCE_DIR}/PIPS-S/Test/pipssMultiTests.sh $<TARGET_FILE:pipssFromRaw> ${PROJECT_SOURCE_DIR}/PIPS-S/Test/rawInput)
+endif(BUILD_PIPS_S)
+
+if(BUILD_PIPS_NLP)
+  add_test(NAME PIPS-NLP-simpleTest1 COMMAND $<TARGET_FILE:parmodel2> -objcheck)
+  add_test(NAME PIPS-NLP-simpleTest2 COMMAND $<TARGET_FILE:parmodel3> -objcheck)
+endif(BUILD_PIPS_NLP)
+
+endif(WITH_MAKETEST)
 
 message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")

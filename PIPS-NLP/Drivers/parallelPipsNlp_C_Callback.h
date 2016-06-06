@@ -1,5 +1,5 @@
-/* PIPS-NLP                                                         	*
- * Author: Feng Qiang                      		*
+/* PIPS-NLP                                             *
+ * Author: Feng Qiang and Cosmin G. Petra               *
  * (C) 2016 Argonne National Laboratory			*/
 
 #ifndef _PARALLELPIPSNLP_C_CALLBACK_H__
@@ -14,16 +14,17 @@ typedef void * UserDataPtr;
  * prob points to the userdata field of the PipsNlpProblemStruct.
  * row_node_id and col_node_id are the node ids in the stochastic tree
  *
- * Note:
- * When the requested data are vectors, the row and col node should be equal and are used to identify the sub-vectors to be evaluated, where
- * 	eval_f_grad is an exception. See below for more detail.
- * When the requested data are sub-matrices, the row and col node ids are used to identify the block.
+ * The row and col node ids are used to identify the block in problem.
+ * When vectors are requested, the row and col ids should be equal. 
+ * eval_f_grad is an exception. See below for details.
+ * When the requested data are sub-matrices, the row and col node ids are 
+ * used to identify the block.
  */
 typedef struct CallBackData
 {
-	UserDataPtr prob;
-	int row_node_id;
-	int col_node_id;
+  UserDataPtr prob;
+  int row_node_id;
+  int col_node_id;
 } CallBackData;
 
 typedef CallBackData * CallBackDataPtr;
@@ -39,8 +40,8 @@ extern "C" typedef int (*str_init_x0_cb)(double* x0, CallBackDataPtr cbd);
 
 /*
  * This function is used to request the values and sizes of the col and row's lower and upper bound vectors.
- * The sizes of col and row are represented by n and m respectively. n and m should be written when setting the lower and upper
- * bounds pointers to NULL.
+ * The sizes of col and row are represented by n and m, respectively. 
+ * To get n and m, set the vectors pointers to NULL.
  * The vectors of the corresponding node id is given in the CallBackData.
  *
  *  note: when providing the row_lb and row_ub vectors, it assumes that the equality constraints should be at the top of these vectors.
@@ -136,50 +137,53 @@ extern "C" typedef int (*str_write_solution_cb)(double* x, double* lam_eq, doubl
 
 extern "C"
 {
+  struct PipsNlpProblemStruct
+  {
+    MPI_Comm comm;
+    int nscen;
+    str_init_x0_cb init_x0;
+    str_prob_info_cb prob_info;
+    str_eval_f_cb eval_f;
+    str_eval_g_cb eval_g;
+    str_eval_grad_f_cb eval_grad_f;
+    str_eval_jac_g_cb eval_jac_g;
+    str_eval_h_cb eval_h;
+    str_write_solution_cb write_solution;
+    UserDataPtr userdata;
+    // holders for optimal solution and objective
+    double objective;
+  };
+  typedef struct PipsNlpProblemStruct* PipsNlpProblemStructPtr; 	/** Pointer to a pips_nlp Problem. **/
 
-	struct PipsNlpProblemStruct
-	{
-	  MPI_Comm comm;
-	  int nscen;
-	  str_init_x0_cb init_x0;
-	  str_prob_info_cb prob_info;
-	  str_eval_f_cb eval_f;
-	  str_eval_g_cb eval_g;
-	  str_eval_grad_f_cb eval_grad_f;
-	  str_eval_jac_g_cb eval_jac_g;
-	  str_eval_h_cb eval_h;
-	  str_write_solution_cb write_solution;
-	  UserDataPtr userdata;
-	};
+  PipsNlpProblemStructPtr 
+  CreatePipsNlpProblemStruct(MPI_Comm comm,
+			     int nscen, /** number of scenarios **/
+			     str_init_x0_cb init_x0,
+			     str_prob_info_cb prob_info,
+			     str_eval_f_cb eval_f, /** Callback function of objective function **/
+			     str_eval_g_cb eval_g, /** Callback function of constraint body **/
+			     str_eval_grad_f_cb eval_grad_f, /** Callback function of objective gradient **/
+			     str_eval_jac_g_cb eval_jac_g, /** Callback function of constraint Jacobian **/
+			     str_eval_h_cb eval_h, /** Callback function of Lagrangian Hessian **/
+			     str_write_solution_cb write_solution, /** Callback function to write back solution **/
+			     UserDataPtr userdata
+			     );
 
-	typedef struct PipsNlpProblemStruct* PipsNlpProblemStructPtr; 	/** Pointer to a pips_nlp Problem. **/
+  void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob);
 
-	PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
-		  MPI_Comm comm
-		, int nscen /** number of scenarios **/
-		, str_init_x0_cb init_x0
-		, str_prob_info_cb prob_info
-		, str_eval_f_cb eval_f /** Callback function of objective function **/
-		, str_eval_g_cb eval_g /** Callback function of constraint body **/
-		, str_eval_grad_f_cb eval_grad_f /** Callback function of objective gradient **/
-		, str_eval_jac_g_cb eval_jac_g /** Callback function of constraint Jacobian **/
-		, str_eval_h_cb eval_h /** Callback function of Lagrangian Hessian **/
-		, str_write_solution_cb write_solution /** Callback function to write back solution **/
-		, UserDataPtr userdata
-	);
+  int PipsNlpSolveStruct(PipsNlpProblemStruct* prob);
 
-	void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob);
+  /*
+   * Get primal-dual solution corresponding to node Id specified in the CallBackData.
+   * The vector for primal (x) and dual variables (lam_eq and lam_ieq) should be allocated
+   * when calling the function.
+   */
+   int get_x(CallBackDataPtr cbd,double* x, double* lam_eq, double* lam_ieq);
 
-	int PipsNlpSolveStruct(PipsNlpProblemStruct* prob);
-
-	/*
-	 * This function is used to get the variable values from PIPS-NLP at the node Id specified in the CallBackData.
-	 * x should be already allocated for the size of declared variables in this node.
-	 * lam_eq should be already allocated for the size of declared equality constraints in this node, whereas
-	 * the lam_ieq is the counterparts for inequality constraints.
-	 */
-	int get_x(CallBackDataPtr cbd,double* x, double* lam_eq, double* lam_ieq);
-
+  /*
+   * Get the objective value
+   */
+  double PipsNlpProblemStructGetObjective(PipsNlpProblemStruct* prob);
 };
 #endif
 

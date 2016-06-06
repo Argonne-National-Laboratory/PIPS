@@ -1,5 +1,5 @@
-/* PIPS-NLP                                                         	*
- * Authors: Feng Qiang                    		*
+/* PIPS-NLP                                             *
+ * Authors: Feng Qiang and Cosmin G. Petra              *
  * (C) 2016 Argonne National Laboratory			*/
 
 #include <cstdlib>
@@ -33,7 +33,8 @@
 #include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
 
 extern "C"
-PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
+PipsNlpProblemStructPtr 
+CreatePipsNlpProblemStruct(
 	MPI_Comm comm,
 	int nscen,
 	str_init_x0_cb init_x0,
@@ -46,30 +47,30 @@ PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(
 	str_write_solution_cb write_solution,
 	UserDataPtr userdata)
 {
-	MPI_Comm_rank(comm, &gmyid);
-	MPI_Comm_size(comm, &gnprocs);
-	MESSAGE("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
-	MESSAGE("CreatePipsNlpProblemStruct - C");
-
+  MPI_Comm_rank(comm, &gmyid);
+  MPI_Comm_size(comm, &gnprocs);
+  //MESSAGE("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
+  MESSAGE("CreatePipsNlpProblemStruct - C");
+  
 //	pipsOptions *pipsOpt = new pipsOptions();
 //	pipsOpt->readFile();
 //	pipsOpt->defGloOpt();
 
-	PipsNlpProblemStructPtr retval = new PipsNlpProblemStruct;
-
-	retval->comm = comm;
-	retval->nscen = nscen;
-	retval->init_x0 = init_x0;
-	retval->prob_info = prob_info;
-	retval->eval_f = eval_f;
-	retval->eval_g = eval_g;
-	retval->eval_grad_f = eval_grad_f;
-	retval->eval_jac_g = eval_jac_g;
-	retval->eval_h = eval_h;
-	retval->write_solution = write_solution;
-	retval->userdata = userdata;
-
-	return retval;
+  PipsNlpProblemStructPtr retval = new PipsNlpProblemStruct;
+  
+  retval->comm = comm;
+  retval->nscen = nscen;
+  retval->init_x0 = init_x0;
+  retval->prob_info = prob_info;
+  retval->eval_f = eval_f;
+  retval->eval_g = eval_g;
+  retval->eval_grad_f = eval_grad_f;
+  retval->eval_jac_g = eval_jac_g;
+  retval->eval_h = eval_h;
+  retval->write_solution = write_solution;
+  retval->userdata = userdata;
+  retval->objective = 0.0;
+  return retval;
 }
 
 
@@ -80,70 +81,84 @@ extern int gSymLinearSolver;
 extern int gUseReducedSpace;
 
 extern "C"
-int PipsNlpSolveStruct( PipsNlpProblemStruct* prob)
+int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
 {
 #ifdef NLPTIMING
-	double stime = MPI_Wtime();
+  double stime = MPI_Wtime();
 #endif
-	MESSAGE("PipsNlpSolveStruct  - "<<gnprocs);
-	MPI_Comm comm = prob->comm;
+  MESSAGE("PipsNlpSolveStruct - for " << gnprocs << " processors");
+  MPI_Comm comm = prob->comm;
+  
+  pipsOptions *pipsOpt = new pipsOptions();
+  pipsOpt->readFile();
+  pipsOpt->defGloOpt();
+  gInnerSCsolve=0;
+  
+  StructJuMPInput *s = new StructJuMPInput(prob);
+  MESSAGE("comm is "<<comm);
+  assert(comm == MPI_COMM_WORLD);
+  
+  MESSAGE("before PIPSIpmInterface created .." );
+  NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
+  MESSAGE("PIPSIpmInterface created .." );
+  
+  //  delete s;
+  //MESSAGE("AMPL NL  deleted ... solving");
+  
+  if (gmyid == 0) {
+    std::cout << "  \n  -----------------------------------------------\n"
+	      << "  NLP Solver \n"
+	      << "  Argonne National Laboratory, 2016\n"
+	      << "  -----------------------------------------------\n" <<std::endl;
+    
+    if(gUseReducedSpace>0) {
+      std::cout << "\n  Reduced Space Solver ------	 ";
+      std::cout << "Reduced Space Solver with Umfpack and following linear solver.\n";
+    }
+    if(0==gSymLinearSolver)
+      std::cout << "\n  Linear system solver ------	 Ma27.\n\n";
+    else if(1==gSymLinearSolver)
+      std::cout << "\n  Linear system solver ------	 Ma57.\n\n";
+    else if(2==gSymLinearSolver)
+      std::cout << "\n  Linear system solver ------	 Pardiso.\n\n";
+    else if(3==gSymLinearSolver)
+      std::cout << "\n  Linear system solver ------	 Umfpack.\n\n";
+  }
+  
+  pipsIpm.go();
 
-	pipsOptions *pipsOpt = new pipsOptions();
-	pipsOpt->readFile();
-	pipsOpt->defGloOpt();
-	gInnerSCsolve=0;
+  prob->objective = pipsIpm.getObjective();
+  
+  delete pipsOpt;
 
-	StructJuMPInput *s = new StructJuMPInput(prob);
-	MESSAGE("comm is "<<comm);
-	assert(comm == MPI_COMM_WORLD);
-
-	MESSAGE("before PIPSIpmInterface created .." );
-	NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
-	MESSAGE("PIPSIpmInterface created .." );
-
-	//  delete s;
-	MESSAGE("AMPL NL  deleted ... solving");
-
-	if (gmyid == 0) {
-		std::cout << "  \n  -----------------------------------------------\n"
-		<< "  NLP Solver \n"
-		<< "  Argonne National Laboratory, 2016\n"
-		<< "  -----------------------------------------------\n" <<std::endl;
-
-		if(gUseReducedSpace>0)
-		std::cout << "\n  Reduced Space Solver ------	 Reduced Space Solver with Umfpack and following linear solver.\n";
-
-		if(0==gSymLinearSolver)
-		std::cout << "\n  Linear system solver ------	 Ma27.\n\n";
-		else if(1==gSymLinearSolver)
-		std::cout << "\n  Linear system solver ------	 Ma57.\n\n";
-		else if(2==gSymLinearSolver)
-		std::cout << "\n  Linear system solver ------	 Pardiso.\n\n";
-		else if(3==gSymLinearSolver)
-		std::cout << "\n  Linear system solver ------	 Umfpack.\n\n";
-	}
-
-	pipsIpm.go();
-
-	delete pipsOpt;
+  //! shouldn't "s" be deleted somewhere here ?
 
 #ifdef NLPTIMING
-	gprof.t_solver_lifetime = MPI_Wtime() - stime;
-	gprof.report_timing();
+  gprof.t_solver_lifetime = MPI_Wtime() - stime;
+  gprof.report_timing();
 #endif
-	return 0;
+  return 0;
 }
 
 
 extern "C"
 void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob){
-
+  //! shouldn't the prob be de-allocated ?
+  //! shouldn't the signature be PipsNlpProblemStruct**
 }
 
 extern "C"
 int get_x(CallBackDataPtr data,double* x, double* lam_eq, double* lam_ieq)
 {
+  //to be implemented
+  return 0;
+}
 
-
-	return 0;
+extern "C"
+double PipsNlpProblemStructGetObjective(PipsNlpProblemStruct* prob)
+{
+  if(prob)
+    return prob->objective;
+  else
+    return 0.0;
 }

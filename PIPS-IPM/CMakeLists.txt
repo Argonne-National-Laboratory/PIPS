@@ -86,12 +86,12 @@ if (HAVE_PARDISO)
     #   ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY32} ${MATH_LIBS})
 
     if(HAVE_MA27)
-    add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
-    target_link_libraries(pipsipmFromRaw
-      stochInput ${COIN_LIBS}
-      ooqpstoch ooqpstochla ooqpmehrotrastoch
-      ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+#    add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
+#    target_link_libraries(pipsipmFromRaw
+#      stochInput ${COIN_LIBS}
+#      ooqpstoch ooqpstochla ooqpmehrotrastoch
+#      ooqpgensparse ooqpbase ooqpsparse ooqpdense
+#      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
     add_executable(ooqpFromRaw Drivers/ooqpFromRaw.cpp)
     target_link_libraries(ooqpFromRaw
@@ -116,13 +116,22 @@ if (HAVE_PARDISO)
 
     endif(HAVE_MA27)
 
-    if(HAVE_AMPL)
-      add_executable(pipsipmPyomo_schur Drivers/pipsipmPyomo_schur.cpp)
-      target_link_libraries(pipsipmPyomo_schur
-	pyomoStochInput stochInput ${COIN_LIBS}
-	ooqpstoch ooqpstochla ooqpmehrotrastoch
-	ooqpgensparse ooqpbase ooqpsparse ooqpdense
-	${AMPL_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
-    endif(HAVE_AMPL)
+#    if(HAVE_AMPL)
+#      add_executable(pipsipmPyomo_schur Drivers/pipsipmPyomo_schur.cpp)
+#      target_link_libraries(pipsipmPyomo_schur
+#	pyomoStochInput stochInput ${COIN_LIBS}
+#	ooqpstoch ooqpstochla ooqpmehrotrastoch
+#	ooqpgensparse ooqpbase ooqpsparse ooqpdense
+#	${AMPL_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+#    endif(HAVE_AMPL)
   endif(HAVE_MA57 AND HAVE_METIS)
 endif(HAVE_PARDISO)
+
+#MA27 or MA57 and METIS are prerequisites, this should be fine without additional checks.
+#It still works if only one of MA27 or MA57 is available.
+add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
+target_link_libraries(pipsipmFromRaw
+    stochInput ${COIN_LIBS}
+    ooqpstoch ooqpstochla ooqpmehrotrastoch
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})

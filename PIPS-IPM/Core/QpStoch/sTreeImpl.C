@@ -122,8 +122,6 @@ StochSymMatrix* sTreeImpl::createQ() const
   return NULL;
 }
 
-//#define RESCALE 200
-
 static double RESCALE=1.0;
 StochVector* sTreeImpl::createc() const
 {
@@ -135,7 +133,7 @@ StochVector* sTreeImpl::createc() const
   double* vec = ((SimpleVector*)svec->vec)->elements();  
 
   if(m_id==0) {
-    RESCALE=1.0/children.size();
+    //RESCALE=1.0/children.size();
     cout << "RESCALE set to " << RESCALE << endl;
 #ifdef TIMING
       //RESCALE=1;//0.25*children.size();

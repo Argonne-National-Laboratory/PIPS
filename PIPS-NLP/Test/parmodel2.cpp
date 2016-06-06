@@ -1,3 +1,8 @@
+/* This is a driver used for build and regression testing.
+ * Called by CMake CTest during the 'make test' phase of the build,
+ * and will return an error (-1) if the optimal objective differs from 5000.0.
+ */
+
 #include "./Drivers/parallelPipsNlp_C_Callback.h"
 
 #include "mpi.h"
@@ -6,11 +11,16 @@
 #include <cassert>
 #include <math.h>
 
+#include <string>
+
+static const double       optObj=5000.0;
+static const std::string  objCheckArgName="-objcheck";
+
 //# min x1^2 + x2^2 + x3^2 + x4^2 + x5^2 + x6^2
 //# st.
 //#     x1 + x2 = 100
-//#     0< x2 + x3 + x4  < 500
-//#     0< x1 + x5 + x6  < 500
+//#     0< x2 + x3 + x4  <= 500
+//#     0< x1 + x5 + x6  <= 500
 //# x free variables
 
 int str_init_x0(double* x0, CallBackDataPtr cbd) {
@@ -358,30 +368,47 @@ int str_write_solution(double* x, double* lam_eq, double* lam_ieq,CallBackDataPt
 }
 
 int main(int argc, char* argv[]) {
-	MPI_Init(&argc, &argv);
-	MESSAGE("start");
-	MPI_Comm comm = MPI_COMM_WORLD;
-	MPI_Comm_rank(comm, &gmyid);
-	MPI_Comm_size(comm, &gnprocs);
+  MPI_Init(&argc, &argv);
+  MESSAGE("driver starts ...");
+  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm, &gmyid);
+  MPI_Comm_size(comm, &gnprocs);
 
-	str_init_x0_cb init_x0 = &str_init_x0;
-	str_prob_info_cb prob_info = &str_prob_info;
-	str_eval_f_cb eval_f = &str_eval_f;
-	str_eval_g_cb eval_g = &str_eval_g;
-	str_eval_grad_f_cb eval_grad_f = &str_eval_grad_f;
-	str_eval_jac_g_cb eval_jac_g = &str_eval_jac_g;
-	str_eval_h_cb eval_h = &str_eval_h;
-	str_write_solution_cb write_solution = &str_write_solution;
+  str_init_x0_cb init_x0 = &str_init_x0;
+  str_prob_info_cb prob_info = &str_prob_info;
+  str_eval_f_cb eval_f = &str_eval_f;
+  str_eval_g_cb eval_g = &str_eval_g;
+  str_eval_grad_f_cb eval_grad_f = &str_eval_grad_f;
+  str_eval_jac_g_cb eval_jac_g = &str_eval_jac_g;
+  str_eval_h_cb eval_h = &str_eval_h;
+  str_write_solution_cb write_solution = &str_write_solution;
 
-	PipsNlpProblemStructPtr prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
-			init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
-			eval_h, write_solution, NULL);
+  PipsNlpProblemStructPtr prob = 
+    CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
+			       init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
+			       eval_h, write_solution, NULL);
 
-	MESSAGE("problem created");
+  MESSAGE("problem created");
 
-	PipsNlpSolveStruct(prob);
+  PipsNlpSolveStruct(prob); 
 
-	MESSAGE("end solve ");
-	MPI_Barrier(comm);
-    MPI_Finalize();
+  // here is the 'TESTING' behaviour, when -objcheck is passed
+  int nreturn=0; //=OK, be optimistic
+  if(argc>1) {
+    if(objCheckArgName==argv[1]) {
+      double objective = PipsNlpProblemStructGetObjective(prob);
+      if(fabs((objective-optObj)/(1+optObj))>1e-5)
+	nreturn=-1; //failure, didn't get 5 common digits
+      std::cout << "Objective should be " <<  optObj << " and we got " << objective << std::endl;
+    } else {
+      std::cout << "Couldn't understand option option [" << argv[1] << "]" << std::endl;
+    }
+  }
+
+  //! should have a deallocation of 'prob' here...
+
+  MESSAGE("end solve ");
+  MPI_Barrier(comm);
+  MPI_Finalize();
+  return nreturn;
 }
