@@ -217,3 +217,31 @@ target_link_libraries(parmodel_1STonly
   ${PARDISO_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
+
+# Test for problem with linking constraints 
+add_executable(parmodelLink parmodelLink.cpp)
+target_link_libraries(parmodelLink
+  parpipsnlp
+  reducedSolverSpecial
+  ${WHOLE_ARCHIVE}
+  updateFromCallBack
+  LU_solvers
+  nlpsparse
+  nlpdense
+  pipsnlpFLSStoch
+  nlpstoch
+  nlpstochla
+  nlpgensparse
+  nlpbase
+  genStructparallel
+  structStochInfo
+  global_var
+  ${COIN_LIBS}
+  ${MA57_LIBRARY}
+  ${MA27_LIBRARY}
+  ${UMF_ALLINONE_LIBRARY}
+  ${METIS_LIBRARY}
+  ${PARDISO_LIBRARY}
+  ${NO_WHOLE_ARCHIVE}
+  ${MATH_LIBS} )
+

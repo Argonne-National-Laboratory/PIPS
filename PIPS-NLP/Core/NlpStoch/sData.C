@@ -38,7 +38,8 @@ sData::sData(sTree* tree)
   iclow = OoqpVectorHandle    ( tree->createiclow() );
   bu    = OoqpVectorHandle    ( tree->createcupp()  );
   icupp = OoqpVectorHandle    ( tree->createicupp() );
-
+ 
+  
   CeqBody  = OoqpVectorHandle ( tree->createCeqBody()	);
   CIneqBody  = OoqpVectorHandle ( tree->createCineqBody() );  
 
@@ -258,6 +259,30 @@ int sData::getLocalSizes(int& nx, int& my, int& mz)
   return 0;
 }
 
+int sData::getmle()
+{
+  long long mle, nx;
+  if(useMultiStage==0){
+    StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*Jeq);
+    Ast.Cmat->getSize(mle, nx);
+  }else{
+    assert("not done" && 0);
+  }
+  return mle;
+}
+
+int sData::getmli()
+{
+  long long mli, nx;
+  if(useMultiStage==0){
+    StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*Jineq);
+    Ast.Cmat->getSize(mli, nx);
+  }else{
+    assert("not done" && 0);
+  }
+  return mli;
+}
+
 
 int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
 {
@@ -339,6 +364,25 @@ SparseGenMatrix& sData::getLocalD()
   }
 }
 
+SparseGenMatrix& sData::getLocalE()
+{
+  if(useMultiStage==0){
+    StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*Jeq);
+    return *Ast.Cmat;
+  }else{
+    assert("not done" && 0);
+  }
+}
+
+SparseGenMatrix& sData::getLocalF()
+{
+  if(useMultiStage==0){
+    StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*Jineq);
+    return *Cst.Cmat;
+  }else{
+    assert("not done" && 0);
+  }
+}
 
 
 void sData::sync()

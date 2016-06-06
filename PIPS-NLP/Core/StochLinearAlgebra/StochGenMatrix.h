@@ -37,7 +37,7 @@ public:
 		 long long global_m, long long global_n,
 		 int A_m, int A_n, int A_nnz,
 		 int B_m, int B_n, int B_nnz,
-		 MPI_Comm mpiComm_);
+		 MPI_Comm mpiComm_, int C_m=0, int C_n=0, int C_nnz=0);
 
   // constructor for combining scenarios
   //StochGenMatrix(const vector<StochGenMatrix*> &blocks); -- not needed; cpetra
@@ -48,6 +48,7 @@ public:
   std::vector<StochGenMatrix*> children;
   SparseGenMatrix* Amat;
   SparseGenMatrix* Bmat;
+  SparseGenMatrix* Cmat;
   int id;
   long long m,n;
   MPI_Comm mpiComm;
@@ -59,6 +60,10 @@ public:
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
 		    OoqpVector& yvecParent);
+
+  virtual void transMult2 ( double beta,   StochVector& y,
+		    double alpha,  StochVector& x,
+		    OoqpVector& yvecParent, OoqpVector& xCvecParent);
 
  public:
   virtual void getSize( long long& m, long long& n );
@@ -98,6 +103,9 @@ public:
   /** y = beta * y + alpha * this * x */
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x );
+
+  virtual void mult ( double beta,  OoqpVector& y,
+                      double alpha, OoqpVector& x, OoqpVector& yvecParent);
 
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x );
@@ -186,11 +194,18 @@ public:
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x ){};
 
+  virtual void mult ( double beta,  OoqpVector& y,
+                      double alpha, OoqpVector& x, OoqpVector& yvecParent){};
+
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x ){};
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
 		    OoqpVector& yvecParent){};
+
+  virtual void transMult2 ( double beta,   StochVector& y,
+		    double alpha,  StochVector& x,
+		    OoqpVector& yvecParent, OoqpVector& xCvecParent){};
 
   virtual double abmaxnorm(){return 0.0;};
 

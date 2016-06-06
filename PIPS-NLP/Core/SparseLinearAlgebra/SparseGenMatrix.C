@@ -138,7 +138,12 @@ void SparseGenMatrix::fromGetDense( int row, int col, double * A, int lda,
 {
   mStorage->fromGetDense( row, col, A, lda, rowExtent, colExtent );
 }
-  
+
+void SparseGenMatrix::fromAddDense( int row, int col, double * A, int lda,
+				    int rowExtent, int colExtent )
+{
+  mStorage->fromAddDense( row, col, A, lda, rowExtent, colExtent );
+}  
 
 void SparseGenMatrix::fromGetSpRow( int row, int col,
 				    double A[], int lenA,
@@ -498,3 +503,12 @@ void SparseGenMatrix::fromGetDense_withMap( int row, int col, double * A, int ld
   mStorage->fromGetDense_withMap( row, col, A, lda, rowExtent, colExtent, FirstCall, ValIdxMap);
 }
 
+
+void SparseGenMatrix::transCopyof(SparseGenMatrix& from)
+{
+  int rows, cols, nnz;
+  from.getSize(rows,cols);
+  nnz = from.numberOfNonZeros(); 
+  mStorage = SparseStorageHandle( new SparseStorage(cols, rows, nnz ) );
+  from.getStorageRef().transpose( this->krowM(), this->jcolM(), this->M());
+}

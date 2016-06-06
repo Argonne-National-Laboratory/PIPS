@@ -135,6 +135,13 @@ extern "C" typedef int (*str_eval_h_cb)(double* x0, double* x1, double* lamdba,
  */
 extern "C" typedef int (*str_write_solution_cb)(double* x, double* lam_eq, double* lam_ieq, CallBackDataPtr cbd);
 
+
+extern "C" typedef int (*str_get_link_matrix_cb)(int* e_nz, double* e_elts,
+						 int* e_rowidx, int* e_colptr, int* i_nz, double* i_elts, int* i_rowidx,
+						 int* i_colptr, CallBackDataPtr cbd);
+extern "C" typedef int (*str_link_info_cb)(int* m, double* row_lb, double* row_ub, CallBackDataPtr cbd);
+
+
 extern "C"
 {
   struct PipsNlpProblemStruct
@@ -148,6 +155,8 @@ extern "C"
     str_eval_grad_f_cb eval_grad_f;
     str_eval_jac_g_cb eval_jac_g;
     str_eval_h_cb eval_h;
+    str_get_link_matrix_cb get_link_matrix;
+    str_link_info_cb link_info;
     str_write_solution_cb write_solution;
     UserDataPtr userdata;
     // holders for optimal solution and objective
@@ -166,7 +175,9 @@ extern "C"
 			     str_eval_jac_g_cb eval_jac_g, /** Callback function of constraint Jacobian **/
 			     str_eval_h_cb eval_h, /** Callback function of Lagrangian Hessian **/
 			     str_write_solution_cb write_solution, /** Callback function to write back solution **/
-			     UserDataPtr userdata
+			     UserDataPtr userdata,
+			     str_get_link_matrix_cb get_link_matrix = NULL,
+			     str_link_info_cb link_info = NULL
 			     );
 
   void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob);
@@ -184,6 +195,7 @@ extern "C"
    * Get the objective value
    */
   double PipsNlpProblemStructGetObjective(PipsNlpProblemStruct* prob);
+
 };
 #endif
 

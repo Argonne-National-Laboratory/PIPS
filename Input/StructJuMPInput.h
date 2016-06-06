@@ -33,6 +33,12 @@ protected:
 	std::map<int, CoinPackedMatrix> qwmat_map;
 	std::map<int, CoinPackedMatrix> qtmat_map;
 
+	std::vector<double> linklb;
+	std::vector<double> linkub;
+        int mlink;
+        int e_ml;
+        int i_ml;
+	std::map<int,CoinPackedMatrix> Emat_map; // 0 is corresponding to the first stage, 1 to scenario 1. linking jacobian 
 public:
 	PipsNlpProblemStruct* prob;
 
@@ -66,6 +72,15 @@ public:
 	virtual std::vector<std::string> getSecondStageRowNames(int scen);
 	virtual double scenarioProbability(int scen);
 	virtual bool isSecondStageColInteger(int scen, int col);
+
+
+	//to deal with constraints links first stage variables and second stage from scenario 1, 2 ...s 
+	virtual int nLinkCons(){ return mlink;};
+        virtual int nLinkECons(){ return e_ml;};
+        virtual int nLinkICons(){ return i_ml;};
+        virtual std::vector<double> getLinkRowLB();
+        virtual std::vector<double> getLinkRowUB();
+	virtual CoinPackedMatrix getLinkMatrix(int nodeid);
 
 	// returns the column-oriented first-stage constraint matrix (A matrix)
 	virtual CoinPackedMatrix getFirstStageConstraints();

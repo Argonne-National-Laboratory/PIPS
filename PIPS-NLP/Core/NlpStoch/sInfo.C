@@ -49,6 +49,8 @@ sInfo::sInfo(sData *data_in)
   C = data_in->Jineq;
   Cmat = &data_in->getLocalC();
   Dmat = &data_in->getLocalD();  
+  Emat = &data_in->getLocalE();
+  Fmat = &data_in->getLocalF();
   
   Q = data_in->H;
   Qdiag = &data_in->getLocalQ();
@@ -86,7 +88,17 @@ void sInfo::AddChild(sInfo* child)
   children.push_back(child);
 }
 
+void sInfo::Emult ( double beta,  OoqpVector& y,
+		     double alpha, OoqpVector& x )
+{
+  Emat->mult(beta, y, alpha, x);
+}
 
+void sInfo::Fmult ( double beta,  OoqpVector& y,
+		    double alpha, OoqpVector& x )
+{
+  Fmat->mult(beta, y, alpha, x);
+}
 
 //
 //void sInfo::createChildren(sData *data_in)

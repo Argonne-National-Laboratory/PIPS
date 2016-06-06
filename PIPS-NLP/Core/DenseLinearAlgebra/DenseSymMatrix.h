@@ -78,7 +78,10 @@ public:
 				  DoubleMatrix& M,
 				  int srcRow, int srcCol,
 				  int rowExtent, int colExtent );
-
+  virtual void symAtAddSubmatrix( int destRow, int destCol,
+                                  DoubleMatrix& M,
+                                  int srcRow, int srcCol,
+                                  int rowExtent, int colExtent );
   virtual void getDiagonal( OoqpVector& vec );
   virtual void setToDiagonal( OoqpVector& vec );
 
@@ -113,6 +116,11 @@ public:
 				  int rowExtent, int colExtent,
 				  int forceSymUpdate);
 
+  virtual void symAtAddSubmatrix( int destRow, int destCol,
+                                  DoubleMatrix& M,
+                                  int srcRow, int srcCol,
+                                  int rowExtent, int colExtent,
+                                  int forceSymUpdate);
   /** 
    * Performs a rank-k update. Depending on the value of 'trans', i.e.,
    *   - this=alpha*this + beta*U*U'   if trans=0

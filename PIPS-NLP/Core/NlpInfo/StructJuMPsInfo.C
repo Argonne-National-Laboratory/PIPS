@@ -277,20 +277,16 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 		double parent_var[parent->locNx];
 		OoqpVector* parent_X = (vars_X.parent->vec);
 		parent_X->copyIntoArray(parent_var);
-
 		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
 		stochInput->prob->eval_g(parent_var,local_var,coneq,coninq,&cbd);
+
 #ifdef NLPTIMING
 		gprof.t_model_evaluation += MPI_Wtime()-stime;
 		gprof.n_eval_g += 1;
 #endif
-		PRINT_ARRAY("parent_var", parent_var, parent->locNx);
-		PRINT_ARRAY("local_var", local_var, locNx);
-		PRINT_ARRAY("coneq", coneq, locMy);
-		PRINT_ARRAY("coninq", coninq, locMz);
 	}
 	else
 	{
@@ -304,9 +300,50 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 		gprof.t_model_evaluation += MPI_Wtime()-stime;
 		gprof.n_eval_g += 1;
 #endif
-		PRINT_ARRAY("local_var", local_var, locNx);
-		PRINT_ARRAY("coneq", coneq, locMy);
-		PRINT_ARRAY("coninq", coninq, locMz);
+		int e_ml = stochInput->nLinkECons();
+		int i_ml = stochInput->nLinkICons();
+		if (e_ml > 0)
+		{
+		    SimpleVector linkeq(e_ml);
+		    linkeq.setToZero();
+		    for(size_t it=0; it<children.size(); it++){
+		        //int m,n;
+			//children[it]->Emat->getSize( m, n );
+		        children[it]->Emult(1.0, linkeq, 1.0, *(dynamic_cast<StochVector&>(*svars->children[it]->x).vec));
+		    }
+		    double* buffer = new double[e_ml];
+		    MPI_Allreduce(linkeq.elements(), buffer, e_ml, MPI_DOUBLE, MPI_SUM, mpiComm);
+       		    for(int i=0; i<e_ml; i++)
+		    {
+		        linkeq.elements()[i] = buffer[i];
+		    }  
+		    Emult(1.0, linkeq, 1.0, *(dynamic_cast<StochVector&>(*svars->x).vec));
+		    for(int i=0; i<e_ml; i++)
+		    {
+		        coneq[i+locMy-e_ml] = linkeq.elements()[i];
+		    }
+		    delete[] buffer;
+		}
+                if (i_ml > 0)
+		{
+                    SimpleVector linkinq(i_ml);
+                    linkinq.setToZero();
+                    for(size_t it=0; it<children.size(); it++){
+		      children[it]->Fmult(1.0, linkinq, 1.0, *(dynamic_cast<StochVector&>(*svars->children[it]->x).vec));
+		    }		  
+		    double* buffer = new double[i_ml];
+                    MPI_Allreduce(linkinq.elements(), buffer, i_ml, MPI_DOUBLE, MPI_SUM, mpiComm);
+                    for(int i=0; i<i_ml; i++)
+		    {
+                        linkinq.elements()[i] = buffer[i];
+		    }
+                    Fmult(1.0, linkinq, 1.0, *(dynamic_cast<StochVector&>(*svars->x).vec));
+                    for(int i=0; i<i_ml; i++)
+		    {
+			coninq[i+locMz -i_ml] = linkinq.elements()[i];
+		    }
+                    delete[] buffer;
+		}
 	}
 
 	StochVector* sconeq = dynamic_cast<StochVector*>(conEq);
