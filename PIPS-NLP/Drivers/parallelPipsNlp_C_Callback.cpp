@@ -51,10 +51,6 @@ CreatePipsNlpProblemStruct(
   MPI_Comm_size(comm, &gnprocs);
   //MESSAGE("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
   MESSAGE("CreatePipsNlpProblemStruct - C");
-  
-//	pipsOptions *pipsOpt = new pipsOptions();
-//	pipsOpt->readFile();
-//	pipsOpt->defGloOpt();
 
   PipsNlpProblemStructPtr retval = new PipsNlpProblemStruct;
   
@@ -70,6 +66,8 @@ CreatePipsNlpProblemStruct(
   retval->write_solution = write_solution;
   retval->userdata = userdata;
   retval->objective = 0.0;
+  retval->nvars = 0;
+  retval->ncons = 0;
   return retval;
 }
 
@@ -102,9 +100,6 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
   NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
   MESSAGE("PIPSIpmInterface created .." );
   
-  //  delete s;
-  //MESSAGE("AMPL NL  deleted ... solving");
-  
   if (gmyid == 0) {
     std::cout << "  \n  -----------------------------------------------\n"
 	      << "  NLP Solver \n"
@@ -125,26 +120,27 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
       std::cout << "\n  Linear system solver ------	 Umfpack.\n\n";
   }
   
-  pipsIpm.go();
+  pipsIpm.computeProblemSize(prob->nvars,prob->ncons);
+
+  int ret = pipsIpm.go();
 
   prob->objective = pipsIpm.getObjective();
   
+  delete s;
   delete pipsOpt;
-
-  //! shouldn't "s" be deleted somewhere here ?
 
 #ifdef NLPTIMING
   gprof.t_solver_lifetime = MPI_Wtime() - stime;
   gprof.report_timing();
 #endif
-  return 0;
+  return ret;
 }
 
 
 extern "C"
 void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob){
-  //! shouldn't the prob be de-allocated ?
   //! shouldn't the signature be PipsNlpProblemStruct**
+  delete prob;
 }
 
 extern "C"
@@ -162,3 +158,22 @@ double PipsNlpProblemStructGetObjective(PipsNlpProblemStruct* prob)
   else
     return 0.0;
 }
+
+extern "C"
+int PipsNlpProblemStructGetTotalVars(PipsNlpProblemStruct* prob)
+{
+  if(prob)
+      return prob->nvars;
+    else
+      return 0;
+}
+
+extern "C"
+int PipsNlpProblemStructGetTotalCons(PipsNlpProblemStruct* prob)
+{
+  if(prob)
+      return prob->ncons;
+    else
+      return 0;
+}
+

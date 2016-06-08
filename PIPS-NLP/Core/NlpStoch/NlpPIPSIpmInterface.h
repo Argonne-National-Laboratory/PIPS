@@ -24,9 +24,10 @@ class NlpPIPSIpmInterface
   NlpPIPSIpmInterface(stochasticInput &in, MPI_Comm = MPI_COMM_WORLD);
   ~NlpPIPSIpmInterface();
 
-  void go(int addslack=0);
+  int go(int addslack=0);
 
   double getObjective() const;
+  void computeProblemSize(int&, int&);
   double getFirstStageObjective() const;
 
 
@@ -104,13 +105,11 @@ NlpPIPSIpmInterface<FORMULATION, IPMSOLVER,UPDATENLP>::NlpPIPSIpmInterface(stoch
 
   solver  = new IPMSOLVER( factory, data );
   solver->addMonitor(new StochMonitor( factory ));
-
-
 }
 
 
 template<typename FORMULATION, typename IPMSOLVER,typename UPDATENLP>
-void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
+int NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
 
 
   int mype;
@@ -119,35 +118,35 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
   if(0 == mype) cout << "solving ..." << endl;
 
   if(mype==0) {
-    cout << "1st stage " << data->getLocalnx() << " variables, " << data->getLocalmy() 
-	 << " equality constraints, " << data->getLocalmz() << " inequality constraints." << endl;
+    cout<< "1st stage " << data->getLocalnx() << " variables, " << data->getLocalmy()
+        << " equality constraints, " << data->getLocalmz() << " inequality constraints." << endl;
   }
   
   int nscens=data->children.size();
   if(nscens) {
   	if(mype==0) {
-      cout << "2nd stage (use 1st scenario): " << data->children[0]->getLocalnx() << " variables, " 
-	   << data->children[0]->getLocalmy() << " equality constraints, " 
-	   << data->children[0]->getLocalmz() << " inequality constraints." << endl;
+      cout<< "2nd stage (use 1st scenario): " << data->children[0]->getLocalnx() << " variables, "
+          << data->children[0]->getLocalmy() << " equality constraints, "
+          << data->children[0]->getLocalmz() << " inequality constraints." << endl;
   	 
       std::cout << nscens << " scenarios." << endl;
   	}
-	int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
-	for(int j=0;j<nscens;j++){ 
-	  sum_var += data->children[j]->getLocalnx();
-	  sum_econ += data->children[j]->getLocalmy();
-	  sum_icon += data->children[j]->getLocalmz();
-	}
+    int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
+    for(int j=0;j<nscens;j++){
+      sum_var += data->children[j]->getLocalnx();
+      sum_econ += data->children[j]->getLocalmy();
+      sum_icon += data->children[j]->getLocalmz();
+    }
 
-	MPI_Allreduce(&sum_var, &total_var, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-	MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-	MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_var, &total_var, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-	if(mype==0) {  
-      std::cout << "Total " << data->getLocalnx() + total_var << " variables, " 
-	   << data->getLocalmy()+total_econ  << " equality constraints, " 
-	   << data->getLocalmz()+total_icon << " inequality constraints. \n" << endl;
-	}
+    if(mype==0) {
+        std::cout << "Total " << data->getLocalnx() + total_var << " variables, "
+       << data->getLocalmy()+total_econ  << " equality constraints, "
+       << data->getLocalmz()+total_icon << " inequality constraints. \n" << endl;
+    }
   }
 
   double tmElapsed=MPI_Wtime();
@@ -157,7 +156,7 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
   	result = solver->solve(data,vars,resids);
   else{
   	printf("Wrong! Cannot reach here! STOP"); 
-	exit(1);
+  	exit(1);
   }
   //---------------------------------------------
   tmElapsed=MPI_Wtime()-tmElapsed;
@@ -170,8 +169,8 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
     //cout << " " << data->nx << " variables, " << data->my  
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
     
-    std::cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
-	 << objective << endl;
+    std::cout<< " Iterates: " << solver->iter <<",    Optimal Solution:  "
+             << objective << endl;
 
     std::cout << "Solve time: " << tmElapsed << " seconds." << endl;
 
@@ -185,8 +184,8 @@ void NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
     
   }
 
-  if(mype==0)
-	  this->writeSolution();
+	this->writeSolution();
+	return result;
 }
 
 template<typename FORMULATION, typename SOLVER, typename UPDATENLP>
@@ -195,6 +194,22 @@ double NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::getObjective() const {
   return updateNlpInfo->ObjValue(vars);
 }
 
+template<typename  FORMULATION, typename SOLVER, typename UPDATENLP>
+void NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::computeProblemSize(int& nvar, int& ncon){
+  int nscens=data->children.size();
+  int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
+  for(int j=0;j<nscens;j++){
+    sum_var += data->children[j]->getLocalnx();
+    sum_econ += data->children[j]->getLocalmy();
+    sum_icon += data->children[j]->getLocalmz();
+  }
+
+  MPI_Allreduce(&sum_var, &total_var, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  nvar = total_var;
+  ncon = total_econ + total_icon;
+}
 
 template<typename FORMULATION, typename SOLVER, typename UPDATENLP>
 double NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::getFirstStageObjective() const {
