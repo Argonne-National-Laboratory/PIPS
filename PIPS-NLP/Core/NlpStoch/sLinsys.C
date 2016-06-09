@@ -1,3 +1,4 @@
+
 /* PIPS
    Authors: Cosmin Petra and Miles Lubin
    See license and copyright information in the documentation */
@@ -393,6 +394,10 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
+  SparseGenMatrix& E = prob->getLocalE();
+  SparseGenMatrix& F = prob->getLocalF();
+  int mle = prob->getmle();
+  int mli = prob->getmli();
 
   //get n0= nx(parent)= #cols of A or C
   int dummy, n0;
@@ -404,13 +409,28 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
     SimpleVector zi1 (&zi[0],           locnx);
     SimpleVector zi2 (&zi[locnx],       locns);
     SimpleVector zi3 (&zi[locnx+locns], locmy);
-	SimpleVector zi4 (&zi[locnx+locns+locmy], locmz);
+    SimpleVector zi4 (&zi[locnx+locns+locmy], locmz);
     // same for z01 (only the first n0 entries in the output z0 are computed)
     SimpleVector z01 (&z0[0], n0);
 
     R.transMult(1.0, z01, -1.0, zi1);
     A.transMult(1.0, z01, -1.0, zi3);
     C.transMult(1.0, z01, -1.0, zi4);
+    
+    if (mle > 0)
+      {
+	int nx0, my0, mz0;
+	stochNode->get_FistStageSize(nx0, my0,mz0);
+	SimpleVector z0E (&z0[nx0+mz0+my0-mle], mle);
+	E.mult(1.0, z0E, -1.0, zi1);
+      }
+    if (mli > 0)
+      {
+	int nx0, my0, mz0;
+	stochNode->get_FistStageSize(nx0, my0,mz0);
+	SimpleVector z0F (&z0[nx0+mz0+my0+mz0-mli], mli);
+	F.mult(1.0, z0F, -1.0, zi1);
+      }
 #if 0
 	A.printMatrixInMatlab("bord_A");
 	C.printMatrixInMatlab("bord_C");
@@ -429,8 +449,6 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
     A.transMult(1.0, z01, -1.0, zi2);
     C.transMult(1.0, z01, -1.0, zi3);
   }
-
-
 }
 
 
@@ -478,6 +496,11 @@ void sLinsys::LniTransMult(sData *prob,
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
+  SparseGenMatrix& E = prob->getLocalE();
+  SparseGenMatrix& F = prob->getLocalF();
+  int mle = prob->getmle();
+  int mli = prob->getmli();
+
   int N, nx0;
   int locns = locmz;
 
@@ -510,6 +533,21 @@ void sLinsys::LniTransMult(sData *prob,
     R.mult(0.0, LniTx1, 1.0, x1);
     A.mult(0.0, LniTx3, 1.0, x1);
     C.mult(0.0, LniTx4, 1.0, x1);
+    if (mle > 0)
+      {
+	int nx0, my0, mz0;
+        stochNode->get_FistStageSize(nx0, my0,mz0);
+        SimpleVector xE (&x[nx0+mz0+my0-mle], mle);
+        E.transMult(1.0, LniTx1, 1.0, xE);
+      }
+    if (mli > 0)
+      {
+        int nx0, my0, mz0;
+        stochNode->get_FistStageSize(nx0, my0,mz0);
+        SimpleVector xF (&x[nx0+mz0+my0+mz0-mli], mli);
+        F.transMult(1.0, LniTx1, 1.0, xF);
+      }
+
   }else{
     // shortcuts
 //    SimpleVector x1(&x[0], nx0);
@@ -591,11 +629,24 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
-
+  
 
   int N, nxP, NP,mR,nR;
   int locns = locmz;
   
+  int mle = prob->getmle();
+  int mli = prob->getmli();
+  SparseGenMatrix& E = prob->getLocalE();
+  SparseGenMatrix& F = prob->getLocalF();
+
+  SparseGenMatrix ET;
+  SparseGenMatrix FT;
+  ET.transCopyof(E);
+  FT.transCopyof(F);
+
+  int nx0, my0, mz0;
+  stochNode->get_FistStageSize(nx0, my0,mz0);
+   
   A.getSize(N, nxP); assert(N==locmy);
   NP = SC.size(); assert(NP>=nxP);
 
@@ -619,13 +670,12 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     colSparsity=new int[N];
     //blocksize=32;
   }
-
+  
   for (int it=0; it < nxP; it += blocksize) {
     int start=it;
     int end = MIN(it+blocksize,nxP);
     int numcols = end-start;
     cols.getStorageRef().m = numcols; // avoid extra solves
-
 
     bool allzero = true;
     memset(&cols[0][0],0,N*blocksize*sizeof(double));
@@ -662,28 +712,123 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
       else 
 		solver->solve(cols);
 
-	  if(gOuterSolve>=3 ) {
-
-        R.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
+      if(gOuterSolve>=3 ) {
+        R.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
        				      -1.0, &cols[0][0], N);
-        A.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
-       				      -1.0, &cols[0][locnx+locns], N);
-        C.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,
+        A.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
+       				      -1.0, &cols[0][locnx+locns], N);	
+        C.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,
        				      -1.0, &cols[0][locnx+locns+locmy], N);
+	if(mle>0)
+          ET.getStorageRef().transMultMat( 1.0,  &(SC.getStorageRef().M[nx0+mz0+my0-mle][start]), numcols, NP, -1.0, &cols[0][0], N);
+	if(mli>0)
+	    FT.getStorageRef().transMultMat( 1.0, &(SC.getStorageRef().M[nx0+mz0+my0+mz0-mli][start]), numcols, NP,
+                                   -1.0, &cols[0][0], N);
 	  }
 	  else{
-  
-        R.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
+	    R.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
        				      -1.0, &cols[0][0], N);
-        A.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,  
+	    A.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
        				      -1.0, &cols[0][locnx], N);
-        C.getStorageRef().transMultMat( 1.0, SC[start], numcols, NP,
+	    C.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,
        				      -1.0, &cols[0][locnx+locmy], N);
 	  }
-
-	  
     } //end !allzero
   }
+
+  for (int it=0; it < mle; it += blocksize)
+  {
+    int start=it;
+    int end = MIN(it+blocksize,mle);
+    int numcols = end-start;
+    cols.getStorageRef().m = numcols; // avoid extra solves                                                                                                                          
+    bool allzero = true;
+    memset(&cols[0][0],0,N*blocksize*sizeof(double));
+
+    if(ispardiso) 
+    {
+        for(int i=0; i<N; i++) colSparsity[i]=0;
+	ET.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, colSparsity, allzero);
+    }
+    else 
+    {
+	ET.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
+    }
+    if(!allzero) {
+      if(ispardiso)
+	pardisoSlv->solve(cols,colSparsity);
+      else
+	solver->solve(cols);
+      if(gOuterSolve>=3 ) {
+	R.getStorageRef().transMultMat( 1.0, &(SC[0][nx0+mz0+my0-mle+start]), numcols, NP,
+					-1.0, &cols[0][0], N);
+	A.getStorageRef().transMultMat( 1.0, &(SC[0][nx0+mz0+my0-mle+start]), numcols, NP,
+					-1.0, &cols[0][locnx+locns], N);
+	C.getStorageRef().transMultMat( 1.0, &(SC[0][nx0+mz0+my0-mle+start]), numcols, NP,
+					-1.0, &cols[0][locnx+locns+locmy], N);
+	if(mle>0)
+	  ET.getStorageRef().transMultMat( 1.0,  &(SC[nx0+mz0+my0-mle][nx0+mz0+my0-mle+start]), numcols, NP, -1.0, &cols[0][0], N);
+	if(mli>0)
+	  FT.getStorageRef().transMultMat( 1.0,  &(SC[nx0+mz0+my0+mz0-mli][nx0+mz0+my0-mle+start]), numcols, NP, -1.0, &cols[0][0], N);
+
+	/*
+	std::cout<<"cols:  "<<std::endl;
+        for(int i=0; i<numcols;i++)
+          for(int j=0; j<N;j++)
+	    std::cout<<"col "<<i<<"row "<<j<<"elt "<<cols[i][j]<<std::endl;
+
+	std::cout<<"SC:  "<<std::endl;
+        for(int i=0; i<NP;i++)
+          for(int j=0; j<NP;j++)
+	    std::cout<<"row "<<i<<"col "<<j<<"elt "<<SC.getStorageRef().M[i][j]<<std::endl;
+	*/
+      }
+      else{
+	assert(false && "not implemented");
+      }
+    } //end !allzero 
+  }
+
+  for (int it=0; it < mli; it += blocksize)
+  {
+      int start=it;
+      int end = MIN(it+blocksize,mle);
+      int numcols = end-start;
+      cols.getStorageRef().m = numcols; // avoid extra solves
+      bool allzero = true;
+      memset(&cols[0][0],0,N*blocksize*sizeof(double));
+
+      if(ispardiso)
+      {
+	  for(int i=0; i<N; i++) colSparsity[i]=0;
+	  FT.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, colSparsity, allzero);
+      }
+      else
+      {
+	  FT.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
+      }
+      if(!allzero) {
+	if(ispardiso)
+	  pardisoSlv->solve(cols,colSparsity);
+	else
+	  solver->solve(cols);
+	if(gOuterSolve>=3 ) {
+	  R.getStorageRef().transMultMat( 1.0, &(SC[0][nx0+mz0+my0+mz0-mli+start]), numcols, NP,
+					  -1.0, &cols[0][0], N);
+	  A.getStorageRef().transMultMat( 1.0, &(SC[0][nx0+mz0+my0+mz0-mli+start]), numcols, NP,
+					  -1.0, &cols[0][locnx+locns], N);
+	  C.getStorageRef().transMultMat( 1.0, &(SC[0][nx0+mz0+my0+mz0-mli+start]), numcols, NP,
+					  -1.0, &cols[0][locnx+locns+locmy], N);
+	  if(mle>0)
+	    ET.getStorageRef().transMultMat( 1.0,  &(SC[nx0+mz0+my0-mle][nx0+mz0+my0+mz0-mli+start]), numcols, NP, -1.0, &cols[0][0], N);
+	  if(mli>0)
+	    FT.getStorageRef().transMultMat( 1.0,  &(SC[nx0+mz0+my0+mz0-mli][nx0+mz0+my0+mz0-mli+start]), numcols, NP, -1.0, &cols[0][0], N);
+	}
+	else{
+	  assert(false && "not implemented");
+	}
+      } //end !allzero
+    }
 
   if(ispardiso) delete[] colSparsity;
 }

@@ -452,6 +452,7 @@ endif(BUILD_PIPS_S)
 if(BUILD_PIPS_NLP)
   add_test(NAME PIPS-NLP-simpleTest1 COMMAND $<TARGET_FILE:parmodel2> -objcheck)
   add_test(NAME PIPS-NLP-simpleTest2 COMMAND $<TARGET_FILE:parmodel3> -objcheck)
+  add_test(NAME PIPS-NLP-linkingTest COMMAND $<TARGET_FILE:parmodelLink> -objcheck)
 endif(BUILD_PIPS_NLP)
 
 endif(WITH_MAKETEST)

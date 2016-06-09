@@ -130,11 +130,29 @@ void DenseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
   colExtent = ( destCol + colExtent <= n ) ?  colExtent : n - destCol;
 
   Mat.fromGetDense( srcRow, srcCol, &M[destRow][destCol], n,
-		     rowExtent, colExtent );
-
-  
+		     rowExtent, colExtent );  
 }
 
+void DenseSymMatrix::symAtAddSubmatrix( int destRow, int destCol,
+					DoubleMatrix& Mat,
+					int srcRow, int srcCol,
+					int rowExtent, int colExtent )
+{
+  int m = mStorage->m, n = mStorage->n;
+  double ** M = mStorage->M;
+
+  assert( destRow >= 0 && destRow + rowExtent <= m );
+  assert( destCol >= 0 && destCol + colExtent <= n );
+
+  // If assertions are turned off, clip to the actual size of this matrix                                                                                                            
+  destRow = ( destRow >= 0 ) ? destRow : 0;
+  destCol = ( destCol >= 0 ) ? destCol : 0;
+  rowExtent = ( destRow + rowExtent <= m ) ?  rowExtent : m - destRow;
+  colExtent = ( destCol + colExtent <= n ) ?  colExtent : n - destCol;
+
+  Mat.fromAddDense( srcRow, srcCol, &M[destRow][destCol], n,
+		    rowExtent, colExtent );
+}
 
 void DenseSymMatrix::mult ( double beta,  double y[], int incy,
 				double alpha, double x[], int incx )
@@ -432,10 +450,40 @@ void DenseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
     for(int j=destCol; j<destCol + colExtent; j++) {
       M[j][i] = M[i][j]; 
     }
-  }
-
-  
+  }  
 }
+
+void DenseSymMatrix::symAtAddSubmatrix( int destRow, int destCol,
+                                        DoubleMatrix& Mat,
+                                        int srcRow, int srcCol,
+                                        int rowExtent, int colExtent,
+                                        int forceSymUpdate)
+{
+  if(forceSymUpdate==0) {
+    symAtAddSubmatrix(destRow, destCol,
+                      Mat, srcRow, srcCol, rowExtent, colExtent);
+    return;
+  }
+  int m = mStorage->m, n = mStorage->n;
+  double ** M = mStorage->M;
+
+  assert( destRow >= 0 && destRow + rowExtent <= m );
+  assert( destCol >= 0 && destCol + colExtent <= n );
+  // If assertions are turned off, clip to the actual size of this matrix
+  destRow = ( destRow >= 0 ) ? destRow : 0;
+  destCol = ( destCol >= 0 ) ? destCol : 0;
+  rowExtent = ( destRow + rowExtent <= m ) ?  rowExtent : m - destRow;
+  colExtent = ( destCol + colExtent <= n ) ?  colExtent : n - destCol;
+  Mat.fromAddDense( srcRow, srcCol, &M[destRow][destCol], n,
+                    rowExtent, colExtent );
+  //!exec                                                                                                                                                                           
+  for(int i=destRow; i<destRow + rowExtent; i++) {
+    for(int j=destCol; j<destCol + colExtent; j++) {
+      M[j][i] = M[i][j];
+    }
+  }
+}
+
 
 void DenseSymMatrix::atRankkUpdate( double alpha, double beta, DenseGenMatrix& U, int trans)
 {

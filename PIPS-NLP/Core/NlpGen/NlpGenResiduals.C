@@ -280,11 +280,10 @@ void NlpGenResiduals::eval_kkt_res(NlpGenData *prob, NlpGenVars *vars)
 
   double componentNorm, prinorm=0.0, dualnorm=0.0, comnorm=0.0, gap=0.0;
   
-  prob->getg( *rQ );
-  
+  prob->getg( *rQ );  
   // calculate x^T (g+Qx) - contribution to the duality gap
   gap = rQ->dotProductWith(*vars->x);   
-
+  
   // calculate dual residual: g - Ae'*lame - Ai'*lami
   prob->ATransmult( 1.0, *rQ, -1.0, *vars->y ); 
   prob->CTransmult( 1.0, *rQ, -1.0, *vars->z );
@@ -298,11 +297,9 @@ void NlpGenResiduals::eval_kkt_res(NlpGenData *prob, NlpGenVars *vars)
   componentNorm = rQ->infnorm();
   if( componentNorm > dualnorm ) 
   	dualnorm = componentNorm;
-
   // calculate primal residual for Eq Cons: Ce(x)-b
   rA->copyFrom(*prob->CeqBody);
   rA->axpy( -1.0, *prob->bA);
-
   // contribution -d^T y to duality gap
   gap -= prob->bA->dotProductWith(*vars->y);
 
@@ -318,7 +315,6 @@ void NlpGenResiduals::eval_kkt_res(NlpGenData *prob, NlpGenVars *vars)
   componentNorm = rC->infnorm();
   if( componentNorm > prinorm ) 
   	prinorm = componentNorm;
-  
   // calculate primal residual for InEq Cons: clow <=  s <= cupp
   // also calculate dual residual for the slack, as z-lambda, lambda is the dual for the lower bound and pi for the upper
   rz->setToZero();
@@ -347,8 +343,8 @@ void NlpGenResiduals::eval_kkt_res(NlpGenData *prob, NlpGenVars *vars)
     ru->axpy( -1.0, prob->supperBound() );
     ru->selectNonZeros( *icupp );
     ru->axpy( 1.0, *vars->u );  // residual: s-cupp+u, u is the slack for the upper bound
-
-	gap += prob->bu->dotProductWith(*vars->pi);
+    
+    gap += prob->bu->dotProductWith(*vars->pi);
 
     componentNorm = ru->infnorm();
     if( componentNorm > prinorm ) 
@@ -358,8 +354,6 @@ void NlpGenResiduals::eval_kkt_res(NlpGenData *prob, NlpGenVars *vars)
   componentNorm = rz->infnorm();
   if( componentNorm > dualnorm ) 
   	dualnorm = componentNorm;
-
-
   // additional eq constraints due to the variable bounds:  x-v=xlow, x+w=xupp
   // if nxlow == prob->nxLOri, we do not transfer problem
   if( nxlow > 0 ) {
@@ -387,7 +381,6 @@ void NlpGenResiduals::eval_kkt_res(NlpGenData *prob, NlpGenVars *vars)
     if( componentNorm > prinorm ) 
 	  prinorm = componentNorm;
   }
-  
   mDualityGap = gap; //no dual gap for nonlinear prob
 
 

@@ -70,7 +70,10 @@ class sData : public NlpGenData {
   SparseGenMatrix& getLocalB();
   SparseGenMatrix& getLocalC();
   SparseGenMatrix& getLocalD();
-
+  SparseGenMatrix& getLocalE();
+  SparseGenMatrix& getLocalF();
+  int getmle();
+  int getmli();  
   void sync();
  public:
 
