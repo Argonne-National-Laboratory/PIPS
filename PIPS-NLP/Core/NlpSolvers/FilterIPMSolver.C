@@ -912,7 +912,7 @@ FilterIPMSolver::defaultStatus(Data *  data_in, Variables * /* vars */,
 
   if(DoFeasResto){
   	printf("OOPS! Feasiblity Restoration Phase. STOP! \n");
-    assert("Not implemented" && 0);
+    return NEED_FEASIBILITY_RESTORATION;
   }
 
   int stop_code = NOT_FINISHED;

@@ -359,7 +359,7 @@ int PipsNlpSolve( PipsNlpProblem retval, double* obj_val, double* sol_x, UserDat
 
 	delete updateNlpCB;
 	delete pipsOpt;
-	return 1;
+	return result;
 }
 
 
