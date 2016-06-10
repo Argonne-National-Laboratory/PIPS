@@ -38,6 +38,8 @@ using namespace std;
 #include "FilterIPMOption.h"
 #include "PDRegularization.h"
 
+#include "global_var.h"
+
 // gmu is used in EmtlStochSymIndefSolver to decide if the system should be perturbed
 double gmu;
 // double grnorm;
@@ -91,6 +93,7 @@ int FilterIPMStochSolver::solve( Data *prob_in, Variables *iterate, Residuals * 
 
   gmu = 1000;
   g_iterNumber=0.0;
+  giterNum = 0;
 
   ChangeBounds(prob,resid);
   
@@ -115,7 +118,7 @@ int FilterIPMStochSolver::solve( Data *prob_in, Variables *iterate, Residuals * 
   /* ----------------------------- Start main loop ------------------------- */
   do
   {
-	iter++; g_iterNumber=iter;
+	iter++; g_iterNumber=iter; giterNum = iter;
 
     stochFactory->iterateStarted();
 
