@@ -8,6 +8,7 @@
 
 extern int gmyid;
 extern int gnprocs;
+extern int giterNum; //the global variable hold current iteration number
 #ifdef NLPTIMING
 extern PerfMetrics gprof;
 #endif

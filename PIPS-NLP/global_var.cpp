@@ -7,6 +7,7 @@
 
 int gmyid;
 int gnprocs;
+int giterNum;
 #ifdef NLPTIMING
 PerfMetrics gprof = PerfMetrics::getPerfMetrics();
 #endif

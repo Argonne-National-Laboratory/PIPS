@@ -161,6 +161,8 @@ extern "C"
     UserDataPtr userdata;
     // holders for optimal solution and objective
     double objective;
+    int nvars;
+    int ncons;
   };
   typedef struct PipsNlpProblemStruct* PipsNlpProblemStructPtr; 	/** Pointer to a pips_nlp Problem. **/
 
@@ -196,6 +198,15 @@ extern "C"
    */
   double PipsNlpProblemStructGetObjective(PipsNlpProblemStruct* prob);
 
+  /*
+   * Get the number of total variables
+   */
+  int PipsNlpProblemStructGetTotalVars(PipsNlpProblemStruct* prob);
+
+   /*
+    * Get the number of total constraints
+    */
+  int PipsNlpProblemStructGetTotalCons(PipsNlpProblemStruct* prob);
 };
 #endif
 
