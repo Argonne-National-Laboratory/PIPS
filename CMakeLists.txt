@@ -150,7 +150,7 @@ set(SHARED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ThirdPartyLibs)
 #CBC
 set(COIN_DIR ${SHARED_DIR}/CBC/src)
 if(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
-	message(FATAL_ERROR "Please run \"./wgetCBC.sh\" in ${COIN_DIR}")
+	message(FATAL_ERROR "Please run \"./wgetCBC.sh\" in ${SHARED_DIR}/CBC")
 endif(NOT EXISTS "${COIN_DIR}/lib/pkgconfig/coinutils.pc")
 
 set(ENV{PKG_CONFIG_PATH} ${COIN_DIR}/lib/pkgconfig)
