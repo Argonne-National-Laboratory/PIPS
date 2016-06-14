@@ -4,6 +4,18 @@ cmake_minimum_required(VERSION 2.8)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
+# For debugging build, set CMAKE_BUILD_TYPE to DEBUG
+# For optimized build, set CMAKE_BUILD_TYPE to RELEASE
+# For optimized build with debug info, set CMAKE_BUILD_TYPE to RELWITHDEBINFO
+# CMAKE_BUILD_TYPE should be set at the command line or in a toolchain file
+if(CMAKE_BUILD_TYPE)
+  message("CMake build type is ${CMAKE_BUILD_TYPE}")
+  message("Build type default flags are: ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
+else()
+  message("CMAKE_BUILD_TYPE not set!")
+endif(CMAKE_BUILD_TYPE)
+  
 option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)
 option(BUILD_PIPS_IPM "Build PIPS-IPM" OFF)
@@ -112,8 +124,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -dynamic")
     else(IS_XE6 OR IS_XK7 OR IS_XC30)
     	set(CMAKE_CXX_COMPILER "mpicxx")
-    	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ") # need this explicitly for mpicxx
-    	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fPIC -fpermissive")
+    	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fpermissive")
     endif(IS_XE6 OR IS_XK7 OR IS_XC30)
 elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	message(STATUS "running on mac")
@@ -377,12 +388,6 @@ endif()
 
 ###############################################################################
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-
-#set(CMAKE_BUILD_TYPE DEBUG)
-#set(CMAKE_BUILD_TYPE RELWITHDEBINFO)
-#set(CMAKE_BUILD_TYPE RELEASE)
-#message("FLAGS: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 # must set TAU_MAKEFILE, TAU_OPTIONS environment variables
 #set(CMAKE_CXX_COMPILER "tau_cxx.sh")
