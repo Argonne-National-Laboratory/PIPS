@@ -92,7 +92,8 @@ extern PetscErrorCode PC_Shell_Apply_Sparse(PC pc,Vec b_in,Vec x_out);
 NlpGenLinsys::NlpGenLinsys( NlpGen * factory_,
 			  NlpGenData * prob,
 			  LinearAlgebraPackage * la ) :
-  factory( factory_), rhs(NULL), dd(NULL), dq(NULL), useRefs(0),additiveDiag(NULL)
+  factory( factory_), rhs(NULL), dd(NULL), dq(NULL), useRefs(0),additiveDiag(NULL),
+  allocateSpace(true)
 {
 
   nx = prob->nx; my = prob->my; mz = prob->mz;
@@ -183,6 +184,25 @@ NlpGenLinsys::NlpGenLinsys( NlpGen * factory_,
 
   KryIter=0;
 }
+
+
+NlpGenLinsys::~NlpGenLinsys(){
+	if (allocateSpace){
+	if(dd) { delete dd; dd=NULL;} 
+	if(dq) { delete dq; dq=NULL;} 
+	if(rhs) { delete rhs; rhs=NULL;} 
+	if(nomegaInv) { delete nomegaInv; nomegaInv=NULL;} 
+	if(temp_diagX) { delete temp_diagX; temp_diagX=NULL;} 
+	if(temp_diagZ) { delete temp_diagZ; temp_diagZ=NULL;} 
+	if(temp_diagS) { delete temp_diagS; temp_diagS=NULL;} 
+	if(temp_diagY) { delete temp_diagY; temp_diagY=NULL;} 
+	if(sol) delete sol; if(res) delete res; if(resx) delete resx; if(ress) delete ress; if(resy) delete resy; if(resz) delete resz; 
+	if(sol2) delete sol2; if(res2) delete res2; 
+	if(sol2Bicg) delete sol2Bicg;
+	if(res2Bicg) delete res2Bicg; if(res3Bicg) delete res3Bicg; if(res4Bicg) delete res4Bicg; if(res5Bicg) delete res5Bicg;
+	}
+}
+
 
 
 // build the matrix which need to be factorized, in QP form

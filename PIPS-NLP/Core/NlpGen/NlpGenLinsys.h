@@ -93,15 +93,17 @@ public:
 
   // number of krylov iterations
   int KryIter;
+
+  bool allocateSpace;
   
 public:
   NlpGenLinsys(  NlpGen * factory,
 		NlpGenData * data,
 		LinearAlgebraPackage * la );
 
-  NlpGenLinsys() {KryIter=0;};
+  NlpGenLinsys() {KryIter=0;allocateSpace=false;};
 
-  ~NlpGenLinsys() {}
+  ~NlpGenLinsys();
 
 
   /** sets up the matrix for the main linear system in "augmented

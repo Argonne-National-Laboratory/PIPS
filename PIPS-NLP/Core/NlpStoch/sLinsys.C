@@ -115,10 +115,10 @@ sLinsys::sLinsys(sFactory* factory_,
   rhs = rhs_;
   additiveDiag = additiveDiag_;
 
-  temp_diagX =	factory_->tree->newPrimalVector();
-  temp_diagS =  factory_->tree->newDualZVector() ;
-  temp_diagZ =  factory_->tree->newDualZVector() ;
-  temp_diagY =  factory_->tree->newDualYVector() ;
+//  temp_diagX =	factory_->tree->newPrimalVector();
+//  temp_diagS =  factory_->tree->newDualZVector() ;
+//  temp_diagZ =  factory_->tree->newDualZVector() ;
+//  temp_diagY =  factory_->tree->newDualYVector() ;
 
   useRefs=1;
   data = prob;

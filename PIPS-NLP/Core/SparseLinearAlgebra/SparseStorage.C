@@ -70,6 +70,9 @@ SparseStorage::~SparseStorage()
     delete [] M;
   }
 
+  if(additiveDiag) 
+  	delete [] additiveDiag;
+
   SparseStorage::instances--;
 }
 

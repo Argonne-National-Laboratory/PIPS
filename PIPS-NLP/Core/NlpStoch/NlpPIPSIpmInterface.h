@@ -213,6 +213,7 @@ NlpPIPSIpmInterface<FORMULATION, IPMSOLVER,UPDATENLP>::~NlpPIPSIpmInterface()
   delete vars;
   delete data;
   delete factory;
+  if(updateNlpInfo) delete updateNlpInfo;
 }
 
 

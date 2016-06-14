@@ -206,5 +206,6 @@ NlpInfoAMPL::get_InitX0(OoqpVector* vX)
 		timeFromAMPL += MPI_Wtime()-tTot;
 #endif   
 
+  free(tempX);
 }
 

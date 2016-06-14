@@ -45,8 +45,7 @@ public:
 	}
 	amplGenStochInput(const std::string &datarootname,
 			int overrideScenarioNumber = 0, MPI_Comm comm = MPI_COMM_WORLD);
-	~amplGenStochInput() {
-	}
+	~amplGenStochInput();
 
 	virtual int nScenarios() {
 		return nScenarios_;
@@ -239,6 +238,12 @@ protected:
 
 	int nnzA1st, nnzC1st;
 	std::vector<int> nnzA2nd, nnzC2nd;
+
+
+virtual int nLinkCons(){return 0;};
+virtual int nLinkECons(){return 0;};
+virtual int nLinkICons(){return 0;};
+
 
 ////////////////////////////////////////////////////////////////////////////////////
 

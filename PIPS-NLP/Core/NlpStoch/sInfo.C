@@ -13,6 +13,7 @@
 
 sInfo::~sInfo()
 {
+	destroyChildren();
 }	  
 
 sInfo::sInfo()

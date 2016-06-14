@@ -547,6 +547,7 @@ void ampl_get_matrices(  fint irow[], fint kcol[], double elts[],
   	ampl_GetHessianInit(dwrkX,elts,yeltsTemp);
   else
   	ampl_GetHessianInit(NULL,elts,yeltsTemp);
+  free(yeltsTemp);
 
   if(1==full_size){
     int kQ = 0;
@@ -650,4 +651,33 @@ void ampl_write_solution(double *varsX, double *Yelts,double *Zelts )
   }
   write_sol("\npipsnlp_serial:", varsX, dualWrk,NULL);
   free(dualWrk);
+}
+
+
+
+void ampl_free_mapinfo(){
+
+	if(amplRowMap) delete [] (amplRowMap);
+	if(invpRowMap) delete [] (invpRowMap);
+
+	if(XStatus) delete [] (XStatus);
+	if(ConStatus) delete [] (ConStatus);
+
+	if(JacAGoffTransMap) free(JacAGoffTransMap);
+	if(JacCGoffTransMap) free(JacCGoffTransMap);
+
+	if(dA_goff) free(dA_goff);
+	if(dC_goff) free(dC_goff);
+
+	if(dC_L_goff) free(dC_L_goff);
+	if(dC_U_goff) free(dC_U_goff);	
+
+	if(dC_UL_goff) free(dC_UL_goff);
+	if(amplRowMap_CLow) delete [] (amplRowMap_CLow);	
+	if(amplRowMap_CUp) delete [] (amplRowMap_CUp);	
+	if(amplRowMap_XLow) delete [] (amplRowMap_XLow);	
+	if(amplRowMap_XUp) delete [] (amplRowMap_XUp);	
+
+
+	
 }

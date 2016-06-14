@@ -207,7 +207,7 @@ int solve(const string& datarootname, int nscen)
 #endif
   pipsIpm.writeSolution();
   delete pipsOpt;
-//  delete s;
+  delete s;
 
   return 0;
 }

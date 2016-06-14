@@ -141,6 +141,8 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
   gprof.t_solver_lifetime = MPI_Wtime() - stime;
   gprof.report_timing();
 #endif
+
+  delete s;
   return 0;
 }
 

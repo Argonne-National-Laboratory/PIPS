@@ -258,8 +258,8 @@ void SparseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
   int i, k;
   int info, nnz, nnzR;
 
-  int *    ja = new int[colExtent];
-  double * a = new double[colExtent];
+//  int *    ja = new int[colExtent];
+//  double * a = new double[colExtent];
 
   nnz = 0;
   for ( i = 0; i < rowExtent; i++ ) {
