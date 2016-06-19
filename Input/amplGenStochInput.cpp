@@ -331,7 +331,10 @@ amplGenStochInput::amplGenStochInput(const string &datarootname_in,
 	nSecondStageVars_[scen] = 0;
   }
 
+  delete [] amplRowMap1st;
   delete amplSuffix;
+  delete [] filedataArgv[0];
+  delete [] filedataArgv[1];
 }
 
 
@@ -1071,6 +1074,8 @@ void amplGenStochInput::		loadLocalNLdata(int scen)
   }
 
   delete amplSuffix;
+  delete [] filedataArgv[1];
+  
 }
 
 
@@ -1135,3 +1140,10 @@ void amplGenStochInput::doNetworkPart(const int scen, AmplSuffix* amplSuffix )
 }
 
 
+amplGenStochInput::~amplGenStochInput(){
+	for( int i = 0; i < nScenarios_; i++ ) {
+		if(amplRowMap2nd[i])
+			delete [] amplRowMap2nd[i];
+
+	}	
+}

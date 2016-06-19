@@ -77,4 +77,7 @@ ampl_get_InitX0(double *varsX);
 
 void ampl_write_solution(double *varsX, double *Yelts, double *Zelts);
 
+void
+ampl_free_mapinfo();
+
 #endif

@@ -130,13 +130,14 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
 
   prob->objective = pipsIpm.getObjective();
   
-  delete s;
   delete pipsOpt;
+  delete s;
 
 #ifdef NLPTIMING
   gprof.t_solver_lifetime = MPI_Wtime() - stime;
   gprof.report_timing();
 #endif
+
   return ret;
 }
 

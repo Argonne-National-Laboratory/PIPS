@@ -194,25 +194,27 @@ MPI_Init(&argc, &argv);
     exit( 1 );
   }
 
-  {  
-  	double *dxWrk = (double*) malloc (n_var*sizeof(double));
-  	ampl_get_InitX0(dxWrk);
-	double init_Obj = ampl_get_Obj(dxWrk);
+    
+  double *dxWrk = (double*) malloc (n_var*sizeof(double));
+  ampl_get_InitX0(dxWrk);
+  double init_Obj = ampl_get_Obj(dxWrk);
 	
-    ampl_get_ObjGrad(dxWrk, Objgrad);
-    ampl_get_bounds(
+  ampl_get_ObjGrad(dxWrk, Objgrad);
+  ampl_get_bounds(
 		   xlow, nx, ixlow, xupp, ixupp,
 		   bA, my,
 		   clow, mz, iclow, cupp, icupp );
 
-    ampl_get_matrices( irow, jcol, HessianElts,
+  ampl_get_matrices( irow, jcol, HessianElts,
 		   nx, nnzQ, my, nnzA, mz, nnzC,
 		   irowQ, jcolQ, dQ,
 		   irowA, jcolA, dA,
 		   irowC, jcolC, dC, 
 		   dxWrk, 
 		   full_size_Hessian );
-  }
+
+  free(dxWrk);
+  free(HessianElts);
 
   double objectiveConstant = objconst(0);
 
@@ -350,6 +352,21 @@ MPI_Init(&argc, &argv);
 		std::cout << "\n" << std::endl;
 #endif
 
+
+  freeNlpGenSparse(&Objgrad,
+  	&irowQ,&jcolQ,&dQ,
+  	&xlow,&ixlow,&xupp,&ixupp,
+  	&irowA,&jcolA,&dA,
+  	&bA,
+    &irowC,&jcolC,&dC,
+	&clow,&iclow,&cupp,&icupp);
+
+  ampl_free_mapinfo();
+
+  if(updateNlpAmpl) delete updateNlpAmpl;
+  delete pipsOpt;
+  delete amplSuffix;
+  delete localNL;
 
 
   delete s;

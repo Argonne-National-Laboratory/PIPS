@@ -133,8 +133,28 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 
 sLinsysRoot::~sLinsysRoot()
 {
-  for(size_t c=0; c<children.size(); c++)
-    delete children[c];
+//  for(size_t c=0; c<children.size(); c++)
+//    delete children[c];
+
+  for(size_t it=0; it<children.size(); it++) {
+    children[it]->deleteChildren();
+    delete children[it];
+  }
+  children.clear();
+
+	if(dd) { delete dd; dd=NULL;} 
+	if(dq) { delete dq; dq=NULL;} 
+	if(rhs) { delete rhs; rhs=NULL;} 
+	if(nomegaInv) { delete nomegaInv; nomegaInv=NULL;} 
+	if(temp_diagX) { delete temp_diagX; temp_diagX=NULL;} 
+	if(temp_diagZ) { delete temp_diagZ; temp_diagZ=NULL;} 
+	if(temp_diagS) { delete temp_diagS; temp_diagS=NULL;} 
+	if(temp_diagY) { delete temp_diagY; temp_diagY=NULL;}   
+	if(sol) delete sol; if(res) delete res; if(resx) delete resx; if(ress) delete ress; if(resy) delete resy; if(resz) delete resz; 
+	if(sol2) delete sol2; if(res2) delete res2; 
+	if(sol2Bicg) delete sol2Bicg;
+	if(res2Bicg) delete res2Bicg; if(res3Bicg) delete res3Bicg; if(res4Bicg) delete res4Bicg; if(res5Bicg) delete res5Bicg;
+  
 }
 
 //this variable is just reset in this file; children will default to the "safe" linear solver
