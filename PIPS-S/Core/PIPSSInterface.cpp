@@ -233,7 +233,7 @@ void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<
 		e1.setFullNonZero(elts1.size(),&elts1[0]);
 		e2.setFullNonZero(elts2.size(),&elts2[0]);
 	}
-	d.addRow(e1,e2,scen,lb,ub);
+	d.addSecondStageRow(e1,e2,scen,lb,ub);
 
 
 }
@@ -264,12 +264,10 @@ void PIPSSInterface::commitNewRows() {
 	delete solver;
 	solver = solver2;
 	st = useDual;
-
 	commitStates();
 
 
 }
-
 
 	const CoinShallowPackedVector PIPSSInterface::retrieveARow(int index ) const {
 		return d.retrieveARow(index);
@@ -283,7 +281,7 @@ void PIPSSInterface::commitNewRows() {
 		return d.retrieveTRow(index,scen);
 	}
 
-	const CoinShallowPackedVector PIPSSInterface::retrieveACol(int index) const{ 
+	const CoinShallowPackedVector PIPSSInterface::retrieveACol(int index) const{
 		return d.retrieveACol(index);
 	}
 
@@ -305,7 +303,7 @@ void PIPSSInterface::commitNewRows() {
 			CoinShallowPackedVector row=d.retrieveARow(index);
 			int nElems=row.getNumElements();
 			const int *indices=row.getIndices();
-			const double *elems=row.getElements(); 
+			const double *elems=row.getElements();
 
 	    	for (int el=0; el<nElems; el++){
 	    		expression+=(elems[el]*solution.getFirstStageVec()[indices[el]]);
@@ -313,7 +311,6 @@ void PIPSSInterface::commitNewRows() {
 	    	}
 	    	double lb=d.l.getFirstStageVec()[d.dims.inner.numFirstStageVars()+index];
 	    	double ub=d.u.getFirstStageVec()[d.dims.inner.numFirstStageVars()+index];
-	    	//cout<< std::setprecision(15)<<" In the end our row "<<index<<" had "<<lb<<" "<<expression<<" "<<ub<<endl;
 	    	if (expression<lb-intTol) return -2;
 	    	if (expression>ub+intTol) return -1;
 	    	return 1;
@@ -325,10 +322,9 @@ void PIPSSInterface::commitNewRows() {
 				CoinShallowPackedVector row=d.retrieveTRow(index,scen);
 				int nElems=row.getNumElements();
 				const int *indices=row.getIndices();
-				const double *elems=row.getElements(); 
+				const double *elems=row.getElements();
 
 		    	for (int el=0; el<nElems; el++){
-		    		//cout<<expression<<"+="<<elems[el]*solution.getFirstStageVec()[indices[el]]<<" "<<elems[el]<<" "<<solution.getFirstStageVec()[indices[el]]<<" "<<indices[el]<<endl;
 		    		expression+=(elems[el]*solution.getFirstStageVec()[indices[el]]);
 
 		    	}
@@ -336,17 +332,15 @@ void PIPSSInterface::commitNewRows() {
 		    	CoinShallowPackedVector row2=d.retrieveWRow(index,scen);
 				int nElems2=row2.getNumElements();
 				const int *indices2=row2.getIndices();
-				const double *elems2=row2.getElements(); 
+				const double *elems2=row2.getElements();
 
 		    	for (int el=0; el<nElems2; el++){
-		    		//cout<<expression<<"+="<<elems2[el]*solution.getSecondStageVec(scen)[indices2[el]]<<" "<<elems2[el]<<" "<<solution.getSecondStageVec(scen)[indices2[el]]<<" s"<<scen<<" "<<indices2[el]<<endl;
 		    		expression+=(elems2[el]*solution.getSecondStageVec(scen)[indices2[el]]);
 
 		    	}
 		    	double lb=d.l.getSecondStageVec(scen)[d.dims.inner.numSecondStageVars(scen)+index];
 		    	double ub=d.u.getSecondStageVec(scen)[d.dims.inner.numSecondStageVars(scen)+index];
-		    	//cout<<std::setprecision(15)<<" In the end our row "<<index<<" "<<scen<<" had "<<lb<<" "<<expression<<" "<<ub<<endl;
-	    	
+
 		    	if (expression<lb-intTol) return -2;
 		    	if (expression>ub+intTol) return -1;
 		    	return 1;
@@ -363,9 +357,7 @@ void PIPSSInterface::commitNewRows() {
 
 
 	void PIPSSInterface::commitNewColsAndRows()  {
-	
-		assert(solver->status == Optimal);
-	
+		//assert(solver->status == Optimal);
 		BALPSolverDual* solver2 = new BALPSolverDual(d);
 		solver2->setPrimalTolerance(solver->getPrimalTolerance());
 		solver2->setDualTolerance(solver->getDualTolerance());
@@ -373,9 +365,9 @@ void PIPSSInterface::commitNewRows() {
 		solver = solver2;
 		st = useDual;
 		solver->status = Uninitialized;
-		
+
 	}
-	
+
 	void PIPSSInterface::generateBetas(sparseBAVector &beta){
 		solver->generateBetas(beta);
 	}
@@ -388,9 +380,8 @@ void PIPSSInterface::commitNewRows() {
 		CoinPackedVector e1;
 		e1.setFullNonZero(elts1.size(),&elts1[0]);
 		d.addFirstStageRow(e1,lb,ub);
-		cout<<"Added first stage row "<<d.dims.inner.numFirstStageVars()<<" and cons "<<d.dims.numFirstStageCons()<<endl;
 	}
-		
+
 	void PIPSSInterface::addSecondStageRows(const std::vector< std::vector <double> >& elts1, const std::vector< std::vector <double> >&elts2, int scen, std::vector<double> &lb, std::vector<double> &ub, int nRows) {
 	 	std::vector<CoinPackedVector*> vectors1(nRows);
 		std::vector<CoinPackedVector*> vectors2(nRows);
@@ -411,7 +402,7 @@ void PIPSSInterface::commitNewRows() {
 	 	std::vector<CoinPackedVector*> vectors(nRows);
 	 	for (int i=0; i< nRows; i++){
 	 		vectors[i]= new CoinPackedVector();
-	 		vectors[i]->setFullNonZero(elts[i].size(),&elts[i][0]);	
+	 		vectors[i]->setFullNonZero(elts[i].size(),&elts[i][0]);
 	 	}
 		d.addFirstStageRows(vectors, lb, ub, nRows);
 		for (int i=0; i< nRows; i++){
@@ -419,17 +410,22 @@ void PIPSSInterface::commitNewRows() {
 		}
 	}
 
-	void PIPSSInterface::deleteLastFirstStageRows(int nRows){
+	void PIPSSInterface::deleteLastFirstStageConsecutiveRows(int nRows){
 		d.deleteLastFirstStageRows(nRows);
 	}
-		
-	void PIPSSInterface::deleteLastFirstStageColumns(int nCols){
+
+	void PIPSSInterface::deleteLastFirstStageConsecutiveColumns(int nCols){
 		d.deleteLastFirstStageColumns(nCols);
 	}
 
 	void PIPSSInterface::deleteLastSecondStageConsecutiveRows(int scenario, int nRows){
 		d.deleteLastSecondStageConsecutiveRows(scenario,nRows);
 	}
+
+	void PIPSSInterface::deleteLastSecondStageConsecutiveColumns(int scenario, int nCols){
+		d.deleteLastSecondStageConsecutiveColumns(scenario,nCols);
+	}
+
 
 	int PIPSSInterface::addFirstStageColumn(double lb, double ub, double c){
 		int out= d.addFirstStageColumn(lb,ub,c);

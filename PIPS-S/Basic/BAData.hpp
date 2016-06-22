@@ -21,21 +21,21 @@ public:
 
 	void getCol(sparseBAVector &v, BAIndex i) const;
 	void addColToVec(sparseBAVector &v, BAIndex i, double mult) const;
-	
+
 	// pick out nonbasic elements from "in" and multiply them with nonbasic columns
 	// effectively same as multiplying with whole matrix assuming basic "in" are zero
 	// a bit strange for dense input and sparse output, but this is the most convenient presently
-	void multiply(const denseBAVector &in, sparseBAVector &out, const BAFlagVector<variableState>&) const; 
+	void multiply(const denseBAVector &in, sparseBAVector &out, const BAFlagVector<variableState>&) const;
 
 	// multiply entire constraint matrix transpose by "in"
 	// taking linear combinations of the rows
 	void multiplyT(const sparseBAVector &in, sparseBAVector &out) const;
 
 
-	void addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
+	void addSecondStageRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
 
 	void addFirstStageRows(const std::vector<CoinPackedVector*> &v1, std::vector<double> &lb, std::vector<double> &ub, int nRows);
-	
+
 	void addSecondStageConsecutiveRows(const std::vector<CoinPackedVector*> &elts1, const std::vector<CoinPackedVector*> &elts2, int scenario, std::vector<double> &lb, std::vector<double> &ub, int nRows);
 
 	int addFirstStageColumn(double lb, double ub, double c);
@@ -46,9 +46,12 @@ public:
 
 	void deleteLastFirstStageRows(int nRows);
 
+	void deleteLastFirstStageColumns(int nCols);
+
 	void deleteLastSecondStageConsecutiveRows(int scenario, int nRows);
 
-	void deleteLastFirstStageColumns(int nCols);
+	void deleteLastSecondStageConsecutiveColumns(int scenario, int nCols);
+
 
 	const CoinShallowPackedVector retrieveARow(int index) const;
 
@@ -68,12 +71,12 @@ public:
 	denseBAVector l,u,c;
 	BAFlagVector<constraintType> vartype;
 	BAFlagVector<std::string> names;
-	boost::shared_ptr<CoinPackedMatrix> Acol; 
+	boost::shared_ptr<CoinPackedMatrix> Acol;
 	boost::shared_ptr<CoinPackedMatrix> Arow;
 	std::vector<boost::shared_ptr<CoinPackedMatrix> > Tcol;
 	std::vector<boost::shared_ptr<CoinPackedMatrix> > Trow;
-	std::vector<boost::shared_ptr<CoinPackedMatrix> > Wcol; 
-	std::vector<boost::shared_ptr<CoinPackedMatrix> > Wrow; 
+	std::vector<boost::shared_ptr<CoinPackedMatrix> > Wcol;
+	std::vector<boost::shared_ptr<CoinPackedMatrix> > Wrow;
 	BAContext &ctx;
 
 protected:

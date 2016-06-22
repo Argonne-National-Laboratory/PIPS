@@ -7,7 +7,7 @@
 #include "memContainer.hpp"
 #include <cmath>
 
-//#include <iostream>
+#include <iostream>
 
 const int MAX_UPDATES = 500;
 
@@ -25,7 +25,7 @@ template<typename T1, typename T2> class BAVector {
 public:
 
   BAVector() : dims(0), nScen(0) {
-    
+
   }
 private:
   BAVector(const BAVector&) { }
@@ -48,7 +48,7 @@ public:
 	  vec2.resize(nScen);
 	  this->dims = &dims;
 	  this->ctx = &ctx;
-	  localScen.reserve(10); 
+	  localScen.reserve(10);
 	  localScen.push_back(-1);
 	  if (vec1.allocated()) vec1.deallocate();
 	  if (t == PrimalVector) {
@@ -74,20 +74,20 @@ public:
 	      vec2[i] = 0;
 	    }
 	  }
-	  
-	  
+
+
 	}
-  
+
   bool allocated() const { return (dims != 0); }
-  
+
   void divideBy(double d) {
-    assert(vecType == BasicVector); 
+    assert(vecType == BasicVector);
     vec1.divideBy(d);
     for (int i = 0; i < nScen; i++) {
       vec2[i]->divideBy(d);
     }
   }
-  
+
 	void multiplyBy(double d) {
 		assert(vecType == BasicVector);
 		vec1.multiplyBy(d);
@@ -135,7 +135,7 @@ public:
 
 	BAVectorType vectorType() const { return vecType; }
 
-  
+
 protected:
 	const BADimensions* dims;
 	int nScen;
@@ -185,7 +185,33 @@ public:
       vec2[idx]->copyFrom(v.getSecondStageVec(idx));
     }
   }
-  
+
+  //copy input vector, and take only the size determined by the host dimensions
+  void copyAndShrinkToDims(const denseBAVector &v) {
+  	const BADimensions* vDims=v.dims;
+  	assert(dims->numFirstStageVars()<=vDims->numFirstStageVars());
+	assert(dims->numFirstStageCons()<=vDims->numFirstStageCons());
+	int vars1=dims->numFirstStageVars()-dims->numFirstStageCons();
+	int vvars1=vDims->numFirstStageVars()-vDims->numFirstStageCons();
+	//Copy first stage vars
+  	vec1.copyBeginning(v.getFirstStageVec(),vars1);
+  	//Copy first stage slacks
+  	vec1.copyToPosition(&v.getFirstStageVec()[vvars1], vars1, dims->numFirstStageCons());
+  	for (unsigned i = 1; i < localScen.size(); i++) {
+      int idx = localScen[i];
+      int vars2=dims->numSecondStageVars(idx)-dims->numSecondStageCons(idx);
+	  int vvars2=vDims->numSecondStageVars(idx)-vDims->numSecondStageCons(idx);
+
+      assert(dims->numSecondStageVars(idx)<=vDims->numSecondStageVars(idx));
+	  assert(dims->numSecondStageCons(idx)<=vDims->numSecondStageCons(idx));
+	  //Copy first stage vars
+	  vec2[idx]->copyBeginning(v.getSecondStageVec(idx),vars2);
+  	  //Copy first stage slacks
+	  vec2[idx]->copyToPosition(&v.getSecondStageVec(idx)[vvars2], vars2, dims->numSecondStageCons(idx));
+  	 }
+
+  }
+
  void copyBeginning(const denseBAVector &v) {
     vec1.copyBeginning(v.getFirstStageVec());
     for (unsigned i = 1; i < localScen.size(); i++) {
@@ -199,11 +225,11 @@ public:
   {
     allocate(*v.dims,*v.ctx,v.vecType);
     copyFrom(v);
-  }		 
+  }
 
-	
+
   denseBAVector& operator=(const denseBAVector& v) {
-    //these are required by "allocate" to work 
+    //these are required by "allocate" to work
     //also the dealocation of the local vectors is done in allocate
     dims=0; nScen=0; localScen.clear();
     allocate(*v.dims,*v.ctx,v.vecType);
@@ -220,7 +246,7 @@ public:
 		dot += vec1.dotWith(v.getFirstStageVec());
 		return dot;
 	}
-	
+
 	inline double& operator[](BAIndex i) {
 		if (i.scen == -1) {
 			return this->vec1[i.idx];
@@ -244,9 +270,32 @@ class sparseBAVector : public sameBAVector<sparseVector> {
 public:
 	sparseBAVector()  {}
 
+	 sparseBAVector& operator=(const sparseBAVector& v) {
+	 	dims=0; nScen=0; localScen.clear();
+   		allocate(*v.dims,*v.ctx,v.vecType);
+
+	    getVec(-1)=sparseVector(v.getVec(-1));
+	    for (unsigned i = 1; i < localScen.size(); i++) {
+	      int idx = localScen[i];
+	      getVec(idx) =sparseVector(v.getVec(idx));
+	    }
+	}
+
+
+	  sparseBAVector(const sparseBAVector& v)
+	  : sameBAVector<sparseVector>()
+	  {
+	  	allocate(*v.dims,*v.ctx,v.vecType);
+	    getVec(-1)=sparseVector(v.getVec(-1));
+	    for (unsigned i = 1; i < localScen.size(); i++) {
+	      int idx = localScen[i];
+	      getVec(idx) =sparseVector(v.getVec(idx));
+	    }
+	  }
+
+
 private:
-sparseBAVector(const sparseBAVector&) {}
-  sparseBAVector& operator=(const sparseBAVector&) {}
+
 public:
 	inline double operator[](BAIndex i) const {
 		if (i.scen == -1) {
@@ -255,7 +304,7 @@ public:
 			return (*this->vec2[i.scen])[i.idx];
 		}
 	}
-	
+
 
 	void checkClean() {
 		assert(vecType == BasicVector);
@@ -297,10 +346,10 @@ public:
     this->allocate(*v.dims, *v.ctx, v.vecType);
     this->copyFrom(v);
     return *this;
-  }  
+  }
 
 	~BAFlagVector() {
-		deallocate();	
+		deallocate();
 	}
 
 	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
@@ -379,7 +428,7 @@ public:
 		for (int scen = 0; scen < nScen; scen++) {
 			if (vec2[scen]) vec2[scen]->copyFrom(r.getSecondStageVec(scen));
 		}
-	
+
 	}
 
 protected:
@@ -396,7 +445,7 @@ protected:
 // T must be a container type, like std::vector or CoinIndexedVector
 template<typename T> class BAContainer {
 public:
-	
+
 
 	BAContainer() : dims(0) {}
 
@@ -419,7 +468,7 @@ public:
 
     return *this;
   }
-  
+
 
 
 	void allocate(const BADimensions &dims, const BAContext &ctx, BAVectorType t) {
@@ -448,12 +497,12 @@ public:
 				} else { // Basic
 					vec2[i].reserve(dims.numSecondStageCons(i)+MAX_UPDATES);
 				}
-			} 
+			}
 		}
 	}
 
   void deallocate() {
-    clear(); 
+    clear();
     dims = 0;
   }
 	void clear() {
@@ -512,7 +561,7 @@ public:
 	const packedVector& getPackedVec(int localidx) const {
 		return vec.at(localidx);
 	}
-	
+
 	// release allocated memory
 	void clear() {
 		for (unsigned i = 0; i < vec.size(); i++) {

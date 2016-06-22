@@ -17,9 +17,9 @@ template<typename T1, typename T2> void mergeColAndRow(T1& v, const T2 &col, con
 
 }
 
-template<typename BAVec, typename T1, typename Col2, typename Row2> 
+template<typename BAVec, typename T1, typename Col2, typename Row2>
 	void formBAVector(BAVec &v, const T1 &c1, Col2 c2, const T1 &r1, Row2 r2, const BAContext& ctx) {
-	
+
 	const vector<int> localScen = ctx.localScenarios();
 	mergeColAndRow(v.getFirstStageVec(), c1, r1);
 
@@ -71,10 +71,10 @@ void checkConstraintType(const denseVector &L, const denseVector &U, denseFlagVe
 BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 	int nscen = input.nScenarios();
 	ctx.initializeAssignment(nscen); // must do this first
-	dims = BADimensions(input,ctx); 
+	dims = BADimensions(input,ctx);
 
 	const vector<int> &localScen = ctx.localScenarios();
-	
+
 	l.allocate(dims, ctx, PrimalVector);
 	u.allocate(dims, ctx, PrimalVector);
 	c.allocate(dims, ctx, PrimalVector);
@@ -119,7 +119,7 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 	as soon as we add individual scenario cuts these need to be duplicated anyway.
 	One could think about adding identical cuts (with different RHSs)
 	to each scenario to restore this optimization.
-	
+
 	onlyBoundsVary = input.onlyBoundsVary();
 	if (onlyBoundsVary) {
 		Tcol[0].reset(new CoinPackedMatrix(input.getLinkingConstraints(0)));
@@ -151,7 +151,7 @@ BAData::BAData(stochasticInput &input, BAContext &ctx) : ctx(ctx) {
 	}*/
 
 	out1Send.reserve(dims.numFirstStageVars());
-	
+
 }
 
 BAData::BAData(const BAData &d) : dims(d.dims.inner), ctx(d.ctx) {
@@ -233,7 +233,7 @@ void BAData::getCol(sparseBAVector &v, BAIndex idx) const {
 			v1Idx[0] = k;
 			v1.setNumElements(1);
 		}
-	
+
 	} else {
 		if (!ctx.assignedScenario(scen)) return;
 		CoinIndexedVector &v2 = v.getSecondStageVec(scen).v;
@@ -290,7 +290,7 @@ void BAData::addColToVec(sparseBAVector &v, BAIndex idx, double mult) const {
 				v2.quickAdd(row,mult*TcolElts[q]);
 			}
 		}
-	
+
 	} else {
 		if (!ctx.assignedScenario(scen)) return;
 		CoinIndexedVector &v2 = v.getSecondStageVec(scen).v;
@@ -304,7 +304,7 @@ void BAData::addColToVec(sparseBAVector &v, BAIndex idx, double mult) const {
 		}
 	}
 
-	
+
 
 }
 
@@ -328,7 +328,7 @@ void BAData::multiply(const denseBAVector &in, sparseBAVector &out, const BAFlag
 		CoinIndexedVector &out2 = out.getSecondStageVec(scen).v;
 		double *out2Elts = out2.denseVector();
 		int *out2Idx = out2.getIndices();
-	
+
 		int nvar2Real = dims.inner.numSecondStageVars(scen);
 		int ncons2 = dims.numSecondStageCons(scen);
 		int nnz2 = 0;
@@ -338,7 +338,7 @@ void BAData::multiply(const denseBAVector &in, sparseBAVector &out, const BAFlag
 		const double *TrowElts = Trow[scen]->getElements();
 		const int *TrowIdx = Trow[scen]->getIndices();
 
-		
+
 		for (int i = 0; i < ncons2; i++) {
 			double work = 0.0;
 			// W part
@@ -405,7 +405,7 @@ void BAData::multiplyT(const sparseBAVector &in, sparseBAVector &out) const {
 	int nvarReal1 = dims.inner.numFirstStageVars();
 	int nnzIn1 = in1.getNumElements();
 
-	
+
 	const vector<int> &localScen = in.localScenarios();
 
 #ifdef PIPSPROF
@@ -415,12 +415,12 @@ void BAData::multiplyT(const sparseBAVector &in, sparseBAVector &out) const {
 
 	for (unsigned i = 1; i < localScen.size(); i++) {
 		int scen = localScen[i];
-		
+
 		const CoinIndexedVector &in2 = in.getSecondStageVec(scen).v;
 		CoinIndexedVector &out2 = out.getSecondStageVec(scen).v;
 		const double *in2Elts = in2.denseVector();
 		const int* in2Idx = in2.getIndices();
-	
+
 		int nvarReal2 = dims.inner.numSecondStageVars(scen);
 		int nnzIn2 = in2.getNumElements();
 
@@ -428,7 +428,7 @@ void BAData::multiplyT(const sparseBAVector &in, sparseBAVector &out) const {
 		const int *WrowIdx = Wrow[scen]->getIndices();
 		const double *TrowElts = Trow[scen]->getElements();
 		const int *TrowIdx = Trow[scen]->getIndices();
-		
+
 		for (int j = 0; j < nnzIn2; j++) {
 			int row = in2Idx[j];
 			double mult = in2Elts[row];
@@ -463,9 +463,9 @@ void BAData::multiplyT(const sparseBAVector &in, sparseBAVector &out) const {
 	comm_t = MPI_Wtime() - comm_t;
 	double first_t = MPI_Wtime();
 #endif
-	
+
 	out1Send.clear();
-	
+
 	// more efficient way to do it if T blocks are all the same
 
 	// A block
@@ -509,9 +509,8 @@ void BAData::multiplyT(const sparseBAVector &in, sparseBAVector &out) const {
 }
 
 
-void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb, double ub) {
+void BAData::addSecondStageRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBase &elts2, int scen, double lb, double ub) {
 
-	// don't (yet) support first-stage cuts
 	assert(scen >= 0 && scen < dims.numScenarios());
 	if (ctx.assignedScenario(scen)) {
 		Trow[scen]->appendRow(elts1);
@@ -539,7 +538,7 @@ void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBas
 		newC[nvar2+ncons2] = 0.0;
 		oldC.swap(newC);
 
-		dims.addSecondStageRow(scen);
+		dims.inner.addSecondStageRow(scen);
 
 		assert(oldU.length() == nvar2+ncons2+1);
 		assert(oldL.length() == nvar2+ncons2+1);
@@ -566,17 +565,17 @@ void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBas
 
 	const CoinShallowPackedVector BAData::retrieveARow(int index)const{
 		return Arow->getVector(index);
-	
+
 	}
 
 	const CoinShallowPackedVector BAData::retrieveWRow(int index,int scen)const {
 		return Wrow[scen]->getVector(index);
-		
+
 	}
 
 	const CoinShallowPackedVector BAData::retrieveTRow(int index,int scen)const{
 		return Trow[scen]->getVector(index);
-		
+
 	}
 
 	const CoinShallowPackedVector BAData::retrieveACol(int index)const{
@@ -585,17 +584,17 @@ void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBas
 
 	const CoinShallowPackedVector BAData::retrieveWCol(int index,int scen)const{
 		return Wcol[scen]->getVector(index);
-		
+
 	}
 
 	const CoinShallowPackedVector BAData::retrieveTCol (int index,int scen)const{
 		return Tcol[scen]->getVector(index);
-		
+
 	}
 
 	void BAData::addSecondStageConsecutiveRows(const std::vector<CoinPackedVector*> &v1, const std::vector<CoinPackedVector*> &v2, int scenario, std::vector<double> &lb, std::vector<double> &ub, int nRows){
 
-		
+
 	CoinPackedVectorBase * const * elts1= (CoinPackedVectorBase * const *) &v1[0];
 	CoinPackedVectorBase * const * elts2= (CoinPackedVectorBase * const *) &v2[0];
 	assert(scenario >= 0 && scenario < dims.numScenarios());
@@ -625,7 +624,7 @@ void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBas
 		for(int i=0; i< nRows; i++) newC[nvar2+ncons2+i] = 0.0;
 		oldC.swap(newC);
 
-		for(int i=0; i< nRows; i++) dims.addSecondStageRow(scenario);
+		for(int i=0; i< nRows; i++) dims.inner.addSecondStageRow(scenario);
 
 		assert(oldU.length() == nvar2+ncons2+nRows);
 		assert(oldL.length() == nvar2+ncons2+nRows);
@@ -650,8 +649,7 @@ void BAData::addRow(const CoinPackedVectorBase& elts1, const CoinPackedVectorBas
 
 void BAData::addFirstStageRow(const CoinPackedVectorBase& elts1, double lb, double ub) {
 
-	// don't (yet) support first-stage cuts
-	
+	assert(lb<=ub);
 	Arow->appendRow(elts1);
 	Acol->reverseOrderedCopyOf(*Arow);
 	int nvar = dims.inner.numFirstStageVars();
@@ -671,7 +669,7 @@ void BAData::addFirstStageRow(const CoinPackedVectorBase& elts1, double lb, doub
 	newC.copyBeginning(&oldC[0],nvar+ncons);
 	newC[nvar+ncons] = 0.0;
 	oldC.swap(newC);
-	dims.addFirstStageRow();
+	dims.inner.addFirstStageRow();
 	assert(oldU.length() == nvar+ncons+1);
 	assert(oldL.length() == nvar+ncons+1);
 	vartype.deallocate();
@@ -686,7 +684,8 @@ void BAData::addFirstStageRow(const CoinPackedVectorBase& elts1, double lb, doub
 		int scen = localScen[i];
 		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
 	}
-	
+	out1Send.reserve(dims.numFirstStageVars());
+
 }
 
 void BAData::addFirstStageRows(const std::vector<CoinPackedVector*> &v1, std::vector<double> &lb, std::vector<double> &ub, int nRows) {
@@ -696,7 +695,7 @@ void BAData::addFirstStageRows(const std::vector<CoinPackedVector*> &v1, std::ve
 	assert(lb.size()==ub.size() && lb.size()==nRows && nRows>0);
 	Arow->appendRows(nRows,elts1);
 	Acol->reverseOrderedCopyOf(*Arow);
-	
+
 	int nvar2 = dims.inner.numFirstStageVars();
 	int ncons2 = dims.numFirstStageCons();
 	denseVector newL(nvar2+ncons2+nRows);
@@ -715,7 +714,7 @@ void BAData::addFirstStageRows(const std::vector<CoinPackedVector*> &v1, std::ve
 	for(int i=0; i< nRows; i++)newC[nvar2+ncons2+i] = 0.0;
 	oldC.swap(newC);
 
-	for(int i=0; i< nRows; i++)dims.addFirstStageRow();
+	for(int i=0; i< nRows; i++)dims.inner.addFirstStageRow();
 
 	assert(oldU.length() == nvar2+ncons2+nRows);
 	assert(oldL.length() == nvar2+ncons2+nRows);
@@ -731,7 +730,7 @@ void BAData::addFirstStageRows(const std::vector<CoinPackedVector*> &v1, std::ve
 		int scen = localScen[i];
 		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
 	}
-	
+	out1Send.reserve(dims.numFirstStageVars());
 
 }
 
@@ -743,42 +742,18 @@ int BAData::addFirstStageColumn( double lb, double ub, double cobj){
 
 	//Assertions
 	assert(lb<=ub);
-	
-	//increase cols major dimension and rows minor dimension
-	cout<<" About to update dimensions of A col"<<Acol->getMajorDim()<<" "<<Acol->getMinorDim()<<endl;
-	cout<<" About to update  dimensions of A row"<<Arow->getMajorDim()<<" "<<Arow->getMinorDim()<<endl;
 
 	Acol->appendCol(elts);
 	Arow->reverseOrderedCopyOf(*Acol);
 
-	cout<<" We updated dimensions of A col"<<Acol->getMajorDim()<<" "<<Acol->getMinorDim()<<endl;
-	cout<<" We updated dimensions of A row"<<Arow->getMajorDim()<<" "<<Arow->getMinorDim()<<endl;
-
-	//Acol->setDimensions(-1, Acol->getMajorDim()+1);
-
-	//Arow->setDimensions(-1,Arow->getMinorDim()+1);
-	////cout<<" We updated dimensions of A col"<<Acol->getMajorDim()<<" "<<Acol->getMinorDim()<<endl;
-	////cout<<" We updated dimensions of A row"<<Arow->getMajorDim()<<" "<<Arow->getMinorDim()<<endl;
-
 	for (int scen=0; scen < Tcol.size(); scen++){
 		if (!ctx.assignedScenario(scen)) continue;
-		
-		//cout<<" About to update dimensions of t col"<<scen<<" "<<Tcol[scen]->getMajorDim()<<" "<<Tcol[scen]->getMinorDim()<<endl;
-		//cout<<" About to update  dimensions of t row"<<scen<<" "<<Trow[scen]->getMajorDim()<<" "<<Trow[scen]->getMinorDim()<<endl;
 		Tcol[scen]->appendCol(elts);
 		Trow[scen]->reverseOrderedCopyOf(*Tcol[scen]);
-//cout<<" We updated dimensions of t col"<<scen<<" "<<Tcol[scen]->getMajorDim()<<" "<<Tcol[scen]->getMinorDim()<<endl;
-		//cout<<" We updated dimensions of t row"<<scen<<" "<<Trow[scen]->getMajorDim()<<" "<<Trow[scen]->getMinorDim()<<endl;
-	
-	//	Tcol[scen]->setDimensions(-1,Tcol[scen]->getMajorDim()+1);
-	//	Trow[scen]->setDimensions(-1,Trow[scen]->getMinorDim()+1);
-	//	//cout<<" We updated dimensions of t col"<<scen<<" "<<Tcol[scen]->getMajorDim()<<" "<<Tcol[scen]->getMinorDim()<<endl;
-	//	//cout<<" We updated dimensions of t row"<<scen<<" "<<Trow[scen]->getMajorDim()<<" "<<Trow[scen]->getMinorDim()<<endl;
-	
 	}
 
-	
-	//increase the size of l, u, c, 
+
+	//increase the size of l, u, c,
 	int nvar2 = dims.inner.numFirstStageVars();
 	int ncons2 = dims.numFirstStageCons();
 	denseVector newL(nvar2+ncons2+1);
@@ -787,27 +762,14 @@ int BAData::addFirstStageColumn( double lb, double ub, double cobj){
 	newL.copyToPosition(&oldL[nvar2],nvar2+1,ncons2);
 	newL[nvar2] = lb;
 	oldL.swap(newL);
-/*
-	 //cout<<"AddingFirstStageCol lb ";
-        for (int i=0; i<oldL.length(); i++){
-        	cout<<oldL[i]<<",";
-        }
-        cout<<endl;
-*/
+
 	denseVector newU(nvar2+ncons2+1);
 	denseVector &oldU = u.getFirstStageVec();
 	newU.copyBeginning(&oldU[0],nvar2);
 	newU.copyToPosition(&oldU[nvar2],nvar2+1,ncons2);
 	newU[nvar2] = ub;
 	oldU.swap(newU);
-/*
-	 cout<<"AddingFirstStageCol ub ";
-        for (int i=0; i<oldU.length(); i++){
-        	cout<<oldU[i]<<",";
-        }
-        cout<<endl;
 
-*/
 	denseVector newC(nvar2+ncons2+1);
 	denseVector &oldC = c.getFirstStageVec();
 
@@ -820,7 +782,7 @@ int BAData::addFirstStageColumn( double lb, double ub, double cobj){
 	assert(oldL.length() == nvar2+ncons2+1);
 
 	//Update dims
-	dims.addFirstStageVar();
+	dims.inner.addFirstStageVar();
 
 	//check constraint type?
 	vartype.deallocate();
@@ -830,26 +792,35 @@ int BAData::addFirstStageColumn( double lb, double ub, double cobj){
 	// we're dropping the names here by not copying them
 	// TODO: fix this
 	names.allocate(dims, ctx, PrimalVector);
-	
+
 	assert(l.getFirstStageVec().length()==u.getFirstStageVec().length());
-	
+
 	const vector<int> &localScen = ctx.localScenarios();
-	
+
 	for (unsigned i = 0; i < localScen.size(); i++) {
 		int scen = localScen[i];
 		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
 	}
-
+	out1Send.reserve(dims.numFirstStageVars());
 
 	return nvar2;
 }
 
 int BAData::addSecondStageColumn(int scen,double lb, double ub, double cobj){
 
-	// don't (yet) support first-stage cuts
 	assert(scen >= 0 && scen < dims.numScenarios());
 	int returnIndex= -1;
 	if (ctx.assignedScenario(scen)) {
+
+		vector<double> elems(Wcol[scen]->getMinorDim(),0);
+		CoinPackedVector elts;
+		elts.setFullNonZero(elems.size(),&elems[0]);
+
+		//Assertions
+		assert(lb<=ub);
+
+		Wcol[scen]->appendCol(elts);
+		Wrow[scen]->reverseOrderedCopyOf(*Wcol[scen]);
 
 		int nvar2 = dims.inner.numSecondStageVars(scen);
 		int ncons2 = dims.numSecondStageCons(scen);
@@ -857,24 +828,24 @@ int BAData::addSecondStageColumn(int scen,double lb, double ub, double cobj){
 		denseVector &oldL = l.getSecondStageVec(scen);
 		newL.copyBeginning(&oldL[0],nvar2);
 		newL.copyToPosition(&oldL[nvar2],nvar2+1,ncons2);
-		newL[nvar2+ncons2] = lb;
+		newL[nvar2] = lb;
 		oldL.swap(newL);
 
 		denseVector newU(nvar2+ncons2+1);
 		denseVector &oldU = u.getSecondStageVec(scen);
 		newU.copyBeginning(&oldU[0],nvar2);
 		newU.copyToPosition(&oldU[nvar2],nvar2+1,ncons2);
-		newU[nvar2+ncons2] = ub;
+		newU[nvar2] = ub;
 		oldU.swap(newU);
 
 		denseVector newC(nvar2+ncons2+1);
 		denseVector &oldC = c.getSecondStageVec(scen);
 		newC.copyBeginning(&oldC[0],nvar2);
 		newC.copyToPosition(&oldC[nvar2],nvar2+1,ncons2);
-		newC[nvar2+ncons2] = cobj;
+		newC[nvar2] = cobj;
 		oldC.swap(newC);
 
-		dims.addSecondStageVar(scen);
+		dims.inner.addSecondStageVar(scen);
 
 		assert(oldU.length() == nvar2+ncons2+1);
 		assert(oldL.length() == nvar2+ncons2+1);
@@ -907,7 +878,7 @@ void BAData::deleteLastFirstStageRows(int nRows) {
 	for (int i=0; i<indices.size();i++)indices[i]=rowStart+i;
 	Arow->deleteRows(nRows,&indices[0]);
 	Acol->reverseOrderedCopyOf(*Arow);
-	
+
 	int nvar2 = dims.inner.numFirstStageVars();
 	int ncons2 = dims.numFirstStageCons();
 	denseVector newL(nvar2+ncons2-nRows);
@@ -925,7 +896,7 @@ void BAData::deleteLastFirstStageRows(int nRows) {
 	newC.copyBeginning(&oldC[0],nvar2+rowStart);
 	oldC.swap(newC);
 
-	for(int i=0; i< nRows; i++)dims.removeFirstStageRow();
+	for(int i=0; i< nRows; i++)dims.inner.removeFirstStageRow();
 
 	assert(oldU.length() == nvar2+rowStart);
 	assert(oldL.length() == nvar2+rowStart);
@@ -944,6 +915,7 @@ void BAData::deleteLastFirstStageRows(int nRows) {
 		int scen = localScen[i];
 		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
 	}
+	out1Send.reserve(dims.numFirstStageVars());
 
 }
 
@@ -957,93 +929,69 @@ void BAData::deleteLastSecondStageConsecutiveRows(int scenario, int nRows){
 
 		vector<int> indices(nRows);
 		for (int i=0; i<indices.size();i++)indices[i]=rowStart+i;
-	
+
 		Trow[scenario]->deleteRows(nRows,&indices[0]);
 		Tcol[scenario]->reverseOrderedCopyOf(*Trow[scenario]);
 		Wrow[scenario]->deleteRows(nRows,&indices[0]);
 		Wcol[scenario]->reverseOrderedCopyOf(*Wrow[scenario]);
-	
+
 		int nvar2 = dims.inner.numSecondStageVars(scenario);
 		int ncons2 = dims.numSecondStageCons(scenario);
 		denseVector newL(nvar2+ncons2-nRows);
 		denseVector &oldL = l.getSecondStageVec(scenario);
 		newL.copyBeginning(&oldL[0],nvar2+rowStart);
 		oldL.swap(newL);
-	
+
 		denseVector newU(nvar2+ncons2-nRows);
 		denseVector &oldU = u.getSecondStageVec(scenario);
 		newU.copyBeginning(&oldU[0],nvar2+rowStart);
 		oldU.swap(newU);
-	
-		denseVector newC(nvar2+ncons2+nRows);
+
+		denseVector newC(nvar2+ncons2-nRows);
 		denseVector &oldC = c.getSecondStageVec(scenario);
 		newC.copyBeginning(&oldC[0],nvar2+rowStart);
 		oldC.swap(newC);
-	
-		for(int i=0; i< nRows; i++) dims.removeSecondStageRow(scenario);
+
+		for(int i=0; i< nRows; i++) dims.inner.removeSecondStageRow(scenario);
 		assert(oldU.length() == nvar2+rowStart);
 		assert(oldL.length() == nvar2+rowStart);
 	}
 
 	vartype.deallocate();
 	names.deallocate();
-	
+
 	vartype.allocate(dims, ctx, PrimalVector);
 
 	// we're dropping the names here by not copying them
 	// TODO: fix this
 	names.allocate(dims, ctx, PrimalVector);
-//cout<<"DeleteLastsecondstagerow 8"<<endl;
-	
+
 	const vector<int> &localScen = ctx.localScenarios();
 	for (unsigned i = 0; i < localScen.size(); i++) {
 		int scen = localScen[i];
 		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
 	}
-	//cout<<"DeleteLastsecondstagerow 9"<<endl;
-	
+
 }
 
 
 void BAData::deleteLastFirstStageColumns(int nCols){
 
-
-	
 	int ncons = dims.numFirstStageCons();
 	int nvar = dims.inner.numFirstStageVars();
 	//TODO add guard to make sure we don't delete a column that still has nonzero coefficients in the constraint matrix
 	assert(nCols<=nvar);
-	
 	int colStart=dims.inner.numFirstStageVars()-nCols;
-
 	vector<int> indices(nCols);
 	for (int i=0; i<indices.size();i++)indices[i]=colStart+i;
-
-	cout<<" About to update dimensions of A col"<<Acol->getMajorDim()<<" "<<Acol->getMinorDim()<<endl;
-	cout<<" About to update  dimensions of A row"<<Arow->getMajorDim()<<" "<<Arow->getMinorDim()<<endl;
-
 	Acol->deleteCols(nCols,&indices[0]);
 	Arow->reverseOrderedCopyOf(*Acol);
 
-	cout<<" We updated dimensions of A col"<<Acol->getMajorDim()<<" "<<Acol->getMinorDim()<<endl;
-	cout<<" We updated dimensions of A row"<<Arow->getMajorDim()<<" "<<Arow->getMinorDim()<<endl;
-
-
 	for (int scen=0; scen < Tcol.size(); scen++){
 		if (!ctx.assignedScenario(scen)) continue;
-		
-		 
-
-		cout<<" About to update dimensions of t col"<<scen<<" "<<Tcol[scen]->getMajorDim()<<" "<<Tcol[scen]->getMinorDim()<<endl;
-		cout<<" About to update  dimensions of t row"<<scen<<" "<<Trow[scen]->getMajorDim()<<" "<<Trow[scen]->getMinorDim()<<endl;
 		Tcol[scen]->deleteCols(nCols,&indices[0]);
 		Trow[scen]->reverseOrderedCopyOf(*Tcol[scen]);
-		cout<<" We updated dimensions of t col"<<scen<<" "<<Tcol[scen]->getMajorDim()<<" "<<Tcol[scen]->getMinorDim()<<endl;
-		cout<<" We updated dimensions of t row"<<scen<<" "<<Trow[scen]->getMajorDim()<<" "<<Trow[scen]->getMinorDim()<<endl;
-		
 	}
-
-
 
 	//Shrink l, u, and c
 	denseVector newL(nvar+ncons-nCols);
@@ -1060,7 +1008,6 @@ void BAData::deleteLastFirstStageColumns(int nCols){
 
 	denseVector newC(nvar+ncons-nCols);
 	denseVector &oldC = c.getFirstStageVec();
-
 	newC.copyBeginning(&oldC[0],nvar-nCols);
 	newC.copyToPosition(&oldC[nvar],nvar-nCols,ncons);
 	oldC.swap(newC);
@@ -1069,7 +1016,7 @@ void BAData::deleteLastFirstStageColumns(int nCols){
 	assert(oldL.length() == nvar+ncons-nCols);
 
 	//Update dims
-	for (int i=0; i< nCols; i++)dims.removeFirstStageVar();
+	for (int i=0; i< nCols; i++)dims.inner.removeFirstStageVar();
 
 	//check constraint type?
 	vartype.deallocate();
@@ -1079,9 +1026,76 @@ void BAData::deleteLastFirstStageColumns(int nCols){
 	// we're dropping the names here by not copying them
 	// TODO: fix this
 	names.allocate(dims, ctx, PrimalVector);
-	
+
 	assert(l.getFirstStageVec().length()==u.getFirstStageVec().length());
-	
+
+	const vector<int> &localScen = ctx.localScenarios();
+	for (unsigned i = 0; i < localScen.size(); i++) {
+		int scen = localScen[i];
+		checkConstraintType(l.getVec(scen),u.getVec(scen),vartype.getVec(scen));
+	}
+
+	out1Send.reserve(dims.numFirstStageVars());
+
+}
+
+
+
+void BAData::deleteLastSecondStageConsecutiveColumns(int scen, int nCols){
+
+	assert(scen >= 0 && scen < dims.numScenarios());
+
+	if (ctx.assignedScenario(scen)) {
+
+		int nvar2 = dims.inner.numSecondStageVars(scen);
+		int ncons2 = dims.numSecondStageCons(scen);
+		//TODO add guard to make sure we don't delete a column that still has nonzero coefficients in the constraint matrix
+		assert(nCols<=nvar2);
+
+		int colStart=dims.inner.numSecondStageVars(scen)-nCols;
+
+		vector<int> indices(nCols);
+		for (int i=0; i<indices.size();i++)indices[i]=colStart+i;
+
+		Wcol[scen]->deleteCols(nCols,&indices[0]);
+		Wrow[scen]->reverseOrderedCopyOf(*Wcol[scen]);
+
+		//Shrink l, u, and c
+		denseVector newL(nvar2+ncons2-nCols);
+		denseVector &oldL = l.getSecondStageVec(scen);
+		newL.copyBeginning(&oldL[0],nvar2-nCols);
+		newL.copyToPosition(&oldL[nvar2],nvar2-nCols,ncons2);
+		oldL.swap(newL);
+
+		denseVector newU(nvar2+ncons2-nCols);
+		denseVector &oldU = u.getSecondStageVec(scen);
+		newU.copyBeginning(&oldU[0],nvar2-nCols);
+		newU.copyToPosition(&oldU[nvar2],nvar2-nCols,ncons2);
+		oldU.swap(newU);
+
+		denseVector newC(nvar2+ncons2-nCols);
+		denseVector &oldC = c.getSecondStageVec(scen);
+		newC.copyBeginning(&oldC[0],nvar2-nCols);
+		newC.copyToPosition(&oldC[nvar2],nvar2-nCols,ncons2);
+		oldC.swap(newC);
+
+		assert(oldU.length() == nvar2+ncons2-nCols);
+		assert(oldL.length() == nvar2+ncons2-nCols);
+
+		//Update dims
+		for (int i=0; i< nCols; i++)dims.inner.removeSecondStageVar(scen);
+
+	}
+	//check constraint type?
+	vartype.deallocate();
+	names.deallocate();
+
+	vartype.allocate(dims, ctx, PrimalVector);
+	// we're dropping the names here by not copying them
+	// TODO: fix this
+	names.allocate(dims, ctx, PrimalVector);
+
+	assert(l.getSecondStageVec(scen).length()==u.getSecondStageVec(scen).length());
 
 	const vector<int> &localScen = ctx.localScenarios();
 	for (unsigned i = 0; i < localScen.size(); i++) {
