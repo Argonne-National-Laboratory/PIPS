@@ -61,15 +61,12 @@ int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
         assert(row == col);
 
 	int type = cbd->typeflag;
-	if(type == 1)
-	{
-	    if(row_lb == NULL)
-	    {
+	if(type == 1){
+	    if(row_lb == NULL){
 	        assert(row_ub == NULL);
 		*m = 4;
 	    }
-	    else
-	    {
+	    else{
 	        row_lb[0] = 200;
 		row_lb[1] = 200;
 		row_lb[2] = 100;
@@ -219,10 +216,8 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 	int col = cbd->col_node_id;
 	int type = cbd->typeflag;
 	MESSAGE("str_eval_jac_g  -- row " << row <<" col "<<col<<"type "<<type);
-        if(type == 1)
-	{
-	    if(e_colptr==NULL && i_colptr == NULL)
-	    {
+        if(type == 1){
+	    if(e_colptr==NULL && i_colptr == NULL){
 	        assert(e_elts == NULL && e_rowidx == NULL && e_colptr == NULL);
 		assert(i_elts == NULL && i_rowidx == NULL && i_colptr == NULL);
 		if (col == 0) {
@@ -237,8 +232,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		} else
 		    assert(false);
 	    }
-	  else
-	    {
+	  else{
 	        if (col == 0) {
 		    assert(*i_nz == 2 && *e_nz == 2);
 		    i_rowidx[0] = 0;

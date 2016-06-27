@@ -15,33 +15,6 @@ StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p) {
 #ifdef NLPTIMING
 //	report_timing(gprof);
 #endif
-	//number of linking constraints
-        mlink = 0;
-        e_ml = 0;
-        i_ml = 0;
-        bool e=true; //equality constraint must be at front of list 
-
-	CallBackData cbd_link = {prob->userdata,0,0,1};
-	prob->prob_info(NULL, NULL, NULL, &mlink, NULL, NULL, &cbd_link);
-
-        if(mlink != 0)
-	  {
-	    linklb.resize(mlink);
-	    linkub.resize(mlink);
-       	    prob->prob_info(NULL, NULL, NULL, &mlink, &linklb[0], &linkub[0], &cbd_link);
-            for(int i=0;i<linklb.size();i++)
-	      {
-                if(linklb[i] == linkub[i]){
-		  e_ml++;
-		  assert(e); //equality constraint must be at front of list                                                                                                      
-                }
-                else{
-		  e = false;
-		  assert(linklb[i]<linkub[i]);
-		  i_ml++;
-		}
-	      }
-	  }
 	MESSAGE("exit constructor StructJuMPInput - ");
 }
 StructJuMPInput::~StructJuMPInput() {
@@ -71,6 +44,35 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
 	MESSAGE("ncon,nvar "<<mc<<", "<<nv);
+
+
+	if(nodeid==0){
+	    //number of linking constraints
+	    mlink = 0;
+	    e_ml = 0;
+	    i_ml = 0;
+	    bool e=true; //equality constraint must be at front of list
+
+	    CallBackData cbd_link = {prob->userdata,0,0,1};
+	    prob->prob_info(NULL, NULL, NULL, &mlink, NULL, NULL, &cbd_link);
+
+	    if(mlink != 0){
+	        linklb.resize(mlink);
+		linkub.resize(mlink);
+		prob->prob_info(NULL, NULL, NULL, &mlink, &linklb[0], &linkub[0], &cbd_link);
+		for(int i=0;i<linklb.size();i++){
+		    if(linklb[i] == linkub[i]){
+		        e_ml++;
+			assert(e); //equality constraint must be at front of list
+		    }
+		    else{
+		        e = false;
+			assert(linklb[i]<linkub[i]);
+			i_ml++;
+		    }
+		}
+	    }
+	}
 
         int temp = mc;
         if (nodeid == 0 && mlink != 0)

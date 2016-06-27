@@ -45,10 +45,8 @@ int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
 	MESSAGE("str_prob_info -- row " << row <<" col "<<col);
 	assert(row == col);
         int type = cbd->typeflag;
-        if(type == 1)
-	  {
-            if(row_lb == NULL)
-              {
+        if(type == 1){
+            if(row_lb == NULL){
                 assert(row_ub == NULL);
                 *m = 0;
               }
