@@ -58,7 +58,30 @@ int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
 	MESSAGE("str_prob_info -- row " << row <<" col "<<col);
-	assert(row == col);
+        assert(row == col);
+
+	int type = cbd->typeflag;
+	if(type == 1)
+	{
+	    if(row_lb == NULL)
+	    {
+	        assert(row_ub == NULL);
+		*m = 4;
+	    }
+	    else
+	    {
+	        row_lb[0] = 200;
+		row_lb[1] = 200;
+		row_lb[2] = 100;
+		row_lb[3] = 100;
+		row_ub[0] = 200;
+		row_ub[1] = 200;
+		row_ub[2] = 200;
+		row_ub[3] = 200;
+	    }
+	    return 1;
+	}
+
 	if(col_lb == NULL)
 	{
 		assert(row_lb == NULL);
@@ -194,7 +217,91 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		int* i_colptr, CallBackDataPtr cbd) {
 	int row = cbd->row_node_id;
 	int col = cbd->col_node_id;
-	MESSAGE("str_eval_jac_g  -- row " << row <<" col "<<col);
+	int type = cbd->typeflag;
+	MESSAGE("str_eval_jac_g  -- row " << row <<" col "<<col<<"type "<<type);
+        if(type == 1)
+	{
+	    if(e_colptr==NULL && i_colptr == NULL)
+	    {
+	        assert(e_elts == NULL && e_rowidx == NULL && e_colptr == NULL);
+		assert(i_elts == NULL && i_rowidx == NULL && i_colptr == NULL);
+		if (col == 0) {
+		    *e_nz = 2;
+		    *i_nz = 2;
+		} else if (col == 1) {
+		    *e_nz = 3;
+		    *i_nz = 3;
+		} else if (col == 2) {
+		    *e_nz = 3;
+		    *i_nz = 3;
+		} else
+		    assert(false);
+	    }
+	  else
+	    {
+	        if (col == 0) {
+		    assert(*i_nz == 2 && *e_nz == 2);
+		    i_rowidx[0] = 0;
+		    i_rowidx[1] = 1;
+		    i_colptr[0] = 0;
+		    i_colptr[1] = 1;
+		    i_colptr[2] = 2;
+		    i_elts[0] = 1.0;
+		    i_elts[1] = 1.0;
+		    
+		    e_rowidx[0] = 0;
+		    e_rowidx[1] = 1;
+		    e_colptr[0] = 0;
+		    e_colptr[1] = 1;
+		    e_colptr[2] = 2;
+		    e_elts[0] = 1.0;
+		    e_elts[1] = 1.0;
+		} else if (col == 1) {
+		    assert(*i_nz == 3 && *e_nz == 3);
+		    i_rowidx[0] = 1;
+		    i_rowidx[1] = 0;
+		    i_rowidx[2] = 1;
+		    i_colptr[0] = 0;
+		    i_colptr[1] = 1;
+		    i_colptr[2] = 3;
+		    i_elts[0] = 1.0;
+		    i_elts[1] = 1.0;
+		    i_elts[2] = 1.0;
+		    
+		    e_rowidx[0] = 0;
+		    e_rowidx[1] = 0;
+		    e_rowidx[2] = 1;
+		    e_colptr[0] = 0;
+		    e_colptr[1] = 1;
+		    e_colptr[2] = 3;
+		    e_elts[0] = 1.0;
+		    e_elts[1] = 1.0;
+		    e_elts[2] = 1.0;
+		} else if (col == 2) {
+		    assert(*i_nz == 3 && *e_nz == 3);
+		    i_rowidx[0] = 0;
+		    i_rowidx[1] = 0;
+		    i_rowidx[2] = 1;
+		    i_colptr[0] = 0;
+		    i_colptr[1] = 1;
+		    i_colptr[2] = 3;
+		    i_elts[0] = 1.0;
+		    i_elts[1] = 1.0;
+		    i_elts[2] = 1.0;
+		    
+		    e_rowidx[0] = 0;
+		    e_rowidx[1] = 1;
+		    e_rowidx[2] = 1;
+		    e_colptr[0] = 0;
+		    e_colptr[1] = 2;
+		    e_colptr[2] = 3;
+		    e_elts[0] = 1.0;
+		    e_elts[1] = 1.0;
+		    e_elts[2] = 1.0;
+		}
+	    }
+	    return 1;
+	}
 	if(e_colptr==NULL && i_colptr == NULL)
 	{
 		assert(e_elts == NULL && e_rowidx == NULL && e_colptr == NULL);
@@ -400,117 +507,6 @@ int str_write_solution(double* x, double* lam_eq, double* lam_ieq,CallBackDataPt
 }
 
 
-
-
-int str_get_link_matrix(int* e_nz, double* e_elts,
-		   int* e_rowidx, int* e_colptr, int* i_nz, double* i_elts, int* i_rowidx,
-		   int* i_colptr, CallBackDataPtr cbd) {
-  int row = cbd->row_node_id;
-  int col = cbd->col_node_id;
-  MESSAGE("str_get_link_matrix  -- row " << row <<" col "<<col);
-  if(e_colptr==NULL && i_colptr == NULL)
-    {
-      assert(e_elts == NULL && e_rowidx == NULL && e_colptr == NULL);
-      assert(i_elts == NULL && i_rowidx == NULL && i_colptr == NULL);
-      if (col == 0) {
-	*e_nz = 2;
-	*i_nz = 2;
-      } else if (col == 1) {
-	*e_nz = 3;
-	*i_nz = 3;
-      } else if (col == 2) {
-	*e_nz = 3;
-	*i_nz = 3;
-      } else
-	assert(false);
-    }
-  else
-    {
-      if (col == 0) {
-	assert(*i_nz == 2 && *e_nz == 2);
-	i_rowidx[0] = 0;
-	i_rowidx[1] = 1;
-	i_colptr[0] = 0;
-	i_colptr[1] = 1;
-	i_colptr[2] = 2;
-	i_elts[0] = 1.0;
-	i_elts[1] = 1.0;
-
-	e_rowidx[0] = 0;
-        e_rowidx[1] = 1;
-        e_colptr[0] = 0;
-        e_colptr[1] = 1;
-        e_colptr[2] = 2;
-        e_elts[0] = 1.0;
-        e_elts[1] = 1.0;
-      } else if (col == 1) {
-	assert(*i_nz == 3 && *e_nz == 3);
-	i_rowidx[0] = 1;
-	i_rowidx[1] = 0;
-	i_rowidx[2] = 1;
-	i_colptr[0] = 0;
-	i_colptr[1] = 1;
-	i_colptr[2] = 3;
-	i_elts[0] = 1.0;
-	i_elts[1] = 1.0;
-	i_elts[2] = 1.0;
-
-	e_rowidx[0] = 0;
-	e_rowidx[1] = 0;
-	e_rowidx[2] = 1;
-        e_colptr[0] = 0;
-        e_colptr[1] = 1;
-	e_colptr[2] = 3;
-	e_elts[0] = 1.0;
-        e_elts[1] = 1.0;
-	e_elts[2] = 1.0;
-      } else if (col == 2) {
-	assert(*i_nz == 3 && *e_nz == 3);
-	i_rowidx[0] = 0;
-        i_rowidx[1] = 0;
-        i_rowidx[2] = 1;
-        i_colptr[0] = 0;
-        i_colptr[1] = 1;
-        i_colptr[2] = 3;
-        i_elts[0] = 1.0;
-        i_elts[1] = 1.0;
-        i_elts[2] = 1.0;
-
-        e_rowidx[0] = 0;
-        e_rowidx[1] = 1;
-        e_rowidx[2] = 1;
-        e_colptr[0] = 0;
-        e_colptr[1] = 2;
-        e_colptr[2] = 3;
-        e_elts[0] = 1.0;
-        e_elts[1] = 1.0;
-        e_elts[2] = 1.0;
-      }
-    }
-    return 1;
-}
-
-int str_link_info(int* m, double* row_lb, double* row_ub, CallBackDataPtr cbd) {
-  if(row_lb == NULL)
-    {
-      assert(row_ub == NULL);
-      *m = 4;
-    }
-  else
-    {
-	  row_lb[0] = 200;
-	  row_lb[1] = 200;
-	  row_lb[2] = 100;
-	  row_lb[3] = 100;
-
-	  row_ub[0] = 200;
-	  row_ub[1] = 200;
-          row_ub[2] = 200;
-	  row_ub[3] = 200;
-    }
-  return 1;
-}
-
 int main(int argc, char* argv[]) {
   MPI_Init(&argc, &argv);
   MESSAGE("start");
@@ -526,15 +522,11 @@ int main(int argc, char* argv[]) {
   str_eval_jac_g_cb eval_jac_g = &str_eval_jac_g;
   str_eval_h_cb eval_h = &str_eval_h;
   str_write_solution_cb write_solution = &str_write_solution;
-  str_get_link_matrix_cb  get_link_matrix = &str_get_link_matrix;
-  str_link_info_cb link_info = &str_link_info;
-
   PipsNlpProblemStructPtr 
     prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, 2,
 				      init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
-				      eval_h, write_solution, NULL, get_link_matrix,link_info);
+				      eval_h, write_solution, NULL);
   MESSAGE("problem created");
-
   PipsNlpSolveStruct(prob);
 
   // here is the 'TESTING' behaviour, when -objcheck is passed
