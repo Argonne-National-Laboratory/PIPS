@@ -15,34 +15,6 @@ StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p) {
 #ifdef NLPTIMING
 //	report_timing(gprof);
 #endif
-	//number of linking constraints
-        mlink = 0;
-        e_ml = 0;
-        i_ml = 0;
-        bool e=true; //equality constraint must be at front of list 
-        if(prob->link_info != NULL)
-	  {
-            CallBackData cbd = {prob->userdata,0,0};
-            prob->link_info(&mlink, NULL, NULL, &cbd);
-            linklb.resize(mlink);
-            linkub.resize(mlink);
-            prob->link_info(&mlink, &linklb[0], &linkub[0], &cbd);
-	  }
-        if(mlink != 0)
-	  {
-            for(int i=0;i<linklb.size();i++)
-	      {
-                if(linklb[i] == linkub[i]){
-		  e_ml++;
-		  assert(e); //equality constraint must be at front of list                                                                                                      
-                }
-                else{
-		  e = false;
-		  assert(linklb[i]<linkub[i]);
-		  i_ml++;
-		}
-	      }
-	  }
 	MESSAGE("exit constructor StructJuMPInput - ");
 }
 StructJuMPInput::~StructJuMPInput() {
@@ -58,7 +30,7 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	int nv = 0;
 	int mc = 0;
 
-	CallBackData data = { prob->userdata, nodeid, nodeid };
+	CallBackData data = { prob->userdata, nodeid, nodeid,0 };
 //	MESSAGE("data -"<<&data);
 	MESSAGE("get_prob_info callback data ptr - "<<data.row_node_id);
 #ifdef NLPTIMING
@@ -72,6 +44,35 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	nvar_map[nodeid] = nv;
 	ncon_map[nodeid] = mc;
 	MESSAGE("ncon,nvar "<<mc<<", "<<nv);
+
+
+	if(nodeid==0){
+	    //number of linking constraints
+	    mlink = 0;
+	    e_ml = 0;
+	    i_ml = 0;
+	    bool e=true; //equality constraint must be at front of list
+
+	    CallBackData cbd_link = {prob->userdata,0,0,1};
+	    prob->prob_info(NULL, NULL, NULL, &mlink, NULL, NULL, &cbd_link);
+
+	    if(mlink != 0){
+	        linklb.resize(mlink);
+		linkub.resize(mlink);
+		prob->prob_info(NULL, NULL, NULL, &mlink, &linklb[0], &linkub[0], &cbd_link);
+		for(int i=0;i<linklb.size();i++){
+		    if(linklb[i] == linkub[i]){
+		        e_ml++;
+			assert(e); //equality constraint must be at front of list
+		    }
+		    else{
+		        e = false;
+			assert(linklb[i]<linkub[i]);
+			i_ml++;
+		    }
+		}
+	    }
+	}
 
         int temp = mc;
         if (nodeid == 0 && mlink != 0)
@@ -258,7 +259,7 @@ std::vector<double> StructJuMPInput::getFirstStageObj() {
 	int nvar = nvar_map[0];
 	double x0[nvar];
 	std::vector<double> grad(nvar);
-	CallBackData data = { prob->userdata, 0, 0 };
+	CallBackData data = { prob->userdata, 0, 0, 0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
@@ -364,7 +365,7 @@ std::vector<double> StructJuMPInput::getSecondStageObj(int scen) {
 	double x0[n0];
 	double x1[n1];
 	std::vector<double> grad(n1);
-	CallBackData data = { prob->userdata, nodeid, nodeid };
+	CallBackData data = { prob->userdata, nodeid, nodeid,0 };
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
@@ -446,7 +447,7 @@ bool StructJuMPInput::isSecondStageColInteger(int scen, int col) {
 CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	MESSAGE("getFirstStageConstraints ");
 	int nvar = nvar_map[0];
-	CallBackData cbd = { prob->userdata, 0, 0 };
+	CallBackData cbd = { prob->userdata, 0, 0 , 0};
 	std::vector<double> x0(nvar, 1.0);
 	int e_nz, i_nz;
 #ifdef NLPTIMING
@@ -517,7 +518,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 
 	int nvar = nvar_map[nodeid];
 
-	CallBackData cbd = { prob->userdata, nodeid, nodeid };
+	CallBackData cbd = { prob->userdata, nodeid, nodeid, 0};
 	std::vector<double> x0(nvar_map[0], 1.0);
 	std::vector<double> x1(nvar, 1.0);
 
@@ -567,13 +568,13 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 
 
 CoinPackedMatrix StructJuMPInput::getLinkMatrix(int nodeid){
+  assert(mlink>0);
   int e_nz, i_nz;
   int nvar = nvar_map[nodeid];
-  CallBackData cbd = {prob->userdata,nodeid,nodeid};
-
-  prob->get_link_matrix(&e_nz,NULL,NULL,NULL,
-                        &i_nz,NULL,NULL,NULL,&cbd);
-
+  CallBackData cbd_link = {prob->userdata,nodeid,nodeid, 1};
+  prob->eval_jac_g(NULL, NULL, 
+		   &e_nz,NULL,NULL,NULL,
+		   &i_nz,NULL,NULL,NULL,&cbd_link);
   std::vector<int> e_rowidx(e_nz);
   std::vector<int> e_colptr(nvar+1,0);
   std::vector<double> e_elts(e_nz);
@@ -582,8 +583,9 @@ CoinPackedMatrix StructJuMPInput::getLinkMatrix(int nodeid){
   std::vector<int> i_colptr(nvar+1,0);
   std::vector<double> i_elts(i_nz);
 
-  prob->get_link_matrix(&e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
-                        &i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd);
+  prob->eval_jac_g(NULL, NULL,
+		   &e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],
+		   &i_nz,&i_elts[0],&i_rowidx[0],&i_colptr[0],&cbd_link);
 
   Emat_map[nodeid].copyOf(true,e_ml,nvar,e_nz,&e_elts[0],&e_rowidx[0],&e_colptr[0],0);
   CoinPackedMatrix i_Emat;
@@ -610,7 +612,7 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 
 	int nvar = nvar_map[0];
 	MESSAGE(" nvar "<<nvar);
-	CallBackData cbd = { prob->userdata, nodeid, 0 };
+	CallBackData cbd = { prob->userdata, nodeid, 0 , 0};
 	std::vector<double> x0(nvar_map[0], 1.0);
 	std::vector<double> x1(nvar_map[nodeid], 1.0);
 
@@ -676,7 +678,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 	std::vector<double> lam(ncon, 1.0);
 
 	int nz;
-	CallBackData cbd = { prob->userdata, 0, 0 };
+	CallBackData cbd = { prob->userdata, 0, 0, 0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
@@ -725,7 +727,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageHessian(int scen) {
 	std::vector<double> lam(ncon, 1.0);
 
 	int nz;
-	CallBackData cbd = { prob->userdata, nodeid, nodeid };
+	CallBackData cbd = { prob->userdata, nodeid, nodeid, 0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
@@ -775,7 +777,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen) {
 	std::vector<double> lam(ncon, 1.0);
 
 	int nz;
-	CallBackData cbd = { prob->userdata, 0, nodeid };
+	CallBackData cbd = { prob->userdata, 0, nodeid, 0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif

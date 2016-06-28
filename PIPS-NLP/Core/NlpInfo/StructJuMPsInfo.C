@@ -107,7 +107,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 		{
 			MESSAGE("ObjValue - gmyid=="<<gmyid);
 			assert(nodeId() == 0);
-			CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+			CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 			double obj;
 #ifdef NLPTIMING
 			double stime = MPI_Wtime();
@@ -138,7 +138,7 @@ double StructJuMPsInfo::ObjValue(NlpGenVars * vars){
 		OoqpVector* parent_X = (vars_X.parent->vec);
 		parent_X->copyIntoArray(parent_var);
 		assert(nodeId() != 0);
-		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -174,7 +174,7 @@ int StructJuMPsInfo::ObjGrad(NlpGenVars * vars, OoqpVector *grad){
 //	MESSAGE("gymyid ="<<gmyid);
 	if(gmyid == 0)
 	{
-		CallBackData cbd = {stochInput->prob->userdata, nodeId(), nodeId()};
+	  CallBackData cbd = {stochInput->prob->userdata, nodeId(), nodeId(),0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -222,7 +222,7 @@ void StructJuMPsInfo::ObjGrad_FromSon(NlpGenVars* vars, OoqpVector* grad, double
 	PRINT_ARRAY("parent_var",parent_var,parent->locNx);
 	PRINT_ARRAY("local_var",local_var,locNx);
 	std::vector<double> parent_part(parent->locNx,0.0);
-	CallBackData cbd_parent = {stochInput->prob->userdata, nodeId(), parent->stochNode->id()};
+	CallBackData cbd_parent = {stochInput->prob->userdata, nodeId(), parent->stochNode->id(),0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
@@ -236,7 +236,7 @@ void StructJuMPsInfo::ObjGrad_FromSon(NlpGenVars* vars, OoqpVector* grad, double
 	PRINT_ARRAY("parent_part",parent_part,parent->locNx);
 
 	std::vector<double> this_part(locNx,0.0);
-	CallBackData cbd_this = {stochInput->prob->userdata, nodeId(), nodeId()};
+	CallBackData cbd_this = {stochInput->prob->userdata, nodeId(), nodeId(),0};
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
@@ -277,7 +277,7 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 		double parent_var[parent->locNx];
 		OoqpVector* parent_X = (vars_X.parent->vec);
 		parent_X->copyIntoArray(parent_var);
-		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -291,7 +291,7 @@ void StructJuMPsInfo::ConstraintBody(NlpGenVars * vars, OoqpVector *conEq,OoqpVe
 	else
 	{
 		assert(nodeId()==0);
-		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -392,7 +392,7 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int i_nz = Dmat->numberOfNonZeros();
 //		MESSAGE("Bmat nz "<<e_nz<<" Dmat nz "<<i_nz);
 
-		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 ////		have to request the structure again
 //		stochInput->prob->eval_jac_g(local_var,local_var,
 //				&e_nz,NULL,NULL,NULL,
@@ -444,7 +444,7 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int e_nz_Amat = Amat->numberOfNonZeros();
 		int i_nz_Cmat = Cmat->numberOfNonZeros();
 
-		CallBackData cbd_link = {stochInput->prob->userdata,nodeId(),parent->stochNode->id()};
+		CallBackData cbd_link = {stochInput->prob->userdata,nodeId(),parent->stochNode->id(),0};
 //		MESSAGE("nz amat "<<e_nz_Amat<<"  cmat "<<i_nz_Cmat);
 //		stochInput->prob->eval_jac_g(parent_var,local_var,
 //					&e_nz_Amat,NULL,NULL,NULL,
@@ -481,7 +481,7 @@ void StructJuMPsInfo::JacFull(NlpGenVars* vars, GenMatrix* JacA, GenMatrix* JaC)
 		int e_nz_Bmat = Bmat->numberOfNonZeros();
 		int i_nz_Dmat = Dmat->numberOfNonZeros();
 
-		CallBackData cbd_diag = {stochInput->prob->userdata,nodeId(),nodeId()};
+		CallBackData cbd_diag = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 //		stochInput->prob->eval_jac_g(parent_var,local_var,
 //						&e_nz_Bmat,NULL,NULL,NULL,
 //						&i_nz_Dmat,NULL,NULL,NULL,&cbd_diag);
@@ -570,7 +570,7 @@ void StructJuMPsInfo::Hessian(NlpGenVars * nlpvars, SymMatrix *Hess)
 		MESSAGE("gmyid="<<gmyid);
 		int rowidx[nzqd];
 		int colptr[locNx+1];
-		CallBackData cbd = {stochInput->prob->userdata,0,0};
+		CallBackData cbd = {stochInput->prob->userdata,0,0,0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -642,7 +642,7 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		double elts[pnzqd];
 		int rowidx[pnzqd];
 		int colptr[parent->locNx+1];
-		CallBackData cbd_pnzqd = {stochInput->prob->userdata,nodeId(),0};
+		CallBackData cbd_pnzqd = {stochInput->prob->userdata,nodeId(),0,0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -664,7 +664,7 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		double elts[nzqd];
 		int rowidx[nzqd];
 		int colptr[locNx+1];
-		CallBackData cbd_nzqd = {stochInput->prob->userdata,nodeId(),nodeId()};
+		CallBackData cbd_nzqd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -686,7 +686,7 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		double elts[nzqb];
 		int rowidx[nzqb];
 		int colptr[parent->locNx+1];
-		CallBackData cbd_nzqb = {stochInput->prob->userdata,0,nodeId()};
+		CallBackData cbd_nzqb = {stochInput->prob->userdata,0,nodeId(),0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
@@ -714,7 +714,7 @@ void StructJuMPsInfo::get_InitX0(OoqpVector* vX){
 	assert(children.size() == vars_X->children.size());
 
 	double temp_var[locNx];
-	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
@@ -751,7 +751,7 @@ void StructJuMPsInfo::writeSolution(NlpGenVars* nlpvars)
 	local_Y->copyIntoArray(local_y);
 	local_Z->copyIntoArray(local_z);
 
-	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId()};
+	CallBackData cbd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 #ifdef NLPTIMING
 		double stime = MPI_Wtime();
 #endif
