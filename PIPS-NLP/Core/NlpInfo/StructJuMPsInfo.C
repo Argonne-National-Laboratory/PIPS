@@ -635,49 +635,28 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 	PRINT_ARRAY("parent_var",parent_var,parent->locNx);
 	PRINT_ARRAY("local_var",local_var,locNx);
 	PRINT_ARRAY("lam",lam,locMy+locMz);
-	//pnzqd
-	{
-		MESSAGE("  -- Parent contribution - ");
-		int pnzqd = parent->Qdiag->numberOfNonZeros();
-		double elts[pnzqd];
-		int rowidx[pnzqd];
-		int colptr[parent->locNx+1];
-		CallBackData cbd_pnzqd = {stochInput->prob->userdata,nodeId(),0,0};
-#ifdef NLPTIMING
-		double stime = MPI_Wtime();
-#endif
-		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&pnzqd,elts,rowidx,colptr,&cbd_pnzqd);
-#ifdef NLPTIMING
-		gprof.t_model_evaluation += MPI_Wtime() - stime;
-		gprof.n_laghess += 1;
-#endif
-		PRINT_ARRAY("rowidx",rowidx,pnzqd);
-		PRINT_ARRAY("colptr",colptr,parent->locNx+1);
-		PRINT_ARRAY("elts",elts,pnzqd);
-		for(int i=0;i<pnzqd;i++) parent_hess[i] += elts[i];
-	}
 
-	//nzqd
-	{
-		MESSAGE(" --- Child diagonal");
-		int nzqd = Qdiag->numberOfNonZeros();
-		double elts[nzqd];
-		int rowidx[nzqd];
-		int colptr[locNx+1];
-		CallBackData cbd_nzqd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
+  //nzqd
+  {
+    MESSAGE(" --- Child diagonal");
+    int nzqd = Qdiag->numberOfNonZeros();
+    double elts[nzqd];
+    int rowidx[nzqd];
+    int colptr[locNx+1];
+    CallBackData cbd_nzqd = {stochInput->prob->userdata,nodeId(),nodeId(),0};
 #ifdef NLPTIMING
-		double stime = MPI_Wtime();
+    double stime = MPI_Wtime();
 #endif
-		stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqd,elts,rowidx,colptr,&cbd_nzqd);
+    stochInput->prob->eval_h(parent_var,local_var,&lam[0],&nzqd,elts,rowidx,colptr,&cbd_nzqd);
 #ifdef NLPTIMING
-		gprof.t_model_evaluation += MPI_Wtime() - stime;
-		gprof.n_laghess += 1;
+    gprof.t_model_evaluation += MPI_Wtime() - stime;
+    gprof.n_laghess += 1;
 #endif
-		PRINT_ARRAY("rowidx",rowidx,nzqd);
-		PRINT_ARRAY("colptr",colptr,locNx+1);
-		PRINT_ARRAY("elts",elts,nzqd);
-		Qdiag->copyMtxFromDouble(nzqd,elts);
-	}
+    PRINT_ARRAY("rowidx",rowidx,nzqd);
+    PRINT_ARRAY("colptr",colptr,locNx+1);
+    PRINT_ARRAY("elts",elts,nzqd);
+    Qdiag->copyMtxFromDouble(nzqd,elts);
+  }
 
 	//nzqb
 	{
@@ -703,6 +682,29 @@ void StructJuMPsInfo::Hessian_FromSon(NlpGenVars* nlpvars, double *parent_hess){
 		convert_to_csr(locNx,parent->locNx,&rowidx[0],&colptr[0],&elts[0],nzqb,csr_ret);
 		Qborder->copyMtxFromDouble(nzqb,csr_ret);
 	}
+
+	//pnzqd
+  {
+    MESSAGE("  -- Parent contribution - ");
+    int pnzqd = parent->Qdiag->numberOfNonZeros();
+    double elts[pnzqd];
+    int rowidx[pnzqd];
+    int colptr[parent->locNx+1];
+    CallBackData cbd_pnzqd = {stochInput->prob->userdata,nodeId(),0,0};
+#ifdef NLPTIMING
+    double stime = MPI_Wtime();
+#endif
+    stochInput->prob->eval_h(parent_var,local_var,&lam[0],&pnzqd,elts,rowidx,colptr,&cbd_pnzqd);
+#ifdef NLPTIMING
+    gprof.t_model_evaluation += MPI_Wtime() - stime;
+    gprof.n_laghess += 1;
+#endif
+    PRINT_ARRAY("rowidx",rowidx,pnzqd);
+    PRINT_ARRAY("colptr",colptr,parent->locNx+1);
+    PRINT_ARRAY("elts",elts,pnzqd);
+    for(int i=0;i<pnzqd;i++) parent_hess[i] += elts[i];
+  }
+
 	MESSAGE("exit Hessian_FromSon");
 }
 
