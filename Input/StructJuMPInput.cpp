@@ -47,39 +47,38 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 
 
 	if(nodeid==0){
-	    //number of linking constraints
-	    mlink = 0;
-	    e_ml = 0;
-	    i_ml = 0;
-	    bool e=true; //equality constraint must be at front of list
+    //number of linking constraints
+    mlink = 0;
+    e_ml = 0;
+    i_ml = 0;
+    bool e=true; //equality constraint must be at front of list
 
-	    CallBackData cbd_link = {prob->userdata,0,0,1};
-	    prob->prob_info(NULL, NULL, NULL, &mlink, NULL, NULL, &cbd_link);
+    CallBackData cbd_link = {prob->userdata,0,0,1};
+    prob->prob_info(NULL, NULL, NULL, &mlink, NULL, NULL, &cbd_link);
 
-	    if(mlink != 0){
-	        linklb.resize(mlink);
-		linkub.resize(mlink);
-		prob->prob_info(NULL, NULL, NULL, &mlink, &linklb[0], &linkub[0], &cbd_link);
-		for(int i=0;i<linklb.size();i++){
-		    if(linklb[i] == linkub[i]){
-		        e_ml++;
-			assert(e); //equality constraint must be at front of list
-		    }
-		    else{
-		        e = false;
-			assert(linklb[i]<linkub[i]);
-			i_ml++;
-		    }
-		}
-	    }
-	}
+    if (mlink != 0) {
+      linklb.resize(mlink);
+      linkub.resize(mlink);
+      prob->prob_info(NULL, NULL, NULL, &mlink, &linklb[0], &linkub[0], &cbd_link);
+      for(int i = 0;i < linklb.size();i++) {
+        if (linklb[i] == linkub[i]) {
+          e_ml++;
+          assert(e); //equality constraint must be at front of list
+        }
+        else {
+          e = false;
+          assert(linklb[i] < linkub[i]);
+          i_ml++;
+        }
+      }
+    }
+  }
 
-        int temp = mc;
-        if (nodeid == 0 && mlink != 0)
-	  {
-            ncon_map[nodeid] += mlink;
-            temp += mlink;
-	  }
+  int temp = mc;
+  if (nodeid == 0 && mlink != 0) {
+    ncon_map[nodeid] += mlink;
+    temp += mlink;
+  }
 	std::vector<double> collb(nv);
 	std::vector<double> colub(nv);
 	std::vector<double> rowlb(temp);
@@ -95,44 +94,38 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	gprof.n_prob_info+=1;
 #endif
 
-        if (nodeid == 0 && mlink != 0)
-	  {
-            mc = mc + mlink;
-            int e_mc = 0;
-            int i_mc = 0;
-            bool e=true; //equality constraint must be at front of list
-            for(int i=0;i<(mc-mlink);i++)
-	      {
-                if(rowlb[i] == rowub[i]){
-		  e_mc++;
-		  assert(e); //equality constraint must be at front of list
-                }
-                else{
-		  e = false;
-		  assert(rowlb[i]<rowub[i]);
-		  i_mc++;
-                }
-	      }
-	    // arrange bounds, c_equality, link_equality, c_ineqaulity, link_inequality
-            for(int i=i_mc-1; i>=0; i-- )
-	      {
-                rowlb[i+e_mc+e_ml] = rowlb[i+e_mc];
-                rowub[i+e_mc+e_ml] = rowub[i+e_mc];
-	      }
-            for(int i=0; i<e_ml; i++ )
-	      {
-                rowlb[i+e_mc] = linklb[i];
-                rowub[i+e_mc] = linkub[i];
-	      }
-            for(int i=0; i<i_ml; i++ )
-	      {
-                rowlb[i+e_mc+e_ml+i_mc] = linklb[i+e_ml];
-                rowub[i+e_mc+e_ml+i_mc] = linkub[i+e_ml];
-	      }
-            PRINT_ARRAY(" Row after combined Lower - ",rowlb,mc);
-            PRINT_ARRAY(" Row after combined Upper - ",rowub,mc);
-	  }
-
+  if (nodeid == 0 && mlink != 0) {
+    mc = mc + mlink;
+    int e_mc = 0;
+    int i_mc = 0;
+    bool e = true; //equality constraint must be at front of list
+    for(int i = 0;i < (mc - mlink);i++) {
+      if (rowlb[i] == rowub[i]) {
+        e_mc++;
+        assert(e); //equality constraint must be at front of list
+      }
+      else {
+        e = false;
+        assert(rowlb[i] < rowub[i]);
+        i_mc++;
+      }
+    }
+    // arrange bounds, c_equality, link_equality, c_ineqaulity, link_inequality
+    for(int i = i_mc - 1;i >= 0;i--) {
+      rowlb[i + e_mc + e_ml] = rowlb[i + e_mc];
+      rowub[i + e_mc + e_ml] = rowub[i + e_mc];
+    }
+    for(int i = 0;i < e_ml;i++) {
+      rowlb[i + e_mc] = linklb[i];
+      rowub[i + e_mc] = linkub[i];
+    }
+    for(int i = 0;i < i_ml;i++) {
+      rowlb[i + e_mc + e_ml + i_mc] = linklb[i + e_ml];
+      rowub[i + e_mc + e_ml + i_mc] = linkub[i + e_ml];
+    }
+    PRINT_ARRAY(" Row after combined Lower - ", rowlb, mc);
+    PRINT_ARRAY(" Row after combined Upper - ", rowub, mc);
+  }
 
 	collb_map[nodeid] = collb;
 	colub_map[nodeid] = colub;
