@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sstream>
 
-StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p) {
+StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p):isAmat(false), isQamat(false) {
 	MESSAGE("enter constructor StructJuMPInput - "<<p);
 	this->prob = p;
 	useInputDate = 1;
@@ -250,13 +250,13 @@ std::vector<double> StructJuMPInput::getFirstStageObj() {
 	MESSAGE("getFirstStageObj - 0");
 	assert(nvar_map.find(0) != nvar_map.end());
 	int nvar = nvar_map[0];
-	double x0[nvar];
+	std::vector<double> x0(nvar, 1.0);
 	std::vector<double> grad(nvar);
 	CallBackData data = { prob->userdata, 0, 0, 0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
-	prob->eval_grad_f(x0, x0, &grad[0], &data);
+	prob->eval_grad_f(&x0[0], &x0[0], &grad[0], &data);
 #ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
@@ -355,14 +355,14 @@ std::vector<double> StructJuMPInput::getSecondStageObj(int scen) {
 	assert(nvar_map.find(0) != nvar_map.end());
 	int n0 = nvar_map[0];
 	int n1 = nvar_map[nodeid];
-	double x0[n0];
-	double x1[n1];
+	std::vector<double> x0(n0, 1.0);
+	std::vector<double> x1(n1, 1.0);
 	std::vector<double> grad(n1);
 	CallBackData data = { prob->userdata, nodeid, nodeid,0 };
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
-	prob->eval_grad_f(x0, x1, &grad[0], &data);
+	prob->eval_grad_f(&x0[0], &x1[0], &grad[0], &data);
 #ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
@@ -439,6 +439,11 @@ bool StructJuMPInput::isSecondStageColInteger(int scen, int col) {
 // returns the column-oriented first-stage constraint matrix (A matrix)
 CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	MESSAGE("getFirstStageConstraints ");
+	if(isAmat){
+	  MESSAGE("return (quick) getFirstStageConstraints - Amat -  "<<amat.getNumRows()<<" x "<<amat.getNumCols() <<" nz "<<amat.getNumElements());
+	  return amat;
+	}
+
 	int nvar = nvar_map[0];
 	CallBackData cbd = { prob->userdata, 0, 0 , 0};
 	std::vector<double> x0(nvar, 1.0);
@@ -458,6 +463,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	std::vector<int> i_rowidx(i_nz);
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
+	cbd.typeflag = 2;
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
@@ -495,6 +501,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 //	MESSAGE("testmat "<<testmat.getNumRows()<<" "<<testmat.getNumCols()<<" "<<testmat.getNumElements()<<
 //			" Arow -"<<Arow.getNumRows()<<" "<<Arow.getNumCols()<<" "<<Arow.getNumElements());
 
+	isAmat = true;
 	return amat;
 }
 // returns the column-oriented second-stage constraint matrix (W matrix)
@@ -530,6 +537,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	std::vector<int> i_rowidx(i_nz);
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
+	cbd.typeflag = 2;
 
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
@@ -549,7 +557,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 
 	wmat.bottomAppendPackedMatrix(i_wmat);
 
-	wmat_map[scen] = wmat;
+	wmat_map[nodeid] = wmat;
 	assert(wmat.getNumCols() == nvar);
 	assert(wmat.getNumRows() == ncon_map[nodeid]);
 	IF_VERBOSE_DO(wmat.dumpMatrix(););
@@ -663,6 +671,10 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 
 CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 	MESSAGE("getFirstStageHessian - ");
+	if(isQamat){
+	  MESSAGE("return (quick) getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols() <<" nz "<<qamat.getNumElements());
+	  return qamat;
+	}
 	assert(nvar_map.find(0) != nvar_map.end());
 
 	int nvar = nvar_map[0];
@@ -684,7 +696,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 	std::vector<int> rowidx(nz);
 	std::vector<int> colptr(nvar + 1, 0);
 	std::vector<double> elts(nz);
-
+	cbd.typeflag = 0;
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
@@ -699,6 +711,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 	IF_VERBOSE_DO(qamat.dumpMatrix(););
 	MESSAGE("return getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols() <<" nz "<<qamat.getNumElements());
 
+	isQamat = true;
 	return qamat;
 }
 // Q_i
@@ -782,6 +795,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen) {
 	std::vector<int> rowidx(nz, 0);
 	std::vector<int> colptr(n0 + 1, 0);
 	std::vector<double> elts(nz, 0.0);
+	cbd.typeflag = 2;
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
