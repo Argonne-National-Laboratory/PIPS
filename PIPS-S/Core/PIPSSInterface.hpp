@@ -41,11 +41,11 @@ public:
 
         const denseBAVector& getPrimalSolution() const { return solver->getPrimalSolution(); }
 
-	void setFirstStageColState(int idx,variableState s); 
+	void setFirstStageColState(int idx,variableState s);
 	void setFirstStageRowState(int idx,variableState);
 	void setSecondStageColState(int scen, int idx,variableState);
 	void setSecondStageRowState(int scen, int idx,variableState);
-	void commitStates(); 
+	void commitStates();
 
 	variableState getFirstStageColState(int idx) const;
 	variableState getFirstStageRowState(int idx) const;
@@ -53,7 +53,7 @@ public:
 	variableState getSecondStageRowState(int scen, int idx) const;
 
 	int getNumIterations() const { return solver->nIter; }
-	
+
 	// override default
 	void setStates(const BAFlagVector<variableState> &s) { solver->setStates(s); }
 
@@ -101,26 +101,29 @@ public:
 	int isRowFeasible(int index, int scen,denseBAVector &solution);
 
 	void commitNewColsAndRows();
-	
+
 	void generateBetas(sparseBAVector &beta);
 
 	void generateNonBasicRow(BAIndex in, sparseBAVector &row);
 
 	void addFirstStageRow(const std::vector<double>& elts1, double lb = -COIN_DBL_MAX, double ub = COIN_DBL_MAX);
-	
+
 	void addSecondStageRows(const std::vector< std::vector <double> >& elts1, const std::vector< std::vector <double> >&elts2, int scen, std::vector<double> &lb, std::vector<double> &ub, int nRows);
-	
+
 	void addFirstStageRows(const std::vector< std::vector <double> >& elts, std::vector<double> &lb, std::vector<double> &ub, int nRows);
 
 	int addFirstStageColumn(double lb, double ub, double c);
 
 	int addSecondStageColumn(int scen,double lb, double ub, double cobj);
 
-	void deleteLastFirstStageRows(int nRows);
-	
+	void deleteLastFirstStageConsecutiveRows(int nRows);
+
 	void deleteLastSecondStageConsecutiveRows(int scenario, int nRows);
 
-	void deleteLastFirstStageColumns(int nCols);
+	void deleteLastFirstStageConsecutiveColumns(int nCols);
+
+	void deleteLastSecondStageConsecutiveColumns(int scenario, int nCols);
+
 
 	const BADimensionsSlacks& getSlackDims() const { return d.dims; }
 

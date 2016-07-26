@@ -25,15 +25,15 @@ struct BAIndex {
 };
 
 // communication context class
-// contains MPI communicator 
+// contains MPI communicator
 // handles logic for assigning scenarios
 class BAContext {
 public:
 	BAContext(MPI_Comm comm);
-	
+
 	// returns true if current MPI process is assigned scenario idx
-	bool assignedScenario(int idx) const { 
-		if (idx == -1) return true; 
+	bool assignedScenario(int idx) const {
+		if (idx == -1) return true;
 		else return (assignedScen.at(idx) == _mype);
 	}
 	// returns MPI process that "owns" scenario
@@ -48,8 +48,8 @@ public:
 	void initializeAssignment(int nscen);
 	// localScenarios is list of scenarios for which a vector has been allocated (except for basic vectors)
 	// includes -1 as first element, indicating first stage
-	// IF YOU WANT TO ONLY ITERATE OVER SECOND STAGE, START AT localScen[1]! 
-	const std::vector<int>& localScenarios() const { return localScen; } 
+	// IF YOU WANT TO ONLY ITERATE OVER SECOND STAGE, START AT localScen[1]!
+	const std::vector<int>& localScenarios() const { return localScen; }
 
 protected:
 	int _mype;
@@ -68,7 +68,7 @@ class BADimensions {
 public:
 	BADimensions() : ctx(0) {}
 	BADimensions(stochasticInput &i, const BAContext&);
-	BADimensions(const BADimensions& d) { this->operator=(d); } 
+	BADimensions(const BADimensions& d) { this->operator=(d); }
 	virtual ~BADimensions() {}
 	virtual int numFirstStageVars() const { return nFirstStageVars_; }
 	virtual int numFirstStageCons() const { return nFirstStageCons_; }
@@ -141,7 +141,7 @@ public:
 		nSecondStageVars_v[idx]--;
 
 	}
-	
+
 	const BAContext *ctx; // this is ugly
 protected:
 	int nFirstStageVars_, nFirstStageCons_, nScen;
@@ -162,10 +162,6 @@ public:
 	virtual int numFirstStageVars() const { return inner.numFirstStageVars() + inner.numFirstStageCons(); }
 	virtual int numSecondStageVars(int idx) const { return inner.numSecondStageVars(idx) + inner.numSecondStageCons(idx); }
 	virtual int numSecondStageCons(int idx) const { return inner.numSecondStageCons(idx); }
-	
-	virtual void addSecondStageRow(int idx) {
-		inner.addSecondStageRow(idx);
-	}
 
 	BADimensions inner;
 };
