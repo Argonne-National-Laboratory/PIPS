@@ -372,8 +372,9 @@ endif()
 
 #Boost
 if (BUILD_PIPS_S OR BUILD_PIPS_IPM)
-  find_package(Boost COMPONENTS system filesystem thread log log_setup)
+  find_package(Boost COMPONENTS log log_setup regex system filesystem thread chrono date_time)
   include_directories(${Boost_INCLUDE_DIR})
+  #message("---- ${Boost_INCLUDE_DIR}") #message("---- ${Boost_LIBRARIES}")
   if (NOT Boost_FOUND)
     message("! A Boost version containing BOOST.LOG has NOT been found.")
     message("! Please specify the location of the Boost library containing 'log' package.")
