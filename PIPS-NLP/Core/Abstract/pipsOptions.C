@@ -128,7 +128,11 @@ pipsOptions::pipsOptions()
    SCOPF_precond(0),
    UseDualRegAlg(0),
    isNLP(1)
-{}
+{
+#ifndef WITH_MA57
+  if(SymLinearSolver==1) SymLinearSolver=0;
+#endif
+}
 
 /* ----------------------------------------------------------------------------
  pipsOptions::~pipsOptions - Destructor

@@ -100,7 +100,7 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* nomegaInv, OoqpVector* rhs, OoqpVector* additiveDiag_)
 {
   sLinsysLeaf *resultSLin=NULL;
- 
+  cout<< "newLinsysLeaf:" <<gSymLinearSolver << endl;
   if(0==gSymLinearSolver){
 #ifdef WITH_MA27
 	Ma27Solver* sMA27=NULL; 
@@ -127,8 +127,7 @@ sFactory::newLinsysLeaf(sData* prob,
 //	resultSLin = new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, additiveDiag_, sMA57);
 #endif 
   }
-  
-  assert(resultSLin);
+  if(NULL==resultSLin) assert(0 && "PIPS was not compiled with the linear solver required");
 
   return resultSLin;
 }
