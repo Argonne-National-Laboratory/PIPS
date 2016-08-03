@@ -26,10 +26,12 @@ protected:
 	std::map<int, int> i_ncon_map;
 
 	CoinPackedMatrix amat;
+	bool isAmat;
 	std::map<int, CoinPackedMatrix> wmat_map;
 	std::map<int, CoinPackedMatrix> tmat_map;
 
 	CoinPackedMatrix qamat;
+	bool isQamat;
 	std::map<int, CoinPackedMatrix> qwmat_map;
 	std::map<int, CoinPackedMatrix> qtmat_map;
 

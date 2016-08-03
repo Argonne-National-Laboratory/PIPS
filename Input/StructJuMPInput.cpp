@@ -6,7 +6,7 @@
 #include <iostream>
 #include <sstream>
 
-StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p) {
+StructJuMPInput::StructJuMPInput(PipsNlpProblemStruct* p):isAmat(false), isQamat(false) {
 	MESSAGE("enter constructor StructJuMPInput - "<<p);
 	this->prob = p;
 	useInputDate = 1;
@@ -47,39 +47,38 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 
 
 	if(nodeid==0){
-	    //number of linking constraints
-	    mlink = 0;
-	    e_ml = 0;
-	    i_ml = 0;
-	    bool e=true; //equality constraint must be at front of list
+    //number of linking constraints
+    mlink = 0;
+    e_ml = 0;
+    i_ml = 0;
+    bool e=true; //equality constraint must be at front of list
 
-	    CallBackData cbd_link = {prob->userdata,0,0,1};
-	    prob->prob_info(NULL, NULL, NULL, &mlink, NULL, NULL, &cbd_link);
+    CallBackData cbd_link = {prob->userdata,0,0,1};
+    prob->prob_info(NULL, NULL, NULL, &mlink, NULL, NULL, &cbd_link);
 
-	    if(mlink != 0){
-	        linklb.resize(mlink);
-		linkub.resize(mlink);
-		prob->prob_info(NULL, NULL, NULL, &mlink, &linklb[0], &linkub[0], &cbd_link);
-		for(int i=0;i<linklb.size();i++){
-		    if(linklb[i] == linkub[i]){
-		        e_ml++;
-			assert(e); //equality constraint must be at front of list
-		    }
-		    else{
-		        e = false;
-			assert(linklb[i]<linkub[i]);
-			i_ml++;
-		    }
-		}
-	    }
-	}
+    if (mlink != 0) {
+      linklb.resize(mlink);
+      linkub.resize(mlink);
+      prob->prob_info(NULL, NULL, NULL, &mlink, &linklb[0], &linkub[0], &cbd_link);
+      for(int i = 0;i < linklb.size();i++) {
+        if (linklb[i] == linkub[i]) {
+          e_ml++;
+          assert(e); //equality constraint must be at front of list
+        }
+        else {
+          e = false;
+          assert(linklb[i] < linkub[i]);
+          i_ml++;
+        }
+      }
+    }
+  }
 
-        int temp = mc;
-        if (nodeid == 0 && mlink != 0)
-	  {
-            ncon_map[nodeid] += mlink;
-            temp += mlink;
-	  }
+  int temp = mc;
+  if (nodeid == 0 && mlink != 0) {
+    ncon_map[nodeid] += mlink;
+    temp += mlink;
+  }
 	std::vector<double> collb(nv);
 	std::vector<double> colub(nv);
 	std::vector<double> rowlb(temp);
@@ -95,44 +94,38 @@ void StructJuMPInput::get_prob_info(int nodeid) {
 	gprof.n_prob_info+=1;
 #endif
 
-        if (nodeid == 0 && mlink != 0)
-	  {
-            mc = mc + mlink;
-            int e_mc = 0;
-            int i_mc = 0;
-            bool e=true; //equality constraint must be at front of list
-            for(int i=0;i<(mc-mlink);i++)
-	      {
-                if(rowlb[i] == rowub[i]){
-		  e_mc++;
-		  assert(e); //equality constraint must be at front of list
-                }
-                else{
-		  e = false;
-		  assert(rowlb[i]<rowub[i]);
-		  i_mc++;
-                }
-	      }
-	    // arrange bounds, c_equality, link_equality, c_ineqaulity, link_inequality
-            for(int i=i_mc-1; i>=0; i-- )
-	      {
-                rowlb[i+e_mc+e_ml] = rowlb[i+e_mc];
-                rowub[i+e_mc+e_ml] = rowub[i+e_mc];
-	      }
-            for(int i=0; i<e_ml; i++ )
-	      {
-                rowlb[i+e_mc] = linklb[i];
-                rowub[i+e_mc] = linkub[i];
-	      }
-            for(int i=0; i<i_ml; i++ )
-	      {
-                rowlb[i+e_mc+e_ml+i_mc] = linklb[i+e_ml];
-                rowub[i+e_mc+e_ml+i_mc] = linkub[i+e_ml];
-	      }
-            PRINT_ARRAY(" Row after combined Lower - ",rowlb,mc);
-            PRINT_ARRAY(" Row after combined Upper - ",rowub,mc);
-	  }
-
+  if (nodeid == 0 && mlink != 0) {
+    mc = mc + mlink;
+    int e_mc = 0;
+    int i_mc = 0;
+    bool e = true; //equality constraint must be at front of list
+    for(int i = 0;i < (mc - mlink);i++) {
+      if (rowlb[i] == rowub[i]) {
+        e_mc++;
+        assert(e); //equality constraint must be at front of list
+      }
+      else {
+        e = false;
+        assert(rowlb[i] < rowub[i]);
+        i_mc++;
+      }
+    }
+    // arrange bounds, c_equality, link_equality, c_ineqaulity, link_inequality
+    for(int i = i_mc - 1;i >= 0;i--) {
+      rowlb[i + e_mc + e_ml] = rowlb[i + e_mc];
+      rowub[i + e_mc + e_ml] = rowub[i + e_mc];
+    }
+    for(int i = 0;i < e_ml;i++) {
+      rowlb[i + e_mc] = linklb[i];
+      rowub[i + e_mc] = linkub[i];
+    }
+    for(int i = 0;i < i_ml;i++) {
+      rowlb[i + e_mc + e_ml + i_mc] = linklb[i + e_ml];
+      rowub[i + e_mc + e_ml + i_mc] = linkub[i + e_ml];
+    }
+    PRINT_ARRAY(" Row after combined Lower - ", rowlb, mc);
+    PRINT_ARRAY(" Row after combined Upper - ", rowub, mc);
+  }
 
 	collb_map[nodeid] = collb;
 	colub_map[nodeid] = colub;
@@ -257,13 +250,13 @@ std::vector<double> StructJuMPInput::getFirstStageObj() {
 	MESSAGE("getFirstStageObj - 0");
 	assert(nvar_map.find(0) != nvar_map.end());
 	int nvar = nvar_map[0];
-	double x0[nvar];
+	std::vector<double> x0(nvar, 1.0);
 	std::vector<double> grad(nvar);
 	CallBackData data = { prob->userdata, 0, 0, 0};
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
-	prob->eval_grad_f(x0, x0, &grad[0], &data);
+	prob->eval_grad_f(&x0[0], &x0[0], &grad[0], &data);
 #ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
@@ -362,14 +355,14 @@ std::vector<double> StructJuMPInput::getSecondStageObj(int scen) {
 	assert(nvar_map.find(0) != nvar_map.end());
 	int n0 = nvar_map[0];
 	int n1 = nvar_map[nodeid];
-	double x0[n0];
-	double x1[n1];
+	std::vector<double> x0(n0, 1.0);
+	std::vector<double> x1(n1, 1.0);
 	std::vector<double> grad(n1);
 	CallBackData data = { prob->userdata, nodeid, nodeid,0 };
 #ifdef NLPTIMING
 	double stime = MPI_Wtime();
 #endif
-	prob->eval_grad_f(x0, x1, &grad[0], &data);
+	prob->eval_grad_f(&x0[0], &x1[0], &grad[0], &data);
 #ifdef NLPTIMING
 	gprof.t_struct_building += MPI_Wtime() - stime;
 #endif
@@ -446,6 +439,11 @@ bool StructJuMPInput::isSecondStageColInteger(int scen, int col) {
 // returns the column-oriented first-stage constraint matrix (A matrix)
 CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	MESSAGE("getFirstStageConstraints ");
+	if(isAmat){
+	  MESSAGE("return (quick) getFirstStageConstraints - Amat -  "<<amat.getNumRows()<<" x "<<amat.getNumCols() <<" nz "<<amat.getNumElements());
+	  return amat;
+	}
+
 	int nvar = nvar_map[0];
 	CallBackData cbd = { prob->userdata, 0, 0 , 0};
 	std::vector<double> x0(nvar, 1.0);
@@ -465,6 +463,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 	std::vector<int> i_rowidx(i_nz);
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
+	cbd.typeflag = 2;
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
@@ -502,6 +501,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageConstraints() {
 //	MESSAGE("testmat "<<testmat.getNumRows()<<" "<<testmat.getNumCols()<<" "<<testmat.getNumElements()<<
 //			" Arow -"<<Arow.getNumRows()<<" "<<Arow.getNumCols()<<" "<<Arow.getNumElements());
 
+	isAmat = true;
 	return amat;
 }
 // returns the column-oriented second-stage constraint matrix (W matrix)
@@ -537,6 +537,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 	std::vector<int> i_rowidx(i_nz);
 	std::vector<int> i_colptr(nvar + 1, 0);
 	std::vector<double> i_elts(i_nz);
+	cbd.typeflag = 2;
 
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
@@ -556,7 +557,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageConstraints(int scen) {
 
 	wmat.bottomAppendPackedMatrix(i_wmat);
 
-	wmat_map[scen] = wmat;
+	wmat_map[nodeid] = wmat;
 	assert(wmat.getNumCols() == nvar);
 	assert(wmat.getNumRows() == ncon_map[nodeid]);
 	IF_VERBOSE_DO(wmat.dumpMatrix(););
@@ -670,6 +671,10 @@ CoinPackedMatrix StructJuMPInput::getLinkingConstraints(int scen) {
 
 CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 	MESSAGE("getFirstStageHessian - ");
+	if(isQamat){
+	  MESSAGE("return (quick) getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols() <<" nz "<<qamat.getNumElements());
+	  return qamat;
+	}
 	assert(nvar_map.find(0) != nvar_map.end());
 
 	int nvar = nvar_map[0];
@@ -691,7 +696,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 	std::vector<int> rowidx(nz);
 	std::vector<int> colptr(nvar + 1, 0);
 	std::vector<double> elts(nz);
-
+	cbd.typeflag = 0;
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
@@ -706,6 +711,7 @@ CoinPackedMatrix StructJuMPInput::getFirstStageHessian() {
 	IF_VERBOSE_DO(qamat.dumpMatrix(););
 	MESSAGE("return getFirstStageHessian - Qamat - "<<qamat.getNumRows()<<" x "<<qamat.getNumCols() <<" nz "<<qamat.getNumElements());
 
+	isQamat = true;
 	return qamat;
 }
 // Q_i
@@ -789,6 +795,7 @@ CoinPackedMatrix StructJuMPInput::getSecondStageCrossHessian(int scen) {
 	std::vector<int> rowidx(nz, 0);
 	std::vector<int> colptr(n0 + 1, 0);
 	std::vector<double> elts(nz, 0.0);
+	cbd.typeflag = 2;
 #ifdef NLPTIMING
 	stime = MPI_Wtime();
 #endif
