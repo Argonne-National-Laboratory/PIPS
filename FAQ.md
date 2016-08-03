@@ -9,7 +9,7 @@ This feature isn't available on standard solvers.
 PIPS is also a parallel solver, meaning that it can distribute work across nodes (other computers or CPU cores).
 
 **Q: What if I have a weak notebook with a single or dual core CPU? Is PIPS still useful for me?**
-s
+
 A. On short, yes, but you will not get the parallelism benefits, and it will most likely be slower than general purpose solvers.
 
 **Q: Can I use PIPS to solve standard (unstructured) problems?**
@@ -26,8 +26,7 @@ StructJuMP
 **Q: What is StructJuMP?**
 
 A. [StructJuMP](https://github.com/StructJuMP/StructJuMP.jl) is a modeling environment that extends [JuMP](https://github.com/JuliaOpt/JuMP.jl) to easily express the structure of problems and interface efficiently with 
-structure-exploiting solvers such as PIPS. It also works in parallel (distributed memory), and thus allows the specification of much  
-larger (structured) problems than JuMP can handle.
+structure-exploiting solvers such as PIPS. It also works in parallel (distributed memory), and thus allows the specification of much larger (structured) problems than JuMP can handle.
 
 **Q: What do you mean by structured problem?**
 
@@ -60,7 +59,7 @@ it has too many scenarios, StructJuMP+PIPS can still handle it on a memory distr
 
 **Q: Can you give me a quick recap on when to use StructJuMP+PIPS and when to use general purpose AMLs and solvers?**
 
-A. You should use StrucJuMP+PIPS if:
+A. You should use StructJuMP+PIPS if:
 * your problem is structured (for example, a stochastic problem)
 * it is sufficiently large (for example, has many scenarios)
 * you have a highly parallel computing hardware
