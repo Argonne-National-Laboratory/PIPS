@@ -1,3 +1,4 @@
+#!/bin/sh
 ### install MA27
 
 #we assume ma27 is in a tar.gz file

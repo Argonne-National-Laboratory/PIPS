@@ -1,3 +1,4 @@
+#!/bin/sh
 ### install MA57
 
 #assume ma57 in tar.gz file

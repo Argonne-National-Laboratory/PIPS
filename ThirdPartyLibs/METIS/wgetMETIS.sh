@@ -1,3 +1,4 @@
+#!/bin/sh
 echo " "
 echo "##### Downloading the third party packages for PIPS-NLP:"
 echo " "

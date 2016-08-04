@@ -1,3 +1,4 @@
+#!/bin/sh
 fn=CB_v0.3.11.tgz
 echo " "
 echo "##### Downloading the third party packages for PIPS-NLP:"

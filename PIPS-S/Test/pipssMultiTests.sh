@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/sh
 
 # Test script called by CMake CTest during 'make test'. Can also be used separately.
 # Usage:
@@ -20,8 +20,6 @@ check_output()
     return 1
   fi
 }
-
-echo "$2/20data/problemdata 8"  > log.log
 
 exe=$1
 

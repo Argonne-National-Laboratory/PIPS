@@ -1,3 +1,4 @@
+#!/bin/sh
 fn=Cbc-2.9.8.tgz
 
 echo " "

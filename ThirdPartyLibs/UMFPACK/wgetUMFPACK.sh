@@ -1,3 +1,4 @@
+#!/bin/sh
 fn=SuiteSparse-4.4.5.tar.gz
 echo " "
 echo "##### Downloading the third party packages for PIPS-NLP:"
