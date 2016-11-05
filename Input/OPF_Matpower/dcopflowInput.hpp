@@ -47,8 +47,10 @@ public:
 	virtual int nSecondStageVars(int scen) { return nSecondStageVars_[scen]; }
 	virtual int nSecondStageCons(int scen) { return nSecondStageCons_[scen]; }
 
-	virtual bool isFirstStageColInteger(int col) { return false; }	
-	virtual bool isSecondStageColInteger(int scen, int col) { return false; }
+        virtual bool isFirstStageColInteger(int col) { return false; }
+        virtual bool isFirstStageColBinary(int col) { return false; }
+        virtual bool isSecondStageColInteger(int scen, int col) { return false; }
+        virtual bool isSecondStageColBinary(int scen, int col) { return false; }
 	
 	virtual bool scenarioDimensionsEqual() { return false; }
 	virtual bool onlyBoundsVary() { return false; }

@@ -65,6 +65,7 @@ public:
 	virtual std::vector<double> getFirstStageRowUB();
 	virtual std::vector<std::string> getFirstStageRowNames();
 	virtual bool isFirstStageColInteger(int col) { return false; }
+	virtual bool isFirstStageColBinary(int col) { return false; }
 
 	virtual std::vector<double> getSecondStageColLB(int scen);
 	virtual std::vector<double> getSecondStageColUB(int scen);
@@ -76,6 +77,7 @@ public:
 	virtual std::vector<std::string> getSecondStageRowNames(int scen);
 	virtual double scenarioProbability(int scen) { return 1.0/cuts.size(); }
 	virtual bool isSecondStageColInteger(int scen, int col) { return false; }
+	virtual bool isSecondStageColBinary(int scen, int col) { return false; }
 
 	virtual CoinPackedMatrix getFirstStageConstraints();
 	virtual CoinPackedMatrix getSecondStageConstraints(int scen);

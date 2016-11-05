@@ -89,6 +89,10 @@ public:
 		return false;
 	}
 
+	virtual bool isFirstStageColBinary(int col) {
+		return false;
+	}
+
 	virtual std::vector<double> getSecondStageColLB(int scen) {
 		loadLocalNLdata(scen);
 		return localData[scen].collb;
@@ -121,6 +125,9 @@ public:
 		return 1.0 / nScenarios_;
 	}
 	virtual bool isSecondStageColInteger(int scen, int col) {
+		return false;
+	}
+	virtual bool isSecondStageColBinary(int scen, int col) {
 		return false;
 	}
 

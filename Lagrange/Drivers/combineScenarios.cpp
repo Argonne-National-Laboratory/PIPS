@@ -28,6 +28,17 @@ public:
 	virtual std::vector<double> getFirstStageRowUB() { return inner.getFirstStageRowUB(); }
 	virtual std::vector<std::string> getFirstStageRowNames() { return inner.getFirstStageRowNames(); }
 	virtual bool isFirstStageColInteger(int col) { return inner.isFirstStageColInteger(col); }
+	virtual bool isFirstStageColBinary(int col) {
+	  bool isInteger = this->isFirstStageColInteger(col);
+	  // CoinMpsIO has no isBinary member function, but some preprocessing features require
+	  // knowledge of binary variables, so kludge in an "isBinary" member function by
+	  // relying on CoinMpsIO setting lower and upper bounds to zero and one, respectively.
+	  // Also note: CoinMpsIO uses a default tolerance of 1.0e-8 on integrality comparisons.
+	  const double intTol = 1.0e-8;
+	  bool isLBzero = (fabs(this->getFirstStageColLB().at(col)) < intTol);
+	  bool isUBone = (fabs(this->getFirstStageColUB().at(col) - 1.0) < intTol);
+	  return (isInteger && isLBzero && isUBone);
+	}
 
 	virtual std::vector<double> getSecondStageColLB(int scen) { return inner.getSecondStageColLB(realScenarios[scen]); }
 	virtual std::vector<double> getSecondStageColUB(int scen) { return inner.getSecondStageColUB(realScenarios[scen]); }
@@ -39,6 +50,17 @@ public:
 	virtual std::vector<std::string> getSecondStageRowNames(int scen) { return inner.getSecondStageRowNames(realScenarios[scen]); }
 	virtual double scenarioProbability(int scen) { return inner.scenarioProbability(realScenarios[scen])/rescale; }
 	virtual bool isSecondStageColInteger(int scen, int col) { return inner.isSecondStageColInteger(realScenarios[scen],col); }
+        virtual bool isSecondStageColBinary(int scen, int col) {
+	  bool isInteger = this->isSecondStageColInteger(scen, col);
+	  // CoinMpsIO has no isBinary member function, but some preprocessing features require
+	  // knowledge of binary variables, so kludge in an "isBinary" member function by
+	  // relying on CoinMpsIO setting lower and upper bounds to zero and one, respectively.
+	  // Also note: CoinMpsIO uses a default tolerance of 1.0e-8 on integrality comparisons.
+	  const double intTol = 1.0e-8;
+	  bool isLBzero = (fabs(this->getSecondStageColLB(scen).at(col)) < intTol);
+	  bool isUBone = (fabs(this->getSecondStageColUB(scen).at(col) - 1.0) < intTol);
+	  return (isInteger && isLBzero && isUBone);
+	}
 
 	virtual CoinPackedMatrix getFirstStageConstraints() { return inner.getFirstStageConstraints(); }
 	virtual CoinPackedMatrix getSecondStageConstraints(int scen) { return inner.getSecondStageConstraints(realScenarios[scen]); }
