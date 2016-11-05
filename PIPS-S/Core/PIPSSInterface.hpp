@@ -28,6 +28,8 @@ public:
 
 	void setPrimalTolerance(double val) { solver->setPrimalTolerance(val); }
 	void setDualTolerance(double val) { solver->setDualTolerance(val); }
+	double getPrimalTolerance() const { return solver->primalTol; }
+	double getDualTolerance() const { return solver->dualTol; }
 	double getObjective() const { return solver->objval; }
 	solverState getStatus() const { return solver->status; }
 
