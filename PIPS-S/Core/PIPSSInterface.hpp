@@ -39,6 +39,7 @@ public:
 	std::vector<double> getSecondStageDualColSolution(int scen) const;
 	// these are the multipliers on the rows, not the reduced costs for
 	// the slacks corresponding to the rows. We need to reconcile this with Clp.
+	std::vector<double> getFirstStageDualRowSolution() const;
 	std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
         const denseBAVector& getPrimalSolution() const { return solver->getPrimalSolution(); }

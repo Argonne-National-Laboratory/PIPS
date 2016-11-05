@@ -144,6 +144,12 @@ std::vector<double> PIPSSInterface::getSecondStageDualColSolution(int scen) cons
 	return std::vector<double>(&x[0],&x[nvar2real]);
 }
 
+std::vector<double> PIPSSInterface::getFirstStageDualRowSolution() const {
+	const sparseVector &x = solver->btranVec.getFirstStageVec();
+	int ncons1 = d.dims.inner.numFirstStageCons();
+	return std::vector<double>(&x[0],&x[ncons1]);
+}
+
 std::vector<double> PIPSSInterface::getSecondStageDualRowSolution(int scen) const {
 	assert(d.ctx.assignedScenario(scen));
 	const sparseVector &x = solver->btranVec.getSecondStageVec(scen);
