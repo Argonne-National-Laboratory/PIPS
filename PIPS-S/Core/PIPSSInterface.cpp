@@ -231,6 +231,31 @@ void PIPSSInterface::setUB(const denseBAVector& ub) {
         boundsChanged = true;
 }
 
+std::vector<double> PIPSSInterface::getFirstStageColLB() const {
+	const denseVector &x = solver->myLB().getFirstStageVec();
+	int nvar1real = d.dims.inner.numFirstStageVars();
+	return std::vector<double>(&x[0], &x[nvar1real]);
+}
+
+std::vector<double> PIPSSInterface::getFirstStageColUB() const {
+	const denseVector &x = solver->myUB().getFirstStageVec();
+	int nvar1real = d.dims.inner.numFirstStageVars();
+	return std::vector<double>(&x[0], &x[nvar1real]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageColLB(int scen) const {
+	const denseVector &x = solver->myLB().getSecondStageVec(scen);
+	int nvar2real = d.dims.inner.numSecondStageVars(scen);
+	return std::vector<double>(&x[0], &x[nvar2real]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageColUB(int scen) const {
+	const denseVector &x = solver->myUB().getSecondStageVec(scen);
+	int nvar2real = d.dims.inner.numSecondStageVars(scen);
+	return std::vector<double>(&x[0], &x[nvar2real]);
+}
+
+
 void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
 
 	CoinPackedVector e1;

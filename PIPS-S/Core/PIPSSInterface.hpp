@@ -73,6 +73,10 @@ public:
 
         const denseBAVector& getLB() const { return solver->myLB(); }
         const denseBAVector& getUB() const { return solver->myUB(); }
+	std::vector<double> getFirstStageColLB() const;
+	std::vector<double> getFirstStageColUB() const;
+	std::vector<double> getSecondStageColLB(int scen) const;
+	std::vector<double> getSecondStageColUB(int scen) const;
 
         const denseBAVector& getVarObjective() const { return d.c; }
         const BAFlagVector<constraintType>& getVariableTypes() const {return d.vartype;}
