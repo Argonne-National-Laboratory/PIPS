@@ -78,6 +78,11 @@ public:
 	std::vector<double> getSecondStageColLB(int scen) const;
 	std::vector<double> getSecondStageColUB(int scen) const;
 
+	std::vector<double> getFirstStageRowLB() const;
+	std::vector<double> getFirstStageRowUB() const;
+	std::vector<double> getSecondStageRowLB(int scen) const;
+	std::vector<double> getSecondStageRowUB(int scen) const;
+
         const denseBAVector& getVarObjective() const { return d.c; }
         const BAFlagVector<constraintType>& getVariableTypes() const {return d.vartype;}
         const BAData& getBAData() const { return d; }
