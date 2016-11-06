@@ -83,6 +83,10 @@ public:
 	std::vector<double> getSecondStageRowLB(int scen) const;
 	std::vector<double> getSecondStageRowUB(int scen) const;
 
+	CoinPackedMatrix getFirstStageConstraints() const { return *(d.Acol); }
+	CoinPackedMatrix getSecondStageConstraints(int scen) const { return *(d.Wcol[scen]); }
+	CoinPackedMatrix getLinkingConstraints(int scen) const { return *(d.Tcol[scen]); }
+
         const denseBAVector& getVarObjective() const { return d.c; }
         const BAFlagVector<constraintType>& getVariableTypes() const {return d.vartype;}
         const BAData& getBAData() const { return d; }
