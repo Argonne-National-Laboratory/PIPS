@@ -87,6 +87,9 @@ public:
 	CoinPackedMatrix getSecondStageConstraints(int scen) const { return *(d.Wcol[scen]); }
 	CoinPackedMatrix getLinkingConstraints(int scen) const { return *(d.Tcol[scen]); }
 
+	int getNumFirstStageCons() const { return d.dims.numFirstStageCons(); }
+	int getNumSecondStageCons(int scen) const { return d.dims.numSecondStageCons(scen); }
+
         const denseBAVector& getVarObjective() const { return d.c; }
         const BAFlagVector<constraintType>& getVariableTypes() const {return d.vartype;}
         const BAData& getBAData() const { return d; }
