@@ -9,7 +9,7 @@ public:
 	denseVector() : d(0), own(true), len(0) {}
 	denseVector(int len) : own(true), len(len) { d = new double[len]; }
 	//denseVector(int len, double *buf) : d(buf), own(false), len(len) {}
-	denseVector(const denseVector& v) : own(true), len(v.len) { 
+	denseVector(const denseVector& v) : own(true), len(v.len) {
 		d = new double[len];
 		std::copy(v.d,v.d+len,d);
 	}
@@ -27,7 +27,7 @@ public:
 	inline double& operator[](int idx) { /*assert(d); assert(idx < len);*/ return d[idx]; }
 	inline const double& operator[](int idx) const { /*assert(d); assert(idx < len);*/ return d[idx]; }
 private:
-  denseVector& operator=(const denseVector&) {}
+	denseVector& operator=(const denseVector&) { return *this; }
 public:
 	void divideBy(double pivot);
 	void multiplyBy(double x);
@@ -47,7 +47,7 @@ public:
 
 	void copyToPosition(const denseVector &v, int start, int n);
 void copyBeginning(const denseVector &v);
-	
+
 	void swap(denseVector &v) {
 		assert(v.own == own);
 		int l = v.len; double *d2 = v.d;
@@ -65,7 +65,7 @@ private:
 };
 
 template <class T> class denseFlagVector {
-	
+
 public:
 	denseFlagVector(int len) : len(len) { d = new T[len]; }
 private:
@@ -76,7 +76,7 @@ public:
 
 	virtual int length() const { return len; }
         virtual bool allocated() const { return (d != 0); }
-  
+
 	inline T& operator[](int idx) { /*assert(idx < len);*/ return d[idx]; }
 	inline const T& operator[](int idx) const { /*assert(idx < len);*/ return d[idx]; }
 	void copyFrom(const denseFlagVector<T> &v) {
