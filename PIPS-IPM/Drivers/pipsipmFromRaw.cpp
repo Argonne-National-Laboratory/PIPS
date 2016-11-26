@@ -60,7 +60,7 @@ int solve(const string& datarootname, int nscen) {
 
   double obj = pipsIpm.getObjective();
   //cout << "PIPS-IPM: optimal objective: "  << obj << endl;
-  printf("PIPS-IPM: optimal objective: %.8f \n", obj);
+  if (mype == 0) printf("PIPS-IPM: optimal objective: %.8f \n", obj);
 
   return 0;
 }
