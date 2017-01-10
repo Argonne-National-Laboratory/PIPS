@@ -11,7 +11,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Mo
 if(CMAKE_BUILD_TYPE)
   message("CMake build type is ${CMAKE_BUILD_TYPE}")
   message("Build type default flags are: ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
+  set(CMAKE_CXX_FLAGS "-g ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
 else()
   message("CMAKE_BUILD_TYPE not set!")
 endif(CMAKE_BUILD_TYPE)
@@ -112,6 +112,7 @@ endif (CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
 #	message(STATUS "MPI is found: ${MPI_CXX_INCLUDE_PATH}")
 #endif(MPI_FOUND)
 
+set(CMAKE_EXE_LINKER_FLAGS "-g ${CMAKE_EXE_LINKER_FLAGS}")
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a") #need this to find PARDISO

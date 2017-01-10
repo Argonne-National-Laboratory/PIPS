@@ -12,6 +12,7 @@ else
   echo "### ASL: Download Failed.\n"
   exit 1 
 fi
+export CFLAGS='-O3 -g'
 
 fn=solvers.tar.gz
 name=`basename ${fn} .tar.gz`
@@ -22,5 +23,5 @@ chmod +x src/configure
 chmod +x src/configurehere
 
 cd src
-./configurehere
-make -j4
+./configurehere CFLAGS='-O3 -g'
+make -j64
