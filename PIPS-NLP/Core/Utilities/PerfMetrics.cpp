@@ -18,16 +18,16 @@ PerfMetrics& PerfMetrics::getPerfMetrics()
 
 std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 {
-	return os<<"t_struct_building "<<p.t_struct_building<<" "
-			<<"t_model_evaluation "<<p.t_model_evaluation<<" "
-			<<"t_solver_lifetime "<<p.t_solver_lifetime<<" "
-			<<"n_prob_info "<<p.n_prob_info<<" "
-			<<"n_init_x0 "<<p.n_init_x0<<" "
-			<<"n_feval "<<p.n_feval<<" "
-			<<"n_eval_g "<<p.n_eval_g<<" "
-			<<"n_grad_f "<<p.n_grad_f<<" "
-			<<"n_jac_g "<<p.n_jac_g<<" "
-			<<"n_laghess "<<p.n_laghess<<" "
+	return os<<"t_struct_building "<<p.t_struct_building<< std::endl
+			<<"t_model_evaluation "<<p.t_model_evaluation<< std::endl
+			<<"t_solver_lifetime "<<p.t_solver_lifetime<< std::endl
+			<<"n_prob_info "<<p.n_prob_info<< std::endl
+			<<"n_init_x0 "<<p.n_init_x0<< std::endl
+			<<"n_feval "<<p.n_feval<< std::endl
+			<<"n_eval_g "<<p.n_eval_g<< std::endl 
+			<<"n_grad_f "<<p.n_grad_f<< std::endl 
+			<<"n_jac_g "<<p.n_jac_g<< std::endl
+			<<"n_laghess "<<p.n_laghess<< std::endl
 			<<"n_write_solution "<<p.n_write_solution<<" ";
 }
 
