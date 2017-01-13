@@ -133,7 +133,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(IS_MACOS TRUE)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
-#add_definitions(-DTIMING -DSTOCH_TESTING)
+add_definitions(-DTIMING -DSTOCH_TESTING)
 
 # inspired by elemental-bgp
 if(MATH_LIBS)

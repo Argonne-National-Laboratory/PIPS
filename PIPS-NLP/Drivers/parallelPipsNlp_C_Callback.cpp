@@ -32,6 +32,20 @@
 #include "../global_var.h"
 #include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
 
+#ifdef TIMING
+  double timeFromAMPL;
+  double probGenTime;
+  double PartSolver_GenTime;
+  double PartSolver_SolTime;
+  double PartSolver_FactTime;
+  int call_sol_Times;
+  int call_fact_Times;
+
+  int call_sol_Times_MA57;
+  int call_fact_Times_MA57;
+  double genTime_localAmpl;
+#endif
+
 extern "C"
 PipsNlpProblemStructPtr 
 CreatePipsNlpProblemStruct(
@@ -177,4 +191,3 @@ int PipsNlpProblemStructGetTotalCons(PipsNlpProblemStruct* prob)
     else
       return 0;
 }
-
