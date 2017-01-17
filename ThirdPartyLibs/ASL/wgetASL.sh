@@ -22,6 +22,9 @@ ln -s ./${name} ./src
 chmod +x src/configure
 chmod +x src/configurehere
 
+echo "Applying patch for #define filename in asl.h, which is incompatible with mpi.h."
+cp ./patch/asl.h ./src
+
 cd src
 ./configurehere CFLAGS='-O3'
 make -j4
