@@ -3,6 +3,9 @@
  * (C) 2015 Argonne National Laboratory
  */
 
+#ifdef TIMING
+  #include "mpi.h"
+#endif
 #include "NlpGenData.h"
 #include "NlpGenVars.h"
 #include "NlpGenResiduals.h"
