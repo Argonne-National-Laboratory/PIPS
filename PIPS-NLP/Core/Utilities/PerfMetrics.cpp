@@ -49,9 +49,22 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"In factor()"<< std::endl
 			<<"------------------"<< std::endl
 			<<"t_factorNoMatChange "<< p.t_factorNoMatChange << std::endl
+			<<"t_factor_rest "<< p.t_factor_rest << std::endl
 			<<"t_computeRegularization "<< p.t_computeRegularization << std::endl
 			<<"t_factorNoMatChange2 "<< p.t_factorNoMatChange2 << std::endl
 			<<"t_factor2 "<< p.t_factor2 << std::endl
+			<<"------------------"<< std::endl
+			<<"In factor2()"<< std::endl
+			<<"------------------"<< std::endl
+			<<"t_initializeKKT "<< p.t_initializeKKT << std::endl
+			<<"t_reduceKKT "<< p.t_reduceKKT << std::endl
+			<<"t_finalizeKKT "<< p.t_finalizeKKT << std::endl
+			<<"t_factorizeKKT "<< p.t_factorizeKKT << std::endl
+			<<"t_factor2_total "<< p.t_factor2_total << std::endl
+			<<"------------------"<< std::endl
+			<<"In factorizeKKT()"<< std::endl
+			<<"------------------"<< std::endl
+			<<"t_matrixChanged "<< p.t_matrixChanged << std::endl
 			<<"------------------"<< std::endl
 			<<"n_prob_info "<<p.n_prob_info<< std::endl
 			<<"n_init_x0 "<<p.n_init_x0<< std::endl

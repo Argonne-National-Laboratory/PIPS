@@ -210,14 +210,25 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
   if(RegInfo->DoEvalReg >= 1){
   	RegInfo->newLinearSystem();
 
-	if(RegInfo->ForceReg)
+	if(RegInfo->ForceReg) {
 	  NlpGenLinsys::factorNoMatChange(prob_, vars, RegInfo);
-	else
+  }
+	else {
       NlpGenLinsys::factorNoMatChange(prob_, vars, NULL);	
+  }
+#ifdef TIMING
+  gprof.t_factorNoMatChange+=MPI_Wtime()-stime;
+  double stime=MPI_Wtime();
+#endif
+
 
     // now DO THE LINEAR ALGEBRA!
     // in order to avoid a call to NlpGenLinsys::factor, call factor2 method.
     Num_NegEVal = factor2(prob, vars);
+#ifdef TIMING
+    gprof.t_factor2+=MPI_Wtime()-stime;
+    stime=MPI_Wtime();
+#endif
 
 	long long gbMy = prob->getGlobalMy();
 	long long gbMz = prob->getGlobalMz();
@@ -233,10 +244,10 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
 	if( (RegInfo->DoEvalReg==1 && Num_NegEVal == gbMy + gbMz) || (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1)){
 	  skipUpdateReg=true;
 	}
-  }
 #ifdef TIMING
-  gprof.t_factorNoMatChange+=MPI_Wtime()-stime;
+  gprof.t_factor_rest+=MPI_Wtime()-stime;
 #endif
+  }
 
   // update regularization
   while( !skipUpdateReg ){
@@ -246,10 +257,7 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
 	RegInfo->computeRegularization(priReg,dualReg,prob->currMu);
 #ifdef TIMING
   gprof.t_computeRegularization+=MPI_Wtime()-stime;
-#endif
-
-#ifdef TIMING
-    stime=MPI_Wtime();
+  stime=MPI_Wtime();
 #endif
 	
     NlpGenLinsys::factorNoMatChange(prob_, vars, RegInfo);
@@ -258,6 +266,9 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
     stime=MPI_Wtime();
 #endif
 	Num_NegEVal=(long long)factor2(prob, vars);
+#ifdef TIMING
+  gprof.t_factor2+=MPI_Wtime()-stime;
+#endif
 
 	// check if matrix is singular
 	if(Num_NegEVal < 0)
@@ -274,10 +285,6 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
 	  skipUpdateReg = true;
 	}  	  
   }  
-  #ifdef TIMING
-    gprof.t_factor2+=MPI_Wtime()-stime;
-  #endif
-
 #ifdef TIMING
   tTot = MPI_Wtime()-tTot;
   MPI_Barrier(MPI_COMM_WORLD);
