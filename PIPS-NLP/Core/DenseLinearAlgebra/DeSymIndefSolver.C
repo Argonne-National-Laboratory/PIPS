@@ -24,6 +24,12 @@ extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *
                   double *, int    *,    int *, int *,   int *, int *,
                      int *, double *, double *, int *, double *);
 #endif
+#ifdef TIMING
+#include <mpi.h>
+#include "../../global_var.h"
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
+#endif
+
 
 extern double gHSL_PivotLV;
 extern int gSymLinearAlgSolverForDense;
@@ -225,6 +231,10 @@ if(gSymLinearAlgSolverForDense<=1){
       lkeepTemp = ( nnzWrk > n ) ? (5 * n + 2 *nnzWrk + 42) : (6 * n + nnzWrk + 42);
       keepTemp  = new int[lkeepTemp];
       iworkTemp = new int[5 * n];
+      
+#ifdef TIMING
+double stime=MPI_Wtime();
+#endif
 	  
       FNAME(ma57ad)( &n, &nnzWrk, rowM, colM, &lkeepTemp, keepTemp, iworkTemp, icntlTemp,
 	     infoTemp, rinfoTemp );	 
@@ -284,11 +294,17 @@ if(gSymLinearAlgSolverForDense<=1){
 //		fprintf(outfile,"]; \n\n");
 //
 //		fclose(outfile);
-
+#ifdef TIMING
+gprof.t_ma57ad+=MPI_Wtime()-stime;
+stime=MPI_Wtime();
+#endif
 
       FNAME(ma57bd)( &n,	   &nnzWrk,	elesM,	   factTemp,  &lfactTemp,  ifactTemp,
 		   &lifactTemp,  &lkeepTemp,  keepTemp,  iworkTemp2,  icntlTemp,  cntlTemp,
 		   infoTemp,	 rinfoTemp );
+#ifdef TIMING
+       gprof.t_ma57bd+=MPI_Wtime()-stime;
+#endif
 
       if( infoTemp[0] == 0 ){
 		  negEigVal = infoTemp[24-1]; 

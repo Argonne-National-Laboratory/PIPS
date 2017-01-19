@@ -66,6 +66,11 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"------------------"<< std::endl
 			<<"t_matrixChanged "<< p.t_matrixChanged << std::endl
 			<<"------------------"<< std::endl
+			<<"In matrixChanged()"<< std::endl
+			<<"------------------"<< std::endl
+			<<"t_ma57ad "<< p.t_ma57ad << std::endl
+			<<"t_ma57bd "<< p.t_ma57bd << std::endl
+			<<"------------------"<< std::endl
 			<<"n_prob_info "<<p.n_prob_info<< std::endl
 			<<"n_init_x0 "<<p.n_init_x0<< std::endl
 			<<"n_feval "<<p.n_feval<< std::endl
@@ -89,7 +94,7 @@ void PerfMetrics::report_timing()
 	fs<<oss.str();
 	fs.close();
 
-	if(gmyid == 0)
+	//if(gmyid == 0)
 		std::cout<<oss.str();
 
 }
