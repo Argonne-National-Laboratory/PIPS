@@ -210,7 +210,10 @@ if(gSymLinearAlgSolverForDense<=1){
 	int *ifactTemp, *iworkTemp2;
 
 	if(gSymLinearAlgSolverForDense==1){
-#ifdef WITH_MA57		
+#ifdef WITH_MA57	
+#ifdef TIMING
+double stime=MPI_Wtime();
+#endif	
 	  FNAME(ma57id)( cntlTemp, icntlTemp );
 	  
 	  icntlTemp[1-1] = 0;	// don't print warning messages
@@ -233,7 +236,8 @@ if(gSymLinearAlgSolverForDense<=1){
       iworkTemp = new int[5 * n];
       
 #ifdef TIMING
-double stime=MPI_Wtime();
+gprof.t_ma57id+=MPI_Wtime()-stime;
+stime=MPI_Wtime();
 #endif
 	  
       FNAME(ma57ad)( &n, &nnzWrk, rowM, colM, &lkeepTemp, keepTemp, iworkTemp, icntlTemp,

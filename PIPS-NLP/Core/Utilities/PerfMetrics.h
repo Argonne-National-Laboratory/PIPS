@@ -23,6 +23,7 @@ private:
 		t_factorNoMatChange(0.0), t_computeRegularization(0.0),
 		t_factorNoMatChange2(0.0), t_factor2(0.0), t_factor2_total(0.0),
 		t_factor_rest(0.0), t_matrixChanged(0.0), t_ma57ad(0.0), t_ma57bd(0.0),
+		t_ma57id(0.0),
 		t_initializeKKT(0.0), t_reduceKKT(0.0), t_factorizeKKT(0.0), t_finalizeKKT(0.0),
 		n_prob_info(0), n_init_x0(0), n_feval(0), n_eval_g(0), n_grad_f(0),
 		n_jac_g(0), n_laghess(0), n_write_solution(0)
@@ -65,6 +66,7 @@ public:
 	double t_factor_rest;
 	double t_factor2_total;
 	double t_matrixChanged;
+	double t_ma57id;
 	double t_ma57ad;
 	double t_ma57bd;
 	int n_prob_info;

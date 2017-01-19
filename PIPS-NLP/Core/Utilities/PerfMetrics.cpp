@@ -68,6 +68,7 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"------------------"<< std::endl
 			<<"In matrixChanged()"<< std::endl
 			<<"------------------"<< std::endl
+			<<"t_ma57id "<< p.t_ma57id << std::endl
 			<<"t_ma57ad "<< p.t_ma57ad << std::endl
 			<<"t_ma57bd "<< p.t_ma57bd << std::endl
 			<<"------------------"<< std::endl
