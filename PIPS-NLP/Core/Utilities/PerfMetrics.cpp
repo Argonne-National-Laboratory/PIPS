@@ -21,6 +21,10 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 	return os<<"t_struct_building "<<p.t_struct_building<< std::endl
 			<<"t_model_evaluation "<<p.t_model_evaluation<< std::endl
 			<<"t_solver_lifetime "<<p.t_solver_lifetime<< std::endl
+			<<"t_solver_go "<<p.t_solver_go<< std::endl
+			<<"------------------"<< std::endl
+			<<"In solver"<< std::endl
+			<<"------------------"<< std::endl
 			<<"t_compute_step_WithRegularization "<<p.t_compute_step_WithRegularization << std::endl
 			<<"t_evalData "<<p.t_evalData << std::endl
 			<<"t_BarrObj "<<p.t_BarrObj << std::endl
@@ -33,7 +37,15 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"t_total_sum "<<p.t_compute_step_WithRegularization+p.t_evalData+
 			p.t_BarrObj+p.t_calcresids+p.t_updateBarrierParameter
 			+p.t_addDampingTermToKKT+p.t_line_search+p.t_rest << std::endl
-			<<"t_solver_go "<<p.t_solver_go<< std::endl
+			<<"------------------"<< std::endl
+			<<"In compute_step_WithRegularization"<< std::endl
+			<<"------------------"<< std::endl
+			<<"t_set_r3_xz_alpha "<< p.t_set_r3_xz_alpha << std::endl
+			<<"t_factor "<< p.t_factor << std::endl
+			<<"t_computeXSDD1 "<< p.t_computeXSDD1 << std::endl
+			<<"t_computeQuantitiesForDualRegp "<< p.t_computeQuantitiesForDualReg << std::endl
+			<<"t_computeXSDD2 "<< p.t_computeXSDD2 << std::endl
+			<<"------------------"<< std::endl
 			<<"n_prob_info "<<p.n_prob_info<< std::endl
 			<<"n_init_x0 "<<p.n_init_x0<< std::endl
 			<<"n_feval "<<p.n_feval<< std::endl

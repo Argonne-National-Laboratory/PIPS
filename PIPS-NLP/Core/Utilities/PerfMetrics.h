@@ -43,6 +43,11 @@ public:
 	double t_line_search;
 	double t_rest;
 	double t_total;
+	double t_set_r3_xz_alpha;
+	double t_factor;
+	double t_computeXSDD1;
+	double t_computeQuantitiesForDualReg;
+	double t_computeXSDD2;
 
 	int n_prob_info;
 	int n_init_x0;
