@@ -46,6 +46,13 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"t_computeQuantitiesForDualRegp "<< p.t_computeQuantitiesForDualReg << std::endl
 			<<"t_computeXSDD2 "<< p.t_computeXSDD2 << std::endl
 			<<"------------------"<< std::endl
+			<<"In factor()"<< std::endl
+			<<"------------------"<< std::endl
+			<<"t_factorNoMatChange "<< p.t_factorNoMatChange << std::endl
+			<<"t_computeRegularization "<< p.t_computeRegularization << std::endl
+			<<"t_factorNoMatChange2 "<< p.t_factorNoMatChange2 << std::endl
+			<<"t_factor2 "<< p.t_factor2 << std::endl
+			<<"------------------"<< std::endl
 			<<"n_prob_info "<<p.n_prob_info<< std::endl
 			<<"n_init_x0 "<<p.n_init_x0<< std::endl
 			<<"n_feval "<<p.n_feval<< std::endl

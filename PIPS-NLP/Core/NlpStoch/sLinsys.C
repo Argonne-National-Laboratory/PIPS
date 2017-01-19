@@ -19,6 +19,13 @@
 
 #include "RegularizationAlg.h"
 
+#ifdef TIMING
+#include <mpi.h>
+#include "../../global_var.h"
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
+#endif
+
+
 #ifndef MIN
 #define MIN(a,b) ((a > b) ? b : a)
 #endif
@@ -197,6 +204,9 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
   //					(this is always the 1st call of this routine when IFR is used)
   //			  0 -> when factorizing the matrix, force to use primal regularizaion. called iff xWx tests fail  
   //					(the other calls of this routine when IFR is used, now matrix is nonsingular for sure)
+#ifdef TIMING
+    double stime=MPI_Wtime();
+#endif
   if(RegInfo->DoEvalReg >= 1){
   	RegInfo->newLinearSystem();
 
@@ -224,12 +234,29 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
 	  skipUpdateReg=true;
 	}
   }
+#ifdef TIMING
+  gprof.t_factorNoMatChange+=MPI_Wtime()-stime;
+#endif
 
   // update regularization
   while( !skipUpdateReg ){
+#ifdef TIMING
+  stime=MPI_Wtime();
+#endif
 	RegInfo->computeRegularization(priReg,dualReg,prob->currMu);
+#ifdef TIMING
+  gprof.t_computeRegularization+=MPI_Wtime()-stime;
+#endif
+
+#ifdef TIMING
+    stime=MPI_Wtime();
+#endif
 	
     NlpGenLinsys::factorNoMatChange(prob_, vars, RegInfo);
+#ifdef TIMING
+    gprof.t_factorNoMatChange2+=MPI_Wtime()-stime;
+    stime=MPI_Wtime();
+#endif
 	Num_NegEVal=(long long)factor2(prob, vars);
 
 	// check if matrix is singular
@@ -247,6 +274,9 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
 	  skipUpdateReg = true;
 	}  	  
   }  
+  #ifdef TIMING
+    gprof.t_factor2+=MPI_Wtime()-stime;
+  #endif
 
 #ifdef TIMING
   tTot = MPI_Wtime()-tTot;

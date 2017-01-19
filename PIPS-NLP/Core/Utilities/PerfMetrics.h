@@ -18,6 +18,10 @@ private:
 		t_solver_go(0.0), t_compute_step_WithRegularization(0.0), t_evalData(0.0),
 		t_BarrObj(0.0), t_calcresids(0.0), t_updateBarrierParameter(0.0),
 		t_addDampingTermToKKT(0.0), t_line_search(0.0), t_rest(0.0), t_total(0.0),
+		t_set_r3_xz_alpha(0.0), t_factor(0.0), t_computeXSDD1(0.0),
+		t_computeQuantitiesForDualReg(0.0), t_computeXSDD2(0.0), 
+		t_factorNoMatChange(0.0), t_computeRegularization(0.0),
+		t_factorNoMatChange2(0.0), t_factor2(0.0),
 		n_prob_info(0), n_init_x0(0), n_feval(0), n_eval_g(0), n_grad_f(0),
 		n_jac_g(0), n_laghess(0), n_write_solution(0)
 	{
@@ -48,7 +52,10 @@ public:
 	double t_computeXSDD1;
 	double t_computeQuantitiesForDualReg;
 	double t_computeXSDD2;
-
+	double t_factorNoMatChange;
+	double t_computeRegularization;
+	double t_factorNoMatChange2;
+	double t_factor2;
 	int n_prob_info;
 	int n_init_x0;
 	int n_feval;
