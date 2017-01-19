@@ -40,6 +40,8 @@ using namespace std;
 
 #include "global_var.h"
 
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
+
 // gmu is used in EmtlStochSymIndefSolver to decide if the system should be perturbed
 double gmu;
 // double grnorm;
@@ -119,38 +121,51 @@ int FilterIPMStochSolver::solve( Data *prob_in, Variables *iterate, Residuals * 
   do
   {
 	iter++; g_iterNumber=iter; giterNum = iter;
-
+  double stime=MPI_Wtime();
+	double stimet=stime;
     stochFactory->iterateStarted();
 
 	EvalErrScaling(iterate);
 
     // evaluate functions (obj, con, jac, hes)
 	prob->evalData(iterate);
+	gprof.t_evalData+=MPI_Wtime()-stime;
 	// update BarrObjValue with damping rate
+	stime=MPI_Wtime();
 	prob->BarrObj = prob->BarrObjValue(vars, prob->PriObj, FilterIPMOpt->k_d);
+	gprof.t_BarrObj+=MPI_Wtime()-stime;
 
 
     // evaluate residuals
+		stime=MPI_Wtime();
     resid->calcresids(prob, iterate);
-	
+		gprof.t_calcresids+=MPI_Wtime()-stime;
+
 	// initialize the filter  and some parameters
+	  stime=MPI_Wtime();
     if(iter==1 )
 	  FilterInitializeAndPara(prob, iterate,resid);
 
     //  termination test:
     status_code = this->doStatus( prob, iterate, resid, iter, mu, 0 );
-	if( status_code != NOT_FINISHED ) 
+	if( status_code != NOT_FINISHED )
 	  break;
 
 	// update barrier parameter mu, reset filter if necessary
 	muChanged=updateBarrierParameter(prob, iterate, resid);
+	gprof.t_updateBarrierParameter+=MPI_Wtime()-stime;
 
-    //add damping term to where var/con only has single bound, see filter line search IPM paper section 3.7 
+    //add damping term to where var/con only has single bound, see filter line search IPM paper section 3.7
+		stime=MPI_Wtime();
     addDampingTermToKKT(resid);
+		gprof.t_addDampingTermToKKT+=MPI_Wtime()-stime;
 
     // compute search direction and update regularization if necessary
+	stime=MPI_Wtime();
 	compute_step_WithRegularization( prob, iterate, resid,steps);
+	gprof.t_compute_step_WithRegularization+=MPI_Wtime()-stime;
 
+  stime=MPI_Wtime();
 	//apply frac-to-boundary to get max primal step length
 	alp_pri_max = vars->stepMax_Pri(steps,tau_j);  
 
@@ -165,7 +180,9 @@ int FilterIPMStochSolver::solve( Data *prob_in, Variables *iterate, Residuals * 
 	  // use tiny step
 	  use_TinyStep(steps);
 	}
+ gprof.t_line_search+=MPI_Wtime()-stime;
 
+ stime=MPI_Wtime();
 	// terminate the process due to calling feasibility restoration phase
 	if(DoFeasResto){
 	  status_code = this->doStatus( prob, iterate, resid, iter, mu, 0 );
@@ -193,7 +210,9 @@ int FilterIPMStochSolver::solve( Data *prob_in, Variables *iterate, Residuals * 
 	}  
 
     gmu = mu;
-    stochFactory->iterateEnded();	
+		gprof.t_rest+=MPI_Wtime()-stime;
+		gprof.t_total+=MPI_Wtime()-stimet;
+    stochFactory->iterateEnded();
   }while(!done);
 
   return status_code;

@@ -136,10 +136,18 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
   
   pipsIpm.computeProblemSize(prob->nvars,prob->ncons);
 
+  #ifdef NLPTIMING
+    double stime1 = MPI_Wtime();
+  #endif
+
   int ret = pipsIpm.go();
 
-  prob->objective = pipsIpm.getObjective();
+  #ifdef NLPTIMING
+    gprof.t_solver_go = MPI_Wtime() - stime1;
+  #endif
   
+  prob->objective = pipsIpm.getObjective();
+
   delete pipsOpt;
   delete s;
 
