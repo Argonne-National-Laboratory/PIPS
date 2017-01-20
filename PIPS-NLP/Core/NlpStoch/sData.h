@@ -29,6 +29,9 @@ class sData : public NlpGenData {
  public:
   std::string datarootname;
   std::string datalocalname;
+#ifdef TIMING
+  int n_factor2;
+#endif
   
   /** constructor that makes data objects of the specified dimensions */
   sData( sTree* tree);

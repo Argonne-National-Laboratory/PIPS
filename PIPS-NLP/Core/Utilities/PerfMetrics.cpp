@@ -61,6 +61,7 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"t_finalizeKKT "<< p.t_finalizeKKT << std::endl
 			<<"t_factorizeKKT "<< p.t_factorizeKKT << std::endl
 			<<"t_factor2_total "<< p.t_factor2_total << std::endl
+			<<"n_factor2 "<<p.n_factor2<< std::endl
 			<<"------------------"<< std::endl
 			<<"In factorizeKKT()"<< std::endl
 			<<"------------------"<< std::endl
@@ -68,6 +69,8 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"------------------"<< std::endl
 			<<"In matrixChanged()"<< std::endl
 			<<"------------------"<< std::endl
+			<<"t_dsytrf "<< p.t_dsytrf << std::endl
+	//		<<"s_n "<< p.s_n << std::endl
 			<<"t_ma57id "<< p.t_ma57id << std::endl
 			<<"t_ma57ad "<< p.t_ma57ad << std::endl
 			<<"t_ma57bd "<< p.t_ma57bd << std::endl

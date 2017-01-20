@@ -175,6 +175,9 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
 #ifdef TIMING
   double stime=MPI_Wtime();
   double stime1=MPI_Wtime();
+  gprof.n_factor2++;
+  prob->n_factor2++;
+  std::cout << "n_factor2: " << prob->n_factor2 << std::endl;
 #endif
   	
   DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);

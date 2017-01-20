@@ -116,7 +116,9 @@ int DeSymIndefSolver::matrixChanged()
   int info;
 
   int n = mStorage->n;
-
+#ifdef TIMING
+  double stime1=MPI_Wtime();
+#endif
   if (sparseMat) {
     std::fill(mStorage->M[0],mStorage->M[0]+n*n,0.);
 
@@ -134,6 +136,9 @@ int DeSymIndefSolver::matrixChanged()
   //query the size of workspace
   lwork=-1;
   double lworkNew;
+#ifdef TIMING
+  std::cout << "dystrf n: " << n << std::endl;
+#endif
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, &lworkNew, &lwork, &info );
   
@@ -186,7 +191,9 @@ int DeSymIndefSolver::matrixChanged()
   //for(int i=0; i<n; i++)
   //  if(ipiv[i]<0) piv2x2++;
   //printf("%d 2x2 pivots were used\n", piv2x2);
-
+#ifdef TIMING
+  gprof.t_dsytrf+=MPI_Wtime()-stime1;
+#endif
 
 //*********************************************************************************
 if(gSymLinearAlgSolverForDense<=1){

@@ -23,10 +23,10 @@ private:
 		t_factorNoMatChange(0.0), t_computeRegularization(0.0),
 		t_factorNoMatChange2(0.0), t_factor2(0.0), t_factor2_total(0.0),
 		t_factor_rest(0.0), t_matrixChanged(0.0), t_ma57ad(0.0), t_ma57bd(0.0),
-		t_ma57id(0.0),
+		t_ma57id(0.0), t_dsytrf(0.0),
 		t_initializeKKT(0.0), t_reduceKKT(0.0), t_factorizeKKT(0.0), t_finalizeKKT(0.0),
 		n_prob_info(0), n_init_x0(0), n_feval(0), n_eval_g(0), n_grad_f(0),
-		n_jac_g(0), n_laghess(0), n_write_solution(0)
+		n_jac_g(0), n_laghess(0), n_write_solution(0), n_factor2(0)
 	{
 		PerfMetrics::_prof = NULL;
 	};
@@ -69,6 +69,7 @@ public:
 	double t_ma57id;
 	double t_ma57ad;
 	double t_ma57bd;
+	double t_dsytrf;
 	int n_prob_info;
 	int n_init_x0;
 	int n_feval;
@@ -77,6 +78,7 @@ public:
 	int n_jac_g;
 	int n_laghess;
 	int n_write_solution;
+	int n_factor2;
 
 public:
 	friend std::ostream& operator<<(std::ostream& os, const PerfMetrics& p);
