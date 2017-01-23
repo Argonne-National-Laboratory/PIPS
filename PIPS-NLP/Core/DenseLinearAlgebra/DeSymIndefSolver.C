@@ -47,6 +47,12 @@ extern int gSymLinearAlgSolverForDense;
 
 // dsytrf_() factors a symmetric indefinite matrix A, see LAPACK 
 // documentation for more details.
+extern "C" void FNAME(dgetrf)(int *n, 
+			int *m, 
+			double A[], 
+			int *lda, 
+			int ipiv[], 
+			int *info);
 extern "C" void FNAME(dsytrf)(char *uplo, 
 			int *n, 
 			double A[], 
@@ -177,8 +183,16 @@ int DeSymIndefSolver::matrixChanged()
 //*********************************************************************************
 
   //factorize
+  double *temp=new double[n*n];
+  for(int i=0; i<n;i++) {
+    for(int j=0; j<n;j++) {
+      temp[i*n+j]=mStorage->M[i][j];
+    }
+  }
+  FNAME(dgetrf)( &n, &n, temp, &n,
+      ipiv, &info );
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
-	   ipiv, work, &lwork, &info );
+      ipiv, work, &lwork, &info );
 
 #ifdef TIMING_FLOPS
   HPM_Stop("DSYTRFFact");
@@ -194,6 +208,12 @@ int DeSymIndefSolver::matrixChanged()
 #ifdef TIMING
   gprof.t_dsytrf+=MPI_Wtime()-stime1;
 #endif
+negEigVal=0;
+for(int i=0;i<n;i++) {
+  if(temp[i*n+i]<0) negEigVal++;
+}
+std::cout << "negEigVal1: " << negEigVal << std::endl;
+//return negEigVal;
 
 //*********************************************************************************
 if(gSymLinearAlgSolverForDense<=1){
@@ -465,6 +485,7 @@ else{
   free (colM);
   free (elesM);
 
+std::cout << "negEigVal2: " << negEigVal << std::endl;
   return negEigVal;
 
 }
