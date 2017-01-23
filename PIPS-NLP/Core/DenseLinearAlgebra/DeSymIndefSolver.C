@@ -47,12 +47,6 @@ extern int gSymLinearAlgSolverForDense;
 
 // dsytrf_() factors a symmetric indefinite matrix A, see LAPACK 
 // documentation for more details.
-extern "C" void FNAME(dgetrf)(int *n, 
-			int *m, 
-			double A[], 
-			int *lda, 
-			int ipiv[], 
-			int *info);
 extern "C" void FNAME(dsytrf)(char *uplo, 
 			int *n, 
 			double A[], 
@@ -143,7 +137,7 @@ int DeSymIndefSolver::matrixChanged()
   lwork=-1;
   double lworkNew;
 #ifdef TIMING
-  std::cout << "dystrf n: " << n << std::endl;
+  std::cout << "dsytrf n: " << n << std::endl;
 #endif
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, &lworkNew, &lwork, &info );
@@ -183,14 +177,7 @@ int DeSymIndefSolver::matrixChanged()
 //*********************************************************************************
 
   //factorize
-  double *temp=new double[n*n];
-  for(int i=0; i<n;i++) {
-    for(int j=0; j<n;j++) {
-      temp[i*n+j]=mStorage->M[i][j];
-    }
-  }
-  FNAME(dgetrf)( &n, &n, temp, &n,
-      ipiv, &info );
+
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
       ipiv, work, &lwork, &info );
 
@@ -208,13 +195,39 @@ int DeSymIndefSolver::matrixChanged()
 #ifdef TIMING
   gprof.t_dsytrf+=MPI_Wtime()-stime1;
 #endif
-negEigVal=0;
-for(int i=0;i<n;i++) {
-  if(temp[i*n+i]<0) negEigVal++;
+double negEigVal3=0;
+double posEigVal3=0;
+double zEigVal3=0;
+double t=0;
+for(int k=0; k<n; k++) {
+  double d = mStorage->M[k][k];
+  if(ipiv[k] < 0) {
+   if(t==0) {
+     t=abs(mStorage->M[k+1][k]);
+     d=(d/t)*mStorage->M[k+1][k+1]-t;
+     //cout << "loop 0 | entry: " << mStorage->M[k][k+1] << " t: " << t << " d: " << d;
+   }
+   else {
+     d=t;
+     t=0;
+     //cout << "loop 1 | t: " << t << " d: " << d;
+   }
+ }
+//std::cout << " ipiv: " << ipiv[k];
+if(d<0) negEigVal3++;
+if(d==0) zEigVal3++;
+if(d>0) posEigVal3++;
+//cout << std::endl;
 }
-std::cout << "negEigVal1: " << negEigVal << std::endl;
-//return negEigVal;
 
+//return negEigVal;
+std::cout << "Info:" << info << std::endl;
+std::cout << "negEigVal3: " << negEigVal3 << std::endl;
+std::cout << "zEigVal3: " << zEigVal3 << std::endl;
+std::cout << "posEigVal3: " << posEigVal3 << std::endl;
+std::cout << "sumEigVal3: " << posEigVal3+zEigVal3+negEigVal3 << std::endl;
+return negEigVal3;
+double negEigVal2=0;
 //*********************************************************************************
 if(gSymLinearAlgSolverForDense<=1){
 //*********************************************************************************
@@ -338,9 +351,9 @@ stime=MPI_Wtime();
 #endif
 
       if( infoTemp[0] == 0 ){
-		  negEigVal = infoTemp[24-1]; 
+		  negEigVal2 = infoTemp[24-1]; 
 	  }else if (infoTemp[0] == 4){
-		  negEigVal = -1; 
+		  negEigVal2 = -1; 
 	  }else{ 
   	  	cout << "ma57bd: Factorization Fails: info[0]=: " << infoTemp[0] << endl;
 //        assert(false);
@@ -485,7 +498,9 @@ else{
   free (colM);
   free (elesM);
 
-std::cout << "negEigVal2: " << negEigVal << std::endl;
+std::cout << "negEigVal2: " << negEigVal2 << std::endl;
+negEigVal=negEigVal3;
+std::cout << "negEigVal used: " << negEigVal << std::endl;
   return negEigVal;
 
 }
