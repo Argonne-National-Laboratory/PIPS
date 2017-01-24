@@ -16,7 +16,7 @@ else()
   message("CMAKE_BUILD_TYPE not set!")
 endif(CMAKE_BUILD_TYPE)
   
-option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" OFF)
+option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)
 option(BUILD_PIPS_IPM "Build PIPS-IPM" OFF)
 option(BUILD_PIPS_NLP "Build PIPS-NLP" OFF)
@@ -36,7 +36,7 @@ message(STATUS "BUILD_PIPS_NLP=${BUILD_PIPS_NLP}")
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
 #with NLP profile metric
-option(WITH_NLPTIMING "Build with timing for PIPS-NLP" ON)
+option(WITH_NLPTIMING "Build with timing for PIPS-NLP" OFF)
 option(WITH_VERBOSE "Build with extra verbosity level" OFF)
 if(WITH_NLPTIMING)
 	add_definitions(-DNLPTIMING)
