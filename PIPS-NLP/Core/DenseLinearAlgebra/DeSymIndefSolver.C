@@ -24,11 +24,6 @@ extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *
                   double *, int    *,    int *, int *,   int *, int *,
                      int *, double *, double *, int *, double *);
 #endif
-#ifdef TIMING
-#include <mpi.h>
-#include "../../global_var.h"
-#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
-#endif
 
 
 extern double gHSL_PivotLV;
@@ -111,14 +106,11 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
 //#include "mpi.h"
 int DeSymIndefSolver::matrixChanged()
 {
-
+  int n = mStorage->n;
+if(gSymLinearAlgSolverForDense==1){
   char fortranUplo = 'U';
   int info;
-
-  int n = mStorage->n;
-#ifdef TIMING
-  double stime1=MPI_Wtime();
-#endif
+  
   if (sparseMat) {
     std::fill(mStorage->M[0],mStorage->M[0]+n*n,0.);
 
@@ -136,9 +128,7 @@ int DeSymIndefSolver::matrixChanged()
   //query the size of workspace
   lwork=-1;
   double lworkNew;
-#ifdef TIMING
-  std::cout << "dsytrf n: " << n << std::endl;
-#endif
+
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, &lworkNew, &lwork, &info );
   
@@ -146,35 +136,9 @@ int DeSymIndefSolver::matrixChanged()
   if(work) delete[] work;
   work = new double[lwork];
 
-
 #ifdef TIMING_FLOPS
   HPM_Start("DSYTRFFact");
 #endif
-
-//*********************************************************************************
-  // try to find inertia information for this dense matrix
-  int nnzWrk = (1+n)*n/2;;
-  int *rowStartM;  
-  int *rowM = (int*) malloc (nnzWrk*sizeof(int));
-  int *colM = (int*) malloc (nnzWrk*sizeof(int));
-  double *elesM = (double*) malloc (nnzWrk*sizeof(double));
-  int findNz=0;
-
-  for(int rowID=0;rowID<n;rowID++){
-	for(int colID=0;colID<n;colID++){
-	  if(rowID>=colID){
-		rowM[findNz] = rowID+1;
-		colM[findNz] = colID+1;
-		elesM[findNz]= mStorage->M[rowID][colID];
-		findNz++;
-	  }
-	}
-	if(gSymLinearAlgSolverForDense>1)
-	  rowStartM[rowID+1] = findNz+1;
-  }  
-  assert(findNz==nnzWrk);
-  if(gSymLinearAlgSolverForDense>1) assert(rowStartM[n]-1==nnzWrk);
-//*********************************************************************************
 
   //factorize
 
@@ -186,18 +150,8 @@ int DeSymIndefSolver::matrixChanged()
 #endif
   if(info!=0)
       printf("DeSymIndefSolver::matrixChanged : error - dsytrf returned info=%d\n", info);
-  //assert(info==0);
 
-  //int piv2x2=0;
-  //for(int i=0; i<n; i++)
-  //  if(ipiv[i]<0) piv2x2++;
-  //printf("%d 2x2 pivots were used\n", piv2x2);
-#ifdef TIMING
-  gprof.t_dsytrf+=MPI_Wtime()-stime1;
-#endif
-double negEigVal3=0;
-double posEigVal3=0;
-double zEigVal3=0;
+negEigVal=0;
 double t=0;
 for(int k=0; k<n; k++) {
   double d = mStorage->M[k][k];
@@ -205,31 +159,19 @@ for(int k=0; k<n; k++) {
    if(t==0) {
      t=abs(mStorage->M[k+1][k]);
      d=(d/t)*mStorage->M[k+1][k+1]-t;
-     //cout << "loop 0 | entry: " << mStorage->M[k][k+1] << " t: " << t << " d: " << d;
    }
    else {
      d=t;
      t=0;
-     //cout << "loop 1 | t: " << t << " d: " << d;
    }
  }
-//std::cout << " ipiv: " << ipiv[k];
-if(d<0) negEigVal3++;
-if(d==0) zEigVal3++;
-if(d>0) posEigVal3++;
-//cout << std::endl;
+if(d<0) negEigVal++;
 }
 
-//return negEigVal;
-std::cout << "Info:" << info << std::endl;
-std::cout << "negEigVal3: " << negEigVal3 << std::endl;
-std::cout << "zEigVal3: " << zEigVal3 << std::endl;
-std::cout << "posEigVal3: " << posEigVal3 << std::endl;
-std::cout << "sumEigVal3: " << posEigVal3+zEigVal3+negEigVal3 << std::endl;
-return negEigVal3;
-double negEigVal2=0;
 //*********************************************************************************
-if(gSymLinearAlgSolverForDense<=1){
+}
+else {
+  if(gSymLinearAlgSolverForDense<1){
 //*********************************************************************************
   // we use MA57 or MA27 to find inertia
   negEigVal=0;
@@ -249,121 +191,6 @@ if(gSymLinearAlgSolverForDense<=1){
 	double *factTemp;
 	int *ifactTemp, *iworkTemp2;
 
-	if(gSymLinearAlgSolverForDense==1){
-#ifdef WITH_MA57	
-#ifdef TIMING
-double stime=MPI_Wtime();
-#endif	
-	  FNAME(ma57id)( cntlTemp, icntlTemp );
-	  
-	  icntlTemp[1-1] = 0;	// don't print warning messages
-	  icntlTemp[2-1] = 0;	// no Warning messages
-	  icntlTemp[4-1] = 0;	// no statistics messages
-	  icntlTemp[5-1] = 0;	// no Print messages.
-	  icntlTemp[6-1] = 0; 	// no messages output.
-	  icntlTemp[7-1] = 1;	// 0 or 2 use MC47;  1 use the one kept from ma57ad; 3 min degree ordering as in MA27; 4 use Metis; 5 automatic choice(MA47 or Metis)
-	  icntlTemp[9-1] = 10;  // up to 10 steps of iterative refinement
-	  icntlTemp[11-1] = 16;
-	  icntlTemp[12-1] = 16; 
-	  icntlTemp[15-1] = 0;
-      icntlTemp[16-1] = 0;
-	  
-      cntlTemp[0] = gHSL_PivotLV;
-	  cntlTemp[1] = 1.e-20;	  
-
-      lkeepTemp = ( nnzWrk > n ) ? (5 * n + 2 *nnzWrk + 42) : (6 * n + nnzWrk + 42);
-      keepTemp  = new int[lkeepTemp];
-      iworkTemp = new int[5 * n];
-      
-#ifdef TIMING
-gprof.t_ma57id+=MPI_Wtime()-stime;
-stime=MPI_Wtime();
-#endif
-	  
-      FNAME(ma57ad)( &n, &nnzWrk, rowM, colM, &lkeepTemp, keepTemp, iworkTemp, icntlTemp,
-	     infoTemp, rinfoTemp );	 
-	  
-      lfactTemp  = infoTemp[8];
-      lfactTemp  = 2*(int) (rpessimism * lfactTemp );
-      factTemp   = new double[lfactTemp];
-      lifactTemp = infoTemp[9];
-      lifactTemp = (int) (ipessimism * lifactTemp );
-      ifactTemp  = new int[lifactTemp ];
-      iworkTemp2 = new int[n];
-	
-//      char *name = "matSt.m";
-//
-//       FILE* outfile = fopen( name, "wr" );
-//
-//		fprintf(outfile,"n_dim_%s = %d;\n\n", name,n);;
-//		fprintf(outfile,"nnz_%s = %d;\n\n", name, nnzWrk);
-//
-//		int findkk=0;
-//		fprintf(outfile,"rowId_%s = [ ",name);
-//		for(int kk=0;kk<nnzWrk;kk++)
-//			if(findkk%10==0){
-//			 fprintf(outfile,"%d, ... \n", rowM[kk]+1);
-//					 findkk++;
-//			}
-//			else{
-//			 fprintf(outfile,"%d,", rowM[kk]+1);
-//					 findkk++;
-//			}
-//		fprintf(outfile,"]; \n\n");
-//
-//		findkk=0;
-//		fprintf(outfile,"colId_%s = [ ",name);
-//		for(int kk=0;kk<nnzWrk;kk++)
-//			if(findkk%10==0){
-//			 fprintf(outfile,"%d, ... \n", colM[kk]+1);
-//					 findkk++;
-//			}
-//			else{
-//			 fprintf(outfile,"%d,", colM[kk]+1);
-//					 findkk++;
-//			}
-//		fprintf(outfile,"]; \n\n");
-//
-//		findkk=0;
-//		fprintf(outfile,"elts_%s = [ ",name);
-//		for(int kk=0;kk<nnzWrk;kk++)
-//			if(findkk%10==0){
-//			  fprintf(outfile,"%5.17g, ... \n", elesM[kk]);
-//					 findkk++;
-//			}
-//			else{
-//			  fprintf(outfile,"%5.17g,", elesM[kk]);
-//					 findkk++;
-//			}
-//		fprintf(outfile,"]; \n\n");
-//
-//		fclose(outfile);
-#ifdef TIMING
-gprof.t_ma57ad+=MPI_Wtime()-stime;
-stime=MPI_Wtime();
-#endif
-
-      FNAME(ma57bd)( &n,	   &nnzWrk,	elesM,	   factTemp,  &lfactTemp,  ifactTemp,
-		   &lifactTemp,  &lkeepTemp,  keepTemp,  iworkTemp2,  icntlTemp,  cntlTemp,
-		   infoTemp,	 rinfoTemp );
-#ifdef TIMING
-       gprof.t_ma57bd+=MPI_Wtime()-stime;
-#endif
-
-      if( infoTemp[0] == 0 ){
-		  negEigVal2 = infoTemp[24-1]; 
-	  }else if (infoTemp[0] == 4){
-		  negEigVal2 = -1; 
-	  }else{ 
-  	  	cout << "ma57bd: Factorization Fails: info[0]=: " << infoTemp[0] << endl;
-//        assert(false);
-      }
-  
-#else
-	  assert("ma57 not defined"&&0);
-#endif
-	}
-	else{
 #ifdef WITH_MA27		
 	  FNAME(ma27id)( icntlTemp,cntlTemp );
 	  
@@ -413,7 +240,6 @@ stime=MPI_Wtime();
 #else
 	  assert("ma27 not defined"&&0);
 #endif		
-	}
 
 	delete [] iworkTemp2 ;
 	delete [] ifactTemp ;
@@ -436,6 +262,31 @@ else{
   int iparm[64];
   int num_threads;
   double dparm[64];
+  
+  //*********************************************************************************
+    int nnzWrk = (1+n)*n/2;;
+    int *rowStartM;  
+    int *rowM = (int*) malloc (nnzWrk*sizeof(int));
+    int *colM = (int*) malloc (nnzWrk*sizeof(int));
+    double *elesM = (double*) malloc (nnzWrk*sizeof(double));
+    int findNz=0;
+  
+    for(int rowID=0;rowID<n;rowID++){
+  	for(int colID=0;colID<n;colID++){
+  	  if(rowID>=colID){
+  		rowM[findNz] = rowID+1;
+  		colM[findNz] = colID+1;
+  		elesM[findNz]= mStorage->M[rowID][colID];
+  		findNz++;
+  	  }
+  	}
+  	if(gSymLinearAlgSolverForDense>1)
+  	  rowStartM[rowID+1] = findNz+1;
+    }  
+    assert(findNz==nnzWrk);
+    if(gSymLinearAlgSolverForDense>1) assert(rowStartM[n]-1==nnzWrk);
+  //*********************************************************************************
+
 
   /* Numbers of processors, value of OMP_NUM_THREADS */
   char *var = getenv("OMP_NUM_THREADS");
@@ -488,19 +339,17 @@ else{
   }
 
   free(rowStartM);
-#else
-	  assert("pardiso not defined"&&0);
-#endif  
-}
-//*********************************************************************************
-
   free (rowM);
   free (colM);
   free (elesM);
 
-std::cout << "negEigVal2: " << negEigVal2 << std::endl;
-negEigVal=negEigVal3;
-std::cout << "negEigVal used: " << negEigVal << std::endl;
+#else
+	  assert("pardiso not defined"&&0);
+#endif  
+}
+}
+//*********************************************************************************
+
   return negEigVal;
 
 }
