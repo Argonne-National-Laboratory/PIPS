@@ -176,8 +176,6 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
   double stime=MPI_Wtime();
   double stime1=MPI_Wtime();
   gprof.n_factor2++;
-  prob->n_factor2++;
-  std::cout << "n_factor2: " << prob->n_factor2 << std::endl;
 #endif
   	
   DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
@@ -233,8 +231,6 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
   //printf("(%d, %d) --- %f\n", PROW,PCOL, kktd[PROW][PCOL]);
 
   MPI_Allreduce(&matIsSingular, &matIsSingularAllReduce, 1, MPI_INT, MPI_SUM, mpiComm);
-  
-
 
   if(0==matIsSingularAllReduce){
   	// all the diag mat is nonsingular
@@ -729,22 +725,13 @@ void sLinsysRoot::reduceKKT()
 int sLinsysRoot::factorizeKKT()
 {
   int negEValTemp=0;
-  #ifdef TIMING
-    double stime1=MPI_Wtime();
-  #endif
   //stochNode->resMon.recFactTmLocal_start();  
 #ifdef TIMING
   MPI_Barrier(mpiComm);
   extern double g_iterNumber;
   double st=MPI_Wtime();
 #endif
-#ifdef TIMING
-  double stime=MPI_Wtime();
-#endif
   negEValTemp = solver->matrixChanged();
-#ifdef TIMING
-  gprof.t_matrixChanged+=MPI_Wtime()-stime;
-#endif
 
   //stochNode->resMon.recFactTmLocal_stop(); 
 #ifdef TIMING
@@ -754,9 +741,6 @@ int sLinsysRoot::factorizeKKT()
   // note, this will include noop scalapack processors
   if( (mype/256)*256==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
-#endif
-#ifdef TIMING
-  //gprof.t_factorizeKKT_total+=MPI_Wtime()-stime;
 #endif
   return negEValTemp;
 }

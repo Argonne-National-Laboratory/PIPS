@@ -18,7 +18,8 @@ PerfMetrics& PerfMetrics::getPerfMetrics()
 
 std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 {
-	return os<<"t_struct_building "<<p.t_struct_building<< std::endl
+	return os << "PIPS timers" << std::endl
+	    <<"t_struct_building "<<p.t_struct_building<< std::endl
 			<<"t_model_evaluation "<<p.t_model_evaluation<< std::endl
 			<<"t_solver_lifetime "<<p.t_solver_lifetime<< std::endl
 			<<"t_solver_go "<<p.t_solver_go<< std::endl
@@ -62,18 +63,6 @@ std::ostream& operator<<(std::ostream& os, const PerfMetrics& p)
 			<<"t_factorizeKKT "<< p.t_factorizeKKT << std::endl
 			<<"t_factor2_total "<< p.t_factor2_total << std::endl
 			<<"n_factor2 "<<p.n_factor2<< std::endl
-			<<"------------------"<< std::endl
-			<<"In factorizeKKT()"<< std::endl
-			<<"------------------"<< std::endl
-			<<"t_matrixChanged "<< p.t_matrixChanged << std::endl
-			<<"------------------"<< std::endl
-			<<"In matrixChanged()"<< std::endl
-			<<"------------------"<< std::endl
-			<<"t_dsytrf "<< p.t_dsytrf << std::endl
-	//		<<"s_n "<< p.s_n << std::endl
-			<<"t_ma57id "<< p.t_ma57id << std::endl
-			<<"t_ma57ad "<< p.t_ma57ad << std::endl
-			<<"t_ma57bd "<< p.t_ma57bd << std::endl
 			<<"------------------"<< std::endl
 			<<"n_prob_info "<<p.n_prob_info<< std::endl
 			<<"n_init_x0 "<<p.n_init_x0<< std::endl

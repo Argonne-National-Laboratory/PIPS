@@ -20,9 +20,6 @@ sData::sData(sTree* tree)
 //  : NlpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
 {
   stochNode = tree;
-#ifdef TIMING
-    n_factor2=0;
-#endif 
   H     = SymMatrixHandle ( tree->createQ() );
   grad     = OoqpVectorHandle    ( tree->createc() );
 
@@ -98,9 +95,7 @@ sData::sData(int useMultiStage_, sTree* tree_, OoqpVector * c_in, SymMatrix * Q_
 	      dampind_sL_t_in, dampind_sU_u_in)
 {
   stochNode = tree_;
-#ifdef TIMING
-  n_factor2=0;
-#endif 
+
   useMultiStage=useMultiStage_;
 
   createChildren(useMultiStage);

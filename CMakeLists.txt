@@ -16,7 +16,7 @@ else()
   message("CMAKE_BUILD_TYPE not set!")
 endif(CMAKE_BUILD_TYPE)
   
-option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
+option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" OFF)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)
 option(BUILD_PIPS_IPM "Build PIPS-IPM" OFF)
 option(BUILD_PIPS_NLP "Build PIPS-NLP" OFF)
@@ -112,7 +112,6 @@ endif (CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
 #	message(STATUS "MPI is found: ${MPI_CXX_INCLUDE_PATH}")
 #endif(MPI_FOUND)
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 if(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so;.a") #need this to find PARDISO
@@ -133,7 +132,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(IS_MACOS TRUE)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
-add_definitions(-DTIMING -DSTOCH_TESTING)
+#add_definitions(-DTIMING -DSTOCH_TESTING)
 
 # inspired by elemental-bgp
 if(MATH_LIBS)

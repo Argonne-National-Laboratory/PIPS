@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# This script should help to bootstrap PIPS.
+
 rm -rf ./ThirdPartyLibs/ASL/solvers
 rm -rf ./ThirdPartyLibs/ASL/src
 rm -rf ./ThirdPartyLibs/ASL/*.tar.gz
@@ -30,6 +32,6 @@ rm -rf build
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_ALL=OFF -DBUILD_PIPS_NLP=ON -B. -H..
-make
+make -j4
 
 
