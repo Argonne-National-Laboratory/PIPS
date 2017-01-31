@@ -19,7 +19,7 @@ ln -s ./${name} ./src
 
 #compile metis
 cd src
-sed -i  "s/\bCOPTIONS =/COPTIONS = -fPIC /g" Makefile.in
+sed -i  "s/\bCOPTIONS =/COPTIONS = -O3 -fPIC /g" Makefile.in
 make -j4
 
 
