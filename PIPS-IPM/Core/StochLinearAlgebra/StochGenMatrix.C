@@ -25,6 +25,28 @@ StochGenMatrix::StochGenMatrix(int id,
   }
 }
 
+StochGenMatrix::StochGenMatrix(int id,
+			       long long global_m, long long global_n,
+			       int A_m, int A_n, int A_nnz,
+			       int B_m, int B_n, int B_nnz,
+				   int Bl_m, int Bl_n, int Bl_nnz,
+			       MPI_Comm mpiComm_)
+  : id(id), m(global_m), n(global_n),
+    mpiComm(mpiComm_), iAmDistrib(0),
+    workPrimalVec(NULL)
+{
+  //cout << "StochGenMatrix-> " << A_m << " " << A_n << " " << B_m << " " << B_n << " " << endl;
+
+  Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
+  Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
+  Blmat = new SparseGenMatrix(Bl_m, Bl_n, Bl_nnz);
+
+  if(mpiComm!=MPI_COMM_NULL) {
+    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if(size>1) iAmDistrib=1;
+  }
+}
+
 /*StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) 
   : iAmDistrib(0), workPrimalVec(NULL)
 {

@@ -42,19 +42,32 @@ class StochInputTree {
 	   FVEC fclow, FVEC ficlow, FVEC fcupp, FVEC ficupp,
 	   FVEC fxlow, FVEC fixlow, FVEC fxupp, FVEC fixupp,
 	   bool deleteUserData=false);
+
+	// includes linking constraints
+	StochInputNode(void* user_data, int id,
+	   int n, int my, int myl, int mz,
+	   FMAT fQ, FNNZ fnnzQ, FVEC fc,
+	   FMAT fA, FNNZ fnnzA, FMAT fB, FNNZ fnnzB, FMAT fBl_, FNNZ fnnzBl_,
+	   FVEC fb, FVEC fbl,
+	   FMAT fC, FNNZ fnnzC, FMAT fD, FNNZ fnnzD,
+	   FVEC fclow, FVEC ficlow, FVEC fcupp, FVEC ficupp,
+	   FVEC fxlow, FVEC fixlow, FVEC fxupp, FVEC fixupp,
+	   bool deleteUserData=false);
+
   ~StochInputNode();
 
   protected:
-    
-    int id; int n,my,mz; 
 
-    int nnzQ, nnzA, nnzB, nnzC, nnzD;
+    int id;
+    int n, my, myl, mz;
+    int nnzQ, nnzA, nnzB, nnzBl, nnzC, nnzD;
+
   protected:
-    //call back functions
-    FNNZ fnnzQ, fnnzA, fnnzB, fnnzC, fnnzD;
-    FMAT fQ, fA, fB, fC, fD;
+    // callback functions
+    FNNZ fnnzQ, fnnzA, fnnzB, fnnzBl, fnnzC, fnnzD;
+    FMAT fQ, fA, fB, fBl, fC, fD;
 
-    FVEC fc, fb;
+    FVEC fc, fb, fbl;
     FVEC fclow, fcupp, ficlow, ficupp;
     FVEC fxlow, fxupp, fixlow, fixupp;
     

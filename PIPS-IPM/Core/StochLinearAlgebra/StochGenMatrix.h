@@ -24,6 +24,15 @@ public:
 		 int B_m, int B_n, int B_nnz,
 		 MPI_Comm mpiComm_);
 
+  /** Constructs a matrix with local A, B, and Bl (linking constraints) blocks having the sizes and number of nz specified by
+      A_m, A_n, A_nnz, B_m, B_n, B_nnz, and Bl_m, Bl_n, Bl_nnz. Otherwise, identical to the above constructor */
+  StochGenMatrix(int id,
+		 long long global_m, long long global_n,
+		 int A_m, int A_n, int A_nnz,
+		 int B_m, int B_n, int B_nnz,
+		 int Bl_m, int Bl_n, int Bl_nnz,
+		 MPI_Comm mpiComm_);
+
   // constructor for combining scenarios
   //StochGenMatrix(const vector<StochGenMatrix*> &blocks); -- not needed; cpetra
   virtual ~StochGenMatrix();
@@ -33,6 +42,8 @@ public:
   std::vector<StochGenMatrix*> children;
   SparseGenMatrix* Amat;
   SparseGenMatrix* Bmat;
+  SparseGenMatrix* Blmat;
+
   int id;
   long long m,n;
   MPI_Comm mpiComm;

@@ -107,7 +107,7 @@ public:
 			      double *u_elt, 
 			      double *ustep_elt,
 			      int& first_or_second);
-  /** Returns a pointer to the elemens of this vector. */
+  /** Returns a pointer to the elements of this vector. */
   double * elements() { return v; };
 };
 

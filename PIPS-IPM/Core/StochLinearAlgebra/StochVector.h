@@ -23,6 +23,9 @@ public:
   /** The data for this node. */
   OoqpVector*               vec;
 
+  /** The linking constraint data for this node. */
+  OoqpVector*               vecl;
+
   /** Children of this node */
   std::vector<StochVector*> children;
 

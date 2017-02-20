@@ -5,6 +5,8 @@
 
 #include "mpi.h"
 
+#define LINKING_CONS 1
+
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
 /* Row-major format */
@@ -51,7 +53,7 @@ int nnzMatEqStage2(void* user_data, int id, int* nnz)
 
 int nnzMatEqLink(void* user_data, int id, int* nnz)
 {
-	*nnz = 1;
+	*nnz = 0;
 
 	return 0;
 }
@@ -214,12 +216,14 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matEqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
+#if 0
     M[0] = 1.0;
 
 	krowM[0] = 0;
 	krowM[1] = 1;
 
 	jcolM[0] = 0;
+#endif
     return 0;
 }
 
@@ -236,7 +240,7 @@ int main(int argc, char ** argv) {
   int nx0 = 2;
   int my0 = 2;
   int mz0 = 0;
-  int myl0 = 1;
+  int myl0 = 0;
   int mzl0 = 0;
 
   FNNZ fnnzQ = &nnzAllZero;
@@ -267,13 +271,31 @@ int main(int argc, char ** argv) {
   FMAT fQ = &matAllZero;
   FMAT fA = &matEqStage1;
   FMAT fB = &matEqStage2;
-  FMAT fBL = &matEqLink;
+  FMAT fBl = &matEqLink;
   FMAT fC = &matAllZero;
   FMAT fD = &matAllZero;
-  FMAT fDL = &matAllZero;
+  FMAT fDl = &matAllZero;
 
   ProbData probData(nScenarios);
 
+#if LINKING_CONS
+  //build the problem tree
+  StochInputTree::StochInputNode dataLinking(&probData, 0,
+				      nx0, my0, myl0, mz0, // mzl0
+				      fQ, fnnzQ, fc,
+				      fA, fnnzA,
+				      fB, fnnzB,
+					  fBl, fnnzBl,
+				      fb, fbl,
+				      fC, fnnzC,
+				      fD, fnnzD,
+					  //fDL, fnnzDL,
+				      fclow, ficlow, fcupp, ficupp,
+					  //fdllow, fidllow, fdlupp, fidlupp,
+				      fxlow, fixlow, fxupp, fixupp, false );
+
+  StochInputTree* root = new StochInputTree(dataLinking);
+#else
   //build the problem tree
   StochInputTree::StochInputNode data(&probData, 0,
 				      nx0,my0,mz0, //myl0, mzl0
@@ -288,7 +310,10 @@ int main(int argc, char ** argv) {
 				      fclow, ficlow, fcupp, ficupp,
 					  //fdllow, fidllow, fdlupp, fidlupp,
 				      fxlow, fixlow, fxupp, fixupp, false );
+
   StochInputTree* root = new StochInputTree(data);
+#endif
+
 
   for( int id = 1; id <= nScenarios; id++ ) {
 	  int nx = 2;
@@ -296,7 +321,23 @@ int main(int argc, char ** argv) {
 	  int mz = 0;
 	  int myl = 1;
 	  int mzl = 0;
+#if LINKING_CONS
+	  StochInputTree::StochInputNode dataLinking(&probData, id,
+					nx, my, myl, mz, // mzl,
+					fQ, fnnzQ, fc,
+					fA, fnnzA,
+					fB, fnnzB,
+					fBl, fnnzBl,
+					fb, fbl,
+					fC, fnnzC,
+					fD, fnnzD,
+					//fDL, fnnzDL,
+					fclow, ficlow, fcupp, ficupp,
+					//fdllow, fidllow, fdlupp, fidlupp,
+					fxlow, fixlow, fxupp, fixupp, false);
 
+	  root->AddChild(new StochInputTree(dataLinking));
+#else
 	  StochInputTree::StochInputNode data(&probData, id,
 					nx, my, mz, //myl, mzl
 					fQ, fnnzQ, fc,
@@ -311,7 +352,9 @@ int main(int argc, char ** argv) {
 					//fdllow, fidllow, fdlupp, fidlupp,
 					fxlow, fixlow, fxupp, fixupp, false);
 
-    root->AddChild(new StochInputTree(data));
+	  root->AddChild(new StochInputTree(data));
+#endif
+
   }
 
   int rank;

@@ -47,7 +47,7 @@ class sTreeCallbacks : public sTree
 
   void computeGlobalSizes();
  public:
-  int NNZA,NNZQ,NNZB,NNZC,NNZD; //global nnz
+  int NNZA,NNZQ,NNZB,NNZBl,NNZC,NNZD; //global nnz
   void loadLocalSizes();
  protected:
   sTreeCallbacks();

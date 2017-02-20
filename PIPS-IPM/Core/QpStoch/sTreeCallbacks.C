@@ -91,10 +91,11 @@ void sTreeCallbacks::computeGlobalSizes()
     NNZQ = data->nnzQ;
     NNZA = data->nnzA;
     NNZB = data->nnzB;
+    NNZBl = data->nnzBl;
     NNZC = data->nnzC;
     NNZD = data->nnzD;
   } else {
-    N = MY = MZ = NNZQ = NNZA = NNZB = NNZC = NNZD = 0;
+    N = MY = MZ = NNZQ = NNZA = NNZB = NNZBl = NNZC = NNZD = 0;
   }
   if (tree && np == -1) {
     for(size_t it=0; it<tree->children.size();it++) {
@@ -105,6 +106,7 @@ void sTreeCallbacks::computeGlobalSizes()
       NNZQ += tree->children[it]->nodeInput->nnzQ;
       NNZA += tree->children[it]->nodeInput->nnzA;
       NNZB += tree->children[it]->nodeInput->nnzB;
+      NNZBl += tree->children[it]->nodeInput->nnzBl;
       NNZC += tree->children[it]->nodeInput->nnzC;
       NNZD += tree->children[it]->nodeInput->nnzD;
     }
@@ -117,6 +119,7 @@ void sTreeCallbacks::computeGlobalSizes()
       fakedata->nnzQ += scens[it]->nnzQ;
       fakedata->nnzA += scens[it]->nnzA;
       fakedata->nnzB += scens[it]->nnzB;
+      fakedata->nnzBl += scens[it]->nnzBl;
       fakedata->nnzC += scens[it]->nnzC;
       fakedata->nnzD += scens[it]->nnzD;
       real_children[it]->np = np;
@@ -127,6 +130,7 @@ void sTreeCallbacks::computeGlobalSizes()
     NNZQ += fakedata->nnzQ;
     NNZA += fakedata->nnzA;
     NNZB += fakedata->nnzB;
+    NNZBl += fakedata->nnzBl;
     NNZC += fakedata->nnzC;
     NNZD += fakedata->nnzD;
   }
@@ -141,6 +145,7 @@ void sTreeCallbacks::computeGlobalSizes()
     NNZQ += ((sTreeCallbacks*)children[it])->NNZQ;
     NNZA += ((sTreeCallbacks*)children[it])->NNZA;
     NNZB += ((sTreeCallbacks*)children[it])->NNZB;
+    NNZBl += ((sTreeCallbacks*)children[it])->NNZBl;
     NNZC += ((sTreeCallbacks*)children[it])->NNZC;
     NNZD += ((sTreeCallbacks*)children[it])->NNZD;
   }
@@ -202,6 +207,10 @@ StochGenMatrix* sTreeCallbacks::createA() const
 
   StochGenMatrix* A = NULL;
   if (!fakedata) {
+
+	if (data->nnzBl<0)
+      data->fnnzBl(data->user_data, data->id, &data->nnzBl);
+
     if (np==-1) {
 
       //data->fnnzA(data->user_data, data->id, &nnzA);
@@ -216,9 +225,10 @@ StochGenMatrix* sTreeCallbacks::createA() const
            data->my, np, data->nnzB,
            data->my, data->n,  data->nnzA,
            commWrkrs);
-      //populate the submatrices A and B
+      //populate the submatrices B and Bl
       //data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fA(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
+      data->fBl(data->user_data, data->id, A->Blmat->krowM(), A->Blmat->jcolM(), A->Blmat->M());
     } else {
 
       if (data->nnzA<0)
@@ -231,12 +241,13 @@ StochGenMatrix* sTreeCallbacks::createA() const
            data->my, np, data->nnzA, 
            data->my, data->n,  data->nnzB,
            commWrkrs);
-      //populate the submatrices A and B
+      //populate the submatrices A, B, and Bl
       data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fB(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
+      data->fBl(data->user_data, data->id, A->Blmat->krowM(), A->Blmat->jcolM(), A->Blmat->M());
 
-      printf("  -- my=%d nx=%d   1st stg nx=%d nnzA=%d nnzB=%d\n", 
-	     data->my, data->n,  np, data->nnzA, data->nnzB);
+      printf("  -- my=%d nx=%d   1st stg nx=%d nnzA=%d nnzB=%d, nnzBl=%d\n",
+	     data->my, data->n,  np, data->nnzA, data->nnzB, data->nnzBl);
     }
 
     for(size_t it=0; it<children.size(); it++) {
@@ -413,10 +424,14 @@ StochVector* sTreeCallbacks::createb() const
     return new StochDummyVector();
 
   StochVector* b = new StochVector(my(), commWrkrs);
-  double* vData = ((SimpleVector*)b->vec)->elements();  
+  double* vData = ((SimpleVector*)b->vec)->elements();
+  double* vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
   if (!fakedata) {
     data->fb(data->user_data, data->id, 
        vData, data->my);
+
+    data->fbl(data->user_data, data->id,
+    		vDataLinkCons, data->myl);
 
     for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createb();
@@ -428,6 +443,13 @@ StochVector* sTreeCallbacks::createb() const
       scens[i]->fb(scens[i]->user_data,scens[i]->id,
         vData+pos, scens[i]->my);
       pos += scens[i]->my;
+    }
+
+    pos = 0;
+    for(size_t i = 0; i < scens.size(); i++) {
+      scens[i]->fbl(scens[i]->user_data,scens[i]->id,
+    		  vDataLinkCons+pos, scens[i]->myl);
+      pos += scens[i]->myl;
     }
   }
 
