@@ -224,7 +224,9 @@ StochGenMatrix* sTreeCallbacks::createA() const
            N, MY, 
            data->my, np, data->nnzB,
            data->my, data->n,  data->nnzA,
+           data->myl, data->n,  data->nnzBl,
            commWrkrs);
+
       //populate the submatrices B and Bl
       //data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fA(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
@@ -240,6 +242,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
            N, MY, 
            data->my, np, data->nnzA, 
            data->my, data->n,  data->nnzB,
+		   data->myl, data->n,  data->nnzBl,
            commWrkrs);
       //populate the submatrices A, B, and Bl
       data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
@@ -361,6 +364,11 @@ int sTreeCallbacks::my() const {
   else return fakedata->my;
 }
 
+int sTreeCallbacks::myl() const {
+  if (data) return data->myl;
+  else return fakedata->myl;
+}
+
 int sTreeCallbacks::mz() const {
   if (data) return data->mz;
   else return fakedata->mz;
@@ -423,7 +431,7 @@ StochVector* sTreeCallbacks::createb() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  StochVector* b = new StochVector(my(), commWrkrs);
+  StochVector* b = new StochVector(my(), myl(), commWrkrs);
   double* vData = ((SimpleVector*)b->vec)->elements();
   double* vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
   if (!fakedata) {

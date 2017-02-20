@@ -35,8 +35,6 @@ StochGenMatrix::StochGenMatrix(int id,
     mpiComm(mpiComm_), iAmDistrib(0),
     workPrimalVec(NULL)
 {
-  //cout << "StochGenMatrix-> " << A_m << " " << A_n << " " << B_m << " " << B_n << " " << endl;
-
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
   Blmat = new SparseGenMatrix(Bl_m, Bl_n, Bl_nnz);

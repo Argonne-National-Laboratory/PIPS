@@ -53,7 +53,7 @@ int nnzMatEqStage2(void* user_data, int id, int* nnz)
 
 int nnzMatEqLink(void* user_data, int id, int* nnz)
 {
-	*nnz = 0;
+	*nnz = 1;
 
 	return 0;
 }
@@ -216,7 +216,7 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matEqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-#if 0
+#if 1
     M[0] = 1.0;
 
 	krowM[0] = 0;
@@ -240,7 +240,7 @@ int main(int argc, char ** argv) {
   int nx0 = 2;
   int my0 = 2;
   int mz0 = 0;
-  int myl0 = 0;
+  int myl0 = 1;
   int mzl0 = 0;
 
   FNNZ fnnzQ = &nnzAllZero;
@@ -280,7 +280,7 @@ int main(int argc, char ** argv) {
 
 #if LINKING_CONS
   //build the problem tree
-  StochInputTree::StochInputNode dataLinking(&probData, 0,
+  StochInputTree::StochInputNode dataLinkCons(&probData, 0,
 				      nx0, my0, myl0, mz0, // mzl0
 				      fQ, fnnzQ, fc,
 				      fA, fnnzA,
@@ -294,7 +294,7 @@ int main(int argc, char ** argv) {
 					  //fdllow, fidllow, fdlupp, fidlupp,
 				      fxlow, fixlow, fxupp, fixupp, false );
 
-  StochInputTree* root = new StochInputTree(dataLinking);
+  StochInputTree* root = new StochInputTree(dataLinkCons);
 #else
   //build the problem tree
   StochInputTree::StochInputNode data(&probData, 0,
@@ -322,7 +322,7 @@ int main(int argc, char ** argv) {
 	  int myl = 1;
 	  int mzl = 0;
 #if LINKING_CONS
-	  StochInputTree::StochInputNode dataLinking(&probData, id,
+	  StochInputTree::StochInputNode dataLinkCons(&probData, id,
 					nx, my, myl, mz, // mzl,
 					fQ, fnnzQ, fc,
 					fA, fnnzA,
@@ -336,7 +336,7 @@ int main(int argc, char ** argv) {
 					//fdllow, fidllow, fdlupp, fidlupp,
 					fxlow, fixlow, fxupp, fixupp, false);
 
-	  root->AddChild(new StochInputTree(dataLinking));
+	  root->AddChild(new StochInputTree(dataLinkCons));
 #else
 	  StochInputTree::StochInputNode data(&probData, id,
 					nx, my, mz, //myl, mzl

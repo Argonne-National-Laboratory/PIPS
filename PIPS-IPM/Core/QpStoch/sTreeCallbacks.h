@@ -42,6 +42,7 @@ class sTreeCallbacks : public sTree
 
   int nx() const;
   int my() const; 
+  int myl() const;
   int mz() const; 
   int id() const; 
 
