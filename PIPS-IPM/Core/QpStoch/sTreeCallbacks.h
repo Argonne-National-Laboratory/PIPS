@@ -41,7 +41,7 @@ class sTreeCallbacks : public sTree
   StochVector*      createicupp() const;
 
   int nx() const;
-  int my() const; 
+  int my() const;
   int myl() const;
   int mz() const; 
   int id() const; 

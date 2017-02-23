@@ -157,6 +157,9 @@ void StochVector::scale( double alpha )
 void StochVector::setToZero()
 {
   vec->setToZero();
+
+  if( vecl != 0 )
+     vecl->setToZero();
   
   for(size_t it=0; it<children.size(); it++)
     children[it]->setToZero();

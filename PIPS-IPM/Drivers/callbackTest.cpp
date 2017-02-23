@@ -121,8 +121,9 @@ int vecXlbActive(void* user_data, int id, double* vec, int len)
 int vecLinkRhs(void* user_data, int id, double* vec, int len)
 {
 	int i;
+
 	for( i = 0; i < len; i++ )
-		vec[i] = 3.0;
+		vec[i] = 6.0;
 
 	return 0;
 }
@@ -217,12 +218,24 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 int matEqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
 #if 1
-    M[0] = 1.0;
+	if( id == 0 )
+	{
+       M[0] = 1.0;
 
-	krowM[0] = 0;
-	krowM[1] = 1;
+       krowM[0] = 0;
+       krowM[1] = 1;
 
-	jcolM[0] = 0;
+       jcolM[0] = 0;
+	}
+	else
+	{
+	   M[0] = 1.0 + (double) id;
+
+	   krowM[0] = 0;
+	   krowM[1] = 1;
+
+	   jcolM[0] = 1;
+	}
 #endif
     return 0;
 }
@@ -322,7 +335,7 @@ int main(int argc, char ** argv) {
 	  int myl = 1;
 	  int mzl = 0;
 #if LINKING_CONS
-	  StochInputTree::StochInputNode dataLinkCons(&probData, id,
+	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
 					nx, my, myl, mz, // mzl,
 					fQ, fnnzQ, fc,
 					fA, fnnzA,
@@ -336,7 +349,7 @@ int main(int argc, char ** argv) {
 					//fdllow, fidllow, fdlupp, fidlupp,
 					fxlow, fixlow, fxupp, fixupp, false);
 
-	  root->AddChild(new StochInputTree(dataLinkCons));
+	  root->AddChild(new StochInputTree(dataLinkConsChild));
 #else
 	  StochInputTree::StochInputNode data(&probData, id,
 					nx, my, mz, //myl, mzl

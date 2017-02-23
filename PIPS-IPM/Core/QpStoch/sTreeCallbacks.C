@@ -218,6 +218,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
         data->fnnzA(data->user_data, data->id, &data->nnzA);
       data->nnzB=0;
 
+      // todo is data->n the right size for Bl?
       //this is the root; populate B with A's data
       //B_0 is the A_0 from the theoretical form
       A = new StochGenMatrix(data->id, 
@@ -238,11 +239,12 @@ StochGenMatrix* sTreeCallbacks::createA() const
       if (data->nnzB<0)
         data->fnnzB(data->user_data, data->id, &data->nnzB);
 
+      // todo is np the right size for Bl?
       A = new StochGenMatrix(data->id, 
            N, MY, 
            data->my, np, data->nnzA, 
            data->my, data->n,  data->nnzB,
-		   data->myl, data->n,  data->nnzBl,
+		   data->myl, np,  data->nnzBl,
            commWrkrs);
       //populate the submatrices A, B, and Bl
       data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
@@ -431,7 +433,7 @@ StochVector* sTreeCallbacks::createb() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  StochVector* b = new StochVector(my(), myl(), commWrkrs);
+  StochVector* b = new StochVector(my(), myl(), commWrkrs); // todo set myl = 0 if not root?
   double* vData = ((SimpleVector*)b->vec)->elements();
   double* vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
   if (!fakedata) {

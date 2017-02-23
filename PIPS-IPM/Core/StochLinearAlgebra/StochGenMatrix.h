@@ -95,6 +95,11 @@ public:
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x );
 
+  /** mult method for children; needed only for linking constraints */
+  virtual void mult2 ( double beta,  OoqpVector& y,
+                        double alpha, OoqpVector& x,
+						   OoqpVector& yvecParent );
+
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x );
 
@@ -174,6 +179,11 @@ public:
   /** y = beta * y + alpha * this * x */
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x ){};
+
+  /** mult method for children; needed only for linking constraints */
+  virtual void mult2 ( double beta,  OoqpVector& y,
+                        double alpha, OoqpVector& x,
+						   OoqpVector& yvecParent ){};
 
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x ){};

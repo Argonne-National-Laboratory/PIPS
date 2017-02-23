@@ -2,7 +2,7 @@
 #include "DoubleMatrixTypes.h"
 #include "StochVector.h"
 #include "SimpleVector.h"
-
+#define PRINT 0
 using namespace std;
 
 StochGenMatrix::StochGenMatrix(int id, 
@@ -18,6 +18,7 @@ StochGenMatrix::StochGenMatrix(int id,
 
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
+  Blmat = 0;
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -217,6 +218,17 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
   assert(y.children.size() - nChildren == 0);
   assert(x.children.size() - nChildren == 0);
 
+  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
+#if PRINT
+  xvec[0] = 1.0;
+  xvec[1] = 1.0;
+
+  yvec[0] = 0.0;
+  yvec[1] = 0.0;
+  alpha = 2.0;
+  beta = 1.0;
+#endif
   if (0.0 == alpha) {
     y.vec->scale( beta );
     return;
@@ -225,13 +237,17 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
     //  y.vec->scale( beta/alpha );
     //}
 
-    Bmat->mult(beta, *y.vec, alpha, *x.vec);
+    Bmat->mult(beta, yvec, alpha, xvec);
 
     long long mA, nA; 
     Amat->getSize(mA,nA);
     if(nA>0) {
       //not the root
-      Amat->mult(1.0, *y.vec, alpha, *x.parent->vec);
+      Amat->mult(1.0, yvec, alpha, *x.parent->vec);
+
+#if PRINT
+      std::cout << " amat0: " <<  (Amat->M())[0] <<  " bmat1: " <<  (Amat->M())[1] << "\n";
+#endif
     }
 
     //if( 1.0 != alpha ) {
@@ -239,9 +255,97 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
     //}
   }
 
-  for(size_t it=0; it<children.size(); it++)
-    children[it]->mult(beta, *y.children[it], alpha, *x.children[it]);
+#if PRINT
+  std::cout << "mult; id: " << id ;
+  std::cout << " bmat0: " <<  (Bmat->M())[0] <<  " bmat1: " <<  (Bmat->M())[1] << "\n";
+  std::cout << "out: " << yvec[0] << " " << yvec[1] << "\n";
+#endif
+
+
+  /* linking constraints present? */
+  if( Blmat != 0 )
+  {
+	//preparations for the parallel case
+	int iAmSpecial = 1;
+	if(iAmDistrib) {
+	  int rank; MPI_Comm_rank(mpiComm, &rank);
+	  if(rank>0) iAmSpecial = 0;
+	}
+
+	SimpleVector& yvecl = dynamic_cast<SimpleVector&>(*y.vecl);
+
+	if( iAmSpecial )
+	  Blmat->mult(beta, yvecl, alpha, xvec);
+	else
+	  yvecl.setToZero();
+
+    for(size_t it=0; it<children.size(); it++)
+	   children[it]->mult2(beta, *y.children[it], alpha, *x.children[it], yvecl);
+
+	if(iAmDistrib) {
+	  // sum up linking constraints vectors
+	  int locn=yvecl.length();
+	  double* buffer = new double[locn];
+
+	  MPI_Allreduce(yvecl.elements(), buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
+	  yvecl.copyFromArray(buffer);
+
+	  delete[] buffer;
+    }
+  }
+  else
+  {
+    for(size_t it=0; it<children.size(); it++)
+      children[it]->mult(beta, *y.children[it], alpha, *x.children[it]);
+  }
 }
+
+
+/* mult method for children; needed only for linking constraints */
+void StochGenMatrix::mult2( double beta,  OoqpVector& y_,
+			   double alpha, OoqpVector& x_, OoqpVector& yparentl_ )
+{
+  assert(Blmat != 0);
+
+  StochVector & x = dynamic_cast<StochVector&>(x_);
+  StochVector & y = dynamic_cast<StochVector&>(y_);
+
+  //check the tree compatibility
+  int nChildren = children.size();
+  assert(y.children.size() - nChildren == 0);
+  assert(x.children.size() - nChildren == 0);
+
+  if( 0.0 == alpha ) {
+    y.vec->scale( beta );
+    return;
+  }
+
+  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
+#if PRINT
+  xvec[0] = 1.0;
+  xvec[1] = 1.0;
+
+  yvec[0] = 0.0;
+  yvec[1] = 0.0;
+
+
+	  std::cout << "mult2; id: " << id ;
+	  std::cout << " bmat0: " <<  (Bmat->M())[0] <<  " bmat1: " <<  (Bmat->M())[1] << "\n";
+#endif
+
+  Bmat->mult(beta, yvec, alpha, xvec);
+  Blmat->mult(1.0, yparentl_, alpha, xvec);
+  Amat->mult(1.0, *y.vec, alpha, *x.parent->vec);
+
+  for( size_t it=0; it<children.size(); it++ )
+    children[it]->mult2(beta, *y.children[it], alpha, *x.children[it], yvec);
+
+#if PRINT
+  cout << "outchild: " << yvec[0] << " " << yvec[1] << "\n";
+#endif
+}
+
 
 void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
 				 double alpha,  OoqpVector& x_ )
@@ -265,10 +369,36 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
     int rank; MPI_Comm_rank(mpiComm, &rank);
     if(rank>0) iAmSpecial = 0;
   }
+#if PRINT
+  xvec[0] = 1.0;
+  xvec[1] = 1.0;
+  yvec[0] = 0.0;
+  yvec[1] = 0.0;
+  alpha = 1.0;
+
+  cout << "length " << yvec.n << " \n";
+#endif
 
   if(iAmSpecial)
+  {
+#if PRINT
+	  std::cout << "mult; id: " << id ;
+	  std::cout << "bmat0: " <<  (Bmat->M())[0] <<  "bmat1: " <<  (Bmat->M())[1] << "\n";
+#endif
+
+
     //y_i = beta* y_i  +  alpha* B_i^T* x_i
     Bmat->transMult(beta, yvec, alpha, xvec);
+
+
+    if(Blmat != 0)
+    {
+       SimpleVector& xvecl = dynamic_cast<SimpleVector&>(*x.vecl);
+
+	   //y_i = y_i  +  alpha* Bl_0^T* xl_i
+	   Blmat->transMult(1.0, yvec, alpha, xvecl);
+    }
+  }
   else
     yvec.setToZero();
 
@@ -290,6 +420,9 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
 
     delete[] buffer;
   }
+#if PRINT
+  cout << "outall: " << yvec[0] << " " << yvec[1] << "\n";
+#endif
 }
 
 void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
@@ -311,9 +444,20 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
   assert(nA>0);
 #endif
 
+#if PRINT
+  std::cout << "mult2; id: " << id ;
+  	  std::cout << "amat0: " <<  (Amat->M())[0] <<  "amat1: " <<  (Amat->M())[1] << "\n";
+
+
+  	  xvec[0] = 1.0;
+  	  xvec[1] = 1.0;
+
+  	  yvec[0] = 0.0;
+  	  yvec[1] = 0.0;
+#endif
+
   //do A_i^T x_i and add it to yvecParent which already contains B_0^T x_0
   Amat->transMult(1.0, yvecParent, alpha, *x.vec);
-  
 
   //preparations for the parallel case
   int iAmSpecial = 1;
@@ -321,11 +465,24 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
     int rank; MPI_Comm_rank(mpiComm, &rank);
     if(rank>0) iAmSpecial = 0;
   }
-
+#if PRINT
+  std::cout << "mult2; id: " << id ;
+  std::cout << "bmat0: " <<  (Bmat->M())[0] <<  "bmat1: " <<  (Bmat->M())[1] << "\n";
+#endif
   if(iAmSpecial)
+  {
     //do A_i^T x_i and add it to yvecParent which already contains
     //B_0^T x_0
     Bmat->transMult(beta, yvec, alpha, xvec);
+
+    if(Blmat != 0)
+    {
+       SimpleVector& xvecl = dynamic_cast<SimpleVector&>(*x.vecl);
+
+	   //y_i = y_i  +  alpha* Bl_i^T* xl_i
+	   Blmat->transMult(1.0, yvec, alpha, xvecl);
+    }
+  }
   else
     yvec.setToZero();
   
@@ -333,6 +490,9 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
     children[it]->transMult2(beta, *y.children[it], 
 			     alpha, *x.children[it],
 			     yvec);
+#if PRINT
+  cout << "childout: " << yvec[0] << " " << yvec[1] << "\n";
+#endif
 
   if(iAmDistrib) {
     int locn=yvec.length();

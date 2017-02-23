@@ -32,6 +32,13 @@ sTree::~sTree()
     delete children[it];
 }
 
+// todo
+int sTree::myl() const
+{
+   return 0;
+}
+
+
 void sTree::assignProcesses(MPI_Comm comm)
 {
   int size;
@@ -479,7 +486,7 @@ StochVector* sTree::newDualYVector() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  StochVector* y = new StochVector(my(), commWrkrs);
+  StochVector* y = new StochVector(my(), myl(), commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualYVector();
