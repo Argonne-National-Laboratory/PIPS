@@ -486,7 +486,10 @@ StochVector* sTree::newDualYVector() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  StochVector* y = new StochVector(my(), myl(), commWrkrs);
+  //length of linking part
+  int yl = (np == -1) ? myl() : -1;
+
+  StochVector* y = new StochVector(my(), yl, commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualYVector();

@@ -46,6 +46,7 @@ public:
       NO data is copied, for this use one of the 'copy...' functions.
   */
   virtual OoqpVector* dataClone() const;
+  virtual OoqpVector* dataCloneLinkCons() const;
   virtual StochVector* clone() const;
 
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3);

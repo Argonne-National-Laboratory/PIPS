@@ -11,7 +11,7 @@
 #include <math.h>
 
 StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
-  : OoqpVector(n_), parent(NULL), mpiComm(mpiComm_),
+  : OoqpVector(n_), parent(NULL), vecl(NULL), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
   vec = new SimpleVector(n_);
@@ -29,7 +29,11 @@ StochVector::StochVector(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed/*
     iAmDistrib(isDistributed)
 {
   vec = new SimpleVector(n_);
-  vecl = new SimpleVector(nl_);
+
+  if( nl_ >= 0 )
+    vecl = new SimpleVector(nl_);
+  else
+	vecl = NULL;
 
   if(-1==iAmDistrib && MPI_COMM_NULL!=mpiComm) {
     int size;
@@ -57,19 +61,34 @@ StochVector::~StochVector()
   for (size_t it=0; it<children.size(); it++)
     delete children[it];
   
-  if (vec)
+  if( vec )
     delete vec;
+
+  if( vecl )
+	delete vecl;
 }
 
 OoqpVector* StochVector::dataClone() const
 {
+  assert(!vecl);
   OoqpVector* clone = new SimpleVector(vec->length());
+  return clone;
+}
+
+OoqpVector* StochVector::dataCloneLinkCons() const
+{
+  assert(vecl);
+  OoqpVector* clone = new SimpleVector(vecl->length());
   return clone;
 }
 
 StochVector* StochVector::clone() const
 {
-  StochVector* clone = new StochVector(this->vec->length(), mpiComm);
+  StochVector* clone;
+  if( vecl )
+    clone = new StochVector(this->vec->length(), this->vecl->length(), mpiComm);
+  else
+	clone = new StochVector(this->vec->length(), mpiComm);
 
   for(size_t it=0; it<this->children.size(); it++) {
     clone->AddChild(this->children[it]->clone());
@@ -78,6 +97,7 @@ StochVector* StochVector::clone() const
 }
 
 
+// todo vecl
 void 
 StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
 {
@@ -109,6 +129,7 @@ StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
 
 }
 
+// todo vecl
 void 
 StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
 {
@@ -150,6 +171,8 @@ void StochVector::scale( double alpha )
 {
   vec->scale(alpha);
   
+  if( vecl ) vecl->scale(alpha);
+
   for(size_t it=0; it<children.size(); it++)
     children[it]->scale(alpha);
 }
@@ -158,8 +181,7 @@ void StochVector::setToZero()
 {
   vec->setToZero();
 
-  if( vecl != 0 )
-     vecl->setToZero();
+  if( vecl ) vecl->setToZero();
   
   for(size_t it=0; it<children.size(); it++)
     children[it]->setToZero();
@@ -169,6 +191,8 @@ void StochVector::setToConstant( double c)
 {
   vec->setToConstant(c);
   
+  if( vecl ) vecl->setToConstant(c);
+
   for(size_t it=0; it<children.size(); it++)
     children[it]->setToConstant(c);
 }
@@ -185,7 +209,13 @@ void StochVector::copyFrom( OoqpVector& v_ )
 
   this->vec->copyFrom(*v.vec);
 
-  //check tree compatibility
+  if( this->vecl )
+  {
+     assert(v.vecl);
+     this->vecl->copyFrom(*v.vecl);
+  }
+
+  //assert tree compatibility
   assert(children.size() == v.children.size());
 
   for(size_t it=0; it<children.size(); it++)
@@ -209,6 +239,8 @@ double StochVector::infnorm()
 
   infnrm = max(vec->infnorm(), infnrm);
 
+  if( vecl ) infnrm = max(vecl->infnorm(), infnrm);
+
   return infnrm; 
 }
 
@@ -221,6 +253,8 @@ double StochVector::onenorm()
 {
   double onenrm = vec->onenorm();
 
+  if( vecl ) onenrm += vecl->onenorm();
+
   for(size_t it=0; it<children.size(); it++)
     onenrm += children[it]->onenorm();
 
@@ -229,8 +263,11 @@ double StochVector::onenorm()
   return onenrm; 
 }
 
+
 void StochVector::min( double& m, int& index )
 {
+  assert(!vecl);
+
   double lMin; int lInd;
 
   if(NULL==parent) {
@@ -257,9 +294,12 @@ void StochVector::min( double& m, int& index )
 
 double StochVector::stepbound(OoqpVector & v_, double maxStep )
 {
+  assert(!vecl);
+
   StochVector& v = dynamic_cast<StochVector&>(v_);
 
   double step = this->vec->stepbound(*v.vec, maxStep);
+
 
   //check tree compatibility
   assert(children.size() == v.children.size());
@@ -285,6 +325,8 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 			      double *ustep_elt,
 			      int& first_or_second)
 {
+  assert(!vecl);
+
   StochVector& w = *this;
   StochVector& u = dynamic_cast<StochVector&>(u_vec);
 
@@ -345,6 +387,7 @@ void StochVector::componentMult( OoqpVector& v_ )
   assert(v.children.size() == children.size());
 
   vec->componentMult(*v.vec);
+  if( vecl ) vecl->componentMult(*v.vecl);
 
   for(size_t it=0; it<children.size(); it++) 
     children[it]->componentMult(*v.children[it]);
@@ -356,6 +399,8 @@ void StochVector::componentDiv ( OoqpVector& v_ )
   assert(v.children.size() == children.size());
 
   vec->componentDiv(*v.vec);
+  if( vecl ) vecl->componentDiv(*v.vecl);
+
   for(size_t it=0; it<children.size(); it++) 
     children[it]->componentDiv(*v.children[it]);
 }
@@ -363,6 +408,8 @@ void StochVector::componentDiv ( OoqpVector& v_ )
 void StochVector::scalarMult( double num )
 {
   vec->scalarMult(num);
+  if( vecl ) vecl->scalarMult(num);
+
   for(size_t it=0; it<children.size(); it++) 
     children[it]->scalarMult(num);
 }
@@ -371,6 +418,7 @@ void StochVector::writeToStream( ostream& out ) const
 {
   out << "---" << endl;
   vec->writeToStream(out);
+  if( vecl ) vecl->writeToStream(out);
   out << "~~~" << endl;
   //for(size_t it=0; it<children.size(); it++) 
   //  children[it]->writeToStream(out);
@@ -380,6 +428,7 @@ void StochVector::writefToStream( ostream& out,
 				  const char format[] ) const
 {
   vec->writefToStream(out, format);
+  if( vecl ) vecl->writefToStream(out, format);
 
   for(size_t it=0; it<children.size(); it++) 
     children[it]->writefToStream(out, format);
@@ -392,6 +441,12 @@ void StochVector::axpy  ( double alpha, OoqpVector& x_ )
   assert(x.children.size() == children.size());
 
   vec->axpy(alpha, *x.vec);
+
+  if( vecl )
+  {
+     assert(x.vecl);
+     vecl->axpy(alpha, *x.vecl);
+  }
 
   for(size_t it=0; it<children.size(); it++)
     children[it]->axpy(alpha, *x.children[it]);
@@ -407,6 +462,13 @@ void StochVector::axzpy ( double alpha, OoqpVector& x_, OoqpVector& z_ )
 
   vec->axzpy(alpha, *x.vec, *z.vec);
 
+  if( vecl )
+  {
+     assert(x.vecl);
+     assert(z.vecl);
+     vecl->axzpy(alpha, *x.vecl, *z.vecl);
+  }
+
   for(size_t it=0; it<children.size(); it++)
     children[it]->axzpy(alpha, *x.children[it], *z.children[it]);
 }
@@ -414,6 +476,8 @@ void StochVector::axzpy ( double alpha, OoqpVector& x_, OoqpVector& z_ )
 /** this += alpha * x / z */
 void StochVector::axdzpy( double alpha, OoqpVector& x_, OoqpVector& z_ )
 {
+  assert(!vecl);
+
   StochVector& x = dynamic_cast<StochVector&>(x_);
   StochVector& z = dynamic_cast<StochVector&>(z_);
   assert(x.children.size() == children.size());
@@ -429,6 +493,9 @@ void StochVector::axdzpy( double alpha, OoqpVector& x_, OoqpVector& z_ )
 void StochVector::addConstant( double c )
 {
   vec->addConstant(c);
+
+  if( vecl ) vecl->addConstant(c);
+
   for(size_t it=0; it<children.size(); it++) 
     children[it]->addConstant(c);
 }
@@ -457,6 +524,13 @@ double StochVector::dotProductWith( OoqpVector& v_ )
   }
 
   dotProd += vec->dotProductWith(*v.vec);
+
+  if( vecl )
+  {
+	 assert(v.vecl);
+     dotProd += vecl->dotProductWith(*v.vecl);
+  }
+
   return dotProd;
 }
 
@@ -487,12 +561,21 @@ double StochVector::shiftedDotProductWith( double alpha, OoqpVector& mystep_,
 					*yvec.vec,
 					beta, *ystep.vec);
 
+  if( vecl ){
+	assert(mystep.vecl);
+	assert(yvec.vecl);
+	assert(ystep.vecl);
+    dotProd += vecl->shiftedDotProductWith(alpha, *mystep.vecl,  *yvec.vecl, beta, *ystep.vecl);
+  }
+
   return dotProd;
 }
 
 void StochVector::negate()
 {
   vec->negate();
+  if( vecl ) vecl->negate();
+
   for(size_t it=0; it<children.size(); it++) 
     children[it]->negate();
 }
@@ -500,6 +583,8 @@ void StochVector::negate()
 void StochVector::invert()
 {
   vec->invert();
+  if( vecl ) vecl->invert();
+
   for(size_t it=0; it<children.size(); it++) 
     children[it]->invert();
 }
@@ -507,7 +592,7 @@ void StochVector::invert()
 int StochVector::allPositive()
 {
   //!parallel
-  int allPos = vec->allPositive();
+  int allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : 1);
   if (!allPos) return 0;
 
   for(size_t it=0; it<children.size() && allPos; it++) 
@@ -516,8 +601,10 @@ int StochVector::allPositive()
   return allPos;
 }
 
+// todo adapt for linking constraints (vecl)?
 int StochVector::matchesNonZeroPattern( OoqpVector& select_ )
 {
+  assert(!vecl);
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
@@ -530,8 +617,11 @@ int StochVector::matchesNonZeroPattern( OoqpVector& select_ )
   return match;
 }
 
+// todo adapt for linking constraints (vecl)?
 void StochVector::selectNonZeros( OoqpVector& select_ )
 {
+  assert(!vecl);
+
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
@@ -556,10 +646,14 @@ long long StochVector::numberOfNonzeros()
   }
   nnz += vec->numberOfNonzeros();
 
+  if( vecl ) nnz += vecl->numberOfNonzeros();
+
   return nnz;
 }
 void StochVector::addSomeConstants( double c, OoqpVector& select_ )
 {
+  assert(!vecl);
+
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
@@ -579,6 +673,8 @@ void StochVector::writefSomeToStream( ostream& out,
 void StochVector::axdzpy( double alpha, OoqpVector& x_,
 		       OoqpVector& z_, OoqpVector& select_ )
 {
+  assert(!vecl);
+
   StochVector& select = dynamic_cast<StochVector&>(select_);
   StochVector&      x = dynamic_cast<StochVector&>(x_);
   StochVector&      z = dynamic_cast<StochVector&>(z_);
@@ -595,6 +691,8 @@ void StochVector::axdzpy( double alpha, OoqpVector& x_,
 
 int StochVector::somePositive( OoqpVector& select_ )
 {
+  assert(!vecl);
+
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
@@ -610,6 +708,8 @@ int StochVector::somePositive( OoqpVector& select_ )
 
 void StochVector::divideSome( OoqpVector& div_, OoqpVector& select_ )
 {
+  assert(!vecl);
+
   StochVector& div    = dynamic_cast<StochVector&>(div_);
   StochVector& select = dynamic_cast<StochVector&>(select_);
 

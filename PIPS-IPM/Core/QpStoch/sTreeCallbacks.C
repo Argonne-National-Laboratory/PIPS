@@ -433,14 +433,22 @@ StochVector* sTreeCallbacks::createb() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  StochVector* b = new StochVector(my(), myl(), commWrkrs); // todo set myl = 0 if not root?
+  int yl = (np == -1) ? myl() : -1;
+
+  StochVector* b = new StochVector(my(), yl, commWrkrs);
+
   double* vData = ((SimpleVector*)b->vec)->elements();
-  double* vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
+  double* vDataLinkCons = NULL;
+
+  if( np == -1 )
+     vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
+
   if (!fakedata) {
     data->fb(data->user_data, data->id, 
        vData, data->my);
 
-    data->fbl(data->user_data, data->id,
+    if( np == -1 )
+      data->fbl(data->user_data, data->id,
     		vDataLinkCons, data->myl);
 
     for(size_t it=0; it<children.size(); it++) {
@@ -456,10 +464,12 @@ StochVector* sTreeCallbacks::createb() const
     }
 
     pos = 0;
-    for(size_t i = 0; i < scens.size(); i++) {
-      scens[i]->fbl(scens[i]->user_data,scens[i]->id,
-    		  vDataLinkCons+pos, scens[i]->myl);
-      pos += scens[i]->myl;
+    if( np == -1) {
+      for(size_t i = 0; i < scens.size(); i++) {
+        scens[i]->fbl(scens[i]->user_data,scens[i]->id,
+       		  vDataLinkCons+pos, scens[i]->myl);
+        pos += scens[i]->myl;
+      }
     }
   }
 
