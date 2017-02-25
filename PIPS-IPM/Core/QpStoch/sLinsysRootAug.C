@@ -22,10 +22,10 @@ extern int gOuterSolve;
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
 { 
-  prob_->getLocalSizes(locnx, locmy, locmz);
+  prob_->getLocalSizes(locnx, locmy, locmz, locmyl);
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
-  redRhs = new SimpleVector(locnx+locmy+locmz);
+  redRhs = new SimpleVector(locnx+locmy+locmz+locmyl);
 };
 
 sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
@@ -51,7 +51,7 @@ sLinsysRootAug::~sLinsysRootAug()
 SymMatrix* 
 sLinsysRootAug::createKKT(sData* prob)
 {
-  int n = locnx+locmy;
+  int n = locnx + locmy + locmyl;
   return new DenseSymMatrix(n);
 }
 

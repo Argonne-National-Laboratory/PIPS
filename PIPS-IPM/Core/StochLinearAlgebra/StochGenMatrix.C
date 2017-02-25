@@ -18,7 +18,7 @@ StochGenMatrix::StochGenMatrix(int id,
 
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
-  Blmat = 0;
+  Blmat = NULL;
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);

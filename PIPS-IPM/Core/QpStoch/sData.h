@@ -37,8 +37,10 @@ class sData : public QpGenData {
 
   int getLocalnx();
   int getLocalmy();
+  int getLocalmyl();
   int getLocalmz();
   int getLocalSizes(int& nx, int& my, int& mz);
+  int getLocalSizes(int& nx, int& my, int& mz, int& myl);
 
   int getLocalNnz(int& nnzQ, int& nnzB, int& nnzD);
 
