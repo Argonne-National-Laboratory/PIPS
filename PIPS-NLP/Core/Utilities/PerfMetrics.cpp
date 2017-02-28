@@ -87,7 +87,7 @@ void PerfMetrics::report_timing()
 	fs<<oss.str();
 	fs.close();
 
-	//if(gmyid == 0)
+	if(gmyid == 0)
 		std::cout<<oss.str();
 
 }

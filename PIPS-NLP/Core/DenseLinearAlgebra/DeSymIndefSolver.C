@@ -2,7 +2,8 @@
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 /* 2015. Modified by Nai-Yuan Chiang for NLP*/
-
+#include "../../global_var.h"
+#include <omp.h>
 #include "DeSymIndefSolver.h"
 #include "SimpleVector.h"
 #include <cassert>
@@ -142,6 +143,11 @@ if(gSymLinearAlgSolverForDense==1){
 #endif
 
   //factorize
+  omp_set_num_threads(16);
+  if(gmyid==0) {
+    printf("OMP_NUM_PROCS: %d\n", omp_get_num_procs());
+    printf("OMP_NUM_THREADS: %d\n", omp_get_num_threads());
+  }
 
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
       ipiv, work, &lwork, &info );

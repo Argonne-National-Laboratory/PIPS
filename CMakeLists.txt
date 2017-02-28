@@ -36,7 +36,7 @@ message(STATUS "BUILD_PIPS_NLP=${BUILD_PIPS_NLP}")
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
 #with NLP profile metric
-option(WITH_NLPTIMING "Build with timing for PIPS-NLP" OFF)
+option(WITH_NLPTIMING "Build with timing for PIPS-NLP" ON)
 option(WITH_VERBOSE "Build with extra verbosity level" OFF)
 if(WITH_NLPTIMING)
 	add_definitions(-DNLPTIMING)
@@ -132,13 +132,14 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(IS_MACOS TRUE)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
-#add_definitions(-DTIMING -DSTOCH_TESTING)
+add_definitions(-DTIMING -DSTOCH_TESTING)
 
 # inspired by elemental-bgp
 if(MATH_LIBS)
 	message(STATUS "Using user-defined MATH_LIBS=${MATH_LIBS}")
 elseif(IS_DIRECTORY $ENV{MKLROOT})
-    set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
+  #set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
+    set(MATH_LIBS "-mkl=parallel")
     message(STATUS "Using MKLROOT:$ENV{MKLROOT} MATH_LIBS=${MATH_LIBS}")
 else(MATH_LIBS)
     message(STATUS "Searching system path for MATH_LIBS")
