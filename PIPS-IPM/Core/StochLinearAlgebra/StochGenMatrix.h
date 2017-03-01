@@ -52,9 +52,20 @@ public:
   OoqpVector* workPrimalVec;
   OoqpVector* getWorkPrimalVec(const StochVector& origin);
 
+  /** trans mult method for children with linking constraints */
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent);
+		    OoqpVector& yvecParent, OoqpVector& xvecl );
+
+  /** trans mult method for children; does not support linking constraints */
+  virtual void transMult2 ( double beta,   StochVector& y,
+		    double alpha,  StochVector& x,
+		    OoqpVector& yvecParent );
+
+  /** mult method for children; needed only for linking constraints */
+  virtual void mult2 ( double beta,  OoqpVector& y,
+                        double alpha, OoqpVector& x,
+						   OoqpVector& yvecParent );
 
  public:
   virtual void getSize( long long& m, long long& n );
@@ -94,11 +105,6 @@ public:
   /** y = beta * y + alpha * this * x */
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x );
-
-  /** mult method for children; needed only for linking constraints */
-  virtual void mult2 ( double beta,  OoqpVector& y,
-                        double alpha, OoqpVector& x,
-						   OoqpVector& yvecParent );
 
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x );
@@ -189,7 +195,7 @@ public:
                            double alpha,  OoqpVector& x ){};
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent){};
+		    OoqpVector& yvecParent, OoqpVector& xveclParent){};
 
   virtual double abmaxnorm(){return 0.0;};
 

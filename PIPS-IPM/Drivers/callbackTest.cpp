@@ -35,9 +35,9 @@ extern "C" {
 int nnzMatEqStage1(void* user_data, int id, int* nnz)
 {
 	if( id == 0 )
-		*nnz = 2;
+		*nnz = 3;
 	else
-		*nnz = 2;
+		*nnz = 3;
 
 	return 0;
 }
@@ -53,7 +53,7 @@ int nnzMatEqStage2(void* user_data, int id, int* nnz)
 
 int nnzMatEqLink(void* user_data, int id, int* nnz)
 {
-	*nnz = 1;
+	*nnz = 3;
 
 	return 0;
 }
@@ -121,9 +121,13 @@ int vecXlbActive(void* user_data, int id, double* vec, int len)
 int vecLinkRhs(void* user_data, int id, double* vec, int len)
 {
 	int i;
-
+#if 0
 	for( i = 0; i < len; i++ )
 		vec[i] = 6.0;
+#endif
+
+	vec[0] = 8.0;
+	vec[1] = 4.0;
 
 	return 0;
 }
@@ -142,27 +146,22 @@ int matAllZero(void* user_data, int id, int* krowM, int* jcolM, double* M)
 int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
 	int i;
-    int n = 2;
-
-    if( id == 0 )
-    {
+#if 1
+    int n = 3;
 
   	   for( i = 0; i < n; i++ )
-  		   M[i] = 1.0;
+  		   M[i] = i + 1;
 
   	   krowM[0] = 0;
   	   krowM[1] = 1;
-  	   krowM[2] = 2;
+  	   krowM[2] = 3;
 
   	   jcolM[0] = 0;
-  	   jcolM[1] = 1;
-#if 0
-  	   for( i = 0; i <= n; i++ )
-  		   krowM[i] = 0;
-#endif
-    }
-    else
-    {
+  	   jcolM[1] = 0;
+  	   jcolM[2] = 1;
+#else
+  	 int n = 2;
+
  	   for( i = 0; i < n; i++ )
  		   M[i] = 1.0;
 
@@ -172,7 +171,7 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
  	   jcolM[0] = 0;
  	   jcolM[1] = 1;
-    }
+#endif
 
     return 0;
 }
@@ -217,7 +216,51 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matEqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-#if 1
+
+	if( id == 0 )
+	{
+       M[0] = 1.0;
+       M[1] = 1.0;
+       M[2] = 1.0;
+
+       krowM[0] = 0;
+       krowM[1] = 1;
+       krowM[2] = 3;
+
+       jcolM[0] = 0;
+       jcolM[1] = 0;
+       jcolM[2] = 1;
+	}
+	else if( id == 1)
+	{
+	       M[0] = 1.0;
+	       M[1] = 2.0;
+	       M[2] = 1.0;
+
+	       krowM[0] = 0;
+	       krowM[1] = 2;
+	       krowM[2] = 3;
+
+	       jcolM[0] = 0;
+	           jcolM[1] = 1;
+	           jcolM[2] = 1;
+	}
+	else
+	{
+	       M[0] = 1.0;
+	       M[1] = 3.0;
+	       M[2] = 1.0;
+
+
+	       krowM[0] = 0;
+	       krowM[1] = 2;
+	       krowM[2] = 3;
+
+	       jcolM[0] = 0;
+	           jcolM[1] = 1;
+	           jcolM[2] = 1;
+	}
+#if 0
 	if( id == 0 )
 	{
        M[0] = 1.0;
@@ -253,7 +296,7 @@ int main(int argc, char ** argv) {
   int nx0 = 2;
   int my0 = 2;
   int mz0 = 0;
-  int myl0 = 1;
+  int myl0 = 2;
   int mzl0 = 0;
 
   FNNZ fnnzQ = &nnzAllZero;
@@ -332,7 +375,7 @@ int main(int argc, char ** argv) {
 	  int nx = 2;
 	  int my = 2;
 	  int mz = 0;
-	  int myl = 1;
+	  int myl = 2;
 	  int mzl = 0;
 #if LINKING_CONS
 	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,

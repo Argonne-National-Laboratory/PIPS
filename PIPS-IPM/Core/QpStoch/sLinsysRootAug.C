@@ -719,6 +719,29 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     kktd->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1);
   //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
 
+
+  /////////////////////////////////////////////////////////////
+  // update the KKT with F
+  /////////////////////////////////////////////////////////////
+  if( locmyl > 0 )
+  {
+    SparseGenMatrix& F = prob->getLocalF();
+    double* dF = F.M();
+    int* krowF = F.krowM();
+    int* jcolF = F.jcolM();
+
+    int iKkt = locnx + locmy;
+    for( int i = 0; i < locmyl; i++, iKkt++ ) {
+
+      for( p = krowF[i], pend = krowF[i+1]; p < pend; p++ ) {
+        j = jcolF[p];
+        val = dF[p];
+        dKkt[iKkt][j] += val;
+        dKkt[j][iKkt] += val;
+      }
+    }
+  }
+
   /////////////////////////////////////////////////////////////
   // update the KKT zeros for the lower right block 
   /////////////////////////////////////////////////////////////

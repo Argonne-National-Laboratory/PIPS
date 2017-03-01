@@ -74,6 +74,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   gap = rQ->dotProductWith(*vars->x); 
 
   prob->ATransmult( 1.0, *rQ, -1.0, *vars->y );
+  cout << "start C \n\n";
   prob->CTransmult( 1.0, *rQ, -1.0, *vars->z );
   //componentNorm = rQ->infnorm();
   

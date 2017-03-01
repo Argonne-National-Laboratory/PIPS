@@ -258,6 +258,14 @@ SparseGenMatrix& sData::getLocalB()
   return *Ast.Bmat;
 }
 
+// This is F_i (linking equality matrix):
+SparseGenMatrix& sData::getLocalF()
+{
+  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+  return *Ast.Blmat;
+}
+
+
 // low_i <= C_i x_0 + D_i x_i <= upp_i
 
 // This is C_i
@@ -274,6 +282,12 @@ SparseGenMatrix& sData::getLocalD()
   return *Cst.Bmat;
 }
 
+// This is G_i (linking inequality matrix):
+SparseGenMatrix& sData::getLocalG()
+{
+  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+  return *Cst.Blmat;
+}
 
 
 void sData::sync()

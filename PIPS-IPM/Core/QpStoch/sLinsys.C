@@ -450,6 +450,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& F = prob->getLocalF();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   int N, nxP, NP;
@@ -474,22 +475,60 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     solver->solve(col);
 
     //here we have colGi = inv(H_i)* it-th col of Gi^t
-     //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
+    //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
 
-
- 
     // SC+=R*x
     R.transMult( 1.0, &SC[it][0],     1,
      		 -1.0, &col[0],      1);
 
     // SC+=At*y
-     A.transMult( 1.0, &SC[it][0],   1,  
+    A.transMult( 1.0, &SC[it][0],   1,
 		  -1.0, &col[locnx],  1);
 
     // SC+=Ct*z
     C.transMult( 1.0, &SC[it][0],   1,
 		 -1.0, &col[locnx+locmy], 1);
 
+    // do we have linking equality constraints?
+    if( locmyl > 0 )
+       // SC+=F*x
+       F.mult( 1.0, &SC[it][locnx+locmy],     1,
+        		 -1.0, &col[0],      1);
+
+  }
+
+  // do we have linking equality constraints?
+  if( locmyl > 0 )
+  {
+	int locNxMyMz = locnx+locmy+locmz;
+	int locNxMy = locnx+locmy;
+
+    // do column-wise multiplication for columns containing Ft (F transposed)
+    for(int it=0; it<locmyl; it++) {
+
+      double* pcol = &col[0];
+
+      // get it'th column from Ft (i.e., it'th row from F)
+      F.fromGetDense(it, 0, &col[0],           1, 1, locnx);
+
+      for(int it1=locnx; it1< locNxMyMz; it1++) pcol[it1]=0.0;
+
+      solver->solve(col);
+
+      R.transMult( 1.0, &SC[it + locNxMy][0],   1,
+       	  -1.0, &col[0],      1);
+      A.transMult( 1.0, &SC[it + locNxMy][0],   1,
+  		  -1.0, &col[locnx],  1);
+      C.transMult( 1.0, &SC[it + locNxMy][0],   1,
+  		  -1.0, &col[locNxMy], 1);
+
+      // here we have colGi = inv(H_i)* (it + locnx + locmy)-th col of Gi^t
+      // now do colSC = Gi * inv(H_i)* (it + locnx + locmy)-th col of Gi^t
+
+      // SC+=F*x
+      F.mult( 1.0, &SC[it + locNxMy][locNxMy],   1,
+  		  -1.0, &col[0],  1);
+    }
   }
 }
  

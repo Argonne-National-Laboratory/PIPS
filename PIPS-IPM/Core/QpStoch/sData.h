@@ -48,8 +48,10 @@ class sData : public QpGenData {
   SparseGenMatrix& getLocalCrossHessian();
   SparseGenMatrix& getLocalA();
   SparseGenMatrix& getLocalB();
+  SparseGenMatrix& getLocalF();
   SparseGenMatrix& getLocalC();
   SparseGenMatrix& getLocalD();
+  SparseGenMatrix& getLocalG();
 
   void sync();
  public:
