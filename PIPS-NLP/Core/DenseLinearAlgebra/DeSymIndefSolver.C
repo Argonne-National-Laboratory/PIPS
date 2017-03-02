@@ -143,10 +143,9 @@ if(gSymLinearAlgSolverForDense==1){
 #endif
 
   //factorize
-  omp_set_num_threads(16);
   if(gmyid==0) {
     printf("OMP_NUM_PROCS: %d\n", omp_get_num_procs());
-    printf("OMP_NUM_THREADS: %d\n", omp_get_num_threads());
+    printf("OMP_GET_MAX_THREADS: %d\n", omp_get_max_threads());
   }
 
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
@@ -178,6 +177,7 @@ for(int k=0; k<n; k++) {
     break;
   }
 }
+  return negEigVal;
 
 //*********************************************************************************
 }

@@ -164,7 +164,7 @@ int FilterIPMStochSolver::solve( Data *prob_in, Variables *iterate, Residuals * 
 
     //  termination test:
     status_code = this->doStatus( prob, iterate, resid, iter, mu, 0 );
-    if(iter==2) status_code = SUCCESSFUL_TERMINATION;
+    if(iter==10) status_code = SUCCESSFUL_TERMINATION;
 	if( status_code != NOT_FINISHED )
 	  break;
 
