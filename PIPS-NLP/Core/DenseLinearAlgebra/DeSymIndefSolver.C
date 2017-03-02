@@ -146,10 +146,45 @@ if(gSymLinearAlgSolverForDense==1){
   if(gmyid==0) {
     printf("OMP_NUM_PROCS: %d\n", omp_get_num_procs());
     printf("OMP_GET_MAX_THREADS: %d\n", omp_get_max_threads());
+    printf("On node ranks: %d\n", gnprocs_node);
   }
-
-  FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
+  if(gwindow==NULL) {
+    if(gmyid_node==0) {
+      gwindow=new double[n*n];
+      gipiv=new int[n+1];
+      MPI_Win_create(gwindow, n*n*sizeof(double), sizeof(double), MPI_INFO_NULL, comm_node, &gwin);
+      MPI_Win_create(gipiv, (n+1)*sizeof(int), sizeof(int), MPI_INFO_NULL, comm_node, &gwin_ipiv);
+    } else {
+      MPI_Win_create(NULL, 0, 1, MPI_INFO_NULL, comm_node, &gwin); 
+      MPI_Win_create(NULL, 0, 1, MPI_INFO_NULL, comm_node, &gwin_ipiv); 
+      // Allocate something to overwrite NULL
+      gwindow=new double[1];
+    }
+  }
+  if(gmyid_node==0) {
+    FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
       ipiv, work, &lwork, &info );
+    //  printf("gwindow on 0 before: %lf %d %d\n", gwindow[0],gipiv[0],info);
+    for(int i=0;i<n*n;i++) gwindow[i]=(&mStorage->M[0][0])[i];
+    for(int i=0;i<n;i++) gipiv[i]=ipiv[i];
+    gipiv[n]=info;
+    //  printf("gwindow on 0 after: %lf %d %d\n", gwindow[0],gipiv[0],info);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+  }
+  else {
+    //printf("gwindow on other before: %lf %d %d\n", mStorage->M[0][0], ipiv[0], info);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+    MPI_Get(&mStorage->M[0][0], n*n, MPI_DOUBLE, 0, 0, n*n, MPI_DOUBLE, gwin);
+    MPI_Get(ipiv, n, MPI_INT, 0, 0, n, MPI_INT, gwin_ipiv);
+    MPI_Get(&info, 1, MPI_INT, 0, n, 1, MPI_INT, gwin_ipiv);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+    //printf("gwindow on other after: %lf %d %d\n", mStorage->M[0][0], ipiv[0], info);
+  }
 
 #ifdef TIMING_FLOPS
   HPM_Stop("DSYTRFFact");
