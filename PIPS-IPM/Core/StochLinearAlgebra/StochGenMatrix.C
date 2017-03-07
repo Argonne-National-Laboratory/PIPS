@@ -2,7 +2,7 @@
 #include "DoubleMatrixTypes.h"
 #include "StochVector.h"
 #include "SimpleVector.h"
-#define PRINT 1
+#define PRINT 0
 using namespace std;
 
 StochGenMatrix::StochGenMatrix(int id, 

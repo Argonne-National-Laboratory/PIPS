@@ -463,13 +463,16 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
   SimpleVector col(N);
 
+  // todo
+  cout << "locmyl: " << locmyl << "\n";
+
   for(int it=0; it<nxP; it++) {
-    
+
     double* pcol = &col[0];
     for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
 
     R.fromGetDense(0, it, &col[0],           1, locnx, 1);
-    A.fromGetDense(0, it, &col[locnx],       1, locmy, 1);    
+    A.fromGetDense(0, it, &col[locnx],       1, locmy, 1);
     C.fromGetDense(0, it, &col[locnx+locmy], 1, locmz, 1);
 
     solver->solve(col);
@@ -530,6 +533,18 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   		  -1.0, &col[0],  1);
     }
   }
+
+#if 0
+  for( int k = 0; k < NP; k++)
+  	   for( int k2 = 0; k2 < NP; k2++)
+  cout << "SC[" << k << "][" << k2 << "] = " << SC[k][k2] <<"\n";
+#endif
+
+
+  // assert symmetry todo delete
+  for( int k = 0; k < NP; k++)
+ 	   for( int k2 = 0; k2 < NP; k2++)
+ 	       assert((SC[k][k2] - SC[k2][k]) <= 0.0001 && (SC[k2][k] - SC[k][k2]) <= 0.0001);
 }
  
 #include <set>
