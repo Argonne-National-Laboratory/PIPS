@@ -12,7 +12,10 @@ else
   echo "### ASL: Download Failed.\n"
   exit 1 
 fi
+#export CFLAGS='-O3 -xMIC-AVX512'
 export CFLAGS='-O3'
+#export CC='icc'
+export CC='gcc'
 
 fn=solvers.tar.gz
 name=`basename ${fn} .tar.gz`
@@ -24,7 +27,10 @@ chmod +x src/configurehere
 
 echo "Applying patch for #define filename in asl.h, which is incompatible with mpi.h."
 cp ./patch/asl.h ./src
+cp ./patch/dtoa.c ./src
 
 cd src
-./configurehere CFLAGS='-O3'
-make -j4
+#./configurehere CC='icc' CFLAGS='-O3 -xMIC-AVX512'
+#./configurehere CC='gcc' CFLAGS='-O3'
+./configurehere 
+make -j64
