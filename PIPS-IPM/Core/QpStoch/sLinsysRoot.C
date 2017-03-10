@@ -201,7 +201,10 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
     //SimpleVector tmp(zi.length());
     //tmp.copyFromArray(zi.elements());
     //children[it]->addLnizi(prob->children[it], b0, tmp);
-    children[it]->addLnizi(prob->children[it], b0, zi);
+    if( locmyl > 0 )
+      children[it]->addLniziLinkCons(prob->children[it], b0, zi, locmy, locmz);
+    else
+      children[it]->addLnizi(prob->children[it], b0, zi);
 #ifdef TIMING
     children[it]->stochNode->resMon.recLsolveTmChildren_stop();
 #endif

@@ -85,7 +85,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   troot_total=tchild_total=tcomm_total=0.0; 
 #endif
 
-  assert(locnx+locmy+locmz==b.length());
+  assert(locnx+locmy+locmz == b.length());
   SimpleVector& r = (*redRhs);
   assert(r.length() <= b.length());
   SparseGenMatrix& C = prob->getLocalD();
@@ -152,6 +152,86 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
 	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
 #endif
 }
+
+void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
+{
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+#ifdef TIMING
+  t_start=MPI_Wtime();
+  troot_total=tchild_total=tcomm_total=0.0;
+#endif
+
+  assert(locmyl > 0);
+
+  assert(locnx+locmy+locmz+locmyl == b.length());
+  SimpleVector& r = (*redRhs);
+  assert(r.length() <= b.length());
+  SparseGenMatrix& C = prob->getLocalD();
+
+  ///////////////////////////////////////////////////////////////////////
+  // LOCAL SOLVE
+  ///////////////////////////////////////////////////////////////////////
+
+  ///////////////////////////////////////////////////////////////////////
+  // b=[b1;b2;b3;b4] is a locnx+locmy+locmz+locmyl vector
+  // the new rhs should be
+  //           r = [b1-C^T*(zDiag)^{-1}*b3; b2; b4]
+  ///////////////////////////////////////////////////////////////////////
+
+  r.copyFromArray(b.elements()); //will copy only as many elems as r has
+
+  // aliases to parts (no mem allocations)
+  SimpleVector r3(&r[locnx+locmy], locmz); //r3 is used as a temp
+                                           //buffer for b3
+  SimpleVector r2(&r[locnx],       locmy);
+  SimpleVector r1(&r[0],           locnx);
+
+  ///////////////////////////////////////////////////////////////////////
+  // compute r1 = b1 - C^T*(zDiag)^{-1}*b3
+  ///////////////////////////////////////////////////////////////////////
+  if(locmz>0) {
+    assert(r3.length() == zDiag->length());
+    r3.componentDiv(*zDiag);//r3 is a copy of b3
+    C.transMult(1.0, r1, -1.0, r3);
+  }
+  ///////////////////////////////////////////////////////////////////////
+  // r contains all the stuff -> solve for it
+  ///////////////////////////////////////////////////////////////////////
+
+  if(gInnerSCsolve==0) {
+    // Option 1. - solve with the factors
+    solver->Dsolve(r);
+  } else if(gInnerSCsolve==1) {
+    // Option 2 - solve with the factors and perform iter. ref.
+    solveWithIterRef(prob, r);
+  } else {
+    assert(gInnerSCsolve==2);
+    // Option 3 - use the factors as preconditioner and apply BiCGStab
+    solveWithBiCGStab(prob, r);
+  }
+  ///////////////////////////////////////////////////////////////////////
+  // r is the sln to the reduced system
+  // the sln to the aug system should be
+  //      x = [r1; r2;  (zDiag)^{-1} * (b3-C*r1);
+  ///////////////////////////////////////////////////////////////////////
+  SimpleVector b1(&b[0],           locnx);
+  SimpleVector b2(&b[locnx],       locmy);
+  SimpleVector b3(&b[locnx+locmy], locmz);
+  b1.copyFrom(r1);
+  b2.copyFrom(r2);
+
+  if(locmz>0) {
+    C.mult(1.0, b3, -1.0, r1);
+    b3.componentDiv(*zDiag);
+  }
+#ifdef TIMING
+  if(myRank==0 && gInnerSCsolve>=1)
+    cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
+	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
+#endif
+}
+
 
 /** rxy = beta*rxy + alpha * SC * x */
 void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy, 

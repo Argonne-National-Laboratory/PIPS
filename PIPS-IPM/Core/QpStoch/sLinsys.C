@@ -101,7 +101,10 @@ void sLinsys::joinRHS( OoqpVector& rhs_in,  OoqpVector& rhs1_in,
   StochVector& rhs2 = dynamic_cast<StochVector&>(rhs2_in);
   StochVector& rhs3 = dynamic_cast<StochVector&>(rhs3_in);
 
-  rhs.jointCopyFrom(rhs1, rhs2, rhs3);
+  if( rhs2.vecl )
+	rhs.jointCopyFromLinkCons(rhs1, rhs2, rhs3, rhs2);
+  else
+    rhs.jointCopyFrom(rhs1, rhs2, rhs3);
 }
 
 void sLinsys::separateVars( OoqpVector& x_in, OoqpVector& y_in,
@@ -259,6 +262,39 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
   C.transMult(1.0, z01, -1.0, zi3);
 }
 
+/** sum up right hand side for (current) scenario i and add it to right hand side of scenario 0 */
+void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, int my0, int mz0)
+{
+  assert(locmyl > 0);
+
+  SimpleVector& z0 = dynamic_cast<SimpleVector&>(z0_);
+  SimpleVector& zi = dynamic_cast<SimpleVector&>(zi_);
+
+  solver->Dsolve (zi);
+  solver->Ltsolve(zi);
+
+  SparseGenMatrix& A = prob->getLocalA();
+  SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& F = prob->getLocalF();
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+  int dummy, nx0;
+  A.getSize(dummy, nx0);
+
+  // zi2, zi3 are just references to fragments of zi
+  SimpleVector zi1 (&zi[0],           locnx);
+  SimpleVector zi2 (&zi[locnx],       locmy);
+  SimpleVector zi3 (&zi[locnx+locmy], locmz);
+  // same for z01 (only the first n0 entries in the output z0 are computed) and z0l (accordingly)
+  SimpleVector z01 (&z0[0], nx0);
+  SimpleVector z0l (&z0[nx0+my0+mz0], locmyl);
+
+  R.transMult(1.0, z01, -1.0, zi1);
+  A.transMult(1.0, z01, -1.0, zi2);
+  C.transMult(1.0, z01, -1.0, zi3);
+
+  F.mult(1.0, z0l, -1.0, zi1);
+}
 
 
 void sLinsys::solveCompressed( OoqpVector& rhs_ )

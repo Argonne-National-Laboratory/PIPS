@@ -566,7 +566,9 @@ StochVector* sTree::newRhs()
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  StochVector* rhs = new StochVector(nx() + my() + mz(), commWrkrs);
+  int locmyl = (np == -1) ?  myl() : 0;
+
+  StochVector* rhs = new StochVector(nx() + my() + mz() + locmyl, commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newRhs();
