@@ -35,9 +35,20 @@ extern "C" {
 int nnzMatEqStage1(void* user_data, int id, int* nnz)
 {
 	if( id == 0 )
-		*nnz = 3;
+		*nnz = 2;
 	else
-		*nnz = 3;
+		*nnz = 2;
+
+	return 0;
+}
+
+
+int nnzMatIneqStage1(void* user_data, int id, int* nnz)
+{
+	if( id == 0 )
+		*nnz = 1;
+	else
+		*nnz = 1;
 
 	return 0;
 }
@@ -48,6 +59,13 @@ int nnzMatEqStage2(void* user_data, int id, int* nnz)
 		*nnz = 0;
 	else
 		*nnz = 2;
+	return 0;
+}
+
+
+int nnzMatIneqStage2(void* user_data, int id, int* nnz)
+{
+		*nnz = 1;
 	return 0;
 }
 
@@ -89,6 +107,26 @@ int vecEqRhs(void* user_data, int id, double* vec, int len)
 
 	return 0;
 }
+
+int vecIneqRhs(void* user_data, int id, double* vec, int len)
+{
+	int i;
+
+		for( i = 0; i < len; i++ )
+			vec[i] = 4.0;
+
+	return 0;
+}
+
+int vecIneqRhsActive(void* user_data, int id, double* vec, int len)
+{
+	int i;
+	for( i = 0; i < len; i++ )
+		vec[i] = 1.0;
+
+	return 0;
+}
+
 
 int vecObj(void* user_data, int id, double* vec, int len)
 {
@@ -146,7 +184,7 @@ int matAllZero(void* user_data, int id, int* krowM, int* jcolM, double* M)
 int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
 	int i;
-#if 1
+#if 0
     int n = 3;
 
   	   for( i = 0; i < n; i++ )
@@ -172,6 +210,23 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
  	   jcolM[0] = 0;
  	   jcolM[1] = 1;
 #endif
+
+    return 0;
+}
+
+
+int matIneqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
+{
+	int i;
+    int n = 1;
+
+  	   for( i = 0; i < n; i++ )
+  		   M[i] = 2.0;
+
+  	   krowM[0] = 0;
+  	   krowM[1] = 1;
+
+  	   jcolM[0] = 0;
 
     return 0;
 }
@@ -210,6 +265,22 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
   	   jcolM[0] = 0;
   	   jcolM[1] = 1;
     }
+
+    return 0;
+}
+
+int matIneqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
+{
+	int i;
+    int n = 1;
+
+  	   for( i = 0; i < n; i++ )
+  		   M[i] = 2.0;
+
+  	   krowM[0] = 0;
+  	   krowM[1] = 1;
+
+  	   jcolM[0] = 0;
 
     return 0;
 }
@@ -295,7 +366,7 @@ int main(int argc, char ** argv) {
   // set callbacks
   int nx0 = 2;
   int my0 = 2;
-  int mz0 = 0;
+  int mz0 = 1;
   int myl0 = 2;
   int mzl0 = 0;
 
@@ -303,20 +374,20 @@ int main(int argc, char ** argv) {
   FNNZ fnnzA = &nnzMatEqStage1;
   FNNZ fnnzB = &nnzMatEqStage2;
   FNNZ fnnzBl = &nnzMatEqLink;
-  FNNZ fnnzC = &nnzAllZero;
-  FNNZ fnnzD = &nnzAllZero;
+  FNNZ fnnzC = &nnzMatIneqStage1;
+  FNNZ fnnzD = &nnzMatIneqStage2;
   FNNZ fnnzDl = &nnzAllZero;
 
   FVEC fc = &vecObj;
   FVEC fb = &vecEqRhs;
   FVEC fbl = &vecLinkRhs;
   FVEC fclow = &vecAllZero;
-  FVEC fcupp = &vecAllZero;
+  FVEC fcupp = &vecIneqRhs;
   FVEC fxlow = &vecXlb;
   FVEC fxupp = &vecAllZero;
   FVEC ficlow = &vecAllZero;
   FVEC fixlow = &vecXlbActive;
-  FVEC ficupp = &vecAllZero;
+  FVEC ficupp = &vecIneqRhsActive;
   FVEC fixupp = &vecAllZero;
 
   FVEC fdlupp = &vecAllZero;
@@ -328,8 +399,8 @@ int main(int argc, char ** argv) {
   FMAT fA = &matEqStage1;
   FMAT fB = &matEqStage2;
   FMAT fBl = &matEqLink;
-  FMAT fC = &matAllZero;
-  FMAT fD = &matAllZero;
+  FMAT fC = &matIneqStage1;
+  FMAT fD = &matIneqStage2;
   FMAT fDl = &matAllZero;
 
   ProbData probData(nScenarios);
@@ -374,7 +445,7 @@ int main(int argc, char ** argv) {
   for( int id = 1; id <= nScenarios; id++ ) {
 	  int nx = 2;
 	  int my = 2;
-	  int mz = 0;
+	  int mz = 1;
 	  int myl = 2;
 	  int mzl = 0;
 #if LINKING_CONS
@@ -432,7 +503,9 @@ int main(int argc, char ** argv) {
   pipsIpm.go();
 
   if( rank == 0 )
-	  cout << "solving finished." << endl;
+  {
+	  cout << "solving finished; obj:" << pipsIpm.getObjective() << endl;
+  }
 
 
   // free memory

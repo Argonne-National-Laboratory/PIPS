@@ -340,7 +340,11 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
   stochNode->resMon.eDsolve.clear();
   stochNode->resMon.recDsolveTmLocal_start();
 #endif
-  solveReduced(prob, b0);
+
+  if( locmyl > 0 )
+    solveReducedLinkCons(prob, b0);
+  else
+    solveReduced(prob, b0);
 #ifdef TIMING
   stochNode->resMon.recDsolveTmLocal_stop();
 #endif

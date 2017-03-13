@@ -25,6 +25,7 @@ sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   prob_->getLocalSizes(locnx, locmy, locmz, locmyl);
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
+  assert(locmyl >= 0);
   redRhs = new SimpleVector(locnx+locmy+locmz+locmyl);
 };
 
@@ -166,7 +167,8 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
 
   assert(locnx+locmy+locmz+locmyl == b.length());
   SimpleVector& r = (*redRhs);
-  assert(r.length() <= b.length());
+  // todo changed this from <=
+  assert(r.length() == b.length());
   SparseGenMatrix& C = prob->getLocalD();
 
   ///////////////////////////////////////////////////////////////////////
@@ -179,11 +181,14 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   //           r = [b1-C^T*(zDiag)^{-1}*b3; b2; b4]
   ///////////////////////////////////////////////////////////////////////
 
-  r.copyFromArray(b.elements()); //will copy only as many elems as r has
+  //copy all elements from b except for the the residual values corresponding to z0
+  assert(locnx+locmy > 0);
+  assert(sizeof( double ) == sizeof(r[0]));
+  memcpy( &r[0], &b[0], (locnx+locmy) * sizeof( double ) );
+  memcpy( &r[locnx+locmy], &b[locnx+locmy+locmz], locmyl * sizeof( double ) );
 
   // aliases to parts (no mem allocations)
-  SimpleVector r3(&r[locnx+locmy], locmz); //r3 is used as a temp
-                                           //buffer for b3
+  SimpleVector rl(&r[locnx+locmy], locmyl);
   SimpleVector r2(&r[locnx],       locmy);
   SimpleVector r1(&r[0],           locnx);
 
@@ -191,9 +196,10 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   // compute r1 = b1 - C^T*(zDiag)^{-1}*b3
   ///////////////////////////////////////////////////////////////////////
   if(locmz>0) {
-    assert(r3.length() == zDiag->length());
-    r3.componentDiv(*zDiag);//r3 is a copy of b3
-    C.transMult(1.0, r1, -1.0, r3);
+	SimpleVector b3copy(&r[locnx+locmy+locmyl], locmz); // b3copy is used as a temp buffer for b3
+    assert(b3copy.length() == zDiag->length());
+    b3copy.componentDiv(*zDiag);//r3 is a copy of b3
+    C.transMult(1.0, r1, -1.0, b3copy);
   }
   ///////////////////////////////////////////////////////////////////////
   // r contains all the stuff -> solve for it
@@ -218,6 +224,7 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   SimpleVector b1(&b[0],           locnx);
   SimpleVector b2(&b[locnx],       locmy);
   SimpleVector b3(&b[locnx+locmy], locmz);
+  SimpleVector b4(&b[locnx+locmy+locmz], locmyl);
   b1.copyFrom(r1);
   b2.copyFrom(r2);
 
@@ -225,6 +232,9 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
     C.mult(1.0, b3, -1.0, r1);
     b3.componentDiv(*zDiag);
   }
+
+  b4.copyFrom(rl);
+
 #ifdef TIMING
   if(myRank==0 && gInnerSCsolve>=1)
     cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total

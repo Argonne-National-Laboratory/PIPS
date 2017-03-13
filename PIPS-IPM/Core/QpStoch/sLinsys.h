@@ -73,6 +73,10 @@ class sLinsys : public QpGenLinsys
 		    SimpleVector& y, 
 		    double alpha, SimpleVector& x);
 
+  /** y += alpha * Lni^T * x with linking constraints */
+  void LniTransMultLinkCons(sData *prob,
+		    SimpleVector& y,
+		    double alpha, SimpleVector& x);
 
   /** Methods that use dense matrices U and V to compute the 
    *  terms from the Schur complement.

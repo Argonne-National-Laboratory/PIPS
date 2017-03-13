@@ -115,7 +115,11 @@ void sLinsys::separateVars( OoqpVector& x_in, OoqpVector& y_in,
   StochVector& z    = dynamic_cast<StochVector&>(z_in);
   StochVector& vars = dynamic_cast<StochVector&>(vars_in);
 
-  vars.jointCopyTo(x, y, z);
+
+  if( y.vecl )
+	vars.jointCopyToLinkCons(x, y, z, y);
+  else
+    vars.jointCopyTo(x, y, z);
 }
 
 
@@ -334,7 +338,7 @@ void sLinsys::LniTransMult(sData *prob,
   assert(nx0 <= x.length());
 
   N = locnx+locmy+locmz;
-  assert( y.length() == N);
+  assert(y.length() == N);
   
   //!memopt
   SimpleVector LniTx(N);
@@ -349,13 +353,24 @@ void sLinsys::LniTransMult(sData *prob,
   R.mult(0.0, LniTx1, 1.0, x1);
   A.mult(0.0, LniTx2, 1.0, x1);
   C.mult(0.0, LniTx3, 1.0, x1);
- 
-  solver->Lsolve(LniTx); 
+
+  if (locmyl > 0)
+  {
+	SparseGenMatrix& F = prob->getLocalF();
+    SimpleVector xlink(&x[N], locmyl);
+    assert(x.length() == N + locmyl);
+
+    F.transMult(1.0, LniTx1, 1.0, xlink);
+  }
+
+  solver->Lsolve(LniTx);
   solver->Dsolve(LniTx);
 
-  y.axpy(alpha,LniTx); 
- 
+  y.axpy(alpha,LniTx);
+
 }
+
+
 /*
  * Computes res += [0 A^T C^T ]*inv(KKT)*[0;A;C] x
  */

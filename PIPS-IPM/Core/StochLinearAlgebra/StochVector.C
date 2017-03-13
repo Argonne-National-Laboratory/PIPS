@@ -167,7 +167,6 @@ StochVector::jointCopyFromLinkCons(StochVector& v1, StochVector& v2, StochVector
 }
 
 
-// todo vecl
 void 
 StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
 {
@@ -195,6 +194,44 @@ StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
   for(size_t it=0; it<children.size(); it++) {
     children[it]->jointCopyTo(*v1.children[it], 
 			      *v2.children[it], 
+			      *v3.children[it]);
+  }
+}
+
+void
+StochVector::jointCopyToLinkCons(StochVector& v1, StochVector& v2, StochVector& v3, StochVector& vl)
+{
+  assert(vl.vecl);
+
+  SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
+  SimpleVector& sv1 = dynamic_cast<SimpleVector&>(*v1.vec);
+  SimpleVector& sv2 = dynamic_cast<SimpleVector&>(*v2.vec);
+  SimpleVector& sv3 = dynamic_cast<SimpleVector&>(*v3.vec);
+  SimpleVector& svl = dynamic_cast<SimpleVector&>(*vl.vec);
+
+  int n1 = sv1.length();
+  int n2 = sv2.length();
+  int n3 = sv3.length();
+  int n4 = svl.length();
+
+  assert(n1+n2+n3+n4 == sv.length());
+  assert(sizeof(double) == sizeof(sv[0]));
+
+  if(n1>0)
+    memcpy(&sv1[0], &sv[0], n1*sizeof(double));
+
+  if(n2>0)
+    memcpy(&sv2[0], &sv[n1], n2*sizeof(double));
+
+  if(n3>0)
+    memcpy(&sv3[0], &sv[n1+n2], n3*sizeof(double));
+
+  if(n4>0)
+    memcpy(&svl[0], &sv[n1+n2+n3], n4*sizeof(double));
+
+  for(size_t it=0; it<children.size(); it++) {
+    children[it]->jointCopyTo(*v1.children[it],
+			      *v2.children[it],
 			      *v3.children[it]);
   }
 }

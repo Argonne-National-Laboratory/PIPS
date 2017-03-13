@@ -208,9 +208,10 @@ StochGenMatrix* sTreeCallbacks::createA() const
   StochGenMatrix* A = NULL;
   if (!fakedata) {
 
-	if (data->nnzBl<0)
+	if (data->fnnzBl && data->nnzBl < 0)
       data->fnnzBl(data->user_data, data->id, &data->nnzBl);
 
+	// are we at the root?
     if (np==-1) {
 
       //data->fnnzA(data->user_data, data->id, &nnzA);
@@ -218,20 +219,31 @@ StochGenMatrix* sTreeCallbacks::createA() const
         data->fnnzA(data->user_data, data->id, &data->nnzA);
       data->nnzB=0;
 
-      // todo is data->n the right size for Bl?
-      //this is the root; populate B with A's data
-      //B_0 is the A_0 from the theoretical form
-      A = new StochGenMatrix(data->id, 
-           N, MY, 
-           data->my, np, data->nnzB,
-           data->my, data->n,  data->nnzA,
-           data->myl, data->n,  data->nnzBl,
-           commWrkrs);
+      // are there linking constraints?
+      if (data->fnnzBl)
+      {
+    	// populate B with A's data B_0 is the A_0 from the theoretical form; also fill Bl
+    	// (i.e. the first block of linking constraints)
+        A = new StochGenMatrix(data->id,
+             N, MY,
+             data->my, np, data->nnzB,
+             data->my, data->n,  data->nnzA,
+             data->myl, data->n,  data->nnzBl,
+             commWrkrs);
+      }
+      else
+      {
+    	// populate B with A's data B_0 is the A_0 from the theoretical form
+        A = new StochGenMatrix(data->id,
+             N, MY,
+             data->my, np, data->nnzB,
+             data->my, data->n,  data->nnzA,
+             commWrkrs);
+      }
 
       //populate the submatrices B and Bl
       //data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fA(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
-      data->fBl(data->user_data, data->id, A->Blmat->krowM(), A->Blmat->jcolM(), A->Blmat->M());
     } else {
 
       if (data->nnzA<0)
@@ -239,21 +251,35 @@ StochGenMatrix* sTreeCallbacks::createA() const
       if (data->nnzB<0)
         data->fnnzB(data->user_data, data->id, &data->nnzB);
 
-      // todo is np the right size for Bl?
-      A = new StochGenMatrix(data->id, 
-           N, MY, 
-           data->my, np, data->nnzA, 
-           data->my, data->n,  data->nnzB,
-		   data->myl, np,  data->nnzBl,
-           commWrkrs);
-      //populate the submatrices A, B, and Bl
+      // are there linking constraints?
+      if (data->fnnzBl)
+      {
+        A = new StochGenMatrix(data->id,
+             N, MY,
+             data->my, np, data->nnzA,
+             data->my, data->n,  data->nnzB,
+	  	     data->myl, data->n,  data->nnzBl,
+             commWrkrs);
+      }
+      else
+      {
+        A = new StochGenMatrix(data->id,
+             N, MY,
+             data->my, np, data->nnzA,
+             data->my, data->n,  data->nnzB,
+             commWrkrs);
+      }
+      //populate the submatrices A, B
       data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fB(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
-      data->fBl(data->user_data, data->id, A->Blmat->krowM(), A->Blmat->jcolM(), A->Blmat->M());
 
       printf("  -- my=%d nx=%d   1st stg nx=%d nnzA=%d nnzB=%d, nnzBl=%d\n",
 	     data->my, data->n,  np, data->nnzA, data->nnzB, data->nnzBl);
     }
+
+    // populate Bl if existent
+    if (data->fBl)
+      data->fBl(data->user_data, data->id, A->Blmat->krowM(), A->Blmat->jcolM(), A->Blmat->M());
 
     for(size_t it=0; it<children.size(); it++) {
       StochGenMatrix* child = children[it]->createA();
@@ -440,14 +466,15 @@ StochVector* sTreeCallbacks::createb() const
   double* vData = ((SimpleVector*)b->vec)->elements();
   double* vDataLinkCons = NULL;
 
-  if( np == -1 )
+  if (np == -1)
      vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
 
   if (!fakedata) {
     data->fb(data->user_data, data->id, 
        vData, data->my);
 
-    if( np == -1 )
+    // at root and with linking constraints?
+    if (np == -1 && data->fbl)
       data->fbl(data->user_data, data->id,
     		vDataLinkCons, data->myl);
 
@@ -464,12 +491,10 @@ StochVector* sTreeCallbacks::createb() const
     }
 
     pos = 0;
-    if( np == -1) {
-      for(size_t i = 0; i < scens.size(); i++) {
-        scens[i]->fbl(scens[i]->user_data,scens[i]->id,
-       		  vDataLinkCons+pos, scens[i]->myl);
-        pos += scens[i]->myl;
-      }
+    // at root and with linking constraints? todo don't really know whether this is correct
+    if (np == -1 && data->fbl) {
+        scens[0]->fbl(scens[0]->user_data,scens[0]->id,
+       		  vDataLinkCons, scens[0]->myl);
     }
   }
 

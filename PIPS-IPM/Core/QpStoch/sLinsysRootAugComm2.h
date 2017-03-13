@@ -32,6 +32,7 @@ class sLinsysRootAugComm2 : public sLinsysRootComm2 {
   virtual void finalizeKKT( sData* prob, Variables* vars);
  protected:
   virtual void solveReduced( sData *prob, SimpleVector& b);
+  virtual void solveReducedLinkCons( sData *prob, SimpleVector& b);
   void solveWithIterRef( sData *prob, SimpleVector& b);
   void solveWithBiCGStab( sData *prob, SimpleVector& b);
 
