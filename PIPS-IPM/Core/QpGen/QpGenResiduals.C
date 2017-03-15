@@ -77,7 +77,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 
   prob->CTransmult( 1.0, *rQ, -1.0, *vars->z );
   //componentNorm = rQ->infnorm();
-  
+
   vars->gamma->selectNonZeros(*ixlow);
   vars->phi->selectNonZeros( *ixupp );
 

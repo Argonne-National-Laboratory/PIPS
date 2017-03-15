@@ -237,8 +237,14 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
   }
 
 #endif
+
   if (0.0 == alpha) {
     y.vec->scale( beta );
+
+    // todo next two lines newly added...are they correct?
+    for(size_t it=0; it<children.size(); it++)
+      children[it]->mult(beta, *y.children[it], alpha, *x.children[it]);
+
     return;
   } else {
     //if( alpha != 1.0 || beta != 1.0 ) {
@@ -249,8 +255,9 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 
     long long mA, nA; 
     Amat->getSize(mA,nA);
+
+    // not at root?
     if(nA>0) {
-      //not the root
       Amat->mult(1.0, yvec, alpha, *x.parent->vec);
 
 #if PRINT
@@ -281,9 +288,10 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 	}
 
 	SimpleVector& yvecl = dynamic_cast<SimpleVector&>(*y.vecl);
-
+#if PRINT
 	 yvecl[0] = 0.0;
 	 yvecl[1] = 0.0;
+#endif
 	if( iAmSpecial )
 	  Blmat->mult(beta, yvecl, alpha, xvec);
 	else
@@ -292,7 +300,9 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
     for(size_t it=0; it<children.size(); it++)
 	   children[it]->mult2(beta, *y.children[it], alpha, *x.children[it], yvecl);
 
+#if PRINT
     std::cout << "ylout: " << yvecl[0] << " " << yvecl[1] << "\n";
+#endif
 
 	if(iAmDistrib) {
 	  // sum up linking constraints vectors
@@ -349,8 +359,13 @@ void StochGenMatrix::mult2( double beta,  OoqpVector& y_,
   Blmat->mult(1.0, yparentl_, alpha, xvec);
   Amat->mult(1.0, *y.vec, alpha, *x.parent->vec);
 
+  // not implemented
+  assert(children.size() == 0);
+
+#if 0
   for( size_t it=0; it<children.size(); it++ )
     children[it]->mult2(beta, *y.children[it], alpha, *x.children[it], yvec);
+#endif
 
 #if PRINT
   cout << "outchild: " << yvec[0] << " " << yvec[1] << "\n";
@@ -377,15 +392,14 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
     int rank; MPI_Comm_rank(mpiComm, &rank);
     if(rank>0) iAmSpecial = 0;
   }
-
+#if PRINT
   int rank; MPI_Comm_rank(mpiComm, &rank);
   cout << "entering!!! rank: " << rank << " children " << children.size() << "\n";
-
+#endif
 
   // with linking constraints?
   if( Blmat )
   {
-
     assert(x.vecl);
     SimpleVector& xvecl = dynamic_cast<SimpleVector&>(*x.vecl);
 #if PRINT
@@ -401,7 +415,6 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   xvecl[0] = 1.0;
   xvecl[1] = 1.0;
 #endif
-
 
     if( iAmSpecial )
     {
@@ -474,9 +487,10 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
   assert(nA>0);
 #endif
 
+#if PRINT
   int rank; MPI_Comm_rank(mpiComm, &rank);
   cout << "child entering rank: " << rank << " children " << children.size() << "\n\n";
-#if PRINT
+
   //std::cout << "mult2; id: " << id ;
   	//  std::cout << "amat0: " <<  (Amat->M())[0] <<  "amat1: " <<  (Amat->M())[1] << "\n";
 
@@ -496,7 +510,7 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
     int rank; MPI_Comm_rank(mpiComm, &rank);
     if(rank>0) iAmSpecial = 0;
   }
-#if PRINT && 0
+#if PRINT
   std::cout << "mult2; id: " << id ;
   std::cout << "bmat0: " <<  (Bmat->M())[0] <<  "bmat1: " <<  (Bmat->M())[1] << "\n";
 #endif

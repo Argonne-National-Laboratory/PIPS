@@ -193,9 +193,14 @@ public:
 
   virtual void transMult ( double beta,   OoqpVector& y,
                            double alpha,  OoqpVector& x ){};
+
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent, OoqpVector& xveclParent){};
+		    OoqpVector& yvecParent, OoqpVector& xvecl ){};
+
+  virtual void transMult2 ( double beta,   StochVector& y,
+		    double alpha,  StochVector& x,
+		    OoqpVector& yvecParent ){};
 
   virtual double abmaxnorm(){return 0.0;};
 

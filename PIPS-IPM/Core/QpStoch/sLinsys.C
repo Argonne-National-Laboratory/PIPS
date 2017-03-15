@@ -514,9 +514,6 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
   SimpleVector col(N);
 
-  // todo
-  cout << "locmyl: " << locmyl << "\n";
-
   for(int it=0; it<nxP; it++) {
 
     double* pcol = &col[0];
@@ -548,7 +545,6 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
        // SC+=F*x
        F.mult( 1.0, &SC[it][locnx+locmy],     1,
         		 -1.0, &col[0],      1);
-
   }
 
   // do we have linking equality constraints?

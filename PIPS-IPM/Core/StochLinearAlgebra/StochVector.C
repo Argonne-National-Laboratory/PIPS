@@ -207,7 +207,7 @@ StochVector::jointCopyToLinkCons(StochVector& v1, StochVector& v2, StochVector& 
   SimpleVector& sv1 = dynamic_cast<SimpleVector&>(*v1.vec);
   SimpleVector& sv2 = dynamic_cast<SimpleVector&>(*v2.vec);
   SimpleVector& sv3 = dynamic_cast<SimpleVector&>(*v3.vec);
-  SimpleVector& svl = dynamic_cast<SimpleVector&>(*vl.vec);
+  SimpleVector& svl = dynamic_cast<SimpleVector&>(*vl.vecl);
 
   int n1 = sv1.length();
   int n2 = sv2.length();

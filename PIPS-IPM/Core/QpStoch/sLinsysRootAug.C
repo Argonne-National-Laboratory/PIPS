@@ -821,15 +821,22 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     int* jcolF = F.jcolM();
 
     int iKkt = locnx + locmy;
-    for( int i = 0; i < locmyl; i++, iKkt++ ) {
+    for( int i = 0; i < locmyl; ++i, ++iKkt ) {
 
-      for( p = krowF[i], pend = krowF[i+1]; p < pend; p++ ) {
+      for( p = krowF[i], pend = krowF[i+1]; p < pend; ++p ) {
         j = jcolF[p];
         val = dF[p];
         dKkt[iKkt][j] += val;
         dKkt[j][iKkt] += val;
       }
     }
+
+
+    // assert symmetry todo delete
+    for( int k = 0; k < locnx + locmy + locmyl; k++)
+   	   for( int k2 = 0; k2 < locnx + locmy + locmyl; k2++)
+   	       assert((dKkt[k][k2] - dKkt[k2][k]) <= 0.0001 && (dKkt[k2][k] - dKkt[k][k2]) <= 0.0001);
+
   }
 
   /////////////////////////////////////////////////////////////

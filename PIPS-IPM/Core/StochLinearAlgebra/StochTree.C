@@ -566,7 +566,6 @@ StochSymMatrix* StochTree::createQ() const
 
 StochGenMatrix* StochTree::createA() const
 {
-
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL) {
     return new StochGenDummyMatrix(id());

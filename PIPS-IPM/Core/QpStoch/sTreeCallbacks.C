@@ -199,7 +199,6 @@ StochSymMatrix* sTreeCallbacks::createQ() const
 
 StochGenMatrix* sTreeCallbacks::createA() const
 {
-
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL) {
     return new StochGenDummyMatrix(id());
@@ -241,7 +240,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
              commWrkrs);
       }
 
-      //populate the submatrices B and Bl
+      //populate submatrix B
       //data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fA(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
     } else {
