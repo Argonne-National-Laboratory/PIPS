@@ -5,7 +5,7 @@
 
 #include "mpi.h"
 
-#define LINKING_CONS 0
+#define LINKING_CONS 1
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
@@ -315,20 +315,30 @@ int main(int argc, char ** argv) {
   int nx0 = 2;
   int my0 = 2;
   int mz0 = 0;
-  int myl0 = 0;
+
   int mzl0 = 0;
 
   FNNZ fnnzQ = &nnzAllZero;
   FNNZ fnnzA = &nnzMatEqStage1;
   FNNZ fnnzB = &nnzMatEqStage2;
-  FNNZ fnnzBl = &nnzAllZero;//&nnzMatEqLink;
+
   FNNZ fnnzC = &nnzAllZero;//&nnzMatIneqStage1;
   FNNZ fnnzD = &nnzAllZero;//&nnzMatIneqStage2;
   FNNZ fnnzDl = &nnzAllZero;
 
+#if LINKING_CONS
+  FNNZ fnnzBl = &nnzMatEqLink;
+  FVEC fbl = &vecLinkRhs;
+  FMAT fBl = &matEqLink;
+#else
+  FNNZ fnnzBl = &nnzAllZero;
+  FVEC fbl = &vecAllZero;
+  FMAT fBl = &matAllZero;
+#endif
+
   FVEC fc = &vecObj;
   FVEC fb = &vecEqRhs;
-  FVEC fbl = &vecAllZero;//&vecLinkRhs;
+
   FVEC fclow = &vecAllZero;
   FVEC fcupp = &vecAllZero;//&vecIneqRhs;
   FVEC fxlow = &vecXlb;
@@ -346,7 +356,6 @@ int main(int argc, char ** argv) {
   FMAT fQ = &matAllZero;
   FMAT fA = &matEqStage1;
   FMAT fB = &matEqStage2;
-  FMAT fBl = &matAllZero;//&matEqLink;
   FMAT fC = &matAllZero;//&matIneqStage1;
   FMAT fD = &matAllZero;//&matIneqStage2;
   FMAT fDl = &matAllZero;
@@ -354,6 +363,8 @@ int main(int argc, char ** argv) {
   ProbData probData(nScenarios);
 
 #if LINKING_CONS
+
+  int myl0 = 1;
   //build the problem tree
   StochInputTree::StochInputNode dataLinkCons(&probData, 0,
 				      nx0, my0, myl0, mz0, // mzl0
@@ -371,6 +382,8 @@ int main(int argc, char ** argv) {
 
   StochInputTree* root = new StochInputTree(dataLinkCons);
 #else
+
+  int myl0 = 0;
   //build the problem tree
   StochInputTree::StochInputNode data(&probData, 0,
 				      nx0,my0,mz0, //myl0, mzl0
@@ -394,9 +407,11 @@ int main(int argc, char ** argv) {
 	  int nx = 2;
 	  int my = 2;
 	  int mz = 0;
-	  int myl = 0;
+
 	  int mzl = 0;
 #if LINKING_CONS
+
+	  int myl = 1;
 	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
 					nx, my, myl, mz, // mzl,
 					fQ, fnnzQ, fc,
@@ -413,6 +428,8 @@ int main(int argc, char ** argv) {
 
 	  root->AddChild(new StochInputTree(dataLinkConsChild));
 #else
+	  int myl = 0;
+
 	  StochInputTree::StochInputNode data(&probData, id,
 					nx, my, mz, //myl, mzl
 					fQ, fnnzQ, fc,
