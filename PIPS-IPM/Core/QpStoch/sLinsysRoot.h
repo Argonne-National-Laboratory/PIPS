@@ -70,7 +70,7 @@ class sLinsysRoot : public sLinsys {
 		    int row, int col, 
 		    int rowExtent, int colExtent);
   void submatrixAllReduce(DenseSymMatrix* A, 
-			  int row, int col, int drow, int dcol,
+			  int startRow, int startCol, int nRows, int nCols,
 			  MPI_Comm comm);
  protected: //buffers
 

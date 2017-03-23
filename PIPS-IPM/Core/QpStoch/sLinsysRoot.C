@@ -101,6 +101,19 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->factor2(prob->children[c], vars);
   }
 
+  //todo deleteme
+  int myrank; MPI_Comm_rank(mpiComm, &myrank);
+  cout << children.size() << " children on " << myrank << endl << endl;
+  if( myrank )
+  {
+	 volatile double x = 100.0;
+	 for (int var = 0; var < 1000; ++var) {
+       x /= (x - 10.0);
+       if( x <= 0.0)
+    	   x = 100.0;
+	}
+  }
+
   for(size_t c=0; c<children.size(); c++) {
 #ifdef STOCH_TESTING
     g_scenNum=c;
@@ -115,6 +128,15 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
 
+
+  cout << "dkkt after:" <<  endl;
+  for( int k = 0; k < locnx + locmy + locmyl; k++)
+  {
+    	   for( int k2 = 0; k2 < locnx + locmy + locmyl; k2++)
+      cout << myrank << "Kkt[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"                            ";
+ 	   cout << endl;
+  }
+
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
   stochNode->resMon.recReduceTmLocal_start();
@@ -123,6 +145,28 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
  #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
 #endif  
+
+  if( myrank )
+  {
+	 volatile double x = 100.0;
+	 for (int var = 0; var < 1000; ++var) {
+       x /= (x - 10.0);
+       if( x <= 0.0)
+    	   x = 100.0;
+	}
+  }
+
+
+  cout << "dkkt after ALL REDUCE:" <<  endl <<  endl;
+  for( int k = 0; k < locnx + locmy + locmyl; k++)
+  {
+    	   for( int k2 = 0; k2 < locnx + locmy + locmyl; k2++)
+      cout << myrank << "[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"             ";
+ 	   cout << endl;
+  }
+
+
+
   finalizeKKT(prob, vars);
   
   //printf("(%d, %d) --- %f\n", PROW,PCOL, kktd[PROW][PCOL]);
@@ -484,7 +528,30 @@ void sLinsysRoot::reduceKKT()
   DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt); 
 
   //parallel communication
-  if(iAmDistrib) submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
+  if (iAmDistrib) {
+    submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
+	if (locmyl > 0)
+	{
+	   int locNxMy = locnx + locmy;
+	   int locNxMyMyl = locnx + locmy + locmyl;
+
+	   assert(kktd->size() == locNxMyMyl);
+
+	   // reduce upper right part
+	   submatrixAllReduce(kktd, 0, locNxMy, locnx, locNxMyMyl - locNxMy, mpiComm);
+
+	   // preserve symmetrytodo memopt!
+	   double ** M = kktd->mStorage->M;
+	   for( int k = locNxMy; k < locNxMyMyl; k++ ){
+		 for( int k2 = 0; k2 < locnx; k2++ ){
+		   M[k][k2] = M[k2][k];
+		 }
+	   }
+
+	   // reduce lower diagonal part
+	   submatrixAllReduce(kktd, locNxMy, locNxMy, locNxMyMyl - locNxMy, locNxMyMyl - locNxMy, mpiComm);
+	}
+  }
 }
 
 
@@ -542,27 +609,32 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 
 
 #define CHUNK_SIZE 1024*1024*64 //doubles  = 128 MBytes (maximum)
+// todo delete
+#if 0
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A, 
 				     int row, int col, int drow, int dcol,
 				     MPI_Comm comm)
 {
   double ** M = A->mStorage->M;
   int n = A->mStorage->n;
-#ifdef DEBUG 
+
   assert(n >= row+drow);
   assert(n >= col+dcol);
-#endif
+
   int iErr;
   int chunk_size = CHUNK_SIZE / n * n; 
   chunk_size = min(chunk_size, n*n);
   double* chunk = new double[chunk_size];
 
   int rows_in_chunk = chunk_size/n;
+
   int iRow=row;
   do {
 
     if(iRow+rows_in_chunk > drow)
       rows_in_chunk = drow-iRow;
+
+    assert(rows_in_chunk >= 0);
 
     iErr=MPI_Allreduce(&M[iRow][0], 
 		       chunk, rows_in_chunk*n, 
@@ -573,8 +645,8 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
     for(int i=iRow; i<iRow+rows_in_chunk; i++) {
 
       int shft = (i-iRow)*n;
-      for(int j=col; j<col+dcol; j++)
-	M[i][j] = chunk[shft+j];
+      for (int j=col; j<col+dcol; j++)
+	    M[i][j] = chunk[shft+j];
     }
     iRow += rows_in_chunk;
   
@@ -582,7 +654,70 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
 
   delete[] chunk;
 }
+#endif
 
+
+
+void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
+		             int startRow, int startCol, int nRows, int nCols,
+				     MPI_Comm comm)
+{
+  double ** M = A->mStorage->M;
+  int n = A->mStorage->n;
+
+  assert(nRows > 0);
+  assert(nCols > 0);
+  assert(startRow >= 0);
+  assert(startCol >= 0);
+
+  int endRow = startRow + nRows;
+  int endCol = startCol + nCols;
+
+  assert(n >= endRow);
+  if( n < endCol )
+	  cout << n << " " <<  endCol << endl;
+  assert(n >= endCol);
+
+  int iErr;
+  int chunk_size = (CHUNK_SIZE / n) * n;
+  chunk_size = min(chunk_size, n*nRows);
+
+  double* chunk = new double[chunk_size];
+
+  int rows_in_chunk = chunk_size/n;
+
+  cout << "rows_in_chunk " << rows_in_chunk << endl;
+
+  int iRow=startRow;
+
+  // main loop
+  do {
+
+    if( iRow + rows_in_chunk > endRow )
+      rows_in_chunk = endRow - iRow;
+
+    assert(rows_in_chunk > 0);
+
+    iErr=MPI_Allreduce(&M[iRow][0], chunk, rows_in_chunk*n, MPI_DOUBLE, MPI_SUM, comm);
+
+    assert(iErr==MPI_SUCCESS);
+
+    int shift = 0;
+
+    // copy into M
+    for( int i = iRow; i < iRow + rows_in_chunk; i++ ) {
+      for( int j = startCol; j < endCol; j++ )
+	    M[i][j] = chunk[shift+j];
+
+      // shift one row forward
+      shift += n;
+    }
+    iRow += rows_in_chunk;
+
+  } while( iRow < endRow );
+
+  delete[] chunk;
+}
 
 
 #ifdef STOCH_TESTING

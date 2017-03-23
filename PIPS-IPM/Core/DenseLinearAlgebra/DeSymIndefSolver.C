@@ -91,6 +91,7 @@ void DeSymIndefSolver::matrixChanged()
 
   int n = mStorage->n;
 
+
   if (sparseMat) {
     std::fill(mStorage->M[0],mStorage->M[0]+n*n,0.);
 
@@ -103,7 +104,23 @@ void DeSymIndefSolver::matrixChanged()
         mStorage->M[i][col] = sM[k];
       }
     }
+    assert(0);
   }
+
+  for(int k = 0; k < n; k++)
+  {
+	   for( int k2 = 0; k2 < n; k2++)
+	   {
+    // cout << "DESYM[" << k << "][" << k2 << "] = " << mStorage->M[k][k2] <<"        ";
+		   cout  << mStorage->M[k][k2] <<  "  ";
+		   //todo
+    // assert(mStorage->M[k][k2] == mStorage->M[k2][k]);
+	   }
+	   cout << endl;
+
+  }
+
+  cout << "AFTER: \n\n";
 
   //query the size of workspace
   lwork=-1;
@@ -123,6 +140,17 @@ void DeSymIndefSolver::matrixChanged()
   //factorize
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, work, &lwork, &info );
+
+
+  for(int k = 0; k < n; k++)
+  {
+	  cout << "perm: " <<  ipiv[k] << "    ";
+	   for( int k2 = 0; k2 < n; k2++)
+  //   cout << "DESYM[" << k << "][" << k2 << "] = " << mStorage->M[k][k2] <<"        ";
+		   cout  << mStorage->M[k][k2] <<  "  ";
+	   cout << endl;
+
+  }
 
 #ifdef TIMING_FLOPS
   HPM_Stop("DSYTRFFact");

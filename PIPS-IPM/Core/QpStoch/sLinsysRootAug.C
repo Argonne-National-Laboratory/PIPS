@@ -757,6 +757,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   //////////////////////////////////////////////////////
 
 
+
   /////////////////////////////////////////////////////////////
   // update the KKT with Q (DO NOT PUT DIAG)
   /////////////////////////////////////////////////////////////
@@ -836,6 +837,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     for( int k = 0; k < locnx + locmy + locmyl; k++)
    	   for( int k2 = 0; k2 < locnx + locmy + locmyl; k2++)
    	       assert((dKkt[k][k2] - dKkt[k2][k]) <= 0.0001 && (dKkt[k2][k] - dKkt[k][k2]) <= 0.0001);
+
 
   }
 

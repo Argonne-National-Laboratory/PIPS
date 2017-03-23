@@ -330,7 +330,7 @@ void Ma27Solver::solve( OoqpVector& rhs_in )
       this->setThresholdPivoting(tp);
 
       if( gOoqpPrintLevel >= 10 ) {
-	cout << "Setting ThresholdPivoting parameter to " 
+	cout << "Ma27: Setting ThresholdPivoting parameter to "
 	     << this->thresholdPivoting()
 	     << " for future factorizations" << endl;
       }

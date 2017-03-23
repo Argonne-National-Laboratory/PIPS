@@ -356,9 +356,10 @@ void sLinsys::LniTransMult(sData *prob,
 
   if (locmyl > 0)
   {
+	int nxMyMzP = x.length() - locmyl;
+
 	SparseGenMatrix& F = prob->getLocalF();
-    SimpleVector xlink(&x[N], locmyl);
-    assert(x.length() == N + locmyl);
+    SimpleVector xlink(&x[nxMyMzP], locmyl);
 
     F.transMult(1.0, LniTx1, 1.0, xlink);
   }
@@ -506,9 +507,14 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
   int N, nxP, NP;
   A.getSize(N, nxP); assert(N==locmy);
+
+  int nxMyP = locmy + nxP;
+
   NP = SC.size(); assert(NP>=nxP);
 
   if(nxP==-1) C.getSize(N,nxP);
+
+  // todo does that still hold for linking constraints?
   if(nxP==-1) nxP = NP;
   N = locnx+locmy+locmz;
 
@@ -523,7 +529,10 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     A.fromGetDense(0, it, &col[locnx],       1, locmy, 1);
     C.fromGetDense(0, it, &col[locnx+locmy], 1, locmz, 1);
 
+    //todo deleteme
+    cout << "1 call Ma27" << endl;
     solver->solve(col);
+    cout << "1 after Ma27 call" << endl;
 
     //here we have colGi = inv(H_i)* it-th col of Gi^t
     //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
@@ -542,16 +551,18 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
     // do we have linking equality constraints?
     if( locmyl > 0 )
+    {
        // SC+=F*x
-       F.mult( 1.0, &SC[it][locnx+locmy],     1,
+       F.mult( 1.0, &SC[it][nxMyP],     1,
         		 -1.0, &col[0],      1);
+    }
   }
 
   // do we have linking equality constraints?
   if( locmyl > 0 )
   {
-	int locNxMyMz = locnx+locmy+locmz;
-	int locNxMy = locnx+locmy;
+	int nxMyMzLoc = locnx+locmy+locmz;
+	int nxMyLoc = locnx+locmy;
 
     // do column-wise multiplication for columns containing Ft (F transposed)
     for(int it=0; it<locmyl; it++) {
@@ -561,30 +572,40 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
       // get it'th column from Ft (i.e., it'th row from F)
       F.fromGetDense(it, 0, &col[0],           1, 1, locnx);
 
-      for(int it1=locnx; it1< locNxMyMz; it1++) pcol[it1]=0.0;
 
+
+      for(int it1=locnx; it1< nxMyMzLoc; it1++) pcol[it1]=0.0;
+
+      //todo deleteme
+cout << "call Ma27" << endl;
       solver->solve(col);
+      cout << "after Ma27 call" << endl;
 
-      R.transMult( 1.0, &SC[it + locNxMy][0],   1,
+      R.transMult( 1.0, &SC[it + nxMyP][0],   1,
        	  -1.0, &col[0],      1);
-      A.transMult( 1.0, &SC[it + locNxMy][0],   1,
+      A.transMult( 1.0, &SC[it + nxMyP][0],   1,
   		  -1.0, &col[locnx],  1);
-      C.transMult( 1.0, &SC[it + locNxMy][0],   1,
-  		  -1.0, &col[locNxMy], 1);
+      C.transMult( 1.0, &SC[it + nxMyP][0],   1,
+  		  -1.0, &col[nxMyLoc], 1);
 
       // here we have colGi = inv(H_i)* (it + locnx + locmy)-th col of Gi^t
       // now do colSC = Gi * inv(H_i)* (it + locnx + locmy)-th col of Gi^t
 
       // SC+=F*x
-      F.mult( 1.0, &SC[it + locNxMy][locNxMy],   1,
+      cout << "add to " <<  it + nxMyP <<  " " << it + nxMyP << endl;
+      cout << "val : " << col[0] << endl;
+      F.mult( 1.0, &SC[it + nxMyP][nxMyP],   1,
   		  -1.0, &col[0],  1);
     }
   }
 
-#if 0
+#if 1
   for( int k = 0; k < NP; k++)
+  {
   	   for( int k2 = 0; k2 < NP; k2++)
-  cout << "SC[" << k << "][" << k2 << "] = " << SC[k][k2] <<"\n";
+       cout << "SC[" << k << "][" << k2 << "] = " << SC[k][k2] <<"   ";
+  	   cout << endl;
+  }
 #endif
 
 

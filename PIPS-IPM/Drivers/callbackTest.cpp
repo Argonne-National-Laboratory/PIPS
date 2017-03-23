@@ -35,7 +35,7 @@ extern "C" {
 int nnzMatEqStage1(void* user_data, int id, int* nnz)
 {
 	if( id == 0 )
-		*nnz = 3;
+		*nnz = 2;
 	else
 		*nnz = 3;
 
@@ -65,13 +65,18 @@ int nnzMatEqStage2(void* user_data, int id, int* nnz)
 
 int nnzMatIneqStage2(void* user_data, int id, int* nnz)
 {
-		*nnz = 1;
+    *nnz = 1;
 	return 0;
 }
 
 int nnzMatEqLink(void* user_data, int id, int* nnz)
 {
-	*nnz = 1;
+	*nnz = 3;
+
+	if( id == 2 )
+		*nnz = 4;
+
+
 
 	return 0;
 }
@@ -167,7 +172,9 @@ int vecLinkRhs(void* user_data, int id, double* vec, int len)
 		vec[i] = 6.0;
 #endif
 
-	vec[0] = 3.0;
+	//vec[0] = 3.0;
+	vec[0] = 6.0;
+	vec[1] = 4.0;
 	return 0;
 }
 
@@ -186,18 +193,34 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
 	int i;
 #if 1
-    int n = 3;
+	if( id == 0 )
+	{
+		M[0] = 2.0;
+		M[1] = 7.0;
 
-  	   for( i = 0; i < n; i++ )
-  		   M[i] = i + 2.0;
+		   krowM[0] = 0;
+		   krowM[1] = 1;
+		   krowM[2] = 2;
 
-  	   krowM[0] = 0;
-  	   krowM[1] = 1;
-  	   krowM[2] = 3;
 
-  	   jcolM[0] = 0;
-  	   jcolM[1] = 0;
-  	   jcolM[2] = 1;
+		   jcolM[0] = 0;
+		   jcolM[1] = 1;
+	}
+	else
+	{
+		int n = 3;
+
+		   for( i = 0; i < n; i++ )
+			   M[i] = i + 2.0;
+
+		   krowM[0] = 0;
+		   krowM[1] = 1;
+		   krowM[2] = 3;
+
+		   jcolM[0] = 0;
+		   jcolM[1] = 0;
+		   jcolM[2] = 1;
+	}
 #else
   	 int n = 2;
 
@@ -290,14 +313,53 @@ int matEqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
 
 
+if( id == 2 )
+{
+	  M[0] = 1.0;
+	  M[1] = 1.0;
+
+	  M[2] = 1.0;
+
+	  M[3] = 1.0;
 
 
+		       krowM[0] = 0;
+		       krowM[1] = 2;
+		       krowM[2] = 4;
+
+		       jcolM[0] = 1;
+		       jcolM[1] = 3;
+
+		       jcolM[2] = 2;
+
+		       jcolM[3] = 3;
+}
+else
+{
+
+	   M[0] = 1.0;
+	   M[1] = 1.0;
+
+	   M[2] = 1.0;
+
+	       krowM[0] = 0;
+	       krowM[1] = 2;
+	       krowM[2] = 3;
+
+	       jcolM[0] = 0;
+	       jcolM[1] = 1;
+
+	       jcolM[2] = 0;
+}
+
+#if 0
        M[0] = 1.0;
 
        krowM[0] = 0;
        krowM[1] = 1;
 
        jcolM[0] = 0;
+#endif
 
     return 0;
 }
@@ -314,7 +376,7 @@ int main(int argc, char ** argv) {
   // set callbacks
   int nx0 = 2;
   int my0 = 2;
-  int mz0 = 0;
+  int mz0 = 1;
 
   int mzl0 = 0;
 
@@ -322,8 +384,8 @@ int main(int argc, char ** argv) {
   FNNZ fnnzA = &nnzMatEqStage1;
   FNNZ fnnzB = &nnzMatEqStage2;
 
-  FNNZ fnnzC = &nnzAllZero;//&nnzMatIneqStage1;
-  FNNZ fnnzD = &nnzAllZero;//&nnzMatIneqStage2;
+  FNNZ fnnzC = &nnzMatIneqStage1;//FNNZ fnnzC = &nnzAllZero;//&nnzMatIneqStage1;
+  FNNZ fnnzD = &nnzMatIneqStage2;//FNNZ fnnzD = &nnzAllZero;//&nnzMatIneqStage2;
   FNNZ fnnzDl = &nnzAllZero;
 
 #if LINKING_CONS
@@ -340,12 +402,12 @@ int main(int argc, char ** argv) {
   FVEC fb = &vecEqRhs;
 
   FVEC fclow = &vecAllZero;
-  FVEC fcupp = &vecAllZero;//&vecIneqRhs;
+  FVEC fcupp = &vecIneqRhs;//FVEC fcupp = &vecAllZero;
   FVEC fxlow = &vecXlb;
   FVEC fxupp = &vecAllZero;
   FVEC ficlow = &vecAllZero;
   FVEC fixlow = &vecXlbActive;
-  FVEC ficupp = vecAllZero;//&vecIneqRhsActive;
+  FVEC ficupp = &vecIneqRhsActive;//FVEC ficupp = vecAllZero;
   FVEC fixupp = &vecAllZero;
 
   FVEC fdlupp = &vecAllZero;
@@ -356,15 +418,15 @@ int main(int argc, char ** argv) {
   FMAT fQ = &matAllZero;
   FMAT fA = &matEqStage1;
   FMAT fB = &matEqStage2;
-  FMAT fC = &matAllZero;//&matIneqStage1;
-  FMAT fD = &matAllZero;//&matIneqStage2;
+  FMAT fC = &matIneqStage1;//FMAT fC = &matAllZero;//
+  FMAT fD = &matIneqStage2;//FMAT fD = &matAllZero;//
   FMAT fDl = &matAllZero;
 
   ProbData probData(nScenarios);
 
 #if LINKING_CONS
 
-  int myl0 = 1;
+  int myl0 = 2;
   //build the problem tree
   StochInputTree::StochInputNode dataLinkCons(&probData, 0,
 				      nx0, my0, myl0, mz0, // mzl0
@@ -406,12 +468,14 @@ int main(int argc, char ** argv) {
   for( int id = 1; id <= nScenarios; id++ ) {
 	  int nx = 2;
 	  int my = 2;
-	  int mz = 0;
+	  int mz = 1;
 
 	  int mzl = 0;
 #if LINKING_CONS
 
-	  int myl = 1;
+	  int myl = 2;
+	  if( id == 2 )
+		  nx += 2;
 	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
 					nx, my, myl, mz, // mzl,
 					fQ, fnnzQ, fc,
