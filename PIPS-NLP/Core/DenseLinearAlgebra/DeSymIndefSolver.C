@@ -6,7 +6,7 @@
 #include "DeSymIndefSolver.h"
 #include "SimpleVector.h"
 #include <cassert>
-
+#include <cmath>
 #include "DenseSymMatrix.h"
 #include "DenseGenMatrix.h"
 #include "stdlib.h"
@@ -157,7 +157,7 @@ for(int k=0; k<n; k++) {
   double d = mStorage->M[k][k];
   if(ipiv[k] < 0) {
    if(t==0) {
-     t=abs(mStorage->M[k+1][k]);
+     t=fabs(mStorage->M[k+1][k]);
      d=(d/t)*mStorage->M[k+1][k+1]-t;
    }
    else {
