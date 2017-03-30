@@ -11,7 +11,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Mo
 if(CMAKE_BUILD_TYPE)
   message("CMake build type is ${CMAKE_BUILD_TYPE}")
   message("Build type default flags are: ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
+  set(CMAKE_CXX_FLAGS "-pg  ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
+
 else()
   message("CMAKE_BUILD_TYPE not set!")
 endif(CMAKE_BUILD_TYPE)
@@ -248,6 +249,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 
   #MA86 is not needed at this time
   #find_library(MA86_LIBRARY hsl_ma86 PATHS ${MA86_DIR}/lib)
+  set(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
 
   #PARDISO Solver
   set(PARDISO_DIR ${SHARED_DIR}/PARDISO/src)

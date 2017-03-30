@@ -7,7 +7,8 @@ import MPI
 #     x2^2 + x4*x1 < 6
 # x1, x2 , x3, x4 free variables
 
-include("../../JuliaInterface/ParPipsNlp.jl")
+#include("../../JuliaInterface/ParPipsNlp.jl")
+include("/Users/frank/.julia/v0.4/StructJuMPSolverInterface/src/pips_parallel_cfunc.jl")
 
 using ParPipsNlp
 
@@ -359,4 +360,4 @@ function main()
     MPI.Finalize()
 end
 
-main()
+#main()

@@ -105,8 +105,8 @@ int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
 			col_lb[1] = -INFINITY;
 			col_ub[0] = INFINITY;
 			col_ub[1] = INFINITY;
-			row_lb[0] = 100;
-			row_ub[0] = 100;
+			row_lb[0] = 70;
+			row_ub[0] = 70;
 		}
 		else if(row ==1 || row == 2)
 		{

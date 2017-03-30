@@ -7,7 +7,7 @@
 #include "DeSymIndefSolver.h"
 #include "SimpleVector.h"
 #include <cassert>
-
+#include <cmath>
 #include "DenseSymMatrix.h"
 #include "DenseGenMatrix.h"
 #include "stdlib.h"
