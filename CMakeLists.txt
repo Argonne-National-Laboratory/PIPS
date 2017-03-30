@@ -46,6 +46,36 @@ if(WITH_VERBOSE)
 	add_definitions(-DVERBOSE)
 endif()
 
+# DOCUMENTATION
+
+# SO FAR ONLY FOR PIPS-NLP
+if (BUILD_PIPS_DOC)
+  find_package(Doxygen)
+  option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" ${DOXYGEN_FOUND})
+endif()
+
+if(BUILD_DOCUMENTATION)
+  if(NOT DOXYGEN_FOUND)
+    message(FATAL_ERROR "Doxygen is needed to build the documentation.")
+  endif()
+  # GENERATING FOR PIPS-NLP
+  set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/PIPS-NLP/Docs/Doxyfile.in)
+  set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/PIPS-NLP/Doxyfile)
+
+  configure_file(${doxyfile_in} ${doxyfile} @ONLY)
+
+  add_custom_target(doc
+    COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating API documentation with Doxygen"
+    VERBATIM)
+
+  install(DIRECTORY
+    ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+endif()
+
+
+
 # PIPS-IPM and PIPS-NLP require OpenMP
 if (BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   find_package(OpenMP)
@@ -132,7 +162,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(CMAKE_CXX_COMPILER "mpicxx")
 	set(IS_MACOS TRUE)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
-set(CMAKE_CXX_FLAGS "-cxx=icpc ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 add_definitions(-DTIMING -DSTOCH_TESTING)
 
