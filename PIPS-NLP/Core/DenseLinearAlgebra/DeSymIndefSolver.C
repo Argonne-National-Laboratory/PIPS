@@ -161,6 +161,15 @@ if(gSymLinearAlgSolverForDense==1){
       gwindow=new double[1];
     }
   }
+  static bool dump=true;
+  if(gmyid==0 && dump==true) {
+    printf("Dumping 1stageM.dmp\n");
+    FILE *fp=fopen("1ststageM.dmp","w");
+    fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&mStorage->M[0][0], sizeof(double), n*n, fp);
+    fclose(fp);
+    dump=false;
+  } 
   if(gmyid_node==0) {
     FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
       ipiv, work, &lwork, &info );
@@ -410,6 +419,15 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
 #ifdef TIMING_FLOPS
   HPM_Start("DSYTRSSolve");
 #endif
+  static bool dump=true;
+  if(gmyid==0 && dump==true) {
+    printf("Dumping 1stageRHS.dmp\n");
+    FILE *fp=fopen("1ststageRHS.dmp","w");
+    fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&sv[0], sizeof(double), n, fp);
+    fclose(fp);
+    dump=false;
+  } 
 
   FNAME(dsytrs)( &fortranUplo, &n, &one,	&mStorage->M[0][0],	&n,
 	   ipiv, &sv[0],	&n,	&info);
@@ -417,6 +435,15 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
 #ifdef TIMING_FLOPS
   HPM_Stop("DSYTRSSolve");
 #endif
+  static bool dump1=true;
+  if(gmyid==0 && dump1==true) {
+    printf("Dumping 1stageSol.dmp\n");
+    FILE *fp=fopen("1ststageSol.dmp","w");
+    fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&sv[0], sizeof(double), n, fp);
+    fclose(fp);
+    dump1=false;
+  } 
   assert(info==0);
 }
 
