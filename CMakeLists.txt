@@ -33,6 +33,13 @@ message(STATUS "BUILD_PIPS_S=${BUILD_PIPS_S}")
 message(STATUS "BUILD_PIPS_IPM=${BUILD_PIPS_IPM}")
 message(STATUS "BUILD_PIPS_NLP=${BUILD_PIPS_NLP}")
 
+#with dumping matrices 1st stage (and global soon)
+
+if(DUMP)
+  add_definitions(-DDUMP)
+endif()
+
+
 #with testing of (selected) executables
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
