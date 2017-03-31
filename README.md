@@ -32,7 +32,7 @@ Developed by:
  * Victor Zavala - Argonne National Laboratory and Univ. of Wisconsin-Madison
  * Cosmin G. Petra - Lawrence Livermore / Argonne National Laboratory	 
 
-# INSTALATION Instructions
+# INSTALLATION Instructions
 
 ## Building PIPS-S only can be achieved via 
 1. cmake -DBUILD_ALL=OFF -DBUILD_PIPS_S=ON <path_to_CMakeLists.txt>
@@ -44,7 +44,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=<path_to_toolchain_file> <path_to_CMakeLists.txt>
 Same applies to PIPS-IPM and PIPS-NLP (option names BUILD_PIPS_IPM and BUILD_PIPS_NLP, 
 respectively).
 
-## General instalation instructions
+## General installation instructions
 1. Install package wget, cmake, mpich2, and boost.
 You can get them via the following command (xxx stands for the name of the package):
 In Linux(Ubuntu): apt-get install xxxx
@@ -60,7 +60,7 @@ For an example, use command "sh wgetASL.sh" in the folder ThirdPartyLibs/ASL
 (See ThirdPartyLibs/MA27/README.txt and ThirdPartyLibs/MA57/README.txt for more details.)
 
 4. Assuming we are trying to install PIPS in the folder PIPSMAINPATH/build_pips, where 
-PIPSMAINPATH is the root instalation folder, use the following commands in the PIPSMAINPATH
+PIPSMAINPATH is the root installation folder, use the following commands in the PIPSMAINPATH
 folder to configure and install PIPS:
 mkdir build_pips
 cd build_pips
