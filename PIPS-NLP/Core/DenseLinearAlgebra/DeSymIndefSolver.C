@@ -167,6 +167,7 @@ if(gSymLinearAlgSolverForDense==1){
     printf("Dumping 1stageM.dmp\n");
     FILE *fp=fopen("1ststageM.dmp","w");
     fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&n, sizeof(int), 1, fp);
     fwrite(&mStorage->M[0][0], sizeof(double), n*n, fp);
     fclose(fp);
     dump=false;
@@ -426,7 +427,9 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
   if(gmyid==0 && dump==true) {
     printf("Dumping 1stageRHS.dmp\n");
     FILE *fp=fopen("1ststageRHS.dmp","w");
+    int ione=1;
     fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&ione, sizeof(int), 1, fp);
     fwrite(&sv[0], sizeof(double), n, fp);
     fclose(fp);
     dump=false;
@@ -444,6 +447,8 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
   if(gmyid==0 && dump1==true) {
     printf("Dumping 1stageSol.dmp\n");
     FILE *fp=fopen("1ststageSol.dmp","w");
+    int ione=1;
+    fwrite(&ione, sizeof(int), 1, fp);
     fwrite(&n, sizeof(int), 1, fp);
     fwrite(&sv[0], sizeof(double), n, fp);
     fclose(fp);
