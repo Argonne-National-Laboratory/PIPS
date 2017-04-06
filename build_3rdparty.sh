@@ -1,4 +1,4 @@
-##!/bin/bash
+#!/bin/bash
 
 ## This script should help to bootstrap PIPS and build thirdparty libraries.
 
