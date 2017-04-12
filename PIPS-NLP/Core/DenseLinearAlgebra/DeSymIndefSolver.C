@@ -143,11 +143,11 @@ if(gSymLinearAlgSolverForDense==1){
 #endif
 
   //factorize
-  if(gmyid==0) {
-    printf("OMP_NUM_PROCS: %d\n", omp_get_num_procs());
-    printf("OMP_GET_MAX_THREADS: %d\n", omp_get_max_threads());
-    printf("On node ranks: %d\n", gnprocs_node);
-  }
+  //if(gmyid==0) {
+    //printf("OMP_NUM_PROCS: %d\n", omp_get_num_procs());
+    //printf("OMP_GET_MAX_THREADS: %d\n", omp_get_max_threads());
+    //printf("On node ranks: %d\n", gnprocs_node);
+  //}
   if(gwindow==NULL) {
     if(gmyid_node==0) {
       gwindow=new double[n*n];

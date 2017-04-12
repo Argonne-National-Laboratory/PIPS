@@ -44,7 +44,7 @@ endif()
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
 #with NLP profile metric
-option(WITH_NLPTIMING "Build with timing for PIPS-NLP" ON)
+option(WITH_NLPTIMING "Build with timing for PIPS-NLP" OFF)
 option(WITH_VERBOSE "Build with extra verbosity level" OFF)
 if(WITH_NLPTIMING)
 	add_definitions(-DNLPTIMING)
@@ -171,7 +171,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-add_definitions(-DTIMING -DSTOCH_TESTING)
+#add_definitions(-DTIMING -DSTOCH_TESTING)
 
 # inspired by elemental-bgp
 if(MATH_LIBS)
