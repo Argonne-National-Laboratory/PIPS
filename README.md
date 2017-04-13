@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/michel2323/PIPS.svg?branch=master)](https://travis-ci.org/michel2323/PIPS)
+[![Build Status](https://travis-ci.org/michel2323/PIPS.svg?branch=develop)](https://travis-ci.org/michel2323/PIPS)
 
 # What is PIPS?
 
