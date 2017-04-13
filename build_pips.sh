@@ -1,37 +1,18 @@
 #!/bin/bash
 
-# This script should help to bootstrap PIPS.
-
-rm -rf ./ThirdPartyLibs/ASL/solvers
-rm -rf ./ThirdPartyLibs/ASL/src
-rm -rf ./ThirdPartyLibs/ASL/*.tar.gz
-rm -rf ./ThirdPartyLibs/CBC/Cbc-2.9.8
-rm -rf ./ThirdPartyLibs/CBC/src
-rm -rf ./ThirdPartyLibs/CBC/*.tgz
-rm -rf ./ThirdPartyLibs/MA57/ma57*
-rm -rf ./ThirdPartyLibs/MA57/src
-rm -rf ./ThirdPartyLibs/METIS/metis*
-rm -rf ./ThirdPartyLibs/METIS/src
-
-
-cd ./ThirdPartyLibs/ASL
-./wgetASL.sh
-cd ../..
-cd ./ThirdPartyLibs/CBC
-./wgetCBC.sh
-cd ../..
-cd ./ThirdPartyLibs/MA57
-cp ~/ma57-3.9.0.tar.gz .
-./installMa57.sh
-cd ../..
-cd ./ThirdPartyLibs/METIS
-./wgetMETIS.sh
-cd ../..
+## This script should help to bootstrap PIPS.
 
 rm -rf build
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_ALL=OFF -DBUILD_PIPS_NLP=ON -B. -H..
-make -j4
+# CMAKE_BUILD_TYPE is RELEASE or DEBUG
+# BUILD_ALL=OFF: Do not build all PIPS variants
+# BUILD_PIPS_NLP: Build PIPS_NLP
+# BUILD_PIPS_DOC: Build the documentation target (make doc)
+# DUMP_ON: Dump 1st stage matrix
 
+cmake -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_ALL=OFF -DBUILD_PIPS_NLP=ON -DBUILD_PIPS_DOC=ON -DDUMP=ON -B. -H..
+
+# Build using 4 processes. 
+make -j4
 

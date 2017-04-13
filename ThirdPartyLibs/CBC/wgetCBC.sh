@@ -22,6 +22,7 @@ ln -s ./${name} ./src
 cd src
 #./configure --enable-static --prefix=`pwd`
 #make -j4 install
-./configure CFLAGS='-O3' CXXFLAGS='-O3' --enable-static --prefix=`pwd`
-make -j4 install
+#./configure CFLAGS='-O3' CXXFLAGS='-O3' --enable-static --prefix=`pwd`
+./configure --enable-static --prefix=`pwd`
+make -j$1 install
 

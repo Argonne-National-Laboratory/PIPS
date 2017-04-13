@@ -20,6 +20,6 @@ ln -s ./${name} ./src
 #compile metis
 cd src
 sed -i  "s/\bCOPTIONS =/COPTIONS = -O3 -fPIC /g" Makefile.in
-make -j4
+make -j$1
 
 

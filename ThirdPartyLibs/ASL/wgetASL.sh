@@ -12,10 +12,6 @@ else
   echo "### ASL: Download Failed.\n"
   exit 1 
 fi
-#export CFLAGS='-O3 -xMIC-AVX512'
-export CFLAGS='-O3'
-#export CC='icc'
-export CC='gcc'
 
 fn=solvers.tar.gz
 name=`basename ${fn} .tar.gz`
@@ -33,4 +29,4 @@ cd src
 #./configurehere CC='icc' CFLAGS='-O3 -xMIC-AVX512'
 #./configurehere CC='gcc' CFLAGS='-O3'
 ./configurehere 
-make -j64
+make -j$1
