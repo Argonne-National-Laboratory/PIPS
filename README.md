@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/michel2323/PIPS.svg?branch=develop)](https://travis-ci.org/michel2323/PIPS)
+
 # What is PIPS?
 
 PIPS is a suite of parallel optimization solvers mainly for stochastic optimization problems consisting of the following solvers:
