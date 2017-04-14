@@ -2,6 +2,7 @@
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 /* 2015. Modified by Nai-Yuan Chiang for NLP*/
+
 #include "../../global_var.h"
 #include <omp.h>
 #include "DeSymIndefSolver.h"
@@ -11,7 +12,7 @@
 #include "DenseSymMatrix.h"
 #include "DenseGenMatrix.h"
 #include "stdlib.h"
-#include <cmath>
+
 
 #ifdef WITH_MA27
 #include "Ma27Solver.h"
@@ -26,7 +27,6 @@ extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *
                   double *, int    *,    int *, int *,   int *, int *,
                      int *, double *, double *, int *, double *);
 #endif
-
 
 extern double gHSL_PivotLV;
 extern int gSymLinearAlgSolverForDense;
@@ -109,9 +109,10 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
 int DeSymIndefSolver::matrixChanged()
 {
   int n = mStorage->n;
-if(gSymLinearAlgSolverForDense==1){
-  char fortranUplo = 'U';
-  int info;
+  /* If matrix is dense use LAPACK, not MA57 */
+  if(gSymLinearAlgSolverForDense==1){
+    char fortranUplo = 'U';
+    int info;
   
   if (sparseMat) {
     std::fill(mStorage->M[0],mStorage->M[0]+n*n,0.);
@@ -130,13 +131,13 @@ if(gSymLinearAlgSolverForDense==1){
   //query the size of workspace
   lwork=-1;
   double lworkNew;
-
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, &lworkNew, &lwork, &info );
   
   lwork = (int)lworkNew; 
   if(work) delete[] work;
   work = new double[lwork];
+
 
 #ifdef TIMING_FLOPS
   HPM_Start("DSYTRFFact");
@@ -148,6 +149,12 @@ if(gSymLinearAlgSolverForDense==1){
     //printf("OMP_GET_MAX_THREADS: %d\n", omp_get_max_threads());
     //printf("On node ranks: %d\n", gnprocs_node);
   //}
+
+  /* Create MPI windows used for the scatter of the factorization result. One
+   * MPI rank does the factorization and distributes the result through the
+   * windows
+   */
+
   if(gwindow==NULL) {
     if(gmyid_node==0) {
       gwindow=new double[n*n];
@@ -174,6 +181,7 @@ if(gSymLinearAlgSolverForDense==1){
   } 
 #endif
   if(gmyid_node==0) {
+    /* rank 0 does the factorization */
     FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
       ipiv, work, &lwork, &info );
     //  printf("gwindow on 0 before: %lf %d %d\n", gwindow[0],gipiv[0],info);
@@ -187,6 +195,7 @@ if(gSymLinearAlgSolverForDense==1){
     MPI_Win_fence(0,gwin_ipiv);
   }
   else {
+    /* All other ranks get the result from rank 0 */
     //printf("gwindow on other before: %lf %d %d\n", mStorage->M[0][0], ipiv[0], info);
     MPI_Win_fence(0,gwin);
     MPI_Win_fence(0,gwin_ipiv);
@@ -203,7 +212,7 @@ if(gSymLinearAlgSolverForDense==1){
 #endif
   if(info!=0)
       printf("DeSymIndefSolver::matrixChanged : error - dsytrf returned info=%d\n", info);
-
+/* Compute the inertia. Only negative eigenvalues are returned */
 negEigVal=0;
 double t=0;
 for(int k=0; k<n; k++) {
@@ -227,9 +236,9 @@ for(int k=0; k<n; k++) {
   return negEigVal;
 
 //*********************************************************************************
-}
+} // this was it for gSymLinearAlgSolverForDense=1. A previous MA57 call was removed.
 else {
-  if(gSymLinearAlgSolverForDense<1){
+  if(gSymLinearAlgSolverForDense<1){ 
 //*********************************************************************************
   // we use MA57 or MA27 to find inertia
   negEigVal=0;

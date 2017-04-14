@@ -44,7 +44,7 @@ public:
 	double t_evalData;
 	double t_BarrObj;
 	double t_calcresids;
-  double t_updateBarrierParameter;
+        double t_updateBarrierParameter;
 	double t_addDampingTermToKKT;
 	double t_line_search;
 	double t_rest;
