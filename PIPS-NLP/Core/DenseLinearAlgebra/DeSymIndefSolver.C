@@ -239,26 +239,48 @@ for(int k=0; k<n; k++) {
 } // this was it for gSymLinearAlgSolverForDense=1. A previous MA57 call was removed.
 else {
   if(gSymLinearAlgSolverForDense<1){ 
-//*********************************************************************************
-  // we use MA57 or MA27 to find inertia
-  negEigVal=0;
-  
-  if(n>1){
-	int     icntlTemp[30];
-    double  cntlTemp[5];
-    int     infoTemp[40];	
-    double  rinfoTemp[20];
-    double  ipessimism = 1.4;
-    double  rpessimism = 1.4;
-
-    int	   lkeepTemp;
-    int	   lifactTemp, lfactTemp;
-	int   *keepTemp, *iworkTemp;
-	int    nsteps;
-	double *factTemp;
-	int *ifactTemp, *iworkTemp2;
+    //*********************************************************************************
+    // we use MA57 or MA27 to find inertia
+    negEigVal=0;
+    
+    if(n>1){
+      int     icntlTemp[30];
+      double  cntlTemp[5];
+      int     infoTemp[40];	
+      double  rinfoTemp[20];
+      double  ipessimism = 1.4;
+      double  rpessimism = 1.4;
+      
+      int	   lkeepTemp;
+      int	   lifactTemp, lfactTemp;
+      int   *keepTemp, *iworkTemp;
+      int    nsteps;
+      double *factTemp;
+      int *ifactTemp, *iworkTemp2;
 
 #ifdef WITH_MA27		
+  //*********************************************************************************
+  // try to find inertia information for this dense matrix
+    int nnzWrk = (1+n)*n/2;;
+    int *rowStartM;  
+    int *rowM = (int*) malloc (nnzWrk*sizeof(int));
+    int *colM = (int*) malloc (nnzWrk*sizeof(int));
+    double *elesM = (double*) malloc (nnzWrk*sizeof(double));
+    int findNz=0;
+    
+    for(int rowID=0;rowID<n;rowID++){
+      for(int colID=0;colID<n;colID++){
+        if(rowID>=colID){
+          rowM[findNz] = rowID+1;
+          colM[findNz] = colID+1;
+          elesM[findNz]= mStorage->M[rowID][colID];
+          findNz++;
+        }
+      }
+      if(gSymLinearAlgSolverForDense>1)
+      rowStartM[rowID+1] = findNz+1;
+    }  
+    assert(findNz==nnzWrk);
 	  FNAME(ma27id)( icntlTemp,cntlTemp );
 	  
 	  icntlTemp[1-1] = 0;	// don't print warning messages
