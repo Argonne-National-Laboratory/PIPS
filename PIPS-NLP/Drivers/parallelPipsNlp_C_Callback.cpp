@@ -31,6 +31,7 @@
 
 #include "../global_var.h"
 #include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
+#include <mpi.h>
 
 #ifdef TIMING
   double timeFromAMPL;
