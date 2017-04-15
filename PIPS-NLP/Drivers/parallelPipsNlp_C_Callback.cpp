@@ -63,8 +63,7 @@ CreatePipsNlpProblemStruct(
 {
   MPI_Comm_rank(comm, &gmyid);
   MPI_Comm_size(comm, &gnprocs);
-  MPI_Info info;
-  MPI_Comm_split_type(comm,MPI_COMM_TYPE_SHARED,gmyid,info,&comm_node);
+  MPI_Comm_split_type(comm,MPI_COMM_TYPE_SHARED,gmyid,MPI_INFO_NULL,&comm_node);
   MPI_Comm_rank(comm_node, &gmyid_node);
   MPI_Comm_size(comm_node, &gnprocs_node);
   //MESSAGE("on proc ["<<gmyid<<"] of ["<< gnprocs << "] MPI processes.");
