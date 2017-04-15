@@ -16,7 +16,7 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y libblas-dev liblapack-dev 
   - if [ $MPICH -eq "1" ]; then sudo apt-get install -y libmpich-dev mpich; fi
-  - if [ $OPENMPI -eq "1" ]; then sudo apt-get install -y openmpi-common; fi
+  - if [ $OPENMPI -eq "1" ]; then sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin openmpi-common; fi
   - eval "$(ssh-agent -s)"
   - chmod 600 /tmp/deploy_rsa
   - ssh-add /tmp/deploy_rsa
