@@ -2,6 +2,9 @@
 
 ## This script should help to bootstrap PIPS.
 
+# exit if a command fails
+set -e
+
 mkdir build
 cd build
 # CMAKE_BUILD_TYPE is RELEASE or DEBUG

@@ -10,6 +10,9 @@ export CC='gcc'
 export CFLAGS='-O3'
 export CXXFLAGS='-O3'
 
+# exit if a command fails
+set -e
+
 cd ./ThirdPartyLibs/ASL
 ./wgetASL.sh $NUMTHREADS
 cd ../..
