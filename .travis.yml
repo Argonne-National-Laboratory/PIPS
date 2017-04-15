@@ -13,21 +13,22 @@ addons:
   
 before_install:
   - openssl aes-256-cbc -K $encrypted_03afd2aa4132_key -iv $encrypted_03afd2aa4132_iv -in deploy_rsa.enc -out /tmp/deploy_rsa -d
-  - sudo apt-get update -qq
-  - sudo apt-get install -y libblas-dev liblapack-dev 
-  - if [ $MPICH -eq "1" ]; then sudo apt-get install -y libmpich-dev mpich; fi
-# compile openmpi because ubuntu 14.04 openmpi package is outdated
-  - if [ $OPENMPI -eq "1" ]; then sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin openmpi-common; fi
-  - if [ $OPENMPI -eq "1" ]; then wget https://www.open-mpi.org/software/ompi/v2.1/downloads/openmpi-2.1.0.tar.gz; fi
-  - if [ $OPENMPI -eq "1" ]; then tar xvzf openmpi-2.1.0.tar.gz; cd openmpi-2.1.0; ./configure --prefix=$PWD/../local --enable-mpi-cxx; fi 
-  - if [ $OPENMPI -eq "1" ]; then make -j4; make install; cd .. ; fi
-  - if [ $OPENMPI -eq "1" ]; then export PATH=$PWD/local/bin:$PATH; fi
   - eval "$(ssh-agent -s)"
   - chmod 600 /tmp/deploy_rsa
   - ssh-add /tmp/deploy_rsa
   - git clone git@xgitlab.cels.anl.gov:schanen/ma57.git
   - cp ./ma57/ma57-3.9.0.tar.gz ./ThirdPartyLibs/MA57
+# travis doesn't let me download openmpi from open-mpi.org
+  - if [ $OPENMPI -eq "1" ]; then cp ./ma57/openmpi-2.1.0.tar.gz .; fi
   - if [ $TEST_WITH_MA27 -eq "1" ]; then cp ./ma57/ma27-1.0.0.tar.gz ./ThirdPartyLibs/MA27; fi
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libblas-dev liblapack-dev 
+  - if [ $MPICH -eq "1" ]; then sudo apt-get install -y libmpich-dev mpich; fi
+# compile openmpi because ubuntu 14.04 openmpi package is outdated
+  - if [ $OPENMPI -eq "1" ]; then sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin openmpi-common; fi
+  - if [ $OPENMPI -eq "1" ]; then tar xvzf openmpi-2.1.0.tar.gz; cd openmpi-2.1.0; ./configure --prefix=$PWD/../local --enable-mpi-cxx; fi 
+  - if [ $OPENMPI -eq "1" ]; then make -j4; make install; cd .. ; fi
+  - if [ $OPENMPI -eq "1" ]; then export PATH=$PWD/local/bin:$PATH; fi
   
 install:
   - ./build_3rdparty.sh $TEST_WITH_MA27
