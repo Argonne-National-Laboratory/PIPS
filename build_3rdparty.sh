@@ -19,14 +19,16 @@ cd ../..
 cd ./ThirdPartyLibs/CBC
 ./wgetCBC.sh $NUMTHREADS
 cd ../..
-cd ./ThirdPartyLibs/MA57
-if [ ! -f "ma57-3.9.0.tar.gz" ]; then
-  echo "ERROR: Please provide ma57 library from http://www.hsl.rl.ac.uk/catalogue/ma57.html and put it in ThirdPartyLibs/MA57 folder."
-  exit 1
-fi
-./installMa57.sh $NUMTHREADS
-cd ../..
 echo $BUILD_WITH_MA27
+if [ $BUILD_WITH_MA27 -eq "0" ]; then
+  cd ./ThirdPartyLibs/MA57
+  if [ ! -f "ma57-3.9.0.tar.gz" ]; then
+    echo "ERROR: Please provide ma57 library from http://www.hsl.rl.ac.uk/catalogue/ma57.html and put it in ThirdPartyLibs/MA57 folder."
+    exit 1
+  fi
+  ./installMa57.sh $NUMTHREADS
+  cd ../..
+fi
 if [ $BUILD_WITH_MA27 -eq "1" ]; then
   cd ./ThirdPartyLibs/MA27
   if [ ! -f "ma27-1.0.0.tar.gz" ]; then
