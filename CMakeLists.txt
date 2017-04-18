@@ -32,6 +32,13 @@ message(STATUS "BUILD_PIPS_S=${BUILD_PIPS_S}")
 message(STATUS "BUILD_PIPS_IPM=${BUILD_PIPS_IPM}")
 message(STATUS "BUILD_PIPS_NLP=${BUILD_PIPS_NLP}")
 
+#with dumping matrices 1st stage (and global soon)
+
+if(DUMP)
+  add_definitions(-DDUMP)
+endif()
+
+
 #with testing of (selected) executables
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
@@ -44,6 +51,36 @@ endif()
 if(WITH_VERBOSE)
 	add_definitions(-DVERBOSE)
 endif()
+
+# DOCUMENTATION
+
+# SO FAR ONLY FOR PIPS-NLP
+if (BUILD_PIPS_DOC)
+  find_package(Doxygen)
+  option(BUILD_DOCUMENTATION "Create and install the HTML based API documentation (requires Doxygen)" ${DOXYGEN_FOUND})
+endif()
+
+if(BUILD_DOCUMENTATION)
+  if(NOT DOXYGEN_FOUND)
+    message(FATAL_ERROR "Doxygen is needed to build the documentation.")
+  endif()
+  # GENERATING FOR PIPS-NLP
+  set(doxyfile_in ${CMAKE_CURRENT_SOURCE_DIR}/PIPS-NLP/Docs/Doxyfile.in)
+  set(doxyfile ${CMAKE_CURRENT_BINARY_DIR}/PIPS-NLP/Doxyfile)
+
+  configure_file(${doxyfile_in} ${doxyfile} @ONLY)
+
+  add_custom_target(doc
+    COMMAND ${DOXYGEN_EXECUTABLE} ${doxyfile}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating API documentation with Doxygen"
+    VERBATIM)
+
+  install(DIRECTORY
+    ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc)
+endif()
+
+
 
 # PIPS-IPM and PIPS-NLP require OpenMP
 if (BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
@@ -138,7 +175,9 @@ endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 if(MATH_LIBS)
 	message(STATUS "Using user-defined MATH_LIBS=${MATH_LIBS}")
 elseif(IS_DIRECTORY $ENV{MKLROOT})
-    set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
+  #set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
+    set(MATH_LIBS "-Wl,--start-group  -L$ENV{MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_avx -lmkl_def -liomp5 -lgfortran -lpthread -lm -ldl")
+    #    set(MATH_LIBS "-mkl=parallel")
     message(STATUS "Using MKLROOT:$ENV{MKLROOT} MATH_LIBS=${MATH_LIBS}")
 else(MATH_LIBS)
     message(STATUS "Searching system path for MATH_LIBS")
