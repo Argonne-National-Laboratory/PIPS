@@ -26,8 +26,10 @@ before_install:
   - if [ $MPICH -eq "1" ]; then sudo apt-get install -y libmpich-dev mpich; fi
 # compile openmpi because ubuntu 14.04 openmpi package is outdated
   - if [ $OPENMPI -eq "1" ]; then sudo apt-get install -y gfortran libopenmpi-dev openmpi-bin openmpi-common; fi
-  - if [ $OPENMPI -eq "1" ]; then tar xvzf openmpi-2.1.0.tar.gz; cd openmpi-2.1.0; ./configure --prefix=$PWD/../local --enable-mpi-cxx; fi 
-  - if [ $OPENMPI -eq "1" ]; then make -j4; make install; cd .. ; fi
+  - if [ $OPENMPI -eq "1" ]; then tar xzf openmpi-2.1.0.tar.gz; fi
+  - if [ $OPENMPI -eq "1" ]; then cd openmpi-2.1.0; ./configure -q --prefix=$PWD/../local --enable-mpi-cxx; fi 
+  - if [ $OPENMPI -eq "1" ]; then make -j4; fi 
+  - if [ $OPENMPI -eq "1" ]; then make install; cd .. ; fi
   - if [ $OPENMPI -eq "1" ]; then export PATH=$PWD/local/bin:$PATH; fi
   
 install:
