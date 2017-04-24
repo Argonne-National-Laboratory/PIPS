@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/michel2323/PIPS.svg?branch=develop)](https://travis-ci.org/michel2323/PIPS)
-
 # What is PIPS?
 
 PIPS is a suite of parallel optimization solvers mainly for stochastic optimization problems consisting of the following solvers:
@@ -7,11 +5,15 @@ PIPS is a suite of parallel optimization solvers mainly for stochastic optimizat
  * PIPS-S   - parallel MPI implementation of the revised simplex method
  * PIPS-NLP - parallel MPI interior-point for structured NLPs
 
-# LICENSE
+# Travis Build
+
+[![Build Status](https://travis-ci.org/Argonne-National-Laboratory/PIPS.svg?branch=master)](https://travis-ci.org/Argonne-National-Laboratory/PIPS)
+
+# License
 
 See LICENSE file.
 
-# CONTRIBUTIONS
+# Contributions
 
 ## PIPS-IPM
 
@@ -39,7 +41,7 @@ Developed by:
  * Victor Zavala - Argonne National Laboratory and Univ. of Wisconsin-Madison
  * Cosmin G. Petra - Lawrence Livermore / Argonne National Laboratory	 
 
-# INSTALLATION Instructions
+# Installation Instructions
 
 ## Building PIPS-S only can be achieved via 
 1. cmake -DBUILD_ALL=OFF -DBUILD_PIPS_S=ON <path_to_CMakeLists.txt>
@@ -76,7 +78,7 @@ make
 
 5. The build system will install executables from three sources: PIPS-IPM, PIPS-S and PIPS-NLP. 
 
-# ACKNOWLEDGMENTS
+# Acknowledgments 
 
 PIPS has been developed under the financial support of: 
 - Department of Energy, Office of Advanced Scientific Computing Research
