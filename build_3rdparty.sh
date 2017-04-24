@@ -4,9 +4,16 @@
 
 # Number of threads used to build
 NUMTHREADS=4
-BUILD_WITH_MA27=$1
+if [ -z $1 ]; then
+  BUILD_WITH_MA27=0
+else
+  BUILD_WITH_MA27=$1
+fi
+echo $BUILD_WITH_MA27
 
+# Set icc here on KNL
 export CC='gcc'
+export CXX='g++'
 export CFLAGS='-O3'
 export CXXFLAGS='-O3'
 
@@ -19,7 +26,6 @@ cd ../..
 cd ./ThirdPartyLibs/CBC
 ./wgetCBC.sh $NUMTHREADS
 cd ../..
-echo $BUILD_WITH_MA27
 if [ $BUILD_WITH_MA27 -eq "0" ]; then
   cd ./ThirdPartyLibs/MA57
   if [ ! -f "ma57-3.9.0.tar.gz" ]; then
