@@ -424,6 +424,12 @@ int main(int argc, char ** argv) {
 
   ProbData probData(nScenarios);
 
+  int rank;
+  int size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+
 #if LINKING_CONS
 
   int myl0 = 2;
@@ -469,13 +475,13 @@ int main(int argc, char ** argv) {
 	  int nx = 2;
 	  int my = 2;
 	  int mz = 1;
-
 	  int mzl = 0;
-#if LINKING_CONS
 
+#if LINKING_CONS
 	  int myl = 2;
 	  if( id == 2 )
-		  nx += 2;
+	   nx += 2;
+
 	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
 					nx, my, myl, mz, // mzl,
 					fQ, fnnzQ, fc,
@@ -512,11 +518,6 @@ int main(int argc, char ** argv) {
 #endif
 
   }
-
-  int rank;
-  int size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   if( rank == 0 )
 	  cout << "Using a total of " << size << " MPI processes." << endl;

@@ -112,8 +112,8 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 #ifdef TIMING
   if(0==myRank) cout << " rC norm = " << componentNorm << endl;
 #endif
-  //  cout << " rC norm = " << componentNorm << endl;
-  //if( componentNorm > norm ) norm = componentNorm;
+  // cout << " rC norm = " << componentNorm << endl;
+  // if( componentNorm > norm ) norm = componentNorm;
 
   rz->copyFrom( *vars->z );
 

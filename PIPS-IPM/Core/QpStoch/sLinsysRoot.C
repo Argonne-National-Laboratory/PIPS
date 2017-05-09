@@ -540,7 +540,7 @@ void sLinsysRoot::reduceKKT()
 	   // reduce upper right part
 	   submatrixAllReduce(kktd, 0, locNxMy, locnx, locNxMyMyl - locNxMy, mpiComm);
 
-	   // preserve symmetrytodo memopt!
+	   // preserve symmetry todo memopt!
 	   double ** M = kktd->mStorage->M;
 	   for( int k = locNxMy; k < locNxMyMyl; k++ ){
 		 for( int k2 = 0; k2 < locnx; k2++ ){
