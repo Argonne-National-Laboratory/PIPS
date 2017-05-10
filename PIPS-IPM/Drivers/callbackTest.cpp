@@ -76,10 +76,16 @@ int nnzMatEqLink(void* user_data, int id, int* nnz)
 	if( id == 2 )
 		*nnz = 4;
 
+	return 0;
+}
 
+int nnzMatIneqLink(void* user_data, int id, int* nnz)
+{
+	*nnz = 1;
 
 	return 0;
 }
+
 
 int nnzAllZero(void* user_data, int id, int* nnz)
 {
@@ -126,6 +132,14 @@ int vecIneqRhs(void* user_data, int id, double* vec, int len)
 	return 0;
 }
 
+int vecIneqRhsLink(void* user_data, int id, double* vec, int len)
+{
+	vec[0] = 4.0;
+
+	return 0;
+}
+
+
 int vecIneqRhsActive(void* user_data, int id, double* vec, int len)
 {
 	int i;
@@ -135,6 +149,12 @@ int vecIneqRhsActive(void* user_data, int id, double* vec, int len)
 	return 0;
 }
 
+int vecIneqRhsActiveLink(void* user_data, int id, double* vec, int len)
+{
+    vec[0] = 1.0;
+
+	return 0;
+}
 
 int vecObj(void* user_data, int id, double* vec, int len)
 {
@@ -238,6 +258,20 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
     return 0;
 }
 
+
+
+
+int matIneqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
+{
+    int n = 1;
+
+  	   M[0] = 1.0;
+
+  	   krowM[0] = 0;
+  	   jcolM[0] = 0;
+
+    return 0;
+}
 
 int matIneqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
@@ -377,8 +411,7 @@ int main(int argc, char ** argv) {
   int nx0 = 2;
   int my0 = 2;
   int mz0 = 1;
-
-  int mzl0 = 0;
+  int mzl0 = 1;
 
   FNNZ fnnzQ = &nnzAllZero;
   FNNZ fnnzA = &nnzMatEqStage1;
@@ -386,16 +419,32 @@ int main(int argc, char ** argv) {
 
   FNNZ fnnzC = &nnzMatIneqStage1;//FNNZ fnnzC = &nnzAllZero;//&nnzMatIneqStage1;
   FNNZ fnnzD = &nnzMatIneqStage2;//FNNZ fnnzD = &nnzAllZero;//&nnzMatIneqStage2;
-  FNNZ fnnzDl = &nnzAllZero;
 
 #if LINKING_CONS
   FNNZ fnnzBl = &nnzMatEqLink;
   FVEC fbl = &vecLinkRhs;
   FMAT fBl = &matEqLink;
+
+  FMAT fDl = &matIneqLink;
+  FNNZ fnnzDl = &nnzMatIneqLink;
+
+  FVEC fdlupp = &vecIneqRhsLink;
+  FVEC fdllow = &vecAllZero;
+  FVEC fidlupp = &vecIneqRhsActiveLink;
+  FVEC fidllow = &vecAllZero;
+
 #else
   FNNZ fnnzBl = &nnzAllZero;
   FVEC fbl = &vecAllZero;
   FMAT fBl = &matAllZero;
+
+  FMAT fDl = &matAllZero;
+  FNNZ fnnzDl = &nnzAllZero;
+
+  FVEC fdlupp = &vecAllZero;
+  FVEC fdllow = &vecAllZero;
+  FVEC fidlupp = &vecAllZero;
+  FVEC fidllow = &vecAllZero;
 #endif
 
   FVEC fc = &vecObj;
@@ -410,17 +459,13 @@ int main(int argc, char ** argv) {
   FVEC ficupp = &vecIneqRhsActive;//FVEC ficupp = vecAllZero;
   FVEC fixupp = &vecAllZero;
 
-  FVEC fdlupp = &vecAllZero;
-  FVEC fdllow = &vecAllZero;
-  FVEC fidlupp = &vecAllZero;
-  FVEC fidllow = &vecAllZero;
+
 
   FMAT fQ = &matAllZero;
   FMAT fA = &matEqStage1;
   FMAT fB = &matEqStage2;
   FMAT fC = &matIneqStage1;//FMAT fC = &matAllZero;//
   FMAT fD = &matIneqStage2;//FMAT fD = &matAllZero;//
-  FMAT fDl = &matAllZero;
 
   ProbData probData(nScenarios);
 
@@ -435,7 +480,7 @@ int main(int argc, char ** argv) {
   int myl0 = 2;
   //build the problem tree
   StochInputTree::StochInputNode dataLinkCons(&probData, 0,
-				      nx0, my0, myl0, mz0, // mzl0
+				      nx0, my0, myl0, mz0, mzl0,
 				      fQ, fnnzQ, fc,
 				      fA, fnnzA,
 				      fB, fnnzB,
@@ -443,9 +488,9 @@ int main(int argc, char ** argv) {
 				      fb, fbl,
 				      fC, fnnzC,
 				      fD, fnnzD,
-					  //fDL, fnnzDL,
+					  fDl, fnnzDl,
 				      fclow, ficlow, fcupp, ficupp,
-					  //fdllow, fidllow, fdlupp, fidlupp,
+					  fdllow, fidllow, fdlupp, fidlupp,
 				      fxlow, fixlow, fxupp, fixupp, false );
 
   StochInputTree* root = new StochInputTree(dataLinkCons);
@@ -462,7 +507,7 @@ int main(int argc, char ** argv) {
 				      fb, //fbl
 				      fC, fnnzC,
 				      fD, fnnzD,
-					  //fDL, fnnzDL,
+					  //fDL, fnnzDl,
 				      fclow, ficlow, fcupp, ficupp,
 					  //fdllow, fidllow, fdlupp, fidlupp,
 				      fxlow, fixlow, fxupp, fixupp, false );
@@ -475,7 +520,7 @@ int main(int argc, char ** argv) {
 	  int nx = 2;
 	  int my = 2;
 	  int mz = 1;
-	  int mzl = 0;
+	  int mzl = 1;
 
 #if LINKING_CONS
 	  int myl = 2;
@@ -483,7 +528,7 @@ int main(int argc, char ** argv) {
 	   nx += 2;
 
 	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
-					nx, my, myl, mz, // mzl,
+					nx, my, myl, mz, mzl,
 					fQ, fnnzQ, fc,
 					fA, fnnzA,
 					fB, fnnzB,
@@ -491,9 +536,9 @@ int main(int argc, char ** argv) {
 					fb, fbl,
 					fC, fnnzC,
 					fD, fnnzD,
-					//fDL, fnnzDL,
+					fDl, fnnzDl,
 					fclow, ficlow, fcupp, ficupp,
-					//fdllow, fidllow, fdlupp, fidlupp,
+					fdllow, fidllow, fdlupp, fidlupp,
 					fxlow, fixlow, fxupp, fixupp, false);
 
 	  root->AddChild(new StochInputTree(dataLinkConsChild));

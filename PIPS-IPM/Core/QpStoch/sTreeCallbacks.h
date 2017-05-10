@@ -44,11 +44,12 @@ class sTreeCallbacks : public sTree
   int my() const;
   int myl() const;
   int mz() const; 
+  int mzl() const;
   int id() const; 
 
   void computeGlobalSizes();
  public:
-  int NNZA,NNZQ,NNZB,NNZBl,NNZC,NNZD; //global nnz
+  int NNZA,NNZQ,NNZB,NNZBl,NNZC,NNZD,NNZDl; //global nnz
   void loadLocalSizes();
  protected:
   sTreeCallbacks();
