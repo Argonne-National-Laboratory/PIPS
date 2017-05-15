@@ -101,19 +101,6 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->factor2(prob->children[c], vars);
   }
 
-  //todo deleteme
-  int myrank; MPI_Comm_rank(mpiComm, &myrank);
-  cout << children.size() << " children on " << myrank << endl << endl;
-  if( myrank )
-  {
-	 volatile double x = 100.0;
-	 for (int var = 0; var < 1000; ++var) {
-       x /= (x - 10.0);
-       if( x <= 0.0)
-    	   x = 100.0;
-	}
-  }
-
   for(size_t c=0; c<children.size(); c++) {
 #ifdef STOCH_TESTING
     g_scenNum=c;
@@ -128,14 +115,16 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
 
-
+#if 1
+  // todo deleteme
   cout << "dkkt after:" <<  endl;
-  for( int k = 0; k < locnx + locmy + locmyl; k++)
+  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
   {
-    	   for( int k2 = 0; k2 < locnx + locmy + locmyl; k2++)
-      cout << myrank << "Kkt[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"                            ";
+    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
+      cout << "Kkt[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"     ";
  	   cout << endl;
   }
+#endif
 
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
@@ -146,30 +135,18 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   stochNode->resMon.recReduceTmLocal_stop();
 #endif  
 
-  if( myrank )
-  {
-	 volatile double x = 100.0;
-	 for (int var = 0; var < 1000; ++var) {
-       x /= (x - 10.0);
-       if( x <= 0.0)
-    	   x = 100.0;
-	}
-  }
-
-
+#if 0
+  // todo deleteme
   cout << "dkkt after ALL REDUCE:" <<  endl <<  endl;
-  for( int k = 0; k < locnx + locmy + locmyl; k++)
+  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
   {
-    	   for( int k2 = 0; k2 < locnx + locmy + locmyl; k2++)
-      cout << myrank << "[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"             ";
+    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
+      cout  << "[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"             ";
  	   cout << endl;
   }
-
-
+#endif
 
   finalizeKKT(prob, vars);
-  
-  //printf("(%d, %d) --- %f\n", PROW,PCOL, kktd[PROW][PCOL]);
 
   factorizeKKT();
 
@@ -465,6 +442,7 @@ void sLinsysRoot::putZDiagonal( OoqpVector& zdiag_ )
 
   //kkt->atPutDiagonal( locnx+locmy, *zdiag.vec );
   zDiag = zdiag.vec;
+  zDiagLinkCons = zdiag.vecl;
 
   // propagate it to the subtree
   for(size_t it=0; it<children.size(); it++)

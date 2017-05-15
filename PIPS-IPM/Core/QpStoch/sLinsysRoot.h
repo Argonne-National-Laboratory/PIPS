@@ -75,6 +75,7 @@ class sLinsysRoot : public sLinsys {
  protected: //buffers
 
   OoqpVector* zDiag;
+  OoqpVector* zDiagLinkCons;
   OoqpVector* xDiag;
 
 #ifdef STOCH_TESTING

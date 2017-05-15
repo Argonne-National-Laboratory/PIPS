@@ -32,12 +32,15 @@ sTree::~sTree()
     delete children[it];
 }
 
-// todo
 int sTree::myl() const
 {
    return 0;
 }
 
+int sTree::mzl() const
+{
+   return 0;
+}
 
 void sTree::assignProcesses(MPI_Comm comm)
 {
@@ -504,7 +507,10 @@ StochVector* sTree::newDualZVector() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  StochVector* z = new StochVector(mz(), commWrkrs);
+  //length of linking part
+  int zl = (np == -1) ? mzl() : -1;
+
+  StochVector* z = new StochVector(mz(), zl, commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualZVector();
@@ -566,9 +572,10 @@ StochVector* sTree::newRhs()
   if(commWrkrs==MPI_COMM_NULL)
     return new StochDummyVector();
 
-  int locmyl = (np == -1) ?  myl() : 0;
+  int locmyl = (np == -1) ? myl() : 0;
+  int locmzl = (np == -1) ? mzl() : 0;
 
-  StochVector* rhs = new StochVector(nx() + my() + mz() + locmyl, commWrkrs);
+  StochVector* rhs = new StochVector(nx() + my() + mz() + locmyl + locmzl, commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newRhs();

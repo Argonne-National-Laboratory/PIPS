@@ -60,7 +60,7 @@ class sLinsys : public QpGenLinsys
 
   SymMatrix* kkt;
   DoubleLinearSolver* solver;
-  int locnx, locmy, locmyl, locmz;
+  int locnx, locmy, locmyl, locmz, locmzl;
   sData* data;
   
  public:

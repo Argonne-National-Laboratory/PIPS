@@ -101,10 +101,7 @@ void sLinsys::joinRHS( OoqpVector& rhs_in,  OoqpVector& rhs1_in,
   StochVector& rhs2 = dynamic_cast<StochVector&>(rhs2_in);
   StochVector& rhs3 = dynamic_cast<StochVector&>(rhs3_in);
 
-  if( rhs2.vecl )
-	rhs.jointCopyFromLinkCons(rhs1, rhs2, rhs3, rhs2);
-  else
-    rhs.jointCopyFrom(rhs1, rhs2, rhs3);
+  rhs.jointCopyFromLinkCons(rhs1, rhs2, rhs3);
 }
 
 void sLinsys::separateVars( OoqpVector& x_in, OoqpVector& y_in,
@@ -115,11 +112,7 @@ void sLinsys::separateVars( OoqpVector& x_in, OoqpVector& y_in,
   StochVector& z    = dynamic_cast<StochVector&>(z_in);
   StochVector& vars = dynamic_cast<StochVector&>(vars_in);
 
-
-  if( y.vecl )
-	vars.jointCopyToLinkCons(x, y, z, y);
-  else
-    vars.jointCopyTo(x, y, z);
+  vars.jointCopyToLinkCons(x, y, z);
 }
 
 
@@ -503,22 +496,33 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
   SparseGenMatrix& F = prob->getLocalF();
+  SparseGenMatrix& G = prob->getLocalG();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   int N, nxP, NP;
-  A.getSize(N, nxP); assert(N==locmy);
+  A.getSize(N, nxP);
+  assert(N==locmy);
+  assert(locmyl >= 0);
+  assert(locmzl >= 0);
 
   int nxMyP = locmy + nxP;
+  int nxMyMzP = nxMyP + locmyl;
 
-  NP = SC.size(); assert(NP>=nxP);
+  NP = SC.size();
+  assert(NP>=nxP);
 
-  if(nxP==-1) C.getSize(N,nxP);
+  if(nxP==-1)
+    C.getSize(N,nxP);
 
-  // todo does that still hold for linking constraints?
-  if(nxP==-1) nxP = NP;
+  if(nxP==-1)
+    nxP = NP;
+
   N = locnx+locmy+locmz;
 
   SimpleVector col(N);
+
+  const int withMyl = (locmyl > 0);
+  const int withMzl = (locmzl > 0);
 
   for(int it=0; it<nxP; it++) {
 
@@ -529,41 +533,32 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     A.fromGetDense(0, it, &col[locnx],       1, locmy, 1);
     C.fromGetDense(0, it, &col[locnx+locmy], 1, locmz, 1);
 
-    //todo deleteme
-    cout << "1 call Ma27" << endl;
     solver->solve(col);
-    cout << "1 after Ma27 call" << endl;
 
     //here we have colGi = inv(H_i)* it-th col of Gi^t
     //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
 
     // SC+=R*x
-    R.transMult( 1.0, &SC[it][0],     1,
-     		 -1.0, &col[0],      1);
+    R.transMult( 1.0, &SC[it][0],     1,  -1.0, &col[0],      1);
 
     // SC+=At*y
-    A.transMult( 1.0, &SC[it][0],   1,
-		  -1.0, &col[locnx],  1);
+    A.transMult( 1.0, &SC[it][0],     1,  -1.0, &col[locnx],  1);
 
     // SC+=Ct*z
-    C.transMult( 1.0, &SC[it][0],   1,
-		 -1.0, &col[locnx+locmy], 1);
+    C.transMult( 1.0, &SC[it][0],     1,  -1.0, &col[locnx+locmy], 1);
 
-    // do we have linking equality constraints?
-    if( locmyl > 0 )
-    {
-       // SC+=F*x
-       F.mult( 1.0, &SC[it][nxMyP],     1,
-        		 -1.0, &col[0],      1);
-    }
+    // do we have linking equality constraints? If so, set SC+=F*x
+    if( withMyl )
+       F.mult( 1.0, &SC[it][nxMyP],     1, -1.0, &col[0],      1);
+
+    // do we have linking inequality constraints? If so, set SC+=G*x
+    if( withMzl )
+       G.mult( 1.0, &SC[it][nxMyMzP],     1,  -1.0, &col[0],      1);
   }
 
   // do we have linking equality constraints?
-  if( locmyl > 0 )
+  if( withMyl )
   {
-	int nxMyMzLoc = locnx+locmy+locmz;
-	int nxMyLoc = locnx+locmy;
-
     // do column-wise multiplication for columns containing Ft (F transposed)
     for(int it=0; it<locmyl; it++) {
 
@@ -572,30 +567,50 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
       // get it'th column from Ft (i.e., it'th row from F)
       F.fromGetDense(it, 0, &col[0],           1, 1, locnx);
 
+      for(int it1=locnx; it1 < locnx+locmy+locmz; it1++) pcol[it1]=0.0;
 
-
-      for(int it1=locnx; it1< nxMyMzLoc; it1++) pcol[it1]=0.0;
-
-      //todo deleteme
-cout << "call Ma27" << endl;
       solver->solve(col);
-      cout << "after Ma27 call" << endl;
 
-      R.transMult( 1.0, &SC[it + nxMyP][0],   1,
-       	  -1.0, &col[0],      1);
-      A.transMult( 1.0, &SC[it + nxMyP][0],   1,
-  		  -1.0, &col[locnx],  1);
-      C.transMult( 1.0, &SC[it + nxMyP][0],   1,
-  		  -1.0, &col[nxMyLoc], 1);
+      R.transMult( 1.0, &SC[it + nxMyP][0],   1,  -1.0, &col[0],      1);
+      A.transMult( 1.0, &SC[it + nxMyP][0],   1,  -1.0, &col[locnx],  1);
+      C.transMult( 1.0, &SC[it + nxMyP][0],   1,  -1.0, &col[locnx+locmy], 1);
 
       // here we have colGi = inv(H_i)* (it + locnx + locmy)-th col of Gi^t
       // now do colSC = Gi * inv(H_i)* (it + locnx + locmy)-th col of Gi^t
 
-      // SC+=F*x
-      cout << "add to " <<  it + nxMyP <<  " " << it + nxMyP << endl;
-      cout << "val : " << col[0] << endl;
-      F.mult( 1.0, &SC[it + nxMyP][nxMyP],   1,
-  		  -1.0, &col[0],  1);
+      F.mult( 1.0, &SC[it + nxMyP][nxMyP],   1, -1.0, &col[0],  1);
+
+      if( withMzl )
+         G.mult( 1.0, &SC[it + nxMyP][nxMyMzP],   1, -1.0, &col[0],  1);
+    }
+  }
+
+  // do we have linking inequality constraints?
+  if( withMzl )
+  {
+    // do column-wise multiplication for columns containing Gt (G transposed)
+    for(int it=0; it<locmzl; it++) {
+
+      double* pcol = &col[0];
+
+      // get it'th column from Gt (i.e., it'th row from G)
+      G.fromGetDense(it, 0, &col[0],           1, 1, locnx);
+
+      for(int it1=locnx; it1 < locnx+locmy+locmz; it1++) pcol[it1]=0.0;
+
+      solver->solve(col);
+
+      R.transMult( 1.0, &SC[it + nxMyMzP][0],   1,  -1.0, &col[0],      1);
+      A.transMult( 1.0, &SC[it + nxMyMzP][0],   1,  -1.0, &col[locnx],  1);
+      C.transMult( 1.0, &SC[it + nxMyMzP][0],   1,  -1.0, &col[locnx+locmy], 1);
+
+      // here we have colGi = inv(H_i)* (it + locnx + locmy + locmyl)-th col of Gi^t
+      // now do colSC = Gi * inv(H_i)* (it + locnx + locmy + locmyl)-th col of Gi^t
+
+      if( withMyl )
+        F.mult( 1.0, &SC[it + nxMyMzP][nxMyP],   1,  -1.0, &col[0],  1);
+
+      G.mult( 1.0, &SC[it + nxMyMzP][nxMyMzP],   1,  -1.0, &col[0],  1);
     }
   }
 

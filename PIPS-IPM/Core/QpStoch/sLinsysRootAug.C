@@ -22,11 +22,11 @@ extern int gOuterSolve;
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
 { 
-  prob_->getLocalSizes(locnx, locmy, locmz, locmyl);
+  prob_->getLocalSizes(locnx, locmy, locmz, locmyl, locmzl);
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
-  assert(locmyl >= 0);
-  redRhs = new SimpleVector(locnx+locmy+locmz+locmyl);
+  assert(locmyl >= 0 && locmzl >= 0);
+  redRhs = new SimpleVector(locnx+locmy+locmz+locmyl+locmzl);
 };
 
 sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
@@ -37,6 +37,8 @@ sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
 			       OoqpVector* rhs_)
   : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(NULL)
 { 
+  assert(locmyl == 0 && locmzl == 0);
+
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
   redRhs = new SimpleVector(locnx+locmy+locmz);
@@ -52,7 +54,7 @@ sLinsysRootAug::~sLinsysRootAug()
 SymMatrix* 
 sLinsysRootAug::createKKT(sData* prob)
 {
-  int n = locnx + locmy + locmyl;
+  int n = locnx + locmy + locmyl + locmzl;
   return new DenseSymMatrix(n);
 }
 
@@ -741,7 +743,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 
 void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 {
-  int j, p, pend; double val;
+  int j, p, pend;
 
   stochNode->resMon.recFactTmLocal_start();
   stochNode->resMon.recSchurMultLocal_start();
@@ -768,7 +770,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     for(p=krowQ[i]; p<pend; p++) {
       j = jcolQ[p]; 
       if(i==j) continue;
-      val = dQ[p];
+      double val = dQ[p];
       dKkt[i][j] += val;
       dKkt[j][i] += val;
     }
@@ -826,19 +828,47 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 
       for( p = krowF[i], pend = krowF[i+1]; p < pend; ++p ) {
         j = jcolF[p];
-        val = dF[p];
+        double val = dF[p];
         dKkt[iKkt][j] += val;
         dKkt[j][iKkt] += val;
       }
     }
 
+    // assert symmetry todo delete
+    for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
+   	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
+   	       assert((dKkt[k][k2] - dKkt[k2][k]) <= 0.0001 && (dKkt[k2][k] - dKkt[k][k2]) <= 0.0001);
+  }
+
+  /////////////////////////////////////////////////////////////
+  // update the KKT with G and put z diagonal
+  /////////////////////////////////////////////////////////////
+  if( locmzl > 0 )
+  {
+    SparseGenMatrix& G = prob->getLocalG();
+    assert(zDiagLinkCons);
+    SimpleVector& szDiagLinkCons = dynamic_cast<SimpleVector&>(*zDiagLinkCons);
+
+    double* dG = G.M();
+    int* krowG = G.krowM();
+    int* jcolG = G.jcolM();
+
+    int iKkt = locnx + locmy + locmyl;
+    for( int i = 0; i < locmzl; ++i, ++iKkt ) {
+
+      dKkt[iKkt][iKkt] += szDiagLinkCons[i];
+      for( p = krowG[i], pend = krowG[i+1]; p < pend; ++p ) {
+        j = jcolG[p];
+        double val = dG[p];
+        dKkt[iKkt][j] += val;
+        dKkt[j][iKkt] += val;
+      }
+    }
 
     // assert symmetry todo delete
-    for( int k = 0; k < locnx + locmy + locmyl; k++)
-   	   for( int k2 = 0; k2 < locnx + locmy + locmyl; k2++)
-   	       assert((dKkt[k][k2] - dKkt[k2][k]) <= 0.0001 && (dKkt[k2][k] - dKkt[k][k2]) <= 0.0001);
-
-
+    for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
+         for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
+             assert((dKkt[k][k2] - dKkt[k2][k]) <= 0.0001 && (dKkt[k2][k] - dKkt[k][k2]) <= 0.0001);
   }
 
   /////////////////////////////////////////////////////////////

@@ -269,6 +269,7 @@ int matIneqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
   	   krowM[0] = 0;
   	   jcolM[0] = 0;
+  	 krowM[1] = 1;
 
     return 0;
 }

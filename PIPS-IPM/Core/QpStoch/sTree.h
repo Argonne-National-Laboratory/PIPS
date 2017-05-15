@@ -83,6 +83,7 @@ class sTree
   virtual int nx() const = 0;
   virtual int my() const = 0;
   virtual int myl() const;
+  virtual int mzl() const;
   virtual int mz() const = 0; 
   virtual int id() const = 0; 
 

@@ -69,7 +69,7 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
   // size = ?  nnz = ?
   int nnzQ, nnzB, nnzD;
 
-  prob->getLocalSizes(locnx, locmy, locmz, locmyl);
+  prob->getLocalSizes(locnx, locmy, locmz, locmyl, locmzl);
   int n = locnx+locmy+locmz;
 
   prob->getLocalNnz(nnzQ, nnzB, nnzD);

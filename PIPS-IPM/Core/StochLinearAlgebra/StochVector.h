@@ -50,9 +50,9 @@ public:
   virtual StochVector* clone() const;
 
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3);
-  virtual void jointCopyFromLinkCons(StochVector& v1, StochVector& v2, StochVector& v3, StochVector& vl);
+  virtual void jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector& vz);
   virtual void jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3);
-  virtual void jointCopyToLinkCons(StochVector& v1, StochVector& v2, StochVector& v3, StochVector& vl);
+  virtual void jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& vz);
 
   virtual int isKindOf( int kind );
   virtual void setToZero();

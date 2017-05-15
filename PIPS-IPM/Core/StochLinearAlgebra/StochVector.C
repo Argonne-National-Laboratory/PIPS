@@ -129,41 +129,56 @@ StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
 }
 
 void
-StochVector::jointCopyFromLinkCons(StochVector& v1, StochVector& v2, StochVector& v3, StochVector& vl)
+StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector& vz)
 {
-  assert(vl.vecl);
-
   SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
-  SimpleVector& sv1 = dynamic_cast<SimpleVector&>(*v1.vec);
-  SimpleVector& sv2 = dynamic_cast<SimpleVector&>(*v2.vec);
-  SimpleVector& sv3 = dynamic_cast<SimpleVector&>(*v3.vec);
-  SimpleVector& svl = dynamic_cast<SimpleVector&>(*vl.vecl);
+  SimpleVector& svx = dynamic_cast<SimpleVector&>(*vx.vec);
+  SimpleVector& svy = dynamic_cast<SimpleVector&>(*vy.vec);
+  SimpleVector& svz = dynamic_cast<SimpleVector&>(*vz.vec);
 
-  int n1 = sv1.length();
-  int n2 = sv2.length();
-  int n3 = sv3.length();
-  int n4 = svl.length();
+  int n1 = svx.length();
+  int n2 = svy.length();
+  int n3 = svz.length();
+  int n4 = 0;
+  int n5 = 0;
 
-  assert(n1+n2+n3+n4 == sv.length());
+  assert(n1+n2+n3 <= sv.length());
+  assert(sizeof(double) == sizeof(sv[0]));
 
   if(n1>0)
-    memcpy(&sv[0], &sv1[0], n1*sizeof(double));
+    memcpy(&sv[0], &svx[0], n1*sizeof(double));
 
   if(n2>0)
-    memcpy(&sv[n1], &sv2[0], n2*sizeof(double));
+    memcpy(&sv[n1], &svy[0], n2*sizeof(double));
 
   if(n3>0)
-    memcpy(&sv[n1+n2], &sv3[0], n3*sizeof(double));
+    memcpy(&sv[n1+n2], &svz[0], n3*sizeof(double));
 
-  if(n4>0)
-    memcpy(&sv[n1+n2+n3], &svl[0], n4*sizeof(double));
+  if( vy.vecl )
+  {
+    SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
+    n4 = svyl.length();
+    assert(n4 > 0);
 
-  for(size_t it=0; it<children.size(); it++) {
-    children[it]->jointCopyFrom(*v1.children[it],
-				*v2.children[it],
-				*v3.children[it]);
+    memcpy(&sv[n1+n2+n3], &svyl[0], n4*sizeof(double));
   }
 
+  if( vz.vecl )
+  {
+    SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
+    n5 = svzl.length();
+    assert(n5 > 0);
+
+    memcpy(&sv[n1+n2+n3+n4], &svzl[0], n5*sizeof(double));
+  }
+
+  assert(n1+n2+n3+n4+n5 == sv.length());
+
+  for(size_t it=0; it<children.size(); it++) {
+    children[it]->jointCopyFromLinkCons(*vx.children[it],
+				*vy.children[it],
+				*vz.children[it]);
+  }
 }
 
 
@@ -199,40 +214,53 @@ StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
 }
 
 void
-StochVector::jointCopyToLinkCons(StochVector& v1, StochVector& v2, StochVector& v3, StochVector& vl)
+StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& vz)
 {
-  assert(vl.vecl);
-
   SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
-  SimpleVector& sv1 = dynamic_cast<SimpleVector&>(*v1.vec);
-  SimpleVector& sv2 = dynamic_cast<SimpleVector&>(*v2.vec);
-  SimpleVector& sv3 = dynamic_cast<SimpleVector&>(*v3.vec);
-  SimpleVector& svl = dynamic_cast<SimpleVector&>(*vl.vecl);
+  SimpleVector& svx = dynamic_cast<SimpleVector&>(*vx.vec);
+  SimpleVector& svy = dynamic_cast<SimpleVector&>(*vy.vec);
+  SimpleVector& svz = dynamic_cast<SimpleVector&>(*vz.vec);
 
-  int n1 = sv1.length();
-  int n2 = sv2.length();
-  int n3 = sv3.length();
-  int n4 = svl.length();
+  int n1 = svx.length();
+  int n2 = svy.length();
+  int n3 = svz.length();
+  int n4 = 0;
+  int n5 = 0;
 
-  assert(n1+n2+n3+n4 == sv.length());
+  assert(n1+n2+n3 <= sv.length());
   assert(sizeof(double) == sizeof(sv[0]));
 
   if(n1>0)
-    memcpy(&sv1[0], &sv[0], n1*sizeof(double));
+    memcpy(&svx[0], &sv[0], n1*sizeof(double));
 
   if(n2>0)
-    memcpy(&sv2[0], &sv[n1], n2*sizeof(double));
+    memcpy(&svy[0], &sv[n1], n2*sizeof(double));
 
   if(n3>0)
-    memcpy(&sv3[0], &sv[n1+n2], n3*sizeof(double));
+    memcpy(&svz[0], &sv[n1+n2], n3*sizeof(double));
 
-  if(n4>0)
-    memcpy(&svl[0], &sv[n1+n2+n3], n4*sizeof(double));
+  if( vy.vecl )
+  {
+     SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
+     n4 = svyl.length();
+     assert(n4 > 0);
+
+     memcpy(&svyl[0], &sv[n1+n2+n3], n4*sizeof(double));
+  }
+
+  if( vz.vecl )
+  {
+     SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
+     n5 = svzl.length();
+     assert(n5 > 0);
+
+     memcpy(&svzl[0], &sv[n1+n2+n3+n4], n5*sizeof(double));
+  }
 
   for(size_t it=0; it<children.size(); it++) {
-    children[it]->jointCopyTo(*v1.children[it],
-			      *v2.children[it],
-			      *v3.children[it]);
+    children[it]->jointCopyToLinkCons(*vx.children[it],
+			      *vy.children[it],
+			      *vz.children[it]);
   }
 }
 
@@ -551,14 +579,19 @@ void StochVector::axzpy ( double alpha, OoqpVector& x_, OoqpVector& z_ )
 /** this += alpha * x / z */
 void StochVector::axdzpy( double alpha, OoqpVector& x_, OoqpVector& z_ )
 {
-  assert(!vecl);
-
   StochVector& x = dynamic_cast<StochVector&>(x_);
   StochVector& z = dynamic_cast<StochVector&>(z_);
   assert(x.children.size() == children.size());
   assert(z.children.size() == children.size());
 
   vec->axdzpy(alpha, *x.vec, *z.vec);
+
+  if( vecl )
+  {
+    assert(x.vecl);
+    assert(z.vecl);
+    vecl->axdzpy(alpha, *x.vecl, *z.vecl);
+  }
 
   for(size_t it=0; it<children.size(); it++)
     children[it]->axdzpy(alpha, *x.children[it], *z.children[it]);
@@ -602,8 +635,8 @@ double StochVector::dotProductWith( OoqpVector& v_ )
 
   if( vecl )
   {
-	 assert(v.vecl);
-     dotProd += vecl->dotProductWith(*v.vecl);
+    assert(v.vecl);
+    dotProd += vecl->dotProductWith(*v.vecl);
   }
 
   return dotProd;
@@ -636,10 +669,11 @@ double StochVector::shiftedDotProductWith( double alpha, OoqpVector& mystep_,
 					*yvec.vec,
 					beta, *ystep.vec);
 
-  if( vecl ){
-	assert(mystep.vecl);
-	assert(yvec.vecl);
-	assert(ystep.vecl);
+  if( vecl )
+  {
+	 assert(mystep.vecl);
+	 assert(yvec.vecl);
+	 assert(ystep.vecl);
     dotProd += vecl->shiftedDotProductWith(alpha, *mystep.vecl,  *yvec.vecl, beta, *ystep.vecl);
   }
 
@@ -676,14 +710,19 @@ int StochVector::allPositive()
   return allPos;
 }
 
-// todo adapt for linking constraints (vecl)?
 int StochVector::matchesNonZeroPattern( OoqpVector& select_ )
 {
-  assert(!vecl);
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
   int match = vec->matchesNonZeroPattern(*select.vec);
+
+  if( vecl )
+  {
+     assert(select.vecl);
+     match = match && vecl->matchesNonZeroPattern(*select.vecl);
+  }
+
   if(!match) return 0;
 
   for(size_t it=0; it<children.size() && match; it++) 
@@ -692,15 +731,18 @@ int StochVector::matchesNonZeroPattern( OoqpVector& select_ )
   return match;
 }
 
-// todo adapt for linking constraints (vecl)?
 void StochVector::selectNonZeros( OoqpVector& select_ )
 {
-  assert(!vecl);
-
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
   vec->selectNonZeros(*select.vec);
+
+  if( vecl )
+  {
+     assert(select.vecl);
+     vecl->selectNonZeros(*select.vecl);
+  }
 
   for(size_t it=0; it<children.size(); it++) 
     children[it]->selectNonZeros(*select.children[it]);
@@ -727,12 +769,16 @@ long long StochVector::numberOfNonzeros()
 }
 void StochVector::addSomeConstants( double c, OoqpVector& select_ )
 {
-  assert(!vecl);
-
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
   vec->addSomeConstants(c, *select.vec);
+
+  if( vecl )
+  {
+     assert(select.vecl);
+     vecl->addSomeConstants(c, *select.vecl);
+  }
 
   for(size_t it=0; it<children.size(); it++) 
     children[it]->addSomeConstants(c, *select.children[it]);
@@ -748,8 +794,6 @@ void StochVector::writefSomeToStream( ostream& out,
 void StochVector::axdzpy( double alpha, OoqpVector& x_,
 		       OoqpVector& z_, OoqpVector& select_ )
 {
-  assert(!vecl);
-
   StochVector& select = dynamic_cast<StochVector&>(select_);
   StochVector&      x = dynamic_cast<StochVector&>(x_);
   StochVector&      z = dynamic_cast<StochVector&>(z_);
@@ -759,6 +803,14 @@ void StochVector::axdzpy( double alpha, OoqpVector& x_,
   assert(children.size() == z.     children.size());
 
   vec->axdzpy(alpha, *x.vec, *z.vec, *select.vec);
+
+  if( vecl )
+  {
+     assert(x.vecl);
+     assert(z.vecl);
+     assert(select.vecl);
+     vecl->axdzpy(alpha, *x.vecl, *z.vecl, *select.vecl);
+  }
 
   for(size_t it=0; it<children.size(); it++)
     children[it]->axdzpy(alpha, *x.children[it], *z.children[it], *select.children[it]);
@@ -783,8 +835,6 @@ int StochVector::somePositive( OoqpVector& select_ )
 
 void StochVector::divideSome( OoqpVector& div_, OoqpVector& select_ )
 {
-  assert(!vecl);
-
   StochVector& div    = dynamic_cast<StochVector&>(div_);
   StochVector& select = dynamic_cast<StochVector&>(select_);
 
@@ -792,6 +842,13 @@ void StochVector::divideSome( OoqpVector& div_, OoqpVector& select_ )
   assert(children.size() == select.children.size());
 
   vec->divideSome(*div.vec, *select.vec);
+
+  if( vecl )
+  {
+     assert(div.vecl);
+     assert(select.vecl);
+     vecl->divideSome(*div.vecl, *select.vecl);
+  }
 
   for(size_t it=0; it<children.size(); it++)
     children[it]->divideSome(*div.children[it], *select.children[it]);
