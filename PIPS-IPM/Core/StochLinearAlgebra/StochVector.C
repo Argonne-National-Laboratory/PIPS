@@ -257,6 +257,8 @@ StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& 
      memcpy(&svzl[0], &sv[n1+n2+n3+n4], n5*sizeof(double));
   }
 
+  assert(n1+n2+n3+n4+n5 == sv.length());
+
   for(size_t it=0; it<children.size(); it++) {
     children[it]->jointCopyToLinkCons(*vx.children[it],
 			      *vy.children[it],
@@ -369,15 +371,34 @@ double StochVector::onenorm()
 
 void StochVector::min( double& m, int& index )
 {
-  assert(!vecl);
-
   double lMin; int lInd;
 
   if(NULL==parent) {
     vec->min(m,index);
+    if( vecl )
+    {
+       vecl->min(lMin,lInd);
+       if( lMin < m )
+       {
+          m = lMin;
+          index = lInd + vec->length();
+       }
+    }
   } else {
     vec->min(lMin,lInd);
     
+    if( vecl )
+    {
+       double lMinlink;
+       int lIndlink;
+       vecl->min(lMinlink,lIndlink);
+       if( lMinlink < lMin )
+       {
+          lMin = lMinlink;
+          lInd = lIndlink + vec->length();
+       }
+    }
+
     if(lMin<m) {
       m = lMin;
       index = lInd + parent->n - this->n;
@@ -397,12 +418,17 @@ void StochVector::min( double& m, int& index )
 
 double StochVector::stepbound(OoqpVector & v_, double maxStep )
 {
-  assert(!vecl);
-
   StochVector& v = dynamic_cast<StochVector&>(v_);
 
   double step = this->vec->stepbound(*v.vec, maxStep);
 
+  if( vecl )
+  {
+     assert(v.vecl);
+     double stepl = vecl->stepbound(*v.vecl, maxStep);
+     if( stepl < step )
+        step = stepl;
+  }
 
   //check tree compatibility
   assert(children.size() == v.children.size());
@@ -428,8 +454,6 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 			      double *ustep_elt,
 			      int& first_or_second)
 {
-  assert(!vecl);
-
   StochVector& w = *this;
   StochVector& u = dynamic_cast<StochVector&>(u_vec);
 
@@ -437,10 +461,22 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
   StochVector& ustep = dynamic_cast<StochVector&>(ustep_vec);
 
   double step = maxStep;
-  step = w.vec->findBlocking(*wstep.vec, *u.vec, *ustep.vec, step, 
-			      w_elt, wstep_elt, u_elt, ustep_elt, 
-			      first_or_second);
   
+  if( w.vecl )
+  {
+    assert(wstep.vecl);
+    assert(u.vecl);
+    assert(ustep.vecl);
+
+    step = w.vecl->findBlocking(*wstep.vecl, *u.vecl, *ustep.vecl, step,
+                 w_elt, wstep_elt, u_elt, ustep_elt,
+                 first_or_second);
+  }
+
+  step = w.vec->findBlocking(*wstep.vec, *u.vec, *ustep.vec, step,
+			      w_elt, wstep_elt, u_elt, ustep_elt,
+			      first_or_second);
+
   int nChildren=w.children.size();
   //check tree compatibility
   assert( nChildren             - u.children.size() == 0);
@@ -461,7 +497,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
     MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
 
     //we prefer a AllReduce instead of a bcast, since the step==stepG m
-    //ay occur for two different processes and a deadlock may occur.
+    //may occur for two different processes and a deadlock may occur.
     double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
     if(step==stepG) {
       buffer[0]=*w_elt; buffer[1]=*wstep_elt; 
@@ -818,14 +854,18 @@ void StochVector::axdzpy( double alpha, OoqpVector& x_,
 
 int StochVector::somePositive( OoqpVector& select_ )
 {
-  assert(!vecl);
-
   StochVector& select = dynamic_cast<StochVector&>(select_);
   assert(children.size() == select.children.size());
 
   //!parallel stuff needed
 
   int somePos = vec->somePositive(*select.vec);
+
+  if( vecl )
+  {
+    assert(select.vecl);
+    somePos = somePos && vecl->somePositive(*select.vecl);
+  }
 
   for(size_t it=0; it<children.size() && somePos; it++)
     somePos = children[it]->somePositive(*select.children[it]);

@@ -165,11 +165,9 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   troot_total=tchild_total=tcomm_total=0.0;
 #endif
 
-  assert(locmyl > 0);
-
-  assert(locnx+locmy+locmz+locmyl == b.length());
+  assert(locnx+locmy+locmz+locmyl+locmz == b.length());
   SimpleVector& r = (*redRhs);
-  // todo changed this from <=
+
   assert(r.length() == b.length());
   SparseGenMatrix& C = prob->getLocalD();
 
@@ -178,19 +176,23 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
 
   ///////////////////////////////////////////////////////////////////////
-  // b=[b1;b2;b3;b4] is a locnx+locmy+locmz+locmyl vector
+  // b=[b1;b2;b3;b4;b5] is a locnx+locmy+locmz+locmyl+locmz vector
   // the new rhs should be
-  //           r = [b1-C^T*(zDiag)^{-1}*b3; b2; b4]
+  //           r = [b1-C^T*(zDiag)^{-1}*b3; b2; b4; b5]
   ///////////////////////////////////////////////////////////////////////
 
-  //copy all elements from b except for the the residual values corresponding to z0
+  //copy all elements from b into r except for the the residual values corresponding to z0
   assert(locnx+locmy > 0);
   assert(sizeof( double ) == sizeof(r[0]));
+
+
   memcpy( &r[0], &b[0], (locnx+locmy) * sizeof( double ) );
-  memcpy( &r[locnx+locmy], &b[locnx+locmy+locmz], locmyl * sizeof( double ) );
+  if( locmyl > 0 )
+     memcpy( &r[locnx+locmy], &b[locnx+locmy+locmz], locmyl * sizeof( double ) );
+  if( locmzl > 0 )
+     memcpy( &r[locnx+locmy+locmyl], &b[locnx+locmy+locmz+locmyl], locmzl * sizeof( double ) );
 
   // aliases to parts (no mem allocations)
-  SimpleVector rl(&r[locnx+locmy], locmyl);
   SimpleVector r2(&r[locnx],       locmy);
   SimpleVector r1(&r[0],           locnx);
 
@@ -198,9 +200,10 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   // compute r1 = b1 - C^T*(zDiag)^{-1}*b3
   ///////////////////////////////////////////////////////////////////////
   if(locmz>0) {
-	SimpleVector b3copy(&r[locnx+locmy+locmyl], locmz); // b3copy is used as a temp buffer for b3
+    memcpy( &r[locnx+locmy+locmyl+locmzl], &b[locnx+locmy], locmz * sizeof( double ) );
+	 SimpleVector b3copy(&r[locnx+locmy+locmyl+locmzl], locmz); // b3copy is used as a temp buffer for b3
     assert(b3copy.length() == zDiag->length());
-    b3copy.componentDiv(*zDiag);//r3 is a copy of b3
+    b3copy.componentDiv(*zDiag);
     C.transMult(1.0, r1, -1.0, b3copy);
   }
   ///////////////////////////////////////////////////////////////////////
@@ -226,7 +229,7 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   SimpleVector b1(&b[0],           locnx);
   SimpleVector b2(&b[locnx],       locmy);
   SimpleVector b3(&b[locnx+locmy], locmz);
-  SimpleVector b4(&b[locnx+locmy+locmz], locmyl);
+
   b1.copyFrom(r1);
   b2.copyFrom(r2);
 
@@ -235,7 +238,19 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
     b3.componentDiv(*zDiag);
   }
 
-  b4.copyFrom(rl);
+  if( locmyl > 0 )
+  {
+    SimpleVector rmyl(&r[locnx+locmy], locmyl);
+    SimpleVector b4(&b[locnx+locmy+locmz], locmyl);
+    b4.copyFrom(rmyl);
+  }
+
+  if( locmzl > 0 )
+  {
+    SimpleVector rmzl(&r[locnx+locmy+locmyl], locmzl);
+    SimpleVector b5(&b[locnx+locmy+locmz+locmyl], locmzl);
+    b5.copyFrom(rmzl);
+  }
 
 #ifdef TIMING
   if(myRank==0 && gInnerSCsolve>=1)

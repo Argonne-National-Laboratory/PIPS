@@ -260,10 +260,8 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 }
 
 /** sum up right hand side for (current) scenario i and add it to right hand side of scenario 0 */
-void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, int my0, int mz0)
+void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 {
-  assert(locmyl > 0);
-
   SimpleVector& z0 = dynamic_cast<SimpleVector&>(z0_);
   SimpleVector& zi = dynamic_cast<SimpleVector&>(zi_);
 
@@ -272,25 +270,48 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
 
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
-  SparseGenMatrix& F = prob->getLocalF();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   int dummy, nx0;
   A.getSize(dummy, nx0);
 
+  // todo deleteme
+#if 1
+  int mz, my, test;
+
+  A.getSize(my, test);
+  assert(test == nx0);
+  C.getSize(mz, test);
+  assert(test == nx0);
+
+  assert(mz == locmz);
+  assert(my == locmy);
+#endif
+
   // zi2, zi3 are just references to fragments of zi
   SimpleVector zi1 (&zi[0],           locnx);
   SimpleVector zi2 (&zi[locnx],       locmy);
   SimpleVector zi3 (&zi[locnx+locmy], locmz);
-  // same for z01 (only the first n0 entries in the output z0 are computed) and z0l (accordingly)
+  // same for z01 (only the first n0 entries in the output z0 are computed)
   SimpleVector z01 (&z0[0], nx0);
-  SimpleVector z0l (&z0[nx0+my0+mz0], locmyl);
 
   R.transMult(1.0, z01, -1.0, zi1);
   A.transMult(1.0, z01, -1.0, zi2);
   C.transMult(1.0, z01, -1.0, zi3);
 
-  F.mult(1.0, z0l, -1.0, zi1);
+  if( locmyl > 0 )
+  {
+    SimpleVector z0myl (&z0[nx0+locmy+locmz], locmyl);
+    SparseGenMatrix& F = prob->getLocalF();
+    F.mult(1.0, z0myl, -1.0, zi1);
+  }
+
+  if( locmzl > 0 )
+  {
+    SimpleVector z0mzl (&z0[nx0+locmy+locmz+locmyl], locmzl);
+    SparseGenMatrix& G = prob->getLocalG();
+    G.mult(1.0, z0mzl, -1.0, zi1);
+  }
 }
 
 
@@ -347,14 +368,24 @@ void sLinsys::LniTransMult(sData *prob,
   A.mult(0.0, LniTx2, 1.0, x1);
   C.mult(0.0, LniTx3, 1.0, x1);
 
-  if (locmyl > 0)
+  if( locmyl > 0 )
   {
-	int nxMyMzP = x.length() - locmyl;
+	 int nxMyMzP = x.length() - locmyl - locmzl;
 
-	SparseGenMatrix& F = prob->getLocalF();
+	 SparseGenMatrix& F = prob->getLocalF();
     SimpleVector xlink(&x[nxMyMzP], locmyl);
 
     F.transMult(1.0, LniTx1, 1.0, xlink);
+  }
+
+  if( locmzl > 0 )
+  {
+    int nxMyMzMylP = x.length() - locmzl;
+
+    SparseGenMatrix& G = prob->getLocalG();
+    SimpleVector xlink(&x[nxMyMzMylP], locmzl);
+
+    G.transMult(1.0, LniTx1, 1.0, xlink);
   }
 
   solver->Lsolve(LniTx);
@@ -614,7 +645,8 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     }
   }
 
-#if 1
+// todo
+#if 0
   for( int k = 0; k < NP; k++)
   {
   	   for( int k2 = 0; k2 < NP; k2++)
@@ -625,9 +657,10 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
 
   // assert symmetry todo delete
+#define EPSI .0001
   for( int k = 0; k < NP; k++)
  	   for( int k2 = 0; k2 < NP; k2++)
- 	       assert((SC[k][k2] - SC[k2][k]) <= 0.0001 && (SC[k2][k] - SC[k][k2]) <= 0.0001);
+ 	       assert((SC[k][k2] - SC[k2][k]) <= EPSI && (SC[k2][k] - SC[k][k2]) <= EPSI);
 }
  
 #include <set>

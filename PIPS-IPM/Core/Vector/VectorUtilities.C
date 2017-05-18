@@ -135,18 +135,18 @@ double find_blocking( double w[],     int n, int incw,
     if( *pw > 0 && temp < 0 ) {
       temp = -*pw/temp;
       if( temp <= bound ) {
-	bound = temp;
-	lastBlocking = i;
-	first_or_second = 1;
+         bound = temp;
+         lastBlocking = i;
+         first_or_second = 1;
       }
     }
     temp = *pustep;
     if( *pu > 0 && temp < 0 ) {
       temp = -*pu/temp;
       if( temp <= bound ) {
-	bound = temp;
-	lastBlocking = i;
-	first_or_second = 2;
+         bound = temp;
+         lastBlocking = i;
+         first_or_second = 2;
       }
     }
 

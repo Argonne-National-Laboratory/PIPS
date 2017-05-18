@@ -115,7 +115,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
 
-#if 1
+#if 0
   // todo deleteme
   cout << "dkkt after:" <<  endl;
   for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
@@ -200,6 +200,7 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
   // Do the Schur compl and L0\b0
 
   SimpleVector& b0 = dynamic_cast<SimpleVector&>(*b.vec);
+  assert(!b.vecl);
 
   //this code actually works on a single CPU too :)
   if (iAmDistrib) {
@@ -208,8 +209,9 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
     if(myRank>0) {
       b0.setToZero();
     }
-  } //else b0.writeToStream(cout);
+  }
 
+  // compute B_i^T rhs_i and add it up
 
   for(size_t it=0; it<children.size(); it++) {
 #ifdef TIMING
@@ -222,10 +224,8 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
     //SimpleVector tmp(zi.length());
     //tmp.copyFromArray(zi.elements());
     //children[it]->addLnizi(prob->children[it], b0, tmp);
-    if( locmyl > 0 )
-      children[it]->addLniziLinkCons(prob->children[it], b0, zi, locmy, locmz);
-    else
-      children[it]->addLnizi(prob->children[it], b0, zi);
+    children[it]->addLniziLinkCons(prob->children[it], b0, zi);
+
 #ifdef TIMING
     children[it]->stochNode->resMon.recLsolveTmChildren_stop();
 #endif
@@ -362,10 +362,8 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
   stochNode->resMon.recDsolveTmLocal_start();
 #endif
 
-  if( locmyl > 0 )
-    solveReducedLinkCons(prob, b0);
-  else
-    solveReduced(prob, b0);
+  solveReducedLinkCons(prob, b0);
+
 #ifdef TIMING
   stochNode->resMon.recDsolveTmLocal_stop();
 #endif
@@ -508,26 +506,24 @@ void sLinsysRoot::reduceKKT()
   //parallel communication
   if (iAmDistrib) {
     submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
-	if (locmyl > 0)
+	if( locmyl > 0 || locmzl > 0 )
 	{
 	   int locNxMy = locnx + locmy;
-	   int locNxMyMyl = locnx + locmy + locmyl;
+	   int locNxMyMylMzl = locnx + locmy + locmyl + locmzl;
 
-	   assert(kktd->size() == locNxMyMyl);
+	   assert(kktd->size() == locNxMyMylMzl);
 
 	   // reduce upper right part
-	   submatrixAllReduce(kktd, 0, locNxMy, locnx, locNxMyMyl - locNxMy, mpiComm);
+	   submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
 
 	   // preserve symmetry todo memopt!
 	   double ** M = kktd->mStorage->M;
-	   for( int k = locNxMy; k < locNxMyMyl; k++ ){
-		 for( int k2 = 0; k2 < locnx; k2++ ){
-		   M[k][k2] = M[k2][k];
-		 }
-	   }
+	   for( int k = locNxMy; k < locNxMyMylMzl; k++ )
+		  for( int k2 = 0; k2 < locnx; k2++ )
+		    M[k][k2] = M[k2][k];
 
 	   // reduce lower diagonal part
-	   submatrixAllReduce(kktd, locNxMy, locNxMy, locNxMyMyl - locNxMy, locNxMyMyl - locNxMy, mpiComm);
+	   submatrixAllReduce(kktd, locNxMy, locNxMy, locmyl + locmzl, locmyl + locmzl, mpiComm);
 	}
   }
 }
@@ -663,8 +659,6 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
   double* chunk = new double[chunk_size];
 
   int rows_in_chunk = chunk_size/n;
-
-  cout << "rows_in_chunk " << rows_in_chunk << endl;
 
   int iRow=startRow;
 
