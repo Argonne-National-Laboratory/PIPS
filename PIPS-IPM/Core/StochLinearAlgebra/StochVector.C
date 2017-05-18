@@ -158,18 +158,16 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
   {
     SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
     n4 = svyl.length();
-    assert(n4 > 0);
-
-    memcpy(&sv[n1+n2+n3], &svyl[0], n4*sizeof(double));
+    if( n4 > 0 );
+      memcpy(&sv[n1+n2+n3], &svyl[0], n4*sizeof(double));
   }
 
   if( vz.vecl )
   {
     SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
     n5 = svzl.length();
-    assert(n5 > 0);
-
-    memcpy(&sv[n1+n2+n3+n4], &svzl[0], n5*sizeof(double));
+    if( n5 > 0 );
+      memcpy(&sv[n1+n2+n3+n4], &svzl[0], n5*sizeof(double));
   }
 
   assert(n1+n2+n3+n4+n5 == sv.length());
@@ -243,18 +241,16 @@ StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& 
   {
      SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
      n4 = svyl.length();
-     assert(n4 > 0);
-
-     memcpy(&svyl[0], &sv[n1+n2+n3], n4*sizeof(double));
+     if( n4 > 0 )
+       memcpy(&svyl[0], &sv[n1+n2+n3], n4*sizeof(double));
   }
 
   if( vz.vecl )
   {
      SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
      n5 = svzl.length();
-     assert(n5 > 0);
-
-     memcpy(&svzl[0], &sv[n1+n2+n3+n4], n5*sizeof(double));
+     if( n5 > 0 )
+       memcpy(&svzl[0], &sv[n1+n2+n3+n4], n5*sizeof(double));
   }
 
   assert(n1+n2+n3+n4+n5 == sv.length());

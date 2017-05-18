@@ -165,7 +165,7 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   troot_total=tchild_total=tcomm_total=0.0;
 #endif
 
-  assert(locnx+locmy+locmz+locmyl+locmz == b.length());
+  assert(locnx+locmy+locmz+locmyl+locmzl == b.length());
   SimpleVector& r = (*redRhs);
 
   assert(r.length() == b.length());
