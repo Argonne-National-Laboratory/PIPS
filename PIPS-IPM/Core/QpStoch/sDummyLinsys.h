@@ -37,7 +37,7 @@ class sDummyLinsys : public sLinsys
   
 
   virtual void addLnizi(sData *prob, OoqpVector& z0, OoqpVector& zi){};
-  virtual void addLniziLinkCons(sData *prob, OoqpVector& z0, OoqpVector& zi, int my0, int mz0){};
+  virtual void addLniziLinkCons(sData *prob, OoqpVector& z0, OoqpVector& zi){};
 
   /** y += alpha * Lni^T * x */
   void LniTransMult(sData *prob, 

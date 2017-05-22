@@ -220,9 +220,6 @@ void sLinsysRoot::Lsolve(sData *prob, OoqpVector& x)
 #endif
     SimpleVector& zi = dynamic_cast<SimpleVector&>(*b.children[it]->vec);
 
-    // todo
-    assert(zi.n > 0);
-
     //!memopt here
     //SimpleVector tmp(zi.length());
     //tmp.copyFromArray(zi.elements());
