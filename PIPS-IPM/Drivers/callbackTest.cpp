@@ -128,6 +128,7 @@ int vecEqRhs(void* user_data, int id, double* vec, int len)
 
 int vecIneqRhs(void* user_data, int id, double* vec, int len)
 {
+
 	int i;
 
 		for( i = 0; i < len; i++ )
@@ -358,11 +359,11 @@ if( id == 2 )
 		       krowM[2] = 4;
 
 		       jcolM[0] = 1;
-		       jcolM[1] = 2;
+		       jcolM[1] = 3;
 
 		       jcolM[2] = 2;
 
-		       jcolM[3] = 1;
+		       jcolM[3] = 3;
 }
 else
 {
