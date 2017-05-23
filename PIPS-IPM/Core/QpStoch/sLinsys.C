@@ -660,7 +660,11 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 #define EPSI .0001
   for( int k = 0; k < NP; k++)
  	   for( int k2 = 0; k2 < NP; k2++)
+ 	   {
+ 	      if( SC[k][k2] - SC[k2][k] > EPSI || SC[k2][k] - SC[k][k2] > EPSI )
+           printf(" %f  %f \n", SC[k][k2], SC[k2][k]);
  	       assert((SC[k][k2] - SC[k2][k]) <= EPSI && (SC[k2][k] - SC[k][k2]) <= EPSI);
+ 	   }
 }
  
 #include <set>

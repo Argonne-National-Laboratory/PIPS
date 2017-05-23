@@ -37,7 +37,7 @@ int nnzMatEqStage1(void* user_data, int id, int* nnz)
 	if( id == 0 )
 		*nnz = 2;
 	else
-		*nnz = 3;
+		*nnz = 2;
 
 	return 0;
 }
@@ -65,6 +65,9 @@ int nnzMatEqStage2(void* user_data, int id, int* nnz)
 
 int nnzMatIneqStage2(void* user_data, int id, int* nnz)
 {
+   if( id == 0 )
+      *nnz = 0;
+   else
     *nnz = 1;
 	return 0;
 }
@@ -104,20 +107,21 @@ int vecAllZero(void* user_data, int id, double* vec, int len)
 
 int vecEqRhs(void* user_data, int id, double* vec, int len)
 {
-	int i;
 	if( id == 0 )
 	{
-		for( i = 0; i < len; i++ )
-			vec[i] = 1.0;
+	   vec[0] = 2.0;
+	   vec[1] = 7.0;
 	}
-	else
+	else if( id == 1 )
 	{
-		for( i = 0; i < len; i++ )
-			vec[i] =  2.0 * id + (double) i;
+      vec[0] = 3.0;
+      vec[1] = 7.0;
 	}
-
-	vec[0] += 1.0;
-	vec[1] += 6.0;
+   else if( id == 2 )
+   {
+      vec[0] = 0.0;
+      vec[1] = 7.0;
+   }
 
 	return 0;
 }
@@ -127,7 +131,7 @@ int vecIneqRhs(void* user_data, int id, double* vec, int len)
 	int i;
 
 		for( i = 0; i < len; i++ )
-			vec[i] = 4.0;
+			vec[i] = 5.0;
 
 	return 0;
 }
@@ -160,7 +164,7 @@ int vecObj(void* user_data, int id, double* vec, int len)
 {
 	int i;
 	for( i = 0; i < len; i++ )
-		vec[i] = 1.0;
+		vec[i] = 2.0;
 
 	return 0;
 }
@@ -187,12 +191,7 @@ int vecXlbActive(void* user_data, int id, double* vec, int len)
 int vecLinkRhs(void* user_data, int id, double* vec, int len)
 {
 	int i;
-#if 0
-	for( i = 0; i < len; i++ )
-		vec[i] = 6.0;
-#endif
 
-	//vec[0] = 3.0;
 	vec[0] = 6.0;
 	vec[1] = 4.0;
 	return 0;
@@ -211,51 +210,49 @@ int matAllZero(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-	int i;
-#if 1
 	if( id == 0 )
 	{
 		M[0] = 2.0;
 		M[1] = 7.0;
 
-		   krowM[0] = 0;
-		   krowM[1] = 1;
-		   krowM[2] = 2;
+  	   krowM[0] = 0;
+  	   krowM[1] = 1;
+  	   krowM[2] = 2;
 
 
-		   jcolM[0] = 0;
-		   jcolM[1] = 1;
+  	   jcolM[0] = 0;
+  	   jcolM[1] = 1;
 	}
-	else
+	else if( id == 1 )
 	{
-		int n = 3;
+      M[0] = 2.0;
+      M[1] = 5.0;
 
-		   for( i = 0; i < n; i++ )
-			   M[i] = i + 2.0;
+      krowM[0] = 0;
+      krowM[1] = 1;
+      krowM[2] = 2;
 
-		   krowM[0] = 0;
-		   krowM[1] = 1;
-		   krowM[2] = 3;
 
-		   jcolM[0] = 0;
-		   jcolM[1] = 0;
-		   jcolM[2] = 1;
+      jcolM[0] = 0;
+      jcolM[1] = 1;
 	}
-#else
-  	 int n = 2;
+   else if( id == 2 )
+   {
+      M[0] = 2.0;
+      M[0] = 0.0;
 
- 	   for( i = 0; i < n; i++ )
- 		   M[i] = 1.0;
+      M[1] = 4.0;
 
- 	   krowM[0] = 0;
- 	   krowM[1] = 1;
- 	   krowM[2] = 2;
+      krowM[0] = 0;
+      krowM[1] = 1;
+      krowM[2] = 2;
 
- 	   jcolM[0] = 0;
- 	   jcolM[1] = 1;
-#endif
 
-    return 0;
+      jcolM[0] = 0;
+      jcolM[1] = 1;
+   }
+
+   return 0;
 }
 
 
@@ -263,12 +260,10 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matIneqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-    int n = 1;
+  	 M[0] = 1.0;
 
-  	   M[0] = 1.0;
-
-  	   krowM[0] = 0;
-  	   jcolM[0] = 0;
+  	 krowM[0] = 0;
+  	 jcolM[0] = 0;
   	 krowM[1] = 1;
 
     return 0;
@@ -276,11 +271,8 @@ int matIneqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matIneqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-	int i;
-    int n = 1;
 
-  	   for( i = 0; i < n; i++ )
-  		   M[i] = 2.0;
+  		M[0] = 2.0;
 
   	   krowM[0] = 0;
   	   krowM[1] = 1;
@@ -292,18 +284,17 @@ int matIneqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-	int i;
-    int n = 2;
+
 
     if( id == 0 )
     {
-   	   for( i = 0; i <= n; i++ )
-   		   krowM[i] = 0;
+      krowM[0] = 0;
+   	krowM[1] = 0;
     }
     else if( id == 1 )
     {
- 	   for( i = 0; i < 2; i++ )
- 		   M[i] = (double) i + 1.0;
+      M[0] = 1.0;
+      M[1] = 2.0;
 
  	   krowM[0] = 0;
  	   krowM[1] = 1;
@@ -314,8 +305,10 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
     }
     else
     {
-  	   for( i = 0; i < 2; i++ )
-  		   M[i] = (double) i + 3.0;
+      M[0] = 1.0;
+      M[0] = 0.0;
+
+      M[1] = 3.0;
 
   	   krowM[0] = 0;
   	   krowM[1] = 1;
@@ -330,16 +323,20 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matIneqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-	int i;
-    int n = 1;
-
-  	   for( i = 0; i < n; i++ )
-  		   M[i] = 2.0;
+   if( id == 0 )
+   {
+     krowM[0] = 0;
+     krowM[1] = 0;
+   }
+   else
+   {
+      M[0] = 3.0;
 
   	   krowM[0] = 0;
   	   krowM[1] = 1;
 
   	   jcolM[0] = 0;
+   }
 
     return 0;
 }
@@ -352,9 +349,7 @@ if( id == 2 )
 {
 	  M[0] = 1.0;
 	  M[1] = 1.0;
-
 	  M[2] = 1.0;
-
 	  M[3] = 1.0;
 
 
@@ -363,11 +358,11 @@ if( id == 2 )
 		       krowM[2] = 4;
 
 		       jcolM[0] = 1;
-		       jcolM[1] = 3;
+		       jcolM[1] = 2;
 
 		       jcolM[2] = 2;
 
-		       jcolM[3] = 3;
+		       jcolM[3] = 1;
 }
 else
 {
@@ -387,14 +382,6 @@ else
 	       jcolM[2] = 0;
 }
 
-#if 0
-       M[0] = 1.0;
-
-       krowM[0] = 0;
-       krowM[1] = 1;
-
-       jcolM[0] = 0;
-#endif
 
     return 0;
 }
@@ -521,12 +508,12 @@ int main(int argc, char ** argv) {
 	  int nx = 2;
 	  int my = 2;
 	  int mz = 1;
-	  int mzl = 1;
 
 #if LINKING_CONS
 	  int myl = 2;
+	   int mzl = 1;
 	  if( id == 2 )
-	   nx += 2;
+	   nx = 4;
 
 	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
 					nx, my, myl, mz, mzl,
