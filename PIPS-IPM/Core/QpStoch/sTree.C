@@ -34,12 +34,12 @@ sTree::~sTree()
 
 int sTree::myl() const
 {
-   return 0;
+   return -1;
 }
 
 int sTree::mzl() const
 {
-   return 0;
+   return -1;
 }
 
 void sTree::assignProcesses(MPI_Comm comm)
