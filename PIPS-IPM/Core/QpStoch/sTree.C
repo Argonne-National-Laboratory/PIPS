@@ -575,6 +575,9 @@ StochVector* sTree::newRhs()
   int locmyl = (np == -1) ? myl() : 0;
   int locmzl = (np == -1) ? mzl() : 0;
 
+  locmyl = max(locmyl, 0);
+  locmzl = max(locmyl, 0);
+
   StochVector* rhs = new StochVector(nx() + my() + mz() + locmyl + locmzl, commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {

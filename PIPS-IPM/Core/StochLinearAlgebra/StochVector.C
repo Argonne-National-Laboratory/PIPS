@@ -33,7 +33,7 @@ StochVector::StochVector(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed/*
   if( nl_ >= 0 )
     vecl = new SimpleVector(nl_);
   else
-	vecl = NULL;
+	 vecl = NULL;
 
   if(-1==iAmDistrib && MPI_COMM_NULL!=mpiComm) {
     int size;
@@ -158,6 +158,8 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
   {
     SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
     n4 = svyl.length();
+    assert(n4 >= 0);
+
     if( n4 > 0 );
       memcpy(&sv[n1+n2+n3], &svyl[0], n4*sizeof(double));
   }
@@ -166,6 +168,8 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
   {
     SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
     n5 = svzl.length();
+    assert(n5 >= 0);
+
     if( n5 > 0 );
       memcpy(&sv[n1+n2+n3+n4], &svzl[0], n5*sizeof(double));
   }
@@ -241,6 +245,8 @@ StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& 
   {
      SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
      n4 = svyl.length();
+     assert(n4 >= 0);
+
      if( n4 > 0 )
        memcpy(&svyl[0], &sv[n1+n2+n3], n4*sizeof(double));
   }
@@ -249,6 +255,8 @@ StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& 
   {
      SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
      n5 = svzl.length();
+     assert(n5>= 0);
+
      if( n5 > 0 )
        memcpy(&svzl[0], &sv[n1+n2+n3+n4], n5*sizeof(double));
   }

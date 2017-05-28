@@ -481,7 +481,7 @@ StochVector* sTreeCallbacks::createb() const
   double* vData = ((SimpleVector*)b->vec)->elements();
   double* vDataLinkCons = NULL;
 
-  if (np == -1)
+  if (np == -1 && b->vecl )
      vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
 
   if (!fakedata) {
@@ -490,8 +490,10 @@ StochVector* sTreeCallbacks::createb() const
 
     // at root and with linking constraints?
     if (np == -1 && data->fbl)
-      data->fbl(data->user_data, data->id,
-    		vDataLinkCons, data->myl);
+    {
+      assert(vDataLinkCons);
+      data->fbl(data->user_data, data->id, vDataLinkCons, data->myl);
+    }
 
     for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createb();
@@ -508,8 +510,8 @@ StochVector* sTreeCallbacks::createb() const
     pos = 0;
     // at root and with linking constraints? todo don't really know whether this is correct
     if (np == -1 && data->fbl) {
-        scens[0]->fbl(scens[0]->user_data,scens[0]->id,
-       		  vDataLinkCons, scens[0]->myl);
+        assert(vDataLinkCons);
+        scens[0]->fbl(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->myl);
     }
   }
 
@@ -638,7 +640,7 @@ StochVector* sTreeCallbacks::createclow() const
   double* vData = ((SimpleVector*)clow->vec)->elements();
   double* vDataLinkCons = NULL;
 
-  if (np == -1)
+  if (np == -1 && clow->vecl )
      vDataLinkCons = ((SimpleVector*)clow->vecl)->elements();
 
   if (!fakedata) {  
@@ -646,7 +648,10 @@ StochVector* sTreeCallbacks::createclow() const
 
     // at root and with linking constraints?
     if (np == -1 && data->fdllow)
+    {
+      assert(vDataLinkCons);
       data->fdllow(data->user_data, data->id, vDataLinkCons, data->mzl);
+    }
 
     for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createclow();
@@ -662,7 +667,10 @@ StochVector* sTreeCallbacks::createclow() const
 
     // at root and with linking constraints? todo don't really know whether this is correct
     if (np == -1 && data->fdllow)
+    {
+        assert(vDataLinkCons);
         scens[0]->fdllow(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->mzl);
+    }
 
   }
   return clow;
@@ -680,7 +688,7 @@ StochVector* sTreeCallbacks::createiclow() const
   double* vData = ((SimpleVector*)iclow->vec)->elements();  
   double* vDataLinkCons = NULL;
 
-  if (np == -1)
+  if (np == -1 && iclow->vecl )
     vDataLinkCons = ((SimpleVector*)iclow->vecl)->elements();
 
   if (!fakedata) {
@@ -688,7 +696,10 @@ StochVector* sTreeCallbacks::createiclow() const
 
     // at root and with linking constraints?
     if (np == -1 && data->fidllow)
+    {
+      assert(vDataLinkCons);
       data->fidllow(data->user_data, data->id, vDataLinkCons, data->mzl);
+    }
 
     for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createiclow();
@@ -704,7 +715,10 @@ StochVector* sTreeCallbacks::createiclow() const
 
     // at root and with linking constraints? todo don't really know whether this is correct
     if (np == -1 && data->fidllow)
+    {
+        assert(vDataLinkCons);
         scens[0]->fidllow(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->mzl);
+    }
   }
   return iclow;
 }
@@ -721,7 +735,7 @@ StochVector* sTreeCallbacks::createcupp() const
   double* vData = ((SimpleVector*)cupp->vec)->elements();  
   double* vDataLinkCons = NULL;
 
-  if (np == -1)
+  if (np == -1 && cupp->vecl)
     vDataLinkCons = ((SimpleVector*)cupp->vecl)->elements();
 
   if (!fakedata) {
@@ -729,7 +743,10 @@ StochVector* sTreeCallbacks::createcupp() const
 
     // at root and with linking constraints?
     if (np == -1 && data->fdlupp)
+    {
+      assert(vDataLinkCons);
       data->fdlupp(data->user_data, data->id, vDataLinkCons, data->mzl);
+    }
 
     for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createcupp();
@@ -745,7 +762,10 @@ StochVector* sTreeCallbacks::createcupp() const
 
     // at root and with linking constraints? todo don't really know whether this is correct
     if (np == -1 && data->fdlupp)
-        scens[0]->fdlupp(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->mzl);
+    {
+      assert(vDataLinkCons);
+      scens[0]->fdlupp(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->mzl);
+    }
 
   }
   return cupp;
@@ -763,7 +783,7 @@ StochVector* sTreeCallbacks::createicupp() const
   double* vData = ((SimpleVector*)icupp->vec)->elements();
   double* vDataLinkCons = NULL;
 
-  if (np == -1)
+  if (np == -1 && icupp->vecl)
      vDataLinkCons = ((SimpleVector*)icupp->vecl)->elements();
 
   if (!fakedata) {
@@ -772,7 +792,10 @@ StochVector* sTreeCallbacks::createicupp() const
 
     // at root and with linking constraints?
     if (np == -1 && data->fidlupp)
+    {
+      assert(vDataLinkCons);
       data->fidlupp(data->user_data, data->id, vDataLinkCons, data->mzl);
+    }
 
     for(size_t it=0; it<children.size(); it++) {
       StochVector* child = children[it]->createicupp();
@@ -788,7 +811,10 @@ StochVector* sTreeCallbacks::createicupp() const
 
     // at root and with linking constraints? todo don't really know whether this is correct
     if (np == -1 && data->fidlupp)
-        scens[0]->fidlupp(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->mzl);
+    {
+      assert(vDataLinkCons);
+      scens[0]->fidlupp(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->mzl);
+    }
   }
   return icupp;
 }

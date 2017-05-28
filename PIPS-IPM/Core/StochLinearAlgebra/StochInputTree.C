@@ -50,7 +50,7 @@ StochInputNode(void* user_data_, int id_,
 	       FVEC fxlow_, FVEC fixlow_, 
 	       FVEC fxupp_, FVEC fixupp_,
 	       bool deleteUserData_/*=false*/)
-  : id(id_), n(n_), my(my_), myl(0), mz(mz_), mzl(0),
+  : id(id_), n(n_), my(my_), myl(-1), mz(mz_), mzl(-1),
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzBl(-1), nnzC(-1), nnzD(-1), nnzDl(-1),
     fnnzQ(fnnzQ_), fnnzA(fnnzA_), fnnzB(fnnzB_), fnnzBl(NULL), fnnzC(fnnzC_), fnnzD(fnnzD_), fnnzDl(NULL),
     fQ(fQ_), fA(fA_), fB(fB_), fBl(NULL), fC(fC_), fD(fD_), fDl(NULL),
