@@ -147,3 +147,22 @@ target_link_libraries(pipsipmCallbackExample
 
 
 
+set(GAMSDIR  Drivers/gams)
+add_executable(gmspips Drivers/gmspips/gmspips.cpp Drivers/gmspips/gmspipsio.c ${GAMSDIR}/apifiles/C/api/gmomcc.c ${GAMSDIR}/apifiles/C/api/gevmcc.c ${GAMSDIR}/apifiles/C/api/gdxcc.c)
+set_target_properties(gmspips PROPERTIES
+     LINK_FLAGS -ldl)
+add_definitions(-DGMS_PIPS -DGMS_MPI)
+target_include_directories(gmspips PUBLIC
+     ${GAMSDIR}/apifiles/C/api/ Drivers/gmspips/)
+target_link_libraries(gmspips
+    stochInput ${COIN_LIBS}
+    ooqpstoch ooqpstochla ooqpmehrotrastoch
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
+
+add_executable(gmschk Drivers/gmspips/gmspipschk.cpp Drivers/gmspips/gmspipsio.c ${GAMSDIR}/apifiles/C/api/gmomcc.c ${GAMSDIR}/apifiles/C/api/gevmcc.c ${GAMSDIR}/apifiles/C/api/gdxcc.c)
+set_target_properties(gmschk PROPERTIES
+     LINK_FLAGS -ldl)
+target_include_directories(gmschk PUBLIC
+     ${GAMSDIR}/apifiles/C/api/ Drivers/gmspips/)
+
