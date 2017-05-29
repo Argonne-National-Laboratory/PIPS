@@ -136,9 +136,14 @@ target_link_libraries(pipsipmFromRaw
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
     
-add_executable(pipsipmCallbackTest Drivers/callbackTest.cpp)
-target_link_libraries(pipsipmCallbackTest
+
+add_executable(pipsipmCallbackExample Drivers/callbackExample.cpp)
+target_link_libraries(pipsipmCallbackExample
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})      
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})     
+     
+
+
+

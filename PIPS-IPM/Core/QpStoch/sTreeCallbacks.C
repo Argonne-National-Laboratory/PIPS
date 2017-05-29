@@ -83,7 +83,31 @@ void sTreeCallbacks::loadLocalSizes()
 // this is usually called before assigning processes
 void sTreeCallbacks::computeGlobalSizes()
 {
-  if (data) {
+   int myrank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+  if (data && sTree::isInVector(myrank, myProcs) ) {
+
+    // callback used for sizes?
+    if( data->nCall ) {
+       assert(data->myCall);
+       assert(data->mzCall);
+
+       data->nCall(data->user_data, data->id, &data->n);
+       data->myCall(data->user_data, data->id, &data->my);
+       data->mzCall(data->user_data, data->id, &data->mz);
+
+       if( data->mylCall )
+          data->mylCall(data->user_data, data->id, &data->myl);
+       else
+          data->myl = -1;
+
+       if( data->mzlCall )
+          data->mzlCall(data->user_data, data->id, &data->mzl);
+       else
+          data->myl = -1;
+    }
+
     N  = data->n;
     MY = data->my;
     MZ = data->mz;

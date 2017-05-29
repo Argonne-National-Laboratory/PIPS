@@ -48,11 +48,14 @@ sFactory::sFactory( StochInputTree* inputTree, MPI_Comm comm)
 {
   
   tree = new sTreeCallbacks(inputTree);
+
+  //decide how the CPUs are assigned
+  tree->assignProcesses(comm);
+
   tree->computeGlobalSizes();
   //now the sizes of the problem are available, set them for the parent class
   tree->GetGlobalSizes(nx, my, mz);
-  //decide how the CPUs are assigned 
-  tree->assignProcesses(comm);
+
 }
  
 sFactory::sFactory( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )

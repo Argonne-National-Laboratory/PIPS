@@ -51,6 +51,7 @@ StochInputNode(void* user_data_, int id_,
 	       FVEC fxupp_, FVEC fixupp_,
 	       bool deleteUserData_/*=false*/)
   : id(id_), n(n_), my(my_), myl(-1), mz(mz_), mzl(-1),
+    nCall(NULL), myCall(NULL), mzCall(NULL), mylCall(NULL), mzlCall(NULL),
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzBl(-1), nnzC(-1), nnzD(-1), nnzDl(-1),
     fnnzQ(fnnzQ_), fnnzA(fnnzA_), fnnzB(fnnzB_), fnnzBl(NULL), fnnzC(fnnzC_), fnnzD(fnnzD_), fnnzDl(NULL),
     fQ(fQ_), fA(fA_), fB(fB_), fBl(NULL), fC(fC_), fD(fD_), fDl(NULL),
@@ -62,10 +63,11 @@ StochInputNode(void* user_data_, int id_,
     deleteUserData(deleteUserData_)
 { };
 
+
 // includes linking constraints
 StochInputTree::StochInputNode::
 StochInputNode(void* user_data_, int id_,
-	       int n_, int my_, int myl_, int mz_, int mzl_,
+	       FNNZ n_, FNNZ my_, FNNZ myl_, FNNZ mz_, FNNZ mzl_,
 	       FMAT fQ_, FNNZ fnnzQ_, FVEC fc_,
 	       FMAT fA_, FNNZ fnnzA_,
 	       FMAT fB_, FNNZ fnnzB_,
@@ -81,7 +83,8 @@ StochInputNode(void* user_data_, int id_,
 	       FVEC fxlow_, FVEC fixlow_,
 	       FVEC fxupp_, FVEC fixupp_,
 	       bool deleteUserData_/*=false*/)
-  : id(id_), n(n_), my(my_), myl(myl_), mz(mz_), mzl(mzl_),
+  : id(id_), n(-1), my(-1), myl(-1), mz(-1), mzl(-1),
+    nCall(n_), myCall(my_), mzCall(mz_), mylCall(myl_), mzlCall(mzl_),
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzBl(-1), nnzC(-1), nnzD(-1), nnzDl(-1),
     fnnzQ(fnnzQ_), fnnzA(fnnzA_), fnnzB(fnnzB_), fnnzBl(fnnzBl_), fnnzC(fnnzC_), fnnzD(fnnzD_), fnnzDl(fnnzDl_),
     fQ(fQ_), fA(fA_), fB(fB_), fBl(fBl_), fC(fC_), fD(fD_), fDl(fDl_),
