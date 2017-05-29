@@ -5,7 +5,7 @@
 
 #include "mpi.h"
 
-#define LINKING_CONS 0
+#define LINKING_CONS 1
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 

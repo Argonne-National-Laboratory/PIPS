@@ -164,6 +164,7 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   t_start=MPI_Wtime();
   troot_total=tchild_total=tcomm_total=0.0;
 #endif
+  assert(locmyl >= 0 && locmzl >= 0);
 
   assert(locnx+locmy+locmz+locmyl+locmzl == b.length());
   SimpleVector& r = (*redRhs);
@@ -849,10 +850,11 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
       }
     }
 
+    const double epsilon = .0001;
     // assert symmetry todo delete
     for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-   	       assert((dKkt[k][k2] - dKkt[k2][k]) <= 0.0001 && (dKkt[k2][k] - dKkt[k][k2]) <= 0.0001);
+   	      assert(fabs(dKkt[k][k2] - dKkt[k2][k]) <= epsilon);
   }
 
   /////////////////////////////////////////////////////////////
@@ -881,9 +883,10 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     }
 
     // assert symmetry todo delete
+    const double epsilon = .0001;
     for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
          for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-             assert((dKkt[k][k2] - dKkt[k2][k]) <= 0.0001 && (dKkt[k2][k] - dKkt[k][k2]) <= 0.0001);
+             assert(fabs(dKkt[k][k2] - dKkt[k2][k]) <= epsilon);
   }
 
   /////////////////////////////////////////////////////////////

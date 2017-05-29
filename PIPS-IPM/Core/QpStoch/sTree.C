@@ -508,6 +508,7 @@ StochVector* sTree::newDualZVector() const
     return new StochDummyVector();
 
   //length of linking part
+
   int zl = (np == -1) ? mzl() : -1;
 
   StochVector* z = new StochVector(mz(), zl, commWrkrs);
@@ -576,7 +577,7 @@ StochVector* sTree::newRhs()
   int locmzl = (np == -1) ? mzl() : 0;
 
   locmyl = max(locmyl, 0);
-  locmzl = max(locmyl, 0);
+  locmzl = max(locmzl, 0);
 
   StochVector* rhs = new StochVector(nx() + my() + mz() + locmyl + locmzl, commWrkrs);
 

@@ -7,6 +7,7 @@
 #include "sFactory.h"
 #include "sData.h"
 #include "SparseLinearAlgebraPackage.h"
+#include "math.h"
 
 #ifndef MIN
 #define MIN(a,b) ((a > b) ? b : a)
@@ -657,15 +658,12 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
 
   // assert symmetry todo delete
-#define EPSI .0001
+
 #if 0
+  const double epsilon = .0001;
   for( int k = 0; k < NP; k++)
  	   for( int k2 = 0; k2 < NP; k2++)
- 	   {
- 	      if( SC[k][k2] - SC[k2][k] > EPSI || SC[k2][k] - SC[k][k2] > EPSI )
-           printf(" %f  %f \n", SC[k][k2], SC[k2][k]);
- 	       assert((SC[k][k2] - SC[k2][k]) <= EPSI && (SC[k2][k] - SC[k][k2]) <= EPSI);
- 	   }
+ 	       assert(fabs(SC[k][k2] - SC[k2][k]) <= epsilon);
 #endif
 }
  
