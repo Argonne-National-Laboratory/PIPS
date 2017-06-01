@@ -492,7 +492,7 @@ StochVector* sTree::newDualYVector() const
   //length of linking part
   int yl = (np == -1) ? myl() : -1;
 
-  StochVector* y = new StochVector(my(), yl, commWrkrs);
+  StochVector* y = new StochVector(my(), yl, commWrkrs, -1);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualYVector();
@@ -511,7 +511,7 @@ StochVector* sTree::newDualZVector() const
 
   int zl = (np == -1) ? mzl() : -1;
 
-  StochVector* z = new StochVector(mz(), zl, commWrkrs);
+  StochVector* z = new StochVector(mz(), zl, commWrkrs, -1);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newDualZVector();

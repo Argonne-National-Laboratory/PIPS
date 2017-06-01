@@ -15,7 +15,7 @@ protected:
 
 public:
   StochVector( int n, MPI_Comm mpiComm, int isDistributed=-1);
-  StochVector( int n, int nl, MPI_Comm mpiComm, int isDistributed=-1);
+  StochVector( int n, int nl, MPI_Comm mpiComm, int isDistributed);
   virtual ~StochVector();
 
   void AddChild(StochVector* child);
