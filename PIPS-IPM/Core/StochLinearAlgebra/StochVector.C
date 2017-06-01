@@ -65,7 +65,7 @@ StochVector::~StochVector()
     delete vec;
 
   if( vecl )
-	delete vecl;
+	 delete vecl;
 }
 
 OoqpVector* StochVector::dataClone() const
@@ -86,13 +86,13 @@ StochVector* StochVector::clone() const
 {
   StochVector* clone;
   if( vecl )
-    clone = new StochVector(this->vec->length(), this->vecl->length(), mpiComm);
+    clone = new StochVector(vec->length(), vecl->length(), mpiComm, -1);
   else
-	clone = new StochVector(this->vec->length(), mpiComm);
+	 clone = new StochVector(vec->length(), mpiComm);
 
-  for(size_t it=0; it<this->children.size(); it++) {
-    clone->AddChild(this->children[it]->clone());
-  }
+  for(size_t it=0; it<children.size(); it++)
+    clone->AddChild(children[it]->clone());
+
   return clone;
 }
 
