@@ -61,8 +61,8 @@ int fsize##nType(void* user_data, int id, int* nnz)                  \
    checkAndAlloc(id);                                                \
    GMSPIPSBlockData_t* blk = blocks[id];                             \
    assert(blk);                                                      \
-   fprintf(fLog,"nCB " #nType " blk=%d\n",id);                       \
    *nnz = blk->nType;                                                \
+   fprintf(fLog,"nCB blk=%d " #nType " %d\n",id,*nnz);               \
    return 0;                                                         \
 }
 
@@ -79,8 +79,8 @@ int fnonzero##nnzType(void* user_data, int id, int* nnz)             \
    checkAndAlloc(id);                                                \
    GMSPIPSBlockData_t* blk = blocks[id];                             \
    assert(blk);                                                      \
-   fprintf(fLog,"nnzCB " #nnzType " blk=%d\n",id);                   \
    *nnz = blk->nnz##nnzType;                                         \
+   fprintf(fLog,"nnzCB blk=%d " #nnzType " %d\n",id,*nnz);           \
    return 0;                                                         \
 }
 
@@ -98,11 +98,13 @@ int fvec##vecType(void* user_data, int id, double* vec, int len)     \
    checkAndAlloc(id);                                                \
    GMSPIPSBlockData_t* blk = blocks[id];                             \
    assert(blk);                                                      \
+   fprintf(fLog,"vecCB blk=%d " #vecType " len=%d allocLen %d\n",id,blk->size,len); \
    assert(len == blk->size);                                         \
-   fprintf(fLog,"vecCB " #vecType " blk=%d\n",id);                   \
-   for( int i = 0; i < len; i++ )                                    \
+   for( int i = 0; i < len; i++ ) {                                  \
       vec[i] = blk->vecType[i];                                      \
-	return 0;                                                    \
+      fprintf(fLog,"  i=%d val=%g\n",i,vec[i]);                      \
+   }                                                                 \
+   return 0;                                                         \
 }
 
 vecCB(c    ,ni )
@@ -129,21 +131,24 @@ int fmat##mat(void* user_data, int id, int* krowM, int* jcolM, double* M) \
    checkAndAlloc(id);                                                     \
    GMSPIPSBlockData_t* blk = blocks[id];                                  \
    assert(blk);                                                           \
-   fprintf(fLog,"matCB " #mat " blk=%d\n",id);                            \
+   fprintf(fLog,"matCB blk=%d " #mat " mLen %d nzLen %ld\n",id,blk->m##mmat,blk->nnz##mat); \
    if ( 0==blk->m##mmat )                                                 \
    {                                                                      \
+     fprintf(fLog," empty\n"); \
      krowM[0] = 0;                                                        \
      return 0;                                                            \
    }                                                                      \
                                                                           \
    assert(blk->rm##mat);                                                  \
-   for( int i = 0; i <= blk->m##mmat; i++ )                               \
+   for( int i = 0; i <= blk->m##mmat; i++ ) {                             \
       krowM[i] = blk->rm##mat[i];                                         \
+      fprintf(fLog,"  i=%d krowM=%d\n",i,krowM[i]);                       \
+   }                                                                      \
                                                                           \
-   for( int i = 0; i < blk->nnz##mat; i++ )                               \
-   {                                                                      \
-      jcolM[i] = blk->ci##mat[i];                                         \
-      M[i] = blk->val##mat[i];                                            \
+   for( int k = 0; k < blk->nnz##mat; k++ ) {                             \
+      jcolM[k] = blk->ci##mat[k];                                         \
+      M[k] = blk->val##mat[k];                                            \
+      fprintf(fLog,"  k=%d jcolM=%d M=%g\n",k,jcolM[k],M[k]);             \
    }                                                                      \
    return 0;                                                              \
 }
