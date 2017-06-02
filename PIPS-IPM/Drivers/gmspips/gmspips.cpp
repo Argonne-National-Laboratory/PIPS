@@ -133,7 +133,6 @@ int fmat##mat(void* user_data, int id, int* krowM, int* jcolM, double* M) \
    if ( 0==blk->m##mmat )                                                 \
    {                                                                      \
      krowM[0] = 0;                                                        \
-     krowM[1] = 0;                                                        \
      return 0;                                                            \
    }                                                                      \
                                                                           \
