@@ -275,9 +275,10 @@ int main(int argc, char ** argv)
 #if defined(GMS_PIPS)
    //build the problem tree
    StochInputTree::StochInputNode data(blocks, 0,
-      fsni, fsmA, fsmC, 
 #if defined(LINKCONSTR)   
-      fsmBL, fsmDL,
+      fsni, fsmA, fsmBL, fsmC, fsmDL,
+#else
+      fsni, fsmA, fsmC,
 #endif      
       fQ,  fnnzQ, fc,
       fA,  fnnzA,
@@ -306,10 +307,11 @@ int main(int argc, char ** argv)
 
 #if defined(GMS_PIPS)
       StochInputTree::StochInputNode data(blocks, blk,
+#if defined(LINKCONSTR)
+         fsni, fsmA, fsmBL, fsmC, fsmDL,
+#else
          fsni, fsmA, fsmC,
-#if defined(LINKCONSTR)   
-         fsmBL, fsmDL,
-#endif      
+#endif
          fQ,  fnnzQ, fc,
          fA,  fnnzA,
          fB,  fnnzB,
