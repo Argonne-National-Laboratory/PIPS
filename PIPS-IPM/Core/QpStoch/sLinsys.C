@@ -523,7 +523,7 @@ void sLinsys::addTermToSchurResidual(sData* prob,
 /* this is the original code that was doing one column at a time. */
 
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
-				       DenseSymMatrix& SC) 
+				       DenseSymMatrix& SC, int deleteme)
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
@@ -531,17 +531,21 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   SparseGenMatrix& G = prob->getLocalG();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
-  int N, nxP, NP;
+  int N, nxP;
   A.getSize(N, nxP);
+
   assert(N==locmy);
   assert(locmyl >= 0);
   assert(locmzl >= 0);
 
-  int nxMyP = locmy + nxP;
-  int nxMyMzP = nxMyP + locmyl;
-
-  NP = SC.size();
+  const int NP = SC.size();
   assert(NP>=nxP);
+
+  const int nxMyP = NP - locmyl - locmzl;
+  const int nxMyMzP = NP - locmzl;
+
+  assert((deleteme + nxP + locmyl + locmzl) == NP);
+  assert(nxMyP == (nxP + deleteme));
 
   if(nxP==-1)
     C.getSize(N,nxP);
