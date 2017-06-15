@@ -155,7 +155,7 @@ link_cap2(net,tt)            = sum(time_map(tt,ttX), link_capX(net,ttX) * overla
 link_efficiency2(net,tt)     =   sum(time_map(tt,ttX), link_efficiencyX(net,ttX) * overlap(tt,ttX))
                                / sum(time_map(tt,ttX), overlap(tt,ttX));
 demand2(rr,tt)               = sum(time_map(tt,ttX), demandX(rr,ttX) * overlap(tt,ttX));
-avail2(rr,p,tt)              = sum(time_map(tt,ttX), availX(ttX,rr,p) * overlap(tt,ttX));
+avail2(rr,p,tt)              = sum(time_map(tt,ttX), availX(ttX,rr,p));
 $ifi not %METHOD%==spExplicitDE type_mult(type)= 1;
 
 * projection on parameters with rearranged index sets
@@ -395,6 +395,13 @@ $ELSE.method
    s_eq_storage_capacity(t,rs(r,s))   = yes;
    s_eq_emission_cap(e)               = yes;
    s_eq_link_capacity(t,net(r1,r2))   = yes;
+
+   simple.optfile = 1;
+$onecho > cplex.opt
+lpmethod 4
+solutiontype 2
+preind 0
+$offecho
 
    solve simple min OBJ use lp;
 $ENDIF.method
