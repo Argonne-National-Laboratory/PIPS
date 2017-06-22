@@ -138,7 +138,7 @@ loop(tt,
     tmpEnd   = sum(tX, endX(tX));
     time_map(tt,tX) = yes;
   );
-  if(end(tt) = tmpEnd,
+  if(end(tt) = tmpEnd and not tlast(tt),
     tX(ttX)  = tX(ttX-1);
     tmpStart = sum(tX, startX(tX));
     tmpEnd   = sum(tX, endX(tX));
