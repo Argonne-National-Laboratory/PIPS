@@ -849,12 +849,13 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
         dKkt[j][iKkt] += val;
       }
     }
-
+#if 0
     const double epsilon = .0001;
     // assert symmetry todo delete
     for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
    	      assert(fabs(dKkt[k][k2] - dKkt[k2][k]) <= epsilon);
+#endif
   }
 
   /////////////////////////////////////////////////////////////
@@ -881,12 +882,13 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
         dKkt[j][iKkt] += val;
       }
     }
-
+#if 0
     // assert symmetry todo delete
     const double epsilon = .0001;
     for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
          for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
              assert(fabs(dKkt[k][k2] - dKkt[k2][k]) <= epsilon);
+#endif
   }
 
   /////////////////////////////////////////////////////////////

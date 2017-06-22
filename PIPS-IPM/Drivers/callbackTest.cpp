@@ -504,7 +504,6 @@ int main(int argc, char ** argv) {
   StochInputTree* root = new StochInputTree(data);
 #endif
 
-
   for( int id = 1; id <= nScenarios; id++ ) {
 	  int nx = 2;
 	  int my = 2;

@@ -66,7 +66,7 @@ class sLinsys : public QpGenLinsys
  public:
   virtual void addLnizi(sData *prob, OoqpVector& z0, OoqpVector& zi);
 
-  virtual void addLniziLinkCons(sData *prob, OoqpVector& z0, OoqpVector& zi);
+  virtual void addLniziLinkCons(sData *prob, OoqpVector& z0, OoqpVector& zi, int parentmy, int parentmz);
 
   /** y += alpha * Lni^T * x */
   void LniTransMult(sData *prob, 

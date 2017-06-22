@@ -261,7 +261,7 @@ void sLinsys::addLnizi(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 }
 
 /** sum up right hand side for (current) scenario i and add it to right hand side of scenario 0 */
-void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
+void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, int parentmy, int parentmz)
 {
   SimpleVector& z0 = dynamic_cast<SimpleVector&>(z0_);
   SimpleVector& zi = dynamic_cast<SimpleVector&>(zi_);
@@ -302,14 +302,26 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_)
 
   if( locmyl > 0 )
   {
-    SimpleVector z0myl (&z0[nx0+locmy+locmz], locmyl);
+    assert(locmyl >= 0);
+    const int nxMyMz = z0.length() - locmyl - locmzl;
+
+    // todo remove function parameter parentmy parentmz
+    assert(nxMyMz == nx0 + parentmy + parentmz);
+
+    SimpleVector z0myl (&z0[nxMyMz], locmyl);
     SparseGenMatrix& F = prob->getLocalF();
     F.mult(1.0, z0myl, -1.0, zi1);
   }
 
   if( locmzl > 0 )
   {
-    SimpleVector z0mzl (&z0[nx0+locmy+locmz+locmyl], locmzl);
+    assert(locmyl >= 0);
+    const int nxMyMzMyl = z0.length() - locmzl;
+
+    // todo remove function parameter parentmy parentmz
+    assert(nxMyMzMyl == nx0 + parentmy + parentmz + locmyl);
+
+    SimpleVector z0mzl (&z0[nxMyMzMyl], locmzl);
     SparseGenMatrix& G = prob->getLocalG();
     G.mult(1.0, z0mzl, -1.0, zi1);
   }

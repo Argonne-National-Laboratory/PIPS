@@ -271,6 +271,10 @@ StochGenMatrix* sTreeCallbacks::createA() const
 
       //populate submatrix B
       data->fA(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
+
+
+      printf("root  -- my=%d  myl=%d nx=%d   1st stg nx=%d nnzA=%d nnzB=%d, nnzBl=%d\n",
+        data->my, data->myl, data->n,  np, data->nnzA, data->nnzB, data->nnzBl);
     } else {
 
       if (data->nnzB<0)
@@ -298,8 +302,8 @@ StochGenMatrix* sTreeCallbacks::createA() const
       data->fA(data->user_data, data->id, A->Amat->krowM(), A->Amat->jcolM(), A->Amat->M());
       data->fB(data->user_data, data->id, A->Bmat->krowM(), A->Bmat->jcolM(), A->Bmat->M());
 
-      printf("  -- my=%d nx=%d   1st stg nx=%d nnzA=%d nnzB=%d, nnzBl=%d\n",
-	     data->my, data->n,  np, data->nnzA, data->nnzB, data->nnzBl);
+      printf("  -- my=%d  myl=%d nx=%d   1st stg nx=%d nnzA=%d nnzB=%d, nnzBl=%d\n",
+	     data->my, data->myl, data->n,  np, data->nnzA, data->nnzB, data->nnzBl);
     }
 
     // populate Bl if existent
@@ -365,8 +369,8 @@ StochGenMatrix* sTreeCallbacks::createC() const
 
       data->fC(data->user_data, data->id, C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M());
 
-      printf("  -- mz=%d nx=%d   1st stg nx=%d nnzD=%d\n", 
-	     data->mz, data->n,  np, data->nnzC);
+      printf("root  -- mz=%d  mzl=%d nx=%d 1st stg nx=%d nnzD=%d\n",
+	     data->mz, data->mzl, data->n,  np, data->nnzC);
      
     } else {
 
@@ -396,8 +400,8 @@ StochGenMatrix* sTreeCallbacks::createC() const
       data->fC(data->user_data, data->id, C->Amat->krowM(), C->Amat->jcolM(), C->Amat->M());
       data->fD(data->user_data, data->id, C->Bmat->krowM(), C->Bmat->jcolM(), C->Bmat->M());
 
-      printf("  -- mz=%d nx=%d   1st stg nx=%d nnzC=%d nnzD=%d, nnzDl=%d\n",
-	     data->mz, data->n,  np, data->nnzC, data->nnzD, data->nnzDl);
+      printf("  -- mz=%d mzl=%d nx=%d  1st stg nx=%d nnzC=%d nnzD=%d, nnzDl=%d\n",
+	     data->mz, data->mzl, data->n,  np, data->nnzC, data->nnzD, data->nnzDl);
     }
       
     // populate Dl if existent
