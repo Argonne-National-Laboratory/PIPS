@@ -54,6 +54,8 @@ set r(rr)                       'active region                                 '
     netx(rr,rr1,rr2)            'copy of transmission links                    '
     time_map(tt,ttX)            'mapping of model to input time steps          '
     tX(ttX)                     'dynamic subset of data time steps             '
+    tlast(tt)                   'last time step                                '
+    tXlast(ttX)                 'last hour in base data                        '
 ;
 Alias(r,r1,r2);
 $iftheni.method %METHOD%==spExplicitDE
@@ -166,9 +168,11 @@ $load plant_max_add_cap storage_max_add_cap link_max_add_cap cost_plant_add
 $load cost_storage_add cost_link_add availX
 $gdxin
 
+tlast(tt)  = tt.last;
 * compute mapping and overlap of model time steps to input time steps
 start(tt)   = %FROM%*365*24 + (ord(tt)-1) * %RESOLUTION%;
 end(tt)     = %FROM%*365*24 +  ord(tt)    * %RESOLUTION%;
+end(tlast)  = %TO%*365*24;
 startX(ttX) = ord(ttX)-1;
 endX(ttX)   = ord(ttX);
 tX(ttX)     = no;
@@ -185,15 +189,18 @@ loop(tt,
     tmpEnd   = sum(tX, endX(tX));
     time_map(tt,tX) = yes;
   );
-  if(end(tt) = tmpEnd,
+  if(end(tt) = tmpEnd and not tlast(tt),
     tX(ttX)  = tX(ttX-1);
     tmpStart = sum(tX, startX(tX));
     tmpEnd   = sum(tX, endX(tX));
   );
   // if end(t) < tmpEnd we do not need to do anything
 );
-overlap(time_map(tt,ttX)) = abs(min(0, max(end(tt),endX(ttX)) - min(start(tt),startX(ttX)) - (%RESOLUTION%+1)));
-
+tXlast(tX) = tX.last;
+abort$(not sum(time_map(tlast,tXlast),1)) 'Last time steps of base and model data do not map.';
+overlap(time_map(tt,ttX)) = min(1, abs(min(0, max(end(tt),endX(ttX)) - min(start(tt),startX(ttX)) - (%RESOLUTION%+1))));
+overlap(time_map(tlast,ttX)) = min(end(tlast),endX(ttX)) - max(start(tlast),startX(ttX));
+                 
 * Compute parameters according to time span and resolution
 plant_cap2(rp(rr,p),tt)      = sum(time_map(tt,ttX), plant_capX(rp,ttX) * overlap(tt,ttX));
 total_plant_cap(rp(rr,p))    = (%TO% - %FROM%) * yearly_plant_cap(rp);
@@ -201,12 +208,12 @@ total_emission_cap(e)        = (%TO% - %FROM%) * yearly_emission_cap(e);
 storage_efficiency(rs(rr,s)) = rPower(storage_efficiency(rs),%RESOLUTION%);
 storage_max_in(rs(rr,s))     = %RESOLUTION% * storage_max_in(rs);
 storage_max_out(rs(rr,s))    = %RESOLUTION% * storage_max_out(rs);
-cost_unserved_demand(tt)     = sum(time_map(tt,ttX), cost_unserved_demandX(ttX) * overlap(tt,ttX));
+cost_unserved_demand(tt)     = smax(time_map(tt,ttX), cost_unserved_demandX(ttX));
 link_cap2(net,tt)            = sum(time_map(tt,ttX), link_capX(net,ttX) * overlap(tt,ttX));
 link_efficiency2(net,tt)     =   sum(time_map(tt,ttX), link_efficiencyX(net,ttX) * overlap(tt,ttX))
                                / sum(time_map(tt,ttX), overlap(tt,ttX));
 demand2(rr,tt)               = sum(time_map(tt,ttX), demandX(rr,ttX) * overlap(tt,ttX));
-avail2(rr,p,tt)              = sum(time_map(tt,ttX), availX(ttX,rr,p) * overlap(tt,ttX));
+avail2(rr,p,tt)              = sum(time_map(tt,ttX), availX(ttX,rr,p)) / sum(time_map(tt,ttX), 1);
 $ifi not %METHOD%==spExplicitDE type_mult(type)= 1;
 
 * projection on parameters with rearranged index sets
