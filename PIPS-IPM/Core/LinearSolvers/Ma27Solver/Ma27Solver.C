@@ -15,6 +15,7 @@
 #endif
 
 extern int gOoqpPrintLevel;
+const int maxMa27Iter = 18;
 const double kInitTreatAsZero        = 1.0e-12;
 const double kInitThresholdPivoting  = 1.0e-8;
 const double kInitPrecision          = 1e-7;
@@ -227,9 +228,9 @@ void Ma27SolverBase::matrixChanged()
     }; break;
     }    
     tries++;
-  } while( !done && tries < 10);
+  } while( !done && tries < maxMa27Iter);
 
-  if ( !done && tries >= 10) {
+  if ( !done && maxMa27Iter >= 10) {
     if( gOoqpPrintLevel >= 100 ) {
       cout << "we are screwed; did not get a factorization after 10 tries " 
 	   << endl;
