@@ -351,6 +351,12 @@ int main(int argc, char ** argv)
    fprintf(fLog, "PIPS Log for rank %d\n", rank);
 #endif  
    if( rank == 0 )
+#if defined(LINKCONSTR)   
+      cout << "Using version with linking constraint." << endl;
+#else
+      cout << "Using version without linking constraint." << endl;
+#endif      
+   if( rank == 0 )
       cout << "Using a total of " << size << " MPI processes." << endl;
 
 #if defined(GMS_PIPS)
