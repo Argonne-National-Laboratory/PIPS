@@ -4,7 +4,12 @@
 
 # Number of threads used to build
 NUMTHREADS=4
-BUILD_WITH_MA27=$1
+if [ -z $1 ]; then
+  BUILD_WITH_MA27=0
+else
+  BUILD_WITH_MA27=$1
+fi
+
 
 export CC='gcc'
 export CFLAGS='-O3'
