@@ -5,6 +5,7 @@
 #ifndef SIMPLEVECTOR
 #define SIMPLEVECTOR
 
+
 #include "OoqpVector.h"
 #include "SimpleVectorHandle.h"
 
@@ -26,14 +27,14 @@ public:
    */
   double & operator[]( int i ) { 
 #ifdef RANGECHECKS
-    assert( i > 0 && i < n );
+    assert( i >= 0 && i < n );
 #endif
     return v[i];
  }
   const double & operator[]( int i ) const
   {
 #ifdef RANGECHECKS
-    assert( i > 0 && i < n );
+    assert( i >= 0 && i < n );
 #endif
     return v[i];
   } 

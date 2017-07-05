@@ -160,7 +160,7 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
     n4 = svyl.length();
     assert(n4 >= 0);
 
-    if( n4 > 0 );
+    if( n4 > 0 )
       memcpy(&sv[n1+n2+n3], &svyl[0], n4*sizeof(double));
   }
 
@@ -170,7 +170,7 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
     n5 = svzl.length();
     assert(n5 >= 0);
 
-    if( n5 > 0 );
+    if( n5 > 0 )
       memcpy(&sv[n1+n2+n3+n4], &svzl[0], n5*sizeof(double));
   }
 

@@ -170,6 +170,7 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   SimpleVector& r = (*redRhs);
 
   assert(r.length() == b.length());
+
   SparseGenMatrix& C = prob->getLocalD();
 
   ///////////////////////////////////////////////////////////////////////
@@ -183,9 +184,8 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
 
   //copy all elements from b into r except for the the residual values corresponding to z0
-  assert(locnx+locmy > 0);
+  assert(locnx > 0);
   assert(sizeof( double ) == sizeof(r[0]));
-
 
   memcpy( &r[0], &b[0], (locnx+locmy) * sizeof( double ) );
   if( locmyl > 0 )
@@ -194,7 +194,6 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
      memcpy( &r[locnx+locmy+locmyl], &b[locnx+locmy+locmz+locmyl], locmzl * sizeof( double ) );
 
   // aliases to parts (no mem allocations)
-  SimpleVector r2(&r[locnx],       locmy);
   SimpleVector r1(&r[0],           locnx);
 
   ///////////////////////////////////////////////////////////////////////
@@ -228,13 +227,19 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   //      x = [r1; r2;  (zDiag)^{-1} * (b3-C*r1);
   ///////////////////////////////////////////////////////////////////////
   SimpleVector b1(&b[0],           locnx);
-  SimpleVector b2(&b[locnx],       locmy);
-  SimpleVector b3(&b[locnx+locmy], locmz);
 
   b1.copyFrom(r1);
-  b2.copyFrom(r2);
 
-  if(locmz>0) {
+  if( locmy > 0 )
+  {
+     SimpleVector r2(&r[locnx],       locmy);
+     SimpleVector b2(&b[locnx],       locmy);
+     b2.copyFrom(r2);
+  }
+
+  if( locmz > 0 )
+  {
+    SimpleVector b3(&b[locnx+locmy], locmz);
     C.mult(1.0, b3, -1.0, r1);
     b3.componentDiv(*zDiag);
   }

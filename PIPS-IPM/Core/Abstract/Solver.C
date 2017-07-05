@@ -14,7 +14,7 @@
 
 #include <cmath>
 
-int gOoqpPrintLevel = 10;
+int gOoqpPrintLevel = 1000;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
 
