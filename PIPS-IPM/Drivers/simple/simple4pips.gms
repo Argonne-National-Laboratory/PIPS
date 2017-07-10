@@ -310,9 +310,17 @@ $endif.method
 ;
 
 eq_bobj(s_eq_bobj(b))..
+$ifthene.scaling NOT %SCALING% == 1
     BOBJ(b) =e= sum(btrmap(b,t,r), sum((ptype(rp(r,p),type)), POWER(t,rp) * cost_power_generation(rp) * type_mult(type))
                                  + SLACK(t,r) * cost_unserved_demand(t)
                                  + sum((rp(r,p),e), POWER(t,rp) * plant_emission(rp,e) * cost_emission(e)) );
+$else.scaling
+   [BOBJ(b) - sum(btrmap(b,t,r), sum((ptype(rp(r,p),type)), POWER(t,rp) * cost_power_generation(rp) * type_mult(type))
+                               + SLACK(t,r) * cost_unserved_demand(t)
+                               + sum((rp(r,p),e), POWER(t,rp) * plant_emission(rp,e) * cost_emission(e)) )]
+   / [10*smin((btrmap(b,t,r),ptype(rp(r,p),type),e)$cost_power_generation(rp),  cost_power_generation(rp)*type_mult(type) + plant_emission(rp,e) * cost_emission(e))]
+   =e= 0;
+$endif.scaling
 
 eq_power_balance(s_eq_power_balance(t,r))..
         sum(rp(r,p),    POWER(t,rp))
@@ -323,7 +331,11 @@ eq_power_balance(s_eq_power_balance(t,r))..
     =g= demand(t,r);
 
 eq_plant_capacity(s_eq_plant_capacity(t,rp(r,p)))..
+$ifthene.scaling NOT %SCALING% == 1
     POWER(t,rp) =l= (plant_cap(t,rp) + PLANT_ADD_CAP(rp)*%RESOLUTION%) * avail(t,rp) ;
+$else.scaling
+    [POWER(t,rp) - (plant_cap(t,rp) + PLANT_ADD_CAP(rp)*%RESOLUTION%) * avail(t,rp)] / [1$(avail(t,rp)<1e-6) + ((%RESOLUTION%)*avail(t,rp)*10)$(avail(t,rp)>=1e-6)] =l= 0;
+$endif.scaling
 
 eq_total_plant_capacity(s_eq_total_plant_capacity(rp(r,p)))..
     sum(t, POWER(t,rp)) =l= total_plant_cap(rp);
@@ -337,7 +349,17 @@ eq_storage_capacity(s_eq_storage_capacity(t,rs(r,s)))..
     STORAGE_LEVEL(t,rs) =l= storage_cap(rs) + STORAGE_ADD_CAP(rs);
 
 eq_emission_cap(s_eq_emission_cap(e))..
+$ifthene.scaling NOT %SCALING% == 1
     sum((rp(r,p),t), POWER(t,rp) * plant_emission(rp,e)) =l= total_emission_cap(e);
+$else.scaling
+    [sum((rp(r,p),t), POWER(t,rp) * plant_emission(rp,e)) - total_emission_cap(e)]
+    / [10*smin((rp(r,p),t)$plant_emission(rp,e), plant_emission(rp,e))]
+    =l= 0;
+$endif.scaling
+
+
+
+
 
 eq_link_capacity(s_eq_link_capacity(t,net))..
     FLOW(t,net) =l= link_cap(t,net) + LINK_ADD_CAP(net) * %RESOLUTION%;
@@ -393,14 +415,6 @@ $iftheni.method %METHOD%==pips
    s_eq_emission_cap(e)               = yes;
    s_eq_link_capacity(t,net(r1,r2))   = yes;
 
-*  scaling
-$ifthene.scaling %SCALING% == 1
-   eq_plant_capacity.scale(s_eq_plant_capacity(t,rp(r,p))) = 1$(avail(t,rp)<1e-6) + ((%RESOLUTION%)*avail(t,rp)*10)$(avail(t,rp)>=1e-6);
-   eq_bobj.scale(s_eq_bobj(b)) =  10*smin((btrmap(b,t,r),ptype(rp(r,p),type),e)$cost_power_generation(rp),  cost_power_generation(rp)*type_mult(type) + plant_emission(rp,e) * cost_emission(e));
-   eq_emission_cap.scale(s_eq_emission_cap(e)) = 10*smin((rp(r,p),t)$plant_emission(rp,e), plant_emission(rp,e));
-   simple.scaleopt = 1;
-$endif.scaling
-
    putclose fopt 'jacobian allblocksPips.gdx';
 *  / 'dictmap dmallblocksPips.gdx';
    solve simple min OBJ use lp;
@@ -425,14 +439,6 @@ lpmethod 4
 solutiontype 2
 preind 0
 $offecho
-                   
-*  scaling
-$ifthene.scaling %SCALING% == 1
-   eq_plant_capacity.scale(s_eq_plant_capacity(t,rp(r,p))) = 1$(avail(t,rp)<1e-6) + ((%RESOLUTION%)*avail(t,rp)*10)$(avail(t,rp)>=1e-6);
-   eq_bobj.scale(s_eq_bobj(b)) =  10*smin((btrmap(b,t,r),ptype(rp(r,p),type),e)$cost_power_generation(rp),  cost_power_generation(rp)*type_mult(type) + plant_emission(rp,e) * cost_emission(e));
-   eq_emission_cap.scale(s_eq_emission_cap(e)) = 10*smin((rp(r,p),t)$plant_emission(rp,e), plant_emission(rp,e));
-   simple.scaleopt = 1;
-$endif.scaling
 
    solve simple min OBJ use lp;
 
