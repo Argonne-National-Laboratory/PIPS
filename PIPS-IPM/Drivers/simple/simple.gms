@@ -10,6 +10,9 @@ $if  not set EMPMETHOD            $set EMPMETHOD         DE
 $if  not set LOADFROMXLS          $ set LOADFROMXLS      0
 $if  not set XLSID                $ set XLSID            standard
 
+$if  not set SCALING              $set SCALING           0
+$if  not set NOSLACK              $set NOSLACK           0
+
 
 $ife %FROM%>%TO%         $abort 'FROM > TO'
 $ife %RESOLUTION%<0      $abort 'Negative RESOLUTION forbidden'
@@ -200,7 +203,7 @@ tXlast(tX) = tX.last;
 abort$(not sum(time_map(tlast,tXlast),1)) 'Last time steps of base and model data do not map.';
 overlap(time_map(tt,ttX)) = min(1, abs(min(0, max(end(tt),endX(ttX)) - min(start(tt),startX(ttX)) - (%RESOLUTION%+1))));
 overlap(time_map(tlast,ttX)) = min(end(tlast),endX(ttX)) - max(start(tlast),startX(ttX));
-                 
+
 * Compute parameters according to time span and resolution
 plant_cap2(rp(rr,p),tt)      = sum(time_map(tt,ttX), plant_capX(rp,ttX) * overlap(tt,ttX));
 total_plant_cap(rp(rr,p))    = (%TO% - %FROM%) * yearly_plant_cap(rp);
@@ -310,16 +313,32 @@ $ELSE.method
 $ENDIF.method
           ;
 eq_robj(%SCENS%r)..
-$IFTHENI.method not %METHOD%==distributedsimplebendersstage
+$IFTHENE.scaling NOT %SCALING% == 1
+$  IFTHENI.method not %METHOD%==distributedsimplebendersstage
     ROBJ(%SCENS%r)
-$else.method
+$  else.method
     OBJ
-$endif.method
+$  endif.method
             =e= sum((t,ptype(rp(r,p),type)), POWER(%SCENS%t,rp) * cost_power_generation(rp) * type_mult(%SCENS%type))
               + sum(t,           SLACK(%SCENS%t,r)              * cost_unserved_demand(t))
               + sum(rp(r,p),     PLANT_ADD_CAP(rp)              * cost_plant_add(rp))
               + sum(rs(r,s),     STORAGE_ADD_CAP(rs)            * cost_storage_add(rs))
               + sum(e,           EMISSION_COST(%SCENS%r,e));
+$ELSE.scaling
+$  IFTHENI.method not %METHOD%==distributedsimplebendersstage
+    [ROBJ(%SCENS%r)
+$  else.method
+    [OBJ
+$  endif.method
+   - ( sum((t,ptype(rp(r,p),type)), POWER(%SCENS%t,rp) * cost_power_generation(rp) * type_mult(%SCENS%type))
+     + sum(t,           SLACK(%SCENS%t,r)              * cost_unserved_demand(t))
+     + sum(rp(r,p),     PLANT_ADD_CAP(rp)              * cost_plant_add(rp))
+     + sum(rs(r,s),     STORAGE_ADD_CAP(rs)            * cost_storage_add(rs))
+     + sum(e,           EMISSION_COST(%SCENS%r,e))) ]
+   / [10*smin((t,ptype(rp(r,p),type))$cost_power_generation(rp), cost_power_generation(rp) * type_mult(%SCENS%type))]
+   =e= 0;
+
+$ENDIF.scaling
 
 eq_power_balance(%SCENS%t,r)..
         sum(rp(r,p),    POWER(%SCENS%t,rp))
@@ -335,7 +354,12 @@ $ENDIF.method
     =g= demand(t,r);
 
 eq_plant_capacity(%SCENS%t,rp(r,p))..
+$ifthene.scaling NOT %SCALING% == 1
     POWER(%SCENS%t,rp) =l= (plant_cap(t,rp) + PLANT_ADD_CAP(rp)*%RESOLUTION%) * avail(t,rp) ;
+$else.scaling
+    [POWER(%SCENS%t,rp) - (plant_cap(t,rp) + PLANT_ADD_CAP(rp)*%RESOLUTION%) * avail(t,rp)] / [1$(avail(t,rp)<1e-6) + ((%RESOLUTION%)*avail(t,rp)*10)$(avail(t,rp)>=1e-6)] =l= 0;
+$endif.scaling
+
 
 eq_total_plant_capacity(%SCENS%rp(r,p))..
     sum(t, POWER(%SCENS%t,rp)) =l= total_plant_cap(rp);
@@ -349,14 +373,24 @@ eq_storage_capacity(%SCENS%t,rs(r,s))..
     STORAGE_LEVEL(%SCENS%t,rs) =l= storage_cap(rs) + STORAGE_ADD_CAP(rs);
 
 eq_emission_region(%SCENS%r,e)..
+$ifthene.scaling NOT %SCALING% == 1
     sum((rp(r,p),t), POWER(%SCENS%t,rp) * plant_emission(rp,e)) =l= total_emission_cap(e)*EMISSION_SPLIT(%SCENS%r,e);
+$else.scaling
+    [sum((rp(r,p),t), POWER(%SCENS%t,rp) * plant_emission(rp,e)) - total_emission_cap(e)*EMISSION_SPLIT(%SCENS%r,e)]
+    / [10*smin((rp(r,p),t)$plant_emission(rp,e), plant_emission(rp,e))] =l= 0;
+$endif.scaling
 
 eq_emission_cost(%SCENS%r,e)..
+$ifthene.scaling NOT %SCALING% == 1
     sum((rp(r,p),t), POWER(%SCENS%t,rp) * plant_emission(rp,e)) * cost_emission(e) =e= EMISSION_COST(%SCENS%r,e);
+$else.scaling
+      [sum((rp(r,p),t), POWER(%SCENS%t,rp) * plant_emission(rp,e)) * cost_emission(e) - EMISSION_COST(%SCENS%r,e)]
+    / [10*smin((rp(r,p),t)$plant_emission(rp,e), plant_emission(rp,e)*cost_emission(e))]   =e= 0;
+$endif.scaling
 
 eq_emission_cap(%SCENS%e)$(not genBlock)..
     sum(rr, EMISSION_SPLIT(%SCENS%rr,e)) =l= 1;
-
+                     
 $IFTHENI.method %METHOD%==lagrange_relaxation
 eq_link_capacity(t,netx(r,net(rr1,rr2)))..
     FLOW(t,netx) =l= link_cap(t,net) + LINK_ADD_CAP(netx) * %RESOLUTION%;
@@ -378,6 +412,17 @@ dummyForLindoBenders.. 1 =g= 0;
 $endif
 
 model simple / all /;
+
+$ifthene.noslack %NOSLACK%==1
+$ IFTHENI.method %METHOD%==spExplicitDE
+   sc(scen) = yes;
+$ ENDIF.method
+  SLACK.fx(%SCENS%tt,rr)  = 0;
+  simple.holdfixed = 1;
+$ IFTHENI.method %METHOD%==spExplicitDE
+   sc(scen) = no;
+$ ENDIF.method
+$endif.noslack
 
 $IFTHENI.method %METHOD%==rolling_horizon
    r(rr) = yes;
