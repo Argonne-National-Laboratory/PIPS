@@ -78,13 +78,13 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     return;
   }
   //here noProcs >=2 so we have to assign children to them
-
+#if 0
   //what is the load for each children
   vector<double> vecChildNodesLoad(children.size()); 
   for(size_t i=0; i<children.size(); i++) {
     vecChildNodesLoad[i] = children[i]->processLoad();
   }
-
+#endif
   //**** solve the asignment problem ****
   //here we'll have the mapping of children to processes
   vector<vector<int> > mapChildNodesToProcs;

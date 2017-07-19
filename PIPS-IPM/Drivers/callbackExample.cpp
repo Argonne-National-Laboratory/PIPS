@@ -32,34 +32,76 @@ public: //methods
 
 extern "C" {
 
+
+int nSize(void* user_data, int id, int* nnz)
+{
+   if( id == 2 )
+     *nnz = 4;
+   else
+     *nnz = 2;
+
+   return 0;
+}
+
+int mySize(void* user_data, int id, int* nnz)
+{
+   *nnz = 2;
+
+   return 0;
+}
+
+int mzSize(void* user_data, int id, int* nnz)
+{
+   *nnz = 1;
+
+   return 0;
+}
+
+
+int mylSize(void* user_data, int id, int* nnz)
+{
+
+   *nnz = 2;
+
+   return 0;
+}
+
+int mzlSize(void* user_data, int id, int* nnz)
+{
+   *nnz = 1;
+
+   return 0;
+}
+
+
 int nnzMatEqStage1(void* user_data, int id, int* nnz)
 {
-	if( id == 0 )
-		*nnz = 2;
-	else
-		*nnz = 2;
+   if( id == 0 )
+      *nnz = 2;
+   else
+      *nnz = 2;
 
-	return 0;
+   return 0;
 }
 
 
 int nnzMatIneqStage1(void* user_data, int id, int* nnz)
 {
-	if( id == 0 )
-		*nnz = 1;
-	else
-		*nnz = 1;
+   if( id == 0 )
+      *nnz = 1;
+   else
+      *nnz = 1;
 
-	return 0;
+   return 0;
 }
 
 int nnzMatEqStage2(void* user_data, int id, int* nnz)
 {
-	if( id == 0 )
-		*nnz = 0;
-	else
-		*nnz = 2;
-	return 0;
+   if( id == 0 )
+      *nnz = 0;
+   else
+      *nnz = 2;
+   return 0;
 }
 
 
@@ -69,138 +111,138 @@ int nnzMatIneqStage2(void* user_data, int id, int* nnz)
       *nnz = 0;
    else
     *nnz = 1;
-	return 0;
+   return 0;
 }
 
 int nnzMatEqLink(void* user_data, int id, int* nnz)
 {
-	*nnz = 3;
+   *nnz = 3;
 
-	if( id == 2 )
-		*nnz = 4;
+   if( id == 2 )
+      *nnz = 4;
 
-	return 0;
+   return 0;
 }
 
 int nnzMatIneqLink(void* user_data, int id, int* nnz)
 {
-	*nnz = 1;
+   *nnz = 1;
 
-	return 0;
+   return 0;
 }
 
 
 int nnzAllZero(void* user_data, int id, int* nnz)
 {
-	*nnz = 0;
-	return 0;
+   *nnz = 0;
+   return 0;
 }
 
 int vecAllZero(void* user_data, int id, double* vec, int len)
 {
-	int i;
-	for( i = 0; i < len; i++ )
-		vec[i] = 0.0;
+   int i;
+   for( i = 0; i < len; i++ )
+      vec[i] = 0.0;
 
-	return 0;
+   return 0;
 }
 
 int vecEqRhs(void* user_data, int id, double* vec, int len)
 {
-	if( id == 0 )
-	{
-	   vec[0] = 2.0;
-	   vec[1] = 7.0;
-	}
-	else if( id == 1 )
-	{
+   if( id == 0 )
+   {
+      vec[0] = 2.0;
+      vec[1] = 7.0;
+   }
+   else if( id == 1 )
+   {
       vec[0] = 3.0;
       vec[1] = 7.0;
-	}
+   }
    else if( id == 2 )
    {
       vec[0] = 0.0;
       vec[1] = 7.0;
    }
 
-	return 0;
+   return 0;
 }
 
 int vecIneqRhs(void* user_data, int id, double* vec, int len)
 {
 
-	int i;
+   int i;
 
-		for( i = 0; i < len; i++ )
-			vec[i] = 5.0;
+      for( i = 0; i < len; i++ )
+         vec[i] = 5.0;
 
-	return 0;
+   return 0;
 }
 
 int vecIneqRhsLink(void* user_data, int id, double* vec, int len)
 {
-	vec[0] = 4.0;
+   vec[0] = 4.0;
 
-	return 0;
+   return 0;
 }
 
 
 int vecIneqRhsActive(void* user_data, int id, double* vec, int len)
 {
-	int i;
-	for( i = 0; i < len; i++ )
-		vec[i] = 1.0;
+   int i;
+   for( i = 0; i < len; i++ )
+      vec[i] = 1.0;
 
-	return 0;
+   return 0;
 }
 
 int vecIneqRhsActiveLink(void* user_data, int id, double* vec, int len)
 {
     vec[0] = 1.0;
 
-	return 0;
+   return 0;
 }
 
 int vecObj(void* user_data, int id, double* vec, int len)
 {
-	int i;
-	for( i = 0; i < len; i++ )
-		vec[i] = 2.0;
+   int i;
+   for( i = 0; i < len; i++ )
+      vec[i] = 2.0;
 
-	return 0;
+   return 0;
 }
 
 int vecXlb(void* user_data, int id, double* vec, int len)
 {
-	int i;
-	for( i = 0; i < len; i++ )
-		vec[i] = 0.0;
+   int i;
+   for( i = 0; i < len; i++ )
+      vec[i] = 0.0;
 
-	return 0;
+   return 0;
 }
 
 int vecXlbActive(void* user_data, int id, double* vec, int len)
 {
-	int i;
-	for( i = 0; i < len; i++ )
-		vec[i] = 1.0;
+   int i;
+   for( i = 0; i < len; i++ )
+      vec[i] = 1.0;
 
-	return 0;
+   return 0;
 }
 
 
 int vecLinkRhs(void* user_data, int id, double* vec, int len)
 {
-	int i;
+   int i;
 
-	vec[0] = 6.0;
-	vec[1] = 4.0;
-	return 0;
+   vec[0] = 6.0;
+   vec[1] = 4.0;
+   return 0;
 }
 
 int matAllZero(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-	int i;
+   int i;
     int n = 2;
 
     for( i = 0; i <= n; i++ )
@@ -211,21 +253,21 @@ int matAllZero(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-	if( id == 0 )
-	{
-		M[0] = 2.0;
-		M[1] = 7.0;
+   if( id == 0 )
+   {
+      M[0] = 2.0;
+      M[1] = 7.0;
 
-  	   krowM[0] = 0;
-  	   krowM[1] = 1;
-  	   krowM[2] = 2;
+      krowM[0] = 0;
+      krowM[1] = 1;
+      krowM[2] = 2;
 
 
-  	   jcolM[0] = 0;
-  	   jcolM[1] = 1;
-	}
-	else if( id == 1 )
-	{
+      jcolM[0] = 0;
+      jcolM[1] = 1;
+   }
+   else if( id == 1 )
+   {
       M[0] = 2.0;
       M[1] = 5.0;
 
@@ -236,7 +278,7 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
       jcolM[0] = 0;
       jcolM[1] = 1;
-	}
+   }
    else if( id == 2 )
    {
       M[0] = 2.0;
@@ -261,11 +303,11 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matIneqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-  	 M[0] = 1.0;
+    M[0] = 1.0;
 
-  	 krowM[0] = 0;
-  	 jcolM[0] = 0;
-  	 krowM[1] = 1;
+    krowM[0] = 0;
+    jcolM[0] = 0;
+    krowM[1] = 1;
 
     return 0;
 }
@@ -273,12 +315,12 @@ int matIneqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 int matIneqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
 
-  		M[0] = 2.0;
+      M[0] = 2.0;
 
-  	   krowM[0] = 0;
-  	   krowM[1] = 1;
+      krowM[0] = 0;
+      krowM[1] = 1;
 
-  	   jcolM[0] = 0;
+      jcolM[0] = 0;
 
     return 0;
 }
@@ -290,19 +332,19 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
     if( id == 0 )
     {
       krowM[0] = 0;
-   	krowM[1] = 0;
+      krowM[1] = 0;
     }
     else if( id == 1 )
     {
       M[0] = 1.0;
       M[1] = 2.0;
 
- 	   krowM[0] = 0;
- 	   krowM[1] = 1;
- 	   krowM[2] = 2;
+      krowM[0] = 0;
+      krowM[1] = 1;
+      krowM[2] = 2;
 
- 	   jcolM[0] = 0;
- 	   jcolM[1] = 1;
+      jcolM[0] = 0;
+      jcolM[1] = 1;
     }
     else
     {
@@ -311,12 +353,12 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
       M[1] = 3.0;
 
-  	   krowM[0] = 0;
-  	   krowM[1] = 1;
-  	   krowM[2] = 2;
+      krowM[0] = 0;
+      krowM[1] = 1;
+      krowM[2] = 2;
 
-  	   jcolM[0] = 0;
-  	   jcolM[1] = 1;
+      jcolM[0] = 0;
+      jcolM[1] = 1;
     }
 
     return 0;
@@ -333,10 +375,10 @@ int matIneqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
    {
       M[0] = 3.0;
 
-  	   krowM[0] = 0;
-  	   krowM[1] = 1;
+      krowM[0] = 0;
+      krowM[1] = 1;
 
-  	   jcolM[0] = 0;
+      jcolM[0] = 0;
    }
 
     return 0;
@@ -348,39 +390,39 @@ int matEqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 if( id == 2 )
 {
-	  M[0] = 1.0;
-	  M[1] = 1.0;
-	  M[2] = 1.0;
-	  M[3] = 1.0;
+     M[0] = 1.0;
+     M[1] = 1.0;
+     M[2] = 1.0;
+     M[3] = 1.0;
 
 
-		       krowM[0] = 0;
-		       krowM[1] = 2;
-		       krowM[2] = 4;
+             krowM[0] = 0;
+             krowM[1] = 2;
+             krowM[2] = 4;
 
-		       jcolM[0] = 1;
-		       jcolM[1] = 3;
+             jcolM[0] = 1;
+             jcolM[1] = 3;
 
-		       jcolM[2] = 2;
+             jcolM[2] = 2;
 
-		       jcolM[3] = 3;
+             jcolM[3] = 3;
 }
 else
 {
 
-	   M[0] = 1.0;
-	   M[1] = 1.0;
+      M[0] = 1.0;
+      M[1] = 1.0;
 
-	   M[2] = 1.0;
+      M[2] = 1.0;
 
-	       krowM[0] = 0;
-	       krowM[1] = 2;
-	       krowM[2] = 3;
+          krowM[0] = 0;
+          krowM[1] = 2;
+          krowM[2] = 3;
 
-	       jcolM[0] = 0;
-	       jcolM[1] = 1;
+          jcolM[0] = 0;
+          jcolM[1] = 1;
 
-	       jcolM[2] = 0;
+          jcolM[2] = 0;
 }
 
 
@@ -397,10 +439,14 @@ int main(int argc, char ** argv) {
   int nScenarios = 2;
 
   // set callbacks
-  int nx0 = 2;
-  int my0 = 2;
-  int mz0 = 1;
-  int mzl0 = 1;
+  FNNZ nCall = &nSize;
+  FNNZ myCall = &mySize;
+  FNNZ mzCall = &mzSize;
+  FNNZ mylCall = &mylSize;
+  FNNZ mzlCall = &mzlSize;
+
+
+
 
   FNNZ fnnzQ = &nnzAllZero;
   FNNZ fnnzA = &nnzMatEqStage1;
@@ -466,108 +512,107 @@ int main(int argc, char ** argv) {
 
 #if LINKING_CONS
 
-  int myl0 = 2;
+
   //build the problem tree
   StochInputTree::StochInputNode dataLinkCons(&probData, 0,
-				      nx0, my0, myl0, mz0, mzl0,
-				      fQ, fnnzQ, fc,
-				      fA, fnnzA,
-				      fB, fnnzB,
-					  fBl, fnnzBl,
-				      fb, fbl,
-				      fC, fnnzC,
-				      fD, fnnzD,
-					  fDl, fnnzDl,
-				      fclow, ficlow, fcupp, ficupp,
-					  fdllow, fidllow, fdlupp, fidlupp,
-				      fxlow, fixlow, fxupp, fixupp, false );
+                  nCall, myCall, mylCall, mzCall, mzlCall,
+                  fQ, fnnzQ, fc,
+                  fA, fnnzA,
+                  fB, fnnzB,
+                  fBl, fnnzBl,
+                  fb, fbl,
+                  fC, fnnzC,
+                  fD, fnnzD,
+                  fDl, fnnzDl,
+                  fclow, ficlow, fcupp, ficupp,
+                  fdllow, fidllow, fdlupp, fidlupp,
+                  fxlow, fixlow, fxupp, fixupp, false );
 
   StochInputTree* root = new StochInputTree(dataLinkCons);
 #else
 
-  int myl0 = 0;
+  int nx0 = 2;
+  int my0 = 2;
+  int mz0 = 1;
+
   //build the problem tree
   StochInputTree::StochInputNode data(&probData, 0,
-				      nx0,my0,mz0, //myl0, mzl0
-				      fQ, fnnzQ, fc,
-				      fA, fnnzA,
-				      fB, fnnzB,
-					  //fBL, fnnzBL,
-				      fb, //fbl
-				      fC, fnnzC,
-				      fD, fnnzD,
-					  //fDL, fnnzDl,
-				      fclow, ficlow, fcupp, ficupp,
-					  //fdllow, fidllow, fdlupp, fidlupp,
-				      fxlow, fixlow, fxupp, fixupp, false );
+                  nx0,my0,mz0, //myl0, mzl0
+                  fQ, fnnzQ, fc,
+                  fA, fnnzA,
+                  fB, fnnzB,
+                 //fBL, fnnzBL,
+                  fb, //fbl
+                  fC, fnnzC,
+                  fD, fnnzD,
+                 //fDL, fnnzDl,
+                  fclow, ficlow, fcupp, ficupp,
+                 //fdllow, fidllow, fdlupp, fidlupp,
+                  fxlow, fixlow, fxupp, fixupp, false );
 
   StochInputTree* root = new StochInputTree(data);
 #endif
 
+
   for( int id = 1; id <= nScenarios; id++ ) {
-	  int nx = 2;
-	  int my = 2;
-	  int mz = 1;
+
 
 #if LINKING_CONS
-	  int myl = 2;
-	   int mzl = 1;
-	  if( id == 2 )
-	   nx = 4;
+     StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
+               nCall, myCall, mylCall, mzCall, mzlCall,
+               fQ, fnnzQ, fc,
+               fA, fnnzA,
+               fB, fnnzB,
+               fBl, fnnzBl,
+               fb, fbl,
+               fC, fnnzC,
+               fD, fnnzD,
+               fDl, fnnzDl,
+               fclow, ficlow, fcupp, ficupp,
+               fdllow, fidllow, fdlupp, fidlupp,
+               fxlow, fixlow, fxupp, fixupp, false);
 
-	  StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
-					nx, my, myl, mz, mzl,
-					fQ, fnnzQ, fc,
-					fA, fnnzA,
-					fB, fnnzB,
-					fBl, fnnzBl,
-					fb, fbl,
-					fC, fnnzC,
-					fD, fnnzD,
-					fDl, fnnzDl,
-					fclow, ficlow, fcupp, ficupp,
-					fdllow, fidllow, fdlupp, fidlupp,
-					fxlow, fixlow, fxupp, fixupp, false);
-
-	  root->AddChild(new StochInputTree(dataLinkConsChild));
+     root->AddChild(new StochInputTree(dataLinkConsChild));
 #else
-	  int myl = 0;
+     int nx = 2;
+     int my = 2;
+     int mz = 1;
 
-	  StochInputTree::StochInputNode data(&probData, id,
-					nx, my, mz, //myl, mzl
-					fQ, fnnzQ, fc,
-					fA, fnnzA,
-					fB, fnnzB,
-					//fBL, fnnzBL,
-					fb, //fbl
-					fC, fnnzC,
-					fD, fnnzD,
-					//fDL, fnnzDL,
-					fclow, ficlow, fcupp, ficupp,
-					//fdllow, fidllow, fdlupp, fidlupp,
-					fxlow, fixlow, fxupp, fixupp, false);
+     StochInputTree::StochInputNode data(&probData, id,
+               nx, my, mz, //myl, mzl
+               fQ, fnnzQ, fc,
+               fA, fnnzA,
+               fB, fnnzB,
+               //fBL, fnnzBL,
+               fb, //fbl
+               fC, fnnzC,
+               fD, fnnzD,
+               //fDL, fnnzDL,
+               fclow, ficlow, fcupp, ficupp,
+               //fdllow, fidllow, fdlupp, fidlupp,
+               fxlow, fixlow, fxupp, fixupp, false);
 
-	  root->AddChild(new StochInputTree(data));
+     root->AddChild(new StochInputTree(data));
 #endif
 
   }
 
   if( rank == 0 )
-	  cout << "Using a total of " << size << " MPI processes." << endl;
+     cout << "Using a total of " << size << " MPI processes." << endl;
 
   PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
 
   if( rank == 0 )
-	  cout << "PIPSIpmInterface created" << endl;
+     cout << "PIPSIpmInterface created" << endl;
 
   if( rank == 0 )
-	  cout << "solving..." << endl;
+     cout << "solving..." << endl;
 
   pipsIpm.go();
 
   if( rank == 0 )
   {
-	//  cout << "solving finished; obj:" << pipsIpm.getObjective() << endl;
+   //  cout << "solving finished; obj:" << pipsIpm.getObjective() << endl;
   }
 
 

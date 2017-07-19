@@ -66,7 +66,7 @@ class sLinsys : public QpGenLinsys
  public:
   virtual void addLnizi(sData *prob, OoqpVector& z0, OoqpVector& zi);
 
-  virtual void addLniziLinkCons(sData *prob, OoqpVector& z0, OoqpVector& zi);
+  virtual void addLniziLinkCons(sData *prob, OoqpVector& z0, OoqpVector& zi, int parentmy, int parentmz);
 
   /** y += alpha * Lni^T * x */
   void LniTransMult(sData *prob, 
@@ -84,7 +84,7 @@ class sLinsys : public QpGenLinsys
    *  the terms from the Schur Complement 
    */
   virtual void addTermToDenseSchurCompl(sData *prob, 
-					DenseSymMatrix& SC);
+					DenseSymMatrix& SC, int deleteme = - 1);
 					
   virtual void addColsToDenseSchurCompl(sData *prob, 
 					DenseGenMatrix& out, 

@@ -33,6 +33,7 @@ class StochInputTree {
     friend class StochInputTree; friend class StochTree; friend class sTreeCallbacks;
   public:
   StochInputNode();
+
 	StochInputNode(void* user_data, int id, 
 	   int n, int my, int mz,
 	   FMAT fQ, FNNZ fnnzQ, FVEC fc,  
@@ -43,9 +44,20 @@ class StochInputTree {
 	   FVEC fxlow, FVEC fixlow, FVEC fxupp, FVEC fixupp,
 	   bool deleteUserData=false);
 
-	// includes linking constraints
+	// full callback constructor without constraints
+   StochInputNode(void* user_data, int id,
+      FNNZ n, FNNZ my, FNNZ mz,
+      FMAT fQ, FNNZ fnnzQ, FVEC fc,
+      FMAT fA, FNNZ fnnzA, FMAT fB, FNNZ fnnzB,
+      FVEC fb,
+      FMAT fC, FNNZ fnnzC, FMAT fD, FNNZ fnnzD,
+      FVEC fclow, FVEC ficlow, FVEC fcupp, FVEC ficupp,
+      FVEC fxlow, FVEC fixlow, FVEC fxupp, FVEC fixupp,
+      bool deleteUserData=false);
+
+	// full callback constructor including linking constraints
 	StochInputNode(void* user_data, int id,
-	   int n, int my, int myl, int mz, int mzl,
+	   FNNZ n, FNNZ my, FNNZ myl, FNNZ mz, FNNZ mzl,
 	   FMAT fQ, FNNZ fnnzQ, FVEC fc,
 	   FMAT fA, FNNZ fnnzA, FMAT fB, FNNZ fnnzB, FMAT fBl, FNNZ fnnzBl,
 	   FVEC fb, FVEC fbl,
@@ -64,7 +76,10 @@ class StochInputTree {
     int nnzQ, nnzA, nnzB, nnzBl, nnzC, nnzD, nnzDl;
 
   protected:
-    // callback functions
+    //callback functions
+
+    //callback functions nCall, myCall, mzCall, mylCall, mzlCall can be NULL if data is provided through int n,my,mz,myl,mzl
+    FNNZ nCall, myCall, mzCall, mylCall, mzlCall;
     FNNZ fnnzQ, fnnzA, fnnzB, fnnzBl, fnnzC, fnnzD, fnnzDl;
     FMAT fQ, fA, fB, fBl, fC, fD, fDl;
 

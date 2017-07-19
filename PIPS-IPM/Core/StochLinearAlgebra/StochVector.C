@@ -24,7 +24,7 @@ StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
 
 }
 
-StochVector::StochVector(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
+StochVector::StochVector(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed)
   : OoqpVector(n_), parent(NULL), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
@@ -90,8 +90,9 @@ StochVector* StochVector::clone() const
   else
 	 clone = new StochVector(vec->length(), mpiComm);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it=0; it<children.size(); it++) {
     clone->AddChild(children[it]->clone());
+  }
 
   return clone;
 }
@@ -160,7 +161,7 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
     n4 = svyl.length();
     assert(n4 >= 0);
 
-    if( n4 > 0 );
+    if( n4 > 0 )
       memcpy(&sv[n1+n2+n3], &svyl[0], n4*sizeof(double));
   }
 
@@ -170,7 +171,7 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
     n5 = svzl.length();
     assert(n5 >= 0);
 
-    if( n5 > 0 );
+    if( n5 > 0 )
       memcpy(&sv[n1+n2+n3+n4], &svzl[0], n5*sizeof(double));
   }
 
