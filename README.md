@@ -7,38 +7,6 @@ PIPS is a suite of parallel optimization solvers mainly for stochastic optimizat
  * PIPS-S   - parallel MPI implementation of the revised simplex method
  * PIPS-NLP - parallel MPI interior-point for structured NLPs
 
-# LICENSE
-
-See LICENSE file.
-
-# CONTRIBUTIONS
-
-## PIPS-IPM
-
-Developed by:
-  * Cosmin G. Petra - Lawrence Livermore / Argonne National Laboratory
-
-Contributions from:
-  * Miles Lubin - Argonne National Laboratory
-  * Naiyuan Chiang - Argonne National Laboratory
-
-## PIPS-S
-
-Developed by: 
-  * Miles Lubin - Argonne National Laboratory
-  * Cosmin G. Petra - Lawrence Livermore / Argonne National Laboratory
-
-Contributions from:
-  * Geoffrey Oxberry - Lawrence Livermore National Laboratory
-  * Julian Hall - U. of Edinburgh
-
-## PIPS-NLP 
-
-Developed by:
- * Naiyuan Chiang - Argonne National Laboratory
- * Victor Zavala - Argonne National Laboratory and Univ. of Wisconsin-Madison
- * Cosmin G. Petra - Lawrence Livermore / Argonne National Laboratory	 
-
 # INSTALLATION Instructions
 
 ## Building PIPS-S only can be achieved via 
@@ -76,6 +44,45 @@ make
 
 5. The build system will install executables from three sources: PIPS-IPM, PIPS-S and PIPS-NLP. 
 
+## Note regarding the use of Pardiso with PIPS-IPM
+Pardiso solver has a special feature for PIPS to compute certain Schur complements efficiently. To use PIPS with Pardiso you will need to obtain the PARDISO library and a license [here](http://www.pardiso-project.org/). The build system of PIPS will build PARDISO-related binaries automatically if the PARDISO library is placed under ThirdPartyLibs/PARDISO/src/libpardiso.so
+
+
+# CONTRIBUTIONS
+
+## PIPS-IPM
+Developed by:
+  * Cosmin G. Petra - Lawrence Livermore National Laboratory
+
+Contributions from:
+  * Miles Lubin - while at Argonne National Laboratory
+
+## PIPS-S
+
+Developed by: 
+  * Miles Lubin - while at Argonne National Laboratory 
+  * Cosmin G. Petra - Lawrence Livermore National Laboratory
+  * Julian Hall - U. of Edinburgh
+  
+Contributions from:
+  * Geoffrey Oxberry - Lawrence Livermore National Laboratory
+
+
+## PIPS-NLP 
+
+Developed by:
+ * Naiyuan Chiang - while at Argonne National Laboratory
+ * Cosmin G. Petra - Lawrence Livermore 	 National Laboratory
+Contributions from:
+ * Victor Zavala - Univ. of Wisconsin-Madison
+
+
+# LICENSE
+
+See LICENSE file.
+
+PIPS-IPM and PIPS-NLP are derivative works of OOQP (http://pages.cs.wisc.edu/~swright/ooqp/) by E. Michael Gertz and Stephen. Wright
+
 # ACKNOWLEDGMENTS
 
 PIPS has been developed under the financial support of: 
@@ -83,5 +90,5 @@ PIPS has been developed under the financial support of:
 - Department of Energy, Early Career Program 
 - Department of Energy, Office of Electricity Delivery and Energy Reliability
 
-PIPS-IPM and PIPS-NLP are derivative works of OOQP (http://pages.cs.wisc.edu/~swright/ooqp/) by E. Michael Gertz and Stephen. Wright
+
 
