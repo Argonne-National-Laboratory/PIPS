@@ -42,11 +42,13 @@ endif()
 #with testing of (selected) executables
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
-#with NLP profile metric
-option(WITH_NLPTIMING "Build with timing for PIPS-NLP" OFF)
+#with timing for PIPS-IPM
+
+#with PIPS IPM AND NLP profile metric
+option(WITH_TIMING "Build with timing recording and reporting for PIPS-NLP" OFF)
 option(WITH_VERBOSE "Build with extra verbosity level" OFF)
-if(WITH_NLPTIMING)
-	add_definitions(-DNLPTIMING)
+if(WITH_TIMING)
+	add_definitions(-DTIMING -DSTOCH_TESTING -DNLPTIMING)
 endif()
 if(WITH_VERBOSE)
 	add_definitions(-DVERBOSE)
@@ -169,7 +171,7 @@ elseif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(IS_MACOS TRUE)
 endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
 
-#add_definitions(-DTIMING -DSTOCH_TESTING)
+
 
 # inspired by elemental-bgp
 if(MATH_LIBS)
@@ -320,7 +322,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 	  if(IS_XC30)
 	    set(PARDISO_LIBRARY "${PARDISO_LIBS_STATIC}")
 	  else(IS_XC30)
-	    set(PARDISO_LIBRARY ${PARDISO_DIR}/libpardiso490-GNU430-X86-64.so)
+	    set(PARDISO_LIBRARY ${PARDISO_DIR}/libpardiso.so)
 	  endif(IS_XC30)
 	endif(IS_XK7)
       endif(IS_XE6)
@@ -335,6 +337,8 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
       endif(EXISTS ${PARDISO_LIBRARY} OR IS_XC30)
     endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneQ-static")
   endif(${CMAKE_SYSTEM_NAME} MATCHES "BlueGeneP-static")
+
+  message(STATUS "Pardiso lib: ${PARDISO_LIBRARY}  and HAVE_PARDISO is ${HAVE_PARDISO}")
 
   #setting CXX_FLAGS
   if(HAVE_MA27)

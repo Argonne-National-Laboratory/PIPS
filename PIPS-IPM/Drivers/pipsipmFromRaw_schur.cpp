@@ -34,7 +34,7 @@ int main(int argc, char ** argv) {
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
 
   if(argc<3) {
-    if (mype == 0) printf("Usage: %s [rawdump root name] [num scenarios] [outer solve (opt)] [inner solve (opt)]\n",argv[0]);
+    if (mype == 0) printf("\nUsage:\n%s   [rawdump root name]   [num scenarios]   [outer solve (optional): 0 vanilla direct (default), 1 with iter.refin, 2 with BICGStab]   [inner solve (optional): 0 vanila direct (default), EXPERIMENTAL-> 1 iter.refin, 2. BiCGStab]\n\n",argv[0]);
     return 1;
   }
   
