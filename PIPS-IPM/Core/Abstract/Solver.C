@@ -264,7 +264,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   } else
     phi_min_history[idx] = phi;
 
-  if ( iterate >= maxit * 2 ) {
+  if ( iterate >= maxit ) {
     stop_code = MAX_ITS_EXCEEDED;
   } else if ( mu <= mutol && rnorm <= artol*dnorm ) {
     stop_code = SUCCESSFUL_TERMINATION;
