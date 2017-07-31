@@ -14,6 +14,11 @@
 
 #include "RegularizationAlg.h"
 
+#ifdef TIMING
+#include "../../global_var.h"
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
+#endif
+
 using namespace std;
 /*********************************************************************/
 /************************** ROOT *************************************/
@@ -167,6 +172,11 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
   int return_NegEval=-1;  
   int matIsSingular=0,matIsSingularAllReduce;
   int mype; MPI_Comm_rank(mpiComm, &mype);
+#ifdef TIMING
+  double stime=MPI_Wtime();
+  double stime1=MPI_Wtime();
+  gprof.n_factor2++;
+#endif
   	
   DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
   initializeKKT(prob, vars);
@@ -194,6 +204,10 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
+#ifdef TIMING
+  gprof.t_initializeKKT+=MPI_Wtime()-stime;
+  stime=MPI_Wtime();
+#endif
 
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
@@ -201,9 +215,18 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
 #endif 
   reduceKKT();
 #ifdef TIMING
+  gprof.t_reduceKKT+=MPI_Wtime()-stime;
+  stime=MPI_Wtime();
+#endif
+
+#ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
 #endif  
   finalizeKKT(prob, vars);
+#ifdef TIMING
+  gprof.t_finalizeKKT+=MPI_Wtime()-stime;
+  stime=MPI_Wtime();
+#endif
   
   //printf("(%d, %d) --- %f\n", PROW,PCOL, kktd[PROW][PCOL]);
 
@@ -213,6 +236,10 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
   	// all the diag mat is nonsingular
   	MPI_Allreduce(&negEVal, &return_NegEval, 1, MPI_INT, MPI_SUM, mpiComm);
 	negEVal = factorizeKKT();
+#ifdef TIMING
+  gprof.t_factorizeKKT+=MPI_Wtime()-stime;
+  stime=MPI_Wtime();
+#endif
 	if(negEVal<0){ 
 	  return_NegEval = -1;
 	}else{
@@ -222,6 +249,7 @@ int sLinsysRoot::factor2(sData *prob, Variables *vars)
   
 #ifdef TIMING
   afterFactor();
+  gprof.t_factor2_total+=MPI_Wtime()-stime1;
 #endif
 
   return return_NegEval;
@@ -697,14 +725,12 @@ void sLinsysRoot::reduceKKT()
 int sLinsysRoot::factorizeKKT()
 {
   int negEValTemp=0;
-  
   //stochNode->resMon.recFactTmLocal_start();  
 #ifdef TIMING
   MPI_Barrier(mpiComm);
   extern double g_iterNumber;
   double st=MPI_Wtime();
 #endif
-
   negEValTemp = solver->matrixChanged();
 
   //stochNode->resMon.recFactTmLocal_stop(); 
@@ -716,7 +742,6 @@ int sLinsysRoot::factorizeKKT()
   if( (mype/256)*256==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
-
   return negEValTemp;
 }
 

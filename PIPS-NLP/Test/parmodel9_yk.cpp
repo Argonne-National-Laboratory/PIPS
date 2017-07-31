@@ -5,6 +5,21 @@
 #include <iostream>
 #include <cassert>
 #include <math.h>
+
+#ifdef TIMING
+  double timeFromAMPL;
+  double probGenTime;
+  double PartSolver_GenTime;
+  double PartSolver_SolTime;  
+  double PartSolver_FactTime;
+  int call_sol_Times;
+  int call_fact_Times;
+
+  int call_sol_Times_MA57;
+  int call_fact_Times_MA57;  
+  double genTime_localAmpl;
+#endif
+
 //#min x1^2 + x3^2 + x4^2 + x5^2 + x6^2
 //# st.
 //#     x3 + x4 = 200

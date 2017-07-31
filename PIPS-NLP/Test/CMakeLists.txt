@@ -211,7 +211,6 @@ target_link_libraries(parleastsquares
   ${MA27_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
-  ${PARDISO_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
 

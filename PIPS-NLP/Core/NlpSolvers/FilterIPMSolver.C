@@ -28,6 +28,10 @@
 #include "NlpGenLinsys.h"
 
 #include "../../global_var.h"
+#ifdef TIMING
+#include <mpi.h>
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
+#endif
 
 extern int gOoqpPrintLevel;
 extern int gdWd_test;
@@ -490,8 +494,15 @@ FilterIPMSolver::compute_step_WithRegularization(Data *prob_in, Variables *itera
   NlpGenVars *vars 		= (NlpGenVars *) iterate_in;
   NlpGenVars *steps 	= (NlpGenVars *) step_in;
   NlpGenLinsys *sysNLP 	= dynamic_cast<NlpGenLinsys *>(sys);
+	
+#ifdef TIMING
+	double stime0;
+#endif
     
   if(inSOC==false){
+#ifdef TIMING
+	stime0=MPI_Wtime();
+#endif
 	// form rhs of linear system:
 	resid_in->set_r3_xz_alpha( iterate_in, -mu );   
 
@@ -502,13 +513,20 @@ FilterIPMSolver::compute_step_WithRegularization(Data *prob_in, Variables *itera
 	  PD_Reg->DoEvalReg=2;
 	else 
 	  PD_Reg->DoEvalReg=1;
-
+#ifdef TIMING
+  gprof.t_set_r3_xz_alpha+=MPI_Wtime()-stime0;
+	stime0=MPI_Wtime();
+#endif
 	sysNLP->factor(prob, iterate_in,PD_Reg);
 
     double xWx, thd;
 	double kappa_test = gkappa_tWt;
 	if(gkappaWithMu) kappa_test *= mu;
-
+	
+#ifdef TIMING
+  gprof.t_factor+=MPI_Wtime()-stime0;
+	stime0=MPI_Wtime();
+#endif
     if(gdWd_test<=1){
 	  // solve d step, compute dWd and thd (this is the first fact/solve)
 	  sysNLP->solve_IterRefine(prob, iterate_in, resid_in, step_in, KKT_Resid, KKT_sol);
@@ -523,8 +541,15 @@ FilterIPMSolver::compute_step_WithRegularization(Data *prob_in, Variables *itera
 	  xWx_0 = get_xWx(prob_in, resid_in,t_step);
 	  thd_0 = kappa_test*steps->computeXSDD(t_step);	    
     }
-	
+#ifdef TIMING
+				gprof.t_computeXSDD1+=MPI_Wtime()-stime0;
+				stime0=MPI_Wtime();
+#endif
 	if(gUseDualRegAlg>0) computeQuantitiesForDualReg(prob_in,iterate_in,resid_in,step_in, PD_Reg);
+#ifdef TIMING
+	gprof.t_computeQuantitiesForDualReg+=MPI_Wtime()-stime0;
+	stime0=MPI_Wtime();
+#endif
 
 	// do inertia-free test, if fails, add regularization
 	xWx   = xWx_0;
@@ -572,6 +597,9 @@ FilterIPMSolver::compute_step_WithRegularization(Data *prob_in, Variables *itera
 	  thd_done 	= kappa_test*steps->computeDD();
 	}
   }  
+	#ifdef TIMING
+	gprof.t_computeXSDD2+=MPI_Wtime()-stime0;
+	#endif
 }
 
 

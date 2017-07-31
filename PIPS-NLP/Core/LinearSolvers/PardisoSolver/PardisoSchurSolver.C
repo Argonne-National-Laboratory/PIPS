@@ -40,7 +40,7 @@ extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
                   double *, int    *,    int *, int *,   int *, int *,
                      int *, double *, double *, int *, double *);
-extern "C" void pardiso_schur(void*, int*, int*, int*, double*, int*, int*);
+extern "C" void pardiso_get_schur(void*, int*, int*, int*, double*, int*, int*);
 
 extern "C" void pardiso_chkmatrix  (int *, int *, double *, int *, int *, int *);
 extern "C" void pardiso_chkvec     (int *, int *, double *, int *);
@@ -390,7 +390,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
   //if (myRankp==0) msglvl=1;
   iparm[32] = 1; // compute determinant
-  iparm[37] = Msys->size(); //compute Schur-complement
+  iparm[37] = nSC;//Msys->size(); //compute Schur-complement
   
 #ifdef TIMING
   //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
@@ -423,7 +423,8 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   int* colidxSC =new int[nnzSC];
   double* eltsSC=new double[nnzSC];
 
-  pardiso_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
+  //pardiso_sc(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
+  pardiso_get_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
 
   //convert back to C/C++ indexing
   for(int it=0; it<nSC+1; it++) rowptrSC[it]--;
@@ -932,7 +933,7 @@ int pardiso_stuff(int n, int nnz, int n0, int* rowptr, int* colidx, double* elts
     int* colidxSC =new int[nnzSC];
     double* eltsSC=new double[nnzSC];
     
-    pardiso_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
+    pardiso_get_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
     //!cout << "Schur complement (2nd stage) n=" << nSC << "   nnz=" << nnzSC << endl;
     
     //convert back to C/C++ indexing

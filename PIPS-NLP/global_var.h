@@ -4,10 +4,18 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <mpi.h>
 #include "./Core/Utilities/PerfMetrics.h"
 
 extern int gmyid;
 extern int gnprocs;
+extern int gmyid_node;
+extern int gnprocs_node;
+extern MPI_Comm comm_node;
+extern double *gwindow;
+extern int *gipiv;
+extern MPI_Win gwin;
+extern MPI_Win gwin_ipiv;
 extern int giterNum; //the global variable hold current iteration number
 #ifdef NLPTIMING
 extern PerfMetrics gprof;

@@ -4,10 +4,18 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <mpi.h>
 
 int gmyid;
 int gnprocs;
 int giterNum;
+int gmyid_node;
+int gnprocs_node;
+MPI_Comm comm_node;
+double *gwindow=NULL;
+int *gipiv=NULL;
+MPI_Win gwin;
+MPI_Win gwin_ipiv;
 #ifdef NLPTIMING
 PerfMetrics gprof = PerfMetrics::getPerfMetrics();
 #endif

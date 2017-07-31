@@ -3,13 +3,16 @@
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 /* 2015. Modified by Nai-Yuan Chiang for NLP*/
 
+#include "../../global_var.h"
+#include <omp.h>
 #include "DeSymIndefSolver.h"
 #include "SimpleVector.h"
 #include <cassert>
-
+#include <cmath>
 #include "DenseSymMatrix.h"
 #include "DenseGenMatrix.h"
 #include "stdlib.h"
+
 
 #ifdef WITH_MA27
 #include "Ma27Solver.h"
@@ -105,12 +108,11 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
 //#include "mpi.h"
 int DeSymIndefSolver::matrixChanged()
 {
-
+  int n = mStorage->n;
+  /* If matrix is dense use LAPACK, not MA57 */
   char fortranUplo = 'U';
   int info;
-
-  int n = mStorage->n;
-
+  
   if (sparseMat) {
     std::fill(mStorage->M[0],mStorage->M[0]+n*n,0.);
 
@@ -140,306 +142,97 @@ int DeSymIndefSolver::matrixChanged()
   HPM_Start("DSYTRFFact");
 #endif
 
-//*********************************************************************************
-  // try to find inertia information for this dense matrix
-  int nnzWrk = (1+n)*n/2;;
-  int *rowStartM;  
-  int *rowM = (int*) malloc (nnzWrk*sizeof(int));
-  int *colM = (int*) malloc (nnzWrk*sizeof(int));
-  double *elesM = (double*) malloc (nnzWrk*sizeof(double));
-  int findNz=0;
-
-  for(int rowID=0;rowID<n;rowID++){
-	for(int colID=0;colID<n;colID++){
-	  if(rowID>=colID){
-		rowM[findNz] = rowID+1;
-		colM[findNz] = colID+1;
-		elesM[findNz]= mStorage->M[rowID][colID];
-		findNz++;
-	  }
-	}
-	if(gSymLinearAlgSolverForDense>1)
-	  rowStartM[rowID+1] = findNz+1;
-  }  
-  assert(findNz==nnzWrk);
-  if(gSymLinearAlgSolverForDense>1) assert(rowStartM[n]-1==nnzWrk);
-//*********************************************************************************
-
   //factorize
-  FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
-	   ipiv, work, &lwork, &info );
+  //if(gmyid==0) {
+    //printf("OMP_NUM_PROCS: %d\n", omp_get_num_procs());
+    //printf("OMP_GET_MAX_THREADS: %d\n", omp_get_max_threads());
+    //printf("On node ranks: %d\n", gnprocs_node);
+  //}
+
+  /* Create MPI windows used for the scatter of the factorization result. One
+   * MPI rank does the factorization and distributes the result through the
+   * windows
+   */
+
+  if(gwindow==NULL) {
+    if(gmyid_node==0) {
+      gwindow=new double[n*n];
+      gipiv=new int[n+1];
+      MPI_Win_create(gwindow, n*n*sizeof(double), sizeof(double), MPI_INFO_NULL, comm_node, &gwin);
+      MPI_Win_create(gipiv, (n+1)*sizeof(int), sizeof(int), MPI_INFO_NULL, comm_node, &gwin_ipiv);
+    } else {
+      MPI_Win_create(NULL, 0, 1, MPI_INFO_NULL, comm_node, &gwin); 
+      MPI_Win_create(NULL, 0, 1, MPI_INFO_NULL, comm_node, &gwin_ipiv); 
+      // Allocate something to overwrite NULL
+      gwindow=new double[1];
+    }
+  }
+#ifdef DUMP
+  static bool dump=true;
+  if(gmyid==0 && dump==true) {
+    printf("Dumping 1stageM.dmp\n");
+    FILE *fp=fopen("1ststageM.dmp","w");
+    fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&mStorage->M[0][0], sizeof(double), n*n, fp);
+    fclose(fp);
+    dump=false;
+  } 
+#endif
+  if(gmyid_node==0) {
+    /* rank 0 does the factorization */
+    FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
+      ipiv, work, &lwork, &info );
+    //  printf("gwindow on 0 before: %lf %d %d\n", gwindow[0],gipiv[0],info);
+    for(int i=0;i<n*n;i++) gwindow[i]=(&mStorage->M[0][0])[i];
+    for(int i=0;i<n;i++) gipiv[i]=ipiv[i];
+    gipiv[n]=info;
+    //  printf("gwindow on 0 after: %lf %d %d\n", gwindow[0],gipiv[0],info);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+  }
+  else {
+    /* All other ranks get the result from rank 0 */
+    //printf("gwindow on other before: %lf %d %d\n", mStorage->M[0][0], ipiv[0], info);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+    MPI_Get(&mStorage->M[0][0], n*n, MPI_DOUBLE, 0, 0, n*n, MPI_DOUBLE, gwin);
+    MPI_Get(ipiv, n, MPI_INT, 0, 0, n, MPI_INT, gwin_ipiv);
+    MPI_Get(&info, 1, MPI_INT, 0, n, 1, MPI_INT, gwin_ipiv);
+    MPI_Win_fence(0,gwin);
+    MPI_Win_fence(0,gwin_ipiv);
+    //printf("gwindow on other after: %lf %d %d\n", mStorage->M[0][0], ipiv[0], info);
+  }
 
 #ifdef TIMING_FLOPS
   HPM_Stop("DSYTRFFact");
 #endif
   if(info!=0)
       printf("DeSymIndefSolver::matrixChanged : error - dsytrf returned info=%d\n", info);
-  //assert(info==0);
-
-  //int piv2x2=0;
-  //for(int i=0; i<n; i++)
-  //  if(ipiv[i]<0) piv2x2++;
-  //printf("%d 2x2 pivots were used\n", piv2x2);
-
-
-//*********************************************************************************
-if(gSymLinearAlgSolverForDense<=1){
-//*********************************************************************************
-  // we use MA57 or MA27 to find inertia
-  negEigVal=0;
-  
-  if(n>1){
-	int     icntlTemp[30];
-    double  cntlTemp[5];
-    int     infoTemp[40];	
-    double  rinfoTemp[20];
-    double  ipessimism = 1.4;
-    double  rpessimism = 1.4;
-
-    int	   lkeepTemp;
-    int	   lifactTemp, lfactTemp;
-	int   *keepTemp, *iworkTemp;
-	int    nsteps;
-	double *factTemp;
-	int *ifactTemp, *iworkTemp2;
-
-	if(gSymLinearAlgSolverForDense==1){
-#ifdef WITH_MA57		
-	  FNAME(ma57id)( cntlTemp, icntlTemp );
-	  
-	  icntlTemp[1-1] = 0;	// don't print warning messages
-	  icntlTemp[2-1] = 0;	// no Warning messages
-	  icntlTemp[4-1] = 0;	// no statistics messages
-	  icntlTemp[5-1] = 0;	// no Print messages.
-	  icntlTemp[6-1] = 0; 	// no messages output.
-	  icntlTemp[7-1] = 1;	// 0 or 2 use MC47;  1 use the one kept from ma57ad; 3 min degree ordering as in MA27; 4 use Metis; 5 automatic choice(MA47 or Metis)
-	  icntlTemp[9-1] = 10;  // up to 10 steps of iterative refinement
-	  icntlTemp[11-1] = 16;
-	  icntlTemp[12-1] = 16; 
-	  icntlTemp[15-1] = 0;
-      icntlTemp[16-1] = 0;
-	  
-      cntlTemp[0] = gHSL_PivotLV;
-	  cntlTemp[1] = 1.e-20;	  
-
-      lkeepTemp = ( nnzWrk > n ) ? (5 * n + 2 *nnzWrk + 42) : (6 * n + nnzWrk + 42);
-      keepTemp  = new int[lkeepTemp];
-      iworkTemp = new int[5 * n];
-	  
-      FNAME(ma57ad)( &n, &nnzWrk, rowM, colM, &lkeepTemp, keepTemp, iworkTemp, icntlTemp,
-	     infoTemp, rinfoTemp );	 
-	  
-      lfactTemp  = infoTemp[8];
-      lfactTemp  = 2*(int) (rpessimism * lfactTemp );
-      factTemp   = new double[lfactTemp];
-      lifactTemp = infoTemp[9];
-      lifactTemp = (int) (ipessimism * lifactTemp );
-      ifactTemp  = new int[lifactTemp ];
-      iworkTemp2 = new int[n];
-	
-//      char *name = "matSt.m";
-//
-//       FILE* outfile = fopen( name, "wr" );
-//
-//		fprintf(outfile,"n_dim_%s = %d;\n\n", name,n);;
-//		fprintf(outfile,"nnz_%s = %d;\n\n", name, nnzWrk);
-//
-//		int findkk=0;
-//		fprintf(outfile,"rowId_%s = [ ",name);
-//		for(int kk=0;kk<nnzWrk;kk++)
-//			if(findkk%10==0){
-//			 fprintf(outfile,"%d, ... \n", rowM[kk]+1);
-//					 findkk++;
-//			}
-//			else{
-//			 fprintf(outfile,"%d,", rowM[kk]+1);
-//					 findkk++;
-//			}
-//		fprintf(outfile,"]; \n\n");
-//
-//		findkk=0;
-//		fprintf(outfile,"colId_%s = [ ",name);
-//		for(int kk=0;kk<nnzWrk;kk++)
-//			if(findkk%10==0){
-//			 fprintf(outfile,"%d, ... \n", colM[kk]+1);
-//					 findkk++;
-//			}
-//			else{
-//			 fprintf(outfile,"%d,", colM[kk]+1);
-//					 findkk++;
-//			}
-//		fprintf(outfile,"]; \n\n");
-//
-//		findkk=0;
-//		fprintf(outfile,"elts_%s = [ ",name);
-//		for(int kk=0;kk<nnzWrk;kk++)
-//			if(findkk%10==0){
-//			  fprintf(outfile,"%5.17g, ... \n", elesM[kk]);
-//					 findkk++;
-//			}
-//			else{
-//			  fprintf(outfile,"%5.17g,", elesM[kk]);
-//					 findkk++;
-//			}
-//		fprintf(outfile,"]; \n\n");
-//
-//		fclose(outfile);
-
-
-      FNAME(ma57bd)( &n,	   &nnzWrk,	elesM,	   factTemp,  &lfactTemp,  ifactTemp,
-		   &lifactTemp,  &lkeepTemp,  keepTemp,  iworkTemp2,  icntlTemp,  cntlTemp,
-		   infoTemp,	 rinfoTemp );
-
-      if( infoTemp[0] == 0 ){
-		  negEigVal = infoTemp[24-1]; 
-	  }else if (infoTemp[0] == 4){
-		  negEigVal = -1; 
-	  }else{ 
-  	  	cout << "ma57bd: Factorization Fails: info[0]=: " << infoTemp[0] << endl;
-//        assert(false);
-      }
-  
-#else
-	  assert("ma57 not defined"&&0);
-#endif
-	}
-	else{
-#ifdef WITH_MA27		
-	  FNAME(ma27id)( icntlTemp,cntlTemp );
-	  
-	  icntlTemp[1-1] = 0;	// don't print warning messages
-	  icntlTemp[2-1] = 0;	// no Warning messages
-	  
-      cntlTemp[0] = gHSL_PivotLV;
-	  cntlTemp[1] = 1.e-20;	  
-
-	  // set array lengths as recommended in ma27 docs
-  	  lkeepTemp = (int)(1.3 * (2*nnzWrk + 3*n + 1));
-  	  keepTemp = new int[lkeepTemp];
-
-  	  // define ikeep (which stores the pivot sequence)
-  	  int *ikeepTemp = new int[3*n];
-  	  iworkTemp = new int[2*n];
-	  
- 	  // set iflag to zero to make ma27ad choose a pivot order.
-  	  int iflag = 0, maxfrt;
-
-  	  double ops;
-  	  FNAME(ma27ad)( &n, &nnzWrk, rowM, colM, keepTemp, &lkeepTemp, ikeepTemp, iworkTemp, &nsteps, &iflag,
-	   		icntlTemp, cntlTemp, infoTemp, &ops);
-
-  	  lfactTemp  = infoTemp[4];
-  	  factTemp	 = new double[lfactTemp];
-  	  lifactTemp = infoTemp[5];
-  	  ifactTemp  = new int[lifactTemp];	  
-  	  iworkTemp2 = new int[n];
-
-  	  for (int i=0; i<nnzWrk; i++) factTemp[i] = elesM[i];
-  	  for (int i = nnzWrk; i<lfactTemp; i++) factTemp[i] = 0.0;	  
-	 
-      FNAME(ma27bd)( &n, &nnzWrk, rowM, colM, factTemp, &lfactTemp, ifactTemp, &lifactTemp, ikeepTemp,
-	     &nsteps,  &maxfrt, iworkTemp2, icntlTemp, cntlTemp,  infoTemp );  
-	  
-      if( infoTemp[0] == 0 ){
-		  negEigVal = infoTemp[15-1]; 
-	  }else if (infoTemp[0] == 4){
-		  negEigVal = -1; 
-	  }else{ 
-  	  	cout << "ma27bd: Factorization Fails: info[0]=: " << infoTemp[0] << endl;
-//        assert(false);
-      }	
-	  
-	  delete [] ikeepTemp ;
-#else
-	  assert("ma27 not defined"&&0);
-#endif		
-	}
-
-	delete [] iworkTemp2 ;
-	delete [] ifactTemp ;
-	delete [] factTemp ;
-	delete [] iworkTemp ;
-	delete [] keepTemp ;
+/* Compute the inertia. Only negative eigenvalues are returned */
+negEigVal=0;
+double t=0;
+for(int k=0; k<n; k++) {
+  double d = mStorage->M[k][k];
+  if(ipiv[k] < 0) {
+   if(t==0) {
+     t=fabs(mStorage->M[k+1][k]);
+     d=(d/t)*mStorage->M[k+1][k+1]-t;
+   }
+   else {
+     d=t;
+     t=0;
+   }
   }
-  else{
-	assert(n==1);
-	if(mStorage->M[0][0]<0) negEigVal=1;	
+  if(d<0) negEigVal++;
+  if(d==0) {
+    negEigVal=-1;
+    break;
   }
-  
-//*********************************************************************************
 }
-else{
-//*********************************************************************************
-#ifdef WITH_PARDISO
-  // we use Pardiso to find inertia
-  void  *pt[64]; 
-  int iparm[64];
-  int num_threads;
-  double dparm[64];
-
-  /* Numbers of processors, value of OMP_NUM_THREADS */
-  char *var = getenv("OMP_NUM_THREADS");
-  if(var != NULL)
-    sscanf( var, "%d", &num_threads );
-  else {
-    printf("Set environment OMP_NUM_THREADS");
-    exit(1);
-  }  
-
-  negEigVal=0;
-
-  if(n>1){
-    int solverInfo=0, mtype=-2, error;
-    pardisoinit (pt,  &mtype, &solverInfo, iparm, dparm, &error); 
-    if (error!=0) {
-      cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
-      assert(false);
-    }
-  
-    int phase = 12; //Analysis, numerical factorization
-    int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
-    int mnum=1; //actual matrix (as in index from 1 to maxfct)
-    int nrhs=1;
-    int msglvl=0; //messaging level
-    int error2,  mtype2=-2;
-
-    iparm[2] = num_threads;
-    iparm[1] = 2; // 2 is for metis, 0 for min degree 
-    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
-                 // if needed, use 2 for advanced matchings and higer accuracy.
-    iparm[30] = 0; // do not specify sparse rhs at this point
-
-    pardiso (pt , &maxfct , &mnum, &mtype2, &phase,
-	   &n, elesM, rowStartM, colM,
-	   NULL, &nrhs,
-	   iparm, &msglvl, NULL, NULL, &error2, dparm );
-    if ( error2 != 0) {
-      printf ("PardisoSolver - ERROR during factorization: %d\n", error2 );
-     assert(false);
-    }
-
-	negEigVal = iparm[22];
-  }
-  else{
-	assert(n==1);
-	if(mStorage->M[0][0]<0)
-	  negEigVal=1;	
-  }
-
-  free(rowStartM);
-#else
-	  assert("pardiso not defined"&&0);
-#endif  
-}
-//*********************************************************************************
-
-  free (rowM);
-  free (colM);
-  free (elesM);
-
-  return negEigVal;
-
+return negEigVal;
 }
 
 void DeSymIndefSolver::solve ( OoqpVector& v )
@@ -452,12 +245,38 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
 #ifdef TIMING_FLOPS
   HPM_Start("DSYTRSSolve");
 #endif
+#ifdef DUMP
+  static bool dump=true;
+  if(gmyid==0 && dump==true) {
+    printf("Dumping 1stageRHS.dmp\n");
+    FILE *fp=fopen("1ststageRHS.dmp","w");
+    int ione=1;
+    fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&ione, sizeof(int), 1, fp);
+    fwrite(&sv[0], sizeof(double), n, fp);
+    fclose(fp);
+    dump=false;
+  } 
+#endif
 
   FNAME(dsytrs)( &fortranUplo, &n, &one,	&mStorage->M[0][0],	&n,
 	   ipiv, &sv[0],	&n,	&info);
 
 #ifdef TIMING_FLOPS
   HPM_Stop("DSYTRSSolve");
+#endif
+#ifdef DUMP
+  static bool dump1=true;
+  if(gmyid==0 && dump1==true) {
+    printf("Dumping 1stageSol.dmp\n");
+    FILE *fp=fopen("1ststageSol.dmp","w");
+    int ione=1;
+    fwrite(&ione, sizeof(int), 1, fp);
+    fwrite(&n, sizeof(int), 1, fp);
+    fwrite(&sv[0], sizeof(double), n, fp);
+    fclose(fp);
+    dump1=false;
+  } 
 #endif
   assert(info==0);
 }
