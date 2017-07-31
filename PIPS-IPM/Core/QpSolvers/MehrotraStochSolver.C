@@ -115,6 +115,9 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
     // actually take the step and calculate the new mu
     iterate->saxpy(step, alpha);
     mu = iterate->mu();
+
+    //assert(mu <= gmu);
+
     gmu = mu;
     
     stochFactory->iterateEnded();

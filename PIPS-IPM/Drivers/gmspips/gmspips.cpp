@@ -18,6 +18,16 @@
 #include <fstream>
 using namespace std;
 
+#define BiCGStab
+
+#if defined(GMS_PIPS)
+#ifdef BiCGStab
+extern int gOuterSolve;
+extern int gInnerSCsolve;
+#endif
+#endif
+
+
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
@@ -360,6 +370,12 @@ int main(int argc, char ** argv)
       cout << "Using a total of " << size << " MPI processes." << endl;
 
 #if defined(GMS_PIPS)
+#ifdef BiCGStab
+   cout << "using BiCGStab" << endl;
+   gOuterSolve=2;
+   gInnerSCsolve=0;
+#endif
+
    PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
    if( rank == 0 )
       cout << "PIPSIpmInterface created" << endl;
