@@ -276,19 +276,6 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
   int dummy, nx0;
   A.getSize(dummy, nx0);
 
-  // todo deleteme
-#if 1
-  int mz, my, test;
-
-  A.getSize(my, test);
-  assert(test == nx0);
-  C.getSize(mz, test);
-  assert(test == nx0);
-
-  assert(mz == locmz);
-  assert(my == locmy);
-#endif
-
   // zi2, zi3 are just references to fragments of zi
   SimpleVector zi1 (&zi[0],           locnx);
   SimpleVector zi2 (&zi[locnx],       locmy);
@@ -535,7 +522,7 @@ void sLinsys::addTermToSchurResidual(sData* prob,
 /* this is the original code that was doing one column at a time. */
 
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
-				       DenseSymMatrix& SC, int deleteme)
+				       DenseSymMatrix& SC)
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
@@ -555,9 +542,6 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
   const int nxMyP = NP - locmyl - locmzl;
   const int nxMyMzP = NP - locmzl;
-
-  assert((deleteme + nxP + locmyl + locmzl) == NP);
-  assert(nxMyP == (nxP + deleteme));
 
   if(nxP==-1)
     C.getSize(N,nxP);

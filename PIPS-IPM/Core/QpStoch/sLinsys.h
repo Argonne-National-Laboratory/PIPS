@@ -84,7 +84,7 @@ class sLinsys : public QpGenLinsys
    *  the terms from the Schur Complement 
    */
   virtual void addTermToDenseSchurCompl(sData *prob, 
-					DenseSymMatrix& SC, int deleteme = - 1);
+					DenseSymMatrix& SC);
 					
   virtual void addColsToDenseSchurCompl(sData *prob, 
 					DenseGenMatrix& out, 

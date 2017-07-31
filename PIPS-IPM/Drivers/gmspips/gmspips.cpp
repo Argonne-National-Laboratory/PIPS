@@ -1,8 +1,8 @@
 #if defined(GMS_PIPS)
 #include "StochInputTree.h"
 #include "PIPSIpmInterface.h"
-#include "sFactoryAug.h"
 #include "MehrotraStochSolver.h"
+#include "sFactoryAugSchurLeaf.h"
 #endif
 #if defined(GMS_MPI)
 #include "mpi.h"
@@ -360,7 +360,7 @@ int main(int argc, char ** argv)
       cout << "Using a total of " << size << " MPI processes." << endl;
 
 #if defined(GMS_PIPS)
-   PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
    if( rank == 0 )
       cout << "PIPSIpmInterface created" << endl;
 

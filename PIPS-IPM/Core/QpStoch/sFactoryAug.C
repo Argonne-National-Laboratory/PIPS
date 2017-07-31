@@ -17,7 +17,7 @@ sFactoryAug::sFactoryAug( StochInputTree* inputTree, MPI_Comm comm)
 
 sFactoryAug::sFactoryAug( stochasticInput& in, MPI_Comm comm)
   : sFactory(in,comm)
-{ }
+{ };
 
 sFactoryAug::sFactoryAug( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
   : sFactory(nx, my, mz, nnzQ, nnzA, nnzC)

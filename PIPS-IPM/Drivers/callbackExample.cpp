@@ -1,11 +1,12 @@
 #include "StochInputTree.h"
 #include "PIPSIpmInterface.h"
 #include "sFactoryAug.h"
+#include "sFactoryAugSchurLeaf.h"
 #include "MehrotraStochSolver.h"
 
 #include "mpi.h"
 
-#define LINKING_CONS 1
+#define LINKING_CONS 0
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
@@ -600,7 +601,12 @@ int main(int argc, char ** argv) {
   if( rank == 0 )
      cout << "Using a total of " << size << " MPI processes." << endl;
 
-  PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+  //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+
+
+
+  PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
+
 
   if( rank == 0 )
      cout << "PIPSIpmInterface created" << endl;

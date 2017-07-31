@@ -110,7 +110,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
     children[c]->stochNode->resMon.recFactTmChildren_start();    
     //---------------------------------------------
-    children[c]->addTermToDenseSchurCompl(prob->children[c], kktd, locmy);
+    children[c]->addTermToDenseSchurCompl(prob->children[c], kktd);
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }

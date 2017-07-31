@@ -60,6 +60,7 @@ void SimpleVector::copyFromArray( char w[] )
 
 SimpleVector::SimpleVector( int n_ ) : OoqpVector( n_ )
 {
+  assert(n >= 0);
   preserveVec = 0;
   v = new double[n];
   memset(v,0,n*sizeof(double));
