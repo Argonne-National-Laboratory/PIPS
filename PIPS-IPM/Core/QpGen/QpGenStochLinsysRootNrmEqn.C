@@ -276,7 +276,7 @@ void QpGenStochLinsysRootNrmEqn::factor2(QpGenStochData *prob, Variables *vars)
 
     memcpy(&UtV->mStorage->M[0][0], buffer, locnx*locnx*sizeof(double));
 
-    delete buffer;
+    delete[] buffer;
   }
 
   stochNode->resMon.recFactTmLocal_start();

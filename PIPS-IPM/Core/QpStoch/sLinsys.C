@@ -737,13 +737,13 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
 
-  int N, nxP, NP;
+  int N, nxP;
   A.getSize(N, nxP); assert(N==locmy);
   //out.getSize(ncols, N); assert(N == nxP);
   assert(endcol <= nxP);
 
   if(nxP==-1) C.getSize(N,nxP);
-  if(nxP==-1) {assert(false); nxP = NP;} //petra - found that NP may be unitialized; initialized NP (to remove the compile warning) but added an assert
+//  if(nxP==-1) {assert(false); nxP = NP;} //petra - found that NP may be unitialized; initialized NP (to remove the compile warning) but added an assert
 
   N = locnx+locmy+locmz;
 

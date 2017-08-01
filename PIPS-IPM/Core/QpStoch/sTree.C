@@ -153,14 +153,12 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 	assert(ierr==MPI_SUCCESS);
 	delete[] ranksToKeep;
 	
-	
 	ierr = MPI_Comm_create(commWrkrs, childGroup, &childComm); assert(ierr==MPI_SUCCESS);
 	MPI_Group_free(&childGroup); //MPI_Group_free(&mpiWorldGroup);
 	
 	//!log printf("----Node [%d] is on proc [%d]\n", i, rankMe);fflush(stdout); 
 	children[i]->assignProcesses(childComm,childRanks); 
       } //END noRanks4ThisChild>1
-
     } else { //this Child was not assigned to this CPU
       delete[] ranksToKeep; 
       //!log printf("---Node [%d] not on  proc [%d] \n", i, rankMe);fflush(stdout);

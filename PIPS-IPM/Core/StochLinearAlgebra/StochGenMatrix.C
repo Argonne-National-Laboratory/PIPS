@@ -392,6 +392,7 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
     int rank; MPI_Comm_rank(mpiComm, &rank);
     if(rank>0) iAmSpecial = 0;
   }
+// deleteme
 #if PRINT
   int rank; MPI_Comm_rank(mpiComm, &rank);
   cout << "entering!!! rank: " << rank << " children " << children.size() << "\n";
@@ -402,6 +403,7 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   {
     assert(x.vecl);
     SimpleVector& xvecl = dynamic_cast<SimpleVector&>(*x.vecl);
+    // deleteme
 #if PRINT
   xvec[0] = 1.0;
   xvec[1] = 1.0;
