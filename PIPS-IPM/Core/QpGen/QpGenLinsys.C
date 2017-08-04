@@ -449,7 +449,11 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       double tt = t.dotProductWith(t);
       if(tt==0.0) { flag=4; break;}
       
-      omega=t.dotProductWith(r); omega /= tt;
+      omega=t.dotProductWith(r);
+
+      assert(omega != 0);
+
+      omega /= tt;
       
       // x=x+omega*dx  (x=x+omega*sh)
       x.axpy( omega, dx);

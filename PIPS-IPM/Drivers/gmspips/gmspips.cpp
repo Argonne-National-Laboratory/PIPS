@@ -373,7 +373,7 @@ int main(int argc, char ** argv)
 #ifdef BiCGStab
    cout << "using BiCGStab" << endl;
    gOuterSolve=2;
-   gInnerSCsolve=0;
+   gInnerSCsolve=2;
 #endif
 
    PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
