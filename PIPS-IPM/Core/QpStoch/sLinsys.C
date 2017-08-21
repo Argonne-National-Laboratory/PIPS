@@ -305,7 +305,7 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
     assert(locmyl >= 0);
     const int nxMyMzMyl = z0.length() - locmzl;
 
-    // todo remove function parameter parentmy parentmz
+    // todo remove function parameter parentmy parentmz DUMMY!
     assert(nxMyMzMyl == nx0 + parentmy + parentmz + locmyl);
 
     SimpleVector z0mzl (&z0[nxMyMzMyl], locmzl);

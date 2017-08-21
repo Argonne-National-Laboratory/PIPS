@@ -6,7 +6,10 @@
 
 #include "mpi.h"
 
-#define LINKING_CONS 0
+#define LINKING_CONS 1
+
+extern int gOuterSolve;
+extern int gInnerSCsolve;
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
@@ -601,10 +604,11 @@ int main(int argc, char ** argv) {
   if( rank == 0 )
      cout << "Using a total of " << size << " MPI processes." << endl;
 
+
+  gOuterSolve = 0;
+  gInnerSCsolve = 0;
+
   //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
-
-
-
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
 
 

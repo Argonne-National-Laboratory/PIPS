@@ -36,7 +36,10 @@ protected:
   virtual void firstCall(); //first factorization call
   void firstSolveCall(SparseGenMatrix& R, 
 		      SparseGenMatrix& A,
-		      SparseGenMatrix& C); //first solve call
+		      SparseGenMatrix& C,
+		      SparseGenMatrix& F,
+		      SparseGenMatrix& G,
+		      int nSC0); //first solve call
   
   /** sets mStorage to refer to the argument sgm */
   PardisoSchurSolver( SparseSymMatrix * sgm ); 
@@ -59,6 +62,8 @@ protected:
   virtual void schur_solve(/*const*/ SparseGenMatrix& R, 
 			   /*const*/ SparseGenMatrix& A,
 			   /*const*/ SparseGenMatrix& C,
+			   /*const*/ SparseGenMatrix& F,
+			   /*const*/ SparseGenMatrix& G,
 			   DenseSymMatrix& SC);
   
  protected:

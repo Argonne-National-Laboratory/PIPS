@@ -21,10 +21,8 @@ using namespace std;
 #define BiCGStab
 
 #if defined(GMS_PIPS)
-#ifdef BiCGStab
 extern int gOuterSolve;
 extern int gInnerSCsolve;
-#endif
 #endif
 
 
@@ -374,9 +372,14 @@ int main(int argc, char ** argv)
    cout << "using BiCGStab" << endl;
    gOuterSolve=2;
    gInnerSCsolve=2;
+#else
+   gOuterSolve=0;
+   gInnerSCsolve=0;
 #endif
 
    PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
+   //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+
    if( rank == 0 )
       cout << "PIPSIpmInterface created" << endl;
 

@@ -18,7 +18,7 @@ StochGenMatrix::StochGenMatrix(int id,
 
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
-  Blmat = NULL;
+  Blmat = new SparseGenMatrix(0, 0, 0);
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -151,7 +151,7 @@ void StochGenMatrix::scalarMult( double num)
 {
   Amat->scalarMult(num);
   Bmat->scalarMult(num);
-  if( Blmat ) Blmat->scalarMult(num);
+  Blmat->scalarMult(num);
 
   for (size_t it=0; it<children.size(); it++) 
     children[it]->scalarMult(num);
@@ -276,9 +276,11 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
   std::cout << "out: " << yvec[0] << " " << yvec[1] << "\n";
 #endif
 
+  int blm, bln;
+  Blmat->getSize(blm, bln);
 
   /* linking constraints present? */
-  if( Blmat )
+  if( blm > 0 )
   {
 	//preparations for the parallel case
 	int iAmSpecial = 1;
@@ -327,8 +329,6 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 void StochGenMatrix::mult2( double beta,  OoqpVector& y_,
 			   double alpha, OoqpVector& x_, OoqpVector& yparentl_ )
 {
-  assert(Blmat != 0);
-
   StochVector & x = dynamic_cast<StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
@@ -398,8 +398,11 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   cout << "entering!!! rank: " << rank << " children " << children.size() << "\n";
 #endif
 
+  int blm, bln;
+  Blmat->getSize(blm, bln);
+
   // with linking constraints?
-  if( Blmat )
+  if( blm > 0 )
   {
     assert(x.vecl);
     SimpleVector& xvecl = dynamic_cast<SimpleVector&>(*x.vecl);
@@ -427,8 +430,8 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
       //y_i = beta* y_i  +  alpha* B_i^T* x_i
       Bmat->transMult(beta, yvec, alpha, xvec);
 
-	  //y_i = y_i  +  alpha* Bl_0^T* xl_i
-	  Blmat->transMult(1.0, yvec, alpha, xvecl);
+	   //y_i = y_i  +  alpha* Bl_0^T* xl_i
+	   Blmat->transMult(1.0, yvec, alpha, xvecl);
     }
     else
     {
@@ -473,8 +476,6 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
 				  double alpha,  StochVector& x,
 				  OoqpVector& yvecParent, OoqpVector& xvecl)
 {
-  assert(Blmat);
-
   //assert tree compatibility
   assert(y.children.size() - children.size() == 0);
   assert(x.children.size() - children.size() == 0);
@@ -520,8 +521,8 @@ void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
   {
     Bmat->transMult(beta, yvec, alpha, xvec);
 
-	//y_i = y_i  +  alpha* Bl_i^T* xl_i
-	Blmat->transMult(1.0, yvec, alpha, xvecl);
+	 //y_i = y_i  +  alpha* Bl_i^T* xl_i
+	 Blmat->transMult(1.0, yvec, alpha, xvecl);
   }
   else
     yvec.setToZero();
@@ -617,7 +618,7 @@ double StochGenMatrix::abmaxnorm()
   }
 
   nrm = max(nrm, max(Amat->abmaxnorm(), Bmat->abmaxnorm()));
-  if( Blmat ) nrm = max(nrm, Blmat->abmaxnorm());
+  nrm = max(nrm, Blmat->abmaxnorm());
 
   return nrm;
 }
@@ -668,9 +669,7 @@ int StochGenMatrix::numberOfNonZeros()
     nnz=nnzG;
   }
 
-  nnz += Amat->numberOfNonZeros() + Bmat->numberOfNonZeros();
-
-  if( Blmat ) nnz += Blmat->numberOfNonZeros();
+  nnz += Amat->numberOfNonZeros() + Bmat->numberOfNonZeros() + Blmat->numberOfNonZeros();
 
   return nnz;
 }

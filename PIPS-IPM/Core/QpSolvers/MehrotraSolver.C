@@ -40,7 +40,8 @@ MehrotraSolver::MehrotraSolver( ProblemFormulation * opt, Data * prob )
   sys   = 0;
   step  = factory->makeVariables( prob );
   
-  maxit      = 200;
+  // todo 200
+  maxit      = 400;
   printlevel = 0;   // has no meaning right now 
   tsig       = 3.0; // the usual value for the centering exponent (tau)
 

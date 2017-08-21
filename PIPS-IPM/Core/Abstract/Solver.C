@@ -273,8 +273,10 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check infeasibility condition
-  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4*phi_min_history[idx]) 
+  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4*phi_min_history[idx]) {
+    std::cout << "INFEASIBLITY detected, phi: " << phi << std::endl;
     stop_code = INFEASIBLE;
+  }
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check for unknown status: slow convergence first
