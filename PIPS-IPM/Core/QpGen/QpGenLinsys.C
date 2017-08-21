@@ -324,14 +324,18 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   tTmp=MPI_Wtime();
 #endif
   //starting guess/point
-  x.copyFrom(b); solveCompressed(x); //solution to the approx. system
+  x.copyFrom(b);
+
+  //solution to the approx. system
+  solveCompressed(x);
 #ifdef TIMING
   tSlv += (MPI_Wtime()-tTmp);
   tTmp=MPI_Wtime();
   gOuterBiCGIter++;
 #endif
   //initial residual: res=res-A*x
-  r.copyFrom(b); matXYZMult(1.0,r, -1.0,x, data, stepx,stepy,stepz);
+  r.copyFrom(b);
+  matXYZMult(1.0,r, -1.0,x, data, stepx,stepy,stepz);
 #ifdef TIMING
   tResid += (MPI_Wtime()-tTmp);
 #endif  

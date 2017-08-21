@@ -604,8 +604,7 @@ int main(int argc, char ** argv) {
   if( rank == 0 )
      cout << "Using a total of " << size << " MPI processes." << endl;
 
-
-  gOuterSolve = 0;
+  gOuterSolve = 2;
   gInnerSCsolve = 0;
 
   //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
