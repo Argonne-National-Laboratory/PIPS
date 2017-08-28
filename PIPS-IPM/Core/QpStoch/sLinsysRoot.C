@@ -9,6 +9,8 @@
 #include "sData.h"
 #include "sDummyLinsys.h"
 #include "sLinsysLeaf.h"
+#include "math.h"
+
 /*********************************************************************/
 /************************** ROOT *************************************/
 /*********************************************************************/
@@ -115,17 +117,6 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
 
-#if 0
-  // todo deleteme
-  cout << "dkkt after:" <<  endl;
-  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
-  {
-    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-      cout << "Kkt[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"     ";
- 	   cout << endl;
-  }
-#endif
-
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
   stochNode->resMon.recReduceTmLocal_start();
@@ -135,22 +126,32 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   stochNode->resMon.recReduceTmLocal_stop();
 #endif  
 
+  finalizeKKT(prob, vars);
+
+#if 1
 #if 0
   // todo deleteme
-  cout << "dkkt after ALL REDUCE:" <<  endl <<  endl;
+  cout << "KKT before factorize:" <<  endl <<  endl;
   for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
   {
-    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
+         for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
       cout  << "[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"             ";
- 	   cout << endl;
+      cout << endl;
   }
 #endif
-
-  finalizeKKT(prob, vars);
+  const double epsilon = 1e-5;
+  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
+       for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
+       {
+           if( fabs(kktd[k][k2] - kktd[k2][k]) > epsilon )
+              std::cout << "SYMMETRY FAIL, > eps " << fabs(kktd[k][k2] - kktd[k2][k])  << std::endl;
+           assert(fabs(kktd[k][k2] - kktd[k2][k]) <= epsilon);
+       }
+#endif
 
   factorizeKKT();
 
-  //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd); 
+  //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd);
 
 #ifdef TIMING
   afterFactor();

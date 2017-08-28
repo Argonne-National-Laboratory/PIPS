@@ -14,6 +14,8 @@
 #include "SimpleVector.h"
 #include "LinearAlgebraPackage.h"
 #include "QpGen.h"
+#include <limits>
+
 
 #ifdef TIMING
 #include "mpi.h"
@@ -310,18 +312,27 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   OoqpVector &r0=*res2, &dx=*sol2, &v=*res3, &t=*res4, &p=*res5;
   OoqpVector &x=*sol, &r=*res, &b=*rhs;
 
-  const double tol=1e-10, EPS=2e-16; 
+  const double tol=1e-12; // 10
+  const double EPS = 1e-16;
   const int maxit=500;
 
-  double n2b=b.twonorm(), tolb=n2b*tol;
+  double n2b=b.twonorm();
+  assert(n2b >= 0);
+  double tolb=n2b*tol;
   int flag; double iter=0.;
   double rho=1., omega=1., alpha;  
 
+  // todo somewhat too small
+  tolb = max(tolb, 2 * std::numeric_limits<double>::min());
 
 #ifdef TIMING
   gOuterBiCGIter=0;
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   tTmp=MPI_Wtime();
+
+  if( myRank == 0 )
+     std::cout << "tolb outer " << tolb << std::endl;
+
 #endif
   //starting guess/point
   x.copyFrom(b);
@@ -345,7 +356,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #endif
   
   //quick return if solve is accurate enough
-  if(normr<tolb) { 
+  if( normr<=tolb ) {
      this->separateVars( stepx, stepy, stepz, x );
 #ifdef TIMING
      tTot = MPI_Wtime() - tTot;
@@ -473,34 +484,36 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #ifdef TIMING
       tTmp=MPI_Wtime();
 #endif
-	//compute the actual residual
-	OoqpVector& res=dx; //use dx 
-	res.copyFrom(b); matXYZMult(1.0,res, -1.0,x, data, stepx,stepy,stepz);
+         //compute the actual residual
+         OoqpVector& res=dx; //use dx
+         res.copyFrom(b); matXYZMult(1.0,res, -1.0,x, data, stepx,stepy,stepz);
 #ifdef TIMING
-      tResid += (MPI_Wtime()-tTmp);
+         tResid += (MPI_Wtime()-tTmp);
 #endif
 
 	normr_act = res.twonorm();
 	//cout << "Outer BiCG - actual rel.res.nrm: " << normr_act/n2b << endl;
-	if(normr_act<=tolb) {
-	  //converged
+         if(normr_act<=tolb) {
+           //converged
 #ifdef TIMING 
-	  histRelResid[histRelResid.size()-1]=normr_act/n2b;
+           histRelResid[histRelResid.size()-1]=normr_act/n2b;
 #endif
-	  flag=0; iter=it+1.; break;
-	} // else continue - To Do: detect stagnation (flag==3)
-      } else {
-	//To Do: detect stagnation/divergence and rollback to min.norm. iterate
-	//for now we print a warning and exit in case residual increases.
-	if(normr>normr_min) {
+           flag=0; iter=it+1.; break;
+         } // else continue - To Do: detect stagnation (flag==3)
+      }
+      else
+      {
+         //To Do: detect stagnation/divergence and rollback to min.norm. iterate
+         //for now we print a warning and exit in case residual increases.
+         if(normr>normr_min) {
 #ifdef TIMING
 	  if(0==myRank) 
 	    cout << "Outer BiCG - Increase in BiCGStab residual. Old=" << normr_min
 		 << "  New=" << normr << endl;
 #endif
-	  flag=5; iter=it+1.; break;
-	} else normr_min=normr;
-	
+
+	        flag=5; iter=it+1.; break;
+         } else normr_min=normr;
       } //~end of convergence test
     } //~end of scoping
     

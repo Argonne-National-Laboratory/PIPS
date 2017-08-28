@@ -397,7 +397,10 @@ void sLinsys::LniTransMult(sData *prob,
 
 
 /*
- * Computes res += [0 A^T C^T ]*inv(KKT)*[0;A;C] x
+ * Computes res += [R^T A^T C^T ] * inv(KKT) * [R 0 F^T G^T ] x
+ *                 [0         ]              [A             ]
+ *                 [F         ]              [C             ]
+ *                 [G         ]
  */
 
 void sLinsys::addTermToSchurResidual(sData* prob, 
@@ -406,20 +409,40 @@ void sLinsys::addTermToSchurResidual(sData* prob,
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& F = prob->getLocalF();
+  SparseGenMatrix& G = prob->getLocalG();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   int nxP, aux;
   A.getSize(aux,nxP); assert(aux==locmy);
   C.getSize(aux,nxP); assert(aux==locmz);
+  F.getSize(aux,nxP); assert(aux==locmyl);
+  G.getSize(aux,nxP); assert(aux==locmzl);
   R.getSize(aux,nxP); assert(aux==locnx);
-  assert(nxP==x.length());
+
+  // res contains mz buffer part
+  assert(res.length() >= x.length());
+  assert(x.length() >= nxP);
+
   int N=locnx+locmy+locmz;
   SimpleVector y(N);
-  //y.setToZero();
 
   R.mult( 0.0,&y[0],1,           1.0,&x[0],1);
   A.mult( 0.0,&y[locnx],1,       1.0,&x[0],1);
   C.mult( 0.0,&y[locnx+locmy],1, 1.0,&x[0],1);
+
+  if( locmyl > 0 )
+  {
+     assert(res.length() == x.length());
+     F.transMult( 1.0,&y[0],1,       1.0,&x[x.length() - locmyl - locmzl],1);
+  }
+
+  if( locmzl > 0 )
+  {
+     assert(res.length() == x.length());
+     G.transMult( 1.0,&y[0],1,       1.0,&x[x.length() - locmzl],1);
+  }
+
   //cout << "4 - y norm:" << y.twonorm() << endl;
   //printf("%g  %g  %g  %g\n", y[locnx+locmy+0], y[locnx+locmy+1], y[locnx+locmy+2], y[locnx+locmy+3]);
   solver->solve(y);
@@ -427,6 +450,12 @@ void sLinsys::addTermToSchurResidual(sData* prob,
   R.transMult(1.0,&res[0],1, 1.0,&y[0],1);
   A.transMult(1.0,&res[0],1, 1.0,&y[locnx],1);
   C.transMult(1.0,&res[0],1, 1.0,&y[locnx+locmy],1);
+
+  if( locmyl > 0 )
+     F.mult(1.0,&res[res.length() - locmyl - locmzl],1, 1.0,&y[0],1);
+
+  if( locmzl > 0 )
+     G.mult(1.0,&res[res.length() - locmzl],1, 1.0,&y[0],1);
 }
 
 #include "PardisoSolver.h"

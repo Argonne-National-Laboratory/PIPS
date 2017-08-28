@@ -9,6 +9,8 @@
 #include "PardisoSolver.h"
 #include "sData.h"
 #include "sTree.h"
+#include <limits>
+
 
 #include <unistd.h>
 #include "math.h"
@@ -122,7 +124,6 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
-
   if(gInnerSCsolve==0) {
     // Option 1. - solve with the factors
     solver->Dsolve(r);
@@ -134,6 +135,7 @@ void sLinsysRootAug::solveReduced( sData *prob, SimpleVector& b)
     // Option 3 - use the factors as preconditioner and apply BiCGStab
     solveWithBiCGStab(prob, r);
   }
+
   ///////////////////////////////////////////////////////////////////////
   // r is the sln to the reduced system
   // the sln to the aug system should be 
@@ -210,17 +212,21 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   // r contains all the stuff -> solve for it
   ///////////////////////////////////////////////////////////////////////
 
+  // we do not need the last locmz elements of r
+  SimpleVector rshort(&r[0], locnx+locmy+locmyl+locmzl);
+
   if(gInnerSCsolve==0) {
     // Option 1. - solve with the factors
-    solver->Dsolve(r);
+    solver->Dsolve(rshort);
   } else if(gInnerSCsolve==1) {
     // Option 2 - solve with the factors and perform iter. ref.
-    solveWithIterRef(prob, r);
+    solveWithIterRef(prob, rshort);
   } else {
     assert(gInnerSCsolve==2);
     // Option 3 - use the factors as preconditioner and apply BiCGStab
-    solveWithBiCGStab(prob, r);
+    solveWithBiCGStab(prob, rshort);
   }
+
   ///////////////////////////////////////////////////////////////////////
   // r is the sln to the reduced system
   // the sln to the aug system should be
@@ -267,52 +273,81 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
 
 
 /** rxy = beta*rxy + alpha * SC * x */
-void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy, 
-			     double alpha, SimpleVector& x, 
-			     sData* prob)
+void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy,
+              double alpha, SimpleVector& x,
+              sData* prob)
 {
   //if (iAmDistrib) {
-  //only one process substracts [ (Q+Dx0+C'*Dz0*C)*xx + A'*xy ] from r
-  //                            [  A*xx                       ]
+  //only one process subtracts [ (Q+Dx0+C'*Dz0*C)*xx + A'*xy + F'*xxl + G'*xyl ] from r
+  //                           [  A*xx                                         ]
+  //                           [  F*xx                                         ]
+  //                           [  G*xx                           + Omega * xyl ]
+
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
   if(myRank==0) {
-    //only this proc substracts from rxy
+    assert(rxy.length() == locnx + locmy + locmyl + locmzl);
+
+    //only this proc subtracts from rxy
     rxy.scalarMult(beta);
     SparseSymMatrix& Q = prob->getLocalQ();
     Q.mult(1.0,&rxy[0],1, alpha,&x[0],1);
 
     if(locmz>0) {
       SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
-      CtDC_sp->mult(1.0,&rxy[0],1, alpha,&x[0],1);
+      // todo DR: changed it to -alpha
+      CtDC_sp->mult(1.0,&rxy[0],1, -alpha,&x[0],1);
+      std::cout << "length " << CtDC_sp->size() << std::endl;
     }
-    
+
     SimpleVector& xDiagv = dynamic_cast<SimpleVector&>(*xDiag);
     assert(xDiagv.length() == locnx);
     for(int i=0; i<xDiagv.length(); i++)
       rxy[i] += alpha*xDiagv[i]*x[i];
-    
+
     SparseGenMatrix& A=prob->getLocalB();
     A.transMult(1.0,&rxy[0],1, alpha,&x[locnx],1);
     A.mult(1.0,&rxy[locnx],1, alpha,&x[0],1);
+
+    assert(locmyl >= 0 && locmzl >= 0);
+
+    if( locmyl > 0 ) {
+       SparseGenMatrix& F = prob->getLocalF();
+       F.transMult(1.0,&rxy[0],1, alpha,&x[locnx+locmy],1);
+       F.mult(1.0,&rxy[locnx+locmy],1, alpha,&x[0],1);
+    }
+
+    if( locmzl > 0 ) {
+       SparseGenMatrix& G = prob->getLocalG();
+       G.transMult(1.0,&rxy[0],1, alpha,&x[locnx+locmy+locmyl],1);
+       G.mult(1.0,&rxy[locnx+locmy+locmyl],1, alpha,&x[0],1);
+
+       SimpleVector& zDiagLinkConsv = dynamic_cast<SimpleVector&>(*zDiagLinkCons);
+       assert(zDiagLinkConsv.length() == locmzl);
+       const int shift = locnx+locmy+locmyl;
+       for(int i=0; i<zDiagLinkConsv.length(); i++)
+         rxy[i+shift] += alpha*zDiagLinkConsv[i]*x[i+shift];
+    }
   } else {
     //other processes set r to zero since they will get this portion from process 0
     rxy.setToZero();
   }
-  
+
 #ifdef TIMING
     taux=MPI_Wtime();
-#endif  
+#endif
     // now children add [0 A^T C^T ]*inv(KKT)*[0;A;C] x
-    SimpleVector xx(locnx);
+    SimpleVector xx((locmyl || locmzl) ? (locnx + locmy + locmyl + locmzl) : locnx);
     xx.copyFromArray(x.elements());
     xx.scalarMult(-alpha);
+
     for(size_t it=0; it<children.size(); it++) {
-      children[it]->addTermToSchurResidual(prob->children[it],rxy,xx);  
+      children[it]->addTermToSchurResidual(prob->children[it],rxy,xx);
     }
+
 #ifdef TIMING
     tchild_total +=  (MPI_Wtime()-taux);
 #endif
-    //~done computing residual 
+    //~done computing residual
 
 #ifdef TIMING
     taux=MPI_Wtime();
@@ -321,7 +356,7 @@ void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy,
     if(iAmDistrib) {
       SimpleVector buf(rxy.length());
       buf.setToZero(); //we use dx as the recv buffer
-      MPI_Allreduce(rxy.elements(), buf.elements(), locnx+locmy, MPI_DOUBLE, MPI_SUM, mpiComm);
+      MPI_Allreduce(rxy.elements(), buf.elements(), locnx+locmy+locmyl+locmzl, MPI_DOUBLE, MPI_SUM, mpiComm);
       rxy.copyFrom(buf);
     }
 #ifdef TIMING
@@ -329,6 +364,8 @@ void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy,
 #endif
 
 }
+
+
 
 void sLinsysRootAug::solveWithIterRef( sData *prob, SimpleVector& r)
 {
@@ -509,18 +546,23 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   //maxit = n/2+1;
 
   //////////////////////////////////////////////////////////////////
-  //  Problem Setup and intialization
+  //  Problem Setup and initialization
   //////////////////////////////////////////////////////////////////
 
   n2b = b.twonorm();
   tolb = n2b*tol;
 
+  // todo somewhat too small
+  tolb = max(tolb, 2 * std::numeric_limits<double>::min());
+
 
 #ifdef TIMING
+  std::cout << "initial norm of b " << n2b << std::endl;
   taux = MPI_Wtime();
 #endif
   //initial guess
   x.copyFrom(b);
+
   solver->Dsolve(x);
   //initial residual
   r.copyFrom(b);
@@ -529,7 +571,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   troot_total += (MPI_Wtime()-taux);
   taux = MPI_Wtime();
 #endif 
- 
+
   //applyA(1.0, r, -1.0, x);
   SCmult(1.0,r, -1.0,x, prob);
 
@@ -538,12 +580,16 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 #endif
 
   normr=r.twonorm();
+
 #ifdef TIMING
   if(myRank==0)
+  {
     cout << "BiCG: initial rel resid: " << normr/n2b << endl;
+    cout << "initial tolb " << tolb << std::endl;
+  }
 #endif
 
-  if(normr<tolb) {
+  if( normr<=tolb ) {
     //initial guess is good enough
     b.copyFrom(x); flag=0; return;
   }
@@ -554,7 +600,6 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   rho=1.0; omega=1.0;
   stag=0; maxmsteps=min(min(n/50, 5), n-maxit); 
   maxstagsteps=3; moresteps=0;
-
 
   //////////////////////////////////////////////////////////////////
   // loop over maxit iterations
@@ -595,7 +640,6 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 #endif 
     
     SCmult(0.0,v, 1.0,paux, prob);
-
     
     SimpleVector& ph = paux;
 
@@ -663,7 +707,6 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 
     SCmult(0.0,t, 1.0,paux, prob);
 
-
     SimpleVector& sh = paux; 
     double tt = t.dotProductWith(t);
     if(tt==0.0) { flag=4; break;}
@@ -726,7 +769,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     relres = normr_act/n2b;
 #ifdef TIMING
     if(myRank==0) {
-      printf("BiCGStab converged: normResid=%g relResid=%g iter=%g\n", 
+      printf("INNER BiCGStab converged: normResid=%g relResid=%g iter=%g\n",
 	     normr_act, relres, iter);
       }
 #endif
@@ -747,9 +790,11 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
       relres = normr/n2b;
     }
   
+    // todo
+    assert(0);
 #ifdef TIMING
     if(myRank==0) {
-      printf("BiCGStab did not NOT converged after %g[%d] iterations.\n", iter,ii);
+      printf("INNERBiCGStab did not NOT converged after %g[%d] iterations.\n", iter,ii);
       printf("\t - Error code %d\n\t - Act res=%g\n\t - Rel res=%g %g\n\n", 
 	     flag, normr, relres, normrmin);
     }
@@ -854,7 +899,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
         dKkt[j][iKkt] += val;
       }
     }
-#if 0
+#if 1
     const double epsilon = .0001;
     // assert symmetry todo delete
     for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
@@ -887,14 +932,14 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
         dKkt[j][iKkt] += val;
       }
     }
-#if 0
+  }
+#if 1
     // assert symmetry todo delete
     const double epsilon = .0001;
     for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
          for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
              assert(fabs(dKkt[k][k2] - dKkt[k2][k]) <= epsilon);
 #endif
-  }
 
   /////////////////////////////////////////////////////////////
   // update the KKT zeros for the lower right block 

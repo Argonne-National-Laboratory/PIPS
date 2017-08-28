@@ -180,7 +180,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
 	// back off just a touch
-	alpha *= .99999999;
+	alpha *= .95;
+	//alpha *= .99999999; todo the original value
 	//alpha *= 0.9995;
 	return alpha;
 }
@@ -257,6 +258,9 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   rnorm_history[idx] = rnorm;
   phi = (rnorm + gap) / dnorm;
   phi_history[idx] = phi;
+
+  // todo deleteme
+  std::cout << "mu/mutol " << mu << "  " << mutol << "rnorm/limit " << rnorm << " " << artol*dnorm  << std::endl;
 
   if(idx > 0) {
     phi_min_history[idx] = phi_min_history[idx-1];
