@@ -21,7 +21,7 @@ StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
     MPI_Comm_size(mpiComm, &size);
     iAmDistrib = size==1?0:1;
   }
-
+  vecl = NULL;
 }
 
 StochVector::StochVector(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed)

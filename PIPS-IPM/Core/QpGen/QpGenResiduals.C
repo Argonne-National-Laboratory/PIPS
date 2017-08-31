@@ -128,8 +128,11 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     rz->axpy( -1.0, *vars->lambda );
 
 #ifdef TIMING
-    if(0==myRank) cout << "lambda norm " << (vars->lambda)->infnorm() << std::endl;
+    componentNorm =  (vars->lambda)->infnorm();
+    if(0==myRank) cout << "lambda norm " << componentNorm << std::endl;
 #endif
+
+
     rt->copyFrom( *vars->s );
     rt->axpy( -1.0, prob->slowerBound() );
     rt->selectNonZeros( *iclow );
@@ -146,7 +149,8 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   if( mcupp > 0 ) { 
     rz->axpy(  1.0, *vars->pi );
 #ifdef TIMING
-    if(0==myRank) cout  << "pi norm " << (vars->pi)->infnorm() << std::endl;
+    componentNorm = (vars->pi)->infnorm();
+    if(0==myRank) cout  << "pi norm " << componentNorm << std::endl;
 #endif
 
 #ifdef PRINT_MAX
