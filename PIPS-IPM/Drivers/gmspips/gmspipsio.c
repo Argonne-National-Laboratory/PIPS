@@ -589,7 +589,7 @@ void copyGDXSymbol(int         numBlocks,
                    const int   linkingBlock,
                    const int   readType)
 {
-   int i,k, objVarUel;
+   int i, rc, objVarUel;
    int symNr=0, symType=0, symDim=0, recNr=0, userInfo=0;
    int dimFirst=0;
    gdxValues_t   vals;
@@ -606,7 +606,16 @@ void copyGDXSymbol(int         numBlocks,
       objVarUel = keyInt[0];
       assert(objVarUel);
    }
-   GDXSAVECALL(gdxFindSymbol(fGDX, symName, &symNr));
+   rc = gdxFindSymbol(fGDX, symName, &symNr);
+   if (!rc and 0==strcmp(symName,"ANl"))
+   {
+      for (i=0; i<numBlocks; i++)
+      {
+         GDXSAVECALLX(bGDX[i],gdxDataWriteRawStart(bGDX[i], symName, "Non-linear Jacobian indicator", 2, dt_par, 0));
+         GDXSAVECALLX(bGDX[i],gdxDataWriteDone(bGDX[i]));
+      }
+      return;      
+   }
    GDXSAVECALL(gdxSymbolInfo(fGDX, symNr, symText, &symDim, &symType));
    GDXSAVECALL(gdxSymbolInfoX(fGDX, symNr, &recNr, &userInfo, symText));
 
@@ -615,11 +624,15 @@ void copyGDXSymbol(int         numBlocks,
       GDXSAVECALLX(bGDX[i],gdxDataWriteRawStart(bGDX[i], symName, symText, symDim, symType, userInfo));
    }
    GDXSAVECALL(gdxDataReadRawStart(fGDX, symNr, &recNr));
-   k = 0; while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
+   while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
    {
-      if ( 0 == readType )
+      if ( 0 == readType || 3 == readType )
       {
-         int blk = stage[k++];
+         int blk;
+         if ( 0 == readType )
+            blk = stage[keyInt[0]-1];
+         else
+            blk = stage[keyInt[0]-1-nUelOffSet];
          if (blk==linkingBlock)
          {
             for (i=0; i<numBlocks; i++)
@@ -724,20 +737,26 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       return 1;
    }
    
-   printf("Reading variable stages\n");fflush(stdout);
-   GDXSAVECALL(gdxFindSymbol(fGDX, "x", &symNr));
-   GDXSAVECALL(gdxDataReadRawStart(fGDX, symNr, &gdxN));
-   varstage = (int *) malloc(gdxN*sizeof(int));
+   printf("Reading equations stages\n");fflush(stdout);
+   GDXSAVECALL(gdxFindSymbol(fGDX, "i", &symNr));
+   GDXSAVECALL(gdxDataReadRawStart(fGDX, symNr, &gdxM));
+   GDXSAVECALL(gdxDataReadDone(fGDX));
+   rowstage = (int *)calloc(gdxM,sizeof(int));
+   GDXSAVECALL(gdxFindSymbol(fGDX, "e", &symNr));
+   GDXSAVECALL(gdxDataReadRawStart(fGDX, symNr, &rc));
    while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
-      varstage[j++] = (int) vals[GMS_VAL_SCALE] - offset;
+      rowstage[keyInt[0]-1] = (int) vals[GMS_VAL_SCALE] - offset;
    GDXSAVECALL(gdxDataReadDone(fGDX));
 
-   printf("Reading equations stages\n");fflush(stdout);
-   GDXSAVECALL(gdxFindSymbol(fGDX, "e", &symNr));
-   GDXSAVECALL(gdxDataReadRawStart(fGDX, symNr, &gdxM));
-   rowstage = (int *)malloc(gdxM*sizeof(int));
+   printf("Reading variable stages\n");fflush(stdout);
+   GDXSAVECALL(gdxFindSymbol(fGDX, "j", &symNr));
+   GDXSAVECALL(gdxDataReadRawStart(fGDX, symNr, &gdxN));
+   GDXSAVECALL(gdxDataReadDone(fGDX));
+   varstage = (int *) calloc(gdxN,sizeof(int));
+   GDXSAVECALL(gdxFindSymbol(fGDX, "x", &symNr));
+   GDXSAVECALL(gdxDataReadRawStart(fGDX, symNr, &rc));
    while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
-      rowstage[i++] = (int) vals[GMS_VAL_SCALE] - offset;
+      varstage[keyInt[0]-1-gdxM] = (int) vals[GMS_VAL_SCALE] - offset;
    GDXSAVECALL(gdxDataReadDone(fGDX));
 
    {
@@ -800,11 +819,11 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    
    /* Copy symbols */
    copyGDXSymbol(numBlocks,bGDX,fGDX,"i",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,0);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,3);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"jobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"objcoef",gdxM,offset,NULL,    NULL,     NULL,    0        ,1);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"e",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,0);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,3);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"A",      gdxM,offset,NULL,    varstage, rowstage,0        ,2);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"ANl",    gdxM,offset,NULL,    NULL,     NULL,    0        ,1);
    
