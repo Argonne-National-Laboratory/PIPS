@@ -29,7 +29,7 @@ sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   solver = createSolver(prob_, kkt);
   assert(locmyl >= 0 && locmzl >= 0);
   redRhs = new SimpleVector(locnx+locmy+locmz+locmyl+locmzl);
-};
+}
 
 sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
 			       sData* prob_,
@@ -44,7 +44,7 @@ sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
   redRhs = new SimpleVector(locnx+locmy+locmz);
-};
+}
 
 sLinsysRootAug::~sLinsysRootAug()
 {

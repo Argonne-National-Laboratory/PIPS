@@ -328,8 +328,6 @@ StochGenMatrix* sTreeCallbacks::createC() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochGenDummyMatrix(id());
 
-  printf("Create C\n");
-
   StochGenMatrix* C = NULL;
   if (!fakedata) {
 

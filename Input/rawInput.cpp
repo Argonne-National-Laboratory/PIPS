@@ -61,8 +61,7 @@ void rawInput::parseZeroData(const std::string &zerodata, int overrideScenarioNu
 	string line;
 	getline(f1,line);
 	getline(f1,line);
-	size_t loc = line.find("Only Bounds Vary");
-	assert(loc == 0);
+	assert(line.find("Only Bounds Vary") == 0);
 	f1 >> nSecondStageVars_;
 	f1 >> nSecondStageCons_;
 
@@ -91,8 +90,7 @@ void rawInput::parseZeroData(const std::string &zerodata, int overrideScenarioNu
 
 	getline(f1,line);
 	getline(f1,line);
-	loc = line.find("A matrix");
-	assert(loc == 0);
+	assert(line.find("A matrix") == 0);
 
 	CoinBigIndex nnz;
 	vector<CoinBigIndex> starts;
@@ -116,8 +114,7 @@ void rawInput::parseZeroData(const std::string &zerodata, int overrideScenarioNu
 
 	getline(f1,line);
 	getline(f1,line);
-	loc = line.find("W matrix");
-	assert(loc == 0);
+	assert(line.find("W matrix") == 0);
 
 	f1 >> nnz;
 	starts.resize(nSecondStageVars_+1);
@@ -136,8 +133,7 @@ void rawInput::parseZeroData(const std::string &zerodata, int overrideScenarioNu
 
 	getline(f1,line);
 	getline(f1,line);
-	loc = line.find("T matrix");
-	assert(loc == 0);
+	assert(line.find("T matrix") == 0);
 
 	f1 >> nnz;
 	starts.resize(nFirstStageVars_+1);

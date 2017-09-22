@@ -1,4 +1,4 @@
-#add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
+add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
   Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver

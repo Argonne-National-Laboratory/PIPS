@@ -312,8 +312,8 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   OoqpVector &r0=*res2, &dx=*sol2, &v=*res3, &t=*res4, &p=*res5;
   OoqpVector &x=*sol, &r=*res, &b=*rhs;
 
-  const double tol=1e-12; // 10
-  const double EPS = 1e-16;
+  const double tol=1e-10;
+  const double eps=1e-14;
   const int maxit=500;
 
   double n2b=b.twonorm();
@@ -322,8 +322,8 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   int flag; double iter=0.;
   double rho=1., omega=1., alpha;  
 
-  // todo somewhat too small
-  tolb = max(tolb, 2 * std::numeric_limits<double>::min());
+  // todo this should be done properly
+  tolb = max(tolb, eps);
 
 #ifdef TIMING
   gOuterBiCGIter=0;

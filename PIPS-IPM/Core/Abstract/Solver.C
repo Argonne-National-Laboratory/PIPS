@@ -14,6 +14,8 @@
 
 #include <cmath>
 
+#define BAD_NUMERICS
+
 int gOoqpPrintLevel = 1000;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
@@ -194,7 +196,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 
 	// back off just a touch (or a bit more)
 #ifdef BAD_NUMERICS
-	alpha *= 0.9995;
+	alpha *= 0.995;
 #else
 	alpha *= .99999999;
 #endif

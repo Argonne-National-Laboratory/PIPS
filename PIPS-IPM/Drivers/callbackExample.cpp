@@ -237,8 +237,6 @@ int vecXlbActive(void* user_data, int id, double* vec, int len)
 
 int vecLinkRhs(void* user_data, int id, double* vec, int len)
 {
-   int i;
-
    vec[0] = 6.0;
    vec[1] = 4.0;
    return 0;
@@ -427,7 +425,7 @@ else
     return 0;
 }
 
-};
+}
 
 
 int main(int argc, char ** argv) {
