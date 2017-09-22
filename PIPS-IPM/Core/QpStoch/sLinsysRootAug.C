@@ -294,9 +294,7 @@ void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy,
 
     if(locmz>0) {
       SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
-      // todo DR: changed it to -alpha
       CtDC_sp->mult(1.0,&rxy[0],1, -alpha,&x[0],1);
-      std::cout << "length " << CtDC_sp->size() << std::endl;
     }
 
     SimpleVector& xDiagv = dynamic_cast<SimpleVector&>(*xDiag);
@@ -555,7 +553,6 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   // todo somewhat too small
   tolb = max(tolb, 2 * std::numeric_limits<double>::min());
 
-
 #ifdef TIMING
   std::cout << "initial norm of b " << n2b << std::endl;
   taux = MPI_Wtime();
@@ -789,9 +786,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
       iter=1.0+ii;
       relres = normr/n2b;
     }
-  
-    // todo
-    assert(0);
+
 #ifdef TIMING
     if(myRank==0) {
       printf("INNERBiCGStab did not NOT converged after %g[%d] iterations.\n", iter,ii);
@@ -899,13 +894,6 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
         dKkt[j][iKkt] += val;
       }
     }
-#if 1
-    const double epsilon = .0001;
-    // assert symmetry todo delete
-    for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
-   	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-   	      assert(fabs(dKkt[k][k2] - dKkt[k2][k]) <= epsilon);
-#endif
   }
 
   /////////////////////////////////////////////////////////////
@@ -933,8 +921,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
       }
     }
   }
-#if 1
-    // assert symmetry todo delete
+#ifdef STOCH_TESTING
     const double epsilon = .0001;
     for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
          for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)

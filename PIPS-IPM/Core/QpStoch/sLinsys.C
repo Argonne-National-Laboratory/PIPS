@@ -292,7 +292,6 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
     assert(locmyl >= 0);
     const int nxMyMz = z0.length() - locmyl - locmzl;
 
-    // todo  ALSO IN DUMMY CLASS! remove function parameter parentmy parentmz ALSO IN DUMMY CLASS!
     assert(nxMyMz == nx0 + parentmy + parentmz);
 
     SimpleVector z0myl (&z0[nxMyMz], locmyl);
@@ -305,7 +304,6 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
     assert(locmyl >= 0);
     const int nxMyMzMyl = z0.length() - locmzl;
 
-    // todo remove function parameter parentmy parentmz DUMMY!
     assert(nxMyMzMyl == nx0 + parentmy + parentmz + locmyl);
 
     SimpleVector z0mzl (&z0[nxMyMzMyl], locmzl);
@@ -675,20 +673,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     }
   }
 
-// todo
-#if 0
-  for( int k = 0; k < NP; k++)
-  {
-  	   for( int k2 = 0; k2 < NP; k2++)
-       cout << "SC[" << k << "][" << k2 << "] = " << SC[k][k2] <<"   ";
-  	   cout << endl;
-  }
-#endif
-
-
-  // assert symmetry todo delete
-
-#if 0
+#ifdef STOCH_TESTING
   const double epsilon = .0001;
   for( int k = 0; k < NP; k++)
  	   for( int k2 = 0; k2 < NP; k2++)

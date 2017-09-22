@@ -139,9 +139,9 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   // todo not implemented yet
   assert(R.numberOfNonZeros() == 0);
 
-#if 0
-  cout << "nR=" << nR << " nA=" << nA << " nC=" << nC << " nF=" << nF << " nG=" << nG << " nSC=" << nSC << " sizeKi=" << (nR+nA+nC)<< endl
-      << "nnzR=" << R.numberOfNonZeros()
+#ifdef TIMING
+  cout << "firstSolveCall: nR=" << nR << " nA=" << nA << " nC=" << nC << " nF=" << nF << " nG=" << nG << " nSC=" << nSC << " sizeKi=" << (nR+nA+nC)<< endl
+      << " nnzR=" << R.numberOfNonZeros()
       << " nnzA=" << A.numberOfNonZeros()
       << " nnzC=" << C.numberOfNonZeros()
       << " nnzF=" << F.numberOfNonZeros()
