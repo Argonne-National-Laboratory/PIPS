@@ -607,7 +607,7 @@ void copyGDXSymbol(int         numBlocks,
       assert(objVarUel);
    }
    rc = gdxFindSymbol(fGDX, symName, &symNr);
-   if (!rc and 0==strcmp(symName,"ANl"))
+   if (!rc && 0==strcmp(symName,"ANl"))
    {
       for (i=0; i<numBlocks; i++)
       {
