@@ -276,19 +276,6 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
   int dummy, nx0;
   A.getSize(dummy, nx0);
 
-  // todo deleteme
-#if 1
-  int mz, my, test;
-
-  A.getSize(my, test);
-  assert(test == nx0);
-  C.getSize(mz, test);
-  assert(test == nx0);
-
-  assert(mz == locmz);
-  assert(my == locmy);
-#endif
-
   // zi2, zi3 are just references to fragments of zi
   SimpleVector zi1 (&zi[0],           locnx);
   SimpleVector zi2 (&zi[locnx],       locmy);
@@ -305,7 +292,6 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
     assert(locmyl >= 0);
     const int nxMyMz = z0.length() - locmyl - locmzl;
 
-    // todo  ALSO IN DUMMY CLASS! remove function parameter parentmy parentmz ALSO IN DUMMY CLASS!
     assert(nxMyMz == nx0 + parentmy + parentmz);
 
     SimpleVector z0myl (&z0[nxMyMz], locmyl);
@@ -318,7 +304,6 @@ void sLinsys::addLniziLinkCons(sData *prob, OoqpVector& z0_, OoqpVector& zi_, in
     assert(locmyl >= 0);
     const int nxMyMzMyl = z0.length() - locmzl;
 
-    // todo remove function parameter parentmy parentmz
     assert(nxMyMzMyl == nx0 + parentmy + parentmz + locmyl);
 
     SimpleVector z0mzl (&z0[nxMyMzMyl], locmzl);
@@ -410,7 +395,10 @@ void sLinsys::LniTransMult(sData *prob,
 
 
 /*
- * Computes res += [0 A^T C^T ]*inv(KKT)*[0;A;C] x
+ * Computes res += [R^T A^T C^T ] * inv(KKT) * [R 0 F^T G^T ] x
+ *                 [0         ]              [A             ]
+ *                 [F         ]              [C             ]
+ *                 [G         ]
  */
 
 void sLinsys::addTermToSchurResidual(sData* prob, 
@@ -419,20 +407,40 @@ void sLinsys::addTermToSchurResidual(sData* prob,
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& F = prob->getLocalF();
+  SparseGenMatrix& G = prob->getLocalG();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
   int nxP, aux;
   A.getSize(aux,nxP); assert(aux==locmy);
   C.getSize(aux,nxP); assert(aux==locmz);
+  F.getSize(aux,nxP); assert(aux==locmyl);
+  G.getSize(aux,nxP); assert(aux==locmzl);
   R.getSize(aux,nxP); assert(aux==locnx);
-  assert(nxP==x.length());
+
+  // res contains mz buffer part
+  assert(res.length() >= x.length());
+  assert(x.length() >= nxP);
+
   int N=locnx+locmy+locmz;
   SimpleVector y(N);
-  //y.setToZero();
 
   R.mult( 0.0,&y[0],1,           1.0,&x[0],1);
   A.mult( 0.0,&y[locnx],1,       1.0,&x[0],1);
   C.mult( 0.0,&y[locnx+locmy],1, 1.0,&x[0],1);
+
+  if( locmyl > 0 )
+  {
+     assert(res.length() == x.length());
+     F.transMult( 1.0,&y[0],1,       1.0,&x[x.length() - locmyl - locmzl],1);
+  }
+
+  if( locmzl > 0 )
+  {
+     assert(res.length() == x.length());
+     G.transMult( 1.0,&y[0],1,       1.0,&x[x.length() - locmzl],1);
+  }
+
   //cout << "4 - y norm:" << y.twonorm() << endl;
   //printf("%g  %g  %g  %g\n", y[locnx+locmy+0], y[locnx+locmy+1], y[locnx+locmy+2], y[locnx+locmy+3]);
   solver->solve(y);
@@ -440,6 +448,12 @@ void sLinsys::addTermToSchurResidual(sData* prob,
   R.transMult(1.0,&res[0],1, 1.0,&y[0],1);
   A.transMult(1.0,&res[0],1, 1.0,&y[locnx],1);
   C.transMult(1.0,&res[0],1, 1.0,&y[locnx+locmy],1);
+
+  if( locmyl > 0 )
+     F.mult(1.0,&res[res.length() - locmyl - locmzl],1, 1.0,&y[0],1);
+
+  if( locmzl > 0 )
+     G.mult(1.0,&res[res.length() - locmzl],1, 1.0,&y[0],1);
 }
 
 #include "PardisoSolver.h"
@@ -535,7 +549,7 @@ void sLinsys::addTermToSchurResidual(sData* prob,
 /* this is the original code that was doing one column at a time. */
 
 void sLinsys::addTermToDenseSchurCompl(sData *prob, 
-				       DenseSymMatrix& SC, int deleteme)
+				       DenseSymMatrix& SC)
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
@@ -555,9 +569,6 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 
   const int nxMyP = NP - locmyl - locmzl;
   const int nxMyMzP = NP - locmzl;
-
-  assert((deleteme + nxP + locmyl + locmzl) == NP);
-  assert(nxMyP == (nxP + deleteme));
 
   if(nxP==-1)
     C.getSize(N,nxP);
@@ -662,20 +673,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     }
   }
 
-// todo
-#if 0
-  for( int k = 0; k < NP; k++)
-  {
-  	   for( int k2 = 0; k2 < NP; k2++)
-       cout << "SC[" << k << "][" << k2 << "] = " << SC[k][k2] <<"   ";
-  	   cout << endl;
-  }
-#endif
-
-
-  // assert symmetry todo delete
-
-#if 0
+#ifdef STOCH_TESTING
   const double epsilon = .0001;
   for( int k = 0; k < NP; k++)
  	   for( int k2 = 0; k2 < NP; k2++)
@@ -753,13 +751,13 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
 
-  int N, nxP, NP;
+  int N, nxP;
   A.getSize(N, nxP); assert(N==locmy);
   //out.getSize(ncols, N); assert(N == nxP);
   assert(endcol <= nxP);
 
   if(nxP==-1) C.getSize(N,nxP);
-  if(nxP==-1) {assert(false); nxP = NP;} //petra - found that NP may be unitialized; initialized NP (to remove the compile warning) but added an assert
+//  if(nxP==-1) {assert(false); nxP = NP;} //petra - found that NP may be unitialized; initialized NP (to remove the compile warning) but added an assert
 
   N = locnx+locmy+locmz;
 

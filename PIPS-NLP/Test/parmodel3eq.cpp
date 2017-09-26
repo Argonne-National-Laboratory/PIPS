@@ -6,6 +6,19 @@
 #include <cassert>
 #include <math.h>
 
+#ifdef TIMING
+  double timeFromAMPL;
+  double probGenTime;
+  double PartSolver_GenTime;
+  double PartSolver_SolTime;
+  double PartSolver_FactTime;
+  int call_sol_Times;
+  int call_fact_Times;
+
+  int call_sol_Times_MA57;
+  int call_fact_Times_MA57;
+  double genTime_localAmpl;
+#endif
 
 //# min x1^2 + x2^2 + x1x2 + x3^2 + x4^2 + x3x4 + x5^2 + x6^2 + x5x6
 //# st.

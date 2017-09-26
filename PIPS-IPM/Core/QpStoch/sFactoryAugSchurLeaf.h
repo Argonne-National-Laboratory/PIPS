@@ -10,8 +10,9 @@
 class sFactoryAugSchurLeaf : public sFactoryAug {
  public:
 
-  sFactoryAugSchurLeaf( StochInputTree* in)
-    : sFactoryAug(in) {};
+ sFactoryAugSchurLeaf( StochInputTree* inputTree, MPI_Comm comm=MPI_COMM_WORLD)
+   : sFactoryAug(inputTree, comm) {};
+
  sFactoryAugSchurLeaf( stochasticInput& in, MPI_Comm comm=MPI_COMM_WORLD)
    : sFactoryAug(in,comm) {};
 

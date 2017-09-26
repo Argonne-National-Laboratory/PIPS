@@ -197,19 +197,11 @@ int sData::getLocalSizes(int& nx, int& my, int& mz, int& myl, int& mzl)
   long long nxloc, myloc, mzloc, mylloc, mzlloc;
 
   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  if( Ast.Blmat )
-    Ast.Blmat->getSize(mylloc, nxloc);
-  else
-    mylloc = 0;
-
+  Ast.Blmat->getSize(mylloc, nxloc);
   Ast.Bmat->getSize(myloc, nxloc);
 
   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  if( Cst.Blmat )
-    Cst.Blmat->getSize(mzlloc, nxloc);
-  else
-    mzlloc = 0;
-
+  Cst.Blmat->getSize(mzlloc, nxloc);
   Cst.Bmat->getSize(mzloc, nxloc);
 
   nx=nxloc; my=myloc; mz=mzloc; myl=mylloc; mzl=mzlloc;

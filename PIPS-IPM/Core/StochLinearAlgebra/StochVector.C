@@ -11,7 +11,7 @@
 #include <math.h>
 
 StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
-  : OoqpVector(n_), parent(NULL), vecl(NULL), mpiComm(mpiComm_),
+  : OoqpVector(n_), vecl(NULL), parent(NULL), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
   vec = new SimpleVector(n_);
@@ -21,7 +21,7 @@ StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
     MPI_Comm_size(mpiComm, &size);
     iAmDistrib = size==1?0:1;
   }
-
+  vecl = NULL;
 }
 
 StochVector::StochVector(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed)

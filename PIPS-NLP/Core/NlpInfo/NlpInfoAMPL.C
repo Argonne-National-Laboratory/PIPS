@@ -2,6 +2,9 @@
  * Authors: Nai-Yuan Chiang                      		*
  * (C) 2015 Argonne National Laboratory			*/
 
+#ifdef TIMING
+  #include "mpi.h"
+#endif
 #include "NlpInfoAMPL.h"
 #include "getAmplFunction.h"
 #include "NlpGenVars.h"
@@ -17,7 +20,6 @@
 #include "SparseSymMatrix.h"
 
 #ifdef TIMING
-  #include "mpi.h"
   extern double timeFromAMPL;
 #endif
 

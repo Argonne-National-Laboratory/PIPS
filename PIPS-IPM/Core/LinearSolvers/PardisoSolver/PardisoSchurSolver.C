@@ -40,7 +40,7 @@ extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
                   double *, int    *,    int *, int *,   int *, int *,
                      int *, double *, double *, int *, double *);
-extern "C" void pardiso_schur(void*, int*, int*, int*, double*, int*, int*);
+extern "C" void pardiso_get_schur(void*, int*, int*, int*, double*, int*, int*);
 
 extern "C" void pardiso_chkmatrix  (int *, int *, double *, int *, int *, int *);
 extern "C" void pardiso_chkvec     (int *, int *, double *, int *);
@@ -121,138 +121,238 @@ void PardisoSchur32Solver::firstCall()
 // this function is called only once and creates the augmented system
 void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R, 
 					SparseGenMatrix& A,
-					SparseGenMatrix& C)
+					SparseGenMatrix& C,
+					SparseGenMatrix& F,
+					SparseGenMatrix& G,
+					int nSC0)
 {
-  int nR,nA,nC;
+  int nR,nA,nC,nF,nG,nx;
   nnz=0;
-  R.getSize(nR,nSC); nnz += R.numberOfNonZeros();
-  A.getSize(nA,nSC); nnz += A.numberOfNonZeros();
-  C.getSize(nC,nSC); nnz += C.numberOfNonZeros();
+
+  F.getSize(nF,nx); nnz += F.numberOfNonZeros();
+  G.getSize(nG,nx); nnz += G.numberOfNonZeros();
+  R.getSize(nR,nx); nnz += R.numberOfNonZeros();
+  A.getSize(nA,nx); nnz += A.numberOfNonZeros();
+  C.getSize(nC,nx); nnz += C.numberOfNonZeros();
   int Msize=Msys->size();
 
-  //cout << "nR=" << nR << " nA=" << nA << " nC=" << nC << " nSC=" << nSC << " sizeKi=" << (nR+nA+nC)<< endl 
-  //     << "nnzR=" << R.numberOfNonZeros() 
-  //     << " nnzA=" << A.numberOfNonZeros()  
-  //     << " nnzC=" << C.numberOfNonZeros() << endl;
+  // todo not implemented yet
+  assert(R.numberOfNonZeros() == 0);
+
+#ifdef TIMING
+  cout << "firstSolveCall: nR=" << nR << " nA=" << nA << " nC=" << nC << " nF=" << nF << " nG=" << nG << " nSC=" << nSC << " sizeKi=" << (nR+nA+nC)<< endl
+      << " nnzR=" << R.numberOfNonZeros()
+      << " nnzA=" << A.numberOfNonZeros()
+      << " nnzC=" << C.numberOfNonZeros()
+      << " nnzF=" << F.numberOfNonZeros()
+      << " nnzG=" << C.numberOfNonZeros() << endl;
+#endif
+
+  if( nF > 0 || nG > 0 )
+    nSC = nSC0;
+  else
+    nSC = nx;
 
   n = nR+nA+nC+nSC;
+
   assert( Msize == nR+nA+nC );
   nnz += Msys->numberOfNonZeros();
   nnz += nSC; //space for the 0 diagonal of 2x2 block
 
   // the lower triangular part of the augmented system in row-major
-  SparseSymMatrix augSys( n, nnz);
+  SparseSymMatrix augSys(n, nnz);
   
+  // pointer for augmented system
+  int* krowAug = augSys.getStorageRef().krowM;
+  int* jcolAug = augSys.getStorageRef().jcolM;
+  double* MAug = augSys.getStorageRef().M;
+
   //
   //put (1,1) block in the augmented system
   //
-  memcpy(augSys.getStorageRef().krowM, Msys->getStorageRef().krowM, sizeof(int)*Msize);
-  memcpy(augSys.getStorageRef().jcolM, Msys->getStorageRef().jcolM, sizeof(int)*Msys->numberOfNonZeros());
-  memcpy(augSys.getStorageRef().M,     Msys->getStorageRef().M,     sizeof(double)*Msys->numberOfNonZeros());
+  memcpy(krowAug, Msys->getStorageRef().krowM, sizeof(int)*Msize);
+  memcpy(jcolAug, Msys->getStorageRef().jcolM, sizeof(int)*Msys->numberOfNonZeros());
+  memcpy(MAug,    Msys->getStorageRef().M,     sizeof(double)*Msys->numberOfNonZeros());
+
+
+  int nnzIt=Msys->numberOfNonZeros();
 
   //
-  //put C block in the augmented system as C^T in the lower triangular part
+  //put A and C block in the augmented system as At and Ct in the lower triangular part
   //
-  if(C.numberOfNonZeros()>0 && nC>0) {
-    int nnzIt=Msys->numberOfNonZeros();
-    
-    SparseGenMatrix Ct(nSC,nC,C.numberOfNonZeros());
-    int* krowCt=Ct.getStorageRef().krowM;
-    int* jcolCt=Ct.getStorageRef().jcolM;
-    double *MCt=Ct.getStorageRef().M;
-    
-    C.getStorageRef().transpose(krowCt, jcolCt, MCt);
-    
-    int colShift=nR+nA;
-    
-    int* krowAug= augSys.getStorageRef().krowM;
-    int* jcolAug = augSys.getStorageRef().jcolM;
-    double* MAug = augSys.getStorageRef().M;
-    
-    int row=Msize;
-    for(; row<n; row++) {
-      krowAug[row]=nnzIt;
-      
-      for(int c=krowCt[row-Msize]; c< krowCt[row-Msize+1]; c++) {
-	
-	int j=jcolCt[c];
-	  
-	jcolAug[nnzIt]=j+colShift;
-	MAug[nnzIt]   =MCt[c];
-	nnzIt++;
-      }
-      //add the zero from the diagonal
-      jcolAug[nnzIt]=row;
-      MAug[nnzIt]=0.0;
-      nnzIt++;
-      
-    }
-    krowAug[row]=nnzIt;
-  }
 
-  // -- to do
-  //put R block in the augmented system as R^T in the lower triangular part
-  assert(R.numberOfNonZeros()==0);
-  //
-  if(A.numberOfNonZeros()>0 && nA>0) {
-    int nnzIt=Msys->numberOfNonZeros();
-    
-    SparseGenMatrix At(nSC,nA,A.numberOfNonZeros());
+  if( nA > 0 || nC > 0 )
+  {
+    const bool putA = A.numberOfNonZeros() > 0;
+    const bool putC = C.numberOfNonZeros() > 0;
+
+    // putA = TRUE => nA > 0
+    assert(putA == (putA && (nA > 0)));
+    assert(putC == (putC && (nC > 0)));
+
+    // initialize variables for At
+    SparseGenMatrix At(putA ? nx : 0, putA ? nA : 0, putA ? A.numberOfNonZeros() : 0);
     int* krowAt=At.getStorageRef().krowM;
     int* jcolAt=At.getStorageRef().jcolM;
     double *MAt=At.getStorageRef().M;
-    
-    A.getStorageRef().transpose(krowAt, jcolAt, MAt);
-    
-    int colShift=nR;
-    
-    int* krowAug= augSys.getStorageRef().krowM;
-    int* jcolAug = augSys.getStorageRef().jcolM;
-    double* MAug = augSys.getStorageRef().M;
-    
+
+    if( putA )
+       A.getStorageRef().transpose(krowAt, jcolAt, MAt);
+
+    const int colShiftA=nR;
+
+    // initialize variables for Ct
+    SparseGenMatrix Ct(putC ? nx : 0, putC ? nC : 0, putC ? C.numberOfNonZeros() : 0);
+    int* krowCt=Ct.getStorageRef().krowM;
+    int* jcolCt=Ct.getStorageRef().jcolM;
+    double *MCt=Ct.getStorageRef().M;
+
+    if( putC )
+       C.getStorageRef().transpose(krowCt, jcolCt, MCt);
+
+    const int colShiftC=nR+nA;
+
     int row=Msize;
-    for(; row<n; row++) {
+    for( ; row < Msize + nx; row++ ) {
       krowAug[row]=nnzIt;
-      
-      for(int c=krowAt[row-Msize]; c< krowAt[row-Msize+1]; c++) {
-	
-	int j=jcolAt[c];
-	  
-	jcolAug[nnzIt]=j+colShift;
-	MAug[nnzIt]   =MAt[c];
-	nnzIt++;
+
+      if( putA ) {
+         for(int c=krowAt[row-Msize]; c< krowAt[row-Msize+1]; c++) {
+            const int j=jcolAt[c];
+            jcolAug[nnzIt]=j+colShiftA;
+            MAug[nnzIt]   =MAt[c];
+            nnzIt++;
+         }
+      }
+
+      if( putC )
+      {
+         for(int c=krowCt[row-Msize]; c< krowCt[row-Msize+1]; c++) {
+            const int j=jcolCt[c];
+            jcolAug[nnzIt]=j+colShiftC;
+            MAug[nnzIt]   =MCt[c];
+            nnzIt++;
+         }
       }
       //add the zero from the diagonal
       jcolAug[nnzIt]=row;
       MAug[nnzIt]=0.0;
       nnzIt++;
+
     }
     krowAug[row]=nnzIt;
   }
 
+  //
+  // add linking constraint matrices F and G
+  //
+  if( nF > 0 || nG > 0 )
+  {
+     // put diagonal in zero block
+     int row = Msize + nx;
+     assert(row <= n - nF - nG);
+     for( ; row < n - nF - nG; row++ ) {
+        krowAug[row]=nnzIt;
+        jcolAug[nnzIt] = row;
+        MAug[nnzIt] = 0.0;
+        nnzIt++;
+     }
+
+     // are there linking equality constraints?
+     if( nF > 0 )
+     {
+        // put F in the lower triangular part below R (and below 0 block)
+
+        int* krowF=F.getStorageRef().krowM;
+        int* jcolF=F.getStorageRef().jcolM;
+        double *MF=F.getStorageRef().M;
+
+        const bool putF = F.numberOfNonZeros() > 0;
+
+        const int row0 = n - nF - nG;
+        int row = row0;
+        assert(row0 >= Msize+nx);
+
+        for( ; row < n - nG; row++ ) {
+          krowAug[row]=nnzIt;
+
+          if( putF ) {
+             for(int c=krowF[row-row0]; c< krowF[row-row0+1]; c++) {
+                jcolAug[nnzIt]=jcolF[c];
+                MAug[nnzIt]   =MF[c];
+                nnzIt++;
+             }
+          }
+          //add the zero from the diagonal
+          jcolAug[nnzIt]=row;
+          MAug[nnzIt]=0.0;
+          nnzIt++;
+        }
+        krowAug[row]=nnzIt;
+     }
+
+     // are there linking equality constraints?
+     if( nG > 0 )
+     {
+        // put G in the lower triangular part below F
+
+        int* krowG=G.getStorageRef().krowM;
+        int* jcolG=G.getStorageRef().jcolM;
+        double *MG=G.getStorageRef().M;
+
+        const bool putG = G.numberOfNonZeros() > 0;
+
+        const int row0 = n - nG;
+        int row = row0;
+
+        for( ; row < n; row++ ) {
+          krowAug[row]=nnzIt;
+
+          if( putG ) {
+             for(int c=krowG[row-row0]; c< krowG[row-row0+1]; c++) {
+                jcolAug[nnzIt]=jcolG[c];
+                MAug[nnzIt]   =MG[c];
+                nnzIt++;
+             }
+          }
+          //add the zero from the diagonal
+          jcolAug[nnzIt]=row;
+          MAug[nnzIt]=0.0;
+          nnzIt++;
+        }
+        krowAug[row]=nnzIt;
+     }
+  }
+
   nnz=augSys.numberOfNonZeros();
+
   // we need to transpose to get the augmented system in the row-major upper triangular format of  PARDISO 
   rowptrAug = new int[n+1];
   colidxAug = new int[nnz];
   eltsAug   = new double[nnz];
 
   augSys.getStorageRef().transpose(rowptrAug,colidxAug,eltsAug);
-      
 
-  //save the indeces for diagonal entries for a streamlined later update
+  assert(rowptrAug[n] == nnz);
+
+  //save the indices for diagonal entries for a streamlined later update
   int* krowMsys = Msys->getStorageRef().krowM;
   int* jcolMsys = Msys->getStorageRef().jcolM;
+
   for(int r=0; r<Msize; r++) {
+
     // Msys - find the index in jcol for the diagonal (r,r)
     int idxDiagMsys=-1;
     for(int idx=krowMsys[r]; idx<krowMsys[r+1]; idx++)
       if(jcolMsys[idx]==r) {idxDiagMsys=idx; break;}
+
     assert(idxDiagMsys>=0);
 
     // aug  - find the index in jcol for the diagonal (r,r)
     int idxDiagAug=-1;
     for(int idx=rowptrAug[r]; idx<rowptrAug[r+1]; idx++)
       if(colidxAug[idx]==r) {idxDiagAug=idx; break;}
+
     assert(idxDiagAug>=0);
 
     diagMap.insert( pair<int,int>(idxDiagMsys,idxDiagAug) );
@@ -294,6 +394,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
     assert(false);
   }
   */
+
 } 
 
  
@@ -315,11 +416,14 @@ void PardisoSchurSolver::matrixChanged()
 void PardisoSchurSolver::schur_solve(SparseGenMatrix& R, 
 				     SparseGenMatrix& A,
 				     SparseGenMatrix& C,
+				     SparseGenMatrix& F,
+				     SparseGenMatrix& G,
 				     DenseSymMatrix& SC0)
 {
   bool doSymbFact=false;
   if(firstSolve) { 
-    firstSolveCall(R,A,C); firstSolve=false; 
+
+    firstSolveCall(R,A,C,F,G, SC0.size()); firstSolve=false;
     doSymbFact=true;
   } else {
 
@@ -366,7 +470,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
   //if (myRankp==0) msglvl=1;
   iparm[32] = 1; // compute determinant
-  iparm[37] = Msys->size(); //compute Schur-complement
+  iparm[37] = nSC;//Msys->size(); //compute Schur-complement
   
 #ifdef TIMING
   //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
@@ -398,19 +502,18 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   int* colidxSC =new int[nnzSC];
   double* eltsSC=new double[nnzSC];
 
-  pardiso_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
+  pardiso_get_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
 
   //convert back to C/C++ indexing
   for(int it=0; it<nSC+1; it++) rowptrSC[it]--;
   for(int it=0; it<nnzSC; it++) colidxSC[it]--;
-
 
   for(int r=0; r<nSC; r++) {
     for(int ci=rowptrSC[r]; ci<rowptrSC[r+1]; ci++) {
       int c=colidxSC[ci];
       SC0[r][c] += eltsSC[ci];
       if(r!=c)
-	SC0[c][r] += eltsSC[ci];
+         SC0[c][r] += eltsSC[ci];
     }
   }
 
@@ -458,13 +561,16 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   //compute residual (alternative)  
   double* tmp_resid=new double[dim];
   memcpy(tmp_resid, rhs.elements(), dim*sizeof(double));
+  double mat_max=0;
   for(int i=0; i<dim; i++) {
     for(int p=rowptrAug[i]; p<rowptrAug[i+1]; p++) {
       int j=colidxAug[p-1]-1;
       if(j+1<=dim) {
 	//r[i] = r[i] + M(i,j)*x(j)
 	tmp_resid[i] -= eltsAug[p-1]*x_n[j];
-	
+
+	if(abs(eltsAug[p-1])>mat_max) mat_max=abs(eltsAug[p-1]);
+
 	if(j!=i) {
 	  //r[j] = r[j] + M(j,i)*x(i)
 	  tmp_resid[j] -=  eltsAug[p-1]*x_n[i];
@@ -472,19 +578,21 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
       }
     }
   }
-  double res_norm2=0.0, res_nrmInf=0; 
+  double res_norm2=0.0, res_nrmInf=0, sol_inf=0.;
   for(int i=0; i<dim; i++) {
       res_norm2 += tmp_resid[i]*tmp_resid[i];
       if(res_nrmInf<fabs(tmp_resid[i]))
 	 res_nrmInf=tmp_resid[i];
+      if(abs(x_n[i])>sol_inf)  sol_inf = abs(x_n[i]);
   }
   res_norm2 = sqrt(res_norm2);
 
   double rhsNorm=rhs.twonorm();
-  if(res_norm2/rhsNorm>1e-9) {
-    cout << "PardisoSchurSolve::solve big residual --- rhs.nrm=" << rhsNorm 
-	 << " iter.refin.=" << iparm[6] 
-	 << " rel.res.nrm2=" << res_norm2/rhsNorm
+  //if(min(res_nrmInf/(mat_max*sol_inf),res_norm2/(mat_max*sol_inf))>1e-3) {
+  if(min(res_nrmInf/rhsNorm,res_norm2/rhsNorm)>1e-6) {
+    cout << "PardisoSchurSolve large residual - norms resid="<< res_norm2 << ":" << res_nrmInf 
+	 << " rhs=" << rhsNorm << " sol="<<sol_inf << " mat="<< mat_max 
+	 << " #refin.=" << iparm[6] 
 	 << " rel.res.nrmInf=" << res_nrmInf/rhsNorm 
 	 << " bicgiter=" << gOuterBiCGIter<< endl;
 
@@ -904,7 +1012,7 @@ int pardiso_stuff(int n, int nnz, int n0, int* rowptr, int* colidx, double* elts
     int* colidxSC =new int[nnzSC];
     double* eltsSC=new double[nnzSC];
     
-    pardiso_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
+    pardiso_get_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
     //!cout << "Schur complement (2nd stage) n=" << nSC << "   nnz=" << nnzSC << endl;
     
     //convert back to C/C++ indexing

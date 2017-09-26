@@ -51,8 +51,8 @@ StochInputNode(void* user_data_, int id_,
 	       FVEC fxupp_, FVEC fixupp_,
 	       bool deleteUserData_/*=false*/)
   : id(id_), n(n_), my(my_), myl(-1), mz(mz_), mzl(-1),
-    nCall(NULL), myCall(NULL), mzCall(NULL), mylCall(NULL), mzlCall(NULL),
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzBl(-1), nnzC(-1), nnzD(-1), nnzDl(-1),
+    nCall(NULL), myCall(NULL), mzCall(NULL), mylCall(NULL), mzlCall(NULL),
     fnnzQ(fnnzQ_), fnnzA(fnnzA_), fnnzB(fnnzB_), fnnzBl(NULL), fnnzC(fnnzC_), fnnzD(fnnzD_), fnnzDl(NULL),
     fQ(fQ_), fA(fA_), fB(fB_), fBl(NULL), fC(fC_), fD(fD_), fDl(NULL),
     fc(fc_), fb(fb_), fbl(NULL),
@@ -61,7 +61,7 @@ StochInputNode(void* user_data_, int id_,
     fxlow(fxlow_), fxupp(fxupp_), fixlow(fixlow_), fixupp(fixupp_), 
     user_data(user_data_), 
     deleteUserData(deleteUserData_)
-{ };
+{ }
 
 
 // full callback constructor without constraints
@@ -80,8 +80,8 @@ StochInputNode(void* user_data_, int id_,
           FVEC fxupp_, FVEC fixupp_,
           bool deleteUserData_/*=false*/)
   : id(id_), n(-1), my(-1), myl(-1), mz(-1), mzl(-1),
-    nCall(n_), myCall(my_), mzCall(mz_), mylCall(NULL), mzlCall(NULL),
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzBl(-1), nnzC(-1), nnzD(-1), nnzDl(-1),
+    nCall(n_), myCall(my_), mzCall(mz_), mylCall(NULL), mzlCall(NULL),
     fnnzQ(fnnzQ_), fnnzA(fnnzA_), fnnzB(fnnzB_), fnnzBl(NULL), fnnzC(fnnzC_), fnnzD(fnnzD_), fnnzDl(NULL),
     fQ(fQ_), fA(fA_), fB(fB_), fBl(NULL), fC(fC_), fD(fD_), fDl(NULL),
     fc(fc_), fb(fb_), fbl(NULL),
@@ -90,7 +90,7 @@ StochInputNode(void* user_data_, int id_,
     fxlow(fxlow_), fxupp(fxupp_), fixlow(fixlow_), fixupp(fixupp_),
     user_data(user_data_),
     deleteUserData(deleteUserData_)
-{ };
+{ }
 
 // full callback constructor including linking constraints
 StochInputTree::StochInputNode::
@@ -122,7 +122,7 @@ StochInputNode(void* user_data_, int id_,
     fxlow(fxlow_), fxupp(fxupp_), fixlow(fixlow_), fixupp(fixupp_),
     user_data(user_data_),
     deleteUserData(deleteUserData_)
-{ };
+{ }
 
 
 StochInputTree::StochInputNode::StochInputNode()
@@ -130,10 +130,10 @@ StochInputTree::StochInputNode::StochInputNode()
     nnzQ(-1), nnzA(-1), nnzB(-1), nnzC(-1), nnzD(-1),
     user_data(NULL), 
     deleteUserData(false)
-{ };
+{ }
 
 
 StochInputTree::StochInputNode::~StochInputNode() 
 { 
   if(deleteUserData) free(user_data);
-};
+}

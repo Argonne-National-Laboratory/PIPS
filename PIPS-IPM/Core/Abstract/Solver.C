@@ -14,6 +14,8 @@
 
 #include <cmath>
 
+#define BAD_NUMERICS
+
 int gOoqpPrintLevel = 1000;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
@@ -44,7 +46,11 @@ Solver::Solver() : itsMonitors(0), status(0), startStrategy(0),
 		   mutol(1.e-6), artol(1e-4), sys(0)
 {
   // define parameters associated with the step length heuristic
+#ifdef BAD_NUMERICS
+  gamma_f = 0.95;
+#else
   gamma_f = 0.99;
+#endif
   gamma_a = 1.0 / (1.0 - gamma_f);
 
 }
@@ -57,6 +63,7 @@ void Solver::start( ProblemFormulation * formulation,
     startStrategy->doIt( this, formulation, iterate, prob, resid, step );
   } else {
     this->defaultStart( formulation, iterate, prob, resid, step );
+     //this->stevestart( formulation, iterate, prob, resid, step );
     //this->dumbstart( formulation, iterate, prob, resid, step );
   }
 }
@@ -164,11 +171,19 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	  alpha = ( - primalValue +
 		    mufull / ( dualValue + maxAlpha * dualStep ) ) /
 	    primalStep;
+#ifdef TIMING
+	  std::cout << "alpha " << primalValue + maxAlpha * primalStep << std::endl;
+	  //assert(primalValue + maxAlpha * primalStep >= 0.0);
+#endif
 	  break;
 	case 2:
 	  alpha = ( - dualValue +
 		    mufull / ( primalValue + maxAlpha * primalStep ) ) /
 	    dualStep;
+#ifdef TIMING
+	  std::cout << "dual alpha " << dualValue + maxAlpha * dualStep << std::endl;
+	  //assert(dualValue + maxAlpha * dualStep >= 0.0);
+#endif
 	  break;
 	default:
 	  cout << "Can't get here: firstOrSecond=" << firstOrSecond << endl;
@@ -179,9 +194,16 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	// make it at least gamma_f * maxStep
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
-	// back off just a touch
+	// back off just a touch (or a bit more)
+#ifdef BAD_NUMERICS
+	alpha *= 0.995;
+#else
 	alpha *= .99999999;
-	//alpha *= 0.9995;
+#endif
+
+	assert(alpha < 1.0);
+
+
 	return alpha;
 }
 
@@ -258,6 +280,10 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   phi = (rnorm + gap) / dnorm;
   phi_history[idx] = phi;
 
+#ifdef TIMING
+  std::cout << "mu/mutol " << mu << "  " << mutol << "rnorm/limit " << rnorm << " " << artol*dnorm  << std::endl;
+#endif
+
   if(idx > 0) {
     phi_min_history[idx] = phi_min_history[idx-1];
     if(phi < phi_min_history[idx]) phi_min_history[idx] = phi;
@@ -273,8 +299,12 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check infeasibility condition
-  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4*phi_min_history[idx]) 
+  if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4*phi_min_history[idx]) {
+#ifdef TIMING
+    std::cout << "possible INFEASIBLITY detected, phi: " << phi << std::endl;
+#endif
     stop_code = INFEASIBLE;
+  }
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check for unknown status: slow convergence first

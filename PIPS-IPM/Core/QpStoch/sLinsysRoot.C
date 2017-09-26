@@ -9,6 +9,8 @@
 #include "sData.h"
 #include "sDummyLinsys.h"
 #include "sLinsysLeaf.h"
+#include "math.h"
+
 /*********************************************************************/
 /************************** ROOT *************************************/
 /*********************************************************************/
@@ -110,21 +112,10 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
     children[c]->stochNode->resMon.recFactTmChildren_start();    
     //---------------------------------------------
-    children[c]->addTermToDenseSchurCompl(prob->children[c], kktd, locmy);
+    children[c]->addTermToDenseSchurCompl(prob->children[c], kktd);
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
-
-#if 0
-  // todo deleteme
-  cout << "dkkt after:" <<  endl;
-  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
-  {
-    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-      cout << "Kkt[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"     ";
- 	   cout << endl;
-  }
-#endif
 
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
@@ -135,22 +126,22 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   stochNode->resMon.recReduceTmLocal_stop();
 #endif  
 
-#if 0
-  // todo deleteme
-  cout << "dkkt after ALL REDUCE:" <<  endl <<  endl;
-  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
-  {
-    	   for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-      cout  << "[" << k << "][" << k2 << "] = " << kktd[k][k2] <<"             ";
- 	   cout << endl;
-  }
-#endif
-
   finalizeKKT(prob, vars);
+
+#ifdef STOCH_TESTING
+  const double epsilon = 1e-5;
+  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
+       for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
+       {
+           if( fabs(kktd[k][k2] - kktd[k2][k]) > epsilon )
+              std::cout << "SYMMETRY FAIL, > eps " << fabs(kktd[k][k2] - kktd[k2][k])  << std::endl;
+           assert(fabs(kktd[k][k2] - kktd[k2][k]) <= epsilon);
+       }
+#endif
 
   factorizeKKT();
 
-  //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd); 
+  //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd);
 
 #ifdef TIMING
   afterFactor();
@@ -517,7 +508,7 @@ void sLinsysRoot::reduceKKT()
 	   submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
 
 	   // preserve symmetry todo memopt!
-	   double ** M = kktd->mStorage->M;
+	   double** M = kktd->mStorage->M;
 	   for( int k = locNxMy; k < locNxMyMylMzl; k++ )
 		  for( int k2 = 0; k2 < locnx; k2++ )
 		    M[k][k2] = M[k2][k];
@@ -583,55 +574,6 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 
 
 #define CHUNK_SIZE 1024*1024*64 //doubles  = 128 MBytes (maximum)
-// todo delete
-#if 0
-void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A, 
-				     int row, int col, int drow, int dcol,
-				     MPI_Comm comm)
-{
-  double ** M = A->mStorage->M;
-  int n = A->mStorage->n;
-
-  assert(n >= row+drow);
-  assert(n >= col+dcol);
-
-  int iErr;
-  int chunk_size = CHUNK_SIZE / n * n; 
-  chunk_size = min(chunk_size, n*n);
-  double* chunk = new double[chunk_size];
-
-  int rows_in_chunk = chunk_size/n;
-
-  int iRow=row;
-  do {
-
-    if(iRow+rows_in_chunk > drow)
-      rows_in_chunk = drow-iRow;
-
-    assert(rows_in_chunk >= 0);
-
-    iErr=MPI_Allreduce(&M[iRow][0], 
-		       chunk, rows_in_chunk*n, 
-		       MPI_DOUBLE, MPI_SUM, comm);
-    assert(iErr==MPI_SUCCESS);
-
-    //copy data in M
-    for(int i=iRow; i<iRow+rows_in_chunk; i++) {
-
-      int shft = (i-iRow)*n;
-      for (int j=col; j<col+dcol; j++)
-	    M[i][j] = chunk[shft+j];
-    }
-    iRow += rows_in_chunk;
-  
-  } while(iRow<row+drow);
-
-  delete[] chunk;
-}
-#endif
-
-
-
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
 		             int startRow, int startCol, int nRows, int nCols,
 				     MPI_Comm comm)

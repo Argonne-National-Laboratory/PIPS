@@ -57,6 +57,7 @@ if (HAVE_PARDISO)
       ooqpgensparse ooqpsparse ooqpbase ooqpgondzio ooqpdense
       ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
+  if( 0 )
     add_executable(pipsipmFromRaw_comm2_schur Drivers/pipsipmFromRaw_comm2_schur.cpp)
     target_link_libraries(pipsipmFromRaw_comm2_schur
       stochInput ${COIN_LIBS}
@@ -78,6 +79,9 @@ if (HAVE_PARDISO)
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
       ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
+      
+   endif( 0 )   
+   
     # add_executable(pipsipmFromRaw_schur32 Drivers/pipsipmFromRaw_schur32.cpp)
     # target_link_libraries(pipsipmFromRaw_schur32
     #   stochInput ${COIN_LIBS}
@@ -136,9 +140,11 @@ target_link_libraries(pipsipmFromRaw
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
     
-add_executable(pipsipmCallbackTest Drivers/callbackTest.cpp)
-target_link_libraries(pipsipmCallbackTest
+
+add_executable(pipsipmCallbackExample Drivers/callbackExample.cpp)
+target_link_libraries(pipsipmCallbackExample
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})      
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
+

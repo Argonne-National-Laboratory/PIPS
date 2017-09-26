@@ -1,11 +1,15 @@
 #include "StochInputTree.h"
 #include "PIPSIpmInterface.h"
 #include "sFactoryAug.h"
+#include "sFactoryAugSchurLeaf.h"
 #include "MehrotraStochSolver.h"
 
 #include "mpi.h"
 
 #define LINKING_CONS 1
+
+extern int gOuterSolve;
+extern int gInnerSCsolve;
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
@@ -233,8 +237,6 @@ int vecXlbActive(void* user_data, int id, double* vec, int len)
 
 int vecLinkRhs(void* user_data, int id, double* vec, int len)
 {
-   int i;
-
    vec[0] = 6.0;
    vec[1] = 4.0;
    return 0;
@@ -242,12 +244,6 @@ int vecLinkRhs(void* user_data, int id, double* vec, int len)
 
 int matAllZero(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-   int i;
-    int n = 2;
-
-    for( i = 0; i <= n; i++ )
-        krowM[i] = 0;
-
     return 0;
 }
 
@@ -429,7 +425,7 @@ else
     return 0;
 }
 
-};
+}
 
 
 int main(int argc, char ** argv) {
@@ -600,7 +596,12 @@ int main(int argc, char ** argv) {
   if( rank == 0 )
      cout << "Using a total of " << size << " MPI processes." << endl;
 
-  PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+  gOuterSolve = 2;
+  gInnerSCsolve = 2;
+
+  //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+  PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
+
 
   if( rank == 0 )
      cout << "PIPSIpmInterface created" << endl;

@@ -466,7 +466,7 @@ void DenseSymMatrix::atRankkUpdate( double alpha, double beta, DenseGenMatrix& U
 #ifdef DEBUG
   //TRANS = 'N', k specifies the number of columns of the matrix U
   //we pass U' instead of U, so k should be the number of rows of U
-  int r,c; U.getSize(rll,cll);
+  int r,c; U.getSize(r,c);
   if(TRANS=='N') assert(k==r);
   else if(TRANS=='T') assert(k==c);
   else assert(false);

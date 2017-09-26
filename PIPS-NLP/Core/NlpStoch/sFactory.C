@@ -100,7 +100,9 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* nomegaInv, OoqpVector* rhs, OoqpVector* additiveDiag_)
 {
   sLinsysLeaf *resultSLin=NULL;
+#ifdef TIMING
   cout<< "newLinsysLeaf:" <<gSymLinearSolver << endl;
+#endif
   if(0==gSymLinearSolver){
 #ifdef WITH_MA27
 	Ma27Solver* sMA27=NULL; 

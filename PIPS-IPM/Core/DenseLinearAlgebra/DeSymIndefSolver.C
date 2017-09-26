@@ -115,7 +115,6 @@ void DeSymIndefSolver::matrixChanged()
   if(work) delete[] work;
   work = new double[lwork];
 
-
 #ifdef TIMING_FLOPS
   HPM_Start("DSYTRFFact");
 #endif
@@ -123,19 +122,6 @@ void DeSymIndefSolver::matrixChanged()
   //factorize
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, work, &lwork, &info );
-
-  // todo
-#if 0
-  for(int k = 0; k < n; k++)
-  {
-	  cout << "perm: " <<  ipiv[k] << "    ";
-	   for( int k2 = 0; k2 < n; k2++)
-  //   cout << "DESYM[" << k << "][" << k2 << "] = " << mStorage->M[k][k2] <<"        ";
-		   cout  << mStorage->M[k][k2] <<  "  ";
-	   cout << endl;
-
-  }
-#endif
 
 #ifdef TIMING_FLOPS
   HPM_Stop("DSYTRFFact");

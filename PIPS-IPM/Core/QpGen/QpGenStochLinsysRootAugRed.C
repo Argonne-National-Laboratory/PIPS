@@ -408,7 +408,7 @@ void QpGenStochLinsysRootAugRed::updateKKT(QpGenStochData* prob, Variables* vars
 //}
 
 #define CHUNK_SIZE 1024*1024*16 //doubles  = 128 MBytes (maximum)
-//todo DR: this function seems to be wrong, should be replaced (as in sLinsysRoot.C); is it ever called?
+//todo this function seems to be wrong, should be replaced (as in sLinsysRoot.C); is it ever called?
 void QpGenStochLinsysRootAugRed::submatrixAllReduce(DenseSymMatrix* A, 
 						    int row, int col, int drow, int dcol,
 						    MPI_Comm comm)

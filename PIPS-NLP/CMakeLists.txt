@@ -32,7 +32,7 @@ add_library(global_var
 #message("HAVE_PARDISO: ${HAVE_PARDISO}")
 #message("HAVE_MA57: ${HAVE_MA57}")
 
-if(HAVE_PARDISO OR HAVE_MA57)
+if(HAVE_MA57)
 
 #set(MYBLAS_LIB "/usr/lib/libblas.a")
 set(MYBLAS_LIB "/usr/local/lib/libopenblas.a")
@@ -135,7 +135,7 @@ else(HAVE_PETSC)
 
 endif(HAVE_PETSC)
 
-endif(HAVE_PARDISO OR HAVE_MA57)
+endif(HAVE_MA57)
 
 
 add_library(pipsnlp SHARED Drivers/pipsipmNlp_C_callbacks.cpp)

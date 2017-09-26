@@ -2,6 +2,12 @@
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 
+#ifdef PRINT_MAX
+#include "StochVector.h"
+#include "SimpleVector.h"
+#include <cmath>
+#endif
+
 #include "QpGenResiduals.h"
 #include "QpGenVars.h"
 #include "QpGenData.h"
@@ -11,6 +17,9 @@
 
 #include <iostream>
 #include <fstream>
+
+
+
 using namespace std;
 
 #include "mpi.h"
@@ -74,15 +83,13 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   gap = rQ->dotProductWith(*vars->x); 
 
   prob->ATransmult( 1.0, *rQ, -1.0, *vars->y );
-
   prob->CTransmult( 1.0, *rQ, -1.0, *vars->z );
-  //componentNorm = rQ->infnorm();
 
   vars->gamma->selectNonZeros(*ixlow);
   vars->phi->selectNonZeros( *ixupp );
-
   if( nxlow > 0 ) rQ->axpy( -1.0, *vars->gamma );
   if( nxupp > 0 ) rQ->axpy(  1.0, *vars->phi );
+
   componentNorm = rQ->infnorm();
 #ifdef TIMING
   double rQtwonorm=rQ->twonorm();
@@ -98,7 +105,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   
   // contribution -d^T y to duality gap
   gap -= prob->bA->dotProductWith(*vars->y);
-  
+
   componentNorm = rA->infnorm();
 #ifdef TIMING
   if(0==myRank) cout << " rA norm = " << componentNorm << endl;
@@ -120,12 +127,18 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   if( mclow > 0 ) {
     rz->axpy( -1.0, *vars->lambda );
 
+#ifdef TIMING
+    componentNorm =  (vars->lambda)->infnorm();
+    if(0==myRank) cout << "lambda norm " << componentNorm << std::endl;
+#endif
+
+
     rt->copyFrom( *vars->s );
     rt->axpy( -1.0, prob->slowerBound() );
     rt->selectNonZeros( *iclow );
     rt->axpy( -1.0, *vars->t );
     gap -= prob->bl->dotProductWith(*vars->lambda);
-	
+
     componentNorm = rt->infnorm();
 #ifdef TIMING
     if(0==myRank) cout << " rt norm = " << componentNorm << endl;
@@ -135,8 +148,62 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   }
   if( mcupp > 0 ) { 
     rz->axpy(  1.0, *vars->pi );
-    ru->copyFrom( *vars->s );
+#ifdef TIMING
+    componentNorm = (vars->pi)->infnorm();
+    if(0==myRank) cout  << "pi norm " << componentNorm << std::endl;
+#endif
 
+#ifdef PRINT_MAX
+        double max = 0.0;
+
+        int maxchild = -1;
+        int maxindex = -1;
+        {
+
+        OoqpVector& lp = *vars->pi;
+        StochVector& lam = reinterpret_cast<StochVector&>(lp);
+        std::cout << "childrensize " << lam.children.size() << std::endl;
+        for( int k = 0; k < lam.children.size(); k++ )
+        {
+           StochVector& lamc = *lam.children[k];
+
+           SimpleVector& lvec = reinterpret_cast<SimpleVector&>(*lamc.vec);
+           for( int i = 0; i < lvec.length(); i++ )
+           {
+           if( fabs(lvec[i]) > max )
+           {
+              maxindex = i;
+              maxchild = k;
+              max = (lvec)[i];
+           }
+           }
+        }
+        std::cout << "max at child " << maxchild << " ind " << maxindex << ": " << max << std::endl;
+
+        }
+
+
+        {
+
+        OoqpVector& lp = *vars->u;
+        StochVector& lam = reinterpret_cast<StochVector&>(lp);
+        for( int k = 0; k < lam.children.size(); k++ )
+        {
+           StochVector& lamc = *lam.children[k];
+
+           SimpleVector& lvec = reinterpret_cast<SimpleVector&>(*lamc.vec);
+           for( int i = 0; i < lvec.length(); i++ )
+           {
+              if( i == maxindex && k == maxchild )
+              {
+                 std::cout << "uval at child " << k  << " ind: " << i << ": " << lvec[i] << std::endl;
+              }
+           }
+        }
+        }
+#endif
+
+    ru->copyFrom( *vars->s );
     ru->axpy( -1.0, prob->supperBound() );
     ru->selectNonZeros( *icupp );
     ru->axpy( 1.0, *vars->u );

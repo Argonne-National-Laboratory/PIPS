@@ -21,6 +21,12 @@ ln -s ./${name} ./src
 chmod +x src/configure
 chmod +x src/configurehere
 
+echo "Applying patch for #define filename in asl.h, which is incompatible with mpi.h."
+cp ./patch/asl.h ./src
+cp ./patch/dtoa.c ./src
+
 cd src
-./configurehere
-make -j4
+#./configurehere CC='icc' CFLAGS='-O3 -xMIC-AVX512'
+#./configurehere CC='gcc' CFLAGS='-O3'
+./configurehere 
+make -j$1

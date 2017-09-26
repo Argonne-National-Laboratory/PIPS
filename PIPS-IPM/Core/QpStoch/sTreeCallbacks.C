@@ -287,7 +287,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
              N, MY,
              data->my, np, data->nnzA,
              data->my, data->n,  data->nnzB,
-	  	     data->myl, data->n,  data->nnzBl,
+	  	       data->myl, data->n,  data->nnzBl,
              commWrkrs);
       }
       else
@@ -327,8 +327,6 @@ StochGenMatrix* sTreeCallbacks::createC() const
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
     return new StochGenDummyMatrix(id());
-
-  printf("Create C\n");
 
   StochGenMatrix* C = NULL;
   if (!fakedata) {
@@ -463,8 +461,10 @@ StochVector* sTreeCallbacks::createc() const
   if (!fakedata) {
     // populate the node's data with data from user.
     //if(children.size()>0) RESCALE=0.001/1000;//children.size();
+#if 0
     if(0==rankMe)
       cout << "RESCALE set to " << RESCALE << endl;
+#endif
 
     data->fc(data->user_data, data->id, 
        vData, data->n);

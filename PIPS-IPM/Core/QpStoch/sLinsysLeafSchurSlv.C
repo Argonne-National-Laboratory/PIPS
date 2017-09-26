@@ -28,12 +28,13 @@ void sLinsysLeafSchurSlv::addTermToDenseSchurCompl( sData *prob,
 {
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& F = prob->getLocalF();
+  SparseGenMatrix& G = prob->getLocalG();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
-
   
   //if(!gLackOfAccuracy && !switchedToSafeSlv) {
     PardisoSchurSolver* scSolver=dynamic_cast<PardisoSchurSolver*>(solver);
-    scSolver->schur_solve(R,A,C, SC);
+    scSolver->schur_solve(R, A, C, F, G, SC);
     //} else {
     ////cout << "\tdefaulting to sLinsysLeaf::addTermToDenseSchurCompl ...";
     //sLinsysLeaf::addTermToDenseSchurCompl(prob, SC);

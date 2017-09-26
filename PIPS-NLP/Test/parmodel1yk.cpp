@@ -6,6 +6,20 @@
 #include <cassert>
 #include <math.h>
 
+#ifdef TIMING
+  double timeFromAMPL;
+  double probGenTime;
+  double PartSolver_GenTime;
+  double PartSolver_SolTime;
+  double PartSolver_FactTime;
+  int call_sol_Times;
+  int call_fact_Times;
+
+  int call_sol_Times_MA57;
+  int call_fact_Times_MA57;
+  double genTime_localAmpl;
+#endif
+
 // min x5
 // st.  x3*x4/x2 - x5 =0
 //      x1 -  x3 = 0
@@ -341,4 +355,3 @@ int main(int argc, char* argv[]) {
   MPI_Barrier(comm);
   MPI_Finalize();
 }
-

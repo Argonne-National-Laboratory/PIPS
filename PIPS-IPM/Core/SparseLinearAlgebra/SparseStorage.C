@@ -889,7 +889,11 @@ void SparseStorage::symmetrize( int& info)
       } // End not a diagonal element
     } // End loop over elements of column j
   } // End for all columns
-  if( info != 0 ) return;
+  if( info != 0 ) {
+     delete [] irowM;
+     return;
+  }
+
   nnz = ku;
 
   doubleLexSort( irowM, nnz, jcolM, M );
@@ -1143,11 +1147,11 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
   /////////////////////////////////////////////////////
   int nnz = krowM[m];
 
-  //cummulative sum to find the number of elements in each row of At, ie column of A.
+  //cumulative sum to find the number of elements in each row of At, ie column of A.
   int* w=new int[n];
   for(int i=0; i<n;   i++) w[i]=0;
   for(int i=0; i<nnz; i++) w[ jcolM[i] ]++;
-  
+
   krowMt[0]=0; //double sum=0.0;
   for(int i=1; i<=n; i++) {
     krowMt[i] = krowMt[i-1]+w[i-1];
