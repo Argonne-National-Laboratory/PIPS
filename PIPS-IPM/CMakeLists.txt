@@ -78,9 +78,7 @@ if (HAVE_PARDISO)
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
       ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
-
-      
-   endif( 0 )   
+  endif( 0 )   
    
     # add_executable(pipsipmFromRaw_schur32 Drivers/pipsipmFromRaw_schur32.cpp)
     # target_link_libraries(pipsipmFromRaw_schur32
