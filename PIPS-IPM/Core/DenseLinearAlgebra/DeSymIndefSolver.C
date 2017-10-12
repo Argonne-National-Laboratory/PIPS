@@ -85,7 +85,6 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
 //#include "mpi.h"
 void DeSymIndefSolver::matrixChanged()
 {
-
   char fortranUplo = 'U';
   int info;
 

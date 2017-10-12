@@ -20,7 +20,7 @@ extern "C" typedef int (*FVEC)(void* user_data, int id, double* vec, int len);
 
 
 /** Problem parameters and data */
-struct ProbData
+class ProbData
 {
 public: //data
   int nScenarios;
@@ -202,7 +202,7 @@ int vecIneqRhsActive(void* user_data, int id, double* vec, int len)
 
 int vecIneqRhsActiveLink(void* user_data, int id, double* vec, int len)
 {
-    vec[0] = 1.0;
+   vec[0] = 1.0;
 
    return 0;
 }
@@ -310,21 +310,18 @@ int matIneqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matIneqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
+    M[0] = 2.0;
 
-      M[0] = 2.0;
+    krowM[0] = 0;
+    krowM[1] = 1;
 
-      krowM[0] = 0;
-      krowM[1] = 1;
-
-      jcolM[0] = 0;
+    jcolM[0] = 0;
 
     return 0;
 }
 
 int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-
-
     if( id == 0 )
     {
       krowM[0] = 0;
@@ -344,9 +341,7 @@ int matEqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
     }
     else
     {
-      M[0] = 1.0;
       M[0] = 0.0;
-
       M[1] = 3.0;
 
       krowM[0] = 0;
@@ -382,50 +377,41 @@ int matIneqStage2(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 int matEqLink(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-
-
-if( id == 2 )
-{
+   if( id == 2 )
+   {
      M[0] = 1.0;
      M[1] = 1.0;
      M[2] = 1.0;
      M[3] = 1.0;
 
+     krowM[0] = 0;
+     krowM[1] = 2;
+     krowM[2] = 4;
 
-             krowM[0] = 0;
-             krowM[1] = 2;
-             krowM[2] = 4;
-
-             jcolM[0] = 1;
-             jcolM[1] = 3;
-
-             jcolM[2] = 2;
-
-             jcolM[3] = 3;
-}
-else
-{
-
+     jcolM[0] = 1;
+     jcolM[1] = 3;
+     jcolM[2] = 2;
+     jcolM[3] = 3;
+   }
+   else
+   {
       M[0] = 1.0;
       M[1] = 1.0;
-
       M[2] = 1.0;
 
-          krowM[0] = 0;
-          krowM[1] = 2;
-          krowM[2] = 3;
+      krowM[0] = 0;
+      krowM[1] = 2;
+      krowM[2] = 3;
 
-          jcolM[0] = 0;
-          jcolM[1] = 1;
+      jcolM[0] = 0;
+      jcolM[1] = 1;
+      jcolM[2] = 0;
+   }
 
-          jcolM[2] = 0;
+   return 0;
 }
 
-
-    return 0;
-}
-
-}
+} /* extern C */
 
 
 int main(int argc, char ** argv) {
@@ -440,22 +426,17 @@ int main(int argc, char ** argv) {
   FNNZ mzCall = &mzSize;
   FNNZ mylCall = &mylSize;
   FNNZ mzlCall = &mzlSize;
-
-
-
-
   FNNZ fnnzQ = &nnzAllZero;
   FNNZ fnnzA = &nnzMatEqStage1;
   FNNZ fnnzB = &nnzMatEqStage2;
 
-  FNNZ fnnzC = &nnzMatIneqStage1;//FNNZ fnnzC = &nnzAllZero;//&nnzMatIneqStage1;
-  FNNZ fnnzD = &nnzMatIneqStage2;//FNNZ fnnzD = &nnzAllZero;//&nnzMatIneqStage2;
+  FNNZ fnnzC = &nnzMatIneqStage1;//FNNZ fnnzC = &nnzAllZero;
+  FNNZ fnnzD = &nnzMatIneqStage2;//FNNZ fnnzD = &nnzAllZero;
 
 #if LINKING_CONS
   FNNZ fnnzBl = &nnzMatEqLink;
   FVEC fbl = &vecLinkRhs;
   FMAT fBl = &matEqLink;
-
   FMAT fDl = &matIneqLink;
   FNNZ fnnzDl = &nnzMatIneqLink;
 
@@ -491,12 +472,11 @@ int main(int argc, char ** argv) {
   FVEC fixupp = &vecAllZero;
 
 
-
   FMAT fQ = &matAllZero;
   FMAT fA = &matEqStage1;
   FMAT fB = &matEqStage2;
-  FMAT fC = &matIneqStage1;//FMAT fC = &matAllZero;//
-  FMAT fD = &matIneqStage2;//FMAT fD = &matAllZero;//
+  FMAT fC = &matIneqStage1;//FMAT fC = &matAllZero;
+  FMAT fD = &matIneqStage2;//FMAT fD = &matAllZero;
 
   ProbData probData(nScenarios);
 
@@ -507,8 +487,6 @@ int main(int argc, char ** argv) {
 
 
 #if LINKING_CONS
-
-
   //build the problem tree
   StochInputTree::StochInputNode dataLinkCons(&probData, 0,
                   nCall, myCall, mylCall, mzCall, mzlCall,
@@ -551,8 +529,6 @@ int main(int argc, char ** argv) {
 
 
   for( int id = 1; id <= nScenarios; id++ ) {
-
-
 #if LINKING_CONS
      StochInputTree::StochInputNode dataLinkConsChild(&probData, id,
                nCall, myCall, mylCall, mzCall, mzlCall,
@@ -596,12 +572,15 @@ int main(int argc, char ** argv) {
   if( rank == 0 )
      cout << "Using a total of " << size << " MPI processes." << endl;
 
+  /* use BiCGStab both for inner and outer solve */
   gOuterSolve = 2;
   gInnerSCsolve = 2;
 
-  //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+#ifdef WITH_PARDISO
   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
-
+#else
+  PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+#endif
 
   if( rank == 0 )
      cout << "PIPSIpmInterface created" << endl;
@@ -612,12 +591,8 @@ int main(int argc, char ** argv) {
   pipsIpm.go();
 
   if( rank == 0 )
-  {
-   //  cout << "solving finished; obj:" << pipsIpm.getObjective() << endl;
-  }
+     cout << "solving finished ... objective value: " << pipsIpm.getObjective() << endl;
 
-
-  // free memory
   delete root;
 
   MPI_Finalize();

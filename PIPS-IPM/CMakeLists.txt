@@ -1,4 +1,4 @@
-add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
+#add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
   Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver
@@ -78,9 +78,7 @@ if (HAVE_PARDISO)
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
       ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
-
-      
-   endif( 0 )   
+  endif( 0 )   
    
     # add_executable(pipsipmFromRaw_schur32 Drivers/pipsipmFromRaw_schur32.cpp)
     # target_link_libraries(pipsipmFromRaw_schur32

@@ -5,15 +5,15 @@
 # pipsipmMultiTestsScript.sh <pipsipmRawDriver> <rootDirRawInput>
 #
 #
-# The script checks the output of the PIPS-S driver for correctness when applied to a 
+# The script checks the output of the PIPS-IPM driver for correctness when applied to a 
 # a couple of small test problems (in 'raw input' format)
 
 check_output()
 {
-  pipsscmd="$1 $2 8"
+  pipsscmd="$1 $2"
   output=$($pipsscmd 2>&1 | grep "$3")
   
-  if [ "$output" == "" ]
+  if [ "$output" = "" ]
   then
     return 0 #no match, return false
   else
