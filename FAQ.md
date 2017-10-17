@@ -21,6 +21,10 @@ The algorithms implemented in PIPS are designed to exploit the structure and per
 
 A. PIPS only supports 2-stage stochastic problems, however, be aware that multistage problems can be expressed as two-stage in most the cases. 
 
+**Q: PIPS with MA27 or MA57 is slow. Is there any way to speed up the solution?**
+
+A. PIPS is much faster when used with PARDISO-SC. PARDISO-SC is part of the PARDISO linear solver available [here](http://www.pardiso-project.org/) and was explicitly developed for PIPS to take full advantage of the sparsity and allow intra-node OpenMP parallelization. PARDISO-SC implements an incomplete augmented factorization approach for systems with multiple sparse right-hand sides (details [here](http://dx.doi.org/10.1137/130908737) and is usually one order of magnitude faster than using MA27 or MA57, which do not exploit this feature. Also, in a couple of instances, PIPS with PARDISO-SC proved to be more numerically stable than PIPS with other linear solvers. PARDISO-SC is only available with PIPS-IPM at this point. 
+
 StructJuMP
 ====
 **Q: What is StructJuMP?**
