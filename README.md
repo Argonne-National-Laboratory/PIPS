@@ -45,13 +45,15 @@ Same applies to PIPS-IPM and PIPS-NLP (option names BUILD_PIPS_IPM and BUILD_PIP
 respectively).
 
 ### Note regarding the use of Pardiso with PIPS-IPM
-Pardiso solver has a special feature for PIPS to compute certain Schur complements efficiently. To use PIPS with Pardiso you will need to obtain the PARDISO library and a license [here](http://www.pardiso-project.org/). The build system of PIPS will build PARDISO-related binaries automatically if the PARDISO library is placed under ThirdPartyLibs/PARDISO/src/libpardiso.so
+Pardiso solver has a special feature for PIPS to compute certain Schur complements much faster then when used with other linear solvers. To use PIPS with Pardiso you will need to obtain the PARDISO library and a license [here](http://www.pardiso-project.org/). The build system of PIPS will build PARDISO-related binaries automatically if the PARDISO library is placed under ThirdPartyLibs/PARDISO/src/libpardiso.so
 
 ### Profiling and timing for HPC 
 PIPS-IPM + Pardiso offers best-in-class HPC performance. PIPS has built-in parallel performance profiling (mostly in the form of detailed timing and extended convergence reporting). To enable this feature, build PIPS with the -DWITH_TIMING option, for example, a typical build command would be
 ```{r, engine='bash', withtiming}
 cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain.cmake -DWITH_TIMING=ON .. 
 ```
+
+### FAQ available [here](https://github.com/Argonne-National-Laboratory/PIPS/blob/master/FAQ.md)
 
 # CONTRIBUTIONS
 
