@@ -3,6 +3,8 @@
 #include "sFactoryAug.h"
 #include "sFactoryAugSchurLeaf.h"
 #include "MehrotraStochSolver.h"
+#include "GondzioStochSolver.h"
+
 
 #include "mpi.h"
 
@@ -577,7 +579,8 @@ int main(int argc, char ** argv) {
   gInnerSCsolve = 2;
 
 #ifdef WITH_PARDISO
-  PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
+  PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root);
+  //PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
 #else
   PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
 #endif

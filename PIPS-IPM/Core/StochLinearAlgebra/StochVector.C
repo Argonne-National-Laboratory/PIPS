@@ -651,7 +651,13 @@ void StochVector::addConstant( double c )
 
 void StochVector::gondzioProjection( double rmin, double rmax )
 {
-  assert( "Have not been yet implemented" && 0 );
+  vec->gondzioProjection( rmin, rmax );
+
+
+  if( vecl ) vecl->gondzioProjection( rmin, rmax );
+
+  for(size_t it=0; it<children.size(); it++)
+    children[it]->gondzioProjection( rmin, rmax );
 }
 
 double StochVector::dotProductWith( OoqpVector& v_ )

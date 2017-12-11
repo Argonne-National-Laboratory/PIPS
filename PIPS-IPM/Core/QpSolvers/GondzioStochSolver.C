@@ -15,6 +15,9 @@
 #include "Data.h"
 #include "ProblemFormulation.h"
 
+#include "OoqpVector.h"
+#include "DoubleMatrix.h"
+
 #include "StochTree.h"
 #include "QpGenStoch.h"
 #include "StochResourcesMonitor.h"
@@ -30,8 +33,13 @@ using namespace std;
 
 // gmu is needed by MA57!
 double gmu;
+
 // double grnorm;
 extern int gOoqpPrintLevel;
+
+double g_iterNumber;
+
+
 GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
   : GondzioSolver(opt, prob)
 {
@@ -51,6 +59,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    int status_code;
    double alpha = 1, sigma = 1;
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
+   g_iterNumber = 0.0;
 
    gmu = 1000;
    //  grnorm = 1000;
@@ -106,6 +115,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          this->doMonitor(prob, iterate, resid, alpha, sigma, iter, mu,
                status_code, 2);
       }
+
+      g_iterNumber+=0.5;
 
       // *** Corrector step ***
 
@@ -216,60 +227,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 }
 
 
-void GondzioStochSolver::defaultMonitor( Data * /* data */, Variables * /* vars */,
-                           Residuals * resids,
-                           double alpha, double sigma,
-                           int i, double mu,
-                           int status_code,
-                           int level )
-{
-  switch( level ) {
-  case 0 : case 1: {
-    cout << endl << "Duality Gap: " << resids->dualityGap() << endl;
-    if( i > 1 ) {
-      cout << " Number of Corrections = " <<  NumberGondzioCorrections
-      << " alpha = " << alpha << endl;
-    }
-    cout << " *** Iteration " << i << " *** " << endl;
-    cout << " mu = " << mu << " relative residual norm = "
-    << resids->residualNorm() / dnorm << endl;
-
-    if( level == 1) {
-      // Termination has been detected by the status check; print
-      // appropriate message
-      if(status_code == SUCCESSFUL_TERMINATION) {
-   cout << endl
-        << " *** SUCCESSFUL TERMINATION ***"
-        << endl;
-      } else if (status_code == MAX_ITS_EXCEEDED) {
-   cout << endl
-        << " *** MAXIMUM ITERATIONS REACHED *** " << endl;
-      } else if (status_code == INFEASIBLE) {
-   cout << endl
-        << " *** TERMINATION: PROBABLY INFEASIBLE *** "
-        << endl;
-      } else if (status_code == UNKNOWN) {
-   cout << endl
-        << " *** TERMINATION: STATUS UNKNOWN *** " << endl;
-      }
-    }
-  } break;
-  case 2:
-    cout << " *** sigma = " << sigma << endl;
-    break;
-  }
-}
-
-
 GondzioStochSolver::~GondzioStochSolver()
 {
-  delete corrector_resid;
-  delete corrector_step;
-  delete step;
-  delete sys;
-
-  delete [] mu_history;
-  delete [] rnorm_history;
-  delete [] phi_history;
-  delete [] phi_min_history;
 }

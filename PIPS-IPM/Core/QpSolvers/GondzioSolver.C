@@ -20,7 +20,7 @@ using namespace std;
 #include <cmath>
 
 // gmu is needed by MA57!
-double gmu;
+static double gmu;
 // double grnorm;
 extern int gOoqpPrintLevel;
 
@@ -34,6 +34,8 @@ GondzioSolver::GondzioSolver( ProblemFormulation * of, Data * prob )
   maxit = 100;
   printlevel = 0; // has no meaning right now 
   tsig = 3.0;     // the usual value for the centering exponent (tau)
+
+  NumberGondzioCorrections = 0;
 
   maximum_correctors = 3; // maximum number of Gondzio correctors
 

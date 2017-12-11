@@ -72,7 +72,7 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
     
     // evaluate residuals and update algorithm status:
     resid->calcresids(prob, iterate);
-    
+
     // termination test:
     status_code = this->doStatus( prob, iterate, resid, iter, mu, 0 );
     if( status_code != NOT_FINISHED ) break;
