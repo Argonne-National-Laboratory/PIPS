@@ -36,7 +36,7 @@ extern "C" typedef int (*FVEC)(void* user_data, int id, double* vec, int len);
 
 extern "C" {
 
-static int rank=0;
+static int gmsRank=0;
 static int size=1;
 static bool allGDX=false;
 static char fileName[256];
@@ -49,7 +49,7 @@ FILE *fLog;
 if (!blocks[blk])                                                                 \
 {                                                                                 \
    int rc;                                                                        \
-   fprintf(fLog,"Block %d read on rank %d\n", blk, rank);                         \
+   fprintf(fLog,"Block %d read on gmsRank %d\n", blk, gmsRank);                         \
    blocks[blk] = (GMSPIPSBlockData_t*) malloc(sizeof(GMSPIPSBlockData_t));        \
    if ( !allGDX )                                                                 \
    {                                                                              \
@@ -346,25 +346,25 @@ int main(int argc, char ** argv)
    }
 
 #if defined(GMS_MPI)   
-   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   MPI_Comm_rank(MPI_COMM_WORLD, &gmsRank);
    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
    char fbuf[256];
 #if defined (GMS_LOG)
-   sprintf(fbuf,"log%d.txt", rank);
+   sprintf(fbuf,"log%d.txt", gmsRank);
 #else
    sprintf(fbuf,"/dev/null");
 #endif
    fLog = fopen(fbuf, "w+");
-   fprintf(fLog, "PIPS Log for rank %d\n", rank);
+   fprintf(fLog, "PIPS Log for gmsRank %d\n", gmsRank);
 #endif  
-   if( rank == 0 )
+   if( gmsRank == 0 )
 #if defined(LINKCONSTR)   
       cout << "Using version with linking constraint." << endl;
 #else
       cout << "Using version without linking constraint." << endl;
 #endif      
-   if( rank == 0 )
+   if( gmsRank == 0 )
       cout << "Using a total of " << size << " MPI processes." << endl;
 
 #if defined(GMS_PIPS)
@@ -380,15 +380,15 @@ int main(int argc, char ** argv)
    PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
    //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
 
-   if( rank == 0 )
+   if( gmsRank == 0 )
       cout << "PIPSIpmInterface created" << endl;
 
-   if( rank == 0 )
+   if( gmsRank == 0 )
       cout << "solving..." << endl;
    
    pipsIpm.go();
 
-   if( rank == 0 )
+   if( gmsRank == 0 )
       cout << "solving finished." << endl;
 
    // free memory
