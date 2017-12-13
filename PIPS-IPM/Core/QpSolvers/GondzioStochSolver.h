@@ -23,13 +23,21 @@ class ProblemFormulation;
  */
 class GondzioStochSolver : public GondzioSolver
 {
+protected:
+  double corrector_weight;
+  const unsigned int n_linesearch_points;
+  Variables* temp_step;
+
 public:
 
-  GondzioStochSolver( ProblemFormulation * of, Data * prob );
+  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10 );
 
   ~GondzioStochSolver();
 
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
+
+  // returns Gondzio weight for corrector step
+  virtual double correctorWeight(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha);
 
 };
 

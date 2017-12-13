@@ -156,7 +156,7 @@ target_include_directories(gmspips PUBLIC
 target_link_libraries(gmspips
     dl
     stochInput ${COIN_LIBS}
-    ooqpstoch ooqpstochla ooqpmehrotrastoch
+    ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgondziostoch
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}  ${PARDISO_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
 

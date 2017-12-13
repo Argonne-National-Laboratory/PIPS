@@ -25,11 +25,18 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 using namespace std;
 
 #include <cstdio>
 #include <cassert>
 #include <cmath>
+
+#include "StochVector.h"
+#include "mpi.h"
+#include "QpGenVars.h"
+#include "QpGenResiduals.h"
+
 
 // gmu is needed by MA57!
 double gmu;
@@ -40,15 +47,56 @@ extern int gOoqpPrintLevel;
 double g_iterNumber;
 
 
-GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob )
-  : GondzioSolver(opt, prob)
+GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points )
+  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points) // todo don't call parent constructor
 {
+   assert(n_linesearch_points > 0);
 
+   // the two StepFactor constants set targets for increase in step
+   // length for each corrector
+   StepFactor0 = 0.08; // todo change
+   StepFactor1 = 1.08; // todo change
+   corrector_weight = 0.0;
+
+   temp_step = factory->makeVariables(prob);
 }
-#include "StochVector.h"
-#include "mpi.h"
-#include "QpGenVars.h"
-#include "QpGenResiduals.h"
+
+double GondzioStochSolver::correctorWeight(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha)
+{
+   assert(predictor_alpha > 0.0 && predictor_alpha <= 1.0);
+
+   double alpha_best = -1.0;
+   double weight_best = 1.0;
+   const double weight_min = predictor_alpha * predictor_alpha;
+   const double weight_intervallength = 1.0 - weight_min;
+
+   // main loop
+   for( unsigned int n = 0; n <= n_linesearch_points; n++ )
+   {
+      double weight_curr = weight_min + (weight_intervallength / (n_linesearch_points)) * n;
+
+      weight_curr = min(weight_curr, 1.0);
+
+      assert(weight_curr > 0.0 && weight_curr <= 1.0);
+
+      temp_step->copy(predictor_step);
+      temp_step->saxpy(corrector_step, weight_curr);
+
+      const double alpha_curr = iterate->stepbound(temp_step);
+
+      //  std::cout << "curr alpha: " << alpha_curr << std::endl;
+
+      if( alpha_curr > alpha_best )
+      {
+         alpha_best = alpha_curr;
+         weight_best = weight_curr;
+      }
+   }
+
+   assert(alpha_best > 0.0 && alpha_best <= 1.0);
+
+   return weight_best;
+}
 
 int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 {
@@ -120,15 +168,25 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       // *** Corrector step ***
 
+      corrector_resid->clear_r1r2();
+
       // form right hand side of linear system:
-      resid->add_r3_xz_alpha(step, -sigma * mu);
+      corrector_resid->set_r3_xz_alpha(step, -sigma * mu);
 
-      sys->solve(prob, iterate, resid, step);
-      step->negate();
+      sys->solve(prob, iterate, corrector_resid, corrector_step);
+      corrector_step->negate();
 
-      // calculate distance to boundary along the Mehrotra
-      // predictor-corrector step:
+      // line search on corrector step todo corrector_weight is member!
+      corrector_weight = correctorWeight(iterate, step, corrector_step, alpha);
+     // corrector_weight = 1.0;
+
+      // calculate weighted predictor-corrector step
+      step->saxpy(corrector_step, corrector_weight);
+
       alpha = iterate->stepbound(step);
+
+      std::cout << "alpha " << alpha << std::endl;
+
 
       // prepare for Gondzio corrector loop: zero out the
       // corrector_resid structure:
@@ -165,6 +223,9 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step);
+
+
+         // todo do line search on corrector_step
 
          // add the current step to corrector_step, and calculate the
          // step to boundary along the resulting direction

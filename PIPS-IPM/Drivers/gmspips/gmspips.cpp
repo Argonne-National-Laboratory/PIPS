@@ -2,6 +2,7 @@
 #include "StochInputTree.h"
 #include "PIPSIpmInterface.h"
 #include "MehrotraStochSolver.h"
+#include "GondzioStochSolver.h"
 #include "sFactoryAugSchurLeaf.h"
 #endif
 #if defined(GMS_MPI)
@@ -377,7 +378,9 @@ int main(int argc, char ** argv)
    gInnerSCsolve=0;
 #endif
 
-   PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
+   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root);
+
+  // PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
    //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
 
    if( rank == 0 )
