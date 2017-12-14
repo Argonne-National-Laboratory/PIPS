@@ -54,20 +54,20 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
 
    // the two StepFactor constants set targets for increase in step
    // length for each corrector
-   StepFactor0 = 0.08; // todo change
-   StepFactor1 = 1.08; // todo change
-   corrector_weight = 0.0;
+   StepFactor0 = 0.3; // changed from 0.08 to 0.3
+   StepFactor1 = 1.5; // changed from 1.08 to 1.5
 
    temp_step = factory->makeVariables(prob);
 }
 
-double GondzioStochSolver::correctorWeight(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha)
+void GondzioStochSolver::calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step,
+      double alpha_predictor, double& alpha_candidate, double& weight_candidate)
 {
-   assert(predictor_alpha > 0.0 && predictor_alpha <= 1.0);
+   assert(alpha_predictor > 0.0 && alpha_predictor <= 1.0);
 
    double alpha_best = -1.0;
-   double weight_best = 1.0;
-   const double weight_min = predictor_alpha * predictor_alpha;
+   double weight_best = -1.0;
+   const double weight_min = alpha_predictor * alpha_predictor;
    const double weight_intervallength = 1.0 - weight_min;
 
    // main loop
@@ -83,6 +83,7 @@ double GondzioStochSolver::correctorWeight(Variables *iterate, Variables* predic
       temp_step->saxpy(corrector_step, weight_curr);
 
       const double alpha_curr = iterate->stepbound(temp_step);
+      assert(alpha_curr > 0.0 && alpha_curr <= 1.0);
 
       //  std::cout << "curr alpha: " << alpha_curr << std::endl;
 
@@ -93,16 +94,16 @@ double GondzioStochSolver::correctorWeight(Variables *iterate, Variables* predic
       }
    }
 
-   assert(alpha_best > 0.0 && alpha_best <= 1.0);
+   assert(alpha_best >= 0.0 && weight_best >= 0.0);
 
-   return weight_best;
+   weight_candidate = weight_best;
+   alpha_candidate = alpha_best;
 }
 
 int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 {
    int done;
    double mu, muaff;
-   int StopCorrections;
    double alpha_target, alpha_enhanced, rmin, rmax;
    int status_code;
    double alpha = 1, sigma = 1;
@@ -176,17 +177,12 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       sys->solve(prob, iterate, corrector_resid, corrector_step);
       corrector_step->negate();
 
-      // line search on corrector step todo corrector_weight is member!
-      corrector_weight = correctorWeight(iterate, step, corrector_step, alpha);
-     // corrector_weight = 1.0;
-
       // calculate weighted predictor-corrector step
-      step->saxpy(corrector_step, corrector_weight);
-
-      alpha = iterate->stepbound(step);
+      double weight_candidate = 1.0;
+      calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha, alpha, weight_candidate);
+      step->saxpy(corrector_step, weight_candidate);
 
       std::cout << "alpha " << alpha << std::endl;
-
 
       // prepare for Gondzio corrector loop: zero out the
       // corrector_resid structure:
@@ -196,12 +192,10 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       rmin = sigma * mu * beta_min;
       rmax = sigma * mu * beta_max;
 
-      StopCorrections = 0;
       NumberGondzioCorrections = 0;
 
       // enter the Gondzio correction loop:
-      while( NumberGondzioCorrections < maximum_correctors && alpha < 1.0
-            && !StopCorrections )
+      while( NumberGondzioCorrections < maximum_correctors && alpha < 1.0 )
       {
 
          // copy current variables into corrector_step
@@ -214,6 +208,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
          // add a step of this length to corrector_step
          corrector_step->saxpy(step, alpha_target);
+         // corrector_step is now x_k + alpha_target * delta_p (a trial point)
 
          // place XZ into the r3 component of corrector_resids
          corrector_resid->set_r3_xz_alpha(corrector_step, 0.0);
@@ -222,39 +217,39 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          corrector_resid->project_r3(rmin, rmax);
 
          // solve for corrector direction
-         sys->solve(prob, iterate, corrector_resid, corrector_step);
+         sys->solve(prob, iterate, corrector_resid, corrector_step);	// corrector_step is now delta_m
 
+         // calculate weighted predictor-corrector step
+         calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha_target, alpha_enhanced, weight_candidate);
 
-         // todo do line search on corrector_step
-
-         // add the current step to corrector_step, and calculate the
-         // step to boundary along the resulting direction
-         corrector_step->saxpy(step, 1.0);
-         alpha_enhanced = iterate->stepbound(corrector_step);
+         // todo weight * corrector_step; corrector_step += step
+         temp_step->copy(step);
+         temp_step->saxpy(corrector_step, weight_candidate);
 
          // if the enhanced step length is actually 1, make it official
          // and stop correcting
          if( alpha_enhanced == 1.0 )
          {
-            step->copy(corrector_step);
+            step->copy(temp_step);
             alpha = alpha_enhanced;
             NumberGondzioCorrections++;
-            StopCorrections = 1;
+
+            // exit Gondzio correction loop
+            break;
          }
          else if( alpha_enhanced >= (1.0 + AcceptTol) * alpha )
          {
             // if enhanced step length is significantly better than the
             // current alpha, make the enhanced step official, but maybe
             // keep correcting
-            step->copy(corrector_step);
+            step->copy(temp_step);
             alpha = alpha_enhanced;
             NumberGondzioCorrections++;
-            StopCorrections = 0;
          }
          else
          {
-            // otherwise quit the correction loop
-            StopCorrections = 1;
+            // exit Gondzio correction loop
+            break;
          }
       }
 

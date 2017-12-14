@@ -24,7 +24,6 @@ class ProblemFormulation;
 class GondzioStochSolver : public GondzioSolver
 {
 protected:
-  double corrector_weight;
   const unsigned int n_linesearch_points;
   Variables* temp_step;
 
@@ -37,7 +36,8 @@ public:
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
 
   // returns Gondzio weight for corrector step
-  virtual double correctorWeight(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha);
+  virtual void calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha,
+        double& alpha_candidate, double& weight_candidate);
 
 };
 

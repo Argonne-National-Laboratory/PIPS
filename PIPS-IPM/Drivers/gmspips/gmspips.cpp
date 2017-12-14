@@ -186,7 +186,7 @@ int fmatQ(void* user_data, int id, int* krowM, int* jcolM, double* M)
    return 0;
 }
 
-};
+}
 
 int main(int argc, char ** argv) 
 {  
