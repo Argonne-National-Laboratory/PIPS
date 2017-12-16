@@ -49,5 +49,5 @@ echo "$nblocks"
 
 gams ../simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\(60/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=../subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
 ../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks allblocksPips.gdx > /dev/null
-mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR > pips.out
+mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR  2>&1 | tee pips.out
 
