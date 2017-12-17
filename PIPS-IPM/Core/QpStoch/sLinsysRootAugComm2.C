@@ -393,7 +393,7 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
   int flag; double imin;
   double n2b;                  //norm of b 
   double normr, normrmin;      //norm of the residual and norm of residual at min-resid iterate
-  double normr_act;
+  double normr_act;       // todo fixme this value may be used uninitialized
   double tolb;                 //relative tolerance
   double rho, omega, alpha;
   int stag, maxmsteps, maxstagsteps, moresteps;
