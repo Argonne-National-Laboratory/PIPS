@@ -252,8 +252,9 @@ template<typename S, typename F>
 void OOQPRecourseInterface<S,F>::go() 
 {
   //s->monitorSelf();
+#ifdef TIMING
   int result = s->solve(prob.get(),vars.get(),resid.get());
-#ifdef TIMING  
+
   if ( 0 == result ) {
     double objective = prob->objectiveValue(vars.get());
     
@@ -264,6 +265,8 @@ void OOQPRecourseInterface<S,F>::go()
     cout << " Iterates: " << s->iter
    	 <<",    Optimal Solution:  " << objective << endl;
   }
+#else
+  s->solve(prob.get(),vars.get(),resid.get());
 #endif
 }
 

@@ -74,7 +74,7 @@ void PIPSSolve(MPI_Comm comm, void* user_data, int numScens,
   for (int i=0;i<nx0;i++){ first_primal[i] = pipsIpm.getFirstStagePrimalColSolution()[i]; }
   for (int i=0;i<my+mz0;i++){ first_dual[i] = pipsIpm.getFirstStageDualRowSolution()[i]; }
   int cnt1 = 0;
-  int cnt2 = 0;
+  // int cnt2 = 0;
   for (int i=0;i<numScens;i++){
     for (int j=0;j<nx;j++){
         second_primal[cnt1++] = pipsIpm.getSecondStagePrimalColSolution(i)[j];

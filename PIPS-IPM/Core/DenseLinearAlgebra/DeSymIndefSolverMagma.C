@@ -166,10 +166,10 @@ void DeSymIndefSolverMagma::solve ( GenMatrix& rhs_in )
   char trans = 'U';
   int info;
   //RANS   (input) CHARACTER*1
-  //*          Specifies the form of the system of equations:
-  //*          = 'N':  A * X = B  (No transpose)
-  //*          = 'T':  A'* X = B  (Transpose)
-  //*          = 'C':  A'* X = B  (Conjugate transpose = Transpose)
+  //          Specifies the form of the system of equations:
+  //          = 'N':  A * X = B  (No transpose)
+  //          = 'T':  A'* X = B  (Transpose)
+  //          = 'C':  A'* X = B  (Conjugate transpose = Transpose)
 
   int nrows,ncols; rhs.getSize(ncols,nrows);
 

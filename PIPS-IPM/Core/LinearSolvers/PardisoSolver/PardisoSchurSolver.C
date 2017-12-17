@@ -32,8 +32,8 @@ extern double g_iterNumber;
 extern int gOuterBiCGIter;
 #ifdef STOCH_TESTING
 extern double g_scenNum;
-#endif
 static int rhsCount=0;
+#endif
 using namespace std;
 
 extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
@@ -520,7 +520,6 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
 }
 
-static int totalSlv=0;
 void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 { 
   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);

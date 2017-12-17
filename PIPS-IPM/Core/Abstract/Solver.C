@@ -40,9 +40,9 @@ int gInnerSCsolve=0;
 //number of iterative refinements in the 2nd stage sparse systems
 int gInnerStg2solve=3;
 
-Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0), phi(0.0), maxit(0),
-		   mutol(1.e-6), artol(1e-4), sys(0), mu_history(0), rnorm_history(0),
-		   phi_history(0), phi_min_history(0), iter(0)
+Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
+		   mutol(1.e-6), artol(1e-4), phi(0.0), maxit(0), mu_history(0), rnorm_history(0),
+		   phi_history(0), phi_min_history(0), iter(0), sys(0)
 {
   // define parameters associated with the step length heuristic
 #ifdef BAD_NUMERICS
