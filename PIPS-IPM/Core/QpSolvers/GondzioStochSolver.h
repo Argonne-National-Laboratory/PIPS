@@ -29,9 +29,9 @@ protected:
 
 public:
 
-  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10 );
+  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10 ); // todo increase n_linesearch_points
 
-  ~GondzioStochSolver();
+  virtual ~GondzioStochSolver();
 
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
 

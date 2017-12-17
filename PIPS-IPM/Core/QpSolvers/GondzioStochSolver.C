@@ -37,7 +37,6 @@ using namespace std;
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
 
-
 // gmu is needed by MA57!
 double gmu;
 
@@ -48,14 +47,14 @@ double g_iterNumber;
 
 
 GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points )
-  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points) // todo don't call parent constructor
+  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points)
 {
    assert(n_linesearch_points > 0);
 
    // the two StepFactor constants set targets for increase in step
    // length for each corrector
-   StepFactor0 = 0.3; // changed from 0.08 to 0.3
-   StepFactor1 = 1.5; // changed from 1.08 to 1.5
+   StepFactor0 = 0.3;
+   StepFactor1 = 1.5;
 
    temp_step = factory->makeVariables(prob);
 }
@@ -84,8 +83,6 @@ void GondzioStochSolver::calculateAlphaWeightCandidate(Variables *iterate, Varia
 
       const double alpha_curr = iterate->stepbound(temp_step);
       assert(alpha_curr > 0.0 && alpha_curr <= 1.0);
-
-      //  std::cout << "curr alpha: " << alpha_curr << std::endl;
 
       if( alpha_curr > alpha_best )
       {
@@ -178,11 +175,11 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       corrector_step->negate();
 
       // calculate weighted predictor-corrector step
-      double weight_candidate = 1.0;
+      double weight_candidate = -1.0;
       calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha, alpha, weight_candidate);
-      step->saxpy(corrector_step, weight_candidate);
+      assert(weight_candidate >= 0.0 && weight_candidate <= 1.0);
 
-      std::cout << "alpha " << alpha << std::endl;
+      step->saxpy(corrector_step, weight_candidate);
 
       // prepare for Gondzio corrector loop: zero out the
       // corrector_resid structure:
@@ -285,4 +282,5 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
 GondzioStochSolver::~GondzioStochSolver()
 {
+   delete temp_step;
 }
