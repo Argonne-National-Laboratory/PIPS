@@ -4,27 +4,30 @@ BEGIN {
    runs = 0
    eps = 0.5
    fails = 0
-   file = ARGV[1]
+   split(ARGV[1], array, ".")
+   testfile = array[1]
 } 
 {
     if( $1 == "EOF" )
     {
        print "#runs: "i
-       exit 1
+       exit 0
     }
     
     if( $1 != "#" )
     {
+       instancename = $1
+       instancedir = pipstmp""instancename 
        runs++
-       pipscall = "gamspips.sh -DIR=pipstmp"$1" "$2" "$3" "$4
-       #system(pipscall)
+       pipscall = "gamspips.sh -DIR="instancedir" "$2" "$3" "$4
+       system(pipscall)
        
        # check .out file       
-       cmd = "checkoutfile.awk pipstmp"$1"/pips.out"
+       cmd = "checkoutfile.awk pipstmp"instancedir"/pips.out"
        cmd | getline newresult
        
        # check .sol file
-       cmd = "checksolfile.awk del.sol"
+       cmd = "checksolfile.awk -v instance="instancename" "testfile".sol"
        cmd | getline oldresult
        
        # compare results
