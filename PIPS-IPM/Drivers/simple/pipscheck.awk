@@ -10,20 +10,19 @@ BEGIN {
 {
     if( $1 == "EOF" )
     {
-       print "#runs: "i
        exit 0
     }
     
     if( $1 != "#" )
     {
        instancename = $1
-       instancedir = pipstmp""instancename 
+       instancedir = "pipstmp"instancename 
        runs++
        pipscall = "gamspips.sh -DIR="instancedir" "$2" "$3" "$4
        system(pipscall)
        
        # check .out file       
-       cmd = "checkoutfile.awk pipstmp"instancedir"/pips.out"
+       cmd = "checkoutfile.awk "instancedir"/pips.out"
        cmd | getline newresult
        
        # check .sol file
@@ -35,6 +34,7 @@ BEGIN {
        {
           print $1" failed"
           fails++
+          failsarr[fails] = instancename" not solved to optimality"
        }
        else if( oldresult == "notfound" )
        {
@@ -48,16 +48,19 @@ BEGIN {
        {
           print $1" failed (wrong obj)"
           fails++
+          failsarr[fails] = instancename" has wrong objective"
        }
     }
 }
 END {
     if( fails > 0 )
     {
-       print "++++++++++++++++++\ncheck FAILED: nfails: "fails" (of "runs" runs)\n++++++++++++++++++"
+       print "\n++++++++++++++++++\ncheck FAILED: nfails: "fails" (of "runs" runs)\n++++++++++++++++++"
+       for( i = 1; i <= fails; i++ )
+           print failsarr[i] "\n"
     }
     else
     {
-       print "++++++++++++++++++\ncheck passed ("runs" runs)\n++++++++++++++++++"
+       print "\n++++++++++++++++++\ncheck passed ("runs" runs)\n++++++++++++++++++"
     }
 }

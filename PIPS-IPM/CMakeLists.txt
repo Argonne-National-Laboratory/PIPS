@@ -1,5 +1,5 @@
 #add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
-include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpGen
+include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpScalers Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
   Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver
   Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver Core/LinearSolvers/BiCGStabSolver)
@@ -142,7 +142,7 @@ target_link_libraries(pipsipmFromRaw
 add_executable(pipsipmCallbackExample Drivers/callbackExample.cpp)
 target_link_libraries(pipsipmCallbackExample
     stochInput ${COIN_LIBS}
-    ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgondziostoch
+    ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgondziostoch ooqpqpscaler
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
 

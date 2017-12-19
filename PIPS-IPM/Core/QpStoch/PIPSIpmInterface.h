@@ -45,7 +45,7 @@ class PIPSIpmInterface
  
   FORMULATION * factory;
   sData *        data;
-  sVars *   vars;
+  sVars *        vars;
   sResiduals *   resids;
 
   IPMSOLVER *   solver;
@@ -165,9 +165,15 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 #endif
 
   double tmElapsed=MPI_Wtime();
+
+  // todo: scaler->scale(data,vars,resids);
+
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
   //---------------------------------------------
+
+  // todo: scaler->unscale(data,vars,resids);
+
   tmElapsed=MPI_Wtime()-tmElapsed;
 #ifdef TIMING
   double objective = getObjective();
