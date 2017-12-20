@@ -18,15 +18,15 @@ BEGIN {
        instancename = $1
        instancedir = "pipstmp"instancename 
        runs++
-       pipscall = "gamspips.sh -DIR="instancedir" "$2" "$3" "$4
+       pipscall = "sh gamspips.sh -DIR="instancedir" "$2" "$3" "$4
        system(pipscall)
        
        # check .out file       
-       cmd = "checkoutfile.awk "instancedir"/pips.out"
+       cmd = "awk -f checkoutfile.awk "instancedir"/pips.out"
        cmd | getline newresult
        
        # check .sol file
-       cmd = "checksolfile.awk -v instance="instancename" "testfile".sol"
+       cmd = "awk -f checksolfile.awk -v instance="instancename" "testfile".sol"
        cmd | getline oldresult
        
        # compare results
