@@ -7,7 +7,7 @@
 
 #include "Scaler.h"
 
-Scaler::Scaler()
+Scaler::Scaler(Data * prob)
 {
 }
 

@@ -35,7 +35,7 @@ class Scaler
 
 public:
 
-  Scaler();
+  Scaler(Data * prob);
   virtual ~Scaler();
 
   /** scale */

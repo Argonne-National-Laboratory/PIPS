@@ -247,6 +247,12 @@ public:
 
   /** C = this^T * inv(D) * this where D=diag(d) is a diagonal matrix. */
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
+
+  /** get ith row */
+  virtual void getRow(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+
+  /** get ith col */
+  virtual void getCol(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
 };
 
 #endif
