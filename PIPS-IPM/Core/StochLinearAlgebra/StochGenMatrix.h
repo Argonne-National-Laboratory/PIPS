@@ -126,6 +126,22 @@ public:
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
   void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
+
+  /** fill vector with absolute minimum value of each row  */
+  virtual void getRowMinVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
+        bool initializeVec = true );
+
+  /** fill vector with absolute minimum value of each column */
+  virtual void getColMinVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
+        bool initializeVec = true );
+
+  /** fill vector with absolute maximum value of each row */
+  virtual void getRowMaxVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
+        bool initializeVec = true );
+
+  /** fill vector with absolute maximum value of each column */
+  virtual void getColMaxVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
+        bool initializeVec = true );
 };
 
 
@@ -202,7 +218,7 @@ public:
 		    double alpha,  StochVector& x,
 		    OoqpVector& yvecParent ){};
 
-  virtual double abmaxnorm(){return 0.0;};
+  virtual double abmaxnorm(){ return 0.0; };
 
   virtual void writeToStream(ostream& out) const{};
 
@@ -218,6 +234,21 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
 
+  /** fill vector with absolute minimum value of each row  */
+  virtual void getRowMinVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
+        bool initializeVec = true ){};
+
+  /** fill vector with absolute maximum value of each row */
+  virtual void getRowMaxVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
+        bool initializeVec = true ){};
+
+  /** fill vector with absolute minimum value of each column */
+  virtual void getColMinVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
+        bool initializeVec = true ){};
+
+  /** fill vector with absolute maximum value of each column */
+  virtual void getColMaxVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
+        bool initializeVec = true ){};
 };
 
 

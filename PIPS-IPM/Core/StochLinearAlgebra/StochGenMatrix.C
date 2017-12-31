@@ -2,6 +2,7 @@
 #include "DoubleMatrixTypes.h"
 #include "StochVector.h"
 #include "SimpleVector.h"
+#include <limits>
 using namespace std;
 
 StochGenMatrix::StochGenMatrix(int id, 
@@ -585,3 +586,49 @@ void StochGenMatrix::matTransDinvMultMat(OoqpVector& d, SymMatrix** res)
 {
   assert( "Has not been yet implemented" && 0 );
 }
+
+void StochGenMatrix::getRowMinVec(OoqpVector& vec, const OoqpVector* colScaleVec,
+      bool initializeVec)
+{
+   StochVector& minvec = dynamic_cast<StochVector&>(vec);
+
+   // assert tree compatibility
+   assert(minvec.children.size() == children.size());
+
+   Amat->getRowMinVec(*(minvec.vec), colScaleVec, initializeVec);
+   Bmat->getRowMinVec(*(minvec.vec), colScaleVec, false);
+
+   if( minvec.vecl )
+      Blmat->getRowMinVec(*(minvec.vecl), colScaleVec, initializeVec);
+
+   if( colScaleVec )
+   {
+      const StochVector* covec = dynamic_cast<const StochVector*>(colScaleVec);
+      for( size_t it = 0; it < children.size(); it++)
+         children[it]->getRowMinVec(*(minvec.children[it]), covec->children[it], initializeVec);
+   }
+   else
+   {
+      for( size_t it = 0; it < children.size(); it++)
+         children[it]->getRowMinVec(*(minvec.children[it]), NULL, initializeVec);
+   }
+}
+
+void StochGenMatrix::getRowMaxVec(OoqpVector& vec, const OoqpVector* colScaleVec,
+      bool initializeVec)
+{
+
+}
+
+void StochGenMatrix::getColMinVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
+      bool initializeVec)
+{
+
+}
+
+void StochGenMatrix::getColMaxVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
+      bool initializeVec)
+{
+
+}
+

@@ -338,7 +338,7 @@ double StochVector::infnorm()
   infnrm = 0.0;
 
   for(size_t it=0; it<children.size(); it++)
-    infnrm = max(infnrm, children[it]->infnorm());
+    infnrm = std::max(infnrm, children[it]->infnorm());
 
   if(iAmDistrib) {
     double infnrmG=0.0;
@@ -346,9 +346,9 @@ double StochVector::infnorm()
     infnrm = infnrmG;
   }
 
-  infnrm = max(vec->infnorm(), infnrm);
+  infnrm = std::max(vec->infnorm(), infnrm);
 
-  if( vecl ) infnrm = max(vecl->infnorm(), infnrm);
+  if( vecl ) infnrm = std::max(vecl->infnorm(), infnrm);
 
   return infnrm; 
 }
@@ -419,6 +419,60 @@ void StochVector::min( double& m, int& index )
     m = minG;
   }  
 }
+
+
+void StochVector::max( double& m, int& index )
+{
+   double lMax;
+   int lInd;
+
+   if( NULL == parent )
+   {
+      vec->max(m, index);
+      if( vecl )
+      {
+         vecl->max(lMax, lInd);
+         if( lMax > m )
+         {
+            m = lMax;
+            index = lInd + vec->length();
+         }
+      }
+   }
+   else
+   {
+      vec->max(lMax, lInd);
+
+      if( vecl )
+      {
+         double lMaxlink;
+         int lIndlink;
+         vecl->max(lMaxlink, lIndlink);
+         if( lMaxlink > lMax )
+         {
+            lMax = lMaxlink;
+            lInd = lIndlink + vec->length();
+         }
+      }
+
+      if( lMax > m )
+      {
+         m = lMax;
+         index = lInd + parent->n - this->n;
+      }
+   }
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->max(m, index);
+
+   if( iAmDistrib == 1 )
+   {
+      double maxG;
+      MPI_Allreduce(&m, &maxG, 1, MPI_DOUBLE, MPI_MAX, mpiComm);
+      m = maxG;
+   }
+}
+
 
 double StochVector::stepbound(OoqpVector & v_, double maxStep )
 {

@@ -63,6 +63,7 @@ public:
   virtual double infnorm();
   virtual double onenorm();
   virtual void min( double& m, int& index );
+  virtual void max( double& m, int& index );
   virtual double stepbound(OoqpVector & v, double maxStep );
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 

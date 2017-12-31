@@ -142,7 +142,7 @@ target_link_libraries(pipsipmFromRaw
 add_executable(pipsipmCallbackExample Drivers/callbackExample.cpp)
 target_link_libraries(pipsipmCallbackExample
     stochInput ${COIN_LIBS}
-    ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgondziostoch ooqpqpscaler
+    ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgondziostoch ooqpqpscaler ooqpequistochscaler
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
 
@@ -156,7 +156,7 @@ target_include_directories(gmspips PUBLIC
 target_link_libraries(gmspips
     dl
     stochInput ${COIN_LIBS}
-    ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgondziostoch
+    ooqpstoch ooqpstochla ooqpmehrotrastoch ooqpgondziostoch ooqpequistochscaler
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}  ${PARDISO_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
 

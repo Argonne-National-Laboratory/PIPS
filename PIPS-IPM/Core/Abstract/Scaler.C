@@ -7,7 +7,8 @@
 
 #include "Scaler.h"
 
-Scaler::Scaler(Data * prob)
+Scaler::Scaler(Data* prob, bool bitshifting)
+: do_bitshifting(bitshifting)
 {
 }
 

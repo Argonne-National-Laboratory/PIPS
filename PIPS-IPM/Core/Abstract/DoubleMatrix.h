@@ -18,7 +18,7 @@ using namespace std;
 class DoubleLinearSolver;
 
 /**
- * Handle the manupulation of matrix elements
+ * Handle the manipulation of matrix elements
  * @ingroup AbstractLinearAlgebra
  */
 class DoubleStorage : public IotrRefCount {
@@ -253,6 +253,22 @@ public:
 
   /** get ith col */
   virtual void getCol(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+
+  /** fill vector with absolute minimum value of each row  */
+  virtual void getRowMinVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
+        bool initializeVec = true ) { assert(0 && "not implemented"); };
+
+  /** fill vector with absolute maximum value of each row */
+  virtual void getRowMaxVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
+        bool initializeVec = true ) { assert(0 && "not implemented"); };
+
+  /** fill vector with absolute minimum value of each column */
+  virtual void getColMinVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
+        bool initializeVec = true ) { assert(0 && "not implemented"); };
+
+  /** fill vector with absolute maximum value of each column */
+  virtual void getColMaxVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
+        bool initializeVec = true ) { assert(0 && "not implemented"); };
 };
 
 #endif

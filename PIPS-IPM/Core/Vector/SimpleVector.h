@@ -52,6 +52,7 @@ public:
   virtual double infnorm();
   virtual double onenorm();
   virtual void min( double& m, int& index );
+  virtual void max( double& m, int& index );
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);
@@ -109,7 +110,7 @@ public:
 			      double *ustep_elt,
 			      int& first_or_second);
   /** Returns a pointer to the elements of this vector. */
-  double * elements() { return v; };
+  double * elements() const { return v; };
 };
 
 #endif

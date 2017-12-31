@@ -9,7 +9,7 @@
 #include "SparseStorage.h"
 #include "OoqpVector.h"
 #include "SimpleVector.h"
-
+#include <limits>
 #include <fstream>
 
 
@@ -122,13 +122,12 @@ void SparseStorage::RowScale( OoqpVector& scale_in )
 
   assert( extent == m );
 
-  int i, j, k;
+  int i, k;
 
   for ( i = 0; i < m; i++ ) {
     // Loop over all rows in the sparse matrix
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       // Loop over the elements of the sparse row
-      j = jcolM[k];
       M[k] = M[k] * scale[i];
     } // End loop over the elements of the sparse row
   } // End loop over all rows in the sparse matrix
@@ -159,13 +158,12 @@ void SparseStorage::SymmetricScale( OoqpVector& scale_in )
 
 void SparseStorage::scalarMult( double num )
 {
-  int i, j, k;
+  int i, k;
 
   for ( i = 0; i < m; i++ ) {
     // Loop over all rows in the sparse matrix
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       // Loop over the elements of the sparse row
-      j = jcolM[k];
       M[k] = M[k] * num;
     } // End loop over the elements of the sparse row
   } // End loop over all rows in the sparse matrix
@@ -1370,6 +1368,104 @@ void SparseStorage::dump(const string& filename)
   }
 }
 
+void SparseStorage::getRowMinVec(double* vec, const double* colScaleVec, bool initalizeVec) const
+{
+   const bool coscale = (colScaleVec != NULL);
+
+   if( coscale )
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         if( initalizeVec )
+            vec[r] = std::numeric_limits<double>::max();
+
+         double minval = vec[r];
+         assert(minval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
+
+            // todo global epsilon would be good
+            if( absval < minval && absval > 0.0 )
+               minval = absval;
+         }
+         vec[r] = minval;
+
+         if( initalizeVec && vec[r] == std::numeric_limits<double>::max() )
+            vec[r] = 0.0;
+      }
+   }
+   else
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         if( initalizeVec )
+            vec[r] = std::numeric_limits<double>::max();
+
+         double minval = vec[r];
+         assert(minval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i]);
+
+            if( absval < minval && absval > 0.0 )
+               minval = absval;
+         }
+         vec[r] = minval;
+
+         if( initalizeVec && vec[r] == std::numeric_limits<double>::max() )
+            vec[r] = 0.0;
+      }
+   }
+}
+
+void SparseStorage::getRowMaxVec(double* vec, const double* colScaleVec, bool initalizeVec) const
+{
+   const bool coscale = (colScaleVec != NULL);
+
+   if( coscale )
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         if( initalizeVec )
+            vec[r] = 0.0;
+
+         double maxval = vec[r];
+         assert(maxval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
+
+            if( absval > maxval && absval > 0.0 )
+               maxval = absval;
+         }
+         vec[r] = maxval;
+      }
+   }
+   else
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         if( initalizeVec )
+            vec[r] = 0.0;
+
+         double maxval = vec[r];
+         assert(maxval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i]);
+
+            if( absval > maxval && absval > 0.0 )
+               maxval = absval;
+         }
+         vec[r] = maxval;
+      }
+   }
+}
 
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:

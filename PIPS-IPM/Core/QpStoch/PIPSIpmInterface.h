@@ -12,6 +12,8 @@
 #include "sVars.h"
 #include "sTree.h"
 #include "StochMonitor.h"
+#include "Scaler.h"
+#include "ScalerFactory.h"
 
 #include <cstdlib>
 
@@ -20,7 +22,7 @@ class PIPSIpmInterface
 {
  public:
   PIPSIpmInterface(stochasticInput &in, MPI_Comm = MPI_COMM_WORLD);
-  PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD);
+  PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD, ScalerType scaler_type = SCALER_NONE);
   ~PIPSIpmInterface();
 
   void go();
@@ -48,6 +50,7 @@ class PIPSIpmInterface
   sVars *        vars;
   sResiduals *   resids;
 
+  Scaler *      scaler;
   IPMSOLVER *   solver;
 
   PIPSIpmInterface() {};
@@ -99,12 +102,18 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 }
 
 template<class FORMULATION, class IPMSOLVER>
-PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm) : comm(comm)
+PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type) : comm(comm)
 {
 
 #ifdef TIMING
   int mype;
   MPI_Comm_rank(comm,&mype);
+#endif
+
+ // scaler = new EquiStochScaler(data);
+  //scaler = ScalerFactory::makeScaler(data, scaler_type);
+#ifdef TIMING
+  if(mype==0) printf("scaler created\n");
 #endif
 
   factory = new FORMULATION( in, comm);

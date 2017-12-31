@@ -96,6 +96,11 @@ public:
   /** Return the minimum value in this vector, and the index at 
    *  which it occurs. */
   virtual void min( double& m, int& index ) = 0;
+
+  /** Return the maximum value in this vector, and the index at
+   *  which it occurs. */
+  virtual void max( double& m, int& index ) = 0;
+
   /** Return the dot product of this OoqpVector with v */
   virtual double dotProductWith( OoqpVector& v ) = 0;
 

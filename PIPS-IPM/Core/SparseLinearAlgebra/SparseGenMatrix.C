@@ -8,7 +8,7 @@
 #include "SimpleVector.h"
 
 #include "DoubleMatrixTypes.h"
-
+#include <limits>
 #include "SparseSymMatrix.h"
 
 int SparseGenMatrix::isKindOf( int type )
@@ -359,3 +359,60 @@ void SparseGenMatrix::matMultTrans(SymMatrix** res)
 				   krowM(), jcolM(), M(),
 				   MMt->krowM(), MMt->jcolM(), MMt->M());
 }
+
+void SparseGenMatrix::getRowMinVec(OoqpVector& vec, const OoqpVector* colScaleVec,
+      bool initializeVec)
+{
+   SimpleVector& minvec = dynamic_cast<SimpleVector&>(vec);
+
+   assert(minvec.length() == mStorage->m);
+
+   if( initializeVec )
+      minvec.setToConstant(std::numeric_limits<double>::max());
+
+   if( colScaleVec )
+   {
+      SimpleVector& minvec = dynamic_cast<SimpleVector&>(vec);
+      const SimpleVector* covec = dynamic_cast<const SimpleVector*>(colScaleVec);
+
+      mStorage->getRowMinVec(minvec.elements(), covec->elements());
+   }
+   else
+   {
+      mStorage->getRowMinVec(minvec.elements(), NULL);
+   }
+}
+
+void SparseGenMatrix::getRowMaxVec(OoqpVector& vec, const OoqpVector* colScaleVec,
+      bool initializeVec)
+{
+   SimpleVector& maxvec = dynamic_cast<SimpleVector&>(vec);
+   assert(maxvec.length() == mStorage->m);
+
+   if( colScaleVec )
+   {
+      SimpleVector& maxvec = dynamic_cast<SimpleVector&>(vec);
+      const SimpleVector* covec = dynamic_cast<const SimpleVector*>(colScaleVec);
+
+      mStorage->getRowMaxVec(maxvec.elements(), covec->elements(), initializeVec);
+   }
+   else
+   {
+      mStorage->getRowMaxVec(maxvec.elements(), NULL, initializeVec);
+   }
+}
+
+void SparseGenMatrix::getColMinVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
+      bool initializeVec)
+{
+
+}
+
+
+
+void SparseGenMatrix::getColMaxVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
+      bool initializeVec)
+{
+
+}
+

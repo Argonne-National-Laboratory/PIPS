@@ -137,6 +137,12 @@ public:
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
+  /** store absolute non-zero minimum of each entry of row i and vec[i] in vec[i]  */
+  void getRowMinVec(double* vec, const double* colScaleVec = NULL, bool initalizeVec = true) const;
+
+  /** store absolute non-zero maximum of each entry of row i and vec[i] in vec[i]  */
+  void getRowMaxVec(double* vec, const double* colScaleVec = NULL, bool initalizeVec = true) const;
+
   void dump(const string& filename);
 
   virtual ~SparseStorage();
