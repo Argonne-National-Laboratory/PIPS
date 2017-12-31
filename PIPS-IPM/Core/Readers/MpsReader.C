@@ -1105,10 +1105,8 @@ void MpsReader::readProblemName( char line[], int& iErr, int kindOfLine )
 
 void MpsReader::readProblemName2( char line[], int& iErr, int kindOfLine )
 {
-    int i = 0;
     char *token;
     char *arrayOfTokens[2];
-    int ierr =0;
     char tempLine[200];
     char tag[6];
 
@@ -1165,10 +1163,8 @@ void MpsReader::readProblemName2( char line[], int& iErr, int kindOfLine )
 
 void MpsReader::readObjectiveSense( char line[], int& iErr, int kindOfLine )
 {
-    int i = 0;
     char *token;
     char *arrayOfTokens[1];
-    int ierr =0;
     char tempLine[200];
 
     if( DATALINE == kindOfLine ) {
@@ -1954,9 +1950,7 @@ int MpsReader::ParseHeaderLine(char line[], char entry[] )
 
 int MpsReader::ParseHeaderLine2(char line[], char entry[] )
 {
-    int i = 0;
     char *token;
-    int ierr =0;
     char tempLine[200];
 
     strncpy( tempLine, line, 200);
@@ -1980,10 +1974,8 @@ int MpsReader::ParseHeaderLine2(char line[], char entry[] )
 
 int MpsReader::ParseRowsLine2( char line[],  char code[], char name1[] )
 {
-    int i = 0;
     char *token;
     char *arrayOfTokens[2];
-    int ierr =0;
     char tempLine[200];
 
     strncpy( tempLine, line, 200);

@@ -110,7 +110,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   MPI_Comm_rank(comm,&mype);
 #endif
 
- // scaler = new EquiStochScaler(data);
+  //scaler = new EquiStochScaler(data);
   //scaler = ScalerFactory::makeScaler(data, scaler_type);
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");

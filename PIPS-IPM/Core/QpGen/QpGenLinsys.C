@@ -319,13 +319,14 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   double n2b=b.twonorm();
   assert(n2b >= 0);
   double tolb=n2b*tol;
-  int flag; double iter=0.;
+  int flag;
   double rho=1., omega=1., alpha;  
 
   // todo this should be done properly
   tolb = max(tolb, eps);
 
 #ifdef TIMING
+  double iter=0.0;
   gOuterBiCGIter=0;
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   tTmp=MPI_Wtime();
@@ -437,8 +438,9 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 	  //converged
 #ifdef TIMING
 	  histRelResid[histRelResid.size()-1]=normr_act/n2b;
+	  iter=it+0.5;
 #endif
-	  flag=0; iter=it+0.5; break;
+	  flag=0; break;
 	}
       } //~end of convergence test
     }
@@ -497,8 +499,9 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
            //converged
 #ifdef TIMING 
            histRelResid[histRelResid.size()-1]=normr_act/n2b;
+           iter=it+1.;
 #endif
-           flag=0; iter=it+1.; break;
+           flag=0; break;
          } // else continue - To Do: detect stagnation (flag==3)
       }
       else
@@ -510,9 +513,10 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 	  if(0==myRank) 
 	    cout << "Outer BiCG - Increase in BiCGStab residual. Old=" << normr_min
 		 << "  New=" << normr << endl;
+	  iter=it+1.;
 #endif
 
-	        flag=5; iter=it+1.; break;
+	        flag=5; break;
          } else normr_min=normr;
       } //~end of convergence test
     } //~end of scoping

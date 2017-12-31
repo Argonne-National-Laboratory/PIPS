@@ -170,9 +170,11 @@ void dumpaug(int nx, SparseGenMatrix &A, SparseGenMatrix &C) {
 
 Data * sFactory::makeData()
 {
-  double t,t2=MPI_Wtime();
+#ifdef TIMING
+  double t2=MPI_Wtime();
   int mype; MPI_Comm_rank(tree->commWrkrs,&mype);
   bool p = (mype == 0);
+#endif
 
   // use the tree to get the data from user and to create OOQP objects
 
