@@ -51,6 +51,15 @@ public:
    */
   virtual double stepbound( Variables *b ) = 0;
 
+  /** calculate the largest alpha_primal and alpha_dual in (0,1] such that the nonnegative
+     * variables stay nonnegative in the given search direction b. In the
+     * abstract problem formulation, this is the largest value of alpha
+     * such that (s,z) + alpha_primal * (b->s,0) + alpha_dual * (0,b->z) >= 0.
+     *
+     * @see stepbound
+     */
+  virtual void stepbound_primal_dual( Variables *b, double & alpha_primal, double & alpha_dual );
+
   /** Performs the same function as stepbound, and supplies additional
    * information about which component of the nonnegative variables is
    * responsible for restricting alpha. In terms of the abstract

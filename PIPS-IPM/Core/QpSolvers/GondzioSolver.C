@@ -20,7 +20,7 @@ using namespace std;
 #include <cmath>
 
 // gmu is needed by MA57!
-static double gmu;
+double gmu;
 // double grnorm;
 extern int gOoqpPrintLevel;
 

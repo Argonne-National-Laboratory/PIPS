@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <cassert>
 using namespace std;
 #include "Variables.h"
 #include "Solver.h"
@@ -17,4 +18,9 @@ void Variables::print()
 {
   cout << " Complementary Variables = " << nComplementaryVariables << endl;
   cout << "(Cannot tell you more at this level)" << endl;
+}
+
+void Variables::stepbound_primal_dual( Variables *b, double & alpha_primal, double & alpha_dual )
+{
+  assert(0 && "not implemented here");
 }

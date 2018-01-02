@@ -288,6 +288,11 @@ double QpGenVars::stepbound( Variables * b_in )
 
   return maxStep;
 }
+
+void QpGenVars::stepbound_primal_dual( Variables *b, double & alpha_primal, double & alpha_dual )
+{
+	// todo: implement method here that computes alpha_primal and alpha_dual
+}
   
 int QpGenVars::isInteriorPoint()
 {

@@ -1,13 +1,12 @@
 /*
- * GondzioStochSolver.C
+ * GondzioStochLpSolver.C
  *
- *  Created on: Dec 7, 2017
- *      Author: Daniel Rehfeldt
+ *  Created on: 20.12.2017
+ *      Author: Svenja Uslu
  */
 
 
-
-#include "GondzioStochSolver.h"
+#include "GondzioStochLpSolver.h"
 #include "Variables.h"
 #include "Residuals.h"
 #include "LinearSystem.h"
@@ -43,23 +42,18 @@ static double gmu;
 // double grnorm;
 extern int gOoqpPrintLevel;
 
-double g_iterNumber;
+static double g_iterNumber;
 
 
-GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points )
-  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points)
+GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points )
+  : GondzioStochSolver(opt, prob)
 {
-   assert(n_linesearch_points > 0);
 
-   // the two StepFactor constants set targets for increase in step
-   // length for each corrector
-   StepFactor0 = 0.3;
-   StepFactor1 = 1.5;
 
-   temp_step = factory->makeVariables(prob);
+   //temp_step = factory->makeVariables(prob);
 }
 
-void GondzioStochSolver::calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step,
+void GondzioStochLpSolver::calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step,
       double alpha_predictor, double& alpha_candidate, double& weight_candidate)
 {
    assert(alpha_predictor > 0.0 && alpha_predictor <= 1.0);
@@ -97,13 +91,14 @@ void GondzioStochSolver::calculateAlphaWeightCandidate(Variables *iterate, Varia
    alpha_candidate = alpha_best;
 }
 
-int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
+int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 {
    int done;
    double mu, muaff;
    double alpha_target, alpha_enhanced, rmin, rmax;
    int status_code;
    double alpha = 1, sigma = 1;
+   double alpha_pri = 1, alpha_dual = 1;
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
 
@@ -150,7 +145,11 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       sys->solve(prob, iterate, resid, step);
       step->negate();
 
+      //todo: compute primal and dual steplength (alpha_primal, alpha_dual)
+      //probably also adapt calculation of centering parameter
+
       alpha = iterate->stepbound(step);
+      iterate->stepbound_primal_dual(step, alpha_pri, alpha_dual);
 
       // calculate centering parameter
       muaff = iterate->mustep(step, alpha);
@@ -280,7 +279,9 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 }
 
 
-GondzioStochSolver::~GondzioStochSolver()
+GondzioStochLpSolver::~GondzioStochLpSolver()
 {
-   delete temp_step;
 }
+
+
+
