@@ -81,7 +81,12 @@ public:
 
   virtual double mustep(Variables *step_in, double alpha);
 
+  virtual double mustep_pd( Variables *step, double alpha_primal, double alpha_dual );
+
   virtual void saxpy( Variables *b, double alpha );
+
+  virtual void saxpy_pd( Variables *b, double alpha_primal, double alpha_dual);
+
   virtual void negate();
   
   /** calculate the largest alpha in (0,1] such that the nonnegative

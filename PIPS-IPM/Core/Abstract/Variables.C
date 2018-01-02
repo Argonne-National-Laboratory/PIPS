@@ -20,6 +20,16 @@ void Variables::print()
   cout << "(Cannot tell you more at this level)" << endl;
 }
 
+void Variables::saxpy_pd( Variables *b, double alpha_primal, double alpha_dual)
+{
+  assert(0 && "not implemented here");
+}
+
+double Variables::mustep_pd( Variables *step, double alpha_primal, double alpha_dual )
+{
+  assert(0 && "not implemented here");
+}
+
 void Variables::stepbound_primal_dual( Variables *b, double & alpha_primal, double & alpha_dual )
 {
   assert(0 && "not implemented here");

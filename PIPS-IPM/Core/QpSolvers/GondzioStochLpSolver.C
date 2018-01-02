@@ -91,6 +91,11 @@ void GondzioStochLpSolver::calculateAlphaWeightCandidate(Variables *iterate, Var
    alpha_candidate = alpha_best;
 }
 
+void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double alpha_primal, double alpha_dual, double& alpha_primal_candidate, double& alpha_dual_candidate, double& weight_candidate)
+{
+	// todo: implement method here. think of alpha_pri * alpha_dual
+}
+
 int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
 {
    int done;
@@ -99,6 +104,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    int status_code;
    double alpha = 1, sigma = 1;
    double alpha_pri = 1, alpha_dual = 1;
+   double alpha_pri_target, alpha_dual_target;
+   double alpha_pri_enhanced, alpha_dual_enhanced;
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
 
@@ -148,11 +155,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       //todo: compute primal and dual steplength (alpha_primal, alpha_dual)
       //probably also adapt calculation of centering parameter
 
-      alpha = iterate->stepbound(step);
+      // instead of: alpha = iterate->stepbound(step); do:
       iterate->stepbound_primal_dual(step, alpha_pri, alpha_dual);
 
       // calculate centering parameter
-      muaff = iterate->mustep(step, alpha);
+      // instead of: muaff = iterate->mustep(step, alpha); do:
+      muaff = iterate->mustep_pd(step, alpha_pri, alpha_dual);
       sigma = pow(muaff / mu, tsig);
 
       if( gOoqpPrintLevel >= 10 )
@@ -175,7 +183,10 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       // calculate weighted predictor-corrector step
       double weight_candidate = -1.0;
-      calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha, alpha, weight_candidate);
+      // instead of: calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha, alpha, weight_candidate); do:
+      calculateAlphaPDWeightCandidate(iterate, step, corrector_step, alpha_pri, alpha_dual,
+    		  alpha_pri, alpha_dual, weight_candidate);
+
       assert(weight_candidate >= 0.0 && weight_candidate <= 1.0);
 
       step->saxpy(corrector_step, weight_candidate);
@@ -191,19 +202,26 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       NumberGondzioCorrections = 0;
 
       // enter the Gondzio correction loop:
-      while( NumberGondzioCorrections < maximum_correctors && alpha < 1.0 )
+      // instead of: while( NumberGondzioCorrections < maximum_correctors && alpha < 1.0 ) do:
+      // todo: && or || between both alphas ?
+      while( NumberGondzioCorrections < maximum_correctors && alpha_pri < 1.0 && alpha_dual < 1.0 )
       {
 
          // copy current variables into corrector_step
          corrector_step->copy(iterate);
 
          // calculate target steplength
-         alpha_target = StepFactor1 * alpha + StepFactor0;
-         if( alpha_target > 1.0 )
-            alpha_target = 1.0;
+         // instead of: alpha_taget = StepFactor1 * alpha + StepFactor0; do:
+         alpha_pri_target = StepFactor1 * alpha_pri + StepFactor0;
+         alpha_dual_target = StepFactor1 * alpha_dual + StepFactor0;
+         if( alpha_pri_target > 1.0 )
+            alpha_pri_target = 1.0;
+         if( alpha_dual_target > 1.0 )
+            alpha_dual_target = 1.0;
 
          // add a step of this length to corrector_step
-         corrector_step->saxpy(step, alpha_target);
+         // instead of: corrector_step->saxpy(step, alpha_target); do:
+         corrector_step->saxpy_pd(step, alpha_pri_target, alpha_dual_target);
          // corrector_step is now x_k + alpha_target * delta_p (a trial point)
 
          // place XZ into the r3 component of corrector_resids
@@ -216,7 +234,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          sys->solve(prob, iterate, corrector_resid, corrector_step);	// corrector_step is now delta_m
 
          // calculate weighted predictor-corrector step
-         calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha_target, alpha_enhanced, weight_candidate);
+         calculateAlphaPDWeightCandidate(iterate, step, corrector_step, alpha_pri_target, alpha_dual_target,
+        		 alpha_pri_enhanced, alpha_dual_enhanced, weight_candidate);
 
          // todo weight * corrector_step; corrector_step += step
          temp_step->copy(step);
@@ -224,22 +243,25 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
          // if the enhanced step length is actually 1, make it official
          // and stop correcting
-         if( alpha_enhanced == 1.0 )
+         // todo: is || correct or && ?
+         if( alpha_pri_enhanced == 1.0 || alpha_dual_enhanced == 1.0 )
          {
             step->copy(temp_step);
-            alpha = alpha_enhanced;
+            alpha_pri = alpha_pri_enhanced;
+            alpha_dual = alpha_dual_enhanced;
             NumberGondzioCorrections++;
 
             // exit Gondzio correction loop
             break;
          }
-         else if( alpha_enhanced >= (1.0 + AcceptTol) * alpha )
+         else if( alpha_pri_enhanced >= (1.0 + AcceptTol) * alpha_pri || alpha_dual_enhanced >= (1.0 + AcceptTol) * alpha_dual)
          {
             // if enhanced step length is significantly better than the
             // current alpha, make the enhanced step official, but maybe
             // keep correcting
             step->copy(temp_step);
-            alpha = alpha_enhanced;
+            alpha_pri = alpha_pri_enhanced;
+            alpha_dual = alpha_dual_enhanced;
             NumberGondzioCorrections++;
          }
          else
@@ -251,14 +273,16 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       // We've finally decided on a step direction, now calculate the
       // length using Mehrotra's heuristic.x
-      alpha = finalStepLength(iterate, step);
+      // instead of: alpha = finalStepLength(iterate, step); do:
+      finalStepLength_PD(iterate, step, alpha_pri, alpha_dual);
 
       // alternatively, just use a crude step scaling factor.
       // alpha = 0.995 * iterate->stepbound( step );
 
       // actually take the step (at last!) and calculate the new mu
 
-      iterate->saxpy(step, alpha);
+      // instead of: iterate->saxpy(step, alpha); do:
+      iterate->saxpy_pd(step, alpha_pri, alpha_dual);
       mu = iterate->mu();
       gmu = mu;
 

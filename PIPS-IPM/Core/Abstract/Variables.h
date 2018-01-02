@@ -35,6 +35,11 @@ public:
    * "alpha" along direction "step" */
   virtual double mustep(Variables *step, double alpha) = 0;
 
+  /** compute the complementarity gap resulting from a step of length
+   * "alpha_primal" along primal direction of "step" and
+   * "alpha_dual" along dual direction of "step" */
+  virtual double mustep_pd( Variables *step, double alpha_primal, double alpha_dual );
+
   /** negate the value of all the variables in this structure */
   virtual void negate() = 0;
 
@@ -42,6 +47,13 @@ public:
       variables in this class */
   virtual void saxpy( Variables *b, double alpha) = 0;
   
+  /** given variables b, compute a <- a + alpha_primal * b_primal + alpha_dual * b_dual,
+   *  where a are the variables in this class
+   *
+   *  @see saxpy
+   */
+  virtual void saxpy_pd( Variables *b, double alpha_primal, double alpha_dual);
+
   /** calculate the largest alpha in (0,1] such that the nonnegative
    * variables stay nonnegative in the given search direction. In the
    * abstract problem formulation, this is the largest value of alpha

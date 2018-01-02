@@ -206,6 +206,12 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	return alpha;
 }
 
+void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
+		  	  	  	  	  	  	  double& alpha_primal, double& alpha_dual )
+{
+	// todo: implement here
+}
+
 
 void Solver::doMonitor( Data * data, Variables * vars,
 			Residuals * resids,

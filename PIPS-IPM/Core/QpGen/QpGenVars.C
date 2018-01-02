@@ -185,6 +185,11 @@ double QpGenVars::mustep(Variables * step_in, double alpha)
   }
 }
 
+double QpGenVars::mustep_pd( Variables *step, double alpha_primal, double alpha_dual )
+{
+	// todo: implement method here that computes mustep_pd
+}
+
 void QpGenVars::saxpy( Variables *b_in, double alpha )
 {
   QpGenVars * b = (QpGenVars *) b_in;
@@ -222,6 +227,12 @@ void QpGenVars::saxpy( Variables *b_in, double alpha )
     phi   ->axpy( alpha, *b->phi );
   }
 }
+
+void QpGenVars::saxpy_pd( Variables *b, double alpha_primal, double alpha_dual)
+{
+	// todo: implement method here that computes saxpy with alpha_primal and alpha_dual
+}
+
 
 void QpGenVars::negate()
 {

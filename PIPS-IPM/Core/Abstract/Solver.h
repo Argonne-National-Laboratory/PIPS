@@ -96,6 +96,10 @@ public:
   /** Mehrotra's heuristic to calculate the final step length */
   virtual double finalStepLength( Variables *iterate, Variables *step );
 
+  /** Mehrotra's heuristic to calculate the final step length in primal and dual direction */
+  virtual void finalStepLength_PD( Variables *iterate, Variables *step,
+		  	  	  	  	  	  	  double& alpha_primal, double& alpha_dual );
+
   /** perform monitor operation at each interior-point iteration */
   virtual void doMonitor( Data * data, Variables * vars,
 						  Residuals * resids,
