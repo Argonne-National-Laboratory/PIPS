@@ -31,10 +31,10 @@ public:
   virtual ~Scaler();
 
   /** scale */
-  virtual void scale(Data * prob) = 0;
+  virtual void scale() = 0;
 
   /** unscale */
-  virtual void unscale(Data * prob) = 0;
+  virtual void unscale() = 0;
 
 };
 

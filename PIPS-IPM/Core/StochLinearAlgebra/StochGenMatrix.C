@@ -587,48 +587,76 @@ void StochGenMatrix::matTransDinvMultMat(OoqpVector& d, SymMatrix** res)
   assert( "Has not been yet implemented" && 0 );
 }
 
-void StochGenMatrix::getRowMinVec(OoqpVector& vec, const OoqpVector* colScaleVec,
-      bool initializeVec)
+
+void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
+      const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* linkparent)
 {
-   StochVector& minvec = dynamic_cast<StochVector&>(vec);
+   StochVector& mvec = dynamic_cast<StochVector&>(minmaxVec);
 
    // assert tree compatibility
-   assert(minvec.children.size() == children.size());
+   assert(mvec.children.size() == children.size());
 
-   Amat->getRowMinVec(*(minvec.vec), colScaleVec, initializeVec);
-   Bmat->getRowMinVec(*(minvec.vec), colScaleVec, false);
+   Bmat->getRowMinMaxVec(getMin, initializeVec, colScaleVec, *(mvec.vec));
+   Amat->getRowMinMaxVec(getMin, false, colScaleVec, *(mvec.vec));
 
-   if( minvec.vecl )
-      Blmat->getRowMinVec(*(minvec.vecl), colScaleVec, initializeVec);
+   SimpleVector* mvecl = NULL;
+
+   /* with linking constraints? */
+   if( mvec.vecl || linkparent )
+   {
+      assert(mvec.vecl == NULL || linkparent == NULL);
+
+      bool iAmSpecial = true;
+      if( iAmDistrib )
+      {
+         int rank;
+         MPI_Comm_rank(mpiComm, &rank);
+         if( rank > 0 )
+            iAmSpecial = false;
+      }
+      if( linkparent )
+         mvecl = dynamic_cast<SimpleVector*>(linkparent);
+      else
+         mvecl = dynamic_cast<SimpleVector*>(mvec.vecl);
+
+      // at root and not rank 0?
+      if( linkparent == NULL && !iAmSpecial )
+         mvecl->setToZero();
+      else
+      {
+         const bool initializeLinkVec = initializeVec && linkparent == NULL && iAmSpecial;
+         Blmat->getRowMinMaxVec(getMin, initializeLinkVec, colScaleVec, *(mvec.vec));
+      }
+   }
 
    if( colScaleVec )
    {
       const StochVector* covec = dynamic_cast<const StochVector*>(colScaleVec);
-      for( size_t it = 0; it < children.size(); it++)
-         children[it]->getRowMinVec(*(minvec.children[it]), covec->children[it], initializeVec);
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->getRowMinMaxVec(getMin, initializeVec, covec->children[it],
+               *(mvec.children[it]), NULL);
    }
    else
    {
-      for( size_t it = 0; it < children.size(); it++)
-         children[it]->getRowMinVec(*(minvec.children[it]), NULL, initializeVec);
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->getRowMinMaxVec(getMin, initializeVec, NULL, *(mvec.children[it]),
+               NULL);
+   }
+
+   // distributed, with linking constraints, and at root?
+   if( iAmDistrib && mvec.vecl != NULL && linkparent == NULL )
+   {
+      // sum up linking constraints vectors
+      const int locn = mvecl->length();
+      double* buffer = new double[locn];
+
+      // todo: set to MAX and back afterwards?
+
+      MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE,
+            getMin ? MPI_MIN : MPI_MAX, mpiComm);
+
+      mvecl->copyFromArray(buffer);
+
+      delete[] buffer;
    }
 }
-
-void StochGenMatrix::getRowMaxVec(OoqpVector& vec, const OoqpVector* colScaleVec,
-      bool initializeVec)
-{
-
-}
-
-void StochGenMatrix::getColMinVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
-      bool initializeVec)
-{
-
-}
-
-void StochGenMatrix::getColMaxVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
-      bool initializeVec)
-{
-
-}
-

@@ -1368,7 +1368,7 @@ void SparseStorage::dump(const string& filename)
   }
 }
 
-void SparseStorage::getRowMinVec(double* vec, const double* colScaleVec, bool initalizeVec) const
+void SparseStorage::getRowMinVec(bool initalizeVec, const double* colScaleVec, double* vec) const
 {
    const bool coscale = (colScaleVec != NULL);
 
@@ -1387,7 +1387,7 @@ void SparseStorage::getRowMinVec(double* vec, const double* colScaleVec, bool in
             const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
 
             // todo global epsilon would be good
-            if( absval < minval && absval > 0.0 )
+            if( (absval < minval || minval == 0.0) && absval > 0.0 )
                minval = absval;
          }
          vec[r] = minval;
@@ -1410,7 +1410,7 @@ void SparseStorage::getRowMinVec(double* vec, const double* colScaleVec, bool in
          {
             const double absval = std::abs(M[i]);
 
-            if( absval < minval && absval > 0.0 )
+            if( (absval < minval || minval == 0.0) && absval > 0.0 )
                minval = absval;
          }
          vec[r] = minval;
@@ -1421,7 +1421,7 @@ void SparseStorage::getRowMinVec(double* vec, const double* colScaleVec, bool in
    }
 }
 
-void SparseStorage::getRowMaxVec(double* vec, const double* colScaleVec, bool initalizeVec) const
+void SparseStorage::getRowMaxVec(bool initalizeVec, const double* colScaleVec, double* vec) const
 {
    const bool coscale = (colScaleVec != NULL);
 
@@ -1439,7 +1439,7 @@ void SparseStorage::getRowMaxVec(double* vec, const double* colScaleVec, bool in
          {
             const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
 
-            if( absval > maxval && absval > 0.0 )
+            if( absval > maxval )
                maxval = absval;
          }
          vec[r] = maxval;
@@ -1459,13 +1459,22 @@ void SparseStorage::getRowMaxVec(double* vec, const double* colScaleVec, bool in
          {
             const double absval = std::abs(M[i]);
 
-            if( absval > maxval && absval > 0.0 )
+            if( absval > maxval )
                maxval = absval;
          }
          vec[r] = maxval;
       }
    }
 }
+
+void SparseStorage::getRowMinMaxVec(bool getMin, bool initalizeVec, const double* colScaleVec, double* vec) const
+{
+   if( getMin )
+      getRowMinVec(initalizeVec, colScaleVec, vec);
+   else
+      getRowMaxVec(initalizeVec, colScaleVec, vec);
+}
+
 
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:

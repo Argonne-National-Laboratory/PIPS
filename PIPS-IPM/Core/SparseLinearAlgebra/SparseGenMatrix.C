@@ -360,58 +360,27 @@ void SparseGenMatrix::matMultTrans(SymMatrix** res)
 				   MMt->krowM(), MMt->jcolM(), MMt->M());
 }
 
-void SparseGenMatrix::getRowMinVec(OoqpVector& vec, const OoqpVector* colScaleVec,
-      bool initializeVec)
+void SparseGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
+      const OoqpVector* colScaleVec, OoqpVector& minmaxVec)
 {
-   SimpleVector& minvec = dynamic_cast<SimpleVector&>(vec);
+   SimpleVector& mvec = dynamic_cast<SimpleVector&>(minmaxVec);
 
-   assert(minvec.length() == mStorage->m);
-
-   if( initializeVec )
-      minvec.setToConstant(std::numeric_limits<double>::max());
+   assert(mvec.length() == mStorage->m);
 
    if( colScaleVec )
    {
-      SimpleVector& minvec = dynamic_cast<SimpleVector&>(vec);
       const SimpleVector* covec = dynamic_cast<const SimpleVector*>(colScaleVec);
 
-      mStorage->getRowMinVec(minvec.elements(), covec->elements());
+      mStorage->getRowMinMaxVec(getMin, initializeVec, covec->elements(), mvec.elements());
    }
    else
    {
-      mStorage->getRowMinVec(minvec.elements(), NULL);
+      mStorage->getRowMinMaxVec(getMin, initializeVec, NULL, mvec.elements());
    }
 }
 
-void SparseGenMatrix::getRowMaxVec(OoqpVector& vec, const OoqpVector* colScaleVec,
-      bool initializeVec)
-{
-   SimpleVector& maxvec = dynamic_cast<SimpleVector&>(vec);
-   assert(maxvec.length() == mStorage->m);
-
-   if( colScaleVec )
-   {
-      SimpleVector& maxvec = dynamic_cast<SimpleVector&>(vec);
-      const SimpleVector* covec = dynamic_cast<const SimpleVector*>(colScaleVec);
-
-      mStorage->getRowMaxVec(maxvec.elements(), covec->elements(), initializeVec);
-   }
-   else
-   {
-      mStorage->getRowMaxVec(maxvec.elements(), NULL, initializeVec);
-   }
-}
-
-void SparseGenMatrix::getColMinVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
-      bool initializeVec)
-{
-
-}
-
-
-
-void SparseGenMatrix::getColMaxVec(OoqpVector& vec, const OoqpVector* rowScaleVec,
-      bool initializeVec)
+void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
+      const OoqpVector* rowScaleVec, OoqpVector& minmaxVec)
 {
 
 }

@@ -57,14 +57,19 @@ void QpScaler::applyScaling(QpGenData * prob)
 
 double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC)
 {
-   A->getRowMaxVec(maxvecA, NULL, true);
-   A->getRowMinVec(minvecA, NULL, true);
-   C->getRowMaxVec(maxvecC, NULL, true);
-   C->getRowMinVec(minvecC, NULL, true);
+   A->getRowMinMaxVec(true, true, NULL, minvecA);
+   A->getRowMinMaxVec(false, true, NULL, maxvecA);
+   C->getRowMinMaxVec(true, true, NULL, minvecC);
+   C->getRowMinMaxVec(false, true, NULL, maxvecC);
 
    //TODO
    //OoqpVector tmpA = maxvecA;
    //OoqpVector* tmpA ()
+   int i;
+   double m;
+   maxvecA.max(m, i);
+
+   std::cout << "maxvec " << m << std::endl;
 
    maxvecA.divideSome(minvecA, minvecA);
    maxvecC.divideSome(minvecC, minvecC);

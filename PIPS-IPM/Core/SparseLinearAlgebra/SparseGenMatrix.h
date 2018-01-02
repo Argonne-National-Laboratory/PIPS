@@ -102,21 +102,13 @@ public:
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
 
-  /** fill vector with absolute minimum value of each row  */
-  virtual void getRowMinVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
-        bool initializeVec = true );
+  /** fill vector with absolute minimum/maximum value of each row */
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec );
 
-  /** fill vector with absolute maximum value of each row */
-  virtual void getRowMaxVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
-        bool initializeVec = true );
-
-  /** fill vector with absolute minimum value of each column */
-  virtual void getColMinVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
-        bool initializeVec = true );
-
-  /** fill vector with absolute maximum value of each column */
-  virtual void getColMaxVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
-        bool initializeVec = true );
+  /** fill vector with absolute minimum/maximum value of each column */
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
   virtual ~SparseGenMatrix();
 

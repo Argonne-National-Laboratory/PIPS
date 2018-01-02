@@ -67,6 +67,10 @@ public:
                         double alpha, OoqpVector& x,
 						   OoqpVector& yvecParent );
 
+  /** internal method needed for handling linking constraints */
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* OoqpVector );
+
  public:
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
@@ -127,21 +131,19 @@ public:
   void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
 
-  /** fill vector with absolute minimum value of each row  */
-  virtual void getRowMinVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
-        bool initializeVec = true );
+  /** fill vector with absolute minimum/maximum value of each row */
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec )
+  {
+     getRowMinMaxVec(getMin, initializeVec, colScaleVec, minmaxVec, NULL);
+  };
 
-  /** fill vector with absolute minimum value of each column */
-  virtual void getColMinVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
-        bool initializeVec = true );
-
-  /** fill vector with absolute maximum value of each row */
-  virtual void getRowMaxVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
-        bool initializeVec = true );
-
-  /** fill vector with absolute maximum value of each column */
-  virtual void getColMaxVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
-        bool initializeVec = true );
+  /** fill vector with absolute minimum/maximum value of each column */
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec )
+  {
+     assert(0);
+  }
 };
 
 
@@ -150,6 +152,7 @@ public:
  */
 
 class StochGenDummyMatrix : public StochGenMatrix {
+
 protected:
 
 public:
@@ -234,21 +237,14 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
 
-  /** fill vector with absolute minimum value of each row  */
-  virtual void getRowMinVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
-        bool initializeVec = true ){};
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* linkparent){};
 
-  /** fill vector with absolute maximum value of each row */
-  virtual void getRowMaxVec( OoqpVector& vec, const OoqpVector* colScaleVec = NULL,
-        bool initializeVec = true ){};
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec ){};
 
-  /** fill vector with absolute minimum value of each column */
-  virtual void getColMinVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
-        bool initializeVec = true ){};
-
-  /** fill vector with absolute maximum value of each column */
-  virtual void getColMaxVec( OoqpVector& vec, const OoqpVector* rowScaleVec = NULL,
-        bool initializeVec = true ){};
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
 };
 
 

@@ -110,12 +110,6 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   MPI_Comm_rank(comm,&mype);
 #endif
 
-  //scaler = new EquiStochScaler(data);
-  //scaler = ScalerFactory::makeScaler(data, scaler_type);
-#ifdef TIMING
-  if(mype==0) printf("scaler created\n");
-#endif
-
   factory = new FORMULATION( in, comm);
 #ifdef TIMING
   if(mype==0) printf("factory created\n");
@@ -143,6 +137,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   //solver->monitorSelf();
 #endif
 
+  scaler = ScalerFactory::makeScaler(data, scaler_type);
+#ifdef TIMING
+  if(mype==0) printf("scaler created\n");
+#endif
 }
 
 
@@ -175,7 +173,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
   double tmElapsed=MPI_Wtime();
 
-  // todo: scaler->scale(data,vars,resids);
+  scaler->scale();
 
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
@@ -231,6 +229,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete vars;
   delete data;
   delete factory;
+  delete scaler;
 }
 
 

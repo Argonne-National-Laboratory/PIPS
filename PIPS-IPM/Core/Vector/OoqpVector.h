@@ -211,6 +211,9 @@ public:
   virtual void copyFromArray( double v[] ) = 0;
   /** Copy the elements of the C-style char array v into this OoqpVector. */
   virtual void copyFromArray( char v[] ) = 0;
+
+  virtual OoqpVector* clone() const { assert(0 && "not implemented"); return NULL; };
+
 };
 
 

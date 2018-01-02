@@ -31,7 +31,6 @@ class QpScaler : public Scaler
 protected:
   enum MatrixType {MATRIXTYPE_A, MATRIXTYPE_C, MATRIXTYPE_Q};
 
-
   // scaling vector
   OoqpVector* vec_rowscaleQ;
   OoqpVector* vec_rowscaleA;
@@ -77,10 +76,10 @@ public:
   virtual ~QpScaler();
 
   /** scale */
-  virtual void scale(Data* prob) = 0;
+  virtual void scale() = 0;
 
   /** unscale */
-  virtual void unscale(Data* prob) = 0;
+  virtual void unscale() = 0;
 
 };
 

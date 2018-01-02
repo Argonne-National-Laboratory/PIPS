@@ -378,7 +378,9 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
 
   const int maxit=500;
   const double tol=1e-12, EPS=2e-16;
+#ifdef TIMING
   double iter=0.0;
+#endif
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
@@ -515,7 +517,10 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
       if(normr<=tolb) {
 	//converged
 	x.copyFrom(xhalf);	
-	flag = 0; iter = 0.5+ii;
+	flag = 0;
+#ifdef TIMING
+	iter = 0.5+ii;
+#endif
 	break;
       } else {
 	if(stag>=maxstagsteps && moresteps==0) {
@@ -581,7 +586,13 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
       SCmult(1.0,r, -1.0,x, prob);
       normr_act=r.twonorm();
 
-      if(normr<=tolb) { flag = 0; iter = 1.0+ii; break; }
+      if(normr<=tolb) {
+         flag = 0;
+#ifdef TIMING
+         iter = 1.0+ii;
+#endif
+         break;
+      }
       else {
 	if(stag>=maxstagsteps && moresteps==0) {
 	  stag = 0;
@@ -609,7 +620,9 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
   }//end while
 
   if(ii>=maxit) {
+#ifdef TIMING
     iter=ii;
+#endif
     flag=10;
   }
   
@@ -635,7 +648,9 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
       //iter=imin;
       relres=normr/n2b;
     } else {
+#ifdef TIMING
       iter=1.0+ii;
+#endif
       relres = normr/n2b;
     }
   
