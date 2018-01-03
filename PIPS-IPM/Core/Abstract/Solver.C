@@ -209,7 +209,88 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 		  	  	  	  	  	  	  double& alpha_primal, double& alpha_dual )
 {
-	// todo: implement here
+	// todo: implement here: this is just a copy of finalStepLength with adjusted return statement at the end
+	double primalValue, primalStep, dualValue, dualStep,
+		  maxAlpha, mufull;
+		int firstOrSecond;
+
+		maxAlpha = iterate->findBlocking( step,
+						  primalValue, primalStep,
+						  dualValue, dualStep,
+						  firstOrSecond );
+		mufull = iterate->mustep( step, maxAlpha );
+		mufull /= gamma_a;
+
+		double alpha = 1.0;
+		switch( firstOrSecond ) {
+		case 0:
+		  alpha = 1; // No constraints were blocking
+		  break;
+		case 1:
+		  alpha = ( - primalValue +
+			    mufull / ( dualValue + maxAlpha * dualStep ) ) /
+		    primalStep;
+	#ifdef TIMING
+		  std::cout << "alpha " << primalValue + maxAlpha * primalStep << std::endl;
+		  //assert(primalValue + maxAlpha * primalStep >= 0.0);
+	#endif
+		  break;
+		case 2:
+		  alpha = ( - dualValue +
+			    mufull / ( primalValue + maxAlpha * primalStep ) ) /
+		    dualStep;
+	#ifdef TIMING
+		  std::cout << "dual alpha " << dualValue + maxAlpha * dualStep << std::endl;
+		  //assert(dualValue + maxAlpha * dualStep >= 0.0);
+	#endif
+		  break;
+		default:
+		  cout << "Can't get here: firstOrSecond=" << firstOrSecond << endl;
+		  assert( 0 && "Can't get here" );
+	          break;
+		}
+
+		// make it at least gamma_f * maxStep
+		if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
+
+		// back off just a touch (or a bit more)
+	#ifdef BAD_NUMERICS
+		alpha *= 0.995;
+	#else
+		alpha *= .99999999;
+	#endif
+
+		assert(alpha < 1.0);
+
+		// adapted for different steplengths, but very crude!
+		// if blocking index is primal -> alpha is alpha_primal, adapt alpha_dual
+		if( firstOrSecond == 1 )
+		{
+			alpha_primal = alpha;
+			#ifdef BAD_NUMERICS
+				alpha_dual *= 0.995;
+			#else
+				alpha_dual *= .99999999;
+			#endif
+		}
+		// if blocking index is dual -> alpha is alpha_dual, adapt alpha_primal
+		else if( firstOrSecond == 2 )
+		{
+			alpha_dual = alpha;
+			#ifdef BAD_NUMERICS
+				alpha_primal *= 0.995;
+			#else
+				alpha_primal *= .99999999;
+			#endif
+
+		}
+		// if no blocking index -> set both to alpha
+		else if( firstOrSecond == 0)
+		{
+			alpha_primal = alpha;
+			alpha_dual = alpha;
+		}
+		assert(alpha_primal < 1.0 && alpha_dual < 1.0);
 }
 
 

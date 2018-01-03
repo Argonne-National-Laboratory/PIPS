@@ -30,7 +30,7 @@ double Variables::mustep_pd( Variables *step, double alpha_primal, double alpha_
   assert(0 && "not implemented here");
 }
 
-void Variables::stepbound_primal_dual( Variables *b, double & alpha_primal, double & alpha_dual )
+void Variables::stepbound_pd( Variables *b, double & alpha_primal, double & alpha_dual )
 {
   assert(0 && "not implemented here");
 }

@@ -70,7 +70,7 @@ public:
      *
      * @see stepbound
      */
-  virtual void stepbound_primal_dual( Variables *b, double & alpha_primal, double & alpha_dual );
+  virtual void stepbound_pd( Variables *b, double & alpha_primal, double & alpha_dual );
 
   /** Performs the same function as stepbound, and supplies additional
    * information about which component of the nonnegative variables is

@@ -185,9 +185,32 @@ double QpGenVars::mustep(Variables * step_in, double alpha)
   }
 }
 
-double QpGenVars::mustep_pd( Variables *step, double alpha_primal, double alpha_dual )
+double QpGenVars::mustep_pd( Variables *step_in, double alpha_primal, double alpha_dual )
 {
-	// todo: implement method here that computes mustep_pd
+	QpGenVars * step = (QpGenVars *) step_in;
+	double mu = 0.0;
+	if (nComplementaryVariables == 0) {
+		return 0.0;
+	} else {
+		if (mclow > 0) {
+			mu += t->shiftedDotProductWith(alpha_primal, *step->t, *lambda, alpha_primal,
+					*step->lambda);
+		}
+		if (mcupp > 0) {
+			mu += u->shiftedDotProductWith(alpha_primal, *step->u, *pi, alpha_primal,
+					*step->pi);
+		}
+		if (nxlow > 0) {
+			mu += v->shiftedDotProductWith(alpha_dual, *step->v, *gamma, alpha_dual,
+					*step->gamma);
+		}
+		if (nxupp > 0) {
+			mu += w->shiftedDotProductWith(alpha_dual, *step->w, *phi, alpha_dual,
+					*step->phi);
+		}
+		mu /= nComplementaryVariables;
+		return mu;
+	}
 }
 
 void QpGenVars::saxpy( Variables *b_in, double alpha )
@@ -228,9 +251,46 @@ void QpGenVars::saxpy( Variables *b_in, double alpha )
   }
 }
 
-void QpGenVars::saxpy_pd( Variables *b, double alpha_primal, double alpha_dual)
+void QpGenVars::saxpy_pd( Variables *b_in, double alpha_primal, double alpha_dual)
 {
-	// todo: implement method here that computes saxpy with alpha_primal and alpha_dual
+	QpGenVars * b = (QpGenVars *) b_in;
+
+	x->axpy(alpha_primal, *b->x);
+	y->axpy(alpha_dual, *b->y);
+	z->axpy(alpha_dual, *b->z);
+	s->axpy(alpha_primal, *b->s);
+	if (mclow > 0) {
+		assert(
+				b->t->matchesNonZeroPattern(*iclow)
+						&& b->lambda->matchesNonZeroPattern(*iclow));
+
+		t->axpy(alpha_primal, *b->t);
+		lambda->axpy(alpha_primal, *b->lambda);
+	}
+	if (mcupp > 0) {
+		assert(
+				b->u->matchesNonZeroPattern(*icupp)
+						&& b->pi->matchesNonZeroPattern(*icupp));
+
+		u->axpy(alpha_primal, *b->u);
+		pi->axpy(alpha_primal, *b->pi);
+	}
+	if (nxlow > 0) {
+		assert(
+				b->v->matchesNonZeroPattern(*ixlow)
+						&& b->gamma->matchesNonZeroPattern(*ixlow));
+
+		v->axpy(alpha_dual, *b->v);
+		gamma->axpy(alpha_dual, *b->gamma);
+	}
+	if (nxupp > 0) {
+		assert(
+				b->w->matchesNonZeroPattern(*ixupp)
+						&& b->phi->matchesNonZeroPattern(*ixupp));
+
+		w->axpy(alpha_dual, *b->w);
+		phi->axpy(alpha_dual, *b->phi);
+	}
 }
 
 
@@ -300,9 +360,48 @@ double QpGenVars::stepbound( Variables * b_in )
   return maxStep;
 }
 
-void QpGenVars::stepbound_primal_dual( Variables *b, double & alpha_primal, double & alpha_dual )
+void QpGenVars::stepbound_pd( Variables *b_in, double & alpha_primal, double & alpha_dual )
 {
-	// todo: implement method here that computes alpha_primal and alpha_dual
+	QpGenVars * b = (QpGenVars *) b_in;
+	double maxStep_primal, maxStep_dual;
+
+	maxStep_primal = 1.0;
+	maxStep_dual = 1.0;
+
+	if (mclow > 0) {
+		assert(t->somePositive(*iclow));
+		assert(lambda->somePositive(*iclow));
+
+		maxStep_primal = t->stepbound(*b->t, maxStep_primal);
+		maxStep_primal = lambda->stepbound(*b->lambda, maxStep_primal);
+	}
+
+	if (mcupp > 0) {
+		assert(u->somePositive(*icupp));
+		assert(pi->somePositive(*icupp));
+
+		maxStep_primal = u->stepbound(*b->u, maxStep_primal);
+		maxStep_primal = pi->stepbound(*b->pi, maxStep_primal);
+	}
+
+	if (nxlow > 0) {
+		assert(v->somePositive(*ixlow));
+		assert(gamma->somePositive(*ixlow));
+
+		maxStep_dual = v->stepbound(*b->v, maxStep_dual);
+		maxStep_dual = gamma->stepbound(*b->gamma, maxStep_dual);
+	}
+
+	if (nxupp > 0) {
+		assert(w->somePositive(*ixupp));
+		assert(phi->somePositive(*ixupp));
+
+		maxStep_dual = w->stepbound(*b->w, maxStep_dual);
+		maxStep_dual = phi->stepbound(*b->phi, maxStep_dual);
+	}
+
+	alpha_primal = maxStep_primal;
+	alpha_dual = maxStep_dual;
 }
   
 int QpGenVars::isInteriorPoint()
