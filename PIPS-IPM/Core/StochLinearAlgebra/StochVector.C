@@ -789,9 +789,21 @@ void StochVector::negate()
     children[it]->negate();
 }
 
+
+void StochVector::invertSave(double zeroReplacementVal)
+{
+  vec->invertSave(zeroReplacementVal);
+
+  if( vecl ) vecl->invertSave(zeroReplacementVal);
+
+  for( size_t it = 0; it < children.size(); it++ )
+    children[it]->invertSave(zeroReplacementVal);
+}
+
 void StochVector::invert()
 {
   vec->invert();
+
   if( vecl ) vecl->invert();
 
   for(size_t it=0; it<children.size(); it++) 

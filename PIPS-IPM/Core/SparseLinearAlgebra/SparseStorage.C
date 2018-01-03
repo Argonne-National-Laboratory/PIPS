@@ -1392,7 +1392,7 @@ void SparseStorage::getRowMinVec(bool initalizeVec, const double* colScaleVec, d
          }
          vec[r] = minval;
 
-         if( initalizeVec && vec[r] == std::numeric_limits<double>::max() )
+         if( initalizeVec &&  std::numeric_limits<double>::max() == vec[r] )
             vec[r] = 0.0;
       }
    }
@@ -1415,7 +1415,7 @@ void SparseStorage::getRowMinVec(bool initalizeVec, const double* colScaleVec, d
          }
          vec[r] = minval;
 
-         if( initalizeVec && vec[r] == std::numeric_limits<double>::max() )
+         if( initalizeVec && std::numeric_limits<double>::max() == vec[r] )
             vec[r] = 0.0;
       }
    }

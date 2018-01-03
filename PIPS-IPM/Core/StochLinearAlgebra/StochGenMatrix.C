@@ -137,9 +137,38 @@ void StochGenMatrix::ColumnScale( OoqpVector& vec )
   assert( "Has not been yet implemented" && 0 );
 }
 
+void StochGenMatrix::RowScale2( OoqpVector& vec, OoqpVector* linkingvec )
+{
+   StochVector& scalevec = dynamic_cast<StochVector&>(vec);
+
+   assert(children.size() == scalevec.children.size());
+
+   Amat->RowScale(*scalevec.vec);
+   Bmat->RowScale(*scalevec.vec);
+
+   if( linkingvec )
+   {
+      SimpleVector* vecl = dynamic_cast<SimpleVector*>(linkingvec);
+      Blmat->RowScale(*vecl);
+   }
+}
+
 void StochGenMatrix::RowScale( OoqpVector& vec )
 {
-  assert( "Has not been yet implemented" && 0 );
+   StochVector& scalevec = dynamic_cast<StochVector&>(vec);
+
+   assert(children.size() == scalevec.children.size());
+
+   Amat->RowScale(*scalevec.vec);
+   Bmat->RowScale(*scalevec.vec);
+
+   SimpleVector* vecl = dynamic_cast<SimpleVector*>(scalevec.vecl);
+
+   if( vecl )
+      Blmat->RowScale(*vecl);
+
+   for (size_t it=0; it<children.size(); it++)
+     children[it]->RowScale2(*(scalevec.children[it]), vecl);
 }
 
 void StochGenMatrix::SymmetricScale( OoqpVector &vec)
@@ -625,7 +654,7 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
       else
       {
          const bool initializeLinkVec = initializeVec && linkparent == NULL && iAmSpecial;
-         Blmat->getRowMinMaxVec(getMin, initializeLinkVec, colScaleVec, *(mvec.vec));
+         Blmat->getRowMinMaxVec(getMin, initializeLinkVec, colScaleVec, *mvecl);
       }
    }
 
@@ -633,14 +662,12 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    {
       const StochVector* covec = dynamic_cast<const StochVector*>(colScaleVec);
       for( size_t it = 0; it < children.size(); it++ )
-         children[it]->getRowMinMaxVec(getMin, initializeVec, covec->children[it],
-               *(mvec.children[it]), NULL);
+         children[it]->getRowMinMaxVec(getMin, initializeVec, covec->children[it], *(mvec.children[it]), mvecl);
    }
    else
    {
       for( size_t it = 0; it < children.size(); it++ )
-         children[it]->getRowMinMaxVec(getMin, initializeVec, NULL, *(mvec.children[it]),
-               NULL);
+         children[it]->getRowMinMaxVec(getMin, initializeVec, NULL, *(mvec.children[it]), mvecl);
    }
 
    // distributed, with linking constraints, and at root?
@@ -648,12 +675,25 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    {
       // sum up linking constraints vectors
       const int locn = mvecl->length();
+      double* const entries = mvecl->elements();
       double* buffer = new double[locn];
 
-      // todo: set to MAX and back afterwards?
+      if( getMin )
+      {
+         for( int i = 0; i < locn; i++ )
+            if( 0.0 == entries[i] )
+               entries[i] = std::numeric_limits<double>::max();
 
-      MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE,
-            getMin ? MPI_MIN : MPI_MAX, mpiComm);
+         MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_MIN, mpiComm);
+
+         for( int i = 0; i < locn; i++ )
+            if( std::numeric_limits<double>::max() == buffer[i] )
+               buffer[i] = 0.0;
+      }
+      else
+      {
+         MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_MAX, mpiComm);
+      }
 
       mvecl->copyFromArray(buffer);
 

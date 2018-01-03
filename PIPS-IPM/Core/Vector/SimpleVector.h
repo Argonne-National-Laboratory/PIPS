@@ -82,6 +82,7 @@ public:
 					double beta,  OoqpVector& ystep );
   virtual void negate();
   virtual void invert();
+  virtual void invertSave( double zeroReplacementVal = 0.0 );
   virtual int allPositive();
   virtual long long numberOfNonzeros();
 

@@ -115,6 +115,9 @@ public:
   /** Invert (1/x) the elements of this OoqpVector. */
   virtual void invert() = 0;
 
+  /** Invert (1/x) the elements of this OoqpVector, but don't divide by zero and replace by zeroReplacementVal instead */
+  virtual void invertSave( double zeroReplacementVal = 0.0 ) { assert(0 && "not implemented here"); };
+
   /** True if all elements of this OoqpVector are positive. */
   virtual int allPositive() = 0;
   
@@ -212,7 +215,7 @@ public:
   /** Copy the elements of the C-style char array v into this OoqpVector. */
   virtual void copyFromArray( char v[] ) = 0;
 
-  virtual OoqpVector* clone() const { assert(0 && "not implemented"); return NULL; };
+  virtual OoqpVector* clone() const { assert(0 && "not implemented here"); return NULL; };
 
 };
 

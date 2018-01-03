@@ -101,6 +101,7 @@ public:
 					double beta,  OoqpVector& ystep );
   virtual void negate();
   virtual void invert();
+  virtual void invertSave( double zeroReplacementVal = 0.0 );
   virtual int allPositive();
 
   virtual int matchesNonZeroPattern( OoqpVector& select );
@@ -193,6 +194,7 @@ public:
 					double beta,  OoqpVector& ystep ){return 0.0;}
   virtual void negate(){};
   virtual void invert(){};
+  virtual void invertSave( double zeroReplacementVal = 0.0 ) {};
   virtual int allPositive(){return 1;}
 
   virtual int matchesNonZeroPattern( OoqpVector& select ){return 1;}

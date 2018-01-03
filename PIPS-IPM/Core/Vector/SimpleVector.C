@@ -463,10 +463,24 @@ void SimpleVector::negate()
   for( i = 0; i < n; i++ ) v[i] = -v[i];
 }
 
+void SimpleVector::invertSave( double zeroReplacementVal )
+{
+  for( int i = 0; i < n; i++ )
+  {
+     if( v[i] != 0.0 )
+        v[i] = 1/v[i];
+     else
+        v[i] = zeroReplacementVal;
+  }
+}
+
 void SimpleVector::invert()
 {
-  int i;
-  for( i = 0; i < n; i++ ) v[i] = 1/v[i];
+  for( int i = 0; i < n; i++ )
+  {
+    assert(v[i] != 0.0);
+    v[i] = 1/v[i];
+  }
 }
 
 int SimpleVector::allPositive()

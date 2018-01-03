@@ -262,7 +262,7 @@ void SparseGenMatrix::SymmetricScale( OoqpVector& vec )
 
 void SparseGenMatrix::RowScale( OoqpVector& vec )
 {
-  mStorage->ColumnScale( vec );
+  mStorage->RowScale( vec );
 }
 
 void SparseGenMatrix::scalarMult( double num )

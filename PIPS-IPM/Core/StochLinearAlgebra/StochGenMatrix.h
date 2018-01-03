@@ -67,6 +67,9 @@ public:
                         double alpha, OoqpVector& x,
 						   OoqpVector& yvecParent );
 
+  /** row scale method for children */
+  virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec );
+
   /** internal method needed for handling linking constraints */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* OoqpVector );
@@ -236,6 +239,8 @@ public:
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
+
+  virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* linkparent){};

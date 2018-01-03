@@ -53,7 +53,7 @@ protected:
 
   //todo method for scaling Q
 
-  virtual void applyScaling(QpGenData * prob);
+  virtual void applyScaling();
   /*
   virtual void computeScalingVecs();
 

@@ -30,29 +30,32 @@ QpScaler::QpScaler(Data * prob, bool bitshifting)
    lhsC = qpprob->bl; // LHS of C
 }
 
-void QpScaler::applyScaling(QpGenData * prob)
+void QpScaler::applyScaling()
 {
    // todo scale Q
 
+   std::cout << "normbefore " << A->abmaxnorm() << std::endl;
    // scale A and rhs
-   A->ColumnScale(*vec_colscale);
+  // A->ColumnScale(*vec_colscale);
    A->RowScale(*vec_rowscaleA);
    bA->componentMult(*vec_rowscaleA);
 
+   std::cout << "after " << A->abmaxnorm() << std::endl;
+
    // scale C and lhs, rhs
-   C->ColumnScale(*vec_colscale);
+ //  C->ColumnScale(*vec_colscale);
    C->RowScale(*vec_rowscaleC);
    rhsC->componentMult(*vec_rowscaleC);
    lhsC->componentMult(*vec_rowscaleC);
 
    // scale ub and lb of x
-   bux->componentDiv(*vec_colscale);
-   blx->componentDiv(*vec_colscale);
+//   bux->componentDiv(*vec_colscale);
+//   blx->componentDiv(*vec_colscale);
 
    // scale obj
-   assert(factor_objscale > 0.0);
-   obj->componentMult(*vec_colscale);
-   obj->scalarMult(factor_objscale);
+//   assert(factor_objscale > 0.0);
+//   obj->componentMult(*vec_colscale);
+//   obj->scalarMult(factor_objscale);
 }
 
 double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC)
@@ -62,29 +65,34 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    C->getRowMinMaxVec(true, true, NULL, minvecC);
    C->getRowMinMaxVec(false, true, NULL, maxvecC);
 
-   //TODO
-   //OoqpVector tmpA = maxvecA;
-   //OoqpVector* tmpA ()
+   OoqpVector* const ratiovecA = maxvecA.clone();
+   OoqpVector* const ratiovecC = maxvecC.clone();
+
+   ratiovecA->copyFrom(maxvecA);
+   ratiovecC->copyFrom(maxvecC);
+
    int i;
    double m;
-   maxvecA.max(m, i);
-
+   ratiovecA->max(m, i);
    std::cout << "maxvec " << m << std::endl;
 
-   maxvecA.divideSome(minvecA, minvecA);
-   maxvecC.divideSome(minvecC, minvecC);
+   ratiovecA->divideSome(minvecA, minvecA);
+   ratiovecC->divideSome(minvecC, minvecC);
 
    int index;
    double maxratio;
-   maxvecA.max(maxratio, index);
+   ratiovecA->max(maxratio, index);
    assert(maxratio >= 0.0);
 
    double maxvalC;
-   maxvecC.max(maxvalC, index);
+   ratiovecC->max(maxvalC, index);
    assert(maxvalC >= 0.0);
 
    if( maxvalC > maxratio )
       maxratio = maxvalC;
+
+   delete ratiovecA;
+   delete ratiovecC;
 
    return maxratio ;
 }
