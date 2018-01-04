@@ -116,7 +116,10 @@ public:
   virtual void invert() = 0;
 
   /** Invert (1/x) the elements of this OoqpVector, but don't divide by zero and replace by zeroReplacementVal instead */
-  virtual void invertSave( double zeroReplacementVal = 0.0 ) { assert(0 && "not implemented here"); };
+  virtual void invertSave( double zeroReplacementVal = 0.0 ) = 0;
+
+  /** Rounds vector entries to nearest power of two values */
+  virtual void roundToPow2() = 0;
 
   /** True if all elements of this OoqpVector are positive. */
   virtual int allPositive() = 0;

@@ -789,6 +789,15 @@ void StochVector::negate()
     children[it]->negate();
 }
 
+void StochVector::invert()
+{
+  vec->invert();
+
+  if( vecl ) vecl->invert();
+
+  for(size_t it=0; it<children.size(); it++)
+    children[it]->invert();
+}
 
 void StochVector::invertSave(double zeroReplacementVal)
 {
@@ -800,14 +809,15 @@ void StochVector::invertSave(double zeroReplacementVal)
     children[it]->invertSave(zeroReplacementVal);
 }
 
-void StochVector::invert()
+
+void StochVector::roundToPow2()
 {
-  vec->invert();
+  vec->roundToPow2();
 
-  if( vecl ) vecl->invert();
+  if( vecl ) vecl->roundToPow2();
 
-  for(size_t it=0; it<children.size(); it++) 
-    children[it]->invert();
+  for( size_t it = 0; it < children.size(); it++ )
+     children[it]->roundToPow2();
 }
 
 int StochVector::allPositive()

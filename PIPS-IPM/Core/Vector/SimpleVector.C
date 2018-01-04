@@ -463,6 +463,15 @@ void SimpleVector::negate()
   for( i = 0; i < n; i++ ) v[i] = -v[i];
 }
 
+void SimpleVector::invert()
+{
+  for( int i = 0; i < n; i++ )
+  {
+    assert(v[i] != 0.0);
+    v[i] = 1/v[i];
+  }
+}
+
 void SimpleVector::invertSave( double zeroReplacementVal )
 {
   for( int i = 0; i < n; i++ )
@@ -474,12 +483,17 @@ void SimpleVector::invertSave( double zeroReplacementVal )
   }
 }
 
-void SimpleVector::invert()
+void SimpleVector::roundToPow2()
 {
   for( int i = 0; i < n; i++ )
   {
-    assert(v[i] != 0.0);
-    v[i] = 1/v[i];
+     int exp;
+     const double mantissa = std::frexp(v[i], &exp);
+
+     if( mantissa >= 0.75 )
+        v[i] = std::ldexp(0.5, exp + 1);
+     else
+        v[i] = std::ldexp(0.5, exp);
   }
 }
 
