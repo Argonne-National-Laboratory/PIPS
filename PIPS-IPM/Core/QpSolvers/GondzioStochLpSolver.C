@@ -315,9 +315,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       // length using Mehrotra's heuristic.x
       finalStepLength_PD(iterate, step, alpha_pri, alpha_dual);
 
-      // alternatively, just use a crude step scaling factor.
-      // alpha = 0.995 * iterate->stepbound( step );
-
       // actually take the step (at last!) and calculate the new mu
 
       iterate->saxpy_pd(step, alpha_pri, alpha_dual);

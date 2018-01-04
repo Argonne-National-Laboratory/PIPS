@@ -136,6 +136,15 @@ public:
 			       double & dualStep,
 			       int& firstOrSecond );
 
+  virtual void findBlocking_pd( Variables * step,
+  				double & primalValue,
+  				double & primalStep,
+  				double & dualValue,
+  				double & dualStep,
+  				double & primalValue_d, double & primalStep_d, double & dualValue_d, double & dualStep_d,
+  				double& alphaPrimal, double& alphaDual,
+  				int& primalBlocking, int& dualBlocking );
+
   /** sets components of (u,t,v,w) to alpha and of
       (lambda,pi,phi,gamma) to beta */
   virtual void interiorPoint( double alpha, double beta );

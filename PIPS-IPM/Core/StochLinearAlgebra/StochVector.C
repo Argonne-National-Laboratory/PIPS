@@ -524,6 +524,110 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
   return step;
 }
 
+void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
+			      OoqpVector & u_vec,
+			      OoqpVector & ustep_vec,
+			      double maxStepPri, double maxStepDual,
+			      double *w_elt_p, double *wstep_elt_p, double *u_elt_p, double *ustep_elt_p,
+				  double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
+				  double& stepPrimal, double& stepDual,
+			      int& primalBlocking, int& dualBlocking)
+{
+  StochVector& w = *this;
+  StochVector& u = dynamic_cast<StochVector&>(u_vec);
+
+  StochVector& wstep = dynamic_cast<StochVector&>(wstep_vec);
+  StochVector& ustep = dynamic_cast<StochVector&>(ustep_vec);
+
+  stepPrimal = maxStepPri;
+
+  if( w.vecl )
+  {
+    assert(wstep.vecl);
+    assert(u.vecl);
+    assert(ustep.vecl);
+
+    w.vecl->findBlocking_pd(*wstep.vecl, *u.vecl, *ustep.vecl, stepPrimal, stepDual,
+                 w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p,
+				 w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
+				 stepPrimal, stepDual,
+                 primalBlocking, dualBlocking);
+  }
+
+  w.vec->findBlocking_pd(*wstep.vec, *u.vec, *ustep.vec, stepPrimal, stepDual,
+		  	  	  w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p,
+				  w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
+				  stepPrimal, stepDual,
+				  primalBlocking, dualBlocking);
+
+  int nChildren=w.children.size();
+  //check tree compatibility
+  assert( nChildren             - u.children.size() == 0);
+  assert( wstep.children.size() == ustep.children.size() );
+  assert( nChildren             - ustep.children.size() == 0);
+
+  for(int it=0; it<nChildren; it++) {
+    w.children[it]->findBlocking_pd(*wstep.children[it],
+			       *u.children[it],
+			       *ustep.children[it],
+				   stepPrimal, stepDual,
+				   w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p,
+				   w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
+				   stepPrimal, stepDual, primalBlocking, dualBlocking);
+  }
+
+  if(iAmDistrib==1) {
+    double stepG;
+    MPI_Allreduce(&stepPrimal, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+
+    //we prefer a AllReduce instead of a bcast, since the step==stepG m
+    //may occur for two different processes and a deadlock may occur.
+    double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
+    if(stepPrimal==stepG) {
+      buffer[0]=*w_elt_p; buffer[1]=*wstep_elt_p;
+      buffer[2]=*u_elt_p; buffer[3]=*ustep_elt_p;
+      buffer[4]=primalBlocking;
+    } else {
+      buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
+    }
+    double bufferOut[5];
+    MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm);
+
+    *w_elt_p = bufferOut[0]; *wstep_elt_p=bufferOut[1];
+    *u_elt_p = bufferOut[2]; *ustep_elt_p=bufferOut[3];
+
+    //primalBlocking  negative means no blocking, so set it to 0.
+    primalBlocking = bufferOut[4]<0?0:(int)bufferOut[4];
+    assert(primalBlocking==0 || primalBlocking==1);
+    stepPrimal=stepG;
+
+    // same procedure for stepDual:
+    double stepF;
+	MPI_Allreduce(&stepDual, &stepF, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+
+	//we prefer a AllReduce instead of a bcast, since the stepDual==stepF m
+	//may occur for two different processes and a deadlock may occur.
+	double buffer_d[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
+	if(stepDual==stepF) {
+	  buffer_d[0]=*w_elt_d; buffer_d[1]=*wstep_elt_d;
+	  buffer_d[2]=*u_elt_d; buffer_d[3]=*ustep_elt_d;
+	  buffer_d[4]=dualBlocking;
+	} else {
+	  buffer_d[0]=buffer_d[1]=buffer_d[2]=buffer_d[3]=buffer_d[4]= -std::numeric_limits<double>::max();
+	}
+	double bufferOut_d[5];
+	MPI_Allreduce(buffer_d, bufferOut_d, 5, MPI_DOUBLE, MPI_MAX, mpiComm);
+
+	*w_elt_d = bufferOut_d[0]; *wstep_elt_d=bufferOut_d[1];
+	*u_elt_d = bufferOut_d[2]; *ustep_elt_d=bufferOut_d[3];
+
+	//dualBlocking negative means no blocking, so set it to 0.
+	dualBlocking = bufferOut_d[4]<0?0:(int)bufferOut_d[4];
+	assert(dualBlocking==0 || dualBlocking==1);
+	stepDual=stepF;
+  }
+}
+
 void StochVector::componentMult( OoqpVector& v_ )
 {
   StochVector& v = dynamic_cast<StochVector&>(v_);

@@ -102,6 +102,15 @@ public:
 			       double & dualStep,
 			       int& firstOrSecond ) = 0;
 
+  virtual void findBlocking_pd( Variables * step,
+  				double & primalValue,
+  				double & primalStep,
+  				double & dualValue,
+  				double & dualStep,
+  				double & primalValue_d, double & primalStep_d, double & dualValue_d, double & dualStep_d,
+  				double& alphaPrimal, double& alphaDual,
+  				int& primalBlocking, int& dualBlocking );
+
   /** In the abstract QP formulation, sets s to alpha, z to beta and
    *  the other variable components to zero. */
   virtual void interiorPoint( double alpha, double beta ) = 0;

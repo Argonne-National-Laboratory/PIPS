@@ -505,6 +505,29 @@ double SimpleVector::findBlocking(OoqpVector & wstep_vec,
 			  first_or_second );
 }
 
+void SimpleVector::findBlocking_pd(OoqpVector & wstep_vec,
+						OoqpVector & u_vec, OoqpVector & ustep_vec,
+						double maxStepPri, double maxStepDual,
+						double *w_elt_p, double *wstep_elt_p, double *u_elt_p, double *ustep_elt_p,
+						double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
+						double& bound_primal, double& bound_dual,
+						int& primalBlocking, int& dualBlocking) {
+	double * w = v;
+	SimpleVector & swstep = dynamic_cast<SimpleVector &>(wstep_vec);
+	double * wstep = swstep.v;
+
+	SimpleVector & su_vec = dynamic_cast<SimpleVector &>(u_vec);
+	double * u = su_vec.v;
+
+	SimpleVector & sustep_vec = dynamic_cast<SimpleVector &>(ustep_vec);
+	double * ustep = sustep_vec.v;
+
+	::find_blocking_pd(w, n, 1, wstep, 1, u, 1, ustep, 1, maxStepPri,
+			maxStepDual, w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p, w_elt_d,
+			wstep_elt_d, u_elt_d, ustep_elt_d, bound_primal, bound_dual,
+			primalBlocking, dualBlocking);
+}
+
 int SimpleVector::matchesNonZeroPattern( OoqpVector& select )
 {
   SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);

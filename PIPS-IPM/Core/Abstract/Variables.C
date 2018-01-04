@@ -28,9 +28,22 @@ void Variables::saxpy_pd( Variables *b, double alpha_primal, double alpha_dual)
 double Variables::mustep_pd( Variables *step, double alpha_primal, double alpha_dual )
 {
   assert(0 && "not implemented here");
+  return 0;
 }
 
 void Variables::stepbound_pd( Variables *b, double & alpha_primal, double & alpha_dual )
+{
+  assert(0 && "not implemented here");
+}
+
+void Variables::findBlocking_pd( Variables * step,
+				double & primalValue,
+				double & primalStep,
+				double & dualValue,
+				double & dualStep,
+				double & primalValue_d, double & primalStep_d, double & dualValue_d, double & dualStep_d,
+				double& alphaPrimal, double& alphaDual,
+				int& primalBlocking, int& dualBlocking )
 {
   assert(0 && "not implemented here");
 }

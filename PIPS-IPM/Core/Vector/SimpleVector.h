@@ -108,6 +108,13 @@ public:
 			      double *u_elt, 
 			      double *ustep_elt,
 			      int& first_or_second);
+  virtual void findBlocking_pd(OoqpVector & wstep_vec,
+  						OoqpVector & u_vec, OoqpVector & ustep_vec,
+  						double maxStepPri, double maxStepDual,
+  						double *w_elt_p, double *wstep_elt_p, double *u_elt_p, double *ustep_elt_p,
+  						double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
+  						double& bound_primal, double& bound_dual,
+  						int& primalBlocking, int& dualBlocking);
   /** Returns a pointer to the elements of this vector. */
   double * elements() { return v; };
 };
