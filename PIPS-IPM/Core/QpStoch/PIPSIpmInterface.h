@@ -173,7 +173,8 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
   double tmElapsed=MPI_Wtime();
 
-  scaler->scale();
+  if( scaler )
+     scaler->scale();
 
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);

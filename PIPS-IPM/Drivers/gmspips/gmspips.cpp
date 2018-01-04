@@ -378,7 +378,7 @@ int main(int argc, char ** argv)
    gInnerSCsolve=0;
 #endif
 
-   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root);
+   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH);
 
   // PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
    //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);

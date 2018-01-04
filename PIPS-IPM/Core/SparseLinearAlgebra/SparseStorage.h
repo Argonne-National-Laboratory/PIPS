@@ -128,7 +128,7 @@ public:
 
   void transMultLower( double beta,  double y[],
 			       double alpha, double x[], int firstrow );
-	void transMultMat( double beta,  double* Y, int ny, int ldy,
+  void transMultMat( double beta,  double* Y, int ny, int ldy,
 						 double alpha, double *X, int ldx);
   void transMultMatLower( double* Y, int ny, int firstrow,
 						 double alpha, double *X, int ldx);
