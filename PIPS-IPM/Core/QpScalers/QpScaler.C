@@ -28,6 +28,16 @@ QpScaler::QpScaler(Data * prob, bool bitshifting)
    blx = qpprob->blx; // lower bound of x
    rhsC = qpprob->bu; // RHS of C
    lhsC = qpprob->bl; // LHS of C
+
+   factor_objscale = 1.0;
+}
+
+double QpScaler::getOrigObj(double objval)
+{
+   assert(vec_colscale != NULL);
+   assert(factor_objscale > 0.0);
+
+   return (objval / factor_objscale);
 }
 
 void QpScaler::applyScaling()

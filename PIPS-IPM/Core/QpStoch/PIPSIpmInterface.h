@@ -130,16 +130,16 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("resids created\n");
 #endif
 
-  solver  = new IPMSOLVER( factory, data );
-  solver->addMonitor(new StochMonitor( factory ));
-#ifdef TIMING
-  if(mype==0) printf("solver created\n");
-  //solver->monitorSelf();
-#endif
-
   scaler = ScalerFactory::makeScaler(data, scaler_type);
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");
+#endif
+
+  solver  = new IPMSOLVER( factory, data );
+  solver->addMonitor(new StochMonitor( factory, scaler ));
+#ifdef TIMING
+  if(mype==0) printf("solver created\n");
+  //solver->monitorSelf();
 #endif
 }
 
@@ -147,9 +147,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 template<typename FORMULATION, typename IPMSOLVER>
 void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
-
-  int mype;
-  MPI_Comm_rank(comm,&mype);
+   int mype;
+   MPI_Comm_rank(comm,&mype);
 #ifdef TIMING
   if(0 == mype) cout << "solving ..." << endl;
 
@@ -169,9 +168,9 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
     }
   }
-#endif
 
   double tmElapsed=MPI_Wtime();
+#endif
 
   if( scaler )
      scaler->scale();
@@ -180,15 +179,12 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   int result = solver->solve(data,vars,resids);
   //---------------------------------------------
 
-  // todo: scaler->unscale(data,vars,resids);
-
-  tmElapsed=MPI_Wtime()-tmElapsed;
-#ifdef TIMING
-  double objective = getObjective();
-#endif
-
   if ( 0 == result && 0 == mype ) {
 #ifdef TIMING
+
+    tmElapsed=MPI_Wtime()-tmElapsed;
+
+    double objective = getObjective();
     //cout << " " << data->nx << " variables, " << data->my  
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
     
@@ -203,13 +199,19 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
       sscanf( var, "%d", &num_threads );
       cout << "Num threads: " << num_threads << endl;
     }
+
 #endif
   }
 }
 
 template<typename FORMULATION, typename SOLVER>
 double PIPSIpmInterface<FORMULATION,SOLVER>::getObjective() const {
-  return data->objectiveValue(vars);
+  double obj = data->objectiveValue(vars);
+
+  if( scaler )
+     obj = scaler->getOrigObj(obj);
+
+  return obj;
 }
 
 

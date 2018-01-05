@@ -56,6 +56,8 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    StepFactor0 = 0.3;
    StepFactor1 = 1.5;
 
+   mutol = 1.e-9; // todo parameter
+
    temp_step = factory->makeVariables(prob);
 }
 

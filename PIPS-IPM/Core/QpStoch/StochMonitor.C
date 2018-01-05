@@ -11,20 +11,22 @@
 
 using namespace std;
 
-StochMonitor::StochMonitor(QpGenStoch* qp_) 
+StochMonitor::StochMonitor(QpGenStoch* qp_, Scaler* scaler)
+  : qp(qp_), scaler(scaler)
 {
-  qp = qp_;
   mpiComm=MPI_COMM_WORLD; //default for old version
   MPI_Comm_rank(mpiComm, &myRank);
   myGlobRank = myRank;
 }
 
-StochMonitor::StochMonitor(sFactory* qp_) 
+StochMonitor::StochMonitor(sFactory* qp_, Scaler* scaler)
+  : qp(NULL), scaler(scaler)
 {
   mpiComm = qp_->tree->commWrkrs;
   MPI_Comm_rank(mpiComm, &myRank);
   MPI_Comm_rank(MPI_COMM_WORLD, &myGlobRank);
 }
+
 void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
 			 Residuals * resids,
 			 double alpha, double sigma,
@@ -33,6 +35,9 @@ void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
 			 int level ) 
 {
   double objective = dynamic_cast<QpGenData*>(data)->objectiveValue(dynamic_cast<QpGenVars*>(vars));
+
+  if( scaler )
+     objective = scaler->getOrigObj(objective);
 
   //log only on the first proc
   if(myRank>0) return;

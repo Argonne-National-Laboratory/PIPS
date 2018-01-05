@@ -77,10 +77,10 @@ public:
   virtual ~QpScaler();
 
   /** scale */
-  virtual void scale() = 0;
+  virtual void scale() = 0;;
 
-  /** unscale */
-  virtual void unscale() = 0;
+  /** unscale given objective value */
+  virtual double getOrigObj(double objval);
 
 };
 
