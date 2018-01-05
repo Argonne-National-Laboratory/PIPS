@@ -80,21 +80,16 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    ratiovecA->copyFrom(maxvecA);
    ratiovecC->copyFrom(maxvecC);
 
-   int i;
-   double m;
-   ratiovecA->max(m, i);
-   std::cout << "maxvec " << m << std::endl;
-
    ratiovecA->divideSome(minvecA, minvecA);
    ratiovecC->divideSome(minvecC, minvecC);
 
-   int index;
+   int i;
    double maxratio;
-   ratiovecA->max(maxratio, index);
+   ratiovecA->max(maxratio, i);
    assert(maxratio >= 0.0);
 
    double maxvalC;
-   ratiovecC->max(maxvalC, index);
+   ratiovecC->max(maxvalC, i);
    assert(maxvalC >= 0.0);
 
    if( maxvalC > maxratio )
@@ -103,12 +98,36 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    delete ratiovecA;
    delete ratiovecC;
 
-   return maxratio ;
+   return maxratio;
 }
 
-double QpScaler::maxColRatio() //( OoqpVector& colvecmax, OoqpVector& colvecmin )
+double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
 {
-   double maxratio = 0.0;
+   A->getColMinMaxVec(true, true, NULL, minvec);
+   C->getColMinMaxVec(true, false, NULL, minvec);
+
+   A->getColMinMaxVec(false, true, NULL, maxvec);
+   C->getColMinMaxVec(false, false, NULL, maxvec);
+
+   OoqpVector* const ratiovec = maxvec.clone();
+
+   ratiovec->copyFrom(maxvec);
+
+   int i;
+   double m;
+   ratiovec->max(m, i);
+   std::cout << "COLmaxvec " << m << std::endl;
+
+   ratiovec->divideSome(minvec, minvec);
+
+   int index;
+   double maxratio;
+   ratiovec->min(maxratio, index);
+   assert(maxratio >= 0.0);
+
+   std::cout << "maxratio " << maxratio << std::endl;
+
+   delete ratiovec;
 
    return maxratio;
 }

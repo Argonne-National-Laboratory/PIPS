@@ -70,7 +70,7 @@ protected:
   virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC);
 
   /** get maximum absolute column ratio and write maximum column entries into vectors */
-  virtual double maxColRatio();
+  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec);
 public:
 
   QpScaler(Data* prob, bool bitshifting = true);
