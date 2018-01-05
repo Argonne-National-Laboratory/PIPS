@@ -54,7 +54,6 @@ void QpScaler::applyScaling()
 
    // scale obj
 //   assert(factor_objscale > 0.0);
-//   obj->componentMult(*vec_colscale);
 //   obj->scalarMult(factor_objscale);
 }
 

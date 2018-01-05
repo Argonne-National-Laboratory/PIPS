@@ -54,12 +54,13 @@ protected:
   //todo method for scaling Q
 
   virtual void applyScaling();
+  virtual void doObjScaling() = 0;
   /*
   virtual void computeScalingVecs();
 
   virtual void computeRowscaleVec(GenMatrix* matrix, MatrixType type) = 0;
   virtual void computeColscaleVec(GenMatrix* matrixA, GenMatrix* matrixC, GenMatrix* matrixQ) = 0;
-  virtual void computeObjScaleFactor();
+
 
   virtual void scaleMatrix(GenMatrix* matrix);
   virtual void scaleVector(OoqpVector* vec, const OoqpVector* scalevec);
