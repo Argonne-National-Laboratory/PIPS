@@ -21,10 +21,10 @@ using namespace std;
 class SparseStorage : public DoubleStorage {
 private:
   /** store absolute non-zero minimum entry of row i and vec[i] in vec[i]; empty rows get value 0.0  */
-  void getRowMinVec(bool initalizeVec, const double* colScaleVec, double* vec) const;
+  void getRowMinVec(const double* colScaleVec, double* vec) const;
 
   /** store absolute non-zero maximum entry of row i and vec[i] in vec[i]; empty rows get value 0.0  */
-  void getRowMaxVec(bool initalizeVec, const double* colScaleVec, double* vec) const;
+  void getRowMaxVec(const double* colScaleVec, double* vec) const;
 
 protected:
   int neverDeleteElts;
@@ -145,7 +145,7 @@ public:
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
   /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i]; empty rows get value 0.0  */
-  void getRowMinMaxVec(bool getMin, bool initalizeVec, const double* colScaleVec, double* vec) const;
+  void getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const;
 
   void dump(const string& filename);
 

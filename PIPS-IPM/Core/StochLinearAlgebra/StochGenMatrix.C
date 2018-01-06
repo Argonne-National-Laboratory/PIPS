@@ -675,28 +675,84 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    {
       // sum up linking constraints vectors
       const int locn = mvecl->length();
-      double* const entries = mvecl->elements();
       double* buffer = new double[locn];
 
       if( getMin )
-      {
-         for( int i = 0; i < locn; i++ )
-            if( 0.0 == entries[i] )
-               entries[i] = std::numeric_limits<double>::max();
-
          MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_MIN, mpiComm);
-
-         for( int i = 0; i < locn; i++ )
-            if( std::numeric_limits<double>::max() == buffer[i] )
-               buffer[i] = 0.0;
-      }
       else
-      {
          MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_MAX, mpiComm);
-      }
 
       mvecl->copyFromArray(buffer);
 
       delete[] buffer;
    }
 }
+
+void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec, OoqpVector* parent)
+{
+   StochVector& minmaxVecStoch = dynamic_cast<StochVector&>(minmaxVec);
+
+   // assert tree compatibility
+   assert(minmaxVecStoch.children.size() == children.size());
+
+   SimpleVector* mvec = dynamic_cast<SimpleVector*>(minmaxVecStoch.vec);
+
+   Bmat->getColMinMaxVec(getMin, initializeVec, rowScaleVec, *(mvec));
+
+   int blm, bln;
+   Blmat->getSize(blm, bln);
+
+   /* with linking constraints? */
+   if( blm > 0 )
+   {
+      bool iAmSpecial = true;
+      if( iAmDistrib )
+      {
+         int rank;
+         MPI_Comm_rank(mpiComm, &rank);
+         if( rank > 0 )
+            iAmSpecial = false;
+      }
+
+      // todo there might be a problem with initialization if B is empty
+      if( iAmSpecial || parent != NULL )
+         Blmat->getColMinMaxVec(getMin, false, rowScaleVec, *mvec);
+   }
+
+   // not at root?
+   if( parent )
+      Amat->getColMinMaxVec(getMin, false, rowScaleVec, *(parent));
+   else
+   {
+      if( rowScaleVec )
+      {
+         const StochVector* covec = dynamic_cast<const StochVector*>(rowScaleVec);
+         for( size_t it = 0; it < children.size(); it++ )
+            children[it]->getColMinMaxVec(getMin, initializeVec, covec->children[it], *(minmaxVecStoch.children[it]), mvec);
+      }
+      else
+      {
+         for( size_t it = 0; it < children.size(); it++ )
+            children[it]->getColMinMaxVec(getMin, initializeVec, NULL, *(minmaxVecStoch.children[it]), mvec);
+      }
+   }
+
+   // distributed and at root?
+   if( iAmDistrib && parent == NULL )
+   {
+      const int locn = mvec->length();
+      double* const entries = mvec->elements();
+      double* buffer = new double[locn];
+
+      if( getMin )
+         MPI_Allreduce(entries, buffer, locn, MPI_DOUBLE, MPI_MIN, mpiComm);
+      else
+         MPI_Allreduce(entries, buffer, locn, MPI_DOUBLE, MPI_MAX, mpiComm);
+
+      mvec->copyFromArray(buffer);
+
+      delete[] buffer;
+   }
+}
+

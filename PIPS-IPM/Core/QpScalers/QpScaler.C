@@ -122,10 +122,10 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
 
    int index;
    double maxratio;
-   ratiovec->min(maxratio, index);
+   ratiovec->max(maxratio, index);
    assert(maxratio >= 0.0);
 
-   std::cout << "maxratio " << maxratio << std::endl;
+   std::cout << "colmaxratio " << maxratio << std::endl;
 
    delete ratiovec;
 

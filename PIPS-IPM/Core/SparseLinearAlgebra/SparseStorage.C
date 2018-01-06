@@ -1368,7 +1368,7 @@ void SparseStorage::dump(const string& filename)
   }
 }
 
-void SparseStorage::getRowMinVec(bool initalizeVec, const double* colScaleVec, double* vec) const
+void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const
 {
    const bool coscale = (colScaleVec != NULL);
 
@@ -1376,9 +1376,6 @@ void SparseStorage::getRowMinVec(bool initalizeVec, const double* colScaleVec, d
    {
       for( int r = 0; r < m; r++ )
       {
-         if( initalizeVec )
-            vec[r] = std::numeric_limits<double>::max();
-
          double minval = vec[r];
          assert(minval >= 0.0);
 
@@ -1387,22 +1384,16 @@ void SparseStorage::getRowMinVec(bool initalizeVec, const double* colScaleVec, d
             const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
 
             // todo global epsilon would be good
-            if( (absval < minval || minval == 0.0) && absval > 0.0 )
+            if( absval < minval && absval > 0.0 )
                minval = absval;
          }
          vec[r] = minval;
-
-         if( initalizeVec &&  std::numeric_limits<double>::max() == vec[r] )
-            vec[r] = 0.0;
       }
    }
    else
    {
       for( int r = 0; r < m; r++ )
       {
-         if( initalizeVec )
-            vec[r] = std::numeric_limits<double>::max();
-
          double minval = vec[r];
          assert(minval >= 0.0);
 
@@ -1410,18 +1401,15 @@ void SparseStorage::getRowMinVec(bool initalizeVec, const double* colScaleVec, d
          {
             const double absval = std::abs(M[i]);
 
-            if( (absval < minval || minval == 0.0) && absval > 0.0 )
+            if( absval < minval && absval > 0.0 )
                minval = absval;
          }
          vec[r] = minval;
-
-         if( initalizeVec && std::numeric_limits<double>::max() == vec[r] )
-            vec[r] = 0.0;
       }
    }
 }
 
-void SparseStorage::getRowMaxVec(bool initalizeVec, const double* colScaleVec, double* vec) const
+void SparseStorage::getRowMaxVec(const double* colScaleVec, double* vec) const
 {
    const bool coscale = (colScaleVec != NULL);
 
@@ -1429,9 +1417,6 @@ void SparseStorage::getRowMaxVec(bool initalizeVec, const double* colScaleVec, d
    {
       for( int r = 0; r < m; r++ )
       {
-         if( initalizeVec )
-            vec[r] = 0.0;
-
          double maxval = vec[r];
          assert(maxval >= 0.0);
 
@@ -1449,9 +1434,6 @@ void SparseStorage::getRowMaxVec(bool initalizeVec, const double* colScaleVec, d
    {
       for( int r = 0; r < m; r++ )
       {
-         if( initalizeVec )
-            vec[r] = 0.0;
-
          double maxval = vec[r];
          assert(maxval >= 0.0);
 
@@ -1467,12 +1449,12 @@ void SparseStorage::getRowMaxVec(bool initalizeVec, const double* colScaleVec, d
    }
 }
 
-void SparseStorage::getRowMinMaxVec(bool getMin, bool initalizeVec, const double* colScaleVec, double* vec) const
+void SparseStorage::getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const
 {
    if( getMin )
-      getRowMinVec(initalizeVec, colScaleVec, vec);
+      getRowMinVec(colScaleVec, vec);
    else
-      getRowMaxVec(initalizeVec, colScaleVec, vec);
+      getRowMaxVec(colScaleVec, vec);
 }
 
 

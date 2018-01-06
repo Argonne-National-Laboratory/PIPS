@@ -72,7 +72,10 @@ public:
 
   /** internal method needed for handling linking constraints */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* OoqpVector );
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* linkparent );
+
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec, OoqpVector* parent );
 
  public:
   virtual void getSize( long long& m, long long& n );
@@ -145,8 +148,8 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec )
   {
-     assert(0);
-  }
+     getColMinMaxVec(getMin, initializeVec, rowScaleVec, minmaxVec, NULL);
+  };
 };
 
 
@@ -244,6 +247,9 @@ public:
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* linkparent){};
+
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec, OoqpVector* parent){};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec ){};
