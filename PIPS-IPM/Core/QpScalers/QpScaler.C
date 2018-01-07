@@ -44,27 +44,26 @@ void QpScaler::applyScaling()
 {
    // todo scale Q
 
-   std::cout << "normbefore " << A->abmaxnorm() << std::endl;
+   std::cout << "Anorm before " << A->abmaxnorm() << std::endl;
+   std::cout << "Cnorm before " << C->abmaxnorm() << std::endl;
+
    // scale A and rhs
-  // A->ColumnScale(*vec_colscale);
+   A->ColumnScale(*vec_colscale);
    A->RowScale(*vec_rowscaleA);
    bA->componentMult(*vec_rowscaleA);
 
-   std::cout << "after " << A->abmaxnorm() << std::endl;
-
    // scale C and lhs, rhs
- //  C->ColumnScale(*vec_colscale);
+   C->ColumnScale(*vec_colscale);
    C->RowScale(*vec_rowscaleC);
    rhsC->componentMult(*vec_rowscaleC);
    lhsC->componentMult(*vec_rowscaleC);
 
    // scale ub and lb of x
-//   bux->componentDiv(*vec_colscale);
-//   blx->componentDiv(*vec_colscale);
+   bux->componentDiv(*vec_colscale);
+   blx->componentDiv(*vec_colscale);
 
-   // scale obj
-//   assert(factor_objscale > 0.0);
-//   obj->scalarMult(factor_objscale);
+   std::cout << "Anorm after " << A->abmaxnorm() << std::endl;
+   std::cout << "Cnorm after " << C->abmaxnorm() << std::endl;
 }
 
 double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC)

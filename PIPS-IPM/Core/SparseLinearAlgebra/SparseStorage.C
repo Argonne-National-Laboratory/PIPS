@@ -98,9 +98,8 @@ void SparseStorage::fromGetDiagonal( int idiag, OoqpVector& vec_in )
 void SparseStorage::ColumnScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
 
-  assert( extent == n );
+  assert( scale.length() == n );
  
   int i, j, k;
 
@@ -118,9 +117,8 @@ void SparseStorage::ColumnScale( OoqpVector& scale_in )
 void SparseStorage::RowScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
 
-  assert( extent == m );
+  assert( scale.length() == m );
 
   int i, k;
 

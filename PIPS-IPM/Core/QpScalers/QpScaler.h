@@ -29,7 +29,12 @@ class Data;
 class QpScaler : public Scaler
 {
 protected:
-  enum MatrixType {MATRIXTYPE_A, MATRIXTYPE_C, MATRIXTYPE_Q};
+  static void invertAndRound(bool round, OoqpVector& vector)
+  {
+     vector.invertSave(1.0);
+     if( round )
+        vector.roundToPow2();
+  }
 
   // scaling vector
   OoqpVector* vec_rowscaleQ;
@@ -51,21 +56,9 @@ protected:
   // scaling factor for objective
   double factor_objscale;
 
-  //todo method for scaling Q
-
   virtual void applyScaling();
   virtual void doObjScaling() = 0;
-  /*
-  virtual void computeScalingVecs();
 
-  virtual void computeRowscaleVec(GenMatrix* matrix, MatrixType type) = 0;
-  virtual void computeColscaleVec(GenMatrix* matrixA, GenMatrix* matrixC, GenMatrix* matrixQ) = 0;
-
-
-  virtual void scaleMatrix(GenMatrix* matrix);
-  virtual void scaleVector(OoqpVector* vec, const OoqpVector* scalevec);
-  virtual void scaleVector(OoqpVector* vec, double scalefactor);
-*/
   /** get maximum absolute row ratio and write maximum row entries into vectors */
   virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC);
 

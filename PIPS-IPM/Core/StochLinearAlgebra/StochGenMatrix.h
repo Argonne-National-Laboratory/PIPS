@@ -67,15 +67,18 @@ public:
                         double alpha, OoqpVector& x,
 						   OoqpVector& yvecParent );
 
+  /** column scale method for children */
+  virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec );
+
   /** row scale method for children */
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec );
 
   /** internal method needed for handling linking constraints */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* linkparent );
+        const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent);
 
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec, OoqpVector* parent );
+        const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
  public:
   virtual void getSize( long long& m, long long& n );
@@ -141,14 +144,14 @@ public:
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec )
   {
-     getRowMinMaxVec(getMin, initializeVec, colScaleVec, minmaxVec, NULL);
+     getRowMinMaxVec(getMin, initializeVec, colScaleVec, NULL, minmaxVec, NULL);
   };
 
   /** fill vector with absolute minimum/maximum value of each column */
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec )
   {
-     getColMinMaxVec(getMin, initializeVec, rowScaleVec, minmaxVec, NULL);
+     getColMinMaxVec(getMin, initializeVec, rowScaleVec, NULL, minmaxVec, NULL);
   };
 };
 
@@ -243,13 +246,14 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
 
+  virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec ){};
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* colScaleVec, OoqpVector& minmaxVec, OoqpVector* linkparent){};
+        const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};
 
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec, OoqpVector* parent){};
+        const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent ){};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec ){};
