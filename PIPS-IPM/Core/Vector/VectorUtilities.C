@@ -180,7 +180,7 @@ void find_blocking_pd( double w[],     int n, int incw,
 		    double *w_elt_d,          double *wstep_elt_d,
 		    double *u_elt_d,          double *ustep_elt_d,
 			double& bound_primal, double& bound_dual,
-		    int& primalBlocking, int& dualBlocking )
+			bool& primalBlocking, bool& dualBlocking )
 {
   bound_primal = maxStep_primal;
   bound_dual = maxStep_dual;
@@ -204,7 +204,7 @@ void find_blocking_pd( double w[],     int n, int incw,
       if( temp <= bound_primal ) {
          bound_primal = temp;
          lastBlockingPrimal = i;
-         primalBlocking = 1;
+         primalBlocking = true;
       }
     }
     temp = *pustep;
@@ -213,7 +213,7 @@ void find_blocking_pd( double w[],     int n, int incw,
       if( temp <= bound_dual ) {
          bound_dual = temp;
          lastBlockingDual = i;
-         dualBlocking = 1;
+         dualBlocking = true;
       }
     }
 

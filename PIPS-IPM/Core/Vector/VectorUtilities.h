@@ -43,6 +43,6 @@ void find_blocking_pd( double w[],     int n, int incw,
 		    double *w_elt_d,          double *wstep_elt_d,
 		    double *u_elt_d,          double *ustep_elt_d,
 			double& bound_primal, double& bound_dual,
-		    int& primalBlocking, int& dualBlocking );
+			bool& primalBlocking, bool& dualBlocking );
 
 #endif

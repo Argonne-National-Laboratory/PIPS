@@ -5,6 +5,8 @@
 #ifndef VARIABLES_H
 #define VARIABLES_H
 
+#include <cassert>
+
 /**
  * @file Variables.h
  * @ingroup AbstractProblemFormulation
@@ -38,7 +40,11 @@ public:
   /** compute the complementarity gap resulting from a step of length
    * "alpha_primal" along primal direction of "step" and
    * "alpha_dual" along dual direction of "step" */
-  virtual double mustep_pd( Variables *step, double alpha_primal, double alpha_dual );
+  virtual double mustep_pd( Variables *step, double alpha_primal, double alpha_dual )
+  {
+    assert(0 && "not implemented here");
+    return 0;
+  }
 
   /** negate the value of all the variables in this structure */
   virtual void negate() = 0;
@@ -52,7 +58,10 @@ public:
    *
    *  @see saxpy
    */
-  virtual void saxpy_pd( Variables *b, double alpha_primal, double alpha_dual);
+  virtual void saxpy_pd( Variables *b, double alpha_primal, double alpha_dual)
+  {
+    assert(0 && "not implemented here");
+  }
 
   /** calculate the largest alpha in (0,1] such that the nonnegative
    * variables stay nonnegative in the given search direction. In the
@@ -70,7 +79,10 @@ public:
      *
      * @see stepbound
      */
-  virtual void stepbound_pd( Variables *b, double & alpha_primal, double & alpha_dual );
+  virtual void stepbound_pd( Variables *b, double & alpha_primal, double & alpha_dual )
+  {
+    assert(0 && "not implemented here");
+  }
 
   /** Performs the same function as stepbound, and supplies additional
    * information about which component of the nonnegative variables is
@@ -109,7 +121,10 @@ public:
   				double & dualStep,
   				double & primalValue_d, double & primalStep_d, double & dualValue_d, double & dualStep_d,
   				double& alphaPrimal, double& alphaDual,
-  				int& primalBlocking, int& dualBlocking );
+				bool& primalBlocking, bool& dualBlocking )
+  {
+    assert(0 && "not implemented here");
+  }
 
   /** In the abstract QP formulation, sets s to alpha, z to beta and
    *  the other variable components to zero. */

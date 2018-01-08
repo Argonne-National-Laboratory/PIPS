@@ -53,44 +53,6 @@ GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * pro
    //temp_step = factory->makeVariables(prob);
 }
 
-void GondzioStochLpSolver::calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step,
-      double alpha_predictor, double& alpha_candidate, double& weight_candidate)
-{
-   assert(alpha_predictor > 0.0 && alpha_predictor <= 1.0);
-
-   double alpha_best = -1.0;
-   double weight_best = -1.0;
-   const double weight_min = alpha_predictor * alpha_predictor;
-   const double weight_intervallength = 1.0 - weight_min;
-
-   // main loop
-   for( unsigned int n = 0; n <= n_linesearch_points; n++ )
-   {
-      double weight_curr = weight_min + (weight_intervallength / (n_linesearch_points)) * n;
-
-      weight_curr = min(weight_curr, 1.0);
-
-      assert(weight_curr > 0.0 && weight_curr <= 1.0);
-
-      temp_step->copy(predictor_step);
-      temp_step->saxpy(corrector_step, weight_curr);
-
-      const double alpha_curr = iterate->stepbound(temp_step);
-      assert(alpha_curr > 0.0 && alpha_curr <= 1.0);
-
-      if( alpha_curr > alpha_best )
-      {
-         alpha_best = alpha_curr;
-         weight_best = weight_curr;
-      }
-   }
-
-   assert(alpha_best >= 0.0 && weight_best >= 0.0);
-
-   weight_candidate = weight_best;
-   alpha_candidate = alpha_best;
-}
-
 void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
 		Variables* corrector_step, double alpha_primal, double alpha_dual,
 		double& alpha_primal_candidate, double& alpha_dual_candidate,
@@ -246,8 +208,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       NumberGondzioCorrections = 0;
 
       // enter the Gondzio correction loop:
-      // todo: && or || between both alphas ?
-      while( NumberGondzioCorrections < maximum_correctors && alpha_pri < 1.0 && alpha_dual < 1.0)
+      while( NumberGondzioCorrections < maximum_correctors && (alpha_pri < 1.0 || alpha_dual < 1.0))
       {
 
          // copy current variables into corrector_step
@@ -283,7 +244,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
          // if the enhanced step length is actually 1, make it official
          // and stop correcting
-         // todo: is || correct or && ?
          if( alpha_pri_enhanced == 1.0 || alpha_dual_enhanced == 1.0)
          {
             step->copy(temp_step);

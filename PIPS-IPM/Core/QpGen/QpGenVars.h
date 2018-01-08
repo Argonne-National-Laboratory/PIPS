@@ -143,7 +143,7 @@ public:
   				double & dualStep,
   				double & primalValue_d, double & primalStep_d, double & dualValue_d, double & dualStep_d,
   				double& alphaPrimal, double& alphaDual,
-  				int& primalBlocking, int& dualBlocking );
+				bool& primalBlocking, bool& dualBlocking );
 
   /** sets components of (u,t,v,w) to alpha and of
       (lambda,pi,phi,gamma) to beta */

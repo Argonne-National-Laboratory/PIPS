@@ -210,7 +210,7 @@ public:
     			      double *ustep_elt_p,
     				  double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
     				  double& stepPrimal, double& stepDual,
-    			      int& primalBlocking, int& dualBlocking) = 0;
+					  bool& primalBlocking, bool& dualBlocking) = 0;
 
   /** Copy the elements of this OoqpVector into the C-style array v. */
   virtual void copyIntoArray( double v[] ) const = 0;

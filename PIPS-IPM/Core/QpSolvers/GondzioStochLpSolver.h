@@ -37,10 +37,6 @@ public:
 
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
 
-  // returns Gondzio weight for corrector step
-  virtual void calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha,
-        double& alpha_candidate, double& weight_candidate);
-
   // returns Gondzio weight for corrector step for different alpha_primal and alpha_dual
   virtual void calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
 	  		Variables* corrector_step, double alpha_primal, double alpha_dual,

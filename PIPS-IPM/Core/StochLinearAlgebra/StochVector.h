@@ -83,7 +83,7 @@ public:
   			      double *ustep_elt_p,
   				  double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
   				  double& stepPrimal, double& stepDual,
-  			      int& primalBlocking, int& dualBlocking);
+				  bool& primalBlocking, bool& dualBlocking);
 
   virtual void componentMult( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
@@ -186,7 +186,7 @@ public:
     			      double *ustep_elt_p,
     				  double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
     				  double& stepPrimal, double& stepDual,
-    			      int& primalBlocking, int& dualBlocking){};
+					  bool& primalBlocking, bool& dualBlocking){};
 
   virtual void componentMult( OoqpVector& v ){};
   virtual void componentDiv ( OoqpVector& v ){};

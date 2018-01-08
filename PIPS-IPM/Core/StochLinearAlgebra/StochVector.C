@@ -531,7 +531,7 @@ void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
 			      double *w_elt_p, double *wstep_elt_p, double *u_elt_p, double *ustep_elt_p,
 				  double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
 				  double& stepPrimal, double& stepDual,
-			      int& primalBlocking, int& dualBlocking)
+				  bool& primalBlocking, bool& dualBlocking)
 {
   StochVector& w = *this;
   StochVector& u = dynamic_cast<StochVector&>(u_vec);
@@ -582,7 +582,7 @@ void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
 
     //we prefer a AllReduce instead of a bcast, since the step==stepG m
     //may occur for two different processes and a deadlock may occur.
-    double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
+    double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, primalBlocking
     if(stepPrimal==stepG) {
       buffer[0]=*w_elt_p; buffer[1]=*wstep_elt_p;
       buffer[2]=*u_elt_p; buffer[3]=*ustep_elt_p;
@@ -598,7 +598,7 @@ void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
 
     //primalBlocking  negative means no blocking, so set it to 0.
     primalBlocking = bufferOut[4]<0?0:(int)bufferOut[4];
-    assert(primalBlocking==0 || primalBlocking==1);
+    assert( primalBlocking || !primalBlocking);
     stepPrimal=stepG;
 
     // same procedure for stepDual:
@@ -607,7 +607,7 @@ void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
 
 	//we prefer a AllReduce instead of a bcast, since the stepDual==stepF m
 	//may occur for two different processes and a deadlock may occur.
-	double buffer_d[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
+	double buffer_d[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-dualBlocking
 	if(stepDual==stepF) {
 	  buffer_d[0]=*w_elt_d; buffer_d[1]=*wstep_elt_d;
 	  buffer_d[2]=*u_elt_d; buffer_d[3]=*ustep_elt_d;
@@ -623,7 +623,7 @@ void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
 
 	//dualBlocking negative means no blocking, so set it to 0.
 	dualBlocking = bufferOut_d[4]<0?0:(int)bufferOut_d[4];
-	assert(dualBlocking==0 || dualBlocking==1);
+	assert( dualBlocking || !dualBlocking);
 	stepDual=stepF;
   }
 }

@@ -484,7 +484,7 @@ void QpGenVars::findBlocking_pd( Variables * step,
 				double & dualStep,
 				double & primalValue_d, double & primalStep_d, double & dualValue_d, double & dualStep_d,
 				double& alphaPrimal, double& alphaDual,
-				int& primalBlocking, int& dualBlocking )
+				bool& primalBlocking, bool& dualBlocking )
 {
   alphaPrimal = 1.0, alphaDual = 1.0;
   primalBlocking = 0, dualBlocking = 0;

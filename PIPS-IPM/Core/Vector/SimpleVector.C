@@ -511,7 +511,7 @@ void SimpleVector::findBlocking_pd(OoqpVector & wstep_vec,
 						double *w_elt_p, double *wstep_elt_p, double *u_elt_p, double *ustep_elt_p,
 						double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
 						double& bound_primal, double& bound_dual,
-						int& primalBlocking, int& dualBlocking) {
+						bool& primalBlocking, bool& dualBlocking) {
 	double * w = v;
 	SimpleVector & swstep = dynamic_cast<SimpleVector &>(wstep_vec);
 	double * wstep = swstep.v;

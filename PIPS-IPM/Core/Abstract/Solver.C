@@ -214,7 +214,7 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	double primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 		  maxAlpha_d;
 	double mufull;
-	int primalBlocking, dualBlocking;
+	bool primalBlocking, dualBlocking;
 
 	iterate->findBlocking_pd( step,
 					  primalValue_p, primalStep_p,
@@ -222,18 +222,18 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 					  dualValue_d, dualStep_d,
 					  maxAlpha_p, maxAlpha_d,
 					  primalBlocking, dualBlocking );
-	assert( primalBlocking == 0 || primalBlocking == 1);
-	assert( dualBlocking == 0 || dualBlocking == 1);
+	assert( primalBlocking || !primalBlocking );
+	assert( dualBlocking || !dualBlocking );
 
 	mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d);
 	mufull /= gamma_a;
 
 	alpha_primal = 1.0;
-	if( primalBlocking == 0 )
+	if( !primalBlocking )
 	{
 		alpha_primal = 1; // No primal constraints were blocking
 	}
-	else if( primalBlocking == 1 )
+	else if( primalBlocking )
 	{
 		alpha_primal = ( - primalValue_p +
 						mufull / ( dualValue_p + maxAlpha_d * dualStep_p ) ) /
@@ -244,11 +244,11 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	}
 
 	alpha_dual = 1.0;
-	if( dualBlocking == 0 )
+	if( !dualBlocking )
 	{
 		alpha_dual = 1; // No dual constraints were blocking
 	}
-	else if( dualBlocking == 1 )
+	else if( dualBlocking )
 	{
 		alpha_dual = ( - dualValue_d +
 						mufull / ( primalValue_d + maxAlpha_p * primalStep_d ) ) /
