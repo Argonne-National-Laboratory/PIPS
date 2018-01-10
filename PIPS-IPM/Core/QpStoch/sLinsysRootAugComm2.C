@@ -392,14 +392,14 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
   SimpleVector xhalf(n);       // half iterate of BiCG
   SimpleVector p(n),paux(n);
   SimpleVector v(n), t(n);
-  int flag; double imin;
+  int flag;
   double n2b;                  //norm of b 
   double normr, normrmin;      //norm of the residual and norm of residual at min-resid iterate
   double normr_act;       // todo fixme this value may be used uninitialized
   double tolb;                 //relative tolerance
   double rho, omega, alpha;
   int stag, maxmsteps, maxstagsteps, moresteps;
-  double relres;
+  //double imin;
   //maxit = n/2+1;
 
   //////////////////////////////////////////////////////////////////
@@ -409,8 +409,8 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
   n2b = b.twonorm();
   tolb = n2b*tol;
 
-
 #ifdef TIMING
+  double relres;
   taux = MPI_Wtime();
 #endif
   //initial guess
@@ -539,7 +539,7 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
     //update quantities related to minimal norm iterate
     if(normr_act<normrmin) {
       xmin.copyFrom(xhalf); normrmin=normr_act;
-      imin=0.5+ii;
+      //imin=0.5+ii;
     }
 
 #ifdef TIMING
@@ -609,7 +609,7 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
     //update quantities related to minimal norm iterate
     if(normr_act<normrmin) {
       xmin.copyFrom(x); normrmin=normr_act;
-      imin=1.5+ii;
+      //imin=1.5+ii;
     }
     //printf("iter %g normr=%g\n", ii+1.0, normr);
     ///////////////////////////////
@@ -627,9 +627,9 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
   }
   
   if(flag==0 || flag==-1) {
-
-    relres = normr_act/n2b;
 #ifdef TIMING
+    relres = normr_act/n2b;
+
     if(myRank==0) {
       printf("BiCGStab converged: normResid=%g relResid=%g iter=%g\n", 
 	     normr_act, relres, iter);
@@ -646,12 +646,14 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
     if(normr >= normr_act) {
       x.copyFrom(xmin);
       //iter=imin;
+#ifdef TIMING
       relres=normr/n2b;
+#endif
     } else {
 #ifdef TIMING
       iter=1.0+ii;
-#endif
       relres = normr/n2b;
+#endif
     }
   
 #ifdef TIMING
