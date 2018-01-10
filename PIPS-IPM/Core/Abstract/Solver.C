@@ -217,9 +217,8 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	bool primalBlocking, dualBlocking;
 
 	iterate->findBlocking_pd( step,
-					  primalValue_p, primalStep_p,
-					  dualValue_p, dualStep_p, primalValue_d, primalStep_d,
-					  dualValue_d, dualStep_d,
+					  primalValue_p, primalStep_p, dualValue_p, dualStep_p,
+					  primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 					  maxAlpha_p, maxAlpha_d,
 					  primalBlocking, dualBlocking );
 	assert( primalBlocking || !primalBlocking );
@@ -258,9 +257,9 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 		#endif
 	}
 
-	// make it at least gamma_f * maxAlpha
-	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
-	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
+	// make it at least gamma_f * maxAlpha and no bigger than 1
+	if( alpha_primal < gamma_f * maxAlpha_p || alpha_primal > 1 ) alpha_primal = gamma_f * maxAlpha_p;
+	if( alpha_dual < gamma_f * maxAlpha_d || alpha_dual > 1 ) alpha_dual = gamma_f * maxAlpha_d;
 
 	// back off just a touch (or a bit more)
 	#ifdef BAD_NUMERICS
@@ -272,6 +271,7 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	#endif
 
 	assert(alpha_primal < 1.0 && alpha_dual < 1.0);
+	assert(alpha_primal >= 0 && alpha_dual >= 0 );
 }
 
 
