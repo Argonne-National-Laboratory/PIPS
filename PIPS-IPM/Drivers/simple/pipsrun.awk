@@ -22,7 +22,7 @@ BEGIN {
        instancename = $1
        instancedir = "pipstmp"instancename 
        runs++
-       pipscall = "sh gamspipstime.sh -DIR="instancedir" "$2" "$3" "$4
+       pipscall = "sh gamspipstime.sh -DIR="instancedir" "$2" "$3" "$4" "$5
        system(pipscall)
        
        # check .out file       
