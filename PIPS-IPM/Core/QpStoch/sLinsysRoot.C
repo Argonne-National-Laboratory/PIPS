@@ -26,6 +26,9 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   assert(dd!=NULL);
   createChildren(prob_);
 
+  /** Initialize diagonal matrix */
+  putXDiagonal( *dq );
+
   if(gOuterSolve) {
     // stuff for iterative refimenent and BiCG
     sol  = factory_->tree->newRhs();
@@ -58,6 +61,9 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0)
 {
   createChildren(prob_);
+
+  /** Initialize diagonal matrix */
+  putXDiagonal( *dq );
 
   if(gOuterSolve) {
       // stuff for iterative refimenent and BiCG 
