@@ -539,7 +539,7 @@ void StochGenMatrix::writeToStreamDense(ostream& out) const
 	MPI_Comm_size(mpiComm, &world_size);
 	int token;
 	if (iAmDistrib && rank > 0) {
-		MPI_Recv(&token, 1, MPI_INT, (rank - 1), rank - 1, mpiComm,
+		MPI_Recv(&token, 1, MPI_INT, (rank - 1), 0, mpiComm,
 				MPI_STATUS_IGNORE);
 	}
 	if (!iAmDistrib || (iAmDistrib && rank == 0)) {
@@ -553,7 +553,7 @@ void StochGenMatrix::writeToStreamDense(ostream& out) const
 		children[it]->writeToStreamDenseChild(out, it + 1);
 	}
 	if (iAmDistrib && rank < world_size - 1) {
-		MPI_Send(&token, 1, MPI_INT, (rank + 1), rank, mpiComm);
+		MPI_Send(&token, 1, MPI_INT, (rank + 1), 0, mpiComm);
 	}
 }
 

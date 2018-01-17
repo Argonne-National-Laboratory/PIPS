@@ -75,6 +75,7 @@ class sFactory : public QpGen {
 
   virtual void iterateStarted();
   virtual void iterateEnded();
+  void writeProblemToStream(ostream& out, bool printRhs) const;
 
   sResiduals *resid;
   vector<sVars*> registeredVars;

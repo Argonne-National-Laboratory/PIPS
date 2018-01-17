@@ -5,6 +5,8 @@
 #ifndef OPTIMIZATIONFACTORY
 #define OPTIMIZATIONFACTORY
 
+#include <iostream>
+
 /**
  *  @defgroup AbstractProblemFormulation
  *
@@ -57,6 +59,8 @@ public:
 
   /** creates the Variables class for the relevant formulation */
   virtual Variables     * makeVariables( Data * prob_in ) = 0;
+  void writeProblemToStream(std::ostream& out) const;
+
   virtual ~ProblemFormulation() {};
 };
 

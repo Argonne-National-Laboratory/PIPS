@@ -247,6 +247,7 @@ public:
 
   /** C = this^T * inv(D) * this where D=diag(d) is a diagonal matrix. */
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
+  virtual void writeToStreamDense(ostream& out) const {}
 };
 
 #endif
