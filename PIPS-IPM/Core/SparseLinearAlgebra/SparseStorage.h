@@ -86,6 +86,7 @@ public:
 			      double x[], int incx, int extent );
 
   virtual void writeToStream(ostream& out) const;
+  virtual void writeToStreamDense(ostream& out) const;
 
   virtual void symmetrize( int& info);
   virtual double abmaxnorm();

@@ -112,6 +112,8 @@ public:
   virtual double abmaxnorm();
 
   virtual void writeToStream(ostream& out) const;
+  virtual void writeToStreamDense(ostream& out) const;
+  virtual void writeToStreamDenseChild(ostream& out, int index) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -205,6 +207,8 @@ public:
   virtual double abmaxnorm(){return 0.0;};
 
   virtual void writeToStream(ostream& out) const{};
+  virtual void writeToStreamDense(ostream& out) const{};
+  virtual void writeToStreamDenseChild(ostream& out, int index) const{};
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.

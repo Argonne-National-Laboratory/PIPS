@@ -570,6 +570,29 @@ void SparseStorage::writeToStream(ostream& out) const
   }
 }
 
+void SparseStorage::writeToStreamDense( ostream& out) const
+{
+  int i, k;
+  //todo: instead of \t, use length of longest value in M
+
+  for( i = 0; i < m; i++ ) {	// Row i
+	int j=0;					// Column j
+    for ( k = krowM[i]; k < krowM[i+1]; k++ ) {
+      while( jcolM[k] > j) {
+      	out << 0 << '\t';
+      	j++;
+      }
+      out << M[k] << '\t';
+      j++;
+    }
+    while( j < n ) {
+      out << 0 << '\t';
+      j++;
+    }
+    out << endl;
+  }
+}
+
 void indexedLexSort( int first[], int n, int swapFirst,
 		     int second[], int swapSecond, int index[] )
 {

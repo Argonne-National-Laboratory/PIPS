@@ -89,6 +89,10 @@ void SparseGenMatrix::writeToStream(ostream& out) const
   mStorage->writeToStream( out );
 }
 
+void SparseGenMatrix::writeToStreamDense(ostream& out) const
+{
+  mStorage->writeToStreamDense( out );
+}
 
 void SparseGenMatrix::randomize( double alpha, double beta, double * seed )
 {
