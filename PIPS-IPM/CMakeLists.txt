@@ -31,6 +31,11 @@ if (HAVE_MA57 AND HAVE_METIS)
       ${MA57_LIBRARY} ${METIS_LIBRARY}
       ${NO_WHOLE_ARCHIVE}
       ${MATH_LIBS})
+	install(TARGETS pipsipm-shared LIBRARY DESTINATION $ENV{PWD}/lib)
+	install(FILES ${SHARED_DIR}/MA57/src/lib/libma57.a ${SHARED_DIR}/METIS/src/libmetis.a DESTINATION $ENV{PWD}/lib)
+	if(HAVE_PARDISO)
+		install(FILES ${SHARED_DIR}/PARDISO/src/libpardiso.so DESTINATION $ENV{PWD}/lib)
+	endif()
   endif (HAVE_CLANG)
 
 endif(HAVE_MA57 AND HAVE_METIS)
