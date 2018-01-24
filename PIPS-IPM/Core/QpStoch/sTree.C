@@ -219,7 +219,7 @@ void sTree::syncDualZVector(StochVector& stVec)
 
 void sTree::syncStochSymMatrix(StochSymMatrix& mat) 
 {
-  int ierr; int syncChildren=0;
+  int syncChildren=0;
   char* marked4Del = new char[children.size()];
 
   assert(false && "Code needs update to Sync also the Hessian bordering blocks");
@@ -252,7 +252,13 @@ void sTree::syncStochSymMatrix(StochSymMatrix& mat)
       } else {
 	//receiving
 	int dims[3]; MPI_Status status;
-	ierr = MPI_Recv(dims, 3, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+
+#ifndef NDEBUG
+	const int ierr = MPI_Recv(dims, 3, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+	assert(ierr == MPI_SUCCESS);
+#else
+	(void) MPI_Recv(dims, 3, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+#endif
 
 	if(mat.children.size() == children.size()) {
 	  delete mat.children[it];
@@ -293,7 +299,7 @@ void sTree::syncStochSymMatrix(StochSymMatrix& mat)
 
 void sTree::syncStochGenMatrix(StochGenMatrix& mat) 
 {
-  int ierr; int syncChildren=0;
+  int syncChildren=0;
   char* marked4Del = new char[children.size()];
 
   for(size_t it=0; it<children.size(); it++) {
@@ -333,7 +339,13 @@ void sTree::syncStochGenMatrix(StochGenMatrix& mat)
       } else {
 	//receiving
 	int dims[8]; MPI_Status status;
-	ierr = MPI_Recv(dims, 8, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+
+#ifndef NDEBUG
+	const int ierr = MPI_Recv(dims, 8, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+   assert(ierr == MPI_SUCCESS);
+#else
+   (void) MPI_Recv(dims, 8, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+#endif
 
 	assert(dims[0]==dims[3]);
 
@@ -385,7 +397,7 @@ void sTree::syncStochGenMatrix(StochGenMatrix& mat)
 
 void sTree::syncStochVector(StochVector& stVec)
 {
-  int ierr; int syncChildren=0;
+  int syncChildren=0;
 
   char* marked4Del = new char[children.size()];
   for(size_t it=0; it<children.size(); it++) {
@@ -408,8 +420,13 @@ void sTree::syncStochVector(StochVector& stVec)
 	//printf("send %d\n", dim);
 	if(dim>0) {
 	  //send
-	  ierr = MPI_Send(buffer, dim, MPI_DOUBLE, 
-			  partner, children[it]->id(), MPI_COMM_WORLD);
+
+#ifndef NDEBUG
+	  const int ierr = MPI_Send(buffer, dim, MPI_DOUBLE, partner, children[it]->id(), MPI_COMM_WORLD);
+	  assert(ierr == MPI_SUCCESS);
+#else
+	  (void) MPI_Send(buffer, dim, MPI_DOUBLE, partner, children[it]->id(), MPI_COMM_WORLD);
+#endif
 	} else { /*printf("zero length vector, NO actual SYNC\n");*/ }
 	
 	
@@ -437,9 +454,13 @@ void sTree::syncStochVector(StochVector& stVec)
 	}
 	//do nothing for the stoch empty vectors
 	if( dim > 0 ) {
+#ifndef NDEBUG
+	  const int ierr = MPI_Recv(buffer, dim, MPI_DOUBLE, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+	  assert(ierr == MPI_SUCCESS);
+#else
+	  (void) MPI_Recv(buffer, dim, MPI_DOUBLE, partner, children[it]->id(), MPI_COMM_WORLD, &status);
+#endif
 
-	  ierr = MPI_Recv(buffer, dim, MPI_DOUBLE, 
-			  partner, children[it]->id(), MPI_COMM_WORLD, &status);
 	} else { /*printf("zero length vector, NO SYNC\n");*/ }
       }
     } else {

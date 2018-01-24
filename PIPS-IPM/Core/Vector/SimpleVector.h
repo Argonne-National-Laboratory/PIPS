@@ -52,6 +52,7 @@ public:
   virtual double infnorm();
   virtual double onenorm();
   virtual void min( double& m, int& index );
+  virtual void max( double& m, int& index );
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);
@@ -81,6 +82,8 @@ public:
 					double beta,  OoqpVector& ystep );
   virtual void negate();
   virtual void invert();
+  virtual void invertSave( double zeroReplacementVal = 0.0 );
+  virtual void roundToPow2();
   virtual int allPositive();
   virtual long long numberOfNonzeros();
 
@@ -116,7 +119,7 @@ public:
   						double& bound_primal, double& bound_dual,
 						bool& primalBlocking, bool& dualBlocking);
   /** Returns a pointer to the elements of this vector. */
-  double * elements() { return v; };
+  double * elements() const { return v; };
 };
 
 #endif

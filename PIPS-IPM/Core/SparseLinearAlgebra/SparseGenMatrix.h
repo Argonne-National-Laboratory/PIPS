@@ -15,6 +15,11 @@
  *  @ingroup SparseLinearAlgebra
  */
 class SparseGenMatrix : public GenMatrix {
+private:
+  static
+  void getMinMaxVec( bool getMin, bool initializeVec,
+        const SparseStorage* storage, const OoqpVector* coScaleVec, OoqpVector& minmaxVec );
+
 protected:
   SparseStorageHandle mStorage;
   int size;
@@ -102,6 +107,14 @@ public:
   int * krowM() { return mStorage->krowM; }
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
+
+  /** fill vector with absolute minimum/maximum value of each row */
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec );
+
+  /** fill vector with absolute minimum/maximum value of each column */
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
   virtual ~SparseGenMatrix();
 

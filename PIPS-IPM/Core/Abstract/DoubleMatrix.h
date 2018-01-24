@@ -18,7 +18,7 @@ using namespace std;
 class DoubleLinearSolver;
 
 /**
- * Handle the manupulation of matrix elements
+ * Handle the manipulation of matrix elements
  * @ingroup AbstractLinearAlgebra
  */
 class DoubleStorage : public IotrRefCount {
@@ -247,7 +247,22 @@ public:
 
   /** C = this^T * inv(D) * this where D=diag(d) is a diagonal matrix. */
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
+
   virtual void writeToStreamDense(ostream& out) const {}
+
+  /** get ith row */
+  virtual void getRow(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+
+  /** get ith col */
+  virtual void getCol(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+
+  /** fill vector with absolute minimum/maximum value of each row */
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec ) { assert(0 && "not implemented"); };
+
+  /** fill vector with absolute minimum/maximum value of each column */
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ) { assert(0 && "not implemented"); };
 };
 
 #endif

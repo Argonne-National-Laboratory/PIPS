@@ -96,6 +96,11 @@ public:
   /** Return the minimum value in this vector, and the index at 
    *  which it occurs. */
   virtual void min( double& m, int& index ) = 0;
+
+  /** Return the maximum value in this vector, and the index at
+   *  which it occurs. */
+  virtual void max( double& m, int& index ) = 0;
+
   /** Return the dot product of this OoqpVector with v */
   virtual double dotProductWith( OoqpVector& v ) = 0;
 
@@ -109,6 +114,12 @@ public:
 
   /** Invert (1/x) the elements of this OoqpVector. */
   virtual void invert() = 0;
+
+  /** Invert (1/x) the elements of this OoqpVector, but don't divide by zero and replace by zeroReplacementVal instead */
+  virtual void invertSave( double zeroReplacementVal = 0.0 ) = 0;
+
+  /** Rounds vector entries to nearest power of two values */
+  virtual void roundToPow2() = 0;
 
   /** True if all elements of this OoqpVector are positive. */
   virtual int allPositive() = 0;
@@ -218,6 +229,9 @@ public:
   virtual void copyFromArray( double v[] ) = 0;
   /** Copy the elements of the C-style char array v into this OoqpVector. */
   virtual void copyFromArray( char v[] ) = 0;
+
+  virtual OoqpVector* clone() const { assert(0 && "not implemented here"); return NULL; };
+
 };
 
 

@@ -14,7 +14,7 @@
 #include "QpGenData.h"
 #include "QpGenResiduals.h"
 
-//class Data;
+class Data;
 
 
 /**  * @defgroup QpScaler
@@ -24,39 +24,56 @@
  */
 
 /**
- * Base class for QP scalers.
+ * Abstract base class for QP scalers.
  */
-class QpScaler : Scaler
+class QpScaler : public Scaler
 {
-  enum MatrixType {MATRIXTYPE_A, MATRIXTYPE_C};
 protected:
+  static void invertAndRound(bool round, OoqpVector& vector)
+  {
+     vector.invertSave(1.0);
+     if( round )
+        vector.roundToPow2();
+  }
 
+  // scaling vector
+  OoqpVector* vec_rowscaleQ;
   OoqpVector* vec_rowscaleA;
-  OoqpVector* vec_colscaleA;
   OoqpVector* vec_rowscaleC;
-  OoqpVector* vec_colscaleC;
+  OoqpVector* vec_colscale;
+
+  // problem data
+  SymMatrixHandle Q;
+  GenMatrixHandle A;
+  GenMatrixHandle C;
+  OoqpVectorHandle obj;
+  OoqpVectorHandle bA;
+  OoqpVectorHandle bux;
+  OoqpVectorHandle blx;
+  OoqpVectorHandle rhsC;
+  OoqpVectorHandle lhsC;
+
+  // scaling factor for objective
   double factor_objscale;
 
-  //todo empty method for scaling Q
+  virtual void applyScaling();
+  virtual void doObjScaling() = 0;
 
-  virtual void computeRowscaleVec(GenMatrix* matrix, MatrixType type);
-  virtual void computeColscaleVec(GenMatrix* matrix, MatrixType type);
+  /** get maximum absolute row ratio and write maximum row entries into vectors */
+  virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC);
 
-  virtual void scaleMatrix(GenMatrix* matrix);
-  virtual void scaleVector(OoqpVector* vec, const OoqpVector* scalevec);
-  virtual void scaleVector(OoqpVector* vec, double scalefactor);
+  /** get maximum absolute column ratio and write maximum column entries into vectors */
+  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec);
 public:
 
-  QpScaler();
+  QpScaler(Data* prob, bool bitshifting = true);
   virtual ~QpScaler();
 
   /** scale */
-  virtual void scale( ProblemFormulation * formulation,
-        QpGenData * prob, QpGenVars * vars, QpGenResiduals * resid);
+  virtual void scale() = 0;
 
-  /** unscale */
-  virtual void unscale( ProblemFormulation * formulation,
-        QpGenData * prob, QpGenVars * vars, QpGenResiduals * resid);
+  /** unscale given objective value */
+  virtual double getOrigObj(double objval);
 
 };
 

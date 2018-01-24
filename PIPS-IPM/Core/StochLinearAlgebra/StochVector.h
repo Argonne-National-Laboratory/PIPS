@@ -63,6 +63,7 @@ public:
   virtual double infnorm();
   virtual double onenorm();
   virtual void min( double& m, int& index );
+  virtual void max( double& m, int& index );
   virtual double stepbound(OoqpVector & v, double maxStep );
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -111,6 +112,9 @@ public:
 					double beta,  OoqpVector& ystep );
   virtual void negate();
   virtual void invert();
+  virtual void invertSave( double zeroReplacementVal = 0.0 );
+  virtual void roundToPow2();
+
   virtual int allPositive();
 
   virtual int matchesNonZeroPattern( OoqpVector& select );
@@ -214,6 +218,8 @@ public:
 					double beta,  OoqpVector& ystep ){return 0.0;}
   virtual void negate(){};
   virtual void invert(){};
+  virtual void invertSave( double zeroReplacementVal = 0.0 ){};
+  virtual void roundToPow2(){};
   virtual int allPositive(){return 1;}
 
   virtual int matchesNonZeroPattern( OoqpVector& select ){return 1;}

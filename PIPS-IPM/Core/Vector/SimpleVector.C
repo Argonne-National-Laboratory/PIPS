@@ -35,6 +35,26 @@ void SimpleVector::min( double& m, int& index )
   }
 }
 
+void SimpleVector::max( double& m, int& index )
+{
+   if( n == 0 )
+   {
+      index = -1;
+      m = -1e20;
+      return;
+   }
+   index = 0;
+   m = v[0];
+   for( int i = 0; i < n; i++ )
+   {
+      if( v[i] > m )
+      {
+         m = v[i];
+         index = i;
+      }
+   }
+}
+
 int SimpleVector::isKindOf( int kind )
 {
   return (kind == kSimpleVector);
@@ -445,8 +465,36 @@ void SimpleVector::negate()
 
 void SimpleVector::invert()
 {
-  int i;
-  for( i = 0; i < n; i++ ) v[i] = 1/v[i];
+  for( int i = 0; i < n; i++ )
+  {
+    assert(v[i] != 0.0);
+    v[i] = 1/v[i];
+  }
+}
+
+void SimpleVector::invertSave( double zeroReplacementVal )
+{
+  for( int i = 0; i < n; i++ )
+  {
+     if( v[i] != 0.0 )
+        v[i] = 1/v[i];
+     else
+        v[i] = zeroReplacementVal;
+  }
+}
+
+void SimpleVector::roundToPow2()
+{
+  for( int i = 0; i < n; i++ )
+  {
+     int exp;
+     const double mantissa = std::frexp(v[i], &exp);
+
+     if( mantissa >= 0.75 )
+        v[i] = std::ldexp(0.5, exp + 1);
+     else
+        v[i] = std::ldexp(0.5, exp);
+  }
 }
 
 int SimpleVector::allPositive()
@@ -598,6 +646,9 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
   double * q   = sdiv.v;
   assert( n == div.length() && n == select.length() );
 
+  // todo Daniel Rehfeldt: this expects non-aliasing; think there is no need for pointer arithmetic
+  // as the run-time is dominated by the division.
+#if 0
   double * lmap = map + n;
   double * w = v;
   while( map < lmap ) {
@@ -608,4 +659,15 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
     w++;
     q++;
   }
+#else
+  for( int i = 0; i < n; i++ )
+  {
+     if( 0.0 != map[i] )
+     {
+        assert(q[i] != 0.0);
+        v[i] /= q[i];
+     }
+  }
+#endif
+
 }

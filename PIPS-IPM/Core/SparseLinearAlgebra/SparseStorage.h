@@ -19,6 +19,13 @@ using namespace std;
  *  @ingroup SparseLinearAlgebra
  */
 class SparseStorage : public DoubleStorage {
+private:
+  /** store absolute non-zero minimum entry of row i and vec[i] in vec[i]; empty rows get value 0.0  */
+  void getRowMinVec(const double* colScaleVec, double* vec) const;
+
+  /** store absolute non-zero maximum entry of row i and vec[i] in vec[i]; empty rows get value 0.0  */
+  void getRowMaxVec(const double* colScaleVec, double* vec) const;
+
 protected:
   int neverDeleteElts;
   
@@ -122,7 +129,7 @@ public:
 
   void transMultLower( double beta,  double y[],
 			       double alpha, double x[], int firstrow );
-	void transMultMat( double beta,  double* Y, int ny, int ldy,
+  void transMultMat( double beta,  double* Y, int ny, int ldy,
 						 double alpha, double *X, int ldx);
   void transMultMatLower( double* Y, int ny, int firstrow,
 						 double alpha, double *X, int ldx);
@@ -137,6 +144,10 @@ public:
 
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
+
+  /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i];
+   *  empty rows get value 0.0 for maximization and <double>::max() for minimization  */
+  void getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const;
 
   void dump(const string& filename);
 

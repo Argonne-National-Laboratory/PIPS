@@ -9,7 +9,7 @@
 #include "SparseStorage.h"
 #include "OoqpVector.h"
 #include "SimpleVector.h"
-
+#include <limits>
 #include <fstream>
 
 
@@ -98,9 +98,8 @@ void SparseStorage::fromGetDiagonal( int idiag, OoqpVector& vec_in )
 void SparseStorage::ColumnScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
 
-  assert( extent == n );
+  assert( scale.length() == n );
  
   int i, j, k;
 
@@ -118,17 +117,15 @@ void SparseStorage::ColumnScale( OoqpVector& scale_in )
 void SparseStorage::RowScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
 
-  assert( extent == m );
+  assert( scale.length() == m );
 
-  int i, j, k;
+  int i, k;
 
   for ( i = 0; i < m; i++ ) {
     // Loop over all rows in the sparse matrix
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       // Loop over the elements of the sparse row
-      j = jcolM[k];
       M[k] = M[k] * scale[i];
     } // End loop over the elements of the sparse row
   } // End loop over all rows in the sparse matrix
@@ -159,13 +156,12 @@ void SparseStorage::SymmetricScale( OoqpVector& scale_in )
 
 void SparseStorage::scalarMult( double num )
 {
-  int i, j, k;
+  int i, k;
 
   for ( i = 0; i < m; i++ ) {
     // Loop over all rows in the sparse matrix
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       // Loop over the elements of the sparse row
-      j = jcolM[k];
       M[k] = M[k] * num;
     } // End loop over the elements of the sparse row
   } // End loop over all rows in the sparse matrix
@@ -1391,6 +1387,95 @@ void SparseStorage::dump(const string& filename)
   for (i = 0; i < len; i++) {
     fd << M[i] << " ";
   }
+}
+
+void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const
+{
+   const bool coscale = (colScaleVec != NULL);
+
+   if( coscale )
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double minval = vec[r];
+         assert(minval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
+
+            // todo global epsilon would be good
+            if( absval < minval && absval > 0.0 )
+               minval = absval;
+         }
+         vec[r] = minval;
+      }
+   }
+   else
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double minval = vec[r];
+         assert(minval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i]);
+
+            if( absval < minval && absval > 0.0 )
+               minval = absval;
+         }
+         vec[r] = minval;
+      }
+   }
+}
+
+void SparseStorage::getRowMaxVec(const double* colScaleVec, double* vec) const
+{
+   const bool coscale = (colScaleVec != NULL);
+
+   if( coscale )
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double maxval = vec[r];
+         assert(maxval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
+
+            if( absval > maxval )
+               maxval = absval;
+         }
+         vec[r] = maxval;
+      }
+   }
+   else
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double maxval = vec[r];
+         assert(maxval >= 0.0);
+
+         for( int i = krowM[r]; i < krowM[r + 1]; i++ )
+         {
+            const double absval = std::abs(M[i]);
+
+            if( absval > maxval )
+               maxval = absval;
+         }
+         vec[r] = maxval;
+      }
+   }
+}
+
+void SparseStorage::getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const
+{
+   if( getMin )
+      getRowMinVec(colScaleVec, vec);
+   else
+      getRowMaxVec(colScaleVec, vec);
 }
 
 

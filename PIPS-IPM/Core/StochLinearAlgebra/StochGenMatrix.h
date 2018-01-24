@@ -67,6 +67,19 @@ public:
                         double alpha, OoqpVector& x,
 						   OoqpVector& yvecParent );
 
+  /** column scale method for children */
+  virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec );
+
+  /** row scale method for children */
+  virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec );
+
+  /** internal method needed for handling linking constraints */
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent);
+
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
+
  public:
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
@@ -128,6 +141,20 @@ public:
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
   void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
+
+  /** fill vector with absolute minimum/maximum value of each row */
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec )
+  {
+     getRowMinMaxVec(getMin, initializeVec, colScaleVec, NULL, minmaxVec, NULL);
+  };
+
+  /** fill vector with absolute minimum/maximum value of each column */
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec )
+  {
+     getColMinMaxVec(getMin, initializeVec, rowScaleVec, NULL, minmaxVec, NULL);
+  };
 };
 
 
@@ -136,6 +163,7 @@ public:
  */
 
 class StochGenDummyMatrix : public StochGenMatrix {
+
 protected:
 
 public:
@@ -204,7 +232,7 @@ public:
 		    double alpha,  StochVector& x,
 		    OoqpVector& yvecParent ){};
 
-  virtual double abmaxnorm(){return 0.0;};
+  virtual double abmaxnorm(){ return 0.0; };
 
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamDense(ostream& out) const{};
@@ -222,6 +250,20 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
 
+  virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec ){};
+  virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
+
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};
+
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent ){};
+
+  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec ){};
+
+  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
 };
 
 

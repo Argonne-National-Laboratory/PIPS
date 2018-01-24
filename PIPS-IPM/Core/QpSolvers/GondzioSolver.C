@@ -46,7 +46,7 @@ GondzioSolver::GondzioSolver( ProblemFormulation * of, Data * prob )
 
   // accept the enhanced step if it produces a small improvement in
   // the step length
-  AcceptTol = 0.005; 
+  AcceptTol = 0.005; // todo
 
   //define the Gondzio correction box 
   beta_min = 0.1;  

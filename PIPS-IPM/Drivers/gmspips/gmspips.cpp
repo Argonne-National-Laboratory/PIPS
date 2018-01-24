@@ -197,22 +197,29 @@ int main(int argc, char ** argv)
 #endif
 
    GMSPIPSBlockData_t** blocks;
+   bool scale = false;
 
-   if ( (argc<3) || (argc>4) )
+   if ( (argc<3) || (argc>5) )
    {
-      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir]" << endl;
+      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale]" << endl;
       exit(1);
    }
    
    allGDX = strstr(argv[2],".gdx")!=NULL;
    numBlocks = atoi(argv[1]);
    strcpy(fileName,argv[2]);
-   if ( 4==argc )
+   if ( argc >= 4 )
    {
       strcpy(GDXDirectory,argv[3]);
       pGDXDirectory = &GDXDirectory[0];
    }
    
+   if ( argc == 5 )
+   {
+      assert(strcmp(argv[4], "scale") == 0);
+      scale = true;
+   }
+
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
 #if 0
    int nBlock0 = 0;
@@ -371,7 +378,8 @@ int main(int argc, char ** argv)
 
 #if defined(GMS_PIPS)
 #ifdef BiCGStab
-   cout << "using BiCGStab" << endl;
+   if( gmsRank == 0 )
+      cout << "using BiCGStab" << endl;
    gOuterSolve=2;
    gInnerSCsolve=0;
 #else
@@ -379,9 +387,13 @@ int main(int argc, char ** argv)
    gInnerSCsolve=0;
 #endif
 
-   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root);
+   // for different steplength:
+   //PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root);
 
-  // PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
+   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
+         scale ? SCALER_EQUI_STOCH : SCALER_NONE );
+
+   // PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
    //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
 
    if( gmsRank == 0 )

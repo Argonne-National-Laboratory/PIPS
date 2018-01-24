@@ -8,7 +8,7 @@
 #include "SimpleVector.h"
 
 #include "DoubleMatrixTypes.h"
-
+#include <limits>
 #include "SparseSymMatrix.h"
 
 int SparseGenMatrix::isKindOf( int type )
@@ -266,7 +266,7 @@ void SparseGenMatrix::SymmetricScale( OoqpVector& vec )
 
 void SparseGenMatrix::RowScale( OoqpVector& vec )
 {
-  mStorage->ColumnScale( vec );
+  mStorage->RowScale( vec );
 }
 
 void SparseGenMatrix::scalarMult( double num )
@@ -312,10 +312,12 @@ void SparseGenMatrix::matTransDinvMultMat(OoqpVector& d_, SymMatrix** res)
   int m=mStorage->m; int n=mStorage->n; int nnz=mStorage->numberOfNonZeros();
 
   if(*res==NULL) {
-    assert(m_Mt==NULL);
-    //we need to form the transpose
-    m_Mt=new SparseGenMatrix(n,m,nnz);
-    mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
+
+    // we need to form the transpose
+    if(!m_Mt) {
+      m_Mt=new SparseGenMatrix(n,m,nnz);
+      mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
+    }
 
     //find the sparsity pattern of the product -> the buffers for result will be allocated
     int* krowMtM=NULL; int* jcolMtM=NULL; double* dMtM=NULL;
@@ -343,8 +345,6 @@ void SparseGenMatrix::matMultTrans(SymMatrix** res)
   SimpleVector d(n); d.setToConstant(1.0);
 
   if(*res==NULL) {
-    //assert(m_Mt==NULL);
-
     //we need to form the transpose
     if(!m_Mt) {
       m_Mt = new SparseGenMatrix(n,m,nnz);
@@ -363,3 +363,54 @@ void SparseGenMatrix::matMultTrans(SymMatrix** res)
 				   krowM(), jcolM(), M(),
 				   MMt->krowM(), MMt->jcolM(), MMt->M());
 }
+
+void
+SparseGenMatrix::getMinMaxVec( bool getMin, bool initializeVec,
+      const SparseStorage* storage, const OoqpVector* coScaleVec, OoqpVector& minmaxVec )
+{
+   SimpleVector& mvec = dynamic_cast<SimpleVector&>(minmaxVec);
+
+   assert(mvec.length() == storage->m);
+
+   if( initializeVec )
+   {
+      if( getMin )
+         mvec.setToConstant(std::numeric_limits<double>::max());
+      else
+         mvec.setToConstant(0.0);
+   }
+
+   if( coScaleVec )
+   {
+      const SimpleVector* covec = dynamic_cast<const SimpleVector*>(coScaleVec);
+
+      storage->getRowMinMaxVec(getMin, covec->elements(), mvec.elements());
+   }
+   else
+   {
+      storage->getRowMinMaxVec(getMin, NULL, mvec.elements());
+   }
+}
+
+void SparseGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
+      const OoqpVector* colScaleVec, OoqpVector& minmaxVec)
+{
+   getMinMaxVec(getMin, initializeVec, mStorage, colScaleVec, minmaxVec);
+}
+
+void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
+      const OoqpVector* rowScaleVec, OoqpVector& minmaxVec)
+{
+   // we may need to form the transpose
+   if( !m_Mt )
+   {
+      const int nnz = mStorage->numberOfNonZeros();
+      const int m = mStorage->m;
+      const int n = mStorage->n;
+      m_Mt = new SparseGenMatrix(n, m, nnz);
+      mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
+   }
+
+   getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
+}
+
