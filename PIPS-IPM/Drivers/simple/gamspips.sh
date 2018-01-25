@@ -7,6 +7,7 @@ to="0.08"
 tbsize="8"
 np="1"
 scale=""
+stepLp=""
 
 
 for i in "$@"
@@ -36,6 +37,10 @@ case $i in
     scale="${i#*=}"
     shift # past argument=value
     ;;
+    -STEPLP=*|--STEPLP=*)
+    stepLp="${i#*=}"
+    shift # past argument=value
+    ;;
     *)
           # unknown option
     ;;
@@ -54,9 +59,16 @@ echo "$nblocks"
 
 gams ../simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\(60/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=../subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
 ../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks allblocksPips.gdx > /dev/null
-if [ "$scale" == "true" ]; then
-  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR scale 2>&1 | tee pips.out
+
+if [ "$stepLp" = "true" ]; then
+  stepLp="stepLp"
 else
-  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR 2>&1 | tee pips.out
+  stepLp=""
+fi
+if [ "$scale" = "true" ]; then
+  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR scale $stepLp 2>&1 | tee pips.out
+else
+  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $stepLp 2>&1 | tee pips.out
+
 fi
 

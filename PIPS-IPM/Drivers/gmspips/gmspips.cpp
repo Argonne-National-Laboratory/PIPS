@@ -198,10 +198,11 @@ int main(int argc, char ** argv)
 
    GMSPIPSBlockData_t** blocks;
    bool scale = false;
+   bool stepDiffLp = false;
 
-   if ( (argc<3) || (argc>5) )
+   if ( (argc<3) || (argc>6) )
    {
-      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale]" << endl;
+      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp]" << endl;
       exit(1);
    }
    
@@ -214,11 +215,22 @@ int main(int argc, char ** argv)
       pGDXDirectory = &GDXDirectory[0];
    }
    
-   if ( argc == 5 )
+   if (argc >= 5)
    {
-      assert(strcmp(argv[4], "scale") == 0);
-      scale = true;
+		if (strcmp(argv[4], "scale") == 0)
+			scale = true;
+
+		if (strcmp(argv[4], "stepLp") == 0)
+			stepDiffLp = true;
    }
+	if (argc == 6)
+{
+		if (strcmp(argv[5], "scale") == 0)
+			scale = true;
+
+		if (strcmp(argv[5], "stepLp") == 0)
+			stepDiffLp = true;
+	}
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
 #if 0
@@ -387,23 +399,36 @@ int main(int argc, char ** argv)
    gInnerSCsolve=0;
 #endif
 
-   // for different steplength:
-   //PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root);
+	if (stepDiffLp)
+	{
+		cout << "Different steplengths in primal and dual direction are used." <<endl;
+		PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
+				scale ? SCALER_EQUI_STOCH : SCALER_NONE );
+		if( gmsRank == 0 )
+		cout << "PIPSIpmInterface created" << endl;
 
-   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
-         scale ? SCALER_EQUI_STOCH : SCALER_NONE );
+		if( gmsRank == 0 )
+		cout << "solving..." << endl;
 
-   // PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
-   //PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+		pipsIpm.go();
+	}
 
-   if( gmsRank == 0 )
-      cout << "PIPSIpmInterface created" << endl;
+	else {
 
-   if( gmsRank == 0 )
-      cout << "solving..." << endl;
-   
-   pipsIpm.go();
+		PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
+				scale ? SCALER_EQUI_STOCH : SCALER_NONE );
 
+		// PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
+		//PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+
+		if( gmsRank == 0 )
+		cout << "PIPSIpmInterface created" << endl;
+
+		if( gmsRank == 0 )
+		cout << "solving..." << endl;
+
+		pipsIpm.go();
+	}
    if( gmsRank == 0 )
       cout << "solving finished." << endl;
 
