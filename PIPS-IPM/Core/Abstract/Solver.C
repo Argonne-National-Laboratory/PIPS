@@ -14,7 +14,7 @@
 
 #include <cmath>
 
-#define BAD_NUMERICS
+//#define BAD_NUMERICS
 
 int gOoqpPrintLevel = 1000;
 int gLackOfAccuracy=0;
