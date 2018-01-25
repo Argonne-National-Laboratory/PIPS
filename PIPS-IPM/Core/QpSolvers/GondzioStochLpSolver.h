@@ -26,8 +26,6 @@ class ProblemFormulation;
 class GondzioStochLpSolver : public GondzioStochSolver
 {
 protected:
-  //const unsigned int n_linesearch_points;
-  //Variables* temp_step;
 
 public:
 
