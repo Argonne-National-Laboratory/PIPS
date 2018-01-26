@@ -5,7 +5,8 @@
  *      Author: bzfrehfe
  */
 
-#include "EquiStochScaler.h"
+#include "../QpPreprocess/EquiStochScaler.h"
+
 #include "StochVector.h"
 #include <cmath>
 

@@ -5,7 +5,8 @@
  *      Author: Daniel Rehfeldt
  */
 
-#include "QpScaler.h"
+#include "../QpPreprocess/QpScaler.h"
+
 #include <algorithm>
 
 QpScaler::QpScaler(Data * prob, bool bitshifting)

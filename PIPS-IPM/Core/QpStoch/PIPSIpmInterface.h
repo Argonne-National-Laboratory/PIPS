@@ -13,9 +13,9 @@
 #include "sTree.h"
 #include "StochMonitor.h"
 #include "Scaler.h"
-#include "ScalerFactory.h"
-
 #include <cstdlib>
+
+#include "../QpPreprocess/ScalerFactory.h"
 
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
@@ -46,7 +46,8 @@ class PIPSIpmInterface
  protected:
  
   FORMULATION * factory;
-  sData *        data;
+  sData *        data;       // possibly presolved data
+  sData *        origData;   // original data
   sVars *        vars;
   sResiduals *   resids;
 
@@ -92,6 +93,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
   if(mype==0) printf("resids created\n");
 #endif
 
+  scaler = NULL;
+
   solver  = new IPMSOLVER( factory, data );
   solver->addMonitor(new StochMonitor( factory ));
 #ifdef TIMING
@@ -119,6 +122,21 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 #ifdef TIMING
   if(mype==0) printf("data created\n");
 #endif
+
+  // presolving activated?
+  if( 1 )
+  {
+     origData = data;
+
+    // data = presolver->presolve(origData);
+
+
+  }
+  else
+  {
+     origData = NULL;
+  }
+
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
 #ifdef TIMING

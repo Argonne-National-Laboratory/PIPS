@@ -5,10 +5,10 @@
  *      Author: Daniel Rehfeldt
  */
 
-#ifndef PIPS_IPM_CORE_QPSCALERS_SCALERFACTORY_H_
-#define PIPS_IPM_CORE_QPSCALERS_SCALERFACTORY_H_
+#ifndef PIPS_IPM_CORE_QPPREPROCESS_SCALERFACTORY_H_
+#define PIPS_IPM_CORE_QPPREPROCESS_SCALERFACTORY_H_
 
-#include "EquiStochScaler.h"
+#include "../QpPreprocess/EquiStochScaler.h"
 
 enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH};
 
@@ -43,4 +43,4 @@ private:
 
 
 
-#endif /* PIPS_IPM_CORE_QPSCALERS_SCALERFACTORY_H_ */
+#endif /* PIPS_IPM_CORE_QPPREPROCESS_SCALERFACTORY_H_ */
