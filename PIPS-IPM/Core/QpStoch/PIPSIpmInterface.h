@@ -7,13 +7,13 @@
 
 #include "stochasticInput.hpp"
 
+#include "Presolver.h"
 #include "sData.h"
 #include "sResiduals.h"
 #include "sVars.h"
 #include "sTree.h"
 #include "StochMonitor.h"
 #include "Scaler.h"
-#include "Presolver.h"
 #include <cstdlib>
 
 #include "PreprocessFactory.h"
@@ -138,7 +138,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
     // data = presolver->presolve(origData);
 
      presolver = scfactory.makePresolver(data);
-
+     presolver->presolve();
   }
   else
   {

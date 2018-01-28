@@ -30,7 +30,7 @@ public:
   StochPresolver(const Data* prob);
   virtual ~StochPresolver();
 
-  virtual Data* presolve(const Data* prob);
+  virtual Data* presolve();
 };
 
 //@}

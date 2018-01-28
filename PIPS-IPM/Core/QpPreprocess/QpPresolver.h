@@ -24,13 +24,11 @@ class Data;
 
 class QpPresolver : public Presolver
 {
-   private:
-
    public:
       QpPresolver(const Data* prob);
-      ~QpPresolver();
+      virtual ~QpPresolver();
 
-      Data* presolve(const Data* prob) = 0;
+      virtual Data* presolve() = 0;
 };
 
 

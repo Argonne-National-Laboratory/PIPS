@@ -24,14 +24,12 @@ class Data;
 
 class Presolver
 {
-protected:
-
 public:
-  Presolver(const Data * prob);
-  virtual ~Presolver();
+  Presolver(const Data * prob) {};
+  virtual ~Presolver() {};
 
-  /** presolve */
-  virtual Data* presolve(const Data* prob) = 0;
+  /** presolve and return point to presolved data */
+  virtual Data* presolve() = 0;
 
 };
 

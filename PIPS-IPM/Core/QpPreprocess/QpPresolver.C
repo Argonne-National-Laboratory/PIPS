@@ -5,17 +5,15 @@
  *      Author: bzfrehfe
  */
 
-
+#include <iostream>
 #include "QpPresolver.h"
 
 
 QpPresolver::QpPresolver(const Data* prob)
  : Presolver(prob)
 {
-
 }
 
 QpPresolver::~QpPresolver()
 {
-
 }

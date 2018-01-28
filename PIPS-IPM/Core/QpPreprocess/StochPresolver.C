@@ -22,10 +22,10 @@ StochPresolver::~StochPresolver()
 }
 
 
-Data* StochPresolver::presolve(const Data* prob)
+Data* StochPresolver::presolve()
 {
 
-   std::cout << "HERE" << std::endl;
+   std::cout << "start stoch presolving" << std::endl;
    assert(0);
 
    return 0;
