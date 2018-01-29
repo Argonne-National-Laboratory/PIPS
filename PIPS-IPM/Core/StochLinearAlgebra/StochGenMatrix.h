@@ -33,9 +33,16 @@ public:
 		 int Bl_m, int Bl_n, int Bl_nnz,
 		 MPI_Comm mpiComm_);
 
+  /** Constructs a matrix with local A, B, and Bl (linking constraints) blocks set to NULL */
+  StochGenMatrix(int id,
+       long long global_m, long long global_n,
+       MPI_Comm mpiComm_);
+
   // constructor for combining scenarios
   //StochGenMatrix(const vector<StochGenMatrix*> &blocks); -- not needed; cpetra
   virtual ~StochGenMatrix();
+
+  virtual StochGenMatrix* cloneFull() const;
 
   virtual void AddChild(StochGenMatrix* child);
 

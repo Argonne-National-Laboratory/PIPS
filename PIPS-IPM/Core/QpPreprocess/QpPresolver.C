@@ -10,7 +10,7 @@
 
 
 QpPresolver::QpPresolver(const Data* prob)
- : Presolver(prob)
+ : Presolver(prob), origprob(prob)
 {
 }
 

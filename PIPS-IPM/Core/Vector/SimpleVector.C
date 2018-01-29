@@ -93,11 +93,20 @@ SimpleVector::SimpleVector( double * v_, int n_ )
   v = v_;
 }
 
+
 SimpleVector::~SimpleVector()
 {
   if( !preserveVec ) {
     delete [] v;
   }
+}
+
+SimpleVector* SimpleVector::cloneFull() const
+{
+   SimpleVector* clone = new SimpleVector(n);
+   clone->copyFromArray(v);
+
+   return clone;
 }
 
 void SimpleVector::setToZero()
@@ -221,10 +230,7 @@ void SimpleVector::componentDiv ( OoqpVector& vec )
 
 void SimpleVector::writeToStream(ostream& out) const
 {
-  //this->writefToStream( out, "%{value}" );
-  for(int i = 0; i < 10; i++ ) {
-    printf("%22.16f\n", v[i]);
-  }
+  this->writefToStream( out, "%{value}" );
 }
 
 void SimpleVector::writefToStream( ostream& out,

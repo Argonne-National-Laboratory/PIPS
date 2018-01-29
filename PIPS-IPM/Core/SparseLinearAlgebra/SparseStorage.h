@@ -45,6 +45,8 @@ public:
 		 int deleteElts=0);
   //SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal); -- not needed anymore; cpetra
 
+  void copyFrom(int * krowM_, int * jcolM_, double * M_) const;
+
   void shiftRows( int row, int shift, int& info );
   virtual void getSize( int& m, int& n );
   int rows() { return m; }

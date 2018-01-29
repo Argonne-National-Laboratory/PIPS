@@ -46,27 +46,22 @@ StochGenMatrix::StochGenMatrix(int id,
   }
 }
 
-/*StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) 
-  : iAmDistrib(0), workPrimalVec(NULL)
+StochGenMatrix::StochGenMatrix(int id,
+                long long global_m, long long global_n,
+                MPI_Comm mpiComm_)
+  : id(id), m(global_m), n(global_n),
+    mpiComm(mpiComm_), iAmDistrib(0),
+    workPrimalVec(NULL)
 {
-  mpiComm = blocks[0]->mpiComm;
-  n = blocks[0]->n;
-  m = blocks[0]->m;
-  id = blocks[0]->id;
+  Amat = NULL;
+  Bmat = NULL;
+  Blmat = NULL;
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
     if(size>1) iAmDistrib=1;
   }
-
-  vector<SparseGenMatrix*> v(blocks.size());
-
-  for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Amat;
-  Amat = new SparseGenMatrix(v, false);
-  for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Bmat;
-  Bmat = new SparseGenMatrix(v, true);
 }
-*/
 
 StochGenMatrix::~StochGenMatrix()
 {
@@ -86,6 +81,25 @@ StochGenMatrix::~StochGenMatrix()
   if(workPrimalVec)
     delete workPrimalVec;
 }
+
+
+StochGenMatrix* StochGenMatrix::cloneFull() const
+{
+   StochGenMatrix* clone = new StochGenMatrix(id, m, n, mpiComm);
+
+   // clone submatrices
+   clone->Amat = Amat->cloneFull();
+   clone->Bmat = Bmat->cloneFull();
+
+   if( Blmat )
+      clone->Blmat = Blmat->cloneFull();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      clone->children.push_back(children[it]->cloneFull());
+
+   return clone;
+}
+
 
 void StochGenMatrix::AddChild(StochGenMatrix* child)
 {

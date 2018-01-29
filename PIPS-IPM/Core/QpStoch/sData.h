@@ -56,8 +56,7 @@ class sData : public QpGenData {
 
   void sync();
  public:
-
-
+  virtual sData* cloneFull() const;
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};

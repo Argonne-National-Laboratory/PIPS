@@ -39,6 +39,10 @@ public:
     return v[i];
   } 
   //@}
+
+  /* copy vector entries as well */
+  virtual SimpleVector* cloneFull() const;
+
   virtual ~SimpleVector();
 
   virtual void copyIntoArray( double v[] ) const;

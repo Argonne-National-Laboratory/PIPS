@@ -43,7 +43,6 @@ public:
   virtual void randomize( double alpha, double beta, double *ix ) = 0;
   /** Copy the elements of v into this OoqpVector object. */
   virtual void copyFrom( OoqpVector& v ) = 0;
-
   
   /** Return the infinity norm of this OoqpVector object. */
   virtual double twonorm() = 0;

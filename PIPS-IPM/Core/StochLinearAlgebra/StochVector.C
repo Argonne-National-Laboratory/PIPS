@@ -96,6 +96,21 @@ StochVector* StochVector::clone() const
   return clone;
 }
 
+StochVector* StochVector::cloneFull() const
+{
+   StochVector* clone = new StochVector(vec->length(), (vecl != NULL) ? vecl->length() : -1, mpiComm, -1);
+
+   clone->vec->copyFrom(*vec);
+
+   if( vecl )
+      clone->vecl->copyFrom(*vecl);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      clone->AddChild(children[it]->cloneFull());
+
+   return clone;
+}
+
 
 void 
 StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)

@@ -22,7 +22,6 @@ private:
 
 protected:
   SparseStorageHandle mStorage;
-  int size;
 
 public:
   SparseGenMatrix( int rows, int cols, int nnz );
@@ -31,6 +30,8 @@ public:
 		   int deleteElts=0);
   //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
   
+  virtual SparseGenMatrix* cloneFull() const;
+
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 

@@ -24,6 +24,9 @@ class Data;
 
 class QpPresolver : public Presolver
 {
+   protected:
+      const Data* origprob;
+
    public:
       QpPresolver(const Data* prob);
       virtual ~QpPresolver();

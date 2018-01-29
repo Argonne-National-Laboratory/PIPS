@@ -48,6 +48,8 @@ public:
   virtual OoqpVector* dataClone() const;
   virtual OoqpVector* dataCloneLinkCons() const;
   virtual StochVector* clone() const;
+  /* copy vector entries as well */
+  virtual StochVector* cloneFull() const;
 
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3);
   virtual void jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector& vz);

@@ -52,6 +52,28 @@ SparseGenMatrix::~SparseGenMatrix()
 }
 
 
+SparseGenMatrix* SparseGenMatrix::cloneFull() const
+{
+   SparseGenMatrix* clone = new SparseGenMatrix(mStorage->m, mStorage->n, mStorage->len);
+
+   mStorage->copyFrom(clone->krowM(), clone->jcolM(), clone->M());
+
+   if( m_Mt )
+   {
+      assert(clone->m_Mt == NULL);
+
+      SparseStorage* storage_t = m_Mt->getStorage();
+      clone->m_Mt = new SparseGenMatrix(storage_t->m, storage_t->n, storage_t->len);
+
+      SparseGenMatrix* clone_t = clone->m_Mt;
+
+      storage_t->copyFrom(clone_t->krowM(), clone_t->jcolM(), clone_t->M());
+   }
+
+   return clone;
+}
+
+
 void SparseGenMatrix::atPutDense( int row, int col, double * A, int lda,
 				      int rowExtent, int colExtent )
 {

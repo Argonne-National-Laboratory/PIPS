@@ -9,6 +9,7 @@
 #include "StochPresolver.h"
 #include <cassert>
 #include <iostream>
+#include "sData.h"
 
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
@@ -26,7 +27,15 @@ Data* StochPresolver::presolve()
 {
 
    std::cout << "start stoch presolving" << std::endl;
+
+   const sData* sorigprob = dynamic_cast<const sData*>(origprob);
+
+
+
+   sData* newprob = sorigprob->cloneFull();
+
+
    assert(0);
 
-   return 0;
+   return newprob;
 }

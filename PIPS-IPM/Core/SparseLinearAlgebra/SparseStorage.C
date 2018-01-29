@@ -11,6 +11,7 @@
 #include "SimpleVector.h"
 #include <limits>
 #include <fstream>
+#include <string>
 
 
 int SparseStorage::instances = 0;
@@ -59,6 +60,14 @@ SparseStorage::~SparseStorage()
   }
 
   SparseStorage::instances--;
+}
+
+
+void SparseStorage::copyFrom(int * krowM_, int * jcolM_, double * M_) const
+{
+   memcpy(jcolM_, jcolM, len * sizeof(jcolM[0]));
+   memcpy(M_, M, len * sizeof(M[0]));
+   memcpy(krowM_, krowM, (m + 1) * sizeof(krowM[0]));
 }
 
 void SparseStorage::getSize( int& m_, int& n_ )

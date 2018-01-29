@@ -61,6 +61,82 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
   createChildren();
 }
 
+sData* sData::cloneFull() const
+{
+
+   sData* clone = 0;
+   //: nxlow(data.nxlow), nxupp(data.nxupp), mclow(data.mclow), mcupp(data.mcupp)
+
+
+   //stochNode = data.stochNode;
+
+   //this->la = data.la;
+
+    bA->writeToStream(cout);
+    C->writeToStreamDense(cout);
+
+   // create StochMatrices and StochVectors
+   StochVector* gClone =  dynamic_cast<const StochVector&>(*bA).cloneFull();
+
+   StochGenMatrix* Cclone = dynamic_cast<const StochGenMatrix&>(*C).cloneFull();
+
+   std::cout << " XXXXXXX \n   " << std::endl;
+
+
+   Cclone->writeToStreamDense(cout);
+
+
+   gClone->writeToStream(cout);
+
+
+
+   /*
+   // set references
+   SpReferTo( g,     c_in  );
+   SpReferTo( bA,    bA_in );
+   SpReferTo( blx,   xlow_in  );
+   SpReferTo( ixlow, ixlow_in );
+   SpReferTo( bux,   xupp_in  );
+   SpReferTo( ixupp, ixupp_in );
+   SpReferTo( bl,    clow_in  );
+   SpReferTo( iclow, iclow_in );
+   SpReferTo( bu,    cupp_in  );
+   SpReferTo( icupp, icupp_in );
+
+   long long dummy;
+
+   nx = g->length();
+   SpReferTo( Q, Q_in );
+
+   SpReferTo( A, A_in );
+   A->getSize( my, dummy );
+
+   SpReferTo( C, C_in );
+   C->getSize( mz, dummy );
+
+
+   SymMatrixHandle Q;
+   GenMatrixHandle A;
+   GenMatrixHandle C;
+   OoqpVectorHandle    g;
+   OoqpVectorHandle    bA;
+   OoqpVectorHandle    bux;
+   OoqpVectorHandle    ixupp;
+   OoqpVectorHandle    blx;
+   OoqpVectorHandle    ixlow;
+   OoqpVectorHandle    bu;
+   OoqpVectorHandle    icupp;
+   OoqpVectorHandle    bl;
+   OoqpVectorHandle    iclow;
+   OoqpVectorHandle    sc;
+
+   long long nx, my, mz;
+
+   // create children
+   createChildren();
+   */
+   return clone;
+}
 
 void sData::createChildren()
 {
