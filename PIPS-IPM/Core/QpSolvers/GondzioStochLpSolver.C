@@ -5,7 +5,7 @@
  *      Author: Svenja Uslu
  */
 
-
+//#define PIPS_DEBUG
 #include "GondzioStochLpSolver.h"
 #include "Variables.h"
 #include "Residuals.h"
@@ -46,12 +46,10 @@ extern int gOoqpPrintLevel;
 static double g_iterNumber;
 
 
-GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points )
-  : GondzioStochSolver(opt, prob)
+GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points, bool adaptive_linesearch)
+  : GondzioStochSolver(opt, prob, n_linesearch_points, adaptive_linesearch)
 {
 
-
-   //temp_step = factory->makeVariables(prob);
 }
 
 void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
@@ -212,8 +210,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       // enter the Gondzio correction loop:
       while( NumberGondzioCorrections < maximum_correctors && (PIPSisLT(alpha_pri, 1.0) || PIPSisLT(alpha_dual, 1.0)) )
       {
-         // std::cout << "corrector loop: " << NumberGondzioCorrections
-         //    << " alpha_pri: " << alpha_pri <<  " alpha_dual: " << alpha_dual << std::endl;
+         PIPSdebugMessage("corrector loop: %d alpha_pri: %f alpha_dual %f \n", NumberGondzioCorrections, alpha_pri, alpha_dual);
 
          // copy current variables into corrector_step
          corrector_step->copy(iterate);
@@ -278,7 +275,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       // and stop correcting
       if( PIPSisEQ(alpha_pri_enhanced, 1.0) && PIPSisEQ(alpha_dual_enhanced, 1.0) )
       {
-         //std::cout << "both one" << std::endl;
+         PIPSdebugMessage("both one \n");
 
          step->saxpy_pd(corrector_step, weight_primal_candidate, weight_dual_candidate);
 
@@ -291,7 +288,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       }
       else if( alpha_pri_enhanced >= (1.0 + AcceptTol) * alpha_pri && alpha_dual_enhanced >= (1.0 + AcceptTol) * alpha_dual)
       {
-         //std::cout << "both better" << std::endl;
+         PIPSdebugMessage("both better \n");
 
          // if enhanced step length is significantly better than the
          // current alpha, make the enhanced step official, but maybe
@@ -304,7 +301,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       }
       else if( alpha_pri_enhanced >= (1.0 + AcceptTol) * alpha_pri )
       {
-         //std::cout << "primal better " << std::endl;
+         PIPSdebugMessage("primal better \n");
 
          step->saxpy_pd(corrector_step, weight_primal_candidate, 0.0);
 
@@ -313,7 +310,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       }
       else if( alpha_dual_enhanced >= (1.0 + AcceptTol) * alpha_dual )
       {
-         //std::cout << "dual better " << std::endl;
+         PIPSdebugMessage("dual better \n");
 
          step->saxpy_pd(corrector_step, 0.0, weight_dual_candidate);
 
