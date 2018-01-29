@@ -290,6 +290,22 @@ void Solver::doMonitor( Data * data, Variables * vars,
   }
 }
 
+void Solver::doMonitorPd( Data * data, Variables * vars,
+         Residuals * resids,
+         double alpha_primal, double alpha_dual, double sigma,
+         int i, double mu,
+                        int stop_code,
+         int level )
+{
+  OoqpMonitor * m = itsMonitors;
+
+  while( m ) {
+    m->doItPd( this, data, vars, resids, alpha_primal, alpha_dual, sigma, i, mu, stop_code, level );
+    m = m->nextMonitor;
+  }
+}
+
+
 int Solver::doStatus( Data * data, Variables * vars,
 		       Residuals * resids,
 		       int i, double mu,

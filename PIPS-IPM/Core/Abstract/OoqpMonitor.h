@@ -4,6 +4,7 @@
 
 #ifndef OOQPMONITOR
 #define OOQPMONITOR
+#include <cassert>
 
 class Solver;
 class Data;
@@ -26,6 +27,14 @@ public:
 					 int i, double mu, 
                      int status_code,
 					 int level ) = 0;
+
+  virtual void doItPd( Solver * solver, Data * data, Variables * vars,
+                Residuals * resids,
+                double alpha_primal, double alpha_dual, double sigma,
+                int i, double mu,
+                     int status_code,
+                int level ) { assert(0 && "not implemented here"); };
+
   virtual ~OoqpMonitor() {};
 };  
 

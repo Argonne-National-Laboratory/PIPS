@@ -24,12 +24,13 @@ class ProblemFormulation;
 class GondzioStochSolver : public GondzioSolver
 {
 protected:
-  const unsigned int n_linesearch_points;
+  unsigned int n_linesearch_points;
   Variables* temp_step;
 
 public:
 
-  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10 ); // todo increase n_linesearch_points
+  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
+        bool adaptive_linesearch = true );
 
   virtual ~GondzioStochSolver();
 
