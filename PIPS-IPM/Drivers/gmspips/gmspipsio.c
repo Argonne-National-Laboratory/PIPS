@@ -1420,6 +1420,7 @@ if (blk->rm##mat)                                                               
    }
 
    gdxClose(fGDX);
+   gdxFree(&fGDX);
    free(cVal);
    free(cIdxUel);
    free(varPerm);
