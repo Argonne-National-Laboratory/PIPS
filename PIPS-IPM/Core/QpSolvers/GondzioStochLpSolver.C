@@ -6,6 +6,7 @@
  */
 
 //#define PIPS_DEBUG
+#include "pipsdef.h"
 #include "GondzioStochLpSolver.h"
 #include "Variables.h"
 #include "Residuals.h"
@@ -20,7 +21,6 @@
 #include "StochTree.h"
 #include "QpGenStoch.h"
 #include "StochResourcesMonitor.h"
-#include "pipsdef.h"
 
 #include <cstring>
 #include <iostream>

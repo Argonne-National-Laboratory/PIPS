@@ -13,7 +13,7 @@
 #include <cmath>
 #include <string>
 
-const double pips_eps = 10e-16;
+const double pips_eps = 10e-14;
 
 #ifdef PIPS_DEBUG
 #define PIPSdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__), printf
@@ -21,17 +21,17 @@ const double pips_eps = 10e-16;
 #define PIPSdebugMessage      while( 0 ) /*lint -e{530}*/ printf
 #endif
 
-bool PIPSisEQ(double val1, double val2)
+inline bool PIPSisEQ(double val1, double val2)
 {
    return (std::fabs(val1 - val2) <= pips_eps);
 }
 
-bool PIPSisLE(double val1, double val2)
+inline bool PIPSisLE(double val1, double val2)
 {
    return (val1 <= val2 + pips_eps);
 }
 
-bool PIPSisLT(double val1, double val2)
+inline bool PIPSisLT(double val1, double val2)
 {
    return (val1 <= val2 - pips_eps);
 }
