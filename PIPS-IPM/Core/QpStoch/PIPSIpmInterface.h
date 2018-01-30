@@ -130,7 +130,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("resids created\n");
 #endif
 
-  ScalerFactory& scfactory = ScalerFactory::getInstance();
+  const ScalerFactory& scfactory = ScalerFactory::getInstance();
   scaler = scfactory.makeScaler(data, scaler_type);
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");

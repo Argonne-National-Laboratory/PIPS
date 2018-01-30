@@ -213,6 +213,13 @@ public:
     return obj;
   }
 
+  /** returns pointer without increasing reference count; use with care!
+   */
+  T * ptr_unsave()
+  {
+    return obj;
+  }
+
   /** Allow EXPLICIT conversion from a (T*) to a SmartPointer to
    *  T. Implicit conversion is not allowed, because this could have
    *  subtle, unintended consequences. */

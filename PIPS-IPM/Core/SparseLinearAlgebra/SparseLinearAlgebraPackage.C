@@ -7,14 +7,13 @@
 #include "SparseSymMatrix.h"
 #include "SimpleVector.h"
 #include "DoubleMatrix.h"
+#include "SmartPointer.h"
 
 SparseLinearAlgebraPackage * SparseLinearAlgebraPackage::soleInstance()
 {
-  static SparseLinearAlgebraPackage * la = 0;
+  static SmartPointer<SparseLinearAlgebraPackage> la(new SparseLinearAlgebraPackage);
   
-  if( !la ) la = new SparseLinearAlgebraPackage;
-
-  return la;
+  return la.ptr_unsave();
 }
 
 SymMatrix * SparseLinearAlgebraPackage::newSymMatrix( int size, int nnz)

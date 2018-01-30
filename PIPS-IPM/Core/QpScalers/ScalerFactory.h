@@ -9,13 +9,15 @@
 #define PIPS_IPM_CORE_QPSCALERS_SCALERFACTORY_H_
 
 #include "EquiStochScaler.h"
+#include "IotrRefCount.h"
+#include "SmartPointer.h"
 
 enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH};
 
-class ScalerFactory
+class ScalerFactory : public IotrRefCount
 {
 public:
-      static Scaler* makeScaler(Data* data, ScalerType type)
+      Scaler* makeScaler(Data* data, ScalerType type) const
       {
          switch( type )
             {
@@ -26,9 +28,9 @@ public:
             }
       };
 
-      static ScalerFactory& getInstance()
+      static const ScalerFactory& getInstance()
       {
-         static ScalerFactory* instance = new ScalerFactory;
+         static SmartPointer<ScalerFactory> instance(new ScalerFactory);
          return *instance;
       }
 private:
