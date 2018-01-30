@@ -134,11 +134,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   {
 
      origData = data;
-
-    // data = presolver->presolve(origData);
-
      presolver = scfactory.makePresolver(data);
-     presolver->presolve();
+     data = dynamic_cast<sData*>(presolver->presolve());
   }
   else
   {
@@ -257,6 +254,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete resids;
   delete vars;
   delete data;
+  delete origData;
   delete factory;
   delete scaler;
 }

@@ -61,80 +61,73 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
   createChildren();
 }
 
+
 sData* sData::cloneFull() const
 {
-
-   sData* clone = 0;
-   //: nxlow(data.nxlow), nxupp(data.nxupp), mclow(data.mclow), mcupp(data.mcupp)
+   ofstream myfile;
 
 
-   //stochNode = data.stochNode;
+   myfile.open("org.txt");
 
-   //this->la = data.la;
+   (*A).writeToStreamDense(myfile);
+   (*C).writeToStreamDense(myfile);
 
-    bA->writeToStream(cout);
-    C->writeToStreamDense(cout);
+   (*g).writeToStream(myfile);
+   (*bA).writeToStream(myfile);
+   (*bux).writeToStream(myfile);
+   (*ixupp).writeToStream(myfile);
+   (*blx).writeToStream(myfile);
+   (*ixlow).writeToStream(myfile);
+   (*bu).writeToStream(myfile);
+   (*icupp).writeToStream(myfile);
+   (*bl).writeToStream(myfile);
+   (*iclow).writeToStream(myfile);
 
-   // create StochMatrices and StochVectors
-   StochVector* gClone =  dynamic_cast<const StochVector&>(*bA).cloneFull();
+   myfile.close();
 
-   StochGenMatrix* Cclone = dynamic_cast<const StochGenMatrix&>(*C).cloneFull();
+   // todo Q is emty!
+   StochSymMatrix* Q_clone = dynamic_cast<const StochSymMatrix&>(*Q).clone();
 
-   std::cout << " XXXXXXX \n   " << std::endl;
-
-
-   Cclone->writeToStreamDense(cout);
-
-
-   gClone->writeToStream(cout);
-
-
-
-   /*
-   // set references
-   SpReferTo( g,     c_in  );
-   SpReferTo( bA,    bA_in );
-   SpReferTo( blx,   xlow_in  );
-   SpReferTo( ixlow, ixlow_in );
-   SpReferTo( bux,   xupp_in  );
-   SpReferTo( ixupp, ixupp_in );
-   SpReferTo( bl,    clow_in  );
-   SpReferTo( iclow, iclow_in );
-   SpReferTo( bu,    cupp_in  );
-   SpReferTo( icupp, icupp_in );
-
-   long long dummy;
-
-   nx = g->length();
-   SpReferTo( Q, Q_in );
-
-   SpReferTo( A, A_in );
-   A->getSize( my, dummy );
-
-   SpReferTo( C, C_in );
-   C->getSize( mz, dummy );
+   StochGenMatrix* A_clone = dynamic_cast<const StochGenMatrix&>(*A).cloneFull();
+   StochGenMatrix* C_clone = dynamic_cast<const StochGenMatrix&>(*C).cloneFull();
+   StochVector* c_clone = dynamic_cast<const StochVector&>(*g).cloneFull();
+   StochVector* bA_clone = dynamic_cast<const StochVector&>(*bA).cloneFull();
+   StochVector* xupp_clone = dynamic_cast<const StochVector&>(*bux).cloneFull();
+   StochVector* ixupp_clone = dynamic_cast<const StochVector&>(*ixupp).cloneFull();
+   StochVector* xlow_clone = dynamic_cast<const StochVector&>(*blx).cloneFull();
+   StochVector* ixlow_clone = dynamic_cast<const StochVector&>(*ixlow).cloneFull();
+   StochVector* cupp_clone = dynamic_cast<const StochVector&>(*bu).cloneFull();
+   StochVector* icupp_clone = dynamic_cast<const StochVector&>(*icupp).cloneFull();
+   StochVector* clow_clone = dynamic_cast<const StochVector&>(*bl).cloneFull();
+   StochVector* iclow_clone = dynamic_cast<const StochVector&>(*iclow).cloneFull();
 
 
-   SymMatrixHandle Q;
-   GenMatrixHandle A;
-   GenMatrixHandle C;
-   OoqpVectorHandle    g;
-   OoqpVectorHandle    bA;
-   OoqpVectorHandle    bux;
-   OoqpVectorHandle    ixupp;
-   OoqpVectorHandle    blx;
-   OoqpVectorHandle    ixlow;
-   OoqpVectorHandle    bu;
-   OoqpVectorHandle    icupp;
-   OoqpVectorHandle    bl;
-   OoqpVectorHandle    iclow;
-   OoqpVectorHandle    sc;
+   myfile.open("pres.txt");
+   A_clone->writeToStreamDense(myfile);
+   C_clone->writeToStreamDense(myfile);
+   c_clone->writeToStream(myfile);
+   bA_clone->writeToStream(myfile);
+   xupp_clone->writeToStream(myfile);
+   ixupp_clone->writeToStream(myfile);
+   xlow_clone->writeToStream(myfile);
+   ixlow_clone->writeToStream(myfile);
+   cupp_clone->writeToStream(myfile);
+   icupp_clone->writeToStream(myfile);
+   clow_clone->writeToStream(myfile);
+   iclow_clone->writeToStream(myfile);
+   myfile.close();
 
-   long long nx, my, mz;
 
-   // create children
-   createChildren();
-   */
+   sTree* tree_clone = stochNode; // todo
+
+   sData* clone = new sData(tree_clone,  c_clone, Q_clone,
+                  xlow_clone,  ixlow_clone,  nxlow,
+                  xupp_clone,  ixupp_clone,  nxupp,
+                  A_clone,  bA_clone,
+                  C_clone,
+                  clow_clone,  iclow_clone,  mclow,
+                  cupp_clone,  icupp_clone,  mcupp);
+
    return clone;
 }
 
@@ -171,6 +164,7 @@ void sData::createChildren()
   }
 
 }
+
 
 void sData::destroyChildren()
 {

@@ -35,6 +35,7 @@ public:
   
   virtual void AddChild(StochSymMatrix* child);
 
+  virtual StochSymMatrix* clone() const;
 
   virtual int isKindOf( int type );
   virtual void atPutDense( int row, int col, double * A, int lda,
@@ -104,6 +105,8 @@ public:
     : StochSymMatrix(id_, 0, 0, 0, MPI_COMM_NULL) {};
 
   virtual ~StochSymDummyMatrix(){};
+
+  virtual StochSymDummyMatrix* clone() const { return new StochSymDummyMatrix(id); };
 
   virtual void AddChild(StochSymMatrix* child){};
 

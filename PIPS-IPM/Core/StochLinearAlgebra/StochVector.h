@@ -159,6 +159,7 @@ public:
   */
   virtual OoqpVector* dataClone() const { return new SimpleVector(0);}
   virtual StochVector* clone() const { return new StochDummyVector();}
+  virtual StochVector* cloneFull() const { return new StochDummyVector();}
 
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3){};
   virtual void jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3){};

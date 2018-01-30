@@ -2,12 +2,6 @@
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 
-#ifdef PRINT_MAX
-#include "StochVector.h"
-#include "SimpleVector.h"
-#include <cmath>
-#endif
-
 #include "QpGenResiduals.h"
 #include "QpGenVars.h"
 #include "QpGenData.h"
@@ -151,56 +145,6 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 #ifdef TIMING
     componentNorm = (vars->pi)->infnorm();
     if(0==myRank) cout  << "pi norm " << componentNorm << std::endl;
-#endif
-
-#ifdef PRINT_MAX
-        double max = 0.0;
-
-        int maxchild = -1;
-        int maxindex = -1;
-        {
-
-        OoqpVector& lp = *vars->pi;
-        StochVector& lam = reinterpret_cast<StochVector&>(lp);
-        std::cout << "childrensize " << lam.children.size() << std::endl;
-        for( int k = 0; k < lam.children.size(); k++ )
-        {
-           StochVector& lamc = *lam.children[k];
-
-           SimpleVector& lvec = reinterpret_cast<SimpleVector&>(*lamc.vec);
-           for( int i = 0; i < lvec.length(); i++ )
-           {
-           if( fabs(lvec[i]) > max )
-           {
-              maxindex = i;
-              maxchild = k;
-              max = (lvec)[i];
-           }
-           }
-        }
-        std::cout << "max at child " << maxchild << " ind " << maxindex << ": " << max << std::endl;
-
-        }
-
-
-        {
-
-        OoqpVector& lp = *vars->u;
-        StochVector& lam = reinterpret_cast<StochVector&>(lp);
-        for( int k = 0; k < lam.children.size(); k++ )
-        {
-           StochVector& lamc = *lam.children[k];
-
-           SimpleVector& lvec = reinterpret_cast<SimpleVector&>(*lamc.vec);
-           for( int i = 0; i < lvec.length(); i++ )
-           {
-              if( i == maxindex && k == maxchild )
-              {
-                 std::cout << "uval at child " << k  << " ind: " << i << ": " << lvec[i] << std::endl;
-              }
-           }
-        }
-        }
 #endif
 
     ru->copyFrom( *vars->s );

@@ -186,6 +186,9 @@ public:
   virtual void getSize( int& m, int& n ){m=0; n=0;}
   virtual void getSize( long long& m, long long& n ){m=0; n=0;}
 
+  virtual StochGenMatrix* cloneFull() const { return new StochGenDummyMatrix(id); };
+
+
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
    *  are treated as non-zero even though their value happens to be zero.

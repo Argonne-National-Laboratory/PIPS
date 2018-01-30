@@ -76,6 +76,22 @@ StochSymMatrix::~StochSymMatrix()
   if (border) delete border;
 }
 
+StochSymMatrix* StochSymMatrix::clone() const
+{
+   const int local_n = diag->getStorage()->n;
+   const int local_nnz = diag->getStorage()->len;
+
+   StochSymMatrix* clone = new StochSymMatrix(id, n, local_n, local_nnz, mpiComm);
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      StochSymMatrix* child = children[it]->clone();
+      clone->AddChild(child);
+   }
+
+   return clone;
+}
+
 int StochSymMatrix::isKindOf( int type )
 {
   return type == kStochSymMatrix || type == kSymMatrix;

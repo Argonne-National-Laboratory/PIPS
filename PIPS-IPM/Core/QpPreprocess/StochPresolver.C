@@ -34,8 +34,7 @@ Data* StochPresolver::presolve()
 
    sData* newprob = sorigprob->cloneFull();
 
-
-   assert(0);
+   std::cout << "CLONED" << std::endl;
 
    return newprob;
 }
