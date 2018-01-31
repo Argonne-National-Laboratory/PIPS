@@ -23,7 +23,8 @@ class PIPSIpmInterface
 {
  public:
   PIPSIpmInterface(stochasticInput &in, MPI_Comm = MPI_COMM_WORLD);
-  PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD, ScalerType scaler_type = SCALER_NONE);
+  PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD,
+        ScalerType scaler_type = SCALER_NONE, PresolverType presolver_type = PRESOLVER_NONE);
   ~PIPSIpmInterface();
 
   void go();
@@ -107,7 +108,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 }
 
 template<class FORMULATION, class IPMSOLVER>
-PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type) : comm(comm)
+PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type,
+      PresolverType presolver_type) : comm(comm)
 {
 
 #ifdef TIMING
@@ -125,26 +127,21 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("data created\n");
 #endif
 
-  const PreprocessFactory& scfactory = PreprocessFactory::getInstance();
+  const PreprocessFactory& prefactory = PreprocessFactory::getInstance();
 
-  presolver = NULL;
-
- // presolver =
+  presolver = prefactory.makePresolver(data, presolver_type);
 
   // presolving activated?
-  if( 0 )
+  if( presolver != NULL )
   {
-     presolver = scfactory.makePresolver(data);
-
+     std::cout << "use presolver\n\n\n" << std::endl;
      origData = data;
      data = dynamic_cast<sData*>(presolver->presolve());
   }
   else
   {
-
      origData = NULL;
   }
-
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
 #ifdef TIMING
@@ -156,7 +153,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("resids created\n");
 #endif
 
-  scaler = scfactory.makeScaler(data, scaler_type);
+  scaler = prefactory.makeScaler(data, scaler_type);
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");
 #endif
@@ -200,16 +197,14 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
       if( scaler )
       {
+         std::cout << "scale \n\n\n" << std::endl;
+
          ofstream myfile;
          myfile.open("BeforeScalingPres.txt");
          data->writeToStream(myfile);
          myfile.close();
 
          scaler->scale();
-
-         myfile.open("AfterScalingPres.txt");
-         data->writeToStream(myfile);
-         myfile.close();
       }
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);

@@ -12,6 +12,7 @@
 #include "StochPresolver.h"
 
 enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH};
+enum PresolverType {PRESOLVER_NONE, PRESOLVER_STOCH};
 
 class PreprocessFactory
 {
@@ -27,9 +28,15 @@ public:
             }
       };
 
-      static StochPresolver* makePresolver(const Data* data /*PresolverType type*/)
+      static Presolver* makePresolver(const Data* data, PresolverType type)
       {
-         return new StochPresolver(data);
+         switch( type )
+            {
+            case PRESOLVER_STOCH:
+               return new StochPresolver(data);
+            default:
+               return 0;
+            }
       };
 
       static PreprocessFactory& getInstance()

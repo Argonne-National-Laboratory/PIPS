@@ -8,7 +8,7 @@ tbsize="8"
 np="1"
 scale=""
 stepLp=""
-
+presolve=""
 
 for i in "$@"
 do
@@ -41,6 +41,10 @@ case $i in
     stepLp="${i#*=}"
     shift # past argument=value
     ;;
+    -PRESOLVE=*|--PRESOLVE=*)
+    presolve="${i#*=}"
+    shift # past argument=value
+    ;;
     *)
           # unknown option
     ;;
@@ -65,10 +69,19 @@ if [ "$stepLp" = "true" ]; then
 else
   stepLp=""
 fi
-if [ "$scale" = "true" ]; then
-  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR scale $stepLp 2>&1 | tee pips.out
-else
-  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $stepLp 2>&1 | tee pips.out
 
+if [ "$presolve" = "true" ]; then
+  presolve="presolve"
+else
+  presolve=""
 fi
+
+if [ "$scale" = "true" ]; then
+  scale="scale"
+else
+  scale=""
+fi
+
+mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
+
 
