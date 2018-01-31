@@ -127,18 +127,21 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 
   const PreprocessFactory& scfactory = PreprocessFactory::getInstance();
 
+  presolver = NULL;
+
  // presolver =
 
   // presolving activated?
-  if( 1 )
+  if( 0 )
   {
+     presolver = scfactory.makePresolver(data);
 
      origData = data;
-     presolver = scfactory.makePresolver(data);
      data = dynamic_cast<sData*>(presolver->presolve());
   }
   else
   {
+
      origData = NULL;
   }
 
@@ -195,9 +198,19 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   double tmElapsed=MPI_Wtime();
 #endif
 
-  if( scaler )
-     scaler->scale();
+      if( scaler )
+      {
+         ofstream myfile;
+         myfile.open("BeforeScalingPres.txt");
+         data->writeToStream(myfile);
+         myfile.close();
 
+         scaler->scale();
+
+         myfile.open("AfterScalingPres.txt");
+         data->writeToStream(myfile);
+         myfile.close();
+      }
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
   //---------------------------------------------
@@ -257,6 +270,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete origData;
   delete factory;
   delete scaler;
+  delete presolver;
+
 }
 
 

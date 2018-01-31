@@ -61,28 +61,40 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
   createChildren();
 }
 
+void sData::writeToStream(ostream& out) const
+{
+   out << "A: " << std::endl;
+   (*A).writeToStreamDense(out);
+   out << "C: " << std::endl;
+   (*C).writeToStreamDense(out);
+   out << "obj: " << std::endl;
+   (*g).writeToStream(out);
+   out << "bA: " << std::endl;
+   (*bA).writeToStream(out);
+   out << "xupp: " << std::endl;
+   (*bux).writeToStream(out);
+   out << "ixupp: " << std::endl;
+   (*ixupp).writeToStream(out);
+   out << "xlow: " << std::endl;
+   (*blx).writeToStream(out);
+   out << "ixlow: " << std::endl;
+   (*ixlow).writeToStream(out);
+   out << "cupp: " << std::endl;
+   (*bu).writeToStream(out);
+   out << "icupp: " << std::endl;
+   (*icupp).writeToStream(out);
+   out << "clow: " << std::endl;
+   (*bl).writeToStream(out);
+   out << "iclow: " << std::endl;
+   (*iclow).writeToStream(out);
+}
 
 sData* sData::cloneFull() const
 {
    ofstream myfile;
 
-
    myfile.open("org.txt");
-
-   (*A).writeToStreamDense(myfile);
-   (*C).writeToStreamDense(myfile);
-
-   (*g).writeToStream(myfile);
-   (*bA).writeToStream(myfile);
-   (*bux).writeToStream(myfile);
-   (*ixupp).writeToStream(myfile);
-   (*blx).writeToStream(myfile);
-   (*ixlow).writeToStream(myfile);
-   (*bu).writeToStream(myfile);
-   (*icupp).writeToStream(myfile);
-   (*bl).writeToStream(myfile);
-   (*iclow).writeToStream(myfile);
-
+   writeToStream(myfile);
    myfile.close();
 
    // todo Q is emty!
