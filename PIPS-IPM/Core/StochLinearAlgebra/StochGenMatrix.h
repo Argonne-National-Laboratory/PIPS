@@ -87,6 +87,8 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
+  virtual void initTransposedChild();
+
  public:
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
@@ -143,6 +145,9 @@ public:
   virtual void symmetrize( int& info );
 
   virtual void randomize( double alpha, double beta, double * seed );
+
+  /** initialize transposed matrices for A, B, Bl */
+  virtual void initTransposed();
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
@@ -260,8 +265,12 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
 
+  virtual void initTransposedChild() {};
+
   virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec ){};
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
+
+  virtual void initTransposed() {};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};

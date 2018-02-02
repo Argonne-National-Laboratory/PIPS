@@ -645,6 +645,29 @@ void StochGenMatrix::randomize( double alpha, double beta, double * seed )
   assert( "Has not been yet implemented" && 0 );
 }
 
+void StochGenMatrix::initTransposed()
+{
+   Bmat->initTransposed();
+
+   if( Blmat != NULL )
+      Blmat->initTransposed();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->initTransposedChild();
+}
+
+void StochGenMatrix::initTransposedChild()
+{
+   Amat->initTransposed();
+   Bmat->initTransposed();
+
+   if( Blmat != NULL )
+      Blmat->initTransposed();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->initTransposedChild();
+}
+
 
 void StochGenMatrix::atPutDiagonal( int idiag, OoqpVector& v )
 {

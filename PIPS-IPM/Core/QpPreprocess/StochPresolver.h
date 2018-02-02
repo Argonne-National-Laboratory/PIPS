@@ -9,6 +9,8 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVER_H_
 
 #include "QpPresolver.h"
+#include "StochVector.h"
+#include "SmartPointer.h"
 
 class Data;
 
@@ -24,6 +26,22 @@ class Data;
  */
 class StochPresolver : public QpPresolver
 {
+private:
+  const double feastol = 1.0e-6;
+  const double infinity = 10e30;
+
+  // number of non-zero elements of each row
+  StochVectorHandle nRowElemsA;
+  StochVectorHandle nRowElemsC;
+
+  // number of non-zero elements of each column
+  StochVectorHandle nColElemsA;
+  StochVectorHandle nColElemsC;
+
+  // remove small matrix entries and return number of eliminations
+  int cleanUp();
+
+  sData* presProb;
 
 public:
 

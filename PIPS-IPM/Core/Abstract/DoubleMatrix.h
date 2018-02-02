@@ -250,6 +250,9 @@ public:
 
   virtual void writeToStreamDense(ostream& out) const {}
 
+  /** initialize transposed matrix */
+  virtual void initTransposed() { assert(0 && "not implemented"); };
+
   /** get ith row */
   virtual void getRow(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
 

@@ -327,6 +327,18 @@ void SparseGenMatrix::matTransDMultMat(OoqpVector& d_, SymMatrix** res)
 			     MtDM->krowM(), MtDM->jcolM(), MtDM->M());
 }
 
+void SparseGenMatrix::initTransposed()
+{
+   assert(m_Mt == NULL);
+
+   const int m = mStorage->m;
+   const int n = mStorage->n;
+   const int nnz = mStorage->numberOfNonZeros();
+
+   m_Mt = new SparseGenMatrix(n, m, nnz);
+   mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
+}
+
 void SparseGenMatrix::matTransDinvMultMat(OoqpVector& d_, SymMatrix** res)
 {
   SimpleVector& d = dynamic_cast<SimpleVector &>(d_);

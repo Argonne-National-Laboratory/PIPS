@@ -83,6 +83,9 @@ public:
   /** C = this^T * inv(D) * this where D=diag(d) is a diagonal matrix. */
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
 
+  /** initialize transposed matrix */
+  virtual void initTransposed();
+
   /** C = this * this^T */
   virtual void matMultTrans(SymMatrix** res);
   
