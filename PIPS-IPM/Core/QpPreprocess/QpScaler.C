@@ -12,12 +12,8 @@
 QpScaler::QpScaler(Data * prob, bool bitshifting)
 : Scaler(prob, bitshifting)
 {
-   QpGenData* qpprob = dynamic_cast<QpGenData*>(prob);
+   const QpGenData* qpprob = dynamic_cast<QpGenData*>(prob);
 
-   vec_rowscaleQ = NULL;
-   vec_rowscaleA = NULL;
-   vec_rowscaleC = NULL;
-   vec_colscale = NULL;
    factor_objscale = 1.0;
 
    Q = qpprob->Q;
@@ -74,8 +70,8 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    C->getRowMinMaxVec(true, true, NULL, minvecC);
    C->getRowMinMaxVec(false, true, NULL, maxvecC);
 
-   OoqpVector* const ratiovecA = maxvecA.clone();
-   OoqpVector* const ratiovecC = maxvecC.clone();
+   OoqpVectorHandle ratiovecA(maxvecA.clone());
+   OoqpVectorHandle ratiovecC(maxvecC.clone());
 
    ratiovecA->copyFrom(maxvecA);
    ratiovecC->copyFrom(maxvecC);
@@ -95,9 +91,6 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    if( maxvalC > maxratio )
       maxratio = maxvalC;
 
-   delete ratiovecA;
-   delete ratiovecC;
-
    return maxratio;
 }
 
@@ -109,7 +102,7 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
    A->getColMinMaxVec(false, true, NULL, maxvec);
    C->getColMinMaxVec(false, false, NULL, maxvec);
 
-   OoqpVector* const ratiovec = maxvec.clone();
+   OoqpVectorHandle ratiovec(maxvec.clone());
 
    ratiovec->copyFrom(maxvec);
 
@@ -127,15 +120,9 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
 
    std::cout << "colmaxratio " << maxratio << std::endl;
 
-   delete ratiovec;
-
    return maxratio;
 }
 
 QpScaler::~QpScaler()
 {
-   delete vec_rowscaleQ;
-   delete vec_rowscaleA;
-   delete vec_rowscaleC;
-   delete vec_colscale;
 }

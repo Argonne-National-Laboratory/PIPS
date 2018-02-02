@@ -122,26 +122,29 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("factory created\n");
 #endif
 
-  data = dynamic_cast<sData*>     ( factory->makeData() );
-#ifdef TIMING
-  if(mype==0) printf("data created\n");
-#endif
-
   const PreprocessFactory& prefactory = PreprocessFactory::getInstance();
 
-  presolver = prefactory.makePresolver(data, presolver_type);
-
   // presolving activated?
-  if( presolver != NULL )
+  if( presolver_type != PRESOLVER_NONE )
   {
-     std::cout << "use presolver\n\n\n" << std::endl;
-     origData = data;
+     origData = dynamic_cast<sData*>(factory->makeData());
+
+     presolver = prefactory.makePresolver(origData, presolver_type);
+
      data = dynamic_cast<sData*>(presolver->presolve());
+
+     factory->data = data; // todo update also sTree* of factory
   }
   else
   {
+     data = dynamic_cast<sData*>     ( factory->makeData() );
      origData = NULL;
+     presolver = NULL;
   }
+
+#ifdef TIMING
+  if(mype==0) printf("data created\n");
+#endif
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
 #ifdef TIMING
@@ -195,17 +198,9 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   double tmElapsed=MPI_Wtime();
 #endif
 
-      if( scaler )
-      {
-         std::cout << "scale \n\n\n" << std::endl;
+  if( scaler )
+     scaler->scale();
 
-         ofstream myfile;
-         myfile.open("BeforeScalingPres.txt");
-         data->writeToStream(myfile);
-         myfile.close();
-
-         scaler->scale();
-      }
   //---------------------------------------------
   int result = solver->solve(data,vars,resids);
   //---------------------------------------------
@@ -258,6 +253,10 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
 { 
+
+
+
+
   delete solver;
   delete resids;
   delete vars;

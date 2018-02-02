@@ -10,6 +10,7 @@
 
 #include "Scaler.h"
 #include "OoqpVector.h"
+#include "StochVector.h"
 #include "DoubleMatrix.h"
 #include "QpGenData.h"
 #include "QpGenResiduals.h"
@@ -37,10 +38,10 @@ protected:
   }
 
   // scaling vector
-  OoqpVector* vec_rowscaleQ;
-  OoqpVector* vec_rowscaleA;
-  OoqpVector* vec_rowscaleC;
-  OoqpVector* vec_colscale;
+  StochVectorHandle vec_rowscaleQ;
+  StochVectorHandle vec_rowscaleA;
+  StochVectorHandle vec_rowscaleC;
+  StochVectorHandle vec_colscale;
 
   // problem data
   SymMatrixHandle Q;

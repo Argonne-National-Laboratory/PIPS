@@ -21,13 +21,14 @@ class sData : public QpGenData {
   /** constructor that sets up pointers to the data objects that are
       passed as arguments */
   sData( sTree* stochNode,
-	 OoqpVector * c, SymMatrix * Q,
-	 OoqpVector * xlow, OoqpVector * ixlow, long long nxlow,
-	 OoqpVector * xupp, OoqpVector * ixupp, long long nxupp,
-	 GenMatrix * A, OoqpVector * bA,
-	 GenMatrix * C,
-	 OoqpVector * clow, OoqpVector * iclow, long long mclow,
-	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp );
+    OoqpVector * c, SymMatrix * Q,
+    OoqpVector * xlow, OoqpVector * ixlow, long long nxlow,
+    OoqpVector * xupp, OoqpVector * ixupp, long long nxupp,
+    GenMatrix * A, OoqpVector * bA,
+    GenMatrix * C,
+    OoqpVector * clow, OoqpVector * iclow, long long mclow,
+    OoqpVector * cupp, OoqpVector * ciupp, long long mcupp);
+
 
   std::vector<sData*> children;
   void AddChild(sData* child);
@@ -56,14 +57,13 @@ class sData : public QpGenData {
 
   void sync();
  public:
-  virtual void writeToStream(ostream& out) const;
+  virtual void writeToStreamDense(ostream& out) const;
   virtual sData* cloneFull() const;
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
 
   virtual ~sData();
-
 
  protected:
   void createChildren();

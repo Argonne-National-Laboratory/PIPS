@@ -7,7 +7,6 @@
 
 #include "../QpPreprocess/EquiStochScaler.h"
 
-#include "StochVector.h"
 #include <cmath>
 
 EquiStochScaler::EquiStochScaler(Data* prob, bool bitshifting)
@@ -54,23 +53,18 @@ void EquiStochScaler::scale()
     * since the absolute smallest value in the scaled matrix is bounded from below by
     * the inverse of the maximum ratio of the direction that is done first */
 
-   StochVector* rowmaxA = dynamic_cast<StochVector*>(bA->clone());
-   StochVector* rowminA = dynamic_cast<StochVector*>(bA->clone());
-   StochVector* rowmaxC = dynamic_cast<StochVector*>(rhsC->clone());
-   StochVector* rowminC = dynamic_cast<StochVector*>(rhsC->clone());
-   StochVector* colmax = dynamic_cast<StochVector*>(bux->clone());
-   StochVector* colmin = dynamic_cast<StochVector*>(bux->clone());
+   StochVectorHandle rowmaxA(dynamic_cast<StochVector*>(bA->clone()));
+   StochVectorHandle rowminA(dynamic_cast<StochVector*>(bA->clone()));
+   StochVectorHandle rowmaxC(dynamic_cast<StochVector*>(rhsC->clone()));
+   StochVectorHandle rowminC(dynamic_cast<StochVector*>(rhsC->clone()));
+   StochVectorHandle colmax(dynamic_cast<StochVector*>(bux->clone()));
+   StochVectorHandle colmin(dynamic_cast<StochVector*>(bux->clone()));
 
    const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC);
    const double colratio = maxColRatio(*colmax, *colmin);
 
    std::cout << "rowratio " << rowratio << std::endl;
    //std::cout << "colratio " << colratio << std::endl;
-
-   // minimum vectors are not needed here
-   delete rowminA;
-   delete rowminC;
-   delete colmin;
 
    assert(vec_rowscaleA == NULL && vec_rowscaleC == NULL && vec_colscale == NULL);
 
