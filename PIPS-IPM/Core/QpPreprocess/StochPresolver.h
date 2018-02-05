@@ -10,7 +10,9 @@
 
 #include "QpPresolver.h"
 #include "StochVector.h"
+#include "StochGenMatrix.h"
 #include "SmartPointer.h"
+#include "sData.h"
 
 class Data;
 
@@ -40,6 +42,9 @@ private:
 
   // remove small matrix entries and return number of eliminations
   int cleanUp();
+
+  int cleanUpRowC(StochGenMatrix* matrixC, StochVector* clow, StochVector* cupp,
+        StochVector* xlow, StochVector* xupp);
 
   sData* presProb;
 
