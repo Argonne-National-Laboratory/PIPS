@@ -21,17 +21,14 @@ StochPresolver::StochPresolver(const Data* prob)
 {
    const sData* sorigprob = dynamic_cast<const sData*>(prob);
 
-   StochVectorHandle gcloneA(dynamic_cast<StochVector*>(sorigprob->g->clone()));
-   nColElemsA = gcloneA;
-
-   StochVectorHandle gcloneC(dynamic_cast<StochVector*>(sorigprob->g->clone()));
-   nColElemsC = gcloneC;
+   StochVectorHandle gclone(dynamic_cast<StochVector*>(sorigprob->g->clone()));
+   nColElems = gclone;
 
    StochVectorHandle bAclone(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
    nRowElemsA = bAclone;
 
    StochVectorHandle icuppclone(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
-   nRowElemsA = icuppclone;
+   nRowElemsC = icuppclone;
 
    presProb = NULL;
 }
@@ -41,6 +38,41 @@ StochPresolver::~StochPresolver()
 {
 }
 
+void
+StochPresolver::initNnzCounter()
+{
+   StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
+   StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+
+   A.addNnzPerRow(*nRowElemsA);
+   C.addNnzPerRow(*nRowElemsC);
+
+   C.addNnzPerCol(*nColElems);
+   A.addNnzPerCol(*nColElems);
+
+
+   int rank = 0;
+
+   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+   if( rank == 0)
+   {
+      std::cout << "write Cols" << std::endl;
+         nColElems->writeToStreamAll(std::cout);
+
+      std::cout << "writeA" << std::endl;
+
+      nRowElemsA->writeToStreamAll(std::cout);
+
+      std::cout << "writeC " << std::endl;
+
+
+      nRowElemsC->writeToStreamAll(std::cout);
+   }
+
+
+
+}
 
 Data* StochPresolver::presolve()
 {
@@ -51,10 +83,12 @@ Data* StochPresolver::presolve()
 
    presProb = sorigprob->cloneFull();
 
-
    // initialized all transposed sub matrices
    presProb->A->initTransposed();
    presProb->C->initTransposed();
+
+   initNnzCounter();
+
 
    int cleanup_elims = cleanUp();
 
@@ -66,69 +100,83 @@ int StochPresolver::cleanUp()
 {
    int nelims = 0;
 
-   GenMatrix * C_p = SpAsPointer(presProb->C);
-   StochGenMatrix* C = dynamic_cast<StochGenMatrix*>(C_p);
-   OoqpVector * bl_p = SpAsPointer(presProb->bl);
-   StochVector* clow = dynamic_cast<StochVector*>(bl_p);
-   OoqpVector * bu_p = SpAsPointer(presProb->bu);
-   StochVector* cupp = dynamic_cast<StochVector*>(bu_p);
-   OoqpVector * blx_p = SpAsPointer(presProb->blx);
-   StochVector* xlow = dynamic_cast<StochVector*>(blx_p);
-   OoqpVector * bux_p = SpAsPointer(presProb->bux);
-   StochVector* xupp = dynamic_cast<StochVector*>(bux_p);
+   const StochGenMatrix& C = dynamic_cast<const StochGenMatrix&>(*(presProb->C));
+   const StochVector& clow = dynamic_cast<const StochVector&>(*(presProb->bl));
+   const StochVector& cupp = dynamic_cast<const StochVector&>(*(presProb->bu));
+   const StochVector& xlow = dynamic_cast<const StochVector&>(*(presProb->blx));
+   const StochVector& xupp = dynamic_cast<const StochVector&>(*(presProb->bux));
 
    // handle parent
-   assert(C->children.size() == cupp->children.size());
+   assert(C.children.size() == cupp.children.size());
 
-   C->writeToStreamDense(cout);
-   for( size_t it = 0; it < C->children.size(); it++ )
-
+   C.writeToStreamDense(cout);
+   for( size_t it = 0; it < C.children.size(); it++ )
    {
       // call
-      nelims += cleanUpRowC(C->children[it], clow->children[it], cupp->children[it],
-            xlow->children[it], xupp->children[it]);
+      nelims += cleanUpRowsC(C.children[it], clow.children[it], cupp.children[it],
+            xlow.children[it], xupp.children[it], nRowElemsC->children[it]);
 
    }
-   C->writeToStreamDense(cout);
+   C.writeToStreamDense(cout);
 
+   assert(0);
+
+
+   // todo StochGenDummyMatrix
    return nelims;
 }
 
 
 // new method for Amat, Bmat
-int StochPresolver::cleanUpRowC(StochGenMatrix* matrixC, StochVector* clow, StochVector* cupp,
-      StochVector* xlow, StochVector* xupp)
+int StochPresolver::cleanUpRowsC(StochGenMatrix* matrixC, StochVector* clow, StochVector* cupp,
+      StochVector* xlow, StochVector* xupp, StochVector* nnzRowC)
 {
    int nelims = 0;
    int m,n;
    matrixC->Bmat->getSize(m, n);
 
-   for( int i = 0; i < m; i++ ) // Row i
+   double* const val = matrixC->Bmat->M();
+   const int* const rowStart = matrixC->Bmat->krowM();
+   const int* const colIdx = matrixC->Bmat->jcolM();
+
+   double* const xuppElems = (dynamic_cast<SimpleVector*>(xupp->vec))->elements();
+   double* const xlowElems = (dynamic_cast<SimpleVector*>(xlow->vec))->elements();
+   double* const nnzPerRow = (dynamic_cast<SimpleVector*>(nnzRowC->vec))->elements();
+
+   std::cout << "lower: " << std::endl;
+   (dynamic_cast<SimpleVector*>(xlow->vec))->writeToStream(std::cout);
+
+   std::cout << "upper: " << std::endl;
+   (dynamic_cast<SimpleVector*>(xupp->vec))->writeToStream(std::cout);
+
+   for( int r = 0; r < m; r++ ) // Row i
    {
-      int j = 0; // Column j
-      for( int k = matrixC->Bmat->krowM()[i]; k < matrixC->Bmat->krowM()[i + 1];
-            k++ )
+      const int rowEnd = rowStart[r + 1];
+      std::cout << "length: " << rowEnd - rowStart[r] << std::endl;
+
+      for( int k = rowStart[r]; k < rowEnd; k++ )
       {
-         if( matrixC->Bmat->M()[k] < 1e-3 )
-         {//((SimpleVector*)icupp->vec)->elements();
+         if( val[k] < 1e-3 )
+         {
+            const int col = colIdx[k]; // Column j
 
-            double xu_j = ((SimpleVector*)xupp->vec)->elements()[j];
-            double xl_j = ((SimpleVector*)xlow->vec)->elements()[j];
+            const double ub = xuppElems[col];
+            const double lb = xlowElems[col];
 
-            int supp = matrixC->Bmat->krowM()[i+1] - matrixC->Bmat->krowM()[i];
+            // todo
+            const double supp = nnzPerRow[r];
 
-            if( fabs(matrixC->Bmat->M()[k]) * (xu_j - xl_j) * supp < 1e-2 * feastol)
+            if( fabs(val[k]) * (ub - lb) * supp < 1e-2 * feastol)
             {
                // set entry a_ij to 0
                // todo: adapt matrixC and nnz and rhs
-            matrixC->Bmat->M()[k] = 0;
-            nelims++;
+               val[k] = 0.0;
+               nelims++;
+               nnzPerRow[r] -= 1;
+               std::cout << "eliminate " << r << "of " << m  << " " << col <<  "of " << n << std::endl;
             }
-
          }
-         j++;
       }
-
    }
 
    return nelims;

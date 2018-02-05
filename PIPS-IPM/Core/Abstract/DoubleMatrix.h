@@ -253,11 +253,11 @@ public:
   /** initialize transposed matrix */
   virtual void initTransposed() { assert(0 && "not implemented"); };
 
-  /** get ith row */
-  virtual void getRow(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+  /** add number of elements per row to given vector */
+  virtual void addNnzPerRow(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
 
-  /** get ith col */
-  virtual void getCol(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+  /** add number of elements per column to given vector */
+  virtual void addNnzPerCol(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
 
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,

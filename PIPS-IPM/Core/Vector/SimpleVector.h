@@ -63,6 +63,7 @@ public:
   virtual void printSolutionToStdErr( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
   virtual void writeToStream(ostream& out) const;
+  virtual void writeToStreamAll(ostream& out) const;
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const;
 

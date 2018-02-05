@@ -707,6 +707,116 @@ void StochGenMatrix::matTransDinvMultMat(OoqpVector& d, SymMatrix** res)
 }
 
 
+void StochGenMatrix::addNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent)
+{
+   StochVector& nnzVecStoch = dynamic_cast<StochVector&>(nnzVec);
+
+   // assert tree compatibility
+   assert(nnzVecStoch.children.size() == children.size());
+
+   SimpleVector* nnzvecl = NULL;
+
+   Bmat->addNnzPerRow(*(nnzVecStoch.vec));
+
+   if( linkParent != NULL )
+      Amat->addNnzPerRow(*(nnzVecStoch.vec));
+
+   /* with linking constraints? */
+   if( nnzVecStoch.vecl || linkParent )
+   {
+      assert(nnzVecStoch.vecl == NULL || linkParent == NULL);
+
+      bool iAmSpecial = true;
+      if( iAmDistrib )
+      {
+         int rank;
+         MPI_Comm_rank(mpiComm, &rank);
+         if( rank > 0 )
+            iAmSpecial = false;
+      }
+
+      if( linkParent )
+         nnzvecl = dynamic_cast<SimpleVector*>(linkParent);
+      else
+         nnzvecl = dynamic_cast<SimpleVector*>(nnzVecStoch.vecl);
+
+      if( linkParent != NULL || iAmSpecial )
+         Blmat->addNnzPerRow(*nnzvecl);
+   }
+
+
+   for( size_t it = 0; it < children.size(); it++ )
+     children[it]->addNnzPerRow(*(nnzVecStoch.children[it]), nnzvecl);
+
+   // distributed, with linking constraints, and at root?
+   if( iAmDistrib && nnzVecStoch.vecl != NULL && linkParent == NULL )
+   {
+      // sum up linking constraints vectors
+      const int locn = nnzvecl->length();
+      double* buffer = new double[locn];
+
+      MPI_Allreduce(nnzvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+      nnzvecl->copyFromArray(buffer);
+
+      delete[] buffer;
+   }
+}
+
+void StochGenMatrix::addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
+{
+   StochVector& nnzVecStoch = dynamic_cast<StochVector&>(nnzVec);
+
+   // assert tree compatibility
+   assert(nnzVecStoch.children.size() == children.size());
+
+   SimpleVector* const vec = dynamic_cast<SimpleVector*>(nnzVecStoch.vec);
+
+   bool iAmSpecial = true;
+   if( iAmDistrib )
+   {
+      int rank;
+      MPI_Comm_rank(mpiComm, &rank);
+      if( rank > 0 )
+         iAmSpecial = false;
+   }
+
+   if( iAmSpecial || linkParent != NULL )
+   {
+      Bmat->addNnzPerCol(*(vec));
+
+      int blm, bln;
+      Blmat->getSize(blm, bln);
+
+      /* with linking constraints? */
+      if( blm > 0 )
+         Blmat->addNnzPerCol(*vec);
+   }
+
+   // not at root?
+   if( linkParent != NULL )
+      Amat->addNnzPerCol(*linkParent);
+   else
+   {
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->addNnzPerCol(*(nnzVecStoch.children[it]), vec);
+   }
+
+   // distributed and at root?
+   if( iAmDistrib && linkParent == NULL )
+   {
+      const int locn = vec->length();
+      double* const entries = vec->elements();
+      double* buffer = new double[locn];
+
+      MPI_Allreduce(entries, buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+      vec->copyFromArray(buffer);
+
+      delete[] buffer;
+   }
+}
+
 void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
       const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent)
 {

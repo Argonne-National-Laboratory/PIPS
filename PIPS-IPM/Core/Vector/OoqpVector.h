@@ -61,6 +61,9 @@ public:
   /** Multiply the components of this OoqpVector by num. */
   virtual void scalarMult( double num) = 0;
 
+  virtual void writeToStreamAll(ostream& out) const {assert(0 && "not implemented here");};
+
+
   virtual void writeToStream(ostream& out) const = 0;
   /** Write the components of this OoqpVector to a stream, subject to 
    *  a format.

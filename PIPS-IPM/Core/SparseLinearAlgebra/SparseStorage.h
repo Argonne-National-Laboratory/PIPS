@@ -53,7 +53,7 @@ public:
   int cols() { return n; }
 
   int length() { return len; };
-  int numberOfNonZeros() {	return krowM[m]; };
+  int numberOfNonZeros() const {	return krowM[m]; };
   virtual void fromGetDense( int row, int col, double * A, int lda,
 			     int rowExtent, int colExtent );
   virtual void atPutDense( int row, int col, double * A, int lda,
@@ -125,7 +125,7 @@ public:
 			int* krowMt, int* jcolMt, double* dMt,
 			int* krowMtM, int* jcolMtM, double* dMtM);
   /** Builds the transpose: Mt = this^T */
-  void transpose(int* krowMt, int* jcolMt, double* dMt);
+  void transpose(int* krowMt, int* jcolMt, double* dMt) const;
 
   void reduceToLower();
 
@@ -146,6 +146,9 @@ public:
 
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
+
+  /** add nnz per row to given array */
+  void addNnzPerRow(double* vec) const;
 
   /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i];
    *  empty rows get value 0.0 for maximization and <double>::max() for minimization  */

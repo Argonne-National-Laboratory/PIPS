@@ -734,6 +734,21 @@ void StochVector::scalarMult( double num )
     children[it]->scalarMult(num);
 }
 
+void StochVector::writeToStreamAll( ostream& out ) const
+{
+   out << "----" << endl;
+   vec->writeToStreamAll(out);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->writeToStreamAll(out);
+
+   if( vecl )
+   {
+      out << "---- (linking)" << endl;
+      vecl->writeToStreamAll(out);
+   }
+}
+
 void StochVector::writeToStream( ostream& out ) const
 {
   out << "---" << endl;

@@ -577,25 +577,35 @@ void SparseStorage::writeToStream(ostream& out) const
 
 void SparseStorage::writeToStreamDense( ostream& out) const
 {
-  int i, k;
-  //todo: instead of \t, use length of longest value in M
+   int i, k;
+   //todo: instead of \t, use length of longest value in M
 
-  for( i = 0; i < m; i++ ) {	// Row i
-	int j=0;					// Column j
-    for ( k = krowM[i]; k < krowM[i+1]; k++ ) {
-      while( jcolM[k] > j) {
-      	out << 0 << '\t';
-      	j++;
+   for( i = 0; i < m; i++ )
+   { // Row i
+      int j = 0; // Column j
+      for( k = krowM[i]; k < krowM[i + 1]; k++ )
+      {
+
+#ifndef NDEBUG
+         // assert that columns are ordered
+         assert(k == krowM[i] || jcolM[k - 1] < jcolM[k]);
+#endif
+
+         while( jcolM[k] > j )
+         {
+            out << 0 << '\t';
+            j++;
+         }
+         out << M[k] << '\t';
+         j++;
       }
-      out << M[k] << '\t';
-      j++;
-    }
-    while( j < n ) {
-      out << 0 << '\t';
-      j++;
-    }
-    out << endl;
-  }
+      while( j < n )
+      {
+         out << 0 << '\t';
+         j++;
+      }
+      out << endl;
+   }
 }
 
 void indexedLexSort( int first[], int n, int swapFirst,
@@ -1167,7 +1177,7 @@ void SparseStorage::atPutDiagonal( int idiag,
 
 */
 
-void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
+void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt) const
 {
   int ind, pend;//,ptend;
   /////////////////////////////////////////////////////
@@ -1396,6 +1406,12 @@ void SparseStorage::dump(const string& filename)
   for (i = 0; i < len; i++) {
     fd << M[i] << " ";
   }
+}
+
+void SparseStorage::addNnzPerRow(double* vec) const
+{
+   for( int r = 0; r < m; r++ )
+      vec[r] += krowM[r + 1] - krowM[r];
 }
 
 void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const

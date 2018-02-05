@@ -398,6 +398,30 @@ void SparseGenMatrix::matMultTrans(SymMatrix** res)
 				   MMt->krowM(), MMt->jcolM(), MMt->M());
 }
 
+
+void
+SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
+{
+   SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
+
+   assert(vec.length() == mStorage->m);
+
+   mStorage->addNnzPerRow(vec.elements());
+}
+
+void
+SparseGenMatrix::addNnzPerCol(OoqpVector& nnzVec)
+{
+   if( !m_Mt )
+      initTransposed();
+
+   SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
+
+   assert(vec.length() == m_Mt->mStorage->m);
+
+   m_Mt->mStorage->addNnzPerRow(vec.elements());
+}
+
 void
 SparseGenMatrix::getMinMaxVec( bool getMin, bool initializeVec,
       const SparseStorage* storage, const OoqpVector* coScaleVec, OoqpVector& minmaxVec )
@@ -437,13 +461,7 @@ void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
 {
    // we may need to form the transpose
    if( !m_Mt )
-   {
-      const int nnz = mStorage->numberOfNonZeros();
-      const int m = mStorage->m;
-      const int n = mStorage->n;
-      m_Mt = new SparseGenMatrix(n, m, nnz);
-      mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
-   }
+      initTransposed();
 
    getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
 }

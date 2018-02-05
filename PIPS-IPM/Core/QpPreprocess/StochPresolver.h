@@ -29,22 +29,24 @@ class Data;
 class StochPresolver : public QpPresolver
 {
 private:
-  const double feastol = 1.0e-6;
-  const double infinity = 10e30;
+  static const double feastol = 1.0e-6;
+  static const double infinity = 10e30;
 
   // number of non-zero elements of each row
   StochVectorHandle nRowElemsA;
   StochVectorHandle nRowElemsC;
 
   // number of non-zero elements of each column
-  StochVectorHandle nColElemsA;
-  StochVectorHandle nColElemsC;
+  StochVectorHandle nColElems;
+
+  // initialize row and column nnz counter
+  void initNnzCounter();
 
   // remove small matrix entries and return number of eliminations
   int cleanUp();
 
-  int cleanUpRowC(StochGenMatrix* matrixC, StochVector* clow, StochVector* cupp,
-        StochVector* xlow, StochVector* xupp);
+  int cleanUpRowsC(StochGenMatrix* matrixC, StochVector* clow, StochVector* cupp,
+        StochVector* xlow, StochVector* xupp, StochVector* nnzRowC);
 
   sData* presProb;
 

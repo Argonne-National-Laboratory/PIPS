@@ -112,6 +112,10 @@ public:
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
 
+  virtual void addNnzPerRow(OoqpVector& nnzVec);
+
+  virtual void addNnzPerCol(OoqpVector& nnzVec);
+
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec );
