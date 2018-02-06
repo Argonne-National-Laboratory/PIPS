@@ -63,6 +63,12 @@ class sData : public QpGenData {
   virtual void createScaleFromQ();
   virtual void datainput() {};
 
+  // deletes (non-linking) equality row
+  void deleteEqRow(size_t id, size_t rowidx);
+
+  // deletes linking equality row
+  void deleteEqRowLinking(int rowidx);
+
   virtual ~sData();
 
  protected:

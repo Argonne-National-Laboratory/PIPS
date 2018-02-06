@@ -181,6 +181,9 @@ public:
   {
      getColMinMaxVec(getMin, initializeVec, rowScaleVec, NULL, minmaxVec, NULL);
   };
+
+
+  void deleteRow(size_t id, size_t rowidx);
 };
 
 
@@ -305,6 +308,8 @@ public:
 
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
+
+  void deleteRow(size_t id, size_t rowidx) {};
 };
 
 

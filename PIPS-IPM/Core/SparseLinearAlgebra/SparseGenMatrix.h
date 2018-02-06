@@ -124,6 +124,8 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
+  void deleteRow(size_t rowidx);
+
   virtual ~SparseGenMatrix();
 
  protected:

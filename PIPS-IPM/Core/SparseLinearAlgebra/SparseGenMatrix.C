@@ -466,3 +466,18 @@ void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
 }
 
+void SparseGenMatrix::deleteRow(size_t rowidx)
+{
+   assert(0);
+
+}
+
+
+
+
+
+
+
+
+
+

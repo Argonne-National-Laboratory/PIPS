@@ -202,6 +202,34 @@ sData::createScaleFromQ()
     */
 }
 
+void
+sData::deleteEqRow(size_t id, size_t rowidx)
+{
+   assert(children.size() > id);
+
+   StochGenMatrix& A_stoch = dynamic_cast<StochGenMatrix&>(*A);
+   StochVector& bA_stoch = dynamic_cast<StochVector&>(*bA);
+
+   assert(children.size() == A_stoch.children.size());
+   assert(children.size() == bA_stoch.children.size());
+
+   // call local methods
+   A_stoch.deleteRow(id, rowidx);
+   //bA_stoch.deleteEntry(id, rowidx);
+
+   // adapt size
+   sData* const child = children[id];
+   child->mz--;
+   assert(child->mz >= 0);
+}
+
+void
+sData::deleteEqRowLinking(int rowidx)
+{
+
+}
+
+
 sData::~sData()
 {
    for( size_t it = 0; it < children.size(); it++ )

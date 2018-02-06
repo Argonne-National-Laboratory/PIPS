@@ -979,3 +979,10 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    }
 }
 
+void StochGenMatrix::deleteRow(size_t id, size_t rowidx)
+{
+   assert(children.size() > id);
+   Amat->deleteRow(rowidx);
+   Bmat->deleteRow(rowidx);
+}
+
