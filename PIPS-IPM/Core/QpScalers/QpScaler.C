@@ -7,6 +7,7 @@
 
 #include "QpScaler.h"
 #include <algorithm>
+#include "pipsdef.h"
 
 QpScaler::QpScaler(Data * prob, bool bitshifting)
 : Scaler(prob, bitshifting)
@@ -44,9 +45,6 @@ void QpScaler::applyScaling()
 {
    // todo scale Q
 
-   std::cout << "Anorm before " << A->abmaxnorm() << std::endl;
-   std::cout << "Cnorm before " << C->abmaxnorm() << std::endl;
-
    // scale A and rhs
    A->ColumnScale(*vec_colscale);
    A->RowScale(*vec_rowscaleA);
@@ -61,9 +59,6 @@ void QpScaler::applyScaling()
    // scale ub and lb of x
    bux->componentDiv(*vec_colscale);
    blx->componentDiv(*vec_colscale);
-
-   std::cout << "Anorm after " << A->abmaxnorm() << std::endl;
-   std::cout << "Cnorm after " << C->abmaxnorm() << std::endl;
 }
 
 double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC)
@@ -87,9 +82,13 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    ratiovecA->max(maxratio, i);
    assert(maxratio >= 0.0);
 
+   PIPSdebugMessage("max column ratio A: %f", maxratio);
+
    double maxvalC;
    ratiovecC->max(maxvalC, i);
    assert(maxvalC >= 0.0);
+
+   PIPSdebugMessage("max column ratio C: %f", maxvalC);
 
    if( maxvalC > maxratio )
       maxratio = maxvalC;
@@ -115,16 +114,15 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
    int i;
    double m;
    ratiovec->max(m, i);
-   std::cout << "COLmaxvec " << m << std::endl;
+   PIPSdebugMessage("max column entry: %f", m);
 
    ratiovec->divideSome(minvec, minvec);
 
-   int index;
    double maxratio;
-   ratiovec->max(maxratio, index);
+   ratiovec->max(maxratio, i);
    assert(maxratio >= 0.0);
 
-   std::cout << "colmaxratio " << maxratio << std::endl;
+   PIPSdebugMessage("max column ratio: %f", maxratio);
 
    delete ratiovec;
 
