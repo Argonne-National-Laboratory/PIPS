@@ -111,13 +111,9 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
 
    ratiovec->copyFrom(maxvec);
 
-   int i;
-   double m;
-   ratiovec->max(m, i);
-   PIPSdebugMessage("max column entry: %f", m);
-
    ratiovec->divideSome(minvec, minvec);
 
+   int i;
    double maxratio;
    ratiovec->max(maxratio, i);
    assert(maxratio >= 0.0);
