@@ -90,7 +90,9 @@ Data* StochPresolver::presolve()
    initNnzCounter();
 
 
-   int cleanup_elims = cleanUp();
+
+
+  // int cleanup_elims = cleanUp();
 
    return presProb;
 }

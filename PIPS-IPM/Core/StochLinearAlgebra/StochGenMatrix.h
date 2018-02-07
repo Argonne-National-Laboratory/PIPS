@@ -184,6 +184,10 @@ public:
 
 
   void deleteRow(size_t id, size_t rowidx);
+
+  void initDynamicStorage(double rowSpareRatio);
+
+  void freeDynamicStorage();
 };
 
 
@@ -310,6 +314,10 @@ public:
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
 
   void deleteRow(size_t id, size_t rowidx) {};
+
+  void initDynamicStorage(double rowSpareRatio) {};
+
+  void freeDynamicStorage() {};
 };
 
 

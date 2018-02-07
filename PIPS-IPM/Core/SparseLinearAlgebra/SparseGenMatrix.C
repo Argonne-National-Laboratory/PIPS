@@ -18,7 +18,7 @@ int SparseGenMatrix::isKindOf( int type )
 
 
 SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz )
-  : m_Mt(NULL)
+  : mStorageDynamic(NULL), m_Mt(NULL)
 {
   mStorage = SparseStorageHandle( new SparseStorage( rows, cols, nnz ) );
 }
@@ -27,7 +27,7 @@ SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz )
 SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz,
 				  int krowM[], int jcolM[],  double M[],
 				  int deleteElts)
-  : m_Mt(NULL)
+  : mStorageDynamic(NULL), m_Mt(NULL)
 {
   //cout << "SparseGenMatrix1  " << rows << " " << cols << " " << nnz << endl;
   mStorage = SparseStorageHandle( new SparseStorage( rows, cols,nnz, 
@@ -48,7 +48,8 @@ SparseGenMatrix::~SparseGenMatrix()
 {
   //cout << "~~~~~~~~~SparseGenMatrix " << mStorage->mRefs  << endl;
   if(m_Mt) delete m_Mt;
-  
+
+  delete mStorageDynamic;
 }
 
 
@@ -472,8 +473,27 @@ void SparseGenMatrix::deleteRow(size_t rowidx)
 
 }
 
+void SparseGenMatrix::initDynamicStorage(double rowSpareRatio)
+{
+   if( mStorageDynamic != NULL )
+      mStorageDynamic = new SparseStorageDynamic(*mStorage, rowSpareRatio);
+}
 
+void SparseGenMatrix::storageCopyDynamicToStatic()
+{
+   assert(mStorage->refs() == 1);
 
+   delete SpAsPointer(mStorage);
+
+   mStorageDynamic->transformToStatic();
+
+}
+
+void SparseGenMatrix::freeDynamicStorage()
+{
+   delete mStorageDynamic;
+   mStorageDynamic = NULL;
+}
 
 
 

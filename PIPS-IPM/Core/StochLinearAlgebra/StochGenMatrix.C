@@ -986,3 +986,17 @@ void StochGenMatrix::deleteRow(size_t id, size_t rowidx)
    Bmat->deleteRow(rowidx);
 }
 
+void StochGenMatrix::initDynamicStorage(double rowSpareRatio)
+{
+   Amat->initDynamicStorage(rowSpareRatio);
+   Bmat->initDynamicStorage(rowSpareRatio);
+   Blmat->initDynamicStorage(rowSpareRatio);
+}
+
+void StochGenMatrix::freeDynamicStorage()
+{
+   Amat->freeDynamicStorage();
+   Bmat->freeDynamicStorage();
+   Blmat->freeDynamicStorage();
+}
+

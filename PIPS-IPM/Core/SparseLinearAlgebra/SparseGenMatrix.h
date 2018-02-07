@@ -8,6 +8,7 @@
 #include "OoqpVectorHandle.h"
 #include "DoubleMatrix.h"
 #include "SparseStorage.h"
+#include "SparseStorageDynamic.h"
 #include "SparseGenMatrixHandle.h"
 
 /** Represents sparse non-symmetric, possibly non-square matrices stored in
@@ -22,6 +23,10 @@ private:
 
 protected:
   SparseStorageHandle mStorage;
+  SparseStorageDynamic* mStorageDynamic;
+
+  // in the case of A'*A we internally form the transpose only once
+  SparseGenMatrix* m_Mt;
 
 public:
   SparseGenMatrix( int rows, int cols, int nnz );
@@ -126,11 +131,13 @@ public:
 
   void deleteRow(size_t rowidx);
 
-  virtual ~SparseGenMatrix();
+  void initDynamicStorage(double rowSpareRatio);
 
- protected:
-  // in the case of A'*A we internally form the transpose only once
-  SparseGenMatrix* m_Mt;
+  void storageCopyDynamicToStatic();
+
+  void freeDynamicStorage();
+
+  virtual ~SparseGenMatrix();
 
 };
 
