@@ -15,6 +15,7 @@
 #include "../SparseLinearAlgebra/SparseGenMatrix.h"
 #include "../StochLinearAlgebra/StochVectorHandle.h"
 #include "../Vector/OoqpVector.h"
+#include "StochGenMatrix.h"
 
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
@@ -79,24 +80,58 @@ Data* StochPresolver::presolve()
 
    std::cout << "start stoch presolving" << std::endl;
 
+
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
-   presProb = sorigprob->cloneFull();
+   std::cout << "ORG \n" << std::endl;
+   sorigprob->A->writeToStreamDense(std::cout);
+   std::cout << "C: \n" << std::endl;
+   sorigprob->C->writeToStreamDense(std::cout);
 
-   // initialized all transposed sub matrices
-   presProb->A->initTransposed();
-   presProb->C->initTransposed();
+
+   // clone and initialize dynamic storage
+   presProb = sorigprob->cloneFull(true);
+
+   // initialized all dynamic transposed sub matrices
+   //presProb->A->initTransposed(true);
+   //presProb->C->initTransposed(true);
 
    initNnzCounter();
 
-
-
-
   // int cleanup_elims = cleanUp();
+
+
+
+   buildCleanStorage();
+
+
+   std::cout << "PRES \n" << std::endl;
+   presProb->A->writeToStreamDense(std::cout);
+
+   std::cout << "C: \n" << std::endl;
+
+   presProb->C->writeToStreamDense(std::cout);
+
+   assert(0);
+
 
    return presProb;
 }
 
+
+void StochPresolver::buildCleanStorage()
+{
+   StochGenMatrix& Astoch = dynamic_cast<StochGenMatrix&>(*(presProb->A));
+   StochGenMatrix& Cstoch = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+
+   Astoch.initStaticStorageFromDynamic(*nRowElemsA, *nColElems);
+   Astoch.freeDynamicStorage();
+
+   Cstoch.initStaticStorageFromDynamic(*nRowElemsC, *nColElems);
+   Cstoch.freeDynamicStorage();
+
+   // clean vectors
+}
 
 int StochPresolver::cleanUp()
 {

@@ -17,6 +17,12 @@ int SparseGenMatrix::isKindOf( int type )
 }
 
 
+SparseGenMatrix::SparseGenMatrix( )
+  : mStorageDynamic(NULL), m_Mt(NULL)
+{
+   SpNil(mStorage);
+}
+
 SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz )
   : mStorageDynamic(NULL), m_Mt(NULL)
 {
@@ -53,11 +59,21 @@ SparseGenMatrix::~SparseGenMatrix()
 }
 
 
-SparseGenMatrix* SparseGenMatrix::cloneFull() const
+SparseGenMatrix* SparseGenMatrix::cloneFull(bool switchToDynamicStorage) const
 {
-   SparseGenMatrix* clone = new SparseGenMatrix(mStorage->m, mStorage->n, mStorage->len);
+   SparseGenMatrix* clone;
 
-   mStorage->copyFrom(clone->krowM(), clone->jcolM(), clone->M());
+   if( switchToDynamicStorage )
+   {
+      clone = new SparseGenMatrix();
+      clone->mStorageDynamic = new SparseStorageDynamic(*mStorage);
+      assert(!m_Mt);
+   }
+   else
+   {
+      clone = new SparseGenMatrix(mStorage->m, mStorage->n, mStorage->len);
+      mStorage->copyFrom(clone->krowM(), clone->jcolM(), clone->M());
+   }
 
    if( m_Mt )
    {
@@ -405,9 +421,17 @@ SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
 {
    SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
 
-   assert(vec.length() == mStorage->m);
 
-   mStorage->addNnzPerRow(vec.elements());
+   if( mStorageDynamic != NULL )
+   {
+      assert(vec.length() == mStorageDynamic->m);
+      mStorageDynamic->addNnzPerRow(vec.elements());
+   }
+   else
+   {
+      assert(vec.length() == mStorage->m);
+      mStorage->addNnzPerRow(vec.elements());
+   }
 }
 
 void
@@ -467,26 +491,19 @@ void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
 }
 
-void SparseGenMatrix::deleteRow(size_t rowidx)
+
+void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
 {
-   assert(0);
+   assert(mStorageDynamic != NULL);
 
-}
+   const SimpleVector& rowNnzVecSimple = dynamic_cast<const SimpleVector&>(rowNnzVec);
+   const SimpleVector& colNnzVecSimple = dynamic_cast<const SimpleVector&>(colNnzVec);
 
-void SparseGenMatrix::initDynamicStorage(double rowSpareRatio)
-{
-   if( mStorageDynamic != NULL )
-      mStorageDynamic = new SparseStorageDynamic(*mStorage, rowSpareRatio);
-}
+   SparseStorageHandle staticStorage(mStorageDynamic->getStaticStorage(rowNnzVecSimple.elements(), colNnzVecSimple.elements()));
 
-void SparseGenMatrix::storageCopyDynamicToStatic()
-{
-   assert(mStorage->refs() == 1);
+   mStorage = staticStorage;
 
-   delete SpAsPointer(mStorage);
-
-   mStorageDynamic->transformToStatic();
-
+   assert(mStorage->refs() == 2);
 }
 
 void SparseGenMatrix::freeDynamicStorage()

@@ -8,7 +8,8 @@
 #ifndef PIPS_IPM_CORE_SPARSELINEARALGEBRA_SPARSESTORAGEDYNAMIC_H_
 #define PIPS_IPM_CORE_SPARSELINEARALGEBRA_SPARSESTORAGEDYNAMIC_H_
 
-#include "DoubleStorage.h"
+#include "DoubleMatrix.h"
+#include "SparseStorage.h"
 
 typedef struct
 {
@@ -34,7 +35,7 @@ public:
   int n;
   int len;
 
-  SparseStorageDynamic( const SparseStorage& storage, double spareRatio );
+  SparseStorageDynamic( const SparseStorage& storage, double spareRatio = 0.2 );
 
   ~SparseStorageDynamic();
 
@@ -61,7 +62,9 @@ public:
   virtual void RowScale ( OoqpVector& vec ) { assert(0 && "not implemented here"); };
   virtual void scalarMult( double num ) { assert(0 && "not implemented here"); };
 
-  void copyFrom(SparseStorage& targetstorage);
+  void addNnzPerRow(double* vec) const;
+
+  SparseStorage* getStaticStorage(double* rowNnz, double* colNnz);
 };
 
 typedef SmartPointer<SparseStorageDynamic>  SparseStorageDynamicHandle;

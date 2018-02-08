@@ -29,13 +29,14 @@ protected:
   SparseGenMatrix* m_Mt;
 
 public:
+  SparseGenMatrix( );
   SparseGenMatrix( int rows, int cols, int nnz );
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
 		   int deleteElts=0);
   //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
   
-  virtual SparseGenMatrix* cloneFull() const;
+  virtual SparseGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
@@ -129,11 +130,7 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
-  void deleteRow(size_t rowidx);
-
-  void initDynamicStorage(double rowSpareRatio);
-
-  void storageCopyDynamicToStatic();
+  void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
 
   void freeDynamicStorage();
 

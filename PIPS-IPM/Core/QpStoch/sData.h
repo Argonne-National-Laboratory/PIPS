@@ -58,16 +58,10 @@ class sData : public QpGenData {
   void sync();
  public:
   virtual void writeToStreamDense(ostream& out) const;
-  virtual sData* cloneFull() const;
+  virtual sData* cloneFull(bool switchToDynamicStorage = false) const;
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
-
-  // deletes (non-linking) equality row
-  void deleteEqRow(size_t id, size_t rowidx);
-
-  // deletes linking equality row
-  void deleteEqRowLinking(int rowidx);
 
   virtual ~sData();
 

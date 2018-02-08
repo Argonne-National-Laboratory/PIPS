@@ -88,12 +88,12 @@ sData::writeToStreamDense(ostream& out) const
 }
 
 sData*
-sData::cloneFull() const
+sData::cloneFull(bool switchToDynamicStorage) const
 {
-   // todo Q is emty!
+   // todo Q is empty!
    StochSymMatrixHandle Q_clone(dynamic_cast<const StochSymMatrix&>(*Q).clone());
-   StochGenMatrixHandle A_clone(dynamic_cast<const StochGenMatrix&>(*A).cloneFull());
-   StochGenMatrixHandle C_clone(dynamic_cast<const StochGenMatrix&>(*C).cloneFull());
+   StochGenMatrixHandle A_clone(dynamic_cast<const StochGenMatrix&>(*A).cloneFull(switchToDynamicStorage));
+   StochGenMatrixHandle C_clone(dynamic_cast<const StochGenMatrix&>(*C).cloneFull(switchToDynamicStorage));
 
    StochVectorHandle c_clone (dynamic_cast<const StochVector&>(*g).cloneFull());
    StochVectorHandle bA_clone ( dynamic_cast<const StochVector&>(*bA).cloneFull());
@@ -201,34 +201,6 @@ sData::createScaleFromQ()
     }
     */
 }
-
-void
-sData::deleteEqRow(size_t id, size_t rowidx)
-{
-   assert(children.size() > id);
-
-   StochGenMatrix& A_stoch = dynamic_cast<StochGenMatrix&>(*A);
-   StochVector& bA_stoch = dynamic_cast<StochVector&>(*bA);
-
-   assert(children.size() == A_stoch.children.size());
-   assert(children.size() == bA_stoch.children.size());
-
-   // call local methods
-   A_stoch.deleteRow(id, rowidx);
-   //bA_stoch.deleteEntry(id, rowidx);
-
-   // adapt size
-   sData* const child = children[id];
-   child->mz--;
-   assert(child->mz >= 0);
-}
-
-void
-sData::deleteEqRowLinking(int rowidx)
-{
-
-}
-
 
 sData::~sData()
 {

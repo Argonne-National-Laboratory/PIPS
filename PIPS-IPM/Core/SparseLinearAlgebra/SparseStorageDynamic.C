@@ -25,7 +25,7 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
 
    for( int r = 0; r < m; r++ )
    {
-      len += spareRatio * (orgkrowM[r + 1] - orgkrowM[r]) + 1;
+      len += spareRatio * (orgkrowM[r + 1] - orgkrowM[r]);
       assert(orgkrowM[r + 1] - orgkrowM[r] >= 0);
    }
 
@@ -39,7 +39,7 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
    int shift = 0;
    for( int r = 0; r < m; r++ )
    {
-      const int offset = spareRatio * (orgkrowM[r + 1] - orgkrowM[r]) + 1;
+      const int offset = spareRatio * (orgkrowM[r + 1] - orgkrowM[r]);
 
       rowptr[r].start = orgkrowM[r] + shift;
 
@@ -66,8 +66,20 @@ void SparseStorageDynamic::getSize(int& m, int& n)
    n = this->n;
 }
 
-void SparseStorageDynamic::copyFrom(SparseStorage& targetstorage)
+SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* colNnz)
 {
+   // empty?
+   if( n <= 0 )
+   {
+      assert(len == 0);
+
+      SparseStorage* staticStorage = new SparseStorage(m, n, len);
+
+      return staticStorage;
+   }
+
+   assert(rowNnz != NULL && colNnz != NULL);
+
    // get m, n, len for new storage
 
    bool* cols = new bool[n];
@@ -97,7 +109,9 @@ void SparseStorageDynamic::copyFrom(SparseStorage& targetstorage)
          rownnz++;
       }
 
-      if( rownnz > 0 )
+      assert(rownnz == 0 || rowNnz[r] != 0.0);
+
+      if( rownnz > 0 || rowNnz[r] != 0.0 )
       {
          len_static += rownnz;
          m_static++;
@@ -109,12 +123,17 @@ void SparseStorageDynamic::copyFrom(SparseStorage& targetstorage)
    int* colsmap = new int[n];
 
    for( int i = 0; i < n; i++ )
+   {
       if( cols[i] )
-         colsmap[i] = n_static++;
+         colsmap[i] = n_static;
 #ifndef NDEBUG
       else
          colsmap[i] = -1;
 #endif
+
+      if( cols[i] || colNnz[i] != 0.0 )
+         n_static++;
+   }
 
    SparseStorage* staticStorage = new SparseStorage(m_static, n_static, len_static);
 
@@ -150,7 +169,7 @@ void SparseStorageDynamic::copyFrom(SparseStorage& targetstorage)
          M_static[nnz_static++] = M[j];
       }
 
-      if( nnz_static_old != nnz_static )
+      if( nnz_static_old != nnz_static || rowNnz[r] != 0.0 )
          krowM_static[rowcount++] = nnz_static_old;
    }
 
@@ -162,6 +181,12 @@ void SparseStorageDynamic::copyFrom(SparseStorage& targetstorage)
    krowM_static[rowcount] = nnz_static;
 
    return staticStorage;
+}
+
+void SparseStorageDynamic::addNnzPerRow(double* vec) const
+{
+   for( int r = 0; r < m; r++ )
+      vec[r] += rowptr[r].end - rowptr[r].start;
 }
 
 SparseStorageDynamic::~SparseStorageDynamic()

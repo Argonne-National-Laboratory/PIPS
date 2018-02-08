@@ -137,7 +137,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   }
   else
   {
-     data = dynamic_cast<sData*>     ( factory->makeData() );
+     data = dynamic_cast<sData*>(factory->makeData());
      origData = NULL;
      presolver = NULL;
   }

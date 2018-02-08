@@ -83,19 +83,19 @@ StochGenMatrix::~StochGenMatrix()
 }
 
 
-StochGenMatrix* StochGenMatrix::cloneFull() const
+StochGenMatrix* StochGenMatrix::cloneFull(bool switchToDynamicStorage) const
 {
    StochGenMatrix* clone = new StochGenMatrix(id, m, n, mpiComm);
 
    // clone submatrices
-   clone->Amat = Amat->cloneFull();
-   clone->Bmat = Bmat->cloneFull();
+   clone->Amat = Amat->cloneFull(switchToDynamicStorage);
+   clone->Bmat = Bmat->cloneFull(switchToDynamicStorage);
 
    if( Blmat )
-      clone->Blmat = Blmat->cloneFull();
+      clone->Blmat = Blmat->cloneFull(switchToDynamicStorage);
 
    for( size_t it = 0; it < children.size(); it++ )
-      clone->children.push_back(children[it]->cloneFull());
+      clone->children.push_back(children[it]->cloneFull(switchToDynamicStorage));
 
    return clone;
 }
@@ -979,18 +979,38 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    }
 }
 
-void StochGenMatrix::deleteRow(size_t id, size_t rowidx)
+void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec)
 {
-   assert(children.size() > id);
-   Amat->deleteRow(rowidx);
-   Bmat->deleteRow(rowidx);
-}
+   const StochVector& rowNnzVecStoch = dynamic_cast<const StochVector&>(rowNnzVec);
+   const StochVector& colNnzVecStoch = dynamic_cast<const StochVector&>(colNnzVec);
 
-void StochGenMatrix::initDynamicStorage(double rowSpareRatio)
-{
-   Amat->initDynamicStorage(rowSpareRatio);
-   Bmat->initDynamicStorage(rowSpareRatio);
-   Blmat->initDynamicStorage(rowSpareRatio);
+   assert(rowNnzVecStoch.children.size() == colNnzVecStoch.children.size());
+
+   const SimpleVector* const rowvec = dynamic_cast<const SimpleVector*>(rowNnzVecStoch.vec);
+   const SimpleVector* const colvec = dynamic_cast<const SimpleVector*>(colNnzVecStoch.vec);
+
+   const SimpleVector* const rowlink = dynamic_cast<const SimpleVector*>(rowNnzVecStoch.vecl);
+
+   Bmat->initStaticStorageFromDynamic(*rowvec, *colvec);
+
+   // at root?
+   if( colParentVec == NULL )
+   {
+      assert(rowLinkVec == NULL);
+
+      if( rowlink != NULL )
+         Blmat->initStaticStorageFromDynamic(*rowlink, *colvec);
+
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->initStaticStorageFromDynamic(*(rowNnzVecStoch.children[it]), *(colNnzVecStoch.children[it]), rowlink, colvec);
+   }
+   else
+   {
+      Amat->initStaticStorageFromDynamic(*rowvec, *colParentVec);
+
+      if( rowLinkVec != NULL)
+         Blmat->initStaticStorageFromDynamic(*rowLinkVec, *colvec);
+   }
 }
 
 void StochGenMatrix::freeDynamicStorage()
@@ -998,5 +1018,8 @@ void StochGenMatrix::freeDynamicStorage()
    Amat->freeDynamicStorage();
    Bmat->freeDynamicStorage();
    Blmat->freeDynamicStorage();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->freeDynamicStorage();
 }
 

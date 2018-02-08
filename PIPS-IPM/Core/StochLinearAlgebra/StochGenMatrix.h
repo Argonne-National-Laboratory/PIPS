@@ -42,7 +42,7 @@ public:
   //StochGenMatrix(const vector<StochGenMatrix*> &blocks); -- not needed; cpetra
   virtual ~StochGenMatrix();
 
-  virtual StochGenMatrix* cloneFull() const;
+  virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
   virtual void AddChild(StochGenMatrix* child);
 
@@ -92,6 +92,8 @@ public:
         const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
   virtual void initTransposedChild();
+
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec);
 
  public:
   virtual void getSize( long long& m, long long& n );
@@ -182,12 +184,12 @@ public:
      getColMinMaxVec(getMin, initializeVec, rowScaleVec, NULL, minmaxVec, NULL);
   };
 
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
+  {
+     initStaticStorageFromDynamic(rowNnzVec, colNnzVec, NULL, NULL);
+  };
 
-  void deleteRow(size_t id, size_t rowidx);
-
-  void initDynamicStorage(double rowSpareRatio);
-
-  void freeDynamicStorage();
+  virtual void freeDynamicStorage();
 };
 
 
@@ -212,7 +214,7 @@ public:
   virtual void getSize( int& m, int& n ){m=0; n=0;}
   virtual void getSize( long long& m, long long& n ){m=0; n=0;}
 
-  virtual StochGenMatrix* cloneFull() const { return new StochGenDummyMatrix(id); };
+  virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const { return new StochGenDummyMatrix(id); };
 
 
   /** The actual number of structural non-zero elements in this sparse
@@ -313,11 +315,11 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
 
-  void deleteRow(size_t id, size_t rowidx) {};
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec) {};
 
-  void initDynamicStorage(double rowSpareRatio) {};
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec) {};
 
-  void freeDynamicStorage() {};
+  virtual void freeDynamicStorage() {};
 };
 
 

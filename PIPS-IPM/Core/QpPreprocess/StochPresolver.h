@@ -42,6 +42,9 @@ private:
   // initialize row and column nnz counter
   void initNnzCounter();
 
+  //  builds clean (static and presolved) storage from dynamic  one
+  void buildCleanStorage();
+
   // remove small matrix entries and return number of eliminations
   int cleanUp();
 
