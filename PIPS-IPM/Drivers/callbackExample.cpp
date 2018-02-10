@@ -2,7 +2,7 @@
 #include "PIPSIpmInterface.h"
 #include "sFactoryAug.h"
 #include "sFactoryAugSchurLeaf.h"
-#include "MehrotraStochSolver.h"
+//#include "MehrotraStochSolver.h"
 #include "GondzioStochSolver.h"
 
 

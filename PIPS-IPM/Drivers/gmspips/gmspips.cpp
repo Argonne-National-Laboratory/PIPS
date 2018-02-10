@@ -1,7 +1,7 @@
 #if defined(GMS_PIPS)
 #include "StochInputTree.h"
 #include "PIPSIpmInterface.h"
-#include "MehrotraStochSolver.h"
+//#include "MehrotraStochSolver.h"
 #include "GondzioStochSolver.h"
 #include "GondzioStochLpSolver.h"
 #include "sFactoryAugSchurLeaf.h"
