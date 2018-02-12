@@ -775,7 +775,10 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    assert(minmaxVecStoch.children.size() == children.size());
 
    Bmat->getRowMinMaxVec(getMin, initializeVec, covec, *(minmaxVecStoch.vec));
-   Amat->getRowMinMaxVec(getMin, false, covecparent, *(minmaxVecStoch.vec));
+
+   // not at root?
+   if( linkParent != NULL )
+      Amat->getRowMinMaxVec(getMin, false, covecparent, *(minmaxVecStoch.vec));
 
    /* with linking constraints? */
    if( minmaxVecStoch.vecl || linkParent )
@@ -790,25 +793,30 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
          if( rank > 0 )
             iAmSpecial = false;
       }
-      if( linkParent )
-         mvecl = dynamic_cast<SimpleVector*>(linkParent);
-      else
-         mvecl = dynamic_cast<SimpleVector*>(minmaxVecStoch.vecl);
 
       // at root?
       if( linkParent == NULL )
       {
-         if( getMin )
-            mvecl->setToConstant(std::numeric_limits<double>::max());
-         else
-            mvecl->setToZero();
+         mvecl = dynamic_cast<SimpleVector*>(minmaxVecStoch.vecl);
+
+         if( initializeVec )
+         {
+            if( getMin )
+               mvecl->setToConstant(std::numeric_limits<double>::max());
+            else
+               mvecl->setToZero();
+         }
+      }
+      else
+      {
+         mvecl = dynamic_cast<SimpleVector*>(linkParent);
       }
 
       if( linkParent != NULL || iAmSpecial )
          Blmat->getRowMinMaxVec(getMin, false, covec, *mvecl);
    }
 
-   if( colScaleVec )
+   if( colScaleVec != NULL )
    {
       for( size_t it = 0; it < children.size(); it++ )
          children[it]->getRowMinMaxVec(getMin, initializeVec, colScaleVecStoch->children[it], covec,
@@ -824,6 +832,8 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    // distributed, with linking constraints, and at root?
    if( iAmDistrib && minmaxVecStoch.vecl != NULL && linkParent == NULL )
    {
+      assert(mvecl != NULL);
+
       // sum up linking constraints vectors
       const int locn = mvecl->length();
       double* buffer = new double[locn];
@@ -888,7 +898,7 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    }
 
    // not at root?
-   if( minmaxParent )
+   if( minmaxParent != NULL )
       Amat->getColMinMaxVec(getMin, false, covec, *(minmaxParent));
    else
    {
@@ -920,5 +930,15 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
 
       delete[] buffer;
    }
+}
+
+void StochGenMatrix::updateTransposed()
+{
+  Amat->updateTransposed();
+  Bmat->updateTransposed();
+  Blmat->updateTransposed();
+
+  for( size_t it = 0; it < children.size(); it++ )
+     children[it]->updateTransposed();
 }
 

@@ -11,7 +11,6 @@
 #include <cmath>
 #include "pipsdef.h"
 
-
 EquiStochScaler::EquiStochScaler(Data* prob, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {

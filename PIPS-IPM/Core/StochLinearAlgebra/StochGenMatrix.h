@@ -81,6 +81,8 @@ public:
         const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
  public:
+  virtual void updateTransposed();
+
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 
@@ -178,6 +180,7 @@ public:
   virtual void AddChild(StochGenMatrix* child){};
 
  public:
+  virtual void updateTransposed() {};
   virtual void getSize( int& m, int& n ){m=0; n=0;}
   virtual void getSize( long long& m, long long& n ){m=0; n=0;}
 
