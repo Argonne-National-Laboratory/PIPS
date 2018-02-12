@@ -94,6 +94,7 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
+  virtual void writeToStreamDenseRow( ostream& out, int rowidx) const;
 
   virtual void symmetrize( int& info);
   virtual double abmaxnorm();

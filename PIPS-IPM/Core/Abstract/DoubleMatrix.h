@@ -249,6 +249,7 @@ public:
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
 
   virtual void writeToStreamDense(ostream& out) const {}
+  virtual void writeToStreamDenseRow(ostream& out) const {}
 
   /** get ith row */
   virtual void getRow(OoqpVector& vec, int i) { assert(0 && "not implemented"); };

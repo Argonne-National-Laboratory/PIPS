@@ -127,6 +127,8 @@ public:
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
   virtual void writeToStreamDenseChild(ostream& out, int index) const;
+  virtual void writeToStreamDenseRow(ostream& out) const;
+  virtual void writeToStreamDenseChildRow(ostream& out, int offset) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -237,6 +239,8 @@ public:
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamDense(ostream& out) const{};
   virtual void writeToStreamDenseChild(ostream& out, int index) const{};
+  virtual void writeToStreamDenseRow(ostream& out) const{};
+  virtual void writeToStreamDenseChildRow(ostream& out, int offset) const{};
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
