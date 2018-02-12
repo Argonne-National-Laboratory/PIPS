@@ -172,13 +172,29 @@ void SparseGenMatrix::symmetrize( int& info )
 
 void SparseGenMatrix::getSize( long long& m, long long& n )
 {
-  m = mStorage->m;
-  n = mStorage->n;
+   if( mStorageDynamic != NULL )
+   {
+      m = mStorageDynamic->m;
+      n = mStorageDynamic->n;
+   }
+   else
+   {
+      m = mStorage->m;
+      n = mStorage->n;
+   }
 }
 void SparseGenMatrix::getSize( int& m, int& n )
 {
-  m = mStorage->m;
-  n = mStorage->n;
+  if( mStorageDynamic != NULL )
+  {
+     m = mStorageDynamic->m;
+     n = mStorageDynamic->n;
+  }
+  else
+  {
+     m = mStorage->m;
+     n = mStorage->n;
+  }
 }
 
 
@@ -344,16 +360,26 @@ void SparseGenMatrix::matTransDMultMat(OoqpVector& d_, SymMatrix** res)
 			     MtDM->krowM(), MtDM->jcolM(), MtDM->M());
 }
 
-void SparseGenMatrix::initTransposed()
+void SparseGenMatrix::initTransposed(bool dynamic)
 {
    assert(m_Mt == NULL);
 
-   const int m = mStorage->m;
-   const int n = mStorage->n;
-   const int nnz = mStorage->numberOfNonZeros();
+   if( dynamic )
+   {
+      assert(mStorageDynamic != NULL);
+      m_Mt = new SparseGenMatrix();
 
-   m_Mt = new SparseGenMatrix(n, m, nnz);
-   mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
+      m_Mt->mStorageDynamic = mStorageDynamic->getTranspose();
+   }
+   else
+   {
+      const int m = mStorage->m;
+      const int n = mStorage->n;
+      const int nnz = mStorage->numberOfNonZeros();
+
+      m_Mt = new SparseGenMatrix(n, m, nnz);
+      mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
+   }
 }
 
 void SparseGenMatrix::matTransDinvMultMat(OoqpVector& d_, SymMatrix** res)
@@ -437,14 +463,20 @@ SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
 void
 SparseGenMatrix::addNnzPerCol(OoqpVector& nnzVec)
 {
-   if( !m_Mt )
-      initTransposed();
+   assert(m_Mt != NULL);
 
    SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
 
-   assert(vec.length() == m_Mt->mStorage->m);
-
-   m_Mt->mStorage->addNnzPerRow(vec.elements());
+   if( m_Mt->mStorageDynamic != NULL  )
+   {
+      assert(vec.length() == m_Mt->mStorageDynamic->m);
+      m_Mt->mStorageDynamic->addNnzPerRow(vec.elements());
+   }
+   else
+   {
+      assert(vec.length() == m_Mt->mStorage->m);
+      m_Mt->mStorage->addNnzPerRow(vec.elements());
+   }
 }
 
 void

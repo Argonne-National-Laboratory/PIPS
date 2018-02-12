@@ -250,9 +250,6 @@ public:
 
   virtual void writeToStreamDense(ostream& out) const {}
 
-  /** initialize transposed matrix */
-  virtual void initTransposed() { assert(0 && "not implemented"); };
-
   /** add number of elements per row to given vector */
   virtual void addNnzPerRow(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
 

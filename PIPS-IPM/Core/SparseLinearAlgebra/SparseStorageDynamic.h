@@ -21,21 +21,23 @@ typedef struct
  *  @ingroup SparseLinearAlgebra
  */
 class SparseStorageDynamic : public DoubleStorage {
+
 private:
   const double spareRatio;
 
 public:
   static int instances;
 
-  ROWPTRS * rowptr;
-  int * jcolM;
-  double * M;
-
   int m;
   int n;
   int len;
 
+  ROWPTRS * rowptr;
+  int * jcolM;
+  double * M;
+
   SparseStorageDynamic( const SparseStorage& storage, double spareRatio = 0.2 );
+  SparseStorageDynamic( int m, int n, int len, double spareRatio = 0.2 );
 
   ~SparseStorageDynamic();
 
@@ -64,7 +66,8 @@ public:
 
   void addNnzPerRow(double* vec) const;
 
-  SparseStorage* getStaticStorage(double* rowNnz, double* colNnz);
+  SparseStorage* getStaticStorage(double* rowNnz, double* colNnz) const;
+  SparseStorageDynamic* getTranspose() const;
 };
 
 typedef SmartPointer<SparseStorageDynamic>  SparseStorageDynamicHandle;

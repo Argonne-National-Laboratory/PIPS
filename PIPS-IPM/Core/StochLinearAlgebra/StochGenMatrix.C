@@ -90,9 +90,7 @@ StochGenMatrix* StochGenMatrix::cloneFull(bool switchToDynamicStorage) const
    // clone submatrices
    clone->Amat = Amat->cloneFull(switchToDynamicStorage);
    clone->Bmat = Bmat->cloneFull(switchToDynamicStorage);
-
-   if( Blmat )
-      clone->Blmat = Blmat->cloneFull(switchToDynamicStorage);
+   clone->Blmat = Blmat->cloneFull(switchToDynamicStorage);
 
    for( size_t it = 0; it < children.size(); it++ )
       clone->children.push_back(children[it]->cloneFull(switchToDynamicStorage));
@@ -645,27 +643,22 @@ void StochGenMatrix::randomize( double alpha, double beta, double * seed )
   assert( "Has not been yet implemented" && 0 );
 }
 
-void StochGenMatrix::initTransposed()
+void StochGenMatrix::initTransposed(bool dynamic)
 {
-   Bmat->initTransposed();
-
-   if( Blmat != NULL )
-      Blmat->initTransposed();
+   Bmat->initTransposed(dynamic);
+   Blmat->initTransposed(dynamic);
 
    for( size_t it = 0; it < children.size(); it++ )
-      children[it]->initTransposedChild();
+      children[it]->initTransposedChild(dynamic);
 }
 
-void StochGenMatrix::initTransposedChild()
+void StochGenMatrix::initTransposedChild(bool dynamic)
 {
-   Amat->initTransposed();
-   Bmat->initTransposed();
+   Amat->initTransposed(dynamic);
+   Bmat->initTransposed(dynamic);
 
    if( Blmat != NULL )
-      Blmat->initTransposed();
-
-   for( size_t it = 0; it < children.size(); it++ )
-      children[it]->initTransposedChild();
+      Blmat->initTransposed(dynamic);
 }
 
 

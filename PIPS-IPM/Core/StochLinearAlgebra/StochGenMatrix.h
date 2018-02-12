@@ -91,7 +91,7 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
-  virtual void initTransposedChild();
+  virtual void initTransposedChild(bool dynamic);
 
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec);
 
@@ -152,8 +152,8 @@ public:
 
   virtual void randomize( double alpha, double beta, double * seed );
 
-  /** initialize transposed matrices for A, B, Bl */
-  virtual void initTransposed();
+  /** initialize (dynamic) transposed matrices for A, B, Bl */
+  virtual void initTransposed(bool dynamic = false);
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
@@ -288,12 +288,12 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
 
-  virtual void initTransposedChild() {};
+  virtual void initTransposedChild(bool dynamic) {};
 
   virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec ){};
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
 
-  virtual void initTransposed() {};
+  virtual void initTransposed(bool dynamic = false) {};
 
   virtual void addNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent) {};
 

@@ -10,14 +10,27 @@
 
 int SparseStorageDynamic::instances = 0;
 
+
+SparseStorageDynamic::SparseStorageDynamic(int m, int n, int len, double spareRatio)
+ : spareRatio(spareRatio), m(m), n(n), len(len)
+{
+   assert(m >= 0 && len >= 1);
+
+   rowptr = new ROWPTRS[m + 1];
+   M = new double[len];
+   jcolM = new int[len];
+}
+
 SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double spareRatio)
  : spareRatio(spareRatio), m(storage.m), n(storage.n)
 {
    assert(spareRatio >= 0.0);
+   assert(m >= 0 && storage.len >= 0);
 
    const int* const orgkrowM = storage.krowM;
    const int* const orgjcolM = storage.jcolM;
    const double* const orgM = storage.M;
+
 
    // compute length of new storage
 
@@ -29,10 +42,18 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
       assert(orgkrowM[r + 1] - orgkrowM[r] >= 0);
    }
 
-   jcolM = new int[len];
-   M = new double[len];
-   rowptr = new ROWPTRS[m + 1];
+   if( len > 0 )
+   {
+      jcolM = new int[len];
+      M = new double[len];
+   }
+   else
+   {
+      jcolM = NULL;
+      M = NULL;
+   }
 
+   rowptr = new ROWPTRS[m + 1];
 
    // build storage
 
@@ -48,7 +69,6 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
          M[j + shift] = orgM[j];
          jcolM[j + shift] = orgjcolM[j];
       }
-
       shift += offset;
 
       rowptr[r].end = orgkrowM[r + 1] + shift;
@@ -66,7 +86,7 @@ void SparseStorageDynamic::getSize(int& m, int& n)
    n = this->n;
 }
 
-SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* colNnz)
+SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* colNnz) const
 {
    // empty?
    if( n <= 0 )
@@ -183,6 +203,83 @@ SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* co
    return staticStorage;
 }
 
+
+SparseStorageDynamic* SparseStorageDynamic::getTranspose() const
+{
+   assert(n > 0);
+
+   // compute nnz of each row of At (column of A)
+
+   int* w = new int[n];
+
+   for( int i = 0; i < n; i++ )
+      w[i] = 0;
+
+   for( int r = 0; r < m; r++ )
+   {
+      const int start = rowptr[r].start;
+      const int end = rowptr[r].end;
+
+      for( int j = start; j < end; j++ )
+         w[jcolM[r]]++;
+   }
+
+   int translen = 0;
+
+   assert(spareRatio >= 0.0);
+
+   for( int i = 0; i < n; i++ )
+      translen += w[i] + int(w[i] * spareRatio);
+
+   SparseStorageDynamic* transpose = new SparseStorageDynamic(n, m, translen, spareRatio);
+
+
+   // set row pointers
+
+   ROWPTRS* const transrowptr = transpose->rowptr;
+   transrowptr[0].start = 0;
+
+   for( int i = 1; i <= n; i++ )
+   {
+      const int oldstart = transrowptr[i - 1].start;
+      const int oldend = oldstart + w[i - 1];
+      assert(oldend >= oldstart);
+
+      transrowptr[i - 1].end = oldend;
+      transrowptr[i].start = oldend + int((oldend - oldstart) * spareRatio);
+      w[i - 1] = oldstart;
+   }
+
+   transrowptr[n].start = translen;
+   transrowptr[n].end = translen;
+
+
+   // fill jCol and M
+
+   int* const transjcolM = transpose->jcolM;
+   double* const transM = transpose->M;
+
+   for( int r = 0; r < m; r++ )
+   {
+      const int start = rowptr[r].start;
+      const int end = rowptr[r].end;
+
+      for( int j = start; j < end; j++ )
+      {
+         const int idx = w[jcolM[j]];
+
+         transM[idx] = M[j];
+         transjcolM[idx] = r;
+         w[jcolM[j]] = idx + 1;
+      }
+   }
+
+   delete[] w;
+
+   return transpose;
+}
+
+
 void SparseStorageDynamic::addNnzPerRow(double* vec) const
 {
    for( int r = 0; r < m; r++ )
@@ -191,5 +288,9 @@ void SparseStorageDynamic::addNnzPerRow(double* vec) const
 
 SparseStorageDynamic::~SparseStorageDynamic()
 {
+   delete[] jcolM;
+   delete[] rowptr;
+   delete[] M;
+
    SparseStorageDynamic::instances--;
 }

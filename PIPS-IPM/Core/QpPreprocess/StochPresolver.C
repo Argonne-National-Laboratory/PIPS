@@ -48,8 +48,8 @@ StochPresolver::initNnzCounter()
    A.addNnzPerRow(*nRowElemsA);
    C.addNnzPerRow(*nRowElemsC);
 
-   C.addNnzPerCol(*nColElems);
    A.addNnzPerCol(*nColElems);
+   C.addNnzPerCol(*nColElems);
 
 
    int rank = 0;
@@ -80,7 +80,6 @@ Data* StochPresolver::presolve()
 
    std::cout << "start stoch presolving" << std::endl;
 
-
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
    std::cout << "ORG \n" << std::endl;
@@ -93,8 +92,8 @@ Data* StochPresolver::presolve()
    presProb = sorigprob->cloneFull(true);
 
    // initialized all dynamic transposed sub matrices
-   //presProb->A->initTransposed(true);
-   //presProb->C->initTransposed(true);
+   dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
+   dynamic_cast<StochGenMatrix&>(*presProb->C).initTransposed(true);
 
    initNnzCounter();
 
