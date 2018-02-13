@@ -286,6 +286,60 @@ void SparseStorageDynamic::addNnzPerRow(double* vec) const
       vec[r] += rowptr[r].end - rowptr[r].start;
 }
 
+void SparseStorageDynamic::writeToStreamDense( ostream& out) const
+{
+   int i, k;
+   //todo: instead of \t, use length of longest value in M
+
+   for( i = 0; i < m; i++ )
+   { // Row i
+      int j = 0; // Column j
+      const int start = rowptr[i].start;
+      const int end = rowptr[i].end;
+      for( k = start; k < end; k++ )
+      {
+         while( jcolM[k] > j )
+         {
+            out << 0 << '\t';
+            j++;
+         }
+         out << M[k] << '\t';
+         j++;
+      }
+      while( j < n )
+      {
+         out << 0 << '\t';
+         j++;
+      }
+      out << endl;
+   }
+}
+
+void SparseStorageDynamic::writeToStreamDenseRow( stringstream& out, int rowidx) const
+{
+   int j = 0; // Column j
+
+   const int start = rowptr[rowidx].start;
+   const int end = rowptr[rowidx].end;
+
+   for( int k = start; k < end; k++ )
+   {
+      while( jcolM[k] > j )
+      {
+         out << 0 << '\t';
+         j++;
+      }
+      out << M[k] << '\t';
+      j++;
+   }
+
+   while( j < n )
+   {
+      out << 0 << '\t';
+      j++;
+   }
+}
+
 SparseStorageDynamic::~SparseStorageDynamic()
 {
    delete[] jcolM;

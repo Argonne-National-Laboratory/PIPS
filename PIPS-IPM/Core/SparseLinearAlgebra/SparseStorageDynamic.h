@@ -66,6 +66,9 @@ public:
 
   void addNnzPerRow(double* vec) const;
 
+  void writeToStreamDense( ostream& out) const;
+  void writeToStreamDenseRow( stringstream& out, int rowidx) const;
+
   SparseStorage* getStaticStorage(double* rowNnz, double* colNnz) const;
   SparseStorageDynamic* getTranspose() const;
 };
