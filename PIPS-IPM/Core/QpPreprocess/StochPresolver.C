@@ -49,8 +49,10 @@ StochPresolver::initNnzCounter()
    C.addNnzPerRow(*nRowElemsC);
 
    A.addNnzPerCol(*nColElems);
-   C.addNnzPerCol(*nColElems);
 
+   nColElems->writeToStreamAll(std::cout);
+
+   C.addNnzPerCol(*nColElems);
 
    int rank = 0;
 
@@ -70,8 +72,6 @@ StochPresolver::initNnzCounter()
       nRowElemsC->writeToStreamAll(std::cout);
    }
 
-
-
 }
 
 Data* StochPresolver::presolve()
@@ -81,14 +81,17 @@ Data* StochPresolver::presolve()
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
-   std::cout << "ORG \n" << std::endl;
-   sorigprob->A->writeToStreamDense(std::cout);
-   std::cout << "C: \n" << std::endl;
-   sorigprob->C->writeToStreamDense(std::cout);
-
-
    // clone and initialize dynamic storage
    presProb = sorigprob->cloneFull(true);
+
+   std::cout << "DYNAMIC" << std::endl;
+
+   std::cout << "ORG \n" << std::endl;
+   presProb->A->writeToStreamDense(std::cout);
+   std::cout << "C: \n" << std::endl;
+   presProb->C->writeToStreamDense(std::cout);
+
+
 
    // initialized all dynamic transposed sub matrices
    dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
