@@ -592,44 +592,8 @@ void StochGenMatrix::writeToStream(ostream& out) const
   assert( "Has not been yet implemented" && 0 );
 }
 
-void StochGenMatrix::writeToStreamDense(ostream& out) const
-{
-	int rank;
-	MPI_Comm_rank(mpiComm, &rank);
-	int world_size;
-	MPI_Comm_size(mpiComm, &world_size);
-	int token;
-	if (iAmDistrib && rank > 0) {
-		MPI_Recv(&token, 1, MPI_INT, (rank - 1), 0, mpiComm,
-				MPI_STATUS_IGNORE);
-	}
-	if (!iAmDistrib || (iAmDistrib && rank == 0)) {
-		token = -1;
-		out << "Block B_0: " << endl;
-		this->Bmat->writeToStreamDense(out);
-		out << "Linking Block Bl_0:" << endl;
-		this->Blmat->writeToStreamDense(out);
-	}
-	for (size_t it = 0; it < children.size(); it++) {
-		children[it]->writeToStreamDenseChild(out, it + 1);
-	}
-	if (iAmDistrib && rank < world_size - 1) {
-		MPI_Send(&token, 1, MPI_INT, (rank + 1), 0, mpiComm);
-	}
-}
-
-void StochGenMatrix::writeToStreamDenseChild(ostream& out, int index) const
-{
-	out<< "Block A_"<<index <<":"<<endl;
-	this->Amat->writeToStreamDense(out);
-	out<< "Block B_"<<index <<":"<<endl;
-	this->Bmat->writeToStreamDense(out);
-	out<< "Linking block Bl_"<<index <<":"<<endl;
-	this->Blmat->writeToStreamDense(out);
-}
-
 void
-StochGenMatrix::writeToStreamDenseRow(ostream& out) const
+StochGenMatrix::writeToStreamDense(ostream& out) const
 {
    int rank;
    MPI_Comm_rank(mpiComm, &rank);
@@ -646,7 +610,7 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
 
    for( size_t it = 0; it < children.size(); it++ )
    {
-      children[it]->writeToStreamDenseChildRow(sout, offset);
+      children[it]->writeToStreamDenseChild(sout, offset);
       out<<sout.str();
       sout.clear();
       sout.str(std::string());
@@ -713,8 +677,8 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
       MPI_Barrier(mpiComm);
 }
 
-/** writes a child matrix row-wise, offset indicates the offset between A and B block. */
-void StochGenMatrix::writeToStreamDenseChildRow(stringstream& out, int offset) const
+/** writes child matrix blocks, offset indicates the offset between A and B block. */
+void StochGenMatrix::writeToStreamDenseChild(stringstream& out, int offset) const
 {
    int mA, mB, n;
    this->Amat->getSize(mA, n);

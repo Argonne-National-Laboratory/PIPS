@@ -249,7 +249,6 @@ public:
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
 
   virtual void writeToStreamDense(ostream& out) const {}
-  virtual void writeToStreamDenseRow(ostream& out) const {}
 
   /** add number of elements per row to given vector */
   virtual void addNnzPerRow(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
