@@ -99,7 +99,7 @@ Data* StochPresolver::presolve()
 
    initNnzCounter();
 
-  // int cleanup_elims = cleanUp();
+ //  int cleanup_elims = cleanUp();
 
    std::cout << "PRES before building static storage \n" << std::endl;
    std::cout << "A: \n" << std::endl;
@@ -116,6 +116,8 @@ Data* StochPresolver::presolve()
    presProb->A->writeToStreamDense(std::cout);
    std::cout << "C: \n" << std::endl;
    presProb->C->writeToStreamDense(std::cout);
+
+   std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
 
    assert(0);
 

@@ -369,6 +369,17 @@ sData::getLocalG()
 }
 
 void
+cleanUpPresolvedData(const StochVector& rowNnzVec, const StochVector& colNnzVec)
+{
+   // clean up equality system
+
+   // clean up inequality system
+
+   // adapt sizes
+
+}
+
+void
 sData::sync()
 {
 
