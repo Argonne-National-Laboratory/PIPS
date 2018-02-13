@@ -625,6 +625,7 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
    MPI_Comm_size(mpiComm, &world_size);
    int m, n;
    int offset = 0;
+   stringstream sout;
    if( iAmDistrib && rank > 0 )
       MPI_Recv(&offset, 1, MPI_INT, (rank - 1), 0, mpiComm, MPI_STATUS_IGNORE);
 
@@ -633,63 +634,75 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
 
    for( size_t it = 0; it < children.size(); it++ )
    {
-      children[it]->writeToStreamDenseChildRow(out, offset);
+      children[it]->writeToStreamDenseChildRow(sout, offset);
+      out<<sout.str();
+      sout.clear();
+      sout.str(std::string());
       children[it]->Bmat->getSize(m, n);
       offset += n;
    }
    if( iAmDistrib && rank < world_size - 1 )
-      MPI_Send(&offset, 1, MPI_INT, (rank + 1) % world_size, 0, mpiComm);
+      MPI_Ssend(&offset, 1, MPI_INT, (rank + 1) % world_size, 0, mpiComm);
 
    // linking contraints ?
-   // todo: linking with several processes not working correctly yet
-   if( this->Blmat != NULL )
+   int mlink, nlink;
+   this->Blmat->getSize(mlink, nlink);
+   if( mlink > 0 )
    {
-      int token = 10;
-      int mlink, nlink;
-      this->Blmat->getSize(mlink, nlink);
-      if( iAmDistrib && rank == world_size - 1 )   // start linking after non-linking
-         MPI_Send(&token, 1, MPI_INT, 0, 0, mpiComm);
+      if( iAmDistrib )
+         MPI_Barrier(mpiComm);
+
       // for each row r do:
-      int r = 0;
-      for( r = 0; r < mlink; r++ )
+      for( int r = 0; r < mlink; r++ )
       {
          if( iAmDistrib )
          {
+            MPI_Barrier(mpiComm);
+
+            // process Zero collects all the information and then prints it.
             if( rank == 0 )
             {
-               MPI_Recv(&token, 1, MPI_INT, world_size - 1, r, mpiComm, MPI_STATUS_IGNORE);
-               this->Blmat->writeToStreamDenseRow(out, r);
-            }
-            else
-               MPI_Recv(&token, 1, MPI_INT, rank - 1, r + 1, mpiComm, MPI_STATUS_IGNORE);
+               out << this->Blmat->writeToStreamDenseRow(r);
 
-            for( size_t it = 0; it < children.size(); it++ )
-            {
-               children[it]->Blmat->writeToStreamDenseRow(out, r);
-            }
-            if( rank == world_size - 1 )
+               out << writeToStreamDenseRowLink(r);
+
+               for( int p = 1; p < world_size; p++ )
+               {
+                  MPI_Status status;
+                  int l;
+                  MPI_Probe(p, r + 1, mpiComm, &status);
+                  MPI_Get_count(&status, MPI_CHAR, &l);
+                  char *buf = new char[l];
+                  MPI_Recv(buf, l, MPI_CHAR, p, r + 1, mpiComm, &status);
+                  string rowPartFromP(buf, l);
+                  out << rowPartFromP;
+                  delete[] buf;
+               }
                out << endl;
 
-            token++;
-            MPI_Send(&token, 1, MPI_INT, (rank + 1) % world_size, r + 1, mpiComm);
-         }
-         else  // not distributed
-         {
-            this->Blmat->writeToStreamDenseRow(out, r);
-            for( size_t it = 0; it < children.size(); it++ )
-            {
-               children[it]->Blmat->writeToStreamDenseRow(out, r);
             }
-            out << endl;
+            else // rank != 0
+            {
+               std::string str = writeToStreamDenseRowLink(r);
+               MPI_Ssend(str.c_str(), str.length(), MPI_CHAR, 0, r + 1, mpiComm);
+            }
          }
+         else // not distributed
+         {
+            this->Blmat->writeToStreamDenseRow(sout, r);
+            for( size_t it = 0; it < children.size(); it++ )
+               children[it]->Blmat->writeToStreamDenseRow(sout, r);
 
+            out << sout.rdbuf() << endl;
+         }
       }
-      MPI_Barrier(mpiComm);
    }
+   if( iAmDistrib )
+      MPI_Barrier(mpiComm);
 }
 
 /** writes a child matrix row-wise, offset indicates the offset between A and B block. */
-void StochGenMatrix::writeToStreamDenseChildRow(ostream& out, int offset) const
+void StochGenMatrix::writeToStreamDenseChildRow(stringstream& out, int offset) const
 {
    int mA, mB, n;
    this->Amat->getSize(mA, n);
@@ -703,6 +716,18 @@ void StochGenMatrix::writeToStreamDenseChildRow(ostream& out, int offset) const
       this->Bmat->writeToStreamDenseRow(out, r);
       out << endl;
    }
+}
+
+/** returns a string containing the linking-row rowidx of the children. */
+std::string StochGenMatrix::writeToStreamDenseRowLink(int rowidx) const
+{
+   std::string str_all;
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      std::string str = children[it]->Blmat->writeToStreamDenseRow(rowidx);
+      str_all.append(str);
+   }
+   return str_all;
 }
 
 /* Make the elements in this matrix symmetric. The elements of interest

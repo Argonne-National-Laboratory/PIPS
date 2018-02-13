@@ -80,6 +80,10 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
+  virtual void writeToStreamDenseChild(ostream& out, int index) const;
+  virtual void writeToStreamDenseChildRow(stringstream& out, int offset) const;
+  virtual std::string writeToStreamDenseRowLink(int rowidx) const;
+
  public:
   virtual void updateTransposed();
 
@@ -128,9 +132,7 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
-  virtual void writeToStreamDenseChild(ostream& out, int index) const;
   virtual void writeToStreamDenseRow(ostream& out) const;
-  virtual void writeToStreamDenseChildRow(ostream& out, int offset) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -243,7 +245,8 @@ public:
   virtual void writeToStreamDense(ostream& out) const{};
   virtual void writeToStreamDenseChild(ostream& out, int index) const{};
   virtual void writeToStreamDenseRow(ostream& out) const{};
-  virtual void writeToStreamDenseChildRow(ostream& out, int offset) const{};
+  virtual void writeToStreamDenseChildRow(stringstream& out, int offset) const{};
+  virtual std::string writeToStreamDenseRowLink(int rowidx) const{return 0;};
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.

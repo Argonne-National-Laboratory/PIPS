@@ -96,13 +96,25 @@ void SparseGenMatrix::writeToStreamDense(ostream& out) const
   mStorage->writeToStreamDense( out );
 }
 
-void SparseGenMatrix::writeToStreamDenseRow( ostream& out, int rowidx) const
+void SparseGenMatrix::writeToStreamDenseRow( stringstream& out, int rowidx) const
 {
    // check if mStorage might be empty
-   if(mStorage->m > 0){
+   if(mStorage->n > 0){
       assert( rowidx < mStorage->m);
       mStorage->writeToStreamDenseRow( out, rowidx );
    }
+}
+
+std::string SparseGenMatrix::writeToStreamDenseRow( int rowidx) const
+{
+
+   stringstream out;
+   // check if mStorage might be empty
+   if(mStorage->n > 0){
+      assert( rowidx < mStorage->m);
+      mStorage->writeToStreamDenseRow( out, rowidx );
+   }
+   return out.str();
 }
 
 void SparseGenMatrix::randomize( double alpha, double beta, double * seed )

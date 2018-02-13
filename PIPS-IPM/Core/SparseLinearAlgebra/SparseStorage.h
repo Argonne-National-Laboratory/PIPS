@@ -11,6 +11,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <vector>
 using namespace std;
@@ -94,7 +95,7 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
-  virtual void writeToStreamDenseRow( ostream& out, int rowidx) const;
+  virtual void writeToStreamDenseRow( stringstream& out, int rowidx) const;
 
   virtual void symmetrize( int& info);
   virtual double abmaxnorm();
