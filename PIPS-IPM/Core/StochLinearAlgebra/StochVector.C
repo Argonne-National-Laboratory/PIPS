@@ -775,6 +775,9 @@ void StochVector::axpy  ( double alpha, OoqpVector& x_ )
   StochVector& x = dynamic_cast<StochVector&>(x_);
   assert(x.children.size() == children.size());
 
+  if( alpha == 0.0)
+     return;
+
   vec->axpy(alpha, *x.vec);
 
   if( vecl )

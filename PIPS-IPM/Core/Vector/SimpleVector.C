@@ -500,12 +500,17 @@ void SimpleVector::roundToPow2()
   for( int i = 0; i < n; i++ )
   {
      int exp;
+#if 0
      const double mantissa = std::frexp(v[i], &exp);
 
      if( mantissa >= 0.75 )
         v[i] = std::ldexp(0.5, exp + 1);
      else
         v[i] = std::ldexp(0.5, exp);
+#else
+     (void) std::frexp(v[i], &exp);
+     v[i] = std::ldexp(0.5, exp);
+#endif
   }
 }
 

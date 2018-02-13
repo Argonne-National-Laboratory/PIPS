@@ -107,6 +107,15 @@ public:
 						  int i, double mu,
 						  int stop_code,
 						  int level );
+
+  /** perform monitor operation at each interior-point iteration */
+  virtual void doMonitorPd( Data * data, Variables * vars,
+                    Residuals * resids,
+                    double alpha_primal, double alpha_dual, double sigma,
+                    int i, double mu,
+                    int stop_code,
+                    int level );
+
   /** default monitor: prints out one line of information on each
    * interior-point iteration */
   virtual void defaultMonitor( Data * data, Variables * vars,

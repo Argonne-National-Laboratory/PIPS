@@ -95,7 +95,14 @@ public:
 
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec);
 
+  virtual void writeToStreamDenseChild(ostream& out, int index) const;
+  virtual void writeToStreamDenseChildRow(stringstream& out, int offset) const;
+  virtual std::string writeToStreamDenseRowLink(int rowidx) const;
+
+
  public:
+  virtual void updateTransposed();
+
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 
@@ -141,7 +148,7 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
-  virtual void writeToStreamDenseChild(ostream& out, int index) const;
+  virtual void writeToStreamDenseRow(ostream& out) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -211,6 +218,7 @@ public:
   virtual void AddChild(StochGenMatrix* child){};
 
  public:
+  virtual void updateTransposed() {};
   virtual void getSize( int& m, int& n ){m=0; n=0;}
   virtual void getSize( long long& m, long long& n ){m=0; n=0;}
 
@@ -275,6 +283,9 @@ public:
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamDense(ostream& out) const{};
   virtual void writeToStreamDenseChild(ostream& out, int index) const{};
+  virtual void writeToStreamDenseRow(ostream& out) const{};
+  virtual void writeToStreamDenseChildRow(stringstream& out, int offset) const{};
+  virtual std::string writeToStreamDenseRowLink(int rowidx) const{return 0;};
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.

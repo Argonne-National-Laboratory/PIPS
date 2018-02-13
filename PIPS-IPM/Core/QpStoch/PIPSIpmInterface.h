@@ -157,6 +157,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 #endif
 
   scaler = prefactory.makeScaler(data, scaler_type);
+
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");
 #endif

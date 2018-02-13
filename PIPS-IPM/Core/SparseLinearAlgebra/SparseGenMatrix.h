@@ -29,7 +29,10 @@ protected:
   SparseGenMatrix* m_Mt;
 
 public:
+
   SparseGenMatrix( );
+
+  void updateTransposed();
   SparseGenMatrix( int rows, int cols, int nnz );
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
@@ -99,6 +102,8 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
+  virtual void writeToStreamDenseRow( stringstream& out, int rowidx) const;
+  virtual std::string writeToStreamDenseRow( int rowidx) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.

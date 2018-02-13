@@ -25,21 +25,21 @@ class ProblemFormulation;
  */
 class GondzioStochLpSolver : public GondzioStochSolver
 {
-protected:
+private:
+  // returns Gondzio weight for corrector step for different alpha_primal and alpha_dual
+  virtual void calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
+         Variables* corrector_step, double alpha_primal, double alpha_dual,
+         double& alpha_primal_candidate, double& alpha_dual_candidate,
+         double& weight_primal_candidate, double& weight_dual_candidate);
 
 public:
 
-  GondzioStochLpSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10 );
+  GondzioStochLpSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
+        bool adaptive_linesearch = false ); // todo set to true
 
   virtual ~GondzioStochLpSolver();
 
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
-
-  // returns Gondzio weight for corrector step for different alpha_primal and alpha_dual
-  virtual void calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
-	  		Variables* corrector_step, double alpha_primal, double alpha_dual,
-	  		double& alpha_primal_candidate, double& alpha_dual_candidate,
-	  		double& weight_primal_candidate, double& weight_dual_candidate);
 
 };
 

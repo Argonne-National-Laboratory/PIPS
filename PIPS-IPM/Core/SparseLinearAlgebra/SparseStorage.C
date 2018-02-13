@@ -608,6 +608,26 @@ void SparseStorage::writeToStreamDense( ostream& out) const
    }
 }
 
+void SparseStorage::writeToStreamDenseRow( stringstream& out, int rowidx) const
+{
+   int j = 0; // Column j
+   for( int k = krowM[rowidx]; k < krowM[rowidx + 1]; k++ )
+   {
+      while( jcolM[k] > j )
+      {
+         out << 0 << '\t';
+         j++;
+      }
+      out << M[k] << '\t';
+      j++;
+   }
+   while( j < n )
+   {
+      out << 0 << '\t';
+      j++;
+   }
+}
+
 void indexedLexSort( int first[], int n, int swapFirst,
 		     int second[], int swapSecond, int index[] )
 {
