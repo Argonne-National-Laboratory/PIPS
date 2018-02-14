@@ -371,9 +371,11 @@ sData::getLocalG()
 void
 sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec)
 {
+   // todo Q is ignored
+
    // clean up equality system
    StochGenMatrix& A_stoch = dynamic_cast<StochGenMatrix&>(*A);
-   StochVector& b_Astoch = dynamic_cast<StochGenMatrix&>(*bA);
+   StochVector& b_Astoch = dynamic_cast<StochVector&>(*bA);
 
    A_stoch.initStaticStorageFromDynamic(rowNnzVecA, colNnzVec);
    b_Astoch.removeEntries(rowNnzVecA);
