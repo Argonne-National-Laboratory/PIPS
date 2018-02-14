@@ -55,20 +55,17 @@ StochPresolver::initNnzCounter()
    C.addNnzPerCol(*nColElems);
 
    int rank = 0;
-
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-   if( rank == 0)
+   if( rank == 0 )
    {
-      std::cout << "write Cols" << std::endl;
-         nColElems->writeToStreamAll(std::cout);
+      std::cout << "write Cols with all cols" << std::endl;
+      nColElems->writeToStreamAll(std::cout);
 
-      std::cout << "writeA" << std::endl;
-
+      std::cout << "write Rows A" << std::endl;
       nRowElemsA->writeToStreamAll(std::cout);
 
-      std::cout << "writeC " << std::endl;
-
+      std::cout << "write Rows C " << std::endl;
       nRowElemsC->writeToStreamAll(std::cout);
    }
 
@@ -84,11 +81,20 @@ Data* StochPresolver::presolve()
    // clone and initialize dynamic storage
    presProb = sorigprob->cloneFull(true);
 
-   std::cout << "DYNAMIC" << std::endl;
+   int rank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-   std::cout << "ORG \n" << std::endl;
+   if( rank == 0 )
+   {
+      std::cout << "DYNAMIC" << std::endl;
+      std::cout << "ORG \n" << std::endl;
+
+      std::cout << "A: \n" << std::endl;
+   }
    presProb->A->writeToStreamDense(std::cout);
-   std::cout << "C: \n" << std::endl;
+
+   if( rank == 0 )
+      std::cout << "C: \n" << std::endl;
    presProb->C->writeToStreamDense(std::cout);
 
 
@@ -101,20 +107,29 @@ Data* StochPresolver::presolve()
 
  //  int cleanup_elims = cleanUp();
 
-   std::cout << "PRES before building static storage \n" << std::endl;
-   std::cout << "A: \n" << std::endl;
+   if( rank == 0 )
+   {
+      std::cout << "PRES before building static storage \n" << std::endl;
+      std::cout << "A: \n" << std::endl;
+   }
    presProb->A->writeToStreamDense(std::cout);
-   std::cout << "C: \n" << std::endl;
+
+   if( rank == 0 )
+      std::cout << "C: \n" << std::endl;
    presProb->C->writeToStreamDense(std::cout);
 
 
    buildCleanStorage();
 
-
-   std::cout << "PRES after building static storage \n" << std::endl;
-   std::cout << "A: \n" << std::endl;
+   if( rank == 0 )
+   {
+      std::cout << "PRES after building static storage \n" << std::endl;
+      std::cout << "A: \n" << std::endl;
+   }
    presProb->A->writeToStreamDense(std::cout);
-   std::cout << "C: \n" << std::endl;
+
+   if( rank == 0 )
+      std::cout << "C: \n" << std::endl;
    presProb->C->writeToStreamDense(std::cout);
 
    std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
