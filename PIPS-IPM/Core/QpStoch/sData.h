@@ -62,7 +62,7 @@ class sData : public QpGenData {
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
-  void cleanUpPresolvedData(const StochVector& rowNnzVec, const StochVector& colNnzVec);
+  void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
 
   virtual ~sData();
 

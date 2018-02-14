@@ -123,6 +123,9 @@ public:
   						double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
   						double& bound_primal, double& bound_dual,
 						bool& primalBlocking, bool& dualBlocking);
+
+  virtual void removeEntries(const OoqpVector& select);
+
   /** Returns a pointer to the elements of this vector. */
   double * elements() const { return v; };
 };

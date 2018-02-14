@@ -136,6 +136,9 @@ public:
   virtual void copyFromArray( double v[] );
   virtual void copyFromArray( char v[] );
 
+  /** remove entries i for which select[i] == 0 */
+  virtual void removeEntries( const OoqpVector& select );
+
   int getSize() { return n; };
 };
 
@@ -241,6 +244,8 @@ public:
   virtual void copyIntoArray( double v[] ) const{};
   virtual void copyFromArray( double v[] ){};
   virtual void copyFromArray( char v[] ){};
+  virtual void removeEntries( const OoqpVector& select ) {};
+
 
   int getSize() { return 0; };
 };

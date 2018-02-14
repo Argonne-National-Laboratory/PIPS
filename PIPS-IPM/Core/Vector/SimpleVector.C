@@ -688,3 +688,24 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
 #endif
 
 }
+
+
+void SimpleVector::removeEntries(const OoqpVector& select)
+{
+   const SimpleVector& selectSimple = dynamic_cast<const SimpleVector&>(select);
+   const double* const selectArr = selectSimple.v;
+
+   assert(n == selectSimple.length());
+
+   int nNew = 0;
+
+   for( int i = 0; i < n; i++ )
+      if( selectArr[i] != 0.0 )
+         v[nNew++] = v[i];
+
+   n = nNew;
+}
+
+
+
+

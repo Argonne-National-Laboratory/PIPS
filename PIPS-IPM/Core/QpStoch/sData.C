@@ -369,13 +369,59 @@ sData::getLocalG()
 }
 
 void
-cleanUpPresolvedData(const StochVector& rowNnzVec, const StochVector& colNnzVec)
+sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec)
 {
    // clean up equality system
+   StochGenMatrix& A_stoch = dynamic_cast<StochGenMatrix&>(*A);
+   StochVector& b_Astoch = dynamic_cast<StochGenMatrix&>(*bA);
 
-   // clean up inequality system
+   A_stoch.initStaticStorageFromDynamic(rowNnzVecA, colNnzVec);
+   b_Astoch.removeEntries(rowNnzVecA);
 
-   // adapt sizes
+   // clean up inequality system and x
+   StochGenMatrix& C_stoch = dynamic_cast<StochGenMatrix&>(*C);
+   StochVector& g_stoch = dynamic_cast<StochVector&>(*g);
+
+   StochVector& blx_stoch = dynamic_cast<StochVector&>(*blx);
+   StochVector& ixlow_stoch = dynamic_cast<StochVector&>(*ixlow);
+   StochVector& bux_stoch = dynamic_cast<StochVector&>(*bux);
+   StochVector& ixupp_stoch = dynamic_cast<StochVector&>(*ixupp);
+
+   StochVector& bl_stoch = dynamic_cast<StochVector&>(*bl);
+   StochVector& iclow_stoch = dynamic_cast<StochVector&>(*iclow);
+   StochVector& bu_stoch = dynamic_cast<StochVector&>(*bu);
+   StochVector& icupp_stoch = dynamic_cast<StochVector&>(*icupp);
+
+   C_stoch.initStaticStorageFromDynamic(rowNnzVecC, colNnzVec);
+   g_stoch.removeEntries(colNnzVec);
+
+   blx_stoch.removeEntries(colNnzVec);
+   ixlow_stoch.removeEntries(colNnzVec);
+   bux_stoch.removeEntries(colNnzVec);
+   ixupp_stoch.removeEntries(colNnzVec);
+
+   bl_stoch.removeEntries(rowNnzVecC);
+   iclow_stoch.removeEntries(rowNnzVecC);
+   bu_stoch.removeEntries(rowNnzVecC);
+   icupp_stoch.removeEntries(rowNnzVecC);
+
+
+   // adapt sizes and tree
+
+
+#if 0
+   stochNode = tree;
+
+
+
+
+#endif
+   nxlow = ixlow_stoch.numberOfNonzeros();
+   nxupp = ixupp_stoch.numberOfNonzeros();
+   mclow = iclow_stoch.numberOfNonzeros();
+   mcupp = icupp_stoch.numberOfNonzeros();
+
+
 
 }
 

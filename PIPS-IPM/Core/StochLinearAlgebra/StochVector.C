@@ -1135,3 +1135,24 @@ void StochVector::copyFromArray( char v[] )
 {
   assert( "Not supported" && 0 );
 }
+
+void StochVector::removeEntries( const OoqpVector& select )
+{
+   const StochVector& selectStoch = dynamic_cast<const StochVector&>(select);
+
+   assert(children.size() == selectStoch.children.size());
+
+   vec->removeEntries(*selectStoch.vec);
+
+   if( vecl )
+   {
+      assert(selectStoch.vecl);
+      vecl->removeEntries(*selectStoch.vecl);
+   }
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->removeEntries(*selectStoch.children[it]);
+}
+
+
+

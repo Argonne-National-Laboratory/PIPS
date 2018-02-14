@@ -232,6 +232,9 @@ public:
   /** Copy the elements of the C-style char array v into this OoqpVector. */
   virtual void copyFromArray( char v[] ) = 0;
 
+  /** remove entries i for which select[i] == 0 */
+  virtual void removeEntries( const OoqpVector& select ) { assert(0 && "not implemented here"); };
+
   virtual OoqpVector* clone() const { assert(0 && "not implemented here"); return NULL; };
 
 };
