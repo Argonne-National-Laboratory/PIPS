@@ -736,16 +736,71 @@ void StochVector::scalarMult( double num )
 
 void StochVector::writeToStreamAll( ostream& out ) const
 {
-   out << "----" << endl;
-   vec->writeToStreamAll(out);
+   int rank;
+   MPI_Comm_rank(mpiComm, &rank);
+   int world_size;
+   MPI_Comm_size(mpiComm, &world_size);
+   MPI_Status status;
+   int l;
+   stringstream sout;
 
-   for( size_t it = 0; it < children.size(); it++ )
-      children[it]->writeToStreamAll(out);
+   if( rank == 0)
+   {
+      sout << "----" << endl;
+      vec->writeToStreamAllStringStream(sout);
+
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->writeToStreamAllChild(sout);
+
+      out << sout.str();
+      sout.str(std::string());
+
+      for( int p = 1; p < world_size; p++ )
+      {
+         MPI_Probe(p, p, mpiComm, &status);
+         MPI_Get_count(&status, MPI_CHAR, &l);
+         char *buf = new char[l];
+         MPI_Recv(buf, l, MPI_CHAR, p, p, mpiComm, &status);
+         string rowPartFromP(buf, l);
+         out << rowPartFromP;
+         delete[] buf;
+      }
+      if( vecl )
+      {
+         sout << "---" << endl;
+         vecl->writeToStreamAllStringStream(sout);
+      }
+      sout << "----" << endl;
+      out << sout.str();
+   }
+   else if( iAmDistrib==1 )
+   { // rank != 0
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->writeToStreamAllChild(sout);
+
+      std::string str = sout.str();
+      MPI_Ssend(str.c_str(), str.length(), MPI_CHAR, 0, rank, mpiComm);
+
+   }
+
+   if( iAmDistrib==1 )
+      MPI_Barrier(mpiComm);
+}
+
+void StochVector::writeToStreamAllChild( stringstream& sout ) const
+{
+   sout << "--" << endl;
+   vec->writeToStreamAllStringStream(sout);
+
+   for( size_t it = 0; it < children.size(); it++ ){
+      sout << "-- " << endl;
+      children[it]->writeToStreamAllChild(sout);
+   }
 
    if( vecl )
    {
-      out << "---- (linking)" << endl;
-      vecl->writeToStreamAll(out);
+      sout << "---" << endl;
+      vecl->writeToStreamAllStringStream(sout);
    }
 }
 
