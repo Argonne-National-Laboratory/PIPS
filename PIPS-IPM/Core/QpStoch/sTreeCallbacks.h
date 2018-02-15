@@ -52,6 +52,8 @@ class sTreeCallbacks : public sTree
   int NNZA,NNZQ,NNZB,NNZBl,NNZC,NNZD,NNZDl; //global nnz
   int NNZA_INACTIVE,NNZQ_INACTIVE,NNZB_INACTIVE,NNZBl_INACTIVE,NNZC_INACTIVE,NNZD_INACTIVE,NNZDl_INACTIVE; //global inactive nnz
   long long N_INACTIVE,MY_INACTIVE,MZ_INACTIVE; //global inactive sizes
+  int nx_active, my_active, mz_active, myl_active, mzl_active;
+  int nx_inactive, my_inactive, mz_inactive, myl_inactive, mzl_inactive;
 
   void loadLocalSizes();
 
