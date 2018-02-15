@@ -810,7 +810,7 @@ void StochGenMatrix::matTransDinvMultMat(OoqpVector& d, SymMatrix** res)
 }
 
 
-void StochGenMatrix::addNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent)
+void StochGenMatrix::getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent)
 {
    StochVector& nnzVecStoch = dynamic_cast<StochVector&>(nnzVec);
 
@@ -849,7 +849,7 @@ void StochGenMatrix::addNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent)
 
 
    for( size_t it = 0; it < children.size(); it++ )
-     children[it]->addNnzPerRow(*(nnzVecStoch.children[it]), nnzvecl);
+     children[it]->getNnzPerRow(*(nnzVecStoch.children[it]), nnzvecl);
 
    // distributed, with linking constraints, and at root?
    if( iAmDistrib && nnzVecStoch.vecl != NULL && linkParent == NULL )
@@ -866,7 +866,7 @@ void StochGenMatrix::addNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent)
    }
 }
 
-void StochGenMatrix::addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
+void StochGenMatrix::getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
 {
    StochVector& nnzVecStoch = dynamic_cast<StochVector&>(nnzVec);
 
@@ -905,7 +905,7 @@ void StochGenMatrix::addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
    else
    {
       for( size_t it = 0; it < children.size(); it++ )
-         children[it]->addNnzPerCol(*(nnzVecStoch.children[it]), vec);
+         children[it]->getNnzPerCol(*(nnzVecStoch.children[it]), vec);
    }
 
    // distributed and at root?
@@ -915,15 +915,9 @@ void StochGenMatrix::addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
       double* const entries = vec->elements();
       double* buffer = new double[locn];
 
-      cout<<"vec before allreduce: rank: "<<rank<<"\n";
-      vec->writeToStreamAll(cout);
-
       MPI_Allreduce(entries, buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
 
       vec->copyFromArray(buffer);
-
-      cout<<"vec after allreduce: rank: "<<rank<<"\n";
-      vec->writeToStreamAll(cout);
 
       delete[] buffer;
    }

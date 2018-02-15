@@ -45,18 +45,19 @@ StochPresolver::initNnzCounter()
    StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
    StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*(presProb->C));
 
-   A.addNnzPerRow(*nRowElemsA);
-   C.addNnzPerRow(*nRowElemsC);
+   StochVectorHandle colClone(dynamic_cast<StochVector*>(nColElems->clone()));
 
-   A.addNnzPerCol(*nColElems);
+   A.getNnzPerRow(*nRowElemsA);
+   C.getNnzPerRow(*nRowElemsC);
+
+   A.getNnzPerCol(*nColElems);
+   C.getNnzPerCol(*colClone);
+
+   nColElems->axpy(1.0, *colClone);
+
 
    int rank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-   if( rank == 0 ) std::cout << "write Cols only from A" << std::endl;
-   nColElems->writeToStreamAll(std::cout);
-
-   C.addNnzPerCol(*nColElems);
 
    if( rank == 0 ) std::cout << "write Cols with all cols" << std::endl;
    nColElems->writeToStreamAll(std::cout);

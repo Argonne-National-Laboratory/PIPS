@@ -80,9 +80,9 @@ public:
   /** row scale method for children */
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec );
 
-  virtual void addNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent);
+  virtual void getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent);
 
-  virtual void addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent);
+  virtual void getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent);
 
   /** internal method needed for handling linking constraints */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
@@ -165,14 +165,14 @@ public:
   void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
 
-  virtual void addNnzPerRow(OoqpVector& nnzVec)
+  virtual void getNnzPerRow(OoqpVector& nnzVec)
   {
-     addNnzPerRow(nnzVec, NULL);
+     getNnzPerRow(nnzVec, NULL);
   };
 
-  virtual void addNnzPerCol(OoqpVector& nnzVec)
+  virtual void getNnzPerCol(OoqpVector& nnzVec)
   {
-     addNnzPerCol(nnzVec, NULL);
+     getNnzPerCol(nnzVec, NULL);
   };
 
   /** fill vector with absolute minimum/maximum value of each row */
@@ -302,13 +302,13 @@ public:
 
   virtual void initTransposed(bool dynamic = false) {};
 
-  virtual void addNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent) {};
+  virtual void getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent) {};
 
-  virtual void addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent) {};
+  virtual void getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent) {};
 
-  virtual void addNnzPerRow(OoqpVector& nnzVec) {};
+  virtual void getNnzPerRow(OoqpVector& nnzVec) {};
 
-  virtual void addNnzPerCol(OoqpVector& nnzVec) {};
+  virtual void getNnzPerCol(OoqpVector& nnzVec) {};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};
