@@ -12,6 +12,7 @@
 #include "DoubleMatrixTypes.h"
 #include "StochResourcePlanner.h"
 #include <cmath>
+#include <algorithm>    // std::swap
 
 using namespace std;
 
@@ -28,8 +29,11 @@ sTreeCallbacks::~sTreeCallbacks()
 }
 
 sTreeCallbacks::sTreeCallbacks() 
-  : NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+  : NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1), isDataPresolved(false), hasPresolvedData(false),
     data(NULL), tree(NULL), fakedata(NULL)
+
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -37,7 +41,9 @@ sTreeCallbacks::sTreeCallbacks()
 
 sTreeCallbacks::sTreeCallbacks(StochInputTree* inputTree)
   : sTree(),
-    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+    NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1), isDataPresolved(false), hasPresolvedData(false),
     tree(NULL), fakedata(NULL)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -54,7 +60,10 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree* inputTree)
 // np==-1 is used to indicate the root node. these can't be root nodes
 sTreeCallbacks::sTreeCallbacks(const vector<StochInputTree::StochInputNode*> &localscens)
   : sTree(), 
-    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+    NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1), isDataPresolved(false), hasPresolvedData(false),
+
     data(NULL), tree(NULL), scens(localscens)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -68,7 +77,9 @@ sTreeCallbacks::sTreeCallbacks(const vector<StochInputTree::StochInputNode*> &lo
 }
 sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
   : sTree(), 
-    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
+    NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1), isDataPresolved(false), hasPresolvedData(false),
     data(data_), tree(NULL), fakedata(NULL)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -78,6 +89,55 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
 void sTreeCallbacks::loadLocalSizes()
 {
   //alredy in data structure
+}
+
+void sTreeCallbacks::switchToPresolvedData()
+{
+   assert(!isDataPresolved);
+   assert(hasPresolvedData);
+
+   std::swap(NNZA_INACTIVE, NNZA);
+   std::swap(NNZQ_INACTIVE, NNZQ);
+   std::swap(NNZB_INACTIVE, NNZB);
+   std::swap(NNZBl_INACTIVE, NNZBl);
+   std::swap(NNZC_INACTIVE, NNZC);
+   std::swap(NNZD_INACTIVE, NNZD);
+   std::swap(NNZDl_INACTIVE, NNZDl);
+   std::swap(N_INACTIVE, N);
+   std::swap(MY_INACTIVE, MY);
+   std::swap(MZ_INACTIVE, MZ);
+
+   isDataPresolved = true;
+}
+
+
+void sTreeCallbacks::switchToOriginalData()
+{
+   assert(isDataPresolved);
+
+   std::swap(NNZA_INACTIVE, NNZA);
+   std::swap(NNZQ_INACTIVE, NNZQ);
+   std::swap(NNZB_INACTIVE, NNZB);
+   std::swap(NNZBl_INACTIVE, NNZBl);
+   std::swap(NNZC_INACTIVE, NNZC);
+   std::swap(NNZD_INACTIVE, NNZD);
+   std::swap(NNZDl_INACTIVE, NNZDl);
+   std::swap(N_INACTIVE, N);
+   std::swap(MY_INACTIVE, MY);
+   std::swap(MZ_INACTIVE, MZ);
+
+   isDataPresolved = false;
+}
+
+
+bool sTreeCallbacks::isPresolved()
+{
+   return isDataPresolved;
+}
+
+bool sTreeCallbacks::hasPresolved()
+{
+   return hasPresolvedData;
 }
 
 // this is usually called before assigning processes

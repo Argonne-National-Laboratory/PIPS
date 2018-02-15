@@ -50,8 +50,19 @@ class sTreeCallbacks : public sTree
   void computeGlobalSizes();
  public:
   int NNZA,NNZQ,NNZB,NNZBl,NNZC,NNZD,NNZDl; //global nnz
+  int NNZA_INACTIVE,NNZQ_INACTIVE,NNZB_INACTIVE,NNZBl_INACTIVE,NNZC_INACTIVE,NNZD_INACTIVE,NNZDl_INACTIVE; //global inactive nnz
+  long long N_INACTIVE,MY_INACTIVE,MZ_INACTIVE; //global inactive sizes
+
   void loadLocalSizes();
+
+  virtual void switchToPresolvedData();
+  virtual void switchToOriginalData();
+  virtual bool isPresolved();
+  virtual bool hasPresolved();
  protected:
+  bool isDataPresolved;
+  bool hasPresolvedData;
+
   sTreeCallbacks();
   StochInputTree::StochInputNode* data; //input data
   // in POOLSCEN case, only root node has non-null data
