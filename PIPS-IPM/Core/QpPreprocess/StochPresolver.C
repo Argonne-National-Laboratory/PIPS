@@ -85,19 +85,12 @@ Data* StochPresolver::presolve()
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    if( rank == 0 )
-   {
-      std::cout << "DYNAMIC" << std::endl;
-      std::cout << "ORG \n" << std::endl;
-
       std::cout << "A: \n" << std::endl;
-   }
    presProb->A->writeToStreamDense(std::cout);
 
    if( rank == 0 )
       std::cout << "C: \n" << std::endl;
    presProb->C->writeToStreamDense(std::cout);
-
-
 
    // initialized all dynamic transposed sub matrices
    dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
@@ -107,25 +100,11 @@ Data* StochPresolver::presolve()
 
  //  int cleanup_elims = cleanUp();
 
+
+   presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
+
    if( rank == 0 )
-   {
-      std::cout << "PRES before building static storage \n" << std::endl;
       std::cout << "A: \n" << std::endl;
-   }
-   presProb->A->writeToStreamDense(std::cout);
-
-   if( rank == 0 )
-      std::cout << "C: \n" << std::endl;
-   presProb->C->writeToStreamDense(std::cout);
-
-
-   buildCleanStorage();
-
-   if( rank == 0 )
-   {
-      std::cout << "PRES after building static storage \n" << std::endl;
-      std::cout << "A: \n" << std::endl;
-   }
    presProb->A->writeToStreamDense(std::cout);
 
    if( rank == 0 )
@@ -138,21 +117,6 @@ Data* StochPresolver::presolve()
 
 
    return presProb;
-}
-
-
-void StochPresolver::buildCleanStorage()
-{
-   StochGenMatrix& Astoch = dynamic_cast<StochGenMatrix&>(*(presProb->A));
-   StochGenMatrix& Cstoch = dynamic_cast<StochGenMatrix&>(*(presProb->C));
-
-   Astoch.initStaticStorageFromDynamic(*nRowElemsA, *nColElems);
-   Astoch.freeDynamicStorage();
-
-   Cstoch.initStaticStorageFromDynamic(*nRowElemsC, *nColElems);
-   Cstoch.freeDynamicStorage();
-
-   // clean vectors
 }
 
 int StochPresolver::cleanUp()

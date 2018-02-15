@@ -135,7 +135,7 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
-  void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
+  void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec);
 
   void freeDynamicStorage();
 

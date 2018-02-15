@@ -1,5 +1,6 @@
 #include "sData.h"
 #include "sTree.h"
+#include "sTreeCallbacks.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
@@ -332,6 +333,7 @@ sData::getLocalB()
 {
    StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
    return *Ast.Bmat;
+
 }
 
 // This is F_i (linking equality matrix):
@@ -372,12 +374,15 @@ void
 sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec)
 {
    // todo Q is ignored
+   StochSymMatrix& Q_stoch = dynamic_cast<StochSymMatrix&>(*Q);
 
    // clean up equality system
    StochGenMatrix& A_stoch = dynamic_cast<StochGenMatrix&>(*A);
    StochVector& b_Astoch = dynamic_cast<StochVector&>(*bA);
 
    A_stoch.initStaticStorageFromDynamic(rowNnzVecA, colNnzVec);
+   A_stoch.freeDynamicStorage();
+
    b_Astoch.removeEntries(rowNnzVecA);
 
    // clean up inequality system and x
@@ -395,6 +400,8 @@ sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& ro
    StochVector& icupp_stoch = dynamic_cast<StochVector&>(*icupp);
 
    C_stoch.initStaticStorageFromDynamic(rowNnzVecC, colNnzVec);
+   C_stoch.freeDynamicStorage();
+
    g_stoch.removeEntries(colNnzVec);
 
    blx_stoch.removeEntries(colNnzVec);
@@ -407,24 +414,23 @@ sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& ro
    bu_stoch.removeEntries(rowNnzVecC);
    icupp_stoch.removeEntries(rowNnzVecC);
 
+   assert(stochNode != NULL);
 
    // adapt sizes and tree
+   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*stochNode);
 
+   callbackTree.initPresolvedData(Q_stoch, A_stoch, C_stoch, g_stoch, b_Astoch, iclow_stoch);
+   callbackTree.switchToPresolvedData();
 
-#if 0
-   stochNode = tree;
+   long long dummy;
+   nx = g_stoch.length();
+   A_stoch.getSize( my, dummy );
+   C_stoch.getSize( mz, dummy );
 
-
-
-
-#endif
    nxlow = ixlow_stoch.numberOfNonzeros();
    nxupp = ixupp_stoch.numberOfNonzeros();
    mclow = iclow_stoch.numberOfNonzeros();
    mcupp = icupp_stoch.numberOfNonzeros();
-
-
-
 }
 
 void

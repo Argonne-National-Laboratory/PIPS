@@ -61,6 +61,7 @@ class sTreeCallbacks : public sTree
   virtual void switchToOriginalData();
   virtual bool isPresolved();
   virtual bool hasPresolved();
+  virtual void initPresolvedData(const StochSymMatrix& Q, const StochGenMatrix& A, const StochGenMatrix& C, const StochVector& nxVec, const StochVector& myVec, const StochVector& mzVec);
  protected:
   bool isDataPresolved;
   bool hasPresolvedData;

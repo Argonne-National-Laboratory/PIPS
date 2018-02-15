@@ -1107,7 +1107,8 @@ void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, c
 
    const SimpleVector* const rowlink = dynamic_cast<const SimpleVector*>(rowNnzVecStoch.vecl);
 
-   Bmat->initStaticStorageFromDynamic(*rowvec, *colvec);
+   Amat->initStaticStorageFromDynamic(*rowvec, colParentVec); // initialized with colVec == NULL for parent
+   Bmat->initStaticStorageFromDynamic(*rowvec, colvec);
 
    // at root?
    if( colParentVec == NULL )
@@ -1115,18 +1116,17 @@ void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, c
       assert(rowLinkVec == NULL);
 
       if( rowlink != NULL )
-         Blmat->initStaticStorageFromDynamic(*rowlink, *colvec);
+         Blmat->initStaticStorageFromDynamic(*rowlink, colvec);
 
       for( size_t it = 0; it < children.size(); it++ )
          children[it]->initStaticStorageFromDynamic(*(rowNnzVecStoch.children[it]), *(colNnzVecStoch.children[it]), rowlink, colvec);
    }
    else
    {
-      Amat->initStaticStorageFromDynamic(*rowvec, *colParentVec);
-
       if( rowLinkVec != NULL)
-         Blmat->initStaticStorageFromDynamic(*rowLinkVec, *colvec);
+         Blmat->initStaticStorageFromDynamic(*rowLinkVec, colvec);
    }
+
 }
 
 void StochGenMatrix::freeDynamicStorage()

@@ -96,7 +96,7 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
 
 void sTreeCallbacks::loadLocalSizes()
 {
-  //alredy in data structure
+  //already in data structure
 }
 
 void sTreeCallbacks::switchToPresolvedData()
@@ -121,7 +121,14 @@ void sTreeCallbacks::switchToPresolvedData()
    std::swap(myl_active, myl_inactive);
    std::swap(mzl_active, mzl_inactive);
 
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->np = this->nx_active;
+      dynamic_cast<sTreeCallbacks*>(children[it])->switchToPresolvedData();
+   }
+
    isDataPresolved = true;
+
 }
 
 
@@ -146,6 +153,12 @@ void sTreeCallbacks::switchToOriginalData()
    std::swap(myl_active, myl_inactive);
    std::swap(mzl_active, mzl_inactive);
 
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->np = this->nx_active;
+      dynamic_cast<sTreeCallbacks*>(children[it])->switchToOriginalData();
+   }
+
    isDataPresolved = false;
 }
 
@@ -158,6 +171,73 @@ bool sTreeCallbacks::isPresolved()
 bool sTreeCallbacks::hasPresolved()
 {
    return hasPresolvedData;
+}
+
+void sTreeCallbacks::initPresolvedData(const StochSymMatrix& Q, const StochGenMatrix& A, const StochGenMatrix& C, const StochVector& nxVec, const StochVector& myVec, const StochVector& mzVec)
+{
+   assert(!hasPresolvedData);
+
+   assert(nxVec.children.size() == children.size());
+   assert(myVec.children.size() == children.size());
+   assert(mzVec.children.size() == children.size());
+   assert(A.children.size() == children.size());
+   assert(C.children.size() == children.size());
+
+   assert(fakedata == NULL);
+   assert(tree == NULL);
+
+   const SimpleVector& nxVecSimple = dynamic_cast<const SimpleVector&>(*nxVec.vec);
+   const SimpleVector& myVecSimple = dynamic_cast<const SimpleVector&>(*myVec.vec);
+   const SimpleVector& mzVecSimple = dynamic_cast<const SimpleVector&>(*mzVec.vec);
+   const SimpleVector* const myVecSimpleLink = dynamic_cast<const SimpleVector*>(myVec.vecl);
+   const SimpleVector* const mzVecSimpleLink = dynamic_cast<const SimpleVector*>(mzVec.vecl);
+
+   N_INACTIVE = nxVecSimple.n;
+   MY_INACTIVE = myVecSimple.n;
+   MZ_INACTIVE = mzVecSimple.n;
+
+   nx_inactive = N;
+   my_inactive = MY;
+   mz_inactive = MZ;
+
+   if( myVecSimpleLink != NULL )
+      myl_inactive = myVecSimpleLink->n;
+
+   if( mzVecSimpleLink != NULL )
+      mzl_inactive = mzVecSimpleLink->n;
+
+   // todo
+   NNZQ_INACTIVE = 0;
+
+   NNZB_INACTIVE = A.Bmat->numberOfNonZeros();
+   NNZA_INACTIVE = A.Amat->numberOfNonZeros();
+   NNZBl_INACTIVE = A.Blmat->numberOfNonZeros();
+
+   NNZC_INACTIVE = C.Amat->numberOfNonZeros();
+   NNZD_INACTIVE = C.Bmat->numberOfNonZeros();
+   NNZDl_INACTIVE =  C.Blmat->numberOfNonZeros();
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      assert(children[it]->np == this->nx_active);
+      sTreeCallbacks* sTreeCallbacksChild = dynamic_cast<sTreeCallbacks*>(children[it]);
+
+      sTreeCallbacksChild->initPresolvedData(*Q.children[it], *A.children[it], *C.children[it], *nxVec.children[it], *myVec.children[it], *mzVec.children[it]);
+      N_INACTIVE += sTreeCallbacksChild->N_INACTIVE;
+      MY_INACTIVE += sTreeCallbacksChild->MY_INACTIVE;
+      MZ_INACTIVE += sTreeCallbacksChild->MZ_INACTIVE;
+
+      //nnz stuff
+      NNZQ_INACTIVE += sTreeCallbacksChild->NNZQ_INACTIVE;
+      NNZA_INACTIVE += sTreeCallbacksChild->NNZA_INACTIVE;
+      NNZB_INACTIVE += sTreeCallbacksChild->NNZB_INACTIVE;
+      NNZBl_INACTIVE += sTreeCallbacksChild->NNZBl_INACTIVE;
+      NNZC_INACTIVE += sTreeCallbacksChild->NNZC_INACTIVE;
+      NNZD_INACTIVE += sTreeCallbacksChild->NNZD_INACTIVE;
+      NNZDl_INACTIVE += sTreeCallbacksChild->NNZDl_INACTIVE;
+   }
+
+   hasPresolvedData = true;
 }
 
 // this is usually called before assigning processes

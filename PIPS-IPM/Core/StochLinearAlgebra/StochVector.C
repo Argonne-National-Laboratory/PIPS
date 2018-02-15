@@ -1198,6 +1198,7 @@ void StochVector::removeEntries( const OoqpVector& select )
    assert(children.size() == selectStoch.children.size());
 
    vec->removeEntries(*selectStoch.vec);
+   n = vec->n;
 
    if( vecl )
    {

@@ -598,14 +598,15 @@ void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
 }
 
-void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
+void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec)
 {
    assert(mStorageDynamic != NULL);
 
    const SimpleVector& rowNnzVecSimple = dynamic_cast<const SimpleVector&>(rowNnzVec);
-   const SimpleVector& colNnzVecSimple = dynamic_cast<const SimpleVector&>(colNnzVec);
+   const SimpleVector* const colNnzVecSimple = dynamic_cast<const SimpleVector*>(colNnzVec);
 
-   SparseStorageHandle staticStorage(mStorageDynamic->getStaticStorage(rowNnzVecSimple.elements(), colNnzVecSimple.elements()));
+   SparseStorageHandle staticStorage(mStorageDynamic->getStaticStorage(rowNnzVecSimple.elements(),
+         (colNnzVecSimple == NULL) ? NULL : colNnzVecSimple->elements()));
 
    mStorage = staticStorage;
 
