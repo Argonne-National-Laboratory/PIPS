@@ -239,6 +239,12 @@ void SimpleVector::writeToStreamAll(ostream& out) const
       out << v[i] << "\n";
 }
 
+void SimpleVector::writeToStreamAllStringStream(stringstream& sout) const
+{
+   for( int i = 0; i < n; i++ )
+      sout << v[i] << "\n";
+}
+
 void SimpleVector::writefToStream( ostream& out,
 				       const char format[] ) const
 {

@@ -50,24 +50,23 @@ StochPresolver::initNnzCounter()
 
    A.addNnzPerCol(*nColElems);
 
+   int rank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+   if( rank == 0 ) std::cout << "write Cols only from A" << std::endl;
    nColElems->writeToStreamAll(std::cout);
 
    C.addNnzPerCol(*nColElems);
 
-   int rank = 0;
-   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   if( rank == 0 ) std::cout << "write Cols with all cols" << std::endl;
+   nColElems->writeToStreamAll(std::cout);
 
-   if( rank == 0 )
-   {
-      std::cout << "write Cols with all cols" << std::endl;
-      nColElems->writeToStreamAll(std::cout);
+   if( rank == 0 ) std::cout << "write Rows A" << std::endl;
+   nRowElemsA->writeToStreamAll(std::cout);
 
-      std::cout << "write Rows A" << std::endl;
-      nRowElemsA->writeToStreamAll(std::cout);
+   if( rank == 0 ) std::cout << "write Rows C " << std::endl;
+   nRowElemsC->writeToStreamAll(std::cout);
 
-      std::cout << "write Rows C " << std::endl;
-      nRowElemsC->writeToStreamAll(std::cout);
-   }
 
 }
 

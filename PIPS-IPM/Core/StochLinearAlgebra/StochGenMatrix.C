@@ -875,6 +875,9 @@ void StochGenMatrix::addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
 
    SimpleVector* const vec = dynamic_cast<SimpleVector*>(nnzVecStoch.vec);
 
+   int rank;
+   MPI_Comm_rank(mpiComm, &rank);
+
    bool iAmSpecial = true;
    if( iAmDistrib )
    {
@@ -912,9 +915,15 @@ void StochGenMatrix::addNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
       double* const entries = vec->elements();
       double* buffer = new double[locn];
 
+      cout<<"vec before allreduce: rank: "<<rank<<"\n";
+      vec->writeToStreamAll(cout);
+
       MPI_Allreduce(entries, buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
 
       vec->copyFromArray(buffer);
+
+      cout<<"vec after allreduce: rank: "<<rank<<"\n";
+      vec->writeToStreamAll(cout);
 
       delete[] buffer;
    }

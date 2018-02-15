@@ -10,6 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 using namespace std;
 #include "IotrRefCount.h"
 #include "OoqpVectorHandle.h"
@@ -62,6 +63,8 @@ public:
   virtual void scalarMult( double num) = 0;
 
   virtual void writeToStreamAll(ostream& out) const {assert(0 && "not implemented here");};
+  virtual void writeToStreamAllStringStream( stringstream& sout ) const {assert(0 && "not implemented here");};
+  virtual void writeToStreamAllChild( stringstream& sout ) const {assert(0 && "not implemented here");};
 
 
   virtual void writeToStream(ostream& out) const = 0;
