@@ -235,7 +235,8 @@ void SimpleVector::writeToStream(ostream& out) const
 
 void SimpleVector::writeToStreamAll(ostream& out) const
 {
-   assert(0 && "not implemented here");
+   for( int i = 0; i < n; i++ )
+      out << v[i] << "\n";
 }
 
 void SimpleVector::writeToStreamAllStringStream(stringstream& sout) const
