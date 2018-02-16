@@ -96,14 +96,19 @@ Data* StochPresolver::presolve()
 
    myfile.close();
 
+   StochGenMatrix& Apres = dynamic_cast<StochGenMatrix&>(*presProb->A);
+   StochGenMatrix& Cpres = dynamic_cast<StochGenMatrix&>(*presProb->C);
 
    // initialized all dynamic transposed sub matrices
-   dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
-   dynamic_cast<StochGenMatrix&>(*presProb->C).initTransposed(true);
+   Apres.initTransposed(true);
+   Cpres.initTransposed(true);
+
 
    initNnzCounter();
 
- //  int cleanup_elims = cleanUp();
+
+   //  int cleanup_elims = cleanUp();
+   // todo: presolve
 
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
@@ -111,6 +116,9 @@ Data* StochPresolver::presolve()
 std::cout << "AFTER \n" << std::endl;
    dynamic_cast<sTreeCallbacks*>(presProb->stochNode)->writeSizes(std::cout);
 
+
+   Apres.deleteTransposed();
+   Cpres.deleteTransposed();
 
 
    presProb->writeToStreamDense(myfile);
@@ -122,9 +130,6 @@ std::cout << "AFTER \n" << std::endl;
    std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
 
    //assert(0);
-
-
-   //todo kill transposed
 
    return presProb;
 }

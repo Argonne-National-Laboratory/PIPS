@@ -762,6 +762,16 @@ void StochGenMatrix::initTransposed(bool dynamic)
       children[it]->initTransposedChild(dynamic);
 }
 
+void StochGenMatrix::deleteTransposed()
+{
+   Amat->deleteTransposed();
+   Bmat->deleteTransposed();
+   Blmat->deleteTransposed();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->deleteTransposed();
+}
+
 void StochGenMatrix::initTransposedChild(bool dynamic)
 {
    Amat->initTransposed(dynamic);

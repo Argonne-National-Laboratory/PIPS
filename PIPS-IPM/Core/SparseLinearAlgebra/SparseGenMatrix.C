@@ -636,3 +636,13 @@ void SparseGenMatrix::updateTransposed()
 
    mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
 }
+
+void SparseGenMatrix::deleteTransposed()
+{
+   if( m_Mt != NULL )
+   {
+      delete m_Mt;
+      m_Mt = NULL;
+   }
+}
+

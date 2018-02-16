@@ -1207,7 +1207,10 @@ void StochVector::removeEntries( const OoqpVector& select )
    }
 
    for( size_t it = 0; it < children.size(); it++ )
+   {
       children[it]->removeEntries(*selectStoch.children[it]);
+      n += children[it]->n;
+   }
 }
 
 

@@ -159,6 +159,7 @@ public:
 
   /** initialize (dynamic) transposed matrices for A, B, Bl */
   virtual void initTransposed(bool dynamic = false);
+  virtual void deleteTransposed();
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
@@ -301,6 +302,7 @@ public:
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
 
   virtual void initTransposed(bool dynamic = false) {};
+  virtual void deleteTransposed() {};
 
   virtual void getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent) {};
 

@@ -33,6 +33,8 @@ public:
   SparseGenMatrix( );
 
   void updateTransposed();
+  void deleteTransposed();
+
   SparseGenMatrix( int rows, int cols, int nnz );
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
