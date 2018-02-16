@@ -133,16 +133,11 @@ void SparseGenMatrix::writeToStream(ostream& out) const
 void SparseGenMatrix::writeToStreamDense(ostream& out) const
 {
    if( mStorageDynamic != NULL )
-   {
-      out<<"writing from dynamic storage"<<endl;
       mStorageDynamic->writeToStreamDense( out );
-   }
 
    else
-   {
-      out<<"writing from static storage"<<endl;
       mStorage->writeToStreamDense( out );
-   }
+
 }
 
 void

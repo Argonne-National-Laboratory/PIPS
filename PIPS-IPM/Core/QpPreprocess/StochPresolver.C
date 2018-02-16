@@ -91,9 +91,7 @@ Data* StochPresolver::presolve()
 
    ofstream myfile;
    myfile.open ("before.txt");
-
    sorigprob->writeToStreamDense(myfile);
-
    myfile.close();
 
    StochGenMatrix& Apres = dynamic_cast<StochGenMatrix&>(*presProb->A);
@@ -112,20 +110,20 @@ Data* StochPresolver::presolve()
 
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
-   myfile.open ("after.txt");
-std::cout << "AFTER \n" << std::endl;
-   dynamic_cast<sTreeCallbacks*>(presProb->stochNode)->writeSizes(std::cout);
 
+
+   std::cout << "AFTER \n" << std::endl;
+
+   dynamic_cast<sTreeCallbacks*>(presProb->stochNode)->writeSizes(std::cout);
 
    Apres.deleteTransposed();
    Cpres.deleteTransposed();
 
-
+   myfile.open("after.txt");
    presProb->writeToStreamDense(myfile);
-
-
    myfile.close();
 
+   presProb->writeToStreamDense(std::cout);
 
    std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
 
