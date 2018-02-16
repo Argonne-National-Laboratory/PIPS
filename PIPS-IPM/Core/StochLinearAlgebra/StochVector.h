@@ -11,6 +11,10 @@
 class StochTree;
 
 class StochVector : public OoqpVector {
+private:
+
+  virtual void writeToStreamAllChild( stringstream& sout ) const;
+
 protected:
 
 public:
@@ -93,7 +97,6 @@ public:
   virtual void scalarMult( double num);
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamAll(ostream& out) const;
-  virtual void writeToStreamAllChild( stringstream& sout ) const;
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const;
 

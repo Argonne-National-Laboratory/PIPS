@@ -62,30 +62,33 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
 void
 sData::writeToStreamDense(ostream& out) const
 {
-   out << "A: " << std::endl;
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank == 0 ) out <<  "A: " << std::endl;
    (*A).writeToStreamDense(out);
-   out << "C: " << std::endl;
+   if( myRank == 0 ) out <<  "C: " << std::endl;
    (*C).writeToStreamDense(out);
-   out << "obj: " << std::endl;
-   (*g).writeToStream(out);
-   out << "bA: " << std::endl;
-   (*bA).writeToStream(out);
-   out << "xupp: " << std::endl;
-   (*bux).writeToStream(out);
-   out << "ixupp: " << std::endl;
-   (*ixupp).writeToStream(out);
-   out << "xlow: " << std::endl;
-   (*blx).writeToStream(out);
-   out << "ixlow: " << std::endl;
-   (*ixlow).writeToStream(out);
-   out << "cupp: " << std::endl;
-   (*bu).writeToStream(out);
-   out << "icupp: " << std::endl;
-   (*icupp).writeToStream(out);
-   out << "clow: " << std::endl;
-   (*bl).writeToStream(out);
-   out << "iclow: " << std::endl;
-   (*iclow).writeToStream(out);
+   if( myRank == 0 ) out <<  "obj: " << std::endl;
+   (*g).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "bA: " << std::endl;
+   (*bA).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "xupp: " << std::endl;
+   (*bux).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "ixupp: " << std::endl;
+   (*ixupp).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "xlow: " << std::endl;
+   (*blx).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "ixlow: " << std::endl;
+   (*ixlow).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "cupp: " << std::endl;
+   (*bu).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "icupp: " << std::endl;
+   (*icupp).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "clow: " << std::endl;
+   (*bl).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "iclow: " << std::endl;
+   (*iclow).writeToStreamAll(out);
 }
 
 sData*

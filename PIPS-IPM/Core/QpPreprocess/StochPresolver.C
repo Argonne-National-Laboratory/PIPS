@@ -84,13 +84,14 @@ Data* StochPresolver::presolve()
    int rank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-   if( rank == 0 )
-      std::cout << "A: \n" << std::endl;
-   presProb->A->writeToStreamDense(std::cout);
+   ofstream myfile;
+   myfile.open ("before.txt");
 
-   if( rank == 0 )
-      std::cout << "C: \n" << std::endl;
-   presProb->C->writeToStreamDense(std::cout);
+   sorigprob->writeToStreamDense(myfile);
+
+
+   myfile.close();
+
 
    // initialized all dynamic transposed sub matrices
    dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
@@ -102,19 +103,21 @@ Data* StochPresolver::presolve()
 
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
+   myfile.open ("after.txt");
 
-   if( rank == 0 )
-      std::cout << "A: \n" << std::endl;
-   presProb->A->writeToStreamDense(std::cout);
 
-   if( rank == 0 )
-      std::cout << "C: \n" << std::endl;
-   presProb->C->writeToStreamDense(std::cout);
+   presProb->writeToStreamDense(myfile);
+
+
+   myfile.close();
+
 
    std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
 
    assert(0);
 
+
+   //todo kill transposed
 
    return presProb;
 }
