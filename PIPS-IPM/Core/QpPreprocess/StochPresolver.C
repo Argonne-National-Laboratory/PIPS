@@ -16,6 +16,7 @@
 #include "../StochLinearAlgebra/StochVectorHandle.h"
 #include "../Vector/OoqpVector.h"
 #include "StochGenMatrix.h"
+#include "sTreeCallbacks.h"
 
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
@@ -55,7 +56,7 @@ StochPresolver::initNnzCounter()
 
    nColElems->axpy(1.0, *colClone);
 
-
+#if 0
    int rank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -67,6 +68,7 @@ StochPresolver::initNnzCounter()
 
    if( rank == 0 ) std::cout << "write Rows C " << std::endl;
    nRowElemsC->writeToStreamAll(std::cout);
+#endif
 
 
 }
@@ -78,6 +80,9 @@ Data* StochPresolver::presolve()
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
+   dynamic_cast<sTreeCallbacks*>(sorigprob->stochNode)->writeSizes(std::cout);
+
+
    // clone and initialize dynamic storage
    presProb = sorigprob->cloneFull(true);
 
@@ -88,7 +93,6 @@ Data* StochPresolver::presolve()
    myfile.open ("before.txt");
 
    sorigprob->writeToStreamDense(myfile);
-
 
    myfile.close();
 
@@ -104,6 +108,9 @@ Data* StochPresolver::presolve()
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
    myfile.open ("after.txt");
+std::cout << "AFTER \n" << std::endl;
+   dynamic_cast<sTreeCallbacks*>(presProb->stochNode)->writeSizes(std::cout);
+
 
 
    presProb->writeToStreamDense(myfile);
@@ -114,7 +121,7 @@ Data* StochPresolver::presolve()
 
    std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
 
-   assert(0);
+   //assert(0);
 
 
    //todo kill transposed

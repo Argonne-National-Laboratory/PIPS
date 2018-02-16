@@ -15,6 +15,12 @@
 
 class sTreeCallbacks : public sTree
 {
+
+ private:
+  virtual void initPresolvedData(const StochSymMatrix& Q, const StochGenMatrix& A, const StochGenMatrix& C,
+        const StochVector& nxVec, const StochVector& myVec, const StochVector& mzVec, int mylParent, int mzlParent);
+
+
  public:
   sTreeCallbacks(StochInputTree* root);
   sTreeCallbacks(const std::vector<StochInputTree::StochInputNode*> &localscens);
@@ -61,7 +67,11 @@ class sTreeCallbacks : public sTree
   virtual void switchToOriginalData();
   virtual bool isPresolved();
   virtual bool hasPresolved();
-  virtual void initPresolvedData(const StochSymMatrix& Q, const StochGenMatrix& A, const StochGenMatrix& C, const StochVector& nxVec, const StochVector& myVec, const StochVector& mzVec);
+  virtual void initPresolvedData(const StochSymMatrix& Q, const StochGenMatrix& A, const StochGenMatrix& C, const StochVector& nxVec, const StochVector& myVec, const StochVector& mzVec)
+  {
+     initPresolvedData(Q, A, C, nxVec, myVec, mzVec, -1, -1);
+  }
+  virtual void writeSizes(ostream& sout) const;
  protected:
   bool isDataPresolved;
   bool hasPresolvedData;
