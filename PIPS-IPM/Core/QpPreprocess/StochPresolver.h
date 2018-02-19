@@ -43,11 +43,9 @@ private:
   void initNnzCounter();
 
   // remove small matrix entries and return number of eliminations
-  int cleanUp();
+  void removeTinyEntries();
 
-  int cleanUpRowsC(StochGenMatrix* matrixC, StochVector* clow, StochVector* cupp,
-        StochVector* xlow, StochVector* xupp, StochVector* nnzRowC);
-
+  void removeTinyEntriesC(StochVector& reductionsCol);
   sData* presProb;
 
 public:

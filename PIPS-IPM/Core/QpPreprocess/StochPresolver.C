@@ -105,8 +105,8 @@ Data* StochPresolver::presolve()
    initNnzCounter();
 
 
-   //  int cleanup_elims = cleanUp();
    // todo: presolve
+   //removeTinyEntries();
 
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
@@ -132,89 +132,72 @@ Data* StochPresolver::presolve()
    return presProb;
 }
 
-int StochPresolver::cleanUp()
+void StochPresolver::removeTinyEntries()
 {
-   int nelims = 0;
+   StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
+   StochVector& bA = dynamic_cast<StochVector&>(*(presProb->bA));
 
-   const StochGenMatrix& C = dynamic_cast<const StochGenMatrix&>(*(presProb->C));
-   const StochVector& clow = dynamic_cast<const StochVector&>(*(presProb->bl));
-   const StochVector& cupp = dynamic_cast<const StochVector&>(*(presProb->bu));
-   const StochVector& xlow = dynamic_cast<const StochVector&>(*(presProb->blx));
-   const StochVector& xupp = dynamic_cast<const StochVector&>(*(presProb->bux));
+   StochVector& reductionsCol = *nColElems->clone();
 
-   // handle parent
-   assert(C.children.size() == cupp.children.size());
+   // remove tiny entries in A row-wise
+   //removeTinyEntriesA(reductionsCol);
 
-   C.writeToStreamDense(cout);
-   for( size_t it = 0; it < C.children.size(); it++ )
-   {
-      // call
-      nelims += cleanUpRowsC(C.children[it], clow.children[it], cupp.children[it],
-            xlow.children[it], xupp.children[it], nRowElemsC->children[it]);
-
-   }
-   C.writeToStreamDense(cout);
-
-   assert(0);
+   // remove tiny entries in C row-wise
+   removeTinyEntriesC(reductionsCol);
 
 
    // todo StochGenDummyMatrix
-   return nelims;
 }
 
 
-// new method for Amat, Bmat
-int StochPresolver::cleanUpRowsC(StochGenMatrix* matrixC, StochVector* clow, StochVector* cupp,
-      StochVector* xlow, StochVector* xupp, StochVector* nnzRowC)
+void StochPresolver::removeTinyEntriesC( StochVector& reductionsCol)
 {
-   int nelims = 0;
-   int m,n;
-   matrixC->Bmat->getSize(m, n);
+   double* cuppElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec))->elements();
+   double* clowElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec))->elements();
+   double* icuppElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec))->elements();
+   double* iclowElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec))->elements();
 
-   double* const val = matrixC->Bmat->M();
-   const int* const rowStart = matrixC->Bmat->krowM();
-   const int* const colIdx = matrixC->Bmat->jcolM();
+   double* const xuppElems = (dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presProb->bux)).vec))->elements();
+   double* const xlowElems = (dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presProb->blx)).vec))->elements();
 
-   double* const xuppElems = (dynamic_cast<SimpleVector*>(xupp->vec))->elements();
-   double* const xlowElems = (dynamic_cast<SimpleVector*>(xlow->vec))->elements();
-   double* const nnzPerRow = (dynamic_cast<SimpleVector*>(nnzRowC->vec))->elements();
+   SimpleVector* nnzPerRowC = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
+   SimpleVector* nnzPerColC = dynamic_cast<SimpleVector*>(nColElems->vec);
+   SimpleVector* reductionsRowSimple(nnzPerRowC);
+   reductionsRowSimple->setToZero();
+   SimpleVector* reductionsColSimple(nnzPerColC);
+   reductionsColSimple->setToZero();
+   double* reductRow = reductionsRowSimple->elements();
+   double* reductCol = reductionsColSimple->elements();
 
-   std::cout << "lower: " << std::endl;
-   (dynamic_cast<SimpleVector*>(xlow->vec))->writeToStream(std::cout);
+   SparseStorageDynamic& storage = dynamic_cast<StochGenMatrix&>(*(presProb->C)).Bmat->getStorageDynamicRef();
 
-   std::cout << "upper: " << std::endl;
-   (dynamic_cast<SimpleVector*>(xupp->vec))->writeToStream(std::cout);
+   // todo: check correct sizes
 
-   for( int r = 0; r < m; r++ ) // Row i
+   for( int r = 0; r < storage.m; r++ )
    {
-      const int rowEnd = rowStart[r + 1];
-      std::cout << "length: " << rowEnd - rowStart[r] << std::endl;
-
-      for( int k = rowStart[r]; k < rowEnd; k++ )
+      const int start = storage.rowptr[r].start;
+      const int end = storage.rowptr[r].end;
+      for( int k = start; k < end; k++ )
       {
-         if( val[k] < 1e-3 )
+         cout<<"consider entry ( "<<r<<", "<<storage.jcolM[k]<<" ) = "<<storage.M[k]<<endl;
+         if( fabs(storage.M[k])<1e-3 && fabs(storage.M[k]) * (xuppElems[k]-xlowElems[k]) * nnzPerRowC->elements()[r] < 1e-2 * feastol )
          {
-            const int col = colIdx[k]; // Column j
-
-            const double ub = xuppElems[col];
-            const double lb = xlowElems[col];
-
-            // todo
-            const double supp = nnzPerRow[r];
-
-            if( fabs(val[k]) * (ub - lb) * supp < 1e-2 * feastol)
-            {
-               // set entry a_ij to 0
-               // todo: adapt matrixC and nnz and rhs
-               val[k] = 0.0;
-               nelims++;
-               nnzPerRow[r] -= 1;
-               std::cout << "eliminate " << r << "of " << m  << " " << col <<  "of " << n << std::endl;
-            }
+            if( icuppElems[r] != 0.0)
+               cuppElems[r] -= storage.M[k] * xlowElems[k];
+            if( iclowElems[r] != 0.0 )
+               clowElems[r] -= storage.M[k] * xlowElems[k];
+            storage.M[k] = 0.0;
+            reductRow[r]++;
+            reductCol[storage.jcolM[k]]++;
+            cout<<"entry ( "<<r<<", "<<storage.jcolM[k]<<" ) removed"<<endl;
+         }
+         if(fabs(storage.M[k]) < 1e-10 ){
+            storage.M[k] = 0.0;
+            reductRow[r]++;
+            reductCol[storage.jcolM[k]]++;
+            cout<<"entry ( "<<r<<", "<<storage.jcolM[k]<<" ) removed"<<endl;
          }
       }
    }
-
-   return nelims;
 }
 

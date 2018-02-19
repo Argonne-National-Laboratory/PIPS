@@ -125,6 +125,9 @@ public:
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
 
+  SparseStorageDynamic * getStorageDynamic() { assert(mStorageDynamic != NULL); return mStorageDynamic; }
+  SparseStorageDynamic& getStorageDynamicRef() { assert(mStorageDynamic != NULL); return *mStorageDynamic; }
+
   virtual void addNnzPerRow(OoqpVector& nnzVec);
 
   virtual void addNnzPerCol(OoqpVector& nnzVec);
