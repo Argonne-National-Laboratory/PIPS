@@ -376,8 +376,10 @@ sData::getLocalG()
 void
 sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec)
 {
-   // todo Q is ignored
    StochSymMatrix& Q_stoch = dynamic_cast<StochSymMatrix&>(*Q);
+
+   // todo only works if Q is empty
+   Q_stoch.deleteEmptyRowsCols(colNnzVec);
 
    // clean up equality system
    StochGenMatrix& A_stoch = dynamic_cast<StochGenMatrix&>(*A);

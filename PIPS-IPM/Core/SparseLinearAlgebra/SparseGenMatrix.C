@@ -608,6 +608,14 @@ void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, 
    assert(mStorage->refs() == 2);
 }
 
+void SparseGenMatrix::deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
+{
+   const SimpleVector& rowNnzVecSimple = dynamic_cast<const SimpleVector&>(rowNnzVec);
+   const SimpleVector& colNnzVecSimple = dynamic_cast<const SimpleVector&>(colNnzVec);
+
+   mStorage->deleteEmptyRowsCols(rowNnzVecSimple.elements(), colNnzVecSimple.elements());
+}
+
 void SparseGenMatrix::freeDynamicStorage()
 {
    delete mStorageDynamic;

@@ -139,6 +139,8 @@ public:
 
   void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec);
 
+  void deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
+
   void freeDynamicStorage();
 
   virtual ~SparseGenMatrix();

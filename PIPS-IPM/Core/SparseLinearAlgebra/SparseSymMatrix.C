@@ -334,3 +334,11 @@ void SparseSymMatrix::reduceToLower()
 {
   mStorage->reduceToLower();
 }
+
+
+void SparseSymMatrix::deleteEmptyRowsCols(const OoqpVector& nnzVec)
+{
+   const SimpleVector& vec = dynamic_cast<const SimpleVector&>(nnzVec);
+   mStorage->deleteEmptyRowsCols(vec.elements(), vec.elements());
+}
+

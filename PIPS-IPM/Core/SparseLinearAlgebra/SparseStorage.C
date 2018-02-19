@@ -1428,6 +1428,67 @@ void SparseStorage::dump(const string& filename)
   }
 }
 
+void SparseStorage::deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec)
+{
+   assert(nnzRowVec != NULL && nnzColVec != NULL);
+
+   int m_new = 0;
+   int n_new = 0;
+
+   int* rowsmap = new int[m];
+
+   for( int i = 0; i < m; i++ )
+      if( nnzRowVec[i] != 0.0 )
+         rowsmap[i] = m_new++;
+
+   int* colsmap = new int[n];
+
+   for( int i = 0; i < n; i++ )
+      if( nnzColVec[i] != 0.0 )
+         colsmap[i] = n_new++;
+
+   assert(krowM[0] == 0);
+
+   // todo
+#if 0
+   int nnz = 0;
+   int rowcount = 0;
+   int len_new = 0;
+
+
+   for( int r = 0; r < m; r++ )
+   {
+      const int nnzRow = nnzRowVec[r];
+
+      if( nnzRow == 0.0 )
+      {
+         nnz += krowM[r + 1] - krowM[r];
+         continue;
+      }
+      krowM[rowcount] = len_new;
+
+      for( int j = krowM[r]; j < krowM[r + 1]; j++ )
+      {
+         jcolM[len_new] = jcolM[colsmap[nnz]];
+         M[len_new++] = M[nnz++];
+      }
+      rowcount++;
+   }
+
+
+   for( int r = rowcount; r <= m; r++ )
+      krowM[r] = len_new;
+
+   assert(nnz == len);
+#endif
+
+   m = m_new;
+   n = n_new;
+
+   delete[] colsmap;
+   delete[] rowsmap;
+}
+
 void SparseStorage::addNnzPerRow(double* vec) const
 {
    for( int r = 0; r < m; r++ )
