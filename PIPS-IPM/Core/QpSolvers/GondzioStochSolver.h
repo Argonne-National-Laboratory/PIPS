@@ -15,6 +15,7 @@ class Data;
 class Variables;
 class ProblemFormulation;
 
+const unsigned int max_linesearch_points = 25;
 
 /**
  * Derived class of Solver implementing Gondzio-correction version of
