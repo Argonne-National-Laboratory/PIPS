@@ -45,7 +45,16 @@ private:
   // remove small matrix entries and return number of eliminations
   void removeTinyEntries();
 
-  void removeTinyEntriesC(StochVector& reductionsCol);
+  void removeTinyEntriesC();
+
+  void removeTinyEntriesCChild(StochGenMatrix* matrix, StochVector* xlow, StochVector* xupp, StochVector* redRow,
+                                               StochVector* redCol, StochVector* adaptionsRhs);
+
+  void removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
+                                  SimpleVector* reductionsRow, SimpleVector* reductionsCol, SimpleVector* adaptionsRhs);
+
+  void adaptRhsA(StochVector* adaptionsRhsStoch, StochVector* b);
+  void adaptRhsC(StochVector& adaptionsRhsStoch, StochVector& cupp, StochVector& clow, StochVector& icupp, StochVector& iclow);
   sData* presProb;
 
 public:

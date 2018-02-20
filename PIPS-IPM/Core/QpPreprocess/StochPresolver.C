@@ -134,70 +134,180 @@ Data* StochPresolver::presolve()
 
 void StochPresolver::removeTinyEntries()
 {
-   StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
-   StochVector& bA = dynamic_cast<StochVector&>(*(presProb->bA));
+   // remove tiny entries in A
 
-   StochVector& reductionsCol = *nColElems->clone();
-
-   // remove tiny entries in A row-wise
-   //removeTinyEntriesA(reductionsCol);
-
-   // remove tiny entries in C row-wise
-   removeTinyEntriesC(reductionsCol);
-
-
-   // todo StochGenDummyMatrix
+   // remove tiny entries in C
+   removeTinyEntriesC();
 }
 
 
-void StochPresolver::removeTinyEntriesC( StochVector& reductionsCol)
+void StochPresolver::removeTinyEntriesC()
 {
-   double* cuppElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec))->elements();
-   double* clowElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec))->elements();
-   double* icuppElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec))->elements();
-   double* iclowElems = (dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec))->elements();
+   int rank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   bool iAmDistrib = false;
+   if( world_size > 1 )
+      iAmDistrib = true;
 
-   double* const xuppElems = (dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presProb->bux)).vec))->elements();
-   double* const xlowElems = (dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presProb->blx)).vec))->elements();
+   if( iAmDistrib && rank > 0 )
+   {
+      // removeTinyEntriesInnerLoop für Amat und adapt rhs. Row reductions selber. col reductions allreduce
+      // Bmat und adapt rhs. row reductions selber. col reductions selber
+      // Blmat und send adaptions to Zero. row reductions allreduce. col reductions selber
+   }
+   if(iAmDistrib && rank == 0 )
+   {
+      // Bmat und adapt rhs. row reductions selber. col reductions allreduce
+      // Blmat und adapt rhs. row reductions allreduce. col reductions allreduce
+      // receive all adaptations for rhs linking part and adapt them
+   }
+   if( !iAmDistrib )
+   {
+      // todo:
+      // Bmat und adapt rhs. row and col reductions selber
+      // Blmat und adapt rhs. row and col reductions selber
+      // for children:
+      //    Amat, Bmat, Blmat, adapt rhs, row, col reductions
 
-   SimpleVector* nnzPerRowC = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
-   SimpleVector* nnzPerColC = dynamic_cast<SimpleVector*>(nColElems->vec);
-   SimpleVector* reductionsRowSimple(nnzPerRowC);
-   reductionsRowSimple->setToZero();
-   SimpleVector* reductionsColSimple(nnzPerColC);
-   reductionsColSimple->setToZero();
-   double* reductRow = reductionsRowSimple->elements();
-   double* reductCol = reductionsColSimple->elements();
+      SimpleVector* nnzPerRowC = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
 
-   SparseStorageDynamic& storage = dynamic_cast<StochGenMatrix&>(*(presProb->C)).Bmat->getStorageDynamicRef();
+      StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+      const StochVector& xlow = dynamic_cast<const StochVector&>(*(presProb->blx));
+      const StochVector& xupp = dynamic_cast<const StochVector&>(*(presProb->bux));
 
-   // todo: check correct sizes
+      // create empty vectors redRow, redCol, adaptionsRhs with the correct sizes:
+      StochVector& redRow(*nRowElemsC);
+      redRow.setToZero();
+      SimpleVector* reductionsRowSimple = redRow.vec;
+      StochVector& redCol(*nColElems);
+      redCol.setToZero();
+      SimpleVector* reductionsColSimple = redCol.vec;
+      StochVector& adaptionsRhs(dynamic_cast<StochVector&>(*(presProb->bu)));
+      adaptionsRhs.setToZero();
 
+      StochVector& cupp = dynamic_cast<StochVector&>(*(presProb->bu));
+      StochVector& clow = dynamic_cast<StochVector&>(*(presProb->bl));
+      StochVector& icupp = dynamic_cast<StochVector&>(*(presProb->icupp));
+      StochVector& iclow = dynamic_cast<StochVector&>(*(presProb->iclow));
+
+      SparseStorageDynamic& storageB = matrixC.Bmat->getStorageDynamicRef();
+      double* const xlowElemsB = (dynamic_cast<SimpleVector*>(xlow.vec))->elements();
+      double* const xuppElemsB = (dynamic_cast<SimpleVector*>(xupp.vec))->elements();
+      SimpleVector* adaptionsRhsVec(dynamic_cast<SimpleVector*>(adaptionsRhs.vec));
+
+      // for Bmat:
+      removeTinyEntriesInnerLoop( storageB, xlowElemsB, xuppElemsB, nnzPerRowC, reductionsRowSimple, reductionsColSimple, adaptionsRhsVec);
+      adaptRhsC(adaptionsRhs, cupp, clow, icupp, iclow);
+
+      SimpleVector* nnzPerRowClink = dynamic_cast<SimpleVector*>(nRowElemsC->vecl);
+      SimpleVector* nnzPerColClink = dynamic_cast<SimpleVector*>(nColElems->vecl);
+      SparseStorageDynamic& storageBlink = matrixC.Blmat->getStorageDynamicRef();
+      double* const xlowElemsBlink = (dynamic_cast<SimpleVector*>(xlow.vecl))->elements();
+      double* const xuppElemsBlink = (dynamic_cast<SimpleVector*>(xupp.vecl))->elements();
+      SimpleVector* adaptionsRhsVecLink(dynamic_cast<SimpleVector*>(adaptionsRhs.vecl));
+
+      // for Blmat:
+      removeTinyEntriesInnerLoop( storageBlink, xlowElemsBlink, xuppElemsBlink, nnzPerRowClink, reductionsRowSimple, reductionsColSimple, adaptionsRhsVecLink);
+      adaptRhsC(adaptionsRhs, cupp, clow, icupp, iclow);
+
+      // todo: assert children size
+      for( int it = 0; it< matrixC.children.size(); it++){
+         //removeTinyEntriesCChild(matrixC.children[it], xlow.children[it], xupp.children[it], redRow.children[it], redCol.children[it], adaptionsRhs.children[it]);
+         //adaptRhsC(adaptionsRhs.children[it], cupp.children[it], clow.children[it], icupp.children[it], iclow.children[it]);
+         //(*nRowElemsC).children[it]->axpy(1.0, redRow.children[it]);
+         //(*nColElems).children[it]->axpy(1.0, redCol.children[it]);
+      }
+
+      //(*nRowElemsC).axpy(1.0, reductionsRowSimple);
+      //(*nColElems).axpy(1.0, reductionsColSimple);
+
+   }
+
+}
+
+/** Calls removeTinyEntriesInnerLoop for a Child on the matrices Amat, Bmat, Blmat and collects the returned information in redRow, redCol
+ * and adaptionsRhs. */
+void StochPresolver::removeTinyEntriesCChild(StochGenMatrix* matrix, StochVector* xlow, StochVector* xupp, StochVector* redRow,
+                                             StochVector* redCol, StochVector* adaptionsRhs)
+{
+   SparseStorageDynamic& storageA = dynamic_cast<SparseGenMatrix*>(matrix->Amat)->getStorageDynamicRef();
+   SparseStorageDynamic& storageB = dynamic_cast<SparseGenMatrix*>(matrix->Bmat)->getStorageDynamicRef();
+   SparseStorageDynamic& storageBl = dynamic_cast<SparseGenMatrix*>(matrix->Blmat)->getStorageDynamicRef();
+
+   // todo: remove entries in Amat, Bmat, Blmat using innerLoop and return combined redRow, redCol and adaptionsRhs
+
+
+}
+
+/** Removes tiny entries in storage and stores the number of reductions in reductionsRow and reductionsCol respectively. The adaption
+ * that have to be made to the rhs (and lhs) are stored in adaptionsRhs. */
+void StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
+                                SimpleVector* reductionsRow, SimpleVector* reductionsCol, SimpleVector* adaptionsRhs)
+{
    for( int r = 0; r < storage.m; r++ )
    {
       const int start = storage.rowptr[r].start;
       const int end = storage.rowptr[r].end;
       for( int k = start; k < end; k++ )
       {
-         cout<<"consider entry ( "<<r<<", "<<storage.jcolM[k]<<" ) = "<<storage.M[k]<<endl;
-         if( fabs(storage.M[k])<1e-3 && fabs(storage.M[k]) * (xuppElems[k]-xlowElems[k]) * nnzPerRowC->elements()[r] < 1e-2 * feastol )
+         cout << "consider entry ( " << r << ", " << storage.jcolM[k] << " ) = "<< storage.M[k] << endl;
+         if( fabs(storage.M[k]) < 1e-3
+               && fabs(storage.M[k]) * (xuppElems[k] - xlowElems[k]) * nnzPerRow->elements()[r] < 1e-2 * feastol )
          {
-            if( icuppElems[r] != 0.0)
-               cuppElems[r] -= storage.M[k] * xlowElems[k];
-            if( iclowElems[r] != 0.0 )
-               clowElems[r] -= storage.M[k] * xlowElems[k];
+            adaptionsRhs->elements()[r] = -storage.M[k] * xlowElems[k];
+
             storage.M[k] = 0.0;
-            reductRow[r]++;
-            reductCol[storage.jcolM[k]]++;
-            cout<<"entry ( "<<r<<", "<<storage.jcolM[k]<<" ) removed"<<endl;
+            reductionsRow->elements()[r]++;
+            reductionsCol->elements()[storage.jcolM[k]]++;
+            cout << "entry ( " << r << ", " << storage.jcolM[k] << " ) removed"<< endl;
          }
-         if(fabs(storage.M[k]) < 1e-10 ){
+         if( fabs(storage.M[k]) < 1e-10 )
+         {
             storage.M[k] = 0.0;
-            reductRow[r]++;
-            reductCol[storage.jcolM[k]]++;
-            cout<<"entry ( "<<r<<", "<<storage.jcolM[k]<<" ) removed"<<endl;
+            reductionsRow->elements()[r]++;
+            reductionsCol->elements()[storage.jcolM[k]]++;
+            cout << "entry ( " << r << ", " << storage.jcolM[k] << " ) removed"<< endl;
          }
       }
    }
+}
+
+/** Adapt the rhs cupp and lhs clow by adding the values in adaptionsRhsStoch to them. */
+void StochPresolver::adaptRhsC(StochVector& adaptionsRhsStoch, StochVector& cupp, StochVector& clow, StochVector& icupp, StochVector& iclow )
+{
+   SimpleVector* cuppS = dynamic_cast<SimpleVector*>(cupp.vec);
+   SimpleVector* clowS = dynamic_cast<SimpleVector*>(clow.vec);
+   SimpleVector* icuppS = dynamic_cast<SimpleVector*>(icupp.vec);
+   SimpleVector* iclowS = dynamic_cast<SimpleVector*>(iclow.vec);
+   SimpleVector* adaptionsRhs = dynamic_cast<SimpleVector*>(adaptionsRhsStoch.vec);
+
+   assert(adaptionsRhs->n == cuppS->n);
+   assert(adaptionsRhs->n == clowS->n);
+
+   for( int i = 0; i < adaptionsRhs->n; i++ )
+   {
+      if( adaptionsRhs->elements()[i] != 0.0 )
+      {
+         if( icuppS->elements()[i] != 0.0 )
+            cuppS->elements()[i] += adaptionsRhs->elements()[i];
+         if( iclowS->elements()[i] != 0.0 )
+            clowS->elements()[i] += adaptionsRhs->elements()[i];
+      }
+   }
+}
+
+/** Adapt the rhs bA by adding the values in adaptionsRhsStoch to it. */
+void StochPresolver::adaptRhsA(StochVector* adaptionsRhsStoch, StochVector* b)
+{
+      SimpleVector* bA = dynamic_cast<SimpleVector*>(b->vec);
+      SimpleVector* adaptionsRhs = dynamic_cast<SimpleVector*>(adaptionsRhsStoch->vec);
+
+      assert(adaptionsRhs->n == bA->n);
+
+      for( int i = 0; i < adaptionsRhs->n; i++ )
+         if( adaptionsRhs->elements()[i] != 0.0 )
+            bA->elements()[i] += adaptionsRhs->elements()[i];
 }
 
