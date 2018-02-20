@@ -69,9 +69,22 @@ class sLinsysRoot : public sLinsys {
   void myAtPutZeros(DenseSymMatrix* mat, 
 		    int row, int col, 
 		    int rowExtent, int colExtent);
+
+  // all_reduces specified submatrix (in chunks)
   void submatrixAllReduce(DenseSymMatrix* A, 
 			  int startRow, int startCol, int nRows, int nCols,
 			  MPI_Comm comm);
+
+  // all_reduces specified submatrix as a while
+  void submatrixAllReduceFull(DenseSymMatrix* A,
+           int startRow, int startCol, int nRows, int nCols,
+           MPI_Comm comm);
+
+  // all_reducees upper half (including diagonal) of specified submatrix
+  void submatrixAllReduceDiagUpper(DenseSymMatrix* A,
+            int substart, int subsize,
+            MPI_Comm comm);
+
  protected: //buffers
 
   OoqpVector* zDiag;

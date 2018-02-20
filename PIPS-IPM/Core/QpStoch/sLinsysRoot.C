@@ -2,7 +2,7 @@
    Authors: Cosmin Petra and Miles Lubin
    See license and copyright information in the documentation */
 
-
+#define DENSE_UPPER_ONLY
 #include "sLinsysRoot.h"
 #include "sTree.h"
 #include "sFactory.h"
@@ -121,24 +121,14 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   MPI_Barrier(MPI_COMM_WORLD);
   stochNode->resMon.recReduceTmLocal_start();
 #endif 
+
   reduceKKT();
+
  #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
 #endif  
 
   finalizeKKT(prob, vars);
-
-#ifdef STOCH_TESTING
-  const double epsilon = 1e-5;
-  for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
-       for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-       {
-           if( fabs(kktd[k][k2] - kktd[k2][k]) > epsilon )
-              std::cout << "SYMMETRY FAIL, > eps " << fabs(kktd[k][k2] - kktd[k2][k])  << std::endl;
-           assert(fabs(kktd[k][k2] - kktd[k2][k]) <= epsilon);
-       }
-#endif
-
   factorizeKKT();
 
   //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd);
@@ -492,30 +482,62 @@ void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 
 void sLinsysRoot::reduceKKT()
 {
-  DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt); 
+   DenseSymMatrix* const kktd = dynamic_cast<DenseSymMatrix*>(kkt);
 
   //parallel communication
-  if (iAmDistrib) {
-    submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
-	if( locmyl > 0 || locmzl > 0 )
-	{
-	   int locNxMy = locnx + locmy;
-	   int locNxMyMylMzl = locnx + locmy + locmyl + locmzl;
+   if( iAmDistrib )
+   {
+#ifdef DENSE_UPPER_ONLY
+      submatrixAllReduceDiagUpper(kktd, 0, locnx, mpiComm);
 
-	   assert(kktd->size() == locNxMyMylMzl);
+      // todo deleteme
+      double** M = kktd->mStorage->M;
+      for( int k = 0; k < locnx; k++ )
+         for( int k2 = 0; k2 < k; k2++ )
+            M[k][k2] = M[k2][k];
+#else
+      submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
+#endif
+      if( locmyl > 0 || locmzl > 0 )
+      {
+         const int locNxMy = locnx + locmy;
+         const int locNxMyMylMzl = locnx + locmy + locmyl + locmzl;
 
-	   // reduce upper right part
-	   submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
+         assert(kktd->size() == locNxMyMylMzl);
 
-	   // preserve symmetry todo memopt!
-	   double** M = kktd->mStorage->M;
-	   for( int k = locNxMy; k < locNxMyMylMzl; k++ )
-		  for( int k2 = 0; k2 < locnx; k2++ )
-		    M[k][k2] = M[k2][k];
+#ifdef DENSE_UPPER_ONLY
+         // reduce upper right part
+         submatrixAllReduceFull(kktd, 0, locNxMy, locnx, locmyl + locmzl,
+               mpiComm);
 
-	   // reduce lower diagonal part
-	   submatrixAllReduce(kktd, locNxMy, locNxMy, locmyl + locmzl, locmyl + locmzl, mpiComm);
-	}
+         // reduce lower diagonal part
+         submatrixAllReduceDiagUpper(kktd, locNxMy, locmyl + locmzl, mpiComm);
+
+#else
+         // reduce upper right part
+         submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
+
+         // preserve symmetry
+         double** M = kktd->mStorage->M;
+         for( int k = locNxMy; k < locNxMyMylMzl; k++ )
+         for( int k2 = 0; k2 < locnx; k2++ )
+         M[k][k2] = M[k2][k];
+
+         // reduce lower diagonal part
+         submatrixAllReduce(kktd, locNxMy, locNxMy, locmyl + locmzl, locmyl + locmzl, mpiComm);
+#endif
+#if 1
+//todo deleteme
+         for( int k = locNxMy; k < locNxMyMylMzl; k++ )
+            for( int k2 = 0; k2 < locnx; k2++ )
+               M[k][k2] = M[k2][k];
+
+         for( int k = locNxMy; k < locNxMyMylMzl; k++ )
+            for( int k2 = locNxMy; k2 < k; k2++ )
+               M[k][k2] = M[k2][k];
+#endif
+
+      }
   }
 }
 
@@ -590,8 +612,6 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
   int endCol = startCol + nCols;
 
   assert(n >= endRow);
-  if( n < endCol )
-	  cout << n << " " <<  endCol << endl;
   assert(n >= endCol);
 
   int iErr;
@@ -631,6 +651,114 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
   } while( iRow < endRow );
 
   delete[] chunk;
+}
+
+
+void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
+                   int startRow, int startCol, int nRows, int nCols,
+                 MPI_Comm comm)
+{
+   double** const M = A->mStorage->M;
+   const int n = A->mStorage->n;
+
+   assert(nRows > 0);
+   assert(nCols > 0);
+   assert(startRow >= 0);
+   assert(startCol >= 0);
+
+   const int endRow = startRow + nRows;
+   const int endCol = startCol + nCols;
+
+   assert(n >= endRow);
+   assert(n >= endCol);
+
+   const int buffersize = nRows * nCols;
+
+   double* const buffer = new double[buffersize];
+
+   // copy into buffer
+   int counter = 0;
+   const size_t nColBytes = nCols * sizeof(double);
+
+   for( int r = startRow; r < endRow; r++ )
+   {
+      memcpy(&buffer[counter], &M[r][startCol], nColBytes);
+      counter += nCols;
+   }
+
+   assert(counter == buffersize);
+
+   // todo debug, delete!
+   counter = 0;
+   for( int r = startRow; r < endRow; r++ )
+      for( int j = startCol; j < endCol; j++ )
+         assert(buffer[counter++] == M[r][j]);
+
+   // todo memopt use extra buffer?
+   const int iErr = MPI_Allreduce(MPI_IN_PLACE, buffer, buffersize, MPI_DOUBLE, MPI_SUM, comm);
+
+   assert(iErr == MPI_SUCCESS);
+
+   // copy back
+   counter = 0;
+   for( int r = startRow; r < endRow; r++ )
+   {
+      memcpy(M[r] + startCol, &buffer[counter], nColBytes);
+      counter += nCols;
+   }
+
+   assert(counter == buffersize);
+
+   delete[] buffer;
+}
+
+
+void sLinsysRoot::submatrixAllReduceDiagUpper(DenseSymMatrix* A,
+                   int substart, int subsize,
+                 MPI_Comm comm)
+{
+   double** const M = A->mStorage->M;
+   const int n = A->mStorage->n;
+
+   assert(subsize >= 0);
+   assert(substart >= 0);
+
+   if( subsize == 0)
+      return;
+
+   const int subend = substart + subsize;
+   assert(n >= subend);
+
+   // number of elements in upper matrix triangle (including diagonal)
+   const int buffersize = (subsize * subsize + subsize) / 2;
+   assert(buffersize > 0);
+
+   double* const buffer = new double[buffersize];
+
+   int counter = 0;
+   for( int i = substart; i < subend; i++ )
+      for( int j = i; j < subend; j++ )
+      {
+         assert(counter < buffersize);
+         buffer[counter++] = M[i][j];
+      }
+   assert(counter == buffersize);
+
+   // todo memopt use extra buffer?
+   const int iErr = MPI_Allreduce(MPI_IN_PLACE, buffer, buffersize, MPI_DOUBLE,
+         MPI_SUM, comm);
+
+   assert(iErr == MPI_SUCCESS);
+
+   counter = 0;
+   for( int i = substart; i < subend; i++ )
+      for( int j = i; j < subend; j++ )
+      {
+         assert(counter < buffersize);
+         M[i][j] = buffer[counter++];
+      }
+
+   delete[] buffer;
 }
 
 
