@@ -31,6 +31,9 @@ class StochPresolver : public QpPresolver
 private:
   static const double feastol = 1.0e-6;
   static const double infinity = 10e30;
+  static const double tolerance1 = 1.0e-3;
+  static const double tolerance2 = 1.0e-2;
+  static const double tolerance3 = 1.0e-10;
 
   // number of non-zero elements of each row
   StochVectorHandle nRowElemsA;

@@ -148,8 +148,11 @@ void StochPresolver::removeTinyEntriesC()
    int world_size;
    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
    bool iAmSpecial = true;
+   bool iAmDistrib = false;
    if( world_size > 1 && myRank > 0)
       iAmSpecial = false;
+   if( world_size > 1)
+      iAmDistrib = true;
 
    SimpleVector* nnzPerRowC = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
 
@@ -159,13 +162,10 @@ void StochPresolver::removeTinyEntriesC()
 
    // create empty vectors redRow, redCol, adaptionsRhs with the correct sizes:
    StochVector* redRow = (*nRowElemsC).clone();
-   redRow->setToZero();
    SimpleVector* reductionsRowSimple = dynamic_cast<SimpleVector*>(redRow->vec);
    StochVector* redCol = (*nColElems).clone();
-   redCol->setToZero();
-   SimpleVector* reductionsColVec = dynamic_cast<SimpleVector*>(redCol->vec);
+
    StochVector* adaptionsRhs = (dynamic_cast<StochVector&>(*(presProb->bu))).clone();
-   adaptionsRhs->setToZero();
 
    StochVector& cupp = dynamic_cast<StochVector&>(*(presProb->bu));
    StochVector& clow = dynamic_cast<StochVector&>(*(presProb->bl));
@@ -177,24 +177,29 @@ void StochPresolver::removeTinyEntriesC()
    double* const xuppElemsB = (dynamic_cast<SimpleVector*>(xupp.vec))->elements();
    SimpleVector* adaptionsRhsVec(dynamic_cast<SimpleVector*>(adaptionsRhs->vec));
 
-   SimpleVector* nnzPerRowClink = dynamic_cast<SimpleVector*>(nRowElemsC->vecl);
-   SimpleVector* reductionsRowSimpleLink = dynamic_cast<SimpleVector*>(redRow->vecl);
-   SparseStorageDynamic& storageBlink = matrixC.Blmat->getStorageDynamicRef();
-   double* const xlowElemsBlink = (dynamic_cast<SimpleVector*>(xlow.vecl))->elements();
-   double* const xuppElemsBlink = (dynamic_cast<SimpleVector*>(xupp.vecl))->elements();
-   SimpleVector* adaptionsRhsVecLink(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl));
-
    if( iAmSpecial )
    {
+      SimpleVector* reductionsColVec = dynamic_cast<SimpleVector*>(redCol->vec);
+
       // for Bmat:
       removeTinyEntriesInnerLoop(storageB, xlowElemsB, xuppElemsB, nnzPerRowC, reductionsRowSimple, reductionsColVec, adaptionsRhsVec);
       adaptRhsC(dynamic_cast<SimpleVector*>(adaptionsRhs->vec), dynamic_cast<SimpleVector*>(cupp.vec), dynamic_cast<SimpleVector*>(clow.vec),
             dynamic_cast<SimpleVector*>(icupp.vec), dynamic_cast<SimpleVector*>(iclow.vec));
-      (*nRowElemsC).vec->axpy(1.0, *redRow->vec);
+      (*nRowElemsC).vec->axpy(-1.0, *redRow->vec);
+      // todo: assert nRowElemns.vec >= 0
 
-      // for Blmat:
-      removeTinyEntriesInnerLoop(storageBlink, xlowElemsBlink, xuppElemsBlink,
-            nnzPerRowClink, reductionsRowSimpleLink, reductionsColVec, adaptionsRhsVecLink);
+      if( nRowElemsC->vecl )
+      {
+         // for Blmat:
+         SimpleVector* nnzPerRowClink = dynamic_cast<SimpleVector*>(nRowElemsC->vecl);
+         SimpleVector* reductionsRowSimpleLink = dynamic_cast<SimpleVector*>(redRow->vecl);
+         SparseStorageDynamic& storageBlink = matrixC.Blmat->getStorageDynamicRef();
+         double* const xlowElemsBlink = (dynamic_cast<SimpleVector*>(xlow.vecl))->elements();
+         double* const xuppElemsBlink = (dynamic_cast<SimpleVector*>(xupp.vecl))->elements();
+         SimpleVector* adaptionsRhsVecLink(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl));
+         removeTinyEntriesInnerLoop(storageBlink, xlowElemsBlink, xuppElemsBlink,
+               nnzPerRowClink, reductionsRowSimpleLink, reductionsColVec, adaptionsRhsVecLink);
+      }
    }
 
    // todo: assert children size
@@ -207,45 +212,41 @@ void StochPresolver::removeTinyEntriesC()
             dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(clow.children[it])->vec),
             dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(icupp.children[it])->vec),
             dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(iclow.children[it])->vec));
-      (*nRowElemsC).children[it]->axpy(1.0, *dynamic_cast<OoqpVector*>(redRow->children[it]));
-      (*nColElems).children[it]->axpy(1.0, *dynamic_cast<OoqpVector*>(redCol->children[it]));
+      (*nRowElemsC).children[it]->axpy(-1.0, *dynamic_cast<OoqpVector*>(redRow->children[it]));
+      (*nColElems).children[it]->axpy(-1.0, *dynamic_cast<OoqpVector*>(redCol->children[it]));
+      // todo: assert nRowElemns.children[it] >= 0
+      // todo: assert nColElemns.children[it] >= 0
    }
 
    // update nColElems.vec via AllReduce
-   if( world_size > 1 )
+   if( iAmDistrib )
    {
       double* redColParent = dynamic_cast<SimpleVector*>(redCol->vec)->elements();
-      double* redColParentG = dynamic_cast<SimpleVector*>(redCol->vec)->elements();
       int message_size = dynamic_cast<SimpleVector*>(redCol->vec)->length();
-      MPI_Allreduce(redColParent, redColParentG, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      redColParent = redColParentG;
+      MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
    }
-   (*nColElems).vec->axpy(1.0, *redCol->vec);
+   (*nColElems).vec->axpy(-1.0, *redCol->vec);
+   // todo: assert nColElemns.vec >= 0
 
-   // update nRowElemsC.vecl via AllReduce
-   if( world_size > 1 )
+   if( nRowElemsC->vecl )
    {
-      double* redRowLink = dynamic_cast<SimpleVector*>(redRow->vecl)->elements();
-      double* redRowLinkG = dynamic_cast<SimpleVector*>(redRow->vecl)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(redRow->vecl)->length();
-      MPI_Allreduce(redRowLink, redRowLinkG, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      redRowLink = redRowLinkG; //todo: check if only redRowLink is changed or original redRow ?
-   }
-   (*nRowElemsC).vecl->axpy(1.0, *redRow->vecl);
+      // update nRowElemsC.vecl and adaptionsRhs->vecl via AllReduce:
+      if( iAmDistrib )
+      {
+         double* redRowLink = dynamic_cast<SimpleVector*>(redRow->vecl)->elements();
+         int message_size = dynamic_cast<SimpleVector*>(redRow->vecl)->length();
+         MPI_Allreduce(MPI_IN_PLACE, redRowLink, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-   // todo: update adaptionsRhs.vecl via AllReduce
-   if( world_size > 1 )
-   {
-      double* adaptionsRhsLink = dynamic_cast<SimpleVector*>(adaptionsRhs->vecl)->elements();
-      double* adaptionsRhsLinkG = dynamic_cast<SimpleVector*>(adaptionsRhs->vecl)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(adaptionsRhs->vecl)->length();
-      MPI_Allreduce(adaptionsRhsLink, adaptionsRhsLinkG, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      adaptionsRhsLink = adaptionsRhsLinkG;
-   }
-   (*nRowElemsC).vecl->axpy(1.0, *redRow->vecl);
-   adaptRhsC(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl), dynamic_cast<SimpleVector*>(cupp.vecl), dynamic_cast<SimpleVector*>(clow.vecl),
-         dynamic_cast<SimpleVector*>(icupp.vecl), dynamic_cast<SimpleVector*>(iclow.vecl));
+         double* adaptionsRhsLink = dynamic_cast<SimpleVector*>(adaptionsRhs->vecl)->elements();
+         message_size = dynamic_cast<SimpleVector*>(adaptionsRhs->vecl)->length();
+         MPI_Allreduce(MPI_IN_PLACE, adaptionsRhsLink, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      }
 
+      (*nRowElemsC).vecl->axpy(-1.0, *redRow->vecl);
+      // todo: assert nRowElemns.vecl >= 0
+      adaptRhsC(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl), dynamic_cast<SimpleVector*>(cupp.vecl), dynamic_cast<SimpleVector*>(clow.vecl),
+            dynamic_cast<SimpleVector*>(icupp.vecl), dynamic_cast<SimpleVector*>(iclow.vecl));
+   }
 
 }
 
@@ -256,22 +257,16 @@ void StochPresolver::removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, 
 {
    SparseStorageDynamic& storageA = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamicRef();
    SparseStorageDynamic& storageB = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamicRef();
-   SparseStorageDynamic& storageBl = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Blmat)->getStorageDynamicRef();
-
-   // todo: remove entries in Amat, Bmat, Blmat using innerLoop and return combined redRow, redCol and adaptionsRhs
 
    double* const xlowElemsParent = (dynamic_cast<const SimpleVector*>(xlow.vec))->elements();
    double* const xuppElemsParent = (dynamic_cast<const SimpleVector*>(xupp.vec))->elements();
    double* const xlowElemsChild = (dynamic_cast<const SimpleVector*>(xlow.children[it]->vec))->elements();
    double* const xuppElemsChild = (dynamic_cast<const SimpleVector*>(xupp.children[it]->vec))->elements();
-   SimpleVector* nnzRowChild = (dynamic_cast<SimpleVector*>(nnzPerRow->children[it]->vec));
-   SimpleVector* nnzRowLink = (dynamic_cast<SimpleVector*>(nnzPerRow->vecl));
-   SimpleVector* redRowChild = (dynamic_cast<SimpleVector*>(redRow->children[it]->vec));
-   SimpleVector* redRowLink = (dynamic_cast<SimpleVector*>(redRow->vecl));
-   SimpleVector* redColParent = (dynamic_cast<SimpleVector*>(redCol->vec));
-   SimpleVector* redColChild = (dynamic_cast<SimpleVector*>(redCol->children[it]->vec));
-   SimpleVector* rhsLink = (dynamic_cast<SimpleVector*>(adaptionsRhs->vecl));
-   SimpleVector* rhsChild = (dynamic_cast<SimpleVector*>(adaptionsRhs->children[it]->vec));
+   SimpleVector* nnzRowChild = dynamic_cast<SimpleVector*>(nnzPerRow->children[it]->vec);
+   SimpleVector* redRowChild = dynamic_cast<SimpleVector*>(redRow->children[it]->vec);
+   SimpleVector* redColParent = dynamic_cast<SimpleVector*>(redCol->vec);
+   SimpleVector* redColChild = dynamic_cast<SimpleVector*>(redCol->children[it]->vec);
+   SimpleVector* rhsChild = dynamic_cast<SimpleVector*>(adaptionsRhs->children[it]->vec);
 
    // for Amat:
    removeTinyEntriesInnerLoop( storageA, xlowElemsParent, xuppElemsParent, nnzRowChild, redRowChild, redColParent, rhsChild);
@@ -279,8 +274,16 @@ void StochPresolver::removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, 
    // for Bmat:
    removeTinyEntriesInnerLoop( storageB, xlowElemsChild, xuppElemsChild, nnzRowChild, redRowChild, redColChild, rhsChild);
 
-   // for Blmat:
-   removeTinyEntriesInnerLoop( storageBl, xlowElemsParent, xuppElemsParent, nnzRowLink, redRowLink, redColChild, rhsLink);
+   if( nnzPerRow->vecl )
+   {
+      // for Blmat:
+      SparseStorageDynamic& storageBl = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Blmat)->getStorageDynamicRef();
+      SimpleVector* nnzRowLink = dynamic_cast<SimpleVector*>(nnzPerRow->vecl);
+      SimpleVector* redRowLink = dynamic_cast<SimpleVector*>(redRow->vecl);
+      SimpleVector* rhsLink = dynamic_cast<SimpleVector*>(adaptionsRhs->vecl);
+
+      removeTinyEntriesInnerLoop( storageBl, xlowElemsParent, xuppElemsParent, nnzRowLink, redRowLink, redColChild, rhsLink);
+   }
 
 
 }
@@ -290,6 +293,11 @@ void StochPresolver::removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, 
 void StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
                                 SimpleVector* reductionsRow, SimpleVector* reductionsCol, SimpleVector* adaptionsRhs)
 {
+   double* adaptions = adaptionsRhs->elements();
+   double* redRow = reductionsRow->elements();
+   double* redCol = reductionsCol->elements();
+   double* nnzRow = nnzPerRow->elements();
+
    for( int r = 0; r < storage.m; r++ )
    {
       const int start = storage.rowptr[r].start;
@@ -297,21 +305,21 @@ void StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, d
       for( int k = start; k < end; k++ )
       {
          cout << "consider entry ( " << r << ", " << storage.jcolM[k] << " ) = "<< storage.M[k] << endl;
-         if( fabs(storage.M[k]) < 1e-3
-               && fabs(storage.M[k]) * (xuppElems[k] - xlowElems[k]) * nnzPerRow->elements()[r] < 1e-2 * feastol )
+         if( fabs(storage.M[k]) < tolerance1
+               && fabs(storage.M[k]) * (xuppElems[k] - xlowElems[k]) * nnzRow[r] < tolerance2 * feastol )
          {
-            adaptionsRhs->elements()[r] = -storage.M[k] * xlowElems[k];
+            adaptions[r] -= storage.M[k] * xlowElems[k];
 
             storage.M[k] = 0.0;
-            reductionsRow->elements()[r]++;
-            reductionsCol->elements()[storage.jcolM[k]]++;
+            redRow[r]++;
+            redCol[storage.jcolM[k]]++;
             cout << "entry ( " << r << ", " << storage.jcolM[k] << " ) removed"<< endl;
          }
-         if( fabs(storage.M[k]) < 1e-10 )
+         if( fabs(storage.M[k]) < tolerance3 )
          {
             storage.M[k] = 0.0;
-            reductionsRow->elements()[r]++;
-            reductionsCol->elements()[storage.jcolM[k]]++;
+            redRow[r]++;
+            redCol[storage.jcolM[k]]++;
             cout << "entry ( " << r << ", " << storage.jcolM[k] << " ) removed"<< endl;
          }
       }
@@ -321,23 +329,23 @@ void StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, d
 /** Adapt the rhs cupp and lhs clow by adding the values in adaptionsRhsStoch to them. */
 void StochPresolver::adaptRhsC(SimpleVector* adaptionsRhs, SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow )
 {
-  /* SimpleVector* cuppS = dynamic_cast<SimpleVector*>(cupp.vec);
-   SimpleVector* clowS = dynamic_cast<SimpleVector*>(clow.vec);
-   SimpleVector* icuppS = dynamic_cast<SimpleVector*>(icupp.vec);
-   SimpleVector* iclowS = dynamic_cast<SimpleVector*>(iclow.vec);
-   SimpleVector* adaptionsRhs = dynamic_cast<SimpleVector*>(adaptionsRhsStoch.vec);*/
-
    assert(adaptionsRhs->n == cupp->n);
    assert(adaptionsRhs->n == clow->n);
 
+   double* adaptions = adaptionsRhs->elements();
+   double* icuppElems = icupp->elements();
+   double* iclowElems = iclow->elements();
+   double* cuppElems = cupp->elements();
+   double* clowElems = clow->elements();
+
    for( int i = 0; i < adaptionsRhs->n; i++ )
    {
-      if( adaptionsRhs->elements()[i] != 0.0 )
+      if( adaptions[i] != 0.0 )
       {
-         if( icupp->elements()[i] != 0.0 )
-            cupp->elements()[i] += adaptionsRhs->elements()[i];
-         if( iclow->elements()[i] != 0.0 )
-            clow->elements()[i] += adaptionsRhs->elements()[i];
+         if( icuppElems[i] != 0.0 )
+            cuppElems[i] += adaptions[i];
+         if( iclowElems[i] != 0.0 )
+            clowElems[i] += adaptions[i];
       }
    }
 }
