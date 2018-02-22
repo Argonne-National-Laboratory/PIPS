@@ -163,9 +163,6 @@ int StochPresolver::removeTinyEntriesC()
    if( world_size > 1)
       iAmDistrib = true;
 
-   double minval = -1.0;
-   int index = -1;
-
    SimpleVector* nnzPerRowC = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
 
    StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
@@ -203,8 +200,12 @@ int StochPresolver::removeTinyEntriesC()
    // update nRowElemsC.vec
    (*nRowElemsC).vec->axpy(-1.0, *redRow->vec);
 
+#ifndef NDEBUG
+   double minval = -1.0;
+   int index = -1;
    (*nRowElemsC).vec->min(minval, index);
    assert( minval >= 0.0 );
+#endif
 
    // assert children sizes
    assert( matrixC.children.size() == xlow.children.size() );
@@ -214,10 +215,18 @@ int StochPresolver::removeTinyEntriesC()
    assert( matrixC.children.size() == redCol->children.size() );
    assert( matrixC.children.size() == adaptionsRhs->children.size() );
 
-   for( size_t it = 0; it< matrixC.children.size(); it++){
-
+   for( size_t it = 0; it< matrixC.children.size(); it++)
+   {
       if( matrixC.children[it]->isKindOf(kStochGenDummyMatrix) )
+      {
+         assert( adaptionsRhs->children[it]->isKindOf(kStochDummy) );
+         assert( xlow.children[it]->isKindOf(kStochDummy) );
+         assert( xupp.children[it]->isKindOf(kStochDummy) );
+         assert( nRowElemsC->children[it]->isKindOf(kStochDummy) );
+         assert( redRow->children[it]->isKindOf(kStochDummy) );
+         assert( redCol->children[it]->isKindOf(kStochDummy) );
          continue;
+      }
 
       nelims += removeTinyEntriesCChild(it, matrixC, xlow, xupp, nRowElemsC, redRow, redCol, adaptionsRhs);
       adaptRhsC(dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>((*adaptionsRhs).children[it])->vec),
@@ -229,18 +238,17 @@ int StochPresolver::removeTinyEntriesC()
       dynamic_cast<StochVector*>((*nRowElemsC).children[it])->axpy(-1.0, *dynamic_cast<OoqpVector*>(redRow->children[it]));
       dynamic_cast<StochVector*>((*nColElems).children[it])->axpy(-1.0, *dynamic_cast<OoqpVector*>(redCol->children[it]));
 
+      assert( dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl == NULL );
+
+#ifndef NDEBUG
       minval = -1.0;
       dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vec->min(minval, index);
       assert( minval >= 0.0 );
-      if(dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl )
-      {
-         minval = -1.0;
-         dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl->min(minval, index);
-         assert( minval >= 0.0 );
-      }
+
       minval = -1.0;
       dynamic_cast<StochVector*>((*nColElems).children[it])->vec->min(minval, index);
       assert( minval >= 0.0 );
+#endif
    }
 
    // update nColElems.vec via AllReduce
@@ -252,10 +260,11 @@ int StochPresolver::removeTinyEntriesC()
    }
    (*nColElems).vec->axpy(-1.0, *redCol->vec);
 
+#ifndef NDEBUG
    minval = -1.0;
-   index = -1;
    (*nColElems).vec->min(minval, index);
    assert( minval >= 0.0 );
+#endif
 
    if( nRowElemsC->vecl )
    {
@@ -285,10 +294,11 @@ int StochPresolver::removeTinyEntriesC()
 
       (*nRowElemsC).vecl->axpy(-1.0, *redRow->vecl);
 
+#ifndef NDEBUG
       minval = -1.0;
-      index = -1;
       (*nRowElemsC).vecl->min(minval, index);
       assert( minval >= 0.0 );
+#endif
 
       adaptRhsC(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl), dynamic_cast<SimpleVector*>(cupp.vecl), dynamic_cast<SimpleVector*>(clow.vecl),
             dynamic_cast<SimpleVector*>(icupp.vecl), dynamic_cast<SimpleVector*>(iclow.vecl));
@@ -353,26 +363,29 @@ int StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, do
    double* redCol = reductionsCol->elements();
    double* nnzRow = nnzPerRow->elements();
 
+   int col = -1;
+
    for( int r = 0; r < storage.m; r++ )
    {
       const int start = storage.rowptr[r].start;
       const int end = storage.rowptr[r].end;
       for( int k = start; k < end; k++ )
       {
-         if( fabs(storage.M[k]) < tolerance1
-               && fabs(storage.M[k]) * (xuppElems[k] - xlowElems[k]) * nnzRow[r] < tolerance2 * feastol )
+         col = storage.jcolM[k];
+         if( fabs(storage.M[k]) < tolerance3 )
          {
-            adaptions[r] -= storage.M[k] * xlowElems[k];
-
             cout << "Remove entry M ( "<< r << ", " << storage.jcolM[k] << " ) = "<<storage.M[k]<<" (by first test)"<<endl;
             storage.M[k] = 0.0;
             redRow[r]++;
             redCol[storage.jcolM[k]]++;
             nelims ++;
          }
-         else if( fabs(storage.M[k]) < tolerance3 )
+         else if( fabs(storage.M[k]) < tolerance1
+               && fabs(storage.M[k]) * (xuppElems[col] - xlowElems[col]) * nnzRow[r] < tolerance2 * feastol )
          {
-            cout << "Remove entry M ( "<< r << ", " << storage.jcolM[k] << " ) = "<<storage.M[k]<<" (by second test)"<<endl;
+            adaptions[r] -= storage.M[k] * xlowElems[col];
+
+            cout << "Remove entry M ( "<< r << ", " << col << " ) = "<<storage.M[k]<<" (by second test)"<<endl;
             storage.M[k] = 0.0;
             redRow[r]++;
             redCol[storage.jcolM[k]]++;
