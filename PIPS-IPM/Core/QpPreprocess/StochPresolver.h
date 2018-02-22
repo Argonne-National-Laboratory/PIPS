@@ -46,14 +46,14 @@ private:
   void initNnzCounter();
 
   // remove small matrix entries and return number of eliminations
-  void removeTinyEntries();
+  int removeTinyEntries();
 
-  void removeTinyEntriesC();
+  int removeTinyEntriesC();
 
-  void removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, const StochVector& xlow, const StochVector& xupp, StochVector* nnzPerRow, StochVector* redRow,
+  int removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, const StochVector& xlow, const StochVector& xupp, StochVector* nnzPerRow, StochVector* redRow,
                                                StochVector* redCol, StochVector* adaptionsRhs);
 
-  void removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
+  int removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
                                   SimpleVector* reductionsRow, SimpleVector* reductionsCol, SimpleVector* adaptionsRhs);
 
   void adaptRhsA(StochVector* adaptionsRhsStoch, StochVector* b);

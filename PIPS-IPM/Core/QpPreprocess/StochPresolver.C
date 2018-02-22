@@ -85,8 +85,8 @@ Data* StochPresolver::presolve()
    // clone and initialize dynamic storage
    presProb = sorigprob->cloneFull(true);
 
-   int rank = 0;
-   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   int myRank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    ofstream myfile;
    myfile.open ("before.txt");
@@ -105,7 +105,9 @@ Data* StochPresolver::presolve()
 
 
    // todo: presolve
-   removeTinyEntries();
+   int nElimsTinyEntries = removeTinyEntries();
+   if( myRank == 0)
+      std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
 
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
@@ -120,7 +122,7 @@ Data* StochPresolver::presolve()
    presProb->writeToStreamDense(myfile);
    myfile.close();
 
-   presProb->writeToStreamDense(std::cout);
+   //presProb->writeToStreamDense(std::cout);
 
    std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
 
@@ -129,18 +131,30 @@ Data* StochPresolver::presolve()
    return presProb;
 }
 
-void StochPresolver::removeTinyEntries()
+int StochPresolver::removeTinyEntries()
 {
-   std::cout << "removing tiny entries..." << std::endl;
+   int nelims = 0;
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank == 0)
+      std::cout << "removing tiny entries..." << std::endl;
    // remove tiny entries in A
 
    // remove tiny entries in C
-   removeTinyEntriesC();
+   nelims += removeTinyEntriesC();
+
+   if( myRank == 0)
+      std::cout << "removing tiny entries finished. Removed "<< nelims <<" entries in total." << std::endl;
+
+   return nelims;
 }
 
 
-void StochPresolver::removeTinyEntriesC()
+int StochPresolver::removeTinyEntriesC()
 {
+   int nelims = 0;
+
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    int world_size;
@@ -148,6 +162,9 @@ void StochPresolver::removeTinyEntriesC()
    bool iAmDistrib = false;
    if( world_size > 1)
       iAmDistrib = true;
+
+   double minval = -1.0;
+   int index = -1;
 
    SimpleVector* nnzPerRowC = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
 
@@ -176,25 +193,18 @@ void StochPresolver::removeTinyEntriesC()
    SimpleVector* reductionsColVec = dynamic_cast<SimpleVector*>(redCol->vec);
 
    // for Bmat:
-   removeTinyEntriesInnerLoop(storageB, xlowElemsB, xuppElemsB, nnzPerRowC, reductionsRowSimple, reductionsColVec, adaptionsRhsVec);
+   int nelimsB0 = removeTinyEntriesInnerLoop(storageB, xlowElemsB, xuppElemsB, nnzPerRowC, reductionsRowSimple, reductionsColVec, adaptionsRhsVec);
    adaptRhsC(dynamic_cast<SimpleVector*>(adaptionsRhs->vec), dynamic_cast<SimpleVector*>(cupp.vec), dynamic_cast<SimpleVector*>(clow.vec),
          dynamic_cast<SimpleVector*>(icupp.vec), dynamic_cast<SimpleVector*>(iclow.vec));
+
+   if( myRank == 0 )
+      nelims += nelimsB0;
+
+   // update nRowElemsC.vec
    (*nRowElemsC).vec->axpy(-1.0, *redRow->vec);
 
-   // todo: assert nRowElemns.vec >= 0
-
-   if( nRowElemsC->vecl )
-   {
-      // for Blmat:
-      SimpleVector* nnzPerRowClink = dynamic_cast<SimpleVector*>(nRowElemsC->vecl);
-      SimpleVector* reductionsRowSimpleLink = dynamic_cast<SimpleVector*>(redRow->vecl);
-      SparseStorageDynamic& storageBlink = matrixC.Blmat->getStorageDynamicRef();
-
-      SimpleVector* adaptionsRhsVecLink(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl));
-      removeTinyEntriesInnerLoop(storageBlink, xlowElemsB, xuppElemsB,
-            nnzPerRowClink, reductionsRowSimpleLink, reductionsColVec, adaptionsRhsVecLink);
-   }
-
+   (*nRowElemsC).vec->min(minval, index);
+   assert( minval >= 0.0 );
 
    // assert children sizes
    assert( matrixC.children.size() == xlow.children.size() );
@@ -209,17 +219,28 @@ void StochPresolver::removeTinyEntriesC()
       if( matrixC.children[it]->isKindOf(kStochGenDummyMatrix) )
          continue;
 
-      removeTinyEntriesCChild(it, matrixC, xlow, xupp, nRowElemsC, redRow, redCol, adaptionsRhs);
+      nelims += removeTinyEntriesCChild(it, matrixC, xlow, xupp, nRowElemsC, redRow, redCol, adaptionsRhs);
       adaptRhsC(dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>((*adaptionsRhs).children[it])->vec),
             dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(cupp.children[it])->vec),
             dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(clow.children[it])->vec),
             dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(icupp.children[it])->vec),
             dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(iclow.children[it])->vec));
-      (*nRowElemsC).children[it]->axpy(-1.0, *dynamic_cast<OoqpVector*>(redRow->children[it]));
-      (*nColElems).children[it]->axpy(-1.0, *dynamic_cast<OoqpVector*>(redCol->children[it]));
 
-      // todo: assert nRowElemns.children[it] >= 0
-      // todo: assert nColElemns.children[it] >= 0
+      dynamic_cast<StochVector*>((*nRowElemsC).children[it])->axpy(-1.0, *dynamic_cast<OoqpVector*>(redRow->children[it]));
+      dynamic_cast<StochVector*>((*nColElems).children[it])->axpy(-1.0, *dynamic_cast<OoqpVector*>(redCol->children[it]));
+
+      minval = -1.0;
+      dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vec->min(minval, index);
+      assert( minval >= 0.0 );
+      if(dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl )
+      {
+         minval = -1.0;
+         dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl->min(minval, index);
+         assert( minval >= 0.0 );
+      }
+      minval = -1.0;
+      dynamic_cast<StochVector*>((*nColElems).children[it])->vec->min(minval, index);
+      assert( minval >= 0.0 );
    }
 
    // update nColElems.vec via AllReduce
@@ -231,10 +252,25 @@ void StochPresolver::removeTinyEntriesC()
    }
    (*nColElems).vec->axpy(-1.0, *redCol->vec);
 
-   // todo: assert nColElemns.vec >= 0
+   minval = -1.0;
+   index = -1;
+   (*nColElems).vec->min(minval, index);
+   assert( minval >= 0.0 );
 
    if( nRowElemsC->vecl )
    {
+      // for Blmat:
+      SimpleVector* nnzPerRowClink = dynamic_cast<SimpleVector*>(nRowElemsC->vecl);
+      SimpleVector* reductionsRowSimpleLink = dynamic_cast<SimpleVector*>(redRow->vecl);
+      SparseStorageDynamic& storageBlink = matrixC.Blmat->getStorageDynamicRef();
+
+      SimpleVector* adaptionsRhsVecLink(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl));
+      int nelimsLink = removeTinyEntriesInnerLoop(storageBlink, xlowElemsB, xuppElemsB,
+            nnzPerRowClink, reductionsRowSimpleLink, reductionsColVec, adaptionsRhsVecLink);
+
+      if( myRank == 0)
+         nelims += nelimsLink;
+
       // update nRowElemsC.vecl and adaptionsRhs->vecl via AllReduce:
       if( iAmDistrib )
       {
@@ -249,19 +285,30 @@ void StochPresolver::removeTinyEntriesC()
 
       (*nRowElemsC).vecl->axpy(-1.0, *redRow->vecl);
 
-      // todo: assert nRowElemns.vecl >= 0
+      minval = -1.0;
+      index = -1;
+      (*nRowElemsC).vecl->min(minval, index);
+      assert( minval >= 0.0 );
 
       adaptRhsC(dynamic_cast<SimpleVector*>(adaptionsRhs->vecl), dynamic_cast<SimpleVector*>(cupp.vecl), dynamic_cast<SimpleVector*>(clow.vecl),
             dynamic_cast<SimpleVector*>(icupp.vecl), dynamic_cast<SimpleVector*>(iclow.vecl));
    }
 
+   if( iAmDistrib )
+   {
+      MPI_Allreduce(MPI_IN_PLACE, &nelims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   }
+
+   return nelims;
 }
 
 /** Calls removeTinyEntriesInnerLoop for a Child on the matrices Amat, Bmat, Blmat and collects the returned information in redRow, redCol
  * and adaptionsRhs. */
-void StochPresolver::removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, const StochVector& xlow, const StochVector& xupp, StochVector* nnzPerRow,
+int StochPresolver::removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, const StochVector& xlow, const StochVector& xupp, StochVector* nnzPerRow,
       StochVector* redRow, StochVector* redCol, StochVector* adaptionsRhs)
 {
+   int nelims = 0;
+
    SparseStorageDynamic& storageA = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamicRef();
    SparseStorageDynamic& storageB = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamicRef();
 
@@ -276,10 +323,10 @@ void StochPresolver::removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, 
    SimpleVector* rhsChild = dynamic_cast<SimpleVector*>(adaptionsRhs->children[it]->vec);
 
    // for Amat:
-   removeTinyEntriesInnerLoop( storageA, xlowElemsParent, xuppElemsParent, nnzRowChild, redRowChild, redColParent, rhsChild);
+   nelims += removeTinyEntriesInnerLoop( storageA, xlowElemsParent, xuppElemsParent, nnzRowChild, redRowChild, redColParent, rhsChild);
 
    // for Bmat:
-   removeTinyEntriesInnerLoop( storageB, xlowElemsChild, xuppElemsChild, nnzRowChild, redRowChild, redColChild, rhsChild);
+   nelims += removeTinyEntriesInnerLoop( storageB, xlowElemsChild, xuppElemsChild, nnzRowChild, redRowChild, redColChild, rhsChild);
 
    if( nnzPerRow->vecl )
    {
@@ -289,17 +336,18 @@ void StochPresolver::removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, 
       SimpleVector* redRowLink = dynamic_cast<SimpleVector*>(redRow->vecl);
       SimpleVector* rhsLink = dynamic_cast<SimpleVector*>(adaptionsRhs->vecl);
 
-      removeTinyEntriesInnerLoop( storageBl, xlowElemsParent, xuppElemsParent, nnzRowLink, redRowLink, redColChild, rhsLink);
+      nelims += removeTinyEntriesInnerLoop( storageBl, xlowElemsParent, xuppElemsParent, nnzRowLink, redRowLink, redColChild, rhsLink);
    }
 
-
+   return nelims;
 }
 
 /** Removes tiny entries in storage and stores the number of reductions in reductionsRow and reductionsCol respectively. The adaption
  * that have to be made to the rhs (and lhs) are stored in adaptionsRhs. */
-void StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
+int StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
                                 SimpleVector* reductionsRow, SimpleVector* reductionsCol, SimpleVector* adaptionsRhs)
 {
+   int nelims = 0;
    double* adaptions = adaptionsRhs->elements();
    double* redRow = reductionsRow->elements();
    double* redCol = reductionsCol->elements();
@@ -311,26 +359,28 @@ void StochPresolver::removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, d
       const int end = storage.rowptr[r].end;
       for( int k = start; k < end; k++ )
       {
-         cout << "consider entry ( " << r << ", " << storage.jcolM[k] << " ) = "<< storage.M[k] << endl;
          if( fabs(storage.M[k]) < tolerance1
                && fabs(storage.M[k]) * (xuppElems[k] - xlowElems[k]) * nnzRow[r] < tolerance2 * feastol )
          {
             adaptions[r] -= storage.M[k] * xlowElems[k];
 
+            cout << "Remove entry M ( "<< r << ", " << storage.jcolM[k] << " ) = "<<storage.M[k]<<" (by first test)"<<endl;
             storage.M[k] = 0.0;
             redRow[r]++;
             redCol[storage.jcolM[k]]++;
-            cout << "entry ( " << r << ", " << storage.jcolM[k] << " ) removed"<< endl;
+            nelims ++;
          }
-         if( fabs(storage.M[k]) < tolerance3 )
+         else if( fabs(storage.M[k]) < tolerance3 )
          {
+            cout << "Remove entry M ( "<< r << ", " << storage.jcolM[k] << " ) = "<<storage.M[k]<<" (by second test)"<<endl;
             storage.M[k] = 0.0;
             redRow[r]++;
             redCol[storage.jcolM[k]]++;
-            cout << "entry ( " << r << ", " << storage.jcolM[k] << " ) removed"<< endl;
+            nelims ++;
          }
       }
    }
+   return nelims;
 }
 
 /** Adapt the rhs cupp and lhs clow by adding the values in adaptionsRhsStoch to them. */
