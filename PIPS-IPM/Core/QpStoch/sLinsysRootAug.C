@@ -9,6 +9,7 @@
 #include "PardisoSolver.h"
 #include "sData.h"
 #include "sTree.h"
+#include "pipschecks.h"
 #include <limits>
 
 
@@ -825,9 +826,9 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   stochNode->resMon.recFactTmLocal_start();
   stochNode->resMon.recSchurMultLocal_start();
 
-  DenseSymMatrix * kktd = (DenseSymMatrix*) kkt;
+  DenseSymMatrix * const kktd = (DenseSymMatrix*) kkt;
   //alias for internal buffer of kkt
-  double** dKkt = kktd->Mat();
+  double** const dKkt = kktd->Mat();
  
 
   //////////////////////////////////////////////////////
@@ -873,10 +874,18 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
     int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();
     
+    assert(subMatrixIsOrdered(krowCtDC, jcolCtDC, 0, locnx));
+
     for(int i=0; i<locnx; i++) {
       pend = krowCtDC[i+1];
       for(p=krowCtDC[i]; p<pend; p++) {
         j = jcolCtDC[p];
+
+#ifdef DENSE_USE_HALF
+        if( j > i )
+           break;
+#endif
+
         dKkt[i][j] -= dCtDC[p];
 	      //printf("%d %d %f\n", i,j,dCtDC[p]);
       }
@@ -886,7 +895,27 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   // update the KKT with A (symmetric update forced)
   /////////////////////////////////////////////////////////////
   if(locmy>0)
-    kktd->symAtPutSubmatrix( locnx, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1);
+  {
+    SparseGenMatrix& A = prob->getLocalB(); // yes, B
+#ifdef DENSE_USE_HALF
+    double* dA = A.M();
+    int* krowA = A.krowM();
+    int* jcolA = A.jcolM();
+
+    int iKkt = locnx;
+    for( int i = 0; i < locmy; ++i, ++iKkt ) {
+
+      for( p = krowA[i], pend = krowA[i + 1]; p < pend; ++p ) {
+        j = jcolA[p];
+        assert(j < locnx);
+
+        dKkt[iKkt][j] += dA[p];
+      }
+    }
+#else
+    kktd->symAtPutSubmatrix( locnx, 0, B, 0, 0, locmy, locnx, 1);
+#endif
+  }
   //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
 
 
@@ -902,12 +931,15 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 
     int iKkt = locnx + locmy;
     for( int i = 0; i < locmyl; ++i, ++iKkt ) {
-
       for( p = krowF[i], pend = krowF[i+1]; p < pend; ++p ) {
         j = jcolF[p];
-        double val = dF[p];
+        assert(j < locnx);
+
+        const double val = dF[p];
         dKkt[iKkt][j] += val;
+#ifndef DENSE_USE_HALF
         dKkt[j][iKkt] += val;
+#endif
       }
     }
   }
@@ -931,18 +963,16 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
       dKkt[iKkt][iKkt] += szDiagLinkCons[i];
       for( p = krowG[i], pend = krowG[i+1]; p < pend; ++p ) {
         j = jcolG[p];
+        assert(j < locnx);
+
         double val = dG[p];
         dKkt[iKkt][j] += val;
+#ifndef DENSE_USE_HALF
         dKkt[j][iKkt] += val;
+#endif
       }
     }
   }
-#ifdef STOCH_TESTING
-    const double epsilon = .0001;
-    for( int k = 0; k < locnx + locmy + locmyl + locmzl; k++)
-         for( int k2 = 0; k2 < locnx + locmy + locmyl + locmzl; k2++)
-             assert(fabs(dKkt[k][k2] - dKkt[k2][k]) <= epsilon);
-#endif
 
   /////////////////////////////////////////////////////////////
   // update the KKT zeros for the lower right block 

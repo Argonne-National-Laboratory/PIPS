@@ -44,6 +44,15 @@ endif()
 #with testing of (selected) executables
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
+#with memory transfer reduction
+option(WITH_MEMREDUCE "Reduce memory transfer and copying" ON)
+
+if(WITH_MEMREDUCE)
+  add_definitions(-DDENSE_USE_HALF)
+endif(WITH_MEMREDUCE)
+message(STATUS "WITH_MEMREDUCE=${WITH_MEMREDUCE}")
+
+
 #with timing for PIPS-IPM
 
 #with PIPS IPM AND NLP profile metric

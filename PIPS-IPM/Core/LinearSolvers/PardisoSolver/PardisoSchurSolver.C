@@ -7,6 +7,7 @@
 using namespace std;
 #include <unistd.h>
 
+#include "pipschecks.h"
 #include "PardisoSchurSolver.h"
 #include "SparseStorage.h"
 #include "SparseSymMatrix.h"
@@ -508,13 +509,22 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   for(int it=0; it<nSC+1; it++) rowptrSC[it]--;
   for(int it=0; it<nnzSC; it++) colidxSC[it]--;
 
-  for(int r=0; r<nSC; r++) {
-    for(int ci=rowptrSC[r]; ci<rowptrSC[r+1]; ci++) {
-      int c=colidxSC[ci];
-      SC0[r][c] += eltsSC[ci];
-      if(r!=c)
-         SC0[c][r] += eltsSC[ci];
-    }
+  assert(subMatrixIsOrdered(rowptrSC, colidxSC, 0, nSC));
+
+  for( int r = 0; r < nSC; r++ )
+  {
+     for( int ci = rowptrSC[r]; ci < rowptrSC[r + 1]; ci++ )
+     {
+        const int c = colidxSC[ci];
+        assert(c >= r);
+
+        SC0[c][r] += eltsSC[ci];
+
+#ifndef DENSE_USE_HALF
+        if( r != c )
+           SC0[r][c] += eltsSC[ci];
+#endif
+     }
   }
 
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;

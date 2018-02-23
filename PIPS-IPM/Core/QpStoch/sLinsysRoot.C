@@ -2,7 +2,6 @@
    Authors: Cosmin Petra and Miles Lubin
    See license and copyright information in the documentation */
 
-#define DENSE_UPPER_ONLY
 #include "sLinsysRoot.h"
 #include "sTree.h"
 #include "sFactory.h"
@@ -487,14 +486,9 @@ void sLinsysRoot::reduceKKT()
   //parallel communication
    if( iAmDistrib )
    {
-#ifdef DENSE_UPPER_ONLY
-      submatrixAllReduceDiagUpper(kktd, 0, locnx, mpiComm);
 
-      // todo deleteme
-      double** M = kktd->mStorage->M;
-      for( int k = 0; k < locnx; k++ )
-         for( int k2 = 0; k2 < k; k2++ )
-            M[k][k2] = M[k2][k];
+#ifdef DENSE_USE_HALF
+      submatrixAllReduceDiagLower(kktd, 0, locnx, mpiComm);
 #else
       submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
 #endif
@@ -505,13 +499,13 @@ void sLinsysRoot::reduceKKT()
 
          assert(kktd->size() == locNxMyMylMzl);
 
-#ifdef DENSE_UPPER_ONLY
-         // reduce upper right part
-         submatrixAllReduceFull(kktd, 0, locNxMy, locnx, locmyl + locmzl,
+#ifdef DENSE_USE_HALF
+         // reduce lower left part
+         submatrixAllReduceFull(kktd, locNxMy, 0, locmyl + locmzl, locnx,
                mpiComm);
 
-         // reduce lower diagonal part
-         submatrixAllReduceDiagUpper(kktd, locNxMy, locmyl + locmzl, mpiComm);
+         // reduce lower diagonal linking part
+         submatrixAllReduceDiagLower(kktd, locNxMy, locmyl + locmzl, mpiComm);
 
 #else
          // reduce upper right part
@@ -526,17 +520,6 @@ void sLinsysRoot::reduceKKT()
          // reduce lower diagonal part
          submatrixAllReduce(kktd, locNxMy, locNxMy, locmyl + locmzl, locmyl + locmzl, mpiComm);
 #endif
-#if 1
-//todo deleteme
-         for( int k = locNxMy; k < locNxMyMylMzl; k++ )
-            for( int k2 = 0; k2 < locnx; k2++ )
-               M[k][k2] = M[k2][k];
-
-         for( int k = locNxMy; k < locNxMyMylMzl; k++ )
-            for( int k2 = locNxMy; k2 < k; k2++ )
-               M[k][k2] = M[k2][k];
-#endif
-
       }
   }
 }
@@ -688,12 +671,6 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
 
    assert(counter == buffersize);
 
-   // todo debug, delete!
-   counter = 0;
-   for( int r = startRow; r < endRow; r++ )
-      for( int j = startCol; j < endCol; j++ )
-         assert(buffer[counter++] == M[r][j]);
-
    // todo memopt use extra buffer?
    const int iErr = MPI_Allreduce(MPI_IN_PLACE, buffer, buffersize, MPI_DOUBLE, MPI_SUM, comm);
 
@@ -713,7 +690,7 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
 }
 
 
-void sLinsysRoot::submatrixAllReduceDiagUpper(DenseSymMatrix* A,
+void sLinsysRoot::submatrixAllReduceDiagLower(DenseSymMatrix* A,
                    int substart, int subsize,
                  MPI_Comm comm)
 {
@@ -729,7 +706,7 @@ void sLinsysRoot::submatrixAllReduceDiagUpper(DenseSymMatrix* A,
    const int subend = substart + subsize;
    assert(n >= subend);
 
-   // number of elements in upper matrix triangle (including diagonal)
+   // number of elements in lower matrix triangle (including diagonal)
    const int buffersize = (subsize * subsize + subsize) / 2;
    assert(buffersize > 0);
 
@@ -737,7 +714,7 @@ void sLinsysRoot::submatrixAllReduceDiagUpper(DenseSymMatrix* A,
 
    int counter = 0;
    for( int i = substart; i < subend; i++ )
-      for( int j = i; j < subend; j++ )
+      for( int j = substart; j <= i; j++ )
       {
          assert(counter < buffersize);
          buffer[counter++] = M[i][j];
@@ -752,7 +729,7 @@ void sLinsysRoot::submatrixAllReduceDiagUpper(DenseSymMatrix* A,
 
    counter = 0;
    for( int i = substart; i < subend; i++ )
-      for( int j = i; j < subend; j++ )
+      for( int j = substart; j <= i; j++ )
       {
          assert(counter < buffersize);
          M[i][j] = buffer[counter++];

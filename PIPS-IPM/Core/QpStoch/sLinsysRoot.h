@@ -80,8 +80,8 @@ class sLinsysRoot : public sLinsys {
            int startRow, int startCol, int nRows, int nCols,
            MPI_Comm comm);
 
-  // all_reducees upper half (including diagonal) of specified submatrix
-  void submatrixAllReduceDiagUpper(DenseSymMatrix* A,
+  // all_reducees lower half (including diagonal) of specified submatrix
+  void submatrixAllReduceDiagLower(DenseSymMatrix* A,
             int substart, int subsize,
             MPI_Comm comm);
 

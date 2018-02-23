@@ -104,6 +104,15 @@ void DeSymIndefSolver::matrixChanged()
     }
   }
 
+#ifdef DENSE_USE_HALF
+#ifndef NDEBUG
+  for( int i = 0; i < n; i++ )
+     for( int j = 0; j < n; j++ )
+        assert(j <= i || mStorage->M[i][j] == 0.0);
+#endif
+#endif
+
+
   //query the size of workspace
   lwork=-1;
   double lworkNew;
