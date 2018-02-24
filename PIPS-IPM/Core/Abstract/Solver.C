@@ -11,8 +11,12 @@
 #include "Residuals.h"
 #include "LinearSystem.h"
 #include "OoqpStartStrategy.h"
-
 #include <cmath>
+
+#ifdef TIMING
+#include "mpi.h"
+#endif
+
 
 //#define BAD_NUMERICS
 
@@ -154,6 +158,11 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	  maxAlpha, mufull;
 	int firstOrSecond;
 
+#ifdef TIMING
+	int myrank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+#endif
+
 	maxAlpha = iterate->findBlocking( step, 
 					  primalValue, primalStep,
 					  dualValue, dualStep,
@@ -171,7 +180,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 		    mufull / ( dualValue + maxAlpha * dualStep ) ) /
 	    primalStep;
 #ifdef TIMING
-	  std::cout << "alpha " << primalValue + maxAlpha * primalStep << std::endl;
+	  if( myrank == 0 )
+	     std::cout << "\n alpha " << primalValue + maxAlpha * primalStep << std::endl;
 	  //assert(primalValue + maxAlpha * primalStep >= 0.0);
 #endif
 	  break;
@@ -180,7 +190,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 		    mufull / ( primalValue + maxAlpha * primalStep ) ) /
 	    dualStep;
 #ifdef TIMING
-	  std::cout << "dual alpha " << dualValue + maxAlpha * dualStep << std::endl;
+	  if( myrank == 0 )
+	     std::cout << "\n dual alpha " << dualValue + maxAlpha * dualStep << std::endl;
 	  //assert(dualValue + maxAlpha * dualStep >= 0.0);
 #endif
 	  break;
