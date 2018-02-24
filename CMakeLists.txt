@@ -259,6 +259,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   #HSL Solver and METIS
   set(MA27_DIR ${SHARED_DIR}/MA27/src)
   set(MA57_DIR ${SHARED_DIR}/MA57/src)
+
   find_library(MA27_LIBRARY libma27.a PATHS ${MA27_DIR}/lib)
   find_library(MA57_LIBRARY libma57.a PATHS ${MA57_DIR}/lib)
   if(NOT MA27_LIBRARY AND NOT MA57_LIBRARY)
@@ -340,6 +341,18 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 
   message(STATUS "Pardiso lib: ${PARDISO_LIBRARY}  and HAVE_PARDISO is ${HAVE_PARDISO}")
 
+
+  set(MUMPS_DIR ${SHARED_DIR}/MUMPS)
+  find_library(MUMPS_LIBRARY libdmumps.a PATHS ${MUMPS_DIR}/lib)
+  find_path(MUMPS_INCLUDE_DIR NAME dmumps_c.h HINTS ${MUMPS_DIR}/include)
+  if(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
+    # we assume the other libraries are in there
+    set(HAVE_MUMPS TRUE)
+    include_directories(${MUMPS_INCLUDE_DIR})
+  else ()
+    message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
+  endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
+
   #setting CXX_FLAGS
   if(HAVE_MA27)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA27")
@@ -352,6 +365,12 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   else(HAVE_MA57)
     set(MA57_LIBRARY "")
   endif(HAVE_MA57)
+
+  if(HAVE_MUMPS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MUMPS")
+  else(HAVE_MUMPS)
+    set(MUMPS_LIBRARY "")
+  endif(HAVE_MUMPS)
 
   #if(HAVE_MA86)
   #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA86")

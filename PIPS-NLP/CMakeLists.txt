@@ -3,7 +3,7 @@
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
   Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver
-  Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver
+  Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver Core/LinearSolvers/MumpsSolver
   Core/LinearSolvers/BiCGStabSolver
   Core/LinearSolvers/UmfPackSolver)
 include_directories(Core/StochLinearAlgebra)
