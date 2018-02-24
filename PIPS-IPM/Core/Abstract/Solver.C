@@ -181,8 +181,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	    primalStep;
 #ifdef TIMING
 	  if( myrank == 0 )
-	     std::cout << "\n alpha " << primalValue + maxAlpha * primalStep << std::endl;
-	  //assert(primalValue + maxAlpha * primalStep >= 0.0);
+	     std::cout << "(primal) original alpha " << alpha << std::endl;
 #endif
 	  break;
 	case 2:
@@ -191,8 +190,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	    dualStep;
 #ifdef TIMING
 	  if( myrank == 0 )
-	     std::cout << "\n dual alpha " << dualValue + maxAlpha * dualStep << std::endl;
-	  //assert(dualValue + maxAlpha * dualStep >= 0.0);
+	     std::cout << "(dual) original alpha " << alpha << std::endl;
 #endif
 	  break;
 	default:
@@ -364,6 +362,11 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   double gap   = fabs( resids->dualityGap() );
   double rnorm = resids->residualNorm();
 
+#ifdef TIMING
+   int myrank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+#endif
+
   idx = iterate-1;
   if(idx <  0     ) idx=0;
   if(idx >= maxit ) idx=maxit-1;
@@ -375,7 +378,8 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   phi_history[idx] = phi;
 
 #ifdef TIMING
-  std::cout << "mu/mutol " << mu << "  " << mutol << "rnorm/limit " << rnorm << " " << artol*dnorm  << std::endl;
+  if( myrank == 0 )
+     std::cout << "mu/mutol " << mu << "  " << mutol << "rnorm/limit " << rnorm << " " << artol*dnorm  << std::endl;
 #endif
 
   if(idx > 0) {
@@ -395,7 +399,8 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   // check infeasibility condition
   if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4*phi_min_history[idx]) {
 #ifdef TIMING
-    std::cout << "possible INFEASIBLITY detected, phi: " << phi << std::endl;
+    if( myrank == 0 )
+       std::cout << "possible INFEASIBLITY detected, phi: " << phi << std::endl;
 #endif
     stop_code = INFEASIBLE;
   }
