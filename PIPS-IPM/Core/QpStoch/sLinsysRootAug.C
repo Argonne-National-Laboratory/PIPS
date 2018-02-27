@@ -913,7 +913,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
       }
     }
 #else
-    kktd->symAtPutSubmatrix( locnx, 0, B, 0, 0, locmy, locnx, 1);
+    kktd->symAtPutSubmatrix( locnx, 0, A, 0, 0, locmy, locnx, 1);
 #endif
   }
   //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");

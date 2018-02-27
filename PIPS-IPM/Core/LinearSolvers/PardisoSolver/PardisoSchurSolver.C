@@ -870,9 +870,9 @@ int dumpAugMatrix(int n, int nnz, int nSys,
   fd.precision(16);
 
   fd << n << endl << nSys << endl << nnz << endl;
-  for(int it=0; it<n+1; it++) fd << rowptr[it] << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << colidx[it] << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << elts[it]   << " ";  fd << endl;
+  for(int it=0; it<n+1; it++) {fd << rowptr[it] << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << colidx[it] << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << elts[it]   << " ";}  fd << endl;
 
   cout << filename << " done!" << endl;
   return 0;
@@ -903,9 +903,9 @@ int dumpSysMatrix(SparseSymMatrix* Msys, const char* fname)
   fd.precision(16);
 
   fd << n << endl << nnz << endl;
-  for(int it=0; it<n+1; it++) fd << rowptr[it]+1 << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << colidx[it]+1 << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << elts[it]   << " ";  fd << endl;
+  for(int it=0; it<n+1; it++) {fd << rowptr[it]+1 << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << colidx[it]+1 << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << elts[it]   << " ";}  fd << endl;
 
   delete[] rowptr; delete[] colidx; delete[] elts;
 

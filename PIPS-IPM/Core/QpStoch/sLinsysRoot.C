@@ -554,9 +554,8 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat,
 			       int row, int col, 
 			       int rowExtent, int colExtent)
 {
-  int nn = mat->size();
-  assert( row >= 0 && row + rowExtent <= nn );
-  assert( col >= 0 && col + colExtent <= nn );
+  assert( row >= 0 && row + rowExtent <= mat->size() );
+  assert( col >= 0 && col + colExtent <= mat->size() );
 
   double ** M = mat->getStorageRef().M;
 
@@ -642,7 +641,6 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
                  MPI_Comm comm)
 {
    double** const M = A->mStorage->M;
-   const int n = A->mStorage->n;
 
    assert(nRows > 0);
    assert(nCols > 0);
@@ -652,8 +650,8 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
    const int endRow = startRow + nRows;
    const int endCol = startCol + nCols;
 
-   assert(n >= endRow);
-   assert(n >= endCol);
+   assert(A->mStorage->n >= endRow);
+   assert(A->mStorage->n >= endCol);
 
    const int buffersize = nRows * nCols;
 
@@ -695,7 +693,6 @@ void sLinsysRoot::submatrixAllReduceDiagLower(DenseSymMatrix* A,
                  MPI_Comm comm)
 {
    double** const M = A->mStorage->M;
-   const int n = A->mStorage->n;
 
    assert(subsize >= 0);
    assert(substart >= 0);
@@ -704,7 +701,7 @@ void sLinsysRoot::submatrixAllReduceDiagLower(DenseSymMatrix* A,
       return;
 
    const int subend = substart + subsize;
-   assert(n >= subend);
+   assert(A->mStorage->n >= subend);
 
    // number of elements in lower matrix triangle (including diagonal)
    const int buffersize = (subsize * subsize + subsize) / 2;
