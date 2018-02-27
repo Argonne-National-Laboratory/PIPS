@@ -520,6 +520,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 
   double step = maxStep;
   
+  // todo only if i am special?
   if( w.vecl )
   {
     assert(wstep.vecl);
@@ -557,13 +558,42 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
     //we prefer a AllReduce instead of a bcast, since the step==stepG m
     //may occur for two different processes and a deadlock may occur.
     double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
+
+    int count;
     if(step==stepG) {
       buffer[0]=*w_elt; buffer[1]=*wstep_elt; 
       buffer[2]=*u_elt; buffer[3]=*ustep_elt;
       buffer[4]=first_or_second;
+
+      count = 1;
     } else {
+
+      count = 0;
       buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
     }
+
+    MPI_Allreduce(MPI_IN_PLACE, &count, 1, MPI_INT, MPI_SUM, mpiComm);
+
+    // is there more than one process with step==stepG?
+    if( count > 1 )
+    {
+       int myrank;
+       int mineqrank;
+
+       MPI_Comm_rank(mpiComm, &myrank);
+
+       if( step == stepG )
+          mineqrank = myrank;
+       else
+          mineqrank = std::numeric_limits<int>::max();
+
+       MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
+
+       // step==stepG and not smallest rank?
+      if( step == stepG && mineqrank != myrank )
+         buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
+    }
+
     double bufferOut[5];
     MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm);
 

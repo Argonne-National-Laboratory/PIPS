@@ -12,6 +12,7 @@
 #include "LinearSystem.h"
 #include "OoqpStartStrategy.h"
 #include <cmath>
+#include <limits>
 
 #ifdef TIMING
 #include "mpi.h"
@@ -154,21 +155,24 @@ void Solver::dumbstart(  ProblemFormulation * /* formulation */,
 
 double Solver::finalStepLength( Variables *iterate, Variables *step )
 {
-	double primalValue, primalStep, dualValue, dualStep,
-	  maxAlpha, mufull;
-	int firstOrSecond;
+   double primalValue = -std::numeric_limits<double>::max();
+   double primalStep = -std::numeric_limits<double>::max();
+   double dualValue = -std::numeric_limits<double>::max();
+   double dualStep = -std::numeric_limits<double>::max();
+   int firstOrSecond = -1;
+
 
 #ifdef TIMING
 	int myrank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 #endif
 
-	maxAlpha = iterate->findBlocking( step, 
+	const double maxAlpha = iterate->findBlocking( step,
 					  primalValue, primalStep,
 					  dualValue, dualStep,
 					  firstOrSecond );
-	mufull = iterate->mustep( step, maxAlpha );
-	mufull /= gamma_a;
+
+	const double mufull = iterate->mustep( step, maxAlpha ) / gamma_a;
 
 	double alpha = 1.0;
 	switch( firstOrSecond ) {
