@@ -211,17 +211,16 @@ public:
 			      double *ustep_elt,
 			      int& first_or_second) = 0;
 
-  virtual void findBlocking_pd(OoqpVector & wstep_vec,
-    			      OoqpVector & u_vec,
-    			      OoqpVector & ustep_vec,
-    			      const double maxStepPri, const double maxStepDual,
-    			      double *w_elt_p,
-    			      double *wstep_elt_p,
-    			      double *u_elt_p,
-    			      double *ustep_elt_p,
-    				  double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
-    				  double& stepPrimal, double& stepDual,
-					  bool& primalBlocking, bool& dualBlocking) = 0;
+  virtual void findBlocking_pd(const OoqpVector & wstep_vec,
+    			      const OoqpVector & u_vec,
+    			      const OoqpVector & ustep_vec,
+    			      double& maxStepPri, double& maxStepDual,
+    			      double& w_elt_p,
+    			      double& wstep_elt_p,
+    			      double& u_elt_p,
+    			      double& ustep_elt_p,
+    				  double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
+					  bool& primalBlocking, bool& dualBlocking) const = 0;
 
   /** Copy the elements of this OoqpVector into the C-style array v. */
   virtual void copyIntoArray( double v[] ) const = 0;

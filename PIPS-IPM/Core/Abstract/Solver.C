@@ -244,12 +244,12 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 
 	const double mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d) / gamma_a;
 
-	alpha_primal = 1.0;
+
 	if( !primalBlocking )
 	{
-		alpha_primal = 1; // No primal constraints were blocking
+		alpha_primal = 1.0; // No primal constraints were blocking
 	}
-	else if( primalBlocking )
+	else
 	{
 		alpha_primal = ( - primalValue_p +
 						mufull / ( dualValue_p + maxAlpha_d * dualStep_p ) ) /
@@ -259,12 +259,11 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 		#endif
 	}
 
-	alpha_dual = 1.0;
 	if( !dualBlocking )
 	{
-		alpha_dual = 1; // No dual constraints were blocking
+		alpha_dual = 1.0; // No dual constraints were blocking
 	}
-	else if( dualBlocking )
+	else
 	{
 		alpha_dual = ( - dualValue_d +
 						mufull / ( primalValue_d + maxAlpha_p * primalStep_d ) ) /
@@ -274,9 +273,12 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 		#endif
 	}
 
+	assert(alpha_primal <= 1.0);
+   assert(alpha_dual <= 1.0);
+
 	// make it at least gamma_f * maxAlpha and no bigger than 1
-	if( alpha_primal < gamma_f * maxAlpha_p || alpha_primal > 1 ) alpha_primal = gamma_f * maxAlpha_p;
-	if( alpha_dual < gamma_f * maxAlpha_d || alpha_dual > 1 ) alpha_dual = gamma_f * maxAlpha_d;
+	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
+	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
 	// back off just a touch (or a bit more)
 	#ifdef BAD_NUMERICS

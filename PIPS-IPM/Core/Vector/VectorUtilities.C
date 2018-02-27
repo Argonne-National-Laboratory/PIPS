@@ -174,18 +174,14 @@ void find_blocking_pd( const double w[], const int n,
           const double wstep[],
 		    const double u[],
 		    const double ustep[],
-		    const double maxStep_primal, const double maxStep_dual,
-		    double *w_elt,          double *wstep_elt,
-		    double *u_elt,          double *ustep_elt,
-		    double *w_elt_d,          double *wstep_elt_d,
-		    double *u_elt_d,          double *ustep_elt_d,
-			double& bound_primal, double& bound_dual,
+		    double& maxStep_primal, double& maxStep_dual,
+		    double& w_elt,          double& wstep_elt,
+		    double& u_elt,          double& ustep_elt,
+		    double& w_elt_d,        double& wstep_elt_d,
+		    double& u_elt_d,        double& ustep_elt_d,
 			bool& primalBlocking, bool& dualBlocking )
 {
-  bound_primal = maxStep_primal;
-  bound_dual = maxStep_dual;
-
-  int lastBlockingPrimal = -1, lastBlockingDual = -1;
+   int lastBlockingPrimal = -1, lastBlockingDual = -1;
 
    for( int i = 0; i < n; i++ )
    {
@@ -193,9 +189,9 @@ void find_blocking_pd( const double w[], const int n,
       if( w[i] > 0 && temp < 0 )
       {
          temp = -w[i] / temp;
-         if( temp < bound_primal )
+         if( temp < maxStep_primal )
          {
-            bound_primal = temp;
+            maxStep_primal = temp;
             lastBlockingPrimal = i;
             primalBlocking = true;
          }
@@ -204,9 +200,9 @@ void find_blocking_pd( const double w[], const int n,
       if( u[i] > 0 && temp < 0 )
       {
          temp = -u[i] / temp;
-         if( temp < bound_dual )
+         if( temp < maxStep_dual )
          {
-            bound_dual = temp;
+            maxStep_dual = temp;
             lastBlockingDual = i;
             dualBlocking = true;
          }
@@ -215,17 +211,17 @@ void find_blocking_pd( const double w[], const int n,
 
   if( lastBlockingPrimal > -1 ) {
     // fill out the elements
-    *w_elt     = w[lastBlockingPrimal];
-    *wstep_elt = wstep[lastBlockingPrimal];
-    *u_elt     = u[lastBlockingPrimal];
-    *ustep_elt = ustep[lastBlockingPrimal];
+    w_elt     = w[lastBlockingPrimal];
+    wstep_elt = wstep[lastBlockingPrimal];
+    u_elt     = u[lastBlockingPrimal];
+    ustep_elt = ustep[lastBlockingPrimal];
   }
   if( lastBlockingDual > -1 ) {
      // fill out the elements
-     *w_elt_d     = w[lastBlockingDual];
-     *wstep_elt_d = wstep[lastBlockingDual];
-     *u_elt_d     = u[lastBlockingDual];
-     *ustep_elt_d = ustep[lastBlockingDual];
+     w_elt_d     = w[lastBlockingDual];
+     wstep_elt_d = wstep[lastBlockingDual];
+     u_elt_d     = u[lastBlockingDual];
+     ustep_elt_d = ustep[lastBlockingDual];
    }
 }
 

@@ -37,12 +37,11 @@ void find_blocking_pd( const double w[], const int n,
 		    const double wstep[],
 		    const double u[],
 		    const double ustep[],
-		    const double maxStep_primal, const double maxStep_dual,
-		    double *w_elt,          double *wstep_elt,
-		    double *u_elt,          double *ustep_elt,
-		    double *w_elt_d,          double *wstep_elt_d,
-		    double *u_elt_d,          double *ustep_elt_d,
-			double& bound_primal, double& bound_dual,
+		    double& maxStep_primal, double& maxStep_dual,
+		    double& w_elt,          double& wstep_elt,
+		    double& u_elt,          double& ustep_elt,
+		    double& w_elt_d,          double& wstep_elt_d,
+		    double& u_elt_d,          double& ustep_elt_d,
 			bool& primalBlocking, bool& dualBlocking );
 
 #endif
