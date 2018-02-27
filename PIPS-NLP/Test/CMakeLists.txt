@@ -21,6 +21,7 @@ target_link_libraries(parmodel1yk
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -47,6 +48,7 @@ target_link_libraries(parmodel1
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -74,6 +76,7 @@ target_link_libraries(parmodel
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -101,6 +104,7 @@ target_link_libraries(parmodel2
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -128,6 +132,7 @@ target_link_libraries(parmodel3
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -155,6 +160,7 @@ target_link_libraries(parmodel9
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -182,6 +188,7 @@ target_link_libraries(parmodel9_yk
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -209,6 +216,7 @@ target_link_libraries(parleastsquares
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
@@ -235,6 +243,7 @@ target_link_libraries(parmodel_lp
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -263,6 +272,7 @@ target_link_libraries(parmodel_1STonly
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}
@@ -290,6 +300,7 @@ target_link_libraries(parmodelLink
   ${COIN_LIBS}
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
+  ${MUMPS_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
   ${METIS_LIBRARY}
   ${PARDISO_LIBRARY}

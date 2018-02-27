@@ -348,6 +348,17 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   if(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
     # we assume the other libraries are in there
     set(HAVE_MUMPS TRUE)
+
+    # -L/home/petra1/work/installs/metis-5.1.0/_installation/lib/ -lmetis
+
+    # hack(ish) way of specifying the many mumps libraries
+    # - put all the  mumps libraries: -ldmumps -lmumps_common -lpord
+    # - scalapack and blacs should be set in ${SCALAPACK_LIBRARIES} using Toolchain.cmake (or hardcoded here)
+    # - mpifort also needed
+    # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord -lmpifort ${SCALAPACK_LIBRARIES}")
+
+    MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
     include_directories(${MUMPS_INCLUDE_DIR})
   else ()
     message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
@@ -531,6 +542,6 @@ message(STATUS "CMAKE_CXX_STANDARD_LIBRIES: ${CMAKE_CXX_STANDARD_LIBRARIES}")
 message(STATUS "CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
 get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
-message(STATUS "${inc_dirs}")
+message(STATUS "inc_dirs: ${inc_dirs}")
 get_property(link_dirs DIRECTORY PROPERTY LINK_DIRECTORIES)
-message(STATUS "${link_dirs}")
+message(STATUS "link_dirs: ${link_dirs}")

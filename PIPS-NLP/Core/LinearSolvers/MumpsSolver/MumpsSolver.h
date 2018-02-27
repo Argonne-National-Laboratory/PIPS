@@ -17,6 +17,9 @@ class MumpsSolver : public DoubleLinearSolver {
 public:
   DenseStorageHandle mStorage;
 protected:
+  //mumps data structure
+  void* mumps_ptr_;
+
   double* work; int lwork;
   int *ipiv;
   SparseSymMatrix *sparseMat;

@@ -11,19 +11,19 @@
 #include "stdlib.h"
 
 
-#ifdef WITH_MA27
-#include "Ma27Solver.h"
-#endif
-#ifdef WITH_MA57
-#include "Ma57Solver.h"
-#endif
-#ifdef WITH_PARDISO
-#include "PardisoSolver.h"
-extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
-extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
-                  double *, int    *,    int *, int *,   int *, int *,
-                     int *, double *, double *, int *, double *);
-#endif
+// #ifdef WITH_MA27
+// #include "Ma27Solver.h"
+// #endif
+// #ifdef WITH_MA57
+// #include "Ma57Solver.h"
+// #endif
+// #ifdef WITH_PARDISO
+// #include "PardisoSolver.h"
+// extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
+// extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
+//                   double *, int    *,    int *, int *,   int *, int *,
+//                      int *, double *, double *, int *, double *);
+// #endif
 
 extern double gHSL_PivotLV;
 extern int gSymLinearAlgSolverForDense;
@@ -79,6 +79,9 @@ MumpsSolver::MumpsSolver( DenseSymMatrix * dm )
 {
   mStorage = DenseStorageHandle( dm->getStorage() );
 
+  DMUMPS_STRUC_C* mumps_ = new DMUMPS_STRUC_C;
+
+
   int size = mStorage->n;
   ipiv = new int[size];
   lwork = -1;
@@ -89,6 +92,8 @@ MumpsSolver::MumpsSolver( DenseSymMatrix * dm )
 
 MumpsSolver::MumpsSolver( SparseSymMatrix * sm )
 {
+
+
   int size = sm->size();
   mStorage = DenseStorageHandle( new DenseStorage(size,size) );
 
@@ -96,9 +101,18 @@ MumpsSolver::MumpsSolver( SparseSymMatrix * sm )
   lwork = -1;
   work = NULL;
   sparseMat = sm;
+}
 
-  
+MumpsSolver::~MumpsSolver()
+{
+  DMUMPS_STRUC_C* mumps_ = (DMUMPS_STRUC_C*)mumps_ptr_;
+  mumps_->job = -2; //terminate mumps
+  dmumps_c(mumps_);
+  delete [] mumps_->a;
+  delete mumps_;
 
+  delete[] ipiv;
+  if(work) delete[] work;
 }
 
 
@@ -296,10 +310,4 @@ void MumpsSolver::solve ( GenMatrix& rhs_in )
 void MumpsSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 {
   this->matrixChanged();
-}
-
-MumpsSolver::~MumpsSolver()
-{
-  delete[] ipiv;
-  if(work) delete[] work;
 }
