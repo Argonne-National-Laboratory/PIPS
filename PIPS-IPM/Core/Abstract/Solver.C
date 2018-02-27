@@ -222,11 +222,18 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 		  	  	  	  	  	  	  double& alpha_primal, double& alpha_dual )
 {
-	double primalValue_p, primalStep_p, dualValue_p, dualStep_p,
-		  maxAlpha_p;
-	double primalValue_d, primalStep_d, dualValue_d, dualStep_d,
-		  maxAlpha_d;
-	double mufull;
+   double primalValue_p = -std::numeric_limits<double>::max();
+   double primalStep_p = -std::numeric_limits<double>::max();
+   double dualValue_p = -std::numeric_limits<double>::max();
+   double dualStep_p = -std::numeric_limits<double>::max();
+   double maxAlpha_p;
+
+   double primalValue_d = -std::numeric_limits<double>::max();
+   double primalStep_d = -std::numeric_limits<double>::max();
+   double dualValue_d = -std::numeric_limits<double>::max();
+   double dualStep_d = -std::numeric_limits<double>::max();
+	double maxAlpha_d;
+
 	bool primalBlocking, dualBlocking;
 
 	iterate->findBlocking_pd( step,
@@ -234,11 +241,8 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 					  primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 					  maxAlpha_p, maxAlpha_d,
 					  primalBlocking, dualBlocking );
-	assert( primalBlocking || !primalBlocking );
-	assert( dualBlocking || !dualBlocking );
 
-	mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d);
-	mufull /= gamma_a;
+	const double mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d) / gamma_a;
 
 	alpha_primal = 1.0;
 	if( !primalBlocking )
@@ -251,7 +255,7 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 						mufull / ( dualValue_p + maxAlpha_d * dualStep_p ) ) /
 					primalStep_p;
 		#ifdef TIMING
-			std::cout << "primal alpha " << primalValue_p + maxAlpha_p * primalStep_p << std::endl;
+			std::cout << "primal alpha " << alpha_primal << std::endl;
 		#endif
 	}
 
@@ -266,7 +270,7 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 						mufull / ( primalValue_d + maxAlpha_p * primalStep_d ) ) /
 					dualStep_d;
 		#ifdef TIMING
-			std::cout << "dual alpha " << dualValue_d + maxAlpha_d * dualStep_d << std::endl;
+			std::cout << "dual alpha " << alpha_dual << std::endl;
 		#endif
 	}
 

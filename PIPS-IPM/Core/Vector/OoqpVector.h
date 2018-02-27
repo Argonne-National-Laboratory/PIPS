@@ -214,7 +214,7 @@ public:
   virtual void findBlocking_pd(OoqpVector & wstep_vec,
     			      OoqpVector & u_vec,
     			      OoqpVector & ustep_vec,
-    			      double maxStepPri, double maxStepDual,
+    			      const double maxStepPri, const double maxStepDual,
     			      double *w_elt_p,
     			      double *wstep_elt_p,
     			      double *u_elt_p,
