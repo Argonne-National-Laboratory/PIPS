@@ -495,9 +495,7 @@ void sLinsysRoot::reduceKKT()
       if( locmyl > 0 || locmzl > 0 )
       {
          const int locNxMy = locnx + locmy;
-         const int locNxMyMylMzl = locnx + locmy + locmyl + locmzl;
-
-         assert(kktd->size() == locNxMyMylMzl);
+         assert(kktd->size() == locnx + locmy + locmyl + locmzl);
 
 #ifdef DENSE_USE_HALF
          // reduce lower left part
@@ -511,11 +509,13 @@ void sLinsysRoot::reduceKKT()
          // reduce upper right part
          submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
 
+         const int locNxMyMylMzl = locnx + locmy + locmyl + locmzl;
+
          // preserve symmetry
          double** M = kktd->mStorage->M;
          for( int k = locNxMy; k < locNxMyMylMzl; k++ )
-         for( int k2 = 0; k2 < locnx; k2++ )
-         M[k][k2] = M[k2][k];
+            for( int k2 = 0; k2 < locnx; k2++ )
+               M[k][k2] = M[k2][k];
 
          // reduce lower diagonal part
          submatrixAllReduce(kktd, locNxMy, locNxMy, locmyl + locmzl, locmyl + locmzl, mpiComm);
@@ -655,22 +655,22 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
 
    const int buffersize = nRows * nCols;
 
-   double* const buffer = new double[buffersize];
+   double* const bufferSend = new double[buffersize];
+   double* const bufferRecv = new double[buffersize];
 
-   // copy into buffer
+   // copy into send buffer
    int counter = 0;
    const size_t nColBytes = nCols * sizeof(double);
 
    for( int r = startRow; r < endRow; r++ )
    {
-      memcpy(&buffer[counter], &M[r][startCol], nColBytes);
+      memcpy(&bufferSend[counter], &M[r][startCol], nColBytes);
       counter += nCols;
    }
 
    assert(counter == buffersize);
 
-   // todo memopt use extra buffer?
-   const int iErr = MPI_Allreduce(MPI_IN_PLACE, buffer, buffersize, MPI_DOUBLE, MPI_SUM, comm);
+   const int iErr = MPI_Allreduce(bufferSend, bufferRecv, buffersize, MPI_DOUBLE, MPI_SUM, comm);
 
    assert(iErr == MPI_SUCCESS);
 
@@ -678,13 +678,14 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
    counter = 0;
    for( int r = startRow; r < endRow; r++ )
    {
-      memcpy(M[r] + startCol, &buffer[counter], nColBytes);
+      memcpy(&M[r][startCol], &bufferRecv[counter], nColBytes);
       counter += nCols;
    }
 
    assert(counter == buffersize);
 
-   delete[] buffer;
+   delete[] bufferRecv;
+   delete[] bufferSend;
 }
 
 
@@ -707,20 +708,21 @@ void sLinsysRoot::submatrixAllReduceDiagLower(DenseSymMatrix* A,
    const int buffersize = (subsize * subsize + subsize) / 2;
    assert(buffersize > 0);
 
-   double* const buffer = new double[buffersize];
+   double* const bufferSend = new double[buffersize];
+   double* const bufferRecv = new double[buffersize];
 
    int counter = 0;
+   // todo memopt, use memcpy?
    for( int i = substart; i < subend; i++ )
       for( int j = substart; j <= i; j++ )
       {
          assert(counter < buffersize);
-         buffer[counter++] = M[i][j];
+         bufferSend[counter++] = M[i][j];
       }
+
    assert(counter == buffersize);
 
-   // todo memopt use extra buffer?
-   const int iErr = MPI_Allreduce(MPI_IN_PLACE, buffer, buffersize, MPI_DOUBLE,
-         MPI_SUM, comm);
+   const int iErr = MPI_Allreduce(bufferSend, bufferRecv, buffersize, MPI_DOUBLE, MPI_SUM, comm);
 
    assert(iErr == MPI_SUCCESS);
 
@@ -729,10 +731,11 @@ void sLinsysRoot::submatrixAllReduceDiagLower(DenseSymMatrix* A,
       for( int j = substart; j <= i; j++ )
       {
          assert(counter < buffersize);
-         M[i][j] = buffer[counter++];
+         M[i][j] = bufferRecv[counter++];
       }
 
-   delete[] buffer;
+   delete[] bufferSend;
+   delete[] bufferRecv;
 }
 
 

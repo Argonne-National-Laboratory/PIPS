@@ -851,6 +851,9 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
       double val = dQ[p];
       dKkt[i][j] += val;
       dKkt[j][i] += val;
+#ifdef DENSE_USE_HALF
+      assert(0 && "Q not supported");
+#endif
     }
   }
   
@@ -898,9 +901,9 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   {
     SparseGenMatrix& A = prob->getLocalB(); // yes, B
 #ifdef DENSE_USE_HALF
-    double* dA = A.M();
-    int* krowA = A.krowM();
-    int* jcolA = A.jcolM();
+    const double* dA = A.M();
+    const int* krowA = A.krowM();
+    const int* jcolA = A.jcolM();
 
     int iKkt = locnx;
     for( int i = 0; i < locmy; ++i, ++iKkt ) {
@@ -925,9 +928,9 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   if( locmyl > 0 )
   {
     SparseGenMatrix& F = prob->getLocalF();
-    double* dF = F.M();
-    int* krowF = F.krowM();
-    int* jcolF = F.jcolM();
+    const double* dF = F.M();
+    const int* krowF = F.krowM();
+    const int* jcolF = F.jcolM();
 
     int iKkt = locnx + locmy;
     for( int i = 0; i < locmyl; ++i, ++iKkt ) {
@@ -953,9 +956,9 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     assert(zDiagLinkCons);
     SimpleVector& szDiagLinkCons = dynamic_cast<SimpleVector&>(*zDiagLinkCons);
 
-    double* dG = G.M();
-    int* krowG = G.krowM();
-    int* jcolG = G.jcolM();
+    const double* dG = G.M();
+    const int* krowG = G.krowM();
+    const int* jcolG = G.jcolM();
 
     int iKkt = locnx + locmy + locmyl;
     for( int i = 0; i < locmzl; ++i, ++iKkt ) {
@@ -965,7 +968,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
         j = jcolG[p];
         assert(j < locnx);
 
-        double val = dG[p];
+        const double val = dG[p];
         dKkt[iKkt][j] += val;
 #ifndef DENSE_USE_HALF
         dKkt[j][iKkt] += val;

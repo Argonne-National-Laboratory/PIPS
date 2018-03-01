@@ -148,10 +148,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 template<typename FORMULATION, typename IPMSOLVER>
 void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
-
+   int mype;
+   MPI_Comm_rank(comm,&mype);
 #ifdef TIMING
-  int mype;
-  MPI_Comm_rank(comm,&mype);
+
 
   if(0 == mype) cout << "solving ..." << endl;
 
@@ -179,8 +179,11 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
      scaler->scale();
 
   //---------------------------------------------
-  int result = solver->solve(data,vars,resids);
+  const int result = solver->solve(data,vars,resids);
   //---------------------------------------------
+
+  if( result != 0 && mype == 0 )
+     std::cout << "failed to solve instance, result code: " << result << std::endl;
 
 #ifdef TIMING
    if ( 0 != result )
