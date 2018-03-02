@@ -162,9 +162,10 @@ int StochPresolver::removeTinyEntries()
    if( myRank == 0)
       std::cout << "removing tiny entries..." << std::endl;
    // remove tiny entries in A
+   nelims += removeTinyEntriesSystem( true );
 
    // remove tiny entries in C
-   nelims += removeTinyEntriesC();
+   nelims += removeTinyEntriesSystem( false );
 
    if( myRank == 0)
       std::cout << "removing tiny entries finished. Removed "<< nelims <<" entries in total." << std::endl;
@@ -192,7 +193,7 @@ void StochPresolver::setCurrentPointersToNull()
    currRedColChild = NULL;
 }
 
-bool StochPresolver::updateCurrentPointers(int it, bool equality)
+bool StochPresolver::updateCurrentPointers(int it, bool equalitySystem)
 {
    StochGenMatrix* matrix;
    currRedColParent = dynamic_cast<SimpleVector*>(redCol->vec);
@@ -200,7 +201,7 @@ bool StochPresolver::updateCurrentPointers(int it, bool equality)
    currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->blx))->vec);
    currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->bux))->vec);
 
-   if( equality )
+   if( equalitySystem )
    {
       matrix = dynamic_cast<StochGenMatrix*>(SpAsPointer(presProb->A));
 
@@ -249,12 +250,6 @@ bool StochPresolver::updateCurrentPointers(int it, bool equality)
                dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->iclow))->vec);
          currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
          currRedRow = dynamic_cast<SimpleVector*>(redRowC->vec);
-         currAmat = NULL;
-         currBmat = matrix->Bmat->getStorageDynamic();
-         //currBlmat = matrix->Blmat->getStorageDynamic();
-
-         currxlowChild = NULL;
-         currxuppChild = NULL;
       }
       else  // at child it
       {
@@ -282,30 +277,36 @@ bool StochPresolver::updateCurrentPointers(int it, bool equality)
                dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->iclow))->children[it]->vec);
          currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsC->children[it]->vec);
          currRedRow = dynamic_cast<SimpleVector*>(redRowC->children[it]->vec);
-         currAmat =
-               dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Amat)->getStorageDynamic();
-         currBmat =
-               dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Bmat)->getStorageDynamic();
-         //currBlmat = dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Blmat)->getStorageDynamic();
 
-         currxlowChild =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->blx))->children[it]->vec);
-         currxuppChild =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->bux))->children[it]->vec);
       }
    }
    if( it == -1 ) // case at root
    {
+      currAmat = NULL;
+      currBmat = matrix->Bmat->getStorageDynamic();
+      //currBlmat = matrix->Blmat->getStorageDynamic();
       currRedColChild = NULL;
+
+      currxlowChild = NULL;
+      currxuppChild = NULL;
    }
 
    else  // at child it
+   {
+      currAmat = dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Amat)->getStorageDynamic();
+      currBmat = dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Bmat)->getStorageDynamic();
+      //currBlmat = dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Blmat)->getStorageDynamic();
       currRedColChild = dynamic_cast<SimpleVector*>(redCol->children[it]->vec);
 
+      currxlowChild =
+            dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->blx))->children[it]->vec);
+      currxuppChild =
+            dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>(SpAsPointer(presProb->bux))->children[it]->vec);
+   }
    return true;
 }
 
-int StochPresolver::removeTinyEntriesC()
+int StochPresolver::removeTinyEntriesSystem(bool equalitySystem)
 {
    int nelims = 0;
    double minval = -1.0;
@@ -321,20 +322,31 @@ int StochPresolver::removeTinyEntriesC()
 
    redRowC->setToZero();
    redCol->setToZero();
+   setCurrentPointersToNull();
 
-   StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+   StochGenMatrix* matrix;
+   if( equalitySystem )
+      matrix = dynamic_cast<StochGenMatrix*>(SpAsPointer(presProb->A));
+   else
+      matrix = dynamic_cast<StochGenMatrix*>(SpAsPointer(presProb->C));
 
    int nelimsB0 = 0;
-   if( updateCurrentPointers( -1, false) )
+   if( updateCurrentPointers( -1, equalitySystem) )
    {
       nelimsB0 = removeTinyInnerLoop(*currBmat, currxlowParent, currxuppParent, currRedColParent);
 
-      // update nRowElemsC.vec
-      (*nRowElemsC).vec->axpy(-1.0, *currRedRow);
+      // update nRowElems.vec
+      if( equalitySystem )
+         (*nRowElemsA).vec->axpy(-1.0, *currRedRow);
+      else
+         (*nRowElemsC).vec->axpy(-1.0, *currRedRow);
 
 #ifndef NDEBUG
       minval = -1.0;
-      (*nRowElemsC).vec->min(minval, index);
+      if( equalitySystem )
+         (*nRowElemsA).vec->min(minval, index);
+      else
+         (*nRowElemsC).vec->min(minval, index);
       assert( minval >= 0.0 );
 #endif
    }
@@ -343,25 +355,35 @@ int StochPresolver::removeTinyEntriesC()
       nelims += nelimsB0;
 
    // assert children sizes
-   assert( matrixC.children.size() == nRowElemsC->children.size() );
-   assert( matrixC.children.size() == redRowC->children.size() );
-   assert( matrixC.children.size() == redCol->children.size() );
+   assert( matrix->children.size() == nRowElemsC->children.size() );
+   assert( matrix->children.size() == redCol->children.size() );
 
    // go through the children
-   for( size_t it = 0; it< matrixC.children.size(); it++)
+   for( int it = 0; it< matrix->children.size(); it++)
    {
-      if( updateCurrentPointers((int)it, false) )
+      if( updateCurrentPointers(it, equalitySystem) )
       {
-         nelims += removeTinyCChild();
+         nelims += removeTinyChild();
 
-         // update nRowElemsC.children[it] and nColElems.children[it]
-         dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vec->axpy(-1.0, *currRedRow);
-         assert( dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl == NULL );
+         // update nRowElems.children[it] and nColElems.children[it]
+         if( equalitySystem )
+         {
+            dynamic_cast<SimpleVector*>(dynamic_cast<StochVector*>((*nRowElemsA).children[it])->vec)->axpy(-1.0, *currRedRow);
+            assert( dynamic_cast<StochVector*>((*nRowElemsA).children[it])->vecl == NULL );
+         }
+         else
+         {
+            dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vec->axpy(-1.0, *currRedRow);
+            assert( dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl == NULL );
+         }
          dynamic_cast<StochVector*>((*nColElems).children[it])->vec->axpy(-1.0, *currRedColChild);
 
 #ifndef NDEBUG
          minval = -1.0;
-         dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vec->min(minval, index);
+         if( equalitySystem )
+            dynamic_cast<StochVector*>((*nRowElemsA).children[it])->vec->min(minval, index);
+         else
+            dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vec->min(minval, index);
          assert( minval >= 0.0 );
 
          minval = -1.0;
@@ -395,7 +417,7 @@ int StochPresolver::removeTinyEntriesC()
 }
 
 /** Calls removeTinyInnerLoop for a Child on the matrices Amat, Bmat which also adapts the rhs. */
-int StochPresolver::removeTinyCChild()
+int StochPresolver::removeTinyChild()
 {
    int nelims = 0;
 
