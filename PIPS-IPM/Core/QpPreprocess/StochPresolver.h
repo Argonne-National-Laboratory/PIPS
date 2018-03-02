@@ -88,7 +88,8 @@ private:
   // remove small matrix entries and return number of eliminations
   int removeTinyEntries();
 
-  int removeTinyEntriesSystem(bool equalitySystem);
+  int removeTinyEntriesSystemA();
+  int removeTinyEntriesSystemC();
 
   int removeTinyChild();
 
