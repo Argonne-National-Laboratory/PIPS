@@ -16,6 +16,11 @@
 
 class Data;
 
+typedef struct
+{
+   int rowIdx;
+   int colIdx;
+} MTRXENTRY;
 
 /**  * @defgroup QpPreprocess
  *
@@ -65,6 +70,8 @@ private:
   SimpleVector* currRedRow;
   SimpleVector* currRedColParent;
   SimpleVector* currRedColChild;
+
+  MTRXENTRY * removedEntries;
 
   /** objective offset created by presolving*/
   double objOffset;

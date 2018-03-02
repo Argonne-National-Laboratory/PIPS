@@ -10,6 +10,8 @@
 #include <cassert>
 #include <iostream>
 #include <cmath>
+#include <utility>
+#include <math.h>
 
 #include "../Abstract/DoubleMatrix.h"
 #include "../SparseLinearAlgebra/SparseGenMatrix.h"
@@ -54,6 +56,8 @@ StochPresolver::StochPresolver(const Data* prob)
    currRedRow = NULL;
    currRedColParent = NULL;
    currRedColChild = NULL;
+
+   removedEntries = NULL;
    objOffset = 0.0;
 }
 
@@ -127,6 +131,7 @@ Data* StochPresolver::presolve()
 
 
    // todo: presolve
+   removedEntries = new MTRXENTRY[(int)ceil(0.2 * ((*presProb).my + (*presProb).mz) * (*presProb).nx)];
    int nElimsTinyEntries = removeTinyEntries();
    if( myRank == 0)
       std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
@@ -359,9 +364,9 @@ int StochPresolver::removeTinyEntriesSystem(bool equalitySystem)
    assert( matrix->children.size() == redCol->children.size() );
 
    // go through the children
-   for( int it = 0; it< matrix->children.size(); it++)
+   for( size_t it = 0; it< matrix->children.size(); it++)
    {
-      if( updateCurrentPointers(it, equalitySystem) )
+      if( updateCurrentPointers((int)it, equalitySystem) )
       {
          nelims += removeTinyChild();
 
@@ -432,7 +437,7 @@ int StochPresolver::removeTinyChild()
    return nelims;
 }
 
-/** Removes tiny entries in storage and adapts the rhs accodringly. */
+/** Removes tiny entries in storage and adapts the rhs accordingly. */
 int StochPresolver::removeTinyInnerLoop(SparseStorageDynamic& storage, SimpleVector* const xlow, SimpleVector* const xupp, SimpleVector* reductionsCol)
 {
    int nelims = 0;
@@ -467,17 +472,27 @@ int StochPresolver::removeTinyInnerLoop(SparseStorageDynamic& storage, SimpleVec
    for( int r = 0; r < storage.m; r++ )
    {
       const int start = storage.rowptr[r].start;
-      const int end = storage.rowptr[r].end;
-      for( int k = start; k < end; k++ )
+      int end = storage.rowptr[r].end;
+      int k = start;
+      while( k < end )
       {
          col = storage.jcolM[k];
          if( fabs(storage.M[k]) < tolerance3 )
          {
             cout << "Remove entry M ( "<< r << ", " << storage.jcolM[k] << " ) = "<<storage.M[k]<<" (by first test)"<<endl;
-            storage.M[k] = 0.0;
+
             redRow[r]++;
             redCol[storage.jcolM[k]]++;
             nelims ++;
+
+            //removedEntries[nelimsGlobal].rowIdx = r;
+            //removedEntries[nelimsGlobal].colIdx = storage.jcolM[k];
+            //storage.M[k] = 0.0;
+            std::swap(storage.M[k],storage.M[end-1]);
+            std::swap(storage.jcolM[k],storage.jcolM[end-1]);
+            storage.rowptr[r].end --;
+            end = storage.rowptr[r].end;
+            r--;
          }
          else if( fabs(storage.M[k]) < tolerance1
                && fabs(storage.M[k]) * (xuppElems[col] - xlowElems[col]) * nnzRow[r] < tolerance2 * feastol )
@@ -493,11 +508,20 @@ int StochPresolver::removeTinyInnerLoop(SparseStorageDynamic& storage, SimpleVec
             }
 
             cout << "Remove entry M ( "<< r << ", " << col << " ) = "<<storage.M[k]<<" (by second test)"<<endl;
-            storage.M[k] = 0.0;
             redRow[r]++;
             redCol[storage.jcolM[k]]++;
             nelims ++;
+
+            //removedEntries[nelimsGlobal]rowIdx = r;
+            //removedEntries[nelimsGlobal].colIdx = storage.jcolM[k];
+            // storage.M[k] = 0.0;
+            std::swap(storage.M[k],storage.M[end-1]);
+            std::swap(storage.jcolM[k],storage.jcolM[end-1]);
+            storage.rowptr[r].end --;
+            end = storage.rowptr[r].end;
+            r--;
          }
+         k++;
       }
    }
    return nelims;
