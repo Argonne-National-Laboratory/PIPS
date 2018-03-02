@@ -85,9 +85,7 @@ private:
 
   int removeTinyCChild();
 
-  int removeTinyInnerLoop(SparseStorageDynamic& storage, SimpleVector* const xlow, SimpleVector* const xupp, SimpleVector* nnzPerRow,
-        SimpleVector* reductionsRow, SimpleVector* reductionsCol,
-        SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow);
+  int removeTinyInnerLoop(SparseStorageDynamic& storage, SimpleVector* const xlow, SimpleVector* const xupp, SimpleVector* reductionsCol);
 
   sData* presProb;
 
