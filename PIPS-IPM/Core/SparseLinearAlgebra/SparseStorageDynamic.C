@@ -50,7 +50,7 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
 
    for( int r = 0; r < m; r++ )
    {
-      len += spareRatio * (orgkrowM[r + 1] - orgkrowM[r]);
+      len += int(spareRatio * (orgkrowM[r + 1] - orgkrowM[r]));
       assert(orgkrowM[r + 1] - orgkrowM[r] >= 0);
    }
 
@@ -72,7 +72,7 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
    int shift = 0;
    for( int r = 0; r < m; r++ )
    {
-      const int offset = spareRatio * (orgkrowM[r + 1] - orgkrowM[r]);
+      const int offset = int(spareRatio * (orgkrowM[r + 1] - orgkrowM[r]));
 
       rowptr[r].start = orgkrowM[r] + shift;
 
@@ -90,9 +90,10 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
             shift--;
          }
       }
-      shift += offset;
 
       rowptr[r].end = orgkrowM[r + 1] + shift;
+
+      shift += offset;
    }
 
    assert(m == 0 || rowptr[m - 1].end + int(spareRatio * (orgkrowM[m] - orgkrowM[m - 1])) == len );
