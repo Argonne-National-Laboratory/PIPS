@@ -42,22 +42,53 @@ private:
   // number of non-zero elements of each column
   StochVectorHandle nColElems;
 
+  // number of removed elements of each row / column
+  StochVectorHandle redRowA;
+  StochVectorHandle redRowC;
+  StochVectorHandle redCol;
+
+  // pointers to the currently needed matrices and vectors for presolving
+  SparseStorageDynamic* currAmat;
+  SparseStorageDynamic* currBmat;
+  SparseStorageDynamic* currBlmat;
+  SimpleVector* currxlowParent;
+  SimpleVector* currxlowChild;
+  SimpleVector* currxuppParent;
+  SimpleVector* currxuppChild;
+  SimpleVector* currEqRhs;
+  SimpleVector* currIneqRhs;
+  SimpleVector* currIneqLhs;
+  SimpleVector* currIcupp;
+  SimpleVector* currIclow;
+
+  SimpleVector* currNnzRow;
+  SimpleVector* currRedRow;
+  SimpleVector* currRedColParent;
+  SimpleVector* currRedColChild;
+
+  /** objective offset created by presolving*/
+  double objOffset;
+
   // initialize row and column nnz counter
   void initNnzCounter();
+
+  /** initialize current pointer for matrices and vectors.
+   * If it==-1, we are at parent and want block B_0 (Bmat).
+   * Returns false if it is a dummy child. */
+  bool updateCurrentPointers(int it, bool equality);
+  void setCurrentPointersToNull();
 
   // remove small matrix entries and return number of eliminations
   int removeTinyEntries();
 
   int removeTinyEntriesC();
 
-  int removeTinyEntriesCChild(size_t it, StochGenMatrix& matrix, const StochVector& xlow, const StochVector& xupp, StochVector* nnzPerRow, StochVector* redRow,
-                                               StochVector* redCol, StochVector* adaptionsRhs);
+  int removeTinyCChild();
 
-  int removeTinyEntriesInnerLoop(SparseStorageDynamic& storage, double* const xlowElems, double* const xuppElems, SimpleVector* nnzPerRow,
-                                  SimpleVector* reductionsRow, SimpleVector* reductionsCol, SimpleVector* adaptionsRhs);
+  int removeTinyInnerLoop(SparseStorageDynamic& storage, SimpleVector* const xlow, SimpleVector* const xupp, SimpleVector* nnzPerRow,
+        SimpleVector* reductionsRow, SimpleVector* reductionsCol,
+        SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow);
 
-  void adaptRhsA(StochVector* adaptionsRhsStoch, StochVector* b);
-  void adaptRhsC(SimpleVector* adaptionsRhs, SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow );
   sData* presProb;
 
 public:
