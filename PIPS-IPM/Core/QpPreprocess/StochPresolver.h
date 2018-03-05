@@ -22,6 +22,9 @@ typedef struct
    int colIdx;
 } MTRXENTRY;
 
+enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
+enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
+
 /**  * @defgroup QpPreprocess
  *
  * QP presolver
@@ -82,7 +85,7 @@ private:
   /** initialize current pointer for matrices and vectors.
    * If it==-1, we are at parent and want block B_0 (Bmat).
    * Returns false if it is a dummy child. */
-  bool updateCurrentPointers(int it, bool equalitySystem);
+  bool updateCurrentPointers(int it, SystemType system_type);
   void setCurrentPointersToNull();
 
   // remove small matrix entries and return number of eliminations
@@ -91,9 +94,12 @@ private:
   int removeTinyEntriesSystemA();
   int removeTinyEntriesSystemC();
 
-  int removeTinyChild();
+  int removeTinyChild( SystemType system_type );
 
-  int removeTinyInnerLoop(SparseStorageDynamic& storage, SimpleVector* const xlow, SimpleVector* const xupp, SimpleVector* reductionsCol);
+  int removeTinyInnerLoop( SystemType system_type, BlockType block_type );
+  void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims);
+
+  void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector);
 
   sData* presProb;
 
