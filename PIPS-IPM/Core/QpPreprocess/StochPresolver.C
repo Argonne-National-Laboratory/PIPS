@@ -186,12 +186,15 @@ void StochPresolver::setCurrentPointersToNull()
    currRedColChild = NULL;
 }
 
-bool StochPresolver::updateCurrentPointers(int it, SystemType system_type)
+void StochPresolver::updateCurrentParentColPointers()
 {
    currRedColParent = dynamic_cast<SimpleVector*>(redCol->vec);
    currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
    currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
+}
 
+bool StochPresolver::updateCurrentPointers(int it, SystemType system_type)
+{
    if( system_type == EQUALITY_SYSTEM )
    {
       StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
@@ -322,8 +325,7 @@ int StochPresolver::removeTinyEntriesSystemA()
    redRowC->setToZero();
    redCol->setToZero();
    setCurrentPointersToNull();
-
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
+   updateCurrentParentColPointers();
 
    int nelimsB0 = 0;
    if( updateCurrentPointers( -1, EQUALITY_SYSTEM) )
@@ -334,6 +336,8 @@ int StochPresolver::removeTinyEntriesSystemA()
 
    if( myRank == 0 )
       nelims += nelimsB0;
+
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
    assert( matrix.children.size() == nRowElemsC->children.size() );
    assert( matrix.children.size() == redCol->children.size() );
@@ -384,8 +388,7 @@ int StochPresolver::removeTinyEntriesSystemC()
    redRowC->setToZero();
    redCol->setToZero();
    setCurrentPointersToNull();
-
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+   updateCurrentParentColPointers();
 
    int nelimsB0 = 0;
    if( updateCurrentPointers( -1, INEQUALITY_SYSTEM) )
@@ -396,6 +399,8 @@ int StochPresolver::removeTinyEntriesSystemC()
 
    if( myRank == 0 )
       nelims += nelimsB0;
+
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
 
    assert( matrix.children.size() == nRowElemsC->children.size() );
    assert( matrix.children.size() == redCol->children.size() );
