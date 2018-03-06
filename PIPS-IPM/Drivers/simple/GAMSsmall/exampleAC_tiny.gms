@@ -10,8 +10,8 @@ Table A(i,j)
 i1   2
 i2        7
 i3   2       0.4e-10
-i4        5             2
-i5        4                         3
+i4        5  0.4e-9     2
+i5 0.4e-9 4                         3
 ;
 
 Table C(i,j)
@@ -20,7 +20,7 @@ i1   3
 i2     0.4e-8
 i3   2         4
 i4        5       0.4e-10
-i5        4                    0.4e-9
+i5        4                    0.4e-9 0.4e-9
 ;
 
 Positive Variables x(j)

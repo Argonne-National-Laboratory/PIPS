@@ -13,6 +13,7 @@
 #include "StochGenMatrix.h"
 #include "SmartPointer.h"
 #include "sData.h"
+#include <vector>
 
 class Data;
 
@@ -21,6 +22,12 @@ typedef struct
    int rowIdx;
    int colIdx;
 } MTRXENTRY;
+
+typedef struct
+{
+   int start;
+   int end;
+} BLOCKS;
 
 enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
 enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
@@ -74,7 +81,11 @@ private:
   SimpleVector* currRedColParent;
   SimpleVector* currRedColChild;
 
-  MTRXENTRY * removedEntries;
+  int nChildren;
+  int localNelims;
+  std::vector<MTRXENTRY> removedEntries;
+  BLOCKS* linkVarsBlocks;
+  BLOCKS* childBlocks;
 
   /** objective offset created by presolving*/
   double objOffset;
@@ -83,7 +94,6 @@ private:
   void initNnzCounter();
 
   void setCurrentPointersToNull();
-  void updateCurrentParentColPointers();
 
   /** initialize current pointer for matrices and vectors.
    * If it==-1, we are at parent and want block B_0 (Bmat).
@@ -96,12 +106,17 @@ private:
   int removeTinyEntriesSystemA();
   int removeTinyEntriesSystemC();
 
-  int removeTinyChild( SystemType system_type );
+  int removeTinyChild( int it, SystemType system_type );
 
-  int removeTinyInnerLoop( SystemType system_type, BlockType block_type );
+  int removeTinyInnerLoop( int it, SystemType system_type, BlockType block_type );
   void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims);
+  void storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type);
 
   void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector);
+
+  void updateTransposed(StochGenMatrix& matrix);
+  void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd);
+  void resetBlocks();
 
   sData* presProb;
 
