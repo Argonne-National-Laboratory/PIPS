@@ -49,6 +49,9 @@ StochPresolver::StochPresolver(const Data* prob)
    nChildren = nColElems->children.size();
    linkVarsBlocks = new BLOCKS[nChildren + 1];
    childBlocks = new BLOCKS[nChildren + 1];
+   resetLinkvarsAndChildBlocks();
+
+   blocks = new int[nChildren + 2];
    resetBlocks();
 
    objOffset = 0.0;
@@ -59,6 +62,7 @@ StochPresolver::~StochPresolver()
 {
    delete[] linkVarsBlocks;
    delete[] childBlocks;
+   delete[] blocks;
 }
 
 void
@@ -131,6 +135,9 @@ Data* StochPresolver::presolve()
    if( myRank == 0)
       std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
 
+   int nElimsSingletonRow = doSingletonRows();
+   if( myRank == 0)
+         std::cout << "In total, "<<nElimsSingletonRow<<" singleton rows were considered." << std::endl;
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
 
@@ -628,16 +635,35 @@ void StochPresolver::updateTransposed(StochGenMatrix& matrix)
          SparseStorageDynamic& BChild_trans = matrix.children[i-1]->Bmat->getStorageDynamicTransposedRef();
          updateTransposedSubmatrix(BChild_trans, childBlocks[i].start, childBlocks[i].end);
       }
-
    }
 
    // set localNelims, removedEntries, linkVarsBlocks, childBlocks to zero again.
    localNelims = 0;
    removedEntries.clear();
-   resetBlocks();
+   resetLinkvarsAndChildBlocks();
 }
 
-void StochPresolver::resetBlocks()
+int StochPresolver::doSingletonRows()
+{
+   int nelims = 0;
+   nelims += doSingletonRowsA();
+   nelims += doSingletonRowsC();
+   return nelims;
+}
+
+int StochPresolver::doSingletonRowsA()
+{
+   int nelims = 0;
+   return nelims;
+}
+
+int StochPresolver::doSingletonRowsC()
+{
+   int nelims = 0;
+   return nelims;
+}
+
+void StochPresolver::resetLinkvarsAndChildBlocks()
 {
    for( int i = 0; i < nChildren+1; i++)
    {
@@ -646,6 +672,12 @@ void StochPresolver::resetBlocks()
       childBlocks[i].start = 0;
       childBlocks[i].end = 0;
    }
+}
+
+void StochPresolver::resetBlocks()
+{
+   for( int i = 0; i < nChildren+2; i++)
+      blocks[i] = 0;
 }
 
 void StochPresolver::updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd)

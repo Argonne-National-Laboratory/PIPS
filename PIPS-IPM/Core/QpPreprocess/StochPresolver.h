@@ -29,6 +29,12 @@ typedef struct
    int end;
 } BLOCKS;
 
+typedef struct
+{
+   int colIdx;
+   double val;
+} COLUMNTOADAPT;
+
 enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
 enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
 
@@ -81,11 +87,36 @@ private:
   SimpleVector* currRedColParent;
   SimpleVector* currRedColChild;
 
+  /** the number of children */
   int nChildren;
+  /** number of eliminations on this process in the current elimination routine */
   int localNelims;
+
+  /** vector containing the removed entries */
   std::vector<MTRXENTRY> removedEntries;
+
+  /** array of length nChildren+1 to store start and end indices for removedEntries
+   * that correspond to the linking-variable block (usually Amat).
+   * As linkVarsBlocks[0] represents the parent block, the child block 'it' is accessed
+   * using the index 'it+1'. */
   BLOCKS* linkVarsBlocks;
+  /** array of length nChildren+1 to store start and end indices for removedEntries
+   * that correspond to the child block (usually Bmat).
+   * As childBlocks[0] represents the parent block which has no 'free' block,
+   * the child block 'it' is accessed using the index 'it+1'. */
   BLOCKS* childBlocks;
+
+  // variables used for singleton row elimination:
+  /** vector containing the row indices of singleton rows */
+  std::vector<int> singletonRows;
+  /** array of length nChildren+2 to store start indices for singletonRows
+   * that correspond to the correct block. As blocks[0] represents the parent block,
+   * the child block 'it' is accessed using the index 'it+1'. */
+  int* blocks;
+  /** vector containing the column indices of entries that were found during the
+   * singleton row routine. Along with the column index, the value needed for
+   * adaptation is stored. */
+  std::vector<COLUMNTOADAPT> colAdapt;
 
   /** objective offset created by presolving*/
   double objOffset;
@@ -116,6 +147,12 @@ private:
 
   void updateTransposed(StochGenMatrix& matrix);
   void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd);
+
+  int doSingletonRows();
+  int doSingletonRowsA();
+  int doSingletonRowsC();
+
+  void resetLinkvarsAndChildBlocks();
   void resetBlocks();
 
   sData* presProb;
