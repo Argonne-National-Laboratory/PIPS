@@ -51,8 +51,10 @@ StochPresolver::StochPresolver(const Data* prob)
    childBlocks = new BLOCKS[nChildren + 1];
    resetLinkvarsAndChildBlocks();
 
-   blocks = new int[nChildren + 2];
+   blocks = new int[nChildren + 3];
    resetBlocks();
+   colBlocks = new int[nChildren + 2];
+//todo: reset colBlocks
 
    objOffset = 0.0;
 }
@@ -63,6 +65,7 @@ StochPresolver::~StochPresolver()
    delete[] linkVarsBlocks;
    delete[] childBlocks;
    delete[] blocks;
+   delete[] colBlocks;
 }
 
 void
@@ -646,9 +649,72 @@ void StochPresolver::updateTransposed(StochGenMatrix& matrix)
 int StochPresolver::doSingletonRows()
 {
    int nelims = 0;
+   int nSingleRows = initSingletonRows(EQUALITY_SYSTEM);
+   cout<<"Found "<<nSingleRows<<" singleton rows in equality system A."<<endl;
    nelims += doSingletonRowsA();
    nelims += doSingletonRowsC();
    return nelims;
+}
+
+int StochPresolver::initSingletonRows(SystemType system_type)
+{
+   int nSingletonRows = 0;
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      assert(singletonRows.size() == 0);
+
+      SimpleVector* nRowASimple = dynamic_cast<SimpleVector*>(nRowElemsA->vec);
+      nSingletonRows += initSingletonRowsBlock(-1, nRowASimple);
+
+      assert((int)nRowElemsA->children.size() == nChildren);
+      for( size_t it = 0; it < nRowElemsA->children.size(); it++)
+      {
+         SimpleVector* nRowASimpleChild = dynamic_cast<SimpleVector*>(nRowElemsA->children[it]->vec);
+         nSingletonRows += initSingletonRowsBlock(int(it), nRowASimpleChild);
+      }
+      blocks[nChildren+1] = singletonRows.size();
+
+      // todo: linking block nRowElemsA->vecl
+      //blocks[nChildren+2] = singletonRows.size();
+   }
+   else
+   {
+      assert( system_type == INEQUALITY_SYSTEM );
+      //todo: if rows from A and C should be stored, then another variable to store the indices is needed,
+      // blocks is not enough.
+      assert(singletonRows.size() == 0);
+
+      SimpleVector* nRowASimple = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
+      nSingletonRows += initSingletonRowsBlock(-1, nRowASimple);
+
+      assert((int)nRowElemsC->children.size() == nChildren);
+      for( size_t it = 0; it < nRowElemsC->children.size(); it++)
+      {
+         SimpleVector* nRowASimpleChild = dynamic_cast<SimpleVector*>(nRowElemsC->children[it]->vec);
+         nSingletonRows += initSingletonRowsBlock(int(it), nRowASimpleChild);
+      }
+      blocks[nChildren+1] = singletonRows.size();
+
+      // todo: linking block nRowElemsC->vecl
+      //blocks[nChildren+2] = singletonRows.size();
+   }
+   return nSingletonRows;
+}
+
+int StochPresolver::initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple)
+{
+   int nSingletonRows = 0;
+
+   blocks[it+1] = singletonRows.size();
+   double* nnzRow = nnzRowSimple->elements();
+
+   for( int i = 0; i < nnzRowSimple->n; i++)
+      if( nnzRow[i] == 1.0 )
+      {
+         singletonRows.push_back(i);
+         nSingletonRows++;
+      }
+   return nSingletonRows;
 }
 
 int StochPresolver::doSingletonRowsA()
@@ -676,7 +742,7 @@ void StochPresolver::resetLinkvarsAndChildBlocks()
 
 void StochPresolver::resetBlocks()
 {
-   for( int i = 0; i < nChildren+2; i++)
+   for( int i = 0; i < nChildren+3; i++)
       blocks[i] = 0;
 }
 

@@ -109,14 +109,19 @@ private:
   // variables used for singleton row elimination:
   /** vector containing the row indices of singleton rows */
   std::vector<int> singletonRows;
-  /** array of length nChildren+2 to store start indices for singletonRows
+  /** array of length nChildren+3 to store start indices for singletonRows
    * that correspond to the correct block. As blocks[0] represents the parent block,
-   * the child block 'it' is accessed using the index 'it+1'. */
+   * the child block 'it' is accessed using the index 'it+1'.
+   * The linking-row block is accessed using the index nChildren+2. */
   int* blocks;
   /** vector containing the column indices of entries that were found during the
    * singleton row routine. Along with the column index, the value needed for
    * adaptation is stored. */
   std::vector<COLUMNTOADAPT> colAdapt;
+  /** array of length nChildren+2 to store start indices for colAdapt
+     * that correspond to the correct block. As blocks[0] represents the parent block,
+     * the child block 'it' is accessed using the index 'it+1'. */
+  int* colBlocks;
 
   /** objective offset created by presolving*/
   double objOffset;
@@ -149,6 +154,8 @@ private:
   void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd);
 
   int doSingletonRows();
+  int initSingletonRows(SystemType system_type);
+  int initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple);
   int doSingletonRowsA();
   int doSingletonRowsC();
 
