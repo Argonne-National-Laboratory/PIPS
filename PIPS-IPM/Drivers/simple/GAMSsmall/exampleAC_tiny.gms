@@ -23,7 +23,9 @@ i4        5       0.4e-10
 i5        4                    0.4e-9 0.4e-9
 ;
 
-Positive Variables x(j)
+Positive Variables x(j)  / j3.up 10, j7.up 5 /;
+*makes it infeasible: j2.up 0.5
+
 Variable           z      objective variable
 Equations          e(i)   equality equations
                    ie(i)  inequality equations

@@ -76,11 +76,18 @@ private:
   SimpleVector* currxlowChild;
   SimpleVector* currxuppParent;
   SimpleVector* currxuppChild;
+  SimpleVector* currIxlowParent;
+  SimpleVector* currIxlowChild;
+  SimpleVector* currIxuppParent;
+  SimpleVector* currIxuppChild;
   SimpleVector* currEqRhs;
   SimpleVector* currIneqRhs;
   SimpleVector* currIneqLhs;
   SimpleVector* currIcupp;
   SimpleVector* currIclow;
+
+  SimpleVector* currgParent;
+  SimpleVector* currgChild;
 
   SimpleVector* currNnzRow;
   SimpleVector* currRedRow;
@@ -117,11 +124,11 @@ private:
   /** vector containing the column indices of entries that were found during the
    * singleton row routine. Along with the column index, the value needed for
    * adaptation is stored. */
-  std::vector<COLUMNTOADAPT> colAdapt;
-  /** array of length nChildren+2 to store start indices for colAdapt
-     * that correspond to the correct block. As blocks[0] represents the parent block,
-     * the child block 'it' is accessed using the index 'it+1'. */
-  int* colBlocks;
+  std::vector<COLUMNTOADAPT> colAdaptParent;
+  std::vector<COLUMNTOADAPT> colAdaptChildren;
+  /** array of length nChildren+1 to store start indices for colAdaptChildren
+     * that correspond to the correct child block. */
+  int* colBlocksChildren;
 
   /** objective offset created by presolving*/
   double objOffset;
@@ -156,7 +163,10 @@ private:
   int doSingletonRows();
   int initSingletonRows(SystemType system_type);
   int initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple);
-  int doSingletonRowsA();
+  bool doSingletonRowsA();
+  bool updateCurrentPointersForSingletonRow(int it, SystemType system_type);
+  bool procSingletonRow(StochGenMatrix& stochMatrix, int it);
+  bool removeSingleRowEntry(SparseStorageDynamic& storage, int rowIdx, BlockType block_type);
   int doSingletonRowsC();
 
   void resetLinkvarsAndChildBlocks();
