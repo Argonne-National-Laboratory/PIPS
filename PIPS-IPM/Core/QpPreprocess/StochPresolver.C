@@ -52,9 +52,10 @@ StochPresolver::StochPresolver(const Data* prob)
    resetLinkvarsAndChildBlocks();
 
    blocks = new int[nChildren + 3];
-   resetBlocks();
+   blocksIneq = new int[nChildren + 3];
    colBlocksChildren = new int[nChildren + 1];
-//todo: reset colBlocks
+   resetBlocks();
+   resetColBlocks();
 
    objOffset = 0.0;
 }
@@ -65,6 +66,7 @@ StochPresolver::~StochPresolver()
    delete[] linkVarsBlocks;
    delete[] childBlocks;
    delete[] blocks;
+   delete[] blocksIneq;
    delete[] colBlocksChildren;
 }
 
@@ -138,7 +140,11 @@ Data* StochPresolver::presolve()
    if( myRank == 0)
       std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
 
-   doSingletonRows();
+   myfile.open("middle.txt");
+   presProb->writeToStreamDense(myfile);
+   myfile.close();
+
+   //doSingletonRows();
 
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
 
@@ -190,7 +196,9 @@ int StochPresolver::removeTinyEntries()
 void StochPresolver::setCurrentPointersToNull()
 {
    currAmat = NULL;
+   currAmatTrans = NULL;
    currBmat = NULL;
+   currBmatTrans = NULL;
    currBlmat = NULL;
    currxlowParent = NULL;
    currxuppParent = NULL;
@@ -211,6 +219,7 @@ void StochPresolver::setCurrentPointersToNull()
    currRedColChild = NULL;
    currgParent = NULL;
    currgChild = NULL;
+   currNnzColChild = NULL;
 }
 
 bool StochPresolver::updateCurrentPointers(int it, SystemType system_type)
@@ -228,28 +237,17 @@ bool StochPresolver::updateCurrentPointers(int it, SystemType system_type)
       if( it == -1 ) // case at root
       {
          currAmat = matrix.Bmat->getStorageDynamic();   // save Bmat as currAmat for easy computation in TinyInnerLoop
-
          currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec);
          currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsA->vec);
          currRedRow = dynamic_cast<SimpleVector*>(redRowA->vec);
       }
       else  // at child it
       {
-         if( matrix.children[it]->isKindOf(kStochGenDummyMatrix))
-         {
-            assert( dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->isKindOf(kStochDummy) );
-            assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->isKindOf(kStochDummy) );
-            assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->isKindOf(kStochDummy) );
-            assert( nRowElemsA->children[it]->isKindOf(kStochDummy) );
-            assert( redRowA->children[it]->isKindOf(kStochDummy) );
-            assert( redCol->children[it]->isKindOf(kStochDummy) );
-            setCurrentPointersToNull();
-            return false;
-         }
+         if( childIsDummy(matrix, it, EQUALITY_SYSTEM) ) return false;
+
          currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
          currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
          //currBlmat = dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Blmat)->getStorageDynamic();
-
          currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->vec);
          currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsC->children[it]->vec);
          currRedRow = dynamic_cast<SimpleVector*>(redRowA->children[it]->vec);
@@ -270,45 +268,25 @@ bool StochPresolver::updateCurrentPointers(int it, SystemType system_type)
       {
          currAmat = matrix.Bmat->getStorageDynamic();   // save Bmat as currAmat for easy computation in TinyInnerLoop
 
-         currIneqRhs =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec);
-         currIneqLhs =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec);
-         currIcupp =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
-         currIclow =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
+         currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec);
+         currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec);
+         currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
+         currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
          currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
          currRedRow = dynamic_cast<SimpleVector*>(redRowC->vec);
       }
       else  // at child it
       {
-         if( matrix.children[it]->isKindOf(kStochGenDummyMatrix))
-         {
-            assert( dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->isKindOf(kStochDummy) );
-            assert( dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->isKindOf(kStochDummy) );
-            assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->isKindOf(kStochDummy) );
-            assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->isKindOf(kStochDummy) );
-            assert( dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->isKindOf(kStochDummy) );
-            assert( dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->isKindOf(kStochDummy) );
-            assert( nRowElemsC->children[it]->isKindOf(kStochDummy) );
-            assert( redRowC->children[it]->isKindOf(kStochDummy) );
-            assert( redCol->children[it]->isKindOf(kStochDummy) );
-            setCurrentPointersToNull();
-            return false;
-         }
+         if( childIsDummy(matrix, it, INEQUALITY_SYSTEM) ) return false;
+
          currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
          currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
          //currBlmat = dynamic_cast<SparseGenMatrix*>(matrix->children[it]->Blmat)->getStorageDynamic();
 
-         currIneqRhs =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec);
-         currIneqLhs =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec);
-         currIcupp =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec);
-         currIclow =
-               dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec);
+         currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec);
+         currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec);
+         currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec);
+         currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec);
          currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsC->children[it]->vec);
          currRedRow = dynamic_cast<SimpleVector*>(redRowC->children[it]->vec);
 
@@ -319,25 +297,18 @@ bool StochPresolver::updateCurrentPointers(int it, SystemType system_type)
       currBmat = NULL;  // Bmat is saved as currAmat for easy computation in TinyInnerLoop
       //currBlmat = matrix->Blmat->getStorageDynamic();
       currRedColChild = NULL;
-
       currxlowChild = NULL;
       currxuppChild = NULL;
       currIxlowChild = NULL;
       currIxuppChild = NULL;
    }
-
    else  // at child it
    {
       currRedColChild = dynamic_cast<SimpleVector*>(redCol->children[it]->vec);
-
-      currxlowChild =
-            dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->vec);
-      currxuppChild =
-            dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->vec);
-      currIxlowChild =
-            dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
-      currIxuppChild =
-            dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
+      currxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->vec);
+      currxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->vec);
+      currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
+      currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
    }
    return true;
 }
@@ -671,6 +642,8 @@ int StochPresolver::doSingletonRows()
    int nelims = 0;
    int nSingleRows = initSingletonRows(EQUALITY_SYSTEM);
    cout<<"Found "<<nSingleRows<<" singleton rows in equality system A."<<endl;
+
+   resetRedCounters();
    nelims += doSingletonRowsA();
    nelims += doSingletonRowsC();
    return nelims;
@@ -762,14 +735,18 @@ int StochPresolver::initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple)
 
 bool StochPresolver::doSingletonRowsA()
 {
-   // First, remove enries in singleton rows and fix the variables value
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   bool iAmDistrib = false;
+   if( world_size > 1) iAmDistrib = true;
+
+   // First, remove enries in singleton rows
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
    updateCurrentPointersForSingletonRow(-1, EQUALITY_SYSTEM);
 
    bool possFeas = procSingletonRow(matrix, -1);
-   if( !possFeas )
-      return false;
+   if( !possFeas ) return false;
 
    assert(nChildren == (int)matrix.children.size());
    for( int it = 0; it < nChildren; it++ )
@@ -777,17 +754,46 @@ bool StochPresolver::doSingletonRowsA()
       if( updateCurrentPointersForSingletonRow(it, EQUALITY_SYSTEM) )
       {
          possFeas = procSingletonRow(matrix, it);
-         if( !possFeas )
-            return false;
+         if( !possFeas ) return false;
       }
    }
    colBlocksChildren[matrix.children.size()] = colAdaptChildren.size();
 
    for(int i = 0; i<(int)singletonRows.size(); i++)
       assert(singletonRows[i] == -1);
+   singletonRows.clear();
+   resetBlocks();
+
+   // Update the nnz Vectors using the reduction Vectors
+   updateNnzUsingReductions( nRowElemsA->vec, redRowA->vec);
+   for(int i = 0; i<nChildren; i++)
+   {
+      updateNnzUsingReductions( dynamic_cast<StochVector*>((*nRowElemsA).children[i])->vec, dynamic_cast<SimpleVector*>(redRowA->children[i]->vec));
+      updateNnzUsingReductions( dynamic_cast<StochVector*>((*nColElems).children[i])->vec, dynamic_cast<SimpleVector*>(redCol->children[i]->vec));
+   }
+
+   if( iAmDistrib )
+   {
+      double* redColParent = dynamic_cast<SimpleVector*>(redCol->vec)->elements();
+      int message_size = dynamic_cast<SimpleVector*>(redCol->vec)->length();
+      MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   }
+   updateNnzUsingReductions(nColElems->vec, redCol->vec);
+
+   // Set the variable bounds to zero.
+   setRemovedVarsBoundsToZero();
+
+   cout<<"After setRemovedVarsBoundsToZero, before applyColAdapt:"<<endl;
+   presProb->writeToStreamDense(cout);
 
    // Then remove the corresponding entries to these variables (go through the columns)
-//todo applyColAdapt();
+
+   int newSREq = 0;
+   int newSRIneq = 0;
+   // todo AAAA Fehlerquelle hier drin:
+   //applyColAdapt(newSREq, newSRIneq);
+
+   cout<<"Found "<<newSREq<<" new singleton rows in A and "<<newSRIneq<<" new singleton rows in C."<<endl;
 
    return true;
 }
@@ -798,13 +804,13 @@ bool StochPresolver::doSingletonRowsA()
 bool StochPresolver::updateCurrentPointersForSingletonRow(int it, SystemType system_type)
 {
    //todo: for INEQUALITY_SYSTEM
+
    // current pointers the same for all children and parent (parent part of col vector)
    currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
    currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
    currIxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
    currIxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
    currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
-   currRedColParent = dynamic_cast<SimpleVector*>(redCol->vec);
 
    if( it == -1 )
    {
@@ -815,13 +821,12 @@ bool StochPresolver::updateCurrentPointersForSingletonRow(int it, SystemType sys
    }
    else  // at child it
    {
-      if( redCol->children[it]->isKindOf(kStochDummy))
+      if( nColElems->children[it]->isKindOf(kStochDummy))
       {
          assert( dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->isKindOf(kStochDummy) );
          assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->isKindOf(kStochDummy) );
          assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->isKindOf(kStochDummy) );
          assert( redRowA->children[it]->isKindOf(kStochDummy) );
-         assert( redCol->children[it]->isKindOf(kStochDummy) );
          setCurrentPointersToNull();
          return false;
       }
@@ -832,7 +837,6 @@ bool StochPresolver::updateCurrentPointersForSingletonRow(int it, SystemType sys
       currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->vec);
       currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
       currRedRow = dynamic_cast<SimpleVector*>(redRowA->children[it]->vec);
-      currRedColChild = dynamic_cast<SimpleVector*>(redCol->children[it]->vec);
    }
    return true;
 }
@@ -853,7 +857,7 @@ bool StochPresolver::procSingletonRow(StochGenMatrix& stochMatrix, int it)
          int rowIdx = singletonRows[i];
          singletonRows[i] = -1;  // for debugging purposes
 
-         possFeas = removeSingleRowEntry(B0_mat, rowIdx, LINKING_VARS_BLOCK);
+         possFeas = removeSingleRowEntry(B0_mat, rowIdx, LINKING_VARS_BLOCK, true);
          if( !possFeas ) return false;
       }
    }
@@ -868,11 +872,11 @@ bool StochPresolver::procSingletonRow(StochGenMatrix& stochMatrix, int it)
          int rowIdx = singletonRows[i];
          singletonRows[i] = -1;  // for debugging purposes
          if( A_mat.rowptr[rowIdx].start +1 == A_mat.rowptr[rowIdx].end) // single entry in in the linking vars block Amat
-            possFeas = removeSingleRowEntry(A_mat, rowIdx, LINKING_VARS_BLOCK);
+            possFeas = removeSingleRowEntry(A_mat, rowIdx, LINKING_VARS_BLOCK, false);
          else   // single entry in in the child block Bmat
          {
             assert(B_mat.rowptr[rowIdx].start +1 == B_mat.rowptr[rowIdx].end);
-            possFeas = removeSingleRowEntry(B_mat, rowIdx, CHILD_BLOCK);
+            possFeas = removeSingleRowEntry(B_mat, rowIdx, CHILD_BLOCK, false);
          }
          if( !possFeas ) return false;
       }
@@ -887,25 +891,16 @@ bool StochPresolver::procSingletonRow(StochGenMatrix& stochMatrix, int it)
  * Fixes the variable to 0 by setting both lower and uppder bound to 0.
  * Stores the corresponding column index in colAdaptParent or colAdaptChild respectively.
  * Return false if infeasibility is detected.*/
-bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int rowIdx, BlockType block_type)
+bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int rowIdx, BlockType block_type, bool parentZero)
 {
-   int indexK = storage.rowptr[rowIdx].start;
-   int colIdx = storage.jcolM[indexK];
-
-   assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
-
-   double aik = storage.M[indexK];
-   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
-   assert(aik != 0.0);
-
-   double val = currEqRhs->elements()[rowIdx] / aik;
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    double* ixlow;
    double* ixupp;
    double* xlow;
    double* xupp;
    double* g;
-   double* red_col;
 
    if( block_type == LINKING_VARS_BLOCK )
    {
@@ -914,7 +909,6 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       xlow = currxlowParent->elements();
       xupp = currxuppParent->elements();
       g = currgParent->elements();
-      red_col = currRedColParent->elements();
    }
    else
    {
@@ -924,27 +918,30 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       xlow = currxlowChild->elements();
       xupp = currxuppChild->elements();
       g = currgChild->elements();
-      red_col = currRedColChild->elements();
    }
+
+   int indexK = storage.rowptr[rowIdx].start;
+   int colIdx = storage.jcolM[indexK];
+
+   assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
+
+   double aik = storage.M[indexK];
+   assert(aik != 0.0);
+   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
+
+   double val = currEqRhs->elements()[rowIdx] / aik;
 
    if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
          || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
    {
-      cout<<"Infeasibility detected at variable "<<colIdx<<endl;
+      cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
       return false;
    }
    else{
-      objOffset += g[colIdx] * val;
+      if( !parentZero || myRank == 0 )
+         objOffset += g[colIdx] * val;
 
-      currRedRow->elements()[rowIdx]++;
-      red_col[storage.jcolM[indexK]]++;
       storage.rowptr[rowIdx].end --;
-
-      currEqRhs->elements()[rowIdx] = 0.0;
-      if(ixlow[colIdx] != 0.0)
-         xlow[colIdx] = 0.0;
-      if(ixupp[colIdx] != 0.0)
-         xupp[colIdx] = 0.0;
 
       COLUMNTOADAPT colWithVal = {colIdx, val};
       if( block_type == LINKING_VARS_BLOCK )
@@ -954,6 +951,283 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
          assert(block_type == CHILD_BLOCK);
          colAdaptChildren.push_back(colWithVal);
       }
+   }
+
+   return true;
+}
+
+/** For the removed entries in the singleton-row procedure, adapt the bounds for the concerned variables.
+ * Set their lower and upper bounds (xlow/xupp) to 0.0 and their ixlow/ixupp to 1.0 . */
+void StochPresolver::setRemovedVarsBoundsToZero()
+{
+   // todo: if there are same columns in the parent col block, might show infeasibility?
+
+   currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
+   currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
+   currIxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
+   currIxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
+
+   for(int i=0; i<(int)colAdaptParent.size(); i++)
+   {
+      int colIdx = colAdaptParent[i].colIdx;
+      currxlowParent->elements()[colIdx] = 0.0;
+      currxuppParent->elements()[colIdx] = 0.0;
+      currIxlowParent->elements()[colIdx] = 1.0;
+      currIxuppParent->elements()[colIdx] = 1.0;
+   }
+
+   for(int it=0; it<nChildren; it++)
+   {
+      cout<<"child "<<it<<endl;
+      if( nColElems->children[it]->isKindOf(kStochDummy))
+         continue;
+      currxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->vec);
+      currxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->vec);
+      currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
+      currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
+
+      cout<<"colBlocksChildren[it]: "<<colBlocksChildren[it]<<" colBlocksChildren[it+1]: "<<colBlocksChildren[it+1]<<endl;
+      for(int i = colBlocksChildren[it]; i < colBlocksChildren[it + 1]; i++)
+      {
+         int colIdx = colAdaptChildren[i].colIdx;
+         currxlowParent->elements()[colIdx] = 0.0;
+         currxuppParent->elements()[colIdx] = 0.0;
+         currIxlowParent->elements()[colIdx] = 1.0;
+         currIxuppParent->elements()[colIdx] = 1.0;
+         assert(0);
+
+      }
+   }
+}
+
+void StochPresolver::applyColAdapt(int& newSREq, int& newSRIneq)
+{
+   // go through colAdaptParent, then colAdaptChildren and for each column index j, go through A' to find all rows containing an entry in j.
+   // for these rows, eliminate the entry (in A and in A'), adapt the rhs with the value, increase redRow and redCol, decrease nnzRow. If it is now 1, add
+   // this row to the singletonRow list.
+
+   // todo: verify that no two column indices inside are the same but with different values (->infeasible)
+
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   bool iAmDistrib = false;
+   if( world_size > 1) iAmDistrib = true;
+
+   if( colAdaptParent.size() > 0 )
+   {
+      updateCurrentPointersForColAdapt(-1, EQUALITY_SYSTEM);
+      newSREq += colAdaptLinkVars(-1, EQUALITY_SYSTEM);
+
+      updateCurrentPointersForColAdapt(-1, INEQUALITY_SYSTEM);
+      newSRIneq += colAdaptLinkVars(-1, INEQUALITY_SYSTEM);
+   }
+    cout<<"After colAdaptParent, before colAdaptChild:"<<endl;
+    presProb->writeToStreamDense(cout);
+
+   for(int i= 0; i<nChildren; i++)
+   {
+      if( updateCurrentPointersForColAdapt( i, EQUALITY_SYSTEM) )
+      {
+         newSREq += colAdaptLinkVars(i, EQUALITY_SYSTEM);
+         if( colBlocksChildren[i] < colBlocksChildren[i+1] )
+            newSREq += colAdaptChild( i, EQUALITY_SYSTEM);
+      }
+
+      if( updateCurrentPointersForColAdapt( i, INEQUALITY_SYSTEM) )
+      {
+         newSRIneq += colAdaptLinkVars(i, INEQUALITY_SYSTEM);
+         if( colBlocksChildren[i] < colBlocksChildren[i+1] )
+            newSRIneq += colAdaptChild( i, INEQUALITY_SYSTEM);
+      }
+   }
+
+   if( iAmDistrib )
+   {
+      double* redColParent = dynamic_cast<SimpleVector*>(redCol->vec)->elements();
+      int message_size = dynamic_cast<SimpleVector*>(redCol->vec)->length();
+      MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   }
+   updateNnzUsingReductions(nColElems->vec, redCol->vec);
+}
+
+int StochPresolver::colAdaptLinkVars(int it, SystemType system_type)
+{
+   int newSingletonRows = 0;
+
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      if( it==-1) assert(singletonRows.size()==0);
+      blocks[it+1] = singletonRows.size();
+   }
+   else
+   {
+      if( it==-1) assert(singletonRowsIneq.size()==0);
+      blocksIneq[it+1] = singletonRowsIneq.size();
+   }
+
+   for( int i=0; i < (int)colAdaptParent.size(); i++)
+   {
+      int colIdxA = colAdaptParent[i].colIdx;
+      double val = colAdaptParent[i].val;
+
+      for( int j = currAmatTrans->rowptr[colIdxA].start; j < currAmatTrans->rowptr[colIdxA].end; j++ )
+      {
+         int rowIdxA = currAmatTrans->jcolM[j];
+         double m = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA);
+
+         if( system_type == EQUALITY_SYSTEM )
+            currEqRhs->elements()[rowIdxA] -= m * val;
+         else
+         {  // for inequality system, adapt both sides if they exist
+            assert(system_type ==INEQUALITY_SYSTEM);
+            if( currIcupp->elements()[rowIdxA] != 0.0 )
+               currIneqRhs->elements()[rowIdxA] -= m * val;
+            if( currIclow->elements()[rowIdxA] != 0.0 )
+               currIneqLhs->elements()[rowIdxA] -=  m * val;
+         }
+
+         currRedColParent->elements()[colIdxA] ++;
+         currNnzRow->elements()[rowIdxA] --;
+         currRedRow->elements()[rowIdxA] ++;
+
+         if(currRedRow->elements()[rowIdxA] == 1)
+         {
+            newSingletonRows++;
+            if( system_type == EQUALITY_SYSTEM )
+               singletonRows.push_back(rowIdxA);
+            else
+               singletonRowsIneq.push_back(rowIdxA);
+         }
+      }
+      clearRow(*currAmatTrans, colIdxA);
+   }
+
+   return newSingletonRows;
+}
+
+int StochPresolver::colAdaptChild( int it, SystemType system_type )
+{
+   // Bmat, BmatTrans, ncolchild, redcolchild, nrowchild, redrowchild, currEqRhs, icupp, cupp, iclow, clow are updated
+   int newSingletonRows = 0;
+/*
+   if( system_type == EQUALITY_SYSTEM )
+      blocks[it + 1] = singletonRows.size();
+   else
+      blocksIneq[it + 1] = singletonRowsIneq.size();
+  */
+   for( int i = colBlocksChildren[it]; i<colBlocksChildren[it+1]; i++)
+   {
+      int colIdxB = colAdaptChildren[i].colIdx;
+      double val = colAdaptChildren[i].val;
+
+      for( int j = currBmatTrans->rowptr[colIdxB].start; j<currBmatTrans->rowptr[colIdxB].end; j++ )
+      {
+         int rowIdxB = currBmatTrans->jcolM[j];
+         double m = removeEntryInDynamicStorage(*currBmat, rowIdxB, colIdxB);
+
+         if( system_type == EQUALITY_SYSTEM )
+            currEqRhs->elements()[rowIdxB] -= m * val;
+         else
+         {  // for inequality system, adapt both sides if they exist
+            assert(system_type ==INEQUALITY_SYSTEM);
+            if( currIcupp->elements()[rowIdxB] != 0.0 )
+               currIneqRhs->elements()[rowIdxB] -= m * val;
+            if( currIclow->elements()[rowIdxB] != 0.0 )
+               currIneqLhs->elements()[rowIdxB] -=  m * val;
+         }
+
+         currNnzColChild->elements()[colIdxB] --;
+         currRedColChild->elements()[colIdxB] ++;
+         currNnzRow->elements()[rowIdxB] --;
+         currRedRow->elements()[rowIdxB] ++;
+
+         if(currRedRow->elements()[rowIdxB] == 1)
+         {
+            newSingletonRows++;
+            if( system_type == EQUALITY_SYSTEM )
+               singletonRows.push_back(rowIdxB);
+            else
+               singletonRowsIneq.push_back(rowIdxB);
+         }
+      }
+      clearRow(*currBmatTrans, colIdxB);
+   }
+   return newSingletonRows;
+}
+
+/** Return false if it is a dummy child. Else, set the current pointers to Amat, AmatTrans, Bmat, BmatTrans,
+ * currNnzRow, currRedRow, currNnzColChild, currRedColChild.
+ * currxlowChild, currxuppChild, currIxlowChild, currIxuppChild.
+ * And depending on the systemType: either currEqRhs or currIneqRhs, currIneqLhs, currIcupp and currIclow. */
+bool StochPresolver::updateCurrentPointersForColAdapt(int it, SystemType system_type)
+{
+   setCurrentPointersToNull();
+   if( it == -1 )
+   {
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
+         currAmat = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamic();
+         currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamicTransposed();
+         currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec);
+         currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsA->vec);
+         currRedRow = dynamic_cast<SimpleVector*>(redRowA->vec);
+      }
+      else  // system_type == INEQUALITY_SYSTEM
+      {
+         StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+
+         currAmat = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamic();
+         currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamicTransposed();
+         currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec);
+         currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec);
+         currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
+         currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
+         currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsC->vec);
+         currRedRow = dynamic_cast<SimpleVector*>(redRowC->vec);
+      }
+      currRedColParent = dynamic_cast<SimpleVector*>(redCol->vec);
+
+   }
+   else{ // at child it
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
+
+         if( childIsDummy(matrix, it, EQUALITY_SYSTEM) ) return false;
+
+         currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
+         currBmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamicTransposed();
+         currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
+         currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamicTransposed();
+
+         currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->vec);
+         currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsA->children[it]->vec);
+         currRedRow = dynamic_cast<SimpleVector*>(redRowA->children[it]->vec);
+      }
+      else  // system_type == INEQUALITY_SYSTEM
+      {
+         assert( system_type == INEQUALITY_SYSTEM );
+
+         StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+
+         if( childIsDummy(matrix, it, INEQUALITY_SYSTEM) ) return false;
+
+         currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
+         currBmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamicTransposed();
+         currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
+         currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamicTransposed();
+
+         currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec);
+         currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec);
+         currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec);
+         currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec);
+         currNnzRow = dynamic_cast<SimpleVector*>(nRowElemsC->children[it]->vec);
+         currRedRow = dynamic_cast<SimpleVector*>(redRowC->children[it]->vec);
+      }
+      currNnzColChild = dynamic_cast<SimpleVector*>(nColElems->children[it]->vec);
+      currRedColChild = dynamic_cast<SimpleVector*>(redCol->children[it]->vec);
+      currRedColParent = dynamic_cast<SimpleVector*>(redCol->vec);
    }
 
    return true;
@@ -979,7 +1253,23 @@ void StochPresolver::resetLinkvarsAndChildBlocks()
 void StochPresolver::resetBlocks()
 {
    for( int i = 0; i < nChildren+3; i++)
+   {
       blocks[i] = 0;
+      blocksIneq[i] = 0;
+   }
+}
+
+void StochPresolver::resetColBlocks()
+{
+   for( int i = 0; i < nChildren+1; i++)
+      colBlocksChildren[i] = 0;
+}
+
+void StochPresolver::resetRedCounters()
+{
+   redRowA->setToZero();
+   redRowC->setToZero();
+   redCol->setToZero();
 }
 
 void StochPresolver::updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd)
@@ -1005,6 +1295,60 @@ void StochPresolver::updateTransposedSubmatrix(SparseStorageDynamic& transStorag
       std::swap(transStorage.jcolM[col_At],transStorage.jcolM[end-1]);
       transStorage.rowptr[row_At].end --;
    }
+}
+
+double StochPresolver::removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx)
+{
+   int i;
+   int end = storage.rowptr[rowIdx].end;
+
+   for( i=storage.rowptr[rowIdx].start; i<end; i++)
+   {
+      if( storage.jcolM[i] == colIdx )
+                  break;
+   }
+   double m = storage.M[i];
+   std::swap(storage.M[i],storage.M[end-1]);
+   std::swap(storage.jcolM[i],storage.jcolM[end-1]);
+   storage.rowptr[rowIdx].end --;
+
+   return m;
+}
+
+void StochPresolver::clearRow(SparseStorageDynamic& storage, const int rowIdx)
+{
+   storage.rowptr[rowIdx].end = storage.rowptr[rowIdx].start;
+}
+
+bool StochPresolver::childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type)
+{
+   if( matrix.children[it]->isKindOf(kStochGenDummyMatrix))
+   {
+      assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->isKindOf(kStochDummy) );
+      assert( redCol->children[it]->isKindOf(kStochDummy) );
+
+      if( system_type == EQUALITY_SYSTEM)
+      {
+         assert( dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->isKindOf(kStochDummy) );
+         assert( nRowElemsA->children[it]->isKindOf(kStochDummy) );
+         assert( redRowA->children[it]->isKindOf(kStochDummy) );
+      }
+      else
+      {
+         assert( dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->isKindOf(kStochDummy) );
+         assert( nRowElemsC->children[it]->isKindOf(kStochDummy) );
+         assert( redRowC->children[it]->isKindOf(kStochDummy) );
+      }
+      setCurrentPointersToNull();
+      return true;
+   }
+   return false;
 }
 
 

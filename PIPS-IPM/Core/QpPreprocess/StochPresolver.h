@@ -70,7 +70,9 @@ private:
 
   // pointers to the currently needed matrices and vectors for presolving
   SparseStorageDynamic* currAmat;
+  SparseStorageDynamic* currAmatTrans;
   SparseStorageDynamic* currBmat;
+  SparseStorageDynamic* currBmatTrans;
   SparseStorageDynamic* currBlmat;
   SimpleVector* currxlowParent;
   SimpleVector* currxlowChild;
@@ -93,6 +95,7 @@ private:
   SimpleVector* currRedRow;
   SimpleVector* currRedColParent;
   SimpleVector* currRedColChild;
+  SimpleVector* currNnzColChild;
 
   /** the number of children */
   int nChildren;
@@ -121,6 +124,8 @@ private:
    * the child block 'it' is accessed using the index 'it+1'.
    * The linking-row block is accessed using the index nChildren+2. */
   int* blocks;
+  std::vector<int> singletonRowsIneq;
+  int* blocksIneq;
   /** vector containing the column indices of entries that were found during the
    * singleton row routine. Along with the column index, the value needed for
    * adaptation is stored. */
@@ -166,11 +171,23 @@ private:
   bool doSingletonRowsA();
   bool updateCurrentPointersForSingletonRow(int it, SystemType system_type);
   bool procSingletonRow(StochGenMatrix& stochMatrix, int it);
-  bool removeSingleRowEntry(SparseStorageDynamic& storage, int rowIdx, BlockType block_type);
+  bool removeSingleRowEntry(SparseStorageDynamic& storage, int rowIdx, BlockType block_type, bool parentZero);
+  void setRemovedVarsBoundsToZero();
+  void applyColAdapt(int& newSREq, int& newSRIneq);
+  int colAdaptLinkVars(int it, SystemType system_type);
+  int colAdaptChild( int it, SystemType system_type);
+  bool updateCurrentPointersForColAdapt(int it, SystemType system_type);
   int doSingletonRowsC();
 
   void resetLinkvarsAndChildBlocks();
   void resetBlocks();
+  void resetColBlocks();
+  void resetRedCounters();
+
+  double removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx);
+  void clearRow(SparseStorageDynamic& storage, const int rowIdx);
+
+  bool childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type);
 
   sData* presProb;
 

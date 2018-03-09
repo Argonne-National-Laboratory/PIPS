@@ -2,14 +2,14 @@ Set i rows    / i1*i5 /
     j columns / j1*j8 /;
 
 parameter g(j) obj coefficients / j1 2, j2 2, j3 2, j4 2, j5 2, j6 2, j7 2, j8 2 /
-          b(i) right hand side  / i1 2, i2 7, i3 2, i4 7, i5 7 /
+          b(i) right hand side  / i1 3, i2 7, i3 2, i4 7, i5 7 /
           cupp(i) right hand side  / i1 3, i2 9, i3 6, i4 7, i5 7 /;
 
 Table A(i,j)
     j1   j2    j3      j4    j5    j6    j7    j8
-i1   2
+i1   2    1
 i2        7
-i3   2       0.4e-10
+i3   2      0.4e-10
 i4        5  0.4e-9     2
 i5 0.4e-9 4                         3
 ;
