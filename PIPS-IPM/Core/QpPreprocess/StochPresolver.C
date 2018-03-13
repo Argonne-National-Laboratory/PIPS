@@ -167,7 +167,8 @@ Data* StochPresolver::presolve()
 
    //presProb->writeToStreamDense(std::cout);
 
-   std::cout << "nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
+   std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
+   std::cout << "presProb nx, my, mz" << presProb->nx << " " << presProb->my << " " << presProb->mz << std::endl;
 
    //assert(0);
 
@@ -653,6 +654,8 @@ int StochPresolver::doSingletonRows()
    resetRedCounters();
    nelims += doSingletonRowsA();
    nelims += doSingletonRowsC();
+
+   cout<<"Objective offset is "<<objOffset<<endl;
    return nelims;
 }
 
@@ -911,7 +914,7 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
    double* ixupp;
    double* xlow;
    double* xupp;
-//   double* g;
+   double* g;
 
    if( block_type == LINKING_VARS_BLOCK )
    {
@@ -919,7 +922,7 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       ixupp = currIxuppParent->elements();
       xlow = currxlowParent->elements();
       xupp = currxuppParent->elements();
-//      g = currgParent->elements();
+      g = currgParent->elements();
    }
    else
    {
@@ -928,7 +931,7 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       ixupp = currIxuppChild->elements();
       xlow = currxlowChild->elements();
       xupp = currxuppChild->elements();
-//      g = currgChild->elements();
+      g = currgChild->elements();
    }
 
    int indexK = storage.rowptr[rowIdx].start;
@@ -949,9 +952,9 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       return false;
    }
    else{
-      /*if( !parentZero || myRank == 0 )  // not necessary because variable bounds are fixed to value.
+      if( !parentZero || myRank == 0 )
          objOffset += g[colIdx] * val;
-       */
+
       storage.rowptr[rowIdx].end --;
 
       COLUMNTOADAPT colWithVal = {colIdx, val};
