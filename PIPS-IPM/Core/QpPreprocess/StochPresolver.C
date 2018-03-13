@@ -136,15 +136,15 @@ Data* StochPresolver::presolve()
    // todo: presolve
 
    removedEntries.reserve((int)ceil(0.2 * ((*presProb).my + (*presProb).mz) * (*presProb).nx));
-   int nElimsTinyEntries = removeTinyEntries();
-   if( myRank == 0)
-      std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
+   //int nElimsTinyEntries = removeTinyEntries();
+   //if( myRank == 0)
+   //   std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
+
+   doSingletonRows();
 
    myfile.open("middle.txt");
    presProb->writeToStreamDense(myfile);
    myfile.close();
-
-   //doSingletonRows();
 
 /*   cout<<"nRowElemsA "<<endl;
    nRowElemsA->writeToStreamAll(cout);
@@ -760,6 +760,7 @@ bool StochPresolver::doSingletonRowsA()
    assert(nChildren == (int)matrix.children.size());
    for( int it = 0; it < nChildren; it++ )
    {
+      colBlocksChildren[it] = colAdaptChildren.size();
       if( updateCurrentPointersForSingletonRow(it, EQUALITY_SYSTEM) )
       {
          possFeas = procSingletonRow(matrix, it);
@@ -873,7 +874,7 @@ bool StochPresolver::procSingletonRow(StochGenMatrix& stochMatrix, int it)
    }
    else  // else, at child it. Consider Amat and Bmat
    {
-      colBlocksChildren[it] = colAdaptChildren.size();
+      //colBlocksChildren[it] = colAdaptChildren.size();
       SparseStorageDynamic& A_mat = stochMatrix.children[it]->Amat->getStorageDynamicRef();
       SparseStorageDynamic& B_mat = stochMatrix.children[it]->Bmat->getStorageDynamicRef();
 
@@ -989,7 +990,6 @@ void StochPresolver::setRemovedVarsBoundsToValues()
 
    for(int it=0; it<nChildren; it++)
    {
-      cout<<"child "<<it<<endl;
       if( nColElems->children[it]->isKindOf(kStochDummy))
          continue;
       currxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->vec);
@@ -997,7 +997,6 @@ void StochPresolver::setRemovedVarsBoundsToValues()
       currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
       currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
 
-      cout<<"colBlocksChildren[it]: "<<colBlocksChildren[it]<<" colBlocksChildren[it+1]: "<<colBlocksChildren[it+1]<<endl;
       for(int i = colBlocksChildren[it]; i < colBlocksChildren[it + 1]; i++)
       {
          int colIdx = colAdaptChildren[i].colIdx;
@@ -1006,8 +1005,6 @@ void StochPresolver::setRemovedVarsBoundsToValues()
          currxuppParent->elements()[colIdx] = val;
          currIxlowParent->elements()[colIdx] = 1.0;
          currIxuppParent->elements()[colIdx] = 1.0;
-         assert(0);
-
       }
    }
 }
@@ -1172,7 +1169,7 @@ int StochPresolver::colAdaptChild( int it, SystemType system_type )
          currRedRow->elements()[rowIdxB] ++;
          assert( currNnzColChild->elements()[colIdxB] >= 0.0 && currNnzRow->elements()[rowIdxB] >= 0.0 );
 
-         if(currRedRow->elements()[rowIdxB] == 1)
+         if(currNnzRow->elements()[rowIdxB] == 1)
          {
             newSingletonRows++;
             if( system_type == EQUALITY_SYSTEM )
@@ -1332,7 +1329,10 @@ double StochPresolver::removeEntryInDynamicStorage(SparseStorageDynamic& storage
 {
    int i;
    int end = storage.rowptr[rowIdx].end;
+   int start = storage.rowptr[rowIdx].start;
 
+   if( start == end )
+      return 0.0;
    for( i=storage.rowptr[rowIdx].start; i<end; i++)
    {
       if( storage.jcolM[i] == colIdx )
