@@ -146,6 +146,13 @@ Data* StochPresolver::presolve()
 
    //doSingletonRows();
 
+/*   cout<<"nRowElemsA "<<endl;
+   nRowElemsA->writeToStreamAll(cout);
+   cout<<"nRowElemsC "<<endl;
+   nRowElemsC->writeToStreamAll(cout);
+   cout<<"nColElems "<<endl;
+   nColElems->writeToStreamAll(cout);
+*/
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
 
    if( myRank == 0)
@@ -735,12 +742,14 @@ int StochPresolver::initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple)
 
 bool StochPresolver::doSingletonRowsA()
 {
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    int world_size;
    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
    bool iAmDistrib = false;
    if( world_size > 1) iAmDistrib = true;
 
-   // First, remove enries in singleton rows
+   // First, remove enries in the singleton rows
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
    updateCurrentPointersForSingletonRow(-1, EQUALITY_SYSTEM);
@@ -759,6 +768,7 @@ bool StochPresolver::doSingletonRowsA()
    }
    colBlocksChildren[matrix.children.size()] = colAdaptChildren.size();
 
+   // empty the singletonRow list
    for(int i = 0; i<(int)singletonRows.size(); i++)
       assert(singletonRows[i] == -1);
    singletonRows.clear();
@@ -780,20 +790,21 @@ bool StochPresolver::doSingletonRowsA()
    }
    updateNnzUsingReductions(nColElems->vec, redCol->vec);
 
-   // Set the variable bounds to zero.
-   setRemovedVarsBoundsToZero();
+   // Set the variable bounds to the corresponding value
+   setRemovedVarsBoundsToValues();
 
-   cout<<"After setRemovedVarsBoundsToZero, before applyColAdapt:"<<endl;
-   presProb->writeToStreamDense(cout);
+   //cout<<"After setRemovedVarsBoundsToZero, before applyColAdapt:"<<endl;
+   //presProb->writeToStreamDense(cout);
 
    // Then remove the corresponding entries to these variables (go through the columns)
 
    int newSREq = 0;
    int newSRIneq = 0;
    // todo AAAA Fehlerquelle hier drin:
-   //applyColAdapt(newSREq, newSRIneq);
+   applyColAdapt(newSREq, newSRIneq);
 
-   cout<<"Found "<<newSREq<<" new singleton rows in A and "<<newSRIneq<<" new singleton rows in C."<<endl;
+   if( myRank == 0 )
+      cout<<"Found "<<newSREq<<" new singleton rows in A and "<<newSRIneq<<" new singleton rows in C."<<endl;
 
    return true;
 }
@@ -843,7 +854,6 @@ bool StochPresolver::updateCurrentPointersForSingletonRow(int it, SystemType sys
 
 bool StochPresolver::procSingletonRow(StochGenMatrix& stochMatrix, int it)
 {
-   cout<<"Call procSingletonRow with it="<<it<<endl;
    bool possFeas = true;
 
    if( it == -1 ) // we are at parent. So only consider Bmat
@@ -863,7 +873,7 @@ bool StochPresolver::procSingletonRow(StochGenMatrix& stochMatrix, int it)
    }
    else  // else, at child it. Consider Amat and Bmat
    {
-      //colBlocksChildren[it] = colAdaptChildren.size();
+      colBlocksChildren[it] = colAdaptChildren.size();
       SparseStorageDynamic& A_mat = stochMatrix.children[it]->Amat->getStorageDynamicRef();
       SparseStorageDynamic& B_mat = stochMatrix.children[it]->Bmat->getStorageDynamicRef();
 
@@ -900,7 +910,7 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
    double* ixupp;
    double* xlow;
    double* xupp;
-   double* g;
+//   double* g;
 
    if( block_type == LINKING_VARS_BLOCK )
    {
@@ -908,7 +918,7 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       ixupp = currIxuppParent->elements();
       xlow = currxlowParent->elements();
       xupp = currxuppParent->elements();
-      g = currgParent->elements();
+//      g = currgParent->elements();
    }
    else
    {
@@ -917,7 +927,7 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       ixupp = currIxuppChild->elements();
       xlow = currxlowChild->elements();
       xupp = currxuppChild->elements();
-      g = currgChild->elements();
+//      g = currgChild->elements();
    }
 
    int indexK = storage.rowptr[rowIdx].start;
@@ -938,9 +948,9 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
       return false;
    }
    else{
-      if( !parentZero || myRank == 0 )
+      /*if( !parentZero || myRank == 0 )  // not necessary because variable bounds are fixed to value.
          objOffset += g[colIdx] * val;
-
+       */
       storage.rowptr[rowIdx].end --;
 
       COLUMNTOADAPT colWithVal = {colIdx, val};
@@ -958,7 +968,7 @@ bool StochPresolver::removeSingleRowEntry(SparseStorageDynamic& storage, int row
 
 /** For the removed entries in the singleton-row procedure, adapt the bounds for the concerned variables.
  * Set their lower and upper bounds (xlow/xupp) to 0.0 and their ixlow/ixupp to 1.0 . */
-void StochPresolver::setRemovedVarsBoundsToZero()
+void StochPresolver::setRemovedVarsBoundsToValues()
 {
    // todo: if there are same columns in the parent col block, might show infeasibility?
 
@@ -970,8 +980,9 @@ void StochPresolver::setRemovedVarsBoundsToZero()
    for(int i=0; i<(int)colAdaptParent.size(); i++)
    {
       int colIdx = colAdaptParent[i].colIdx;
-      currxlowParent->elements()[colIdx] = 0.0;
-      currxuppParent->elements()[colIdx] = 0.0;
+      double val = colAdaptParent[i].val;
+      currxlowParent->elements()[colIdx] = val;
+      currxuppParent->elements()[colIdx] = val;
       currIxlowParent->elements()[colIdx] = 1.0;
       currIxuppParent->elements()[colIdx] = 1.0;
    }
@@ -990,8 +1001,9 @@ void StochPresolver::setRemovedVarsBoundsToZero()
       for(int i = colBlocksChildren[it]; i < colBlocksChildren[it + 1]; i++)
       {
          int colIdx = colAdaptChildren[i].colIdx;
-         currxlowParent->elements()[colIdx] = 0.0;
-         currxuppParent->elements()[colIdx] = 0.0;
+         int val = colAdaptChildren[i].val;
+         currxlowParent->elements()[colIdx] = val;
+         currxuppParent->elements()[colIdx] = val;
          currIxlowParent->elements()[colIdx] = 1.0;
          currIxuppParent->elements()[colIdx] = 1.0;
          assert(0);
@@ -1007,7 +1019,8 @@ void StochPresolver::applyColAdapt(int& newSREq, int& newSRIneq)
    // this row to the singletonRow list.
 
    // todo: verify that no two column indices inside are the same but with different values (->infeasible)
-
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    int world_size;
    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
    bool iAmDistrib = false;
@@ -1016,13 +1029,16 @@ void StochPresolver::applyColAdapt(int& newSREq, int& newSRIneq)
    if( colAdaptParent.size() > 0 )
    {
       updateCurrentPointersForColAdapt(-1, EQUALITY_SYSTEM);
-      newSREq += colAdaptLinkVars(-1, EQUALITY_SYSTEM);
+      int newSREqRoot = colAdaptLinkVars(-1, EQUALITY_SYSTEM);
 
       updateCurrentPointersForColAdapt(-1, INEQUALITY_SYSTEM);
-      newSRIneq += colAdaptLinkVars(-1, INEQUALITY_SYSTEM);
+      int newSRIneqRoot = colAdaptLinkVars(-1, INEQUALITY_SYSTEM);
+      if( myRank == 0)
+      {
+         newSREq += newSREqRoot;
+         newSRIneq += newSRIneqRoot;
+      }
    }
-    cout<<"After colAdaptParent, before colAdaptChild:"<<endl;
-    presProb->writeToStreamDense(cout);
 
    for(int i= 0; i<nChildren; i++)
    {
@@ -1046,12 +1062,28 @@ void StochPresolver::applyColAdapt(int& newSREq, int& newSRIneq)
       double* redColParent = dynamic_cast<SimpleVector*>(redCol->vec)->elements();
       int message_size = dynamic_cast<SimpleVector*>(redCol->vec)->length();
       MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      int* newSR = new int[2];
+      newSR[0] = newSREq;
+      newSR[1] = newSRIneq;
+      MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      newSREq = newSR[0];
+      newSRIneq = newSR[1];
    }
+
    updateNnzUsingReductions(nColElems->vec, redCol->vec);
+
+   // reset colAdaptParent, colAdaptChildren, colBlocksChildren
+   colAdaptParent.clear();
+   colAdaptChildren.clear();
+   resetColBlocks();
 }
 
+/** Adapt the columns for the linking-variable-blocks (the A_i) blocks */
 int StochPresolver::colAdaptLinkVars(int it, SystemType system_type)
 {
+   // todo: adapt linking block
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    int newSingletonRows = 0;
 
    if( system_type == EQUALITY_SYSTEM )
@@ -1086,11 +1118,12 @@ int StochPresolver::colAdaptLinkVars(int it, SystemType system_type)
                currIneqLhs->elements()[rowIdxA] -=  m * val;
          }
 
-         currRedColParent->elements()[colIdxA] ++;
+         if( it > -1 || myRank == 0 )
+            currRedColParent->elements()[colIdxA] ++;
          currNnzRow->elements()[rowIdxA] --;
          currRedRow->elements()[rowIdxA] ++;
 
-         if(currRedRow->elements()[rowIdxA] == 1)
+         if(currNnzRow->elements()[rowIdxA] == 1)
          {
             newSingletonRows++;
             if( system_type == EQUALITY_SYSTEM )
@@ -1108,18 +1141,15 @@ int StochPresolver::colAdaptLinkVars(int it, SystemType system_type)
 int StochPresolver::colAdaptChild( int it, SystemType system_type )
 {
    // Bmat, BmatTrans, ncolchild, redcolchild, nrowchild, redrowchild, currEqRhs, icupp, cupp, iclow, clow are updated
+   // todo: Linking Block Blmat ?
    int newSingletonRows = 0;
-/*
-   if( system_type == EQUALITY_SYSTEM )
-      blocks[it + 1] = singletonRows.size();
-   else
-      blocksIneq[it + 1] = singletonRowsIneq.size();
-  */
+
    for( int i = colBlocksChildren[it]; i<colBlocksChildren[it+1]; i++)
    {
       int colIdxB = colAdaptChildren[i].colIdx;
       double val = colAdaptChildren[i].val;
 
+      // Block Bmat:
       for( int j = currBmatTrans->rowptr[colIdxB].start; j<currBmatTrans->rowptr[colIdxB].end; j++ )
       {
          int rowIdxB = currBmatTrans->jcolM[j];
@@ -1140,6 +1170,7 @@ int StochPresolver::colAdaptChild( int it, SystemType system_type )
          currRedColChild->elements()[colIdxB] ++;
          currNnzRow->elements()[rowIdxB] --;
          currRedRow->elements()[rowIdxB] ++;
+         assert( currNnzColChild->elements()[colIdxB] >= 0.0 && currNnzRow->elements()[rowIdxB] >= 0.0 );
 
          if(currRedRow->elements()[rowIdxB] == 1)
          {

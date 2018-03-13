@@ -172,7 +172,7 @@ private:
   bool updateCurrentPointersForSingletonRow(int it, SystemType system_type);
   bool procSingletonRow(StochGenMatrix& stochMatrix, int it);
   bool removeSingleRowEntry(SparseStorageDynamic& storage, int rowIdx, BlockType block_type, bool parentZero);
-  void setRemovedVarsBoundsToZero();
+  void setRemovedVarsBoundsToValues();
   void applyColAdapt(int& newSREq, int& newSRIneq);
   int colAdaptLinkVars(int it, SystemType system_type);
   int colAdaptChild( int it, SystemType system_type);
