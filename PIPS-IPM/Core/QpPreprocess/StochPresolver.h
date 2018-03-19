@@ -35,6 +35,14 @@ typedef struct
    double val;
 } COLUMNTOADAPT;
 
+struct col_is_smaller
+{
+    bool operator()(const COLUMNTOADAPT& x, const COLUMNTOADAPT& y) const
+    {
+        return x.colIdx < y.colIdx;
+    }
+};
+
 enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
 enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
 
@@ -74,6 +82,7 @@ private:
   SparseStorageDynamic* currBmat;
   SparseStorageDynamic* currBmatTrans;
   SparseStorageDynamic* currBlmat;
+  SparseStorageDynamic* currBlmatTrans;
   SimpleVector* currxlowParent;
   SimpleVector* currxlowChild;
   SimpleVector* currxuppParent;
@@ -87,12 +96,21 @@ private:
   SimpleVector* currIneqLhs;
   SimpleVector* currIcupp;
   SimpleVector* currIclow;
+  SimpleVector* currEqRhsLink;
+  SimpleVector* currIneqRhsLink;
+  SimpleVector* currIneqLhsLink;
+  SimpleVector* currIcuppLink;
+  SimpleVector* currIclowLink;
+  double* currEqRhsAdaptionsLink;
+  double* currInEqRhsAdaptionsLink;
+  double* currInEqLhsAdaptionsLink;
 
   SimpleVector* currgParent;
   SimpleVector* currgChild;
 
   SimpleVector* currNnzRow;
   SimpleVector* currRedRow;
+  SimpleVector* currRedRowLink;
   SimpleVector* currRedColParent;
   SimpleVector* currRedColChild;
   SimpleVector* currNnzColChild;
@@ -126,14 +144,22 @@ private:
   int* blocks;
   std::vector<int> singletonRowsIneq;
   int* blocksIneq;
+
+  // variables used for singleton row elimination:
+  /** vector containing the row indices of singleton rows */
+  std::vector<int> singletonRows2;
+  /** array of length nChildren+3 to store start indices for singletonRows
+   * that correspond to the correct block. As blocks[0] represents the parent block,
+   * the child block 'it' is accessed using the index 'it+1'.
+   * The linking-row block is accessed using the index nChildren+2. */
+  int* blocks2;
+  std::vector<int> singletonRowsIneq2;
+  int* blocksIneq2;
+
   /** vector containing the column indices of entries that were found during the
    * singleton row routine. Along with the column index, the value needed for
    * adaptation is stored. */
   std::vector<COLUMNTOADAPT> colAdaptParent;
-  std::vector<COLUMNTOADAPT> colAdaptChildren;
-  /** array of length nChildren+1 to store start indices for colAdaptChildren
-     * that correspond to the correct child block. */
-  int* colBlocksChildren;
 
   /** objective offset created by presolving*/
   double objOffset;
@@ -170,24 +196,36 @@ private:
   int initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple);
   bool doSingletonRowsA();
   bool updateCurrentPointersForSingletonRow(int it, SystemType system_type);
-  bool procSingletonRow(StochGenMatrix& stochMatrix, int it);
-  bool removeSingleRowEntry(SparseStorageDynamic& storage, int rowIdx, BlockType block_type, bool parentZero);
-  void setRemovedVarsBoundsToValues();
-  void applyColAdapt(int& newSREq, int& newSRIneq);
+  bool updateCPForSingletonRowInequalityBChild( int it );
+  bool procSingletonRowRoot(StochGenMatrix& stochMatrix);
+  bool procSingletonRowChild(StochGenMatrix& stochMatrix, int it, int& newSR);
+  bool procSingletonRowChildAmat(SparseStorageDynamic& A_mat, int it);
+  bool procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR);
+  bool removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
+  int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
+  bool adaptInequalityChildB(std::vector<COLUMNTOADAPT> & colAdaptBblock);
+  bool removeSingleRowEntryB0(SparseStorageDynamic& storage, int rowIdx);
+  bool adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
+  bool adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
+
   int colAdaptLinkVars(int it, SystemType system_type);
-  int colAdaptChild( int it, SystemType system_type);
   bool updateCurrentPointersForColAdapt(int it, SystemType system_type);
+  bool updateCPforColAdaptF0( SystemType system_type );
+  int colAdaptF0(SystemType system_type);
+  bool combineColAdaptParent();
+  void updateRhsNRowLink();
   int doSingletonRowsC();
 
   void resetLinkvarsAndChildBlocks();
   void resetBlocks();
-  void resetColBlocks();
   void resetRedCounters();
+  void resetRhsAdaptionsLink();
 
   double removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx);
   void clearRow(SparseStorageDynamic& storage, const int rowIdx);
 
   bool childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type);
+  bool hasLinking(SystemType system_type);
 
   sData* presProb;
 
