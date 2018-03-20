@@ -63,6 +63,7 @@ private:
   static const double tolerance1 = 1.0e-3;
   static const double tolerance2 = 1.0e-2;
   static const double tolerance3 = 1.0e-10;
+  static const int maxIterSR = 20;
 
   // number of non-zero elements of each row
   StochVectorHandle nRowElemsA;
@@ -194,18 +195,18 @@ private:
   int doSingletonRows();
   int initSingletonRows(SystemType system_type);
   int initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple);
-  bool doSingletonRowsA();
+  bool doSingletonRowsA(int& newSREq, int& newSRIneq);
   bool updateCurrentPointersForSingletonRow(int it, SystemType system_type);
   bool updateCPForSingletonRowInequalityBChild( int it );
   bool procSingletonRowRoot(StochGenMatrix& stochMatrix);
-  bool procSingletonRowChild(StochGenMatrix& stochMatrix, int it, int& newSR);
+  bool procSingletonRowChild(StochGenMatrix& stochMatrix, int it, int& newSR, int& newSRIneq);
   bool procSingletonRowChildAmat(SparseStorageDynamic& A_mat, int it);
   bool procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR);
   bool removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
   int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
-  bool adaptInequalityChildB(std::vector<COLUMNTOADAPT> & colAdaptBblock);
+  bool adaptInequalityChildB(std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq);
   bool removeSingleRowEntryB0(SparseStorageDynamic& storage, int rowIdx);
-  bool adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
+  bool adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type, int& newSR);
   bool adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
 
   int colAdaptLinkVars(int it, SystemType system_type);

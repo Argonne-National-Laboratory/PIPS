@@ -149,7 +149,7 @@ Data* StochPresolver::presolve()
    //if( myRank == 0)
    //   std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
 
-   doSingletonRows();
+   //doSingletonRows();
 
    myfile.open("middle.txt");
    presProb->writeToStreamDense(myfile);
@@ -663,15 +663,37 @@ void StochPresolver::updateTransposed(StochGenMatrix& matrix)
 
 int StochPresolver::doSingletonRows()
 {
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   bool iAmDistrib = false;
+   if( world_size > 1)
+      iAmDistrib = true;
+
    int nelims = 0;
-   int nSingleRows = initSingletonRows(EQUALITY_SYSTEM);
-   cout<<"Found "<<nSingleRows<<" singleton rows in equality system A."<<endl;
+   int newSREq = initSingletonRows(EQUALITY_SYSTEM);
+   int newSRIneq = 0;
+   cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
 
-   resetRedCounters();
-   nelims += doSingletonRowsA();
-   nelims += doSingletonRowsC();
+   int iter = 0;
+   while( newSREq > 0 && iter < maxIterSR)
+   {
+      if( iter > 0 )
+         newSREq = initSingletonRows(EQUALITY_SYSTEM);
+      resetRedCounters();
+      nelims += doSingletonRowsA(newSREq, newSRIneq);
+      //nelims += doSingletonRowsC();
+      if( myRank == 0 )
+         cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
+      iter++;
+   }
 
-   cout<<"Objective offset is "<<objOffset<<endl;
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &objOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   if( myRank == 0 )
+      cout<<"Objective offset is "<<objOffset<<endl;
+
    return nelims;
 }
 
@@ -759,7 +781,7 @@ int StochPresolver::initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple)
    return nSingletonRows;
 }
 
-bool StochPresolver::doSingletonRowsA()
+bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
 {
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -768,6 +790,8 @@ bool StochPresolver::doSingletonRowsA()
    bool iAmDistrib = false;
    if( world_size > 1) iAmDistrib = true;
 
+   newSREq = 0;
+   newSRIneq = 0;
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
    updateCurrentPointersForSingletonRow(-1, EQUALITY_SYSTEM);
@@ -775,12 +799,11 @@ bool StochPresolver::doSingletonRowsA()
    if( !possFeas ) return false;
 
    assert(nChildren == (int)matrix.children.size());
-   int newSREq = 0; int newSRIneq = 0;
    for( int it = 0; it < nChildren; it++ )
    {
       if( updateCurrentPointersForSingletonRow(it, EQUALITY_SYSTEM) )
       {
-         possFeas = procSingletonRowChild(matrix, it, newSREq);
+         possFeas = procSingletonRowChild(matrix, it, newSREq, newSRIneq);
          if( !possFeas ) return false;
       }
    }
@@ -800,11 +823,12 @@ bool StochPresolver::doSingletonRowsA()
          newSRIneq += colAdaptLinkVars(i, INEQUALITY_SYSTEM);
    }
 
-   // apply updated colAdapt to the F0 block (Blmat of parent):
+   // apply updated colAdaptParent to the F0 block (Blmat of parent):
    if( updateCPforColAdaptF0( EQUALITY_SYSTEM ) )
-      newSREq += colAdaptF0( EQUALITY_SYSTEM);
+      colAdaptF0( EQUALITY_SYSTEM);
    if( updateCPforColAdaptF0( INEQUALITY_SYSTEM) )
-      newSRIneq += colAdaptF0( INEQUALITY_SYSTEM);
+      colAdaptF0( INEQUALITY_SYSTEM);
+   colAdaptParent.clear();
 
    if( iAmDistrib )
    {
@@ -815,15 +839,41 @@ bool StochPresolver::doSingletonRowsA()
    updateNnzUsingReductions(nColElems->vec, redCol->vec);
 
    resetRedCounters();
-   return true;
 
-   /* BBB
-   // empty the singletonRow list
+   // empty the singletonRow list or todo: store the new singleton rows during the process
    for(int i = 0; i<(int)singletonRows.size(); i++)
       assert(singletonRows[i] == -1);
    singletonRows.clear();
    resetBlocks();
-*/
+
+   if( iAmDistrib )
+   {
+      int* newSR = new int[2];
+      newSR[0] = newSREq;
+      newSR[1] = newSRIneq;
+      MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      newSREq = newSR[0];
+      newSRIneq = newSR[1];
+      delete[] newSR;
+   }
+
+   /*
+   // print F_1 (blmat vom letzten child) for debugging
+   SparseStorageDynamic& blmat_test = matrix.children[1]->Blmat->getStorageDynamicRef();
+   cout<<"blmat_test: m,n,len: "<<blmat_test.m<<" "<<blmat_test.n<<" "<<blmat_test.len<<endl;
+   blmat_test.writeToStreamDense(cout);
+   cout<<"blmat_test jcolM:"<<endl;
+   for(int i=0; i<blmat_test.len; i++)
+      cout<<blmat_test.jcolM[i]<<endl;
+   cout<<"blmat_test M:"<<endl;
+   for(int i=0; i<blmat_test.len; i++)
+      cout<<blmat_test.M[i]<<endl;
+   cout<<"blmat_test krowptrs:"<<endl;
+   for(int i=0; i<blmat_test.m; i++)
+      cout<<"start: "<<blmat_test.rowptr[i].start<<" end: "<<blmat_test.rowptr[i].end<<endl;
+      */
+
+   return true;
 }
 
 /** Update the current pointers for the singleton row routine.
@@ -946,7 +996,7 @@ bool StochPresolver::procSingletonRowRoot(StochGenMatrix& stochMatrix)
  * in Bmat and in Blmat are removed.
  * Using this colAdaptLinkBlock, the variables (columns) are removed from the inequalities Bmat, Blmat as well.
  */
-bool StochPresolver::procSingletonRowChild(StochGenMatrix& stochMatrix, int it, int& newSR)
+bool StochPresolver::procSingletonRowChild(StochGenMatrix& stochMatrix, int it, int& newSREq, int& newSRIneq)
 {
    bool possFeas = true;
 
@@ -957,7 +1007,7 @@ bool StochPresolver::procSingletonRowChild(StochGenMatrix& stochMatrix, int it, 
    if( !possFeas ) return false;
 
    std::vector<COLUMNTOADAPT> colAdaptLinkBlock;
-   possFeas = procSingletonRowChildBmat( B_mat, it, colAdaptLinkBlock, newSR);
+   possFeas = procSingletonRowChildBmat( B_mat, it, colAdaptLinkBlock, newSREq);
    if( !possFeas ) return false;
 
    // using colAdaptLinkBlock, go through the columns in Blmat
@@ -968,7 +1018,7 @@ bool StochPresolver::procSingletonRowChild(StochGenMatrix& stochMatrix, int it, 
    }
    // and go through the columns in Bmat, Blmat of the inequality
    updateCPForSingletonRowInequalityBChild( it );
-   possFeas = adaptInequalityChildB( colAdaptLinkBlock );
+   possFeas = adaptInequalityChildB( colAdaptLinkBlock, newSRIneq );
    if( !possFeas ) return false;
 
    return true;
@@ -1008,7 +1058,6 @@ bool StochPresolver::procSingletonRowChildAmat(SparseStorageDynamic& A_mat, int 
             return false;
          }
          objOffset += g[colIdx] * val;
-         cout<<"Adding offset "<< g[colIdx] * val <<endl;
 
          COLUMNTOADAPT colWithVal = {colIdx, val};
          colAdaptParent.push_back(colWithVal);
@@ -1106,13 +1155,7 @@ int StochPresolver::adaptChildBmatCol(int colIdx, double val, SystemType system_
       assert( currNnzColChild->elements()[colIdx] >= 0.0 && currNnzRow->elements()[rowIdxB] >= 0.0 );
 
       if(currNnzRow->elements()[rowIdxB] == 1)
-      {
          newSingletonRows++;
-         if( system_type == EQUALITY_SYSTEM )
-            singletonRows2.push_back(rowIdxB);
-         else
-            singletonRowsIneq2.push_back(rowIdxB);
-      }
    }
    clearRow(*currBmatTrans, colIdx);
 
@@ -1121,10 +1164,10 @@ int StochPresolver::adaptChildBmatCol(int colIdx, double val, SystemType system_
 
 /** Given the vector<COLUMNTOADAPT>, both the block Bmat and Blat (if existent) are updated accordingly.
  */
-bool StochPresolver::adaptInequalityChildB( std::vector<COLUMNTOADAPT> & colAdaptBblock )
+bool StochPresolver::adaptInequalityChildB( std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq )
 {
    // Bmat blocks
-   bool possFeas = adaptChildBmat( colAdaptBblock, INEQUALITY_SYSTEM);
+   bool possFeas = adaptChildBmat( colAdaptBblock, INEQUALITY_SYSTEM, newSRIneq);
    if( !possFeas ) return false;
 
    // Blmat blocks
@@ -1169,11 +1212,28 @@ bool StochPresolver::removeSingleRowEntryB0(SparseStorageDynamic& storage, int r
    }
    else
    {
-      COLUMNTOADAPT colWithVal = {colIdx, val};
       if( myRank == 0 )
       {
-         colAdaptParent.push_back(colWithVal);
-         objOffset += g[colIdx] * val;
+         COLUMNTOADAPT colWithVal = {colIdx, val};
+         bool uniqueAdditionToOffset = true;
+         for(int i=0; i<(int)colAdaptParent.size(); i++)
+         {
+            if( colAdaptParent[i].colIdx == colIdx )
+            {
+               if( colAdaptParent[i].val != val )
+               {
+                  cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
+                  return false;
+               }
+               uniqueAdditionToOffset = false;
+            }
+
+         }
+         if( uniqueAdditionToOffset )
+         {
+            colAdaptParent.push_back(colWithVal);
+            objOffset += g[colIdx] * val;
+         }
       }
    }
 
@@ -1184,7 +1244,7 @@ bool StochPresolver::removeSingleRowEntryB0(SparseStorageDynamic& storage, int r
  * Given a vector<COLUMNTOADAPT>, this routine goes through all columns inside and removes them
  * from the current Bmat block. Depending on the system_type, rhs (and lhs) are updated.
  */
-bool StochPresolver::adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type )
+bool StochPresolver::adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type, int& newSR )
 {
    for(int i=0; i<(int)colAdaptBlock.size(); i++)
    {
@@ -1213,6 +1273,9 @@ bool StochPresolver::adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock,
          currNnzRow->elements()[rowIdx] --;
          currNnzColChild->elements()[colIdx] --;
          currRedColChild->elements()[colIdx] ++;
+
+         if( currNnzRow->elements()[rowIdx] == 1.0 )
+            newSR++;
 
          assert( currNnzColChild->elements()[colIdx] >= 0.0 );
       }
@@ -1303,11 +1366,9 @@ int StochPresolver::colAdaptLinkVars(int it, SystemType system_type)
          currNnzRow->elements()[rowIdxA] --;
          currRedRow->elements()[rowIdxA] ++;
 
-         if(currNnzRow->elements()[rowIdxA] == 1.0)
-         {
-            newSingletonRows++;
-            // todo BBB save singleton rows somewhere else because this gets mixed up with newly found SR in the Bmat blocks
-         }
+         if( currNnzRow->elements()[rowIdxA] == 1.0 )
+            if( it > -1 || myRank == 0 )  // damit die newSR von B_0 nicht doppelt gezählt werden
+               newSingletonRows++;
       }
       clearRow(*currAmatTrans, colIdxA);
    }
@@ -1447,10 +1508,7 @@ int StochPresolver::colAdaptF0(SystemType system_type)
          assert( dynamic_cast<SimpleVector*>(nColElems->vec)->elements()[colIdx] >= 0.0 );
 
          if(currNnzRow->elements()[rowIdx] == 1.0)
-         {
             newSingletonRows++;
-            // todo BBB save singleton rows somewhere else because this gets mixed up with newly found SR in the Bmat blocks
-         }
       }
       clearRow(*currBlmatTrans, colIdx);
    }
@@ -1466,7 +1524,6 @@ bool StochPresolver::combineColAdaptParent()
 
    if( iAmDistrib )
    {
-      cout<<"Distributed: Allgatherv of the colAdaptParent..."<<endl;
       // allgather the length of each colAdaptParent
       int mylen = colAdaptParent.size();
       int* recvcounts = new int[world_size];
