@@ -46,12 +46,19 @@ StochPresolver::StochPresolver(const Data* prob)
 
    setCurrentPointersToNull();
 
-   if(redRowA->vecl != NULL)  //todo correct test for linking?
+   if(redRowA->vecl != NULL)
       currEqRhsAdaptionsLink = new double[redRowA->vecl->n];
-   if(redRowC->vecl != NULL)  //todo correct test for linking?
+   else
+      currEqRhsAdaptionsLink = NULL;
+   if(redRowC->vecl != NULL)
    {
       currInEqRhsAdaptionsLink = new double[redRowC->vecl->n];
       currInEqLhsAdaptionsLink = new double[redRowC->vecl->n];
+   }
+   else
+   {
+      currInEqRhsAdaptionsLink = NULL;
+      currInEqLhsAdaptionsLink = NULL;
    }
 
    localNelims = 0;
@@ -343,12 +350,8 @@ int StochPresolver::removeTinyEntriesSystemA()
    localNelims = 0;
 
    int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   bool iAmDistrib = false;
-   if( world_size > 1)
-      iAmDistrib = true;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
    redRowC->setToZero();
    redCol->setToZero();
@@ -407,12 +410,8 @@ int StochPresolver::removeTinyEntriesSystemC()
    localNelims = 0;
 
    int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   bool iAmDistrib = false;
-   if( world_size > 1)
-      iAmDistrib = true;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
    redRowC->setToZero();
    redCol->setToZero();
@@ -665,11 +664,6 @@ int StochPresolver::doSingletonRows()
 {
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   bool iAmDistrib = false;
-   if( world_size > 1)
-      iAmDistrib = true;
 
    int nelims = 0;
    int newSREq = initSingletonRows(EQUALITY_SYSTEM);
@@ -677,22 +671,27 @@ int StochPresolver::doSingletonRows()
    cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
 
    int iter = 0;
+   bool possibleFeasible = true;
+
+   // main loop:
    while( newSREq > 0 && iter < maxIterSR)
    {
       if( iter > 0 )
          newSREq = initSingletonRows(EQUALITY_SYSTEM);
       resetRedCounters();
-      nelims += doSingletonRowsA(newSREq, newSRIneq);
+      possibleFeasible = doSingletonRowsA(newSREq, newSRIneq);
+      if( !possibleFeasible )
+      {
+         cout<<"Infeasibility detected during singleton row presolving."<<endl;
+         return 0;
+      }
       //nelims += doSingletonRowsC();
       if( myRank == 0 )
          cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
       iter++;
    }
 
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &objOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-   if( myRank == 0 )
-      cout<<"Objective offset is "<<objOffset<<endl;
+   updateObjOffset();
 
    return nelims;
 }
@@ -700,12 +699,8 @@ int StochPresolver::doSingletonRows()
 int StochPresolver::initSingletonRows(SystemType system_type)
 {
    int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   bool iAmDistrib = false;
-   if( world_size > 1)
-      iAmDistrib = true;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
    int nSingletonRows = 0;
 
@@ -784,11 +779,8 @@ int StochPresolver::initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple)
 bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
 {
    int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   bool iAmDistrib = false;
-   if( world_size > 1) iAmDistrib = true;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
    newSREq = 0;
    newSRIneq = 0;
@@ -801,6 +793,7 @@ bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
    assert(nChildren == (int)matrix.children.size());
    for( int it = 0; it < nChildren; it++ )
    {
+      // dummy child?
       if( updateCurrentPointersForSingletonRow(it, EQUALITY_SYSTEM) )
       {
          possFeas = procSingletonRowChild(matrix, it, newSREq, newSRIneq);
@@ -817,6 +810,7 @@ bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
    // apply updated colAdaptParent to the Amat blocks
    for(int i= -1; i<nChildren; i++)
    {
+      // dummy child?
       if( updateCurrentPointersForColAdapt( i, EQUALITY_SYSTEM) )
          newSREq += colAdaptLinkVars(i, EQUALITY_SYSTEM);
       if( updateCurrentPointersForColAdapt( i, INEQUALITY_SYSTEM) )
@@ -824,6 +818,7 @@ bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
    }
 
    // apply updated colAdaptParent to the F0 block (Blmat of parent):
+   // dummy child?
    if( updateCPforColAdaptF0( EQUALITY_SYSTEM ) )
       colAdaptF0( EQUALITY_SYSTEM);
    if( updateCPforColAdaptF0( INEQUALITY_SYSTEM) )
@@ -848,13 +843,10 @@ bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
 
    if( iAmDistrib )
    {
-      int* newSR = new int[2];
-      newSR[0] = newSREq;
-      newSR[1] = newSRIneq;
+      int newSR[2] = {newSREq, newSRIneq};
       MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       newSREq = newSR[0];
       newSRIneq = newSR[1];
-      delete[] newSR;
    }
 
    /*
@@ -1517,9 +1509,10 @@ int StochPresolver::colAdaptF0(SystemType system_type)
 
 bool StochPresolver::combineColAdaptParent()
 {
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   int myRank, world_size;
    bool iAmDistrib = false;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
    if( world_size > 1) iAmDistrib = true;
 
    if( iAmDistrib )
@@ -1581,7 +1574,11 @@ bool StochPresolver::combineColAdaptParent()
          if( colAdaptParent[i].colIdx == colIdxCurrent )
          {
             if( colAdaptParent[i].val != valCurrent )
+            {
+               cout<<"Detected infeasibility (in variable) "<<colIdxCurrent<<endl;
                return false;
+            }
+
             else
                colAdaptParent.erase(colAdaptParent.begin()+i);   //todo: implement more efficiently
          }
@@ -1598,10 +1595,9 @@ bool StochPresolver::combineColAdaptParent()
 
 void StochPresolver::updateRhsNRowLink()
 {
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   bool iAmDistrib = false;
-   if( world_size > 1) iAmDistrib = true;
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
    if( hasLinking(EQUALITY_SYSTEM) )
    {
@@ -1620,6 +1616,7 @@ void StochPresolver::updateRhsNRowLink()
       for(int i=0; i<currEqRhsLink->n; i++)
          currEqRhsLink->elements()[i] += currEqRhsAdaptionsLink[i];
 
+      resetEqRhsAdaptionsLink();
    }
    if( hasLinking(INEQUALITY_SYSTEM) )
    {
@@ -1647,8 +1644,8 @@ void StochPresolver::updateRhsNRowLink()
          if( currIclowLink->elements()[i] != 0.0 )
             currIneqLhsLink->elements()[i] += currInEqLhsAdaptionsLink[i];
       }
+      resetIneqRhsAdaptionsLink();
    }
-   resetRhsAdaptionsLink();
 }
 
 int StochPresolver::doSingletonRowsC()
@@ -1684,11 +1681,16 @@ void StochPresolver::resetRedCounters()
    redCol->setToZero();
 }
 
-void StochPresolver::resetRhsAdaptionsLink()
+void StochPresolver::resetEqRhsAdaptionsLink()
 {
+   assert(hasLinking(EQUALITY_SYSTEM));
    for( int i = 0; i < redRowA->vecl->n; i++)
       currEqRhsAdaptionsLink[i] = 0.0;
+}
 
+void StochPresolver::resetIneqRhsAdaptionsLink()
+{
+   assert(hasLinking(INEQUALITY_SYSTEM));
    for( int i = 0; i < redRowC->vecl->n; i++ )
    {
       currInEqRhsAdaptionsLink[i] = 0.0;
@@ -1794,5 +1796,26 @@ bool StochPresolver::hasLinking(SystemType system_type)
          return true;
    }
    return false;
+}
+
+void StochPresolver::getRankDistributed( MPI_Comm comm, int& myRank, bool& iAmDistrib )
+{
+   MPI_Comm_rank(comm, &myRank);
+   int world_size;
+   MPI_Comm_size(comm, &world_size);
+   if( world_size > 1) iAmDistrib = true;
+   else iAmDistrib = false;
+}
+
+void StochPresolver::updateObjOffset()
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &objOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   if( myRank == 0 )
+      cout<<"Objective offset is "<<objOffset<<endl;
 }
 

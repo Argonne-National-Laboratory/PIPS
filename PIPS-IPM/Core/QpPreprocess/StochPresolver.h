@@ -220,13 +220,16 @@ private:
   void resetLinkvarsAndChildBlocks();
   void resetBlocks();
   void resetRedCounters();
-  void resetRhsAdaptionsLink();
+  void resetEqRhsAdaptionsLink();
+  void resetIneqRhsAdaptionsLink();
 
   double removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx);
   void clearRow(SparseStorageDynamic& storage, const int rowIdx);
 
   bool childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type);
   bool hasLinking(SystemType system_type);
+  void getRankDistributed( MPI_Comm comm, int& myRank, bool& iAmDistrib );
+  void updateObjOffset();
 
   sData* presProb;
 
