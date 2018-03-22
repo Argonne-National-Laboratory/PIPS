@@ -20,7 +20,7 @@ endif(HAVE_MA57)
 #	set(solvers ${solvers} LinearSolvers/Ma86Solver/Ma86Solver.C QpGen/QpGenSparseMa86.C)
 #endif(HAVE_MA86)
 if(HAVE_PARDISO)
-	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C LinearSolvers/PardisoSolver/PardisoSchurSolver.C)
+	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C LinearSolvers/PardisoSolver/PardisoSchurSolver.C LinearSolvers/PardisoSolver/PardisoIndefSolver.C)
 endif(HAVE_PARDISO)
 
 add_library(ooqpgensparse 

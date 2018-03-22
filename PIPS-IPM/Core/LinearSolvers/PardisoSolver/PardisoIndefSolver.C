@@ -10,6 +10,7 @@
 
 
 #include "pipschecks.h"
+#include "SimpleVector.h"
 #include <cstdlib>
 #include <stdlib.h>
 #include <cmath>
@@ -134,7 +135,7 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 }
 
 
-void DeSymIndefSolver::matrixChanged()
+void PardisoIndefSolver::matrixChanged()
 {
 
    std::cout << "factor ..."  << std::endl;
@@ -192,6 +193,9 @@ void DeSymIndefSolver::matrixChanged()
      std::cout << "DENSE_USE_HALF: starting factorization" << std::endl;
 #endif
 #endif
+   int n = mStorage->n;
+
+   assert(mStorage->n == mStorage->m);
 
 
    int nnz = 0;
@@ -268,8 +272,7 @@ void DeSymIndefSolver::matrixChanged()
   HPM_Start("DSYTRFFact");
 #endif
 
-   int n = mStorage->n;
-
+   int error;
    phase = 11;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
@@ -302,7 +305,7 @@ void DeSymIndefSolver::matrixChanged()
    printf("\nFactorization completed ...\n ");
 }
 
-void DeSymIndefSolver::solve ( OoqpVector& v )
+void PardisoIndefSolver::solve ( OoqpVector& v )
 {
    int n = mStorage->n;
    phase = 33;
@@ -317,6 +320,7 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
 #ifdef TIMING_FLOPS
    HPM_Start("DSYTRSSolve");
 #endif
+   int error;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
          iparm, &msglvl, b, x, &error, dparm);
@@ -338,19 +342,20 @@ void DeSymIndefSolver::solve ( OoqpVector& v )
    printf("\nSolve completed ... ");
 }
 
-void DeSymIndefSolver::solve ( GenMatrix& rhs_in )
+void PardisoIndefSolver::solve ( GenMatrix& rhs_in )
 {
    assert(0 && "not supported");
 }
 
-void DeSymIndefSolver::diagonalChanged( int /* idiag */, int /* extent */ )
+void PardisoIndefSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 {
   this->matrixChanged();
 }
 
-DeSymIndefSolver::~DeSymIndefSolver()
+PardisoIndefSolver::~PardisoIndefSolver()
 {
     phase = -1;                 /* Release internal memory. */
+    int error;
     int n = mStorage->n;
     pardiso (pt, &maxfct, &mnum, &mtype, &phase,
              &n, &ddum, ia, ja, &idum, &nrhs,

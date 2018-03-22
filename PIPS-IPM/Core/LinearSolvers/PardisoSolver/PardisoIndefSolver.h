@@ -10,6 +10,7 @@
 
 #include "DoubleLinearSolver.h"
 #include "DenseSymMatrixHandle.h"
+#include "DenseSymMatrix.h"
 #include "SparseSymMatrix.h"
 #include "DenseStorageHandle.h"
 

@@ -7,6 +7,7 @@
 #include "DeSymIndefSolver2.h"
 #include "DeSymPSDSolver.h"
 #include "PardisoSolver.h"
+#include "PardisoIndefSolver.h"
 #include "sData.h"
 #include "sTree.h"
 #include "pipschecks.h"
@@ -71,7 +72,10 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
   //if(0==myRank) cout << "Using LAPACK dsytrf for 1st stage systems - sLinsysRootAug" << endl;
-  return new DeSymIndefSolver(kktmat);
+
+ // return new DeSymIndefSolver(kktmat);
+  return new PardisoIndefSolver(kktmat); // todo user parameter or at least a compile flag
+
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
 }
