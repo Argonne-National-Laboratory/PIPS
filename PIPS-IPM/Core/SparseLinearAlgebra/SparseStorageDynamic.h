@@ -17,6 +17,14 @@ typedef struct
    int end;
 } ROWPTRS;
 
+struct first_is_smaller
+{
+    bool operator()(const std::pair<int, double>& x, const std::pair<int, double>& y) const
+    {
+        return x.first < y.first;
+    }
+};
+
 /** A class for managing the matrix elements used by sparse matrices.
  *  @ingroup SparseLinearAlgebra
  */
@@ -68,6 +76,8 @@ public:
 
   void writeToStreamDense( ostream& out) const;
   void writeToStreamDenseRow( stringstream& out, int rowidx) const;
+
+  void restoreOrder();
 
   SparseStorage* getStaticStorage(double* rowNnz, double* colNnz) const;
   SparseStorageDynamic* getTranspose() const;

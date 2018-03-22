@@ -663,12 +663,14 @@ void StochPresolver::updateTransposed(StochGenMatrix& matrix)
 int StochPresolver::doSingletonRows()
 {
    int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   int nelims = 0;
+   int nelims = 0, newSRIneq = 0;
    int newSREq = initSingletonRows(EQUALITY_SYSTEM);
-   int newSRIneq = 0;
-   cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &newSREq, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   if( myRank == 0 ) cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
 
    int iter = 0;
    bool possibleFeasible = true;
@@ -677,14 +679,17 @@ int StochPresolver::doSingletonRows()
    while( newSREq > 0 && iter < maxIterSR)
    {
       if( iter > 0 )
-         newSREq = initSingletonRows(EQUALITY_SYSTEM);
+         initSingletonRows(EQUALITY_SYSTEM);
       resetRedCounters();
+      // main method:
       possibleFeasible = doSingletonRowsA(newSREq, newSRIneq);
       if( !possibleFeasible )
       {
          cout<<"Infeasibility detected during singleton row presolving."<<endl;
          return 0;
       }
+      // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsA:
+      updateLinkingVarsBlocks(newSREq, newSRIneq);
       //nelims += doSingletonRowsC();
       if( myRank == 0 )
          cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
@@ -699,8 +704,7 @@ int StochPresolver::doSingletonRows()
 int StochPresolver::initSingletonRows(SystemType system_type)
 {
    int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    int nSingletonRows = 0;
 
@@ -745,17 +749,6 @@ int StochPresolver::initSingletonRows(SystemType system_type)
       // todo: linking block nRowElemsC->vecl
       //blocks[nChildren+2] = singletonRows.size();
    }
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &nSingletonRows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-   cout<<"singletonRows: "<<endl;
-   for(size_t i= 0; i<singletonRows.size(); i++)
-      cout<<singletonRows[i]<<endl;
-
-   cout<<"blocks: "<<endl;
-   for(int i= 0; i<nChildren+3; i++)
-      cout<<blocks[i]<<endl;
-
 
    return nSingletonRows;
 }
@@ -795,17 +788,26 @@ bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
    {
       // dummy child?
       if( updateCurrentPointersForSingletonRow(it, EQUALITY_SYSTEM) )
-      {
+      {  // main part for each child: go through B and adapt F, D and G
          possFeas = procSingletonRowChild(matrix, it, newSREq, newSRIneq);
          if( !possFeas ) return false;
       }
    }
 
-   // Update: redRowLink and lhs/rhs (Linking part) of both systems:
+   // Update nRowLink and lhs/rhs (Linking part) of both systems:
    updateRhsNRowLink();
 
    possFeas = combineColAdaptParent();
    if( !possFeas ) return false;
+
+   return true;
+}
+
+void StochPresolver::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
    // apply updated colAdaptParent to the Amat blocks
    for(int i= -1; i<nChildren; i++)
@@ -835,37 +837,19 @@ bool StochPresolver::doSingletonRowsA(int& newSREq, int& newSRIneq)
 
    resetRedCounters();
 
-   // empty the singletonRow list or todo: store the new singleton rows during the process
+   // empty the singletonRow list
    for(int i = 0; i<(int)singletonRows.size(); i++)
       assert(singletonRows[i] == -1);
    singletonRows.clear();
    resetBlocks();
 
    if( iAmDistrib )
-   {
+   {  // communicate newly found number of singleton rows so that all processes share this knowledge
       int newSR[2] = {newSREq, newSRIneq};
       MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       newSREq = newSR[0];
       newSRIneq = newSR[1];
    }
-
-   /*
-   // print F_1 (blmat vom letzten child) for debugging
-   SparseStorageDynamic& blmat_test = matrix.children[1]->Blmat->getStorageDynamicRef();
-   cout<<"blmat_test: m,n,len: "<<blmat_test.m<<" "<<blmat_test.n<<" "<<blmat_test.len<<endl;
-   blmat_test.writeToStreamDense(cout);
-   cout<<"blmat_test jcolM:"<<endl;
-   for(int i=0; i<blmat_test.len; i++)
-      cout<<blmat_test.jcolM[i]<<endl;
-   cout<<"blmat_test M:"<<endl;
-   for(int i=0; i<blmat_test.len; i++)
-      cout<<blmat_test.M[i]<<endl;
-   cout<<"blmat_test krowptrs:"<<endl;
-   for(int i=0; i<blmat_test.m; i++)
-      cout<<"start: "<<blmat_test.rowptr[i].start<<" end: "<<blmat_test.rowptr[i].end<<endl;
-      */
-
-   return true;
 }
 
 /** Update the current pointers for the singleton row routine.

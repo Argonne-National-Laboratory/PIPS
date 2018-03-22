@@ -7,6 +7,8 @@
 
 #include "SparseStorageDynamic.h"
 #include <cassert>
+#include <algorithm>
+#include <vector>
 
 int SparseStorageDynamic::instances = 0;
 
@@ -375,6 +377,28 @@ void SparseStorageDynamic::writeToStreamDenseRow( stringstream& out, int rowidx)
    {
       out << 0 << '\t';
       j++;
+   }
+}
+
+void SparseStorageDynamic::restoreOrder()
+{
+   for(int i=0; i<m; i++)  // row i
+   {
+      int start = rowptr[i].start;
+      int end = rowptr[i].end;
+
+      // todo: this is too much overhead, better to implement a random access iterator
+      std::vector<std::pair<int, double> > pairVector;
+
+      for(int j=0; j<(end - start); j++)
+         pairVector.push_back(make_pair(jcolM[j], M[j]));
+
+      std::sort(pairVector.begin(), pairVector.end(), first_is_smaller());
+      for(int j=0; j<(end - start); j++)
+      {
+         jcolM[j] = pairVector[j].first;
+         M[j] = pairVector[j].second;
+      }
    }
 }
 

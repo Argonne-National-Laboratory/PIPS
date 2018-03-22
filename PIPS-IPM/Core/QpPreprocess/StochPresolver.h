@@ -196,6 +196,7 @@ private:
   int initSingletonRows(SystemType system_type);
   int initSingletonRowsBlock(int it, SimpleVector* nnzRowSimple);
   bool doSingletonRowsA(int& newSREq, int& newSRIneq);
+  void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq);
   bool updateCurrentPointersForSingletonRow(int it, SystemType system_type);
   bool updateCPForSingletonRowInequalityBChild( int it );
   bool procSingletonRowRoot(StochGenMatrix& stochMatrix);

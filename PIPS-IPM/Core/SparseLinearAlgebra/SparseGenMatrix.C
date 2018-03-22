@@ -600,6 +600,7 @@ void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, 
    const SimpleVector& rowNnzVecSimple = dynamic_cast<const SimpleVector&>(rowNnzVec);
    const SimpleVector* const colNnzVecSimple = dynamic_cast<const SimpleVector*>(colNnzVec);
 
+   mStorageDynamic->restoreOrder();
    SparseStorageHandle staticStorage(mStorageDynamic->getStaticStorage(rowNnzVecSimple.elements(),
          (colNnzVecSimple == NULL) ? NULL : colNnzVecSimple->elements()));
 
