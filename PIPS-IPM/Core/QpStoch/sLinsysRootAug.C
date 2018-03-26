@@ -66,18 +66,25 @@ sLinsysRootAug::createKKT(sData* prob)
 DoubleLinearSolver*
 sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
-
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-  //return new PardisoSolver(kktmat);
-
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-  //if(0==myRank) cout << "Using LAPACK dsytrf for 1st stage systems - sLinsysRootAug" << endl;
 
-  return new DeSymIndefSolver(kktmat);
- //return new PardisoIndefSolver(kktmat); // todo user parameter or at least a compile flag
+  // todo user parameter
+#ifdef WITH_PARDISOINDEF
+  if( 0 == myRank )
+     cout << "Using Pardiso for summed Schur complement - sLinsysRootAug"<< endl;
+  return new PardisoIndefSolver(kktmat);
 
-  //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
-  //return new DeSymPSDSolver(kktmat);
+#else
+   if( 0 == myRank )
+      cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug"<< endl;
+
+   return new DeSymIndefSolver(kktmat);
+   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
+   //return new DeSymPSDSolver(kktmat);
+   //return new PardisoSolver(kktmat);
+#endif
+
 }
 
 #ifdef TIMING

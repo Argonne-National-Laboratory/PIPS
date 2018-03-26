@@ -71,7 +71,7 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
   maxfct = 1;      /* Maximum number of numerical factorizations.  */
   mnum   = 1;         /* Which factorization to use. */
 
-  msglvl = 1;         /* Print statistical information  */
+  msglvl = 0;         /* Print statistical information  */
   ia = 0;
   ja = 0;
   a = 0;
@@ -137,11 +137,10 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 
 void PardisoIndefSolver::matrixChanged()
 {
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-   std::cout << "factor ..."  << std::endl;
-
-
-
+   if( myRank == 0 )
+      printf("\nFactorization starts ...\n ");
 #if 0
    ofstream myfile;
    myfile.open("xout");
@@ -268,10 +267,6 @@ void PardisoIndefSolver::matrixChanged()
    }
 #endif
 
-#ifdef TIMING_FLOPS
-  HPM_Start("DSYTRFFact");
-#endif
-
    int error;
    phase = 11;
 
@@ -283,9 +278,14 @@ void PardisoIndefSolver::matrixChanged()
       printf("\nERROR during symbolic factorization: %d", error);
       exit(1);
    }
-   printf("\nReordering completed ... ");
-   printf("\nNumber of nonzeros in factors  = %d", iparm[17]);
-   printf("\nNumber of factorization MFLOPS = %d", iparm[18]);
+
+   if( myRank == 0 )
+   {
+      printf("\nReordering completed: ");
+      printf("\nNumber of nonzeros in factors  = %d", iparm[17]);
+      printf("          Number of factorization MFLOPS = %d", iparm[18]);
+   }
+
 
    phase = 22;
    iparm[32] = 1; /* compute determinant */
@@ -293,16 +293,14 @@ void PardisoIndefSolver::matrixChanged()
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
          iparm, &msglvl, &ddum, &ddum, &error, dparm);
 
-#ifdef TIMING_FLOPS
-  HPM_Stop("DSYTRFFact");
-#endif
 
    if( error != 0 )
    {
       printf("\nERROR during numerical factorization: %d", error);
       exit(2);
    }
-   printf("\nFactorization completed ...\n ");
+   if( myRank == 0 )
+      printf("\nFactorization completed ...\n ");
 }
 
 void PardisoIndefSolver::solve ( OoqpVector& v )
@@ -338,8 +336,6 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       b[i] = x[i];
 
    delete[] x; // todo
-
-   printf("\nSolve completed ... ");
 }
 
 void PardisoIndefSolver::solve ( GenMatrix& rhs_in )
