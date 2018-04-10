@@ -59,7 +59,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    setCurrentPointersToNull();
 
    int nelimsB0 = 0;
-   if( updateCurrentPointers( -1, EQUALITY_SYSTEM) )
+   if( updateCPforTinyEntry( -1, EQUALITY_SYSTEM) )
    {
       nelimsB0 = removeTinyInnerLoop( -1, EQUALITY_SYSTEM, LINKING_VARS_BLOCK );
       assert( nelimsB0 == localNelims );
@@ -77,7 +77,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    // go through the children
    for( size_t it = 0; it< matrix.children.size(); it++)
    {
-      if( updateCurrentPointers(int(it), EQUALITY_SYSTEM) )
+      if( updateCPforTinyEntry(int(it), EQUALITY_SYSTEM) )
       {
          nelims += removeTinyChild((int)it, EQUALITY_SYSTEM);
 
@@ -119,7 +119,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
    setCurrentPointersToNull();
 
    int nelimsB0 = 0;
-   if( updateCurrentPointers( -1, INEQUALITY_SYSTEM) )
+   if( updateCPforTinyEntry( -1, INEQUALITY_SYSTEM) )
    {
       nelimsB0 = removeTinyInnerLoop( -1, INEQUALITY_SYSTEM, LINKING_VARS_BLOCK );
       assert( nelimsB0 == localNelims );
@@ -137,7 +137,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
    // go through the children
    for( size_t it = 0; it< matrix.children.size(); it++)
    {
-      if( updateCurrentPointers((int)it, INEQUALITY_SYSTEM) )
+      if( updateCPforTinyEntry((int)it, INEQUALITY_SYSTEM) )
       {
          nelims += removeTinyChild((int)it, INEQUALITY_SYSTEM);
 

@@ -57,7 +57,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       iter++;
    }
 
-   synchronizeObjOffset();
+   globalSumObjOffset();
 
    return nelims;
 }
@@ -140,7 +140,7 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
    newSRIneq = 0;
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
-   updateCurrentPointersForSingletonRow(-1, EQUALITY_SYSTEM);
+   updateCPForSingletonRow(-1, EQUALITY_SYSTEM);
    bool possFeas = procSingletonRowRoot(matrix);
    if( !possFeas ) return false;
 
@@ -148,7 +148,7 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
    for( int it = 0; it < nChildren; it++ )
    {
       // dummy child?
-      if( updateCurrentPointersForSingletonRow(it, EQUALITY_SYSTEM) )
+      if( updateCPForSingletonRow(it, EQUALITY_SYSTEM) )
       {  // main part for each child: go through B and adapt F, D and G
          possFeas = procSingletonRowChild(matrix, it, newSREq, newSRIneq);
          if( !possFeas ) return false;
@@ -256,7 +256,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(SparseStorageDynamic
             cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
             return false;
          }
-         presData.objOffset += g[colIdx] * val;
+         presData.addObjOffset(g[colIdx] * val);
 
          COLUMNTOADAPT colWithVal = {colIdx, val};
          presData.colAdaptParent.push_back(colWithVal);
@@ -311,7 +311,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat( int rowIdx, std
       cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
       return false;
    }
-   presData.objOffset += g[colIdx] * val;
+   presData.addObjOffset(g[colIdx] * val);
 
    // adapt the col, val immediately in this block B_i and store them for the Blmat
    newSR += adaptChildBmatCol(colIdx, val, system_type);
@@ -375,7 +375,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
          if( uniqueAdditionToOffset )
          {
             presData.colAdaptParent.push_back(colWithVal);
-            presData.objOffset += g[colIdx] * val;
+            presData.addObjOffset(g[colIdx] * val);
          }
       }
    }

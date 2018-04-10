@@ -122,30 +122,42 @@ protected:
     * the child block 'it' is accessed using the index 'it+1'. */
    BLOCKS* childBlocks;
 
-
-   /* update methods */
+   /* swap two entries in the SparseStorageDynamic format */
    void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims);
    void updateRhsNRowLink();
-
-   void setCurrentPointersToNull();
-
-   /** initialize current pointer for matrices and vectors.
-    * If it==-1, we are at parent and want block B_0 (Bmat).
-    * Returns false if it is a dummy child. */
-   bool updateCurrentPointers(int it, SystemType system_type);
-
-
    void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector);
 
-
+   // methods to update the transposed matrix:
    void updateTransposed(StochGenMatrix& matrix);
    void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd);
 
    void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq);
-   bool updateCurrentPointersForSingletonRow(int it, SystemType system_type);
+
+   // methods to update the current pointers:
+   void setCurrentPointersToNull();
+   /** initialize current pointer for matrices and vectors.
+    * If it==-1, we are at parent and want block B_0 (Bmat).
+    * Returns false if it is a dummy child. */
+   bool updateCPforTinyEntry(int it, SystemType system_type);
+   bool updateCPForSingletonRow(int it, SystemType system_type);
    bool updateCPForSingletonRowInequalityBChild( int it );
    bool updateCurrentPointersForColAdapt(int it, SystemType system_type);
    bool updateCPforColAdaptF0( SystemType system_type );
+
+   void setCPAmatsRoot(GenMatrixHandle matrixHandle);
+   bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
+   bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
+   bool setCPAmatBmat(GenMatrixHandle matrixHandle, int it, SystemType system_type);
+   void setCPBlmatsRoot(GenMatrixHandle matrixHandle);
+   void setCPBlmatsChild(GenMatrixHandle matrixHandle, int it);
+   void setCPColumnRoot();
+   void setCPColumnChild(int it);
+   void setCPRowRootEquality();
+   void setCPRowRootInequality();
+   void setCPRowChildEquality(int it);
+   void setCPRowChildInequality(int it);
+   void setCPRowLinkEquality();
+   void setCPRowLinkInequality();
 
    void resetLinkvarsAndChildBlocks();
    void resetEqRhsAdaptionsLink();
@@ -167,7 +179,7 @@ protected:
    int colAdaptF0(SystemType system_type);
    bool combineColAdaptParent();
 
-   void synchronizeObjOffset();
+   void globalSumObjOffset();
 };
 
 

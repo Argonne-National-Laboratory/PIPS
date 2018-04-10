@@ -19,21 +19,7 @@ typedef struct
 class PresolveData
 {
    public:
-      PresolveData(const sData* sorigprob);
-      ~PresolveData();
-
-      void initialize();
-      sData* finalize();
-
-      void resetRedCounters();
-      void resetBlocks();
-
-      /** objective offset created by presolving*/
-      double objOffset;
-
-
-      // number of children
-      int nChildren;
+      sData* presProb;
 
       // number of non-zero elements of each row
       StochVectorHandle nRowElemsA;
@@ -46,8 +32,6 @@ class PresolveData
       StochVectorHandle redRowA;
       StochVectorHandle redRowC;
       StochVectorHandle redCol;
-
-      sData* presProb;
 
       //StochGenMatrix& Apres;
       //StochGenMatrix& Cpres;
@@ -68,9 +52,25 @@ class PresolveData
        * adaptation is stored. */
       std::vector<COLUMNTOADAPT> colAdaptParent;
 
+      PresolveData(const sData* sorigprob);
+      ~PresolveData();
+
+      void initialize();
+      sData* finalize();
+
+      void resetRedCounters();
+      void resetBlocks();
       // todo getter, setter for element access of nnz counter???
+      int getNChildren();
+      double getObjOffset();
+      double addObjOffset(double addOffset);
+      void setObjOffset(double offset);
 
    private:
+      // number of children
+      int nChildren;
+      // objective offset created by presolving
+      double objOffset;
       // initialize row and column nnz counter
       void initNnzCounter();
 

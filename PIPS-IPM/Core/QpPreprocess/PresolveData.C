@@ -109,6 +109,25 @@ void PresolveData::resetBlocks()
    }
 }
 
+int PresolveData::getNChildren()
+{
+   return nChildren;
+}
 
+double PresolveData::getObjOffset()
+{
+   return objOffset;
+}
+
+double PresolveData::addObjOffset(double addOffset)
+{
+   objOffset += addOffset;
+   return objOffset;
+}
+
+void PresolveData::setObjOffset(double offset)
+{
+   objOffset = offset;
+}
 
 
