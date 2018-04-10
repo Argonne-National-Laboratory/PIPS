@@ -8,21 +8,32 @@
 #ifndef PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_
 #define PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_
 
+#include "sData.h"
+
+typedef struct
+{
+   int colIdx;
+   double val;
+} COLUMNTOADAPT;
 
 class PresolveData
 {
-      PresolveData(const sData sorigprob);
+   public:
+      PresolveData(const sData* sorigprob);
       ~PresolveData();
 
       void initialize();
-
       sData* finalize();
 
+      void resetRedCounters();
+      void resetBlocks();
 
       /** objective offset created by presolving*/
       double objOffset;
 
 
+      // number of children
+      int nChildren;
 
       // number of non-zero elements of each row
       StochVectorHandle nRowElemsA;
@@ -38,8 +49,24 @@ class PresolveData
 
       sData* presProb;
 
-      StochGenMatrix& Apres;
-      StochGenMatrix& Cpres;
+      //StochGenMatrix& Apres;
+      //StochGenMatrix& Cpres;
+
+      // variables used for singleton row elimination:
+      /** vector containing the row indices of singleton rows */
+      std::vector<int> singletonRows;
+      /** array of length nChildren+3 to store start indices for singletonRows
+       * that correspond to the correct block. As blocks[0] represents the parent block,
+       * the child block 'it' is accessed using the index 'it+1'.
+       * The linking-row block is accessed using the index nChildren+2. */
+      int* blocks;
+      std::vector<int> singletonRowsIneq;
+      int* blocksIneq;
+
+      /** vector containing the column indices of entries that were found during the
+       * singleton row routine. Along with the column index, the value needed for
+       * adaptation is stored. */
+      std::vector<COLUMNTOADAPT> colAdaptParent;
 
       // todo getter, setter for element access of nnz counter???
 
@@ -49,91 +76,5 @@ class PresolveData
 
 };
 
-
-
-PresolveData::PresolveData(const sData sorigprob)
-{
-   StochVectorHandle gclone(dynamic_cast<StochVector*>(sorigprob->g->clone()));
-   nColElems = gclone;
-   StochVectorHandle colClone(dynamic_cast<StochVector*>(sorigprob->g->clone()));
-   redCol = colClone;
-
-   StochVectorHandle bAclone(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
-   nRowElemsA = bAclone;
-   StochVectorHandle rowAclone(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
-   redRowA = rowAclone;
-
-   StochVectorHandle icuppclone(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
-   nRowElemsC = icuppclone;
-   StochVectorHandle rowCclone(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
-   redRowC = rowCclone;
-
-   presProb = sorigprob->cloneFull(true);
-
-   Apres = dynamic_cast<StochGenMatrix&>(*presProb->A);
-   Cpres = dynamic_cast<StochGenMatrix&>(*presProb->C);
-   objOffset = 0.0;
-
-
-
-
-
-
-}
-
-void
-PresolveData::initialize()
-{
-   // initialized all dynamic transposed sub matrices todo in extra method??? initiliaze?
-   Apres.initTransposed(true);
-   Cpres.initTransposed(true);
-
-   initNnzCounter();
-}
-
-sData*
-PresolveData::finalize()
-{
-   presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
-
-   Apres.deleteTransposed();
-   Cpres.deleteTransposed();
-
-   return presProb;
-}
-
-void
-PresolveData::initNnzCounter()
-{
-   StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
-   StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*(presProb->C));
-
-   StochVectorHandle colClone(dynamic_cast<StochVector*>(nColElems->clone()));
-
-   A.getNnzPerRow(*nRowElemsA);
-   C.getNnzPerRow(*nRowElemsC);
-
-   A.getNnzPerCol(*nColElems);
-   C.getNnzPerCol(*colClone);
-
-   nColElems->axpy(1.0, *colClone);
-
-
-#if 0
-   int rank = 0;
-   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-   if( rank == 0 ) std::cout << "write Cols with all cols" << std::endl;
-   nColElems->writeToStreamAll(std::cout);
-
-   if( rank == 0 ) std::cout << "write Rows A" << std::endl;
-   nRowElemsA->writeToStreamAll(std::cout);
-
-   if( rank == 0 ) std::cout << "write Rows C " << std::endl;
-   nRowElemsC->writeToStreamAll(std::cout);
-#endif
-
-
-}
-
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_ */
+

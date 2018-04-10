@@ -10,18 +10,43 @@
 
 #include "StochVector.h"
 #include "StochGenMatrix.h"
+#include "DoubleMatrixTypes.h"
 #include "SmartPointer.h"
 #include "PresolveData.h"
 #include "sData.h"
 #include <vector>
 #include <cassert>
 
+typedef struct
+{
+   int rowIdx;
+   int colIdx;
+} MTRXENTRY;
+
+typedef struct
+{
+   int start;
+   int end;
+} BLOCKS;
+
+struct col_is_smaller
+{
+    bool operator()(const COLUMNTOADAPT& x, const COLUMNTOADAPT& y) const
+    {
+        return x.colIdx < y.colIdx;
+    }
+};
+
+enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
+enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
+
 
 class StochPresolverBase
 {
+public:
    StochPresolverBase(PresolveData& presData);
 
-   ~StochPresolverBase();
+   virtual ~StochPresolverBase();
 
    virtual bool applyPresolving(int& nelims) = 0;
 
@@ -32,6 +57,7 @@ protected:
    static const double tolerance1 = 1.0e-3;
    static const double tolerance2 = 1.0e-2;
    static const double tolerance3 = 1.0e-10;
+   static const int maxIterSR = 20;
 
 
    // pointers to the currently needed matrices and vectors for presolving
@@ -122,8 +148,6 @@ protected:
    bool updateCPforColAdaptF0( SystemType system_type );
 
    void resetLinkvarsAndChildBlocks();
-   void resetBlocks();
-   void resetRedCounters();
    void resetEqRhsAdaptionsLink();
    void resetIneqRhsAdaptionsLink();
 
@@ -132,10 +156,18 @@ protected:
 
    bool childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type);
    bool hasLinking(SystemType system_type);
-   void getRankDistributed( MPI_Comm comm, int& myRank, bool& iAmDistrib );
+   void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib);
 
    bool adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type, int& newSR);
    bool adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
+   int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
+   bool adaptInequalityChildB(std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq);
+
+   int colAdaptLinkVars(int it, SystemType system_type);
+   int colAdaptF0(SystemType system_type);
+   bool combineColAdaptParent();
+
+   void synchronizeObjOffset();
 };
 
 

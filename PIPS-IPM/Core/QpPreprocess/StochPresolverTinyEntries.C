@@ -16,7 +16,6 @@ StochPresolverTinyEntries::StochPresolverTinyEntries(PresolveData& presData)
 
 StochPresolverTinyEntries::~StochPresolverTinyEntries()
 {
-
 }
 
 
@@ -55,8 +54,8 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   redRowC->setToZero();
-   redCol->setToZero();
+   presData.redRowC->setToZero();
+   presData.redCol->setToZero();
    setCurrentPointersToNull();
 
    int nelimsB0 = 0;
@@ -64,7 +63,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    {
       nelimsB0 = removeTinyInnerLoop( -1, EQUALITY_SYSTEM, LINKING_VARS_BLOCK );
       assert( nelimsB0 == localNelims );
-      updateNnzUsingReductions( (*nRowElemsA).vec, currRedRow);
+      updateNnzUsingReductions( (*presData.nRowElemsA).vec, currRedRow);
    }
 
    if( myRank == 0 )
@@ -72,8 +71,8 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
 
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
-   assert( matrix.children.size() == nRowElemsC->children.size() );
-   assert( matrix.children.size() == redCol->children.size() );
+   assert( matrix.children.size() == presData.nRowElemsC->children.size() );
+   assert( matrix.children.size() == presData.redCol->children.size() );
 
    // go through the children
    for( size_t it = 0; it< matrix.children.size(); it++)
@@ -82,21 +81,21 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
       {
          nelims += removeTinyChild((int)it, EQUALITY_SYSTEM);
 
-         updateNnzUsingReductions( dynamic_cast<StochVector*>((*nRowElemsA).children[it])->vec, currRedRow);
-         updateNnzUsingReductions( dynamic_cast<StochVector*>((*nColElems).children[it])->vec, currRedColChild);
+         updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nRowElemsA).children[it])->vec, currRedRow);
+         updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nColElems).children[it])->vec, currRedColChild);
 
-         assert( dynamic_cast<StochVector*>((*nRowElemsA).children[it])->vecl == NULL );
+         assert( dynamic_cast<StochVector*>((*presData.nRowElemsA).children[it])->vecl == NULL );
       }
    }
 
    // update nColElems.vec via AllReduce
    if( iAmDistrib )
    {
-      double* redColParent = dynamic_cast<SimpleVector*>(redCol->vec)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(redCol->vec)->length();
+      double* redColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
+      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
       MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
    }
-   updateNnzUsingReductions((*nColElems).vec, redCol->vec);
+   updateNnzUsingReductions((*presData.nColElems).vec, presData.redCol->vec);
 
    // todo: special treatment for the linking rows
 
@@ -115,8 +114,8 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   redRowC->setToZero();
-   redCol->setToZero();
+   presData.redRowC->setToZero();
+   presData.redCol->setToZero();
    setCurrentPointersToNull();
 
    int nelimsB0 = 0;
@@ -124,7 +123,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
    {
       nelimsB0 = removeTinyInnerLoop( -1, INEQUALITY_SYSTEM, LINKING_VARS_BLOCK );
       assert( nelimsB0 == localNelims );
-      updateNnzUsingReductions( (*nRowElemsC).vec, currRedRow);
+      updateNnzUsingReductions( (*presData.nRowElemsC).vec, currRedRow);
    }
 
    if( myRank == 0 )
@@ -132,8 +131,8 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
 
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
 
-   assert( matrix.children.size() == nRowElemsC->children.size() );
-   assert( matrix.children.size() == redCol->children.size() );
+   assert( matrix.children.size() == presData.nRowElemsC->children.size() );
+   assert( matrix.children.size() == presData.redCol->children.size() );
 
    // go through the children
    for( size_t it = 0; it< matrix.children.size(); it++)
@@ -142,21 +141,21 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
       {
          nelims += removeTinyChild((int)it, INEQUALITY_SYSTEM);
 
-         updateNnzUsingReductions( dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vec, currRedRow);
-         updateNnzUsingReductions( dynamic_cast<StochVector*>((*nColElems).children[it])->vec, currRedColChild);
+         updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nRowElemsC).children[it])->vec, currRedRow);
+         updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nColElems).children[it])->vec, currRedColChild);
 
-         assert( dynamic_cast<StochVector*>((*nRowElemsC).children[it])->vecl == NULL );
+         assert( dynamic_cast<StochVector*>((*presData.nRowElemsC).children[it])->vecl == NULL );
       }
    }
 
    // update nColElems.vec via AllReduce
    if( iAmDistrib )
    {
-      double* redColParent = dynamic_cast<SimpleVector*>(redCol->vec)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(redCol->vec)->length();
+      double* redColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
+      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
       MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
    }
-   updateNnzUsingReductions((*nColElems).vec, redCol->vec);
+   updateNnzUsingReductions((*presData.nColElems).vec, presData.redCol->vec);
 
    // todo: special treatment for the linking rows
 

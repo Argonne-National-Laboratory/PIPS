@@ -8,9 +8,12 @@
 #ifndef PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERTINYENTRIES_H_
 #define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERTINYENTRIES_H_
 
+#include "StochPresolverBase.h"
+#include <math.h>
 
 class StochPresolverTinyEntries : public StochPresolverBase
 {
+   public:
       StochPresolverTinyEntries(PresolveData& presData);
 
       ~StochPresolverTinyEntries();
