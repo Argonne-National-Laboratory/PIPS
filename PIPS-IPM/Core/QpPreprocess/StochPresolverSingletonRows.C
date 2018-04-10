@@ -57,7 +57,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       iter++;
    }
 
-   globalSumObjOffset();
+   presData.globalSumObjOffset();
 
    return nelims;
 }
@@ -71,7 +71,7 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 
    if( system_type == EQUALITY_SYSTEM )
    {
-      assert(presData.singletonRows.size() == 0);
+      assert(presData.getNumberSR() == 0);
 
       SimpleVector* nRowASimple = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
       int nSingleRowsA0block =  initSingletonRowsBlock(-1, nRowASimple);
@@ -84,7 +84,7 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
          SimpleVector* nRowASimpleChild = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec);
          nSingletonRows += initSingletonRowsBlock(int(it), nRowASimpleChild);
       }
-      presData.blocks[nChildren+1] = presData.singletonRows.size();
+      presData.setBlocks(nChildren+1, presData.getNumberSR());
 
       // todo: linking block nRowElemsA->vecl
       //blocks[nChildren+2] = singletonRows.size();
@@ -94,7 +94,7 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
       assert( system_type == INEQUALITY_SYSTEM );
       //todo: if rows from A and C should be stored, then another variable to store the indices is needed,
       // blocks is not enough.
-      assert(presData.singletonRows.size() == 0);
+      assert(presData.getNumberSR() == 0);
 
       SimpleVector* nRowASimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
       nSingletonRows += initSingletonRowsBlock(-1, nRowASimple);
@@ -105,7 +105,7 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
          SimpleVector* nRowASimpleChild = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
          nSingletonRows += initSingletonRowsBlock(int(it), nRowASimpleChild);
       }
-      presData.blocks[nChildren+1] = presData.singletonRows.size();
+      presData.setBlocks(nChildren+1, presData.getNumberSR());
 
       // todo: linking block nRowElemsC->vecl
       //blocks[nChildren+2] = singletonRows.size();
@@ -118,13 +118,13 @@ int StochPresolverSingletonRows::initSingletonRowsBlock(int it, SimpleVector* nn
 {
    int nSingletonRows = 0;
 
-   presData.blocks[it + 1] = presData.singletonRows.size();
+   presData.setBlocks(it+1, presData.getNumberSR());
    double* nnzRow = nnzRowSimple->elements();
 
    for( int i = 0; i < nnzRowSimple->n; i++ )
       if( nnzRow[i] == 1.0 )
       {
-         presData.singletonRows.push_back(i);
+         presData.addSingletonRow(i);
          nSingletonRows++;
       }
    return nSingletonRows;
@@ -158,7 +158,7 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
    // Update nRowLink and lhs/rhs (Linking part) of both systems:
    updateRhsNRowLink();
 
-   possFeas = combineColAdaptParent();
+   possFeas = presData.combineColAdaptParent();
    if( !possFeas ) return false;
 
    return true;
@@ -175,12 +175,12 @@ bool StochPresolverSingletonRows::procSingletonRowRoot(StochGenMatrix& stochMatr
    bool possFeas = true;
 
    SparseStorageDynamic& B0_mat = stochMatrix.Bmat->getStorageDynamicRef();
-   assert( presData.colAdaptParent.size() == 0 );
+   assert( presData.getNumberColAdParent() == 0 );
 
-   for(int i = presData.blocks[0]; i<presData.blocks[1]; i++)
+   for(int i = presData.getBlocks(0); i<presData.getBlocks(1); i++)
    {
-      int rowIdx = presData.singletonRows[i];
-      presData.singletonRows[i] = -1;  // for debugging purposes
+      int rowIdx = presData.getSingletonRow(i);
+      presData.setSingletonRow(i, -1);  // for debugging purposes
 
       possFeas = removeSingleRowEntryB0(B0_mat, rowIdx);
       if( !possFeas ) return false;
@@ -231,12 +231,12 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(SparseStorageDynamic
    double* xupp = currxuppParent->elements();
    double* g = currgParent->elements();
 
-   for(int i = presData.blocks[it+1]; i<presData.blocks[it+2]; i++)
+   for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
-      int rowIdx = presData.singletonRows[i];
+      int rowIdx = presData.getSingletonRow(i);
       if( A_mat.rowptr[rowIdx].start +1 == A_mat.rowptr[rowIdx].end )
       {
-         presData.singletonRows[i] = -1;  // for debugging purposes
+         presData.setSingletonRow(i, -1);  // for debugging purposes
 
          // store the column index with fixed value in colAdaptParent and adapt objOffset:
          int indexK = A_mat.rowptr[rowIdx].start;
@@ -259,7 +259,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(SparseStorageDynamic
          presData.addObjOffset(g[colIdx] * val);
 
          COLUMNTOADAPT colWithVal = {colIdx, val};
-         presData.colAdaptParent.push_back(colWithVal);
+         presData.addColToAdaptParent(colWithVal);
       }
    }
    return true;
@@ -267,9 +267,9 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(SparseStorageDynamic
 
 bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR)
 {
-   for(int i = presData.blocks[it+1]; i<presData.blocks[it+2]; i++)
+   for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
-      int rowIdx = presData.singletonRows[i];
+      int rowIdx = presData.getSingletonRow(i);
       if( rowIdx == -1 || B_mat.rowptr[rowIdx].start == B_mat.rowptr[rowIdx].end)
       {
          // entry was already in Amat or in a previous singleton row in Bmat
@@ -278,7 +278,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic
       else
       {
          assert( B_mat.rowptr[rowIdx].start +1 == B_mat.rowptr[rowIdx].end );
-         presData.singletonRows[i] = -1;  // for debugging purposes
+         presData.setSingletonRow(i, -1);  // for debugging purposes
          removeSingleRowEntryChildBmat(rowIdx, colAdaptLinkBlock, EQUALITY_SYSTEM, newSR);
       }
    }
@@ -359,11 +359,11 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
       {
          COLUMNTOADAPT colWithVal = {colIdx, val};
          bool uniqueAdditionToOffset = true;
-         for(int i=0; i<(int)presData.colAdaptParent.size(); i++)
+         for(int i=0; i<presData.getNumberColAdParent(); i++)
          {
-            if( presData.colAdaptParent[i].colIdx == colIdx )
+            if( presData.getColAdaptParent(i).colIdx == colIdx )
             {
-               if( presData.colAdaptParent[i].val != val )
+               if( presData.getColAdaptParent(i).val != val )
                {
                   cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
                   return false;
@@ -374,7 +374,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
          }
          if( uniqueAdditionToOffset )
          {
-            presData.colAdaptParent.push_back(colWithVal);
+            presData.addColToAdaptParent(colWithVal);
             presData.addObjOffset(g[colIdx] * val);
          }
       }
@@ -382,5 +382,6 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
 
    return true;
 }
+
 
 

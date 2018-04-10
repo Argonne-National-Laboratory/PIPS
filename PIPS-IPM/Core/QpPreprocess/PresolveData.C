@@ -71,12 +71,10 @@ void PresolveData::initNnzCounter()
 
    A.getNnzPerRow(*nRowElemsA);
    C.getNnzPerRow(*nRowElemsC);
-
    A.getNnzPerCol(*nColElems);
    C.getNnzPerCol(*colClone);
 
    nColElems->axpy(1.0, *colClone);
-
 
 #if 0
    int rank = 0;
@@ -91,6 +89,108 @@ void PresolveData::initNnzCounter()
    if( rank == 0 ) std::cout << "write Rows C " << std::endl;
    nRowElemsC->writeToStreamAll(std::cout);
 #endif
+}
+
+bool PresolveData::combineColAdaptParent()
+{
+   int myRank, world_size;
+   bool iAmDistrib = false;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   if( world_size > 1) iAmDistrib = true;
+
+   if( iAmDistrib )
+   {
+      // allgather the length of each colAdaptParent
+      int mylen = getNumberColAdParent();
+      int* recvcounts = new int[world_size];
+
+      MPI_Allgather(&mylen, 1, MPI_INT, recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
+
+      // allgatherv the actual colAdaptParents
+      // First, extract the colIdx and val into int* and double* arrays:
+      int* colIndicesLocal = new int[mylen];
+      double* valuesLocal = new double[mylen];
+      for(int i=0; i<mylen; i++)
+      {
+         colIndicesLocal[i] = getColAdaptParent(i).colIdx;
+         valuesLocal[i] = getColAdaptParent(i).val;
+      }
+      // Second, prepare the receive buffers:
+      int lenghtGlobal = recvcounts[0];
+      int* displs = new int[world_size];
+      displs[0] = 0;
+      for(int i=1; i<world_size; i++)
+      {
+         lenghtGlobal += recvcounts[i];
+         displs[i] = displs[i-1] + recvcounts[i-1];
+      }
+      int* colIndicesGlobal = new int[lenghtGlobal];
+      double* valuesGlobal = new double[lenghtGlobal];
+      // Then, do the actual MPI communication:
+      MPI_Allgatherv(colIndicesLocal, mylen, MPI_INT, colIndicesGlobal, recvcounts, displs , MPI_INT, MPI_COMM_WORLD);
+      MPI_Allgatherv(valuesLocal, mylen, MPI_DOUBLE, valuesGlobal, recvcounts, displs , MPI_DOUBLE, MPI_COMM_WORLD);
+
+      // Reconstruct a colAdaptParent:
+      clearColAdaptParent();
+      for(int i=0; i<lenghtGlobal; i++)
+      {
+         COLUMNTOADAPT colWithVal = {colIndicesGlobal[i], valuesGlobal[i]};
+         addColToAdaptParent(colWithVal);
+      }
+
+      delete[] recvcounts;
+      delete[] colIndicesLocal;
+      delete[] valuesLocal;
+      delete[] colIndicesGlobal;
+      delete[] valuesGlobal;
+   }
+
+   // Sort colIndicesGlobal (and valuesGlobal accordingly), remove duplicates and find infeasibilities
+   std::sort(colAdaptParent.begin(), colAdaptParent.end(), col_is_smaller());
+
+   if(getNumberColAdParent() > 0)
+   {
+      int colIdxCurrent = getColAdaptParent(0).colIdx;
+      double valCurrent = getColAdaptParent(0).val;
+      for(int i=1; i<getNumberColAdParent(); i++)
+      {
+         if( getColAdaptParent(i).colIdx == colIdxCurrent )
+         {
+            if( getColAdaptParent(i).val != valCurrent )
+            {
+               cout<<"Detected infeasibility (in variable) "<<colIdxCurrent<<endl;
+               return false;
+            }
+            else
+               colAdaptParent.erase(colAdaptParent.begin()+i);   //todo: implement more efficiently
+         }
+         else{
+            colIdxCurrent = getColAdaptParent(i).colIdx;
+            valCurrent = getColAdaptParent(i).val;
+         }
+      }
+   }
+   assert( getNumberColAdParent() <= nColElems->vec->n );
+
+   return true;
+}
+
+/** Synchronize the objective offset on all processes. */
+void PresolveData::globalSumObjOffset()
+{
+   int myRank;
+   bool iAmDistrib = false;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   if( world_size > 1) iAmDistrib = true;
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &objOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+   if( myRank == 0 )
+      cout<<"Objective offset is "<<getObjOffset()<<endl;
 }
 
 void PresolveData::resetRedCounters()
@@ -118,16 +218,97 @@ double PresolveData::getObjOffset()
 {
    return objOffset;
 }
-
 double PresolveData::addObjOffset(double addOffset)
 {
    objOffset += addOffset;
    return objOffset;
 }
-
 void PresolveData::setObjOffset(double offset)
 {
    objOffset = offset;
 }
 
+int PresolveData::getSingletonRow(int i)
+{
+   assert(i<getNumberSR() && i>=0);
+   return singletonRows[i];
+}
+int PresolveData::getNumberSR()
+{
+   return (int)singletonRows.size();
+}
+void PresolveData::addSingletonRow(int i)
+{
+   singletonRows.push_back(i);
+}
+void PresolveData::setSingletonRow(int i, int value)
+{
+   assert(i>=0 && i<getNumberSR());
+   singletonRows[i] = value;
+}
+void PresolveData::clearSingletonRows()
+{
+   singletonRows.clear();
+}
+int PresolveData::getSingletonRowIneq(int i)
+{
+   assert(i<getNumberSRIneq() && i>=0);
+   return singletonRowsIneq[i];
+}
+int PresolveData::getNumberSRIneq()
+{
+   return (int)singletonRowsIneq.size();
+}
+void PresolveData::addSingletonRowIneq(int i)
+{
+   singletonRowsIneq.push_back(i);
+}
+void PresolveData::setSingletonRowIneq(int i, int value)
+{
+   assert(i>=0 && i<getNumberSRIneq());
+   singletonRowsIneq[i] = value;
+}
+void PresolveData::clearSingletonRowsIneq()
+{
+   singletonRowsIneq.clear();
+}
+
+void PresolveData::setBlocks(int i, double value)
+{
+   assert(i<nChildren+3 && i>=0);
+   blocks[i] = value;
+}
+double PresolveData::getBlocks(int i)
+{
+   assert(i<nChildren+3 && i>=0);
+   return blocks[i];
+}
+void PresolveData::setBlocksIneq(int i, double value)
+{
+   assert(i<nChildren+3 && i>=0);
+   blocksIneq[i] = value;
+}
+double PresolveData::getBlocksIneq(int i)
+{
+   assert(i<nChildren+3 && i>=0);
+   return blocksIneq[i];
+}
+
+COLUMNTOADAPT PresolveData::getColAdaptParent(int i)
+{
+   assert( i<getNumberColAdParent() );
+   return colAdaptParent[i];
+}
+int PresolveData::getNumberColAdParent()
+{
+   return (int)colAdaptParent.size();
+}
+void PresolveData::addColToAdaptParent(COLUMNTOADAPT colToAdapt)
+{
+   colAdaptParent.push_back(colToAdapt);
+}
+void PresolveData::clearColAdaptParent()
+{
+   colAdaptParent.clear();
+}
 

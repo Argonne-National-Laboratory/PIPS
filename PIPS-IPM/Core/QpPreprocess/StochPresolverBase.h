@@ -29,14 +29,6 @@ typedef struct
    int end;
 } BLOCKS;
 
-struct col_is_smaller
-{
-    bool operator()(const COLUMNTOADAPT& x, const COLUMNTOADAPT& y) const
-    {
-        return x.colIdx < y.colIdx;
-    }
-};
-
 enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
 enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
 
@@ -177,9 +169,7 @@ protected:
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);
-   bool combineColAdaptParent();
 
-   void globalSumObjOffset();
 };
 
 

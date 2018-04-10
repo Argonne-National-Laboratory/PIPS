@@ -210,7 +210,7 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
       colAdaptF0( EQUALITY_SYSTEM);
    if( updateCPforColAdaptF0( INEQUALITY_SYSTEM) )
       colAdaptF0( INEQUALITY_SYSTEM);
-   presData.colAdaptParent.clear();
+   presData.clearColAdaptParent();
 
    if( iAmDistrib )
    {
@@ -223,9 +223,9 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
    presData.resetRedCounters();
 
    // empty the singletonRow list
-   for(int i = 0; i<(int)presData.singletonRows.size(); i++)
-      assert(presData.singletonRows[i] == -1);
-   presData.singletonRows.clear();
+   for(int i = 0; i<presData.getNumberSR(); i++)
+      assert(presData.getSingletonRow(i) == -1);
+   presData.clearSingletonRows();
    presData.resetBlocks();
 
    if( iAmDistrib )
@@ -429,7 +429,6 @@ bool StochPresolverBase::updateCPforColAdaptF0( SystemType system_type )
    }
    return true;
 }
-
 
 /** Set currAmat = root.Bmat */
 void StochPresolverBase::setCPAmatsRoot(GenMatrixHandle matrixHandle)
@@ -837,10 +836,10 @@ int StochPresolverBase::colAdaptLinkVars(int it, SystemType system_type)
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    int newSingletonRows = 0;
 
-   for( int i=0; i < (int)presData.colAdaptParent.size(); i++)
+   for( int i=0; i < presData.getNumberColAdParent(); i++)
    {
-      int colIdxA = presData.colAdaptParent[i].colIdx;
-      double val = presData.colAdaptParent[i].val;
+      int colIdxA = presData.getColAdaptParent(i).colIdx;
+      double val = presData.getColAdaptParent(i).val;
 
       for( int j = currAmatTrans->rowptr[colIdxA].start; j < currAmatTrans->rowptr[colIdxA].end; j++ )
       {
@@ -881,10 +880,10 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
 
    int newSingletonRows = 0;
 
-   for(int i=0; i<(int)presData.colAdaptParent.size(); i++)
+   for(int i=0; i<presData.getNumberColAdParent(); i++)
    {
-      int colIdx = presData.colAdaptParent[i].colIdx;
-      double val = presData.colAdaptParent[i].val;
+      int colIdx = presData.getColAdaptParent(i).colIdx;
+      double val = presData.getColAdaptParent(i).val;
 
       for( int j = currBlmatTrans->rowptr[colIdx].start; j<currBlmatTrans->rowptr[colIdx].end; j++ )
       {
@@ -915,106 +914,3 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
    return newSingletonRows;
 }
 
-bool StochPresolverBase::combineColAdaptParent()
-{
-   int myRank, world_size;
-   bool iAmDistrib = false;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   if( world_size > 1) iAmDistrib = true;
-
-   if( iAmDistrib )
-   {
-      // allgather the length of each colAdaptParent
-      int mylen = presData.colAdaptParent.size();
-      int* recvcounts = new int[world_size];
-
-      MPI_Allgather(&mylen, 1, MPI_INT, recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
-
-      // allgatherv the actual colAdaptParents
-      // First, extract the colIdx and val into int* and double* arrays:
-      int* colIndicesLocal = new int[mylen];
-      double* valuesLocal = new double[mylen];
-      for(int i=0; i<mylen; i++)
-      {
-         colIndicesLocal[i] = presData.colAdaptParent[i].colIdx;
-         valuesLocal[i] = presData.colAdaptParent[i].val;
-      }
-      // Second, prepare the receive buffers:
-      int lenghtGlobal = recvcounts[0];
-      int* displs = new int[world_size];
-      displs[0] = 0;
-      for(int i=1; i<world_size; i++)
-      {
-         lenghtGlobal += recvcounts[i];
-         displs[i] = displs[i-1] + recvcounts[i-1];
-      }
-      int* colIndicesGlobal = new int[lenghtGlobal];
-      double* valuesGlobal = new double[lenghtGlobal];
-      // Then, do the actual MPI communication:
-      MPI_Allgatherv(colIndicesLocal, mylen, MPI_INT, colIndicesGlobal, recvcounts, displs , MPI_INT, MPI_COMM_WORLD);
-      MPI_Allgatherv(valuesLocal, mylen, MPI_DOUBLE, valuesGlobal, recvcounts, displs , MPI_DOUBLE, MPI_COMM_WORLD);
-
-      // Reconstruct a colAdaptParent:
-      presData.colAdaptParent.clear();
-      for(int i=0; i<lenghtGlobal; i++)
-      {
-         COLUMNTOADAPT colWithVal = {colIndicesGlobal[i], valuesGlobal[i]};
-         presData.colAdaptParent.push_back(colWithVal);
-      }
-
-      delete[] recvcounts;
-      delete[] colIndicesLocal;
-      delete[] valuesLocal;
-      delete[] colIndicesGlobal;
-      delete[] valuesGlobal;
-   }
-
-   // Sort colIndicesGlobal (and valuesGlobal accordingly), remove duplicates and find infeasibilities
-   std::sort(presData.colAdaptParent.begin(), presData.colAdaptParent.end(), col_is_smaller());
-
-   if(presData.colAdaptParent.size() > 0)
-   {
-      int colIdxCurrent = presData.colAdaptParent[0].colIdx;
-      double valCurrent = presData.colAdaptParent[0].val;
-      for(int i=1; i<(int)presData.colAdaptParent.size(); i++)
-      {
-         if( presData.colAdaptParent[i].colIdx == colIdxCurrent )
-         {
-            if( presData.colAdaptParent[i].val != valCurrent )
-            {
-               cout<<"Detected infeasibility (in variable) "<<colIdxCurrent<<endl;
-               return false;
-            }
-
-            else
-               presData.colAdaptParent.erase(presData.colAdaptParent.begin()+i);   //todo: implement more efficiently
-         }
-         else{
-            colIdxCurrent = presData.colAdaptParent[i].colIdx;
-            valCurrent = presData.colAdaptParent[i].val;
-         }
-      }
-   }
-   assert( (int)presData.colAdaptParent.size() <= presData.nColElems->vec->n );
-
-   return true;
-}
-
-/** Synchronize the objective offset on all processes. */
-void StochPresolverBase::globalSumObjOffset()
-{
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-
-   if( iAmDistrib )
-   {
-      double localOffset = presData.getObjOffset();
-      double globalOffset;
-      MPI_Allreduce(&localOffset, &globalOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      presData.setObjOffset(globalOffset);
-   }
-   if( myRank == 0 )
-      cout<<"Objective offset is "<<presData.getObjOffset()<<endl;
-}
