@@ -30,11 +30,9 @@ class PresolveData
    public:
       sData* presProb;
 
-      // number of non-zero elements of each row
+      // number of non-zero elements of each row / column
       StochVectorHandle nRowElemsA;
       StochVectorHandle nRowElemsC;
-
-      // number of non-zero elements of each column
       StochVectorHandle nColElems;
 
       // number of removed elements of each row / column

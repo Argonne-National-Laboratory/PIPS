@@ -223,13 +223,10 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
    presData.resetRedCounters();
 
    // empty the singletonRow list
-   for(int i = 0; i<presData.getNumberSR(); i++)
-      assert(presData.getSingletonRow(i) == -1);
    presData.clearSingletonRows();
-   presData.resetBlocks();
 
    if( iAmDistrib )
-   {  // communicate newly found number of singleton rows so that all processes share this knowledge
+   {  // communicate newly found number of singleton rows so that all processes share this information
       int newSR[2] = {newSREq, newSRIneq};
       MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       newSREq = newSR[0];

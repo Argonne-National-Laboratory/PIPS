@@ -246,9 +246,14 @@ void PresolveData::setSingletonRow(int i, int value)
    assert(i>=0 && i<getNumberSR());
    singletonRows[i] = value;
 }
+/* empties the singletonRows list. Verifies first if all elements were set to -1,
+ * then clears the singletonRows list and resets the blocks. */
 void PresolveData::clearSingletonRows()
 {
+   for(int i = 0; i<getNumberSR(); i++)
+      assert(getSingletonRow(i) == -1);
    singletonRows.clear();
+   resetBlocks();
 }
 int PresolveData::getSingletonRowIneq(int i)
 {
@@ -270,7 +275,10 @@ void PresolveData::setSingletonRowIneq(int i, int value)
 }
 void PresolveData::clearSingletonRowsIneq()
 {
+   for(int i = 0; i<getNumberSRIneq(); i++)
+      assert(getSingletonRowIneq(i) == -1);
    singletonRowsIneq.clear();
+   resetBlocks();
 }
 
 void PresolveData::setBlocks(int i, double value)
