@@ -2,6 +2,8 @@
 #include "mpi.h"
 #include "MumpsSolver.h"
 
+#include <string>
+
 #define USE_COMM_WORLD -987654
 
 
@@ -22,8 +24,10 @@ public:
     nnz_  = num_blocks*(block_size_+1)*block_size_/2; //only lower + diagonal entries
     nnz_ += half_num_blocks*block_size_*block_size_;
     nnz_ += diagblock_size_; // this is a diagonal
-    nnz_  += diagblock_size_; // this is the diag block under the above diagonal
-    nnz_ += block_size_*(half_num_blocks-1)*3;
+    //nnz_  += diagblock_size_; // this is the diag block under the above diagonal
+    nnz_ += block_size_*(half_num_blocks-1)*4;
+
+    loc_nnz_=0; 
 
     MPI_Comm_size(comm_, &nranks_);
     MPI_Comm_rank(comm_, &my_rank_);
@@ -34,18 +38,30 @@ public:
   void distributedAssemble_scheme1();
   /* distributes the number of rows across ranks */
   //void distributedAssemble_scheme2();
+
+  /* convert to Fortran indexes */
+  void convertToFortran() 
+  {
+    for (int i=0; i<loc_nnz_; i++) loc_i[i] = loc_i[i]+1;
+    for (int i=0; i<loc_nnz_; i++) loc_j[i] = loc_j[i]+1;
+  }
+
+  /* outputs the matrix (i,j,value) in a text file: works with one process only */
+  void toTextFile() const;
 protected:
   MPI_Comm comm_;
   int nranks_;
   int my_rank_;
-  long long n_;
-  long long nnz_;
-  int* loc_i, *loc_j;
-  double* loc_A;
 
   int num_blocks_;
   int block_size_;
   int diagblock_size_;
+public:
+  long long n_;
+  long long nnz_, loc_nnz_;
+  int* loc_i, *loc_j;
+  double* loc_A;
+
 
 };
 
@@ -54,11 +70,22 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  MumpsSolver* mumps = new MumpsSolver(100, MPI_COMM_WORLD, MPI_COMM_WORLD);
-
-  DistributedMatrixEx1 dmat(10, 800, MPI_COMM_WORLD);
+  DistributedMatrixEx1 dmat(50, 100, MPI_COMM_WORLD);
   dmat.distributedAssemble_scheme1();
 
+  dmat.toTextFile();
+
+  MumpsSolver* mumps = new MumpsSolver(dmat.n_, MPI_COMM_WORLD, MPI_COMM_WORLD);
+  dmat.convertToFortran();
+  mumps->setLocalEntries(dmat.nnz_, dmat.loc_nnz_, dmat.loc_i, dmat.loc_j, dmat.loc_A);
+  mumps->matrixChanged();
+
+  double vec[dmat.n_];
+  for(int i=0; i<dmat.n_; i++)
+    vec[i]=1.0;
+  mumps->solve(vec);
+
+  printf("vec %g %g\n", vec[0], vec[1]);
   delete mumps;
 
   MPI_Finalize();
@@ -72,6 +99,25 @@ DistributedMatrixEx1::~DistributedMatrixEx1()
   delete[] loc_j;
   delete[] loc_A;
 };
+
+void DistributedMatrixEx1::toTextFile() const
+{
+  if(nranks_!=1) {
+    printf("Saving the matrix to a text file works only with one MPI process only\n");
+    return;
+  }
+  std::string file = "matrix.txt";
+  FILE *f = fopen(file.c_str(), "w");
+  if(NULL!=f) {
+    fprintf(f, "%d %d 0\n", n_, nnz_);
+    for(long long itnz=0; itnz<nnz_; itnz++) {
+      fprintf(f, "%d %d %20.16f\n", loc_i[itnz], loc_j[itnz], loc_A[itnz]);
+    }
+    fclose(f);
+  } else {
+    printf("Could not open file %s for writing\n", file.c_str());
+  }
+}
 
 void DistributedMatrixEx1::distributedAssemble_scheme1()
 {
@@ -87,12 +133,12 @@ void DistributedMatrixEx1::distributedAssemble_scheme1()
   int next_rank = my_rank_+1;
   long long loc_nz_end = next_rank*nnzperrank + (next_rank<remainder?next_rank:remainder)-1;
 
-  long long loc_nnz = loc_nz_end-loc_nz_start+1;
-  printf("proc %d starts at %d-th nnz and ends at %d-th nnz for a total of %d nnz\n", my_rank_, loc_nz_start, loc_nz_end, loc_nnz);
+  loc_nnz_ = loc_nz_end-loc_nz_start+1;
+  printf("proc %d starts at %d-th nnz and ends at %d-th nnz for a total of %d nnz\n", my_rank_, loc_nz_start, loc_nz_end, loc_nnz_);
 
-  loc_i = new int[loc_nnz];
-  loc_j = new int[loc_nnz];
-  loc_A = new double[loc_nnz];
+  loc_i = new int[loc_nnz_];
+  loc_j = new int[loc_nnz_];
+  loc_A = new double[loc_nnz_];
 
   int half_num_blocks = (int) num_blocks_/2;
 
@@ -173,6 +219,7 @@ void DistributedMatrixEx1::distributedAssemble_scheme1()
     it_nz++;
 
     int i = j+diagblock_size_;
+    if(i>=n_) continue;
     if(it_nz>=loc_nz_start && it_nz<=loc_nz_end) {
       int nzidx=it_nz-loc_nz_start;
       loc_i[nzidx] = i;
@@ -195,6 +242,6 @@ void DistributedMatrixEx1::distributedAssemble_scheme1()
   }
   assert(it_nz==nnz_);
 
-  
+  printf("Created a matrix of size %d with nnz %d (local nnz %d)\n", n_, nnz_, loc_nnz_);
 
 };

@@ -24,22 +24,28 @@ using namespace std;
 
 MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm, MPI_Comm pipsMpiComm)
 {
+  int error=MPI_Comm_rank(mumpsMpiComm, &my_rank_); assert(error==MPI_SUCCESS);
+
+  n_ = globSize;
   mumps_ = new DMUMPS_STRUC_C;
-  mumps_->n = globSize;
   mumps_->comm_fortran = getFortranMPIComm(mumpsMpiComm);
-  mumps_->a = NULL;
-  mumps_->jcn = NULL;
-  mumps_->irn = NULL;
   mumps_->sym = 2;//general symetric matrix
   mumps_->job = -1; //initialization
   mumps_->par = 1; //host process involved in parallel computations
   dmumps_c(mumps_);  
 
-  setMumpsVerbosity(3);//3 moderately verbose, 1 only errors, 0 anything is surpressed
+  if(mumps_->infog[1-1] != 0)
+    if(my_rank_==0) printf("Error occured when initializing MUMPS.\n");
 
+  setMumpsVerbosity(1);//3 moderately verbose, 1 only errors, 0 anything is surpressed
+
+  mumps_->n = (int)globSize;
   mumps_->icntl[ 5  -1] = 0; //assembled format for matrix (triplet format)
   mumps_->icntl[18  -1] = 3; //distributed assembled format
-  dmumps_c(mumps_);  
+  mumps_->icntl[20  -1] = 0; //the right-hand side is in dense format in the structure component
+  mumps_->icntl[21  -1] = 0; // the solution vector is assembled and stored in the structure component RHS
+  //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
+
 
 }
 
@@ -47,11 +53,20 @@ MumpsSolver::~MumpsSolver()
 {
   mumps_->job = -2; //terminate mumps
   dmumps_c(mumps_);
-  delete [] mumps_->a;
   delete mumps_;
 
 }
+bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* locirn, int* locjcn, double* locA)
+{
+  mumps_->nnz = globnnz;
+  mumps_->nnz_loc = locnnz;
+  //par%IRN par%JCN par%A
+  mumps_->irn_loc = locirn;
+  mumps_->jcn_loc = locjcn;
+  mumps_->a_loc = locA;
 
+  return true;
+}
 // MumpsSolver::MumpsSolver( DenseSymMatrix * dm )
 // {
 //   mStorage = DenseStorageHandle( dm->getStorage() );
@@ -86,25 +101,90 @@ MumpsSolver::~MumpsSolver()
 //#include "mpi.h"
 int MumpsSolver::matrixChanged()
 {
-  int n = mumps_->n;
-  /* If matrix is dense use LAPACK, not MA57 */
-  char fortranUplo = 'U';
-  int info;
-  
-  // if (sparseMat) {
-  //   std::fill(mStorage->M[0],mStorage->M[0]+n*n,0.);
+  // n_=2;
+  // int i[3] = {1,1,2};
+  // int j[3] = {1,2,2};
+  // double a[3] = {2.0,1.0, 2.0};
+  // mumps_->irn = i;//locirn;
+  // mumps_->jcn = j;
+  // mumps_->a = a;
+  // mumps_->nnz=3;
 
-  //   const double *sM = sparseMat->M();
-  //   const int *jcolM = sparseMat->jcolM();
-  //   const int *krowM = sparseMat->krowM();
-  //   for (int i = 0; i < n; i++) {
-  //     for (int k = krowM[i]; k < krowM[i+1]; k++) {
-  //       int col = jcolM[k];
-  //       mStorage->M[i][col] = sM[k];
-  //     }
-  //   }
-  // }
-  int negEigVal=0;
+  mumps_->n = n_;
+  mumps_->job = 1; //performs the analysis
+
+  //ICNTL(28) determines whether a sequential or a parallel analysis is performed. In this, case ICNTL(7) is meaningless
+  mumps_->icntl[28-1] =2; 
+
+  //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
+  // 1 for PT_SCOTCH, 2 for ParMetis, 0 automatic (default)
+  //mumps_->icntl[29-1] =2;
+
+  // 0: parallel factorization of the root node (default)
+  // > 0: forces a sequential factorization of the root node (ScaLAPACK will not be used). 
+  // see also CNTL(1): CNTL(1) is the relative threshold for numerical pivoting.
+  mumps_->icntl[13-1] = 0;
+
+  dmumps_c(mumps_);
+  int error = mumps_->infog[1-1];
+  if(error != 0) {
+    if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the analysis phase. \n", error);
+  }
+
+
+  //
+  //factorize
+  //
+  mumps_->job = 2;
+
+  // 0: parallel factorization of the root node (default)
+  // > 0: forces a sequential factorization of the root node (ScaLAPACK will not be used). I
+  mumps_->icntl[13-1] = 0;
+
+  dmumps_c(mumps_);
+  error = mumps_->infog[1-1];
+  if(error != 0) {
+    if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
+  }
+  //CNTL(1) is the relative threshold for numerical pivoting.
+  //CNTL(4) determines the threshold for static pivoting. See Subsection 3.9
+  //INFOG(12) - after factorization: Total number of off-diagonal pivots
+  
+  //if ScaLAPACK is allowed for the last dense block (default in parallel, ICNTL(13)=0), then the
+  //presence of negative pivots in the part of the factorization processed with ScaLAPACK (subroutine
+  //P POTRF) will raise an error and the code -40 is then returned in INFOG(1);
+  if (error == -8 || error == -9) {
+    //not enough memory
+
+    assert(false && "this code was not fully tested. ");
+    const int try_max=10;
+    for(int t=0; t<try_max; t++) {
+      double mem_percent = mumps_->icntl[13];
+      mumps_->icntl[13] = (2.0 * mumps_->icntl[13]);
+      if(my_rank_==0) printf("Increased Mumps ICNTL(14) from %g to %g\n", mem_percent, mumps_->icntl[13]);
+
+      dmumps_c(mumps_);
+      error = mumps_->infog[1-1];
+
+      if (error != -8 && error != -9)
+	break;
+    }
+
+    if (error == -8 || error == -9) {
+      if(my_rank_==0) printf("Fatal error in Mumps: not able to obtain more memory\n");
+      return -1;
+    }
+  }
+
+  if (error == -10) {
+    //system is singular
+    if(my_rank_==0) printf("Warning: Mumps INFO(1) = %d matrix is singular.\n", error);
+    return -1;
+  }
+
+  int negEigVal = mumps_->infog[12-1];
+
+  if(my_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
   return negEigVal;
 }
 
@@ -112,7 +192,23 @@ int MumpsSolver::matrixChanged()
 // Distributed solution (ICNTL(21)=1)
 void  MumpsSolver::solve ( double* vec )
 {
+  mumps_->rhs = vec;
+  //solve
+  mumps_->job = 3;
 
+#define MAX_ITER_REFIN 3
+
+  mumps_->icntl[10-1] = MAX_ITER_REFIN; //maximum number of iterative refinements
+
+  dmumps_c(mumps_);
+  int error = mumps_->infog[1-1];
+  if(error != 0) {
+    if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the solve phase. \n", error);
+    assert(false);
+    return;
+  }
+  //iterative refinement ICNTL(10)
+  //error analysis ICNTL(11)
 }
 
 #ifndef WITHOUT_PIPS
@@ -176,10 +272,12 @@ void MumpsSolver::setMumpsVerbosity(int level) {
   case 1: { 
     mumps_->icntl[1 -1] = 6; //standard output stream
     mumps_->icntl[4 -1] = 1; //Only error messages printed.
+    break;
   }
   case 2: {
     mumps_->icntl[2 -1] = 6; //output stream for diagnostic printing, statistics, and warning messages.
     mumps_->icntl[4 -1] = 2; //Errors, warnings, and main statistics printed.
+    break;
   }
   case 3: {
     mumps_->icntl[2 -1] = 6; //output stream for diagnostic printing, statistics, and warning messages.

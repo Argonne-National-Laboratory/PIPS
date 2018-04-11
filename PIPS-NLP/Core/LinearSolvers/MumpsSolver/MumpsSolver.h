@@ -27,7 +27,7 @@ public:
   virtual ~MumpsSolver();
   /* Set entries that are local to the MPI rank. These arrays are not copied and the
    * the caller of this function needs the keep them for the lifetime of this class. */
-  bool setLocalEntries(long long locnnz, const int* locirn, const int* locjcn, const double* locA=NULL);
+  bool setLocalEntries(long long globnnz, long long locnnz, int* locirn, int* locjcn, double* locA=NULL);
   //MumpsSolver( DenseSymMatrix * storage );
   //MumpsSolver( SparseSymMatrix * storage );
   virtual void diagonalChanged( int idiag, int extent );
@@ -62,7 +62,9 @@ public:
 protected:
   //mumps data structure
   DMUMPS_STRUC_C* mumps_;
-
+  long long n_;
+  int my_rank_;
+ protected:
   /* 0  - no output
    * 1  - error messages only
    * 2  - 1+warning messages
