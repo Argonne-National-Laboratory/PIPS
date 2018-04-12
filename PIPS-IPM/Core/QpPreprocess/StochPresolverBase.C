@@ -90,7 +90,7 @@ void StochPresolverBase::updateRhsNRowLink()
    }
    if( hasLinking(INEQUALITY_SYSTEM) )
    {
-      setCPRowLinkInequality();
+      setCPRhsLinkInequality();
 
       if( iAmDistrib )
       {
@@ -188,6 +188,12 @@ void StochPresolverBase::updateTransposedSubmatrix(SparseStorageDynamic& transSt
    }
 }
 
+/** Should be called right after doSingletonRowsA() or another method that stores
+ * information to update in the member variable colAdaptParent.
+ * Updates the blocks A,C,F0,G0 using colAdaptParent.
+ * Returns the number of newly found singleton rows (equality/inequality system)
+ * during adaption of A,C,F0,G0.
+ */
 void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
 {
    int myRank;
@@ -307,9 +313,6 @@ bool StochPresolverBase::updateCPforTinyEntry(int it, SystemType system_type)
  * Return false if child[it] is a dummy child. */
 bool StochPresolverBase::updateCPForSingletonRow(int it, SystemType system_type)
 {
-   //todo: for INEQUALITY_SYSTEM
-   assert(system_type == EQUALITY_SYSTEM);
-
    setCurrentPointersToNull();
 
    setCPColumnRoot();
@@ -317,24 +320,49 @@ bool StochPresolverBase::updateCPForSingletonRow(int it, SystemType system_type)
 
    if( it == -1 )
    {
-      // todo: curr matrices
-      setCPRowRootEquality();
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         setCPAmatsRoot(presProb->C);
+         setCPRowRootEquality();
+      }
+      else  // INEQUALITY_SYSTEM
+      {
+         assert( system_type == INEQUALITY_SYSTEM );
+         setCPAmatsRoot(presProb->C);
+         setCPRowRootInequality();
+      }
    }
    else  // at child it
    {
-      // child is dummy? set currAmat, AmatTrans, Bmat, BmatTrans
-      if( !setCPAmatsChild( presProb->A,  it, system_type)) return false;
-      if( !setCPBmatsChild( presProb->A,  it, system_type)) return false;
-
-      if( hasLinking(system_type) )
+      if( system_type == EQUALITY_SYSTEM )
       {
-         setCPBlmatsChild( presProb->A, it);
-         setCPRowLinkEquality();
+         // child is dummy? set currAmat, AmatTrans, Bmat, BmatTrans
+         if( !setCPAmatsChild( presProb->A,  it, system_type)) return false;
+         if( !setCPBmatsChild( presProb->A,  it, system_type)) return false;
+         setCPRowChildEquality(it);
+
+         if( hasLinking(system_type) )
+         {
+            setCPBlmatsChild( presProb->A, it);
+            setCPRowLinkEquality();
+         }
+
       }
+      else  // INEQUALITY_SYSTEM
+      {
+         // child is dummy? set currAmat, AmatTrans, Bmat, BmatTrans
+         if( !setCPAmatsChild( presProb->C,  it, system_type)) return false;
+         if( !setCPBmatsChild( presProb->C,  it, system_type)) return false;
+         setCPRowChildInequality(it);
 
+         if( hasLinking(system_type) )
+         {
+            setCPBlmatsChild( presProb->A, it);
+            setCPRhsLinkInequality();
+            currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
+         }
+      }
       setCPColumnChild(it);
-      setCPRowChildEquality(it);
-
       currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
    }
@@ -418,11 +446,14 @@ bool StochPresolverBase::updateCPforColAdaptF0( SystemType system_type )
    {
       setCPBlmatsRoot(presProb->A);
       setCPRowLinkEquality();
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
    }
    else
    {
       setCPBlmatsRoot(presProb->C);
-      setCPRowLinkInequality();
+      setCPRhsLinkInequality();
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
    }
    return true;
 }
@@ -543,17 +574,15 @@ void StochPresolverBase::setCPRowChildInequality(int it)
 void StochPresolverBase::setCPRowLinkEquality()
 {
    currEqRhsLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vecl);
-   currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
    currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl);
 }
 
-void StochPresolverBase::setCPRowLinkInequality()
+void StochPresolverBase::setCPRhsLinkInequality()
 {
    currIneqRhsLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vecl);
    currIneqLhsLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vecl);
    currIcuppLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
    currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
-   currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
 }
 
 void StochPresolverBase::resetLinkvarsAndChildBlocks()

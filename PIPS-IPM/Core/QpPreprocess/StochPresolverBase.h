@@ -56,7 +56,6 @@ protected:
    sData* presProb;
    PresolveData& presData;
 
-
    SparseStorageDynamic* currAmat;
    SparseStorageDynamic* currAmatTrans;
    SparseStorageDynamic* currBmat;
@@ -102,7 +101,6 @@ protected:
 
    /** vector containing the removed entries */
    std::vector<MTRXENTRY> removedEntries;
-
    /** array of length nChildren+1 to store start and end indices for removedEntries
     * that correspond to the linking-variable block (usually Amat).
     * As linkVarsBlocks[0] represents the parent block, the child block 'it' is accessed
@@ -149,7 +147,7 @@ protected:
    void setCPRowChildEquality(int it);
    void setCPRowChildInequality(int it);
    void setCPRowLinkEquality();
-   void setCPRowLinkInequality();
+   void setCPRhsLinkInequality();
 
    void resetLinkvarsAndChildBlocks();
    void resetEqRhsAdaptionsLink();

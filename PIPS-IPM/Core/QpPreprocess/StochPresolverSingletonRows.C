@@ -51,17 +51,44 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       }
       // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsA:
       updateLinkingVarsBlocks(newSREq, newSRIneq);
-      //nelims += doSingletonRowsC();
+
       if( myRank == 0 )
          cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
       iter++;
+      cout<<"NnzRowsA: (";
+      presData.nRowElemsA->writeToStreamAll(cout);
+      cout<<"NnzRowsC: (";
+      presData.nRowElemsC->writeToStreamAll(cout);
    }
+
+   //todo: order in a loop SR routines for A and C
+  /* if( newSRIneq > 0)
+   {
+      initSingletonRows(INEQUALITY_SYSTEM);
+      possibleFeasible = doSingletonRowsC(newSREq, newSRIneq);
+      if( !possibleFeasible )
+      {
+         cout<<"Infeasibility detected during singleton row presolving of C."<<endl;
+         return 0;
+      }
+      // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsC:
+      updateLinkingVarsBlocks(newSREq, newSRIneq);
+   }*/
+
 
    presData.globalSumObjOffset();
 
    return nelims;
 }
 
+/** Initializes the singletonRows list (acutally a vector<int> singletonRows)
+ * and the blocks (int*) pointing to the start and end indices in singletonRows
+ * for each block (parent, children, linking rows).
+ * Attention: there is no communication over the preocesses to adapt the number of
+ * singleton rows found (for performance reasons). If this is necessary, a simple
+ * MPI_Allreduce call should be used right after calling this method.
+ * Returns the number of singleton rows found (might be different for each process!).
+ */
 int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 {
    int myRank;
@@ -102,8 +129,8 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
       assert((int)presData.nRowElemsC->children.size() == nChildren);
       for( size_t it = 0; it < presData.nRowElemsC->children.size(); it++)
       {
-         SimpleVector* nRowASimpleChild = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
-         nSingletonRows += initSingletonRowsBlock(int(it), nRowASimpleChild);
+         SimpleVector* nRowCSimpleChild = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
+         nSingletonRows += initSingletonRowsBlock(int(it), nRowCSimpleChild);
       }
       presData.setBlocks(nChildren+1, presData.getNumberSR());
 
@@ -130,18 +157,21 @@ int StochPresolverSingletonRows::initSingletonRowsBlock(int it, SimpleVector* nn
    return nSingletonRows;
 }
 
+/** Goes through the singleton rows in the equality system A. For those fixing variables in
+ * the blocks B,D,Fi,Gi (the blocks Bmat and Blmat of both A and C), the fixation and updating
+ * of the columns is done. The fixed variables in one of the Amat blocks are stored in the
+ * member variable colAdaptParent. Updating the blocks A,C,F0,G0 using colAdaptParent happens
+ * in updateLinkingVarsBlocks() which should be called after this method.
+ * Returns the number of newly found singleton rows (equality/inequality system) during adaption of B,D,Fi,Gi.
+ */
 bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
 {
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-
    newSREq = 0;
    newSRIneq = 0;
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
    updateCPForSingletonRow(-1, EQUALITY_SYSTEM);
-   bool possFeas = procSingletonRowRoot(matrix);
+   bool possFeas = procSingletonRowRoot(matrix, EQUALITY_SYSTEM);
    if( !possFeas ) return false;
 
    assert(nChildren == (int)matrix.children.size());
@@ -164,13 +194,38 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
    return true;
 }
 
-int StochPresolverSingletonRows::doSingletonRowsC()
+bool StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
 {
-   int nelims = 0;
-   return nelims;
+   newSREq = 0;
+   newSRIneq = 0;
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+
+   updateCPForSingletonRow(-1, INEQUALITY_SYSTEM);
+   bool possFeas = procSingletonRowRoot(matrix, INEQUALITY_SYSTEM);
+   if( !possFeas ) return false;
+/*
+   assert(nChildren == (int)matrix.children.size());
+   for( int it = 0; it < nChildren; it++ )
+   {
+      // dummy child?
+      if( updateCurrentPointersForSingletonRow(it, INEQUALITY_SYSTEM) )
+      {  // main part for each child: go through B and adapt F, D and G
+         possFeas = procSingletonRowChild(matrix, it, newSREq, newSRIneq);
+         if( !possFeas ) return false;
+      }
+   }
+
+   // Update nRowLink and lhs/rhs (Linking part) of both systems:
+   updateRhsNRowLink();
+
+   possFeas = combineColAdaptParent();
+      if( !possFeas ) return false;
+      */
+
+   return true;
 }
 
-bool StochPresolverSingletonRows::procSingletonRowRoot(StochGenMatrix& stochMatrix)
+bool StochPresolverSingletonRows::procSingletonRowRoot(StochGenMatrix& stochMatrix, SystemType system_type)
 {
    bool possFeas = true;
 
@@ -182,7 +237,10 @@ bool StochPresolverSingletonRows::procSingletonRowRoot(StochGenMatrix& stochMatr
       int rowIdx = presData.getSingletonRow(i);
       presData.setSingletonRow(i, -1);  // for debugging purposes
 
-      possFeas = removeSingleRowEntryB0(B0_mat, rowIdx);
+      if( system_type == EQUALITY_SYSTEM)
+         possFeas = removeSingleRowEntryB0(B0_mat, rowIdx);
+      else
+         possFeas = removeSingleRowEntryB0Inequality(B0_mat, rowIdx);
       if( !possFeas ) return false;
    }
 
@@ -286,7 +344,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic
    return true;
 }
 
-bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR)
+bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR)
 {
    double* ixlow = currIxlowChild->elements();
    double* ixupp = currIxuppChild->elements();
@@ -357,31 +415,186 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
    {
       if( myRank == 0 )
       {
-         COLUMNTOADAPT colWithVal = {colIdx, val};
-         bool uniqueAdditionToOffset = true;
-         for(int i=0; i<presData.getNumberColAdParent(); i++)
-         {
-            if( presData.getColAdaptParent(i).colIdx == colIdx )
-            {
-               if( presData.getColAdaptParent(i).val != val )
-               {
-                  cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
-                  return false;
-               }
-               uniqueAdditionToOffset = false;
-            }
-
-         }
-         if( uniqueAdditionToOffset )
-         {
-            presData.addColToAdaptParent(colWithVal);
-            presData.addObjOffset(g[colIdx] * val);
-         }
+         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+            return false;
       }
    }
 
    return true;
 }
+
+bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, int rowIdx)
+{
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   double* ixlow = currIxlowParent->elements();
+   double* ixupp = currIxuppParent->elements();
+   double* xlow = currxlowParent->elements();
+   double* xupp = currxuppParent->elements();
+   double* g = currgParent->elements();
+
+   int indexK = storage.rowptr[rowIdx].start;
+   int colIdx = storage.jcolM[indexK];
+
+   assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
+
+   double aik = storage.M[indexK];
+   assert(aik != 0.0);
+   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
+
+   // calculate the newly found bounds on variable x_k:
+   double newxlow = -std::numeric_limits<double>::max();
+   double newxupp = std::numeric_limits<double>::max();
+   calculateNewBoundsOnVariable(newxlow, newxupp, rowIdx, aik);
+
+   // test if they imply infeasibility
+   if( newBoundsImplyInfeasible(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+      return false;
+   else
+   {
+      // test if they imply fixation
+      double val = 0.0;
+      if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+      {
+         // as in SR(equality), store them to remove the column later
+         if( myRank == 0 )
+         {
+            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+               return false;
+         }
+      }
+
+      // test if new bounds are tightening: add to newBoundsParent
+      else
+      {
+         if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+         {
+            // store them to adapt the bounds on all processes later
+            if( myRank == 0 )
+            {
+               if( !storeNewBoundsParent(colIdx, newxlow, newxupp) )
+                  return false;
+            }
+         }
+         // set a_ik=0.0, nRow=0, nCol-- todo:
+         // vllt kann Methode aus TinyEntries benutzt werden?
+         // was ist besser, sofort auch A' aktualisieren oder sammeln und am Ende?
+      }
+   }
+
+   return true;
+}
+
+void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik)
+{
+   if( aik > 0.0 )
+   {
+      if( currIclow->elements()[rowIdx] != 0.0 )
+         newxlow = currIneqLhs->elements()[rowIdx] / aik;
+      if( currIcupp->elements()[rowIdx] != 0.0 )
+         newxupp = currIneqRhs->elements()[rowIdx] / aik;
+   }
+   else
+   {
+      if( currIcupp->elements()[rowIdx] != 0.0 )
+         newxlow = currIneqRhs->elements()[rowIdx] / aik;
+      if( currIclow->elements()[rowIdx] != 0.0 )
+         newxupp = currIneqLhs->elements()[rowIdx] / aik;
+   }
+}
+
+bool StochPresolverSingletonRows::newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
+      double* ixlow, double* ixupp, double* xlow, double* xupp)
+{
+   if( ( ixlow[colIdx] != 0.0 && xlow[colIdx] > newxupp)
+         || (ixupp[colIdx] != 0.0 && xupp[colIdx] < newxlow )
+         || (newxlow > newxupp))
+   {
+      cout<<"Infeasibility detected at variable "<<colIdx<<", new bounds= ["<<newxlow<<", "<<newxupp<<"]"<<endl;
+      return true;
+   }
+   return false;
+}
+
+bool StochPresolverSingletonRows::newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
+      double* ixlow, double* ixupp, double* xlow, double* xupp)
+{
+   if( newxlow == newxupp
+         || ( ixlow[colIdx] != 0.0 && xlow[colIdx] == newxupp )
+         || ( ixupp[colIdx] != 0.0 && xupp[colIdx] == newxlow ))
+      return true;
+   return false;
+}
+
+bool StochPresolverSingletonRows::newBoundsTightenOldBounds(double newxlow, double newxupp, int colIdx,
+      double* ixlow, double* ixupp, double* xlow, double* xupp)
+{
+   if( ( ixlow[colIdx] != 0.0 && xlow[colIdx] < newxlow )
+         || ( ixupp[colIdx] != 0.0 && xupp[colIdx] > newxupp ))
+      return true;
+   return false;
+}
+
+/** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
+ * Adapts the objective offset g only once for each column (variable).
+ * Should be called only from Process Zero.
+ * Returns false if infeasibility is detected.
+ */
+bool StochPresolverSingletonRows::storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g)
+{
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   assert( myRank == 0 );
+
+   COLUMNTOADAPT colWithVal = {colIdx, value};
+   bool uniqueAdditionToOffset = true;
+   for(int i=0; i<presData.getNumberColAdParent(); i++)
+   {
+      if( presData.getColAdaptParent(i).colIdx == colIdx )
+      {
+         if( presData.getColAdaptParent(i).val != value )
+         {
+            cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<value<<endl;
+            return false;
+         }
+         uniqueAdditionToOffset = false;
+      }
+   }
+   if( uniqueAdditionToOffset )
+   {
+      presData.addColToAdaptParent(colWithVal);
+      presData.addObjOffset(g[colIdx] * value);
+   }
+   return true;
+}
+
+/** Stores the column index colIdx together with the new bounds as a XBOUNDS in newBoundsParent.
+ * Should be called only from Process Zero.
+ * Returns false if infeasibility is detected (contradictory bounds).
+ */
+bool StochPresolverSingletonRows::storeNewBoundsParent(int colIdx, double newxlow, double newxupp)
+{
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   assert( myRank == 0 );
+
+   XBOUNDS newXbounds = {colIdx, newxlow, newxupp};
+   for(int i=0; i<(int)newBoundsParent.size(); i++)
+   {
+      if( newBoundsParent[i].colIdx == colIdx )
+      {
+         if( newBoundsParent[i].newxlow > newxlow || newBoundsParent[i].newxupp < newxlow )
+         {
+            cout<<"Infeasibility detected at variable "<<colIdx<<" because of tightened bounds."<<endl;
+            return false;
+         }
+      }
+   }
+   newBoundsParent.push_back(newXbounds);
+   return true;
+}
+
 
 
 
