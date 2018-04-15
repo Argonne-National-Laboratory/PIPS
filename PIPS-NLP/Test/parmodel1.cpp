@@ -27,10 +27,10 @@
 //#     x2^2 + x4*x1 < 6
 //# x1, x2 , x3, x4 free variables
 
-#define S  1    //S scenarios
-#define N0 2    // number of first-stage vars
-#define N1 3*N0  // number of second-stage vars for scen 1
-#define NS 2*N0  // number of second-stage vars for scen > 1
+#define S  16    //S scenarios
+#define N0 100    // number of first-stage vars
+#define N1 10*N0 // number of second-stage vars for scen 1 (! N1 should be >= N0)
+#define NS 2*N0  // number of second-stage vars for scen > 1 (! NS should be >= N0)
 
 /* min f0(x0) + 1/S sum fs(xs) 
  * s.t.  x0>=0.25, xs>=0.5, x0_1<=100, xs_1<=100
@@ -61,70 +61,72 @@ int str_init_x0(double* x0, CallBackDataPtr cbd) {
 
 int str_prob_info(int* n, double* col_lb, double* col_ub, int* m,
 		double* row_lb, double* row_ub, CallBackDataPtr cbd) {
-	int row = cbd->row_node_id;
-	int col = cbd->col_node_id;
-	MESSAGE("str_prob_info -- row " << row <<" col "<<col);
-	assert(row == col);
-        int type = cbd->typeflag;
-	printf("type %d\n", type);
-        if(type == 1){
-	  if(row_lb == NULL){
-	    assert(row_ub == NULL);
-	    *m = 0;
-	  }
-	  return 1;
-        }
-	if(col_lb == NULL)
-	{
-	  assert(row_lb == NULL);
-	  assert(row_ub == NULL);
-	  assert(col_ub == NULL);
-	  if(row==0) {
-	    *n = N0;
-	    *m = 0;
-	  } else if(row ==1 ) {
-	    *n = N1;
-	    *m = N0+2;
-	  } else {
-	    assert(row<=S);
-	    *n = NS;
-	    *m = N0+1;
-	  }
-	} else {
-	  if(row==0) {
-	      assert(*n==N0 && *m == 0);
-	      for(int i=0; i<N0; i++) { 
-		col_lb[i] = 0.25;
-		col_ub[i] = INFINITY;
-	      }
-	      col_ub[0] = 100.;
-	    }
-	  else if(row ==1) {
-	    assert(*n==N1 && *m == N0+2 );
-	    for(int i=0; i<N1; i++) {
-		col_lb[i] = 0.5;
-		col_ub[i] = INFINITY;
-	    }
-	    col_ub[0] = 100.;
+  assert(N0<=N1 && "Invalid value of N1");
+  assert(N0<=NS && "Invalid value of NS");
 
-	    for(int i=0; i<N0; i++) {row_lb[i] = 1.;  row_ub[i] = 1.;}
-	    row_lb[N0]   = -INFINITY;  row_ub[N0]   = N0+N1;
-	    row_lb[N0+1] = -INFINITY;  row_ub[N0+1] = N1+1;
-
-	  }
-	  else if(row >=2)  {
-	    assert(row<=S);
-	    assert(*n==NS);
-	    assert(*m ==N0+1);
-	    for(int i=0; i<NS; i++) { col_lb[i] = 0.5; col_ub[i]= INFINITY; }
-	    col_ub[0] = 100.;
-
-	    for(int i=0; i<N0; i++) { row_lb[i] = 1.; row_ub[i] = 1.;} //eq constraints
-	    row_lb[N0] = -INFINITY; row_ub[N0] = NS+1;
-	  }
-	}
-
-	return 1;
+  int row = cbd->row_node_id;
+  int col = cbd->col_node_id;
+  MESSAGE("str_prob_info -- row " << row <<" col "<<col);
+  assert(row == col);
+  int type = cbd->typeflag;
+  if(type == 1){
+    if(row_lb == NULL){
+      assert(row_ub == NULL);
+      *m = 0;
+    }
+    return 1;
+  }
+  if(col_lb == NULL)
+    {
+      assert(row_lb == NULL);
+      assert(row_ub == NULL);
+      assert(col_ub == NULL);
+      if(row==0) {
+	*n = N0;
+	*m = 0;
+      } else if(row ==1 ) {
+	*n = N1;
+	*m = N0+2;
+      } else {
+	assert(row<=S);
+	*n = NS;
+	*m = N0+1;
+      }
+    } else {
+    if(row==0) {
+      assert(*n==N0 && *m == 0);
+      for(int i=0; i<N0; i++) { 
+	col_lb[i] = 0.25;
+	col_ub[i] = INFINITY;
+      }
+      col_ub[0] = 100.;
+    }
+    else if(row ==1) {
+      assert(*n==N1 && *m == N0+2 );
+      for(int i=0; i<N1; i++) {
+	col_lb[i] = 0.5;
+	col_ub[i] = INFINITY;
+      }
+      col_ub[0] = 100.;
+      
+      for(int i=0; i<N0; i++) {row_lb[i] = 1.;  row_ub[i] = 1.;}
+      row_lb[N0]   = -INFINITY;  row_ub[N0]   = N0+N1;
+      row_lb[N0+1] = -INFINITY;  row_ub[N0+1] = N1+1;
+      
+    }
+    else if(row >=2)  {
+      assert(row<=S);
+      assert(*n==NS);
+      assert(*m ==N0+1);
+      for(int i=0; i<NS; i++) { col_lb[i] = 0.5; col_ub[i]= INFINITY; }
+      col_ub[0] = 100.;
+      
+      for(int i=0; i<N0; i++) { row_lb[i] = 1.; row_ub[i] = 1.;} //eq constraints
+      row_lb[N0] = -INFINITY; row_ub[N0] = NS+1;
+    }
+  }
+  
+  return 1;
 }
 
 int str_eval_f(double* x0, double* x1, double* obj, CallBackDataPtr cbd) {
@@ -196,13 +198,13 @@ int str_eval_grad_f(double* x0, double* x1, double* grad, CallBackDataPtr cbd) {
 	else if(row == 1 && col == 1)
 	{
 	  //	grad[0] = (x0[0]+x0[1]);
-	  for(int i=0; i<N1; i++)  grad[i] = x1[i]/S;
+	  for(int i=0; i<N1; i++)  grad[i] = (x1[i]-1.)/S;
 
 	} else if(row == col )
 	{
 	  assert(row<=S);
 	  //	grad[0] = (x0[0]+x0[1]);
-	  for(int i=0; i<NS; i++) grad[i] = x1[i]/S;
+	  for(int i=0; i<NS; i++) grad[i] = (x1[i]-1)/S;
 	}
 	else if(row == 1 && col == 0)
 	{
@@ -284,7 +286,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		    i_elts[2*i] = 1.;
 
 		    //second inequality
-		    i_rowidx[2*i+1]=0;
+		    i_rowidx[2*i+1]=1;
 		    i_elts[2*i+1] = 1.;
 		  }
 		  i_colptr[N1] = N1+N1;
@@ -294,7 +296,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		  //	i_colptr[1] = 1;
 		  //	i_elts[0] = x0[0];
 		  
-		} else if (row == col ) {
+		} else if (row == col ) { //this is the case row>=2
 		  assert(*i_nz == NS && *e_nz == N0);
 		  //equalities
 		  for(int i=0; i<N0; i++) {
@@ -336,6 +338,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		  }
 		  i_colptr[N0]=N0; 
 		  //second inequality (has no entries in the jacobian, do nothing)
+
 		  //	i_rowidx[0] = 0;
 		  //	i_rowidx[1] = 0;
 		  //	i_colptr[0] = 0;
@@ -345,7 +348,7 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		  //	i_elts[1] = 2.0*x0[1];
 		} else if (row >= 2 && col == 0) {
 		  assert(*i_nz == 0 && *e_nz == N0);
-		  //the equalities
+		  //the equality
 		  //equalities
 		  for(int i=0; i<N0; i++) {
 		    e_rowidx[i] = i;
