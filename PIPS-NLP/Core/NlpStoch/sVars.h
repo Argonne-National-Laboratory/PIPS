@@ -21,7 +21,11 @@ class sVars : public NlpGenVars {
 	 OoqpVector * iclow_in, OoqpVector * icupp_in);
 
   /** constructor in which the data and variable pointers are set to
-      point to the given arguments */
+   *  point to the given arguments 
+   *
+   *  Re: global nx,my,mz: these will overwrite nx, my, and mz members
+   *  in the parent NlpGenVars class
+   */
   sVars( sTree* tree,
 	 OoqpVector * x_in, OoqpVector * s_in,
 	 OoqpVector * y_in, OoqpVector * z_in,
@@ -32,7 +36,8 @@ class sVars : public NlpGenVars {
 	 OoqpVector * ixlow_in, long long nxlowGlobal,
 	 OoqpVector * ixupp_in, long long nxuppGlobal,
 	 OoqpVector * iclow_in, long long mclowGlobal,
-	 OoqpVector * icupp_in, long long mcuppGlobal);
+	 OoqpVector * icupp_in, long long mcuppGlobal,
+	 long long nxGlobal, long long myGlobal, long long mzGlobal);
 
   virtual ~sVars();
   
@@ -42,26 +47,17 @@ class sVars : public NlpGenVars {
 //  long long n2ndSlack;  
 //  long long nSlack;
 
-
-
   std::vector<sVars*> children;
 
-
  protected:
+  sVars() {};
+  sVars(const sVars& ) {};
+
   void createChildren();
 
   void AddChild(sVars* child);
 
   sTree* stochNode;
-
-
-
- public:
-
-
-
-
-
   
 };
 #endif

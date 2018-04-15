@@ -83,14 +83,7 @@ NlpGenVars::NlpGenVars( OoqpVector * x_in, OoqpVector * s_in,
   assert( mz == u     ->length() || ( 0 == u     ->length() && mcupp == 0 ));
   assert( mz == pi    ->length() || ( 0 == pi    ->length() && mcupp == 0 ));
 
-
-
   nSlack = nComplementaryVariables;
-
-  
-
-
-  
 }
 
 
@@ -898,10 +891,6 @@ void NlpGenVars::printSolution( MpsReader * reader, NlpGenData * data,
 }
 
 
-
-
-
-
 void NlpGenVars::interiorPointPriX( double alpha)
 {
   x->setToZero();
@@ -1079,9 +1068,6 @@ void NlpGenVars::takeDualStep( Variables *step_in, const double alphaDual, doubl
     phi->axpy( alphaSlackDual, *steps->phi );
   }
 }
-
-
-
 
 
 void
@@ -1331,14 +1317,12 @@ NlpGenVars::push_variables( OoqpVector *vec, OoqpVector *vec_slackLB, OoqpVector
   }
 }
 
-
-
-
-
 void NlpGenVars::getErrScaling(double s_max, double &scal_commerr, double &scal_dualerr)
 {
-  int n = nxlow + nxupp + mclow + mcupp;
+  long long n = nxlow + nxupp + mclow + mcupp;
 
+  assert(n==nComplementaryVariables && "these two should be equal");
+  //printf("nx %d nxlow %d nxupp %d    mz %d mclow %d mcupp %d     my %d\n", nx, nxlow, nxupp, mz, mclow, mcupp, my);
   scal_commerr = lambda->onenorm() + pi->onenorm() + gamma->onenorm() + phi->onenorm();
 
   if (n == 0) {
@@ -1362,8 +1346,6 @@ void NlpGenVars::getErrScaling(double s_max, double &scal_commerr, double &scal_
 
   assert(scal_commerr>0 && scal_dualerr>0);
 }
-
-
 
 double NlpGenVars::computeDD()
 {
