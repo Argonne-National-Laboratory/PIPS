@@ -20,19 +20,17 @@
   double genTime_localAmpl;
 #endif
 
-//# min (x1+x2)^2+(x1+x2)*x3 + (x1+x2)*x4
-//# st.
-//#     x1 * x2 = 10
-//#     x2^2 + x3*x1 < 5
-//#     x2^2 + x4*x1 < 6
-//# x1, x2 , x3, x4 free variables
-
 #define S  16    //S scenarios
 #define N0 100    // number of first-stage vars
-#define N1 10*N0 // number of second-stage vars for scen 1 (! N1 should be >= N0)
+#define N1 4*N0 // number of second-stage vars for scen 1 (! N1 should be >= N0)
 #define NS 2*N0  // number of second-stage vars for scen > 1 (! NS should be >= N0)
 
-/* min f0(x0) + 1/S sum fs(xs) 
+/* Example of a convex QP.
+ * Number of scenarios and the size of each scenario can be controlled. The first-scenario
+ * has a different number of variables and an additional constraints than the other
+ * scenarios. 
+ *
+ * min f0(x0) + 1/S sum fs(xs) 
  * s.t.  x0>=0.25, xs>=0.5, x0_1<=100, xs_1<=100
  *       x0_i + x_s_i =1, i=1,N0, s=1,S
  *       sum(x0)+sum(x1)<=N0+N1
@@ -160,8 +158,6 @@ int str_eval_g(double* x0, double* x1, double* eq_g, double* inq_g,
 	MESSAGE("str_eval_g  -- row " << row <<" col "<<col);
 	assert(row == col);
 	if(row == 0) {
-	  ////x1 + x2 = 100
-	  //	eq_g[0] = x0[0] * x0[1];
 	  //no constraints
 	} else if(row == 1) {
 	  //x2^2 + x3|x4 * x1
@@ -191,19 +187,15 @@ int str_eval_grad_f(double* x0, double* x1, double* grad, CallBackDataPtr cbd) {
 
 	if(row == 0 && col == 0)
 	{
-	  //	grad[0] = 2.0 * (x0[0]+x0[1]);
-	  //	grad[1] = 2.0 * (x0[0]+x0[1]);
 	  for(int i=0; i<N0; i++) grad[i] = x0[i];
 	}
 	else if(row == 1 && col == 1)
 	{
-	  //	grad[0] = (x0[0]+x0[1]);
 	  for(int i=0; i<N1; i++)  grad[i] = (x1[i]-1.)/S;
 
 	} else if(row == col )
 	{
 	  assert(row<=S);
-	  //	grad[0] = (x0[0]+x0[1]);
 	  for(int i=0; i<NS; i++) grad[i] = (x1[i]-1)/S;
 	}
 	else if(row == 1 && col == 0)
@@ -216,9 +208,6 @@ int str_eval_grad_f(double* x0, double* x1, double* grad, CallBackDataPtr cbd) {
 	else if(row >= 2 && col == 0)
 	{
 	  assert(row<=S);
-	  //row == 2 && col == 0
-	  //	grad[0] = x1[0];
-	  //	grad[1] = x1[0];
 	  for(int i=0; i<N0; i++) grad[i]=0.;
 	}
 	else
@@ -291,11 +280,6 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		  }
 		  i_colptr[N1] = N1+N1;
 		  
-		  //	i_rowidx[0] = 0;
-		  //	i_colptr[0] = 0;
-		  //	i_colptr[1] = 1;
-		  //	i_elts[0] = x0[0];
-		  
 		} else if (row == col ) { //this is the case row>=2
 		  assert(*i_nz == NS && *e_nz == N0);
 		  //equalities
@@ -314,11 +298,6 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		    i_elts[i]=1.;
 		  }
 		  i_colptr[NS]=NS; 
-
-		  //	i_rowidx[0] = 0;
-		  //	i_colptr[0] = 0;
-		  //	i_colptr[1] = 1;
-		  //	i_elts[0] = x0[0];
 
 		} else if (row == 1 && col == 0) {
 		  assert(*i_nz == N0 && *e_nz == N0);
@@ -339,13 +318,6 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 		  i_colptr[N0]=N0; 
 		  //second inequality (has no entries in the jacobian, do nothing)
 
-		  //	i_rowidx[0] = 0;
-		  //	i_rowidx[1] = 0;
-		  //	i_colptr[0] = 0;
-		  //	i_colptr[1] = 1;
-		  //	i_colptr[2] = 2;
-		  //	i_elts[0] = x1[0];
-		  //	i_elts[1] = 2.0*x0[1];
 		} else if (row >= 2 && col == 0) {
 		  assert(*i_nz == 0 && *e_nz == N0);
 		  //the equality
@@ -481,31 +453,52 @@ int str_write_solution(double* x, double* lam_eq, double* lam_ieq,CallBackDataPt
   return 1;
 }
 
+static const double       optObj=6.25;
+static const std::string  objCheckArgName="-objcheck";
+
 int main(int argc, char* argv[]) {
-	MPI_Init(&argc, &argv);
-	MESSAGE("start");
-	MPI_Comm comm = MPI_COMM_WORLD;
-	MPI_Comm_rank(comm, &gmyid);
-	MPI_Comm_size(comm, &gnprocs);
+  MPI_Init(&argc, &argv);
+  MESSAGE("start");
+  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(comm, &gmyid);
+  MPI_Comm_size(comm, &gnprocs);
+  
+  str_init_x0_cb init_x0 = &str_init_x0;
+  str_prob_info_cb prob_info = &str_prob_info;
+  str_eval_f_cb eval_f = &str_eval_f;
+  str_eval_g_cb eval_g = &str_eval_g;
+  str_eval_grad_f_cb eval_grad_f = &str_eval_grad_f;
+  str_eval_jac_g_cb eval_jac_g = &str_eval_jac_g;
+  str_eval_h_cb eval_h = &str_eval_h;
+  str_write_solution_cb write_solution = &str_write_solution;
+  
+  PipsNlpProblemStructPtr prob = 
+    CreatePipsNlpProblemStruct(MPI_COMM_WORLD, S,
+			       init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
+			       eval_h, write_solution, NULL);
+  
+  MESSAGE("problem created");
+  
+  PipsNlpSolveStruct(prob);
 
-	str_init_x0_cb init_x0 = &str_init_x0;
-	str_prob_info_cb prob_info = &str_prob_info;
-	str_eval_f_cb eval_f = &str_eval_f;
-	str_eval_g_cb eval_g = &str_eval_g;
-	str_eval_grad_f_cb eval_grad_f = &str_eval_grad_f;
-	str_eval_jac_g_cb eval_jac_g = &str_eval_jac_g;
-	str_eval_h_cb eval_h = &str_eval_h;
-	str_write_solution_cb write_solution = &str_write_solution;
+    // here is the 'TESTING' behaviour, when -objcheck is passed
+  int nreturn=0; //=OK, be optimistic
+  if(argc>1) {
+    if(objCheckArgName==argv[1]) {
+      double objective = PipsNlpProblemStructGetObjective(prob);
+      if(fabs((objective-optObj)/(1+optObj))>1e-4)
+	nreturn=-1; //failure, didn't get 5 common digits
+      std::cout << "Objective should be " <<  optObj << " and we got " << objective;
+      if(nreturn!=0) std::cout << ", which is not correct!";
+	std::cout << std::endl;
+    } else {
+      std::cout << "Couldn't understand option option [" << argv[1] << "]" << std::endl;
+    }
+  }
 
-	PipsNlpProblemStructPtr prob = CreatePipsNlpProblemStruct(MPI_COMM_WORLD, S,
-			init_x0, prob_info, eval_f, eval_g, eval_grad_f, eval_jac_g,
-			eval_h, write_solution, NULL);
+  //! should have a deallocation of 'prob' here...
 
-	MESSAGE("problem created");
-
-	PipsNlpSolveStruct(prob);
-
-	MESSAGE("end solve ");
-	MPI_Barrier(comm);
-    MPI_Finalize();
+  MESSAGE("end solve ");
+  MPI_Barrier(comm);
+  MPI_Finalize();
 }
