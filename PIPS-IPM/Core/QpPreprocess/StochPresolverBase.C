@@ -129,6 +129,22 @@ void StochPresolverBase::updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVe
 #endif
 }
 
+void StochPresolverBase::storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type)
+{
+   assert( (int)removedEntries.size() == localNelims );
+
+   if( block_type == LINKING_VARS_BLOCK )
+      assert( linkVarsBlocks[it+1].start <= localNelims );
+
+   else if( block_type == CHILD_BLOCK )
+      assert( childBlocks[it+1].start <= localNelims );
+
+   MTRXENTRY entry = {rowidx, colidx};
+   removedEntries.push_back(entry);
+
+   localNelims++;
+}
+
 void StochPresolverBase::updateTransposed(StochGenMatrix& matrix)
 {
    // update matrix' using removedEntries, linkVarsBlocks, childBlocks
@@ -196,6 +212,7 @@ void StochPresolverBase::updateTransposedSubmatrix(SparseStorageDynamic& transSt
  */
 void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
 {
+   cout<<"colAdaptParent has "<<presData.getNumberColAdParent()<<" entries."<<endl;
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
@@ -274,6 +291,7 @@ void StochPresolverBase::setCurrentPointersToNull()
    currgParent = NULL;
    currgChild = NULL;
    currNnzColChild = NULL;
+   currNnzColParent = NULL;
 }
 
 bool StochPresolverBase::updateCPforTinyEntry(int it, SystemType system_type)
@@ -330,6 +348,7 @@ bool StochPresolverBase::updateCPForSingletonRow(int it, SystemType system_type)
          assert( system_type == INEQUALITY_SYSTEM );
          setCPAmatsRoot(presProb->C);
          setCPRowRootInequality();
+         currNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec);
       }
    }
    else  // at child it

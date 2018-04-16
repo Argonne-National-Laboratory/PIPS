@@ -19,6 +19,14 @@ typedef struct
    double newxupp;
 } XBOUNDS;
 
+struct xbounds_col_is_smaller
+{
+    bool operator()(const XBOUNDS& x, const XBOUNDS& y) const
+    {
+        return x.colIdx < y.colIdx;
+    }
+};
+
 class StochPresolverSingletonRows : public StochPresolverBase
 {
 public:
@@ -58,6 +66,14 @@ private:
          double* ixlow, double* ixupp, double* xlow, double* xupp);
    bool storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g);
    bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
+
+   bool combineNewBoundsParent();
+   void updateLinkingVarsBounds();
+   XBOUNDS getNewBoundsParent(int i);
+   void setNewBoundsParent(int i, int colIdx, double newxlow, double newxupp);
+   int getNumberNewBoundsParent();
+   void addNewBoundsParent(XBOUNDS newXBounds);
+   void clearNewBoundsParent();
 };
 
 

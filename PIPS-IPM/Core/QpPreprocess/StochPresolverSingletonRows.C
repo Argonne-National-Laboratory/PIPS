@@ -28,6 +28,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
 
    nelims = 0;
    int newSRIneq = 0;
+   /* auskommentiert, um singletonRowC zu testen.
    int newSREq = initSingletonRows(EQUALITY_SYSTEM);
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &newSREq, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -55,25 +56,36 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       if( myRank == 0 )
          cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
       iter++;
-      cout<<"NnzRowsA: (";
-      presData.nRowElemsA->writeToStreamAll(cout);
-      cout<<"NnzRowsC: (";
-      presData.nRowElemsC->writeToStreamAll(cout);
-   }
+   }*/
 
    //todo: order in a loop SR routines for A and C
-  /* if( newSRIneq > 0)
+   int newSREq = 0;
+   int iter = 0;
+
+   newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
+   if( newSRIneq > 0)
    {
-      initSingletonRows(INEQUALITY_SYSTEM);
-      possibleFeasible = doSingletonRowsC(newSREq, newSRIneq);
+      if( iter > 0 )
+         newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
+      cout<<"There are "<<newSRIneq<<" singleton rows in C."<<endl;
+      bool possibleFeasible = doSingletonRowsC(newSREq, newSRIneq);
       if( !possibleFeasible )
       {
          cout<<"Infeasibility detected during singleton row presolving of C."<<endl;
          return 0;
       }
+      cout<<"NnzRowsA: (";
+      presData.nRowElemsA->writeToStreamAll(cout);
+      cout<<"NnzRowsC: (";
+      presData.nRowElemsC->writeToStreamAll(cout);
+      cout<<"RedRowsC: (";
+      presData.redRowC->writeToStreamAll(cout);
+
+      // update the variable bounds vor the linking variables:
+      updateLinkingVarsBounds();
       // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsC:
       updateLinkingVarsBlocks(newSREq, newSRIneq);
-   }*/
+   }
 
 
    presData.globalSumObjOffset();
@@ -196,6 +208,7 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
 
 bool StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
 {
+   cout<<"-----doSingletonRowsC-----"<<endl;
    newSREq = 0;
    newSRIneq = 0;
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
@@ -203,7 +216,7 @@ bool StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
    updateCPForSingletonRow(-1, INEQUALITY_SYSTEM);
    bool possFeas = procSingletonRowRoot(matrix, INEQUALITY_SYSTEM);
    if( !possFeas ) return false;
-/*
+/* children part auskommentiert, da noch nicht implementiert
    assert(nChildren == (int)matrix.children.size());
    for( int it = 0; it < nChildren; it++ )
    {
@@ -217,10 +230,12 @@ bool StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
 
    // Update nRowLink and lhs/rhs (Linking part) of both systems:
    updateRhsNRowLink();
-
-   possFeas = combineColAdaptParent();
-      if( !possFeas ) return false;
       */
+   possFeas = combineNewBoundsParent();
+   if( !possFeas ) return false;
+   possFeas = presData.combineColAdaptParent();
+   if( !possFeas ) return false;
+
 
    return true;
 }
@@ -443,44 +458,57 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
    assert(aik != 0.0);
    cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
 
-   // calculate the newly found bounds on variable x_k:
    double newxlow = -std::numeric_limits<double>::max();
    double newxupp = std::numeric_limits<double>::max();
+   double val = 0.0;
+
+   // calculate the newly found bounds on variable x_k:
    calculateNewBoundsOnVariable(newxlow, newxupp, rowIdx, aik);
 
    // test if they imply infeasibility
    if( newBoundsImplyInfeasible(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
       return false;
+
+   // test if they imply fixation
+   else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+   {
+      cout<<"New bounds imply fixation of variable "<<colIdx<<" to "<<val<<endl;
+      // as in SR(equality), store them to remove the column later
+      if( myRank == 0 )
+      {
+         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+            return false;
+      }
+      // in case of fixation, nnz bzw. red Counters are not touched yet because they will be set
+      // correctly later, when colAdaptParent is applied.
+   }
    else
    {
-      // test if they imply fixation
-      double val = 0.0;
-      if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+      // test if new bounds are tightening: add to newBoundsParent
+      if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
       {
-         // as in SR(equality), store them to remove the column later
+         cout<<"New bounds tighten bounds of variable "<<colIdx<<endl;
+         // store them to adapt the bounds on all processes later
          if( myRank == 0 )
          {
-            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+            if( !storeNewBoundsParent(colIdx, newxlow, newxupp) )
                return false;
          }
       }
-
-      // test if new bounds are tightening: add to newBoundsParent
       else
-      {
-         if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
-         {
-            // store them to adapt the bounds on all processes later
-            if( myRank == 0 )
-            {
-               if( !storeNewBoundsParent(colIdx, newxlow, newxupp) )
-                  return false;
-            }
-         }
-         // set a_ik=0.0, nRow=0, nCol-- todo:
-         // vllt kann Methode aus TinyEntries benutzt werden?
-         // was ist besser, sofort auch A' aktualisieren oder sammeln und am Ende?
-      }
+         cout<<"New bounds are redundant for variable "<<colIdx<<endl;
+      // speichern der Entries in removedEntries
+      storeRemovedEntryIndex(rowIdx, colIdx, -1, LINKING_VARS_BLOCK);
+
+      // set a_ik=0.0, nRow=0, nCol--
+      clearRow(storage, rowIdx);
+      currNnzRow->elements()[rowIdx]--;
+      currNnzColParent->elements()[colIdx]--;
+      assert( currNnzRow->elements()[rowIdx] == 0 );
+
+      // A' erst am Ende aktualisieren, mit den gesammelten Einträgen in removedEntries:
+      StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*presProb->C);
+      updateTransposed(C);
    }
 
    return true;
@@ -595,6 +623,175 @@ bool StochPresolverSingletonRows::storeNewBoundsParent(int colIdx, double newxlo
    return true;
 }
 
+/** Method similar to combineColAdaptParent(), that is a method going through newBoundsParent
+ * and cleaning it up, removing redundant bounds, checking for infeasibility or more tightening.
+ */
+bool StochPresolverSingletonRows::combineNewBoundsParent()
+{
+   int myRank, world_size;
+   bool iAmDistrib = false;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   if( world_size > 1) iAmDistrib = true;
+
+   if( iAmDistrib )
+   {
+      // allgather the length of each newBoundsParent
+      int mylen = getNumberNewBoundsParent();
+      int* recvcounts = new int[world_size];
+
+      MPI_Allgather(&mylen, 1, MPI_INT, recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
+
+      // allgatherv the actual newBoundsParent
+      // First, extract the colIdx and val into int* and double* arrays:
+      int* colIndicesLocal = new int[mylen];
+      double* xlowLocal = new double[mylen];
+      double* xuppLocal = new double[mylen];
+      for(int i=0; i<mylen; i++)
+      {
+         colIndicesLocal[i] = getNewBoundsParent(i).colIdx;
+         xlowLocal[i] = getNewBoundsParent(i).newxlow;
+         xuppLocal[i] = getNewBoundsParent(i).newxupp;
+      }
+      // Second, prepare the receive buffers:
+      int lenghtGlobal = recvcounts[0];
+      int* displs = new int[world_size];
+      displs[0] = 0;
+      for(int i=1; i<world_size; i++)
+      {
+         lenghtGlobal += recvcounts[i];
+         displs[i] = displs[i-1] + recvcounts[i-1];
+      }
+      int* colIndicesGlobal = new int[lenghtGlobal];
+      double* xlowGlobal = new double[lenghtGlobal];
+      double* xuppGlobal = new double[lenghtGlobal];
+      // Then, do the actual MPI communication:
+      MPI_Allgatherv(colIndicesLocal, mylen, MPI_INT, colIndicesGlobal, recvcounts, displs , MPI_INT, MPI_COMM_WORLD);
+      MPI_Allgatherv(xlowLocal, mylen, MPI_DOUBLE, xlowGlobal, recvcounts, displs , MPI_DOUBLE, MPI_COMM_WORLD);
+      MPI_Allgatherv(xuppLocal, mylen, MPI_DOUBLE, xuppGlobal, recvcounts, displs , MPI_DOUBLE, MPI_COMM_WORLD);
+
+      // Reconstruct a newBoundsParent containing all entries:
+      clearNewBoundsParent();
+      for(int i=0; i<lenghtGlobal; i++)
+      {
+         XBOUNDS newXBound = {colIndicesGlobal[i], xlowGlobal[i], xuppGlobal[i]};
+         addNewBoundsParent(newXBound);
+      }
+
+      delete[] recvcounts;
+      delete[] colIndicesLocal;
+      delete[] xlowLocal;
+      delete[] displs;
+      delete[] colIndicesGlobal;
+      delete[] xlowGlobal;
+      delete[] xuppGlobal;
+   }
+
+   // Sort colIndicesGlobal (and xlowGlobal, xuppGlobal accordingly), remove duplicates,
+   // tighten bounds and find infeasibilities
+   cout<<"Before sorting, newBoundsParent has "<<getNumberNewBoundsParent()<<" entries."<<endl;
+   std::sort(newBoundsParent.begin(), newBoundsParent.end(), xbounds_col_is_smaller());
+
+   if(getNumberNewBoundsParent() > 0)
+   {
+      int colIdxCurrent = getNewBoundsParent(0).colIdx;
+      double xlowCurrent = getNewBoundsParent(0).newxlow;
+      double xuppCurrent = getNewBoundsParent(0).newxupp;
+      for(int i=1; i<getNumberNewBoundsParent(); i++)
+      {
+         if( getNewBoundsParent(i).colIdx == colIdxCurrent )
+         {
+            double bestLow = max(xlowCurrent, getNewBoundsParent(i).newxlow);
+            double bestUpp = min(xuppCurrent, getNewBoundsParent(i).newxupp);
+            if( bestLow > bestUpp )
+            {
+               cout<<"Detected infeasibility (in variable) "<<colIdxCurrent<<endl;
+               return false;
+            }
+            else
+            {
+               // change the vector element newBoundsParent.begin()+(i-1), also das,
+               // welches colIdxCurrent definiert hat:
+               setNewBoundsParent(i-1, colIdxCurrent, bestLow, bestUpp);
+               newBoundsParent.erase(newBoundsParent.begin()+i);   //todo: implement more efficiently
+            }
+         }
+         else{
+            colIdxCurrent = getNewBoundsParent(i).colIdx;
+            xlowCurrent = getNewBoundsParent(0).newxlow;
+            xuppCurrent = getNewBoundsParent(0).newxupp;
+         }
+      }
+   }
+   assert( getNumberNewBoundsParent() <= presData.nColElems->vec->n );
+
+   return true;
+}
+
+/** Should be called right after doSingletonRowsC() or another method that stores
+ * information to update in newBoundsParent.
+ * Updates the bounds on the linking variables.
+ */
+void StochPresolverSingletonRows::updateLinkingVarsBounds()
+{
+   cout<<"newBoundsParent has "<<getNumberNewBoundsParent()<<" entries."<<endl;
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
+   setCPColumnRoot();
+   double* ixlow = currIxlowParent->elements();
+   double* ixupp = currIxuppParent->elements();
+   double* xlow = currxlowParent->elements();
+   double* xupp = currxuppParent->elements();
+
+   // apply updated newBoundsParent to the variable bounds.
+   for(int i=0; i<getNumberNewBoundsParent(); i++)
+   {
+      XBOUNDS newbounds = getNewBoundsParent(i);
+      int colIdx = newbounds.colIdx;
+      double newxlow = newbounds.newxlow;
+      double newxupp = newbounds.newxupp;
+      if( (ixlow[colIdx] != 0.0 && newxlow > xlow[colIdx])
+         || (ixlow[colIdx] == 0.0 && newxlow > -std::numeric_limits<double>::max()) )
+      {
+         ixlow[colIdx] = 1.0;
+         xlow[colIdx] = newxlow;
+      }
+      if( (ixupp[colIdx] != 0.0 && newxupp < xupp[colIdx])
+            || (ixupp[colIdx] == 0.0 && newxupp < std::numeric_limits<double>::max()))
+      {
+         ixupp[colIdx] = 1.0;
+         xupp[colIdx] = newxupp;
+      }
+   }
+   clearNewBoundsParent();
+}
+
+XBOUNDS StochPresolverSingletonRows::getNewBoundsParent(int i)
+{
+   assert( i<getNumberNewBoundsParent() );
+   return newBoundsParent[i];
+}
+void StochPresolverSingletonRows::setNewBoundsParent(int i, int colIdx, double newxlow, double newxupp)
+{
+   assert( i<getNumberNewBoundsParent() );
+   newBoundsParent[i].colIdx = colIdx;
+   newBoundsParent[i].newxlow = newxlow;
+   newBoundsParent[i].newxupp = newxupp;
+}
+int StochPresolverSingletonRows::getNumberNewBoundsParent()
+{
+   return (int)newBoundsParent.size();
+}
+void StochPresolverSingletonRows::addNewBoundsParent(XBOUNDS newXBounds)
+{
+   newBoundsParent.push_back(newXBounds);
+}
+void StochPresolverSingletonRows::clearNewBoundsParent()
+{
+   newBoundsParent.clear();
+}
 
 
 

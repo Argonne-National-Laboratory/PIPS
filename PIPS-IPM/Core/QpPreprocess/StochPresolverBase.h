@@ -91,6 +91,7 @@ protected:
    SimpleVector* currRedRow;
    SimpleVector* currRedRowLink;
    SimpleVector* currRedColParent;
+   SimpleVector* currNnzColParent;
    SimpleVector* currRedColChild;
    SimpleVector* currNnzColChild;
 
@@ -117,6 +118,7 @@ protected:
    void updateRhsNRowLink();
    void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector);
 
+   void storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type);
    // methods to update the transposed matrix:
    void updateTransposed(StochGenMatrix& matrix);
    void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd);

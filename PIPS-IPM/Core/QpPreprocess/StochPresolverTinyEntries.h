@@ -29,7 +29,6 @@ class StochPresolverTinyEntries : public StochPresolverBase
       int removeTinyChild( int it, SystemType system_type );
 
       int removeTinyInnerLoop( int it, SystemType system_type, BlockType block_type );
-      void storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type);
 
       // data
 };

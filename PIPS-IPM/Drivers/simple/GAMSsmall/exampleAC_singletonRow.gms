@@ -3,7 +3,8 @@ Set i rows    / i1*i6 /
 
 parameter g(j) obj coefficients / j1 2, j2 2, j3 2, j4 2, j5 2, j6 2, j7 2, j8 2 /
           b(i) right hand side  / i1 3, i2 10, i3 4, i4 5, i5 8, i6 11 /
-          cupp(i) right hand side  / i1 3, i2 9, i3 10, i4 13, i5 7, i6 10 /;
+          cupp(i) right hand side  / i1 3, i2 2, i3 10, i4 13, i5 7, i6 10 /
+          clow(i) left hand side  / i1 3, i2 1, i3 0, i4 0, i5 1, i6 1 /;
 
 Table A(i,j)
     j1   j2    j3      j4    j5    j6    j7    j8
@@ -18,24 +19,26 @@ i6   1    1     1       1     1     1     1     1
 Table C(i,j)
     j1   j2   j3     j4    j5    j6    j7    j8
 i1   3
-i2        1
+i2   1    
 i3   2         4      1
 i4        5           2
 i5        4                       1     2
 i6   1    1    1                  1     1
 ;
 
-Positive Variables x(j)  / j3.up 10, j7.up 5 /;
+Positive Variables x(j)  / j1.up 4, j3.up 10, j7.up 5 /;
 *makes it infeasible: j2.up 0.5
 
 Variable           z      objective variable
 Equations          e(i)   equality equations
                    ie(i)  inequality equations
+*                   ie_low(i) lower inequality equations
                    defobj objective function;
 
 defobj.. z =e= sum(j, g(j)*x(j));
 e(i)..   sum(j, A(i,j)*x(j)) =e= b(i);
 ie(i)..  sum(j, C(i,j)*x(j)) =l= cupp(i);
+*ie_low(i).. sum(j, C(i,j)*x(j)) =g= clow(i);
 
 Model m /all/ ;
 
@@ -60,6 +63,12 @@ $ifthen %METHOD%==PIPS
   ie.stage('i4') = 2;
   ie.stage('i5') = 3;
   ie.stage('i6') = 4;
+*  ie_low.stage('i1') = 1;
+*  ie_low.stage('i2') = 1;
+*  ie_low.stage('i3') = 2;
+*  ie_low.stage('i4') = 2;
+*  ie_low.stage('i5') = 3;
+*  ie_low.stage('i6') = 4;
   defobj.stage  = 4;
 
 

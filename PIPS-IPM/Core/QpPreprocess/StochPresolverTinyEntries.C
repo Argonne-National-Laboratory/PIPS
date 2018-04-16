@@ -54,8 +54,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   presData.redRowC->setToZero();
-   presData.redCol->setToZero();
+   presData.resetRedCounters();
    setCurrentPointersToNull();
 
    int nelimsB0 = 0;
@@ -71,7 +70,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
 
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
-   assert( matrix.children.size() == presData.nRowElemsC->children.size() );
+   assert( matrix.children.size() == presData.nRowElemsA->children.size() );
    assert( matrix.children.size() == presData.redCol->children.size() );
 
    // go through the children
@@ -114,8 +113,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   presData.redRowC->setToZero();
-   presData.redCol->setToZero();
+   presData.resetRedCounters();
    setCurrentPointersToNull();
 
    int nelimsB0 = 0;
@@ -281,19 +279,4 @@ int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_ty
    return nelims;
 }
 
-void StochPresolverTinyEntries::storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type)
-{
-   assert( (int)removedEntries.size() == localNelims );
-
-   if( block_type == LINKING_VARS_BLOCK )
-      assert( linkVarsBlocks[it+1].start <= localNelims );
-
-   else if( block_type == CHILD_BLOCK )
-      assert( childBlocks[it+1].start <= localNelims );
-
-   MTRXENTRY entry = {rowidx, colidx};
-   removedEntries.push_back(entry);
-
-   localNelims++;
-}
 
