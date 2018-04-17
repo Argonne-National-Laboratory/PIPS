@@ -20,7 +20,7 @@ Table C(i,j)
     j1   j2   j3     j4    j5    j6    j7    j8
 i1   3
 i2   1    
-i3   2         4      1
+i3   2         4      
 i4                    2
 i5        4                       1     2
 i6   1    1    1                  1     1

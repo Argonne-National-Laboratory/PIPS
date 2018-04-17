@@ -26,6 +26,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
+   indivObjOffset = 0.0;
    nelims = 0;
    int newSRIneq = 0;
    /* auskommentiert, um singletonRowC zu testen.
@@ -87,8 +88,9 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       updateLinkingVarsBlocks(newSREq, newSRIneq);
    }
 
-
-   presData.globalSumObjOffset();
+   // Sum up individual objOffset and then add it to the global objOffset:
+   sumIndivObjOffset();
+   presData.addObjOffset(indivObjOffset);
 
    return nelims;
 }
@@ -327,10 +329,8 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
                cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
                return false;
             }
-            presData.addObjOffset(g[colIdx] * val);
-
-            COLUMNTOADAPT colWithVal = {colIdx, val};
-            presData.addColToAdaptParent(colWithVal);
+            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+               return false;
          }
          else  // INEQUALITY_SYSTEM
          {
@@ -354,8 +354,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
                if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
                   return false;
 
-               // in case of fixation, nnz or red Counters are not touched yet because they will be set
-               // correctly later, when colAdaptParent is applied.
+               // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied.
             }
             else
             {
@@ -426,7 +425,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx, std:
          cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
          return false;
       }
-      presData.addObjOffset(g[colIdx] * val);
+      indivObjOffset += g[colIdx] * val;
 
       // adapt the col, val immediately in this block B_i and store them for the Blmat
       newSR += adaptChildBmatCol(colIdx, val, system_type);
@@ -453,7 +452,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx, std:
       {
          cout<<"New bounds imply fixation of variable "<<colIdx<<" of a child to value: "<<val<<endl;
          // adapt immediately in D_i by adapting objOffset, removing column colIdx and store in colADaptLinkBlock for G, F, B
-         presData.addObjOffset(g[colIdx] * val);
+         indivObjOffset += g[colIdx] * val;
 
          // adapt the col, val immediately in this block B_i and store them for the Blmat
          newSR += adaptChildBmatCol(colIdx, val, INEQUALITY_SYSTEM);
@@ -697,7 +696,7 @@ bool StochPresolverSingletonRows::storeColValInColAdaptParentAndAdaptOffset(int 
    if( uniqueAdditionToOffset )
    {
       presData.addColToAdaptParent(colWithVal);
-      presData.addObjOffset(g[colIdx] * value);
+      indivObjOffset += g[colIdx] * value;
    }
    return true;
 }
@@ -821,7 +820,8 @@ bool StochPresolverSingletonRows::combineNewBoundsParent()
                newBoundsParent.erase(newBoundsParent.begin()+i);   //todo: implement more efficiently
             }
          }
-         else{
+         else
+         {
             colIdxCurrent = getNewBoundsParent(i).colIdx;
             xlowCurrent = getNewBoundsParent(0).newxlow;
             xuppCurrent = getNewBoundsParent(0).newxupp;
@@ -860,10 +860,9 @@ void StochPresolverSingletonRows::getValuesForSR(SparseStorageDynamic& storage, 
 {
    int indexK = storage.rowptr[rowIdx].start;
    colIdx = storage.jcolM[indexK];
+   aik = storage.M[indexK];
 
    assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
-
-   aik = storage.M[indexK];
    assert(aik != 0.0);
    cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
 }

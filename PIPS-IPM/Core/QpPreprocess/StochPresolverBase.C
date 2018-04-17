@@ -36,6 +36,8 @@ StochPresolverBase::StochPresolverBase(PresolveData& presData)
    linkVarsBlocks = new BLOCKS[nChildren + 1];
    childBlocks = new BLOCKS[nChildren + 1];
    resetLinkvarsAndChildBlocks();
+
+   indivObjOffset = 0.0;
 }
 
 StochPresolverBase::~StochPresolverBase()
@@ -365,7 +367,6 @@ bool StochPresolverBase::updateCPForSingletonRow(int it, SystemType system_type)
             setCPBlmatsChild( presProb->A, it);
             setCPRowLinkEquality();
          }
-
       }
       else  // INEQUALITY_SYSTEM
       {
@@ -993,5 +994,22 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
       clearRow(*currBlmatTrans, colIdx);
    }
    return newSingletonRows;
+}
+
+/** Sum up the individual objective offset on all processes. */
+void StochPresolverBase::sumIndivObjOffset()
+{
+   int myRank;
+   bool iAmDistrib = false;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   if( world_size > 1) iAmDistrib = true;
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &indivObjOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+   if( myRank == 0 )
+      cout<<"Individual objective offset is: "<<indivObjOffset<<endl;
 }
 

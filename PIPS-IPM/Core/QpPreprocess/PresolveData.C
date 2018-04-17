@@ -176,23 +176,6 @@ bool PresolveData::combineColAdaptParent()
    return true;
 }
 
-/** Synchronize the objective offset on all processes. */
-void PresolveData::globalSumObjOffset()
-{
-   int myRank;
-   bool iAmDistrib = false;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   if( world_size > 1) iAmDistrib = true;
-
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &objOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-   if( myRank == 0 )
-      cout<<"Objective offset is "<<getObjOffset()<<endl;
-}
-
 void PresolveData::resetRedCounters()
 {
    redRowA->setToZero();

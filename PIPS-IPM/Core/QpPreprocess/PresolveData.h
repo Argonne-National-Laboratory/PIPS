@@ -50,7 +50,6 @@ class PresolveData
       sData* finalize();
 
       bool combineColAdaptParent();
-      void globalSumObjOffset();
 
       void resetRedCounters();
       void resetBlocks();

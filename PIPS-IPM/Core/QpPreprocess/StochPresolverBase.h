@@ -113,6 +113,8 @@ protected:
     * the child block 'it' is accessed using the index 'it+1'. */
    BLOCKS* childBlocks;
 
+   double indivObjOffset;
+
    /* swap two entries in the SparseStorageDynamic format */
    void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims);
    void updateRhsNRowLink();
@@ -170,7 +172,7 @@ protected:
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);
-
+   void sumIndivObjOffset();
 };
 
 
