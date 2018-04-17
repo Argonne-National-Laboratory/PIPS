@@ -191,7 +191,7 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
    {
       // dummy child?
       if( updateCPForSingletonRow(it, EQUALITY_SYSTEM) )
-      {  // main part for each child: go through B and adapt F, D and G
+      {  // main part for each child: go through A and B and adapt F, D and G
          possFeas = procSingletonRowChild(matrix, it, newSREq, newSRIneq);
          if( !possFeas ) return false;
       }
@@ -216,26 +216,25 @@ bool StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
    updateCPForSingletonRow(-1, INEQUALITY_SYSTEM);
    bool possFeas = procSingletonRowRoot(matrix, INEQUALITY_SYSTEM);
    if( !possFeas ) return false;
-/* children part auskommentiert, da noch nicht implementiert
+
    assert(nChildren == (int)matrix.children.size());
    for( int it = 0; it < nChildren; it++ )
    {
       // dummy child?
-      if( updateCurrentPointersForSingletonRow(it, INEQUALITY_SYSTEM) )
-      {  // main part for each child: go through B and adapt F, D and G
-         possFeas = procSingletonRowChild(matrix, it, newSREq, newSRIneq);
+      if( updateCPForSingletonRow(it, INEQUALITY_SYSTEM) )
+      {  // main part for each child: go through A and B and adapt F, D and G ?
+         possFeas = procSingletonRowChildInequality(matrix, it);
          if( !possFeas ) return false;
       }
    }
 
    // Update nRowLink and lhs/rhs (Linking part) of both systems:
    updateRhsNRowLink();
-      */
+
    possFeas = combineNewBoundsParent();
    if( !possFeas ) return false;
    possFeas = presData.combineColAdaptParent();
    if( !possFeas ) return false;
-
 
    return true;
 }
@@ -255,7 +254,10 @@ bool StochPresolverSingletonRows::procSingletonRowRoot(StochGenMatrix& stochMatr
       if( system_type == EQUALITY_SYSTEM)
          possFeas = removeSingleRowEntryB0(B0_mat, rowIdx);
       else
-         possFeas = removeSingleRowEntryB0Inequality(B0_mat, rowIdx);
+      {
+         SparseStorageDynamic& B0_trans = stochMatrix.Bmat->getStorageDynamicTransposedRef();
+         possFeas = removeSingleRowEntryB0Inequality(B0_mat, B0_trans, rowIdx);
+      }
       if( !possFeas ) return false;
    }
 
@@ -272,14 +274,13 @@ bool StochPresolverSingletonRows::procSingletonRowChild(StochGenMatrix& stochMat
 {
    bool possFeas = true;
 
-   SparseStorageDynamic& A_mat = stochMatrix.children[it]->Amat->getStorageDynamicRef();
    SparseStorageDynamic& B_mat = stochMatrix.children[it]->Bmat->getStorageDynamicRef();
 
-   possFeas = procSingletonRowChildAmat( A_mat, it);
+   possFeas = procSingletonRowChildAmat( it, EQUALITY_SYSTEM);
    if( !possFeas ) return false;
 
    std::vector<COLUMNTOADAPT> colAdaptLinkBlock;
-   possFeas = procSingletonRowChildBmat( B_mat, it, colAdaptLinkBlock, newSREq);
+   possFeas = procSingletonRowChildBmat( B_mat, it, colAdaptLinkBlock, newSREq, EQUALITY_SYSTEM);
    if( !possFeas ) return false;
 
    // using colAdaptLinkBlock, go through the columns in Blmat
@@ -290,13 +291,13 @@ bool StochPresolverSingletonRows::procSingletonRowChild(StochGenMatrix& stochMat
    }
    // and go through the columns in Bmat, Blmat of the inequality
    updateCPForSingletonRowInequalityBChild( it );
-   possFeas = adaptInequalityChildB( colAdaptLinkBlock, newSRIneq );
+   possFeas = adaptOtherSystemChildB( INEQUALITY_SYSTEM, colAdaptLinkBlock, newSRIneq );
    if( !possFeas ) return false;
 
    return true;
 }
 
-bool StochPresolverSingletonRows::procSingletonRowChildAmat(SparseStorageDynamic& A_mat, int it)
+bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType system_type)
 {
    double* ixlow = currIxlowParent->elements();
    double* ixupp = currIxuppParent->elements();
@@ -307,38 +308,83 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(SparseStorageDynamic
    for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
       int rowIdx = presData.getSingletonRow(i);
-      if( A_mat.rowptr[rowIdx].start +1 == A_mat.rowptr[rowIdx].end )
+      if( currAmat->rowptr[rowIdx].start +1 == currAmat->rowptr[rowIdx].end )
       {
          presData.setSingletonRow(i, -1);  // for debugging purposes
 
          // store the column index with fixed value in colAdaptParent and adapt objOffset:
-         int indexK = A_mat.rowptr[rowIdx].start;
-         int colIdx = A_mat.jcolM[indexK];
+         int colIdx = -1;
+         double aik = 0.0;
+         getValuesForSR(*currAmat, rowIdx, colIdx, aik);
 
-         assert(A_mat.rowptr[rowIdx].start +1 == A_mat.rowptr[rowIdx].end);
-
-         double aik = A_mat.M[indexK];
-         assert(aik != 0.0);
-         cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
-
-         double val = currEqRhs->elements()[rowIdx] / aik;
-
-         if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
-               || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
+         if( system_type == EQUALITY_SYSTEM )
          {
-            cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
-            return false;
-         }
-         presData.addObjOffset(g[colIdx] * val);
+            double val = currEqRhs->elements()[rowIdx] / aik;
 
-         COLUMNTOADAPT colWithVal = {colIdx, val};
-         presData.addColToAdaptParent(colWithVal);
+            if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
+                  || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
+            {
+               cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
+               return false;
+            }
+            presData.addObjOffset(g[colIdx] * val);
+
+            COLUMNTOADAPT colWithVal = {colIdx, val};
+            presData.addColToAdaptParent(colWithVal);
+         }
+         else  // INEQUALITY_SYSTEM
+         {
+            // test what the new bounds imply: infeasiblity, fixation, tightening, redundancy
+            double newxlow = -std::numeric_limits<double>::max();
+            double newxupp = std::numeric_limits<double>::max();
+            double val = 0.0;
+
+            // calculate the newly found bounds on variable x_k:
+            calculateNewBoundsOnVariable(newxlow, newxupp, rowIdx, aik);
+
+            // test if they imply infeasibility
+            if( newBoundsImplyInfeasible(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+               return false;
+
+            // test if they imply fixation
+            else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+            {
+               cout<<"New bounds imply fixation of variable "<<colIdx<<" of child "<<it<<" to value: "<<val<<endl;
+               // as in SR(equality), store them to remove the column later
+               if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+                  return false;
+
+               // in case of fixation, nnz or red Counters are not touched yet because they will be set
+               // correctly later, when colAdaptParent is applied.
+            }
+            else
+            {
+               // test if new bounds are tightening: add to newBoundsParent
+               if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+               {
+                  cout<<"New bounds tighten bounds of variable "<<colIdx<<endl;
+                  // store them to adapt the bounds on all processes later
+                  if( !storeNewBoundsParent(colIdx, newxlow, newxupp) )
+                     return false;
+               }
+               else
+                  cout<<"New bounds are redundant for variable "<<colIdx<<endl;
+
+               // set a_ik=0.0, nRow--, redCol++
+               clearRow(*currAmat, rowIdx);
+               // remove entry a_ik in transposed matrix as well
+               removeEntryInDynamicStorage(*currAmatTrans, colIdx, rowIdx, val);
+               currNnzRow->elements()[rowIdx]--;
+               assert( currNnzRow->elements()[rowIdx] == 0 );
+               currRedColParent->elements()[colIdx]++;
+            }
+         }
       }
    }
    return true;
 }
 
-bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR)
+bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR, SystemType system_type)
 {
    for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
@@ -352,10 +398,9 @@ bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic
       {
          assert( B_mat.rowptr[rowIdx].start +1 == B_mat.rowptr[rowIdx].end );
          presData.setSingletonRow(i, -1);  // for debugging purposes
-         removeSingleRowEntryChildBmat(rowIdx, colAdaptLinkBlock, EQUALITY_SYSTEM, newSR);
+         removeSingleRowEntryChildBmat(rowIdx, colAdaptLinkBlock, system_type, newSR);
       }
    }
-
    return true;
 }
 
@@ -367,31 +412,78 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx, std:
    double* xupp = currxuppChild->elements();
    double* g = currgChild->elements();
 
-   assert(currBmat->rowptr[rowIdx].start +1 == currBmat->rowptr[rowIdx].end);
+   int colIdx = -1;
+   double aik = 0.0;
+   getValuesForSR(*currBmat, rowIdx, colIdx, aik);
 
-   int indexK = currBmat->rowptr[rowIdx].start;
-   int colIdx = currBmat->jcolM[indexK];
-
-   double aik = currBmat->M[indexK];
-   assert(aik != 0.0);
-   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
-
-   double val = currEqRhs->elements()[rowIdx] / aik;
-
-   if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
-         || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
+   if( system_type == EQUALITY_SYSTEM )
    {
-      cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
-      return false;
+      double val = currEqRhs->elements()[rowIdx] / aik;
+
+      if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
+            || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
+      {
+         cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
+         return false;
+      }
+      presData.addObjOffset(g[colIdx] * val);
+
+      // adapt the col, val immediately in this block B_i and store them for the Blmat
+      newSR += adaptChildBmatCol(colIdx, val, system_type);
+
+      COLUMNTOADAPT colWithVal = {colIdx, val};
+      colAdaptLinkBlock.push_back(colWithVal);
    }
-   presData.addObjOffset(g[colIdx] * val);
+   else  // INEQUALITY_SYSTEM
+   {
+      // test what the new bounds imply: infeasiblity, fixation, tightening, redundancy
+      double newxlow = -std::numeric_limits<double>::max();
+      double newxupp = std::numeric_limits<double>::max();
+      double val = 0.0;
 
-   // adapt the col, val immediately in this block B_i and store them for the Blmat
-   newSR += adaptChildBmatCol(colIdx, val, system_type);
+      // calculate the newly found bounds on variable x_k:
+      calculateNewBoundsOnVariable(newxlow, newxupp, rowIdx, aik);
 
-   COLUMNTOADAPT colWithVal = {colIdx, val};
-   colAdaptLinkBlock.push_back(colWithVal);
+      // test if they imply infeasibility
+      if( newBoundsImplyInfeasible(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+         return false;
 
+      // test if they imply fixation
+      else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+      {
+         cout<<"New bounds imply fixation of variable "<<colIdx<<" of a child to value: "<<val<<endl;
+         // adapt immediately in D_i by adapting objOffset, removing column colIdx and store in colADaptLinkBlock for G, F, B
+         presData.addObjOffset(g[colIdx] * val);
+
+         // adapt the col, val immediately in this block B_i and store them for the Blmat
+         newSR += adaptChildBmatCol(colIdx, val, INEQUALITY_SYSTEM);
+
+         COLUMNTOADAPT colWithVal = {colIdx, val};
+         colAdaptLinkBlock.push_back(colWithVal);
+      }
+      else
+      {
+         // test if new bounds are tightening:
+         if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
+         {
+            cout<<"New bounds tighten bounds of variable "<<colIdx<<endl;
+            // adapt immediately the variable bounds
+            setNewXBounds(colIdx, newxlow, newxupp, ixlow, xlow, ixupp, xupp);
+         }
+         else
+            cout<<"New bounds are redundant for variable "<<colIdx<<endl;
+
+         // set a_ik=0.0, nRow--, nCol--
+         clearRow(*currBmat, rowIdx);
+         // remove entry a_ik in transposed matrix as well
+         removeEntryInDynamicStorage(*currBmatTrans, colIdx, rowIdx, val);
+         currNnzRow->elements()[rowIdx]--;
+         assert( currNnzRow->elements()[rowIdx] == 0 );
+         currNnzColChild->elements()[colIdx]--;
+         assert( currNnzColChild->elements()[colIdx] >= 0 );
+      }
+
+   }
    return true;
 }
 
@@ -409,14 +501,9 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
    double* xupp = currxuppParent->elements();
    double* g = currgParent->elements();
 
-   int indexK = storage.rowptr[rowIdx].start;
-   int colIdx = storage.jcolM[indexK];
-
-   assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
-
-   double aik = storage.M[indexK];
-   assert(aik != 0.0);
-   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
+   int colIdx = -1;
+   double aik = 0.0;
+   getValuesForSR(storage, rowIdx, colIdx, aik);
 
    double val = currEqRhs->elements()[rowIdx] / aik;
 
@@ -438,7 +525,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
    return true;
 }
 
-bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, int rowIdx)
+bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, SparseStorageDynamic& storageTransposed, int rowIdx)
 {
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -449,14 +536,9 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
    double* xupp = currxuppParent->elements();
    double* g = currgParent->elements();
 
-   int indexK = storage.rowptr[rowIdx].start;
-   int colIdx = storage.jcolM[indexK];
-
-   assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
-
-   double aik = storage.M[indexK];
-   assert(aik != 0.0);
-   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
+   int colIdx = -1;
+   double aik = 0.0;
+   getValuesForSR(storage, rowIdx, colIdx, aik);
 
    double newxlow = -std::numeric_limits<double>::max();
    double newxupp = std::numeric_limits<double>::max();
@@ -497,19 +579,45 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
       }
       else
          cout<<"New bounds are redundant for variable "<<colIdx<<endl;
-      // speichern der Entries in removedEntries
-      storeRemovedEntryIndex(rowIdx, colIdx, -1, LINKING_VARS_BLOCK);
 
       // set a_ik=0.0, nRow=0, nCol--
       clearRow(storage, rowIdx);
+      // remove entry a_ik in transposed matrix as well
+      removeEntryInDynamicStorage(storageTransposed, colIdx, rowIdx, val);
       currNnzRow->elements()[rowIdx]--;
       currNnzColParent->elements()[colIdx]--;
       assert( currNnzRow->elements()[rowIdx] == 0 );
-
-      // A' erst am Ende aktualisieren, mit den gesammelten Einträgen in removedEntries:
-      StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*presProb->C);
-      updateTransposed(C);
    }
+
+   return true;
+}
+
+bool StochPresolverSingletonRows::procSingletonRowChildInequality(StochGenMatrix& stochMatrix, int it)
+{
+   bool possFeas = true;
+   int newSRIneq = 0;
+
+   // go through A, storing new bounds in newBoundsParent and possibly fixations in colAdaptParent
+   // go through B, adapting new bounds immediately and storing fixations in colAdaptLinkBlock
+
+   possFeas = procSingletonRowChildAmat(it, INEQUALITY_SYSTEM);
+   if( !possFeas ) return false;
+
+   std::vector<COLUMNTOADAPT> colAdaptLinkBlock;
+   possFeas = procSingletonRowChildBmat( *currBmat, it, colAdaptLinkBlock, newSRIneq, INEQUALITY_SYSTEM);
+   if( !possFeas ) return false;
+
+   // using colAdaptLinkBlock, go through the columns in Blmat
+   if( hasLinking(INEQUALITY_SYSTEM) )
+   {
+      possFeas = adaptChildBlmat( colAdaptLinkBlock, INEQUALITY_SYSTEM);
+      if( !possFeas ) return false;
+   }
+
+   // and go through the columns in Bmat, Blmat of the equality system
+   updateCPForSingletonRowEqualityBChild( it );
+   possFeas = adaptOtherSystemChildB( EQUALITY_SYSTEM, colAdaptLinkBlock, newSRIneq );
+   if( !possFeas ) return false;
 
    return true;
 }
@@ -558,23 +666,20 @@ bool StochPresolverSingletonRows::newBoundsFixVariable(double& value, double new
 bool StochPresolverSingletonRows::newBoundsTightenOldBounds(double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp)
 {
-   if( ( ixlow[colIdx] != 0.0 && xlow[colIdx] < newxlow )
-         || ( ixupp[colIdx] != 0.0 && xupp[colIdx] > newxupp ))
+   if( ( ixlow[colIdx] != 0.0 && newxlow > xlow[colIdx] )
+         || ( ixlow[colIdx] == 0.0 && newxlow > -std::numeric_limits<double>::max() )
+         || ( ixupp[colIdx] != 0.0 && newxupp < xupp[colIdx] )
+         || ( ixupp[colIdx] == 0.0 && newxupp < std::numeric_limits<double>::max() ) )
       return true;
    return false;
 }
 
 /** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
  * Adapts the objective offset g only once for each column (variable).
- * Should be called only from Process Zero.
  * Returns false if infeasibility is detected.
  */
 bool StochPresolverSingletonRows::storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g)
 {
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   assert( myRank == 0 );
-
    COLUMNTOADAPT colWithVal = {colIdx, value};
    bool uniqueAdditionToOffset = true;
    for(int i=0; i<presData.getNumberColAdParent(); i++)
@@ -735,9 +840,6 @@ bool StochPresolverSingletonRows::combineNewBoundsParent()
 void StochPresolverSingletonRows::updateLinkingVarsBounds()
 {
    cout<<"newBoundsParent has "<<getNumberNewBoundsParent()<<" entries."<<endl;
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
    setCPColumnRoot();
    double* ixlow = currIxlowParent->elements();
@@ -749,23 +851,21 @@ void StochPresolverSingletonRows::updateLinkingVarsBounds()
    for(int i=0; i<getNumberNewBoundsParent(); i++)
    {
       XBOUNDS newbounds = getNewBoundsParent(i);
-      int colIdx = newbounds.colIdx;
-      double newxlow = newbounds.newxlow;
-      double newxupp = newbounds.newxupp;
-      if( (ixlow[colIdx] != 0.0 && newxlow > xlow[colIdx])
-         || (ixlow[colIdx] == 0.0 && newxlow > -std::numeric_limits<double>::max()) )
-      {
-         ixlow[colIdx] = 1.0;
-         xlow[colIdx] = newxlow;
-      }
-      if( (ixupp[colIdx] != 0.0 && newxupp < xupp[colIdx])
-            || (ixupp[colIdx] == 0.0 && newxupp < std::numeric_limits<double>::max()))
-      {
-         ixupp[colIdx] = 1.0;
-         xupp[colIdx] = newxupp;
-      }
+      setNewXBounds(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp, ixlow, xlow, ixupp, xupp);
    }
    clearNewBoundsParent();
+}
+
+void StochPresolverSingletonRows::getValuesForSR(SparseStorageDynamic& storage, int rowIdx, int& colIdx, double& aik)
+{
+   int indexK = storage.rowptr[rowIdx].start;
+   colIdx = storage.jcolM[indexK];
+
+   assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
+
+   aik = storage.M[indexK];
+   assert(aik != 0.0);
+   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
 }
 
 XBOUNDS StochPresolverSingletonRows::getNewBoundsParent(int i)
@@ -791,6 +891,22 @@ void StochPresolverSingletonRows::addNewBoundsParent(XBOUNDS newXBounds)
 void StochPresolverSingletonRows::clearNewBoundsParent()
 {
    newBoundsParent.clear();
+}
+
+void StochPresolverSingletonRows::setNewXBounds(int colIdx, double newxlow, double newxupp, double* ixlow, double* xlow, double* ixupp, double* xupp)
+{
+   if( (ixlow[colIdx] != 0.0 && newxlow > xlow[colIdx])
+      || (ixlow[colIdx] == 0.0 && newxlow > -std::numeric_limits<double>::max()) )
+   {
+      ixlow[colIdx] = 1.0;
+      xlow[colIdx] = newxlow;
+   }
+   if( (ixupp[colIdx] != 0.0 && newxupp < xupp[colIdx])
+         || (ixupp[colIdx] == 0.0 && newxupp < std::numeric_limits<double>::max()))
+   {
+      ixupp[colIdx] = 1.0;
+      xupp[colIdx] = newxupp;
+   }
 }
 
 

@@ -133,6 +133,7 @@ protected:
    bool updateCPforTinyEntry(int it, SystemType system_type);
    bool updateCPForSingletonRow(int it, SystemType system_type);
    bool updateCPForSingletonRowInequalityBChild( int it );
+   bool updateCPForSingletonRowEqualityBChild( int it );
    bool updateCurrentPointersForColAdapt(int it, SystemType system_type);
    bool updateCPforColAdaptF0( SystemType system_type );
 
@@ -155,7 +156,7 @@ protected:
    void resetEqRhsAdaptionsLink();
    void resetIneqRhsAdaptionsLink();
 
-   double removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx);
+   bool removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m);
    void clearRow(SparseStorageDynamic& storage, const int rowIdx);
 
    bool childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type);
@@ -165,7 +166,7 @@ protected:
    bool adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type, int& newSR);
    bool adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
    int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
-   bool adaptInequalityChildB(std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq);
+   bool adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq);
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);

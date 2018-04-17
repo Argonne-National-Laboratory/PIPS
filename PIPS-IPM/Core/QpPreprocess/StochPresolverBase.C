@@ -411,6 +411,29 @@ bool StochPresolverBase::updateCPForSingletonRowInequalityBChild( int it )
    return true;
 }
 
+/** Return false if it is a dummy child. */
+bool StochPresolverBase::updateCPForSingletonRowEqualityBChild( int it )
+{
+   assert( it >= 0);
+   setCurrentPointersToNull();
+
+   // dummy child? set currBmat, currBmatTrans
+   if( !setCPBmatsChild(presProb->A, it, EQUALITY_SYSTEM)) return false;
+   setCPRowChildEquality(it);
+
+   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
+   currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+
+   if( hasLinking(EQUALITY_SYSTEM) )
+   {
+      setCPBlmatsChild(presProb->A, it);
+      currIcuppLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
+      currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
+      currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl);
+   }
+   return true;
+}
+
 /** Return false if it is a dummy child. Else, set the current pointers to Amat, AmatTrans, Bmat, BmatTrans,
  * currNnzRow, currRedRow, currNnzColChild, currRedColChild.
  * currxlowChild, currxuppChild, currIxlowChild, currIxuppChild.
@@ -632,26 +655,29 @@ void StochPresolverBase::resetIneqRhsAdaptionsLink()
    }
 }
 
-
-double StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx)
+/** Removes the specified entry from storage and stores its value in m.
+ * Returns false if the specified entry does not exist anymore in storage.
+ * For example, if the entry was removed before because of redundancy.
+ */
+bool StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m)
 {
-   int i;
+   int i = -1;
    int end = storage.rowptr[rowIdx].end;
    int start = storage.rowptr[rowIdx].start;
 
-   if( start == end )
-      return 0.0;
-   for( i=storage.rowptr[rowIdx].start; i<end; i++)
+   for( i=start; i<end; i++)
    {
       if( storage.jcolM[i] == colIdx )
-                  break;
+         break;
    }
-   double m = storage.M[i];
+   if( i < 0 || i == end )
+      return false;
+   m = storage.M[i];
    std::swap(storage.M[i],storage.M[end-1]);
    std::swap(storage.jcolM[i],storage.jcolM[end-1]);
    storage.rowptr[rowIdx].end --;
 
-   return m;
+   return true;
 }
 
 void StochPresolverBase::clearRow(SparseStorageDynamic& storage, const int rowIdx)
@@ -739,12 +765,12 @@ bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBl
       for( int j = currBmatTrans->rowptr[colIdx].start; j<currBmatTrans->rowptr[colIdx].end; j++ )
       {
          int rowIdx = currBmatTrans->jcolM[j];
-         double m = removeEntryInDynamicStorage(*currBmat, rowIdx, colIdx);
-
+         double m = 0.0;
+         bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdx, colIdx, m);
+         if( !entryExists )
+            continue;
          if( system_type == EQUALITY_SYSTEM )
-         {
             currEqRhs->elements()[rowIdx] -= m * val;
-         }
          else
          {
             assert(system_type ==INEQUALITY_SYSTEM);
@@ -792,12 +818,13 @@ bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptB
       for( int j = currBlmatTrans->rowptr[colIdx].start; j<currBlmatTrans->rowptr[colIdx].end; j++ )
       {
          int rowIdx = currBlmatTrans->jcolM[j];
-         double m = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx);
+         double m = 0.0;
+         bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdx, colIdx, m);
+         if( !entryExists )
+            continue;
 
          if( system_type == EQUALITY_SYSTEM )
-         {
             currEqRhsAdaptionsLink[rowIdx] -= m * val;
-         }
          else
          {
             if( currIcuppLink->elements()[rowIdx] != 0.0 )
@@ -829,7 +856,10 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
    for( int j = currBmatTrans->rowptr[colIdx].start; j<currBmatTrans->rowptr[colIdx].end; j++ )
    {
       int rowIdxB = currBmatTrans->jcolM[j];
-      double m = removeEntryInDynamicStorage(*currBmat, rowIdxB, colIdx);
+      double m = 0.0;
+      bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdxB, colIdx, m);
+      if( !entryExists )
+         continue;
 
       if( system_type == EQUALITY_SYSTEM )
          currEqRhs->elements()[rowIdxB] -= m * val;
@@ -858,16 +888,16 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
 
 /** Given the vector<COLUMNTOADAPT>, both the block Bmat and Blat (if existent) are updated accordingly.
  */
-bool StochPresolverBase::adaptInequalityChildB( std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq )
+bool StochPresolverBase::adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq )
 {
    // Bmat blocks
-   bool possFeas = adaptChildBmat( colAdaptBblock, INEQUALITY_SYSTEM, newSRIneq);
+   bool possFeas = adaptChildBmat( colAdaptBblock, system_type, newSRIneq);
    if( !possFeas ) return false;
 
    // Blmat blocks
-   if( hasLinking(INEQUALITY_SYSTEM) )
+   if( hasLinking(system_type) )
    {
-      bool possFeas = adaptChildBlmat( colAdaptBblock, INEQUALITY_SYSTEM);
+      bool possFeas = adaptChildBlmat( colAdaptBblock, system_type);
       if( !possFeas ) return false;
    }
 
@@ -889,7 +919,10 @@ int StochPresolverBase::colAdaptLinkVars(int it, SystemType system_type)
       for( int j = currAmatTrans->rowptr[colIdxA].start; j < currAmatTrans->rowptr[colIdxA].end; j++ )
       {
          int rowIdxA = currAmatTrans->jcolM[j];
-         double m = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA);
+         double m = 0.0;
+         bool entryExists = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m);
+         if( !entryExists )
+            continue;
          cout<<"Removed entry "<<rowIdxA<<", "<<colIdxA<<" with value "<<m<<" in Amat of child "<<it<<endl;
 
          if( system_type == EQUALITY_SYSTEM )
@@ -933,7 +966,10 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
       for( int j = currBlmatTrans->rowptr[colIdx].start; j<currBlmatTrans->rowptr[colIdx].end; j++ )
       {
          int rowIdx = currBlmatTrans->jcolM[j];
-         double m = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx);
+         double m = 0.0;
+         bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
+         if( !entryExists )
+            continue;
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsLink->elements()[rowIdx] -= m * val;

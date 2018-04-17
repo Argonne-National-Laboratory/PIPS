@@ -50,12 +50,14 @@ private:
 
    bool procSingletonRowRoot(StochGenMatrix& stochMatrix, SystemType system_type);
    bool procSingletonRowChild(StochGenMatrix& stochMatrix, int it, int& newSR, int& newSRIneq);
-   bool procSingletonRowChildAmat(SparseStorageDynamic& A_mat, int it);
-   bool procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR);
+   bool procSingletonRowChildAmat(int it, SystemType system_type);
+   bool procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR,
+         SystemType system_type);
    bool removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
 
    bool removeSingleRowEntryB0(SparseStorageDynamic& storage, int rowIdx);
-   bool removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, int rowIdx);
+   bool removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, SparseStorageDynamic& storageTransposed, int rowIdx);
+   bool procSingletonRowChildInequality(StochGenMatrix& stochMatrix, int it);
 
    void calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
@@ -69,11 +71,14 @@ private:
 
    bool combineNewBoundsParent();
    void updateLinkingVarsBounds();
+   void getValuesForSR(SparseStorageDynamic& storage, int rowIdx, int& colIdx, double& aik);
    XBOUNDS getNewBoundsParent(int i);
    void setNewBoundsParent(int i, int colIdx, double newxlow, double newxupp);
    int getNumberNewBoundsParent();
    void addNewBoundsParent(XBOUNDS newXBounds);
    void clearNewBoundsParent();
+
+   void setNewXBounds(int colIdx, double newxlow, double newxupp, double* ixlow, double* xlow, double* ixupp, double* xupp);
 };
 
 
