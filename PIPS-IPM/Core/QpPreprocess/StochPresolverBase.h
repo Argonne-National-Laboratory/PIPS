@@ -168,7 +168,7 @@ protected:
    bool adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type, int& newSR);
    bool adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
    int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
-   bool adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq);
+   bool adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSR);
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);

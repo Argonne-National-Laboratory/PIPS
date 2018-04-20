@@ -798,6 +798,7 @@ bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBl
 
 bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type)
 {
+   cout<<"colAdaptBlock.size(): "<<colAdaptBlock.size()<<endl;
    assert(currBlmat != NULL);
    if( system_type == EQUALITY_SYSTEM )
    {
@@ -820,9 +821,10 @@ bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptB
       {
          int rowIdx = currBlmatTrans->jcolM[j];
          double m = 0.0;
-         bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdx, colIdx, m);
+         bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
+         cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F_i, system_type:"<<system_type<<endl;
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsAdaptionsLink[rowIdx] -= m * val;
@@ -889,10 +891,10 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
 
 /** Given the vector<COLUMNTOADAPT>, both the block Bmat and Blat (if existent) are updated accordingly.
  */
-bool StochPresolverBase::adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSRIneq )
+bool StochPresolverBase::adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSR )
 {
    // Bmat blocks
-   bool possFeas = adaptChildBmat( colAdaptBblock, system_type, newSRIneq);
+   bool possFeas = adaptChildBmat( colAdaptBblock, system_type, newSR);
    if( !possFeas ) return false;
 
    // Blmat blocks
@@ -924,7 +926,7 @@ int StochPresolverBase::colAdaptLinkVars(int it, SystemType system_type)
          bool entryExists = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m);
          if( !entryExists )
             continue;
-         cout<<"Removed entry "<<rowIdxA<<", "<<colIdxA<<" with value "<<m<<" in Amat of child "<<it<<endl;
+         cout<<"Removed entry "<<rowIdxA<<", "<<colIdxA<<" with value "<<m<<" in Amat of child "<<it<<" system_type:"<<system_type<<endl;
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhs->elements()[rowIdxA] -= m * val;
@@ -971,6 +973,7 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
          bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
+         cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F0("<<system_type<<")"<<endl;
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsLink->elements()[rowIdx] -= m * val;
@@ -1008,8 +1011,5 @@ void StochPresolverBase::sumIndivObjOffset()
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &indivObjOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-   if( myRank == 0 )
-      cout<<"Individual objective offset is: "<<indivObjOffset<<endl;
 }
 

@@ -57,7 +57,7 @@ private:
 
    bool removeSingleRowEntryB0(SparseStorageDynamic& storage, int rowIdx);
    bool removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, SparseStorageDynamic& storageTransposed, int rowIdx);
-   bool procSingletonRowChildInequality(StochGenMatrix& stochMatrix, int it);
+   bool procSingletonRowChildInequality(StochGenMatrix& stochMatrix, int it, int newSREq, int newSRIneq);
 
    void calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
@@ -79,6 +79,7 @@ private:
    void clearNewBoundsParent();
 
    void setNewXBounds(int colIdx, double newxlow, double newxupp, double* ixlow, double* xlow, double* ixupp, double* xupp);
+   void synchronizeNumberSR(int& newSREq, int& newSRIneq);
 };
 
 

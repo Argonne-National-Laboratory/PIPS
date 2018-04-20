@@ -23,74 +23,82 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
 bool StochPresolverSingletonRows::applyPresolving(int& nelims)
 {
    int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    indivObjOffset = 0.0;
    nelims = 0;
+   int newSREq = 0;
    int newSRIneq = 0;
-   /* auskommentiert, um singletonRowC zu testen.
-   int newSREq = initSingletonRows(EQUALITY_SYSTEM);
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &newSREq, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
+   presData.resetRedCounters();
+   newSREq = initSingletonRows(EQUALITY_SYSTEM);
+   synchronizeNumberSR(newSREq, newSRIneq);
    if( myRank == 0 ) cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
 
    int iter = 0;
+   int globalIter = 0;
    bool possibleFeasible = true;
 
    // main loop:
-   while( newSREq > 0 && iter < maxIterSR)
+   while( (newSREq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
-      if( iter > 0 )
-         initSingletonRows(EQUALITY_SYSTEM);
-      presData.resetRedCounters();
-      // main method:
-      possibleFeasible = doSingletonRowsA(newSREq, newSRIneq);
-      if( !possibleFeasible )
+      cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+      while( newSREq > 0 && iter < maxIterSR)
       {
-         cout<<"Infeasibility detected during singleton row presolving."<<endl;
-         return 0;
+         cout<<"SR(Equality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+         if( globalIter > 0 )
+            initSingletonRows(EQUALITY_SYSTEM);
+         // main method:
+         possibleFeasible = doSingletonRowsA(newSREq, newSRIneq);
+         if( !possibleFeasible )
+         {
+            cout<<"Infeasibility detected: singleton row presolving of A."<<endl;
+            return 0;
+         }
+         // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsA:
+         updateLinkingVarsBlocks(newSREq, newSRIneq);
+         synchronizeNumberSR(newSREq, newSRIneq);
+
+         if( myRank == 0 )
+            cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
+         iter++;
       }
-      // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsA:
-      updateLinkingVarsBlocks(newSREq, newSRIneq);
-
-      if( myRank == 0 )
-         cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
-      iter++;
-   }*/
-
-   //todo: order in a loop SR routines for A and C
-   int newSREq = 0;
-   int iter = 0;
-
-   newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
-   if( newSRIneq > 0)
-   {
-      if( iter > 0 )
+      newSREq = 0;
+      if( globalIter == 0 )
+      {
          newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
-      cout<<"There are "<<newSRIneq<<" singleton rows in C."<<endl;
-      bool possibleFeasible = doSingletonRowsC(newSREq, newSRIneq);
-      if( !possibleFeasible )
-      {
-         cout<<"Infeasibility detected during singleton row presolving of C."<<endl;
-         return 0;
+         synchronizeNumberSR(newSREq, newSRIneq);
       }
-      cout<<"NnzRowsA: (";
-      presData.nRowElemsA->writeToStreamAll(cout);
-      cout<<"NnzRowsC: (";
-      presData.nRowElemsC->writeToStreamAll(cout);
-      cout<<"RedRowsC: (";
-      presData.redRowC->writeToStreamAll(cout);
+      while( newSRIneq > 0 && iter < maxIterSR)
+      {
+         cout<<"SR(Inequality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+         if( globalIter > 0 )
+            initSingletonRows(INEQUALITY_SYSTEM);
+         // main method:
+         possibleFeasible = doSingletonRowsC(newSREq, newSRIneq);
+         if( !possibleFeasible )
+         {
+            cout<<"Infeasibility detected: singleton row presolving of C."<<endl;
+            return 0;
+         }
+         // update the variable bounds for the linking variables:
+         updateLinkingVarsBounds();
+         // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsC:
+         updateLinkingVarsBlocks(newSREq, newSRIneq);
+         synchronizeNumberSR(newSREq, newSRIneq);
 
-      // update the variable bounds vor the linking variables:
-      updateLinkingVarsBounds();
-      // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsC:
-      updateLinkingVarsBlocks(newSREq, newSRIneq);
+         if( myRank == 0 )
+            cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
+         iter++;
+      }
+      newSRIneq = 0;
+      globalIter++;
    }
 
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
+   if( myRank == 0 ) cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
 
    return nelims;
 }
@@ -181,7 +189,6 @@ int StochPresolverSingletonRows::initSingletonRowsBlock(int it, SimpleVector* nn
 bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
 {
    newSREq = 0;
-   newSRIneq = 0;
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->A));
 
    updateCPForSingletonRow(-1, EQUALITY_SYSTEM);
@@ -210,8 +217,6 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
 
 bool StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
 {
-   cout<<"-----doSingletonRowsC-----"<<endl;
-   newSREq = 0;
    newSRIneq = 0;
    StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
 
@@ -225,7 +230,7 @@ bool StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
       // dummy child?
       if( updateCPForSingletonRow(it, INEQUALITY_SYSTEM) )
       {  // main part for each child: go through A and B and adapt F, D and G ?
-         possFeas = procSingletonRowChildInequality(matrix, it);
+         possFeas = procSingletonRowChildInequality(matrix, it, newSREq, newSRIneq);
          if( !possFeas ) return false;
       }
    }
@@ -326,7 +331,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
             if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
                   || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
             {
-               cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
+               cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<", child="<<it<<endl;
                return false;
             }
             if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
@@ -383,7 +388,8 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
    return true;
 }
 
-bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR, SystemType system_type)
+bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic& B_mat, int it,
+      std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR, SystemType system_type)
 {
    for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
@@ -403,7 +409,8 @@ bool StochPresolverSingletonRows::procSingletonRowChildBmat(SparseStorageDynamic
    return true;
 }
 
-bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR)
+bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
+      std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR)
 {
    double* ixlow = currIxlowChild->elements();
    double* ixupp = currIxuppChild->elements();
@@ -591,10 +598,9 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
    return true;
 }
 
-bool StochPresolverSingletonRows::procSingletonRowChildInequality(StochGenMatrix& stochMatrix, int it)
+bool StochPresolverSingletonRows::procSingletonRowChildInequality(StochGenMatrix& stochMatrix, int it, int newSREq, int newSRIneq)
 {
    bool possFeas = true;
-   int newSRIneq = 0;
 
    // go through A, storing new bounds in newBoundsParent and possibly fixations in colAdaptParent
    // go through B, adapting new bounds immediately and storing fixations in colAdaptLinkBlock
@@ -615,7 +621,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildInequality(StochGenMatrix
 
    // and go through the columns in Bmat, Blmat of the equality system
    updateCPForSingletonRowEqualityBChild( it );
-   possFeas = adaptOtherSystemChildB( EQUALITY_SYSTEM, colAdaptLinkBlock, newSRIneq );
+   possFeas = adaptOtherSystemChildB( EQUALITY_SYSTEM, colAdaptLinkBlock, newSREq );
    if( !possFeas ) return false;
 
    return true;
@@ -656,9 +662,16 @@ bool StochPresolverSingletonRows::newBoundsFixVariable(double& value, double new
       double* ixlow, double* ixupp, double* xlow, double* xupp)
 {
    if( newxlow == newxupp
-         || ( ixlow[colIdx] != 0.0 && xlow[colIdx] == newxupp )
-         || ( ixupp[colIdx] != 0.0 && xupp[colIdx] == newxlow ))
+         || ( ixlow[colIdx] != 0.0 && xlow[colIdx] == newxupp ))
+   {
+      value = newxupp;
       return true;
+   }
+   else if( ixupp[colIdx] != 0.0 && xupp[colIdx] == newxlow )
+   {
+      value = newxlow;
+      return true;
+   }
    return false;
 }
 
@@ -793,7 +806,6 @@ bool StochPresolverSingletonRows::combineNewBoundsParent()
 
    // Sort colIndicesGlobal (and xlowGlobal, xuppGlobal accordingly), remove duplicates,
    // tighten bounds and find infeasibilities
-   cout<<"Before sorting, newBoundsParent has "<<getNumberNewBoundsParent()<<" entries."<<endl;
    std::sort(newBoundsParent.begin(), newBoundsParent.end(), xbounds_col_is_smaller());
 
    if(getNumberNewBoundsParent() > 0)
@@ -809,7 +821,7 @@ bool StochPresolverSingletonRows::combineNewBoundsParent()
             double bestUpp = min(xuppCurrent, getNewBoundsParent(i).newxupp);
             if( bestLow > bestUpp )
             {
-               cout<<"Detected infeasibility (in variable) "<<colIdxCurrent<<endl;
+               cout<<"Detected infeasibility in variable "<<colIdxCurrent<<" of parent."<<endl;
                return false;
             }
             else
@@ -839,8 +851,6 @@ bool StochPresolverSingletonRows::combineNewBoundsParent()
  */
 void StochPresolverSingletonRows::updateLinkingVarsBounds()
 {
-   cout<<"newBoundsParent has "<<getNumberNewBoundsParent()<<" entries."<<endl;
-
    setCPColumnRoot();
    double* ixlow = currIxlowParent->elements();
    double* ixupp = currIxuppParent->elements();
@@ -905,6 +915,23 @@ void StochPresolverSingletonRows::setNewXBounds(int colIdx, double newxlow, doub
    {
       ixupp[colIdx] = 1.0;
       xupp[colIdx] = newxupp;
+   }
+}
+
+void StochPresolverSingletonRows::synchronizeNumberSR(int& newSREq, int& newSRIneq)
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   if( iAmDistrib )
+   {
+      int* newSR = new int[2];
+      newSR[0] = newSREq;
+      newSR[1] = newSRIneq;
+      MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      newSREq = newSR[0];
+      newSRIneq = newSR[1];
+      delete[] newSR;
    }
 }
 
