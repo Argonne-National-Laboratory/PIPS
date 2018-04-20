@@ -377,7 +377,7 @@ bool StochPresolverBase::updateCPForSingletonRow(int it, SystemType system_type)
 
          if( hasLinking(system_type) )
          {
-            setCPBlmatsChild( presProb->A, it);
+            setCPBlmatsChild( presProb->C, it);
             setCPRhsLinkInequality();
             currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
          }
