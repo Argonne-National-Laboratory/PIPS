@@ -91,6 +91,7 @@ Data* StochPresolver::presolve()
    cout<<"nColElems "<<endl;
    nColElems->writeToStreamAll(cout);
 */
+   cout<<"Finalizing presolved Data."<<endl;
    sData* finalPresData = presData.finalize();
 
    myfile.open("after.txt");

@@ -390,14 +390,14 @@ void SparseStorageDynamic::restoreOrder()
       // todo: this is too much overhead, better to implement a random access iterator
       std::vector<std::pair<int, double> > pairVector;
 
-      for(int j=0; j<(end - start); j++)
+      for(int j=start; j<end; j++)
          pairVector.push_back(make_pair(jcolM[j], M[j]));
 
       std::sort(pairVector.begin(), pairVector.end(), first_is_smaller());
-      for(int j=0; j<(end - start); j++)
+      for(int j=start; j<end; j++)
       {
-         jcolM[j] = pairVector[j].first;
-         M[j] = pairVector[j].second;
+         jcolM[j] = pairVector[j-start].first;
+         M[j] = pairVector[j-start].second;
       }
    }
 }
