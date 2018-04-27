@@ -102,7 +102,7 @@ bool PresolveData::combineColAdaptParent()
    if( iAmDistrib )
    {
       // allgather the length of each colAdaptParent
-      int mylen = getNumberColAdParent();
+      const int mylen = getNumberColAdParent();
       int* recvcounts = new int[world_size];
 
       MPI_Allgather(&mylen, 1, MPI_INT, recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
@@ -192,12 +192,12 @@ void PresolveData::resetBlocks()
    }
 }
 
-int PresolveData::getNChildren()
+int PresolveData::getNChildren() const
 {
    return nChildren;
 }
 
-double PresolveData::getObjOffset()
+double PresolveData::getObjOffset() const
 {
    return objOffset;
 }
@@ -211,12 +211,12 @@ void PresolveData::setObjOffset(double offset)
    objOffset = offset;
 }
 
-int PresolveData::getSingletonRow(int i)
+int PresolveData::getSingletonRow(int i) const
 {
    assert(i<getNumberSR() && i>=0);
    return singletonRows[i];
 }
-int PresolveData::getNumberSR()
+int PresolveData::getNumberSR() const
 {
    return (int)singletonRows.size();
 }
@@ -238,12 +238,12 @@ void PresolveData::clearSingletonRows()
    singletonRows.clear();
    resetBlocks();
 }
-int PresolveData::getSingletonRowIneq(int i)
+int PresolveData::getSingletonRowIneq(int i) const
 {
    assert(i<getNumberSRIneq() && i>=0);
    return singletonRowsIneq[i];
 }
-int PresolveData::getNumberSRIneq()
+int PresolveData::getNumberSRIneq() const
 {
    return (int)singletonRowsIneq.size();
 }
@@ -269,7 +269,7 @@ void PresolveData::setBlocks(int i, double value)
    assert(i<nChildren+3 && i>=0);
    blocks[i] = value;
 }
-double PresolveData::getBlocks(int i)
+double PresolveData::getBlocks(int i) const
 {
    assert(i<nChildren+3 && i>=0);
    return blocks[i];
@@ -279,18 +279,18 @@ void PresolveData::setBlocksIneq(int i, double value)
    assert(i<nChildren+3 && i>=0);
    blocksIneq[i] = value;
 }
-double PresolveData::getBlocksIneq(int i)
+double PresolveData::getBlocksIneq(int i) const
 {
    assert(i<nChildren+3 && i>=0);
    return blocksIneq[i];
 }
 
-COLUMNTOADAPT PresolveData::getColAdaptParent(int i)
+COLUMNTOADAPT PresolveData::getColAdaptParent(int i) const
 {
    assert( i<getNumberColAdParent() );
    return colAdaptParent[i];
 }
-int PresolveData::getNumberColAdParent()
+int PresolveData::getNumberColAdParent() const
 {
    return (int)colAdaptParent.size();
 }

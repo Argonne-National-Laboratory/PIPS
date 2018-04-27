@@ -118,12 +118,12 @@ protected:
    /* swap two entries in the SparseStorageDynamic format */
    void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims);
    void updateRhsNRowLink();
-   void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector);
+   void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
 
    void storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type);
    // methods to update the transposed matrix:
    void updateTransposed(StochGenMatrix& matrix);
-   void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd);
+   void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd) const;
 
    void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq);
 
@@ -158,17 +158,17 @@ protected:
    void resetEqRhsAdaptionsLink();
    void resetIneqRhsAdaptionsLink();
 
-   bool removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m);
-   void clearRow(SparseStorageDynamic& storage, const int rowIdx);
+   bool removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m) const;
+   void clearRow(SparseStorageDynamic& storage, const int rowIdx) const;
 
-   bool childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type);
-   bool hasLinking(SystemType system_type);
-   void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib);
+   bool childIsDummy(StochGenMatrix const & matrix, int it, SystemType system_type);
+   bool hasLinking(SystemType system_type) const;
+   void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
 
-   bool adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type, int& newSR);
-   bool adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type);
+   bool adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR);
+   bool adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type);
    int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
-   bool adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSR);
+   bool adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR);
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);

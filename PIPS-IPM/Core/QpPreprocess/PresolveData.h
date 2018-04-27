@@ -54,29 +54,29 @@ class PresolveData
       void resetRedCounters();
       void resetBlocks();
       // todo getter, setter for element access of nnz counter???
-      int getNChildren();
-      double getObjOffset();
+      int getNChildren() const;
+      double getObjOffset() const;
       double addObjOffset(double addOffset);
       void setObjOffset(double offset);
 
-      int getSingletonRow(int i);
-      int getNumberSR();
+      int getSingletonRow(int i) const;
+      int getNumberSR() const;
       void addSingletonRow(int value);
       void setSingletonRow(int i, int value);
       void clearSingletonRows();
-      int getSingletonRowIneq(int i);
-      int getNumberSRIneq();
+      int getSingletonRowIneq(int i) const;
+      int getNumberSRIneq() const;
       void addSingletonRowIneq(int value);
       void setSingletonRowIneq(int i, int value);
       void clearSingletonRowsIneq();
 
       void setBlocks(int i, double value);
-      double getBlocks(int i);
+      double getBlocks(int i) const;
       void setBlocksIneq(int i, double value);
-      double getBlocksIneq(int i);
+      double getBlocksIneq(int i) const;
 
-      COLUMNTOADAPT getColAdaptParent(int i);
-      int getNumberColAdParent();
+      COLUMNTOADAPT getColAdaptParent(int i) const;
+      int getNumberColAdParent() const;
       void addColToAdaptParent(COLUMNTOADAPT colToAdapt);
       void clearColAdaptParent();
 

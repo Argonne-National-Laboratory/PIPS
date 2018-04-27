@@ -42,7 +42,7 @@ bool StochPresolverTinyEntries::applyPresolving(int& nelims)
    if( myRank == 0)
       std::cout << "removing tiny entries finished. Removed "<< nelims <<" entries in total." << std::endl;
 
-   return nelims;
+   return true;
 }
 
 int StochPresolverTinyEntries::removeTinyEntriesSystemA()
@@ -91,7 +91,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    if( iAmDistrib )
    {
       double* redColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
+      const int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
       MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
    }
    updateNnzUsingReductions((*presData.nColElems).vec, presData.redCol->vec);
@@ -150,7 +150,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
    if( iAmDistrib )
    {
       double* redColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
+      const int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
       MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
    }
    updateNnzUsingReductions((*presData.nColElems).vec, presData.redCol->vec);
@@ -166,10 +166,8 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
 /** Calls removeTinyInnerLoop for a Child on the matrices Amat, Bmat which also adapts the rhs. */
 int StochPresolverTinyEntries::removeTinyChild( int it, SystemType system_type )
 {
-   int nelims = 0;
-
    // for Amat:
-   nelims += removeTinyInnerLoop( it, system_type, LINKING_VARS_BLOCK );
+   int nelims = removeTinyInnerLoop( it, system_type, LINKING_VARS_BLOCK );
 
    // for Bmat:
    nelims += removeTinyInnerLoop( it, system_type, CHILD_BLOCK );
@@ -239,9 +237,8 @@ int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_ty
    // the actual work starts here:
    for( int r = 0; r < storage->m; r++ )
    {
-      const int start = storage->rowptr[r].start;
       int end = storage->rowptr[r].end;
-      int k = start;
+      int k = storage->rowptr[r].start;
       while( k < end )
       {
          const int col = storage->jcolM[k];

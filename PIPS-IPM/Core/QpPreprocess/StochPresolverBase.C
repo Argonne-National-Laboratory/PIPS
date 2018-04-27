@@ -78,7 +78,7 @@ void StochPresolverBase::updateRhsNRowLink()
       {
          // todo improve mpi communication, only one:
          double* redRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl)->elements();
-         int message_sizeA = dynamic_cast<SimpleVector*>(presData.redRowA->vecl)->length();
+         const int message_sizeA = dynamic_cast<SimpleVector*>(presData.redRowA->vecl)->length();
          MPI_Allreduce(MPI_IN_PLACE, redRowLink, message_sizeA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
          MPI_Allreduce(MPI_IN_PLACE, currEqRhsAdaptionsLink, message_sizeA, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       }
@@ -97,7 +97,7 @@ void StochPresolverBase::updateRhsNRowLink()
       if( iAmDistrib )
       {
          // todo improve mpi communication, only one:
-         int message_sizeC = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->length();
+         const int message_sizeC = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->length();
          double* redRowLinkC = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->elements();
          MPI_Allreduce(MPI_IN_PLACE, redRowLinkC, message_sizeC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
          MPI_Allreduce(MPI_IN_PLACE, currInEqRhsAdaptionsLink, message_sizeC, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -118,7 +118,7 @@ void StochPresolverBase::updateRhsNRowLink()
 }
 
 /** Update the nnzVector by subtracting the reductions vector. */
-void StochPresolverBase::updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector)
+void StochPresolverBase::updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const
 {
    SimpleVector* redSimple = dynamic_cast<SimpleVector*>(redVector);
    nnzVector->axpy(-1.0, *redSimple);
@@ -141,7 +141,7 @@ void StochPresolverBase::storeRemovedEntryIndex(int rowidx, int colidx, int it, 
    else if( block_type == CHILD_BLOCK )
       assert( childBlocks[it+1].start <= localNelims );
 
-   MTRXENTRY entry = {rowidx, colidx};
+   const MTRXENTRY entry = {rowidx, colidx};
    removedEntries.push_back(entry);
 
    localNelims++;
@@ -181,17 +181,17 @@ void StochPresolverBase::updateTransposed(StochGenMatrix& matrix)
    resetLinkvarsAndChildBlocks();
 }
 
-void StochPresolverBase::updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd)
+void StochPresolverBase::updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd) const
 {
    assert( blockEnd <= (int)removedEntries.size());
 
    for( int j = blockStart; j < blockEnd; j++)
    {
-      int row_A = removedEntries[j].rowIdx;
-      int row_At = removedEntries[j].colIdx;
+      const int row_A = removedEntries[j].rowIdx;
+      const int row_At = removedEntries[j].colIdx;
 
-      int start = transStorage.rowptr[row_At].start;
-      int end = transStorage.rowptr[row_At].end;
+      const int start = transStorage.rowptr[row_At].start;
+      const int end = transStorage.rowptr[row_At].end;
       int col_At;
 
       for( col_At = start; col_At < end; col_At++)
@@ -660,7 +660,7 @@ void StochPresolverBase::resetIneqRhsAdaptionsLink()
  * Returns false if the specified entry does not exist anymore in storage.
  * For example, if the entry was removed before because of redundancy.
  */
-bool StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m)
+bool StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m) const
 {
    int i = -1;
    int end = storage.rowptr[rowIdx].end;
@@ -681,12 +681,12 @@ bool StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& stora
    return true;
 }
 
-void StochPresolverBase::clearRow(SparseStorageDynamic& storage, const int rowIdx)
+void StochPresolverBase::clearRow(SparseStorageDynamic& storage, const int rowIdx) const
 {
    storage.rowptr[rowIdx].end = storage.rowptr[rowIdx].start;
 }
 
-bool StochPresolverBase::childIsDummy(StochGenMatrix& matrix, int it, SystemType system_type)
+bool StochPresolverBase::childIsDummy(StochGenMatrix const & matrix, int it, SystemType system_type)
 {
    if( matrix.children[it]->isKindOf(kStochGenDummyMatrix))
    {
@@ -717,7 +717,7 @@ bool StochPresolverBase::childIsDummy(StochGenMatrix& matrix, int it, SystemType
    return false;
 }
 
-bool StochPresolverBase::hasLinking(SystemType system_type)
+bool StochPresolverBase::hasLinking(SystemType system_type) const
 {
    int mlink, nlink;
    if( system_type == EQUALITY_SYSTEM )
@@ -743,7 +743,7 @@ bool StochPresolverBase::hasLinking(SystemType system_type)
    return false;
 }
 
-void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& iAmDistrib )
+void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& iAmDistrib ) const
 {
    MPI_Comm_rank(comm, &myRank);
    int world_size;
@@ -756,7 +756,7 @@ void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& i
  * Given a vector<COLUMNTOADAPT>, this routine goes through all columns inside and removes them
  * from the current Bmat block. Depending on the system_type, rhs (and lhs) are updated.
  */
-bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type, int& newSR )
+bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR )
 {
    for(int i=0; i<(int)colAdaptBlock.size(); i++)
    {
@@ -796,7 +796,7 @@ bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> & colAdaptBl
    return true;
 }
 
-bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptBlock, SystemType system_type)
+bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type)
 {
    cout<<"colAdaptBlock.size(): "<<colAdaptBlock.size()<<endl;
    assert(currBlmat != NULL);
@@ -814,14 +814,14 @@ bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> & colAdaptB
 
    for(int i=0; i<(int)colAdaptBlock.size(); i++)
    {
-      int colIdx = colAdaptBlock[i].colIdx;
-      double val = colAdaptBlock[i].val;
+      const int colIdx = colAdaptBlock[i].colIdx;
+      const double val = colAdaptBlock[i].val;
 
       for( int j = currBlmatTrans->rowptr[colIdx].start; j<currBlmatTrans->rowptr[colIdx].end; j++ )
       {
-         int rowIdx = currBlmatTrans->jcolM[j];
+         const int rowIdx = currBlmatTrans->jcolM[j];
          double m = 0.0;
-         bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
+         const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
          cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F_i, system_type:"<<system_type<<endl;
@@ -858,9 +858,9 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
 
    for( int j = currBmatTrans->rowptr[colIdx].start; j<currBmatTrans->rowptr[colIdx].end; j++ )
    {
-      int rowIdxB = currBmatTrans->jcolM[j];
+      const int rowIdxB = currBmatTrans->jcolM[j];
       double m = 0.0;
-      bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdxB, colIdx, m);
+      const bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdxB, colIdx, m);
       if( !entryExists )
          continue;
 
@@ -891,16 +891,16 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
 
 /** Given the vector<COLUMNTOADAPT>, both the block Bmat and Blat (if existent) are updated accordingly.
  */
-bool StochPresolverBase::adaptOtherSystemChildB( SystemType system_type, std::vector<COLUMNTOADAPT> & colAdaptBblock, int& newSR )
+bool StochPresolverBase::adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR )
 {
    // Bmat blocks
-   bool possFeas = adaptChildBmat( colAdaptBblock, system_type, newSR);
+   bool possFeas = adaptChildBmat(colAdaptBblock, system_type, newSR);
    if( !possFeas ) return false;
 
    // Blmat blocks
    if( hasLinking(system_type) )
    {
-      bool possFeas = adaptChildBlmat( colAdaptBblock, system_type);
+      possFeas = adaptChildBlmat(colAdaptBblock, system_type);
       if( !possFeas ) return false;
    }
 
@@ -916,14 +916,14 @@ int StochPresolverBase::colAdaptLinkVars(int it, SystemType system_type)
 
    for( int i=0; i < presData.getNumberColAdParent(); i++)
    {
-      int colIdxA = presData.getColAdaptParent(i).colIdx;
-      double val = presData.getColAdaptParent(i).val;
+      const int colIdxA = presData.getColAdaptParent(i).colIdx;
+      const double val = presData.getColAdaptParent(i).val;
 
       for( int j = currAmatTrans->rowptr[colIdxA].start; j < currAmatTrans->rowptr[colIdxA].end; j++ )
       {
-         int rowIdxA = currAmatTrans->jcolM[j];
+         const int rowIdxA = currAmatTrans->jcolM[j];
          double m = 0.0;
-         bool entryExists = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m);
+         const bool entryExists = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m);
          if( !entryExists )
             continue;
          cout<<"Removed entry "<<rowIdxA<<", "<<colIdxA<<" with value "<<m<<" in Amat of child "<<it<<" system_type:"<<system_type<<endl;
@@ -963,14 +963,14 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
 
    for(int i=0; i<presData.getNumberColAdParent(); i++)
    {
-      int colIdx = presData.getColAdaptParent(i).colIdx;
-      double val = presData.getColAdaptParent(i).val;
+      const int colIdx = presData.getColAdaptParent(i).colIdx;
+      const double val = presData.getColAdaptParent(i).val;
 
       for( int j = currBlmatTrans->rowptr[colIdx].start; j<currBlmatTrans->rowptr[colIdx].end; j++ )
       {
-         int rowIdx = currBlmatTrans->jcolM[j];
+         const int rowIdx = currBlmatTrans->jcolM[j];
          double m = 0.0;
-         bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
+         const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
          cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F0("<<system_type<<")"<<endl;
