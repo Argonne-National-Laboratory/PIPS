@@ -276,4 +276,36 @@ int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_ty
    return nelims;
 }
 
+bool StochPresolverTinyEntries::updateCPforTinyEntry(int it, SystemType system_type)
+{
+   setCurrentPointersToNull();
+   setCPColumnRoot();
+
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      // dummy child? set currAmat and currBmat
+      if( !setCPAmatBmat(presProb->A, it, EQUALITY_SYSTEM) ) return false;
+      if( it == -1 ) // case at root
+         setCPRowRootEquality();
+      else  // at child it
+         setCPRowChildEquality(it);
+   }
+   else  // system_type == INEQUALITY_SYSTEM
+   {
+      assert( system_type == INEQUALITY_SYSTEM );
+
+      // dummy child? set currAmat and currBmat
+      if( !setCPAmatBmat(presProb->C, it, INEQUALITY_SYSTEM) ) return false;
+
+      if( it == -1 ) // case at root
+         setCPRowRootInequality();
+      else  // at child it
+         setCPRowChildInequality(it);
+   }
+   if( it > -1 ) // at child it
+      setCPColumnChild(it);
+
+   return true;
+}
+
 

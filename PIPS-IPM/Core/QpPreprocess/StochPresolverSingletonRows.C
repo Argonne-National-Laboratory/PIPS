@@ -940,5 +940,112 @@ void StochPresolverSingletonRows::synchronizeNumberSR(int& newSREq, int& newSRIn
    }
 }
 
+/** Update the current pointers for the singleton row routine.
+ * If it==-1, we are at parent block. Else, et child[it].
+ * Return false if child[it] is a dummy child. */
+bool StochPresolverSingletonRows::updateCPForSingletonRow(int it, SystemType system_type)
+{
+   setCurrentPointersToNull();
+
+   setCPColumnRoot();
+   currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
+
+   if( it == -1 )
+   {
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         setCPAmatsRoot(presProb->C);
+         setCPRowRootEquality();
+      }
+      else  // INEQUALITY_SYSTEM
+      {
+         assert( system_type == INEQUALITY_SYSTEM );
+         setCPAmatsRoot(presProb->C);
+         setCPRowRootInequality();
+         currNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec);
+      }
+   }
+   else  // at child it
+   {
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         // child is dummy? set currAmat, AmatTrans, Bmat, BmatTrans
+         if( !setCPAmatsChild( presProb->A,  it, system_type)) return false;
+         if( !setCPBmatsChild( presProb->A,  it, system_type)) return false;
+         setCPRowChildEquality(it);
+
+         if( hasLinking(system_type) )
+         {
+            setCPBlmatsChild( presProb->A, it);
+            setCPRowLinkEquality();
+         }
+      }
+      else  // INEQUALITY_SYSTEM
+      {
+         // child is dummy? set currAmat, AmatTrans, Bmat, BmatTrans
+         if( !setCPAmatsChild( presProb->C,  it, system_type)) return false;
+         if( !setCPBmatsChild( presProb->C,  it, system_type)) return false;
+         setCPRowChildInequality(it);
+
+         if( hasLinking(system_type) )
+         {
+            setCPBlmatsChild( presProb->C, it);
+            setCPRhsLinkInequality();
+            currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
+         }
+      }
+      setCPColumnChild(it);
+      currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
+      currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+   }
+   return true;
+}
+
+/** Return false if it is a dummy child. */
+bool StochPresolverSingletonRows::updateCPForSingletonRowInequalityBChild( int it )
+{
+   assert( it >= 0);
+   setCurrentPointersToNull();
+
+   // dummy child? set currBmat, currBmatTrans
+   if( !setCPBmatsChild(presProb->C, it, INEQUALITY_SYSTEM)) return false;
+   setCPRowChildInequality(it);
+
+   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
+   currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+
+   if( hasLinking(INEQUALITY_SYSTEM) )
+   {
+      setCPBlmatsChild(presProb->C, it);
+      currIcuppLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
+      currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
+      currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
+   }
+   return true;
+}
+
+/** Return false if it is a dummy child. */
+bool StochPresolverSingletonRows::updateCPForSingletonRowEqualityBChild( int it )
+{
+   assert( it >= 0);
+   setCurrentPointersToNull();
+
+   // dummy child? set currBmat, currBmatTrans
+   if( !setCPBmatsChild(presProb->A, it, EQUALITY_SYSTEM)) return false;
+   setCPRowChildEquality(it);
+
+   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
+   currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+
+   if( hasLinking(EQUALITY_SYSTEM) )
+   {
+      setCPBlmatsChild(presProb->A, it);
+      currIcuppLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
+      currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
+      currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl);
+   }
+   return true;
+}
+
 
 
