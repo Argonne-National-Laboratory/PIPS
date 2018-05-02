@@ -87,6 +87,7 @@ private:
    bool updateCPForSingletonRow(int it, SystemType system_type);
    bool updateCPForSingletonRowInequalityBChild( int it );
    bool updateCPForSingletonRowEqualityBChild( int it );
+
 };
 
 

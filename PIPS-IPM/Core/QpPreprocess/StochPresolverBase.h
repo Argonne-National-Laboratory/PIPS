@@ -169,6 +169,11 @@ protected:
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);
    void sumIndivObjOffset();
+
+   void countRowsCols();
+   void countRangedRowsBlock(int& nRangedRows, int& nRowsIneq) const;
+   void countEqualityRowsBlock(int& nRowsEq) const;
+   void countBoxedColumns(int& nBoxCols, int& nColsTotal) const;
 };
 
 

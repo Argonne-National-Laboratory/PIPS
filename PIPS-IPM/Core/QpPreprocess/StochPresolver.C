@@ -23,6 +23,7 @@
 #include "DoubleMatrixTypes.h"
 #include "StochPresolverTinyEntries.h"
 #include "StochPresolverSingletonRows.h"
+#include "StochPresolverDuplicateRows.h"
 #include "PresolveData.h"
 
 StochPresolver::StochPresolver(const Data* prob)
@@ -61,6 +62,7 @@ Data* StochPresolver::presolve()
 
    // init all presolvers:
 
+   StochPresolverDuplicateRows presolverDuplicateRow(presData);
    StochPresolverTinyEntries presolverTiny(presData);
    StochPresolverSingletonRows presolverSR(presData);
 
@@ -70,7 +72,9 @@ Data* StochPresolver::presolve()
       // presolverTiny.applyPresolving
       // presolverSingletonRow.applyPresolving
 
-   bool possfeas = presolverTiny.applyPresolving(nelims);
+   bool possfeas;
+   possfeas = presolverDuplicateRow.applyPresolving(nelims);
+   possfeas = presolverTiny.applyPresolving(nelims);
    possfeas = presolverSR.applyPresolving(nelims);
 
   // if( !possfeas )
@@ -94,16 +98,16 @@ Data* StochPresolver::presolve()
    cout<<"Finalizing presolved Data."<<endl;
    sData* finalPresData = presData.finalize();
 
-   myfile.open("after.txt");
+/*   myfile.open("after.txt");
    finalPresData->writeToStreamDense(myfile);
-   myfile.close();
+   myfile.close();*/
 
    //presProb->writeToStreamDense(std::cout);
 
    std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
    std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
 
-
+   //MPI_Barrier( MPI_COMM_WORLD);
    //assert(0);
 
    return finalPresData;

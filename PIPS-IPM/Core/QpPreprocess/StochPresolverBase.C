@@ -685,7 +685,7 @@ bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & col
          const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
-         cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F_i, system_type:"<<system_type<<endl;
+         //cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F_i, system_type:"<<system_type<<endl;
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsAdaptionsLink[rowIdx] -= m * val;
@@ -787,7 +787,7 @@ int StochPresolverBase::colAdaptLinkVars(int it, SystemType system_type)
          const bool entryExists = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m);
          if( !entryExists )
             continue;
-         cout<<"Removed entry "<<rowIdxA<<", "<<colIdxA<<" with value "<<m<<" in Amat of child "<<it<<" system_type:"<<system_type<<endl;
+         //cout<<"Removed entry "<<rowIdxA<<", "<<colIdxA<<" with value "<<m<<" in Amat of child "<<it<<" system_type:"<<system_type<<endl;
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhs->elements()[rowIdxA] -= m * val;
@@ -834,7 +834,7 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
          const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
-         cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F0("<<system_type<<")"<<endl;
+         //cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F0("<<system_type<<")"<<endl;
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsLink->elements()[rowIdx] -= m * val;
@@ -872,5 +872,140 @@ void StochPresolverBase::sumIndivObjOffset()
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &indivObjOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+}
+
+void StochPresolverBase::countRowsCols()
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
+   int nRangedRows = 0;
+   int nRowsIneq = 0;
+   int nRowsEq = 0;
+   int nBoxCols = 0;
+   int nColsTotal = 0;
+
+   if( myRank == 0 )
+   {
+      currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
+      currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
+      countRangedRowsBlock( nRangedRows, nRowsIneq);
+
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
+      countEqualityRowsBlock(nRowsEq);
+
+      currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
+      currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
+      currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->vec);
+      countBoxedColumns( nBoxCols, nColsTotal);
+   }
+
+   assert((int)presData.nRowElemsC->children.size() == nChildren);
+   assert((int)presData.nRowElemsA->children.size() == (int)presData.nRowElemsC->children.size());
+   assert( (int)dynamic_cast<StochVector&>(*(presProb->icupp)).children.size() == nChildren );
+   for( size_t it = 0; it < presData.nRowElemsC->children.size(); it++)
+   {
+      if( !childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->C)), it, INEQUALITY_SYSTEM))
+      {
+         currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec);
+         currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec);
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
+         countRangedRowsBlock(nRangedRows, nRowsIneq);
+
+         currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
+         currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
+         currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+         countBoxedColumns( nBoxCols, nColsTotal);
+      }
+      if(!childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->A)), it, EQUALITY_SYSTEM))
+      {
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec);
+         countEqualityRowsBlock(nRowsEq);
+      }
+   }
+
+   if( hasLinking(INEQUALITY_SYSTEM) && myRank == 0 )
+   {
+      currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
+      currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      countRangedRowsBlock(nRangedRows, nRowsIneq);
+   }
+   if( hasLinking(EQUALITY_SYSTEM) && myRank == 0)
+   {
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      countEqualityRowsBlock(nRowsEq);
+   }
+
+   if( iAmDistrib )
+   {
+      int* count = new int[5];
+      count[0] = nRangedRows;
+      count[1] = nRowsIneq;
+      count[2] = nRowsEq;
+      count[3] = nBoxCols;
+      count[4] = nColsTotal;
+      MPI_Allreduce(MPI_IN_PLACE, count, 5, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      nRangedRows = count[0];
+      nRowsIneq = count[1];
+      nRowsEq = count[2];
+      nBoxCols = count[3];
+      nColsTotal = count[4];
+      delete[] count;
+   }
+
+   if( myRank == 0 )
+   {
+      cout<<"There are "<<nRangedRows<<" ranged Rows and "<<nRowsIneq<<" rows in C."<<endl;
+      cout<<"There are "<<nRowsEq<<" Rows in A and "<<nRowsEq+nRowsIneq<<" rows in total."<<endl;
+      cout<<"There are "<<nBoxCols<<" boxed Columns and "<<nColsTotal<<" columns in total."<<endl;
+   }
+
+   // MPI_Barrier( MPI_COMM_WORLD);
+   // assert(0);
+
+}
+
+void StochPresolverBase::countRangedRowsBlock(int& nRangedRows, int& nRowsIneq) const
+{
+   assert( currIclow->n == currIcupp->n );
+
+   for( int i = 0; i < currIclow->n; i++ )
+   {
+      if( currNnzRow->elements()[i] != 0.0 )
+      {
+         nRowsIneq ++;
+         if( currIclow->elements()[i] != 0.0 && currIcupp->elements()[i] != 0.0 )
+            nRangedRows++;
+      }
+   }
+}
+
+void StochPresolverBase::countEqualityRowsBlock(int& nRowsEq) const
+{
+   assert( currNnzRow != NULL );
+
+   for( int i = 0; i < currNnzRow->n; i++ )
+   {
+      if( currNnzRow->elements()[i] != 0.0 )
+         nRowsEq ++;
+   }
+}
+
+void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal) const
+{
+   assert( currIxlowChild->n == currIxuppChild->n );
+
+   for( int i = 0; i < currIxlowChild->n; i++ )
+   {
+      if( currNnzColChild->elements()[i] != 0.0 )
+      {
+         nColsTotal ++;
+         if( currIxlowChild->elements()[i] != 0.0 && currIxuppChild->elements()[i] != 0.0 )
+            nBoxCols++;
+      }
+   }
 }
 

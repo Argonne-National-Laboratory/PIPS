@@ -25,6 +25,10 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
+   if( myRank == 0 )
+      cout<<"Before singleton Row Presolving:"<<endl;
+   countRowsCols();
+
    indivObjOffset = 0.0;
    nelims = 0;
    int newSREq = 0;
@@ -106,7 +110,12 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
-   if( myRank == 0 ) cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
+   if( myRank == 0 )
+   {
+      cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
+      cout<<"After singleton Row Presolving:"<<endl;
+   }
+   countRowsCols();
 
    return true;
 }
@@ -145,16 +154,28 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 
       // todo: linking block nRowElemsA->vecl
       //blocks[nChildren+2] = singletonRows.size();
+      if( hasLinking(EQUALITY_SYSTEM) && myRank == 0)
+      {
+         int nSRLink = 0;
+         SimpleVector* nnzRowLink = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+
+         for( int i = 0; i < nnzRowLink->n; i++ )
+            if( nnzRowLink->elements()[i] == 1.0 )
+            {
+               nSRLink++;
+            }
+         cout<<"There are "<<nSRLink<<" singleton rows among the linking contraints of A."<<endl;
+      }
    }
    else
    {
       assert( system_type == INEQUALITY_SYSTEM );
-      //todo: if rows from A and C should be stored, then another variable to store the indices is needed,
-      // blocks is not enough.
       assert(presData.getNumberSR() == 0);
 
-      SimpleVector* nRowASimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
-      nSingletonRows += initSingletonRowsBlock(-1, nRowASimple);
+      SimpleVector* nRowCSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
+      const int nSingleRowsA0block =  initSingletonRowsBlock(-1, nRowCSimple);
+      if( myRank == 0 )
+         nSingletonRows += nSingleRowsA0block;
 
       assert((int)presData.nRowElemsC->children.size() == nChildren);
       for( size_t it = 0; it < presData.nRowElemsC->children.size(); it++)
@@ -166,6 +187,18 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 
       // todo: linking block nRowElemsC->vecl
       //blocks[nChildren+2] = singletonRows.size();
+      if( hasLinking(INEQUALITY_SYSTEM) && myRank == 0)
+      {
+         int nSRLink = 0;
+         SimpleVector* nnzRowLink = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+
+         for( int i = 0; i < nnzRowLink->n; i++ )
+            if( nnzRowLink->elements()[i] == 1.0 )
+            {
+               nSRLink++;
+            }
+         cout<<"There are "<<nSRLink<<" singleton rows among the linking contraints of C."<<endl;
+      }
    }
 
    return nSingletonRows;
@@ -358,7 +391,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
             // test if they imply fixation
             else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
             {
-               cout<<"New bounds imply fixation of variable "<<colIdx<<" of child "<<it<<" to value: "<<val<<endl;
+               //cout<<"New bounds imply fixation of variable "<<colIdx<<" of child "<<it<<" to value: "<<val<<endl;
                // as in SR(equality), store them to remove the column later
                if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
                   return false;
@@ -460,7 +493,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
       // test if they imply fixation
       else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
       {
-         cout<<"New bounds imply fixation of variable "<<colIdx<<" of a child to value: "<<val<<endl;
+         //cout<<"New bounds imply fixation of variable "<<colIdx<<" of a child to value: "<<val<<endl;
          // adapt immediately in D_i by adapting objOffset, removing column colIdx and store in colADaptLinkBlock for G, F, B
          indivObjOffset += g[colIdx] * val;
 
@@ -878,7 +911,7 @@ void StochPresolverSingletonRows::getValuesForSR(SparseStorageDynamic const & st
 
    assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
    assert(aik != 0.0);
-   cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
+   //cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
 }
 
 XBOUNDS StochPresolverSingletonRows::getNewBoundsParent(int i) const
@@ -1046,6 +1079,5 @@ bool StochPresolverSingletonRows::updateCPForSingletonRowEqualityBChild( int it 
    }
    return true;
 }
-
 
 
