@@ -613,6 +613,32 @@ void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& i
    else iAmDistrib = false;
 }
 
+void StochPresolverBase::synchronize(int& value) const
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+}
+
+void StochPresolverBase::synchronizeSum(int& first, int& second) const
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   if( iAmDistrib )
+   {
+      int* newSR = new int[2];
+      newSR[0] = first;
+      newSR[1] = second;
+      MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      first = newSR[0];
+      second = newSR[1];
+      delete[] newSR;
+   }
+}
+
 /*
  * Given a vector<COLUMNTOADAPT>, this routine goes through all columns inside and removes them
  * from the current Bmat block. Depending on the system_type, rhs (and lhs) are updated.

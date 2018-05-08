@@ -160,6 +160,9 @@ protected:
    bool childIsDummy(StochGenMatrix const & matrix, int it, SystemType system_type);
    bool hasLinking(SystemType system_type) const;
    void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
+   void synchronize(int& value) const;
+   void synchronizeSum(int& first, int& second) const;
+
 
    bool adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR);
    bool adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type);

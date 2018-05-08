@@ -36,7 +36,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
 
    presData.resetRedCounters();
    newSREq = initSingletonRows(EQUALITY_SYSTEM);
-   synchronizeNumberSR(newSREq, newSRIneq);
+   synchronize(newSREq);
    if( myRank == 0 ) cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
 
    int iter = 0;
@@ -61,7 +61,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
          }
          // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsA:
          updateLinkingVarsBlocks(newSREq, newSRIneq);
-         synchronizeNumberSR(newSREq, newSRIneq);
+         synchronizeSum(newSREq, newSRIneq);
 
          if( myRank == 0 )
             cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
@@ -71,7 +71,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       if( globalIter == 0 )
       {
          newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
-         synchronizeNumberSR(newSREq, newSRIneq);
+         synchronize(newSRIneq);
          if( myRank == 0 )
             cout<<"Found "<<newSRIneq<<" singleton rows in C."<<endl;
       }
@@ -80,9 +80,9 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
          cout<<"SR(Inequality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
          if( globalIter > 0 )
          {
-            initSingletonRows(INEQUALITY_SYSTEM);
+            newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
             // only for debugging:
-            synchronizeNumberSR(newSREq, newSRIneq);
+            synchronize(newSRIneq);
             if( myRank == 0 )
                cout<<"Found "<<newSRIneq<<" singleton rows in C."<<endl;
          }
@@ -97,10 +97,10 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
          updateLinkingVarsBounds();
          // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsC:
          updateLinkingVarsBlocks(newSREq, newSRIneq);
-         synchronizeNumberSR(newSREq, newSRIneq);
+         synchronizeSum(newSREq, newSRIneq);
 
          if( myRank == 0 )
-            cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
+            cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A (at most), "<<newSRIneq<<" in C."<<endl;
          iter++;
       }
       newSRIneq = 0;
@@ -953,23 +953,6 @@ void StochPresolverSingletonRows::setNewXBounds(int colIdx, double newxlow, doub
    {
       ixupp[colIdx] = 1.0;
       xupp[colIdx] = newxupp;
-   }
-}
-
-void StochPresolverSingletonRows::synchronizeNumberSR(int& newSREq, int& newSRIneq) const
-{
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-   if( iAmDistrib )
-   {
-      int* newSR = new int[2];
-      newSR[0] = newSREq;
-      newSR[1] = newSRIneq;
-      MPI_Allreduce(MPI_IN_PLACE, newSR, 2, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-      newSREq = newSR[0];
-      newSRIneq = newSR[1];
-      delete[] newSR;
    }
 }
 

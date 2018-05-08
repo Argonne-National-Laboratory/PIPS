@@ -24,6 +24,7 @@
 #include "StochPresolverTinyEntries.h"
 #include "StochPresolverSingletonRows.h"
 #include "StochPresolverDuplicateRows.h"
+#include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
 
 StochPresolver::StochPresolver(const Data* prob)
@@ -50,9 +51,9 @@ Data* StochPresolver::presolve()
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    ofstream myfile;
-   myfile.open ("before.txt");
+   /*myfile.open ("before.txt");
    sorigprob->writeToStreamDense(myfile);
-   myfile.close();
+   myfile.close();*/
 
    int nelims = 0;
 
@@ -65,6 +66,7 @@ Data* StochPresolver::presolve()
    StochPresolverDuplicateRows presolverDuplicateRow(presData);
    StochPresolverTinyEntries presolverTiny(presData);
    StochPresolverSingletonRows presolverSR(presData);
+   StochPresolverSingletonColumns presolverSC(presData);
 
 
    // main presolving loop
@@ -73,9 +75,11 @@ Data* StochPresolver::presolve()
       // presolverSingletonRow.applyPresolving
 
    bool possfeas;
-   possfeas = presolverDuplicateRow.applyPresolving(nelims);
-   possfeas = presolverTiny.applyPresolving(nelims);
+   possfeas = presolverSC.applyPresolving(nelims);
+   //possfeas = presolverDuplicateRow.applyPresolving(nelims);
+   //possfeas = presolverTiny.applyPresolving(nelims);
    possfeas = presolverSR.applyPresolving(nelims);
+   possfeas = presolverSC.applyPresolving(nelims);
 
   // if( !possfeas )
   //    break;
@@ -85,8 +89,6 @@ Data* StochPresolver::presolve()
    //int nElimsTinyEntries = removeTinyEntries();
    //if( myRank == 0)
    //   std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
-
-   //doSingletonRows();
 
 /*   cout<<"nRowElemsA "<<endl;
    nRowElemsA->writeToStreamAll(cout);

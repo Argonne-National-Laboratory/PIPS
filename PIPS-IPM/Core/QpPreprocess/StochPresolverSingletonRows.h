@@ -79,7 +79,6 @@ private:
    void clearNewBoundsParent();
 
    void setNewXBounds(int colIdx, double newxlow, double newxupp, double* ixlow, double* xlow, double* ixupp, double* xupp) const;
-   void synchronizeNumberSR(int& newSREq, int& newSRIneq) const;
 
    /** initialize current pointer for matrices and vectors.
     * If it==-1, we are at parent and want block B_0 (Bmat).
