@@ -121,7 +121,7 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
   if (gmyid == 0) {
     std::cout << "  \n  -----------------------------------------------\n"
 	      << "  NLP Solver \n"
-	      << "  Argonne National Laboratory, 2016\n"
+	      << "  Argonne National Laboratory \n  Lawrence Livermore National Laboratory\n  2010-2018\n"
 	      << "  -----------------------------------------------\n" <<std::endl;
     
     if(gUseReducedSpace>0) {

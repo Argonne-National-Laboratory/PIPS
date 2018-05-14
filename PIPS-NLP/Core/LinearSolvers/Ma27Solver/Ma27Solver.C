@@ -17,8 +17,11 @@
 #include <unistd.h>
 #endif
 
+#include "mpi.h"
+
 using namespace std;
 extern double gHSL_PivotLV;
+extern int gPipsPrtLV;
 
 extern int gOoqpPrintLevel;
 const double kInitTreatAsZero = 1.0e-20;//1.0e-12
@@ -43,8 +46,24 @@ Ma27Solver::Ma27Solver( SparseSymMatrix * sgm, const int numOfNegEigVal_in ):
 
 Ma27SolverBase::Ma27SolverBase( int n_in, int nnz_in ) :
   precision(kInitPrecision), irowM(0), jcolM(0), fact(0),
-  n(n_in), nnz(nnz_in), ipessimism(1.2), rpessimism(1.2) 
+  n(n_in), nnz(nnz_in), ipessimism(1.2), rpessimism(1.2), nMsgMaxThresh(5)
 {
+  int flag;
+  MPI_Initialized(&flag);
+  if(flag) {
+    flag = MPI_Comm_rank(MPI_COMM_WORLD,&mype);
+    assert(MPI_SUCCESS==flag);
+
+    int ranks;
+    flag = MPI_Comm_size(MPI_COMM_WORLD,&ranks);
+    assert(MPI_SUCCESS==flag);
+    if(ranks>=16) nMsgMaxThresh=2;
+    if(ranks>=512) nMsgMaxThresh=1;
+  } else
+    mype=0;
+
+  if(gPipsPrtLV>=2) gOoqpPrintLevel=max(10, gOoqpPrintLevel);
+
   FNAME(ma27id)(icntl, cntl);
   // set initial value of "Treat As Zero" parameter
   this->setTreatAsZero( kInitTreatAsZero );
@@ -96,7 +115,7 @@ void Ma27SolverBase::firstCall()
   }; break;
   case -3 : {
     if( gOoqpPrintLevel >= 100 ) {
-      cout << "insufficient space in iw: " << liw 
+      cout << "insuffcient space in iw: " << liw 
 	   << " suggest reset to " << this->ierror() << endl;
     }
   }; break;
@@ -131,6 +150,7 @@ void Ma27SolverBase::diagonalChanged( int /* idiag */, int /* extent */ )
 
 int Ma27SolverBase::matrixChanged()
 {
+  //gOoqpPrintLevel=1000;
   // if fact has not been allocated, this must be the first call.
   if( !fact ) this->firstCall();  
   int done = 0, tries = 0;
@@ -196,7 +216,8 @@ int Ma27SolverBase::matrixChanged()
       rpessimism *= 1.1;
     }; break;
     case -5 : {
-      if( gOoqpPrintLevel >= 100 ) {
+      if( gOoqpPrintLevel >= 10 ) 
+      {
 	cout << "matrix apparently numerically singular, detected at stage " 
 	     << this->ierror() << endl;
 	cout << "accept this factorization and hope for the best.." << endl;
@@ -205,7 +226,8 @@ int Ma27SolverBase::matrixChanged()
       done = 1;
     }; break;
     case -6 : {
-      if( gOoqpPrintLevel >= 100 ) {
+      if( gOoqpPrintLevel >= 10 ) 
+      {
 	cout << "change of sign of pivots detected at stage " 
 	     << this->ierror() << endl;
 	cout << "but who cares " << endl;
@@ -225,9 +247,11 @@ int Ma27SolverBase::matrixChanged()
       done = 1;
     }; break;
     case 3 : {
-      if( gOoqpPrintLevel >= 100 ) {
-	cout << "rank deficient matrix detected; apparent rank is " 
-	     << this->ierror() << endl;
+      if( gOoqpPrintLevel >= 100 ) 
+      {
+	cout << "rank deficient matrix detected by MA27; apparent rank is " 
+	     << this->ierror() << " while size is " << n << endl;
+	matrixSingular=1;
       }
       done = 1;
     }; break;  
@@ -238,9 +262,9 @@ int Ma27SolverBase::matrixChanged()
   } while( !done && tries < 10);
 
   if ( !done && tries >= 10) {
-    if( gOoqpPrintLevel >= 100 ) {
-      cout << "we are screwed; did not get a factorization after 10 tries " 
-	   << endl;
+    if( gOoqpPrintLevel >= 10 ) 
+    {
+      cout << "we are screwed; did not get a factorization after 10 tries " << endl;
     }
   }
 
@@ -249,6 +273,8 @@ int Ma27SolverBase::matrixChanged()
   else
 	negEigVal = info[15-1];
 
+  if(gPipsPrtLV>=3)
+    printf("MA27: returning negEigVal=%d and matrix size is %d (mpi rank %d)\n", negEigVal, n, mype);
   return negEigVal;
 
   // allocate w for subsequent calls to ma27cd_
@@ -283,6 +309,8 @@ void Ma27SolverBase::basicSolve( double * drhs, int nn )
 
 }
 
+#include <cstdio>
+#include <cmath>
 void Ma27Solver::solve( OoqpVector& rhs_in )
 {
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
@@ -298,6 +326,11 @@ void Ma27Solver::solve( OoqpVector& rhs_in )
   rhsSave->copyFrom(rhs);
   resid->copyFrom(rhs);
   rhsnorm = rhs.infnorm();
+
+  for(int i=0; i<n; i++) {
+    assert(false==isnan(drhs[i]));
+    assert(false==isinf(drhs[i]));
+  }
 
   // compute norm of rhs, and save it
   //  double * resids_ma27 = new double[n];
@@ -319,7 +352,8 @@ void Ma27Solver::solve( OoqpVector& rhs_in )
     //    for(ii=0, rnorm=0.0; ii<n; ii++) 
     //        rnorm += resids_ma27[ii] * resids_ma27[ii]; 
     //    rnorm = sqrt(rnorm);
-    rnorm = resid->infnorm();
+    rnorm = resid->twonorm();
+    //printf("rnormm: %.8e  rhssnorm %.8e\n", rnorm, rhsnorm);
     //    cout << "relative norm of residuals for linear system: " 
     //	 << rnorm/rhsnorm << endl;
     
@@ -332,22 +366,36 @@ void Ma27Solver::solve( OoqpVector& rhs_in )
       // ThresholdPivoting parameter is already too high; give up and
       // use this solution, whatever it is (the algorithm may bomb in
       // an outer loop).
-      if( gOoqpPrintLevel >= 10 ) {
-	cout << "ThresholdPivoting parameter is already too high\n";
+      //if( gOoqpPrintLevel >= 10 ) 
+      {
+	if(nMsgMaxThresh>0) { 
+	  if(gPipsPrtLV>=2) {
+	    printf("MA27: Threshold Pivot reached %.6e and high residual norm detected (resNorm=%g rhsNorm=%g) (mpi rank %d)\n", this->thresholdPivoting(), rnorm, rhsnorm, mype);
+	    printf("MA27 ThresholdPivoting parameter already too high - algorithm may fail at the outer loop. Cause: bad scaling of the problem or rank deficiency of the matrix in the second stage (mpi rank %d)\n", mype);
+	    nMsgMaxThresh--;
+	  }
+	}
       }
       done = 1;
+      //!
+      //double * rhsss = rhsSave->elements();
+      //printf("rhs -----------------------\n");
+      // for(int i=0; i<n; i++) if(rhsss[i]!=0) printf("%.8e ", rhsss[i]);
+      //printf("\n");
+
+      //double *solll = resid->elements();
+      //printf("sol -----------------------\n");
+      //for(int i=0; i<n; i++) if(solll[i]!=0) printf("%.8e ", solll[i]);
+      //printf("\n");
     } else {
-      //printf("Refactoring resNorm=%g rhsNorm=%g\n", rnorm, rhsnorm);;
+      
       // refactor with a higher Threshold Pivoting parameter
       double tp = this->thresholdPivoting();
       tp *= kThresholdPivotingFactor;
       if( tp > kThresholdPivotingMax ) tp = kThresholdPivotingMax;
       this->setThresholdPivoting(tp);
-
-      if( gOoqpPrintLevel >= 10 ) {
-	cout << "Setting ThresholdPivoting parameter to " 
-	     << this->thresholdPivoting()
-	     << " for future factorizations" << endl;
+      if(gPipsPrtLV>=3 && mype<=4) { //if( gOoqpPrintLevel >= 10 ) {
+	cout << "Setting ThresholdPivoting parameter to " << this->thresholdPivoting() << " for future factorizations" << endl;
       }
       this->matrixChanged(); refactorizations++;
       // restore rhs to prepare for the solve in the next loop

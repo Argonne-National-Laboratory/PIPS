@@ -108,6 +108,12 @@ protected:
   /** called the very first time a matrix is factored. Allocates space
    * for the factorization and performs ordering */
   virtual void firstCall();
+
+  /** avoid displaying too many messages by keeping count of them */
+  int nMsgMaxThresh;
+
+  /** rank number */
+  int mype;
 public:
 
   /** base class constructor. Allocates values for kTreatAsZero,
