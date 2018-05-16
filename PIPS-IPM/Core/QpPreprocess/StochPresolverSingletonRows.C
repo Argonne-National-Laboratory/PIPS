@@ -433,8 +433,10 @@ bool StochPresolverSingletonRows::procSingletonRowChildBmat(int it, std::vector<
    for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
       const int rowIdx = presData.getSingletonRow(i);
-      if( rowIdx == -1 || currBmat->rowptr[rowIdx].start == currBmat->rowptr[rowIdx].end)
-         continue;   // entry was already in Amat or in a previous singleton row in Bmat
+      if( rowIdx == -1 )
+         continue;   // entry was already in Amat
+      else if( currBmat->rowptr[rowIdx].start == currBmat->rowptr[rowIdx].end)
+         presData.setSingletonRow(i, -1); // entry was already in a previous singleton row in Bmat, set singletonRow(i) to -1.
       else
       {
          assert( currBmat->rowptr[rowIdx].start +1 == currBmat->rowptr[rowIdx].end );
