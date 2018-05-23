@@ -43,7 +43,8 @@ bool StochPresolverSingletonColumns::applyPresolving(int& nelims)
    assert( nSC == nSColEq + nSColIneq );
    if(myRank == 0)
    {
-      cout<<"Number of singleton columns in A: "<<nSColEq<<" (with zero objective: "<<nZeroCostSc<<") and in C: "<<nSColIneq<<endl;
+      cout<<"Number of singleton columns in A: "<<nSColEq<<" (with zero objective: "<<nZeroCostSc<<") and in C: "<<nSColIneq<<
+            ". In total: "<<nSColEq+nSColIneq<<endl;
       cout<<"In A, SC have: both bounds, only lower, only upper, no bounds: "<<nBothBounds<<", "<<nLowerBound<<", "<<nUpperBound<<", "<<nNoBounds<<endl;
       cout<<"SCs with entry in Linking Rows in A and C: "<<nSColEqLinkRow<<", "<<nSColIneqLinkrow<<endl;
    }

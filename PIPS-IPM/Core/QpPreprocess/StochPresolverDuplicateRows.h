@@ -21,7 +21,8 @@ public:
    virtual bool applyPresolving(int& nelims);
 
 private:
-   bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j);
+   void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
+   bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;
 
 };
 

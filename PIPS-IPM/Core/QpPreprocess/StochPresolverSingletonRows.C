@@ -39,6 +39,19 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    synchronize(newSREq);
    if( myRank == 0 ) cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
 
+   // only for printing: remove afterwards
+   if(1)
+   {
+      for(int i=0; i<presData.getNumberSR(); i++)
+         presData.setSingletonRow(i, -1);
+      presData.clearSingletonRows();
+      newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
+      synchronize(newSRIneq);
+      if( myRank == 0 ) cout<<"Found "<<newSRIneq<<" singleton rows in inequality system C."<<endl;
+      return true;
+   }
+   // end of special block.
+
    int iter = 0;
    int globalIter = 0;
    bool possibleFeasible = true;
@@ -46,10 +59,10 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    // main loop:
    while( (newSREq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
-      cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+      if( myRank == 0 ) cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
       while( newSREq > 0 && iter < maxIterSR)
       {
-         cout<<"SR(Equality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+         if( myRank == 0 )cout<<"SR(Equality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
          if( globalIter > 0 )
             initSingletonRows(EQUALITY_SYSTEM);
          // main method:
@@ -77,7 +90,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       }
       while( newSRIneq > 0 && iter < maxIterSR)
       {
-         cout<<"SR(Inequality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+         if( myRank == 0 ) cout<<"SR(Inequality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
          if( globalIter > 0 )
          {
             newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
@@ -164,7 +177,7 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
             {
                nSRLink++;
             }
-         cout<<"There are "<<nSRLink<<" singleton rows among the linking contraints of A."<<endl;
+         cout<<"There are "<<nSRLink<<" singleton rows among the linking constraints of A."<<endl;
       }
    }
    else
@@ -197,7 +210,7 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
             {
                nSRLink++;
             }
-         cout<<"There are "<<nSRLink<<" singleton rows among the linking contraints of C."<<endl;
+         cout<<"There are "<<nSRLink<<" singleton rows among the linking constraints of C."<<endl;
       }
    }
 
@@ -622,8 +635,8 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
                return false;
          }
       }
-      else
-         cout<<"New bounds are redundant for variable "<<colIdx<<endl;
+      //else
+         //cout<<"New bounds are redundant for variable "<<colIdx<<endl;
 
       // set a_ik=0.0, nRow=0, nCol--
       clearRow(storage, rowIdx);

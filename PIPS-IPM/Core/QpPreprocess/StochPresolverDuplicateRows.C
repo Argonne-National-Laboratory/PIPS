@@ -29,14 +29,32 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
       cout<<"Before duplicate Row Presolving:"<<endl;
    countRowsCols();
 
+   StochGenMatrix& matrixA = dynamic_cast<StochGenMatrix&>(*(presProb->A));
+   StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+   countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
+   countDuplicateRows(matrixA, EQUALITY_SYSTEM);
+
+   return true;
+}
+
+void StochPresolverDuplicateRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
+{
+   //TODO: several duplicate rows are counted too often because each duplicate pair is counted as one
+   // ie, if rows i,j,k,l are duplicate, they are counted (i,j) (i,k) (i,l) (j,k) (j,l)(k,l) as 6 instead of 4
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
    int duplicRow = 0;
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(presProb->C));
-   // for now, only look in C
+
    // the B_0 block:
    if( myRank == 0)
    {
       currAmat = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamic();
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
+      if(system_type==EQUALITY_SYSTEM)
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
+      else
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
       for( int i=0; i<currNnzRow->n; i++)
       {
          for( int j=i+1; j<currNnzRow->n; j++)
@@ -46,20 +64,28 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
                   compareCoefficients(*currAmat, i, j))
             {
                duplicRow++;
-               cout<<"Row "<<i<<" and "<<j<<" of B_0 are duplicate rows."<<endl;
+               //cout<<"Row "<<i<<" and "<<j<<" of B_0 are duplicate rows."<<endl;
             }
          }
       }
+      if(system_type==EQUALITY_SYSTEM)
+         cout<<"There are "<<duplicRow<<" duplicate rows in the A_0 block of A."<<endl;
+      else
+         cout<<"There are "<<duplicRow<<" duplicate rows in the A_0 block of C."<<endl;
    }
 
    // the children:
    for( size_t it = 0; it< matrix.children.size(); it++)
    {
-      if( !childIsDummy( matrix, (int)it, INEQUALITY_SYSTEM) )
+      if( (system_type==EQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, EQUALITY_SYSTEM)) ||
+            (system_type == INEQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, INEQUALITY_SYSTEM)) )
       {
          currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
          currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
-         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
+         if(system_type==EQUALITY_SYSTEM)
+            currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec);
+         else
+            currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
          for( int i=0; i<currNnzRow->n; i++)
          {
             for( int j=i+1; j<currNnzRow->n; j++)
@@ -69,7 +95,7 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
                      compareCoefficients(*currAmat, i, j) && compareCoefficients(*currBmat, i, j) )
                {
                   duplicRow++;
-                  cout<<"Row "<<i<<" and "<<j<<" of child "<<it<<" are duplicate rows."<<endl;
+                  //cout<<"Row "<<i<<" and "<<j<<" of child "<<it<<" are duplicate rows."<<endl;
                }
             }
          }
@@ -77,14 +103,20 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
    }
 
    // the linking constraints:
-   if( hasLinking( INEQUALITY_SYSTEM ))
+   //TODO: more efficient communication, maybe vector containing info about all rows?
+   if( (system_type==EQUALITY_SYSTEM && hasLinking(EQUALITY_SYSTEM)) ||
+         (system_type==INEQUALITY_SYSTEM && hasLinking(INEQUALITY_SYSTEM)))
    {
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      int nDuplicLinkRow = 0;
+      if(system_type==EQUALITY_SYSTEM)
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      else
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
       for(int i=0; i<currNnzRow->n; i++)
       {
          for( int j=i+1; j<currNnzRow->n; j++)
          {
-            int counter = 0;
+            int notParallel = 0;
             double* nRow = currNnzRow->elements();
             currBlmat = dynamic_cast<SparseGenMatrix*>(matrix.Blmat)->getStorageDynamic();
             if( nRow[i] != 0.0 && nRow[i] == nRow[j] &&
@@ -93,32 +125,50 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
                // check other F_i blocks as well:
                for( size_t it = 0; it< matrix.children.size(); it++)
                {
-                  if( !childIsDummy( matrix, (int)it, INEQUALITY_SYSTEM) )
+                  if( (system_type==EQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, EQUALITY_SYSTEM)) ||
+                        (system_type==INEQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, INEQUALITY_SYSTEM)) )
                   {
                      currBlmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Blmat)->getStorageDynamic();
                      if( !compareCoefficients(*currBlmat, i, j))
-                        counter++;
+                        notParallel++;
                   }
-                  currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+                  if(system_type==EQUALITY_SYSTEM)
+                     currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+                  else
+                     currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
                }
                if( iAmDistrib )
-                  MPI_Allreduce(MPI_IN_PLACE, &counter, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-               if( myRank == 0 && counter == 0 )
+                  MPI_Allreduce(MPI_IN_PLACE, &notParallel, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+               if( myRank == 0 && notParallel == 0 )
                {
                   duplicRow++;
-                  cout<<"Row "<<i<<" and "<<j<<" of Linking Constraints are duplicate rows."<<endl;
+                  nDuplicLinkRow++;
+                  //cout<<"Row "<<i<<" and "<<j<<" of Linking Constraints are duplicate rows."<<endl;
                }
             }
          }
+      }
+      if(myRank == 0)
+      {
+         assert(nDuplicLinkRow <= currNnzRow->n);
+         //duplicRow += nDuplicLinkRow;
+         if(system_type==EQUALITY_SYSTEM)
+            cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of A."<<endl;
+         else
+            cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of C."<<endl;
       }
    }
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &duplicRow, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-   if(myRank == 0) cout<<"There are "<<duplicRow<<" duplicate rows in C."<<endl;
-
-   return true;
+   if(myRank == 0)
+   {
+      if(system_type==EQUALITY_SYSTEM)
+         cout<<"There are "<<duplicRow<<" duplicate rows in A."<<endl;
+      else
+         cout<<"There are "<<duplicRow<<" duplicate rows in C."<<endl;
+   }
 }
 
 /* Compares the matrix coeffients in row i and j.
@@ -127,9 +177,11 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
  * ensured that the order in each row is intact.
  * Empty rows can be considered as duplicate rows.
  */
-bool StochPresolverDuplicateRows::compareCoefficients(SparseStorageDynamic& matrix, int i, int j)
+bool StochPresolverDuplicateRows::compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const
 {
    assert( currNnzRow->elements()[i] == currNnzRow->elements()[j] );
+   assert( i>=0 && i<matrix.m );
+   assert( j>=0 && j<matrix.m );
 
    int rowLen = matrix.rowptr[i].end - matrix.rowptr[i].start;
 

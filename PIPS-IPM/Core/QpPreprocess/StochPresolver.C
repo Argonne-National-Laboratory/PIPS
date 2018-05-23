@@ -39,16 +39,14 @@ StochPresolver::~StochPresolver()
 
 Data* StochPresolver::presolve()
 {
+   int myRank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-   std::cout << "start stoch presolving" << std::endl;
+   if( myRank == 0) std::cout << "start stoch presolving" << std::endl;
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
-
    // clone and initialize dynamic storage
-
-   int myRank = 0;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    ofstream myfile;
    /*myfile.open ("before.txt");
@@ -84,12 +82,6 @@ Data* StochPresolver::presolve()
   // if( !possfeas )
   //    break;
 
-
-   //removedEntries.reserve((int)ceil(0.2 * ((*presProb).my + (*presProb).mz) * (*presProb).nx));
-   //int nElimsTinyEntries = removeTinyEntries();
-   //if( myRank == 0)
-   //   std::cout << "In total, "<<nElimsTinyEntries<<" tiny entries were removed." << std::endl;
-
 /*   cout<<"nRowElemsA "<<endl;
    nRowElemsA->writeToStreamAll(cout);
    cout<<"nRowElemsC "<<endl;
@@ -97,7 +89,7 @@ Data* StochPresolver::presolve()
    cout<<"nColElems "<<endl;
    nColElems->writeToStreamAll(cout);
 */
-   cout<<"Finalizing presolved Data."<<endl;
+   if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
    sData* finalPresData = presData.finalize();
 
 /*   myfile.open("after.txt");
