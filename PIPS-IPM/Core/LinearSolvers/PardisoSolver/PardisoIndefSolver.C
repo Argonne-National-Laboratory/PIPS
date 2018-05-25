@@ -178,6 +178,8 @@ void PardisoIndefSolver::matrixChanged()
    myfile.close();
 #endif
 
+   int n = mStorage->n;
+
 #ifdef DENSE_USE_HALF
 #ifndef NDEBUG
   for( int i = 0; i < n; i++ )
@@ -192,18 +194,13 @@ void PardisoIndefSolver::matrixChanged()
      std::cout << "DENSE_USE_HALF: starting factorization" << std::endl;
 #endif
 #endif
-   int n = mStorage->n;
 
    assert(mStorage->n == mStorage->m);
-
-
    int nnz = 0;
    for( int i = 0; i < n; i++ )
       for( int j = 0; j <= i; j++ )
          if( mStorage->M[i][j] != 0.0 )
             nnz++;
-
-
 
 /*
    for( int i = 0; i < n; i++ )
@@ -221,8 +218,6 @@ void PardisoIndefSolver::matrixChanged()
 
 */
 
-
-
    if( ia ) // todo store and later resize
       delete[] ia;
 
@@ -236,7 +231,6 @@ void PardisoIndefSolver::matrixChanged()
    ja = new int[nnz];
    a = new double[nnz];
 
-   int nnzold = nnz;
    nnz = 0;
    for( int j = 0; j < n; j++ )
    {
@@ -247,9 +241,7 @@ void PardisoIndefSolver::matrixChanged()
             ja[nnz] = i;
             a[nnz++] = mStorage->M[i][j];
          }
-
    }
-   assert(nnzold == nnz);
 
    ia[n] = nnz;
 
@@ -285,7 +277,6 @@ void PardisoIndefSolver::matrixChanged()
       printf("\nNumber of nonzeros in factors  = %d", iparm[17]);
       printf("          Number of factorization MFLOPS = %d", iparm[18]);
    }
-
 
    phase = 22;
    iparm[32] = 1; /* compute determinant */
