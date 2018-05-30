@@ -74,7 +74,7 @@ Data* StochPresolver::presolve()
 
    bool possfeas;
    possfeas = presolverSC.applyPresolving(nelims);
-   //possfeas = presolverDuplicateRow.applyPresolving(nelims);
+   possfeas = presolverDuplicateRow.applyPresolving(nelims);
    //possfeas = presolverTiny.applyPresolving(nelims);
    possfeas = presolverSR.applyPresolving(nelims);
    possfeas = presolverSC.applyPresolving(nelims);

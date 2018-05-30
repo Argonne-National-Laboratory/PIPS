@@ -10,6 +10,9 @@
 
 #include "StochPresolverBase.h"
 
+#include <boost/unordered_set.hpp>
+
+
 class StochPresolverDuplicateRows : public StochPresolverBase
 {
 public:

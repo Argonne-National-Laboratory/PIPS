@@ -7,6 +7,33 @@
 
 #include "StochPresolverDuplicateRows.h"
 
+namespace rowlib
+{
+    struct row
+    {
+        int id;
+        int length;
+        int* colIndices;
+
+        row(int i, int n, int* t)
+            : id(i), length(n), colIndices(t) {}
+    };
+
+    bool operator==(row const& a, row const& b)
+    {
+        return a.id == b.id;
+    }
+
+    std::size_t hash_value(row const& b)
+    {
+        std::size_t seed = 0;
+        boost::hash_combine(seed, b.length);
+        for(int i=0; i<b.length; i++)
+            boost::hash_combine(seed, b.colIndices[i]);
+        return seed;
+    }
+}
+
 StochPresolverDuplicateRows::StochPresolverDuplicateRows(PresolveData& presData)
 : StochPresolverBase(presData)
 {
@@ -18,12 +45,36 @@ StochPresolverDuplicateRows::~StochPresolverDuplicateRows()
  // todo
 }
 
-
 bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
 {
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
+   boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows;
+   int col0[] = {1,2,3};
+   rowlib::row row0(0, 3, col0);
+   int col1[] = {1,2,3};
+   rowlib::row row1(1, 3, col1);
+   int col2[] = {1,2,4};
+   rowlib::row row2(2, 3, col2);
+
+   rows.insert(row0);
+   rows.insert(row1);
+   rows.insert(row2);
+
+   unsigned n = rows.bucket_count();
+   std::cout << "unordered_set rows has size " << rows.size() << '\n';
+   std::cout << "unordered_set rows has " << n << " buckets.\n";
+   for (unsigned i=0; i<n; ++i)
+   {
+       std::cout << "bucket #" << i << " contains: ";
+       for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
+           std::cout << "element "; //todo print row id of *it
+       std::cout << "\n";
+   }
+
+   assert(0);
 
    if( myRank == 0 )
       cout<<"Before duplicate Row Presolving:"<<endl;
