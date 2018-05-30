@@ -37,7 +37,16 @@ namespace rowlib
 StochPresolverDuplicateRows::StochPresolverDuplicateRows(PresolveData& presData)
 : StochPresolverBase(presData)
 {
- // todo
+   norm_Amat = NULL;
+   norm_Bmat= NULL;
+   norm_Cmat = NULL;
+   norm_Dmat = NULL;
+   norm_b = NULL;
+   norm_c = NULL;
+   norm_d = NULL;
+
+   mA = 0;
+   nA = 0;
 }
 
 StochPresolverDuplicateRows::~StochPresolverDuplicateRows()
@@ -51,7 +60,7 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows;
+  /* boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows;
    int col0[] = {1,2,3};
    rowlib::row row0(0, 3, col0);
    int col1[] = {1,2,3};
@@ -62,6 +71,8 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
    rows.insert(row0);
    rows.insert(row1);
    rows.insert(row2);
+   int col3[] = {0,1,2,3};
+   rows.emplace(3,4,col3);
 
    unsigned n = rows.bucket_count();
    std::cout << "unordered_set rows has size " << rows.size() << '\n';
@@ -70,20 +81,54 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
    {
        std::cout << "bucket #" << i << " contains: ";
        for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
-           std::cout << "element "; //todo print row id of *it
+           std::cout << " row id#"<<it->id;
        std::cout << "\n";
    }
+   assert( rows.find(row0) != rows.end());*/
 
-   assert(0);
-
-   if( myRank == 0 )
-      cout<<"Before duplicate Row Presolving:"<<endl;
-   countRowsCols();
+  /*if( myRank == 0 ) cout<<"Before duplicate Row Presolving:"<<endl;
+   countRowsCols();*/
 
    StochGenMatrix& matrixA = dynamic_cast<StochGenMatrix&>(*(presProb->A));
    StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
-   countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
-   countDuplicateRows(matrixA, EQUALITY_SYSTEM);
+
+   // for children:
+   for( size_t it = 0; it< matrixA.children.size(); it++)
+   {
+      // copy and normalize A,B,C,D and b,c,d
+      setNormalizedPointers((int)it, matrixA, matrixC );
+
+      // Initialize unordered set 'rows'
+      // Per row, add row to 'rows'
+      // Second Hashing: Per bucket, do ...
+      // When two parallel rows are found, check if they are both =, both <=, or = and and <=
+      // The action has to be applied to the original matrices (not the normalized copies)
+   }
+
+   SparseStorageDynamic norm_storage = matrixA.Bmat->getStorageDynamicRef();
+
+   assert(0);
+
+
+   //countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
+   //countDuplicateRows(matrixA, EQUALITY_SYSTEM);
+
+   return true;
+}
+
+bool StochPresolverDuplicateRows::setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
+{
+   // check if it is no dummy child
+   // copy the matrices
+   // normalize the rows
+
+   if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
+   {
+      // todo: copy instead of setting pointers to original data
+      norm_Amat = dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamic();
+      norm_Bmat = dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Bmat)->getStorageDynamic();
+      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec);
+   }
 
    return true;
 }

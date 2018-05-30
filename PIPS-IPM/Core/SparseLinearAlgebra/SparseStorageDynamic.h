@@ -46,6 +46,7 @@ public:
 
   SparseStorageDynamic( const SparseStorage& storage, double spareRatio = 0.2 );
   SparseStorageDynamic( int m, int n, int len, double spareRatio = 0.2 );
+  SparseStorageDynamic( const SparseStorageDynamic &dynamicStorage);
 
   ~SparseStorageDynamic();
 

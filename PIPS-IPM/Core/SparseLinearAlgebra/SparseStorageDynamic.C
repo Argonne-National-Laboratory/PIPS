@@ -108,6 +108,20 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
    SparseStorageDynamic::instances++;
 }
 
+SparseStorageDynamic::SparseStorageDynamic( const SparseStorageDynamic &dynamicStorage)
+: spareRatio(dynamicStorage.spareRatio), m(dynamicStorage.m), n(dynamicStorage.n), len(dynamicStorage.len)
+{
+   jcolM = new int[len];
+   M = new double[len];
+   rowptr = new ROWPTRS[m + 1];
+
+   memcpy(jcolM, dynamicStorage.jcolM, len * sizeof(dynamicStorage.jcolM[0]));
+   memcpy(M, dynamicStorage.M, len * sizeof(dynamicStorage.M[0]));
+   memcpy(rowptr, dynamicStorage.rowptr, (m + 1) * sizeof(dynamicStorage.rowptr[0]));
+
+   // is this necessary?    SparseStorageDynamic::instances++;
+}
+
 void SparseStorageDynamic::getSize(int& m, int& n)
 {
    m = this->m;
