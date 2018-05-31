@@ -7,7 +7,22 @@
 
 #include "StochPresolverDuplicateRows.h"
 
+namespace rowlib
+{
+   bool operator==(row const& a, row const& b)
+   {
+      return a.id == b.id;
+   }
 
+   std::size_t hash_value(row const& b)
+   {
+      std::size_t seed = 0;
+      boost::hash_combine(seed, b.length);
+      for( int i = 0; i < b.length; i++ )
+         boost::hash_combine(seed, b.colIndices[i]);
+      return seed;
+   }
+}
 
 StochPresolverDuplicateRows::StochPresolverDuplicateRows(PresolveData& presData)
 : StochPresolverBase(presData)
@@ -72,27 +87,58 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
    // for children:
    for( size_t it = 0; it< matrixA.children.size(); it++)
    {
+      cout<<"At child #"<<(int)it<<endl;
+
       // copy and normalize A,B,C,D and b,c,d:
       if( setNormalizedPointers((int)it, matrixA, matrixC ) )
       {
          // Initialize unordered set 'rows':
          boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows;
 
-         // Per row, add row to 'rows':
-         insertRowsIntoHashtable( rows, (int)it, matrixA, matrixC );
+         // Per row, add row to the set 'rows':
+         if( norm_Amat )
+            insertRowsIntoHashtable( rows, norm_Amat, norm_Bmat, EQUALITY_SYSTEM );
+         assert( (int)rows.size() == mA );
+         if( norm_Cmat )
+         {
+            insertRowsIntoHashtable( rows, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM );
+            assert((int)rows.size() == mA + norm_Cmat->m);
+         }
 
-         // Second Hashing: Per bucket, do ...
-         // When two parallel rows are found, check if they are both =, both <=, or = and and <=
-         // The action has to be applied to the original matrices (not the normalized copies)
+         // Prints for visualization:
+         std::cout << "unordered_set rows has size " << rows.size() << '\n';
+         for (unsigned i=0; i<rows.bucket_count(); ++i)
+         {
+             std::cout << "bucket #" << i << " contains: ";
+             for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
+                 std::cout << " row id#"<<it->id;
+             std::cout << "\n";
+         }
+
+         // todo Second Hashing: Per bucket, do ...
+         // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
+         // todo When two parallel rows are found, check if they are both =, both <=, or = and and <=
+         // todo The action has to be applied to the original matrices (not the normalized copies)
+
          // Objects created with new have to be deleted at the end of each child (norm_Amat etc)
+         // the colIndices arrays also have to be deleted
          deleteNormalizedPointers((int)it, matrixA, matrixC);
+         deleteColIndicesArrays(rows);
+
+         /*std::cout << "unordered_set rows has size " << rows.size() <<" after deleting"<< '\n';
+         for (unsigned i=0; i<rows.bucket_count(); ++i)
+         {
+             std::cout << "bucket #" << i << " contains: ";
+             for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
+                 std::cout << " colIndices:"<<it->colIndices[0];
+             std::cout << "\n";
+         }/*
       }
    }
 
-   SparseStorageDynamic norm_storage = matrixA.Bmat->getStorageDynamicRef();
+   //SparseStorageDynamic norm_storage = matrixA.Bmat->getStorageDynamicRef();
 
    assert(0);
-
 
    //countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
    //countDuplicateRows(matrixA, EQUALITY_SYSTEM);
@@ -108,7 +154,7 @@ bool StochPresolverDuplicateRows::setNormalizedPointers(int it, StochGenMatrix& 
    {
       norm_Amat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamicRef());
       norm_Bmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Bmat)->getStorageDynamicRef());
-      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec)->cloneFull();
+      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->vec)->cloneFull();
    }
    else
    {
@@ -192,7 +238,10 @@ void StochPresolverDuplicateRows::normalizeBLocksRowwise( SystemType system_type
 {
    assert( Ablock && Bblock && Rhs );
    int nRows = Ablock->m;
-   assert( nRows == Bblock->m && nRows == Rhs->n );
+   assert( nRows == Bblock->m);
+   if( nRows != Rhs->n )
+      cout<<"nRows="<<nRows<<", Rhs->n="<<Rhs->n<<endl;
+   assert( nRows == Rhs->n );
 
    if( system_type == INEQUALITY_SYSTEM )
    {
@@ -253,10 +302,52 @@ void StochPresolverDuplicateRows::normalizeBLocksRowwise( SystemType system_type
    }
 }
 
-void StochPresolverDuplicateRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows, int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC )
+void StochPresolverDuplicateRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows,
+      SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type )
 {
-   // todo
+   if( Ablock )
+   {
+      assert( Bblock );
+      if( system_type == EQUALITY_SYSTEM )
+         assert( mA == Ablock->m );
+      for(int i=0; i<Ablock->m; i++)
+      {
+         // calculate combined rowlength
+         const int rowStartA = Ablock->rowptr[i].start;
+         const int rowEndA =  Ablock->rowptr[i].end;
+         const int rowlengthA = rowEndA - rowStartA;
+         const int rowStartB = Bblock->rowptr[i].start;
+         const int rowEndB =  Bblock->rowptr[i].end;
+         const int rowlength = rowlengthA + (rowEndB - rowStartB);
+
+         // create array containing col indices from Ablock and Bblock
+         //int colIndices[] = new int[rowlength];
+         int* colIndices = new int[rowlength];
+
+         for(int k=0; k<rowlengthA; k++)
+            colIndices[k] = Ablock->jcolM[k+rowStartA];
+         for(int k=0; k<(rowEndB-rowStartB); k++)
+            colIndices[rowlengthA + k] = nA + Bblock->jcolM[k+rowStartB];
+
+         // calculate rowId:
+         int rowId = i;
+         if( system_type == INEQUALITY_SYSTEM )
+            rowId += mA;
+         cout<<"Inserting row id#"<<rowId<<", rowLength="<<rowlength<<endl;
+         rows.emplace(rowId, rowlength, colIndices);
+      }
+   }
 }
+
+void StochPresolverDuplicateRows::deleteColIndicesArrays(boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows)
+{
+   for (unsigned i=0; i<rows.bucket_count(); ++i)
+   {
+       for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
+           delete it->colIndices;
+   }
+}
+
 void StochPresolverDuplicateRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
 {
    //TODO: several duplicate rows are counted too often because each duplicate pair is counted as one
