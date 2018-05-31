@@ -40,7 +40,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    if( myRank == 0 ) cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
 
    // only for printing: remove afterwards
-   if(1)
+/*   if(1)
    {
       for(int i=0; i<presData.getNumberSR(); i++)
          presData.setSingletonRow(i, -1);
@@ -49,7 +49,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
       synchronize(newSRIneq);
       if( myRank == 0 ) cout<<"Found "<<newSRIneq<<" singleton rows in inequality system C."<<endl;
       return true;
-   }
+   }*/
    // end of special block.
 
    int iter = 0;

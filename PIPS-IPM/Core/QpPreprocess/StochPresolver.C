@@ -49,9 +49,9 @@ Data* StochPresolver::presolve()
    // clone and initialize dynamic storage
 
    ofstream myfile;
-   /*myfile.open ("before.txt");
+   myfile.open ("before.txt");
    sorigprob->writeToStreamDense(myfile);
-   myfile.close();*/
+   myfile.close();
 
    int nelims = 0;
 
@@ -61,10 +61,10 @@ Data* StochPresolver::presolve()
 
    // init all presolvers:
 
-   StochPresolverDuplicateRows presolverDuplicateRow(presData);
-   StochPresolverTinyEntries presolverTiny(presData);
+   //StochPresolverDuplicateRows presolverDuplicateRow(presData);
+   //StochPresolverTinyEntries presolverTiny(presData);
    StochPresolverSingletonRows presolverSR(presData);
-   StochPresolverSingletonColumns presolverSC(presData);
+   //StochPresolverSingletonColumns presolverSC(presData);
 
 
    // main presolving loop
@@ -73,11 +73,11 @@ Data* StochPresolver::presolve()
       // presolverSingletonRow.applyPresolving
 
    bool possfeas;
-   possfeas = presolverSC.applyPresolving(nelims);
-   possfeas = presolverDuplicateRow.applyPresolving(nelims);
+   //possfeas = presolverSC.applyPresolving(nelims);
+   //possfeas = presolverDuplicateRow.applyPresolving(nelims);
    //possfeas = presolverTiny.applyPresolving(nelims);
    possfeas = presolverSR.applyPresolving(nelims);
-   possfeas = presolverSC.applyPresolving(nelims);
+   //possfeas = presolverSC.applyPresolving(nelims);
 
   // if( !possfeas )
   //    break;
@@ -92,9 +92,9 @@ Data* StochPresolver::presolve()
    if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
    sData* finalPresData = presData.finalize();
 
-/*   myfile.open("after.txt");
+   myfile.open("after.txt");
    finalPresData->writeToStreamDense(myfile);
-   myfile.close();*/
+   myfile.close();
 
    //presProb->writeToStreamDense(std::cout);
 

@@ -30,6 +30,7 @@ SparseStorageDynamic::SparseStorageDynamic(int m, int n, int len, double spareRa
       M = NULL;
       jcolM = NULL;
    }
+   SparseStorageDynamic::instances++;
 }
 
 SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double spareRatio)
@@ -111,15 +112,25 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
 SparseStorageDynamic::SparseStorageDynamic( const SparseStorageDynamic &dynamicStorage)
 : spareRatio(dynamicStorage.spareRatio), m(dynamicStorage.m), n(dynamicStorage.n), len(dynamicStorage.len)
 {
-   jcolM = new int[len];
-   M = new double[len];
-   rowptr = new ROWPTRS[m + 1];
+   assert(m >= 0 && len >= 0);
 
-   memcpy(jcolM, dynamicStorage.jcolM, len * sizeof(dynamicStorage.jcolM[0]));
-   memcpy(M, dynamicStorage.M, len * sizeof(dynamicStorage.M[0]));
+   rowptr = new ROWPTRS[m + 1];
    memcpy(rowptr, dynamicStorage.rowptr, (m + 1) * sizeof(dynamicStorage.rowptr[0]));
 
-   // is this necessary?    SparseStorageDynamic::instances++;
+   if( len > 0 )
+   {
+      jcolM = new int[len];
+      M = new double[len];
+      memcpy(jcolM, dynamicStorage.jcolM, len * sizeof(dynamicStorage.jcolM[0]));
+      memcpy(M, dynamicStorage.M, len * sizeof(dynamicStorage.M[0]));
+   }
+   else
+   {
+      jcolM = NULL;
+      M = NULL;
+   }
+
+   SparseStorageDynamic::instances++;
 }
 
 void SparseStorageDynamic::getSize(int& m, int& n)

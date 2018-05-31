@@ -12,6 +12,32 @@
 
 #include <boost/unordered_set.hpp>
 
+namespace rowlib
+{
+    struct row
+    {
+        int id;
+        int length;
+        int* colIndices;
+
+        row(int i, int n, int* t)
+            : id(i), length(n), colIndices(t) {}
+    };
+
+    bool operator==(row const& a, row const& b)
+    {
+        return a.id == b.id;
+    }
+
+    std::size_t hash_value(row const& b)
+    {
+        std::size_t seed = 0;
+        boost::hash_combine(seed, b.length);
+        for(int i=0; i<b.length; i++)
+            boost::hash_combine(seed, b.colIndices[i]);
+        return seed;
+    }
+}
 
 class StochPresolverDuplicateRows : public StochPresolverBase
 {
@@ -30,8 +56,10 @@ private:
    SparseStorageDynamic* norm_Cmat;
    SparseStorageDynamic* norm_Dmat;
    SimpleVector* norm_b;
-   SimpleVector* norm_c;
-   SimpleVector* norm_d;
+   SimpleVector* norm_clow;
+   SimpleVector* norm_cupp;
+   SimpleVector* norm_iclow;
+   SimpleVector* norm_icupp;
 
    // number of rows of the A or C block
    int mA;
@@ -40,6 +68,12 @@ private:
    int nA;
 
    bool setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
+   void deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
+   void normalizeBLocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
+         SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
+   void insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows, int it,
+         StochGenMatrix& matrixA, StochGenMatrix& matrixC );
+
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
    bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;
 

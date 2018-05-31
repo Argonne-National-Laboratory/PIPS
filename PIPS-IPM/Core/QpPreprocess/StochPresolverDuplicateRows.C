@@ -7,32 +7,7 @@
 
 #include "StochPresolverDuplicateRows.h"
 
-namespace rowlib
-{
-    struct row
-    {
-        int id;
-        int length;
-        int* colIndices;
 
-        row(int i, int n, int* t)
-            : id(i), length(n), colIndices(t) {}
-    };
-
-    bool operator==(row const& a, row const& b)
-    {
-        return a.id == b.id;
-    }
-
-    std::size_t hash_value(row const& b)
-    {
-        std::size_t seed = 0;
-        boost::hash_combine(seed, b.length);
-        for(int i=0; i<b.length; i++)
-            boost::hash_combine(seed, b.colIndices[i]);
-        return seed;
-    }
-}
 
 StochPresolverDuplicateRows::StochPresolverDuplicateRows(PresolveData& presData)
 : StochPresolverBase(presData)
@@ -42,8 +17,10 @@ StochPresolverDuplicateRows::StochPresolverDuplicateRows(PresolveData& presData)
    norm_Cmat = NULL;
    norm_Dmat = NULL;
    norm_b = NULL;
-   norm_c = NULL;
-   norm_d = NULL;
+   norm_cupp = NULL;
+   norm_clow = NULL;
+   norm_icupp = NULL;
+   norm_iclow = NULL;
 
    mA = 0;
    nA = 0;
@@ -95,14 +72,21 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
    // for children:
    for( size_t it = 0; it< matrixA.children.size(); it++)
    {
-      // copy and normalize A,B,C,D and b,c,d
-      setNormalizedPointers((int)it, matrixA, matrixC );
+      // copy and normalize A,B,C,D and b,c,d:
+      if( setNormalizedPointers((int)it, matrixA, matrixC ) )
+      {
+         // Initialize unordered set 'rows':
+         boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows;
 
-      // Initialize unordered set 'rows'
-      // Per row, add row to 'rows'
-      // Second Hashing: Per bucket, do ...
-      // When two parallel rows are found, check if they are both =, both <=, or = and and <=
-      // The action has to be applied to the original matrices (not the normalized copies)
+         // Per row, add row to 'rows':
+         insertRowsIntoHashtable( rows, (int)it, matrixA, matrixC );
+
+         // Second Hashing: Per bucket, do ...
+         // When two parallel rows are found, check if they are both =, both <=, or = and and <=
+         // The action has to be applied to the original matrices (not the normalized copies)
+         // Objects created with new have to be deleted at the end of each child (norm_Amat etc)
+         deleteNormalizedPointers((int)it, matrixA, matrixC);
+      }
    }
 
    SparseStorageDynamic norm_storage = matrixA.Bmat->getStorageDynamicRef();
@@ -118,21 +102,161 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
 
 bool StochPresolverDuplicateRows::setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
 {
-   // check if it is no dummy child
-   // copy the matrices
-   // normalize the rows
+   // check if it is no dummy child and copy the matrices:
 
    if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
    {
-      // todo: copy instead of setting pointers to original data
-      norm_Amat = dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamic();
-      norm_Bmat = dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Bmat)->getStorageDynamic();
-      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec);
+      norm_Amat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamicRef());
+      norm_Bmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Bmat)->getStorageDynamicRef());
+      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec)->cloneFull();
    }
+   else
+   {
+      norm_Amat = NULL;
+      norm_Bmat = NULL;
+      norm_b = NULL;
+   }
+   if( !childIsDummy(matrixC, it, INEQUALITY_SYSTEM) )
+   {
+      norm_Cmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamicRef());
+      norm_Dmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Bmat)->getStorageDynamicRef());
+      norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec)->cloneFull();
+      norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec)->cloneFull();
+      norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec)->cloneFull();
+      norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec)->cloneFull();
+   }
+   else
+   {
+      norm_Cmat = NULL;
+      norm_Dmat = NULL;
+      norm_cupp = NULL;
+      norm_clow = NULL;
+      norm_icupp = NULL;
+      norm_iclow = NULL;
+   }
+   if( !norm_Amat && !norm_Cmat )   // case no child exists
+      return false;
+   else  // set mA, nA correctly
+   {
+      if( norm_Amat )
+      {
+         mA = norm_Amat->m;
+         nA = norm_Amat->n;
+      }
+      else
+      {
+         mA = 0;
+         nA = 0;
+      }
+   }
+   if(norm_Amat && norm_Cmat) // only for assertions
+   {
+      assert( norm_Amat->n == norm_Cmat->n );
+      assert( norm_Bmat->n == norm_Dmat->n );
+      assert( norm_Amat->m == norm_Bmat->m );
+      assert( norm_Cmat->m == norm_Dmat->m );
+   }
+
+   // normalize the rows:
+   if( norm_Amat )
+      normalizeBLocksRowwise( EQUALITY_SYSTEM, norm_Amat, norm_Bmat, norm_b, NULL, NULL, NULL);
+   if( norm_Cmat )
+      normalizeBLocksRowwise( INEQUALITY_SYSTEM, norm_Cmat, norm_Dmat, norm_cupp, norm_clow, norm_icupp, norm_iclow);
 
    return true;
 }
 
+void StochPresolverDuplicateRows::deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
+{
+   if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
+   {
+      assert( norm_Amat && norm_Bmat && norm_b );
+      delete norm_Amat;
+      delete norm_Bmat;
+      delete norm_b;
+   }
+   if( !childIsDummy(matrixC, it, INEQUALITY_SYSTEM) )
+   {
+      assert( norm_Cmat && norm_Dmat && norm_cupp && norm_clow && norm_icupp && norm_iclow );
+      delete norm_Cmat;
+      delete norm_Dmat;
+      delete norm_cupp;
+      delete norm_clow;
+      delete norm_icupp;
+      delete norm_iclow;
+   }
+}
+
+void StochPresolverDuplicateRows::normalizeBLocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
+      SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs)
+{
+   assert( Ablock && Bblock && Rhs );
+   int nRows = Ablock->m;
+   assert( nRows == Bblock->m && nRows == Rhs->n );
+
+   if( system_type == INEQUALITY_SYSTEM )
+   {
+      assert( Lhs && iRhs && iLhs );
+      assert( Lhs->n == nRows && iRhs->n == nRows && iLhs->n == nRows );
+   }
+
+   for( int i=0; i<nRows; i++)   // row i
+   {
+      double maxValue = 0.0;
+      bool negateRow = false;
+      const int rowStartA = Ablock->rowptr[i].start;
+      const int rowEndA = Ablock->rowptr[i].end;
+      if( rowStartA < rowEndA )
+      {
+         if( Ablock->M[rowStartA] < 0)
+            negateRow = true;
+         for(int k=rowStartA; k<rowEndA; k++)
+         {
+            if( fabs(Ablock->M[k]) > maxValue )
+               maxValue = fabs(Ablock->M[k]);
+         }
+      }
+      const int rowStartB = Bblock->rowptr[i].start;
+      const int rowEndB = Bblock->rowptr[i].end;
+      if( rowStartB < rowEndB )
+      {
+         if( Bblock->M[rowStartB] < 0)
+            negateRow = true;
+         for(int k=rowStartB; k<rowEndB; k++)
+         {
+            if( fabs(Bblock->M[k]) > maxValue )
+               maxValue = fabs(Bblock->M[k]);
+         }
+      }
+      // normalize the row by dividing all entries by maxValue and possible by -1, if negateRow.
+      if(negateRow)
+         maxValue *= -1.0;
+      if( rowStartA < rowEndA )
+      {
+         for(int k=rowStartA; k<rowEndA; k++)
+            Ablock->M[k] *= maxValue;
+      }
+      if( rowStartB < rowEndB )
+      {
+         for(int k=rowStartB; k<rowEndB; k++)
+            Bblock->M[k] *= maxValue;
+      }
+      if( system_type == EQUALITY_SYSTEM )
+         Rhs->elements()[i] *= maxValue;
+      else
+      {
+         if( iLhs->elements()[i] != 0.0 )
+            Lhs->elements()[i] *= maxValue;
+         if( iRhs->elements()[i] != 0.0 )
+            Rhs->elements()[i] *= maxValue;
+      }
+   }
+}
+
+void StochPresolverDuplicateRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows, int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC )
+{
+   // todo
+}
 void StochPresolverDuplicateRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
 {
    //TODO: several duplicate rows are counted too often because each duplicate pair is counted as one
