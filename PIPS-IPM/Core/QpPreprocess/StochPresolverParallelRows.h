@@ -14,18 +14,34 @@
 
 namespace rowlib
 {
-    struct row
+    struct rowWithColInd
     {
         int id;
         int length;
         int* colIndices;
+        double* norm_entries;
 
-        row(int i, int n, int* t)
-            : id(i), length(n), colIndices(t) {}
+
+        rowWithColInd(int i, int n, int* t, double* entries)
+            : id(i), length(n), colIndices(t), norm_entries(entries)  {}
     };
 
-    bool operator==(row const& a, row const& b);
-    std::size_t hash_value(row const& b);
+    bool operator==(rowWithColInd const& a, rowWithColInd const& b);
+    std::size_t hash_value(rowWithColInd const& b);
+
+    struct rowWithEntries
+    {
+        int id;
+        int length;
+        int* colIndices;
+        double* norm_entries;
+
+        rowWithEntries(int i, int n, int* colInd, double* entries)
+            : id(i), length(n),  colIndices(colInd), norm_entries(entries) {}
+    };
+
+    bool operator==(rowWithEntries const& a, rowWithEntries const& b);
+    std::size_t hash_value(rowWithEntries const& b);
 }
 
 class StochPresolverParallelRows : public StochPresolverBase
@@ -52,17 +68,20 @@ private:
 
    // number of rows of the A or C block
    int mA;
-
    // number of columns of the A or C block
    int nA;
+
+   boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > rowsFirstHashTable;
+   boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> > rowsSecondHashTable;
 
    bool setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
    void deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
    void normalizeBLocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
-   void insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows,
+   void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type);
-   void deleteColIndicesArrays(boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows);
+   void insertRowsIntoSecondHashtable();
+   void deleteColIndicesArrays(boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows);
 
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
    bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;

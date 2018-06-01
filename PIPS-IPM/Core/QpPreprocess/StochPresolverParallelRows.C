@@ -9,17 +9,31 @@
 
 namespace rowlib
 {
-   bool operator==(row const& a, row const& b)
+   bool operator==(rowWithColInd const& a, rowWithColInd const& b)
    {
       return a.id == b.id;
    }
 
-   std::size_t hash_value(row const& b)
+   std::size_t hash_value(rowWithColInd const& b)
    {
       std::size_t seed = 0;
       boost::hash_combine(seed, b.length);
       for( int i = 0; i < b.length; i++ )
          boost::hash_combine(seed, b.colIndices[i]);
+      return seed;
+   }
+
+   bool operator==(rowWithEntries const& a, rowWithEntries const& b)
+   {
+      return a.id == b.id;
+   }
+
+   std::size_t hash_value(rowWithEntries const& b)
+   {
+      std::size_t seed = 0;
+      boost::hash_combine(seed, b.length);
+      for( int i = 0; i < b.length; i++ )
+         boost::hash_combine(seed, b.norm_entries[i]);
       return seed;
    }
 }
@@ -93,29 +107,46 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       if( setNormalizedPointers((int)it, matrixA, matrixC ) )
       {
          // Initialize unordered set 'rows':
-         boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows;
+         rowsFirstHashTable.clear();
 
          // Per row, add row to the set 'rows':
          if( norm_Amat )
-            insertRowsIntoHashtable( rows, norm_Amat, norm_Bmat, EQUALITY_SYSTEM );
-         assert( (int)rows.size() == mA );
+            insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, norm_Bmat, EQUALITY_SYSTEM );
+         assert( (int)rowsFirstHashTable.size() == mA );
          if( norm_Cmat )
          {
-            insertRowsIntoHashtable( rows, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM );
-            assert((int)rows.size() == mA + norm_Cmat->m);
+            insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM );
+            assert((int)rowsFirstHashTable.size() == mA + norm_Cmat->m);
          }
 
          // Prints for visualization:
-         std::cout << "unordered_set rows has size " << rows.size() << '\n';
-         for (unsigned i=0; i<rows.bucket_count(); ++i)
+         std::cout << "unordered_set rowsFirstHashTable has size " << rowsFirstHashTable.size() << '\n';
+         for (unsigned i=0; i<rowsFirstHashTable.bucket_count(); ++i)
          {
              std::cout << "bucket #" << i << " contains: ";
-             for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
+             for (boost::unordered_set<rowlib::rowWithColInd>::local_iterator it = rowsFirstHashTable.begin(i); it!=rowsFirstHashTable.end(i); ++it)
                  std::cout << " row id#"<<it->id;
              std::cout << "\n";
          }
 
-         // todo Second Hashing: Per bucket, do ...
+         // Second Hashing: Per bucket, do Second Hashing:
+         rowsSecondHashTable.clear();
+         insertRowsIntoSecondHashtable();
+
+         // Prints for visualization:
+         std::cout << "unordered_set rowsSecondHashTable has size " << rowsSecondHashTable.size() << '\n';
+         for (unsigned i=0; i<rowsFirstHashTable.bucket_count(); ++i)
+         {
+             std::cout << "bucket #" << i << " contains: ";
+             for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it = rowsSecondHashTable.begin(i); it!=rowsSecondHashTable.end(i); ++it)
+                {
+                   std::cout << " row id#"<<it->id<<", entries: ";
+                   for(int k=0; k<it->length; k++)
+                      std::cout <<it->norm_entries[k]<<", ";
+                }
+             std::cout << "\n";
+         }
+
          // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
          // todo When two parallel rows are found, check if they are both =, both <=, or = and and <=
          // todo The action has to be applied to the original matrices (not the normalized copies)
@@ -123,7 +154,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
          // Objects created with new have to be deleted at the end of each child (norm_Amat etc)
          // the colIndices arrays also have to be deleted
          deleteNormalizedPointers((int)it, matrixA, matrixC);
-         deleteColIndicesArrays(rows);
+         deleteColIndicesArrays(rowsFirstHashTable);
 
          /*std::cout << "unordered_set rows has size " << rows.size() <<" after deleting"<< '\n';
          for (unsigned i=0; i<rows.bucket_count(); ++i)
@@ -283,26 +314,26 @@ void StochPresolverParallelRows::normalizeBLocksRowwise( SystemType system_type,
       if( rowStartA < rowEndA )
       {
          for(int k=rowStartA; k<rowEndA; k++)
-            Ablock->M[k] *= maxValue;
+            Ablock->M[k] /= maxValue;
       }
       if( rowStartB < rowEndB )
       {
          for(int k=rowStartB; k<rowEndB; k++)
-            Bblock->M[k] *= maxValue;
+            Bblock->M[k] /= maxValue;
       }
       if( system_type == EQUALITY_SYSTEM )
-         Rhs->elements()[i] *= maxValue;
+         Rhs->elements()[i] /= maxValue;
       else
       {
          if( iLhs->elements()[i] != 0.0 )
-            Lhs->elements()[i] *= maxValue;
+            Lhs->elements()[i] /= maxValue;
          if( iRhs->elements()[i] != 0.0 )
-            Rhs->elements()[i] *= maxValue;
+            Rhs->elements()[i] /= maxValue;
       }
    }
 }
 
-void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows,
+void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
       SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type )
 {
    if( Ablock )
@@ -320,30 +351,47 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
          const int rowEndB =  Bblock->rowptr[i].end;
          const int rowlength = rowlengthA + (rowEndB - rowStartB);
 
-         // create array containing col indices from Ablock and Bblock
-         //int colIndices[] = new int[rowlength];
+         // create arrays containing col indices and normalized entries from Ablock and Bblock
          int* colIndices = new int[rowlength];
+         double* entries = new double[rowlength];
 
          for(int k=0; k<rowlengthA; k++)
+         {
             colIndices[k] = Ablock->jcolM[k+rowStartA];
+            entries[k] = Ablock->M[k+rowStartA];
+         }
          for(int k=0; k<(rowEndB-rowStartB); k++)
-            colIndices[rowlengthA + k] = nA + Bblock->jcolM[k+rowStartB];
+         {
+           colIndices[rowlengthA + k] = nA + Bblock->jcolM[k+rowStartB];
+           entries[rowlengthA + k] = Bblock->M[k+rowStartB];
+         }
 
          // calculate rowId:
          int rowId = i;
          if( system_type == INEQUALITY_SYSTEM )
             rowId += mA;
          cout<<"Inserting row id#"<<rowId<<", rowLength="<<rowlength<<endl;
-         rows.emplace(rowId, rowlength, colIndices);
+         rows.emplace(rowId, rowlength, colIndices, entries);
       }
    }
 }
 
-void StochPresolverParallelRows::deleteColIndicesArrays(boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows)
+void StochPresolverParallelRows::insertRowsIntoSecondHashtable()
+{
+   assert( rowsSecondHashTable.empty() );
+   for( unsigned i = 0; i < rowsFirstHashTable.bucket_count(); ++i )
+   {
+      for( boost::unordered_set<rowlib::rowWithColInd>::local_iterator it =
+            rowsFirstHashTable.begin(i); it != rowsFirstHashTable.end(i); ++it )
+         rowsSecondHashTable.emplace(it->id, it->length, it->colIndices, it->norm_entries);
+   }
+}
+
+void StochPresolverParallelRows::deleteColIndicesArrays(boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows)
 {
    for (unsigned i=0; i<rows.bucket_count(); ++i)
    {
-       for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
+       for (boost::unordered_set<rowlib::rowWithColInd>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
            delete it->colIndices;
    }
 }
