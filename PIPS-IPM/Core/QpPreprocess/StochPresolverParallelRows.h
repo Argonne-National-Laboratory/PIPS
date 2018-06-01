@@ -1,12 +1,12 @@
 /*
- * StochPresolverDuplicateRows.h
+ * StochPresolverParallelRows.h
  *
  *  Created on: 02.05.2018
  *      Author: bzfuslus
  */
 
-#ifndef PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERDUPLICATEROWS_H_
-#define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERDUPLICATEROWS_H_
+#ifndef PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERPARALLELROWS_H_
+#define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERPARALLELROWS_H_
 
 #include "StochPresolverBase.h"
 
@@ -28,12 +28,12 @@ namespace rowlib
     std::size_t hash_value(row const& b);
 }
 
-class StochPresolverDuplicateRows : public StochPresolverBase
+class StochPresolverParallelRows : public StochPresolverBase
 {
 public:
-   StochPresolverDuplicateRows(PresolveData& presData);
+   StochPresolverParallelRows(PresolveData& presData);
 
-   ~StochPresolverDuplicateRows();
+   ~StochPresolverParallelRows();
 
    // remove small matrix entries and return number of eliminations
    virtual bool applyPresolving(int& nelims);
@@ -69,4 +69,4 @@ private:
 
 };
 
-#endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERDUPLICATEROWS_H_ */
+#endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERPARALLELROWS_H_ */

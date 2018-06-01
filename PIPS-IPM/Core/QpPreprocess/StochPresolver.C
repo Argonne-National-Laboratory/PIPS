@@ -23,9 +23,9 @@
 #include "DoubleMatrixTypes.h"
 #include "StochPresolverTinyEntries.h"
 #include "StochPresolverSingletonRows.h"
-#include "StochPresolverDuplicateRows.h"
 #include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
+#include "StochPresolverParallelRows.h"
 
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
@@ -61,7 +61,7 @@ Data* StochPresolver::presolve()
 
    // init all presolvers:
 
-   //StochPresolverDuplicateRows presolverDuplicateRow(presData);
+   //StochPresolverParallelRows presolverParallelRow(presData);
    //StochPresolverTinyEntries presolverTiny(presData);
    StochPresolverSingletonRows presolverSR(presData);
    //StochPresolverSingletonColumns presolverSC(presData);
@@ -74,7 +74,7 @@ Data* StochPresolver::presolve()
 
    bool possfeas;
    //possfeas = presolverSC.applyPresolving(nelims);
-   //possfeas = presolverDuplicateRow.applyPresolving(nelims);
+   //possfeas = presolverParallelRow.applyPresolving(nelims);
    //possfeas = presolverTiny.applyPresolving(nelims);
    possfeas = presolverSR.applyPresolving(nelims);
    //possfeas = presolverSC.applyPresolving(nelims);

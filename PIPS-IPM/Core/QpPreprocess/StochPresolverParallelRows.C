@@ -1,11 +1,11 @@
 /*
- * StochPresolverDuplicateRows.C
+ * StochPresolverParallelRows.C
  *
  *  Created on: 02.05.2018
  *      Author: bzfuslus
  */
 
-#include "StochPresolverDuplicateRows.h"
+#include "StochPresolverParallelRows.h"
 
 namespace rowlib
 {
@@ -24,7 +24,7 @@ namespace rowlib
    }
 }
 
-StochPresolverDuplicateRows::StochPresolverDuplicateRows(PresolveData& presData)
+StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
 : StochPresolverBase(presData)
 {
    norm_Amat = NULL;
@@ -41,12 +41,12 @@ StochPresolverDuplicateRows::StochPresolverDuplicateRows(PresolveData& presData)
    nA = 0;
 }
 
-StochPresolverDuplicateRows::~StochPresolverDuplicateRows()
+StochPresolverParallelRows::~StochPresolverParallelRows()
 {
  // todo
 }
 
-bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
+bool StochPresolverParallelRows::applyPresolving(int& nelims)
 {
    int myRank;
    bool iAmDistrib;
@@ -132,7 +132,7 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
              for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
                  std::cout << " colIndices:"<<it->colIndices[0];
              std::cout << "\n";
-         }/*
+         }*/
       }
    }
 
@@ -146,7 +146,7 @@ bool StochPresolverDuplicateRows::applyPresolving(int& nelims)
    return true;
 }
 
-bool StochPresolverDuplicateRows::setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
+bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
 {
    // check if it is no dummy child and copy the matrices:
 
@@ -212,7 +212,7 @@ bool StochPresolverDuplicateRows::setNormalizedPointers(int it, StochGenMatrix& 
    return true;
 }
 
-void StochPresolverDuplicateRows::deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
+void StochPresolverParallelRows::deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
 {
    if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
    {
@@ -233,7 +233,7 @@ void StochPresolverDuplicateRows::deleteNormalizedPointers(int it, StochGenMatri
    }
 }
 
-void StochPresolverDuplicateRows::normalizeBLocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
+void StochPresolverParallelRows::normalizeBLocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
       SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs)
 {
    assert( Ablock && Bblock && Rhs );
@@ -302,7 +302,7 @@ void StochPresolverDuplicateRows::normalizeBLocksRowwise( SystemType system_type
    }
 }
 
-void StochPresolverDuplicateRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows,
+void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows,
       SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type )
 {
    if( Ablock )
@@ -339,7 +339,7 @@ void StochPresolverDuplicateRows::insertRowsIntoHashtable( boost::unordered_set<
    }
 }
 
-void StochPresolverDuplicateRows::deleteColIndicesArrays(boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows)
+void StochPresolverParallelRows::deleteColIndicesArrays(boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > &rows)
 {
    for (unsigned i=0; i<rows.bucket_count(); ++i)
    {
@@ -348,7 +348,7 @@ void StochPresolverDuplicateRows::deleteColIndicesArrays(boost::unordered_set<ro
    }
 }
 
-void StochPresolverDuplicateRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
+void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
 {
    //TODO: several duplicate rows are counted too often because each duplicate pair is counted as one
    // ie, if rows i,j,k,l are duplicate, they are counted (i,j) (i,k) (i,l) (j,k) (j,l)(k,l) as 6 instead of 4
@@ -488,7 +488,7 @@ void StochPresolverDuplicateRows::countDuplicateRows(StochGenMatrix& matrix, Sys
  * ensured that the order in each row is intact.
  * Empty rows can be considered as duplicate rows.
  */
-bool StochPresolverDuplicateRows::compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const
+bool StochPresolverParallelRows::compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const
 {
    assert( currNnzRow->elements()[i] == currNnzRow->elements()[j] );
    assert( i>=0 && i<matrix.m );
