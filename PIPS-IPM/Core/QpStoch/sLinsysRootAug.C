@@ -198,8 +198,7 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   ///////////////////////////////////////////////////////////////////////
 
   //copy all elements from b into r except for the the residual values corresponding to z0
-  assert(locnx > 0);
-  assert(sizeof( double ) == sizeof(r[0]));
+  assert(r.n > 0 && sizeof( double ) == sizeof(r[0]));
 
   memcpy( &r[0], &b[0], (locnx+locmy) * sizeof( double ) );
   if( locmyl > 0 )
