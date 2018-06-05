@@ -488,9 +488,11 @@ void sLinsysRoot::reduceKKT()
    {
 
 #ifdef DENSE_USE_HALF
-      submatrixAllReduceDiagLower(kktd, 0, locnx, mpiComm);
+      if( locnx > 0 )
+         submatrixAllReduceDiagLower(kktd, 0, locnx, mpiComm);
 #else
-      submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
+      if( locnx > 0 )
+         submatrixAllReduce(kktd, 0, 0, locnx, locnx, mpiComm);
 #endif
       if( locmyl > 0 || locmzl > 0 )
       {
@@ -499,15 +501,17 @@ void sLinsysRoot::reduceKKT()
 
 #ifdef DENSE_USE_HALF
          // reduce lower left part
-         submatrixAllReduceFull(kktd, locNxMy, 0, locmyl + locmzl, locnx,
-               mpiComm);
+         if( locnx > 0 )
+            submatrixAllReduceFull(kktd, locNxMy, 0, locmyl + locmzl, locnx,
+                  mpiComm);
 
          // reduce lower diagonal linking part
          submatrixAllReduceDiagLower(kktd, locNxMy, locmyl + locmzl, mpiComm);
 
 #else
          // reduce upper right part
-         submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
+         if( locnx > 0 )
+            submatrixAllReduce(kktd, 0, locNxMy, locnx, locmyl + locmzl, mpiComm);
 
          const int locNxMyMylMzl = locnx + locmy + locmyl + locmzl;
 
