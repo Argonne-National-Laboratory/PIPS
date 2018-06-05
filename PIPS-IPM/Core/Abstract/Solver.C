@@ -11,8 +11,13 @@
 #include "Residuals.h"
 #include "LinearSystem.h"
 #include "OoqpStartStrategy.h"
-
 #include <cmath>
+#include <limits>
+
+#ifdef TIMING
+#include "mpi.h"
+#endif
+
 
 //#define BAD_NUMERICS
 
@@ -150,16 +155,24 @@ void Solver::dumbstart(  ProblemFormulation * /* formulation */,
 
 double Solver::finalStepLength( Variables *iterate, Variables *step )
 {
-	double primalValue, primalStep, dualValue, dualStep,
-	  maxAlpha, mufull;
-	int firstOrSecond;
+   double primalValue = -std::numeric_limits<double>::max();
+   double primalStep = -std::numeric_limits<double>::max();
+   double dualValue = -std::numeric_limits<double>::max();
+   double dualStep = -std::numeric_limits<double>::max();
+   int firstOrSecond = -1;
 
-	maxAlpha = iterate->findBlocking( step, 
+
+#ifdef TIMING
+	int myrank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+#endif
+
+	const double maxAlpha = iterate->findBlocking( step,
 					  primalValue, primalStep,
 					  dualValue, dualStep,
 					  firstOrSecond );
-	mufull = iterate->mustep( step, maxAlpha );
-	mufull /= gamma_a;
+
+	const double mufull = iterate->mustep( step, maxAlpha ) / gamma_a;
 
 	double alpha = 1.0;
 	switch( firstOrSecond ) {
@@ -171,8 +184,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 		    mufull / ( dualValue + maxAlpha * dualStep ) ) /
 	    primalStep;
 #ifdef TIMING
-	  std::cout << "alpha " << primalValue + maxAlpha * primalStep << std::endl;
-	  //assert(primalValue + maxAlpha * primalStep >= 0.0);
+	  if( myrank == 0 )
+	     std::cout << "(primal) original alpha " << alpha << std::endl;
 #endif
 	  break;
 	case 2:
@@ -180,8 +193,8 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 		    mufull / ( primalValue + maxAlpha * primalStep ) ) /
 	    dualStep;
 #ifdef TIMING
-	  std::cout << "dual alpha " << dualValue + maxAlpha * dualStep << std::endl;
-	  //assert(dualValue + maxAlpha * dualStep >= 0.0);
+	  if( myrank == 0 )
+	     std::cout << "(dual) original alpha " << alpha << std::endl;
 #endif
 	  break;
 	default:
@@ -209,11 +222,18 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 		  	  	  	  	  	  	  double& alpha_primal, double& alpha_dual )
 {
-	double primalValue_p, primalStep_p, dualValue_p, dualStep_p,
-		  maxAlpha_p;
-	double primalValue_d, primalStep_d, dualValue_d, dualStep_d,
-		  maxAlpha_d;
-	double mufull;
+   double primalValue_p = -std::numeric_limits<double>::max();
+   double primalStep_p = -std::numeric_limits<double>::max();
+   double dualValue_p = -std::numeric_limits<double>::max();
+   double dualStep_p = -std::numeric_limits<double>::max();
+   double maxAlpha_p;
+
+   double primalValue_d = -std::numeric_limits<double>::max();
+   double primalStep_d = -std::numeric_limits<double>::max();
+   double dualValue_d = -std::numeric_limits<double>::max();
+   double dualStep_d = -std::numeric_limits<double>::max();
+	double maxAlpha_d;
+
 	bool primalBlocking, dualBlocking;
 
 	iterate->findBlocking_pd( step,
@@ -221,45 +241,44 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 					  primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 					  maxAlpha_p, maxAlpha_d,
 					  primalBlocking, dualBlocking );
-	assert( primalBlocking || !primalBlocking );
-	assert( dualBlocking || !dualBlocking );
 
-	mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d);
-	mufull /= gamma_a;
+	const double mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d) / gamma_a;
 
-	alpha_primal = 1.0;
+
 	if( !primalBlocking )
 	{
-		alpha_primal = 1; // No primal constraints were blocking
+		alpha_primal = 1.0; // No primal constraints were blocking
 	}
-	else if( primalBlocking )
+	else
 	{
 		alpha_primal = ( - primalValue_p +
 						mufull / ( dualValue_p + maxAlpha_d * dualStep_p ) ) /
 					primalStep_p;
 		#ifdef TIMING
-			std::cout << "primal alpha " << primalValue_p + maxAlpha_p * primalStep_p << std::endl;
+			std::cout << "primal alpha " << alpha_primal << std::endl;
 		#endif
 	}
 
-	alpha_dual = 1.0;
 	if( !dualBlocking )
 	{
-		alpha_dual = 1; // No dual constraints were blocking
+		alpha_dual = 1.0; // No dual constraints were blocking
 	}
-	else if( dualBlocking )
+	else
 	{
 		alpha_dual = ( - dualValue_d +
 						mufull / ( primalValue_d + maxAlpha_p * primalStep_d ) ) /
 					dualStep_d;
 		#ifdef TIMING
-			std::cout << "dual alpha " << dualValue_d + maxAlpha_d * dualStep_d << std::endl;
+			std::cout << "dual alpha " << alpha_dual << std::endl;
 		#endif
 	}
 
+	assert(alpha_primal <= 1.0);
+   assert(alpha_dual <= 1.0);
+
 	// make it at least gamma_f * maxAlpha and no bigger than 1
-	if( alpha_primal < gamma_f * maxAlpha_p || alpha_primal > 1 ) alpha_primal = gamma_f * maxAlpha_p;
-	if( alpha_dual < gamma_f * maxAlpha_d || alpha_dual > 1 ) alpha_dual = gamma_f * maxAlpha_d;
+	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
+	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
 	// back off just a touch (or a bit more)
 	#ifdef BAD_NUMERICS
@@ -353,6 +372,11 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   double gap   = fabs( resids->dualityGap() );
   double rnorm = resids->residualNorm();
 
+#ifdef TIMING
+   int myrank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+#endif
+
   idx = iterate-1;
   if(idx <  0     ) idx=0;
   if(idx >= maxit ) idx=maxit-1;
@@ -364,7 +388,8 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   phi_history[idx] = phi;
 
 #ifdef TIMING
-  std::cout << "mu/mutol " << mu << "  " << mutol << "rnorm/limit " << rnorm << " " << artol*dnorm  << std::endl;
+  if( myrank == 0 )
+     std::cout << "mu/mutol " << mu << "  " << mutol << "rnorm/limit " << rnorm << " " << artol*dnorm  << std::endl;
 #endif
 
   if(idx > 0) {
@@ -384,7 +409,8 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   // check infeasibility condition
   if(idx >= 10 && phi >= 1.e-8 && phi >= 1.e4*phi_min_history[idx]) {
 #ifdef TIMING
-    std::cout << "possible INFEASIBLITY detected, phi: " << phi << std::endl;
+    if( myrank == 0 )
+       std::cout << "possible INFEASIBLITY detected, phi: " << phi << std::endl;
 #endif
     stop_code = INFEASIBLE;
   }

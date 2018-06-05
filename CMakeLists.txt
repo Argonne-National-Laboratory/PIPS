@@ -44,6 +44,20 @@ endif()
 #with testing of (selected) executables
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
+#with memory transfer reduction
+option(WITH_MEMREDUCE "Reduce memory transfer and copying" ON)
+
+#use (sparse) Pardiso solver for summed Schur complement
+option(WITH_PARDISOINDEF "Use Pardiso (if available) for summed Schur complement" OFF)
+message(STATUS "WITH_PARDISOINDEF=${WITH_PARDISOINDEF}")
+
+
+if(WITH_MEMREDUCE)
+  add_definitions(-DDENSE_USE_HALF)
+endif(WITH_MEMREDUCE)
+message(STATUS "WITH_MEMREDUCE=${WITH_MEMREDUCE}")
+
+
 #with timing for PIPS-IPM
 
 #with PIPS IPM AND NLP profile metric
@@ -364,6 +378,9 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 
   if(HAVE_PARDISO)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO")
+    if(WITH_PARDISOINDEF)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISOINDEF")
+    endif(WITH_PARDISOINDEF)
   else(HAVE_PARDISO)
     set(PARDISO_LIBRARY "")
   endif(HAVE_PARDISO)

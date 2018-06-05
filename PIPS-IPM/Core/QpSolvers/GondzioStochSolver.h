@@ -15,6 +15,7 @@ class Data;
 class Variables;
 class ProblemFormulation;
 
+const unsigned int max_linesearch_points = 50;
 
 /**
  * Derived class of Solver implementing Gondzio-correction version of
@@ -35,7 +36,7 @@ protected:
 public:
 
   GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
-        bool adaptive_linesearch = false ); // todo
+        bool adaptive_linesearch = true );
 
   virtual ~GondzioStochSolver();
 

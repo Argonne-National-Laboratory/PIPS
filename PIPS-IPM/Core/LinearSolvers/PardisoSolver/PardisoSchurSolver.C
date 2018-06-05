@@ -7,6 +7,7 @@
 using namespace std;
 #include <unistd.h>
 
+#include "pipschecks.h"
 #include "PardisoSchurSolver.h"
 #include "SparseStorage.h"
 #include "SparseSymMatrix.h"
@@ -139,6 +140,11 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   // todo not implemented yet
   assert(R.numberOfNonZeros() == 0);
 
+  if( nF > 0 || nG > 0 )
+    nSC = nSC0;
+  else
+    nSC = nx;
+
 #ifdef TIMING
   cout << "firstSolveCall: nR=" << nR << " nA=" << nA << " nC=" << nC << " nF=" << nF << " nG=" << nG << " nSC=" << nSC << " sizeKi=" << (nR+nA+nC)<< endl
       << " nnzR=" << R.numberOfNonZeros()
@@ -147,11 +153,6 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
       << " nnzF=" << F.numberOfNonZeros()
       << " nnzG=" << C.numberOfNonZeros() << endl;
 #endif
-
-  if( nF > 0 || nG > 0 )
-    nSC = nSC0;
-  else
-    nSC = nx;
 
   n = nR+nA+nC+nSC;
 
@@ -508,13 +509,22 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
   for(int it=0; it<nSC+1; it++) rowptrSC[it]--;
   for(int it=0; it<nnzSC; it++) colidxSC[it]--;
 
-  for(int r=0; r<nSC; r++) {
-    for(int ci=rowptrSC[r]; ci<rowptrSC[r+1]; ci++) {
-      int c=colidxSC[ci];
-      SC0[r][c] += eltsSC[ci];
-      if(r!=c)
-         SC0[c][r] += eltsSC[ci];
-    }
+  assert(subMatrixIsOrdered(rowptrSC, colidxSC, 0, nSC));
+
+  for( int r = 0; r < nSC; r++ )
+  {
+     for( int ci = rowptrSC[r]; ci < rowptrSC[r + 1]; ci++ )
+     {
+        const int c = colidxSC[ci];
+        assert(c >= r);
+
+        SC0[c][r] += eltsSC[ci];
+
+#ifndef DENSE_USE_HALF
+        if( r != c )
+           SC0[r][c] += eltsSC[ci];
+#endif
+     }
   }
 
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
@@ -860,9 +870,9 @@ int dumpAugMatrix(int n, int nnz, int nSys,
   fd.precision(16);
 
   fd << n << endl << nSys << endl << nnz << endl;
-  for(int it=0; it<n+1; it++) fd << rowptr[it] << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << colidx[it] << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << elts[it]   << " ";  fd << endl;
+  for(int it=0; it<n+1; it++) {fd << rowptr[it] << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << colidx[it] << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << elts[it]   << " ";}  fd << endl;
 
   cout << filename << " done!" << endl;
   return 0;
@@ -893,9 +903,9 @@ int dumpSysMatrix(SparseSymMatrix* Msys, const char* fname)
   fd.precision(16);
 
   fd << n << endl << nnz << endl;
-  for(int it=0; it<n+1; it++) fd << rowptr[it]+1 << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << colidx[it]+1 << " ";  fd << endl;
-  for(int it=0; it<nnz; it++) fd << elts[it]   << " ";  fd << endl;
+  for(int it=0; it<n+1; it++) {fd << rowptr[it]+1 << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << colidx[it]+1 << " ";}  fd << endl;
+  for(int it=0; it<nnz; it++) {fd << elts[it]   << " ";}  fd << endl;
 
   delete[] rowptr; delete[] colidx; delete[] elts;
 

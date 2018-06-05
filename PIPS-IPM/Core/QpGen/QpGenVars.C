@@ -487,39 +487,35 @@ void QpGenVars::findBlocking_pd( Variables * step,
 				bool& primalBlocking, bool& dualBlocking )
 {
   alphaPrimal = 1.0, alphaDual = 1.0;
-  primalBlocking = 0, dualBlocking = 0;
+  primalBlocking = false, dualBlocking = false;
 
   QpGenVars * d = (QpGenVars *) step;
 
   if( mclow > 0 ) {
     t->findBlocking_pd( *d->t, *lambda, *d->lambda, alphaPrimal, alphaDual,
-			     &primalValue, &primalStep, &dualValue, &dualStep,
-				 &primalValue_d, &primalStep_d, &dualValue_d, &dualStep_d,
-				 alphaPrimal, alphaDual,
+			     primalValue, primalStep, dualValue, dualStep,
+				  primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 			     primalBlocking, dualBlocking );
   }
 
   if( mcupp > 0 ) {
     u->findBlocking_pd( *d->u, *pi, *d->pi, alphaPrimal, alphaDual,
-			     &primalValue, &primalStep, &dualValue, &dualStep,
-				 &primalValue_d, &primalStep_d, &dualValue_d, &dualStep_d,
-				 alphaPrimal, alphaDual,
+			    primalValue, primalStep, dualValue, dualStep,
+				 primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 				 primalBlocking, dualBlocking );
   }
 
   if( nxlow > 0 ) {
     v->findBlocking_pd( *d->v, *gamma, *d->gamma, alphaPrimal, alphaDual,
-			     &primalValue, &primalStep, &dualValue, &dualStep,
-				 &primalValue_d, &primalStep_d, &dualValue_d, &dualStep_d,
-				 alphaPrimal, alphaDual,
+			    primalValue, primalStep, dualValue, dualStep,
+				 primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 				 primalBlocking, dualBlocking );
   }
 
   if( nxupp > 0 ) {
     w->findBlocking_pd( *d->w, *phi, *d->phi, alphaPrimal, alphaDual,
-			     &primalValue, &primalStep, &dualValue, &dualStep,
-				 &primalValue_d, &primalStep_d, &dualValue_d, &dualStep_d,
-				 alphaPrimal, alphaDual,
+			    primalValue, primalStep, dualValue, dualStep,
+				 primalValue_d, primalStep_d, dualValue_d, dualStep_d,
 				 primalBlocking, dualBlocking );
   }
 }

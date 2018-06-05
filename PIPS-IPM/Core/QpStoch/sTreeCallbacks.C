@@ -222,7 +222,7 @@ void sTreeCallbacks::initPresolvedData(const StochSymMatrix& Q, const StochGenMa
    }
 
    // empty child?
-   if( N_INACTIVE == 0 && MY_INACTIVE == 0 && MZ_INACTIVE == 0 )
+   if( N_INACTIVE == 0 && MY_INACTIVE == 0 && MZ_INACTIVE == 0 && np != -1 )
    {
       myl_inactive = 0;
       mzl_inactive = 0;

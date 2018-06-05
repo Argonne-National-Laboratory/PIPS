@@ -750,7 +750,7 @@ void SparseStorage::mult( double beta,  double y[], int incy,
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
       temp += M[k] * x[j * incx];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
     }
@@ -770,7 +770,7 @@ void SparseStorage::transMult( double beta,  double y[], int incy,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       y[j * incy] += alpha * M[k] * x[i * incx];
@@ -809,7 +809,7 @@ void SparseStorage::transMultMatLower( double beta,  double* Y, int ny, int ldy,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       //int endcol=j+colStart;
@@ -837,7 +837,7 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       for (int v = 0; v<ny; v++) { 
@@ -865,7 +865,7 @@ void SparseStorage::transMultLower( double beta,  double y[],
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
       if (j < firstrow) continue;
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       // nonzero element at (i,j)
@@ -897,7 +897,7 @@ void SparseStorage::transMultMatLower( double* Y, int ny, int firstrow,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       // better to parallelize this loop over the columns of X

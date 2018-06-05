@@ -58,7 +58,8 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
       MPI_Comm_size(MPI_COMM_WORLD, &size);
 
       if( size > 1)
-         this->n_linesearch_points += size;
+         this->n_linesearch_points =
+               std::min(unsigned(size) + this->n_linesearch_points, max_linesearch_points);
    }
 
    // the two StepFactor constants set targets for increase in step
@@ -66,7 +67,7 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    StepFactor0 = 0.3;
    StepFactor1 = 1.5;
 
-   mutol = 1.e-7; // todo parameter
+   mutol = 1.e-6; // todo parameter
 
    temp_step = factory->makeVariables(prob);
 }

@@ -535,6 +535,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 
   double step = maxStep;
   
+  // todo only if i am special?
   if( w.vecl )
   {
     assert(wstep.vecl);
@@ -572,13 +573,42 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
     //we prefer a AllReduce instead of a bcast, since the step==stepG m
     //may occur for two different processes and a deadlock may occur.
     double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
+
+    int count;
     if(step==stepG) {
       buffer[0]=*w_elt; buffer[1]=*wstep_elt; 
       buffer[2]=*u_elt; buffer[3]=*ustep_elt;
       buffer[4]=first_or_second;
+
+      count = 1;
     } else {
+
+      count = 0;
       buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
     }
+
+    MPI_Allreduce(MPI_IN_PLACE, &count, 1, MPI_INT, MPI_SUM, mpiComm);
+
+    // is there more than one process with step==stepG?
+    if( count > 1 )
+    {
+       int myrank;
+       int mineqrank;
+
+       MPI_Comm_rank(mpiComm, &myrank);
+
+       if( step == stepG )
+          mineqrank = myrank;
+       else
+          mineqrank = std::numeric_limits<int>::max();
+
+       MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
+
+       // step==stepG and not smallest rank?
+      if( step == stepG && mineqrank != myrank )
+         buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
+    }
+
     double bufferOut[5];
     MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm);
 
@@ -593,40 +623,36 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
   return step;
 }
 
-void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
-			      OoqpVector & u_vec,
-			      OoqpVector & ustep_vec,
-			      double maxStepPri, double maxStepDual,
-			      double *w_elt_p, double *wstep_elt_p, double *u_elt_p, double *ustep_elt_p,
-				  double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
-				  double& stepPrimal, double& stepDual,
-				  bool& primalBlocking, bool& dualBlocking)
+void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
+			      const OoqpVector & u_vec,
+			      const OoqpVector & ustep_vec,
+			      double& maxStepPri, double& maxStepDual,
+			      double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
+				   double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
+				   bool& primalBlocking, bool& dualBlocking) const
 {
-  StochVector& w = *this;
-  StochVector& u = dynamic_cast<StochVector&>(u_vec);
+  const StochVector& w = *this;
+  const StochVector& u = dynamic_cast<const StochVector&>(u_vec);
 
-  StochVector& wstep = dynamic_cast<StochVector&>(wstep_vec);
-  StochVector& ustep = dynamic_cast<StochVector&>(ustep_vec);
+  const StochVector& wstep = dynamic_cast<const StochVector&>(wstep_vec);
+  const StochVector& ustep = dynamic_cast<const StochVector&>(ustep_vec);
 
-  stepPrimal = maxStepPri;
-
+  // todo only if i am special?
   if( w.vecl )
   {
     assert(wstep.vecl);
     assert(u.vecl);
     assert(ustep.vecl);
 
-    w.vecl->findBlocking_pd(*wstep.vecl, *u.vecl, *ustep.vecl, stepPrimal, stepDual,
+    w.vecl->findBlocking_pd(*wstep.vecl, *u.vecl, *ustep.vecl, maxStepPri, maxStepDual,
                  w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p,
-				 w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
-				 stepPrimal, stepDual,
+				     w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
                  primalBlocking, dualBlocking);
   }
 
-  w.vec->findBlocking_pd(*wstep.vec, *u.vec, *ustep.vec, stepPrimal, stepDual,
+  w.vec->findBlocking_pd(*wstep.vec, *u.vec, *ustep.vec, maxStepPri, maxStepDual,
 		  	  	  w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p,
 				  w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
-				  stepPrimal, stepDual,
 				  primalBlocking, dualBlocking);
 
   int nChildren=w.children.size();
@@ -639,66 +665,118 @@ void StochVector::findBlocking_pd(OoqpVector & wstep_vec,
     w.children[it]->findBlocking_pd(*wstep.children[it],
 			       *u.children[it],
 			       *ustep.children[it],
-				   stepPrimal, stepDual,
-				   w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p,
-				   w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
-				   stepPrimal, stepDual, primalBlocking, dualBlocking);
-  }
+			       maxStepPri, maxStepDual,
+				    w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p,
+				    w_elt_d, wstep_elt_d, u_elt_d, ustep_elt_d,
+				    primalBlocking, dualBlocking);
+   }
 
-  if(iAmDistrib==1) {
-    double stepG;
-    MPI_Allreduce(&stepPrimal, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+   if( iAmDistrib == 1 )
+   {
+      double stepG, stepF;
+      MPI_Allreduce(&maxStepPri, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+      MPI_Allreduce(&maxStepDual, &stepF, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
 
-    //we prefer a AllReduce instead of a bcast, since the step==stepG m
-    //may occur for two different processes and a deadlock may occur.
-    double buffer[5];
-    //values for computation of the primal steplength:
-    //0-primal val, 1-primal step, 2-dual value, 3-dual step, 4-primalBlocking
-    if(stepPrimal==stepG) {
-      buffer[0]=*w_elt_p; buffer[1]=*wstep_elt_p;
-      buffer[2]=*u_elt_p; buffer[3]=*ustep_elt_p;
-      buffer[4]=primalBlocking;
-    } else {
-      buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
-    }
-    double bufferOut[5];
-    MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm);
+      //we prefer a AllReduce instead of a bcast, since the step==stepG m
+      //may occur for two different processes and a deadlock may occur.
+      double buffer[10];
+      int count[2];
+      //values for computation of the primal steplength:
+      //0-primal val, 1-primal step, 2-dual value, 3-dual step, 4-primalBlocking
+      if( maxStepPri == stepG )
+      {
+         buffer[0] = w_elt_p;
+         buffer[1] = wstep_elt_p;
+         buffer[2] = u_elt_p;
+         buffer[3] = ustep_elt_p;
+         buffer[4] = primalBlocking ? 1.0 : 0.0;
 
-    *w_elt_p = bufferOut[0]; *wstep_elt_p=bufferOut[1];
-    *u_elt_p = bufferOut[2]; *ustep_elt_p=bufferOut[3];
+         count[0] = 1;
+      }
+      else
+      {
+         buffer[0] = buffer[1] = buffer[2] = buffer[3] = buffer[4] =
+               -std::numeric_limits<double>::max();
+         count[0] = 0;
+      }
 
-    //primalBlocking  negative means no blocking, so set it to 0.
-    primalBlocking = bufferOut[4]<0?0:(int)bufferOut[4];
-    assert( primalBlocking || !primalBlocking);
-    stepPrimal=stepG;
+      //values for computation of the dual steplength:
+      //5-primal val, 6-primal step, 7-dual value, 8-dual step, 9-dualBlocking
+      if( maxStepDual == stepF )
+      {
+         buffer[5] = w_elt_d;
+         buffer[6] = wstep_elt_d;
+         buffer[7] = u_elt_d;
+         buffer[8] = ustep_elt_d;
+         buffer[9] = dualBlocking ? 1.0 : 0.0;
 
-    // same procedure for stepDual:
-    double stepF;
-	MPI_Allreduce(&stepDual, &stepF, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+         count[1] = 1;
+      }
+      else
+      {
+         buffer[5] = buffer[6] = buffer[7] = buffer[8] = buffer[9] =
+               -std::numeric_limits<double>::max();
+         count[1] = 0;
+      }
 
-	//we prefer a AllReduce instead of a bcast, since the stepDual==stepF m
-	//may occur for two different processes and a deadlock may occur.
-	double buffer_d[5];
-	//values for computation of the dual steplength:
-	//0-primal val, 1-primal step, 2-dual value, 3-dual step, 4-dualBlocking
-	if(stepDual==stepF) {
-	  buffer_d[0]=*w_elt_d; buffer_d[1]=*wstep_elt_d;
-	  buffer_d[2]=*u_elt_d; buffer_d[3]=*ustep_elt_d;
-	  buffer_d[4]=dualBlocking;
-	} else {
-	  buffer_d[0]=buffer_d[1]=buffer_d[2]=buffer_d[3]=buffer_d[4]= -std::numeric_limits<double>::max();
-	}
-	double bufferOut_d[5];
-	MPI_Allreduce(buffer_d, bufferOut_d, 5, MPI_DOUBLE, MPI_MAX, mpiComm);
+      MPI_Allreduce(MPI_IN_PLACE, &count, 2, MPI_INT, MPI_SUM, mpiComm);
 
-	*w_elt_d = bufferOut_d[0]; *wstep_elt_d=bufferOut_d[1];
-	*u_elt_d = bufferOut_d[2]; *ustep_elt_d=bufferOut_d[3];
+      int myrank, mineqrank;
+      MPI_Comm_rank(mpiComm, &myrank);
 
-	//dualBlocking negative means no blocking, so set it to 0.
-	dualBlocking = bufferOut_d[4]<0?0:(int)bufferOut_d[4];
-	assert( dualBlocking || !dualBlocking);
-	stepDual=stepF;
-  }
+      // is there more than one process with maxStepPri==stepG?
+      if( count[0] > 1 )
+      {
+         if( maxStepPri == stepG )
+            mineqrank = myrank;
+         else
+            mineqrank = std::numeric_limits<int>::max();
+
+         MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
+
+         // step==stepG and not smallest rank?
+         if( maxStepPri == stepG && mineqrank != myrank )
+            buffer[0] = buffer[1] = buffer[2] = buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
+      }
+
+      // is there more than one process with maxStepDual==stepF?
+      if( count[1] > 1 )
+      {
+         if( maxStepDual == stepG )
+            mineqrank = myrank;
+         else
+            mineqrank = std::numeric_limits<int>::max();
+
+         MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
+
+         // stepDual==stepF and not smallest rank?
+         if( maxStepDual == stepG && mineqrank != myrank )
+            buffer[5]=buffer[6]=buffer[7]=buffer[8]=buffer[9]= -std::numeric_limits<double>::max();
+      }
+
+
+      double bufferOut[10];
+      MPI_Allreduce(buffer, bufferOut, 10, MPI_DOUBLE, MPI_MAX, mpiComm);
+
+      w_elt_p = bufferOut[0];
+      wstep_elt_p = bufferOut[1];
+      u_elt_p = bufferOut[2];
+      ustep_elt_p = bufferOut[3];
+
+      w_elt_d = bufferOut[5];
+      wstep_elt_d = bufferOut[6];
+      u_elt_d = bufferOut[7];
+      ustep_elt_d = bufferOut[8];
+
+      //primalBlocking  negative means no blocking, so set it to 0.
+      primalBlocking = bufferOut[4] <= 0.0 ? false : true;
+      maxStepPri = stepG;
+
+      //dualBlocking negative means no blocking, so set it to 0.
+      dualBlocking = bufferOut[9] <= 0.0 ? false : true;
+      maxStepDual = stepF;
+
+   }
 }
 
 void StochVector::componentMult( OoqpVector& v_ )
