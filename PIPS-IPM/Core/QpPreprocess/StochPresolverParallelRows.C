@@ -58,6 +58,8 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
 StochPresolverParallelRows::~StochPresolverParallelRows()
 {
  // todo
+   rowsFirstHashTable = boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> >();
+   rowsSecondHashTable  = boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> >();
 }
 
 bool StochPresolverParallelRows::applyPresolving(int& nelims)
@@ -65,32 +67,6 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-
-  /* boost::unordered_set<rowlib::row, boost::hash<rowlib::row> > rows;
-   int col0[] = {1,2,3};
-   rowlib::row row0(0, 3, col0);
-   int col1[] = {1,2,3};
-   rowlib::row row1(1, 3, col1);
-   int col2[] = {1,2,4};
-   rowlib::row row2(2, 3, col2);
-
-   rows.insert(row0);
-   rows.insert(row1);
-   rows.insert(row2);
-   int col3[] = {0,1,2,3};
-   rows.emplace(3,4,col3);
-
-   unsigned n = rows.bucket_count();
-   std::cout << "unordered_set rows has size " << rows.size() << '\n';
-   std::cout << "unordered_set rows has " << n << " buckets.\n";
-   for (unsigned i=0; i<n; ++i)
-   {
-       std::cout << "bucket #" << i << " contains: ";
-       for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
-           std::cout << " row id#"<<it->id;
-       std::cout << "\n";
-   }
-   assert( rows.find(row0) != rows.end());*/
 
   /*if( myRank == 0 ) cout<<"Before duplicate Row Presolving:"<<endl;
    countRowsCols();*/
@@ -120,36 +96,48 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
          }
 
          // Prints for visualization:
-         std::cout << "unordered_set rowsFirstHashTable has size " << rowsFirstHashTable.size() << '\n';
+         /*std::cout << "unordered_set rowsFirstHashTable has size " << rowsFirstHashTable.size() << '\n';
          for (unsigned i=0; i<rowsFirstHashTable.bucket_count(); ++i)
          {
              std::cout << "bucket #" << i << " contains: ";
              for (boost::unordered_set<rowlib::rowWithColInd>::local_iterator it = rowsFirstHashTable.begin(i); it!=rowsFirstHashTable.end(i); ++it)
                  std::cout << " row id#"<<it->id;
              std::cout << "\n";
-         }
+         }*/
 
          // Second Hashing: Per bucket, do Second Hashing:
          rowsSecondHashTable.clear();
-         insertRowsIntoSecondHashtable();
-
-         // Prints for visualization:
-         std::cout << "unordered_set rowsSecondHashTable has size " << rowsSecondHashTable.size() << '\n';
-         for (unsigned i=0; i<rowsFirstHashTable.bucket_count(); ++i)
+         for( unsigned i = 0; i < rowsFirstHashTable.bucket_count(); ++i )
          {
-             std::cout << "bucket #" << i << " contains: ";
-             for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it = rowsSecondHashTable.begin(i); it!=rowsSecondHashTable.end(i); ++it)
-                {
-                   std::cout << " row id#"<<it->id<<", entries: ";
-                   for(int k=0; k<it->length; k++)
-                      std::cout <<it->norm_entries[k]<<", ";
-                }
-             std::cout << "\n";
-         }
+            for( boost::unordered_set<rowlib::rowWithColInd>::local_iterator it =
+                  rowsFirstHashTable.begin(i); it != rowsFirstHashTable.end(i); ++it )
+               rowsSecondHashTable.emplace(it->id, it->length, it->colIndices, it->norm_entries);
 
-         // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
-         // todo When two parallel rows are found, check if they are both =, both <=, or = and and <=
-         // todo The action has to be applied to the original matrices (not the normalized copies)
+            // Prints for visualization:
+            /*if( !rowsSecondHashTable.empty() )
+            {
+               std::cout << "unordered_set rowsSecondHashTable has size " << rowsSecondHashTable.size() << '\n';
+               for (unsigned i=0; i<rowsSecondHashTable.bucket_count(); ++i)
+               {
+                  if( rowsSecondHashTable.bucket_size(i) > 0 )
+                  {
+                     std::cout << "bucket #" << i << " contains: "<<rowsSecondHashTable.bucket_size(i)<<" entries.";
+                     for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it = rowsSecondHashTable.begin(i); it!=rowsSecondHashTable.end(i); ++it)
+                     {
+                        std::cout << " row id#"<<it->id<<", entries: ";
+                        for(int k=0; k<it->length; k++)
+                           std::cout <<it->norm_entries[k]<<", ";
+                     }
+                     std::cout << "\n";
+                  }
+               }
+            }*/
+
+            // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
+            compareRowsInSecondHashTable();
+
+            rowsSecondHashTable.clear();
+         }
 
          // Objects created with new have to be deleted at the end of each child (norm_Amat etc)
          // the colIndices arrays also have to be deleted
@@ -169,6 +157,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
 
    //SparseStorageDynamic norm_storage = matrixA.Bmat->getStorageDynamicRef();
 
+   MPI_Barrier( MPI_COMM_WORLD);
    assert(0);
 
    //countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
@@ -370,23 +359,82 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
          int rowId = i;
          if( system_type == INEQUALITY_SYSTEM )
             rowId += mA;
-         cout<<"Inserting row id#"<<rowId<<", rowLength="<<rowlength<<endl;
+         //cout<<"Inserting row id#"<<rowId<<", rowLength="<<rowlength<<endl;
          rows.emplace(rowId, rowlength, colIndices, entries);
       }
    }
 }
 
-void StochPresolverParallelRows::insertRowsIntoSecondHashtable()
+/*
+ * Per bucket in rowsSecondHashTable, compare the containing rows and check if they are parallel.
+ * If so, consider the different possible cases.
+ */
+void StochPresolverParallelRows::compareRowsInSecondHashTable()
 {
-   assert( rowsSecondHashTable.empty() );
-   for( unsigned i = 0; i < rowsFirstHashTable.bucket_count(); ++i )
+   if( rowsSecondHashTable.empty() )
+      return;
+
+   for (unsigned i=0; i<rowsSecondHashTable.bucket_count(); ++i)
    {
-      for( boost::unordered_set<rowlib::rowWithColInd>::local_iterator it =
-            rowsFirstHashTable.begin(i); it != rowsFirstHashTable.end(i); ++it )
-         rowsSecondHashTable.emplace(it->id, it->length, it->colIndices, it->norm_entries);
+      for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it = rowsSecondHashTable.begin(i);
+            it!=rowsSecondHashTable.end(i); ++it)
+      {
+         // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
+         // Here: parwise comparison:
+         for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it2 = it;
+                                    it2!=rowsSecondHashTable.end(i); ++it2)
+         {
+            // todo When two parallel rows are found, check if they are both =, both <=, or = and and <=
+            if( checkRowsAreParallel( *it, *it2) )
+            {
+               cout<<"Found two rows with parallel coefficients."<<endl;
+               if( it->id < mA && it2->id < mA )
+               {
+                  // Case both constraints are equalities
+                  // todo: compare normalized rhs b
+               }
+               else if( it->id >= mA && it2->id >= mA )
+               {
+                  // Case both constraings are inequalities
+                  // todo: compare the original rhs and the normalizing factor
+               }
+               else
+               {
+                  // Case one constraint is an equality, one an inequality
+                  // todo: compare the original rhs and the normalizing factor
+               }
+               // todo The action has to be applied to the original matrices (not the normalized copies)
+               // todo make sure that more than 2 parallel rows are treated correctly
+            }
+         }
+      }
    }
+
 }
 
+/**
+ * Compare two rowWithEntries rows if the normalized coefficients are the same, at the same
+ * columns indices. If yes, return true. Else, return false.
+ */
+bool StochPresolverParallelRows::checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2)
+{
+   assert( row1.id >= 0 && row2.id >= 0 );
+   if( row1.id == row2.id )
+      return false;
+
+   if( row1.length != row2.length )
+      return false;
+   for( int i; i<row1.length; i++)
+   {
+      if( row1.colIndices[i] != row2.colIndices[i] )
+         return false;
+      if( row1.norm_entries[i] != row2.norm_entries[i] )
+         return false;
+   }
+   return true;
+}
+
+/** Delete the colIndices arrays in the set rows. */
 void StochPresolverParallelRows::deleteColIndicesArrays(boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows)
 {
    for (unsigned i=0; i<rows.bucket_count(); ++i)

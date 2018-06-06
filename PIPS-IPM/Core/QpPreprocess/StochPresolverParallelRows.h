@@ -80,7 +80,9 @@ private:
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type);
-   void insertRowsIntoSecondHashtable();
+   void compareRowsInSecondHashTable();
+   bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
+
    void deleteColIndicesArrays(boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows);
 
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
