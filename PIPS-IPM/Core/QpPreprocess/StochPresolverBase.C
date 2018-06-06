@@ -259,6 +259,34 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
    }
 }
 
+bool StochPresolverBase::newBoundsTightenOldBounds(double new_low, double new_upp, int index,
+      double* ilow, double* iupp, double* low, double* upp) const
+{
+   if( ( ilow[index] != 0.0 && new_low > low[index] )
+         || ( ilow[index] == 0.0 && new_low > -std::numeric_limits<double>::max() )
+         || ( iupp[index] != 0.0 && new_upp < upp[index] )
+         || ( iupp[index] == 0.0 && new_upp < std::numeric_limits<double>::max() ) )
+      return true;
+   return false;
+}
+
+void StochPresolverBase::setNewBounds(int index, double new_low, double new_upp,
+      double* ilow, double* low, double* iupp, double* upp) const
+{
+   if( (ilow[index] != 0.0 && new_low > low[index])
+      || (ilow[index] == 0.0 && new_low > -std::numeric_limits<double>::max()) )
+   {
+      ilow[index] = 1.0;
+      low[index] = new_low;
+   }
+   if( (iupp[index] != 0.0 && new_upp < upp[index])
+         || (iupp[index] == 0.0 && new_upp < std::numeric_limits<double>::max()))
+   {
+      iupp[index] = 1.0;
+      upp[index] = new_upp;
+   }
+}
+
 void StochPresolverBase::setCurrentPointersToNull()
 {
    currAmat = NULL;

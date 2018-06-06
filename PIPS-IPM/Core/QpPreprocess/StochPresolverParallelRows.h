@@ -17,13 +17,17 @@ namespace rowlib
     struct rowWithColInd
     {
         int id;
-        int length;
-        int* colIndices;
-        double* norm_entries;
+        int offset_nA;
+        int lengthA;
+        int* colIndicesA;
+        double* norm_entriesA;
+        int lengthB;
+        int* colIndicesB;
+        double* norm_entriesB;
 
-
-        rowWithColInd(int i, int n, int* t, double* entries)
-            : id(i), length(n), colIndices(t), norm_entries(entries)  {}
+        rowWithColInd(int id, int nA, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
+            : id(id), offset_nA(nA), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
+              lengthB(lenB), colIndicesB(colB), norm_entriesB(entB)  {}
     };
 
     bool operator==(rowWithColInd const& a, rowWithColInd const& b);
@@ -31,13 +35,18 @@ namespace rowlib
 
     struct rowWithEntries
     {
-        int id;
-        int length;
-        int* colIndices;
-        double* norm_entries;
+       int id;
+       int offset_nA;
+       int lengthA;
+       int* colIndicesA;
+       double* norm_entriesA;
+       int lengthB;
+       int* colIndicesB;
+       double* norm_entriesB;
 
-        rowWithEntries(int i, int n, int* colInd, double* entries)
-            : id(i), length(n),  colIndices(colInd), norm_entries(entries) {}
+        rowWithEntries(int id, int nA, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
+            : id(id), offset_nA(nA), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
+              lengthB(lenB), colIndicesB(colB), norm_entriesB(entB) {}
     };
 
     bool operator==(rowWithEntries const& a, rowWithEntries const& b);
@@ -80,10 +89,8 @@ private:
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type);
-   void compareRowsInSecondHashTable();
+   bool compareRowsInSecondHashTable();
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
-
-   void deleteColIndicesArrays(boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows);
 
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
    bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;

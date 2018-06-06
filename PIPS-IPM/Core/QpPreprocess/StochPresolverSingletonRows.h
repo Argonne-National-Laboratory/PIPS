@@ -10,7 +10,6 @@
 
 #include "StochPresolverBase.h"
 #include <vector>
-#include <limits>
 
 typedef struct
 {
@@ -64,8 +63,6 @@ private:
          double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
          double* ixlow, double* ixupp, double* xlow, double* xupp) const;
-   bool newBoundsTightenOldBounds(double newxlow, double newxupp, int colIdx,
-         double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    bool storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g);
    bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
 
@@ -77,8 +74,6 @@ private:
    int getNumberNewBoundsParent() const;
    void addNewBoundsParent(XBOUNDS newXBounds);
    void clearNewBoundsParent();
-
-   void setNewXBounds(int colIdx, double newxlow, double newxupp, double* ixlow, double* xlow, double* ixupp, double* xupp) const;
 
    /** initialize current pointer for matrices and vectors.
     * If it==-1, we are at parent and want block B_0 (Bmat).

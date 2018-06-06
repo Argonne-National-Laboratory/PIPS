@@ -525,7 +525,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
          {
             cout<<"New bounds tighten bounds of variable "<<colIdx<<endl;
             // adapt immediately the variable bounds
-            setNewXBounds(colIdx, newxlow, newxupp, ixlow, xlow, ixupp, xupp);
+            setNewBounds(colIdx, newxlow, newxupp, ixlow, xlow, ixupp, xupp);
          }
          else
             cout<<"New bounds are redundant for variable "<<colIdx<<endl;
@@ -727,17 +727,6 @@ bool StochPresolverSingletonRows::newBoundsFixVariable(double& value, double new
    return false;
 }
 
-bool StochPresolverSingletonRows::newBoundsTightenOldBounds(double newxlow, double newxupp, int colIdx,
-      double* ixlow, double* ixupp, double* xlow, double* xupp) const
-{
-   if( ( ixlow[colIdx] != 0.0 && newxlow > xlow[colIdx] )
-         || ( ixlow[colIdx] == 0.0 && newxlow > -std::numeric_limits<double>::max() )
-         || ( ixupp[colIdx] != 0.0 && newxupp < xupp[colIdx] )
-         || ( ixupp[colIdx] == 0.0 && newxupp < std::numeric_limits<double>::max() ) )
-      return true;
-   return false;
-}
-
 /** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
  * Adapts the objective offset g only once for each column (variable).
  * Returns false if infeasibility is detected.
@@ -913,7 +902,7 @@ void StochPresolverSingletonRows::updateLinkingVarsBounds()
    for(int i=0; i<getNumberNewBoundsParent(); i++)
    {
       XBOUNDS newbounds = getNewBoundsParent(i);
-      setNewXBounds(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp, ixlow, xlow, ixupp, xupp);
+      setNewBounds(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp, ixlow, xlow, ixupp, xupp);
    }
    clearNewBoundsParent();
 }
@@ -952,23 +941,6 @@ void StochPresolverSingletonRows::addNewBoundsParent(XBOUNDS newXBounds)
 void StochPresolverSingletonRows::clearNewBoundsParent()
 {
    newBoundsParent.clear();
-}
-
-void StochPresolverSingletonRows::setNewXBounds(int colIdx, double newxlow, double newxupp,
-      double* ixlow, double* xlow, double* ixupp, double* xupp) const
-{
-   if( (ixlow[colIdx] != 0.0 && newxlow > xlow[colIdx])
-      || (ixlow[colIdx] == 0.0 && newxlow > -std::numeric_limits<double>::max()) )
-   {
-      ixlow[colIdx] = 1.0;
-      xlow[colIdx] = newxlow;
-   }
-   if( (ixupp[colIdx] != 0.0 && newxupp < xupp[colIdx])
-         || (ixupp[colIdx] == 0.0 && newxupp < std::numeric_limits<double>::max()))
-   {
-      ixupp[colIdx] = 1.0;
-      xupp[colIdx] = newxupp;
-   }
 }
 
 /** Update the current pointers for the singleton row routine.

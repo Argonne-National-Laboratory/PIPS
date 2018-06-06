@@ -16,6 +16,7 @@
 #include "sData.h"
 #include <vector>
 #include <cassert>
+#include <limits>
 
 typedef struct
 {
@@ -126,6 +127,10 @@ protected:
    void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd) const;
 
    void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq);
+   bool newBoundsTightenOldBounds(double new_low, double new_upp, int index,
+         double* ilow, double* iupp, double* low, double* upp) const;
+   void setNewBounds(int index, double new_low, double new_upp,
+         double* ilow, double* low, double* iupp, double* upp) const;
 
    // methods to update the current pointers:
    void setCurrentPointersToNull();
