@@ -120,6 +120,8 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
+  void updateNonEmptyRowsCount(OoqpVector& rowcount) const;
+
   virtual ~SparseGenMatrix();
 
  protected:

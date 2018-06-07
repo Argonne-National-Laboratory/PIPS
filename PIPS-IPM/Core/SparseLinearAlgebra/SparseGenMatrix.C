@@ -472,3 +472,17 @@ void SparseGenMatrix::updateTransposed()
 
    mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
 }
+
+
+void SparseGenMatrix::updateNonEmptyRowsCount(OoqpVector& rowcount) const
+{
+   SimpleVector& rowcountvec = dynamic_cast<SimpleVector&>(rowcount);
+   const int m = mStorage->m;
+   const int* const rowStart = mStorage->krowM;
+
+   assert(m == rowcountvec.length());
+
+   for( int i = 0; i < m; i++ )
+      if( rowStart[i] != rowStart[i + 1] )
+         rowcountvec[i] += 1.0;
+}

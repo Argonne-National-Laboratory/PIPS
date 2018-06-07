@@ -21,6 +21,65 @@ double g_scenNum;
 
 extern int gOuterSolve;
 
+void sLinsysRoot::initSparsityData(const sData* prob, bool sparseKkt)
+{
+   assert(prob);
+
+   hasSparseKkt = sparseKkt;
+   use2Links = sparseKkt;
+
+   if( use2Links )
+   {
+      int myrank; MPI_Comm_rank(mpiComm, &myrank);
+
+      const StochGenMatrix& Astoch = dynamic_cast< const StochGenMatrix&> (*(prob->A));
+      const StochGenMatrix& Cstoch = dynamic_cast< const StochGenMatrix&> (*(prob->C));
+
+      linkIndicatorEq = dynamic_cast<SimpleVector*>(Astoch.get2LinkIndicator());
+      linkIndicatorIneq = dynamic_cast<SimpleVector*>(Cstoch.get2LinkIndicator());
+
+      if( myrank == 0 )
+      {
+         const double* const eqElements = linkIndicatorEq->elements();
+         const double* const ineqElements = linkIndicatorIneq->elements();
+
+         int nEq = 0;
+         int nIneq = 0;
+
+         for( int i = 0; i < linkIndicatorEq->length(); i++ )
+            if( eqElements[i] > 0.0 )
+            {
+               assert(eqElements[i] == 1.0);
+               nEq++;
+            }
+         for( int i = 0; i < linkIndicatorIneq->length(); i++ )
+            if( ineqElements[i] > 0.0 )
+            {
+               assert(ineqElements[i] == 1.0);
+               nIneq++;
+            }
+
+         std::cout << "number of equality 2-links: " << nEq << " (out of " << linkIndicatorEq->length() << " equalities) " <<  std::endl;
+         std::cout << "number of inequality 2-links: " << nIneq << " (out of " << linkIndicatorIneq->length() << " equalities) " <<  std::endl;
+      }
+
+      if( linkIndicatorEq->infnorm() == 0.0 && linkIndicatorIneq->infnorm() == 0.0 )
+      {
+         use2Links = false;
+         delete linkIndicatorEq;
+         delete linkIndicatorIneq;
+         linkIndicatorEq = NULL;
+         linkIndicatorIneq = NULL;
+         std::cout << "no 2-links found" << std::endl;
+      }
+   }
+   else
+   {
+      linkIndicatorEq = NULL;
+      linkIndicatorIneq = NULL;
+   }
+}
+
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   : sLinsys(factory_, prob_), iAmDistrib(0)
 {
@@ -48,6 +107,10 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
     sol  = res  = resx = resy = resz = NULL;
     sol2 = res2 = res3 = res4 = res5 = NULL;
   }
+
+  int todo; // make default param
+
+  initSparsityData(prob_, true);
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -81,12 +144,19 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
       sol  = res  = resx = resy = resz = NULL;
       sol2 = res2 = res3 = res4 = res5 = NULL;
   }
+
+  int todo; // make default param
+
+  initSparsityData(prob_, true);
 }
 
 sLinsysRoot::~sLinsysRoot()
 {
   for(size_t c=0; c<children.size(); c++)
     delete children[c];
+
+  delete linkIndicatorEq;
+  delete linkIndicatorIneq;
 }
 
 //this variable is just reset in this file; children will default to the "safe" linear solver

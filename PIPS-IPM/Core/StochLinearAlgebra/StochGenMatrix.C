@@ -957,6 +957,49 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    }
 }
 
+OoqpVector* StochGenMatrix::get2LinkIndicator() const
+{
+   if( Blmat == NULL )
+      return NULL;
+
+   int m,n;
+
+   Blmat->getSize(m, n);
+   assert(m > 0);
+
+   SimpleVector* linkCount = new SimpleVector(m);
+   double* const linkCountEntries = linkCount->elements();
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
+      {
+         assert(children[it]->Blmat);
+
+         children[it]->Blmat->updateNonEmptyRowsCount(*linkCount);
+      }
+   }
+
+   if( iAmDistrib )
+   {
+      MPI_Allreduce(MPI_IN_PLACE, linkCountEntries, m, MPI_DOUBLE, MPI_SUM, mpiComm);
+   }
+
+   Blmat->updateNonEmptyRowsCount(*linkCount);
+
+   for( int i = 0; i < m; i++ )
+   {
+      assert(linkCountEntries[i] >= 2.0);
+
+      if( linkCountEntries[i] > 2.0 )
+         linkCountEntries[i] = 0.0;
+      else
+         linkCountEntries[i] = 1.0;
+   }
+
+   return linkCount;
+}
+
 void StochGenMatrix::updateTransposed()
 {
   Amat->updateTransposed();

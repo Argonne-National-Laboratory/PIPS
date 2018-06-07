@@ -117,6 +117,7 @@ public:
   						double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
   						double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
 						bool& primalBlocking, bool& dualBlocking) const;
+
   /** Returns a pointer to the elements of this vector. */
   double * elements() const { return v; };
 };
