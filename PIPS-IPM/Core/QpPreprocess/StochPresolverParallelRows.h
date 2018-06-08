@@ -64,6 +64,12 @@ public:
    virtual bool applyPresolving(int& nelims);
 
 private:
+   SparseStorageDynamic* currCmat;
+   SparseStorageDynamic* currCmatTrans;
+   SparseStorageDynamic* currDmat;
+   SparseStorageDynamic* currDmatTrans;
+   SimpleVector* currNnzRowC;
+
    // pointers to the normalized and copied matrix blocks
    SparseStorageDynamic* norm_Amat;
    SparseStorageDynamic* norm_Bmat;
@@ -91,6 +97,10 @@ private:
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type);
    bool compareRowsInSecondHashTable();
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
+   void eliminateOriginalRow(int rowId);
+   void removeRow(int rowIdx, SparseStorageDynamic* Ablock, SparseStorageDynamic* AblockTrans,
+         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow,
+         SimpleVector* redColParent, SimpleVector* nnzColChild);
 
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
    bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;

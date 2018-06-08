@@ -131,6 +131,25 @@ void StochPresolverBase::updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVe
 #endif
 }
 
+/**
+ * Update the vector presData.nColElems->vec (nnzColParent vector).
+ * In the distributed case, MPI_allreduce is used to sum up the different
+ * redColParent vectors (presData.redCol->vec). Then the reductions are
+ * subtracted from the nnz-vector.
+ */
+void StochPresolverBase::updateNnzColParent(MPI_Comm comm)
+{
+   int world_size;
+   MPI_Comm_size(comm, &world_size);
+   if( world_size > 1)
+   {
+      double* redColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
+      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
+      MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, comm);
+   }
+   updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
+}
+
 void StochPresolverBase::storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type)
 {
    assert( (int)removedEntries.size() == localNelims );
@@ -237,13 +256,7 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
       colAdaptF0( INEQUALITY_SYSTEM);
    presData.clearColAdaptParent();
 
-   if( iAmDistrib )
-   {
-      double* redColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
-      MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-   }
-   updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
+   updateNnzColParent(MPI_COMM_WORLD);
 
    presData.resetRedCounters();
 
@@ -418,7 +431,8 @@ bool StochPresolverBase::setCPBmatsChild(GenMatrixHandle matrixHandle, int it, S
    return true;
 }
 
-/** Set the current pointers for currAmat and currBmat at the root.
+/** Set the current pointers for currAmat and currBmat for child it>=0.
+ * If it==-1, set only currAmat to the root Bmat.
  * Return false if it is a dummy child. */
 bool StochPresolverBase::setCPAmatBmat(GenMatrixHandle matrixHandle, int it, SystemType system_type)
 {

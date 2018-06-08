@@ -120,6 +120,7 @@ protected:
    void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims);
    void updateRhsNRowLink();
    void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
+   void updateNnzColParent(MPI_Comm comm);
 
    void storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type);
    // methods to update the transposed matrix:
