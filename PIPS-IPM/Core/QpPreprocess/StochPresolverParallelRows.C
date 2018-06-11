@@ -89,17 +89,17 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       if( setNormalizedPointers((int)it, matrixA, matrixC ) )
       {
          cout<<"Normalized pointers are set for child #"<<(int)it<<endl;
-         // Initialize unordered set 'rows':
+         // Prepare unordered set 'rowsFirstHashTable':
          rowsFirstHashTable.clear();
 
-         // Per row, add row to the set 'rows':
+         // Per row, add row to the set 'rowsFirstHashTable':
          if( norm_Amat )
             insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, norm_Bmat, EQUALITY_SYSTEM );
-         assert( (int)rowsFirstHashTable.size() == mA );
+         assert( (int)rowsFirstHashTable.size() <= mA );
          if( norm_Cmat )
          {
             insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM );
-            assert((int)rowsFirstHashTable.size() == mA + norm_Cmat->m);
+            assert( (int)rowsFirstHashTable.size() <= mA + norm_Cmat->m);
          }
 
          // Prints for visualization:
@@ -149,9 +149,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
          }
 
          // Objects created with new have to be deleted at the end of each child (norm_Amat etc)
-         // the colIndices arrays also have to be deleted
          deleteNormalizedPointers((int)it, matrixA, matrixC);
-         //deleteColIndicesArrays(rowsFirstHashTable);
 
          /*std::cout << "unordered_set rows has size " << rows.size() <<" after deleting"<< '\n';
          for (size_t i=0; i<rows.bucket_count(); ++i)
@@ -180,6 +178,11 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    return true;
 }
 
+/** If it is no dummy child, sets normalized pointers:
+ * For the matrix blocks A, B, C and D and their transposed matrices and for the lhs/rhs.
+ * Sets the pointers to currNnzRow, currNnzRowC, currNnzColChild, currRedColParent.
+ * Sets mA and nA correctly.
+ */
 bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
 {
    // check if it is no dummy child and copy the matrices:
@@ -369,12 +372,16 @@ void StochPresolverParallelRows::normalizeBLocksRowwise( SystemType system_type,
    }
 }
 
+/** Inserts all non-empty rows into the given unordered set 'rows'.
+ * Ablock and Bblock are supposed to be the two matrix blocks of a child.
+ */
 void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
       SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type )
 {
    if( Ablock )
    {
       assert( Bblock );
+      aasert( Ablock->m == Bblock->m );
       if( system_type == EQUALITY_SYSTEM )
          assert( mA == Ablock->m );
       for(int i=0; i<Ablock->m; i++)
@@ -392,8 +399,17 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
 
          // colIndices and normalized entries are set as pointers to the original data.
          // create and insert the new element:
-         rows.emplace(rowId, nA, rowlengthA, &(Ablock->jcolM[rowStartA]), &(Ablock->M[rowStartA]),
-               rowlengthB, &(Bblock->jcolM[rowStartB]), &(Bblock->M[rowStartB]));
+         if( rowlengthA != 0 || rowlengthB != 0 )
+            rows.emplace(rowId, nA, rowlengthA, &(Ablock->jcolM[rowStartA]), &(Ablock->M[rowStartA]),
+                           rowlengthB, &(Bblock->jcolM[rowStartB]), &(Bblock->M[rowStartB]));
+
+         else  // only for assertions
+         {
+            if( system_type == EQUALITY_SYSTEM )
+               assert( currNnzRow->elements()[rowId] == 0.0 );
+            else
+               assert( currNnzRowC->elements()[rowId] == 0.0 );
+         }
       }
    }
 }
@@ -439,6 +455,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                else if( it1->id >= mA && it2->id >= mA )
                {
                   // Case both constraints are inequalities
+                  // Set newxlow/newxupp to the bounds of the second inequality:
                   double newxlow = -std::numeric_limits<double>::max();
                   double newxupp = std::numeric_limits<double>::max();
                   if( norm_iclow->elements()[it2->id] != 0.0 )
@@ -450,7 +467,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                         norm_icupp->elements(), norm_iclow->elements(), norm_cupp->elements()) )
                   {
                      // tighten the constraint bounds:
-                     setNewBounds(it1->id, newxlow, newxupp, norm_iclow->elements(), norm_iclow->elements(),
+                     setNewBounds(it1->id, newxlow, newxupp, norm_iclow->elements(), norm_clow->elements(),
                            norm_icupp->elements(), norm_cupp->elements());
                      // todo: apply the lhs/rhs tightening to the original data
                   }
@@ -472,7 +489,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                      swappedId1Id2 = true;
                   }
 
-                  const int ineqRowId = id2 - it2->offset_nA;
+                  const int ineqRowId = id2 - mA;
                   if( norm_iclow->elements()[ineqRowId] != 0.0 )
                   {
                      if( norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
@@ -540,6 +557,7 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId)
    assert(rowId>=0);
    if(rowId < mA) // equality row
    {
+      assert( norm_Amat );
       if(currNnzRow->elements()[rowId] != 0.0) // check if row was already removed
       {
          cout<<"Delete row in A with id# "<<rowId<<endl;

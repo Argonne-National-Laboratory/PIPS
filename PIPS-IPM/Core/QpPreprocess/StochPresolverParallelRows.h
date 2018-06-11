@@ -25,8 +25,8 @@ namespace rowlib
         int* colIndicesB;
         double* norm_entriesB;
 
-        rowWithColInd(int id, int nA, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
-            : id(id), offset_nA(nA), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
+        rowWithColInd(int id, int offset, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
+            : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
               lengthB(lenB), colIndicesB(colB), norm_entriesB(entB)  {}
     };
 
@@ -44,8 +44,8 @@ namespace rowlib
        int* colIndicesB;
        double* norm_entriesB;
 
-        rowWithEntries(int id, int nA, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
-            : id(id), offset_nA(nA), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
+        rowWithEntries(int id, int offset, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
+            : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
               lengthB(lenB), colIndicesB(colB), norm_entriesB(entB) {}
     };
 
@@ -81,7 +81,7 @@ private:
    SimpleVector* norm_iclow;
    SimpleVector* norm_icupp;
 
-   // number of rows of the A or C block
+   // number of rows of the A or B block
    int mA;
    // number of columns of the A or C block
    int nA;
