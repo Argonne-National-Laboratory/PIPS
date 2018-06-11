@@ -85,6 +85,7 @@ QpGenData::QpGenData( )
 void QpGenData::Qmult( double beta,  OoqpVector& y,
 		       double alpha, OoqpVector& x )
 {
+  return; // non-zero Q is currently not supported
   Q->mult( beta, y, alpha, x );
 }
 
