@@ -36,5 +36,10 @@ inline bool PIPSisLT(double val1, double val2)
    return (val1 <= val2 - pips_eps);
 }
 
+inline bool PIPSisEQ_withTolerance(double val1, double val2, double tolerance)
+{
+   return (std::fabs(val1 - val2) <= tolerance);
+}
+
 #endif
 

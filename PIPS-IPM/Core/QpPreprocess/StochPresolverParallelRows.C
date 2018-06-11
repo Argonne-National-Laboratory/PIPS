@@ -34,9 +34,20 @@ namespace rowlib
    {
       std::size_t seed = 0;
       for( int i = 0; i < row.lengthA; i++ )
-         boost::hash_combine(seed, row.norm_entriesA[i]);
+      {
+         // Instead of hashing the normalized double coefficient, use an integer representation:
+         int value_to_hash;
+         double mantisse = std::frexp( (row.norm_entriesA[i] + offset_hash_double), &value_to_hash);
+         value_to_hash += 10*( (int)trunc(mantisse*10000) );
+         boost::hash_combine(seed, value_to_hash);
+      }
       for( int i = 0; i < row.lengthB; i++ )
-         boost::hash_combine(seed, row.norm_entriesB[i]);
+      {
+         int value_to_hash;
+         double mantisse = std::frexp( (row.norm_entriesB[i] + offset_hash_double), &value_to_hash);
+         value_to_hash += 10*( (int)trunc(mantisse*10000) );
+         boost::hash_combine(seed, value_to_hash);
+      }
       return seed;
    }
 }
@@ -76,11 +87,16 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
+   if( myRank == 0 )
+      cout<<"Before Parallel Row Presolving:"<<endl;
+   countRowsCols();
+
    if( myRank == 0 ) cout<<"Start Parallel Row Presolving..."<<endl;
 
    StochGenMatrix& matrixA = dynamic_cast<StochGenMatrix&>(*(presProb->A));
    StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
    presData.resetRedCounters();
+   int nRowElims = 0;
 
    // for children:
    for( size_t child_it = 0; child_it< matrixA.children.size(); child_it++)
@@ -145,7 +161,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
                }
             }*/
             // Compare the rows in the final (from second hash) bin:
-            compareRowsInSecondHashTable();
+            compareRowsInSecondHashTable(nRowElims);
 
             rowsSecondHashTable.clear();
          }
@@ -171,8 +187,15 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    rowsFirstHashTable.clear();
    rowsSecondHashTable.clear();
 
-   //MPI_Barrier( MPI_COMM_WORLD);
+   MPI_Barrier( MPI_COMM_WORLD);
+   synchronize(nRowElims);
+   if( myRank == 0 )
+      cout<<"Removed "<<nRowElims<<" Rows in Parallel Row Presolving."<<endl;
    //assert(0);
+
+   if( myRank == 0 )
+      cout<<"After Parallel Row Presolving:"<<endl;
+   countRowsCols();
 
    //countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
    //countDuplicateRows(matrixA, EQUALITY_SYSTEM);
@@ -420,7 +443,7 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
  * Per bucket in rowsSecondHashTable, compare the containing rows and check if they are parallel.
  * If so, consider the different possible cases.
  */
-bool StochPresolverParallelRows::compareRowsInSecondHashTable()
+bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
 {
    // todo The action has to be applied to the original matrices (not the normalized copies)
    // todo make sure that more than 2 parallel rows are treated correctly
@@ -448,10 +471,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                   if( norm_b->elements()[it1->id] != norm_b->elements()[it2->id])
                      return false;
                   // delete row2 in the original system:
-                  eliminateOriginalRow(it2->id);
-
-                  // delete row2 in the secondHashTable:
-                  //rowsSecondHashTable.erase(*it2);
+                  eliminateOriginalRow((int)it2->id, nRowElims);
 
                }
                else if( it1->id >= mA && it2->id >= mA )
@@ -468,7 +488,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                      newxupp = norm_cupp->elements()[rowId2];
                   // test if new bounds are tightening:
                   if( newBoundsTightenOldBounds(newxlow, newxupp, rowId1, norm_iclow->elements(),
-                        norm_icupp->elements(), norm_iclow->elements(), norm_cupp->elements()) )
+                        norm_icupp->elements(), norm_clow->elements(), norm_cupp->elements()) )
                   {
                      // tighten the constraint bounds:
                      setNewBounds(rowId1, newxlow, newxupp, norm_iclow->elements(), norm_clow->elements(),
@@ -476,10 +496,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                      // todo: apply the lhs/rhs tightening to the original data (it1)
                   }
                   // delete row2 in the original system:
-                  eliminateOriginalRow(rowId2);
-
-                  // delete row2 in the secondHashTable:
-                  //rowsSecondHashTable.erase(*it2);
+                  eliminateOriginalRow(rowId2, nRowElims);
 
                }
                else
@@ -509,14 +526,12 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                   if(swappedId1Id2)
                   {
                      // delete row2 in the original system:
-                     eliminateOriginalRow(it1->id);
-                     //rowsSecondHashTable.erase(*it1);
+                     eliminateOriginalRow(it1->id, nRowElims);
                   }
                   else
                   {
                      // delete row2 in the original system:
-                     eliminateOriginalRow(it2->id);
-                     //rowsSecondHashTable.erase(*it2);
+                     eliminateOriginalRow(it2->id, nRowElims);
                   }
                }
             }
@@ -542,21 +557,21 @@ bool StochPresolverParallelRows::checkRowsAreParallel( rowlib::rowWithEntries ro
    {
       if( row1.colIndicesA[i] != row2.colIndicesA[i] )
          return false;
-      if( row1.norm_entriesA[i] != row2.norm_entriesA[i] )
+      if( !PIPSisEQ_withTolerance(row1.norm_entriesA[i], row2.norm_entriesA[i], tol_compare_double) )
          return false;
    }
    for( int i=0; i<row1.lengthB; i++)
    {
       if( row1.colIndicesB[i] != row2.colIndicesB[i] )
          return false;
-      if( row1.norm_entriesB[i] != row2.norm_entriesB[i] )
+      if( !PIPSisEQ_withTolerance(row1.norm_entriesB[i], row2.norm_entriesB[i], tol_compare_double) )
          return false;
    }
    return true;
 }
 
 /** Eliminate the row in the original system. */
-void StochPresolverParallelRows::eliminateOriginalRow(int rowId)
+void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
 {
    assert(rowId>=0);
    if(rowId < mA) // equality row
@@ -565,6 +580,7 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId)
       if(currNnzRow->elements()[rowId] != 0.0) // check if row was already removed
       {
          cout<<"Delete row in A with id# "<<rowId<<endl;
+         nRowElims++;
          removeRow(rowId, currAmat, currAmatTrans, currBmat, currBmatTrans,
                currNnzRow, currRedColParent, currNnzColChild);
       }
@@ -577,6 +593,7 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId)
       if(currNnzRowC->elements()[rowIdC] != 0.0) // check if row was already removed
       {
          cout<<"Delete row in C with id# "<<rowIdC<<endl;
+         nRowElims++;
          removeRow(rowIdC, currCmat, currCmatTrans, currDmat, currDmatTrans,
                currNnzRowC, currRedColParent, currNnzColChild);
       }

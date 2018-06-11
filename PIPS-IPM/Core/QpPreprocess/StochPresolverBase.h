@@ -14,6 +14,7 @@
 #include "SmartPointer.h"
 #include "PresolveData.h"
 #include "sData.h"
+#include "pipsdef.h"
 #include <vector>
 #include <cassert>
 #include <limits>
@@ -51,6 +52,7 @@ protected:
    static const double tolerance2 = 1.0e-2;
    static const double tolerance3 = 1.0e-10;
    static const int maxIterSR = 20;
+   static const double tol_compare_double = 1.0e-8;
 
 
    // pointers to the currently needed matrices and vectors for presolving

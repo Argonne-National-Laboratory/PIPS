@@ -14,6 +14,8 @@
 
 namespace rowlib
 {
+   static const double offset_hash_double = 0.127;
+
     struct rowWithColInd
     {
         int id;
@@ -95,9 +97,9 @@ private:
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type);
-   bool compareRowsInSecondHashTable();
+   bool compareRowsInSecondHashTable(int& nRowElims);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
-   void eliminateOriginalRow(int rowId);
+   void eliminateOriginalRow(int rowId, int& nRowElims);
    void removeRow(int rowIdx, SparseStorageDynamic* Ablock, SparseStorageDynamic* AblockTrans,
          SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow,
          SimpleVector* redColParent, SimpleVector* nnzColChild);
