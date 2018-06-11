@@ -18,6 +18,7 @@
 class SparseSymMatrix : public SymMatrix {
   SparseStorageHandle mStorage;
 public:
+  SparseSymMatrix();
   SparseSymMatrix( int size, int nnz );
   SparseSymMatrix( int size, int nnz,
 		   int krowM[], int jcolM[], double M[], int deleteElts=0);

@@ -15,6 +15,11 @@ int SparseSymMatrix::isKindOf( int type )
   return type == kSparseSymMatrix || type == kSymMatrix;
 }
 
+SparseSymMatrix::SparseSymMatrix()
+{
+  mStorage = NULL;
+}
+
 SparseSymMatrix::SparseSymMatrix( int size, int nnz )
 {
   mStorage = SparseStorageHandle( new SparseStorage(size, size, nnz) );

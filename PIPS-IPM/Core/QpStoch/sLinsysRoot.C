@@ -110,7 +110,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
 
   int todo; // make default param
 
-  initSparsityData(prob_, true);
+  initSparsityData(prob_, false);
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -147,7 +147,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 
   int todo; // make default param
 
-  initSparsityData(prob_, true);
+  initSparsityData(prob_, false);
 }
 
 sLinsysRoot::~sLinsysRoot()
@@ -179,7 +179,9 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     if(children[c]->mpiComm == MPI_COMM_NULL)
       continue;
 
-    children[c]->stochNode->resMon.recFactTmChildren_start();    
+    children[c]->stochNode->resMon.recFactTmChildren_start();
+
+    int todo; // check whether hasSparse and call sparse schur complement or factor2 Sparse?
     //---------------------------------------------
     children[c]->addTermToDenseSchurCompl(prob->children[c], kktd);
     //---------------------------------------------

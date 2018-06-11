@@ -18,6 +18,7 @@ class PardisoIndefSolver : public DoubleLinearSolver
 {
    public:
       DenseStorageHandle mStorage;
+      SparseStorageHandle mStorageSparse;
    protected:
      // SparseSymMatrix *sparseMat; todo
 

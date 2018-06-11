@@ -58,33 +58,41 @@ sLinsysRootAug::~sLinsysRootAug()
 SymMatrix* 
 sLinsysRootAug::createKKT(sData* prob)
 {
-  int n = locnx + locmy + locmyl + locmzl;
-  return new DenseSymMatrix(n);
+  if( hasSparseKkt )
+     return new SparseSymMatrix();
+  else
+  {
+     const int n = locnx + locmy + locmyl + locmzl;
+     return new DenseSymMatrix(n);
+  }
 }
 
 
 DoubleLinearSolver*
 sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
-  DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
-  // todo user parameter
-#ifdef WITH_PARDISOINDEF
-  if( 0 == myRank )
-     cout << "Using Pardiso for summed Schur complement - sLinsysRootAug"<< endl;
-  return new PardisoIndefSolver(kktmat);
+  if( hasSparseKkt )
+  {
+    SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
 
-#else
-   if( 0 == myRank )
-      cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug"<< endl;
+    if( 0 == myRank )
+       cout << "Using Pardiso for summed Schur complement - sLinsysRootAug"<< endl;
+    return new PardisoIndefSolver(kktmat);
+  }
+  else
+  {
+     if( 0 == myRank )
+        cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug"<< endl;
 
-   return new DeSymIndefSolver(kktmat);
-   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
-   //return new DeSymPSDSolver(kktmat);
-   //return new PardisoSolver(kktmat);
-#endif
+     DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
 
+     return new DeSymIndefSolver(kktmat);
+     //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
+     //return new DeSymPSDSolver(kktmat);
+     //return new PardisoSolver(kktmat);
+  }
 }
 
 #ifdef TIMING

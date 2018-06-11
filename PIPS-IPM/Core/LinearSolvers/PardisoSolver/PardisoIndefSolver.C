@@ -35,6 +35,7 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 
 
   mStorage = DenseStorageHandle( dm->getStorage() );
+  mStorageSparse = NULL;
 
   mtype = -2; /* Real symmetric matrix */
   nrhs = 1;
@@ -89,6 +90,8 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 
 
   mStorage = NULL;
+  int wontworkbeause_NULL;
+  mStorageSparse = SparseStorageHandle( sm->getStorage() );
 
   mtype = -2;
   nrhs = 1;
