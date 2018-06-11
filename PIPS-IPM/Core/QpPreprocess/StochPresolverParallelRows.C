@@ -83,12 +83,12 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    presData.resetRedCounters();
 
    // for children:
-   for( size_t it = 0; it< matrixA.children.size(); it++)
+   for( size_t child_it = 0; child_it< matrixA.children.size(); child_it++)
    {
       // copy and normalize A,B,C,D and b,c,d:
-      if( setNormalizedPointers((int)it, matrixA, matrixC ) )
+      if( setNormalizedPointers((int)child_it, matrixA, matrixC ) )
       {
-         cout<<"Normalized pointers are set for child #"<<(int)it<<endl;
+         cout<<"Normalized pointers are set for child #"<<(int)child_it<<endl;
          // Prepare unordered set 'rowsFirstHashTable':
          rowsFirstHashTable.clear();
 
@@ -118,8 +118,10 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
          {
             for( boost::unordered_set<rowlib::rowWithColInd>::local_iterator it =
                   rowsFirstHashTable.begin(i); it != rowsFirstHashTable.end(i); ++it )
+            {
                rowsSecondHashTable.emplace(it->id, it->offset_nA, it->lengthA, it->colIndicesA, it->norm_entriesA,
                      it->lengthB, it->colIndicesB, it->norm_entriesB);
+            }
 
             // Prints for visualization:
             /*if( !rowsSecondHashTable.empty() )
@@ -149,7 +151,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
          }
 
          // Objects created with new have to be deleted at the end of each child (norm_Amat etc)
-         deleteNormalizedPointers((int)it, matrixA, matrixC);
+         deleteNormalizedPointers((int)child_it, matrixA, matrixC);
 
          /*std::cout << "unordered_set rows has size " << rows.size() <<" after deleting"<< '\n';
          for (size_t i=0; i<rows.bucket_count(); ++i)
@@ -381,7 +383,7 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
    if( Ablock )
    {
       assert( Bblock );
-      aasert( Ablock->m == Bblock->m );
+      assert( Ablock->m == Bblock->m );
       if( system_type == EQUALITY_SYSTEM )
          assert( mA == Ablock->m );
       for(int i=0; i<Ablock->m; i++)
@@ -455,24 +457,26 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable()
                else if( it1->id >= mA && it2->id >= mA )
                {
                   // Case both constraints are inequalities
+                  const int rowId1 = it1->id - mA;
+                  const int rowId2 = it2->id - mA;
                   // Set newxlow/newxupp to the bounds of the second inequality:
                   double newxlow = -std::numeric_limits<double>::max();
                   double newxupp = std::numeric_limits<double>::max();
-                  if( norm_iclow->elements()[it2->id] != 0.0 )
-                     newxlow = norm_clow->elements()[it2->id];
-                  if( norm_icupp->elements()[it2->id] != 0.0 )
-                     newxupp = norm_cupp->elements()[it2->id];
+                  if( norm_iclow->elements()[rowId2] != 0.0 )
+                     newxlow = norm_clow->elements()[rowId2];
+                  if( norm_icupp->elements()[rowId2] != 0.0 )
+                     newxupp = norm_cupp->elements()[rowId2];
                   // test if new bounds are tightening:
-                  if( newBoundsTightenOldBounds(newxlow, newxupp, it1->id, norm_iclow->elements(),
+                  if( newBoundsTightenOldBounds(newxlow, newxupp, rowId1, norm_iclow->elements(),
                         norm_icupp->elements(), norm_iclow->elements(), norm_cupp->elements()) )
                   {
                      // tighten the constraint bounds:
-                     setNewBounds(it1->id, newxlow, newxupp, norm_iclow->elements(), norm_clow->elements(),
+                     setNewBounds(rowId1, newxlow, newxupp, norm_iclow->elements(), norm_clow->elements(),
                            norm_icupp->elements(), norm_cupp->elements());
-                     // todo: apply the lhs/rhs tightening to the original data
+                     // todo: apply the lhs/rhs tightening to the original data (it1)
                   }
                   // delete row2 in the original system:
-                  eliminateOriginalRow(it2->id);
+                  eliminateOriginalRow(rowId2);
 
                   // delete row2 in the secondHashTable:
                   //rowsSecondHashTable.erase(*it2);

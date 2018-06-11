@@ -49,9 +49,9 @@ Data* StochPresolver::presolve()
    // clone and initialize dynamic storage
 
    ofstream myfile;
-   myfile.open ("before.txt");
+   /*myfile.open ("before.txt");
    sorigprob->writeToStreamDense(myfile);
-   myfile.close();
+   myfile.close();*/
 
    int nelims = 0;
 
@@ -92,9 +92,9 @@ Data* StochPresolver::presolve()
    if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
    sData* finalPresData = presData.finalize();
 
-   myfile.open("after.txt");
+   /*myfile.open("after.txt");
    finalPresData->writeToStreamDense(myfile);
-   myfile.close();
+   myfile.close();*/
 
    //presProb->writeToStreamDense(std::cout);
 
