@@ -106,7 +106,6 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       // copy and normalize A,B,C,D and b,c,d:
       if( setNormalizedPointers((int)child_it, matrixA, matrixC ) )
       {
-         cout<<"Normalized pointers are set for child #"<<(int)child_it<<endl;
          // Prepare unordered set 'rowsFirstHashTable':
          rowsFirstHashTable.clear();
 
@@ -121,19 +120,16 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
          }
 
          // Prints for visualization:
-         /*std::cout << "unordered_set rowsFirstHashTable has size " << rowsFirstHashTable.size() << '\n';
-         for (size_t i=0; i<rowsFirstHashTable.bucket_count(); ++i)
-         {
-             std::cout << "bucket #" << i << " contains: ";
-             for (boost::unordered_set<rowlib::rowWithColInd>::local_iterator it = rowsFirstHashTable.begin(i); it!=rowsFirstHashTable.end(i); ++it)
-                 std::cout << " row id#"<<it->id;
-             std::cout << "\n";
-         }*/
+         //std::cout << "unordered_set rowsFirstHashTable has size " << rowsFirstHashTable.size() << '\n';
 
          // Second Hashing: Per bucket, do Second Hashing:
          rowsSecondHashTable.clear();
          for( size_t i = 0; i < rowsFirstHashTable.bucket_count(); ++i )
          {
+            // skip bins with less than 2 elements:
+            if( rowsFirstHashTable.bucket_size(i)<2 )
+               continue;
+            // insert elements from first Hash-bin into the second Hash-table:
             for( boost::unordered_set<rowlib::rowWithColInd>::local_iterator it =
                   rowsFirstHashTable.begin(i); it != rowsFirstHashTable.end(i); ++it )
             {
@@ -149,21 +145,12 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
                {
                   if( rowsSecondHashTable.bucket_size(i) > 0 )
                   {
-                     std::cout << "bucket #" << i << " contains: "<<rowsSecondHashTable.bucket_size(i)<<" entries.";
-                     for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it = rowsSecondHashTable.begin(i); it!=rowsSecondHashTable.end(i); ++it)
-                     {
-                        std::cout << " row id#"<<it->id<<", entries: ";
-                        for(int k=0; k<it->lengthA; k++)
-                           std::cout <<it->norm_entriesA[k]<<", ";
-                        for(int k=0; k<it->lengthB; k++)
-                           std::cout <<it->norm_entriesB[k]<<", ";
-                     }
-                     std::cout << "\n";
+                     std::cout << "bucket #" << i << " contains: "<<rowsSecondHashTable.bucket_size(i)<<" entries."<<endl;
                   }
                }
             }*/
-            // Compare the rows in the final (from second hash) bin:
 
+            // Compare the rows in the final (from second hash) bin:
             possibleFeasible = compareRowsInSecondHashTable(nRowElims);
             if( !possibleFeasible )
             {
@@ -485,7 +472,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
             // When two parallel rows are found, check if they are both =, both <=, or = and <=
             if( checkRowsAreParallel( *it1, *it2) )
             {
-               cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<" and "<<it2->id<<endl;
+//               cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<" and "<<it2->id<<endl;
                if( it1->id < mA && it2->id < mA )
                {
                   // Case both constraints are equalities
@@ -519,29 +506,26 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                      std::swap(id1, id2);
                      swappedId1Id2 = true;
                   }
-
                   const int ineqRowId = id2 - mA;
-                  if( norm_iclow->elements()[ineqRowId] != 0.0 )
-                  {
-                     if( norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
-                        return false;
-                  }
-                  if( norm_icupp->elements()[ineqRowId] != 0.0 )
-                  {
-                     if( norm_cupp->elements()[ineqRowId] < norm_b->elements()[id1] )
-                        return false;
-                  }
+
+                  // check for infeasibility:
+                  if( norm_iclow->elements()[ineqRowId] != 0.0
+                        && norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
+                     return false;
+                  if( norm_icupp->elements()[ineqRowId] != 0.0
+                        && norm_cupp->elements()[ineqRowId] < norm_b->elements()[id1] )
+                     return false;
 
                   // delete the inequality constraint id2 (which could be either it1 or it2 now):
                   if(swappedId1Id2)
                   {
                      // delete row2 in the original system:
-                     eliminateOriginalRow(it1->id, nRowElims);
+                     eliminateOriginalRow((int)it1->id, nRowElims);
                   }
                   else
                   {
                      // delete row2 in the original system:
-                     eliminateOriginalRow(it2->id, nRowElims);
+                     eliminateOriginalRow((int)it2->id, nRowElims);
                   }
                }
             }
@@ -589,7 +573,7 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
       assert( norm_Amat );
       if(currNnzRow->elements()[rowId] != 0.0) // check if row was already removed
       {
-         cout<<"Delete row in A with id# "<<rowId<<endl;
+//         cout<<"Delete row in A with id# "<<rowId<<endl;
          nRowElims++;
          removeRow(rowId, currAmat, currAmatTrans, currBmat, currBmatTrans,
                currNnzRow, currRedColParent, currNnzColChild);
@@ -602,7 +586,7 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
       const int rowIdC = rowId - mA;
       if(currNnzRowC->elements()[rowIdC] != 0.0) // check if row was already removed
       {
-         cout<<"Delete row in C with id# "<<rowIdC<<endl;
+//         cout<<"Delete row in C with id# "<<rowIdC<<endl;
          nRowElims++;
          removeRow(rowIdC, currCmat, currCmatTrans, currDmat, currDmatTrans,
                currNnzRowC, currRedColParent, currNnzColChild);
