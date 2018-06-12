@@ -21,12 +21,11 @@ double g_scenNum;
 
 extern int gOuterSolve;
 
-void sLinsysRoot::initSparsityData(const sData* prob, bool sparseKkt)
+void sLinsysRoot::initSparsityData(const sData* prob)
 {
    assert(prob);
 
-   hasSparseKkt = sparseKkt;
-   use2Links = sparseKkt;
+   use2Links = hasSparseKkt;
 
    if( use2Links )
    {
@@ -108,9 +107,14 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
     sol2 = res2 = res3 = res4 = res5 = NULL;
   }
 
-  int todo; // make default param
+  // todo make default parameter
+#ifdef WITH_PARDISOINDEF
+  hasSparseKkt = true;
+#else
+  hasSparseKkt = false;
+#endif
 
-  initSparsityData(prob_, false);
+  initSparsityData(prob_);
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -145,9 +149,14 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
       sol2 = res2 = res3 = res4 = res5 = NULL;
   }
 
-  int todo; // make default param
+  // todo make default parameter
+#ifdef WITH_PARDISOINDEF
+  hasSparseKkt = true;
+#else
+  hasSparseKkt = false;
+#endif
 
-  initSparsityData(prob_, false);
+  initSparsityData(prob_);
 }
 
 sLinsysRoot::~sLinsysRoot()

@@ -1499,6 +1499,54 @@ void SparseStorage::getRowMinMaxVec(bool getMin, const double* colScaleVec, doub
 }
 
 
+void SparseStorage::permute(const std::vector<int>& permvec)
+{
+   assert(permvec.size() == size_t(m));
+
+   if( len == 0 )
+      return;
+
+   assert(m > 0 && n > 0);
+
+   int* jcolM_new = new int[len];
+   int* krowM_new = new int[m + 1];
+   double* M_new = new double[len];
+
+   int len_new = 0;
+
+   krowM_new[0] = 0;
+   for( int r = 0; r < m; ++r )
+   {
+      const int r_new = permvec[r];
+      const int rowlength = krowM[r + 1] - krowM[r];
+
+      assert(r_new < m && rowlength >= 0);
+
+      if( rowlength > 0 )
+      {
+         memcpy(jcolM_new + len_new, jcolM + krowM[r], rowlength * sizeof(int));
+         memcpy(M_new + len_new, M + krowM[r], rowlength * sizeof(double));
+         len_new += rowlength;
+      }
+
+      for( int j = krowM[r]; j < krowM[r + 1]; j++ )
+      {
+         assert(jcolM_new[len_new] == jcolM[j]);
+         assert(M_new[len_new] == jcolM[j]);
+      }
+   }
+
+   assert(len_new == len);
+
+   delete jcolM;
+   delete krowM;
+   delete M;
+
+   jcolM = jcolM_new;
+   krowM = krowM_new;
+   M = M_new;
+}
+
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:
 // [ A 0 ]

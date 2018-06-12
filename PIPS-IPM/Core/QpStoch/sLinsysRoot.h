@@ -101,7 +101,7 @@ class sLinsysRoot : public sLinsys {
   bool use2Links;
  private:
 
-  void initSparsityData(const sData* prob, bool sparseKkt);
+  void initSparsityData(const sData* prob);
 
 #ifdef STOCH_TESTING
  protected: 

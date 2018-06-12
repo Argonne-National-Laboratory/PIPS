@@ -58,7 +58,9 @@ sLinsysRootAug::~sLinsysRootAug()
 SymMatrix* 
 sLinsysRootAug::createKKT(sData* prob)
 {
-  if( hasSparseKkt )
+   int todo;
+
+  if( hasSparseKkt && 0 )
      return new SparseSymMatrix();
   else
   {
@@ -75,7 +77,9 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 
   if( hasSparseKkt )
   {
-    SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
+     int todo;
+    //SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
+     DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
 
     if( 0 == myRank )
        cout << "Using Pardiso for summed Schur complement - sLinsysRootAug"<< endl;
