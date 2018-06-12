@@ -283,6 +283,9 @@ bool StochPresolverBase::newBoundsTightenOldBounds(double new_low, double new_up
    return false;
 }
 
+/**
+ * Compares and sets the new lower and upper bounds, if they tighten the bounds.
+ */
 void StochPresolverBase::setNewBounds(int index, double new_low, double new_upp,
       double* ilow, double* low, double* iupp, double* upp) const
 {
@@ -298,6 +301,21 @@ void StochPresolverBase::setNewBounds(int index, double new_low, double new_upp,
       iupp[index] = 1.0;
       upp[index] = new_upp;
    }
+}
+
+/**
+ * Sets a given new bound at the specified index into the bound_vector
+ * and sets 1.0 into the i_bound_vector.
+ */
+void StochPresolverBase::setNewBound(int index, double new_bound,
+      SimpleVector* bound_vector, SimpleVector* i_bound_vector) const
+{
+   assert( bound_vector->n == i_bound_vector->n );
+   assert( index >= 0 && index < bound_vector->n );
+
+   bound_vector->elements()[index] = new_bound;
+   if( i_bound_vector->elements()[index] == 0.0 )
+      i_bound_vector->elements()[index] = 1.0;
 }
 
 void StochPresolverBase::setCurrentPointersToNull()
@@ -509,12 +527,17 @@ void StochPresolverBase::setCPRowChildEquality(int it)
 
 void StochPresolverBase::setCPRowChildInequality(int it)
 {
+   setCPRowChildIneqOnlyLhsRhs(it);
+   currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
+   currRedRow = dynamic_cast<SimpleVector*>(presData.redRowC->children[it]->vec);
+}
+
+void StochPresolverBase::setCPRowChildIneqOnlyLhsRhs(int it)
+{
    currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec);
    currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec);
    currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec);
    currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec);
-   currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
-   currRedRow = dynamic_cast<SimpleVector*>(presData.redRowC->children[it]->vec);
 }
 
 void StochPresolverBase::setCPRowLinkEquality()

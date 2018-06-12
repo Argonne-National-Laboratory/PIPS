@@ -69,6 +69,7 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
    norm_clow = NULL;
    norm_icupp = NULL;
    norm_iclow = NULL;
+   norm_factor = NULL;
 
    mA = 0;
    nA = 0;
@@ -87,9 +88,9 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   if( myRank == 0 )
-      cout<<"Before Parallel Row Presolving:"<<endl;
-   countRowsCols();
+//   if( myRank == 0 )
+//      cout<<"Before Parallel Row Presolving:"<<endl;
+//   countRowsCols();
 
    if( myRank == 0 ) cout<<"Start Parallel Row Presolving..."<<endl;
 
@@ -97,6 +98,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
    presData.resetRedCounters();
    int nRowElims = 0;
+   bool possibleFeasible = true;
 
    // for children:
    for( size_t child_it = 0; child_it< matrixA.children.size(); child_it++)
@@ -161,7 +163,13 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
                }
             }*/
             // Compare the rows in the final (from second hash) bin:
-            compareRowsInSecondHashTable(nRowElims);
+
+            possibleFeasible = compareRowsInSecondHashTable(nRowElims);
+            if( !possibleFeasible )
+            {
+               cout<<"Infeasibility detected: in parallel row presolving."<<endl;
+               return false;
+            }
 
             rowsSecondHashTable.clear();
          }
@@ -187,15 +195,16 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    rowsFirstHashTable.clear();
    rowsSecondHashTable.clear();
 
-   MPI_Barrier( MPI_COMM_WORLD);
    synchronize(nRowElims);
    if( myRank == 0 )
       cout<<"Removed "<<nRowElims<<" Rows in Parallel Row Presolving."<<endl;
-   //assert(0);
 
-   if( myRank == 0 )
-      cout<<"After Parallel Row Presolving:"<<endl;
-   countRowsCols();
+//   if( myRank == 0 )
+//      cout<<"After Parallel Row Presolving:"<<endl;
+//   countRowsCols();
+
+   //MPI_Barrier( MPI_COMM_WORLD);
+   //assert(0);
 
    //countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
    //countDuplicateRows(matrixA, EQUALITY_SYSTEM);
@@ -241,12 +250,17 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec)->cloneFull();
       norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec)->cloneFull();
       norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec)->cloneFull();
+      norm_factor = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec)->cloneFull();
+      norm_factor->setToZero();
 
       currCmat = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamic();
       currCmatTrans = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamicTransposed();
       currDmat = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Bmat)->getStorageDynamic();
       currDmatTrans = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Bmat)->getStorageDynamicTransposed();
       currNnzRowC = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
+
+      // set lhs and rhs:
+      setCPRowChildIneqOnlyLhsRhs(it);
    }
    else
    {
@@ -262,6 +276,11 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       currDmat = NULL;
       currDmatTrans = NULL;
       currNnzRowC = NULL;
+
+      currIneqRhs = NULL;
+      currIneqLhs = NULL;
+      currIcupp = NULL;
+      currIclow = NULL;
    }
    if( !norm_Amat && !norm_Cmat )   // case no child exists
    {
@@ -319,6 +338,7 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int it, StochGenMatrix
       delete norm_clow;
       delete norm_icupp;
       delete norm_iclow;
+      delete norm_factor;
    }
 }
 
@@ -366,7 +386,7 @@ void StochPresolverParallelRows::normalizeBLocksRowwise( SystemType system_type,
                maxValue = fabs(Bblock->M[k]);
          }
       }
-      // normalize the row by dividing all entries by maxValue and possible by -1, if negateRow.
+      // normalize the row by dividing all entries by maxValue and possibly by -1, if negateRow.
       if(negateRow)
          maxValue *= -1.0;
       if( rowStartA < rowEndA )
@@ -393,6 +413,7 @@ void StochPresolverParallelRows::normalizeBLocksRowwise( SystemType system_type,
             std::swap(Lhs->elements()[i], Rhs->elements()[i]);
             std::swap(iLhs->elements()[i], iRhs->elements()[i]);
          }
+         norm_factor->elements()[i] = maxValue;
       }
    }
 }
@@ -461,7 +482,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
          for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it2 = it1;
                                     it2!=rowsSecondHashTable.end(i); ++it2)
          {
-            // When two parallel rows are found, check if they are both =, both <=, or = and and <=
+            // When two parallel rows are found, check if they are both =, both <=, or = and <=
             if( checkRowsAreParallel( *it1, *it2) )
             {
                cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<" and "<<it2->id<<endl;
@@ -479,24 +500,13 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                   // Case both constraints are inequalities
                   const int rowId1 = it1->id - mA;
                   const int rowId2 = it2->id - mA;
-                  // Set newxlow/newxupp to the bounds of the second inequality:
-                  double newxlow = -std::numeric_limits<double>::max();
-                  double newxupp = std::numeric_limits<double>::max();
-                  if( norm_iclow->elements()[rowId2] != 0.0 )
-                     newxlow = norm_clow->elements()[rowId2];
-                  if( norm_icupp->elements()[rowId2] != 0.0 )
-                     newxupp = norm_cupp->elements()[rowId2];
-                  // test if new bounds are tightening:
-                  if( newBoundsTightenOldBounds(newxlow, newxupp, rowId1, norm_iclow->elements(),
-                        norm_icupp->elements(), norm_clow->elements(), norm_cupp->elements()) )
-                  {
-                     // tighten the constraint bounds:
-                     setNewBounds(rowId1, newxlow, newxupp, norm_iclow->elements(), norm_clow->elements(),
-                           norm_icupp->elements(), norm_cupp->elements());
-                     // todo: apply the lhs/rhs tightening to the original data (it1)
-                  }
+
+                  // tighten bounds in original and normalized system:
+                  if( !tightenOriginalBoundsOfRow1(rowId1, rowId2) )
+                     return false;
+
                   // delete row2 in the original system:
-                  eliminateOriginalRow(rowId2, nRowElims);
+                  eliminateOriginalRow((int)it2->id, nRowElims);
 
                }
                else
@@ -649,7 +659,65 @@ void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic* Abl
 
    // set nnzRow[rowIdx] to 0.0:
    nnzRow->elements()[rowIdx] = 0.0;
+}
 
+/**
+ * Tightens the original lower and upper bounds of the first row, given the lower
+ * and upper bounds of the second row. The normalized bounds are compared and the
+ * normalizing factor of row1 is used to determine which bound can be tightened to
+ * which value. The normalized bounds of row1 are also updated.
+ */
+bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int rowId2)
+{
+   assert( currCmat && currDmat );
+   assert( rowId1 >= 0 && rowId2 >= 0 );
+   assert( rowId1 < currCmat->m && rowId2 < currCmat->m );
+   assert( norm_factor && norm_factor->n == currCmat->m );
+
+   // the normalizing factor of the first inequality:
+   double factor = norm_factor->elements()[rowId1];
+
+   // Set norm_low/norm_upp to the bounds of the second inequality:
+   double norm_low = -std::numeric_limits<double>::max();
+   double norm_upp = std::numeric_limits<double>::max();
+   if( norm_iclow->elements()[rowId2] != 0.0 )
+      norm_low = norm_clow->elements()[rowId2];
+   if( norm_icupp->elements()[rowId2] != 0.0 )
+      norm_upp = norm_cupp->elements()[rowId2];
+
+   // test for infeasibility:
+   if( (norm_iclow->elements()[rowId1] != 0.0 && norm_upp < norm_clow->elements()[rowId1])
+         || (norm_icupp->elements()[rowId1] != 0.0 && norm_low > norm_cupp->elements()[rowId1]) )
+   {
+      cout<<"Detected infeasibility during parallel row presolving."<<endl;
+      return false;
+   }
+   // test if the new bounds are tightening:
+   if( ( norm_iclow->elements()[rowId1] != 0.0 && norm_low > norm_clow->elements()[rowId1] )
+         || ( norm_iclow->elements()[rowId1] == 0.0 && norm_low > -std::numeric_limits<double>::max() ))
+   {
+      // tighten normalized lower bound:
+      setNewBound( rowId1, norm_low, norm_clow, norm_iclow);
+
+      if(factor>0)   // tighten original lower bound:
+         setNewBound( rowId1, factor * norm_low, currIneqLhs, currIclow);
+
+      else  // tighten original upper bound:
+         setNewBound( rowId1, factor * norm_low, currIneqRhs, currIcupp);
+   }
+   if( ( norm_icupp->elements()[rowId1] != 0.0 && norm_upp < norm_cupp->elements()[rowId1] )
+         || ( norm_icupp->elements()[rowId1] == 0.0 && norm_upp < std::numeric_limits<double>::max() ))
+   {
+      // tighten normalized upper bound:
+      setNewBound( rowId1, norm_upp, norm_cupp, norm_icupp);
+
+      if(factor>0)   // tighten original upper bound:
+         setNewBound( rowId1, factor * norm_upp, currIneqRhs, currIcupp);
+
+      else  // tighten original lower bound:
+         setNewBound( rowId1, factor * norm_upp, currIneqLhs, currIclow);
+   }
+   return true;
 }
 
 void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)

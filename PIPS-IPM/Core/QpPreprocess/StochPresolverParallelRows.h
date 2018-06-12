@@ -82,6 +82,7 @@ private:
    SimpleVector* norm_cupp;
    SimpleVector* norm_iclow;
    SimpleVector* norm_icupp;
+   SimpleVector* norm_factor;
 
    // number of rows of the A or B block
    int mA;
@@ -103,6 +104,7 @@ private:
    void removeRow(int rowIdx, SparseStorageDynamic* Ablock, SparseStorageDynamic* AblockTrans,
          SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow,
          SimpleVector* redColParent, SimpleVector* nnzColChild);
+   bool tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
 
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
    bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;

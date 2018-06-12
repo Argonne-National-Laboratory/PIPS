@@ -134,6 +134,8 @@ protected:
          double* ilow, double* iupp, double* low, double* upp) const;
    void setNewBounds(int index, double new_low, double new_upp,
          double* ilow, double* low, double* iupp, double* upp) const;
+   void setNewBound(int index, double new_bound,
+         SimpleVector* bound_vector, SimpleVector* i_bound_vector) const;
 
    // methods to update the current pointers:
    void setCurrentPointersToNull();
@@ -155,6 +157,7 @@ protected:
    void setCPRowRootInequality();
    void setCPRowChildEquality(int it);
    void setCPRowChildInequality(int it);
+   void setCPRowChildIneqOnlyLhsRhs(int it);
    void setCPRowLinkEquality();
    void setCPRhsLinkInequality();
 
