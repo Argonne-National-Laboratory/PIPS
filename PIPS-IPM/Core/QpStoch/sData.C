@@ -160,7 +160,7 @@ void sData::init2LinksData()
             << linkIndicatorC.size() << " equalities) " << std::endl;
 
       std::cout << "ratio: "
-            << nIneq + nEq / ((double) linkIndicatorA.size() + linkIndicatorC.size()) << std::endl;
+            << (nIneq + nEq) / ((double) linkIndicatorA.size() + linkIndicatorC.size()) << std::endl;
    }
 
    if( nIneq + nEq / ((double) linkIndicatorA.size() + linkIndicatorC.size()) < min2LinksRatio )

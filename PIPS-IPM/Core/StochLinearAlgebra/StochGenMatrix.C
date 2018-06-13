@@ -968,6 +968,8 @@ std::vector<bool> StochGenMatrix::get2LinkIndicator() const
    assert(m > 0);
 
    std::vector<int> linkCount(m, 0);
+   std::vector<int> linkCountPos1(m, -1);
+   std::vector<int> linkCountPos2(m, -1);
 
    for( size_t it = 0; it < children.size(); it++ )
    {
@@ -975,20 +977,42 @@ std::vector<bool> StochGenMatrix::get2LinkIndicator() const
       {
          assert(children[it]->Blmat);
 
-         children[it]->Blmat->updateNonEmptyRowsCount(linkCount);
+         children[it]->Blmat->updateNonEmptyRowsCount(it + 1, linkCount, linkCountPos1, linkCountPos2);
       }
    }
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], m, MPI_INT, MPI_SUM, mpiComm);
 
-   Blmat->updateNonEmptyRowsCount(linkCount);
+   Blmat->updateNonEmptyRowsCount(0, linkCount, linkCountPos1, linkCountPos2);
+
+   // check whether 2-links are indeed in neighboring blocks
 
    std::vector<bool> linkIndicator(m, false);
 
    for( int i = 0; i < m; i++ )
-      if( linkCount[i] == 2 )
+      if( linkCount[i] == 2 && (linkCountPos2[i] - linkCountPos1[i]) == 1  )
+      {
+         assert(linkCountPos1[i] >= 0 && linkCountPos2[i] >= 0);
          linkIndicator[i] = true;
+
+         int deleteme;
+         if( linkCountPos1[i] == 0 || linkCountPos1[i] == 0)
+            std::cout << "OHH for " << linkCountPos2[i] << " " <<  linkCountPos1[i] << std::endl;
+      }
+
+   for( int i = 0; i < m; i++ )
+       if( linkCount[i] == 2 && (linkCountPos2[i] - linkCountPos1[i]) != 1  )
+           std::cout << "FAIL for " << linkCountPos2[i] << " " <<  linkCountPos1[i] << std::endl;
+
+   if( iAmDistrib )
+   {
+      int myrank;
+      MPI_Comm_rank(mpiComm, &myrank);
+
+      // MPI gather
+
+   }
 
    return linkIndicator;
 }
