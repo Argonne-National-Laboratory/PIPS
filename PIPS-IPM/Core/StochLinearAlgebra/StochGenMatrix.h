@@ -163,7 +163,9 @@ public:
   };
 
   /** returns Simple Vector indicating which linking rows have entries in exactly two blocks (indicated by 1.0 versus 0.0)*/
-  virtual OoqpVector* get2LinkIndicator() const;
+  virtual std::vector<bool> get2LinkIndicator() const;
+
+  virtual void permuteLinkingRows(const std::vector<int>& permvec);
 };
 
 
@@ -278,7 +280,9 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
 
-  virtual OoqpVector* get2LinkIndicator() const {return NULL;} ;
+  virtual std::vector<bool> get2LinkIndicator() const {return std::vector<bool>();};
+
+  virtual void permuteLinkingRows(const std::vector<int>& permvec) {};
 };
 
 

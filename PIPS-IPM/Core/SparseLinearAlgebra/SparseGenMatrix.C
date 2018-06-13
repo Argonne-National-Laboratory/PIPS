@@ -474,15 +474,24 @@ void SparseGenMatrix::updateTransposed()
 }
 
 
-void SparseGenMatrix::updateNonEmptyRowsCount(OoqpVector& rowcount) const
+void SparseGenMatrix::updateNonEmptyRowsCount(std::vector<int>& rowcount) const
 {
-   SimpleVector& rowcountvec = dynamic_cast<SimpleVector&>(rowcount);
    const int m = mStorage->m;
    const int* const rowStart = mStorage->krowM;
 
-   assert(m == rowcountvec.length());
+   assert(m >= 0 && static_cast<unsigned>(m) == rowcount.size());
 
    for( int i = 0; i < m; i++ )
       if( rowStart[i] != rowStart[i + 1] )
-         rowcountvec[i] += 1.0;
+         rowcount[i]++;
 }
+
+void SparseGenMatrix::permuteRows(const std::vector<int>& permvec)
+{
+   mStorage->permuteRows(permvec);
+
+   // todo implement
+   assert(!m_Mt);
+}
+
+

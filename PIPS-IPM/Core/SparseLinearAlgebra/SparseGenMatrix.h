@@ -9,6 +9,7 @@
 #include "DoubleMatrix.h"
 #include "SparseStorage.h"
 #include "SparseGenMatrixHandle.h"
+#include <vector>
 
 /** Represents sparse non-symmetric, possibly non-square matrices stored in
  *  row-major Harwell-Boeing format.
@@ -120,7 +121,9 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
-  void updateNonEmptyRowsCount(OoqpVector& rowcount) const;
+  void permuteRows(const std::vector<int>& permvec);
+
+  void updateNonEmptyRowsCount(std::vector<int>& rowcount) const;
 
   virtual ~SparseGenMatrix();
 

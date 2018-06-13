@@ -95,13 +95,9 @@ class sLinsysRoot : public sLinsys {
   OoqpVector* zDiag;
   OoqpVector* zDiagLinkCons;
   OoqpVector* xDiag;
-  SimpleVector* linkIndicatorEq;
-  SimpleVector* linkIndicatorIneq;
-  bool hasSparseKkt;
-  bool use2Links;
- private:
 
-  void initSparsityData(const sData* prob);
+  bool hasSparseKkt;
+ private:
 
 #ifdef STOCH_TESTING
  protected: 

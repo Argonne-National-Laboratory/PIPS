@@ -264,6 +264,7 @@ public:
   /** fill vector with absolute minimum/maximum value of each column */
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ) { assert(0 && "not implemented"); };
+
 };
 
 #endif

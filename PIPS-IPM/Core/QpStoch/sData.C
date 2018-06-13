@@ -5,6 +5,7 @@
 #include "StochVector.h"
 #include "QpGenVars.h"
 #include "SparseLinearAlgebraPackage.h"
+#include "mpi.h"
 
 sData::sData(sTree* tree)
 //  : QpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
@@ -37,28 +38,45 @@ sData::sData(sTree* tree)
   mcupp = icupp->numberOfNonzeros();
 
   createChildren();
+
+  use2Links = false;
 }
 
 sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
-	     OoqpVector * xlow_in, OoqpVector * ixlow_in, long long nxlow_,
-	     OoqpVector * xupp_in, OoqpVector * ixupp_in, long long nxupp_,
-	     GenMatrix  * A_in, OoqpVector * bA_in,
-	     GenMatrix  * C_in,
-	     OoqpVector * clow_in, OoqpVector * iclow_in, long long mclow_,
-	     OoqpVector * cupp_in, OoqpVector * icupp_in, long long mcupp_ )
-  
+        OoqpVector * xlow_in, OoqpVector * ixlow_in, long long nxlow_,
+        OoqpVector * xupp_in, OoqpVector * ixupp_in, long long nxupp_,
+        GenMatrix  * A_in, OoqpVector * bA_in,
+        GenMatrix  * C_in,
+        OoqpVector * clow_in, OoqpVector * iclow_in, long long mclow_,
+        OoqpVector * cupp_in, OoqpVector * icupp_in, long long mcupp_,
+        bool exploit2Links)
+
   : QpGenData(SparseLinearAlgebraPackage::soleInstance(),
-	      c_in, Q_in, 
-	      xlow_in, ixlow_in, xupp_in, ixupp_in,
-	      A_in, bA_in,
-	      C_in,
-	      clow_in, iclow_in, cupp_in, icupp_in)
+         c_in, Q_in,
+         xlow_in, ixlow_in, xupp_in, ixupp_in,
+         A_in, bA_in,
+         C_in,
+         clow_in, iclow_in, cupp_in, icupp_in)
 {
-  nxlow = nxlow_; nxupp = nxupp_; 
+  nxlow = nxlow_; nxupp = nxupp_;
   mclow = mclow_; mcupp = mcupp_;
   stochNode = tree_;
 
   createChildren();
+
+  if( exploit2Links )
+  {
+     init2LinksData();
+
+     if( use2Links )
+     {
+
+           // permute 2-link rows up
+
+     }
+  }
+  else
+     use2Links = false;
 }
 
 
@@ -103,6 +121,56 @@ void sData::destroyChildren()
     delete children[it];
   }
   children.clear();
+}
+
+void sData::permuteLinkRows()
+{
+
+}
+
+void sData::init2LinksData()
+{
+   use2Links = true;
+
+   int myrank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+   const StochGenMatrix& Astoch = dynamic_cast<const StochGenMatrix&>(*A);
+   const StochGenMatrix& Cstoch = dynamic_cast<const StochGenMatrix&>(*C);
+
+   linkIndicatorA = Astoch.get2LinkIndicator();
+   linkIndicatorC = Cstoch.get2LinkIndicator();
+
+   int nEq = 0;
+   int nIneq = 0;
+
+   for( size_t i = 0; i < linkIndicatorA.size(); i++ )
+      if( linkIndicatorA[i] )
+         nEq++;
+
+   for( size_t i = 0; i < linkIndicatorC.size(); i++ )
+      if( linkIndicatorC[i] )
+         nIneq++;
+
+   if( myrank == 0 )
+   {
+      std::cout << "number of equality 2-links: " << nEq << " (out of "
+            << linkIndicatorA.size() << " equalities) " << std::endl;
+      std::cout << "number of inequality 2-links: " << nIneq << " (out of "
+            << linkIndicatorC.size() << " equalities) " << std::endl;
+
+      std::cout << "ratio: "
+            << nIneq + nEq / ((double) linkIndicatorA.size() + linkIndicatorC.size()) << std::endl;
+   }
+
+   if( nIneq + nEq / ((double) linkIndicatorA.size() + linkIndicatorC.size()) < min2LinksRatio )
+   {
+      if( myrank == 0 )
+         std::cout << "not enough 2-links found" << std::endl;
+      use2Links = false;
+   }
+
+
 }
 
 void sData::AddChild(sData* child)
@@ -172,8 +240,6 @@ int sData::getLocalmyl()
   Ast.Blmat->getSize(myl, nxl);
   return myl;
 }
-
-
 
 
 int sData::getLocalmz()

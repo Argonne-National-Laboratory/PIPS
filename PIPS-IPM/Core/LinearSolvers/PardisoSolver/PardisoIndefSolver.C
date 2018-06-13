@@ -90,7 +90,9 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 
 
   mStorage = NULL;
-  int wontworkbeause_NULL;
+
+  assert(0);
+  // wontworkbeause_NULL;
   mStorageSparse = SparseStorageHandle( sm->getStorage() );
 
   mtype = -2;

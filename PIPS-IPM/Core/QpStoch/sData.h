@@ -6,7 +6,6 @@
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 #include "DoubleMatrixHandle.h"
-
 #include <vector>
 
 class sTree;
@@ -27,11 +26,13 @@ class sData : public QpGenData {
 	 GenMatrix * A, OoqpVector * bA,
 	 GenMatrix * C,
 	 OoqpVector * clow, OoqpVector * iclow, long long mclow,
-	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp );
+	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp,
+	 bool exploit2Links = false);
 
   std::vector<sData*> children;
   void AddChild(sData* child);
   sTree* stochNode;
+
  public:
   long long nxlow, nxupp, mclow, mcupp;
 
@@ -55,20 +56,31 @@ class sData : public QpGenData {
   SparseGenMatrix& getLocalG();
 
   void sync();
+
  public:
-
-
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
+  virtual bool with2Links() {return use2Links;};
 
   virtual ~sData();
 
-
  protected:
+  std::vector<int> linkRowsPermutationA;
+  std::vector<int> linkRowsPermutationC;
+
   void createChildren();
   void destroyChildren();
 
+ private:
+  const static double min2LinksRatio = 0.25;
+
+  bool use2Links;
+  std::vector<bool> linkIndicatorA;
+  std::vector<bool> linkIndicatorC;
+
+  void init2LinksData();
+  void permuteLinkRows();
 };
 
 

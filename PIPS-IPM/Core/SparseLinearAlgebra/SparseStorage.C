@@ -1499,7 +1499,7 @@ void SparseStorage::getRowMinMaxVec(bool getMin, const double* colScaleVec, doub
 }
 
 
-void SparseStorage::permute(const std::vector<int>& permvec)
+void SparseStorage::permuteRows(const std::vector<int>& permvec)
 {
    assert(permvec.size() == size_t(m));
 
