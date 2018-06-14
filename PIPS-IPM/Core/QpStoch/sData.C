@@ -70,9 +70,36 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
 
      if( use2Links )
      {
+        // compute permutation vector
+        const int myl = tree_->myl();
+        const int mzl = tree_->mzl();
 
-           // permute 2-link rows up
+        assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
 
+        std::vector<unsigned int> permvecA(myl);
+        std::vector<unsigned int> permvecC(mzl);
+
+        for( int i = 0; i < myl; ++i )
+           permvecA[i] = myl - i - 1;
+
+        for( int i = 0; i < mzl; ++i )
+           permvecC[i] =  mzl - i - 1;
+#if 0
+        ofstream myfile;
+          myfile.open ("C1.txt");
+        dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile);
+#endif
+
+
+        permuteLinkingRows(permvecA, permvecC);
+
+        permuteLinkingRows(permvecA, permvecC);
+
+#if 0
+        ofstream myfile2;
+           myfile2.open ("C2.txt");
+              dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile2);
+#endif
      }
   }
   else
@@ -100,7 +127,6 @@ void sData::createChildren()
   StochVector& cuppSt  = dynamic_cast<StochVector&>(*bu); 
   StochVector& icuppSt = dynamic_cast<StochVector&>(*icupp); 
   
-
   for(size_t it=0; it<gSt.children.size(); it++) {
     AddChild(new sData(stochNode->children[it],
 	       gSt.children[it], QSt.children[it],
@@ -123,9 +149,15 @@ void sData::destroyChildren()
   children.clear();
 }
 
-void sData::permuteLinkRows()
+void sData::permuteLinkingRows(const std::vector<unsigned int>& permvecA, const std::vector<unsigned int>& permvecC)
 {
-
+   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingRows(permvecA);
+   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingRows(permvecC);
+   dynamic_cast<StochVector&>(*bA).permuteLinkingEntries(permvecA);
+   dynamic_cast<StochVector&>(*bl).permuteLinkingEntries(permvecC);
+   dynamic_cast<StochVector&>(*bu).permuteLinkingEntries(permvecC);
+   dynamic_cast<StochVector&>(*iclow).permuteLinkingEntries(permvecC);
+   dynamic_cast<StochVector&>(*icupp).permuteLinkingEntries(permvecC);
 }
 
 void sData::init2LinksData()

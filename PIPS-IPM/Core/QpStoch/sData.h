@@ -73,14 +73,14 @@ class sData : public QpGenData {
   void destroyChildren();
 
  private:
-  const static double min2LinksRatio = 0.25;
+  const static double min2LinksRatio = 0.5;
 
   bool use2Links;
   std::vector<bool> linkIndicatorA;
   std::vector<bool> linkIndicatorC;
 
   void init2LinksData();
-  void permuteLinkRows();
+  void permuteLinkingRows(const std::vector<unsigned int>& permvecA, const std::vector<unsigned int>& permvecC);
 };
 
 

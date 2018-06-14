@@ -121,7 +121,7 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
-  void permuteRows(const std::vector<int>& permvec);
+  void permuteRows(const std::vector<unsigned int>& permvec);
 
   void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkCountPos1,
      std::vector<int>& linkCountPos2) const;

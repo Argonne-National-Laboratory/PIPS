@@ -1017,10 +1017,13 @@ std::vector<bool> StochGenMatrix::get2LinkIndicator() const
    return linkIndicator;
 }
 
-void StochGenMatrix::permuteLinkingRows(const std::vector<int>& permvec)
+void StochGenMatrix::permuteLinkingRows(const std::vector<unsigned int>& permvec)
 {
    if( Blmat )
       Blmat->permuteRows(permvec);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->permuteLinkingRows(permvec);
 }
 
 

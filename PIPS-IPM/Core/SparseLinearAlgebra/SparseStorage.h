@@ -151,7 +151,7 @@ public:
    *  empty rows get value 0.0 for maximization and <double>::max() for minimization  */
   void getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const;
 
-  void permuteRows(const std::vector<int>& permvec);
+  void permuteRows(const std::vector<unsigned int>& permvec);
 
   void dump(const string& filename);
 

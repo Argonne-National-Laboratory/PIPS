@@ -496,11 +496,11 @@ void SparseGenMatrix::updateNonEmptyRowsCount(int blockPosition, std::vector<int
       }
 }
 
-void SparseGenMatrix::permuteRows(const std::vector<int>& permvec)
+void SparseGenMatrix::permuteRows(const std::vector<unsigned int>& permvec)
 {
    mStorage->permuteRows(permvec);
 
-   // todo implement
+   // todo implement column permutation
    assert(!m_Mt);
 }
 

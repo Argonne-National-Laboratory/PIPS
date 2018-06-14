@@ -165,7 +165,7 @@ public:
   /** returns Simple Vector indicating which linking rows have entries in exactly two blocks (indicated by 1.0 versus 0.0)*/
   virtual std::vector<bool> get2LinkIndicator() const;
 
-  virtual void permuteLinkingRows(const std::vector<int>& permvec);
+  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec);
 };
 
 
@@ -282,7 +282,7 @@ public:
 
   virtual std::vector<bool> get2LinkIndicator() const {return std::vector<bool>();};
 
-  virtual void permuteLinkingRows(const std::vector<int>& permvec) {};
+  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec) {};
 };
 
 

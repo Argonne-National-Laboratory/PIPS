@@ -1499,7 +1499,7 @@ void SparseStorage::getRowMinMaxVec(bool getMin, const double* colScaleVec, doub
 }
 
 
-void SparseStorage::permuteRows(const std::vector<int>& permvec)
+void SparseStorage::permuteRows(const std::vector<unsigned int>& permvec)
 {
    assert(permvec.size() == size_t(m));
 
@@ -1513,27 +1513,24 @@ void SparseStorage::permuteRows(const std::vector<int>& permvec)
    double* M_new = new double[len];
 
    int len_new = 0;
-
    krowM_new[0] = 0;
+
    for( int r = 0; r < m; ++r )
    {
-      const int r_new = permvec[r];
-      const int rowlength = krowM[r + 1] - krowM[r];
+      const unsigned int r_perm = permvec[r];
+      const int rowlength = krowM[r_perm + 1] - krowM[r_perm];
 
-      assert(r_new < m && rowlength >= 0);
+      assert(r_perm < static_cast<unsigned int>(m) && rowlength >= 0);
 
       if( rowlength > 0 )
       {
-         memcpy(jcolM_new + len_new, jcolM + krowM[r], rowlength * sizeof(int));
-         memcpy(M_new + len_new, M + krowM[r], rowlength * sizeof(double));
+         memcpy(jcolM_new + len_new, jcolM + krowM[r_perm], rowlength * sizeof(int));
+         memcpy(M_new + len_new, M + krowM[r_perm], rowlength * sizeof(double));
+
          len_new += rowlength;
       }
 
-      for( int j = krowM[r]; j < krowM[r + 1]; j++ )
-      {
-         assert(jcolM_new[len_new] == jcolM[j]);
-         assert(M_new[len_new] == jcolM[j]);
-      }
+      krowM_new[r + 1] = len_new;
    }
 
    assert(len_new == len);

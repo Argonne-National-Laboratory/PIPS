@@ -128,6 +128,7 @@ public:
   virtual void copyIntoArray( double v[] ) const;
   virtual void copyFromArray( double v[] );
   virtual void copyFromArray( char v[] );
+  virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec);
 
   int getSize() { return n; };
 };
@@ -230,6 +231,7 @@ public:
   virtual void copyIntoArray( double v[] ) const{};
   virtual void copyFromArray( double v[] ){};
   virtual void copyFromArray( char v[] ){};
+  virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec) {};
 
   int getSize() { return 0; };
 };
