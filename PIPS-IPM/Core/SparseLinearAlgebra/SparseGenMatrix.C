@@ -474,23 +474,23 @@ void SparseGenMatrix::updateTransposed()
 }
 
 
-void SparseGenMatrix::updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkCountPos1,
-      std::vector<int>& linkCountPos2) const
+void SparseGenMatrix::updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
+      std::vector<int>& linkBlockPos2) const
 {
    const int m = mStorage->m;
    const int* const rowStart = mStorage->krowM;
 
    assert(blockPosition >= 0 && m >= 0);
-   assert(static_cast<unsigned>(m) == rowcount.size());
-   assert(rowcount.size() == linkCountPos1.size() && rowcount.size() == linkCountPos2.size());
+   assert(unsigned(m) == rowcount.size());
+   assert(rowcount.size() == linkBlockPos1.size() && rowcount.size() == linkBlockPos2.size());
 
    for( int i = 0; i < m; i++ )
       if( rowStart[i] != rowStart[i + 1] )
       {
-         if( linkCountPos1[i] < 0 )
-            linkCountPos1[i] = blockPosition;
+         if( linkBlockPos1[i] < 0 )
+            linkBlockPos1[i] = blockPosition;
          else
-            linkCountPos2[i] = blockPosition;
+            linkBlockPos2[i] = blockPosition;
 
          rowcount[i]++;
       }

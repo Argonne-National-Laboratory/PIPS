@@ -3,6 +3,7 @@
 #include "StochVector.h"
 #include "SimpleVector.h"
 #include <limits>
+#include <algorithm>
 using namespace std;
 
 StochGenMatrix::StochGenMatrix(int id, 
@@ -957,64 +958,157 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    }
 }
 
-std::vector<bool> StochGenMatrix::get2LinkIndicator() const
+std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
 {
    if( Blmat == NULL )
-      return std::vector<bool>();
+      std::vector<int>();
 
-   int m,n;
+   int m, n;
 
    Blmat->getSize(m, n);
    assert(m > 0);
 
    std::vector<int> linkCount(m, 0);
-   std::vector<int> linkCountPos1(m, -1);
-   std::vector<int> linkCountPos2(m, -1);
+   std::vector<int> linkBlockStart(m, -1);
+   std::vector<int> linkBlockEnd(m, -1);
+   std::vector<bool> is2link(m, false);
 
    for( size_t it = 0; it < children.size(); it++ )
-   {
       if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
       {
          assert(children[it]->Blmat);
-
-         children[it]->Blmat->updateNonEmptyRowsCount(it + 1, linkCount, linkCountPos1, linkCountPos2);
+         children[it]->Blmat->updateNonEmptyRowsCount(it, linkCount, linkBlockStart, linkBlockEnd);
       }
-   }
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], m, MPI_INT, MPI_SUM, mpiComm);
 
-   Blmat->updateNonEmptyRowsCount(0, linkCount, linkCountPos1, linkCountPos2);
-
-   // check whether 2-links are indeed in neighboring blocks
-
-   std::vector<bool> linkIndicator(m, false);
-
+   // set block identifier
    for( int i = 0; i < m; i++ )
-      if( linkCount[i] == 2 && (linkCountPos2[i] - linkCountPos1[i]) == 1  )
+   {
+      assert(linkBlockEnd[i] == -1 || linkBlockStart[i] <= linkBlockEnd[i]);
+
+      if( linkCount[i] == 2 && (linkBlockEnd[i] - linkBlockStart[i]) == 1 )
       {
-         assert(linkCountPos1[i] >= 0 && linkCountPos2[i] >= 0);
-         linkIndicator[i] = true;
-
-         int deleteme;
-         if( linkCountPos1[i] == 0 || linkCountPos1[i] == 0)
-            std::cout << "OHH for " << linkCountPos2[i] << " " <<  linkCountPos1[i] << std::endl;
+         assert(linkBlockStart[i] >= 0 && linkBlockEnd[i] >= 0);
+         is2link[i] = true;
       }
-
-   for( int i = 0; i < m; i++ )
-       if( linkCount[i] == 2 && (linkCountPos2[i] - linkCountPos1[i]) != 1  )
-           std::cout << "FAIL for " << linkCountPos2[i] << " " <<  linkCountPos1[i] << std::endl;
+   }
 
    if( iAmDistrib )
    {
-      int myrank;
+      // find 2-links between different processes
+
+      int myrank, size;
       MPI_Comm_rank(mpiComm, &myrank);
+      MPI_Comm_size(mpiComm, &size);
 
-      // MPI gather
+      assert(size > 0);
 
+      // 1. allgather number of local 2-link candidates
+      std::vector<int> localCandsIdx;
+      std::vector<int> localCandsBlock;
+      std::vector<int> candsPerProc(size, -1);
+
+      for( int i = 0; i < m; i++ )
+         if( linkCount[i] == 2 && linkBlockStart[i] >= 0 && linkBlockEnd[i] == -1 )
+         {
+            assert(!is2link[i]);
+
+            localCandsIdx.push_back(i);
+            assert(unsigned(linkBlockStart[i]) < children.size());
+
+            localCandsBlock.push_back(linkBlockStart[i]);
+         }
+
+      int localcount = localCandsIdx.size();
+
+      MPI_Allgather(&localcount, 1, MPI_INT, &candsPerProc[0], 1, MPI_INT, mpiComm);
+
+#ifndef NDEBUG
+      for( size_t i = 0; i < candsPerProc.size(); i++ )
+         assert(candsPerProc[i] >= 0);
+#endif
+
+      // 2. allgatherv 2-link candidates
+      std::vector<int> displacements(size + 1, 0);
+      for( int i = 1; i < size; i++ )
+         displacements[i] = candsPerProc[i - 1] + displacements[i - 1];
+
+      const int nAllCands = displacements[size - 1] + candsPerProc[size - 1];
+
+      displacements[size] = nAllCands;
+      std::vector<int> allCandsRow(nAllCands, -1);
+      std::vector<int> allCandsBlock(nAllCands, -1);
+
+      MPI_Allgatherv(&localCandsIdx[0], localcount, MPI_INT, &allCandsRow[0], &candsPerProc[0],
+            &displacements[0], MPI_INT, mpiComm);
+
+      MPI_Allgatherv(&localCandsBlock[0], localcount, MPI_INT, &allCandsBlock[0], &candsPerProc[0],
+            &displacements[0], MPI_INT, mpiComm);
+
+#ifndef NDEBUG
+      for( size_t i = 0; i < allCandsRow.size(); i++ )
+         assert(allCandsRow[i] >= 0 && allCandsRow[i] < m && allCandsBlock[i] >= 0 && allCandsBlock[i] < int(children.size()));
+#endif
+
+
+      // 3. check which candidates are indeed 2-links
+      std::vector<int> blocksHash(m, -1);
+      for( int i = 0; i < size - 1; i++ )
+      {
+         // hash
+         for( int j = displacements[i]; j < displacements[i + 1]; j++ )
+            blocksHash[allCandsRow[j]] = allCandsBlock[j];
+
+         // compare with next
+         for( int j = displacements[i + 1]; j < displacements[i + 2]; j++ )
+         {
+            assert(allCandsBlock[j] > 0);
+            const int candRow = allCandsRow[j];
+            if( blocksHash[candRow] >= 0 )
+            {
+               assert(blocksHash[candRow] != allCandsBlock[j]);
+
+               const int startBlock = std::min(blocksHash[candRow], allCandsBlock[j]);
+               const int endBlock = std::max(blocksHash[candRow], allCandsBlock[j]);
+
+               assert(startBlock >= 0 && endBlock >= 0);
+
+               if( endBlock - startBlock != 1 )
+                  continue;
+
+               is2link[candRow] = true;
+
+               // start block owned by this MPI process?
+               if( !children[startBlock]->isKindOf(kStochGenDummyMatrix) )
+               {
+                  assert(children[endBlock]->isKindOf(kStochGenDummyMatrix));
+                  linkBlockStart[candRow] = startBlock;
+               }
+               else
+               {
+                  assert(children[startBlock]->isKindOf(kStochGenDummyMatrix));
+                  linkBlockStart[candRow] = -1;
+               }
+            }
+         }
+
+         // un-hash
+         for( int j = displacements[i]; j < displacements[i + 1]; j++ )
+            blocksHash[allCandsRow[j]] = -1;
+      }
    }
 
-   return linkIndicator;
+   // correct block identifier
+   for( int i = 0; i < m; i++ )
+      if( !is2link[i] )
+         linkBlockStart[i] = -1;
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &linkBlockStart[0], m, MPI_INT, MPI_MAX, mpiComm);
+
+   return linkBlockStart;
 }
 
 void StochGenMatrix::permuteLinkingRows(const std::vector<unsigned int>& permvec)

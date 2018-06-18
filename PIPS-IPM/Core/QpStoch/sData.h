@@ -74,12 +74,13 @@ class sData : public QpGenData {
 
  private:
   const static double min2LinksRatio = 0.5;
+  static std::vector<unsigned int> getAscending2LinkPermutation(const std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   bool use2Links;
-  std::vector<bool> linkIndicatorA;
-  std::vector<bool> linkIndicatorC;
+  std::vector<int> linkStartBlocksA;
+  std::vector<int> linkStartBlocksC;
 
-  void init2LinksData();
+  void init2LinksData(bool exploit2links);
   void permuteLinkingRows(const std::vector<unsigned int>& permvecA, const std::vector<unsigned int>& permvecC);
 };
 

@@ -123,8 +123,8 @@ public:
 
   void permuteRows(const std::vector<unsigned int>& permvec);
 
-  void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkCountPos1,
-     std::vector<int>& linkCountPos2) const;
+  void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
+     std::vector<int>& linkBlockPos2) const;
 
   virtual ~SparseGenMatrix();
 

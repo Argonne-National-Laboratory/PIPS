@@ -7,6 +7,47 @@
 #include "SparseLinearAlgebraPackage.h"
 #include "mpi.h"
 
+
+std::vector<unsigned int> sData::getAscending2LinkPermutation(const std::vector<int>& linkStartBlocks, size_t nBlocks)
+{
+   size_t size = linkStartBlocks.size();
+   assert(size > 0);
+
+   std::vector<unsigned int> permvec(size, 0);
+   std::vector<int> w(nBlocks + 1, 0);
+
+   for( size_t i = 0; i < size; ++i )
+   {
+      assert(linkStartBlocks[i] >= - 1 && linkStartBlocks[i] < int(nBlocks));
+      w[linkStartBlocks[i] + 1]++;
+   }
+
+   // initialize start pointers
+   int sum = 0;
+   for( size_t i = 1; i <= nBlocks; ++i )
+   {
+      sum += w[i];
+      w[i] = sum;
+   }
+
+   assert(unsigned(sum + w[0]) == size);
+
+   w[0] = 0;
+
+   for( size_t i = 0; i < size; ++i )
+   {
+      const int startBlock = (linkStartBlocks[i] >= 0) ? linkStartBlocks[i] : int(nBlocks);
+
+      assert(w[startBlock] <= int(size));
+      assert(permvec[w[startBlock]] == 0);
+
+      permvec[w[startBlock]] = i;
+      w[startBlock]++;
+   }
+
+   return permvec;
+}
+
 sData::sData(sTree* tree)
 //  : QpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
 {
@@ -64,46 +105,60 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
 
   createChildren();
 
-  if( exploit2Links )
+  init2LinksData(exploit2Links);
+
+  if( use2Links )
   {
-     init2LinksData();
-
-     if( use2Links )
-     {
-        // compute permutation vector
-        const int myl = tree_->myl();
-        const int mzl = tree_->mzl();
-
-        assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
-
-        std::vector<unsigned int> permvecA(myl);
-        std::vector<unsigned int> permvecC(mzl);
-
-        for( int i = 0; i < myl; ++i )
-           permvecA[i] = myl - i - 1;
-
-        for( int i = 0; i < mzl; ++i )
-           permvecC[i] =  mzl - i - 1;
-#if 0
-        ofstream myfile;
-          myfile.open ("C1.txt");
-        dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile);
-#endif
+     assert(linkStartBlocksA.size() == unsigned(tree_->myl()));
+     assert(linkStartBlocksC.size() == unsigned(tree_->mzl()));
 
 
-        permuteLinkingRows(permvecA, permvecC);
+     // compute permutation vector
+     const int myl = tree_->myl();
+     const int mzl = tree_->mzl();
+     const size_t nBlocks = dynamic_cast<StochVector*>(c_in)->children.size();
 
-        permuteLinkingRows(permvecA, permvecC);
+     assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
+
+    // std::vector<unsigned int> permvecA(myl);
+    // std::vector<unsigned int> permvecC(mzl);
+
+     std::vector<unsigned int> permvecA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
+     std::vector<unsigned int> permvecC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
 
 #if 0
-        ofstream myfile2;
-           myfile2.open ("C2.txt");
-              dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile2);
+     for( int i = 0; i < myl; ++i )
+        permvecA[i] = myl - i - 1;
+
+     for( int i = 0; i < mzl; ++i )
+        permvecC[i] =  mzl - i - 1;
+
+     ofstream myfile;
+       myfile.open ("C1.txt");
+     dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile);
 #endif
-     }
+     int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+#ifndef NDEBUG
+     for( size_t i = 1; i < permvecA.size(); i++ )
+        assert(linkStartBlocksA[permvecA[i]] == - 1 || linkStartBlocksA[permvecA[i - 1]] <=  linkStartBlocksA[permvecA[i]]);
+#endif
+
+     assert(0);
+
+
+
+     permuteLinkingRows(permvecA, permvecC);
+
+     permuteLinkingRows(permvecA, permvecC);
+
+#if 0
+     ofstream myfile2;
+        myfile2.open ("C2.txt");
+           dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile2);
+#endif
   }
-  else
-     use2Links = false;
+
 }
 
 
@@ -160,9 +215,16 @@ void sData::permuteLinkingRows(const std::vector<unsigned int>& permvecA, const 
    dynamic_cast<StochVector&>(*icupp).permuteLinkingEntries(permvecC);
 }
 
-void sData::init2LinksData()
+void sData::init2LinksData(bool exploit2links)
 {
-   use2Links = true;
+   use2Links = exploit2links;
+
+   if( !exploit2links )
+   {
+      linkStartBlocksA = std::vector<int>();
+      linkStartBlocksC = std::vector<int>();
+      return;
+   }
 
    int myrank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
@@ -170,32 +232,32 @@ void sData::init2LinksData()
    const StochGenMatrix& Astoch = dynamic_cast<const StochGenMatrix&>(*A);
    const StochGenMatrix& Cstoch = dynamic_cast<const StochGenMatrix&>(*C);
 
-   linkIndicatorA = Astoch.get2LinkIndicator();
-   linkIndicatorC = Cstoch.get2LinkIndicator();
+   int n2LinksEq = 0;
+   int n2LinksIneq = 0;
 
-   int nEq = 0;
-   int nIneq = 0;
+   linkStartBlocksA = Astoch.get2LinkStartBlocks();
+   linkStartBlocksC = Cstoch.get2LinkStartBlocks();
 
-   for( size_t i = 0; i < linkIndicatorA.size(); i++ )
-      if( linkIndicatorA[i] )
-         nEq++;
+   for( size_t i = 0; i < linkStartBlocksA.size(); ++i )
+      if( linkStartBlocksA[i] >= 0 )
+         n2LinksEq++;
 
-   for( size_t i = 0; i < linkIndicatorC.size(); i++ )
-      if( linkIndicatorC[i] )
-         nIneq++;
+   for( size_t i = 0; i < linkStartBlocksC.size(); ++i )
+      if( linkStartBlocksC[i] >= 0 )
+         n2LinksIneq++;
 
    if( myrank == 0 )
    {
-      std::cout << "number of equality 2-links: " << nEq << " (out of "
-            << linkIndicatorA.size() << " equalities) " << std::endl;
-      std::cout << "number of inequality 2-links: " << nIneq << " (out of "
-            << linkIndicatorC.size() << " equalities) " << std::endl;
+      std::cout << "number of equality 2-links: " << n2LinksEq << " (out of "
+            << linkStartBlocksA.size() << " equalities) " << std::endl;
+      std::cout << "number of inequality 2-links: " << n2LinksIneq << " (out of "
+            << linkStartBlocksC.size() << " equalities) " << std::endl;
 
       std::cout << "ratio: "
-            << (nIneq + nEq) / ((double) linkIndicatorA.size() + linkIndicatorC.size()) << std::endl;
+            << (n2LinksEq + n2LinksIneq) / ((double) linkStartBlocksA.size() + linkStartBlocksC.size()) << std::endl;
    }
 
-   if( nIneq + nEq / ((double) linkIndicatorA.size() + linkIndicatorC.size()) < min2LinksRatio )
+   if( n2LinksEq + n2LinksIneq / ((double) linkStartBlocksA.size() + linkStartBlocksC.size()) < min2LinksRatio )
    {
       if( myrank == 0 )
          std::cout << "not enough 2-links found" << std::endl;
