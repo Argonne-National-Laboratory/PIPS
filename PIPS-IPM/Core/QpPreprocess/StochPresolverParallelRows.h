@@ -94,10 +94,10 @@ private:
 
    bool setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
    void deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
-   void normalizeBLocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
+   void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type);
+         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector* nnzRow );
    bool compareRowsInSecondHashTable(int& nRowElims);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
    void eliminateOriginalRow(int rowId, int& nRowElims);

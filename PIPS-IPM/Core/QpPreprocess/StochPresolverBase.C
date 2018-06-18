@@ -510,12 +510,17 @@ void StochPresolverBase::setCPRowRootEquality()
 
 void StochPresolverBase::setCPRowRootInequality()
 {
+   setCPRowRootIneqOnlyLhsRhs();
+   currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
+   currRedRow = dynamic_cast<SimpleVector*>(presData.redRowC->vec);
+}
+
+void StochPresolverBase::setCPRowRootIneqOnlyLhsRhs()
+{
    currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec);
    currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec);
    currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
    currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
-   currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
-   currRedRow = dynamic_cast<SimpleVector*>(presData.redRowC->vec);
 }
 
 void StochPresolverBase::setCPRowChildEquality(int it)

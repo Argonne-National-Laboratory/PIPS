@@ -155,6 +155,7 @@ protected:
    void setCPColumnChild(int it);
    void setCPRowRootEquality();
    void setCPRowRootInequality();
+   void setCPRowRootIneqOnlyLhsRhs();
    void setCPRowChildEquality(int it);
    void setCPRowChildInequality(int it);
    void setCPRowChildIneqOnlyLhsRhs(int it);
