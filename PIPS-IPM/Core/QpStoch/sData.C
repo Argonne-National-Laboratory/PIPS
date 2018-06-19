@@ -8,9 +8,9 @@
 #include "mpi.h"
 
 
-std::vector<unsigned int> sData::getAscending2LinkPermutation(const std::vector<int>& linkStartBlocks, size_t nBlocks)
+std::vector<unsigned int> sData::getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks)
 {
-   size_t size = linkStartBlocks.size();
+   const size_t size = linkStartBlocks.size();
    assert(size > 0);
 
    std::vector<unsigned int> permvec(size, 0);
@@ -44,6 +44,19 @@ std::vector<unsigned int> sData::getAscending2LinkPermutation(const std::vector<
       permvec[w[startBlock]] = i;
       w[startBlock]++;
    }
+
+#ifndef NDEBUG
+     for( size_t i = 1; i < permvec.size(); i++ )
+        assert(linkStartBlocks[permvec[i]] == - 1 || linkStartBlocks[permvec[i - 1]] <=  linkStartBlocks[permvec[i]]);
+#endif
+
+   // permute linkStartBlocks
+   std::vector<int> tmpvec(size);
+
+   for( size_t i = 0; i < size; ++i )
+      tmpvec[i] = linkStartBlocks[permvec[i]];
+
+   linkStartBlocks = tmpvec;
 
    return permvec;
 }
@@ -120,13 +133,13 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
 
      assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
 
-    // std::vector<unsigned int> permvecA(myl);
-    // std::vector<unsigned int> permvecC(mzl);
-
      std::vector<unsigned int> permvecA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
      std::vector<unsigned int> permvecC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
 
 #if 0
+     std::vector<unsigned int> permvecA(myl);
+     std::vector<unsigned int> permvecC(mzl);
+
      for( int i = 0; i < myl; ++i )
         permvecA[i] = myl - i - 1;
 
@@ -137,18 +150,6 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
        myfile.open ("C1.txt");
      dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile);
 #endif
-     int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-#ifndef NDEBUG
-     for( size_t i = 1; i < permvecA.size(); i++ )
-        assert(linkStartBlocksA[permvecA[i]] == - 1 || linkStartBlocksA[permvecA[i - 1]] <=  linkStartBlocksA[permvecA[i]]);
-#endif
-
-     assert(0);
-
-
-
-     permuteLinkingRows(permvecA, permvecC);
 
      permuteLinkingRows(permvecA, permvecC);
 

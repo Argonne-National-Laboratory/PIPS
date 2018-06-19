@@ -74,7 +74,7 @@ class sData : public QpGenData {
 
  private:
   const static double min2LinksRatio = 0.5;
-  static std::vector<unsigned int> getAscending2LinkPermutation(const std::vector<int>& linkStartBlocks, size_t nBlocks);
+  static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   bool use2Links;
   std::vector<int> linkStartBlocksA;
