@@ -916,31 +916,17 @@ double StochVector::dotProductWith( OoqpVector& v_ )
   assert(!vecl || v.vecl);
 
   if(iAmDistrib==1) {
-    int myrank;
-    MPI_Comm_rank(mpiComm, &myrank);
-
-    if( myrank == 0 )
-    {
-       dotProd += vec->dotProductWith(*v.vec);
-
-       if( vecl )
-         dotProd += vecl->dotProductWith(*v.vecl);
-    }
-
     double dotProdG = 0.0;
 
     MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
 
     dotProd = dotProdG;
   }
-  else
-  {
-     dotProd += vec->dotProductWith(*v.vec);
 
-     if( vecl )
-       dotProd += vecl->dotProductWith(*v.vecl);
-  }
+  dotProd += vec->dotProductWith(*v.vec);
 
+  if( vecl )
+    dotProd += vecl->dotProductWith(*v.vecl);
 
   return dotProd;
 }

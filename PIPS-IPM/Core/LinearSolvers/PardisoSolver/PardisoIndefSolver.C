@@ -78,6 +78,7 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
   ddum = -1.0;
   idum = -1;
   phase = 11;
+  x = NULL;
 }
 
 
@@ -86,7 +87,6 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 {
 
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
 
   mStorage = NULL;
 
@@ -132,6 +132,7 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
   ddum = -1.0;
   idum = -1;
   phase = 11;
+  x = NULL;
 }
 
 
@@ -303,7 +304,10 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 
    SimpleVector & sv = dynamic_cast<SimpleVector &>(v);
 
-   double* x = new double[n]; // todo member variable
+   // first call?
+   if( !x )
+      x = new double[n];
+
    double* b = sv.elements();
 
 #ifdef TIMING_FLOPS
@@ -323,10 +327,14 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       exit(3);
    }
 
+   int size;
+   MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+   if( size > 0 )
+      MPI_Allreduce(MPI_IN_PLACE, x, n, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+
    for( int i = 0; i < n; i++ )
       b[i] = x[i];
-
-   delete[] x; // todo
 }
 
 void PardisoIndefSolver::solve ( GenMatrix& rhs_in )
@@ -348,12 +356,8 @@ PardisoIndefSolver::~PardisoIndefSolver()
              &n, &ddum, ia, ja, &idum, &nrhs,
              iparm, &msglvl, &ddum, &ddum, &error,  dparm);
 
-  if( ia )
-     delete[] ia;
-
-  if( ja )
-     delete[] ja;
-
-  if( a )
-     delete[] a;
+  delete[] ia;
+  delete[] ja;
+  delete[] a;
+  delete[] x;
 }
