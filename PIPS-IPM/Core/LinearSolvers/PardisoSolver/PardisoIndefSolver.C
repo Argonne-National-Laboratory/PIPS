@@ -138,6 +138,8 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 
 void PardisoIndefSolver::matrixChanged()
 {
+   // todo: only on rank 0
+
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    if( myRank == 0 )
@@ -297,44 +299,52 @@ void PardisoIndefSolver::matrixChanged()
 
 void PardisoIndefSolver::solve ( OoqpVector& v )
 {
+   int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
+   int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
    int n = mStorage->n;
    phase = 33;
 
    iparm[7] = 1; /* Max numbers of iterative refinement steps. */
 
-   SimpleVector & sv = dynamic_cast<SimpleVector &>(v);
-
-   // first call?
-   if( !x )
-      x = new double[n];
+   SimpleVector& sv = dynamic_cast<SimpleVector&>(v);
 
    double* b = sv.elements();
 
 #ifdef TIMING_FLOPS
    HPM_Start("DSYTRSSolve");
 #endif
-   int error;
+   if( myrank == 0 )
+   {
+      int error;
 
-   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
-         iparm, &msglvl, b, x, &error, dparm);
+      // first call?
+      if( !x )
+         x = new double[n];
+
+      pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
+            iparm, &msglvl, b, x, &error, dparm);
+
+      if( error != 0 )
+      {
+         printf("\nERROR during solution: %d", error);
+         exit(3);
+      }
+
+      if( size > 0 )
+         MPI_Bcast(x, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+      for( int i = 0; i < n; i++ )
+         b[i] = x[i];
+   }
+   else
+   {
+      assert(size > 0);
+      MPI_Bcast(b, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   }
 #ifdef TIMING_FLOPS
    HPM_Stop("DSYTRSSolve");
 #endif
-
-   if( error != 0 )
-   {
-      printf("\nERROR during solution: %d", error);
-      exit(3);
-   }
-
-   int size;
-   MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-   if( size > 0 )
-      MPI_Allreduce(MPI_IN_PLACE, x, n, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
-
-   for( int i = 0; i < n; i++ )
-      b[i] = x[i];
 }
 
 void PardisoIndefSolver::solve ( GenMatrix& rhs_in )
