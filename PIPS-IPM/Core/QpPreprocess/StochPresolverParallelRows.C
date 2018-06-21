@@ -296,6 +296,8 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       mA = norm_Amat->m;
       nA = norm_Amat->n;
 
+      removeSingletonVars();
+
       if( norm_Amat )
          normalizeBlocksRowwise( EQUALITY_SYSTEM, norm_Amat, NULL, norm_b, NULL, NULL, NULL);
       if( norm_Cmat )
@@ -506,33 +508,40 @@ void StochPresolverParallelRows::removeSingletonVars()
             if( norm_AmatTrans &&
                   (norm_AmatTrans->rowptr[i].start +1 == norm_AmatTrans->rowptr[i].end) )
             {
-               removeEntry(i, rowContainsSingletonVariableA, norm_Amat, norm_AmatTrans, normNnzRowA, normNnzColParent, LINKING_VARS_BLOCK);
+               removeEntry(i, rowContainsSingletonVariableA, norm_Amat, norm_AmatTrans,
+                     normNnzRowA, normNnzColParent, LINKING_VARS_BLOCK);
             }
             else if(norm_CmatTrans &&
                   (norm_CmatTrans->rowptr[i].start +1 == norm_CmatTrans->rowptr[i].end) )
             {
-               removeEntry(i, rowContainsSingletonVariableC, norm_Cmat, norm_CmatTrans, normNnzRowC, normNnzColParent, LINKING_VARS_BLOCK);
+               removeEntry(i, rowContainsSingletonVariableC, norm_Cmat, norm_CmatTrans,
+                     normNnzRowC, normNnzColParent, LINKING_VARS_BLOCK);
             }
             // else, the singleton entry is in one of the other A_i or C_i blocks
          }
       }
 
    // for the child block Bmat and Dmat:
-   for( int i = 0; i < normNnzColChild->n; i++ )
+   if( normNnzColChild )
    {
-      if( normNnzColChild->elements()[i] == 1.0 )
+      for( int i = 0; i < normNnzColChild->n; i++ )
       {
-         if( norm_BmatTrans &&
-               (norm_BmatTrans->rowptr[i].start +1 == norm_BmatTrans->rowptr[i].end) )
+         if( normNnzColChild->elements()[i] == 1.0 )
          {
-            removeEntry(i, rowContainsSingletonVariableA, norm_Bmat, norm_BmatTrans, normNnzRowA, normNnzColChild, CHILD_BLOCK);
+            if( norm_BmatTrans &&
+                  (norm_BmatTrans->rowptr[i].start +1 == norm_BmatTrans->rowptr[i].end) )
+            {
+               removeEntry(i, rowContainsSingletonVariableA, norm_Bmat, norm_BmatTrans,
+                     normNnzRowA, normNnzColChild, CHILD_BLOCK);
+            }
+            else if(norm_DmatTrans &&
+                  (norm_DmatTrans->rowptr[i].start +1 == norm_DmatTrans->rowptr[i].end) )
+            {
+               removeEntry(i, rowContainsSingletonVariableC, norm_Dmat, norm_DmatTrans,
+                     normNnzRowC, normNnzColChild, CHILD_BLOCK);
+            }
+            // else, the singleton entry is in the linking block Blmat
          }
-         else if(norm_DmatTrans &&
-               (norm_DmatTrans->rowptr[i].start +1 == norm_DmatTrans->rowptr[i].end) )
-         {
-            removeEntry(i, rowContainsSingletonVariableC, norm_Dmat, norm_DmatTrans, normNnzRowC, normNnzColChild, CHILD_BLOCK);
-         }
-         // else, the singleton entry is in the linking block Blmat
       }
    }
 }
