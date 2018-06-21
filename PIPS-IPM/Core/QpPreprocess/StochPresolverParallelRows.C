@@ -498,8 +498,24 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int it, StochGenMatrix
 
 void StochPresolverParallelRows::removeSingletonVars()
 {
-   // todo: for the A_i blocks (need normNnzColParent)
-   // todo: shift colIndex i by nA for the blocks B and D, here or in removeEntry() ?
+   // for the A_i blocks:
+   for( int i = 0; i < normNnzColParent->n; i++ )
+      {
+         if( normNnzColParent->elements()[i] == 1.0 )
+         {
+            if( norm_AmatTrans &&
+                  (norm_AmatTrans->rowptr[i].start +1 == norm_AmatTrans->rowptr[i].end) )
+            {
+               removeEntry(i, rowContainsSingletonVariableA, norm_Amat, norm_AmatTrans, normNnzRowA, normNnzColParent, LINKING_VARS_BLOCK);
+            }
+            else if(norm_CmatTrans &&
+                  (norm_CmatTrans->rowptr[i].start +1 == norm_CmatTrans->rowptr[i].end) )
+            {
+               removeEntry(i, rowContainsSingletonVariableC, norm_Cmat, norm_CmatTrans, normNnzRowC, normNnzColParent, LINKING_VARS_BLOCK);
+            }
+            // else, the singleton entry is in one of the other A_i or C_i blocks
+         }
+      }
 
    // for the child block Bmat and Dmat:
    for( int i = 0; i < normNnzColChild->n; i++ )
@@ -509,12 +525,12 @@ void StochPresolverParallelRows::removeSingletonVars()
          if( norm_BmatTrans &&
                (norm_BmatTrans->rowptr[i].start +1 == norm_BmatTrans->rowptr[i].end) )
          {
-            removeEntry(i, rowContainsSingletonVariableA, norm_Bmat, norm_BmatTrans, normNnzRowA, normNnzColChild);
+            removeEntry(i, rowContainsSingletonVariableA, norm_Bmat, norm_BmatTrans, normNnzRowA, normNnzColChild, CHILD_BLOCK);
          }
          else if(norm_DmatTrans &&
                (norm_DmatTrans->rowptr[i].start +1 == norm_DmatTrans->rowptr[i].end) )
          {
-            removeEntry(i, rowContainsSingletonVariableC, norm_Dmat, norm_DmatTrans, normNnzRowC, normNnzColChild);
+            removeEntry(i, rowContainsSingletonVariableC, norm_Dmat, norm_DmatTrans, normNnzRowC, normNnzColChild, CHILD_BLOCK);
          }
          // else, the singleton entry is in the linking block Blmat
       }
@@ -526,26 +542,40 @@ void StochPresolverParallelRows::removeSingletonVars()
  * rowContainsSingletonVar to the corresponding column index in which the singleton entry occurs.
  */
 void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector* rowContainsSingletonVar,
-      SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow, SimpleVector* nnzColChild)
+      SparseStorageDynamic* matrix, SparseStorageDynamic* matrixTrans, SimpleVector* nnzRow, SimpleVector* nnzCol,
+      BlockType block_type)
 {
-   assert( colIdx >= 0 && colIdx < BblockTrans->m );
-   assert( BblockTrans->rowptr[colIdx].start +1 == BblockTrans->rowptr[colIdx].end);
-   assert( nnzRow->n == Bblock->m );
-   assert( Bblock->n == nnzColChild->n );
-   assert( nnzColChild->n == BblockTrans->m );
+   assert( colIdx >= 0 && colIdx < matrixTrans->m );
+   assert( matrixTrans->rowptr[colIdx].start +1 == matrixTrans->rowptr[colIdx].end);
+   assert( nnzRow->n == matrix->m );
+   assert( matrix->n == nnzCol->n );
+   assert( nnzCol->n == matrixTrans->m );
+   assert( nnzCol->elements()[colIdx] == 1.0 );
 
    // First, find indices of the singleton entry:
-   const int k = BblockTrans->rowptr[colIdx].start;
-   const int rowIdx = BblockTrans->jcolM[k];
+   const int k = matrixTrans->rowptr[colIdx].start;
+   const int rowIdx = matrixTrans->jcolM[k];
    assert( rowIdx < nnzRow->n );
 
-   rowContainsSingletonVar->elements()[rowIdx] = colIdx;
+   // check if there are no more than one singleton Entries in this row:
+   if( rowContainsSingletonVar->elements()[rowIdx] >= 0 )
+   {
+      rowContainsSingletonVar->elements()[rowIdx] = -2.0;
+      return;
+   }
+   // store the colIdx in rowContainsSingletonVar:
+   // (possibly add offset to colIdx so that Amat and Bmat are distinct)
+   if( block_type == LINKING_VARS_BLOCK )
+      rowContainsSingletonVar->elements()[rowIdx] = colIdx;
+   else // if( block_type == CHILD_BLOCK )
+      rowContainsSingletonVar->elements()[rowIdx] = colIdx + nA;
+
    // Second, remove the entry from norm_Bmat and norm_BmatTrans:
    double tmp = 0;
-   removeEntryInDynamicStorage(*Bblock, rowIdx, colIdx, tmp);
-   BblockTrans->rowptr[colIdx].end --;
+   removeEntryInDynamicStorage(*matrix, rowIdx, colIdx, tmp);
+   matrixTrans->rowptr[colIdx].end --;
    nnzRow->elements()[rowIdx]--;
-   nnzColChild->elements()[colIdx] = 0.0;
+   nnzCol->elements()[colIdx] = 0.0;
 }
 
 void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
@@ -648,7 +678,13 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
 
       for(int i=0; i<Ablock->m; i++)
       {
-         // calculate rowId:
+         // ignore rows containing more than one singleton entry:
+         if( system_type == EQUALITY_SYSTEM && rowContainsSingletonVariableA->elements()[i] == -2.0 )
+            continue;
+         if( system_type == INEQUALITY_SYSTEM && rowContainsSingletonVariableC->elements()[i] == -2.0 )
+            continue;
+
+         // calculate rowId including possible offset (for Inequality rows):
          int rowId = i;
          if( nnzRow->elements()[rowId] == 0.0 )
             continue;
@@ -757,7 +793,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                   }
                   const int ineqRowId = id2 - mA;
                   if( rowContainsSingletonVariableA->elements()[id1] != -1.0
-                        || rowContainsSingletonVariableC->elements()[id1] != -1.0 )
+                        || rowContainsSingletonVariableC->elements()[id2] != -1.0 )
                   {
                      // nearly parallel case 2:
                      cout<<"Nearly Parallel Rows, case 2."<<endl;

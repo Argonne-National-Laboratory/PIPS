@@ -109,7 +109,8 @@ private:
    void deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
    void removeSingletonVars();
    void removeEntry(int colIdx, SimpleVector* rowContainsSingletonVar,
-         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow, SimpleVector* nnzColChild);
+         SparseStorageDynamic* matrix, SparseStorageDynamic* matrixTrans, SimpleVector* nnzRow, SimpleVector* nnzCol,
+         BlockType block_type);
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
