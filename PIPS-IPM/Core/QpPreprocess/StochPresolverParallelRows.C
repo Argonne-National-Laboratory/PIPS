@@ -69,7 +69,18 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
    norm_clow = NULL;
    norm_icupp = NULL;
    norm_iclow = NULL;
-   norm_factor = NULL;
+   norm_factorA = NULL;
+   rowContainsSingletonVariableA = NULL;
+   norm_factorC = NULL;
+   rowContainsSingletonVariableC = NULL;
+   normNnzRowA = NULL;
+   normNnzRowC = NULL;
+   normNnzColParent = NULL;
+   normNnzColChild = NULL;
+   norm_AmatTrans = NULL;
+   norm_BmatTrans = NULL;
+   norm_CmatTrans = NULL;
+   norm_DmatTrans = NULL;
 
    mA = 0;
    nA = 0;
@@ -111,10 +122,10 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
 
          // Per row, add row to the set 'rowsFirstHashTable':
          if( norm_Amat )
-            insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, norm_Bmat, EQUALITY_SYSTEM, currNnzRow );
+            insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, norm_Bmat, EQUALITY_SYSTEM, normNnzRowA );
          assert( (int)rowsFirstHashTable.size() <= mA );
          if( norm_Cmat )
-            insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, currNnzRowC );
+            insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC );
          assert( (int)rowsFirstHashTable.size() <= mA + norm_Cmat->m);
 
          // Prints for visualization:
@@ -184,10 +195,10 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    setNormalizedPointers(-1, matrixA, matrixC );
    // First Hashing: Fill 'rowsFirstHashTable':
    if( norm_Amat )
-      insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, NULL, EQUALITY_SYSTEM, currNnzRow );
+      insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, NULL, EQUALITY_SYSTEM, normNnzRowA );
    assert( (int)rowsFirstHashTable.size() <= mA );
    if( norm_Cmat )
-      insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, NULL, INEQUALITY_SYSTEM, currNnzRowC );
+      insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, NULL, INEQUALITY_SYSTEM, normNnzRowC );
    assert( (int)rowsFirstHashTable.size() <= mA + norm_Cmat->m);
    // Second Hashing: Per bucket, do Second Hashing:
    for( size_t i = 0; i < rowsFirstHashTable.bucket_count(); ++i )
@@ -240,31 +251,47 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
    if( it == -1 )
    {
       norm_Amat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.Bmat)->getStorageDynamicRef());
+      norm_AmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.Bmat)->getStorageDynamicTransposedRef());
       norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec)->cloneFull();
       setCPAmatsRoot( presProb->A );
+      norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec)->cloneFull();
+      norm_factorA->setToZero();
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
+      normNnzRowA = currNnzRow->cloneFull();
+      rowContainsSingletonVariableA = currNnzRow->cloneFull();
+      rowContainsSingletonVariableA->setToConstant( -1.0 );
+
       norm_Bmat = NULL;
+      norm_BmatTrans = NULL;
       currBmat = NULL;
       currBmatTrans = NULL;
 
       norm_Cmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.Bmat)->getStorageDynamicRef());
+      norm_CmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.Bmat)->getStorageDynamicTransposedRef());
       norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec)->cloneFull();
       norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec)->cloneFull();
       norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec)->cloneFull();
       norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec)->cloneFull();
-      norm_factor = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec)->cloneFull();
-      norm_factor->setToZero();
+      norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec)->cloneFull();
+      norm_factorC->setToZero();
       currCmat = dynamic_cast<SparseGenMatrix*>(matrixC.Bmat)->getStorageDynamic();
       currCmatTrans = dynamic_cast<SparseGenMatrix*>(matrixC.Bmat)->getStorageDynamicTransposed();
       currNnzRowC = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
+      normNnzRowC = currNnzRowC->cloneFull();
       setCPRowRootIneqOnlyLhsRhs();
+      rowContainsSingletonVariableC = norm_factorC->cloneFull();
+      rowContainsSingletonVariableC->setToConstant( -1.0 );
+
       norm_Dmat = NULL;
+      norm_DmatTrans = NULL;
       currDmat = NULL;
       currDmatTrans = NULL;
 
       currNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec);
       currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
       currNnzColChild = NULL;
+      normNnzColParent = currNnzColParent->cloneFull();
+      normNnzColChild = NULL;
 
       mA = norm_Amat->m;
       nA = norm_Amat->n;
@@ -280,68 +307,97 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
    if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
    {
       norm_Amat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamicRef());
+      norm_AmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamicTransposedRef());
       norm_Bmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Bmat)->getStorageDynamicRef());
+      norm_BmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Bmat)->getStorageDynamicTransposedRef());
       norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->vec)->cloneFull();
+      norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->vec)->cloneFull();
+      norm_factorA->setToZero();
+
       setCPAmatsChild( presProb->A, it, EQUALITY_SYSTEM);
       setCPBmatsChild( presProb->A, it, EQUALITY_SYSTEM);
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec);
+      normNnzRowA = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec)->cloneFull();
+
+      // set all entries in rowContainsSingletonVariable to -1 to distinguish if there is a SV in a row and at which column index
+      rowContainsSingletonVariableA = currNnzRow->cloneFull();
+      rowContainsSingletonVariableA->setToConstant( -1.0 );
    }
    else
    {
       norm_Amat = NULL;
+      norm_AmatTrans = NULL;
       norm_Bmat = NULL;
+      norm_BmatTrans = NULL;
       norm_b = NULL;
+      norm_factorA = NULL;
 
       currAmat = NULL;
       currAmatTrans = NULL;
       currBmat = NULL;
       currBmatTrans = NULL;
       currNnzRow = NULL;
+      normNnzRowA = NULL;
+
+      rowContainsSingletonVariableA = NULL;
    }
    if( !childIsDummy(matrixC, it, INEQUALITY_SYSTEM) )
    {
       norm_Cmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamicRef());
+      norm_CmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamicTransposedRef());
       norm_Dmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Bmat)->getStorageDynamicRef());
+      norm_DmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Bmat)->getStorageDynamicTransposedRef());
       norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec)->cloneFull();
       norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec)->cloneFull();
       norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec)->cloneFull();
       norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec)->cloneFull();
-      norm_factor = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec)->cloneFull();
-      norm_factor->setToZero();
+      norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec)->cloneFull();
+      norm_factorC->setToZero();
 
       currCmat = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamic();
       currCmatTrans = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamicTransposed();
       currDmat = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Bmat)->getStorageDynamic();
       currDmatTrans = dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Bmat)->getStorageDynamicTransposed();
       currNnzRowC = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
+      normNnzRowC = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec)->cloneFull();
 
-      // set lhs and rhs:
-      setCPRowChildIneqOnlyLhsRhs(it);
+      setCPRowChildIneqOnlyLhsRhs(it); // set lhs and rhs
+
+      rowContainsSingletonVariableC = norm_factorC->cloneFull();
+      rowContainsSingletonVariableC->setToConstant( -1.0 );
    }
    else
    {
       norm_Cmat = NULL;
+      norm_CmatTrans = NULL;
       norm_Dmat = NULL;
+      norm_DmatTrans = NULL;
       norm_cupp = NULL;
       norm_clow = NULL;
       norm_icupp = NULL;
       norm_iclow = NULL;
+      norm_factorC = NULL;
 
       currCmat = NULL;
       currCmatTrans = NULL;
       currDmat = NULL;
       currDmatTrans = NULL;
       currNnzRowC = NULL;
+      normNnzRowC = NULL;
 
       currIneqRhs = NULL;
       currIneqLhs = NULL;
       currIcupp = NULL;
       currIclow = NULL;
+
+      rowContainsSingletonVariableC = NULL;
    }
    if( !norm_Amat && !norm_Cmat )   // case no child exists
    {
       currRedColParent = NULL;
       currNnzColChild = NULL;
+      normNnzColChild = NULL;
+      normNnzColParent = NULL;
       return false;
    }
    else  // set mA, nA correctly
@@ -358,6 +414,9 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       }
       currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+
+      normNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
+      normNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec)->cloneFull();
    }
    if(norm_Amat && norm_Cmat) // only for assertions
    {
@@ -366,6 +425,9 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       assert( norm_Amat->m == norm_Bmat->m );
       assert( norm_Cmat->m == norm_Dmat->m );
    }
+
+   // before normalizing, remove the singleton variables:
+   removeSingletonVars();
 
    // normalize the rows:
    if( norm_Amat )
@@ -378,38 +440,112 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
 
 void StochPresolverParallelRows::deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC)
 {
+   delete normNnzColParent;
    if( it == -1 ) // Case at root
    {
       assert( norm_Amat && norm_b );
       delete norm_Amat;
+      delete norm_AmatTrans;
       delete norm_b;
       assert( norm_Cmat && norm_cupp && norm_clow && norm_icupp && norm_iclow );
       delete norm_Cmat;
+      delete norm_CmatTrans;
       delete norm_cupp;
       delete norm_clow;
       delete norm_icupp;
       delete norm_iclow;
-      delete norm_factor;
+      delete norm_factorA;
+      delete norm_factorC;
+      delete normNnzRowA;
+      delete normNnzRowC;
+      delete rowContainsSingletonVariableA;
+      delete rowContainsSingletonVariableC;
       return;
    }
+   bool childExists = false;
    if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
    {
+      childExists = true;
       assert( norm_Amat && norm_Bmat && norm_b );
       delete norm_Amat;
+      delete norm_AmatTrans;
       delete norm_Bmat;
+      delete norm_BmatTrans;
       delete norm_b;
+      delete norm_factorA;
+      delete normNnzRowA;
+      delete rowContainsSingletonVariableA;
    }
    if( !childIsDummy(matrixC, it, INEQUALITY_SYSTEM) )
    {
+      childExists = true;
       assert( norm_Cmat && norm_Dmat && norm_cupp && norm_clow && norm_icupp && norm_iclow );
       delete norm_Cmat;
+      delete norm_CmatTrans;
       delete norm_Dmat;
+      delete norm_DmatTrans;
       delete norm_cupp;
       delete norm_clow;
       delete norm_icupp;
       delete norm_iclow;
-      delete norm_factor;
+      delete norm_factorC;
+      delete normNnzRowC;
+      delete rowContainsSingletonVariableC;
    }
+   if( childExists )
+      delete normNnzColChild;
+}
+
+void StochPresolverParallelRows::removeSingletonVars()
+{
+   // todo: for the A_i blocks (need normNnzColParent)
+   // todo: shift colIndex i by nA for the blocks B and D, here or in removeEntry() ?
+
+   // for the child block Bmat and Dmat:
+   for( int i = 0; i < normNnzColChild->n; i++ )
+   {
+      if( normNnzColChild->elements()[i] == 1.0 )
+      {
+         if( norm_BmatTrans &&
+               (norm_BmatTrans->rowptr[i].start +1 == norm_BmatTrans->rowptr[i].end) )
+         {
+            removeEntry(i, rowContainsSingletonVariableA, norm_Bmat, norm_BmatTrans, normNnzRowA, normNnzColChild);
+         }
+         else if(norm_DmatTrans &&
+               (norm_DmatTrans->rowptr[i].start +1 == norm_DmatTrans->rowptr[i].end) )
+         {
+            removeEntry(i, rowContainsSingletonVariableC, norm_Dmat, norm_DmatTrans, normNnzRowC, normNnzColChild);
+         }
+         // else, the singleton entry is in the linking block Blmat
+      }
+   }
+}
+
+/** Removes a singleton entry in column colIdx in Bblock and BblockTrans and adapts
+ * the nnz vectors nnzRow and nnzColChild accordingly. Sets the entries in
+ * rowContainsSingletonVar to the corresponding column index in which the singleton entry occurs.
+ */
+void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector* rowContainsSingletonVar,
+      SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow, SimpleVector* nnzColChild)
+{
+   assert( colIdx >= 0 && colIdx < BblockTrans->m );
+   assert( BblockTrans->rowptr[colIdx].start +1 == BblockTrans->rowptr[colIdx].end);
+   assert( nnzRow->n == Bblock->m );
+   assert( Bblock->n == nnzColChild->n );
+   assert( nnzColChild->n == BblockTrans->m );
+
+   // First, find indices of the singleton entry:
+   const int k = BblockTrans->rowptr[colIdx].start;
+   const int rowIdx = BblockTrans->jcolM[k];
+   assert( rowIdx < nnzRow->n );
+
+   rowContainsSingletonVar->elements()[rowIdx] = colIdx;
+   // Second, remove the entry from norm_Bmat and norm_BmatTrans:
+   double tmp = 0;
+   removeEntryInDynamicStorage(*Bblock, rowIdx, colIdx, tmp);
+   BblockTrans->rowptr[colIdx].end --;
+   nnzRow->elements()[rowIdx]--;
+   nnzColChild->elements()[colIdx] = 0.0;
 }
 
 void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
@@ -476,7 +612,10 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
             Bblock->M[k] /= maxValue;
       }
       if( system_type == EQUALITY_SYSTEM )
+      {
          Rhs->elements()[i] /= maxValue;
+         norm_factorA->elements()[i] = maxValue;
+      }
       else
       {
          if( iLhs->elements()[i] != 0.0 )
@@ -489,7 +628,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
             std::swap(Lhs->elements()[i], Rhs->elements()[i]);
             std::swap(iLhs->elements()[i], iRhs->elements()[i]);
          }
-         norm_factor->elements()[i] = maxValue;
+         norm_factorC->elements()[i] = maxValue;
       }
    }
 }
@@ -564,15 +703,25 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
             // When two parallel rows are found, check if they are both =, both <=, or = and <=
             if( checkRowsAreParallel( *it1, *it2) )
             {
-//               cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<" and "<<it2->id<<endl;
+               cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<"("<<it1->lengthA+it1->lengthB<<")"<<" and "<<it2->id<<"("<<it2->lengthA+it2->lengthB<<")"<<endl;
                if( it1->id < mA && it2->id < mA )
                {
-                  // Case both constraints are equalities
-                  if( norm_b->elements()[it1->id] != norm_b->elements()[it2->id])
-                     return false;
-                  // delete row2 in the original system:
-                  eliminateOriginalRow((int)it2->id, nRowElims);
+                  // Case both constraints are equalities:
+                  // check if one of them contains a singleton variable:
+                  if( rowContainsSingletonVariableA->elements()[it1->id] != -1.0
+                        || rowContainsSingletonVariableA->elements()[it2->id] != -1.0 )
+                  {
+                     // nearly parallel case 1:
+                     cout<<"Nearly Parallel Rows, case 1."<<endl;
 
+                  }
+                  else
+                  {
+                     if( norm_b->elements()[it1->id] != norm_b->elements()[it2->id] )
+                        return false;
+                     // delete row2 in the original system:
+                     eliminateOriginalRow((int) it2->id, nRowElims);
+                  }
                }
                else if( it1->id >= mA && it2->id >= mA )
                {
@@ -580,13 +729,21 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                   const int rowId1 = it1->id - mA;
                   const int rowId2 = it2->id - mA;
 
-                  // tighten bounds in original and normalized system:
-                  if( !tightenOriginalBoundsOfRow1(rowId1, rowId2) )
-                     return false;
+                  if( rowContainsSingletonVariableC->elements()[rowId1] != -1.0
+                        || rowContainsSingletonVariableC->elements()[rowId2] != -1.0 )
+                  {
+                     // nearly parallel case 3:
+                     cout<<"Nearly Parallel Rows, case 3."<<endl;
+                  }
+                  else
+                  {
+                     // tighten bounds in original and normalized system:
+                     if( !tightenOriginalBoundsOfRow1(rowId1, rowId2) )
+                        return false;
 
-                  // delete row2 in the original system:
-                  eliminateOriginalRow((int)it2->id, nRowElims);
-
+                     // delete row2 in the original system:
+                     eliminateOriginalRow((int)it2->id, nRowElims);
+                  }
                }
                else
                {  // Case one constraint is an equality, one an inequality
@@ -599,25 +756,34 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                      swappedId1Id2 = true;
                   }
                   const int ineqRowId = id2 - mA;
-
-                  // check for infeasibility:
-                  if( norm_iclow->elements()[ineqRowId] != 0.0
-                        && norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
-                     return false;
-                  if( norm_icupp->elements()[ineqRowId] != 0.0
-                        && norm_cupp->elements()[ineqRowId] < norm_b->elements()[id1] )
-                     return false;
-
-                  // delete the inequality constraint id2 (which could be either it1 or it2 now):
-                  if(swappedId1Id2)
+                  if( rowContainsSingletonVariableA->elements()[id1] != -1.0
+                        || rowContainsSingletonVariableC->elements()[id1] != -1.0 )
                   {
-                     // delete row2 in the original system:
-                     eliminateOriginalRow((int)it1->id, nRowElims);
+                     // nearly parallel case 2:
+                     cout<<"Nearly Parallel Rows, case 2."<<endl;
                   }
                   else
                   {
-                     // delete row2 in the original system:
-                     eliminateOriginalRow((int)it2->id, nRowElims);
+                     cout<<"Parallel Rows, case 2."<<endl;
+                     // check for infeasibility:
+                     if( norm_iclow->elements()[ineqRowId] != 0.0
+                           && norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
+                        return false;
+                     if( norm_icupp->elements()[ineqRowId] != 0.0
+                           && norm_cupp->elements()[ineqRowId] < norm_b->elements()[id1] )
+                        return false;
+
+                     // delete the inequality constraint id2 (which could be either it1 or it2 now):
+                     if(swappedId1Id2)
+                     {
+                        // delete row2 in the original system:
+                        eliminateOriginalRow((int)it1->id, nRowElims);
+                     }
+                     else
+                     {
+                        // delete row2 in the original system:
+                        eliminateOriginalRow((int)it2->id, nRowElims);
+                     }
                   }
                }
             }
@@ -725,6 +891,8 @@ void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic* Abl
 
       const int rowStartB = Bblock->rowptr[rowIdx].start;
       const int rowEndB = Bblock->rowptr[rowIdx].end;
+      assert( rowEndB - rowStartB + rowEndA - rowStartA == nnzRow->elements()[rowIdx] );
+
       // delete row in BblockTrans:
       for(int k=rowStartB; k<rowEndB; k++)
       {
@@ -753,10 +921,10 @@ bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
    assert( currCmat && currDmat );
    assert( rowId1 >= 0 && rowId2 >= 0 );
    assert( rowId1 < currCmat->m && rowId2 < currCmat->m );
-   assert( norm_factor && norm_factor->n == currCmat->m );
+   assert( norm_factorC && norm_factorC->n == currCmat->m );
 
    // the normalizing factor of the first inequality:
-   double factor = norm_factor->elements()[rowId1];
+   double factor = norm_factorC->elements()[rowId1];
 
    // Set norm_low/norm_upp to the bounds of the second inequality:
    double norm_low = -std::numeric_limits<double>::max();

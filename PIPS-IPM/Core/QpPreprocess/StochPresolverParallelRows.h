@@ -82,7 +82,20 @@ private:
    SimpleVector* norm_cupp;
    SimpleVector* norm_iclow;
    SimpleVector* norm_icupp;
-   SimpleVector* norm_factor;
+   SimpleVector* norm_factorC;
+   SimpleVector* norm_factorA;
+
+   // data for the nearly parallel row case
+   SimpleVector* rowContainsSingletonVariableA;
+   SimpleVector* rowContainsSingletonVariableC;
+   SimpleVector* normNnzRowA;
+   SimpleVector* normNnzRowC;
+   SimpleVector* normNnzColParent;
+   SimpleVector* normNnzColChild;
+   SparseStorageDynamic* norm_AmatTrans;
+   SparseStorageDynamic* norm_BmatTrans;
+   SparseStorageDynamic* norm_CmatTrans;
+   SparseStorageDynamic* norm_DmatTrans;
 
    // number of rows of the A or B block
    int mA;
@@ -94,6 +107,9 @@ private:
 
    bool setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
    void deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
+   void removeSingletonVars();
+   void removeEntry(int colIdx, SimpleVector* rowContainsSingletonVar,
+         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow, SimpleVector* nnzColChild);
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,

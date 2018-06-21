@@ -2,26 +2,26 @@ Set i rows    / i1*i6 /
     j columns / j1*j8 /;
 
 parameter g(j) obj coefficients / j1 2, j2 2, j3 2, j4 2, j5 2, j6 2, j7 2, j8 2 /
-          b(i) right hand side  / i1 3, i2 10, i3 5, i4 10, i5 4, i6 9 /
-          cupp(i) right hand side  / i1 3, i2 22, i3 8, i4 -1, i5 7, i6 10 /;
+          b(i) right hand side  / i1 3, i2 10, i3 3, i4 8, i5 4, i6 8 /
+          cupp(i) right hand side  / i1 3, i2 22, i3 8, i4 -1, i5 8, i6 10 /;
 
 Table A(i,j)
     j1   j2    j3      j4    j5    j6    j7    j8
 i1   2    1
 i2   3    7
-i3   2    1     1       1
-i4   4    2     2       2  
+i3   2    1     
+i4   4    2     2         
 i5   1                              3
-i6   1    1     2       1     1     1     1     1
+i6   1    1     2             1     1     1     1
 ;
 
 Table C(i,j)
     j1   j2   j3     j4    j5    j6    j7    j8
 i1   3
-i2   6   14
-i3   2         4      
-i4  -1        -2
-i5        4                       1     2
+i2   6   13
+i3   4    2           1
+i4  -1        -2      
+i5        4                 1     1     2
 i6   1    1    1                  1     1
 ;
 
