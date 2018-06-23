@@ -913,8 +913,11 @@ double StochVector::dotProductWith( OoqpVector& v_ )
   for(size_t it=0; it<children.size(); it++) 
     dotProd += children[it]->dotProductWith(*v.children[it]);
 
+  assert(!vecl || v.vecl);
+
   if(iAmDistrib==1) {
-    double dotProdG=0.0;
+    double dotProdG = 0.0;
+
     MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
 
     dotProd = dotProdG;
@@ -923,10 +926,7 @@ double StochVector::dotProductWith( OoqpVector& v_ )
   dotProd += vec->dotProductWith(*v.vec);
 
   if( vecl )
-  {
-    assert(v.vecl);
     dotProd += vecl->dotProductWith(*v.vecl);
-  }
 
   return dotProd;
 }

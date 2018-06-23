@@ -79,6 +79,7 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
   ddum = -1.0;
   idum = -1;
   phase = 11;
+  x = NULL;
 }
 
 
@@ -87,7 +88,6 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 {
 
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
 
   mStorage = NULL;
 
@@ -137,11 +137,14 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
   ddum = -1.0;
   idum = -1;
   phase = 11;
+  x = NULL;
 }
 
 
 void PardisoIndefSolver::matrixChanged()
 {
+   // todo: only on rank 0
+
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    if( myRank == 0 )
@@ -301,37 +304,52 @@ void PardisoIndefSolver::matrixChanged()
 
 void PardisoIndefSolver::solve ( OoqpVector& v )
 {
+   int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
+   int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
    int n = mStorage->n;
    phase = 33;
 
    iparm[7] = 1; /* Max numbers of iterative refinement steps. */
 
-   SimpleVector & sv = dynamic_cast<SimpleVector &>(v);
+   SimpleVector& sv = dynamic_cast<SimpleVector&>(v);
 
-   double* x = new double[n]; // todo member variable
    double* b = sv.elements();
 
 #ifdef TIMING_FLOPS
    HPM_Start("DSYTRSSolve");
 #endif
-   int error;
+   if( myrank == 0 )
+   {
+      int error;
 
-   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
-         iparm, &msglvl, b, x, &error, dparm);
+      // first call?
+      if( !x )
+         x = new double[n];
+
+      pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
+            iparm, &msglvl, b, x, &error, dparm);
+
+      if( error != 0 )
+      {
+         printf("\nERROR during solution: %d", error);
+         exit(3);
+      }
+
+      if( size > 0 )
+         MPI_Bcast(x, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+      for( int i = 0; i < n; i++ )
+         b[i] = x[i];
+   }
+   else
+   {
+      assert(size > 0);
+      MPI_Bcast(b, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+   }
 #ifdef TIMING_FLOPS
    HPM_Stop("DSYTRSSolve");
 #endif
-
-   if( error != 0 )
-   {
-      printf("\nERROR during solution: %d", error);
-      exit(3);
-   }
-
-   for( int i = 0; i < n; i++ )
-      b[i] = x[i];
-
-   delete[] x; // todo
 }
 
 void PardisoIndefSolver::solve ( GenMatrix& rhs_in )
@@ -353,12 +371,8 @@ PardisoIndefSolver::~PardisoIndefSolver()
              &n, &ddum, ia, ja, &idum, &nrhs,
              iparm, &msglvl, &ddum, &ddum, &error,  dparm);
 
-  if( ia )
-     delete[] ia;
-
-  if( ja )
-     delete[] ja;
-
-  if( a )
-     delete[] a;
+  delete[] ia;
+  delete[] ja;
+  delete[] a;
+  delete[] x;
 }

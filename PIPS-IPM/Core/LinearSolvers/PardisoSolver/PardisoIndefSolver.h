@@ -21,6 +21,7 @@ class PardisoIndefSolver : public DoubleLinearSolver
       SparseStorageHandle mStorageSparse;
    protected:
      // SparseSymMatrix *sparseMat; todo
+      double* x; /* solution vector */
 
       int mtype;
 
