@@ -46,6 +46,9 @@ class sData : public QpGenData {
 
   int getLocalNnz(int& nnzQ, int& nnzB, int& nnzD);
 
+  // returns upper bound on number of non-zeroes in Schur complement
+  int getSchurCompMaxNnz();
+
   SparseSymMatrix& getLocalQ();
   SparseGenMatrix& getLocalCrossHessian();
   SparseGenMatrix& getLocalA();
@@ -75,6 +78,10 @@ class sData : public QpGenData {
  private:
   const static double min2LinksRatio = 0.5;
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
+
+  // nnz in Schur complement signified by given vector
+  static int getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks);
+
 
   bool use2Links;
   std::vector<int> linkStartBlocksA;

@@ -8,6 +8,50 @@
 #include "mpi.h"
 
 
+static inline
+int nnzTriangular(int size)
+{
+   assert(size >= 0);
+   return ((1 + size) * size) / 2;
+}
+
+int sData::getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks)
+{
+   const size_t size = linkStartBlocks.size();
+
+   size_t i = 0;
+   int nnz = 0;
+   int n2linksPrev = 0;
+
+   // main loop, going over all 2-link blocks
+   while( i < size && linkStartBlocks[i] >= 0 )
+   {
+      const int block = linkStartBlocks[i];
+      int n2links = 0;
+
+      // get number of 2-links starting in this block
+      for( ; i < size && linkStartBlocks[i] == block; i++ )
+         n2links++;
+
+      // diagonal block
+      nnz += nnzTriangular(n2links);
+
+      // (one) off-diagonal block
+      nnz += n2links * n2linksPrev;
+
+      n2linksPrev = n2links;
+   }
+
+   // any rows left?
+   if( i < size )
+   {
+      const size_t nRows = size - i;
+      nnz += nRows * size - (nRows * (nRows - 1) / 2);
+   }
+
+   return nnz;
+}
+
 std::vector<unsigned int> sData::getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks)
 {
    const size_t size = linkStartBlocks.size();
@@ -394,6 +438,46 @@ int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
   nnzB = Ast.Bmat->getStorageRef().len;
   nnzD = Cst.Bmat->getStorageRef().len;
   return 0;
+}
+
+int sData::getSchurCompMaxNnz()
+{
+   assert(children.size() > 0);
+
+   const int n0 = getLocalnx();
+   const int myl = getLocalmyl();
+   const int mzl = getLocalmzl();
+
+#ifndef NDEBUG
+   {
+      int mB, nB;
+      getLocalB().getSize(mB, nB);
+      assert(nB == n0);
+   }
+#endif
+
+   int nnz = 0;
+
+   // sum up half of dense square
+   nnz += nnzTriangular(n0);
+
+   // add B_0 (or A_0, depending on notation)
+   nnz += getLocalB().numberOfNonZeros();
+
+   // add borders
+   nnz += myl * n0;
+   nnz += mzl * n0;
+
+   // add linking equality parts
+   nnz += getSchurCompMaxNnz(linkStartBlocksA);
+
+   // add linking inequality parts
+   nnz += getSchurCompMaxNnz(linkStartBlocksC);
+
+   // add linking mixed parts todo
+   nnz += myl * mzl;
+
+   return nnz;
 }
 
 

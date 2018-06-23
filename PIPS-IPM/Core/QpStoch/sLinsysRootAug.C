@@ -60,6 +60,8 @@ sLinsysRootAug::createKKT(sData* prob)
 {
    int todo;
 
+   std::cout << "getSchurCompMaxNnz " << prob->getSchurCompMaxNnz() << std::endl;
+
   if( hasSparseKkt && 0 )
      return new SparseSymMatrix();
   else
