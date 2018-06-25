@@ -88,6 +88,8 @@ private:
    // data for the nearly parallel row case
    SimpleVector* rowContainsSingletonVariableA;
    SimpleVector* rowContainsSingletonVariableC;
+   SimpleVector* singletonCoeffsColParent;
+   SimpleVector* singletonCoeffsColChild;
    SimpleVector* normNnzRowA;
    SimpleVector* normNnzRowC;
    SimpleVector* normNnzColParent;
