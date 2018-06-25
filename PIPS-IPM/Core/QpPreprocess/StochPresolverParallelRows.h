@@ -124,6 +124,8 @@ private:
          SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow,
          SimpleVector* redColParent, SimpleVector* nnzColChild);
    bool tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
+   double getSingletonCoefficient(int singleColIdx);
+   void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
 
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
    bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;

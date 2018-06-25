@@ -83,6 +83,8 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
    norm_BmatTrans = NULL;
    norm_CmatTrans = NULL;
    norm_DmatTrans = NULL;
+   currgChild = NULL;
+   currgParent = NULL;
 
    mA = 0;
    nA = 0;
@@ -297,6 +299,8 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       normNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
       normNnzColChild = NULL;
 
+      currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
+
       mA = norm_Amat->m;
       nA = norm_Amat->n;
 
@@ -424,6 +428,8 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
 
       normNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
       normNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec)->cloneFull();
+
+      currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
 
       singletonCoeffsColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
       singletonCoeffsColParent->setToZero();
@@ -777,7 +783,92 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                   {
                      // nearly parallel case 1:
                      cout<<"Nearly Parallel Rows, case 1."<<endl;
+                     // make sure that a_r2 != 0, otherwise switch ids.
+                     int id1 = it1->id;
+                     int id2 = it2->id;
+                     bool swappedId1Id2 = false;
+                     if( rowContainsSingletonVariableA->elements()[id2] == -1.0 )
+                     {   // swap ids so that id2 has a singleton entry:
+                        std::swap(id1, id2);
+                        swappedId1Id2 = true;
+                     }
+                     assert( rowContainsSingletonVariableA->elements()[id2] != -1.0 );
+                     // calculate t and d:
+                     const int singleColIdx1 = rowContainsSingletonVariableA->elements()[id1];
+                     const int singleColIdx2 = rowContainsSingletonVariableA->elements()[id2];
+                     const double d = (norm_b->elements()[id2] - norm_b->elements()[id1])
+                           / norm_factorA->elements()[id2] / norm_factorA->elements()[id2];
 
+                     const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
+                     const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
+                     const double s = norm_factorA->elements()[id1] / norm_factorA->elements()[id2];
+                     const double t = coeff_singleton1 / coeff_singleton2 / s;
+
+                     if( singleColIdx1 != -1.0 )
+                     {
+                        // tighten the bounds of variable x_1:
+                        double newxlow = - std::numeric_limits<double>::max();
+                        double newxupp = std::numeric_limits<double>::max();
+
+                        // calculate new bounds depending on the sign of t:
+                        if( t > 0 )
+                        {
+                           if( singleColIdx2 >= nA )
+                           {
+                              if( currIxlowChild->elements()[singleColIdx2 - nA] != 0.0 )
+                                 newxlow = ( currxlowChild->elements()[singleColIdx2 - nA] - d ) / t;
+                              if( currIxuppChild->elements()[singleColIdx2 - nA] != 0.0 )
+                                 newxupp = ( currxuppChild->elements()[singleColIdx2 - nA] - d ) / t;
+                           }
+                           else
+                           {
+                              if( currIxlowParent->elements()[singleColIdx2] != 0.0 )
+                                 newxlow = ( currxlowParent->elements()[singleColIdx2] - d ) / t;
+                              if( currIxuppParent->elements()[singleColIdx2] != 0.0 )
+                                 newxupp = ( currxuppParent->elements()[singleColIdx2] - d ) / t;
+                           }
+                        }
+                        else if( t < 0 )
+                        {
+                           if( singleColIdx2 >= nA )
+                           {
+                              if( currIxuppChild->elements()[singleColIdx2 - nA] != 0.0 )
+                                 newxlow = ( currxuppChild->elements()[singleColIdx2 - nA] - d ) / t;
+                              if( currIxlowChild->elements()[singleColIdx2 - nA] != 0.0 )
+                                 newxupp = ( currxlowChild->elements()[singleColIdx2 - nA] - d ) / t;
+                           }
+                           else
+                           {
+                              if( currIxuppParent->elements()[singleColIdx2] != 0.0 )
+                                 newxlow = ( currxuppParent->elements()[singleColIdx2] - d ) / t;
+                              if( currIxlowParent->elements()[singleColIdx2] != 0.0 )
+                                 newxupp = ( currxlowParent->elements()[singleColIdx2] - d ) / t;
+                           }
+                        }
+
+                        // effectively tighten bounds of variable x_id1:
+                        tightenBoundsForSingleVar(singleColIdx1, newxlow, newxupp);
+                     }
+                     // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), the row2 is to be removed and
+                     // the objective offset to be adapted.
+
+                     // adapt objective function: cost of x_1 and objOffset:
+                     double costOfVar2 = 0.0;
+                     if( singleColIdx2 >= nA )
+                        costOfVar2 = currgChild->elements()[singleColIdx2 - nA];
+                     else
+                        costOfVar2 = currgParent->elements()[singleColIdx2];
+                     indivObjOffset += d * costOfVar2;
+                     if( singleColIdx1 >= nA )
+                        currgChild->elements()[singleColIdx1] += t * costOfVar2;
+                     else if( singleColIdx1 >= 0 )    // if singleColIdx1 == -1.0, do nothing
+                        currgParent->elements()[singleColIdx1] += t * costOfVar2;
+
+                     // delete the inequality constraint id2 (which could be either it1 or it2 now):
+                     if(swappedId1Id2)
+                        eliminateOriginalRow((int)it1->id, nRowElims);
+                     else
+                        eliminateOriginalRow((int)it2->id, nRowElims);
                   }
                   else
                   {
@@ -822,7 +913,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                   const int ineqRowId = id2 - mA;
 
                   if( rowContainsSingletonVariableA->elements()[id1] == -1.0
-                        || rowContainsSingletonVariableC->elements()[id2] == -1.0 )
+                        && rowContainsSingletonVariableC->elements()[ineqRowId] == -1.0 )
                   {
                      cout<<"Parallel Rows, case 2."<<endl;
                      // check for infeasibility:
@@ -835,19 +926,13 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                      // remove inequality row.
                   }
                   else if( rowContainsSingletonVariableA->elements()[id1] != -1.0
-                        || rowContainsSingletonVariableC->elements()[id2] == -1.0 )
+                        && rowContainsSingletonVariableC->elements()[ineqRowId] == -1.0 )
                   {
                      // nearly parallel case 2:
                      cout<<"Nearly Parallel Rows, case 2."<<endl;
                      // compute the new variable bound for x_id1:
                      const int singleColIdx = rowContainsSingletonVariableA->elements()[id1];
-                     double coeff_singleton = 0.0;
-                     if( singleColIdx >= nA )
-                     {
-                        coeff_singleton = singletonCoeffsColChild->elements()[singleColIdx - nA];
-                     }
-                     else
-                        coeff_singleton = singletonCoeffsColParent->elements()[singleColIdx];
+                     double coeff_singleton = getSingletonCoefficient(singleColIdx);
 
                      double newxlow = - std::numeric_limits<double>::max();
                      double newxupp = std::numeric_limits<double>::max();
@@ -870,17 +955,8 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                      }
 
                      // effectively tighten bounds of variable x_id1:
-                     if( singleColIdx < nA )   // variable x_1 is in the parent block Amat
-                     {
-                        setNewBounds(singleColIdx, newxlow, newxupp, currIxlowParent->elements(),
-                              currxlowParent->elements(), currIxuppParent->elements(), currxuppParent->elements());
+                     tightenBoundsForSingleVar(singleColIdx, newxlow, newxupp);
 
-                     }
-                     else   // variable x_1 is in the child block Bmat
-                     {
-                        setNewBounds(singleColIdx-nA, newxlow, newxupp, currIxlowChild->elements(),
-                              currxlowChild->elements(), currIxuppChild->elements(), currxuppChild->elements());
-                     }
                      // remove inequality row.
 
                   }
@@ -1082,6 +1158,44 @@ bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
          setNewBound( rowId1, factor * norm_upp, currIneqLhs, currIclow);
    }
    return true;
+}
+
+/** Returns the matrix coefficient of the singleton variable with index singleColIdx.
+ * This index is possibly offset by nA, if it is in a B- or D-block.
+ * If singleColIdx == -1, then 0.0 is returned.
+ */
+double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
+{
+   assert( singleColIdx >= -1.0);
+   assert( singleColIdx < nA + singletonCoeffsColChild->n );
+
+   if( singleColIdx == -1.0 )
+      return 0.0;
+   else if( singleColIdx >= nA )
+      return singletonCoeffsColChild->elements()[singleColIdx - nA];
+   else
+      return singletonCoeffsColParent->elements()[singleColIdx];
+}
+
+/** Tightens the bounds for a singleton variable with index singleColIdx.
+ * @param newxlow and @param newxupp are the new candidate bounds.
+ * This index is possibly offset by nA, if it is in a B- or D-block.
+ */
+void StochPresolverParallelRows::tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp)
+{
+   assert( singleColIdx >= 0 );
+   assert( singleColIdx < nA + currxuppChild->n );
+
+   if( singleColIdx < nA )   // variable x_1 is in the parent block Amat
+   {
+      setNewBounds(singleColIdx, newxlow, newxupp, currIxlowParent->elements(),
+            currxlowParent->elements(), currIxuppParent->elements(), currxuppParent->elements());
+   }
+   else   // variable x_1 is in the child block Bmat
+   {
+      setNewBounds(singleColIdx-nA, newxlow, newxupp, currIxlowChild->elements(),
+            currxlowChild->elements(), currIxuppChild->elements(), currxuppChild->elements());
+   }
 }
 
 void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
