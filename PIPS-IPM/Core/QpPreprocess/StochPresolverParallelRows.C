@@ -127,10 +127,10 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
 
          // Per row, add row to the set 'rowsFirstHashTable':
          if( norm_Amat )
-            insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, norm_Bmat, EQUALITY_SYSTEM, normNnzRowA );
+            insertRowsIntoHashtable( rowsFirstHashTable, *norm_Amat, norm_Bmat, EQUALITY_SYSTEM, *normNnzRowA );
          assert( (int)rowsFirstHashTable.size() <= mA );
          if( norm_Cmat )
-            insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC );
+            insertRowsIntoHashtable( rowsFirstHashTable, *norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, *normNnzRowC );
          assert( (int)rowsFirstHashTable.size() <= mA + norm_Cmat->m);
 
          // Prints for visualization:
@@ -200,10 +200,10 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    setNormalizedPointers(-1, matrixA, matrixC );
    // First Hashing: Fill 'rowsFirstHashTable':
    if( norm_Amat )
-      insertRowsIntoHashtable( rowsFirstHashTable, norm_Amat, NULL, EQUALITY_SYSTEM, normNnzRowA );
+      insertRowsIntoHashtable( rowsFirstHashTable, *norm_Amat, NULL, EQUALITY_SYSTEM, *normNnzRowA );
    assert( (int)rowsFirstHashTable.size() <= mA );
    if( norm_Cmat )
-      insertRowsIntoHashtable( rowsFirstHashTable, norm_Cmat, NULL, INEQUALITY_SYSTEM, normNnzRowC );
+      insertRowsIntoHashtable( rowsFirstHashTable, *norm_Cmat, NULL, INEQUALITY_SYSTEM, *normNnzRowC );
    assert( (int)rowsFirstHashTable.size() <= mA + norm_Cmat->m);
    // Second Hashing: Per bucket, do Second Hashing:
    for( size_t i = 0; i < rowsFirstHashTable.bucket_count(); ++i )
@@ -314,9 +314,9 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       removeSingletonVars();
 
       if( norm_Amat )
-         normalizeBlocksRowwise( EQUALITY_SYSTEM, norm_Amat, NULL, norm_b, NULL, NULL, NULL);
+         normalizeBlocksRowwise( EQUALITY_SYSTEM, *norm_Amat, NULL, *norm_b, NULL, NULL, NULL);
       if( norm_Cmat )
-         normalizeBlocksRowwise( INEQUALITY_SYSTEM, norm_Cmat, NULL, norm_cupp, norm_clow, norm_icupp, norm_iclow);
+         normalizeBlocksRowwise( INEQUALITY_SYSTEM, *norm_Cmat, NULL, *norm_cupp, norm_clow, norm_icupp, norm_iclow);
 
       return true;
    }
@@ -456,9 +456,9 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
 
    // normalize the rows:
    if( norm_Amat )
-      normalizeBlocksRowwise( EQUALITY_SYSTEM, norm_Amat, norm_Bmat, norm_b, NULL, NULL, NULL);
+      normalizeBlocksRowwise( EQUALITY_SYSTEM, *norm_Amat, norm_Bmat, *norm_b, NULL, NULL, NULL);
    if( norm_Cmat )
-      normalizeBlocksRowwise( INEQUALITY_SYSTEM, norm_Cmat, norm_Dmat, norm_cupp, norm_clow, norm_icupp, norm_iclow);
+      normalizeBlocksRowwise( INEQUALITY_SYSTEM, *norm_Cmat, norm_Dmat, *norm_cupp, norm_clow, norm_icupp, norm_iclow);
 
    return true;
 }
@@ -536,14 +536,14 @@ void StochPresolverParallelRows::removeSingletonVars()
             if( norm_AmatTrans &&
                   (norm_AmatTrans->rowptr[i].start +1 == norm_AmatTrans->rowptr[i].end) )
             {
-               removeEntry(i, rowContainsSingletonVariableA, norm_Amat, norm_AmatTrans,
-                     normNnzRowA, normNnzColParent, LINKING_VARS_BLOCK);
+               removeEntry(i, *rowContainsSingletonVariableA, *norm_Amat, *norm_AmatTrans,
+                     *normNnzRowA, *normNnzColParent, LINKING_VARS_BLOCK);
             }
             else if(norm_CmatTrans &&
                   (norm_CmatTrans->rowptr[i].start +1 == norm_CmatTrans->rowptr[i].end) )
             {
-               removeEntry(i, rowContainsSingletonVariableC, norm_Cmat, norm_CmatTrans,
-                     normNnzRowC, normNnzColParent, LINKING_VARS_BLOCK);
+               removeEntry(i, *rowContainsSingletonVariableC, *norm_Cmat, *norm_CmatTrans,
+                     *normNnzRowC, *normNnzColParent, LINKING_VARS_BLOCK);
             }
             // else, the singleton entry is in one of the other A_i or C_i blocks
          }
@@ -559,14 +559,14 @@ void StochPresolverParallelRows::removeSingletonVars()
             if( norm_BmatTrans &&
                   (norm_BmatTrans->rowptr[i].start +1 == norm_BmatTrans->rowptr[i].end) )
             {
-               removeEntry(i, rowContainsSingletonVariableA, norm_Bmat, norm_BmatTrans,
-                     normNnzRowA, normNnzColChild, CHILD_BLOCK);
+               removeEntry(i, *rowContainsSingletonVariableA, *norm_Bmat, *norm_BmatTrans,
+                     *normNnzRowA, *normNnzColChild, CHILD_BLOCK);
             }
             else if(norm_DmatTrans &&
                   (norm_DmatTrans->rowptr[i].start +1 == norm_DmatTrans->rowptr[i].end) )
             {
-               removeEntry(i, rowContainsSingletonVariableC, norm_Dmat, norm_DmatTrans,
-                     normNnzRowC, normNnzColChild, CHILD_BLOCK);
+               removeEntry(i, *rowContainsSingletonVariableC, *norm_Dmat, *norm_DmatTrans,
+                     *normNnzRowC, *normNnzColChild, CHILD_BLOCK);
             }
             // else, the singleton entry is in the linking block Blmat
          }
@@ -578,41 +578,41 @@ void StochPresolverParallelRows::removeSingletonVars()
  * the nnz vectors nnzRow and nnzColChild accordingly. Sets the entries in
  * rowContainsSingletonVar to the corresponding column index in which the singleton entry occurs.
  */
-void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector* rowContainsSingletonVar,
-      SparseStorageDynamic* matrix, SparseStorageDynamic* matrixTrans, SimpleVector* nnzRow, SimpleVector* nnzCol,
+void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
+      SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
       BlockType block_type)
 {
-   assert( colIdx >= 0 && colIdx < matrixTrans->m );
-   assert( matrixTrans->rowptr[colIdx].start +1 == matrixTrans->rowptr[colIdx].end);
-   assert( nnzRow->n == matrix->m );
-   assert( matrix->n == nnzCol->n );
-   assert( nnzCol->n == matrixTrans->m );
-   assert( nnzCol->elements()[colIdx] == 1.0 );
+   assert( colIdx >= 0 && colIdx < matrixTrans.m );
+   assert( matrixTrans.rowptr[colIdx].start +1 == matrixTrans.rowptr[colIdx].end);
+   assert( nnzRow.n == matrix.m );
+   assert( matrix.n == nnzCol.n );
+   assert( nnzCol.n == matrixTrans.m );
+   assert( nnzCol.elements()[colIdx] == 1.0 );
 
    // First, find indices of the singleton entry:
-   const int k = matrixTrans->rowptr[colIdx].start;
-   const int rowIdx = matrixTrans->jcolM[k];
-   assert( rowIdx < nnzRow->n );
+   const int k = matrixTrans.rowptr[colIdx].start;
+   const int rowIdx = matrixTrans.jcolM[k];
+   assert( rowIdx < nnzRow.n );
 
    // check if there are no more than one singleton Entries in this row:
-   if( rowContainsSingletonVar->elements()[rowIdx] >= 0 )
+   if( rowContainsSingletonVar.elements()[rowIdx] >= 0 )
    {
-      rowContainsSingletonVar->elements()[rowIdx] = -2.0;
+      rowContainsSingletonVar.elements()[rowIdx] = -2.0;
       return;
    }
    // store the colIdx in rowContainsSingletonVar:
    // (possibly add offset to colIdx so that Amat and Bmat are distinct)
    if( block_type == LINKING_VARS_BLOCK )
-      rowContainsSingletonVar->elements()[rowIdx] = colIdx;
+      rowContainsSingletonVar.elements()[rowIdx] = colIdx;
    else // if( block_type == CHILD_BLOCK )
-      rowContainsSingletonVar->elements()[rowIdx] = colIdx + nA;
+      rowContainsSingletonVar.elements()[rowIdx] = colIdx + nA;
 
    // Second, remove the entry from norm_Bmat and norm_BmatTrans:
    double coeff = 0;
-   removeEntryInDynamicStorage(*matrix, rowIdx, colIdx, coeff);
-   matrixTrans->rowptr[colIdx].end --;
-   nnzRow->elements()[rowIdx]--;
-   nnzCol->elements()[colIdx] = 0.0;
+   removeEntryInDynamicStorage(matrix, rowIdx, colIdx, coeff);
+   matrixTrans.rowptr[colIdx].end --;
+   nnzRow.elements()[rowIdx]--;
+   nnzCol.elements()[colIdx] = 0.0;
    if( block_type == LINKING_VARS_BLOCK )
       singletonCoeffsColParent->elements()[colIdx] = coeff;
    else
@@ -620,15 +620,14 @@ void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector* rowContai
 }
 
 void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
-      SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
-      SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs)
+      SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock,
+      SimpleVector& Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs)
 {
-   assert( Ablock && Rhs );
-   int nRows = Ablock->m;
+   int nRows = Ablock.m;
    if(Bblock) assert( nRows == Bblock->m);
-   if( nRows != Rhs->n )
-      cout<<"nRows="<<nRows<<", Rhs->n="<<Rhs->n<<endl;
-   assert( nRows == Rhs->n );
+   if( nRows != Rhs.n )
+      cout<<"nRows="<<nRows<<", Rhs->n="<<Rhs.n<<endl;
+   assert( nRows == Rhs.n );
 
    if( system_type == INEQUALITY_SYSTEM )
    {
@@ -640,16 +639,16 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
    {
       double maxValue = 0.0;
       bool negateRow = false;
-      const int rowStartA = Ablock->rowptr[i].start;
-      const int rowEndA = Ablock->rowptr[i].end;
+      const int rowStartA = Ablock.rowptr[i].start;
+      const int rowEndA = Ablock.rowptr[i].end;
       if( rowStartA < rowEndA )
       {
-         if( Ablock->M[rowStartA] < 0)
+         if( Ablock.M[rowStartA] < 0)
             negateRow = true;
          for(int k=rowStartA; k<rowEndA; k++)
          {
-            if( fabs(Ablock->M[k]) > maxValue )
-               maxValue = fabs(Ablock->M[k]);
+            if( fabs(Ablock.M[k]) > maxValue )
+               maxValue = fabs(Ablock.M[k]);
          }
       }
       int rowStartB = 0;
@@ -675,7 +674,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       if( rowStartA < rowEndA )
       {
          for(int k=rowStartA; k<rowEndA; k++)
-            Ablock->M[k] /= maxValue;
+            Ablock.M[k] /= maxValue;
       }
       if( Bblock && (rowStartB < rowEndB) )
       {
@@ -684,7 +683,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       }
       if( system_type == EQUALITY_SYSTEM )
       {
-         Rhs->elements()[i] /= maxValue;
+         Rhs.elements()[i] /= maxValue;
          norm_factorA->elements()[i] = maxValue;
       }
       else
@@ -692,11 +691,11 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
          if( iLhs->elements()[i] != 0.0 )
             Lhs->elements()[i] /= maxValue;
          if( iRhs->elements()[i] != 0.0 )
-            Rhs->elements()[i] /= maxValue;
+            Rhs.elements()[i] /= maxValue;
          // if multiplied by a negative value, lhs and rhs have to be swapped:
          if(negateRow)
          {
-            std::swap(Lhs->elements()[i], Rhs->elements()[i]);
+            std::swap(Lhs->elements()[i], Rhs.elements()[i]);
             std::swap(iLhs->elements()[i], iRhs->elements()[i]);
          }
          norm_factorC->elements()[i] = maxValue;
@@ -709,48 +708,45 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
  * If at root, Bblock should be NULL.
  */
 void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-      SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector* nnzRow )
+      SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector& nnzRow )
 {
-   if( Ablock )
+   if( Bblock) assert( Ablock.m == Bblock->m );
+   if( system_type == EQUALITY_SYSTEM )
+      assert( mA == Ablock.m );
+
+   for(int i=0; i<Ablock.m; i++)
    {
-      if( Bblock) assert( Ablock->m == Bblock->m );
-      if( system_type == EQUALITY_SYSTEM )
-         assert( mA == Ablock->m );
+      // ignore rows containing more than one singleton entry:
+      if( system_type == EQUALITY_SYSTEM && rowContainsSingletonVariableA->elements()[i] == -2.0 )
+         continue;
+      if( system_type == INEQUALITY_SYSTEM && rowContainsSingletonVariableC->elements()[i] == -2.0 )
+         continue;
 
-      for(int i=0; i<Ablock->m; i++)
+      // calculate rowId including possible offset (for Inequality rows):
+      int rowId = i;
+      if( nnzRow.elements()[rowId] == 0.0 )
+         continue;
+      if( system_type == INEQUALITY_SYSTEM )
+         rowId += mA;
+
+      // calculate rowlength of A- and B-block
+      const int rowStartA = Ablock.rowptr[i].start;
+      const int rowlengthA = Ablock.rowptr[i].end - rowStartA;
+      if( Bblock ){
+         const int rowStartB = Bblock->rowptr[i].start;
+         const int rowlengthB = Bblock->rowptr[i].end - rowStartB;
+
+         // colIndices and normalized entries are set as pointers to the original data.
+         // create and insert the new element:
+         assert( rowlengthA != 0 || rowlengthB != 0 );
+         rows.emplace(rowId, nA, rowlengthA, &(Ablock.jcolM[rowStartA]), &(Ablock.M[rowStartA]),
+               rowlengthB, &(Bblock->jcolM[rowStartB]), &(Bblock->M[rowStartB]));
+      }
+      else
       {
-         // ignore rows containing more than one singleton entry:
-         if( system_type == EQUALITY_SYSTEM && rowContainsSingletonVariableA->elements()[i] == -2.0 )
-            continue;
-         if( system_type == INEQUALITY_SYSTEM && rowContainsSingletonVariableC->elements()[i] == -2.0 )
-            continue;
-
-         // calculate rowId including possible offset (for Inequality rows):
-         int rowId = i;
-         if( nnzRow->elements()[rowId] == 0.0 )
-            continue;
-         if( system_type == INEQUALITY_SYSTEM )
-            rowId += mA;
-
-         // calculate rowlength of A- and B-block
-         const int rowStartA = Ablock->rowptr[i].start;
-         const int rowlengthA = Ablock->rowptr[i].end - rowStartA;
-         if( Bblock ){
-            const int rowStartB = Bblock->rowptr[i].start;
-            const int rowlengthB = Bblock->rowptr[i].end - rowStartB;
-
-            // colIndices and normalized entries are set as pointers to the original data.
-            // create and insert the new element:
-            assert( rowlengthA != 0 || rowlengthB != 0 );
-            rows.emplace(rowId, nA, rowlengthA, &(Ablock->jcolM[rowStartA]), &(Ablock->M[rowStartA]),
-                  rowlengthB, &(Bblock->jcolM[rowStartB]), &(Bblock->M[rowStartB]));
-         }
-         else
-         {
-            assert( rowlengthA != 0 );
-            rows.emplace(rowId, nA, rowlengthA, &(Ablock->jcolM[rowStartA]),
-                  &(Ablock->M[rowStartA]), 0, NULL, NULL);
-         }
+         assert( rowlengthA != 0 );
+         rows.emplace(rowId, nA, rowlengthA, &(Ablock.jcolM[rowStartA]),
+               &(Ablock.M[rowStartA]), 0, NULL, NULL);
       }
    }
 }
@@ -1037,8 +1033,8 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
       {
 //         cout<<"Delete row in A with id# "<<rowId<<endl;
          nRowElims++;
-         removeRow(rowId, currAmat, currAmatTrans, currBmat, currBmatTrans,
-               currNnzRow, currRedColParent, currNnzColChild);
+         removeRow(rowId, *currAmat, *currAmatTrans, currBmat, currBmatTrans,
+               *currNnzRow, *currRedColParent, currNnzColChild);
       }
    }
    else  // inequality row
@@ -1050,8 +1046,8 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
       {
 //         cout<<"Delete row in C with id# "<<rowIdC<<endl;
          nRowElims++;
-         removeRow(rowIdC, currCmat, currCmatTrans, currDmat, currDmatTrans,
-               currNnzRowC, currRedColParent, currNnzColChild);
+         removeRow(rowIdC, *currCmat, *currCmatTrans, currDmat, currDmatTrans,
+               *currNnzRowC, *currRedColParent, currNnzColChild);
       }
    }
 }
@@ -1062,40 +1058,38 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
  * Increments redColParent by one at each column index the row had an entry.
  * Decrements nnzColChild by one at each column index the row had an entry.
  */
-void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic* Ablock, SparseStorageDynamic* AblockTrans,
-      SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow,
-      SimpleVector* redColParent, SimpleVector* nnzColChild)
+void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
+      SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
+      SimpleVector& redColParent, SimpleVector* nnzColChild)
 {
-   assert( Ablock && AblockTrans );
-   assert( nnzRow && redColParent );
-   assert( rowIdx>=0 && rowIdx<Ablock->m );
-   assert( Ablock->m == nnzRow->n );
-   assert( Ablock->n == redColParent->n );
+   assert( rowIdx>=0 && rowIdx<Ablock.m );
+   assert( Ablock.m == nnzRow.n );
+   assert( Ablock.n == redColParent.n );
 
-   const int rowStartA = Ablock->rowptr[rowIdx].start;
-   const int rowEndA = Ablock->rowptr[rowIdx].end;
+   const int rowStartA = Ablock.rowptr[rowIdx].start;
+   const int rowEndA = Ablock.rowptr[rowIdx].end;
    // delete row in AblockTrans:
    for(int k=rowStartA; k<rowEndA; k++)
    {
-      const int colIdx = Ablock->jcolM[k];
+      const int colIdx = Ablock.jcolM[k];
       double tmp = 0.0;
-      removeEntryInDynamicStorage(*AblockTrans, colIdx, rowIdx, tmp);
+      removeEntryInDynamicStorage(AblockTrans, colIdx, rowIdx, tmp);
       // increment redColParent[colIdx]:
-      redColParent->elements()[colIdx]++;
+      redColParent.elements()[colIdx]++;
    }
    // delete row in Ablock:
-   clearRow(*Ablock, rowIdx);
+   clearRow(Ablock, rowIdx);
 
    if(Bblock)
    {
       assert( BblockTrans );
-      assert( Ablock->m == Bblock->m );
+      assert( Ablock.m == Bblock->m );
       assert( nnzColChild );
       assert( Bblock->n == nnzColChild->n );
 
       const int rowStartB = Bblock->rowptr[rowIdx].start;
       const int rowEndB = Bblock->rowptr[rowIdx].end;
-      assert( rowEndB - rowStartB + rowEndA - rowStartA == nnzRow->elements()[rowIdx] );
+      assert( rowEndB - rowStartB + rowEndA - rowStartA == nnzRow.elements()[rowIdx] );
 
       // delete row in BblockTrans:
       for(int k=rowStartB; k<rowEndB; k++)
@@ -1110,7 +1104,7 @@ void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic* Abl
       clearRow(*Bblock, rowIdx);
    }
    // set nnzRow[rowIdx] to 0.0:
-   nnzRow->elements()[rowIdx] = 0.0;
+   nnzRow.elements()[rowIdx] = 0.0;
 }
 
 /**

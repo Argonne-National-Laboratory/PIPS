@@ -110,19 +110,19 @@ private:
    bool setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
    void deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
    void removeSingletonVars();
-   void removeEntry(int colIdx, SimpleVector* rowContainsSingletonVar,
-         SparseStorageDynamic* matrix, SparseStorageDynamic* matrixTrans, SimpleVector* nnzRow, SimpleVector* nnzCol,
+   void removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
+         SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
          BlockType block_type);
-   void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock,
-         SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
+   void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock,
+         SimpleVector& Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector* nnzRow );
+         SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector& nnzRow );
    bool compareRowsInSecondHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
    void eliminateOriginalRow(int rowId, int& nRowElims);
-   void removeRow(int rowIdx, SparseStorageDynamic* Ablock, SparseStorageDynamic* AblockTrans,
-         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector* nnzRow,
-         SimpleVector* redColParent, SimpleVector* nnzColChild);
+   void removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
+         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
+         SimpleVector& redColParent, SimpleVector* nnzColChild);
    bool tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
    double getSingletonCoefficient(int singleColIdx);
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
