@@ -113,6 +113,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
    presData.resetRedCounters();
    int nRowElims = 0;
+   indivObjOffset = 0.0;
    bool possibleFeasible = true;
 
    // for children:
@@ -164,7 +165,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
             }*/
 
             // Compare the rows in the final (from second hash) bin:
-            possibleFeasible = compareRowsInSecondHashTable(nRowElims);
+            possibleFeasible = compareRowsInSecondHashTable(nRowElims, (int)i);
             if( !possibleFeasible )
             {
                cout<<"Infeasibility detected: in parallel row presolving."<<endl;
@@ -218,7 +219,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       }
 
       // Compare the rows in the final (from second hash) bin:
-      possibleFeasible = compareRowsInSecondHashTable(nRowElims);
+      possibleFeasible = compareRowsInSecondHashTable(nRowElims, -1);
       if( !possibleFeasible )
       {
          cout<<"Infeasibility detected: in parallel row presolving."<<endl;
@@ -230,6 +231,12 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
 
    if( myRank == 0 )
       cout<<"Removed "<<nRowElims<<" Rows in Parallel Row Presolving."<<endl;
+
+   // Sum up individual objOffset and then add it to the global objOffset:
+   sumIndivObjOffset();
+   presData.addObjOffset(indivObjOffset);
+   if( myRank == 0 )
+      cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
 
 //   if( myRank == 0 )
 //      cout<<"After Parallel Row Presolving:"<<endl;
@@ -750,12 +757,15 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
 
 /*
  * Per bucket in rowsSecondHashTable, compare the containing rows and check if they are parallel.
- * If so, consider the different possible cases.
+ * If so, consider the different possible cases. If a row can be removed, the action is applied
+ * to the original matrices (not the normalized copies).
  */
-bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
+bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, int it)
 {
-   // todo The action has to be applied to the original matrices (not the normalized copies)
    // todo make sure that more than 2 parallel rows are treated correctly
+
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    if( rowsSecondHashTable.empty() )
       return true;
@@ -796,13 +806,13 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                      // calculate t and d:
                      const int singleColIdx1 = rowContainsSingletonVariableA->elements()[id1];
                      const int singleColIdx2 = rowContainsSingletonVariableA->elements()[id2];
-                     const double d = (norm_b->elements()[id2] - norm_b->elements()[id1])
-                           / norm_factorA->elements()[id2] / norm_factorA->elements()[id2];
 
                      const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
                      const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
                      const double s = norm_factorA->elements()[id1] / norm_factorA->elements()[id2];
                      const double t = coeff_singleton1 / coeff_singleton2 / s;
+                     const double d = (norm_b->elements()[id2] - norm_b->elements()[id1])
+                              * norm_factorA->elements()[id2] / coeff_singleton2;
 
                      if( singleColIdx1 != -1.0 )
                      {
@@ -858,12 +868,15 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims)
                         costOfVar2 = currgChild->elements()[singleColIdx2 - nA];
                      else
                         costOfVar2 = currgParent->elements()[singleColIdx2];
-                     indivObjOffset += d * costOfVar2;
+
+                     // only add the objective offset for children or for root as process ZERO:
+                     if( myRank == 0 || it > -1 )
+                        indivObjOffset += d * costOfVar2;
+
                      if( singleColIdx1 >= nA )
-                        currgChild->elements()[singleColIdx1] += t * costOfVar2;
+                        currgChild->elements()[singleColIdx1 - nA] += t * costOfVar2;
                      else if( singleColIdx1 >= 0 )    // if singleColIdx1 == -1.0, do nothing
                         currgParent->elements()[singleColIdx1] += t * costOfVar2;
-
                      // delete the inequality constraint id2 (which could be either it1 or it2 now):
                      if(swappedId1Id2)
                         eliminateOriginalRow((int)it1->id, nRowElims);

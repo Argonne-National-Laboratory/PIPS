@@ -117,7 +117,7 @@ private:
          SimpleVector* Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector* nnzRow );
-   bool compareRowsInSecondHashTable(int& nRowElims);
+   bool compareRowsInSecondHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
    void eliminateOriginalRow(int rowId, int& nRowElims);
    void removeRow(int rowIdx, SparseStorageDynamic* Ablock, SparseStorageDynamic* AblockTrans,
