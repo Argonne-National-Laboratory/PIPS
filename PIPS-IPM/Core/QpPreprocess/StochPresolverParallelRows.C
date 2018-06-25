@@ -1033,7 +1033,7 @@ void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic* Abl
  */
 bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int rowId2)
 {
-   assert( currCmat && currDmat );
+   assert( currCmat );
    assert( rowId1 >= 0 && rowId2 >= 0 );
    assert( rowId1 < currCmat->m && rowId2 < currCmat->m );
    assert( norm_factorC && norm_factorC->n == currCmat->m );
