@@ -28,14 +28,12 @@ if (HAVE_MA57 AND HAVE_METIS)
       stochInput ${COIN_LIBS}
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA57_LIBRARY} ${METIS_LIBRARY}
+      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
       ${NO_WHOLE_ARCHIVE}
-      ${MATH_LIBS})
+	  ${PARDISO_LIBRARY}
+      ${MATH_LIBS} "-Wl,--no-undefined")
 	install(TARGETS pipsipm-shared LIBRARY DESTINATION $ENV{PWD}/lib)
-	install(FILES ${SHARED_DIR}/MA57/src/lib/libma57.a ${SHARED_DIR}/METIS/src/libmetis.a DESTINATION $ENV{PWD}/lib)
-	if(HAVE_PARDISO)
-		install(FILES ${SHARED_DIR}/PARDISO/src/libpardiso.so DESTINATION $ENV{PWD}/lib)
-	endif()
+	#install(FILES ${SHARED_DIR}/MA57/src/lib/libma57.a ${SHARED_DIR}/METIS/src/libmetis.a DESTINATION $ENV{PWD}/lib)
   endif (HAVE_CLANG)
 
 endif(HAVE_MA57 AND HAVE_METIS)
@@ -111,13 +109,39 @@ if (HAVE_PARDISO)
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
       ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
-      add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
-      target_link_libraries(meanSolveAndRecourseEval
-	stochInput ${COIN_LIBS}
-	ooqpstoch ooqpstochla ooqpmehrotrastoch
-	ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
-	${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY}
-	${MATH_LIBS})
+	install(FILES 
+		$ENV{PWD}/Input/libstochInput.a
+		$ENV{PWD}/PIPS-IPM/Core/QpStoch/libooqpstoch.a
+		$ENV{PWD}/PIPS-IPM/Core/StochLinearAlgebra/libooqpstochla.a
+		$ENV{PWD}/PIPS-IPM/Core/QpSolvers/libooqpmehrotrastoch.a
+		$ENV{PWD}/PIPS-IPM/Core/libooqpgensparse.a
+		$ENV{PWD}/PIPS-IPM/Core/libooqpbase.a
+		$ENV{PWD}/PIPS-IPM/Core/SparseLinearAlgebra/libooqpsparse.a
+		$ENV{PWD}/PIPS-IPM/Core/DenseLinearAlgebra/libooqpdense.a
+		${MA27_LIBRARY}
+		${MA57_LIBRARY}
+		${METIS_LIBRARY} 
+		${PARDISO_LIBRARY} DESTINATION $ENV{PWD}/lib)
+
+    add_library(pipsipm_schur-shared SHARED)
+    target_link_libraries(pipsipm_schur-shared
+      ${WHOLE_ARCHIVE}
+      stochInput ${COIN_LIBS}
+      ooqpstoch ooqpstochla ooqpmehrotrastoch
+      ooqpgensparse ooqpbase ooqpsparse ooqpdense
+      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
+      ${NO_WHOLE_ARCHIVE}
+	  ${PARDISO_LIBRARY} ${MATH_LIBS})
+	install(TARGETS pipsipm_schur-shared LIBRARY DESTINATION $ENV{PWD}/lib)
+
+
+    add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
+    target_link_libraries(meanSolveAndRecourseEval
+	  stochInput ${COIN_LIBS}
+	  ooqpstoch ooqpstochla ooqpmehrotrastoch
+	  ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
+	  ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY}
+	  ${MATH_LIBS})
 
     endif(HAVE_MA27)
 
