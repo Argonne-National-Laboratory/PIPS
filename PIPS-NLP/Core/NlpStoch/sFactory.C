@@ -502,13 +502,18 @@ Variables* sFactory::makeVariables( Data * prob_in )
   // OoqpVector * u      = tree->newDualZVector(); 
   // OoqpVector * pi     = tree->newDualZVector();
 
+  long long nxg, myg, mzg;
+  tree->GetGlobalSizes(nxg, myg, mzg);
+  //printf(" ------ %d  %d  %d \n", nx,my,mz);
+
   sVars* vars = new sVars( tree, x, s, y, z,
 			   v, gamma, w, phi,
 			   t, lambda, u, pi, 
 			   prob->ixlow, prob->ixlow->numberOfNonzeros(),
 			   prob->ixupp, prob->ixupp->numberOfNonzeros(),
 			   prob->iclow, prob->iclow->numberOfNonzeros(),
-			   prob->icupp, prob->icupp->numberOfNonzeros());
+			   prob->icupp, prob->icupp->numberOfNonzeros(),
+			   nxg, myg, mzg);
   registeredVars.push_back(vars);
   return vars;
 }
@@ -582,7 +587,7 @@ void sFactory::iterateEnded()
     
     linsys->sync();
 
-    printf("Should not get here! OMG OMG OMG\n");
+    printf("This code is not tested - should not be used!\n");
   }
   //logging and monitoring
   iterTmMonitor.recIterateTm_stop();

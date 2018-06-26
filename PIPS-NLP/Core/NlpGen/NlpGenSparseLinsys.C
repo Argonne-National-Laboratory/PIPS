@@ -23,6 +23,7 @@ extern int gUsePetsc;
 extern int gUser_Defined_PC;
 extern int gUsePetscOuter;
 extern int gisNLP;
+extern int gPipsPrtLV;
 
 NlpGenSparseLinsys::NlpGenSparseLinsys(  NlpGen * factory_in,
 				       NlpGenData * data,
@@ -156,49 +157,54 @@ void NlpGenSparseLinsys::factor(Data *prob_in, Variables *vars,RegularizationAlg
   //					(the other calls of this routine when IFR is used, now matrix is nonsingular for sure)
   if(RegInfo->DoEvalReg >= 1){
     RegInfo->newLinearSystem(); 
-	
-	if(RegInfo->ForceReg)
-	  factorNoMatChange(prob, vars,RegInfo);
-	else
+    
+    if(RegInfo->ForceReg)
+      factorNoMatChange(prob, vars,RegInfo);
+    else
       factorNoMatChange(prob, vars,NULL);
-	
+    
     Num_NegEVal = solver->matrixChanged();
+    
+    if(gPipsPrtLV>=3) 
+      printf("NlpGenSparseLinsys (serial): Num_NegEVal is %d and  my+mz is %d\n", Num_NegEVal, my+mz);
 
-	// check if matrix is singular
-	if( Num_NegEVal < 0 || (Num_NegEVal < my+mz && RegInfo->DoEvalReg == 1) )
-	  RegInfo->MatrixSingular = 1;
-	else
-	  RegInfo->MatrixSingular = 0;
-	
-	// skip update regularizaion if: 	1) have correct inertia and mat is nonsingular 
-	//						OR 	2) mat is nonsingular and we will do inertia-free test later
-	if( (RegInfo->DoEvalReg == 1 && Num_NegEVal == my+mz) || (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1) ) 
-	  skipUpdateReg = true;	
+    // check if matrix is singular
+    if( Num_NegEVal < 0 || (Num_NegEVal < my+mz && RegInfo->DoEvalReg == 1) )
+      RegInfo->MatrixSingular = 1;
+    else
+      RegInfo->MatrixSingular = 0;
+    
+    // skip update regularization if: 	1) have correct inertia and mat is nonsingular 
+    //				OR 	2) mat is nonsingular and we will do inertia-free test later
+    if( (RegInfo->DoEvalReg == 1 && Num_NegEVal == my+mz) || (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1) ) 
+      skipUpdateReg = true;	
   }
-
+  
   // update regularization
   while(!skipUpdateReg){
-	RegInfo->computeRegularization(priReg,dualReg,prob->currMu);
+    RegInfo->computeRegularization(priReg,dualReg,prob->currMu);
 	
     factorNoMatChange(prob, vars,RegInfo);
     Num_NegEVal = solver->matrixChanged();	
 
-	// check if matrix is singular
-	if(Num_NegEVal < 0)
-	  RegInfo->MatrixSingular = 1;
-	else
-	  RegInfo->MatrixSingular = 0;
+    if(gPipsPrtLV>=3) 
+      printf("NlpGenSparseLinsys (serial): Num_NegEVal is %d and  my+mz is %d (on refactorization with regularizations: %g %g)\n", Num_NegEVal, my+mz, priReg, dualReg);
 
-	// skip update regularizaion if: 	1) have correct inertia and mat is nonsingular 
-	//						OR 	2) mat is nonsingular and we will do inertia-free test later	
-	//						OR  	3) we are doing inertia-free test now (mat is defenitly nonsingular)
-	if( (RegInfo->DoEvalReg == 1 && Num_NegEVal == my+mz) 
-		|| (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1) || RegInfo->DoEvalReg == 0 )
-	{
-	  skipUpdateReg = true;
-	}	
+    // check if matrix is singular
+    if(Num_NegEVal < 0)
+      RegInfo->MatrixSingular = 1;
+    else
+      RegInfo->MatrixSingular = 0;
+    
+    // skip update regularization if: 	1) have correct inertia and mat is nonsingular 
+    //				OR 	2) mat is nonsingular and we will do inertia-free test later	
+    //				OR  	3) we are doing inertia-free test now (mat is definitely nonsingular)
+    if( (RegInfo->DoEvalReg == 1 && Num_NegEVal == my+mz) 
+	|| (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1) || RegInfo->DoEvalReg == 0 )
+      {
+	skipUpdateReg = true;
+      }	
   } 
-
 }
 
 //FIXME_ME: if we do reduced space, we do not need to updae kkt matrices

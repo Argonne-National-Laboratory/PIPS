@@ -43,13 +43,9 @@ public:
   OoqpVectorHandle icupp;
   OoqpVectorHandle iclow;
 
-  int nSlack;
-  int nxLOri, nxUOri;
-  int nsLOri, nsUOri;
-  
-  NlpGenVars(){};
-
-//public:  
+  long long nSlack;
+  //int nxLOri, nxUOri;
+  //int nsLOri, nsUOri;
 
   OoqpVectorHandle x;
   OoqpVectorHandle s;
@@ -75,7 +71,9 @@ public:
   OoqpVectorHandle PiLs;
   OoqpVectorHandle PiUs;
 
-
+ protected:
+  NlpGenVars(){};
+ public:  
   /** constructor in which the data and variable pointers are set to
       point to the given arguments */
   NlpGenVars( OoqpVector * x_in, OoqpVector * s_in,
@@ -96,7 +94,8 @@ public:
 
 
   virtual ~NlpGenVars();
-  
+
+
   /** computes mu = (t'lambda +u'pi + v'gamma + w'phi)/(mclow+mcupp+nxlow+nxupp) */
   virtual double mu();
 

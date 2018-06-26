@@ -248,12 +248,10 @@ void pipsOptions::readFile()
   std::string fileName("pipsnlp.parameter");
   optfile = fopen(fileName.c_str(),"r");
   if (optfile==NULL) {
-//	  printf("not find option file: %s \n",fileName.c_str());
-	  return;
-  }
-  else
-  {
-	  printf("load option file: %s \n",fileName.c_str());
+    //	  printf("not find option file: %s \n",fileName.c_str());
+    return;
+  } else {
+    printf("load option file: %s \n",fileName.c_str());
   }
   
   /* Read one line of the options file */
@@ -408,8 +406,9 @@ bool pipsOptions::parseLine(char *buffer)
   double dval;
   
   bool found = false;
-  sscanf(buffer, "%s%lf\n",label, &dval);  
-  
+  int ret=sscanf(buffer, "%s%lf\n",label, &dval);  
+  if(ret!=2) return true;
+
   int mype,doFlag; FindMPI_ID(doFlag,mype);
 
   /* -----------------------------------------------------------------------

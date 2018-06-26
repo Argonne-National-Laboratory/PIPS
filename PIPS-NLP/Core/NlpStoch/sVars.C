@@ -64,7 +64,7 @@ sVars::sVars(sTree* tree,
     w   = OoqpVectorHandle( tree->newPrimalVector() );
     phi = OoqpVectorHandle( tree->newPrimalVector() );
   } 
-  assert(false);
+  assert(false && "This constructor should not be used.");
   x = OoqpVectorHandle( tree->newPrimalVector() );
   y = OoqpVectorHandle( tree->newDualYVector() );
   z = OoqpVectorHandle( tree->newDualZVector() );
@@ -83,7 +83,8 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
 	      OoqpVector * ixlow_in, long long nxlowGlobal,
 	      OoqpVector * ixupp_in, long long nxuppGlobal,
 	      OoqpVector * iclow_in, long long mclowGlobal,
-	      OoqpVector * icupp_in, long long mcuppGlobal)
+	      OoqpVector * icupp_in, long long mcuppGlobal,
+	      long long nxGlobal, long long myGlobal, long long mzGlobal)
   : NlpGenVars()
 {
 
@@ -106,6 +107,9 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
   SpReferTo( iclow, iclow_in );
   SpReferTo( icupp, icupp_in );
 
+  // nx, my, and mz end up with values that are local to the MPI rank. They
+  // are set at their global values at the end of the constructor. This is 
+  // needed since the parent class (NlpGenVars) need the global values.
   nx = x->length();
   my = y->length();
   mz = z->length();
@@ -139,6 +143,10 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
   PiLs = OoqpVectorHandle( tree->newDualZVector() );
   PiUs = OoqpVectorHandle( tree->newDualZVector() );
 
+  //set the global values in the member
+  //if set before createChildren, these global values will be also set for 
+  //children (not  really needed)
+  nx = nxGlobal; my = myGlobal; mz = mzGlobal;
   createChildren();
 
 }
@@ -152,7 +160,6 @@ sVars::~sVars()
 void sVars::AddChild(sVars* child)
 {
   children.push_back(child);
-  
 }
 
 
@@ -187,7 +194,9 @@ void sVars::createChildren()
 			 ixlowst.children[it], nxlow,
 			 ixuppst.children[it], nxupp,
 			 iclowst.children[it], mclow,
-			 icuppst.children[it], mcupp));
+			 icuppst.children[it], mcupp,
+			 nx, my, mz)
+	      );
   }
   
 }
