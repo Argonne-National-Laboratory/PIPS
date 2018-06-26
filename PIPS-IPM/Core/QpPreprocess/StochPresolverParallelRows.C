@@ -779,7 +779,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
             // When two parallel rows are found, check if they are both =, both <=, or = and <=
             if( checkRowsAreParallel( *it1, *it2) )
             {
-               cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<"("<<it1->lengthA+it1->lengthB<<")"<<" and "<<it2->id<<"("<<it2->lengthA+it2->lengthB<<")"<<endl;
+               //cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<"("<<it1->lengthA+it1->lengthB<<")"<<" and "<<it2->id<<"("<<it2->lengthA+it2->lengthB<<")"<<endl;
                if( it1->id < mA && it2->id < mA )
                {
                   // Case both constraints are equalities:
@@ -799,6 +799,11 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                         swappedId1Id2 = true;
                      }
                      assert( rowContainsSingletonVariableA->elements()[id2] != -1.0 );
+                     // if row id1 was already deleted, do not continue the procedure:
+                     if( (id1 < mA && currNnzRow->elements()[id1] == 0.0)
+                           || (id1 > mA && currNnzRowC->elements()[id1 - mA] == 0.0) )
+                        continue;
+
                      // calculate t and d:
                      const int singleColIdx1 = rowContainsSingletonVariableA->elements()[id1];
                      const int singleColIdx2 = rowContainsSingletonVariableA->elements()[id2];
@@ -859,28 +864,18 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                      // the objective offset to be adapted.
 
                      // adapt objective function: cost of x_1 and objOffset:
-                     double costOfVar2 = 0.0;
-                     if( singleColIdx2 >= nA )
-                        costOfVar2 = currgChild->elements()[singleColIdx2 - nA];
-                     else
-                        costOfVar2 = currgParent->elements()[singleColIdx2];
-
+                     const double costOfVar2 = addCostToVariable1(singleColIdx1, singleColIdx2, t);
                      // only add the objective offset for children or for root as process ZERO:
                      if( myRank == 0 || it > -1 )
                         indivObjOffset += d * costOfVar2;
 
-                     if( singleColIdx1 >= nA )
-                        currgChild->elements()[singleColIdx1 - nA] += t * costOfVar2;
-                     else if( singleColIdx1 >= 0 )    // if singleColIdx1 == -1.0, do nothing
-                        currgParent->elements()[singleColIdx1] += t * costOfVar2;
                      // delete the inequality constraint id2 (which could be either it1 or it2 now):
-                     if(swappedId1Id2)
-                        eliminateOriginalRow((int)it1->id, nRowElims);
-                     else
-                        eliminateOriginalRow((int)it2->id, nRowElims);
+                     (swappedId1Id2) ?
+                           eliminateOriginalRow((int)it1->id, nRowElims) : eliminateOriginalRow((int)it2->id, nRowElims);
                   }
                   else
                   {
+                     cout<<"Really Parallel Rows, case 1."<<endl;
                      if( norm_b->elements()[it1->id] != norm_b->elements()[it2->id] )
                         return false;
                      // delete row2 in the original system:
@@ -898,9 +893,16 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   {
                      // nearly parallel case 3:
                      cout<<"Nearly Parallel Rows, case 3."<<endl;
+                     if( rowContainsSingletonVariableC->elements()[rowId1] != -1.0
+                        && rowContainsSingletonVariableC->elements()[rowId2] != -1.0 )
+                     {
+                        if( doNearlyParallelRowCase3(rowId1, rowId2) )
+                           eliminateOriginalRow((int)it2->id, nRowElims);
+                     }
                   }
                   else
                   {
+                     cout<<"Really Parallel Rows, case 3."<<endl;
                      // tighten bounds in original and normalized system:
                      if( !tightenOriginalBoundsOfRow1(rowId1, rowId2) )
                         return false;
@@ -924,7 +926,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   if( rowContainsSingletonVariableA->elements()[id1] == -1.0
                         && rowContainsSingletonVariableC->elements()[ineqRowId] == -1.0 )
                   {
-                     cout<<"Parallel Rows, case 2."<<endl;
+                     cout<<"Really Parallel Rows, case 2."<<endl;
                      // check for infeasibility:
                      if( norm_iclow->elements()[ineqRowId] != 0.0
                            && norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
@@ -974,16 +976,8 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
 
                   // in both the parallel row case and in the nearly parallel row case,
                   // delete the inequality constraint id2 (which could be either it1 or it2 now):
-                  if(swappedId1Id2)
-                  {
-                     // delete row1 in the original system:
-                     eliminateOriginalRow((int)it1->id, nRowElims);
-                  }
-                  else
-                  {
-                     // delete row2 in the original system:
-                     eliminateOriginalRow((int)it2->id, nRowElims);
-                  }
+                  (swappedId1Id2) ?
+                        eliminateOriginalRow((int)it1->id, nRowElims) : eliminateOriginalRow((int)it2->id, nRowElims);
 
                }
             }
@@ -1191,7 +1185,6 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
 void StochPresolverParallelRows::tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp)
 {
    assert( singleColIdx >= 0 );
-   assert( singleColIdx < nA + currxuppChild->n );
 
    if( singleColIdx < nA )   // variable x_1 is in the parent block Amat
    {
@@ -1200,9 +1193,117 @@ void StochPresolverParallelRows::tightenBoundsForSingleVar(int singleColIdx, dou
    }
    else   // variable x_1 is in the child block Bmat
    {
+      assert( singleColIdx < nA + currxuppChild->n );
       setNewBounds(singleColIdx-nA, newxlow, newxupp, currIxlowChild->elements(),
             currxlowChild->elements(), currIxuppChild->elements(), currxuppChild->elements());
    }
+}
+
+/**
+ * Executes the Nearly Parallel Row Case 3: Both constraints are inequalities and both contain
+ * a singleton variable entry.
+ * The row indices rowId1, rowId2 are already de-offset, so they should be in the range [0,Cmat->m).
+ */
+bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2)
+{
+   assert( rowId1 >= 0 && rowId2 >= 0 );
+   assert( rowContainsSingletonVariableC );
+   assert( rowId1 < rowContainsSingletonVariableC->n );
+   assert( rowId2 < rowContainsSingletonVariableC->n );
+   assert( norm_factorC );
+
+   // First, do all the checks to verifiy if the third case applies and all conditions are met.
+   // check s>0:
+   const double s = norm_factorC->elements()[rowId1] / norm_factorC->elements()[rowId2];
+   if( s <= 0)
+      return false;
+
+   // check a_q!=0.0, a_r!=0.0:
+   const int singleColIdx1 = rowContainsSingletonVariableC->elements()[rowId1];
+   const int singleColIdx2 = rowContainsSingletonVariableC->elements()[rowId2];
+   const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
+   const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
+   if( coeff_singleton1 == 0.0 || coeff_singleton2 == 0.0 )
+      return false;
+
+   // check d_q == s * d_r (here s==1, so just d_q == d_r:
+   if( (norm_iclow->elements()[rowId1] != 0.0 && norm_iclow->elements()[rowId1] == 0.0 )
+      || (norm_iclow->elements()[rowId1] == 0.0 && norm_iclow->elements()[rowId1] != 0.0) )
+      return false;
+   if( (norm_iclow->elements()[rowId1] != 0.0 && norm_iclow->elements()[rowId1] != 0.0)
+         && ( !PIPSisEQ_withTolerance(norm_clow->elements()[rowId1], norm_clow->elements()[rowId2], tol_compare_double) ) )
+      return false;
+
+   // check f_q == f_r
+   if( (norm_icupp->elements()[rowId1] != 0.0 && norm_icupp->elements()[rowId1] == 0.0 )
+      || (norm_icupp->elements()[rowId1] == 0.0 && norm_icupp->elements()[rowId1] != 0.0) )
+      return false;
+   if( (norm_icupp->elements()[rowId1] != 0.0 && norm_icupp->elements()[rowId1] != 0.0)
+         && ( !PIPSisEQ_withTolerance(norm_cupp->elements()[rowId1], norm_cupp->elements()[rowId2], tol_compare_double) ) )
+      return false;
+
+   // check c_1*c_2 >= 0:
+   const double c1 = (singleColIdx1 < nA) ? currgParent->elements()[singleColIdx1] : currgChild->elements()[singleColIdx1 - nA];
+   const double c2 = (singleColIdx2 < nA) ? currgParent->elements()[singleColIdx2] : currgChild->elements()[singleColIdx2 - nA];
+   if( c1 * c2 < 0 )
+      return false;
+
+   // check lower and upper bounds:
+   double ixlow1 = (singleColIdx1 < nA) ? currIxlowParent->elements()[singleColIdx1] : currIxlowChild->elements()[singleColIdx1 - nA];
+   double ixupp1 = (singleColIdx1 < nA) ? currIxuppParent->elements()[singleColIdx1] : currIxuppChild->elements()[singleColIdx1 - nA];
+   double ixlow2 = (singleColIdx2 < nA) ? currIxlowParent->elements()[singleColIdx2] : currIxlowChild->elements()[singleColIdx2 - nA];
+   double ixupp2 = (singleColIdx2 < nA) ? currIxuppParent->elements()[singleColIdx2] : currIxuppChild->elements()[singleColIdx2 - nA];
+
+   double xlow1 = (singleColIdx1 < nA) ? currxlowParent->elements()[singleColIdx1] : currxlowChild->elements()[singleColIdx1 - nA];
+   double xupp1 = (singleColIdx1 < nA) ? currxuppParent->elements()[singleColIdx1] : currxuppChild->elements()[singleColIdx1 - nA];
+   double xlow2 = (singleColIdx2 < nA) ? currxlowParent->elements()[singleColIdx2] : currxlowChild->elements()[singleColIdx2 - nA];
+   double xupp2 = (singleColIdx2 < nA) ? currxuppParent->elements()[singleColIdx2] : currxuppChild->elements()[singleColIdx2 - nA];
+
+   // check aq * l1 = s * ar * l2:
+   if( ixlow1 != 0.0 && ixlow2 != 0.0 &&
+         !PIPSisEQ_withTolerance(coeff_singleton1 * xlow1, s* coeff_singleton2 * xlow2, tol_compare_double))
+      return false;
+   if( ixlow1 != 0.0 && ixlow2 == 0.0 && xlow1 > -std::numeric_limits<double>::max() )
+      return false;
+   if( ixlow1 == 0.0 && ixlow2 != 0.0 && xlow2 > -std::numeric_limits<double>::max() )
+      return false;
+
+   // check aq * u1 = s * ar * u2:
+   if( ixupp1 != 0.0 && ixupp2 != 0.0 &&
+         !PIPSisEQ_withTolerance(coeff_singleton1 * xupp1, s* coeff_singleton2 * xupp2, tol_compare_double))
+      return false;
+   if( ixupp1 != 0.0 && ixupp2 == 0.0 && xupp1 < std::numeric_limits<double>::max() )
+      return false;
+   if( ixupp1 == 0.0 && ixupp2 != 0.0 && xupp2 < std::numeric_limits<double>::max() )
+      return false;
+
+   // Second, aggregate x_2: adapt objectiveCost(x_1)
+   const double t = coeff_singleton1 / coeff_singleton2 / s;
+   addCostToVariable1(singleColIdx1, singleColIdx2, t);
+
+   return true;
+}
+
+/*
+ * Adds the cost of the second variable (the singleColIdx2) times t to the cost of
+ * the first variable (the singleColIdx1). If singleColIdx1 == -1, then it is not adapted,
+ * but the cost of the second variable is returned in any case.
+ */
+double StochPresolverParallelRows::addCostToVariable1(int singleColIdx1, int singleColIdx2, double t)
+{
+   assert( singleColIdx2 >= 0 );
+
+   // adapt objective function: c_1 := c_1 + t * c_2
+   const double costOfVar2 = (singleColIdx2 < nA)
+         ? currgParent->elements()[singleColIdx2] : currgChild->elements()[singleColIdx2 - nA];
+
+   if( singleColIdx1 >= nA )
+      currgChild->elements()[singleColIdx1 - nA] += t * costOfVar2;
+   else if( singleColIdx1 >= 0 )
+      currgParent->elements()[singleColIdx1] += t * costOfVar2;
+   // if singleColIdx1 == -1.0, ignore.
+
+   return costOfVar2;
 }
 
 void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
