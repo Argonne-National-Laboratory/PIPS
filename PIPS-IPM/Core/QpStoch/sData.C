@@ -46,10 +46,143 @@ int sData::getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks)
    if( i < size )
    {
       const size_t nRows = size - i;
-      nnz += nRows * size - (nRows * (nRows - 1) / 2);
+      nnz += nnzTriangular(nRows) + nRows * i;
    }
 
    return nnz;
+}
+
+int sData::getSchurCompDiagBlockNnz(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths, int bordersize,
+                                          int row, int& blockStartrow)
+{
+   assert(row >= blockStartrow && blockStartrow >= 0 && bordersize >= 0);
+
+   const int block = linkStartBlocks[row];
+   const int currlength = (block >= 0) ? linkStartBlockLengths[block] : bordersize;
+
+   assert(currlength >= 1);
+
+   int nnz = currlength - (row - blockStartrow);
+
+   // sparse part?
+   if( block >= 0 )
+   {
+      // (one) off-diagonal block
+      const int nextlength = linkStartBlockLengths[block + 1];
+
+      assert(nextlength >= 0);
+      assert(block != int(linkStartBlockLengths.size()) - 2 || nextlength == 0);
+
+      nnz += nextlength;
+
+      // add dense border part
+      nnz += bordersize;
+
+      // update blockStartrow?
+      if( row + 1 == blockStartrow + currlength )
+         blockStartrow = row + 1;
+   }
+
+   return nnz;
+}
+
+int sData::n2linksRows(const std::vector<int>& linkStartBlockLengths)
+{
+   int n = 0;
+
+   for( size_t i = 0; i < linkStartBlockLengths.size(); ++i )
+      n += linkStartBlockLengths[i];
+
+   return n;
+}
+
+std::vector<int> sData::get2LinkLengthsVec(const std::vector<int>& linkStartBlocks, size_t nBlocks)
+{
+   std::vector<int> linkStartBlockLengths(nBlocks, 0);
+
+   const size_t nlinks = linkStartBlocks.size();
+
+   for( size_t i = 0; i < nlinks; i++ )
+   {
+      const int block = linkStartBlocks[i];
+
+      if( block >= 0 )
+      {
+         assert(size_t(block) < nBlocks);
+         linkStartBlockLengths[block]++;
+      }
+   }
+
+   return linkStartBlockLengths;
+}
+
+void sData::getSchurCompMaxUpperCSR(int** krowM, int** jcolM, double** M, int& nnz)
+{
+   assert(children.size() > 0);
+
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   const int mzl = getLocalmzl();
+   const int sizeSC = nx0 + my0 + myl + mzl;
+
+   nnz = getSchurCompMaxNnz();
+
+   assert(nnz > 0);
+   assert(myl >= 0 && mzl >= 0);
+
+   *krowM = new int[sizeSC + 1];
+   *jcolM = new int[nnz];
+   *M = new double[nnz];
+
+   int* const startRow = *krowM;
+
+   startRow[0] = 0;
+
+   // get B_0^T (resp. A_0^T)
+   SparseGenMatrix& Btrans = getLocalB().getTranspose();
+   int* const startRowBtrans = Btrans.krowM();
+
+#ifndef NDEBUG
+   {
+      int bm, bn;
+      Btrans.getSize(bm, bn);
+      assert(bm == nx0 && bn == my0);
+   }
+#endif
+
+   // dense square block, B_0^T, and dense border blocks
+   for( int i = 0; i < nx0; ++i )
+   {
+      const int blength = startRowBtrans[i + 1] - startRowBtrans[i];
+      assert(blength >= 0);
+
+      startRow[i + 1] = startRow[i] + (nx0 - i) + blength + myl + mzl;
+   }
+
+   // empty rows
+   for( int i = nx0; i < nx0 + my0; ++i )
+      startRow[i + 1] = startRow[i];
+
+   // equality linking: sparse diagonal blocks, and mixed rows
+   int blockStartrow = 0;
+   const int bordersizeEq = linkStartBlocksA.size() - n2linksRows(linkStartBlockLengthsA);
+
+   assert(bordersizeEq >= 0);
+
+   // todo replace mzl for sparse 2-link ineq linking cons (G)
+   for( int i = nx0 + my0, j = 0; i < nx0 + my0 + myl; ++i, ++j )
+      startRow[i + 1] = startRow[i] + getSchurCompDiagBlockNnz(linkStartBlocksA, linkStartBlockLengthsA, bordersizeEq, j, blockStartrow) + mzl;
+
+   // inequality linking: dense border block and sparse diagonal blocks
+   blockStartrow = 0;
+   const int bordersizeIneq = linkStartBlocksC.size() - n2linksRows(linkStartBlockLengthsC);
+
+   assert(bordersizeIneq >= 0);
+
+   for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; ++i, ++j )
+      startRow[i + 1] = startRow[i] + getSchurCompDiagBlockNnz(linkStartBlocksC, linkStartBlockLengthsC, bordersizeIneq, j, blockStartrow);
+
 }
 
 std::vector<unsigned int> sData::getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks)
@@ -283,6 +416,9 @@ void sData::init2LinksData(bool exploit2links)
    linkStartBlocksA = Astoch.get2LinkStartBlocks();
    linkStartBlocksC = Cstoch.get2LinkStartBlocks();
 
+   linkStartBlockLengthsA = get2LinkLengthsVec(linkStartBlocksA, stochNode->children.size());
+   linkStartBlockLengthsC = get2LinkLengthsVec(linkStartBlocksC, stochNode->children.size());
+
    for( size_t i = 0; i < linkStartBlocksA.size(); ++i )
       if( linkStartBlocksA[i] >= 0 )
          n2LinksEq++;
@@ -290,6 +426,9 @@ void sData::init2LinksData(bool exploit2links)
    for( size_t i = 0; i < linkStartBlocksC.size(); ++i )
       if( linkStartBlocksC[i] >= 0 )
          n2LinksIneq++;
+
+   assert(n2LinksEq == n2linksRows(linkStartBlockLengthsA));
+   assert(n2LinksIneq == n2linksRows(linkStartBlockLengthsC));
 
    if( myrank == 0 )
    {

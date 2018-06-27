@@ -48,6 +48,8 @@ class sData : public QpGenData {
 
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
+  bool with2Links() {return use2Links;};
+  void getSchurCompMaxUpperCSR(int** krowM, int** jcolM, double** M, int& nnz);
 
   SparseSymMatrix& getLocalQ();
   SparseGenMatrix& getLocalCrossHessian();
@@ -64,7 +66,6 @@ class sData : public QpGenData {
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
-  virtual bool with2Links() {return use2Links;};
 
   virtual ~sData();
 
@@ -82,10 +83,20 @@ class sData : public QpGenData {
   // nnz in Schur complement signified by given vector
   static int getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks);
 
+  // nnz of Schur complement diagonal blocks induced by linking constraints
+  static int getSchurCompDiagBlockNnz(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths, int bordersize,
+        int row, int& blockStartrow);
+
+  // number of sparse 2-link rows
+  static int n2linksRows(const std::vector<int>& linkStartBlockLengths);
+
+  static std::vector<int> get2LinkLengthsVec(const std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   bool use2Links;
   std::vector<int> linkStartBlocksA;
   std::vector<int> linkStartBlocksC;
+  std::vector<int> linkStartBlockLengthsA;
+  std::vector<int> linkStartBlockLengthsC;
 
   void init2LinksData(bool exploit2links);
   void permuteLinkingRows(const std::vector<unsigned int>& permvecA, const std::vector<unsigned int>& permvecC);

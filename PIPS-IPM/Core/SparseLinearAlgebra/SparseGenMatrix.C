@@ -496,6 +496,18 @@ void SparseGenMatrix::updateNonEmptyRowsCount(int blockPosition, std::vector<int
       }
 }
 
+SparseGenMatrix& SparseGenMatrix::getTranspose()
+{
+   if( m_Mt )
+     return *m_Mt;
+
+   updateTransposed();
+
+   assert(m_Mt);
+
+   return *m_Mt;
+}
+
 void SparseGenMatrix::permuteRows(const std::vector<unsigned int>& permvec)
 {
    mStorage->permuteRows(permvec);

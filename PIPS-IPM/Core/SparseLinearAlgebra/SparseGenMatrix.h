@@ -126,6 +126,8 @@ public:
   void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
      std::vector<int>& linkBlockPos2) const;
 
+  SparseGenMatrix& getTranspose();
+
   virtual ~SparseGenMatrix();
 
  protected:
