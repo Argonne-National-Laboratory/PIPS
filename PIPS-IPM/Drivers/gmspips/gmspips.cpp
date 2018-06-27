@@ -21,6 +21,7 @@
 using namespace std;
 
 #define BiCGStab
+//#define GetPrimalSol
 
 #if defined(GMS_PIPS)
 extern int gOuterSolve;
@@ -399,6 +400,10 @@ int main(int argc, char ** argv)
    gInnerSCsolve=0;
 #endif
 
+#ifdef GetPrimalSol
+   std::vector<double> primalSolVec;
+#endif
+
 	if (stepDiffLp)
 	{
 	   if( gmsRank == 0 )
@@ -414,6 +419,9 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
+#ifdef GetPrimalSol
+		primalSolVec = pipsIpm.getPrimalSolution();
+#endif
 	}
 
 	else {
@@ -431,14 +439,34 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
+#ifdef GetPrimalSol
+		primalSolVec = pipsIpm.getPrimalSolution();
+#endif
 	}
    if( gmsRank == 0 )
       cout << "solving finished." << endl;
 
+#ifdef GetPrimalSol
+   if( gmsRank == 0 )
+   {
+      ofstream myfile;
+      myfile.open ("../AT.txt");
+
+      myfile.setf(ios::fixed,ios::floatfield);
+       myfile.precision(2);
+      for( size_t i = 0; i < primalSolVec.size(); i++ )
+         myfile << primalSolVec[i] << std::endl;
+
+      std::cout << " size:  " << primalSolVec.size() << std::endl;
+
+      myfile.close();
+   }
+#endif
+
    // free memory
   delete root;
 
-  #endif
+#endif
 
   for (int blk=0; blk<numBlocks; blk++)
   {
