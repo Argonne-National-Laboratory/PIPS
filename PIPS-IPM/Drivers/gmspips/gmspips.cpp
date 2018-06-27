@@ -17,7 +17,11 @@
 #include <iostream>
 #include <fstream>
 using namespace std;
+//#define GetPrimalSol
 
+#ifdef GetPrimalSol
+   std::vector<double> primalSolVec;
+#endif
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
 
@@ -368,10 +372,31 @@ int main(int argc, char ** argv)
       cout << "solving..." << endl;
    
    pipsIpm.go();
+#ifdef GetPrimalSol
+   primalSolVec = pipsIpm.getPrimalSolution();
+#endif
+
 
    if( rank == 0 )
       cout << "solving finished." << endl;
 
+#ifdef GetPrimalSol
+   if( rank == 0 )
+   {
+      ofstream myfile;
+      myfile.open ("../AT.txt");
+
+      myfile.setf(ios::fixed,ios::floatfield);
+      myfile.precision(2);
+      for( size_t i = 0; i < primalSolVec.size(); i++ )
+         myfile << primalSolVec[i] << std::endl;
+
+      std::cout << " size:  " << primalSolVec.size() << std::endl;
+
+      myfile.close();
+   }
+#endif
+   
    // free memory
   delete root;
 
