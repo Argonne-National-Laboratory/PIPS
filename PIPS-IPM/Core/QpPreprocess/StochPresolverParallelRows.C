@@ -1140,11 +1140,9 @@ bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
       // tighten normalized lower bound:
       setNewBound( rowId1, norm_low, norm_clow, norm_iclow);
 
-      if(factor>0)   // tighten original lower bound:
-         setNewBound( rowId1, factor * norm_low, currIneqLhs, currIclow);
-
-      else  // tighten original upper bound:
-         setNewBound( rowId1, factor * norm_low, currIneqRhs, currIcupp);
+      // tighten original lower (factor>0) or upper ((factor<0) bound:
+      (factor>0) ? setNewBound( rowId1, factor * norm_low, currIneqLhs, currIclow) :
+            setNewBound( rowId1, factor * norm_low, currIneqRhs, currIcupp);
    }
    if( ( norm_icupp->elements()[rowId1] != 0.0 && norm_upp < norm_cupp->elements()[rowId1] )
          || ( norm_icupp->elements()[rowId1] == 0.0 && norm_upp < std::numeric_limits<double>::max() ))
@@ -1152,10 +1150,8 @@ bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
       // tighten normalized upper bound:
       setNewBound( rowId1, norm_upp, norm_cupp, norm_icupp);
 
-      if(factor>0)   // tighten original upper bound:
-         setNewBound( rowId1, factor * norm_upp, currIneqRhs, currIcupp);
-
-      else  // tighten original lower bound:
+      // tighten original upper (factor>0) or lower (factor<0) bound:
+      (factor>0) ? setNewBound( rowId1, factor * norm_upp, currIneqRhs, currIcupp) :
          setNewBound( rowId1, factor * norm_upp, currIneqLhs, currIclow);
    }
    return true;
@@ -1172,10 +1168,9 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
 
    if( singleColIdx == -1.0 )
       return 0.0;
-   else if( singleColIdx >= nA )
-      return singletonCoeffsColChild->elements()[singleColIdx - nA];
-   else
-      return singletonCoeffsColParent->elements()[singleColIdx];
+
+   return ( singleColIdx >= nA ) ? singletonCoeffsColChild->elements()[singleColIdx - nA] :
+         singletonCoeffsColParent->elements()[singleColIdx];
 }
 
 /** Tightens the bounds for a singleton variable with index singleColIdx.
@@ -1401,10 +1396,9 @@ void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, Syst
                      if( !compareCoefficients(*currBlmat, i, j))
                         notParallel++;
                   }
-                  if(system_type==EQUALITY_SYSTEM)
-                     currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
-                  else
-                     currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+                  currNnzRow = (system_type==EQUALITY_SYSTEM) ?
+                        dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl) :
+                        dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
                }
                if( iAmDistrib )
                   MPI_Allreduce(MPI_IN_PLACE, &notParallel, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -1421,10 +1415,9 @@ void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, Syst
       {
          assert(nDuplicLinkRow <= currNnzRow->n);
          //duplicRow += nDuplicLinkRow;
-         if(system_type==EQUALITY_SYSTEM)
-            cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of A."<<endl;
-         else
-            cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of C."<<endl;
+         cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of "
+               <<(system_type==EQUALITY_SYSTEM) ? "A." : " C.";
+         cout<<endl;
       }
    }
 

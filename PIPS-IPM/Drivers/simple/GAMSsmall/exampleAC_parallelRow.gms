@@ -1,18 +1,18 @@
 Set i equality-rows    / i1*i7 /
-    k inequali-rows    / k1*k6 /
+    k inequali-rows    / k1*k7 /
     j columns / j1*j9 /;
 
 parameter g(j) obj coefficients / j1 2, j2 2, j3 2, j4 2, j5 2, j6 2, j7 2, j8 2, j9 2 /
-          b(i) right hand side  / i1 3, i2 10, i3 5, i4 -8, i5 11, i6 4, i7 6 /
-          cupp(k) right hand side  / k1 3, k2 22, k3 -2, k4 -1, k5 8, k6 10 /;
+          b(i) right hand side  / i1 3, i2 10, i3 5, i4 -6, i5 7, i6 4, i7 6 /
+          cupp(k) right hand side  / k1 3, k2 22, k3 -2, k4 -1, k5 -0.5, k6 8, k7 10 /;
 
 Table A(i,j)
     j1   j2    j3      j4    j5    j6    j7    j8    j9
 i1   2    1
 i2   3    7
-i3   2    1             2
-i4  -4   -2            -2     
-i5   6    3             2     
+i3   2    3             
+i4  -4   -2                 
+i5   6    1                 
 i6   1                                    3
 i7   1    1                         1     1     1     1
 ;
@@ -21,14 +21,16 @@ Table C(k,j)
     j1   j2   j3     j4    j5    j6    j7    j8    j9
 k1   3
 k2   6   13
-k3  -4   -4          -2    -1
-k4  -2   -2   -2     -1     
-k5        4                       1     1     2
-k6   1    1                             1     1
+k3  -4   -4                -1
+k4  -2   -2   -2          
+k5  -1   -1          -2
+k6        4                       1     1     2
+k7   1    1                             1     1
 ;
 
-Positive Variables x(j)  / j1.lo 1, j3.up 10, j4.up 5, j4.lo 1, j5.up 40 /;
+Positive Variables x(j)  / j1.lo 1, j3.up 10, j4.up 5, j5.up 40 /;
 *makes it infeasible: j2.up 0.5
+*j4.lo 1
 
 Variable           z      objective variable
 Equations          e(i)   equality equations
@@ -62,8 +64,9 @@ $ifthen %METHOD%==PIPS
   ie.stage('k2') = 1;
   ie.stage('k3') = 2;
   ie.stage('k4') = 2;
-  ie.stage('k5') = 3;
-  ie.stage('k6') = 4;
+  ie.stage('k5') = 2;
+  ie.stage('k6') = 3;
+  ie.stage('k7') = 4;
   defobj.stage  = 4;
 
 
