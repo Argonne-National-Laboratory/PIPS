@@ -447,20 +447,7 @@ int main(int argc, char ** argv)
       cout << "solving finished." << endl;
 
 #ifdef GetPrimalSol
-   if( gmsRank == 0 )
-   {
-      ofstream myfile;
-      myfile.open ("../AT.txt");
-
-      myfile.setf(ios::fixed,ios::floatfield);
-       myfile.precision(2);
-      for( size_t i = 0; i < primalSolVec.size(); i++ )
-         myfile << primalSolVec[i] << std::endl;
-
-      std::cout << " size:  " << primalSolVec.size() << std::endl;
-
-      myfile.close();
-   }
+   // do something with primal solution
 #endif
 
    // free memory

@@ -305,7 +305,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getPrimalSolution(
 
   std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &primalVec[0]);
 
-  // todo only return for rank 0? Otherwise empty vector
+  // todo only build vector for rank 0? Otherwise empty vector
   return primalVec;
 }
 
