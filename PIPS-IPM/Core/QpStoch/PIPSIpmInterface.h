@@ -31,7 +31,7 @@ class PIPSIpmInterface
   void setPrimalTolerance(double val);
   void setDualTolerance(double val);
 
-  std::vector<double> getPrimalSolution() const;
+  std::vector<double> gatherPrimalSolution() const;
 
   std::vector<double> getFirstStagePrimalColSolution() const;
   std::vector<double> getSecondStagePrimalColSolution(int scen) const;
@@ -222,7 +222,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
 
 
 template<class FORMULATION, class IPMSOLVER>
-std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getPrimalSolution() const
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherPrimalSolution() const
 {
   const StochVector& primalStochVec = dynamic_cast<const StochVector&>(*vars->x);
   const SimpleVector& firstvec =  dynamic_cast<const SimpleVector&>(*primalStochVec.vec);
@@ -244,7 +244,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getPrimalSolution(
   size_t solLength = firstvec.length();
 
   // final vector
-  std::vector<double> primalVec;
+  std::vector<double> primalVec(0);
 
   if( mysize > 0 )
   {
@@ -261,12 +261,19 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getPrimalSolution(
      for( size_t i = 1; i < size_t(mysize); ++i )
         recvoffsets[i] = recvoffsets[i - 1] + recvcounts[i - 1];
 
-     solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
-
-     primalVec = std::vector<double>(solLength);
-
-     MPI_Allgatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, &primalVec[0] + firstvec.length(),
-           &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, comm);
+     if ( myrank == 0 )
+     {
+        solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
+        
+        primalVec = std::vector<double>(solLength);
+        
+        MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, &primalVec[0] + firstvec.length(),
+              &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, comm);
+     }
+     else
+     {
+        MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, 0, &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, comm);       
+     }
   }
   else
   {
@@ -277,9 +284,10 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getPrimalSolution(
      std::copy(primalVecLocal.begin(), primalVecLocal.end(), primalVec.begin() + firstvec.length());
   }
 
-  std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &primalVec[0]);
+  if ( myrank == 0 )
+      std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &primalVec[0]);
 
-  // todo only return for rank 0? Otherwise empty vector
+  // todo only build vector for rank 0? Otherwise empty vector
   return primalVec;
 }
 

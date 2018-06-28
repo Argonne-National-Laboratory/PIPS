@@ -17,7 +17,7 @@
 #include <iostream>
 #include <fstream>
 using namespace std;
-//#define GetPrimalSol
+#define GetPrimalSol
 
 #ifdef GetPrimalSol
    std::vector<double> primalSolVec;
@@ -373,7 +373,7 @@ int main(int argc, char ** argv)
    
    pipsIpm.go();
 #ifdef GetPrimalSol
-   primalSolVec = pipsIpm.getPrimalSolution();
+   primalSolVec = pipsIpm.gatherPrimalSolution();
 #endif
 
 
