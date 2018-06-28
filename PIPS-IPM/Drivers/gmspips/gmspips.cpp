@@ -21,7 +21,7 @@
 using namespace std;
 
 #define BiCGStab
-//#define GetPrimalSol
+#define GetPrimalSol
 
 #if defined(GMS_PIPS)
 extern int gOuterSolve;
@@ -420,7 +420,7 @@ int main(int argc, char ** argv)
 
 		pipsIpm.go();
 #ifdef GetPrimalSol
-		primalSolVec = pipsIpm.getPrimalSolution();
+		primalSolVec = pipsIpm.gatherPrimalSolution();
 #endif
 	}
 
@@ -440,20 +440,26 @@ int main(int argc, char ** argv)
 
 		pipsIpm.go();
 #ifdef GetPrimalSol
-		primalSolVec = pipsIpm.getPrimalSolution();
+		primalSolVec = pipsIpm.gatherPrimalSolution();
 #endif
 	}
    if( gmsRank == 0 )
       cout << "solving finished." << endl;
 
 #ifdef GetPrimalSol
-   // do something with primal solution
+   if( gmsRank == 0 )
+   {
+      // do something with primal solution
+
+   }
+
 #endif
 
    // free memory
   delete root;
 
 #endif
+
 
   for (int blk=0; blk<numBlocks; blk++)
   {
