@@ -150,6 +150,21 @@ void StochPresolverBase::updateNnzColParent(MPI_Comm comm)
    updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
 }
 
+void StochPresolverBase::allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptionsVector, SimpleVector& baseVector)
+{
+   assert(adaptionsVector.n == baseVector.n);
+
+   int world_size;
+   MPI_Comm_size(comm, &world_size);
+   if( world_size > 1)
+   {
+      double* adaptionsDouble = adaptionsVector.elements();
+      int message_size = adaptionsVector.length();
+      MPI_Allreduce(MPI_IN_PLACE, adaptionsDouble, message_size, MPI_DOUBLE, MPI_SUM, comm);
+   }
+   baseVector.axpy(1.0, adaptionsVector);
+}
+
 void StochPresolverBase::storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type)
 {
    assert( (int)removedEntries.size() == localNelims );

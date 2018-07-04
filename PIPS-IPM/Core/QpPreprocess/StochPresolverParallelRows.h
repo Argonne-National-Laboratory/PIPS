@@ -98,6 +98,7 @@ private:
    SparseStorageDynamic* norm_BmatTrans;
    SparseStorageDynamic* norm_CmatTrans;
    SparseStorageDynamic* norm_DmatTrans;
+   SimpleVector* gParentAdaptions;
 
    // number of rows of the A or B block
    int mA;

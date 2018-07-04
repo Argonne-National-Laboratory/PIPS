@@ -85,6 +85,8 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
    norm_DmatTrans = NULL;
    currgChild = NULL;
    currgParent = NULL;
+   gParentAdaptions = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec)->cloneFull();
+   gParentAdaptions->setToZero();
 
    mA = 0;
    nA = 0;
@@ -112,6 +114,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    StochGenMatrix& matrixA = dynamic_cast<StochGenMatrix&>(*(presProb->A));
    StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
    presData.resetRedCounters();
+   gParentAdaptions->setToZero();
    int nRowElims = 0;
    indivObjOffset = 0.0;
    bool possibleFeasible = true;
@@ -227,6 +230,9 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       }
       rowsSecondHashTable.clear();
    }
+   allreduceAndUpdate(MPI_COMM_WORLD, *gParentAdaptions, *currgParent);
+   delete gParentAdaptions;
+
    deleteNormalizedPointers(-1, matrixA, matrixC);
 
    if( myRank == 0 )
@@ -437,6 +443,7 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       normNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec)->cloneFull();
 
       currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
+      currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
 
       singletonCoeffsColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
       singletonCoeffsColParent->setToZero();
@@ -1295,8 +1302,9 @@ double StochPresolverParallelRows::addCostToVariable1(int singleColIdx1, int sin
    if( singleColIdx1 >= nA )
       currgChild->elements()[singleColIdx1 - nA] += t * costOfVar2;
    else if( singleColIdx1 >= 0 )
-      currgParent->elements()[singleColIdx1] += t * costOfVar2;
-   // if singleColIdx1 == -1.0, ignore.
+   {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
+      gParentAdaptions->elements()[singleColIdx1] += t * costOfVar2;
+   }// if singleColIdx1 == -1.0, ignore.
 
    return costOfVar2;
 }
@@ -1415,9 +1423,9 @@ void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, Syst
       {
          assert(nDuplicLinkRow <= currNnzRow->n);
          //duplicRow += nDuplicLinkRow;
-         cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of "
-               <<(system_type==EQUALITY_SYSTEM) ? "A." : " C.";
-         cout<<endl;
+         (system_type==EQUALITY_SYSTEM) ?
+               cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of A." <<endl :
+               cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of C." <<endl;
       }
    }
 
@@ -1426,10 +1434,9 @@ void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, Syst
 
    if(myRank == 0)
    {
-      if(system_type==EQUALITY_SYSTEM)
-         cout<<"There are "<<duplicRow<<" duplicate rows in A."<<endl;
-      else
-         cout<<"There are "<<duplicRow<<" duplicate rows in C."<<endl;
+      (system_type == EQUALITY_SYSTEM) ?
+            cout << "There are " << duplicRow << " duplicate rows in A." << endl :
+            cout << "There are " << duplicRow << " duplicate rows in C." << endl;
    }
 }
 

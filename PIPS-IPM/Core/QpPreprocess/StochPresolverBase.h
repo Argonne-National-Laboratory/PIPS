@@ -123,6 +123,7 @@ protected:
    void updateRhsNRowLink();
    void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
    void updateNnzColParent(MPI_Comm comm);
+   void allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptionsVector, SimpleVector& baseVector);
 
    void storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type);
    // methods to update the transposed matrix:
