@@ -32,6 +32,7 @@ public:
   //MumpsSolver( SparseSymMatrix * storage );
   virtual void diagonalChanged( int idiag, int extent );
   virtual int matrixChanged();
+  virtual int saveOrderingPermutation();
 #ifndef WITHOUT_PIPS
   virtual void solve ( OoqpVector& vec );
   virtual void solve ( GenMatrix& vec );

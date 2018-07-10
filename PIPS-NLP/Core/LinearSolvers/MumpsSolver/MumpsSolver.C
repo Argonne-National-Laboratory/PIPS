@@ -17,7 +17,7 @@
 extern double gHSL_PivotLV;
 extern int gSymLinearAlgSolverForDense;
 
-
+static bool gMUMPSStatsOn=true;
 
 using namespace std;
 
@@ -101,29 +101,32 @@ bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* loci
 //#include "mpi.h"
 int MumpsSolver::matrixChanged()
 {
-  // n_=2;
-  // int i[3] = {1,1,2};
-  // int j[3] = {1,2,2};
-  // double a[3] = {2.0,1.0, 2.0};
-  // mumps_->irn = i;//locirn;
-  // mumps_->jcn = j;
-  // mumps_->a = a;
-  // mumps_->nnz=3;
-
   mumps_->n = n_;
-  mumps_->job = 1; //performs the analysis
+  mumps_->job = 1; //perform the analysis
 
-  //ICNTL(28) determines whether a sequential or a parallel analysis is performed. In this, case ICNTL(7) is meaningless
-  mumps_->icntl[28-1] =2; 
+  //ICNTL(28) determines whether a sequential (=1) or a parallel analysis (=2) is performed. For the latter case
+  //ICNTL(7) is meaningless. Automatic choice would be indicated by 0
+  mumps_->icntl[28-1] = 2; 
 
   //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
   // 1 for PT_SCOTCH, 2 for ParMetis, 0 automatic (default)
   //mumps_->icntl[29-1] =2;
 
   // 0: parallel factorization of the root node (default)
-  // > 0: forces a sequential factorization of the root node (ScaLAPACK will not be used). 
+  // > 0: forces a sequential factorization of the root node (ScaLAPACK will not be used).
+  // In this case if the number of working processors is strictly larger than ICNTL(13) then 
+  // splitting of the root node is performed, in order to automatically recover part of the 
+  // parallelism lost because the root node was processed sequentially (advised value is 1).
+  //
   // see also CNTL(1): CNTL(1) is the relative threshold for numerical pivoting.
-  mumps_->icntl[13-1] = 0;
+  //
+  //petra: note that parallel factorization of the root nodes results in incorrect inertia calculation
+  //petra: because of an issue with ScaLAPACK. 
+  //petra: thus, use with > 0, in particular the advised value seem to work fine, but different hardware may
+  //petra: give different performance
+  mumps_->icntl[13-1] = 1;
+
+  double tm = MPI_Wtime();
 
   dmumps_c(mumps_);
   int error = mumps_->infog[1-1];
@@ -131,21 +134,25 @@ int MumpsSolver::matrixChanged()
     if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the analysis phase. \n", error);
   }
 
+  tm = MPI_Wtime()-tm;
+  if(gMUMPSStatsOn)
+    if(my_rank_==0) printf("MUMPS analysis phase took %g seconds.\n", tm);
 
   //
   //factorize
   //
   mumps_->job = 2;
 
-  // 0: parallel factorization of the root node (default)
-  // > 0: forces a sequential factorization of the root node (ScaLAPACK will not be used). I
-  mumps_->icntl[13-1] = 0;
+  tm = MPI_Wtime();
 
   dmumps_c(mumps_);
   error = mumps_->infog[1-1];
   if(error != 0) {
     if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
   }
+
+  saveOrderingPermutation();
+
   //CNTL(1) is the relative threshold for numerical pivoting.
   //CNTL(4) determines the threshold for static pivoting. See Subsection 3.9
   //INFOG(12) - after factorization: Total number of off-diagonal pivots
@@ -156,22 +163,25 @@ int MumpsSolver::matrixChanged()
   if (error == -8 || error == -9) {
     //not enough memory
 
-    assert(false && "this code was not fully tested. ");
+    //assert(false && "this code was not fully tested. ");
     const int try_max=10;
-    for(int t=0; t<try_max; t++) {
+    for(int tr=0; tr<try_max; tr++) {
       double mem_percent = mumps_->icntl[13];
-      mumps_->icntl[13] = (2.0 * mumps_->icntl[13]);
-      if(my_rank_==0) printf("Increased Mumps ICNTL(14) from %g to %g\n", mem_percent, mumps_->icntl[13]);
+      mumps_->icntl[13] = 2 * mumps_->icntl[13];
+
+      if(my_rank_==0) printf("Increased Mumps ICNTL(14) from %g to %d\n", mem_percent, mumps_->icntl[13]);
 
       dmumps_c(mumps_);
       error = mumps_->infog[1-1];
+
+      saveOrderingPermutation();
 
       if (error != -8 && error != -9)
 	break;
     }
 
     if (error == -8 || error == -9) {
-      if(my_rank_==0) printf("Fatal error in Mumps: not able to obtain more memory\n");
+      if(my_rank_==0) printf("Fatal error in Mumps: not able to obtain more memory (ICNTL(14)-related)\n");
       return -1;
     }
   }
@@ -182,10 +192,32 @@ int MumpsSolver::matrixChanged()
     return -1;
   }
 
+  tm = MPI_Wtime()-tm;
+  if(gMUMPSStatsOn)
+    if(my_rank_==0) printf("MUMPS numerical factorization took %g seconds.\n", tm);
+
   int negEigVal = mumps_->infog[12-1];
 
-  if(my_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
+  if(gMUMPSStatsOn) if(my_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
   return negEigVal;
+}
+
+int MumpsSolver::saveOrderingPermutation() {
+  assert(mumps_->job >= 2 && "MUMPS's state must be after analysis.");
+
+  //save ordering computed by MUMPS to disk in ordering.txt. The ordering is on host processor
+  //mumps par%SYM PERM
+  const char* filename = "ordering.txt";
+  if(my_rank_ == 0) {
+    FILE* f = fopen(filename, "w");
+    if(NULL!=f) {
+      for(int it=0; it<n_; it++)
+	fprintf(f, "%d\n", mumps_->sym_perm[it]);
+      fclose(f);
+    } else {
+      printf("Could not open files %s to write the ordering permutation.\n", filename);
+    }
+  }
 }
 
 // Centralized solution (ICNTL(21)=0)
@@ -200,6 +232,8 @@ void  MumpsSolver::solve ( double* vec )
 
   mumps_->icntl[10-1] = MAX_ITER_REFIN; //maximum number of iterative refinements
 
+  double t = MPI_Wtime();
+
   dmumps_c(mumps_);
   int error = mumps_->infog[1-1];
   if(error != 0) {
@@ -207,8 +241,13 @@ void  MumpsSolver::solve ( double* vec )
     assert(false);
     return;
   }
-  //iterative refinement ICNTL(10)
-  //error analysis ICNTL(11)
+
+  t = MPI_Wtime()-t;
+  if(gMUMPSStatsOn)
+    if(my_rank_==0) printf("MUMPS solve  took %g seconds.\n", t);
+
+  //!iterative refinement ICNTL(10)
+  //!error analysis ICNTL(11)
 }
 
 #ifndef WITHOUT_PIPS
@@ -243,6 +282,7 @@ void MumpsSolver::solve ( GenMatrix& rhs_in )
   assert(info==0);
 }
 #endif
+
 void MumpsSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 {
   this->matrixChanged();

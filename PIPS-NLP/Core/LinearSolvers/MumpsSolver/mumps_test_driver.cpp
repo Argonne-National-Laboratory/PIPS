@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  DistributedMatrixEx1 dmat(50, 100, MPI_COMM_WORLD);
+  DistributedMatrixEx1 dmat(800, 15, MPI_COMM_WORLD);
   dmat.distributedAssemble_scheme1();
 
   dmat.toTextFile();
@@ -79,6 +79,8 @@ int main(int argc, char* argv[])
   dmat.convertToFortran();
   mumps->setLocalEntries(dmat.nnz_, dmat.loc_nnz_, dmat.loc_i, dmat.loc_j, dmat.loc_A);
   mumps->matrixChanged();
+
+  //mumps->saveOrderingPermutation();
 
   double vec[dmat.n_];
   for(int i=0; i<dmat.n_; i++)
@@ -128,7 +130,7 @@ void DistributedMatrixEx1::distributedAssemble_scheme1()
   if(my_rank_==0) printf("approx nnz %d per rank\n", nnzperrank);
 
   long long remainder = nnz_ - nranks_*nnzperrank;
-  printf("remainer %d\n", remainder);
+  printf("remainder %d\n", remainder);
   long long loc_nz_start = my_rank_*nnzperrank + (my_rank_<remainder?my_rank_:remainder);
   int next_rank = my_rank_+1;
   long long loc_nz_end = next_rank*nnzperrank + (next_rank<remainder?next_rank:remainder)-1;
