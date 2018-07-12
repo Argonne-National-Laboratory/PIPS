@@ -871,6 +871,7 @@ bool StochPresolverSingletonRows::combineNewBoundsParent()
                // welches colIdxCurrent definiert hat:
                setNewBoundsParent(i-1, colIdxCurrent, bestLow, bestUpp);
                newBoundsParent.erase(newBoundsParent.begin()+i);   //todo: implement more efficiently
+               i--;  // if i is not decremented, then the next entry in newBoundsParent would be omitted
             }
          }
          else
