@@ -100,13 +100,11 @@ extern int gLackOfAccuracy;
 
 void sLinsysRoot::factor2(sData *prob, Variables *vars)
 {
-  DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
   initializeKKT(prob, vars);
 
   // First tell children to factorize. 
-  for(size_t c=0; c<children.size(); c++) {
-    children[c]->factor2(prob->children[c], vars);
-  }
+  for(size_t c=0; c<children.size(); c++)
+    children[c]->factor2(prob->children[c], vars); // todo?
 
   for(size_t c=0; c<children.size(); c++) {
 #ifdef STOCH_TESTING
@@ -116,10 +114,8 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
       continue;
 
     children[c]->stochNode->resMon.recFactTmChildren_start();
-
-    int todo; // check whether hasSparse and call sparse schur complement or factor2 Sparse?
     //---------------------------------------------
-    children[c]->addTermToDenseSchurCompl(prob->children[c], kktd);
+    addTermToSchurCompl(prob, c);
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
@@ -483,11 +479,27 @@ void sLinsysRoot::sync()
   /* Atoms methods of FACTOR2 for a non-leaf linear system */
 void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 {
-  DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt); 
-  myAtPutZeros(kktd);
+   if( hasSparseKkt && 0)
+   {
+      SparseSymMatrix* kkts = dynamic_cast<SparseSymMatrix*>(kkt);
+int todo; // build before and fill with zeroes!
+   }
+   else
+   {
+      DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt);
+      myAtPutZeros(kktd);
+   }
 }
 
 void sLinsysRoot::reduceKKT()
+{
+   if( 0 && hasSparseKkt )
+      reduceKKTsparse();
+   else
+      reduceKKTdense();
+}
+
+void sLinsysRoot::reduceKKTdense()
 {
    DenseSymMatrix* const kktd = dynamic_cast<DenseSymMatrix*>(kkt);
 
@@ -536,6 +548,16 @@ void sLinsysRoot::reduceKKT()
   }
 }
 
+void sLinsysRoot::reduceKKTsparse()
+{
+   SparseSymMatrix* const kktd = dynamic_cast<SparseSymMatrix*>(kkt);
+
+   // todo parallel communication
+   if( iAmDistrib )
+   {
+
+   }
+}
 
 void sLinsysRoot::factorizeKKT()
 {
@@ -588,6 +610,22 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
   myAtPutZeros(mat, 0, 0, n, n);
 }
 
+void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
+{
+   assert(childindex < prob->children.size());
+
+   if( hasSparseKkt && 0 )
+   {
+      SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+      children[childindex]->addTermToSparseSchurCompl(prob->children[childindex], kkts);
+   }
+   else
+   {
+      DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
+      children[childindex]->addTermToDenseSchurCompl(prob->children[childindex], kktd);
+   }
+
+}
 
 #define CHUNK_SIZE 1024*1024*64 //doubles  = 128 MBytes (maximum)
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,

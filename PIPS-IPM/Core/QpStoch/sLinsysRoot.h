@@ -98,6 +98,9 @@ class sLinsysRoot : public sLinsys {
 
   bool hasSparseKkt;
  private:
+  void addTermToSchurCompl(sData* prob, size_t childindex);
+  void reduceKKTdense();
+  void reduceKKTsparse();
 
 #ifdef STOCH_TESTING
  protected: 

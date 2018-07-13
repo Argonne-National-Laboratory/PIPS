@@ -9,6 +9,7 @@
 #include "DoubleLinearSolver.h"
 #include "OoqpVectorHandle.h"
 #include "DenseSymMatrix.h"
+#include "SparseSymMatrix.h"
 #include "DenseGenMatrix.h"
 #include "SimpleVector.h"
 #include "StochVector.h"
@@ -85,6 +86,9 @@ class sLinsys : public QpGenLinsys
    */
   virtual void addTermToDenseSchurCompl(sData *prob, 
 					DenseSymMatrix& SC);
+
+  virtual void addTermToSparseSchurCompl(sData *prob,
+               SparseSymMatrix& SC) { assert(0 && "not implemented here"); };
 					
   virtual void addColsToDenseSchurCompl(sData *prob, 
 					DenseGenMatrix& out, 
