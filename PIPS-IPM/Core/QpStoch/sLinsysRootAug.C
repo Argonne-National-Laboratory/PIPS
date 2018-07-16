@@ -13,6 +13,12 @@
 #include "pipschecks.h"
 #include <limits>
 
+#define DUMPKKT
+
+#ifdef DUMPKKT
+#include <iostream>
+#include <fstream>
+#endif
 
 #include <unistd.h>
 #include "math.h"
@@ -852,9 +858,43 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 {
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
-assert(0);
 
-   int todo;
+
+#ifdef DUMPKKT
+   ofstream myfile;
+   myfile.open("../sparsekkt");
+
+   int count = 0;
+   int msize = locnx + locmy + locmyl + locmzl;
+   int* krow = kkts.krowM();
+   int* jcol = kkts.jcolM();
+   double* M = kkts.M();
+
+   assert(kkts.size() == msize);
+
+   int nnz = krow[msize];
+
+   for( int r = 0; r < msize; r++ )
+   {
+      for( int i = krow[r]; i < krow[r + 1]; i++ )
+      {
+         double val = M[i];
+         double col = jcol[i];
+         if( val != 0.0 )
+            myfile << r << " " << col << " " << val << std::endl;
+         else
+            count++;
+
+      }
+   }
+
+   std::cout << "count " << count << " of " << nnz << std::endl;
+
+   myfile.close();
+#endif
+
+   assert(0);
+
 }
 
 void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
@@ -865,6 +905,24 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
 
    //alias for internal buffer of kkt
    double** const dKkt = kktd->Mat();
+
+#ifdef DUMPKKT
+   const int msize = locnx + locmy + locmyl + locmzl;
+
+   ofstream myfile;
+   myfile.open("../old");
+
+   for( int col = 0; col < msize; col++ )
+      for( int row = col; row < msize; row++ )
+         if( dKkt[row][col] != 0.0 )
+            myfile << col << " " << row << " " << dKkt[row][col] << std::endl;
+
+   myfile.close();
+#endif
+
+
+assert(0);
+
 
    //////////////////////////////////////////////////////
    // compute Q+diag(xdiag) - C' * diag(zDiag) * C

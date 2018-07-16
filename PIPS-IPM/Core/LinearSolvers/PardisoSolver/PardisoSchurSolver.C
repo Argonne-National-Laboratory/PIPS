@@ -479,7 +479,7 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
            assert(cbase < rowptrBase[r + 1]);
         }
 
-        eltsBase[cbase] += eltsSC[c];
+        eltsBase[cbase] += eltsSC[j];
      }
   }
 

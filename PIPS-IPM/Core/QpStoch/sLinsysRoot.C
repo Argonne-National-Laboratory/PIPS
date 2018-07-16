@@ -51,6 +51,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
 
   // use sparse KKT if (enough) 2 links are present
   hasSparseKkt = prob_->with2Links();
+
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -558,7 +559,6 @@ void sLinsysRoot::reduceKKTsparse()
       assert(0);
 
    }
-   assert(0);
 
 }
 
