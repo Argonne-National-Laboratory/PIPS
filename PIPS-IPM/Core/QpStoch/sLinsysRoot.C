@@ -479,10 +479,10 @@ void sLinsysRoot::sync()
   /* Atoms methods of FACTOR2 for a non-leaf linear system */
 void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 {
-   if( hasSparseKkt && 0)
+   if( hasSparseKkt )
    {
       SparseSymMatrix* kkts = dynamic_cast<SparseSymMatrix*>(kkt);
-int todo; // build before and fill with zeroes!
+      kkts->symPutZeroes();
    }
    else
    {
@@ -493,7 +493,7 @@ int todo; // build before and fill with zeroes!
 
 void sLinsysRoot::reduceKKT()
 {
-   if( 0 && hasSparseKkt )
+   if( hasSparseKkt )
       reduceKKTsparse();
    else
       reduceKKTdense();
@@ -555,8 +555,11 @@ void sLinsysRoot::reduceKKTsparse()
    // todo parallel communication
    if( iAmDistrib )
    {
+      assert(0);
 
    }
+   assert(0);
+
 }
 
 void sLinsysRoot::factorizeKKT()
@@ -614,7 +617,7 @@ void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
 {
    assert(childindex < prob->children.size());
 
-   if( hasSparseKkt && 0 )
+   if( hasSparseKkt )
    {
       SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
       children[childindex]->addTermToSparseSchurCompl(prob->children[childindex], kkts);

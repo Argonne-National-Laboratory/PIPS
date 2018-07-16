@@ -78,6 +78,8 @@ public:
 
   virtual void randomize( double alpha, double beta, double * seed );
 
+  virtual void clear();
+
   virtual void getTransposePat( int row, int col, int rowExtent, int colExtent,
 				int kpat[], int krowM[], int jcolM[] );
   virtual void getFromPat( double data[], int n, int kpat[] );

@@ -464,7 +464,7 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
   int* colidxBase = SC0.jcolM();
   double* eltsBase = SC0.M();
 
-  // add to summed Schur complement
+  // add to summed Schur complement todo: exploit block structure, get start and end of block
   for( int r = 0; r < nSC; r++ )
   {
      int cbase = rowptrBase[r];

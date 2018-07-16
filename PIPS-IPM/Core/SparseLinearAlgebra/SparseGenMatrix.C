@@ -464,8 +464,6 @@ void SparseGenMatrix::updateTransposed()
    }
    const int nnz = mStorage->numberOfNonZeros();
 
-   if( nnz <= 0 )
-      return;
    const int m = mStorage->m;
    const int n = mStorage->n;
    m_Mt = new SparseGenMatrix(n, m, nnz);

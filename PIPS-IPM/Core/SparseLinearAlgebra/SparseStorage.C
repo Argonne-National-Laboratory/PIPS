@@ -856,9 +856,6 @@ void SparseStorage::transMultLower( double beta,  double y[],
   }
 }
 
-#ifndef MAX
-#define MAX(a,b) ( (a > b) ? a : b)
-#endif
 #ifndef MIN
 #define MIN(a,b) ( (a > b) ? b : a)
 #endif
@@ -1184,7 +1181,7 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
   /////////////////////////////////////////////////////
   // form the transpose 
   /////////////////////////////////////////////////////
-  int nnz = krowM[m];
+  const int nnz = krowM[m];
 
   //cumulative sum to find the number of elements in each row of At, ie column of A.
   int* w=new int[n];
@@ -1209,6 +1206,12 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
   }
   //we have the transpose
   delete[] w;
+}
+
+void SparseStorage::clear()
+{
+   for( int i = 0; i < len; i++ )
+      M[i] = 0.0;
 }
 
 void SparseStorage::matTransDSymbMultMat(double* d,
@@ -1535,9 +1538,9 @@ void SparseStorage::permuteRows(const std::vector<unsigned int>& permvec)
 
    assert(len_new == len);
 
-   delete jcolM;
-   delete krowM;
-   delete M;
+   delete[] jcolM;
+   delete[] krowM;
+   delete[] M;
 
    jcolM = jcolM_new;
    krowM = krowM_new;

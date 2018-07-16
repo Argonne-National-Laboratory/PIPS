@@ -58,17 +58,25 @@ sLinsysRootAug::~sLinsysRootAug()
 SymMatrix* 
 sLinsysRootAug::createKKT(sData* prob)
 {
+   const int n = locnx + locmy + locmyl + locmzl;
+
    int todo;
 
-   std::cout << "getSchurCompMaxNnz " << prob->getSchurCompMaxNnz() << std::endl;
+   std::cout << "getSchurCompMaxNnz " << prob->getSchurCompMaxNnz()
+         << std::endl;
 
-  if( hasSparseKkt && 0 )
-     return new SparseSymMatrix();
-  else
-  {
-     const int n = locnx + locmy + locmyl + locmzl;
-     return new DenseSymMatrix(n);
-  }
+   if( hasSparseKkt )
+   {
+      SparseSymMatrix* sparsekkt = prob->createSchurCompSparseUpper();
+
+      assert(sparsekkt->size() == n);
+
+      return sparsekkt;
+   }
+   else
+   {
+      return new DenseSymMatrix(n);
+   }
 }
 
 
@@ -80,8 +88,8 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
   if( hasSparseKkt )
   {
      int todo;
-    //SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
-     DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
+    SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
+    // DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
 
     if( 0 == myRank )
        cout << "Using Pardiso for summed Schur complement - sLinsysRootAug"<< endl;
@@ -844,6 +852,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 {
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+assert(0);
 
    int todo;
 }
@@ -1015,7 +1024,7 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   stochNode->resMon.recFactTmLocal_start();
   stochNode->resMon.recSchurMultLocal_start();
 
-  if( hasSparseKkt && 0 )
+  if( hasSparseKkt )
      finalizeKKTsparse(prob, vars);
   else
      finalizeKKTdense(prob, vars);

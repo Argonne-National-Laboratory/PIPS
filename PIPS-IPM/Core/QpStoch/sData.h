@@ -3,6 +3,7 @@
 
 #include "QpGenData.h"
 #include "StochSymMatrix.h"
+#include "SparseSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 #include "DoubleMatrixHandle.h"
@@ -49,7 +50,7 @@ class sData : public QpGenData {
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
   bool with2Links() {return use2Links;};
-  void getSchurCompMaxUpperCSR(int** krowM, int** jcolM, double** M, int& nnz);
+  SparseSymMatrix* createSchurCompSparseUpper();
 
   SparseSymMatrix& getLocalQ();
   SparseGenMatrix& getLocalCrossHessian();

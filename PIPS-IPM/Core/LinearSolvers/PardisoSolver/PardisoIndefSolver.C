@@ -49,9 +49,6 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 {
   mStorage = NULL;
-
-  assert(0);
-  // wontworkbeause_NULL;
   mStorageSparse = SparseStorageHandle( sm->getStorage() );
 
   assert(mStorageSparse);
@@ -336,7 +333,6 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-   int n = mStorage->n;
    phase = 33;
 
    iparm[7] = 5; /* Max numbers of iterative refinement steps. */
@@ -344,6 +340,9 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
    SimpleVector& sv = dynamic_cast<SimpleVector&>(v);
 
    double* b = sv.elements();
+
+   assert(sv.n == n);
+
 
 #ifdef TIMING_FLOPS
    HPM_Start("DSYTRSSolve");

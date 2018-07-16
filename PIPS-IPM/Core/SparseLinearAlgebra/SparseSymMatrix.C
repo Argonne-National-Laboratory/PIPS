@@ -16,11 +16,13 @@ int SparseSymMatrix::isKindOf( int type )
 }
 
 SparseSymMatrix::SparseSymMatrix()
+ : isLower(true)
 {
   mStorage = NULL;
 }
 
-SparseSymMatrix::SparseSymMatrix( int size, int nnz )
+SparseSymMatrix::SparseSymMatrix( int size, int nnz, bool isLower )
+: isLower(isLower)
 {
   mStorage = SparseStorageHandle( new SparseStorage(size, size, nnz) );
 }
@@ -36,7 +38,8 @@ SparseSymMatrix::SparseSymMatrix( int size, int nnz )
 
 SparseSymMatrix::SparseSymMatrix( int size, int nnz,
 				  int krowM[], int jcolM[], double M[],
-				  int deleteElts)
+				  int deleteElts, bool isLower )
+: isLower(isLower)
 {
   mStorage = SparseStorageHandle( new SparseStorage(size, size,
 						    nnz, krowM, jcolM, M,
@@ -81,6 +84,12 @@ void SparseSymMatrix::symAtPutSpRow( int row, double A[],
   } else {
     info = 0;
   }
+}
+
+void SparseSymMatrix::symPutZeroes()
+{
+   assert(mStorage);
+   mStorage->clear();
 }
 
 void SparseSymMatrix::fromGetSpRow( int row, int col,
