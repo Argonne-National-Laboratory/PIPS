@@ -27,22 +27,22 @@ void appendDenseBlock(int start, int end, int& nnz, int* jcolM)
 }
 
 static
-int appendDiagBlocks(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths, int borderstart, int bordersize,
-                                          int row, int& blockStartrow, int& nnz, int* jcolM)
+int appendDiagBlocks(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths, int borderstart, int bordersize, int rowSC,
+                                          int rowBlock, int& blockStartrow, int& nnz, int* jcolM)
 {
-   assert(row >= blockStartrow && blockStartrow >= 0 && borderstart >= 0 && bordersize >= 0 && nnz >= 0);
+   assert(rowBlock >= blockStartrow && blockStartrow >= 0 && borderstart >= 0 && bordersize >= 0 && nnz >= 0);
 
-   const int block = linkStartBlocks[row];
+   const int block = linkStartBlocks[rowBlock];
    const int currlength = (block >= 0) ? linkStartBlockLengths[block] : bordersize;
 
    assert(currlength >= 1);
 
    // add diagonal block (possibly up to the order)
 
-   int rownnz = currlength - (row - blockStartrow);
+   int rownnz = currlength - (rowBlock - blockStartrow);
 
    for( int i = 0; i < rownnz; ++i )
-      jcolM[nnz++] = row + i;
+      jcolM[nnz++] = rowSC + i;
 
    // with offdiagonal blocks?
    if( block >= 0 )
@@ -55,7 +55,7 @@ int appendDiagBlocks(const std::vector<int>& linkStartBlocks, const std::vector<
       assert(block != int(linkStartBlockLengths.size()) - 2 || nextlength == 0);
 
       for( int i = rownnz; i < rownnz + nextlength; ++i )
-         jcolM[nnz++] = row + i;
+         jcolM[nnz++] = rowSC + i;
 
       rownnz += nextlength + bordersize;
 
@@ -63,8 +63,8 @@ int appendDiagBlocks(const std::vector<int>& linkStartBlocks, const std::vector<
          jcolM[nnz++] = i;
 
       // last row of current block?
-      if( row + 1 == blockStartrow + currlength )
-         blockStartrow = row + 1;
+      if( rowBlock + 1 == blockStartrow + currlength )
+         blockStartrow = rowBlock + 1;
    }
 
    return rownnz;
@@ -237,7 +237,7 @@ SparseSymMatrix* sData::createSchurCompSparseUpper()
    // todo replace mzl for sparse 2-link ink linking cons (G)
    for( int i = nx0 + my0, j = 0; i < nx0 + my0 + myl; ++i, ++j )
    {
-       const int blockrownnz = appendDiagBlocks(linkStartBlocksA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, j, blockStartrow, nnzcount, jcolM);
+       const int blockrownnz = appendDiagBlocks(linkStartBlocksA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j, blockStartrow, nnzcount, jcolM);
 
        appendDenseBlock(nx0 + my0 + myl, nx0 + my0 + myl + mzl, nnzcount, jcolM);
        krowM[i + 1] = krowM[i] + blockrownnz + mzl;
@@ -253,7 +253,7 @@ SparseSymMatrix* sData::createSchurCompSparseUpper()
 
    for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; ++i, ++j )
    {
-       const int blockrownnz = appendDiagBlocks(linkStartBlocksC, linkStartBlockLengthsC, borderstartIneq, bordersizeIneq, j, blockStartrow, nnzcount, jcolM);
+       const int blockrownnz = appendDiagBlocks(linkStartBlocksC, linkStartBlockLengthsC, borderstartIneq, bordersizeIneq, i, j, blockStartrow, nnzcount, jcolM);
 
        krowM[i + 1] = krowM[i] + blockrownnz;
    }
