@@ -50,7 +50,7 @@ class sData : public QpGenData {
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
   bool with2Links() {return use2Links;};
-  SparseSymMatrix* createSchurCompSparseUpper();
+  SparseSymMatrix* createSchurCompSymbSparseUpper();
 
   SparseSymMatrix& getLocalQ();
   SparseGenMatrix& getLocalCrossHessian();

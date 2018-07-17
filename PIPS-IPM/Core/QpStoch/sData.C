@@ -171,7 +171,7 @@ std::vector<int> sData::get2LinkLengthsVec(const std::vector<int>& linkStartBloc
    return linkStartBlockLengths;
 }
 
-SparseSymMatrix* sData::createSchurCompSparseUpper()
+SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
 {
    assert(children.size() > 0);
 
