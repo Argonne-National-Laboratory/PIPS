@@ -5,7 +5,7 @@
  *      Author: Svenja Uslu
  */
 
-//#define PIPS_DEBUG
+#define PIPS_DEBUG
 #include "GeoStochScaler.h"
 #include "StochVector.h"
 #include <cmath>
@@ -22,7 +22,6 @@ GeoStochScaler::GeoStochScaler(Data* prob, bool bitshifting)
    goodEnough = 1e3;
 }
 
-// todo: this is same method as in EquiStochScaler
 void GeoStochScaler::doObjScaling()
 {
    assert(vec_colscale != NULL);
@@ -31,9 +30,15 @@ void GeoStochScaler::doObjScaling()
 
    const double absmax = obj->infnorm();
    assert(absmax >= 0);
+   StochVector* objInvert = dynamic_cast<StochVector*>(obj->clone());
+   objInvert->invertSave();
+   double absmin = objInvert->infnorm();
+   if( absmin != 0.0)
+      absmin = 1.0 / absmin;
+   const double scaleFactor = std::sqrt(absmax * absmin);
 
-   if( absmax > 0.0 )
-      factor_objscale = 1.0 / absmax;
+   if( scaleFactor > 0.0 )
+      factor_objscale = 1.0 / scaleFactor;
    else
       factor_objscale = 1.0;
 
