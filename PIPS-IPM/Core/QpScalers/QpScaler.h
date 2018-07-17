@@ -60,10 +60,10 @@ protected:
   virtual void doObjScaling() = 0;
 
   /** get maximum absolute row ratio and write maximum row entries into vectors */
-  virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC);
+  virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, OoqpVector* colScalevec);
 
   /** get maximum absolute column ratio and write maximum column entries into vectors */
-  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec);
+  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector* rowScaleVecA, OoqpVector* rowScaleVecC);
 public:
 
   QpScaler(Data* prob, bool bitshifting = true);

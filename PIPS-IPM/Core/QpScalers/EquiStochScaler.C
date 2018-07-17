@@ -60,8 +60,8 @@ void EquiStochScaler::scale()
    StochVector* colmax = dynamic_cast<StochVector*>(bux->clone());
    StochVector* colmin = dynamic_cast<StochVector*>(bux->clone());
 
-   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC);
-   const double colratio = maxColRatio(*colmax, *colmin);
+   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, NULL);
+   const double colratio = maxColRatio(*colmax, *colmin, NULL, NULL);
 
    PIPSdebugMessage("rowratio %f \n", rowratio);
    PIPSdebugMessage("colratio %f \n", colratio);
@@ -119,8 +119,8 @@ void EquiStochScaler::scale()
    StochVectorHandle xcolmax(dynamic_cast<StochVector*>(bux->clone()));
    StochVectorHandle xcolmin(dynamic_cast<StochVector*>(bux->clone()));
 
-   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC);
-   const double xcolratio = maxColRatio(*xcolmax, *xcolmin);
+   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, NULL);
+   const double xcolratio = maxColRatio(*xcolmax, *xcolmin, NULL, NULL);
 
    PIPSdebugMessage("rowratio after scaling %f \n", xrowratio);
    PIPSdebugMessage("colratio after scaling %f \n", xcolratio);

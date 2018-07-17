@@ -5,7 +5,7 @@
  *      Author: Svenja Uslu
  */
 
-#define PIPS_DEBUG
+//#define PIPS_DEBUG
 #include "GeoStochScaler.h"
 #include "StochVector.h"
 #include <cmath>
@@ -69,8 +69,8 @@ void GeoStochScaler::scale()
    StochVector* colmax = dynamic_cast<StochVector*>(bux->clone());
    StochVector* colmin = dynamic_cast<StochVector*>(bux->clone());
 
-   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC);
-   const double colratio = maxColRatio(*colmax, *colmin);
+   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, NULL);
+   const double colratio = maxColRatio(*colmax, *colmin, NULL, NULL);
 
    PIPSdebugMessage("rowratio %f \n", rowratio);
    PIPSdebugMessage("colratio %f \n", colratio);
@@ -98,6 +98,13 @@ void GeoStochScaler::scale()
 
    assert(vec_rowscaleA == NULL && vec_rowscaleC == NULL && vec_colscale == NULL);
 
+   vec_rowscaleA = rowmaxA->clone();
+   vec_rowscaleA->setToConstant(1.0);
+   vec_rowscaleC = rowmaxC->clone();
+   vec_rowscaleC->setToConstant(1.0);
+   vec_colscale = colmax->clone();
+   vec_colscale->setToConstant(1.0);
+
    double p0 = 0.0;
    double p1 = 0.0;
 
@@ -106,55 +113,60 @@ void GeoStochScaler::scale()
       double p0prev = p0start;
       double p1prev = p1start;
 
-      // todo: make a for-loop around that:
-
-      // column scaling first?
-      if(colratio < rowratio)
+      for( int i = 0; i < maxIters; i++)
       {
-         colmax->componentMult(*colmin);
-         colmax->applySqrt();
-         vec_colscale = colmax;
-         invertAndRound(do_bitshifting, *vec_colscale);
+         //cout<<"In Geoscaling Loop, round "<<i<<endl;
+         // column scaling first?
+         if(colratio < rowratio)
+         {
+            p0 = maxColRatio(*colmax, *colmin, vec_rowscaleA, vec_rowscaleC);
+            colmax->componentMult(*colmin);
+            colmax->applySqrt();
+            vec_colscale = colmax;
 
-         // todo: unsure here about the value for initialilzeVec
-         A->getRowMinMaxVec(false, true, vec_colscale, *rowmaxA);
-         C->getRowMinMaxVec(false, true, vec_colscale, *rowmaxC);
-         A->getRowMinMaxVec(true, true, vec_colscale, *rowminA);
-         C->getRowMinMaxVec(true, true, vec_colscale, *rowminC);
+            invertAndRound(do_bitshifting, *vec_colscale);
 
-         rowmaxA->componentMult(*rowminA);
-         rowmaxC->componentMult(*rowminC);
-         rowmaxA->applySqrt();
-         rowmaxC->applySqrt();
-         vec_rowscaleA = rowmaxA;
-         vec_rowscaleC = rowmaxC;
+            p1 = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, vec_colscale);
+            rowmaxA->componentMult(*rowminA);
+            rowmaxA->applySqrt();
+            rowmaxC->componentMult(*rowminC);
+            rowmaxC->applySqrt();
+            vec_rowscaleA = rowmaxA;
+            vec_rowscaleC = rowmaxC;
 
-         invertAndRound(do_bitshifting, *vec_rowscaleA);
-         invertAndRound(do_bitshifting, *vec_rowscaleC);
+            invertAndRound(do_bitshifting, *vec_rowscaleA);
+            invertAndRound(do_bitshifting, *vec_rowscaleC);
+         }
+         else // row first
+         {
+            p0 = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, vec_colscale);
+            rowmaxA->componentMult(*rowminA);
+            rowmaxA->applySqrt();
+            rowmaxC->componentMult(*rowminC);
+            rowmaxC->applySqrt();
+            vec_rowscaleA = rowmaxA;
+            vec_rowscaleC = rowmaxC;
+            invertAndRound(do_bitshifting, *vec_rowscaleA);
+            invertAndRound(do_bitshifting, *vec_rowscaleC);
+
+            p1 = maxColRatio(*colmax, *colmin, vec_rowscaleA, vec_rowscaleC);
+            colmax->componentMult(*colmin);
+            colmax->applySqrt();
+            vec_colscale = colmax;
+
+            invertAndRound(do_bitshifting, *vec_colscale);
+         }
+         // if ratio improvement is not good enough, then break:
+         cout<<"p0, p0prev, p1, p1prev: "<<p0<<", "<<p0prev<<", "<<p1<<", "<<p1prev<<endl;
+         if( p0 > minImpr * p0prev && p1 > minImpr * p1prev )
+         {
+           // cout<<"Breaking in round "<<i<<endl;
+            break;
+         }
+
+         p0prev = p0;
+         p1prev = p1;
       }
-      else // row first
-      {
-         rowmaxA->componentMult(*rowminA);
-         rowmaxC->componentMult(*rowminC);
-         rowmaxA->applySqrt();
-         rowmaxC->applySqrt();
-         vec_rowscaleA = rowmaxA;
-         vec_rowscaleC = rowmaxC;
-         invertAndRound(do_bitshifting, *vec_rowscaleA);
-         invertAndRound(do_bitshifting, *vec_rowscaleC);
-
-         A->getColMinMaxVec(false, true, vec_rowscaleA, *colmax);
-         C->getColMinMaxVec(false, false, vec_rowscaleC, *colmax);
-         A->getColMinMaxVec(true, true, vec_rowscaleA, *colmin);
-         C->getColMinMaxVec(true, false, vec_rowscaleC, *colmin);
-
-         colmax->componentMult(*colmin);
-         colmax->applySqrt();
-         vec_colscale = colmax;
-
-         invertAndRound(do_bitshifting, *vec_colscale);
-      }
-// todo: loop around and do something with the ratios, only continue if good enough
    }
 
    PIPSdebugMessage("before scaling: \n "
@@ -177,8 +189,8 @@ void GeoStochScaler::scale()
    StochVectorHandle xcolmax(dynamic_cast<StochVector*>(bux->clone()));
    StochVectorHandle xcolmin(dynamic_cast<StochVector*>(bux->clone()));
 
-   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC);
-   const double xcolratio = maxColRatio(*xcolmax, *xcolmin);
+   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, NULL);
+   const double xcolratio = maxColRatio(*xcolmax, *xcolmin, NULL, NULL);
 
    PIPSdebugMessage("rowratio after scaling %f \n", xrowratio);
    PIPSdebugMessage("colratio after scaling %f \n", xcolratio);

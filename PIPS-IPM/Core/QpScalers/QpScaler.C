@@ -65,22 +65,26 @@ void QpScaler::applyScaling()
    blx->componentDiv(*vec_colscale);
 }
 
-double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC)
+double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, OoqpVector* colScalevec)
 {
-   A->getRowMinMaxVec(true, true, NULL, minvecA);
-   A->getRowMinMaxVec(false, true, NULL, maxvecA);
-   C->getRowMinMaxVec(true, true, NULL, minvecC);
-   C->getRowMinMaxVec(false, true, NULL, maxvecC);
+   A->getRowMinMaxVec(true, true, colScalevec, minvecA);
+   A->getRowMinMaxVec(false, true, colScalevec, maxvecA);
+   C->getRowMinMaxVec(true, true, colScalevec, minvecC);
+   C->getRowMinMaxVec(false, true, colScalevec, maxvecC);
 
 #ifndef NDEBUG
-   int j;
-   double max;
 
-   maxvecA.max(max, j);
-   assert(max < 0 || max == A->abmaxnorm());
+   if( !colScalevec )
+   {
+      int j;
+      double max;
 
-   maxvecC.max(max, j);
-   assert(max < 0 || max == C->abmaxnorm());
+      maxvecA.max(max, j);
+      assert(max < 0 || max == A->abmaxnorm());
+
+      maxvecC.max(max, j);
+      assert(max < 0 || max == C->abmaxnorm());
+   }
 #endif
 
    OoqpVector* const ratiovecA = maxvecA.clone();
@@ -112,21 +116,24 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    return maxratio;
 }
 
-double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
+double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector* rowScaleVecA, OoqpVector* rowScaleVecC)
 {
-   A->getColMinMaxVec(true, true, NULL, minvec);
-   C->getColMinMaxVec(true, false, NULL, minvec);
+   A->getColMinMaxVec(true, true, rowScaleVecA, minvec);
+   C->getColMinMaxVec(true, false, rowScaleVecC, minvec);
 
-   A->getColMinMaxVec(false, true, NULL, maxvec);
-   C->getColMinMaxVec(false, false, NULL, maxvec);
+   A->getColMinMaxVec(false, true, rowScaleVecA, maxvec);
+   C->getColMinMaxVec(false, false, rowScaleVecC, maxvec);
 
 #ifndef NDEBUG
-   int j;
-   double max;
+   if( !rowScaleVecA || !rowScaleVecC )
+   {
+      int j;
+      double max;
 
-   maxvec.max(max, j);
+      maxvec.max(max, j);
 
-   assert(max < 0 || max == std::max(A->abmaxnorm(), C->abmaxnorm()));
+      assert(max < 0 || max == std::max(A->abmaxnorm(), C->abmaxnorm()));
+   }
 #endif
 
    OoqpVector* const ratiovec = maxvec.clone();
