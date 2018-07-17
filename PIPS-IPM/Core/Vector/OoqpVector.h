@@ -118,6 +118,9 @@ public:
   /** Invert (1/x) the elements of this OoqpVector, but don't divide by zero and replace by zeroReplacementVal instead */
   virtual void invertSave( double zeroReplacementVal = 0.0 ) = 0;
 
+  /** Take the square root of each element of this OoqpVector. */
+  virtual void applySqrt() = 0;
+
   /** Rounds vector entries to nearest power of two values */
   virtual void roundToPow2() = 0;
 

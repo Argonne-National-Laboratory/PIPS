@@ -66,9 +66,11 @@ else
   stepLp=""
 fi
 if [ "$scale" = "true" ]; then
-  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR scale $stepLp 2>&1 | tee pips.out
+  scale="scale"
 else
-  mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $stepLp 2>&1 | tee pips.out
-
+  scale=""
 fi
+mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp 2>&1 | tee pips.out
+
+
 

@@ -14,7 +14,7 @@
 EquiStochScaler::EquiStochScaler(Data* prob, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
-
+   cout<<"Creating EquiStochScaler..."<<endl;
 }
 
 void EquiStochScaler::doObjScaling()

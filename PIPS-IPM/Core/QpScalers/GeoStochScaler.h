@@ -2,7 +2,7 @@
  * GeoStochScaler.h
  *
  *  Created on: 16.07.2018
- *      Author: bzfuslus
+ *      Author: Svenja Uslu
  */
 
 #ifndef PIPS_IPM_CORE_QPSCALERS_GEOSTOCHSCALER_H_
@@ -24,6 +24,11 @@ class Data;
  */
 class GeoStochScaler : public QpScaler
 {
+   bool equilibrate;
+   int maxIters;
+   double minImpr;
+   double goodEnough;
+
 protected:
   virtual void doObjScaling();
 

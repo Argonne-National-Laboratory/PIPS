@@ -109,6 +109,7 @@ public:
   virtual void negate();
   virtual void invert();
   virtual void invertSave( double zeroReplacementVal = 0.0 );
+  virtual void applySqrt();
   virtual void roundToPow2();
 
   virtual int allPositive();
@@ -212,6 +213,7 @@ public:
   virtual void negate(){};
   virtual void invert(){};
   virtual void invertSave( double zeroReplacementVal = 0.0 ){};
+  virtual void applySqrt(){};
   virtual void roundToPow2(){};
   virtual int allPositive(){return 1;}
 

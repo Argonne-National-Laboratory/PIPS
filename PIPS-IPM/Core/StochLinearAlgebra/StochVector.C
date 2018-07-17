@@ -998,6 +998,15 @@ void StochVector::invertSave(double zeroReplacementVal)
     children[it]->invertSave(zeroReplacementVal);
 }
 
+void StochVector::applySqrt()
+{
+   vec->applySqrt();
+
+   if(vecl) vecl->applySqrt();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->applySqrt();
+}
 
 void StochVector::roundToPow2()
 {

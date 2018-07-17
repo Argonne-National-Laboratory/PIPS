@@ -483,6 +483,15 @@ void SimpleVector::invertSave( double zeroReplacementVal )
   }
 }
 
+void SimpleVector::applySqrt()
+{
+   for( int i = 0; i < n; i++)
+   {
+      assert( v[i] >= 0.0 );
+      v[i] = std::sqrt(v[i]);
+   }
+}
+
 void SimpleVector::roundToPow2()
 {
   for( int i = 0; i < n; i++ )

@@ -9,6 +9,7 @@
 #define PIPS_IPM_CORE_QPSCALERS_SCALERFACTORY_H_
 
 #include "EquiStochScaler.h"
+#include "GeoStochScaler.h"
 #include "IotrRefCount.h"
 #include "SmartPointer.h"
 
@@ -23,6 +24,8 @@ public:
             {
             case SCALER_EQUI_STOCH:
                return new EquiStochScaler(data);
+            case SCALER_GEO_STOCH:
+               return new GeoStochScaler(data);
             default:
                return 0;
             }
