@@ -396,7 +396,6 @@ PardisoIndefSolver::~PardisoIndefSolver()
 {
    phase = -1; /* Release internal memory. */
    int error;
-   int n = mStorage->n;
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, &ddum, ia, ja, &idum, &nrhs,
          iparm, &msglvl, &ddum, &ddum, &error, dparm);
 

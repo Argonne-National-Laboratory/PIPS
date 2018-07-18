@@ -22,7 +22,7 @@ double g_scenNum;
 extern int gOuterSolve;
 
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
-  : sLinsys(factory_, prob_), iAmDistrib(0)
+  : sLinsys(factory_, prob_), iAmDistrib(0), sparseKktBuffer(NULL)
 {
   assert(dd!=NULL);
   createChildren(prob_);
@@ -60,7 +60,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 			 OoqpVector* dq_,
 			 OoqpVector* nomegaInv_,
 			 OoqpVector* rhs_)
-  : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0)
+  : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0), sparseKktBuffer(NULL)
 {
   createChildren(prob_);
 
@@ -94,6 +94,8 @@ sLinsysRoot::~sLinsysRoot()
 {
   for(size_t c=0; c<children.size(); c++)
     delete children[c];
+
+  delete[] sparseKktBuffer;
 }
 
 //this variable is just reset in this file; children will default to the "safe" linear solver
@@ -551,15 +553,28 @@ void sLinsysRoot::reduceKKTdense()
 
 void sLinsysRoot::reduceKKTsparse()
 {
-   SparseSymMatrix* const kktd = dynamic_cast<SparseSymMatrix*>(kkt);
+   if( !iAmDistrib )
+      return;
 
-   // todo parallel communication
-   if( iAmDistrib )
-   {
-      assert(0);
+   assert(kkt);
 
-   }
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
 
+   int* const krowKkt = kkts.krowM();
+   double* const MKkt = kkts.M();
+   const int sizeKkt = locnx + locmy + locmyl + locmzl;
+   const int nnzKkt = krowKkt[sizeKkt];
+
+   assert(kkts.size() == sizeKkt);
+   assert(!kkts.isLower);
+
+   if( sparseKktBuffer == NULL )
+      sparseKktBuffer = new double[nnzKkt];
+
+   // todo: replace by more sophisticated scheme
+   MPI_Allreduce(MKkt, sparseKktBuffer, nnzKkt, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+   memcpy(MKkt, sparseKktBuffer, size_t(nnzKkt) * sizeof(double));
 }
 
 void sLinsysRoot::factorizeKKT()

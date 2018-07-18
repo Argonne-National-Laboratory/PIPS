@@ -13,7 +13,7 @@
 #include "pipschecks.h"
 #include <limits>
 
-#define DUMPKKT
+//#define DUMPKKT
 
 #ifdef DUMPKKT
 #include <iostream>
@@ -868,7 +868,6 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    assert(!kkts.isLower);
    assert(locmyl >= 0 && locmzl >= 0);
 
-
    //////////////////////////////////////////////////////
    // compute Q+diag(xdiag) - C' * diag(zDiag) * C
    // and update the KKT
@@ -943,6 +942,8 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 
          // get start position of sparse kkt block
          const int blockStart = krowKkt[i] + locnx - i;
+
+         assert(blockStart <= krowKkt[i] + 1);
 
          for( int p = krowAt[i]; p < pend; ++p )
          {
@@ -1047,7 +1048,6 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    myfile.close();
 #endif
 
-   assert(0);
 }
 
 void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
@@ -1217,9 +1217,6 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
 
    myfile.close();
 #endif
-
-
-assert(0);
 
    /////////////////////////////////////////////////////////////
    // update the KKT zeros for the lower right block

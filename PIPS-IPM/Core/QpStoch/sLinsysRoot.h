@@ -96,6 +96,8 @@ class sLinsysRoot : public sLinsys {
   OoqpVector* zDiagLinkCons;
   OoqpVector* xDiag;
 
+  double* sparseKktBuffer;
+
   bool hasSparseKkt;
  private:
   void addTermToSchurCompl(sData* prob, size_t childindex);
