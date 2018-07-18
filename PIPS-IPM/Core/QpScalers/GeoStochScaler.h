@@ -33,6 +33,8 @@ class GeoStochScaler : public QpScaler
 protected:
   virtual void doObjScaling();
   void applyGeoMean(StochVector& maxvec, StochVector& minvec);
+  void postEquiScale();
+  void setScalingVecsToOne();
 
 public:
 
