@@ -471,6 +471,27 @@ void SparseGenMatrix::updateTransposed()
    mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
 }
 
+void SparseGenMatrix::deleteTransposed()
+{
+   if( m_Mt )
+   {
+      delete m_Mt;
+      m_Mt = NULL;
+   }
+}
+
+
+void SparseGenMatrix::updateNonEmptyRowsCount(std::vector<int>& rowcount) const
+{
+   const int m = mStorage->m;
+   const int* const rowStart = mStorage->krowM;
+
+   assert(unsigned(m) == rowcount.size());
+
+   for( int i = 0; i < m; i++ )
+      if( rowStart[i] != rowStart[i + 1] )
+         rowcount[i]++;
+}
 
 void SparseGenMatrix::updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
       std::vector<int>& linkBlockPos2) const

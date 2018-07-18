@@ -497,6 +497,9 @@ void sData::init2LinksData(bool exploit2links)
    linkStartBlockLengthsA = get2LinkLengthsVec(linkStartBlocksA, stochNode->children.size());
    linkStartBlockLengthsC = get2LinkLengthsVec(linkStartBlocksC, stochNode->children.size());
 
+   printLinkConsStats();
+   printLinkVarsStats();
+
    for( size_t i = 0; i < linkStartBlocksA.size(); ++i )
       if( linkStartBlocksA[i] >= 0 )
          n2LinksEq++;
@@ -567,7 +570,90 @@ void sData::createScaleFromQ()
   */
 }
 
+void sData::printLinkVarsStats()
+{
+   int n = getLocalnx();
 
+   std::vector<int> linkCount(n, 0);
+
+   dynamic_cast<StochGenMatrix&>(*A).updateKLinkVarsCount(linkCount);
+   dynamic_cast<StochGenMatrix&>(*C).updateKLinkVarsCount(linkCount);
+
+   int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+   if( rank == 0 )
+   {
+      std::vector<int> linkSizes(nLinkStats, 0);
+
+      for( int i = 0; i < n; i++ )
+         if( linkCount[i] < nLinkStats )
+         {
+            assert(linkCount[i] >= 0);
+            linkSizes[size_t(linkCount[i])]++;
+         }
+
+      std::cout << "total link vars " << n << std::endl;
+
+      for( int i = 0; i < nLinkStats; i++ )
+         std::cout << i << "-links " << linkSizes[i] << std::endl;
+   }
+}
+
+void sData::printLinkConsStats()
+{
+   int myl = getLocalmyl();
+   int mzl = getLocalmzl();
+
+   int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+   if( myl > 0 )
+   {
+      std::vector<int> linkCount(myl, 0);
+
+      dynamic_cast<StochGenMatrix&>(*A).updateKLinkConsCount(linkCount);
+
+      if( rank == 0 )
+      {
+         std::vector<int> linkSizes(nLinkStats, 0);
+
+         for( int i = 0; i < myl; i++ )
+            if( linkCount[i] < nLinkStats )
+            {
+               assert(linkCount[i] >= 0);
+               linkSizes[size_t(linkCount[i])]++;
+            }
+
+         std::cout << "total equality Linking Constraints " << myl << std::endl;
+
+         for( int i = 0; i < nLinkStats; i++ )
+            std::cout << i << "-links " << linkSizes[i] << std::endl;
+      }
+   }
+
+   if( mzl > 0 )
+   {
+      std::vector<int> linkCount(mzl, 0);
+
+      dynamic_cast<StochGenMatrix&>(*C).updateKLinkConsCount(linkCount);
+
+      if( rank == 0 )
+      {
+         std::vector<int> linkSizes(nLinkStats, 0);
+
+         for( int i = 0; i < mzl; i++ )
+            if( linkCount[i] < nLinkStats )
+            {
+               assert(linkCount[i] >= 0);
+               linkSizes[size_t(linkCount[i])]++;
+            }
+
+         std::cout << "total inequality Linking Constraints " << mzl << std::endl;
+
+         for( int i = 0; i < nLinkStats; i++ )
+            std::cout << i << "-links " << linkSizes[i] << std::endl;
+      }
+   }
+}
 
 sData::~sData()
 {

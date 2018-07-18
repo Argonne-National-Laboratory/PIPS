@@ -958,6 +958,51 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    }
 }
 
+void StochGenMatrix::updateKLinkConsCount(std::vector<int>& linkCount) const
+{
+   if( Blmat == NULL )
+      return;
+
+   int m, n;
+
+   Blmat->getSize(m, n);
+   assert(m > 0);
+   assert(linkCount.size() == size_t(m));
+
+   for( size_t it = 0; it < children.size(); it++ )
+      if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
+      {
+         assert(children[it]->Blmat);
+         children[it]->Blmat->updateNonEmptyRowsCount(linkCount);
+      }
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], m, MPI_INT, MPI_SUM, mpiComm);
+}
+
+void StochGenMatrix::updateKLinkVarsCount(std::vector<int>& linkCount) const
+{
+   int m, n;
+
+   Bmat->getSize(m, n);
+
+   if( n == 0 )
+      return;
+
+   assert(linkCount.size() == size_t(n));
+
+   for( size_t it = 0; it < children.size(); it++ )
+      if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
+      {
+         assert(children[it]->Blmat);
+         children[it]->Amat->getTranspose().updateNonEmptyRowsCount(linkCount);
+         children[it]->Amat->deleteTransposed();
+      }
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], n, MPI_INT, MPI_SUM, mpiComm);
+}
+
 std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
 {
    if( Blmat == NULL )

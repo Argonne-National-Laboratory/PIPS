@@ -67,6 +67,8 @@ class sData : public QpGenData {
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
+  virtual void printLinkVarsStats();
+  virtual void printLinkConsStats();
 
   virtual ~sData();
 
@@ -78,6 +80,7 @@ class sData : public QpGenData {
   void destroyChildren();
 
  private:
+  const static int nLinkStats = 5;
   const static double min2LinksRatio = 0.5;
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 

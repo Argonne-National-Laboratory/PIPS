@@ -28,6 +28,8 @@ protected:
 public:
 
   void updateTransposed();
+  void deleteTransposed();
+
   SparseGenMatrix( int rows, int cols, int nnz );
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
@@ -122,6 +124,8 @@ public:
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
   void permuteRows(const std::vector<unsigned int>& permvec);
+
+  void updateNonEmptyRowsCount(std::vector<int>& rowcount) const;
 
   void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
      std::vector<int>& linkBlockPos2) const;
