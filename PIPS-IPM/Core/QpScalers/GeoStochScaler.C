@@ -10,12 +10,12 @@
 #include <cmath>
 #include "pipsdef.h"
 
-GeoStochScaler::GeoStochScaler(Data* prob, bool bitshifting)
+GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
    cout<<"Creating GeoStochScaler..."<<endl;
    // todo: make parameters adjustable
-   equilibrate = false;
+   equilibrate = equiScaling;
    maxIters = 8;
    minImpr = 0.85;
    goodEnough = 1e3;
@@ -100,7 +100,7 @@ void GeoStochScaler::scale()
    if( !geoscale )
    {
       PIPSdebugMessage("No geometric scaling done, ratio good enough.\n");
-      // todo: still do equilibrium scaling here or later
+      // todo: still do equilibrium scaling here or later if equilibrate==true
       return;
    }
 
@@ -188,6 +188,8 @@ void GeoStochScaler::scale()
    PIPSdebugMessage("rowratio after scaling %f \n", xrowratio);
    PIPSdebugMessage("colratio after scaling %f \n", xcolratio);
 #endif
+
+//   todo: if equlibrate, do equilibrium scaling after geoscaling
 }
 
 /** apply an approximation to the geometric mean to Vector maxvec:

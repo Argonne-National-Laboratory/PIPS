@@ -13,7 +13,7 @@
 #include "IotrRefCount.h"
 #include "SmartPointer.h"
 
-enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH};
+enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH, SCALER_GEO_EQUI_STOCH};
 
 class ScalerFactory : public IotrRefCount
 {
@@ -25,7 +25,9 @@ public:
             case SCALER_EQUI_STOCH:
                return new EquiStochScaler(data);
             case SCALER_GEO_STOCH:
-               return new GeoStochScaler(data);
+               return new GeoStochScaler(data, false);
+            case SCALER_GEO_EQUI_STOCH:
+               return new GeoStochScaler(data, true);
             default:
                return 0;
             }

@@ -198,7 +198,7 @@ int main(int argc, char ** argv)
 #endif
 
    GMSPIPSBlockData_t** blocks;
-   bool scale = false;
+   ScalerType scaler_type = SCALER_NONE;
    bool stepDiffLp = false;
 
    if ( (argc<3) || (argc>6) )
@@ -218,16 +218,24 @@ int main(int argc, char ** argv)
    
    if( argc >= 5 )
    {
-      if( strcmp(argv[4], "scale") == 0 )
-         scale = true;
+      if( strcmp(argv[4], "scale") == 0 || strcmp(argv[4], "scaleEqui") == 0 )
+         scaler_type = SCALER_EQUI_STOCH;
+      if( strcmp(argv[4], "scaleGeo") == 0 )
+         scaler_type = SCALER_GEO_STOCH;
+      if( strcmp(argv[4], "scaleGeoEqui") == 0 )
+         scaler_type = SCALER_GEO_EQUI_STOCH;
 
       if( strcmp(argv[4], "stepLp") == 0 )
          stepDiffLp = true;
    }
    if( argc == 6 )
    {
-      if( strcmp(argv[5], "scale") == 0 )
-         scale = true;
+      if( strcmp(argv[5], "scale") == 0 || strcmp(argv[5], "scaleEqui") == 0 )
+         scaler_type = SCALER_EQUI_STOCH;
+      if( strcmp(argv[5], "scaleGeo") == 0 )
+         scaler_type = SCALER_GEO_STOCH;
+      if( strcmp(argv[5], "scaleGeoEqui") == 0 )
+         scaler_type = SCALER_GEO_EQUI_STOCH;
 
       if( strcmp(argv[5], "stepLp") == 0 )
          stepDiffLp = true;
@@ -409,8 +417,8 @@ int main(int argc, char ** argv)
 	   if( gmsRank == 0 )
 	      cout << "Different steplengths in primal and dual direction are used." << endl;
 
-		PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
-				scale ? SCALER_EQUI_STOCH : SCALER_NONE );
+      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
+            scaler_type );
 
 		if( gmsRank == 0 )
 		   cout << "PIPSIpmInterface created" << endl;
@@ -426,8 +434,8 @@ int main(int argc, char ** argv)
 
 	else {
 
-		PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
-				scale ? SCALER_EQUI_STOCH : SCALER_NONE );
+      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
+            scaler_type );
 
 		//PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
 		//PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);

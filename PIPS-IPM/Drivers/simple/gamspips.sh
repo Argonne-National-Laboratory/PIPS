@@ -67,6 +67,12 @@ else
 fi
 if [ "$scale" = "true" ]; then
   scale="scale"
+elif [ "$scale" = "scaleEqui" ]; then
+  scale="scale"
+elif [ "$scale" = "scaleGeo" ]; then
+  scale="scaleGeo"
+elif [ "$scale" = "scaleGeoEqui" ]; then
+  scale="scaleGeoEqui"
 else
   scale=""
 fi
