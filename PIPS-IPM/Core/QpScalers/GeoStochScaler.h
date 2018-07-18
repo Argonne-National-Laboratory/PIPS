@@ -9,6 +9,7 @@
 #define PIPS_IPM_CORE_QPSCALERS_GEOSTOCHSCALER_H_
 
 #include "QpScaler.h"
+#include "StochVector.h"
 
 class Data;
 
@@ -31,6 +32,7 @@ class GeoStochScaler : public QpScaler
 
 protected:
   virtual void doObjScaling();
+  void applyGeoMean(StochVector& maxvec, StochVector& minvec);
 
 public:
 

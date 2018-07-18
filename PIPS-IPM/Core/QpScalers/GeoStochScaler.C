@@ -5,9 +5,8 @@
  *      Author: Svenja Uslu
  */
 
-//#define PIPS_DEBUG
+#define PIPS_DEBUG
 #include "GeoStochScaler.h"
-#include "StochVector.h"
 #include <cmath>
 #include "pipsdef.h"
 
@@ -87,15 +86,6 @@ void GeoStochScaler::scale()
       p1start = colratio;
    }
 
-   bool geoscale = p1start > goodEnough;
-
-   if( !geoscale )
-   {
-      PIPSdebugMessage("No geometric scaling done, ratio good enough.\n");
-      // todo: still do equilibrium scaling here or later
-      return;
-   }
-
    assert(vec_rowscaleA == NULL && vec_rowscaleC == NULL && vec_colscale == NULL);
 
    vec_rowscaleA = rowmaxA->clone();
@@ -104,6 +94,15 @@ void GeoStochScaler::scale()
    vec_rowscaleC->setToConstant(1.0);
    vec_colscale = colmax->clone();
    vec_colscale->setToConstant(1.0);
+
+   bool geoscale = p1start > goodEnough;
+
+   if( !geoscale )
+   {
+      PIPSdebugMessage("No geometric scaling done, ratio good enough.\n");
+      // todo: still do equilibrium scaling here or later
+      return;
+   }
 
    double p0 = 0.0;
    double p1 = 0.0;
@@ -120,17 +119,14 @@ void GeoStochScaler::scale()
          if(colratio < rowratio)
          {
             p0 = maxColRatio(*colmax, *colmin, vec_rowscaleA, vec_rowscaleC);
-            colmax->componentMult(*colmin);
-            colmax->applySqrt();
+            applyGeoMean(*colmax, *colmin);
             vec_colscale = colmax;
 
             invertAndRound(do_bitshifting, *vec_colscale);
 
             p1 = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, vec_colscale);
-            rowmaxA->componentMult(*rowminA);
-            rowmaxA->applySqrt();
-            rowmaxC->componentMult(*rowminC);
-            rowmaxC->applySqrt();
+            applyGeoMean(*rowmaxA, *rowminA);
+            applyGeoMean(*rowmaxC, *rowminC);
             vec_rowscaleA = rowmaxA;
             vec_rowscaleC = rowmaxC;
 
@@ -140,18 +136,15 @@ void GeoStochScaler::scale()
          else // row first
          {
             p0 = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, vec_colscale);
-            rowmaxA->componentMult(*rowminA);
-            rowmaxA->applySqrt();
-            rowmaxC->componentMult(*rowminC);
-            rowmaxC->applySqrt();
+            applyGeoMean(*rowmaxA, *rowminA);
+            applyGeoMean(*rowmaxC, *rowminC);
             vec_rowscaleA = rowmaxA;
             vec_rowscaleC = rowmaxC;
             invertAndRound(do_bitshifting, *vec_rowscaleA);
             invertAndRound(do_bitshifting, *vec_rowscaleC);
 
             p1 = maxColRatio(*colmax, *colmin, vec_rowscaleA, vec_rowscaleC);
-            colmax->componentMult(*colmin);
-            colmax->applySqrt();
+            applyGeoMean(*colmax, *colmin);
             vec_colscale = colmax;
 
             invertAndRound(do_bitshifting, *vec_colscale);
@@ -195,6 +188,18 @@ void GeoStochScaler::scale()
    PIPSdebugMessage("rowratio after scaling %f \n", xrowratio);
    PIPSdebugMessage("colratio after scaling %f \n", xcolratio);
 #endif
+}
+
+/** apply an approximation to the geometric mean to Vector maxvec:
+ * Multiply maxvec and minvec componentwise and take the square root of the result.
+ * Return result in maxvec.
+ * */
+void GeoStochScaler::applyGeoMean(StochVector& maxvec, StochVector& minvec)
+{
+   assert( maxvec.n == minvec.n );
+
+   maxvec.componentMult(minvec);
+   maxvec.applySqrt();
 }
 
 GeoStochScaler::~GeoStochScaler()
