@@ -85,11 +85,7 @@ class sData : public QpGenData {
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   // nnz in Schur complement signified by given vector
-  static int getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks);
-
-  // nnz of Schur complement diagonal blocks induced by linking constraints
-  static int getSchurCompDiagBlockNnz(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths, int bordersize,
-        int row, int& blockStartrow);
+  static int getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths);
 
   // number of sparse 2-link rows
   static int n2linksRows(const std::vector<int>& linkStartBlockLengths);

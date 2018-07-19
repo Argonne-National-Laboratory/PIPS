@@ -70,76 +70,47 @@ int appendDiagBlocks(const std::vector<int>& linkStartBlocks, const std::vector<
    return rownnz;
 }
 
-int sData::getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks)
-{
-   const size_t size = linkStartBlocks.size();
 
-   size_t i = 0;
+int sData::getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths)
+{
+   const size_t nRows = linkStartBlocks.size();
+   const size_t nBlocks = linkStartBlockLengths.size();
+   size_t nRowsSparse = 0;
+
    int nnz = 0;
-   int n2linksPrev = 0;
 
    // main loop, going over all 2-link blocks
-   while( i < size && linkStartBlocks[i] >= 0 )
+   for( size_t block = 0; block < nBlocks; ++block )
    {
-      const int block = linkStartBlocks[i];
-      int n2links = 0;
+      if( linkStartBlockLengths[block] == 0 )
+         continue;
 
-      // get number of 2-links starting in this block
-      for( ; i < size && linkStartBlocks[i] == block; i++ )
-         n2links++;
+      const int n2links = linkStartBlockLengths[block];
+      const int nextlength = linkStartBlockLengths[block + 1];
+
+      assert(n2links > 0);
+      assert(nextlength >= 0);
+      assert(block != linkStartBlockLengths.size() - 2 || nextlength == 0);
+
+      nRowsSparse += size_t(n2links);
 
       // diagonal block
       nnz += nnzTriangular(n2links);
 
       // (one) off-diagonal block
-      nnz += n2links * n2linksPrev;
-
-      n2linksPrev = n2links;
+      nnz += n2links * nextlength;
    }
 
    // any rows left?
-   if( i < size )
+   if( nRowsSparse < nRows )
    {
-      const size_t nRows = size - i;
-      nnz += nnzTriangular(nRows) + nRows * i;
+      const size_t nRowsDense = nRows - nRowsSparse;
+      nnz += nnzTriangular(nRowsDense) + nRowsDense * nRowsSparse;
    }
 
    return nnz;
 }
 
-int sData::getSchurCompDiagBlockNnz(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths, int bordersize,
-                                          int row, int& blockStartrow)
-{
-   assert(row >= blockStartrow && blockStartrow >= 0 && bordersize >= 0);
-
-   const int block = linkStartBlocks[row];
-   const int currlength = (block >= 0) ? linkStartBlockLengths[block] : bordersize;
-
-   assert(currlength >= 1);
-
-   int nnz = currlength - (row - blockStartrow);
-
-   // with offdiagonal block?
-   if( block >= 0 )
-   {
-      // (one) off-diagonal block
-      const int nextlength = linkStartBlockLengths[block + 1];
-
-      assert(nextlength >= 0);
-      assert(block != int(linkStartBlockLengths.size()) - 2 || nextlength == 0);
-
-      nnz += nextlength;
-
-      // add dense border part
-      nnz += bordersize;
-
-      // update blockStartrow?
-      if( row + 1 == blockStartrow + currlength )
-         blockStartrow = row + 1;
-   }
-
-   return nnz;
-}
 
 int sData::n2linksRows(const std::vector<int>& linkStartBlockLengths)
 {
@@ -772,10 +743,10 @@ int sData::getSchurCompMaxNnz()
    nnz += mzl * n0;
 
    // add linking equality parts
-   nnz += getSchurCompMaxNnz(linkStartBlocksA);
+   nnz += getSchurCompMaxNnz(linkStartBlocksA, linkStartBlockLengthsA);
 
    // add linking inequality parts
-   nnz += getSchurCompMaxNnz(linkStartBlocksC);
+   nnz += getSchurCompMaxNnz(linkStartBlocksC, linkStartBlockLengthsC);
 
    // add linking mixed parts todo
    nnz += myl * mzl;
