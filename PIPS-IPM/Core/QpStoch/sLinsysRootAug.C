@@ -89,30 +89,29 @@ sLinsysRootAug::createKKT(sData* prob)
 DoubleLinearSolver*
 sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
-  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
-  if( hasSparseKkt )
-  {
-     int todo;
-    SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
-    // DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
+   if( hasSparseKkt )
+   {
+      if( 0 == myRank )
+         cout << "Using Pardiso for summed Schur complement - sLinsysRootAug" << endl;
 
-    if( 0 == myRank )
-       cout << "Using Pardiso for summed Schur complement - sLinsysRootAug"<< endl;
-    return new PardisoIndefSolver(kktmat);
-  }
-  else
-  {
-     if( 0 == myRank )
-        cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug"<< endl;
+      SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
 
-     DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
+      return new PardisoIndefSolver(kktmat);
+   }
+   else
+   {
+      if( 0 == myRank )
+         cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug" << endl;
 
-     return new DeSymIndefSolver(kktmat);
-     //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
-     //return new DeSymPSDSolver(kktmat);
-     //return new PardisoSolver(kktmat);
-  }
+      DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
+
+      return new DeSymIndefSolver(kktmat);
+      //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
+      //return new DeSymPSDSolver(kktmat);
+      //return new PardisoSolver(kktmat);
+   }
 }
 
 #ifdef TIMING
@@ -903,32 +902,37 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       C.matTransDinvMultMat(*zDiag, &CtDC);
       assert(CtDC->size() == locnx);
 
+      assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
+
       //aliases for internal buffers of CtDC
       SparseSymMatrix* CtDCsp = dynamic_cast<SparseSymMatrix*>(CtDC);
-      int* krowCtDC = CtDCsp->krowM();
-      int* jcolCtDC = CtDCsp->jcolM();
-      double* dCtDC = CtDCsp->M();
-
-      assert(subMatrixIsOrdered(krowCtDC, jcolCtDC, 0, locnx));
+      const int* krowCtDC = CtDCsp->krowM();
+      const int* jcolCtDC = CtDCsp->jcolM();
+      const double* dCtDC = CtDCsp->M();
 
       for( int i = 0; i < locnx; i++ )
       {
          const int pend = krowCtDC[i + 1];
          for( int p = krowCtDC[i]; p < pend; p++ )
          {
-            std::cout << "implement me " << std::endl;
-            assert(0);
+            int todo;
+            const int col = jcolCtDC[p];
 
-#if 0
-            j = jcolCtDC[p];
-            dKkt[i][j] -= dCtDC[p];
-#endif
+            if( col >= i )
+            {
+               // get start position of dense kkt block
+               const int blockStart = krowKkt[i];
+               assert(col < locnx && jcolKkt[blockStart + col - i] == col);
+
+               MKkt[blockStart + col - i] -= dCtDC[p];
+            }
          }
       }
    } //~end if locmz>0
-     /////////////////////////////////////////////////////////////
-     // update the KKT with At (symmetric update forced)
-     /////////////////////////////////////////////////////////////
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with At (symmetric update forced)
+   /////////////////////////////////////////////////////////////
    if( locmy > 0 )
    {
       SparseGenMatrix& At = prob->getLocalB().getTranspose(); // yes, B
@@ -1098,27 +1102,30 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
    if(locmz>0) {
      SparseGenMatrix& C = prob->getLocalD();
      C.matTransDinvMultMat(*zDiag, &CtDC);
+
      assert(CtDC->size() == locnx);
+     assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
 
      //aliases for internal buffers of CtDC
      SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
      int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();
 
-     assert(subMatrixIsOrdered(krowCtDC, jcolCtDC, 0, locnx));
+     for( int i = 0; i < locnx; i++ )
+     {
+       pend = krowCtDC[i + 1];
+       for( p = krowCtDC[i]; p < pend; p++ )
+       {
+          j = jcolCtDC[p];
 
-     for(int i=0; i<locnx; i++) {
-       pend = krowCtDC[i+1];
-       for(p=krowCtDC[i]; p<pend; p++) {
-         j = jcolCtDC[p];
+#ifdef DENSE_USE_HALF
+          if( j <= i )
+             dKkt[i][j] -= dCtDC[p];
+#else
+          dKkt[i][j] -= dCtDC[p];
+#endif
 
- #ifdef DENSE_USE_HALF
-         if( j > i )
-            break;
- #endif
-
-         dKkt[i][j] -= dCtDC[p];
-          //printf("%d %d %f\n", i,j,dCtDC[p]);
-       }
+            //printf("%d %d %f\n", i,j,dCtDC[p]);
+        }
      }
    } //~end if locmz>0
    /////////////////////////////////////////////////////////////
