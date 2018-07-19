@@ -17,13 +17,17 @@ StochPresolverBase::StochPresolverBase(PresolveData& presData)
    setCurrentPointersToNull();
 
    if(presData.redRowA->vecl != NULL)
+   {
       currEqRhsAdaptionsLink = new double[presData.redRowA->vecl->n];
+      resetEqRhsAdaptionsLink();
+   }
    else
       currEqRhsAdaptionsLink = NULL;
    if(presData.redRowC->vecl != NULL)
    {
       currInEqRhsAdaptionsLink = new double[presData.redRowC->vecl->n];
       currInEqLhsAdaptionsLink = new double[presData.redRowC->vecl->n];
+      resetIneqRhsAdaptionsLink();
    }
    else
    {
@@ -49,6 +53,10 @@ StochPresolverBase::~StochPresolverBase()
    delete[] currInEqLhsAdaptionsLink;
 }
 
+/**
+ * In the dynamic sparse storage, swap entry (rowidx, jcolM[indexK]) with the last entry in this row.
+ * Decrement rowptr[rowidx].end by one. Decrement rowend and indexK. Increment currRedRow[rowidx] and redCol[colIdx].
+ */
 void StochPresolverBase::updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims)
 {
    double* redRow = currRedRow->elements();
@@ -65,6 +73,11 @@ void StochPresolverBase::updateAndSwap( SparseStorageDynamic* storage, int rowid
    nelims++;
 }
 
+/**
+ * Update the linking parts of nnzRow-Vectors using the vectors presData.redRowA->vecl and presData.redRowc->vecl.
+ * Update the linking parts of the rhs (and lhs)-vectors using the vectors currEqRhsAdaptionsLink,
+ * currInEqRhsAdaptionsLink and currInEqLhsAdaptionsLink.
+ */
 void StochPresolverBase::updateRhsNRowLink()
 {
    int myRank;
@@ -165,6 +178,7 @@ void StochPresolverBase::allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptio
    baseVector.axpy(1.0, adaptionsVector);
 }
 
+/** Add the MTRYENTRY (rowidx, colidx) to removedEntries and increment localNelims */
 void StochPresolverBase::storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type)
 {
    assert( (int)removedEntries.size() == localNelims );
@@ -184,6 +198,7 @@ void StochPresolverBase::storeRemovedEntryIndex(int rowidx, int colidx, int it, 
 void StochPresolverBase::updateTransposed(StochGenMatrix& matrix)
 {
    // update matrix' using removedEntries, linkVarsBlocks, childBlocks
+   // todo ? update Blmat blocks as well (used in tiny entries)
 
    if( linkVarsBlocks[0].start != linkVarsBlocks[0].end )
    {
@@ -770,7 +785,7 @@ bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colA
 
 bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type)
 {
-   cout<<"colAdaptBlock.size(): "<<colAdaptBlock.size()<<endl;
+   //cout<<"colAdaptBlock.size(): "<<colAdaptBlock.size()<<endl;
    assert(currBlmat != NULL);
    if( system_type == EQUALITY_SYSTEM )
    {
