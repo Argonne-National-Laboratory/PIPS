@@ -48,6 +48,8 @@ public:
 
   /* outputs the matrix (i,j,value) in a text file: works with one process only */
   void toTextFile() const;
+
+  int get_my_rank() const { return my_rank_; }
 protected:
   MPI_Comm comm_;
   int nranks_;
@@ -70,7 +72,8 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  DistributedMatrixEx1 dmat(800, 15, MPI_COMM_WORLD);
+  DistributedMatrixEx1 dmat(168, 54, MPI_COMM_WORLD);
+  //DistributedMatrixEx1 dmat(168, 260, MPI_COMM_WORLD);
   dmat.distributedAssemble_scheme1();
 
   dmat.toTextFile();
@@ -87,7 +90,8 @@ int main(int argc, char* argv[])
     vec[i]=1.0;
   mumps->solve(vec);
 
-  printf("vec %g %g\n", vec[0], vec[1]);
+  if(dmat.get_my_rank()==0)
+    printf("vec %g %g\n", vec[0], vec[1]);
   delete mumps;
 
   MPI_Finalize();

@@ -32,3 +32,4 @@ LIBOTHERS="-lgomp -lpthread -lm -ldl"
 mpicxx mumps_test_driver.cpp -m64 -lmpi -lmpifort -DWITHOUT_PIPS  $INCL $LIBS  MumpsSolver.o -qopenmp -ldmumps $LIBBLAS $LIBPAR -lmumps_common -lparmetis -lmetis -lpord -lmumps_common ${LIBOTHERS}  -lifcore -lmpi -lmpifort
 
 #also export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/tce/packages/mkl/mkl-2018.0/lib/
+
