@@ -13,4 +13,4 @@ rm *.o a.out
 
 mpicxx -c -DWITHOUT_PIPS  $INCL MumpsSolver.C 
 
-mpicxx mumps_test_driver.cpp -DWITHOUT_PIPS  $INCL $LIBS  MumpsSolver.o -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi  -fopenmp -lmpifort -lpord -lmumps_common  -lscalapack  -lrefblas  -ltmg -lreflapack 
+mpicxx mumps_test_driver.cpp -O2 -DWITHOUT_PIPS  $INCL $LIBS  MumpsSolver.o -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi  -fopenmp -lmpifort -lpord -lmumps_common  -lscalapack  -lrefblas  -ltmg -lreflapack 

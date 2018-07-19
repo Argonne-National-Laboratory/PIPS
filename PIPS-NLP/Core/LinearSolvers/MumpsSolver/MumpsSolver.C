@@ -102,6 +102,9 @@ bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* loci
 int MumpsSolver::matrixChanged()
 {
   mumps_->n = n_;
+
+  //printf("[1] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
+
   mumps_->job = 1; //perform the analysis
 
   //ICNTL(28) determines whether a sequential (=1) or a parallel analysis (=2) is performed. For the latter case
@@ -126,6 +129,11 @@ int MumpsSolver::matrixChanged()
   //petra: give different performance
   mumps_->icntl[13-1] = 1;
 
+  // CNTL(4) determines the threshold for static pivoting. 0.0 will activate it and MUMPS computes the threshold
+  // automatically. Negative values will disable it (default). 
+  // static pivoting requires iterative refinement.
+  //mumps_->cntl[4-1] = 0.0;
+
   double tm = MPI_Wtime();
 
   dmumps_c(mumps_);
@@ -138,6 +146,20 @@ int MumpsSolver::matrixChanged()
   if(gMUMPSStatsOn)
     if(my_rank_==0) printf("MUMPS analysis phase took %g seconds.\n", tm);
 
+  //printf("[2] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
+
+  // INFOG(7) - after analysis: The ordering method actually used. The returned value will depend on
+  // the type of analysis performed, e.g. sequential or parallel (see INFOG(32)). Please refer to
+  // ICNTL(7) and ICNTL(29) for more details on the ordering methods available in sequential and
+  // parallel analysis respectively.
+  // 1 scotch, 2 metis
+  if(gMUMPSStatsOn)
+    if(my_rank_==0) printf("MUMPS ordering actually used %d\n", mumps_->infog[7-1]);
+  
+  // INFOG(32) - after analysis: The type of analysis actually done (see ICNTL(28)). 
+  // 1 sequential, 2 parallel
+  if(gMUMPSStatsOn)
+    if(my_rank_==0) printf("MUMPS ordering parallelism %d\n", mumps_->infog[32-1]);
   //
   //factorize
   //
@@ -150,7 +172,7 @@ int MumpsSolver::matrixChanged()
   if(error != 0) {
     if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
   }
-
+  //printf("[3] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
   saveOrderingPermutation();
 
   //CNTL(1) is the relative threshold for numerical pivoting.
@@ -196,6 +218,9 @@ int MumpsSolver::matrixChanged()
   if(gMUMPSStatsOn)
     if(my_rank_==0) printf("MUMPS numerical factorization took %g seconds.\n", tm);
 
+  if(gMUMPSStatsOn)
+    if(my_rank_==0) printf("Order of the largest frontal matrix: %d\n", mumps_->infog[11-1]);
+
   int negEigVal = mumps_->infog[12-1];
 
   if(gMUMPSStatsOn) if(my_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
@@ -230,7 +255,14 @@ void  MumpsSolver::solve ( double* vec )
 
 #define MAX_ITER_REFIN 3
 
+  //iterative refinement
   mumps_->icntl[10-1] = MAX_ITER_REFIN; //maximum number of iterative refinements
+
+  // compute main statistics on the error: 0 disabled, 1 full stats (very expensive), 2 main stats
+  // in addition to stats computed for 2 (see below), a value of 1 also computes
+  // an estimate for the (forward) error in the solution in RINFOG(9), and condition numbers for the linear 
+  // system in RINFOG(10) and RINFOG(11) are also returned
+  mumps_->icntl[11-1] = 2;
 
   double t = MPI_Wtime();
 
@@ -246,8 +278,26 @@ void  MumpsSolver::solve ( double* vec )
   if(gMUMPSStatsOn)
     if(my_rank_==0) printf("MUMPS solve  took %g seconds.\n", t);
 
-  //!iterative refinement ICNTL(10)
-  //!error analysis ICNTL(11)
+  //
+  //error analysis ICNTL(11)
+  //
+  //the infinite norm of the matrix
+  double Ainfnrm = mumps_->rinfog[4-1];
+
+  //the infinite norm of the computed solution
+  double xinfnrm = mumps_->rinfog[5-1];
+
+  //the scaled residual
+  double relresid = mumps_->rinfog[6-1];
+
+  //componentwise backward error estimates
+  double omega1=mumps_->rinfog[7-1], omega2=mumps_->rinfog[8-1];
+
+  if(gMUMPSStatsOn)
+    if(my_rank_==0) 
+      printf("MUMPS solution: backward errors %g %g  scaled resid %g Ainfnorm %g  xinfnorm %g.\n", 
+	     omega1, omega2, relresid, Ainfnrm, xinfnrm);
+
 }
 
 #ifndef WITHOUT_PIPS

@@ -1,12 +1,14 @@
+clear all
+
 A = load('matrix.txt');
-n = A(1,1); nnz=A(1,2);
+n = A(1,1); nonz=A(1,2);
 A = A(2:end,:);
 
-[n nnz]
+[n nonz]
 
 close all
 
-if(nnz~=size(A,1)); error('nnz does not match'); end
+if(nonz~=size(A,1)); error('nnz does not match'); end
 im = max(A(:,1));
 if(im<0 || im>=n); error('size does not match i indexes'); end
 jm = max(A(:,2));
@@ -14,12 +16,13 @@ if(jm<0 || jm>=n); error('size does not match j indexes'); end
 
 i=A(:,1)+1; j=A(:,2)+1; els=A(:,3);
 M0= sparse(i,j,els);
-M=0.5*(M0+M0');
-spy(M)
+M=(tril(M0,-1)+M0');
+figure;spy(M)
 tic;
 %x = M\ones(n,1);
 [L,D,P,S] = ldl(M, 0.01, 'lower', 'vector');
 figure; spy(L)
+nnz(L)
 toc
 
 tic;
@@ -29,14 +32,15 @@ toc
 
 tic;
 [L,D,P] = ldl(M);
-%figure; spy(L)
+figure; spy(L)
 toc
 
 tic;
 x=M\ones(n,1);
-x(1:2)
-fprintf('solve error %g\n', norm(M*x-ones(n,1)));
 toc;
+fprintf('solve error %g\n', norm(M*x-ones(n,1)));
+fprintf(' vec %g %g\n', x(1), x(2));
+
 figure;spy(P'*M*P)
 
 
