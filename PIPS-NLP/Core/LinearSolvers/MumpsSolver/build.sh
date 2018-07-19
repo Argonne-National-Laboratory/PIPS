@@ -7,10 +7,10 @@ rm *.o a.out
 #
 
 #linux with gcc, netlib ref blas, mpich
-#LIBS="-L/home/petra1/work/projects/pips/PIPS/ThirdPartyLibs/MUMPS/lib/ -L/home/petra1/work/installs/metis-5.1.0/_installation/lib/ -L/home/petra1/work/installs/scalapack_installer/install/lib"
+#LIBS="-L/home/petra1/work/projects/pips/PIPS/ThirdPartyLibs/MUMPS/lib/ -L/home/petra1/work/installs/parmetis-4.0.3/petra_install/lib -L/home/petra1/work/installs/parmetis-4.0.3/metis/lib -L/home/petra1/work/installs/scalapack_installer/install/lib"
 #INCL="-I/home/petra1/work/projects/pips/PIPS/ThirdPartyLibs/MUMPS/include"
 #mpicxx -c -DWITHOUT_PIPS  $INCL MumpsSolver.C
-#mpicc mumps_test_driver.cpp -DWITHOUT_PIPS  $INCL $LIBS  MumpsSolver.o -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi  -fopenmp -lmpifort -lpord -lmumps_common  -lscalapack  -lrefblas  -ltmg -lreflapack 
+#mpicxx mumps_test_driver.cpp -DWITHOUT_PIPS  $INCL $LIBS  MumpsSolver.o -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi  -fopenmp -lmpifort -lpord -lmumps_common  -lscalapack  -lrefblas  -ltmg -lreflapack 
 
 #linux cluster with intel mkl
 LIBS="-L/g/g92/petra1/MUMPS_5.1.2/lib -L/lib -L/g/g92/petra1/parmetis-4.0.3/petra_install/lib  -L/g/g92/petra1/parmetis-4.0.3/build/Linux-x86_64/libmetis -L/usr/tce/packages/mkl/mkl-2018.0/mkl/lib/intel64"
