@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "mpi.h"
+#include <omp.h>  
 #include "MumpsSolver.h"
 
 #include <string>
@@ -12,7 +13,7 @@ class DistributedMatrixEx1
 public:
   DistributedMatrixEx1(int num_blocks, int block_size, MPI_Comm comm) 
     : comm_(comm), loc_i(NULL), loc_j(NULL), loc_A(NULL), 
-      num_blocks_(num_blocks), block_size_(block_size)
+      num_blocks_(num_blocks), block_size_(block_size), verbosity_(0)
   {
     int half_num_blocks = (int) num_blocks/2;
     diagblock_size_ = half_num_blocks*block_size_; // this is the block on the diagonal in the middle of the matrix; it is a diagonal
@@ -50,6 +51,7 @@ public:
   void toTextFile() const;
 
   int get_my_rank() const { return my_rank_; }
+  void setVerbosity(int verb) { verbosity_ = verb; }
 protected:
   MPI_Comm comm_;
   int nranks_;
@@ -58,6 +60,8 @@ protected:
   int num_blocks_;
   int block_size_;
   int diagblock_size_;
+  /* 0 nothing; 1 only errors; 2 = 1+ warnings; 3 = 2+ summary stats; > 3 = 3+detailed stats */
+  int verbosity_;
 public:
   long long n_;
   long long nnz_, loc_nnz_;
@@ -72,28 +76,68 @@ int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
 
-  DistributedMatrixEx1 dmat(168, 54, MPI_COMM_WORLD);
+  int verbosity = 3;
+  int nMatBlocks=10, nMatBlockSize=200;
+
+  MPI_Comm globlComm = MPI_COMM_WORLD;
+  MPI_Comm mumpsComm = MPI_COMM_WORLD;
+  DistributedMatrixEx1 dmat(nMatBlocks, nMatBlockSize, mumpsComm);
+  dmat.setVerbosity(verbosity);
   //DistributedMatrixEx1 dmat(168, 260, MPI_COMM_WORLD);
   dmat.distributedAssemble_scheme1();
 
   dmat.toTextFile();
-
-  MumpsSolver* mumps = new MumpsSolver(dmat.n_, MPI_COMM_WORLD, MPI_COMM_WORLD);
   dmat.convertToFortran();
+
+  MumpsSolver* mumps = new MumpsSolver(dmat.n_, globlComm, mumpsComm);
+  //mumps->setMumpsVerbosity(1);  
   mumps->setLocalEntries(dmat.nnz_, dmat.loc_nnz_, dmat.loc_i, dmat.loc_j, dmat.loc_A);
+
+  double tmStart = MPI_Wtime();
   mumps->matrixChanged();
+  double tmFact = MPI_Wtime() - tmStart;
 
   //mumps->saveOrderingPermutation();
 
   double vec[dmat.n_];
   for(int i=0; i<dmat.n_; i++)
     vec[i]=1.0;
-  mumps->solve(vec);
 
-  if(dmat.get_my_rank()==0)
-    printf("vec %g %g\n", vec[0], vec[1]);
+  tmStart = MPI_Wtime();
+  mumps->solve(vec);
+  double tmSolv = MPI_Wtime() - tmStart;
+
+  //align the output
+  MPI_Barrier(globlComm);
+
+  if(dmat.get_my_rank()==0 && verbosity>3)
+    printf("sol %g %g\n", vec[0], vec[1]);
   delete mumps;
 
+  //////////////////////
+  // stats
+  /////////////////////
+  int nGloblProcs; MPI_Comm_size(globlComm, &nGloblProcs);
+  int nMumpsProcs; MPI_Comm_size(mumpsComm, &nMumpsProcs);
+  int nNumThreads = omp_get_num_threads();
+  int nNumThreadsMin=0, nNumThreadsMax=0;
+  MPI_Reduce(&nNumThreads, &nNumThreadsMax, 1, MPI_INT, MPI_MAX, 0, globlComm);
+  MPI_Reduce(&nNumThreads, &nNumThreadsMin, 1, MPI_INT, MPI_MIN, 0, globlComm);
+
+  if(dmat.get_my_rank()==0) {
+    if(verbosity>=3) {
+      printf("Used MPIProcs: global %d mumps %d. Threads %d. Matrix was of size %d (%d blocks of size %d).\n", 
+	     nGloblProcs, nMumpsProcs, nNumThreads, dmat.n_, nMatBlocks, nMatBlockSize);
+      printf("Factorization took %g sec. Solve took %g sec\n", tmFact, tmSolv);
+    }
+
+    if(verbosity>=2)
+      if(nNumThreads!=nNumThreadsMax || nNumThreads!=nNumThreadsMin)
+	printf("However, different numbers of threads was used across mpi processes: min %d max %d.\n",
+	       nNumThreadsMin, nNumThreadsMax);
+    
+  }
+  
   MPI_Finalize();
 
   return 0;
@@ -109,7 +153,8 @@ DistributedMatrixEx1::~DistributedMatrixEx1()
 void DistributedMatrixEx1::toTextFile() const
 {
   if(nranks_!=1) {
-    printf("Saving the matrix to a text file works only with one MPI process only\n");
+    if(verbosity_>3)
+      printf("Saving the matrix to a text file works only with one MPI process only\n");
     return;
   }
   std::string file = "matrix.txt";
@@ -121,26 +166,28 @@ void DistributedMatrixEx1::toTextFile() const
     }
     fclose(f);
   } else {
-    printf("Could not open file %s for writing\n", file.c_str());
+    if(verbosity_>0) printf("Could not open file %s for writing\n", file.c_str());
   }
 }
 
 void DistributedMatrixEx1::distributedAssemble_scheme1()
 {
-  if(my_rank_==0) printf("Dealing with %d nnz on %d procs\n", nnz_, nranks_);
+  if(my_rank_==0) 
+     if(verbosity_>3) printf("Dealing with %d nnz on %d procs\n", nnz_, nranks_);
   //nnz per rank
   long long nnzperrank = nnz_ / nranks_;
 
-  if(my_rank_==0) printf("approx nnz %d per rank\n", nnzperrank);
+  if(my_rank_==0) if(verbosity_>3) printf("approx nnz %d per rank\n", nnzperrank);
 
   long long remainder = nnz_ - nranks_*nnzperrank;
-  printf("remainder %d\n", remainder);
+  //printf("remainder %d\n", remainder);
   long long loc_nz_start = my_rank_*nnzperrank + (my_rank_<remainder?my_rank_:remainder);
   int next_rank = my_rank_+1;
   long long loc_nz_end = next_rank*nnzperrank + (next_rank<remainder?next_rank:remainder)-1;
 
   loc_nnz_ = loc_nz_end-loc_nz_start+1;
-  printf("proc %d starts at %d-th nnz and ends at %d-th nnz for a total of %d nnz\n", my_rank_, loc_nz_start, loc_nz_end, loc_nnz_);
+  if(verbosity_>3) 
+    printf("proc %d starts at %d-th nnz and ends at %d-th nnz for a total of %d nnz\n", my_rank_, loc_nz_start, loc_nz_end, loc_nnz_);
 
   loc_i = new int[loc_nnz_];
   loc_j = new int[loc_nnz_];
@@ -248,6 +295,6 @@ void DistributedMatrixEx1::distributedAssemble_scheme1()
   }
   assert(it_nz==nnz_);
 
-  printf("Created a matrix of size %d with nnz %d (local nnz %d)\n", n_, nnz_, loc_nnz_);
+  if(verbosity_>3) printf("Created a matrix of size %d with nnz %d (local nnz %d)\n", n_, nnz_, loc_nnz_);
 
 };

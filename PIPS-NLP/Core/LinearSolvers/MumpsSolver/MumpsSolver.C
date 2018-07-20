@@ -45,8 +45,6 @@ MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm, MPI_C
   mumps_->icntl[20  -1] = 0; //the right-hand side is in dense format in the structure component
   mumps_->icntl[21  -1] = 0; // the solution vector is assembled and stored in the structure component RHS
   //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
-
-
 }
 
 MumpsSolver::~MumpsSolver()

@@ -59,13 +59,6 @@ public:
     return (MUMPS_INT) MPI_Comm_c2f(c_mpiComm);
   };
 
-
-protected:
-  //mumps data structure
-  DMUMPS_STRUC_C* mumps_;
-  long long n_;
-  int my_rank_;
- protected:
   /* 0  - no output
    * 1  - error messages only
    * 2  - 1+warning messages
@@ -75,6 +68,13 @@ protected:
    * Method to be called only after MUMPS has been initialized (JOB=-1)
    */
   void setMumpsVerbosity(int level);
+protected:
+  //mumps data structure
+  DMUMPS_STRUC_C* mumps_;
+  long long n_;
+  int my_rank_;
+ protected:
+
 
 }; // end of class def
 #endif
