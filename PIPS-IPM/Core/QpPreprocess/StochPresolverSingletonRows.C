@@ -5,6 +5,7 @@
  *      Author: bzfuslus
  */
 
+//#define PIPS_DEBUG
 #include "StochPresolverSingletonRows.h"
 
 
@@ -25,9 +26,11 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
+#ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"Before singleton Row Presolving:"<<endl;
+      cout<<"--- Before singleton Row Presolving:"<<endl;
    countRowsCols();
+#endif
 
    indivObjOffset = 0.0;
    nelims = 0;
@@ -37,20 +40,8 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    presData.resetRedCounters();
    newSREq = initSingletonRows(EQUALITY_SYSTEM);
    synchronize(newSREq);
-   if( myRank == 0 ) cout<<"Found "<<newSREq<<" singleton rows in equality system A."<<endl;
-
-   // only for printing: remove afterwards
-/*   if(1)
-   {
-      for(int i=0; i<presData.getNumberSR(); i++)
-         presData.setSingletonRow(i, -1);
-      presData.clearSingletonRows();
-      newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
-      synchronize(newSRIneq);
-      if( myRank == 0 ) cout<<"Found "<<newSRIneq<<" singleton rows in inequality system C."<<endl;
-      return true;
-   }*/
-   // end of special block.
+   if( myRank == 0 )
+      PIPSdebugMessage("Found %d singleton rows in equality system A. \n", newSREq);
 
    int iter = 0;
    int globalIter = 0;
@@ -77,7 +68,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
          synchronizeSum(newSREq, newSRIneq);
 
          if( myRank == 0 )
-            cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A, "<<newSRIneq<<" in C."<<endl;
+            PIPSdebugMessage("Found new singleton rows that were just created: %d in A and %d in C \n", newSREq, newSRIneq);
          iter++;
       }
       newSREq = 0;
@@ -86,18 +77,19 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
          newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
          synchronize(newSRIneq);
          if( myRank == 0 )
-            cout<<"Found "<<newSRIneq<<" singleton rows in C."<<endl;
+            PIPSdebugMessage("Found %d singleton rows in inequality system C. \n", newSRIneq);
       }
       while( newSRIneq > 0 && iter < maxIterSR)
       {
-         if( myRank == 0 ) cout<<"SR(Inequality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+         if( myRank == 0 )
+            PIPSdebugMessage("SR(Inequality) loop at iter %d and globalIter %d \n", iter, globalIter);
          if( globalIter > 0 )
          {
             newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
             // only for debugging:
             synchronize(newSRIneq);
             if( myRank == 0 )
-               cout<<"Found "<<newSRIneq<<" singleton rows in C."<<endl;
+               PIPSdebugMessage("Found %d singleton rows in inequality system C. \n", newSRIneq);
          }
          // main method:
          possibleFeasible = doSingletonRowsC(newSREq, newSRIneq);
@@ -113,7 +105,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
          synchronizeSum(newSREq, newSRIneq);
 
          if( myRank == 0 )
-            cout<<"Found new singleton rows that were just created: "<<newSREq<<" in A (at most), "<<newSRIneq<<" in C."<<endl;
+            PIPSdebugMessage("Found new singleton rows that were just created: %d in A (at most) and %d in C \n", newSREq, newSRIneq);
          iter++;
       }
       newSRIneq = 0;
@@ -124,11 +116,13 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
    if( myRank == 0 )
-   {
       cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
-      cout<<"After singleton Row Presolving:"<<endl;
-   }
+
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout<<"--- After singleton Row Presolving:"<<endl;
    countRowsCols();
+#endif
 
    return true;
 }
@@ -174,10 +168,8 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 
          for( int i = 0; i < nnzRowLink->n; i++ )
             if( nnzRowLink->elements()[i] == 1.0 )
-            {
                nSRLink++;
-            }
-         cout<<"There are "<<nSRLink<<" singleton rows among the linking constraints of A."<<endl;
+         PIPSdebugMessage("There are %d singleton rows among the linking constraints of A. \n", nSRLink);
       }
    }
    else
@@ -207,10 +199,8 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 
          for( int i = 0; i < nnzRowLink->n; i++ )
             if( nnzRowLink->elements()[i] == 1.0 )
-            {
                nSRLink++;
-            }
-         cout<<"There are "<<nSRLink<<" singleton rows among the linking constraints of C."<<endl;
+         PIPSdebugMessage("There are %d singleton rows among the linking constraints of C. \n", nSRLink);
       }
    }
 
@@ -416,13 +406,13 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
                // test if new bounds are tightening: add to newBoundsParent
                if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
                {
-                  cout<<"New bounds tighten bounds of variable "<<colIdx<<endl;
+                  PIPSdebugMessage("New bounds tighten bounds of variable %d \n", colIdx);
                   // store them to adapt the bounds on all processes later
                   if( !storeNewBoundsParent(colIdx, newxlow, newxupp) )
                      return false;
                }
                else
-                  cout<<"New bounds are redundant for variable "<<colIdx<<endl;
+                  PIPSdebugMessage("New bounds are redundant for variable %d \n", colIdx);
 
                // set a_ik=0.0, nRow--, redCol++
                clearRow(*currAmat, rowIdx);
@@ -442,7 +432,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildBmat(int it, std::vector<
       int& newSR, SystemType system_type)
 {
    assert(currBmat != NULL);
-   cout<<"procSingletonRowChildBmat for child "<<it<<" and system_type "<<system_type<<endl;
+   PIPSdebugMessage("procSingletonRowChildBmat for child %d and system_type %d \n", it, system_type);
    for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
       const int rowIdx = presData.getSingletonRow(i);
@@ -523,12 +513,12 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
          // test if new bounds are tightening:
          if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
          {
-            cout<<"New bounds tighten bounds of variable "<<colIdx<<endl;
+            PIPSdebugMessage("New bounds tighten bounds of variable %d \n", colIdx);
             // adapt immediately the variable bounds
             setNewBounds(colIdx, newxlow, newxupp, ixlow, xlow, ixupp, xupp);
          }
          else
-            cout<<"New bounds are redundant for variable "<<colIdx<<endl;
+            PIPSdebugMessage("New bounds are redundant for variable %d \n", colIdx);
 
          // set a_ik=0.0, nRow--, nCol--
          clearRow(*currBmat, rowIdx);
@@ -612,7 +602,8 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
    // test if they imply fixation
    else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
    {
-      cout<<"New bounds imply fixation of variable "<<colIdx<<" to "<<val<<endl;
+      PIPSdebugMessage("New bounds imply fixation of variable %d to %f \n", colIdx, val);
+
       // as in SR(equality), store them to remove the column later
       if( myRank == 0 )
       {
@@ -627,7 +618,8 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
       // test if new bounds are tightening: add to newBoundsParent
       if( newBoundsTightenOldBounds(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
       {
-         cout<<"New bounds tighten bounds of variable "<<colIdx<<endl;
+         PIPSdebugMessage("New bounds tighten bounds of variable  %d \n", colIdx);
+
          // store them to adapt the bounds on all processes later
          if( myRank == 0 )
          {
@@ -916,7 +908,6 @@ void StochPresolverSingletonRows::getValuesForSR(SparseStorageDynamic const & st
 
    assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
    assert(aik != 0.0);
-   //cout<<"a_ik = "<<aik<<" at ("<<rowIdx<<" ,"<<colIdx<<" )" <<endl;
 }
 
 XBOUNDS StochPresolverSingletonRows::getNewBoundsParent(int i) const

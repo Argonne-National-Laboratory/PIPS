@@ -886,22 +886,23 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
     //aliases for internal buffers of CtDC
     SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
     int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();
-    
-    assert(subMatrixIsOrdered(krowCtDC, jcolCtDC, 0, locnx));
 
-    for(int i=0; i<locnx; i++) {
-      pend = krowCtDC[i+1];
-      for(p=krowCtDC[i]; p<pend; p++) {
-        j = jcolCtDC[p];
+    for( int i = 0; i < locnx; i++ )
+    {
+      pend = krowCtDC[i + 1];
+      for( p = krowCtDC[i]; p < pend; p++ )
+      {
+         j = jcolCtDC[p];
 
 #ifdef DENSE_USE_HALF
-        if( j > i )
-           break;
+         if( j <= i )
+            dKkt[i][j] -= dCtDC[p];
+#else
+         dKkt[i][j] -= dCtDC[p];
 #endif
 
-        dKkt[i][j] -= dCtDC[p];
-	      //printf("%d %d %f\n", i,j,dCtDC[p]);
-      }
+           //printf("%d %d %f\n", i,j,dCtDC[p]);
+       }
     }
   } //~end if locmz>0
   /////////////////////////////////////////////////////////////

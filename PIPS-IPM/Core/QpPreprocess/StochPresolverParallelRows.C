@@ -5,6 +5,7 @@
  *      Author: bzfuslus
  */
 
+//#define PIPS_DEBUG
 #include "StochPresolverParallelRows.h"
 
 namespace rowlib
@@ -105,9 +106,11 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-//   if( myRank == 0 )
-//      cout<<"Before Parallel Row Presolving:"<<endl;
-//   countRowsCols();
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout<<"--- Before Parallel Row Presolving:"<<endl;
+   countRowsCols();
+#endif
 
    if( myRank == 0 ) cout<<"Start Parallel Row Presolving..."<<endl;
 
@@ -136,9 +139,6 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
             insertRowsIntoHashtable( rowsFirstHashTable, *norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, *normNnzRowC );
          assert( (int)rowsFirstHashTable.size() <= mA + norm_Cmat->m);
 
-         // Prints for visualization:
-         //std::cout << "unordered_set rowsFirstHashTable has size " << rowsFirstHashTable.size() << '\n';
-
          // Second Hashing: Per bucket, do Second Hashing:
          rowsSecondHashTable.clear();
          for( size_t i = 0; i < rowsFirstHashTable.bucket_count(); ++i )
@@ -154,19 +154,6 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
                      it->lengthB, it->colIndicesB, it->norm_entriesB);
             }
 
-            // Prints for visualization:
-            /*if( !rowsSecondHashTable.empty() )
-            {
-               std::cout << "unordered_set rowsSecondHashTable has size " << rowsSecondHashTable.size() << '\n';
-               for (size_t i=0; i<rowsSecondHashTable.bucket_count(); ++i)
-               {
-                  if( rowsSecondHashTable.bucket_size(i) > 0 )
-                  {
-                     std::cout << "bucket #" << i << " contains: "<<rowsSecondHashTable.bucket_size(i)<<" entries."<<endl;
-                  }
-               }
-            }*/
-
             // Compare the rows in the final (from second hash) bin:
             possibleFeasible = compareRowsInSecondHashTable(nRowElims, (int)i);
             if( !possibleFeasible )
@@ -180,15 +167,6 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
 
          // Objects created with new have to be deleted at the end of each child (norm_Amat etc)
          deleteNormalizedPointers((int)child_it, matrixA, matrixC);
-
-         /*std::cout << "unordered_set rows has size " << rows.size() <<" after deleting"<< '\n';
-         for (size_t i=0; i<rows.bucket_count(); ++i)
-         {
-             std::cout << "bucket #" << i << " contains: ";
-             for (boost::unordered_set<rowlib::row>::local_iterator it = rows.begin(i); it!=rows.end(i); ++it)
-                 std::cout << " colIndices:"<<it->colIndices[0];
-             std::cout << "\n";
-         }*/
       }
    }
 
@@ -244,12 +222,11 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    if( myRank == 0 )
       cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
 
-//   if( myRank == 0 )
-//      cout<<"After Parallel Row Presolving:"<<endl;
-//   countRowsCols();
-
-   //MPI_Barrier( MPI_COMM_WORLD);
-   //assert(0);
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout<<"--- After Parallel Row Presolving:"<<endl;
+   countRowsCols();
+#endif
 
    //countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
    //countDuplicateRows(matrixA, EQUALITY_SYSTEM);
@@ -425,16 +402,9 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
    }
    else  // set mA, nA correctly
    {
-      if( norm_Amat )
-      {
-         mA = norm_Amat->m;
-         nA = norm_Amat->n;
-      }
-      else
-      {
-         mA = 0;
-         nA = 0;
-      }
+      mA = (norm_Amat) ? norm_Amat->m : 0;
+      nA = (norm_Amat) ? norm_Amat->n : 0;
+
       setCPColumnChild(it);   // set pointers to currxlowChild etc.
       setCPColumnRoot();      // set pointers to currxlowParent etc. and to currRedColParent
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
@@ -795,7 +765,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                         || rowContainsSingletonVariableA->elements()[it2->id] != -1.0 )
                   {
                      // nearly parallel case 1:
-                     cout<<"Nearly Parallel Rows, case 1."<<endl;
+                     //PIPSdebugMessage("Nearly Parallel Rows, case 1. \n");
                      // make sure that a_r2 != 0, otherwise switch ids.
                      int id1 = it1->id;
                      int id2 = it2->id;
@@ -882,7 +852,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   }
                   else
                   {
-                     cout<<"Really Parallel Rows, case 1."<<endl;
+                     //PIPSdebugMessage("Really Parallel Rows, case 1. \n");
                      if( norm_b->elements()[it1->id] != norm_b->elements()[it2->id] )
                         return false;
                      // delete row2 in the original system:
@@ -899,7 +869,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                         || rowContainsSingletonVariableC->elements()[rowId2] != -1.0 )
                   {
                      // nearly parallel case 3:
-                     cout<<"Nearly Parallel Rows, case 3."<<endl;
+                     //PIPSdebugMessage("Nearly Parallel Rows, case 3. \n");
                      if( rowContainsSingletonVariableC->elements()[rowId1] != -1.0
                         && rowContainsSingletonVariableC->elements()[rowId2] != -1.0 )
                      {
@@ -909,7 +879,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   }
                   else
                   {
-                     cout<<"Really Parallel Rows, case 3."<<endl;
+                     //PIPSdebugMessage("Really Parallel Rows, case 3. \n");
                      // tighten bounds in original and normalized system:
                      if( !tightenOriginalBoundsOfRow1(rowId1, rowId2) )
                         return false;
@@ -933,7 +903,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   if( rowContainsSingletonVariableA->elements()[id1] == -1.0
                         && rowContainsSingletonVariableC->elements()[ineqRowId] == -1.0 )
                   {
-                     cout<<"Really Parallel Rows, case 2."<<endl;
+                     //PIPSdebugMessage("Really Parallel Rows, case 2. \n");
                      // check for infeasibility:
                      if( norm_iclow->elements()[ineqRowId] != 0.0
                            && norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
@@ -947,7 +917,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                         && rowContainsSingletonVariableC->elements()[ineqRowId] == -1.0 )
                   {
                      // nearly parallel case 2:
-                     cout<<"Nearly Parallel Rows, case 2."<<endl;
+                     //PIPSdebugMessage("Nearly Parallel Rows, case 2. \n");
                      // compute the new variable bound for x_id1:
                      const int singleColIdx = rowContainsSingletonVariableA->elements()[id1];
                      double coeff_singleton = getSingletonCoefficient(singleColIdx);
@@ -1334,10 +1304,7 @@ void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, Syst
             double* nRow = currNnzRow->elements();
             if( nRow[i] != 0.0 && nRow[i] == nRow[j] &&
                   compareCoefficients(*currAmat, i, j))
-            {
                duplicRow++;
-               //cout<<"Row "<<i<<" and "<<j<<" of B_0 are duplicate rows."<<endl;
-            }
          }
       }
       if(system_type==EQUALITY_SYSTEM)
@@ -1365,10 +1332,7 @@ void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, Syst
                double* nRow = currNnzRow->elements();
                if( nRow[i] != 0.0 && nRow[i] == nRow[j] &&
                      compareCoefficients(*currAmat, i, j) && compareCoefficients(*currBmat, i, j) )
-               {
                   duplicRow++;
-                  //cout<<"Row "<<i<<" and "<<j<<" of child "<<it<<" are duplicate rows."<<endl;
-               }
             }
          }
       }
@@ -1414,7 +1378,6 @@ void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, Syst
                {
                   duplicRow++;
                   nDuplicLinkRow++;
-                  //cout<<"Row "<<i<<" and "<<j<<" of Linking Constraints are duplicate rows."<<endl;
                }
             }
          }

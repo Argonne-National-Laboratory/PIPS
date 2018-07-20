@@ -5,6 +5,7 @@
  *      Author: bzfrehfe
  */
 
+//#define PIPS_DEBUG
 #include "StochPresolverBase.h"
 #include <algorithm>
 
@@ -785,7 +786,7 @@ bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colA
 
 bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type)
 {
-   //cout<<"colAdaptBlock.size(): "<<colAdaptBlock.size()<<endl;
+   //PIPSdebugMessage("colAdaptBlock has size %d \n", (int)colAdaptBlock.size());
    assert(currBlmat != NULL);
    if( system_type == EQUALITY_SYSTEM )
    {
@@ -811,7 +812,7 @@ bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & col
          const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
-         //cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F_i, system_type:"<<system_type<<endl;
+         //PIPSdebugMessage("Removed entry (%d, %d) with value %f of system_type %d \n", rowIdx, colIdx, m, system_type);
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsAdaptionsLink[rowIdx] -= m * val;
@@ -913,7 +914,7 @@ int StochPresolverBase::colAdaptLinkVars(int it, SystemType system_type)
          const bool entryExists = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m);
          if( !entryExists )
             continue;
-         //cout<<"Removed entry "<<rowIdxA<<", "<<colIdxA<<" with value "<<m<<" in Amat of child "<<it<<" system_type:"<<system_type<<endl;
+         //PIPSdebugMessage("Removed entry (%d, %d) with value %f in Amat of child %d of system_type %d \n", rowIdxA, colIdxA, m, it, system_type);
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhs->elements()[rowIdxA] -= m * val;
@@ -960,7 +961,7 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
          const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
          if( !entryExists )
             continue;
-         //cout<<"Removed entry "<<rowIdx<<", "<<colIdx<<" with value "<<m<<" in F0("<<system_type<<")"<<endl;
+         //PIPSdebugMessage("Removed entry (%d, %d) with value %f in F_0 of system_type %d \n", rowIdx, colIdx, m, system_type);
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsLink->elements()[rowIdx] -= m * val;
@@ -1098,10 +1099,6 @@ void StochPresolverBase::countRowsCols()
       cout<<"There are "<<nRowsEq<<" Rows in A and "<<nRowsEq+nRowsIneq<<" rows in total."<<endl;
       cout<<"There are "<<nBoxCols<<" boxed Columns and "<<nColsTotal<<" columns in total."<<endl;
    }
-
-   // MPI_Barrier( MPI_COMM_WORLD);
-   // assert(0);
-
 }
 
 void StochPresolverBase::countRangedRowsBlock(int& nRangedRows, int& nRowsIneq) const

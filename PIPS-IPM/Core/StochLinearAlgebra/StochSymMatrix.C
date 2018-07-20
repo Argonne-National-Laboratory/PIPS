@@ -174,6 +174,7 @@ void StochSymMatrix::atPutZeros( int row, int col, int rowExtent, int colExtent 
 void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
 			    double alpha, OoqpVector& x_ )
 {
+//   return;
   StochVector & x = dynamic_cast<StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
