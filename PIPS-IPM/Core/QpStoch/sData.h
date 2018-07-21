@@ -80,7 +80,7 @@ class sData : public QpGenData {
   void destroyChildren();
 
  private:
-  const static int nLinkStats = 5;
+  const static int nLinkStats = 21;
   const static double min2LinksRatio = 0.5;
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 

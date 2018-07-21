@@ -602,7 +602,8 @@ void sData::printLinkVarsStats()
       std::cout << "total link vars " << n << std::endl;
 
       for( int i = 0; i < nLinkStats; i++ )
-         std::cout << i << "-links " << linkSizes[i] << std::endl;
+         if( linkSizes[i] != 0 )
+            std::cout << i << "-links " << linkSizes[i] << std::endl;
    }
 }
 
@@ -633,7 +634,8 @@ void sData::printLinkConsStats()
          std::cout << "total equality Linking Constraints " << myl << std::endl;
 
          for( int i = 0; i < nLinkStats; i++ )
-            std::cout << i << "-links " << linkSizes[i] << std::endl;
+            if( linkSizes[i] != 0 )
+               std::cout << i << "-links " << linkSizes[i] << std::endl;
       }
    }
 
@@ -657,7 +659,8 @@ void sData::printLinkConsStats()
          std::cout << "total inequality Linking Constraints " << mzl << std::endl;
 
          for( int i = 0; i < nLinkStats; i++ )
-            std::cout << i << "-links " << linkSizes[i] << std::endl;
+            if( linkSizes[i] != 0 )
+               std::cout << i << "-links " << linkSizes[i] << std::endl;
       }
    }
 }

@@ -1029,12 +1029,11 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       }
    }
 
-
 #ifdef DUMPKKT
    ofstream myfile;
    myfile.open("../sparsekkt");
 
-   int count = 0;
+   int zerocount = 0;
 
    for( int r = 0; r < sizeKkt; r++ )
    {
@@ -1045,13 +1044,16 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
          if( val != 0.0 )
             myfile << r << " " << col << " " << val << std::endl;
          else
-            count++;
+            zerocount++;
       }
    }
 
-   std::cout << "count " << count << " of " << krowKkt[sizeKkt] << std::endl;
+   std::cout << "zero-count " << zerocount << " of " << krowKkt[sizeKkt] << std::endl;
 
    myfile.close();
+
+   assert(0);
+
 #endif
 
 }
@@ -1225,6 +1227,8 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
             myfile << col << " " << row << " " << dKkt[row][col] << std::endl;
 
    myfile.close();
+
+   assert(0);
 #endif
 
    /////////////////////////////////////////////////////////////
