@@ -464,10 +464,16 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
   int* colidxBase = SC0.jcolM();
   double* eltsBase = SC0.M();
 
+  assert(SC0.size() == nSC);
+
   // add to summed Schur complement todo: exploit block structure, get start and end of block
   for( int r = 0; r < nSC; r++ )
   {
      int cbase = rowptrBase[r];
+
+     // catch empty diagonal
+     if( rowptrSC[r + 1] - rowptrSC[r] == 1 && eltsSC[rowptrSC[r]] == 0.0 )
+        continue;
 
      for( int j = rowptrSC[r]; j < rowptrSC[r + 1]; j++ )
      {

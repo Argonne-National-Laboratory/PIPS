@@ -915,7 +915,6 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
          const int pend = krowCtDC[i + 1];
          for( int p = krowCtDC[i]; p < pend; p++ )
          {
-            int todo;
             const int col = jcolCtDC[p];
 
             if( col >= i )
@@ -942,18 +941,21 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 
       for( int i = 0; i < locnx; ++i )
       {
+         const int pstart = krowAt[i];
          const int pend = krowAt[i + 1];
 
          // get start position of sparse kkt block
          const int blockStart = krowKkt[i] + locnx - i;
 
-         assert(blockStart <= krowKkt[i] + 1);
+         assert(blockStart <= krowKkt[i + 1]);
 
-         for( int p = krowAt[i]; p < pend; ++p )
+         for( int p = pstart; p < pend; ++p )
          {
-            assert(jcolAt[p] < locmy && jcolKkt[blockStart + p] == (locnx + jcolAt[p]));
+            assert(jcolAt[p] < locmy);
+            assert(blockStart + (p - pstart) <= krowKkt[i + 1]);
+            assert(jcolKkt[blockStart + (p - pstart)] == (locnx + jcolAt[p]));
 
-            MKkt[blockStart + p] += MAt[p];
+            MKkt[blockStart + (p - pstart)] += MAt[p];
          }
       }
    }

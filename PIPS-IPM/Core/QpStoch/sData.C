@@ -193,9 +193,16 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
       assert(nnzcount == krowM[i + 1]);
    }
 
-   // empty rows
+   // empty rows; put diagonal for PARDISO
    for( int i = nx0; i < nx0 + my0; ++i )
-      krowM[i + 1] = krowM[i];
+   {
+      const int rowStartIdx = krowM[i];
+
+      jcolM[rowStartIdx] = i;
+      krowM[i + 1] = rowStartIdx + 1;
+   }
+
+   nnzcount += my0;
 
    // equality linking: sparse diagonal blocks, and mixed rows
    int blockStartrow = 0;
@@ -351,16 +358,17 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
      assert(linkStartBlocksA.size() == unsigned(tree_->myl()));
      assert(linkStartBlocksC.size() == unsigned(tree_->mzl()));
 
-
      // compute permutation vector
-     const int myl = tree_->myl();
-     const int mzl = tree_->mzl();
-     const size_t nBlocks = dynamic_cast<StochVector*>(c_in)->children.size();
 
-     assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
+     const size_t nBlocks = dynamic_cast<StochVector*>(c_in)->children.size();
 
      std::vector<unsigned int> permvecA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
      std::vector<unsigned int> permvecC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
+
+#ifndef NDEBUG
+     const int myl = tree_->myl();
+     const int mzl = tree_->mzl();
+     assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
 
 #if 0
      std::vector<unsigned int> permvecA(myl);
@@ -377,6 +385,8 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
      dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile);
 #endif
 
+#endif
+
      permuteLinkingRows(permvecA, permvecC);
 
 #if 0
@@ -385,7 +395,6 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
            dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile2);
 #endif
   }
-
 }
 
 
@@ -550,6 +559,21 @@ void sData::printLinkVarsStats()
    dynamic_cast<StochGenMatrix&>(*A).updateKLinkVarsCount(linkCount);
    dynamic_cast<StochGenMatrix&>(*C).updateKLinkVarsCount(linkCount);
 
+#if 0
+   SparseGenMatrix& A0t = dynamic_cast<StochGenMatrix&>(*A).Bmat->getTranspose();
+   SparseGenMatrix& C0t = dynamic_cast<StochGenMatrix&>(*C).Bmat->getTranspose();
+
+   const int* krowA0t = A0t.krowM();
+   const int* krowC0t = C0t.krowM();
+
+   SparseGenMatrix& Alinkt = dynamic_cast<StochGenMatrix&>(*A).Blmat->getTranspose();
+   SparseGenMatrix& Clinkt = dynamic_cast<StochGenMatrix&>(*C).Blmat->getTranspose();
+
+   const int* krowAlt = Alinkt.krowM();
+   const int* krowClt = Clinkt.krowM();
+
+#endif
+
    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
    if( rank == 0 )
@@ -561,6 +585,18 @@ void sData::printLinkVarsStats()
          {
             assert(linkCount[i] >= 0);
             linkSizes[size_t(linkCount[i])]++;
+#if 0
+
+            if( linkCount[i] == 0 )
+            {
+               std::cout << "at " << i << ": " << std::endl;
+
+               std::cout << krowA0t[i + i] - krowA0t[i]  << std::endl;
+               std::cout << krowC0t[i + i] - krowC0t[i] << std::endl;
+               std::cout << krowAlt[i + i] - krowAlt[i] << std::endl;
+               std::cout <<  krowClt[i + i] - krowClt[i] << std::endl;
+            }
+#endif
          }
 
       std::cout << "total link vars " << n << std::endl;
@@ -719,6 +755,7 @@ int sData::getSchurCompMaxNnz()
    assert(children.size() > 0);
 
    const int n0 = getLocalnx();
+   const int my = getLocalmy();
    const int myl = getLocalmyl();
    const int mzl = getLocalmzl();
 
@@ -726,7 +763,7 @@ int sData::getSchurCompMaxNnz()
    {
       int mB, nB;
       getLocalB().getSize(mB, nB);
-      assert(nB == n0);
+      assert(mB == my  && nB == n0);
    }
 #endif
 
@@ -741,6 +778,9 @@ int sData::getSchurCompMaxNnz()
    // add borders
    nnz += myl * n0;
    nnz += mzl * n0;
+
+   // (empty) diagonal
+   nnz += my;
 
    // add linking equality parts
    nnz += getSchurCompMaxNnz(linkStartBlocksA, linkStartBlockLengthsA);
