@@ -17,6 +17,13 @@
 
 #include <cstdlib>
 
+// todo: proper run-time parameter
+#ifdef WITH_PARDISOINDEF
+   const static bool sparsekkt = true;
+#else
+   const static bool sparsekkt = false;
+#endif
+
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {

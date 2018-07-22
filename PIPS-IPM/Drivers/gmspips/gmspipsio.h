@@ -86,7 +86,8 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
               const int offset,              /** < indicator for clean blocks */
               const int skipStrings,         /** < indicator for not registering uels and strings */
               const char* gdxFilename,       /** < GDX file name with CONVERTD jacobian structure */
-              const char* GAMSSysDir);       /** < GAMS system directory to locate shared libraries (can be NULL) */
+              const char* GAMSSysDir,        /** < GAMS system directory to locate shared libraries (can be NULL) */
+              const char* DictMap);          /** < GDX file name for dict structure (can be NULL) */
 void freeBlock(GMSPIPSBlockData_t* blk);
 #if defined(__cplusplus)
 }

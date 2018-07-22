@@ -163,7 +163,12 @@ public:
   };
 
   /** returns Simple Vector indicating which linking rows have entries in exactly two blocks (indicated by 1.0 versus 0.0)*/
-  virtual OoqpVector* get2LinkIndicator() const;
+  virtual std::vector<int> get2LinkStartBlocks() const;
+
+  virtual void updateKLinkVarsCount(std::vector<int>& linkCount) const;
+  virtual void updateKLinkConsCount(std::vector<int>& linkCount) const;
+
+  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec);
 };
 
 
@@ -186,6 +191,7 @@ public:
 
  public:
   virtual void updateTransposed() {};
+
   virtual void getSize( int& m, int& n ){m=0; n=0;}
   virtual void getSize( long long& m, long long& n ){m=0; n=0;}
 
@@ -278,7 +284,12 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
 
-  virtual OoqpVector* get2LinkIndicator() const {return NULL;} ;
+  virtual std::vector<int> get2LinkStartBlocks() const {return std::vector<int>();};
+
+  virtual void updateKLinkVarsCount(std::vector<int>& linkCount) const {};
+  virtual void updateKLinkConsCount(std::vector<int>& linkCount) const {};
+
+  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec) {};
 };
 
 
