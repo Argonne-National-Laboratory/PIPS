@@ -112,20 +112,19 @@ void PardisoIndefSolver::initPardiso()
 
 void PardisoIndefSolver::matrixChanged()
 {
-   // todo: only on rank 0
-
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
    if( myrank == 0 )
+   {
       printf("\nFactorization starts ...\n ");
 
-   if( mStorageSparse )
-      factorizeFromSparse();
-   else
-      factorizeFromDense();
+      if( mStorageSparse )
+         factorizeFromSparse();
+      else
+         factorizeFromDense();
 
-   if( myrank == 0 )
       printf("\nFactorization completed ...\n ");
+   }
 }
 
 #define SELECT_NNZS
@@ -398,7 +397,7 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       for( int i = 0; i < n; i++ )
          b[i] = x[i];
 
-//      printf("number of iterative refinement steps: %d \n", iparm[7]);
+//      printf("number of iterative refinement steps: %d \n", iparm[6]);
    }
    else
    {

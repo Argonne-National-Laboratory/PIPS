@@ -556,6 +556,8 @@ void sLinsysRoot::reduceKKTsparse()
    if( !iAmDistrib )
       return;
 
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
    assert(kkt);
 
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
@@ -568,13 +570,14 @@ void sLinsysRoot::reduceKKTsparse()
    assert(kkts.size() == sizeKkt);
    assert(!kkts.isLower);
 
-   if( sparseKktBuffer == NULL )
+   if( myRank == 0 && sparseKktBuffer == NULL )
       sparseKktBuffer = new double[nnzKkt];
 
    // todo: replace by more sophisticated scheme
-   MPI_Allreduce(MKkt, sparseKktBuffer, nnzKkt, MPI_DOUBLE, MPI_SUM, mpiComm);
+   MPI_Reduce(MKkt, sparseKktBuffer, nnzKkt, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
 
-   memcpy(MKkt, sparseKktBuffer, size_t(nnzKkt) * sizeof(double));
+   if( myRank == 0 )
+      memcpy(MKkt, sparseKktBuffer, size_t(nnzKkt) * sizeof(double));
 }
 
 void sLinsysRoot::factorizeKKT()
