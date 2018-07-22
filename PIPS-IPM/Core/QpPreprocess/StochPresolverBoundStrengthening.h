@@ -17,11 +17,18 @@ public:
 
    ~StochPresolverBoundStrengthening();
 
-   // remove small matrix entries and return number of eliminations
    virtual bool applyPresolving(int& nelims);
 
 private:
-
+   bool setCPforBounds(GenMatrixHandle matrixHandle, int it, SystemType system_type);
+   void computeActivityBlockwise( SparseStorageDynamic& matrix, int rowIdx, int colIdx,
+         double& infRow, double& supRow,
+         SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp);
+   void doBoundStrengthParent(SystemType system_type);
+   void doBoundStrengthChild(SystemType system_type);
+   double computeNewBound(bool rhs, double activity, double matrixEntry, int rowIdx, SystemType system_type);
+   void strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
+         int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type);
 };
 
 

@@ -26,6 +26,7 @@
 #include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
 #include "StochPresolverParallelRows.h"
+#include "StochPresolverBoundStrengthening.h"
 
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
@@ -61,6 +62,7 @@ Data* StochPresolver::presolve()
 
    // init all presolvers:
 
+   //StochPresolverBoundStrengthening presolverBS(presData);
    //StochPresolverParallelRows presolverParallelRow(presData);
    //StochPresolverTinyEntries presolverTiny(presData);
    StochPresolverSingletonRows presolverSR(presData);
@@ -73,6 +75,7 @@ Data* StochPresolver::presolve()
       // presolverSingletonRow.applyPresolving
 
    bool possfeas;
+   //possfeas = presolverBS.applyPresolving(nelims);
    //possfeas = presolverSC.applyPresolving(nelims);
    //possfeas = presolverParallelRow.applyPresolving(nelims);
    //possfeas = presolverTiny.applyPresolving(nelims);
