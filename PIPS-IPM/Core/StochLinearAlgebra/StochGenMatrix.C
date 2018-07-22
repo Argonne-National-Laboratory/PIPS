@@ -994,7 +994,6 @@ void StochGenMatrix::updateKLinkVarsCount(std::vector<int>& linkCount) const
    for( size_t it = 0; it < children.size(); it++ )
       if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
       {
-         assert(children[it]->Blmat);
          children[it]->Amat->getTranspose().updateNonEmptyRowsCount(linkCount);
          children[it]->Amat->deleteTransposed();
       }

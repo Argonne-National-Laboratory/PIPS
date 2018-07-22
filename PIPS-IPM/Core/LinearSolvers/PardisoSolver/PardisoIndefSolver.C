@@ -93,6 +93,7 @@ void PardisoIndefSolver::initPardiso()
       printf("Set environment OMP_NUM_THREADS to 1");
       exit(1);
    }
+
    iparm[2] = num_procs;
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
@@ -127,6 +128,7 @@ void PardisoIndefSolver::matrixChanged()
       printf("\nFactorization completed ...\n ");
 }
 
+#define SELECT_NNZS
 
 void PardisoIndefSolver::factorizeFromSparse()
 {
@@ -141,24 +143,50 @@ void PardisoIndefSolver::factorizeFromSparse()
    {
       assert(ja == NULL && a == NULL);
 
-      const int* const iaStorage = mStorageSparse->krowM;
-      const int* const jaStorage = mStorageSparse->jcolM;
-
       ia = new int[n + 1];
       ja = new int[nnz];
       a = new double[nnz];
+
+#ifndef SELECT_NNZS
+      const int* const iaStorage = mStorageSparse->krowM;
+      const int* const jaStorage = mStorageSparse->jcolM;
 
       for( int i = 0; i < n + 1; i++ )
          ia[i] = iaStorage[i] + 1;
 
       for( int i = 0; i < nnz; i++ )
          ja[i] = jaStorage[i] + 1;
+#endif
    }
 
    assert(n >= 0);
 
+#ifdef SELECT_NNZS
+   const int* const iaStorage = mStorageSparse->krowM;
+   const int* const jaStorage = mStorageSparse->jcolM;
+
+   ia[0] = 1;
+
+   int nnznew = 0;
+
+   for( int r = 0; r < n; r++ )
+   {
+      for( int j = iaStorage[r]; j < iaStorage[r + 1]; j++ )
+      {
+         if( aStorage[j] != 0.0 || jaStorage[j] == r )
+         {
+            ja[nnznew] = jaStorage[j] + 1;
+            a[nnznew++] = aStorage[j];
+         }
+      }
+
+      ia[r + 1] = nnznew + 1;
+   }
+#else
    for( int i = 0; i < nnz; i++ )
       a[i] = aStorage[i];
+#endif
+
 
    // matrix initialized, now do the actual factorization
    factorize();
