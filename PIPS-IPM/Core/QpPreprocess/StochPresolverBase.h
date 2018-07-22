@@ -31,6 +31,21 @@ typedef struct
    int end;
 } BLOCKS;
 
+typedef struct
+{
+   int colIdx;
+   double newxlow;
+   double newxupp;
+} XBOUNDS;
+
+struct xbounds_col_is_smaller
+{
+    bool operator()(const XBOUNDS& x, const XBOUNDS& y) const
+    {
+        return x.colIdx < y.colIdx;
+    }
+};
+
 enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
 enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
 
@@ -118,6 +133,8 @@ protected:
     * the child block 'it' is accessed using the index 'it+1'. */
    BLOCKS* childBlocks;
 
+   std::vector<XBOUNDS> newBoundsParent;
+
    double indivObjOffset;
 
    /* swap two entries in the SparseStorageDynamic format */
@@ -186,6 +203,15 @@ protected:
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);
+
+   bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
+   bool combineNewBoundsParent();
+   XBOUNDS getNewBoundsParent(int i) const;
+   void setNewBoundsParent(int i, int colIdx, double newxlow, double newxupp);
+   int getNumberNewBoundsParent() const;
+   void addNewBoundsParent(XBOUNDS newXBounds);
+   void clearNewBoundsParent();
+
    void sumIndivObjOffset();
 
    void countRowsCols();

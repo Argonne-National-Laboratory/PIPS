@@ -9,22 +9,6 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERSINGLETONROWS_H_
 
 #include "StochPresolverBase.h"
-#include <vector>
-
-typedef struct
-{
-   int colIdx;
-   double newxlow;
-   double newxupp;
-} XBOUNDS;
-
-struct xbounds_col_is_smaller
-{
-    bool operator()(const XBOUNDS& x, const XBOUNDS& y) const
-    {
-        return x.colIdx < y.colIdx;
-    }
-};
 
 class StochPresolverSingletonRows : public StochPresolverBase
 {
@@ -35,9 +19,6 @@ public:
 
    // remove small matrix entries and return number of eliminations
    virtual bool applyPresolving(int& nelims);
-
-   // data
-   std::vector<XBOUNDS> newBoundsParent;
 
 private:
 
@@ -64,16 +45,9 @@ private:
    bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
          double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    bool storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g);
-   bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
 
-   bool combineNewBoundsParent();
    void updateLinkingVarsBounds();
    void getValuesForSR(SparseStorageDynamic const & storage, int rowIdx, int& colIdx, double& aik) const;
-   XBOUNDS getNewBoundsParent(int i) const;
-   void setNewBoundsParent(int i, int colIdx, double newxlow, double newxupp);
-   int getNumberNewBoundsParent() const;
-   void addNewBoundsParent(XBOUNDS newXBounds);
-   void clearNewBoundsParent();
 
    /** initialize current pointer for matrices and vectors.
     * If it==-1, we are at parent and want block B_0 (Bmat).

@@ -998,6 +998,163 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
    return newSingletonRows;
 }
 
+/** Stores the column index colIdx together with the new bounds as a XBOUNDS in newBoundsParent.
+ * Should be called only from Process Zero.
+ * Returns false if infeasibility is detected (contradictory bounds).
+ */
+bool StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double newxupp)
+{
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   assert( myRank == 0 );
+
+   XBOUNDS newXbounds = {colIdx, newxlow, newxupp};
+   for(int i=0; i<(int)newBoundsParent.size(); i++)
+   {
+      if( newBoundsParent[i].colIdx == colIdx )
+      {
+         if( newBoundsParent[i].newxlow > newxlow || newBoundsParent[i].newxupp < newxlow )
+         {
+            cout<<"Infeasibility detected at variable "<<colIdx<<" because of tightened bounds."<<endl;
+            return false;
+         }
+      }
+   }
+   newBoundsParent.push_back(newXbounds);
+   return true;
+}
+
+/** Method similar to combineColAdaptParent(), that is a method going through newBoundsParent
+ * and cleaning it up, removing redundant bounds, checking for infeasibility or more tightening.
+ */
+bool StochPresolverBase::combineNewBoundsParent()
+{
+   int myRank, world_size;
+   bool iAmDistrib = false;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   if( world_size > 1) iAmDistrib = true;
+
+   if( iAmDistrib )
+   {
+      // allgather the length of each newBoundsParent
+      int mylen = getNumberNewBoundsParent();
+      int* recvcounts = new int[world_size];
+
+      MPI_Allgather(&mylen, 1, MPI_INT, recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
+
+      // allgatherv the actual newBoundsParent
+      // First, extract the colIdx and val into int* and double* arrays:
+      int* colIndicesLocal = new int[mylen];
+      double* xlowLocal = new double[mylen];
+      double* xuppLocal = new double[mylen];
+      for(int i=0; i<mylen; i++)
+      {
+         colIndicesLocal[i] = getNewBoundsParent(i).colIdx;
+         xlowLocal[i] = getNewBoundsParent(i).newxlow;
+         xuppLocal[i] = getNewBoundsParent(i).newxupp;
+      }
+      // Second, prepare the receive buffers:
+      int lenghtGlobal = recvcounts[0];
+      int* displs = new int[world_size];
+      displs[0] = 0;
+      for(int i=1; i<world_size; i++)
+      {
+         lenghtGlobal += recvcounts[i];
+         displs[i] = displs[i-1] + recvcounts[i-1];
+      }
+      int* colIndicesGlobal = new int[lenghtGlobal];
+      double* xlowGlobal = new double[lenghtGlobal];
+      double* xuppGlobal = new double[lenghtGlobal];
+      // Then, do the actual MPI communication:
+      MPI_Allgatherv(colIndicesLocal, mylen, MPI_INT, colIndicesGlobal, recvcounts, displs , MPI_INT, MPI_COMM_WORLD);
+      MPI_Allgatherv(xlowLocal, mylen, MPI_DOUBLE, xlowGlobal, recvcounts, displs , MPI_DOUBLE, MPI_COMM_WORLD);
+      MPI_Allgatherv(xuppLocal, mylen, MPI_DOUBLE, xuppGlobal, recvcounts, displs , MPI_DOUBLE, MPI_COMM_WORLD);
+
+      // Reconstruct a newBoundsParent containing all entries:
+      clearNewBoundsParent();
+      for(int i=0; i<lenghtGlobal; i++)
+      {
+         XBOUNDS newXBound = {colIndicesGlobal[i], xlowGlobal[i], xuppGlobal[i]};
+         addNewBoundsParent(newXBound);
+      }
+
+      delete[] recvcounts;
+      delete[] colIndicesLocal;
+      delete[] xlowLocal;
+      delete[] displs;
+      delete[] colIndicesGlobal;
+      delete[] xlowGlobal;
+      delete[] xuppGlobal;
+   }
+
+   // Sort colIndicesGlobal (and xlowGlobal, xuppGlobal accordingly), remove duplicates,
+   // tighten bounds and find infeasibilities
+   std::sort(newBoundsParent.begin(), newBoundsParent.end(), xbounds_col_is_smaller());
+
+   if(getNumberNewBoundsParent() > 0)
+   {
+      int colIdxCurrent = getNewBoundsParent(0).colIdx;
+      double xlowCurrent = getNewBoundsParent(0).newxlow;
+      double xuppCurrent = getNewBoundsParent(0).newxupp;
+      for(int i=1; i<getNumberNewBoundsParent(); i++)
+      {
+         if( getNewBoundsParent(i).colIdx == colIdxCurrent )
+         {
+            const double bestLow = max(xlowCurrent, getNewBoundsParent(i).newxlow);
+            const double bestUpp = min(xuppCurrent, getNewBoundsParent(i).newxupp);
+            if( bestLow > bestUpp )
+            {
+               cout<<"Detected infeasibility in variable "<<colIdxCurrent<<" of parent."<<endl;
+               return false;
+            }
+            else
+            {
+               // change the vector element newBoundsParent.begin()+(i-1), also das,
+               // welches colIdxCurrent definiert hat:
+               setNewBoundsParent(i-1, colIdxCurrent, bestLow, bestUpp);
+               newBoundsParent.erase(newBoundsParent.begin()+i);   //todo: implement more efficiently
+               i--;  // if i is not decremented, then the next entry in newBoundsParent would be omitted
+            }
+         }
+         else
+         {
+            colIdxCurrent = getNewBoundsParent(i).colIdx;
+            xlowCurrent = getNewBoundsParent(0).newxlow;
+            xuppCurrent = getNewBoundsParent(0).newxupp;
+         }
+      }
+   }
+   assert( getNumberNewBoundsParent() <= presData.nColElems->vec->n );
+
+   return true;
+}
+
+XBOUNDS StochPresolverBase::getNewBoundsParent(int i) const
+{
+   assert( i<getNumberNewBoundsParent() );
+   return newBoundsParent[i];
+}
+void StochPresolverBase::setNewBoundsParent(int i, int colIdx, double newxlow, double newxupp)
+{
+   assert( i<getNumberNewBoundsParent() );
+   newBoundsParent[i].colIdx = colIdx;
+   newBoundsParent[i].newxlow = newxlow;
+   newBoundsParent[i].newxupp = newxupp;
+}
+int StochPresolverBase::getNumberNewBoundsParent() const
+{
+   return (int)newBoundsParent.size();
+}
+void StochPresolverBase::addNewBoundsParent(XBOUNDS newXBounds)
+{
+   newBoundsParent.push_back(newXBounds);
+}
+void StochPresolverBase::clearNewBoundsParent()
+{
+   newBoundsParent.clear();
+}
+
 /** Sum up the individual objective offset on all processes. */
 void StochPresolverBase::sumIndivObjOffset()
 {
