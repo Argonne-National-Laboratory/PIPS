@@ -51,6 +51,8 @@ protected:
    static const double tolerance1 = 1.0e-3;
    static const double tolerance2 = 1.0e-2;
    static const double tolerance3 = 1.0e-10;
+   static const double limit1 = 1.0e3;   // for bound strengthening
+   static const double limit2 = 1.0e8;   // for bound strengthening
    static const int maxIterSR = 20;
    static const double tol_compare_double = 1.0e-8;
 

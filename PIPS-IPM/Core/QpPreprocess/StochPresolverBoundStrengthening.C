@@ -34,7 +34,7 @@ bool StochPresolverBoundStrengthening::applyPresolving(int& nelims)
    doBoundStrengthParent( INEQUALITY_SYSTEM );
 
    // children:
-   for( size_t child_it = 0; child_it < (int)nChildren; child_it++)
+   for( size_t child_it = 0; (int)child_it < nChildren; child_it++)
    {
       // dummy child?
       if( setCPforBounds(presProb->A, (int)child_it, EQUALITY_SYSTEM) )
@@ -237,14 +237,46 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
       }
 
       // tighten the bounds:
-      // todo: only tighten bounds if change is big enough and new bound not infty
       if( childBlock )
-         setNewBounds(colIdx, newBoundLow, newBoundUpp,
-            currIxlowChild->elements(), currxlowChild->elements(), currIxuppChild->elements(), currxuppChild->elements());
+         setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
+            *currIxlowChild, *currxlowChild, *currIxuppChild, *currxuppChild);
       else
-         setNewBounds(colIdx, newBoundLow, newBoundUpp,
-            currIxlowParent->elements(), currxlowParent->elements(), currIxuppParent->elements(), currxuppParent->elements());
+         setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
+            *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);
 
+   }
+}
+
+/**
+ * Compares and sets the new lower and upper bounds, provided that:
+ * - the new bounds tighten the old bounds,
+ * - the absolute value of new bounds does not exceed limit2 = 1.0e8,
+ * - the change in the bounds is at least limit1*epsilon = 1.0e3*1.0e-6.
+ */
+void StochPresolverBoundStrengthening::setNewBoundsIfTighter(int index, double new_low, double new_upp,
+      SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp)
+{
+   const int n = ilow.n;
+   assert( index >= 0 && index < n );
+   assert( low.n == n && iupp.n == n && upp.n == n );
+
+   if( fabs(new_low) < limit2 )
+   {
+      if( (ilow.elements()[index] != 0.0 &&  new_low - low.elements()[index] >= limit1 * feastol )
+         || (ilow.elements()[index] == 0.0 ) )
+      {
+         ilow.elements()[index] = 1.0;
+         low.elements()[index] = new_low;
+      }
+   }
+   if( fabs(new_upp) < limit2 )
+   {
+      if( (iupp.elements()[index] != 0.0 && upp.elements()[index] - new_upp >= limit1 * feastol )
+            || (iupp.elements()[index] == 0.0 ) )
+      {
+         iupp.elements()[index] = 1.0;
+         upp.elements()[index] = new_upp;
+      }
    }
 }
 
