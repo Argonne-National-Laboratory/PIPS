@@ -1134,7 +1134,7 @@ bool StochPresolverBase::combineNewBoundsParent()
             const double bestUpp = min(xuppCurrent, getNewBoundsParent(i).newxupp);
             if( bestLow > bestUpp )
             {
-               cout<<"Detected infeasibility in variable "<<colIdxCurrent<<" of parent."<<endl;
+               cout<<"Detected infeasibility in variable "<<colIdxCurrent<<" of parent. bestLow="<<bestLow<<", bestUpp="<<bestUpp<<endl;
                return false;
             }
             else

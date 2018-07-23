@@ -81,7 +81,8 @@ bool StochPresolverBoundStrengthening::setCPforBounds(GenMatrixHandle matrixHand
       else
          currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[it]->vec);
    }
-   else{
+   else
+   {
       setCPAmatBmat( matrixHandle, it, system_type);  //currAmat
       // set rhs/lhs vectors:
       if( system_type == INEQUALITY_SYSTEM )
@@ -148,7 +149,7 @@ void StochPresolverBoundStrengthening::computeActivityBlockwise( SparseStorageDy
 bool StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_type)
 {
    for(int rowIdx=0; rowIdx<currAmat->m; rowIdx++)
-      if( !strenghtenBoundsInBlock( *currAmat, false, rowIdx, 0.0, 0.0, system_type))
+      if( !strenghtenBoundsInBlock( *currAmat, false, rowIdx, 0.0, 0.0, system_type, true))
          return false;
 
    return true;
@@ -164,9 +165,9 @@ bool StochPresolverBoundStrengthening::doBoundStrengthChild(SystemType system_ty
       computeActivityBlockwise(*currBmat, i, -1, partMinActivityB, partMaxActivityB,
             *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
 
-      if( !strenghtenBoundsInBlock( *currAmat, false, i, partMinActivityB, partMaxActivityB, system_type))
+      if( !strenghtenBoundsInBlock( *currAmat, false, i, partMinActivityB, partMaxActivityB, system_type, false))
          return false;
-      if( !strenghtenBoundsInBlock( *currBmat, true, i, partMinActivityA, partMaxActivityA, system_type))
+      if( !strenghtenBoundsInBlock( *currBmat, true, i, partMinActivityA, partMaxActivityA, system_type, false))
          return false;
    }
    return true;
@@ -211,7 +212,7 @@ double StochPresolverBoundStrengthening::computeNewBound(bool rhs, double activi
  * partMinActivity and partMaxActivity represent the partial row activity of the respective other block.
  */
 bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
-      int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type)
+      int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type, bool atRoot)
 {
    assert( rowIdx >= 0 && rowIdx < matrix.m );
    if( partMinActivity == -std::numeric_limits<double>::max() && partMaxActivity == std::numeric_limits<double>::max())
@@ -280,10 +281,12 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
             // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied
 
          }*/
-         // store the bounds in newBoundsParent for all processes:
-         if( checkNewBoundTightens(true, colIdx, newBoundUpp, *currIxuppParent, *currxuppParent)
+         if( atRoot )
+            setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
+               *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);
+         else if( checkNewBoundTightens(true, colIdx, newBoundUpp, *currIxuppParent, *currxuppParent)
                || checkNewBoundTightens(false, colIdx, newBoundLow, *currIxlowParent, *currxlowParent) )
-            storeNewBoundsParent(colIdx, newBoundLow, newBoundUpp);
+            storeNewBoundsParent(colIdx, newBoundLow, newBoundUpp);  // store the bounds in newBoundsParent for all processes
       }
 
    }
