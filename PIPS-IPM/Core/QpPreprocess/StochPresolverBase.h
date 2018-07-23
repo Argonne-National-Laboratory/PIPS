@@ -204,6 +204,10 @@ protected:
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);
 
+   bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
+      double* ixlow, double* ixupp, double* xlow, double* xupp) const;
+   bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
+      double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
    bool combineNewBoundsParent();
    XBOUNDS getNewBoundsParent(int i) const;

@@ -40,10 +40,6 @@ private:
    bool procSingletonRowChildInequality(int it, int& newSREq, int& newSRIneq);
 
    void calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik) const;
-   bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
-         double* ixlow, double* ixupp, double* xlow, double* xupp) const;
-   bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
-         double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    bool storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g);
 
    void updateLinkingVarsBounds();

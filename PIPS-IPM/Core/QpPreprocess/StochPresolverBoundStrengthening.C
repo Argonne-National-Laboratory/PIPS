@@ -27,24 +27,35 @@ bool StochPresolverBoundStrengthening::applyPresolving(int& nelims)
 
    if( myRank == 0 ) cout<<"Start Bound Strengthening Presolving..."<<endl;
 
+   clearNewBoundsParent();
+
    // root:
    setCPforBounds(presProb->A, -1, EQUALITY_SYSTEM);
-   doBoundStrengthParent( EQUALITY_SYSTEM );
+   if( !doBoundStrengthParent( EQUALITY_SYSTEM ) )
+      return false;
    setCPforBounds(presProb->C, -1, INEQUALITY_SYSTEM);
-   doBoundStrengthParent( INEQUALITY_SYSTEM );
+   if( !doBoundStrengthParent( INEQUALITY_SYSTEM ) )
+      return false;
 
    // children:
    for( size_t child_it = 0; (int)child_it < nChildren; child_it++)
    {
       // dummy child?
       if( setCPforBounds(presProb->A, (int)child_it, EQUALITY_SYSTEM) )
-         doBoundStrengthChild(EQUALITY_SYSTEM);
+         if( !doBoundStrengthChild(EQUALITY_SYSTEM) )
+            return false;
       if( setCPforBounds(presProb->C, (int)child_it, INEQUALITY_SYSTEM) )
-         doBoundStrengthChild(INEQUALITY_SYSTEM);
+         if( !doBoundStrengthChild(INEQUALITY_SYSTEM) )
+            return false;
    }
 
    // linking rows:
    // todo
+
+   // combine the bounds of linking-variables:
+   if( !combineNewBoundsParent() ) return false;
+   // update the the bounds of linking-variables:
+   strengthenLinkingVarsBounds();
 
    if( myRank == 0 ) cout<<"Finished Bound Strengthening Presolving."<<endl;
 
@@ -134,13 +145,15 @@ void StochPresolverBoundStrengthening::computeActivityBlockwise( SparseStorageDy
    }
 }
 
-void StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_type)
+bool StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_type)
 {
    for(int rowIdx=0; rowIdx<currAmat->m; rowIdx++)
-      strenghtenBoundsInBlock( *currAmat, false, rowIdx, 0.0, 0.0, system_type);
+      if( !strenghtenBoundsInBlock( *currAmat, false, rowIdx, 0.0, 0.0, system_type))
+         return false;
 
+   return true;
 }
-void StochPresolverBoundStrengthening::doBoundStrengthChild(SystemType system_type)
+bool StochPresolverBoundStrengthening::doBoundStrengthChild(SystemType system_type)
 {
    for(int i=0; i<currAmat->m; i++) // i ~ rowIndex
    {
@@ -151,9 +164,12 @@ void StochPresolverBoundStrengthening::doBoundStrengthChild(SystemType system_ty
       computeActivityBlockwise(*currBmat, i, -1, partMinActivityB, partMaxActivityB,
             *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
 
-      strenghtenBoundsInBlock( *currAmat, false, i, partMinActivityB, partMaxActivityB, system_type);
-      strenghtenBoundsInBlock( *currBmat, true, i, partMinActivityA, partMaxActivityA, system_type);
+      if( !strenghtenBoundsInBlock( *currAmat, false, i, partMinActivityB, partMaxActivityB, system_type))
+         return false;
+      if( !strenghtenBoundsInBlock( *currBmat, true, i, partMinActivityA, partMaxActivityA, system_type))
+         return false;
    }
+   return true;
 }
 
 /** Computes the new bound (bA - activity)/matrixEntry.
@@ -194,12 +210,12 @@ double StochPresolverBoundStrengthening::computeNewBound(bool rhs, double activi
  * Strengthen the variable bounds in the block matrix. If childBlock==true, then a block B_i or D_i is considered.
  * partMinActivity and partMaxActivity represent the partial row activity of the respective other block.
  */
-void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
+bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
       int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type)
 {
    assert( rowIdx >= 0 && rowIdx < matrix.m );
    if( partMinActivity == -std::numeric_limits<double>::max() && partMaxActivity == std::numeric_limits<double>::max())
-      return;
+      return true;
 
    for( int j=matrix.rowptr[rowIdx].start; j<matrix.rowptr[rowIdx].end; j++)
    {
@@ -238,20 +254,45 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
 
       // tighten the bounds:
       if( childBlock )
+      {
+         if( newBoundsImplyInfeasible(newBoundLow, newBoundUpp, colIdx,
+               currIxlowChild->elements(), currIxuppChild->elements(), currxlowChild->elements(), currxuppChild->elements()) )
+            return false;
+         // todo test if bounds imply fixation
          setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
             *currIxlowChild, *currxlowChild, *currIxuppChild, *currxuppChild);
+      }
       else
-         setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
-            *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);
+      {
+         double varvalue = 0.0;
+         // test if new bounds imply infeasible ?
+         if( newBoundsImplyInfeasible(newBoundLow, newBoundUpp, colIdx,
+               currIxlowParent->elements(), currIxuppParent->elements(), currxlowParent->elements(), currxuppParent->elements()) )
+            return false;
+         // todo test if they imply fixation ?
+         /*else if( newBoundsFixVariable(varvalue, newBoundLow, newBoundUpp, colIdx,
+               currIxlowParent->elements(), currIxuppParent->elements(), currxlowParent->elements(), currxuppParent->elements()) )
+         {
+            //cout<<"New bounds imply fixation of variable "<<colIdx<<" of child "<<it<<" to value: "<<val<<endl;
+            // as in SR(equality), store them to remove the column later
+            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, varvalue, currgParent->elements()) )
+               return false;
+            // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied
+
+         }*/
+         // store the bounds in newBoundsParent for all processes:
+         if( checkNewBoundTightens(true, colIdx, newBoundUpp, *currIxuppParent, *currxuppParent)
+               || checkNewBoundTightens(false, colIdx, newBoundLow, *currIxlowParent, *currxlowParent) )
+            storeNewBoundsParent(colIdx, newBoundLow, newBoundUpp);
+      }
 
    }
+   return true;
 }
 
 /**
  * Compares and sets the new lower and upper bounds, provided that:
- * - the new bounds tighten the old bounds,
- * - the absolute value of new bounds does not exceed limit2 = 1.0e8,
- * - the change in the bounds is at least limit1*epsilon = 1.0e3*1.0e-6.
+ * checkNewBoundTightens() returns true.
  */
 void StochPresolverBoundStrengthening::setNewBoundsIfTighter(int index, double new_low, double new_upp,
       SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp)
@@ -260,23 +301,58 @@ void StochPresolverBoundStrengthening::setNewBoundsIfTighter(int index, double n
    assert( index >= 0 && index < n );
    assert( low.n == n && iupp.n == n && upp.n == n );
 
-   if( fabs(new_low) < limit2 )
+   if( checkNewBoundTightens(false, index, new_low, ilow, low) )
    {
-      if( (ilow.elements()[index] != 0.0 &&  new_low - low.elements()[index] >= limit1 * feastol )
-         || (ilow.elements()[index] == 0.0 ) )
-      {
-         ilow.elements()[index] = 1.0;
-         low.elements()[index] = new_low;
-      }
+      ilow.elements()[index] = 1.0;
+      low.elements()[index] = new_low;
    }
-   if( fabs(new_upp) < limit2 )
+   if( checkNewBoundTightens(true, index, new_upp, iupp, upp) )
    {
-      if( (iupp.elements()[index] != 0.0 && upp.elements()[index] - new_upp >= limit1 * feastol )
-            || (iupp.elements()[index] == 0.0 ) )
-      {
-         iupp.elements()[index] = 1.0;
-         upp.elements()[index] = new_upp;
-      }
+      iupp.elements()[index] = 1.0;
+      upp.elements()[index] = new_upp;
    }
+}
+
+/** Check if the new bound (upper or lower bound depending on the bool uppLow) tightens the
+ * existing bound. Returns true if:
+ * - the new bounds tighten the old bounds,
+ * - the absolute value of new bounds does not exceed limit2 = 1.0e8,
+ * - the change in the bounds is at least limit1*epsilon = 1.0e3*1.0e-6.
+ */
+bool StochPresolverBoundStrengthening::checkNewBoundTightens(bool uppLow, int colIdx, double newBound,
+      SimpleVector& ixbound, SimpleVector& xbound ) const
+{
+   if( fabs(newBound) >= limit2 )
+      return false;
+   if(uppLow)   // upper bound
+   {
+      if( (ixbound.elements()[colIdx] != 0.0 && xbound.elements()[colIdx] - newBound >= limit1 * feastol )
+            || (ixbound.elements()[colIdx] == 0.0) )
+         return true;
+   }
+   else  // lower bound
+   {
+      if( (ixbound.elements()[colIdx] != 0.0 && newBound - xbound.elements()[colIdx] >= limit1 * feastol )
+            || (ixbound.elements()[colIdx] == 0.0) )
+         return true;
+   }
+   return false;
+}
+
+/** Should be called after combineNewBoundsParent() or another method that stores
+ * information to update in newBoundsParent.
+ * Updates the bounds on the linking variables, if they satisfy the conditions in checkNewBoundTightens().
+ */
+void StochPresolverBoundStrengthening::strengthenLinkingVarsBounds()
+{
+   setCPColumnRoot();
+
+   // apply updated newBoundsParent to the variable bounds.
+   for(int i=0; i<getNumberNewBoundsParent(); i++)
+   {
+      XBOUNDS newbounds = getNewBoundsParent(i);
+      setNewBoundsIfTighter(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp, *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);
+   }
+   clearNewBoundsParent();
 }
 

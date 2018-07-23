@@ -998,22 +998,51 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
    return newSingletonRows;
 }
 
+bool StochPresolverBase::newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
+      double* ixlow, double* ixupp, double* xlow, double* xupp) const
+{
+   assert( colIdx >= 0 );
+   if( ( ixlow[colIdx] != 0.0 && xlow[colIdx] > newxupp)
+         || (ixupp[colIdx] != 0.0 && xupp[colIdx] < newxlow )
+         || (newxlow > newxupp))
+   {
+      cout<<"Infeasibility detected at variable "<<colIdx<<", new bounds= ["<<newxlow<<", "<<newxupp<<"]"<<endl;
+      return true;
+   }
+   return false;
+}
+
+bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
+      double* ixlow, double* ixupp, double* xlow, double* xupp) const
+{
+   assert( colIdx >= 0 );
+   if( PIPSisEQ(newxlow, newxupp)
+         || ( ixlow[colIdx] != 0.0 && PIPSisEQ( xlow[colIdx], newxupp) ))
+   {
+      value = newxupp;
+      return true;
+   }
+   else if( ixupp[colIdx] != 0.0 && PIPSisEQ(xupp[colIdx], newxlow) )
+   {
+      value = newxlow;
+      return true;
+   }
+   return false;
+}
+
 /** Stores the column index colIdx together with the new bounds as a XBOUNDS in newBoundsParent.
  * Should be called only from Process Zero.
  * Returns false if infeasibility is detected (contradictory bounds).
  */
 bool StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double newxupp)
 {
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   assert( myRank == 0 );
-
+   assert( colIdx >= 0 );
    XBOUNDS newXbounds = {colIdx, newxlow, newxupp};
    for(int i=0; i<(int)newBoundsParent.size(); i++)
    {
       if( newBoundsParent[i].colIdx == colIdx )
       {
-         if( newBoundsParent[i].newxlow > newxlow || newBoundsParent[i].newxupp < newxlow )
+         if( newBoundsParent[i].newxlow > newxupp || newBoundsParent[i].newxupp < newxlow )
          {
             cout<<"Infeasibility detected at variable "<<colIdx<<" because of tightened bounds."<<endl;
             return false;

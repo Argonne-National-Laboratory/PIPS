@@ -38,6 +38,7 @@ bool StochPresolverSingletonRows::applyPresolving(int& nelims)
    int newSRIneq = 0;
 
    presData.resetRedCounters();
+   clearNewBoundsParent();
    newSREq = initSingletonRows(EQUALITY_SYSTEM);
    synchronize(newSREq);
    if( myRank == 0 )
@@ -689,36 +690,6 @@ void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& newxlow, 
    }
 }
 
-bool StochPresolverSingletonRows::newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
-      double* ixlow, double* ixupp, double* xlow, double* xupp) const
-{
-   if( ( ixlow[colIdx] != 0.0 && xlow[colIdx] > newxupp)
-         || (ixupp[colIdx] != 0.0 && xupp[colIdx] < newxlow )
-         || (newxlow > newxupp))
-   {
-      cout<<"Infeasibility detected at variable "<<colIdx<<", new bounds= ["<<newxlow<<", "<<newxupp<<"]"<<endl;
-      return true;
-   }
-   return false;
-}
-
-bool StochPresolverSingletonRows::newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
-      double* ixlow, double* ixupp, double* xlow, double* xupp) const
-{
-   if( newxlow == newxupp
-         || ( ixlow[colIdx] != 0.0 && xlow[colIdx] == newxupp ))
-   {
-      value = newxupp;
-      return true;
-   }
-   else if( ixupp[colIdx] != 0.0 && xupp[colIdx] == newxlow )
-   {
-      value = newxlow;
-      return true;
-   }
-   return false;
-}
-
 /** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
  * Adapts the objective offset g only once for each column (variable).
  * Returns false if infeasibility is detected.
@@ -746,7 +717,6 @@ bool StochPresolverSingletonRows::storeColValInColAdaptParentAndAdaptOffset(int 
    }
    return true;
 }
-
 
 /** Should be called right after doSingletonRowsC() or another method that stores
  * information to update in newBoundsParent.

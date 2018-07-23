@@ -24,13 +24,16 @@ private:
    void computeActivityBlockwise( SparseStorageDynamic& matrix, int rowIdx, int colIdx,
          double& infRow, double& supRow,
          SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp);
-   void doBoundStrengthParent(SystemType system_type);
-   void doBoundStrengthChild(SystemType system_type);
+   bool doBoundStrengthParent(SystemType system_type);
+   bool doBoundStrengthChild(SystemType system_type);
    double computeNewBound(bool rhs, double activity, double matrixEntry, int rowIdx, SystemType system_type);
-   void strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
+   bool strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
          int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type);
    void setNewBoundsIfTighter(int index, double new_low, double new_upp,
          SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp);
+   bool checkNewBoundTightens(bool uppLow, int colIdx, double newBound,
+         SimpleVector& ixbound, SimpleVector& xbound ) const;
+   void strengthenLinkingVarsBounds();
 };
 
 
