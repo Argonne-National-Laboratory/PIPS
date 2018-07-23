@@ -144,13 +144,12 @@ int MumpsSolver::matrixChanged()
   if(gMUMPSStatsOn)
     if(my_rank_==0) printf("MUMPS analysis phase took %g seconds.\n", tm);
 
-  //printf("[2] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
-
-  // INFOG(7) - after analysis: The ordering method actually used. The returned value will depend on
+  // INFOG(7) - after analysis:  The ordering method actually used. The returned value will depend on
   // the type of analysis performed, e.g. sequential or parallel (see INFOG(32)). Please refer to
   // ICNTL(7) and ICNTL(29) for more details on the ordering methods available in sequential and
   // parallel analysis respectively.
-  // 1 scotch, 2 metis
+  //
+  // INFOG(7) is 1 scotch or 2 metis if ICNTL(28) was set to 2 (parallel symbolic analysis)
   if(gMUMPSStatsOn)
     if(my_rank_==0) printf("MUMPS ordering actually used %d\n", mumps_->infog[7-1]);
   
