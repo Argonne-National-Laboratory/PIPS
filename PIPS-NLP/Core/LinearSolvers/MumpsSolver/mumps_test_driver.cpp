@@ -70,14 +70,23 @@ public:
 
 
 };
+int omp_get_num_threads_cosmin() {
+    int n = 0;
+    #pragma omp parallel reduction(+:n)
+    n += 1;
+    return n;
+}
 
 
 int main(int argc, char* argv[])
 {
   MPI_Init(&argc, &argv);
-
+  //omp_set_num_threads(1);
+  //omp_set_dynamic(0);     // Explicitly disable dynamic teams
+  //omp_set_num_threads(4); 
   int verbosity = 3;
-  int nMatBlocks=10, nMatBlockSize=200;
+  //int nMatBlocks=168, nMatBlockSize=1000;
+  int nMatBlocks=168, nMatBlockSize=1000;
 
   MPI_Comm globlComm = MPI_COMM_WORLD;
   MPI_Comm mumpsComm = MPI_COMM_WORLD;
@@ -86,7 +95,7 @@ int main(int argc, char* argv[])
   //DistributedMatrixEx1 dmat(168, 260, MPI_COMM_WORLD);
   dmat.distributedAssemble_scheme1();
 
-  dmat.toTextFile();
+  //dmat.toTextFile();
   dmat.convertToFortran();
 
   MumpsSolver* mumps = new MumpsSolver(dmat.n_, globlComm, mumpsComm);
@@ -107,6 +116,9 @@ int main(int argc, char* argv[])
   mumps->solve(vec);
   double tmSolv = MPI_Wtime() - tmStart;
 
+  //second factorization+solve with a modified matrix -> reuse the expensive symbolic factorization
+  // to be done
+  
   //align the output
   MPI_Barrier(globlComm);
 
@@ -115,19 +127,22 @@ int main(int argc, char* argv[])
   delete mumps;
 
   //////////////////////
-  // stats
+  // statistics
   /////////////////////
   int nGloblProcs; MPI_Comm_size(globlComm, &nGloblProcs);
   int nMumpsProcs; MPI_Comm_size(mumpsComm, &nMumpsProcs);
-  int nNumThreads = omp_get_num_threads();
+  int nNumThreads = omp_get_num_threads(), nNumThreads2=omp_get_num_threads_cosmin();
   int nNumThreadsMin=0, nNumThreadsMax=0;
   MPI_Reduce(&nNumThreads, &nNumThreadsMax, 1, MPI_INT, MPI_MAX, 0, globlComm);
   MPI_Reduce(&nNumThreads, &nNumThreadsMin, 1, MPI_INT, MPI_MIN, 0, globlComm);
-
+  char* strNumThreads=getenv("OMP_NUM_THREADS");
+  if(strNumThreads==NULL) strNumThreads = "(null)";
+  
+  
   if(dmat.get_my_rank()==0) {
     if(verbosity>=3) {
-      printf("Used MPIProcs: global %d mumps %d. Threads %d. Matrix was of size %d (%d blocks of size %d).\n", 
-	     nGloblProcs, nMumpsProcs, nNumThreads, dmat.n_, nMatBlocks, nMatBlockSize);
+      printf("Used MPIProcs: global %d mumps %d. Threads: omp_get %d env_var %s in-house %d. Matrix was of size %d (%d blocks of size %d).\n", 
+	     nGloblProcs, nMumpsProcs, nNumThreads, strNumThreads, nNumThreads2, dmat.n_, nMatBlocks, nMatBlockSize);
       printf("Factorization took %g sec. Solve took %g sec\n", tmFact, tmSolv);
     }
 
@@ -138,7 +153,7 @@ int main(int argc, char* argv[])
     
   }
   
-  MPI_Finalize();
+   MPI_Finalize();
 
   return 0;
 }
@@ -298,3 +313,31 @@ void DistributedMatrixEx1::distributedAssemble_scheme1()
   if(verbosity_>3) printf("Created a matrix of size %d with nnz %d (local nnz %d)\n", n_, nnz_, loc_nnz_);
 
 };
+
+//notes
+// to reuse the symbolic factorization there are two options (see https://groups.google.com/forum/#!topic/hermes2d/zS8zSG9Uc0Y)
+// 1/ Scaling is performed during analysis (because it 
+// is associated with max. weighted matching algorithms, 
+// see ICNTL(6)): 
+//
+// Then the scaling might not be optimal for successive 
+// factorizations (but it could still be ok). 
+//
+// 2/ Scaling is performed during factorization: 
+//
+// Then repeated factorizations will do repeated scalings. 
+//
+//
+// If 1 is not ok for your matrices and leads to badly 
+// scaled matrices, you could for example force the scaling 
+// options ICNTL(8)= 7 or 8, to force the scaling to be done 
+// during factorization. 
+//
+// Another option is not to provide the numerical values to 
+// the analysis. Then MUMPS will be forced to wait for the 
+// factorization to do the scaling. I would say that scaling 
+// during factorization is useful mainly for special classes 
+// of matrices: either unsymmetric with a very asymmetric 
+// structure, either symmetric ones when they are very 
+// badly conditioned or when there are many zeros on 
+// the diagonal. 
