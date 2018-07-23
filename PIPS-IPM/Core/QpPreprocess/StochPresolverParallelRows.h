@@ -127,8 +127,11 @@ private:
    bool tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
    double getSingletonCoefficient(int singleColIdx);
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
-   bool doNearlyParallelRowCase3(int rowId1, int rowId2);
-   double addCostToVariable1(int singleColIdx1, int singleColIdx2, double t);
+   bool doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
+   bool doNearlyParallelRowCase3(int rowId1, int rowId2, int it);
+   void computeXminusYdivZ( double& result, SimpleVector& ixvec, SimpleVector& xvec,
+         int index, double y, double z);
+   void tightenLinkingVarsBounds();
 
    void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
    bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;
