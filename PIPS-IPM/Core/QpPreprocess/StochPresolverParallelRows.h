@@ -129,6 +129,7 @@ private:
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
    bool doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
    bool doNearlyParallelRowCase3(int rowId1, int rowId2, int it);
+   void adaptObjective( int colIdx1, int colIdx2, double t, double d, int it);
    void computeXminusYdivZ( double& result, SimpleVector& ixvec, SimpleVector& xvec,
          int index, double y, double z);
    void tightenLinkingVarsBounds();

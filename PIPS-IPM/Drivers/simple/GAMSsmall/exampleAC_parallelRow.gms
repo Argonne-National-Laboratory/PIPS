@@ -3,17 +3,17 @@ Set i equality-rows    / i1*i7 /
     j columns / j1*j9 /;
 
 parameter g(j) obj coefficients / j1 2, j2 2, j3 2, j4 2, j5 2, j6 2, j7 2, j8 2, j9 2 /
-          b(i) right hand side  / i1 3, i2 10, i3 6, i4 -8, i5 7, i6 4, i7 6 /
+          b(i) right hand side  / i1 3, i2 10, i3 5, i4 -12, i5 7, i6 4, i7 6 /
           cupp(k) right hand side  / k1 3, k2 22, k3 -2, k4 -1, k5 -0.5, k6 8, k7 10 /;
 
 Table A(i,j)
     j1   j2    j3      j4    j5    j6    j7    j8    j9
 i1   2    1
 i2   3    7
-i3   2    3                   1
-i4  -4   -2                  -2
-*i3   2    1     1             1
-*i4  -4   -2            -2    -2
+*i3   2    3                   1
+*i4  -4   -2                  -2
+i3   2    1     1             1
+i4  -4   -2            -2    -2
 i5   6    1                 
 i6   1                                    3
 i7   1    1                         1     1     1     1
@@ -23,8 +23,8 @@ Table C(k,j)
     j1   j2   j3     j4    j5    j6    j7    j8    j9
 k1   3
 k2   6   13
-k3  -4   -4          -1
-k4  -2   -2    1         
+k3  -4   -4                -1
+k4  -2   -2                 1         
 k5  -3   -1          
 k6        4                       1     1     2
 k7   1    1                             1     1

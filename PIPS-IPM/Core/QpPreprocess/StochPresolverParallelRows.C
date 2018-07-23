@@ -1174,34 +1174,11 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
          storeNewBoundsParent(singleColIdx1, newxlow, newxupp);
 
       // adapt objective function:
-      const double costOfVar2 = (singleColIdx2 < nA)
-            ? currgParent->elements()[singleColIdx2] : currgChild->elements()[singleColIdx2 - nA];
-      if( singleColIdx1 >= nA )
-      {
-         currgChild->elements()[singleColIdx1 - nA] += t * costOfVar2;
-         indivObjOffset += d * costOfVar2;
-      }
-      else if( it > -1 )   // case singleColIdx1 a linking variable, and currently working on a child
-      {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
-         gParentAdaptions->elements()[singleColIdx1] += t * costOfVar2;
-         indivObjOffset += d * costOfVar2;
-      }
-      else  // case Parent block that all processes have
-      {
-         currgParent->elements()[singleColIdx1] += t * costOfVar2;
-         // only add the objective offset for root as process ZERO:
-         if( myRank == 0 )
-            indivObjOffset += d * costOfVar2;
-      }
+      adaptObjective( singleColIdx1, singleColIdx2, t, d, it);
    }
    else
    {
-      // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
-      const double costOfVar2 = (singleColIdx2 < nA)
-            ? currgParent->elements()[singleColIdx2] : currgChild->elements()[singleColIdx2 - nA];
-      // only add the objective offset for children or for root as process ZERO:
-      if( myRank == 0 || it > -1 )
-         indivObjOffset += d * costOfVar2;
+      adaptObjective( -1, singleColIdx2, t, d, it);
    }
    return true;
 }
@@ -1286,21 +1263,45 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
    // Second, aggregate x_2: adapt objectiveCost(x_1)
    const double t = coeff_singleton1 / coeff_singleton2 / s;
 
-   const double costOfVar2 = (singleColIdx2 < nA)
-         ? currgParent->elements()[singleColIdx2] : currgChild->elements()[singleColIdx2 - nA];
-
-   if( singleColIdx1 >= nA )
-      currgChild->elements()[singleColIdx1 - nA] += t * costOfVar2;
-   else if( singleColIdx1 >= 0 && it>-1 )
-   {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
-      gParentAdaptions->elements()[singleColIdx1] += t * costOfVar2;
-   }
-   else if( singleColIdx1 >= 0 && it==-1 )
-   {  // at root, adapt gParent immediately
-      currgParent->elements()[singleColIdx1] += t * costOfVar2;
-   }
+   adaptObjective( singleColIdx1, singleColIdx2, t, 0.0, it);
 
    return true;
+}
+
+/**
+ * Adapt the objective function, at coefficient of colIdx1 and if @param offset, then also the objOffset is adapted.
+ */
+void StochPresolverParallelRows::adaptObjective( int colIdx1, int colIdx2, double t, double d, int it)
+{
+   assert( colIdx1 >= -1 && colIdx2 >= 0 );
+   assert( it >= -1 && it < nChildren );
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   const double costOfVar2 = (colIdx2 < nA)
+         ? currgParent->elements()[colIdx2] : currgChild->elements()[colIdx2 - nA];
+
+   if( colIdx1 == -1 )
+   {  // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
+      if( myRank == 0 || it > -1 ) // only add the objective offset for root as process ZERO:
+         indivObjOffset += d * costOfVar2;
+   }
+   else if( colIdx1 >= nA )
+   {
+      currgChild->elements()[colIdx1 - nA] += t * costOfVar2;
+      indivObjOffset += d * costOfVar2;
+   }
+   else if( it > -1 )   // case singleColIdx1 a linking variable, and currently working on a child
+   {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
+      gParentAdaptions->elements()[colIdx1] += t * costOfVar2;
+      indivObjOffset += d * costOfVar2;
+   }
+   else  // case Parent block that all processes have
+   {
+      currgParent->elements()[colIdx1] += t * costOfVar2;
+      // only add the objective offset for root as process ZERO:
+      if( myRank == 0 ) indivObjOffset += d * costOfVar2;
+   }
 }
 
 void StochPresolverParallelRows::computeXminusYdivZ( double& result,
