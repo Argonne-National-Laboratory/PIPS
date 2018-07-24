@@ -1149,8 +1149,8 @@ bool StochPresolverBase::combineNewBoundsParent()
          else
          {
             colIdxCurrent = getNewBoundsParent(i).colIdx;
-            xlowCurrent = getNewBoundsParent(0).newxlow;
-            xuppCurrent = getNewBoundsParent(0).newxupp;
+            xlowCurrent = getNewBoundsParent(i).newxlow;
+            xuppCurrent = getNewBoundsParent(i).newxupp;
          }
       }
    }

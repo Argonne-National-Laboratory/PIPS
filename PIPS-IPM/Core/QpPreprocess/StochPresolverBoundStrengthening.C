@@ -5,6 +5,7 @@
  *      Author: Svenja Uslu
  */
 
+//#define PIPS_DEBUG
 #include "StochPresolverBoundStrengthening.h"
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(PresolveData& presData)
@@ -253,6 +254,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
             newBoundUpp = computeNewBound(false, uis, a_ik, rowIdx, system_type);
       }
 
+      PIPSdebugMessage("Row %d. At variable %d, newly found bounds are [%f, %f]. lis=%f, uis=%f \n", rowIdx, colIdx, newBoundLow, newBoundUpp, lis, uis);
       // tighten the bounds:
       if( childBlock )
       {
@@ -274,7 +276,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
          /*else if( newBoundsFixVariable(varvalue, newBoundLow, newBoundUpp, colIdx,
                currIxlowParent->elements(), currIxuppParent->elements(), currxlowParent->elements(), currxuppParent->elements()) )
          {
-            //cout<<"New bounds imply fixation of variable "<<colIdx<<" of child "<<it<<" to value: "<<val<<endl;
+            PIPSdebugMessage("New bounds imply fixation of variable %d to value=%f. original bounds: [%f, %f] (if existent). \n", colIdx, varvalue, currxlowParent->elements()[colIdx], currxuppParent->elements()[colIdx]);
             // as in SR(equality), store them to remove the column later
             if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, varvalue, currgParent->elements()) )
                return false;
