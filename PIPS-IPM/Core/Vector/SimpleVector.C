@@ -180,7 +180,7 @@ void SimpleVector::scalarMult( double num)
 void SimpleVector::printSolutionToStdErr( OoqpVector &vec)
 {
   int i;
-  for( i = 0; i < 10; i++ )
+  for( i = 0; i < n; i++ )
     {
     fprintf( stderr, "%f", v[i]);
     }
@@ -201,7 +201,7 @@ void SimpleVector::componentDiv ( OoqpVector& vec )
 void SimpleVector::writeToStream(ostream& out) const
 {
   //this->writefToStream( out, "%{value}" );
-  for(int i = 0; i < 10; i++ ) {
+  for(int i = 0; i < n; i++ ) {
     printf("%22.16f\n", v[i]);
   }
 }
