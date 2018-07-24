@@ -347,7 +347,17 @@ double StochGenMatrix::abmaxnorm()
 
 void StochGenMatrix::writeToStream(ostream& out) const
 {
-  assert( "Has not been yet implemented" && 0 );
+  //assert( "Has not been yet implemented" && 0 );
+  printf("Amat:\n");
+  Amat->writeToStream(out);
+  printf("Bmat:\n");
+  Bmat->writeToStream(out);
+  for (int i = 0; i < children.size(); ++i) {
+    printf("children[%d]->Amat:\n", i);
+    children[i]->Amat->writeToStream(out);
+    printf("children[%d]->Bmat:\n", i);
+    children[i]->Bmat->writeToStream(out);
+  }
 }
 
 
