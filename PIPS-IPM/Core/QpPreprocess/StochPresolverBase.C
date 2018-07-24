@@ -264,7 +264,7 @@ void StochPresolverBase::updateTransposedSubmatrix(SparseStorageDynamic& transSt
  */
 void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
 {
-   cout<<"colAdaptParent has "<<presData.getNumberColAdParent()<<" entries."<<endl;
+   //PIPSdebugMessage("colAdaptParent has size %d \n", presData.getNumberColAdParent());
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );

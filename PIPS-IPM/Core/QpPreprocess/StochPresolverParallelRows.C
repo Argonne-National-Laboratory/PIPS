@@ -1084,7 +1084,13 @@ bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
 double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
 {
    assert( singleColIdx >= -1.0);
-   assert( singleColIdx < nA + singletonCoeffsColChild->n );
+   if( singleColIdx >= nA )
+   {
+      assert( singletonCoeffsColChild );
+      assert( singleColIdx < nA + singletonCoeffsColChild->n );
+   }
+   else
+      assert( singletonCoeffsColParent );
 
    if( singleColIdx == -1.0 )
       return 0.0;

@@ -22,6 +22,20 @@ StochPresolverSingletonColumns::~StochPresolverSingletonColumns()
 
 bool StochPresolverSingletonColumns::applyPresolving(int& nelims)
 {
+   // countSingletonColumns();
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
+   if( myRank == 0 ) cout<<"Start Singleton Column Presolving..."<<endl;
+
+   // todo
+
+   return true;
+}
+
+void StochPresolverSingletonColumns::countSingletonColumns()
+{
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
@@ -48,7 +62,6 @@ bool StochPresolverSingletonColumns::applyPresolving(int& nelims)
       cout<<"In A, SC have: both bounds, only lower, only upper, no bounds: "<<nBothBounds<<", "<<nLowerBound<<", "<<nUpperBound<<", "<<nNoBounds<<endl;
       cout<<"SCs with entry in Linking Rows in A and C: "<<nSColEqLinkRow<<", "<<nSColIneqLinkrow<<endl;
    }
-   return true;
 }
 
 void StochPresolverSingletonColumns::initSingletonColumns(int& nSColEq, int& nSColIneq, int& nZeroCostSc,

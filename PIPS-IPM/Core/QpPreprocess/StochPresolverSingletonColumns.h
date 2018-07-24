@@ -23,6 +23,7 @@ public:
    virtual bool applyPresolving(int& nelims);
 
 private:
+   void countSingletonColumns();
    void initSingletonColumns(int& nSColEq, int& nSCIneq, int& nZeroCostSc, int& nLowerBound, int& nUpperBound,
          int& nBothBounds, int& nNoBounds, int& nSColEqLinkRow, int& nSColIneqLinkrow, int& nSC);
    void initSingletonColsBlock(int it, SimpleVector const * nnzColSimple, int& nSColEq, int& nSCIneq, int& nZeroCostSc,
