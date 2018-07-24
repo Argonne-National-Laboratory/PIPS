@@ -18,10 +18,14 @@ class PardisoIndefSolver : public DoubleLinearSolver
 {
    public:
       DenseStorageHandle mStorage;
+      SparseStorageHandle mStorageSparse;
    protected:
      // SparseSymMatrix *sparseMat; todo
+      double* x; /* solution vector */
 
       int mtype;
+
+      int n; /* size of the matrix */
 
       int nrhs; /* Number of right hand sides. */
 
@@ -46,6 +50,15 @@ class PardisoIndefSolver : public DoubleLinearSolver
       virtual void solve ( OoqpVector& vec );
       virtual void solve ( GenMatrix& vec );
       virtual ~PardisoIndefSolver();
+
+   private:
+      virtual void initPardiso();
+      virtual void factorizeFromSparse();
+
+      // todo delete
+      virtual void factorizeFromDense();
+      virtual void factorize();
+
 };
 
 #endif /* _PARDISOINDEFSOLVER_H_ */

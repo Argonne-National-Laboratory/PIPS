@@ -13,6 +13,12 @@
 #include "pipschecks.h"
 #include <limits>
 
+//#define DUMPKKT
+
+#ifdef DUMPKKT
+#include <iostream>
+#include <fstream>
+#endif
 
 #include <unistd.h>
 #include "math.h"
@@ -58,33 +64,54 @@ sLinsysRootAug::~sLinsysRootAug()
 SymMatrix* 
 sLinsysRootAug::createKKT(sData* prob)
 {
-  int n = locnx + locmy + locmyl + locmzl;
-  return new DenseSymMatrix(n);
+   const int n = locnx + locmy + locmyl + locmzl;
+
+   if( hasSparseKkt )
+   {
+      int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+      if( myRank == 0)
+         std::cout << "getSchurCompMaxNnz " << prob->getSchurCompMaxNnz() << std::endl;
+
+      SparseSymMatrix* sparsekkt = prob->createSchurCompSymbSparseUpper();
+
+      assert(sparsekkt->size() == n);
+
+      return sparsekkt;
+   }
+   else
+   {
+      return new DenseSymMatrix(n);
+   }
 }
 
 
 DoubleLinearSolver*
 sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
-  DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
-  // todo user parameter
-#ifdef WITH_PARDISOINDEF
-  if( 0 == myRank )
-     cout << "Using Pardiso for summed Schur complement - sLinsysRootAug"<< endl;
-  return new PardisoIndefSolver(kktmat);
+   if( hasSparseKkt )
+   {
+      if( 0 == myRank )
+         cout << "Using Pardiso for summed Schur complement - sLinsysRootAug" << endl;
 
-#else
-   if( 0 == myRank )
-      cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug"<< endl;
+      SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
 
-   return new DeSymIndefSolver(kktmat);
-   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
-   //return new DeSymPSDSolver(kktmat);
-   //return new PardisoSolver(kktmat);
-#endif
+      return new PardisoIndefSolver(kktmat);
+   }
+   else
+   {
+      if( 0 == myRank )
+         cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug" << endl;
 
+      DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
+
+      return new DeSymIndefSolver(kktmat);
+      //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
+      //return new DeSymPSDSolver(kktmat);
+      //return new PardisoSolver(kktmat);
+   }
 }
 
 #ifdef TIMING
@@ -827,172 +854,400 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   delete[] resvec;
 }
 
+void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
+{
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+
+   int* const krowKkt = kkts.krowM();
+   int* const jcolKkt = kkts.jcolM();
+   double* const MKkt = kkts.M();
+   const int sizeKkt = locnx + locmy + locmyl + locmzl;
+
+   assert(kkts.size() == sizeKkt);
+   assert(!kkts.isLower);
+   assert(locmyl >= 0 && locmzl >= 0);
+
+   //////////////////////////////////////////////////////
+   // compute Q+diag(xdiag) - C' * diag(zDiag) * C
+   // and update the KKT
+   //////////////////////////////////////////////////////
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with Q (DO NOT PUT DIAG)
+   /////////////////////////////////////////////////////////////
+   SparseSymMatrix& Q = prob->getLocalQ();
+   assert(Q.krowM()[locnx] == 0 && "Q currently not supported for sparse kkt");
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with the diagonals
+   // xDiag is in fact diag(Q)+X^{-1}S
+   /////////////////////////////////////////////////////////////
+   assert(xDiag);
+   const SimpleVector& sxDiag = dynamic_cast<const SimpleVector&>(*xDiag);
+
+   for( int i = 0; i < locnx; i++ )
+   {
+      const int diagIdx = krowKkt[i];
+      assert(jcolKkt[diagIdx] == i);
+
+      MKkt[diagIdx] += sxDiag[i];
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with   - C' * diag(zDiag) *C
+   /////////////////////////////////////////////////////////////
+   if( locmz > 0 )
+   {
+      SparseGenMatrix& C = prob->getLocalD();
+      C.matTransDinvMultMat(*zDiag, &CtDC);
+      assert(CtDC->size() == locnx);
+
+      assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
+
+      //aliases for internal buffers of CtDC
+      SparseSymMatrix* CtDCsp = dynamic_cast<SparseSymMatrix*>(CtDC);
+      const int* krowCtDC = CtDCsp->krowM();
+      const int* jcolCtDC = CtDCsp->jcolM();
+      const double* dCtDC = CtDCsp->M();
+
+      for( int i = 0; i < locnx; i++ )
+      {
+         const int pend = krowCtDC[i + 1];
+         for( int p = krowCtDC[i]; p < pend; p++ )
+         {
+            const int col = jcolCtDC[p];
+
+            if( col >= i )
+            {
+               // get start position of dense kkt block
+               const int blockStart = krowKkt[i];
+               assert(col < locnx && jcolKkt[blockStart + col - i] == col);
+
+               MKkt[blockStart + col - i] -= dCtDC[p];
+            }
+         }
+      }
+   } //~end if locmz>0
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with At (symmetric update forced)
+   /////////////////////////////////////////////////////////////
+   if( locmy > 0 )
+   {
+      SparseGenMatrix& At = prob->getLocalB().getTranspose(); // yes, B
+      const double* MAt = At.M();
+      const int* krowAt = At.krowM();
+      const int* jcolAt = At.jcolM();
+
+      for( int i = 0; i < locnx; ++i )
+      {
+         const int pstart = krowAt[i];
+         const int pend = krowAt[i + 1];
+
+         // get start position of sparse kkt block
+         const int blockStart = krowKkt[i] + locnx - i;
+
+         assert(blockStart <= krowKkt[i + 1]);
+
+         for( int p = pstart; p < pend; ++p )
+         {
+            assert(jcolAt[p] < locmy);
+            assert(blockStart + (p - pstart) <= krowKkt[i + 1]);
+            assert(jcolKkt[blockStart + (p - pstart)] == (locnx + jcolAt[p]));
+
+            MKkt[blockStart + (p - pstart)] += MAt[p];
+         }
+      }
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with Ft
+   /////////////////////////////////////////////////////////////
+   if( locmyl > 0 )
+   {
+      SparseGenMatrix& Ft = prob->getLocalF().getTranspose();
+      const double* MFt = Ft.M();
+      const int* krowFt = Ft.krowM();
+      const int* jcolFt = Ft.jcolM();
+
+      for( int i = 0; i < locnx; ++i )
+      {
+         const int pend = krowFt[i + 1];
+
+         // get start position of dense kkt block
+         const int blockStart = krowKkt[i + 1] - locmyl - locmzl;
+
+         assert(blockStart >= krowKkt[i]);
+
+         for( int p = krowFt[i]; p < pend; ++p )
+         {
+            const int col = jcolFt[p];
+            assert(col < locmyl && jcolKkt[blockStart + col] == (locnx + locmy + col));
+
+            MKkt[blockStart + col] += MFt[p];
+         }
+      }
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with Gt and add z diagonal
+   /////////////////////////////////////////////////////////////
+   if( locmzl > 0 )
+   {
+      SparseGenMatrix& Gt = prob->getLocalG().getTranspose();
+      const double* MGt = Gt.M();
+      const int* krowGt = Gt.krowM();
+      const int* jcolGt = Gt.jcolM();
+
+      for( int i = 0; i < locnx; ++i )
+      {
+         const int pend = krowGt[i + 1];
+
+         // get start position of dense kkt block
+         const int blockStart = krowKkt[i + 1] - locmzl;
+
+         assert(blockStart >= krowKkt[i]);
+
+         for( int p = krowGt[i]; p < pend; ++p )
+         {
+            const int col = jcolGt[p];
+            assert(col < locmzl && jcolKkt[blockStart + col] == (locnx + locmy + locmyl + col));
+
+            MKkt[blockStart + col] += MGt[p];
+         }
+      }
+
+      assert(zDiagLinkCons);
+      const SimpleVector& szDiagLinkCons = dynamic_cast<const SimpleVector&>(*zDiagLinkCons);
+
+      for( int i = 0, iKkt = locnx + locmy + locmyl; i < locmzl; ++i, ++iKkt )
+      {
+         const int idx = krowKkt[iKkt];
+         assert(jcolKkt[idx] == iKkt);
+
+         MKkt[idx] += szDiagLinkCons[i];
+      }
+   }
+
+#ifdef DUMPKKT
+   ofstream myfile;
+   myfile.open("../sparsekkt");
+
+   int zerocount = 0;
+
+   for( int r = 0; r < sizeKkt; r++ )
+   {
+      for( int i = krowKkt[r]; i < krowKkt[r + 1]; i++ )
+      {
+         const double val = MKkt[i];
+         const double col = jcolKkt[i];
+         if( val != 0.0 )
+            myfile << r << " " << col << " " << val << std::endl;
+         else
+            zerocount++;
+      }
+   }
+
+   std::cout << "zero-count " << zerocount << " of " << krowKkt[sizeKkt] << std::endl;
+
+   myfile.close();
+
+   assert(0);
+
+#endif
+
+}
+
+void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
+{
+   int j, p, pend;
+
+   DenseSymMatrix * const kktd = dynamic_cast<DenseSymMatrix*>(kkt);
+
+   //alias for internal buffer of kkt
+   double** const dKkt = kktd->Mat();
+
+   //////////////////////////////////////////////////////
+   // compute Q+diag(xdiag) - C' * diag(zDiag) * C
+   // and update the KKT
+   //////////////////////////////////////////////////////
+
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with Q (DO NOT PUT DIAG)
+   /////////////////////////////////////////////////////////////
+   SparseSymMatrix& Q = prob->getLocalQ();
+   int* krowQ=Q.krowM(); int* jcolQ=Q.jcolM(); double* dQ=Q.M();
+   for(int i=0; i<locnx; i++) {
+     pend = krowQ[i+1];
+     for(p=krowQ[i]; p<pend; p++) {
+       j = jcolQ[p];
+       if(i==j) continue;
+       double val = dQ[p];
+       dKkt[i][j] += val;
+       dKkt[j][i] += val;
+ #ifdef DENSE_USE_HALF
+       assert(0 && "Q not supported");
+ #endif
+     }
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with the diagonals
+   // xDiag is in fact diag(Q)+X^{-1}S
+   /////////////////////////////////////////////////////////////
+   //kktd->atPutDiagonal( 0, *xDiag );
+   SimpleVector& sxDiag = dynamic_cast<SimpleVector&>(*xDiag);
+   for(int i=0; i<locnx; i++) dKkt[i][i] += sxDiag[i];
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with   - C' * diag(zDiag) *C
+   /////////////////////////////////////////////////////////////
+   if(locmz>0) {
+     SparseGenMatrix& C = prob->getLocalD();
+     C.matTransDinvMultMat(*zDiag, &CtDC);
+
+     assert(CtDC->size() == locnx);
+     assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
+
+     //aliases for internal buffers of CtDC
+     SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
+     int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();
+
+     for( int i = 0; i < locnx; i++ )
+     {
+       pend = krowCtDC[i + 1];
+       for( p = krowCtDC[i]; p < pend; p++ )
+       {
+          j = jcolCtDC[p];
+
+#ifdef DENSE_USE_HALF
+          if( j <= i )
+             dKkt[i][j] -= dCtDC[p];
+#else
+          dKkt[i][j] -= dCtDC[p];
+#endif
+
+            //printf("%d %d %f\n", i,j,dCtDC[p]);
+        }
+     }
+   } //~end if locmz>0
+   /////////////////////////////////////////////////////////////
+   // update the KKT with A (symmetric update forced)
+   /////////////////////////////////////////////////////////////
+   if(locmy>0)
+   {
+     SparseGenMatrix& A = prob->getLocalB(); // yes, B
+ #ifdef DENSE_USE_HALF
+     const double* dA = A.M();
+     const int* krowA = A.krowM();
+     const int* jcolA = A.jcolM();
+
+     int iKkt = locnx;
+     for( int i = 0; i < locmy; ++i, ++iKkt ) {
+
+       for( p = krowA[i], pend = krowA[i + 1]; p < pend; ++p ) {
+         j = jcolA[p];
+         assert(j < locnx);
+
+         dKkt[iKkt][j] += dA[p];
+       }
+     }
+ #else
+     kktd->symAtPutSubmatrix( locnx, 0, A, 0, 0, locmy, locnx, 1);
+ #endif
+   }
+   //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
+
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with F
+   /////////////////////////////////////////////////////////////
+   if( locmyl > 0 )
+   {
+     SparseGenMatrix& F = prob->getLocalF();
+     const double* dF = F.M();
+     const int* krowF = F.krowM();
+     const int* jcolF = F.jcolM();
+
+     int iKkt = locnx + locmy;
+     for( int i = 0; i < locmyl; ++i, ++iKkt ) {
+       for( p = krowF[i], pend = krowF[i+1]; p < pend; ++p ) {
+         j = jcolF[p];
+         assert(j < locnx);
+
+         const double val = dF[p];
+         dKkt[iKkt][j] += val;
+ #ifndef DENSE_USE_HALF
+         dKkt[j][iKkt] += val;
+ #endif
+       }
+     }
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with G and put z diagonal
+   /////////////////////////////////////////////////////////////
+   if( locmzl > 0 )
+   {
+     SparseGenMatrix& G = prob->getLocalG();
+     assert(zDiagLinkCons);
+     SimpleVector& szDiagLinkCons = dynamic_cast<SimpleVector&>(*zDiagLinkCons);
+
+     const double* dG = G.M();
+     const int* krowG = G.krowM();
+     const int* jcolG = G.jcolM();
+
+     int iKkt = locnx + locmy + locmyl;
+     for( int i = 0; i < locmzl; ++i, ++iKkt ) {
+
+       dKkt[iKkt][iKkt] += szDiagLinkCons[i];
+       for( p = krowG[i], pend = krowG[i+1]; p < pend; ++p ) {
+         j = jcolG[p];
+         assert(j < locnx);
+
+         const double val = dG[p];
+         dKkt[iKkt][j] += val;
+ #ifndef DENSE_USE_HALF
+         dKkt[j][iKkt] += val;
+ #endif
+       }
+     }
+   }
+
+#ifdef DUMPKKT
+   const int msize = locnx + locmy + locmyl + locmzl;
+
+   ofstream myfile;
+   myfile.open("../densekkt");
+
+   for( int col = 0; col < msize; col++ )
+      for( int row = col; row < msize; row++ )
+         if( dKkt[row][col] != 0.0 )
+            myfile << col << " " << row << " " << dKkt[row][col] << std::endl;
+
+   myfile.close();
+
+   assert(0);
+#endif
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT zeros for the lower right block
+   /////////////////////////////////////////////////////////////
+   //kktd->storage().atPutZeros(locnx, locnx, locmy+locmz, locmy+locmz);
+   //myAtPutZeros(kktd, locnx, locnx, locmy, locmy);
+}
 
 
 void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
 {
-  int j, p, pend;
-
   stochNode->resMon.recFactTmLocal_start();
   stochNode->resMon.recSchurMultLocal_start();
 
-  DenseSymMatrix * const kktd = (DenseSymMatrix*) kkt;
-  //alias for internal buffer of kkt
-  double** const dKkt = kktd->Mat();
- 
-
-  //////////////////////////////////////////////////////
-  // compute Q+diag(xdiag) - C' * diag(zDiag) * C 
-  // and update the KKT
-  //////////////////////////////////////////////////////
-
-
-
-  /////////////////////////////////////////////////////////////
-  // update the KKT with Q (DO NOT PUT DIAG)
-  /////////////////////////////////////////////////////////////
-  SparseSymMatrix& Q = prob->getLocalQ();
-  int* krowQ=Q.krowM(); int* jcolQ=Q.jcolM(); double* dQ=Q.M();
-  for(int i=0; i<locnx; i++) {
-    pend = krowQ[i+1];
-    for(p=krowQ[i]; p<pend; p++) {
-      j = jcolQ[p]; 
-      if(i==j) continue;
-      double val = dQ[p];
-      dKkt[i][j] += val;
-      dKkt[j][i] += val;
-#ifdef DENSE_USE_HALF
-      assert(0 && "Q not supported");
-#endif
-    }
-  }
-  
-  /////////////////////////////////////////////////////////////
-  // update the KKT with the diagonals
-  // xDiag is in fact diag(Q)+X^{-1}S
-  /////////////////////////////////////////////////////////////
-  //kktd->atPutDiagonal( 0, *xDiag );
-  SimpleVector& sxDiag = dynamic_cast<SimpleVector&>(*xDiag);
-  for(int i=0; i<locnx; i++) dKkt[i][i] += sxDiag[i];
-
-  /////////////////////////////////////////////////////////////
-  // update the KKT with   - C' * diag(zDiag) *C
-  /////////////////////////////////////////////////////////////
-  if(locmz>0) {
-    SparseGenMatrix& C = prob->getLocalD();
-    C.matTransDinvMultMat(*zDiag, &CtDC);
-    assert(CtDC->size() == locnx);
-
-    //aliases for internal buffers of CtDC
-    SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
-    int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();
-
-    for( int i = 0; i < locnx; i++ )
-    {
-      pend = krowCtDC[i + 1];
-      for( p = krowCtDC[i]; p < pend; p++ )
-      {
-         j = jcolCtDC[p];
-
-#ifdef DENSE_USE_HALF
-         if( j <= i )
-            dKkt[i][j] -= dCtDC[p];
-#else
-         dKkt[i][j] -= dCtDC[p];
-#endif
-
-           //printf("%d %d %f\n", i,j,dCtDC[p]);
-       }
-    }
-  } //~end if locmz>0
-  /////////////////////////////////////////////////////////////
-  // update the KKT with A (symmetric update forced)
-  /////////////////////////////////////////////////////////////
-  if(locmy>0)
-  {
-    SparseGenMatrix& A = prob->getLocalB(); // yes, B
-#ifdef DENSE_USE_HALF
-    const double* dA = A.M();
-    const int* krowA = A.krowM();
-    const int* jcolA = A.jcolM();
-
-    int iKkt = locnx;
-    for( int i = 0; i < locmy; ++i, ++iKkt ) {
-
-      for( p = krowA[i], pend = krowA[i + 1]; p < pend; ++p ) {
-        j = jcolA[p];
-        assert(j < locnx);
-
-        dKkt[iKkt][j] += dA[p];
-      }
-    }
-#else
-    kktd->symAtPutSubmatrix( locnx, 0, A, 0, 0, locmy, locnx, 1);
-#endif
-  }
-  //prob->getLocalB().getStorageRef().dump("stage1eqmat2.dump");
-
-
-  /////////////////////////////////////////////////////////////
-  // update the KKT with F
-  /////////////////////////////////////////////////////////////
-  if( locmyl > 0 )
-  {
-    SparseGenMatrix& F = prob->getLocalF();
-    const double* dF = F.M();
-    const int* krowF = F.krowM();
-    const int* jcolF = F.jcolM();
-
-    int iKkt = locnx + locmy;
-    for( int i = 0; i < locmyl; ++i, ++iKkt ) {
-      for( p = krowF[i], pend = krowF[i+1]; p < pend; ++p ) {
-        j = jcolF[p];
-        assert(j < locnx);
-
-        const double val = dF[p];
-        dKkt[iKkt][j] += val;
-#ifndef DENSE_USE_HALF
-        dKkt[j][iKkt] += val;
-#endif
-      }
-    }
-  }
-
-  /////////////////////////////////////////////////////////////
-  // update the KKT with G and put z diagonal
-  /////////////////////////////////////////////////////////////
-  if( locmzl > 0 )
-  {
-    SparseGenMatrix& G = prob->getLocalG();
-    assert(zDiagLinkCons);
-    SimpleVector& szDiagLinkCons = dynamic_cast<SimpleVector&>(*zDiagLinkCons);
-
-    const double* dG = G.M();
-    const int* krowG = G.krowM();
-    const int* jcolG = G.jcolM();
-
-    int iKkt = locnx + locmy + locmyl;
-    for( int i = 0; i < locmzl; ++i, ++iKkt ) {
-
-      dKkt[iKkt][iKkt] += szDiagLinkCons[i];
-      for( p = krowG[i], pend = krowG[i+1]; p < pend; ++p ) {
-        j = jcolG[p];
-        assert(j < locnx);
-
-        const double val = dG[p];
-        dKkt[iKkt][j] += val;
-#ifndef DENSE_USE_HALF
-        dKkt[j][iKkt] += val;
-#endif
-      }
-    }
-  }
-
-  /////////////////////////////////////////////////////////////
-  // update the KKT zeros for the lower right block 
-  /////////////////////////////////////////////////////////////
-  //kktd->storage().atPutZeros(locnx, locnx, locmy+locmz, locmy+locmz);
-  //myAtPutZeros(kktd, locnx, locnx, locmy, locmy);
+  if( hasSparseKkt )
+     finalizeKKTsparse(prob, vars);
+  else
+     finalizeKKTdense(prob, vars);
 
   stochNode->resMon.recSchurMultLocal_stop();
   stochNode->resMon.recFactTmLocal_stop();

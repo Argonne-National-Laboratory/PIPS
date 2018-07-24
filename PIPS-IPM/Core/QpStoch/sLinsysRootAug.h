@@ -36,6 +36,9 @@ class sLinsysRootAug : public sLinsysRoot {
  protected:
   virtual void solveReduced( sData *prob, SimpleVector& b);
   virtual void solveReducedLinkCons( sData *prob, SimpleVector& b);
+  virtual void finalizeKKTdense( sData* prob, Variables* vars);
+  virtual void finalizeKKTsparse( sData* prob, Variables* vars);
+
   void solveWithIterRef( sData *prob, SimpleVector& b);
   void solveWithBiCGStab( sData *prob, SimpleVector& b);
 

@@ -18,13 +18,18 @@
 class SparseSymMatrix : public SymMatrix {
   SparseStorageHandle mStorage;
 public:
-  SparseSymMatrix( int size, int nnz );
+  SparseSymMatrix();
+  SparseSymMatrix( int size, int nnz, bool isLower = true );
   SparseSymMatrix( int size, int nnz,
-		   int krowM[], int jcolM[], double M[], int deleteElts=0);
+		   int krowM[], int jcolM[], double M[], int deleteElts=0, bool isLower = true);
   //SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks); not needed anymore; cpetra
 
   SparseStorage&  getStorageRef() { return *mStorage; }
   SparseStorage*  getStorage() { return mStorage.ptr(); }
+
+  // is lower part of matrix stored? (otherwise upper part is stored)
+  const bool isLower;
+
   int * krowM() { return mStorage->krowM; }
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
@@ -45,6 +50,8 @@ public:
 
   virtual void symAtPutSpRow( int col, double A[], int lenA, int jcolA[],
 			      int& info );
+
+  virtual void symPutZeroes();
 
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );

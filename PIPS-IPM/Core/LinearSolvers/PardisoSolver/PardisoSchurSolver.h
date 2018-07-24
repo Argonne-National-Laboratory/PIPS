@@ -66,6 +66,13 @@ protected:
 			   /*const*/ SparseGenMatrix& G,
 			   DenseSymMatrix& SC);
   
+  virtual void schur_solve_sparse(/*const*/ SparseGenMatrix& R,
+            /*const*/ SparseGenMatrix& A,
+            /*const*/ SparseGenMatrix& C,
+            /*const*/ SparseGenMatrix& F,
+            /*const*/ SparseGenMatrix& G,
+            SparseSymMatrix& SC);
+
  protected:
   SparseSymMatrix* Msys; // this is the (1,1) block in the augmented system
   bool first;
@@ -91,6 +98,18 @@ protected:
   //temporary vector of size n
   double* nvec;
   
+  virtual void computeSC(
+            int nSCO,
+            /*const*/ SparseGenMatrix& R,
+            /*const*/ SparseGenMatrix& A,
+            /*const*/ SparseGenMatrix& C,
+            /*const*/ SparseGenMatrix& F,
+            /*const*/ SparseGenMatrix& G,
+            int*& rowptrSC,
+            int*& colidxSC,
+            double*& eltsSC
+  );
+
   virtual ~PardisoSchurSolver();
 };
 

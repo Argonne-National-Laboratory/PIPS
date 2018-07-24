@@ -135,6 +135,7 @@ public:
   virtual void copyIntoArray( double v[] ) const;
   virtual void copyFromArray( double v[] );
   virtual void copyFromArray( char v[] );
+  virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec);
 
   /** remove entries i for which select[i] == 0 */
   virtual void removeEntries( const OoqpVector& select );
@@ -243,8 +244,9 @@ public:
   virtual void copyIntoArray( double v[] ) const{};
   virtual void copyFromArray( double v[] ){};
   virtual void copyFromArray( char v[] ){};
-  virtual void removeEntries( const OoqpVector& select ) {};
 
+  virtual void removeEntries( const OoqpVector& select ) {};
+  virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec) {};
 
   int getSize() { return 0; };
 };

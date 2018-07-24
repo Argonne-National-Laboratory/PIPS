@@ -632,8 +632,6 @@ void SparseGenMatrix::updateTransposed()
    }
    const int nnz = mStorage->numberOfNonZeros();
 
-   if( nnz <= 0 )
-      return;
    const int m = mStorage->m;
    const int n = mStorage->n;
    m_Mt = new SparseGenMatrix(n, m, nnz);
@@ -643,10 +641,64 @@ void SparseGenMatrix::updateTransposed()
 
 void SparseGenMatrix::deleteTransposed()
 {
-   if( m_Mt != NULL )
+   if( m_Mt )
    {
       delete m_Mt;
       m_Mt = NULL;
    }
+}
+
+void SparseGenMatrix::updateNonEmptyRowsCount(std::vector<int>& rowcount) const
+{
+   const int m = mStorage->m;
+   const int* const rowStart = mStorage->krowM;
+
+   assert(unsigned(m) == rowcount.size());
+
+   for( int i = 0; i < m; i++ )
+      if( rowStart[i] != rowStart[i + 1] )
+         rowcount[i]++;
+}
+
+void SparseGenMatrix::updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
+      std::vector<int>& linkBlockPos2) const
+{
+   const int m = mStorage->m;
+   const int* const rowStart = mStorage->krowM;
+
+   assert(blockPosition >= 0 && m >= 0);
+   assert(unsigned(m) == rowcount.size());
+   assert(rowcount.size() == linkBlockPos1.size() && rowcount.size() == linkBlockPos2.size());
+
+   for( int i = 0; i < m; i++ )
+      if( rowStart[i] != rowStart[i + 1] )
+      {
+         if( linkBlockPos1[i] < 0 )
+            linkBlockPos1[i] = blockPosition;
+         else
+            linkBlockPos2[i] = blockPosition;
+
+         rowcount[i]++;
+      }
+}
+
+SparseGenMatrix& SparseGenMatrix::getTranspose()
+{
+   if( m_Mt )
+     return *m_Mt;
+
+   updateTransposed();
+
+   assert(m_Mt);
+
+   return *m_Mt;
+}
+
+void SparseGenMatrix::permuteRows(const std::vector<unsigned int>& permvec)
+{
+   mStorage->permuteRows(permvec);
+
+   // todo implement column permutation
+   assert(!m_Mt);
 }
 

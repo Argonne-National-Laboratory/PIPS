@@ -875,9 +875,6 @@ void SparseStorage::transMultLower( double beta,  double y[],
   }
 }
 
-#ifndef MAX
-#define MAX(a,b) ( (a > b) ? a : b)
-#endif
 #ifndef MIN
 #define MIN(a,b) ( (a > b) ? b : a)
 #endif
@@ -1203,7 +1200,7 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt) const
   /////////////////////////////////////////////////////
   // form the transpose 
   /////////////////////////////////////////////////////
-  int nnz = krowM[m];
+  const int nnz = krowM[m];
 
   //cumulative sum to find the number of elements in each row of At, ie column of A.
   int* w=new int[n];
@@ -1228,6 +1225,12 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt) const
   }
   //we have the transpose
   delete[] w;
+}
+
+void SparseStorage::clear()
+{
+   for( int i = 0; i < len; i++ )
+      M[i] = 0.0;
 }
 
 void SparseStorage::matTransDSymbMultMat(double* d,
@@ -1584,6 +1587,51 @@ void SparseStorage::getRowMinMaxVec(bool getMin, const double* colScaleVec, doub
       getRowMaxVec(colScaleVec, vec);
 }
 
+
+void SparseStorage::permuteRows(const std::vector<unsigned int>& permvec)
+{
+   assert(permvec.size() == size_t(m));
+
+   if( len == 0 )
+      return;
+
+   assert(m > 0 && n > 0);
+
+   int* jcolM_new = new int[len];
+   int* krowM_new = new int[m + 1];
+   double* M_new = new double[len];
+
+   int len_new = 0;
+   krowM_new[0] = 0;
+
+   for( int r = 0; r < m; ++r )
+   {
+      const unsigned int r_perm = permvec[r];
+      const int rowlength = krowM[r_perm + 1] - krowM[r_perm];
+
+      assert(r_perm < static_cast<unsigned int>(m) && rowlength >= 0);
+
+      if( rowlength > 0 )
+      {
+         memcpy(jcolM_new + len_new, jcolM + krowM[r_perm], rowlength * sizeof(int));
+         memcpy(M_new + len_new, M + krowM[r_perm], rowlength * sizeof(double));
+
+         len_new += rowlength;
+      }
+
+      krowM_new[r + 1] = len_new;
+   }
+
+   assert(len_new == len);
+
+   delete[] jcolM;
+   delete[] krowM;
+   delete[] M;
+
+   jcolM = jcolM_new;
+   krowM = krowM_new;
+   M = M_new;
+}
 
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:

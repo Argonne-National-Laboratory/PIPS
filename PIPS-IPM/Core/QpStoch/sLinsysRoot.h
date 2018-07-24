@@ -6,6 +6,8 @@
 #define SROOTLINSYS
 
 #include "sLinsys.h"
+#include "StochGenMatrix.h"
+
 
 class sFactory;
 class sData;
@@ -30,6 +32,7 @@ class sLinsysRoot : public sLinsys {
  public:
   std::vector<sLinsys*> children;
   int iAmDistrib;
+
  public:
 
   sLinsysRoot(sFactory * factory_, sData * prob_);
@@ -59,6 +62,8 @@ class sLinsysRoot : public sLinsys {
   virtual void putZDiagonal( OoqpVector& zdiag );
  
   virtual void AddChild(sLinsys* child);
+
+  virtual bool usingSparseKkt() {return hasSparseKkt;};
 
   void sync();
  public:
@@ -90,6 +95,14 @@ class sLinsysRoot : public sLinsys {
   OoqpVector* zDiag;
   OoqpVector* zDiagLinkCons;
   OoqpVector* xDiag;
+
+  double* sparseKktBuffer;
+
+  bool hasSparseKkt;
+ private:
+  void addTermToSchurCompl(sData* prob, size_t childindex);
+  void reduceKKTdense();
+  void reduceKKTsparse();
 
 #ifdef STOCH_TESTING
  protected: 

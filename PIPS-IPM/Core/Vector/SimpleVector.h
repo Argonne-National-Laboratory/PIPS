@@ -8,6 +8,7 @@
 
 #include "OoqpVector.h"
 #include "SimpleVectorHandle.h"
+#include "vector"
 
 /**
  * Simple sequential vectors with element access.
@@ -126,6 +127,8 @@ public:
                       bool& primalBlocking, bool& dualBlocking) const;
 
   virtual void removeEntries(const OoqpVector& select);
+
+  void permuteEntries(const std::vector<unsigned int>& permvec);
 
   /** Returns a pointer to the elements of this vector. */
   double * elements() const { return v; };

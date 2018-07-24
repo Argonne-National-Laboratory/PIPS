@@ -10,6 +10,7 @@
 #include "SparseStorage.h"
 #include "SparseStorageDynamic.h"
 #include "SparseGenMatrixHandle.h"
+#include <vector>
 
 /** Represents sparse non-symmetric, possibly non-square matrices stored in
  *  row-major Harwell-Boeing format.
@@ -144,6 +145,15 @@ public:
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
 
   void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec);
+
+  void permuteRows(const std::vector<unsigned int>& permvec);
+
+  void updateNonEmptyRowsCount(std::vector<int>& rowcount) const;
+
+  void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
+     std::vector<int>& linkBlockPos2) const;
+
+  SparseGenMatrix& getTranspose();
 
   void deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
 

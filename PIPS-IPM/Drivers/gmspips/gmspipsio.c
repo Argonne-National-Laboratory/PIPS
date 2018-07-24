@@ -623,6 +623,7 @@ void copyGDXSymbol(int         numBlocks,
       GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, symText, symDim, symType, userInfo));
    }
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
+
    while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
    {
       if ( 0 == readType || 3 == readType )

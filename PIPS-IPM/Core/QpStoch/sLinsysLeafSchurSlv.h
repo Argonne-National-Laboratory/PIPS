@@ -27,6 +27,8 @@ class sLinsysLeafSchurSlv : public sLinsysLeaf
   void factor2(sData *prob, Variables *vars);
   void addTermToDenseSchurCompl(sData *prob, 
 				DenseSymMatrix& SC);
+  void addTermToSparseSchurCompl(sData *prob,
+            SparseSymMatrix& SC);
 
  private:
   bool switchedToSafeSlv;

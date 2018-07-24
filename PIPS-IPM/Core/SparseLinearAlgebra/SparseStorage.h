@@ -80,6 +80,8 @@ public:
 
   virtual void randomize( double alpha, double beta, double * seed );
 
+  virtual void clear();
+
   virtual void getTransposePat( int row, int col, int rowExtent, int colExtent,
 				int kpat[], int krowM[], int jcolM[] );
   virtual void getFromPat( double data[], int n, int kpat[] );
@@ -155,6 +157,8 @@ public:
   /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i];
    *  empty rows get value 0.0 for maximization and <double>::max() for minimization  */
   void getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const;
+
+  void permuteRows(const std::vector<unsigned int>& permvec);
 
   void dump(const string& filename);
 

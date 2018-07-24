@@ -48,7 +48,7 @@ public:
   std::vector<StochGenMatrix*> children;
   SparseGenMatrix* Amat;
   SparseGenMatrix* Bmat;
-  SparseGenMatrix* Cmat;
+
   int id;
   long long m,n;
   MPI_Comm mpiComm;

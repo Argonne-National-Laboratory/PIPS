@@ -194,8 +194,15 @@ public:
   {
      initStaticStorageFromDynamic(rowNnzVec, colNnzVec, NULL, NULL);
   };
-
   virtual void freeDynamicStorage();
+
+  /** returns Simple Vector indicating which linking rows have entries in exactly two blocks (indicated by 1.0 versus 0.0)*/
+  virtual std::vector<int> get2LinkStartBlocks() const;
+
+  virtual void updateKLinkVarsCount(std::vector<int>& linkCount) const;
+  virtual void updateKLinkConsCount(std::vector<int>& linkCount) const;
+
+  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec);
 };
 
 
@@ -218,6 +225,7 @@ public:
 
  public:
   virtual void updateTransposed() {};
+
   virtual void getSize( int& m, int& n ){m=0; n=0;}
   virtual void getSize( long long& m, long long& n ){m=0; n=0;}
 
@@ -325,10 +333,16 @@ public:
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
 
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec) {};
-
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec) {};
 
   virtual void freeDynamicStorage() {};
+
+  virtual std::vector<int> get2LinkStartBlocks() const {return std::vector<int>();};
+
+  virtual void updateKLinkVarsCount(std::vector<int>& linkCount) const {};
+  virtual void updateKLinkConsCount(std::vector<int>& linkCount) const {};
+
+  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec) {};
 };
 
 
