@@ -143,7 +143,7 @@ StochVector* sTreeImpl::createc() const
 
   if(m_id==0) {
     //RESCALE=1.0/children.size();
-    cout << "RESCALE set to " << RESCALE << endl;
+    //cout << "RESCALE set to " << RESCALE << endl;
 #ifdef TIMING
       //RESCALE=1;//0.25*children.size();
 #endif
