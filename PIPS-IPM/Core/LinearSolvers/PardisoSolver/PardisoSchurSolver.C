@@ -555,7 +555,6 @@ void PardisoSchurSolver::computeSC(
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
    // if needed, use 2 for advanced matchings and higer accuracy.
    iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    //iparm[27] = 1; // Parallel metis
 
