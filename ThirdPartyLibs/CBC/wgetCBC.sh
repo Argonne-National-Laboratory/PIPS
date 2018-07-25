@@ -23,6 +23,6 @@ cd src
 #./configure --enable-static --prefix=`pwd`
 #make -j4 install
 #./configure CFLAGS='-O3' CXXFLAGS='-O3' --enable-static --prefix=`pwd`
-./configure --enable-static --prefix=`pwd`
+./configure --enable-static --disable-shared --prefix=`pwd` ADD_CXXFLAGS=-fPIC
 make -j$1 install
 

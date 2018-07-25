@@ -70,7 +70,10 @@ StochSymMatrix* sTreeImpl::createQ() const
     // get the Hessian from stochasticInput and get it in row-major
     // format by transposing it
     CoinPackedMatrix Q0;
-    Q0.reverseOrderedCopyOf( in.getFirstStageHessian() );
+    if ( in.getFirstStageHessian().isColOrdered() )
+      Q0.reverseOrderedCopyOf( in.getFirstStageHessian() );
+    else
+      Q0.copyOf( in.getFirstStageHessian() );
 
     Q = new StochSymMatrix(m_id, N, m_nx, Q0.getNumElements(), commWrkrs);
 
@@ -85,8 +88,14 @@ StochSymMatrix* sTreeImpl::createQ() const
 	    Q0.getNumElements()*sizeof(double));
   } else {
     CoinPackedMatrix Qi, Ri;
-    Qi.reverseOrderedCopyOf( in.getSecondStageHessian(m_id-1) );
-    Ri.reverseOrderedCopyOf( in.getSecondStageCrossHessian(m_id-1) );
+    if ( in.getSecondStageHessian(m_id-1).isColOrdered() )
+      Qi.reverseOrderedCopyOf( in.getSecondStageHessian(m_id-1) );
+    else
+      Qi.copyOf( in.getSecondStageHessian(m_id-1) );
+    if ( in.getSecondStageCrossHessian(m_id-1).isColOrdered() )
+      Ri.reverseOrderedCopyOf( in.getSecondStageCrossHessian(m_id-1) );
+    else
+      Ri.copyOf( in.getSecondStageCrossHessian(m_id-1) );
 			     
     Q = new 
       StochSymMatrix( m_id,N, 
@@ -134,7 +143,7 @@ StochVector* sTreeImpl::createc() const
 
   if(m_id==0) {
     //RESCALE=1.0/children.size();
-    cout << "RESCALE set to " << RESCALE << endl;
+    //cout << "RESCALE set to " << RESCALE << endl;
 #ifdef TIMING
       //RESCALE=1;//0.25*children.size();
 #endif
@@ -296,7 +305,11 @@ StochGenMatrix* sTreeImpl::createA() const
   StochGenMatrix* A = NULL;
   if (m_id==0) {
     CoinPackedMatrix Arow; 
-    Arow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
+    // FIXED: do reverseOrderedCopyOf if the matrix is column ordered.
+    if ( in.getFirstStageConstraints().isColOrdered() )
+      Arow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
+    else
+      Arow.copyOf( in.getFirstStageConstraints() );
     assert(false==Arow.hasGaps());  
 
     // number of nz in the rows corresponding to eq constraints
@@ -304,7 +317,7 @@ StochGenMatrix* sTreeImpl::createA() const
 		       in.getFirstStageRowLB(), 
 		       in.getFirstStageRowUB(), 
 		       eq_comp());
-    //printf("%d  -- 1st stage my=%lu nx=%lu nnzB=%d\n", commie, m_my, m_nx, nnzB);
+    //printf("%d  -- 1st stage my=%lu nx=%lu nnzB=%d\n", commWrkrs, m_my, m_nx, nnzB);
     A = new StochGenMatrix( m_id, N, MZ, 
 			    m_my, 0,   0,    // A does not exist for the root
 			    m_my, m_nx, nnzB, // B is 1st stage eq matrix
@@ -316,8 +329,15 @@ StochGenMatrix* sTreeImpl::createA() const
   } else {
     int scen=m_id-1;
     CoinPackedMatrix Arow, Brow; 
-    Arow.reverseOrderedCopyOf( in.getLinkingConstraints(scen) );
-    Brow.reverseOrderedCopyOf( in.getSecondStageConstraints(scen) );
+    // FIXED: do reverseOrderedCopyOf if the matrix is column ordered.
+    if ( in.getLinkingConstraints(scen).isColOrdered() )
+      Arow.reverseOrderedCopyOf( in.getLinkingConstraints(scen) );
+    else
+      Arow.copyOf( in.getLinkingConstraints(scen) );
+    if ( in.getSecondStageConstraints(scen).isColOrdered() )
+      Brow.reverseOrderedCopyOf( in.getSecondStageConstraints(scen) );
+    else
+      Brow.copyOf( in.getSecondStageConstraints(scen) );
 
     int nnzA=countNNZ( Arow, in.getSecondStageRowLB(scen), 
 		       in.getSecondStageRowUB(scen), eq_comp() );
@@ -328,7 +348,7 @@ StochGenMatrix* sTreeImpl::createA() const
 			    m_my, parent->m_nx, nnzA, 
 			    m_my, m_nx,         nnzB,
 			    commWrkrs );
-    //cout << commie << "  -- 2nd stage my=" << m_my << " nx=" << m_nx 
+    //cout << commWrkrs << "  -- 2nd stage my=" << m_my << " nx=" << m_nx 
     // << "  1st stage nx=" << parent->m_nx << "  nnzA=" << nnzA << " nnzB=" << nnzB << endl;
     extractRows( Arow,
 		 in.getSecondStageRowLB(scen), 
@@ -357,7 +377,11 @@ StochGenMatrix* sTreeImpl::createC() const
   StochGenMatrix* C = NULL;
   if (m_id==0) {
     CoinPackedMatrix Crow; 
-    Crow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
+    // FIXED: do reverseOrderedCopyOf if the matrix is column ordered.
+    if ( in.getFirstStageConstraints().isColOrdered() )
+      Crow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
+    else
+      Crow.copyOf( in.getFirstStageConstraints() );
 
     // number of nz in the rows corresponding to ineq constraints
     int nnzD=countNNZ( Crow, 
@@ -375,8 +399,15 @@ StochGenMatrix* sTreeImpl::createC() const
   } else {
     int scen=m_id-1;
     CoinPackedMatrix Crow, Drow; 
-    Crow.reverseOrderedCopyOf( in.getLinkingConstraints(scen) );
-    Drow.reverseOrderedCopyOf( in.getSecondStageConstraints(scen) );
+    // FIXED: do reverseOrderedCopyOf if the matrix is column ordered.
+    if ( in.getLinkingConstraints(scen).isColOrdered() )
+      Crow.reverseOrderedCopyOf( in.getLinkingConstraints(scen) );
+    else
+      Crow.copyOf( in.getLinkingConstraints(scen) );
+    if ( in.getSecondStageConstraints(scen).isColOrdered() )
+      Drow.reverseOrderedCopyOf( in.getSecondStageConstraints(scen) );
+    else
+      Drow.copyOf( in.getSecondStageConstraints(scen) );
 
     int nnzC=countNNZ( Crow, in.getSecondStageRowLB(scen), 
 		       in.getSecondStageRowUB(scen), ineq_comp() );

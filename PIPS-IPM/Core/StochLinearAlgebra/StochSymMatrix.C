@@ -256,7 +256,17 @@ double StochSymMatrix::abmaxnorm()
 
 void StochSymMatrix::writeToStream(ostream& out) const
 {
-  assert( "Not implemented" && 0 );
+  // assert( "Not implemented" && 0 );
+  printf("diag:\n");
+  diag->writeToStream(out);
+  printf("border:\n");
+  border->writeToStream(out);
+  for (int i = 0; i < children.size(); ++i) {
+    printf("children[%d]->diag:\n", i);
+    children[i]->diag->writeToStream(out);
+    printf("children[%d]->border:\n", i);
+    children[i]->border->writeToStream(out);
+  }
 }
 
 void StochSymMatrix::randomizePSD(double * seed)

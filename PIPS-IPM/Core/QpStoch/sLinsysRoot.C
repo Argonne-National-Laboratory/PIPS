@@ -2,7 +2,8 @@
    Authors: Cosmin Petra and Miles Lubin
    See license and copyright information in the documentation */
 
-
+#include <math.h>
+#include <algorithm>
 #include "sLinsysRoot.h"
 #include "sTree.h"
 #include "sFactory.h"
@@ -25,6 +26,9 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
 {
   assert(dd!=NULL);
   createChildren(prob_);
+
+  /** Initialize diagonal matrix */
+  putXDiagonal( *dq );
 
   if(gOuterSolve) {
     // stuff for iterative refimenent and BiCG
@@ -58,6 +62,9 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0)
 {
   createChildren(prob_);
+
+  /** Initialize diagonal matrix */
+  putXDiagonal( *dq );
 
   if(gOuterSolve) {
       // stuff for iterative refimenent and BiCG 
@@ -541,6 +548,63 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
 {
   double ** M = A->mStorage->M;
   int n = A->mStorage->n;
+#if 0
+  /** get size and rank */
+  int comm_size, comm_rank; 
+  MPI_Comm_size(comm, &comm_size);
+  MPI_Comm_rank(comm, &comm_rank);
+
+  double ctime;
+
+  int ntriangle = n * (n - 1) / 2 + n;
+  std::vector<int> nzi; nzi.reserve(ntriangle);
+  for (int i = 0; i < n; ++i) {
+    if (M[i][i] != 0.0)
+      nzi.push_back(n*i);
+    for (int j = i + 1; j < n; ++j) {
+      if (M[i][j] != 0.0)
+        nzi.push_back(n*i+j);
+    }
+  }
+
+  int nzcnt = nzi.size(), total_nzcnt = 0;
+  std::vector<int> nzcnts(comm_size), displs(comm_size);
+  MPI_Allgather(&nzcnt, 1, MPI_INT, &nzcnts[0], 1, MPI_INT, comm);
+  for (int i = 0; i < comm_size; ++i) {
+    total_nzcnt += nzcnts[i];
+    displs[i] = i == 0 ? 0 : displs[i-1] + nzcnts[i-1];
+  }
+
+  ctime = MPI_Wtime();
+  std::vector<int> spInd(total_nzcnt);
+  MPI_Allgatherv(&nzi[0], nzcnt, MPI_INT, &spInd[0], &nzcnts[0], &displs[0], MPI_INT, comm);
+  if (comm_rank == 0) printf("Allgatherv time: %.2f sec\n", MPI_Wtime()-ctime);
+
+  // sort and unique
+  ctime = MPI_Wtime();
+  std::sort(spInd.begin(), spInd.end());
+  std::unique(spInd.begin(), spInd.end());
+  if (comm_rank == 0) printf("sort and unique time: %.2f sec\n", MPI_Wtime()-ctime);
+
+  ctime = MPI_Wtime();
+  int spNzcnt = spInd.size();
+  std::vector<double> spElem0(spNzcnt), spElem(spNzcnt);
+  for (int i = 0, j = 0; i < spNzcnt; ++i) {
+    if (spInd[i] == nzi[j]) {
+      spElem0[i] = M[nzi[j]/n][nzi[j]%n];
+      j++;
+    }
+  }
+  MPI_Allreduce(&spElem0[0], &spElem[0], spNzcnt, MPI_DOUBLE, MPI_SUM, comm);
+  if (comm_rank == 0) printf("Allreduce time (size %d): %.2f sec\n", spNzcnt, MPI_Wtime()-ctime);
+
+  for (int k = 0; k < spNzcnt; ++k) {
+    int i = spInd[k] / n;
+    int j = spInd[k] % n;
+    M[i][j] = spElem[k];
+    M[j][i] = spElem[k];
+  }
+#else
 #ifdef DEBUG 
   assert(n >= row+drow);
   assert(n >= col+dcol);
@@ -567,13 +631,14 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
 
       int shft = (i-iRow)*n;
       for(int j=col; j<col+dcol; j++)
-	M[i][j] = chunk[shft+j];
+       M[i][j] = chunk[shft+j];
     }
     iRow += rows_in_chunk;
   
   } while(iRow<row+drow);
 
   delete[] chunk;
+#endif
 }
 
 

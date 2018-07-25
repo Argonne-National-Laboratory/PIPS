@@ -18,7 +18,7 @@ class sData;
  */
 class sLinsysRoot : public sLinsys {
  protected:
-  sLinsysRoot() {};
+  sLinsysRoot(): xDiag(NULL) {};
 
   virtual void         createChildren(sData* prob);
   virtual void         deleteChildren();
