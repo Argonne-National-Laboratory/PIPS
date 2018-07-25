@@ -517,7 +517,7 @@ void PardisoSchurSolver::computeSC(
    } else {
 
      //update diagonal entries in the PARDISO aug sys
-     double* eltsMsys = Msys->getStorageRef().M;
+     const double* eltsMsys = Msys->getStorageRef().M;
      map<int,int>::iterator it;
      for(it=diagMap.begin(); it!=diagMap.end(); it++)
        eltsAug[it->second] = eltsMsys[it->first];
@@ -535,30 +535,31 @@ void PardisoSchurSolver::computeSC(
    }
  #endif
 
-   int nIter=(int)g_iterNumber;
-   const int symbEvery=5;
-   if( (nIter/symbEvery)*symbEvery==nIter )
-     doSymbFact=true;
+   const int nIter = (int) g_iterNumber;
+   const int symbEvery = 3;
+   if( (nIter % symbEvery) == 0 )
+      doSymbFact = true;
 
-   int phase=22; // Numerical factorization
-   if(doSymbFact) {
-     phase =12;    //Numerical factorization & symb analysis
-   }
+   int phase = 22; // Numerical factorization
 
-   int maxfct=1, mnum=1, nrhs=1;
-   iparm[2]=num_threads;
-   iparm[7]=8;     //# iterative refinements
+   if( doSymbFact )
+      phase = 12; //Numerical factorization & symb analysis
+
+   int maxfct = 1, mnum = 1, nrhs = 1;
+   iparm[2] = num_threads;
+   iparm[7] = 8; //# iterative refinements
    iparm[1] = 2; // 2 is for metis, 0 for min degree
    //iparm[1] = 0; // 2 is for metis, 0 for min degree
    //iparm[ 9] = 10; // pivot perturbation 10^{-xxx}
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
    // if needed, use 2 for advanced matchings and higer accuracy.
+   // todo: test =1 for 23, 24
    iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
    //iparm[27] = 1; // Parallel metis
 
-   int msglvl=pardiso_verbosity;  // with statistical information
+   int msglvl = pardiso_verbosity; // with statistical information
    //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
    //if (myRankp==0) msglvl=1;
    // iparm[32] = 1; // compute determinant
