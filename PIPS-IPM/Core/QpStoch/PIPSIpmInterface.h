@@ -75,6 +75,20 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 #endif
 
   data   = dynamic_cast<sData*>     ( factory->makeData() );
+#ifndef TIMING
+  int mype;
+  MPI_Comm_rank(comm,&mype);
+#endif
+
+  // int comm_size; MPI_Comm_size(comm,&comm_size);
+  // for (int i = 0; i < comm_size; ++i) {
+  //   if(mype==i) {
+  //     printf("Rank %d:\n", i);
+  //     data->print();
+  //   }
+  //   flush(cout);
+  //   MPI_Barrier(comm);
+  // }
 #ifdef TIMING
   if(mype==0) printf("data created\n");
 #endif
