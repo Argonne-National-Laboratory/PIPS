@@ -548,7 +548,7 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
 {
   double ** M = A->mStorage->M;
   int n = A->mStorage->n;
-#if 1
+#if 0
   /** get size and rank */
   int comm_size, comm_rank; 
   MPI_Comm_size(comm, &comm_size);
