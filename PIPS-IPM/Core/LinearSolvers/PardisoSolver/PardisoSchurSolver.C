@@ -59,6 +59,8 @@ int dumpSysMatrix(SparseSymMatrix* Msys,
                   const char* fname=NULL);
 int dumpRhs(SimpleVector& v);
 
+const static int pardiso_verbosity = 0;
+
 
 #ifdef TIMING_FLOPS
 extern "C" {
@@ -77,7 +79,9 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 {
   Msys = sgm;
   n = -1;
-  nvec=NULL;
+  nnz = -1;
+  nSC = -1;
+  nvec = NULL;
   // - we do not have the augmented system yet; most of intialization done during the 
   // first solve call
 
@@ -555,10 +559,10 @@ void PardisoSchurSolver::computeSC(
    iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    //iparm[27] = 1; // Parallel metis
 
-   int msglvl=0;  // with statistical information
+   int msglvl=pardiso_verbosity;  // with statistical information
    //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
    //if (myRankp==0) msglvl=1;
-   iparm[32] = 1; // compute determinant
+   // iparm[32] = 1; // compute determinant
    iparm[37] = nSC;//Msys->size(); //compute Schur-complement
 
  #ifdef TIMING
@@ -613,7 +617,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higer accuracy.
   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-  int msglvl=0;  // with statistical information
+  int msglvl=pardiso_verbosity;  // with statistical information
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
   //if (myRankp==0) msglvl=1;
 
@@ -707,7 +711,7 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
   iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-  int msglvl=0;  // with statistical information
+  int msglvl=pardiso_verbosity;  // with statistical information
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
   //if (myRankp==0) msglvl=1;
 

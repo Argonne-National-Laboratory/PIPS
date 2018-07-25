@@ -99,7 +99,7 @@ void PardisoIndefSolver::initPardiso()
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
 
-   msglvl = 0; /* Print statistical information  */
+   msglvl = 0; /* Print statistical information?  */
    ia = NULL;
    ja = NULL;
    a = NULL;
@@ -324,6 +324,14 @@ void PardisoIndefSolver::factorize()
    }
 #endif
 
+  // iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+  // iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+   // iparm[20] = 1 use Bunch-Kaufman
+   // if needed, use 2 for advanced matchings and higher accuracy.
+   // iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   // iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   // iparm[27] = 1; // Parallel metis
+
    phase = 11;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
@@ -343,7 +351,7 @@ void PardisoIndefSolver::factorize()
    }
 
    phase = 22;
-   iparm[32] = 1; /* compute determinant */
+   // iparm[32] = 1; /* compute determinant */
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
          iparm, &msglvl, &ddum, &ddum, &error, dparm);
