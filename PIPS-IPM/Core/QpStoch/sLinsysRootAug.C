@@ -861,9 +861,8 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    int* const krowKkt = kkts.krowM();
    int* const jcolKkt = kkts.jcolM();
    double* const MKkt = kkts.M();
-   const int sizeKkt = locnx + locmy + locmyl + locmzl;
 
-   assert(kkts.size() == sizeKkt);
+   assert(kkts.size() == locnx + locmy + locmyl + locmzl);
    assert(!kkts.isLower);
    assert(locmyl >= 0 && locmzl >= 0);
 
@@ -1034,6 +1033,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    myfile.open("../sparsekkt");
 
    int zerocount = 0;
+   const int sizeKkt = locnx + locmy + locmyl + locmzl;
 
    for( int r = 0; r < sizeKkt; r++ )
    {

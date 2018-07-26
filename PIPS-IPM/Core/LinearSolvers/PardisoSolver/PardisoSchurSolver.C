@@ -536,7 +536,7 @@ void PardisoSchurSolver::computeSC(
  #endif
 
    const int nIter = (int) g_iterNumber;
-   const int symbEvery = 3;
+   const int symbEvery = 5;
    if( (nIter % symbEvery) == 0 )
       doSymbFact = true;
 
@@ -546,18 +546,23 @@ void PardisoSchurSolver::computeSC(
       phase = 12; //Numerical factorization & symb analysis
 
    int maxfct = 1, mnum = 1, nrhs = 1;
+
    iparm[2] = num_threads;
    iparm[7] = 8; //# iterative refinements
-   iparm[1] = 2; // 2 is for metis, 0 for min degree
-   //iparm[1] = 0; // 2 is for metis, 0 for min degree
    //iparm[ 9] = 10; // pivot perturbation 10^{-xxx}
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-   // if needed, use 2 for advanced matchings and higer accuracy.
-   // todo: test =1 for 23, 24
+   // use 2 for advanced matchings and higher accuracy.
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+  // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
+   iparm[23] = 1;
+   iparm[24] = 1;
+   iparm[27] = 1; // Parallel metis
+#else
+   iparm[1] = 2; // 2 is for metis, 0 for min degree
    iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   //iparm[27] = 1; // Parallel metis
+#endif
 
    int msglvl = pardiso_verbosity; // with statistical information
    //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
@@ -589,7 +594,7 @@ void PardisoSchurSolver::computeSC(
  #endif
    if ( error != 0) {
      printf ("PardisoSolver - ERROR during factorization: %d. Phase param=%d\n", error,phase);
-     assert(false);
+     exit(1);
    }
    rowptrSC = new int[nSC+1];
    colidxSC = new int[nnzSC];
@@ -616,7 +621,11 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
                  // if needed, use 2 for advanced matchings and higher accuracy.
+#ifdef  PARDISO_PARALLEL_AGGRESSIVE
+  iparm[23] = 1;
+#else
   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+#endif
   //iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
 
   int msglvl=pardiso_verbosity;  // with statistical information

@@ -116,14 +116,14 @@ void PardisoIndefSolver::matrixChanged()
 
    if( myrank == 0 )
    {
-      printf("\nFactorization starts ...\n ");
+      printf("\n Schur complement factorization is starting ...\n ");
 
       if( mStorageSparse )
          factorizeFromSparse();
       else
          factorizeFromDense();
 
-      printf("\nFactorization completed ...\n ");
+      printf("\n Schur complement factorization completed \n ");
    }
 }
 
@@ -198,44 +198,6 @@ void PardisoIndefSolver::factorizeFromDense()
 
    assert(mStorage);
 
-#if 0
-   ofstream myfile;
-   myfile.open("xout");
-
-   int all = 0;
-   int z = 0;
-   for( int i = 0; i < n; i++ )
-   {
-      for( int j = i + 1; j < n; j++ )
-         if( mStorage->M[i][j] != 0.0 )
-         {
-            std::cout << "FAIL " << std::endl;
-            exit(1);
-         }
-      for( int j = 0; j <= i; j++ )
-      {
-         all++;
-         if( mStorage->M[i][j] != 0.0 )
-         {
-            z++;
-
-         }
-         myfile << mStorage->M[i][j] << ", ";
-      }
-
-      for( int j = i + 1; j < n; j++ )
-         myfile << "0.0, ";
-
-      myfile << "\n";
-   }
-   cout << "full " << n * n / 2 << " \n";
-   cout << "  all " << all << "\n";
-   cout << "non-zeros " << z << "\n";
-
-   myfile.close();
-#endif
-
-
 #ifdef DENSE_USE_HALF
 #ifndef NDEBUG
   for( int i = 0; i < n; i++ )
@@ -256,23 +218,7 @@ void PardisoIndefSolver::factorizeFromDense()
          if( mStorage->M[i][j] != 0.0 )
             nnz++;
 
-/*
-   for( int i = 0; i < n; i++ )
-   {
-      for( int j = 0; j <= i; j++ )
-      {
-         cout << mStorage->M[i][j] << "      ";
-      }
-
-      for( int j = i + 1; j < n; j++ )
-         cout << "0.0, ";
-
-      cout << "\n";
-   }
-
-*/
-
-   if( ia ) // todo store and later resize
+   if( ia )
       delete[] ia;
 
    if( ja )
@@ -370,14 +316,13 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 
    phase = 33;
 
-   iparm[7] = 5; /* Max numbers of iterative refinement steps. */
+   iparm[7] = 5; /* max number of iterative refinement steps. */
 
    SimpleVector& sv = dynamic_cast<SimpleVector&>(v);
 
    double* b = sv.elements();
 
    assert(sv.n == n);
-
 
 #ifdef TIMING_FLOPS
    HPM_Start("DSYTRSSolve");
@@ -405,7 +350,9 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       for( int i = 0; i < n; i++ )
          b[i] = x[i];
 
-//      printf("number of iterative refinement steps: %d \n", iparm[6]);
+#ifdef TIMING
+      printf("sparse kkt iterative refinement steps: %d \n", iparm[6]);
+#endif
    }
    else
    {
