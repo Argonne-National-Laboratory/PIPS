@@ -134,7 +134,8 @@ void PardisoIndefSolver::factorizeFromSparse()
    assert(mStorageSparse);
 
    const int nnz = mStorageSparse->len;
-
+   const int* const iaStorage = mStorageSparse->krowM;
+   const int* const jaStorage = mStorageSparse->jcolM;
    const double* const aStorage = mStorageSparse->M;
 
    // first call?
@@ -147,8 +148,6 @@ void PardisoIndefSolver::factorizeFromSparse()
       a = new double[nnz];
 
 #ifndef SELECT_NNZS
-      const int* const iaStorage = mStorageSparse->krowM;
-      const int* const jaStorage = mStorageSparse->jcolM;
 
       for( int i = 0; i < n + 1; i++ )
          ia[i] = iaStorage[i] + 1;
@@ -161,8 +160,6 @@ void PardisoIndefSolver::factorizeFromSparse()
    assert(n >= 0);
 
 #ifdef SELECT_NNZS
-   const int* const iaStorage = mStorageSparse->krowM;
-   const int* const jaStorage = mStorageSparse->jcolM;
 
    ia[0] = 1;
 
@@ -184,8 +181,12 @@ void PardisoIndefSolver::factorizeFromSparse()
 #else
    for( int i = 0; i < nnz; i++ )
       a[i] = aStorage[i];
-#endif
+   for( int i = 0; i < n + 1; i++ )
+      assert(ia[i] == iaStorage[i] + 1);
 
+   for( int i = 0; i < nnz; i++ )
+      assert(ja[i] == jaStorage[i] + 1);
+#endif
 
    // matrix initialized, now do the actual factorization
    factorize();
