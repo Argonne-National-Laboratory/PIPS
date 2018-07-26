@@ -302,250 +302,286 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 					  QpGenData* data)
 {
 #ifdef TIMING
-  vector<double> histRelResid;
-  double tTot=MPI_Wtime(), tSlv=0., tResid=0., tTmp;
+   vector<double> histRelResid;
+   double tTot=MPI_Wtime(), tSlv=0., tResid=0., tTmp;
 #endif
 
-  this->joinRHS( *rhs, stepx, stepy, stepz );
+   this->joinRHS(*rhs, stepx, stepy, stepz);
 
-  //aliases
-  OoqpVector &r0=*res2, &dx=*sol2, &v=*res3, &t=*res4, &p=*res5;
-  OoqpVector &x=*sol, &r=*res, &b=*rhs;
+   //aliases
+   OoqpVector &r0 = *res2, &dx = *sol2, &v = *res3, &t = *res4, &p = *res5;
+   OoqpVector &x = *sol, &r = *res, &b = *rhs;
 
-  const double tol=1e-10;
-  const double eps=1e-14;
-  const int maxit=500;
+   const double tol = 1e-10;
+   const double eps = 1e-14;
+   const double n2b = b.twonorm();
+   const double tolb = max(n2b * tol, eps);    // todo this should be done properly
+   const int maxit = 500;
 
-  double n2b=b.twonorm();
-  assert(n2b >= 0);
-  double tolb=n2b*tol;
-  int flag;
-  double rho=1., omega=1., alpha;  
-
-  // todo this should be done properly
-  tolb = max(tolb, eps);
+   assert(n2b >= 0);
 
 #ifdef TIMING
-  double iter=0.0;
-  gOuterBiCGIter=0;
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  tTmp=MPI_Wtime();
+   double iter=0.0;
+   gOuterBiCGIter=0;
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   tTmp=MPI_Wtime();
 
-  if( myRank == 0 )
-     std::cout << "tolb outer " << tolb << std::endl;
-
+   if( myRank == 0 )
+      std::cout << "Outer BiCGStab - tolb: " << tolb << std::endl;
 #endif
-  //starting guess/point
-  x.copyFrom(b);
+   //starting guess/point
+   x.copyFrom(b);
 
-  //solution to the approx. system
-  solveCompressed(x);
+   //solution to the approx. system
+   solveCompressed(x);
 #ifdef TIMING
-  tSlv += (MPI_Wtime()-tTmp);
-  tTmp=MPI_Wtime();
-  gOuterBiCGIter++;
+   tSlv += (MPI_Wtime()-tTmp);
+   tTmp=MPI_Wtime();
+   gOuterBiCGIter++;
 #endif
-  //initial residual: res=res-A*x
-  r.copyFrom(b);
-  matXYZMult(1.0,r, -1.0,x, data, stepx,stepy,stepz);
+   //initial residual: res=res-A*x
+   r.copyFrom(b);
+   matXYZMult(1.0, r, -1.0, x, data, stepx, stepy, stepz);
 #ifdef TIMING
-  tResid += (MPI_Wtime()-tTmp);
+   tResid += (MPI_Wtime()-tTmp);
 #endif  
-  double normr=r.twonorm(), normr_min=normr, normr_act=normr;
+   double normr = r.twonorm(), normr_min = normr, normr_act = normr;
 #ifdef TIMING
-  histRelResid.push_back(normr/n2b);
+   histRelResid.push_back(normr/n2b);
 #endif
-  
-  //quick return if solve is accurate enough
-  if( normr<=tolb ) {
-     this->separateVars( stepx, stepy, stepz, x );
+
+   //quick return if solve is accurate enough
+   if( normr <= tolb )
+   {
+      this->separateVars(stepx, stepy, stepz, x);
 #ifdef TIMING
-     tTot = MPI_Wtime() - tTot;
-     if(0==myRank) {
-       cout << "Outer BiCGStab 0 iterations. Rel.res.nrm:" << normr/n2b  << endl;
-       cout << "solveXYZS w/ BiCGStab times: solve " << tSlv
-	    << "  matvec " << tResid
-	    << "  total " << tTot << endl; 
-     }
-#endif
-     return;
-  }
-
-  //arbitrary vector
-  r0.copyFrom(b);
-
-  //main loop
-  int it=0; while(it<maxit) {
-    flag=-1; //reset flag
-    double rho1=rho; double beta;
-    rho=r0.dotProductWith(r);
-    if(0.0==rho) {flag=4; break;}
-
-    //first half of the iterate
-    {
-      if(it==0) p.copyFrom(r);
-      else {
-	beta = (rho/rho1)*(alpha/omega);
-	if(beta==0.0) { flag=4; break; }
-	
-	//-------- p = r + beta*(p - omega*v) --------
-	p.axpy(-omega, v); p.scale(beta); p.axpy(1.0, r);
+      tTot = MPI_Wtime() - tTot;
+      if(0==myRank)
+      {
+         cout << "Outer BiCGStab 0 iterations. Rel.res.nrm:" << normr/n2b << endl;
+         cout << "solveXYZS w/ BiCGStab times: solve " << tSlv
+         << "  matvec " << tResid
+         << "  total " << tTot << endl;
       }
-#ifdef TIMING
-      tTmp = MPI_Wtime();
 #endif
-      //precond: ph = \tilde{K}^{-1} p
-      dx.copyFrom(p); solveCompressed(dx); 
-#ifdef TIMING
-      tSlv += (MPI_Wtime()-tTmp);
-      tTmp = MPI_Wtime();
-      gOuterBiCGIter++;
-#endif
-      //mat-vec: v = K*ph
-      matXYZMult(0.0,v, 1.0,dx, data, stepx,stepy,stepz);
-#ifdef TIMING
-      tResid += (MPI_Wtime()-tTmp);
-#endif
+      return;
+   }
 
-      double rtv=r0.dotProductWith(v);
-      if(rtv==0.0) { flag=4; break; }
-      
-      alpha=rho/rtv; 
-      // x = x + alpha*dx (x=x+alpha*ph)
-      x.axpy( alpha, dx);
-      // r = r-alpha*v (s=r-alpha*v)
-      r.axpy(-alpha, v);
-      
-      //check for convergence
-      normr=r.twonorm();
+   //arbitrary vector
+   r0.copyFrom(b);
 
-#ifdef TIMING
-      histRelResid.push_back(normr/n2b);
-#endif
-      if(normr<=tolb) {
-#ifdef TIMING
-      tTmp=MPI_Wtime();
-#endif
-	//compute the actual residual
-	OoqpVector& res=dx; //use dx 
-	res.copyFrom(b); matXYZMult(1.0,res, -1.0,x, data, stepx,stepy,stepz);
-#ifdef TIMING
-	tResid += (MPI_Wtime()-tTmp);
-#endif
+   int flag;
+   double rho = 1., omega = 1., alpha;
 
-	normr_act = res.twonorm();
-	if(normr_act<=tolb) {
-	  //converged
-#ifdef TIMING
-	  histRelResid[histRelResid.size()-1]=normr_act/n2b;
-	  iter=it+0.5;
-#endif
-	  flag=0; break;
-	}
-      } //~end of convergence test
-    }
+   //main loop
+   for( int it = 0; it < maxit; it++ )
+   {
+      flag = -1; //reset flag
+      const double rho1 = rho;
 
-    
-    //second half of the iterate now
-    {
-#ifdef TIMING
-      tTmp=MPI_Wtime();
-#endif
-      //preconditioner
-      dx.copyFrom(r); solveCompressed(dx);
-#ifdef TIMING
-      tSlv += (MPI_Wtime()-tTmp);
-      tTmp=MPI_Wtime();
-      gOuterBiCGIter++;
-#endif
-      //mat-vec
-      matXYZMult(0.0,t, 1.0,dx, data, stepx,stepy,stepz);
-#ifdef TIMING
-      tResid += (MPI_Wtime()-tTmp);
-#endif
-      double tt = t.dotProductWith(t);
-      if(tt==0.0) { flag=4; break;}
-      
-      omega=t.dotProductWith(r);
+      rho = r0.dotProductWith(r);
+      if( 0.0 == rho )
+      {
+         flag = 4;
+         break;
+      }
 
-      assert(omega != 0);
+      //first half of the iterate
+      {
+         if( it == 0 )
+            p.copyFrom(r);
+         else
+         {
+            const double beta = (rho / rho1) * (alpha / omega);
+            if( beta == 0.0 )
+            {
+               flag = 4;
+               break;
+            }
 
-      omega /= tt;
-      
-      // x=x+omega*dx  (x=x+omega*sh)
-      x.axpy( omega, dx);
-      // r = r-omega*t (r=s-omega*sh)
-      r.axpy(-omega, t);
-      //check for convergence
-      normr=r.twonorm();
+            //-------- p = r + beta*(p - omega*v) --------
+            p.axpy(-omega, v);
+            p.scale(beta);
+            p.axpy(1.0, r);
+         }
 #ifdef TIMING
-      histRelResid.push_back(normr/n2b);
+         tTmp = MPI_Wtime();
 #endif
-
-      if(normr<=tolb) {
+         //precond: ph = \tilde{K}^{-1} p
+         dx.copyFrom(p);
+         solveCompressed(dx);
 #ifdef TIMING
-      tTmp=MPI_Wtime();
+         tSlv += (MPI_Wtime()-tTmp);
+         tTmp = MPI_Wtime();
+         gOuterBiCGIter++;
 #endif
-         //compute the actual residual
-         OoqpVector& res=dx; //use dx
-         res.copyFrom(b); matXYZMult(1.0,res, -1.0,x, data, stepx,stepy,stepz);
+         //mat-vec: v = K*ph
+         matXYZMult(0.0, v, 1.0, dx, data, stepx, stepy, stepz);
 #ifdef TIMING
          tResid += (MPI_Wtime()-tTmp);
 #endif
 
-	normr_act = res.twonorm();
-	//cout << "Outer BiCG - actual rel.res.nrm: " << normr_act/n2b << endl;
-         if(normr_act<=tolb) {
-           //converged
-#ifdef TIMING 
-           histRelResid[histRelResid.size()-1]=normr_act/n2b;
-           iter=it+1.;
+         const double rtv = r0.dotProductWith(v);
+         if( rtv == 0.0 )
+         {
+            flag = 4;
+            break;
+         }
+
+         alpha = rho / rtv;
+         // x = x + alpha*dx (x=x+alpha*ph)
+         x.axpy(alpha, dx);
+         // r = r-alpha*v (s=r-alpha*v)
+         r.axpy(-alpha, v);
+
+         //check for convergence
+         normr = r.twonorm();
+
+#ifdef TIMING
+         histRelResid.push_back(normr/n2b);
+         if( myRank == 0 )
+              std::cout << "Outer BiCGStab - iteration: " << it << " normr: " << normr << std::endl;
 #endif
-           flag=0; break;
-         } // else continue - To Do: detect stagnation (flag==3)
+         if( normr <= tolb )
+         {
+#ifdef TIMING
+            tTmp=MPI_Wtime();
+#endif
+            //compute the actual residual
+            OoqpVector& res = dx; //use dx
+            res.copyFrom(b);
+            matXYZMult(1.0, res, -1.0, x, data, stepx, stepy, stepz);
+#ifdef TIMING
+            tResid += (MPI_Wtime()-tTmp);
+#endif
+
+            normr_act = res.twonorm();
+            if( normr_act <= tolb )
+            {
+               //converged
+#ifdef TIMING
+               histRelResid[histRelResid.size()-1]=normr_act/n2b;
+               iter=it+0.5;
+#endif
+               flag = 0;
+               break;
+            }
+         } //~end of convergence test
       }
-      else
+
+      //second half of the iterate now
       {
-         //To Do: detect stagnation/divergence and rollback to min.norm. iterate
-         //for now we print a warning and exit in case residual increases.
-         if(normr>normr_min) {
 #ifdef TIMING
-	  if(0==myRank) 
-	    cout << "Outer BiCG - Increase in BiCGStab residual. Old=" << normr_min
-		 << "  New=" << normr << endl;
-	  iter=it+1.;
+         tTmp=MPI_Wtime();
+#endif
+         //preconditioner
+         dx.copyFrom(r);
+         solveCompressed(dx);
+#ifdef TIMING
+         tSlv += (MPI_Wtime()-tTmp);
+         tTmp=MPI_Wtime();
+         gOuterBiCGIter++;
+#endif
+         //mat-vec
+         matXYZMult(0.0, t, 1.0, dx, data, stepx, stepy, stepz);
+#ifdef TIMING
+         tResid += (MPI_Wtime()-tTmp);
+#endif
+         const double tt = t.dotProductWith(t);
+         if( tt == 0.0 )
+         {
+            flag = 4;
+            break;
+         }
+
+         omega = t.dotProductWith(r);
+
+         assert(omega != 0);
+
+         omega /= tt;
+
+         // x=x+omega*dx  (x=x+omega*sh)
+         x.axpy(omega, dx);
+         // r = r-omega*t (r=s-omega*sh)
+         r.axpy(-omega, t);
+         //check for convergence
+         normr = r.twonorm();
+#ifdef TIMING
+         histRelResid.push_back(normr/n2b);
 #endif
 
-	        flag=5; break;
-         } else normr_min=normr;
-      } //~end of convergence test
-    } //~end of scoping
-    
-    it++;
-  } //~ end of BiCGStab loop
-  
-  //warning/error messaging
-  if(flag!=0) {
+         if( normr <= tolb )
+         {
 #ifdef TIMING
-    if(0==myRank) 
+            tTmp=MPI_Wtime();
+#endif
+            //compute the actual residual
+            OoqpVector& res = dx; //use dx
+            res.copyFrom(b);
+            matXYZMult(1.0, res, -1.0, x, data, stepx, stepy, stepz);
+#ifdef TIMING
+            tResid += (MPI_Wtime()-tTmp);
+#endif
+
+            normr_act = res.twonorm();
+            //cout << "Outer BiCG - actual rel.res.nrm: " << normr_act/n2b << endl;
+            if( normr_act <= tolb )
+            {
+               //converged
+#ifdef TIMING 
+               histRelResid[histRelResid.size()-1]=normr_act/n2b;
+               iter=it+1.;
+#endif
+               flag = 0;
+               break;
+            } // else continue - To Do: detect stagnation (flag==3)
+         }
+         else
+         {
+            //To Do: detect stagnation/divergence and rollback to min.norm. iterate
+            //for now we print a warning and exit in case residual increases.
+            if( normr > normr_min )
+            {
+#ifdef TIMING
+               if(0==myRank)
+               cout << "Outer BiCG - Increase in BiCGStab residual. Old=" << normr_min
+               << "  New=" << normr << endl;
+               iter=it+1.;
+#endif
+
+               flag = 5;
+               break;
+            }
+            else
+               normr_min = normr;
+         } //~end of convergence test
+      } //~end of scoping
+   } //~ end of BiCGStab loop
+
+   //warning/error messaging
+   if( flag != 0 )
+   {
+#ifdef TIMING
+      if(0==myRank)
       cout << "Outer BiCG - convergence issues: flag=" << flag << ". "
-	   << iter << " iterations" 
-	   << " rel.res.norm=" << normr_act/n2b << endl;
+      << iter << " iterations"
+      << " rel.res.norm=" << normr_act/n2b << endl;
 #endif
-  }
-  this->separateVars( stepx, stepy, stepz, x );
+   }
+   this->separateVars(stepx, stepy, stepz, x);
 
 #ifdef TIMING
-  tTot = MPI_Wtime()-tTot;
-  if(0==myRank) {
-    cout << "Outer BiCGStab " << iter << " iterations. Rel.res.nrm:";
-    for(size_t it=0; it<histRelResid.size(); it++)
-      cout << histRelResid[it] << " | ";    
-    cout << endl;
-    cout << "solveXYZS w/ BiCGStab times: solve=" << tSlv
-	 << "  matvec=" << tResid
-	 << "  total=" << tTot << endl; 
-  }
+   tTot = MPI_Wtime()-tTot;
+   if(0==myRank)
+   {
+      cout << "Outer BiCGStab " << iter << " iterations. Rel.res.nrm:";
+      for(size_t it=0; it<histRelResid.size(); it++)
+      cout << histRelResid[it] << " | ";
+      cout << endl;
+      cout << "solveXYZS w/ BiCGStab times: solve=" << tSlv
+      << "  matvec=" << tResid
+      << "  total=" << tTot << endl;
+   }
 #endif  
 
 }

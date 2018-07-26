@@ -270,13 +270,17 @@ void PardisoIndefSolver::factorize()
    }
 #endif
 
-  // iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-  // iparm[12] = 1; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-   // iparm[20] = 1 use Bunch-Kaufman
-   // if needed, use 2 for advanced matchings and higher accuracy.
-   // iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   // iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   // iparm[27] = 1; // Parallel metis
+#if 0
+   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+#endif
+
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
+   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   iparm[27] = 1; // Parallel metis
+#endif
 
    phase = 11;
 
@@ -316,7 +320,7 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 
    phase = 33;
 
-   iparm[7] = 5; /* max number of iterative refinement steps. */
+   iparm[7] = 8; /* max number of iterative refinement steps. */
 
    SimpleVector& sv = dynamic_cast<SimpleVector&>(v);
 
