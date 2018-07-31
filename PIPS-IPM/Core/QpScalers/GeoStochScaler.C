@@ -13,7 +13,6 @@
 GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
-   cout<<"Creating GeoStochScaler..."<<endl;
    equilibrate = equiScaling;
 
    // todo: adjust parameters
@@ -33,6 +32,7 @@ void GeoStochScaler::doObjScaling()
    StochVector* objInvert = dynamic_cast<StochVector*>(obj->clone());
    objInvert->invertSave();
    double absmin = objInvert->infnorm();
+   delete objInvert;
    if( absmin != 0.0)
       absmin = 1.0 / absmin;
    const double scaleFactor = std::sqrt(absmax * absmin);
@@ -72,8 +72,8 @@ void GeoStochScaler::scale()
    const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, NULL);
    const double colratio = maxColRatio(*colmax, *colmin, NULL, NULL);
 
-   PIPSdebugMessage("rowratio %f \n", rowratio);
-   PIPSdebugMessage("colratio %f \n", colratio);
+   PIPSdebugMessage("rowratio before scaling %f \n", rowratio);
+   PIPSdebugMessage("colratio before scaling %f \n", colratio);
 
    double p0start, p1start;
    if( colratio < rowratio )
@@ -89,9 +89,9 @@ void GeoStochScaler::scale()
 
    assert(vec_rowscaleA == NULL && vec_rowscaleC == NULL && vec_colscale == NULL);
 
-   vec_rowscaleA = rowmaxA->clone();
-   vec_rowscaleC = rowmaxC->clone();
-   vec_colscale = colmax->clone();
+   vec_rowscaleA = rowmaxA;
+   vec_rowscaleC = rowmaxC;
+   vec_colscale = colmax;
    setScalingVecsToOne();
 
    bool geoscale = p1start > goodEnough;
@@ -99,8 +99,9 @@ void GeoStochScaler::scale()
    if( !geoscale )
    {
       PIPSdebugMessage("No geometric scaling done, ratio already good enough.\n");
-      // todo: still do equilibrium scaling here or later if equilibrate==true
-      return;
+      if( !equilibrate )
+         return;
+      PIPSdebugMessage("But will still perform equilibrium scaling.\n");
    }
 
    double p0 = 0.0;
@@ -148,7 +149,7 @@ void GeoStochScaler::scale()
             invertAndRound(do_bitshifting, *vec_colscale);
          }
          // if ratio improvement is not good enough, then break:
-         cout<<"p0, p0prev, p1, p1prev: "<<p0<<", "<<p0prev<<", "<<p1<<", "<<p1prev<<endl;
+         PIPSdebugMessage("p0=%f, p0prev=%f, p1=%f, p1prev=%f \n", p0, p0prev, p1, p1prev);
          if( p0 > minImpr * p0prev && p1 > minImpr * p1prev )
             break;
 
@@ -172,6 +173,9 @@ void GeoStochScaler::scale()
 
          // equiScaling using the scaling vectors from GeoScaling:
          postEquiScale();
+         delete rowmaxA;
+         delete rowmaxC;
+         delete colmax;
       }
 
       PIPSdebugMessage("before scaling: \n "
