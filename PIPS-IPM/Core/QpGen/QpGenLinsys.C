@@ -316,7 +316,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    const double eps = 1e-14;
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, eps);    // todo this should be done properly
-   const int maxit = 500;
+   const int maxit = 15; // todo 500;
 
    assert(n2b >= 0);
 
