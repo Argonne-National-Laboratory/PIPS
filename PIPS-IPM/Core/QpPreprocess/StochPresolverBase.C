@@ -1104,6 +1104,34 @@ int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, Syst
    return newSR;
 }
 
+/** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
+ * Adapts the objective offset g only once for each column (variable).
+ * Returns false if infeasibility is detected.
+ */
+bool StochPresolverBase::storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value)
+{
+   const COLUMNTOADAPT colWithVal = {colIdx, value};
+   bool uniqueAdditionToOffset = true;
+   for(int i=0; i<presData.getNumberColAdParent(); i++)
+   {
+      if( presData.getColAdaptParent(i).colIdx == colIdx )
+      {
+         if( presData.getColAdaptParent(i).val != value )
+         {
+            cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<value<<endl;
+            return false;
+         }
+         uniqueAdditionToOffset = false;
+      }
+   }
+   if( uniqueAdditionToOffset )
+   {
+      presData.addColToAdaptParent(colWithVal);
+      indivObjOffset += currgParent->elements()[colIdx] * value;
+   }
+   return true;
+}
+
 /** Stores the column index colIdx together with the new bounds as a XBOUNDS in newBoundsParent.
  * Should be called only from Process Zero.
  * Returns false if infeasibility is detected (contradictory bounds).

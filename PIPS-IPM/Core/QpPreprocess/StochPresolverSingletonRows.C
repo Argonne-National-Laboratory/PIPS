@@ -351,7 +351,6 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
    double* ixupp = currIxuppParent->elements();
    double* xlow = currxlowParent->elements();
    double* xupp = currxuppParent->elements();
-   double* g = currgParent->elements();
 
    for(int i = presData.getBlocks(it+1); i<presData.getBlocks(it+2); i++)
    {
@@ -375,7 +374,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
                cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<", child="<<it<<endl;
                return false;
             }
-            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
                return false;
          }
          else  // INEQUALITY_SYSTEM
@@ -397,7 +396,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
             {
                //cout<<"New bounds imply fixation of linking variable "<<colIdx<<" to value: "<<val<<endl;
                // as in SR(equality), store them to remove the column later
-               if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+               if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
                   return false;
 
                // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied.
@@ -532,7 +531,6 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
    double* ixupp = currIxuppParent->elements();
    double* xlow = currxlowParent->elements();
    double* xupp = currxuppParent->elements();
-   double* g = currgParent->elements();
 
    int colIdx = -1;
    double aik = 0.0;
@@ -550,7 +548,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
    {
       if( myRank == 0 )
       {
-         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
             return false;
       }
    }
@@ -568,7 +566,6 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
    double* ixupp = currIxuppParent->elements();
    double* xlow = currxlowParent->elements();
    double* xupp = currxuppParent->elements();
-   double* g = currgParent->elements();
 
    int colIdx = -1;
    double aik = 0.0;
@@ -593,7 +590,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
       // as in SR(equality), store them to remove the column later
       if( myRank == 0 )
       {
-         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
+         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
             return false;
       }
       // in case of fixation, nnz bzw. red Counters are not touched yet because they will be set
@@ -673,34 +670,6 @@ void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& newxlow, 
       if( currIclow->elements()[rowIdx] != 0.0 )
          newxupp = currIneqLhs->elements()[rowIdx] / aik;
    }
-}
-
-/** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
- * Adapts the objective offset g only once for each column (variable).
- * Returns false if infeasibility is detected.
- */
-bool StochPresolverSingletonRows::storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g)
-{
-   const COLUMNTOADAPT colWithVal = {colIdx, value};
-   bool uniqueAdditionToOffset = true;
-   for(int i=0; i<presData.getNumberColAdParent(); i++)
-   {
-      if( presData.getColAdaptParent(i).colIdx == colIdx )
-      {
-         if( presData.getColAdaptParent(i).val != value )
-         {
-            cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<value<<endl;
-            return false;
-         }
-         uniqueAdditionToOffset = false;
-      }
-   }
-   if( uniqueAdditionToOffset )
-   {
-      presData.addColToAdaptParent(colWithVal);
-      indivObjOffset += g[colIdx] * value;
-   }
-   return true;
 }
 
 /** Should be called right after doSingletonRowsC() or another method that stores

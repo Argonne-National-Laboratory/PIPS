@@ -61,6 +61,11 @@ bool StochPresolverBoundStrengthening::applyPresolving(int& nelims)
    // update the the bounds of linking-variables:
    strengthenLinkingVarsBounds();
 
+   if( !presData.combineColAdaptParent() ) return false;
+   // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsC:
+   int newSREq = 0, newSRIneq = 0;
+   updateLinkingVarsBlocks(newSREq, newSRIneq);
+
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
@@ -81,6 +86,7 @@ bool StochPresolverBoundStrengthening::setCPforBounds(GenMatrixHandle matrixHand
 {
    assert( it >= -1 && it < nChildren );
    setCurrentPointersToNull();
+   currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
    if(it >= 0)
    {
       if( !setCPAmatsChild( matrixHandle, it, system_type) )  // currAmat(Trans)
@@ -249,6 +255,10 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
       std::vector<COLUMNTOADAPT>* colAdaptLinkBlock)
 {
    assert( rowIdx >= 0 && rowIdx < matrix.m );
+
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
    if( partMinActivity == -std::numeric_limits<double>::max() && partMaxActivity == std::numeric_limits<double>::max())
       return true;
 
@@ -316,17 +326,18 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
                currIxlowParent->elements(), currIxuppParent->elements(), currxlowParent->elements(), currxuppParent->elements()) )
             return false;
          // todo test if they imply fixation ?
-         /*double varvalue = 0.0;
-         else if( newBoundsFixVariable(varvalue, newBoundLow, newBoundUpp, colIdx,
+         double varvalue = 0.0;
+         if( newBoundsFixVariable(varvalue, newBoundLow, newBoundUpp, colIdx,
                currIxlowParent->elements(), currIxuppParent->elements(), currxlowParent->elements(), currxuppParent->elements()) )
          {
             PIPSdebugMessage("New bounds imply fixation of variable %d to value=%f. original bounds: [%f, %f] (if existent). \n", colIdx, varvalue, currxlowParent->elements()[colIdx], currxuppParent->elements()[colIdx]);
             // as in SR(equality), store them to remove the column later
-            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, varvalue, currgParent->elements()) )
+            if( !atRoot || myRank==0 )
+              if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, varvalue) )
                return false;
             // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied
 
-         }*/
+         }
          if( atRoot )
             setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
                *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);

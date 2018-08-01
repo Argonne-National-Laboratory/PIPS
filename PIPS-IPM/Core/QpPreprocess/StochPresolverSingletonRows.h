@@ -40,7 +40,6 @@ private:
    bool procSingletonRowChildInequality(int it, int& newSREq, int& newSRIneq);
 
    void calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik) const;
-   bool storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value, double* g);
 
    void updateLinkingVarsBounds();
    void getValuesForSR(SparseStorageDynamic const & storage, int rowIdx, int& colIdx, double& aik) const;
