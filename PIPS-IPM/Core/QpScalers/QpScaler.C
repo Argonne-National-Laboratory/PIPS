@@ -5,6 +5,7 @@
  *      Author: Daniel Rehfeldt
  */
 
+//#define PIPS_DEBUG
 #include "QpScaler.h"
 #include <algorithm>
 #include "pipsdef.h"
@@ -100,12 +101,12 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    double maxratio;
    ratiovecA->max(maxratio, i);
 
-   PIPSdebugMessage("max column ratio A: %f", maxratio);
+   PIPSdebugMessage("max row ratio A: %f \n", maxratio);
 
    double maxvalC;
    ratiovecC->max(maxvalC, i);
 
-   PIPSdebugMessage("max column ratio C: %f", maxvalC);
+   PIPSdebugMessage("max row ratio C: %f \n", maxvalC);
 
    if( maxvalC > maxratio )
       maxratio = maxvalC;
@@ -147,7 +148,7 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector*
    ratiovec->max(maxratio, i);
    assert(maxratio >= 0.0);
 
-   PIPSdebugMessage("max column ratio: %f", maxratio);
+   PIPSdebugMessage("max column ratio: %f \n", maxratio);
 
    delete ratiovec;
 

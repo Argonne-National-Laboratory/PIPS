@@ -131,6 +131,7 @@ void GeoStochScaler::scale()
 
             invertAndRound(do_bitshifting, *vec_rowscaleA);
             invertAndRound(do_bitshifting, *vec_rowscaleC);
+            PIPSdebugMessage("Geometric Scaling round %d. colratio=%f, rowratio=%f \n", i, p0, p1);
          }
          else // row first
          {
@@ -147,6 +148,7 @@ void GeoStochScaler::scale()
             vec_colscale = colmax;
 
             invertAndRound(do_bitshifting, *vec_colscale);
+            PIPSdebugMessage("Geometric Scaling round %d. colratio=%f, rowratio=%f \n", i, p1, p0);
          }
          // if ratio improvement is not good enough, then break:
          PIPSdebugMessage("p0=%f, p0prev=%f, p1=%f, p1prev=%f \n", p0, p0prev, p1, p1prev);
