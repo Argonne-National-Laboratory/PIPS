@@ -164,6 +164,7 @@ protected:
     * Returns false if it is a dummy child. */
    bool updateCurrentPointersForColAdapt(int it, SystemType system_type);
    bool updateCPforColAdaptF0( SystemType system_type );
+   bool updateCPforAdaptFixationsBChild( int it, SystemType system_type);
 
    void setCPAmatsRoot(GenMatrixHandle matrixHandle);
    bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
@@ -206,6 +207,8 @@ protected:
 
    bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
+   int fixVarInChildBlockAndStore(int colIdx, double val, SystemType system_type,
+         std::vector<COLUMNTOADAPT> & colAdaptLinkBlock);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);

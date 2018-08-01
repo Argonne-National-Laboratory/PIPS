@@ -453,6 +453,50 @@ bool StochPresolverBase::updateCPforColAdaptF0( SystemType system_type )
    return true;
 }
 
+
+/** Set the current pointers for subsequent application of fixed (non-linking) variables.
+ * Return false if it is a dummy child.
+ */
+bool StochPresolverBase::updateCPforAdaptFixationsBChild( int it, SystemType system_type)
+{
+   assert( it >= 0);
+   setCurrentPointersToNull();
+
+   // dummy child? set currBmat, currBmatTrans
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      if( !setCPBmatsChild(presProb->A, it, EQUALITY_SYSTEM))
+         return false;
+      setCPRowChildEquality(it);
+   }
+   else
+   {
+      if( !setCPBmatsChild(presProb->C, it, INEQUALITY_SYSTEM))
+         return false;
+      setCPRowChildInequality(it);
+   }
+
+   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
+   currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+
+   if( hasLinking(system_type) )
+   {
+      if( system_type == EQUALITY_SYSTEM)
+      {
+         setCPBlmatsChild(presProb->A, it);
+         currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl);
+      }
+      else
+      {
+         setCPBlmatsChild(presProb->C, it);
+         currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
+      }
+      currIcuppLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
+      currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
+   }
+   return true;
+}
+
 /** Set currAmat = root.Bmat */
 void StochPresolverBase::setCPAmatsRoot(GenMatrixHandle matrixHandle)
 {
@@ -852,6 +896,8 @@ bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & col
  */
 int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType system_type)
 {
+   assert(currBmat && currBmatTrans && currNnzColChild && currRedColChild && currNnzRow && currRedRow);
+   assert( colIdx >= 0 && colIdx < currNnzColChild->n );
    int newSingletonRows = 0;
 
    for( int j = currBmatTrans->rowptr[colIdx].start; j<currBmatTrans->rowptr[colIdx].end; j++ )
@@ -1028,6 +1074,34 @@ bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, dou
       return true;
    }
    return false;
+}
+
+/** Fix the (non-linking) variable with index colIdx to the value val, by adapting the
+ * objective offset accordingly and by removing all variable entries in the currBmat / currBmatTrans
+ * (by calling adaptChildBmatCol).
+ * Also, adds the pair <colIdx, val> to the vector colAdaptLinkBlock.
+ * Return the number of newly found singleton Rows in this matrix block.
+ * The following pointers have to be set correctly: currgChild, currBmat, currBmatTrans,
+ * currNnzColChild, currRedColChild, currNnzRow, currRedRow and currEqRhs (if EQUALITY_SYSTEM)
+ * or the corresponding equivalent (if INEQUALITY_SYSTEM).
+ */
+int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, SystemType system_type,
+      std::vector<COLUMNTOADAPT> & colAdaptLinkBlock )
+{
+   assert( currgChild );
+   assert( colIdx >= 0 && colIdx < currgChild->n );
+   //cout<<"New bounds imply fixation of variable "<<colIdx<<" of a child to value: "<<val<<endl;
+
+   // adapting objOffset:
+   indivObjOffset += currgChild->elements()[colIdx] * val;
+
+   // adapt in the currBmat/currBmatTrans by removing column colIdx and store in colADaptLinkBlock for G, F, B:
+   int newSR = adaptChildBmatCol(colIdx, val, system_type);
+
+   COLUMNTOADAPT colWithVal = {colIdx, val};
+   colAdaptLinkBlock.push_back(colWithVal);
+
+   return newSR;
 }
 
 /** Stores the column index colIdx together with the new bounds as a XBOUNDS in newBoundsParent.

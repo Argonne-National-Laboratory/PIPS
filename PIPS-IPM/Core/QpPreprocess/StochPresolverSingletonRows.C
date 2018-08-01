@@ -246,7 +246,7 @@ bool StochPresolverSingletonRows::doSingletonRowsA(int& newSREq, int& newSRIneq)
       // dummy child?
       if( updateCPForSingletonRow(it, EQUALITY_SYSTEM) )
       {  // main part for each child: go through A and B and adapt F, D and G
-         possFeas = procSingletonRowChild( it, newSREq, newSRIneq);
+         possFeas = procSingletonRowChildEquality( it, newSREq, newSRIneq);
          if( !possFeas ) return false;
       }
    }
@@ -322,7 +322,7 @@ bool StochPresolverSingletonRows::procSingletonRowRoot(StochGenMatrix& stochMatr
  * in Bmat and in Blmat are removed.
  * Using this colAdaptLinkBlock, the variables (columns) are removed from the inequalities Bmat, Blmat as well.
  */
-bool StochPresolverSingletonRows::procSingletonRowChild(int it, int& newSREq, int& newSRIneq)
+bool StochPresolverSingletonRows::procSingletonRowChildEquality(int it, int& newSREq, int& newSRIneq)
 {
    bool possFeas = procSingletonRowChildAmat( it, EQUALITY_SYSTEM);
    if( !possFeas ) return false;
@@ -338,7 +338,7 @@ bool StochPresolverSingletonRows::procSingletonRowChild(int it, int& newSREq, in
       if( !possFeas ) return false;
    }
    // and go through the columns in Bmat, Blmat of the inequality
-   updateCPForSingletonRowInequalityBChild( it );
+   updateCPforAdaptFixationsBChild( it, INEQUALITY_SYSTEM );
    possFeas = adaptOtherSystemChildB( INEQUALITY_SYSTEM, colAdaptLinkBlock, newSRIneq );
    if( !possFeas ) return false;
 
@@ -395,7 +395,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
             // test if they imply fixation
             else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
             {
-               //cout<<"New bounds imply fixation of variable "<<colIdx<<" of child "<<it<<" to value: "<<val<<endl;
+               //cout<<"New bounds imply fixation of linking variable "<<colIdx<<" to value: "<<val<<endl;
                // as in SR(equality), store them to remove the column later
                if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val, g) )
                   return false;
@@ -458,7 +458,6 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
    double* ixupp = currIxuppChild->elements();
    double* xlow = currxlowChild->elements();
    double* xupp = currxuppChild->elements();
-   double* g = currgChild->elements();
 
    int colIdx = -1;
    double aik = 0.0;
@@ -474,13 +473,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
          cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
          return false;
       }
-      indivObjOffset += g[colIdx] * val;
-
-      // adapt the col, val immediately in this block B_i and store them for the Blmat
-      newSR += adaptChildBmatCol(colIdx, val, system_type);
-
-      const COLUMNTOADAPT colWithVal = {colIdx, val};
-      colAdaptLinkBlock.push_back(colWithVal);
+      newSR += fixVarInChildBlockAndStore( colIdx, val, system_type, colAdaptLinkBlock);
    }
    else  // INEQUALITY_SYSTEM
    {
@@ -499,15 +492,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
       // test if they imply fixation
       else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
       {
-         //cout<<"New bounds imply fixation of variable "<<colIdx<<" of a child to value: "<<val<<endl;
-         // adapt immediately in D_i by adapting objOffset, removing column colIdx and store in colADaptLinkBlock for G, F, B
-         indivObjOffset += g[colIdx] * val;
-
-         // adapt the col, val immediately in this block B_i and store them for the Blmat
-         newSR += adaptChildBmatCol(colIdx, val, INEQUALITY_SYSTEM);
-
-         COLUMNTOADAPT colWithVal = {colIdx, val};
-         colAdaptLinkBlock.push_back(colWithVal);
+         newSR += fixVarInChildBlockAndStore( colIdx, val, system_type, colAdaptLinkBlock);
       }
       else
       {
@@ -665,7 +650,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildInequality(int it, int& n
    }
 
    // and go through the columns in Bmat, Blmat of the equality system
-   updateCPForSingletonRowEqualityBChild( it );
+   updateCPforAdaptFixationsBChild( it, EQUALITY_SYSTEM );
    possFeas = adaptOtherSystemChildB( EQUALITY_SYSTEM, colAdaptLinkBlock, newSREq );
    if( !possFeas ) return false;
 
@@ -810,50 +795,5 @@ bool StochPresolverSingletonRows::updateCPForSingletonRow(int it, SystemType sys
    return true;
 }
 
-/** Return false if it is a dummy child. */
-bool StochPresolverSingletonRows::updateCPForSingletonRowInequalityBChild( int it )
-{
-   assert( it >= 0);
-   setCurrentPointersToNull();
-
-   // dummy child? set currBmat, currBmatTrans
-   if( !setCPBmatsChild(presProb->C, it, INEQUALITY_SYSTEM)) return false;
-   setCPRowChildInequality(it);
-
-   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
-   currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
-
-   if( hasLinking(INEQUALITY_SYSTEM) )
-   {
-      setCPBlmatsChild(presProb->C, it);
-      currIcuppLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
-      currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
-      currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
-   }
-   return true;
-}
-
-/** Return false if it is a dummy child. */
-bool StochPresolverSingletonRows::updateCPForSingletonRowEqualityBChild( int it )
-{
-   assert( it >= 0);
-   setCurrentPointersToNull();
-
-   // dummy child? set currBmat, currBmatTrans
-   if( !setCPBmatsChild(presProb->A, it, EQUALITY_SYSTEM)) return false;
-   setCPRowChildEquality(it);
-
-   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
-   currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
-
-   if( hasLinking(EQUALITY_SYSTEM) )
-   {
-      setCPBlmatsChild(presProb->A, it);
-      currIcuppLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
-      currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
-      currRedRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl);
-   }
-   return true;
-}
 
 
