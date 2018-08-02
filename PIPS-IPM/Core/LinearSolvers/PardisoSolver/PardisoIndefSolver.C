@@ -271,7 +271,7 @@ void PardisoIndefSolver::factorize()
    }
 #endif
 
-#if 0
+#if 1
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
 #endif
