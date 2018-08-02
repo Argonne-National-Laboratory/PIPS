@@ -11,7 +11,7 @@
 #include "SimpleVector.h"
 #include <limits>
 #include <fstream>
-
+#include <pipsdef.h>
 
 int SparseStorage::instances = 0;
 
@@ -1424,8 +1424,7 @@ void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const
          {
             const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
 
-            // todo global epsilon would be good
-            if( absval < minval && absval > 0.0 )
+            if( absval < minval && absval > pips_eps )
                minval = absval;
          }
          vec[r] = minval;
@@ -1442,7 +1441,7 @@ void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const
          {
             const double absval = std::abs(M[i]);
 
-            if( absval < minval && absval > 0.0 )
+            if( absval < minval && absval > pips_eps )
                minval = absval;
          }
          vec[r] = minval;
