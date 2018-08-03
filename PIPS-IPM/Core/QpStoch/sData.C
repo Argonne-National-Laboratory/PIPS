@@ -241,6 +241,34 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
    return (new SparseSymMatrix(sizeSC, nnz, krowM, jcolM, M, 0, false));
 }
 
+
+std::vector<unsigned int> sData::get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount)
+{
+   const int size = int(linkVarsNnzCount.size());
+
+   if( size == 0 )
+      return std::vector<unsigned int>();
+
+   std::vector<unsigned int> permvec(size, 0);
+
+   int count = 0;
+   int backCount = size - 1;
+   for( int i = 0; i < size; ++i )
+   {
+      assert(count <= backCount);
+      assert(linkVarsNnzCount[i] >= 0);
+
+      if( linkVarsNnzCount[i] != 0 )
+         permvec[count++] = i;
+      else
+         permvec[backCount--] = i;
+   }
+
+   assert(count == backCount + 1);
+
+   return permvec;
+}
+
 std::vector<unsigned int> sData::getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks)
 {
    const size_t size = linkStartBlocks.size();
@@ -358,42 +386,14 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
      assert(linkStartBlocksA.size() == unsigned(tree_->myl()));
      assert(linkStartBlocksC.size() == unsigned(tree_->mzl()));
 
-     // compute permutation vector
-
-     const size_t nBlocks = dynamic_cast<StochVector*>(c_in)->children.size();
-
-     std::vector<unsigned int> permvecA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
-     std::vector<unsigned int> permvecC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
-
-#ifndef NDEBUG
+  #ifndef NDEBUG
      const int myl = tree_->myl();
      const int mzl = tree_->mzl();
      assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
+  #endif
 
-#if 0
-     std::vector<unsigned int> permvecA(myl);
-     std::vector<unsigned int> permvecC(mzl);
-
-     for( int i = 0; i < myl; ++i )
-        permvecA[i] = myl - i - 1;
-
-     for( int i = 0; i < mzl; ++i )
-        permvecC[i] =  mzl - i - 1;
-
-     ofstream myfile;
-       myfile.open ("C1.txt");
-     dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile);
-#endif
-
-#endif
-
-     permuteLinkingRows(permvecA, permvecC);
-
-#if 0
-     ofstream myfile2;
-        myfile2.open ("C2.txt");
-           dynamic_cast<StochGenMatrix&>(*C).writeToStreamDense(myfile2);
-#endif
+     permuteLinkingCons();
+     permuteLinkingVars();
   }
 }
 
@@ -440,15 +440,32 @@ void sData::destroyChildren()
   children.clear();
 }
 
-void sData::permuteLinkingRows(const std::vector<unsigned int>& permvecA, const std::vector<unsigned int>& permvecC)
+void sData::permuteLinkingCons()
 {
-   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingRows(permvecA);
-   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingRows(permvecC);
+   const size_t nBlocks = dynamic_cast<StochVector&>(*g).children.size();
+
+   // compute permutation vectors
+   const std::vector<unsigned int> permvecA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
+   const std::vector<unsigned int> permvecC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
+
+   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingCons(permvecA);
+   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingCons(permvecC);
    dynamic_cast<StochVector&>(*bA).permuteLinkingEntries(permvecA);
    dynamic_cast<StochVector&>(*bl).permuteLinkingEntries(permvecC);
    dynamic_cast<StochVector&>(*bu).permuteLinkingEntries(permvecC);
    dynamic_cast<StochVector&>(*iclow).permuteLinkingEntries(permvecC);
    dynamic_cast<StochVector&>(*icupp).permuteLinkingEntries(permvecC);
+}
+
+void sData::permuteLinkingVars()
+{
+   const std::vector<unsigned int>& permvec = get0VarsRightPermutation(linkVarsNnz);
+
+   dynamic_cast<StochVector&>(*g).permuteVec0Entries(permvec);
+   dynamic_cast<StochVector&>(*bux).permuteVec0Entries(permvec);
+   dynamic_cast<StochVector&>(*blx).permuteVec0Entries(permvec);
+   dynamic_cast<StochVector&>(*ixupp).permuteVec0Entries(permvec);
+   dynamic_cast<StochVector&>(*ixlow).permuteVec0Entries(permvec);
 }
 
 void sData::init2LinksData(bool exploit2links)
@@ -457,19 +474,27 @@ void sData::init2LinksData(bool exploit2links)
 
    if( !exploit2links )
    {
+      linkVarsNnz = std::vector<int>();
       linkStartBlocksA = std::vector<int>();
       linkStartBlocksC = std::vector<int>();
       return;
    }
 
+   const int nx0 = getLocalnx();
    int myrank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
    const StochGenMatrix& Astoch = dynamic_cast<const StochGenMatrix&>(*A);
    const StochGenMatrix& Cstoch = dynamic_cast<const StochGenMatrix&>(*C);
 
+   linkVarsNnz = std::vector<int>(nx0, 0);
+
+   int n0LinksVars = 0;
    int n2LinksEq = 0;
    int n2LinksIneq = 0;
+
+   Astoch.getLinkVarsNnz(linkVarsNnz);
+   Cstoch.getLinkVarsNnz(linkVarsNnz);
 
    linkStartBlocksA = Astoch.get2LinkStartBlocks();
    linkStartBlocksC = Cstoch.get2LinkStartBlocks();
@@ -479,6 +504,10 @@ void sData::init2LinksData(bool exploit2links)
 
    printLinkConsStats();
    printLinkVarsStats();
+
+   for( size_t i = 0; i < linkVarsNnz.size(); ++i )
+      if( linkVarsNnz[i] == 0 )
+         n0LinksVars++;
 
    for( size_t i = 0; i < linkStartBlocksA.size(); ++i )
       if( linkStartBlocksA[i] >= 0 )
@@ -493,6 +522,8 @@ void sData::init2LinksData(bool exploit2links)
 
    if( myrank == 0 )
    {
+      std::cout << "number of 0-link variables: " << n0LinksVars << " (out of "
+            << nx0 << " link variables) " << std::endl;
       std::cout << "number of equality 2-links: " << n2LinksEq << " (out of "
             << linkStartBlocksA.size() << " equalities) " << std::endl;
       std::cout << "number of inequality 2-links: " << n2LinksIneq << " (out of "
@@ -502,14 +533,12 @@ void sData::init2LinksData(bool exploit2links)
             << (n2LinksEq + n2LinksIneq) / ((double) linkStartBlocksA.size() + linkStartBlocksC.size()) << std::endl;
    }
 
-   if( n2LinksEq + n2LinksIneq / ((double) linkStartBlocksA.size() + linkStartBlocksC.size()) < min2LinksRatio )
+   if( (n2LinksEq + n2LinksIneq + n0LinksVars) / double(linkStartBlocksA.size() + linkStartBlocksC.size() + linkVarsNnz.size()) < minStructuredLinksRatio )
    {
       if( myrank == 0 )
-         std::cout << "not enough 2-links found" << std::endl;
+         std::cout << "not enough linking structure found" << std::endl;
       use2Links = false;
    }
-
-
 }
 
 void sData::AddChild(sData* child)

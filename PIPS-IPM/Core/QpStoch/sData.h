@@ -73,6 +73,7 @@ class sData : public QpGenData {
   virtual ~sData();
 
  protected:
+  std::vector<int> linkVarsPermutation;
   std::vector<int> linkRowsPermutationA;
   std::vector<int> linkRowsPermutationC;
 
@@ -81,7 +82,8 @@ class sData : public QpGenData {
 
  private:
   const static int nLinkStats = 21;
-  const static double min2LinksRatio = 0.5;
+  const static double minStructuredLinksRatio = 0.5;
+  static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   // nnz in Schur complement signified by given vector
@@ -93,13 +95,15 @@ class sData : public QpGenData {
   static std::vector<int> get2LinkLengthsVec(const std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   bool use2Links;
+  std::vector<int> linkVarsNnz;
   std::vector<int> linkStartBlocksA;
   std::vector<int> linkStartBlocksC;
   std::vector<int> linkStartBlockLengthsA;
   std::vector<int> linkStartBlockLengthsC;
 
   void init2LinksData(bool exploit2links);
-  void permuteLinkingRows(const std::vector<unsigned int>& permvecA, const std::vector<unsigned int>& permvecC);
+  void permuteLinkingVars();
+  void permuteLinkingCons();
 };
 
 

@@ -125,6 +125,10 @@ public:
 
   void permuteRows(const std::vector<unsigned int>& permvec);
 
+  void permuteCols(const std::vector<unsigned int>& permvec);
+
+  void getLinkVarsNnz(std::vector<int>& vec) const;
+
   void updateNonEmptyRowsCount(std::vector<int>& rowcount) const;
 
   void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,

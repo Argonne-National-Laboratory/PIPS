@@ -11,6 +11,7 @@
 #include "SimpleVector.h"
 #include <limits>
 #include <fstream>
+#include <algorithm>
 
 
 int SparseStorage::instances = 0;
@@ -284,6 +285,19 @@ void SparseStorage::fromGetColBlock(int col, double *A, int lda, int colExtent, 
   }
 }
 
+
+void SparseStorage::getLinkVarsNnz(std::vector<int>& vec) const
+{
+   assert(int(vec.size()) == n);
+
+   for( int i = 0; i < len; i++ )
+   {
+      const int col = jcolM[i];
+      assert(col < n);
+
+      vec[col]++;
+   }
+}
 
 void SparseStorage::atPutSpRow( int row, double A[], int lenA,
 				    int jcolA[], int& info )
@@ -1545,6 +1559,41 @@ void SparseStorage::permuteRows(const std::vector<unsigned int>& permvec)
    jcolM = jcolM_new;
    krowM = krowM_new;
    M = M_new;
+}
+
+void SparseStorage::permuteCols(const std::vector<unsigned int>& permvec)
+{
+   assert(int(permvec.size()) == n);
+
+   double* buffer = new double[len];
+   double* fullRow = new double[n];
+
+   for( int r = 0; r < m; ++r )
+   {
+#ifndef NDEBUG
+      std::fill_n(fullRow, n, std::numeric_limits<double>::infinity());
+#endif
+      // scatter
+      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      {
+         const int col = jcolM[c];
+         assert(col < n);
+
+         fullRow[col] = M[c];
+      }
+
+      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      {
+         const int col = jcolM[c];
+
+         buffer[c] = fullRow[permvec[col]];
+         assert(buffer[c] != std::numeric_limits<double>::infinity());
+      }
+   }
+
+   std::swap(M, buffer);
+   delete[] buffer;
+   delete[] fullRow;
 }
 
 // concatenate matrices
