@@ -73,10 +73,6 @@ class sData : public QpGenData {
   virtual ~sData();
 
  protected:
-  std::vector<int> linkVarsPermutation;
-  std::vector<int> linkRowsPermutationA;
-  std::vector<int> linkRowsPermutationC;
-
   void createChildren();
   void destroyChildren();
 

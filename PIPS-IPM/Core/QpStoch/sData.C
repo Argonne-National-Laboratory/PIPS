@@ -461,6 +461,8 @@ void sData::permuteLinkingVars()
 {
    const std::vector<unsigned int>& permvec = get0VarsRightPermutation(linkVarsNnz);
 
+   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingVars(permvec);
+   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingVars(permvec);
    dynamic_cast<StochVector&>(*g).permuteVec0Entries(permvec);
    dynamic_cast<StochVector&>(*bux).permuteVec0Entries(permvec);
    dynamic_cast<StochVector&>(*blx).permuteVec0Entries(permvec);
