@@ -38,23 +38,15 @@ void GeoStochScaler::doObjScaling()
    const double scaleFactor = std::sqrt(absmax * absmin);
    PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
 
-   if( scaleFactor > 0.0 )
-      factor_objscale = 1.0 / scaleFactor;
-   else
-      factor_objscale = 1.0;
+   assert( scaleFactor >= 0.0 );
+   scaleVector(*obj, scaleFactor);
 
-   if( do_bitshifting )
+   if( equilibrate )
    {
-      int exp;
-      const double mantissa = std::frexp(factor_objscale, &exp);
-
-      if( mantissa >= 0.75 )
-         factor_objscale = std::ldexp(0.5, exp + 1);
-      else
-         factor_objscale = std::ldexp(0.5, exp);
+      const double absmax = obj->infnorm();
+      assert(absmax >= 0);
+      scaleVector(*obj, absmax);
    }
-
-   obj->scalarMult(factor_objscale);
 }
 
 void GeoStochScaler::scale()
@@ -185,7 +177,6 @@ void GeoStochScaler::scale()
             "objnorm: %f \n Anorm:  %f \n Cnorm  %f \n bAnorm %f \n rhsCnorm %f \n lhsCnorm %f \n buxnorm %f \n blxnorm %f \n  ",
            obj->infnorm(), A->abmaxnorm(), C->abmaxnorm(), bA->infnorm(), rhsC->infnorm(), lhsC->infnorm(), bux->infnorm(), blx->infnorm());
 
-      // todo: If Equilibrium Scaling was done, do we need to adapt doObjScaling() ?
       doObjScaling();
 
       applyScaling();

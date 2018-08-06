@@ -26,23 +26,7 @@ void EquiStochScaler::doObjScaling()
    const double absmax = obj->infnorm();
    assert(absmax >= 0);
 
-   if( absmax > 0.0 )
-      factor_objscale = 1.0 / absmax;
-   else
-      factor_objscale = 1.0;
-
-   if( do_bitshifting )
-   {
-      int exp;
-      const double mantissa = std::frexp(factor_objscale, &exp);
-
-      if( mantissa >= 0.75 )
-         factor_objscale = std::ldexp(0.5, exp + 1);
-      else
-         factor_objscale = std::ldexp(0.5, exp);
-   }
-
-   obj->scalarMult(factor_objscale);
+   scaleVector(*obj, absmax);
 }
 
 // todo scale Q

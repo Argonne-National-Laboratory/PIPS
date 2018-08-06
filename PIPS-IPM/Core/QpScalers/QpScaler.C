@@ -155,6 +155,27 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector*
    return maxratio;
 }
 
+void QpScaler::scaleVector(OoqpVector& vector, double scaling_factor)
+{
+   if( scaling_factor > 0.0 )
+      factor_objscale = 1.0 / scaling_factor;
+   else
+      factor_objscale = 1.0;
+
+   if( do_bitshifting )
+   {
+      int exp;
+      const double mantissa = std::frexp(factor_objscale, &exp);
+
+      if( mantissa >= 0.75 )
+         factor_objscale = std::ldexp(0.5, exp + 1);
+      else
+         factor_objscale = std::ldexp(0.5, exp);
+   }
+
+   vector.scalarMult(factor_objscale);
+}
+
 QpScaler::~QpScaler()
 {
    delete vec_rowscaleQ;

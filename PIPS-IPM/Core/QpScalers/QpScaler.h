@@ -64,6 +64,8 @@ protected:
 
   /** get maximum absolute column ratio and write maximum column entries into vectors */
   virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector* rowScaleVecA, OoqpVector* rowScaleVecC);
+
+  void scaleVector(OoqpVector& vector, double scaling_factor);
 public:
 
   QpScaler(Data* prob, bool bitshifting = true);
