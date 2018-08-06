@@ -27,6 +27,21 @@ private:
   /** store absolute non-zero maximum entry of row i and vec[i] in vec[i]; empty rows get value 0.0  */
   void getRowMaxVec(const double* colScaleVec, double* vec) const;
 
+  class index_sort
+  {
+     private:
+       const int* indices;
+       const int maxsize;
+
+     public:
+       index_sort(const int* indices, int maxsize) : indices(indices), maxsize(maxsize) {}
+
+       bool operator()(int i, int j) const
+       {
+          assert(i < maxsize && j < maxsize);
+          return (indices[i] < indices[j]);
+       }
+  };
 protected:
   int neverDeleteElts;
   

@@ -1561,40 +1561,63 @@ void SparseStorage::permuteRows(const std::vector<unsigned int>& permvec)
    M = M_new;
 }
 
+
 void SparseStorage::permuteCols(const std::vector<unsigned int>& permvec)
 {
    assert(int(permvec.size()) == n);
 
-   double* buffer = new double[len];
-   double* fullRow = new double[n];
+   std::vector<unsigned int> permvec_rev(n, 0);
+
+   int* indexvec = new int[n];
+   int* bufferCol = new int[n];
+   double* bufferM = new double[n];
+
+   for( int i = 0; i < n; i++ )
+   {
+      assert(permvec[i] < unsigned(n));
+
+      permvec_rev[permvec[i]] = i;
+   }
 
    for( int r = 0; r < m; ++r )
    {
-#ifndef NDEBUG
-      std::fill_n(fullRow, n, std::numeric_limits<double>::infinity());
-#endif
-      // scatter
-      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      const int row_start = krowM[r];
+      const int row_end = krowM[r + 1];
+      const int row_length = row_end - row_start;
+
+      if( row_length == 0 )
+         continue;
+
+      for( int c = row_start; c < row_end; c++ )
       {
          const int col = jcolM[c];
          assert(col < n);
 
-         fullRow[col] = M[c];
+         jcolM[c] = permvec_rev[col];
       }
 
-      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      for( int i = 0; i < row_length; i++ )
+         indexvec[i] = i;
+
+      std::sort(indexvec, indexvec + row_length, index_sort(jcolM + row_start, row_length) );
+
+      for( int i = 0; i < row_length; i++ )
       {
-         const int col = jcolM[c];
+         assert(indexvec[i] < row_length);
 
-         buffer[c] = fullRow[permvec[col]];
-         assert(buffer[c] != std::numeric_limits<double>::infinity());
+         bufferCol[i] = jcolM[row_start + indexvec[i]];
+         bufferM[i] = M[row_start + indexvec[i]];
       }
+
+      memcpy(jcolM + row_start, bufferCol, row_length * sizeof(int));
+      memcpy(M + row_start, bufferM, row_length * sizeof(double));
    }
 
-   std::swap(M, buffer);
-   delete[] buffer;
-   delete[] fullRow;
+   delete[] indexvec;
+   delete[] bufferM;
+   delete[] bufferCol;
 }
+
 
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:
