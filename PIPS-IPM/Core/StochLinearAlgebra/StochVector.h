@@ -65,6 +65,7 @@ public:
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
   virtual void absmin( double& m);
+  virtual void absminNonZero(double& m, double tolerance=pips_eps);
   virtual double stepbound(OoqpVector & v, double maxStep );
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -169,6 +170,7 @@ public:
   virtual double onenorm(){return 0.0;}
   virtual void min( double& m, int& index ){};
   virtual void absmin( double& m){};
+  virtual void absminNonZero(double& m, double tolerance=pips_eps){};
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 

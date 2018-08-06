@@ -8,6 +8,7 @@
 
 #include "OoqpVector.h"
 #include "SimpleVectorHandle.h"
+#include "pipsdef.h"
 
 /**
  * Simple sequential vectors with element access.
@@ -53,7 +54,8 @@ public:
   virtual double onenorm();
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
-  virtual void absmin( double& m );
+  virtual void absmin( double& m);
+  virtual void absminNonZero(double& m, double tolerance=pips_eps);
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);

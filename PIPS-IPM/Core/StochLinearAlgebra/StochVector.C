@@ -512,6 +512,57 @@ void StochVector::absmin(double& m)
    assert( m >= 0.0 );
 }
 
+void StochVector::absminNonZero(double& m, double tolerance)
+{
+   double lMin;
+   bool initialized = false;
+
+   if(NULL==parent) {
+     vec->absminNonZero(m, tolerance);
+     if( m >= tolerance )
+        initialized = true;
+     if( vecl )
+     {
+        vecl->absminNonZero(lMin, tolerance);
+        if( lMin >= tolerance && (!initialized || lMin < m) )
+           m = lMin;
+     }
+   } else {
+     vec->absminNonZero(lMin, tolerance);
+     if( lMin >= tolerance )
+        initialized = true;
+
+     if( vecl )
+     {
+        double lMinlink;
+        vecl->absminNonZero(lMinlink, tolerance);
+        if( lMinlink >= tolerance && (!initialized || lMinlink < lMin) )
+        {
+           lMin = lMinlink;
+           initialized = true;
+        }
+     }
+
+     if( initialized && lMin<m )
+       m = lMin;
+   }
+
+   for(size_t it=0; it<children.size(); it++) {
+     children[it]->absminNonZero(m, tolerance);
+   }
+
+   if(iAmDistrib==1) {
+     double minG;
+     if( m == 0.0 )
+        m = std::numeric_limits<double>::max();
+     MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+     if( minG < std::numeric_limits<double>::max() )
+        m = minG;
+     else
+        m = 0.0;
+   }
+   assert( m >= tolerance || m == 0.0 );
+}
 
 
 double StochVector::stepbound(OoqpVector & v_, double maxStep )

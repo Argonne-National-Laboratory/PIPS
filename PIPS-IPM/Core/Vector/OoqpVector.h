@@ -13,6 +13,7 @@
 using namespace std;
 #include "IotrRefCount.h"
 #include "OoqpVectorHandle.h"
+#include "pipsdef.h"
 
 /** An abstract class representing the implementation of a OoqpVector. 
  *
@@ -103,6 +104,9 @@ public:
 
   /** Return the absolute minimum value of this vector */
   virtual void absmin(double& m) = 0;
+
+  /** Return the absolute minimum value of this vector bigger than tolerance */
+    virtual void absminNonZero(double& m, double tolerance=pips_eps) = 0;
 
   /** Return the dot product of this OoqpVector with v */
   virtual double dotProductWith( OoqpVector& v ) = 0;

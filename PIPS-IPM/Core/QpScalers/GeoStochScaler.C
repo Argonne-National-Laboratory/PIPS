@@ -31,12 +31,12 @@ void GeoStochScaler::doObjScaling()
    assert(absmax >= 0);
 
    double absmin = 0.0;
-   obj->absmin( absmin );
+   obj->absminNonZero( absmin, pips_eps );
 
    if( absmin < pips_eps )
       absmin = pips_eps;
    const double scaleFactor = std::sqrt(absmax * absmin);
-   cout<<"absmin: "<<absmin<<", absmax: "<<absmax<<", scaleFactor: "<<scaleFactor<<endl;
+   PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
 
    if( scaleFactor > 0.0 )
       factor_objscale = 1.0 / scaleFactor;
