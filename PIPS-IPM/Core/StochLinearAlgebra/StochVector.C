@@ -473,6 +473,46 @@ void StochVector::max( double& m, int& index )
    }
 }
 
+void StochVector::absmin(double& m)
+{
+   double lMin;
+
+   if(NULL==parent) {
+     vec->absmin(m);
+     if( vecl )
+     {
+        vecl->absmin(lMin);
+        if( lMin < m )
+           m = lMin;
+     }
+   } else {
+     vec->absmin(lMin);
+
+     if( vecl )
+     {
+        double lMinlink;
+        vecl->absmin(lMinlink);
+        if( lMinlink < lMin )
+           lMin = lMinlink;
+     }
+
+     if(lMin<m)
+       m = lMin;
+   }
+
+   for(size_t it=0; it<children.size(); it++) {
+     children[it]->absmin(m);
+   }
+
+   if(iAmDistrib==1) {
+     double minG;
+     MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+     m = minG;
+   }
+   assert( m >= 0.0 );
+}
+
+
 
 double StochVector::stepbound(OoqpVector & v_, double maxStep )
 {

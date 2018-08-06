@@ -53,6 +53,7 @@ public:
   virtual double onenorm();
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
+  virtual void absmin( double& m );
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);

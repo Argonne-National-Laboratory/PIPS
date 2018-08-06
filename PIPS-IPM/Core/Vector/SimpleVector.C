@@ -35,6 +35,20 @@ void SimpleVector::min( double& m, int& index )
   }
 }
 
+void SimpleVector::absmin(double& min)
+{
+   if (n==0) {
+     min=1e20;
+     return;
+   }
+   min = fabs(v[0]);
+   for( int i = 0; i < n; i++ ) {
+     if( fabs(v[i]) < min ) {
+        min = fabs(v[i]);
+     }
+   }
+}
+
 void SimpleVector::max( double& m, int& index )
 {
    if( n == 0 )
@@ -179,7 +193,7 @@ double SimpleVector::twonorm()
   }
   return sqrt(norm);
   */
-}    
+}
 
 void SimpleVector::componentMult( OoqpVector& vec )
 {

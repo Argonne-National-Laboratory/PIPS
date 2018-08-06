@@ -29,13 +29,14 @@ void GeoStochScaler::doObjScaling()
 
    const double absmax = obj->infnorm();
    assert(absmax >= 0);
-   StochVector* objInvert = dynamic_cast<StochVector*>(obj->clone());
-   objInvert->invertSave();
-   double absmin = objInvert->infnorm();
-   delete objInvert;
-   if( absmin != 0.0)
-      absmin = 1.0 / absmin;
+
+   double absmin = 0.0;
+   obj->absmin( absmin );
+
+   if( absmin < pips_eps )
+      absmin = pips_eps;
    const double scaleFactor = std::sqrt(absmax * absmin);
+   cout<<"absmin: "<<absmin<<", absmax: "<<absmax<<", scaleFactor: "<<scaleFactor<<endl;
 
    if( scaleFactor > 0.0 )
       factor_objscale = 1.0 / scaleFactor;

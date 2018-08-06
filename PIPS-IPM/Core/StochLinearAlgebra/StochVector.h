@@ -64,6 +64,7 @@ public:
   virtual double onenorm();
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
+  virtual void absmin( double& m);
   virtual double stepbound(OoqpVector & v, double maxStep );
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -167,6 +168,7 @@ public:
   virtual double infnorm(){return 0.0;}
   virtual double onenorm(){return 0.0;}
   virtual void min( double& m, int& index ){};
+  virtual void absmin( double& m){};
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 

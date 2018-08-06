@@ -101,6 +101,9 @@ public:
    *  which it occurs. */
   virtual void max( double& m, int& index ) = 0;
 
+  /** Return the absolute minimum value of this vector */
+  virtual void absmin(double& m) = 0;
+
   /** Return the dot product of this OoqpVector with v */
   virtual double dotProductWith( OoqpVector& v ) = 0;
 
