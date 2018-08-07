@@ -17,6 +17,13 @@
 
 #include <cstdlib>
 
+// todo: proper run-time parameter
+#ifdef WITH_PARDISOINDEF
+   const static bool sparsekkt = true;
+#else
+   const static bool sparsekkt = false;
+#endif
+
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
@@ -32,6 +39,8 @@ class PIPSIpmInterface
 
   void setPrimalTolerance(double val);
   void setDualTolerance(double val);
+
+  std::vector<double> gatherPrimalSolution() const;
 
   std::vector<double> getFirstStagePrimalColSolution() const;
   std::vector<double> getSecondStagePrimalColSolution(int scen) const;
@@ -130,7 +139,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("resids created\n");
 #endif
 
-  ScalerFactory& scfactory = ScalerFactory::getInstance();
+  const ScalerFactory& scfactory = ScalerFactory::getInstance();
   scaler = scfactory.makeScaler(data, scaler_type);
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");
@@ -151,6 +160,8 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
    int mype;
    MPI_Comm_rank(comm,&mype);
 #ifdef TIMING
+
+
   if(0 == mype) cout << "solving ..." << endl;
 
   if(mype==0) {
@@ -177,15 +188,21 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
      scaler->scale();
 
   //---------------------------------------------
-  int result = solver->solve(data,vars,resids);
+  const int result = solver->solve(data,vars,resids);
   //---------------------------------------------
 
-  if ( 0 == result && 0 == mype ) {
+  if( result != 0 && mype == 0 )
+     std::cout << "failed to solve instance, result code: " << result << std::endl;
+
 #ifdef TIMING
+   if ( 0 != result )
+      return;
 
-    tmElapsed=MPI_Wtime()-tmElapsed;
+   tmElapsed=MPI_Wtime()-tmElapsed;
 
-    double objective = getObjective();
+   const double objective = getObjective();
+
+   if( 0 == mype ) {
     //cout << " " << data->nx << " variables, " << data->my  
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
     
@@ -200,9 +217,9 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
       sscanf( var, "%d", &num_threads );
       cout << "Num threads: " << num_threads << endl;
     }
-
-#endif
   }
+#endif
+
 }
 
 template<typename FORMULATION, typename SOLVER>
@@ -236,6 +253,74 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete scaler;
 }
 
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherPrimalSolution() const
+{
+  const StochVector& primalStochVec = dynamic_cast<const StochVector&>(*vars->x);
+  const SimpleVector& firstvec =  dynamic_cast<const SimpleVector&>(*primalStochVec.vec);
+  const size_t nChildren = primalStochVec.children.size();
+
+  int myrank; MPI_Comm_rank(comm, &myrank);
+  int mysize; MPI_Comm_size(comm, &mysize);
+
+  std::vector<double> primalVecLocal;
+
+  for( size_t i = 0; i < nChildren; ++i )
+  {
+     const SimpleVector& vec = dynamic_cast<const SimpleVector&>(*primalStochVec.children[i]->vec);
+
+     if( vec.length() > 0 )
+        primalVecLocal.insert(primalVecLocal.end(), &vec[0], &vec[0] + vec.length());
+  }
+
+  size_t solLength = firstvec.length();
+
+  // final vector
+  std::vector<double> primalVec(0);
+
+  if( mysize > 0 )
+  {
+     // get all lengths
+     std::vector<int> recvcounts(mysize);
+     std::vector<int> recvoffsets(mysize);
+
+     int mylength = int(primalVecLocal.size());
+
+     MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, comm);
+
+     // all-gather local components
+     recvoffsets[0] = 0;
+     for( size_t i = 1; i < size_t(mysize); ++i )
+        recvoffsets[i] = recvoffsets[i - 1] + recvcounts[i - 1];
+
+     if( myrank == 0 )
+     {
+        solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
+        primalVec = std::vector<double>(solLength);
+
+        MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, &primalVec[0] + firstvec.length(),
+              &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, comm);
+     }
+     else
+     {
+        MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, 0, &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, comm);
+     }
+  }
+  else
+  {
+     solLength += primalVecLocal.size();
+
+     primalVec = std::vector<double>(solLength);
+
+     std::copy(primalVecLocal.begin(), primalVecLocal.end(), primalVec.begin() + firstvec.length());
+  }
+
+  if( myrank == 0 )
+     std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &primalVec[0]);
+
+  return primalVec;
+}
 
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStagePrimalColSolution() const {

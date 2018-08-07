@@ -6,7 +6,7 @@
  */
 
 
-
+#include "pipsdef.h"
 #include "GondzioStochSolver.h"
 #include "Variables.h"
 #include "Residuals.h"
@@ -46,17 +46,28 @@ extern int gOoqpPrintLevel;
 double g_iterNumber;
 
 
-GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points )
+GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points,
+      bool adaptive_linesearch )
   : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points)
 {
    assert(n_linesearch_points > 0);
+
+   if( adaptive_linesearch )
+   {
+      int size;
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+      if( size > 1)
+         this->n_linesearch_points =
+               std::min(unsigned(size) + this->n_linesearch_points, max_linesearch_points);
+   }
 
    // the two StepFactor constants set targets for increase in step
    // length for each corrector
    StepFactor0 = 0.3;
    StepFactor1 = 1.5;
 
-   mutol = 1.e-7; // todo parameter
+   mutol = 1.e-6; // todo parameter
 
    temp_step = factory->makeVariables(prob);
 }
@@ -178,7 +189,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       // calculate weighted predictor-corrector step
       double weight_candidate = -1.0;
-      calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha, alpha, weight_candidate);
+      const double alpha_predictor = alpha;
+      calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha_predictor, alpha, weight_candidate);
       assert(weight_candidate >= 0.0 && weight_candidate <= 1.0);
 
       step->saxpy(corrector_step, weight_candidate);
@@ -194,7 +206,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       NumberGondzioCorrections = 0;
 
       // enter the Gondzio correction loop:
-      while( NumberGondzioCorrections < maximum_correctors && alpha < 1.0 )
+      while( NumberGondzioCorrections < maximum_correctors && PIPSisLT(alpha, 1.0) )
       {
 
          // copy current variables into corrector_step
@@ -221,15 +233,11 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          // calculate weighted predictor-corrector step
          calculateAlphaWeightCandidate(iterate, step, corrector_step, alpha_target, alpha_enhanced, weight_candidate);
 
-         // todo weight * corrector_step; corrector_step += step
-         temp_step->copy(step);
-         temp_step->saxpy(corrector_step, weight_candidate);
-
          // if the enhanced step length is actually 1, make it official
          // and stop correcting
-         if( alpha_enhanced == 1.0 )
+         if( PIPSisEQ(alpha_enhanced, 1.0) )
          {
-            step->copy(temp_step);
+            step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
             NumberGondzioCorrections++;
 
@@ -241,7 +249,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             // if enhanced step length is significantly better than the
             // current alpha, make the enhanced step official, but maybe
             // keep correcting
-            step->copy(temp_step);
+            step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
             NumberGondzioCorrections++;
          }

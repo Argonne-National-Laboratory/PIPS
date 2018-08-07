@@ -15,6 +15,7 @@ class Data;
 class Variables;
 class ProblemFormulation;
 
+const unsigned int max_linesearch_points = 50;
 
 /**
  * Derived class of Solver implementing Gondzio-correction version of
@@ -23,21 +24,23 @@ class ProblemFormulation;
  */
 class GondzioStochSolver : public GondzioSolver
 {
+private:
+  // returns Gondzio weight for corrector step
+  virtual void calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha,
+        double& alpha_candidate, double& weight_candidate);
+
 protected:
-  const unsigned int n_linesearch_points;
+  unsigned int n_linesearch_points;
   Variables* temp_step;
 
 public:
 
-  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10 ); // todo increase n_linesearch_points
+  GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
+        bool adaptive_linesearch = true );
 
   virtual ~GondzioStochSolver();
 
   virtual int solve( Data *prob, Variables *iterate, Residuals * resid );
-
-  // returns Gondzio weight for corrector step
-  virtual void calculateAlphaWeightCandidate(Variables *iterate, Variables* predictor_step, Variables* corrector_step, double predictor_alpha,
-        double& alpha_candidate, double& weight_candidate);
 
 };
 

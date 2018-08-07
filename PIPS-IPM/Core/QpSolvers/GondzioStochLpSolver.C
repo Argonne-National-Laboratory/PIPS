@@ -5,7 +5,8 @@
  *      Author: Svenja Uslu
  */
 
-
+//#define PIPS_DEBUG
+#include "pipsdef.h"
 #include "GondzioStochLpSolver.h"
 #include "Variables.h"
 #include "Residuals.h"
@@ -45,12 +46,10 @@ extern int gOoqpPrintLevel;
 static double g_iterNumber;
 
 
-GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points )
-  : GondzioStochSolver(opt, prob)
+GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points, bool adaptive_linesearch)
+  : GondzioStochSolver(opt, prob, n_linesearch_points, adaptive_linesearch)
 {
 
-
-   //temp_step = factory->makeVariables(prob);
 }
 
 void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, Variables* predictor_step,
@@ -58,51 +57,52 @@ void GondzioStochLpSolver::calculateAlphaPDWeightCandidate(Variables *iterate, V
 		double& alpha_primal_candidate, double& alpha_dual_candidate,
 		double& weight_primal_candidate, double& weight_dual_candidate)
 {
-	assert(alpha_primal > 0.0 && alpha_primal <= 1.0);
-	assert(alpha_dual > 0.0 && alpha_dual <= 1.0);
+   assert(alpha_primal > 0.0 && alpha_primal <= 1.0);
+   assert(alpha_dual > 0.0 && alpha_dual <= 1.0);
 
-	   double alpha_primal_best = -1.0, alpha_dual_best = -1.0;
-	   double weight_primal_best = -1.0, weight_dual_best = -1.0;
-	   const double weight_min = alpha_primal * alpha_dual;
-	   const double weight_intervallength = 1.0 - weight_min;
+   double alpha_primal_best = -1.0, alpha_dual_best = -1.0;
+   double weight_primal_best = -1.0, weight_dual_best = -1.0;
+   const double weight_min = alpha_primal * alpha_dual;
+   const double weight_intervallength = 1.0 - weight_min;
 
-	   // main loop
-	   for( unsigned int n = 0; n <= n_linesearch_points; n++ )
-	   {
-	      double weight_curr = weight_min + (weight_intervallength / (n_linesearch_points)) * n;
+   // main loop
+   for( unsigned int n = 0; n <= n_linesearch_points; n++ )
+   {
+      double weight_curr = weight_min
+            + (weight_intervallength / (n_linesearch_points)) * n;
 
-	      weight_curr = min(weight_curr, 1.0);
+      weight_curr = min(weight_curr, 1.0);
 
-	      assert(weight_curr > 0.0 && weight_curr <= 1.0);
+      assert(weight_curr > 0.0 && weight_curr <= 1.0);
 
-	      temp_step->copy(predictor_step);
-	      temp_step->saxpy(corrector_step, weight_curr);
+      temp_step->copy(predictor_step);
+      temp_step->saxpy(corrector_step, weight_curr);
 
-	      double alpha_primal_curr = 1.0, alpha_dual_curr = 1.0;
-	      iterate->stepbound_pd(temp_step, alpha_primal_curr, alpha_dual_curr);
-	      assert(alpha_primal_curr > 0.0 && alpha_primal_curr <= 1.0);
-	      assert(alpha_dual_curr > 0.0 && alpha_dual_curr <= 1.0);
+      double alpha_primal_curr = 1.0, alpha_dual_curr = 1.0;
+      iterate->stepbound_pd(temp_step, alpha_primal_curr, alpha_dual_curr);
+      assert(alpha_primal_curr > 0.0 && alpha_primal_curr <= 1.0);
+      assert(alpha_dual_curr > 0.0 && alpha_dual_curr <= 1.0);
 
-	      if( alpha_primal_curr > alpha_primal_best )
-	      {
-	         alpha_primal_best = alpha_primal_curr;
-	         weight_primal_best = weight_curr;
-	      }
-	      if( alpha_dual_curr > alpha_dual_best )
-	      {
-			alpha_dual_best = alpha_dual_curr;
-			weight_dual_best = weight_curr;
-	      }
-	   }
+      if( alpha_primal_curr > alpha_primal_best )
+      {
+         alpha_primal_best = alpha_primal_curr;
+         weight_primal_best = weight_curr;
+      }
+      if( alpha_dual_curr > alpha_dual_best )
+      {
+         alpha_dual_best = alpha_dual_curr;
+         weight_dual_best = weight_curr;
+      }
+   }
 
-	   assert(alpha_primal_best >= 0.0 && weight_primal_best >= 0.0);
-	   assert(alpha_dual_best >= 0.0 && weight_dual_best >= 0.0);
+   assert(alpha_primal_best >= 0.0 && weight_primal_best >= 0.0);
+   assert(alpha_dual_best >= 0.0 && weight_dual_best >= 0.0);
 
-	   weight_primal_candidate = weight_primal_best;
-	   weight_dual_candidate = weight_dual_best;
+   weight_primal_candidate = weight_primal_best;
+   weight_dual_candidate = weight_dual_best;
 
-	   alpha_primal_candidate = alpha_primal_best;
-	   alpha_dual_candidate = alpha_dual_best;
+   alpha_primal_candidate = alpha_primal_best;
+   alpha_dual_candidate = alpha_dual_best;
 }
 
 int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
@@ -150,7 +150,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       if( gOoqpPrintLevel >= 10 )
       {
-         this->doMonitor(prob, iterate, resid, alpha_pri, sigma, iter, mu,
+         this->doMonitorPd(prob, iterate, resid, alpha_pri, alpha_dual, sigma, iter, mu,
                status_code, 0);
       }
       // *** Predictor step ***
@@ -170,7 +170,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       if( gOoqpPrintLevel >= 10 )
       {
-         this->doMonitor(prob, iterate, resid, alpha_pri, sigma, iter, mu,
+         this->doMonitorPd(prob, iterate, resid, alpha_pri, alpha_dual, sigma, iter, mu,
                status_code, 2);
       }
 
@@ -208,8 +208,9 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       NumberGondzioCorrections = 0;
 
       // enter the Gondzio correction loop:
-      while( NumberGondzioCorrections < maximum_correctors && (alpha_pri < 1.0 || alpha_dual < 1.0))
+      while( NumberGondzioCorrections < maximum_correctors && (PIPSisLT(alpha_pri, 1.0) || PIPSisLT(alpha_dual, 1.0)) )
       {
+         PIPSdebugMessage("corrector loop: %d alpha_pri: %f alpha_dual %f \n", NumberGondzioCorrections, alpha_pri, alpha_dual);
 
          // copy current variables into corrector_step
          corrector_step->copy(iterate);
@@ -238,15 +239,13 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          // calculate weighted predictor-corrector step
          calculateAlphaPDWeightCandidate(iterate, step, corrector_step, alpha_pri_target, alpha_dual_target,
         		 alpha_pri_enhanced, alpha_dual_enhanced, weight_primal_candidate, weight_dual_candidate);
-
-         temp_step->copy(step);
-         temp_step->saxpy_pd(corrector_step, weight_primal_candidate, weight_dual_candidate);
-
+#if 0
          // if the enhanced step length is actually 1, make it official
          // and stop correcting
          if( alpha_pri_enhanced == 1.0 || alpha_dual_enhanced == 1.0)
          {
-            step->copy(temp_step);
+            step->saxpy_pd(corrector_step, weight_primal_candidate, weight_dual_candidate);
+
             alpha_pri = alpha_pri_enhanced;
             alpha_dual = alpha_dual_enhanced;
             NumberGondzioCorrections++;
@@ -259,7 +258,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             // if enhanced step length is significantly better than the
             // current alpha, make the enhanced step official, but maybe
             // keep correcting
-            step->copy(temp_step);
+            step->saxpy_pd(corrector_step, weight_primal_candidate, weight_dual_candidate);
+
             alpha_pri = alpha_pri_enhanced;
             alpha_dual = alpha_dual_enhanced;
             NumberGondzioCorrections++;
@@ -270,6 +270,60 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             break;
          }
       }
+#else
+      // if the enhanced step length is actually 1, make it official
+      // and stop correcting
+      if( PIPSisEQ(alpha_pri_enhanced, 1.0) && PIPSisEQ(alpha_dual_enhanced, 1.0) )
+      {
+         PIPSdebugMessage("both one \n");
+
+         step->saxpy_pd(corrector_step, weight_primal_candidate, weight_dual_candidate);
+
+         alpha_pri = alpha_pri_enhanced;
+         alpha_dual = alpha_dual_enhanced;
+         NumberGondzioCorrections++;
+
+         // exit Gondzio correction loop
+         break;
+      }
+      else if( alpha_pri_enhanced >= (1.0 + AcceptTol) * alpha_pri && alpha_dual_enhanced >= (1.0 + AcceptTol) * alpha_dual)
+      {
+         PIPSdebugMessage("both better \n");
+
+         // if enhanced step length is significantly better than the
+         // current alpha, make the enhanced step official, but maybe
+         // keep correcting
+         step->saxpy_pd(corrector_step, weight_primal_candidate, weight_dual_candidate);
+
+         alpha_pri = alpha_pri_enhanced;
+         alpha_dual = alpha_dual_enhanced;
+         NumberGondzioCorrections++;
+      }
+      else if( alpha_pri_enhanced >= (1.0 + AcceptTol) * alpha_pri )
+      {
+         PIPSdebugMessage("primal better \n");
+
+         step->saxpy_pd(corrector_step, weight_primal_candidate, 0.0);
+
+         alpha_pri = alpha_pri_enhanced;
+         NumberGondzioCorrections++;
+      }
+      else if( alpha_dual_enhanced >= (1.0 + AcceptTol) * alpha_dual )
+      {
+         PIPSdebugMessage("dual better \n");
+
+         step->saxpy_pd(corrector_step, 0.0, weight_dual_candidate);
+
+         alpha_dual = alpha_dual_enhanced;
+         NumberGondzioCorrections++;
+      }
+      else
+      {
+         // exit Gondzio correction loop
+         break;
+      }
+   }
+#endif
 
       // We've finally decided on a step direction, now calculate the
       // length using Mehrotra's heuristic.x
@@ -288,7 +342,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    resid->calcresids(prob, iterate);
    if( gOoqpPrintLevel >= 10 )
    {
-      this->doMonitor(prob, iterate, resid, alpha_pri, sigma, iter, mu, status_code, 1);
+      this->doMonitorPd(prob, iterate, resid, alpha_pri, alpha_dual, sigma, iter, mu, status_code, 1);
    }
 
    // print the results, if you really want to..

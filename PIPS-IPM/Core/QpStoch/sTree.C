@@ -99,6 +99,14 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
   */
   // new assignment to agree with BA.cpp. we'll see if this breaks anything
   int nper = children.size()/noProcs;
+
+  /* too many MPI processes? */
+  if( nper == 0 )
+  {
+     std::cout << "too many MPI processes! (max: " << children.size() << ")" << std::endl;
+     MPI_Abort(world, 1);
+  }
+
   for(size_t i=0; i<children.size(); i++) {
     mapChildNodesToProcs[i].resize(1);
     mapChildNodesToProcs[i][0] = MIN(i/nper,(size_t)noProcs-1);

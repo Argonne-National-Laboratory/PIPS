@@ -33,16 +33,15 @@ double find_blocking( double w[],     int n, int incw,
 		    double *u_elt,          double *ustep_elt,
 		    int& first_or_second );
 
-void find_blocking_pd( double w[],     int n, int incw,
-		    double wstep[],        int incwstep,
-		    double u[],            int incu,
-		    double ustep[],        int incustep,
-		    double maxStep_primal, double maxStep_dual,
-		    double *w_elt,          double *wstep_elt,
-		    double *u_elt,          double *ustep_elt,
-		    double *w_elt_d,          double *wstep_elt_d,
-		    double *u_elt_d,          double *ustep_elt_d,
-			double& bound_primal, double& bound_dual,
+void find_blocking_pd( const double w[], const int n,
+		    const double wstep[],
+		    const double u[],
+		    const double ustep[],
+		    double& maxStep_primal, double& maxStep_dual,
+		    double& w_elt,          double& wstep_elt,
+		    double& u_elt,          double& ustep_elt,
+		    double& w_elt_d,          double& wstep_elt_d,
+		    double& u_elt_d,          double& ustep_elt_d,
 			bool& primalBlocking, bool& dualBlocking );
 
 #endif

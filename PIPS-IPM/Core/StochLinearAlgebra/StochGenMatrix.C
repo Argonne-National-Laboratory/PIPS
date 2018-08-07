@@ -3,6 +3,7 @@
 #include "StochVector.h"
 #include "SimpleVector.h"
 #include <limits>
+#include <algorithm>
 using namespace std;
 
 StochGenMatrix::StochGenMatrix(int id, 
@@ -615,6 +616,121 @@ void StochGenMatrix::writeToStreamDenseChild(ostream& out, int index) const
 	out<< "Linking block Bl_"<<index <<":"<<endl;
 	this->Blmat->writeToStreamDense(out);
 }
+
+void
+StochGenMatrix::writeToStreamDenseRow(ostream& out) const
+{
+   int rank;
+   MPI_Comm_rank(mpiComm, &rank);
+   int world_size;
+   MPI_Comm_size(mpiComm, &world_size);
+   int m, n;
+   int offset = 0;
+   stringstream sout;
+   if( iAmDistrib && rank > 0 )
+      MPI_Recv(&offset, 1, MPI_INT, (rank - 1), 0, mpiComm, MPI_STATUS_IGNORE);
+
+   if( !iAmDistrib || (iAmDistrib && rank == 0) )
+      this->Bmat->writeToStreamDense(out);
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->writeToStreamDenseChildRow(sout, offset);
+      out<<sout.str();
+      sout.clear();
+      sout.str(std::string());
+      children[it]->Bmat->getSize(m, n);
+      offset += n;
+   }
+   if( iAmDistrib && rank < world_size - 1 )
+      MPI_Ssend(&offset, 1, MPI_INT, (rank + 1) % world_size, 0, mpiComm);
+
+   // linking contraints ?
+   int mlink, nlink;
+   this->Blmat->getSize(mlink, nlink);
+   if( mlink > 0 )
+   {
+      if( iAmDistrib )
+         MPI_Barrier(mpiComm);
+
+      // for each row r do:
+      for( int r = 0; r < mlink; r++ )
+      {
+         if( iAmDistrib )
+         {
+            MPI_Barrier(mpiComm);
+
+            // process Zero collects all the information and then prints it.
+            if( rank == 0 )
+            {
+               out << this->Blmat->writeToStreamDenseRow(r);
+
+               out << writeToStreamDenseRowLink(r);
+
+               for( int p = 1; p < world_size; p++ )
+               {
+                  MPI_Status status;
+                  int l;
+                  MPI_Probe(p, r + 1, mpiComm, &status);
+                  MPI_Get_count(&status, MPI_CHAR, &l);
+                  char *buf = new char[l];
+                  MPI_Recv(buf, l, MPI_CHAR, p, r + 1, mpiComm, &status);
+                  string rowPartFromP(buf, l);
+                  out << rowPartFromP;
+                  delete[] buf;
+               }
+               out << endl;
+
+            }
+            else // rank != 0
+            {
+               std::string str = writeToStreamDenseRowLink(r);
+               MPI_Ssend(str.c_str(), str.length(), MPI_CHAR, 0, r + 1, mpiComm);
+            }
+         }
+         else // not distributed
+         {
+            this->Blmat->writeToStreamDenseRow(sout, r);
+            for( size_t it = 0; it < children.size(); it++ )
+               children[it]->Blmat->writeToStreamDenseRow(sout, r);
+
+            out << sout.rdbuf() << endl;
+         }
+      }
+   }
+   if( iAmDistrib )
+      MPI_Barrier(mpiComm);
+}
+
+/** writes a child matrix row-wise, offset indicates the offset between A and B block. */
+void StochGenMatrix::writeToStreamDenseChildRow(stringstream& out, int offset) const
+{
+   int mA, mB, n;
+   this->Amat->getSize(mA, n);
+   this->Bmat->getSize(mB, n);
+   assert(mA == mB );
+   for(int r=0; r < mA; r++)
+   {
+      this->Amat->writeToStreamDenseRow(out, r);
+      for(int i=0; i<offset; i++)
+         out <<'\t';
+      this->Bmat->writeToStreamDenseRow(out, r);
+      out << endl;
+   }
+}
+
+/** returns a string containing the linking-row rowidx of the children. */
+std::string StochGenMatrix::writeToStreamDenseRowLink(int rowidx) const
+{
+   std::string str_all;
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      std::string str = children[it]->Blmat->writeToStreamDenseRow(rowidx);
+      str_all.append(str);
+   }
+   return str_all;
+}
+
 /* Make the elements in this matrix symmetric. The elements of interest
  *  must be in the lower triangle, and the upper triangle must be empty.
  *  @param info zero if the operation succeeded. Otherwise, insufficient
@@ -685,7 +801,10 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    assert(minmaxVecStoch.children.size() == children.size());
 
    Bmat->getRowMinMaxVec(getMin, initializeVec, covec, *(minmaxVecStoch.vec));
-   Amat->getRowMinMaxVec(getMin, false, covecparent, *(minmaxVecStoch.vec));
+
+   // not at root?
+   if( linkParent != NULL )
+      Amat->getRowMinMaxVec(getMin, false, covecparent, *(minmaxVecStoch.vec));
 
    /* with linking constraints? */
    if( minmaxVecStoch.vecl || linkParent )
@@ -700,25 +819,30 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
          if( rank > 0 )
             iAmSpecial = false;
       }
-      if( linkParent )
-         mvecl = dynamic_cast<SimpleVector*>(linkParent);
-      else
-         mvecl = dynamic_cast<SimpleVector*>(minmaxVecStoch.vecl);
 
       // at root?
       if( linkParent == NULL )
       {
-         if( getMin )
-            mvecl->setToConstant(std::numeric_limits<double>::max());
-         else
-            mvecl->setToZero();
+         mvecl = dynamic_cast<SimpleVector*>(minmaxVecStoch.vecl);
+
+         if( initializeVec )
+         {
+            if( getMin )
+               mvecl->setToConstant(std::numeric_limits<double>::max());
+            else
+               mvecl->setToZero();
+         }
+      }
+      else
+      {
+         mvecl = dynamic_cast<SimpleVector*>(linkParent);
       }
 
       if( linkParent != NULL || iAmSpecial )
          Blmat->getRowMinMaxVec(getMin, false, covec, *mvecl);
    }
 
-   if( colScaleVec )
+   if( colScaleVec != NULL )
    {
       for( size_t it = 0; it < children.size(); it++ )
          children[it]->getRowMinMaxVec(getMin, initializeVec, colScaleVecStoch->children[it], covec,
@@ -734,6 +858,8 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    // distributed, with linking constraints, and at root?
    if( iAmDistrib && minmaxVecStoch.vecl != NULL && linkParent == NULL )
    {
+      assert(mvecl != NULL);
+
       // sum up linking constraints vectors
       const int locn = mvecl->length();
       double* buffer = new double[locn];
@@ -798,7 +924,7 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    }
 
    // not at root?
-   if( minmaxParent )
+   if( minmaxParent != NULL )
       Amat->getColMinMaxVec(getMin, false, covec, *(minmaxParent));
    else
    {
@@ -830,5 +956,222 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
 
       delete[] buffer;
    }
+}
+
+void StochGenMatrix::updateKLinkConsCount(std::vector<int>& linkCount) const
+{
+   if( Blmat == NULL )
+      return;
+
+   int m, n;
+
+   Blmat->getSize(m, n);
+   assert(m > 0);
+   assert(linkCount.size() == size_t(m));
+
+   for( size_t it = 0; it < children.size(); it++ )
+      if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
+      {
+         assert(children[it]->Blmat);
+         children[it]->Blmat->updateNonEmptyRowsCount(linkCount);
+      }
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], m, MPI_INT, MPI_SUM, mpiComm);
+}
+
+void StochGenMatrix::updateKLinkVarsCount(std::vector<int>& linkCount) const
+{
+   int m, n;
+
+   Bmat->getSize(m, n);
+
+   if( n == 0 )
+      return;
+
+   assert(linkCount.size() == size_t(n));
+
+   for( size_t it = 0; it < children.size(); it++ )
+      if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
+      {
+         children[it]->Amat->getTranspose().updateNonEmptyRowsCount(linkCount);
+         children[it]->Amat->deleteTransposed();
+      }
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], n, MPI_INT, MPI_SUM, mpiComm);
+}
+
+std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
+{
+   if( Blmat == NULL )
+      std::vector<int>();
+
+   int m, n;
+
+   Blmat->getSize(m, n);
+   assert(m > 0);
+
+   std::vector<int> linkCount(m, 0);
+   std::vector<int> linkBlockStart(m, -1);
+   std::vector<int> linkBlockEnd(m, -1);
+   std::vector<bool> is2link(m, false);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      if( !(children[it]->isKindOf(kStochGenDummyMatrix)) )
+      {
+         assert(children[it]->Blmat);
+         children[it]->Blmat->updateNonEmptyRowsCount(it, linkCount, linkBlockStart, linkBlockEnd);
+      }
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], m, MPI_INT, MPI_SUM, mpiComm);
+
+   // set block identifier
+   for( int i = 0; i < m; i++ )
+   {
+      assert(linkBlockEnd[i] == -1 || linkBlockStart[i] <= linkBlockEnd[i]);
+
+      if( linkCount[i] == 2 && (linkBlockEnd[i] - linkBlockStart[i]) == 1 )
+      {
+         assert(linkBlockStart[i] >= 0 && linkBlockEnd[i] >= 0);
+         is2link[i] = true;
+      }
+   }
+
+   if( iAmDistrib )
+   {
+      // find 2-links between different processes
+
+      int myrank, size;
+      MPI_Comm_rank(mpiComm, &myrank);
+      MPI_Comm_size(mpiComm, &size);
+
+      assert(size > 0);
+
+      // 1. allgather number of local 2-link candidates
+      std::vector<int> localCandsIdx;
+      std::vector<int> localCandsBlock;
+      std::vector<int> candsPerProc(size, -1);
+
+      for( int i = 0; i < m; i++ )
+         if( linkCount[i] == 2 && linkBlockStart[i] >= 0 && linkBlockEnd[i] == -1 )
+         {
+            assert(!is2link[i]);
+
+            localCandsIdx.push_back(i);
+            assert(unsigned(linkBlockStart[i]) < children.size());
+
+            localCandsBlock.push_back(linkBlockStart[i]);
+         }
+
+      int localcount = localCandsIdx.size();
+
+      MPI_Allgather(&localcount, 1, MPI_INT, &candsPerProc[0], 1, MPI_INT, mpiComm);
+
+#ifndef NDEBUG
+      for( size_t i = 0; i < candsPerProc.size(); i++ )
+         assert(candsPerProc[i] >= 0);
+#endif
+
+      // 2. allgatherv 2-link candidates
+      std::vector<int> displacements(size + 1, 0);
+      for( int i = 1; i < size; i++ )
+         displacements[i] = candsPerProc[i - 1] + displacements[i - 1];
+
+      const int nAllCands = displacements[size - 1] + candsPerProc[size - 1];
+
+      displacements[size] = nAllCands;
+      std::vector<int> allCandsRow(nAllCands, -1);
+      std::vector<int> allCandsBlock(nAllCands, -1);
+
+      MPI_Allgatherv(&localCandsIdx[0], localcount, MPI_INT, &allCandsRow[0], &candsPerProc[0],
+            &displacements[0], MPI_INT, mpiComm);
+
+      MPI_Allgatherv(&localCandsBlock[0], localcount, MPI_INT, &allCandsBlock[0], &candsPerProc[0],
+            &displacements[0], MPI_INT, mpiComm);
+
+#ifndef NDEBUG
+      for( size_t i = 0; i < allCandsRow.size(); i++ )
+         assert(allCandsRow[i] >= 0 && allCandsRow[i] < m && allCandsBlock[i] >= 0 && allCandsBlock[i] < int(children.size()));
+#endif
+
+
+      // 3. check which candidates are indeed 2-links
+      std::vector<int> blocksHash(m, -1);
+      for( int i = 0; i < size - 1; i++ )
+      {
+         // hash
+         for( int j = displacements[i]; j < displacements[i + 1]; j++ )
+            blocksHash[allCandsRow[j]] = allCandsBlock[j];
+
+         // compare with next
+         for( int j = displacements[i + 1]; j < displacements[i + 2]; j++ )
+         {
+            assert(allCandsBlock[j] > 0);
+            const int candRow = allCandsRow[j];
+            if( blocksHash[candRow] >= 0 )
+            {
+               assert(blocksHash[candRow] != allCandsBlock[j]);
+
+               const int startBlock = std::min(blocksHash[candRow], allCandsBlock[j]);
+               const int endBlock = std::max(blocksHash[candRow], allCandsBlock[j]);
+
+               assert(startBlock >= 0 && endBlock >= 0);
+
+               if( endBlock - startBlock != 1 )
+                  continue;
+
+               is2link[candRow] = true;
+
+               // start block owned by this MPI process?
+               if( !children[startBlock]->isKindOf(kStochGenDummyMatrix) )
+               {
+                  assert(children[endBlock]->isKindOf(kStochGenDummyMatrix));
+                  linkBlockStart[candRow] = startBlock;
+               }
+               else
+               {
+                  assert(children[startBlock]->isKindOf(kStochGenDummyMatrix));
+                  linkBlockStart[candRow] = -1;
+               }
+            }
+         }
+
+         // un-hash
+         for( int j = displacements[i]; j < displacements[i + 1]; j++ )
+            blocksHash[allCandsRow[j]] = -1;
+      }
+   }
+
+   // correct block identifier
+   for( int i = 0; i < m; i++ )
+      if( !is2link[i] )
+         linkBlockStart[i] = -1;
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &linkBlockStart[0], m, MPI_INT, MPI_MAX, mpiComm);
+
+   return linkBlockStart;
+}
+
+void StochGenMatrix::permuteLinkingRows(const std::vector<unsigned int>& permvec)
+{
+   if( Blmat )
+      Blmat->permuteRows(permvec);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->permuteLinkingRows(permvec);
+}
+
+
+void StochGenMatrix::updateTransposed()
+{
+  Amat->updateTransposed();
+  Bmat->updateTransposed();
+  Blmat->updateTransposed();
+
+  for( size_t it = 0; it < children.size(); it++ )
+     children[it]->updateTransposed();
 }
 

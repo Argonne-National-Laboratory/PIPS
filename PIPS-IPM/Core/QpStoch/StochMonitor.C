@@ -34,13 +34,34 @@ void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
 			 int status_code,
 			 int level ) 
 {
+   StochMonitor::doItStoch(solver, data, vars, resids, alpha, -1.0, sigma, i, mu, status_code, level);
+}
+
+void StochMonitor::doItPd( Solver * solver, Data * data, Variables * vars,
+              Residuals * resids,
+              double alpha_primal, double alpha_dual, double sigma,
+              int i, double mu,
+                   int status_code,
+              int level )
+{
+   StochMonitor::doItStoch(solver, data, vars, resids, alpha_primal, alpha_dual, sigma, i, mu, status_code, level);
+}
+
+void StochMonitor::doItStoch( Solver * solver, Data * data, Variables * vars,
+              Residuals * resids,
+              double alpha_primal, double alpha_dual, double sigma,
+              int i, double mu,
+                   int status_code,
+              int level )
+{
   double objective = dynamic_cast<QpGenData*>(data)->objectiveValue(dynamic_cast<QpGenVars*>(vars));
 
   if( scaler )
      objective = scaler->getOrigObj(objective);
 
   //log only on the first proc
-  if(myRank>0) return;
+   if( myRank > 0 )
+      return;
 
   double dnorm = solver->dataNorm();
 
@@ -56,8 +77,15 @@ void StochMonitor::doIt( Solver * solver, Data * data, Variables * vars,
     //cout << " mu = " << mu << " relative residual norm = " 
     //cout << resids->residualNorm() / dnorm << endl;
     cout << " Duality Gap:  " << resids->dualityGap() << endl;
-    if( i > 1 ) {
-      cout << " alpha = " << alpha << endl;
+    if( i > 1 )
+    {
+       if( alpha_dual != -1.0 )
+       {
+          cout << " alpha primal = " << alpha_primal << endl;
+          cout << " alpha dual = " << alpha_dual << endl;
+       }
+       else
+          cout << " alpha = " << alpha_primal << endl;
     }
     cout << " Objective: " << objective << endl;
     cout << endl;

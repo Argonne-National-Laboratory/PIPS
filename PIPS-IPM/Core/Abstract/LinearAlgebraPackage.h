@@ -12,13 +12,15 @@
  */
 
 #include "DoubleMatrixHandle.h"
+#include "IotrRefCount.h"
+
 class DoubleLinearSolver;
 class OoqpVector;
 
 /**
  * A class whose instances creates matrices and vectors of
  * an appropriate type. */
-class LinearAlgebraPackage {
+class LinearAlgebraPackage : public IotrRefCount{
 protected:
   LinearAlgebraPackage() {};
   virtual ~LinearAlgebraPackage() {};

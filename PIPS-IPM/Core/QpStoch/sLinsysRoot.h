@@ -6,6 +6,8 @@
 #define SROOTLINSYS
 
 #include "sLinsys.h"
+#include "StochGenMatrix.h"
+
 
 class sFactory;
 class sData;
@@ -30,6 +32,7 @@ class sLinsysRoot : public sLinsys {
  public:
   std::vector<sLinsys*> children;
   int iAmDistrib;
+
  public:
 
   sLinsysRoot(sFactory * factory_, sData * prob_);
@@ -60,6 +63,8 @@ class sLinsysRoot : public sLinsys {
  
   virtual void AddChild(sLinsys* child);
 
+  virtual bool usingSparseKkt() {return hasSparseKkt;};
+
   void sync();
  public:
   virtual ~sLinsysRoot();
@@ -69,14 +74,35 @@ class sLinsysRoot : public sLinsys {
   void myAtPutZeros(DenseSymMatrix* mat, 
 		    int row, int col, 
 		    int rowExtent, int colExtent);
+
+  // all_reduces specified submatrix (in chunks)
   void submatrixAllReduce(DenseSymMatrix* A, 
 			  int startRow, int startCol, int nRows, int nCols,
 			  MPI_Comm comm);
+
+  // all_reduces specified submatrix as a while
+  void submatrixAllReduceFull(DenseSymMatrix* A,
+           int startRow, int startCol, int nRows, int nCols,
+           MPI_Comm comm);
+
+  // all_reducees lower half (including diagonal) of specified submatrix
+  void submatrixAllReduceDiagLower(DenseSymMatrix* A,
+            int substart, int subsize,
+            MPI_Comm comm);
+
  protected: //buffers
 
   OoqpVector* zDiag;
   OoqpVector* zDiagLinkCons;
   OoqpVector* xDiag;
+
+  double* sparseKktBuffer;
+
+  bool hasSparseKkt;
+ private:
+  void addTermToSchurCompl(sData* prob, size_t childindex);
+  void reduceKKTdense();
+  void reduceKKTsparse();
 
 #ifdef STOCH_TESTING
  protected: 

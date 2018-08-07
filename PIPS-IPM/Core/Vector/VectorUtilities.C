@@ -170,76 +170,58 @@ double find_blocking( double w[],     int n, int incw,
   return bound;
 }
 
-void find_blocking_pd( double w[],     int n, int incw,
-		    double wstep[],        int incwstep,
-		    double u[],            int incu,
-		    double ustep[],        int incustep,
-		    double maxStep_primal, double maxStep_dual,
-		    double *w_elt,          double *wstep_elt,
-		    double *u_elt,          double *ustep_elt,
-		    double *w_elt_d,          double *wstep_elt_d,
-		    double *u_elt_d,          double *ustep_elt_d,
-			double& bound_primal, double& bound_dual,
+void find_blocking_pd( const double w[], const int n,
+          const double wstep[],
+		    const double u[],
+		    const double ustep[],
+		    double& maxStep_primal, double& maxStep_dual,
+		    double& w_elt,          double& wstep_elt,
+		    double& u_elt,          double& ustep_elt,
+		    double& w_elt_d,        double& wstep_elt_d,
+		    double& u_elt_d,        double& ustep_elt_d,
 			bool& primalBlocking, bool& dualBlocking )
 {
-  bound_primal = maxStep_primal;
-  bound_dual = maxStep_dual;
+   int lastBlockingPrimal = -1, lastBlockingDual = -1;
 
-  int i = n - 1, lastBlockingPrimal = -1, lastBlockingDual = -1;
-
-  // Search backward so that we find the blocking constraint of lowest
-  // index. We do this to make things consistent with MPI's MPI_MINLOC,
-  // which returns the processor with smallest rank where a min occurs.
-  //
-  // Still, going backward is ugly!
-  double *pw     = w     + (n - 1) * incw;
-  double *pwstep = wstep + (n - 1) * incwstep;
-  double *pu     = u     + (n - 1) * incu;
-  double *pustep = ustep + (n - 1) * incustep;
-
-  while( i >= 0 ) {
-    double temp = *pwstep;
-    if( *pw > 0 && temp < 0 ) {
-      temp = -*pw/temp;
-      if( temp <= bound_primal ) {
-         bound_primal = temp;
-         lastBlockingPrimal = i;
-         primalBlocking = true;
+   for( int i = 0; i < n; i++ )
+   {
+      double temp = wstep[i];
+      if( w[i] > 0 && temp < 0 )
+      {
+         temp = -w[i] / temp;
+         if( temp < maxStep_primal )
+         {
+            maxStep_primal = temp;
+            lastBlockingPrimal = i;
+            primalBlocking = true;
+         }
       }
-    }
-    temp = *pustep;
-    if( *pu > 0 && temp < 0 ) {
-      temp = -*pu/temp;
-      if( temp <= bound_dual ) {
-         bound_dual = temp;
-         lastBlockingDual = i;
-         dualBlocking = true;
+      temp = ustep[i];
+      if( u[i] > 0 && temp < 0 )
+      {
+         temp = -u[i] / temp;
+         if( temp < maxStep_dual )
+         {
+            maxStep_dual = temp;
+            lastBlockingDual = i;
+            dualBlocking = true;
+         }
       }
-    }
-
-    i--;
-    if( i >= 0 ) {
-      // It is safe to decrement the pointers
-      pw     -= incw;
-      pwstep -= incwstep;
-      pu     -= incu;
-      pustep -= incustep;
-    }
-  }
+   }
 
   if( lastBlockingPrimal > -1 ) {
     // fill out the elements
-    *w_elt     = w[lastBlockingPrimal];
-    *wstep_elt = wstep[lastBlockingPrimal];
-    *u_elt     = u[lastBlockingPrimal];
-    *ustep_elt = ustep[lastBlockingPrimal];
+    w_elt     = w[lastBlockingPrimal];
+    wstep_elt = wstep[lastBlockingPrimal];
+    u_elt     = u[lastBlockingPrimal];
+    ustep_elt = ustep[lastBlockingPrimal];
   }
   if( lastBlockingDual > -1 ) {
      // fill out the elements
-     *w_elt_d     = w[lastBlockingDual];
-     *wstep_elt_d = wstep[lastBlockingDual];
-     *u_elt_d     = u[lastBlockingDual];
-     *ustep_elt_d = ustep[lastBlockingDual];
+     w_elt_d     = w[lastBlockingDual];
+     wstep_elt_d = wstep[lastBlockingDual];
+     u_elt_d     = u[lastBlockingDual];
+     ustep_elt_d = ustep[lastBlockingDual];
    }
 }
 

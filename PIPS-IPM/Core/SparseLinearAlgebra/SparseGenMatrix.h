@@ -9,6 +9,7 @@
 #include "DoubleMatrix.h"
 #include "SparseStorage.h"
 #include "SparseGenMatrixHandle.h"
+#include <vector>
 
 /** Represents sparse non-symmetric, possibly non-square matrices stored in
  *  row-major Harwell-Boeing format.
@@ -25,6 +26,10 @@ protected:
   int size;
 
 public:
+
+  void updateTransposed();
+  void deleteTransposed();
+
   SparseGenMatrix( int rows, int cols, int nnz );
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
@@ -89,6 +94,8 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
+  virtual void writeToStreamDenseRow( stringstream& out, int rowidx) const;
+  virtual std::string writeToStreamDenseRow( int rowidx) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -115,6 +122,15 @@ public:
   /** fill vector with absolute minimum/maximum value of each column */
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
+
+  void permuteRows(const std::vector<unsigned int>& permvec);
+
+  void updateNonEmptyRowsCount(std::vector<int>& rowcount) const;
+
+  void updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
+     std::vector<int>& linkBlockPos2) const;
+
+  SparseGenMatrix& getTranspose();
 
   virtual ~SparseGenMatrix();
 

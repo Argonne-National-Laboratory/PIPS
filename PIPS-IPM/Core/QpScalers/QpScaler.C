@@ -7,6 +7,11 @@
 
 #include "QpScaler.h"
 #include <algorithm>
+#include "pipsdef.h"
+
+#ifndef NBEBUG
+#include <algorithm>
+#endif
 
 QpScaler::QpScaler(Data * prob, bool bitshifting)
 : Scaler(prob, bitshifting)
@@ -44,9 +49,6 @@ void QpScaler::applyScaling()
 {
    // todo scale Q
 
-   std::cout << "Anorm before " << A->abmaxnorm() << std::endl;
-   std::cout << "Cnorm before " << C->abmaxnorm() << std::endl;
-
    // scale A and rhs
    A->ColumnScale(*vec_colscale);
    A->RowScale(*vec_rowscaleA);
@@ -61,9 +63,6 @@ void QpScaler::applyScaling()
    // scale ub and lb of x
    bux->componentDiv(*vec_colscale);
    blx->componentDiv(*vec_colscale);
-
-   std::cout << "Anorm after " << A->abmaxnorm() << std::endl;
-   std::cout << "Cnorm after " << C->abmaxnorm() << std::endl;
 }
 
 double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC)
@@ -72,6 +71,17 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    A->getRowMinMaxVec(false, true, NULL, maxvecA);
    C->getRowMinMaxVec(true, true, NULL, minvecC);
    C->getRowMinMaxVec(false, true, NULL, maxvecC);
+
+#ifndef NDEBUG
+   int j;
+   double max;
+
+   maxvecA.max(max, j);
+   assert(max < 0 || max == A->abmaxnorm());
+
+   maxvecC.max(max, j);
+   assert(max < 0 || max == C->abmaxnorm());
+#endif
 
    OoqpVector* const ratiovecA = maxvecA.clone();
    OoqpVector* const ratiovecC = maxvecC.clone();
@@ -85,11 +95,13 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    int i;
    double maxratio;
    ratiovecA->max(maxratio, i);
-   assert(maxratio >= 0.0);
+
+   PIPSdebugMessage("max column ratio A: %f", maxratio);
 
    double maxvalC;
    ratiovecC->max(maxvalC, i);
-   assert(maxvalC >= 0.0);
+
+   PIPSdebugMessage("max column ratio C: %f", maxvalC);
 
    if( maxvalC > maxratio )
       maxratio = maxvalC;
@@ -108,23 +120,27 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec)
    A->getColMinMaxVec(false, true, NULL, maxvec);
    C->getColMinMaxVec(false, false, NULL, maxvec);
 
+#ifndef NDEBUG
+   int j;
+   double max;
+
+   maxvec.max(max, j);
+
+   assert(max < 0 || max == std::max(A->abmaxnorm(), C->abmaxnorm()));
+#endif
+
    OoqpVector* const ratiovec = maxvec.clone();
 
    ratiovec->copyFrom(maxvec);
 
-   int i;
-   double m;
-   ratiovec->max(m, i);
-   std::cout << "COLmaxvec " << m << std::endl;
-
    ratiovec->divideSome(minvec, minvec);
 
-   int index;
+   int i;
    double maxratio;
-   ratiovec->max(maxratio, index);
+   ratiovec->max(maxratio, i);
    assert(maxratio >= 0.0);
 
-   std::cout << "colmaxratio " << maxratio << std::endl;
+   PIPSdebugMessage("max column ratio: %f", maxratio);
 
    delete ratiovec;
 

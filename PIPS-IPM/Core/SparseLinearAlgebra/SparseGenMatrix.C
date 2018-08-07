@@ -56,6 +56,7 @@ void SparseGenMatrix::atPutDense( int row, int col, double * A, int lda,
 				      int rowExtent, int colExtent )
 {
   mStorage->atPutDense( row, col, A, lda, rowExtent, colExtent );
+  assert(m_Mt == NULL);
 }
 
 
@@ -81,6 +82,7 @@ void SparseGenMatrix::putSparseTriple( int irow[], int len,
 					   int& info )
 {
   mStorage->putSparseTriple( irow, len, jcol, A, info );
+  assert(m_Mt == NULL);
 }
 
 
@@ -94,9 +96,31 @@ void SparseGenMatrix::writeToStreamDense(ostream& out) const
   mStorage->writeToStreamDense( out );
 }
 
+void SparseGenMatrix::writeToStreamDenseRow( stringstream& out, int rowidx) const
+{
+   // check if mStorage might be empty
+   if(mStorage->n > 0){
+      assert( rowidx < mStorage->m);
+      mStorage->writeToStreamDenseRow( out, rowidx );
+   }
+}
+
+std::string SparseGenMatrix::writeToStreamDenseRow( int rowidx) const
+{
+
+   stringstream out;
+   // check if mStorage might be empty
+   if(mStorage->n > 0){
+      assert( rowidx < mStorage->m);
+      mStorage->writeToStreamDenseRow( out, rowidx );
+   }
+   return out.str();
+}
+
 void SparseGenMatrix::randomize( double alpha, double beta, double * seed )
 {
   mStorage->randomize( alpha, beta, seed );
+  assert(m_Mt == NULL);
 }
 
 
@@ -109,6 +133,7 @@ void SparseGenMatrix::getDiagonal( OoqpVector& vec )
 void SparseGenMatrix::setToDiagonal( OoqpVector& vec )
 {
   mStorage->setToDiagonal( vec );
+  assert(m_Mt == NULL);
 }
 
 
@@ -116,6 +141,7 @@ void SparseGenMatrix::atPutSpRow( int row, double A[],
 				      int lenA, int jcolA[], int& info )
 {
   mStorage->atPutSpRow( row, A, lenA, jcolA, info );
+  assert(m_Mt == NULL);
 }
 
 
@@ -128,6 +154,7 @@ int SparseGenMatrix::numberOfNonZeros()
 void SparseGenMatrix::symmetrize( int& info ) 
 {
   mStorage->symmetrize( info );
+  assert(m_Mt == NULL);
 }
 
 
@@ -162,6 +189,7 @@ void SparseGenMatrix::atPutSubmatrix( int destRow, int destCol,
       ja[k] += (destCol - srcCol);
     }
     mStorage->atPutSpRow( destRow + i, a, nnz, ja, info );
+    assert(m_Mt == NULL);
   }
 
   delete [] ja;
@@ -246,6 +274,8 @@ void SparseGenMatrix::atPutDiagonal( int idiag, OoqpVector& vvec )
   SimpleVector & v = dynamic_cast<SimpleVector &>(vvec);
 
   mStorage->atPutDiagonal( idiag, &v[0], 1, v.n );
+
+  assert(m_Mt == NULL);
 }
 
 
@@ -257,21 +287,33 @@ void SparseGenMatrix::fromGetDiagonal( int idiag, OoqpVector& vvec )
 void SparseGenMatrix::ColumnScale( OoqpVector& vec )
 {
   mStorage->ColumnScale( vec );
+
+  if( m_Mt != NULL )
+     m_Mt->RowScale(vec);
 }
 
 void SparseGenMatrix::SymmetricScale( OoqpVector& vec )
 {
   mStorage->SymmetricScale( vec );
+
+  if( m_Mt != NULL )
+     m_Mt->SymmetricScale(vec);
 }
 
 void SparseGenMatrix::RowScale( OoqpVector& vec )
 {
   mStorage->RowScale( vec );
+
+  if( m_Mt != NULL )
+     m_Mt->ColumnScale(vec);
 }
 
 void SparseGenMatrix::scalarMult( double num )
 {
   mStorage->scalarMult( num );
+
+  if( m_Mt != NULL )
+     m_Mt->scalarMult(num);
 }
 
 void SparseGenMatrix::matTransDMultMat(OoqpVector& d_, SymMatrix** res)
@@ -308,7 +350,6 @@ void SparseGenMatrix::matTransDMultMat(OoqpVector& d_, SymMatrix** res)
 void SparseGenMatrix::matTransDinvMultMat(OoqpVector& d_, SymMatrix** res)
 {
   SimpleVector& d = dynamic_cast<SimpleVector &>(d_);
-
   int m=mStorage->m; int n=mStorage->n; int nnz=mStorage->numberOfNonZeros();
 
   if(*res==NULL) {
@@ -413,4 +454,85 @@ void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
 
    getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
 }
+
+void SparseGenMatrix::updateTransposed()
+{
+   if( m_Mt )
+   {
+      delete m_Mt;
+      m_Mt = NULL;
+   }
+   const int nnz = mStorage->numberOfNonZeros();
+
+   const int m = mStorage->m;
+   const int n = mStorage->n;
+   m_Mt = new SparseGenMatrix(n, m, nnz);
+
+   mStorage->transpose(m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M());
+}
+
+void SparseGenMatrix::deleteTransposed()
+{
+   if( m_Mt )
+   {
+      delete m_Mt;
+      m_Mt = NULL;
+   }
+}
+
+
+void SparseGenMatrix::updateNonEmptyRowsCount(std::vector<int>& rowcount) const
+{
+   const int m = mStorage->m;
+   const int* const rowStart = mStorage->krowM;
+
+   assert(unsigned(m) == rowcount.size());
+
+   for( int i = 0; i < m; i++ )
+      if( rowStart[i] != rowStart[i + 1] )
+         rowcount[i]++;
+}
+
+void SparseGenMatrix::updateNonEmptyRowsCount(int blockPosition, std::vector<int>& rowcount, std::vector<int>& linkBlockPos1,
+      std::vector<int>& linkBlockPos2) const
+{
+   const int m = mStorage->m;
+   const int* const rowStart = mStorage->krowM;
+
+   assert(blockPosition >= 0 && m >= 0);
+   assert(unsigned(m) == rowcount.size());
+   assert(rowcount.size() == linkBlockPos1.size() && rowcount.size() == linkBlockPos2.size());
+
+   for( int i = 0; i < m; i++ )
+      if( rowStart[i] != rowStart[i + 1] )
+      {
+         if( linkBlockPos1[i] < 0 )
+            linkBlockPos1[i] = blockPosition;
+         else
+            linkBlockPos2[i] = blockPosition;
+
+         rowcount[i]++;
+      }
+}
+
+SparseGenMatrix& SparseGenMatrix::getTranspose()
+{
+   if( m_Mt )
+     return *m_Mt;
+
+   updateTransposed();
+
+   assert(m_Mt);
+
+   return *m_Mt;
+}
+
+void SparseGenMatrix::permuteRows(const std::vector<unsigned int>& permvec)
+{
+   mStorage->permuteRows(permvec);
+
+   // todo implement column permutation
+   assert(!m_Mt);
+}
+
 

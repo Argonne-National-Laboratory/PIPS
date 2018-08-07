@@ -589,6 +589,26 @@ void SparseStorage::writeToStreamDense( ostream& out) const
   }
 }
 
+void SparseStorage::writeToStreamDenseRow( stringstream& out, int rowidx) const
+{
+   int j = 0; // Column j
+   for( int k = krowM[rowidx]; k < krowM[rowidx + 1]; k++ )
+   {
+      while( jcolM[k] > j )
+      {
+         out << 0 << '\t';
+         j++;
+      }
+      out << M[k] << '\t';
+      j++;
+   }
+   while( j < n )
+   {
+      out << 0 << '\t';
+      j++;
+   }
+}
+
 void indexedLexSort( int first[], int n, int swapFirst,
 		     int second[], int swapSecond, int index[] )
 {
@@ -711,7 +731,7 @@ void SparseStorage::mult( double beta,  double y[], int incy,
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
       temp += M[k] * x[j * incx];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
     }
@@ -731,7 +751,7 @@ void SparseStorage::transMult( double beta,  double y[], int incy,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       y[j * incy] += alpha * M[k] * x[i * incx];
@@ -770,7 +790,7 @@ void SparseStorage::transMultMatLower( double beta,  double* Y, int ny, int ldy,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       //int endcol=j+colStart;
@@ -798,7 +818,7 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       for (int v = 0; v<ny; v++) { 
@@ -826,7 +846,7 @@ void SparseStorage::transMultLower( double beta,  double y[],
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
       if (j < firstrow) continue;
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       // nonzero element at (i,j)
@@ -836,9 +856,6 @@ void SparseStorage::transMultLower( double beta,  double y[],
   }
 }
 
-#ifndef MAX
-#define MAX(a,b) ( (a > b) ? a : b)
-#endif
 #ifndef MIN
 #define MIN(a,b) ( (a > b) ? b : a)
 #endif
@@ -858,7 +875,7 @@ void SparseStorage::transMultMatLower( double* Y, int ny, int firstrow,
   for( i = 0; i < m; i++ ) {
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
-#ifdef DEBUG
+#ifndef NDEBUG
       assert(j<n);
 #endif
       // better to parallelize this loop over the columns of X
@@ -1164,7 +1181,7 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
   /////////////////////////////////////////////////////
   // form the transpose 
   /////////////////////////////////////////////////////
-  int nnz = krowM[m];
+  const int nnz = krowM[m];
 
   //cumulative sum to find the number of elements in each row of At, ie column of A.
   int* w=new int[n];
@@ -1189,6 +1206,12 @@ void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
   }
   //we have the transpose
   delete[] w;
+}
+
+void SparseStorage::clear()
+{
+   for( int i = 0; i < len; i++ )
+      M[i] = 0.0;
 }
 
 void SparseStorage::matTransDSymbMultMat(double* d,
@@ -1478,6 +1501,51 @@ void SparseStorage::getRowMinMaxVec(bool getMin, const double* colScaleVec, doub
       getRowMaxVec(colScaleVec, vec);
 }
 
+
+void SparseStorage::permuteRows(const std::vector<unsigned int>& permvec)
+{
+   assert(permvec.size() == size_t(m));
+
+   if( len == 0 )
+      return;
+
+   assert(m > 0 && n > 0);
+
+   int* jcolM_new = new int[len];
+   int* krowM_new = new int[m + 1];
+   double* M_new = new double[len];
+
+   int len_new = 0;
+   krowM_new[0] = 0;
+
+   for( int r = 0; r < m; ++r )
+   {
+      const unsigned int r_perm = permvec[r];
+      const int rowlength = krowM[r_perm + 1] - krowM[r_perm];
+
+      assert(r_perm < static_cast<unsigned int>(m) && rowlength >= 0);
+
+      if( rowlength > 0 )
+      {
+         memcpy(jcolM_new + len_new, jcolM + krowM[r_perm], rowlength * sizeof(int));
+         memcpy(M_new + len_new, M + krowM[r_perm], rowlength * sizeof(double));
+
+         len_new += rowlength;
+      }
+
+      krowM_new[r + 1] = len_new;
+   }
+
+   assert(len_new == len);
+
+   delete[] jcolM;
+   delete[] krowM;
+   delete[] M;
+
+   jcolM = jcolM_new;
+   krowM = krowM_new;
+   M = M_new;
+}
 
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:

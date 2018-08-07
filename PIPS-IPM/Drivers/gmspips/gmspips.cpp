@@ -1,7 +1,7 @@
 #if defined(GMS_PIPS)
 #include "StochInputTree.h"
 #include "PIPSIpmInterface.h"
-#include "MehrotraStochSolver.h"
+//#include "MehrotraStochSolver.h"
 #include "GondzioStochSolver.h"
 #include "GondzioStochLpSolver.h"
 #include "sFactoryAugSchurLeaf.h"
@@ -21,6 +21,7 @@
 using namespace std;
 
 #define BiCGStab
+#define GetPrimalSol
 
 #if defined(GMS_PIPS)
 extern int gOuterSolve;
@@ -399,6 +400,10 @@ int main(int argc, char ** argv)
    gInnerSCsolve=0;
 #endif
 
+#ifdef GetPrimalSol
+   std::vector<double> primalSolVec;
+#endif
+
 	if (stepDiffLp)
 	{
 	   if( gmsRank == 0 )
@@ -414,6 +419,9 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
+#ifdef GetPrimalSol
+		primalSolVec = pipsIpm.gatherPrimalSolution();
+#endif
 	}
 
 	else {
@@ -431,14 +439,27 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
+#ifdef GetPrimalSol
+		primalSolVec = pipsIpm.gatherPrimalSolution();
+#endif
 	}
    if( gmsRank == 0 )
       cout << "solving finished." << endl;
 
+#ifdef GetPrimalSol
+   if( gmsRank == 0 )
+   {
+      // do something with primal solution
+
+   }
+
+#endif
+
    // free memory
   delete root;
 
-  #endif
+#endif
+
 
   for (int blk=0; blk<numBlocks; blk++)
   {

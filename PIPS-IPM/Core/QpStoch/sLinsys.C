@@ -672,13 +672,6 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
       G.mult( 1.0, &SC[it + nxMyMzP][nxMyMzP],   1,  -1.0, &col[0],  1);
     }
   }
-
-#ifdef STOCH_TESTING
-  const double epsilon = .0001;
-  for( int k = 0; k < NP; k++)
- 	   for( int k2 = 0; k2 < NP; k2++)
- 	       assert(fabs(SC[k][k2] - SC[k2][k]) <= epsilon);
-#endif
 }
  
 #include <set>

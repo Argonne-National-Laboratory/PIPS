@@ -488,12 +488,17 @@ void SimpleVector::roundToPow2()
   for( int i = 0; i < n; i++ )
   {
      int exp;
+#if 0
      const double mantissa = std::frexp(v[i], &exp);
 
      if( mantissa >= 0.75 )
         v[i] = std::ldexp(0.5, exp + 1);
      else
         v[i] = std::ldexp(0.5, exp);
+#else
+     (void) std::frexp(v[i], &exp);
+     v[i] = std::ldexp(0.5, exp);
+#endif
   }
 }
 
@@ -553,26 +558,25 @@ double SimpleVector::findBlocking(OoqpVector & wstep_vec,
 			  first_or_second );
 }
 
-void SimpleVector::findBlocking_pd(OoqpVector & wstep_vec,
-						OoqpVector & u_vec, OoqpVector & ustep_vec,
-						double maxStepPri, double maxStepDual,
-						double *w_elt_p, double *wstep_elt_p, double *u_elt_p, double *ustep_elt_p,
-						double *w_elt_d, double *wstep_elt_d, double *u_elt_d, double *ustep_elt_d,
-						double& bound_primal, double& bound_dual,
-						bool& primalBlocking, bool& dualBlocking) {
-	double * w = v;
-	SimpleVector & swstep = dynamic_cast<SimpleVector &>(wstep_vec);
-	double * wstep = swstep.v;
+void SimpleVector::findBlocking_pd(const OoqpVector & wstep_vec,
+						const OoqpVector & u_vec, const OoqpVector & ustep_vec,
+						double& maxStepPri, double& maxStepDual,
+						double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
+						double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
+						bool& primalBlocking, bool& dualBlocking) const {
+	const double * w = v;
+	const SimpleVector & swstep = dynamic_cast<const SimpleVector &>(wstep_vec);
+	const double * wstep = swstep.v;
 
-	SimpleVector & su_vec = dynamic_cast<SimpleVector &>(u_vec);
-	double * u = su_vec.v;
+	const SimpleVector & su_vec = dynamic_cast<const SimpleVector &>(u_vec);
+	const double * u = su_vec.v;
 
-	SimpleVector & sustep_vec = dynamic_cast<SimpleVector &>(ustep_vec);
-	double * ustep = sustep_vec.v;
+	const SimpleVector & sustep_vec = dynamic_cast<const SimpleVector &>(ustep_vec);
+	const double * ustep = sustep_vec.v;
 
-	::find_blocking_pd(w, n, 1, wstep, 1, u, 1, ustep, 1, maxStepPri,
+	::find_blocking_pd(w, n, wstep, u, ustep, maxStepPri,
 			maxStepDual, w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p, w_elt_d,
-			wstep_elt_d, u_elt_d, ustep_elt_d, bound_primal, bound_dual,
+			wstep_elt_d, u_elt_d, ustep_elt_d,
 			primalBlocking, dualBlocking);
 }
 
@@ -670,4 +674,26 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
   }
 #endif
 
+}
+
+
+void SimpleVector::permuteEntries(const std::vector<unsigned int>& permvec)
+{
+   if( n == 0 )
+      return;
+
+   assert(n > 0);
+   assert(permvec.size() == size_t(n));
+
+   double* buffer = new double[n];
+
+   for( size_t i = 0; i < permvec.size(); i++ )
+   {
+      assert(permvec[i] < unsigned(n));
+      buffer[i] = v[permvec[i]];
+   }
+
+   std::swap(v, buffer);
+
+   delete[] buffer;
 }

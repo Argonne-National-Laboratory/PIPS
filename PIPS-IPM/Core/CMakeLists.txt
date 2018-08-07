@@ -8,7 +8,7 @@ add_subdirectory(QpStoch)
 add_library(ooqpbase Abstract/OoqpVersion.C Abstract/Variables.C Abstract/Data.C Abstract/Solver.C Abstract/Status.C Abstract/Scaler.C
   Abstract/OoqpMonitor.C Abstract/IotrRefCount.C Abstract/DoubleLinearSolver.C 
   Vector/OoqpVector.C Vector/SimpleVector.C Vector/VectorUtilities.C
-  Utilities/drand.C Utilities/sort.C)
+  Utilities/drand.C Utilities/sort.C Utilities/pipschecks.C)
 
 if(HAVE_MA27)
 	set(solvers LinearSolvers/Ma27Solver/Ma27Solver.C QpGen/QpGenSparseMa27.C)
@@ -20,7 +20,7 @@ endif(HAVE_MA57)
 #	set(solvers ${solvers} LinearSolvers/Ma86Solver/Ma86Solver.C QpGen/QpGenSparseMa86.C)
 #endif(HAVE_MA86)
 if(HAVE_PARDISO)
-	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C LinearSolvers/PardisoSolver/PardisoSchurSolver.C)
+	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C LinearSolvers/PardisoSolver/PardisoSchurSolver.C LinearSolvers/PardisoSolver/PardisoIndefSolver.C)
 endif(HAVE_PARDISO)
 
 add_library(ooqpgensparse 

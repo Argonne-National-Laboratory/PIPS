@@ -11,6 +11,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 #include <vector>
 using namespace std;
@@ -77,6 +78,8 @@ public:
 
   virtual void randomize( double alpha, double beta, double * seed );
 
+  virtual void clear();
+
   virtual void getTransposePat( int row, int col, int rowExtent, int colExtent,
 				int kpat[], int krowM[], int jcolM[] );
   virtual void getFromPat( double data[], int n, int kpat[] );
@@ -94,6 +97,7 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
+  virtual void writeToStreamDenseRow( stringstream& out, int rowidx) const;
 
   virtual void symmetrize( int& info);
   virtual double abmaxnorm();
@@ -148,6 +152,8 @@ public:
   /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i];
    *  empty rows get value 0.0 for maximization and <double>::max() for minimization  */
   void getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const;
+
+  void permuteRows(const std::vector<unsigned int>& permvec);
 
   void dump(const string& filename);
 

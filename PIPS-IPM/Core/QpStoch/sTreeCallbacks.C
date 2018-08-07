@@ -253,7 +253,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
     	// populate B with A's data B_0 is the A_0 from the theoretical form; also fill Bl
     	// (i.e. the first block of linking constraints)
         A = new StochGenMatrix(data->id,
-             N, MY,
+             MY, N,
              data->my, np, data->nnzB,
              data->my, data->n,  data->nnzA,
              data->myl, data->n,  data->nnzBl,
@@ -263,7 +263,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
       {
     	// populate B with A's data B_0 is the A_0 from the theoretical form
         A = new StochGenMatrix(data->id,
-             N, MY,
+             MY, N,
              data->my, np, data->nnzB,
              data->my, data->n,  data->nnzA,
              commWrkrs);
@@ -284,7 +284,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
       if (data->fnnzBl)
       {
         A = new StochGenMatrix(data->id,
-             N, MY,
+             MY, N,
              data->my, np, data->nnzA,
              data->my, data->n,  data->nnzB,
 	  	       data->myl, data->n,  data->nnzBl,
@@ -293,7 +293,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
       else
       {
         A = new StochGenMatrix(data->id,
-             N, MY,
+             MY, N,
              data->my, np, data->nnzA,
              data->my, data->n,  data->nnzB,
              commWrkrs);
@@ -348,7 +348,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
       // populate D with C's data D_0 is the C_0 from the theoretical form; also fill Dl
       // (i.e. the first block of linking constraints)
         C = new StochGenMatrix(data->id,
-             N, MZ,
+             MZ, N,
              data->mz, np, data->nnzD,
              data->mz, data->n, data->nnzC,
              data->mzl, data->n, data->nnzDl,
@@ -359,7 +359,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
         //populate D with C's data
         //D_0 is the C_0 from the theoretical form
         C = new StochGenMatrix(data->id,
-             N, MZ,
+             MZ, N,
              data->mz, np, data->nnzD,
              data->mz, data->n,  data->nnzC,
              commWrkrs);
@@ -379,7 +379,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
       if (data->fnnzDl)
       {
         C = new StochGenMatrix(data->id,
-             N, MZ,
+             MZ, N,
              data->mz, np, data->nnzC,
              data->mz, data->n, data->nnzD,
              data->mzl, data->n, data->nnzDl,
@@ -388,7 +388,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
       else
       {
         C = new StochGenMatrix(data->id,
-             N, MZ,
+             MZ, N,
              data->mz, np, data->nnzC,
              data->mz, data->n, data->nnzD,
              commWrkrs);

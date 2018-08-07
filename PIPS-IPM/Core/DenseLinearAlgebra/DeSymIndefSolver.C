@@ -18,6 +18,11 @@
 #endif
 #endif
 
+
+#if defined(DENSE_USE_HALF) && defined(TIMING)
+#include "mpi.h"
+#endif
+
 // declarations for LAPACK functions used to factor/solve:
 
 // dsytrf_() factors a symmetric indefinite matrix A, see LAPACK 
@@ -81,8 +86,6 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
 
 }
 
-
-//#include "mpi.h"
 void DeSymIndefSolver::matrixChanged()
 {
   char fortranUplo = 'U';
@@ -103,6 +106,21 @@ void DeSymIndefSolver::matrixChanged()
       }
     }
   }
+
+#ifdef DENSE_USE_HALF
+#ifndef NDEBUG
+  for( int i = 0; i < n; i++ )
+     for( int j = 0; j < n; j++ )
+        assert(j <= i || mStorage->M[i][j] == 0.0);
+#endif
+#ifdef TIMING
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+  if( myrank == 0 )
+     std::cout << "DENSE_USE_HALF: starting factorization" << std::endl;
+#endif
+#endif
 
   //query the size of workspace
   lwork=-1;

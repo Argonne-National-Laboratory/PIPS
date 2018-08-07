@@ -2,7 +2,7 @@
 #include "PIPSIpmInterface.h"
 #include "sFactoryAug.h"
 #include "sFactoryAugSchurLeaf.h"
-#include "MehrotraStochSolver.h"
+//#include "MehrotraStochSolver.h"
 #include "GondzioStochSolver.h"
 
 
@@ -574,9 +574,9 @@ int main(int argc, char ** argv) {
   if( rank == 0 )
      cout << "Using a total of " << size << " MPI processes." << endl;
 
-  /* use BiCGStab both for inner and outer solve */
+  /* use BiCGStab for outer solve */
   gOuterSolve = 2;
-  gInnerSCsolve = 2;
+  gInnerSCsolve = 0;
 
 #ifdef WITH_PARDISO
   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH);
