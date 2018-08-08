@@ -901,8 +901,6 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       C.matTransDinvMultMat(*zDiag, &CtDC);
       assert(CtDC->size() == locnx);
 
-      assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
-
       //aliases for internal buffers of CtDC
       SparseSymMatrix* CtDCsp = dynamic_cast<SparseSymMatrix*>(CtDC);
       const int* krowCtDC = CtDCsp->krowM();
@@ -1108,7 +1106,6 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
      C.matTransDinvMultMat(*zDiag, &CtDC);
 
      assert(CtDC->size() == locnx);
-     assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
 
      //aliases for internal buffers of CtDC
      SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
