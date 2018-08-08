@@ -1,0 +1,5 @@
+﻿,CO2,cost,expansion_cost
+coal,390,0.019,1400
+gas,200,0.043,700
+photovoltaic,0,0,900
+wind,0,0,900
