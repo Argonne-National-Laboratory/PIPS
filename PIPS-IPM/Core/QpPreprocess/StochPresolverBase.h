@@ -59,6 +59,7 @@ public:
 
    virtual bool applyPresolving(int& nelims) = 0;
 
+   void countRowsCols();
 
 protected:
    static const double feastol = 1.0e-6;
@@ -222,7 +223,6 @@ protected:
 
    void sumIndivObjOffset();
 
-   void countRowsCols();
    void countRangedRowsBlock(int& nRangedRows, int& nRowsIneq) const;
    void countEqualityRowsBlock(int& nRowsEq) const;
    void countBoxedColumns(int& nBoxCols, int& nColsTotal) const;

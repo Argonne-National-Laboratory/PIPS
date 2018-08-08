@@ -68,6 +68,11 @@ Data* StochPresolver::presolve()
    StochPresolverSingletonRows presolverSR(presData);
    //StochPresolverSingletonColumns presolverSC(presData);
 
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout<<"--- Before Presolving:"<<endl;
+   presolverSR.countRowsCols();
+#endif
 
    // main presolving loop
    // while ( rerun )
@@ -92,6 +97,11 @@ Data* StochPresolver::presolve()
    cout<<"nColElems "<<endl;
    nColElems->writeToStreamAll(cout);
 */
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout<<"--- After Presolving:"<<endl;
+   presolverSR.countRowsCols();
+#endif
    if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
    sData* finalPresData = presData.finalize();
 

@@ -26,6 +26,12 @@ bool StochPresolverBoundStrengthening::applyPresolving(int& nelims)
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout<<"--- Before Bound Strengthening Presolving:"<<endl;
+   countRowsCols();
+#endif
+
    if( myRank == 0 ) cout<<"Start Bound Strengthening Presolving..."<<endl;
 
    indivObjOffset = 0.0;
@@ -73,6 +79,11 @@ bool StochPresolverBoundStrengthening::applyPresolving(int& nelims)
       cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
 
    if( myRank == 0 ) cout<<"Finished Bound Strengthening Presolving."<<endl;
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout<<"--- After Bound Strengthening Presolving:"<<endl;
+   countRowsCols();
+#endif
 
    return true;
 }
