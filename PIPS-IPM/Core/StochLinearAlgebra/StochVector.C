@@ -1283,3 +1283,9 @@ void StochVector::copyFromArray( char v[] )
 {
   assert( "Not supported" && 0 );
 }
+
+void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec)
+{
+   if( vecl )
+      dynamic_cast<SimpleVector*>(vecl)->permuteEntries(permvec);
+}

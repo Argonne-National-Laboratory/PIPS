@@ -17,6 +17,13 @@
 
 #include <cstdlib>
 
+// todo: proper run-time parameter
+#ifdef WITH_PARDISOINDEF
+   const static bool sparsekkt = true;
+#else
+   const static bool sparsekkt = false;
+#endif
+
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
@@ -107,10 +114,11 @@ template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type) : comm(comm)
 {
 
-#ifdef TIMING
   int mype;
   MPI_Comm_rank(comm,&mype);
-#endif
+
+  MPI_Barrier(comm);
+  const double t0 = MPI_Wtime();
 
   factory = new FORMULATION( in, comm);
 #ifdef TIMING
@@ -144,6 +152,12 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("solver created\n");
   //solver->monitorSelf();
 #endif
+
+  MPI_Barrier(comm);
+  const double t1 = MPI_Wtime();
+
+  if( mype == 0 )
+     std::cout << "---reading time (in sec.): " << t1 - t0 << std::endl;
 }
 
 

@@ -21,67 +21,8 @@ double g_scenNum;
 
 extern int gOuterSolve;
 
-void sLinsysRoot::initSparsityData(const sData* prob, bool sparseKkt)
-{
-   assert(prob);
-
-   hasSparseKkt = sparseKkt;
-   use2Links = sparseKkt;
-
-   if( use2Links )
-   {
-      int myrank; MPI_Comm_rank(mpiComm, &myrank);
-
-      const StochGenMatrix& Astoch = dynamic_cast< const StochGenMatrix&> (*(prob->A));
-      const StochGenMatrix& Cstoch = dynamic_cast< const StochGenMatrix&> (*(prob->C));
-
-      linkIndicatorEq = dynamic_cast<SimpleVector*>(Astoch.get2LinkIndicator());
-      linkIndicatorIneq = dynamic_cast<SimpleVector*>(Cstoch.get2LinkIndicator());
-
-      if( myrank == 0 )
-      {
-         const double* const eqElements = linkIndicatorEq->elements();
-         const double* const ineqElements = linkIndicatorIneq->elements();
-
-         int nEq = 0;
-         int nIneq = 0;
-
-         for( int i = 0; i < linkIndicatorEq->length(); i++ )
-            if( eqElements[i] > 0.0 )
-            {
-               assert(eqElements[i] == 1.0);
-               nEq++;
-            }
-         for( int i = 0; i < linkIndicatorIneq->length(); i++ )
-            if( ineqElements[i] > 0.0 )
-            {
-               assert(ineqElements[i] == 1.0);
-               nIneq++;
-            }
-
-         std::cout << "number of equality 2-links: " << nEq << " (out of " << linkIndicatorEq->length() << " equalities) " <<  std::endl;
-         std::cout << "number of inequality 2-links: " << nIneq << " (out of " << linkIndicatorIneq->length() << " equalities) " <<  std::endl;
-      }
-
-      if( linkIndicatorEq->infnorm() == 0.0 && linkIndicatorIneq->infnorm() == 0.0 )
-      {
-         use2Links = false;
-         delete linkIndicatorEq;
-         delete linkIndicatorIneq;
-         linkIndicatorEq = NULL;
-         linkIndicatorIneq = NULL;
-         std::cout << "no 2-links found" << std::endl;
-      }
-   }
-   else
-   {
-      linkIndicatorEq = NULL;
-      linkIndicatorIneq = NULL;
-   }
-}
-
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
-  : sLinsys(factory_, prob_), iAmDistrib(0)
+  : sLinsys(factory_, prob_), iAmDistrib(0), sparseKktBuffer(NULL)
 {
   assert(dd!=NULL);
   createChildren(prob_);
@@ -108,9 +49,9 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
     sol2 = res2 = res3 = res4 = res5 = NULL;
   }
 
-  int todo; // make default param
+  // use sparse KKT if (enough) 2 links are present
+  hasSparseKkt = prob_->with2Links();
 
-  initSparsityData(prob_, true);
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -119,7 +60,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 			 OoqpVector* dq_,
 			 OoqpVector* nomegaInv_,
 			 OoqpVector* rhs_)
-  : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0)
+  : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0), sparseKktBuffer(NULL)
 {
   createChildren(prob_);
 
@@ -145,9 +86,8 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
       sol2 = res2 = res3 = res4 = res5 = NULL;
   }
 
-  int todo; // make default param
-
-  initSparsityData(prob_, true);
+  // use sparse KKT if (enough) 2 links are present
+  hasSparseKkt = prob_->with2Links();
 }
 
 sLinsysRoot::~sLinsysRoot()
@@ -155,8 +95,7 @@ sLinsysRoot::~sLinsysRoot()
   for(size_t c=0; c<children.size(); c++)
     delete children[c];
 
-  delete linkIndicatorEq;
-  delete linkIndicatorIneq;
+  delete[] sparseKktBuffer;
 }
 
 //this variable is just reset in this file; children will default to the "safe" linear solver
@@ -164,13 +103,11 @@ extern int gLackOfAccuracy;
 
 void sLinsysRoot::factor2(sData *prob, Variables *vars)
 {
-  DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
   initializeKKT(prob, vars);
 
   // First tell children to factorize. 
-  for(size_t c=0; c<children.size(); c++) {
-    children[c]->factor2(prob->children[c], vars);
-  }
+  for(size_t c=0; c<children.size(); c++)
+    children[c]->factor2(prob->children[c], vars); // todo?
 
   for(size_t c=0; c<children.size(); c++) {
 #ifdef STOCH_TESTING
@@ -179,9 +116,9 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     if(children[c]->mpiComm == MPI_COMM_NULL)
       continue;
 
-    children[c]->stochNode->resMon.recFactTmChildren_start();    
+    children[c]->stochNode->resMon.recFactTmChildren_start();
     //---------------------------------------------
-    children[c]->addTermToDenseSchurCompl(prob->children[c], kktd);
+    addTermToSchurCompl(prob, c);
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
@@ -545,11 +482,27 @@ void sLinsysRoot::sync()
   /* Atoms methods of FACTOR2 for a non-leaf linear system */
 void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 {
-  DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt); 
-  myAtPutZeros(kktd);
+   if( hasSparseKkt )
+   {
+      SparseSymMatrix* kkts = dynamic_cast<SparseSymMatrix*>(kkt);
+      kkts->symPutZeroes();
+   }
+   else
+   {
+      DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt);
+      myAtPutZeros(kktd);
+   }
 }
 
 void sLinsysRoot::reduceKKT()
+{
+   if( hasSparseKkt )
+      reduceKKTsparse();
+   else
+      reduceKKTdense();
+}
+
+void sLinsysRoot::reduceKKTdense()
 {
    DenseSymMatrix* const kktd = dynamic_cast<DenseSymMatrix*>(kkt);
 
@@ -598,6 +551,34 @@ void sLinsysRoot::reduceKKT()
   }
 }
 
+void sLinsysRoot::reduceKKTsparse()
+{
+   if( !iAmDistrib )
+      return;
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+   assert(kkt);
+
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+
+   int* const krowKkt = kkts.krowM();
+   double* const MKkt = kkts.M();
+   const int sizeKkt = locnx + locmy + locmyl + locmzl;
+   const int nnzKkt = krowKkt[sizeKkt];
+
+   assert(kkts.size() == sizeKkt);
+   assert(!kkts.isLower);
+
+   if( myRank == 0 && sparseKktBuffer == NULL )
+      sparseKktBuffer = new double[nnzKkt];
+
+   // todo: replace by more sophisticated scheme
+   MPI_Reduce(MKkt, sparseKktBuffer, nnzKkt, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
+
+   if( myRank == 0 )
+      memcpy(MKkt, sparseKktBuffer, size_t(nnzKkt) * sizeof(double));
+}
 
 void sLinsysRoot::factorizeKKT()
 {
@@ -650,6 +631,22 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
   myAtPutZeros(mat, 0, 0, n, n);
 }
 
+void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
+{
+   assert(childindex < prob->children.size());
+
+   if( hasSparseKkt )
+   {
+      SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+      children[childindex]->addTermToSparseSchurCompl(prob->children[childindex], kkts);
+   }
+   else
+   {
+      DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
+      children[childindex]->addTermToDenseSchurCompl(prob->children[childindex], kktd);
+   }
+
+}
 
 #define CHUNK_SIZE 1024*1024*64 //doubles  = 128 MBytes (maximum)
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,

@@ -720,3 +720,25 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
 #endif
 
 }
+
+
+void SimpleVector::permuteEntries(const std::vector<unsigned int>& permvec)
+{
+   if( n == 0 )
+      return;
+
+   assert(n > 0);
+   assert(permvec.size() == size_t(n));
+
+   double* buffer = new double[n];
+
+   for( size_t i = 0; i < permvec.size(); i++ )
+   {
+      assert(permvec[i] < unsigned(n));
+      buffer[i] = v[permvec[i]];
+   }
+
+   std::swap(v, buffer);
+
+   delete[] buffer;
+}
