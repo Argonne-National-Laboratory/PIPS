@@ -210,7 +210,7 @@ protected:
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    int fixVarInChildBlockAndStore(int colIdx, double val, SystemType system_type,
          std::vector<COLUMNTOADAPT> & colAdaptLinkBlock);
-   bool storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value);
+   bool storeColValInColAdaptParent(int colIdx, double value);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);

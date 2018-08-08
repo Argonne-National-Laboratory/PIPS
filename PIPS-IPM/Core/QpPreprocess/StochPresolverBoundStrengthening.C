@@ -344,7 +344,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
             PIPSdebugMessage("New bounds imply fixation of variable %d to value=%f. original bounds: [%f, %f] (if existent). \n", colIdx, varvalue, currxlowParent->elements()[colIdx], currxuppParent->elements()[colIdx]);
             // as in SR(equality), store them to remove the column later
             if( !atRoot || myRank==0 )
-              if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, varvalue) )
+              if( !storeColValInColAdaptParent(colIdx, varvalue) )
                return false;
             // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied
 

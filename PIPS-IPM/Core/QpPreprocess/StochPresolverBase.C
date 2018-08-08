@@ -17,14 +17,14 @@ StochPresolverBase::StochPresolverBase(PresolveData& presData)
 
    setCurrentPointersToNull();
 
-   if(presData.redRowA->vecl != NULL)
+   if(hasLinking(EQUALITY_SYSTEM))
    {
       currEqRhsAdaptionsLink = new double[presData.redRowA->vecl->n];
       resetEqRhsAdaptionsLink();
    }
    else
       currEqRhsAdaptionsLink = NULL;
-   if(presData.redRowC->vecl != NULL)
+   if(hasLinking(INEQUALITY_SYSTEM))
    {
       currInEqRhsAdaptionsLink = new double[presData.redRowC->vecl->n];
       currInEqLhsAdaptionsLink = new double[presData.redRowC->vecl->n];
@@ -261,6 +261,7 @@ void StochPresolverBase::updateTransposedSubmatrix(SparseStorageDynamic& transSt
  * Updates the blocks A,C,F0,G0 using colAdaptParent.
  * Returns the number of newly found singleton rows (equality/inequality system)
  * during adaption of A,C,F0,G0.
+ * Adapts the objective offset g only once for each column (variable).
  */
 void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
 {
@@ -268,6 +269,17 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
+   if( myRank == 0)
+   {
+      currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
+      for( int i=0; i<presData.getNumberColAdParent(); i++)
+      {
+         const int colIdx = presData.getColAdaptParent(i).colIdx;
+         const double value = presData.getColAdaptParent(i).val;
+         indivObjOffset += currgParent->elements()[colIdx] * value;
+      }
+   }
 
    // apply updated colAdaptParent to the Amat blocks
    for(int i= -1; i<nChildren; i++)
@@ -1105,10 +1117,9 @@ int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, Syst
 }
 
 /** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
- * Adapts the objective offset g only once for each column (variable).
  * Returns false if infeasibility is detected.
  */
-bool StochPresolverBase::storeColValInColAdaptParentAndAdaptOffset(int colIdx, double value)
+bool StochPresolverBase::storeColValInColAdaptParent(int colIdx, double value)
 {
    const COLUMNTOADAPT colWithVal = {colIdx, value};
    bool uniqueAdditionToOffset = true;
@@ -1125,10 +1136,8 @@ bool StochPresolverBase::storeColValInColAdaptParentAndAdaptOffset(int colIdx, d
       }
    }
    if( uniqueAdditionToOffset )
-   {
       presData.addColToAdaptParent(colWithVal);
-      indivObjOffset += currgParent->elements()[colIdx] * value;
-   }
+
    return true;
 }
 

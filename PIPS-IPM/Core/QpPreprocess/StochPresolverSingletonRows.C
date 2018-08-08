@@ -374,7 +374,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
                cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<", child="<<it<<endl;
                return false;
             }
-            if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
+            if( !storeColValInColAdaptParent(colIdx, val) )
                return false;
          }
          else  // INEQUALITY_SYSTEM
@@ -396,7 +396,7 @@ bool StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
             {
                //cout<<"New bounds imply fixation of linking variable "<<colIdx<<" to value: "<<val<<endl;
                // as in SR(equality), store them to remove the column later
-               if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
+               if( !storeColValInColAdaptParent(colIdx, val) )
                   return false;
 
                // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied.
@@ -548,7 +548,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
    {
       if( myRank == 0 )
       {
-         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
+         if( !storeColValInColAdaptParent(colIdx, val) )
             return false;
       }
    }
@@ -590,7 +590,7 @@ bool StochPresolverSingletonRows::removeSingleRowEntryB0Inequality(SparseStorage
       // as in SR(equality), store them to remove the column later
       if( myRank == 0 )
       {
-         if( !storeColValInColAdaptParentAndAdaptOffset(colIdx, val) )
+         if( !storeColValInColAdaptParent(colIdx, val) )
             return false;
       }
       // in case of fixation, nnz bzw. red Counters are not touched yet because they will be set
