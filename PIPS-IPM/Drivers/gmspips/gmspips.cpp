@@ -207,6 +207,9 @@ int main(int argc, char ** argv)
 
 #if defined(GMS_MPI)
    MPI_Init(&argc, &argv);
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   const double t0 = MPI_Wtime();
 #endif
 
    GMSPIPSBlockData_t** blocks;
@@ -469,6 +472,12 @@ int main(int argc, char ** argv)
   free(blocks);
   
 #if defined(GMS_MPI)   
+  MPI_Barrier(MPI_COMM_WORLD);
+  const double t1 = MPI_Wtime();
+
+  if( gmsRank == 0 )
+     std::cout << "---total time (in sec.): " << t1 - t0 << std::endl;
+
   MPI_Finalize();
 #endif 
   fclose(fLog);

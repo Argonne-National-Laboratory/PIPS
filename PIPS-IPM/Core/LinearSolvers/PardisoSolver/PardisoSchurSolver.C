@@ -59,6 +59,8 @@ int dumpSysMatrix(SparseSymMatrix* Msys,
                   const char* fname=NULL);
 int dumpRhs(SimpleVector& v);
 
+const static int pardiso_verbosity = 0;
+
 
 #ifdef TIMING_FLOPS
 extern "C" {
@@ -77,7 +79,9 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 {
   Msys = sgm;
   n = -1;
-  nvec=NULL;
+  nnz = -1;
+  nSC = -1;
+  nvec = NULL;
   // - we do not have the augmented system yet; most of intialization done during the 
   // first solve call
 
@@ -513,7 +517,7 @@ void PardisoSchurSolver::computeSC(
    } else {
 
      //update diagonal entries in the PARDISO aug sys
-     double* eltsMsys = Msys->getStorageRef().M;
+     const double* eltsMsys = Msys->getStorageRef().M;
      map<int,int>::iterator it;
      for(it=diagMap.begin(); it!=diagMap.end(); it++)
        eltsAug[it->second] = eltsMsys[it->first];
@@ -531,34 +535,39 @@ void PardisoSchurSolver::computeSC(
    }
  #endif
 
-   int nIter=(int)g_iterNumber;
-   const int symbEvery=5;
-   if( (nIter/symbEvery)*symbEvery==nIter )
-     doSymbFact=true;
+   const int nIter = (int) g_iterNumber;
+   const int symbEvery = 5;
+   if( (nIter % symbEvery) == 0 )
+      doSymbFact = true;
 
-   int phase=22; // Numerical factorization
-   if(doSymbFact) {
-     phase =12;    //Numerical factorization & symb analysis
-   }
+   int phase = 22; // Numerical factorization
 
-   int maxfct=1, mnum=1, nrhs=1;
-   iparm[2]=num_threads;
-   iparm[7]=8;     //# iterative refinements
-   iparm[1] = 2; // 2 is for metis, 0 for min degree
-   //iparm[1] = 0; // 2 is for metis, 0 for min degree
+   if( doSymbFact )
+      phase = 12; //Numerical factorization & symb analysis
+
+   int maxfct = 1, mnum = 1, nrhs = 1;
+
+   iparm[2] = num_threads;
+   iparm[7] = 8; //# iterative refinements
    //iparm[ 9] = 10; // pivot perturbation 10^{-xxx}
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-   // if needed, use 2 for advanced matchings and higer accuracy.
+   // use 2 for advanced matchings and higher accuracy.
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+  // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
+   iparm[23] = 1;
+   iparm[24] = 1;
+   iparm[27] = 1; // Parallel metis
+#else
+   iparm[1] = 2; // 2 is for metis, 0 for min degree
    iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   //iparm[27] = 1; // Parallel metis
+   iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+#endif
 
-   int msglvl=0;  // with statistical information
+   int msglvl = pardiso_verbosity; // with statistical information
    //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
    //if (myRankp==0) msglvl=1;
-   iparm[32] = 1; // compute determinant
+   // iparm[32] = 1; // compute determinant
    iparm[37] = nSC;//Msys->size(); //compute Schur-complement
 
  #ifdef TIMING
@@ -585,7 +594,7 @@ void PardisoSchurSolver::computeSC(
  #endif
    if ( error != 0) {
      printf ("PardisoSolver - ERROR during factorization: %d. Phase param=%d\n", error,phase);
-     assert(false);
+     exit(1);
    }
    rowptrSC = new int[nSC+1];
    colidxSC = new int[nnzSC];
@@ -611,18 +620,25 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   iparm[7]=8;    // # of iterative refinements
   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
-                 // if needed, use 2 for advanced matchings and higer accuracy.
+                 // if needed, use 2 for advanced matchings and higher accuracy.
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+  iparm[23] = 1;
+#else
   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-  int msglvl=0;  // with statistical information
+#endif
+  //iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+
+  int msglvl=pardiso_verbosity;  // with statistical information
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
   //if (myRankp==0) msglvl=1;
-
   
   SimpleVector x_n(n);
   SimpleVector rhs_n(n);
-  int dim=rhs.length();
+  const int dim=rhs.length();
   memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
-  for(int i=dim; i<n; i++) rhs_n[i]=0.0;
+
+  for( int i = dim; i < n; i++ )
+      assert(rhs_n[i] == 0.0);
 
 #ifdef TIMING_FLOPS
   HPM_Start("PARDISOSolve");
@@ -641,32 +657,40 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   double* tmp_resid=new double[dim];
   memcpy(tmp_resid, rhs.elements(), dim*sizeof(double));
   double mat_max=0;
-  for(int i=0; i<dim; i++) {
-    for(int p=rowptrAug[i]; p<rowptrAug[i+1]; p++) {
-      int j=colidxAug[p-1]-1;
-      if(j+1<=dim) {
-	//r[i] = r[i] + M(i,j)*x(j)
-	tmp_resid[i] -= eltsAug[p-1]*x_n[j];
+  for( int i = 0; i < dim; i++ )
+  {
+     for( int p = rowptrAug[i]; p < rowptrAug[i + 1]; p++ )
+     {
+        const int j = colidxAug[p - 1] - 1;
+        if( j + 1 <= dim )
+        {
+           //r[i] = r[i] + M(i,j)*x(j)
+           tmp_resid[i] -= eltsAug[p - 1] * x_n[j];
 
-	if(abs(eltsAug[p-1])>mat_max) mat_max=abs(eltsAug[p-1]);
+           if( abs(eltsAug[p - 1]) > mat_max )
+              mat_max = abs(eltsAug[p - 1]);
 
-	if(j!=i) {
-	  //r[j] = r[j] + M(j,i)*x(i)
-	  tmp_resid[j] -=  eltsAug[p-1]*x_n[i];
-	}
-      }
-    }
+           if( j != i )
+           {
+              //r[j] = r[j] + M(j,i)*x(i)
+              tmp_resid[j] -= eltsAug[p - 1] * x_n[i];
+           }
+        }
+     }
   }
+
   double res_norm2=0.0, res_nrmInf=0, sol_inf=0.;
-  for(int i=0; i<dim; i++) {
-      res_norm2 += tmp_resid[i]*tmp_resid[i];
-      if(res_nrmInf<fabs(tmp_resid[i]))
-	 res_nrmInf=tmp_resid[i];
-      if(abs(x_n[i])>sol_inf)  sol_inf = abs(x_n[i]);
+  for( int i = 0; i < dim; i++ )
+  {
+     res_norm2 += tmp_resid[i] * tmp_resid[i];
+     if( res_nrmInf < fabs(tmp_resid[i]) )
+        res_nrmInf = tmp_resid[i];
+     if( abs(x_n[i]) > sol_inf )
+        sol_inf = abs(x_n[i]);
   }
   res_norm2 = sqrt(res_norm2);
 
-  double rhsNorm=rhs.twonorm();
+  const double rhsNorm=rhs.twonorm();
   //if(min(res_nrmInf/(mat_max*sol_inf),res_norm2/(mat_max*sol_inf))>1e-3) {
   if(min(res_nrmInf/rhsNorm,res_norm2/rhsNorm)>1e-6) {
     cout << "PardisoSchurSolve large residual - norms resid="<< res_norm2 << ":" << res_nrmInf 
@@ -707,7 +731,7 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
   iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
   iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-  int msglvl=0;  // with statistical information
+  int msglvl=pardiso_verbosity;  // with statistical information
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
   //if (myRankp==0) msglvl=1;
 

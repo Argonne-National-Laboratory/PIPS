@@ -6,6 +6,7 @@
  */
 
 #include "pipschecks.h"
+#include <math.h>
 #include <cassert>
 
 // are the columns of the given sub-matrix ordered?
@@ -24,3 +25,47 @@ bool subMatrixIsOrdered(const int* rowptr, const int* colidx,
    return true;
 }
 
+// compute residual norms for Ax=rhs with A in CSR with 1-indexing (Fortran)
+void computeFortranCSRMatResidualNorms(const int* rowptr, const int* colidx, const double* vals, /*const*/ SimpleVector& rhs,
+      /*const*/ SimpleVector& x, double& res_norm2, double& res_nrmInf, double& sol_inf, double& mat_max)
+{
+   const int dim=rhs.length();
+   double* tmp_resid = new double[dim];
+   memcpy(tmp_resid, rhs.elements(), dim * sizeof(double));
+
+   mat_max = 0.0, res_norm2 = 0.0, res_nrmInf = 0.0, sol_inf = 0.0;
+
+   for( int i = 0; i < dim; i++ )
+   {
+      for( int p = rowptr[i]; p < rowptr[i + 1]; p++ )
+      {
+         const int j = colidx[p - 1] - 1;
+         if( j + 1 <= dim )
+         {
+            //r[i] = r[i] + M(i,j)*x(j)
+            tmp_resid[i] -= vals[p - 1] * x[j];
+
+            if( fabs(vals[p - 1]) > mat_max )
+               mat_max = fabs(vals[p - 1]);
+
+            if( j != i )
+            {
+               //r[j] = r[j] + M(j,i)*x(i)
+               tmp_resid[j] -= vals[p - 1] * x[i];
+            }
+         }
+      }
+   }
+
+   for( int i = 0; i < dim; i++ )
+   {
+      res_norm2 += tmp_resid[i] * tmp_resid[i];
+      if( res_nrmInf < fabs(tmp_resid[i]) )
+         res_nrmInf = tmp_resid[i];
+      if( fabs(x[i]) > sol_inf )
+         sol_inf = fabs(x[i]);
+   }
+   res_norm2 = sqrt(res_norm2);
+
+   delete[] tmp_resid;
+}

@@ -861,9 +861,8 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    int* const krowKkt = kkts.krowM();
    int* const jcolKkt = kkts.jcolM();
    double* const MKkt = kkts.M();
-   const int sizeKkt = locnx + locmy + locmyl + locmzl;
 
-   assert(kkts.size() == sizeKkt);
+   assert(kkts.size() == locnx + locmy + locmyl + locmzl);
    assert(!kkts.isLower);
    assert(locmyl >= 0 && locmzl >= 0);
 
@@ -901,8 +900,6 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       SparseGenMatrix& C = prob->getLocalD();
       C.matTransDinvMultMat(*zDiag, &CtDC);
       assert(CtDC->size() == locnx);
-
-      assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
 
       //aliases for internal buffers of CtDC
       SparseSymMatrix* CtDCsp = dynamic_cast<SparseSymMatrix*>(CtDC);
@@ -1034,6 +1031,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    myfile.open("../sparsekkt");
 
    int zerocount = 0;
+   const int sizeKkt = locnx + locmy + locmyl + locmzl;
 
    for( int r = 0; r < sizeKkt; r++ )
    {
@@ -1108,7 +1106,6 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
      C.matTransDinvMultMat(*zDiag, &CtDC);
 
      assert(CtDC->size() == locnx);
-     assert(subMatrixIsOrdered(C.krowM(), C.jcolM(), 0, locmzl));
 
      //aliases for internal buffers of CtDC
      SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);

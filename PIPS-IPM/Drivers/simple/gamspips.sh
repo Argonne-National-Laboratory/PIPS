@@ -9,6 +9,8 @@ np="1"
 scale=""
 stepLp=""
 presolve=""
+mins="60"
+
 
 for i in "$@"
 do
@@ -31,6 +33,10 @@ case $i in
     ;;
     -NP=*|--NP=*)
     np="${i#*=}"
+    shift # past argument=value
+    ;;
+    -MINS=*|--MINS=*)
+    mins="${i#*=}"
     shift # past argument=value
     ;;
     -SCALE=*|--SCALE=*)
@@ -58,10 +64,11 @@ fi
 mkdir $built_dir
 cd $built_dir
 
-nblocks=$(echo "8760 * $to / $tbsize + ((8760*${to}) % ${tbsize} > 0) + 1" | bc)
+
+nblocks=$(echo "8760 * $to * (60/$mins) / $tbsize + ((8760*${to}) % ${tbsize} > 0) + 1" | bc)
 echo "$nblocks"
 
-gams ../simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\(60/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=../subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
+gams ../simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\($mins/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=../subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
 ../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks allblocksPips.gdx > /dev/null
 
 if [ "$stepLp" = "true" ]; then

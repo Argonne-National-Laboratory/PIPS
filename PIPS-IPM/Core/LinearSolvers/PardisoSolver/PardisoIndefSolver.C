@@ -99,7 +99,7 @@ void PardisoIndefSolver::initPardiso()
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
 
-   msglvl = 0; /* Print statistical information  */
+   msglvl = 0; /* Print statistical information?  */
    ia = NULL;
    ja = NULL;
    a = NULL;
@@ -116,14 +116,14 @@ void PardisoIndefSolver::matrixChanged()
 
    if( myrank == 0 )
    {
-      printf("\nFactorization starts ...\n ");
+      printf("\n Schur complement factorization is starting ...\n ");
 
       if( mStorageSparse )
          factorizeFromSparse();
       else
          factorizeFromDense();
 
-      printf("\nFactorization completed ...\n ");
+      printf("\n Schur complement factorization completed \n ");
    }
 }
 
@@ -134,7 +134,8 @@ void PardisoIndefSolver::factorizeFromSparse()
    assert(mStorageSparse);
 
    const int nnz = mStorageSparse->len;
-
+   const int* const iaStorage = mStorageSparse->krowM;
+   const int* const jaStorage = mStorageSparse->jcolM;
    const double* const aStorage = mStorageSparse->M;
 
    // first call?
@@ -147,8 +148,6 @@ void PardisoIndefSolver::factorizeFromSparse()
       a = new double[nnz];
 
 #ifndef SELECT_NNZS
-      const int* const iaStorage = mStorageSparse->krowM;
-      const int* const jaStorage = mStorageSparse->jcolM;
 
       for( int i = 0; i < n + 1; i++ )
          ia[i] = iaStorage[i] + 1;
@@ -161,8 +160,6 @@ void PardisoIndefSolver::factorizeFromSparse()
    assert(n >= 0);
 
 #ifdef SELECT_NNZS
-   const int* const iaStorage = mStorageSparse->krowM;
-   const int* const jaStorage = mStorageSparse->jcolM;
 
    ia[0] = 1;
 
@@ -184,8 +181,12 @@ void PardisoIndefSolver::factorizeFromSparse()
 #else
    for( int i = 0; i < nnz; i++ )
       a[i] = aStorage[i];
-#endif
+   for( int i = 0; i < n + 1; i++ )
+      assert(ia[i] == iaStorage[i] + 1);
 
+   for( int i = 0; i < nnz; i++ )
+      assert(ja[i] == jaStorage[i] + 1);
+#endif
 
    // matrix initialized, now do the actual factorization
    factorize();
@@ -197,44 +198,6 @@ void PardisoIndefSolver::factorizeFromDense()
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
    assert(mStorage);
-
-#if 0
-   ofstream myfile;
-   myfile.open("xout");
-
-   int all = 0;
-   int z = 0;
-   for( int i = 0; i < n; i++ )
-   {
-      for( int j = i + 1; j < n; j++ )
-         if( mStorage->M[i][j] != 0.0 )
-         {
-            std::cout << "FAIL " << std::endl;
-            exit(1);
-         }
-      for( int j = 0; j <= i; j++ )
-      {
-         all++;
-         if( mStorage->M[i][j] != 0.0 )
-         {
-            z++;
-
-         }
-         myfile << mStorage->M[i][j] << ", ";
-      }
-
-      for( int j = i + 1; j < n; j++ )
-         myfile << "0.0, ";
-
-      myfile << "\n";
-   }
-   cout << "full " << n * n / 2 << " \n";
-   cout << "  all " << all << "\n";
-   cout << "non-zeros " << z << "\n";
-
-   myfile.close();
-#endif
-
 
 #ifdef DENSE_USE_HALF
 #ifndef NDEBUG
@@ -256,23 +219,7 @@ void PardisoIndefSolver::factorizeFromDense()
          if( mStorage->M[i][j] != 0.0 )
             nnz++;
 
-/*
-   for( int i = 0; i < n; i++ )
-   {
-      for( int j = 0; j <= i; j++ )
-      {
-         cout << mStorage->M[i][j] << "      ";
-      }
-
-      for( int j = i + 1; j < n; j++ )
-         cout << "0.0, ";
-
-      cout << "\n";
-   }
-
-*/
-
-   if( ia ) // todo store and later resize
+   if( ia )
       delete[] ia;
 
    if( ja )
@@ -324,6 +271,18 @@ void PardisoIndefSolver::factorize()
    }
 #endif
 
+#if 1
+   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+#endif
+
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
+   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   iparm[27] = 1; // Parallel metis
+#endif
+
    phase = 11;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
@@ -343,7 +302,7 @@ void PardisoIndefSolver::factorize()
    }
 
    phase = 22;
-   iparm[32] = 1; /* compute determinant */
+   // iparm[32] = 1; /* compute determinant */
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
          iparm, &msglvl, &ddum, &ddum, &error, dparm);
@@ -362,14 +321,13 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 
    phase = 33;
 
-   iparm[7] = 5; /* Max numbers of iterative refinement steps. */
+   iparm[7] = 8; /* max number of iterative refinement steps. */
 
    SimpleVector& sv = dynamic_cast<SimpleVector&>(v);
 
    double* b = sv.elements();
 
    assert(sv.n == n);
-
 
 #ifdef TIMING_FLOPS
    HPM_Start("DSYTRSSolve");
@@ -397,7 +355,9 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       for( int i = 0; i < n; i++ )
          b[i] = x[i];
 
-//      printf("number of iterative refinement steps: %d \n", iparm[6]);
+#ifdef TIMING
+      printf("sparse kkt iterative refinement steps: %d \n", iparm[6]);
+#endif
    }
    else
    {

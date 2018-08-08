@@ -625,24 +625,31 @@ void sData::printLinkVarsStats()
    int n = getLocalnx();
 
    std::vector<int> linkCount(n, 0);
+   std::vector<int> linkCount0(n, 0);
+   std::vector<int> linkCountLC(n, 0);
 
-   dynamic_cast<StochGenMatrix&>(*A).updateKLinkVarsCount(linkCount);
-   dynamic_cast<StochGenMatrix&>(*C).updateKLinkVarsCount(linkCount);
+   StochGenMatrix& Astoch = dynamic_cast<StochGenMatrix&>(*A);
+   StochGenMatrix& Cstoch = dynamic_cast<StochGenMatrix&>(*C);
 
-#if 0
-   SparseGenMatrix& A0t = dynamic_cast<StochGenMatrix&>(*A).Bmat->getTranspose();
-   SparseGenMatrix& C0t = dynamic_cast<StochGenMatrix&>(*C).Bmat->getTranspose();
+   Astoch.updateKLinkVarsCount(linkCount);
+   Cstoch.updateKLinkVarsCount(linkCount);
 
-   const int* krowA0t = A0t.krowM();
-   const int* krowC0t = C0t.krowM();
+   Astoch.Bmat->getTranspose().updateNonEmptyRowsCount(linkCount0);
+   Astoch.Bmat->deleteTransposed();
+   Cstoch.Bmat->getTranspose().updateNonEmptyRowsCount(linkCount0);
+   Cstoch.Bmat->deleteTransposed();
 
-   SparseGenMatrix& Alinkt = dynamic_cast<StochGenMatrix&>(*A).Blmat->getTranspose();
-   SparseGenMatrix& Clinkt = dynamic_cast<StochGenMatrix&>(*C).Blmat->getTranspose();
+   if( Astoch.Blmat )
+   {
+      Astoch.Blmat->getTranspose().updateNonEmptyRowsCount(linkCountLC);
+      Astoch.Blmat->deleteTransposed();
+   }
 
-   const int* krowAlt = Alinkt.krowM();
-   const int* krowClt = Clinkt.krowM();
-
-#endif
+   if( Cstoch.Blmat )
+   {
+      Cstoch.Blmat->getTranspose().updateNonEmptyRowsCount(linkCountLC);
+      Cstoch.Blmat->deleteTransposed();
+   }
 
    int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
@@ -650,30 +657,37 @@ void sData::printLinkVarsStats()
    {
       std::vector<int> linkSizes(nLinkStats, 0);
 
+      int count0 = 0;
+      int countLC = 0;
+      int count0LC = 0;
+
       for( int i = 0; i < n; i++ )
+      {
+         assert(linkCount[i] >= 0 && linkCount0[i] >= 0 && linkCountLC[i] >= 0);
+         assert(linkCount0[i] <= 2 && linkCountLC[i] <= 2);
+
          if( linkCount[i] < nLinkStats )
-         {
-            assert(linkCount[i] >= 0);
             linkSizes[size_t(linkCount[i])]++;
-#if 0
 
-            if( linkCount[i] == 0 )
-            {
-               std::cout << "at " << i << ": " << std::endl;
+         if( linkCount[i] == 0 && linkCountLC[i] == 0 && linkCount0[i] != 0 )
+            count0++;
 
-               std::cout << krowA0t[i + i] - krowA0t[i]  << std::endl;
-               std::cout << krowC0t[i + i] - krowC0t[i] << std::endl;
-               std::cout << krowAlt[i + i] - krowAlt[i] << std::endl;
-               std::cout <<  krowClt[i + i] - krowClt[i] << std::endl;
-            }
-#endif
-         }
+         if( linkCount[i] == 0 && linkCount0[i] == 0 && linkCountLC[i] != 0 )
+            countLC++;
+
+         if( linkCount[i] == 0 && (linkCount0[i] != 0 || linkCountLC[i] != 0) )
+            count0LC++;
+      }
 
       std::cout << "total link vars " << n << std::endl;
 
       for( int i = 0; i < nLinkStats; i++ )
          if( linkSizes[i] != 0 )
             std::cout << i << "-links " << linkSizes[i] << std::endl;
+
+      std::cout << "Block0 exclusive vars " << count0 << std::endl;
+      std::cout << "LC exclusive vars " << countLC << std::endl;
+      std::cout << "Block0 or LC vars " << count0LC  << std::endl;
    }
 }
 
