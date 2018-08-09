@@ -15,6 +15,7 @@ class StochSymMatrix : public SymMatrix {
 
 private:
 
+  // note: also used for dummy class!
   virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec, const OoqpVector* linkParent);
 
 public:
@@ -94,6 +95,7 @@ public:
   virtual void RowScale ( OoqpVector& vec );
   virtual void scalarMult( double num );
 
+  // note: also used for dummy class!
   virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec)
   {
      deleteEmptyRowsCols(nnzVec, NULL);
@@ -174,9 +176,6 @@ public:
   virtual void ColumnScale ( OoqpVector& vec ){};
   virtual void RowScale ( OoqpVector& vec ){};
   virtual void scalarMult( double num ){};
-  
-  virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec, const OoqpVector* linkParent) {};
-  virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec) {};
 };
 
 typedef SmartPointer<StochSymMatrix> StochSymMatrixHandle;
