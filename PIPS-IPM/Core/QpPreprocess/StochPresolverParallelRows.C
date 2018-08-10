@@ -1028,14 +1028,14 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
       norm_upp = norm_cupp->elements()[rowId2];
 
    // test for infeasibility:
-   if( (norm_iclow->elements()[rowId1] != 0.0 && norm_upp < norm_clow->elements()[rowId1])
-         || (norm_icupp->elements()[rowId1] != 0.0 && norm_low > norm_cupp->elements()[rowId1]) )
+   if( (norm_iclow->elements()[rowId1] != 0.0 && PIPSisLT(norm_upp, norm_clow->elements()[rowId1]) )
+         || (norm_icupp->elements()[rowId1] != 0.0 && PIPSisLT(norm_cupp->elements()[rowId1], norm_low) ) )
    {
       cout<<"Detected infeasibility during parallel row presolving."<<endl;
       abortInfeasible(MPI_COMM_WORLD);
    }
    // test if the new bounds are tightening:
-   if( ( norm_iclow->elements()[rowId1] != 0.0 && norm_low > norm_clow->elements()[rowId1] )
+   if( ( norm_iclow->elements()[rowId1] != 0.0 && PIPSisLT(norm_clow->elements()[rowId1], norm_low) )
          || ( norm_iclow->elements()[rowId1] == 0.0 && norm_low > -std::numeric_limits<double>::max() ))
    {
       // tighten normalized lower bound:
@@ -1045,7 +1045,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
       (factor>0) ? setNewBound( rowId1, factor * norm_low, currIneqLhs, currIclow) :
             setNewBound( rowId1, factor * norm_low, currIneqRhs, currIcupp);
    }
-   if( ( norm_icupp->elements()[rowId1] != 0.0 && norm_upp < norm_cupp->elements()[rowId1] )
+   if( ( norm_icupp->elements()[rowId1] != 0.0 && PIPSisLT(norm_upp, norm_cupp->elements()[rowId1]) )
          || ( norm_icupp->elements()[rowId1] == 0.0 && norm_upp < std::numeric_limits<double>::max() ))
    {
       // tighten normalized upper bound:

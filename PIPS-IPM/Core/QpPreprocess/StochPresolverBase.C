@@ -318,9 +318,9 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
 bool StochPresolverBase::newBoundsTightenOldBounds(double new_low, double new_upp, int index,
       double* ilow, double* iupp, double* low, double* upp) const
 {
-   if( ( ilow[index] != 0.0 && new_low > low[index] )
+   if( ( ilow[index] != 0.0 && PIPSisLT(low[index], new_low) )
          || ( ilow[index] == 0.0 && new_low > -std::numeric_limits<double>::max() )
-         || ( iupp[index] != 0.0 && new_upp < upp[index] )
+         || ( iupp[index] != 0.0 && PIPSisLT(new_upp, upp[index]) )
          || ( iupp[index] == 0.0 && new_upp < std::numeric_limits<double>::max() ) )
       return true;
    return false;
@@ -332,13 +332,13 @@ bool StochPresolverBase::newBoundsTightenOldBounds(double new_low, double new_up
 void StochPresolverBase::setNewBounds(int index, double new_low, double new_upp,
       double* ilow, double* low, double* iupp, double* upp) const
 {
-   if( (ilow[index] != 0.0 && new_low > low[index])
+   if( (ilow[index] != 0.0 && PIPSisLT(low[index], new_low) )
       || (ilow[index] == 0.0 && new_low > -std::numeric_limits<double>::max()) )
    {
       ilow[index] = 1.0;
       low[index] = new_low;
    }
-   if( (iupp[index] != 0.0 && new_upp < upp[index])
+   if( (iupp[index] != 0.0 && PIPSisLT(new_upp, upp[index]) )
          || (iupp[index] == 0.0 && new_upp < std::numeric_limits<double>::max()))
    {
       iupp[index] = 1.0;
@@ -828,8 +828,7 @@ void StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colA
       {
          int rowIdx = currBmatTrans->jcolM[j];
          double m = 0.0;
-         bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdx, colIdx, m);
-         if( !entryExists )
+         if( !removeEntryInDynamicStorage(*currBmat, rowIdx, colIdx, m) )
             continue;
          if( system_type == EQUALITY_SYSTEM )
             currEqRhs->elements()[rowIdx] -= m * val;
@@ -881,8 +880,7 @@ void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & col
       {
          const int rowIdx = currBlmatTrans->jcolM[j];
          double m = 0.0;
-         const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
-         if( !entryExists )
+         if( !removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m) )
             continue;
          //PIPSdebugMessage("Removed entry (%d, %d) with value %f of system_type %d \n", rowIdx, colIdx, m, system_type);
 
@@ -921,8 +919,7 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
    {
       const int rowIdxB = currBmatTrans->jcolM[j];
       double m = 0.0;
-      const bool entryExists = removeEntryInDynamicStorage(*currBmat, rowIdxB, colIdx, m);
-      if( !entryExists )
+      if( !removeEntryInDynamicStorage(*currBmat, rowIdxB, colIdx, m) )
          continue;
 
       if( system_type == EQUALITY_SYSTEM )
@@ -979,8 +976,7 @@ int StochPresolverBase::colAdaptLinkVars(int it, SystemType system_type)
       {
          const int rowIdxA = currAmatTrans->jcolM[j];
          double m = 0.0;
-         const bool entryExists = removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m);
-         if( !entryExists )
+         if( !removeEntryInDynamicStorage(*currAmat, rowIdxA, colIdxA, m) )
             continue;
          //PIPSdebugMessage("Removed entry (%d, %d) with value %f in Amat of child %d of system_type %d \n", rowIdxA, colIdxA, m, it, system_type);
 
@@ -1026,8 +1022,7 @@ int StochPresolverBase::colAdaptF0(SystemType system_type)
       {
          const int rowIdx = currBlmatTrans->jcolM[j];
          double m = 0.0;
-         const bool entryExists = removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m);
-         if( !entryExists )
+         if( !removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m) )
             continue;
          //PIPSdebugMessage("Removed entry (%d, %d) with value %f in F_0 of system_type %d \n", rowIdx, colIdx, m, system_type);
 
@@ -1059,8 +1054,8 @@ bool StochPresolverBase::newBoundsImplyInfeasible(double newxlow, double newxupp
       double* ixlow, double* ixupp, double* xlow, double* xupp) const
 {
    assert( colIdx >= 0 );
-   if( ( ixlow[colIdx] != 0.0 && xlow[colIdx] > newxupp)
-         || (ixupp[colIdx] != 0.0 && xupp[colIdx] < newxlow )
+   if( ( ixlow[colIdx] != 0.0 && PIPSisLT(newxupp, xlow[colIdx]) )
+         || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], newxlow) )
          || (newxlow > newxupp))
    {
       cout<<"Infeasibility detected at variable "<<colIdx<<", new bounds= ["<<newxlow<<", "<<newxupp<<"]"<<endl;
@@ -1148,7 +1143,7 @@ void StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double
    {
       if( newBoundsParent[i].colIdx == colIdx )
       {
-         if( newBoundsParent[i].newxlow > newxupp || newBoundsParent[i].newxupp < newxlow )
+         if( PIPSisLT(newxupp, newBoundsParent[i].newxlow) || PIPSisLT(newBoundsParent[i].newxupp, newxlow) )
             abortInfeasible(MPI_COMM_WORLD);
       }
    }

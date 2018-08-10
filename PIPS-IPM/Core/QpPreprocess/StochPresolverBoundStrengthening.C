@@ -282,14 +282,14 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
       double newBoundUpp = std::numeric_limits<double>::max();
       if( lis > -std::numeric_limits<double>::max() )
       {
-         if( a_ik > 0 )
+         if( PIPSisLT(0.0, a_ik) )
             newBoundUpp = computeNewBound(true, lis, a_ik, rowIdx, system_type);
          else
             newBoundLow = computeNewBound(true, lis, a_ik, rowIdx, system_type);
       }
       if( uis < std::numeric_limits<double>::max() )
       {
-         if( a_ik > 0 )
+         if( PIPSisLT(0.0, a_ik) )
             newBoundLow = computeNewBound(false, uis, a_ik, rowIdx, system_type);
          else
             newBoundUpp = computeNewBound(false, uis, a_ik, rowIdx, system_type);

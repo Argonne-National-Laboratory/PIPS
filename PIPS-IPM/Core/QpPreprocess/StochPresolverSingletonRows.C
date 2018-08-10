@@ -334,8 +334,8 @@ void StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
          {
             double val = currEqRhs->elements()[rowIdx] / aik;
 
-            if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
-                  || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
+            if( (ixlow[colIdx] != 0.0 && PIPSisLT(val, xlow[colIdx]) )
+                  || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], val) ) )
             {
                cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<", child="<<it<<endl;
                abortInfeasible(MPI_COMM_WORLD);
@@ -374,8 +374,7 @@ void StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType s
                   // store them to adapt the bounds on all processes later
                   storeNewBoundsParent(colIdx, newxlow, newxupp);
                }
-               else
-                  PIPSdebugMessage("New bounds are redundant for variable %d \n", colIdx);
+               //else   PIPSdebugMessage("New bounds are redundant for variable %d \n", colIdx);
 
                // set a_ik=0.0, nRow--, redCol++
                clearRow(*currAmat, rowIdx);
@@ -427,8 +426,8 @@ void StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
    {
       const double val = currEqRhs->elements()[rowIdx] / aik;
 
-      if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
-            || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
+      if( (ixlow[colIdx] != 0.0 && PIPSisLT(val, xlow[colIdx]) )
+            || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], val) ) )
       {
          cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
          abortInfeasible(MPI_COMM_WORLD);
@@ -463,8 +462,7 @@ void StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
             // adapt immediately the variable bounds
             setNewBounds(colIdx, newxlow, newxupp, ixlow, xlow, ixupp, xupp);
          }
-         else
-            PIPSdebugMessage("New bounds are redundant for variable %d \n", colIdx);
+         //else   PIPSdebugMessage("New bounds are redundant for variable %d \n", colIdx);
 
          // set a_ik=0.0, nRow--, nCol--
          clearRow(*currBmat, rowIdx);
@@ -498,8 +496,8 @@ void StochPresolverSingletonRows::removeSingleRowEntryB0(SparseStorageDynamic& s
 
    const double val = currEqRhs->elements()[rowIdx] / aik;
 
-   if( (ixlow[colIdx] != 0.0 && xlow[colIdx] > val)
-         || (ixupp[colIdx] != 0.0 && xupp[colIdx] < val))
+   if( (ixlow[colIdx] != 0.0 && PIPSisLT(val, xlow[colIdx]) )
+         || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], val) ) )
    {
       cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
       abortInfeasible(MPI_COMM_WORLD);
@@ -594,7 +592,7 @@ void StochPresolverSingletonRows::procSingletonRowChildInequality(int it, int& n
 
 void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik) const
 {
-   if( aik > 0.0 )
+   if( PIPSisLT(0.0, aik) )
    {
       if( currIclow->elements()[rowIdx] != 0.0 )
          newxlow = currIneqLhs->elements()[rowIdx] / aik;
