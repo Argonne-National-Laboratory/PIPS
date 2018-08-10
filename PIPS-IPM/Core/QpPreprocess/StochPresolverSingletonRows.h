@@ -17,27 +17,27 @@ public:
 
    ~StochPresolverSingletonRows();
 
-   // remove small matrix entries and return number of eliminations
-   virtual bool applyPresolving(int& nelims);
+   // remove singleton rows
+   virtual void applyPresolving();
 
 private:
 
    // private methods:
    int initSingletonRows(SystemType system_type);
    int initSingletonRowsBlock(int it, SimpleVector const * nnzRowSimple);
-   bool doSingletonRowsA(int& newSREq, int& newSRIneq);
-   bool doSingletonRowsC(int& newSREq, int& newSRIneq);
+   void doSingletonRowsA(int& newSREq, int& newSRIneq);
+   void doSingletonRowsC(int& newSREq, int& newSRIneq);
 
-   bool procSingletonRowRoot(StochGenMatrix& stochMatrix, SystemType system_type);
-   bool procSingletonRowChildEquality(int it, int& newSR, int& newSRIneq);
-   bool procSingletonRowChildAmat(int it, SystemType system_type);
-   bool procSingletonRowChildBmat(int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR,
+   void procSingletonRowRoot(StochGenMatrix& stochMatrix, SystemType system_type);
+   void procSingletonRowChildEquality(int it, int& newSR, int& newSRIneq);
+   void procSingletonRowChildAmat(int it, SystemType system_type);
+   void procSingletonRowChildBmat(int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR,
          SystemType system_type);
-   bool removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
+   void removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
 
-   bool removeSingleRowEntryB0(SparseStorageDynamic& storage, int rowIdx);
-   bool removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, SparseStorageDynamic& storageTransposed, int rowIdx);
-   bool procSingletonRowChildInequality(int it, int& newSREq, int& newSRIneq);
+   void removeSingleRowEntryB0(SparseStorageDynamic& storage, int rowIdx);
+   void removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, SparseStorageDynamic& storageTransposed, int rowIdx);
+   void procSingletonRowChildInequality(int it, int& newSREq, int& newSRIneq);
 
    void calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik) const;
 

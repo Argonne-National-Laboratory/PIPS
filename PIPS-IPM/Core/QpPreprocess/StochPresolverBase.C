@@ -780,6 +780,13 @@ void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& i
    else iAmDistrib = false;
 }
 
+/** Call MPI_Abort() and print an error message */
+void StochPresolverBase::abortInfeasible(MPI_Comm comm) const
+{
+   cout<<"Infesibility detected in presolving. Aborting now."<<endl;
+   MPI_Abort(comm, 1);
+}
+
 void StochPresolverBase::synchronize(int& value) const
 {
    int myRank;
@@ -810,7 +817,7 @@ void StochPresolverBase::synchronizeSum(int& first, int& second) const
  * Given a vector<COLUMNTOADAPT>, this routine goes through all columns inside and removes them
  * from the current Bmat block. Depending on the system_type, rhs (and lhs) are updated.
  */
-bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR )
+void StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR )
 {
    for(int i=0; i<(int)colAdaptBlock.size(); i++)
    {
@@ -847,10 +854,9 @@ bool StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colA
       }
       clearRow(*currBmatTrans, colIdx);
    }
-   return true;
 }
 
-bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type)
+void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type)
 {
    //PIPSdebugMessage("colAdaptBlock has size %d \n", (int)colAdaptBlock.size());
    assert(currBlmat != NULL);
@@ -898,7 +904,6 @@ bool StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & col
       }
       clearRow(*currBlmatTrans, colIdx);
    }
-   return true;
 }
 
 /** For the given column index and the value to which this variable is to be fixed,
@@ -947,20 +952,14 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
 
 /** Given the vector<COLUMNTOADAPT>, both the block Bmat and Blat (if existent) are updated accordingly.
  */
-bool StochPresolverBase::adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR )
+void StochPresolverBase::adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR )
 {
    // Bmat blocks
-   bool possFeas = adaptChildBmat(colAdaptBblock, system_type, newSR);
-   if( !possFeas ) return false;
+   adaptChildBmat(colAdaptBblock, system_type, newSR);
 
    // Blmat blocks
    if( hasLinking(system_type) )
-   {
-      possFeas = adaptChildBlmat(colAdaptBblock, system_type);
-      if( !possFeas ) return false;
-   }
-
-   return true;
+      adaptChildBlmat(colAdaptBblock, system_type);
 }
 
 /** Adapt the columns for the linking-variable-blocks (the A_i) blocks */
@@ -1117,9 +1116,9 @@ int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, Syst
 }
 
 /** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
- * Returns false if infeasibility is detected.
+ * Aborts if infeasibility is detected.
  */
-bool StochPresolverBase::storeColValInColAdaptParent(int colIdx, double value)
+void StochPresolverBase::storeColValInColAdaptParent(int colIdx, double value)
 {
    const COLUMNTOADAPT colWithVal = {colIdx, value};
    bool uniqueAdditionToOffset = true;
@@ -1127,25 +1126,21 @@ bool StochPresolverBase::storeColValInColAdaptParent(int colIdx, double value)
    {
       if( presData.getColAdaptParent(i).colIdx == colIdx )
       {
-         if( presData.getColAdaptParent(i).val != value )
-         {
-            cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<value<<endl;
-            return false;
-         }
+         if( !PIPSisEQ(presData.getColAdaptParent(i).val, value) )
+            abortInfeasible(MPI_COMM_WORLD);
+
          uniqueAdditionToOffset = false;
       }
    }
    if( uniqueAdditionToOffset )
       presData.addColToAdaptParent(colWithVal);
-
-   return true;
 }
 
 /** Stores the column index colIdx together with the new bounds as a XBOUNDS in newBoundsParent.
  * Should be called only from Process Zero.
  * Returns false if infeasibility is detected (contradictory bounds).
  */
-bool StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double newxupp)
+void StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double newxupp)
 {
    assert( colIdx >= 0 );
    XBOUNDS newXbounds = {colIdx, newxlow, newxupp};
@@ -1154,20 +1149,16 @@ bool StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double
       if( newBoundsParent[i].colIdx == colIdx )
       {
          if( newBoundsParent[i].newxlow > newxupp || newBoundsParent[i].newxupp < newxlow )
-         {
-            cout<<"Infeasibility detected at variable "<<colIdx<<" because of tightened bounds."<<endl;
-            return false;
-         }
+            abortInfeasible(MPI_COMM_WORLD);
       }
    }
    newBoundsParent.push_back(newXbounds);
-   return true;
 }
 
 /** Method similar to combineColAdaptParent(), that is a method going through newBoundsParent
  * and cleaning it up, removing redundant bounds, checking for infeasibility or more tightening.
  */
-bool StochPresolverBase::combineNewBoundsParent()
+void StochPresolverBase::combineNewBoundsParent()
 {
    int myRank, world_size;
    bool iAmDistrib = false;
@@ -1246,7 +1237,7 @@ bool StochPresolverBase::combineNewBoundsParent()
             if( bestLow > bestUpp )
             {
                cout<<"Detected infeasibility in variable "<<colIdxCurrent<<" of parent. bestLow="<<bestLow<<", bestUpp="<<bestUpp<<endl;
-               return false;
+               abortInfeasible(MPI_COMM_WORLD);
             }
             else
             {
@@ -1266,8 +1257,6 @@ bool StochPresolverBase::combineNewBoundsParent()
       }
    }
    assert( getNumberNewBoundsParent() <= presData.nColElems->vec->n );
-
-   return true;
 }
 
 XBOUNDS StochPresolverBase::getNewBoundsParent(int i) const

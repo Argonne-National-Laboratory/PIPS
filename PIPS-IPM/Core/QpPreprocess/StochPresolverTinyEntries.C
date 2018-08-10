@@ -19,9 +19,9 @@ StochPresolverTinyEntries::~StochPresolverTinyEntries()
 }
 
 
-bool StochPresolverTinyEntries::applyPresolving(int& nelims)
+void StochPresolverTinyEntries::applyPresolving()
 {
-   nelims = 0;
+   int nelims = 0;
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
@@ -41,8 +41,6 @@ bool StochPresolverTinyEntries::applyPresolving(int& nelims)
 
    if( myRank == 0)
       std::cout << "removing tiny entries finished. Removed "<< nelims <<" entries in total." << std::endl;
-
-   return true;
 }
 
 int StochPresolverTinyEntries::removeTinyEntriesSystemA()

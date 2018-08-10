@@ -19,8 +19,8 @@ public:
 
    ~StochPresolverSingletonColumns();
 
-   // remove small matrix entries and return number of eliminations
-   virtual bool applyPresolving(int& nelims);
+   // remove singleton columns
+   virtual void applyPresolving();
 
 private:
    void countSingletonColumns();

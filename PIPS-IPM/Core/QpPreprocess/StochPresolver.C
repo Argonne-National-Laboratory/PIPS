@@ -54,16 +54,14 @@ Data* StochPresolver::presolve()
    sorigprob->writeToStreamDense(myfile);
    myfile.close();*/
 
-   int nelims = 0;
-
    // init presolve data presData:
    PresolveData presData(sorigprob);
    presData.initialize();
 
    // init all presolvers:
 
-   //StochPresolverBoundStrengthening presolverBS(presData);
-   //StochPresolverParallelRows presolverParallelRow(presData);
+   StochPresolverBoundStrengthening presolverBS(presData);
+   StochPresolverParallelRows presolverParallelRow(presData);
    //StochPresolverTinyEntries presolverTiny(presData);
    StochPresolverSingletonRows presolverSR(presData);
    //StochPresolverSingletonColumns presolverSC(presData);
@@ -79,16 +77,11 @@ Data* StochPresolver::presolve()
       // presolverTiny.applyPresolving
       // presolverSingletonRow.applyPresolving
 
-   bool possfeas;
-   //possfeas = presolverBS.applyPresolving(nelims);
-   //possfeas = presolverSC.applyPresolving(nelims);
-   //possfeas = presolverParallelRow.applyPresolving(nelims);
-   //possfeas = presolverTiny.applyPresolving(nelims);
-   possfeas = presolverSR.applyPresolving(nelims);
-   //possfeas = presolverSC.applyPresolving(nelims);
-
-  // if( !possfeas )
-  //    break;
+   presolverBS.applyPresolving();
+   presolverParallelRow.applyPresolving();
+   //presolverTiny.applyPresolving();
+   presolverSR.applyPresolving();
+   //presolverSC.applyPresolving();
 
 /*   cout<<"nRowElemsA "<<endl;
    nRowElemsA->writeToStreamAll(cout);

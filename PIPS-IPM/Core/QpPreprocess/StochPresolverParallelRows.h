@@ -62,8 +62,8 @@ public:
 
    ~StochPresolverParallelRows();
 
-   // remove small matrix entries and return number of eliminations
-   virtual bool applyPresolving(int& nelims);
+   // remove parallel rows
+   virtual void applyPresolving();
 
 private:
    SparseStorageDynamic* currCmat;
@@ -118,13 +118,13 @@ private:
          SimpleVector& Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector& nnzRow );
-   bool compareRowsInSecondHashTable(int& nRowElims, int it);
+   void compareRowsInSecondHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
    void eliminateOriginalRow(int rowId, int& nRowElims);
    void removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
          SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
          SimpleVector& redColParent, SimpleVector* nnzColChild);
-   bool tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
+   void tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
    double getSingletonCoefficient(int singleColIdx);
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
    bool doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
@@ -133,9 +133,6 @@ private:
    void computeXminusYdivZ( double& result, SimpleVector& ixvec, SimpleVector& xvec,
          int index, double y, double z);
    void tightenLinkingVarsBounds();
-
-   void countDuplicateRows(StochGenMatrix& matrix, SystemType system_type);
-   bool compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const;
 
 };
 

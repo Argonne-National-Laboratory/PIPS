@@ -18,8 +18,8 @@ class StochPresolverTinyEntries : public StochPresolverBase
 
       ~StochPresolverTinyEntries();
 
-      // remove small matrix entries and return number of eliminations
-      virtual bool applyPresolving(int& nelims);
+      // remove small matrix entries
+      virtual void applyPresolving();
 
    private:
 

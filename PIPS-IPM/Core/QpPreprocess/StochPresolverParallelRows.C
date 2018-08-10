@@ -100,7 +100,7 @@ StochPresolverParallelRows::~StochPresolverParallelRows()
    rowsSecondHashTable  = boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> >();
 }
 
-bool StochPresolverParallelRows::applyPresolving(int& nelims)
+void StochPresolverParallelRows::applyPresolving()
 {
    int myRank;
    bool iAmDistrib;
@@ -121,7 +121,6 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
    clearNewBoundsParent();
    int nRowElims = 0;
    indivObjOffset = 0.0;
-   bool possibleFeasible = true;
 
    // for children:
    for( size_t child_it = 0; child_it< matrixA.children.size(); child_it++)
@@ -156,12 +155,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
             }
 
             // Compare the rows in the final (from second hash) bin:
-            possibleFeasible = compareRowsInSecondHashTable(nRowElims, (int)child_it);
-            if( !possibleFeasible )
-            {
-               cout<<"Infeasibility detected: in parallel row presolving."<<endl;
-               return false;
-            }
+            compareRowsInSecondHashTable(nRowElims, (int)child_it);
 
             rowsSecondHashTable.clear();
          }
@@ -171,7 +165,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       }
    }
    // combine the bounds of linking-variables:
-   if( !combineNewBoundsParent() ) return false;
+   combineNewBoundsParent();
    // update the bounds of linking-variables:
    tightenLinkingVarsBounds();
 
@@ -205,12 +199,7 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       }
 
       // Compare the rows in the final (from second hash) bin:
-      possibleFeasible = compareRowsInSecondHashTable(nRowElims, -1);
-      if( !possibleFeasible )
-      {
-         cout<<"Infeasibility detected: in parallel row presolving."<<endl;
-         return false;
-      }
+      compareRowsInSecondHashTable(nRowElims, -1);
       rowsSecondHashTable.clear();
    }
    // update objective coefficients of linking variables (gParent):
@@ -233,11 +222,6 @@ bool StochPresolverParallelRows::applyPresolving(int& nelims)
       cout<<"--- After Parallel Row Presolving:"<<endl;
    countRowsCols();
 #endif
-
-   //countDuplicateRows(matrixC, INEQUALITY_SYSTEM);
-   //countDuplicateRows(matrixA, EQUALITY_SYSTEM);
-
-   return true;
 }
 
 /** If it is no dummy child, sets normalized pointers:
@@ -740,15 +724,13 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
  * to the original matrices (not the normalized copies).
  * @param it represents the child number (or -1 for parent blocks)
  */
-bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, int it)
+void StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, int it)
 {
-   // todo make sure that more than 2 parallel rows are treated correctly
-
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    if( rowsSecondHashTable.empty() )
-      return true;
+      return;
 
    for (size_t i=0; i<rowsSecondHashTable.bucket_count(); ++i)
    {
@@ -796,8 +778,9 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   else
                   {
                      //PIPSdebugMessage("Really Parallel Rows, case 1. \n");
-                     if( norm_b->elements()[it1->id] != norm_b->elements()[it2->id] )
-                        return false;
+                     if(  !PIPSisEQ( norm_b->elements()[it1->id], norm_b->elements()[it2->id]) )
+                        abortInfeasible(MPI_COMM_WORLD);
+
                      // delete row2 in the original system:
                      eliminateOriginalRow((int) it2->id, nRowElims);
                   }
@@ -824,8 +807,7 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   {
                      //PIPSdebugMessage("Really Parallel Rows, case 3. \n");
                      // tighten bounds in original and normalized system:
-                     if( !tightenOriginalBoundsOfRow1(rowId1, rowId2) )
-                        return false;
+                     tightenOriginalBoundsOfRow1(rowId1, rowId2);
 
                      // delete row2 in the original system:
                      eliminateOriginalRow((int)it2->id, nRowElims);
@@ -850,10 +832,10 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                      // check for infeasibility:
                      if( norm_iclow->elements()[ineqRowId] != 0.0
                            && norm_clow->elements()[ineqRowId] > norm_b->elements()[id1] )
-                        return false;
+                        abortInfeasible(MPI_COMM_WORLD);
                      if( norm_icupp->elements()[ineqRowId] != 0.0
                            && norm_cupp->elements()[ineqRowId] < norm_b->elements()[id1] )
-                        return false;
+                        abortInfeasible(MPI_COMM_WORLD);
                      // remove inequality row.
                   }
                   else if( rowContainsSingletonVariableA->elements()[id1] != -1.0
@@ -904,7 +886,6 @@ bool StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
          }
       }
    }
-   return true;
 }
 
 /**
@@ -1028,7 +1009,7 @@ void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic& Abl
  * which value. The normalized bounds of row1 are also updated.
  * Assumes that both rows are inequality constraints.
  */
-bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int rowId2)
+void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int rowId2)
 {
    assert( currCmat );
    assert( rowId1 >= 0 && rowId2 >= 0 );
@@ -1051,7 +1032,7 @@ bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
          || (norm_icupp->elements()[rowId1] != 0.0 && norm_low > norm_cupp->elements()[rowId1]) )
    {
       cout<<"Detected infeasibility during parallel row presolving."<<endl;
-      return false;
+      abortInfeasible(MPI_COMM_WORLD);
    }
    // test if the new bounds are tightening:
    if( ( norm_iclow->elements()[rowId1] != 0.0 && norm_low > norm_clow->elements()[rowId1] )
@@ -1074,7 +1055,6 @@ bool StochPresolverParallelRows::tightenOriginalBoundsOfRow1(int rowId1, int row
       (factor>0) ? setNewBound( rowId1, factor * norm_upp, currIneqRhs, currIcupp) :
          setNewBound( rowId1, factor * norm_upp, currIneqLhs, currIclow);
    }
-   return true;
 }
 
 /** Returns the matrix coefficient of the singleton variable with index singleColIdx.
@@ -1332,172 +1312,4 @@ void StochPresolverParallelRows::tightenLinkingVarsBounds()
       tightenBoundsForSingleVar(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp);
    }
    clearNewBoundsParent();
-}
-
-void StochPresolverParallelRows::countDuplicateRows(StochGenMatrix& matrix, SystemType system_type)
-{
-   //TODO: several duplicate rows are counted too often because each duplicate pair is counted as one
-   // ie, if rows i,j,k,l are duplicate, they are counted (i,j) (i,k) (i,l) (j,k) (j,l)(k,l) as 6 instead of 4
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-
-   int duplicRow = 0;
-
-   // the B_0 block:
-   if( myRank == 0)
-   {
-      currAmat = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamic();
-      if(system_type==EQUALITY_SYSTEM)
-         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
-      else
-         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
-      for( int i=0; i<currNnzRow->n; i++)
-      {
-         for( int j=i+1; j<currNnzRow->n; j++)
-         {
-            double* nRow = currNnzRow->elements();
-            if( nRow[i] != 0.0 && nRow[i] == nRow[j] &&
-                  compareCoefficients(*currAmat, i, j))
-               duplicRow++;
-         }
-      }
-      if(system_type==EQUALITY_SYSTEM)
-         cout<<"There are "<<duplicRow<<" duplicate rows in the A_0 block of A."<<endl;
-      else
-         cout<<"There are "<<duplicRow<<" duplicate rows in the A_0 block of C."<<endl;
-   }
-
-   // the children:
-   for( size_t it = 0; it< matrix.children.size(); it++)
-   {
-      if( (system_type==EQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, EQUALITY_SYSTEM)) ||
-            (system_type == INEQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, INEQUALITY_SYSTEM)) )
-      {
-         currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
-         currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
-         if(system_type==EQUALITY_SYSTEM)
-            currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec);
-         else
-            currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
-         for( int i=0; i<currNnzRow->n; i++)
-         {
-            for( int j=i+1; j<currNnzRow->n; j++)
-            {
-               double* nRow = currNnzRow->elements();
-               if( nRow[i] != 0.0 && nRow[i] == nRow[j] &&
-                     compareCoefficients(*currAmat, i, j) && compareCoefficients(*currBmat, i, j) )
-                  duplicRow++;
-            }
-         }
-      }
-   }
-
-   // the linking constraints:
-   //TODO: more efficient communication, maybe vector containing info about all rows?
-   if( (system_type==EQUALITY_SYSTEM && hasLinking(EQUALITY_SYSTEM)) ||
-         (system_type==INEQUALITY_SYSTEM && hasLinking(INEQUALITY_SYSTEM)))
-   {
-      int nDuplicLinkRow = 0;
-      if(system_type==EQUALITY_SYSTEM)
-         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
-      else
-         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
-      for(int i=0; i<currNnzRow->n; i++)
-      {
-         for( int j=i+1; j<currNnzRow->n; j++)
-         {
-            int notParallel = 0;
-            double* nRow = currNnzRow->elements();
-            currBlmat = dynamic_cast<SparseGenMatrix*>(matrix.Blmat)->getStorageDynamic();
-            if( nRow[i] != 0.0 && nRow[i] == nRow[j] &&
-                  compareCoefficients(*currBlmat, i, j) )
-            {
-               // check other F_i blocks as well:
-               for( size_t it = 0; it< matrix.children.size(); it++)
-               {
-                  if( (system_type==EQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, EQUALITY_SYSTEM)) ||
-                        (system_type==INEQUALITY_SYSTEM && !childIsDummy( matrix, (int)it, INEQUALITY_SYSTEM)) )
-                  {
-                     currBlmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Blmat)->getStorageDynamic();
-                     if( !compareCoefficients(*currBlmat, i, j))
-                        notParallel++;
-                  }
-                  currNnzRow = (system_type==EQUALITY_SYSTEM) ?
-                        dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl) :
-                        dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
-               }
-               if( iAmDistrib )
-                  MPI_Allreduce(MPI_IN_PLACE, &notParallel, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-               if( myRank == 0 && notParallel == 0 )
-               {
-                  duplicRow++;
-                  nDuplicLinkRow++;
-               }
-            }
-         }
-      }
-      if(myRank == 0)
-      {
-         assert(nDuplicLinkRow <= currNnzRow->n);
-         //duplicRow += nDuplicLinkRow;
-         (system_type==EQUALITY_SYSTEM) ?
-               cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of A." <<endl :
-               cout<<"There are "<<nDuplicLinkRow<<" duplicate rows in the linking rows of C." <<endl;
-      }
-   }
-
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &duplicRow, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-   if(myRank == 0)
-   {
-      (system_type == EQUALITY_SYSTEM) ?
-            cout << "There are " << duplicRow << " duplicate rows in A." << endl :
-            cout << "There are " << duplicRow << " duplicate rows in C." << endl;
-   }
-}
-
-/* Compares the matrix coeffients in row i and j.
- * Returns true if they are the same or false if not.
- * The method assumes ordered rows, so it should only be called when it is
- * ensured that the order in each row is intact.
- * Empty rows can be considered as duplicate rows.
- */
-bool StochPresolverParallelRows::compareCoefficients(SparseStorageDynamic& matrix, int i, int j) const
-{
-   assert( currNnzRow->elements()[i] == currNnzRow->elements()[j] );
-   assert( i>=0 && i<matrix.m );
-   assert( j>=0 && j<matrix.m );
-
-   int rowLen = matrix.rowptr[i].end - matrix.rowptr[i].start;
-
-   if( rowLen != matrix.rowptr[j].end - matrix.rowptr[j].start )
-      return false;  // row entries can be in Amat or Bmat blocks
-   if( rowLen == 0.0 )
-      return true;  // empty rows
-
-   bool allNegatedCoeffs = false;
-   // compare first entry to determine the sign:
-   int k_i = matrix.rowptr[i].start;
-   int k_j = matrix.rowptr[j].start;
-   if( matrix.jcolM[k_i] != matrix.jcolM[k_j] )
-      return false;
-   if( matrix.M[k_i] == - matrix.M[k_j] )
-      allNegatedCoeffs = true;
-   else if ( matrix.M[k_i] != matrix.M[k_j] )
-      return false;
-
-   for( int k=1; k<rowLen; k++ )
-   {
-      k_i = matrix.rowptr[i].start + k;
-      k_j = matrix.rowptr[j].start + k;
-
-      if( matrix.jcolM[k_i] != matrix.jcolM[k_j] )
-         return false;
-      if( (allNegatedCoeffs && matrix.M[k_i] != -matrix.M[k_j]) ||
-            (!allNegatedCoeffs && matrix.M[k_i] != matrix.M[k_j]) )
-         return false;
-   }
-   return true;
 }

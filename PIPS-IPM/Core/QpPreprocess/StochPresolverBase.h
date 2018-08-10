@@ -57,7 +57,7 @@ public:
 
    virtual ~StochPresolverBase();
 
-   virtual bool applyPresolving(int& nelims) = 0;
+   virtual void applyPresolving() = 0;
 
    void countRowsCols();
 
@@ -194,14 +194,15 @@ protected:
    bool childIsDummy(StochGenMatrix const & matrix, int it, SystemType system_type);
    bool hasLinking(SystemType system_type) const;
    void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
+   void abortInfeasible(MPI_Comm comm) const;
    void synchronize(int& value) const;
    void synchronizeSum(int& first, int& second) const;
 
 
-   bool adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR);
-   bool adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type);
+   void adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR);
+   void adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type);
    int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
-   bool adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR);
+   void adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR);
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptF0(SystemType system_type);
@@ -210,11 +211,11 @@ protected:
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    int fixVarInChildBlockAndStore(int colIdx, double val, SystemType system_type,
          std::vector<COLUMNTOADAPT> & colAdaptLinkBlock);
-   bool storeColValInColAdaptParent(int colIdx, double value);
+   void storeColValInColAdaptParent(int colIdx, double value);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
-   bool storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
-   bool combineNewBoundsParent();
+   void storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
+   void combineNewBoundsParent();
    XBOUNDS getNewBoundsParent(int i) const;
    void setNewBoundsParent(int i, int colIdx, double newxlow, double newxupp);
    int getNumberNewBoundsParent() const;

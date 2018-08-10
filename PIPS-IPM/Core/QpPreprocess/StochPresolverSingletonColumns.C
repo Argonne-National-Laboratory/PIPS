@@ -20,7 +20,7 @@ StochPresolverSingletonColumns::~StochPresolverSingletonColumns()
 }
 
 
-bool StochPresolverSingletonColumns::applyPresolving(int& nelims)
+void StochPresolverSingletonColumns::applyPresolving()
 {
    // countSingletonColumns();
    int myRank;
@@ -30,8 +30,6 @@ bool StochPresolverSingletonColumns::applyPresolving(int& nelims)
    if( myRank == 0 ) cout<<"Start Singleton Column Presolving..."<<endl;
 
    // todo
-
-   return true;
 }
 
 void StochPresolverSingletonColumns::countSingletonColumns()
