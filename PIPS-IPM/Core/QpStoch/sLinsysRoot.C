@@ -49,8 +49,10 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
     sol2 = res2 = res3 = res4 = res5 = NULL;
   }
 
-  // use sparse KKT if (enough) 2 links are present
-  hasSparseKkt = prob_->with2Links();
+  // use sparse KKT if link structure is present
+  hasSparseKkt = prob_->exploitingLinkStructure();
+
+  int todo;
 
 }
 
@@ -87,7 +89,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   }
 
   // use sparse KKT if (enough) 2 links are present
-  hasSparseKkt = prob_->with2Links();
+  hasSparseKkt = prob_->exploitingLinkStructure();
 }
 
 sLinsysRoot::~sLinsysRoot()

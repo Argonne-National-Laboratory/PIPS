@@ -28,8 +28,7 @@ class sData : public QpGenData {
 	 GenMatrix * A, OoqpVector * bA,
 	 GenMatrix * C,
 	 OoqpVector * clow, OoqpVector * iclow, long long mclow,
-	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp,
-	 bool exploit2Links = false);
+	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp);
 
   std::vector<sData*> children;
   void AddChild(sData* child);
@@ -54,7 +53,7 @@ class sData : public QpGenData {
   int getN0LinkVars() {return n0LinkVars;}
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
-  bool with2Links() {return use2Links;};
+  bool exploitingLinkStructure() {return useLinkStructure;};
   SparseSymMatrix* createSchurCompSymbSparseUpper();
 
   SparseSymMatrix& getLocalQ();
@@ -66,10 +65,10 @@ class sData : public QpGenData {
   SparseGenMatrix& getLocalD();
   SparseGenMatrix& getLocalG();
 
-
   void printLinkVarsStats();
   void printLinkConsStats();
 
+  void activateLinkStructureExploitation();
 
   void sync();
 
@@ -99,7 +98,7 @@ class sData : public QpGenData {
 
   static std::vector<int> get2LinkLengthsVec(const std::vector<int>& linkStartBlocks, size_t nBlocks);
 
-  bool use2Links;
+  bool useLinkStructure;
   std::vector<int> linkVarsNnz;
   std::vector<int> linkStartBlocksA;
   std::vector<int> linkStartBlocksC;
@@ -109,7 +108,6 @@ class sData : public QpGenData {
   std::vector<unsigned int> linkConsPermutationA;
   std::vector<unsigned int> linkConsPermutationC;
 
-  void init2LinksData(bool exploit2links);
   void permuteLinkingVars();
   void permuteLinkingCons();
 };

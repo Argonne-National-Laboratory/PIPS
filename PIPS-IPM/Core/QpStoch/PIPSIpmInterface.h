@@ -124,6 +124,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("data created\n");
 #endif
 
+#ifdef WITH_PARDISOINDEF
+  data->activateLinkStructureExploitation();
+#endif
+
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
 #ifdef TIMING
   if(mype==0) printf("variables created\n");

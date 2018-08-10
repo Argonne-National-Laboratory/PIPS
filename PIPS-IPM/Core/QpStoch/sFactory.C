@@ -228,14 +228,6 @@ Data * sFactory::makeData()
   }
 #endif
 
-  bool exploit2links;
-
-  // todo: proper run-time parameter
-#ifdef WITH_PARDISOINDEF
-    exploit2links = true;
-#else
-    exploit2links = false;
-#endif
 
   data = new sData( tree, 
 		    c, Q, 
@@ -243,7 +235,7 @@ Data * sFactory::makeData()
 		    xupp, ixupp, ixupp->numberOfNonzeros(),
 		    A, b,
 		    C, clow, iclow, iclow->numberOfNonzeros(),
-		    cupp, icupp, icupp->numberOfNonzeros(), exploit2links);
+		    cupp, icupp, icupp->numberOfNonzeros());
 
   return data;
 }

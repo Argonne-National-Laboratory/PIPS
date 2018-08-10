@@ -407,7 +407,7 @@ sData::sData(sTree* tree)
 
   createChildren();
 
-  use2Links = false;
+  useLinkStructure = false;
   n0LinkVars = 0;
 }
 
@@ -417,9 +417,8 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
         GenMatrix  * A_in, OoqpVector * bA_in,
         GenMatrix  * C_in,
         OoqpVector * clow_in, OoqpVector * iclow_in, long long mclow_,
-        OoqpVector * cupp_in, OoqpVector * icupp_in, long long mcupp_,
-        bool exploit2Links)
-
+        OoqpVector * cupp_in, OoqpVector * icupp_in, long long mcupp_
+        )
   : QpGenData(SparseLinearAlgebraPackage::soleInstance(),
          c_in, Q_in,
          xlow_in, ixlow_in, xupp_in, ixupp_in,
@@ -433,22 +432,8 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
 
   createChildren();
 
-  init2LinksData(exploit2Links);
-
-  if( use2Links )
-  {
-     assert(linkStartBlocksA.size() == unsigned(tree_->myl()));
-     assert(linkStartBlocksC.size() == unsigned(tree_->mzl()));
-
-  #ifndef NDEBUG
-     const int myl = tree_->myl();
-     const int mzl = tree_->mzl();
-     assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
-  #endif
-
-     permuteLinkingCons();
-     permuteLinkingVars();
-  }
+  useLinkStructure = false;
+  n0LinkVars = 0;
 }
 
 
@@ -534,18 +519,12 @@ void sData::permuteLinkingVars()
    dynamic_cast<StochVector&>(*ixlow).permuteVec0Entries(linkVarsPermutation);
 }
 
-void sData::init2LinksData(bool exploit2links)
+void sData::activateLinkStructureExploitation()
 {
-   use2Links = exploit2links;
-   n0LinkVars = 0;
-
-   if( !exploit2links )
-   {
-      linkVarsNnz = std::vector<int>();
-      linkStartBlocksA = std::vector<int>();
-      linkStartBlocksC = std::vector<int>();
+   if( useLinkStructure )
       return;
-   }
+
+   useLinkStructure = true;
 
    const int nx0 = getLocalnx();
    int myrank;
@@ -603,7 +582,22 @@ void sData::init2LinksData(bool exploit2links)
    {
       if( myrank == 0 )
          std::cout << "not enough linking structure found" << std::endl;
-      use2Links = false;
+      useLinkStructure = false;
+   }
+
+   if( useLinkStructure )
+   {
+      assert(linkStartBlocksA.size() == unsigned(stochNode->myl()));
+      assert(linkStartBlocksC.size() == unsigned(stochNode->mzl()));
+
+   #ifndef NDEBUG
+      const int myl = stochNode->myl();
+      const int mzl = stochNode->mzl();
+      assert(myl >= 0 && mzl >= 0 && (mzl + myl > 0));
+   #endif
+
+      permuteLinkingCons();
+      permuteLinkingVars();
    }
 }
 
