@@ -33,7 +33,7 @@ inline bool PIPSisLE(double val1, double val2)
 
 inline bool PIPSisLT(double val1, double val2)
 {
-   return (val1 <= val2 - pips_eps);
+   return (val1 < val2 - pips_eps);
 }
 
 inline bool PIPSisEQ_withTolerance(double val1, double val2, double tolerance)

@@ -1304,6 +1304,7 @@ void StochPresolverBase::countRowsCols()
    int nRowsEq = 0;
    int nBoxCols = 0;
    int nColsTotal = 0;
+   int nFreeVars = 0;
 
    if( myRank == 0 )
    {
@@ -1318,9 +1319,9 @@ void StochPresolverBase::countRowsCols()
       currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
       currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->vec);
-      countBoxedColumns( nBoxCols, nColsTotal);
-      cout<<"Number of linking columns: "<<nColsTotal<<endl;
-      cout<<"Number of Rows in A0 (equality): "<<nRowsEq<<" and (inequality): "<<nRowsIneq<<endl;
+      countBoxedColumns( nBoxCols, nColsTotal, nFreeVars);
+      cout<<"Number of Linking variables: "<<nColsTotal<<", free Linking Variables: "<<nFreeVars<<endl;
+      cout<<"Number of Rows in the Root block in A "<<nRowsEq<<", in C: "<<nRowsIneq<<endl;
    }
 
    assert((int)presData.nRowElemsC->children.size() == nChildren);
@@ -1338,7 +1339,7 @@ void StochPresolverBase::countRowsCols()
          currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
          currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
          currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
-         countBoxedColumns( nBoxCols, nColsTotal);
+         countBoxedColumns( nBoxCols, nColsTotal, nFreeVars);
       }
       if(!childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->A)), it, EQUALITY_SYSTEM))
       {
@@ -1357,7 +1358,7 @@ void StochPresolverBase::countRowsCols()
       countRangedRowsBlock(nRangedRowsLink, nRowsLink);
       nRangedRows += nRangedRowsLink;
       nRowsIneq += nRowsLink;
-      cout<<"Number of linking rows in C: "<<nRowsLink<<" and of those ranged: "<<nRangedRowsLink<<endl;
+      cout<<"Number of Linking rows in C: "<<nRowsLink<<", of those linking rows ranged: "<<nRangedRowsLink<<endl;
    }
    if( hasLinking(EQUALITY_SYSTEM) && myRank == 0)
    {
@@ -1365,7 +1366,7 @@ void StochPresolverBase::countRowsCols()
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
       countEqualityRowsBlock(nRowsLink);
       nRowsEq += nRowsLink;
-      cout<<"Number of linking rows in A: "<<nRowsLink<<endl;
+      cout<<"Number of Linking rows in A: "<<nRowsLink<<endl;
    }
 
    if( iAmDistrib )
@@ -1387,9 +1388,10 @@ void StochPresolverBase::countRowsCols()
 
    if( myRank == 0 )
    {
-      cout<<"There are "<<nRangedRows<<" ranged Rows and "<<nRowsIneq<<" rows in C."<<endl;
-      cout<<"There are "<<nRowsEq<<" Rows in A and "<<nRowsEq+nRowsIneq<<" rows in total."<<endl;
-      cout<<"There are "<<nBoxCols<<" boxed Columns and "<<nColsTotal<<" columns in total."<<endl;
+      cout<<"Number of Rows in A: "<<nRowsEq<<endl;
+      cout<<"Number of Rows in C: "<<nRowsIneq<<", of those ranged: "<<nRangedRows<<endl;
+      cout<<"Number of Rows in total: "<<nRowsEq + nRowsIneq<<endl;
+      cout<<"Number of Variables in total: "<<nColsTotal<<", of those bounded: "<<nBoxCols<<" and free: "<<nFreeVars<<endl;
    }
 }
 
@@ -1419,7 +1421,7 @@ void StochPresolverBase::countEqualityRowsBlock(int& nRowsEq) const
    }
 }
 
-void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal) const
+void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars) const
 {
    assert( currIxlowChild->n == currIxuppChild->n );
 
@@ -1430,6 +1432,8 @@ void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal) const
          nColsTotal ++;
          if( currIxlowChild->elements()[i] != 0.0 && currIxuppChild->elements()[i] != 0.0 )
             nBoxCols++;
+         else if( currIxlowChild->elements()[i] == 0.0 && currIxuppChild->elements()[i] == 0.0)
+            nFreeVars++;
       }
    }
 }

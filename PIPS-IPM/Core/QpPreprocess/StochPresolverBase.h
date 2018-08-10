@@ -226,7 +226,7 @@ protected:
 
    void countRangedRowsBlock(int& nRangedRows, int& nRowsIneq) const;
    void countEqualityRowsBlock(int& nRowsEq) const;
-   void countBoxedColumns(int& nBoxCols, int& nColsTotal) const;
+   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars) const;
 };
 
 
