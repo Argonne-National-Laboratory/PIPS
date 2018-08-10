@@ -8,6 +8,18 @@
 #include "mpi.h"
 
 
+static
+std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& perm)
+{
+   size_t size = perm.size();
+   std::vector<unsigned int> perm_inv(size, 0);
+
+   for( size_t i = 0; i < size; i++ )
+      perm_inv[perm[i]] = i;
+
+   return perm_inv;
+}
+
 static inline
 int nnzTriangular(int size)
 {
@@ -16,7 +28,7 @@ int nnzTriangular(int size)
 }
 
 static
-void appendDenseBlock(int start, int end, int& nnz, int* jcolM)
+void appendRowDense(int start, int end, int& nnz, int* jcolM)
 {
    assert(jcolM);
    assert(nnz >= 0);
@@ -24,6 +36,17 @@ void appendDenseBlock(int start, int end, int& nnz, int* jcolM)
 
    for( int i = start; i < end; i++ )
       jcolM[nnz++] = i;
+}
+
+static
+void appendRowSparse(int startColIdx, int endColIdx, int colOffset, const int* jcolM_append, int& nnz, int* jcolM)
+{
+   assert(jcolM);
+   assert(nnz >= 0);
+   assert(startColIdx >= 0 && startColIdx <= endColIdx);
+
+   for( int c = startColIdx; c < endColIdx; c++ )
+      jcolM[nnz++] = colOffset + jcolM_append[c];
 }
 
 static
@@ -173,24 +196,54 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
       assert(bm == nx0 && bn == my0);
 #endif
 
+   const int nx0NonZero = nx0 - n0LinkVars;
    int nnzcount = 0;
 
-   // dense square block, B_0^T, and dense border blocks
-   for( int i = 0; i < nx0; ++i )
+   assert(nx0NonZero >= 0);
+
+   // dense square block, B_0^T, and dense border blocks todo: add space for CDCt
+   for( int i = 0; i < nx0NonZero; ++i )
    {
       const int blength = startRowBtrans[i + 1] - startRowBtrans[i];
       assert(blength >= 0);
 
       krowM[i + 1] = krowM[i] + (nx0 - i) + blength + myl + mzl;
 
-      appendDenseBlock(i, nx0, nnzcount, jcolM);
+      appendRowDense(i, nx0, nnzcount, jcolM);
 
-      for( int cb = startRowBtrans[i]; cb < startRowBtrans[i + 1]; cb++ )
-         jcolM[nnzcount++] = nx0 + colidxBtrans[cb];
+      appendRowSparse(startRowBtrans[i], startRowBtrans[i + 1], nx0, colidxBtrans, nnzcount, jcolM);
 
-      appendDenseBlock(nx0 + my0, nx0 + my0 + myl + mzl, nnzcount, jcolM);
+      appendRowDense(nx0 + my0, nx0 + my0 + myl + mzl, nnzcount, jcolM);
 
       assert(nnzcount == krowM[i + 1]);
+   }
+
+   // dense square block and rest of B_0, F_0^T, G_0^T
+   for( int i = nx0NonZero; i < nx0; ++i )
+   {
+      appendRowDense(i, nx0, nnzcount, jcolM);
+
+      appendRowSparse(startRowBtrans[i], startRowBtrans[i + 1], nx0, colidxBtrans, nnzcount, jcolM);
+
+      if( myl > 0 )
+      {
+         SparseGenMatrix& Ft = getLocalF().getTranspose();
+         const int* startRowFtrans = Ft.krowM();
+         const int* colidxFtrans = Ft.jcolM();
+
+         appendRowSparse(startRowFtrans[i], startRowFtrans[i + 1], nx0 + my0, colidxFtrans, nnzcount, jcolM);
+      }
+
+      if( mzl > 0 )
+      {
+         SparseGenMatrix& Gt = getLocalG().getTranspose();
+         const int* startRowGtrans = Gt.krowM();
+         const int* colidxGtrans = Gt.jcolM();
+
+         appendRowSparse(startRowGtrans[i], startRowGtrans[i + 1], nx0 + my0 + myl, colidxGtrans, nnzcount, jcolM);
+      }
+
+      krowM[i + 1] = nnzcount;
    }
 
    // empty rows; put diagonal for PARDISO
@@ -217,7 +270,7 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
    {
        const int blockrownnz = appendDiagBlocks(linkStartBlocksA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j, blockStartrow, nnzcount, jcolM);
 
-       appendDenseBlock(nx0 + my0 + myl, nx0 + my0 + myl + mzl, nnzcount, jcolM);
+       appendRowDense(nx0 + my0 + myl, nx0 + my0 + myl + mzl, nnzcount, jcolM);
        krowM[i + 1] = krowM[i] + blockrownnz + mzl;
    }
 
@@ -355,6 +408,7 @@ sData::sData(sTree* tree)
   createChildren();
 
   use2Links = false;
+  n0LinkVars = 0;
 }
 
 sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
@@ -442,37 +496,43 @@ void sData::destroyChildren()
 
 void sData::permuteLinkingCons()
 {
+   assert(linkConsPermutationA.size() == 0);
+   assert(linkConsPermutationC.size() == 0);
+
    const size_t nBlocks = dynamic_cast<StochVector&>(*g).children.size();
 
    // compute permutation vectors
-   const std::vector<unsigned int> permvecA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
-   const std::vector<unsigned int> permvecC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
+   linkConsPermutationA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
+   linkConsPermutationC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
 
-   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingCons(permvecA);
-   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingCons(permvecC);
-   dynamic_cast<StochVector&>(*bA).permuteLinkingEntries(permvecA);
-   dynamic_cast<StochVector&>(*bl).permuteLinkingEntries(permvecC);
-   dynamic_cast<StochVector&>(*bu).permuteLinkingEntries(permvecC);
-   dynamic_cast<StochVector&>(*iclow).permuteLinkingEntries(permvecC);
-   dynamic_cast<StochVector&>(*icupp).permuteLinkingEntries(permvecC);
+   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingCons(linkConsPermutationA);
+   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingCons(linkConsPermutationC);
+   dynamic_cast<StochVector&>(*bA).permuteLinkingEntries(linkConsPermutationA);
+   dynamic_cast<StochVector&>(*bl).permuteLinkingEntries(linkConsPermutationC);
+   dynamic_cast<StochVector&>(*bu).permuteLinkingEntries(linkConsPermutationC);
+   dynamic_cast<StochVector&>(*iclow).permuteLinkingEntries(linkConsPermutationC);
+   dynamic_cast<StochVector&>(*icupp).permuteLinkingEntries(linkConsPermutationC);
 }
 
 void sData::permuteLinkingVars()
 {
-   const std::vector<unsigned int>& permvec = get0VarsRightPermutation(linkVarsNnz);
+   assert(linkVarsPermutation.size() == 0);
 
-   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingVars(permvec);
-   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingVars(permvec);
-   dynamic_cast<StochVector&>(*g).permuteVec0Entries(permvec);
-   dynamic_cast<StochVector&>(*bux).permuteVec0Entries(permvec);
-   dynamic_cast<StochVector&>(*blx).permuteVec0Entries(permvec);
-   dynamic_cast<StochVector&>(*ixupp).permuteVec0Entries(permvec);
-   dynamic_cast<StochVector&>(*ixlow).permuteVec0Entries(permvec);
+   linkVarsPermutation = get0VarsRightPermutation(linkVarsNnz);
+
+   dynamic_cast<StochGenMatrix&>(*A).permuteLinkingVars(linkVarsPermutation);
+   dynamic_cast<StochGenMatrix&>(*C).permuteLinkingVars(linkVarsPermutation);
+   dynamic_cast<StochVector&>(*g).permuteVec0Entries(linkVarsPermutation);
+   dynamic_cast<StochVector&>(*bux).permuteVec0Entries(linkVarsPermutation);
+   dynamic_cast<StochVector&>(*blx).permuteVec0Entries(linkVarsPermutation);
+   dynamic_cast<StochVector&>(*ixupp).permuteVec0Entries(linkVarsPermutation);
+   dynamic_cast<StochVector&>(*ixlow).permuteVec0Entries(linkVarsPermutation);
 }
 
 void sData::init2LinksData(bool exploit2links)
 {
    use2Links = exploit2links;
+   n0LinkVars = 0;
 
    if( !exploit2links )
    {
@@ -491,7 +551,6 @@ void sData::init2LinksData(bool exploit2links)
 
    linkVarsNnz = std::vector<int>(nx0, 0);
 
-   int n0LinksVars = 0;
    int n2LinksEq = 0;
    int n2LinksIneq = 0;
 
@@ -509,7 +568,7 @@ void sData::init2LinksData(bool exploit2links)
 
    for( size_t i = 0; i < linkVarsNnz.size(); ++i )
       if( linkVarsNnz[i] == 0 )
-         n0LinksVars++;
+         n0LinkVars++;
 
    for( size_t i = 0; i < linkStartBlocksA.size(); ++i )
       if( linkStartBlocksA[i] >= 0 )
@@ -524,7 +583,7 @@ void sData::init2LinksData(bool exploit2links)
 
    if( myrank == 0 )
    {
-      std::cout << "number of 0-link variables: " << n0LinksVars << " (out of "
+      std::cout << "number of 0-link variables: " << n0LinkVars << " (out of "
             << nx0 << " link variables) " << std::endl;
       std::cout << "number of equality 2-links: " << n2LinksEq << " (out of "
             << linkStartBlocksA.size() << " equalities) " << std::endl;
@@ -535,7 +594,7 @@ void sData::init2LinksData(bool exploit2links)
             << (n2LinksEq + n2LinksIneq) / ((double) linkStartBlocksA.size() + linkStartBlocksC.size()) << std::endl;
    }
 
-   if( (n2LinksEq + n2LinksIneq + n0LinksVars) / double(linkStartBlocksA.size() + linkStartBlocksC.size() + linkVarsNnz.size()) < minStructuredLinksRatio )
+   if( (n2LinksEq + n2LinksIneq + n0LinkVars) / double(linkStartBlocksA.size() + linkStartBlocksC.size() + linkVarsNnz.size()) < minStructuredLinksRatio )
    {
       if( myrank == 0 )
          std::cout << "not enough linking structure found" << std::endl;
@@ -716,6 +775,19 @@ sData::~sData()
     delete children[it];
 }
 
+std::vector<unsigned int> sData::getLinkVarsPermInv()
+{
+   return getInversePermuation(linkVarsPermutation);
+}
+std::vector<unsigned int> sData::getLinkConsEqPermInv()
+{
+   return getInversePermuation(linkConsPermutationA);
+}
+std::vector<unsigned int> sData::getLinkConsIneqPermInv()
+{
+   return getInversePermuation(linkConsPermutationC);
+}
+
 int sData::getLocalnx()
 {
   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
@@ -817,6 +889,8 @@ int sData::getSchurCompMaxNnz()
 
    int nnz = 0;
 
+   assert(n0 >= n0LinkVars);
+
    // sum up half of dense square
    nnz += nnzTriangular(n0);
 
@@ -824,8 +898,8 @@ int sData::getSchurCompMaxNnz()
    nnz += getLocalB().numberOfNonZeros();
 
    // add borders
-   nnz += myl * n0;
-   nnz += mzl * n0;
+   nnz += myl * (n0 - n0LinkVars);
+   nnz += mzl * (n0 - n0LinkVars);
 
    // (empty) diagonal
    nnz += my;
@@ -838,6 +912,20 @@ int sData::getSchurCompMaxNnz()
 
    // add linking mixed parts todo
    nnz += myl * mzl;
+
+   if( myl > 0 )
+   {
+      SparseGenMatrix& Ft = getLocalF().getTranspose();
+      const int* startRowFtrans = Ft.krowM();
+      nnz += startRowFtrans[n0] - startRowFtrans[n0 - n0LinkVars];
+   }
+
+   if( mzl > 0 )
+   {
+      SparseGenMatrix& Gt = getLocalG().getTranspose();
+      const int* startRowGtrans = Gt.krowM();
+      nnz += startRowGtrans[n0] - startRowGtrans[n0 - n0LinkVars];
+   }
 
    return nnz;
 }

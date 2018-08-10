@@ -37,6 +37,10 @@ class sData : public QpGenData {
  public:
   long long nxlow, nxupp, mclow, mcupp;
 
+  std::vector<unsigned int> getLinkVarsPermInv();
+  std::vector<unsigned int> getLinkConsEqPermInv();
+  std::vector<unsigned int> getLinkConsIneqPermInv();
+
   int getLocalnx();
   int getLocalmy();
   int getLocalmyl();
@@ -46,7 +50,7 @@ class sData : public QpGenData {
   int getLocalSizes(int& nx, int& my, int& mz, int& myl, int& mzl);
 
   int getLocalNnz(int& nnzQ, int& nnzB, int& nnzD);
-
+  int getN0LinkVars() {return n0LinkVars;}
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
   bool with2Links() {return use2Links;};
@@ -61,14 +65,17 @@ class sData : public QpGenData {
   SparseGenMatrix& getLocalD();
   SparseGenMatrix& getLocalG();
 
+
+  void printLinkVarsStats();
+  void printLinkConsStats();
+
+
   void sync();
 
  public:
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
-  virtual void printLinkVarsStats();
-  virtual void printLinkConsStats();
 
   virtual ~sData();
 
@@ -77,6 +84,7 @@ class sData : public QpGenData {
   void destroyChildren();
 
  private:
+  int n0LinkVars;
   const static int nLinkStats = 21;
   const static double minStructuredLinksRatio = 0.5;
   static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
@@ -96,6 +104,9 @@ class sData : public QpGenData {
   std::vector<int> linkStartBlocksC;
   std::vector<int> linkStartBlockLengthsA;
   std::vector<int> linkStartBlockLengthsC;
+  std::vector<unsigned int> linkVarsPermutation;
+  std::vector<unsigned int> linkConsPermutationA;
+  std::vector<unsigned int> linkConsPermutationC;
 
   void init2LinksData(bool exploit2links);
   void permuteLinkingVars();
