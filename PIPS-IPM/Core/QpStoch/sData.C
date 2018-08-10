@@ -505,6 +505,9 @@ void sData::permuteLinkingCons()
    linkConsPermutationA = getAscending2LinkPermutation(linkStartBlocksA, nBlocks);
    linkConsPermutationC = getAscending2LinkPermutation(linkStartBlocksC, nBlocks);
 
+   assert(permutationIsValid(linkConsPermutationA));
+   assert(permutationIsValid(linkConsPermutationC));
+
    dynamic_cast<StochGenMatrix&>(*A).permuteLinkingCons(linkConsPermutationA);
    dynamic_cast<StochGenMatrix&>(*C).permuteLinkingCons(linkConsPermutationC);
    dynamic_cast<StochVector&>(*bA).permuteLinkingEntries(linkConsPermutationA);
@@ -519,6 +522,8 @@ void sData::permuteLinkingVars()
    assert(linkVarsPermutation.size() == 0);
 
    linkVarsPermutation = get0VarsRightPermutation(linkVarsNnz);
+
+   assert(permutationIsValid(linkVarsPermutation));
 
    dynamic_cast<StochGenMatrix&>(*A).permuteLinkingVars(linkVarsPermutation);
    dynamic_cast<StochGenMatrix&>(*C).permuteLinkingVars(linkVarsPermutation);

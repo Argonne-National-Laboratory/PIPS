@@ -7,6 +7,7 @@
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 #include "DoubleMatrixHandle.h"
+#include "pipschecks.h"
 #include <vector>
 
 class sTree;

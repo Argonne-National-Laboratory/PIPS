@@ -10,7 +10,6 @@
 #include "PardisoIndefSolver.h"
 #include "sData.h"
 #include "sTree.h"
-#include "pipschecks.h"
 #include <limits>
 
 //#define DUMPKKT
