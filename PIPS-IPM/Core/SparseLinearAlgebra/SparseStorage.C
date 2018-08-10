@@ -12,6 +12,7 @@
 #include <limits>
 #include <fstream>
 #include <pipsdef.h>
+#include <algorithm>
 
 int SparseStorage::instances = 0;
 
@@ -284,6 +285,19 @@ void SparseStorage::fromGetColBlock(int col, double *A, int lda, int colExtent, 
   }
 }
 
+
+void SparseStorage::getLinkVarsNnz(std::vector<int>& vec) const
+{
+   assert(int(vec.size()) == n);
+
+   for( int i = 0; i < len; i++ )
+   {
+      const int col = jcolM[i];
+      assert(col < n);
+
+      vec[col]++;
+   }
+}
 
 void SparseStorage::atPutSpRow( int row, double A[], int lenA,
 				    int jcolA[], int& info )
@@ -1545,6 +1559,64 @@ void SparseStorage::permuteRows(const std::vector<unsigned int>& permvec)
    krowM = krowM_new;
    M = M_new;
 }
+
+
+void SparseStorage::permuteCols(const std::vector<unsigned int>& permvec)
+{
+   assert(int(permvec.size()) == n);
+
+   std::vector<unsigned int> permvec_rev(n, 0);
+
+   int* indexvec = new int[n];
+   int* bufferCol = new int[n];
+   double* bufferM = new double[n];
+
+   for( int i = 0; i < n; i++ )
+   {
+      assert(permvec[i] < unsigned(n));
+
+      permvec_rev[permvec[i]] = i;
+   }
+
+   for( int r = 0; r < m; ++r )
+   {
+      const int row_start = krowM[r];
+      const int row_end = krowM[r + 1];
+      const int row_length = row_end - row_start;
+
+      if( row_length == 0 )
+         continue;
+
+      for( int c = row_start; c < row_end; c++ )
+      {
+         const int col = jcolM[c];
+         assert(col < n);
+
+         jcolM[c] = permvec_rev[col];
+      }
+
+      for( int i = 0; i < row_length; i++ )
+         indexvec[i] = i;
+
+      std::sort(indexvec, indexvec + row_length, index_sort(jcolM + row_start, row_length) );
+
+      for( int i = 0; i < row_length; i++ )
+      {
+         assert(indexvec[i] < row_length);
+
+         bufferCol[i] = jcolM[row_start + indexvec[i]];
+         bufferM[i] = M[row_start + indexvec[i]];
+      }
+
+      memcpy(jcolM + row_start, bufferCol, row_length * sizeof(int));
+      memcpy(M + row_start, bufferM, row_length * sizeof(double));
+   }
+
+   delete[] indexvec;
+   delete[] bufferM;
+   delete[] bufferCol;
+}
+
 
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:

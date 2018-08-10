@@ -6,6 +6,8 @@
 #define SAUGLINSYS
 
 #include "sLinsysRoot.h"
+//#include "pipschecks.h"
+
 class sData;
 /** 
  * ROOT (= NON-leaf) linear system in reduced augmented form

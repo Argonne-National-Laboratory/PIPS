@@ -576,6 +576,29 @@ double StochGenMatrix::abmaxnorm()
   return nrm;
 }
 
+void StochGenMatrix::getLinkVarsNnz(std::vector<int>& vec) const
+{
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->getLinkVarsNnzChild(vec);
+
+   if( iAmDistrib )
+   {
+      int* buffer = new int[vec.size()];
+      MPI_Allreduce(&vec[0], buffer, vec.size(), MPI_INT, MPI_SUM, mpiComm);
+
+      std::memcpy(&vec[0], buffer, vec.size() * sizeof(int));
+
+      delete[] buffer;
+   }
+}
+
+void StochGenMatrix::getLinkVarsNnzChild(std::vector<int>& vec) const
+{
+   assert(children.size() == 0);
+
+   Amat->getLinkVarsNnz(vec);
+}
+
 void StochGenMatrix::writeToStream(ostream& out) const
 {
   assert( "Has not been yet implemented" && 0 );
@@ -1155,13 +1178,32 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
    return linkBlockStart;
 }
 
-void StochGenMatrix::permuteLinkingRows(const std::vector<unsigned int>& permvec)
+
+void StochGenMatrix::permuteLinkingVars(const std::vector<unsigned int>& permvec)
+{
+   if( Blmat )
+      Blmat->permuteCols(permvec);
+
+   Bmat->permuteCols(permvec);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->permuteLinkingVarsChild(permvec);
+}
+
+void StochGenMatrix::permuteLinkingVarsChild(const std::vector<unsigned int>& permvec)
+{
+   Amat->permuteCols(permvec);
+
+   assert(children.size() == 0);
+}
+
+void StochGenMatrix::permuteLinkingCons(const std::vector<unsigned int>& permvec)
 {
    if( Blmat )
       Blmat->permuteRows(permvec);
 
    for( size_t it = 0; it < children.size(); it++ )
-      children[it]->permuteLinkingRows(permvec);
+      children[it]->permuteLinkingCons(permvec);
 }
 
 

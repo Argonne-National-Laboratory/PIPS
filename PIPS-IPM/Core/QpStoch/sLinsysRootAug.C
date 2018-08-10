@@ -10,7 +10,6 @@
 #include "PardisoIndefSolver.h"
 #include "sData.h"
 #include "sTree.h"
-#include "pipschecks.h"
 #include <limits>
 
 //#define DUMPKKT
@@ -861,6 +860,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    int* const krowKkt = kkts.krowM();
    int* const jcolKkt = kkts.jcolM();
    double* const MKkt = kkts.M();
+   const int n0Links = prob->getN0LinkVars();
 
    assert(kkts.size() == locnx + locmy + locmyl + locmzl);
    assert(!kkts.isLower);
@@ -967,21 +967,48 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       const int* krowFt = Ft.krowM();
       const int* jcolFt = Ft.jcolM();
 
+      int* krowGt = NULL;
+
+      if( locmzl > 0 )
+      {
+         SparseGenMatrix& Gt = prob->getLocalG().getTranspose();
+         krowGt = Gt.krowM();
+      }
+
       for( int i = 0; i < locnx; ++i )
       {
+         const bool sparseRow = (i >= locnx - n0Links);
          const int pend = krowFt[i + 1];
 
-         // get start position of dense kkt block
-         const int blockStart = krowKkt[i + 1] - locmyl - locmzl;
-
-         assert(blockStart >= krowKkt[i]);
-
-         for( int p = krowFt[i]; p < pend; ++p )
+         if( sparseRow )
          {
-            const int col = jcolFt[p];
-            assert(col < locmyl && jcolKkt[blockStart + col] == (locnx + locmy + col));
+            int blockStart =  krowKkt[i + 1] - (krowFt[i + 1] - krowFt[i]);
 
-            MKkt[blockStart + col] += MFt[p];
+            if( locmzl > 0 )
+               blockStart -= (krowGt[i + 1] - krowGt[i]);
+
+            assert(blockStart >= krowKkt[i]);
+
+            for( int p = krowFt[i], shift = 0; p < pend; ++p, ++shift )
+            {
+               const int col = jcolFt[p];
+               assert(col < locmyl && jcolKkt[blockStart + shift] == (locnx + locmy + col));
+
+               MKkt[blockStart + shift] += MFt[p];
+            }
+         }
+         else
+         {
+            const int blockStart = krowKkt[i + 1] - locmyl - locmzl;
+            assert(blockStart >= krowKkt[i]);
+
+            for( int p = krowFt[i]; p < pend; ++p )
+            {
+               const int col = jcolFt[p];
+               assert(col < locmyl && jcolKkt[blockStart + col] == (locnx + locmy + col));
+
+               MKkt[blockStart + col] += MFt[p];
+            }
          }
       }
    }
@@ -999,18 +1026,35 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       for( int i = 0; i < locnx; ++i )
       {
          const int pend = krowGt[i + 1];
+         const bool sparseRow = (i >= locnx - n0Links);
 
-         // get start position of dense kkt block
-         const int blockStart = krowKkt[i + 1] - locmzl;
-
-         assert(blockStart >= krowKkt[i]);
-
-         for( int p = krowGt[i]; p < pend; ++p )
+         if( sparseRow )
          {
-            const int col = jcolGt[p];
-            assert(col < locmzl && jcolKkt[blockStart + col] == (locnx + locmy + locmyl + col));
+            const int blockStart = krowKkt[i + 1] - (krowGt[i + 1] - krowGt[i]);
 
-            MKkt[blockStart + col] += MGt[p];
+            assert(blockStart >= krowKkt[i]);
+
+            for( int p = krowGt[i], shift = 0; p < pend; ++p, ++shift )
+            {
+               const int col = jcolGt[p];
+               assert(col < locmzl && jcolKkt[blockStart + shift] == (locnx + locmy + locmyl + col));
+
+               MKkt[blockStart + shift] += MGt[p];
+            }
+         }
+         else
+         {
+            const int blockStart = krowKkt[i + 1] - locmzl;
+
+            assert(blockStart >= krowKkt[i]);
+
+            for( int p = krowGt[i]; p < pend; ++p )
+            {
+               const int col = jcolGt[p];
+               assert(col < locmzl && jcolKkt[blockStart + col] == (locnx + locmy + locmyl + col));
+
+               MKkt[blockStart + col] += MGt[p];
+            }
          }
       }
 
