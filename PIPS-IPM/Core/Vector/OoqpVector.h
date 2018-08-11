@@ -14,6 +14,7 @@
 using namespace std;
 #include "IotrRefCount.h"
 #include "OoqpVectorHandle.h"
+#include "pipsdef.h"
 
 /** An abstract class representing the implementation of a OoqpVector. 
  *
@@ -106,6 +107,12 @@ public:
    *  which it occurs. */
   virtual void max( double& m, int& index ) = 0;
 
+  /** Return the absolute minimum value of this vector */
+  virtual void absmin(double& m) = 0;
+
+  /** Return the absolute minimum value of this vector bigger than tolerance */
+    virtual void absminNonZero(double& m, double tolerance=pips_eps) = 0;
+
   /** Return the dot product of this OoqpVector with v */
   virtual double dotProductWith( OoqpVector& v ) = 0;
 
@@ -122,6 +129,9 @@ public:
 
   /** Invert (1/x) the elements of this OoqpVector, but don't divide by zero and replace by zeroReplacementVal instead */
   virtual void invertSave( double zeroReplacementVal = 0.0 ) = 0;
+
+  /** Take the square root of each element of this OoqpVector. */
+  virtual void applySqrt() = 0;
 
   /** Rounds vector entries to nearest power of two values */
   virtual void roundToPow2() = 0;

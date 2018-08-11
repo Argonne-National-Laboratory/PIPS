@@ -15,14 +15,7 @@
 #include "StochMonitor.h"
 #include "Scaler.h"
 #include <cstdlib>
-
 #include "PreprocessFactory.h"
-// todo: proper run-time parameter
-#ifdef WITH_PARDISOINDEF
-   const static bool sparsekkt = true;
-#else
-   const static bool sparsekkt = false;
-#endif
 
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
@@ -153,6 +146,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 
 #ifdef TIMING
   if(mype==0) printf("data created\n");
+#endif
+
+#ifdef WITH_PARDISOINDEF
+  data->activateLinkStructureExploitation();
 #endif
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );

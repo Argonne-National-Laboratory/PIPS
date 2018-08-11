@@ -35,6 +35,42 @@ void SimpleVector::min( double& m, int& index )
   }
 }
 
+void SimpleVector::absmin(double& min)
+{
+   if (n==0) {
+     min=1e20;
+     return;
+   }
+   min = fabs(v[0]);
+   for( int i = 0; i < n; i++ ) {
+     if( fabs(v[i]) < min ) {
+        min = fabs(v[i]);
+     }
+   }
+}
+
+/** Compute the min absolute value that is at least as big as tolerance.
+ * If there is no such value, return 0.0 */
+void SimpleVector::absminNonZero(double& min, double tolerance)
+{
+   assert( tolerance >= 0.0 );
+   if (n==0) {
+        min=0.0;
+        return;
+   }
+   bool initialized = false;
+   for( int i = 0; i < n; i++ ) {
+     if( fabs(v[i]) > tolerance ) {
+        if( !initialized || fabs(v[i]) < min ) {
+           min = fabs(v[i]);
+           initialized = true;
+        }
+     }
+   }
+   if( !initialized )
+      min = 0.0;
+}
+
 void SimpleVector::max( double& m, int& index )
 {
    if( n == 0 )
@@ -188,7 +224,7 @@ double SimpleVector::twonorm()
   }
   return sqrt(norm);
   */
-}    
+}
 
 void SimpleVector::componentMult( OoqpVector& vec )
 {
@@ -499,6 +535,15 @@ void SimpleVector::invertSave( double zeroReplacementVal )
      else
         v[i] = zeroReplacementVal;
   }
+}
+
+void SimpleVector::applySqrt()
+{
+   for( int i = 0; i < n; i++)
+   {
+      assert( v[i] >= 0.0 );
+      v[i] = std::sqrt(v[i]);
+   }
 }
 
 void SimpleVector::roundToPow2()

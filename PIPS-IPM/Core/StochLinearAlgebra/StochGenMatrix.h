@@ -91,9 +91,13 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
-  virtual void initTransposedChild(bool dynamic);
 
+  virtual void initTransposedChild(bool dynamic);
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec);
+
+  virtual void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec);
+
+  virtual void getLinkVarsNnzChild(std::vector<int>& vec) const;
 
   virtual void writeToStreamDenseChild(stringstream& out, int offset) const;
   virtual std::string writeToStreamDenseRowLink(int rowidx) const;
@@ -144,6 +148,8 @@ public:
                            double alpha,  OoqpVector& x );
 
   virtual double abmaxnorm();
+
+  virtual void getLinkVarsNnz(std::vector<int>& vec) const;
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
@@ -202,7 +208,8 @@ public:
   virtual void updateKLinkVarsCount(std::vector<int>& linkCount) const;
   virtual void updateKLinkConsCount(std::vector<int>& linkCount) const;
 
-  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec);
+  virtual void permuteLinkingVars(const std::vector<unsigned int>& permvec);
+  virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec);
 };
 
 
@@ -287,6 +294,10 @@ public:
 
   virtual double abmaxnorm(){ return 0.0; };
 
+  virtual void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec) {};
+  virtual void getLinkVarsNnzChild(std::vector<int>& vec) const{};
+
+  virtual void getLinkVarsNnz(std::vector<int>& vec) const{};
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamDense(ostream& out) const{};
   virtual void writeToStreamDenseChild(stringstream& out, int offset) const{};
@@ -342,7 +353,8 @@ public:
   virtual void updateKLinkVarsCount(std::vector<int>& linkCount) const {};
   virtual void updateKLinkConsCount(std::vector<int>& linkCount) const {};
 
-  virtual void permuteLinkingRows(const std::vector<unsigned int>& permvec) {};
+  virtual void permuteLinkingVars(const std::vector<unsigned int>& permvec) {};
+  virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec) {};
 };
 
 

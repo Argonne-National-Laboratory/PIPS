@@ -9,7 +9,27 @@
 #include <math.h>
 #include <cassert>
 
-// are the columns of the given sub-matrix ordered?
+bool permutationIsValid(const std::vector<unsigned int>& perm)
+{
+   size_t size = perm.size();
+   std::vector<bool> permflag(size, false);
+
+   for( size_t i = 0; i < size; ++i )
+   {
+      const unsigned int p = perm[i];
+      if( p >= size )
+         return false;
+      permflag[p] = true;
+   }
+
+   for( size_t i = 0; i < size; ++i )
+      if( !permflag[i] )
+         return false;
+
+   return true;
+}
+
+
 bool subMatrixIsOrdered(const int* rowptr, const int* colidx,
       int rowstart, int rowend)
 {
@@ -25,7 +45,6 @@ bool subMatrixIsOrdered(const int* rowptr, const int* colidx,
    return true;
 }
 
-// compute residual norms for Ax=rhs with A in CSR with 1-indexing (Fortran)
 void computeFortranCSRMatResidualNorms(const int* rowptr, const int* colidx, const double* vals, /*const*/ SimpleVector& rhs,
       /*const*/ SimpleVector& x, double& res_norm2, double& res_nrmInf, double& sol_inf, double& mat_max)
 {

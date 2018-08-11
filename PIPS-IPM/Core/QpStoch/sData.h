@@ -7,6 +7,7 @@
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 #include "DoubleMatrixHandle.h"
+#include "pipschecks.h"
 #include <vector>
 
 class sTree;
@@ -27,8 +28,7 @@ class sData : public QpGenData {
 	 GenMatrix * A, OoqpVector * bA,
 	 GenMatrix * C,
 	 OoqpVector * clow, OoqpVector * iclow, long long mclow,
-	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp,
-	 bool exploit2Links = false);
+	 OoqpVector * cupp, OoqpVector * ciupp, long long mcupp);
 
   std::vector<sData*> children;
   void AddChild(sData* child);
@@ -36,6 +36,10 @@ class sData : public QpGenData {
 
  public:
   long long nxlow, nxupp, mclow, mcupp;
+
+  std::vector<unsigned int> getLinkVarsPermInv();
+  std::vector<unsigned int> getLinkConsEqPermInv();
+  std::vector<unsigned int> getLinkConsIneqPermInv();
 
   int getLocalnx();
   int getLocalmy();
@@ -46,10 +50,10 @@ class sData : public QpGenData {
   int getLocalSizes(int& nx, int& my, int& mz, int& myl, int& mzl);
 
   int getLocalNnz(int& nnzQ, int& nnzB, int& nnzD);
-
+  int getN0LinkVars() {return n0LinkVars;}
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
-  bool with2Links() {return use2Links;};
+  bool exploitingLinkStructure() {return useLinkStructure;};
   SparseSymMatrix* createSchurCompSymbSparseUpper();
 
   SparseSymMatrix& getLocalQ();
@@ -61,6 +65,11 @@ class sData : public QpGenData {
   SparseGenMatrix& getLocalD();
   SparseGenMatrix& getLocalG();
 
+  void printLinkVarsStats();
+  void printLinkConsStats();
+
+  void activateLinkStructureExploitation();
+
   void sync();
 
  public:
@@ -69,23 +78,20 @@ class sData : public QpGenData {
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
   virtual void datainput() {};
-  void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
 
-  virtual void printLinkVarsStats();
-  virtual void printLinkConsStats();
+  void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
 
   virtual ~sData();
 
  protected:
-  std::vector<int> linkRowsPermutationA;
-  std::vector<int> linkRowsPermutationC;
-
   void createChildren();
   void destroyChildren();
 
  private:
+  int n0LinkVars;
   const static int nLinkStats = 21;
-  const static double min2LinksRatio = 0.5;
+  const static double minStructuredLinksRatio = 0.5;
+  static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   // nnz in Schur complement signified by given vector
@@ -96,14 +102,18 @@ class sData : public QpGenData {
 
   static std::vector<int> get2LinkLengthsVec(const std::vector<int>& linkStartBlocks, size_t nBlocks);
 
-  bool use2Links;
+  bool useLinkStructure;
+  std::vector<int> linkVarsNnz;
   std::vector<int> linkStartBlocksA;
   std::vector<int> linkStartBlocksC;
   std::vector<int> linkStartBlockLengthsA;
   std::vector<int> linkStartBlockLengthsC;
+  std::vector<unsigned int> linkVarsPermutation;
+  std::vector<unsigned int> linkConsPermutationA;
+  std::vector<unsigned int> linkConsPermutationC;
 
-  void init2LinksData(bool exploit2links);
-  void permuteLinkingRows(const std::vector<unsigned int>& permvecA, const std::vector<unsigned int>& permvecC);
+  void permuteLinkingVars();
+  void permuteLinkingCons();
 };
 
 

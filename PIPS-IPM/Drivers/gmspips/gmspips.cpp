@@ -190,10 +190,16 @@ int fmatQ(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 }
 
-static void setParams(bool& scale, bool& stepDiffLp, bool& presolve, const char* paramname)
+static void setParams(ScalerType& scaler_type, bool& stepDiffLp, bool& presolve, const char* paramname)
 {
-   if( strcmp(paramname, "scale") == 0 )
-      scale = true;
+   if( strcmp(paramname, "scale") == 0 || strcmp(paramname, "scaleEqui") == 0 )
+      scaler_type = SCALER_EQUI_STOCH;
+
+   if( strcmp(paramname, "scaleGeo") == 0 )
+      scaler_type = SCALER_GEO_STOCH;
+
+   if( strcmp(paramname, "scaleGeoEqui") == 0 )
+      scaler_type = SCALER_GEO_EQUI_STOCH;
 
    if( strcmp(paramname, "stepLp") == 0 )
       stepDiffLp = true;
@@ -213,13 +219,13 @@ int main(int argc, char ** argv)
 #endif
 
    GMSPIPSBlockData_t** blocks;
-   bool scale = false;
+   ScalerType scaler_type = SCALER_NONE;
    bool stepDiffLp = false;
    bool presolve = false;
 
-   if ( (argc<3) || (argc>6) )
+   if ( (argc<3) || (argc>7) )
    {
-      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp]" << endl;
+      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp] [presolve]" << endl;
       exit(1);
    }
    
@@ -233,7 +239,7 @@ int main(int argc, char ** argv)
    }
    
    for( int i = 5; i <= argc; i++ )
-      setParams(scale, stepDiffLp, presolve, argv[i - 1]);
+      setParams(scaler_type, stepDiffLp, presolve, argv[i - 1]);
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
 #if 0
@@ -411,9 +417,9 @@ int main(int argc, char ** argv)
 	   if( gmsRank == 0 )
 	      cout << "Different steplengths in primal and dual direction are used." << endl;
 
-		PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
-				scale ? SCALER_EQUI_STOCH : SCALER_NONE,
-				presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
+      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
+            scaler_type,
+            presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 
 		if( gmsRank == 0 )
 		   cout << "PIPSIpmInterface created" << endl;
@@ -429,7 +435,7 @@ int main(int argc, char ** argv)
 	else
 	{
 		PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
-				scale ? SCALER_EQUI_STOCH : SCALER_NONE,
+		      scaler_type,
 				presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 
 		//PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);

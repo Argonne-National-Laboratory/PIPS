@@ -38,10 +38,10 @@ protected:
   }
 
   // scaling vector
-  StochVectorHandle vec_rowscaleQ;
-  StochVectorHandle vec_rowscaleA;
-  StochVectorHandle vec_rowscaleC;
-  StochVectorHandle vec_colscale;
+  OoqpVector* vec_rowscaleQ;
+  OoqpVector* vec_rowscaleA;
+  OoqpVector* vec_rowscaleC;
+  OoqpVector* vec_colscale;
 
   // problem data
   SymMatrixHandle Q;
@@ -61,10 +61,12 @@ protected:
   virtual void doObjScaling() = 0;
 
   /** get maximum absolute row ratio and write maximum row entries into vectors */
-  virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC);
+  virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, OoqpVector* colScalevec);
 
   /** get maximum absolute column ratio and write maximum column entries into vectors */
-  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec);
+  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector* rowScaleVecA, OoqpVector* rowScaleVecC);
+
+  void scaleVector(OoqpVector& vector, double scaling_factor);
 public:
 
   QpScaler(Data* prob, bool bitshifting = true);

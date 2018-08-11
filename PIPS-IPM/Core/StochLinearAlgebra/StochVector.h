@@ -70,6 +70,8 @@ public:
   virtual double onenorm();
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
+  virtual void absmin( double& m);
+  virtual void absminNonZero(double& m, double tolerance=pips_eps);
   virtual double stepbound(OoqpVector & v, double maxStep );
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -116,6 +118,7 @@ public:
   virtual void negate();
   virtual void invert();
   virtual void invertSave( double zeroReplacementVal = 0.0 );
+  virtual void applySqrt();
   virtual void roundToPow2();
 
   virtual int allPositive();
@@ -135,6 +138,7 @@ public:
   virtual void copyIntoArray( double v[] ) const;
   virtual void copyFromArray( double v[] );
   virtual void copyFromArray( char v[] );
+  virtual void permuteVec0Entries(const std::vector<unsigned int>& permvec);
   virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec);
 
   /** remove entries i for which select[i] == 0 */
@@ -178,6 +182,8 @@ public:
   virtual double infnorm(){return 0.0;}
   virtual double onenorm(){return 0.0;}
   virtual void min( double& m, int& index ){};
+  virtual void absmin( double& m){};
+  virtual void absminNonZero(double& m, double tolerance=pips_eps){};
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -226,6 +232,7 @@ public:
   virtual void negate(){};
   virtual void invert(){};
   virtual void invertSave( double zeroReplacementVal = 0.0 ){};
+  virtual void applySqrt(){};
   virtual void roundToPow2(){};
   virtual int allPositive(){return 1;}
 
@@ -246,6 +253,7 @@ public:
   virtual void copyFromArray( char v[] ){};
 
   virtual void removeEntries( const OoqpVector& select ) {};
+  virtual void permuteVec0(const std::vector<unsigned int>& permvec) {};
   virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec) {};
 
   int getSize() { return 0; };

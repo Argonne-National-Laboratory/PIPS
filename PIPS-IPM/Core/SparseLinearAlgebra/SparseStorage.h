@@ -27,6 +27,21 @@ private:
   /** store absolute non-zero maximum entry of row i and vec[i] in vec[i]; empty rows get value 0.0  */
   void getRowMaxVec(const double* colScaleVec, double* vec) const;
 
+  class index_sort
+  {
+     private:
+       const int* indices;
+       const int maxsize;
+
+     public:
+       index_sort(const int* indices, int maxsize) : indices(indices), maxsize(maxsize) {}
+
+       bool operator()(int i, int j) const
+       {
+          assert(i < maxsize && j < maxsize);
+          return (indices[i] < indices[j]);
+       }
+  };
 protected:
   int neverDeleteElts;
   
@@ -153,12 +168,14 @@ public:
 
   /** add nnz per row to given array */
   void addNnzPerRow(double* vec) const;
+  void getLinkVarsNnz(std::vector<int>& vec) const;
 
   /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i];
    *  empty rows get value 0.0 for maximization and <double>::max() for minimization  */
   void getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const;
 
   void permuteRows(const std::vector<unsigned int>& permvec);
+  void permuteCols(const std::vector<unsigned int>& permvec);
 
   void dump(const string& filename);
 

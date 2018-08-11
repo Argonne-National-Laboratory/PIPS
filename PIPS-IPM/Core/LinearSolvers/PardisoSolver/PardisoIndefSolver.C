@@ -178,6 +178,10 @@ void PardisoIndefSolver::factorizeFromSparse()
 
       ia[r + 1] = nnznew + 1;
    }
+   int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+   if( myrank == 0 )
+      std::cout << "real nnz in KKT: " << nnznew << std::endl;
 #else
    for( int i = 0; i < nnz; i++ )
       a[i] = aStorage[i];

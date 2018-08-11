@@ -1371,18 +1371,20 @@ void StochPresolverBase::countRowsCols()
 
    if( iAmDistrib )
    {
-      int* count = new int[5];
+      int* count = new int[6];
       count[0] = nRangedRows;
       count[1] = nRowsIneq;
       count[2] = nRowsEq;
       count[3] = nBoxCols;
       count[4] = nColsTotal;
-      MPI_Allreduce(MPI_IN_PLACE, count, 5, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      count[5] = nFreeVars;
+      MPI_Allreduce(MPI_IN_PLACE, count, 6, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       nRangedRows = count[0];
       nRowsIneq = count[1];
       nRowsEq = count[2];
       nBoxCols = count[3];
       nColsTotal = count[4];
+      nFreeVars = count[5];
       delete[] count;
    }
 

@@ -14,7 +14,7 @@
 EquiStochScaler::EquiStochScaler(Data* prob, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
-
+   cout<<"Creating EquiStochScaler..."<<endl;
 }
 
 void EquiStochScaler::doObjScaling()
@@ -26,23 +26,7 @@ void EquiStochScaler::doObjScaling()
    const double absmax = obj->infnorm();
    assert(absmax >= 0);
 
-   if( absmax > 0.0 )
-      factor_objscale = 1.0 / absmax;
-   else
-      factor_objscale = 1.0;
-
-   if( do_bitshifting )
-   {
-      int exp;
-      const double mantissa = std::frexp(factor_objscale, &exp);
-
-      if( mantissa >= 0.75 )
-         factor_objscale = std::ldexp(0.5, exp + 1);
-      else
-         factor_objscale = std::ldexp(0.5, exp);
-   }
-
-   obj->scalarMult(factor_objscale);
+   scaleVector(*obj, absmax);
 }
 
 // todo scale Q
@@ -53,18 +37,23 @@ void EquiStochScaler::scale()
     * since the absolute smallest value in the scaled matrix is bounded from below by
     * the inverse of the maximum ratio of the direction that is done first */
 
-   StochVectorHandle rowmaxA(dynamic_cast<StochVector*>(bA->clone()));
-   StochVectorHandle rowminA(dynamic_cast<StochVector*>(bA->clone()));
-   StochVectorHandle rowmaxC(dynamic_cast<StochVector*>(rhsC->clone()));
-   StochVectorHandle rowminC(dynamic_cast<StochVector*>(rhsC->clone()));
-   StochVectorHandle colmax(dynamic_cast<StochVector*>(bux->clone()));
-   StochVectorHandle colmin(dynamic_cast<StochVector*>(bux->clone()));
+   StochVector* rowmaxA = dynamic_cast<StochVector*>(bA->clone());
+   StochVector* rowminA = dynamic_cast<StochVector*>(bA->clone());
+   StochVector* rowmaxC = dynamic_cast<StochVector*>(rhsC->clone());
+   StochVector* rowminC = dynamic_cast<StochVector*>(rhsC->clone());
+   StochVector* colmax = dynamic_cast<StochVector*>(bux->clone());
+   StochVector* colmin = dynamic_cast<StochVector*>(bux->clone());
 
-   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC);
-   const double colratio = maxColRatio(*colmax, *colmin);
+   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, NULL);
+   const double colratio = maxColRatio(*colmax, *colmin, NULL, NULL);
 
    PIPSdebugMessage("rowratio %f \n", rowratio);
    PIPSdebugMessage("colratio %f \n", colratio);
+
+   // minimum vectors are not needed here
+   delete rowminA;
+   delete rowminC;
+   delete colmin;
 
    assert(vec_rowscaleA == NULL && vec_rowscaleC == NULL && vec_colscale == NULL);
 
@@ -114,8 +103,8 @@ void EquiStochScaler::scale()
    StochVectorHandle xcolmax(dynamic_cast<StochVector*>(bux->clone()));
    StochVectorHandle xcolmin(dynamic_cast<StochVector*>(bux->clone()));
 
-   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC);
-   const double xcolratio = maxColRatio(*xcolmax, *xcolmin);
+   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, NULL);
+   const double xcolratio = maxColRatio(*xcolmax, *xcolmin, NULL, NULL);
 
    PIPSdebugMessage("rowratio after scaling %f \n", xrowratio);
    PIPSdebugMessage("colratio after scaling %f \n", xcolratio);

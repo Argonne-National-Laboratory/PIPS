@@ -8,6 +8,7 @@
 
 #include "OoqpVector.h"
 #include "SimpleVectorHandle.h"
+#include "pipsdef.h"
 #include "vector"
 
 /**
@@ -58,6 +59,8 @@ public:
   virtual double onenorm();
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
+  virtual void absmin( double& m);
+  virtual void absminNonZero(double& m, double tolerance=pips_eps);
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);
@@ -90,6 +93,7 @@ public:
   virtual void negate();
   virtual void invert();
   virtual void invertSave( double zeroReplacementVal = 0.0 );
+  virtual void applySqrt();
   virtual void roundToPow2();
   virtual int allPositive();
   virtual long long numberOfNonzeros();

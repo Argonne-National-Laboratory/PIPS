@@ -9,12 +9,15 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_PREPROCESSFACTORY_H_
 
 #include "EquiStochScaler.h"
+#include "GeoStochScaler.h"
 #include "StochPresolver.h"
+#include "IotrRefCount.h"
+#include "SmartPointer.h"
 
-enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH};
+enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH, SCALER_GEO_EQUI_STOCH};
 enum PresolverType {PRESOLVER_NONE, PRESOLVER_STOCH};
 
-class PreprocessFactory
+class PreprocessFactory : public IotrRefCount
 {
 public:
       static Scaler* makeScaler(Data* data, ScalerType type)
@@ -23,6 +26,10 @@ public:
             {
             case SCALER_EQUI_STOCH:
                return new EquiStochScaler(data);
+            case SCALER_GEO_STOCH:
+               return new GeoStochScaler(data, false);
+            case SCALER_GEO_EQUI_STOCH:
+               return new GeoStochScaler(data, true);
             default:
                return 0;
             }

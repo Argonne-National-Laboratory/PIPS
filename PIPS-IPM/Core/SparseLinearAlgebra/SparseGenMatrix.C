@@ -648,6 +648,11 @@ void SparseGenMatrix::deleteTransposed()
    }
 }
 
+void SparseGenMatrix::getLinkVarsNnz(std::vector<int>& vec) const
+{
+   mStorage->getLinkVarsNnz(vec);
+}
+
 void SparseGenMatrix::updateNonEmptyRowsCount(std::vector<int>& rowcount) const
 {
    const int m = mStorage->m;
@@ -698,7 +703,15 @@ void SparseGenMatrix::permuteRows(const std::vector<unsigned int>& permvec)
 {
    mStorage->permuteRows(permvec);
 
-   // todo implement column permutation
-   assert(!m_Mt);
+   if( m_Mt )
+      m_Mt->mStorage->permuteCols(permvec);
+}
+
+void SparseGenMatrix::permuteCols(const std::vector<unsigned int>& permvec)
+{
+   mStorage->permuteCols(permvec);
+
+   if( m_Mt )
+      m_Mt->mStorage->permuteRows(permvec);
 }
 
