@@ -14,7 +14,10 @@
 GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
-   cout<<"Creating GeoStochScaler..."<<endl;
+   int myRank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank == 0) std::cout<<"Creating GeoStochScaler..."<<endl;
    equilibrate = equiScaling;
 
    // todo: adjust parameters
