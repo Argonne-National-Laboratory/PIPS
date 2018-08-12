@@ -51,9 +51,6 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
 
   // use sparse KKT if link structure is present
   hasSparseKkt = prob_->exploitingLinkStructure();
-
-  int todo;
-
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
