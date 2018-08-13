@@ -129,13 +129,22 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   // presolving activated?
   if( presolver_type != PRESOLVER_NONE )
   {
+
      origData = dynamic_cast<sData*>(factory->makeData());
+
+     MPI_Barrier(comm);
+     const double t0_presolve = MPI_Wtime();
 
      presolver = prefactory.makePresolver(origData, presolver_type);
 
      data = dynamic_cast<sData*>(presolver->presolve());
 
      factory->data = data; // todo update also sTree* of factory
+
+     MPI_Barrier(comm);
+     const double t_presolve = MPI_Wtime();
+     if( mype == 0 )
+        std::cout << "---presolve time (in sec.): " << t_presolve - t0_presolve << std::endl;
   }
   else
   {
