@@ -25,22 +25,24 @@ void StochPresolverTinyEntries::applyPresolving()
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-   if( myRank == 0)
-      std::cout << "removing tiny entries..." << std::endl;
+#ifndef NDEBUG
+   if( myRank == 0 )
+      cout << "Starting model cleaup..." << endl;
+   countRowsCols();
+#endif
 
    nelims += removeTinyEntriesSystemA();
    StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*presProb->A);
    updateTransposed(A);
 
-   if( myRank == 0)
-         std::cout << "removing tiny entries in inequality system C..." << std::endl;
-
    nelims += removeTinyEntriesSystemC();
    StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*presProb->C);
    updateTransposed(C);
 
+#ifndef NDEBUG
    if( myRank == 0)
-      std::cout << "removing tiny entries finished. Removed "<< nelims <<" entries in total." << std::endl;
+      cout << "Model cleanup finished. Removed "<< nelims <<" entries in total." << std::endl;
+#endif
 }
 
 int StochPresolverTinyEntries::removeTinyEntriesSystemA()
@@ -94,7 +96,37 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    }
    updateNnzUsingReductions((*presData.nColElems).vec, presData.redCol->vec);
 
-   // todo: special treatment for the linking rows
+   // the linking rows:
+   if( hasLinking(EQUALITY_SYSTEM) )
+   {
+      updateCPforLinkingRows( -1, EQUALITY_SYSTEM );
+      int nelimsF0 = removeTinyLinkingRows(-1, EQUALITY_SYSTEM );
+      // update nCol and nRowA using reductions:
+      updateNnzUsingReductions( (*presData.nColElems).vec, currRedColParent);
+      updateNnzUsingReductions( (*presData.nRowElemsA).vecl, currRedRow);
+
+      if( myRank == 0 )
+         nelims += nelimsF0;
+
+      // go through the children:
+      for( size_t it = 0; it< matrix.children.size(); it++)
+      {
+         if( updateCPforLinkingRows(int(it), EQUALITY_SYSTEM) )
+         {
+            nelims += removeTinyLinkingRows((int)it, EQUALITY_SYSTEM);
+            // update nCol using reductions:
+            updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nColElems).children[it])->vec, currRedColChild);
+         }
+      }
+
+      // update nRowElems.vecl via AllReduce:
+      if( iAmDistrib )
+      {
+         double* redRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl)->elements();
+         const int message_size = dynamic_cast<SimpleVector*>(presData.redRowA->vecl)->length();
+         MPI_Allreduce(MPI_IN_PLACE, redRowLink, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      }
+   }
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &nelims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -153,7 +185,37 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
    }
    updateNnzUsingReductions((*presData.nColElems).vec, presData.redCol->vec);
 
-   // todo: special treatment for the linking rows
+   // the linking rows:
+   if( hasLinking(INEQUALITY_SYSTEM) )
+   {
+      updateCPforLinkingRows( -1, INEQUALITY_SYSTEM );
+      int nelimsF0 = removeTinyLinkingRows(-1, INEQUALITY_SYSTEM );
+      // update nCol and nRowA using reductions:
+      updateNnzUsingReductions( (*presData.nColElems).vec, currRedColParent);
+      updateNnzUsingReductions( (*presData.nRowElemsC).vecl, currRedRow);
+
+      if( myRank == 0 )
+         nelims += nelimsF0;
+
+      // go through the children:
+      for( size_t it = 0; it< matrix.children.size(); it++)
+      {
+         if( updateCPforLinkingRows(int(it), INEQUALITY_SYSTEM) )
+         {
+            nelims += removeTinyLinkingRows((int)it, INEQUALITY_SYSTEM);
+            // update nCol using reductions:
+            updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nColElems).children[it])->vec, currRedColChild);
+         }
+      }
+
+      // update nRowElems.vecl via AllReduce:
+      if( iAmDistrib )
+      {
+         double* redRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->elements();
+         const int message_size = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->length();
+         MPI_Allreduce(MPI_IN_PLACE, redRowLink, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      }
+   }
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &nelims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -242,7 +304,7 @@ int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_ty
          const int col = storage->jcolM[k];
          if( fabs(storage->M[k]) < tolerance3 )
          {
-            cout << "Remove entry M ( "<< r << ", " << storage->jcolM[k] << " ) = "<<storage->M[k]<<" (by first test)"<<endl;
+            // cout << "Remove entry M ( "<< r << ", " << storage->jcolM[k] << " ) = "<<storage->M[k]<<" (by first test)"<<endl;
             storeRemovedEntryIndex(r, storage->jcolM[k], it, block_type);
             updateAndSwap(storage, r, k, end, redCol, nelims);
          }
@@ -259,7 +321,7 @@ int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_ty
                   clowElems[r] -= storage->M[k] * xlowElems[col];
             }
 
-            cout << "Remove entry M ( "<< r << ", " << col << " ) = "<<storage->M[k]<<" (by second test)"<<endl;
+            // cout << "Remove entry M ( "<< r << ", " << col << " ) = "<<storage->M[k]<<" (by second test)"<<endl;
             storeRemovedEntryIndex(r, storage->jcolM[k], it, block_type);
             updateAndSwap(storage, r, k, end, redCol, nelims);
          }
@@ -274,6 +336,93 @@ int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_ty
    return nelims;
 }
 
+int StochPresolverTinyEntries::removeTinyLinkingRows( int it, SystemType system_type )
+{
+   // Setting all the pointers correctly
+   int nelims = 0;
+   double tmp = 0;
+   double* xlowElems;
+   double* xuppElems;
+   double* ixlowElems;
+   double* ixuppElems;
+   double* redCol;
+
+   if( it == -1 )
+   {
+      xlowElems = currxlowParent->elements();
+      xuppElems = currxuppParent->elements();
+      ixlowElems = currIxlowParent->elements();
+      ixuppElems = currIxuppParent->elements();
+      redCol = currRedColParent->elements();
+   }
+   else
+   {
+      xlowElems = currxlowChild->elements();
+      xuppElems = currxuppChild->elements();
+      ixlowElems = currIxlowChild->elements();
+      ixuppElems = currIxuppChild->elements();
+      redCol = currRedColChild->elements();
+   }
+
+   double* rhsElems;
+   double* icuppElems;
+   double* iclowElems;
+   double* cuppElems;
+   double* clowElems;
+
+   if( system_type == EQUALITY_SYSTEM )
+      rhsElems = currEqRhsLink->elements();
+   else
+   {
+      assert( system_type == INEQUALITY_SYSTEM );
+      icuppElems = currIcuppLink->elements();
+      iclowElems = currIclowLink->elements();
+      cuppElems = currIneqRhsLink->elements();
+      clowElems = currIneqLhsLink->elements();
+   }
+
+   // the actual work starts here:
+   for( int r = 0; r < currBlmat->m; r++ )   // r: row index
+   {
+      int end = currBlmat->rowptr[r].end;
+      int k = currBlmat->rowptr[r].start;
+      while( k < end )
+      {
+         const int col = currBlmat->jcolM[k];
+         if( fabs(currBlmat->M[k]) < tolerance3 )
+         {
+            // cout << "Remove entry M ( "<< r << ", " <<col<<" (by first test) in Linking Constraint."<<endl;
+            updateAndSwap(currBlmat, r, k, end, redCol, nelims);
+            removeEntryInDynamicStorage(*currBlmatTrans, col, r, tmp);
+         }
+         else if( fabs(currBlmat->M[k]) < tolerance1 && ixuppElems[col] != 0.0 && ixlowElems[col] != 0.0
+               && fabs(currBlmat->M[k]) * (xuppElems[col] - xlowElems[col]) * currNnzRow->elements()[r] < tolerance2 * feastol )
+         {
+            if( system_type == EQUALITY_SYSTEM )
+               rhsElems[r] -= currBlmat->M[k] * xlowElems[col];
+            else
+            {
+               if( icuppElems[r] != 0.0 )
+                  cuppElems[r] -= currBlmat->M[k] * xlowElems[col];
+               if( iclowElems[r] != 0.0 )
+                  clowElems[r] -= currBlmat->M[k] * xlowElems[col];
+            }
+
+            // cout << "Remove entry M ( "<< r << ", " << col << " ) (by second test) in Linking Constraint."<<endl;
+            updateAndSwap(currBlmat, r, k, end, redCol, nelims);
+            removeEntryInDynamicStorage(*currBlmatTrans, col, r, tmp);
+         }
+         k++;
+      }
+   }
+
+   return nelims;
+}
+
+/**
+ * Set the current pointers to the currently necessary data.
+ * If it==-1, case as root.
+ */
 bool StochPresolverTinyEntries::updateCPforTinyEntry(int it, SystemType system_type)
 {
    setCurrentPointersToNull();
@@ -306,4 +455,43 @@ bool StochPresolverTinyEntries::updateCPforTinyEntry(int it, SystemType system_t
    return true;
 }
 
+/**
+ * Set the current pointers to the linking constraints.
+ * If it==-1, case at F_0.
+ */
+bool StochPresolverTinyEntries::updateCPforLinkingRows(int it, SystemType system_type)
+{
+   if( it == -1 )
+      assert( hasLinking(system_type) );
+
+   setCurrentPointersToNull();
+   // set the column pointers:
+   if( it == -1 )
+      setCPColumnRoot();
+   else
+      setCPColumnChild(it);
+
+   // set the matrix and row pointers:
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      // dummy child? set currBlmat as F_0:
+      if( !setCPLinkConstraint(presProb->A, it, system_type) ) return false;
+      // set row pointers:
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      setCPRowLinkEquality();
+      currRedRow = currRedRowLink;
+   }
+   else  // system_type == INEQUALITY_SYSTEM
+   {
+      // dummy child? set currBlmat as G_0:
+      if( !setCPLinkConstraint(presProb->C, it, system_type) ) return false;
+      // set row pointers:
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      setCPRhsLinkInequality();
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      currRedRow = dynamic_cast<SimpleVector*>(presData.redRowC->vecl);
+   }
+
+   return true;
+}
 

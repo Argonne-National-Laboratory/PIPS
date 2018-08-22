@@ -64,9 +64,9 @@ public:
 protected:
    static const double feastol = 1.0e-6;
    static const double infinity = 10e30;
-   static const double tolerance1 = 1.0e-3;
-   static const double tolerance2 = 1.0e-2;
-   static const double tolerance3 = 1.0e-10;
+   static const double tolerance1 = 1.0e-3;  // for model cleanup
+   static const double tolerance2 = 1.0e-2;  // for model cleanup
+   static const double tolerance3 = 1.0e-10; // for model cleanup
    static const double tolerance4 = 1.0e-12; // for variable fixing
    static const double limit1 = 1.0e3;   // for bound strengthening
    static const double limit2 = 1.0e8;   // for bound strengthening
@@ -172,6 +172,7 @@ protected:
    bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
    bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
    bool setCPAmatBmat(GenMatrixHandle matrixHandle, int it, SystemType system_type);
+   bool setCPLinkConstraint(GenMatrixHandle matrixHandle, int it, SystemType system_type);
    void setCPBlmatsRoot(GenMatrixHandle matrixHandle);
    void setCPBlmatsChild(GenMatrixHandle matrixHandle, int it);
    void setCPColumnRoot();

@@ -60,9 +60,7 @@ StochPresolverBase::~StochPresolverBase()
  */
 void StochPresolverBase::updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims)
 {
-   double* redRow = currRedRow->elements();
-
-   redRow[rowidx]++;
+   currRedRow->elements()[rowidx]++;
    redCol[storage->jcolM[indexK]]++;
 
    std::swap(storage->M[indexK],storage->M[rowEnd-1]);
@@ -556,6 +554,22 @@ bool StochPresolverBase::setCPAmatBmat(GenMatrixHandle matrixHandle, int it, Sys
       if( childIsDummy(matrix, it, system_type) ) return false;
       currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
       currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
+   }
+   return true;
+}
+
+bool StochPresolverBase::setCPLinkConstraint(GenMatrixHandle matrixHandle, int it, SystemType system_type)
+{
+   assert( it >= -1 && it<nChildren );
+   assert( hasLinking(system_type) );
+
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*matrixHandle);
+   if( it == -1 ) // F_0
+      setCPBlmatsRoot(matrixHandle);
+   else  // F_it
+   {
+      if( childIsDummy(matrix, it, system_type) ) return false;
+      setCPBlmatsChild( matrixHandle, it);
    }
    return true;
 }

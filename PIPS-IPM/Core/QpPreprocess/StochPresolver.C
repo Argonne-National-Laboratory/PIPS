@@ -62,7 +62,7 @@ Data* StochPresolver::presolve()
 
    StochPresolverBoundStrengthening presolverBS(presData);
    StochPresolverParallelRows presolverParallelRow(presData);
-   //StochPresolverTinyEntries presolverTiny(presData);
+   StochPresolverTinyEntries presolverTiny(presData);
    StochPresolverSingletonRows presolverSR(presData);
    //StochPresolverSingletonColumns presolverSC(presData);
 
@@ -79,7 +79,7 @@ Data* StochPresolver::presolve()
 
    presolverBS.applyPresolving();
    presolverParallelRow.applyPresolving();
-   //presolverTiny.applyPresolving();
+   presolverTiny.applyPresolving();
    presolverSR.applyPresolving();
    //presolverSC.applyPresolving();
 
