@@ -332,18 +332,23 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
             // store the fixation to remove the column later after communicating
             if( !atRoot || myRank==0 )
               storeColValInColAdaptParent(colIdx, varvalue);
+            // tighten the bounds to varvalue on this processor:
+            setNewBound(colIdx, varvalue, currxlowParent, currIxlowParent );
+            setNewBound(colIdx, varvalue, currxuppParent, currIxuppParent );
 
-            // nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied
+            // note : nnz/red Counters are not touched yet, they will be set later when colAdaptParent is applied
 
          }
-         if( atRoot )
-            setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
-               *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);
-         else if( checkNewBoundTightens(true, colIdx, newBoundUpp, *currIxuppParent, *currxuppParent)
-               || checkNewBoundTightens(false, colIdx, newBoundLow, *currIxlowParent, *currxlowParent) )
-            storeNewBoundsParent(colIdx, newBoundLow, newBoundUpp);  // store the bounds in newBoundsParent for all processes
+         else  // no fixation, but maybe bound strengthening:
+         {
+            if( atRoot )
+               setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
+                     *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);
+            else if( checkNewBoundTightens(true, colIdx, newBoundUpp, *currIxuppParent, *currxuppParent)
+                  || checkNewBoundTightens(false, colIdx, newBoundLow, *currIxlowParent, *currxlowParent) )
+               storeNewBoundsParent(colIdx, newBoundLow, newBoundUpp);  // store the bounds in newBoundsParent for all processes
+         }
       }
-
    }
 }
 

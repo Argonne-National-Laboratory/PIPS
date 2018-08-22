@@ -1079,6 +1079,35 @@ bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, dou
       value = newxlow;
       return true;
    }
+   // if relative difference between newxlow and newxupp is below a threshold, fix the variable:
+   double upperbound = newxupp;
+   if( ixupp[colIdx] != 0.0 && xupp[colIdx]<newxupp )
+      upperbound = xupp[colIdx];
+   double lowerbound = newxlow;
+   if( ixlow[colIdx] != 0.0 && xlow[colIdx]>newxlow )
+      lowerbound = xlow[colIdx];
+   double absmax = std::max(fabs(upperbound), fabs(lowerbound) );
+   double absdiff = fabs( upperbound - lowerbound );
+   if( absdiff / absmax < tolerance4 )
+   {
+      // verify if one of the bounds is integer:
+      double intpart;
+      if( modf(lowerbound, &intpart) == 0.0 )
+      {
+         value = lowerbound;
+         return true;
+      }
+      else if( modf(upperbound, &intpart) == 0.0 )
+      {
+         value = upperbound;
+         return true;
+      }
+      else  // set the variable to the arithmetic mean:
+      {
+         value = (lowerbound + upperbound ) / 2.0;
+         return true;
+      }
+   }
    return false;
 }
 
