@@ -21,9 +21,6 @@ public:
 
 private:
    bool setCPforBounds(GenMatrixHandle matrixHandle, int it, SystemType system_type);
-   void computeActivityBlockwise( SparseStorageDynamic& matrix, int rowIdx, int colIdx,
-         double& infRow, double& supRow,
-         SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp);
    void doBoundStrengthParent(SystemType system_type);
    void doBoundStrengthChild(int it, SystemType system_type);
    double computeNewBound(bool rhs, double activity, double matrixEntry, int rowIdx, SystemType system_type);

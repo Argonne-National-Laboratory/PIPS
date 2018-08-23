@@ -225,6 +225,9 @@ protected:
    void clearNewBoundsParent();
 
    void sumIndivObjOffset();
+   void computeActivityBlockwise( SparseStorageDynamic& matrix, int rowIdx, int colIdx,
+         double& infRow, double& supRow,
+         SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp);
 
    void countRangedRowsBlock(int& nRangedRows, int& nRowsIneq) const;
    void countEqualityRowsBlock(int& nRowsEq) const;

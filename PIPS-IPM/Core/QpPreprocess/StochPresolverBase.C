@@ -1336,6 +1336,57 @@ void StochPresolverBase::sumIndivObjOffset()
       MPI_Allreduce(MPI_IN_PLACE, &indivObjOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
+/**
+ * Compute the minimum and maximum activity of the row rowIdx in matrix. If colIdx!=-1, then this entry
+ * is excluded in the computation of the activities.
+ */
+void StochPresolverBase::computeActivityBlockwise( SparseStorageDynamic& matrix, int rowIdx, int colIdx,
+      double& infRow, double& supRow,
+      SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp)
+{
+   // todo: possibly add two bools: if infty, indicate if at least two bounds were infty
+   assert( rowIdx >= 0 && rowIdx < matrix.m );
+   const int n = matrix.n;
+   assert( colIdx >= -1 && colIdx < n );
+   assert( xlow.n == n && ixlow.n == n && xupp.n == n && ixupp.n == n );
+
+   for( int j=matrix.rowptr[rowIdx].start; j<matrix.rowptr[rowIdx].end; j++)
+   {
+      const int col = matrix.jcolM[j];
+      const double entry = matrix.M[j];
+      if( col == colIdx )
+         continue;
+      if( entry > 0)
+      {
+         // add entry * lower_bound to infRow
+         if( ixlow.elements()[col] != 0.0)
+            infRow += entry * xlow.elements()[col];
+         else
+            infRow = -std::numeric_limits<double>::max();
+         // add entry * upper_bound to supRow
+         if( ixupp.elements()[col] != 0.0 )
+            supRow += entry * xupp.elements()[col];
+         else
+            supRow = std::numeric_limits<double>::max();
+      }
+      else
+      {
+         // add entry * upper_bound to infRow
+         if( ixupp.elements()[col] != 0.0 )
+            infRow += entry * xupp.elements()[col];
+         else
+            infRow = -std::numeric_limits<double>::max();
+         // add entry * lower_bound to supRow
+         if( ixlow.elements()[col] != 0.0 )
+            supRow += entry * xlow.elements()[col];
+         else
+            supRow = std::numeric_limits<double>::max();
+      }
+      if( supRow == std::numeric_limits<double>::max() && infRow == -std::numeric_limits<double>::max() )
+         return;
+   }
+}
+
 void StochPresolverBase::countRowsCols()
 {
    int myRank;

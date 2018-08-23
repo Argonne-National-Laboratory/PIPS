@@ -39,6 +39,10 @@ void StochPresolverTinyEntries::applyPresolving()
    StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*presProb->C);
    updateTransposed(C);
 
+   // todo: removal of redundant constraints
+   // set current pointers
+   // per row, compute activies and compare to lhs and rhs
+
 #ifndef NDEBUG
    if( myRank == 0)
       cout << "Model cleanup finished. Removed "<< nelims <<" entries in total." << std::endl;
