@@ -44,6 +44,9 @@ void StochPresolverTinyEntries::applyPresolving()
    int nRemovedRows = 0;
    nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
    nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
+   // update the nnzColParent counters:
+   updateNnzColParent(MPI_COMM_WORLD);
+   presData.resetRedCounters();
 
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -71,7 +74,11 @@ int StochPresolverTinyEntries::removeRedundantRows(GenMatrixHandle matrixHandle,
    else
       setCPRowRootInequality();
 
-   int nRemovedRowsRoot = removeRedRowsBlockwise(system_type, true);
+   int nRemovedRowsRoot = removeRedundantRowsBlockwise(system_type, true);
+   // update nnzColParent counters using redColParent:
+   updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
+   presData.resetRedCounters();
+
    if( myRank==0 )
       nRemovedRows += nRemovedRowsRoot;
 
@@ -90,15 +97,21 @@ int StochPresolverTinyEntries::removeRedundantRows(GenMatrixHandle matrixHandle,
          else
             setCPRowChildInequality((int)it);                  // nnzRow, IneqLhs, IneqRhs
 
-         nRemovedRows += removeRedRowsBlockwise(system_type, false);
+         nRemovedRows += removeRedundantRowsBlockwise(system_type, false);
       }
    }
    // todo linking rows
+   if( hasLinking(system_type))
+   {
+      int nRemovedRowsLink = removeRedundantLinkingRows(system_type);
+      if( myRank==0 )
+         nRemovedRows += nRemovedRowsLink;
+   }
 
    return nRemovedRows;
 }
 
-int StochPresolverTinyEntries::removeRedRowsBlockwise(SystemType system_type, bool atRoot)
+int StochPresolverTinyEntries::removeRedundantRowsBlockwise(SystemType system_type, bool atRoot)
 {
    assert( currAmat && currAmatTrans );
    assert( currxlowParent && currIxlowParent && currxuppParent && currIxuppParent );
@@ -176,6 +189,23 @@ int StochPresolverTinyEntries::removeRedRowsBlockwise(SystemType system_type, bo
          }
       }
    }
+   return nRemovedRows;
+}
+
+int StochPresolverTinyEntries::removeRedundantLinkingRows(SystemType system_type)
+{
+   assert( hasLinking(system_type) );
+   int nRemovedRows = 0;
+
+   // set pointers to F_0 and compute min/max activity of F0 block (only rank==0 )
+
+   // go through children, set the pointers for F_i blocks. compute activity and sum them up
+
+   // Allreduce sum over all activites
+
+   // check for redundant rows
+
+
    return nRemovedRows;
 }
 

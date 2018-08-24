@@ -24,12 +24,13 @@ class StochPresolverTinyEntries : public StochPresolverBase
    private:
 
       int removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type);
-      int removeRedRowsBlockwise(SystemType system_type, bool atRoot);
+      int removeRedundantRowsBlockwise(SystemType system_type, bool atRoot);
+      int removeRedundantLinkingRows(SystemType system_type);
+
       int removeTinyEntriesSystemA();
       int removeTinyEntriesSystemC();
 
       int removeTinyChild( int it, SystemType system_type );
-
       int removeTinyInnerLoop( int it, SystemType system_type, BlockType block_type );
       int removeTinyLinkingRows( int it, SystemType system_type );
       /** initialize current pointer for matrices and vectors.
