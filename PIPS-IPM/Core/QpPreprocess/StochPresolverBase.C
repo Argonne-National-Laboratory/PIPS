@@ -757,29 +757,38 @@ void StochPresolverBase::removeRow(int rowIdx, SparseStorageDynamic& Ablock, Spa
 
    if(Bblock)
    {
-      assert( BblockTrans );
       assert( Ablock.m == Bblock->m );
-      assert( nnzColChild );
-      assert( Bblock->n == nnzColChild->n );
-
-      const int rowStartB = Bblock->rowptr[rowIdx].start;
-      const int rowEndB = Bblock->rowptr[rowIdx].end;
-      assert( rowEndB - rowStartB + rowEndA - rowStartA == nnzRow.elements()[rowIdx] );
-
-      // delete row in BblockTrans:
-      for(int k=rowStartB; k<rowEndB; k++)
-      {
-         const int colIdx = Bblock->jcolM[k];
-         double tmp = 0.0;
-         removeEntryInDynamicStorage(*BblockTrans, colIdx, rowIdx, tmp);
-         // decrement nnzColChild[colIdx]:
-         nnzColChild->elements()[colIdx]--;
-      }
-      // delete row in Bblock:
-      clearRow(*Bblock, rowIdx);
+      removeRowInBblock( rowIdx, Bblock, BblockTrans, nnzColChild);
    }
    // set nnzRow[rowIdx] to 0.0:
    nnzRow.elements()[rowIdx] = 0.0;
+}
+
+/** Remove row rowIdx in Bblock which should not be a linking variable block.
+ * Removes the corresponding column in BblockTrans.
+ * Decrements nnzColChild by one at each column index the row had an entry.
+ */
+void StochPresolverBase::removeRowInBblock(int rowIdx, SparseStorageDynamic* Bblock,
+      SparseStorageDynamic* BblockTrans, SimpleVector* nnzColChild)
+{
+   assert( Bblock && BblockTrans );
+   assert( nnzColChild );
+   assert( Bblock->n == nnzColChild->n );
+
+   const int rowStartB = Bblock->rowptr[rowIdx].start;
+   const int rowEndB = Bblock->rowptr[rowIdx].end;
+
+   // delete row in BblockTrans:
+   for(int k=rowStartB; k<rowEndB; k++)
+   {
+      const int colIdx = Bblock->jcolM[k];
+      double tmp = 0.0;
+      removeEntryInDynamicStorage(*BblockTrans, colIdx, rowIdx, tmp);
+      // decrement nnzColChild[colIdx]:
+      nnzColChild->elements()[colIdx]--;
+   }
+   // delete row in Bblock:
+   clearRow(*Bblock, rowIdx);
 }
 
 bool StochPresolverBase::childIsDummy(StochGenMatrix const & matrix, int it, SystemType system_type)

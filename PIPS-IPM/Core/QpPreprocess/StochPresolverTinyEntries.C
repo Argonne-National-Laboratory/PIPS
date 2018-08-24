@@ -58,6 +58,10 @@ void StochPresolverTinyEntries::applyPresolving()
 #endif
 }
 
+/** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity
+ * with the row bounds (lhs and rhs). If a row is found to be redundant, it is removed.
+ * If infeasiblity is detected, then Abort.
+ */
 int StochPresolverTinyEntries::removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type)
 {
    int myRank;
@@ -100,17 +104,21 @@ int StochPresolverTinyEntries::removeRedundantRows(GenMatrixHandle matrixHandle,
          nRemovedRows += removeRedundantRowsBlockwise(system_type, false);
       }
    }
-   // todo linking rows
+   // linking rows:
    if( hasLinking(system_type))
    {
-      int nRemovedRowsLink = removeRedundantLinkingRows(system_type);
+      int nRemovedRowsLink = removeRedundantLinkingRows(matrixHandle, system_type);
       if( myRank==0 )
+      {
          nRemovedRows += nRemovedRowsLink;
+         cout<<"Removed Linking Constraints during model cleanup: "<< nRemovedRowsLink <<endl;
+      }
    }
 
    return nRemovedRows;
 }
 
+/** Find and remove redundant rows per child (!atRoot) or for the root block. */
 int StochPresolverTinyEntries::removeRedundantRowsBlockwise(SystemType system_type, bool atRoot)
 {
    assert( currAmat && currAmatTrans );
@@ -192,21 +200,192 @@ int StochPresolverTinyEntries::removeRedundantRowsBlockwise(SystemType system_ty
    return nRemovedRows;
 }
 
-int StochPresolverTinyEntries::removeRedundantLinkingRows(SystemType system_type)
+/** Find and remove redundant linking constraints. */
+int StochPresolverTinyEntries::removeRedundantLinkingRows(GenMatrixHandle matrixHandle, SystemType system_type)
 {
    assert( hasLinking(system_type) );
+
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
    int nRemovedRows = 0;
 
-   // set pointers to F_0 and compute min/max activity of F0 block (only rank==0 )
+   int nLinkRows = 0;
+   if( system_type== EQUALITY_SYSTEM)
+      nLinkRows = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl)->n;
+   else
+      nLinkRows = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl)->n;
 
-   // go through children, set the pointers for F_i blocks. compute activity and sum them up
+   // todo: use other structure supporting bound checks?
+   double* minActivity = new double[nLinkRows];
+   double* maxActivity = new double[nLinkRows];
+   // bool array of length nLinkRows indicating if row is redundant:
+   bool* rowIsRedundant = new bool[nLinkRows];
+   for( int i=0; i<nLinkRows; i++)
+   {
+      minActivity[i] = 0.0;
+      maxActivity[i] = 0.0;
+      rowIsRedundant[i] = false;
+   }
 
-   // Allreduce sum over all activites
+   computeLinkingRowActivity(matrixHandle, system_type, minActivity, maxActivity, nLinkRows);
 
-   // check for redundant rows
+   // set pointers for checkRedundantLinkingRow():
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      currEqRhsLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vecl);
+   }
+   else
+   {
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      setCPRhsLinkInequality();
+   }
+   checkRedundantLinkingRow(matrixHandle, system_type, minActivity, maxActivity, nLinkRows, rowIsRedundant);
 
+   // remove redundant rows indicated in rowIsRedundant:
+   // per child, set pointers for F_i blocks
+   //    go through all rows and remove the indicated redundant rows
+   // set pointers for the F_0 block
+   // go again through all rows, remove them in F_0, count number of removed rows and set nnzRow to 0.
+
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(matrixHandle));
+   for( size_t it = 0; it< matrix.children.size(); it++)
+   {
+      if( !childIsDummy(matrix, (int)it, system_type) )
+      {
+         setCPBlmatsChild(matrixHandle, (int)it);
+         currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+
+         for( int r=0; r<nLinkRows; r++)
+         {
+            if( rowIsRedundant[r] )
+               removeRowInBblock(r, currBlmat, currBlmatTrans, currNnzColChild);
+         }
+      }
+   }
+   // F_0 block
+   setCPBlmatsRoot(matrixHandle);
+   currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
+   if( system_type == EQUALITY_SYSTEM )
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+   else
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+
+   for( int r=0; r<nLinkRows; r++)
+   {
+      if( rowIsRedundant[r] )
+      {
+         removeRow(r, *currBlmat, *currBlmatTrans, NULL, NULL, *currNnzRow, *currRedColParent, NULL);
+         nRemovedRows++;
+      }
+   }
+   // update the nnzColParent counters:
+   updateNnzColParent(MPI_COMM_WORLD);
+   presData.resetRedCounters();
+
+   delete[] minActivity;
+   delete[] maxActivity;
+   delete[] rowIsRedundant;
 
    return nRemovedRows;
+}
+
+/** Compute the minimal and maximal row activies of the linking rows. */
+void StochPresolverTinyEntries::computeLinkingRowActivity(GenMatrixHandle matrixHandle, SystemType system_type,
+      double* minActivity, double* maxActivity, int nLinkRows)
+{
+   assert( hasLinking(system_type) );
+
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
+   // set pointers to F_0 and compute min/max activity of F0 block (only rank==0) :
+   if( myRank == 0 )
+   {
+      setCPBlmatsRoot(matrixHandle);   // set currBlmat, currBlmatTrans
+      setCPColumnRoot();               // redColParent, xlowParent etc
+      for( int r=0; r<nLinkRows; r++)
+      {
+         double minAct = 0.0;
+         double maxAct = 0.0;
+         computeActivityBlockwise(*currBlmat, r, -1, minAct, maxAct, *currxlowParent, *currIxlowParent, *currxuppParent, *currIxuppParent);
+         minActivity[r] = minAct;
+         maxActivity[r] = maxAct;
+      }
+   }
+
+   // go through children, set the pointers for F_i blocks. compute activity and sum them up
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(matrixHandle));
+   for( size_t it = 0; it< matrix.children.size(); it++)
+   {
+      if( !childIsDummy(matrix, (int)it, system_type) )
+      {
+         setCPBlmatsChild(matrixHandle, (int)it);
+         setCPColumnChild((int)it);
+         for( int r=0; r<nLinkRows; r++)
+         {
+            double minAct = 0.0;
+            double maxAct = 0.0;
+            computeActivityBlockwise(*currBlmat, r, -1, minAct, maxAct, *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
+            minActivity[r] += minAct;
+            maxActivity[r] += maxAct;
+         }
+      }
+   }
+
+   // Allreduce sum over all activites
+   if( iAmDistrib )
+   {
+      MPI_Allreduce(MPI_IN_PLACE, minActivity, nLinkRows, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, maxActivity, nLinkRows, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   }
+}
+
+/** For each linking row, check if it is redundant using the minimal and maximal row activities
+ * compared to the lhs and rhs. */
+void StochPresolverTinyEntries::checkRedundantLinkingRow(GenMatrixHandle matrixHandle, SystemType system_type,
+      double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant)
+{
+   // check for redundant rows
+   for( int r=0; r<nLinkRows; r++)
+   {
+      if( currNnzRow->elements()[r] == 0.0 ) // empty rows might still have a rhs but should be ignored.
+         continue;
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         if( ( minActivity[r] > currEqRhsLink->elements()[r] + feastol ) || ( maxActivity[r] < currEqRhsLink->elements()[r] - feastol ) )
+            abortInfeasible(MPI_COMM_WORLD);
+         else if( (minActivity[r] >= currEqRhsLink->elements()[r] - feastol) && (maxActivity[r] <= currEqRhsLink->elements()[r] + feastol) )
+            rowIsRedundant[r] = true;  // discard row r
+      }
+      else  // system_type == INEQUALITY_SYSTEM
+      {
+         if( currIclowLink->elements()[r] != 0.0 )
+         {
+            if( currIneqLhsLink->elements()[r] <= -infinity )
+            {
+               rowIsRedundant[r] = true;  // discard row r
+               continue;
+            }
+            else if( maxActivity[r] < currIneqLhsLink->elements()[r] - feastol )
+               abortInfeasible(MPI_COMM_WORLD);
+         }
+         if( currIcuppLink->elements()[r] != 0.0 )
+         {
+            if( currIneqRhsLink->elements()[r] >= infinity )
+               rowIsRedundant[r] = true;  // discard row r
+            else if( minActivity[r] > currIneqRhsLink->elements()[r] + feastol )
+               abortInfeasible(MPI_COMM_WORLD);
+
+            else if( currIclowLink->elements()[r] != 0.0 &&
+                  ( maxActivity[r] <= currIneqRhsLink->elements()[r] + feastol && minActivity[r] >= currIneqLhsLink->elements()[r] - feastol ) )
+               rowIsRedundant[r] = true;  // discard row r
+         }
+      }
+   }
 }
 
 int StochPresolverTinyEntries::removeTinyEntriesSystemA()

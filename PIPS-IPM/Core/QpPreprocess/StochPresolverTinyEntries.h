@@ -25,7 +25,11 @@ class StochPresolverTinyEntries : public StochPresolverBase
 
       int removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type);
       int removeRedundantRowsBlockwise(SystemType system_type, bool atRoot);
-      int removeRedundantLinkingRows(SystemType system_type);
+      int removeRedundantLinkingRows(GenMatrixHandle matrixHandle, SystemType system_type);
+      void computeLinkingRowActivity(GenMatrixHandle matrixHandle, SystemType system_type,
+            double* minActivity, double* maxActivity, int nLinkRows);
+      void checkRedundantLinkingRow(GenMatrixHandle matrixHandle, SystemType system_type,
+            double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant);
 
       int removeTinyEntriesSystemA();
       int removeTinyEntriesSystemC();

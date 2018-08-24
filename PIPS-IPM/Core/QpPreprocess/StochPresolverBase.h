@@ -195,6 +195,8 @@ protected:
    void removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
          SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
          SimpleVector& redColParent, SimpleVector* nnzColChild);
+   void removeRowInBblock(int rowIdx, SparseStorageDynamic* Bblock,
+         SparseStorageDynamic* BblockTrans, SimpleVector* nnzColChild);
 
    bool childIsDummy(StochGenMatrix const & matrix, int it, SystemType system_type);
    bool hasLinking(SystemType system_type) const;
