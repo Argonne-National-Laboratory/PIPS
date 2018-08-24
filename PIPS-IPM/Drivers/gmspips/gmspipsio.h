@@ -66,7 +66,7 @@ int writeBlock(const char* scrFilename,      /** < scratch file name. If NULL wr
                GMSPIPSBlockData_t* blk,      /** < block structure to write */
                int printLevel);
 int writeSolution(const char* gdxFilename,   /** < GDX output file name */
-                  const char* dmFilename,    /** < DictMap file name */
+                  const char* dictFilename,  /** < Dictionary file name */
                   GMSPIPSBlockData_t* blk);  /** < block structure to write */
 int readBlockSqueezed(int numBlocks,         /** < total number of blocks n in problem 0..n */
               int actBlock,                  /** < number of block to read 0..n */
@@ -86,8 +86,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
               const int offset,              /** < indicator for clean blocks */
               const int skipStrings,         /** < indicator for not registering uels and strings */
               const char* gdxFilename,       /** < GDX file name with CONVERTD jacobian structure */
-              const char* GAMSSysDir,        /** < GAMS system directory to locate shared libraries (can be NULL) */
-              const char* DictMap);          /** < GDX file name for dict structure (can be NULL) */
+              const char* GAMSSysDir);       /** < AMS system directory to locate shared libraries (can be NULL) */
 void freeBlock(GMSPIPSBlockData_t* blk);
 #if defined(__cplusplus)
 }
