@@ -859,6 +859,72 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    }
    assert(objRowUel);
    
+   /* Create PIPS2GAMS mapping file */
+   {
+      FILE *fmap;
+      int* p2gmap;
+      int* p2gblkmap;
+      int i,j,k,cnt,start;
+      char fileName[GMS_SSSIZE];
+      strcpy(fileName,bFileStem);
+      fmap = fopen(strcat(fileName,".map"), "w");
+      assert(fmap);
+      fprintf(fmap,"%d %d %d %d\n", gdxN-1, gdxM-1, objVarUel-gdxM, objRowUel);
+
+      p2gblkmap = (int*) calloc(numBlocks+1,sizeof(int));
+      /* Counts by block */ 
+      for (j=0; j<gdxN; j++)
+         if (j!=objVarUel-gdxM-1)
+            p2gblkmap[varstage[j]]++;
+      /* Calculate start into map array by block */
+      start = 0;
+      for (k=0; k<numBlocks; k++)
+      {
+         cnt = p2gblkmap[k];
+         p2gblkmap[k] = start;
+         start += cnt;         
+      }
+      assert(start==gdxN-1);
+      /* Fill map array */ 
+      p2gmap = (int*) malloc(gdxN*sizeof(int));
+      for (j=0; j<objVarUel-gdxM; j++)
+         p2gmap[p2gblkmap[varstage[j]]++] = j;
+      /* Skip objvar */
+      for (++j; j<gdxN; j++)
+         p2gmap[p2gblkmap[varstage[j]]++] = j-1;
+      for (j=0; j<gdxN-1; j++)
+         fprintf(fmap,"%d\n", p2gmap[j]);
+      free(p2gmap);
+      
+      /* Now the same for rows */
+      memset(p2gblkmap,0,(numBlocks+1)*sizeof(int));
+      /* Counts by block */ 
+      for (i=0; i<gdxM; i++)
+         if (i!=objRowUel-1)
+            p2gblkmap[rowstage[i]]++;
+      /* Calculate start into map array by block */
+      start = 0;
+      for (k=0; k<numBlocks; k++)
+      {
+         cnt = p2gblkmap[k];
+         p2gblkmap[k] = start;
+         start += cnt;         
+      }
+      assert(start==gdxM-1);
+      /* Fill map array */ 
+      p2gmap = (int*) malloc(gdxM*sizeof(int));
+      for (i=0; i<objRowUel; i++)
+         p2gmap[p2gblkmap[rowstage[i]]++] = i;
+      /* Skip objrow */
+      for (++i; i<gdxM; i++)
+         p2gmap[p2gblkmap[rowstage[i]]++] = i-1;
+      for (i=0; i<gdxM-1; i++)
+         fprintf(fmap,"%d\n", p2gmap[i]);
+      free(p2gmap);
+      free(p2gblkmap);      
+      fclose(fmap)
+   }
+   
    /* Copy symbols */
    copyGDXSymbol(numBlocks,bGDX,fGDX,"i",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
