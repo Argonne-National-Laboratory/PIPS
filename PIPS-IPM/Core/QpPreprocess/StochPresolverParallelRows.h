@@ -121,9 +121,6 @@ private:
    void compareRowsInSecondHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
    void eliminateOriginalRow(int rowId, int& nRowElims);
-   void removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
-         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
-         SimpleVector& redColParent, SimpleVector* nnzColChild);
    void tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
    double getSingletonCoefficient(int singleColIdx);
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);

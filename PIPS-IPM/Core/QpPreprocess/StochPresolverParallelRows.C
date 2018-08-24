@@ -948,61 +948,6 @@ void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
 }
 
 /**
- * Remove row rowIdx in Ablock and Bblock. Removes the corresponding column in
- * AblockTrans and BblockTrans. Additionally, sets nnzRow[rowIdx] to 0.0.
- * Increments redColParent by one at each column index the row had an entry.
- * Decrements nnzColChild by one at each column index the row had an entry.
- */
-void StochPresolverParallelRows::removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
-      SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
-      SimpleVector& redColParent, SimpleVector* nnzColChild)
-{
-   assert( rowIdx>=0 && rowIdx<Ablock.m );
-   assert( Ablock.m == nnzRow.n );
-   assert( Ablock.n == redColParent.n );
-
-   const int rowStartA = Ablock.rowptr[rowIdx].start;
-   const int rowEndA = Ablock.rowptr[rowIdx].end;
-   // delete row in AblockTrans:
-   for(int k=rowStartA; k<rowEndA; k++)
-   {
-      const int colIdx = Ablock.jcolM[k];
-      double tmp = 0.0;
-      removeEntryInDynamicStorage(AblockTrans, colIdx, rowIdx, tmp);
-      // increment redColParent[colIdx]:
-      redColParent.elements()[colIdx]++;
-   }
-   // delete row in Ablock:
-   clearRow(Ablock, rowIdx);
-
-   if(Bblock)
-   {
-      assert( BblockTrans );
-      assert( Ablock.m == Bblock->m );
-      assert( nnzColChild );
-      assert( Bblock->n == nnzColChild->n );
-
-      const int rowStartB = Bblock->rowptr[rowIdx].start;
-      const int rowEndB = Bblock->rowptr[rowIdx].end;
-      assert( rowEndB - rowStartB + rowEndA - rowStartA == nnzRow.elements()[rowIdx] );
-
-      // delete row in BblockTrans:
-      for(int k=rowStartB; k<rowEndB; k++)
-      {
-         const int colIdx = Bblock->jcolM[k];
-         double tmp = 0.0;
-         removeEntryInDynamicStorage(*BblockTrans, colIdx, rowIdx, tmp);
-         // decrement nnzColChild[colIdx]:
-         nnzColChild->elements()[colIdx]--;
-      }
-      // delete row in Bblock:
-      clearRow(*Bblock, rowIdx);
-   }
-   // set nnzRow[rowIdx] to 0.0:
-   nnzRow.elements()[rowIdx] = 0.0;
-}
-
-/**
  * Tightens the original lower and upper bounds of the first row, given the lower
  * and upper bounds of the second row. The normalized bounds are compared and the
  * normalizing factor of row1 is used to determine which bound can be tightened to

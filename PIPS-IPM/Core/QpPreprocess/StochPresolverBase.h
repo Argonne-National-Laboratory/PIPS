@@ -192,6 +192,9 @@ protected:
 
    bool removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m) const;
    void clearRow(SparseStorageDynamic& storage, const int rowIdx) const;
+   void removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
+         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
+         SimpleVector& redColParent, SimpleVector* nnzColChild);
 
    bool childIsDummy(StochGenMatrix const & matrix, int it, SystemType system_type);
    bool hasLinking(SystemType system_type) const;

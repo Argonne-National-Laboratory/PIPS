@@ -23,6 +23,8 @@ class StochPresolverTinyEntries : public StochPresolverBase
 
    private:
 
+      int removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type);
+      int removeRedRowsBlockwise(SystemType system_type, bool atRoot);
       int removeTinyEntriesSystemA();
       int removeTinyEntriesSystemC();
 

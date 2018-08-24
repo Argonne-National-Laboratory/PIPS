@@ -23,7 +23,8 @@ void StochPresolverTinyEntries::applyPresolving()
 {
    int nelims = 0;
    int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
 #ifndef NDEBUG
    if( myRank == 0 )
@@ -39,14 +40,143 @@ void StochPresolverTinyEntries::applyPresolving()
    StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*presProb->C);
    updateTransposed(C);
 
-   // todo: removal of redundant constraints
-   // set current pointers
-   // per row, compute activies and compare to lhs and rhs
+   // removal of redundant constraints
+   int nRemovedRows = 0;
+   nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
+   nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
+
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
 #ifndef NDEBUG
    if( myRank == 0)
-      cout << "Model cleanup finished. Removed "<< nelims <<" entries in total." << std::endl;
+      cout << "Model cleanup finished. Removed "<< nRemovedRows<<" redundant rows and "<< nelims <<" entries in total." << std::endl;
+   countRowsCols();
 #endif
+}
+
+int StochPresolverTinyEntries::removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type)
+{
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   int nRemovedRows = 0;
+
+   // set current pointers: currAmat, currBmat, lhr, rhs
+   // root:
+   setCurrentPointersToNull();
+   setCPAmatsRoot(matrixHandle);
+   setCPColumnRoot();
+   if( system_type == EQUALITY_SYSTEM )
+      setCPRowRootEquality();
+   else
+      setCPRowRootInequality();
+
+   int nRemovedRowsRoot = removeRedRowsBlockwise(system_type, true);
+   if( myRank==0 )
+      nRemovedRows += nRemovedRowsRoot;
+
+   // children:
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(matrixHandle));
+   for( size_t it = 0; it< matrix.children.size(); it++)
+   {
+      if( setCPAmatsChild(matrixHandle, (int)it, system_type)) // Amat, AmatTrans
+      {
+         setCPBmatsChild(matrixHandle, (int)it, system_type);  // Bmat, BmatTrans
+         setCPColumnRoot();                                    // redColParent, xlowParent etc
+         setCPColumnChild((int)it);
+         currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+         if( system_type == EQUALITY_SYSTEM )
+            setCPRowChildEquality((int)it);                    // nnzRow, EqRhs
+         else
+            setCPRowChildInequality((int)it);                  // nnzRow, IneqLhs, IneqRhs
+
+         nRemovedRows += removeRedRowsBlockwise(system_type, false);
+      }
+   }
+   // todo linking rows
+
+   return nRemovedRows;
+}
+
+int StochPresolverTinyEntries::removeRedRowsBlockwise(SystemType system_type, bool atRoot)
+{
+   assert( currAmat && currAmatTrans );
+   assert( currxlowParent && currIxlowParent && currxuppParent && currIxuppParent );
+   assert( currRedColParent && currNnzRow );
+   if( atRoot )
+   {
+      assert( NULL==currBmat && NULL==currBmatTrans && NULL==currNnzColChild );
+      assert( NULL==currxlowChild && NULL==currIxlowChild && NULL==currxuppChild && NULL==currIxuppChild );
+   }
+   else
+   {
+      assert( currBmat && currBmatTrans );
+      assert( currxlowChild && currIxlowChild && currxuppChild && currIxuppChild );
+      assert( currNnzColChild );
+   }
+   if( system_type == EQUALITY_SYSTEM )
+      assert( currEqRhs );
+   else
+      assert( currIclow && currIcupp && currIneqLhs && currIneqRhs );
+
+   int nRemovedRows = 0;
+
+   // per row, compute activies and compare to lhs and rhs:
+   for( int r=0; r<currAmat->m; r++)
+   {
+      if( currNnzRow->elements()[r] == 0.0 ) // empty rows might still have a rhs but should be ignored.
+         continue;
+
+      double minAct = 0.0;
+      double maxAct = 0.0;
+      computeActivityBlockwise(*currAmat, r, -1, minAct, maxAct, *currxlowParent, *currIxlowParent, *currxuppParent, *currIxuppParent);
+      if( !atRoot )
+         computeActivityBlockwise(*currBmat, r, -1, minAct, maxAct, *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
+
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         if( ( minAct > currEqRhs->elements()[r] + feastol ) || ( maxAct < currEqRhs->elements()[r] - feastol ) )
+            abortInfeasible(MPI_COMM_WORLD);
+         else if( (minAct >= currEqRhs->elements()[r] - feastol) && (maxAct <= currEqRhs->elements()[r] + feastol) )
+         {
+            // discard row r
+            removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
+            nRemovedRows++;
+         }
+      }
+      else  // system_type == INEQUALITY_SYSTEM
+      {
+         if( currIclow->elements()[r] != 0.0 )
+         {
+            if( currIneqLhs->elements()[r] <= -infinity )
+            {  // discard row r
+               removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
+               nRemovedRows++;
+               continue;
+            }
+            else if( maxAct < currIneqLhs->elements()[r] - feastol )
+               abortInfeasible(MPI_COMM_WORLD);
+         }
+         if( currIcupp->elements()[r] != 0.0 )
+         {
+            if( currIneqRhs->elements()[r] >= infinity )
+            {  // discard row r
+               removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
+               nRemovedRows++;
+            }
+            else if( minAct > currIneqRhs->elements()[r] + feastol )
+               abortInfeasible(MPI_COMM_WORLD);
+
+            else if( currIclow->elements()[r] != 0.0 &&
+                  ( maxAct <= currIneqRhs->elements()[r] + feastol && minAct >= currIneqLhs->elements()[r] - feastol ) )
+            {  // discard row r
+               removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
+               nRemovedRows++;
+            }
+         }
+      }
+   }
+   return nRemovedRows;
 }
 
 int StochPresolverTinyEntries::removeTinyEntriesSystemA()
