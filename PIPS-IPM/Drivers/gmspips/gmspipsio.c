@@ -586,9 +586,11 @@ void copyGDXSymbol(int         numBlocks,
                    const int   vstage[],
                    const int   estage[],
                    const int   linkingBlock,
-                   const int   readType)
+                   const int   readType,
+                   const int   objVarUel,
+                   const int   objRowUel)
 {
-   int k, rc, objVarUel;
+   int k, rc;
    int symNr=0, symType=0, symDim=0, recNr=0, userInfo=0;
    int dimFirst=0;
    gdxValues_t   vals;
@@ -596,21 +598,24 @@ void copyGDXSymbol(int         numBlocks,
    char symText[GMS_SSSIZE];
  
    printf("Copying %s\n", symName); fflush(stdout);
-   if ( 2 == readType )
-   {
-      GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "jobj", &symNr));
-      GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
-      gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst);
-      GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
-      objVarUel = keyInt[0];
-      assert(objVarUel);
-   }
    rc = gdxFindSymbol(fGDX, symName, &symNr);
    if (!rc && 0==strcmp(symName,"ANl"))
    {
       for (k=0; k<numBlocks; k++)
       {
          GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, "Non-linear Jacobian indicator", 2, dt_par, 0));
+         GDXSAVECALLX(bGDX[k],gdxDataWriteDone(bGDX[k]));
+      }
+      return;      
+   }
+   if (!rc && 0==strcmp(symName,"iobj"))
+   {
+      vals[GMS_VAL_LEVEL] = 0;
+      keyInt[0] = objRowUel;
+      for (k=0; k<numBlocks; k++)
+      {
+         GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, "Objective row (if reformulation possible, empty otherwise)", 1, dt_set, 0));
+         GDXSAVECALLX(bGDX[k],gdxDataWriteRaw (bGDX[k], keyInt, vals));
          GDXSAVECALLX(bGDX[k],gdxDataWriteDone(bGDX[k]));
       }
       return;      
@@ -705,9 +710,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    
    char msg[GMS_SSSIZE];
    int rc=0;
-   int symNr=0;
+   int symNr=0, recNr=0;
    int gdxN=0, gdxM=0;
-   int dmM=0, dmN=0, dmTTLBLK=0;
+   int objVarUel=0, objRowUel=0;
    int dimFirst=0, numUels;
    gdxValues_t  vals;
    gdxUelIndex_t keyInt;
@@ -821,16 +826,48 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       }
    }
 
+   /* Get objective uels */
+   GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "jobj", &symNr));
+   GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
+   gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst);
+   GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
+   objVarUel = keyInt[0];
+   assert(objVarUel);
+
+   rc = gdxFindSymbol(fGDX, "iobj", &symNr);
+   if (!rc) /* old jacobian without iobj */
+   {
+      GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "A", &symNr));
+      GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
+      while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
+         if (objVarUel==keyInt[1])
+            if (objRowUel)
+            {
+               objRowUel = 0;
+               break;
+            }
+            else
+               objRowUel = keyInt[0];
+      GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
+   }
+   else
+   {
+      GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
+      gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst);
+      GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
+      objRowUel = keyInt[0];      
+   }
+   assert(objRowUel);
    
    /* Copy symbols */
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"i",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,3);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"jobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"objcoef",gdxM,offset,NULL,    NULL,     NULL,    0        ,1);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"e",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,3);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"A",      gdxM,offset,NULL,    varstage, rowstage,0        ,2);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"ANl",    gdxM,offset,NULL,    NULL,     NULL,    0        ,1);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"i",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"jobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"objcoef",gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"e",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"A",      gdxM,offset,NULL,    varstage, rowstage,0        ,2,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"ANl",    gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
    
    for (k=0; k<numBlocks; k++)
    {
