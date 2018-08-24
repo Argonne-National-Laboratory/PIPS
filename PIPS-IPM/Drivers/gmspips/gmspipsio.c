@@ -904,7 +904,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
             p2gblkmap[rowstage[i]]++;
       /* Calculate start into map array by block */
       start = 0;
-      for (k=0; k<numBlocks; k++)
+      for (k=0; k<=numBlocks; k++)
       {
          cnt = p2gblkmap[k];
          p2gblkmap[k] = start;
@@ -922,13 +922,14 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
          fprintf(fmap,"%d\n", p2gmap[i]);
       free(p2gmap);
       free(p2gblkmap);      
-      fclose(fmap)
+      fclose(fmap);
    }
    
    /* Copy symbols */
    copyGDXSymbol(numBlocks,bGDX,fGDX,"i",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"jobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,bGDX,fGDX,"iobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"objcoef",gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"e",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
