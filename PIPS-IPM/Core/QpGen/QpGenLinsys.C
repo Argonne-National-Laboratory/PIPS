@@ -15,13 +15,11 @@
 #include "LinearAlgebraPackage.h"
 #include "QpGen.h"
 #include <limits>
-
+#include "mpi.h"
 
 #ifdef TIMING
-#include "mpi.h"
 #include <vector>
 #endif
-
 
 #include <fstream>
 using namespace std;
@@ -320,10 +318,10 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
    assert(n2b >= 0);
 
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 #ifdef TIMING
    double iter=0.0;
    gOuterBiCGIter=0;
-   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    tTmp=MPI_Wtime();
 
    if( myRank == 0 )
@@ -349,6 +347,29 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #ifdef TIMING
    histRelResid.push_back(normr/n2b);
 #endif
+
+#ifdef TIMING
+#ifndef NDEBUG
+   double nmin;
+   double tolmin;
+
+   MPI_Allreduce(&normr, &nmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+   MPI_Allreduce(&tolb, &tolmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+
+   if( normr != nmin )
+   {
+      cout << "rtwonorm not consistent " << normr << " " << nmin << "\n";
+      MPI_Abort(MPI_COMM_WORLD, 1);
+
+   }
+   if( tolb != tolmin )
+   {
+      cout << "tolb not consistent " << tolb << " " << tolmin << "\n";
+      MPI_Abort(MPI_COMM_WORLD, 1);
+   }
+#endif
+#endif
+
 
    //quick return if solve is accurate enough
    if( normr <= tolb )
@@ -561,6 +582,8 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    //warning/error messaging
    if( flag != 0 )
    {
+      if( myRank == 0 )
+         cout << "BiCGStab FAIL " << flag << "\n";
 #ifdef TIMING
       if(0==myRank)
       cout << "Outer BiCG - convergence issues: flag=" << flag << ". "

@@ -355,7 +355,12 @@ double StochVector::infnorm()
 
 double StochVector::twonorm()
 {
+#if 0
   return sqrt(this->dotProductWith(*this));
+#else
+  const double scale = this->infnorm();
+  return scale * sqrt(this->dotProductSelf(1 / scale));
+#endif
 }
 
 double StochVector::onenorm()
@@ -1022,6 +1027,28 @@ double StochVector::dotProductWith( OoqpVector& v_ )
   return dotProd;
 }
 
+double StochVector::dotProductSelf(double scaleFactor)
+{
+  double dotSelf = 0.0;
+
+  for(size_t it=0; it<children.size(); it++)
+     dotSelf += children[it]->dotProductSelf(scaleFactor);
+
+  if(iAmDistrib==1) {
+    double dotSelfG = 0.0;
+
+    MPI_Allreduce(&dotSelf, &dotSelfG, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+    dotSelf = dotSelfG;
+  }
+
+  dotSelf += vec->dotProductSelf(scaleFactor);
+
+  if( vecl )
+     dotSelf += vecl->dotProductSelf(scaleFactor);
+
+  return dotSelf;
+}
 
 /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
  */

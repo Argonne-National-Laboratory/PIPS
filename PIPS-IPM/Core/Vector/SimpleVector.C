@@ -428,7 +428,7 @@ double SimpleVector::dotProductWith( OoqpVector& vec )
   assert( n == vec.length() );
   SimpleVector & svec = dynamic_cast<SimpleVector &>(vec);
   double * vvec = svec.v;
-  
+
   double dot1 = 0.0;
   double dot2 = 0.0;
 
@@ -450,6 +450,30 @@ double SimpleVector::dotProductWith( OoqpVector& vec )
   }
   
   return dot2 + dot1;
+}
+
+double SimpleVector::dotProductSelf( double scaleFactor )
+{
+   assert(scaleFactor >= 0.0);
+
+   double dot = 0.0;
+
+   if( scaleFactor == 1.0 )
+   {
+      for( int i = 0; i < n; i++ )
+         if( !PIPSisZero(v[i]) )
+            dot += v[i] * v[i];
+   }
+   else
+   {
+      for( int i = 0; i < n; i++ )
+      {
+         const double valScaled = v[i] * scaleFactor;
+         if( !PIPSisZero(valScaled) )
+            dot += valScaled * valScaled;
+      }
+   }
+   return dot;
 }
 
 double 

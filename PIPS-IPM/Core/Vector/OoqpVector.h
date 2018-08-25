@@ -106,10 +106,13 @@ public:
   virtual void absmin(double& m) = 0;
 
   /** Return the absolute minimum value of this vector bigger than tolerance */
-    virtual void absminNonZero(double& m, double tolerance=pips_eps) = 0;
+    virtual void absminNonZero(double& m, double tolerance = pips_eps) = 0;
 
   /** Return the dot product of this OoqpVector with v */
   virtual double dotProductWith( OoqpVector& v ) = 0;
+
+  /** Return the scaled dot product of this (scaled) vector with itself  */
+  virtual double dotProductSelf(double scaleFactor = 1.0) = 0;
 
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */

@@ -103,6 +103,8 @@ public:
   virtual void addConstant( double c );
   virtual void gondzioProjection( double rmin, double rmax );
   virtual double dotProductWith( OoqpVector& v );
+  virtual double dotProductSelf(double scaleFactor = 1.0);
+
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */
   virtual double shiftedDotProductWith( double alpha, OoqpVector& mystep,
@@ -211,6 +213,8 @@ public:
   virtual void addConstant( double c ){};
   virtual void gondzioProjection( double rmin, double rmax ){};
   virtual double dotProductWith( OoqpVector& v ){return 0.0;}
+  virtual double dotProductSelf(double scaleFactor = 1.0){return 0.0;};
+
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */
   virtual double shiftedDotProductWith( double alpha, OoqpVector& mystep,
