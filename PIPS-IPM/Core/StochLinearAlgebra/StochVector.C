@@ -359,22 +359,35 @@ double StochVector::twonorm()
   return sqrt(this->dotProductWith(*this));
 #else
   const double scale = this->infnorm();
+  assert(scale >= 0.0);
+
+  if( PIPSisZero(scale) )
+     return 0.0;
+
   return scale * sqrt(this->dotProductSelf(1 / scale));
 #endif
 }
 
 double StochVector::onenorm()
 {
-  double onenrm = vec->onenorm();
+  double onenrm = 0.0;
 
-  if( vecl ) onenrm += vecl->onenorm();
+  for( size_t it = 0; it < children.size(); it++ )
+     onenrm += children[it]->onenorm();
 
-  for(size_t it=0; it<children.size(); it++)
-    onenrm += children[it]->onenorm();
+  if( iAmDistrib == 1 )
+  {
+     double sum;
+     MPI_Allreduce(&onenrm, &sum, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+     onenrm = sum;
+  }
 
-  //!parallel
-  assert(false);
-  return onenrm; 
+  onenrm += vec->onenorm();
+
+  if( vecl )
+     onenrm += vecl->onenorm();
+
+  return onenrm;
 }
 
 
