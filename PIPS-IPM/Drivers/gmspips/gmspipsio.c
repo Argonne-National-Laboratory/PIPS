@@ -98,10 +98,254 @@ int writeBlock(const char* scrFilename,  /** < scratch file name. If NULL write 
    return 0;
 }               
  
-int writeSolution(const char* gdxFilename,  /** < GDX output file name */
-                  const char* dictFilename, /** < Dictionary file name */
-                  GMSPIPSBlockData_t* blk)  /** < block structure to write */
+int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
+                  const int numcol,         /** < length of varl/varm array */
+                  const int numrow,         /** < length of equl/equm array */
+                  const double objval,      /** < objective value */
+                  double* varl,             /** < variable level (can be NULL) */
+                  double* varm,             /** < variable marginals (can be NULL) */
+                  double* equl,             /** < equation level (can be NULL) */
+                  double* equm,             /** < equation marginals */
+                  const char* GAMSSysDir)   /** < GAMS system directory to locate shared libraries (can be NULL) */                  
 {
+   FILE *fmap;
+   int* p2gvmap=NULL;
+   int* p2gemap=NULL;
+   char fileName[GMS_SSSIZE];
+   int i, j, rc, p2gN, p2gM, objvar, objrow, gdxN, gdxM;
+   gdxHandle_t fDCT=NULL;
+   gdxHandle_t fSOL=NULL;
+   char msg[GMS_SSSIZE];
+   double* gvarl=NULL;
+   double* gvarm=NULL;
+   double* gequl=NULL;
+   double* gequm=NULL;
+   double objcoef = 1.0; /* TODO carry through the objective coefficient */
+   gdxValues_t   vals, wvals;
+   gdxUelIndex_t keyInt;   
+   char symName[GMS_SSSIZE], symText[GMS_SSSIZE];
+   int dimFirst, nrRecs, numUels, symDim, symType, userInfo, symCnt, symStart=3;
+   int colsSeen=0, rowsSeen=0; 
+   
+   printf("1\n");
+   if ( GAMSSysDir )
+      rc = gdxCreateD (&fDCT, GAMSSysDir, msg, sizeof(msg));
+   else
+      rc = gdxCreate (&fDCT, msg, sizeof(msg));
+   if ( !rc ) 
+   {
+      printf("Could not create gdx object (dct): %s\n", msg);
+      return -2;
+   }
+   strcpy(fileName,gdxFileStem);
+   gdxOpenRead(fDCT, strcat(fileName,"_dict.gdx"), &rc);
+   if (rc) 
+   {
+      printf("Could not open GDX file %s (errNr=%d)\n", fileName, rc);
+      return -2;
+   }
+
+   GDXSAVECALLX(fDCT,gdxSystemInfo (fDCT, &symCnt, &numUels));
+
+   GDXSAVECALLX(fDCT,gdxDataReadRawStart(fDCT, 1, &nrRecs));
+   if (3!=nrRecs)
+   {
+      printf("expect 3 record in dictionary symbol 1, have %d\n", nrRecs);
+      return -2;
+   }
+   GDXSAVECALLX(fDCT,gdxDataReadRaw(fDCT, keyInt, vals, &dimFirst)); // ttblk
+   GDXSAVECALLX(fDCT,gdxDataReadRaw(fDCT, keyInt, vals, &dimFirst)); // mincolcnt
+   if (varl || varm)
+   {
+      if ( numcol+1!=(int) vals[0] )
+      {
+         printf("dictionary has %d variables PIPS only provides %d. Wrong dictionary file?\n", (int) vals[0], numcol+1);
+         return -2;
+      }
+   }
+   gdxN = (int) vals[0];
+   
+   GDXSAVECALLX(fDCT,gdxDataReadRaw(fDCT, keyInt, vals, &dimFirst)); // minrowcnt
+   if (equl || equm)
+   {
+      if ( numrow+1!=(int) vals[0] )
+      {
+         printf("dictionary has %d equations PIPS only provides %d. Wrong dictionary file?\n", (int) vals[0], numrow+1);
+         return -2;
+      }
+   }
+   gdxM = (int) vals[0];
+   GDXSAVECALLX(fDCT,gdxDataReadDone(fDCT));
+   
+   if ( GAMSSysDir )
+      rc = gdxCreateD (&fSOL, GAMSSysDir, msg, sizeof(msg));
+   else
+      rc = gdxCreate (&fSOL, msg, sizeof(msg));
+   if ( !rc ) 
+   {
+      printf("Could not create gdx object (sol): %s\n", msg);
+      return -2;
+   }
+   strcpy(fileName,gdxFileStem);
+   gdxOpenWrite (fSOL, strcat(fileName,"_sol.gdx"), "GMSPIPS", &rc);
+   if (rc) 
+   {
+      printf("Could not open GDX file %s for writing (errNr=%d)\n", fileName, rc);
+      return -2;
+   }
+
+   strcpy(fileName,gdxFileStem);
+   fmap = fopen(strcat(fileName,".map"), "r");
+   if (!fmap)
+      return -1;
+   
+   fscanf(fmap,"%d%d%d%d",&p2gN,&p2gM,&objvar,&objrow);
+   if (varl || varm)
+   {
+      assert(p2gN==numcol);
+      p2gvmap = (int *) malloc(numcol*sizeof(int));
+      assert(p2gvmap);
+   }
+   if (equl || equm)
+   {
+      assert(p2gM==numrow);
+      p2gemap = (int *) malloc(numrow*sizeof(int));
+      assert(p2gemap);
+   }
+   
+   for (j=0; j<numcol; j++)
+   {
+      int col;
+      fscanf(fmap,"%d",&col);
+      if (p2gvmap)
+         p2gvmap[j] = col;
+   }
+      
+   for (i=0; i<numrow; i++)
+   {
+      int row;
+      fscanf(fmap,"%d",&row);
+      if (p2gemap)
+         p2gemap[i] = row;
+   }
+   fclose(fmap);
+   
+   if (varl)
+   {
+      gvarl = (double *) malloc(gdxN*sizeof(double));
+      assert(gvarl);
+      gvarl[objvar] = objval; 
+      for (j=0; j<numcol; j++)
+         gvarl[p2gvmap[j]] = varl[j];
+   }
+   if (varm)
+   {
+      gvarm = (double *) malloc(gdxN*sizeof(double));
+      assert(gvarm);
+      gvarm[objvar] = 0.0; 
+      for (j=0; j<numcol; j++)
+         gvarm[p2gvmap[j]] = varm[j];
+   }
+   if (equl)
+   {
+      gequl = (double *) malloc(gdxM*sizeof(double));
+      assert(gequl);
+      gequl[objrow] = 0.0; 
+      for (i=0; i<numrow; i++)
+         gequl[p2gemap[i]] = equl[i];
+   }
+   if (equm)
+   {
+      gequm = (double *) malloc(gdxM*sizeof(double));
+      assert(gequm);
+      gequm[objrow] = 1.0/objcoef;
+      for (i=0; i<numrow; i++)
+         gequm[p2gemap[i]] = equm[i];
+   }
+   if (p2gvmap) free(p2gvmap);
+   if (p2gemap) free(p2gemap);
+   
+   /* Initialize values to write to some useful defaults */  
+   wvals[GMS_VAL_LEVEL] = 0.0;
+   wvals[GMS_VAL_MARGINAL] = 0.0;
+   wvals[GMS_VAL_LOWER] = GMS_SV_MINF;
+   wvals[GMS_VAL_UPPER] = GMS_SV_PINF;
+   wvals[GMS_VAL_SCALE] = 1.0;
+
+   /* Now walk dictionary and variable and equation vector side-by-side */
+   if (equl || equm)
+   {
+      for(; symStart<=symCnt; symStart++ )
+      {
+         GDXSAVECALLX(fDCT,gdxSymbolInfo(fDCT, symStart, symName, &symDim, &symType));
+         GDXSAVECALLX(fDCT,gdxSymbolInfoX(fDCT, symStart, &nrRecs, &userInfo, symText));
+         GDXSAVECALLX(fDCT,gdxDataReadRawStart(fDCT, symStart, &nrRecs));
+         GDXSAVECALLX(fSOL,gdxDataWriteRawStart(fSOL, symName, symText, symDim, dt_equ, GMS_EQUEOFFSET+GMS_EQUTYPE_E));
+         while ( gdxDataReadRaw(fDCT, keyInt, vals, &dimFirst) )
+         {
+            if (gequl) wvals[GMS_VAL_LEVEL] = gequl[rowsSeen];
+            if (gequm) wvals[GMS_VAL_MARGINAL] = gequm[rowsSeen];
+            rowsSeen++;
+            GDXSAVECALLX(fSOL,gdxDataWriteRaw (fSOL, keyInt, wvals));      
+         }
+         GDXSAVECALLX(fDCT,gdxDataReadDone(fDCT));
+         GDXSAVECALLX(fSOL,gdxDataWriteDone(fSOL));        
+      }      
+   }
+   else /* fast forward to variable symbols */
+   {  
+      for(; symStart<=symCnt; symStart++ )
+      {
+         if (rowsSeen==gdxM)
+            break;
+         GDXSAVECALLX(fDCT,gdxSymbolInfo(fDCT, symStart, symName, &symDim, &symType));
+         GDXSAVECALLX(fDCT,gdxSymbolInfoX(fDCT, symStart, &nrRecs, &userInfo, symText));
+         rowsSeen += nrRecs;
+      }
+   }
+   assert(rowsSeen==gdxM);   
+   if (gequl) free(gequl);
+   if (gequm) free(gequm);
+
+   if (varl || varm)
+   {
+      for(; symStart<=symCnt; symStart++ )
+      {
+         GDXSAVECALLX(fDCT,gdxSymbolInfo(fDCT, symStart, symName, &symDim, &symType));
+         GDXSAVECALLX(fDCT,gdxSymbolInfoX(fDCT, symStart, &nrRecs, &userInfo, symText));
+         GDXSAVECALLX(fDCT,gdxDataReadRawStart(fDCT, symStart, &nrRecs));
+         GDXSAVECALLX(fSOL,gdxDataWriteRawStart(fSOL, symName, symText, symDim, dt_var, 0));
+         while ( gdxDataReadRaw(fDCT, keyInt, vals, &dimFirst) )
+         {
+            if (gvarl) wvals[GMS_VAL_LEVEL] = gvarl[colsSeen];
+            if (gvarm) wvals[GMS_VAL_MARGINAL] = gvarm[colsSeen];
+            colsSeen++;
+            GDXSAVECALLX(fSOL,gdxDataWriteRaw (fSOL, keyInt, wvals));      
+         }
+         GDXSAVECALLX(fDCT,gdxDataReadDone(fDCT));
+         GDXSAVECALLX(fSOL,gdxDataWriteDone(fSOL));        
+      }
+   }
+   assert(colsSeen==gdxN);   
+   if (gvarl) free(gvarl);
+   if (gvarm) free(gvarm);
+   
+   /* Now regsiter uels */
+   GDXSAVECALLX(fSOL,gdxUELRegisterRawStart(fSOL));
+   for (i=1; i<=numUels; i++)
+   {
+      char uel[GMS_SSSIZE];
+      int map;
+      GDXSAVECALLX(fDCT,gdxUMUelGet (fDCT,i,uel,&map));
+      GDXSAVECALLX(fSOL,gdxUELRegisterRaw(fSOL,uel));
+   }
+   GDXSAVECALLX(fSOL,gdxUELRegisterDone(fSOL));
+   
+   gdxClose(fDCT);
+   gdxFree(&fDCT);
+   gdxClose(fSOL);
+   gdxFree(&fSOL);
+
    return 0;
 }
 
@@ -869,7 +1113,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       strcpy(fileName,bFileStem);
       fmap = fopen(strcat(fileName,".map"), "w");
       assert(fmap);
-      fprintf(fmap,"%d %d %d %d\n", gdxN-1, gdxM-1, objVarUel-gdxM, objRowUel);
+      fprintf(fmap,"%d %d %d %d\n", gdxN-1, gdxM-1, objVarUel-gdxM-1, objRowUel-1);
 
       p2gblkmap = (int*) calloc(numBlocks+1,sizeof(int));
       /* Counts by block */ 
@@ -887,7 +1131,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       assert(start==gdxN-1);
       /* Fill map array */ 
       p2gmap = (int*) malloc(gdxN*sizeof(int));
-      for (j=0; j<objVarUel-gdxM; j++)
+      for (j=0; j<objVarUel-gdxM-1; j++)
          p2gmap[p2gblkmap[varstage[j]]++] = j;
       /* Skip objvar */
       for (++j; j<gdxN; j++)
@@ -913,7 +1157,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       assert(start==gdxM-1);
       /* Fill map array */ 
       p2gmap = (int*) malloc(gdxM*sizeof(int));
-      for (i=0; i<objRowUel; i++)
+      for (i=0; i<objRowUel-1; i++)
          p2gmap[p2gblkmap[rowstage[i]]++] = i;
       /* Skip objrow */
       for (++i; i<gdxM; i++)

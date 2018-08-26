@@ -40,6 +40,8 @@
 #define GMS_EQUTYPE_C        5
 #define GMS_EQUTYPE_MAX      6
 
+#define GMS_EQUEOFFSET      53
+
 #define GMS_VAL_LEVEL    0
 #define GMS_VAL_MARGINAL 1
 #define GMS_VAL_LOWER    2

@@ -65,9 +65,15 @@ extern "C" {
 int writeBlock(const char* scrFilename,      /** < scratch file name. If NULL write ASCII to stdout */
                GMSPIPSBlockData_t* blk,      /** < block structure to write */
                int printLevel);
-int writeSolution(const char* gdxFilename,   /** < GDX output file name */
-                  const char* dictFilename,  /** < Dictionary file name */
-                  GMSPIPSBlockData_t* blk);  /** < block structure to write */
+int writeSolution(const char* gdxFileStem,   /** < GDX file stem */
+                  const int numcol,          /** < length of varl/varm array */
+                  const int numrow,          /** < length of equl/equm array */
+                  const double objval,       /** < objective value */
+                  double* varl,              /** < variable level */
+                  double* varm,              /** < variable marginals */
+                  double* equl,              /** < equation level */
+                  double* equm,              /** < equation marginals */
+                  const char* GAMSSysDir);   /** < GAMS system directory to locate shared libraries (can be NULL) */                  
 int readBlockSqueezed(int numBlocks,         /** < total number of blocks n in problem 0..n */
               int actBlock,                  /** < number of block to read 0..n */
               int strict,                    /** < indicator for clean blocks */
@@ -86,7 +92,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
               const int offset,              /** < indicator for clean blocks */
               const int skipStrings,         /** < indicator for not registering uels and strings */
               const char* gdxFilename,       /** < GDX file name with CONVERTD jacobian structure */
-              const char* GAMSSysDir);       /** < AMS system directory to locate shared libraries (can be NULL) */
+              const char* GAMSSysDir);       /** < GAMS system directory to locate shared libraries (can be NULL) */
 void freeBlock(GMSPIPSBlockData_t* blk);
 #if defined(__cplusplus)
 }
