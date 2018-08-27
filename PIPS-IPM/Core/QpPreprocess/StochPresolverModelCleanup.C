@@ -1,25 +1,25 @@
 /*
- * StochPresolverTinyEntries.C
+ * StochPresolverModelCleanup.C
  *
  *  Created on: 06.04.2018
  *      Author: bzfrehfe
  */
 
-#include "StochPresolverTinyEntries.h"
+#include "StochPresolverModelCleanup.h"
 
 
-StochPresolverTinyEntries::StochPresolverTinyEntries(PresolveData& presData)
+StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData)
 : StochPresolverBase(presData)
 {
  // todo
 }
 
-StochPresolverTinyEntries::~StochPresolverTinyEntries()
+StochPresolverModelCleanup::~StochPresolverModelCleanup()
 {
 }
 
 
-void StochPresolverTinyEntries::applyPresolving()
+void StochPresolverModelCleanup::applyPresolving()
 {
    int nelims = 0;
    int myRank;
@@ -62,7 +62,7 @@ void StochPresolverTinyEntries::applyPresolving()
  * with the row bounds (lhs and rhs). If a row is found to be redundant, it is removed.
  * If infeasiblity is detected, then Abort.
  */
-int StochPresolverTinyEntries::removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type)
+int StochPresolverModelCleanup::removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type)
 {
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -119,7 +119,7 @@ int StochPresolverTinyEntries::removeRedundantRows(GenMatrixHandle matrixHandle,
 }
 
 /** Find and remove redundant rows per child (!atRoot) or for the root block. */
-int StochPresolverTinyEntries::removeRedundantRowsBlockwise(SystemType system_type, bool atRoot)
+int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_type, bool atRoot)
 {
    assert( currAmat && currAmatTrans );
    assert( currxlowParent && currIxlowParent && currxuppParent && currIxuppParent );
@@ -201,7 +201,7 @@ int StochPresolverTinyEntries::removeRedundantRowsBlockwise(SystemType system_ty
 }
 
 /** Find and remove redundant linking constraints. */
-int StochPresolverTinyEntries::removeRedundantLinkingRows(GenMatrixHandle matrixHandle, SystemType system_type)
+int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matrixHandle, SystemType system_type)
 {
    assert( hasLinking(system_type) );
 
@@ -293,7 +293,7 @@ int StochPresolverTinyEntries::removeRedundantLinkingRows(GenMatrixHandle matrix
 }
 
 /** Compute the minimal and maximal row activies of the linking rows. */
-void StochPresolverTinyEntries::computeLinkingRowActivity(GenMatrixHandle matrixHandle, SystemType system_type,
+void StochPresolverModelCleanup::computeLinkingRowActivity(GenMatrixHandle matrixHandle, SystemType system_type,
       double* minActivity, double* maxActivity, int nLinkRows)
 {
    assert( hasLinking(system_type) );
@@ -346,7 +346,7 @@ void StochPresolverTinyEntries::computeLinkingRowActivity(GenMatrixHandle matrix
 
 /** For each linking row, check if it is redundant using the minimal and maximal row activities
  * compared to the lhs and rhs. */
-void StochPresolverTinyEntries::checkRedundantLinkingRow(GenMatrixHandle matrixHandle, SystemType system_type,
+void StochPresolverModelCleanup::checkRedundantLinkingRow(GenMatrixHandle matrixHandle, SystemType system_type,
       double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant)
 {
    // check for redundant rows
@@ -388,7 +388,7 @@ void StochPresolverTinyEntries::checkRedundantLinkingRow(GenMatrixHandle matrixH
    }
 }
 
-int StochPresolverTinyEntries::removeTinyEntriesSystemA()
+int StochPresolverModelCleanup::removeTinyEntriesSystemA()
 {
    int nelims = 0;
    localNelims = 0;
@@ -477,7 +477,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemA()
    return nelims;
 }
 
-int StochPresolverTinyEntries::removeTinyEntriesSystemC()
+int StochPresolverModelCleanup::removeTinyEntriesSystemC()
 {
    int nelims = 0;
    localNelims = 0;
@@ -567,7 +567,7 @@ int StochPresolverTinyEntries::removeTinyEntriesSystemC()
 }
 
 /** Calls removeTinyInnerLoop for a Child on the matrices Amat, Bmat which also adapts the rhs. */
-int StochPresolverTinyEntries::removeTinyChild( int it, SystemType system_type )
+int StochPresolverModelCleanup::removeTinyChild( int it, SystemType system_type )
 {
    // for Amat:
    int nelims = removeTinyInnerLoop( it, system_type, LINKING_VARS_BLOCK );
@@ -583,7 +583,7 @@ int StochPresolverTinyEntries::removeTinyChild( int it, SystemType system_type )
 /** Removes tiny entries in storage and adapts the rhs accordingly.
  *  If block_type == LINKING_VARS_BLOCK, then block Amat is considered.
  *  If block_type == CHILD_BLOCK, then block Bmat is considered. */
-int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_type, BlockType block_type )
+int StochPresolverModelCleanup::removeTinyInnerLoop( int it, SystemType system_type, BlockType block_type )
 {
    // Setting all the pointers correctly
    int nelims = 0;
@@ -679,7 +679,7 @@ int StochPresolverTinyEntries::removeTinyInnerLoop( int it, SystemType system_ty
    return nelims;
 }
 
-int StochPresolverTinyEntries::removeTinyLinkingRows( int it, SystemType system_type )
+int StochPresolverModelCleanup::removeTinyLinkingRows( int it, SystemType system_type )
 {
    // Setting all the pointers correctly
    int nelims = 0;
@@ -766,7 +766,7 @@ int StochPresolverTinyEntries::removeTinyLinkingRows( int it, SystemType system_
  * Set the current pointers to the currently necessary data.
  * If it==-1, case as root.
  */
-bool StochPresolverTinyEntries::updateCPforTinyEntry(int it, SystemType system_type)
+bool StochPresolverModelCleanup::updateCPforTinyEntry(int it, SystemType system_type)
 {
    setCurrentPointersToNull();
    setCPColumnRoot();
@@ -802,7 +802,7 @@ bool StochPresolverTinyEntries::updateCPforTinyEntry(int it, SystemType system_t
  * Set the current pointers to the linking constraints.
  * If it==-1, case at F_0.
  */
-bool StochPresolverTinyEntries::updateCPforLinkingRows(int it, SystemType system_type)
+bool StochPresolverModelCleanup::updateCPforLinkingRows(int it, SystemType system_type)
 {
    if( it == -1 )
       assert( hasLinking(system_type) );

@@ -1,22 +1,22 @@
 /*
- * StochPresolverTinyEntries.h
+ * StochPresolverModelCleanup.h
  *
  *  Created on: 06.04.2018
  *      Author: bzfrehfe
  */
 
-#ifndef PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERTINYENTRIES_H_
-#define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERTINYENTRIES_H_
+#ifndef PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERMODELCLEANUP_H_
+#define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERMODELCLEANUP_H_
 
 #include "StochPresolverBase.h"
 #include <math.h>
 
-class StochPresolverTinyEntries : public StochPresolverBase
+class StochPresolverModelCleanup : public StochPresolverBase
 {
    public:
-      StochPresolverTinyEntries(PresolveData& presData);
+      StochPresolverModelCleanup(PresolveData& presData);
 
-      ~StochPresolverTinyEntries();
+      ~StochPresolverModelCleanup();
 
       // remove small matrix entries
       virtual void applyPresolving();
@@ -48,4 +48,4 @@ class StochPresolverTinyEntries : public StochPresolverBase
 
 
 
-#endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERTINYENTRIES_H_ */
+#endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERMODELCLEANUP_H_ */

@@ -21,12 +21,12 @@
 #include "StochGenMatrix.h"
 #include "sTreeCallbacks.h"
 #include "DoubleMatrixTypes.h"
-#include "StochPresolverTinyEntries.h"
 #include "StochPresolverSingletonRows.h"
 #include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
 #include "StochPresolverParallelRows.h"
 #include "StochPresolverBoundStrengthening.h"
+#include "StochPresolverModelCleanup.h"
 
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
@@ -62,7 +62,7 @@ Data* StochPresolver::presolve()
 
    StochPresolverBoundStrengthening presolverBS(presData);
    StochPresolverParallelRows presolverParallelRow(presData);
-   StochPresolverTinyEntries presolverTiny(presData);
+   StochPresolverModelCleanup presolverCleanup(presData);
    StochPresolverSingletonRows presolverSR(presData);
    //StochPresolverSingletonColumns presolverSC(presData);
 
@@ -79,7 +79,7 @@ Data* StochPresolver::presolve()
 
    presolverBS.applyPresolving();
    presolverParallelRow.applyPresolving();
-   presolverTiny.applyPresolving();
+   presolverCleanup.applyPresolving();
    presolverSR.applyPresolving();
    //presolverSC.applyPresolving();
 
