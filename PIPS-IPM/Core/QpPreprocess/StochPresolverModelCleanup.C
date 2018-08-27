@@ -167,33 +167,22 @@ int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_t
       }
       else  // system_type == INEQUALITY_SYSTEM
       {
-         if( currIclow->elements()[r] != 0.0 )
-         {
-            if( currIneqLhs->elements()[r] <= -infinity )
-            {  // discard row r
-               removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
-               nRemovedRows++;
-               continue;
-            }
-            else if( maxAct < currIneqLhs->elements()[r] - feastol )
-               abortInfeasible(MPI_COMM_WORLD);
+         // reformulation of the conditions:
+         if( ( currIclow->elements()[r] != 0.0 && maxAct < currIneqLhs->elements()[r] - feastol )
+               || ( currIcupp->elements()[r] != 0.0 && minAct > currIneqRhs->elements()[r] + feastol ) )
+            abortInfeasible(MPI_COMM_WORLD);
+         if( (currIclow->elements()[r] == 0.0 || (currIclow->elements()[r] != 0.0 && currIneqLhs->elements()[r] <= -infinity)) &&
+               (currIcupp->elements()[r] == 0.0 || (currIcupp->elements()[r] != 0.0 && currIneqRhs->elements()[r] >= infinity)) )
+         {  // discard row r
+            removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
+            nRemovedRows++;
          }
-         if( currIcupp->elements()[r] != 0.0 )
-         {
-            if( currIneqRhs->elements()[r] >= infinity )
-            {  // discard row r
-               removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
-               nRemovedRows++;
-            }
-            else if( minAct > currIneqRhs->elements()[r] + feastol )
-               abortInfeasible(MPI_COMM_WORLD);
-
-            else if( currIclow->elements()[r] != 0.0 &&
-                  ( maxAct <= currIneqRhs->elements()[r] + feastol && minAct >= currIneqLhs->elements()[r] - feastol ) )
-            {  // discard row r
-               removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
-               nRemovedRows++;
-            }
+         else if( (currIclow->elements()[r] == 0.0 || (currIclow->elements()[r] != 0.0 && minAct >= currIneqLhs->elements()[r] - feastol))
+               && (currIcupp->elements()[r] == 0.0 || (currIcupp->elements()[r] != 0.0 && maxAct <= currIneqRhs->elements()[r] + feastol)) )
+              // ( maxAct <= currIneqRhs->elements()[r] + feastol && minAct >= currIneqLhs->elements()[r] - feastol ) )
+         {  // discard row r
+            removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
+            nRemovedRows++;
          }
       }
    }
@@ -278,7 +267,7 @@ int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matri
       if( rowIsRedundant[r] )
       {
          removeRow(r, *currBlmat, *currBlmatTrans, NULL, NULL, *currNnzRow, *currRedColParent, NULL);
-         nRemovedRows++;
+         nRemovedRows++;   // only count the removed row once
       }
    }
    // update the nnzColParent counters:
@@ -363,27 +352,15 @@ void StochPresolverModelCleanup::checkRedundantLinkingRow(GenMatrixHandle matrix
       }
       else  // system_type == INEQUALITY_SYSTEM
       {
-         if( currIclowLink->elements()[r] != 0.0 )
-         {
-            if( currIneqLhsLink->elements()[r] <= -infinity )
-            {
-               rowIsRedundant[r] = true;  // discard row r
-               continue;
-            }
-            else if( maxActivity[r] < currIneqLhsLink->elements()[r] - feastol )
-               abortInfeasible(MPI_COMM_WORLD);
-         }
-         if( currIcuppLink->elements()[r] != 0.0 )
-         {
-            if( currIneqRhsLink->elements()[r] >= infinity )
-               rowIsRedundant[r] = true;  // discard row r
-            else if( minActivity[r] > currIneqRhsLink->elements()[r] + feastol )
-               abortInfeasible(MPI_COMM_WORLD);
-
-            else if( currIclowLink->elements()[r] != 0.0 &&
-                  ( maxActivity[r] <= currIneqRhsLink->elements()[r] + feastol && minActivity[r] >= currIneqLhsLink->elements()[r] - feastol ) )
-               rowIsRedundant[r] = true;  // discard row r
-         }
+         if( (currIclowLink->elements()[r] != 0.0 && maxActivity[r] < currIneqLhsLink->elements()[r] - feastol )
+               ||( currIcuppLink->elements()[r] != 0.0 && minActivity[r] > currIneqRhsLink->elements()[r] + feastol ) )
+            abortInfeasible(MPI_COMM_WORLD);
+         if( (currIclowLink->elements()[r] == 0.0 || (currIclowLink->elements()[r] != 0.0 && currIneqLhsLink->elements()[r] <= -infinity)) &&
+               (currIcuppLink->elements()[r] == 0.0 || (currIcuppLink->elements()[r] != 0.0 && currIneqRhsLink->elements()[r] >= infinity)) )
+            rowIsRedundant[r] = true;  // discard row r
+         else if( (currIclowLink->elements()[r] == 0.0 || (currIclowLink->elements()[r] != 0.0 && minActivity[r] >= currIneqLhsLink->elements()[r] - feastol))
+               && (currIcuppLink->elements()[r] == 0.0 || (currIcuppLink->elements()[r] != 0.0 && maxActivity[r] <= currIneqRhsLink->elements()[r] + feastol)) )
+            rowIsRedundant[r] = true;  // discard row r
       }
    }
 }
@@ -574,8 +551,6 @@ int StochPresolverModelCleanup::removeTinyChild( int it, SystemType system_type 
 
    // for Bmat:
    nelims += removeTinyInnerLoop( it, system_type, CHILD_BLOCK );
-
-   // todo: special treatment for the linking rows
 
    return nelims;
 }

@@ -2,8 +2,11 @@ Set i rows    / i1*i7 /
     j columns / j1*j9 /;
 
 parameter g(j) obj coefficients / j1 2, j2 2, j3 3, j4 2, j5 2, j6 2, j7 2, j8 2, j9 2 /
-          b(i) right hand side  / i1 1, i2 7002, i3 4, i4 5, i5 5, i6 9, i7 2 /
+          b(i) right hand side  / i1 2, i2 7002, i3 4, i4 5, i5 5, i6 10, i7 3 /
           cupp(i) right hand side  / i1 3, i2 2, i3 6, i4 7, i5 -4, i6 10e31, i7 10 /;
+* infeasible:
+*          b(i) right hand side  / i1 1, i2 7002, i3 4, i4 5, i5 5, i6 9, i7 2 /
+*          cupp(i) right hand side  / i1 3, i2 2, i3 6, i4 7, i5 -4, i6 10e31, i7 -10 /;
 
 Table A(i,j)
     j1    j2    j3      j4    j5    j6    j7    j8    j9
@@ -69,7 +72,7 @@ $ifthen %METHOD%==PIPS
 
 
 *For creation of gdx files:
-$ echo jacobian exampleAC_boundStrength.gdx > convertd.opt
+$ echo jacobian exampleAC_redundantRow.gdx > convertd.opt
   option lp=convertd;
   m.optfile = 1;
   solve m use lp min z;
