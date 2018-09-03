@@ -563,54 +563,17 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int it, SystemType system_t
    // Setting all the pointers correctly
    int nelims = 0;
    double* nnzRow = currNnzRow->elements();
-   double* xlowElems;
-   double* xuppElems;
-   double* ixlowElems;
-   double* ixuppElems;
-   double* redCol;
-   SparseStorageDynamic* storage;
+   SparseStorageDynamic* storage = (block_type == LINKING_VARS_BLOCK) ? currAmat : currBmat;
+   double* xlowElems = (block_type == LINKING_VARS_BLOCK) ? currxlowParent->elements() : currxlowChild->elements();
+   double* xuppElems = (block_type == LINKING_VARS_BLOCK) ? currxuppParent->elements() : currxuppChild->elements();
+   double* ixlowElems = (block_type == LINKING_VARS_BLOCK) ? currIxlowParent->elements() : currIxlowChild->elements();
+   double* ixuppElems = (block_type == LINKING_VARS_BLOCK) ? currIxuppParent->elements() : currIxuppChild->elements();
+   double* redCol = (block_type == LINKING_VARS_BLOCK) ? currRedColParent->elements() : currRedColChild->elements();
 
    if( block_type == LINKING_VARS_BLOCK )
-   {
-      storage = currAmat;
-      xlowElems = currxlowParent->elements();
-      xuppElems = currxuppParent->elements();
-      ixlowElems = currIxlowParent->elements();
-      ixuppElems = currIxuppParent->elements();
-
-      redCol = currRedColParent->elements();
-
       linkVarsBlocks[it+1].start = localNelims;
-   }
    else if( block_type == CHILD_BLOCK )
-   {
-      storage = currBmat;
-      xlowElems = currxlowChild->elements();
-      xuppElems = currxuppChild->elements();
-      ixlowElems = currIxlowChild->elements();
-      ixuppElems = currIxuppChild->elements();
-
-      redCol = currRedColChild->elements();
-
       childBlocks[it+1].start = localNelims;
-   }
-
-   double* rhsElems;
-   double* icuppElems;
-   double* iclowElems;
-   double* cuppElems;
-   double* clowElems;
-
-   if( system_type == EQUALITY_SYSTEM )
-      rhsElems = currEqRhs->elements();
-   else
-   {
-      assert( system_type == INEQUALITY_SYSTEM );
-      icuppElems = currIcupp->elements();
-      iclowElems = currIclow->elements();
-      cuppElems = currIneqRhs->elements();
-      clowElems = currIneqLhs->elements();
-   }
 
    // the actual work starts here:
    for( int r = 0; r < storage->m; r++ )
@@ -630,13 +593,13 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int it, SystemType system_t
                && fabs(storage->M[k]) * (xuppElems[col] - xlowElems[col]) * nnzRow[r] < tolerance2 * feastol )
          {
             if( system_type == EQUALITY_SYSTEM )
-               rhsElems[r] -= storage->M[k] * xlowElems[col];
+               currEqRhs->elements()[r] -= storage->M[k] * xlowElems[col];
             else
             {
-               if( icuppElems[r] != 0.0 )
-                  cuppElems[r] -= storage->M[k] * xlowElems[col];
-               if( iclowElems[r] != 0.0 )
-                  clowElems[r] -= storage->M[k] * xlowElems[col];
+               if( currIcupp->elements()[r] != 0.0 )
+                  currIneqRhs->elements()[r] -= storage->M[k] * xlowElems[col];
+               if( currIclow->elements()[r] != 0.0 )
+                  currIneqLhs->elements()[r] -= storage->M[k] * xlowElems[col];
             }
 
             // cout << "Remove entry M ( "<< r << ", " << col << " ) = "<<storage->M[k]<<" (by second test)"<<endl;
@@ -659,45 +622,11 @@ int StochPresolverModelCleanup::removeTinyLinkingRows( int it, SystemType system
    // Setting all the pointers correctly
    int nelims = 0;
    double tmp = 0;
-   double* xlowElems;
-   double* xuppElems;
-   double* ixlowElems;
-   double* ixuppElems;
-   double* redCol;
-
-   if( it == -1 )
-   {
-      xlowElems = currxlowParent->elements();
-      xuppElems = currxuppParent->elements();
-      ixlowElems = currIxlowParent->elements();
-      ixuppElems = currIxuppParent->elements();
-      redCol = currRedColParent->elements();
-   }
-   else
-   {
-      xlowElems = currxlowChild->elements();
-      xuppElems = currxuppChild->elements();
-      ixlowElems = currIxlowChild->elements();
-      ixuppElems = currIxuppChild->elements();
-      redCol = currRedColChild->elements();
-   }
-
-   double* rhsElems;
-   double* icuppElems;
-   double* iclowElems;
-   double* cuppElems;
-   double* clowElems;
-
-   if( system_type == EQUALITY_SYSTEM )
-      rhsElems = currEqRhsLink->elements();
-   else
-   {
-      assert( system_type == INEQUALITY_SYSTEM );
-      icuppElems = currIcuppLink->elements();
-      iclowElems = currIclowLink->elements();
-      cuppElems = currIneqRhsLink->elements();
-      clowElems = currIneqLhsLink->elements();
-   }
+   double* xlowElems = (it == -1) ? currxlowParent->elements() : currxlowChild->elements();
+   double* xuppElems = (it == -1) ? currxuppParent->elements() : currxuppChild->elements();
+   double* ixlowElems = (it == -1) ? currIxlowParent->elements() : currIxlowChild->elements();
+   double* ixuppElems = (it == -1) ? currIxuppParent->elements() : currIxuppChild->elements();
+   double* redCol = (it == -1) ? currRedColParent->elements() : currRedColChild->elements();
 
    // the actual work starts here:
    for( int r = 0; r < currBlmat->m; r++ )   // r: row index
@@ -717,13 +646,13 @@ int StochPresolverModelCleanup::removeTinyLinkingRows( int it, SystemType system
                && fabs(currBlmat->M[k]) * (xuppElems[col] - xlowElems[col]) * currNnzRow->elements()[r] < tolerance2 * feastol )
          {
             if( system_type == EQUALITY_SYSTEM )
-               rhsElems[r] -= currBlmat->M[k] * xlowElems[col];
+               currEqRhsLink->elements()[r] -= currBlmat->M[k] * xlowElems[col];
             else
             {
-               if( icuppElems[r] != 0.0 )
-                  cuppElems[r] -= currBlmat->M[k] * xlowElems[col];
-               if( iclowElems[r] != 0.0 )
-                  clowElems[r] -= currBlmat->M[k] * xlowElems[col];
+               if( currIcuppLink->elements()[r] != 0.0 )
+                  currIneqRhsLink->elements()[r] -= currBlmat->M[k] * xlowElems[col];
+               if( currIclowLink->elements()[r] != 0.0 )
+                  currIneqLhsLink->elements()[r] -= currBlmat->M[k] * xlowElems[col];
             }
 
             // cout << "Remove entry M ( "<< r << ", " << col << " ) (by second test) in Linking Constraint."<<endl;

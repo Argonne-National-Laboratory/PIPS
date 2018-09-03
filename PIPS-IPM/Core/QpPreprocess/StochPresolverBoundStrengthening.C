@@ -308,9 +308,8 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
 void StochPresolverBoundStrengthening::setNewBoundsIfTighter(int index, double new_low, double new_upp,
       SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp)
 {
-   const int n = ilow.n;
-   assert( index >= 0 && index < n );
-   assert( low.n == n && iupp.n == n && upp.n == n );
+   assert( index >= 0 && index < ilow.n );
+   assert( low.n == ilow.n && iupp.n == ilow.n && upp.n == ilow.n );
 
    if( checkNewBoundTightens(false, index, new_low, ilow, low) )
    {
