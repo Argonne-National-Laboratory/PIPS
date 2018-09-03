@@ -64,7 +64,6 @@ Data* StochPresolver::presolve()
    StochPresolverParallelRows presolverParallelRow(presData);
    StochPresolverModelCleanup presolverCleanup(presData);
    StochPresolverSingletonRows presolverSR(presData);
-   //StochPresolverSingletonColumns presolverSC(presData);
 
 #ifndef NDEBUG
    if( myRank == 0 )
@@ -72,16 +71,10 @@ Data* StochPresolver::presolve()
    presolverSR.countRowsCols();
 #endif
 
-   // main presolving loop
-   // while ( rerun )
-      // presolverTiny.applyPresolving
-      // presolverSingletonRow.applyPresolving
-
-   presolverBS.applyPresolving();
-   presolverParallelRow.applyPresolving();
-   presolverCleanup.applyPresolving();
    presolverSR.applyPresolving();
-   //presolverSC.applyPresolving();
+   presolverBS.applyPresolving();
+   presolverCleanup.applyPresolving();
+   presolverParallelRow.applyPresolving();
 
 /*   cout<<"nRowElemsA "<<endl;
    nRowElemsA->writeToStreamAll(cout);
@@ -102,13 +95,8 @@ Data* StochPresolver::presolve()
    finalPresData->writeToStreamDense(myfile);
    myfile.close();*/
 
-   //presProb->writeToStreamDense(std::cout);
-
    std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
    std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
-
-   //MPI_Barrier( MPI_COMM_WORLD);
-   //assert(0);
 
    return finalPresData;
 }
