@@ -533,9 +533,11 @@ SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
 void
 SparseGenMatrix::addNnzPerCol(OoqpVector& nnzVec)
 {
-   assert(m_Mt != NULL);
 
    SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
+
+   if( !m_Mt)
+      initTransposed();
 
    if( m_Mt->mStorageDynamic != NULL  )
    {

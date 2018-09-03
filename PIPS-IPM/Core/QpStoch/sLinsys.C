@@ -557,8 +557,14 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   SparseGenMatrix& G = prob->getLocalG();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
+
   int N, nxP;
+
+  R.getSize(N, nxP);
+  const bool withR = (nxP != -1);
+
   A.getSize(N, nxP);
+  const bool withA = (nxP != -1);
 
   assert(N==locmy);
   assert(locmyl >= 0);
@@ -573,19 +579,36 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   if(nxP==-1)
     C.getSize(N,nxP);
 
+  int N2, nxP2;
+  C.getSize(N2,nxP2);
+  const bool withC = (nxP2 != -1);
+
   if(nxP==-1)
     nxP = NP;
 
   N = locnx+locmy+locmz;
 
   SimpleVector col(N);
+  SimpleVector nnzPerColRAC(nxP);
+
+  if( withR )
+     R.addNnzPerCol(nnzPerColRAC);
+
+  if( withA )
+     A.addNnzPerCol(nnzPerColRAC);
+
+  if( withC )
+     C.addNnzPerCol(nnzPerColRAC);
 
   const int withMyl = (locmyl > 0);
   const int withMzl = (locmzl > 0);
 
   for(int it=0; it<nxP; it++) {
+    if( nnzPerColRAC[it] == 0 )
+      continue;
 
-    double* pcol = &col[0];
+    double* const pcol = &col[0];
+
     for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
 
     R.fromGetDense(0, it, &col[0],           1, locnx, 1);
@@ -618,8 +641,14 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   // do we have linking equality constraints?
   if( withMyl )
   {
+    SimpleVector nnzPerColFt(locmyl);
+    F.addNnzPerRow(nnzPerColFt);
+
     // do column-wise multiplication for columns containing Ft (F transposed)
     for(int it=0; it<locmyl; it++) {
+
+      if( nnzPerColFt[it] == 0 )
+         continue;
 
       double* pcol = &col[0];
 
@@ -647,8 +676,13 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   // do we have linking inequality constraints?
   if( withMzl )
   {
+    SimpleVector nnzPerColGt(locmzl);
+    G.addNnzPerRow(nnzPerColGt);
+
     // do column-wise multiplication for columns containing Gt (G transposed)
     for(int it=0; it<locmzl; it++) {
+      if( nnzPerColGt[it] == 0 )
+         continue;
 
       double* pcol = &col[0];
 
