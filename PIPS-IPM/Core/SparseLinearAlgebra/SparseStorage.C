@@ -11,6 +11,8 @@
 #include "SimpleVector.h"
 #include <limits>
 #include <fstream>
+#include <string>
+
 #include <pipsdef.h>
 #include <algorithm>
 
@@ -60,6 +62,14 @@ SparseStorage::~SparseStorage()
   }
 
   SparseStorage::instances--;
+}
+
+
+void SparseStorage::copyFrom(int * krowM_, int * jcolM_, double * M_) const
+{
+   memcpy(jcolM_, jcolM, len * sizeof(jcolM[0]));
+   memcpy(M_, M, len * sizeof(M[0]));
+   memcpy(krowM_, krowM, (m + 1) * sizeof(krowM[0]));
 }
 
 void SparseStorage::getSize( int& m_, int& n_ )
@@ -582,25 +592,35 @@ void SparseStorage::writeToStream(ostream& out) const
 
 void SparseStorage::writeToStreamDense( ostream& out) const
 {
-  int i, k;
-  //todo: instead of \t, use length of longest value in M
+   int i, k;
+   //todo: instead of \t, use length of longest value in M
 
-  for( i = 0; i < m; i++ ) {	// Row i
-	int j=0;					// Column j
-    for ( k = krowM[i]; k < krowM[i+1]; k++ ) {
-      while( jcolM[k] > j) {
-      	out << 0 << '\t';
-      	j++;
+   for( i = 0; i < m; i++ )
+   { // Row i
+      int j = 0; // Column j
+      for( k = krowM[i]; k < krowM[i + 1]; k++ )
+      {
+
+#ifndef NDEBUG
+         // assert that columns are ordered
+         assert(k == krowM[i] || jcolM[k - 1] < jcolM[k]);
+#endif
+
+         while( jcolM[k] > j )
+         {
+            out << 0 << '\t';
+            j++;
+         }
+         out << M[k] << '\t';
+         j++;
       }
-      out << M[k] << '\t';
-      j++;
-    }
-    while( j < n ) {
-      out << 0 << '\t';
-      j++;
-    }
-    out << endl;
-  }
+      while( j < n )
+      {
+         out << 0 << '\t';
+         j++;
+      }
+      out << endl;
+   }
 }
 
 void SparseStorage::writeToStreamDenseRow( stringstream& out, int rowidx) const
@@ -1189,7 +1209,7 @@ void SparseStorage::atPutDiagonal( int idiag,
 
 */
 
-void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
+void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt) const
 {
   int ind, pend;//,ptend;
   /////////////////////////////////////////////////////
@@ -1424,6 +1444,73 @@ void SparseStorage::dump(const string& filename)
   for (i = 0; i < len; i++) {
     fd << M[i] << " ";
   }
+}
+
+void SparseStorage::deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec)
+{
+   assert(nnzRowVec != NULL && nnzColVec != NULL);
+
+   int m_new = 0;
+   int n_new = 0;
+
+   int* rowsmap = new int[m];
+
+   for( int i = 0; i < m; i++ )
+      if( nnzRowVec[i] != 0.0 )
+         rowsmap[i] = m_new++;
+
+   int* colsmap = new int[n];
+
+   for( int i = 0; i < n; i++ )
+      if( nnzColVec[i] != 0.0 )
+         colsmap[i] = n_new++;
+
+   assert(krowM[0] == 0);
+
+   // todo
+#if 0
+   int nnz = 0;
+   int rowcount = 0;
+   int len_new = 0;
+
+
+   for( int r = 0; r < m; r++ )
+   {
+      const int nnzRow = nnzRowVec[r];
+
+      if( nnzRow == 0.0 )
+      {
+         nnz += krowM[r + 1] - krowM[r];
+         continue;
+      }
+      krowM[rowcount] = len_new;
+
+      for( int j = krowM[r]; j < krowM[r + 1]; j++ )
+      {
+         jcolM[len_new] = jcolM[colsmap[nnz]];
+         M[len_new++] = M[nnz++];
+      }
+      rowcount++;
+   }
+
+
+   for( int r = rowcount; r <= m; r++ )
+      krowM[r] = len_new;
+
+   assert(nnz == len);
+#endif
+
+   m = m_new;
+   n = n_new;
+
+   delete[] colsmap;
+   delete[] rowsmap;
+}
+
+void SparseStorage::addNnzPerRow(double* vec) const
+{
+   for( int r = 0; r < m; r++ )
+      vec[r] += krowM[r + 1] - krowM[r];
 }
 
 void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const

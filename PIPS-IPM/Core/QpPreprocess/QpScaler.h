@@ -5,11 +5,12 @@
  *      Author: Daniel Rehfeldt
  */
 
-#ifndef PIPS_IPM_CORE_QPSCALERS_QPSCALER_H_
-#define PIPS_IPM_CORE_QPSCALERS_QPSCALER_H_
+#ifndef PIPS_IPM_CORE_QPPREPROCESS_QPSCALER_H_
+#define PIPS_IPM_CORE_QPPREPROCESS_QPSCALER_H_
 
 #include "Scaler.h"
 #include "OoqpVector.h"
+#include "StochVector.h"
 #include "DoubleMatrix.h"
 #include "QpGenData.h"
 #include "QpGenResiduals.h"
@@ -17,7 +18,7 @@
 class Data;
 
 
-/**  * @defgroup QpScaler
+/**  * @defgroup QpPreprocess
  *
  * QP scaler
  * @{
@@ -82,4 +83,4 @@ public:
 //@}
 
 
-#endif /* PIPS_IPM_CORE_QPSCALERS_QPSCALER_H_ */
+#endif /* PIPS_IPM_CORE_QPPREPROCESS_QPSCALER_H_ */

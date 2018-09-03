@@ -125,6 +125,7 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector*
    A->getColMinMaxVec(false, true, rowScaleVecA, maxvec);
    C->getColMinMaxVec(false, false, rowScaleVecC, maxvec);
 
+
 #ifndef NDEBUG
    if( !rowScaleVecA || !rowScaleVecC )
    {
@@ -182,4 +183,5 @@ QpScaler::~QpScaler()
    delete vec_rowscaleA;
    delete vec_rowscaleC;
    delete vec_colscale;
+
 }

@@ -7,23 +7,23 @@
 
 #include "stochasticInput.hpp"
 
+#include "Presolver.h"
 #include "sData.h"
 #include "sResiduals.h"
 #include "sVars.h"
 #include "sTree.h"
 #include "StochMonitor.h"
 #include "Scaler.h"
-#include "ScalerFactory.h"
-
 #include <cstdlib>
-
+#include "PreprocessFactory.h"
 
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
  public:
   PIPSIpmInterface(stochasticInput &in, MPI_Comm = MPI_COMM_WORLD);
-  PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD, ScalerType scaler_type = SCALER_NONE);
+  PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD,
+        ScalerType scaler_type = SCALER_NONE, PresolverType presolver_type = PRESOLVER_NONE);
   ~PIPSIpmInterface();
 
   void go();
@@ -49,10 +49,12 @@ class PIPSIpmInterface
  protected:
  
   FORMULATION * factory;
-  sData *        data;
+  sData *        data;       // possibly presolved data
+  sData *        origData;   // original data
   sVars *        vars;
   sResiduals *   resids;
 
+  Presolver*    presolver;
   Scaler *      scaler;
   IPMSOLVER *   solver;
 
@@ -95,6 +97,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
   if(mype==0) printf("resids created\n");
 #endif
 
+  scaler = NULL;
+
   solver  = new IPMSOLVER( factory, data );
   solver->addMonitor(new StochMonitor( factory ));
 #ifdef TIMING
@@ -105,7 +109,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 }
 
 template<class FORMULATION, class IPMSOLVER>
-PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type) : comm(comm)
+PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type,
+      PresolverType presolver_type) : comm(comm)
 {
 
   int mype;
@@ -119,7 +124,35 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("factory created\n");
 #endif
 
-  data   = dynamic_cast<sData*>     ( factory->makeData() );
+  const PreprocessFactory& prefactory = PreprocessFactory::getInstance();
+
+  // presolving activated?
+  if( presolver_type != PRESOLVER_NONE )
+  {
+
+     origData = dynamic_cast<sData*>(factory->makeData());
+
+     MPI_Barrier(comm);
+     const double t0_presolve = MPI_Wtime();
+
+     presolver = prefactory.makePresolver(origData, presolver_type);
+
+     data = dynamic_cast<sData*>(presolver->presolve());
+
+     factory->data = data; // todo update also sTree* of factory
+
+     MPI_Barrier(comm);
+     const double t_presolve = MPI_Wtime();
+     if( mype == 0 )
+        std::cout << "---presolve time (in sec.): " << t_presolve - t0_presolve << std::endl;
+  }
+  else
+  {
+     data = dynamic_cast<sData*>(factory->makeData());
+     origData = NULL;
+     presolver = NULL;
+  }
+
 #ifdef TIMING
   if(mype==0) printf("data created\n");
 #endif
@@ -138,8 +171,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("resids created\n");
 #endif
 
-  const ScalerFactory& scfactory = ScalerFactory::getInstance();
-  scaler = scfactory.makeScaler(data, scaler_type);
+  scaler = prefactory.makeScaler(data, scaler_type);
+
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");
 #endif
@@ -250,12 +283,19 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
 { 
+
+
+
+
   delete solver;
   delete resids;
   delete vars;
   delete data;
+  delete origData;
   delete factory;
   delete scaler;
+  delete presolver;
+
 }
 
 

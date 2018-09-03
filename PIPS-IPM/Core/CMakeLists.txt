@@ -1,5 +1,5 @@
 add_subdirectory(QpSolvers)
-add_subdirectory(QpScalers)
+add_subdirectory(QpPreprocess)
 add_subdirectory(SparseLinearAlgebra)
 add_subdirectory(DenseLinearAlgebra)
 add_subdirectory(StochLinearAlgebra)

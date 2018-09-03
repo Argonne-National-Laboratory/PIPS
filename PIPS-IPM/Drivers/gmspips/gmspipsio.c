@@ -589,7 +589,6 @@ void copyGDXSymbol(int         numBlocks,
                    const int   readType)
 {
    int k, rc, objVarUel;
-
    int symNr=0, symType=0, symDim=0, recNr=0, userInfo=0;
    int dimFirst=0;
    gdxValues_t   vals;
@@ -609,7 +608,6 @@ void copyGDXSymbol(int         numBlocks,
    rc = gdxFindSymbol(fGDX, symName, &symNr);
    if (!rc && 0==strcmp(symName,"ANl"))
    {
-
       for (k=0; k<numBlocks; k++)
       {
          GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, "Non-linear Jacobian indicator", 2, dt_par, 0));
@@ -624,7 +622,6 @@ void copyGDXSymbol(int         numBlocks,
    {
       GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, symText, symDim, symType, userInfo));
    }
-
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
 
    while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
@@ -732,19 +729,18 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    else
       rc = gdxCreate (&fGDX, msg, sizeof(msg));
 
-   if ( !rc ) 
+   if ( !rc )
    {
       printf("Could not create gdx object: %s\n", msg);
       return 1;
    }
 
    gdxOpenRead(fGDX, gdxFilename, &rc);
-   if (rc) 
+   if (rc)
    {
       printf("Could not open GDX file %s (errNr=%d)\n", gdxFilename, rc);
       return 1;
    }
-   
 
    if (DictMap)
    {

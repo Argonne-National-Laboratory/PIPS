@@ -10,7 +10,7 @@
 
 class Data;
 
-/**  * @defgroup Scaler
+/**  * @defgroup Preprocessing
  *
  * Interior-point scalers
  * @{

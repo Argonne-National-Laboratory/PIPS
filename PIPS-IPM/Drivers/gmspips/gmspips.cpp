@@ -190,6 +190,24 @@ int fmatQ(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 }
 
+static void setParams(ScalerType& scaler_type, bool& stepDiffLp, bool& presolve, const char* paramname)
+{
+   if( strcmp(paramname, "scale") == 0 || strcmp(paramname, "scaleEqui") == 0 )
+      scaler_type = SCALER_EQUI_STOCH;
+
+   if( strcmp(paramname, "scaleGeo") == 0 )
+      scaler_type = SCALER_GEO_STOCH;
+
+   if( strcmp(paramname, "scaleGeoEqui") == 0 )
+      scaler_type = SCALER_GEO_EQUI_STOCH;
+
+   if( strcmp(paramname, "stepLp") == 0 )
+      stepDiffLp = true;
+
+   if( strcmp(paramname, "presolve") == 0 )
+      presolve = true;
+}
+
 int main(int argc, char ** argv) 
 {  
 
@@ -203,10 +221,11 @@ int main(int argc, char ** argv)
    GMSPIPSBlockData_t** blocks;
    ScalerType scaler_type = SCALER_NONE;
    bool stepDiffLp = false;
+   bool presolve = false;
 
-   if ( (argc<3) || (argc>6) )
+   if ( (argc<3) || (argc>7) )
    {
-      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp]" << endl;
+      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp] [presolve]" << endl;
       exit(1);
    }
    
@@ -219,30 +238,8 @@ int main(int argc, char ** argv)
       pGDXDirectory = &GDXDirectory[0];
    }
    
-   if( argc >= 5 )
-   {
-      if( strcmp(argv[4], "scale") == 0 || strcmp(argv[4], "scaleEqui") == 0 )
-         scaler_type = SCALER_EQUI_STOCH;
-      if( strcmp(argv[4], "scaleGeo") == 0 )
-         scaler_type = SCALER_GEO_STOCH;
-      if( strcmp(argv[4], "scaleGeoEqui") == 0 )
-         scaler_type = SCALER_GEO_EQUI_STOCH;
-
-      if( strcmp(argv[4], "stepLp") == 0 )
-         stepDiffLp = true;
-   }
-   if( argc == 6 )
-   {
-      if( strcmp(argv[5], "scale") == 0 || strcmp(argv[5], "scaleEqui") == 0 )
-         scaler_type = SCALER_EQUI_STOCH;
-      if( strcmp(argv[5], "scaleGeo") == 0 )
-         scaler_type = SCALER_GEO_STOCH;
-      if( strcmp(argv[5], "scaleGeoEqui") == 0 )
-         scaler_type = SCALER_GEO_EQUI_STOCH;
-
-      if( strcmp(argv[5], "stepLp") == 0 )
-         stepDiffLp = true;
-   }
+   for( int i = 5; i <= argc; i++ )
+      setParams(scaler_type, stepDiffLp, presolve, argv[i - 1]);
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
 #if 0
@@ -421,7 +418,8 @@ int main(int argc, char ** argv)
 	      cout << "Different steplengths in primal and dual direction are used." << endl;
 
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
-            scaler_type );
+            scaler_type,
+            presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 
 		if( gmsRank == 0 )
 		   cout << "PIPSIpmInterface created" << endl;
@@ -434,11 +432,11 @@ int main(int argc, char ** argv)
 		primalSolVec = pipsIpm.gatherPrimalSolution();
 #endif
 	}
-
-	else {
-
-      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
-            scaler_type );
+	else
+	{
+		PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
+		      scaler_type,
+				presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 
 		//PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
 		//PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);

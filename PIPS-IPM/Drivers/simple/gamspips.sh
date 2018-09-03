@@ -8,6 +8,7 @@ tbsize="8"
 np="1"
 scale=""
 stepLp=""
+presolve=""
 mins="60"
 
 
@@ -46,6 +47,10 @@ case $i in
     stepLp="${i#*=}"
     shift # past argument=value
     ;;
+    -PRESOLVE=*|--PRESOLVE=*)
+    presolve="${i#*=}"
+    shift # past argument=value
+    ;;
     *)
           # unknown option
     ;;
@@ -71,6 +76,13 @@ if [ "$stepLp" = "true" ]; then
 else
   stepLp=""
 fi
+
+if [ "$presolve" = "true" ]; then
+  presolve="presolve"
+else
+  presolve=""
+fi
+
 if [ "$scale" = "true" ]; then
   scale="scale"
 elif [ "$scale" = "scaleEqui" ]; then
@@ -82,7 +94,8 @@ elif [ "$scale" = "scaleGeoEqui" ]; then
 else
   scale=""
 fi
-mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp 2>&1 | tee pips.out
 
+echo "Calling: mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve"
+mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
 
 

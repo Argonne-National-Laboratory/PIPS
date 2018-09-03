@@ -1,5 +1,5 @@
 #add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
-include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpScalers Core/QpGen
+include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpPreprocess Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
   Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver
   Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver Core/LinearSolvers/BiCGStabSolver)
@@ -143,7 +143,7 @@ add_executable(pipsipmCallbackExample Drivers/callbackExample.cpp)
 target_link_libraries(pipsipmCallbackExample
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpgondziostoch ooqpqpscaler ooqpequistochscaler
-    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense ooqpqppresolver ooqpqpstochpresolver
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
 
 set(GAMSDIR  Drivers/gams)
@@ -157,7 +157,7 @@ target_link_libraries(gmspips
     dl
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpgondziostoch ooqpequistochscaler
-    ooqpgensparse ooqpbase ooqpsparse ooqpdense
+    ooqpgensparse ooqpbase ooqpsparse ooqpdense ooqpqppresolver ooqpqpstochpresolver
     ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}  ${PARDISO_LIBRARY} ${MATH_LIBS} ${COIN_LIBS})
 
 add_executable(gmschk Drivers/gmspips/gmspipschk.cpp Drivers/gmspips/gmspipsio.c ${GAMSDIR}/apifiles/C/api/gmomcc.c ${GAMSDIR}/apifiles/C/api/gevmcc.c ${GAMSDIR}/apifiles/C/api/gdxcc.c)

@@ -33,9 +33,16 @@ public:
 		 int Bl_m, int Bl_n, int Bl_nnz,
 		 MPI_Comm mpiComm_);
 
+  /** Constructs a matrix with local A, B, and Bl (linking constraints) blocks set to NULL */
+  StochGenMatrix(int id,
+       long long global_m, long long global_n,
+       MPI_Comm mpiComm_);
+
   // constructor for combining scenarios
   //StochGenMatrix(const vector<StochGenMatrix*> &blocks); -- not needed; cpetra
   virtual ~StochGenMatrix();
+
+  virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
   virtual void AddChild(StochGenMatrix* child);
 
@@ -73,6 +80,10 @@ public:
   /** row scale method for children */
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec );
 
+  virtual void getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent);
+
+  virtual void getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent);
+
   /** internal method needed for handling linking constraints */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent);
@@ -80,14 +91,17 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent );
 
+
+  virtual void initTransposedChild(bool dynamic);
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec);
+
   virtual void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec);
 
   virtual void getLinkVarsNnzChild(std::vector<int>& vec) const;
 
-
-  virtual void writeToStreamDenseChild(ostream& out, int index) const;
-  virtual void writeToStreamDenseChildRow(stringstream& out, int offset) const;
+  virtual void writeToStreamDenseChild(stringstream& out, int offset) const;
   virtual std::string writeToStreamDenseRowLink(int rowidx) const;
+
 
  public:
   virtual void updateTransposed();
@@ -139,7 +153,6 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
-  virtual void writeToStreamDenseRow(ostream& out) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -150,10 +163,24 @@ public:
 
   virtual void randomize( double alpha, double beta, double * seed );
 
+  /** initialize (dynamic) transposed matrices for A, B, Bl */
+  virtual void initTransposed(bool dynamic = false);
+  virtual void deleteTransposed();
+
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
   void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
+
+  virtual void getNnzPerRow(OoqpVector& nnzVec)
+  {
+     getNnzPerRow(nnzVec, NULL);
+  };
+
+  virtual void getNnzPerCol(OoqpVector& nnzVec)
+  {
+     getNnzPerCol(nnzVec, NULL);
+  };
 
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
@@ -168,6 +195,12 @@ public:
   {
      getColMinMaxVec(getMin, initializeVec, rowScaleVec, NULL, minmaxVec, NULL);
   };
+
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
+  {
+     initStaticStorageFromDynamic(rowNnzVec, colNnzVec, NULL, NULL);
+  };
+  virtual void freeDynamicStorage();
 
   /** returns Simple Vector indicating which linking rows have entries in exactly two blocks (indicated by 1.0 versus 0.0)*/
   virtual std::vector<int> get2LinkStartBlocks() const;
@@ -202,6 +235,9 @@ public:
 
   virtual void getSize( int& m, int& n ){m=0; n=0;}
   virtual void getSize( long long& m, long long& n ){m=0; n=0;}
+
+  virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const { return new StochGenDummyMatrix(id); };
+
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
@@ -264,9 +300,7 @@ public:
   virtual void getLinkVarsNnz(std::vector<int>& vec) const{};
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamDense(ostream& out) const{};
-  virtual void writeToStreamDenseChild(ostream& out, int index) const{};
-  virtual void writeToStreamDenseRow(ostream& out) const{};
-  virtual void writeToStreamDenseChildRow(stringstream& out, int offset) const{};
+  virtual void writeToStreamDenseChild(stringstream& out, int offset) const{};
   virtual std::string writeToStreamDenseRowLink(int rowidx) const{return 0;};
 
   /** Make the elements in this matrix symmetric. The elements of interest
@@ -281,8 +315,21 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
   virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
 
+  virtual void initTransposedChild(bool dynamic) {};
+
   virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec ){};
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
+
+  virtual void initTransposed(bool dynamic = false) {};
+  virtual void deleteTransposed() {};
+
+  virtual void getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent) {};
+
+  virtual void getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent) {};
+
+  virtual void getNnzPerRow(OoqpVector& nnzVec) {};
+
+  virtual void getNnzPerCol(OoqpVector& nnzVec) {};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};
@@ -295,6 +342,11 @@ public:
 
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
+
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec) {};
+  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec) {};
+
+  virtual void freeDynamicStorage() {};
 
   virtual std::vector<int> get2LinkStartBlocks() const {return std::vector<int>();};
 

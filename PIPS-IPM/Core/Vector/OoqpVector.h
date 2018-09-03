@@ -10,6 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 using namespace std;
 #include "IotrRefCount.h"
 #include "OoqpVectorHandle.h"
@@ -44,7 +45,6 @@ public:
   virtual void randomize( double alpha, double beta, double *ix ) = 0;
   /** Copy the elements of v into this OoqpVector object. */
   virtual void copyFrom( OoqpVector& v ) = 0;
-
   
   /** Return the infinity norm of this OoqpVector object. */
   virtual double twonorm() = 0;
@@ -62,6 +62,11 @@ public:
    */
   /** Multiply the components of this OoqpVector by num. */
   virtual void scalarMult( double num) = 0;
+
+  virtual void writeToStreamAll(ostream& out) const {assert(0 && "not implemented here");};
+  virtual void writeToStreamAllStringStream( stringstream& sout ) const {assert(0 && "not implemented here");};
+  virtual void writeToStreamAllChild( stringstream& sout ) const {assert(0 && "not implemented here");};
+
 
   virtual void writeToStream(ostream& out) const = 0;
   /** Write the components of this OoqpVector to a stream, subject to 
@@ -241,6 +246,9 @@ public:
   virtual void copyFromArray( double v[] ) = 0;
   /** Copy the elements of the C-style char array v into this OoqpVector. */
   virtual void copyFromArray( char v[] ) = 0;
+
+  /** remove entries i for which select[i] == 0 */
+  virtual void removeEntries( const OoqpVector& select ) { assert(0 && "not implemented here"); };
 
   virtual OoqpVector* clone() const { assert(0 && "not implemented here"); return NULL; };
 

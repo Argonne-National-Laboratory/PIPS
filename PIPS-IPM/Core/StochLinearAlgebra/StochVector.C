@@ -96,6 +96,21 @@ StochVector* StochVector::clone() const
   return clone;
 }
 
+StochVector* StochVector::cloneFull() const
+{
+   StochVector* clone = new StochVector(vec->length(), (vecl != NULL) ? vecl->length() : -1, mpiComm, -1);
+
+   clone->vec->copyFrom(*vec);
+
+   if( vecl )
+      clone->vecl->copyFrom(*vecl);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      clone->AddChild(children[it]->cloneFull());
+
+   return clone;
+}
+
 
 void 
 StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
@@ -906,6 +921,76 @@ void StochVector::scalarMult( double num )
     children[it]->scalarMult(num);
 }
 
+void StochVector::writeToStreamAll( ostream& out ) const
+{
+   int rank;
+   MPI_Comm_rank(mpiComm, &rank);
+   int world_size;
+   MPI_Comm_size(mpiComm, &world_size);
+   MPI_Status status;
+   int l;
+   stringstream sout;
+
+   if( rank == 0)
+   {
+      sout << "----" << endl;
+      vec->writeToStreamAllStringStream(sout);
+
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->writeToStreamAllChild(sout);
+
+      out << sout.str();
+      sout.str(std::string());
+
+      for( int p = 1; p < world_size; p++ )
+      {
+         MPI_Probe(p, p, mpiComm, &status);
+         MPI_Get_count(&status, MPI_CHAR, &l);
+         char *buf = new char[l];
+         MPI_Recv(buf, l, MPI_CHAR, p, p, mpiComm, &status);
+         string rowPartFromP(buf, l);
+         out << rowPartFromP;
+         delete[] buf;
+      }
+      if( vecl )
+      {
+         sout << "---" << endl;
+         vecl->writeToStreamAllStringStream(sout);
+      }
+      sout << "----" << endl;
+      out << sout.str();
+   }
+   else if( iAmDistrib==1 )
+   { // rank != 0
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->writeToStreamAllChild(sout);
+
+      std::string str = sout.str();
+      MPI_Ssend(str.c_str(), str.length(), MPI_CHAR, 0, rank, mpiComm);
+
+   }
+
+   if( iAmDistrib==1 )
+      MPI_Barrier(mpiComm);
+}
+
+void StochVector::writeToStreamAllChild( stringstream& sout ) const
+{
+   sout << "--" << endl;
+   vec->writeToStreamAllStringStream(sout);
+
+   for( size_t it = 0; it < children.size(); it++ ){
+      sout << "-- " << endl;
+      children[it]->writeToStreamAllChild(sout);
+   }
+
+   if( vecl )
+   {
+      sout << "---" << endl;
+      vecl->writeToStreamAllStringStream(sout);
+   }
+}
+
 void StochVector::writeToStream( ostream& out ) const
 {
   out << "---" << endl;
@@ -1324,6 +1409,28 @@ void StochVector::copyFromArray( char v[] )
   assert( "Not supported" && 0 );
 }
 
+void StochVector::removeEntries( const OoqpVector& select )
+{
+   const StochVector& selectStoch = dynamic_cast<const StochVector&>(select);
+
+   assert(children.size() == selectStoch.children.size());
+
+   vec->removeEntries(*selectStoch.vec);
+   n = vec->n;
+
+   if( vecl )
+   {
+      assert(selectStoch.vecl);
+      vecl->removeEntries(*selectStoch.vecl);
+   }
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->removeEntries(*selectStoch.children[it]);
+      n += children[it]->n;
+   }
+}
+
 void StochVector::permuteVec0Entries(const std::vector<unsigned int>& permvec)
 {
    dynamic_cast<SimpleVector*>(vec)->permuteEntries(permvec);
@@ -1334,3 +1441,4 @@ void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec
    if( vecl )
       dynamic_cast<SimpleVector*>(vecl)->permuteEntries(permvec);
 }
+

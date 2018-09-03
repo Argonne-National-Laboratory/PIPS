@@ -129,11 +129,20 @@ SimpleVector::SimpleVector( double * v_, int n_ )
   v = v_;
 }
 
+
 SimpleVector::~SimpleVector()
 {
   if( !preserveVec ) {
     delete [] v;
   }
+}
+
+SimpleVector* SimpleVector::cloneFull() const
+{
+   SimpleVector* clone = new SimpleVector(n);
+   clone->copyFromArray(v);
+
+   return clone;
 }
 
 void SimpleVector::setToZero()
@@ -257,10 +266,19 @@ void SimpleVector::componentDiv ( OoqpVector& vec )
 
 void SimpleVector::writeToStream(ostream& out) const
 {
-  //this->writefToStream( out, "%{value}" );
-  for(int i = 0; i < 10; i++ ) {
-    printf("%22.16f\n", v[i]);
-  }
+  this->writefToStream( out, "%{value}" );
+}
+
+void SimpleVector::writeToStreamAll(ostream& out) const
+{
+   for( int i = 0; i < n; i++ )
+      out << v[i] << "\n";
+}
+
+void SimpleVector::writeToStreamAllStringStream(stringstream& sout) const
+{
+   for( int i = 0; i < n; i++ )
+      sout << v[i] << "\n";
 }
 
 void SimpleVector::writefToStream( ostream& out,
@@ -745,6 +763,22 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
 
 }
 
+void SimpleVector::removeEntries(const OoqpVector& select)
+{
+   const SimpleVector& selectSimple = dynamic_cast<const SimpleVector&>(select);
+   const double* const selectArr = selectSimple.v;
+
+   assert(n == selectSimple.length());
+
+   int nNew = 0;
+
+   for( int i = 0; i < n; i++ )
+      if( selectArr[i] != 0.0 )
+         v[nNew++] = v[i];
+
+   n = nNew;
+}
+
 
 void SimpleVector::permuteEntries(const std::vector<unsigned int>& permvec)
 {
@@ -766,3 +800,4 @@ void SimpleVector::permuteEntries(const std::vector<unsigned int>& permvec)
 
    delete[] buffer;
 }
+

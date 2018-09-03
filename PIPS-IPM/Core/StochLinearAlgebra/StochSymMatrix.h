@@ -12,6 +12,12 @@
 #include "mpi.h"
 
 class StochSymMatrix : public SymMatrix {
+
+private:
+
+  // note: also used for dummy class!
+  virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec, const OoqpVector* linkParent);
+
 public:
   /** Constructs a matrix with local size 'local_n' having 'local_nnz' local nonzeros
       and set the global size and the id to to 'global_n' and 'id', respectively.
@@ -35,6 +41,7 @@ public:
   
   virtual void AddChild(StochSymMatrix* child);
 
+  virtual StochSymMatrix* clone() const;
 
   virtual int isKindOf( int type );
   virtual void atPutDense( int row, int col, double * A, int lda,
@@ -87,6 +94,14 @@ public:
   virtual void ColumnScale ( OoqpVector& vec );
   virtual void RowScale ( OoqpVector& vec );
   virtual void scalarMult( double num );
+
+  // note: also used for dummy class!
+  virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec)
+  {
+     deleteEmptyRowsCols(nnzVec, NULL);
+  }
+
+
  protected:
   StochSymMatrix* parent;
 };
@@ -104,6 +119,8 @@ public:
     : StochSymMatrix(id_, 0, 0, 0, MPI_COMM_NULL) {};
 
   virtual ~StochSymDummyMatrix(){};
+
+  virtual StochSymDummyMatrix* clone() const { return new StochSymDummyMatrix(id); };
 
   virtual void AddChild(StochSymMatrix* child){};
 
@@ -159,8 +176,6 @@ public:
   virtual void ColumnScale ( OoqpVector& vec ){};
   virtual void RowScale ( OoqpVector& vec ){};
   virtual void scalarMult( double num ){};
-  
-  
 };
 
 typedef SmartPointer<StochSymMatrix> StochSymMatrixHandle;

@@ -14,7 +14,10 @@
 EquiStochScaler::EquiStochScaler(Data* prob, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
-   cout<<"Creating EquiStochScaler..."<<endl;
+   int myRank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank == 0) std::cout<<"Creating EquiStochScaler..."<<endl;
 }
 
 void EquiStochScaler::doObjScaling()

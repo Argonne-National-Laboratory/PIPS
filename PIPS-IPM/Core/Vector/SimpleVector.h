@@ -41,6 +41,10 @@ public:
     return v[i];
   } 
   //@}
+
+  /* copy vector entries as well */
+  virtual SimpleVector* cloneFull() const;
+
   virtual ~SimpleVector();
 
   virtual void copyIntoArray( double v[] ) const;
@@ -63,6 +67,8 @@ public:
   virtual void printSolutionToStdErr( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
   virtual void writeToStream(ostream& out) const;
+  virtual void writeToStreamAll(ostream& out) const;
+  virtual void writeToStreamAllStringStream(stringstream& sout) const;
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const;
 
@@ -118,12 +124,15 @@ public:
 			      double *u_elt, 
 			      double *ustep_elt,
 			      int& first_or_second);
+
   virtual void findBlocking_pd(const OoqpVector & wstep_vec,
-                  const OoqpVector & u_vec, const OoqpVector & ustep_vec,
-  						double& maxStepPri, double& maxStepDual,
-  						double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
-  						double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
-						bool& primalBlocking, bool& dualBlocking) const;
+                      const OoqpVector & u_vec, const OoqpVector & ustep_vec,
+                      double& maxStepPri, double& maxStepDual,
+                      double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
+                      double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
+                      bool& primalBlocking, bool& dualBlocking) const;
+
+  virtual void removeEntries(const OoqpVector& select);
 
   void permuteEntries(const std::vector<unsigned int>& permvec);
 

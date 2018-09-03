@@ -68,8 +68,6 @@ QpGenData::QpGenData( LinearAlgebraPackage * la_in,
   nx = g->length();
   SpReferTo( Q, Q_in );
 
-
-
   SpReferTo( A, A_in );
   A->getSize( my, dummy );
   

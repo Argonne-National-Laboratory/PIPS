@@ -5,23 +5,23 @@
  *      Author: Svenja Uslu
  */
 
-#ifndef PIPS_IPM_CORE_QPSCALERS_GEOSTOCHSCALER_H_
-#define PIPS_IPM_CORE_QPSCALERS_GEOSTOCHSCALER_H_
+#ifndef PIPS_IPM_CORE_QPPREPROCESS_GEOSTOCHSCALER_H_
+#define PIPS_IPM_CORE_QPPREPROCESS_GEOSTOCHSCALER_H_
 
-#include "QpScaler.h"
+#include "../QpPreprocess/QpScaler.h"
 #include "StochVector.h"
 
 class Data;
 
 
-/**  * @defgroup QpScaler
+/**  * @defgroup QpPreprocess
  *
- * QP scaler
+ * Geometric scaler
  * @{
  */
 
 /**
- * Derived class for QP scalers.
+ * Derived class for Geometric scaler.
  */
 class GeoStochScaler : public QpScaler
 {
@@ -47,4 +47,4 @@ public:
 
 //@}
 
-#endif /* PIPS_IPM_CORE_QPSCALERS_GEOSTOCHSCALER_H_ */
+#endif /* PIPS_IPM_CORE_QPPREPROCESS_GEOSTOCHSCALER_H_ */

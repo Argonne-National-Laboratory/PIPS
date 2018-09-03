@@ -7,12 +7,17 @@
 
 //#define PIPS_DEBUG
 #include "GeoStochScaler.h"
+
 #include <cmath>
 #include "pipsdef.h"
 
 GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
+   int myRank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank == 0) std::cout<<"Creating GeoStochScaler..."<<endl;
    equilibrate = equiScaling;
 
    // todo: adjust parameters
@@ -34,18 +39,24 @@ void GeoStochScaler::doObjScaling()
    obj->absminNonZero( absmin, pips_eps );
 
    if( absmin < pips_eps )
-      absmin = pips_eps;
-   const double scaleFactor = std::sqrt(absmax * absmin);
-   PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
-
-   assert( scaleFactor >= 0.0 );
-   scaleVector(*obj, scaleFactor);
-
-   if( equilibrate )
    {
-      const double absmax = obj->infnorm();
-      assert(absmax >= 0);
-      scaleVector(*obj, absmax);
+      PIPSdebugMessage("Objective Scaling: absmin=%f < %f, setting objective to zero. \n", absmin, pips_eps);
+      obj->setToZero();
+   }
+   else
+   {
+      const double scaleFactor = std::sqrt(absmax * absmin);
+      PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
+
+      assert( scaleFactor >= 0.0 );
+      scaleVector(*obj, scaleFactor);
+
+      if( equilibrate )
+      {
+         const double absmax = obj->infnorm();
+         assert(absmax >= 0);
+         scaleVector(*obj, absmax);
+      }
    }
 }
 

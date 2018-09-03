@@ -76,6 +76,22 @@ StochSymMatrix::~StochSymMatrix()
   if (border) delete border;
 }
 
+StochSymMatrix* StochSymMatrix::clone() const
+{
+   const int local_n = diag->getStorage()->n;
+   const int local_nnz = diag->getStorage()->len;
+
+   StochSymMatrix* clone = new StochSymMatrix(id, n, local_n, local_nnz, mpiComm);
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      StochSymMatrix* child = children[it]->clone();
+      clone->AddChild(child);
+   }
+
+   return clone;
+}
+
 int StochSymMatrix::isKindOf( int type )
 {
   return type == kStochSymMatrix || type == kSymMatrix;
@@ -158,6 +174,7 @@ void StochSymMatrix::atPutZeros( int row, int col, int rowExtent, int colExtent 
 void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
 			    double alpha, OoqpVector& x_ )
 {
+//   return;
   StochVector & x = dynamic_cast<StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
@@ -364,6 +381,29 @@ void StochSymMatrix::scalarMult( double num )
     children[it]->scalarMult(num);
 }
 
+
+void StochSymMatrix::deleteEmptyRowsCols(const OoqpVector& nnzVec, const OoqpVector* linkParent)
+{
+   const StochVector& nnzVecStoch = dynamic_cast<const StochVector&>(nnzVec);
+
+   assert(children.size() == nnzVecStoch.children.size());
+
+   const SimpleVector* const vec = dynamic_cast<const SimpleVector*>(nnzVecStoch.vec);
+
+   diag->deleteEmptyRowsCols(*vec);
+
+   // at root?
+   if( linkParent == NULL )
+   {
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->deleteEmptyRowsCols(*nnzVecStoch.children[it], vec);
+   }
+   else
+   {
+     // adapt border
+      border->deleteEmptyRowsCols(*vec, *linkParent);
+   }
+}
 
 
 int StochSymDummyMatrix::isKindOf( int type ) 

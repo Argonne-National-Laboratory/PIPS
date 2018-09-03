@@ -249,13 +249,12 @@ public:
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
 
   virtual void writeToStreamDense(ostream& out) const {}
-  virtual void writeToStreamDenseRow(ostream& out) const {}
 
-  /** get ith row */
-  virtual void getRow(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+  /** get number of elements per row to given vector */
+  virtual void getNnzPerRow(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
 
-  /** get ith col */
-  virtual void getCol(OoqpVector& vec, int i) { assert(0 && "not implemented"); };
+  /** get number of elements per column to given vector */
+  virtual void getNnzPerCol(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
 
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,

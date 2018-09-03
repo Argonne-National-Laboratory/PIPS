@@ -5,15 +5,15 @@
  *      Author: bzfrehfe
  */
 
-#ifndef PIPS_IPM_CORE_QPSCALERS_EQUISTOCHSCALER_H_
-#define PIPS_IPM_CORE_QPSCALERS_EQUISTOCHSCALER_H_
+#ifndef PIPS_IPM_CORE_QPPREPROCESS_EQUISTOCHSCALER_H_
+#define PIPS_IPM_CORE_QPPREPROCESS_EQUISTOCHSCALER_H_
 
-#include "QpScaler.h"
+#include "../QpPreprocess/QpScaler.h"
 
 class Data;
 
 
-/**  * @defgroup QpScaler
+/**  * @defgroup QpPreprocess
  *
  * QP scaler
  * @{
@@ -39,4 +39,4 @@ public:
 //@}
 
 
-#endif /* PIPS_IPM_CORE_QPSCALERS_EQUISTOCHSCALER_H_ */
+#endif /* PIPS_IPM_CORE_QPPREPROCESS_EQUISTOCHSCALER_H_ */

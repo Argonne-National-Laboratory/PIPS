@@ -1,5 +1,6 @@
 #include "sData.h"
 #include "sTree.h"
+#include "sTreeCallbacks.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
@@ -378,37 +379,42 @@ std::vector<unsigned int> sData::getAscending2LinkPermutation(std::vector<int>& 
 sData::sData(sTree* tree)
 //  : QpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
 {
-  stochNode = tree;
-  Q     = SymMatrixHandle ( tree->createQ() );
-  g     = OoqpVectorHandle    ( tree->createc() );
+   stochNode = tree;
+   Q = SymMatrixHandle(tree->createQ());
+   g = OoqpVectorHandle(tree->createc());
 
-  blx   = OoqpVectorHandle    ( tree->createxlow()  );
-  ixlow = OoqpVectorHandle    ( tree->createixlow() );
-  bux   = OoqpVectorHandle    ( tree->createxupp()  );
-  ixupp = OoqpVectorHandle    ( tree->createixupp() );
+   blx = OoqpVectorHandle(tree->createxlow());
+   ixlow = OoqpVectorHandle(tree->createixlow());
+   bux = OoqpVectorHandle(tree->createxupp());
+   ixupp = OoqpVectorHandle(tree->createixupp());
 
+   A = GenMatrixHandle(tree->createA());
+   bA = OoqpVectorHandle(tree->createb());
 
-  A  = GenMatrixHandle        ( tree->createA() );
-  bA = OoqpVectorHandle       ( tree->createb() );
+   C = GenMatrixHandle(tree->createC());
+   bl = OoqpVectorHandle(tree->createclow());
+   iclow = OoqpVectorHandle(tree->createiclow());
+   bu = OoqpVectorHandle(tree->createcupp());
+   icupp = OoqpVectorHandle(tree->createicupp());
 
+   sc = OoqpVectorHandle(tree->newPrimalVector());
 
-  C     = GenMatrixHandle     ( tree->createC() );  
-  bl    = OoqpVectorHandle    ( tree->createclow() );
-  iclow = OoqpVectorHandle    ( tree->createiclow() );
-  bu    = OoqpVectorHandle    ( tree->createcupp()  );
-  icupp = OoqpVectorHandle    ( tree->createicupp() );
+   nxlow = ixlow->numberOfNonzeros();
+   nxupp = ixupp->numberOfNonzeros();
+   mclow = iclow->numberOfNonzeros();
+   mcupp = icupp->numberOfNonzeros();
 
-  sc = OoqpVectorHandle ( tree->newPrimalVector() );
+   sc = OoqpVectorHandle ( tree->newPrimalVector() );
 
-  nxlow = ixlow->numberOfNonzeros(); 
-  nxupp = ixupp->numberOfNonzeros(); 
-  mclow = iclow->numberOfNonzeros(); 
-  mcupp = icupp->numberOfNonzeros();
+   nxlow = ixlow->numberOfNonzeros();
+   nxupp = ixupp->numberOfNonzeros();
+   mclow = iclow->numberOfNonzeros();
+   mcupp = icupp->numberOfNonzeros();
 
-  createChildren();
+   createChildren();
 
-  useLinkStructure = false;
-  n0LinkVars = 0;
+   useLinkStructure = false;
+   n0LinkVars = 0;
 }
 
 sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
@@ -436,8 +442,68 @@ sData::sData(sTree* tree_, OoqpVector * c_in, SymMatrix * Q_in,
   n0LinkVars = 0;
 }
 
+void sData::writeToStreamDense(ostream& out) const
+{
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-void sData::createChildren()
+   if( myRank == 0 ) out <<  "A: " << std::endl;
+   (*A).writeToStreamDense(out);
+   if( myRank == 0 ) out <<  "C: " << std::endl;
+   (*C).writeToStreamDense(out);
+   if( myRank == 0 ) out <<  "obj: " << std::endl;
+   (*g).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "bA: " << std::endl;
+   (*bA).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "xupp: " << std::endl;
+   (*bux).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "ixupp: " << std::endl;
+   (*ixupp).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "xlow: " << std::endl;
+   (*blx).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "ixlow: " << std::endl;
+   (*ixlow).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "cupp: " << std::endl;
+   (*bu).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "icupp: " << std::endl;
+   (*icupp).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "clow: " << std::endl;
+   (*bl).writeToStreamAll(out);
+   if( myRank == 0 ) out <<  "iclow: " << std::endl;
+   (*iclow).writeToStreamAll(out);
+}
+
+sData*
+sData::cloneFull(bool switchToDynamicStorage) const
+{
+   // todo Q is empty!
+   StochSymMatrixHandle Q_clone(dynamic_cast<const StochSymMatrix&>(*Q).clone());
+   StochGenMatrixHandle A_clone(dynamic_cast<const StochGenMatrix&>(*A).cloneFull(switchToDynamicStorage));
+   StochGenMatrixHandle C_clone(dynamic_cast<const StochGenMatrix&>(*C).cloneFull(switchToDynamicStorage));
+
+   StochVectorHandle c_clone (dynamic_cast<const StochVector&>(*g).cloneFull());
+   StochVectorHandle bA_clone ( dynamic_cast<const StochVector&>(*bA).cloneFull());
+   StochVectorHandle xupp_clone (dynamic_cast<const StochVector&>(*bux).cloneFull());
+   StochVectorHandle ixupp_clone (dynamic_cast<const StochVector&>(*ixupp).cloneFull());
+   StochVectorHandle xlow_clone ( dynamic_cast<const StochVector&>(*blx).cloneFull());
+   StochVectorHandle ixlow_clone ( dynamic_cast<const StochVector&>(*ixlow).cloneFull());
+   StochVectorHandle cupp_clone ( dynamic_cast<const StochVector&>(*bu).cloneFull());
+   StochVectorHandle icupp_clone ( dynamic_cast<const StochVector&>(*icupp).cloneFull());
+   StochVectorHandle clow_clone ( dynamic_cast<const StochVector&>(*bl).cloneFull());
+   StochVectorHandle iclow_clone ( dynamic_cast<const StochVector&>(*iclow).cloneFull());
+
+   sTree* tree_clone = stochNode; // todo
+
+   sData* clone = new sData(tree_clone, c_clone, Q_clone, xlow_clone,
+         ixlow_clone, nxlow, xupp_clone, ixupp_clone, nxupp, A_clone, bA_clone,
+         C_clone, clow_clone, iclow_clone, mclow, cupp_clone, icupp_clone,
+         mcupp);
+
+   return clone;
+}
+
+void
+sData::createChildren()
 {
   //follow the structure of one of the tree objects and create the same
   //structure for this class, and link this object with the corresponding 
@@ -470,13 +536,15 @@ void sData::createChildren()
 
 }
 
-void sData::destroyChildren()
+void
+sData::destroyChildren()
 {
-  for(size_t it=0; it<children.size(); it++) {
-    children[it]->destroyChildren();
-    delete children[it];
-  }
-  children.clear();
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->destroyChildren();
+      delete children[it];
+   }
+   children.clear();
 }
 
 void sData::permuteLinkingCons()
@@ -603,40 +671,42 @@ void sData::activateLinkStructureExploitation()
 
 void sData::AddChild(sData* child)
 {
-  children.push_back(child);
+   children.push_back(child);
 }
 
-double sData::objectiveValue( QpGenVars * vars )
+double
+sData::objectiveValue(QpGenVars * vars)
 {
-  StochVector& x = dynamic_cast<StochVector&>(*vars->x);
-  OoqpVectorHandle temp( x.clone() );
+   StochVector& x = dynamic_cast<StochVector&>(*vars->x);
+   OoqpVectorHandle temp(x.clone());
 
-  this->getg( *temp );
-  this->Qmult( 1.0, *temp, 0.5, *vars->x );
+   this->getg(*temp);
+   this->Qmult(1.0, *temp, 0.5, *vars->x);
 
-  return temp->dotProductWith( *vars->x );
+   return temp->dotProductWith(*vars->x);
 }
 
-void sData::createScaleFromQ()
+void
+sData::createScaleFromQ()
 {
 
-  assert("Not implemented!" && 0);
+   assert("Not implemented!" && 0);
 
-  // Stuff the diagonal elements of Q into the vector "sc"
-  this->getDiagonalOfQ( *sc);
+   // Stuff the diagonal elements of Q into the vector "sc"
+   this->getDiagonalOfQ(*sc);
 
-  // Modifying scVector is equivalent to modifying sc
-  /*SimpleVector & scVector = dynamic_cast<SimpleVector &>(*sc);
+   // Modifying scVector is equivalent to modifying sc
+   /*SimpleVector & scVector = dynamic_cast<SimpleVector &>(*sc);
 
-  int scLength = scVector.length();
+    int scLength = scVector.length();
 
-  for( int i = 0; i < scLength; i++){
+    for( int i = 0; i < scLength; i++){
     if( scVector[i] > 1)
-        scVector[i] = 1.0/sqrt( scVector[i]);
+    scVector[i] = 1.0/sqrt( scVector[i]);
     else
-        scVector[i] = 1.0;
+    scVector[i] = 1.0;
     }
-  */
+    */
 }
 
 void sData::printLinkVarsStats()
@@ -770,8 +840,8 @@ void sData::printLinkConsStats()
 
 sData::~sData()
 {
-  for(size_t it=0; it<children.size(); it++)
-    delete children[it];
+   for( size_t it = 0; it < children.size(); it++ )
+      delete children[it];
 }
 
 std::vector<unsigned int> sData::getLinkVarsPermInv()
@@ -789,84 +859,94 @@ std::vector<unsigned int> sData::getLinkConsIneqPermInv()
 
 int sData::getLocalnx()
 {
-  StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
-  return Qst.diag->size();
+   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
+   return Qst.diag->size();
 }
 
-int sData::getLocalmy()
+int
+sData::getLocalmy()
 {
-  long long my, nx;
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  Ast.Bmat->getSize(my, nx);
-  return my;
+   long long my, nx;
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   Ast.Bmat->getSize(my, nx);
+   return my;
 }
 
-int sData::getLocalmyl()
+int
+sData::getLocalmyl()
 {
-  long long myl, nxl;
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  Ast.Blmat->getSize(myl, nxl);
-  return myl;
+   long long myl, nxl;
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   Ast.Blmat->getSize(myl, nxl);
+   return myl;
 }
-
 
 int sData::getLocalmz()
 {
-  long long mz, nx;
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  Cst.Bmat->getSize(mz, nx);
-  return mz;
+   long long mz, nx;
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   Cst.Bmat->getSize(mz, nx);
+   return mz;
 }
 
-int sData::getLocalmzl()
+int
+sData::getLocalmzl()
 {
-  long long mzl, nxl;
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  Cst.Blmat->getSize(mzl, nxl);
-  return mzl;
+   long long mzl, nxl;
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   Cst.Blmat->getSize(mzl, nxl);
+   return mzl;
 }
 
-int sData::getLocalSizes(int& nx, int& my, int& mz, int& myl, int& mzl)
+int
+sData::getLocalSizes(int& nx, int& my, int& mz, int& myl, int& mzl)
 {
-  long long nxloc, myloc, mzloc, mylloc, mzlloc;
+   long long nxloc, myloc, mzloc, mylloc, mzlloc;
 
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  Ast.Blmat->getSize(mylloc, nxloc);
-  Ast.Bmat->getSize(myloc, nxloc);
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   Ast.Blmat->getSize(mylloc, nxloc);
+   Ast.Bmat->getSize(myloc, nxloc);
 
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  Cst.Blmat->getSize(mzlloc, nxloc);
-  Cst.Bmat->getSize(mzloc, nxloc);
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   Cst.Blmat->getSize(mzlloc, nxloc);
+   Cst.Bmat->getSize(mzloc, nxloc);
 
-  nx=nxloc; my=myloc; mz=mzloc; myl=mylloc; mzl=mzlloc;
-  return 0;
+   nx = nxloc;
+   my = myloc;
+   mz = mzloc;
+   myl = mylloc;
+   mzl = mzlloc;
+   return 0;
 }
 
-int sData::getLocalSizes(int& nx, int& my, int& mz)
+int
+sData::getLocalSizes(int& nx, int& my, int& mz)
 {
-  long long nxll, myll, mzll;
+   long long nxll, myll, mzll;
 
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  Ast.Bmat->getSize(myll, nxll);
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   Ast.Bmat->getSize(myll, nxll);
 
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  Cst.Bmat->getSize(mzll, nxll);
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   Cst.Bmat->getSize(mzll, nxll);
 
-  nx=nxll; my=myll; mz=mzll;
-  return 0;
+   nx = nxll;
+   my = myll;
+   mz = mzll;
+   return 0;
 }
 
-
-int sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
+int
+sData::getLocalNnz(int& nnzQ, int& nnzB, int& nnzD)
 {
-  StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
 
-  nnzQ = Qst.diag->getStorageRef().len + Qst.border->getStorageRef().len;
-  nnzB = Ast.Bmat->getStorageRef().len;
-  nnzD = Cst.Bmat->getStorageRef().len;
-  return 0;
+   nnzQ = Qst.diag->getStorageRef().len + Qst.border->getStorageRef().len;
+   nnzB = Ast.Bmat->getStorageRef().len;
+   nnzD = Cst.Bmat->getStorageRef().len;
+   return 0;
 }
 
 int sData::getSchurCompMaxNnz()
@@ -929,97 +1009,167 @@ int sData::getSchurCompMaxNnz()
    return nnz;
 }
 
-
 SparseSymMatrix& sData::getLocalQ()
 {
-  StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
-  return *Qst.diag;
+   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
+   return *Qst.diag;
 }
 
-SparseGenMatrix& sData::getLocalCrossHessian()
+SparseGenMatrix&
+sData::getLocalCrossHessian()
 {
-  StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
-  return *Qst.border;
+   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
+   return *Qst.border;
 }
 
 // T_i x_0 + W_i x_i = b_i
 
 // This is T_i
-SparseGenMatrix& sData::getLocalA()
+SparseGenMatrix&
+sData::getLocalA()
 {
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  return *Ast.Amat;
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   return *Ast.Amat;
 }
 
 // This is W_i:
-SparseGenMatrix& sData::getLocalB()
+SparseGenMatrix&
+sData::getLocalB()
 {
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  return *Ast.Bmat;
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   return *Ast.Bmat;
+
 }
 
 // This is F_i (linking equality matrix):
-SparseGenMatrix& sData::getLocalF()
+SparseGenMatrix&
+sData::getLocalF()
 {
-  StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
-  return *Ast.Blmat;
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   return *Ast.Blmat;
 }
-
 
 // low_i <= C_i x_0 + D_i x_i <= upp_i
 
 // This is C_i
-SparseGenMatrix& sData::getLocalC()
+SparseGenMatrix&
+sData::getLocalC()
 {
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  return *Cst.Amat;
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   return *Cst.Amat;
 }
 
 // This is D_i
-SparseGenMatrix& sData::getLocalD()
+SparseGenMatrix&
+sData::getLocalD()
 {
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  return *Cst.Bmat;
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   return *Cst.Bmat;
 }
 
 // This is G_i (linking inequality matrix):
-SparseGenMatrix& sData::getLocalG()
+SparseGenMatrix&
+sData::getLocalG()
 {
-  StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
-  return *Cst.Blmat;
+   StochGenMatrix& Cst = dynamic_cast<StochGenMatrix&>(*C);
+   return *Cst.Blmat;
 }
 
+void
+sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec)
+{
+   StochSymMatrix& Q_stoch = dynamic_cast<StochSymMatrix&>(*Q);
 
-void sData::sync()
+   // todo only works if Q is empty
+   Q_stoch.deleteEmptyRowsCols(colNnzVec);
+
+   // clean up equality system
+   StochGenMatrix& A_stoch = dynamic_cast<StochGenMatrix&>(*A);
+   StochVector& b_Astoch = dynamic_cast<StochVector&>(*bA);
+
+   A_stoch.initStaticStorageFromDynamic(rowNnzVecA, colNnzVec);
+   A_stoch.freeDynamicStorage();
+
+   b_Astoch.removeEntries(rowNnzVecA);
+
+   // clean up inequality system and x
+   StochGenMatrix& C_stoch = dynamic_cast<StochGenMatrix&>(*C);
+   StochVector& g_stoch = dynamic_cast<StochVector&>(*g);
+
+   StochVector& blx_stoch = dynamic_cast<StochVector&>(*blx);
+   StochVector& ixlow_stoch = dynamic_cast<StochVector&>(*ixlow);
+   StochVector& bux_stoch = dynamic_cast<StochVector&>(*bux);
+   StochVector& ixupp_stoch = dynamic_cast<StochVector&>(*ixupp);
+
+   StochVector& bl_stoch = dynamic_cast<StochVector&>(*bl);
+   StochVector& iclow_stoch = dynamic_cast<StochVector&>(*iclow);
+   StochVector& bu_stoch = dynamic_cast<StochVector&>(*bu);
+   StochVector& icupp_stoch = dynamic_cast<StochVector&>(*icupp);
+
+   C_stoch.initStaticStorageFromDynamic(rowNnzVecC, colNnzVec);
+   C_stoch.freeDynamicStorage();
+
+   g_stoch.removeEntries(colNnzVec);
+
+   blx_stoch.removeEntries(colNnzVec);
+   ixlow_stoch.removeEntries(colNnzVec);
+   bux_stoch.removeEntries(colNnzVec);
+   ixupp_stoch.removeEntries(colNnzVec);
+
+   bl_stoch.removeEntries(rowNnzVecC);
+   iclow_stoch.removeEntries(rowNnzVecC);
+   bu_stoch.removeEntries(rowNnzVecC);
+   icupp_stoch.removeEntries(rowNnzVecC);
+
+   assert(stochNode != NULL);
+
+   // adapt sizes and tree
+   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*stochNode);
+
+   callbackTree.initPresolvedData(Q_stoch, A_stoch, C_stoch, g_stoch, b_Astoch, iclow_stoch);
+   callbackTree.switchToPresolvedData();
+
+   long long dummy;
+   nx = g_stoch.length();
+   A_stoch.getSize( my, dummy );
+   C_stoch.getSize( mz, dummy );
+
+   nxlow = ixlow_stoch.numberOfNonzeros();
+   nxupp = ixupp_stoch.numberOfNonzeros();
+   mclow = iclow_stoch.numberOfNonzeros();
+   mcupp = icupp_stoch.numberOfNonzeros();
+}
+
+void
+sData::sync()
 {
 
-  
-  destroyChildren();
-  
-  stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*g)); 
+   destroyChildren();
+
+   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*g));
 
 //   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 //   printf("vec -----------------------------------------------------\n");sleep(myRank+1);  
 //   stochNode->displayVectorVsTreeStructure(dynamic_cast<StochVector&>(*g), myRank);
 //   printf("vec done ----------------------\n"); usleep(10000);
 
-  stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*blx));
-  stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*ixlow));
-  stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*bux));
-  stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*ixupp));
-  stochNode->syncDualYVector(dynamic_cast<StochVector&>(*bA));
-  stochNode->syncDualZVector(dynamic_cast<StochVector&>(*bl));
-  stochNode->syncDualZVector(dynamic_cast<StochVector&>(*bu));
-  stochNode->syncDualZVector(dynamic_cast<StochVector&>(*iclow));
-  stochNode->syncDualZVector(dynamic_cast<StochVector&>(*icupp));
+   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*blx));
+   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*ixlow));
+   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*bux));
+   stochNode->syncPrimalVector(dynamic_cast<StochVector&>(*ixupp));
+   stochNode->syncDualYVector(dynamic_cast<StochVector&>(*bA));
+   stochNode->syncDualZVector(dynamic_cast<StochVector&>(*bl));
+   stochNode->syncDualZVector(dynamic_cast<StochVector&>(*bu));
+   stochNode->syncDualZVector(dynamic_cast<StochVector&>(*iclow));
+   stochNode->syncDualZVector(dynamic_cast<StochVector&>(*icupp));
 
-  stochNode->syncStochSymMatrix(dynamic_cast<StochSymMatrix&>(*Q));
-  stochNode->syncStochGenMatrix(dynamic_cast<StochGenMatrix&>(*A));
+   stochNode->syncStochSymMatrix(dynamic_cast<StochSymMatrix&>(*Q));
+   stochNode->syncStochGenMatrix(dynamic_cast<StochGenMatrix&>(*A));
 
-  //sleep(myRank);printf("A mat------------------------------------------------\n");
-  //stochNode->displayMatVsTreeStructure(dynamic_cast<StochGenMatrix&>(*A), myRank);
+   //sleep(myRank);printf("A mat------------------------------------------------\n");
+   //stochNode->displayMatVsTreeStructure(dynamic_cast<StochGenMatrix&>(*A), myRank);
 
-  stochNode->syncStochGenMatrix(dynamic_cast<StochGenMatrix&>(*C));
+   stochNode->syncStochGenMatrix(dynamic_cast<StochGenMatrix&>(*C));
 
-  createChildren();
+   createChildren();
 }

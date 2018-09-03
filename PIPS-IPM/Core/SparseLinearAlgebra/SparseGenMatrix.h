@@ -8,6 +8,7 @@
 #include "OoqpVectorHandle.h"
 #include "DoubleMatrix.h"
 #include "SparseStorage.h"
+#include "SparseStorageDynamic.h"
 #include "SparseGenMatrixHandle.h"
 #include <vector>
 
@@ -23,9 +24,14 @@ private:
 
 protected:
   SparseStorageHandle mStorage;
-  int size;
+  SparseStorageDynamic* mStorageDynamic;
+
+  // in the case of A'*A we internally form the transpose only once
+  SparseGenMatrix* m_Mt;
 
 public:
+
+  SparseGenMatrix( );
 
   void updateTransposed();
   void deleteTransposed();
@@ -36,6 +42,8 @@ public:
 		   int deleteElts=0);
   //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
   
+  virtual SparseGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
+
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );
 
@@ -87,6 +95,9 @@ public:
   /** C = this^T * inv(D) * this where D=diag(d) is a diagonal matrix. */
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
 
+  /** initialize (dynamic) transposed matrix */
+  virtual void initTransposed(bool dynamic = false);
+
   /** C = this * this^T */
   virtual void matMultTrans(SymMatrix** res);
   
@@ -115,6 +126,16 @@ public:
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
 
+  SparseStorageDynamic * getStorageDynamic() { assert(mStorageDynamic != NULL); return mStorageDynamic; }
+  SparseStorageDynamic& getStorageDynamicRef() { assert(mStorageDynamic != NULL); return *mStorageDynamic; }
+  SparseStorageDynamic * getStorageDynamicTransposed() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
+  SparseStorageDynamic& getStorageDynamicTransposedRef() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
+  bool hasDynamicStorage() { return (mStorageDynamic != NULL); }
+
+  virtual void addNnzPerRow(OoqpVector& nnzVec);
+
+  virtual void addNnzPerCol(OoqpVector& nnzVec);
+
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec );
@@ -122,6 +143,8 @@ public:
   /** fill vector with absolute minimum/maximum value of each column */
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
+
+  void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec);
 
   void permuteRows(const std::vector<unsigned int>& permvec);
 
@@ -136,11 +159,11 @@ public:
 
   SparseGenMatrix& getTranspose();
 
-  virtual ~SparseGenMatrix();
+  void deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
 
- protected:
-  // in the case of A'*A we internally form the transpose only once
-  SparseGenMatrix* m_Mt;
+  void freeDynamicStorage();
+
+  virtual ~SparseGenMatrix();
 
 };
 

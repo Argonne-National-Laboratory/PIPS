@@ -11,6 +11,10 @@
 class StochTree;
 
 class StochVector : public OoqpVector {
+private:
+
+  virtual void writeToStreamAllChild( stringstream& sout ) const;
+
 protected:
 
 public:
@@ -48,6 +52,8 @@ public:
   virtual OoqpVector* dataClone() const;
   virtual OoqpVector* dataCloneLinkCons() const;
   virtual StochVector* clone() const;
+  /* copy vector entries as well */
+  virtual StochVector* cloneFull() const;
 
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3);
   virtual void jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector& vz);
@@ -88,6 +94,7 @@ public:
   virtual void componentDiv ( OoqpVector& v );
   virtual void scalarMult( double num);
   virtual void writeToStream(ostream& out) const;
+  virtual void writeToStreamAll(ostream& out) const;
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const;
 
@@ -136,6 +143,9 @@ public:
   virtual void permuteVec0Entries(const std::vector<unsigned int>& permvec);
   virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec);
 
+  /** remove entries i for which select[i] == 0 */
+  virtual void removeEntries( const OoqpVector& select );
+
   int getSize() { return n; };
 };
 
@@ -160,6 +170,7 @@ public:
   */
   virtual OoqpVector* dataClone() const { return new SimpleVector(0);}
   virtual StochVector* clone() const { return new StochDummyVector();}
+  virtual StochVector* cloneFull() const { return new StochDummyVector();}
 
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3){};
   virtual void jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3){};
@@ -198,6 +209,8 @@ public:
   virtual void componentDiv ( OoqpVector& v ){};
   virtual void scalarMult( double num){};
   virtual void writeToStream(ostream& out) const{};
+  virtual void writeToStreamAll(ostream& out) const{};
+  virtual void writeToStreamAllChild( stringstream& sout ) const{};
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const{};
 
@@ -242,6 +255,8 @@ public:
   virtual void copyIntoArray( double v[] ) const{};
   virtual void copyFromArray( double v[] ){};
   virtual void copyFromArray( char v[] ){};
+
+  virtual void removeEntries( const OoqpVector& select ) {};
   virtual void permuteVec0(const std::vector<unsigned int>& permvec) {};
   virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec) {};
 

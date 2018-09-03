@@ -61,13 +61,15 @@ public:
 		 int deleteElts=0);
   //SparseStorage(const vector<SparseStorage*> &blocks, bool diagonal); -- not needed anymore; cpetra
 
+  void copyFrom(int * krowM_, int * jcolM_, double * M_) const;
+
   void shiftRows( int row, int shift, int& info );
   virtual void getSize( int& m, int& n );
   int rows() { return m; }
   int cols() { return n; }
 
   int length() { return len; };
-  int numberOfNonZeros() {	return krowM[m]; };
+  int numberOfNonZeros() const {	return krowM[m]; };
   virtual void fromGetDense( int row, int col, double * A, int lda,
 			     int rowExtent, int colExtent );
   virtual void atPutDense( int row, int col, double * A, int lda,
@@ -142,7 +144,7 @@ public:
 			int* krowMt, int* jcolMt, double* dMt,
 			int* krowMtM, int* jcolMtM, double* dMtM);
   /** Builds the transpose: Mt = this^T */
-  void transpose(int* krowMt, int* jcolMt, double* dMt);
+  void transpose(int* krowMt, int* jcolMt, double* dMt) const;
 
   void reduceToLower();
 
@@ -164,6 +166,8 @@ public:
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
+  /** add nnz per row to given array */
+  void addNnzPerRow(double* vec) const;
   void getLinkVarsNnz(std::vector<int>& vec) const;
 
   /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i];
@@ -174,6 +178,8 @@ public:
   void permuteCols(const std::vector<unsigned int>& permvec);
 
   void dump(const string& filename);
+
+  void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
 
   virtual ~SparseStorage();
 };

@@ -12,6 +12,7 @@
 #include "DoubleMatrixTypes.h"
 #include "StochResourcePlanner.h"
 #include <cmath>
+#include <algorithm>    // std::swap
 
 using namespace std;
 
@@ -28,8 +29,13 @@ sTreeCallbacks::~sTreeCallbacks()
 }
 
 sTreeCallbacks::sTreeCallbacks() 
-  : NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
-    data(NULL), tree(NULL), fakedata(NULL)
+  : NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
+    nx_active(0),  my_active(0),  mz_active(0),  myl_active(0),  mzl_active(0),
+    nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
+    isDataPresolved(false), hasPresolvedData(false), data(NULL), tree(NULL), fakedata(NULL)
+
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -37,12 +43,17 @@ sTreeCallbacks::sTreeCallbacks()
 
 sTreeCallbacks::sTreeCallbacks(StochInputTree* inputTree)
   : sTree(),
-    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
-    tree(NULL), fakedata(NULL)
+    NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
+    nx_active(0),  my_active(0),  mz_active(0),  myl_active(0),  mzl_active(0),
+    nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
+    isDataPresolved(false), hasPresolvedData(false), tree(NULL), fakedata(NULL)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
   data = inputTree->nodeInput;
+
 #ifndef POOLSCEN
   for(size_t it=0; it<inputTree->children.size(); it++)
     children.push_back(new sTreeCallbacks(inputTree->children[it]));
@@ -54,8 +65,12 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree* inputTree)
 // np==-1 is used to indicate the root node. these can't be root nodes
 sTreeCallbacks::sTreeCallbacks(const vector<StochInputTree::StochInputNode*> &localscens)
   : sTree(), 
-    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
-    data(NULL), tree(NULL), scens(localscens)
+    NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
+    nx_active(0),  my_active(0),  mz_active(0),  myl_active(0),  mzl_active(0),
+    nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
+    isDataPresolved(false), hasPresolvedData(false), data(NULL), tree(NULL), scens(localscens)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -68,8 +83,12 @@ sTreeCallbacks::sTreeCallbacks(const vector<StochInputTree::StochInputNode*> &lo
 }
 sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
   : sTree(), 
-    NNZA(0), NNZQ(0), NNZB(0), NNZC(0), NNZD(0),
-    data(data_), tree(NULL), fakedata(NULL)
+    NNZA(0), NNZQ(0), NNZB(0), NNZBl(0), NNZC(0), NNZD(0), NNZDl(0),
+    NNZA_INACTIVE(-1), NNZQ_INACTIVE(-1), NNZB_INACTIVE(-1), NNZBl_INACTIVE(-1), NNZC_INACTIVE(-1), NNZD_INACTIVE(-1), NNZDl_INACTIVE(-1),
+    N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
+    nx_active(data_->n),  my_active(data_->my),  mz_active(data_->mz),  myl_active(data_->myl),  mzl_active(data_->mzl),
+    nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
+    isDataPresolved(false), hasPresolvedData(false), data(data_), tree(NULL), fakedata(NULL)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -77,8 +96,225 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
 
 void sTreeCallbacks::loadLocalSizes()
 {
-  //alredy in data structure
+  //already in data structure
 }
+
+void sTreeCallbacks::switchToPresolvedData()
+{
+   assert(!isDataPresolved);
+   assert(hasPresolvedData);
+
+   std::swap(NNZA_INACTIVE, NNZA);
+   std::swap(NNZQ_INACTIVE, NNZQ);
+   std::swap(NNZB_INACTIVE, NNZB);
+   std::swap(NNZBl_INACTIVE, NNZBl);
+   std::swap(NNZC_INACTIVE, NNZC);
+   std::swap(NNZD_INACTIVE, NNZD);
+   std::swap(NNZDl_INACTIVE, NNZDl);
+   std::swap(N_INACTIVE, N);
+   std::swap(MY_INACTIVE, MY);
+   std::swap(MZ_INACTIVE, MZ);
+
+   std::swap(nx_active, nx_inactive);
+   std::swap(my_active, my_inactive);
+   std::swap(mz_active, mz_inactive);
+   std::swap(myl_active, myl_inactive);
+   std::swap(mzl_active, mzl_inactive);
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->np = this->nx_active;
+      dynamic_cast<sTreeCallbacks*>(children[it])->switchToPresolvedData();
+   }
+
+   isDataPresolved = true;
+
+}
+
+
+void sTreeCallbacks::switchToOriginalData()
+{
+   assert(isDataPresolved);
+
+   std::swap(NNZA_INACTIVE, NNZA);
+   std::swap(NNZQ_INACTIVE, NNZQ);
+   std::swap(NNZB_INACTIVE, NNZB);
+   std::swap(NNZBl_INACTIVE, NNZBl);
+   std::swap(NNZC_INACTIVE, NNZC);
+   std::swap(NNZD_INACTIVE, NNZD);
+   std::swap(NNZDl_INACTIVE, NNZDl);
+   std::swap(N_INACTIVE, N);
+   std::swap(MY_INACTIVE, MY);
+   std::swap(MZ_INACTIVE, MZ);
+
+   std::swap(nx_active, nx_inactive);
+   std::swap(my_active, my_inactive);
+   std::swap(mz_active, mz_inactive);
+   std::swap(myl_active, myl_inactive);
+   std::swap(mzl_active, mzl_inactive);
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->np = this->nx_active;
+      dynamic_cast<sTreeCallbacks*>(children[it])->switchToOriginalData();
+   }
+
+   isDataPresolved = false;
+}
+
+
+bool sTreeCallbacks::isPresolved()
+{
+   return isDataPresolved;
+}
+
+bool sTreeCallbacks::hasPresolved()
+{
+   return hasPresolvedData;
+}
+
+void sTreeCallbacks::initPresolvedData(const StochSymMatrix& Q, const StochGenMatrix& A, const StochGenMatrix& C,
+      const StochVector& nxVec, const StochVector& myVec, const StochVector& mzVec, int mylParent, int mzlParent)
+{
+   assert(!hasPresolvedData);
+
+   assert(nxVec.children.size() == children.size());
+   assert(myVec.children.size() == children.size());
+   assert(mzVec.children.size() == children.size());
+   assert(A.children.size() == children.size());
+   assert(C.children.size() == children.size());
+
+   assert(fakedata == NULL);
+   assert(tree == NULL);
+
+   const SimpleVector& nxVecSimple = dynamic_cast<const SimpleVector&>(*nxVec.vec);
+   const SimpleVector& myVecSimple = dynamic_cast<const SimpleVector&>(*myVec.vec);
+   const SimpleVector& mzVecSimple = dynamic_cast<const SimpleVector&>(*mzVec.vec);
+   const SimpleVector* const myVecSimpleLink = dynamic_cast<const SimpleVector*>(myVec.vecl);
+   const SimpleVector* const mzVecSimpleLink = dynamic_cast<const SimpleVector*>(mzVec.vecl);
+
+   N_INACTIVE = nxVecSimple.n;
+   MY_INACTIVE = myVecSimple.n;
+   MZ_INACTIVE = mzVecSimple.n;
+
+   nx_inactive = N_INACTIVE;
+   my_inactive = MY_INACTIVE;
+   mz_inactive = MZ_INACTIVE;
+
+   if( myVecSimpleLink != NULL )
+   {
+      assert(np == -1);
+      myl_inactive = myVecSimpleLink->n;
+   }
+   else
+   {
+      myl_inactive = mylParent;
+   }
+
+   if( mzVecSimpleLink != NULL )
+   {
+      assert(np == -1);
+      mzl_inactive = mzVecSimpleLink->n;
+   }
+   else
+   {
+      mzl_inactive = mzlParent;
+   }
+
+   // empty child?
+   if( N_INACTIVE == 0 && MY_INACTIVE == 0 && MZ_INACTIVE == 0 && np != -1 )
+   {
+      myl_inactive = 0;
+      mzl_inactive = 0;
+   }
+
+
+   // todo
+   NNZQ_INACTIVE = 0;
+
+   // are we at the root?
+   if( np == -1 )
+   {
+      assert(mylParent == -1);
+      assert(mzlParent == -1);
+
+      NNZA_INACTIVE = A.Bmat->numberOfNonZeros();
+      NNZB_INACTIVE = A.Amat->numberOfNonZeros();
+      NNZC_INACTIVE = C.Bmat->numberOfNonZeros();
+      NNZD_INACTIVE = C.Amat->numberOfNonZeros();
+   }
+   else
+   {
+      NNZA_INACTIVE = A.Amat->numberOfNonZeros();
+      NNZB_INACTIVE = A.Bmat->numberOfNonZeros();
+      NNZC_INACTIVE = C.Amat->numberOfNonZeros();
+      NNZD_INACTIVE = C.Bmat->numberOfNonZeros();
+   }
+
+   NNZBl_INACTIVE = A.Blmat->numberOfNonZeros();
+   NNZDl_INACTIVE =  C.Blmat->numberOfNonZeros();
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      assert(children[it]->np == this->nx_active);
+      sTreeCallbacks* sTreeCallbacksChild = dynamic_cast<sTreeCallbacks*>(children[it]);
+
+      sTreeCallbacksChild->initPresolvedData(*Q.children[it], *A.children[it], *C.children[it], *nxVec.children[it],
+            *myVec.children[it], *mzVec.children[it], myl_inactive, mzl_inactive);
+
+      N_INACTIVE += sTreeCallbacksChild->N_INACTIVE;
+      MY_INACTIVE += sTreeCallbacksChild->MY_INACTIVE;
+      MZ_INACTIVE += sTreeCallbacksChild->MZ_INACTIVE;
+
+      //nnz stuff
+      NNZQ_INACTIVE += sTreeCallbacksChild->NNZQ_INACTIVE;
+      NNZA_INACTIVE += sTreeCallbacksChild->NNZA_INACTIVE;
+      NNZB_INACTIVE += sTreeCallbacksChild->NNZB_INACTIVE;
+      NNZBl_INACTIVE += sTreeCallbacksChild->NNZBl_INACTIVE;
+      NNZC_INACTIVE += sTreeCallbacksChild->NNZC_INACTIVE;
+      NNZD_INACTIVE += sTreeCallbacksChild->NNZD_INACTIVE;
+      NNZDl_INACTIVE += sTreeCallbacksChild->NNZDl_INACTIVE;
+   }
+
+   hasPresolvedData = true;
+}
+
+
+void sTreeCallbacks::writeSizes(ostream& sout) const
+{
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+#if 0
+    sout << "NNZA : " << NNZA   << "\n";
+    sout << "NNZQ : " << NNZQ   << "\n";
+    sout << "NNZB : " << NNZB   << "\n";
+    sout << "NNZBl : " <<  NNZBl   << "\n";
+    sout << "NNZC : " << NNZC   << "\n";
+    sout << "NNZD : " << NNZD   << "\n";
+    sout << "NNZDl : " <<  NNZDl   << "\n";
+#endif
+
+    if( myRank == 0 )
+    {
+    sout << "N          : "  <<  N           << "\n";
+    sout << "MY         : "  <<  MY          << "\n";
+    sout << "MZ         : "  <<  MZ          << "\n";
+    sout << "nx_active  : "  <<  nx_active    << "\n";
+    sout << "my_active  : "  <<  my_active    << "\n";
+    sout << "mz_active  : "  <<  mz_active    << "\n";
+    sout << "myl_active : "  <<  myl_active   << "\n";
+    sout << "mzl_active : "  <<  mzl_active   << "\n";
+    }
+
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      sout << "child " << it << ": \n\n";
+      dynamic_cast<sTreeCallbacks*>(children[it])->writeSizes(sout);
+   }
+}
+
 
 // this is usually called before assigning processes
 void sTreeCallbacks::computeGlobalSizes()
@@ -111,7 +347,13 @@ void sTreeCallbacks::computeGlobalSizes()
     N  = data->n;
     MY = data->my;
     MZ = data->mz;
-    
+
+    nx_active = data->n;
+    my_active = data->my;
+    mz_active = data->mz;
+    myl_active = data->myl;
+    mzl_active = data->mzl;
+
     NNZQ = data->nnzQ;
     NNZA = data->nnzA;
     NNZB = data->nnzB;
@@ -418,28 +660,38 @@ StochGenMatrix* sTreeCallbacks::createC() const
 }
 
 int sTreeCallbacks::nx() const {
-  if (data) return data->n;
-  else return fakedata->n;
+   if( data )
+      return nx_active;
+   else
+      return fakedata->n;
 }
 
 int sTreeCallbacks::my() const {
-  if (data) return data->my;
-  else return fakedata->my;
+   if( data )
+      return my_active;
+   else
+      return fakedata->my;
 }
 
 int sTreeCallbacks::myl() const {
-  if (data) return data->myl;
-  else return fakedata->myl;
+   if( data )
+      return myl_active;
+   else
+      return fakedata->myl;
 }
 
 int sTreeCallbacks::mz() const {
-  if (data) return data->mz;
-  else return fakedata->mz;
+   if( data )
+      return mz_active;
+   else
+      return fakedata->mz;
 }
 
 int sTreeCallbacks::mzl() const {
-  if (data) return data->mzl;
-  else return fakedata->mzl;
+   if( data )
+      return mzl_active;
+   else
+      return fakedata->mzl;
 }
 
 // not sure what this is used for

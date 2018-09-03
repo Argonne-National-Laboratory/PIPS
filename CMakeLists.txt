@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Mo
 # For optimized build with debug info, set CMAKE_BUILD_TYPE to RELWITHDEBINFO
 # CMAKE_BUILD_TYPE should be set at the command line or in a toolchain file
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long")
-# set(CMAKE_BUILD_TYPE  RELEASE)
+set(CMAKE_BUILD_TYPE  DEBUG)
 if(CMAKE_BUILD_TYPE)
   message("CMake build type is ${CMAKE_BUILD_TYPE}")
   message("Build type default flags are: ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
@@ -47,7 +47,7 @@ option(WITH_MAKETEST "Enable 'make test'" ON)
 option(WITH_MEMREDUCE "Reduce memory transfer and copying" ON)
 
 #use (sparse) Pardiso solver for summed Schur complement
-option(WITH_PARDISOINDEF "Use Pardiso (if available) for summed Schur complement" ON)
+option(WITH_PARDISOINDEF "Use Pardiso (if available) for summed Schur complement" OFF)
 message(STATUS "WITH_PARDISOINDEF=${WITH_PARDISOINDEF}")
 
 option(WITH_PARDISO_PARALLEL "Use Pardiso (if available) in fully parallel mode" OFF)

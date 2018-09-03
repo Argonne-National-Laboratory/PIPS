@@ -47,27 +47,22 @@ StochGenMatrix::StochGenMatrix(int id,
   }
 }
 
-/*StochGenMatrix::StochGenMatrix(const vector<StochGenMatrix*> &blocks) 
-  : iAmDistrib(0), workPrimalVec(NULL)
+StochGenMatrix::StochGenMatrix(int id,
+                long long global_m, long long global_n,
+                MPI_Comm mpiComm_)
+  : id(id), m(global_m), n(global_n),
+    mpiComm(mpiComm_), iAmDistrib(0),
+    workPrimalVec(NULL)
 {
-  mpiComm = blocks[0]->mpiComm;
-  n = blocks[0]->n;
-  m = blocks[0]->m;
-  id = blocks[0]->id;
+  Amat = NULL;
+  Bmat = NULL;
+  Blmat = NULL;
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
     if(size>1) iAmDistrib=1;
   }
-
-  vector<SparseGenMatrix*> v(blocks.size());
-
-  for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Amat;
-  Amat = new SparseGenMatrix(v, false);
-  for (size_t i = 0; i < blocks.size(); i++) v[i] = blocks[i]->Bmat;
-  Bmat = new SparseGenMatrix(v, true);
 }
-*/
 
 StochGenMatrix::~StochGenMatrix()
 {
@@ -87,6 +82,23 @@ StochGenMatrix::~StochGenMatrix()
   if(workPrimalVec)
     delete workPrimalVec;
 }
+
+
+StochGenMatrix* StochGenMatrix::cloneFull(bool switchToDynamicStorage) const
+{
+   StochGenMatrix* clone = new StochGenMatrix(id, m, n, mpiComm);
+
+   // clone submatrices
+   clone->Amat = Amat->cloneFull(switchToDynamicStorage);
+   clone->Bmat = Bmat->cloneFull(switchToDynamicStorage);
+   clone->Blmat = Blmat->cloneFull(switchToDynamicStorage);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      clone->children.push_back(children[it]->cloneFull(switchToDynamicStorage));
+
+   return clone;
+}
+
 
 void StochGenMatrix::AddChild(StochGenMatrix* child)
 {
@@ -604,44 +616,8 @@ void StochGenMatrix::writeToStream(ostream& out) const
   assert( "Has not been yet implemented" && 0 );
 }
 
-void StochGenMatrix::writeToStreamDense(ostream& out) const
-{
-	int rank;
-	MPI_Comm_rank(mpiComm, &rank);
-	int world_size;
-	MPI_Comm_size(mpiComm, &world_size);
-	int token;
-	if (iAmDistrib && rank > 0) {
-		MPI_Recv(&token, 1, MPI_INT, (rank - 1), 0, mpiComm,
-				MPI_STATUS_IGNORE);
-	}
-	if (!iAmDistrib || (iAmDistrib && rank == 0)) {
-		token = -1;
-		out << "Block B_0: " << endl;
-		this->Bmat->writeToStreamDense(out);
-		out << "Linking Block Bl_0:" << endl;
-		this->Blmat->writeToStreamDense(out);
-	}
-	for (size_t it = 0; it < children.size(); it++) {
-		children[it]->writeToStreamDenseChild(out, it + 1);
-	}
-	if (iAmDistrib && rank < world_size - 1) {
-		MPI_Send(&token, 1, MPI_INT, (rank + 1), 0, mpiComm);
-	}
-}
-
-void StochGenMatrix::writeToStreamDenseChild(ostream& out, int index) const
-{
-	out<< "Block A_"<<index <<":"<<endl;
-	this->Amat->writeToStreamDense(out);
-	out<< "Block B_"<<index <<":"<<endl;
-	this->Bmat->writeToStreamDense(out);
-	out<< "Linking block Bl_"<<index <<":"<<endl;
-	this->Blmat->writeToStreamDense(out);
-}
-
 void
-StochGenMatrix::writeToStreamDenseRow(ostream& out) const
+StochGenMatrix::writeToStreamDense(ostream& out) const
 {
    int rank;
    MPI_Comm_rank(mpiComm, &rank);
@@ -650,23 +626,55 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
    int m, n;
    int offset = 0;
    stringstream sout;
-   if( iAmDistrib && rank > 0 )
+   MPI_Status status;
+   int l;
+
+   if( iAmDistrib )
+            MPI_Barrier(mpiComm);
+
+   if( iAmDistrib && rank > 0 )  // receive offset from previous process
       MPI_Recv(&offset, 1, MPI_INT, (rank - 1), 0, mpiComm, MPI_STATUS_IGNORE);
 
-   if( !iAmDistrib || (iAmDistrib && rank == 0) )
+   else  //  !iAmDistrib || (iAmDistrib && rank == 0)
       this->Bmat->writeToStreamDense(out);
 
    for( size_t it = 0; it < children.size(); it++ )
    {
-      children[it]->writeToStreamDenseChildRow(sout, offset);
-      out<<sout.str();
-      sout.clear();
-      sout.str(std::string());
+      children[it]->writeToStreamDenseChild(sout, offset);
       children[it]->Bmat->getSize(m, n);
       offset += n;
    }
-   if( iAmDistrib && rank < world_size - 1 )
-      MPI_Ssend(&offset, 1, MPI_INT, (rank + 1) % world_size, 0, mpiComm);
+
+   if( iAmDistrib && rank > 0 )
+   {
+      std::string str = sout.str();
+      // send string to rank ZERO to print it there:
+      MPI_Ssend(str.c_str(), str.length(), MPI_CHAR, 0, rank, mpiComm);
+      // send offset to next process:
+      if( rank < world_size - 1 )
+         MPI_Ssend(&offset, 1, MPI_INT, rank + 1, 0, mpiComm);
+   }
+
+   else if( !iAmDistrib )
+      out << sout.str();
+
+   else if( iAmDistrib && rank == 0 )
+   {
+      out << sout.str();
+      MPI_Ssend(&offset, 1, MPI_INT, rank + 1, 0, mpiComm);
+
+      for( int p = 1; p < world_size; p++ )
+      {
+         MPI_Probe(p, p, mpiComm, &status);
+         MPI_Get_count(&status, MPI_CHAR, &l);
+         char *buf = new char[l];
+         MPI_Recv(buf, l, MPI_CHAR, p, p, mpiComm, &status);
+         string rowPartFromP(buf, l);
+         out << rowPartFromP;
+         delete[] buf;
+      }
+
+   }
 
    // linking contraints ?
    int mlink, nlink;
@@ -692,8 +700,6 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
 
                for( int p = 1; p < world_size; p++ )
                {
-                  MPI_Status status;
-                  int l;
                   MPI_Probe(p, r + 1, mpiComm, &status);
                   MPI_Get_count(&status, MPI_CHAR, &l);
                   char *buf = new char[l];
@@ -713,6 +719,7 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
          }
          else // not distributed
          {
+            stringstream sout;
             this->Blmat->writeToStreamDenseRow(sout, r);
             for( size_t it = 0; it < children.size(); it++ )
                children[it]->Blmat->writeToStreamDenseRow(sout, r);
@@ -725,8 +732,8 @@ StochGenMatrix::writeToStreamDenseRow(ostream& out) const
       MPI_Barrier(mpiComm);
 }
 
-/** writes a child matrix row-wise, offset indicates the offset between A and B block. */
-void StochGenMatrix::writeToStreamDenseChildRow(stringstream& out, int offset) const
+/** writes child matrix blocks, offset indicates the offset between A and B block. */
+void StochGenMatrix::writeToStreamDenseChild(stringstream& out, int offset) const
 {
    int mA, mB, n;
    this->Amat->getSize(mA, n);
@@ -770,6 +777,34 @@ void StochGenMatrix::randomize( double alpha, double beta, double * seed )
   assert( "Has not been yet implemented" && 0 );
 }
 
+void StochGenMatrix::initTransposed(bool dynamic)
+{
+   Bmat->initTransposed(dynamic);
+   Blmat->initTransposed(dynamic);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->initTransposedChild(dynamic);
+}
+
+void StochGenMatrix::deleteTransposed()
+{
+   Amat->deleteTransposed();
+   Bmat->deleteTransposed();
+   Blmat->deleteTransposed();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->deleteTransposed();
+}
+
+void StochGenMatrix::initTransposedChild(bool dynamic)
+{
+   Amat->initTransposed(dynamic);
+   Bmat->initTransposed(dynamic);
+
+   if( Blmat != NULL )
+      Blmat->initTransposed(dynamic);
+}
+
 
 void StochGenMatrix::atPutDiagonal( int idiag, OoqpVector& v )
 {
@@ -808,6 +843,119 @@ void StochGenMatrix::matTransDinvMultMat(OoqpVector& d, SymMatrix** res)
   assert( "Has not been yet implemented" && 0 );
 }
 
+
+void StochGenMatrix::getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent)
+{
+   StochVector& nnzVecStoch = dynamic_cast<StochVector&>(nnzVec);
+
+   // assert tree compatibility
+   assert(nnzVecStoch.children.size() == children.size());
+
+   SimpleVector* nnzvecl = NULL;
+
+   Bmat->addNnzPerRow(*(nnzVecStoch.vec));
+
+   if( linkParent != NULL )
+      Amat->addNnzPerRow(*(nnzVecStoch.vec));
+
+   /* with linking constraints? */
+   if( nnzVecStoch.vecl || linkParent )
+   {
+      assert(nnzVecStoch.vecl == NULL || linkParent == NULL);
+
+      bool iAmSpecial = true;
+      if( iAmDistrib )
+      {
+         int rank;
+         MPI_Comm_rank(mpiComm, &rank);
+         if( rank > 0 )
+            iAmSpecial = false;
+      }
+
+      if( linkParent )
+         nnzvecl = dynamic_cast<SimpleVector*>(linkParent);
+      else
+         nnzvecl = dynamic_cast<SimpleVector*>(nnzVecStoch.vecl);
+
+      if( linkParent != NULL || iAmSpecial )
+         Blmat->addNnzPerRow(*nnzvecl);
+   }
+
+
+   for( size_t it = 0; it < children.size(); it++ )
+     children[it]->getNnzPerRow(*(nnzVecStoch.children[it]), nnzvecl);
+
+   // distributed, with linking constraints, and at root?
+   if( iAmDistrib && nnzVecStoch.vecl != NULL && linkParent == NULL )
+   {
+      // sum up linking constraints vectors
+      const int locn = nnzvecl->length();
+      double* buffer = new double[locn];
+
+      MPI_Allreduce(nnzvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+      nnzvecl->copyFromArray(buffer);
+
+      delete[] buffer;
+   }
+}
+
+void StochGenMatrix::getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent)
+{
+   StochVector& nnzVecStoch = dynamic_cast<StochVector&>(nnzVec);
+
+   // assert tree compatibility
+   assert(nnzVecStoch.children.size() == children.size());
+
+   SimpleVector* const vec = dynamic_cast<SimpleVector*>(nnzVecStoch.vec);
+
+   int rank;
+   MPI_Comm_rank(mpiComm, &rank);
+
+   bool iAmSpecial = true;
+   if( iAmDistrib )
+   {
+      int rank;
+      MPI_Comm_rank(mpiComm, &rank);
+      if( rank > 0 )
+         iAmSpecial = false;
+   }
+
+   if( iAmSpecial || linkParent != NULL )
+   {
+      Bmat->addNnzPerCol(*(vec));
+
+      int blm, bln;
+      Blmat->getSize(blm, bln);
+
+      /* with linking constraints? */
+      if( blm > 0 )
+         Blmat->addNnzPerCol(*vec);
+   }
+
+   // not at root?
+   if( linkParent != NULL )
+      Amat->addNnzPerCol(*linkParent);
+   else
+   {
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->getNnzPerCol(*(nnzVecStoch.children[it]), vec);
+   }
+
+   // distributed and at root?
+   if( iAmDistrib && linkParent == NULL )
+   {
+      const int locn = vec->length();
+      double* const entries = vec->elements();
+      double* buffer = new double[locn];
+
+      MPI_Allreduce(entries, buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+      vec->copyFromArray(buffer);
+
+      delete[] buffer;
+   }
+}
 
 void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
       const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent)
@@ -979,6 +1127,50 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
 
       delete[] buffer;
    }
+}
+
+void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec)
+{
+   const StochVector& rowNnzVecStoch = dynamic_cast<const StochVector&>(rowNnzVec);
+   const StochVector& colNnzVecStoch = dynamic_cast<const StochVector&>(colNnzVec);
+
+   assert(rowNnzVecStoch.children.size() == colNnzVecStoch.children.size());
+
+   const SimpleVector* const rowvec = dynamic_cast<const SimpleVector*>(rowNnzVecStoch.vec);
+   const SimpleVector* const colvec = dynamic_cast<const SimpleVector*>(colNnzVecStoch.vec);
+
+   const SimpleVector* const rowlink = dynamic_cast<const SimpleVector*>(rowNnzVecStoch.vecl);
+
+   Amat->initStaticStorageFromDynamic(*rowvec, colParentVec); // initialized with colVec == NULL for parent
+   Bmat->initStaticStorageFromDynamic(*rowvec, colvec);
+
+   // at root?
+   if( colParentVec == NULL )
+   {
+      assert(rowLinkVec == NULL);
+
+      if( rowlink != NULL )
+         Blmat->initStaticStorageFromDynamic(*rowlink, colvec);
+
+      for( size_t it = 0; it < children.size(); it++ )
+         children[it]->initStaticStorageFromDynamic(*(rowNnzVecStoch.children[it]), *(colNnzVecStoch.children[it]), rowlink, colvec);
+   }
+   else
+   {
+      if( rowLinkVec != NULL)
+         Blmat->initStaticStorageFromDynamic(*rowLinkVec, colvec);
+   }
+
+}
+
+void StochGenMatrix::freeDynamicStorage()
+{
+   Amat->freeDynamicStorage();
+   Bmat->freeDynamicStorage();
+   Blmat->freeDynamicStorage();
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->freeDynamicStorage();
 }
 
 void StochGenMatrix::updateKLinkConsCount(std::vector<int>& linkCount) const

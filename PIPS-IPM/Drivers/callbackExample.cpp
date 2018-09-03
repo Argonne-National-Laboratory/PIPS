@@ -579,7 +579,7 @@ int main(int argc, char ** argv) {
   gInnerSCsolve = 0;
 
 #ifdef WITH_PARDISO
-  PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH);
+  PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH, PRESOLVER_STOCH);
 #else
   PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
 #endif
@@ -599,5 +599,6 @@ int main(int argc, char ** argv) {
   delete root;
 
   MPI_Finalize();
+
   return 0;
 }

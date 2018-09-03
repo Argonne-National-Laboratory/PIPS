@@ -94,6 +94,8 @@ public:
   /** Reduce the matrix to lower triangular */
   void reduceToLower();
 
+  void deleteEmptyRowsCols(const OoqpVector& nnzVec);
+
   virtual ~SparseSymMatrix() {};
 };
 #endif
