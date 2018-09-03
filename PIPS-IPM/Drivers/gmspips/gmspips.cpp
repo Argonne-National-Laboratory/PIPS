@@ -4,6 +4,7 @@
 //#include "MehrotraStochSolver.h"
 #include "GondzioStochSolver.h"
 #include "GondzioStochLpSolver.h"
+#include "sFactoryAug.h"
 #include "sFactoryAugSchurLeaf.h"
 #endif
 #if defined(GMS_MPI)
@@ -420,8 +421,11 @@ int main(int argc, char ** argv)
 	   if( gmsRank == 0 )
 	      cout << "Different steplengths in primal and dual direction are used." << endl;
 
-      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
-            scaler_type );
+#ifdef WITH_PARDISO
+      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD, scaler_type );
+#else
+      PIPSIpmInterface<sFactoryAug, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, scaler_type );
+#endif
 
 		if( gmsRank == 0 )
 		   cout << "PIPSIpmInterface created" << endl;
@@ -436,12 +440,11 @@ int main(int argc, char ** argv)
 	}
 
 	else {
-
-      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
-            scaler_type );
-
-		//PIPSIpmInterface<sFactoryAugSchurLeaf, MehrotraStochSolver> pipsIpm(root);
-		//PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+#ifdef WITH_PARDISO
+      PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, scaler_type );
+#else
+      PIPSIpmInterface<sFactoryAug, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, scaler_type );
+#endif
 
 		if( gmsRank == 0 )
 		   cout << "PIPSIpmInterface created" << endl;

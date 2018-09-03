@@ -581,7 +581,7 @@ int main(int argc, char ** argv) {
 #ifdef WITH_PARDISO
   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH);
 #else
-  PIPSIpmInterface<sFactoryAug, MehrotraStochSolver> pipsIpm(root);
+  PIPSIpmInterface<sFactoryAug, GondzioStochSolver> pipsIpm(root);
 #endif
 
   if( rank == 0 )
