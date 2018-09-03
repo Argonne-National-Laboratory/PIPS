@@ -1410,9 +1410,8 @@ void StochPresolverBase::computeActivityBlockwise( SparseStorageDynamic& matrix,
 {
    // todo: possibly add two bools: if infty, indicate if at least two bounds were infty
    assert( rowIdx >= 0 && rowIdx < matrix.m );
-   const int n = matrix.n;
-   assert( colIdx >= -1 && colIdx < n );
-   assert( xlow.n == n && ixlow.n == n && xupp.n == n && ixupp.n == n );
+   assert( colIdx >= -1 && colIdx < matrix.n );
+   assert( xlow.n == matrix.n && ixlow.n == matrix.n && xupp.n == matrix.n && ixupp.n == matrix.n );
 
    for( int j=matrix.rowptr[rowIdx].start; j<matrix.rowptr[rowIdx].end; j++)
    {

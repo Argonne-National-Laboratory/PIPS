@@ -49,10 +49,10 @@ void StochPresolverSingletonRows::applyPresolving()
    // main loop:
    while( (newSREq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
-      if( myRank == 0 ) cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+      // if( myRank == 0 ) cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
       while( newSREq > 0 && iter < maxIterSR)
       {
-         if( myRank == 0 )cout<<"SR(Equality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
+         // if( myRank == 0 )cout<<"SR(Equality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
          if( globalIter > 0 )
             initSingletonRows(EQUALITY_SYSTEM);
          // main method:
@@ -76,8 +76,7 @@ void StochPresolverSingletonRows::applyPresolving()
       }
       while( newSRIneq > 0 && iter < maxIterSR)
       {
-         if( myRank == 0 )
-            PIPSdebugMessage("SR(Inequality) loop at iter %d and globalIter %d \n", iter, globalIter);
+         // if( myRank == 0 ) PIPSdebugMessage("SR(Inequality) loop at iter %d and globalIter %d \n", iter, globalIter);
          if( globalIter > 0 )
          {
             newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
