@@ -90,6 +90,7 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
+#ifdef WITH_PARDISO
    if( hasSparseKkt )
    {
       if( 0 == myRank )
@@ -100,6 +101,9 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
       return new PardisoIndefSolver(kktmat);
    }
    else
+#else
+   assert(!hasSparseKkt);
+#endif
    {
       if( 0 == myRank )
          cout << "Using LAPACK dsytrf for summed Schur complement - sLinsysRootAug" << endl;
