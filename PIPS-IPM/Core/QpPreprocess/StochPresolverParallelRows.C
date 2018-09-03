@@ -98,6 +98,8 @@ StochPresolverParallelRows::~StochPresolverParallelRows()
  // todo
    rowsFirstHashTable = boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> >();
    rowsSecondHashTable  = boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> >();
+   delete gParentAdaptions;
+
 }
 
 void StochPresolverParallelRows::applyPresolving()
@@ -204,7 +206,6 @@ void StochPresolverParallelRows::applyPresolving()
    }
    // update objective coefficients of linking variables (gParent):
    allreduceAndUpdate(MPI_COMM_WORLD, *gParentAdaptions, *currgParent);
-   delete gParentAdaptions;
 
    deleteNormalizedPointers(-1, matrixA, matrixC);
 
