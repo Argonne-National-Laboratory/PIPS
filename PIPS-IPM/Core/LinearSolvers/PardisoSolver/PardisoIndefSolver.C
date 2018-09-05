@@ -353,11 +353,11 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
          exit(3);
       }
 
-      if( size > 0 )
-         MPI_Bcast(x, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
       for( int i = 0; i < n; i++ )
          b[i] = x[i];
+
+      if( size > 0 )
+         MPI_Bcast(b, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 #ifdef TIMING
       printf("sparse kkt iterative refinement steps: %d \n", iparm[6]);
