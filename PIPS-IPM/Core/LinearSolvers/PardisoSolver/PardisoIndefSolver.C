@@ -94,6 +94,7 @@ void PardisoIndefSolver::initPardiso()
       exit(1);
    }
 
+   // std::cout << "num_procs " << num_procs << std::endl;
    iparm[2] = num_procs;
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
@@ -320,6 +321,12 @@ void PardisoIndefSolver::factorize()
 
 void PardisoIndefSolver::solve ( OoqpVector& v )
 {
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+   assert(iparm[23] == 1);
+   assert(iparm[24] == 1);
+   assert(iparm[27] == 1);
+#endif
+
    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 

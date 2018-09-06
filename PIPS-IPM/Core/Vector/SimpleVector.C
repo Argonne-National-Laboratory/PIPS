@@ -456,7 +456,7 @@ double SimpleVector::dotProductWith( OoqpVector& vec )
 
   int k, imax;
   for( k = 0; k < kmax; k++ ) {
-    imax = (k + 1) * 8196;
+    imax = (k + 1) * size;
     for( ; i < imax; i++ ) {
       dot1 += v[i] * vvec[i];
     }
