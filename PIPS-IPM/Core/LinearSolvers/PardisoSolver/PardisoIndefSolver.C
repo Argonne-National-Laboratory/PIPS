@@ -324,7 +324,6 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
    assert(iparm[23] == 1);
    assert(iparm[24] == 1);
-   assert(iparm[27] == 1);
 #endif
 
    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);

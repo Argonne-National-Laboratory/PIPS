@@ -207,7 +207,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
 	// back off just a touch (or a bit more)
-#ifdef BAD_NUMERICS
+#ifdef WITH_STEPLENGTH_CONSERVATIVE
 	alpha *= 0.995;
 #else
 	alpha *= .99999999;
@@ -281,7 +281,7 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
 	// back off just a touch (or a bit more)
-	#ifdef BAD_NUMERICS
+	#ifdef WITH_STEPLENGTH_CONSERVATIVE
 		alpha_primal *= 0.995;
 		alpha_dual *= 0.995;
 	#else
