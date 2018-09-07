@@ -24,14 +24,14 @@ using namespace std;
 extern int gOuterSolve;
 extern int gOuterBiCGIter;
 
-static void BiCGStabPrintStatus(int flag, int it, double resnorm)
+static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 {
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    if( myRank != 0 )
       return;
 
-   std::cout << "BiCGStab (it=" << it << ", rel.res.norm=" << resnorm << ")";
+   std::cout << "BiCGStab (it=" << it << ", rel.res.norm=" << resnorm << ", rel.r.norm=" << rnorm  << ")";
 
    if( flag == 5 )
       std::cout << " diverged" << std::endl;
@@ -339,7 +339,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    const double eps = 1e-16;
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, eps);
-   const int maxit = 150;
+   const int maxit = 75;
    const int normrDivLimit = 4; // todo user parameter
 
    assert(n2b >= 0);
@@ -501,8 +501,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
                flag = 0;
                break;
             } // else continue - To Do: detect stagnation (flag==3)
-            int todo;
-            // norm(x - x_pr) <= norm(x)*eps (where x_pr is the previous iteration approximation)
+            // todo norm(x - x_pr) <= norm(x)*eps (where x_pr is the previous iteration approximation)
          }
          else
          {
@@ -514,19 +513,20 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
                normr_min = normr;
             }
 
-            // todo rollback to min.norm. iterate!
+            // todo rollback to normr_min iterate!
             if( normrNDiv >= normrDivLimit )
             {
                flag = 5;
                break;
             }
          } //~end of convergence test
-
-         // update best x?
+#if 0
          if( normr < normr_min )
          {
+            // update best for rollback
 
          }
+#endif
       } //~end of scoping
 
       if( isZero(omega, flag) )
@@ -534,7 +534,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
    } //~ end of BiCGStab loop
 
-   BiCGStabPrintStatus(flag, it, normr_act/n2b);
+   BiCGStabPrintStatus(flag, it, normr_act/n2b, normr/n2b);
 
    this->separateVars(stepx, stepy, stepz, x);
 }

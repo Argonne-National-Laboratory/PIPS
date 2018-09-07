@@ -282,10 +282,10 @@ void PardisoIndefSolver::factorize()
 #endif
 
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
+   //iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
    iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   iparm[27] = 1; // Parallel metis
+   //iparm[27] = 1; // Parallel metis
 #endif
 
    phase = 11;

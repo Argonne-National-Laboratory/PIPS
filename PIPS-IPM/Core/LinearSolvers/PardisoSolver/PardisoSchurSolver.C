@@ -557,7 +557,7 @@ void PardisoSchurSolver::computeSC(
   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
    iparm[23] = 1;
    iparm[24] = 1;
-   iparm[27] = 1; // Parallel metis
+  // iparm[27] = 1; // Parallel metis
 #else
    iparm[1] = 2; // 2 is for metis, 0 for min degree
    iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
