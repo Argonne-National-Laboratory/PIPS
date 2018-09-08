@@ -557,7 +557,7 @@ void PardisoSchurSolver::computeSC(
   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
    iparm[23] = 1;
    iparm[24] = 1;
-   iparm[27] = 1; // Parallel metis
+  // iparm[27] = 1; // Parallel metis
 #else
    iparm[1] = 2; // 2 is for metis, 0 for min degree
    iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
@@ -623,10 +623,10 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
                  // if needed, use 2 for advanced matchings and higher accuracy.
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
   iparm[23] = 1;
+  iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
 #else
-  iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+  iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 #endif
-  //iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
 
   int msglvl=pardiso_verbosity;  // with statistical information
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
@@ -636,9 +636,6 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   SimpleVector rhs_n(n);
   const int dim=rhs.length();
   memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
-
-  for( int i = dim; i < n; i++ )
-      assert(rhs_n[i] == 0.0);
 
 #ifdef TIMING_FLOPS
   HPM_Start("PARDISOSolve");

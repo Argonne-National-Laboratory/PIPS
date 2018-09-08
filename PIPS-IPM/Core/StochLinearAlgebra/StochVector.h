@@ -110,7 +110,7 @@ public:
   virtual void addConstant( double c );
   virtual void gondzioProjection( double rmin, double rmax );
   virtual double dotProductWith( OoqpVector& v );
-  virtual double dotProductSelf(double scaleFactor = 1.0);
+  virtual double dotProductSelf(double scaleFactor);
 
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */

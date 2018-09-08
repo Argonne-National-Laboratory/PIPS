@@ -16,16 +16,46 @@
 #include "QpGen.h"
 #include <limits>
 #include "mpi.h"
-
-#ifdef TIMING
 #include <vector>
-#endif
 
 #include <fstream>
 using namespace std;
 
 extern int gOuterSolve;
 extern int gOuterBiCGIter;
+
+static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
+{
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank != 0 )
+      return;
+
+   std::cout << "BiCGStab (it=" << it << ", rel.res.norm=" << resnorm << ", rel.r.norm=" << rnorm  << ")";
+
+   if( flag == 5 )
+      std::cout << " diverged" << std::endl;
+   else if( flag == 4 )
+      std::cout << " break-down occurred" << std::endl;
+   else if( flag == -1 )
+      std::cout << " not converged in max iterations" << std::endl;
+   else if( flag == 0 )
+      std::cout << " converged" << std::endl;
+   else
+      std::cout << std::endl;
+
+}
+
+static bool isZero(double val, int& flag)
+{
+   if( PIPSisZero(val) )
+   {
+      flag = 4;
+      return true;
+   }
+
+   return false;
+}
 
 QpGenLinsys::QpGenLinsys( QpGen * factory_,
 			  QpGenData * prob,
@@ -293,7 +323,225 @@ void QpGenLinsys::solveXYZS( OoqpVector& stepx, OoqpVector& stepy,
   steps.negate();
 }
 
+#if 1
+void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
+                 OoqpVector& stepy,
+                 OoqpVector& stepz,
+                 QpGenData* data)
+{
+   this->joinRHS(*rhs, stepx, stepy, stepz);
 
+   //aliases
+   OoqpVector &r0 = *res2, &dx = *sol2, &v = *res3, &t = *res4, &p = *res5;
+   OoqpVector &x = *sol, &r = *res, &b = *rhs;
+
+   const double tol = 1e-10;
+   const double eps = 1e-16;
+   const double n2b = b.twonorm();
+   const double tolb = max(n2b * tol, eps);
+   const int maxit = 75;
+   const int normrDivLimit = 4; // todo user parameter
+
+   assert(n2b >= 0);
+
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   //starting guess/point
+   x.copyFrom(b);
+
+   //solution to the approx. system
+   solveCompressed(x);
+
+   //initial residual: res=res-A*x
+   r.copyFrom(b);
+   matXYZMult(1.0, r, -1.0, x, data, stepx, stepy, stepz);
+
+   double normr = r.twonorm(), normr_min = normr, normr_act = normr;
+
+#ifdef TIMING
+#ifndef NDEBUG
+   double nmin;
+   double tolmin;
+
+   MPI_Allreduce(&normr, &nmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+   MPI_Allreduce(&tolb, &tolmin, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+
+   if( normr != nmin )
+   {
+      cout << "rtwonorm not consistent " << normr << " " << nmin << "\n";
+      MPI_Abort(MPI_COMM_WORLD, 1);
+
+   }
+   if( tolb != tolmin )
+   {
+      cout << "tolb not consistent " << tolb << " " << tolmin << "\n";
+      MPI_Abort(MPI_COMM_WORLD, 1);
+   }
+#endif
+#endif
+
+   //quick return if solve is accurate enough
+   if( normr <= tolb )
+   {
+      this->separateVars(stepx, stepy, stepz, x);
+      return;
+   }
+
+   r0.copyFrom(r);
+
+   //normalize
+   r0.scale(1 / normr);
+
+   int flag = -1;
+   int normrNDiv = 0;
+   double rho = 1., omega = 1., alpha;
+
+   //main loop
+   int it;
+   for( it = 0; it < maxit; it++ )
+   {
+      assert(flag == -1);
+      const double rho1 = rho;
+
+      rho = r0.dotProductWith(r);
+
+      if( isZero(rho, flag) )
+         break;
+
+      //first half of the iterate
+      {
+         if( it == 0 )
+            p.copyFrom(r);
+         else
+         {
+            const double beta = (rho / rho1) * (alpha / omega);
+
+            if( isZero(beta, flag) )
+               break;
+
+            //-------- p = r + beta*(p - omega*v) --------
+            p.axpy(-omega, v);
+            p.scale(beta);
+            p.axpy(1.0, r);
+         }
+
+         //precond: ph = \tilde{K}^{-1} p
+         dx.copyFrom(p);
+         solveCompressed(dx);
+
+         //mat-vec: v = K*ph
+         matXYZMult(0.0, v, 1.0, dx, data, stepx, stepy, stepz);
+
+         const double rtv = r0.dotProductWith(v);
+
+         if( isZero(rtv, flag) )
+            break;
+
+         alpha = rho / rtv;
+         // x = x + alpha*dx (x=x+alpha*ph)
+         x.axpy(alpha, dx);
+         // r = r-alpha*v (s=r-alpha*v)
+         r.axpy(-alpha, v);
+
+         //check for convergence
+         normr = r.twonorm();
+
+         if( normr <= tolb )
+         {
+            //compute the actual residual
+            OoqpVector& res = dx; //use dx
+            res.copyFrom(b);
+            matXYZMult(1.0, res, -1.0, x, data, stepx, stepy, stepz);
+
+            normr_act = res.twonorm();
+            if( normr_act <= tolb )
+            {
+               //converged
+               flag = 0;
+               break;
+            }
+         } //~end of convergence test
+      }
+
+      //second half of the iterate now
+      {
+         //preconditioner
+         dx.copyFrom(r);
+         solveCompressed(dx);
+
+         //mat-vec
+         matXYZMult(0.0, t, 1.0, dx, data, stepx, stepy, stepz);
+
+         const double tt = t.dotProductSelf(1.0);
+
+         if( isZero(tt, flag) )
+            break;
+
+         omega = t.dotProductWith(r) / tt;
+
+         // x=x+omega*dx  (x=x+omega*sh)
+         x.axpy(omega, dx);
+         // r = r-omega*t (r=s-omega*sh)
+         r.axpy(-omega, t);
+         //check for convergence
+         normr = r.twonorm();
+
+         if( normr <= tolb )
+         {
+            //compute the actual residual
+            OoqpVector& res = dx; //use dx
+            res.copyFrom(b);
+            matXYZMult(1.0, res, -1.0, x, data, stepx, stepy, stepz);
+
+            normr_act = res.twonorm();
+
+            if( normr_act <= tolb )
+            {
+               //converged
+               flag = 0;
+               break;
+            } // else continue - To Do: detect stagnation (flag==3)
+            // todo norm(x - x_pr) <= norm(x)*eps (where x_pr is the previous iteration approximation)
+         }
+         else
+         {
+            if( normr >= normr_min )
+               normrNDiv++;
+            else
+            {
+               normrNDiv = 0;
+               normr_min = normr;
+            }
+
+            // todo rollback to normr_min iterate!
+            if( normrNDiv >= normrDivLimit )
+            {
+               flag = 5;
+               break;
+            }
+         } //~end of convergence test
+#if 0
+         if( normr < normr_min )
+         {
+            // update best for rollback
+
+         }
+#endif
+      } //~end of scoping
+
+      if( isZero(omega, flag) )
+         break;
+
+   } //~ end of BiCGStab loop
+
+   BiCGStabPrintStatus(flag, it, normr_act/n2b, normr/n2b);
+
+   this->separateVars(stepx, stepy, stepz, x);
+}
+
+
+
+#else
 void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 					  OoqpVector& stepy,
 					  OoqpVector& stepz,
@@ -311,10 +559,10 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    OoqpVector &x = *sol, &r = *res, &b = *rhs;
 
    const double tol = 1e-10;
-   const double eps = 1e-14;
+   const double eps = 1e-40;
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, eps);    // todo this should be done properly
-   const int maxit = 15; // todo 500;
+   const int maxit = 500;
 
    assert(n2b >= 0);
 
@@ -608,7 +856,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #endif  
 
 }
-
+#endif
 
 /**
  * res = beta*res - alpha*mat*sol

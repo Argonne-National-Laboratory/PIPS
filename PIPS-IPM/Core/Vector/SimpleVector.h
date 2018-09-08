@@ -87,7 +87,7 @@ public:
    * */
   virtual void gondzioProjection( double rmin, double rmax );
   virtual double dotProductWith( OoqpVector& v );
-  virtual double dotProductSelf( double scaleFactor = 1.0 );
+  virtual double dotProductSelf( double scaleFactor );
 
   virtual double shiftedDotProductWith( double alpha, OoqpVector& mystep,
 					OoqpVector& yvec,

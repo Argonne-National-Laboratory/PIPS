@@ -50,6 +50,10 @@ option(WITH_MEMREDUCE "Reduce memory transfer and copying" ON)
 option(WITH_PARDISOINDEF "Use Pardiso (if available) for summed Schur complement" OFF)
 message(STATUS "WITH_PARDISOINDEF=${WITH_PARDISOINDEF}")
 
+#use conserative step lengths in interior point algorithm
+option(WITH_STEPLENGTH_CONSERVATIVE "use conserative step lengths in interior point algorithm" OFF)
+message(STATUS "WITH_STEPLENGTH_CONSERVATIVE=${WITH_STEPLENGTH_CONSERVATIVE}")
+
 option(WITH_PARDISO_PARALLEL "Use Pardiso (if available) in fully parallel mode" OFF)
 message(STATUS "WITH_PARDISO_PARALLEL=${WITH_PARDISO_PARALLEL}")
 
@@ -376,6 +380,10 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   #else(HAVE_MA57)
   #  set(MA86_LIBRARY "")
   #endif(HAVE_MA86)
+  
+  if(WITH_STEPLENGTH_CONSERVATIVE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_STEPLENGTH_CONSERVATIVE")
+  endif(WITH_STEPLENGTH_CONSERVATIVE)
 
   if(HAVE_PARDISO)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO")
