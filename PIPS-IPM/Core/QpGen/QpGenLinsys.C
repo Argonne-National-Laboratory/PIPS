@@ -24,6 +24,7 @@ using namespace std;
 extern int gOuterSolve;
 extern int gOuterBiCGIter;
 
+// todo provide statistics vector, print if TIMING
 static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 {
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -355,7 +356,13 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    //initial residual: res=res-A*x
    r.copyFrom(b);
    matXYZMult(1.0, r, -1.0, x, data, stepx, stepy, stepz);
-
+#if 0
+   OoqpVector* test = resx->clone();
+   data->C->addColSums(*test);
+   data->C->writeToStreamDense(std::cout);
+   std::cout << setprecision(12) <<"inf " << test->infnorm() << std::endl ;
+   delete test;
+#endif
    double normr = r.twonorm(), normr_min = normr, normr_act = normr;
 
 #ifdef TIMING

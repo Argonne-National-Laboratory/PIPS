@@ -1513,6 +1513,16 @@ void SparseStorage::addNnzPerRow(double* vec) const
       vec[r] += krowM[r + 1] - krowM[r];
 }
 
+void SparseStorage::addRowSums(double* vec) const
+{
+   for( int r = 0; r < m; r++ )
+   {
+      const int end = krowM[r + 1];
+      for( int c = krowM[r]; c < end; c++ )
+         vec[r] += std::fabs(M[c]);
+   }
+}
+
 void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const
 {
    const bool coscale = (colScaleVec != NULL);

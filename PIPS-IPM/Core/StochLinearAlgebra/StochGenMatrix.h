@@ -84,6 +84,9 @@ public:
 
   virtual void getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent);
 
+  virtual void addRowSums( OoqpVector& sumVec, OoqpVector* linkParent );
+  virtual void addColSums( OoqpVector& sumVec, OoqpVector* linkParent );
+
   /** internal method needed for handling linking constraints */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent);
@@ -195,6 +198,9 @@ public:
   {
      getColMinMaxVec(getMin, initializeVec, rowScaleVec, NULL, minmaxVec, NULL);
   };
+
+  virtual void addRowSums( OoqpVector& sumVec ) {addRowSums(sumVec, NULL);};
+  virtual void addColSums( OoqpVector& sumVec ) {addColSums(sumVec, NULL);};
 
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
   {
@@ -342,6 +348,11 @@ public:
 
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
+
+  virtual void addRowSums( OoqpVector& sumVec, OoqpVector* linkParent ) {};
+  virtual void addColSums( OoqpVector& sumVec, OoqpVector* linkParent ) {};
+  virtual void addRowSums( OoqpVector& vec ) {};
+  virtual void addColSums( OoqpVector& vec ) {};
 
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec) {};
   virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec) {};

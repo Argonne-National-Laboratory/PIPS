@@ -133,7 +133,6 @@ public:
   bool hasDynamicStorage() { return (mStorageDynamic != NULL); }
 
   virtual void addNnzPerRow(OoqpVector& nnzVec);
-
   virtual void addNnzPerCol(OoqpVector& nnzVec);
 
   /** fill vector with absolute minimum/maximum value of each row */
@@ -143,6 +142,9 @@ public:
   /** fill vector with absolute minimum/maximum value of each column */
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec );
+
+  virtual void addRowSums( OoqpVector& sumVec );
+  virtual void addColSums( OoqpVector& sumVec );
 
   void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec);
 

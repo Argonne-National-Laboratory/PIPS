@@ -264,6 +264,12 @@ public:
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ) { assert(0 && "not implemented"); };
 
+  /** add absolute value sum of each row to vector */
+  virtual void addRowSums( OoqpVector& vec ) { assert(0 && "not implemented"); };
+
+  /** add absolute value sum of each column to vector */
+  virtual void addColSums( OoqpVector& vec ) { assert(0 && "not implemented"); };
+
 };
 
 #endif

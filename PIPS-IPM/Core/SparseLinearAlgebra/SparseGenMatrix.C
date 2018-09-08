@@ -517,7 +517,6 @@ SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
 {
    SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
 
-
    if( mStorageDynamic != NULL )
    {
       assert(vec.length() == mStorageDynamic->m);
@@ -533,7 +532,6 @@ SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
 void
 SparseGenMatrix::addNnzPerCol(OoqpVector& nnzVec)
 {
-
    SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
 
    if( !m_Mt)
@@ -549,6 +547,31 @@ SparseGenMatrix::addNnzPerCol(OoqpVector& nnzVec)
       assert(vec.length() == m_Mt->mStorage->m);
       m_Mt->mStorage->addNnzPerRow(vec.elements());
    }
+}
+
+void
+SparseGenMatrix::addRowSums(OoqpVector& sumVec)
+{
+   SimpleVector& vec = dynamic_cast<SimpleVector&>(sumVec);
+
+   assert(mStorageDynamic == NULL && mStorage != NULL);
+   assert(vec.length() == mStorage->m);
+
+   mStorage->addRowSums(vec.elements());
+}
+
+void
+SparseGenMatrix::addColSums(OoqpVector& sumVec)
+{
+   SimpleVector& vec = dynamic_cast<SimpleVector&>(sumVec);
+
+   if( !m_Mt )
+      initTransposed();
+
+   assert(m_Mt->mStorageDynamic == NULL && m_Mt->mStorage != NULL);
+   assert(vec.length() == m_Mt->mStorage->m);
+
+   m_Mt->mStorage->addRowSums(vec.elements());
 }
 
 void
