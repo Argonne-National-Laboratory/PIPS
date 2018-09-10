@@ -250,6 +250,9 @@ public:
   /** remove entries i for which select[i] == 0 */
   virtual void removeEntries( const OoqpVector& select ) { assert(0 && "not implemented here"); };
 
+  /** Copy the absolute values of elements of v_in into this OoqpVector object. */
+  virtual void copyFromAbs(const OoqpVector& v) = 0;
+
   virtual OoqpVector* clone() const { assert(0 && "not implemented here"); return NULL; };
 
 };

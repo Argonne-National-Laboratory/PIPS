@@ -157,6 +157,12 @@ public:
 			   OoqpVector& soly, 
 			   OoqpVector& solz);
 
+  virtual double matXYZinfnorm(
+               QpGenData* data,
+               OoqpVector& solx,
+               OoqpVector& soly,
+               OoqpVector& solz);
+
   virtual void solveCompressedBiCGStab(OoqpVector& stepx,
 				       OoqpVector& stepy,
 				       OoqpVector& stepz,
