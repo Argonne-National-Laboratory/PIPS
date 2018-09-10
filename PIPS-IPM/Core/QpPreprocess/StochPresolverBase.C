@@ -1478,7 +1478,7 @@ void StochPresolverBase::countRowsCols()
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->vec);
       countBoxedColumns( nBoxCols, nColsTotal, nFreeVars);
       cout<<"Number of Linking variables: "<<nColsTotal<<", free Linking Variables: "<<nFreeVars<<endl;
-      cout<<"Number of Rows in the Root block in A "<<nRowsEq<<", in C: "<<nRowsIneq<<endl;
+      cout<<"Number of Rows in the Root block in A: "<<nRowsEq<<", in C: "<<nRowsIneq<<endl;
    }
 
    assert((int)presData.nRowElemsC->children.size() == nChildren);
@@ -1509,29 +1509,30 @@ void StochPresolverBase::countRowsCols()
    {
       int nRowsLink = 0;
       int nRangedRowsLink = 0;
-      int n1LinkRows = 0;
+      int nSingletonLinkRows = 0;
       currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
       currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
       countRangedRowsBlock(nRangedRowsLink, nRowsLink);
-      count1LinkRowsBlock(n1LinkRows);
+      countSingletonRowsBlock(nSingletonLinkRows);
       nRangedRows += nRangedRowsLink;
       nRowsIneq += nRowsLink;
       cout<<"Number of Linking rows in C: "<<nRowsLink<<", of those linking rows ranged: "<<nRangedRowsLink<<endl;
-      cout<<"1-link rows in C: "<<n1LinkRows<<endl;
+      cout<<"singleton linking rows in C: "<<nSingletonLinkRows<<endl;
    }
    if( hasLinking(EQUALITY_SYSTEM) && myRank == 0)
    {
       int nRowsLink = 0;
-      int n1LinkRows = 0;
+      int nSingletonLinkRows = 0;
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
       countEqualityRowsBlock(nRowsLink);
-      count1LinkRowsBlock(n1LinkRows);
+      countSingletonRowsBlock(nSingletonLinkRows);
       nRowsEq += nRowsLink;
       cout<<"Number of Linking rows in A: "<<nRowsLink<<endl;
-      cout<<"1-link rows in A: "<<n1LinkRows<<endl;
+      cout<<"singleton linking rows in A: "<<nSingletonLinkRows<<endl;
    }
 
+#ifdef WITH_TIMING
    // count how many linking rows do not really link two blocks:
    if( hasLinking(EQUALITY_SYSTEM) )
    {
@@ -1566,8 +1567,8 @@ void StochPresolverBase::countRowsCols()
       }
       if( myRank == 0 )
       {
-         cout<<"linkRows1Blocks rows in A: "<<linkRows1Blocks<<endl;
-         cout<<"linkRows2Blocks rows in A: "<<linkRows2Blocks<<endl;
+         cout<<"1-link rows in A: "<<linkRows1Blocks<<endl;
+         cout<<"2-link rows in A: "<<linkRows2Blocks<<endl;
       }
    }
    if( hasLinking(INEQUALITY_SYSTEM) )
@@ -1604,10 +1605,11 @@ void StochPresolverBase::countRowsCols()
       }
       if( myRank == 0 )
       {
-         cout<<"linkRows1Blocks rows in C: "<<linkRows1Blocks<<endl;
-         cout<<"linkRows2Blocks rows in C: "<<linkRows2Blocks<<endl;
+         cout<<"1-link rows in C: "<<linkRows1Blocks<<endl;
+         cout<<"2-link rows in C: "<<linkRows2Blocks<<endl;
       }
    }
+#endif
 
    if( iAmDistrib )
    {
@@ -1663,14 +1665,14 @@ void StochPresolverBase::countEqualityRowsBlock(int& nRowsEq) const
    }
 }
 
-void StochPresolverBase::count1LinkRowsBlock(int& n1LinkRows) const
+void StochPresolverBase::countSingletonRowsBlock(int& nSingletonRows) const
 {
    assert( currNnzRow != NULL );
 
    for( int i = 0; i < currNnzRow->n; i++ )
    {
       if( currNnzRow->elements()[i] == 1.0 )
-         n1LinkRows++;
+         nSingletonRows++;
    }
 }
 
