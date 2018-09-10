@@ -166,9 +166,12 @@ public:
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
-  /** add nnz per row to given array */
+  /** add nnz per row to given array (of size nRows) */
   void addNnzPerRow(double* vec) const;
   void getLinkVarsNnz(std::vector<int>& vec) const;
+
+  /** add abs. sum per row to given array (of size nRows) */
+  void addRowSums( double* vec ) const;
 
   /** store absolute non-zero minimum/maximum entry of row i and vec[i] in vec[i];
    *  empty rows get value 0.0 for maximization and <double>::max() for minimization  */

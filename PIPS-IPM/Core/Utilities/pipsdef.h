@@ -12,6 +12,7 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <mpi.h>
 
 const double pips_eps = 1e-13;
 const double pips_eps0 = 1e-40;
@@ -37,6 +38,7 @@ inline bool PIPSisLT(double val1, double val2, double eps = pips_eps)
    return (val1 < val2 - pips_eps);
 }
 
+
 inline bool PIPSisZero(double val, double eps0 = pips_eps0)
 {
    return (std::fabs(val) < pips_eps0);
@@ -47,5 +49,21 @@ inline bool PIPSisEQ_withTolerance(double val1, double val2, double tolerance)
    return (std::fabs(val1 - val2) <= tolerance);
 }
 
-#endif
 
+inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+{
+   bool iAmSpecial = true;
+
+   if( iAmDistrib )
+   {
+      int rank;
+
+      MPI_Comm_rank(mpiComm, &rank);
+      if( rank > 0 )
+         iAmSpecial = false;
+   }
+
+   return iAmSpecial;
+}
+
+#endif
