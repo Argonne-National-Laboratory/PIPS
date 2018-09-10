@@ -54,6 +54,7 @@ public:
   virtual void setToConstant( double c );
   virtual void randomize( double alpha, double beta, double *ix );
   virtual void copyFrom( OoqpVector& v );
+  virtual void copyFromAbs(const OoqpVector& v);
   virtual double twonorm();
   virtual double infnorm();
   virtual double onenorm();

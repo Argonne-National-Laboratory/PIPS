@@ -179,6 +179,16 @@ void SimpleVector::copyFrom( OoqpVector& vec )
   vec.copyIntoArray( this->v );
 }
 
+void SimpleVector::copyFromAbs(const OoqpVector& vec )
+{
+   const SimpleVector& vecSimple = dynamic_cast<const SimpleVector&>(vec);
+   assert( vec.length() == n );
+   double* const vecArr = vecSimple.elements();
+
+   for( int i = 0; i < n; i++ )
+     v[i] = fabs( vecArr[i] );
+}
+
 double SimpleVector::infnorm()
 {
   double temp, norm = 0;

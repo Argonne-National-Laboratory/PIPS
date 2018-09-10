@@ -17,6 +17,7 @@
 #include <limits>
 #include "mpi.h"
 #include <vector>
+#include <algorithm>
 
 #include <fstream>
 using namespace std;
@@ -342,6 +343,9 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    const double tolb = max(n2b * tol, eps);
    const int maxit = 75;
    const int normrDivLimit = 4; // todo user parameter
+
+   //const double infnorm = matXYZinfnorm(data, stepx, stepy, stepz);
+   //std::cout << "infnorm " << infnorm << std::endl;
 
    assert(n2b >= 0);
 
@@ -890,6 +894,39 @@ void QpGenLinsys::matXYZMult(double beta,  OoqpVector& res,
   resz->axzpy(alpha, *nomegaInv, solz);
   //cout << "resz norm: " << resz->twonorm() << endl;
   this->joinRHS( res, *resx, *resy, *resz );
+}
+
+/* computes infinity norm of entire system; solx, soly, solz are used as temporary buffers */
+double QpGenLinsys::matXYZinfnorm(
+             QpGenData* data,
+             OoqpVector& solx,
+             OoqpVector& soly,
+             OoqpVector& solz)
+{
+   double infnorm;
+
+   assert(data);
+
+   // todo might use extra vectors for A and C and compute them only one time
+   solx.copyFromAbs(*dd);
+
+   //std::cout << "infnorm dd=" << dd->infnorm() << std::endl;
+   //std::cout << "infnorm nomegaInv=" << nomegaInv->infnorm() << std::endl;
+
+
+   data->A->addColSums(solx);
+   data->C->addColSums(solx);
+   infnorm = solx.infnorm();
+
+   soly.setToZero();
+   data->A->addRowSums(soly);
+   infnorm = std::max(infnorm, soly.infnorm());
+
+   solz.copyFromAbs(*nomegaInv);
+   data->C->addRowSums(solz);
+   infnorm = std::max(infnorm, solz.infnorm());
+
+   return infnorm;
 }
 
 void QpGenLinsys::solveCompressedIterRefin(OoqpVector& stepx,

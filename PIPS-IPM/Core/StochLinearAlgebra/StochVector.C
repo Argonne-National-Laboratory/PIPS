@@ -346,6 +346,25 @@ void StochVector::copyFrom( OoqpVector& v_ )
     children[it]->copyFrom(*v.children[it]);
 }
 
+void StochVector::copyFromAbs(const OoqpVector& v_ )
+{
+  const StochVector& v = dynamic_cast<const StochVector&>(v_);
+
+  this->vec->copyFromAbs(*v.vec);
+
+  if( this->vecl )
+  {
+     assert(v.vecl);
+     this->vecl->copyFromAbs(*v.vecl);
+  }
+
+  //assert tree compatibility
+  assert(children.size() == v.children.size());
+
+  for(size_t it=0; it<children.size(); it++)
+    children[it]->copyFromAbs(*v.children[it]);
+}
+
 double StochVector::infnorm()
 {
   double infnrm;
