@@ -148,6 +148,8 @@ bool PresolveData::combineColAdaptParent()
 
    // Sort colIndicesGlobal (and valuesGlobal accordingly), remove duplicates and find infeasibilities
    std::sort(colAdaptParent.begin(), colAdaptParent.end(), col_is_smaller());
+   for(int i=1; i<getNumberColAdParent(); i++)
+      assert( getColAdaptParent(i-1).colIdx <= getColAdaptParent(i).colIdx);
 
    if(getNumberColAdParent() > 0)
    {
@@ -163,7 +165,10 @@ bool PresolveData::combineColAdaptParent()
                return false;
             }
             else
+            {
                colAdaptParent.erase(colAdaptParent.begin()+i);   //todo: implement more efficiently
+               i--;
+            }
          }
          else{
             colIdxCurrent = getColAdaptParent(i).colIdx;

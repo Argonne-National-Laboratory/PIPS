@@ -1478,7 +1478,7 @@ void StochPresolverBase::countRowsCols()
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->vec);
       countBoxedColumns( nBoxCols, nColsTotal, nFreeVars);
       cout<<"Number of Linking variables: "<<nColsTotal<<", free Linking Variables: "<<nFreeVars<<endl;
-      cout<<"Number of Rows in the Root block in A "<<nRowsEq<<", in C: "<<nRowsIneq<<endl;
+      cout<<"Number of Rows in the Root block in A: "<<nRowsEq<<", in C: "<<nRowsIneq<<endl;
    }
 
    assert((int)presData.nRowElemsC->children.size() == nChildren);
@@ -1509,22 +1509,107 @@ void StochPresolverBase::countRowsCols()
    {
       int nRowsLink = 0;
       int nRangedRowsLink = 0;
+      int nSingletonLinkRows = 0;
       currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vecl);
       currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
       countRangedRowsBlock(nRangedRowsLink, nRowsLink);
+      countSingletonRowsBlock(nSingletonLinkRows);
       nRangedRows += nRangedRowsLink;
       nRowsIneq += nRowsLink;
       cout<<"Number of Linking rows in C: "<<nRowsLink<<", of those linking rows ranged: "<<nRangedRowsLink<<endl;
+      cout<<"singleton linking rows in C: "<<nSingletonLinkRows<<endl;
    }
    if( hasLinking(EQUALITY_SYSTEM) && myRank == 0)
    {
       int nRowsLink = 0;
+      int nSingletonLinkRows = 0;
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
       countEqualityRowsBlock(nRowsLink);
+      countSingletonRowsBlock(nSingletonLinkRows);
       nRowsEq += nRowsLink;
       cout<<"Number of Linking rows in A: "<<nRowsLink<<endl;
+      cout<<"singleton linking rows in A: "<<nSingletonLinkRows<<endl;
    }
+
+#ifdef WITH_TIMING
+   // count how many linking rows do not really link two blocks:
+   if( hasLinking(EQUALITY_SYSTEM) )
+   {
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      int* rowHasEntryInBlocks = new int[currNnzRow->n];
+      for( int i = 0; i < currNnzRow->n; i++ )
+         rowHasEntryInBlocks[i] = 0;
+      for( size_t it = 0; it < presData.nRowElemsA->children.size(); it++)
+      {
+         if( !childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->A)), it, EQUALITY_SYSTEM))
+         {
+            setCPBlmatsChild(presProb->A, (int)it);
+            for( int i = 0; i < currNnzRow->n; i++ )
+            {
+               if( currNnzRow->elements()[i] != 0.0 )
+                  if( currBlmat->rowptr[i].start != currBlmat->rowptr[i].end)
+                     rowHasEntryInBlocks[i]++;
+            }
+         }
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+
+      }
+      MPI_Allreduce(MPI_IN_PLACE, rowHasEntryInBlocks, currNnzRow->n, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      int linkRows1Blocks = 0;
+      int linkRows2Blocks = 0;
+      for( int i = 0; i < currNnzRow->n; i++ )
+      {
+         if(rowHasEntryInBlocks[i] == 1)
+            linkRows1Blocks++;
+         if(rowHasEntryInBlocks[i] == 2)
+            linkRows2Blocks++;
+      }
+      if( myRank == 0 )
+      {
+         cout<<"1-link rows in A: "<<linkRows1Blocks<<endl;
+         cout<<"2-link rows in A: "<<linkRows2Blocks<<endl;
+      }
+   }
+   if( hasLinking(INEQUALITY_SYSTEM) )
+   {
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      int* rowHasEntryInBlocks = new int[currNnzRow->n];
+      for( int i = 0; i < currNnzRow->n; i++ )
+         rowHasEntryInBlocks[i] = 0;
+      for( size_t it = 0; it < presData.nRowElemsC->children.size(); it++)
+      {
+         if( !childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->C)), it, INEQUALITY_SYSTEM))
+         {
+            setCPBlmatsChild(presProb->C, (int)it);
+            for( int i = 0; i < currNnzRow->n; i++ )
+            {
+               if( currNnzRow->elements()[i] != 0.0 )
+                  if( currBlmat->rowptr[i].start != currBlmat->rowptr[i].end)
+                     rowHasEntryInBlocks[i]++;
+            }
+         }
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
+      }
+
+      MPI_Allreduce(MPI_IN_PLACE, rowHasEntryInBlocks, currNnzRow->n, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      int linkRows1Blocks = 0;
+      int linkRows2Blocks = 0;
+
+      for( int i = 0; i < currNnzRow->n; i++ )
+      {
+         if(rowHasEntryInBlocks[i] == 1)
+            linkRows1Blocks++;
+         if(rowHasEntryInBlocks[i] == 2)
+            linkRows2Blocks++;
+      }
+      if( myRank == 0 )
+      {
+         cout<<"1-link rows in C: "<<linkRows1Blocks<<endl;
+         cout<<"2-link rows in C: "<<linkRows2Blocks<<endl;
+      }
+   }
+#endif
 
    if( iAmDistrib )
    {
@@ -1577,6 +1662,17 @@ void StochPresolverBase::countEqualityRowsBlock(int& nRowsEq) const
    {
       if( currNnzRow->elements()[i] != 0.0 )
          nRowsEq ++;
+   }
+}
+
+void StochPresolverBase::countSingletonRowsBlock(int& nSingletonRows) const
+{
+   assert( currNnzRow != NULL );
+
+   for( int i = 0; i < currNnzRow->n; i++ )
+   {
+      if( currNnzRow->elements()[i] == 1.0 )
+         nSingletonRows++;
    }
 }
 
