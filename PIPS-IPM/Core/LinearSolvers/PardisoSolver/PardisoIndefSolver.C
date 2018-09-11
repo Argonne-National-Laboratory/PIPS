@@ -161,7 +161,7 @@ void PardisoIndefSolver::factorizeFromSparse()
 #ifdef SELECT_NNZS
    std::vector<double>diag(n);
 
-   const double t = 0.001;
+   const double t = 0.0001;
 
    for( int r = 0; r < n; r++ )
    {

@@ -19,8 +19,6 @@
 #endif
 
 
-//#define BAD_NUMERICS
-
 int gOoqpPrintLevel = 1000;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
@@ -50,7 +48,7 @@ Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
 		   phi_history(0), phi_min_history(0), iter(0), sys(0)
 {
   // define parameters associated with the step length heuristic
-#ifdef BAD_NUMERICS
+#ifdef WITH_STEPLENGTH_CONSERVATIVE
   gamma_f = 0.95;
 #else
   gamma_f = 0.99;
@@ -208,7 +206,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 
 	// back off just a touch (or a bit more)
 #ifdef WITH_STEPLENGTH_CONSERVATIVE
-	alpha *= 0.995;
+	alpha *= 0.98;
 #else
 	alpha *= .99999999;
 #endif
@@ -282,8 +280,8 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 
 	// back off just a touch (or a bit more)
 	#ifdef WITH_STEPLENGTH_CONSERVATIVE
-		alpha_primal *= 0.995;
-		alpha_dual *= 0.995;
+		alpha_primal *= 0.98;
+		alpha_dual *= 0.98;
 	#else
 		alpha_primal *= .99999999;
 		alpha_dual *= .99999999;
