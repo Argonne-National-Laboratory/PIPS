@@ -306,7 +306,9 @@ void SparseSymMatrix::mult ( double beta,  double y[], int incy,
       j = jcolM[k];
 	  
       y[i * incy] += alpha * M[k] * x[j * incx];
-      if ( i != j ) {
+      // todo fixme won't work with Q or any other "really" symmetric matrix!
+      // Necessary because CtDC from sLinsysRootAug is stored as a general matrix
+      if ( i != j && 0 ) {
 	y[j * incy] += alpha * M[k] * x[i * incx];
       }
     }

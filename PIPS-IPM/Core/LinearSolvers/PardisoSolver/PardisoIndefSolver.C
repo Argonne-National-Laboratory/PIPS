@@ -31,8 +31,6 @@ extern "C" void pardiso_chkvec     (int *, int *, double *, int *);
 extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
                            double *, int *);
 
-
-
 PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 {
   mStorage = DenseStorageHandle( dm->getStorage() );
@@ -161,9 +159,20 @@ void PardisoIndefSolver::factorizeFromSparse()
    assert(n >= 0);
 
 #ifdef SELECT_NNZS
+   std::vector<double>diag(n);
+
+   const double t = 0.001;
+
+   for( int r = 0; r < n; r++ )
+   {
+      const int j = iaStorage[r];
+      assert(jaStorage[j] == r);
+
+      diag[r] = fabs(aStorage[j]) * t;
+   }
 
    ia[0] = 1;
-
+   int kills = 0;
    int nnznew = 0;
 
    for( int r = 0; r < n; r++ )
@@ -172,17 +181,29 @@ void PardisoIndefSolver::factorizeFromSparse()
       {
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
+#if 0
+            if( (fabs(aStorage[j]) >= diag[r] || fabs(aStorage[j]) >= diag[jaStorage[j]]) )
+            {
+               ja[nnznew] = jaStorage[j] + 1;
+               a[nnznew++] = aStorage[j];
+            }
+            else
+            {
+               kills++;
+               assert(jaStorage[j] != r);
+            }
+#else
             ja[nnznew] = jaStorage[j] + 1;
             a[nnznew++] = aStorage[j];
+#endif
+
          }
       }
-
       ia[r + 1] = nnznew + 1;
    }
-   int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-   if( myrank == 0 )
-      std::cout << "real nnz in KKT: " << nnznew << std::endl;
+   std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
+
 #else
    for( int i = 0; i < nnz; i++ )
       a[i] = aStorage[i];
@@ -358,6 +379,32 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
          printf("\nERROR during solution: %d", error);
          exit(3);
       }
+
+      const double b2norm = sv.twonorm();
+      const double binfnorm = sv.infnorm();
+      double mat_max = 0.0;
+      for( int i = 0; i < n; i++ )
+      {
+         for( int p = ia[i]; p < ia[i + 1]; p++ )
+         {
+            const int j = ja[p - 1] - 1;
+
+            sv[i] -= a[p - 1] * x[j]; //r[i] = r[i] - M(i,j)*x(j)
+
+            mat_max = std::max(std::fabs(a[p - 1]), mat_max);
+
+            assert(j >= i);
+
+            if( j != i )
+               sv[j] -= a[p - 1] * x[i]; //r[j] = r[j] - M(j,i)*x(i)
+         }
+      }
+      const double res2norm = sv.twonorm();
+      const double resinfnorm = sv.infnorm();
+
+      std::cout << "GLOBAL SCHUR: res.2norm=" << res2norm << " rel.res2norm=" << res2norm / b2norm  <<
+            " res.infnorm=" << resinfnorm << " rel.resinfnorm=" << resinfnorm / binfnorm  <<
+            " abs elem=" << mat_max << std::endl;
 
       for( int i = 0; i < n; i++ )
          b[i] = x[i];

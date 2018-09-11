@@ -560,8 +560,8 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 {
   int n = b.length();
 
-  const int maxit=500;
-  const double tol=1e-12, EPS=2e-16;
+  const int maxit=150; // todo maxit = 500
+  const double tol=1e-10, EPS=1e-15; // todo tol=1e-12, EPS=2e-16
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
@@ -590,8 +590,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   n2b = b.twonorm();
   tolb = n2b*tol;
 
-  // todo somewhat too small
-  tolb = max(tolb, 10.0 * std::numeric_limits<double>::min());
+  tolb = max(tolb, EPS);
 
 #ifdef TIMING
   double relres;
@@ -621,18 +620,13 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 
   normr=r.twonorm();
 
-#ifdef TIMING
-  if(myRank==0)
-  {
-    cout << "BiCG: initial rel resid: " << normr/n2b << endl;
-    cout << "initial tolb " << tolb << std::endl;
-  }
-#endif
-
   if( normr<=tolb ) {
     //initial guess is good enough
     b.copyFrom(x); flag=0; return;
   }
+
+  if( myRank == 0 )
+      std::cout << "innerBICG starts: " << normr << " > " << tolb << std::endl;
 
   rt.copyFrom(r); //Shadow residual
   double* resvec = new double[2*maxit+1];
@@ -852,6 +846,10 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     }
 #endif
   }
+
+  if( myRank == 0 )
+     std::cout << "innerBICG: " << "ii=" << ii << " flag=" << flag << " normr=" << normr << " normr_act="
+        << normr_act << " tolb=" << tolb << std::endl;
 
   b.copyFrom(x);
   delete[] resvec;
