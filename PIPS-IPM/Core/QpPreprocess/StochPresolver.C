@@ -75,6 +75,8 @@ Data* StochPresolver::presolve()
    presolverBS.applyPresolving();
    presolverCleanup.applyPresolving();
    presolverParallelRow.applyPresolving();
+   presolverSR.applyPresolving();
+
 
 /*   cout<<"nRowElemsA "<<endl;
    nRowElemsA->writeToStreamAll(cout);

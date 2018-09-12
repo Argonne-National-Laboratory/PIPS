@@ -1532,7 +1532,7 @@ void StochPresolverBase::countRowsCols()
       cout<<"singleton linking rows in A: "<<nSingletonLinkRows<<endl;
    }
 
-#ifdef WITH_TIMING
+#ifdef TIMING
    // count how many linking rows do not really link two blocks:
    if( hasLinking(EQUALITY_SYSTEM) )
    {
