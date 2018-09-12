@@ -369,7 +369,7 @@ void SimpleVector::gondzioProjection( double rmin, double rmax )
     } else {
       v[i] = 0.0;
     }
-    int todo; //why?
+
     if( v[i] < -rmax ) v[i] = -rmax;
   }
 }
