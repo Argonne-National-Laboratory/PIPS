@@ -279,7 +279,6 @@ void StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
 
 void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIneq)
 {
-   // todo F_0 block
    if( hasLinking(EQUALITY_SYSTEM))
    {
       setCurrentPointersToNull();
@@ -358,6 +357,27 @@ void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIn
 
       // Update nRowLink and lhs/rhs (Linking part) of both systems:
       updateRhsNRowLink();
+      presData.resetRedCounters();
+
+      // F_0 block:
+      setCurrentPointersToNull();
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      setCPBlmatsRoot(presProb->A);
+      setCPColumnRoot();
+      currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vecl);
+      for( int rowIdx = 0; rowIdx < currNnzRow->n; rowIdx++ )
+      {
+         if( currNnzRow->elements()[rowIdx] == 1.0 && (currBlmat->rowptr[rowIdx].start != currBlmat->rowptr[rowIdx].end) )
+         {
+            assert( currBlmat->rowptr[rowIdx].start +1 == currBlmat->rowptr[rowIdx].end );
+
+            removeSingleRowEntryB0( *currBlmat, rowIdx);
+         }
+      }
+      if( !presData.combineColAdaptParent() )
+         abortInfeasible(MPI_COMM_WORLD);
+
+      updateLinkingVarsBlocks(newSREq, newSRIneq);
       presData.resetRedCounters();
    }
 }
