@@ -22,8 +22,9 @@ double relativeDiff(double val1, double val2)
 {
    const double val1Abs = std::fabs(val1);
    const double val2Abs = std::fabs(val2);
+   const double div = std::max(1.0, std::max(val1Abs, val2Abs));
 
-   return (val1 - val2) / std::max(val1Abs, val2Abs);
+   return (val1 - val2) / div;
 }
 
 #ifdef PIPS_DEBUG
