@@ -336,6 +336,23 @@ void SimpleVector::writefSomeToStream( ostream& out,
   }
 }
 
+void SimpleVector::writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const
+{
+   if( irhs )
+      assert( this->n == irhs->n );
+
+   for( int i = 0; i < n; i++ )
+   {
+      if( !irhs || ( irhs && dynamic_cast<SimpleVector *>(irhs)->elements()[i] != 0.0 ) )
+         out <<rowName<< i <<" "<< v[i] << "\n";
+   }
+}
+
+void SimpleVector::writeMPSformatCostWithVar(ostream& out, string varStub) const
+{
+   for( int i = 0; i < n; i++ )
+      out <<varStub<< i <<" "<<"COST"<<" "<< v[i] << "\n";
+}
 
 void SimpleVector::scale( double alpha )
 {

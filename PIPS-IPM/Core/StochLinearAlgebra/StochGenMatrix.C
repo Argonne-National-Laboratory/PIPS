@@ -734,6 +734,129 @@ std::string StochGenMatrix::writeToStreamDenseRowLink(int rowidx) const
    return str_all;
 }
 
+void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const
+{
+   int myRank;
+   MPI_Comm_rank(mpiComm, &myRank);
+   string rt;
+   if( rowType == 0 )
+      rt = "E";
+   else if( rowType == 1 )
+      rt = "L";
+   else if( rowType == 2 )
+      rt = "G";
+   else
+      assert(0);
+
+   StochVector* irhsStoch;
+   if( irhs )
+      irhsStoch = dynamic_cast<StochVector*>(irhs);
+
+   int m, n;
+   if( myRank == 0)
+   {
+      // A_0 block:
+      this->Bmat->getSize(m, n);
+      for(int i=0; i<m; i++)
+      {
+         if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vec)->elements()[i] != 0.0) )
+            out<< rt<<" row_"<<rt<<"_"<<"R" <<"_"<<i <<endl;
+      }
+      // linking rows:
+      if( Blmat )
+      {
+         this->Blmat->getSize(m, n);
+         for(int i=0; i<m; i++)
+         {
+            if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vecl)->elements()[i] != 0.0) )
+               out<< rt<<" row_"<<rt<<"_"<<"L" <<"_"<<i <<endl;
+         }
+      }
+   }
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->Amat->getSize(m, n);
+      for(int i=0; i<m; i++)
+      {
+         if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec)->elements()[i] != 0.0) )
+            out<< rt<<" row_"<<rt<<"_"<<it <<"_"<<i <<endl;
+      }
+   }
+}
+
+void StochGenMatrix::writeMPSformatCols(ostream& out, int rowType, OoqpVector* irhs) const
+{
+   int myRank;
+   MPI_Comm_rank(mpiComm, &myRank);
+   string rt;
+   if( rowType == 0 )
+      rt = "E";
+   else if( rowType == 1 )
+      rt = "L";
+   else if( rowType == 2 )
+      rt = "G";
+   else
+      assert(0);
+
+   StochVector* irhsStoch;
+   if( irhs )
+      irhsStoch = dynamic_cast<StochVector*>(irhs);
+
+   if( myRank == 0)
+   {
+      // linking vars in A_0:
+      string rowNameStub = "row_";
+      rowNameStub+= rt;
+      rowNameStub+="_R_";
+      string varNameStub = "var_R_";
+      if( irhs )
+         Bmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->vec));
+      else
+         Bmat->writeMPSformatCols(out, varNameStub, rowNameStub, NULL);
+      if( Blmat )
+      {
+         // linking vars in F_0:
+         rowNameStub = "row_";
+         rowNameStub+= rt;
+         rowNameStub+="_L_";
+         varNameStub = "var_L_";
+         if( irhs )
+            Blmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->vecl));
+         else
+            Blmat->writeMPSformatCols(out, varNameStub, rowNameStub, NULL);
+      }
+   }
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      if( ! children[it]->isKindOf(kStochGenDummyMatrix))
+      {
+         std::stringstream sstm;
+         sstm << "row_" << rt << "_" << it << "_";
+         string rowNameStub = sstm.str();
+         string varNameStub = "var_L_";
+         if( irhs )
+            children[it]->Amat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec));
+         else
+            children[it]->Amat->writeMPSformatCols(out, varNameStub, rowNameStub, NULL);
+         std::stringstream sstm2;
+         sstm2 << "var_" << it << "_";
+         varNameStub = sstm2.str();
+         if( irhs )
+            children[it]->Bmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec));
+         else
+            children[it]->Bmat->writeMPSformatCols(out, varNameStub, rowNameStub, NULL);
+         if( children[it]->Blmat )
+         {
+            rowNameStub = "row_L_";
+            if( irhs )
+               children[it]->Blmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->vecl));
+            else
+               children[it]->Blmat->writeMPSformatCols(out, varNameStub, rowNameStub, NULL);
+         }
+      }
+   }
+}
+
 /* Make the elements in this matrix symmetric. The elements of interest
  *  must be in the lower triangle, and the upper triangle must be empty.
  *  @param info zero if the operation succeeded. Otherwise, insufficient

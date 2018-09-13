@@ -185,6 +185,20 @@ SparseGenMatrix::writeToStreamDenseRow(int rowidx) const
    return out.str();
 }
 
+void SparseGenMatrix::writeMPSformatCols(ostream& out, string varStub, string rowStub, OoqpVector* irhs) const
+{
+   if( irhs )
+      assert( mStorage->m == irhs->n );
+
+   for(int i = 0; i < mStorage->m; i++ ) {
+     for (int k = mStorage->krowM[i]; k < mStorage->krowM[i+1]; k++ )
+     {
+        if( !irhs || ( irhs && dynamic_cast<SimpleVector *>(irhs)->elements()[i] != 0.0) )
+           out << varStub<<mStorage->jcolM[k]<<" "<<rowStub<<i<< " " << mStorage->M[k] << endl;
+     }
+   }
+}
+
 void SparseGenMatrix::randomize( double alpha, double beta, double * seed )
 {
   mStorage->randomize( alpha, beta, seed );

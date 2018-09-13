@@ -74,6 +74,7 @@ class sData : public QpGenData {
 
  public:
   virtual void writeToStreamDense(ostream& out) const;
+  void writeMPSformat(ostream& out) const;
   virtual sData* cloneFull(bool switchToDynamicStorage = false) const;
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();

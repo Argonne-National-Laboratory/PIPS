@@ -473,6 +473,54 @@ void sData::writeToStreamDense(ostream& out) const
    (*iclow).writeToStreamAll(out);
 }
 
+/** Write the LP in MPS format. */
+void sData::writeMPSformat(ostream& out) const
+{
+   // Note: only writes the inequalities that have a finite rhs
+   // (because no specified rhs of a row implies rhs=0).
+   // Also, variable coefficients with indices in inequalitites with
+   // inifnite rhs are not written because these rows do not appear in the MPs model.
+
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank == 0 )
+   {
+      out <<  "NAME PIPS_to_MPS " << endl;
+      out << "ROWS" <<endl;
+      out << "N COST" <<endl;
+   }
+   MPI_Barrier(MPI_COMM_WORLD);
+   // write all row names and if they are E, L or G
+   (*A).writeMPSformatRows(out, 0, NULL);
+   (*C).writeMPSformatRows(out, 1, icupp);
+   (*C).writeMPSformatRows(out, 2, iclow);
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   // write all variable names
+   if( myRank == 0 ) out <<  "COLUMNS " << endl;
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   (*g).writeMPSformatCost(out);
+   (*A).writeMPSformatCols(out, 0, NULL);
+   (*C).writeMPSformatCols(out, 1, icupp);
+   (*C).writeMPSformatCols(out, 2, iclow);
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   // write all rhs / lhs
+   if( myRank == 0 ) out <<  "RHS " << endl;
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   (*bA).writeMPSformatRhs(out, 0, NULL);
+   (*bu).writeMPSformatRhs(out, 1, icupp);
+   (*bl).writeMPSformatRhs(out, 2, iclow);
+
+   // todo write all variable bounds
+   MPI_Barrier(MPI_COMM_WORLD);
+   if( myRank == 0 ) out <<  "BOUNDS " << endl;
+   MPI_Barrier(MPI_COMM_WORLD);
+}
+
 sData*
 sData::cloneFull(bool switchToDynamicStorage) const
 {

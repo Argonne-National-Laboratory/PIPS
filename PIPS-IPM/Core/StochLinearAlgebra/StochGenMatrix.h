@@ -156,6 +156,8 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
+  virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const;
+  virtual void writeMPSformatCols(ostream& out, int rowType, OoqpVector* irhs) const;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -306,7 +308,9 @@ public:
   virtual void getLinkVarsNnz(std::vector<int>& vec) const{};
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamDense(ostream& out) const{};
+  virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const{};
   virtual void writeToStreamDenseChild(stringstream& out, int offset) const{};
+  virtual void writeMPSformatCols(ostream& out, int rowType, OoqpVector* irhs) const{};
   virtual std::string writeToStreamDenseRowLink(int rowidx) const{return 0;};
 
   /** Make the elements in this matrix symmetric. The elements of interest
