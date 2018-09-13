@@ -1132,8 +1132,8 @@ bool StochPresolverBase::newBoundsImplyInfeasible(double newxlow, double newxupp
       double* ixlow, double* ixupp, double* xlow, double* xupp) const
 {
    assert( colIdx >= 0 );
-   if( ( ixlow[colIdx] != 0.0 && PIPSisLT(newxupp, xlow[colIdx]) )
-         || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], newxlow) )
+   if( ( ixlow[colIdx] != 0.0 && PIPSisRelLT(newxupp, xlow[colIdx]) )
+         || (ixupp[colIdx] != 0.0 && PIPSisRelLT(xupp[colIdx], newxlow) )
          || (newxlow > newxupp))
    {
       cout<<"Infeasibility detected at variable "<<colIdx<<", new bounds= ["<<newxlow<<", "<<newxupp<<"]"<<endl;

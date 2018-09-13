@@ -17,6 +17,15 @@
 const double pips_eps = 1e-13;
 const double pips_eps0 = 1e-40;
 
+static inline
+double relativeDiff(double val1, double val2)
+{
+   const double val1Abs = std::fabs(val1);
+   const double val2Abs = std::fabs(val2);
+
+   return (val1 - val2) / std::max(val1Abs, val2Abs);
+}
+
 #ifdef PIPS_DEBUG
 #define PIPSdebugMessage                printf("[%s:%d] debug: ", __FILE__, __LINE__), printf
 #else
@@ -25,23 +34,36 @@ const double pips_eps0 = 1e-40;
 
 inline bool PIPSisEQ(double val1, double val2, double eps = pips_eps)
 {
-   return (std::fabs(val1 - val2) <= pips_eps);
+   return (std::fabs(val1 - val2) <= eps);
+}
+
+inline bool PIPSisRelEQ(double val1, double val2, double eps = pips_eps)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return (std::fabs(reldiff) <= eps);
 }
 
 inline bool PIPSisLE(double val1, double val2, double eps = pips_eps)
 {
-   return (val1 <= val2 + pips_eps);
+   return (val1 <= val2 + eps);
 }
 
 inline bool PIPSisLT(double val1, double val2, double eps = pips_eps)
 {
-   return (val1 < val2 - pips_eps);
+   return (val1 < val2 - eps);
 }
 
+inline bool PIPSisRelLT(double val1, double val2, double eps = pips_eps)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return (reldiff < -eps);
+}
 
 inline bool PIPSisZero(double val, double eps0 = pips_eps0)
 {
-   return (std::fabs(val) < pips_eps0);
+   return (std::fabs(val) < eps0);
 }
 
 inline bool PIPSisEQ_withTolerance(double val1, double val2, double tolerance)
