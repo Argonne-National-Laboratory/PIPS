@@ -403,7 +403,7 @@ int main(int argc, char ** argv)
    if( gmsRank == 0 )
       cout << "using BiCGStab" << endl;
    gOuterSolve=2;
-   gInnerSCsolve=0;
+   gInnerSCsolve=2;
 #else
    gOuterSolve=0;
    gInnerSCsolve=0;

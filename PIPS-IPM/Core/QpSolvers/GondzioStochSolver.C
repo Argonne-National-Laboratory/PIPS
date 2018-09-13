@@ -169,6 +169,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       muaff = iterate->mustep(step, alpha);
       sigma = pow(muaff / mu, tsig);
 
+  //    std::cout << "sigma: " << sigma << std::endl;
+
       if( gOoqpPrintLevel >= 10 )
       {
          this->doMonitor(prob, iterate, resid, alpha, sigma, iter, mu,

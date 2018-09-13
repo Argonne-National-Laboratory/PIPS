@@ -713,15 +713,16 @@ void sData::printLinkVarsStats()
 {
    int n = getLocalnx();
 
-   std::vector<int> linkCount(n, 0);
+   std::vector<int> linkCountA(n, 0);
+   std::vector<int> linkCountC(n, 0);
    std::vector<int> linkCount0(n, 0);
    std::vector<int> linkCountLC(n, 0);
 
    StochGenMatrix& Astoch = dynamic_cast<StochGenMatrix&>(*A);
    StochGenMatrix& Cstoch = dynamic_cast<StochGenMatrix&>(*C);
 
-   Astoch.updateKLinkVarsCount(linkCount);
-   Cstoch.updateKLinkVarsCount(linkCount);
+   Astoch.updateKLinkVarsCount(linkCountA);
+   Cstoch.updateKLinkVarsCount(linkCountC);
 
    Astoch.Bmat->getTranspose().updateNonEmptyRowsCount(linkCount0);
    Astoch.Bmat->deleteTransposed();
@@ -752,19 +753,20 @@ void sData::printLinkVarsStats()
 
       for( int i = 0; i < n; i++ )
       {
-         assert(linkCount[i] >= 0 && linkCount0[i] >= 0 && linkCountLC[i] >= 0);
+         const int linkCountAB = linkCountA[i] + linkCountC[i];
+         assert(linkCountAB >= 0 && linkCount0[i] >= 0 && linkCountLC[i] >= 0);
          assert(linkCount0[i] <= 2 && linkCountLC[i] <= 2);
 
-         if( linkCount[i] < nLinkStats )
-            linkSizes[size_t(linkCount[i])]++;
+         if( linkCountAB < nLinkStats )
+            linkSizes[size_t(linkCountAB)]++;
 
-         if( linkCount[i] == 0 && linkCountLC[i] == 0 && linkCount0[i] != 0 )
+         if( linkCountAB == 0 && linkCountLC[i] == 0 && linkCount0[i] != 0 )
             count0++;
 
-         if( linkCount[i] == 0 && linkCount0[i] == 0 && linkCountLC[i] != 0 )
+         if( linkCountAB == 0 && linkCount0[i] == 0 && linkCountLC[i] != 0 )
             countLC++;
 
-         if( linkCount[i] == 0 && (linkCount0[i] != 0 || linkCountLC[i] != 0) )
+         if( linkCountAB == 0 && (linkCount0[i] != 0 || linkCountLC[i] != 0) )
             count0LC++;
       }
 

@@ -197,8 +197,6 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 
    int mype;
    MPI_Comm_rank(comm,&mype);
-#ifdef TIMING
-
 
   if(0 == mype) cout << "solving ..." << endl;
 
@@ -218,7 +216,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
     }
   }
-
+#ifdef TIMING
   double tmElapsed=MPI_Wtime();
 #endif
 

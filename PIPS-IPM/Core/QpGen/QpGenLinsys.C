@@ -39,6 +39,8 @@ static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
       std::cout << " diverged" << std::endl;
    else if( flag == 4 )
       std::cout << " break-down occurred" << std::endl;
+   else if( flag == 3 )
+      std::cout << " stagnation occurred" << std::endl;
    else if( flag == -1 )
       std::cout << " not converged in max iterations" << std::endl;
    else if( flag == 0 )
@@ -338,11 +340,12 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    OoqpVector &x = *sol, &r = *res, &b = *rhs;
 
    const double tol = 1e-10;
-   const double eps = 1e-16;
+   const double eps = 1e-15;
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, eps);
    const int maxit = 75;
-   const int normrDivLimit = 4; // todo user parameter
+   const int normrDivLimit = 3; // todo user parameter
+   const int stagsLimit = 3;
 
    //const double infnorm = matXYZinfnorm(data, stepx, stepy, stepz);
    //std::cout << "infnorm " << infnorm << std::endl;
@@ -405,6 +408,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
    int flag = -1;
    int normrNDiv = 0;
+   int nstags = 0;
    double rho = 1., omega = 1., alpha;
 
    //main loop
@@ -449,6 +453,12 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
             break;
 
          alpha = rho / rtv;
+
+         if( (std::fabs(alpha) * dx.twonorm()) <= eps * x.twonorm() )
+            nstags++;
+         else
+            nstags = 0;
+
          // x = x + alpha*dx (x=x+alpha*ph)
          x.axpy(alpha, dx);
          // r = r-alpha*v (s=r-alpha*v)
@@ -457,7 +467,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          //check for convergence
          normr = r.twonorm();
 
-         if( normr <= tolb )
+         if( normr <= tolb || nstags >= stagsLimit )
          {
             //compute the actual residual
             OoqpVector& res = dx; //use dx
@@ -490,6 +500,11 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
          omega = t.dotProductWith(r) / tt;
 
+         if( (std::fabs(omega) * dx.twonorm()) <= eps * x.twonorm() )
+            nstags++;
+         else
+            nstags = 0;
+
          // x=x+omega*dx  (x=x+omega*sh)
          x.axpy(omega, dx);
          // r = r-omega*t (r=s-omega*sh)
@@ -497,7 +512,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          //check for convergence
          normr = r.twonorm();
 
-         if( normr <= tolb )
+         if( normr <= tolb || nstags >= stagsLimit )
          {
             //compute the actual residual
             OoqpVector& res = dx; //use dx
@@ -511,8 +526,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
                //converged
                flag = 0;
                break;
-            } // else continue - To Do: detect stagnation (flag==3)
-            // todo norm(x - x_pr) <= norm(x)*eps (where x_pr is the previous iteration approximation)
+            }
          }
          else
          {
@@ -525,12 +539,13 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
             }
 
             // todo rollback to normr_min iterate!
-            if( normrNDiv >= normrDivLimit )
+            if( normrNDiv > normrDivLimit )
             {
                flag = 5;
                break;
             }
          } //~end of convergence test
+
 #if 0
          if( normr < normr_min )
          {
@@ -539,6 +554,12 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          }
 #endif
       } //~end of scoping
+
+      if( nstags >= stagsLimit )
+      {
+         flag = 3;
+         break;
+      }
 
       if( isZero(omega, flag) )
          break;
