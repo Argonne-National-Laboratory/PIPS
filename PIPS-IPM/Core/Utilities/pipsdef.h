@@ -67,12 +67,6 @@ inline bool PIPSisZero(double val, double eps0 = pips_eps0)
    return (std::fabs(val) < eps0);
 }
 
-inline bool PIPSisEQ_withTolerance(double val1, double val2, double tolerance)
-{
-   return (std::fabs(val1 - val2) <= tolerance);
-}
-
-
 inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
 {
    bool iAmSpecial = true;
