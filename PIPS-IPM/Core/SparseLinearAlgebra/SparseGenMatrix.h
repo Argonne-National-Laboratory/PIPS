@@ -105,7 +105,6 @@ public:
 
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamDense(ostream& out) const;
-  virtual void writeMPSformatCols(ostream& out, string varStub, string rowStub, OoqpVector* irhs) const;
   virtual void writeToStreamDenseRow( stringstream& out, int rowidx) const;
   virtual std::string writeToStreamDenseRow( int rowidx) const;
 

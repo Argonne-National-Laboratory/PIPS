@@ -473,57 +473,253 @@ void sData::writeToStreamDense(ostream& out) const
    (*iclow).writeToStreamAll(out);
 }
 
-/** Write the LP in MPS format. */
-void sData::writeMPSformat(ostream& out) const
+/** Write the LP in MPS format. Only works if not distributed. */
+void sData::writeMPSformat(ostream& out)
 {
-   // Note: only writes the inequalities that have a finite rhs
+   // Note: only write the inequalities that have a finite rhs
    // (because no specified rhs of a row implies rhs=0).
    // Also, variable coefficients with indices in inequalitites with
    // inifnite rhs are not written because these rows do not appear in the MPs model.
 
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-   if( myRank == 0 )
+   if( world_size > 1 )
    {
-      out <<  "NAME PIPS_to_MPS " << endl;
-      out << "ROWS" <<endl;
-      out << " N COST" <<endl;
+      cout<<"MPS format writer only available using one Process!"<<endl;
+      return;
    }
-   MPI_Barrier(MPI_COMM_WORLD);
+   cout<<"Writing MPS format..."<<endl;
+
+   out <<  "NAME PIPS_to_MPS " << endl;
+   out << "ROWS" <<endl;
+   out << " N COST" <<endl;
+
    // write all row names and if they are E, L or G
    (*A).writeMPSformatRows(out, 0, NULL);
    (*C).writeMPSformatRows(out, 1, icupp);
    (*C).writeMPSformatRows(out, 2, iclow);
-   MPI_Barrier(MPI_COMM_WORLD);
 
    // write all variable names
-   if( myRank == 0 ) out <<  "COLUMNS " << endl;
-   MPI_Barrier(MPI_COMM_WORLD);
-
-   (*g).writeMPSformatCost(out);
-   (*A).writeMPSformatCols(out, 0, NULL);
-   (*C).writeMPSformatCols(out, 1, icupp);
-   (*C).writeMPSformatCols(out, 2, iclow);
-   MPI_Barrier(MPI_COMM_WORLD);
+   out <<  "COLUMNS " << endl;
+   writeMPSColumns(out);
 
    // write all rhs / lhs
-   if( myRank == 0 ) out <<  "RHS " << endl;
-   MPI_Barrier(MPI_COMM_WORLD);
+   out <<  "RHS " << endl;
 
    (*bA).writeMPSformatRhs(out, 0, NULL);
    (*bu).writeMPSformatRhs(out, 1, icupp);
    (*bl).writeMPSformatRhs(out, 2, iclow);
 
-   // todo write all variable bounds
-   MPI_Barrier(MPI_COMM_WORLD);
-   if( myRank == 0 ) out <<  "BOUNDS " << endl;
-   MPI_Barrier(MPI_COMM_WORLD);
+   // write all variable bounds
+   out <<  "BOUNDS " << endl;
    (*bux).writeMPSformatBounds(out, ixupp, true);
    (*blx).writeMPSformatBounds(out, ixlow, false);
 
-   MPI_Barrier(MPI_COMM_WORLD);
-   if( myRank == 0 ) out <<  "ENDATA " << endl;
+   out <<  "ENDATA " << endl;
+
+   cout<<"Finished writing MPS format."<<endl;
+}
+
+void sData::writeMPSColumns(ostream& out)
+{
+   int world_size;
+   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+   assert( world_size == 1 );
+
+   int m,n;
+   string varName;
+   string rowNameStub;
+   string rowNameStubLT;
+   string rowNameStubGT;
+   StochVector& gStoch = dynamic_cast<StochVector&>(*g);
+   StochVector& icuppStoch = dynamic_cast<StochVector&>(*icupp);
+   StochVector& iclowStoch = dynamic_cast<StochVector&>(*iclow);
+   StochGenMatrix& AStoch = dynamic_cast<StochGenMatrix&>(*A);
+   SparseGenMatrix& ASparseTrans = dynamic_cast<SparseGenMatrix*>(AStoch.Bmat)->getTranspose();
+   StochGenMatrix& CStoch = dynamic_cast<StochGenMatrix&>(*C);
+   SparseGenMatrix& CSparseTrans = dynamic_cast<SparseGenMatrix*>(CStoch.Bmat)->getTranspose();
+
+   SimpleVector* gSimple = dynamic_cast<SimpleVector*>(gStoch.vec);
+   n = gSimple->n;
+   // todo assert ASparseTrans has correct dimensions:
+
+   std::stringstream sstmCol;
+   std::stringstream sstmRow;
+
+
+   // linking variables:
+   for( int col = 0; col<n; col++ )
+   {
+      sstmCol.clear();
+      sstmCol.str("");
+      sstmCol << " var_L_" << col;
+      varName = sstmCol.str();
+
+      // cost coefficients:
+      rowNameStub = "COST";
+      if( gSimple->elements()[col] != 0 )
+         out<<varName<< " " << rowNameStub << " " << gSimple->elements()[col] <<endl;
+
+      // coefficients in A_0:
+      rowNameStub = "row_E_R_";
+      for( int k = ASparseTrans.krowM()[col]; k<ASparseTrans.krowM()[col+1]; k++ )
+         out<<varName<< " " << rowNameStub << ASparseTrans.jcolM()[k] << " " << ASparseTrans.M()[k] <<endl;
+
+      // coefficients in F_0:
+      if( AStoch.Blmat )
+      {
+         SparseGenMatrix& ABlmatSparseTrans = dynamic_cast<SparseGenMatrix*>(AStoch.Blmat)->getTranspose();
+         rowNameStub = "row_E_L_";
+         for( int k = ABlmatSparseTrans.krowM()[col]; k<ABlmatSparseTrans.krowM()[col+1]; k++ )
+            out<<varName<< " " << rowNameStub << ABlmatSparseTrans.jcolM()[k] << " " << ABlmatSparseTrans.M()[k] <<endl;
+         dynamic_cast<SparseGenMatrix*>(AStoch.Blmat)->deleteTransposed();
+      }
+      // coefficients in A_i:
+      for( size_t it = 0; it < children.size(); it++ )
+      {
+         SparseGenMatrix& AChildSparseTrans = dynamic_cast<SparseGenMatrix*>(AStoch.children[it]->Amat)->getTranspose();
+         sstmRow.clear();
+         sstmRow.str("");
+         sstmRow << "row_E_"<<(int)it<<"_";
+         rowNameStub = sstmRow.str();
+         for( int k = AChildSparseTrans.krowM()[col]; k<AChildSparseTrans.krowM()[col+1]; k++ )
+            out<<varName<< " " << rowNameStub << AChildSparseTrans.jcolM()[k] << " " << AChildSparseTrans.M()[k] <<endl;
+         dynamic_cast<SparseGenMatrix*>(AStoch.children[it]->Amat)->deleteTransposed();
+      }
+
+      // coefficients in C_0:
+      rowNameStubLT = "row_L_R_";
+      rowNameStubGT = "row_G_R_";
+      for( int k = CSparseTrans.krowM()[col]; k<CSparseTrans.krowM()[col+1]; k++ )
+      {
+         int rowIdx = CSparseTrans.jcolM()[k];
+         if( dynamic_cast<SimpleVector*>(icuppStoch.vec)->elements()[rowIdx] != 0.0)
+            out<<varName<< " " << rowNameStubLT << rowIdx << " " << CSparseTrans.M()[k] <<endl;
+         if( dynamic_cast<SimpleVector*>(iclowStoch.vec)->elements()[rowIdx] != 0.0)
+            out<<varName<< " " << rowNameStubGT << rowIdx << " " << CSparseTrans.M()[k] <<endl;
+      }
+      // coefficients in G_0:
+      if( CStoch.Blmat )
+      {
+         SparseGenMatrix& CBlmatSparseTrans = dynamic_cast<SparseGenMatrix*>(CStoch.Blmat)->getTranspose();
+         rowNameStubLT = "row_L_L_";
+         rowNameStubGT = "row_G_L_";
+         for( int k = CBlmatSparseTrans.krowM()[col]; k<CBlmatSparseTrans.krowM()[col+1]; k++ )
+         {
+            int rowIdx = CBlmatSparseTrans.jcolM()[k];
+            if( dynamic_cast<SimpleVector*>(icuppStoch.vecl)->elements()[rowIdx] != 0.0)
+               out<<varName<< " " << rowNameStubLT << rowIdx << " " << CBlmatSparseTrans.M()[k] <<endl;
+            if( dynamic_cast<SimpleVector*>(iclowStoch.vecl)->elements()[rowIdx] != 0.0)
+               out<<varName<< " " << rowNameStubGT << rowIdx << " " << CBlmatSparseTrans.M()[k] <<endl;
+         }
+         dynamic_cast<SparseGenMatrix*>(CStoch.Blmat)->deleteTransposed();
+      }
+      // coefficients in C_i:
+      for( size_t it = 0; it < children.size(); it++ )
+      {
+         SparseGenMatrix& CChildSparseTrans = dynamic_cast<SparseGenMatrix*>(CStoch.children[it]->Amat)->getTranspose();
+         sstmRow.clear();
+         sstmRow.str("");
+         sstmRow << "row_L_"<<(int)it<<"_";
+         rowNameStubLT = sstmRow.str();
+         sstmRow.clear();
+         sstmRow.str("");
+         sstmRow << "row_G_"<<(int)it<<"_";
+         rowNameStubGT = sstmRow.str();
+         for( int k = CChildSparseTrans.krowM()[col]; k<CChildSparseTrans.krowM()[col+1]; k++ )
+         {
+            int rowIdx = CChildSparseTrans.jcolM()[k];
+            if( dynamic_cast<SimpleVector*>(icuppStoch.children[it]->vec)->elements()[rowIdx] != 0.0)
+               out<<varName<< " " << rowNameStubLT << rowIdx << " " << CChildSparseTrans.M()[k] <<endl;
+            if( dynamic_cast<SimpleVector*>(iclowStoch.children[it]->vec)->elements()[rowIdx] != 0.0)
+               out<<varName<< " " << rowNameStubGT << rowIdx << " " << CChildSparseTrans.M()[k] <<endl;
+         }
+         dynamic_cast<SparseGenMatrix*>(CStoch.children[it]->Amat)->deleteTransposed();
+      }
+   }
+
+   // non-linking variables:
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      SimpleVector* gSimple = dynamic_cast<SimpleVector*>(gStoch.children[it]->vec);
+      n = gSimple->n;
+
+      for( int col = 0; col<n; col++ )
+      {
+         sstmCol.clear();
+         sstmCol.str("");
+         sstmCol << " var_"<<(int)it <<"_" << col;
+         varName = sstmCol.str();
+
+         // coeffs in COST:
+         rowNameStub = "COST";
+         if( gSimple->elements()[col] != 0 )
+            out<<varName<< " " << rowNameStub << " " << gSimple->elements()[col] <<endl;
+
+         // coeffs in A_i:
+         SparseGenMatrix& AChildSparseTrans = dynamic_cast<SparseGenMatrix*>(AStoch.children[it]->Bmat)->getTranspose();
+         sstmRow.clear();
+         sstmRow.str("");
+         sstmRow << "row_E_"<<(int)it<<"_";
+         rowNameStub = sstmRow.str();
+         for( int k = AChildSparseTrans.krowM()[col]; k<AChildSparseTrans.krowM()[col+1]; k++ )
+            out<<varName<< " " << rowNameStub << AChildSparseTrans.jcolM()[k] << " " << AChildSparseTrans.M()[k] <<endl;
+         dynamic_cast<SparseGenMatrix*>(AStoch.children[it]->Bmat)->deleteTransposed();
+
+         // coefficients in D_i:
+         SparseGenMatrix& CChildSparseTrans = dynamic_cast<SparseGenMatrix*>(CStoch.children[it]->Bmat)->getTranspose();
+         sstmRow.clear();
+         sstmRow.str("");
+         sstmRow << "row_L_"<<(int)it<<"_";
+         rowNameStubLT = sstmRow.str();
+         sstmRow.clear();
+         sstmRow.str("");
+         sstmRow << "row_G_"<<(int)it<<"_";
+         rowNameStubGT = sstmRow.str();
+         for( int k = CChildSparseTrans.krowM()[col]; k<CChildSparseTrans.krowM()[col+1]; k++ )
+         {
+            int rowIdx = CChildSparseTrans.jcolM()[k];
+            if( dynamic_cast<SimpleVector*>(icuppStoch.children[it]->vec)->elements()[rowIdx] != 0.0)
+               out<<varName<< " " << rowNameStubLT << CChildSparseTrans.jcolM()[k] << " " << CChildSparseTrans.M()[k] <<endl;
+            if( dynamic_cast<SimpleVector*>(iclowStoch.children[it]->vec)->elements()[rowIdx] != 0.0)
+               out<<varName<< " " << rowNameStubGT << CChildSparseTrans.jcolM()[k] << " " << CChildSparseTrans.M()[k] <<endl;
+         }
+         dynamic_cast<SparseGenMatrix*>(CStoch.children[it]->Bmat)->deleteTransposed();
+
+         // coefficients in F_i:
+         if( dynamic_cast<StochGenMatrix*>(AStoch.children[it])->Blmat )
+         {
+            SparseGenMatrix& ABlmatSparseTrans = dynamic_cast<SparseGenMatrix*>(AStoch.children[it]->Blmat)->getTranspose();
+            rowNameStub = "row_E_L_";
+            for( int k = ABlmatSparseTrans.krowM()[col]; k<ABlmatSparseTrans.krowM()[col+1]; k++ )
+               out<<varName<< " " << rowNameStub << ABlmatSparseTrans.jcolM()[k] << " " << ABlmatSparseTrans.M()[k] <<endl;
+            dynamic_cast<SparseGenMatrix*>(AStoch.children[it]->Blmat)->deleteTransposed();
+         }
+
+         // coefficients in G_i:
+         if( dynamic_cast<StochGenMatrix*>(CStoch.children[it])->Blmat )
+         {
+            SparseGenMatrix& CBlmatSparseTrans = dynamic_cast<SparseGenMatrix*>(CStoch.children[it]->Blmat)->getTranspose();
+            rowNameStubLT = "row_L_L_";
+            rowNameStubGT = "row_G_L_";
+            for( int k = CBlmatSparseTrans.krowM()[col]; k<CBlmatSparseTrans.krowM()[col+1]; k++ )
+            {
+               int rowIdx = CBlmatSparseTrans.jcolM()[k];
+               if( dynamic_cast<SimpleVector*>(icuppStoch.vecl)->elements()[rowIdx] != 0.0)
+                  out<<varName<< " " << rowNameStubLT << rowIdx << " " << CBlmatSparseTrans.M()[k] <<endl;
+               if( dynamic_cast<SimpleVector*>(iclowStoch.vecl)->elements()[rowIdx] != 0.0)
+                  out<<varName<< " " << rowNameStubGT << rowIdx << " " << CBlmatSparseTrans.M()[k] <<endl;
+            }
+            dynamic_cast<SparseGenMatrix*>(CStoch.children[it]->Blmat)->deleteTransposed();
+         }
+      }
+   }
+
+   // delete transposed matrices:
+   dynamic_cast<SparseGenMatrix*>(AStoch.Bmat)->deleteTransposed();
+   dynamic_cast<SparseGenMatrix*>(CStoch.Bmat)->deleteTransposed();
+
 }
 
 sData*

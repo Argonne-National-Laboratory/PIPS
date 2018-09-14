@@ -251,7 +251,6 @@ public:
   virtual void writeToStreamDense(ostream& out) const {}
 
   virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const {}
-  virtual void writeMPSformatCols(ostream& out, int rowType, OoqpVector* irhs) const {}
 
   /** get number of elements per row to given vector */
   virtual void getNnzPerRow(OoqpVector& nnzVec) { assert(0 && "not implemented"); };

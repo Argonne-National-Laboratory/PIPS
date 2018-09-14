@@ -1080,25 +1080,6 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
    }
 }
 
-void StochVector::writeMPSformatCost(ostream& out) const
-{
-   int myRank;
-   MPI_Comm_rank(mpiComm, &myRank);
-
-   if( myRank==0 )
-   {
-      string varNameStub = " var_L_";
-      vec->writeMPSformatCostWithVar(out, varNameStub);
-   }
-   for(int it=0; it<(int)children.size(); it++)
-   {
-      std::stringstream sstm2;
-      sstm2 << " var_" << it << "_";
-      string varNameStub = sstm2.str();
-      children[it]->vec->writeMPSformatCostWithVar(out, varNameStub);
-   }
-}
-
 void StochVector::writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const
 {
    int myRank;

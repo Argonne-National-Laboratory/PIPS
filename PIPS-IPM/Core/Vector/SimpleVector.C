@@ -348,12 +348,6 @@ void SimpleVector::writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVecto
    }
 }
 
-void SimpleVector::writeMPSformatCostWithVar(ostream& out, string varStub) const
-{
-   for( int i = 0; i < n; i++ )
-      out <<varStub<< i <<" "<<"COST"<<" "<< v[i] << "\n";
-}
-
 void SimpleVector::writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const
 {
    assert( n == dynamic_cast<SimpleVector*>(ix)->n );

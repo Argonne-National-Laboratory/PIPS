@@ -132,10 +132,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 
      origData = dynamic_cast<sData*>(factory->makeData());
 
-     ofstream myfile;
-     myfile.open ("PipsToMPSBeforePresolve.mps");
+/*     ofstream myfile;
+     myfile.open ("PipsToMPS_before.mps");
      origData->writeMPSformat(myfile);
-     myfile.close();
+     myfile.close();*/
 
      MPI_Barrier(comm);
      const double t0_presolve = MPI_Wtime();
@@ -158,10 +158,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
      presolver = NULL;
   }
 
-  ofstream myfile;
+/*  ofstream myfile;
   myfile.open ("PipsToMPS.mps");
   data->writeMPSformat(myfile);
-  myfile.close();
+  myfile.close();*/
 
 #ifdef TIMING
   if(mype==0) printf("data created\n");
