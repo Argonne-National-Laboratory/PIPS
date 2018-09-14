@@ -74,6 +74,7 @@ public:
 			       const char format[] ) const;
   virtual void writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const;
   virtual void writeMPSformatCostWithVar(ostream& out, string varStub) const;
+  virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const;
 
   virtual void scale( double alpha );
 

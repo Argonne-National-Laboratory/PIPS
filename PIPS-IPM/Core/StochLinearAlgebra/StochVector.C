@@ -1050,7 +1050,7 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
 
    if( myRank==0 )
    {
-      string rowNameStub = "B row_";
+      string rowNameStub = " B row_";
       rowNameStub+= rt;
       rowNameStub+="_R_";
       if( irhs)
@@ -1059,7 +1059,7 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
          vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
       if(vecl)
       {
-         rowNameStub = "B row_";
+         rowNameStub = " B row_";
          rowNameStub+= rt;
          rowNameStub+="_L_";
          if( irhs )
@@ -1071,7 +1071,7 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
    for(int it=0; it<(int)children.size(); it++)
    {
       std::stringstream sstm;
-      sstm << "B row_" << rt << "_" << it << "_";
+      sstm << " B row_" << rt << "_" << it << "_";
       string rowNameStub = sstm.str();
       if( irhs )
          children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<SimpleVector*>(ic->children[it]->vec));
@@ -1087,19 +1087,38 @@ void StochVector::writeMPSformatCost(ostream& out) const
 
    if( myRank==0 )
    {
-      string varNameStub = "var_L_";
+      string varNameStub = " var_L_";
       vec->writeMPSformatCostWithVar(out, varNameStub);
+   }
+   for(int it=0; it<(int)children.size(); it++)
+   {
+      std::stringstream sstm2;
+      sstm2 << " var_" << it << "_";
+      string varNameStub = sstm2.str();
+      children[it]->vec->writeMPSformatCostWithVar(out, varNameStub);
+   }
+}
+
+void StochVector::writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const
+{
+   int myRank;
+   MPI_Comm_rank(mpiComm, &myRank);
+
+   StochVector* ixStoch = dynamic_cast<StochVector*>(ix);
+
+   if( myRank==0 )
+   {
+      string varNameStub = "var_L_";
+      vec->writeMPSformatBoundsWithVar(out, varNameStub, (ixStoch->vec), upperBound);
    }
    for(int it=0; it<(int)children.size(); it++)
    {
       std::stringstream sstm2;
       sstm2 << "var_" << it << "_";
       string varNameStub = sstm2.str();
-      children[it]->vec->writeMPSformatCostWithVar(out, varNameStub);
+      children[it]->vec->writeMPSformatBoundsWithVar(out, varNameStub, (ixStoch->children[it]->vec), upperBound);
    }
 }
-
-
 
 /** this += alpha * x */
 void StochVector::axpy  ( double alpha, OoqpVector& x_ )

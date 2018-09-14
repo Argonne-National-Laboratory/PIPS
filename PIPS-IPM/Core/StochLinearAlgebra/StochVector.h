@@ -102,6 +102,8 @@ public:
   virtual void writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs) const;
   virtual void writeMPSformatCost(ostream& out) const;
   virtual void writeMPSformatCostWithVar(ostream& out, string varStub) const {};
+  virtual void writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const;
+  virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const {};
 
   virtual void scale( double alpha );
 
@@ -222,6 +224,9 @@ public:
   virtual void writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const{};
   virtual void writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs) const{};
   virtual void writeMPSformatCost(ostream& out) const {};
+  virtual void writeMPSformatCostWithVar(ostream& out, string varStub) const {};
+  virtual void writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const {};
+  virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const {};
 
   virtual void scale( double alpha ){};
 

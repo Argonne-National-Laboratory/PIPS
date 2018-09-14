@@ -354,6 +354,21 @@ void SimpleVector::writeMPSformatCostWithVar(ostream& out, string varStub) const
       out <<varStub<< i <<" "<<"COST"<<" "<< v[i] << "\n";
 }
 
+void SimpleVector::writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const
+{
+   assert( n == dynamic_cast<SimpleVector*>(ix)->n );
+   string boundType = (upperBound) ? " UP" : " LO";
+   string infiniteBound = (upperBound) ? " PL" : " MI";
+
+   for( int i = 0; i < n; i++ )
+   {
+      if( dynamic_cast<SimpleVector*>(ix)->elements()[i] != 0.0  )
+         out <<boundType<<" BND "<<varStub<< i <<" "<< v[i] << "\n";
+      else
+         out <<infiniteBound<<" BND "<<varStub<< i <<" "<< "\n";
+   }
+}
+
 void SimpleVector::scale( double alpha )
 {
   int one = 1;

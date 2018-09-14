@@ -84,6 +84,8 @@ public:
   virtual void writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs) const {assert(0 && "not implemented here");};
   virtual void writeMPSformatCost(ostream& out) const {assert(0 && "not implemented here");};
   virtual void writeMPSformatCostWithVar(ostream& out, string varStub) const {assert(0 && "not implemented here");};
+  virtual void writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const {assert(0 && "not implemented here");};
+  virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const {assert(0 && "not implemented here");};
 
   /** Scale each element of this OoqpVector by the constant alpha */
   virtual void scale( double alpha ) = 0;

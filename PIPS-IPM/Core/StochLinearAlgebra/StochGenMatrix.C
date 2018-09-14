@@ -760,7 +760,7 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
       for(int i=0; i<m; i++)
       {
          if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vec)->elements()[i] != 0.0) )
-            out<< rt<<" row_"<<rt<<"_"<<"R" <<"_"<<i <<endl;
+            out<< " "<<rt<<" row_"<<rt<<"_"<<"R" <<"_"<<i <<endl;
       }
       // linking rows:
       if( Blmat )
@@ -769,7 +769,7 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
          for(int i=0; i<m; i++)
          {
             if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vecl)->elements()[i] != 0.0) )
-               out<< rt<<" row_"<<rt<<"_"<<"L" <<"_"<<i <<endl;
+               out<<" "<< rt<<" row_"<<rt<<"_"<<"L" <<"_"<<i <<endl;
          }
       }
    }
@@ -779,7 +779,7 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
       for(int i=0; i<m; i++)
       {
          if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec)->elements()[i] != 0.0) )
-            out<< rt<<" row_"<<rt<<"_"<<it <<"_"<<i <<endl;
+            out<<" "<< rt<<" row_"<<rt<<"_"<<it <<"_"<<i <<endl;
       }
    }
 }
@@ -808,7 +808,7 @@ void StochGenMatrix::writeMPSformatCols(ostream& out, int rowType, OoqpVector* i
       string rowNameStub = "row_";
       rowNameStub+= rt;
       rowNameStub+="_R_";
-      string varNameStub = "var_R_";
+      string varNameStub = " var_R_";
       if( irhs )
          Bmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->vec));
       else
@@ -819,7 +819,7 @@ void StochGenMatrix::writeMPSformatCols(ostream& out, int rowType, OoqpVector* i
          rowNameStub = "row_";
          rowNameStub+= rt;
          rowNameStub+="_L_";
-         varNameStub = "var_L_";
+         varNameStub = " var_L_";
          if( irhs )
             Blmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->vecl));
          else
@@ -833,13 +833,13 @@ void StochGenMatrix::writeMPSformatCols(ostream& out, int rowType, OoqpVector* i
          std::stringstream sstm;
          sstm << "row_" << rt << "_" << it << "_";
          string rowNameStub = sstm.str();
-         string varNameStub = "var_L_";
+         string varNameStub = " var_L_";
          if( irhs )
             children[it]->Amat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec));
          else
             children[it]->Amat->writeMPSformatCols(out, varNameStub, rowNameStub, NULL);
          std::stringstream sstm2;
-         sstm2 << "var_" << it << "_";
+         sstm2 << " var_" << it << "_";
          varNameStub = sstm2.str();
          if( irhs )
             children[it]->Bmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec));
@@ -847,7 +847,9 @@ void StochGenMatrix::writeMPSformatCols(ostream& out, int rowType, OoqpVector* i
             children[it]->Bmat->writeMPSformatCols(out, varNameStub, rowNameStub, NULL);
          if( children[it]->Blmat )
          {
-            rowNameStub = "row_L_";
+            rowNameStub = "row_";
+            rowNameStub+= rt;
+            rowNameStub+="_L_";
             if( irhs )
                children[it]->Blmat->writeMPSformatCols(out, varNameStub, rowNameStub, dynamic_cast<SimpleVector*>(irhsStoch->vecl));
             else

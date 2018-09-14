@@ -488,7 +488,7 @@ void sData::writeMPSformat(ostream& out) const
    {
       out <<  "NAME PIPS_to_MPS " << endl;
       out << "ROWS" <<endl;
-      out << "N COST" <<endl;
+      out << " N COST" <<endl;
    }
    MPI_Barrier(MPI_COMM_WORLD);
    // write all row names and if they are E, L or G
@@ -519,6 +519,11 @@ void sData::writeMPSformat(ostream& out) const
    MPI_Barrier(MPI_COMM_WORLD);
    if( myRank == 0 ) out <<  "BOUNDS " << endl;
    MPI_Barrier(MPI_COMM_WORLD);
+   (*bux).writeMPSformatBounds(out, ixupp, true);
+   (*blx).writeMPSformatBounds(out, ixlow, false);
+
+   MPI_Barrier(MPI_COMM_WORLD);
+   if( myRank == 0 ) out <<  "ENDATA " << endl;
 }
 
 sData*
