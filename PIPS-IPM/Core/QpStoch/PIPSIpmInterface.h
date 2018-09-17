@@ -133,7 +133,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
      origData = dynamic_cast<sData*>(factory->makeData());
 
 /*     ofstream myfile;
-     myfile.open ("PipsToMPS_before.mps");
+     myfile.open ("PipsToMPS_original.mps");
      origData->writeMPSformat(myfile);
      myfile.close();*/
 
@@ -159,7 +159,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   }
 
 /*  ofstream myfile;
-  myfile.open ("PipsToMPS.mps");
+  myfile.open ("PipsToMPS_prslv.mps");
   data->writeMPSformat(myfile);
   myfile.close();*/
 

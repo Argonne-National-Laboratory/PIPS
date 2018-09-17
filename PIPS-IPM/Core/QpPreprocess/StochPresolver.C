@@ -86,6 +86,7 @@ Data* StochPresolver::presolve()
    nColElems->writeToStreamAll(cout);
 */
 #ifndef NDEBUG
+   assert( presolverSR.verifyNnzcounters() );
    if( myRank == 0 )
       cout<<"--- After Presolving:"<<endl;
    presolverSR.countRowsCols();

@@ -59,6 +59,7 @@ public:
 
    virtual void applyPresolving() = 0;
 
+   bool verifyNnzcounters();
    void countRowsCols();
 
 protected:
