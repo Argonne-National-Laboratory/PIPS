@@ -9,11 +9,11 @@ rm *.o a.out
 #
 #linux with gcc, netlib ref blas, mpich
 #
-#LIBS="-L/home/petra1/work/projects/pips/PIPS/ThirdPartyLibs/MUMPS/lib/ -L/home/petra1/work/installs/parmetis-4.0.3/petra_install/lib -L/home/petra1/work/installs/parmetis-4.0.3/metis/lib -L/home/petra1/work/installs/scalapack_installer/install/lib"
-#INCL="-I/home/petra1/work/projects/pips/PIPS/ThirdPartyLibs/MUMPS/include"
-#mpicxx -c -DWITHOUT_PIPS  $INCL MumpsSolver.C
-#mpicxx mumps_test_driver.cpp -DWITHOUT_PIPS  $INCL $LIBS  MumpsSolver.o -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi  -fopenmp -lmpifort -lpord -lmumps_common  -lscalapack  -lrefblas  -ltmg -lreflapack 
-
+LIBS="-L/home/petra1/work/projects/pips/PIPS/ThirdPartyLibs/MUMPS/lib/ -L/home/petra1/work/installs/parmetis-4.0.3/petra_install/lib -L/home/petra1/work/installs/parmetis-4.0.3/metis/lib -L/home/petra1/work/installs/scalapack_installer/install/lib"
+INCL="-I/home/petra1/work/projects/pips/PIPS/ThirdPartyLibs/MUMPS/include"
+mpicxx -c -DWITHOUT_PIPS  $INCL MumpsSolver.C
+mpicxx mumps_test_driver.cpp -DWITHOUT_PIPS  $INCL $LIBS  MumpsSolver.o -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi  -fopenmp -lmpifort -lpord -lmumps_common  -lscalapack  -lrefblas  -ltmg -lreflapack 
+exit 0
 #
 #linux cluster with intel mkl
 #
