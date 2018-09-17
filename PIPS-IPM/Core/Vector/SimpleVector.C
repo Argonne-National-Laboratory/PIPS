@@ -35,6 +35,34 @@ void SimpleVector::min( double& m, int& index )
   }
 }
 
+void SimpleVector::absminVecUpdate(OoqpVector& absminvec)
+{
+   const SimpleVector& absminvecSimple = dynamic_cast<const SimpleVector&>(absminvec);
+   assert( absminvecSimple.length() == n );
+   double* const absminvecArr = absminvecSimple.elements();
+
+   for( int i = 0; i < n; i++ )
+   {
+      const double abs = fabs(v[i]);
+      if( abs < absminvecArr[i] && abs > pips_eps )
+         absminvecArr[i] = abs;
+   }
+}
+
+void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec)
+{
+   const SimpleVector& absmaxvecSimple = dynamic_cast<const SimpleVector&>(absmaxvec);
+   assert( absmaxvecSimple.length() == n );
+   double* const absmaxvecArr = absmaxvecSimple.elements();
+
+   for( int i = 0; i < n; i++ )
+   {
+      const double abs = fabs(v[i]);
+      if( abs > absmaxvecArr[i] )
+         absmaxvecArr[i] = abs;
+   }
+}
+
 void SimpleVector::absmin(double& min)
 {
    if (n==0) {

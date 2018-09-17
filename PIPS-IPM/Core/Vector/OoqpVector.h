@@ -80,6 +80,8 @@ public:
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const = 0;
 
+  void writefToStreamStats( ostream& out, std::string prestring);
+
   /** Scale each element of this OoqpVector by the constant alpha */
   virtual void scale( double alpha ) = 0;
 
@@ -109,6 +111,10 @@ public:
 
   /** Return the absolute minimum value of this vector */
   virtual void absmin(double& m) = 0;
+
+  virtual void absminVecUpdate(OoqpVector& absminvec) = 0;
+
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) = 0;
 
   /** Return the absolute minimum value of this vector bigger than tolerance */
   virtual void absminNonZero(double& m, double tolerance = pips_eps) = 0;

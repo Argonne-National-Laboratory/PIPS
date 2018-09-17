@@ -560,8 +560,8 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 {
   int n = b.length();
 
-  const int maxit=150; // todo maxit = 500
-  const double tol=1e-10, EPS=1e-15; // todo tol=1e-12, EPS=2e-16
+  const int maxit=75; //500
+  const double tol=1e-12, EPS=1e-15; // EPS=2e-16
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
@@ -867,6 +867,29 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    assert(kkts.size() == locnx + locmy + locmyl + locmzl);
    assert(!kkts.isLower);
    assert(locmyl >= 0 && locmzl >= 0);
+
+#if 0
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+   if( myRank == 0)
+   {
+      xDiag->writefToStreamStats(std::cout, "xDiag");
+      zDiag->writefToStreamStats(std::cout, "zDiag");
+
+      const SimpleVector& szDiagLinkCons = dynamic_cast<const SimpleVector&>(*zDiagLinkCons);
+      assert(szDiagLinkCons.length() == locmzl);
+      int zerocount = 0;
+      for( int i = 0; i < locmzl; i++ )
+      {
+         if( szDiagLinkCons[i] == 0)
+            zerocount++;
+      }
+
+      zDiagLinkCons->writefToStreamStats(std::cout, "zDiagLinkCons");
+
+      std::cout << "zDiagLinkCons zeroes: " << zerocount << std::endl;
+   }
+#endif
 
    //////////////////////////////////////////////////////
    // compute Q+diag(xdiag) - C' * diag(zDiag) * C

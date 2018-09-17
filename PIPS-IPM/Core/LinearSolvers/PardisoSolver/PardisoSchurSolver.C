@@ -519,6 +519,26 @@ void PardisoSchurSolver::computeSC(
      //update diagonal entries in the PARDISO aug sys
      const double* eltsMsys = Msys->getStorageRef().M;
      map<int,int>::iterator it;
+
+#if 0
+     double max = -1e20;
+     double min = 1e20;
+     double minAbs = 1e20;
+
+     for(it=diagMap.begin(); it!=diagMap.end(); it++)
+     {
+        const double elem = eltsMsys[it->first];
+        if(elem > max)
+           max = elem;
+        if(elem < min)
+           min = elem;
+        if(std::fabs(elem) < minAbs && elem > 0.0 )
+           minAbs = std::fabs(elem);
+
+     }
+     std::cout << "local Schur diag: min/max/minAbs  " << min << " " << max << " " << minAbs << std::endl;
+#endif
+
      for(it=diagMap.begin(); it!=diagMap.end(); it++)
        eltsAug[it->second] = eltsMsys[it->first];
    }
@@ -552,6 +572,7 @@ void PardisoSchurSolver::computeSC(
    //iparm[ 9] = 10; // pivot perturbation 10^{-xxx}
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+   iparm[9] = 6; // pivot perturbation 10^{-xxx}
    // use 2 for advanced matchings and higher accuracy.
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)

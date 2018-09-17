@@ -401,6 +401,11 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       return;
    }
 
+
+   const double infb = b.infnorm();
+   if( myRank == 0 )
+       std::cout << "outerBICG starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb <<  std::endl;
+
    r0.copyFrom(r);
 
    //normalize
@@ -565,6 +570,9 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          break;
 
    } //~ end of BiCGStab loop
+
+   if( myRank == 0 )
+      std::cout << "outer BICGSTAB final normr_act=" <<  normr_act << "\n";
 
    BiCGStabPrintStatus(flag, it, normr_act/n2b, normr/n2b);
 

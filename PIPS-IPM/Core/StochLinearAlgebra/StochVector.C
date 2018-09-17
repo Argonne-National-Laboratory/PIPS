@@ -525,6 +525,40 @@ void StochVector::max( double& m, int& index )
    }
 }
 
+void StochVector::absminVecUpdate(OoqpVector& absminvec)
+{
+   StochVector& absminvecStoch = dynamic_cast<StochVector&>(absminvec);
+   assert(absminvecStoch.children.size() == children.size());
+
+   if( vecl )
+   {
+      assert(absminvecStoch.vecl);
+      vecl->absminVecUpdate(*(absminvecStoch.vecl));
+   }
+
+   vec->absminVecUpdate(*(absminvecStoch.vec));
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->absminVecUpdate(*(absminvecStoch.children[it]));
+}
+
+void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec)
+{
+   StochVector& absmaxvecStoch = dynamic_cast<StochVector&>(absmaxvec);
+   assert(absmaxvecStoch.children.size() == children.size());
+
+   if( vecl )
+   {
+      assert(absmaxvecStoch.vecl);
+      vecl->absmaxVecUpdate(*(absmaxvecStoch.vecl));
+   }
+
+   vec->absmaxVecUpdate(*(absmaxvecStoch.vec));
+
+   for( size_t it = 0; it < children.size(); it++ )
+      children[it]->absmaxVecUpdate(*(absmaxvecStoch.children[it]));
+}
+
 void StochVector::absmin(double& m)
 {
    double lMin;

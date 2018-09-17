@@ -60,6 +60,8 @@ public:
   virtual double onenorm();
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
+  virtual void absminVecUpdate(OoqpVector& absminvec);
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec);
   virtual void absmin( double& m);
   virtual void absminNonZero(double& m, double tolerance=pips_eps);
 

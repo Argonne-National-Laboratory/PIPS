@@ -25,11 +25,11 @@ public:
          switch( type )
             {
             case SCALER_EQUI_STOCH:
-               return new EquiStochScaler(data);
+               return new EquiStochScaler(data, false);
             case SCALER_GEO_STOCH:
-               return new GeoStochScaler(data, false);
+               return new GeoStochScaler(data, false, false);
             case SCALER_GEO_EQUI_STOCH:
-               return new GeoStochScaler(data, true);
+               return new GeoStochScaler(data, true, false);
             default:
                return 0;
             }

@@ -66,7 +66,7 @@ void QpScaler::applyScaling()
    blx->componentDiv(*vec_colscale);
 }
 
-double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, OoqpVector* colScalevec)
+double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, const OoqpVector* colScalevec)
 {
    A->getRowMinMaxVec(true, true, colScalevec, minvecA);
    A->getRowMinMaxVec(false, true, colScalevec, maxvecA);
@@ -87,6 +87,17 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
       assert(max < 0 || max == C->abmaxnorm());
    }
 #endif
+
+   if( with_sides )
+   {
+      bA->absminVecUpdate(minvecA);
+      rhsC->absminVecUpdate(minvecC);
+      lhsC->absminVecUpdate(minvecC);
+
+      bA->absmaxVecUpdate(maxvecA);
+      rhsC->absmaxVecUpdate(maxvecC);
+      lhsC->absmaxVecUpdate(maxvecC);
+   }
 
    OoqpVector* const ratiovecA = maxvecA.clone();
    OoqpVector* const ratiovecC = maxvecC.clone();
@@ -117,14 +128,13 @@ double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVecto
    return maxratio;
 }
 
-double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector* rowScaleVecA, OoqpVector* rowScaleVecC)
+double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, const OoqpVector* rowScaleVecA, const OoqpVector* rowScaleVecC)
 {
    A->getColMinMaxVec(true, true, rowScaleVecA, minvec);
    C->getColMinMaxVec(true, false, rowScaleVecC, minvec);
 
    A->getColMinMaxVec(false, true, rowScaleVecA, maxvec);
    C->getColMinMaxVec(false, false, rowScaleVecC, maxvec);
-
 
 #ifndef NDEBUG
    if( !rowScaleVecA || !rowScaleVecC )

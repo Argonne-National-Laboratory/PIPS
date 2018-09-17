@@ -5,7 +5,7 @@
  *      Author: bzfrehfe
  */
 
-//#define PIPS_DEBUG
+#define PIPS_DEBUG
 #include "EquiStochScaler.h"
 #include "StochVector.h"
 #include <cmath>
@@ -65,7 +65,7 @@ void EquiStochScaler::scale()
    vec_rowscaleC = rowmaxC;
 
    // column scaling first?
-   if( colratio < rowratio )
+   if( colratio < rowratio && !with_sides )
    {
       invertAndRound(do_bitshifting, *vec_colscale);
 
