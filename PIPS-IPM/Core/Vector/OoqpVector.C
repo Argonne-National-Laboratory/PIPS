@@ -12,3 +12,16 @@ OoqpVector::OoqpVector( int n_ )
 OoqpVector::~OoqpVector()
 {
 }
+
+void
+OoqpVector::writefToStreamStats( ostream& out, std::string prestring)
+{
+   double min;
+   double max;
+   int dummy;
+
+   this->min(min, dummy);
+   this->max(max, dummy);
+
+   std::cout << prestring << " length=" << n << " min="<< min <<  "max=" << max << " infnorm=" << this->infnorm() << std::endl;
+}

@@ -5,7 +5,7 @@
  *      Author: Svenja Uslu
  */
 
-//#define PIPS_DEBUG
+#define PIPS_DEBUG
 #include "GeoStochScaler.h"
 
 #include <cmath>
@@ -21,9 +21,9 @@ GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
    equilibrate = equiScaling;
 
    // todo: adjust parameters
-   maxIters = 8;
+   maxIters = 10;
    minImpr = 0.85;
-   goodEnough = 1e3;
+   goodEnough = 500;
 }
 
 void GeoStochScaler::doObjScaling()
@@ -53,9 +53,9 @@ void GeoStochScaler::doObjScaling()
 
       if( equilibrate )
       {
-         const double absmax = obj->infnorm();
-         assert(absmax >= 0);
-         scaleVector(*obj, absmax);
+         const double absmax2 = obj->infnorm();
+         assert(absmax2 >= 0);
+         scaleVector(*obj, absmax2);
       }
    }
 }
@@ -80,7 +80,7 @@ void GeoStochScaler::scale()
    PIPSdebugMessage("colratio before scaling %f \n", colratio);
 
    double p0start, p1start;
-   if( colratio < rowratio )
+   if( colratio < rowratio && !with_sides )
    {
       p0start = colratio;
       p1start = rowratio;
@@ -119,7 +119,7 @@ void GeoStochScaler::scale()
       for( int i = 0; i < maxIters; i++)
       {
          // column scaling first?
-         if(colratio < rowratio)
+         if(colratio < rowratio && !with_sides)
          {
             p0 = maxColRatio(*colmax, *colmin, vec_rowscaleA, vec_rowscaleC);
             applyGeoMean(*colmax, *colmin);
@@ -191,6 +191,22 @@ void GeoStochScaler::scale()
       doObjScaling();
 
       applyScaling();
+
+#if 0
+      double absmaxAll = bA->infnorm();
+      absmaxAll = std::max(absmaxAll, bux->infnorm());
+      absmaxAll = std::max(absmaxAll, blx->infnorm());
+      absmaxAll = std::max(absmaxAll, rhsC->infnorm());
+      absmaxAll = std::max(absmaxAll, lhsC->infnorm());
+
+      std::cout << "absmax: " << absmaxAll <<  "\n\n\n\n\n" <<std::endl;
+
+      bA->scalarMult(1.0 / absmaxAll);
+      bux->scalarMult(1.0 / absmaxAll);
+      blx->scalarMult(1.0 / absmaxAll);
+      rhsC->scalarMult(1.0 / absmaxAll);
+      lhsC->scalarMult(1.0 / absmaxAll);
+#endif
 
       PIPSdebugMessage("after scaling: \n "
             "objnorm: %f \n Anorm:  %f \n Cnorm  %f \n bAnorm %f \n rhsCnorm %f \n lhsCnorm %f \n buxnorm %f \n blxnorm %f \n  ",
@@ -271,7 +287,7 @@ void GeoStochScaler::postEquiScale()
    vec_rowscaleC = rowmaxC;
 
    // column scaling first?
-   if( colratio < rowratio )
+   if( colratio < rowratio && !with_sides )
    {
       invertAndRound(do_bitshifting, *vec_colscale);
 

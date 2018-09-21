@@ -61,10 +61,10 @@ protected:
   virtual void doObjScaling() = 0;
 
   /** get maximum absolute row ratio and write maximum row entries into vectors */
-  virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, OoqpVector* colScalevec);
+  virtual double maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, const OoqpVector* colScalevec);
 
   /** get maximum absolute column ratio and write maximum column entries into vectors */
-  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, OoqpVector* rowScaleVecA, OoqpVector* rowScaleVecC);
+  virtual double maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, const OoqpVector* rowScaleVecA,  const OoqpVector* rowScaleVecC);
 
   void scaleVector(OoqpVector& vector, double scaling_factor);
 public:

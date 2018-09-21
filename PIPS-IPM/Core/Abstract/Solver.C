@@ -48,7 +48,7 @@ Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
 		   phi_history(0), phi_min_history(0), iter(0), sys(0)
 {
   // define parameters associated with the step length heuristic
-#ifdef WITH_STEPLENGTH_CONSERVATIVE
+#ifdef STEPLENGTH_CONSERVATIVE
   gamma_f = 0.95;
 #else
   gamma_f = 0.99;
@@ -205,7 +205,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
 	// back off just a touch (or a bit more)
-#ifdef WITH_STEPLENGTH_CONSERVATIVE
+#ifdef STEPLENGTH_CONSERVATIVE
 	alpha *= 0.98;
 #else
 	alpha *= .99999999;
@@ -279,7 +279,7 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
 	// back off just a touch (or a bit more)
-	#ifdef WITH_STEPLENGTH_CONSERVATIVE
+	#ifdef STEPLENGTH_CONSERVATIVE
 		alpha_primal *= 0.98;
 		alpha_dual *= 0.98;
 	#else

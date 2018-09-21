@@ -25,9 +25,10 @@ class Scaler
 {
 protected:
   const bool do_bitshifting; // only scale by power of two factors?
+  const bool with_sides; // consider lhs/rhs?
 
 public:
-  Scaler(Data * prob, bool bitshifting = true);
+  Scaler(Data * prob, bool bitshifting = true, bool usesides = true);
   virtual ~Scaler();
 
   /** scale */

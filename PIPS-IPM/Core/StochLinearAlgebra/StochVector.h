@@ -71,6 +71,8 @@ public:
   virtual double onenorm();
   virtual void min( double& m, int& index );
   virtual void max( double& m, int& index );
+  virtual void absminVecUpdate(OoqpVector& absminvec);
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec);
   virtual void absmin( double& m);
   virtual void absminNonZero(double& m, double tolerance=pips_eps);
   virtual double stepbound(OoqpVector & v, double maxStep );
@@ -190,6 +192,8 @@ public:
   virtual double infnorm(){return 0.0;}
   virtual double onenorm(){return 0.0;}
   virtual void min( double& m, int& index ){};
+  virtual void absminVecUpdate(OoqpVector& absminvec) {};
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) {};
   virtual void absmin( double& m){};
   virtual void absminNonZero(double& m, double tolerance=pips_eps){};
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}

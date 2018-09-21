@@ -84,6 +84,7 @@ public:
   virtual void writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs) const {assert(0 && "not implemented here");};
   virtual void writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const {assert(0 && "not implemented here");};
   virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const {assert(0 && "not implemented here");};
+  void writefToStreamStats( ostream& out, std::string prestring);
 
   /** Scale each element of this OoqpVector by the constant alpha */
   virtual void scale( double alpha ) = 0;
@@ -114,6 +115,10 @@ public:
 
   /** Return the absolute minimum value of this vector */
   virtual void absmin(double& m) = 0;
+
+  virtual void absminVecUpdate(OoqpVector& absminvec) = 0;
+
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) = 0;
 
   /** Return the absolute minimum value of this vector bigger than tolerance */
   virtual void absminNonZero(double& m, double tolerance = pips_eps) = 0;

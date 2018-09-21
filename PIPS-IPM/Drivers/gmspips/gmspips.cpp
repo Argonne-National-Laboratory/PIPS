@@ -401,11 +401,18 @@ int main(int argc, char ** argv)
 #if defined(GMS_PIPS)
 #ifdef BiCGStab
    if( gmsRank == 0 )
-      cout << "using BiCGStab" << endl;
+      cout << "using outer BiCGStab" << endl;
    gOuterSolve=2;
-   gInnerSCsolve=2;
 #else
    gOuterSolve=0;
+#endif
+
+#ifdef INNER_BICGSTAB
+   gInnerSCsolve=2;
+
+   if( gmsRank == 0 )
+      cout << "using inner BiCGStab" << endl;
+#else
    gInnerSCsolve=0;
 #endif
 

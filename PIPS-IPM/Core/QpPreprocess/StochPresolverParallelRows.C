@@ -912,14 +912,14 @@ bool StochPresolverParallelRows::checkRowsAreParallel( rowlib::rowWithEntries ro
    {
       if( row1.colIndicesA[i] != row2.colIndicesA[i] )
          return false;
-      if( !PIPSisEQ_withTolerance(row1.norm_entriesA[i], row2.norm_entriesA[i], tol_compare_double) )
+      if( !PIPSisEQ(row1.norm_entriesA[i], row2.norm_entriesA[i], tol_compare_double) )
          return false;
    }
    for( int i=0; i<row1.lengthB; i++)
    {
       if( row1.colIndicesB[i] != row2.colIndicesB[i] )
          return false;
-      if( !PIPSisEQ_withTolerance(row1.norm_entriesB[i], row2.norm_entriesB[i], tol_compare_double) )
+      if( !PIPSisEQ(row1.norm_entriesB[i], row2.norm_entriesB[i], tol_compare_double) )
          return false;
    }
    return true;
@@ -1153,7 +1153,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
       || (norm_iclow->elements()[rowId1] == 0.0 && norm_iclow->elements()[rowId1] != 0.0) )
       return false;
    if( (norm_iclow->elements()[rowId1] != 0.0 && norm_iclow->elements()[rowId1] != 0.0)
-         && ( !PIPSisEQ_withTolerance(norm_clow->elements()[rowId1], norm_clow->elements()[rowId2], tol_compare_double) ) )
+         && ( !PIPSisEQ(norm_clow->elements()[rowId1], norm_clow->elements()[rowId2], tol_compare_double) ) )
       return false;
 
    // check f_q == f_r
@@ -1161,7 +1161,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
       || (norm_icupp->elements()[rowId1] == 0.0 && norm_icupp->elements()[rowId1] != 0.0) )
       return false;
    if( (norm_icupp->elements()[rowId1] != 0.0 && norm_icupp->elements()[rowId1] != 0.0)
-         && ( !PIPSisEQ_withTolerance(norm_cupp->elements()[rowId1], norm_cupp->elements()[rowId2], tol_compare_double) ) )
+         && ( !PIPSisEQ(norm_cupp->elements()[rowId1], norm_cupp->elements()[rowId2], tol_compare_double) ) )
       return false;
 
    // check c_1*c_2 >= 0:
@@ -1183,7 +1183,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
 
    // check aq * l1 = s * ar * l2:
    if( ixlow1 != 0.0 && ixlow2 != 0.0 &&
-         !PIPSisEQ_withTolerance(coeff_singleton1 * xlow1, s* coeff_singleton2 * xlow2, tol_compare_double))
+         !PIPSisEQ(coeff_singleton1 * xlow1, s* coeff_singleton2 * xlow2, tol_compare_double))
       return false;
    if( ixlow1 != 0.0 && ixlow2 == 0.0 && xlow1 > -std::numeric_limits<double>::max() )
       return false;
@@ -1192,7 +1192,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
 
    // check aq * u1 = s * ar * u2:
    if( ixupp1 != 0.0 && ixupp2 != 0.0 &&
-         !PIPSisEQ_withTolerance(coeff_singleton1 * xupp1, s* coeff_singleton2 * xupp2, tol_compare_double))
+         !PIPSisEQ(coeff_singleton1 * xupp1, s* coeff_singleton2 * xupp2, tol_compare_double))
       return false;
    if( ixupp1 != 0.0 && ixupp2 == 0.0 && xupp1 < std::numeric_limits<double>::max() )
       return false;

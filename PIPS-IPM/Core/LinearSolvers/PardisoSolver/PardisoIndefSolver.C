@@ -181,7 +181,7 @@ void PardisoIndefSolver::factorizeFromSparse()
       {
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
-#if 0
+#ifdef SPARSE_PRECOND
             if( (fabs(aStorage[j]) >= diag[r] || fabs(aStorage[j]) >= diag[jaStorage[j]]) )
             {
                ja[nnznew] = jaStorage[j] + 1;
@@ -297,6 +297,26 @@ void PardisoIndefSolver::factorize()
    }
 #endif
 
+#if 0
+   const int nnz = ia[n] - 1;
+   double abs_max = 0.0;
+   for( int i = 0; i < nnz; i++ )
+   {
+      const double abs = std::fabs(a[i]);
+      if( abs > abs_max)
+         abs_max = abs;
+   }
+
+   std::cout << "absmax=" << abs_max << " log=" << log10(abs_max) << std::endl;
+if( log10(abs_max) >= 13)
+{
+   iparm[9] = min(int(log10(abs_max)), 15);
+   std::cout << "new: param " << iparm[9] << std::endl;
+}
+else
+#endif
+
+   iparm[9] = 13; // pivot perturbation 10^{-xxx}
 #if 1
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
@@ -379,7 +399,7 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
          printf("\nERROR during solution: %d", error);
          exit(3);
       }
-
+#if 1
       const double b2norm = sv.twonorm();
       const double binfnorm = sv.infnorm();
       double mat_max = 0.0;
@@ -403,8 +423,9 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
       const double resinfnorm = sv.infnorm();
 
       std::cout << "GLOBAL SCHUR: res.2norm=" << res2norm << " rel.res2norm=" << res2norm / b2norm  <<
-            " res.infnorm=" << resinfnorm << " rel.resinfnorm=" << resinfnorm / binfnorm  <<
-            " abs elem=" << mat_max << std::endl;
+            " res.infnorm=" << resinfnorm << " rel.resinfnorm=" << resinfnorm / binfnorm  << " b2norm=" << b2norm <<
+            " abs.mat.elem.=" << mat_max << std::endl;
+#endif
 
       for( int i = 0; i < n; i++ )
          b[i] = x[i];

@@ -347,9 +347,6 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    const int normrDivLimit = 3; // todo user parameter
    const int stagsLimit = 3;
 
-   //const double infnorm = matXYZinfnorm(data, stepx, stepy, stepz);
-   //std::cout << "infnorm " << infnorm << std::endl;
-
    assert(n2b >= 0);
 
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -401,6 +398,16 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       return;
    }
 
+   const double infb = b.infnorm();
+   const double glbinfnorm = matXYZinfnorm(data, stepx, stepy, stepz);
+   double xonenorm = x.onenorm();
+
+   if( myRank == 0 )
+   {
+       std::cout << "global system infnorm=" << glbinfnorm << " x1norm=" <<  xonenorm << " tolb/tolnew: "<< tolb << " " <<  (tol * xonenorm * glbinfnorm )  <<  std::endl;
+       std::cout << "outerBICG starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb <<  std::endl;
+   }
+
    r0.copyFrom(r);
 
    //normalize
@@ -410,6 +417,9 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    int normrNDiv = 0;
    int nstags = 0;
    double rho = 1., omega = 1., alpha;
+
+
+   int todo; // save x_best and use it to check for stagnation and rollback!
 
    //main loop
    int it;
@@ -565,6 +575,9 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
          break;
 
    } //~ end of BiCGStab loop
+
+   if( myRank == 0 )
+      std::cout << "outer BICGSTAB final normr_act=" <<  normr_act << "\n";
 
    BiCGStabPrintStatus(flag, it, normr_act/n2b, normr/n2b);
 

@@ -135,6 +135,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    done = 0;
    mu = iterate->mu();
    gmu = mu;
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    do
    {
@@ -169,7 +170,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       muaff = iterate->mustep(step, alpha);
       sigma = pow(muaff / mu, tsig);
 
-  //    std::cout << "sigma: " << sigma << std::endl;
+      if( 0 == myRank )
+      std::cout << "sigma: " << sigma << std::endl;
 
       if( gOoqpPrintLevel >= 10 )
       {
@@ -274,6 +276,11 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       iterate->saxpy(step, alpha);
       mu = iterate->mu();
       gmu = mu;
+
+      if( 0 == myRank )
+      std::cout << "final alpha: " << alpha << " mu: " << mu <<   std::endl;
+
+
 
       stochFactory->iterateEnded();
    }
