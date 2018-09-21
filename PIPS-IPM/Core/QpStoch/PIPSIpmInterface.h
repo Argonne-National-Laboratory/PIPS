@@ -231,8 +231,17 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 #endif
 
   if( scaler )
+  {
+     MPI_Barrier(comm);
+     const double t0_scaling = MPI_Wtime();
+
      scaler->scale();
 
+     MPI_Barrier(comm);
+     const double t_scaling = MPI_Wtime();
+     if( mype == 0 )
+        std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
+  }
   //---------------------------------------------
   const int result = solver->solve(data,vars,resids);
   //---------------------------------------------
