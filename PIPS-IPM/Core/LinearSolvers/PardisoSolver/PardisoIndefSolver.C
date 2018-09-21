@@ -181,7 +181,7 @@ void PardisoIndefSolver::factorizeFromSparse()
       {
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
-#if 0
+#ifdef SPARSE_PRECOND
             if( (fabs(aStorage[j]) >= diag[r] || fabs(aStorage[j]) >= diag[jaStorage[j]]) )
             {
                ja[nnznew] = jaStorage[j] + 1;
