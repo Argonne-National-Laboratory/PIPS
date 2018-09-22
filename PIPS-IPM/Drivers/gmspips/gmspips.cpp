@@ -20,6 +20,7 @@
 #include <iostream>
 #include <fstream>
 using namespace std;
+#define GetPrimalSol
 
 #define BiCGStab
 #define GetPrimalSol
@@ -28,6 +29,7 @@ using namespace std;
 extern int gOuterSolve;
 extern int gInnerSCsolve;
 #endif
+
 
 
 
@@ -471,12 +473,25 @@ int main(int argc, char ** argv)
 #ifdef GetPrimalSol
    if( gmsRank == 0 )
    {
-      // do something with primal solution
+      double* varl;
+      int rc;
+      
+      varl = (double*) malloc(primalSolVec.size()*sizeof(double));
+      for( size_t i = 0; i < primalSolVec.size(); i++ )
+         varl[i] = primalSolVec[i];
 
+      rc = writeSolution(fileName,primalSolVec.size(),0,pipsIpm.getObjective(),varl,NULL,NULL,NULL,pGDXDirectory);
+      
+      free(varl);
+      if (0==rc)
+         std::cout << "Solution written to " << fileName << "_sol.gdx" << std::endl;
+      else if (-1==rc)
+         std::cout << "Could not access " << fileName << ".map" << std::endl;
+      else
+         std::cout << "Other error writing solution: rc=" << rc << std::endl;
    }
-
 #endif
-
+   
    // free memory
   delete root;
 

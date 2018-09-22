@@ -22,7 +22,6 @@ void printUsage(void)
    printf("  -d        dirStem is scratch directory stem (default)\n");
    printf("  -D        dirStem is scratch directory\n");
    printf("  -g        specify GAMS system directory\n");
-   printf("  -m        specify GAMS dictionary GDX file\n");
    printf("  -b        specify single block\n");
    printf("  -o        specify stage offset (default 1)\n");
    printf("  numblocks total number of blocks\n");
@@ -83,7 +82,6 @@ int main(int argc, char* argv[])
    int gdxSplit = 0;
    int fType = SCRDIRSTEM;
    char* pGAMSSysDir = NULL;
-   char* pDictMap = NULL;
    char* pDirStem = NULL;
    
    while ( --argc > 0 )
@@ -94,7 +92,6 @@ int main(int argc, char* argv[])
          switch (*(p+1))
          {
             case 'g': pGAMSSysDir = *++argv; argc--; break;
-            case 'm': pDictMap = *++argv; argc--; break;
             case 'b': actBlock = atoi(*++argv); argc--; break;
             case 'o': offset = atoi(*++argv); argc--; break;
             case 's': strict = 1; break;
@@ -128,7 +125,7 @@ int main(int argc, char* argv[])
    
    if ( gdxSplit && (fType == GDXFILE) )
    {
-     int rc = gdxSplitting(numBlocks, offset, gdxSplit==2, pDirStem, pGAMSSysDir, pDictMap);
+     int rc = gdxSplitting(numBlocks, offset, gdxSplit==2, pDirStem, pGAMSSysDir);
       assert(0==rc);
       return 0;
    }
