@@ -420,6 +420,7 @@ int main(int argc, char ** argv)
 
 #ifdef GetPrimalSol
    std::vector<double> primalSolVec;
+   double objective;
 #endif
 
 	if (stepDiffLp)
@@ -444,6 +445,7 @@ int main(int argc, char ** argv)
 		pipsIpm.go();
 #ifdef GetPrimalSol
 		primalSolVec = pipsIpm.gatherPrimalSolution();
+		objective = pipsIpm.getObjective();
 #endif
 	}
 
@@ -465,6 +467,7 @@ int main(int argc, char ** argv)
 		pipsIpm.go();
 #ifdef GetPrimalSol
 		primalSolVec = pipsIpm.gatherPrimalSolution();
+      objective = pipsIpm.getObjective();
 #endif
 	}
    if( gmsRank == 0 )
@@ -480,7 +483,7 @@ int main(int argc, char ** argv)
       for( size_t i = 0; i < primalSolVec.size(); i++ )
          varl[i] = primalSolVec[i];
 
-      rc = writeSolution(fileName,primalSolVec.size(),0,pipsIpm.getObjective(),varl,NULL,NULL,NULL,pGDXDirectory);
+      rc = writeSolution(fileName,primalSolVec.size(),0,objective,varl,NULL,NULL,NULL,pGDXDirectory);
       
       free(varl);
       if (0==rc)

@@ -580,7 +580,7 @@ $    include %gams.scrdir%annotate.gms
      put$(not %SUPPRESSDM%) fopt 'dictmap allblocks%GDXSUFFIX%_DM.gdx' /;
      putclose fopt 'jacobian allblocks%GDXSUFFIX%.gdx'
      solve simple min OBJ use lp;
-     execute 'mv -f %gams.scrdir%gamsdict.dat gamsdict.gdx';
+*     execute 'mv -f %gams.scrdir%gamsdict.dat gamsdict.gdx';
 
 $  elseife.blk %BLOCK%==-1
 *    Generate all (small) gdx files in a row
@@ -596,7 +596,7 @@ $      include %gams.scrdir%annotate.gms
        put$(not %SUPPRESSDM%) fopt 'dictmap block%GDXSUFFIX%_DM' (ord(bf)-1):0:0 '.gdx' /;
        putclose fopt 'jacobian block%GDXSUFFIX%' (ord(bf)-1):0:0 '.gdx'
        solve simple min OBJ use lp;
-       put_utility 'exec' / 'mv -f %gams.scrdir%gamsdict.dat gamsdict' (ord(bf)-1):0:0 '.gdx';
+*      put_utility 'exec' / 'mv -f %gams.scrdir%gamsdict.dat gamsdict' (ord(bf)-1):0:0 '.gdx';
        actbf(bf) = no;
      );
 
