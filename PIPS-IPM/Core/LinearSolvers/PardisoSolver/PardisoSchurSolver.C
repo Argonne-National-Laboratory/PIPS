@@ -571,9 +571,10 @@ void PardisoSchurSolver::computeSC(
    iparm[7] = 8; //# iterative refinements
    //iparm[ 9] = 10; // pivot perturbation 10^{-xxx}
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; use 2 for advanced matchings and higher accuracy.
+   int todo; // better 7 or higher?
    iparm[9] = 6; // pivot perturbation 10^{-xxx}
-   // use 2 for advanced matchings and higher accuracy.
+
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
    iparm[23] = 1;

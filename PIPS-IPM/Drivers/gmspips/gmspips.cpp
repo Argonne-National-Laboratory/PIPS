@@ -20,17 +20,13 @@
 #include <iostream>
 #include <fstream>
 using namespace std;
-#define GetPrimalSol
 
-#define BiCGStab
-#define GetPrimalSol
+#define BICGSTAB
 
 #if defined(GMS_PIPS)
 extern int gOuterSolve;
 extern int gInnerSCsolve;
 #endif
-
-
 
 
 extern "C" typedef int (*FNNZ)(void* user_data, int id, int* nnz);
@@ -193,22 +189,20 @@ int fmatQ(void* user_data, int id, int* krowM, int* jcolM, double* M)
 
 }
 
-static void setParams(ScalerType& scaler_type, bool& stepDiffLp, bool& presolve, const char* paramname)
+static void setParams(ScalerType& scaler_type, bool& stepDiffLp, bool& presolve, bool& printsol, const char* paramname)
 {
    if( strcmp(paramname, "scale") == 0 || strcmp(paramname, "scaleEqui") == 0 )
       scaler_type = SCALER_EQUI_STOCH;
-
-   if( strcmp(paramname, "scaleGeo") == 0 )
+   else if( strcmp(paramname, "scaleGeo") == 0 )
       scaler_type = SCALER_GEO_STOCH;
-
-   if( strcmp(paramname, "scaleGeoEqui") == 0 )
+   else if( strcmp(paramname, "scaleGeoEqui") == 0 )
       scaler_type = SCALER_GEO_EQUI_STOCH;
-
-   if( strcmp(paramname, "stepLp") == 0 )
+   else if( strcmp(paramname, "stepLp") == 0 )
       stepDiffLp = true;
-
-   if( strcmp(paramname, "presolve") == 0 )
+   else if( strcmp(paramname, "presolve") == 0 )
       presolve = true;
+   else if( strcmp(paramname, "printsol") == 0 )
+      printsol = true;
 }
 
 int main(int argc, char ** argv) 
@@ -225,10 +219,11 @@ int main(int argc, char ** argv)
    ScalerType scaler_type = SCALER_NONE;
    bool stepDiffLp = false;
    bool presolve = false;
+   bool printsol = false;
 
-   if ( (argc<3) || (argc>7) )
+   if ( (argc<3) || (argc>8) )
    {
-      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp] [presolve]" << endl;
+      cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp] [presolve] [printsol]" << endl;
       exit(1);
    }
    
@@ -242,7 +237,7 @@ int main(int argc, char ** argv)
    }
    
    for( int i = 5; i <= argc; i++ )
-      setParams(scaler_type, stepDiffLp, presolve, argv[i - 1]);
+      setParams(scaler_type, stepDiffLp, presolve, printsol, argv[i - 1]);
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
 #if 0
@@ -401,9 +396,9 @@ int main(int argc, char ** argv)
       cout << "Using a total of " << size << " MPI processes." << endl;
 
 #if defined(GMS_PIPS)
-#ifdef BiCGStab
+#ifdef BICGSTAB
    if( gmsRank == 0 )
-      cout << "using outer BiCGStab" << endl;
+      cout << "using outer BICGSTAB" << endl;
    gOuterSolve=2;
 #else
    gOuterSolve=0;
@@ -413,15 +408,13 @@ int main(int argc, char ** argv)
    gInnerSCsolve=2;
 
    if( gmsRank == 0 )
-      cout << "using inner BiCGStab" << endl;
+      cout << "using inner BICGSTAB" << endl;
 #else
    gInnerSCsolve=0;
 #endif
 
-#ifdef GetPrimalSol
    std::vector<double> primalSolVec;
-   double objective;
-#endif
+   double objective = 0.0;
 
 	if (stepDiffLp)
 	{
@@ -443,10 +436,11 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
-#ifdef GetPrimalSol
-		primalSolVec = pipsIpm.gatherPrimalSolution();
-		objective = pipsIpm.getObjective();
-#endif
+      if( printsol )
+      {
+         primalSolVec = pipsIpm.gatherPrimalSolution();
+         objective = pipsIpm.getObjective();
+      }
 	}
 
 	else {
@@ -465,16 +459,16 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
-#ifdef GetPrimalSol
-		primalSolVec = pipsIpm.gatherPrimalSolution();
-      objective = pipsIpm.getObjective();
-#endif
+      if( printsol )
+      {
+         primalSolVec = pipsIpm.gatherPrimalSolution();
+         objective = pipsIpm.getObjective();
+      }
 	}
    if( gmsRank == 0 )
       cout << "solving finished." << endl;
 
-#ifdef GetPrimalSol
-   if( gmsRank == 0 )
+   if( printsol && gmsRank == 0 )
    {
       double* varl;
       int rc;
@@ -493,7 +487,6 @@ int main(int argc, char ** argv)
       else
          std::cout << "Other error writing solution: rc=" << rc << std::endl;
    }
-#endif
    
    // free memory
   delete root;

@@ -5,7 +5,7 @@
  *      Author: bzfrehfe
  */
 
-#define PIPS_DEBUG
+//#define PIPS_DEBUG
 #include "EquiStochScaler.h"
 #include "StochVector.h"
 #include <cmath>

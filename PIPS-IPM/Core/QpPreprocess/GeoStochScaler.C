@@ -5,7 +5,7 @@
  *      Author: Svenja Uslu
  */
 
-#define PIPS_DEBUG
+//#define PIPS_DEBUG
 #include "GeoStochScaler.h"
 
 #include <cmath>

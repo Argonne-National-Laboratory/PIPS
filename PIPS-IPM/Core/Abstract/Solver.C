@@ -206,7 +206,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 
 	// back off just a touch (or a bit more)
 #ifdef STEPLENGTH_CONSERVATIVE
-	alpha *= 0.98;
+	alpha *= 0.99;
 #else
 	alpha *= .99999999;
 #endif
@@ -280,8 +280,8 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 
 	// back off just a touch (or a bit more)
 	#ifdef STEPLENGTH_CONSERVATIVE
-		alpha_primal *= 0.98;
-		alpha_dual *= 0.98;
+		alpha_primal *= 0.99;
+		alpha_dual *= 0.99;
 	#else
 		alpha_primal *= .99999999;
 		alpha_dual *= .99999999;
@@ -415,18 +415,19 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check for unknown status: slow convergence first
-  if(idx >= 300 && phi_min_history[idx] >= .5 * phi_min_history[idx-30]) {
+  if(idx >= 350 && phi_min_history[idx] >= .5 * phi_min_history[idx-30]) {
     stop_code = UNKNOWN;
     printf("hehe dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  if(idx >= 300 && rnorm / dnorm > artol && 
+  if(idx >= 350 && rnorm / dnorm > artol &&
      (rnorm_history[idx]/mu_history[idx]) / (rnorm_history[0]/mu_history[0]) 
      >= 1.e8) {
     stop_code = UNKNOWN;
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
+  int todo; // use to start inner bicgstab?
   //if(mu<50*rnorm/dnorm || mu<1e-5) {
   if(mu<1.0e5*rnorm/dnorm) {
     //if(!onSafeSolver) {

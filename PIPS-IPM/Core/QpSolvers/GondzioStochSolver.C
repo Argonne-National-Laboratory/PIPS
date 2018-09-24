@@ -67,7 +67,7 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    StepFactor0 = 0.3;
    StepFactor1 = 1.5;
 
-   mutol = 1.e-6; // todo parameter
+   mutol = 1.e-5; // todo parameter
 
    temp_step = factory->makeVariables(prob);
 }
@@ -169,9 +169,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       // calculate centering parameter
       muaff = iterate->mustep(step, alpha);
       sigma = pow(muaff / mu, tsig);
-
-      if( 0 == myRank )
-      std::cout << "sigma: " << sigma << std::endl;
 
       if( gOoqpPrintLevel >= 10 )
       {
@@ -278,9 +275,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       gmu = mu;
 
       if( 0 == myRank )
-      std::cout << "final alpha: " << alpha << " mu: " << mu <<   std::endl;
-
-
+         std::cout << "final alpha: " << alpha << " mu: " << mu <<   std::endl;
 
       stochFactory->iterateEnded();
    }
