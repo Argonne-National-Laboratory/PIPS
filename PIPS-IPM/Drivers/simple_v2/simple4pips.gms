@@ -580,8 +580,11 @@ $    include %gams.scrdir%annotate.gms
      put$(not %SUPPRESSDM%) fopt 'dictmap allblocks%GDXSUFFIX%_DM.gdx' /;
      putclose fopt 'jacobian allblocks%GDXSUFFIX%.gdx'
      solve simple min OBJ use lp;
-*     execute 'mv -f %gams.scrdir%gamsdict.dat gamsdict.gdx';
-
+     execute 'mv -f %gams.scrdir%gamsdict.dat allblocks%GDXSUFFIX%_dict.gdx';
+$eval bmaxp1 %bmax%+1     
+     execute 'gmschk -t -X -g "%gams.sysdir%" %bmaxp1% allblocks%GDXSUFFIX%.gdx'
+     execute 'mpirun -n %bmax% gmspips %bmaxp1% allblocks%GDXSUFFIX% "%gams.sysdir%"'
+     execute_loadpoint 'allblocks%GDXSUFFIX%_sol';
 $  elseife.blk %BLOCK%==-1
 *    Generate all (small) gdx files in a row
      equStage1 = card(bf) + 1; //enable generation of linking constraints for all block files
