@@ -425,7 +425,7 @@ int main(int argc, char ** argv)
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #else
-      PIPSIpmInterface<sFactoryAug, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
+      PIPSIpmInterface<sFactoryAug, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #endif
 
