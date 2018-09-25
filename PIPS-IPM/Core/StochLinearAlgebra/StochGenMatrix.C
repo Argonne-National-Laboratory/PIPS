@@ -734,6 +734,56 @@ std::string StochGenMatrix::writeToStreamDenseRowLink(int rowidx) const
    return str_all;
 }
 
+void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const
+{
+   int myRank;
+   MPI_Comm_rank(mpiComm, &myRank);
+   string rt;
+   if( rowType == 0 )
+      rt = "E";
+   else if( rowType == 1 )
+      rt = "L";
+   else if( rowType == 2 )
+      rt = "G";
+   else
+      assert(0);
+
+   StochVector* irhsStoch;
+   if( irhs )
+      irhsStoch = dynamic_cast<StochVector*>(irhs);
+
+   int m, n;
+   if( myRank == 0)
+   {
+      // A_0 block:
+      this->Bmat->getSize(m, n);
+      for(int i=0; i<m; i++)
+      {
+         if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vec)->elements()[i] != 0.0) )
+            out<< " "<<rt<<" row_"<<rt<<"_"<<"R" <<"_"<<i <<endl;
+      }
+      // linking rows:
+      if( Blmat )
+      {
+         this->Blmat->getSize(m, n);
+         for(int i=0; i<m; i++)
+         {
+            if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vecl)->elements()[i] != 0.0) )
+               out<<" "<< rt<<" row_"<<rt<<"_"<<"L" <<"_"<<i <<endl;
+         }
+      }
+   }
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->Amat->getSize(m, n);
+      for(int i=0; i<m; i++)
+      {
+         if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec)->elements()[i] != 0.0) )
+            out<<" "<< rt<<" row_"<<rt<<"_"<<it <<"_"<<i <<endl;
+      }
+   }
+}
+
 /* Make the elements in this matrix symmetric. The elements of interest
  *  must be in the lower triangle, and the upper triangle must be empty.
  *  @param info zero if the operation succeeded. Otherwise, insufficient

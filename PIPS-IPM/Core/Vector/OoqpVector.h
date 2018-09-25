@@ -80,6 +80,10 @@ public:
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const = 0;
 
+  virtual void writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const {assert(0 && "not implemented here");};
+  virtual void writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs) const {assert(0 && "not implemented here");};
+  virtual void writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const {assert(0 && "not implemented here");};
+  virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const {assert(0 && "not implemented here");};
   void writefToStreamStats( ostream& out, std::string prestring);
 
   /** Scale each element of this OoqpVector by the constant alpha */

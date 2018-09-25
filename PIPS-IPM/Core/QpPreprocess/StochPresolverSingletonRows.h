@@ -27,6 +27,7 @@ private:
    int initSingletonRowsBlock(int it, SimpleVector const * nnzRowSimple);
    void doSingletonRowsA(int& newSREq, int& newSRIneq);
    void doSingletonRowsC(int& newSREq, int& newSRIneq);
+   void doSingletonLinkRows(int& newSREq, int& newSRIneq);
 
    void procSingletonRowRoot(StochGenMatrix& stochMatrix, SystemType system_type);
    void procSingletonRowChildEquality(int it, int& newSR, int& newSRIneq);

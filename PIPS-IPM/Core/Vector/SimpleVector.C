@@ -364,6 +364,32 @@ void SimpleVector::writefSomeToStream( ostream& out,
   }
 }
 
+void SimpleVector::writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const
+{
+   if( irhs )
+      assert( this->n == irhs->n );
+
+   for( int i = 0; i < n; i++ )
+   {
+      if( !irhs || ( irhs && dynamic_cast<SimpleVector *>(irhs)->elements()[i] != 0.0 ) )
+         out <<rowName<< i <<" "<< v[i] << "\n";
+   }
+}
+
+void SimpleVector::writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const
+{
+   assert( n == dynamic_cast<SimpleVector*>(ix)->n );
+   string boundType = (upperBound) ? " UP" : " LO";
+   string infiniteBound = (upperBound) ? " PL" : " MI";
+
+   for( int i = 0; i < n; i++ )
+   {
+      if( dynamic_cast<SimpleVector*>(ix)->elements()[i] != 0.0  )
+         out <<boundType<<" BND "<<varStub<< i <<" "<< v[i] << "\n";
+      else
+         out <<infiniteBound<<" BND "<<varStub<< i <<" "<< "\n";
+   }
+}
 
 void SimpleVector::scale( double alpha )
 {

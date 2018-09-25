@@ -132,6 +132,11 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 
      origData = dynamic_cast<sData*>(factory->makeData());
 
+/*     ofstream myfile;
+     myfile.open ("PipsToMPS_original.mps");
+     origData->writeMPSformat(myfile);
+     myfile.close();*/
+
      MPI_Barrier(comm);
      const double t0_presolve = MPI_Wtime();
 
@@ -152,6 +157,11 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
      origData = NULL;
      presolver = NULL;
   }
+
+/*  ofstream myfile;
+  myfile.open ("PipsToMPS_prslv.mps");
+  data->writeMPSformat(myfile);
+  myfile.close();*/
 
 #ifdef TIMING
   if(mype==0) printf("data created\n");
@@ -221,8 +231,17 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 #endif
 
   if( scaler )
+  {
+     MPI_Barrier(comm);
+     const double t0_scaling = MPI_Wtime();
+
      scaler->scale();
 
+     MPI_Barrier(comm);
+     const double t_scaling = MPI_Wtime();
+     if( mype == 0 )
+        std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
+  }
   //---------------------------------------------
   const int result = solver->solve(data,vars,resids);
   //---------------------------------------------

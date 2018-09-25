@@ -171,9 +171,9 @@ void StochPresolverParallelRows::applyPresolving()
    // update the bounds of linking-variables:
    tightenLinkingVarsBounds();
 
-   // update NnzColParent and synchronize nRowElims:
+   // update NnzColParent:
    updateNnzColParent(MPI_COMM_WORLD);
-   synchronize(nRowElims);
+   presData.resetRedCounters();
 
    rowsFirstHashTable.clear();
    rowsSecondHashTable.clear();
@@ -208,6 +208,13 @@ void StochPresolverParallelRows::applyPresolving()
    allreduceAndUpdate(MPI_COMM_WORLD, *gParentAdaptions, *currgParent);
 
    deleteNormalizedPointers(-1, matrixA, matrixC);
+
+   // update NnzColParent: As all processses have the same information, no communication necessary
+   updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
+   presData.resetRedCounters();
+   // synchronize nRowElims:
+   synchronize(nRowElims);
+
 
    if( myRank == 0 )
       cout<<"Removed "<<nRowElims<<" Rows in Parallel Row Presolving."<<endl;

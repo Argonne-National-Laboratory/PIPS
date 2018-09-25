@@ -100,6 +100,14 @@ void StochPresolverSingletonRows::applyPresolving()
       }
       newSRIneq = 0;
       globalIter++;
+
+      presData.resetRedCounters();
+      int newSREqLink = 0;
+      int newSRIneqLink = 0;
+      doSingletonLinkRows(newSREqLink, newSRIneqLink);
+      synchronizeSum(newSREqLink, newSRIneqLink);
+      newSREq += newSREqLink;
+      newSRIneq += newSRIneqLink;
    }
 
    // Sum up individual objOffset and then add it to the global objOffset:
@@ -265,7 +273,113 @@ void StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
    updateRhsNRowLink();
 
    combineNewBoundsParent();
-   presData.combineColAdaptParent();
+   if( !presData.combineColAdaptParent() )
+      abortInfeasible(MPI_COMM_WORLD);
+}
+
+void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIneq)
+{
+   if( hasLinking(EQUALITY_SYSTEM))
+   {
+      setCurrentPointersToNull();
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      presData.resetRedCounters();
+      resetEqRhsAdaptionsLink();
+      if( hasLinking(INEQUALITY_SYSTEM) )
+         resetIneqRhsAdaptionsLink();
+
+      for( size_t it = 0; it < presData.nRowElemsA->children.size(); it++)
+      {
+         if( !childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->A)), it, EQUALITY_SYSTEM))
+         {
+            setCPBlmatsChild(presProb->A, (int)it);
+            // set pointers ixlow etc and redColChild
+            setCPColumnChild((int) it);
+            setCPRowLinkEquality();    // set currEqRhs
+            currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
+
+            std::vector<COLUMNTOADAPT> varsToBeFixed;
+
+            for( int rowIdx = 0; rowIdx < currNnzRow->n; rowIdx++ )
+            {
+               if( currNnzRow->elements()[rowIdx] == 1.0 && (currBlmat->rowptr[rowIdx].start != currBlmat->rowptr[rowIdx].end) )
+               {  // singleton entry is in this child:
+                  assert( currBlmat->rowptr[rowIdx].start +1 == currBlmat->rowptr[rowIdx].end );
+
+                  // collect all variables that can be fixed in varsToBeFixed:
+                  int colIdx = -1;
+                  double aik = 0.0;
+                  getValuesForSR(*currBlmat, rowIdx, colIdx, aik);
+                  assert( colIdx >= 0 && colIdx < currgChild->n );
+
+                  const double val = currEqRhsLink->elements()[rowIdx] / aik;
+
+                  if( (currIxlowChild->elements()[colIdx] != 0.0 && PIPSisLT(val, currxlowChild->elements()[colIdx]) )
+                        || (currIxuppChild->elements()[colIdx] != 0.0 && PIPSisLT(currxuppChild->elements()[colIdx], val) ) )
+                  {
+                     cout<<"Infeasibility detected at variable "<<colIdx<<", val= "<<val<<endl;
+                     abortInfeasible(MPI_COMM_WORLD);
+                  }
+                  // check if this variable was already fixed by another row:
+                  bool uniqueFixVariable = true;
+                  for(int i=0; i<(int)varsToBeFixed.size(); i++)
+                  {
+                     if( varsToBeFixed[i].colIdx == colIdx )
+                     {
+                        uniqueFixVariable = false;
+                        if( !PIPSisEQ(varsToBeFixed[i].val, val) )
+                           abortInfeasible(MPI_COMM_WORLD);
+                     }
+                  }
+                  if( uniqueFixVariable )
+                  {
+                     // adapting objOffset:
+                     indivObjOffset += currgChild->elements()[colIdx] * val;
+
+                     // store in colADaptLinkBlock for G, F, B, D:
+                     COLUMNTOADAPT colWithVal = {colIdx, val};
+                     varsToBeFixed.push_back(colWithVal);
+                  }
+               }
+            }
+            // using colAdaptLinkBlock, go through the columns in this child:
+
+            // go through the columns in Bmat, Blmat of the equality:
+            updateCPforAdaptFixationsBChild( it, EQUALITY_SYSTEM );
+            adaptOtherSystemChildB( EQUALITY_SYSTEM, varsToBeFixed, newSREq );
+
+            // and go through the columns in Bmat, Blmat of the inequality:
+            updateCPforAdaptFixationsBChild( it, INEQUALITY_SYSTEM );
+            adaptOtherSystemChildB( INEQUALITY_SYSTEM, varsToBeFixed, newSRIneq );
+         }
+         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      }
+
+      // Update nRowLink and lhs/rhs (Linking part) of both systems:
+      updateRhsNRowLink();
+      presData.resetRedCounters();
+
+      // F_0 block:
+      setCurrentPointersToNull();
+      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
+      setCPBlmatsRoot(presProb->A);
+      setCPColumnRoot();
+      currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vecl);
+      for( int rowIdx = 0; rowIdx < currNnzRow->n; rowIdx++ )
+      {
+         if( currNnzRow->elements()[rowIdx] == 1.0 && (currBlmat->rowptr[rowIdx].start != currBlmat->rowptr[rowIdx].end) )
+         {
+            assert( currBlmat->rowptr[rowIdx].start +1 == currBlmat->rowptr[rowIdx].end );
+
+            removeSingleRowEntryB0( *currBlmat, rowIdx);
+         }
+      }
+      if( !presData.combineColAdaptParent() )
+         abortInfeasible(MPI_COMM_WORLD);
+
+      updateLinkingVarsBlocks(newSREq, newSRIneq);
+      presData.resetRedCounters();
+   }
 }
 
 void StochPresolverSingletonRows::procSingletonRowRoot(StochGenMatrix& stochMatrix, SystemType system_type)

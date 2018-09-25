@@ -74,6 +74,8 @@ public:
   virtual void writeToStreamAllStringStream(stringstream& sout) const;
   virtual void writefToStream( ostream& out,
 			       const char format[] ) const;
+  virtual void writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const;
+  virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const;
 
   virtual void scale( double alpha );
 
