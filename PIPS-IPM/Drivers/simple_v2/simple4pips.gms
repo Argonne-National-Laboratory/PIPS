@@ -14,6 +14,7 @@ $if  not set KEEPVENAMES          $set KEEPVENAMES       0
 $if  not set KEEPUELS             $set KEEPUELS          1
 $if  not set SUPPRESSDM           $set SUPPRESSDM        1
 $ifi not set SLICE                $set SLICE             0
+$ifi not set RUNPIPS              $set RUNPIPS           0
 
 $ifi not %METHOD%==PIPS           $set SLICE             0
 $ife %BLOCK%<=-1                  $set SLICE             0
@@ -581,10 +582,19 @@ $    include %gams.scrdir%annotate.gms
      putclose fopt 'jacobian allblocks%GDXSUFFIX%.gdx'
      solve simple min OBJ use lp;
      execute 'mv -f %gams.scrdir%gamsdict.dat allblocks%GDXSUFFIX%_dict.gdx';
-$eval bmaxp1 %bmax%+1     
-     execute 'gmschk -t -X -g "%gams.sysdir%" %bmaxp1% allblocks%GDXSUFFIX%.gdx'
-     execute 'mpirun -n %bmax% gmspips %bmaxp1% allblocks%GDXSUFFIX% "%gams.sysdir%" printsol'
-     execute_loadpoint 'allblocks%GDXSUFFIX%_sol';
+
+$    ifthene.runpips %RUNPIPS%==1     
+$      eval bmaxp1 %bmax%+1            
+       execute 'gmschk -t -X -g "%gams.sysdir%" %bmaxp1% allblocks%GDXSUFFIX%.gdx'
+$      iftheni.computername %system.computername%==anton.gams.com
+         execute 'mpirun -n %bmax% gmspips %bmaxp1% allblocks%GDXSUFFIX% "%gams.sysdir%" printsol'
+$      else.computername
+         execute 'srun -n %bmax% gmspips %bmaxp1% allblocks%GDXSUFFIX% "%gams.sysdir%" printsol'
+$      endif.computername	   
+       execute_loadpoint 'allblocks%GDXSUFFIX%_sol';
+	   display '### OBJECTIVE FUNCTION VALUE:', OBJ.l;	   
+$    endif.runpips
+
 $  elseife.blk %BLOCK%==-1
 *    Generate all (small) gdx files in a row
      equStage1 = card(bf) + 1; //enable generation of linking constraints for all block files
