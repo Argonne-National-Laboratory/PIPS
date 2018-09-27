@@ -1052,7 +1052,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       {
          const int pend = krowGt[i + 1];
          const bool sparseRow = (i >= locnx - n0Links);
-
+XTODO
          if( sparseRow )
          {
             const int blockStart = krowKkt[i + 1] - (krowGt[i + 1] - krowGt[i]);

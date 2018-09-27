@@ -267,6 +267,7 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
    assert(bordersizeEq >= 0 && n2linksRowsEq <= myl);
 
    // todo replace mzl for sparse 2-link ink linking cons (G)
+   XTODO
    for( int i = nx0 + my0, j = 0; i < nx0 + my0 + myl; ++i, ++j )
    {
        const int blockrownnz = appendDiagBlocks(linkStartBlocksA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j, blockStartrow, nnzcount, jcolM);
@@ -1242,6 +1243,7 @@ int sData::getSchurCompMaxNnz()
 
    // add linking mixed parts todo
    nnz += myl * mzl;
+   XTODO
 
    if( myl > 0 )
    {
