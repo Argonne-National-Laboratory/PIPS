@@ -288,6 +288,8 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       normNnzColChild = NULL;
 
       currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
+      for(int i=0; i<currgParent->n; i++)
+         assert( isfinite(currgParent->elements()[i]) );
 
       mA = norm_Amat->m;
       nA = norm_Amat->n;
@@ -411,7 +413,11 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       normNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec)->cloneFull();
 
       currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
+      for(int i=0; i<currgChild->n; i++)
+         assert( isfinite(currgChild->elements()[i]) );
       currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
+      for(int i=0; i<currgParent->n; i++)
+         assert( isfinite(currgParent->elements()[i]) );
 
       singletonCoeffsColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
       singletonCoeffsColParent->setToZero();
