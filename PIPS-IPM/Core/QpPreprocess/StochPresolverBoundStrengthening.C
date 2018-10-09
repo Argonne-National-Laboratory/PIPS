@@ -72,8 +72,11 @@ void StochPresolverBoundStrengthening::applyPresolving()
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
+
+#ifdef TIMING
    if( myRank == 0 )
       cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
+#endif
 
    if( myRank == 0 ) cout<<"Finished Bound Strengthening Presolving."<<endl;
 #ifndef NDEBUG

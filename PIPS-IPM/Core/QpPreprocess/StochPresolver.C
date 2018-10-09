@@ -91,7 +91,7 @@ Data* StochPresolver::presolve()
       cout<<"--- After Presolving:"<<endl;
    presolverSR.countRowsCols();
 #endif
-   if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
+   //if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
    sData* finalPresData = presData.finalize();
 
    /*myfile.open("after.txt");
@@ -100,8 +100,8 @@ Data* StochPresolver::presolve()
 
    if( myRank==0 )
    {
-      std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
-      std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
+      std::cout << "original problem nx, my, mz " << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
+      std::cout << "presolved problem nx, my, mz " << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
    }
 #ifdef TIMING
    std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;

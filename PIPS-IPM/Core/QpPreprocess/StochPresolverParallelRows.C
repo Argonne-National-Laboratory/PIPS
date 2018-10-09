@@ -222,8 +222,11 @@ void StochPresolverParallelRows::applyPresolving()
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
+
+#ifdef TIMING
    if( myRank == 0 )
       cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
+#endif
 
 #ifndef NDEBUG
    if( myRank == 0 )

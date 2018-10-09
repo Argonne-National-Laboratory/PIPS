@@ -288,6 +288,7 @@ void PardisoIndefSolver::factorize()
 
    assert(ia && ja && a);
 
+#ifndef NDEBUG
 #ifdef CHECK_PARDISO
    pardiso_chkmatrix(&mtype, &n, a, ia, ja, &error);
    if( error != 0 )
@@ -295,6 +296,7 @@ void PardisoIndefSolver::factorize()
       printf("\nERROR in consistency of matrix: %d", error);
       exit(1);
    }
+#endif
 #endif
 
 #if 0
@@ -399,7 +401,7 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
          printf("\nERROR during solution: %d", error);
          exit(3);
       }
-#if 1
+#if 0
       const double b2norm = sv.twonorm();
       const double binfnorm = sv.infnorm();
       double mat_max = 0.0;
