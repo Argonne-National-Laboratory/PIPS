@@ -764,6 +764,8 @@ bool StochPresolverSingletonRows::updateCPForSingletonRow(int it, SystemType sys
 
    setCPColumnRoot();
    currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
+   for(int i=0; i<currgParent->n; i++)
+      assert( isfinite(currgParent->elements()[i]) );
 
    if( it == -1 )
    {
@@ -811,6 +813,8 @@ bool StochPresolverSingletonRows::updateCPForSingletonRow(int it, SystemType sys
       }
       setCPColumnChild(it);
       currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
+      for(int i=0; i<currgChild->n; i++)
+         assert( isfinite(currgChild->elements()[i]) );
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
    }
    return true;

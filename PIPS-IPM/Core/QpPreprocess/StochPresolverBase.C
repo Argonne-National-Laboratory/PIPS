@@ -271,6 +271,8 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
    if( myRank == 0)
    {
       currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
+      for(int i=0; i<currgParent->n; i++)
+            assert( isfinite(currgParent->elements()[i]) );
       for( int i=0; i<presData.getNumberColAdParent(); i++)
       {
          const int colIdx = presData.getColAdaptParent(i).colIdx;
