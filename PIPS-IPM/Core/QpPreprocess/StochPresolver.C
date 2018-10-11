@@ -100,8 +100,8 @@ Data* StochPresolver::presolve()
 
    if( myRank==0 )
    {
-      std::cout << "original problem nx, my, mz " << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
-      std::cout << "presolved problem nx, my, mz " << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
+      std::cout << "original problem: variables, equ. constraints., inequ. constraints" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
+      std::cout << "presolved problem: variables, equ. constraints., inequ. constraints " << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
    }
 #ifdef TIMING
    std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
