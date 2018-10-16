@@ -43,22 +43,14 @@ endif(HAVE_MA57 AND HAVE_METIS)
 #    ${MA86_LIB} ${METIS_LIBRARY} ${MATH_LIBS})
 #endif(HAVE_MA86 AND HAVE_METIS)
 
-if (HAVE_PARDISO)
-  if(HAVE_MA27)
-    add_executable(qpgen-sparse-mehrotra.exe Core/QpGen/QpGenSparseMehrotraDriver.C)
-    target_link_libraries(qpgen-sparse-mehrotra.exe
-      ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra
-    ${MA27_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
-    add_executable(pipsipmFromRaw_schur Drivers/pipsipmFromRaw_schur.cpp)
-    target_link_libraries(pipsipmFromRaw_schur
-      stochInput ${COIN_LIBS}
-      ooqpstoch ooqpstochla ooqpmehrotrastoch
-      ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA27_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
-  endif(HAVE_MA27)
+if(HAVE_MA27 OR HAVE_MA57)
+  add_executable(qpgen-sparse-mehrotra.exe Core/QpGen/QpGenSparseMehrotraDriver.C)
+  target_link_libraries(qpgen-sparse-mehrotra.exe
+    ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra
+  ${MA27_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+endif(HAVE_MA27 OR HAVE_MA57 )
 
-  if(HAVE_MA57 AND HAVE_METIS)
     add_executable(qpgen-sparse-ma57-gondzio.exe Core/QpGen/QpGenSparseGondzioDriver.C)
     target_link_libraries(qpgen-sparse-ma57-gondzio.exe
       ooqpgensparse ooqpsparse ooqpbase ooqpgondzio ooqpdense
@@ -69,21 +61,21 @@ if (HAVE_PARDISO)
       stochInput ${COIN_LIBS}
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
     add_executable(pipsipmBatchFromRaw_schur Drivers/pipsipmBatchFromRaw_schur.cpp)
     target_link_libraries(pipsipmBatchFromRaw_schur
       stochInput ${COIN_LIBS}
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
     add_executable(pipsipmBatchFromRaw Drivers/pipsipmBatchFromRaw.cpp)
     target_link_libraries(pipsipmBatchFromRaw
       stochInput ${COIN_LIBS}
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
+      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 
     # add_executable(pipsipmFromRaw_schur32 Drivers/pipsipmFromRaw_schur32.cpp)
     # target_link_libraries(pipsipmFromRaw_schur32
@@ -92,7 +84,6 @@ if (HAVE_PARDISO)
     #   ooqpgensparse ooqpbase ooqpsparse ooqpdense
     #   ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY32} ${MATH_LIBS})
 
-    if(HAVE_MA27)
 #    add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
 #    target_link_libraries(pipsipmFromRaw
 #      stochInput ${COIN_LIBS}
@@ -121,7 +112,6 @@ if (HAVE_PARDISO)
 	${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY}
 	${MATH_LIBS})
 
-    endif(HAVE_MA27)
 
 #    if(HAVE_AMPL)
 #      add_executable(pipsipmPyomo_schur Drivers/pipsipmPyomo_schur.cpp)
@@ -131,10 +121,8 @@ if (HAVE_PARDISO)
 #	ooqpgensparse ooqpbase ooqpsparse ooqpdense
 #	${AMPL_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
 #    endif(HAVE_AMPL)
-  endif(HAVE_MA57 AND HAVE_METIS)
-endif(HAVE_PARDISO)
 
-#MA27 or MA57 and METIS are prerequisites, this should be fine without additional checks.
+#MA27 or (MA57 and METIS) are prerequisites, this should be fine without additional checks.
 #It still works if only one of MA27 or MA57 is available.
 add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
 target_link_libraries(pipsipmFromRaw

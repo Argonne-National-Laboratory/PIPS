@@ -3,6 +3,7 @@
 #include <omp.h>  
 #include "MumpsSolver.h"
 
+#include <cstdlib>
 #include <string>
 
 #define USE_COMM_WORLD -987654
@@ -135,7 +136,7 @@ int main(int argc, char* argv[])
   int nNumThreadsMin=0, nNumThreadsMax=0;
   MPI_Reduce(&nNumThreads, &nNumThreadsMax, 1, MPI_INT, MPI_MAX, 0, globlComm);
   MPI_Reduce(&nNumThreads, &nNumThreadsMin, 1, MPI_INT, MPI_MIN, 0, globlComm);
-  char* strNumThreads=getenv("OMP_NUM_THREADS");
+  const char* strNumThreads=getenv("OMP_NUM_THREADS");
   if(strNumThreads==NULL) strNumThreads = "(null)";
   
   

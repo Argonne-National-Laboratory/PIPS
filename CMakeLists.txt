@@ -349,14 +349,17 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     # we assume the other libraries are in there
     set(HAVE_MUMPS TRUE)
 
-    # -L/home/petra1/work/installs/metis-5.1.0/_installation/lib/ -lmetis
+    # you may need parmetis if mumps was build with parmetis (we recommend using parmetis). For more info
+    # see the readme file in ThirdPartyLibs/MUMPS and the sample build file in PIPS-NLP/Core/LinearSolvers/MumpsSolver
+    # In short: insert something like the following line to MUMPS_LIBRARY below
+    # -L/home/petra1/work/installs/parmetis-4.0.3/lib -lparmetis
 
     # hack(ish) way of specifying the many mumps libraries
     # - put all the  mumps libraries: -ldmumps -lmumps_common -lpord
     # - scalapack and blacs should be set in ${SCALAPACK_LIBRARIES} using Toolchain.cmake (or hardcoded here)
     # - mpifort also needed
     # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
-    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord -lmpifort ${SCALAPACK_LIBRARIES}")
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -L/home/petra1/work/installs/parmetis-4.0.3/lib -lparmetis -ldmumps -lmumps_common -lpord -lmpifort ${SCALAPACK_LIBRARIES}")
 
     MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
     include_directories(${MUMPS_INCLUDE_DIR})
