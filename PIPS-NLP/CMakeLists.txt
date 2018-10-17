@@ -95,10 +95,10 @@ else(HAVE_PETSC)
 	reducedSolverSpecial
 	global_var
 	nlpstoch
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
-    ${PARDISO_LIBRARY}
-    LU_solvers ${UMF_ALLINONE_LIBRARY}
-    ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
+     ${MA57_LIBRARY} ${MA27_LIBRARY} ${MUMPS_LIBRARY}  ${METIS_LIBRARY} 
+    ${PARDISO_LIBRARY} 
+    LU_solvers ${UMF_ALLINONE_LIBRARY} 
+    ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS} 
     )
 
 ### serial filter line search IPM with option to choose MA57/Pardiso. Schur-comp method is available
@@ -127,7 +127,7 @@ else(HAVE_PETSC)
     reducedSolverSpecial
     nlpgensparse nlpbase nlpsparse nlpdense
     global_var
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${MUMPS_LIBRARY} ${METIS_LIBRARY}
     ${PARDISO_LIBRARY}
     LU_solvers ${UMF_ALLINONE_LIBRARY}
     ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}

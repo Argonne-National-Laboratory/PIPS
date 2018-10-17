@@ -28,8 +28,10 @@ public:
   /* Set entries that are local to the MPI rank. These arrays are not copied and the
    * the caller of this function needs the keep them for the lifetime of this class. */
   bool setLocalEntries(long long globnnz, long long locnnz, int* locirn, int* locjcn, double* locA=NULL);
-  //MumpsSolver( DenseSymMatrix * storage );
-  //MumpsSolver( SparseSymMatrix * storage );
+#ifndef WITHOUT_PIPS
+  MumpsSolver( DenseSymMatrix * storage, MPI_Comm mumpsMpiComm, MPI_Comm pipsMpiComm);
+  MumpsSolver( SparseSymMatrix * storage );
+#endif
   virtual void diagonalChanged( int idiag, int extent );
   virtual int matrixChanged();
   virtual int saveOrderingPermutation();
@@ -72,10 +74,16 @@ protected:
   //mumps data structure
   DMUMPS_STRUC_C* mumps_;
   long long n_;
-  int my_rank_;
- protected:
-
-
+  int my_mumps_rank_, my_pips_rank_;
+  
+  MPI_Comm pipsMpiComm, mumpsMpiComm;
+#ifndef WITHOUT_PIPS
+  DenseSymMatrix * Mdsys;
+#endif
+protected:
+  void createMumpsStruct();
+  void gutsOfconstructor( MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ );
+  void denseMatToSpTriplet();
 }; // end of class def
 #endif
  

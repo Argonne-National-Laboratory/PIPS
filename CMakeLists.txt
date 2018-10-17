@@ -359,12 +359,13 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     # - scalapack and blacs should be set in ${SCALAPACK_LIBRARIES} using Toolchain.cmake (or hardcoded here)
     # - mpifort also needed
     # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
-    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -L/home/petra1/work/installs/parmetis-4.0.3/lib -lparmetis -ldmumps -lmumps_common -lpord -lmpifort ${SCALAPACK_LIBRARIES}")
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -L/home/petra1/work/installs/parmetis-4.0.3/lib -ldmumps -lmumps_common -lpord -lmpifort -lparmetis ${SCALAPACK_LIBRARIES}")
 
     MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
     include_directories(${MUMPS_INCLUDE_DIR})
   else ()
     message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
+    set(MUMPS_LIBRARY "")
   endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
 
   #setting CXX_FLAGS

@@ -79,10 +79,26 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
   //return new PardisoSolver(kktmat);
+
+  //this is the default, LAPACK-based
   //return new DeSymIndefSolver(kktmat);
-  return new MumpsSolver(kktmat);
+
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
+
+
+  //1. create the communicator for the subset of processes that MUMPS should use
+  int color = MPI_UNDEFINED;
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  //color only rank 0 and leave the other ones uncolored. MUMPS communicator created below will be MPI_COMM_NULL on
+  //the nodes not colored
+  if(myRank==0)
+    color = 0;
+  MPI_Comm mumpsComm;
+  MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
+  
+  //2. create and return the wrapper instance for Mumps
+  return new MumpsSolver(kktmat, mumpsComm, mpiComm);
 }
 
 #ifdef TIMING

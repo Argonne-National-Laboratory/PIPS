@@ -4,6 +4,7 @@
 
 #ifndef WITHOUT_PIPS
 #include "../../global_var.h"
+#include "SparseStorage.h"
 #include "SimpleVector.h"
 #include "DenseSymMatrix.h"
 #include "DenseGenMatrix.h"
@@ -21,12 +22,48 @@ static bool gMUMPSStatsOn=true;
 
 using namespace std;
 
-
-MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm, MPI_Comm pipsMpiComm)
+#ifndef WITHOUT_PIPS
+MumpsSolver::MumpsSolver( DenseSymMatrix * storage, MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ )
 {
-  int error=MPI_Comm_rank(mumpsMpiComm, &my_rank_); assert(error==MPI_SUCCESS);
+  Mdsys = storage;
+  n_ = Mdsys->size();
 
+  gutsOfconstructor(mumpsMpiComm_, pipsMpiComm_);
+}
+#endif
+
+void MumpsSolver::gutsOfconstructor( MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ ) {
+  pipsMpiComm =  pipsMpiComm_;
+  mumpsMpiComm = mumpsMpiComm_;
+  
+  if(MPI_COMM_NULL==mumpsMpiComm) {
+    mumps_=NULL;
+  } else {
+    createMumpsStruct();
+  }
+  int error=MPI_Comm_rank(mumpsMpiComm, &my_mumps_rank_); assert(error==MPI_SUCCESS);
+}
+
+MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_)
+{
   n_ = globSize;
+#ifndef WITHOUT_PIPS
+  Mdsys = NULL;
+#endif
+  gutsOfconstructor(mumpsMpiComm_, pipsMpiComm_);
+}
+
+MumpsSolver::~MumpsSolver()
+{
+  if(mumps_) {
+    mumps_->job = -2; //terminate mumps
+    dmumps_c(mumps_);
+    delete mumps_;
+  }
+}
+
+void MumpsSolver::createMumpsStruct()
+{
   mumps_ = new DMUMPS_STRUC_C;
   mumps_->comm_fortran = getFortranMPIComm(mumpsMpiComm);
   mumps_->sym = 2;//general symetric matrix
@@ -35,25 +72,19 @@ MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm, MPI_C
   dmumps_c(mumps_);  
 
   if(mumps_->infog[1-1] != 0)
-    if(my_rank_==0) printf("Error occured when initializing MUMPS.\n");
+    if(my_mumps_rank_==0) printf("Error occured when initializing MUMPS.\n");
 
-  setMumpsVerbosity(1);//3 moderately verbose, 1 only errors, 0 anything is surpressed
+  setMumpsVerbosity(0);//3 moderately verbose, 1 only errors, 0 anything is surpressed
 
-  mumps_->n = (int)globSize;
+  mumps_->n = (int)n_;
   mumps_->icntl[ 5  -1] = 0; //assembled format for matrix (triplet format)
   mumps_->icntl[18  -1] = 3; //distributed assembled format
   mumps_->icntl[20  -1] = 0; //the right-hand side is in dense format in the structure component
   mumps_->icntl[21  -1] = 0; // the solution vector is assembled and stored in the structure component RHS
   //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
-}
-
-MumpsSolver::~MumpsSolver()
-{
-  mumps_->job = -2; //terminate mumps
-  dmumps_c(mumps_);
-  delete mumps_;
 
 }
+
 bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* locirn, int* locjcn, double* locA)
 {
   mumps_->nnz = globnnz;
@@ -65,20 +96,6 @@ bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* loci
 
   return true;
 }
-// MumpsSolver::MumpsSolver( DenseSymMatrix * dm )
-// {
-//   mStorage = DenseStorageHandle( dm->getStorage() );
-
-//   DMUMPS_STRUC_C* mumps_ = new DMUMPS_STRUC_C;
-
-
-//   int size = mStorage->n;
-//   ipiv = new int[size];
-//   lwork = -1;
-//   work = NULL;
-//   sparseMat = 0;
-  
-// }
 
 // MumpsSolver::MumpsSolver( SparseSymMatrix * sm )
 // {
@@ -93,12 +110,60 @@ bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* loci
 //   sparseMat = sm;
 // }
 
+#ifndef WITHOUT_PIPS
+void MumpsSolver::denseMatToSpTriplet()
+{
+  assert(Mdsys);
+  //detect sparsity -> count nnz
+  DenseSymMatrix &m = (*Mdsys);
+  int nnz=0;
+  for(int i=0; i<n_; i++) {
+    for(int j=i+1; j<n_; j++) 
+      if(m[i][j]!=0.0) {
+	nnz++;
+      }
+    nnz++; //always have diags
+  }
 
+  printf("pointer %lu \n", mumps_->irn_loc);
+  mumps_->nnz     = nnz;
+  mumps_->nnz_loc = nnz;
+  mumps_->irn_loc = new int[nnz];
+  mumps_->jcn_loc = new int[nnz];
+  mumps_->a_loc = new double[nnz];
 
-
+  //copy nz values
+  int nzIt=0;
+  for(int i=0; i<n_; i++) {
+    mumps_->a_loc[nzIt] = m[i][i];
+    mumps_->irn_loc[nzIt] = i+1;
+    mumps_->jcn_loc[nzIt] = i+1;
+    nzIt++;
+    
+    for(int j=i+1; j<n_; j++) {
+      if(m[i][j]!=0.0) {
+	mumps_->a_loc[nzIt] = m[i][j];
+	mumps_->irn_loc[nzIt] = i+1;
+	mumps_->jcn_loc[nzIt] = j+1;
+	nzIt++;
+      }
+    }
+  }
+  
+  assert(nzIt==nnz);
+}
+#endif
 //#include "mpi.h"
 int MumpsSolver::matrixChanged()
 {
+  if(mumpsMpiComm==MPI_COMM_NULL) 
+    assert(false);
+
+#ifndef WITHOUT_PIPS
+  if(Mdsys!=NULL)
+    denseMatToSpTriplet();
+#endif 
+
   mumps_->n = n_;
 
   //printf("[1] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
@@ -137,12 +202,12 @@ int MumpsSolver::matrixChanged()
   dmumps_c(mumps_);
   int error = mumps_->infog[1-1];
   if(error != 0) {
-    if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the analysis phase. \n", error);
+    if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the analysis phase. \n", error);
   }
 
   tm = MPI_Wtime()-tm;
   if(gMUMPSStatsOn)
-    if(my_rank_==0) printf("MUMPS analysis phase took %g seconds.\n", tm);
+    if(my_mumps_rank_==0) printf("MUMPS analysis phase took %g seconds.\n", tm);
 
   // INFOG(7) - after analysis:  The ordering method actually used. The returned value will depend on
   // the type of analysis performed, e.g. sequential or parallel (see INFOG(32)). Please refer to
@@ -151,12 +216,12 @@ int MumpsSolver::matrixChanged()
   //
   // INFOG(7) is 1 scotch or 2 metis if ICNTL(28) was set to 2 (parallel symbolic analysis)
   if(gMUMPSStatsOn)
-    if(my_rank_==0) printf("MUMPS ordering actually used %d\n", mumps_->infog[7-1]);
+    if(my_mumps_rank_==0) printf("MUMPS ordering actually used %d\n", mumps_->infog[7-1]);
   
   // INFOG(32) - after analysis: The type of analysis actually done (see ICNTL(28)). 
   // 1 sequential, 2 parallel
   if(gMUMPSStatsOn)
-    if(my_rank_==0) printf("MUMPS ordering parallelism %d\n", mumps_->infog[32-1]);
+    if(my_mumps_rank_==0) printf("MUMPS ordering parallelism %d\n", mumps_->infog[32-1]);
   //
   //factorize
   //
@@ -167,7 +232,7 @@ int MumpsSolver::matrixChanged()
   dmumps_c(mumps_);
   error = mumps_->infog[1-1];
   if(error != 0) {
-    if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
+    if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
   }
   //printf("[3] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
   saveOrderingPermutation();
@@ -188,7 +253,7 @@ int MumpsSolver::matrixChanged()
       double mem_percent = mumps_->icntl[13];
       mumps_->icntl[13] = 2 * mumps_->icntl[13];
 
-      if(my_rank_==0) printf("Increased Mumps ICNTL(14) from %g to %d\n", mem_percent, mumps_->icntl[13]);
+      if(my_mumps_rank_==0) printf("Increased Mumps ICNTL(14) from %g to %d\n", mem_percent, mumps_->icntl[13]);
 
       dmumps_c(mumps_);
       error = mumps_->infog[1-1];
@@ -200,27 +265,27 @@ int MumpsSolver::matrixChanged()
     }
 
     if (error == -8 || error == -9) {
-      if(my_rank_==0) printf("Fatal error in Mumps: not able to obtain more memory (ICNTL(14)-related)\n");
+      if(my_mumps_rank_==0) printf("Fatal error in Mumps: not able to obtain more memory (ICNTL(14)-related)\n");
       return -1;
     }
   }
 
   if (error == -10) {
     //system is singular
-    if(my_rank_==0) printf("Warning: Mumps INFO(1) = %d matrix is singular.\n", error);
+    if(my_mumps_rank_==0) printf("Warning: Mumps INFO(1) = %d matrix is singular.\n", error);
     return -1;
   }
 
   tm = MPI_Wtime()-tm;
   if(gMUMPSStatsOn)
-    if(my_rank_==0) printf("MUMPS numerical factorization took %g seconds.\n", tm);
+    if(my_mumps_rank_==0) printf("MUMPS numerical factorization took %g seconds.\n", tm);
 
   if(gMUMPSStatsOn)
-    if(my_rank_==0) printf("Order of the largest frontal matrix: %d\n", mumps_->infog[11-1]);
+    if(my_mumps_rank_==0) printf("Order of the largest frontal matrix: %d\n", mumps_->infog[11-1]);
 
   int negEigVal = mumps_->infog[12-1];
 
-  if(gMUMPSStatsOn) if(my_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
+  if(gMUMPSStatsOn) if(my_mumps_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
   return negEigVal;
 }
 
@@ -230,7 +295,7 @@ int MumpsSolver::saveOrderingPermutation() {
   //save ordering computed by MUMPS to disk in ordering.txt. The ordering is on host processor
   //mumps par%SYM PERM
   const char* filename = "ordering.txt";
-  if(my_rank_ == 0) {
+  if(my_mumps_rank_ == 0) {
     FILE* f = fopen(filename, "w");
     if(NULL!=f) {
       for(int it=0; it<n_; it++)
@@ -266,14 +331,14 @@ void  MumpsSolver::solve ( double* vec )
   dmumps_c(mumps_);
   int error = mumps_->infog[1-1];
   if(error != 0) {
-    if(my_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the solve phase. \n", error);
+    if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the solve phase. \n", error);
     assert(false);
     return;
   }
 
   t = MPI_Wtime()-t;
   if(gMUMPSStatsOn)
-    if(my_rank_==0) printf("MUMPS solve  took %g seconds.\n", t);
+    if(my_mumps_rank_==0) printf("MUMPS solve  took %g seconds.\n", t);
 
   //
   //error analysis ICNTL(11)
@@ -291,7 +356,7 @@ void  MumpsSolver::solve ( double* vec )
   double omega1=mumps_->rinfog[7-1], omega2=mumps_->rinfog[8-1];
 
   if(gMUMPSStatsOn)
-    if(my_rank_==0) 
+    if(my_mumps_rank_==0) 
       printf("MUMPS solution: backward errors %g %g  scaled resid %g Ainfnorm %g  xinfnorm %g.\n", 
 	     omega1, omega2, relresid, Ainfnrm, xinfnrm);
 
@@ -300,33 +365,36 @@ void  MumpsSolver::solve ( double* vec )
 #ifndef WITHOUT_PIPS
 void MumpsSolver::solve ( OoqpVector& v )
 {
-  char fortranUplo = 'U';
-  int info;
-  int one = 1;
+  assert(false);
+  // char fortranUplo = 'U';
+  // int info;
+  // int one = 1;
 
-  int n = mStorage->n; SimpleVector &  sv = dynamic_cast<SimpleVector &>(v);
-
-
-  FNAME(dsytrs)( &fortranUplo, &n, &one,	&mStorage->M[0][0],	&n,
-	   ipiv, &sv[0],	&n,	&info);
+  // int n = mStorage->n; SimpleVector &  sv = dynamic_cast<SimpleVector &>(v);
 
 
-  assert(info==0);
+  // FNAME(dsytrs)( &fortranUplo, &n, &one,	&mStorage->M[0][0],	&n,
+  // 	   ipiv, &sv[0],	&n,	&info);
+
+
+  // assert(info==0);
 }
 
 void MumpsSolver::solve ( GenMatrix& rhs_in )
 {
-  DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
-  char fortranUplo = 'U';
-  int info;
-  int nrows,ncols; rhs.getSize(ncols,nrows);
+  assert(false);
 
-  int n = mStorage->n;
+  // DenseGenMatrix &rhs = dynamic_cast<DenseGenMatrix&>(rhs_in);
+  // char fortranUplo = 'U';
+  // int info;
+  // int nrows,ncols; rhs.getSize(ncols,nrows);
 
-  FNAME(dsytrs)( &fortranUplo, &n, &ncols,	&mStorage->M[0][0],	&n,
-	   ipiv, &rhs[0][0],	&n,	&info);
+  // int n = mStorage->n;
 
-  assert(info==0);
+  // FNAME(dsytrs)( &fortranUplo, &n, &ncols,	&mStorage->M[0][0],	&n,
+  // 	   ipiv, &rhs[0][0],	&n,	&info);
+
+  // assert(info==0);
 }
 #endif
 
