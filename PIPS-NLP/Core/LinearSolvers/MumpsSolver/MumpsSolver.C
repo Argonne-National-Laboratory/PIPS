@@ -332,8 +332,8 @@ void  MumpsSolver::solve ( double* vec )
   int error = mumps_->infog[1-1];
   if(error != 0) {
     if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the solve phase. \n", error);
-    assert(false);
-    return;
+    if(error<0)
+      exit(1);
   }
 
   t = MPI_Wtime()-t;
@@ -365,7 +365,8 @@ void  MumpsSolver::solve ( double* vec )
 #ifndef WITHOUT_PIPS
 void MumpsSolver::solve ( OoqpVector& v )
 {
-  assert(false);
+  SimpleVector &  sv = dynamic_cast<SimpleVector &>(v);
+  solve(&sv[0]);
   // char fortranUplo = 'U';
   // int info;
   // int one = 1;
