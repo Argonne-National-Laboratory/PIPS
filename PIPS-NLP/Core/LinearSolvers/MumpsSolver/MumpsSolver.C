@@ -35,13 +35,14 @@ MumpsSolver::MumpsSolver( DenseSymMatrix * storage, MPI_Comm mumpsMpiComm_, MPI_
 void MumpsSolver::gutsOfconstructor( MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ ) {
   pipsMpiComm =  pipsMpiComm_;
   mumpsMpiComm = mumpsMpiComm_;
-  
   if(MPI_COMM_NULL==mumpsMpiComm) {
     mumps_=NULL;
+    my_mumps_rank_ = -1;
   } else {
     createMumpsStruct();
+    int error=MPI_Comm_rank(mumpsMpiComm, &my_mumps_rank_); assert(error==MPI_SUCCESS);
   }
-  int error=MPI_Comm_rank(mumpsMpiComm, &my_mumps_rank_); assert(error==MPI_SUCCESS);
+
 }
 
 MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_)
@@ -125,12 +126,36 @@ void MumpsSolver::denseMatToSpTriplet()
     nnz++; //always have diags
   }
 
-  printf("pointer %lu \n", mumps_->irn_loc);
+  if(NULL==mumps_->irn_loc) {
+    mumps_->irn_loc = new int[nnz];
+  } else {
+    if(mumps_->nnz != nnz) {
+      if(gMUMPSStatsOn)
+	if(my_mumps_rank_==0) printf("MUMPSSolver: mismatch in the number of nonzeros, reallocating triplet arrays....\n");
+      delete[] mumps_->irn_loc;
+      mumps_->irn_loc = new int[nnz];
+    }
+  }
+
+  if(NULL==mumps_->jcn_loc) {
+    mumps_->jcn_loc = new int[nnz];
+  } else {
+    if(mumps_->nnz != nnz) {
+      delete[] mumps_->jcn_loc;
+      mumps_->jcn_loc = new int[nnz];
+    }
+  }
+  if(NULL==mumps_->a_loc) {
+    mumps_->a_loc = new double[nnz];
+  } else {
+    if(mumps_->nnz != nnz) {
+      delete[] mumps_->a_loc;
+      mumps_->a_loc = new double[nnz];
+    }
+  }
+
   mumps_->nnz     = nnz;
   mumps_->nnz_loc = nnz;
-  mumps_->irn_loc = new int[nnz];
-  mumps_->jcn_loc = new int[nnz];
-  mumps_->a_loc = new double[nnz];
 
   //copy nz values
   int nzIt=0;
@@ -156,137 +181,149 @@ void MumpsSolver::denseMatToSpTriplet()
 //#include "mpi.h"
 int MumpsSolver::matrixChanged()
 {
-  if(mumpsMpiComm==MPI_COMM_NULL) 
-    assert(false);
-
+  if(mumpsMpiComm!=MPI_COMM_NULL) {
 #ifndef WITHOUT_PIPS
-  if(Mdsys!=NULL)
-    denseMatToSpTriplet();
+    if(Mdsys!=NULL)
+      denseMatToSpTriplet();
 #endif 
 
-  mumps_->n = n_;
+    mumps_->n = n_;
+    
+    //printf("[1] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
+    
+    mumps_->job = 1; //perform the analysis
+    
+    //ICNTL(28) determines whether a sequential (=1) or a parallel analysis (=2) is performed. For the latter case
+    //ICNTL(7) is meaningless. Automatic choice would be indicated by 0
+    mumps_->icntl[28-1] = 2; 
+    
+    //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
+    // 1 for PT_SCOTCH, 2 for ParMetis, 0 automatic (default)
+    //mumps_->icntl[29-1] =2;
 
-  //printf("[1] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
+    // 0: parallel factorization of the root node (default)
+    // > 0: forces a sequential factorization of the root node (ScaLAPACK will not be used).
+    // In this case if the number of working processors is strictly larger than ICNTL(13) then 
+    // splitting of the root node is performed, in order to automatically recover part of the 
+    // parallelism lost because the root node was processed sequentially (advised value is 1).
+    //
+    // see also CNTL(1): CNTL(1) is the relative threshold for numerical pivoting.
+    //
+    //petra: note that parallel factorization of the root nodes results in incorrect inertia calculation
+    //petra: because of an issue with ScaLAPACK. 
+    //petra: thus, use with > 0, in particular the advised value seem to work fine, but different hardware may
+    //petra: give different performance
+    mumps_->icntl[13-1] = 1;
 
-  mumps_->job = 1; //perform the analysis
+    // CNTL(4) determines the threshold for static pivoting. 0.0 will activate it and MUMPS computes the threshold
+    // automatically. Negative values will disable it (default). 
+    // static pivoting requires iterative refinement.
+    //mumps_->cntl[4-1] = 0.0;
 
-  //ICNTL(28) determines whether a sequential (=1) or a parallel analysis (=2) is performed. For the latter case
-  //ICNTL(7) is meaningless. Automatic choice would be indicated by 0
-  mumps_->icntl[28-1] = 2; 
+    double tm = MPI_Wtime();
 
-  //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
-  // 1 for PT_SCOTCH, 2 for ParMetis, 0 automatic (default)
-  //mumps_->icntl[29-1] =2;
-
-  // 0: parallel factorization of the root node (default)
-  // > 0: forces a sequential factorization of the root node (ScaLAPACK will not be used).
-  // In this case if the number of working processors is strictly larger than ICNTL(13) then 
-  // splitting of the root node is performed, in order to automatically recover part of the 
-  // parallelism lost because the root node was processed sequentially (advised value is 1).
-  //
-  // see also CNTL(1): CNTL(1) is the relative threshold for numerical pivoting.
-  //
-  //petra: note that parallel factorization of the root nodes results in incorrect inertia calculation
-  //petra: because of an issue with ScaLAPACK. 
-  //petra: thus, use with > 0, in particular the advised value seem to work fine, but different hardware may
-  //petra: give different performance
-  mumps_->icntl[13-1] = 1;
-
-  // CNTL(4) determines the threshold for static pivoting. 0.0 will activate it and MUMPS computes the threshold
-  // automatically. Negative values will disable it (default). 
-  // static pivoting requires iterative refinement.
-  //mumps_->cntl[4-1] = 0.0;
-
-  double tm = MPI_Wtime();
-
-  dmumps_c(mumps_);
-  int error = mumps_->infog[1-1];
-  if(error != 0) {
-    if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the analysis phase. \n", error);
-  }
-
-  tm = MPI_Wtime()-tm;
-  if(gMUMPSStatsOn)
-    if(my_mumps_rank_==0) printf("MUMPS analysis phase took %g seconds.\n", tm);
-
-  // INFOG(7) - after analysis:  The ordering method actually used. The returned value will depend on
-  // the type of analysis performed, e.g. sequential or parallel (see INFOG(32)). Please refer to
-  // ICNTL(7) and ICNTL(29) for more details on the ordering methods available in sequential and
-  // parallel analysis respectively.
-  //
-  // INFOG(7) is 1 scotch or 2 metis if ICNTL(28) was set to 2 (parallel symbolic analysis)
-  if(gMUMPSStatsOn)
-    if(my_mumps_rank_==0) printf("MUMPS ordering actually used %d\n", mumps_->infog[7-1]);
-  
-  // INFOG(32) - after analysis: The type of analysis actually done (see ICNTL(28)). 
-  // 1 sequential, 2 parallel
-  if(gMUMPSStatsOn)
-    if(my_mumps_rank_==0) printf("MUMPS ordering parallelism %d\n", mumps_->infog[32-1]);
-  //
-  //factorize
-  //
-  mumps_->job = 2;
-
-  tm = MPI_Wtime();
-
-  dmumps_c(mumps_);
-  error = mumps_->infog[1-1];
-  if(error != 0) {
-    if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
-  }
-  //printf("[3] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
-  saveOrderingPermutation();
-
-  //CNTL(1) is the relative threshold for numerical pivoting.
-  //CNTL(4) determines the threshold for static pivoting. See Subsection 3.9
-  //INFOG(12) - after factorization: Total number of off-diagonal pivots
-  
-  //if ScaLAPACK is allowed for the last dense block (default in parallel, ICNTL(13)=0), then the
-  //presence of negative pivots in the part of the factorization processed with ScaLAPACK (subroutine
-  //P POTRF) will raise an error and the code -40 is then returned in INFOG(1);
-  if (error == -8 || error == -9) {
-    //not enough memory
-
-    //assert(false && "this code was not fully tested. ");
-    const int try_max=10;
-    for(int tr=0; tr<try_max; tr++) {
-      double mem_percent = mumps_->icntl[13];
-      mumps_->icntl[13] = 2 * mumps_->icntl[13];
-
-      if(my_mumps_rank_==0) printf("Increased Mumps ICNTL(14) from %g to %d\n", mem_percent, mumps_->icntl[13]);
-
-      dmumps_c(mumps_);
-      error = mumps_->infog[1-1];
-
-      saveOrderingPermutation();
-
-      if (error != -8 && error != -9)
-	break;
+    dmumps_c(mumps_);
+    int error = mumps_->infog[1-1];
+    if(error != 0) {
+      if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the analysis phase. \n", error);
     }
 
+    tm = MPI_Wtime()-tm;
+    if(gMUMPSStatsOn)
+      if(my_mumps_rank_==0) printf("MUMPS analysis phase took %g seconds.\n", tm);
+
+    // INFOG(7) - after analysis:  The ordering method actually used. The returned value will depend on
+    // the type of analysis performed, e.g. sequential or parallel (see INFOG(32)). Please refer to
+    // ICNTL(7) and ICNTL(29) for more details on the ordering methods available in sequential and
+    // parallel analysis respectively.
+    //
+    // INFOG(7) is 1 scotch or 2 metis if ICNTL(28) was set to 2 (parallel symbolic analysis)
+    if(gMUMPSStatsOn)
+      if(my_mumps_rank_==0) printf("MUMPS ordering actually used %d\n", mumps_->infog[7-1]);
+  
+    // INFOG(32) - after analysis: The type of analysis actually done (see ICNTL(28)). 
+    // 1 sequential, 2 parallel
+    if(gMUMPSStatsOn)
+      if(my_mumps_rank_==0) printf("MUMPS ordering parallelism %d\n", mumps_->infog[32-1]);
+    //
+    //factorize
+    //
+    mumps_->job = 2;
+
+    tm = MPI_Wtime();
+
+    dmumps_c(mumps_);
+    error = mumps_->infog[1-1];
+    if(error != 0) {
+      if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
+    }
+    //printf("[3] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
+    saveOrderingPermutation();
+
+    //CNTL(1) is the relative threshold for numerical pivoting.
+    //CNTL(4) determines the threshold for static pivoting. See Subsection 3.9
+    //INFOG(12) - after factorization: Total number of off-diagonal pivots
+  
+    //if ScaLAPACK is allowed for the last dense block (default in parallel, ICNTL(13)=0), then the
+    //presence of negative pivots in the part of the factorization processed with ScaLAPACK (subroutine
+    //P POTRF) will raise an error and the code -40 is then returned in INFOG(1);
     if (error == -8 || error == -9) {
-      if(my_mumps_rank_==0) printf("Fatal error in Mumps: not able to obtain more memory (ICNTL(14)-related)\n");
-      return -1;
+      //not enough memory
+
+      //assert(false && "this code was not fully tested. ");
+      const int try_max=10;
+      for(int tr=0; tr<try_max; tr++) {
+	double mem_percent = mumps_->icntl[13];
+	mumps_->icntl[13] = 2 * mumps_->icntl[13];
+
+	if(my_mumps_rank_==0) printf("Increased Mumps ICNTL(14) from %g to %d\n", mem_percent, mumps_->icntl[13]);
+
+	dmumps_c(mumps_);
+	error = mumps_->infog[1-1];
+
+	saveOrderingPermutation();
+
+	if (error != -8 && error != -9)
+	  break;
+      }
+
+      if (error == -8 || error == -9) {
+	if(my_mumps_rank_==0) printf("Fatal error in Mumps: not able to obtain more memory (ICNTL(14)-related)\n");
+	exit(-1);
+      }
     }
+
+    if (error == -10) {
+      //system is singular
+      if(my_mumps_rank_==0) printf("Warning: Mumps INFO(1) = %d matrix is singular.\n", error);
+      exit(-1);
+    }
+
+    tm = MPI_Wtime()-tm;
+    if(gMUMPSStatsOn)
+      if(my_mumps_rank_==0) printf("MUMPS numerical factorization took %g seconds.\n", tm);
+
+    if(gMUMPSStatsOn)
+      if(my_mumps_rank_==0) printf("Order of the largest frontal matrix: %d\n", mumps_->infog[11-1]);
+
+    int negEigVal = mumps_->infog[12-1];
+
+    if(gMUMPSStatsOn) if(my_mumps_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
+
+    //~done with the factorization
+
+    //broadcast negEigVal
+    int rankInPipsComm=0;
+    int ierr = MPI_Bcast(&negEigVal, 1, MPI_INT, rankInPipsComm, pipsMpiComm); assert(ierr==MPI_SUCCESS);
+    return negEigVal;
+  } //end of mumps comm is NOT null (i.e., the process is part of mumps computations)
+  else {
+    //the process is NOT part of mumps computations
+    int negEigVal=0;
+    int rankInPipsComm=0;
+    int ierr = MPI_Bcast(&negEigVal, 1, MPI_INT, rankInPipsComm, pipsMpiComm); assert(ierr==MPI_SUCCESS);
+    return negEigVal;
   }
-
-  if (error == -10) {
-    //system is singular
-    if(my_mumps_rank_==0) printf("Warning: Mumps INFO(1) = %d matrix is singular.\n", error);
-    return -1;
-  }
-
-  tm = MPI_Wtime()-tm;
-  if(gMUMPSStatsOn)
-    if(my_mumps_rank_==0) printf("MUMPS numerical factorization took %g seconds.\n", tm);
-
-  if(gMUMPSStatsOn)
-    if(my_mumps_rank_==0) printf("Order of the largest frontal matrix: %d\n", mumps_->infog[11-1]);
-
-  int negEigVal = mumps_->infog[12-1];
-
-  if(gMUMPSStatsOn) if(my_mumps_rank_==0)  printf("Mumps says matrix has %d negative eigenvalues\n", negEigVal);
-  return negEigVal;
 }
 
 int MumpsSolver::saveOrderingPermutation() {
@@ -333,7 +370,7 @@ void  MumpsSolver::solve ( double* vec )
   if(error != 0) {
     if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the solve phase. \n", error);
     if(error<0)
-      exit(1);
+      exit(error);
   }
 
   t = MPI_Wtime()-t;
@@ -365,8 +402,19 @@ void  MumpsSolver::solve ( double* vec )
 #ifndef WITHOUT_PIPS
 void MumpsSolver::solve ( OoqpVector& v )
 {
+  int rankInPipsComm=0;
   SimpleVector &  sv = dynamic_cast<SimpleVector &>(v);
-  solve(&sv[0]);
+
+  if(mumpsMpiComm!=MPI_COMM_NULL) {
+
+    solve(&sv[0]);
+
+  } else {
+
+  }
+
+  int ierr = MPI_Bcast(&sv[0], (int)n_, MPI_DOUBLE, rankInPipsComm, pipsMpiComm); assert(ierr==MPI_SUCCESS); 
+
   // char fortranUplo = 'U';
   // int info;
   // int one = 1;
