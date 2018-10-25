@@ -247,49 +247,43 @@ void pipsOptions::readFile()
 
   std::string fileName("pipsnlp.parameter");
   optfile = fopen(fileName.c_str(),"r");
-  if (optfile==NULL) {
-//	  printf("not find option file: %s \n",fileName.c_str());
-	  return;
-  }
-  else
-  {
-	  printf("load option file: %s \n",fileName.c_str());
-  }
+  if (optfile!=NULL) {
+    printf("load option file: %s \n",fileName.c_str());
+
   
-  /* Read one line of the options file */
-  while(fgets(buffer, 999, optfile)!=NULL){
-    parseLine(buffer);
+    /* Read one line of the options file */
+    while(fgets(buffer, 999, optfile)!=NULL){
+      parseLine(buffer);
+    }
+    fclose(optfile);
+    
+    if(splitHesDiag==1)
+      assert(outerSolve==3);
+    
+    if(UseReducedSpace==1 && NP_Alg==0){
+      BuildSchurComp = 1;
+    }
   }
-  fclose(optfile);
-
-  if(splitHesDiag==1)
-    assert(outerSolve==3);
-
-  if(UseReducedSpace==1 && NP_Alg==0){
-    BuildSchurComp = 1;
-  }
-
-
 
   if (mype == 0){
-  	printf("OPTION: Set printing level to %d\n",prtLvl);
-	printf("OPTION: Set Iteration Limit to %d\n",max_iter);
-	printf("OPTION: Set Convergence Tolerance to %.2e\n", conv_tol);
-
-	printf("OPTION: Max Line search step:   %d\n",LineSearchMatStep);
+    printf("OPTION: Set printing level to %d\n",prtLvl);
+    printf("OPTION: Set Iteration Limit to %d\n",max_iter);
+    printf("OPTION: Set Convergence Tolerance to %.2e\n", conv_tol);
+    
+    printf("OPTION: Max Line search step:   %d\n",LineSearchMatStep);
   }
 
   if(AddSlackParallelSetting==1){
-	if (mype == 0)printf("OPTION: Adding slacks in the parallel setting.\n");
+    if (mype == 0)printf("OPTION: Adding slacks in the parallel setting.\n");
   }
-
+  
   if(UseReducedSpace==1){
-//  	BuildSchurComp = 0;
-	if(RS_MaxIR>10) RS_MaxIR=10;
-	if (mype == 0)printf("OPTION: Use Reduced Space Solver.\n");
-	if (mype == 0)printf("OPTION: Set Gen linear solver as UMFPACK.\n");
-	if (mype == 0)printf("OPTION: LU solver max IR:  %d \n", RS_MaxIR);
-	if (mype == 0)printf("OPTION: LU solver pivot tol:  %.2e \n", RS_LU_PivotLV);	
+    //BuildSchurComp = 0;
+    if(RS_MaxIR>10) RS_MaxIR=10;
+    if (mype == 0)printf("OPTION: Use Reduced Space Solver.\n");
+    if (mype == 0)printf("OPTION: Set Gen linear solver as UMFPACK.\n");
+    if (mype == 0)printf("OPTION: LU solver max IR:  %d \n", RS_MaxIR);
+    if (mype == 0)printf("OPTION: LU solver pivot tol:  %.2e \n", RS_LU_PivotLV);	
   }	
 
   if(SCOPF_precond==1){

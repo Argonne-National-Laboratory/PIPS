@@ -401,15 +401,13 @@ void  MumpsSolver::solve ( double* vec )
 
 #ifndef WITHOUT_PIPS
 void MumpsSolver::solve ( OoqpVector& v )
-{
+{ 
   int rankInPipsComm=0;
   SimpleVector &  sv = dynamic_cast<SimpleVector &>(v);
 
   if(mumpsMpiComm!=MPI_COMM_NULL) {
 
     solve(&sv[0]);
-
-  } else {
 
   }
 

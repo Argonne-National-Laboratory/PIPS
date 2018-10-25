@@ -1,6 +1,7 @@
 add_library(nlpstoch
   sFactory.C    
   sFactoryAug.C 
+  sFactoryAugSpTripletSC.C
   sData.C
   sLinsys.C   
   sLinsysRoot.C 
