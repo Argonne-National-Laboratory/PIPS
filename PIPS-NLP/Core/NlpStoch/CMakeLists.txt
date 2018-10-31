@@ -6,6 +6,7 @@ add_library(nlpstoch
   sLinsys.C   
   sLinsysRoot.C 
   sLinsysRootAug.C
+  sLinsysRootAugSpTriplet.C
   sLinsysLeaf.C  
   sVars.C 
   StochMonitor.C 
