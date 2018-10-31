@@ -26,7 +26,7 @@ public:
   /**
    * Access the individual elements of this vector.
    */
-  double & operator[]( int i ) { 
+  inline double & operator[]( int i ) { 
 #ifdef RANGECHECKS
     assert( i > 0 && i < n );
 #endif
