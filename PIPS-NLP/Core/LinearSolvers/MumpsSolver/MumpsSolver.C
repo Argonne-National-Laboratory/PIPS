@@ -23,13 +23,22 @@ static bool gMUMPSStatsOn=true;
 using namespace std;
 
 #ifndef WITHOUT_PIPS
-MumpsSolver::MumpsSolver( DenseSymMatrix * storage, MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ )
+MumpsSolver::MumpsSolver( SparseSymMatrixRowMajList* storage, MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ )
 {
-  Mdsys = storage;
-  n_ = Mdsys->size();
+  Msys = storage;
+  n_ = storage->size();
 
   gutsOfconstructor(mumpsMpiComm_, pipsMpiComm_);
 }
+
+MumpsDenseSolver::MumpsDenseSolver( DenseSymMatrix* storage, MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_)
+{
+  Msys = storage;
+  n_ = storage->size();
+
+  gutsOfconstructor(mumpsMpiComm_, pipsMpiComm_);
+}
+
 #endif
 
 void MumpsSolver::gutsOfconstructor( MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ ) {
@@ -49,7 +58,7 @@ MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm_, MPI_
 {
   n_ = globSize;
 #ifndef WITHOUT_PIPS
-  Mdsys = NULL;
+  Msys = NULL;
 #endif
   gutsOfconstructor(mumpsMpiComm_, pipsMpiComm_);
 }
@@ -59,6 +68,12 @@ MumpsSolver::~MumpsSolver()
   if(mumps_) {
     mumps_->job = -2; //terminate mumps
     dmumps_c(mumps_);
+
+    if(mumps_->irn_loc) delete [] mumps_->irn_loc;
+    if(mumps_->jcn_loc) delete [] mumps_->jcn_loc;
+    if(mumps_->a_loc) delete [] mumps_->a_loc;
+
+
     delete mumps_;
   }
 }
@@ -66,6 +81,12 @@ MumpsSolver::~MumpsSolver()
 void MumpsSolver::createMumpsStruct()
 {
   mumps_ = new DMUMPS_STRUC_C;
+  mumps_->n = 0;
+  mumps_->nnz = 0;
+  mumps_->irn_loc = NULL;
+  mumps_->jcn_loc = NULL;
+  mumps_->a_loc = NULL;
+  memset(mumps_->keep, 0, 400*sizeof(int));
   mumps_->comm_fortran = getFortranMPIComm(mumpsMpiComm);
   mumps_->sym = 2;//general symetric matrix
   mumps_->job = -1; //initialization
@@ -112,11 +133,53 @@ bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* loci
 // }
 
 #ifndef WITHOUT_PIPS
-void MumpsSolver::denseMatToSpTriplet()
+void MumpsSolver::sysMatToSpTriplet()
 {
+  assert(Msys);
+  SparseSymMatrixRowMajList* Mspsys = dynamic_cast<SparseSymMatrixRowMajList*>(Msys);
+  assert(Mspsys);
+  int nnz = Mspsys->numberOfNonZeros();
+
+  if(NULL==mumps_->irn_loc) {
+    mumps_->irn_loc = new int[nnz];
+  } else {
+    if(mumps_->nnz != nnz) {
+      if(gMUMPSStatsOn)
+	if(my_mumps_rank_==0) printf("MUMPSSolver: mismatch in the number of nonzeros, reallocating triplet arrays....\n");
+      delete[] mumps_->irn_loc;
+      mumps_->irn_loc = new int[nnz];
+    }
+  }
+
+  if(NULL==mumps_->jcn_loc) {
+    mumps_->jcn_loc = new int[nnz];
+  } else {
+    if(mumps_->nnz != nnz) {
+      delete[] mumps_->jcn_loc;
+      mumps_->jcn_loc = new int[nnz];
+    }
+  }
+  if(NULL==mumps_->a_loc) {
+    mumps_->a_loc = new double[nnz];
+  } else {
+    if(mumps_->nnz != nnz) {
+      delete[] mumps_->a_loc;
+      mumps_->a_loc = new double[nnz];
+    }
+  }
+
+  mumps_->nnz     = nnz;
+  mumps_->nnz_loc = nnz;
+
+  Mspsys->atGetSparseTriplet(mumps_->irn_loc, mumps_->jcn_loc, mumps_->a_loc);
+}
+void MumpsDenseSolver::sysMatToSpTriplet()
+{
+  assert(Msys);
+  DenseSymMatrix* Mdsys = dynamic_cast<DenseSymMatrix*>(Msys);
   assert(Mdsys);
   //detect sparsity -> count nnz
-  DenseSymMatrix &m = (*Mdsys);
+  DenseSymMatrix &m = *Mdsys; 
   int nnz=0;
   for(int i=0; i<n_; i++) {
     for(int j=i+1; j<n_; j++) 
@@ -178,13 +241,18 @@ void MumpsSolver::denseMatToSpTriplet()
   assert(nzIt==nnz);
 }
 #endif
-//#include "mpi.h"
+
 int MumpsSolver::matrixChanged()
 {
+  for(int nzIt=0; nzIt<mumps_->nnz; nzIt++) {
+    printf("%d %d %g\n", mumps_->irn_loc[nzIt], mumps_->jcn_loc[nzIt], mumps_->a_loc[nzIt]);
+  }
+
   if(mumpsMpiComm!=MPI_COMM_NULL) {
+
 #ifndef WITHOUT_PIPS
-    if(Mdsys!=NULL)
-      denseMatToSpTriplet();
+    if(Msys!=NULL)
+      sysMatToSpTriplet();
 #endif 
 
     mumps_->n = n_;

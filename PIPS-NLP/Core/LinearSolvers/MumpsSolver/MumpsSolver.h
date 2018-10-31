@@ -8,7 +8,7 @@
 #include "DenseSymMatrixHandle.h"
 #include "SparseSymMatrix.h"
 #include "DenseStorageHandle.h"
-
+#include "SparseSymMatrixRowMajList.h"
 #else
 class DoubleLinearSolver {};
 #endif
@@ -27,10 +27,10 @@ public:
   virtual ~MumpsSolver();
   /* Set entries that are local to the MPI rank. These arrays are not copied and the
    * the caller of this function needs the keep them for the lifetime of this class. */
-  bool setLocalEntries(long long globnnz, long long locnnz, int* locirn, int* locjcn, double* locA=NULL);
+  virtual bool setLocalEntries(long long globnnz, long long locnnz, 
+			       int* locirn, int* locjcn, double* locA=NULL);
 #ifndef WITHOUT_PIPS
-  MumpsSolver( DenseSymMatrix * storage, MPI_Comm mumpsMpiComm, MPI_Comm pipsMpiComm);
-  MumpsSolver( SparseSymMatrix * storage );
+  MumpsSolver( SparseSymMatrixRowMajList* storage, MPI_Comm mumpsMpiComm, MPI_Comm pipsMpiComm);
 #endif
   virtual void diagonalChanged( int idiag, int extent );
   virtual int matrixChanged();
@@ -78,12 +78,29 @@ protected:
   
   MPI_Comm pipsMpiComm, mumpsMpiComm;
 #ifndef WITHOUT_PIPS
-  DenseSymMatrix * Mdsys;
+  SymMatrix * Msys;
 #endif
 protected:
   void createMumpsStruct();
   void gutsOfconstructor( MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_ );
-  void denseMatToSpTriplet();
-}; // end of class def
+  virtual void sysMatToSpTriplet();
+#ifndef WITHOUT_PIPS
+  MumpsSolver() {};
+#endif
+}; // end of MumpsSolver class def
+
+
+
+class MumpsDenseSolver : public MumpsSolver {
+public:
+  virtual ~MumpsDenseSolver() {};
+#ifndef WITHOUT_PIPS
+  MumpsDenseSolver( DenseSymMatrix* storage, MPI_Comm mumpsMpiComm, MPI_Comm pipsMpiComm);
+#endif
+protected:
+  virtual void sysMatToSpTriplet();
+}; // end of MumpsSolver class def
+
+
 #endif
  
