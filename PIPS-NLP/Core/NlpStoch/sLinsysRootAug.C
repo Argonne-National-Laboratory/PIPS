@@ -23,12 +23,15 @@ extern int separateHandDiag;
 
 using namespace std;
 
+sLinsysRootAug::sLinsysRootAug()
+  : CtDC(NULL)
+{
+  
+}
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
-  kkt = createKKT(prob_);
-  solver = createSolver(prob_, kkt);
   assert(gOuterSolve>=3);
   redRhs = new SimpleVector(locnx+locmz+locmy+locmz);
 };
@@ -43,13 +46,16 @@ sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
   : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_, additiveDiag_), CtDC(NULL)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
-
-  kkt = createKKT(prob_);
-  solver = createSolver(prob_, kkt);
   assert(gOuterSolve>=3);  
   redRhs = new SimpleVector(locnx+locmz+locmy+locmz);
 };
 
+void sLinsysRootAug::initialize(sFactory* factory_, sData* prob_) 
+{
+  assert(gOuterSolve>=3);  
+  kkt = createKKT(prob_);
+  solver = createSolver(prob_, kkt);
+};
 sLinsysRootAug::~sLinsysRootAug()
 {
   if(CtDC) delete CtDC;
@@ -72,33 +78,22 @@ sLinsysRootAug::createKKT(sData* prob)
   return new DenseSymMatrix(n);
 }
 
+extern int gBuildSchurComp;
 
 DoubleLinearSolver*
 sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
-
+  assert(gBuildSchurComp<3);
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
   //return new PardisoSolver(kktmat);
 
   //this is the default, LAPACK-based
-  //return new DeSymIndefSolver(kktmat);
+  //return new MumpsDenseSolver(kktmat, MPI_COMM_WORLD, MPI_COMM_WORLD);
+  return new DeSymIndefSolver(kktmat);
 
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
 
-
-  //1. create the communicator for the subset of processes that MUMPS should use
-  int color = MPI_UNDEFINED;
-  int myRank; MPI_Comm_rank(mpiComm, &myRank);
-  //color only rank 0 and leave the other ones uncolored. MUMPS communicator created below will be MPI_COMM_NULL on
-  //the nodes not colored
-  if(myRank==0)
-    color = 0;
-  MPI_Comm mumpsComm;
-  MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
-  
-  //2. create and return the wrapper instance for Mumps
-  return new MumpsSolver(kktmat, mumpsComm, mpiComm);
 }
 
 #ifdef TIMING
