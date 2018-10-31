@@ -59,6 +59,7 @@ protected:
   dWd = 0;
   thd = 0;
   dmodu = 0;
+  comerr = 0.;
   };
 
 public:
