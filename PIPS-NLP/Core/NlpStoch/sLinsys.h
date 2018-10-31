@@ -11,6 +11,7 @@
 #include "DoubleLinearSolver.h"
 #include "OoqpVectorHandle.h"
 #include "DenseSymMatrix.h"
+#include "SparseSymMatrixRowMajList.h"
 #include "DenseGenMatrix.h"
 #include "SimpleVector.h"
 #include "StochVector.h"
@@ -105,7 +106,8 @@ class sLinsys : public NlpGenLinsys
    */
   virtual void addTermToDenseSchurCompl(sData *prob, 
 					DenseSymMatrix& SC);
-					
+  virtual void addTermToDenseSchurCompl(sData *prob, 
+					SparseSymMatrixRowMajList& SC);
   virtual void addColsToDenseSchurCompl(sData *prob, 
 					DenseGenMatrix& out, 
 					int startcol, int endcol);
@@ -134,6 +136,7 @@ class sLinsys : public NlpGenLinsys
   virtual void _setupYaddLniTx( sData *prob, OoqpVector& y_, 
 			   double alpha, SimpleVector& x, const int aimlevel);
 
+  virtual void initialize(sFactory* factory, sData* prob) = 0;
  public:
   MPI_Comm mpiComm;
   sTree* stochNode;

@@ -25,6 +25,7 @@
 #include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
 #endif
 
+#include <cmath>
 
 #ifndef MIN
 #define MIN(a,b) ((a > b) ? b : a)
@@ -868,6 +869,165 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     }
 
   if(ispardiso) delete[] colSparsity;
+}
+
+
+
+/**
+ * Computes U = Gi * inv(H_i) * Gi^T.
+ *        [ R 0 0 ]
+ * Gi^T = [ A 0 0 ]
+ *        [ C 0 0]
+ *
+ * A and C are the recourse eq. and ineq. matrices, R is the cross
+ * Hessian term.
+ *
+ * if gOuterSolve>=3 && separateHandDiag==0
+ *        		[ R 0 0 ]
+ *        		[ 0 0 0 ]   <--- for the Ineq Cons slack var
+ * Gi^T = 	        [ A 0 0 ]
+ *        		[ C 0 0]
+ *
+ * A and C are the recourse eq. and ineq. matrices, R is the cross
+ * Hessian term.
+ *
+ * Approach:
+ *  1. take 'blocksize' columns of Gi^T (N x nx0) and put them in 'cols' (N x blocksize) 
+ *  2. compute cols = inv(H_i)*cols ( N x blocksize)
+ *  3. multiply scpart = Gi*cols (nx0 x blocksize)
+ *  4. add "sparsified" scpart to SC ( NP x NP) where (NP = nx0+my0+mz0 (+mz0) )
+ *
+ */
+
+void 
+sLinsys::addTermToDenseSchurCompl(sData *prob, 
+				  SparseSymMatrixRowMajList& SC) 
+{
+  SparseGenMatrix& A = prob->getLocalA();
+  SparseGenMatrix& C = prob->getLocalC();
+  SparseGenMatrix& R = prob->getLocalCrossHessian();
+  
+
+  int N, nxP, NP,mR,nR;
+  int locns = locmz;
+  
+  int mle = prob->getmle();
+  int mli = prob->getmli();
+  assert(mle==0 && "this method needs an update for this case");
+  assert(mli==0 && "this method needs an update for this case");
+  //SparseGenMatrix& E = prob->getLocalE();
+  //SparseGenMatrix& F = prob->getLocalF();
+
+  //!SparseGenMatrix ET;
+  //!SparseGenMatrix FT;
+  //!ET.transCopyof(E);
+  //!FT.transCopyof(F);
+
+  int nx0, my0, mz0;
+  stochNode->get_FistStageSize(nx0, my0,mz0);
+   
+  A.getSize(N, nxP); assert(N==locmy);
+  NP = SC.size(); assert(NP>=nxP);
+
+  if(nxP==-1) C.getSize(N,nxP);
+  if(nxP==-1) nxP = NP;
+  if(gOuterSolve>=3 ) 
+    N = locnx+locns+locmy+locmz;
+  else
+    N = locnx+locmy+locmz;
+
+
+  int blocksize = 64;
+  DenseGenMatrix cols(blocksize,N);
+  DenseGenMatrix scpart(blocksize,nx0);
+  //bool ispardiso=false;
+  //PardisoSolver* pardisoSlv=NULL;
+  //int* colSparsity=NULL;
+  //if(pardisoSlv) {
+  //  ispardiso=true;
+  //  colSparsity=new int[N];
+    //blocksize=32;
+  //}
+  
+  for (int it=0; it < nxP; it += blocksize) {
+    int start=it;
+    int end = MIN(it+blocksize,nxP);
+    int numcols = end-start;
+    cols.getStorageRef().m = numcols; // avoid extra solves
+    
+    bool allzero = true;
+    memset(&cols[0][0],0.,N*blocksize*sizeof(double));
+    memset(&scpart[0][0],0.,nx0*blocksize*sizeof(double));
+
+    if(gOuterSolve>=3 ) {
+      R.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
+      A.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locns], N, numcols, allzero);
+      C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locns+locmy], N, numcols, allzero);
+    } else {
+      R.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
+      A.getStorageRef().fromGetColBlock(start, &cols[0][locnx], N, numcols, allzero);
+      C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, allzero);
+    }    
+    //}
+    
+    if(!allzero) {
+      //if(ispardiso)
+      //pardisoSlv->solve(cols,colSparsity);
+      //else 
+      solver->solve(cols);
+
+      if(gOuterSolve>=3 ) {
+	R.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,  
+					-1.0, &cols[0][0], N);
+        A.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,  
+					-1.0, &cols[0][locnx+locns], N);	
+        C.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,
+					-1.0, &cols[0][locnx+locns+locmy], N);
+        // R.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
+	// 				-1.0, &cols[0][0], N);
+        // A.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
+	// 				-1.0, &cols[0][locnx+locns], N);	
+        // C.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,
+	// 				-1.0, &cols[0][locnx+locns+locmy], N);
+	//!mle>0)
+        //!ET.getStorageRef().transMultMat( 1.0,  &(SC.getStorageRef().M[nx0+mz0+my0-mle][start]), numcols, NP, -1.0, &cols[0][0], N);
+	//!if(mli>0)
+	//!FT.getStorageRef().transMultMat( 1.0, &(SC.getStorageRef().M[nx0+mz0+my0+mz0-mli][start]), numcols, NP,
+        //!                        -1.0, &cols[0][0], N);
+      } else {
+	R.getStorageRef().transMultMat( 1.0, &(scpart[0][start]), numcols, nx0,
+					-1.0, &cols[0][0], N);
+	A.getStorageRef().transMultMat( 1.0, &(scpart[0][start]), numcols, nx0,
+					-1.0, &cols[0][locnx], N);
+	C.getStorageRef().transMultMat( 1.0, &(scpart[0][start]), numcols, nx0,
+					-1.0, &cols[0][locnx+locmy], N);
+	// R.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
+	// 				-1.0, &cols[0][0], N);
+	// A.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
+	// 				-1.0, &cols[0][locnx], N);
+	// C.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,
+	// 				-1.0, &cols[0][locnx+locmy], N);
+      }
+    } //end !allzero
+    const double AbsTolForZero=1e-16;
+    //add sparsified scpart  to SC
+    double val; 
+    for(int i=0; i<nx0; i++) {
+      std::list<ColVal> colvalSrc;
+      for(int j=std::max(start,i); j<start+blocksize; j++) {
+	val = scpart[j-start][i];
+
+	if(std::abs(val)>AbsTolForZero)
+	  colvalSrc.push_back(ColVal(j+start,val));
+      }
+      SC.atAddSpRow(i, colvalSrc);
+    }
+
+  } //end iterations over blocks
+
+  //!code for mle and mli (linking constraints) would be similar to the code in the other addTermToDenseSchurCompl method.
+
+
 }
 
 
