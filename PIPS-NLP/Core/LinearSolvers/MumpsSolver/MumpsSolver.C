@@ -51,7 +51,6 @@ void MumpsSolver::gutsOfconstructor( MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiCom
     createMumpsStruct();
     int error=MPI_Comm_rank(mumpsMpiComm, &my_mumps_rank_); assert(error==MPI_SUCCESS);
   }
-
 }
 
 MumpsSolver::MumpsSolver(const long long& globSize, MPI_Comm mumpsMpiComm_, MPI_Comm pipsMpiComm_)
@@ -244,20 +243,18 @@ void MumpsDenseSolver::sysMatToSpTriplet()
 
 int MumpsSolver::matrixChanged()
 {
-  for(int nzIt=0; nzIt<mumps_->nnz; nzIt++) {
-    printf("%d %d %g\n", mumps_->irn_loc[nzIt], mumps_->jcn_loc[nzIt], mumps_->a_loc[nzIt]);
-  }
-
   if(mumpsMpiComm!=MPI_COMM_NULL) {
-
+    
 #ifndef WITHOUT_PIPS
     if(Msys!=NULL)
       sysMatToSpTriplet();
 #endif 
+    
+    //for(int nzIt=0; nzIt<mumps_->nnz; nzIt++) {
+    //  printf("%d %d %g\n", mumps_->irn_loc[nzIt], mumps_->jcn_loc[nzIt], mumps_->a_loc[nzIt]);
+    //}
 
     mumps_->n = n_;
-    
-    //printf("[1] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
     
     mumps_->job = 1; //perform the analysis
     
@@ -325,8 +322,7 @@ int MumpsSolver::matrixChanged()
     if(error != 0) {
       if(my_mumps_rank_==0) printf("Error INFOG(1)=%d occured in Mumps in the factorization phase. \n", error);
     }
-    //printf("[3] nnz %d nnz_loc %d nelt %d\n", mumps_->nnz, mumps_->nnz_loc, mumps_->nelt);
-    saveOrderingPermutation();
+    //saveOrderingPermutation();
 
     //CNTL(1) is the relative threshold for numerical pivoting.
     //CNTL(4) determines the threshold for static pivoting. See Subsection 3.9
@@ -517,7 +513,6 @@ void MumpsSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 {
   this->matrixChanged();
 }
-
 
 /* 0  - no output
  * 1  - error messages only
