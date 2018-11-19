@@ -88,7 +88,6 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
     SparseSymMatrixRowMajList* kktmat = dynamic_cast<SparseSymMatrixRowMajList*>(kktmat_);
     return new MumpsSolver(kktmat, mumpsComm, mpiComm);
   }
-
 }
 
 #ifdef TIMING
@@ -107,11 +106,9 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
   stochNode->resMon.recSchurMultLocal_start();
 
   SparseSymMatrixRowMajList& kktm = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
- 
-  //////////////////////////////////////////////////////
-  // compute Q+diag(xdiag)  
-  // and update the KKT
-  //////////////////////////////////////////////////////
+  
+  //int nnz = kktm.numberOfNonZeros();
+  //printf("nnz mat------------- %d\n", nnz);
 
   /////////////////////////////////////////////////////////////
   // update the KKT with Q (use diag from xDiag DIAG)
@@ -119,26 +116,41 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
   SparseSymMatrix& Q = prob->getLocalQ();
   SimpleVector& sxDiag = dynamic_cast<SimpleVector&>(*xDiag);
   int* krowQ=Q.krowM(); int* jcolQ=Q.jcolM(); double* dQ=Q.M();
-  int jstart = krowQ[0], jend;
+  int jstart = krowQ[0], jend, nelems;
   for(int i=0; i<locnx; i++) {
     
     jend = krowQ[i+1];
-    assert(jcolQ[jstart]==i); 
 
-    //add +1 since we exclude the diagonal entry
-    kktm.atAddSpRow(i, jcolQ + jstart+1, dQ+jstart+1, jend-jstart-1);
+    //assert(jend-jstart==0 || jcolQ[jend-1]==i); //safe to remove for the small test examples
 
+    //we only add "jend-jstart-1" since we do not want to add the diagonal entry;
+    //this is already in sxDiag; these diag entries are added below by using atAddDiagonal
+
+    nelems = jend-jstart;
+    if(nelems<=0) continue;
+
+    //upper or lower triangular Q ?  JuMP sends lower, but the test example are inapropriately coded as upper
+    if(jcolQ[jend-1]<=i) {
+      //lower!
+      assert(jcolQ[jstart]<=i);
+      if(jcolQ[jend-1]==i)
+	kktm.atAddSpRow(i, jcolQ + jstart, dQ+jstart, nelems-1);
+      else 
+	kktm.atAddSpRow(i, jcolQ + jstart, dQ+jstart, nelems);
+    } else {
+      //upper
+      assert(jcolQ[jstart]>=i && "we expect the upper triangular part of the matrix");
+      printf("Warning: input sparse symmetric matrices are in upper triangular format, which will cause performance issues.\n");
+      if(jcolQ[jstart]==i) {
+	kktm.atAddSpRow(i, jcolQ+jstart+1, dQ+jstart+1, nelems-1);
+      } else {
+	kktm.atAddSpRow(i, jcolQ+jstart+1, dQ+jstart+1, nelems);
+      }
+
+
+      //kktm.atAddSpRow(i, jcolQ + jstart, dQ+jstart, jend-jstart-1);
+    }
     jstart = jend;
-    // for(p=krowQ[i]; p<pend; p++) {
-    //   j = jcolQ[p]; 
-    //   assert(j>=i);
-    //   if(i==j) {
-    // 	colValSrc.push_back(ColVal(j,sxDiag[i]));
-    //   } else {
-    // 	colValSrc.push_back(ColVal(j,dQ[p]));
-    //   }
-    // }
-    // kktm.atAddSpRow(i, colValSrc);
   }
 
   kktm.atAddDiagonal(0,sxDiag);
@@ -170,28 +182,27 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
   SimpleVector& szDiag = dynamic_cast<SimpleVector&>(*zDiag);
 
   /////////////////////////////////////////////////////////////////////
-  // update the KKT with  S part 
-  //      and with the left -I -> left upper (locnx,locnx+locmz+locmy)
-  //                           ->right lower (locnx+locmz,locnx+locmz+locmy+locmz)
+  // update the KKT with  S diag part 
   ////////////////////////////////////////////////////////////////////
   if(locmz>0) {
-    int jcol[2]; double M[2];
-    for(int i=locnx; i<locnx+locmz; i++) {
-      jcol[0] = i; jcol[1] = i+locmz+locmy;
-      M[0] = ssDiag[i-locnx]; M[1]=-1.;
-      kktm.atAddSpRow(i, jcol, M, 2);
-    }
-    //kktm.atPutDiagonal(locnx,ssDiag);
+    kktm.atAddDiagonal(locnx, ssDiag);
+    // int jcol[2]; double M[2];
     // for(int i=locnx; i<locnx+locmz; i++) {
-    //   //dKkt[i][i] += ssDiag[i-locnx];
+    //   jcol[0] = i; jcol[1] = i+locmz+locmy;
+    //   M[0] = ssDiag[i-locnx]; M[1]=-1.;
+    //   kktm.atAddSpRow(i, jcol, M, 2);
     // }
+    // //kktm.atPutDiagonal(locnx,ssDiag);
+    // // for(int i=locnx; i<locnx+locmz; i++) {
+    // //   //dKkt[i][i] += ssDiag[i-locnx];
+    // // }
   }
   /////////////////////////////////////////////////////////////
   // update the KKT with A (symmetric update forced)
   /////////////////////////////////////////////////////////////
   if(locmy>0){
-    //!kktd->symAtAddSubmatrix( locnx+locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );`
-    kktm.forceSymUpdate(true);
+    //!kktd->symAtAddSubmatrix( locnx+locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );
+    kktm.forceSymUpdate(false);
     kktm.symAtAddSubmatrix(locnx+locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx);
     kktm.forceSymUpdate(false);
     //!for(int i=locnx+locmz; i<locnx+locmz+locmy; i++) dKkt[i][i] += syDiag[i-locnx-locmz];
@@ -203,19 +214,26 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
     assert(false && "not yet supported");
     //!   kktd->symAtAddSubmatrix( locnx+locmz+locmy-mle, 0, prob->getLocalE(), 0, 0, mle, locnx, 1 );
   }
-  // /////////////////////////////////////////////////////////////
-  // // update the KKT with C (symmetric update forced)  and dual reg
-  // /////////////////////////////////////////////////////////////  
+  // ////////////////////////////////////////////////////////////////////////////
+  // // update the KKT with C   and (dual reg and -I corresponding to \delta z)
+  // ///////////////////////////////////////////////////////////////////////////
   if(locmz>0){
-    kktm.forceSymUpdate(true);
+    kktm.forceSymUpdate(false);
     kktm.symAtAddSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx);
     kktm.forceSymUpdate(false);
-    //   kktd->symAtAddSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx, 1 );
-    kktm.atPutDiagonal(locnx+locmz+locmy, szDiag);
-    // 	for(int i=0; i<locmz; i++){
-    // 		dKkt[i+locnx+locmz+locmy][i+locnx] -= 1.0;
-    // 		dKkt[i+locnx][i+locnx+locmz+locmy] -= 1.0;
-    // 		dKkt[i+locnx+locmz+locmy][i+locnx+locmz+locmy] += szDiag[i];
+    // //   kktd->symAtAddSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx, 1 );
+
+    int jcol[2]; double M[2]; M[0]=-1.;
+    for(int i=locnx+locmz+locmy; i<locnx+locmz+locmy + locmz; i++) {
+      jcol[0] = i-locmz-locmy; 
+      jcol[1] = i; M[1] = szDiag[i - locnx-locmz-locmy];
+      kktm.atAddSpRow(i, jcol, M, 2);
+    }
+    // kktm.atPutDiagonal(locnx+locmz+locmy, szDiag);
+    // // 	for(int i=0; i<locmz; i++){
+    // // 		dKkt[i+locnx+locmz+locmy][i+locnx] -= 1.0;
+    // // 		dKkt[i+locnx][i+locnx+locmz+locmy] -= 1.0;
+    // // 		dKkt[i+locnx+locmz+locmy][i+locnx+locmz+locmy] += szDiag[i];
   }
   // }
   int mli = prob->getmli();
@@ -223,13 +241,6 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
     assert(false && "not yet supported");
     //   kktd->symAtAddSubmatrix( locnx+locmz+locmy+locmz-mli, 0, prob->getLocalF(), 0, 0, mli, locnx, 1 );
   }
-
-
-  // /////////////////////////////////////////////////////////////
-  // // update the KKT zeros for the lower right block 
-  // /////////////////////////////////////////////////////////////
-  // //kktd->storage().atPutZeros(locnx, locnx, locmy+locmz, locmy+locmz);
-  // //myAtPutZeros(kktd, locnx, locnx, locmy, locmy);
 
   stochNode->resMon.recSchurMultLocal_stop();
   stochNode->resMon.recFactTmLocal_stop();
@@ -362,7 +373,7 @@ sLinsysRootAugSpTriplet::UpdateMatrices( Data * prob_in, int const updateLevel)
   assert(kktm!=NULL);
 
   //kktm stores only upper triangular, but B needs to go in the lower part -> force symmetric update 
-  kktm->forceSymUpdate(true);
+  //kktm->forceSymUpdate(true);
 
   if(useUpdate>=2){
     if(gOuterSolve < 3){	
@@ -377,7 +388,7 @@ sLinsysRootAugSpTriplet::UpdateMatrices( Data * prob_in, int const updateLevel)
 	kktm->symAtSetSubmatrix( locnx + locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx);
     } 
   }
-  kktm->forceSymUpdate(false);
+  //kktm->forceSymUpdate(false);
 
   // propagate it to the subtree
   for(size_t it=0; it<children.size(); it++)

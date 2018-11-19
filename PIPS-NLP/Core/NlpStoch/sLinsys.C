@@ -277,9 +277,10 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
 	else
 	  RegInfo->MatrixSingular = 0;
 
-	// skip update regularizaion if: 	1) have correct inertia and mat is nonsingular 
-	//						OR 	2) mat is nonsingular and we will do inertia-free test later	
-	//						OR  	3) we are doing inertia-free test now (mat is defenitly nonsingular)
+	// skip update regularization if: 	
+	// 1) have correct inertia and mat is nonsingular OR
+	// 2) mat is nonsingular and we will do inertia-free test later	OR
+	// 3) we are doing inertia-free test now (mat is defenitly nonsingular)
 	if( (RegInfo->DoEvalReg == 1 && Num_NegEVal == prob->getGlobalMy() + prob->getGlobalMz())
 		|| (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1) || RegInfo->DoEvalReg == 0 )
 	{
@@ -614,7 +615,7 @@ void sLinsys::addTermToSchurResidual(sData* prob,
 				     SimpleVector& res, 
 				     SimpleVector& x)
 {
-	assert(gOuterSolve<3 );
+  assert(gOuterSolve<3 );
 
   SparseGenMatrix& A = prob->getLocalA();
   SparseGenMatrix& C = prob->getLocalC();
@@ -937,19 +938,12 @@ sLinsys::addTermToDenseSchurCompl(sData *prob,
     N = locnx+locmy+locmz;
 
 
-  int blocksize = 64;
-  DenseGenMatrix cols(blocksize,N);
-  DenseGenMatrix scpart(blocksize,nx0);
-  //bool ispardiso=false;
-  //PardisoSolver* pardisoSlv=NULL;
-  //int* colSparsity=NULL;
-  //if(pardisoSlv) {
-  //  ispardiso=true;
-  //  colSparsity=new int[N];
-    //blocksize=32;
-  //}
-  
+  int blocksize = 32;
+
   for (int it=0; it < nxP; it += blocksize) {
+    DenseGenMatrix cols(blocksize,N);
+    DenseGenMatrix scpart(blocksize,nx0);
+
     int start=it;
     int end = MIN(it+blocksize,nxP);
     int numcols = end-start;
@@ -965,48 +959,44 @@ sLinsys::addTermToDenseSchurCompl(sData *prob,
       C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locns+locmy], N, numcols, allzero);
     } else {
       R.getStorageRef().fromGetColBlock(start, &cols[0][0], N, numcols, allzero);
-      A.getStorageRef().fromGetColBlock(start, &cols[0][locnx], N, numcols, allzero);
-      C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, allzero);
-    }    
-    //}
+       A.getStorageRef().fromGetColBlock(start, &cols[0][locnx], N, numcols, allzero);
+       C.getStorageRef().fromGetColBlock(start, &cols[0][locnx+locmy], N, numcols, allzero);
+     }    
     
     if(!allzero) {
-      //if(ispardiso)
-      //pardisoSlv->solve(cols,colSparsity);
-      //else 
       solver->solve(cols);
-
       if(gOuterSolve>=3 ) {
-	R.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,  
-					-1.0, &cols[0][0], N);
-        A.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,  
-					-1.0, &cols[0][locnx+locns], N);	
-        C.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,
-					-1.0, &cols[0][locnx+locns+locmy], N);
+    	R.getStorageRef().transMultMatTrans( 1.0, &(scpart[0][0]), numcols, nx0,  
+    					-1.0, &cols[0][0], N);
+    	A.getStorageRef().transMultMatTrans( 1.0, &(scpart[0][0]), numcols, nx0,  
+    					-1.0, &cols[0][locnx+locns], N);	
+    	C.getStorageRef().transMultMatTrans( 1.0, &(scpart[0][0]), numcols, nx0,
+    					-1.0, &cols[0][locnx+locns+locmy], N);
         // R.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
-	// 				-1.0, &cols[0][0], N);
+    	// 				-1.0, &cols[0][0], N);
         // A.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
-	// 				-1.0, &cols[0][locnx+locns], N);	
+    	// 				-1.0, &cols[0][locnx+locns], N);	
         // C.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,
-	// 				-1.0, &cols[0][locnx+locns+locmy], N);
-	//!mle>0)
+    	// 				-1.0, &cols[0][locnx+locns+locmy], N);
+    	//!mle>0)
         //!ET.getStorageRef().transMultMat( 1.0,  &(SC.getStorageRef().M[nx0+mz0+my0-mle][start]), numcols, NP, -1.0, &cols[0][0], N);
-	//!if(mli>0)
-	//!FT.getStorageRef().transMultMat( 1.0, &(SC.getStorageRef().M[nx0+mz0+my0+mz0-mli][start]), numcols, NP,
+    	//!if(mli>0)
+    	//!FT.getStorageRef().transMultMat( 1.0, &(SC.getStorageRef().M[nx0+mz0+my0+mz0-mli][start]), numcols, NP,
         //!                        -1.0, &cols[0][0], N);
       } else {
-	R.getStorageRef().transMultMat( 1.0, &(scpart[0][start]), numcols, nx0,
-					-1.0, &cols[0][0], N);
-	A.getStorageRef().transMultMat( 1.0, &(scpart[0][start]), numcols, nx0,
-					-1.0, &cols[0][locnx], N);
-	C.getStorageRef().transMultMat( 1.0, &(scpart[0][start]), numcols, nx0,
-					-1.0, &cols[0][locnx+locmy], N);
-	// R.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
-	// 				-1.0, &cols[0][0], N);
-	// A.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
-	// 				-1.0, &cols[0][locnx], N);
-	// C.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,
-	// 				-1.0, &cols[0][locnx+locmy], N);
+    	assert(false);
+    	R.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,
+    					-1.0, &cols[0][0], N);
+    	A.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,
+    					-1.0, &cols[0][locnx], N);
+    	C.getStorageRef().transMultMat( 1.0, &(scpart[0][0]), numcols, nx0,
+    					-1.0, &cols[0][locnx+locmy], N);
+    	// R.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
+    	// 				-1.0, &cols[0][0], N);
+    	// A.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,  
+    	// 				-1.0, &cols[0][locnx], N);
+    	// C.getStorageRef().transMultMat( 1.0, &(SC[0][start]), numcols, NP,
+    	// 				-1.0, &cols[0][locnx+locmy], N);
       }
     } //end !allzero
     const double AbsTolForZero=1e-16;
@@ -1014,11 +1004,13 @@ sLinsys::addTermToDenseSchurCompl(sData *prob,
     double val; 
     for(int i=0; i<nx0; i++) {
       std::list<ColVal> colvalSrc;
-      for(int j=std::max(start,i); j<start+blocksize; j++) {
+      //for(int j=std::max(start,i); j<start+blocksize; j++) {
+      for(int j=start; j<std::min(i+1, start+blocksize); j++) {
+	assert(j-start<blocksize);
 	val = scpart[j-start][i];
-
+	//printf("val %g from i=%d  j=%d\n", val, i, j-start);
 	if(std::abs(val)>AbsTolForZero)
-	  colvalSrc.push_back(ColVal(j+start,val));
+	  colvalSrc.push_back(ColVal(j,val));
       }
       SC.atAddSpRow(i, colvalSrc);
     }
@@ -1026,8 +1018,6 @@ sLinsys::addTermToDenseSchurCompl(sData *prob,
   } //end iterations over blocks
 
   //!code for mle and mli (linking constraints) would be similar to the code in the other addTermToDenseSchurCompl method.
-
-
 }
 
 
