@@ -827,6 +827,38 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
   }
 }
 
+/* Y = this^T X, but Y and X are sent transposed 
+ * M=this is m x n, so M^T is n x m
+ * Y comes as ny x ldy with ldy==n
+ * X comes as ldx x ny with ldx>=m 
+ *
+ * entry (j,v) of the left-hand side is at Y[j+v*ldy]
+ * entry (i,v) of the right factor in the right-hand side is at X[i+v*ldx]
+ */
+void SparseStorage::transMultMatTrans( double beta,  double* Y, int ny, int ldy,
+						 double alpha, double *X, int ldx)
+{
+  assert(ldy==n);
+  assert(ldx>=m);
+  int i, j, k;
+  if(beta!=1.0) {
+    for( int v = 0; v < ny; v++)
+      for( j = 0; j < n; j++ ) {
+	Y[j +ldy*v] *= beta;  //Y[j +ldy*v] *= beta;
+      }
+  }
+  for( i = 0; i < m; i++ ) {
+    for( k = krowM[i]; k < krowM[i+1]; k++ ) {
+      j = jcolM[k];
+      assert(j<n);
+      for (int v = 0; v<ny; v++) { 
+	//printf("---> val %g  indexes v=%d j=%d index=%d  ldy=%d\n", Y[j+ldy*v], v, j, j+ldy*v, ldy);
+	Y[j+ldy*v] += alpha * M[k] * X[i+v*ldx];  //Y[j +ldy*v] *= beta;  
+      }
+    }
+  }
+}
+
 
 
 // y only contains the elements starting at firstrow

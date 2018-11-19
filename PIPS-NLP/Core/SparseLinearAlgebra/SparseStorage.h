@@ -135,8 +135,16 @@ public:
 
   void transMultLower( double beta,  double y[],
 			       double alpha, double x[], int firstrow );
-	void transMultMat( double beta,  double* Y, int ny, int ldy,
-						 double alpha, double *X, int ldx);
+  void transMultMat( double beta,  double* Y, int ny, int ldy,
+		     double alpha, double *X, int ldx);
+
+  /* Same as above but access to Y and X is 'transposed'
+   * This is needed to ensure that the columns of Y are contigous in memory,
+   * which is needed to apply inverse matrices in sLinsys's addTermToDenseSchurCompl
+   */
+  void transMultMatTrans( double beta,  double* Y, int ny, int ldy,
+		     double alpha, double *X, int ldx);
+
   void transMultMatLower( double* Y, int ny, int firstrow,
 						 double alpha, double *X, int ldx);
 
