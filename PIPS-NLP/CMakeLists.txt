@@ -183,6 +183,7 @@ add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   nlpbase 
   genStructparallel
   structStochInfo
+  ${MUMPS_LIBRARY}
   #pipsnlpFLS  
   ${COIN_LIBS}
   ${MA57_LIBRARY}
