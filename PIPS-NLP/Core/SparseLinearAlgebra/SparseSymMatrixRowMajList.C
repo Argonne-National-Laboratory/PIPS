@@ -16,8 +16,11 @@ SparseSymMatrixRowMajList::SparseSymMatrixRowMajList( int size )
 {
   //mStorage = SparseStorageHandle( new SparseStorage(size, size, nnz) );
   vlmat.reserve(size);
-  for(int i=0; i<size; i++) 
-    vlmat.push_back(std::list<ColVal>());
+  for(int i=0; i<size; i++) {
+    std::list<ColVal> row; row.push_back(ColVal(i, 0.));
+    vlmat.push_back(row);
+  }
+  nnz += size;
 }
 
 
@@ -220,7 +223,7 @@ void SparseSymMatrixRowMajList::atPutDiagonal( int idiag, OoqpVector& v_ )
       vlmat[i].push_back(ColVal(i,v[i-idiag]));
       nnz++;
     } else {
-      assert(vlmat[i].front().jcol==i);
+      assert(vlmat[i].front().jcol>=i); //see atAddDiagonal for how to properly implement this case
       vlmat[i].front().M = v[i-idiag];
     }
   }
@@ -235,8 +238,13 @@ void SparseSymMatrixRowMajList::atAddDiagonal( int idiag, OoqpVector& v_ )
       vlmat[i].push_back(ColVal(i,v[i-idiag]));
       nnz++;
     } else {
-      assert(vlmat[i].front().jcol==i);
-      vlmat[i].front().M += v[i-idiag];
+      assert(vlmat[i].back().jcol<=i);
+      if(vlmat[i].back().jcol<i) {
+	vlmat[i].push_back(ColVal(i,v[i-idiag]));
+	nnz++;
+      } else {
+	vlmat[i].back().M += v[i-idiag];
+      }
     }
   }
 }
@@ -325,14 +333,18 @@ void SparseSymMatrixRowMajList::atAddSpRow(const int& row, int* jcolSrc, double*
       break;
 
     if(itDest->jcol == jcolSrc[itSrc]) {
-      if(itDest->jcol < row) {
+      if(itDest->jcol > row) {
 	assert(false && "should not find this jcol here"); //this->putElem(itDest->jcol, row, M[itSrc]); 
       } else {
 	itDest->M += M[itSrc];
       }
       itSrc++;
     } else {
-      if(jcolSrc[itSrc]<row) {
+      if(jcolSrc[itSrc]>row) {
+	assert(false && "remove me when testing with the small example");
+	//the addElem below is highly inefficient for large-problems and it is here
+	//to ensure that the small test examples work despite the fact that they 
+	//the upper triangular of Q.
 	this->addElem(jcolSrc[itSrc], row, M[itSrc]);
       } else {
 	vlmat[row].insert(itDest, ColVal(jcolSrc[itSrc], M[itSrc]));
@@ -344,7 +356,11 @@ void SparseSymMatrixRowMajList::atAddSpRow(const int& row, int* jcolSrc, double*
 
   while(itSrc<nelems) {
     assert(itDest==vlmat[row].end());
-    if(jcolSrc[itSrc]<row) {
+    if(jcolSrc[itSrc]>row) {
+      //assert(false && "remove me when testing with the small example");
+      //the addElem below is highly inefficient for large-problems and it is here
+      //to ensure that the small test examples work despite the fact that they 
+      //the upper triangular of Q.
       this->addElem(jcolSrc[itSrc], row, M[itSrc]);
     } else {
       vlmat[row].push_back(ColVal(jcolSrc[itSrc], M[itSrc]));
@@ -367,11 +383,12 @@ void SparseSymMatrixRowMajList::atAddSpRow(const int& row, std::list<ColVal>& co
       break;
 
     if(itDest->jcol == itSrc->jcol) {
+      assert(itDest->jcol <= row && "should not find this jcol here"); //this->putElem(itDest->jcol, row, M[itSrc]); 
       itDest->M += itSrc->M;
       ++itSrc;
     } else {
       vlmat[row].insert(itDest, *itSrc);
-      assert(false);
+      //assert(false);
       extrannzdest++;
       ++itSrc;
     }
@@ -379,8 +396,7 @@ void SparseSymMatrixRowMajList::atAddSpRow(const int& row, std::list<ColVal>& co
 
   while(itSrc!=colvalSrc.end()) {
     assert(itDest==vlmat[row].end());
-
-    assert(itSrc->jcol>=row && "upper elements only !?!");
+    assert(itSrc->jcol<=row && "lower triangle elements only !?!");
 
     vlmat[row].push_back(*itSrc);
     extrannzdest++;
@@ -420,28 +436,33 @@ mergeSetColumn(const int& rowDestIdx, const int& colDestIdxOffset,
       continue;
     }
 
-
     while(itDest!=colDest.end() && (itDest->jcol-colDestIdxOffset < jcolSrc[itSrc]-colSrcIdxOffset)) {
       ++itDest;
     }
     if(itDest==colDest.end())
       break;
     if(itDest->jcol-colDestIdxOffset == jcolSrc[itSrc]-colSrcIdxOffset) {
-      assert(jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset>=rowDestIdx);
+      assert(jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset<=rowDestIdx);
       itDest->M = Msrc[itSrc];
       itSrc++;
     } else {
       int colDestIdx = jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset;
-      if(colDestIdx<rowDestIdx) {
+      if(colDestIdx>rowDestIdx) {
 	if(!bSymUpdate) {
 	  //this code should not run given the conventions for storing the matrices in PIPS.
 	  assert(!bSymUpdate &&  "careful here: sym update not enforced and you are trying "
-		 "to put entries in the lower triangular; do you know what you're doing? (2)");
+		 "to put entries in the upper triangular; do you know what you're doing? (2)");
 	  //nothing needs to be done if the symmetric update is not enforced. 
 	} else {
+	  assert(false && "remove me after testing with the small examples");
+	  //the addElem below is highly inefficient for large-problems and it is here
+	  //to ensure that the small test examples work despite the fact that they 
+	  //the upper triangular of Q. 
+
 	  //add the element in the upper triangular part, that is, instead of inserting at
 	  //(rowDestIdx, colDestIdx) we insert at (colDestIdx, rowDestIdx)
 	  this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
+	  itSrc++;
 	}
       } else {
 	//this case is for itDest->jcol-colDestIdxOffset > jcolSrc[itSrc]-colSrcIdxOffset
@@ -461,13 +482,18 @@ mergeSetColumn(const int& rowDestIdx, const int& colDestIdxOffset,
 
     assert(itDest==colDest.end());
     int colDestIdx = jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset;
-    if(colDestIdx<rowDestIdx) {
+    if(colDestIdx>rowDestIdx) {
       if(!bSymUpdate) {
 	//this code should not run given the conventions for storing the matrices in PIPS.
 	assert(!bSymUpdate &&  "careful here: sym update not enforced and you are trying "
-	       "to put entries in the lower triangular; do you know what you're doing? (1)");
+	       "to put entries in the upper triangular; do you know what you're doing? (1)");
       //nothing needs to be done if the symmetric update is not enforced. 
       } else {
+	assert(false && "remove me after testing with the small examples");
+	//the addElem below is highly inefficient for large-problems and it is here
+	//to ensure that the small test examples work despite the fact that they 
+	//the upper triangular of Q.
+
 	//add the element in the upper triangular part, that is, instead of inserting at
 	//(rowDestIdx, colDestIdx) we insert at (colDestIdx, rowDestIdx)
 	this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
@@ -555,43 +581,16 @@ void SparseSymMatrixRowMajList::symAtSetSubmatrix( int destRow, int destCol, Dou
     colCount = krowSrc[tmp+1]-colIdx;
     
     if(srcIsSym) {
-      assert(destCol+jcolSrc[krowSrc[i+srcRow]]>=i+destRow && 
-	     "symmetric matrices need to have only elements in the upper triangle");
+      //if(colCount>0) {
+      //assert(destCol+jcolSrc[krowSrc[i+srcRow]]>=i+destRow && 
+      //       "symmetric matrices need to have only elements in the upper triangle");
+      //}
     }
 
     mergeSetColumn(i+destRow, destCol,
 		   jcolSrc+colIdx, MSrc+colIdx, colCount, srcCol,
 		   colExtent);
   }
-  // int *    ja = new int[colExtent];
-  // double * a = new double[colExtent];
-  // int idxRowStart = 0;
-  // bool tempbool = true;
-  // tempbool = firstCall;
-  // if(tempbool)
-  // {
-  //   for ( i = 0; i < rowExtent; i++ ) {
-  //     M.fromGetSpRow_WithRowStart( srcRow + i, srcCol, a, colExtent, ja,
-  // 		     nnz, colExtent, info, idxRowStart);
-  //     for( k = 0; k < nnz; k++ ) {
-  //       ja[k] += (destCol - srcCol);
-  //     }
-  //     this->symAtPutSpRow_CorrectMap( destRow + i, a, nnz, ja, info, ValIdxMap, idxRowStart);
-  //     assert( info == 0 );
-  //   }
-  // }
-  //  else
-  // {
-  //   map<int,int>::iterator it;
-  // 	for( it=ValIdxMap.begin(); it!=ValIdxMap.end(); it++ ) {
-  // 	  mStorage->M[it->first] = M.getMatVal()[it->second];
-  // 	}
-  // }
-
-  
-  // delete [] a;
-  // delete [] ja;
-
 }
 
 void SparseSymMatrixRowMajList::
@@ -606,7 +605,7 @@ symAtAddSubmatrix( int destRow, int destCol,
   int* jcolSrc = NULL;
   double*  MSrc = NULL;
 
-  assert(destCol==0 && "code not supporting nonzero values");
+  assert(destCol==0 && "code not supporting/not tested with nonzero destCol");
 
   SparseSymMatrix* pM = dynamic_cast<SparseSymMatrix*>(&Mat);
   if(pM==NULL) {
@@ -626,7 +625,7 @@ symAtAddSubmatrix( int destRow, int destCol,
     colIdx = krowSrc[tmp];
     colCount = krowSrc[tmp+1]-colIdx;
 
-    assert(jcolSrc[colIdx]>=i);
+    //assert(jcolSrc[colIdx]>=i);
 
     this->atAddSpRow(i+destRow, jcolSrc+colIdx, MSrc+colIdx, colCount);
     // int extrannz = mergeSetColumn(vlmat[i+destRow], destCol,
@@ -644,7 +643,7 @@ void SparseSymMatrixRowMajList::atGetSparseTriplet(int* ii, int* jj, double* MM)
   for(int i=0; i<vlmat.size(); i++) {
     for(list<ColVal>::const_iterator it=vlmat[i].begin(); it!=vlmat[i].end(); ++it) {
       //printf("i=%d j=%d M=%g\n", i, it->jcol,it->M);
-      assert(it->jcol>=i);
+      assert(it->jcol<=i);
       ii[itnz]=i+1; 
       jj[itnz]=it->jcol+1;
       MM[itnz]=it->M;
