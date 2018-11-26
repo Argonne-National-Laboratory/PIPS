@@ -1,12 +1,12 @@
 add_library(nlpstoch
   sFactory.C    
   sFactoryAug.C 
-  sFactoryAugSpTripletSC.C
+  sFactoryAugSparseRowMajSC.C
   sData.C
   sLinsys.C   
   sLinsysRoot.C 
   sLinsysRootAug.C
-  sLinsysRootAugSpTriplet.C
+  sLinsysRootAugSparseRowMaj.C
   sLinsysLeaf.C  
   sVars.C 
   StochMonitor.C 

@@ -2,7 +2,7 @@
    Authors: Cosmin Petra
    See license and copyright information in the documentation */
 
-#include "sLinsysRootAugSpTriplet.h"
+#include "sLinsysRootAugSparseRowMaj.h"
 #include "DeSymIndefSolver.h"
 #include "sData.h"
 #include "sTree.h"

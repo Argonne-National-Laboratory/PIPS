@@ -2,14 +2,14 @@
    Authors: Cosmin Petra
    See license and copyright information in the documentation */
 
-#include "sFactoryAugSpTripletSC.h"
+#include "sFactoryAugSparseRowMajSC.h"
 
 #include "sData.h"
 
 #include "StochTree.h"
 #include "StochInputTree.h"
 
-#include "sLinsysRootAugSpTriplet.h"
+#include "sLinsysRootAugSparseRowMaj.h"
 
 
 sLinsysRoot* sFactoryAugSpTripletSC::newLinsysRoot()

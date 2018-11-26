@@ -10,7 +10,7 @@
 #include "../../Input/StructJuMPInput.h"
 #include "../Core/NlpStoch/NlpPIPSIpmInterface.h"
 #include "../Core/NlpStoch/sFactoryAug.h"
-#include "../Core/NlpStoch/sFactoryAugSpTripletSC.h"
+#include "../Core/NlpStoch/sFactoryAugSparseRowMajSC.h"
 #include "../Core/NlpSolvers/FilterIPMStochSolver.h"
 
 
