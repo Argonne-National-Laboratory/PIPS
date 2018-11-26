@@ -41,7 +41,7 @@ class sLinsysRootAugSpTriplet : public sLinsysRootAug {
 
   virtual void UpdateMatrices( Data * prob_in,int const updateLevel=2);
  protected:
-  
+  bool iAmRank0;
 };
 
 #endif

@@ -23,7 +23,7 @@ using namespace std;
 extern int gBuildSchurComp;
 
 sLinsysRootAugSpTriplet::sLinsysRootAugSpTriplet(sFactory * factory_, sData * prob_)
-  : sLinsysRootAug(factory_, prob_)
+  : sLinsysRootAug(factory_, prob_), iAmRank0(false)
 { 
   assert(gBuildSchurComp==3);
 };
@@ -35,7 +35,8 @@ sLinsysRootAugSpTriplet::sLinsysRootAugSpTriplet(sFactory* factory_,
 						 OoqpVector* nomegaInv_,
 						 OoqpVector* rhs_,
 						 OoqpVector* additiveDiag_)
-  : sLinsysRootAug(factory_, prob_, dd_, dq_, nomegaInv_, rhs_, additiveDiag_)
+  : sLinsysRootAug(factory_, prob_, dd_, dq_, nomegaInv_, rhs_, additiveDiag_),
+    iAmRank0(false)
 { 
   assert(gOuterSolve>=3);  
   assert(gBuildSchurComp==3);
@@ -58,8 +59,6 @@ sLinsysRootAugSpTriplet::createKKT(sData* prob)
   }else{
     n = locnx+locmy+locmz+locmz;
   }
-  //assert(false);
-  //return new DenseSymMatrix(n);
   return new SparseSymMatrixRowMajList(n);
 }
 
@@ -70,9 +69,12 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
 {
   assert(gBuildSchurComp==3);
 
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  iAmRank0 = (myRank==0);
+
   //1. create the communicator for the subset of processes that MUMPS should use
   int color = MPI_UNDEFINED;
-  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  
   //color only rank 0 and leave the other ones uncolored. MUMPS communicator created below will be MPI_COMM_NULL on
   //the nodes not colored
   if(myRank==0)
@@ -348,17 +350,82 @@ void sLinsysRootAugSpTriplet::initializeKKT(sData* prob, Variables* vars)
 
 void sLinsysRootAugSpTriplet::reduceKKT()
 {
+  //  if(!iAmDistrib) return;
+
   SparseSymMatrixRowMajList& kktm = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
-  if(iAmDistrib) {
-    assert(false);
+
+  //get local contribution in triplet format, so that we can reuse MumpsSolver::mumps_->
+  //irn_loc, jcn_loc, and a_loc arrays and save on memory
+  //when MumpsSolver is replaced with something else, this code needs reconsideration
+
+  MumpsSolver* mumpsSolver = dynamic_cast<MumpsSolver*>(solver);
+  assert(mumpsSolver!=NULL);
+  int *irn=NULL, *jcn=NULL; double *M=NULL; 
+  bool deleteTriplet=false;
+  bool bret = mumpsSolver->getTripletStorageArrays(&irn, &jcn, &M);
+  if(false==bret) {
+    //this is a rank NOT part of MUMPS and does not have the arrays; 
+    //allocate them
+    irn = new int[kktm.numberOfNonZeros()];
+    jcn = new int[kktm.numberOfNonZeros()];
+    M = new double[kktm.numberOfNonZeros()];
+    deleteTriplet=true;
+  } else {
+    assert(irn); 
+    assert(jcn);
+    assert(M);
+  }
+  
+  //root processor bcasts the indexes
+  //root first the nnz
+  int nnzRoot = kktm.numberOfNonZeros(); 
+  MPI_Bcast(&nnzRoot, 1, MPI_INT, 0, mpiComm);
+  assert(nnzRoot==kktm.numberOfNonZeros() && "this case is not handled yet");
+
+  //then the indexes
+  if(iAmRank0) {
+    assert(irn);
+    kktm.atGetSparseTriplet(irn, jcn, M, false);
+    assert(irn);
+  }
+  MPI_Bcast(irn, nnzRoot, MPI_INT, 0, mpiComm);
+  MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mpiComm);
+
+  //all processes check: does its sparsity pattern checks out that of the root processor?
+  // - NO: (not yet implemented)
+  //    - each process adds the entries common with the root, and saves the other ones
+  //    - the common entries are MPI_Reduce-d
+  //    - the saved entries are then MPI_Gather-ed to the root, who then add-merge them in 
+  //    its matrix
+  //
+  
+  // - YES: MPI_Reduce the entries
+
+  if(!iAmRank0) {
+    bool bPatternMatched = kktm.fromGetSparseTriplet_w_patternMatch(irn,jcn,nnzRoot,M);
+    assert(bPatternMatched && "this is not yet supported");
+  }
+
+  //MPI_Reduce the entries
+  double* doublebuffer = NULL;
+  if(iAmRank0) {
+    doublebuffer = new double[nnzRoot];
+  }
+  MPI_Reduce(M, doublebuffer, nnzRoot, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
+  if(doublebuffer) memcpy(M, doublebuffer, nnzRoot*sizeof(double));
+  delete [] doublebuffer;
+
+  if(iAmRank0) {
+    bret = kktm.atPutSparseTriplet(irn,jcn,M,nnzRoot);
+    assert(bret==true && "something went wrong");
+  }
+
+  if(deleteTriplet) {
+    delete[] irn;
+    delete[] jcn;
+    delete[] M;
   }
 }
-
-// int sLinsysRootAugSpTriplet::factorizeKKT()
-// {
-//   assert(false);
-//   return -1;
-// }
 
 extern int gisNLP;
 
