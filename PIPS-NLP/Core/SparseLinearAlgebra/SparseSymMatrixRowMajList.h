@@ -119,7 +119,14 @@ class SparseSymMatrixRowMajList : public SymMatrix {
 			  int srcRow, int srcCol,
 			  int rowExtent, int colExtent );
 
-  void atGetSparseTriplet(int* i, int* j, double* M);
+  void atGetSparseTriplet(int* i, int* j, double* M, bool fortran=true);
+
+  //copies entries to 'M' while checking that the sparsity pattern of 'this' is identical to pattern of
+  // the the sparse triplet matrix (i,j,M). Returns false if the pattern does not match
+  bool fromGetSparseTriplet_w_patternMatch(const int* i, const int* j, const int& nnz_, double* M); 
+
+  //copies (i,j,M) to 'this'; returns false if an entry of (i,j,M) not found in 'this', otherwise true.
+  bool atPutSparseTriplet(const int*i, const int* j, const double* M, const int& nnz_);
 
   inline void forceSymUpdate(bool val) { bSymUpdate=val; }
  protected:

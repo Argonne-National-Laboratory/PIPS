@@ -637,15 +637,16 @@ symAtAddSubmatrix( int destRow, int destCol,
 
 }
 
-void SparseSymMatrixRowMajList::atGetSparseTriplet(int* ii, int* jj, double* MM)
+void SparseSymMatrixRowMajList::atGetSparseTriplet(int* ii, int* jj, double* MM, bool fortran/*=true*/)
 {
+  int o=fortran?1:0;
   int itnz=0;
   for(int i=0; i<vlmat.size(); i++) {
     for(list<ColVal>::const_iterator it=vlmat[i].begin(); it!=vlmat[i].end(); ++it) {
-      //printf("i=%d j=%d M=%g\n", i, it->jcol,it->M);
+      printf("i=%d j=%d M=%g (o=%d) \n", i+o, it->jcol+o,it->M, fortran);
       assert(it->jcol<=i);
-      ii[itnz]=i+1; 
-      jj[itnz]=it->jcol+1;
+      ii[itnz]=i+o; 
+      jj[itnz]=it->jcol+o;
       MM[itnz]=it->M;
       itnz++;
     }
@@ -655,4 +656,67 @@ void SparseSymMatrixRowMajList::atGetSparseTriplet(int* ii, int* jj, double* MM)
 void SparseSymMatrixRowMajList::printMatrixInMatlab( char *name)
 {
   assert(false && "not implemented");
+}
+
+bool SparseSymMatrixRowMajList::
+fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int& nnz_in, double* M_out)
+{
+  if(nnz_in!=nnz) return false;
+  if(nnz_in==0) return true;
+
+  int it_in=0; 
+  int row=irow[it_in];
+  list<ColVal>::iterator it=vlmat[row].begin(); 
+  for(int it_in=0; it_in<nnz_in; ) {
+    assert(row<=irow[it_in]);    
+
+    if(row<irow[it_in]) {
+      row = irow[it_in];
+      it=vlmat[row].begin(); 
+    }
+    while(it!=vlmat[row].end() && it->jcol<jcol[it_in]) {
+      ++it;
+    }
+    if(it==vlmat[row].end()) {
+      return false; //could not find irow[it_in] and jcol[it_in] in 'this'
+    }
+    assert(it->jcol==jcol[it_in]);
+    M_out[it_in] = it->M;
+printf("->get -> i=%d j=%d M=%g\n", row, it->jcol,it->M);
+    ++it; it_in++;
+  }
+  
+  return true;
+}
+
+//copies (i,j,M) to 'this'; returns false if an entry of (i,j,M) not found in 'this', otherwise true.
+bool SparseSymMatrixRowMajList::
+atPutSparseTriplet(const int* irow, const int* jcol, const double* M, const int& nnz_in)
+{
+  if(nnz_in!=nnz) return false;
+  if(nnz_in==0) return true;
+
+  int it_in=0;
+  int row=irow[it_in];
+  list<ColVal>::iterator it=vlmat[row].begin();
+  while(it_in<nnz_in) {
+    assert(row<=irow[it_in]);
+
+    if(row<irow[it_in]) {
+      row = irow[it_in];
+      it=vlmat[row].begin(); 
+    }
+    while(it!=vlmat[row].end() && it->jcol<jcol[it_in]) {
+      ++it;
+    }
+    if(it==vlmat[row].end()) {
+      return false; //could not find irow[it_in] and jcol[it_in] in 'this'
+    }
+    assert(it->jcol==jcol[it_in]);
+    it->M = M[it_in];
+
+    ++it; it_in++;
+  }
+  
+  return true;
 }
