@@ -70,6 +70,27 @@ public:
    * Method to be called only after MUMPS has been initialized (JOB=-1)
    */
   void setMumpsVerbosity(int level);
+
+  /* for future implementations of this class: 
+   *   return false if the arrays are not allocated yet, or the class 
+   *   uses a different format, or if the arrays should not be modified outside
+   *   of this class for some reason.
+   *
+   *   otherwise return true
+   */
+  inline bool getTripletStorageArrays(int** irow, int** jcol, double** M) 
+  { 
+    if(NULL==mumps_) return false; 
+    if(NULL==mumps_->irn_loc) return false; 
+    *irow=mumps_->irn_loc; 
+    if(NULL==mumps_->jcn_loc) return false; 
+    *jcol=mumps_->jcn_loc; 
+    if(NULL==mumps_->a_loc)   return false;
+    *M=mumps_->a_loc;
+
+    assert(irow); assert(jcol); assert(M);
+    return true;
+  };
 protected:
   //mumps data structure
   DMUMPS_STRUC_C* mumps_;
