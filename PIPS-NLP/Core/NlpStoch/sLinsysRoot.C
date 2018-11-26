@@ -739,7 +739,7 @@ int sLinsysRoot::factorizeKKT()
   MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  if( (mype/256)*256==mype )
+  //if( (mype/256)*256==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
   return negEValTemp;

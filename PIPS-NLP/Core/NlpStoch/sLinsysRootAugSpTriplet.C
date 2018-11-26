@@ -14,7 +14,14 @@
 
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
+extern double g_scenNum;
 #endif
+
+#ifdef TIMING
+#include "../../global_var.h"
+#include "../PIPS-NLP/Core/Utilities/PerfMetrics.h"
+#endif
+
 extern int gInnerSCsolve;
 extern int gOuterSolve;
 extern int separateHandDiag;
@@ -44,7 +51,6 @@ sLinsysRootAugSpTriplet::sLinsysRootAugSpTriplet(sFactory* factory_,
 
 sLinsysRootAugSpTriplet::~sLinsysRootAugSpTriplet()
 {
-
 }
 
 

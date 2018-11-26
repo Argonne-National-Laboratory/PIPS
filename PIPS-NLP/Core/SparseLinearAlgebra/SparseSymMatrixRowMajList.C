@@ -643,7 +643,7 @@ void SparseSymMatrixRowMajList::atGetSparseTriplet(int* ii, int* jj, double* MM,
   int itnz=0;
   for(int i=0; i<vlmat.size(); i++) {
     for(list<ColVal>::const_iterator it=vlmat[i].begin(); it!=vlmat[i].end(); ++it) {
-      printf("i=%d j=%d M=%g (o=%d) \n", i+o, it->jcol+o,it->M, fortran);
+      //printf("i=%d j=%d M=%g\n", i+o, it->jcol+o,it->M);
       assert(it->jcol<=i);
       ii[itnz]=i+o; 
       jj[itnz]=it->jcol+o;
@@ -682,7 +682,7 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
     }
     assert(it->jcol==jcol[it_in]);
     M_out[it_in] = it->M;
-printf("->get -> i=%d j=%d M=%g\n", row, it->jcol,it->M);
+
     ++it; it_in++;
   }
   

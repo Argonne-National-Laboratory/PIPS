@@ -949,7 +949,7 @@ sLinsys::addTermToDenseSchurCompl(sData *prob,
     int numcols = end-start;
     cols.getStorageRef().m = numcols; // avoid extra solves
     
-    bool allzero = true;
+    bool allzero = false;
     memset(&cols[0][0],0.,N*blocksize*sizeof(double));
     memset(&scpart[0][0],0.,nx0*blocksize*sizeof(double));
 
