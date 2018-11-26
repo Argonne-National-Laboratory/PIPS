@@ -49,13 +49,13 @@ void GeoStochScaler::doObjScaling()
       PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
 
       assert( scaleFactor >= 0.0 );
-      scaleVector(*obj, scaleFactor);
+      scaleObjVector(scaleFactor);
 
       if( equilibrate )
       {
          const double absmax2 = obj->infnorm();
          assert(absmax2 >= 0);
-         scaleVector(*obj, absmax2);
+         scaleObjVector(absmax2);
       }
    }
 }
@@ -187,8 +187,6 @@ void GeoStochScaler::scale()
       PIPSdebugMessage("before scaling: \n "
             "objnorm: %f \n Anorm:  %f \n Cnorm  %f \n bAnorm %f \n rhsCnorm %f \n lhsCnorm %f \n buxnorm %f \n blxnorm %f \n  ",
            obj->infnorm(), A->abmaxnorm(), C->abmaxnorm(), bA->infnorm(), rhsC->infnorm(), lhsC->infnorm(), bux->infnorm(), blx->infnorm());
-
-      doObjScaling();
 
       applyScaling();
 

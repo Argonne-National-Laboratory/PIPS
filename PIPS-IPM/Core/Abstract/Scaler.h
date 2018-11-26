@@ -7,6 +7,7 @@
 
 #ifndef PIPS_IPM_CORE_ABSTRACT_SCALER_H_
 #define PIPS_IPM_CORE_ABSTRACT_SCALER_H_
+#include "OoqpVector.h"
 
 class Data;
 
@@ -24,6 +25,7 @@ class Data;
 class Scaler
 {
 protected:
+  Data* const problem;
   const bool do_bitshifting; // only scale by power of two factors?
   const bool with_sides; // consider lhs/rhs?
 
@@ -36,6 +38,10 @@ public:
 
   /** unscale given objective value */
   virtual double getOrigObj(double objval) = 0;
+
+  /** compute objective value from given primal solution vector */
+  virtual OoqpVector* getOrigObj(const OoqpVector& solprimal) = 0;
+
 
 };
 

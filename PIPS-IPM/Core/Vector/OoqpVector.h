@@ -264,7 +264,7 @@ public:
   virtual void copyFromAbs(const OoqpVector& v) = 0;
 
   virtual OoqpVector* clone() const { assert(0 && "not implemented here"); return NULL; };
-
+  virtual OoqpVector* cloneFull() const { assert(0 && "not implemented here"); return NULL; };
 };
 
 
