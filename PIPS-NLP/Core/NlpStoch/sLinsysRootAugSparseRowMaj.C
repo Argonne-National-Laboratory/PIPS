@@ -272,6 +272,10 @@ int sLinsysRootAugSpTriplet::factor2(sData *prob, Variables *vars)
   SparseSymMatrixRowMajList& kktd = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
   initializeKKT(prob, vars);
 
+#ifdef TIMING
+  gprof.t_initializeKKT+=MPI_Wtime()-stime;
+#endif
+
   // First tell children to factorize. 
   for(size_t c=0; c<children.size(); c++) {
     tempNegEVal = children[c]->factor2(prob->children[c], vars);
@@ -295,25 +299,27 @@ int sLinsysRootAugSpTriplet::factor2(sData *prob, Variables *vars)
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
-#ifdef TIMING
-  gprof.t_initializeKKT+=MPI_Wtime()-stime;
-  stime=MPI_Wtime();
-#endif
+
 
 #ifdef TIMING
-  MPI_Barrier(MPI_COMM_WORLD);
+  //MPI_Barrier(MPI_COMM_WORLD);
+  stime=MPI_Wtime();
   stochNode->resMon.recReduceTmLocal_start();
 #endif 
+  ///////////////////////////
   reduceKKT();
+  ///////////////////////////
 #ifdef TIMING
   gprof.t_reduceKKT+=MPI_Wtime()-stime;
-  stime=MPI_Wtime();
 #endif
 
 #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
+  stime=MPI_Wtime();
 #endif  
+  ///////////////////////////
   finalizeKKT(prob, vars);
+  ///////////////////////////
 #ifdef TIMING
   gprof.t_finalizeKKT+=MPI_Wtime()-stime;
   stime=MPI_Wtime();
