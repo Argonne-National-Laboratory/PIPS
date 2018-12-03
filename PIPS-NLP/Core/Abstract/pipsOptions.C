@@ -1,6 +1,7 @@
-/* PIPS-NLP                                                         	*
- * Authors: Nai-Yuan Chiang                      		*
- * (C) 2015 Argonne National Laboratory			*/
+/* PIPS-NLP  
+ * Authors: Nai-Yuan Chiang & Cosmin Petra, 
+ * ANL and LLNL, 2015-2018 
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +27,7 @@ int gSymLinearAlgSolverForDense;
 
 
 int gBuildSchurComp;
+double gAbsTolForZero;
 int gSolveSchurScheme;
 int gUseReducedSpace;
 int gRS_SchurSolver;
@@ -123,6 +125,7 @@ pipsOptions::pipsOptions()
 	RS_MaxIR(5),
 	RS_LU_PivotLV(0.0001),
    BuildSchurComp(1),
+   AbsTolForZero(0.),
    SolveSchurScheme(0),
    NP_Alg(0),
    SCOPF_precond(0),
@@ -175,6 +178,7 @@ pipsOptions::defGloOpt()
   					  // 3: Default solve - Schur complement based decomposition, do not compress!
 
   gBuildSchurComp 	= BuildSchurComp;
+  gAbsTolForZero        = AbsTolForZero;
   gSolveSchurScheme = SolveSchurScheme;			
   gUseReducedSpace  = UseReducedSpace;
   gRS_SchurSolver	= RS_SchurSolver;
@@ -252,7 +256,7 @@ void pipsOptions::readFile()
 
   
     /* Read one line of the options file */
-    while(fgets(buffer, 999, optfile)!=NULL){
+    while(fgets(buffer, 9999, optfile)!=NULL){
       parseLine(buffer);
     }
     fclose(optfile);
@@ -511,14 +515,14 @@ bool pipsOptions::parseLine(char *buffer)
 	this->BuildSchurComp = int(dval);
 	found = true;
   } 
+  if (strcmp(label, "AbsTolForZero") == 0 ) {
+	this->AbsTolForZero = dval;
+	found = true;
+  } 
   
-
-
-
   /* -----------------------------------------------------------------------
      Reduced space solver
     ----------------------------------------------------------------------- */
-
   if (strcmp(label, "UseReducedSpace") == 0 ) {
 	this->UseReducedSpace = int(dval);
 	found = true;

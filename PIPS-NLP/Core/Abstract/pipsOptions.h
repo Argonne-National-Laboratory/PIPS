@@ -87,6 +87,7 @@ class pipsOptions
   //(0): do not build SC   1: use dense Schur	2: use sparse Schur
   // 3: compute SC in sparse triplet format (and use MUMPS as a parallel solver); ignores 'SolveSchurScheme' below
   int BuildSchurComp; 
+  double AbsTolForZero;
 
   /* -------- how to compute Schur --------  */
   int SolveSchurScheme; //   (0): LDLt  2: BICG

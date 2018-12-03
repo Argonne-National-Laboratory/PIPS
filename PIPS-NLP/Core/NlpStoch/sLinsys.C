@@ -35,6 +35,7 @@ extern int gOuterIterRefin;
 
 extern int gOuterSolve;
 extern int separateHandDiag;
+extern double gAbsTolForZero;
 
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
   : NlpGenLinsys(), kkt(NULL), solver(NULL), isActive(true)
@@ -999,18 +1000,17 @@ sLinsys::addTermToDenseSchurCompl(sData *prob,
     	// 				-1.0, &cols[0][locnx+locmy], N);
       }
     } //end !allzero
-    const double AbsTolForZero=1e-16;
+
     //add sparsified scpart  to SC
     double val; 
     for(int i=0; i<nx0; i++) {
       std::list<ColVal> colvalSrc;
-      //for(int j=std::max(start,i); j<start+blocksize; j++) {
       for(int j=start; j<std::min(i+1, start+blocksize); j++) {
 	assert(j-start<blocksize);
 	val = scpart[j-start][i];
-	//printf("val %g from i=%d  j=%d\n", val, i, j-start);
-	if(std::abs(val)>AbsTolForZero)
+	if(std::abs(val)>gAbsTolForZero) {
 	  colvalSrc.push_back(ColVal(j,val));
+	}
       }
       SC.atAddSpRow(i, colvalSrc);
     }
