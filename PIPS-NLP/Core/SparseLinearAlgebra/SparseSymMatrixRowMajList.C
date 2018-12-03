@@ -487,17 +487,19 @@ mergeSetColumn(const int& rowDestIdx, const int& colDestIdxOffset,
 	//this code should not run given the conventions for storing the matrices in PIPS.
 	//assert(!bSymUpdate &&  "careful here: sym update not enforced and you are trying "
 	//       "to put entries in the upper triangular; do you know what you're doing? (1)");
+	//this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
       //nothing needs to be done if the symmetric update is not enforced. 
       //} else {
-      assert(false && "remove me after testing with the small examples");
+	//assert(false && "remove me after testing with the small examples");
       //the addElem below is highly inefficient for large-problems and it is here
       //to ensure that the small test examples work despite the fact that they provide
       //the upper triangular of Q.
       
       //add the element in the upper triangular part, that is, instead of inserting at
       //(rowDestIdx, colDestIdx) we insert at (colDestIdx, rowDestIdx)
-      this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
-      //}
+	//assert(false);
+	this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
+	//}
     } else  {
       colDest.push_back(ColVal(jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset,Msrc[itSrc]));
       nnz++;
