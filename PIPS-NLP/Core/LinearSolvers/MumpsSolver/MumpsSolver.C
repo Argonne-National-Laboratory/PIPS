@@ -14,7 +14,6 @@
 #include <cmath>
 #include "stdlib.h"
 
-
 extern double gHSL_PivotLV;
 extern int gSymLinearAlgSolverForDense;
 
@@ -68,10 +67,9 @@ MumpsSolver::~MumpsSolver()
     mumps_->job = -2; //terminate mumps
     dmumps_c(mumps_);
 
-    if(mumps_->irn_loc) delete [] mumps_->irn_loc;
-    if(mumps_->jcn_loc) delete [] mumps_->jcn_loc;
-    if(mumps_->a_loc) delete [] mumps_->a_loc;
-
+    if(M_IRN) delete [] M_IRN;
+    if(M_JCN) delete [] M_JCN;
+    if(M_A) delete [] M_A;
 
     delete mumps_;
   }
@@ -82,9 +80,12 @@ void MumpsSolver::createMumpsStruct()
   mumps_ = new DMUMPS_STRUC_C;
   mumps_->n = 0;
   mumps_->nnz = 0;
-  mumps_->irn_loc = NULL;
-  mumps_->jcn_loc = NULL;
-  mumps_->a_loc = NULL;
+  M_IRN = NULL;
+  M_JCN = NULL;
+  M_A = NULL;
+  mumps_->irn = NULL;
+  mumps_->jcn = NULL;
+  mumps_->a = NULL;
   memset(mumps_->keep, 0, 400*sizeof(int));
   mumps_->comm_fortran = getFortranMPIComm(mumpsMpiComm);
   mumps_->sym = 2;//general symetric matrix
@@ -98,8 +99,12 @@ void MumpsSolver::createMumpsStruct()
   setMumpsVerbosity(0);//3 moderately verbose, 1 only errors, 0 anything is surpressed
 
   mumps_->n = (int)n_;
-  mumps_->icntl[ 5  -1] = 0; //assembled format for matrix (triplet format)
-  mumps_->icntl[18  -1] = 3; //distributed assembled format
+  //0: assembled format for matrix (triplet format), 1 elemental (do not use)
+  mumps_->icntl[ 5  -1] = 0; 
+  // 0 centralized, use irn, jcn; undef MUMPS_DISTRIBUTED_MAT
+  // 3 distributed assembled format, use irn_loc and jcn_loc; define MUMPS_DISTRIBUTED_MAT
+  mumps_->icntl[18  -1] = 0; 
+
   mumps_->icntl[20  -1] = 0; //the right-hand side is in dense format in the structure component
   mumps_->icntl[21  -1] = 0; // the solution vector is assembled and stored in the structure component RHS
   //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
@@ -108,28 +113,23 @@ void MumpsSolver::createMumpsStruct()
 
 bool MumpsSolver::setLocalEntries(long long globnnz, long long locnnz, int* locirn, int* locjcn, double* locA)
 {
-  mumps_->nnz = globnnz;
-  mumps_->nnz_loc = locnnz;
-  //par%IRN par%JCN par%A
-  mumps_->irn_loc = locirn;
-  mumps_->jcn_loc = locjcn;
-  mumps_->a_loc = locA;
-
+#ifdef MUMPS_DISTRIBUTED_MAT
+    // this is for mumps_->icntl[18  -1] = 3; 
+    mumps_->nnz = globnnz;
+    mumps_->nnz_loc = locnnz;
+    //par%IRN par%JCN par%A
+    mumps_->irn_loc = locirn;
+    mumps_->jcn_loc = locjcn;
+    M_A = locA;
+#else 
+    //this is for mumps_->icntl[18  -1] = 0; 
+    mumps_->nnz = globnnz;
+    mumps_->irn = locirn;
+    mumps_->jcn = locjcn;
+    mumps_->a = locA;
+#endif
   return true;
 }
-
-// MumpsSolver::MumpsSolver( SparseSymMatrix * sm )
-// {
-
-
-//   int size = sm->size();
-//   mStorage = DenseStorageHandle( new DenseStorage(size,size) );
-
-//   ipiv = new int[size];
-//   lwork = -1;
-//   work = NULL;
-//   sparseMat = sm;
-// }
 
 #ifndef WITHOUT_PIPS
 void MumpsSolver::sysMatToSpTriplet()
@@ -139,38 +139,38 @@ void MumpsSolver::sysMatToSpTriplet()
   assert(Mspsys);
   int nnz = Mspsys->numberOfNonZeros();
 
-  if(NULL==mumps_->irn_loc) {
-    mumps_->irn_loc = new int[nnz];
+  if(NULL==M_IRN) {
+    M_IRN = new int[nnz];
   } else {
     if(mumps_->nnz != nnz) {
       if(gMUMPSStatsOn)
 	if(my_mumps_rank_==0) printf("MUMPSSolver: mismatch in the number of nonzeros, reallocating triplet arrays....\n");
-      delete[] mumps_->irn_loc;
-      mumps_->irn_loc = new int[nnz];
+      delete[] M_IRN;
+      M_IRN = new int[nnz];
     }
   }
 
-  if(NULL==mumps_->jcn_loc) {
-    mumps_->jcn_loc = new int[nnz];
+  if(NULL==M_JCN) {
+    M_JCN = new int[nnz];
   } else {
     if(mumps_->nnz != nnz) {
-      delete[] mumps_->jcn_loc;
-      mumps_->jcn_loc = new int[nnz];
+      delete[] M_JCN;
+      M_JCN = new int[nnz];
     }
   }
-  if(NULL==mumps_->a_loc) {
-    mumps_->a_loc = new double[nnz];
+  if(NULL==M_A) {
+    M_A = new double[nnz];
   } else {
     if(mumps_->nnz != nnz) {
-      delete[] mumps_->a_loc;
-      mumps_->a_loc = new double[nnz];
+      delete[] M_A;
+      M_A = new double[nnz];
     }
   }
 
   mumps_->nnz     = nnz;
   mumps_->nnz_loc = nnz;
 
-  Mspsys->atGetSparseTriplet(mumps_->irn_loc, mumps_->jcn_loc, mumps_->a_loc);
+  Mspsys->atGetSparseTriplet(M_IRN, M_JCN, M_A);
 }
 void MumpsDenseSolver::sysMatToSpTriplet()
 {
@@ -188,31 +188,31 @@ void MumpsDenseSolver::sysMatToSpTriplet()
     nnz++; //always have diags
   }
 
-  if(NULL==mumps_->irn_loc) {
-    mumps_->irn_loc = new int[nnz];
+  if(NULL==M_IRN) {
+    M_IRN = new int[nnz];
   } else {
     if(mumps_->nnz != nnz) {
       if(gMUMPSStatsOn)
 	if(my_mumps_rank_==0) printf("MUMPSSolver: mismatch in the number of nonzeros, reallocating triplet arrays....\n");
-      delete[] mumps_->irn_loc;
-      mumps_->irn_loc = new int[nnz];
+      delete[] M_IRN;
+      M_IRN = new int[nnz];
     }
   }
 
-  if(NULL==mumps_->jcn_loc) {
-    mumps_->jcn_loc = new int[nnz];
+  if(NULL==M_JCN) {
+    M_JCN = new int[nnz];
   } else {
     if(mumps_->nnz != nnz) {
-      delete[] mumps_->jcn_loc;
-      mumps_->jcn_loc = new int[nnz];
+      delete[] M_JCN;
+      M_JCN = new int[nnz];
     }
   }
-  if(NULL==mumps_->a_loc) {
-    mumps_->a_loc = new double[nnz];
+  if(NULL==M_A) {
+    M_A = new double[nnz];
   } else {
     if(mumps_->nnz != nnz) {
-      delete[] mumps_->a_loc;
-      mumps_->a_loc = new double[nnz];
+      delete[] M_A;
+      M_A = new double[nnz];
     }
   }
 
@@ -222,16 +222,16 @@ void MumpsDenseSolver::sysMatToSpTriplet()
   //copy nz values
   int nzIt=0;
   for(int i=0; i<n_; i++) {
-    mumps_->a_loc[nzIt] = m[i][i];
-    mumps_->irn_loc[nzIt] = i+1;
-    mumps_->jcn_loc[nzIt] = i+1;
+    M_A[nzIt] = m[i][i];
+    M_IRN[nzIt] = i+1;
+    M_JCN[nzIt] = i+1;
     nzIt++;
     
     for(int j=i+1; j<n_; j++) {
       if(m[i][j]!=0.0) {
-	mumps_->a_loc[nzIt] = m[i][j];
-	mumps_->irn_loc[nzIt] = i+1;
-	mumps_->jcn_loc[nzIt] = j+1;
+	M_A[nzIt] = m[i][j];
+	M_IRN[nzIt] = i+1;
+	M_JCN[nzIt] = j+1;
 	nzIt++;
       }
     }
@@ -244,14 +244,14 @@ void MumpsDenseSolver::sysMatToSpTriplet()
 int MumpsSolver::matrixChanged()
 {
   if(mumpsMpiComm!=MPI_COMM_NULL) {
-    
+    printf("mumps Rank %d says hello\n", my_mumps_rank_);
 #ifndef WITHOUT_PIPS
     if(Msys!=NULL)
       sysMatToSpTriplet();
 #endif 
     
     //for(int nzIt=0; nzIt<mumps_->nnz; nzIt++) {
-    //  printf("%d %d %g\n", mumps_->irn_loc[nzIt], mumps_->jcn_loc[nzIt], mumps_->a_loc[nzIt]);
+    //  printf("%d %d %g\n", M_IRN[nzIt], M_JCN[nzIt], M_A[nzIt]);
     //}
 
     mumps_->n = n_;
@@ -472,23 +472,10 @@ void MumpsSolver::solve ( OoqpVector& v )
   if(mumpsMpiComm!=MPI_COMM_NULL) {
 
     solve(&sv[0]);
-
   }
 
-  int ierr = MPI_Bcast(&sv[0], (int)n_, MPI_DOUBLE, rankInPipsComm, pipsMpiComm); assert(ierr==MPI_SUCCESS); 
-
-  // char fortranUplo = 'U';
-  // int info;
-  // int one = 1;
-
-  // int n = mStorage->n; SimpleVector &  sv = dynamic_cast<SimpleVector &>(v);
-
-
-  // FNAME(dsytrs)( &fortranUplo, &n, &one,	&mStorage->M[0][0],	&n,
-  // 	   ipiv, &sv[0],	&n,	&info);
-
-
-  // assert(info==0);
+  int ierr = MPI_Bcast(&sv[0], (int)n_, MPI_DOUBLE, rankInPipsComm, pipsMpiComm); 
+  assert(ierr==MPI_SUCCESS); 
 }
 
 void MumpsSolver::solve ( GenMatrix& rhs_in )

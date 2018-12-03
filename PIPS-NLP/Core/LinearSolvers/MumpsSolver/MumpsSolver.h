@@ -18,6 +18,19 @@ class DoubleLinearSolver {};
 
 #include <cassert>
 
+//#define MUMPS_DISTRIBUTED_MAT
+
+#ifdef MUMPS_DISTRIBUTED_MAT
+#define M_IRN mumps_->irn_loc
+#define M_JCN mumps_->jcn_loc
+#define M_A   mumps_->a_loc
+#else
+#define M_IRN mumps_->irn
+#define M_JCN mumps_->jcn
+#define M_A   mumps_->a
+#endif
+
+
 /** A linear solver for symmetric indefinite systems using MUMPS
  *
  */
@@ -81,12 +94,12 @@ public:
   inline bool getTripletStorageArrays(int** irow, int** jcol, double** M) 
   { 
     if(NULL==mumps_) return false; 
-    if(NULL==mumps_->irn_loc) return false; 
-    *irow=mumps_->irn_loc; 
-    if(NULL==mumps_->jcn_loc) return false; 
-    *jcol=mumps_->jcn_loc; 
-    if(NULL==mumps_->a_loc)   return false;
-    *M=mumps_->a_loc;
+    if(NULL==M_IRN) return false; 
+    *irow=M_IRN; 
+    if(NULL==M_JCN) return false; 
+    *jcol=M_JCN;
+    if(NULL==M_A)   return false;
+    *M=M_A;
 
     assert(irow); assert(jcol); assert(M);
     return true;
