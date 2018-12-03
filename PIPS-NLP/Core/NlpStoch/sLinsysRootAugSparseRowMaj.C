@@ -81,9 +81,9 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
   //1. create the communicator for the subset of processes that MUMPS should use
   int color = MPI_UNDEFINED;
   
-  //color only rank 0 and leave the other ones uncolored. MUMPS communicator created below will be MPI_COMM_NULL on
-  //the nodes not colored
-  if(myRank==0)
+  //color a couple of ranks, say 0,1,2,4 and leave the other ones uncolored. 
+  //MUMPS communicator created below will be MPI_COMM_NULL on the nodes not colored
+  if(myRank<4)
     color = 0;
   MPI_Comm mumpsComm;
   MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
@@ -210,9 +210,7 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
   /////////////////////////////////////////////////////////////
   if(locmy>0){
     //!kktd->symAtAddSubmatrix( locnx+locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx, 1 );
-    kktm.forceSymUpdate(false);
     kktm.symAtAddSubmatrix(locnx+locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx);
-    kktm.forceSymUpdate(false);
     //!for(int i=locnx+locmz; i<locnx+locmz+locmy; i++) dKkt[i][i] += syDiag[i-locnx-locmz];
     
   }
@@ -226,9 +224,7 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
   // // update the KKT with C   and (dual reg and -I corresponding to \delta z)
   // ///////////////////////////////////////////////////////////////////////////
   if(locmz>0){
-    kktm.forceSymUpdate(false);
     kktm.symAtAddSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx);
-    kktm.forceSymUpdate(false);
     // //   kktd->symAtAddSubmatrix( locnx+locmz+locmy, 0, prob->getLocalD(), 0, 0, locmz, locnx, 1 );
 
     int jcol[2]; double M[2]; M[0]=-1.;
@@ -451,9 +447,6 @@ sLinsysRootAugSpTriplet::UpdateMatrices( Data * prob_in, int const updateLevel)
   SparseSymMatrixRowMajList* kktm = dynamic_cast<SparseSymMatrixRowMajList*>(kkt);
   assert(kktm!=NULL);
 
-  //kktm stores only upper triangular, but B needs to go in the lower part -> force symmetric update 
-  //kktm->forceSymUpdate(true);
-
   if(useUpdate>=2){
     if(gOuterSolve < 3){	
       kktm->symAtSetSubmatrix( 0, 0, prob->getLocalQ(), 0, 0, locnx, locnx);
@@ -467,7 +460,6 @@ sLinsysRootAugSpTriplet::UpdateMatrices( Data * prob_in, int const updateLevel)
 	kktm->symAtSetSubmatrix( locnx + locmz, 0, prob->getLocalB(), 0, 0, locmy, locnx);
     } 
   }
-  //kktm->forceSymUpdate(false);
 
   // propagate it to the subtree
   for(size_t it=0; it<children.size(); it++)
