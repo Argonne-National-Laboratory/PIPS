@@ -128,11 +128,11 @@ class SparseSymMatrixRowMajList : public SymMatrix {
   //copies (i,j,M) to 'this'; returns false if an entry of (i,j,M) not found in 'this', otherwise true.
   bool atPutSparseTriplet(const int*i, const int* j, const double* M, const int& nnz_);
 
-  inline void forceSymUpdate(bool val) { bSymUpdate=val; }
+  //inline void forceSymUpdate(bool val) { bSymUpdate=val; }
  protected:
   std::vector<std::list<ColVal> > vlmat;
   int nnz;
-  bool bSymUpdate;
+  //bool bSymUpdate;
  protected:
   /* Precondition: both colDest and jcolSrc are supposed to be ordered */
   void mergeSetColumn(const int& rowDestIdx, const int& colDestIdxOffset,

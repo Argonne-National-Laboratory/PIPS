@@ -12,7 +12,7 @@ using namespace std;
 
 
 SparseSymMatrixRowMajList::SparseSymMatrixRowMajList( int size )
-  : nnz(0), bSymUpdate(false)
+  : nnz(0)
 {
   //mStorage = SparseStorageHandle( new SparseStorage(size, size, nnz) );
   vlmat.reserve(size);
@@ -448,22 +448,22 @@ mergeSetColumn(const int& rowDestIdx, const int& colDestIdxOffset,
     } else {
       int colDestIdx = jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset;
       if(colDestIdx>rowDestIdx) {
-	if(!bSymUpdate) {
-	  //this code should not run given the conventions for storing the matrices in PIPS.
-	  assert(!bSymUpdate &&  "careful here: sym update not enforced and you are trying "
-		 "to put entries in the upper triangular; do you know what you're doing? (2)");
-	  //nothing needs to be done if the symmetric update is not enforced. 
-	} else {
-	  assert(false && "remove me after testing with the small examples");
-	  //the addElem below is highly inefficient for large-problems and it is here
-	  //to ensure that the small test examples work despite the fact that they 
-	  //the upper triangular of Q. 
-
-	  //add the element in the upper triangular part, that is, instead of inserting at
-	  //(rowDestIdx, colDestIdx) we insert at (colDestIdx, rowDestIdx)
-	  this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
-	  itSrc++;
-	}
+	//if(!bSymUpdate) {
+	//  //this code should not run given the conventions for storing the matrices in PIPS.
+	//  assert(!bSymUpdate &&  "careful here: sym update not enforced and you are trying "
+	//	 "to put entries in the upper triangular; do you know what you're doing? (2)");
+	//  //nothing needs to be done if the symmetric update is not enforced. 
+	//} else {
+	assert(false && "remove me after testing with the small examples");
+	//the addElem below is highly inefficient for large-problems and it is here
+	//to ensure that the small test examples work despite the fact that they 
+	//the upper triangular of Q. 
+	
+	//add the element in the upper triangular part, that is, instead of inserting at
+	//(rowDestIdx, colDestIdx) we insert at (colDestIdx, rowDestIdx)
+	this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
+	itSrc++;
+	//}
       } else {
 	//this case is for itDest->jcol-colDestIdxOffset > jcolSrc[itSrc]-colSrcIdxOffset
 	colDest.insert(itDest, ColVal(jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset,Msrc[itSrc]));
@@ -483,24 +483,23 @@ mergeSetColumn(const int& rowDestIdx, const int& colDestIdxOffset,
     assert(itDest==colDest.end());
     int colDestIdx = jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset;
     if(colDestIdx>rowDestIdx) {
-      if(!bSymUpdate) {
+      //if(!bSymUpdate) {
 	//this code should not run given the conventions for storing the matrices in PIPS.
-	assert(!bSymUpdate &&  "careful here: sym update not enforced and you are trying "
-	       "to put entries in the upper triangular; do you know what you're doing? (1)");
+	//assert(!bSymUpdate &&  "careful here: sym update not enforced and you are trying "
+	//       "to put entries in the upper triangular; do you know what you're doing? (1)");
       //nothing needs to be done if the symmetric update is not enforced. 
-      } else {
-	assert(false && "remove me after testing with the small examples");
-	//the addElem below is highly inefficient for large-problems and it is here
-	//to ensure that the small test examples work despite the fact that they 
-	//the upper triangular of Q.
-
-	//add the element in the upper triangular part, that is, instead of inserting at
-	//(rowDestIdx, colDestIdx) we insert at (colDestIdx, rowDestIdx)
-	this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
-      }
+      //} else {
+      assert(false && "remove me after testing with the small examples");
+      //the addElem below is highly inefficient for large-problems and it is here
+      //to ensure that the small test examples work despite the fact that they provide
+      //the upper triangular of Q.
+      
+      //add the element in the upper triangular part, that is, instead of inserting at
+      //(rowDestIdx, colDestIdx) we insert at (colDestIdx, rowDestIdx)
+      this->putElem(colDestIdx,rowDestIdx,Msrc[itSrc]);
+      //}
     } else  {
       colDest.push_back(ColVal(jcolSrc[itSrc]-colSrcIdxOffset+colDestIdxOffset,Msrc[itSrc]));
-      //colDest.push_back(ColVal(jcolSrc[itSrc],Msrc[itSrc]));
       nnz++;
     }
     itSrc++;
@@ -555,7 +554,7 @@ void SparseSymMatrixRowMajList::symAtSetSubmatrix( int destRow, int destCol, Dou
 			       int rowExtent, int colExtent)
 {
   int i, k, colIdx, colCount, tmp;
-  bool srcIsSym = false;
+  //bool srcIsSym = false;
   int* krowSrc = NULL;
   int* jcolSrc = NULL;
   double*  MSrc = NULL;
@@ -571,7 +570,7 @@ void SparseSymMatrixRowMajList::symAtSetSubmatrix( int destRow, int destCol, Dou
       krowSrc = pM->krowM(); jcolSrc = pM->jcolM(); MSrc = pM->M();
     }
   } else {
-    srcIsSym = true;
+    //srcIsSym = true;
     krowSrc = pM->krowM(); jcolSrc = pM->jcolM(); MSrc = pM->M(); 
   }
  
@@ -580,12 +579,12 @@ void SparseSymMatrixRowMajList::symAtSetSubmatrix( int destRow, int destCol, Dou
     colIdx = krowSrc[tmp];
     colCount = krowSrc[tmp+1]-colIdx;
     
-    if(srcIsSym) {
+    //if(srcIsSym) {
       //if(colCount>0) {
       //assert(destCol+jcolSrc[krowSrc[i+srcRow]]>=i+destRow && 
       //       "symmetric matrices need to have only elements in the upper triangle");
       //}
-    }
+    //}
 
     mergeSetColumn(i+destRow, destCol,
 		   jcolSrc+colIdx, MSrc+colIdx, colCount, srcCol,
@@ -628,13 +627,7 @@ symAtAddSubmatrix( int destRow, int destCol,
     //assert(jcolSrc[colIdx]>=i);
 
     this->atAddSpRow(i+destRow, jcolSrc+colIdx, MSrc+colIdx, colCount);
-    // int extrannz = mergeSetColumn(vlmat[i+destRow], destCol,
-    // 				  jcolSrc+colIdx, MSrc+colIdx, colCount, srcCol,
-    // 				  colExtent);
-    // assert(extrannz>=0);
-    // this->nnz += extrannz;
   }
-
 }
 
 void SparseSymMatrixRowMajList::atGetSparseTriplet(int* ii, int* jj, double* MM, bool fortran/*=true*/)
