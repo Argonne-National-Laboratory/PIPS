@@ -1131,11 +1131,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       assert(start==gdxN-1);
       /* Fill map array */ 
       p2gmap = (int*) malloc(gdxN*sizeof(int));
-      for (j=0; j<objVarUel-gdxM-1; j++)
-         p2gmap[p2gblkmap[varstage[j]]++] = j;
-      /* Skip objvar */
-      for (++j; j<gdxN; j++)
-         p2gmap[p2gblkmap[varstage[j]]++] = j-1;
+      for (j=0; j<gdxN; j++)
+         if (j!=objVarUel-gdxM-1)
+            p2gmap[p2gblkmap[varstage[j]]++] = j;
       for (j=0; j<gdxN-1; j++)
          fprintf(fmap,"%d\n", p2gmap[j]);
       free(p2gmap);
@@ -1157,11 +1155,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       assert(start==gdxM-1);
       /* Fill map array */ 
       p2gmap = (int*) malloc(gdxM*sizeof(int));
-      for (i=0; i<objRowUel-1; i++)
-         p2gmap[p2gblkmap[rowstage[i]]++] = i;
-      /* Skip objrow */
-      for (++i; i<gdxM; i++)
-         p2gmap[p2gblkmap[rowstage[i]]++] = i-1;
+      for (i=0; i<gdxM; i++)
+         if (i!=objRowUel-1)
+            p2gmap[p2gblkmap[rowstage[i]]++] = i;
       for (i=0; i<gdxM-1; i++)
          fprintf(fmap,"%d\n", p2gmap[i]);
       free(p2gmap);
