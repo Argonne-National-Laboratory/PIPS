@@ -215,6 +215,8 @@ int main(int argc, char ** argv)
    const double t0 = MPI_Wtime();
 #endif
 
+   initGMSPIPSIO();   
+
    GMSPIPSBlockData_t** blocks;
    ScalerType scaler_type = SCALER_NONE;
    bool stepDiffLp = false;

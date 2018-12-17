@@ -45,6 +45,8 @@ int  readOneBlock(const int numBlocks,
    int rc;
    if ( SCRDIRSTEM == fType || SCRDIR == fType )
    {
+
+#if !GDXSOURCE
       char fname[GMS_SSSIZE], dname[GMS_SSSIZE];
       
       if ( SCRDIRSTEM == fType )
@@ -58,6 +60,9 @@ int  readOneBlock(const int numBlocks,
          sprintf(dname,"%s\\gamsmat.dat", pDirStem);
       }
       rc = readBlockSqueezed(numBlocks,actBlock,strict,fname,dname,pGAMSSysDir,block);
+#else
+      rc = 255;
+#endif   
    }
    else
    {
@@ -122,6 +127,8 @@ int main(int argc, char* argv[])
    assert(pDirStem);
    assert(numBlocks>0);
    assert(actBlock<numBlocks);
+   
+   initGMSPIPSIO();   
    
    if ( gdxSplit && (fType == GDXFILE) )
    {

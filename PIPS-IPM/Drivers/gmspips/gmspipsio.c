@@ -5,9 +5,13 @@
 
 #include "gmspipsio.h"
 #include "gclgms.h"
+#if defined(GDXSOURCE)
+#include "gdxstatic.h"
+#else
 #include "gdxcc.h"
 #include "gmomcc.h"
 #include "gevmcc.h"
+#endif   
 
 #if defined(__cplusplus)
 extern "C" {
@@ -126,11 +130,12 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    char symName[GMS_SSSIZE], symText[GMS_SSSIZE];
    int dimFirst, nrRecs, numUels, symDim, symType, userInfo, symCnt, symStart=3;
    int colsSeen=0, rowsSeen=0; 
-   
-   printf("1\n");
+
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fDCT, GAMSSysDir, msg, sizeof(msg));
    else
+#endif      
       rc = gdxCreate (&fDCT, msg, sizeof(msg));
    if ( !rc ) 
    {
@@ -177,9 +182,11 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    gdxM = (int) vals[0];
    GDXSAVECALLX(fDCT,gdxDataReadDone(fDCT));
    
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fSOL, GAMSSysDir, msg, sizeof(msg));
    else
+#endif      
       rc = gdxCreate (&fSOL, msg, sizeof(msg));
    if ( !rc ) 
    {
@@ -436,7 +443,7 @@ if ( blk->nnz##mat )                                                   \
    blk->val##mat = (double *) malloc(blk->nnz##mat * sizeof(double));  \
 }
 
-#if 1 
+#if !defined(GDXSOURCE)
 int doColumnPermutation(const gmoHandle_t gmo, const int strict, const int n, const int stageI, const int stage0, 
                      int32_t* n0, int32_t* ni, int perm[] )
 {
@@ -970,9 +977,11 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    assert(numBlocks>0);   
    assert(gdxFilename);
    
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fGDX, GAMSSysDir, msg, sizeof(msg));
    else
+#endif
       rc = gdxCreate (&fGDX, msg, sizeof(msg));
 
    if ( !rc )
@@ -1025,9 +1034,11 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    for (k=0; k<numBlocks; k++)
    {
       int nUel;
+#if !defined(GDXSOURCE)   
       if ( GAMSSysDir )
          rc = gdxCreateD (&(bGDX[k]), GAMSSysDir, msg, sizeof(msg));
       else
+#endif
          rc = gdxCreate (&(bGDX[k]), msg, sizeof(msg));
       
       if ( !rc ) 
@@ -1234,9 +1245,11 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    assert(actBlock>=0 && actBlock<numBlocks);
    assert(gdxFilename);
    
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fGDX, GAMSSysDir, msg, sizeof(msg));
    else
+#endif
       rc = gdxCreate (&fGDX, msg, sizeof(msg));
 
    if ( !rc ) 
@@ -1799,6 +1812,14 @@ if (blk->rm##mat)                                                               
    
    return 0;   
 
+}
+
+int initGMSPIPSIO()
+{
+#if defined(GDXSOURCE)
+   _P3_DllInit();   
+#endif   
+   return 0;
 }
 
 #if defined(__cplusplus)
