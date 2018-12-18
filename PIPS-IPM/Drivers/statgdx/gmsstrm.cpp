@@ -426,7 +426,7 @@ Constructor(GMSSTRM_txfilestream ) GMSSTRM_txfilestream_DOT_create(
   const SYSTEM_ansichar *afilename,
   SYSTEM_word amode)
 {
-  P3UTILS_tp3fileopenaction fmode;
+  P3UTILS_tp3fileopenaction fmode = P3UTILS_p3openread;
 
   ValueCast(GMSSTRM_txfilestream,SYSTEM_tobject_DOT_create(ValueCast(
     SYSTEM_tobject,self)));

@@ -778,6 +778,7 @@ void _P3_Readfs0 (_P3file *fil, SYSTEM_byte *s, SYSTEM_byte max)
    * If defined(P3UNIX) and the strings ends with CarriageReturn,
    * we'll return only max-1 chars
    */
+  ch = EOF;			/* squash a stupid warning */
   for (i=1; i<=max && (ch =getc(f)) != '\n' && (ch != EOF); i++)
     s[i] = ch;
   *s = i-1;
@@ -1108,8 +1109,10 @@ void _P3block_read_write (_P3file        *fil,
     }
     else {
       if (count != num_transferred) { /* Also an error indication to report */
-        int eee;
-        eee = feof(f) ? READ_AT_END_OF_FILE : EIO;
+        int eee = EIO;
+	if (feof(f))
+	  eee = READ_AT_END_OF_FILE;
+        /* eee = feof(f) ? READ_AT_END_OF_FILE : EIO; */
         _P3_IO_ERR(_P3_err, eee, fil, ((wr) ? _P3_ERR_VERB_WRITE : _P3_ERR_VERB_READ));
       }
     }
@@ -1209,6 +1212,7 @@ void _P3fileopn(_P3file *fil, SYSTEM_longint s, SYSTEM_longint t,
   /* Set action to perform on file */
   /* Weird case: s = _P3RESET and filemode = 1 (_FM_RO):
      Do append, not write which erases the file */
+  action = _P3RESET;		/* squash warning */
   switch (s) {
     case _P3APPEND:
       action = _P3APPEND ;

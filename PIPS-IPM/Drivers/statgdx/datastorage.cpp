@@ -1493,6 +1493,7 @@ static Function(DATASTORAGE_psparsecell ) cleanup(
   DATASTORAGE_psparsecell ps;
   DATASTORAGE_psparsecell pdown;
 
+  pp = NULL;
   result = NULL;
   ps = p;
   while (ps != NULL) {

@@ -1122,7 +1122,7 @@ Procedure P3UTILS_p3move64(
   }
   else {
     size_t ssz = (size_t) sz;
-    if (ssz != sz)
+    if ((SYSTEM_int64)ssz != sz)
       _EINVALIDCAST_RAISE_E(_P3str1("\030p3Move64: size too large"));
     (void) memmove (dest, source, ssz);
   }

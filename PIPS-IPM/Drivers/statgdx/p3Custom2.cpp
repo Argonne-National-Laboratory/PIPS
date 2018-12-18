@@ -2,7 +2,7 @@
  * This code is sensitive to the order of the #defines, so inlining is not OK
  */
 
-#if defined(__linux)
+#if defined(__linux) && ! defined(_GNU_SOURCE)
 # define _GNU_SOURCE  /* required for dladdr() but no desired globally */
 #endif
 
