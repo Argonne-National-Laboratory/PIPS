@@ -848,10 +848,10 @@ void copyGDXSymbol(int         numBlocks,
    gdxUelIndex_t keyInt;   
    char symText[GMS_SSSIZE];
  
-   printf("Copying %s\n", symName); fflush(stdout);
    rc = gdxFindSymbol(fGDX, symName, &symNr);
    if (!rc && 0==strcmp(symName,"ANl"))
    {
+      printf("Copying %s\n", symName); fflush(stdout);
       for (k=0; k<numBlocks; k++)
       {
          GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, "Non-linear Jacobian indicator", 2, dt_par, 0));
@@ -861,6 +861,7 @@ void copyGDXSymbol(int         numBlocks,
    }
    if (!rc && 0==strcmp(symName,"iobj"))
    {
+      printf("Copying %s\n", symName); fflush(stdout);
       vals[GMS_VAL_LEVEL] = 0;
       keyInt[0] = objRowUel;
       for (k=0; k<numBlocks; k++)
@@ -873,6 +874,7 @@ void copyGDXSymbol(int         numBlocks,
    }
    GDXSAVECALLX(fGDX,gdxSymbolInfo(fGDX, symNr, symText, &symDim, &symType));
    GDXSAVECALLX(fGDX,gdxSymbolInfoX(fGDX, symNr, &recNr, &userInfo, symText));
+   printf("Copying %s (#recs=%d)\n", symName, recNr); fflush(stdout);
 
    for (k=0; k<numBlocks; k++)
    {
@@ -1052,6 +1054,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
 
       if ( !skipStrings )
       {
+         if (0==k)
+            printf("#UELs: %d\n",numUels);fflush(stdout);
+
          printf("UEL Registration block %d\n",k);fflush(stdout);
          GDXSAVECALLX(bGDX[k],gdxUELRegisterRawStart(bGDX[k]));
          for (nUel=1; nUel<=numUels; nUel++)
