@@ -31,7 +31,9 @@
 #include "gmsglobx.h"
 #include "paldoorg.h"
 #include "gdlaudit.h"
+#if defined(USE_RUNNER)
 #include "runner.h"
+#endif
 #include "gxfile.h"
 
 
@@ -2363,7 +2365,9 @@ Extern_C void _P3_DllFini()
   _P3_Finalizing = 1;
   _P3_DLL_UNWIND();
   _Final_Module_gxfile();
+#if defined(USE_RUNNER)
   _Final_Module_runner();
+#endif
   _Final_Module_gdlaudit();
   _Final_Module_paldoorg();
   _Final_Module_gmsglobx();
@@ -2432,7 +2436,9 @@ Extern_C SYSTEM_integer _P3_DllInit()
   _Init_Module_gmsglobx();
   _Init_Module_paldoorg();
   _Init_Module_gdlaudit();
+#if defined(USE_RUNNER)
   _Init_Module_runner();
+#endif
   _Init_Module_gxfile();
 
 

@@ -25,7 +25,9 @@
 #include "gmsheapnew.h"
 #include "datastorage.h"
 #include "gdlaudit.h"
+#if defined(USE_RUNNER)
 #include "runner.h"
+#endif
 #include "gxfile.h"
 
 _P3STR_7 GXFILE_baduel_prefix = {4,'?','L','_','_'};
@@ -286,7 +288,9 @@ static Function(SYSTEM_integer ) GXFILE_convertgdxfile(
   SYSTEM_integer result;
   SYSTEM_shortstring conv;
   SYSTEM_shortstring comp;
+#if defined(USE_RUNNER)
   RUNNER_trunner r;
+#endif
 
   result = 0;
   {
@@ -301,11 +305,12 @@ static Function(SYSTEM_integer ) GXFILE_convertgdxfile(
     _P3strcpy(conv,255,_P3str1("\002V7"));
   if (_P3strcmpE(conv,_P3str1("\002V5"))) { 
     _P3strclr(comp);
-  } else 
-    if (GXFILE_getenvcompressflag() == 0) { 
-      _P3strcpy(comp,255,_P3str1("\001U"));
-    } else 
-      _P3strcpy(comp,255,_P3str1("\001C"));
+  }
+  else if (GXFILE_getenvcompressflag() == 0) { 
+    _P3strcpy(comp,255,_P3str1("\001U"));
+  }
+  else 
+    _P3strcpy(comp,255,_P3str1("\001C"));
   {
     _P3STR_255 _t1;
     _P3STR_255 _t2;
@@ -314,6 +319,11 @@ static Function(SYSTEM_integer ) GXFILE_convertgdxfile(
       _t2,255,_P3str1("\002V7"),mycomp))) 
       return result;
   }
+#if ! defined(USE_RUNNER)
+  // if we go this way, we will not run gdxcopy to compress or uncompress
+  // the GDX file
+  result = GXFILE_err_gdxcopy;
+#else
   r = ValueCast(RUNNER_trunner,RUNNER_trunner_DOT_create(ValueCast(
     RUNNER_trunner,_P3alloc_object(&RUNNER_trunner_CD))));
   if (_P3strcmpE(GXFILE_dllloadpath,_P3str1("\000"))) { 
@@ -343,6 +353,7 @@ static Function(SYSTEM_integer ) GXFILE_convertgdxfile(
       result = GXFILE_err_gdxcopy - r->RUNNER_trunner_DOT_fprogrc;
   SYSTEM_tobject_DOT_free(ValueCast(SYSTEM_tobject,r));
   return result;
+#endif
 }  /* convertgdxfile */
 
 static Function(SYSTEM_ansichar *) GXFILE_makegoodexpltext(
