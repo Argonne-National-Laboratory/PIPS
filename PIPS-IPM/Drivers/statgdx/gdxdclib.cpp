@@ -248,7 +248,6 @@ Extern_C _P3_DllExport Function(SYSTEM_integer )  STDCALL xcheck(
         entryindex = i;
         SYSTEM_break(BRK_1);
       } 
-    CNT_1:;
 }
 BRK_1:;
     if (entryindex == 0) {
@@ -1501,8 +1500,11 @@ Extern_C _P3_DllExport Function(SYSTEM_integer )  STDCALL
     (ValueCast(GXFILE_tgxfileobj,pgdx))->
       GXFILE_tgxfileobj_DOT_gdxdatareadrawfastfilt_dp_callbyref = 
       SYSTEM_true;
-    PointerCast(SYSTEM_pointer,&local_dp) = ValueCast(SYSTEM_pointer,
-      dp);
+#if 0    
+    PointerCast(SYSTEM_pointer,&local_dp) = ValueCast(SYSTEM_pointer, dp);
+#else
+    (void) memcpy ((void *)&local_dp, (void *)&dp, sizeof(local_dp));
+#endif
     result = GXFILE_tgxfileobj_DOT_gdxdatareadrawfastfilt(ValueCast(
       GXFILE_tgxfileobj,pgdx),synr,uelfilterstr,local_dp);
     return result;
@@ -1524,8 +1526,11 @@ Extern_C _P3_DllExport Function(SYSTEM_integer )  STDCALL
     (ValueCast(GXFILE_tgxfileobj,pgdx))->
       GXFILE_tgxfileobj_DOT_gdxgetdomainelements_dp_callbyref = 
       SYSTEM_true;
-    PointerCast(SYSTEM_pointer,&local_dp) = ValueCast(SYSTEM_pointer,
-      dp);
+#if 0    
+    PointerCast(SYSTEM_pointer,&local_dp) = ValueCast(SYSTEM_pointer, dp);
+#else
+    (void) memcpy ((void *)&local_dp, (void *)&dp, sizeof(local_dp));
+#endif
     result = GXFILE_tgxfileobj_DOT_gdxgetdomainelements(ValueCast(
       GXFILE_tgxfileobj,pgdx),synr,dimpos,filternr,local_dp,nrelem,
       uptr);

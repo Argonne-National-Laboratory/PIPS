@@ -36,10 +36,8 @@ Function(P3LIBRARY_tlibhandle ) P3LIBRARY_p3loadlibrary(
   SYSTEM_ansichar *loadmsg)
 {
   P3LIBRARY_tlibhandle result;
-  SYSTEM_integer lasterr;
   P3PRIVATE_shortstrbuf libbuf;
   SYSTEM_P3_pansichar libptr;
-  P3PRIVATE_shortstrbuf errmsgbuf;
   SYSTEM_P3_pansichar dlerrmsg;
 
   libptr = P3PRIVATE_strtostrbuf(lib,libbuf);
@@ -48,6 +46,8 @@ Function(P3LIBRARY_tlibhandle ) P3LIBRARY_p3loadlibrary(
 #if defined(_WIN32)
 {
   UINT oldMode;
+  SYSTEM_integer lasterr;
+  P3PRIVATE_shortstrbuf errmsgbuf;
 
   oldMode = SetErrorMode(SEM_FAILCRITICALERRORS);
   result = (SYSTEM_pointer) LoadLibrary((char *)libptr);

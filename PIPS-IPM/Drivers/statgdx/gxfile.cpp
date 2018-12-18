@@ -134,9 +134,15 @@ Function(SYSTEM_integer )  STDCALL
   GXFILE_uint64 local_uptr;
 
   if (self->GXFILE_tgxfileobj_DOT_gdxdatareadrawfastfilt_dp_callbyref) {
+#if 0
     PointerCast(SYSTEM_pointer,&local_gdxdatareadrawfastfilt_dp) = ValueCast(
       SYSTEM_pointer,self->
       GXFILE_tgxfileobj_DOT_gdxdatareadrawfastfilt_dp);
+#else
+    (void) memcpy ((void *)&local_gdxdatareadrawfastfilt_dp,
+		   (void *)&self->GXFILE_tgxfileobj_DOT_gdxdatareadrawfastfilt_dp,
+		   sizeof(GXDEFS_tdatastorefiltproc_f));
+#endif
     local_uptr._u._c1.i = 0;
     local_uptr._u._c2.p = uptr;
     result = (*local_gdxdatareadrawfastfilt_dp)(indx,vals,&local_uptr.
@@ -157,9 +163,15 @@ Procedure  STDCALL GXFILE_tgxfileobj_DOT_gdxgetdomainelements_dp_fc(
   GXFILE_uint64 local_uptr;
 
   if (self->GXFILE_tgxfileobj_DOT_gdxgetdomainelements_dp_callbyref) {
+#if 0
     PointerCast(SYSTEM_pointer,&local_gdxgetdomainelements_dp) = ValueCast(
       SYSTEM_pointer,self->
       GXFILE_tgxfileobj_DOT_gdxgetdomainelements_dp);
+#else
+    (void) memcpy ((void *)&local_gdxgetdomainelements_dp,
+		   (void *)&self->GXFILE_tgxfileobj_DOT_gdxgetdomainelements_dp,
+		   sizeof(GXDEFS_tdomainindexproc_f));
+#endif
     local_uptr._u._c1.i = 0;
     local_uptr._u._c2.p = uptr;
     (*local_gdxgetdomainelements_dp)(&rawindex,&mappedindex,&
@@ -171,7 +183,6 @@ Procedure  STDCALL GXFILE_tgxfileobj_DOT_gdxgetdomainelements_dp_fc(
 cnstdef {GXFILE_version = 7};
 cnstdef {GXFILE_gdxheadernr = 123};
 static _P3STR_7 GXFILE_gdxheaderid = {7,'G','A','M','S','G','D','X'};
-static SYSTEM_double GXFILE_bigfloat = 1e20;
 cnstdef {GXFILE_mark_boi = 19510624};
 static _P3STR_7 GXFILE_mark_uel = {5,'_','U','E','L','_'};
 static _P3STR_7 GXFILE_mark_symb = {6,'_','S','Y','M','B','_'};
@@ -352,8 +363,8 @@ static Function(SYSTEM_integer ) GXFILE_convertgdxfile(
     if (r->RUNNER_trunner_DOT_fprogrc != 0) 
       result = GXFILE_err_gdxcopy - r->RUNNER_trunner_DOT_fprogrc;
   SYSTEM_tobject_DOT_free(ValueCast(SYSTEM_tobject,r));
-  return result;
 #endif
+  return result;
 }  /* convertgdxfile */
 
 static Function(SYSTEM_ansichar *) GXFILE_makegoodexpltext(
@@ -403,7 +414,6 @@ static Function(SYSTEM_boolean ) GXFILE_isgoodident(
           result = SYSTEM_false;
           SYSTEM_break(BRK_1);
         } 
-CNT_1:;
       } while (n++ !=  _stop);
 BRK_1:;
 
@@ -411,6 +421,7 @@ BRK_1:;
   return result;
 }  /* isgoodident */
 
+#if 0
 static Function(SYSTEM_integer ) GXFILE_imax(
   SYSTEM_integer a,
   SYSTEM_integer b)
@@ -423,6 +434,7 @@ static Function(SYSTEM_integer ) GXFILE_imax(
     result = b;
   return result;
 }  /* imax */
+#endif
 
 static Function(GXFILE_tgdxelemsize ) GXFILE_getintegersize(
   SYSTEM_integer n)
@@ -469,7 +481,7 @@ Procedure GXFILE_tintegermapping_DOT_setmapping(
   SYSTEM_integer t)
 {
   SYSTEM_integer n;
-  SYSTEM_integer delta;
+  SYSTEM_integer delta = 0;
 
   if (f >= self->GXFILE_tintegermapping_DOT_fcapacity) {
     delta = 0;
@@ -692,7 +704,6 @@ Function(GXFILE_tuelusermapstatus )
             SYSTEM_break(BRK_2);
           } 
       
-CNT_2:;
       } while (n++ !=  _stop);
 BRK_2:;
 
@@ -804,12 +815,13 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxopenwriteex(
     self->GXFILE_tgxfileobj_DOT_lasterror = *errnr;
     return result;
   } 
-  if (compr != 0) 
+  if (compr != 0) {
     if (self->GXFILE_tgxfileobj_DOT_ffile->
       GMSSTRM_tbufferedfilestream_DOT_fcancompress) { 
       compr = 1;
     } else 
       compr = 0;
+  }
   self->GXFILE_tgxfileobj_DOT_fcomprlev = compr;
   self->GXFILE_tgxfileobj_DOT_compressout = compr > 0;
   self->GXFILE_tgxfileobj_DOT_fmode = GXFILE_f_not_open;
@@ -1363,7 +1375,6 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxopenreadxx(
 
       }
     
-CNT_3:;
     }
 BRK_3:;
     {
@@ -2322,7 +2333,6 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_preparesymbolread(
   SYSTEM_integer result;
   GXDEFS_tgdxvalues avals;
   static GXFILE_tgxmodeset allowedmodes_6 = {2,0,0};
-  SYSTEM_integer n;
   SYSTEM_integer d;
   GMSSPECS_tgdxdimension d2;
   SYSTEM_integer v;
@@ -2375,7 +2385,6 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_preparesymbolread(
         self->GXFILE_tgxfileobj_DOT_cursyptr = ValueCast(
           GXFILE_pgdxsymbrecord,STRHASH_txstrhashlist_DOT_getobject(
           self->GXFILE_tgxfileobj_DOT_namelist,synr));
-      CNT_4:;
       } while (!(self->GXFILE_tgxfileobj_DOT_cursyptr->sdatatype != 
         GMSSPECS_dt_alias));
 BRK_4:;
@@ -2585,7 +2594,6 @@ BRK_4:;
                 }
 
               }
-CNT_5:;
             } while (d++ !=  _stop);
 BRK_5:;
 
@@ -2886,7 +2894,6 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxdatareadmap(
           }
 
         }
-CNT_6:;
       } while (d++ !=  _stop);
 BRK_6:;
 
@@ -3153,7 +3160,6 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxdatareadrawfastfilt(
   SYSTEM_integer filtdim;
   GXDEFS_tgdxuelindex elemdim;
   GXDEFS_tgdxuelindex elemnrs;
-  GXDEFS_tgdxuelindex hisindx;
   SYSTEM_boolean goodindx;
   SYSTEM_integer d;
   GXDEFS_tgdxvalues values;
@@ -3195,7 +3201,6 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxdatareadrawfastfilt(
               goodindx = SYSTEM_false;
               SYSTEM_break(BRK_7);
             } 
-CNT_7:;
           } while (d++ !=  _stop);
 BRK_7:;
 
@@ -3205,7 +3210,6 @@ BRK_7:;
             self->GXFILE_tgxfileobj_DOT_lastelem,values,self) == 0) 
             SYSTEM_break(BRK_8);
       
-CNT_8:;
       }
 BRK_8:;
       result = GXFILE_mytrue;
@@ -3343,7 +3347,7 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxdataerrorrecord(
     if (!GXFILE_tgxfileobj_DOT_checkmode(self,_P3str1("\017DataErrorRecord"),
       allowedmodes_11)) 
       return result;
-  if (self->GXFILE_tgxfileobj_DOT_errorlist != NULL) 
+  if (self->GXFILE_tgxfileobj_DOT_errorlist != NULL) {
     if (recnr < 1 || recnr > GMSDATA_ttblgamsdata_DOT_getcount(
       self->GXFILE_tgxfileobj_DOT_errorlist)) { 
       GXFILE_tgxfileobj_DOT_reporterror(self,GXFILE_err_baderrorrecord);
@@ -3351,7 +3355,8 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxdataerrorrecord(
       GMSDATA_ttblgamsdata_DOT_getrecord(self->
         GXFILE_tgxfileobj_DOT_errorlist,recnr - 1,keyint,values);
       result = GXFILE_mytrue;
-    } 
+    }
+  }
   return result;
 }  /* gdxdataerrorrecord */
 
@@ -4174,6 +4179,7 @@ Function(SYSTEM_boolean ) GXFILE_tgxfileobj_DOT_dowrite(
   SYSTEM_byte bxv;
 
   result = SYSTEM_true;
+  delta = 0;
   _fdim = self->GXFILE_tgxfileobj_DOT_fcurrentdim + 1;
   { register SYSTEM_int32 _stop = self->
       GXFILE_tgxfileobj_DOT_fcurrentdim;
@@ -4194,7 +4200,6 @@ Function(SYSTEM_boolean ) GXFILE_tgxfileobj_DOT_dowrite(
         SYSTEM_break(BRK_10);
       } 
     
-CNT_10:;
     } while (d++ !=  _stop);
 BRK_10:;
 
@@ -4514,10 +4519,11 @@ static Function(SYSTEM_double ) getasacronym(
       _2self)->GXFILE_tgxfileobj_DOT_acronymlist->
       GXFILE_tacronymlist_DOT_flist,n)))->
       GXFILE_tacronym_DOT_acrreadmap;
-    if (newindx <= 0) 
+    if (newindx <= 0) {
       if ((*_2self)->GXFILE_tgxfileobj_DOT_nextautoacronym <= 0) { 
         newindx = orgindx;
-      } else {
+      }
+      else {
         newindx = (*_2self)->GXFILE_tgxfileobj_DOT_nextautoacronym;
         (*_2self)->GXFILE_tgxfileobj_DOT_nextautoacronym = (*_2self)->
           GXFILE_tgxfileobj_DOT_nextautoacronym + 1;
@@ -4529,7 +4535,8 @@ static Function(SYSTEM_double ) getasacronym(
           _W3->GXFILE_tacronym_DOT_acrautogen = SYSTEM_true;
 
         }
-      } 
+      }
+    }
   } 
   result = (*_2self)->GXFILE_tgxfileobj_DOT_zvalacr * newindx;
   return result;
@@ -5322,8 +5329,8 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxaddalias(
   } else 
     synr2 = STRHASH_txstrhashlist_DOT_indexof(self->
       GXFILE_tgxfileobj_DOT_namelist,id2);
-  if (GXFILE_tgxfileobj_DOT_errorcondition(self,synr1 >= 0 != 
-    synr2 >= 0,GXFILE_err_aliassetexpected)) 
+  if (GXFILE_tgxfileobj_DOT_errorcondition(self,(synr1 >= 0) != 
+					   (synr2 >= 0),GXFILE_err_aliassetexpected)) 
     return result;
   if (synr1 > 0) {
     synr = synr1;
@@ -5970,7 +5977,6 @@ Function(SYSTEM_boolean ) GXFILE_tgxfileobj_DOT_resultwillbesorted(
 {
   SYSTEM_boolean result;
   SYSTEM_integer d;
-  SYSTEM_integer n;
   GXFILE_tdfilter pfilter;
 
   result = SYSTEM_false;
@@ -6014,7 +6020,6 @@ Function(SYSTEM_boolean ) GXFILE_tgxfileobj_DOT_resultwillbesorted(
       }
 CNT_12:;
     } while (d++ !=  _stop);
-BRK_12:;
 
   }
   result = SYSTEM_true;
@@ -6178,7 +6183,6 @@ Procedure GXFILE_tfilterlist_DOT_addfilter(
         GXFILE_tfilterlist_DOT_deletefilter(self,n);
         SYSTEM_break(BRK_13);
       } 
-CNT_13:;
     } while (n++ !=  _stop);
 BRK_13:;
 
@@ -6339,7 +6343,6 @@ Function(SYSTEM_integer ) GXFILE_tgxfileobj_DOT_gdxgetdomainelements(
   
 CNT_14:;
   }
-BRK_14:;
   GXFILE_tgxfileobj_DOT_gdxdatareaddone(self);
   *nrelem = 0;
   if (!_P3assigned(dp)) { 

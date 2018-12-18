@@ -91,6 +91,7 @@ typedef SYSTEM_ansichar SYSUTILS_P3_tchararray[1000001];
 typedef SYSUTILS_P3_tchararray *SYSUTILS_P3_pchararray;
 static _P3STR_3 SYSUTILS_P3_filestopper, SYSUTILS_P3_extstopper;
 
+#if 0
 static Procedure SYSUTILS_P3_pcharconcatpchar(
   SYSTEM_P3_pansichar pdest,
   SYSTEM_integer *w,
@@ -110,6 +111,7 @@ static Procedure SYSUTILS_P3_pcharconcatpchar(
     (*ValueCast(SYSUTILS_P3_pchararray,pdest))[*w] = _P3char('\000');
   } 
 }  /* pcharconcatpchar */
+#endif
 
 static Function(SYSTEM_ansichar *) SYSUTILS_P3_pchartostr(
   SYSTEM_ansichar *result,
@@ -133,7 +135,6 @@ static Function(SYSTEM_ansichar *) SYSUTILS_P3_pchartostr(
         _P3strcpy(result,_len_ret,_P3str1("\023PCharToStr Overflow"));
         SYSTEM_break(BRK_1);
       } 
-    CNT_1:;
     } while (SYSTEM_true);
 BRK_1:;
   } 
@@ -1007,17 +1008,13 @@ Function(SYSTEM_P3_tdatetime ) SYSUTILS_P3_filedatetodatetime(
 
   result = 0;
   if (P3PLATFORM_osfiletype() == P3PLATFORM_osfilewin) {
-    result = SYSUTILS_P3_encodedate(ValueCast(SYSTEM_int32,(VariableCast(
-      SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.hi >> 9) + 1980,ValueCast(
-      SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,
-      SYSTEM_int32))._u._c1.hi >> 5) & 15,ValueCast(
-      SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,
-      SYSTEM_int32))._u._c1.hi) & 31) + SYSUTILS_P3_encodetime((VariableCast(
-      SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo >> 11,ValueCast(
-      SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,
-      SYSTEM_int32))._u._c1.lo >> 5) & 63,ValueCast(
-      SYSTEM_uint32,ValueCast(SYSTEM_int32,(VariableCast(
-      SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo) & 31) << 1,0);
+    result = SYSUTILS_P3_encodedate(
+				    ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.hi >> 9) + 1980,
+				    ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate, SYSTEM_int32))._u._c1.hi >> 5) & 15,
+				    ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate, SYSTEM_int32))._u._c1.hi) & 31)
+      + SYSUTILS_P3_encodetime(
+			       (VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo >> 11,ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo >> 5) & 63,
+			       ValueCast(SYSTEM_uint32,ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo) & 31) << 1,0);
     return result;
   } 
   /**** C code included from sysutils_p3.pas(1459:1): 11 lines ****/
@@ -1038,7 +1035,7 @@ Function(SYSTEM_P3_tdatetime ) SYSUTILS_P3_filedatetodatetime(
 Function(SYSTEM_integer ) SYSUTILS_P3_datetimetofiledate(
   SYSTEM_P3_tdatetime datetime)
 {
-  SYSTEM_integer result;
+  SYSTEM_integer result = 0;
   SYSTEM_word year, month, day, hour, minu, sec, msec;
 
   SYSUTILS_P3_decodedate(datetime,&year,&month,&day);
@@ -1276,7 +1273,6 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_floattostr(
               s[j + e] = _P3char(' ');
           } else 
             SYSTEM_break(BRK_2);
-CNT_2:;
         } while (i-- !=  _stop);
 BRK_2:;
 
@@ -1305,7 +1301,6 @@ BRK_2:;
             s[i] = _P3char(' ');
           } else 
             SYSTEM_break(BRK_3);
-CNT_3:;
         } while (i-- !=  _stop);
 BRK_3:;
 
@@ -1322,7 +1317,6 @@ BRK_3:;
             s[k - 1] = _P3char(' ');
         } else 
           SYSTEM_break(BRK_4);
-CNT_4:;
       } while (i++ !=  _stop);
 BRK_4:;
 
@@ -1335,7 +1329,6 @@ BRK_4:;
             s[j] = _P3char(' ');
         } else 
           SYSTEM_break(BRK_5);
-CNT_5:;
       } while (i-- !=  _stop);
 BRK_5:;
 
@@ -1568,7 +1561,6 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_decodedatefully(
       _P3dec1(d,i);
       _P3inc0(m);
     
-CNT_6:;
     }
 BRK_6:;
     *year = y;
