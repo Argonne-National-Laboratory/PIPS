@@ -92,7 +92,7 @@ class sLinsysLeaf : public sLinsys
  virtual void setYDiagonal( OoqpVector& ydiag );  
  virtual void setZDiagonal( OoqpVector& zdiag );
 
-  
+ virtual void initialize(sFactory* factory, sData* prob) { };
 
  protected:
   sLinsysLeaf() {};
@@ -277,14 +277,13 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
   
   solver = NULL;
   if(0==gUseReducedSpace && gNP_Alg==0){
-	if(1==gBuildSchurComp){
-	  solver = new LINSOLVER( kktsp,locmy+locmz);
-	}else{
-	  // build sc to solve problem, we only support dense schur comp
-	  assert("Not Implemented" &&0);
-	}
-  }
-  else if (2==gUseReducedSpace && gNP_Alg==0 ){
+    if(1==gBuildSchurComp || 3==gBuildSchurComp) {
+      //dense SC or sparse triplet SC
+      solver = new LINSOLVER( kktsp,locmy+locmz);
+    } else {
+      assert("Not supported" && false);
+    }
+  } else if (2==gUseReducedSpace && gNP_Alg==0 ){
   	// use reduced space schur solver, assume decition vars is inside kktsp
 	if(0==gBuildSchurComp){
 	  assert("Not Implemented" &&0);

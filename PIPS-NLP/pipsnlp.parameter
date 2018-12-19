@@ -23,6 +23,21 @@ MaxIR 10
 IRtol 1e-12
 
 !-------------------------------------------------------------------------
+!		Treatment of the Schur complement (first-stage)
+!-------------------------------------------------------------------------
+! 1. form dense Schur complement and solve with LAPACK
+! 3: compute and form a sparsified Schur complement and solve with sparse
+! solver, such as MUMPS (MPI)
+!
+! Do not use other values since they are experimental and aren't robust
+! or have been replaced by 3 (i.e., value of 2).
+BuildSchurComp 1
+! Tolerance used to decide which elements in Schur complement are zeros.
+! default 0. Use a small positive val to obtain a sparser Schur complement.
+AbsTolForZero 0
+
+
+!-------------------------------------------------------------------------
 !		linear solver
 !-------------------------------------------------------------------------
 ! 	0:Ma27 	(1):Ma57  	2:pardiso 3:Umfpack

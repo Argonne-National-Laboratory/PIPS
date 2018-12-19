@@ -37,7 +37,9 @@ sFactoryAug::~sFactoryAug()
 
 sLinsysRoot* sFactoryAug::newLinsysRoot()
 {
-  return new sLinsysRootAug(this, data);
+  sLinsysRoot* r = new sLinsysRootAug(this, data);
+  r->initialize(this,data);
+  return r;
 }
 
 sLinsysRoot* 
@@ -45,13 +47,14 @@ sFactoryAug::newLinsysRoot(sData* prob,
 			   OoqpVector* dd,OoqpVector* dq,
 			   OoqpVector* nomegaInv, OoqpVector* rhs, OoqpVector* additiveDiag)
 {
-  return new sLinsysRootAug(this, prob, dd, dq, nomegaInv, rhs, additiveDiag);
+  sLinsysRoot* r = new sLinsysRootAug(this, prob, dd, dq, nomegaInv, rhs, additiveDiag);
+  r->initialize(this,data);
+  return r;
 }
 
 
 LinearSystem* sFactoryAug::makeLinsys( Data * prob_in )
 {  
-  linsys = NULL;
   linsys = newLinsysRoot();
 
   assert(linsys);

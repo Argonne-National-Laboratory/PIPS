@@ -9,6 +9,10 @@
 #include "sData.h"
 #include "sTree.h"
 
+#ifdef WITH_MUMPS
+#include "MumpsSolver.h"
+#endif
+
 #include <unistd.h>
 #include "math.h"
 
@@ -21,12 +25,15 @@ extern int separateHandDiag;
 
 using namespace std;
 
+sLinsysRootAug::sLinsysRootAug()
+  : CtDC(NULL)
+{
+  
+}
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
-  kkt = createKKT(prob_);
-  solver = createSolver(prob_, kkt);
   assert(gOuterSolve>=3);
   redRhs = new SimpleVector(locnx+locmz+locmy+locmz);
 };
@@ -41,13 +48,16 @@ sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
   : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_, additiveDiag_), CtDC(NULL)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
-
-  kkt = createKKT(prob_);
-  solver = createSolver(prob_, kkt);
   assert(gOuterSolve>=3);  
   redRhs = new SimpleVector(locnx+locmz+locmy+locmz);
 };
 
+void sLinsysRootAug::initialize(sFactory* factory_, sData* prob_) 
+{
+  assert(gOuterSolve>=3);  
+  kkt = createKKT(prob_);
+  solver = createSolver(prob_, kkt);
+};
 sLinsysRootAug::~sLinsysRootAug()
 {
   if(CtDC) delete CtDC;
@@ -70,16 +80,22 @@ sLinsysRootAug::createKKT(sData* prob)
   return new DenseSymMatrix(n);
 }
 
+extern int gBuildSchurComp;
 
 DoubleLinearSolver*
 sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
-
+  assert(gBuildSchurComp<3);
   DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
   //return new PardisoSolver(kktmat);
+
+  //this is the default, LAPACK-based
+  //return new MumpsDenseSolver(kktmat, MPI_COMM_WORLD, MPI_COMM_WORLD);
   return new DeSymIndefSolver(kktmat);
+
   //return new DeSymIndefSolver2(kktmat, locnx); // saddle point solver
   //return new DeSymPSDSolver(kktmat);
+
 }
 
 #ifdef TIMING

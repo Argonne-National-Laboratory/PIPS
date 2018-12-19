@@ -10,6 +10,9 @@
 #include "../../Input/StructJuMPInput.h"
 #include "../Core/NlpStoch/NlpPIPSIpmInterface.h"
 #include "../Core/NlpStoch/sFactoryAug.h"
+#ifdef WITH_MUMPS
+#include "../Core/NlpStoch/sFactoryAugSparseRowMajSC.h"
+#endif
 #include "../Core/NlpSolvers/FilterIPMStochSolver.h"
 
 
@@ -95,6 +98,7 @@ extern int gNP_Alg;
 extern int gAddSlackParallelSetting;
 extern int gSymLinearSolver;
 extern int gUseReducedSpace;
+extern int gBuildSchurComp;
 
 extern "C"
 int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
@@ -113,13 +117,9 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
   StructJuMPInput *s = new StructJuMPInput(prob);
   MESSAGE("comm is "<<comm);
   assert(comm == MPI_COMM_WORLD);
-  
-  MESSAGE("before PIPSIpmInterface created .." );
-  NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
-  MESSAGE("PIPSIpmInterface created .." );
-  
+
   if (gmyid == 0) {
-    std::cout << "  \n  -----------------------------------------------\n"
+    std::cout << "  \n  --------------------------------------------------------------------\n"
 	      << "  NLP Solver \n"
 	      << "  Argonne National Laboratory \n  Lawrence Livermore National Laboratory\n  2010-2018\n"
 	      << "  -----------------------------------------------\n" <<std::endl;
@@ -129,28 +129,48 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
       std::cout << "Reduced Space Solver with Umfpack and following linear solver.\n";
     }
     if(0==gSymLinearSolver)
-      std::cout << "\n  Linear system solver ------	 Ma27.\n\n";
+      std::cout << "  Linear system solver ------	 Ma27.\n";
     else if(1==gSymLinearSolver)
-      std::cout << "\n  Linear system solver ------	 Ma57.\n\n";
+      std::cout << "  Linear system solver ------	 Ma57.\n";
     else if(2==gSymLinearSolver)
-      std::cout << "\n  Linear system solver ------	 Pardiso.\n\n";
+      std::cout << "  Linear system solver ------	 Pardiso.\n";
     else if(3==gSymLinearSolver)
-      std::cout << "\n  Linear system solver ------	 Umfpack.\n\n";
+      std::cout << "  Linear system solver ------	 Umfpack.\n";
+
+    if(gBuildSchurComp!=3) 
+      std::cout << "  Schur complement treatment (" << gBuildSchurComp << ")" << endl;
+    else
+      std::cout << "  Schur complement     ------  sparse triplet format\n";
   }
+  int ret;
+#ifdef NLPTIMING
+  double stime1 = MPI_Wtime();
+#endif
+  if(gBuildSchurComp==3) {
+#ifdef WITH_MUMPS    
+    NlpPIPSIpmInterface<sFactoryAugSpTripletSC, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
+    //NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
+    pipsIpm.computeProblemSize(prob->nvars,prob->ncons);
+
+    ret = pipsIpm.go();
   
-  pipsIpm.computeProblemSize(prob->nvars,prob->ncons);
+    prob->objective = pipsIpm.getObjective();
+#else
+    printf("PIPS needs to be built with MUMPS for option gBuildSchurComp==3\n");
+#endif
+  } else {
+    NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
+    pipsIpm.computeProblemSize(prob->nvars,prob->ncons);
 
-  #ifdef NLPTIMING
-    double stime1 = MPI_Wtime();
-  #endif
-
-  int ret = pipsIpm.go();
-
-  #ifdef NLPTIMING
-    gprof.t_solver_go = MPI_Wtime() - stime1;
-  #endif
+    ret = pipsIpm.go();
   
-  prob->objective = pipsIpm.getObjective();
+    prob->objective = pipsIpm.getObjective();
+  }
+
+
+#ifdef NLPTIMING
+  gprof.t_solver_go = MPI_Wtime() - stime1;
+#endif
 
   delete pipsOpt;
   delete s;

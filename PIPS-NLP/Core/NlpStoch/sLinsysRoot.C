@@ -261,7 +261,8 @@ void sLinsysRoot::afterFactor()
 {
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
-  if( (mype/256)*256==mype) {
+  //if( (mype/256)*256==mype) 
+  {
 
       for (size_t c=0; c<children.size(); c++) {
 	  if (children[c]->mpiComm == MPI_COMM_NULL) continue;
@@ -401,7 +402,8 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
 #ifdef TIMING
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-  if(256*(myRank/256) == myRank) {
+  //if(256*(myRank/256) == myRank) 
+  {
       double tTotResChildren=0.0;
     for(size_t it=0; it<children.size(); it++) {
 	if (children[it]->mpiComm == MPI_COMM_NULL) continue;
@@ -727,7 +729,7 @@ int sLinsysRoot::factorizeKKT()
   int negEValTemp=0;
   //stochNode->resMon.recFactTmLocal_start();  
 #ifdef TIMING
-  MPI_Barrier(mpiComm);
+  //MPI_Barrier(mpiComm);
   extern double g_iterNumber;
   double st=MPI_Wtime();
 #endif
@@ -736,10 +738,10 @@ int sLinsysRoot::factorizeKKT()
   //stochNode->resMon.recFactTmLocal_stop(); 
 #ifdef TIMING
   st = MPI_Wtime()-st;
-  MPI_Barrier(mpiComm);
+  //MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  if( (mype/256)*256==mype )
+  //if( (mype/256)*256==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
   return negEValTemp;

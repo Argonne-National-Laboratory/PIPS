@@ -259,6 +259,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   #HSL Solver and METIS
   set(MA27_DIR ${SHARED_DIR}/MA27/src)
   set(MA57_DIR ${SHARED_DIR}/MA57/src)
+
   find_library(MA27_LIBRARY libma27.a PATHS ${MA27_DIR}/lib)
   find_library(MA57_LIBRARY libma57.a PATHS ${MA57_DIR}/lib)
   if(NOT MA27_LIBRARY AND NOT MA57_LIBRARY)
@@ -340,6 +341,33 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 
   message(STATUS "Pardiso lib: ${PARDISO_LIBRARY}  and HAVE_PARDISO is ${HAVE_PARDISO}")
 
+
+  set(MUMPS_DIR ${SHARED_DIR}/MUMPS)
+  find_library(MUMPS_LIBRARY libdmumps.a PATHS ${MUMPS_DIR}/lib)
+  find_path(MUMPS_INCLUDE_DIR NAME dmumps_c.h HINTS ${MUMPS_DIR}/include)
+  if(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
+    # we assume the other libraries are in there
+    set(HAVE_MUMPS TRUE)
+
+    # you may need parmetis if mumps was build with parmetis (we recommend using parmetis). For more info
+    # see the readme file in ThirdPartyLibs/MUMPS and the sample build file in PIPS-NLP/Core/LinearSolvers/MumpsSolver
+    # In short: insert something like the following line to MUMPS_LIBRARY below
+    # -L/home/petra1/work/installs/parmetis-4.0.3/lib -lparmetis
+
+    # hack(ish) way of specifying the many mumps libraries
+    # - put all the  mumps libraries: -ldmumps -lmumps_common -lpord
+    # - scalapack and blacs should be set in ${SCALAPACK_LIBRARIES} using Toolchain.cmake (or hardcoded here)
+    # - mpifort also needed
+    # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -L/home/petra1/work/installs/parmetis-4.0.3/lib -ldmumps -lmumps_common -lpord -lmpifort -lparmetis ${SCALAPACK_LIBRARIES}")
+
+    MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
+    include_directories(${MUMPS_INCLUDE_DIR})
+  else ()
+    message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
+    set(MUMPS_LIBRARY "")
+  endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
+
   #setting CXX_FLAGS
   if(HAVE_MA27)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA27")
@@ -352,6 +380,12 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   else(HAVE_MA57)
     set(MA57_LIBRARY "")
   endif(HAVE_MA57)
+
+  if(HAVE_MUMPS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MUMPS")
+  else(HAVE_MUMPS)
+    set(MUMPS_LIBRARY "")
+  endif(HAVE_MUMPS)
 
   #if(HAVE_MA86)
   #  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MA86")
@@ -513,6 +547,6 @@ message(STATUS "CMAKE_CXX_STANDARD_LIBRIES: ${CMAKE_CXX_STANDARD_LIBRARIES}")
 message(STATUS "CMAKE_LIBRARY_PATH: ${CMAKE_LIBRARY_PATH}")
 message(STATUS "CMAKE_EXE_LINKER_FLAGS: ${CMAKE_EXE_LINKER_FLAGS}")
 get_property(inc_dirs DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
-message(STATUS "${inc_dirs}")
+message(STATUS "inc_dirs: ${inc_dirs}")
 get_property(link_dirs DIRECTORY PROPERTY LINK_DIRECTORIES)
-message(STATUS "${link_dirs}")
+message(STATUS "link_dirs: ${link_dirs}")

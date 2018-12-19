@@ -108,7 +108,7 @@ class sLinsysRoot : public sLinsys {
    virtual void setSDiagonal( OoqpVector& sdiag );  
    virtual void setYDiagonal( OoqpVector& ydiag );  
    virtual void setZDiagonal( OoqpVector& zdiag );
-
+   virtual void initialize(sFactory* factory, sData* prob) {};
 };
 
 #endif

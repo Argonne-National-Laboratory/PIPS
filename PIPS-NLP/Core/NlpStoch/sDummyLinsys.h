@@ -71,11 +71,12 @@ class sDummyLinsys : public sLinsys
   virtual void deleteChildren(){};
   virtual void UpdateMatrices( Data * prob_in, int const onlyRegPart){};
 
-virtual void setXDiagonal( OoqpVector& xdiag ){};
-virtual void setSDiagonal( OoqpVector& sdiag ){};  
-virtual void setYDiagonal( OoqpVector& ydiag ){};  
-virtual void setZDiagonal( OoqpVector& zdiag ){};  
+  virtual void setXDiagonal( OoqpVector& xdiag ){};
+  virtual void setSDiagonal( OoqpVector& sdiag ){};  
+  virtual void setYDiagonal( OoqpVector& ydiag ){};  
+  virtual void setZDiagonal( OoqpVector& zdiag ){};  
 
+  virtual void initialize(sFactory* factory, sData* prob) {};
 
 virtual void _backSolve(sData *prob, OoqpVector& ParSol_ , OoqpVector& Vec_, StochVector* End_Par_Pos_){};
 

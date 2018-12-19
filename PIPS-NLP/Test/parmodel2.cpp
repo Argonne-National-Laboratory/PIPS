@@ -270,14 +270,14 @@ int str_eval_jac_g(double* x0, double* x1, int* e_nz, double* e_elts,
 			i_colptr[0] = 0;
 			i_colptr[1] = 0;
 			i_colptr[2] = 1;
-			i_elts[1] = 1.0;
+			i_elts[0] = 1.0;
 		} else if (row == 2 && col == 0) {
 			assert(*i_nz == 1 && *e_nz == 0);
 			i_rowidx[0] = 0;
 			i_colptr[0] = 0;
 			i_colptr[1] = 1;
 			i_colptr[2] = 1;
-			i_elts[1] = 1.0;
+			i_elts[0] = 1.0;
 		} else
 			assert(false);
 	}
@@ -428,7 +428,7 @@ int main(int argc, char* argv[]) {
   }
 
   //! should have a deallocation of 'prob' here...
-
+  FreePipsNlpProblemStruct(prob);
   MESSAGE("end solve ");
   MPI_Barrier(comm);
   MPI_Finalize();

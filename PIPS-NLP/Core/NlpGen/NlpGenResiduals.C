@@ -89,7 +89,7 @@ NlpGenResiduals::NlpGenResiduals( LinearAlgebraPackage * la,
   dWd = 0;
   thd = 0;
   dmodu = 0;
-  
+  comerr = 0;
 }
 
 

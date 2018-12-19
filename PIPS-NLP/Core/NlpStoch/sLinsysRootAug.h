@@ -14,13 +14,13 @@ class sData;
  */
 class sLinsysRootAug : public sLinsysRoot {
  protected:
-  sLinsysRootAug() {};
+  sLinsysRootAug();
 
   virtual SymMatrix*   createKKT     (sData* prob);
   virtual DoubleLinearSolver* 
                        createSolver  (sData* prob, 
 				      SymMatrix* kktmat);
-
+  virtual void initialize(sFactory* factory, sData* prob);
   //virtual void         createChildren(sData* prob) 
   //{sLinsysRootAug::createChildren(prob);};
  public:

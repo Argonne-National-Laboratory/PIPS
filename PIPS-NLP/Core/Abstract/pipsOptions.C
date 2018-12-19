@@ -1,6 +1,7 @@
-/* PIPS-NLP                                                         	*
- * Authors: Nai-Yuan Chiang                      		*
- * (C) 2015 Argonne National Laboratory			*/
+/* PIPS-NLP  
+ * Authors: Nai-Yuan Chiang & Cosmin Petra, 
+ * ANL and LLNL, 2015-2018 
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +27,7 @@ int gSymLinearAlgSolverForDense;
 
 
 int gBuildSchurComp;
+double gAbsTolForZero;
 int gSolveSchurScheme;
 int gUseReducedSpace;
 int gRS_SchurSolver;
@@ -123,6 +125,7 @@ pipsOptions::pipsOptions()
 	RS_MaxIR(5),
 	RS_LU_PivotLV(0.0001),
    BuildSchurComp(1),
+   AbsTolForZero(0.),
    SolveSchurScheme(0),
    NP_Alg(0),
    SCOPF_precond(0),
@@ -175,6 +178,7 @@ pipsOptions::defGloOpt()
   					  // 3: Default solve - Schur complement based decomposition, do not compress!
 
   gBuildSchurComp 	= BuildSchurComp;
+  gAbsTolForZero        = AbsTolForZero;
   gSolveSchurScheme = SolveSchurScheme;			
   gUseReducedSpace  = UseReducedSpace;
   gRS_SchurSolver	= RS_SchurSolver;
@@ -230,8 +234,7 @@ pipsOptions::copyFrom(pipsOptions &os)
   this->max_iter = os.max_iter;
   this->conv_tol = os.conv_tol;
   this->MaxIR = os.MaxIR;
-
-} 
+}
 
 void pipsOptions::readFile()
 {
@@ -241,53 +244,49 @@ void pipsOptions::readFile()
   int mype,doFlag;  FindMPI_ID(doFlag,mype);
   int prosize;	FindMPI_Size(doFlag,prosize);
 
-  if (pipsOptions::defOpt==NULL){
+  if (pipsOptions::defOpt==NULL) {
     defOpt = this;
   }
 
   std::string fileName("pipsnlp.parameter");
   optfile = fopen(fileName.c_str(),"r");
   if (optfile==NULL) {
-    //	  printf("not find option file: %s \n",fileName.c_str());
     return;
   } else {
     printf("load option file: %s \n",fileName.c_str());
   }
-  
   /* Read one line of the options file */
-  while(fgets(buffer, 999, optfile)!=NULL){
+  while(fgets(buffer, 9999, optfile)!=NULL){
     parseLine(buffer);
   }
   fclose(optfile);
-
+  
   if(splitHesDiag==1)
     assert(outerSolve==3);
-
+  
   if(UseReducedSpace==1 && NP_Alg==0){
     BuildSchurComp = 1;
   }
-
-
-
+  
   if (mype == 0){
-  	printf("OPTION: Set printing level to %d\n",prtLvl);
-	printf("OPTION: Set Iteration Limit to %d\n",max_iter);
-	printf("OPTION: Set Convergence Tolerance to %.2e\n", conv_tol);
-
-	printf("OPTION: Max Line search step:   %d\n",LineSearchMatStep);
+    printf("OPTION: Set printing level to %d\n",prtLvl);
+    printf("OPTION: Set Iteration Limit to %d\n",max_iter);
+    printf("OPTION: Set Convergence Tolerance to %.2e\n", conv_tol);
+    
+    printf("OPTION: Max Line search step:   %d\n",LineSearchMatStep);
   }
 
   if(AddSlackParallelSetting==1){
-	if (mype == 0)printf("OPTION: Adding slacks in the parallel setting.\n");
+    if (mype == 0)printf("OPTION: Adding slacks in the parallel setting.\n");
   }
-
+  
   if(UseReducedSpace==1){
-//  	BuildSchurComp = 0;
-	if(RS_MaxIR>10) RS_MaxIR=10;
-	if (mype == 0)printf("OPTION: Use Reduced Space Solver.\n");
-	if (mype == 0)printf("OPTION: Set Gen linear solver as UMFPACK.\n");
-	if (mype == 0)printf("OPTION: LU solver max IR:  %d \n", RS_MaxIR);
-	if (mype == 0)printf("OPTION: LU solver pivot tol:  %.2e \n", RS_LU_PivotLV);	
+    //BuildSchurComp = 0;
+    if(RS_MaxIR>10) RS_MaxIR=10;
+    if (mype == 0)printf("OPTION: Use Reduced Space Solver.\n");
+    if (mype == 0)printf("OPTION: Set Gen linear solver as UMFPACK.\n");
+    if (mype == 0)printf("OPTION: LU solver max IR:  %d \n", RS_MaxIR);
+    if (mype == 0)printf("OPTION: LU solver pivot tol:  %.2e \n", RS_LU_PivotLV);	
   }	
 
   if(SCOPF_precond==1){
@@ -516,14 +515,14 @@ bool pipsOptions::parseLine(char *buffer)
 	this->BuildSchurComp = int(dval);
 	found = true;
   } 
+  if (strcmp(label, "AbsTolForZero") == 0 ) {
+	this->AbsTolForZero = dval;
+	found = true;
+  } 
   
-
-
-
   /* -----------------------------------------------------------------------
      Reduced space solver
     ----------------------------------------------------------------------- */
-
   if (strcmp(label, "UseReducedSpace") == 0 ) {
 	this->UseReducedSpace = int(dval);
 	found = true;

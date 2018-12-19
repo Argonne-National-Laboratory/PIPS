@@ -310,7 +310,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
   OoqpVector &r0=*res2, &dx=*sol2, &v=*res3, &t=*res4, &p=*res5;
   OoqpVector &x=*sol, &r=*res, &b=*rhs;
 
-  const double tol=1e-10, EPS=2e-16; 
+  const double tol=1e-8, EPS=2e-16; 
   const int maxit=500;
 
   double n2b=b.twonorm(), tolb=n2b*tol;
@@ -346,7 +346,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #ifdef TIMING
      tTot = MPI_Wtime() - tTot;
      if(0==myRank) {
-       cout << "Outer BiCGStab 0 iterations. Rel.res.nrm:" << normr/n2b  << endl;
+       cout << "Outer BiCGStab not needed. (Rel)res.nrm:" << normr/n2b  << endl;
        cout << "solveXYZS w/ BiCGStab times: solve " << tSlv
 	    << "  matvec " << tResid
 	    << "  total " << tTot << endl; 
@@ -513,7 +513,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 #ifdef TIMING
   tTot = MPI_Wtime()-tTot;
   if(0==myRank) {
-    cout << "Outer BiCGStab " << iter << " iterations. Rel.res.nrm:";
+    cout << "Outer BiCGStab " << iter << " iterations. (Rel)resid.nrm.history:";
     for(size_t it=0; it<histRelResid.size(); it++)
       cout << histRelResid[it] << " | ";    
     cout << endl;

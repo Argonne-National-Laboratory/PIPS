@@ -79,17 +79,18 @@ class pipsOptions
   					  // 2: BiCGStab
   					  // 3: Default solve - Schur complement based decomposition, do not compress!
 
-  int splitHesDiag; 				// 0: default solve - add diag part (X^{-1}Z) to Q
-										// 1: separate them : FIXME_NY: now only works if outerSolve =3
-
-
+  // 0: default solve - add diag part (X^{-1}Z) to Q
+  // 1: separate them : FIXME_NY: now only works if outerSolve =3
+  int splitHesDiag; 				
+						
   /* -------- about schur complement solver --------  */
-        
-  int BuildSchurComp; //(0): do not build SC   1: use dense Schur	2: use sparse Schur
+  //(0): do not build SC   1: use dense Schur	2: use sparse Schur
+  // 3: compute SC in sparse triplet format (and use MUMPS as a parallel solver); ignores 'SolveSchurScheme' below
+  int BuildSchurComp; 
+  double AbsTolForZero;
 
   /* -------- how to compute Schur --------  */
   int SolveSchurScheme; //   (0): LDLt  2: BICG
-
 
   /* -------- about Reduced space solver --------  */
   int UseReducedSpace;		//   (0): full sapce  1: reduced space
@@ -145,7 +146,6 @@ class pipsOptions
   /* -------- is NLP or QP/LP--------  */
   int isNLP; 			//   0: is QP/LP  (1): is NLP
 
-  
   /* ============================ methods =============================== */
 
   /** base constructor */

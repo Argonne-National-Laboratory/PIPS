@@ -47,14 +47,14 @@ endif(HAVE_MA57 AND HAVE_METIS)
 #endif(HAVE_MA86 AND HAVE_METIS)
 
 
-#build only some executable depending on the linear solvers available
+
+#build only some executablea depending on the linear solvers available
 if (HAVE_PARDISO)
   if(HAVE_MA27)
     add_executable(qpgen-sparse-mehrotra.exe Core/QpGen/QpGenSparseMehrotraDriver.C)
     target_link_libraries(qpgen-sparse-mehrotra.exe
       ooqpgensparse ooqpsparse ooqpbase ooqpmehrotra
       ${MA27_LIBRARY} ${PARDISO_LIBRARY} ${MATH_LIBS})
-
 
   if(HAVE_MA57 AND HAVE_METIS)
     add_executable(qpgen-sparse-ma57-gondzio.exe Core/QpGen/QpGenSparseGondzioDriver.C)
@@ -89,22 +89,19 @@ if (HAVE_PARDISO)
     #   ooqpstoch ooqpstochla ooqpmehrotrastoch
     #   ooqpgensparse ooqpbase ooqpsparse ooqpdense
     #   ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY32} ${MATH_LIBS})
-
-
-      add_executable(ooqpFromRaw Drivers/ooqpFromRaw.cpp)
-       target_link_libraries(ooqpFromRaw
+    add_executable(ooqpFromRaw Drivers/ooqpFromRaw.cpp)
+    target_link_libraries(ooqpFromRaw
          stochInput ${COIN_LIBS}
          ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
 	 ${MA57_LIBRARY} ${METIS_LIBRARY} ${MA27_LIBRARY} ${MATH_LIBS})
 
-     add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
-      target_link_libraries(meanSolveAndRecourseEval
+    add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
+    target_link_libraries(meanSolveAndRecourseEval
 	stochInput ${COIN_LIBS}
 	ooqpstoch ooqpstochla ooqpmehrotrastoch
 	ooqpgensparse ooqpbase ooqpmehrotra ooqpsparse ooqpdense
 	${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY}
 	${MATH_LIBS})
-
 
 #    if(HAVE_AMPL)
 #      add_executable(pipsipmPyomo_schur Drivers/pipsipmPyomo_schur.cpp)
@@ -118,11 +115,11 @@ if (HAVE_PARDISO)
   endif(HAVE_MA27)
 endif(HAVE_PARDISO)
 
-#MA27 or MA57 and METIS are prerequisites, this should be fine without additional checks.
+#MA27 or (MA57 and METIS) are prerequisites, this should be fine without additional checks.
 #It still works if only one of MA27 or MA57 is available.
 add_executable(pipsipmFromRaw Drivers/pipsipmFromRaw.cpp)
 target_link_libraries(pipsipmFromRaw
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpmehrotrastoch
     ooqpgensparse ooqpbase ooqpsparse ooqpdense
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${PARDISO_LIBRARY} ${METIS_LIBRARY} ${MATH_LIBS})
