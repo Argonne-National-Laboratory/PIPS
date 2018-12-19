@@ -205,7 +205,7 @@ else()
    set(GAMSDIR Drivers/gams)
    add_executable(gmspips Drivers/gmspips/gmspips.cpp Drivers/gmspips/gmspipsio.c ${GAMSDIR}/apifiles/C/api/gmomcc.c ${GAMSDIR}/apifiles/C/api/gevmcc.c ${GAMSDIR}/apifiles/C/api/gdxcc.c)
    add_definitions(-DGMS_PIPS -DGMS_LOG -DGMS_MPI -DLINKCONSTR)
-   target_include_directories(gmspips PUBLIC${GAMSDIR}/apifiles/C/api/ Drivers/gmspips/)
+   target_include_directories(gmspips PUBLIC ${GAMSDIR}/apifiles/C/api/ Drivers/gmspips/)
    target_link_libraries(gmspips
        dl
        stochInput ${COIN_LIBS}
