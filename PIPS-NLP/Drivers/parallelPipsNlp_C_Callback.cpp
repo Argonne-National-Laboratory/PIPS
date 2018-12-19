@@ -10,7 +10,9 @@
 #include "../../Input/StructJuMPInput.h"
 #include "../Core/NlpStoch/NlpPIPSIpmInterface.h"
 #include "../Core/NlpStoch/sFactoryAug.h"
+#ifdef WITH_MUMPS
 #include "../Core/NlpStoch/sFactoryAugSparseRowMajSC.h"
+#endif
 #include "../Core/NlpSolvers/FilterIPMStochSolver.h"
 
 
@@ -145,7 +147,7 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
   double stime1 = MPI_Wtime();
 #endif
   if(gBuildSchurComp==3) {
-    
+#ifdef WITH_MUMPS    
     NlpPIPSIpmInterface<sFactoryAugSpTripletSC, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
     //NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
     pipsIpm.computeProblemSize(prob->nvars,prob->ncons);
@@ -153,6 +155,9 @@ int PipsNlpSolveStruct(PipsNlpProblemStruct* prob)
     ret = pipsIpm.go();
   
     prob->objective = pipsIpm.getObjective();
+#else
+    printf("PIPS needs to be built with MUMPS for option gBuildSchurComp==3\n");
+#endif
   } else {
     NlpPIPSIpmInterface<sFactoryAug, FilterIPMStochSolver, StructJuMPsInfo> pipsIpm(*s,comm);
     pipsIpm.computeProblemSize(prob->nvars,prob->ncons);

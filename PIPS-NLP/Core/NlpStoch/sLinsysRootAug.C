@@ -9,7 +9,9 @@
 #include "sData.h"
 #include "sTree.h"
 
+#ifdef WITH_MUMPS
 #include "MumpsSolver.h"
+#endif
 
 #include <unistd.h>
 #include "math.h"

@@ -7,7 +7,9 @@
 #include "sData.h"
 #include "sTree.h"
 
+#ifdef WITH_MUMPS
 #include "MumpsSolver.h"
+#endif
 
 #include <unistd.h>
 #include "math.h"
@@ -87,7 +89,8 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
     color = 0;
   MPI_Comm mumpsComm;
   MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
-  
+ 
+#ifdef HAVE_MUMPS
   //2. create and return the wrapper instance for Mumps
   if(0) {
     DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
@@ -96,6 +99,9 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
     SparseSymMatrixRowMajList* kktmat = dynamic_cast<SparseSymMatrixRowMajList*>(kktmat_);
     return new MumpsSolver(kktmat, mumpsComm, mpiComm);
   }
+#else
+  assert(0 && "PIPS was not built with MUMPS");
+#endif
 }
 
 #ifdef TIMING
@@ -359,7 +365,6 @@ void sLinsysRootAugSpTriplet::initializeKKT(sData* prob, Variables* vars)
 void sLinsysRootAugSpTriplet::reduceKKT()
 {
   //  if(!iAmDistrib) return;
-
   SparseSymMatrixRowMajList& kktm = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
 
   //get local contribution in triplet format, so that we can reuse MumpsSolver::mumps_->
