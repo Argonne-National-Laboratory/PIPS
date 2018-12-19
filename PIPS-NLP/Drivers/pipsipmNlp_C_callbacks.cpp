@@ -282,7 +282,7 @@ int PipsNlpSolve( PipsNlpProblem retval, double* obj_val, double* sol_x, UserDat
 	if(pipsOpt->prtLvl>0){
 		printf("  \n  -----------------------------------------------\n");
 		printf("  NLP Solver \n");
-		printf("  Nai-Yuan Chiang & V.M. Zavala, Argonne National Laboratory, 2013\n");
+		printf("  Argonne National Laboratory \n  Lawrence Livermore National Laboratory  \n  2010-2018\n");
 		printf("  -----------------------------------------------\n");
 		{
 			printf("  Variables ================ %-5d \n",pipsnlp->nx);

@@ -19,7 +19,7 @@
 #include "RegularizationAlg.h"
 
 #include "SparseGenMatrix.h"
-
+#include <mpi.h>
 #include <stdlib.h>
 
 
@@ -52,7 +52,7 @@ extern int gUser_Defined_PC;
 extern int gUsePetscOuter;
 
 extern int gUseDualRegAlg;
-
+extern int gPipsPrtLV;
 
 #ifndef MAX
 #define MAX(a,b) ( (a > b) ? a : b)
@@ -87,7 +87,11 @@ extern PetscErrorCode PC_Shell_Apply_Sparse(PC pc,Vec b_in,Vec x_out);
 
 #endif
 
-
+#ifndef FindMPI_ID
+#define FindMPI_ID(FLAG,MYID) MPI_Initialized(&FLAG); \
+		if(FLAG) MPI_Comm_rank(MPI_COMM_WORLD,&MYID); \
+		else MYID=0;
+#endif
 
 NlpGenLinsys::NlpGenLinsys( NlpGen * factory_,
 			  NlpGenData * prob,
@@ -600,6 +604,7 @@ void NlpGenLinsys::solve(Data * prob_in, Variables *vars_in,
 void NlpGenLinsys::solve_IterRefine(Data * prob_in, Variables *vars_in,
 			Residuals *res_in, Variables *step_in, Residuals *KKT_Resid_in ,Variables *KKT_sol_in)
 {
+  int mype,doFlag; FindMPI_ID(doFlag,mype);
   NlpGenData      * prob  	= (NlpGenData *) prob_in;
   NlpGenVars      * vars 	= (NlpGenVars *) vars_in;
   NlpGenVars      * step  	= (NlpGenVars *) step_in;
@@ -616,9 +621,9 @@ void NlpGenLinsys::solve_IterRefine(Data * prob_in, Variables *vars_in,
 
 	//compute residual of the kkt system, do IR if required;	
 	prob->linsysRes_Full = computeResidual_FullKKT(prob, kkt_resid, kkt_sol, vars);
-	
+	//printf("!!!! linsysRes_Full=%g IRtol=%g\n", prob->linsysRes_Full,gIRtol);
     if( prob->linsysRes_Full > gIRtol){
-	  double currentRes=0, ir_iter=0; 
+      double currentRes=0.; int ir_iter=0; 
 	  
   	  while(ir_iter<gMaxIR && prob->linsysRes_Full > gIRtol){
 
@@ -634,10 +639,19 @@ void NlpGenLinsys::solve_IterRefine(Data * prob_in, Variables *vars_in,
 	    if(currentRes < prob->linsysRes_Full){
 		  prob->linsysRes_Full = currentRes;
 		  step->copy(kkt_sol);	  
-	    }else{
-		  break;
+	    } else {
+	      if(ir_iter==0 && gPipsPrtLV>=2) {
+		if(0==mype)
+		  printf("Warning: FullKKT iterative refinement did not improve residual after the initial step.\n");
+	      }
+	      break;
 	    }
 	    ir_iter++;
+	  }
+	  
+	  if(ir_iter==gMaxIR && gPipsPrtLV>=2) {
+	    if(0==mype)
+	      printf("Warning: FullKKT iterative refinement reached max number of steps [%d].\n", ir_iter);
 	  }
    	}
   }
@@ -857,42 +871,53 @@ void NlpGenLinsys::solveCompressedAugXSYZ(OoqpVector& stepx, OoqpVector& steps,
 					   OoqpVector& stepz,
 					   NlpGenData* prob)
 {
-    this->joinRHSXSYZ( *rhs, stepx, steps, stepy, stepz );
-	sol->copyFrom(*rhs);
-    this->solveCompressed( *sol );
-	
-	//use res as residual
-	res->copyFrom(*rhs);	
-    //separate var and compute residual,  do IR if required;	
-	prob->linsysRes = computeResidual(prob, *res, *sol, stepx, steps, stepy, stepz);
-	
-	if(gDoIR_Aug==1 && prob->linsysRes > gIRtol){
-	  double currentRes=0, ir_iter=0;	
-	  int callBackBestSol = 0;
-	  
-	  while(ir_iter<gMaxIR && prob->linsysRes > gIRtol){
-	    sol2->copyFrom(*res);
-	    this->solveCompressed( *sol2 );
-	  
-	    sol2->axpy(1.0,*sol);
-	    res->copyFrom(*rhs);	
-	    currentRes = computeResidual(prob, *res, *sol2, stepx, steps, stepy, stepz);  
+  this->joinRHSXSYZ( *rhs, stepx, steps, stepy, stepz );
+  sol->copyFrom(*rhs);
+  this->solveCompressed( *sol );
+  
+  int mype,doFlag; FindMPI_ID(doFlag,mype);
 
-	    if(currentRes < prob->linsysRes){
-		  prob->linsysRes = currentRes;
-		  sol->copyFrom(*sol2);		
-	    }else{
-	      callBackBestSol=1;
-	      break;
-		}
-		ir_iter++;
-	  }
+  //use res as residual
+  res->copyFrom(*rhs);	
+  //separate var and compute residual,  do IR if required;	
+  prob->linsysRes = computeResidual(prob, *res, *sol, stepx, steps, stepy, stepz);
+  if(gDoIR_Aug==1 && prob->linsysRes > gIRtol){
+    
+    double currentRes=0.; int ir_iter=0;	
+    int callBackBestSol = 0;
+    
+    while(ir_iter<gMaxIR && prob->linsysRes > gIRtol){
+      sol2->copyFrom(*res);
+      this->solveCompressed( *sol2 );
+      
+      sol2->axpy(1.0,*sol);
+      res->copyFrom(*rhs);	
+      currentRes = computeResidual(prob, *res, *sol2, stepx, steps, stepy, stepz);  
+      //printf("!!!AugSys iterative refinement residuals old=%.8e  new=%.8e gIRtol=%.3e\n", prob->linsysRes, currentRes, gIRtol);
+      if(currentRes < prob->linsysRes){
+	prob->linsysRes = currentRes;
+	sol->copyFrom(*sol2);		
+      } else {
+	callBackBestSol=1;
+	break;
+      }
+      ir_iter++;
+    }
+    
+    if(callBackBestSol == 1) {
+      if(gPipsPrtLV>=2 && ir_iter==0) {
+	if(0==mype)
+	  printf("Warning: AugSys iterative refinement did not improve residual at the initial step.\n");
+      }
+      this->separateVarsXSYZ( stepx, steps, stepy, stepz, *sol);
+    }
 
-	  if(callBackBestSol == 1)
-	    this->separateVarsXSYZ( stepx, steps, stepy, stepz, *sol);
-	}
-
-	prob->KryIter = KryIter;
+    if(ir_iter==gMaxIR && gPipsPrtLV>=2)
+      if(0==mype)
+	printf("Warning: AugSys iterative refinement reached max number of steps [%d]\n",ir_iter);
+  }
+  
+  prob->KryIter = KryIter;
 }
 
 
@@ -1406,7 +1431,8 @@ void NlpGenLinsys::matXYZMult(double beta,  OoqpVector& res,
   resx->axzpy(alpha, *dd, solx);
   data->ATransmult(1.0, *resx, alpha, soly);
   data->CTransmult(1.0, *resx, alpha, solz);
-
+  //cout << "residuaklsssssssssssssssssssssss\n";
+  //cout << "resx norm: " << resx->twonorm() << endl;
   data->Amult(beta, *resy, alpha, solx);
   //cout << "resy norm: " << resy->twonorm() << endl;
   data->Cmult(beta, *resz, alpha, solx);
@@ -1415,7 +1441,7 @@ void NlpGenLinsys::matXYZMult(double beta,  OoqpVector& res,
   this->joinRHS( res, *resx, *resy, *resz );
 }
 
-
+#include <iomanip>  
 
 /**
  * res = beta*res + alpha*mat*sol
@@ -1429,7 +1455,7 @@ void NlpGenLinsys::matXSYZMult( double beta,  OoqpVector& res_,
 			 OoqpVector& soly_, 
 			 OoqpVector& solz_)
 {
-
+  //aaa
   this->separateVarsXSYZ( solx_, sols_, soly_, solz_, sol_ );
   this->separateVarsXSYZ( *resx, *ress,*resy, *resz, res_);
 
@@ -1440,7 +1466,12 @@ void NlpGenLinsys::matXSYZMult( double beta,  OoqpVector& res_,
   if(separateHandDiag != 1 ){
     dd->axpy(-1,*dq);
   }
-  
+
+  //cout << std::setprecision(16) << "x norm" << solx_.infnorm() << endl;  
+  //cout << std::setprecision(16) << "s norm" << sols_.infnorm() << endl;  
+  //cout << std::setprecision(16) << "y norm" << soly_.infnorm() << endl;  
+  //cout << std::setprecision(16) << "z norm" << solz_.infnorm() << endl;  
+
   data->Qmult(beta, *resx, alpha, solx_);
   resx->axzpy(alpha, *dd, solx_);
   
@@ -1459,7 +1490,9 @@ void NlpGenLinsys::matXSYZMult( double beta,  OoqpVector& res_,
   resz->axpy(-alpha, sols_);
   resz->axzpy(alpha, *temp_diagZ, solz_);
 
-  //cout << "resz norm: " << resz->twonorm() << endl;
+  //cout << "resx norm: " << resx->infnorm() << endl;
+  //cout << "resy norm: " << resy->infnorm() << endl;
+  //cout << "resz norm: " << resz->infnorm() << endl;
   this->joinRHSXSYZ( res_, *resx, *ress, *resy, *resz );
 
   //FIXME_NY: recover dd, we may need it later? as in eval_xWx. 

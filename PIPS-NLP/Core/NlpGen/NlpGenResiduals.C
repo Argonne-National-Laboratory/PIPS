@@ -415,7 +415,11 @@ void NlpGenResiduals::eval_kkt_res(NlpGenData *prob, NlpGenVars *vars)
 
   comerr_0 = comnorm;
 
-  mResidualNorm = mResidualNorm>comerr?mResidualNorm:comerr;  
+  //!petra
+  //valgrind complains that 'comerr' has uninitialised value, which is true
+  //mResidualNorm = mResidualNorm>comerr?mResidualNorm:comerr; 
+  //I think the above line should be
+  mResidualNorm = mResidualNorm>comerr_0?mResidualNorm:comerr_0;  
 
   //compute XZe-mu  -> comp err here
   comerr = getKKTError_Comp(prob,vars,prob->currMu,PIPS_NORM_INF);

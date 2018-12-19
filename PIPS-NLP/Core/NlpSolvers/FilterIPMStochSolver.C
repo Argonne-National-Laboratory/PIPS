@@ -259,7 +259,10 @@ FilterIPMStochSolver::defaultStatus(Data *  data_in, Variables * /* vars */,
   NlpGenVars*  steps = (NlpGenVars *) mainstep;
 
   if(DoFeasResto){
-  	printf("OOPS! Feasiblity Restoration Phase. STOP! \n");
+    //printf("OOPS! Feasiblity Restoration Phase. STOP! \n");
+    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    if(0==myRank)
+      printf("Problem may be locally infeasible. Feasibility Restoration Phase is needed, but it is not yet implemented.\n");
     return NEED_FEASIBILITY_RESTORATION;
   }
 

@@ -25,8 +25,8 @@ sTreeImpl::sTreeImpl( stochasticInput &in_, MPI_Comm comm /*=MPI_COMM_WORLD*/)
     c->parent = this;
     children.push_back( c );
   }
-  //if(0==rankMe) cout << "sTreeImpl constructor done" << endl;
-
+  if(0==rankMe) cout << "[PIPS] - " << in.nScenarios() << " scenarios on " << numProcs << " MPI ranks" << endl;
+  
 }
 
 sTreeImpl::sTreeImpl(int id, stochasticInput &in_)

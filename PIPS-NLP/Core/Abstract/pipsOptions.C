@@ -234,8 +234,7 @@ pipsOptions::copyFrom(pipsOptions &os)
   this->max_iter = os.max_iter;
   this->conv_tol = os.conv_tol;
   this->MaxIR = os.MaxIR;
-
-} 
+}
 
 void pipsOptions::readFile()
 {
@@ -245,30 +244,30 @@ void pipsOptions::readFile()
   int mype,doFlag;  FindMPI_ID(doFlag,mype);
   int prosize;	FindMPI_Size(doFlag,prosize);
 
-  if (pipsOptions::defOpt==NULL){
+  if (pipsOptions::defOpt==NULL) {
     defOpt = this;
   }
 
   std::string fileName("pipsnlp.parameter");
   optfile = fopen(fileName.c_str(),"r");
-  if (optfile!=NULL) {
+  if (optfile==NULL) {
+    return;
+  } else {
     printf("load option file: %s \n",fileName.c_str());
-
-  
-    /* Read one line of the options file */
-    while(fgets(buffer, 9999, optfile)!=NULL){
-      parseLine(buffer);
-    }
-    fclose(optfile);
-    
-    if(splitHesDiag==1)
-      assert(outerSolve==3);
-    
-    if(UseReducedSpace==1 && NP_Alg==0){
-      BuildSchurComp = 1;
-    }
   }
-
+  /* Read one line of the options file */
+  while(fgets(buffer, 9999, optfile)!=NULL){
+    parseLine(buffer);
+  }
+  fclose(optfile);
+  
+  if(splitHesDiag==1)
+    assert(outerSolve==3);
+  
+  if(UseReducedSpace==1 && NP_Alg==0){
+    BuildSchurComp = 1;
+  }
+  
   if (mype == 0){
     printf("OPTION: Set printing level to %d\n",prtLvl);
     printf("OPTION: Set Iteration Limit to %d\n",max_iter);
@@ -406,8 +405,9 @@ bool pipsOptions::parseLine(char *buffer)
   double dval;
   
   bool found = false;
-  sscanf(buffer, "%s%lf\n",label, &dval);  
-  
+  int ret=sscanf(buffer, "%s%lf\n",label, &dval);  
+  if(ret!=2) return true;
+
   int mype,doFlag; FindMPI_ID(doFlag,mype);
 
   /* -----------------------------------------------------------------------

@@ -36,6 +36,7 @@ extern int gOuterIterRefin;
 extern int gOuterSolve;
 extern int separateHandDiag;
 extern double gAbsTolForZero;
+extern int gPipsPrtLV;
 
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
   : NlpGenLinsys(), kkt(NULL), solver(NULL), isActive(true)
@@ -196,104 +197,116 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
   bool skipUpdateReg=false;
   long long Num_NegEVal=-1;
   double priReg=0.0,dualReg=0.0;
-
+  int mype; int ret = MPI_Comm_rank(mpiComm, &mype); assert(MPI_SUCCESS==ret);
 #ifdef TIMING
   double tTot=MPI_Wtime();
 #endif
-  // DoEvalReg =   1 -> when factorizing the matrix, add regularizations to correct inertia and singularity 
-  //				  	(we ONLY calling this routine once in IBR)
-  //			  2 -> when factorizing the matrix, add regularizations to correct singularity only 
-  //					(this is always the 1st call of this routine when IFR is used)
-  //			  0 -> when factorizing the matrix, force to use primal regularizaion. called iff xWx tests fail  
-  //					(the other calls of this routine when IFR is used, now matrix is nonsingular for sure)
+  // DoEvalReg = 1 -> when factorizing the matrix, add regularizations to correct inertia and singularity 
+  //		 	(we ONLY calling this routine once in IBR)
+  //		 2 -> when factorizing the matrix, add regularizations to correct singularity only 
+  //			(this is always the 1st call of this routine when IFR is used)
+  //		 0 -> when factorizing the matrix, force to use primal regularization. called iff xWx tests fail  
+  //		        (the other calls of this routine when IFR is used, now matrix is nonsingular for sure)
 #ifdef TIMING
-    double stime=MPI_Wtime();
-#endif
-  if(RegInfo->DoEvalReg >= 1){
-  	RegInfo->newLinearSystem();
-
-	if(RegInfo->ForceReg) {
-	  NlpGenLinsys::factorNoMatChange(prob_, vars, RegInfo);
-  }
-	else {
-      NlpGenLinsys::factorNoMatChange(prob_, vars, NULL);	
-  }
-#ifdef TIMING
-  gprof.t_factorNoMatChange+=MPI_Wtime()-stime;
   double stime=MPI_Wtime();
 #endif
+  if(RegInfo->DoEvalReg >= 1) {
+    RegInfo->newLinearSystem();
+    
+    if(RegInfo->ForceReg) {
+      NlpGenLinsys::factorNoMatChange(prob_, vars, RegInfo);
+    }
+    else {
+      NlpGenLinsys::factorNoMatChange(prob_, vars, NULL);	
+    }
+    
+#ifdef TIMING
+    gprof.t_factorNoMatChange+=MPI_Wtime()-stime;
+    double stime=MPI_Wtime();
+#endif
 
+    long long gbMy = prob->getGlobalMy();
+    long long gbMz = prob->getGlobalMz();
 
     // now DO THE LINEAR ALGEBRA!
     // in order to avoid a call to NlpGenLinsys::factor, call factor2 method.
     Num_NegEVal = factor2(prob, vars);
+  
+    if(mype==0 && gPipsPrtLV>=3)
+      printf("sLinsys (parallel) Num_NegEVal is %d and my+mz is %d\n", Num_NegEVal, gbMy + gbMz);
+
 #ifdef TIMING
     gprof.t_factor2+=MPI_Wtime()-stime;
     stime=MPI_Wtime();
 #endif
 
-	long long gbMy = prob->getGlobalMy();
-	long long gbMz = prob->getGlobalMz();
-
-	// check if matrix is singular
-	if(Num_NegEVal < 0 || (Num_NegEVal < gbMy + gbMz && RegInfo->DoEvalReg == 1) )
-	  RegInfo->MatrixSingular = 1;
-	else
-	  RegInfo->MatrixSingular = 0;	
-
-	// skip update regularizaion if: 	1) have correct inertia and mat is nonsingular 
-	//						OR 	2) mat is nonsingular and we will do inertia-free test later	
-	if( (RegInfo->DoEvalReg==1 && Num_NegEVal == gbMy + gbMz) || (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1)){
-	  skipUpdateReg=true;
-	}
+    // check if matrix is singular
+    if(Num_NegEVal < 0 || (Num_NegEVal < gbMy + gbMz && RegInfo->DoEvalReg == 1) )
+      RegInfo->MatrixSingular = 1;
+    else
+      RegInfo->MatrixSingular = 0;	
+    
+    // skip update regularization if: 	
+    // 1) have correct inertia and mat is nonsingular OR
+    // 2) mat is nonsingular and we will do inertia-free test later	
+    if( (RegInfo->DoEvalReg==1 && Num_NegEVal == gbMy + gbMz) || (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1)){
+      skipUpdateReg=true;
+    }
 #ifdef TIMING
-  gprof.t_factor_rest+=MPI_Wtime()-stime;
+    gprof.t_factor_rest+=MPI_Wtime()-stime;
 #endif
   }
 
   // update regularization
   while( !skipUpdateReg ){
 #ifdef TIMING
-  stime=MPI_Wtime();
-#endif
-	RegInfo->computeRegularization(priReg,dualReg,prob->currMu);
-#ifdef TIMING
-  gprof.t_computeRegularization+=MPI_Wtime()-stime;
-  stime=MPI_Wtime();
-#endif
-	
-    NlpGenLinsys::factorNoMatChange(prob_, vars, RegInfo);
-#ifdef TIMING
-    gprof.t_factorNoMatChange2+=MPI_Wtime()-stime;
     stime=MPI_Wtime();
 #endif
-	Num_NegEVal=(long long)factor2(prob, vars);
+    
+    RegInfo->computeRegularization(priReg,dualReg,prob->currMu);
+    
 #ifdef TIMING
-  gprof.t_factor2+=MPI_Wtime()-stime;
+    gprof.t_computeRegularization+=MPI_Wtime()-stime; stime=MPI_Wtime();
+#endif
+    
+    NlpGenLinsys::factorNoMatChange(prob_, vars, RegInfo);
+    
+#ifdef TIMING
+    gprof.t_factorNoMatChange2+=MPI_Wtime()-stime; stime=MPI_Wtime();
+#endif
+    
+    Num_NegEVal=(long long)factor2(prob, vars);
+    
+#ifdef TIMING
+    gprof.t_factor2+=MPI_Wtime()-stime;
 #endif
 
-	// check if matrix is singular
-	if(Num_NegEVal < 0)
-	  RegInfo->MatrixSingular = 1;
-	else
-	  RegInfo->MatrixSingular = 0;
 
-	// skip update regularization if: 	
-	// 1) have correct inertia and mat is nonsingular OR
-	// 2) mat is nonsingular and we will do inertia-free test later	OR
-	// 3) we are doing inertia-free test now (mat is defenitly nonsingular)
-	if( (RegInfo->DoEvalReg == 1 && Num_NegEVal == prob->getGlobalMy() + prob->getGlobalMz())
-		|| (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1) || RegInfo->DoEvalReg == 0 )
-	{
-	  skipUpdateReg = true;
-	}  	  
+    if(mype==0 && gPipsPrtLV>=3) 
+      printf("sLinsys (parallel) Num_NegEVal is %d and  my+mz is %d (on refactorization with regularizations: %g %g)\n", Num_NegEVal, my+mz, priReg, dualReg);
+    
+    // check if matrix is singular
+    if(Num_NegEVal < 0)
+      RegInfo->MatrixSingular = 1;
+    else
+      RegInfo->MatrixSingular = 0;
+    
+    // skip update regularization if: 
+    //  1) have correct inertia and mat is nonsingular OR
+    //  2) mat is nonsingular and we will do inertia-free test later OR
+    //  3) we are doing inertia-free test now (mat is definitely nonsingular)
+    if( (RegInfo->DoEvalReg == 1 && Num_NegEVal == prob->getGlobalMy() + prob->getGlobalMz())
+	|| (RegInfo->DoEvalReg == 2 && Num_NegEVal != -1) || RegInfo->DoEvalReg == 0 )
+      {
+	skipUpdateReg = true;
+      }  	  
   }  
 #ifdef TIMING
   tTot = MPI_Wtime()-tTot;
   MPI_Barrier(MPI_COMM_WORLD);
-  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  if(0==myRank)
-      std::cout << "Outer fact. total time " << tTot << std::endl;
+  //int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  if(0==mype)
+    std::cout << "Outer fact. total time " << tTot << std::endl;
 #endif
 }
 
