@@ -4,11 +4,12 @@ CLEANEXTS   = o a
 # Specify the target file 
 OUTPUTFILE  = libstatgdx.a
 CXX = mpicxx
-CXXFLAGS = -D_GCL_RHACK_ -D_P3_DllExport= -DSTDCALL= -DGDX_CALLCONV=unwanted -DLEG -Wall -Wno-long-long -fpermissive
+CXXFLAGS = -D_GCL_RHACK_ -D_P3_DllExport= -DSTDCALL= -DGDX_CALLCONV=unwanted -DLEG -Wall -fpermissive
+# CXXFLAGS += -Wno-long-long
 CXXFLAGS += -Wno-strict-aliasing
 CXXFLAGS += -Wno-unused-function
 CXXFLAGS += -Wno-unused-variable
-CXXFLAGS += -Wno-unused-label
+* CXXFLAGS += -Wno-unused-label
 CXXFLAGS += -Wno-unused-value
 CXXFLAGS += -Wno-parentheses
 CXXFLAGS += -fdiagnostics-show-option

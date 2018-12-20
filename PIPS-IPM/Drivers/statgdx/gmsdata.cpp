@@ -97,8 +97,12 @@ Procedure GMSDATA_tgrowarray_DOT_clear(
       GMSDATA_tgrowarray_DOT_baseused - 1;
   
 }
+#if 0
   SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
     GMSDATA_tgrowarray_DOT_pbase),0);
+#else
+  SYSTEM_reallocmem((void **) &self->GMSDATA_tgrowarray_DOT_pbase, 0);
+#endif
   self->GMSDATA_tgrowarray_DOT_baseallocated = 0;
   self->GMSDATA_tgrowarray_DOT_pcurrentbuf = NULL;
 }  /* clear */
@@ -136,9 +140,14 @@ Function(SYSTEM_pointer ) GMSDATA_tgrowarray_DOT_reservemem(
       } else 
         self->GMSDATA_tgrowarray_DOT_baseallocated = 2 * self->
           GMSDATA_tgrowarray_DOT_baseallocated;
+#if 0
       SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
         GMSDATA_tgrowarray_DOT_pbase),self->
         GMSDATA_tgrowarray_DOT_baseallocated * sizeof(SYSTEM_pointer));
+#else
+      SYSTEM_reallocmem((void **) &self->GMSDATA_tgrowarray_DOT_pbase,
+			self->GMSDATA_tgrowarray_DOT_baseallocated * sizeof(SYSTEM_pointer));
+#endif
     } 
     _P3getmem(self->GMSDATA_tgrowarray_DOT_pcurrentbuf,sizeof(
       GMSDATA_tgadatabuffer));
@@ -306,10 +315,8 @@ Procedure GMSDATA_ttblgamsdata_DOT_sort(
           sortneeded = SYSTEM_true;
           SYSTEM_break(BRK_1);
         } 
-CNT_1:;
-      } while (n++ !=  _stop);
+	} while (n++ !=  _stop);
 BRK_1:;
-
     }
     if (sortneeded) 
       GMSDATA_ttblgamsdata_DOT_quicksort(self,0,self->
@@ -514,8 +521,6 @@ Function(SYSTEM_boolean ) GMSDATA_ttblgamsdata_DOT_searchrecord(
         l = i;
         SYSTEM_break(BRK_2);
       } 
-  
-CNT_2:;
   }
 BRK_2:;
   *recnr = l;

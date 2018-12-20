@@ -1,73 +1,6 @@
 #include "p3io.h"
 #include "system_p3.h"
 
-
-static Function(SYSTEM_P3_pansichar ) SYSTEM_P3_getparamstr(
-  SYSTEM_P3_pansichar p,
-  SYSTEM_ansichar *param)
-{
-  SYSTEM_P3_pansichar result;
-  SYSTEM_integer len;
-  SYSTEM_P3_pansichar start, s;
-
-  while (SYSTEM_true) {
-    while (*p != _P3char('\000') && *p <= _P3char(' ')) {
-
-      _P3inc0(p);
-}
-    start = p;
-    _P3inc0(start);
-    if (*p == _P3char('\"') && *start == _P3char('\"')) { 
-      _P3inc1(p,2);
-    } else 
-      SYSTEM_break(BRK_1);
-  
-CNT_1:;
-  }
-BRK_1:;
-  len = 0;
-  start = p;
-  while (*p > _P3char(' ')) {
-
-    if (*p == _P3char('\"')) {
-      _P3inc0(p);
-      while (*p != _P3char('\000') && *p != _P3char('\"')) {
-        _P3inc0(p);
-        _P3inc0(len);
-      
-}
-      if (*p != _P3char('\000')) 
-        _P3inc0(p);
-    } else {
-      _P3inc0(p);
-      _P3inc0(len);
-    } 
-}
-  _P3setlength(param,len,255);
-  p = start;
-  s = ValueCast(SYSTEM_P3_pansichar,&param[1]);
-  while (*p > _P3char(' ')) {
-
-    if (*p == _P3char('\"')) {
-      _P3inc0(p);
-      while (*p != _P3char('\000') && *p != _P3char('\"')) {
-        *s = *p;
-        _P3inc0(s);
-        _P3inc0(p);
-      
-}
-      if (*p != _P3char('\000')) 
-        _P3inc0(p);
-    } else {
-      *s = *p;
-      _P3inc0(s);
-      _P3inc0(p);
-    } 
-}
-  result = p;
-  return result;
-}  /* getparamstr */
-
 static Function(SYSTEM_P3_pansichar ) SYSTEM_P3_getparamshortstr(
   SYSTEM_P3_pansichar p,
   SYSTEM_ansichar *param);
@@ -104,8 +37,6 @@ static Function(SYSTEM_P3_pansichar ) SYSTEM_P3_getparamshortstr(
       _P3inc1(p,2);
     } else 
       SYSTEM_break(BRK_2);
-  
-CNT_2:;
   }
 BRK_2:;
   len = 0;

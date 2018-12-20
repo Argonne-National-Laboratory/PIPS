@@ -16,13 +16,6 @@ typedef _P3SET_7 P3IEEEFP_tfpuexceptionflags;
 Function(P3IEEEFP_tfpclass ) P3IEEEFP_fpclass(
   SYSTEM_double x);
 
-Function(_P3set_elem *) P3IEEEFP_getexceptionflags(
-  _P3set_elem *result,
-  SYSTEM_uint8 _len_ret);
-
-Procedure P3IEEEFP_clearexceptionflags(
-  const _P3set_elem *flags);
-
 Function(SYSTEM_boolean ) P3IEEEFP_p3isfinite(
   SYSTEM_double x);
 

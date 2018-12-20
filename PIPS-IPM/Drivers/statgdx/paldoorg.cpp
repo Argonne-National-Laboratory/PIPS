@@ -1508,9 +1508,14 @@ Function(SYSTEM_boolean ) PALDOORG_tpalobject_DOT_pallicensegetmessage(
   GMSOBJ_txlist_DOT_delete(ValueCast(GMSOBJ_txlist,self->
     PALDOORG_tpalobject_DOT_ml),0);
   if ((ValueCast(GMSOBJ_txstrings,self->PALDOORG_tpalobject_DOT_ml))->
-    GMSOBJ_txlist_DOT_fcount == 0) 
+      GMSOBJ_txlist_DOT_fcount == 0) {
+#if 0
     SYSUTILS_P3_freeandnil(&PointerCast(GMSOBJ_txstrings,&self->
       PALDOORG_tpalobject_DOT_ml));
+#else
+    SYSUTILS_P3_freeandnil((GMSOBJ_txstrings *) & self->PALDOORG_tpalobject_DOT_ml);
+#endif
+  }
   result = SYSTEM_true;
   return result;
 }  /* pallicensegetmessage */

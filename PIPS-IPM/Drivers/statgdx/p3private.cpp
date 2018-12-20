@@ -76,8 +76,7 @@ Function(SYSTEM_ansichar *) P3PRIVATE_strbuftostr(
       result[len] = src[i];
     } else 
       SYSTEM_break(BRK_1);
-  CNT_1:;
-}
+  }
 BRK_1:;
   _P3setlength(result,len,255);
   return result;
@@ -98,8 +97,7 @@ Function(SYSTEM_ansichar *) P3PRIVATE_pchartostr(
       _P3inc0(psrc);
     } else 
       SYSTEM_break(BRK_2);
-  CNT_2:;
-}
+  }
 BRK_2:;
   _P3setlength(result,len,255);
   return result;

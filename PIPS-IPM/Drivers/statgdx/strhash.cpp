@@ -599,8 +599,6 @@ Procedure STRHASH_txstrhashlist_DOT_sort(
             SYSTEM_break(BRK_1);
           } 
           psn = psn1;
-        
-CNT_1:;
         } while (n++ !=  _stop);
 BRK_1:;
 
@@ -696,8 +694,6 @@ Procedure STRHASH_txstrhashlist_DOT_renameentry(
           SYSTEM_break(BRK_2);
         prevbuck = pbuck;
         pbuck = pbuck->nxtbuck;
-      
-CNT_2:;
       }
 BRK_2:;
       if (prevbuck == NULL) { 

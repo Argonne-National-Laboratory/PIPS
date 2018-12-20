@@ -15,7 +15,6 @@
 #include "strutilx.h"
 
 SYSTEM_shortstring STRUTILX_blanks255;
-static GMSGEN_tcharset STRUTILX_whitespace = {255,255,255,255,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 static _P3STR_7 STRUTILX_maxint_s = {6,'m','a','x','i','n','t'};
 static _P3STR_7 STRUTILX_minint_s = {6,'m','i','n','i','n','t'};
 static SYSTEM_double STRUTILX_maxdouble_v = 1.0e299;
@@ -138,8 +137,6 @@ Function(SYSTEM_integer ) STRUTILX_strucmpnum(
         result = SYSTEM_ord(ws1[k]) - SYSTEM_ord(ws2[k]);
         if (result != 0) 
           SYSTEM_break(BRK_1);
-      
-CNT_1:;
       } while (k++ !=  _stop);
 BRK_1:;
 
@@ -531,7 +528,6 @@ Function(SYSTEM_ansichar *) STRUTILX_dbltostr(
               s[j + e] = _P3char(' ');
           } else 
             SYSTEM_break(BRK_2);
-CNT_2:;
         } while (i-- !=  _stop);
 BRK_2:;
 
@@ -560,7 +556,6 @@ BRK_2:;
             s[i] = _P3char(' ');
           } else 
             SYSTEM_break(BRK_3);
-CNT_3:;
         } while (i-- !=  _stop);
 BRK_3:;
 
@@ -577,7 +572,6 @@ BRK_3:;
             s[k - 1] = _P3char(' ');
         } else 
           SYSTEM_break(BRK_4);
-CNT_4:;
       } while (i++ !=  _stop);
 BRK_4:;
 
@@ -590,7 +584,6 @@ BRK_4:;
             s[j] = _P3char(' ');
         } else 
           SYSTEM_break(BRK_5);
-CNT_5:;
       } while (i-- !=  _stop);
 BRK_5:;
 
@@ -737,7 +730,6 @@ Function(SYSTEM_integer ) STRUTILX_lchpossp(
         result = k;
         SYSTEM_break(BRK_6);
       } 
-CNT_6:;
     } while (k++ !=  _stop);
 BRK_6:;
 
@@ -773,8 +765,7 @@ Function(SYSTEM_integer ) STRUTILX_rchpossp(
       result = k;
       SYSTEM_break(BRK_7);
     } 
-  CNT_7:;
-}
+  }
 BRK_7:;
   return result;
 }  /* rchpossp */
@@ -807,7 +798,6 @@ Function(SYSTEM_integer ) STRUTILX_lchupossp(
         result = k;
         SYSTEM_break(BRK_8);
       } 
-CNT_8:;
     } while (k++ !=  _stop);
 BRK_8:;
 
@@ -844,8 +834,7 @@ Function(SYSTEM_integer ) STRUTILX_rchupossp(
       result = k;
       SYSTEM_break(BRK_9);
     } 
-  CNT_9:;
-}
+  }
 BRK_9:;
   return result;
 }  /* rchupossp */
@@ -874,7 +863,6 @@ Function(SYSTEM_integer ) STRUTILX_lchsetpos(
         result = k;
         SYSTEM_break(BRK_10);
       } 
-CNT_10:;
     } while (k++ !=  _stop);
 BRK_10:;
 
@@ -895,8 +883,7 @@ Function(SYSTEM_integer ) STRUTILX_rchsetpos(
       result = k;
       SYSTEM_break(BRK_11);
     } 
-  CNT_11:;
-}
+  }
 BRK_11:;
   return result;
 }  /* rchsetpos */
@@ -942,7 +929,6 @@ Function(SYSTEM_integer ) STRUTILX_lstrpossp(
               result = 0;
               SYSTEM_break(BRK_13);
             } 
-CNT_13:;
           } while (k++ !=  _stop);
 BRK_13:;
 
@@ -952,8 +938,6 @@ BRK_13:;
       
 CNT_12:;
       } while (p++ !=  _stop);
-BRK_12:;
-
     }
   return result;
 }  /* lstrpossp */
@@ -1040,7 +1024,6 @@ Function(SYSTEM_ansichar *) STRUTILX_replacestr(
           SYSTEM_copy(_t1,255,s,r,i - r)),_new);
       }
       r = i + SYSTEM_length(old);
-    CNT_14:;
     } while (SYSTEM_true);
 BRK_14:;
     {

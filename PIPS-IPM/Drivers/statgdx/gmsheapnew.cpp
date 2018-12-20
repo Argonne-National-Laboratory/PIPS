@@ -122,8 +122,6 @@ Destructor(GMSHEAPNEW_tbigblockmgr )
   GMSHEAPNEW_tbigblockmgr_DOT_destroy(
   GMSHEAPNEW_tbigblockmgr self)
 {
-  SYSTEM_integer n;
-
   GMSHEAPNEW_tbigblockmgr_DOT_clear(self);
   _P3freemem(self->GMSHEAPNEW_tbigblockmgr_DOT_spname);
   while (self->GMSHEAPNEW_tbigblockmgr_DOT_mgrlist->

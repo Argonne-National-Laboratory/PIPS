@@ -482,8 +482,13 @@ Procedure GMSOBJ_txlist_DOT_setcapacity(
   if (newcapacity != self->GMSOBJ_txlist_DOT_fcapacity) {
     if (newcapacity < self->GMSOBJ_txlist_DOT_fcount) 
       newcapacity = self->GMSOBJ_txlist_DOT_fcount;
+#if 0
     SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
       GMSOBJ_txlist_DOT_flist),newcapacity * sizeof(SYSTEM_pointer));
+#else
+    SYSTEM_reallocmem ((void **) & self->GMSOBJ_txlist_DOT_flist,
+		       newcapacity * sizeof(SYSTEM_pointer));
+#endif
     self->GMSOBJ_txlist_DOT_fcapacity = newcapacity;
   } 
 }  /* setcapacity */
@@ -678,8 +683,7 @@ Constructor(GMSOBJ_txcustomstringlist )
   GMSOBJ_txcustomstringlist_DOT_create(
   GMSOBJ_txcustomstringlist self)
 {
-  ValueCast(GMSOBJ_txcustomstringlist,SYSTEM_tobject_DOT_create(ValueCast(
-    SYSTEM_tobject,self)));
+  (GMSOBJ_txcustomstringlist) SYSTEM_tobject_DOT_create((SYSTEM_tobject)self);
   self->GMSOBJ_txcustomstringlist_DOT_flist = NULL;
   self->GMSOBJ_txcustomstringlist_DOT_fcount = 0;
   self->GMSOBJ_txcustomstringlist_DOT_fcapacity = 0;
@@ -938,9 +942,14 @@ Procedure GMSOBJ_txcustomstringlist_DOT_setcapacity(
 {
   if (newcapacity < self->GMSOBJ_txcustomstringlist_DOT_fcount) 
     newcapacity = self->GMSOBJ_txcustomstringlist_DOT_fcount;
+#if 0
   SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
     GMSOBJ_txcustomstringlist_DOT_flist),newcapacity * sizeof(
     GMSOBJ_tstringitem));
+#else
+  SYSTEM_reallocmem((void **) & self->GMSOBJ_txcustomstringlist_DOT_flist,
+		    newcapacity * sizeof(GMSOBJ_tstringitem));
+#endif
   self->GMSOBJ_txcustomstringlist_DOT_fcapacity = newcapacity;
 }  /* setcapacity */
 
@@ -1171,8 +1180,6 @@ Function(SYSTEM_integer ) GMSOBJ_txhashedstringlist_DOT_indexof(
       refnr))) 
       SYSTEM_break(BRK_1);
     ph = ph->pnext;
-  
-CNT_1:;
   }
 BRK_1:;
   if (ph == NULL) { 
@@ -1207,8 +1214,6 @@ Function(SYSTEM_integer ) GMSOBJ_txhashedstringlist_DOT_addobject(
       refnr))) 
       SYSTEM_break(BRK_2);
     ph = ph->pnext;
-  
-CNT_2:;
   }
 BRK_2:;
   if (ph != NULL) { 
@@ -1537,11 +1542,20 @@ Procedure GMSOBJ_txstrstrlist_DOT_putobject(
   VirtMethodCall(ValueCast(GMSOBJ_txcustomstringlist,self), 
     GMSOBJ_txcustomstringlist_DOT_freeobject_T, 4, (ValueCast(
     GMSOBJ_txcustomstringlist,self),index));
+#if 0
   PointerCast(SYSTEM_P3_pshortstring,&(*self->
     GMSOBJ_txcustomstringlist_DOT_flist)[index - SYSTEM_ord(self->
     GMSOBJ_tquicksortclass_DOT_onebased)].fobject) = 
     STRUTILX_newstringm(astr,&self->
     GMSOBJ_txcustomstringlist_DOT_fstrmemory);
+#else
+  {
+    int k = index - SYSTEM_ord(self->GMSOBJ_tquicksortclass_DOT_onebased);
+    (*self->GMSOBJ_txcustomstringlist_DOT_flist)[k].fobject =
+      ValueCast(SYSTEM_tobject,
+		STRUTILX_newstringm(astr,&self->GMSOBJ_txcustomstringlist_DOT_fstrmemory));
+  }
+#endif
 }  /* putobject */
 
 Procedure GMSOBJ_txstrstrlist_DOT_setasstring(
@@ -1773,8 +1787,6 @@ Procedure GMSOBJ_tbooleanbitarray_DOT_iterate(
       
 CNT_3:;
       } while (p++ !=  _stop);
-BRK_3:;
-
     }
   } 
   (*func)( -1);
@@ -1806,8 +1818,7 @@ Procedure GMSOBJ_tbooleanbitarray_DOT_iteratedown(
       } while (!(m == 0));
     
     CNT_4:;
-}
-BRK_4:;
+    }
   } 
   (*func)( -1);
 }  /* iteratedown */

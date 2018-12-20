@@ -1,0 +1,110 @@
+There are several warning-suppression flags used to get a clean build
+with -Wall:
+
+CXXFLAGS += -Wno-long-long
+CXXFLAGS += -Wno-strict-aliasing
+CXXFLAGS += -Wno-unused-function
+CXXFLAGS += -Wno-unused-variable
+CXXFLAGS += -Wno-unused-label
+CXXFLAGS += -Wno-unused-value
+CXXFLAGS += -Wno-parentheses
+
+---------------------------------------------------------------------------
+
+ITEM: -Wlong-long
+Disabling this has no effect, so we can leave it enabled
+
+---------------------------------------------------------------------------
+ 
+ITEM: -Wstrict-aliasing
+Delphi encourages a coding style that is the polar opposite of strict
+aliasing when data needs to be moved between different types.  For
+example their run-time libs use lots of code that casts an integer or
+float or double to a record type to get at the bytes and bits.  I can
+take such usage in our P3 libraries and elsewhere and make it more C
+friendly by using a memcpy() or equivalent to actually copy the bytes
+to space that is typed appropriately.
+
+However, one of the casts we use in P3 is turfing up a warning: to fix
+this requires work on P3 itself.  Here's an example:
+#define PointerCast(t, p)  *(t*)(p)  /* t pointers, p address */
+#if defined(EXISTING_WAY_TURFS_WARNING)
+  SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,& ptrToMem), N);
+#else
+  SYSTEM_reallocmem ((void **) & ptrToMem, N);
+#endif
+The PointerCast macro removes one level of indirection.  Ughh, this
+probably requires a good look at the code p3 is emitting, and how, and
+why.
+
+Another case from gmsobj.pas:
+PShortString(FList^[Index - Ord(OneBased)].FObject) :=
+NewStringM(AStr, FStrMemory);
+Essentially, .FObject is a TObject pointer that we cast as a
+shortString pointer and assign a shortstring pointer to.  Perhaps we
+could just make this
+FList^[Index - Ord(OneBased)].FObject := TObject(NewStringM(AStr, FStrMemory));
+
+Finally, the xuncompress warnings were fixed by adjusting the Delphi
+source.  It is better to do:
+pFunction := nil;    (and similar stuff when RHS is non-nil)
+than
+@pFunction := nil;
+since the latter syntax results in a PointerCast in the C code.
+
+---------------------------------------------------------------------------
+
+ITEM: -Wunused-function
+For the most part we have cleaned these out of the code here and in
+master.  There is one exception for a routine that is used in P3 but
+only for Windows.  The translated code is independent of the target
+platform so the routine goes in unused for non-Windows.
+Ditto for hackEnvSPD in p3utils: it is only used on some platforms.
+
+---------------------------------------------------------------------------
+
+ITEM: -Wunused-variable
+All cleaned up, here and soon in master.
+
+---------------------------------------------------------------------------
+
+ITEM: -Wunused-label
+I suppose this could be fixed in P3, but I don't know how long it
+would take to do so.  I just hacked them out of the source here.
+
+---------------------------------------------------------------------------
+
+ITEM: -Wunused-value
+If we do not disable unused-value warnings, we get many error messages
+about object creation from code like this:
+
+  ValueCast(GMSOBJ_tbooleanbitarray,SYSTEM_tobject_DOT_create(ValueCast(
+    SYSTEM_tobject,self)));
+
+Here are the relevant macros:
+
+#define ValueCast(t, e)     (t)(e)
+#define SYSTEM_tobject_DOT_create(Self)       (Self)
+
+Plugging in we get:
+
+(GMSOBJ_tbooleanbitarray) SYSTEM_tobject_DOT_create((SYSTEM_tobject)self);
+
+or
+
+(GMSOBJ_tbooleanbitarray) ((SYSTEM_tobject)self);
+
+This is correct, since the allocation and initialization of the
+buffer/object pointed to by self take place before this call, but we
+get a warning about the unused value here, i.e. self.
+
+There were also a bunch of warnings about "left-hand operand of comma has
+no effect".  I fixed this in the master p3/lib/sysutils_p3.pas by
+removing casts to longRec and using a system.move instead.  I hacked
+the edits into this stuff.
+
+---------------------------------------------------------------------------
+
+ITEM: -Wparentheses
+
+---------------------------------------------------------------------------

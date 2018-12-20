@@ -1069,9 +1069,14 @@ Destructor(DATASTORAGE_tintegermapping )
   DATASTORAGE_tintegermapping_DOT_destroy(
   DATASTORAGE_tintegermapping self)
 {
-  if (self->DATASTORAGE_tintegermapping_DOT_pmap != NULL) 
+  if (self->DATASTORAGE_tintegermapping_DOT_pmap != NULL)  {
+#if 0
     SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
       DATASTORAGE_tintegermapping_DOT_pmap),0);
+#else
+    SYSTEM_reallocmem((void **) &self->DATASTORAGE_tintegermapping_DOT_pmap,0);
+#endif
+  }
   SYSTEM_tobject_DOT_destroy(ValueCast(SYSTEM_tobject,self));
   return self;
 }  /* destroy */
@@ -1122,10 +1127,15 @@ Procedure DATASTORAGE_tintegermapping_DOT_setmapping(
             DATASTORAGE_tintegermapping_DOT_fcapacity /  4);
     } while (!(f < self->DATASTORAGE_tintegermapping_DOT_fcapacity + 
       delta));
+#if 0
     SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
       DATASTORAGE_tintegermapping_DOT_pmap),(self->
       DATASTORAGE_tintegermapping_DOT_fcapacity + delta) * sizeof(
       SYSTEM_longint));
+#else
+    SYSTEM_reallocmem((void **) &self->DATASTORAGE_tintegermapping_DOT_pmap,
+		      (self->DATASTORAGE_tintegermapping_DOT_fcapacity + delta) * sizeof(SYSTEM_longint));
+#endif
     { register SYSTEM_int32 _stop = self->
         DATASTORAGE_tintegermapping_DOT_fcapacity + delta - 1;
       if ((n = self->DATASTORAGE_tintegermapping_DOT_fcapacity) <=  _stop) do {
@@ -1285,7 +1295,6 @@ Procedure DATASTORAGE_tgamsdatasparse_DOT_loadrecord(
           }
           SYSTEM_break(BRK_1);
         } 
-CNT_1:;
       } while (d++ !=  _stop);
 BRK_1:;
 
@@ -1360,9 +1369,7 @@ Function(SYSTEM_P3_pbyte ) DATASTORAGE_tgamsdatasparse_DOT_getnextkey(
         d2 = d;
         SYSTEM_break(BRK_2);
       } 
-    
-    CNT_2:;
-}
+    }
 BRK_2:;
     if (d2 >= 1) 
       { register SYSTEM_int32 _stop = self->
@@ -1467,8 +1474,6 @@ Procedure DATASTORAGE_tgamsdatasparse_DOT_insertrecord(
 
           }
           SYSTEM_break(BRK_3);
-        
-CNT_3:;
         } while (d++ !=  _stop);
 BRK_3:;
 
@@ -2001,8 +2006,6 @@ Function(SYSTEM_boolean )
     
 CNT_4:;
     } while (d++ !=  _stop);
-BRK_4:;
-
   }
   *apdata = ValueCast(SYSTEM_pointer,&(ValueCast(
     DATASTORAGE_psparsedatacell,(*self->
@@ -2394,8 +2397,12 @@ Destructor(DATASTORAGE_treclist ) DATASTORAGE_treclist_DOT_destroy(
   DATASTORAGE_treclist self)
 {
   DATASTORAGE_treclist_DOT_clear(self);
+#if 0
   SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
     DATASTORAGE_treclist_DOT_flist),0);
+#else
+  SYSTEM_reallocmem((void **) &self->DATASTORAGE_treclist_DOT_flist,0);
+#endif
   SYSTEM_tobject_DOT_destroy(ValueCast(SYSTEM_tobject,self));
   return self;
 }  /* destroy */
@@ -2407,9 +2414,14 @@ Procedure DATASTORAGE_treclist_DOT_setcapacity(
   if (newcapacity != self->DATASTORAGE_treclist_DOT_fcapacity) {
     if (newcapacity < self->DATASTORAGE_treclist_DOT_fcount) 
       newcapacity = self->DATASTORAGE_treclist_DOT_fcount;
+#if 0
     SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
       DATASTORAGE_treclist_DOT_flist),newcapacity * sizeof(
       SYSTEM_pointer));
+#else
+    SYSTEM_reallocmem((void **) &self->DATASTORAGE_treclist_DOT_flist,
+		      newcapacity * sizeof(SYSTEM_pointer));
+#endif
     self->DATASTORAGE_treclist_DOT_fcapacity = newcapacity;
   } 
 }  /* setcapacity */
@@ -2684,11 +2696,8 @@ static Function(SYSTEM_boolean ) issorted(
         kd = r->_u._c2.reckeys[d - 1] - (*prevkey)[d - 1];
         if (kd != 0) 
           SYSTEM_break(BRK_5);
-      
-CNT_5:;
       } while (d++ !=  _stop);
 BRK_5:;
-
     }
     if (kd < 0) {
       result = SYSTEM_false;
@@ -2696,8 +2705,6 @@ BRK_5:;
     } 
     prevkey = ValueCast(GMSGEN_pintegerarrayone,r->_u._c2.reckeys);
     r = r->recnext;
-  
-CNT_6:;
   }
 BRK_6:;
   return result;

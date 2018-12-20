@@ -468,9 +468,14 @@ Constructor(GXFILE_tintegermapping ) GXFILE_tintegermapping_DOT_create(
 Destructor(GXFILE_tintegermapping ) GXFILE_tintegermapping_DOT_destroy(
   GXFILE_tintegermapping self)
 {
-  if (self->GXFILE_tintegermapping_DOT_pmap != NULL) 
+  if (self->GXFILE_tintegermapping_DOT_pmap != NULL)  {
+#if 0
     SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
-      GXFILE_tintegermapping_DOT_pmap),0);
+				   GXFILE_tintegermapping_DOT_pmap),0);
+#else
+    SYSTEM_reallocmem((void **) &self->GXFILE_tintegermapping_DOT_pmap,0);
+#endif
+  }
   SYSTEM_tobject_DOT_destroy(ValueCast(SYSTEM_tobject,self));
   return self;
 }  /* destroy */
@@ -494,10 +499,15 @@ Procedure GXFILE_tintegermapping_DOT_setmapping(
         } else 
           _P3inc1(delta,self->GXFILE_tintegermapping_DOT_fcapacity /  4);
     } while (!(f < self->GXFILE_tintegermapping_DOT_fcapacity + delta));
+#if 0
     SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
       GXFILE_tintegermapping_DOT_pmap),(self->
       GXFILE_tintegermapping_DOT_fcapacity + delta) * sizeof(
       SYSTEM_longint));
+#else
+    SYSTEM_reallocmem((void **) &self->GXFILE_tintegermapping_DOT_pmap,
+		      (self->GXFILE_tintegermapping_DOT_fcapacity + delta) * sizeof(SYSTEM_longint));
+#endif
     { register SYSTEM_int32 _stop = self->
         GXFILE_tintegermapping_DOT_fcapacity + delta - 1;
       if ((n = self->GXFILE_tintegermapping_DOT_fcapacity) <=  _stop) do {

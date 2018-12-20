@@ -1372,7 +1372,7 @@ Function(SYSTEM_ansichar *) P3UTILS_p3getusername(
    }
 #else
    {
-     int rc, n;
+     int n;
      char loginName[256];
      char *p = NULL;
 

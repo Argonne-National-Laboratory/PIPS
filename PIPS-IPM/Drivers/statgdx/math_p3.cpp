@@ -20,15 +20,6 @@ static SYSTEM_int64 MATH_P3_signmask;
 static SYSTEM_int64 MATH_P3_expomask;
 static SYSTEM_int64 MATH_P3_mantmask;
 
-static Procedure MATH_P3_double2i64(
-  SYSTEM_double x,
-  SYSTEM_int64 *i)
-{
-  MATH_P3_ti64rec i64rec;
-
-  i64rec._u._c1.x = x;
-  *i = i64rec._u._c2.i64;
-}  /* double2i64 */
 /**** C code included from math_p3.pas(93:1): 36 lines ****/
 #if   defined(AIX)
 # include <float.h>

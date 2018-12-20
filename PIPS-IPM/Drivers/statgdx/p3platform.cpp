@@ -158,7 +158,7 @@ void _Init_Module_p3platform(void)
 }
 #elif defined(P3UNIX)
 {
-  struct utsname uts;  int err, len;
+  struct utsname uts;  int err;
 
   localosplatform  = P3PLATFORM_osmissing;
   if ((err = uname(&uts)) < 0)

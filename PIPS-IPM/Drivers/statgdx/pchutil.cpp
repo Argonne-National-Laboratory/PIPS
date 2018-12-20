@@ -69,7 +69,6 @@ Function(SYSTEM_ansichar *) PCHUTIL_pchartostr(
         _P3strcpy(result,_len_ret,_P3str1("\023PCharToStr Overflow"));
         SYSTEM_break(BRK_1);
       } 
-    CNT_1:;
     } while (SYSTEM_true);
 BRK_1:;
   } 
@@ -97,7 +96,6 @@ Procedure PCHUTIL_convertpchar(
         _P3strcpy(s,255,_P3str1("\025ConvertPChar Overflow"));
         SYSTEM_break(BRK_2);
       } 
-    CNT_2:;
     } while (SYSTEM_true);
 BRK_2:;
   } 

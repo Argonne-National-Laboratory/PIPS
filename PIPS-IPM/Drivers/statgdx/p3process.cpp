@@ -500,7 +500,6 @@ libcASyncForkExec (int argc, char *const argv[], SYSTEM_cardinal *pid)
 {
   int result = 1;  /* failure */
   int lPid;        /* local pid, typed appropriately */
-  int wstat;
 
   *pid = ~0;
   lPid = fork();
@@ -562,8 +561,6 @@ static Function(SYSTEM_P3_pansichar ) P3PROCESS_getparamshortstr(
       _P3inc1(p,2);
     } else 
       SYSTEM_break(BRK_1);
-  
-CNT_1:;
   }
 BRK_1:;
   len = 0;
@@ -1362,7 +1359,7 @@ static Function(SYSTEM_integer ) asyncsystem4unix(
 {
   SYSTEM_integer result;
   SYSTEM_cardinal pid;
-  SYSTEM_integer argc, i;
+  SYSTEM_integer argc;
   P3PROCESS_tpargv pargv;
   SYSTEM_P3_pansichar s;
   SYSTEM_shortstring param;
@@ -1989,9 +1986,14 @@ Procedure P3PROCESS_texecarglist_DOT_setcapacity(
   if (newcapacity != self->P3PROCESS_texecarglist_DOT_fcapacity) {
     if (newcapacity < self->P3PROCESS_texecarglist_DOT_fcount) 
       newcapacity = self->P3PROCESS_texecarglist_DOT_fcount;
+#if 0
     SYSTEM_reallocmem(&PointerCast(SYSTEM_pointer,&self->
       P3PROCESS_texecarglist_DOT_flist),newcapacity * sizeof(
       SYSTEM_pointer));
+#else
+      SYSTEM_reallocmem ((void **) & self->P3PROCESS_texecarglist_DOT_flist,
+			 newcapacity * sizeof(SYSTEM_pointer));
+#endif
     self->P3PROCESS_texecarglist_DOT_fcapacity = newcapacity;
   } 
 }  /* setcapacity */
@@ -2039,8 +2041,6 @@ Function(SYSTEM_integer ) P3PROCESS_texecarglist_DOT_split(
     } else 
       P3PROCESS_texecarglist_DOT_insert(self,count,param);
     _P3inc0(count);
-  
-CNT_2:;
   }
 BRK_2:;
   result = count;

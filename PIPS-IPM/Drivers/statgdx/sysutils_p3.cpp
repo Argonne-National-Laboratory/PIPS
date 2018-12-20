@@ -8,7 +8,7 @@ SYSTEM_ansichar SYSUTILS_P3_pathdelim, SYSUTILS_P3_drivedelim,
   SYSUTILS_P3_pathsep;
 _arr_13SYSUTILS_P3 SYSUTILS_P3_monthdays = {{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}, 
   {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}};
-/**** C code included from sysutils_p3.pas(289:1): 77 lines ****/
+/**** C code included from sysutils_p3.pas(304:1): 77 lines ****/
 #if   defined(P3UNIX)
 #include <sys/time.h>
 #include <sys/types.h>
@@ -113,34 +113,6 @@ static Procedure SYSUTILS_P3_pcharconcatpchar(
 }  /* pcharconcatpchar */
 #endif
 
-static Function(SYSTEM_ansichar *) SYSUTILS_P3_pchartostr(
-  SYSTEM_ansichar *result,
-  SYSTEM_uint8 _len_ret,
-  SYSTEM_P3_pansichar p)
-{
-  SYSTEM_integer k;
-
-  if (p == NULL) { 
-    _P3strclr(result);
-  } else {
-    k = 0;
-    do {
-      if ((*ValueCast(SYSUTILS_P3_pchararray,p))[k] == _P3char('\000')) {
-        _P3setlength(result,k,255);
-        SYSTEM_break(BRK_1);
-      } 
-      result[k + 1] = (*ValueCast(SYSUTILS_P3_pchararray,p))[k];
-      k = k + 1;
-      if (k >= 255) {
-        _P3strcpy(result,_len_ret,_P3str1("\023PCharToStr Overflow"));
-        SYSTEM_break(BRK_1);
-      } 
-    } while (SYSTEM_true);
-BRK_1:;
-  } 
-  return result;
-}  /* pchartostr */
-
 static Procedure SYSUTILS_P3_divmod(
   SYSTEM_integer dividend,
   SYSTEM_word divisor,
@@ -172,7 +144,7 @@ Function(SYSTEM_pointer ) SYSUTILS_P3_allocmem(
   SYSTEM_pointer result;
 
   _P3getmem(result,sz);
-  /**** C code included from sysutils_p3.pas(472:1): 1 lines ****/
+  /**** C code included from sysutils_p3.pas(487:1): 1 lines ****/
   (void) memset(result, 0, (size_t)sz);
   return result;
 }  /* allocmem */
@@ -350,15 +322,16 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_inttostr(
 {
   SYSTEM_int64 w, w2;
 
+  w2 = 0;
   if (n < 0) {
     result[1] = _P3char('-');
     n = -n;
     w2 = 1;
   } else 
-    w2 = 0;
+    n = -n;
   w = 255;
   do {
-    result[w] = ValueCast(SYSTEM_ansichar,n % 10 + 48);
+    result[w] = ValueCast(SYSTEM_ansichar,48 - n % 10);
     _P3dec0(w);
     n = n /  10;
   } while (!(n == 0));
@@ -376,23 +349,23 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_inttohex(
   SYSTEM_ansichar *result,
   SYSTEM_uint8 _len_ret,
   SYSTEM_int64 v,
-  SYSTEM_integer d)
+  SYSTEM_integer w)
 {
   static SYSTEM_shortstring hex = {16,'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-  cnstdef {len = 16};
-  _P3STR_31 buf;
+  cnstdef {maxw = 32};
+  _P3STR_63 buf;
   SYSTEM_integer i;
 
-  i = len;
-  if (d > 16) 
-    d = len;
-  _P3setlength(buf,len,16);
+  if (w > 32) 
+    w = 0;
+  i = maxw;
+  _P3setlength(buf,maxw,32);
   do {
     buf[i] = hex[(15 & v) + 1];
     v = ValueCast(SYSTEM_uint64,v) >> 4;
     i = i - 1;
-  } while (!(v == 0 && d + i <= 16));
-  SYSTEM_copy(result,_len_ret,buf,i + 1,len);
+  } while (!(v == 0 && w + i <= 32));
+  SYSTEM_copy(result,_len_ret,buf,i + 1,maxw);
   return result;
 }  /* inttohex */
 
@@ -480,7 +453,7 @@ Function(SYSTEM_integer ) SYSUTILS_P3_fileage(
   len = ValueCast(SYSTEM_uint8,filename[0]);
   SYSTEM_move(&filename[1],fname,len);
   fname[len] = _P3char('\000');
-  /**** C code included from sysutils_p3.pas(755:1): 32 lines ****/
+  /**** C code included from sysutils_p3.pas(774:1): 32 lines ****/
 #if defined(_WIN32)
 {
   HANDLE          handle;
@@ -521,7 +494,7 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_fileexists(
 {
   SYSTEM_boolean result;
 
-  /**** C code included from sysutils_p3.pas(837:1): 12 lines ****/
+  /**** C code included from sysutils_p3.pas(860:1): 12 lines ****/
 char buf[256];
 unsigned char len;
 /* */
@@ -542,7 +515,7 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_directoryexists(
 {
   SYSTEM_boolean result;
 
-  /**** C code included from sysutils_p3.pas(860:1): 25 lines ****/
+  /**** C code included from sysutils_p3.pas(887:1): 25 lines ****/
 char dirBuf[256];
 unsigned char len;
 /* */
@@ -576,7 +549,7 @@ static Function(SYSTEM_integer ) SYSUTILS_P3_findmatchingfile(
 {
   SYSTEM_integer result;
 
-  /**** C code included from sysutils_p3.pas(992:1): 129 lines ****/
+  /**** C code included from sysutils_p3.pas(1023:1): 129 lines ****/
 #if defined(_WIN32)
 {
   int len;
@@ -719,16 +692,28 @@ Function(SYSTEM_integer ) SYSUTILS_P3_findfirst(
 
   f->excludeattr = ~attr;
   f->excludeattr = f->excludeattr & faspecial;
-  SYSUTILS_P3_extractfilepath(f->pathonly,255,path);
-  SYSUTILS_P3_extractfilename(f->pattern,255,path);
+  {
+    SYSTEM_shortstring _t1;
+
+    _P3strcpy(f->pathonly,255,SYSUTILS_P3_extractfilepath(_t1,255,
+      path));
+  }
+  {
+    SYSTEM_shortstring _t1;
+
+    _P3strcpy(f->pattern,255,SYSUTILS_P3_extractfilename(_t1,255,
+      path));
+  }
   if (_P3strcmpE(f->pathonly,_P3str1("\000"))) 
     {
+      SYSTEM_shortstring _t1;
       SYSTEM_shortstring _t2;
 
-      SYSUTILS_P3_includetrailingpathdelimiter(f->pathonly,255,
-        SYSUTILS_P3_getcurrentdir(_t2,255));
+      _P3strcpy(f->pathonly,255,
+        SYSUTILS_P3_includetrailingpathdelimiter(_t1,255,
+        SYSUTILS_P3_getcurrentdir(_t2,255)));
     }
-  /**** C code included from sysutils_p3.pas(1180:1): 39 lines ****/
+  /**** C code included from sysutils_p3.pas(1211:1): 39 lines ****/
 #if defined(_WIN32)
 {
   char pathbuf[256];
@@ -776,7 +761,7 @@ Function(SYSTEM_integer ) SYSUTILS_P3_findnext(
 {
   SYSTEM_integer result;
 
-  /**** C code included from sysutils_p3.pas(1235:1): 10 lines ****/
+  /**** C code included from sysutils_p3.pas(1266:1): 10 lines ****/
 #if defined(_WIN32)
   if (FindNextFile((HANDLE)f->findhandle, (PWIN32_FIND_DATA) &(f->finddata))) {
     result = SYSUTILS_P3_findmatchingfile(f);
@@ -793,13 +778,13 @@ Function(SYSTEM_integer ) SYSUTILS_P3_findnext(
 Procedure SYSUTILS_P3_findclose(
   SYSUTILS_P3_tsearchrec *f)
 {
-  /**** C code included from sysutils_p3.pas(1267:1): 13 lines ****/
+  /**** C code included from sysutils_p3.pas(1302:1): 13 lines ****/
 #if defined(_WIN32)
   if (INVALID_HANDLE_VALUE != (HANDLE) f->findhandle) {
     FindClose((HANDLE) f->findhandle);
     f->findhandle = (SYSTEM_pointer) INVALID_HANDLE_VALUE;
   }
-#elif defined(AIX) || defined(BGP) || defined(__APPLE__) || defined(__linux__) || defined(SIG) || defined(SOL)
+#elif defined(AIX) || defined(BGP) || defined(__APPLE__) || defined(__linux__) || defined(__sun__) || defined(__sparc)
   if (NULL != f->findhandle) {
     closedir((DIR *) f->findhandle);
     f->findhandle = NULL;
@@ -820,7 +805,7 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_deletefile(
 
   p = ValueCast(SYSTEM_P3_pansichar,&fname[0]);
   SYSUTILS_P3_strpcopy(p,filename);
-  /**** C code included from sysutils_p3.pas(1300:1): 5 lines ****/
+  /**** C code included from sysutils_p3.pas(1339:1): 5 lines ****/
 #if defined(_WIN32)
   result = DeleteFile((char *)p);
 #else
@@ -843,7 +828,7 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_renamefile(
   SYSUTILS_P3_strpcopy(palt,oldname);
   pneu = ValueCast(SYSTEM_P3_pansichar,&neu[0]);
   SYSUTILS_P3_strpcopy(pneu,newname);
-  /**** C code included from sysutils_p3.pas(1328:1): 5 lines ****/
+  /**** C code included from sysutils_p3.pas(1371:1): 5 lines ****/
 #if defined(_WIN32)
   result = MoveFileA((char *)palt, (char *)pneu);
 #else
@@ -980,7 +965,7 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_extractshortpathname(
   SYSTEM_uint8 _len_ret,
   const SYSTEM_ansichar *filename)
 {
-  /**** C code included from sysutils_p3.pas(1420:1): 17 lines ****/
+  /**** C code included from sysutils_p3.pas(1467:1): 17 lines ****/
 #if defined(_WIN32)
   {
   char inbuf[256], outbuf[MAX_PATH];
@@ -1005,19 +990,23 @@ Function(SYSTEM_P3_tdatetime ) SYSUTILS_P3_filedatetodatetime(
   SYSTEM_integer filedate)
 {
   SYSTEM_P3_tdatetime result;
+  SYSUTILS_P3_longrec rec;
+  SYSTEM_word year, month, day, hour, minu, sec;
 
   result = 0;
   if (P3PLATFORM_osfiletype() == P3PLATFORM_osfilewin) {
-    result = SYSUTILS_P3_encodedate(
-				    ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.hi >> 9) + 1980,
-				    ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate, SYSTEM_int32))._u._c1.hi >> 5) & 15,
-				    ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate, SYSTEM_int32))._u._c1.hi) & 31)
-      + SYSUTILS_P3_encodetime(
-			       (VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo >> 11,ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo >> 5) & 63,
-			       ValueCast(SYSTEM_uint32,ValueCast(SYSTEM_int32,(VariableCast(SYSUTILS_P3_longrec,&filedate,SYSTEM_int32))._u._c1.lo) & 31) << 1,0);
+    SYSTEM_move(&filedate,&rec,sizeof(SYSUTILS_P3_longrec));
+    year = ValueCast(SYSTEM_int32,rec._u._c1.hi >> 9) + 1980;
+    month = ValueCast(SYSTEM_int32,rec._u._c1.hi >> 5) & 15;
+    day = ValueCast(SYSTEM_int32,rec._u._c1.hi) & 31;
+    hour = rec._u._c1.lo >> 11;
+    minu = ValueCast(SYSTEM_int32,rec._u._c1.lo >> 5) & 63;
+    sec = ValueCast(SYSTEM_uint32,ValueCast(SYSTEM_int32,rec._u._c1.lo) & 31) << 1;
+    result = SYSUTILS_P3_encodedate(year,month,day) + 
+      SYSUTILS_P3_encodetime(hour,minu,sec,0);
     return result;
   } 
-  /**** C code included from sysutils_p3.pas(1459:1): 11 lines ****/
+  /**** C code included from sysutils_p3.pas(1509:1): 11 lines ****/
 {
 #if ! defined(_WIN32)
   struct tm ut;
@@ -1035,28 +1024,32 @@ Function(SYSTEM_P3_tdatetime ) SYSUTILS_P3_filedatetodatetime(
 Function(SYSTEM_integer ) SYSUTILS_P3_datetimetofiledate(
   SYSTEM_P3_tdatetime datetime)
 {
-  SYSTEM_integer result = 0;
+  SYSTEM_integer result;
+  SYSUTILS_P3_longrec rec;
   SYSTEM_word year, month, day, hour, minu, sec, msec;
+  SYSTEM_word lo, hi;
 
+  result = 0;
   SYSUTILS_P3_decodedate(datetime,&year,&month,&day);
   if (P3PLATFORM_osfiletype() == P3PLATFORM_osfilewin) { 
     if (year < 1980 || year > 2107) { 
       result = 0;
     } else {
       SYSUTILS_P3_decodetime(datetime,&hour,&minu,&sec,&msec);
-      (VariableCast(SYSUTILS_P3_longrec,&result,SYSTEM_int32)).
-        _u._c1.lo = ValueCast(SYSTEM_int32,sec >> 1) | minu << 5 | 
+      lo = ValueCast(SYSTEM_int32,sec >> 1) | minu << 5 | 
         hour << 11;
-      (VariableCast(SYSUTILS_P3_longrec,&result,SYSTEM_int32)).
-        _u._c1.hi = ValueCast(SYSTEM_int32,day) | month << 5 | ValueCast(
+      hi = ValueCast(SYSTEM_int32,day) | month << 5 | ValueCast(
         SYSTEM_uint32,ValueCast(SYSTEM_int32,year) - 1980) << 9;
+      rec._u._c1.lo = lo;
+      rec._u._c1.hi = hi;
+      SYSTEM_move(&rec,&result,sizeof(SYSTEM_int32));
     } 
   } else 
     if (year < 1970 || year > 2038) { 
       result = 0;
     } else {
       SYSUTILS_P3_decodetime(datetime,&hour,&minu,&sec,&msec);
-      /**** C code included from sysutils_p3.pas(1521:1): 17 lines ****/
+      /**** C code included from sysutils_p3.pas(1576:1): 17 lines ****/
 #if defined(_WIN32)
       result = -1;
 #else
@@ -1087,7 +1080,7 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_getcurrentdir(
 
   isok = SYSTEM_true;
   _P3strclr(emsg);
-  /**** C code included from sysutils_p3.pas(1598:1): 57 lines ****/
+  /**** C code included from sysutils_p3.pas(1653:1): 57 lines ****/
 {
   /* this implementation assumes the return is a ShortString, */
   /* i.e. char buf[256] or less */
@@ -1162,7 +1155,7 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_setcurrentdir(
 
   p = ValueCast(SYSTEM_P3_pansichar,&_dirname[0]);
   SYSUTILS_P3_strpcopy(p,dir);
-  /**** C code included from sysutils_p3.pas(1684:1): 5 lines ****/
+  /**** C code included from sysutils_p3.pas(1743:1): 5 lines ****/
 #if defined(_WIN32)
   result = SetCurrentDirectory((char *)p);
 #else
@@ -1194,7 +1187,7 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_removedir(
 
   p = ValueCast(SYSTEM_P3_pansichar,&_dirname[0]);
   SYSUTILS_P3_strpcopy(p,dir);
-  /**** C code included from sysutils_p3.pas(1717:1): 5 lines ****/
+  /**** C code included from sysutils_p3.pas(1776:1): 5 lines ****/
 #if defined(_WIN32)
   result = RemoveDirectory((char *)p);
 #else
@@ -1208,7 +1201,7 @@ Function(SYSTEM_cardinal ) SYSUTILS_P3_strlen(
 {
   SYSTEM_cardinal result;
 
-  /**** C code included from sysutils_p3.pas(1731:1): 1 lines ****/
+  /**** C code included from sysutils_p3.pas(1790:1): 1 lines ****/
   result = strlen((char *)str);
   return result;
 }  /* strlen */
@@ -1222,7 +1215,7 @@ Function(SYSTEM_P3_pansichar ) SYSUTILS_P3_strpcopy(
 
   len = SYSTEM_length(src);
   SYSTEM_move(&src[1],dest,len);
-  /**** C code included from sysutils_p3.pas(1747:1): 1 lines ****/
+  /**** C code included from sysutils_p3.pas(1810:1): 1 lines ****/
   dest[len] = '\0';
   result = dest;
   return result;
@@ -1561,7 +1554,7 @@ Function(SYSTEM_boolean ) SYSUTILS_P3_decodedatefully(
       _P3dec1(d,i);
       _P3inc0(m);
     
-    }
+}
 BRK_6:;
     *year = y;
     *month = m;
@@ -1585,7 +1578,7 @@ Function(SYSTEM_P3_tdatetime ) SYSUTILS_P3_date(void)
 {
   SYSTEM_P3_tdatetime result;
 
-  /**** C code included from sysutils_p3.pas(2051:1): 19 lines ****/
+  /**** C code included from sysutils_p3.pas(2114:1): 19 lines ****/
 int rc;
 #if defined(_WIN32)
 SYSTEMTIME st;
@@ -1612,7 +1605,7 @@ Function(SYSTEM_P3_tdatetime ) SYSUTILS_P3_time(void)
 {
   SYSTEM_P3_tdatetime result;
 
-  /**** C code included from sysutils_p3.pas(2081:1): 21 lines ****/
+  /**** C code included from sysutils_p3.pas(2148:1): 21 lines ****/
 int rc;
 #if defined(_WIN32)
 SYSTEMTIME st;
@@ -1641,7 +1634,7 @@ Function(SYSTEM_P3_tdatetime ) SYSUTILS_P3_now(void)
 {
   SYSTEM_P3_tdatetime result;
 
-  /**** C code included from sysutils_p3.pas(2112:1): 30 lines ****/
+  /**** C code included from sysutils_p3.pas(2183:1): 30 lines ****/
 int rc;
 double dnow, tnow;
 #if defined(_WIN32)
@@ -1680,7 +1673,7 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_syserrormessage(
   SYSTEM_uint8 _len_ret,
   SYSTEM_integer errorcode)
 {
-  /**** C code included from sysutils_p3.pas(2153:1): 15 lines ****/
+  /**** C code included from sysutils_p3.pas(2228:1): 15 lines ****/
 {
   int i;
   char *errMsg = strerror(errorcode);
@@ -1732,7 +1725,7 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_excludetrailingpathdelimiter(
 Procedure SYSUTILS_P3_sleep(
   SYSTEM_cardinal milliseconds)
 {
-  /**** C code included from sysutils_p3.pas(2203:1): 14 lines ****/
+  /**** C code included from sysutils_p3.pas(2286:1): 14 lines ****/
 #if defined(_WIN32)
   Sleep(milliseconds);
 #else
@@ -1764,7 +1757,7 @@ Function(SYSTEM_ansichar *) SYSUTILS_P3_getenvironmentvariable(
   SYSTEM_uint8 _len_ret,
   const SYSTEM_ansichar *name)
 {
-  /**** C code included from sysutils_p3.pas(2238:1): 40 lines ****/
+  /**** C code included from sysutils_p3.pas(2325:1): 40 lines ****/
 {
   char buf[256];
   char *s;

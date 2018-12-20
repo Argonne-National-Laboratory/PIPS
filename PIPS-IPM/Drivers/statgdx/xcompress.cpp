@@ -105,24 +105,24 @@ Function(SYSTEM_boolean ) XCOMPRESS_loadzliblibrary(
     XCOMPRESS_zlibhandle = P3LIBRARY_p3loadlibrary(wfn,loadmsg);
     if (XCOMPRESS_zlibhandle != ValueCast(SYSTEM_pointer,0) && 
       _P3strcmpE(loadmsg,_P3str1("\000"))) {
-      PointerCast(SYSTEM_pointer,&XCOMPRESS_pcompress) = loadentry(_P3str1("\010compress"),
-        wfn,loadmsg);
-      PointerCast(SYSTEM_pointer,&XCOMPRESS_puncompress) = loadentry(_P3str1("\012uncompress"),
-        wfn,loadmsg);
-      PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzreadopen) = loadentry(_P3str1("\006gzopen"),
-        wfn,loadmsg);
-      PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzread) = loadentry(_P3str1("\006gzread"),
-        wfn,loadmsg);
-      PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzreadclose) = loadentry(_P3str1("\007gzclose"),
-        wfn,loadmsg);
-    } 
+      XCOMPRESS_pcompress = ValueCast(_Func_0XCOMPRESS,
+                                      loadentry(_P3str1("\010compress"), wfn,loadmsg));
+      XCOMPRESS_puncompress = ValueCast(_Func_1XCOMPRESS,
+                                        loadentry(_P3str1("\012uncompress"), wfn,loadmsg));
+      XCOMPRESS_pgzreadopen = ValueCast(_Func_2XCOMPRESS,
+                                        loadentry(_P3str1("\006gzopen"), wfn,loadmsg));
+      XCOMPRESS_pgzread = ValueCast(_Func_3XCOMPRESS,
+                                    loadentry(_P3str1("\006gzread"), wfn,loadmsg));
+      XCOMPRESS_pgzreadclose = ValueCast(_Func_4XCOMPRESS,
+                                         loadentry(_P3str1("\007gzclose"), wfn,loadmsg));
+    }
   } 
   if (_P3strcmpN(loadmsg,_P3str1("\000"))) {
-    PointerCast(SYSTEM_pointer,&XCOMPRESS_pcompress) = NULL;
-    PointerCast(SYSTEM_pointer,&XCOMPRESS_puncompress) = NULL;
-    PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzreadopen) = NULL;
-    PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzread) = NULL;
-    PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzreadclose) = NULL;
+    XCOMPRESS_pcompress = NULL;
+    XCOMPRESS_puncompress = NULL;
+    XCOMPRESS_pgzreadopen = NULL;
+    XCOMPRESS_pgzread = NULL;
+    XCOMPRESS_pgzreadclose = NULL;
   } 
   result = ValueCast(SYSTEM_pointer,XCOMPRESS_pcompress) != NULL;
   return result;
@@ -134,11 +134,11 @@ Procedure XCOMPRESS_unloadzliblibrary(void)
     P3LIBRARY_p3freelibrary(XCOMPRESS_zlibhandle);
     XCOMPRESS_zlibhandle = ValueCast(SYSTEM_pointer,0);
   } 
-  PointerCast(SYSTEM_pointer,&XCOMPRESS_pcompress) = NULL;
-  PointerCast(SYSTEM_pointer,&XCOMPRESS_puncompress) = NULL;
-  PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzreadopen) = NULL;
-  PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzread) = NULL;
-  PointerCast(SYSTEM_pointer,&XCOMPRESS_pgzreadclose) = NULL;
+  XCOMPRESS_pcompress = NULL;
+  XCOMPRESS_puncompress = NULL;
+  XCOMPRESS_pgzreadopen = NULL;
+  XCOMPRESS_pgzread = NULL;
+  XCOMPRESS_pgzreadclose = NULL;
 }  /* unloadzliblibrary */
 
 Function(SYSTEM_integer ) XCOMPRESS_compress(

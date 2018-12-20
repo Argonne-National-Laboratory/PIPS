@@ -1,5 +1,6 @@
 #include "p3io.h"
 #include "p3platform.h"
+#include "exceptions.h"
 #include "math_p3.h"
 #include "system_p3.h"
 #include "p3ieeefp.h"
@@ -9,7 +10,7 @@ SYSTEM_double P3IEEEFP_nanquiet;
 SYSTEM_double P3IEEEFP_nansignaling;
 SYSTEM_double P3IEEEFP_infpositive;
 SYSTEM_double P3IEEEFP_infnegative;
-/**** C code included from p3ieeefp.pas(91:1): 24 lines ****/
+/**** C code included from p3ieeefp.pas(99:1): 22 lines ****/
 #if   defined(AIX)
 # include <float.h>
 # include <fpxcp.h>
@@ -21,8 +22,6 @@ SYSTEM_double P3IEEEFP_infnegative;
 # include <fenv.h>
 #elif defined(SOL)
 # include <ieeefp.h>
-#elif defined(SIG)
-# include <fenv.h>
 #endif
 
 #define ADD2MASK(X) _P3SET_p(result,_len_ret,result,X)
@@ -49,26 +48,6 @@ static SYSTEM_int64 P3IEEEFP_signmask;
 static SYSTEM_int64 P3IEEEFP_expomask;
 static SYSTEM_int64 P3IEEEFP_mantmask;
 static SYSTEM_int64 P3IEEEFP_qnanmask;
-
-static Procedure P3IEEEFP_double2buf(
-  SYSTEM_pointer psrc,
-  SYSTEM_pointer pdest)
-{
-  SYSTEM_integer k;
-
-  if (P3PLATFORM_nativeislittleendian()) {
-    _P3inc1(PointerCast(SYSTEM_P3_pbyte,&pdest),7);
-    for (k = 1;k <= (SYSTEM_int32)8;++k) {
-      *ValueCast(SYSTEM_P3_pbyte,pdest) = *ValueCast(SYSTEM_P3_pbyte,
-        psrc);
-      _P3inc0(PointerCast(SYSTEM_P3_pbyte,&psrc));
-      _P3dec0(PointerCast(SYSTEM_P3_pbyte,&pdest));
-    
-    }
-  } else 
-    SYSTEM_move(ValueCast(SYSTEM_P3_pbyte,psrc),ValueCast(
-      SYSTEM_P3_pbyte,pdest),8);
-}  /* double2buf */
 
 static Procedure P3IEEEFP_double2i64(
   SYSTEM_double x,
@@ -137,112 +116,6 @@ typedef struct P3IEEEFP_fpenvrec_S {
   SYSTEM_word fill7;
 } P3IEEEFP_fpenvrec;
 
-
-Function(_P3set_elem *) P3IEEEFP_getexceptionflags(
-  _P3set_elem *result,
-  SYSTEM_uint8 _len_ret)
-{
-  _P3SET_copy(result,_len_ret,_P3empty_set);
-  /**** C code included from p3ieeefp.pas(265:1): 51 lines ****/
-#if   defined(_WIN32)
-{
-  unsigned int sw;
-
-  sw = _status87();
-  if (sw & _SW_INVALID   ) ADD2MASK(EX_INVALIDOP );
-  if (sw & _SW_DENORMAL  ) ADD2MASK(EX_DENORMAL  );
-  if (sw & _SW_ZERODIVIDE) ADD2MASK(EX_ZERODIVIDE);
-  if (sw & _SW_OVERFLOW  ) ADD2MASK(EX_OVERFLOW  );
-  if (sw & _SW_UNDERFLOW ) ADD2MASK(EX_UNDERFLOW );
-  if (sw & _SW_INEXACT   ) ADD2MASK(EX_PRECISION );
-}
-#elif defined(AIX)
-{
-  fptrap_t traps;
-  traps = fp_read_flag();
-  if (traps & FP_INVALID    ) ADD2MASK(EX_INVALIDOP );
-  if (traps & FP_DIV_BY_ZERO) ADD2MASK(EX_ZERODIVIDE);
-  if (traps & FP_OVERFLOW   ) ADD2MASK(EX_OVERFLOW  );
-  if (traps & FP_UNDERFLOW  ) ADD2MASK(EX_UNDERFLOW );
-  if (traps & FP_INEXACT    ) ADD2MASK(EX_PRECISION );
-}
-#elif defined(__APPLE__)
-{
-  int flags;
-
-  flags = fetestexcept(FE_ALL_EXCEPT);
-  if (flags & FE_INVALID  ) ADD2MASK(EX_INVALIDOP );
-  if (flags & FE_DIVBYZERO) ADD2MASK(EX_ZERODIVIDE);
-  if (flags & FE_OVERFLOW ) ADD2MASK(EX_OVERFLOW  );
-  if (flags & FE_UNDERFLOW) ADD2MASK(EX_UNDERFLOW );
-  if (flags & FE_INEXACT  ) ADD2MASK(EX_PRECISION );
-}
-#elif defined(BGP) || defined(__linux__) || defined(SIG)
-{
-  *result = (_P3set_elem) fetestexcept(FE_ALL_EXCEPT);
-}
-#elif defined(SOL)
-{
-  fp_except flags;
-
-  flags = fpgetsticky();
-  if (flags & FP_X_INV) ADD2MASK(EX_INVALIDOP );
-  if (flags & FP_X_DZ ) ADD2MASK(EX_ZERODIVIDE);
-  if (flags & FP_X_OFL) ADD2MASK(EX_OVERFLOW  );
-  if (flags & FP_X_UFL) ADD2MASK(EX_UNDERFLOW );
-  if (flags & FP_X_IMP) ADD2MASK(EX_PRECISION );
-}
-#else
-# error "This OS not yet implemented"
-#endif
-  return result;
-}  /* getexceptionflags */
-
-Procedure P3IEEEFP_clearexceptionflags(
-  const _P3set_elem *flags)
-{
-  /**** C code included from p3ieeefp.pas(336:1): 40 lines ****/
-#if defined(_WIN32)
-{
-  (void) _clearfp();
-}
-#elif defined(AIX)
-{
-  fpflag_t flgs;
-
-  flgs = 0;
-  if (ISINFLAGS(MATH_P3_exinvalidop )) flgs |= FP_INVALID    ;
-  if (ISINFLAGS(MATH_P3_exzerodivide)) flgs |= FP_DIV_BY_ZERO;
-  if (ISINFLAGS(MATH_P3_exoverflow  )) flgs |= FP_OVERFLOW   ;
-  if (ISINFLAGS(MATH_P3_exunderflow )) flgs |= FP_UNDERFLOW  ;
-  if (ISINFLAGS(MATH_P3_exprecision )) flgs |= FP_INEXACT    ;
-  fp_clr_flag(flgs);
-}
-#elif defined(BGP) || defined(__APPLE__) || defined(__linux__) || defined(SIG)
-{
-  int t;
-
-  t = FE_ALL_EXCEPT & ((int) *flags);
-  feclearexcept(t);
-}
-#elif defined(SOL)
-{
-  fp_except flgs, turnoff;
-
-  turnoff = 0;
-  if (ISINFLAGS(MATH_P3_exinvalidop   )) turnoff |= FP_X_INV;
-  if (ISINFLAGS(MATH_P3_exzerodivide  )) turnoff |= FP_X_DZ ;
-  if (ISINFLAGS(MATH_P3_exoverflow    )) turnoff |= FP_X_OFL;
-  if (ISINFLAGS(MATH_P3_exunderflow   )) turnoff |= FP_X_UFL;
-  if (ISINFLAGS(MATH_P3_exprecision   )) turnoff |= FP_X_IMP;
-  flgs = fpgetsticky();
-  flgs &= ~turnoff;
-  (void) fpsetsticky(flgs);
-}
-#else
-# error "This OS not yet implemented"
-#endif
-}  /* clearexceptionflags */
 
 Function(SYSTEM_boolean ) P3IEEEFP_p3isfinite(
   SYSTEM_double x)

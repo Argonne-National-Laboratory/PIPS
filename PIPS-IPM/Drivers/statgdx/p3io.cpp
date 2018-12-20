@@ -2774,7 +2774,7 @@ void SYSTEM_tobject_DOT_free(SYSTEM_tobject self)
 /* End class/Interfaces stuff */
 
 void P3_PGM_init(char **_Argv, int _Argc, _P3void_procT PGM_Final)
-{ int i;
+{
   _P3_argc = _Argc-1;  _P3_argv = _Argv;
 
   /* Empty the empty set: */
@@ -2808,7 +2808,7 @@ void P3_PGM_init(char **_Argv, int _Argc, _P3void_procT PGM_Final)
 } /* P3_PGM_init */
 
 void P3_DLL_init(void)
-{ int i;
+{
   _P3_argc = -1;  _P3_argv = NULL; /* No arguments inside a DLL */
 
   /* Empty the empty set: */

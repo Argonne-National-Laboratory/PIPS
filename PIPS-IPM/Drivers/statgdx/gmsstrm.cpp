@@ -581,8 +581,6 @@ Procedure GMSSTRM_txfilestream_DOT_setpassword(
       
 CNT_1:;
       } while (k++ !=  _stop);
-BRK_1:;
-
     }
     _P3setlength(self->GMSSTRM_txfilestream_DOT_fpassword,w,255);
   } 
@@ -965,8 +963,6 @@ Function(SYSTEM_longword ) GMSSTRM_tbufferedfilestream_DOT_read(
       _P3inc1(usrreadcnt,nrbytes);
       _P3dec1(count,nrbytes);
       _P3inc1(result,nrbytes);
-    
-CNT_2:;
     }
 BRK_2:;
   } 
@@ -1029,8 +1025,6 @@ Function(SYSTEM_longword ) GMSSTRM_tbufferedfilestream_DOT_write(
         GMSSTRM_tbufferedfilestream_DOT_bufsize && !
         GMSSTRM_tbufferedfilestream_DOT_flushbuffer(self)) 
         SYSTEM_break(BRK_3);
-    
-CNT_3:;
     }
 BRK_3:;
   } 
@@ -1368,18 +1362,20 @@ Procedure GMSSTRM_tmibufferedstream_DOT_reversebytes(
   SYSTEM_integer sz)
 {
   SYSTEM_integer k;
-
-  _P3inc1(PointerCast(SYSTEM_P3_pbyte,&pdest),sz - 1);
-  { register SYSTEM_int32 _stop = sz;
-    if ((k = 1) <=  _stop) do {
-      *ValueCast(SYSTEM_P3_pbyte,pdest) = *ValueCast(SYSTEM_P3_pbyte,
-        psrc);
-      _P3inc0(PointerCast(SYSTEM_P3_pbyte,&psrc));
-      _P3dec0(PointerCast(SYSTEM_P3_pbyte,&pdest));
-    
-    } while (k++ !=  _stop);
-
+  SYSTEM_integer n;
+  typedef SYSTEM_uint8 _sub_1REVERSEBYTESMAX8;
+  typedef SYSTEM_byte _arr_0REVERSEBYTESMAX8[8];
+  _arr_0REVERSEBYTESMAX8 orig, flip;
+  n = sz - 1;
+  if (n > 7) 
+    n = 7;
+  SYSTEM_move(ValueCast(SYSTEM_P3_pbyte,psrc),orig,n + 1);
+  { register SYSTEM_int32 _stop = n;
+    if ((k = 0) <=  _stop) do {
+	flip[k] = orig[n - k];
+      } while (k++ !=  _stop);
   }
+  SYSTEM_move(flip,ValueCast(SYSTEM_P3_pbyte,pdest),n + 1);
 }  /* reversebytes */
 
 Function(SYSTEM_boolean ) GMSSTRM_tmibufferedstream_DOT_wordsneedflip(
@@ -1555,8 +1551,7 @@ Procedure GMSSTRM_tmibufferedstream_DOT_writegmsdouble(
           _P3inc0(c);
         } else 
           SYSTEM_break(BRK_4);
-      CNT_4:;
-}
+      }
 BRK_4:;
       b = 128 | c;
       VirtMethodCall(ValueCast(GMSSTRM_txstream,self), 
@@ -1572,8 +1567,7 @@ BRK_4:;
           _P3inc0(c);
         } else 
           SYSTEM_break(BRK_5);
-      CNT_5:;
-}
+      }
 BRK_5:;
       b = 128 | c;
       VirtMethodCall(ValueCast(GMSSTRM_txstream,self), 
@@ -1994,7 +1988,6 @@ Procedure GMSSTRM_compresstextfile(
     if (nrread == 0) 
       SYSTEM_break(BRK_6);
     GMSSTRM_tbinarytextfileio_DOT_write(fout,buffer,nrread);
-  CNT_6:;
   } while (!(nrread < 4096));
 BRK_6:;
   _Lalldone_75:;
@@ -2038,7 +2031,6 @@ Procedure GMSSTRM_uncompresstextfile(
     if (nrread == 0) 
       SYSTEM_break(BRK_7);
     GMSSTRM_tbinarytextfileio_DOT_write(fout,buffer,nrread);
-  CNT_7:;
   } while (!(nrread < 4096));
 BRK_7:;
   _Lalldone_76:;
@@ -2130,14 +2122,11 @@ Procedure GMSSTRM_compressfromstdin(
       buffer[nrread - 1] = SYSTEM_ord(ch);
       if (nrread == 4096) 
         SYSTEM_break(BRK_8);
-    
-CNT_8:;
     }
 BRK_8:;
     if (nrread == 0) 
       SYSTEM_break(BRK_9);
     GMSSTRM_tbinarytextfileio_DOT_write(fout,buffer,nrread);
-  CNT_9:;
   } while (!(nrread < 4096));
 BRK_9:;
   *errnr = GMSSTRM_tbinarytextfileio_DOT_getlastioresult(fout);
@@ -2184,7 +2173,6 @@ Procedure GMSSTRM_uncompresstostdout(
       } while (n++ !=  _stop);
 
     }
-  CNT_10:;
   } while (!(nrread < 4096));
 BRK_10:;
   *errnr = GMSSTRM_tbinarytextfileio_DOT_getlastioresult(fin);
@@ -2301,8 +2289,6 @@ Function(SYSTEM_longword ) GMSSTRM_tgzipinputstream_DOT_read(
       _P3inc1(usrreadcnt,nrbytes);
       _P3dec1(count,nrbytes);
       _P3inc1(result,nrbytes);
-    
-CNT_11:;
     }
 BRK_11:;
   } 
