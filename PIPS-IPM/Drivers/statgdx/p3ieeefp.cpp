@@ -24,15 +24,6 @@ SYSTEM_double P3IEEEFP_infnegative;
 # include <ieeefp.h>
 #endif
 
-#define ADD2MASK(X) _P3SET_p(result,_len_ret,result,X)
-#define ISINFLAGS(X) (_P3SET_ic(5,X,flags))
-#define EX_INVALIDOP   _P3set1("\001")
-#define EX_DENORMAL    _P3set1("\002")
-#define EX_ZERODIVIDE  _P3set1("\004")
-#define EX_OVERFLOW    _P3set1("\010")
-#define EX_UNDERFLOW   _P3set1("\020")
-#define EX_PRECISION   _P3set1("\040")
-
 typedef struct P3IEEEFP_ti64rec_S {
   union{
     struct{

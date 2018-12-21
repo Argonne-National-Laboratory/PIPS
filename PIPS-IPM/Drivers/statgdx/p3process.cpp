@@ -1405,7 +1405,7 @@ static Function(SYSTEM_integer ) P3PROCESS_system4unix(
 #if defined(_WIN32)
   result = 127; /* should never happen */
 #else
-  if ('\0' == (char *) cmdptr) { /* special case, run default shell */
+  if ('\0' == *(char *) cmdptr) { /* special case, run default shell */
     newptr = (SYSTEM_char *) "sh";
   }
   else {

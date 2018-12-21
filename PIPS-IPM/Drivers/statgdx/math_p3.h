@@ -40,19 +40,6 @@ typedef SYSTEM_byte MATH_P3_tfpuexception; /* Anonymous */ enum{MATH_P3_exinvali
   MATH_P3_exoverflow,MATH_P3_exunderflow,MATH_P3_exprecision};
 typedef _P3SET_7 MATH_P3_tfpuexceptionmask;
 
-Function(_P3set_elem *) MATH_P3_getexceptionmask(
-  _P3set_elem *result,
-  SYSTEM_uint8 _len_ret);
-
-Function(_P3set_elem *) MATH_P3_setexceptionmask(
-  _P3set_elem *result,
-  SYSTEM_uint8 _len_ret,
-  const _P3set_elem *mask);
-
-Procedure MATH_P3_setexceptionmask2p3(void);
-
-Procedure MATH_P3_clearexceptions(void);
-
 extern void _Init_Module_math_p3(void);
 extern void _Final_Module_math_p3(void);
 
