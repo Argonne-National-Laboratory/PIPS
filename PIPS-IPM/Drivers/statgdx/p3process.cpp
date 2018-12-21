@@ -1452,7 +1452,7 @@ static Function(SYSTEM_integer ) asyncsystem4win(
 
   _P3strclr(msg);
   SYSUTILS_P3_getenvironmentvariable(cs,255,_P3str1("\007COMSPEC"));
-  if (_P3strcmpE(cs,_P3str1("\000"))) 
+  if (_P3strcmpE(cs,_P3str1("\000"))) {
     if (SYSUTILS_P3_fileexists(P3PROCESS_cmd_win7)) { 
       _P3strcpy(cs,255,P3PROCESS_cmd_win7);
     } else 
@@ -1462,7 +1462,8 @@ static Function(SYSTEM_integer ) asyncsystem4win(
         result = 1;
         _P3strcpy(msg,255,_P3str1("\045COMSPEC not set and cmd.exe not found"));
         return result;
-      } 
+      }
+  }
   csptr = P3PRIVATE_strtostrbuf(cs,csbuf);
   if (*cmdptr == _P3char('\000')) {
     arglen = SYSUTILS_P3_strlen(csptr) + 1;
@@ -1504,7 +1505,7 @@ static Function(SYSTEM_integer ) P3PROCESS_system4win(
   SYSTEM_integer arglen;
 
   SYSUTILS_P3_getenvironmentvariable(cs,255,_P3str1("\007COMSPEC"));
-  if (_P3strcmpE(cs,_P3str1("\000"))) 
+  if (_P3strcmpE(cs,_P3str1("\000"))) {
     if (SYSUTILS_P3_fileexists(P3PROCESS_cmd_win7)) { 
       _P3strcpy(cs,255,P3PROCESS_cmd_win7);
     } else 
@@ -1513,7 +1514,8 @@ static Function(SYSTEM_integer ) P3PROCESS_system4win(
       } else {
         result = 1;
         return result;
-      } 
+      }
+  }
   csptr = P3PRIVATE_strtostrbuf(cs,csbuf);
   if (*cmdptr == _P3char('\000')) {
     arglen = SYSUTILS_P3_strlen(csptr) + 1;
@@ -1992,7 +1994,7 @@ Procedure P3PROCESS_texecarglist_DOT_setcapacity(
       SYSTEM_pointer));
 #else
       SYSTEM_reallocmem ((void **) & self->P3PROCESS_texecarglist_DOT_flist,
-			 newcapacity * sizeof(SYSTEM_pointer));
+                         newcapacity * sizeof(SYSTEM_pointer));
 #endif
     self->P3PROCESS_texecarglist_DOT_fcapacity = newcapacity;
   } 

@@ -1132,13 +1132,14 @@ Procedure P3UTILS_p3reallocmem64(
   SYSTEM_pointer *p,
   SYSTEM_int64 size)
 {
-  if (size <= 0) 
+  if (size <= 0) {
     if (*p == NULL) { 
       return;
     } else {
       _P3freemem0(*p);
       *p = NULL;
-    } 
+    }
+  }
   /**** C code included from p3utils.pas(1869:1): 11 lines ****/
   if (8 == sizeof(p)) {
     SYSTEM_reallocmem64 (p, size);

@@ -490,7 +490,7 @@ Procedure GMSHEAPNEW_theapmgr_DOT_xfreemem(
   SYSTEM_pointer p,
   SYSTEM_integer size)
 {
-  if (size > 0) 
+  if (size > 0) {
     if (size <= 256) { 
       GMSHEAPNEW_theapmgr_DOT_gmsfreemem(self,p,(size - 1) /  
         GMSHEAPNEW_heapgranularity + 1);
@@ -499,7 +499,8 @@ Procedure GMSHEAPNEW_theapmgr_DOT_xfreemem(
       GMSOBJ_txlist_DOT_remove(self->GMSHEAPNEW_theapmgr_DOT_active,p);
       GMSHEAPNEW_theapmgr_DOT_reducememorysize(self,size);
       _P3freemem0(p);
-    } 
+    }
+  }
 }  /* xfreemem */
 
 Procedure GMSHEAPNEW_theapmgr_DOT_xfreememnc(
@@ -537,7 +538,7 @@ Procedure GMSHEAPNEW_theapmgr_DOT_xfreemem64(
   SYSTEM_pointer p,
   SYSTEM_int64 size)
 {
-  if (size > 0) 
+  if (size > 0) {
     if (size <= 256) { 
       GMSHEAPNEW_theapmgr_DOT_gmsfreemem(self,p,(size - 1) /  
         GMSHEAPNEW_heapgranularity + 1);
@@ -546,7 +547,8 @@ Procedure GMSHEAPNEW_theapmgr_DOT_xfreemem64(
       GMSOBJ_txlist_DOT_remove(self->GMSHEAPNEW_theapmgr_DOT_active,p);
       GMSHEAPNEW_theapmgr_DOT_reducememorysize(self,size);
       P3UTILS_p3freemem64(&p,size);
-    } 
+    }
+  }
 }  /* xfreemem64 */
 
 Function(SYSTEM_pointer ) GMSHEAPNEW_theapmgr_DOT_xgetmem(

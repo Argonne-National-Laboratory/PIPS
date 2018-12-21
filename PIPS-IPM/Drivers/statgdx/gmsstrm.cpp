@@ -601,7 +601,7 @@ static Function(SYSTEM_ansichar ) randch(
 {
   SYSTEM_ansichar result;
 
-  *_2seed = *_2seed * 12347 + 1023 & 134217727;
+  *_2seed = (*_2seed * 12347 + 1023) & 134217727;
   result = ValueCast(SYSTEM_ansichar,*_2seed & 255);
   return result;
 }  /* randch */
@@ -1526,7 +1526,7 @@ Procedure GMSSTRM_tmibufferedstream_DOT_writegmsdouble(
 
   gv = GMSSPECS_mapval(d);
   b = SYSTEM_ord(gv);
-  if (gv == GMSSPECS_xvreal) 
+  if (gv == GMSSPECS_xvreal) {
     if (d == 0.0) { 
       b = 7;
     } else 
@@ -1535,6 +1535,7 @@ Procedure GMSSTRM_tmibufferedstream_DOT_writegmsdouble(
       } else 
         if (d == -1.0) 
           b = 9;
+  }
   if (b != 0) {
     VirtMethodCall(ValueCast(GMSSTRM_txstream,self), 
       GMSSTRM_txstream_DOT_write_T, 5, (ValueCast(GMSSTRM_txstream,self),&
@@ -1598,7 +1599,7 @@ Procedure GMSSTRM_tmibufferedstream_DOT_writegmsinteger(
     b = 128;
     n = -n;
   } 
-  b = b | n & 15;
+  b = b | (n & 15);
   n = ValueCast(SYSTEM_uint32,n) >> 4;
   c = 0;
   while (n != 0) {

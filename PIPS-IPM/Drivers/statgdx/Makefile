@@ -9,7 +9,7 @@ CXXFLAGS = -D_GCL_RHACK_ -D_P3_DllExport= -DSTDCALL= -DGDX_CALLCONV=unwanted -DL
 CXXFLAGS += -Wno-strict-aliasing
 CXXFLAGS += -Wno-unused-function
 CXXFLAGS += -Wno-unused-variable
-* CXXFLAGS += -Wno-unused-label
+CXXFLAGS += -Wno-unused-label
 CXXFLAGS += -Wno-unused-value
 CXXFLAGS += -Wno-parentheses
 CXXFLAGS += -fdiagnostics-show-option

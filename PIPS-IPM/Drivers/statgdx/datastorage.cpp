@@ -1134,7 +1134,7 @@ Procedure DATASTORAGE_tintegermapping_DOT_setmapping(
       SYSTEM_longint));
 #else
     SYSTEM_reallocmem((void **) &self->DATASTORAGE_tintegermapping_DOT_pmap,
-		      (self->DATASTORAGE_tintegermapping_DOT_fcapacity + delta) * sizeof(SYSTEM_longint));
+                      (self->DATASTORAGE_tintegermapping_DOT_fcapacity + delta) * sizeof(SYSTEM_longint));
 #endif
     { register SYSTEM_int32 _stop = self->
         DATASTORAGE_tintegermapping_DOT_fcapacity + delta - 1;
@@ -2202,9 +2202,8 @@ Function(SYSTEM_integer ) DATASTORAGE_tgamshashlist_DOT_hash(
   { register SYSTEM_int32 _stop = self->
       DATASTORAGE_tgamshashlist_DOT_fdimension;
     if ((d = 2) <=  _stop) do {
-      v = 1234593 * v + (*akey)[d - 1] & 2147483647;
+      v = (1234593 * v + (*akey)[d - 1]) & 2147483647;
     } while (d++ !=  _stop);
-
   }
   result = v % self->DATASTORAGE_tgamshashlist_DOT_hashsize;
   return result;
@@ -2420,7 +2419,7 @@ Procedure DATASTORAGE_treclist_DOT_setcapacity(
       SYSTEM_pointer));
 #else
     SYSTEM_reallocmem((void **) &self->DATASTORAGE_treclist_DOT_flist,
-		      newcapacity * sizeof(SYSTEM_pointer));
+                      newcapacity * sizeof(SYSTEM_pointer));
 #endif
     self->DATASTORAGE_treclist_DOT_fcapacity = newcapacity;
   } 

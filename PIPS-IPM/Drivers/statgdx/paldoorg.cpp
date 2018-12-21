@@ -804,8 +804,8 @@ static Function(SYSTEM_boolean ) PALDOORG_havedata(
           _P3inc0((*q)[0]);
           (*q)[ValueCast(SYSTEM_int32,(*q)[0])] = *p;
         } else 
-          if (*p == _P3char('\015') && (rp->nlnl == 0 || rp->nlnl == 2) || *
-            p == _P3char('\012') && (rp->nlnl == 1 || rp->nlnl == 3)) { 
+          if ((*p == _P3char('\015') && (rp->nlnl == 0 || rp->nlnl == 2))
+	      || (*p == _P3char('\012') && (rp->nlnl == 1 || rp->nlnl == 3))) { 
             _P3inc0(rp->nlnl);
           } else 
             rp->nlnl = 0;
@@ -1312,15 +1312,17 @@ Function(SYSTEM_boolean ) PALDOORG_tpalobject_DOT_pallicensecheck(
     PALDOORG_tpalobject_DOT_msgadd(self,_P3str1("\052*** Continue to run in demonstration mode."));
     PALDOORG_tpalobject_DOT_makedemolicense(self);
   } 
-  if (self->PALDOORG_tpalobject_DOT_isglobal == 1 && (self->
-    PALDOORG_tpalobject_DOT_rowcnt > 10 || self->
-    PALDOORG_tpalobject_DOT_colcnt > 10) || self->
-    PALDOORG_tpalobject_DOT_isglobal == 0 && (self->
-    PALDOORG_tpalobject_DOT_disccnt > 50 || self->
-    PALDOORG_tpalobject_DOT_nlnzcnt > 1000 || self->
-    PALDOORG_tpalobject_DOT_nzcnt > 2000 || self->
-    PALDOORG_tpalobject_DOT_rowcnt > 300 || self->
-    PALDOORG_tpalobject_DOT_colcnt > 300)) {
+  if (((self->PALDOORG_tpalobject_DOT_isglobal == 1) &&
+       ((self->PALDOORG_tpalobject_DOT_rowcnt > 10) ||
+	(self->PALDOORG_tpalobject_DOT_colcnt > 10)))
+      ||
+      ((self->PALDOORG_tpalobject_DOT_isglobal == 0) &&
+       (self->PALDOORG_tpalobject_DOT_disccnt > 50 ||
+	self->PALDOORG_tpalobject_DOT_nlnzcnt > 1000 ||
+	self->PALDOORG_tpalobject_DOT_nzcnt > 2000 ||
+	self->PALDOORG_tpalobject_DOT_rowcnt > 300 ||
+	self->PALDOORG_tpalobject_DOT_colcnt > 300))
+      ) {
     {
       SYSTEM_shortstring _t1;
 

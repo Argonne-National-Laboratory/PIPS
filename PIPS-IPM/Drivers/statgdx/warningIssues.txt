@@ -106,5 +106,37 @@ the edits into this stuff.
 ---------------------------------------------------------------------------
 
 ITEM: -Wparentheses
+Short version: these are more about coding style and less about code
+quality.  For example, indenting 2 spaces or 4 has zero impact on code
+quality, it is just a style question.  That's how I summarize these
+warnings.  Some examples are below.
+
+We get warnings with this:
+if (xxx)
+  if (yyy)
+    someFunc();
+  else
+    otherFunc();
+Instead we should add explicit braces around the if (xxx) statement.
+
+We get warnings with this:
+extern int foo (int a, int b) {
+  int r = (a > 1) && (b > 3) || (a < 3) && (b > 21);
+  return r;
+}
+because it likes this:
+  int r = ((a > 1) && (b > 3)) || ((a < 3) && (b > 21));
+
+We get warnings with this:
+  int r = 123453 * a + b & 313131;
+because it likes this:
+  int r = (123453 * a + b) & 313131;
+
+We get warnings with this:
+  b = b | n & 15;
+because it likes this:
+  b = b | (n & 15);
+
+
 
 ---------------------------------------------------------------------------
