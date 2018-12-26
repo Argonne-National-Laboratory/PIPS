@@ -90,7 +90,7 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
   MPI_Comm mumpsComm;
   MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
  
-#ifdef HAVE_MUMPS
+#ifdef WITH_MUMPS
   //2. create and return the wrapper instance for Mumps
   if(0) {
     DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
