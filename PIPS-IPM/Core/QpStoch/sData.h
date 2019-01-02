@@ -96,8 +96,15 @@ class sData : public QpGenData {
   static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 
-  // nnz in Schur complement signified by given vector
-  static int getSchurCompMaxNnz(const std::vector<int>& linkStartBlocks, const std::vector<int>& linkStartBlockLengths);
+  // max nnz in Schur complement diagonal block signified by given vector
+  static int getSCdiagBlocksMaxNnz(const std::vector<int>& linkStartBlocks,
+        const std::vector<int>& linkStartBlockLengths);
+
+  // max nnz in Schur complement mixed block signified by given vectors
+  static int  getSCmixedBlocksMaxNnz(const std::vector<int>& linkStartBlockId_Left,
+        const std::vector<int>& linkStartBlockId_Right,
+        const std::vector<int>& linkStartBlockLength_Left,
+        const std::vector<int>& linkStartBlockLength_Right);
 
   // number of sparse 2-link rows
   static int n2linksRows(const std::vector<int>& linkStartBlockLengths);
@@ -106,8 +113,8 @@ class sData : public QpGenData {
 
   bool useLinkStructure;
   std::vector<int> linkVarsNnz;
-  std::vector<int> linkStartBlocksA;
-  std::vector<int> linkStartBlocksC;
+  std::vector<int> linkStartBlockIdA;
+  std::vector<int> linkStartBlockIdC;
   std::vector<int> linkStartBlockLengthsA;
   std::vector<int> linkStartBlockLengthsC;
   std::vector<unsigned int> linkVarsPermutation;
