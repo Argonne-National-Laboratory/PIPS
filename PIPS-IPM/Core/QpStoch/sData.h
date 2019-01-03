@@ -97,12 +97,11 @@ class sData : public QpGenData {
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 
   // max nnz in Schur complement diagonal block signified by given vector
-  static int getSCdiagBlocksMaxNnz(const std::vector<int>& linkStartBlocks,
+  static int getSCdiagBlocksMaxNnz(size_t nRows,
         const std::vector<int>& linkStartBlockLengths);
 
   // max nnz in Schur complement mixed block signified by given vectors
-  static int  getSCmixedBlocksMaxNnz(const std::vector<int>& linkStartBlockId_Left,
-        const std::vector<int>& linkStartBlockId_Right,
+  static int  getSCmixedBlocksMaxNnz(size_t nRows, size_t nCols,
         const std::vector<int>& linkStartBlockLength_Left,
         const std::vector<int>& linkStartBlockLength_Right);
 

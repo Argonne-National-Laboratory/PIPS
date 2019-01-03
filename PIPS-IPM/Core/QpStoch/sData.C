@@ -61,7 +61,7 @@ int appendDiagBlocks(const std::vector<int>& linkStartBlockId, const std::vector
 
    assert(currlength >= 1);
 
-   // add diagonal block (possibly up to the order)
+   // add diagonal block (possibly up to the border)
 
    int rownnz = currlength - (rowBlock - blockStartrow);
 
@@ -95,9 +95,105 @@ int appendDiagBlocks(const std::vector<int>& linkStartBlockId, const std::vector
 }
 
 
-int sData::getSCdiagBlocksMaxNnz(const std::vector<int>& linkStartBlockId, const std::vector<int>& linkStartBlockLengths)
+static
+int appendMixedBlocks(const std::vector<int>& linkStartBlockId_Left,
+      const std::vector<int>& linkStartBlockId_Right,
+      const std::vector<int>& linkStartBlockLengths_Left,
+      const std::vector<int>& linkStartBlockLengths_Right,
+      int colStartIdxSC, int bordersize_cols,
+      int rowIdx, int& colIdxOffset, int& rowBlockStartIdx, int& nnz, int* jcolM)
 {
-   const size_t nRows = linkStartBlockId.size();
+   assert(rowIdx >= rowBlockStartIdx && rowBlockStartIdx >= 0 && colStartIdxSC >= 0 && nnz >= 0);
+   assert(bordersize_cols >= 0 && colIdxOffset >= 0);
+   assert(linkStartBlockLengths_Left.size() == linkStartBlockLengths_Right.size());
+
+   const int nCols = int(linkStartBlockId_Right.size());
+   const int block = linkStartBlockId_Left[rowIdx];
+
+   assert(nCols >= bordersize_cols);
+
+   int rownnz;
+
+   // sparse row?
+   if( block >= 0 )
+   {
+      const int length_Right = linkStartBlockLengths_Right[block];
+      const int colStartIdxBorderSC = colStartIdxSC + nCols - bordersize_cols;
+      int colStartIdx = colStartIdxSC + colIdxOffset;
+      rownnz = 0;
+
+      assert(length_Right >= 0);
+
+      // 1) left off-diagonal block (not for first block)
+      if( block >= 1 )
+      {
+         const int prevlength_Right = linkStartBlockLengths_Right[block - 1];
+         assert(prevlength_Right >= 0);
+
+         for( int i = 0; i < prevlength_Right; ++i )
+            jcolM[nnz++] = (colStartIdx + i);
+
+         rownnz += prevlength_Right;
+         colStartIdx += prevlength_Right;
+      }
+
+      // 2) diagonal block
+      for( int i = 0; i < length_Right; ++i )
+         jcolM[nnz++] = (colStartIdx + i);
+
+      rownnz += length_Right;
+      colStartIdx += length_Right;
+
+      // 3) right off-diagonal block (not for last block)
+      if( int(linkStartBlockLengths_Left.size()) != block + 1 )
+      {
+         const int nextlength_Right = linkStartBlockLengths_Right[block + 1];
+
+         for( int i = 0; i < nextlength_Right; ++i )
+            jcolM[nnz++] = (colStartIdx + i);
+
+         rownnz += nextlength_Right;
+         colStartIdx += nextlength_Right;
+      }
+
+      assert(colStartIdx <= colStartIdxBorderSC);
+
+      // 4) right border
+      for( int i = 0; i < bordersize_cols; ++i )
+         jcolM[nnz++] = colStartIdxBorderSC + i;
+
+      rownnz += bordersize_cols;
+
+      // last row of current block?
+      if( rowIdx + 1 == rowBlockStartIdx + linkStartBlockLengths_Left[block] )
+      {
+         assert((rowIdx == int(linkStartBlockId_Left.size()) - 1) || (block + 1 == linkStartBlockId_Left[rowIdx + 1])
+               || (linkStartBlockId_Left[rowIdx + 1] == -1) );
+
+         rowBlockStartIdx = rowIdx + 1;
+
+         if( block >= 1 )
+            colIdxOffset += linkStartBlockLengths_Right[block - 1];
+      }
+      else
+      {
+         assert(block == linkStartBlockId_Left[rowIdx + 1]);
+      }
+   }
+   else
+   {
+      // append fully dense row
+      for( int i = 0; i < nCols; ++i )
+         jcolM[nnz++] = colStartIdxSC + i;
+
+      rownnz = nCols;
+   }
+
+   return rownnz;
+}
+
+int sData::getSCdiagBlocksMaxNnz(size_t nRows, const std::vector<int>& linkStartBlockLengths)
+{
    const size_t nBlocks = linkStartBlockLengths.size();
    size_t nRowsSparse = 0;
 
@@ -136,15 +232,11 @@ int sData::getSCdiagBlocksMaxNnz(const std::vector<int>& linkStartBlockId, const
 }
 
 
-int sData::getSCmixedBlocksMaxNnz(const std::vector<int>& linkStartBlockId_Left,
-      const std::vector<int>& linkStartBlockId_Right,
+int sData::getSCmixedBlocksMaxNnz(size_t nRows, size_t nCols,
       const std::vector<int>& linkStartBlockLength_Left,
       const std::vector<int>& linkStartBlockLength_Right)
 {
    assert(linkStartBlockLength_Left.size() == linkStartBlockLength_Right.size());
-
-   const size_t nRows = linkStartBlockId_Left.size();
-   const size_t nCols = linkStartBlockId_Right.size();
 
    const size_t nBlocks = linkStartBlockLength_Left.size();
    size_t nRowsSparse = 0;
@@ -222,6 +314,8 @@ std::vector<int> sData::get2LinkLengthsVec(const std::vector<int>& linkStartBloc
          linkStartBlockLengths[block]++;
       }
    }
+
+   assert(nBlocks == 0 || linkStartBlockLengths[nBlocks - 1] == 0);
 
    return linkStartBlockLengths;
 }
@@ -323,26 +417,29 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
    const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
    const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
    const int borderstartEq = nx0 + my0 + n2linksRowsEq;
-
-   assert(bordersizeEq >= 0 && n2linksRowsEq <= myl);
-
-   // todo replace mzl for sparse 2-link ink linking cons (G)
-   int todo;
-   for( int i = nx0 + my0, j = 0; i < nx0 + my0 + myl; ++i, ++j )
-   {
-       const int blockrownnz = appendDiagBlocks(linkStartBlockIdA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j, blockStartrow, nnzcount, jcolM);
-
-       appendRowDense(nx0 + my0 + myl, nx0 + my0 + myl + mzl, nnzcount, jcolM);
-       krowM[i + 1] = krowM[i] + blockrownnz + mzl;
-   }
-
-   // inequality linking: dense border block and sparse diagonal blocks
-   blockStartrow = 0;
    const int n2linksRowsIneq = n2linksRows(linkStartBlockLengthsC);
    const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
    const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
 
+   assert(bordersizeEq >= 0 && n2linksRowsEq <= myl);
    assert(bordersizeIneq >= 0 && n2linksRowsIneq <= mzl);
+
+   for( int i = nx0 + my0, j = 0, colIdxOffset = 0, blockStartrowMix = 0; i < nx0 + my0 + myl; ++i, ++j )
+   {
+      int blockrownnz = appendDiagBlocks(linkStartBlockIdA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j,
+            blockStartrow, nnzcount, jcolM);
+
+      blockrownnz += appendMixedBlocks(linkStartBlockIdA, linkStartBlockIdC, linkStartBlockLengthsA, linkStartBlockLengthsC,
+            (nx0 + my0 + myl), bordersizeIneq, j, colIdxOffset, blockStartrowMix, nnzcount, jcolM);
+
+      std::cout << blockStartrowMix << " vs " << blockStartrow << std::endl;
+      assert(blockStartrowMix == blockStartrow);
+
+      krowM[i + 1] = krowM[i] + blockrownnz;
+   }
+
+   // inequality linking: dense border block and sparse diagonal blocks
+   blockStartrow = 0;
 
    for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; ++i, ++j )
    {
@@ -1296,13 +1393,13 @@ int sData::getSchurCompMaxNnz()
    nnz += my;
 
    // add linking equality parts
-   nnz += getSCdiagBlocksMaxNnz(linkStartBlockIdA, linkStartBlockLengthsA);
+   nnz += getSCdiagBlocksMaxNnz(linkStartBlockIdA.size(), linkStartBlockLengthsA);
 
    // add linking inequality parts
-   nnz += getSCdiagBlocksMaxNnz(linkStartBlockIdC, linkStartBlockLengthsC);
+   nnz += getSCdiagBlocksMaxNnz(linkStartBlockIdC.size(), linkStartBlockLengthsC);
 
    // add linking mixed parts
-   nnz += getSCmixedBlocksMaxNnz(linkStartBlockIdA, linkStartBlockIdC,
+   nnz += getSCmixedBlocksMaxNnz(linkStartBlockIdA.size(), linkStartBlockIdC.size(),
                                  linkStartBlockLengthsA, linkStartBlockLengthsC);
 
    if( myl > 0 )
