@@ -167,9 +167,6 @@ int appendMixedBlocks(const std::vector<int>& linkStartBlockId_Left,
       // last row of current block?
       if( rowIdx + 1 == rowBlockStartIdx + linkStartBlockLengths_Left[block] )
       {
-         assert((rowIdx == int(linkStartBlockId_Left.size()) - 1) || (block + 1 == linkStartBlockId_Left[rowIdx + 1])
-               || (linkStartBlockId_Left[rowIdx + 1] == -1) );
-
          rowBlockStartIdx = rowIdx + 1;
 
          if( block >= 1 )
