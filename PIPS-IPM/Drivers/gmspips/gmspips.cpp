@@ -215,6 +215,8 @@ int main(int argc, char ** argv)
    const double t0 = MPI_Wtime();
 #endif
 
+   initGMSPIPSIO();   
+
    GMSPIPSBlockData_t** blocks;
    ScalerType scaler_type = SCALER_NONE;
    bool stepDiffLp = false;
@@ -436,11 +438,11 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
+
+      objective = pipsIpm.getObjective();
+
       if( printsol )
-      {
          primalSolVec = pipsIpm.gatherPrimalSolution();
-         objective = pipsIpm.getObjective();
-      }
 	}
 
 	else {
@@ -459,14 +461,13 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
+      objective = pipsIpm.getObjective();
+
       if( printsol )
-      {
          primalSolVec = pipsIpm.gatherPrimalSolution();
-         objective = pipsIpm.getObjective();
-      }
 	}
    if( gmsRank == 0 )
-      cout << "solving finished." << endl;
+      cout << "solving finished. \n ---Objective value: " << objective  << endl;
 
    if( printsol && gmsRank == 0 )
    {

@@ -21,12 +21,12 @@ $eval NBTIMESTEPS ceil((%TO%-%FROM%)*365*24/%RESOLUTION%)
 $setnames "%gams.input%" SIMPLEDIR fn fe
 
 * if there is no input data for the current settings available call data generator
-$ifthen %LOADFROMXLS%==0
+$ifthen.xls %LOADFROMXLS%==0
 $  include "%SIMPLEDIR%simple_data_gen.gms" 
-$else
+$else.xls
 $  call gams "%SIMPLEDIR%simple_data_excel.gms" --XLSID=%XLSID%
 $  if errorlevel 1 $abort 'problems with creating REMix data from Excel'
-$endif
+$endif.xls
 
 
 *   basic sets
@@ -409,6 +409,7 @@ dummyForLindoBenders.. 1 =g= 0;
 $endif
 
 model simple / all /;
+option limrow=0, limcol=0, solprint=silent;
 
 $ifthene.noslack %NOSLACK%==1
 $ IFTHENI.method %METHOD%==spExplicitDE
@@ -714,10 +715,20 @@ $  include "%SIMPLEDIR%lg.gms"
 $ELSEIFI.method %METHOD%==stochasticEMP
 $  include "%SIMPLEDIR%stochasticEMP.gms"
 
-$ELSEIFI.method %METHOD%==STOCHASTICBENDERS
+$ELSEIFI.method %METHOD%==SPBENDERSSEQ
    t(tt) = yes;
    r(rr) = yes;
-$  include "%SIMPLEDIR%stochasticBenders.gms"
+$  include "%SIMPLEDIR%spBendersSeq.gms"
+
+$ELSEIFI.method %METHOD%==SPBENDERSASYNC
+   t(tt) = yes;
+   r(rr) = yes;
+$  include "%SIMPLEDIR%spBendersAsync.gms"
+
+$ELSEIFI.method %METHOD%==SPBENDERSMPI
+   t(tt) = yes;
+   r(rr) = yes;
+$  include "%SIMPLEDIR%spBendersMPI.gms"
 
 $ELSE.method
 *  Standard LP

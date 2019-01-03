@@ -63,6 +63,9 @@ message(STATUS "WITH_INNER_BICGSTAB=${WITH_INNER_BICGSTAB}")
 option(WITH_PARDISO_PARALLEL "Use Pardiso (if available) in fully parallel mode" ON)
 message(STATUS "WITH_PARDISO_PARALLEL=${WITH_PARDISO_PARALLEL}")
 
+option(BUILD_GDX_SOURCE "Build GDX Source" OFF)
+message(STATUS "BUILD_GDX_SOURCE=${BUILD_GDX_SOURCE}")
+
 if(WITH_MEMREDUCE)
   add_definitions(-DDENSE_USE_HALF)
 endif(WITH_MEMREDUCE)

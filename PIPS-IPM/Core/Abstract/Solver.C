@@ -14,9 +14,7 @@
 #include <cmath>
 #include <limits>
 
-#ifdef TIMING
 #include "mpi.h"
-#endif
 
 
 int gOoqpPrintLevel = 1000;
@@ -370,10 +368,8 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   double gap   = fabs( resids->dualityGap() );
   double rnorm = resids->residualNorm();
 
-#ifdef TIMING
-   int myrank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-#endif
+  int myrank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
   idx = iterate-1;
   if(idx <  0     ) idx=0;
@@ -386,8 +382,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   phi_history[idx] = phi;
 
 #ifdef TIMING
-  if( myrank == 0 )
-     std::cout << "mu/mutol " << mu << "  " << mutol << "rnorm/limit " << rnorm << " " << artol*dnorm  << std::endl;
+
 #endif
 
   if(idx > 0) {
@@ -401,6 +396,13 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   } else if ( mu <= mutol && rnorm <= artol*dnorm ) {
     stop_code = SUCCESSFUL_TERMINATION;
   }
+
+  if( myrank == 0 )
+  {
+    // std::cout << "artol=" << artol << " dnorm=" << dnorm  << std::endl;
+     std::cout << "mu/mutol: " << mu << "  " << mutol << "  ....   rnorm/limit: " << rnorm << " " << artol*dnorm  << std::endl;
+  }
+
   //if(iterate>=50) stop_code = SUCCESSFUL_TERMINATION;
   if(stop_code != NOT_FINISHED)  return stop_code;
 

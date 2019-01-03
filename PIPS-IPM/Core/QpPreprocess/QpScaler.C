@@ -46,9 +46,23 @@ double QpScaler::getOrigObj(double objval)
    return (objval / factor_objscale);
 }
 
+OoqpVector* QpScaler::getOrigObj(const OoqpVector& solprimal)
+{
+   assert(problem);
+   OoqpVector* unscaledprimal = solprimal.cloneFull();
+
+   // unscale primal
+   unscaledprimal->componentMult(*vec_colscale);
+
+   return unscaledprimal;
+}
+
+
 void QpScaler::applyScaling()
 {
    // todo scale Q
+
+   doObjScaling();
 
    // scale A and rhs
    A->ColumnScale(*vec_colscale);
@@ -166,7 +180,7 @@ double QpScaler::maxColRatio(OoqpVector& maxvec, OoqpVector& minvec, const OoqpV
    return maxratio;
 }
 
-void QpScaler::scaleVector(OoqpVector& vector, double scaling_factor)
+void QpScaler::scaleObjVector(double scaling_factor)
 {
    if( scaling_factor > 0.0 )
       factor_objscale = 1.0 / scaling_factor;
@@ -184,7 +198,8 @@ void QpScaler::scaleVector(OoqpVector& vector, double scaling_factor)
          factor_objscale = std::ldexp(0.5, exp);
    }
 
-   vector.scalarMult(factor_objscale);
+   assert(obj);
+   obj->scalarMult(factor_objscale);
 }
 
 QpScaler::~QpScaler()

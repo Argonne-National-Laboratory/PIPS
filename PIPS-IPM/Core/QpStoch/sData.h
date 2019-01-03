@@ -91,7 +91,7 @@ class sData : public QpGenData {
 
  private:
   int n0LinkVars;
-  const static int nLinkStats = 21;
+  const static int nLinkStats = 6;
   const static double minStructuredLinksRatio = 0.5;
   static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);

@@ -29,7 +29,7 @@ void EquiStochScaler::doObjScaling()
    const double absmax = obj->infnorm();
    assert(absmax >= 0);
 
-   scaleVector(*obj, absmax);
+   scaleObjVector(absmax);
 }
 
 // todo scale Q
@@ -89,8 +89,6 @@ void EquiStochScaler::scale()
    PIPSdebugMessage("before scaling: \n "
          "objnorm: %f \n Anorm:  %f \n Cnorm  %f \n bAnorm %f \n rhsCnorm %f \n lhsCnorm %f \n buxnorm %f \n blxnorm %f \n  ",
         obj->infnorm(), A->abmaxnorm(), C->abmaxnorm(), bA->infnorm(), rhsC->infnorm(), lhsC->infnorm(), bux->infnorm(), blx->infnorm());
-
-   doObjScaling();
 
    applyScaling();
 

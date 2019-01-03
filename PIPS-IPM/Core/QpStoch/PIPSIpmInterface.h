@@ -300,10 +300,6 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
 { 
-
-
-
-
   delete solver;
   delete resids;
   delete vars;
@@ -312,14 +308,19 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete factory;
   delete scaler;
   delete presolver;
-
 }
 
 
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherPrimalSolution() const
 {
-  const StochVector& primalStochVec = dynamic_cast<const StochVector&>(*vars->x);
+  StochVector* primalUnscaled = NULL;
+
+  if( scaler )
+     primalUnscaled = dynamic_cast<StochVector*>(scaler->getOrigObj(*vars->x));
+
+  const StochVector& primalStochVec = (scaler) ? *primalUnscaled : dynamic_cast<const StochVector&>(*vars->x);
+
   const SimpleVector& firstvec =  dynamic_cast<const SimpleVector&>(*primalStochVec.vec);
   const size_t nChildren = primalStochVec.children.size();
 
@@ -380,6 +381,8 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherPrimalSoluti
 
   if( myrank == 0 )
      std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &primalVec[0]);
+
+  delete primalUnscaled;
 
   return primalVec;
 }

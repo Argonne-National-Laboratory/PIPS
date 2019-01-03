@@ -5,9 +5,13 @@
 
 #include "gmspipsio.h"
 #include "gclgms.h"
+#if defined(GDXSOURCE)
+#include "gdxstatic.h"
+#else
 #include "gdxcc.h"
 #include "gmomcc.h"
 #include "gevmcc.h"
+#endif   
 
 #if defined(__cplusplus)
 extern "C" {
@@ -126,11 +130,12 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    char symName[GMS_SSSIZE], symText[GMS_SSSIZE];
    int dimFirst, nrRecs, numUels, symDim, symType, userInfo, symCnt, symStart=3;
    int colsSeen=0, rowsSeen=0; 
-   
-   printf("1\n");
+
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fDCT, GAMSSysDir, msg, sizeof(msg));
    else
+#endif      
       rc = gdxCreate (&fDCT, msg, sizeof(msg));
    if ( !rc ) 
    {
@@ -177,9 +182,11 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    gdxM = (int) vals[0];
    GDXSAVECALLX(fDCT,gdxDataReadDone(fDCT));
    
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fSOL, GAMSSysDir, msg, sizeof(msg));
    else
+#endif      
       rc = gdxCreate (&fSOL, msg, sizeof(msg));
    if ( !rc ) 
    {
@@ -436,7 +443,7 @@ if ( blk->nnz##mat )                                                   \
    blk->val##mat = (double *) malloc(blk->nnz##mat * sizeof(double));  \
 }
 
-#if 1 
+#if !defined(GDXSOURCE)
 int doColumnPermutation(const gmoHandle_t gmo, const int strict, const int n, const int stageI, const int stage0, 
                      int32_t* n0, int32_t* ni, int perm[] )
 {
@@ -841,10 +848,10 @@ void copyGDXSymbol(int         numBlocks,
    gdxUelIndex_t keyInt;   
    char symText[GMS_SSSIZE];
  
-   printf("Copying %s\n", symName); fflush(stdout);
    rc = gdxFindSymbol(fGDX, symName, &symNr);
    if (!rc && 0==strcmp(symName,"ANl"))
    {
+      printf("Copying %s\n", symName); fflush(stdout);
       for (k=0; k<numBlocks; k++)
       {
          GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, "Non-linear Jacobian indicator", 2, dt_par, 0));
@@ -854,6 +861,7 @@ void copyGDXSymbol(int         numBlocks,
    }
    if (!rc && 0==strcmp(symName,"iobj"))
    {
+      printf("Copying %s\n", symName); fflush(stdout);
       vals[GMS_VAL_LEVEL] = 0;
       keyInt[0] = objRowUel;
       for (k=0; k<numBlocks; k++)
@@ -866,6 +874,7 @@ void copyGDXSymbol(int         numBlocks,
    }
    GDXSAVECALLX(fGDX,gdxSymbolInfo(fGDX, symNr, symText, &symDim, &symType));
    GDXSAVECALLX(fGDX,gdxSymbolInfoX(fGDX, symNr, &recNr, &userInfo, symText));
+   printf("Copying %s (#recs=%d)\n", symName, recNr); fflush(stdout);
 
    for (k=0; k<numBlocks; k++)
    {
@@ -970,9 +979,11 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    assert(numBlocks>0);   
    assert(gdxFilename);
    
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fGDX, GAMSSysDir, msg, sizeof(msg));
    else
+#endif
       rc = gdxCreate (&fGDX, msg, sizeof(msg));
 
    if ( !rc )
@@ -1025,9 +1036,11 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    for (k=0; k<numBlocks; k++)
    {
       int nUel;
+#if !defined(GDXSOURCE)   
       if ( GAMSSysDir )
          rc = gdxCreateD (&(bGDX[k]), GAMSSysDir, msg, sizeof(msg));
       else
+#endif
          rc = gdxCreate (&(bGDX[k]), msg, sizeof(msg));
       
       if ( !rc ) 
@@ -1041,6 +1054,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
 
       if ( !skipStrings )
       {
+         if (0==k)
+            printf("#UELs: %d\n",numUels);fflush(stdout);
+
          printf("UEL Registration block %d\n",k);fflush(stdout);
          GDXSAVECALLX(bGDX[k],gdxUELRegisterRawStart(bGDX[k]));
          for (nUel=1; nUel<=numUels; nUel++)
@@ -1131,11 +1147,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       assert(start==gdxN-1);
       /* Fill map array */ 
       p2gmap = (int*) malloc(gdxN*sizeof(int));
-      for (j=0; j<objVarUel-gdxM-1; j++)
-         p2gmap[p2gblkmap[varstage[j]]++] = j;
-      /* Skip objvar */
-      for (++j; j<gdxN; j++)
-         p2gmap[p2gblkmap[varstage[j]]++] = j-1;
+      for (j=0; j<gdxN; j++)
+         if (j!=objVarUel-gdxM-1)
+            p2gmap[p2gblkmap[varstage[j]]++] = j;
       for (j=0; j<gdxN-1; j++)
          fprintf(fmap,"%d\n", p2gmap[j]);
       free(p2gmap);
@@ -1157,11 +1171,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       assert(start==gdxM-1);
       /* Fill map array */ 
       p2gmap = (int*) malloc(gdxM*sizeof(int));
-      for (i=0; i<objRowUel-1; i++)
-         p2gmap[p2gblkmap[rowstage[i]]++] = i;
-      /* Skip objrow */
-      for (++i; i<gdxM; i++)
-         p2gmap[p2gblkmap[rowstage[i]]++] = i-1;
+      for (i=0; i<gdxM; i++)
+         if (i!=objRowUel-1)
+            p2gmap[p2gblkmap[rowstage[i]]++] = i;
       for (i=0; i<gdxM-1; i++)
          fprintf(fmap,"%d\n", p2gmap[i]);
       free(p2gmap);
@@ -1238,9 +1250,11 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    assert(actBlock>=0 && actBlock<numBlocks);
    assert(gdxFilename);
    
+#if !defined(GDXSOURCE)   
    if ( GAMSSysDir )
       rc = gdxCreateD (&fGDX, GAMSSysDir, msg, sizeof(msg));
    else
+#endif
       rc = gdxCreate (&fGDX, msg, sizeof(msg));
 
    if ( !rc ) 
@@ -1803,6 +1817,14 @@ if (blk->rm##mat)                                                               
    
    return 0;   
 
+}
+
+int initGMSPIPSIO()
+{
+#if defined(GDXSOURCE)
+   _P3_DllInit();   
+#endif   
+   return 0;
 }
 
 #if defined(__cplusplus)

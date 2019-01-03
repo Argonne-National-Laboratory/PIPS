@@ -1173,15 +1173,21 @@ void sData::printLinkVarsStats()
             count0LC++;
       }
 
-      std::cout << "total link vars " << n << std::endl;
 
+      int nlocal = 0;
       for( int i = 0; i < nLinkStats; i++ )
          if( linkSizes[i] != 0 )
-            std::cout << i << "-links " << linkSizes[i] << std::endl;
+         {
+            nlocal += linkSizes[i];
+            std::cout << i << "-link vars: " << linkSizes[i] << std::endl;
+         }
 
-      std::cout << "Block0 exclusive vars " << count0 << std::endl;
-      std::cout << "LC exclusive vars " << countLC << std::endl;
-      std::cout << "Block0 or LC vars " << count0LC  << std::endl;
+      assert(n - nlocal >= 0);
+      std::cout << "---total linking variables: " << n << " (global: " << n - nlocal << ")" <<   std::endl;
+
+      std::cout << "   Block0 exclusive vars " << count0 << std::endl;
+      std::cout << "   LC exclusive vars " << countLC << std::endl;
+      std::cout << "   Block0 or LC vars " << count0LC  << std::endl;
    }
 }
 
@@ -1209,11 +1215,15 @@ void sData::printLinkConsStats()
                linkSizes[size_t(linkCount[i])]++;
             }
 
-         std::cout << "total equality Linking Constraints " << myl << std::endl;
-
+         int nlocal = 0;
          for( int i = 0; i < nLinkStats; i++ )
             if( linkSizes[i] != 0 )
-               std::cout << i << "-links " << linkSizes[i] << std::endl;
+            {
+               nlocal += linkSizes[i];
+               std::cout << "equality " <<  i << "-link cons: " << linkSizes[i] << std::endl;
+            }
+         std::cout << "---total equality linking constraints: " << myl << " (global: " << myl - nlocal << ")" <<   std::endl;
+
       }
    }
 
@@ -1234,11 +1244,14 @@ void sData::printLinkConsStats()
                linkSizes[size_t(linkCount[i])]++;
             }
 
-         std::cout << "total inequality Linking Constraints " << mzl << std::endl;
-
+         int nlocal = 0;
          for( int i = 0; i < nLinkStats; i++ )
             if( linkSizes[i] != 0 )
-               std::cout << i << "-links " << linkSizes[i] << std::endl;
+            {
+               nlocal += linkSizes[i];
+               std::cout << "inequality " <<  i << "-link cons: " << linkSizes[i] << std::endl;
+            }
+         std::cout << "---total inequality linking constraints: " << mzl << " (global: " << mzl - nlocal << ")" <<   std::endl;
       }
    }
 }
