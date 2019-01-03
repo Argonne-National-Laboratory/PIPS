@@ -432,7 +432,6 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
       blockrownnz += appendMixedBlocks(linkStartBlockIdA, linkStartBlockIdC, linkStartBlockLengthsA, linkStartBlockLengthsC,
             (nx0 + my0 + myl), bordersizeIneq, j, colIdxOffset, blockStartrowMix, nnzcount, jcolM);
 
-      std::cout << blockStartrowMix << " vs " << blockStartrow << std::endl;
       assert(blockStartrowMix == blockStartrow);
 
       krowM[i + 1] = krowM[i] + blockrownnz;
