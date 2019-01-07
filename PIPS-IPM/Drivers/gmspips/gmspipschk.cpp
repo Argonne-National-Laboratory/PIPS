@@ -85,6 +85,7 @@ int main(int argc, char* argv[])
    int gnuplot = 0;
    int printMat = 0;
    int gdxSplit = 0;
+   int rc = 0;
    int fType = SCRDIRSTEM;
    char* pGAMSSysDir = NULL;
    char* pDirStem = NULL;
@@ -132,22 +133,30 @@ int main(int argc, char* argv[])
    
    if ( gdxSplit && (fType == GDXFILE) )
    {
-     int rc = gdxSplitting(numBlocks, offset, gdxSplit==2, pDirStem, pGAMSSysDir);
-      assert(0==rc);
-      return 0;
+      rc = gdxSplitting(numBlocks, offset, gdxSplit==2, pDirStem, pGAMSSysDir);
+      if (rc)
+         printf("gdxSplitting failed (rc=%d)\n", rc);
+      return rc;
    }
    
    if ( actBlock>=0 )
    {
       GMSPIPSBlockData_t block;
-      int rc;
       
       rc = readOneBlock(numBlocks, actBlock, strict, offset, fType, pDirStem, pGAMSSysDir, &block);
-      assert(0==rc);
+      if (rc)
+      {
+         printf("readOneBlock with actBlock=%d failed (rc=%d)\n", actBlock, rc);
+         return rc;
+      }
       if ( printMat )
       {
          rc = writeBlock(NULL,&block,printMat);
-         assert(0==rc);
+         if (rc)
+         {
+            printf("writeBlock with actBlock=%d failed (rc=%d)\n", actBlock, rc);
+            return rc;
+         }
       }
       else
          printf("All done\n");
@@ -155,17 +164,25 @@ int main(int argc, char* argv[])
    }      
    else
    {
-      int rc, nBlock0=-1;
+      int nBlock0=-1;
       GMSPIPSBlockData_t** blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
       for (int blk=0; blk<numBlocks; blk++)
       {
          blocks[blk] = (GMSPIPSBlockData_t*) malloc(sizeof(GMSPIPSBlockData_t));
          rc = readOneBlock(numBlocks, blk, strict, offset, fType, pDirStem, pGAMSSysDir, blocks[blk]);
-         assert(0==rc);
+         if (rc)
+         {
+            printf("readOneBlock with blk=%d failed (rc=%d)\n", blk, rc);
+            return rc;
+         }
          if ( 0==blk )
             nBlock0 = blocks[blk]->n0;
          else
-            assert(nBlock0 == blocks[blk]->n0);
+            if (nBlock0 != blocks[blk]->n0)
+            {
+               printf("(nBlock0 != blocks[blk]->n0 (%d != %d, blk=%d)\n", nBlock0, blocks[blk]->n0, blk);
+               return -1;
+            }
       }
       
       if ( gnuplot )
@@ -208,14 +225,17 @@ int main(int argc, char* argv[])
          for (int blk=0; blk<numBlocks; blk++)
          {
             rc = writeBlock(NULL,blocks[blk],printMat);
-            assert(0==rc);
+            if (rc)
+            {
+               printf("writeBlock with blk=%d failed (rc=%d)\n", blk, rc);
+               return rc;
+            }
          }
          printf("All done\n");
       }
       else 
          printf("All done\n");
 
-      exit(0);
       for (int blk=0; blk<numBlocks; blk++)
       {
          freeBlock(blocks[blk]);
@@ -223,5 +243,5 @@ int main(int argc, char* argv[])
       }
       free(blocks);
    }      
-   return 0;
+   return rc;
 }

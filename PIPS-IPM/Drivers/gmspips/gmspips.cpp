@@ -51,17 +51,17 @@ FILE *fLog;
 if (!blocks[blk])                                                                 \
 {                                                                                 \
    int rc;                                                                        \
-   fprintf(fLog,"Block %d read on gmsRank %d\n", blk, gmsRank);                         \
+   fprintf(fLog,"Block %d read on gmsRank %d\n", blk, gmsRank);                   \
    blocks[blk] = (GMSPIPSBlockData_t*) malloc(sizeof(GMSPIPSBlockData_t));        \
    if ( !allGDX )                                                                 \
    {                                                                              \
       char fname[256];                                                            \
-      sprintf(fname,"%s%d.gdx", fileName, blk);                                   \
+      snprintf(fname, 256, "%s%d.gdx", fileName, blk);                            \
       rc = readBlock(numBlocks,blk,0,1,fname,pGDXDirectory,blocks[blk]);          \
    }                                                                              \
    else                                                                           \
       rc = readBlock(numBlocks,blk,0,1,fileName,pGDXDirectory,blocks[blk]);       \
-   assert(rc==0);                                                                 \
+   if (rc) {fprintf(fLog,"Block %d read on gmsRank %d failed rc=%d\n", blk, gmsRank, rc); return rc;} \
 }
 
 #define nCB(nType)                                                   \
