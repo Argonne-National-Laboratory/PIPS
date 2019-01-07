@@ -969,6 +969,7 @@ Function(SYSTEM_boolean )
   SYSTEM_boolean result;
   SYSTEM_integer v1, v2, v3;
 
+  v1 = v2 = v3 = 0;
   PALDOORG_platformsvals(GMSGLOBX_platformslookup(pf),&v1,&v2,&v3);
   result = PALDOORG_tpalobject_DOT_licensecheckv1to3(self,v1,v2,v3);
   return result;

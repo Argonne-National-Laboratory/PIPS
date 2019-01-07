@@ -223,7 +223,7 @@ int xGetExecName (unsigned char *execName, unsigned char *msg)
 int xGetLibName (unsigned char *libName, unsigned char *msg)
 {
   char libBuf[4096];
-  char msgBuf[2048];
+  char msgBuf[2048+20];
   char tmpBuf[2048];
   int rc, k;
 
