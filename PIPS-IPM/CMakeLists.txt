@@ -188,7 +188,7 @@ if (BUILD_GDX_SOURCE)
      
    link_directories(PIPS-IPM)
    add_executable(gmspips Drivers/gmspips/gmspips.cpp Drivers/gmspips/gmspipsio.c)
-   add_definitions(-DGMS_PIPS -DGMS_LOG -DGMS_MPI -DLINKCONSTR -DGDXSOURCE)
+   add_definitions(-DGMS_PIPS -DGMS_LOG -DGMS_MPI -DLINKCONSTR -DGDXSOURCE -fno-strict-aliasing -fwrapv )
    target_include_directories(gmspips PUBLIC Drivers/statgdx Drivers/gmspips/)
    target_link_libraries(gmspips
        dl 
