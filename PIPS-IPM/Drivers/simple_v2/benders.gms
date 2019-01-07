@@ -43,10 +43,12 @@ parameter
     ub                         upper bound
     gub                        global upper bound                  / inf /
     done                       termination indicator               / 0 /
-    best_flow(tt,rr1,rr2)      flow corresponding to gub           / #tt.#net 0 /
-    best_link_add_cap(rr1,rr2) link_add_cap corresponding to gub   / #net 0 /
+    best_flow(tt,rr1,rr2)      flow corresponding to gub           
+    best_link_add_cap(rr1,rr2) link_add_cap corresponding to gub   
     best_emission_split(rr,e)  emission_split corresponding to gub / #rr.#e 0 /
 ;
+best_flow(tt,net)      = 0;
+best_link_add_cap(net) = 0;
 
 option limrow=0, limcol=0, solprint=silent, solvelink=5;
 
