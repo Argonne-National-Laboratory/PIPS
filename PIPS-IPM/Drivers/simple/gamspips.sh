@@ -10,6 +10,7 @@ scale=""
 stepLp=""
 presolve=""
 mins="60"
+mygams="/nfs/optimi/kombadon/bzfrehfe/projects/PIPSjsc/PIPS_beamme/PIPS-IPM/Drivers/gams25.0_linux_x64_64_sfx/gams"
 
 
 for i in "$@"
@@ -68,7 +69,7 @@ cd $built_dir
 nblocks=$(echo "8760 * $to * (60/$mins) / $tbsize + ((8760*${to}) % ${tbsize} > 0) + 1" | bc)
 echo "$nblocks"
 
-gams ../simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\($mins/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=../subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
+$mygams ../simple4pips.gms --NBREGIONS=$regions --TO=$to --RESOLUTION=\($mins/60\)  --TBSIZE=$tbsize --METHOD=PIPS subsys=../subsysLinux.txt  --SCENBLOCK=-1 > /dev/null
 ../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks allblocksPips.gdx > /dev/null
 
 if [ "$stepLp" = "true" ]; then
