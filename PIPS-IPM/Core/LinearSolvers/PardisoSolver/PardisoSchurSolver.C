@@ -82,7 +82,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   nnz = -1;
   nSC = -1;
   nvec = NULL;
-  // - we do not have the augmented system yet; most of intialization done during the 
+  // - we do not have the augmented system yet; most of initialization done during the
   // first solve call
 
   first = true; firstSolve = true;
@@ -672,6 +672,8 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   HPM_Stop("PARDISOSolve");
 #endif
 
+
+#ifdef PRINT_SC_RESIDUAL
   //compute residual (alternative)  
   double* tmp_resid=new double[dim];
   memcpy(tmp_resid, rhs.elements(), dim*sizeof(double));
@@ -730,6 +732,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
     //}
   }
   delete[] tmp_resid;
+#endif
   
 
   memcpy(&rhs[0], x_n.elements(), dim*sizeof(double));
@@ -770,7 +773,7 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
 
 
   //compute residual (alternative)
-  
+#ifdef PRINT_SC_RESIDUAL
   double* tmp_resid=new double[dim];
   memcpy(tmp_resid, rhs.elements(), dim*sizeof(double));
   for(int i=0; i<dim; i++) {
@@ -802,6 +805,7 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
 	 << " rel.res.nrmInf=" << res_nrmInf/rhsNorm << endl;
   }
   delete[] tmp_resid;
+#endif
   
 
   memcpy(&rhs[0], x_n.elements(), dim*sizeof(double));

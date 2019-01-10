@@ -319,9 +319,11 @@ else
 #endif
 
    iparm[9] = 13; // pivot perturbation 10^{-xxx}
-#if 1
+#ifdef PARDISOINDEF_SCALE
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+   if( myrank == 0)
+      std::cout << "... SCALE PARDISO for global SC" << std::endl;
 #endif
 
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
