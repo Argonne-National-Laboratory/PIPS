@@ -694,6 +694,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 
   StochVector& wstep = dynamic_cast<StochVector&>(wstep_vec);
   StochVector& ustep = dynamic_cast<StochVector&>(ustep_vec);
+  const double local_eps = 1e-14;
 
   double step = maxStep;
   
@@ -730,14 +731,18 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 
   if(iAmDistrib==1) {
     double stepG;
+    assert(PIPSisLE(step, 1.0));
+    assert(PIPSisLE(0.0, step));
+
     MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+    const bool iHaveMinStep = PIPSisEQ(step, stepG, local_eps);
 
     //we prefer a AllReduce instead of a bcast, since the step==stepG m
     //may occur for two different processes and a deadlock may occur.
     double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
 
     int count;
-    if(step==stepG) {
+    if( iHaveMinStep ) {
       buffer[0]=*w_elt; buffer[1]=*wstep_elt; 
       buffer[2]=*u_elt; buffer[3]=*ustep_elt;
       buffer[4]=first_or_second;
@@ -759,7 +764,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 
        MPI_Comm_rank(mpiComm, &myrank);
 
-       if( step == stepG )
+       if( iHaveMinStep )
           mineqrank = myrank;
        else
           mineqrank = std::numeric_limits<int>::max();
@@ -767,7 +772,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
        MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
 
        // step==stepG and not smallest rank?
-      if( step == stepG && mineqrank != myrank )
+      if( iHaveMinStep && mineqrank != myrank )
          buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
     }
 
@@ -795,6 +800,7 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
 {
   const StochVector& w = *this;
   const StochVector& u = dynamic_cast<const StochVector&>(u_vec);
+  const double local_eps = 1e-14;
 
   const StochVector& wstep = dynamic_cast<const StochVector&>(wstep_vec);
   const StochVector& ustep = dynamic_cast<const StochVector&>(ustep_vec);
@@ -835,17 +841,22 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
 
    if( iAmDistrib == 1 )
    {
-      double stepG, stepF;
-      MPI_Allreduce(&maxStepPri, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
-      MPI_Allreduce(&maxStepDual, &stepF, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+      double maxStepGlobalPri, maxStepGlobalDual;
+      assert(PIPSisLE(maxStepPri, 1.0) && PIPSisLE(maxStepDual, 1.0));
+      assert(PIPSisLE(0.0, maxStepPri) && PIPSisLE(0.0, maxStepDual));
 
-      //we prefer a AllReduce instead of a bcast, since the step==stepG m
+      MPI_Allreduce(&maxStepPri, &maxStepGlobalPri, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+      MPI_Allreduce(&maxStepDual, &maxStepGlobalDual, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+      const bool iHaveMinStepPri = PIPSisEQ(maxStepPri, maxStepGlobalPri, local_eps);
+      const bool iHaveMinStepDual = PIPSisEQ(maxStepDual, maxStepGlobalDual, local_eps);
+
+      //we prefer a AllReduce instead of a bcast, since the step==stepG
       //may occur for two different processes and a deadlock may occur.
       double buffer[10];
       int count[2];
       //values for computation of the primal steplength:
       //0-primal val, 1-primal step, 2-dual value, 3-dual step, 4-primalBlocking
-      if( maxStepPri == stepG )
+      if( iHaveMinStepPri )
       {
          buffer[0] = w_elt_p;
          buffer[1] = wstep_elt_p;
@@ -864,7 +875,7 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
 
       //values for computation of the dual steplength:
       //5-primal val, 6-primal step, 7-dual value, 8-dual step, 9-dualBlocking
-      if( maxStepDual == stepF )
+      if( iHaveMinStepDual )
       {
          buffer[5] = w_elt_d;
          buffer[6] = wstep_elt_d;
@@ -881,15 +892,17 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
          count[1] = 0;
       }
 
-      MPI_Allreduce(MPI_IN_PLACE, &count, 2, MPI_INT, MPI_SUM, mpiComm);
+      MPI_Allreduce(MPI_IN_PLACE, count, 2, MPI_INT, MPI_SUM, mpiComm);
 
-      int myrank, mineqrank;
+      int myrank;
       MPI_Comm_rank(mpiComm, &myrank);
 
       // is there more than one process with maxStepPri==stepG?
       if( count[0] > 1 )
       {
-         if( maxStepPri == stepG )
+         int mineqrank;
+
+         if( iHaveMinStepPri )
             mineqrank = myrank;
          else
             mineqrank = std::numeric_limits<int>::max();
@@ -897,14 +910,16 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
          MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
 
          // step==stepG and not smallest rank?
-         if( maxStepPri == stepG && mineqrank != myrank )
+         if( iHaveMinStepPri && mineqrank != myrank )
             buffer[0] = buffer[1] = buffer[2] = buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
       }
 
       // is there more than one process with maxStepDual==stepF?
       if( count[1] > 1 )
       {
-         if( maxStepDual == stepG )
+         int mineqrank;
+
+         if( iHaveMinStepDual )
             mineqrank = myrank;
          else
             mineqrank = std::numeric_limits<int>::max();
@@ -912,10 +927,9 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
          MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
 
          // stepDual==stepF and not smallest rank?
-         if( maxStepDual == stepG && mineqrank != myrank )
+         if( iHaveMinStepDual && mineqrank != myrank )
             buffer[5]=buffer[6]=buffer[7]=buffer[8]=buffer[9]= -std::numeric_limits<double>::max();
       }
-
 
       double bufferOut[10];
       MPI_Allreduce(buffer, bufferOut, 10, MPI_DOUBLE, MPI_MAX, mpiComm);
@@ -932,12 +946,11 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
 
       //primalBlocking  negative means no blocking, so set it to 0.
       primalBlocking = bufferOut[4] <= 0.0 ? false : true;
-      maxStepPri = stepG;
+      maxStepPri = maxStepGlobalPri;
 
       //dualBlocking negative means no blocking, so set it to 0.
       dualBlocking = bufferOut[9] <= 0.0 ? false : true;
-      maxStepDual = stepF;
-
+      maxStepDual = maxStepGlobalDual;
    }
 }
 

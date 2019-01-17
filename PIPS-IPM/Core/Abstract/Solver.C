@@ -429,7 +429,7 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  int todo; // use to start inner bicgstab?
+  // todo use to start inner bicgstab?
   //if(mu<50*rnorm/dnorm || mu<1e-5) {
   if(mu<1.0e5*rnorm/dnorm) {
     //if(!onSafeSolver) {
