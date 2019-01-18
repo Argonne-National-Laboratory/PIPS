@@ -8,6 +8,7 @@
 #ifndef PIPS_IPM_CORE_UTILITIES_PIPSDEF_H_
 #define PIPS_IPM_CORE_UTILITIES_PIPSDEF_H_
 
+#include <stdlib.h>
 #include <sstream>
 #include <iostream>
 #include <cmath>
@@ -65,6 +66,23 @@ inline bool PIPSisRelLT(double val1, double val2, double eps = pips_eps)
 inline bool PIPSisZero(double val, double eps0 = pips_eps0)
 {
    return (std::fabs(val) < eps0);
+}
+
+inline int PIPSgetnOMPthreads()
+{
+   int num_procs;
+
+   /* Numbers of processors, value of OMP_NUM_THREADS */
+   char* var = getenv("OMP_NUM_THREADS");
+   if( var != NULL )
+      sscanf(var, "%d", &num_procs);
+   else
+   {
+      printf("Set environment OMP_NUM_THREADS to 1");
+      exit(1);
+   }
+
+   return num_procs;
 }
 
 inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)

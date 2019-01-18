@@ -14,6 +14,7 @@ using namespace std;
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
+#include "pipsdef.h"
 #include <cstdlib>
 #include <cmath>
 
@@ -87,15 +88,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 
   first = true; firstSolve = true;
    
-  /* Numbers of processors, value of OMP_NUM_THREADS */
-  char *var = getenv("OMP_NUM_THREADS");
-  if(var != NULL) {
-    sscanf( var, "%d", &num_threads );
-  }
-  else {
-    printf("Set environment OMP_NUM_THREADS");
-    exit(1);
-  }
+  num_threads = PIPSgetnOMPthreads();
 }
 
 PardisoSchur32Solver::PardisoSchur32Solver( SparseSymMatrix * sgm )
