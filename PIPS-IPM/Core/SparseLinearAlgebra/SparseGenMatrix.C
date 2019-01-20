@@ -642,6 +642,24 @@ void SparseGenMatrix::deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const Ooq
    mStorage->deleteEmptyRowsCols(rowNnzVecSimple.elements(), colNnzVecSimple.elements());
 }
 
+void SparseGenMatrix::fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
+       double* rowsArrayDense, int* rowSparsity)
+{
+
+   mStorage->fromGetRowsBlock(rowIndices, nRows, arrayLineSize, arrayLineOffset, rowsArrayDense, rowSparsity);
+}
+
+void SparseGenMatrix::fromGetColsBlock(const int* colIndices, int nCols, int arrayLineSize, int arrayLineOffset,
+       double* colsArrayDense, int* rowSparsity)
+{
+   if( !m_Mt )
+      updateTransposed();
+
+   m_Mt->getStorageRef().fromGetRowsBlock(colIndices, nCols, arrayLineSize, arrayLineOffset,
+         colsArrayDense, rowSparsity);
+}
+
+
 void SparseGenMatrix::freeDynamicStorage()
 {
    delete mStorageDynamic;

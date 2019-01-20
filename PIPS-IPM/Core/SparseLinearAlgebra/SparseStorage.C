@@ -296,6 +296,37 @@ void SparseStorage::fromGetColBlock(int col, double *A, int lda, int colExtent, 
 }
 
 
+void SparseStorage::fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize,
+      int arrayLineOffset, double* rowsArrayDense, int* rowSparsity)
+{
+   assert(rowsArrayDense && rowIndices);
+   assert(arrayLineSize >= 0 && arrayLineOffset >= 0);
+
+   // todo use OMP?
+   for( int i = 0; i < nRows; i++ )
+   {
+      const int r = rowIndices[i];
+      assert(r >= 0 && r < m);
+
+      // empty row?
+      if( krowM[r] == krowM[r + 1] )
+         continue;
+
+      const int offset = i * arrayLineSize + arrayLineOffset;
+
+      if( rowSparsity ) // todo
+         assert(0);
+
+      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      {
+         const int col = jcolM[c];
+         assert(offset >= 0);
+
+         rowsArrayDense[offset + col] = M[c];
+      }
+   }
+}
+
 void SparseStorage::getLinkVarsNnz(std::vector<int>& vec) const
 {
    assert(int(vec.size()) == n);

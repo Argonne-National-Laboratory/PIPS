@@ -15,8 +15,9 @@
 
 extern int gOuterIterRefin;
 
+
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
-  : QpGenLinsys(), kkt(NULL), solver(NULL)
+  : QpGenLinsys(), kkt(NULL), solver(NULL), nThreads(PIPSgetnOMPthreads())
 {
   factory = factory_;
 
@@ -57,7 +58,7 @@ sLinsys::sLinsys(sFactory* factory_,
 		 OoqpVector* dq_,
 		 OoqpVector* nomegaInv_,
 		 OoqpVector* rhs_)
-  : QpGenLinsys(), kkt(NULL), solver(NULL)
+  : QpGenLinsys(), kkt(NULL), solver(NULL), nThreads(PIPSgetnOMPthreads())
 {
   factory = factory_;
 
@@ -705,202 +706,185 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
       G.mult( 1.0, &SC[it + nxMyMzP][nxMyMzP],   1,  -1.0, &col[0],  1);
     }
   }
+
+  SC.writeToStream(cout); // todo write out in each iteration with global counter and MPI rank!
+
+  assert(0);
 }
  
 
 void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
                    DenseSymMatrix& SC)
 {
-  SparseGenMatrix& A = prob->getLocalA();
-  SparseGenMatrix& C = prob->getLocalC();
-  SparseGenMatrix& F = prob->getLocalF();
-  SparseGenMatrix& G = prob->getLocalG();
-  SparseGenMatrix& R = prob->getLocalCrossHessian();
+   SparseGenMatrix& A = prob->getLocalA();
+   SparseGenMatrix& C = prob->getLocalC();
+   SparseGenMatrix& F = prob->getLocalF();
+   SparseGenMatrix& G = prob->getLocalG();
+   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
-  int N, nxP;
+   int N, nxP;
 
-  R.getSize(N, nxP);
-  const bool withR = (nxP != -1);
+   R.getSize(N, nxP);
+   const bool withR = (nxP != -1);
 
-  A.getSize(N, nxP);
-  const bool withA = (nxP != -1);
+   A.getSize(N, nxP);
+   const bool withA = (nxP != -1);
 
-  assert(N==locmy);
-  assert(locmyl >= 0);
-  assert(locmzl >= 0);
+   assert(N == locmy);
+   assert(locmyl >= 0);
+   assert(locmzl >= 0);
 
-  const int NP = SC.size();
-  assert(NP>=nxP);
+   const int NP = SC.size();
+   assert(NP >= nxP);
 
-  const int nxMyP = NP - locmyl - locmzl;
-  const int nxMyMzP = NP - locmzl;
+   const int nxMyP = NP - locmyl - locmzl;
+   const int nxMyMzP = NP - locmzl;
 
-  if(nxP==-1)
-    C.getSize(N,nxP);
+   if( nxP == -1 )
+      C.getSize(N, nxP);
 
-  int N2, nxP2;
-  C.getSize(N2,nxP2);
-  const bool withC = (nxP2 != -1);
+   int N2, nxP2;
+   C.getSize(N2, nxP2);
+   const bool withC = (nxP2 != -1);
 
-  if(nxP==-1)
-    nxP = NP;
+   if( nxP == -1 )
+      nxP = NP;
 
-  N = locnx+locmy+locmz;
+   N = locnx + locmy + locmz;
 
-  SimpleVector col(N);
+   SimpleVector nnzPerColRAC(nxP);
 
-  // todo XXXX remove
-  SimpleVector nnzPerColRAC(nxP);
+   if( withR )
+      R.addNnzPerCol(nnzPerColRAC);
 
-  if( withR )
-     R.addNnzPerCol(nnzPerColRAC);
+   if( withA )
+      A.addNnzPerCol(nnzPerColRAC);
 
-  if( withA )
-     A.addNnzPerCol(nnzPerColRAC);
+   if( withC )
+      C.addNnzPerCol(nnzPerColRAC);
 
-  if( withC )
-     C.addNnzPerCol(nnzPerColRAC);
+   const int withF = (locmyl > 0);
+   const int withG = (locmzl > 0);
+   const int blocksizemax = nThreads;
 
-  const int withMyl = (locmyl > 0);
-  const int withMzl = (locmzl > 0);
+   assert(nThreads >= 1);
 
-  // todo expensive???
-  const int blocksizemax = PIPSgetnOMPthreads();
+   std::cout << "blocksizemax " << blocksizemax << std::endl;
 
-  std::cout << "blocksizemax " << blocksizemax << std::endl;
+   // save columns in this array todo member variable, initialized at first call (if == NULL)
+   double* colsBlockDense = new double[blocksizemax * N];
 
-  // save columns row-wise in this matrix
-  DenseGenMatrix colsBlockTrans(blocksizemax, N);
+   // to save original column index of each column in colsBlockTrans
+   int* colId = new int[blocksizemax];
+   int colpos = 0;
 
-  // to save original column index of each column in colsBlockTrans
-  SimpleVector colId(blocksizemax);
+   //                       (R)
+   //     SC +=  B^T  K^-1  (A)
+   //                       (C)
+   while( colpos < nxP )
+   {
+      int blocksize = 0;
 
-  int colpos = 0;
+      for( ; colpos < nxP && blocksize < blocksizemax; colpos++ )
+         if( nnzPerColRAC[colpos] != 0 )
+            colId[blocksize++] = colpos;
 
-  while( colpos < nxP )
-  {
-     int blocksize = 0;
+      if( blocksize == 0 )
+         break;
 
-     // load next block into colsBlockTrans
-     // todo use transposed to get col block
+      memset(colsBlockDense, 0, blocksize * N * sizeof(double));
+
+      R.fromGetColsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
+      A.fromGetColsBlock(colId, blocksize, N, locnx, colsBlockDense, NULL);
+      C.fromGetColsBlock(colId, blocksize, N, (locnx + locmy), colsBlockDense, NULL);
+
+   //   solver->solve(colsBlockDense); // todo
+
+      multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
+   }
+
+   // do we have linking equality constraints?
+   if( withF )
+   {
+      //                       (F^T)
+      //     SC +=  B^T  K^-1  (0  )
+      //                       (0  )
+
+      SimpleVector nnzPerColFt(locmyl);
+      F.addNnzPerRow(nnzPerColFt);
+
+      int colpos = 0;
+
+      // do block-wise multiplication for columns containing Ft (F transposed)
+      while( colpos < locmyl )
+      {
+         int blocksize = 0;
+
+         for( ; colpos < locmyl && blocksize < blocksizemax; colpos++ )
+            if( nnzPerColFt[colpos] != 0 )
+               colId[blocksize++] = colpos;
+
+         if( blocksize == 0 )
+            break;
+
+         memset(colsBlockDense, 0, blocksize * N * sizeof(double));
+
+         // get column block from Ft (i.e., row block from F)
+         F.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
+
+        // solver->solve(col);
+
+         for( int i = 0; i < blocksize; i++ )
+            colId[i] += nxMyP;
+
+         multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
+      }
+   }
+
+   // do we have linking inequality constraints?
+   if( withG )
+   {
+      //                       (G^T)
+      //     SC +=  B^T  K^-1  (0  )
+      //                       (0  )
+
+      SimpleVector nnzPerColGt(locmzl);
+      G.addNnzPerRow(nnzPerColGt);
+
+      int colpos = 0;
+
+      // do block-wise multiplication for columns containing Gt (G transposed)
+      while( colpos < locmzl )
+      {
+         int blocksize = 0;
+
+         for( ; colpos < locmzl && blocksize < blocksizemax; colpos++ )
+            if( nnzPerColGt[colpos] != 0 )
+               colId[blocksize++] = colpos;
+
+         if( blocksize == 0 )
+            break;
+
+         memset(colsBlockDense, 0, blocksize * N * sizeof(double));
+
+         G.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
+
+      //   solver->solve(col);
+
+         for( int i = 0; i < blocksize; i++ )
+             colId[i] += nxMyMzP;
+
+          multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
+      }
+   }
+
+   SC.writeToStream(cout); // todo write out in each iteration with global counter and MPI rank!
+
+   assert(0);
 
 
-     solver->solve(col);
-
-
-     // multiply each column todo add OMP
-     for( int it_col = 0; it_col < blocksize; it_col++ )
-     {
-
-     }
-
-     colpos += blocksize;
-  }
-
-  for(int it=0; it<nxP; it++) {
-    if( nnzPerColRAC[it] == 0 )
-      continue;
-
-    double* const pcol = &col[0];
-
-    for(int it1=0; it1<locnx; it1++) pcol[it1]=0.0;
-
-    // todo use transposed to get col block
-    R.fromGetDense(0, it, &col[0],           1, locnx, 1);
-    A.fromGetDense(0, it, &col[locnx],       1, locmy, 1);
-    C.fromGetDense(0, it, &col[locnx+locmy], 1, locmz, 1);
-
-    solver->solve(col);
-
-    //here we have colGi = inv(H_i)* it-th col of Gi^t
-    //now do colSC = Gi * inv(H_i)* it-th col of Gi^t
-
-    // SC+=R*x
-    R.transMult( 1.0, &SC[it][0],     1,  -1.0, &col[0],      1);
-
-    // SC+=At*y
-    A.transMult( 1.0, &SC[it][0],     1,  -1.0, &col[locnx],  1);
-
-    // SC+=Ct*z
-    C.transMult( 1.0, &SC[it][0],     1,  -1.0, &col[locnx+locmy], 1);
-
-    // do we have linking equality constraints? If so, set SC+=F*x
-    if( withMyl )
-       F.mult( 1.0, &SC[it][nxMyP],     1, -1.0, &col[0],      1);
-
-    // do we have linking inequality constraints? If so, set SC+=G*x
-    if( withMzl )
-       G.mult( 1.0, &SC[it][nxMyMzP],     1,  -1.0, &col[0],      1);
-  }
-
-  // do we have linking equality constraints?
-  if( withMyl )
-  {
-    SimpleVector nnzPerColFt(locmyl);
-    F.addNnzPerRow(nnzPerColFt);
-
-    // do column-wise multiplication for columns containing Ft (F transposed)
-    for(int it=0; it<locmyl; it++) {
-
-      if( nnzPerColFt[it] == 0 )
-         continue;
-
-      double* pcol = &col[0];
-
-      // get it'th column from Ft (i.e., it'th row from F)
-      F.fromGetDense(it, 0, &col[0],           1, 1, locnx);
-
-      for(int it1=locnx; it1 < locnx+locmy+locmz; it1++) pcol[it1]=0.0;
-
-      solver->solve(col);
-
-      R.transMult( 1.0, &SC[it + nxMyP][0],   1,  -1.0, &col[0],      1);
-      A.transMult( 1.0, &SC[it + nxMyP][0],   1,  -1.0, &col[locnx],  1);
-      C.transMult( 1.0, &SC[it + nxMyP][0],   1,  -1.0, &col[locnx+locmy], 1);
-
-      // here we have colGi = inv(H_i)* (it + locnx + locmy)-th col of Gi^t
-      // now do colSC = Gi * inv(H_i)* (it + locnx + locmy)-th col of Gi^t
-
-      F.mult( 1.0, &SC[it + nxMyP][nxMyP],   1, -1.0, &col[0],  1);
-
-      if( withMzl )
-         G.mult( 1.0, &SC[it + nxMyP][nxMyMzP],   1, -1.0, &col[0],  1);
-    }
-  }
-
-  // do we have linking inequality constraints?
-  if( withMzl )
-  {
-    SimpleVector nnzPerColGt(locmzl);
-    G.addNnzPerRow(nnzPerColGt);
-
-    // do column-wise multiplication for columns containing Gt (G transposed)
-    for(int it=0; it<locmzl; it++) {
-      if( nnzPerColGt[it] == 0 )
-         continue;
-
-      double* pcol = &col[0];
-
-      // get it'th column from Gt (i.e., it'th row from G)
-      G.fromGetDense(it, 0, &col[0],           1, 1, locnx);
-
-      for(int it1=locnx; it1 < locnx+locmy+locmz; it1++) pcol[it1]=0.0;
-
-      solver->solve(col);
-
-      R.transMult( 1.0, &SC[it + nxMyMzP][0],   1,  -1.0, &col[0],      1);
-      A.transMult( 1.0, &SC[it + nxMyMzP][0],   1,  -1.0, &col[locnx],  1);
-      C.transMult( 1.0, &SC[it + nxMyMzP][0],   1,  -1.0, &col[locnx+locmy], 1);
-
-      // here we have colGi = inv(H_i)* (it + locnx + locmy + locmyl)-th col of Gi^t
-      // now do colSC = Gi * inv(H_i)* (it + locnx + locmy + locmyl)-th col of Gi^t
-
-      if( withMyl )
-        F.mult( 1.0, &SC[it + nxMyMzP][nxMyP],   1,  -1.0, &col[0],  1);
-
-      G.mult( 1.0, &SC[it + nxMyMzP][nxMyMzP],   1,  -1.0, &col[0],  1);
-    }
-  }
+   delete[] colId;
+   delete[] colsBlockDense;
 }
 
 #include <set>
@@ -1014,6 +998,49 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
       outi += nxP-c;
     }
   }
+}
+
+void sLinsys::multLeftSchurComplBlocked(/*const*/sData* prob, /*const*/double* colsBlockDense,
+      const int* colId, int blocksize, DenseSymMatrix& SC)
+{
+   assert(colId && prob && colsBlockDense);
+
+   const int withF = (locmyl > 0);
+   const int withG = (locmzl > 0);
+   const int N = locnx + locmy + locmz;
+   const int NP = SC.size();
+   const int nxMyP = NP - locmyl - locmzl;
+   const int nxMyMzP = NP - locmzl;
+
+   SparseGenMatrix& A = prob->getLocalA();
+   SparseGenMatrix& C = prob->getLocalC();
+   SparseGenMatrix& F = prob->getLocalF();
+   SparseGenMatrix& G = prob->getLocalG();
+   SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+   // multiply each column with left factor of SC todo add OMP
+   for( int it_col = 0; it_col < blocksize; it_col++ )
+   {
+      double* const col = &colsBlockDense[it_col * N];
+      const int row_sc = colId[it_col];
+
+      // SC+=R^T*x
+      R.transMult(1.0, &SC[row_sc][0], 1, -1.0, &col[0], 1);
+
+      // SC+=A^T*y
+      A.transMult(1.0, &SC[row_sc][0], 1, -1.0, &col[locnx], 1);
+
+      // SC+=C^T*z
+      C.transMult(1.0, &SC[row_sc][0], 1, -1.0, &col[locnx + locmy], 1);
+
+      // do we have linking equality constraints? If so, set SC+=F*x
+      if( withF )
+         F.mult(1.0, &SC[row_sc][nxMyP], 1, -1.0, &col[0], 1);
+
+      // do we have linking inequality constraints? If so, set SC+=G*x
+      if( withG )
+         G.mult(1.0, &SC[row_sc][nxMyMzP], 1, -1.0, &col[0], 1);
+   }
 }
 
 /*

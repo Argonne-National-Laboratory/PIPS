@@ -166,6 +166,9 @@ public:
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
+  void fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
+        double* rowsArrayDense, int* rowSparsity = NULL);
+
   /** add nnz per row to given array (of size nRows) */
   void addNnzPerRow(double* vec) const;
   void getLinkVarsNnz(std::vector<int>& vec) const;
