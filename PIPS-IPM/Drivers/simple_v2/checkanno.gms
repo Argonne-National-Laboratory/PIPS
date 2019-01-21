@@ -86,6 +86,7 @@ $ifthen not set skipFix
                  (maxVarStage+1)$(maxStage(i)>minStage(i));
 $   setnames '%jacFileName%' fp fn fe
     put_utility 'log' / 'Writing modified jacobian with proper annotation';
+    option gdxuels=full;
     execute_unload '%fp%%fn%_fixedanno_novenames%fe%', i, j, jobj, objcoef, e, x, A, ANl;
     loop(s$sameas('0',s), loop(i, repSize(s+e.stage(i),'m fixed') = repSize(s+e.stage(i),'m fixed')+1));
     loop(s$sameas('0',s), loop(j, repSize(s+x.stage(j),'n fixed') = repSize(s+x.stage(j),'n fixed')+1));
