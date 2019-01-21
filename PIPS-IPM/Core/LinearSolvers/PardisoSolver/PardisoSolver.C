@@ -443,6 +443,49 @@ void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
   memcpy(&rhs[0][0], sol, sz_sol*sizeof(double));
 }
 
+void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
+{
+   assert(rhss);
+   assert(nrhss >= 1);
+
+   if( sz_sol < nrhss * n )
+   {
+      sz_sol = nrhss * n;
+      delete[] sol;
+
+      sol = new double[sz_sol];
+   }
+
+   int phase = 33; //solve and iterative refinement
+   int maxfct = 1; //max number of fact having same sparsity pattern to keep at the same time
+   int mnum = 1; //actual matrix (as in index from 1 to maxfct)
+   int nrhss_local = nrhss;
+   int msglvl = 0;
+   int mtype = -2, error;
+   iparm[1] = 2; //metis
+   iparm[2] = num_threads;
+   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+
+   if( colSparsity)
+      iparm[30] = 1; //sparse rhs
+   else
+      iparm[30] = 0;
+
+   //iparm[5] = 1; /* replace drhs with the solution */
+
+   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, colSparsity,
+         &nrhss_local, iparm, &msglvl, rhss, sol, &error, dparm);
+
+   if( error != 0 )
+   {
+      printf("PardisoSolver - ERROR during solve: %d", error);
+      exit(1);
+   }
+
+   memcpy(rhss, sol, n * nrhss * sizeof(double));
+}
+
+
 PardisoSolver::~PardisoSolver()
 {
 

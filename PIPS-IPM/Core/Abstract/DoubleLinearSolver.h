@@ -39,8 +39,11 @@ public:
    *           On exit, the solution.  */
   virtual void solve ( OoqpVector& x ) = 0;
 
-	// solve with multiple RHS
-	virtual void solve ( GenMatrix& rhs ) { assert(0 && "Not implemented"); }
+  // solve with multiple RHS
+  virtual void solve ( GenMatrix& rhs ) { assert(0 && "Not implemented"); }
+
+  // solve with multiple RHS and column sparsity array (can be NULL)
+  virtual void solve ( int nrhss, double* rhss, int* colSparsity ) { assert(0 && "Not implemented"); }
 
   virtual void Lsolve  ( OoqpVector& x ) {}
   virtual void Dsolve  ( OoqpVector& x ) { solve(x);}

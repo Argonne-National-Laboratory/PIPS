@@ -446,7 +446,7 @@ int main(int argc, char ** argv)
 	}
 
 	else {
-#ifdef WITH_PARDISO
+#if defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #else

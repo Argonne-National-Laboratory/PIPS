@@ -168,7 +168,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 #endif
 
 #ifdef WITH_PARDISOINDEF
-  data->activateLinkStructureExploitation();
+  int todo;
+  //data->activateLinkStructureExploitation();
 #endif
 
   vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );

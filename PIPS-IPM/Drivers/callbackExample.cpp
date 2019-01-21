@@ -578,10 +578,10 @@ int main(int argc, char ** argv) {
   gOuterSolve = 2;
   gInnerSCsolve = 0;
 
-#ifdef WITH_PARDISO
+#if defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH, PRESOLVER_NONE);
 #else
-  PIPSIpmInterface<sFactoryAug, GondzioStochSolver> pipsIpm(root);
+  PIPSIpmInterface<sFactoryAug, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH, PRESOLVER_NONE);
 #endif
 
   if( rank == 0 )

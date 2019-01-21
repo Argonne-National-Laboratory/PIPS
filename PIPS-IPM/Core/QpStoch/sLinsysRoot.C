@@ -670,7 +670,7 @@ void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
    else
    {
       DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
-#ifdef WITH_PARDISO_BLOCKSC
+#ifdef PARDISO_BLOCKSC
       children[childindex]->addTermToDenseSchurComplBlocked(prob->children[childindex], kktd);
 #else
       children[childindex]->addTermToDenseSchurCompl(prob->children[childindex], kktd);

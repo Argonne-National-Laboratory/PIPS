@@ -707,8 +707,12 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     }
   }
 
-  SC.writeToStream(cout); // todo write out in each iteration with global counter and MPI rank!
+  ofstream myfile;
+  myfile.open ("../old.txt");
 
+  SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
+
+  myfile.close();
   assert(0);
 }
  
@@ -789,6 +793,8 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
          if( nnzPerColRAC[colpos] != 0 )
             colId[blocksize++] = colpos;
 
+      std::cout << "blocksize " << blocksize << std::endl;
+
       if( blocksize == 0 )
          break;
 
@@ -798,7 +804,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
       A.fromGetColsBlock(colId, blocksize, N, locnx, colsBlockDense, NULL);
       C.fromGetColsBlock(colId, blocksize, N, (locnx + locmy), colsBlockDense, NULL);
 
-   //   solver->solve(colsBlockDense); // todo
+      solver->solve(blocksize, colsBlockDense, NULL); // todo
 
       multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
    }
@@ -815,7 +821,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
       int colpos = 0;
 
-      // do block-wise multiplication for columns containing Ft (F transposed)
+      // do block-wise multiplication for columns of F^T part
       while( colpos < locmyl )
       {
          int blocksize = 0;
@@ -832,7 +838,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
          // get column block from Ft (i.e., row block from F)
          F.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
 
-        // solver->solve(col);
+         solver->solve(blocksize, colsBlockDense, NULL);
 
          for( int i = 0; i < blocksize; i++ )
             colId[i] += nxMyP;
@@ -853,7 +859,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
       int colpos = 0;
 
-      // do block-wise multiplication for columns containing Gt (G transposed)
+      // do block-wise multiplication for columns of G^T part
       while( colpos < locmzl )
       {
          int blocksize = 0;
@@ -869,7 +875,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
          G.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
 
-      //   solver->solve(col);
+         solver->solve(blocksize, colsBlockDense, NULL); // todo
 
          for( int i = 0; i < blocksize; i++ )
              colId[i] += nxMyMzP;
@@ -878,7 +884,13 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
       }
    }
 
-   SC.writeToStream(cout); // todo write out in each iteration with global counter and MPI rank!
+   ofstream myfile;
+   myfile.open ("../blocked.txt");
+
+   SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
+
+   myfile.close();
+
 
    assert(0);
 
