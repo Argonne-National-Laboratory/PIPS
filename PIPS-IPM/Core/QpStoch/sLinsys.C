@@ -707,13 +707,23 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
     }
   }
 
+#if 0
+  // debug stuff
+  int myrank;
+  static int iteration = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
   ofstream myfile;
-  myfile.open ("../old.txt");
-
+  char filename[50];
+  sprintf(filename, "../old_%d_%d.txt", myrank, iteration);
+  myfile.open(filename);
+  iteration++;
   SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
 
+  std::cout << "iteration " << iteration << std::endl;
   myfile.close();
-  assert(0);
+
+  //assert(0);
+#endif
 }
  
 
@@ -792,8 +802,6 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
       for( ; colpos < nxP && blocksize < blocksizemax; colpos++ )
          if( nnzPerColRAC[colpos] != 0 )
             colId[blocksize++] = colpos;
-
-      std::cout << "blocksize " << blocksize << std::endl;
 
       if( blocksize == 0 )
          break;
@@ -884,16 +892,23 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
       }
    }
 
+#if 0
+   // debug stuff
+   int myrank;
+   static int iteration = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
    ofstream myfile;
-   myfile.open ("../blocked.txt");
-
+   char filename[50];
+   sprintf(filename, "../blocked_%d_%d.txt", myrank, iteration);
+   myfile.open(filename);
+   iteration++;
    SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
-
    myfile.close();
 
+   // assert(0);
+#endif
 
-   assert(0);
-
+   std::cout << "finished" << std::endl;
 
    delete[] colId;
    delete[] colsBlockDense;
