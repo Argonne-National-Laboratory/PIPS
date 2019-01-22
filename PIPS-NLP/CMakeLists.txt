@@ -53,6 +53,7 @@ if(HAVE_PETSC)
     ${COIN_LIBS}
     ${MA27_LIBRARY} ${MA57_LIBRARY}
     ${UMF_ALLINONE_LIBRARY}
+    ${PARMETIS_LIBRARY}
     ${METIS_LIBRARY} ${AMPL_LIBRARY} ${MATH_LIBS}
 #    ${PETSC_LIBRARY}
     ${PARDISO_LIBRARY}
@@ -78,6 +79,7 @@ if(HAVE_PETSC)
 #    ${UMF_ALLINONE_LIBRARY}
 #    ${UMFPACK_LIBRARY_PIPS}
 #    ${AMD_LIBRARY}
+    ${PARMETIS_LIBRARY}
     ${METIS_LIBRARY}
     ${PARDISO_LIBRARY}
     ${PETSC_LIBRARY}
@@ -95,7 +97,8 @@ else(HAVE_PETSC)
 	reducedSolverSpecial
 	global_var
 	nlpstoch
-     ${MA57_LIBRARY} ${MA27_LIBRARY} ${MUMPS_LIBRARY}  ${METIS_LIBRARY} 
+     ${MA57_LIBRARY} ${MA27_LIBRARY} ${MUMPS_LIBRARY}  
+     ${PARMETIS_LIBRARY} ${METIS_LIBRARY} 
     ${PARDISO_LIBRARY} 
     LU_solvers ${UMF_ALLINONE_LIBRARY} 
     ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS} 
@@ -112,7 +115,8 @@ else(HAVE_PETSC)
 #	nlpstochla
 #	 schurDecompSolver
 #     ReducedSpaceSolver reducedSolverSpecial
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}
+    ${MA27_LIBRARY} ${MA57_LIBRARY} 
+    ${PARMETIS_LIBRARY} ${METIS_LIBRARY} 
     ${PARDISO_LIBRARY}
     LU_solvers ${UMF_ALLINONE_LIBRARY}
     ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
@@ -127,7 +131,8 @@ else(HAVE_PETSC)
     reducedSolverSpecial
     nlpgensparse nlpbase nlpsparse nlpdense
     global_var
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${MUMPS_LIBRARY} ${METIS_LIBRARY}
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${MUMPS_LIBRARY}
+    ${PARMETIS_LIBRARY} ${METIS_LIBRARY} 
     ${PARDISO_LIBRARY}
     LU_solvers ${UMF_ALLINONE_LIBRARY}
     ${AMPL_LIBRARY} ${COIN_LIBS} ${MATH_LIBS}
@@ -158,7 +163,7 @@ target_link_libraries(pipsnlp
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
-  ${METIS_LIBRARY}
+  ${PARMETIS_LIBRARY} ${METIS_LIBRARY} 
   ${PARDISO_LIBRARY}
   #${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
@@ -189,7 +194,7 @@ add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   ${MA57_LIBRARY}
   ${MA27_LIBRARY}
   ${UMF_ALLINONE_LIBRARY}
-  ${METIS_LIBRARY}
+  ${PARMETIS_LIBRARY} ${METIS_LIBRARY} 
   ${PARDISO_LIBRARY}
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )

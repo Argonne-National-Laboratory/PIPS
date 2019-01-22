@@ -6,3 +6,6 @@ MUMPS cannot be downloaded automatically due to licensing issues.
 4) Copy the include directory in 'include/' directory under this location.
 
 Note: Instead of 3) and 4) once can modify the root CMakefile to point to the location where the 'lib/' and 'include/' are located
+
+Makefile_sample.inc provides an example configuration based on a Ubuntu 18.04
+build with the distribution provided scalapack.
