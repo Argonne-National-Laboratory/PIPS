@@ -790,6 +790,12 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
    // to save original column index of each column in colsBlockTrans
    int* colId = new int[blocksizemax];
+#if 1
+   int* colSparsity = new int[N];
+#else
+   int* colSparsity = NULL;
+#endif
+
    int colpos = 0;
 
    //                       (R)
@@ -808,11 +814,14 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
       memset(colsBlockDense, 0, blocksize * N * sizeof(double));
 
-      R.fromGetColsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
-      A.fromGetColsBlock(colId, blocksize, N, locnx, colsBlockDense, NULL);
-      C.fromGetColsBlock(colId, blocksize, N, (locnx + locmy), colsBlockDense, NULL);
+      if( colSparsity )
+         memset(colSparsity, 0, N * sizeof(int));
 
-      solver->solve(blocksize, colsBlockDense, NULL); // todo
+      R.fromGetColsBlock(colId, blocksize, N, 0, colsBlockDense, colSparsity);
+      A.fromGetColsBlock(colId, blocksize, N, locnx, colsBlockDense, colSparsity);
+      C.fromGetColsBlock(colId, blocksize, N, (locnx + locmy), colsBlockDense, colSparsity);
+
+      solver->solve(blocksize, colsBlockDense, colSparsity);
 
       multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
    }
@@ -827,7 +836,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
       SimpleVector nnzPerColFt(locmyl);
       F.addNnzPerRow(nnzPerColFt);
 
-      int colpos = 0;
+      colpos = 0;
 
       // do block-wise multiplication for columns of F^T part
       while( colpos < locmyl )
@@ -841,12 +850,15 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
          if( blocksize == 0 )
             break;
 
+         if( colSparsity )
+            memset(colSparsity, 0, N * sizeof(int));
+
          memset(colsBlockDense, 0, blocksize * N * sizeof(double));
 
          // get column block from Ft (i.e., row block from F)
-         F.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
+         F.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, colSparsity);
 
-         solver->solve(blocksize, colsBlockDense, NULL);
+         solver->solve(blocksize, colsBlockDense, colSparsity);
 
          for( int i = 0; i < blocksize; i++ )
             colId[i] += nxMyP;
@@ -865,7 +877,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
       SimpleVector nnzPerColGt(locmzl);
       G.addNnzPerRow(nnzPerColGt);
 
-      int colpos = 0;
+      colpos = 0;
 
       // do block-wise multiplication for columns of G^T part
       while( colpos < locmzl )
@@ -879,11 +891,14 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
          if( blocksize == 0 )
             break;
 
+         if( colSparsity )
+            memset(colSparsity, 0, N * sizeof(int));
+
          memset(colsBlockDense, 0, blocksize * N * sizeof(double));
 
-         G.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, NULL);
+         G.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, colSparsity);
 
-         solver->solve(blocksize, colsBlockDense, NULL); // todo
+         solver->solve(blocksize, colsBlockDense, colSparsity);
 
          for( int i = 0; i < blocksize; i++ )
              colId[i] += nxMyMzP;
@@ -905,11 +920,12 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
    SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
    myfile.close();
 
-   // assert(0);
+   assert(0);
 #endif
 
    std::cout << "finished" << std::endl;
 
+   delete[] colSparsity;
    delete[] colId;
    delete[] colsBlockDense;
 }
