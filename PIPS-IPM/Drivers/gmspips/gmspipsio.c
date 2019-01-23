@@ -974,6 +974,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    char bFileStem[GMS_SSSIZE], fileName[GMS_SSSIZE];
    int* varstage = NULL;
    int* rowstage = NULL;
+   int intMaxBlock = 0;
 
 
    assert(numBlocks>0);   
@@ -1018,10 +1019,20 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "x", &symNr));
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &rc));
    while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
-      varstage[keyInt[0]-1-gdxM] = (int) vals[GMS_VAL_SCALE] - offset;
+   {
+      int blk;
+      blk = (int) vals[GMS_VAL_SCALE] - offset;
+      varstage[keyInt[0]-1-gdxM] = blk;
+      if (blk>intMaxBlock)
+         intMaxBlock = blk;
+   }
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
 
-
+   if (intMaxBlock+offset != numBlocks)
+   {
+      printf("numblocks from command line (%d) does not match blocks in GDX file (%d)\n", numBlocks, intMaxBlock+offset);
+      return 1;
+   }
    {
       char* lastdot;     
          strcpy(bFileStem,gdxFilename);
@@ -1191,7 +1202,8 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    copyGDXSymbol(numBlocks,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"A",      gdxM,offset,NULL,    varstage, rowstage,0        ,2,objVarUel,objRowUel);
    copyGDXSymbol(numBlocks,bGDX,fGDX,"ANl",    gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
-   
+  
+   printf("gmspipscall: gmspips %d %s %s [scale] ...\n",numBlocks,bFileStem,GAMSSysDir);
    for (k=0; k<numBlocks; k++)
    {
       int errNr = gdxGetLastError(bGDX[k]);
