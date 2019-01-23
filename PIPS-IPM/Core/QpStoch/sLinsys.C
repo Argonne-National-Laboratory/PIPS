@@ -9,6 +9,10 @@
 #include "SparseLinearAlgebraPackage.h"
 #include "math.h"
 
+#ifdef _OPENMP
+#include "omp.h"
+#endif
+
 #ifndef MIN
 #define MIN(a,b) ((a > b) ? b : a)
 #endif
@@ -726,6 +730,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
 #endif
 }
  
+//#define TIME_SCHUR
 
 void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
                    DenseSymMatrix& SC)
@@ -779,7 +784,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
    const int withF = (locmyl > 0);
    const int withG = (locmzl > 0);
-   const int blocksizemax = nThreads;
+   const int blocksizemax = 1; // todo nThreads?
 
    assert(nThreads >= 1);
 
@@ -794,6 +799,10 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
    int* colSparsity = new int[N];
 #else
    int* colSparsity = NULL;
+#endif
+
+#ifdef TIME_SCHUR
+   const double t_start = omp_get_wtime();
 #endif
 
    int colpos = 0;
@@ -825,6 +834,12 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
       multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
    }
+
+#ifdef TIME_SCHUR
+   const double t_end = omp_get_wtime();
+   std::cout << "t_end - t_start:" << (t_end - t_start) << std::endl;
+   assert(0);
+#endif
 
    // do we have linking equality constraints?
    if( withF )

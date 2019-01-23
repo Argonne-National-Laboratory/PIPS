@@ -464,9 +464,8 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
    int mtype = -2, error;
    iparm[1] = 2; //metis
    iparm[2] = num_threads;
-   std::cout << "nrhss " << nrhss << std::endl;
 
-   //iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   //std::cout << "nrhss " << nrhss << std::endl;
    //iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
 
    iparm[7] = 1; /* Max numbers of iterative refinement steps . */
