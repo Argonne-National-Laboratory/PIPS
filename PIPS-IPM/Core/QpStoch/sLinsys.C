@@ -784,7 +784,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
    const int withF = (locmyl > 0);
    const int withG = (locmzl > 0);
-   const int blocksizemax = 1; // todo nThreads?
+   const int blocksizemax = 1; // todo nThreads, or 64?
 
    assert(nThreads >= 1);
 
@@ -943,6 +943,55 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
    delete[] colSparsity;
    delete[] colId;
    delete[] colsBlockDense;
+}
+
+void sLinsys::addTermToSparseSchurComplBlocked( sData *prob,
+                      SparseSymMatrix& SC)
+{
+#if 0
+   SparseGenMatrix& A = prob->getLocalA();
+   SparseGenMatrix& C = prob->getLocalC();
+   SparseGenMatrix& F = prob->getLocalF();
+   SparseGenMatrix& G = prob->getLocalG();
+   SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+   int* rowptrSC;
+   int* colidxSC;
+   double* eltsSC;
+
+   computeSC(SC0.size(), R, A, C, F, G, rowptrSC, colidxSC, eltsSC);
+
+   int* rowptrBase = SC0.krowM();
+   int* colidxBase = SC0.jcolM();
+   double* eltsBase = SC0.M();
+
+   assert(SC0.size() == nSC);
+
+   // add to summed Schur complement todo: exploit block structure, get start and end of block
+   for( int r = 0; r < nSC; r++ )
+   {
+      int cbase = rowptrBase[r];
+
+      // catch empty diagonal
+      if( rowptrSC[r + 1] - rowptrSC[r] == 1 && eltsSC[rowptrSC[r]] == 0.0 )
+         continue;
+
+      for( int j = rowptrSC[r]; j < rowptrSC[r + 1]; j++ )
+      {
+         const int c = colidxSC[j];
+
+         while( colidxBase[cbase] != c )
+         {
+            cbase++;
+            assert(cbase < rowptrBase[r + 1]);
+         }
+
+         eltsBase[cbase] += eltsSC[j];
+      }
+   }
+
+   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
+#endif
 }
 
 #include <set>
