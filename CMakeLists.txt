@@ -367,7 +367,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   else ()
     message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
     set(MUMPS_LIBRARY "")
-  endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
+  endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY AND PARMETIS_LIBRARY)
 
   #setting CXX_FLAGS
   if(HAVE_MA27)
