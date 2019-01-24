@@ -661,7 +661,9 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
 {
    assert(childindex < prob->children.size());
-
+#ifdef PARDISO_BLOCKSC
+   children[childindex]->addTermToSchurComplBlocked(prob->children[childindex], hasSparseKkt, *kkt);
+#else
    if( hasSparseKkt )
    {
       SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
@@ -670,13 +672,9 @@ void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
    else
    {
       DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
-#ifdef PARDISO_BLOCKSC
-      children[childindex]->addTermToDenseSchurComplBlocked(prob->children[childindex], kktd);
-#else
       children[childindex]->addTermToDenseSchurCompl(prob->children[childindex], kktd);
-#endif
    }
-
+#endif
 }
 
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,

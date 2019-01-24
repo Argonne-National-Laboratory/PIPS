@@ -5,15 +5,13 @@
 #include <cmath>
 #include <cstring>
 #include <cassert>
-
 #include "SparseStorage.h"
 #include "OoqpVector.h"
 #include "SimpleVector.h"
+#include "pipsdef.h"
 #include <limits>
 #include <fstream>
 #include <string>
-
-#include <pipsdef.h>
 #include <algorithm>
 
 int SparseStorage::instances = 0;
@@ -893,7 +891,58 @@ void SparseStorage::transMultMat( double beta,  double* Y, int ny, int ldy,
   }
 }
 
+// adds this * x to the part of row yrow of y that is in the upper half of y
+// y is assumed to be symmetric and sorted!
+void SparseStorage::multMatSymUpper( double beta, SparseStorage& y,
+              double alpha, double x[], int yrow, int ycolstart ) const
+{
+   assert(yrow >= 0 && yrow < y.m);
+   assert(ycolstart >= 0 && ycolstart < y.n);
+   assert(y.n == m);
+   assert(y.n == y.m);
 
+   int* const krowM_y = y.krowM;
+   int* const jcolM_y = y.jcolM;
+   double* const M_y = y.M;
+
+   // assert that yrow is sorted
+#ifndef NDEBUG
+   for( int ci = krowM_y[yrow] + 1; ci < krowM_y[yrow + 1]; ci++ )
+      assert( jcolM_y[ci - 1] < jcolM_y[ci] );
+#endif
+
+   // scale row yrow
+   if( beta != 1.0 )
+      for( int c_y = krowM_y[yrow]; c_y != krowM_y[yrow + 1]; c_y++ )
+         M_y[c_y] *= beta;
+
+   // add this * x to yrow (and exploit that y is symmetric)
+   int colpos_y = krowM_y[yrow];
+   for( int r = yrow; r < m; r++ )
+   {
+      double yrx = 0.0; // y_(r,.) * x
+      for( int c = krowM[r]; c != krowM[r + 1]; c++ )
+      {
+         const int col = jcolM[c];
+         yrx += x[col] * M[c];
+      }
+
+      if( PIPSisZero(yrx) )
+         continue;
+
+      for( ; colpos_y != krowM_y[yrow + 1]; colpos_y++ )
+      {
+         const int col_y = jcolM_y[colpos_y];
+         if( col_y == (r + ycolstart) )
+         {
+            M_y[colpos_y] += yrx;
+            break;
+         }
+      }
+
+      assert(colpos_y != krowM_y[r + 1]);
+   }
+}
 
 // y only contains the elements starting at firstrow
 // this is useful in the symmetric reduce, because we can

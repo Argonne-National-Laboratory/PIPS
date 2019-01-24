@@ -87,14 +87,11 @@ class sLinsys : public QpGenLinsys
   virtual void addTermToDenseSchurCompl(sData *prob, 
 					DenseSymMatrix& SC);
 
-  virtual void addTermToDenseSchurComplBlocked(sData *prob,
-               DenseSymMatrix& SC);
+  virtual void addTermToSchurComplBlocked(sData *prob, bool sparseSC,
+               SymMatrix& SC);
 
   virtual void addTermToSparseSchurCompl(sData *prob,
                SparseSymMatrix& SC) { assert(0 && "not implemented here"); };
-
-  virtual void addTermToSparseSchurComplBlocked(sData *prob,
-               SparseSymMatrix& SC);
 					
   virtual void addColsToDenseSchurCompl(sData *prob, 
 					DenseGenMatrix& out, 
@@ -117,6 +114,12 @@ class sLinsys : public QpGenLinsys
   int nThreads;
 
   void multLeftSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
+        const int* colId, int blocksize, bool sparseSC, SymMatrix& SC);
+
+  void multLeftSparseSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
+        const int* colId, int blocksize, SparseSymMatrix& SC);
+
+  void multLeftDenseSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
         const int* colId, int blocksize, DenseSymMatrix& SC);
 
 };

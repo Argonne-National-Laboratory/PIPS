@@ -732,8 +732,8 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
  
 //#define TIME_SCHUR
 
-void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
-                   DenseSymMatrix& SC)
+void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
+                   SymMatrix& SC)
 {
    SparseGenMatrix& A = prob->getLocalA();
    SparseGenMatrix& C = prob->getLocalC();
@@ -832,7 +832,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
 
       solver->solve(blocksize, colsBlockDense, colSparsity);
 
-      multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
+      multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, sparseSC, SC);
    }
 
 #ifdef TIME_SCHUR
@@ -878,7 +878,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
          for( int i = 0; i < blocksize; i++ )
             colId[i] += nxMyP;
 
-         multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
+         multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, sparseSC, SC);
       }
    }
 
@@ -918,7 +918,7 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
          for( int i = 0; i < blocksize; i++ )
              colId[i] += nxMyMzP;
 
-          multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC);
+          multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, sparseSC, SC);
       }
    }
 
@@ -945,54 +945,6 @@ void sLinsys::addTermToDenseSchurComplBlocked(sData *prob,
    delete[] colsBlockDense;
 }
 
-void sLinsys::addTermToSparseSchurComplBlocked( sData *prob,
-                      SparseSymMatrix& SC)
-{
-#if 0
-   SparseGenMatrix& A = prob->getLocalA();
-   SparseGenMatrix& C = prob->getLocalC();
-   SparseGenMatrix& F = prob->getLocalF();
-   SparseGenMatrix& G = prob->getLocalG();
-   SparseGenMatrix& R = prob->getLocalCrossHessian();
-
-   int* rowptrSC;
-   int* colidxSC;
-   double* eltsSC;
-
-   computeSC(SC0.size(), R, A, C, F, G, rowptrSC, colidxSC, eltsSC);
-
-   int* rowptrBase = SC0.krowM();
-   int* colidxBase = SC0.jcolM();
-   double* eltsBase = SC0.M();
-
-   assert(SC0.size() == nSC);
-
-   // add to summed Schur complement todo: exploit block structure, get start and end of block
-   for( int r = 0; r < nSC; r++ )
-   {
-      int cbase = rowptrBase[r];
-
-      // catch empty diagonal
-      if( rowptrSC[r + 1] - rowptrSC[r] == 1 && eltsSC[rowptrSC[r]] == 0.0 )
-         continue;
-
-      for( int j = rowptrSC[r]; j < rowptrSC[r + 1]; j++ )
-      {
-         const int c = colidxSC[j];
-
-         while( colidxBase[cbase] != c )
-         {
-            cbase++;
-            assert(cbase < rowptrBase[r + 1]);
-         }
-
-         eltsBase[cbase] += eltsSC[j];
-      }
-   }
-
-   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
-#endif
-}
 
 #include <set>
 #include <algorithm>
@@ -1107,11 +1059,52 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
   }
 }
 
-void sLinsys::multLeftSchurComplBlocked(/*const*/sData* prob, /*const*/double* colsBlockDense,
+void sLinsys:: multLeftSparseSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
+      const int* colId, int blocksize, SparseSymMatrix& SC)
+{
+   const int withF = (locmyl > 0);
+   const int withG = (locmzl > 0);
+   const int N = locnx + locmy + locmz;
+   const int NP = SC.size();
+   const int nxMyP = NP - locmyl - locmzl;
+   const int nxMyMzP = NP - locmzl;
+
+   SparseGenMatrix& A = prob->getLocalA();
+   SparseGenMatrix& C = prob->getLocalC();
+   SparseGenMatrix& F = prob->getLocalF();
+   SparseGenMatrix& G = prob->getLocalG();
+   SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+   // multiply each column with left factor of SC
+   // todo: #pragma omp parallel for schedule(dynamic, 10)
+   for( int it_col = 0; it_col < blocksize; it_col++ )
+   {
+      double* const col = &colsBlockDense[it_col * N];
+      const int row_sc = colId[it_col];
+
+      // SC+=R^T*x
+      R.transmultMatSymUpper(1.0, SC, -1.0, &col[0], row_sc, 0);
+
+      // SC+=A^T*y
+      A.transmultMatSymUpper(1.0, SC, -1.0, &col[locnx], row_sc, 0);
+
+      // SC+=C^T*z
+      C.transmultMatSymUpper(1.0, SC, -1.0, &col[locnx + locmy], row_sc, 0);
+
+      // do we have linking equality constraints? If so, set SC+=F*x
+      if( withF )
+         F.multMatSymUpper(1.0, SC, -1.0, &col[0], row_sc, nxMyP);
+
+      // do we have linking inequality constraints? If so, set SC+=G*x
+      if( withG )
+         G.multMatSymUpper(1.0, SC, -1.0, &col[0], row_sc, nxMyMzP);
+
+   }
+}
+
+void sLinsys:: multLeftDenseSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
       const int* colId, int blocksize, DenseSymMatrix& SC)
 {
-   assert(colId && prob && colsBlockDense);
-
    const int withF = (locmyl > 0);
    const int withG = (locmzl > 0);
    const int N = locnx + locmy + locmz;
@@ -1147,6 +1140,23 @@ void sLinsys::multLeftSchurComplBlocked(/*const*/sData* prob, /*const*/double* c
       // do we have linking inequality constraints? If so, set SC+=G*x
       if( withG )
          G.mult(1.0, &SC[row_sc][nxMyMzP], 1, -1.0, &col[0], 1);
+   }
+}
+
+void sLinsys::multLeftSchurComplBlocked(/*const*/sData* prob, /*const*/double* colsBlockDense,
+      const int* colId, int blocksize, bool sparseSC, SymMatrix& SC)
+{
+   assert(colId && prob && colsBlockDense);
+
+   if( sparseSC )
+   {
+      SparseSymMatrix& SC_sparse = dynamic_cast<SparseSymMatrix&>(SC);
+      multLeftSparseSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC_sparse);
+   }
+   else
+   {
+      DenseSymMatrix& SC_dense = dynamic_cast<DenseSymMatrix&>(SC);
+      multLeftDenseSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC_dense);
    }
 }
 
