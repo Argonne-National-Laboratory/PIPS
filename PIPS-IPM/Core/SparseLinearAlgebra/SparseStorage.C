@@ -939,6 +939,8 @@ void SparseStorage::multMatSymUpper( double beta, SparseStorage& y,
       if( PIPSisZero(yrx) )
          continue;
 
+      yrx *= alpha;
+
       for( ; c_y != krowM_y[yrow + 1]; c_y++ )
       {
          const int col_y = jcolM_y[c_y];

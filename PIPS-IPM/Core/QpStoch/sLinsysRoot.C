@@ -121,6 +121,17 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
+#if 0
+  ofstream myfile;
+
+  myfile.open("../0A.txt");
+
+  kkt->writeToStream(myfile);
+  myfile.close();
+
+  assert(0);
+#endif
+
 
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);

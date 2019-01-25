@@ -648,9 +648,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   //if (myRankp==0) msglvl=1;
   
   SimpleVector x_n(n);
-  SimpleVector rhs_n(n);
   const int dim=rhs.length();
-  memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
 
 #ifdef TIMING_FLOPS
   HPM_Start("PARDISOSolve");
@@ -659,7 +657,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
-	   iparm , &msglvl, rhs_n.elements(), x_n.elements(), &error, dparm );   
+	   iparm , &msglvl, rhs.elements(), x_n.elements(), &error, dparm );
 
 #ifdef TIMING_FLOPS
   HPM_Stop("PARDISOSolve");

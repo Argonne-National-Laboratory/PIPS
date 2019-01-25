@@ -787,8 +787,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
    const int blocksizemax = 1; // todo nThreads, or 64?
 
    assert(nThreads >= 1);
-
-   std::cout << "blocksizemax " << blocksizemax << std::endl;
+   //std::cout << "blocksizemax " << blocksizemax << std::endl;
 
    // save columns in this array todo member variable, initialized at first call (if == NULL)
    double* colsBlockDense = new double[blocksizemax * N];
@@ -937,8 +936,6 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
 
    assert(0);
 #endif
-
-   std::cout << "finished" << std::endl;
 
    delete[] colSparsity;
    delete[] colId;
