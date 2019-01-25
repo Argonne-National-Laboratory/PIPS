@@ -304,6 +304,13 @@ extern int gLackOfAccuracy;
 
 void PardisoSolver::solve( OoqpVector& rhs_in )
 {
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+   assert(iparm[23] == 1);
+   assert(iparm[24] == 1);
+#else
+   assert(iparm[23] == 0);
+#endif
+
    SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
    double * sol_local = nvec;
 
@@ -321,12 +328,6 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
                   // if needed, use 2 for advanced matchings and higher accuracy.
-#ifdef PARDISO_PARALLEL_AGGRESSIVE
-         iparm[23] = 1;
-         iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-#else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-#endif
 
    //iparm[5] = 1; /* replace drhs with the solution */
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM,

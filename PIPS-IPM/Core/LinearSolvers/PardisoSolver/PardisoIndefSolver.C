@@ -81,7 +81,6 @@ void PardisoIndefSolver::initPardiso()
       printf("[PARDISO]: License check was successful ... \n");
 
    iparm[2] = PIPSgetnOMPthreads();
-   std::cout << "PARDISO indef num_procs " << iparm[2] << std::endl;
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
@@ -167,6 +166,7 @@ void PardisoIndefSolver::factorizeFromSparse()
    {
       for( int j = iaStorage[r]; j < iaStorage[r + 1]; j++ )
       {
+         //if( fabs(aStorage[j]) > 1e-15 || jaStorage[j] == r )
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
 #ifdef SPARSE_PRECOND
