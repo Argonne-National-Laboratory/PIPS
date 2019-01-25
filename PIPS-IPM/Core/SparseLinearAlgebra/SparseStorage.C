@@ -898,8 +898,8 @@ void SparseStorage::multMatSymUpper( double beta, SparseStorage& y,
 {
    assert(yrow >= 0 && yrow < y.m);
    assert(ycolstart >= 0 && ycolstart < y.n);
-   assert(y.n == m);
    assert(y.n == y.m);
+   assert(y.n >= m + ycolstart);
 
    int* const krowM_y = y.krowM;
    int* const jcolM_y = y.jcolM;
@@ -917,10 +917,19 @@ void SparseStorage::multMatSymUpper( double beta, SparseStorage& y,
          M_y[c_y] *= beta;
 
    // add this * x to yrow (and exploit that y is symmetric)
-   int colpos_y = krowM_y[yrow];
-   for( int r = yrow; r < m; r++ )
+   int c_y = krowM_y[yrow];
+   for( int r = 0; r < m; r++ )
    {
-      double yrx = 0.0; // y_(r,.) * x
+      double yrx;
+      const int colplace_y = r + ycolstart; // the column in y where to place yrx
+
+      // not in upper half of y?
+      if( colplace_y < yrow )
+         continue;
+
+      // compute y_(r,.) * x
+      yrx = 0.0;
+
       for( int c = krowM[r]; c != krowM[r + 1]; c++ )
       {
          const int col = jcolM[c];
@@ -930,12 +939,12 @@ void SparseStorage::multMatSymUpper( double beta, SparseStorage& y,
       if( PIPSisZero(yrx) )
          continue;
 
-      for( ; colpos_y != krowM_y[yrow + 1]; colpos_y++ )
+      for( ; c_y != krowM_y[yrow + 1]; c_y++ )
       {
-         const int col_y = jcolM_y[colpos_y];
-         if( col_y == (r + ycolstart) )
+         const int col_y = jcolM_y[c_y];
+         if( col_y == colplace_y )
          {
-            M_y[colpos_y] += yrx;
+            M_y[c_y] += yrx;
             break;
          }
       }
