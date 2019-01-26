@@ -303,6 +303,24 @@ void SparseGenMatrix::mult ( double beta,  double y[], int incy,
   mStorage->mult( beta, y, incy, alpha, x, incx);
 }
 
+void SparseGenMatrix::multMatSymUpper( double beta, SymMatrix& y,
+      double alpha, double x[], int yrowstart, int ycolstart ) const
+{
+  SparseSymMatrix& y_sparse = dynamic_cast<SparseSymMatrix &>(y);
+  assert(!y_sparse.isLower);
+
+  mStorage->multMatSymUpper( beta, y_sparse.getStorageRef(), alpha, x, yrowstart, ycolstart );
+}
+
+void SparseGenMatrix::transmultMatSymUpper( double beta, SymMatrix& y,
+      double alpha, double x[], int yrowstart, int ycolstart ) const
+{
+  assert(m_Mt);
+  SparseSymMatrix& y_sparse = dynamic_cast<SparseSymMatrix &>(y);
+  assert(!y_sparse.isLower);
+
+  m_Mt->getStorageRef().multMatSymUpper( beta, y_sparse.getStorageRef(), alpha, x, yrowstart, ycolstart );
+}
 
 void SparseGenMatrix::transMult ( double beta,   OoqpVector& y_in,
 				  double alpha,  OoqpVector& x_in )
@@ -641,6 +659,24 @@ void SparseGenMatrix::deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const Ooq
 
    mStorage->deleteEmptyRowsCols(rowNnzVecSimple.elements(), colNnzVecSimple.elements());
 }
+
+void SparseGenMatrix::fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
+       double* rowsArrayDense, int* rowSparsity)
+{
+
+   mStorage->fromGetRowsBlock(rowIndices, nRows, arrayLineSize, arrayLineOffset, rowsArrayDense, rowSparsity);
+}
+
+void SparseGenMatrix::fromGetColsBlock(const int* colIndices, int nCols, int arrayLineSize, int arrayLineOffset,
+       double* colsArrayDense, int* rowSparsity)
+{
+   if( !m_Mt )
+      updateTransposed();
+
+   m_Mt->getStorageRef().fromGetRowsBlock(colIndices, nCols, arrayLineSize, arrayLineOffset,
+         colsArrayDense, rowSparsity);
+}
+
 
 void SparseGenMatrix::freeDynamicStorage()
 {

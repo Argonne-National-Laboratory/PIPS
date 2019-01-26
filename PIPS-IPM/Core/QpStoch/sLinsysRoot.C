@@ -121,6 +121,17 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
+#if 0
+  ofstream myfile;
+
+  myfile.open("../0A.txt");
+
+  kkt->writeToStream(myfile);
+  myfile.close();
+
+  assert(0);
+#endif
+
 
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
@@ -661,7 +672,9 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
 {
    assert(childindex < prob->children.size());
-
+#ifdef PARDISO_BLOCKSC
+   children[childindex]->addTermToSchurComplBlocked(prob->children[childindex], hasSparseKkt, *kkt);
+#else
    if( hasSparseKkt )
    {
       SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
@@ -672,7 +685,7 @@ void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
       DenseSymMatrix& kktd = dynamic_cast<DenseSymMatrix&>(*kkt);
       children[childindex]->addTermToDenseSchurCompl(prob->children[childindex], kktd);
    }
-
+#endif
 }
 
 void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,

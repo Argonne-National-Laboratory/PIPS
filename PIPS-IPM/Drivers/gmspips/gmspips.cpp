@@ -423,7 +423,7 @@ int main(int argc, char ** argv)
 	   if( gmsRank == 0 )
 	      cout << "Different steplengths in primal and dual direction are used." << endl;
 
-#ifdef WITH_PARDISO
+#if defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #else
@@ -446,7 +446,7 @@ int main(int argc, char ** argv)
 	}
 
 	else {
-#ifdef WITH_PARDISO
+#if defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #else

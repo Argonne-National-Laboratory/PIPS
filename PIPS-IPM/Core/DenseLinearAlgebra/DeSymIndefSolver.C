@@ -108,7 +108,7 @@ void DeSymIndefSolver::matrixChanged()
   }
 
 #ifdef DENSE_USE_HALF
-#ifndef NDEBUG
+#if 0
 #ifdef WITH_PARDISOINDEF
   for( int i = 0; i < n; i++ )
      for( int j = 0; j < n; j++ )

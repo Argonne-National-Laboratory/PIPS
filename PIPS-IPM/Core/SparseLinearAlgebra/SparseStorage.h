@@ -148,6 +148,9 @@ public:
 
   void reduceToLower();
 
+  void multMatSymUpper( double beta, SparseStorage& y,
+                double alpha, double x[], int yrow, int ycolstart ) const;
+
   void transMultLower( double beta,  double y[],
 			       double alpha, double x[], int firstrow );
   void transMultMat( double beta,  double* Y, int ny, int ldy,
@@ -165,6 +168,9 @@ public:
 
   void fromGetColBlock(int col, double *A, int lda, int colExtent, bool &allzero);
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
+
+  void fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
+        double* rowsArrayDense, int* rowSparsity = NULL);
 
   /** add nnz per row to given array (of size nRows) */
   void addNnzPerRow(double* vec) const;

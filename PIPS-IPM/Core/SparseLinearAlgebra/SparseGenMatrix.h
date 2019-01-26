@@ -83,6 +83,12 @@ public:
   virtual void mult ( double beta,  double y[], int incy,
                       double alpha, double x[], int incx );
 
+  virtual void multMatSymUpper( double beta, SymMatrix& y,
+        double alpha, double x[], int yrowstart, int ycolstart ) const;
+
+  virtual void transmultMatSymUpper( double beta, SymMatrix& y,
+        double alpha, double x[], int yrowstart, int ycolstart ) const;
+
   virtual void transMult( double beta,   OoqpVector& y,
 			  double alpha,  OoqpVector& x );
   virtual void transMult( double beta,  OoqpVector& y_in, int incy,
@@ -162,6 +168,12 @@ public:
   SparseGenMatrix& getTranspose();
 
   void deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
+
+  void fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
+        double* rowsArrayDense, int* rowSparsity = NULL);
+
+  void fromGetColsBlock(const int* colIndices, int nCols, int arrayLineSize, int arrayLineOffset,
+        double* colsArrayDense, int* rowSparsity = NULL);
 
   void freeDynamicStorage();
 

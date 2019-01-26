@@ -80,20 +80,7 @@ void PardisoIndefSolver::initPardiso()
    else if( myRank == 0 )
       printf("[PARDISO]: License check was successful ... \n");
 
-   int num_procs;
-
-   /* Numbers of processors, value of OMP_NUM_THREADS */
-   char* var = getenv("OMP_NUM_THREADS");
-   if( var != NULL )
-      sscanf(var, "%d", &num_procs);
-   else
-   {
-      printf("Set environment OMP_NUM_THREADS to 1");
-      exit(1);
-   }
-
-   // std::cout << "num_procs " << num_procs << std::endl;
-   iparm[2] = num_procs;
+   iparm[2] = PIPSgetnOMPthreads();
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
@@ -179,6 +166,7 @@ void PardisoIndefSolver::factorizeFromSparse()
    {
       for( int j = iaStorage[r]; j < iaStorage[r + 1]; j++ )
       {
+         //if( fabs(aStorage[j]) > 1e-15 || jaStorage[j] == r )
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
 #ifdef SPARSE_PRECOND

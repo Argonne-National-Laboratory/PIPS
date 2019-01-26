@@ -42,7 +42,9 @@ private:
   virtual void matrixChanged();
   virtual void solve( OoqpVector& rhs );
   virtual void solve( GenMatrix& rhs);
-  virtual void solve( GenMatrix& rhs, int *colSparsity);  
+  virtual void solve( GenMatrix& rhs, int *colSparsity);
+  virtual void solve( int nrhss, double* rhss, int* colSparsity );
+
  // virtual void Lsolve( OoqpVector& x );
  // virtual void Dsolve( OoqpVector& x );
  // virtual void Ltsolve( OoqpVector& x );

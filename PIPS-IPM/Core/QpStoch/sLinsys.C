@@ -9,14 +9,19 @@
 #include "SparseLinearAlgebraPackage.h"
 #include "math.h"
 
+#ifdef _OPENMP
+#include "omp.h"
+#endif
+
 #ifndef MIN
 #define MIN(a,b) ((a > b) ? b : a)
 #endif
 
 extern int gOuterIterRefin;
 
+
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
-  : QpGenLinsys(), kkt(NULL), solver(NULL)
+  : QpGenLinsys(), kkt(NULL), solver(NULL), nThreads(PIPSgetnOMPthreads())
 {
   factory = factory_;
 
@@ -57,7 +62,7 @@ sLinsys::sLinsys(sFactory* factory_,
 		 OoqpVector* dq_,
 		 OoqpVector* nomegaInv_,
 		 OoqpVector* rhs_)
-  : QpGenLinsys(), kkt(NULL), solver(NULL)
+  : QpGenLinsys(), kkt(NULL), solver(NULL), nThreads(PIPSgetnOMPthreads())
 {
   factory = factory_;
 
@@ -557,7 +562,6 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   SparseGenMatrix& G = prob->getLocalG();
   SparseGenMatrix& R = prob->getLocalCrossHessian();
 
-
   int N, nxP;
 
   R.getSize(N, nxP);
@@ -706,8 +710,239 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
       G.mult( 1.0, &SC[it + nxMyMzP][nxMyMzP],   1,  -1.0, &col[0],  1);
     }
   }
+
+#if 0
+  // debug stuff
+  int myrank;
+  static int iteration = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  ofstream myfile;
+  char filename[50];
+  sprintf(filename, "../old_%d_%d.txt", myrank, iteration);
+  myfile.open(filename);
+  iteration++;
+  SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
+
+  std::cout << "iteration " << iteration << std::endl;
+  myfile.close();
+
+  //assert(0);
+#endif
 }
  
+//#define TIME_SCHUR
+
+void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
+                   SymMatrix& SC)
+{
+   SparseGenMatrix& A = prob->getLocalA();
+   SparseGenMatrix& C = prob->getLocalC();
+   SparseGenMatrix& F = prob->getLocalF();
+   SparseGenMatrix& G = prob->getLocalG();
+   SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+   int N, nxP;
+
+   R.getSize(N, nxP);
+   const bool withR = (nxP != -1);
+
+   A.getSize(N, nxP);
+   const bool withA = (nxP != -1);
+
+   assert(N == locmy);
+   assert(locmyl >= 0);
+   assert(locmzl >= 0);
+
+   const int NP = SC.size();
+   assert(NP >= nxP);
+
+   const int nxMyP = NP - locmyl - locmzl;
+   const int nxMyMzP = NP - locmzl;
+
+   if( nxP == -1 )
+      C.getSize(N, nxP);
+
+   int N2, nxP2;
+   C.getSize(N2, nxP2);
+   const bool withC = (nxP2 != -1);
+
+   if( nxP == -1 )
+      nxP = NP;
+
+   N = locnx + locmy + locmz;
+
+   SimpleVector nnzPerColRAC(nxP);
+
+   if( withR )
+      R.addNnzPerCol(nnzPerColRAC);
+
+   if( withA )
+      A.addNnzPerCol(nnzPerColRAC);
+
+   if( withC )
+      C.addNnzPerCol(nnzPerColRAC);
+
+   const int withF = (locmyl > 0);
+   const int withG = (locmzl > 0);
+   const int blocksizemax = 1; // todo nThreads, or 64?
+
+   assert(nThreads >= 1);
+   //std::cout << "blocksizemax " << blocksizemax << std::endl;
+
+   // save columns in this array todo member variable, initialized at first call (if == NULL)
+   double* colsBlockDense = new double[blocksizemax * N];
+
+   // to save original column index of each column in colsBlockTrans
+   int* colId = new int[blocksizemax];
+#if 1
+   int* colSparsity = new int[N];
+#else
+   int* colSparsity = NULL;
+#endif
+
+#ifdef TIME_SCHUR
+   const double t_start = omp_get_wtime();
+#endif
+
+   int colpos = 0;
+
+   //                       (R)
+   //     SC +=  B^T  K^-1  (A)
+   //                       (C)
+   while( colpos < nxP )
+   {
+      int blocksize = 0;
+
+      for( ; colpos < nxP && blocksize < blocksizemax; colpos++ )
+         if( nnzPerColRAC[colpos] != 0 )
+            colId[blocksize++] = colpos;
+
+      if( blocksize == 0 )
+         break;
+
+      memset(colsBlockDense, 0, blocksize * N * sizeof(double));
+
+      if( colSparsity )
+         memset(colSparsity, 0, N * sizeof(int));
+
+      R.fromGetColsBlock(colId, blocksize, N, 0, colsBlockDense, colSparsity);
+      A.fromGetColsBlock(colId, blocksize, N, locnx, colsBlockDense, colSparsity);
+      C.fromGetColsBlock(colId, blocksize, N, (locnx + locmy), colsBlockDense, colSparsity);
+
+      solver->solve(blocksize, colsBlockDense, colSparsity);
+
+      multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, sparseSC, SC);
+   }
+
+#ifdef TIME_SCHUR
+   const double t_end = omp_get_wtime();
+   std::cout << "t_end - t_start:" << (t_end - t_start) << std::endl;
+   assert(0);
+#endif
+
+   // do we have linking equality constraints?
+   if( withF )
+   {
+      //                       (F^T)
+      //     SC +=  B^T  K^-1  (0  )
+      //                       (0  )
+
+      SimpleVector nnzPerColFt(locmyl);
+      F.addNnzPerRow(nnzPerColFt);
+
+      colpos = 0;
+
+      // do block-wise multiplication for columns of F^T part
+      while( colpos < locmyl )
+      {
+         int blocksize = 0;
+
+         for( ; colpos < locmyl && blocksize < blocksizemax; colpos++ )
+            if( nnzPerColFt[colpos] != 0 )
+               colId[blocksize++] = colpos;
+
+         if( blocksize == 0 )
+            break;
+
+         if( colSparsity )
+            memset(colSparsity, 0, N * sizeof(int));
+
+         memset(colsBlockDense, 0, blocksize * N * sizeof(double));
+
+         // get column block from Ft (i.e., row block from F)
+         F.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, colSparsity);
+
+         solver->solve(blocksize, colsBlockDense, colSparsity);
+
+         for( int i = 0; i < blocksize; i++ )
+            colId[i] += nxMyP;
+
+         multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, sparseSC, SC);
+      }
+   }
+
+   // do we have linking inequality constraints?
+   if( withG )
+   {
+      //                       (G^T)
+      //     SC +=  B^T  K^-1  (0  )
+      //                       (0  )
+
+      SimpleVector nnzPerColGt(locmzl);
+      G.addNnzPerRow(nnzPerColGt);
+
+      colpos = 0;
+
+      // do block-wise multiplication for columns of G^T part
+      while( colpos < locmzl )
+      {
+         int blocksize = 0;
+
+         for( ; colpos < locmzl && blocksize < blocksizemax; colpos++ )
+            if( nnzPerColGt[colpos] != 0 )
+               colId[blocksize++] = colpos;
+
+         if( blocksize == 0 )
+            break;
+
+         if( colSparsity )
+            memset(colSparsity, 0, N * sizeof(int));
+
+         memset(colsBlockDense, 0, blocksize * N * sizeof(double));
+
+         G.fromGetRowsBlock(colId, blocksize, N, 0, colsBlockDense, colSparsity);
+
+         solver->solve(blocksize, colsBlockDense, colSparsity);
+
+         for( int i = 0; i < blocksize; i++ )
+             colId[i] += nxMyMzP;
+
+          multLeftSchurComplBlocked(prob, colsBlockDense, colId, blocksize, sparseSC, SC);
+      }
+   }
+
+#if 0
+   // debug stuff
+   int myrank;
+   static int iteration = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+   ofstream myfile;
+   char filename[50];
+   sprintf(filename, "../blocked_%d_%d.txt", myrank, iteration);
+   myfile.open(filename);
+   iteration++;
+   SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
+   myfile.close();
+
+   assert(0);
+#endif
+
+   delete[] colSparsity;
+   delete[] colId;
+   delete[] colsBlockDense;
+}
+
+
 #include <set>
 #include <algorithm>
 
@@ -819,6 +1054,107 @@ void sLinsys::symAddColsToDenseSchurCompl(sData *prob,
       outi += nxP-c;
     }
   }
+}
+
+void sLinsys:: multLeftSparseSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
+      const int* colId, int blocksize, SparseSymMatrix& SC)
+{
+   const int withF = (locmyl > 0);
+   const int withG = (locmzl > 0);
+   const int N = locnx + locmy + locmz;
+   const int NP = SC.size();
+   const int nxMyP = NP - locmyl - locmzl;
+   const int nxMyMzP = NP - locmzl;
+
+   SparseGenMatrix& A = prob->getLocalA();
+   SparseGenMatrix& C = prob->getLocalC();
+   SparseGenMatrix& F = prob->getLocalF();
+   SparseGenMatrix& G = prob->getLocalG();
+   SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+   // multiply each column with left factor of SC
+   // todo: #pragma omp parallel for schedule(dynamic, 10)
+   for( int it_col = 0; it_col < blocksize; it_col++ )
+   {
+      double* const col = &colsBlockDense[it_col * N];
+      const int row_sc = colId[it_col];
+
+      // SC+=R^T*x
+      R.transmultMatSymUpper(1.0, SC, -1.0, &col[0], row_sc, 0);
+
+      // SC+=A^T*y
+      A.transmultMatSymUpper(1.0, SC, -1.0, &col[locnx], row_sc, 0);
+
+      // SC+=C^T*z
+      C.transmultMatSymUpper(1.0, SC, -1.0, &col[locnx + locmy], row_sc, 0);
+
+      // do we have linking equality constraints? If so, set SC+=F*x
+      if( withF )
+         F.multMatSymUpper(1.0, SC, -1.0, &col[0], row_sc, nxMyP);
+
+      // do we have linking inequality constraints? If so, set SC+=G*x
+      if( withG )
+         G.multMatSymUpper(1.0, SC, -1.0, &col[0], row_sc, nxMyMzP);
+
+   }
+}
+
+void sLinsys:: multLeftDenseSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,
+      const int* colId, int blocksize, DenseSymMatrix& SC)
+{
+   const int withF = (locmyl > 0);
+   const int withG = (locmzl > 0);
+   const int N = locnx + locmy + locmz;
+   const int NP = SC.size();
+   const int nxMyP = NP - locmyl - locmzl;
+   const int nxMyMzP = NP - locmzl;
+
+   SparseGenMatrix& A = prob->getLocalA();
+   SparseGenMatrix& C = prob->getLocalC();
+   SparseGenMatrix& F = prob->getLocalF();
+   SparseGenMatrix& G = prob->getLocalG();
+   SparseGenMatrix& R = prob->getLocalCrossHessian();
+
+   // multiply each column with left factor of SC todo add OMP
+   for( int it_col = 0; it_col < blocksize; it_col++ )
+   {
+      double* const col = &colsBlockDense[it_col * N];
+      const int row_sc = colId[it_col];
+
+      // SC+=R^T*x
+      R.transMult(1.0, &SC[row_sc][0], 1, -1.0, &col[0], 1);
+
+      // SC+=A^T*y
+      A.transMult(1.0, &SC[row_sc][0], 1, -1.0, &col[locnx], 1);
+
+      // SC+=C^T*z
+      C.transMult(1.0, &SC[row_sc][0], 1, -1.0, &col[locnx + locmy], 1);
+
+      // do we have linking equality constraints? If so, set SC+=F*x
+      if( withF )
+         F.mult(1.0, &SC[row_sc][nxMyP], 1, -1.0, &col[0], 1);
+
+      // do we have linking inequality constraints? If so, set SC+=G*x
+      if( withG )
+         G.mult(1.0, &SC[row_sc][nxMyMzP], 1, -1.0, &col[0], 1);
+   }
+}
+
+void sLinsys::multLeftSchurComplBlocked(/*const*/sData* prob, /*const*/double* colsBlockDense,
+      const int* colId, int blocksize, bool sparseSC, SymMatrix& SC)
+{
+   assert(colId && prob && colsBlockDense);
+
+   if( sparseSC )
+   {
+      SparseSymMatrix& SC_sparse = dynamic_cast<SparseSymMatrix&>(SC);
+      multLeftSparseSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC_sparse);
+   }
+   else
+   {
+      DenseSymMatrix& SC_dense = dynamic_cast<DenseSymMatrix&>(SC);
+      multLeftDenseSchurComplBlocked(prob, colsBlockDense, colId, blocksize, SC_dense);
+   }
 }
 
 /*
