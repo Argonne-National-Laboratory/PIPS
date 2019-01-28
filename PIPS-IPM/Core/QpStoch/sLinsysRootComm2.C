@@ -290,7 +290,6 @@ void sLinsysRootComm2::submatrixReduce(DenseSymMatrix* A,
   assert(n >= row+drow);
   assert(n >= col+dcol);
 #endif
-  int iErr;
   int chunk_size = CHUNK_SIZE / n * n; 
   chunk_size = min(chunk_size, n*n);
   double* chunk = new double[chunk_size];
@@ -305,9 +304,8 @@ void sLinsysRootComm2::submatrixReduce(DenseSymMatrix* A,
     //iErr=MPI_Allreduce(&M[iRow][0], 
     //		       chunk, rows_in_chunk*n, 
     //		       MPI_DOUBLE, MPI_SUM, comm);
-    iErr=MPI_Reduce(&M[iRow][0], chunk, rows_in_chunk*n,
+    MPI_Reduce(&M[iRow][0], chunk, rows_in_chunk*n,
 		    MPI_DOUBLE, MPI_SUM, 0, comm);
-    assert(iErr==MPI_SUCCESS);
 
     //copy data in M
     for(int i=iRow; i<iRow+rows_in_chunk; i++) {

@@ -706,7 +706,6 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
   assert(n >= endRow);
   assert(n >= endCol);
 
-  int iErr;
   int chunk_size = (CHUNK_SIZE / n) * n;
   chunk_size = min(chunk_size, n*nRows);
 
@@ -723,10 +722,12 @@ void sLinsysRoot::submatrixAllReduce(DenseSymMatrix* A,
       rows_in_chunk = endRow - iRow;
 
     assert(rows_in_chunk > 0);
-
-    iErr=MPI_Allreduce(&M[iRow][0], chunk, rows_in_chunk*n, MPI_DOUBLE, MPI_SUM, comm);
-
+#ifndef NDEBUG
+    const int iErr=MPI_Allreduce(&M[iRow][0], chunk, rows_in_chunk*n, MPI_DOUBLE, MPI_SUM, comm);
     assert(iErr==MPI_SUCCESS);
+#else
+    MPI_Allreduce(&M[iRow][0], chunk, rows_in_chunk*n, MPI_DOUBLE, MPI_SUM, comm);
+#endif
 
     int shift = 0;
 
@@ -758,10 +759,9 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
    assert(startCol >= 0);
 
    const int endRow = startRow + nRows;
-   const int endCol = startCol + nCols;
 
    assert(A->mStorage->n >= endRow);
-   assert(A->mStorage->n >= endCol);
+   assert(A->mStorage->n >= startCol + nCols);
 
    const int buffersize = nRows * nCols;
 
@@ -780,9 +780,12 @@ void sLinsysRoot::submatrixAllReduceFull(DenseSymMatrix* A,
 
    assert(counter == buffersize);
 
+#ifndef NDEBUG
    const int iErr = MPI_Allreduce(bufferSend, bufferRecv, buffersize, MPI_DOUBLE, MPI_SUM, comm);
-
    assert(iErr == MPI_SUCCESS);
+#else
+   MPI_Allreduce(bufferSend, bufferRecv, buffersize, MPI_DOUBLE, MPI_SUM, comm);
+#endif
 
    // copy back
    counter = 0;
@@ -822,7 +825,7 @@ void sLinsysRoot::submatrixAllReduceDiagLower(DenseSymMatrix* A,
    double* const bufferRecv = new double[buffersize];
 
    int counter = 0;
-   // todo memopt, use memcpy?
+
    for( int i = substart; i < subend; i++ )
       for( int j = substart; j <= i; j++ )
       {
@@ -832,9 +835,12 @@ void sLinsysRoot::submatrixAllReduceDiagLower(DenseSymMatrix* A,
 
    assert(counter == buffersize);
 
+#ifndef NDEBUG
    const int iErr = MPI_Allreduce(bufferSend, bufferRecv, buffersize, MPI_DOUBLE, MPI_SUM, comm);
-
    assert(iErr == MPI_SUCCESS);
+#else
+   MPI_Allreduce(bufferSend, bufferRecv, buffersize, MPI_DOUBLE, MPI_SUM, comm);
+#endif
 
    counter = 0;
    for( int i = substart; i < subend; i++ )

@@ -959,7 +959,6 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       SparseGenMatrix& At = prob->getLocalB().getTranspose(); // yes, B
       const double* MAt = At.M();
       const int* krowAt = At.krowM();
-      const int* jcolAt = At.jcolM();
 
       for( int i = 0; i < locnx; ++i )
       {
@@ -973,9 +972,9 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 
          for( int p = pstart; p < pend; ++p )
          {
-            assert(jcolAt[p] < locmy);
+            assert(At.jcolM()[p] < locmy);
             assert(blockStart + (p - pstart) <= krowKkt[i + 1]);
-            assert(jcolKkt[blockStart + (p - pstart)] == (locnx + jcolAt[p]));
+            assert(jcolKkt[blockStart + (p - pstart)] == (locnx + At.jcolM()[p]));
 
             MKkt[blockStart + (p - pstart)] += MAt[p];
          }
@@ -1016,8 +1015,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 
             for( int p = krowFt[i], shift = 0; p < pend; ++p, ++shift )
             {
-               const int col = jcolFt[p];
-               assert(col < locmyl && jcolKkt[blockStart + shift] == (locnx + locmy + col));
+               assert(jcolFt[p] < locmyl && jcolKkt[blockStart + shift] == (locnx + locmy + jcolFt[p]));
 
                MKkt[blockStart + shift] += MFt[p];
             }
@@ -1061,8 +1059,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 
             for( int p = krowGt[i], shift = 0; p < pend; ++p, ++shift )
             {
-               const int col = jcolGt[p];
-               assert(col < locmzl && jcolKkt[blockStart + shift] == (locnx + locmy + locmyl + col));
+               assert(jcolGt[p] < locmzl && jcolKkt[blockStart + shift] == (locnx + locmy + locmyl + jcolGt[p]));
 
                MKkt[blockStart + shift] += MGt[p];
             }

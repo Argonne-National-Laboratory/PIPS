@@ -144,10 +144,9 @@ void SparseStorage::RowScale( OoqpVector& scale_in )
 void SparseStorage::SymmetricScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
 
-  assert( extent == n );
-  assert( extent == m );
+  assert( scale.length() == n );
+  assert( scale.length() == m );
 
   int i, j, k;
 

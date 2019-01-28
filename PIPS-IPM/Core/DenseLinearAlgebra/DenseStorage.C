@@ -276,10 +276,9 @@ void DenseStorage::atPutDiagonal( int idiag,
 void DenseStorage::ColumnScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
-
-  assert( extent == n );
   
+  assert( scale.length() == n );
+
   int i,j;
 
   for ( i = 0; i < m; i++ ) {
@@ -308,9 +307,8 @@ void DenseStorage::scalarMult( double num )
 void DenseStorage::RowScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
 
-  assert( extent == m );
+  assert( scale.length() == m );
 
   int i, j;
 
@@ -327,10 +325,9 @@ void DenseStorage::RowScale( OoqpVector& scale_in )
 void DenseStorage::SymmetricScale( OoqpVector& scale_in )
 {
   SimpleVector & scale = dynamic_cast<SimpleVector &>(scale_in);
-  int extent = scale.length();
 
-  assert( extent == n );
-  assert( extent == m );
+  assert( scale.length() == n );
+  assert( scale.length() == m );
 
   int i, j;
 

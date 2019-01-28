@@ -751,6 +751,8 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
    StochVector* irhsStoch;
    if( irhs )
       irhsStoch = dynamic_cast<StochVector*>(irhs);
+   else
+      irhsStoch = NULL;
 
    int m, n;
    if( myRank == 0)
@@ -759,7 +761,7 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
       this->Bmat->getSize(m, n);
       for(int i=0; i<m; i++)
       {
-         if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vec)->elements()[i] != 0.0) )
+         if( !irhs || (irhsStoch && dynamic_cast<SimpleVector*>(irhsStoch->vec)->elements()[i] != 0.0) )
             out<< " "<<rt<<" row_"<<rt<<"_"<<"R" <<"_"<<i <<endl;
       }
       // linking rows:
@@ -768,7 +770,7 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
          this->Blmat->getSize(m, n);
          for(int i=0; i<m; i++)
          {
-            if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->vecl)->elements()[i] != 0.0) )
+            if( !irhs || (irhsStoch && dynamic_cast<SimpleVector*>(irhsStoch->vecl)->elements()[i] != 0.0) )
                out<<" "<< rt<<" row_"<<rt<<"_"<<"L" <<"_"<<i <<endl;
          }
       }
@@ -778,7 +780,7 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
       children[it]->Amat->getSize(m, n);
       for(int i=0; i<m; i++)
       {
-         if( !irhs || (irhs && dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec)->elements()[i] != 0.0) )
+         if( !irhs || (irhsStoch && dynamic_cast<SimpleVector*>(irhsStoch->children[it]->vec)->elements()[i] != 0.0) )
             out<<" "<< rt<<" row_"<<rt<<"_"<<it <<"_"<<i <<endl;
       }
    }

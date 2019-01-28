@@ -1091,7 +1091,7 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
    else
       assert(0);
 
-   StochVector* ic;
+   StochVector* ic = NULL;
    if( irhs )
       ic = dynamic_cast<StochVector*>(irhs);
 
@@ -1100,7 +1100,7 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
       string rowNameStub = " B row_";
       rowNameStub+= rt;
       rowNameStub+="_R_";
-      if( irhs)
+      if( irhs && ic )
          vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<SimpleVector*>(ic->vec));
       else
          vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
