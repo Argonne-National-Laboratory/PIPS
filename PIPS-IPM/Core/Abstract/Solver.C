@@ -240,33 +240,44 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 
 	const double mufull = iterate->mustep_pd( step, maxAlpha_p, maxAlpha_d) / gamma_a;
 
-
+	// No primal constraints were blocking?
 	if( !primalBlocking )
 	{
-		alpha_primal = 1.0; // No primal constraints were blocking
+		alpha_primal = 1.0;
 	}
 	else
 	{
-		alpha_primal = ( - primalValue_p +
-						mufull / ( dualValue_p + maxAlpha_d * dualStep_p ) ) /
-					primalStep_p;
-		#ifdef TIMING
-			std::cout << "primal alpha " << alpha_primal << std::endl;
-		#endif
+	   const double dualValueEstim_p = dualValue_p + maxAlpha_d * dualStep_p;
+
+      if( PIPSisEQ(dualValueEstim_p, 0.0 ) )
+      {
+         alpha_primal = 0.0; // to be corrected below
+      }
+      else
+      {
+         alpha_primal = ( - primalValue_p + mufull / ( dualValueEstim_p ) ) /
+                  primalStep_p;
+      }
 	}
 
+	// No dual constraints were blocking?
 	if( !dualBlocking )
 	{
-		alpha_dual = 1.0; // No dual constraints were blocking
+		alpha_dual = 1.0;
 	}
 	else
 	{
-		alpha_dual = ( - dualValue_d +
-						mufull / ( primalValue_d + maxAlpha_p * primalStep_d ) ) /
-					dualStep_d;
-		#ifdef TIMING
-			std::cout << "dual alpha " << alpha_dual << std::endl;
-		#endif
+	   const double primValueEstim_d = primalValue_d + maxAlpha_p * primalStep_d;
+
+	   if( PIPSisEQ(primValueEstim_d, 0.0 ) )
+	   {
+         alpha_dual = 0.0; // to be corrected below
+	   }
+	   else
+	   {
+         alpha_dual = ( - dualValue_d + mufull / ( primValueEstim_d ) ) /
+               dualStep_d;
+	   }
 	}
 
 	assert(alpha_primal <= 1.0);

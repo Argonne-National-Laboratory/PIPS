@@ -755,6 +755,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
     }
 
     MPI_Allreduce(MPI_IN_PLACE, &count, 1, MPI_INT, MPI_SUM, mpiComm);
+    assert(count >= 1);
 
     // is there more than one process with step==stepG?
     if( count > 1 )
@@ -782,9 +783,14 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
     *w_elt = bufferOut[0]; *wstep_elt=bufferOut[1];
     *u_elt = bufferOut[2]; *ustep_elt=bufferOut[3];
 
-    //first_or_second  negative means no blocking, so set it to 0.
-    first_or_second = bufferOut[4]<0?0:(int)bufferOut[4];
-    assert(first_or_second==0 || first_or_second==1 || first_or_second==2);
+    // negative or 0 means no blocking, so set first_or_second to 0.
+    if( bufferOut[4] <= 0.5 )
+       first_or_second = 0;
+    else if( bufferOut[4] <= 1.5 )
+       first_or_second = 1;
+    else
+       first_or_second = 2;
+
     step=stepG;
   }
   return step;
@@ -894,6 +900,8 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
 
       MPI_Allreduce(MPI_IN_PLACE, count, 2, MPI_INT, MPI_SUM, mpiComm);
 
+      assert(count >= 1);
+
       int myrank;
       MPI_Comm_rank(mpiComm, &myrank);
 
@@ -944,12 +952,10 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
       u_elt_d = bufferOut[7];
       ustep_elt_d = bufferOut[8];
 
-      //primalBlocking  negative means no blocking, so set it to 0.
-      primalBlocking = bufferOut[4] <= 0.0 ? false : true;
+      primalBlocking = bufferOut[4] <= 0.5 ? false : true;
       maxStepPri = maxStepGlobalPri;
 
-      //dualBlocking negative means no blocking, so set it to 0.
-      dualBlocking = bufferOut[9] <= 0.0 ? false : true;
+      dualBlocking = bufferOut[9] <= 0.5 ? false : true;
       maxStepDual = maxStepGlobalDual;
    }
 }
