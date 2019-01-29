@@ -361,10 +361,16 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     # - mpifort also needed
     # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
     if(NOT SCALAPACK_LIBRARIES)
+      MESSAGE("SCALAPACK_LIBRARIES for MUMPS not set. Default linking for Ubuntu.")
       set(SCALAPACK_LIBRARIES "-lscalapack-openmpi -lblacs-openmpi  -lblacsF77init-openmpi -lblacsCinit-openmpi") 
     endif(NOT SCALAPACK_LIBRARIES)
-    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord -lmpi_mpifh ${SCALAPACK_LIBRARIES}")
-
+    # -lmpi_mpifh includes the OpenMPI Fortran MPI interface used when
+    # building MUMPS. MPICH requires -lmpifort
+    if(NOT MUMPS_FORT_LIB)
+      MESSAGE("MUMPS_FORT_LIB not set for linking the Fortran MPI interface library required by MUMPS. Using OpenMPI Fortran interface -lmpi_mpifh")
+      set(MUMPS_FORT_LIB "-lmpi_mpifh")
+    endif(NOT MUMPS_FORT_LIB)
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord ${MUMPS_FORT_LIB} ${SCALAPACK_LIBRARIES}")
     MESSAGE( "SCALAPACK_LIBRARIES: ${SCALAPACK_LIBRARIES}")
     MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
     include_directories(${MUMPS_INCLUDE_DIR})
