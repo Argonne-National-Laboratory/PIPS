@@ -900,7 +900,7 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
 
       MPI_Allreduce(MPI_IN_PLACE, count, 2, MPI_INT, MPI_SUM, mpiComm);
 
-      assert(count >= 1);
+      assert(count[0] >= 1 && count[1] >= 1);
 
       int myrank;
       MPI_Comm_rank(mpiComm, &myrank);
