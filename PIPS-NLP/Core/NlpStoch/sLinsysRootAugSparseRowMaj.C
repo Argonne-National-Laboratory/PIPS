@@ -7,9 +7,7 @@
 #include "sData.h"
 #include "sTree.h"
 
-#ifdef WITH_MUMPS
 #include "MumpsSolver.h"
-#endif
 
 #include <unistd.h>
 #include "math.h"
@@ -80,18 +78,22 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
   iAmRank0 = (myRank==0);
 
-  //1. create the communicator for the subset of processes that MUMPS should use
+  // 1. Get the on node ranks with shared-memory access
+  MPI_Comm nodeComm;
+  MPI_Comm_split_type(mpiComm, MPI_COMM_TYPE_SHARED, myRank, MPI_INFO_NULL, &nodeComm);
+
+
+  // 2. create the communicator for the subset of processes that MUMPS should use
   int color = MPI_UNDEFINED;
   
-  //color a couple of ranks, say 0,1,2,4 and leave the other ones uncolored. 
-  //MUMPS communicator created below will be MPI_COMM_NULL on the nodes not colored
+  // color a couple of ranks, say 0,1,2,4 and leave the other ones uncolored. 
+  // MUMPS communicator created below will be MPI_COMM_NULL on the nodes not colored
   if(myRank<4)
     color = 0;
   MPI_Comm mumpsComm;
-  MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
- 
-#ifdef WITH_MUMPS
-  //2. create and return the wrapper instance for Mumps
+  MPI_Comm_split(nodeComm, color, 0, &mumpsComm);
+  
+  // 3. create and return the wrapper instance for Mumps
   if(0) {
     DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
     return new MumpsDenseSolver(kktmat, mumpsComm, mpiComm);
@@ -99,9 +101,6 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
     SparseSymMatrixRowMajList* kktmat = dynamic_cast<SparseSymMatrixRowMajList*>(kktmat_);
     return new MumpsSolver(kktmat, mumpsComm, mpiComm);
   }
-#else
-  assert(0 && "PIPS was not built with MUMPS");
-#endif
 }
 
 #ifdef TIMING
@@ -365,6 +364,7 @@ void sLinsysRootAugSpTriplet::initializeKKT(sData* prob, Variables* vars)
 void sLinsysRootAugSpTriplet::reduceKKT()
 {
   //  if(!iAmDistrib) return;
+
   SparseSymMatrixRowMajList& kktm = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
 
   //get local contribution in triplet format, so that we can reuse MumpsSolver::mumps_->
