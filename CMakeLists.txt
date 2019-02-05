@@ -270,9 +270,10 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     message(STATUS "MA27_LIBRARY = ${MA27_LIBRARY}")
   endif(MA27_LIBRARY)
 
-  set(METIS_DIR ${SHARED_DIR}/METIS/src)
-  find_library(METIS_LIBRARY NAME libmetis.a HINTS ${METIS_DIR} PATHS ${METIS_DIR})
-  find_path(METIS_INCLUDE_DIR NAME metis.h HINTS ${METIS_DIR}/Lib)
+  set(METIS_DIR ${SHARED_DIR}/METIS)
+  find_library(PARMETIS_LIBRARY NAME libparmetis.a HINTS ${METIS_DIR}/lib PATHS ${METIS_DIR}/lib)
+  find_library(METIS_LIBRARY NAME libmetis.a HINTS ${METIS_DIR}/lib PATHS ${METIS_DIR}/lib)
+  find_path(METIS_INCLUDE_DIR NAME metis.h HINTS ${METIS_DIR}/include)
   if(METIS_INCLUDE_DIR AND METIS_LIBRARY)
     include_directories(${METIS_INCLUDE_DIR})
     set(HAVE_METIS TRUE)
@@ -345,7 +346,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   set(MUMPS_DIR ${SHARED_DIR}/MUMPS)
   find_library(MUMPS_LIBRARY libdmumps.a PATHS ${MUMPS_DIR}/lib)
   find_path(MUMPS_INCLUDE_DIR NAME dmumps_c.h HINTS ${MUMPS_DIR}/include)
-  if(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
+  if(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY AND PARMETIS_LIBRARY)
     # we assume the other libraries are in there
     set(HAVE_MUMPS TRUE)
 
@@ -359,14 +360,24 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     # - scalapack and blacs should be set in ${SCALAPACK_LIBRARIES} using Toolchain.cmake (or hardcoded here)
     # - mpifort also needed
     # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
-    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -L/home/petra1/work/installs/parmetis-4.0.3/lib -ldmumps -lmumps_common -lpord -lmpifort -lparmetis ${SCALAPACK_LIBRARIES}")
-
+    if(NOT SCALAPACK_LIBRARIES)
+      MESSAGE("SCALAPACK_LIBRARIES for MUMPS not set. Default linking for Ubuntu.")
+      set(SCALAPACK_LIBRARIES "-lscalapack-openmpi -lblacs-openmpi  -lblacsF77init-openmpi -lblacsCinit-openmpi") 
+    endif(NOT SCALAPACK_LIBRARIES)
+    # -lmpi_mpifh includes the OpenMPI Fortran MPI interface used when
+    # building MUMPS. MPICH requires -lmpifort
+    if(NOT MUMPS_FORT_LIB)
+      MESSAGE("MUMPS_FORT_LIB not set for linking the Fortran MPI interface library required by MUMPS. Using OpenMPI Fortran interface -lmpi_mpifh")
+      set(MUMPS_FORT_LIB "-lmpi_mpifh")
+    endif(NOT MUMPS_FORT_LIB)
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord ${MUMPS_FORT_LIB} ${SCALAPACK_LIBRARIES}")
+    MESSAGE( "SCALAPACK_LIBRARIES: ${SCALAPACK_LIBRARIES}")
     MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
     include_directories(${MUMPS_INCLUDE_DIR})
   else ()
     message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
     set(MUMPS_LIBRARY "")
-  endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY)
+  endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY AND PARMETIS_LIBRARY)
 
   #setting CXX_FLAGS
   if(HAVE_MA27)
