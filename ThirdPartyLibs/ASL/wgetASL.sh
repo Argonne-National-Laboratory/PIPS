@@ -15,12 +15,10 @@ else
 fi
 
 echo "Unpacking the source code..."
-
 fn=solvers.tar.gz
 tar -xzf $fn
 mv mp-$coinasl/src/asl/solvers .
 rm -rf mp-$coinasl
-
 name=`basename ${fn} .tar.gz`
 ln -s ./${name} ./src
 
