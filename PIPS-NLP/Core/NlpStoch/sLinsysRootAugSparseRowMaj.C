@@ -115,8 +115,14 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
     
   }
   MPI_Comm mumpsComm;
+  int mumpsSize;
   MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
- 
+  if (mumpsComm != MPI_COMM_NULL)
+  {
+    MPI_Comm_size(mumpsComm, &mumpsSize);
+    std::cout << "MUMPS communicator size: " << mumpsSize << std::endl;
+  }
+
 #ifdef WITH_MUMPS
   //2. create and return the wrapper instance for Mumps
   if(0) {
