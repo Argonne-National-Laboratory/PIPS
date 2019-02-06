@@ -97,6 +97,7 @@ protected:
 
   //temporary vector of size n
   double* nvec;
+  int nvec_size; // to be save
   
   virtual void computeSC(
             int nSCO,

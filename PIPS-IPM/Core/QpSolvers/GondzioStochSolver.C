@@ -67,7 +67,12 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    StepFactor0 = 0.3;
    StepFactor1 = 1.5;
 
+#ifdef REDUCED_ACCURACY
+   artol = 1e-3;
+   mutol = 2.e-5;
+#else
    mutol = 1.e-6; // todo parameter
+#endif
 
    temp_step = factory->makeVariables(prob);
 }

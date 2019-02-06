@@ -83,6 +83,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   nnz = -1;
   nSC = -1;
   nvec = NULL;
+  nvec_size = -1;
   // - we do not have the augmented system yet; most of initialization done during the
   // first solve call
 
@@ -362,6 +363,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 
   //allocate temp vector(s)
   nvec=new double[n];
+  nvec_size = n;
 
   /*  //
   // symbolic analysis
@@ -584,6 +586,7 @@ void PardisoSchurSolver::computeSC(
    //if (myRankp==0) msglvl=1;
    // iparm[32] = 1; // compute determinant
    iparm[37] = nSC;//Msys->size(); //compute Schur-complement
+   iparm[30] = 0; // do not specify sparse rhs at this point
 
  #ifdef TIMING
    //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
@@ -647,8 +650,12 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
   //if (myRankp==0) msglvl=1;
   
-  SimpleVector x_n(n);
+  assert(nvec_size == n);
+  double* const x_n = nvec;
   const int dim=rhs.length();
+  assert(dim >= 0 && dim <= n);
+
+  memset(x_n, 0, dim * sizeof(double));
 
 #ifdef TIMING_FLOPS
   HPM_Start("PARDISOSolve");
@@ -657,7 +664,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
-	   iparm , &msglvl, rhs.elements(), x_n.elements(), &error, dparm );
+	   iparm , &msglvl, rhs.elements(), x_n, &error, dparm );
 
 #ifdef TIMING_FLOPS
   HPM_Stop("PARDISOSolve");
@@ -726,7 +733,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 #endif
   
 
-  memcpy(&rhs[0], x_n.elements(), dim*sizeof(double));
+  memcpy(&rhs[0], x_n, dim*sizeof(double));
 }
 
 void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
