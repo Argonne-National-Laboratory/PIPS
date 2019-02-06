@@ -80,13 +80,40 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
   iAmRank0 = (myRank==0);
 
-  //1. create the communicator for the subset of processes that MUMPS should use
+  // Build node communicator on each node, with all ranks on the node
+  MPI_Comm nodeComm;
+  MPI_Comm_split_type(mpiComm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &nodeComm);
+
+  // We do an allreduce on each node to find the node communicator with the rank 0
+
+  int commWithRank0 = 0;
+  if(iAmRank0) {
+    int one = 1;
+    MPI_Allreduce(&one, &commWithRank0, 1, MPI_INT, MPI_SUM, nodeComm);
+  }
+  else {
+    int zero = 0;
+    MPI_Allreduce(&zero, &commWithRank0, 1, MPI_INT, MPI_SUM, nodeComm);
+
+  }
+  // The process where commWithRank0 = 1 are the ones that have rank 0 on their node.
+  // Those processes build the MUMPS communicator
   int color = MPI_UNDEFINED;
+  if(commWithRank0 == 1) {
+    int nodeRank;
+    MPI_Comm_rank(nodeComm, &nodeRank);
   
-  //color a couple of ranks, say 0,1,2,4 and leave the other ones uncolored. 
-  //MUMPS communicator created below will be MPI_COMM_NULL on the nodes not colored
-  if(myRank<4)
-    color = 0;
+    //color a couple of ranks, say 0,1,2,4 and leave the other ones uncolored. 
+    //MUMPS communicator created below will be MPI_COMM_NULL on the nodes not colored
+
+    // Now we are sure we color ranks that are located on the same node
+    if(nodeRank<4)
+      color = 0;
+    // Make sure myRank 0 is in the MUMPS communicator and does not have nodeRank > 4
+    if(myRank==0)
+      color = 0;
+    
+  }
   MPI_Comm mumpsComm;
   MPI_Comm_split(mpiComm, color, 0, &mumpsComm);
  
