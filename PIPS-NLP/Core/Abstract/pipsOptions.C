@@ -253,7 +253,7 @@ void pipsOptions::readFile()
   if (optfile==NULL) {
     return;
   } else {
-    printf("load option file: %s \n",fileName.c_str());
+    if (mype == 0) printf("load option file: %s \n",fileName.c_str());
   }
   /* Read one line of the options file */
   while(fgets(buffer, 9999, optfile)!=NULL){

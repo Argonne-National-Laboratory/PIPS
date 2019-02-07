@@ -260,7 +260,7 @@ int MumpsSolver::matrixChanged()
     
     //ICNTL(28) determines whether a sequential (=1) or a parallel analysis (=2) is performed. For the latter case
     //ICNTL(7) is meaningless. Automatic choice would be indicated by 0
-    mumps_->icntl[28-1] = 2; 
+    mumps_->icntl[28-1] = 0; 
     
     //ICNTL(29) defines the parallel ordering tool to be used to compute the fill-in reducing permutation.
     // 1 for PT_SCOTCH, 2 for ParMetis, 0 automatic (default)
@@ -287,6 +287,7 @@ int MumpsSolver::matrixChanged()
 
     double tm = MPI_Wtime();
 
+    
     dmumps_c(mumps_);
     int error = mumps_->infog[1-1];
     if(error != 0) {
