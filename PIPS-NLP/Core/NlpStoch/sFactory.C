@@ -101,7 +101,7 @@ sFactory::newLinsysLeaf(sData* prob,
 {
   sLinsysLeaf *resultSLin=NULL;
 #ifdef TIMING
-  cout<< "newLinsysLeaf:" <<gSymLinearSolver << endl;
+  if(mype == 0) cout<< "newLinsysLeaf:" <<gSymLinearSolver << endl;
 #endif
   if(0==gSymLinearSolver){
 #ifdef WITH_MA27

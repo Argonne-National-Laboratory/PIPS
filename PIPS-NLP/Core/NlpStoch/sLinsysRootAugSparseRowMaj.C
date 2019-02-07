@@ -120,7 +120,7 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
   if (mumpsComm != MPI_COMM_NULL)
   {
     MPI_Comm_size(mumpsComm, &mumpsSize);
-    std::cout << "MUMPS communicator size: " << mumpsSize << std::endl;
+    if (myRank==0) std::cout << "MUMPS communicator size: " << mumpsSize << std::endl;
   }
 
 #ifdef WITH_MUMPS
