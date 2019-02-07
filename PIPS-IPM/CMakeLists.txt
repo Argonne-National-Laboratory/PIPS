@@ -188,7 +188,7 @@ if (BUILD_GDX_SOURCE)
      
    link_directories(PIPS-IPM)
    add_executable(gmspips Drivers/gmspips/gmspips.cpp Drivers/gmspips/gmspipsio.c)
-   add_definitions(-DGMS_PIPS -DGMS_LOG -DGMS_MPI -DLINKCONSTR -DGDXSOURCE -fno-strict-aliasing -fwrapv )
+   add_definitions(-DGMS_PIPS -DGMS_MPI -DLINKCONSTR -DGDXSOURCE -fno-strict-aliasing -fwrapv ) # -DGMS_LOG
    target_include_directories(gmspips PUBLIC Drivers/statgdx Drivers/gmspips/)
    target_link_libraries(gmspips
        dl 
@@ -204,7 +204,7 @@ if (BUILD_GDX_SOURCE)
 else()
    set(GAMSDIR Drivers/gams)
    add_executable(gmspips Drivers/gmspips/gmspips.cpp Drivers/gmspips/gmspipsio.c ${GAMSDIR}/apifiles/C/api/gmomcc.c ${GAMSDIR}/apifiles/C/api/gevmcc.c ${GAMSDIR}/apifiles/C/api/gdxcc.c)
-   add_definitions(-DGMS_PIPS -DGMS_LOG -DGMS_MPI -DLINKCONSTR)
+   add_definitions(-DGMS_PIPS -DGMS_MPI -DLINKCONSTR) # -DGMS_LOG
    target_include_directories(gmspips PUBLIC ${GAMSDIR}/apifiles/C/api/ Drivers/gmspips/)
    target_link_libraries(gmspips
        dl
