@@ -675,7 +675,9 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
     if(it==vlmat[row].end()) {
       return false; //could not find irow[it_in] and jcol[it_in] in 'this'
     }
-    assert(it->jcol==jcol[it_in]);
+    //assert(it->jcol==jcol[it_in]);
+    if(it->jcol > jcol[it_in]) return false;
+
     M_out[it_in] = it->M;
 
     ++it; it_in++;
