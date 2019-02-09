@@ -20,7 +20,7 @@ sFactoryAug::sFactoryAug( stochasticInput& in, MPI_Comm comm)
 { };
 
 sFactoryAug::sFactoryAug( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
-  : sFactory(nx, my, mz, nnzQ, nnzA, nnzC)
+  : sFactory(nx_, my_, mz_, nnzQ_, nnzA_, nnzC_)
 { };
 
 sFactoryAug::sFactoryAug()
