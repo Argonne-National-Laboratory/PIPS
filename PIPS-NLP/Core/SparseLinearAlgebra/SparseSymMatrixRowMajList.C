@@ -686,6 +686,32 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
   return true;
 }
 
+
+// Performs the following 
+//
+// M[ this.(i,j) \setintersection (irn,jcn)] = this.M
+// M[(irn,jcn) \setdiff this.(i,j) ]         = 0.
+// (irn_diff,jcn_diff) = this.(i,j) \setdiff (irn,jcn)
+//
+// Input:
+//  - irn, jcn: triplet indexes, all of size nnz_in
+// 
+// Output:
+//  - M: values corresponding to entries in (irn,jcn), of size nnz_. The method copies in M the values 
+// stored in 'this' that have indexes present in (irn,jcn). When (i,j) is in (irn,jcn) but not in 'this',
+// M[i,j] is set to 0. The indexes in 'this' that are not in (irn,jcn) are returned in (irn_diff, jcn_diff)
+//  - irn_diff, jcn_diff: allocated by this function or returned as NULL; caller is responsible for freeing
+// these; contain the indexes in 'this' that are not in (irn,jcn)
+bool SparseSymMatrixRowMajList::
+fromGetIntersectionSparseTriplet_w_diff(const int* irn, const int* jcn, const int& nnz_in, 
+					double* M_out,
+					int** irn_diff, int** jcn_diff)
+
+{
+
+  return true;
+}
+
 //copies (i,j,M) to 'this'; returns false if an entry of (i,j,M) not found in 'this', otherwise true.
 bool SparseSymMatrixRowMajList::
 atPutSparseTriplet(const int* irow, const int* jcol, const double* M, const int& nnz_in)
