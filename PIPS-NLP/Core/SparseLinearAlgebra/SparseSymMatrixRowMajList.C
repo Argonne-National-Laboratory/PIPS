@@ -686,7 +686,6 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
   return true;
 }
 
-
 // Performs the following 
 //
 // M[ this.(i,j) \setintersection (irn,jcn)] = this.M
@@ -694,7 +693,7 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
 // (irn_diff,jcn_diff) = this.(i,j) \setdiff (irn,jcn)
 //
 // Input:
-//  - irn, jcn: triplet indexes, all of size nnz_in
+//  - irn, jcn: triplet indexes, all of size nnz_
 // 
 // Output:
 //  - M: values corresponding to entries in (irn,jcn), of size nnz_. The method copies in M the values 
@@ -702,14 +701,98 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
 // M[i,j] is set to 0. The indexes in 'this' that are not in (irn,jcn) are returned in (irn_diff, jcn_diff)
 //  - irn_diff, jcn_diff: allocated by this function or returned as NULL; caller is responsible for freeing
 // these; contain the indexes in 'this' that are not in (irn,jcn)
+//  - nnz_diff: number of nz in (irn_diff,jcn_diff)
+// 
+// Return: false if diff is non-empty, otherwise true
 bool SparseSymMatrixRowMajList::
-fromGetIntersectionSparseTriplet_w_diff(const int* irn, const int* jcn, const int& nnz_in, 
+fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const int& nnz_in, 
 					double* M_out,
-					int** irn_diff, int** jcn_diff)
+					int** irow_diff, int** jcol_diff, int& nnz_diff)
 
 {
+  *irow_diff = *jcol_diff = NULL; nnz_diff=0;
+  if(nnz_in==0) {
+    if(this->nnz == 0) return true;
+  }
+  
+  list<ColVal>::iterator it_this;
+  std::vector<int> virow_diff, vjcol_diff;
+  virow_diff.reserve(1024); vjcol_diff.reserve(1024); //should cover most power grid problems
 
-  return true;
+  int row_in_start = nnz_in>0?irow[0]:0;
+
+  //elements in this' rows up to row_in_start will be in diff
+  for(int row=0; row<row_in_start; row++) {
+    
+    for(it_this = this->vlmat[row].begin(); it_this!=this->vlmat[row].end(); ++it_this) {
+      virow_diff.push_back(row);
+      vjcol_diff.push_back(it_this->jcol);
+    }
+  }
+
+  int row=-1; 
+  // go over rows that are present both in this and (irow,jcol)
+  for(int it_in=0; it_in<nnz_in; ) {
+    assert(row<=irow[it_in]);
+    if(row<irow[it_in]) {
+      row=irow[it_in];
+      it_this=vlmat[row].begin(); 
+    }
+
+
+    //iterate in this' row till jcol[it_in] is reached or not found
+    while(it_this!=vlmat[row].end() && it_this->jcol<jcol[it_in]) {
+      // current element in this not in (irow,jcol)
+      virow_diff.push_back(row);
+      vjcol_diff.push_back(it_this->jcol);
+      ++it_this;
+    }
+
+    if(it_this==vlmat[row].end()) {
+      //could not find irow[it_in] and jcol[it_in] in 'this'
+      M_out[it_in] = 0.;
+      it_in++;
+    } else {
+      // we have that it_this->jcol >= jcol[it_in])
+      if(it_this->jcol==jcol[it_in]) {
+	//element found
+	M_out[it_in] = it_this->M;
+	++it_this; it_in++;
+      } else {
+	assert(it_this->jcol>jcol[it_in]);
+	//element in 'this' not in (irow,jcol)
+	virow_diff.push_back(row);
+	vjcol_diff.push_back(it_this->jcol);
+	++it_this; it_in++;
+      }
+    }
+  } //end for over elements in (irow,jcol)
+
+  // go over rows that are present in this but not in (irow,jcol) 
+  for(; row<this->vlmat.size(); row++) {
+    for(it_this = this->vlmat[row].begin(); it_this!=this->vlmat[row].end(); ++it_this) {
+      //element in diff
+      virow_diff.push_back(row);
+      vjcol_diff.push_back(it_this->jcol);
+    }
+  }
+
+  nnz_diff = virow_diff.size();
+  assert(nnz_diff == vjcol_diff.size());
+  if(nnz_diff==0) 
+    return true;
+  //else
+
+  *irow_diff = new int[nnz_diff];
+  assert(NULL!= *irow_diff && "insufficient memory !?!");
+  std::copy(virow_diff.begin(), virow_diff.end(), *irow_diff);
+  std::vector<int>().swap(virow_diff);//deallocate before the next allocation
+
+  *jcol_diff = new int[nnz_diff];
+  assert(NULL!= *jcol_diff && "insufficient memory !?!");
+  std::copy(vjcol_diff.begin(), vjcol_diff.end(), *jcol_diff);
+
+  return false;
 }
 
 //copies (i,j,M) to 'this'; returns false if an entry of (i,j,M) not found in 'this', otherwise true.

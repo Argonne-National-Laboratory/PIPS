@@ -140,8 +140,11 @@ class SparseSymMatrixRowMajList : public SymMatrix {
   // M[i,j] is set to 0. The indexes in 'this' that are not in (irn,jcn) are returned in (irn_diff, jcn_diff)
   //  - irn_diff, jcn_diff: allocated by this function or returned as NULL; caller is responsible for freeing
   // these; contain the indexes in 'this' that are not in (irn,jcn)
+  //  - nnz_diff: number of nz in (irn_diff,jcn_diff)
+  // 
+  // Return: false if diff is non-empty, otherwise true
   bool fromGetIntersectionSparseTriplet_w_diff(const int* irn, const int* jcn, const int& nnz_, double* M,
-					       int** irn_diff, int** jcn_diff); 
+					       int** irn_diff, int** jcn_diff, int& nnz_diff); 
 
   //copies (i,j,M) to 'this'; returns false if an entry of (i,j,M) not found in 'this', otherwise true.
   bool atPutSparseTriplet(const int*i, const int* j, const double* M, const int& nnz_);
