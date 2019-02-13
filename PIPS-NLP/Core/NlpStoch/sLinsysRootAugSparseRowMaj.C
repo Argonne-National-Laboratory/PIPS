@@ -402,34 +402,39 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 
   //get local contribution in triplet format, so that we can reuse MumpsSolver::mumps_->
   //irn_loc, jcn_loc, and a_loc arrays and save on memory
-  //when MumpsSolver is replaced with something else, this code needs reconsideration
+  //when MumpsSolver is replaced with another solver, this code needs reconsideration
 
   MumpsSolver* mumpsSolver = dynamic_cast<MumpsSolver*>(solver);
   assert(mumpsSolver!=NULL);
   int *irn=NULL, *jcn=NULL; double *M=NULL; 
   bool deleteTriplet=false;
-  bool bret = mumpsSolver->getTripletStorageArrays(&irn, &jcn, &M);
-  if(false==bret) {
-    //this is a rank NOT part of MUMPS and does not have the arrays; 
-    //allocate them
-    irn = new int[kktm.numberOfNonZeros()];
-    jcn = new int[kktm.numberOfNonZeros()];
-    M = new double[kktm.numberOfNonZeros()];
-    deleteTriplet=true;
-  } else {
-    assert(irn); 
-    assert(jcn);
-    assert(M);
-  }
-  
-  //root processor bcasts the indexes
-  //root first the nnz
+
+  if(iAmRank0) {
+    bool bret = mumpsSolver->getTripletStorageArrays(&irn, &jcn, &M);
+    assert(bret && "apparently MPI rank 0 is not part of the MUMPS communicator (and it should be)");
+    assert(irn); assert(jcn); assert(M);
+    deleteTriplet=false;
+  } 
+
+  //
+  //root processor bcasts the its triplet indexes
+  //
+
+  //root bcasts first the nnz
   int nnzRoot = kktm.numberOfNonZeros(); 
   MPI_Bcast(&nnzRoot, 1, MPI_INT, 0, mpiComm);
-  assert(nnzRoot==kktm.numberOfNonZeros() && "this case is not handled yet");
+  
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
 
-  //then the indexes
-  if(iAmRank0) {
+  if(!iAmRank0) {
+    //allocate
+    irn = new int[nnzRoot];
+    jcn = new int[nnzRoot];
+    M = new double[nnzRoot];
+    deleteTriplet=true;
+  } else {
+    //root prepares the sparse triplet
     assert(irn);
     kktm.atGetSparseTriplet(irn, jcn, M, false);
     assert(irn);
@@ -438,21 +443,102 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mpiComm);
 
   //all processes check: does its sparsity pattern checks out that of the root processor?
-  // - NO: (not yet implemented)
-  //    - each process adds the entries common with the root, and saves the other ones
+  // - NO: 
+  //    - each process adds the entries in common with the root, and saves the other/diff ones (not in root)
   //    - the common entries are MPI_Reduce-d
-  //    - the saved entries are then MPI_Gather-ed to the root, who then add-merge them in 
-  //    its matrix
+  //    - the saved entries are then MPI_Gather-ed to the root, who then add-merge them in its matrix
   //
+
+  int *irow_diff=NULL, *jcol_diff=NULL; int nnz_diff;
+  if(!iAmRank0) {
+
+    bool bPatternMatched = kktm.fromGetSparseTriplet_w_patternMatch(irn,jcn,nnzRoot,M,
+								    &irow_diff, &jcol_diff, nnz_diff);
+    if(bPatternMatched) { 
+      assert(nnz_diff==0); 
+      assert(irow_diff==NULL); 
+      assert(jcol_diff==NULL); 
+    } else {
+      assert(nnz_diff!=0); 
+      assert(irow_diff!=NULL); 
+      assert(jcol_diff!=NULL);
+    }
+  }
+
+  // - the common entries are MPI_Reduce-d
+  {
+    double* doublebuffer = NULL;
+    if(iAmRank0) {
+      doublebuffer = new double[nnzRoot];
+    }
+    MPI_Reduce(M, doublebuffer, nnzRoot, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
+    if(doublebuffer) memcpy(M, doublebuffer, nnzRoot*sizeof(double));
+    delete [] doublebuffer;
+
+    if(iAmRank0) {
+      bret = kktm.atPutSparseTriplet(irn,jcn,M,nnzRoot);
+      assert(bret==true && "sparsity patterns do not match on rank 0; this should not happen");
+    }
+  }
+
+  // - the saved entries are then MPI_Gather-ed 
+  {
+    int mismatch=(nnz_diff>0), auxG;
+    MPI_Allreduce(&mismatch, &auxG, 1, MPI_INT, MPI_MAX, mpiComm);
+    mismatch=auxG;
+    if(mismatch) {
+
+      //first get the sum of nnz of diff over all processes -> needed to allocate recv buffer at root
+      int commSize; MPI_Comm_size( mpiComm, &commSize); 
+      int* diff_counts = NULL, *irow_diff_dest=NULL, *jcol_diff_dest=NULL; //double* M_dest=NULL;
+      if(iAmRank0) diff_counts = new int[commSize];
+
+      MPI_Gather(&nnz_diff, 1, MPI_INT, diff_counts, 1, MPI_INT, 0, mpiComm);
+
+      int nnz_diff_total = 0;
+      if(iAmRank0) {
+	assert(diff_counts[0]==0); //diff for rank 0 should be empty
+	for(int i=0; i<commSize; i++) 
+	  nnz_diff_total += diff_counts[i];
+	assert(nnz_diff_total!=0);
+
+	irow_diff_dest = new int[nnz_diff_total];
+	jcol_diff_dest = new int[nnz_diff_total];
+	//M_dest = new double[nnz_diff_total];
+      }
+      
+
+      MPI_Gather(irow_diff, nnz_diff, MPI_INT, irow_diff_dest, nnz_diff_total, MPI_INT, 0, mpiComm);
+      MPI_Gather(jcol_diff, nnz_diff, MPI_INT, jcol_diff_dest, nnz_diff_total, MPI_INT, 0, mpiComm);
+      //MPI_Gather(jcol_diff, nnz_diff, MPI_INT, jcol_diff_dest, nnz_diff_total, MPI_INT, 0, mpiComm);
+      
+      if(iAmRank0) {	
+	for(int p=0; p<commSize; p++) {
+	  
+	}
+      }
+
+      delete [] diff_counts;
+      delete [] irow_diff_dest;
+      delete [] jcol_diff_dest;
+    }
+   
+    
+  }
   
+
+
+  //all processes check: does its sparsity pattern checks out that of the root processor?
   // - YES: MPI_Reduce the entries
 
   if(!iAmRank0) {
     bool bPatternMatched = kktm.fromGetSparseTriplet_w_patternMatch(irn,jcn,nnzRoot,M);
     assert(bPatternMatched && "this is not yet supported");
   }
-
-  //MPI_Reduce the entries
+  
+  //
+  // at this point irn and jcn   are   identical on all processes
+  // MPI_Reduce the entries
   double* doublebuffer = NULL;
   if(iAmRank0) {
     doublebuffer = new double[nnzRoot];
