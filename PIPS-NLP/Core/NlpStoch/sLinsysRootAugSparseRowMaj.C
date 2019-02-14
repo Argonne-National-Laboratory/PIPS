@@ -399,11 +399,11 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 {
   //  if(!iAmDistrib) return;
   SparseSymMatrixRowMajList& kktm = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
+  int nnzRoot = kktm.numberOfNonZeros(); 
 
   //get local contribution in triplet format, so that we can reuse MumpsSolver::mumps_->
   //irn_loc, jcn_loc, and a_loc arrays and save on memory
   //when MumpsSolver is replaced with another solver, this code needs reconsideration
-
   MumpsSolver* mumpsSolver = dynamic_cast<MumpsSolver*>(solver);
   assert(mumpsSolver!=NULL);
   int *irn=NULL, *jcn=NULL; double *M=NULL; 
@@ -411,21 +411,27 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 
   if(iAmRank0) {
     bool bret = mumpsSolver->getTripletStorageArrays(&irn, &jcn, &M);
-    assert(bret && "apparently MPI rank 0 is not part of the MUMPS communicator (and it should be)");
-    assert(irn); assert(jcn); assert(M);
-    deleteTriplet=false;
+    //assert(bret && "apparently MPI rank 0 is not part of the MUMPS communicator (and it should be)");    
+    if(bret==false) {
+      irn = new int[nnzRoot];
+      jcn = new int[nnzRoot];
+      M = new double[nnzRoot];
+      deleteTriplet=true;
+    } else {
+      assert(irn); assert(jcn); assert(M);
+      deleteTriplet=false;
+    }
   } 
+
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
 
   //
   //root processor bcasts the its triplet indexes
   //
 
   //root bcasts first the nnz
-  int nnzRoot = kktm.numberOfNonZeros(); 
   MPI_Bcast(&nnzRoot, 1, MPI_INT, 0, mpiComm);
-  
-  int myRank; MPI_Comm_rank(mpiComm, &myRank);
-  printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
 
   if(!iAmRank0) {
     //allocate
@@ -449,22 +455,24 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   //    - the saved entries are then MPI_Gather-ed to the root, who then add-merge them in its matrix
   //
 
-  int *irow_diff=NULL, *jcol_diff=NULL; int nnz_diff;
+  int *irow_diff=NULL, *jcol_diff=NULL; double* M_diff=NULL; int nnz_diff=0;
   if(!iAmRank0) {
 
-    bool bPatternMatched = kktm.fromGetSparseTriplet_w_patternMatch(irn,jcn,nnzRoot,M,
-								    &irow_diff, &jcol_diff, nnz_diff);
+    bool bPatternMatched = kktm.fromGetIntersectionSparseTriplet_w_diff(irn,jcn,nnzRoot,M,
+									&irow_diff, &jcol_diff, &M_diff, nnz_diff);
     if(bPatternMatched) { 
       assert(nnz_diff==0); 
       assert(irow_diff==NULL); 
       assert(jcol_diff==NULL); 
+      assert(M_diff==NULL); 
     } else {
       assert(nnz_diff!=0); 
       assert(irow_diff!=NULL); 
       assert(jcol_diff!=NULL);
+      assert(M_diff!=NULL); 
     }
+    printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
   }
-
   // - the common entries are MPI_Reduce-d
   {
     double* doublebuffer = NULL;
@@ -476,7 +484,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
     delete [] doublebuffer;
 
     if(iAmRank0) {
-      bret = kktm.atPutSparseTriplet(irn,jcn,M,nnzRoot);
+      bool bret = kktm.atPutSparseTriplet(irn,jcn,M,nnzRoot);
       assert(bret==true && "sparsity patterns do not match on rank 0; this should not happen");
     }
   }
@@ -490,67 +498,109 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 
       //first get the sum of nnz of diff over all processes -> needed to allocate recv buffer at root
       int commSize; MPI_Comm_size( mpiComm, &commSize); 
-      int* diff_counts = NULL, *irow_diff_dest=NULL, *jcol_diff_dest=NULL; //double* M_dest=NULL;
+      int* diff_counts = NULL, *irow_diff_dest=NULL, *jcol_diff_dest=NULL; double* M_diff_dest=NULL;
       if(iAmRank0) diff_counts = new int[commSize];
 
       MPI_Gather(&nnz_diff, 1, MPI_INT, diff_counts, 1, MPI_INT, 0, mpiComm);
 
-      int nnz_diff_total = 0;
+      int* displs=NULL;
       if(iAmRank0) {
 	assert(diff_counts[0]==0); //diff for rank 0 should be empty
-	for(int i=0; i<commSize; i++) 
-	  nnz_diff_total += diff_counts[i];
-	assert(nnz_diff_total!=0);
+	displs = new int[commSize];
+
+	displs[0]=0;
+	for(int i=1; i<commSize; i++) { 
+	  displs[i] = displs[i-1] + diff_counts[i-1];
+
+	  printf("Rank %d  -> diff_counts=%d\n", i, diff_counts[i]);
+	}
+
+	int nnz_diff_total = displs[commSize-1]+diff_counts[commSize-1];
+
+	printf("Rank %d  -> %d entries to be gathered\n", myRank, nnz_diff_total);
 
 	irow_diff_dest = new int[nnz_diff_total];
 	jcol_diff_dest = new int[nnz_diff_total];
-	//M_dest = new double[nnz_diff_total];
+	M_diff_dest = new double[nnz_diff_total];
       }
       
 
-      MPI_Gather(irow_diff, nnz_diff, MPI_INT, irow_diff_dest, nnz_diff_total, MPI_INT, 0, mpiComm);
-      MPI_Gather(jcol_diff, nnz_diff, MPI_INT, jcol_diff_dest, nnz_diff_total, MPI_INT, 0, mpiComm);
-      //MPI_Gather(jcol_diff, nnz_diff, MPI_INT, jcol_diff_dest, nnz_diff_total, MPI_INT, 0, mpiComm);
-      
+      MPI_Gatherv(irow_diff, nnz_diff, MPI_INT,    irow_diff_dest, diff_counts, displs, MPI_INT,    0, mpiComm);
+      MPI_Gatherv(jcol_diff, nnz_diff, MPI_INT,    jcol_diff_dest, diff_counts, displs, MPI_INT,    0, mpiComm);
+      MPI_Gatherv(M_diff,    nnz_diff, MPI_DOUBLE, M_diff_dest,    diff_counts, displs, MPI_DOUBLE, 0, mpiComm);
+
+
       if(iAmRank0) {	
+	int nz_start=0, nz_end;
 	for(int p=0; p<commSize; p++) {
-	  
-	}
-      }
+	  if(diff_counts[p]==0) continue; 
 
+	  printf("Rank %d  adding %d entries from rank %d\n", myRank, diff_counts[p], p);
+
+	  nz_end=nz_start+diff_counts[p];
+
+	  printf("  nz_start=%d nz_end=%d\n", nz_start, nz_end);
+	  
+	  //for the diff coming from rank p, go over the nnz and add each row to kktm
+	  //we assume the row indexes are ordered, and for equal row indexes the col indexes are ordered
+  
+	  int row_start = nz_start, row_end = nz_start;
+	    
+	  
+	  for(int itnz=row_start; itnz<row_end; itnz++) {
+	    kktm.addElem(irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
+	    printf("adding element (%d %d %g)\n", irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
+	  }
+
+	  // while(row_end<nz_end) {
+	    
+	  //   while(irow_diff_dest[row_start] == irow_diff_dest[row_end] && row_end<nz_end) 
+	  //     row_end++;
+	  //   assert(row_end>=row_start);
+
+	  //   kktm.atAddSpRow(irow_diff_dest[row_start], jcol_diff_dest+row_start, M_diff_dest+row_start, row_end-row_start);
+	  //   row_start = row_end;
+	  // }
+
+	  nz_start = nz_end;
+
+	} // end for(int p=0; p<commSize; p++) 
+	
+      } // end if(iAmRank0) {
+      
       delete [] diff_counts;
       delete [] irow_diff_dest;
       delete [] jcol_diff_dest;
-    }
-   
-    
+    } // end if(mismatch)
   }
   
 
+// #ifdef DEBUG
+//   //all processes check: does its sparsity pattern checks out that of the root processor?
+//   // - YES: MPI_Reduce the entries
 
-  //all processes check: does its sparsity pattern checks out that of the root processor?
-  // - YES: MPI_Reduce the entries
-
-  if(!iAmRank0) {
-    bool bPatternMatched = kktm.fromGetSparseTriplet_w_patternMatch(irn,jcn,nnzRoot,M);
-    assert(bPatternMatched && "this is not yet supported");
-  }
+//   if(!iAmRank0) {
+//     bool bPatternMatched = kktm.fromGetSparseTriplet_w_patternMatch(irn,jcn,nnzRoot,M);
+//     assert(bPatternMatched && "this is not yet supported");
+//   }
   
-  //
-  // at this point irn and jcn   are   identical on all processes
-  // MPI_Reduce the entries
-  double* doublebuffer = NULL;
-  if(iAmRank0) {
-    doublebuffer = new double[nnzRoot];
-  }
-  MPI_Reduce(M, doublebuffer, nnzRoot, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
-  if(doublebuffer) memcpy(M, doublebuffer, nnzRoot*sizeof(double));
-  delete [] doublebuffer;
+//   //
+//   // at this point irn and jcn   are   identical on all processes
+//   // MPI_Reduce the entries
+//   double* doublebuffer = NULL;
+//   if(iAmRank0) {
+//     doublebuffer = new double[nnzRoot];
+//   }
+//   MPI_Reduce(M, doublebuffer, nnzRoot, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
+//   if(doublebuffer) memcpy(M, doublebuffer, nnzRoot*sizeof(double));
+//   delete [] doublebuffer;
 
-  if(iAmRank0) {
-    bret = kktm.atPutSparseTriplet(irn,jcn,M,nnzRoot);
-    assert(bret==true && "something went wrong");
-  }
+//   if(iAmRank0) {
+//     bool bret = kktm.atPutSparseTriplet(irn,jcn,M,nnzRoot);
+//     assert(bret==true && "something went wrong");
+//   }
+// #endif
+
 
   if(deleteTriplet) {
     delete[] irn;

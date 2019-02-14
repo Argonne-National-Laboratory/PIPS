@@ -690,7 +690,7 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
 //
 // M[ this.(i,j) \setintersection (irn,jcn)] = this.M
 // M[(irn,jcn) \setdiff this.(i,j) ]         = 0.
-// (irn_diff,jcn_diff) = this.(i,j) \setdiff (irn,jcn)
+// (irn_diff,jcn_diff) = this.(i,j) \setdiff (irn,jcn) and M_diff = this[irn_diff,jcn_diff]
 //
 // Input:
 //  - irn, jcn: triplet indexes, all of size nnz_
@@ -702,12 +702,13 @@ fromGetSparseTriplet_w_patternMatch(const int* irow, const int* jcol, const int&
 //  - irn_diff, jcn_diff: allocated by this function or returned as NULL; caller is responsible for freeing
 // these; contain the indexes in 'this' that are not in (irn,jcn)
 //  - nnz_diff: number of nz in (irn_diff,jcn_diff)
+//  - M_diff: entries of the difference
 // 
 // Return: false if diff is non-empty, otherwise true
 bool SparseSymMatrixRowMajList::
 fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const int& nnz_in, 
 					double* M_out,
-					int** irow_diff, int** jcol_diff, int& nnz_diff)
+					int** irow_diff, int** jcol_diff, double**M_diff, int& nnz_diff)
 
 {
   *irow_diff = *jcol_diff = NULL; nnz_diff=0;
@@ -717,7 +718,8 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
   
   list<ColVal>::iterator it_this;
   std::vector<int> virow_diff, vjcol_diff;
-  virow_diff.reserve(1024); vjcol_diff.reserve(1024); //should cover most power grid problems
+  std::vector<double> vM_diff;
+  virow_diff.reserve(1024); vjcol_diff.reserve(1024); vM_diff.reserve(1024);//should cover most power grid problems
 
   int row_in_start = nnz_in>0?irow[0]:0;
 
@@ -727,6 +729,7 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
     for(it_this = this->vlmat[row].begin(); it_this!=this->vlmat[row].end(); ++it_this) {
       virow_diff.push_back(row);
       vjcol_diff.push_back(it_this->jcol);
+      vM_diff.push_back(it_this->M);
     }
   }
 
@@ -745,6 +748,7 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
       // current element in this not in (irow,jcol)
       virow_diff.push_back(row);
       vjcol_diff.push_back(it_this->jcol);
+      vM_diff.push_back(it_this->M);
       ++it_this;
     }
 
@@ -763,6 +767,7 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
 	//element in 'this' not in (irow,jcol)
 	virow_diff.push_back(row);
 	vjcol_diff.push_back(it_this->jcol);
+	vM_diff.push_back(it_this->M);
 	++it_this; it_in++;
       }
     }
@@ -774,23 +779,30 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
       //element in diff
       virow_diff.push_back(row);
       vjcol_diff.push_back(it_this->jcol);
+      vM_diff.push_back(it_this->M);
     }
   }
 
   nnz_diff = virow_diff.size();
   assert(nnz_diff == vjcol_diff.size());
+  assert(nnz_diff == vM_diff.size());
   if(nnz_diff==0) 
     return true;
   //else
 
   *irow_diff = new int[nnz_diff];
-  assert(NULL!= *irow_diff && "insufficient memory !?!");
+  assert(NULL != *irow_diff && "insufficient memory !?!");
   std::copy(virow_diff.begin(), virow_diff.end(), *irow_diff);
   std::vector<int>().swap(virow_diff);//deallocate before the next allocation
 
   *jcol_diff = new int[nnz_diff];
-  assert(NULL!= *jcol_diff && "insufficient memory !?!");
+  assert(NULL != *jcol_diff && "insufficient memory !?!");
   std::copy(vjcol_diff.begin(), vjcol_diff.end(), *jcol_diff);
+  std::vector<int>().swap(vjcol_diff);//deallocate
+
+  *M_diff = new double[nnz_diff];
+  assert(NULL != *M_diff && "insufficient memory !?!");
+  std::copy(vM_diff.begin(), vM_diff.end(), *M_diff);
 
   return false;
 }
