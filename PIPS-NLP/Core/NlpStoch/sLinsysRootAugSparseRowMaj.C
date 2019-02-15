@@ -443,16 +443,14 @@ void sLinsysRootAugSpTriplet::reduceKKT()
     //root prepares the sparse triplet
     assert(irn);
     kktm.atGetSparseTriplet(irn, jcn, M, false);
-    assert(irn);
   }
   MPI_Bcast(irn, nnzRoot, MPI_INT, 0, mpiComm);
   MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mpiComm);
 
   //all processes check: does its sparsity pattern checks out that of the root processor?
-  // - NO: 
-  //    - each process adds the entries in common with the root, and saves the other/diff ones (not in root)
+  //    - each process adds the entries in common with the root, and saves the not-in-the-root/diff entries (not in root)
   //    - the common entries are MPI_Reduce-d
-  //    - the saved entries are then MPI_Gather-ed to the root, who then add-merge them in its matrix
+  //    - the not-in-the-root entries are then MPI_Gather-ed to the root, who then add-merge them in its matrix
   //
 
   int *irow_diff=NULL, *jcol_diff=NULL; double* M_diff=NULL; int nnz_diff=0;
@@ -546,21 +544,21 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   
 	  int row_start = nz_start, row_end = nz_start;
 	    
-	  
-	  for(int itnz=row_start; itnz<row_end; itnz++) {
-	    kktm.addElem(irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
-	    printf("adding element (%d %d %g)\n", irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
-	  }
+	  //!
+	  //for(int itnz=nz_start; itnz<nz_end; itnz++) {
+	  //  kktm.addElem(irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
+	  //  printf("adding element (%d %d %g)\n", irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
+	  //}
 
-	  // while(row_end<nz_end) {
+	  while(row_end<nz_end) {
 	    
-	  //   while(irow_diff_dest[row_start] == irow_diff_dest[row_end] && row_end<nz_end) 
-	  //     row_end++;
-	  //   assert(row_end>=row_start);
+	    while(irow_diff_dest[row_start] == irow_diff_dest[row_end] && row_end<nz_end) 
+	      row_end++;
+	    assert(row_end>=row_start);
 
-	  //   kktm.atAddSpRow(irow_diff_dest[row_start], jcol_diff_dest+row_start, M_diff_dest+row_start, row_end-row_start);
-	  //   row_start = row_end;
-	  // }
+	    kktm.atAddSpRow(irow_diff_dest[row_start], jcol_diff_dest+row_start, M_diff_dest+row_start, row_end-row_start);
+	    row_start = row_end;
+	  }
 
 	  nz_start = nz_end;
 
@@ -571,35 +569,16 @@ void sLinsysRootAugSpTriplet::reduceKKT()
       delete [] diff_counts;
       delete [] irow_diff_dest;
       delete [] jcol_diff_dest;
+      delete [] M_diff_dest;
     } // end if(mismatch)
   }
-  
 
-// #ifdef DEBUG
-//   //all processes check: does its sparsity pattern checks out that of the root processor?
-//   // - YES: MPI_Reduce the entries
+  // {
+  // char name[100]; sprintf(name, "Rank %d  -> matrix in", 0);
+  // if(iAmRank0)
+  //   kktm.printMatrixInMatlab(name);
+  // }
 
-//   if(!iAmRank0) {
-//     bool bPatternMatched = kktm.fromGetSparseTriplet_w_patternMatch(irn,jcn,nnzRoot,M);
-//     assert(bPatternMatched && "this is not yet supported");
-//   }
-  
-//   //
-//   // at this point irn and jcn   are   identical on all processes
-//   // MPI_Reduce the entries
-//   double* doublebuffer = NULL;
-//   if(iAmRank0) {
-//     doublebuffer = new double[nnzRoot];
-//   }
-//   MPI_Reduce(M, doublebuffer, nnzRoot, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
-//   if(doublebuffer) memcpy(M, doublebuffer, nnzRoot*sizeof(double));
-//   delete [] doublebuffer;
-
-//   if(iAmRank0) {
-//     bool bret = kktm.atPutSparseTriplet(irn,jcn,M,nnzRoot);
-//     assert(bret==true && "something went wrong");
-//   }
-// #endif
 
 
   if(deleteTriplet) {

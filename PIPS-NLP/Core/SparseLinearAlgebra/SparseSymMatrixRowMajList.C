@@ -648,9 +648,19 @@ void SparseSymMatrixRowMajList::atGetSparseTriplet(int* ii, int* jj, double* MM,
   }
 }
 
+//:) not really matlab format
 void SparseSymMatrixRowMajList::printMatrixInMatlab( char *name)
 {
-  assert(false && "not implemented");
+  if(name) printf("Matrix ---->> %s\n", name);
+  int itnz=0;
+  for(int i=0; i<vlmat.size(); i++) {
+    printf("row %4d:",i); 
+    for(list<ColVal>::const_iterator it=vlmat[i].begin(); it!=vlmat[i].end(); ++it) {
+      assert(it->jcol<=i);
+      printf("[%d, %g]", it->jcol, it->M); 
+    }
+    printf("\n");
+  }
 }
 
 bool SparseSymMatrixRowMajList::
@@ -719,7 +729,7 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
   list<ColVal>::iterator it_this;
   std::vector<int> virow_diff, vjcol_diff;
   std::vector<double> vM_diff;
-  virow_diff.reserve(1024); vjcol_diff.reserve(1024); vM_diff.reserve(1024);//should cover most power grid problems
+  virow_diff.reserve(2048); vjcol_diff.reserve(2048); vM_diff.reserve(2048);
 
   int row_in_start = nnz_in>0?irow[0]:0;
 
@@ -742,10 +752,9 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
       it_this=vlmat[row].begin(); 
     }
 
-
     //iterate in this' row till jcol[it_in] is reached or not found
     while(it_this!=vlmat[row].end() && it_this->jcol<jcol[it_in]) {
-      // current element in this not in (irow,jcol)
+      // current element in 'this' not in (irow,jcol)
       virow_diff.push_back(row);
       vjcol_diff.push_back(it_this->jcol);
       vM_diff.push_back(it_this->M);
@@ -753,7 +762,7 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
     }
 
     if(it_this==vlmat[row].end()) {
-      //could not find irow[it_in] and jcol[it_in] in 'this'
+      //element in it_in (irow,jcol) but not in this
       M_out[it_in] = 0.;
       it_in++;
     } else {
@@ -764,16 +773,15 @@ fromGetIntersectionSparseTriplet_w_diff(const int* irow, const int* jcol, const 
 	++it_this; it_in++;
       } else {
 	assert(it_this->jcol>jcol[it_in]);
-	//element in 'this' not in (irow,jcol)
-	virow_diff.push_back(row);
-	vjcol_diff.push_back(it_this->jcol);
-	vM_diff.push_back(it_this->M);
-	++it_this; it_in++;
+	// element it_in in (irow,jcol) not in 'this'
+	M_out[it_in] = 0.;
+	it_in++;
       }
     }
   } //end for over elements in (irow,jcol)
 
-  // go over rows that are present in this but not in (irow,jcol) 
+  row++; //increase row count for the last entry in (irow,jcol)
+  // go over rows that are present in 'this' but not in (irow,jcol) 
   for(; row<this->vlmat.size(); row++) {
     for(it_this = this->vlmat[row].begin(); it_this!=this->vlmat[row].end(); ++it_this) {
       //element in diff
