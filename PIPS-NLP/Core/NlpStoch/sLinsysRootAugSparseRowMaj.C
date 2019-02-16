@@ -27,6 +27,7 @@ extern double g_scenNum;
 extern int gInnerSCsolve;
 extern int gOuterSolve;
 extern int separateHandDiag;
+extern int gPipsPrtLV;
 
 using namespace std;
 extern int gBuildSchurComp;
@@ -424,7 +425,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   } 
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-  printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
+  if(gPipsPrtLV >= 2) printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
 
   //
   //root processor bcasts the its triplet indexes
@@ -469,7 +470,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
       assert(jcol_diff!=NULL);
       assert(M_diff!=NULL); 
     }
-    printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
+    if(gPipsPrtLV >= 2) printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
   }
   // - the common entries are MPI_Reduce-d
   {
