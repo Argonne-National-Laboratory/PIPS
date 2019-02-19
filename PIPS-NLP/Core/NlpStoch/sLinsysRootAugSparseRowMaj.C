@@ -154,9 +154,6 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
 
   SparseSymMatrixRowMajList& kktm = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
   
-  //int nnz = kktm.numberOfNonZeros();
-  //printf("nnz mat------------- %d\n", nnz);
-
   /////////////////////////////////////////////////////////////
   // update the KKT with Q (use diag from xDiag DIAG)
   /////////////////////////////////////////////////////////////
@@ -203,18 +200,6 @@ void sLinsysRootAugSpTriplet::finalizeKKT(sData* prob, Variables* vars)
   kktm.atAddDiagonal(0,sxDiag);
 
   
-  // for(int i=0; i<locnx; i++) {
-  //   pend = krowQ[i+1];
-  //   for(p=krowQ[i]; p<pend; p++) {
-  //     j = jcolQ[p]; 
-  //     if(i==j) continue;
-  //     val = dQ[p];
-  //     dKkt[i][j] += val;
-  //     dKkt[j][i] += val;
-  //   }
-  // }
-  
-
   /////////////////////////////////////////////////////////////
   // update the KKT with the diagonals
   // xDiag is in fact diag(Q)+X^{-1}S
@@ -397,7 +382,6 @@ void sLinsysRootAugSpTriplet::initializeKKT(sData* prob, Variables* vars)
 
 void sLinsysRootAugSpTriplet::reduceKKT()
 {
-  //  if(!iAmDistrib) return;
   SparseSymMatrixRowMajList& kktm = dynamic_cast<SparseSymMatrixRowMajList&>(*kkt);
   int nnzRoot = kktm.numberOfNonZeros(); 
 
@@ -411,7 +395,6 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 
   if(iAmRank0) {
     bool bret = mumpsSolver->getTripletStorageArrays(&irn, &jcn, &M);
-    //assert(bret && "apparently MPI rank 0 is not part of the MUMPS communicator (and it should be)");    
     if(bret==false) {
       irn = new int[nnzRoot];
       jcn = new int[nnzRoot];
@@ -424,7 +407,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   } 
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-  printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
+  //printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
 
   //
   //root processor bcasts the its triplet indexes
@@ -447,12 +430,13 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   MPI_Bcast(irn, nnzRoot, MPI_INT, 0, mpiComm);
   MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mpiComm);
 
-  //all processes check: does its sparsity pattern checks out that of the root processor?
-  //    - each process adds the entries in common with the root, and saves the not-in-the-root/diff entries (not in root)
+  //all processes check: does its sparsity pattern check that of the root processor?
+  //    - each process adds the entries in common with the root, and saves the not-in-the-root/diff 
+  //    entries
   //    - the common entries are MPI_Reduce-d
-  //    - the not-in-the-root entries are then MPI_Gather-ed to the root, who then add-merge them in its matrix
+  //    - the not-in-the-root entries are then MPI_Gather-ed to the root; the root rank then 
+  //    add-merge them in its matrix
   //
-
   int *irow_diff=NULL, *jcol_diff=NULL; double* M_diff=NULL; int nnz_diff=0;
   if(!iAmRank0) {
 
@@ -469,7 +453,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
       assert(jcol_diff!=NULL);
       assert(M_diff!=NULL); 
     }
-    printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
+    //printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
   }
   // - the common entries are MPI_Reduce-d
   {
@@ -509,13 +493,12 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 	displs[0]=0;
 	for(int i=1; i<commSize; i++) { 
 	  displs[i] = displs[i-1] + diff_counts[i-1];
-
-	  printf("Rank %d  -> diff_counts=%d\n", i, diff_counts[i]);
+	  //printf("Rank %d  -> diff_counts=%d\n", i, diff_counts[i]);
 	}
 
 	int nnz_diff_total = displs[commSize-1]+diff_counts[commSize-1];
 
-	printf("Rank %d  -> %d entries to be gathered\n", myRank, nnz_diff_total);
+	//printf("Rank %d  -> %d entries to be gathered\n", myRank, nnz_diff_total);
 
 	irow_diff_dest = new int[nnz_diff_total];
 	jcol_diff_dest = new int[nnz_diff_total];
@@ -533,23 +516,14 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 	for(int p=0; p<commSize; p++) {
 	  if(diff_counts[p]==0) continue; 
 
-	  printf("Rank %d  adding %d entries from rank %d\n", myRank, diff_counts[p], p);
+	  //printf("Rank %d  adding %d entries from rank %d\n", myRank, diff_counts[p], p);
 
 	  nz_end=nz_start+diff_counts[p];
 
-	  printf("  nz_start=%d nz_end=%d\n", nz_start, nz_end);
-	  
 	  //for the diff coming from rank p, go over the nnz and add each row to kktm
 	  //we assume the row indexes are ordered, and for equal row indexes the col indexes are ordered
   
 	  int row_start = nz_start, row_end = nz_start;
-	    
-	  //!
-	  //for(int itnz=nz_start; itnz<nz_end; itnz++) {
-	  //  kktm.addElem(irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
-	  //  printf("adding element (%d %d %g)\n", irow_diff_dest[itnz], jcol_diff_dest[itnz], M_diff_dest[itnz]);
-	  //}
-
 	  while(row_end<nz_end) {
 	    
 	    while(irow_diff_dest[row_start] == irow_diff_dest[row_end] && row_end<nz_end) 
@@ -572,14 +546,6 @@ void sLinsysRootAugSpTriplet::reduceKKT()
       delete [] M_diff_dest;
     } // end if(mismatch)
   }
-
-  // {
-  // char name[100]; sprintf(name, "Rank %d  -> matrix in", 0);
-  // if(iAmRank0)
-  //   kktm.printMatrixInMatlab(name);
-  // }
-
-
 
   if(deleteTriplet) {
     delete[] irn;
