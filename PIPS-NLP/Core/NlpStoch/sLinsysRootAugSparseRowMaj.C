@@ -31,6 +31,7 @@ extern int gPipsPrtLV;
 
 using namespace std;
 extern int gBuildSchurComp;
+extern int gMUMPSranks;
 
 sLinsysRootAugSpTriplet::sLinsysRootAugSpTriplet(sFactory * factory_, sData * prob_)
   : sLinsysRootAug(factory_, prob_), iAmRank0(false)
@@ -108,7 +109,7 @@ sLinsysRootAugSpTriplet::createSolver(sData* prob, SymMatrix* kktmat_)
     //MUMPS communicator created below will be MPI_COMM_NULL on the nodes not colored
 
     // Now we are sure we color ranks that are located on the same node
-    if(nodeRank<4)
+    if(nodeRank<gMUMPSranks)
       color = 0;
     // Make sure myRank 0 is in the MUMPS communicator and does not have nodeRank > 4
     if(myRank==0)
