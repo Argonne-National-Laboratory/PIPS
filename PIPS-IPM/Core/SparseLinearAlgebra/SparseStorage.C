@@ -311,13 +311,13 @@ void SparseStorage::fromGetRowsBlock(const int* rowIndices, int nRows, int array
 
       const int offset = i * arrayLineSize + arrayLineOffset;
 
-      if( rowSparsity ) // todo
-         rowSparsity[arrayLineOffset + r] = 1;
-
       for( int c = krowM[r]; c < krowM[r + 1]; c++ )
       {
          const int col = jcolM[c];
          assert(offset >= 0);
+
+         if( rowSparsity )
+            rowSparsity[arrayLineOffset + col] = 1;
 
          rowsArrayDense[offset + col] = M[c];
       }

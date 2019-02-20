@@ -479,7 +479,25 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
    iparm[1] = 2; //metis
    iparm[2] = num_threads;
 
-   //std::cout << "nrhss " << nrhss << std::endl;
+
+#ifndef NDEBUG
+   if( colSparsity )
+   {
+      for( int nr = 0; nr < nrhss; nr++ )
+      {
+         for( int i = 0; i < n; i++ )
+         {
+            const int rhspos = nr * n + i;
+            if( rhss[rhspos] != 0.0 )
+               assert(colSparsity[i] == 1);
+            else if( nrhss == 1 ) // does not work with zeroes in matrix, e.g. callback example
+               assert(colSparsity[i] == 0);
+
+         }
+      }
+   }
+#endif
+
    //iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
 
    iparm[7] = 1; /* Max numbers of iterative refinement steps . */
