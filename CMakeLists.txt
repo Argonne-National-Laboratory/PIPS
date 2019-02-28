@@ -66,7 +66,7 @@ message(STATUS "WITH_INNER_BICGSTAB=${WITH_INNER_BICGSTAB}")
 option(WITH_PARDISO_PARALLEL "Use Pardiso (if available) in fully parallel mode" ON)
 message(STATUS "WITH_PARDISO_PARALLEL=${WITH_PARDISO_PARALLEL}")
 
-option(WITH_PARDISO_BLOCKSC "Use Pardiso (if available) for comuting the Schur complement in blocks" ON)
+option(WITH_PARDISO_BLOCKSC "Use Pardiso (if available) for comuting the Schur complement in blocks" OFF)
 message(STATUS "WITH_PARDISO_BLOCKSC=${WITH_PARDISO_BLOCKSC}")
 
 option(WITH_PARDISOINDEF_SCALE "Scale in Pardiso indef. (if available) " ON)

@@ -39,8 +39,8 @@ public:
   /** unscale given objective value */
   virtual double getOrigObj(double objval) = 0;
 
-  /** compute objective value from given primal solution vector */
-  virtual OoqpVector* getOrigObj(const OoqpVector& solprimal) = 0;
+  /** compute original vector from given primal vector */
+  virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) = 0;
 
 
 };

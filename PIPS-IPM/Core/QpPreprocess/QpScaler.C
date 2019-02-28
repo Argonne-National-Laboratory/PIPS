@@ -46,7 +46,7 @@ double QpScaler::getOrigObj(double objval)
    return (objval / factor_objscale);
 }
 
-OoqpVector* QpScaler::getOrigObj(const OoqpVector& solprimal)
+OoqpVector* QpScaler::getOrigPrimal(const OoqpVector& solprimal)
 {
    assert(problem);
    OoqpVector* unscaledprimal = solprimal.cloneFull();

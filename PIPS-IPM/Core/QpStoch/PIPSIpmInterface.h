@@ -317,7 +317,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherPrimalSoluti
   StochVector* primalUnscaled = NULL;
 
   if( scaler )
-     primalUnscaled = dynamic_cast<StochVector*>(scaler->getOrigObj(*vars->x));
+     primalUnscaled = dynamic_cast<StochVector*>(scaler->getOrigPrimal(*vars->x));
 
   const StochVector& primalStochVec = (scaler) ? *primalUnscaled : dynamic_cast<const StochVector&>(*vars->x);
 

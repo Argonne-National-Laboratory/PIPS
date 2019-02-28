@@ -28,7 +28,7 @@ public:
   Presolver(const Data * prob) {};
   virtual ~Presolver() {};
 
-  /** presolve and return point to presolved data */
+  /** presolve and return pointer to presolved data */
   virtual Data* presolve() = 0;
 
 };

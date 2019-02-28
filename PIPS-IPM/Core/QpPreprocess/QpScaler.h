@@ -76,7 +76,7 @@ public:
   virtual void scale() = 0;
 
   virtual double getOrigObj(double objval);
-  virtual OoqpVector* getOrigObj(const OoqpVector& solprimal);
+  virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal);
 
 };
 
