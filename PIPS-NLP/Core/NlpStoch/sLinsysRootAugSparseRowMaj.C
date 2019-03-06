@@ -503,31 +503,50 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 
       MPI_Gather(&nnz_diff, 1, MPI_INT, diff_counts, 1, MPI_INT, 0, mpiComm);
 
-      int* displs=NULL;
+      size_t* displs=NULL;
       if(iAmRank0) {
 	assert(diff_counts[0]==0); //diff for rank 0 should be empty
-	displs = new int[commSize];
+	displs = new size_t[commSize];
 
 	displs[0]=0;
 	for(int i=1; i<commSize; i++) { 
 	  displs[i] = displs[i-1] + diff_counts[i-1];
 
-	  printf("Rank %d  -> diff_counts=%d\n", i, diff_counts[i]);
+          printf("Rank %d  -> diff_counts=%d %zu\n", i, diff_counts[i], displs[i]);
 	}
 
-	int nnz_diff_total = displs[commSize-1]+diff_counts[commSize-1];
+	size_t nnz_diff_total = displs[commSize-1]+diff_counts[commSize-1];
 
-	printf("Rank %d  -> %d entries to be gathered\n", myRank, nnz_diff_total);
+	printf("Rank %d  -> %zu entries to be gathered\n", myRank, nnz_diff_total);
 
 	irow_diff_dest = new int[nnz_diff_total];
 	jcol_diff_dest = new int[nnz_diff_total];
 	M_diff_dest = new double[nnz_diff_total];
       }
       
+      if(iAmRank0) {
+        MPI_Request request[3][commSize-1];
+        for(int i=1; i < commSize; i++) {
+          MPI_Irecv(irow_diff_dest+displs[i], diff_counts[i], MPI_INT, i, 0, mpiComm, &request[0][i-1]);
+          MPI_Irecv(jcol_diff_dest+displs[i], diff_counts[i], MPI_INT, i, 0, mpiComm, &request[1][i-1]);
+          MPI_Irecv(M_diff_dest+displs[i], diff_counts[i], MPI_DOUBLE, i, 0, mpiComm, &request[2][i-1]);
+        }
+        for(int i=0; i<nnz_diff; i++) irow_diff_dest[i] = irow_diff[i];
+        for(int i=0; i<nnz_diff; i++) jcol_diff_dest[i] = jcol_diff[i];
+        for(int i=0; i<nnz_diff; i++) M_diff_dest[i] = M_diff[i];
+        MPI_Waitall(commSize-1, request[0], MPI_STATUSES_IGNORE);
+        MPI_Waitall(commSize-1, request[1], MPI_STATUSES_IGNORE);
+        MPI_Waitall(commSize-1, request[2], MPI_STATUSES_IGNORE);
+      }
+      else {
+        MPI_Send(irow_diff, nnz_diff, MPI_INT, 0, 0, mpiComm);
+        MPI_Send(jcol_diff, nnz_diff, MPI_INT, 0, 0, mpiComm);
+        MPI_Send(M_diff, nnz_diff, MPI_DOUBLE, 0, 0, mpiComm);
+      }
 
-      MPI_Gatherv(irow_diff, nnz_diff, MPI_INT,    irow_diff_dest, diff_counts, displs, MPI_INT,    0, mpiComm);
-      MPI_Gatherv(jcol_diff, nnz_diff, MPI_INT,    jcol_diff_dest, diff_counts, displs, MPI_INT,    0, mpiComm);
-      MPI_Gatherv(M_diff,    nnz_diff, MPI_DOUBLE, M_diff_dest,    diff_counts, displs, MPI_DOUBLE, 0, mpiComm);
+      //MPI_Gatherv(irow_diff, nnz_diff, MPI_INT,    irow_diff_dest, diff_counts, displs, MPI_INT,    0, mpiComm);
+      //MPI_Gatherv(jcol_diff, nnz_diff, MPI_INT,    jcol_diff_dest, diff_counts, displs, MPI_INT,    0, mpiComm);
+      //MPI_Gatherv(M_diff,    nnz_diff, MPI_DOUBLE, M_diff_dest,    diff_counts, displs, MPI_DOUBLE, 0, mpiComm);
 
 
       if(iAmRank0) {	
@@ -535,11 +554,11 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 	for(int p=0; p<commSize; p++) {
 	  if(diff_counts[p]==0) continue; 
 
-	  printf("Rank %d  adding %d entries from rank %d\n", myRank, diff_counts[p], p);
+          //printf("Rank %d  adding %d entries from rank %d\n", myRank, diff_counts[p], p);
 
 	  nz_end=nz_start+diff_counts[p];
 
-	  printf("  nz_start=%d nz_end=%d\n", nz_start, nz_end);
+          //printf("  nz_start=%d nz_end=%d\n", nz_start, nz_end);
 	  
 	  //for the diff coming from rank p, go over the nnz and add each row to kktm
 	  //we assume the row indexes are ordered, and for equal row indexes the col indexes are ordered
