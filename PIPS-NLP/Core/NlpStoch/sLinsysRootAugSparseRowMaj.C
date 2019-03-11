@@ -432,8 +432,8 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   MPI_Bcast(irn, nnzRoot, MPI_INT, 0, mumpsComm);
   MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mumpsComm);
 
-  //all processes check: does its sparsity pattern check that of the root processor?
-  //    - each process adds the entries in common with the root, and saves the not-in-the-root/diff 
+  //all mumps processes check: does its sparsity pattern check that of the root processor?
+  //    - each process saves the not-in-the-root/diff 
   //    entries
   //    - the not-in-the-root indices are then MPI_Gather-ed to the root;
   //
@@ -487,19 +487,20 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 
 	irow_diff_dest = new int[nnz_diff_total];
 	jcol_diff_dest = new int[nnz_diff_total];
+  // Only used with all set to zero. Handed over to atAddSpRow. One could avoid this.
 	M_diff_dest = new double[nnz_diff_total];
   // Make sure M_diff_dest is 0
-  for(size_t i=0; i<nnz_diff_total; i++) M_diff_dest=0;
+  for(size_t i=0; i<nnz_diff_total; i++) M_diff_dest[i]=0;
       }
       
       if(iAmRank0) {
-        MPI_Request request[3][commSize-1];
+        MPI_Request request[2][commSize-1];
         for(int i=1; i < commSize; i++) {
           MPI_Irecv(irow_diff_dest+displs[i], diff_counts[i], MPI_INT, i, 0, mumpsComm, &request[0][i-1]);
           MPI_Irecv(jcol_diff_dest+displs[i], diff_counts[i], MPI_INT, i, 0, mumpsComm, &request[1][i-1]);
         }
-        for(int i=0; i<nnz_diff; i++) irow_diff_dest[i] = irow_diff[i];
-        for(int i=0; i<nnz_diff; i++) jcol_diff_dest[i] = jcol_diff[i];
+        memcpy(irow_diff_dest, irow_diff, nnz_diff);
+        memcpy(jcol_diff_dest, jcol_diff, nnz_diff);
         MPI_Waitall(commSize-1, request[0], MPI_STATUSES_IGNORE);
         MPI_Waitall(commSize-1, request[1], MPI_STATUSES_IGNORE);
       }
@@ -601,9 +602,8 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mpiComm);
 
   //all processes check: does its sparsity pattern check that of the root processor?
-  //    - each process adds the entries in common with the root, and saves the not-in-the-root/diff 
-  //    entries
-  //    - the common entries are MPI_Reduce-d
+  //    - all entries are MPI_Reduce-d
+  //    - exit if there is a difference in sparsity pattern with root
   int *irow_diff=NULL, *jcol_diff=NULL; double* M_diff=NULL; int nnz_diff=0;
   if(!iAmRank0) {
 
@@ -622,7 +622,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
     }
     //printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
   }
-  // - the common entries are MPI_Reduce-d
+  // - entries are MPI_Reduce-d
   {
     double* doublebuffer = NULL;
     if(iAmRank0) {
@@ -638,7 +638,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
     }
   }
 
-  // - the saved entries are then MPI_Gather-ed 
+  // - check whether a rank has a mismatch  
   {
     int mismatch=(nnz_diff>0), auxG;
     MPI_Allreduce(&mismatch, &auxG, 1, MPI_INT, MPI_MAX, mpiComm);
