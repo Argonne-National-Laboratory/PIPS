@@ -489,7 +489,7 @@ void sLinsysRootAugSpTriplet::reduceKKT()
 	jcol_diff_dest = new int[nnz_diff_total];
 	M_diff_dest = new double[nnz_diff_total];
   // Make sure M_diff_dest is 0
-  for(size_t i=0; i<nnz_diff_total; i++) M_diff_dest=0;
+  for(size_t i=0; i<nnz_diff_total; i++) M_diff_dest[i]=0;
       }
       
       if(iAmRank0) {
