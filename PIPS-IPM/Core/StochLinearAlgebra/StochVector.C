@@ -1585,3 +1585,72 @@ void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec
       dynamic_cast<SimpleVector*>(vecl)->permuteEntries(permvec);
 }
 
+std::vector<double> StochVector::gatherStochVector() const
+{
+   const SimpleVector& firstvec = dynamic_cast<const SimpleVector&>(*vec);
+   const size_t nChildren = children.size();
+
+   int myrank;
+   MPI_Comm_rank(mpiComm, &myrank);
+   int mysize;
+   MPI_Comm_size(mpiComm, &mysize);
+
+   std::vector<double> primalVecLocal;
+
+   for( size_t i = 0; i < nChildren; ++i )
+   {
+      const SimpleVector& vec = dynamic_cast<const SimpleVector&>(*children[i]->vec);
+
+      if( vec.length() > 0 )
+         primalVecLocal.insert(primalVecLocal.end(), &vec[0], &vec[0] + vec.length());
+   }
+
+   size_t solLength = firstvec.length();
+
+   // final vector
+   std::vector<double> primalVec(0);
+
+   if( mysize > 0 )
+   {
+      // get all lengths
+      std::vector<int> recvcounts(mysize);
+      std::vector<int> recvoffsets(mysize);
+
+      int mylength = int(primalVecLocal.size());
+
+      MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
+
+      // all-gather local components
+      recvoffsets[0] = 0;
+      for( size_t i = 1; i < size_t(mysize); ++i )
+         recvoffsets[i] = recvoffsets[i - 1] + recvcounts[i - 1];
+
+      if( myrank == 0 )
+      {
+         solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
+         primalVec = std::vector<double>(solLength);
+
+         MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE,
+               &primalVec[0] + firstvec.length(), &recvcounts[0],
+               &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+      }
+      else
+      {
+         MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, 0,
+               &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+      }
+   }
+   else
+   {
+      solLength += primalVecLocal.size();
+
+      primalVec = std::vector<double>(solLength);
+
+      std::copy(primalVecLocal.begin(), primalVecLocal.end(), primalVec.begin() + firstvec.length());
+   }
+
+   if( myrank == 0 )
+      std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &primalVec[0]);
+
+   return primalVec;
+}
