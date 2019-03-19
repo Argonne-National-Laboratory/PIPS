@@ -472,6 +472,9 @@ int main(int argc, char ** argv)
 		pipsIpm.go();
       objective = pipsIpm.getObjective();
 
+      std::vector<double> primalSolVec2 = pipsIpm.gatherPrimalSolution();
+
+
       if( printsol )
       {
          primalSolVec = pipsIpm.gatherPrimalSolution();
