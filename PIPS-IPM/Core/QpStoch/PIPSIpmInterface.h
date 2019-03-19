@@ -35,6 +35,11 @@ class PIPSIpmInterface
   void setDualTolerance(double val);
 
   std::vector<double> gatherPrimalSolution() const;
+  std::vector<double> gatherDualSolutionEq() const;
+  std::vector<double> gatherDualSolutionIneq() const;
+  std::vector<double> gatherDualSolutionVarBoundsUpp() const;
+  std::vector<double> gatherDualSolutionVarBoundsLow() const;
+
 
   std::vector<double> getFirstStagePrimalColSolution() const;
   std::vector<double> getSecondStagePrimalColSolution(int scen) const;
@@ -326,6 +331,74 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherPrimalSoluti
   delete primalUnscaled;
 
   return primalVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionEq() const
+{
+  StochVector* dualUnscaled = NULL;
+
+  if( scaler )
+     dualUnscaled = dynamic_cast<StochVector*>(scaler->getOrigDualEq(*vars->y));
+
+  const StochVector& dualStochVec = (scaler) ? *dualUnscaled : dynamic_cast<const StochVector&>(*vars->y);
+
+  std::vector<double> dualVec = dualStochVec.gatherStochVector();
+
+  delete dualUnscaled;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionIneq() const
+{
+  StochVector* dualUnscaled = NULL;
+
+  if( scaler )
+     dualUnscaled = dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->z));
+
+  const StochVector& dualStochVec = (scaler) ? *dualUnscaled : dynamic_cast<const StochVector&>(*vars->z);
+
+  std::vector<double> dualVec = dualStochVec.gatherStochVector();
+
+  delete dualUnscaled;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBoundsUpp() const
+{
+  StochVector* dualUnscaled = NULL;
+
+  if( scaler )
+     dualUnscaled = dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsUpp(*vars->phi));
+
+  const StochVector& dualStochVec = (scaler) ? *dualUnscaled : dynamic_cast<const StochVector&>(*vars->phi);
+
+  std::vector<double> dualVec = dualStochVec.gatherStochVector();
+
+  delete dualUnscaled;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBoundsLow() const
+{
+  StochVector* dualUnscaled = NULL;
+
+  if( scaler )
+     dualUnscaled = dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsLow(*vars->gamma));
+
+  const StochVector& dualStochVec = (scaler) ? *dualUnscaled : dynamic_cast<const StochVector&>(*vars->gamma);
+
+  std::vector<double> dualVec = dualStochVec.gatherStochVector();
+
+  delete dualUnscaled;
+
+  return dualVec;
 }
 
 template<class FORMULATION, class IPMSOLVER>
