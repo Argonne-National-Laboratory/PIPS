@@ -585,7 +585,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
       data->nnzD=0;
       
       // are there linking constraints?
-      if (data->fnnzBl)
+      if (data->fnnzDl)
       {
       // populate D with C's data D_0 is the C_0 from the theoretical form; also fill Dl
       // (i.e. the first block of linking constraints)
