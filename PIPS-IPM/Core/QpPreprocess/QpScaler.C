@@ -63,7 +63,7 @@ OoqpVector* QpScaler::getOrigDualEq(const OoqpVector& soldual) const
    OoqpVector* unscaleddual = soldual.cloneFull();
 
    // unscale dual
-   unscaleddual->componentDiv(*vec_rowscaleA);
+   unscaleddual->componentMult(*vec_rowscaleA);
 
    return unscaleddual;
 }
@@ -74,19 +74,31 @@ OoqpVector* QpScaler::getOrigDualIneq(const OoqpVector& soldual) const
    OoqpVector* unscaleddual = soldual.cloneFull();
 
    // unscale dual
-   unscaleddual->componentDiv(*vec_rowscaleC);
+   unscaleddual->componentMult(*vec_rowscaleC);
 
    return unscaleddual;
 }
 
 OoqpVector* QpScaler::getOrigDualVarBoundsUpp(const OoqpVector& soldual) const
 {
-   return getOrigPrimal(soldual);
+   assert(problem && vec_colscale);
+   OoqpVector* unscaleddual = soldual.cloneFull();
+
+   // unscale primal
+   unscaleddual->componentDiv(*vec_colscale);
+
+   return unscaleddual;
 }
 
 OoqpVector* QpScaler::getOrigDualVarBoundsLow(const OoqpVector& soldual) const
 {
-   return getOrigPrimal(soldual);
+   assert(problem && vec_colscale);
+   OoqpVector* unscaleddual = soldual.cloneFull();
+
+   // unscale primal
+   unscaleddual->componentDiv(*vec_colscale);
+
+   return unscaleddual;
 }
 
 
@@ -110,6 +122,7 @@ void QpScaler::applyScaling()
    // scale ub and lb of x
    bux->componentDiv(*vec_colscale);
    blx->componentDiv(*vec_colscale);
+
 }
 
 double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, const OoqpVector* colScalevec)
@@ -228,6 +241,8 @@ void QpScaler::scaleObjVector(double scaling_factor)
          factor_objscale = std::ldexp(0.5, exp + 1);
       else
          factor_objscale = std::ldexp(0.5, exp);
+
+      exit(1);
    }
 
    assert(obj);

@@ -1262,15 +1262,20 @@ sData::~sData()
       delete children[it];
 }
 
-std::vector<unsigned int> sData::getLinkVarsPermInv()
+std::vector<unsigned int> sData::getLinkVarsPerm() const
+{
+   std::vector<unsigned int> copy = linkVarsPermutation;
+   return copy;
+}
+std::vector<unsigned int> sData::getLinkVarsPermInv() const
 {
    return getInversePermuation(linkVarsPermutation);
 }
-std::vector<unsigned int> sData::getLinkConsEqPermInv()
+std::vector<unsigned int> sData::getLinkConsEqPermInv() const
 {
    return getInversePermuation(linkConsPermutationA);
 }
-std::vector<unsigned int> sData::getLinkConsIneqPermInv()
+std::vector<unsigned int> sData::getLinkConsIneqPermInv() const
 {
    return getInversePermuation(linkConsPermutationC);
 }
