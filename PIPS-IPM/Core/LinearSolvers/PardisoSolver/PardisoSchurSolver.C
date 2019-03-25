@@ -82,7 +82,12 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   n = -1;
   nnz = -1;
   nSC = -1;
+  rowptrAug = NULL;
+  colidxAug = NULL;
+  eltsAug = NULL;
+
   nvec = NULL;
+  nvec2 = NULL;
   nvec_size = -1;
   // - we do not have the augmented system yet; most of initialization done during the
   // first solve call
@@ -363,6 +368,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 
   //allocate temp vector(s)
   nvec=new double[n];
+  nvec2=new double[n];
   nvec_size = n;
 
   /*  //
@@ -626,6 +632,7 @@ void PardisoSchurSolver::computeSC(
    assert(subMatrixIsOrdered(rowptrSC, colidxSC, 0, nSC));
 }
 
+
 void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 { 
   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
@@ -651,10 +658,17 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   
   assert(nvec_size == n);
   double* const x_n = nvec;
+  double* const rhs_n = nvec2;
+
   const int dim=rhs.length();
   assert(dim >= 0 && dim <= n);
 
   memset(x_n, 0, dim * sizeof(double));
+  memcpy(rhs_n, rhs.elements(), dim * sizeof(double));
+
+  // todo sparsity vector?
+  if( n > dim )
+     memset(&rhs_n[dim], 0, (n - dim) * sizeof(double));
 
 #ifdef TIMING_FLOPS
   HPM_Start("PARDISOSolve");
@@ -663,7 +677,8 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
-	   iparm , &msglvl, rhs.elements(), x_n, &error, dparm );
+	   iparm , &msglvl, rhs_n, x_n, &error, dparm );
+
 
 #ifdef TIMING_FLOPS
   HPM_Stop("PARDISOSolve");
@@ -731,8 +746,8 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   delete[] tmp_resid;
 #endif
   
+  memcpy(&rhs[0], x_n, dim * sizeof(double));
 
-  memcpy(&rhs[0], x_n, dim*sizeof(double));
 }
 
 void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
@@ -963,6 +978,7 @@ PardisoSchurSolver::~PardisoSchurSolver()
   if(eltsAug)   delete[] eltsAug;
   
   if(nvec) delete[] nvec;
+  if(nvec2) delete[] nvec2;
 }
 
 #ifdef STOCH_TESTING
