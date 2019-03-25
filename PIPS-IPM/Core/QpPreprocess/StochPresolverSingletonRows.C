@@ -47,7 +47,7 @@ void StochPresolverSingletonRows::applyPresolving()
    int globalIter = 0;
 
    // main loop:
-   while( (newSREq > 0 && iter < maxIterSR) || globalIter == 0 )
+   while( (newSREq + newSRIneq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
       // if( myRank == 0 ) cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
       while( newSREq > 0 && iter < maxIterSR)
@@ -104,6 +104,8 @@ void StochPresolverSingletonRows::applyPresolving()
       presData.resetRedCounters();
       int newSREqLink = 0;
       int newSRIneqLink = 0;
+
+      // todo what about inequalities?
       doSingletonLinkRows(newSREqLink, newSRIneqLink);
       synchronizeSum(newSREqLink, newSRIneqLink);
       newSREq += newSREqLink;
@@ -282,6 +284,7 @@ void StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
 
 void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIneq)
 {
+   // todo what if !hasLinking(EQUALITY_SYSTEM), but hasLinking(INEQUALITY_SYSTEM)???
    if( hasLinking(EQUALITY_SYSTEM))
    {
       setCurrentPointersToNull();
@@ -314,6 +317,11 @@ void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIn
                   double aik = 0.0;
                   getValuesForSR(*currBlmat, rowIdx, colIdx, aik);
                   assert( colIdx >= 0 && colIdx < currgChild->n );
+                  assert(!PIPSisZero(aik));
+
+                  // todo
+                  //if( aik < tolerance3 )
+                  // continue;
 
                   const double val = currEqRhsLink->elements()[rowIdx] / aik;
 
@@ -380,6 +388,7 @@ void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIn
       if( !presData.combineColAdaptParent() )
          abortInfeasible(MPI_COMM_WORLD);
 
+      // todo delete...summed up two times! (after function call)
       updateLinkingVarsBlocks(newSREq, newSRIneq);
       presData.resetRedCounters();
    }

@@ -77,6 +77,7 @@ void StochPresolverBase::updateAndSwap( SparseStorageDynamic* storage, int rowid
  * Update the linking parts of the rhs (and lhs)-vectors using the vectors currEqRhsAdaptionsLink,
  * currInEqRhsAdaptionsLink and currInEqLhsAdaptionsLink.
  */
+// todo call me also from clean-up!
 void StochPresolverBase::updateRhsNRowLink()
 {
    int myRank;
@@ -1262,6 +1263,7 @@ void StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double
 /** Method similar to combineColAdaptParent(), that is a method going through newBoundsParent
  * and cleaning it up, removing redundant bounds, checking for infeasibility or more tightening.
  */
+// todo why not just MPI_ALLREDUCE with min and max????
 void StochPresolverBase::combineNewBoundsParent()
 {
    int myRank, world_size;

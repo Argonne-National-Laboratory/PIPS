@@ -215,6 +215,7 @@ void StochPresolverParallelRows::applyPresolving()
    // synchronize nRowElims:
    synchronize(nRowElims);
 
+   // todo linking constraints!!!
 
    if( myRank == 0 )
       cout<<"Removed "<<nRowElims<<" Rows in Parallel Row Presolving."<<endl;

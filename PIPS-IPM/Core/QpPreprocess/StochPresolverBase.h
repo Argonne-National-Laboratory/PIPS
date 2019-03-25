@@ -57,6 +57,7 @@ public:
 
    virtual ~StochPresolverBase();
 
+   // todo return bool whether enough eliminations
    virtual void applyPresolving() = 0;
 
    bool verifyNnzcounters();

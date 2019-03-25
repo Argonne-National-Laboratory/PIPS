@@ -71,11 +71,16 @@ Data* StochPresolver::presolve()
    presolverSR.countRowsCols();
 #endif
 
+   // todo loop, and not exhaustive
+
    presolverSR.applyPresolving();
    presolverBS.applyPresolving();
    presolverCleanup.applyPresolving();
    presolverParallelRow.applyPresolving();
    presolverSR.applyPresolving();
+
+   // todo in DEBUG mode check that all MPI procs have same A_0, b_0, etc... (root info)
+
 
 
 /*   cout<<"nRowElemsA "<<endl;

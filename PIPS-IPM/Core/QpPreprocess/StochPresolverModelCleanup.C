@@ -32,6 +32,7 @@ void StochPresolverModelCleanup::applyPresolving()
    countRowsCols();
 #endif
 
+   // todo: make one function, delete removeTinyEntriesSystemC! only difference: lhs and rhs
    nelims += removeTinyEntriesSystemA();
    StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*presProb->A);
    updateTransposed(A);
@@ -467,6 +468,7 @@ int StochPresolverModelCleanup::removeTinyEntriesSystemC()
    setCurrentPointersToNull();
 
    int nelimsB0 = 0;
+   // todo double setCurrentPointersToNull:
    if( updateCPforTinyEntry( -1, INEQUALITY_SYSTEM) )
    {
       nelimsB0 = removeTinyInnerLoop( -1, INEQUALITY_SYSTEM, LINKING_VARS_BLOCK );
@@ -529,6 +531,7 @@ int StochPresolverModelCleanup::removeTinyEntriesSystemC()
       }
 
       // update nRowElems.vecl via AllReduce:
+      // todo BUG? update changes of lhs and rhs of linking constraints!!!! remember changes and allreduce
       if( iAmDistrib )
       {
          double* redRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->elements();
@@ -601,6 +604,9 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int it, SystemType system_t
                if( currIclow->elements()[r] != 0.0 )
                   currIneqLhs->elements()[r] -= storage->M[k] * xlowElems[col];
             }
+
+            // todo third criterion? for linking constraints: call extra function to know whether we have linking cons
+            // that link only two blocks (not so urgent for linking)
 
             // cout << "Remove entry M ( "<< r << ", " << col << " ) = "<<storage->M[k]<<" (by second test)"<<endl;
             storeRemovedEntryIndex(r, storage->jcolM[k], it, block_type);

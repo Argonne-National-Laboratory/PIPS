@@ -44,19 +44,19 @@ void StochPresolverBoundStrengthening::applyPresolving()
    doBoundStrengthParent( INEQUALITY_SYSTEM );
 
    // children:
-   for( size_t child_it = 0; (int)child_it < nChildren; child_it++)
+   for( int child_it = 0; child_it < nChildren; child_it++)
    {
       // dummy child?
-      if( setCPforBounds(presProb->A, (int)child_it, EQUALITY_SYSTEM) )
-         doBoundStrengthChild((int)child_it, EQUALITY_SYSTEM);
-      if( setCPforBounds(presProb->C, (int)child_it, INEQUALITY_SYSTEM) )
-         doBoundStrengthChild((int)child_it, INEQUALITY_SYSTEM);
+      if( setCPforBounds(presProb->A, child_it, EQUALITY_SYSTEM) )
+         doBoundStrengthChild(child_it, EQUALITY_SYSTEM);
+      if( setCPforBounds(presProb->C, child_it, INEQUALITY_SYSTEM) )
+         doBoundStrengthChild(child_it, INEQUALITY_SYSTEM);
    }
    // Update nRowLink and lhs/rhs (Linking part) of both systems:
    updateRhsNRowLink();
 
    // linking rows:
-   // todo
+   // todo (don't change update before)
 
    // combine the bounds of linking-variables:
    combineNewBoundsParent();
@@ -217,12 +217,13 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
    if( partMinActivity == -std::numeric_limits<double>::max() && partMaxActivity == std::numeric_limits<double>::max())
       return;
 
-   for( int j=matrix.rowptr[rowIdx].start; j<matrix.rowptr[rowIdx].end; j++)
+   for( int j = matrix.rowptr[rowIdx].start; j < matrix.rowptr[rowIdx].end; j++ )
    {
       const int colIdx = matrix.jcolM[j];
       double lis = partMinActivity, uis = partMaxActivity;
 
-      // Compute remaining activity of the row:
+      // Compute remaining activity of the row: todo: compute activity one time and update afterwards;
+      // recompute activity all 1000? times
       if( childBlock )
          computeActivityBlockwise(matrix, rowIdx, colIdx, lis, uis,
             *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
@@ -289,7 +290,7 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
             // store the fixation to remove the column later after communicating
             if( !atRoot || myRank==0 )
               storeColValInColAdaptParent(colIdx, varvalue);
-            // tighten the bounds to varvalue on this processor:
+            // tighten the bounds to varvalue on this process:
             setNewBound(colIdx, varvalue, currxlowParent, currIxlowParent );
             setNewBound(colIdx, varvalue, currxuppParent, currIxuppParent );
 
