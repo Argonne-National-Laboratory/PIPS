@@ -395,163 +395,175 @@ void sLinsysRootAugSpTriplet::reduceKKT()
   // and gather the entries of all the MUMPS ranks.
   // Do not update the values of the differences, just add 0s on rank 0
   if (mumpsComm != MPI_COMM_NULL) {
-  if(iAmRank0) {
-    bool bret = mumpsSolver->getTripletStorageArrays(&irn, &jcn, &M);
-    if(bret==false) {
+    if (iAmRank0) {
+      bool bret = mumpsSolver->getTripletStorageArrays(&irn, &jcn, &M);
+      if (bret == false) {
+        irn = new int[nnzRoot];
+        jcn = new int[nnzRoot];
+        M = new double[nnzRoot];
+        deleteTriplet = true;
+      }
+      else {
+        assert(irn);
+        assert(jcn);
+        assert(M);
+        deleteTriplet = false;
+      }
+    }
+
+    int myRank;
+    MPI_Comm_rank(mumpsComm, &myRank);
+    //printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
+
+    //
+    //root processor bcasts the its triplet indexes
+    //
+
+    //root bcasts first the nnz
+    MPI_Bcast(&nnzRoot, 1, MPI_INT, 0, mumpsComm);
+
+    if (!iAmRank0) {
+      //allocate
       irn = new int[nnzRoot];
       jcn = new int[nnzRoot];
       M = new double[nnzRoot];
-      deleteTriplet=true;
-    } else {
-      assert(irn); assert(jcn); assert(M);
-      deleteTriplet=false;
+      deleteTriplet = true;
     }
-  } 
-
-  int myRank; MPI_Comm_rank(mumpsComm, &myRank);
-  //printf("myRank %d ---- nnzRoot %d   localkktm %d \n", myRank, nnzRoot, kktm.numberOfNonZeros());
-
-  //
-  //root processor bcasts the its triplet indexes
-  //
-
-  //root bcasts first the nnz
-  MPI_Bcast(&nnzRoot, 1, MPI_INT, 0, mumpsComm);
-
-  if(!iAmRank0) {
-    //allocate
-    irn = new int[nnzRoot];
-    jcn = new int[nnzRoot];
-    M = new double[nnzRoot];
-    deleteTriplet=true;
-  } else {
-    //root prepares the sparse triplet
-    assert(irn);
-    kktm.atGetSparseTriplet(irn, jcn, M, false);
-  }
-  MPI_Bcast(irn, nnzRoot, MPI_INT, 0, mumpsComm);
-  MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mumpsComm);
-
-  //all mumps processes check: does its sparsity pattern check that of the root processor?
-  //    - each process saves the not-in-the-root/diff 
-  //    entries
-  //    - the not-in-the-root indices are then MPI_Gather-ed to the root;
-  //
-  int *irow_diff=NULL, *jcol_diff=NULL; double* M_diff=NULL; int nnz_diff=0;
-  if(!iAmRank0) {
-
-    bool bPatternMatched = kktm.fromGetIntersectionSparseTriplet_w_diff(irn,jcn,nnzRoot,M,
-									&irow_diff, &jcol_diff, &M_diff, nnz_diff);
-    if(bPatternMatched) { 
-      assert(nnz_diff==0); 
-      assert(irow_diff==NULL); 
-      assert(jcol_diff==NULL); 
-      assert(M_diff==NULL); 
-    } else {
-      assert(nnz_diff!=0); 
-      assert(irow_diff!=NULL); 
-      assert(jcol_diff!=NULL);
-      assert(M_diff!=NULL); 
+    else {
+      //root prepares the sparse triplet
+      assert(irn);
+      kktm.atGetSparseTriplet(irn, jcn, M, false);
     }
-    //printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
-  }
+    MPI_Bcast(irn, nnzRoot, MPI_INT, 0, mumpsComm);
+    MPI_Bcast(jcn, nnzRoot, MPI_INT, 0, mumpsComm);
 
-  // - the saved entries are then MPI_Gather-ed 
-  {
-    int mismatch=(nnz_diff>0), auxG;
-    MPI_Allreduce(&mismatch, &auxG, 1, MPI_INT, MPI_MAX, mumpsComm);
-    mismatch=auxG;
-    if(mismatch) {
+    //all mumps processes check: does its sparsity pattern check that of the root processor?
+    //    - each process saves the not-in-the-root/diff
+    //    entries
+    //    - the not-in-the-root indices are then MPI_Gather-ed to the root;
+    //
+    int *irow_diff = NULL, *jcol_diff = NULL;
+    double *M_diff = NULL;
+    int nnz_diff = 0;
+    if (!iAmRank0) {
 
-      //first get the sum of nnz of diff over all processes -> needed to allocate recv buffer at root
-      int commSize; MPI_Comm_size( mumpsComm, &commSize); 
-      int* diff_counts = NULL, *irow_diff_dest=NULL, *jcol_diff_dest=NULL; double* M_diff_dest=NULL;
-      if(iAmRank0) diff_counts = new int[commSize];
-
-      MPI_Gather(&nnz_diff, 1, MPI_INT, diff_counts, 1, MPI_INT, 0, mumpsComm);
-
-      size_t* displs=NULL;
-      if(iAmRank0) {
-	assert(diff_counts[0]==0); //diff for rank 0 should be empty
-	displs = new size_t[commSize];
-
-	displs[0]=0;
-	for(int i=1; i<commSize; i++) { 
-	  displs[i] = displs[i-1] + diff_counts[i-1];
-	  printf("Rank %d  -> displs=%zu , diff_counts=%d\n", i, displs[i], diff_counts[i]);
-	}
-
-	size_t nnz_diff_total = displs[commSize-1]+diff_counts[commSize-1];
-
-	//printf("Rank %d  -> %d entries to be gathered\n", myRank, nnz_diff_total);
-
-	irow_diff_dest = new int[nnz_diff_total];
-	jcol_diff_dest = new int[nnz_diff_total];
-  // Only used with all set to zero. Handed over to atAddSpRow. One could avoid this.
-	M_diff_dest = new double[nnz_diff_total];
-  // Make sure M_diff_dest is 0
-  for(size_t i=0; i<nnz_diff_total; i++) M_diff_dest[i]=0;
+      bool bPatternMatched = kktm.fromGetIntersectionSparseTriplet_w_diff(irn, jcn, nnzRoot, M,
+                                                                          &irow_diff, &jcol_diff, &M_diff, nnz_diff);
+      if (bPatternMatched) {
+        assert(nnz_diff == 0);
+        assert(irow_diff == NULL);
+        assert(jcol_diff == NULL);
+        assert(M_diff == NULL);
       }
-      
-      if(iAmRank0) {
-        MPI_Request request[2][commSize-1];
-        for(int i=1; i < commSize; i++) {
-          MPI_Irecv(irow_diff_dest+displs[i], diff_counts[i], MPI_INT, i, 0, mumpsComm, &request[0][i-1]);
-          MPI_Irecv(jcol_diff_dest+displs[i], diff_counts[i], MPI_INT, i, 0, mumpsComm, &request[1][i-1]);
+      else
+      {
+        assert(nnz_diff != 0);
+        assert(irow_diff != NULL);
+        assert(jcol_diff != NULL);
+        assert(M_diff != NULL);
+      }
+      //printf("Rank %d  has %d entries that rank0 does not have.\n", myRank, nnz_diff);
+    }
+
+    // - the saved entries are then MPI_Gather-ed
+    {
+      int mismatch = (nnz_diff > 0), auxG;
+      MPI_Allreduce(&mismatch, &auxG, 1, MPI_INT, MPI_MAX, mumpsComm);
+      mismatch = auxG;
+      if (mismatch) {
+
+        //first get the sum of nnz of diff over all processes -> needed to allocate recv buffer at root
+        int commSize;
+        MPI_Comm_size(mumpsComm, &commSize);
+        int *diff_counts = NULL, *irow_diff_dest = NULL, *jcol_diff_dest = NULL;
+        double *M_diff_dest = NULL;
+        if (iAmRank0)
+          diff_counts = new int[commSize];
+
+        MPI_Gather(&nnz_diff, 1, MPI_INT, diff_counts, 1, MPI_INT, 0, mumpsComm);
+
+        size_t *displs = NULL;
+        if (iAmRank0) {
+          assert(diff_counts[0] == 0); //diff for rank 0 should be empty
+          displs = new size_t[commSize];
+
+          displs[0] = 0;
+          for (int i = 1; i < commSize; i++) {
+            displs[i] = displs[i - 1] + diff_counts[i - 1];
+            printf("Rank %d  -> displs=%zu , diff_counts=%d\n", i, displs[i], diff_counts[i]);
+          }
+
+          size_t nnz_diff_total = displs[commSize - 1] + diff_counts[commSize - 1];
+
+          //printf("Rank %d  -> %d entries to be gathered\n", myRank, nnz_diff_total);
+
+          irow_diff_dest = new int[nnz_diff_total];
+          jcol_diff_dest = new int[nnz_diff_total];
+          // Only used with all set to zero. Handed over to atAddSpRow. One could avoid this.
+          M_diff_dest = new double[nnz_diff_total];
+          // Make sure M_diff_dest is 0
+          for (size_t i = 0; i < nnz_diff_total; i++)
+            M_diff_dest[i] = 0;
         }
-        memcpy(irow_diff_dest, irow_diff, nnz_diff);
-        memcpy(jcol_diff_dest, jcol_diff, nnz_diff);
-        MPI_Waitall(commSize-1, request[0], MPI_STATUSES_IGNORE);
-        MPI_Waitall(commSize-1, request[1], MPI_STATUSES_IGNORE);
-      }
-      else {
-        MPI_Send(irow_diff, nnz_diff, MPI_INT, 0, 0, mumpsComm);
-        MPI_Send(jcol_diff, nnz_diff, MPI_INT, 0, 0, mumpsComm);
-      }
 
+        if (iAmRank0) {
+          MPI_Request request[2][commSize - 1];
+          for (int i = 1; i < commSize; i++) {
+            MPI_Irecv(irow_diff_dest + displs[i], diff_counts[i], MPI_INT, i, 0, mumpsComm, &request[0][i - 1]);
+            MPI_Irecv(jcol_diff_dest + displs[i], diff_counts[i], MPI_INT, i, 0, mumpsComm, &request[1][i - 1]);
+          }
+          memcpy(irow_diff_dest, irow_diff, nnz_diff);
+          memcpy(jcol_diff_dest, jcol_diff, nnz_diff);
+          MPI_Waitall(commSize - 1, request[0], MPI_STATUSES_IGNORE);
+          MPI_Waitall(commSize - 1, request[1], MPI_STATUSES_IGNORE);
+        }
+        else {
+          MPI_Send(irow_diff, nnz_diff, MPI_INT, 0, 0, mumpsComm);
+          MPI_Send(jcol_diff, nnz_diff, MPI_INT, 0, 0, mumpsComm);
+        }
 
+        if (iAmRank0) {
+          int nz_start = 0, nz_end;
+          for (int p = 0; p < commSize; p++) {
+            if (diff_counts[p] == 0)
+              continue;
 
-      if(iAmRank0) {	
-	int nz_start=0, nz_end;
-	for(int p=0; p<commSize; p++) {
-	  if(diff_counts[p]==0) continue; 
+            //printf("Rank %d  adding %d entries from rank %d\n", myRank, diff_counts[p], p);
 
-	  //printf("Rank %d  adding %d entries from rank %d\n", myRank, diff_counts[p], p);
+            nz_end = nz_start + diff_counts[p];
 
-	  nz_end=nz_start+diff_counts[p];
+            //for the diff coming from rank p, go over the nnz and add each row to kktm
+            //we assume the row indexes are ordered, and for equal row indexes the col indexes are ordered
 
-	  //for the diff coming from rank p, go over the nnz and add each row to kktm
-	  //we assume the row indexes are ordered, and for equal row indexes the col indexes are ordered
-  
-	  int row_start = nz_start, row_end = nz_start;
-	  while(row_end<nz_end) {
-	    
-	    while(irow_diff_dest[row_start] == irow_diff_dest[row_end] && row_end<nz_end) 
-	      row_end++;
-	    assert(row_end>=row_start);
+            int row_start = nz_start, row_end = nz_start;
+            while (row_end < nz_end) {
 
-	    kktm.atAddSpRow(irow_diff_dest[row_start], jcol_diff_dest+row_start, M_diff_dest+row_start, row_end-row_start);
-	    row_start = row_end;
-	  }
+              while (irow_diff_dest[row_start] == irow_diff_dest[row_end] && row_end < nz_end)
+                row_end++;
+              assert(row_end >= row_start);
 
-	  nz_start = nz_end;
+              kktm.atAddSpRow(irow_diff_dest[row_start], jcol_diff_dest + row_start, M_diff_dest + row_start, row_end - row_start);
+              row_start = row_end;
+            }
 
-	} // end for(int p=0; p<commSize; p++) 
-	
-      } // end if(iAmRank0) {
-      
-      delete [] diff_counts;
-      delete [] irow_diff_dest;
-      delete [] jcol_diff_dest;
-      delete [] M_diff_dest;
-    } // end if(mismatch)
-  }
+            nz_start = nz_end;
 
-  if(deleteTriplet) {
-    delete[] irn;
-    delete[] jcn;
-    delete[] M;
-  }
+          } // end for(int p=0; p<commSize; p++)
+
+        } // end if(iAmRank0) {
+
+        delete[] diff_counts;
+        delete[] irow_diff_dest;
+        delete[] jcol_diff_dest;
+        delete[] M_diff_dest;
+      } // end if(mismatch)
+    }
+
+    if (deleteTriplet) {
+      delete[] irn;
+      delete[] jcn;
+      delete[] M;
+    }
   } // end mumpsComm != MPI_COMM_NULL
 
   // Now that rank 0 has the global sparsity pattern, we can just reduce over
