@@ -367,7 +367,7 @@ FilterIPMStochSolver::defaultStatus(Data *  data_in, Variables * /* vars */,
 
   if ( stop_code != NOT_FINISHED){ 
   	if(0==myRank && printlevel>0){
-		printf("  Iter is accecpted due to: \n");
+		printf("  Iter is accepted due to: \n");
 		printf("							SWC and AC: %d \n", StepAcceptDueTo_SWC_AC);
 		printf("							SRC __ Obj: %d \n", StepAcceptDueTo_SRC_obj);
 		printf("							SRC __ Con: %d \n", StepAcceptDueTo_SRC_con);		
