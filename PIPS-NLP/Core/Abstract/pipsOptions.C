@@ -27,6 +27,7 @@ int gSymLinearAlgSolverForDense;
 
 
 int gBuildSchurComp;
+int gMUMPSranks;
 double gAbsTolForZero;
 int gSolveSchurScheme;
 int gUseReducedSpace;
@@ -125,6 +126,7 @@ pipsOptions::pipsOptions()
 	RS_MaxIR(5),
 	RS_LU_PivotLV(0.0001),
    BuildSchurComp(1),
+   MUMPSranks(4),
    AbsTolForZero(0.),
    SolveSchurScheme(0),
    NP_Alg(0),
@@ -178,6 +180,7 @@ pipsOptions::defGloOpt()
   					  // 3: Default solve - Schur complement based decomposition, do not compress!
 
   gBuildSchurComp 	= BuildSchurComp;
+  gMUMPSranks 	= MUMPSranks;
   gAbsTolForZero        = AbsTolForZero;
   gSolveSchurScheme = SolveSchurScheme;			
   gUseReducedSpace  = UseReducedSpace;
@@ -515,6 +518,10 @@ bool pipsOptions::parseLine(char *buffer)
 	this->BuildSchurComp = int(dval);
 	found = true;
   } 
+  if (strcmp(label, "MUMPSranks") == 0 ) {
+	this->MUMPSranks = int(dval);
+	found = true;
+  }
   if (strcmp(label, "AbsTolForZero") == 0 ) {
 	this->AbsTolForZero = dval;
 	found = true;
