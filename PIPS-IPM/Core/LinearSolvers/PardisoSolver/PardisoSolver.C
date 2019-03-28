@@ -440,7 +440,7 @@ void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
   int mtype=-2, error;
   iparm[1] = 2; //metis
   iparm[2] = num_threads;
-  iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+  iparm[7] = 5; /* Max numbers of iterative refinement steps . */
   iparm[30] = 1; //sparse rhs
   //iparm[5] = 1; /* replace drhs with the solution */
 
