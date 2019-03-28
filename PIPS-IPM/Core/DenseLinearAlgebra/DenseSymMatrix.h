@@ -23,7 +23,7 @@ public:
   DenseSymMatrix( int size );
   DenseSymMatrix( double Q[], int size );
 
-  virtual int isKindOf( int matrixType );
+  virtual int isKindOf( int matrixType ) const;
 
   virtual void mult ( double beta,  double y[], int incy,
 		      double alpha, double x[], int incx );

@@ -10,7 +10,7 @@
 
 #include "DoubleMatrixTypes.h"
 
-int SparseSymMatrix::isKindOf( int type )
+int SparseSymMatrix::isKindOf( int type ) const
 {
   return type == kSparseSymMatrix || type == kSymMatrix;
 }

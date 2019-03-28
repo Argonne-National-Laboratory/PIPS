@@ -7,7 +7,8 @@
 
 //#define PIPS_DEBUG
 #include "StochPresolverSingletonRows.h"
-
+#include <limits>
+#include <cmath>
 
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData)
 : StochPresolverBase(presData)
@@ -296,7 +297,7 @@ void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIn
 
       for( size_t it = 0; it < presData.nRowElemsA->children.size(); it++)
       {
-         if( !childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->A)), it, EQUALITY_SYSTEM))
+         if( !nodeIsDummy( it, EQUALITY_SYSTEM))
          {
             setCPBlmatsChild(presProb->A, (int)it);
             // set pointers ixlow etc and redColChild
@@ -774,7 +775,7 @@ bool StochPresolverSingletonRows::updateCPForSingletonRow(int it, SystemType sys
    setCPColumnRoot();
    currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
    for(int i=0; i<currgParent->n; i++)
-      assert( isfinite(currgParent->elements()[i]) );
+      assert( std::isfinite(currgParent->elements()[i]) );
 
    if( it == -1 )
    {

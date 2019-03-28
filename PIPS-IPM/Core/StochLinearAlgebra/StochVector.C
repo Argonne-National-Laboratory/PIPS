@@ -286,7 +286,7 @@ StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& 
 }
 
 
-int StochVector::isKindOf( int kind )
+int StochVector::isKindOf( int kind ) const
 {
   return kind==kStochVector;
 }

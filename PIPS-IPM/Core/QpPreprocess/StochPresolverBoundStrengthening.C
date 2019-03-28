@@ -7,11 +7,15 @@
 
 //#define PIPS_DEBUG
 #include "StochPresolverBoundStrengthening.h"
+#include <limits>
+#include <cmath>
 
-StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(PresolveData& presData)
-: StochPresolverBase(presData)
+StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
+      PresolveData& presData) :
+      StochPresolverBase(presData)
 {
- // todo
+   // todo
+   // we should add statistics data here maybe ? not sure
 }
 
 StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
@@ -97,7 +101,7 @@ bool StochPresolverBoundStrengthening::setCPforBounds(GenMatrixHandle matrixHand
    setCurrentPointersToNull();
    currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
    for(int i=0; i<currgParent->n; i++)
-      assert( isfinite(currgParent->elements()[i]) );
+      assert( std::isfinite(currgParent->elements()[i]) );
 
    if(it >= 0)
    {
@@ -111,7 +115,7 @@ bool StochPresolverBoundStrengthening::setCPforBounds(GenMatrixHandle matrixHand
          setCPRowChildEquality(it);
       currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
       for(int i=0; i<currgChild->n; i++)
-         assert( isfinite(currgChild->elements()[i]) );
+         assert( std::isfinite(currgChild->elements()[i]) );
       currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
    }
    else

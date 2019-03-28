@@ -5,7 +5,6 @@
  *      Author: bzfrehfe
  */
 
-#include <iostream>
 #include "QpPresolver.h"
 
 

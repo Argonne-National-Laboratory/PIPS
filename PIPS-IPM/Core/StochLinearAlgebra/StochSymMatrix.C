@@ -92,7 +92,7 @@ StochSymMatrix* StochSymMatrix::clone() const
    return clone;
 }
 
-int StochSymMatrix::isKindOf( int type )
+int StochSymMatrix::isKindOf( int type ) const
 {
   return type == kStochSymMatrix || type == kSymMatrix;
 }
@@ -406,7 +406,7 @@ void StochSymMatrix::deleteEmptyRowsCols(const OoqpVector& nnzVec, const OoqpVec
 }
 
 
-int StochSymDummyMatrix::isKindOf( int type ) 
+int StochSymDummyMatrix::isKindOf( int type ) const
 { 
   return type==kStochSymDummyMatrix;
 }

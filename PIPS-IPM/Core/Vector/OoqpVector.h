@@ -212,7 +212,7 @@ public:
    *  Classes overriding this method must call the inherited version, so that
    *  the class hierarchy is supported.
    */
-  virtual int isKindOf( int kind ) = 0;
+  virtual int isKindOf( int kind ) const = 0;
 
   /** Return the largest value of alpha in the interval [0, maxStep] for
    *  which: this + alpha * v >= 0. Set firstBlocking to be the

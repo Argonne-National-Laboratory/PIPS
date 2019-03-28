@@ -18,8 +18,7 @@
 const double pips_eps = 1e-13;
 const double pips_eps0 = 1e-40;
 
-static inline
-double relativeDiff(double val1, double val2)
+static inline double relativeDiff(double val1, double val2)
 {
    const double val1Abs = std::fabs(val1);
    const double val2Abs = std::fabs(val2);

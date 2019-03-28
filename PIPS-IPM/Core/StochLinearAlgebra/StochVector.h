@@ -60,7 +60,7 @@ public:
   virtual void jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3);
   virtual void jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& vz);
 
-  virtual int isKindOf( int kind );
+  virtual int isKindOf( int kind ) const;
   virtual void setToZero();
   virtual void setToConstant( double c );
   virtual void randomize( double alpha, double beta, double *ix );
@@ -182,7 +182,7 @@ public:
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3){};
   virtual void jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3){};
 
-  virtual int isKindOf( int kind ){return kind==kStochDummy;}
+  virtual int isKindOf( int kind ) const {return kind == kStochDummy;}
   virtual void setToZero(){};
   virtual void setToConstant( double c ){};
   virtual void randomize( double alpha, double beta, double *ix ){};

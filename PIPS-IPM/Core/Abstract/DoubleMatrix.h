@@ -11,6 +11,7 @@
 
 #include <cstring>
 #include <iostream>
+// todo remove ?
 using namespace std;
 #include "OoqpVectorHandle.h"
 #include "DoubleMatrixHandle.h"
@@ -58,7 +59,7 @@ public:
   DoubleMatrix() {}
 
   /** True if this matrix identifies itself to be of type matrixType. */
-  virtual int isKindOf( int matrixType ) = 0;
+  virtual int isKindOf( int matrixType ) const = 0;
 
   /** Get the value of some of the elements of this matrix.
    * 
