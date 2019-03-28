@@ -500,7 +500,7 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
 
    //iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
 
-   iparm[7] = 1; /* Max numbers of iterative refinement steps . */
+   iparm[7] = 5; /* Max numbers of iterative refinement steps . */
 
    if( colSparsity)
       iparm[30] = 1; //sparse rhs
