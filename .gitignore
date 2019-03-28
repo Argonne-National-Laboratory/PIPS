@@ -50,6 +50,7 @@ slurm*
 build
 SharedLibraries
 build_pips
+PARDISO
 
 # Ignore the OS X DS_Store
 .DS_Store
@@ -57,4 +58,5 @@ build_pips
 # Ignore Eclipse files
 .metadata*
 .project
+.cproject
 RemoteSystemsTempFiles*
