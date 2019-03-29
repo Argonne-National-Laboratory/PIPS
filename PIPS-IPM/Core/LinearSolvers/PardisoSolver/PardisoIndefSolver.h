@@ -29,11 +29,13 @@ class PardisoIndefSolver : public DoubleLinearSolver
 
       int nrhs; /* Number of right hand sides. */
 
-      void *pt[64];  /* Internal solver memory pointer pt                  */
+      void *pt[64];  /* Internal solver memory pointer pt */
 
       /* Pardiso control parameters. */
       int iparm[64];
+#ifndef WITH_PARDISO_SOLVER
       double dparm[64];
+#endif
       int maxfct, mnum, phase, msglvl, solver;
       int* ia;
       int* ja;
@@ -58,7 +60,6 @@ class PardisoIndefSolver : public DoubleLinearSolver
       // todo delete
       virtual void factorizeFromDense();
       virtual void factorize();
-
 };
 
 #endif /* _PARDISOINDEFSOLVER_H_ */

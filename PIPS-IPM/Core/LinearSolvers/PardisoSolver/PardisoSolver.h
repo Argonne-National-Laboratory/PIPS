@@ -59,9 +59,12 @@ private:
   bool first;
   void  *pt[64]; 
   int iparm[64];
+  int n;
+
+#ifndef WITH_MKL_PARDISO
   int num_threads;
   double dparm[64];
-  int n;
+#endif
 
   /** storage for the upper triangular (in row-major format) */
   int     *krowM,    *jcolM;

@@ -20,8 +20,13 @@
 
 #define CHECK_PARDISO
 
+#ifdef WITH_MKL_PARDISO
+#include "mkl_pardiso.h"
+#include "mkl_types.h"
+#endif
 
 /* PARDISO prototype. */
+#ifndef WITH_MKL_PARDISO
 extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *,
                   double *, int    *,    int *, int *,   int *, int *,
@@ -30,6 +35,7 @@ extern "C" void pardiso_chkmatrix  (int *, int *, double *, int *, int *, int *)
 extern "C" void pardiso_chkvec     (int *, int *, double *, int *);
 extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
                            double *, int *);
+#endif
 
 PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 {
@@ -63,9 +69,11 @@ void PardisoIndefSolver::initPardiso()
    mtype = -2;
    nrhs = 1;
 
+#ifndef WITH_MKL_PARDISO
    int error = 0;
    solver = 0; /* use sparse direct solver */
-   pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error);
+
+   pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
 
    if( error != 0 )
    {
@@ -81,6 +89,13 @@ void PardisoIndefSolver::initPardiso()
       printf("[PARDISO]: License check was successful ... \n");
 
    iparm[2] = PIPSgetnOMPthreads();
+#else
+   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
+   //iparm[26] = 1;
+   pardisoinit(pt, &mtype, iparm);
+#endif
+
+
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
@@ -278,12 +293,17 @@ void PardisoIndefSolver::factorize()
 
 #ifndef NDEBUG
 #ifdef CHECK_PARDISO
+#ifndef WITH_MKL_PARDISO
    pardiso_chkmatrix(&mtype, &n, a, ia, ja, &error);
    if( error != 0 )
    {
       printf("\nERROR in consistency of matrix: %d", error);
       exit(1);
    }
+#else
+   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
+   iparm[26] = 1;
+#endif
 #endif
 #endif
 
@@ -309,22 +329,36 @@ else
    iparm[9] = 13; // pivot perturbation 10^{-xxx}
 #ifdef PARDISOINDEF_SCALE
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+#ifndef WITH_MKL_PARDISO
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+#else
+   iparm[12] = 1; // MKL does not have a =2 option here
+#endif
    if( myrank == 0)
       std::cout << "... SCALE PARDISO for global SC" << std::endl;
 #endif
 
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   //iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
-   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+
+   #ifndef WITH_MKL_PARDISO
+   //iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0) no MKL equivalent
    iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   //iparm[27] = 1; // Parallel metis
+   //iparm[27] = 1; // Parallel metis no MKL equivalent
+   #else
+   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
+                  // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
+   #endif
 #endif
 
    phase = 11;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
-         iparm, &msglvl, &ddum, &ddum, &error, dparm);
+         iparm, &msglvl, &ddum, &ddum, &error
+#ifndef WITH_MKL_PARDISO
+         , dparm
+#endif
+   );
 
    if( error != 0 )
    {
@@ -340,10 +374,16 @@ else
    }
 
    phase = 22;
+#ifndef WITH_MKL_PARDISO
    // iparm[32] = 1; /* compute determinant */
+#endif
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
-         iparm, &msglvl, &ddum, &ddum, &error, dparm);
+         iparm, &msglvl, &ddum, &ddum, &error
+#ifndef WITH_MKL_PARDISO
+         , dparm
+#endif
+   );
 
    if( error != 0 )
    {
@@ -354,9 +394,14 @@ else
 
 void PardisoIndefSolver::solve ( OoqpVector& v )
 {
+
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
    assert(iparm[23] == 1);
-   assert(iparm[24] == 1);
+#ifndef WITH_MKL_PARDISO
+  assert(iparm[24] == 1);
+#else
+  assert(iparm[24] == 2);
+#endif
 #endif
 
    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -384,8 +429,11 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
          x = new double[n];
 
       pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
-            iparm, &msglvl, b, x, &error, dparm);
-
+            iparm, &msglvl, b, x, &error
+#ifndef WITH_MKL_PARDISO
+            ,dparm
+#endif
+      );
       if( error != 0 )
       {
          printf("\nERROR during solution: %d", error);
@@ -454,7 +502,11 @@ PardisoIndefSolver::~PardisoIndefSolver()
    phase = -1; /* Release internal memory. */
    int error;
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, &ddum, ia, ja, &idum, &nrhs,
-         iparm, &msglvl, &ddum, &ddum, &error, dparm);
+         iparm, &msglvl, &ddum, &ddum, &error
+#ifndef WITH_MKL_PARDISO
+         , dparm
+#endif
+   );
 
    delete[] ia;
    delete[] ja;

@@ -79,8 +79,11 @@ protected:
   bool firstSolve;
   void  *pt[64]; 
   int iparm[64];
-  double dparm[64];
+
+#ifndef WITH_MKL_PARDISO
   int num_threads;
+  double dparm[64];
+#endif
 
   /** dimension of the PARDISO augmented system */
   int n; 

@@ -23,9 +23,14 @@ using namespace std;
 #include <unistd.h>
 #endif
 
+#ifdef WITH_MKL_PARDISO
+#include "mkl_pardiso.h"
+#include "mkl_types.h"
+#endif
+
 extern int gOoqpPrintLevel;
 
-
+#ifndef WITH_MKL_PARDISO
 extern "C" void pardisoinit (void   *, int    *,   int *, int *, double *, int *);
 extern "C" void pardiso     (void   *, int    *,   int *, int *,    int *, int *, 
                   double *, int    *,    int *, int *,   int *, int *,
@@ -36,7 +41,7 @@ extern "C" void pardiso_chkmatrix  (int *, int *, double *, int *, int *, int *)
 extern "C" void pardiso_chkvec     (int *, int *, double *, int *);
 extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
                            double *, int *);
-
+#endif
 
 PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 {
@@ -58,8 +63,10 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 
   first = true;
   nvec=new double[n];
-  num_threads = PIPSgetnOMPthreads();
 
+#ifndef WITH_MKL_PARDISO
+  num_threads = PIPSgetnOMPthreads();
+#endif
   Mdsys=NULL;
 }
 
@@ -87,6 +94,7 @@ PardisoSolver::PardisoSolver( DenseSymMatrix * m )
   first = true;
   nvec=new double[n];
    
+#ifndef WITH_MKL_PARDISO
   /* Numbers of processors, value of OMP_NUM_THREADS */
   char *var = getenv("OMP_NUM_THREADS");
   if(var != NULL)
@@ -95,6 +103,7 @@ PardisoSolver::PardisoSolver( DenseSymMatrix * m )
     printf("Set environment OMP_NUM_THREADS");
     exit(1);
   }
+#endif
 }
 int PardisoSolver::getNumberOfNonZeros(DenseSymMatrix& m)
 {
@@ -108,112 +117,166 @@ int PardisoSolver::getNumberOfNonZeros(DenseSymMatrix& m)
   return nnz;
 }
 
-void PardisoSolver::firstCall()
+void
+PardisoSolver::firstCall()
 {
 
-  int solver=0, mtype=-2, error;
-  pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error); 
-  if (error!=0) {
-    cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
-    assert(false);
-  }
-  
-  if(Msys) {
+   int mtype = -2;
+#ifndef WITH_MKL_PARDISO
+   int solver = 0, error;
 
-    //get the matrix in upper triangular
-    Msys->getStorageRef().transpose(krowM, jcolM, M);
-    
-    //save the indeces for diagonal entries for a streamlined later update
-    int* krowMsys = Msys->getStorageRef().krowM;
-    int* jcolMsys = Msys->getStorageRef().jcolM;
-    for(int r=0; r<n; r++) {
-      // Msys - find the index in jcol for the diagonal (r,r)
-      int idxDiagMsys=-1;
-      for(int idx=krowMsys[r]; idx<krowMsys[r+1]; idx++)
-	if(jcolMsys[idx]==r) {idxDiagMsys=idx; break;}
-      assert(idxDiagMsys>=0); //must have all diagonals entries
-      
-      // aug  - find the index in jcol for the diagonal (r,r)
-      int idxDiagAug=-1;
-      for(int idx=krowM[r]; idx<krowM[r+1]; idx++)
-	if(jcolM[idx]==r) {idxDiagAug=idx; break;}
-      assert(idxDiagAug>=0);
-      
-      diagMap.insert( pair<int,int>(idxDiagMsys,idxDiagAug) );
-    }
-  } else {
-    // the input is a dense matrix
-    // the dense matrix is also processed in matrixChanged everytime the method is called  
-    if(Mdsys) {
-      // the input is a dense matrix
-      DenseSymMatrix& Md = (*Mdsys);
-      nnz=getNumberOfNonZeros(Md);
+   pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
 
-      delete[] krowM; delete[] jcolM; delete[] M;
-      krowM = new int[n+1];
-      jcolM = new int[nnz];
-      M = new double[nnz];
+   if( error != 0 )
+   {
+      cout << "PardisoSolver ERROR during pardisoinit:" << error << "." << endl;
+      assert(false);
+   }
+#else
+   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
+   //iparm[26] = 1;
+   pardisoinit(pt, &mtype, iparm);
+#endif
 
-      int nzIt=0;
-      for(int i=0; i<n; i++) {
+   if( Msys )
+   {
 
-	krowM[i]=nzIt;
-	//cout << i << " " << krowM[i] << endl;
-	
-	jcolM[nzIt]=i; // the diagonal
-	M[nzIt]=Md[i][i];
-	assert(nzIt<nnz);
-	nzIt++;
-	
-	for(int j=i+1; j<n; j++) {
-	  if(Md[i][j]!=0.0) {
-	    jcolM[nzIt]=j;
-	    M[nzIt]=Md[i][j];
-	    assert(nzIt<nnz);
-	    nzIt++;
-	  }
-	}
+      //get the matrix in upper triangular
+      Msys->getStorageRef().transpose(krowM, jcolM, M);
+
+      //save the indeces for diagonal entries for a streamlined later update
+      int* krowMsys = Msys->getStorageRef().krowM;
+      int* jcolMsys = Msys->getStorageRef().jcolM;
+      for( int r = 0; r < n; r++ )
+      {
+         // Msys - find the index in jcol for the diagonal (r,r)
+         int idxDiagMsys = -1;
+         for( int idx = krowMsys[r]; idx < krowMsys[r + 1]; idx++ )
+            if( jcolMsys[idx] == r )
+            {
+               idxDiagMsys = idx;
+               break;
+            }
+         assert(idxDiagMsys>=0);
+         //must have all diagonals entries
+
+         // aug  - find the index in jcol for the diagonal (r,r)
+         int idxDiagAug = -1;
+         for( int idx = krowM[r]; idx < krowM[r + 1]; idx++ )
+            if( jcolM[idx] == r )
+            {
+               idxDiagAug = idx;
+               break;
+            }
+         assert(idxDiagAug>=0);
+
+         diagMap.insert(pair<int, int>(idxDiagMsys, idxDiagAug));
       }
-      //cout << "PardisoSolver::first call nzit=" << nzIt << endl;
-      assert(nzIt==nnz);
-      krowM[n]=nzIt;
+   }
+   else
+   {
+      // the input is a dense matrix
+      // the dense matrix is also processed in matrixChanged everytime the method is called
+      if( Mdsys )
+      {
+         // the input is a dense matrix
+         DenseSymMatrix& Md = (*Mdsys);
+         nnz = getNumberOfNonZeros(Md);
 
-    } else { assert(false); }
-  }
+         delete[] krowM;
+         delete[] jcolM;
+         delete[] M;
+         krowM = new int[n + 1];
+         jcolM = new int[nnz];
+         M = new double[nnz];
+
+         int nzIt = 0;
+         for( int i = 0; i < n; i++ )
+         {
+
+            krowM[i] = nzIt;
+            //cout << i << " " << krowM[i] << endl;
+
+            jcolM[nzIt] = i; // the diagonal
+            M[nzIt] = Md[i][i];
+            assert(nzIt<nnz);
+            nzIt++;
+
+            for( int j = i + 1; j < n; j++ )
+            {
+               if( Md[i][j] != 0.0 )
+               {
+                  jcolM[nzIt] = j;
+                  M[nzIt] = Md[i][j];
+                  assert(nzIt<nnz);
+                  nzIt++;
+               }
+            }
+         }
+         //cout << "PardisoSolver::first call nzit=" << nzIt << endl;
+         assert(nzIt==nnz);
+         krowM[n] = nzIt;
+
+      }
+      else
+      {
+         assert(false);
+      }
+   }
+
+   // need Fortran indexes
+   for( int i = 0; i < n + 1; i++ )
+      krowM[i] += 1;
+   for( int i = 0; i < nnz; i++ )
+      jcolM[i] += 1;
 
 
-  // need Fortran indexes
-  for( int i = 0; i < n+1; i++) krowM[i] += 1;
-  for( int i = 0; i < nnz; i++) jcolM[i] += 1;
+   //
+   // symbolic analysis
+   //
+   /* same for mkl_pardiso and pardiso */
+//   mtype = -2;
+//   int phase = 11; // analysis
+//   int maxfct = 1, mnum = 1, nrhs = 1;
+//
+//   iparm[1] = 2; // 2 is for metis, 0 for min degree
+//   iparm[7] = 3; // # iterative refinements
+//   //iparm[9] =10; // pivot perturbation 10^{-xxx}
+//   iparm[23] = 1; //Parallel Numerical Factorization (0 = used in the last years/INTEL calls it classical algorithm , 1 = two-level scheduling)
+//   int msglvl = 0; // with statistical information
+//
+//#ifndef WITH_MKL_PARDISO
+//   iparm[2] = num_threads;
+//   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+//   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+//                  // if needed, use 2 for advanced matchings and higer accuracy.
+//#else
+//   int error;
+//   /* From INTEL (instead of iparm[2] which is not defined there):
+//   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
+//   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
+//   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
+//   */
+//   iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
+//   iparm[12] = 1; // 0 disable matching, 1 enable matching, no other settings
+//#endif
+//
+//
+//   /* no dparm in MKL PARDISO anymore */
+//   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, NULL, &nrhs,
+//         iparm, &msglvl, NULL, NULL, &error
+//#ifndef WITH_MKL_PARDISO
+//         ,dparm
+//#endif
+//   );
+//
+//   if( error != 0 )
+//   {
+//      printf("PardisoSolver - ERROR during symbolic factorization: %d\n",
+//            error);
+//      assert(false);
+//   }
 
-  /*
-  //
-  // symbolic analysis
-  //
-  mtype=-2;
-  int phase=11; //analysis
-  int maxfct=1, mnum=1, nrhs=1;
-  iparm[2]=num_threads;
-  iparm[7]=3;     //# iterative refinements
-  iparm[1] = 2; // 2 is for metis, 0 for min degree 
-  //iparm[ 9] =10; // pivot perturbation 10^{-xxx} 
-  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
-                 // if needed, use 2 for advanced matchings and higer accuracy.
-  iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-
-  int msglvl=0;  // with statistical information
-
-  pardiso (pt , &maxfct, &mnum, &mtype, &phase,
-	   &n, M, krowM, jcolM,
-	   NULL, &nrhs,
-	   iparm, &msglvl, NULL, NULL, &error, dparm );
-
-  if ( error != 0) {
-    printf ("PardisoSolver - ERROR during symbolic factorization: %d\n", error );
-    assert(false);
-  }
-  */
 } 
 
  
@@ -225,113 +288,168 @@ void PardisoSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 extern double g_iterNumber;
 void PardisoSolver::matrixChanged()
 {
-  if (first) { firstCall(); first = false; }
-  else {
-    if(Msys) {
-      //update diagonal entries in the PARDISO aug sys (if the input is sparse)
-      double* eltsMsys = Msys->getStorageRef().M;
-      map<int,int>::iterator it;
-      for(it=diagMap.begin(); it!=diagMap.end(); it++)
-	M[it->second] = eltsMsys[it->first];
-    }
-  }
-
-  if(Mdsys) {
-    // the input is a dense matrix
-    DenseSymMatrix& Md = (*Mdsys);
-    //double tm=MPI_Wtime();
-    int nzIt=0;
-    for(int i=0; i<n; i++) {
-      
-      krowM[i]=nzIt;
-
-      jcolM[nzIt]=i; // the diagonal
-      M[nzIt]=Md[i][i];
-      nzIt++;
-
-      
-      for(int j=i+1; j<n; j++) {
-	if(Md[i][j]!=0.0) {
-	  jcolM[nzIt]=j;
-	  M[nzIt]=Md[i][j];
-	  nzIt++;
-	}
+   if( first )
+   {
+      firstCall();
+      first = false;
+   }
+   else
+   {
+      if( Msys )
+      {
+         //update diagonal entries in the PARDISO aug sys (if the input is sparse)
+         double* eltsMsys = Msys->getStorageRef().M;
+         map<int, int>::iterator it;
+         for( it = diagMap.begin(); it != diagMap.end(); it++ )
+            M[it->second] = eltsMsys[it->first];
       }
-    }
-    //cout << "PardisoSolver::matrix changed nnzit=" << nzIt << endl;
-    krowM[n]=nzIt;
-    assert(nzIt==nnz);
-    // need Fortran indexes
-    for( int i = 0; i < n+1; i++) krowM[i] += 1;
-    for( int i = 0; i < nnz; i++) jcolM[i] += 1;
-    //cout << "Forming the matrix took:" << MPI_Wtime()-tm << endl;
-  }
-    //
-  // numerical factorization & symb.analysis
-  //
-  int phase = 12; //Analysis, numerical factorization
-  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
-  int mnum=1; //actual matrix (as in index from 1 to maxfct)
-  int nrhs=1;
-  int msglvl=0; //messaging level
-  int mtype=-2, error;
+   }
 
-  iparm[2] = num_threads;
-  iparm[1] = 2; // 2 is for metis, 0 for min degree 
-  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
-                 // if needed, use 2 for advanced matchings and higer accuracy.
-  iparm[30] = 0; // do not specify sparse rhs at this point
+   if( Mdsys )
+   {
+      // the input is a dense matrix
+      DenseSymMatrix& Md = (*Mdsys);
+      //double tm=MPI_Wtime();
+      int nzIt = 0;
+      for( int i = 0; i < n; i++ )
+      {
 
-#ifdef PARDISO_PARALLEL_AGGRESSIVE
-  iparm[23] = 1;
-  iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+         krowM[i] = nzIt;
+
+         jcolM[nzIt] = i; // the diagonal
+         M[nzIt] = Md[i][i];
+         nzIt++;
+
+         for( int j = i + 1; j < n; j++ )
+         {
+            if( Md[i][j] != 0.0 )
+            {
+               jcolM[nzIt] = j;
+               M[nzIt] = Md[i][j];
+               nzIt++;
+            }
+         }
+      }
+      //cout << "PardisoSolver::matrix changed nnzit=" << nzIt << endl;
+      krowM[n] = nzIt;
+      assert(nzIt==nnz);
+      // need Fortran indexes
+      for( int i = 0; i < n + 1; i++ )
+         krowM[i] += 1;
+      for( int i = 0; i < nnz; i++ )
+         jcolM[i] += 1;
+      //cout << "Forming the matrix took:" << MPI_Wtime()-tm << endl;
+   }
+
+   //
+   // numerical factorization & symb. analysis
+   //
+   /* same for mkl_pardiso and pardiso */
+   int mtype = -2, error;
+   int phase = 12; // Analysis, numerical factorization
+   int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
+   int mnum = 1; // actual matrix (as in index from 1 to maxfct)
+   int nrhs = 1;
+   int msglvl = 0; // messaging level (0 = no output, 1 = staticstical info to screen)
+   iparm[1] = 2; // 2 is for metis, 0 for min degree
+   iparm[30] = 0; // do not specify sparse rhs at this point
+
+#ifndef WITH_MKL_PARDISO
+   iparm[2] = num_threads;
+   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+                  // if needed, use 2 for advanced matchings and higer accuracy.
 #else
-  iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   /* From INTEL (instead of iparm[2] which is not defined there):
+   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
+   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
+   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
+   */
+   iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
+   iparm[12] = 1; // 0 disable matching, 1 enable matching, no other settings
 #endif
 
-  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-	   &n, M, krowM, jcolM,
-	   NULL, &nrhs,
-	   iparm, &msglvl, NULL, NULL, &error, dparm );
-  if ( error != 0) {
-    printf ("PardisoSolver - ERROR during factorization: %d\n", error );
-    assert(false);
-  }
+
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+
+   #ifndef WITH_MKL_PARDISO
+   iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   #else
+   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
+                  // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
+   #endif
+#else
+   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+#endif
+
+   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, NULL, &nrhs,
+         iparm, &msglvl, NULL, NULL, &error
+#ifndef WITH_MKL_PARDISO
+         ,dparm
+#endif
+   );
+   if( error != 0 )
+   {
+      printf("PardisoSolver - ERROR during factorization: %d\n", error);
+      assert(false);
+   }
 }
 
 extern int gLackOfAccuracy; 
-
 void PardisoSolver::solve( OoqpVector& rhs_in )
 {
-#ifdef PARDISO_PARALLEL_AGGRESSIVE
-   assert(iparm[23] == 1);
-   assert(iparm[24] == 1);
-#else
-   assert(iparm[23] == 0);
-#endif
-
    SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
    double * sol_local = nvec;
 
    //int maxRefinSteps=(gLackOfAccuracy==0?3:6);
 
-   int phase = 33; //solve and iterative refinement
-   int maxfct = 1; //max number of fact having same sparsity pattern to keep at the same time
-   int mnum = 1; //actual matrix (as in index from 1 to maxfct)
+   /* same for mkl_pardiso and pardiso */
+   int phase = 33; // solve and iterative refinement
+   int mtype = -2, error;
+   int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
+   int mnum = 1; // actual matrix (as in index from 1 to maxfct)
    int nrhs = 1;
    int msglvl = 0;
-   int mtype = -2, error;
+   iparm[1] = 2; // 2 is for metis, 0 for min degree
+   //iparm[5] = 1; // replace drhs with the solution
+   iparm[7] = 8; // max number of iterative refinement steps
+
+#ifndef WITH_MKL_PARDISO
    iparm[2] = num_threads;
-   iparm[1] = 2; //metis
-   iparm[7] = 8; /* Max numbers of iterative refinement steps . */
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-                  // if needed, use 2 for advanced matchings and higher accuracy.
+                  // if needed, use 2 for advanced matchings and higer accuracy.
+#else
+   /* From INTEL (instead of iparm[2] which is not defined there):
+   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
+   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
+   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
+   */
+   iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
+   iparm[12] = 1; // 0 disable matching, 1 enable matching, no other settings
+#endif
 
-   //iparm[5] = 1; /* replace drhs with the solution */
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+
+   #ifndef WITH_MKL_PARDISO
+   iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   #else
+   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
+                  // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
+   #endif
+#else
+   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+#endif
+
+
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM,
-   NULL, &nrhs, iparm, &msglvl, rhs.elements(), sol_local, &error, dparm);
+         NULL, &nrhs, iparm, &msglvl, rhs.elements(), sol_local, &error
+#ifndef WITH_MKL_PARDISO
+         ,dparm
+#endif
+   );
 
    if( error != 0 )
    {
@@ -394,25 +512,39 @@ void PardisoSolver::solve(GenMatrix& rhs_in)
   }
   assert(nrows==n);
 
-  int phase = 33; //solve and iterative refinement
-  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
-  int mnum=1; //actual matrix (as in index from 1 to maxfct)
-  int nrhs=ncols;
-  int msglvl=0;
-  int mtype=-2, error;
-  iparm[1] = 2; //metis
+  /* same for mkl_pardiso and pardiso */
+  int phase = 33; // solve and iterative refinement
+  int mtype = -2, error;
+  int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
+  int mnum = 1; // actual matrix (as in index from 1 to maxfct)
+  int nrhs = ncols;
+  int msglvl = 0;
+  iparm[1] = 2; // 2 is for metis, 0 for min degree
+  //iparm[5] = 1; // replace drhs with the solution
+  iparm[7] = 2; // max number of iterative refinement steps
+  iparm[30]=0; // no sparse rhs
+
+#ifndef WITH_MKL_PARDISO
   iparm[2] = num_threads;
-  iparm[7] = 2; /* Max numbers of iterative refinement steps . */
-  //iparm[5] = 1; /* replace drhs with the solution */
-  iparm[30]=0; //no sparse rhs
+#else
+  /* From INTEL (instead of iparm[2] which is not defined there):
+  *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
+  *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
+  *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
+  */
+#endif
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
 	   NULL, &nrhs ,
 	   iparm, &msglvl, 
 	   &rhs[0][0], sol,
-	   &error, dparm );
- 
+	   &error
+#ifndef WITH_MKL_PARDISO
+	   , dparm
+#endif
+  );
+
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
   }
@@ -432,24 +564,39 @@ void PardisoSolver::solve( GenMatrix& rhs_in, int *colSparsity)
   }
   assert(nrows==n);
 
-  int phase = 33; //solve and iterative refinement
-  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
-  int mnum=1; //actual matrix (as in index from 1 to maxfct)
-  int nrhs=ncols;
-  int msglvl=0;
-  int mtype=-2, error;
-  iparm[1] = 2; //metis
-  iparm[2] = num_threads;
-  iparm[7] = 5; /* Max numbers of iterative refinement steps . */
-  iparm[30] = 1; //sparse rhs
-  //iparm[5] = 1; /* replace drhs with the solution */
+
+  /* same for mkl_pardiso and pardiso */
+   int phase = 33; // solve and iterative refinement
+   int mtype = -2, error;
+   int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
+   int mnum = 1; // actual matrix (as in index from 1 to maxfct)
+   int nrhs = ncols;
+   int msglvl = 0;
+   iparm[1] = 2; // 2 is for metis, 0 for min degree
+   //iparm[5] = 1; // replace drhs with the solution
+   iparm[7] = 2; // max number of iterative refinement steps
+   iparm[30]= 1; // sparse rhs
+
+ #ifndef WITH_MKL_PARDISO
+   iparm[2] = num_threads;
+ #else
+   /* From INTEL (instead of iparm[2] which is not defined there):
+   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
+   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
+   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
+   */
+ #endif
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
 	   colSparsity, &nrhs,
 	   iparm, &msglvl, 
 	   &rhs[0][0], sol,
-	   &error, dparm );
+	   &error
+#ifndef WITH_MKL_PARDISO
+	   , dparm
+#endif
+  );
  
   if ( error != 0) {
     printf ("PardisoSolver - ERROR during solve: %d", error ); 
@@ -470,16 +617,6 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
       sol = new double[sz_sol];
    }
 
-   int phase = 33; //solve and iterative refinement
-   int maxfct = 1; //max number of fact having same sparsity pattern to keep at the same time
-   int mnum = 1; //actual matrix (as in index from 1 to maxfct)
-   int nrhss_local = nrhss;
-   int msglvl = 0;
-   int mtype = -2, error;
-   iparm[1] = 2; //metis
-   iparm[2] = num_threads;
-
-
 #ifndef NDEBUG
    if( colSparsity )
    {
@@ -498,19 +635,40 @@ void PardisoSolver::solve( int nrhss, double* rhss, int* colSparsity )
    }
 #endif
 
-   //iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-
-   iparm[7] = 5; /* Max numbers of iterative refinement steps . */
-
-   if( colSparsity)
+   /* same for mkl_pardiso and pardiso */
+   int phase = 33; // solve and iterative refinement
+   int mtype = -2, error;
+   int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
+   int mnum = 1; // actual matrix (as in index from 1 to maxfct)
+   int nrhss_local = nrhss;
+   int msglvl = 0;
+   iparm[1] = 2; // 2 is for metis, 0 for min degree
+   //iparm[5] = 1; // replace drhs with the solution
+   iparm[7] = 5; // max number of iterative refinement steps
+   if( colSparsity )
       iparm[30] = 1; //sparse rhs
    else
       iparm[30] = 0;
 
-   //iparm[5] = 1; /* replace drhs with the solution */
+ #ifndef WITH_MKL_PARDISO
+   iparm[2] = num_threads;
+   //iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+ #else
+   /* From INTEL (instead of iparm[2] which is not defined there):
+   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
+   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
+   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
+   */
+   //iparm[24] = 2; // parallelization for the forward and backward solve. 0=sequential, 1=parallel in core solve, 2=parallel solve.
+ #endif
+
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, colSparsity,
-         &nrhss_local, iparm, &msglvl, rhss, sol, &error, dparm);
+         &nrhss_local, iparm, &msglvl, rhss, sol, &error
+#ifndef WITH_MKL_PARDISO
+         , dparm
+#endif
+   );
 
    if( error != 0 )
    {
@@ -526,15 +684,22 @@ PardisoSolver::~PardisoSolver()
 {
 
   //cout << "PardisoSolver DESTRUCTOR" << endl;
-  int phase = -1; /* Release internal memory . */
-  int maxfct=1; //max number of fact having same sparsity pattern to keep at the same time
-  int mnum=1; //actual matrix (as in index from 1 to maxfct)
+  int phase = -1; // release internal memory
+  int maxfct=1; // max number of fact having same sparsity pattern to keep at the same time
+  int mnum=1; // actual matrix (as in index from 1 to maxfct)
   int nrhs=1;
   int msglvl=0;
   int mtype=-2, error;
+
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, NULL, krowM, jcolM, NULL, &nrhs,
-	   iparm, &msglvl, NULL, NULL, &error, dparm );
+	   iparm, &msglvl, NULL, NULL, &error
+#ifndef WITH_MKL_PARDISO
+	   , dparm
+#endif
+  );
+
+
   if ( error != 0) {
     printf ("PardisoSolver - ERROR in pardiso release: %d", error ); 
   }
