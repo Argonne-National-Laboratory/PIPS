@@ -1317,6 +1317,7 @@ void StochPresolverBase::combineNewBoundsParent()
       delete[] recvcounts;
       delete[] colIndicesLocal;
       delete[] xlowLocal;
+      delete[] xuppLocal;
       delete[] displs;
       delete[] colIndicesGlobal;
       delete[] xlowGlobal;
