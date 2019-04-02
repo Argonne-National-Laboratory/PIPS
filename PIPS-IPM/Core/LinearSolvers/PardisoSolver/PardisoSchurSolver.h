@@ -77,7 +77,7 @@ protected:
   SparseSymMatrix* Msys; // this is the (1,1) block in the augmented system
   bool first;
   bool firstSolve;
-  void  *pt[64]; 
+  void  *pt[10000];
   int iparm[64];
 
 #ifndef WITH_MKL_PARDISO
