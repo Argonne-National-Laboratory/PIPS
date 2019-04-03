@@ -602,7 +602,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
 #ifndef NDEBUG
 #ifndef WITH_MKL_PARDISO
    pardiso_chkmatrix(&mtype, &n, eltsAug, rowptrAug, colidxAug, &error);
-
    if( error != 0 )
    {
       cout << "PARDISO matrix error " << error << endl;
@@ -613,6 +612,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    iparm[26] = 1;
 #endif
 #endif
+
    const int nIter = (int) g_iterNumber;
    const int symbEvery = 5;
    if( (nIter % symbEvery) == 0 )
@@ -668,7 +668,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
    iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential
 #endif
 
-
    /* compute schur complement */
 #ifndef WITH_MKL_PARDISO
    iparm[37] = nSC; // Msys->size(); // compute Schur-complement
@@ -713,46 +712,39 @@ void PardisoSchurSolver::computeSC(int nSCO,
       colidxSC[it]--;
 
 #else
-
-   /* iparm[35] = -2 for computing schur-complement matrix as well as factorization arrays */
-   // iparm[35] < 0 only possible if iparm[23] != 0 and since iparm[23]=1 disables scaling and matching we have to set it to iparm[23]=10
-
    // perm array has to be defined is of size of augmented system (dense) and inicates rows/colums we want to have in the schur complement with 1
    // rest set to 0
    // setting all entries to 1 will return the input matrix as schur complement
-//   iparm[23] = 10;
-   iparm[23] = 1;
+
+   // iparm[35] < 0 only possible if iparm[23] != 0 and since iparm[23]=1 disables scaling and matching we have to set it to iparm[23]=10
+   iparm[23] = 1; // 10 will lead to a seg fault thrown in pardiso_export or weird behaviour of te first pardiso call (depending on iparm[35])
    iparm[35] = -2;
-   iparm[4] = 0;
-   iparm[30] = 0;
-//   iparm[10] = 0;
-//   iparm[12] = 0;
 
    int perm[n] = {0};
    for(int i = n - nSC; i < n; ++i)
       perm[i] = 1;
 
-   ///////////////////////////////////////////////////////////////////////////
-
    /* reordering and symbolic factorization */
    phase = 11;
-   iparm[35] = -2;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, eltsAug, rowptrAug,
    	   	   colidxAug, perm, &nrhs, iparm, &msglvl, NULL, NULL, &error);
 
+   /* iparm[35] should now contain the number of non-zero entries in the Schur-complement */
    assert(error == 0); assert(iparm[35] >= 0);
 
    /* preallocation of schur matrix arrays */
-   int nnzSC = iparm[35]; // todo move up - used in both cases
+   int nnzSC = iparm[35];
    rowptrSC = new int[nSC + 1];
    colidxSC = new int[iparm[35]];
    eltsSC = new double[iparm[35]];
 
    phase = 22;
+   /* reset iparm[35] to -2 */
    iparm[35] = -2;
    int step = 1;
 
+   // mkl pardiso returns arrays with zero-based index via export
    pardiso_export(pt, eltsSC, rowptrSC, colidxSC, &step, iparm, &error);
 
    #ifdef TIMING
@@ -764,6 +756,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    HPM_Start("PARDISOFact");
    #endif
 
+   /* factorization call */
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, eltsAug, rowptrAug,
          colidxAug, perm, &nrhs, iparm, &msglvl, NULL, NULL, &error);
 
@@ -784,12 +777,14 @@ void PardisoSchurSolver::computeSC(int nSCO,
       exit(1);
    }
 
-   // mkl pardiso returns arrays with zero-based index via export
 
    int ind, pend;
+
    /////////////////////////////////////////////////////
-   // form the transpose
+   // transpose the matrix since it is given in lower triangular form and we are using upper triangular form
    /////////////////////////////////////////////////////
+   // todo move somewhere else
+
    //cummulative sum to find the number of elements in each row of At, ie column of A.
    int w[n] = {0};
 
@@ -827,67 +822,30 @@ void PardisoSchurSolver::computeSC(int nSCO,
       colidxSC[i] = colidxSCTP[i];
       eltsSC[i] = eltsSCTP[i];
    }
+
    delete[] colidxSCTP;
    delete[] eltsSCTP;
    delete[] rowptrSCTP;
-   /*
-5.761818                           -0.844697-1.267045 -1.267045
-         0.566893                  -0.462963
-                  0.000000
-                           0.000000
-                                    0.108831 0.106534 0.106534
-                                             0.159801 0.159801
-                                                      0.159801
------------------------------------------------------------------------------------
-0.080000                                             -0.083333
-         0.362812                  -0.246914
-                  0.000000
-                           0.000000
-                                   -0.427641-0.666667
-                                            -2.000000
-                                                     -0.086806
-
-
-    */
-
 #endif
 
-   /* pipsipmCallbackExample first schur complement
-2.080000                        -0.333333-0.500000-0.500000
-        0.510204                -0.416667
-                0.000000
-                        0.000000
-                                0.000000 -0.000000-0.000000
-                                         0.000000  0.000000
-                                                   0.000000
------------------------------------------------------------------------------------
-0.080000                                           -0.083333
-        0.326531                -0.222222
-                0.000000
-                        0.000000
-                                -0.444444 -0.666667
-                                          -2.000000
-                                                   -0.086806
-    */
-
-   for( int it = 0; it < nSC; it++ )
-   {
-      int k = rowptrSC[it];
-      for( int jt = 0; jt < nSC && k < rowptrSC[it + 1]; jt++ )
-      {
-         if( colidxSC[k] == jt )
-         {
-            std::cout << std::fixed << std::setprecision(6) << eltsSC[k]
-                  << "\t";
-            ++k;
-         }
-         else
-            std::cout << "\t";
-      }
-      std::cout << std::endl;
-   }
-
-   std::cout << "-----------------------------------------------------------------------------------" << std::endl;
+// TODO remove when finished debugging mkl - print schur matrix
+//   for( int it = 0; it < nSC; it++ )
+//   {
+//      int k = rowptrSC[it];
+//      for( int jt = 0; jt < nSC && k < rowptrSC[it + 1]; jt++ )
+//      {
+//         if( colidxSC[k] == jt )
+//         {
+//            std::cout << std::fixed << std::setprecision(2) << eltsSC[k]
+//                  << "\t";
+//            ++k;
+//         }
+//         else
+//            std::cout << "0\t";
+//      }
+//      std::cout << std::endl;
+//   }
+//   std::cout << "-----------------------------------------------------------------------------------" << std::endl;
 
    assert(subMatrixIsOrdered(rowptrSC, colidxSC, 0, nSC));
 
@@ -932,7 +890,6 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
   #ifndef WITH_MKL_PARDISO
   iparm[24] = 1;// parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-  // iparm[27] = 1; // Parallel metis - not for MKL_PARDISO
   #else
   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here; one rhs -> parallelization, multiple rhs -> parallel forward backward subst
   #endif
@@ -958,6 +915,8 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   HPM_Start("PARDISOSolve");
 #endif
 
+  // todo remove when done debugging
+  //////////////////////////////////////
   iparm[1-1] = 1;         /* No solver default */
   iparm[2-1] = 2;         /* Fill-in reordering from METIS */
   iparm[10-1] = 8;        /* Perturb the pivot elements with 1E-13 */
@@ -967,11 +926,36 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   iparm[18-1] = -1;       /* Output: Number of nonzeros in the factor LU */
   iparm[19-1] = -1;       /* Output: Mflops for LU factorization */
   iparm[36-1] = 1;        /* Use Schur complement */
-
+  // added
   iparm[5] = 0;
   iparm[23] = 1;
   iparm[30] = 0;
   iparm[35] = -2;
+  iparm[7] = 0;
+  iparm[20] = 0;
+  iparm[24] = 0;
+  iparm[26] = 0;
+
+  for( int it = 0; it < n; it++ )
+  {
+     int k = rowptrAug[it] - 1;
+     for( int jt = 0; jt < n && k < rowptrAug[it + 1] - 1; jt++ )
+     {
+        if( colidxAug[k] - 1 == jt )
+        {
+           std::cout << std::fixed << std::setprecision(4) << eltsAug[k]
+                 << "\t";
+           ++k;
+        }
+        else
+           std::cout << "0\t";
+     }
+     std::cout << std::endl;
+  }
+  //////////////////////////////////////
+
+  // solving phase
+  phase = 33;
 
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
@@ -983,26 +967,119 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
   );
   assert(error == 0);
-	   std::cout << std::endl;
-	   for(int i = 0; i < n; i++)
-	      std::cout << x_n[i] << " ";
-	   std::cout << std::endl;
 
-/* mkl pardiso
-0.000000 0.000000 0.359375 0.000000 -0.600000 -1.500000 -1.400000 0.000000 0.000000 -0.216094 -0.297344 0.000000
 
--0.000000 -0.247434 -0.144336 0.144336 0.000000 0.000000 -0.000000 0.000000 -1.316991 0.000000 0.000000 -0.433009 0.144336 -1.400000
+  /////TODO remove when done debugging
+  //////////////////////////////////////
 
-0.000000 -0.000000 -0.000977 0.000000 0.000000 -1.000000 -1.000000 0.000000 0.000000 5.500781 -0.903516 0.000000
-*/
+  // compute the full sparse representation of the sparse symmetric input
+  // cout elems per row
+  int nelems[n] = {0};
+  for(int i = 0; i < n; ++i)
+  {
+     // diag elem
+     for(int j = rowptrAug[i] - 1; j < rowptrAug[i + 1] - 1; ++j)
+     {
+        if(i == colidxAug[j] - 1)
+           nelems[i]++;
+        else
+        {
+           nelems[colidxAug[j] - 1]++;
+           nelems[i]++;
+        }
+     }
+  }
 
-/*
--1.800000 -1.000000 5.430000 0.875000 -1.800000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+  // fill rowptr array
+  int rowptrAugFull[n + 1];
 
--0.291667 -1.000000 0.000000 0.000000 0.000000 0.583333 -0.291667 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+  rowptrAugFull[0] = 0;
+  for(int i = 0; i < n; ++i)
+     rowptrAugFull[i + 1] = rowptrAugFull[i] + nelems[i];
 
--1.200000 -0.714286 3.416094 0.714286 -0.800000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
- */
+  int colidxAugFull[rowptrAugFull[n]];
+  for( int i = 0; i < rowptrAugFull[n]; ++i)
+     colidxAugFull[i] = -1;
+
+  double eltsAugFull[rowptrAugFull[n]];
+
+  // fill in col and value
+  for(int i = 0; i < n; ++i)
+  {
+     int rowstart = rowptrAug[i] - 1;
+     int rowend = rowptrAug[i+1] - 1;
+
+     for(int k = rowstart; k < rowend; ++k)
+     {
+        double value = eltsAug[k];
+        int col = colidxAug[k] - 1;
+
+        int kk = rowptrAugFull[i];
+        int colfull = colidxAugFull[kk];
+        while(colfull != -1)
+        {
+           kk++;
+           colfull = colidxAugFull[kk];
+        }
+
+        colidxAugFull[kk] = col;
+        eltsAugFull[kk] = value;
+
+        if(col != i )
+        {
+           kk = rowptrAugFull[col];
+           int colfull = colidxAugFull[kk];
+
+           while(colfull != -1)
+           {
+              kk++;
+              colfull = colidxAugFull[kk];
+           }
+
+           colidxAugFull[kk] = i;
+           eltsAugFull[kk] = value;
+        }
+     }
+   }
+
+  // print full matrix
+   std::cout << std::endl << "dim: " << dim << "\tn: " << n << std::endl;
+   for( int it = 0; it < n; it++ )
+   {
+      int k = rowptrAugFull[it];
+      for( int jt = 0; jt < n && k < rowptrAugFull[it + 1]; jt++ )
+      {
+         if( colidxAugFull[k] == jt )
+         {
+            std::cout << std::fixed << std::setprecision(4) << eltsAugFull[k]
+                  << "\t";
+            ++k;
+         }
+         else
+            std::cout << "0\t";
+      }
+      std::cout << std::endl;
+   }
+
+   std::cout << std::endl;
+
+   // print x
+  for(int i = 0; i < n; ++i)
+     std::cout << x_n[i] << " ";
+   std::cout << std::endl;
+
+   // print Ax == b
+   double res[n];
+   for( int i = 0; i < n; ++i )
+   {
+      res[i] = 0.0;
+      for( int j = rowptrAugFull[i]; j < rowptrAugFull[i + 1]; ++j )
+         res[i] += eltsAugFull[j] * x_n[colidxAugFull[j]];
+      std::cout << res[i] << " == " << rhs_n[i] << std::endl;
+   }
+
+   exit(1);
+   //////////////////////////////////////
 
 #ifdef TIMING_FLOPS
   HPM_Stop("PARDISOSolve");
@@ -1090,6 +1167,8 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
 
   iparm[7] = 8; // max number of iterative refinement steps
 
+
+  // todo this is not working at the moment
 #ifndef WITH_MKL_PARDISO
   iparm[2] = num_threads;
 
