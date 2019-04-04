@@ -83,7 +83,7 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       presolverSR.applyPresolving();
-      //presolverBS.applyPresolving();
+      presolverBS.applyPresolving();
       // TODO bugged
       presolverCleanup.applyPresolving();
       //presolverParallelRow.applyPresolving();

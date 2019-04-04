@@ -57,7 +57,7 @@ public:
    virtual void applyPresolving() = 0;
 
    bool verifyNnzcounters();
-   void countRowsCols(); // theoreticallt const but sets pointers
+   void countRowsCols(); // theoretically const but sets pointers
 
    /** checks if all processes have the same root node data.
     *
