@@ -632,7 +632,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
 
    iparm[7] = 8; // max number of iterative refinement steps
    iparm[9] = 13;//todo was 1 // pivot perturbation 10^{-xxx} todo better 7 or higher?
-   iparm[30] = 0; // do not specify sparse rhs at this point
+   iparm[30] = 0; // todo do not specify sparse rhs at this point
 
 #ifndef WITH_MKL_PARDISO
    iparm[2] = num_threads;
@@ -676,6 +676,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
    //double o=MPI_Wtime();
    #endif
+
    #ifdef TIMING_FLOPS
    HPM_Start("PARDISOFact");
    #endif
@@ -686,13 +687,16 @@ void PardisoSchurSolver::computeSC(int nSCO,
  #ifdef TIMING_FLOPS
    HPM_Stop("PARDISOFact");
  #endif
-   int nnzSC=iparm[38];
- #ifdef TIMING
+
+   int nnzSC=iparm[38]; // todo
+
+#ifdef TIMING
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    if(1001*(myRank/1001)==myRank)
    printf("rank %d perturbPiv %d peakmem %d\n", myRank, iparm[13], iparm[14]); // same for MKL and pardiso
    //cout << "NNZ(SCHUR) " << nnzSC << "    SPARSITY " << nnzSC/(1.0*nSC*nSC) << endl;
  #endif
+
    if( error != 0 )
    {
       printf("PardisoSolver - ERROR during factorization: %d. Phase param=%d\n",
@@ -704,13 +708,11 @@ void PardisoSchurSolver::computeSC(int nSCO,
    eltsSC = new double[nnzSC];
 
    pardiso_get_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
-
    //convert back to C/C++ indexing
    for( int it = 0; it < nSC + 1; it++ )
       rowptrSC[it]--;
    for( int it = 0; it < nnzSC; it++ )
       colidxSC[it]--;
-
 #else
    // perm array has to be defined is of size of augmented system (dense) and inicates rows/colums we want to have in the schur complement with 1
    // rest set to 0
@@ -846,7 +848,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
 //      std::cout << std::endl;
 //   }
 //   std::cout << "-----------------------------------------------------------------------------------" << std::endl;
-
    assert(subMatrixIsOrdered(rowptrSC, colidxSC, 0, nSC));
 
 }
@@ -888,9 +889,10 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 
-  #ifndef WITH_MKL_PARDISO
+#ifndef WITH_MKL_PARDISO
   iparm[24] = 1;// parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-  #else
+  // iparm[27] = 1; // Parallel metis - not for MKL_PARDISO
+#else
   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here; one rhs -> parallelization, multiple rhs -> parallel forward backward subst
   #endif
 #else
@@ -917,24 +919,24 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
   // todo remove when done debugging
   //////////////////////////////////////
-  iparm[1-1] = 1;         /* No solver default */
-  iparm[2-1] = 2;         /* Fill-in reordering from METIS */
-  iparm[10-1] = 8;        /* Perturb the pivot elements with 1E-13 */
-  iparm[11-1] = 0;        /* Use nonsymmetric permutation and scaling MPS */
-  iparm[13-1] = 0;        /* Maximum weighted matching algorithm is switched-off (default for symmetric). Try iparm[12] = 1 in case of inappropriate accuracy */
-  iparm[14-1] = 0;        /* Output: Number of perturbed pivots */
-  iparm[18-1] = -1;       /* Output: Number of nonzeros in the factor LU */
-  iparm[19-1] = -1;       /* Output: Mflops for LU factorization */
-  iparm[36-1] = 1;        /* Use Schur complement */
-  // added
-  iparm[5] = 0;
-  iparm[23] = 1;
-  iparm[30] = 0;
-  iparm[35] = -2;
-  iparm[7] = 0;
-  iparm[20] = 0;
-  iparm[24] = 0;
-  iparm[26] = 0;
+//  iparm[1-1] = 1;         /* No solver default */
+//  iparm[2-1] = 2;         /* Fill-in reordering from METIS */
+//  iparm[10-1] = 8;        /* Perturb the pivot elements with 1E-13 */
+//  iparm[11-1] = 0;        /* Use nonsymmetric permutation and scaling MPS */
+//  iparm[13-1] = 0;        /* Maximum weighted matching algorithm is switched-off (default for symmetric). Try iparm[12] = 1 in case of inappropriate accuracy */
+//  iparm[14-1] = 0;        /* Output: Number of perturbed pivots */
+//  iparm[18-1] = -1;       /* Output: Number of nonzeros in the factor LU */
+//  iparm[19-1] = -1;       /* Output: Mflops for LU factorization */
+//  iparm[36-1] = 1;        /* Use Schur complement */
+//  // added
+//  iparm[5] = 0;
+//  iparm[23] = 1;
+//  iparm[30] = 0;
+//  iparm[35] = -2;
+//  iparm[7] = 0;
+//  iparm[20] = 0;
+//  iparm[24] = 0;
+//  iparm[26] = 0;
 
   for( int it = 0; it < n; it++ )
   {
@@ -954,19 +956,87 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   }
   //////////////////////////////////////
 
+  /* pardiso from mkl does not support same functionality as pardiso-project
+   *
+   * pardiso project:
+   * when computing the schur complement S with factorization matrices we will get
+   *
+   * [A11 A12]   [L11 0] [I 0] [U11 U12]
+   * [A21 A22] = [L12 I] [0 S] [0     I]
+   *
+   * a subsequent solve call will then only solve for A11 x1 = b1 instead of the full
+   * system.
+   *
+   * pardiso mkl:
+   * while the schur complement is the same, the factorization computed, stored and
+   * used for solve calls is a full factorization. thus pardiso from intel will always
+   * solve the full system
+   *
+   * workaround is to solve
+   *
+   * (phase 331)
+   * [L11   0] [z1] = [b1]
+   * [L12   I] [z2] = [b2]
+   *
+   * (phase 332)
+   * [I 0] [y1]   [z1]
+   * [0 S] [y2] = [z2]
+   *
+   * (phase 333)
+   * [U11 U12] [x1]   [y1]
+   * [0     I] [x2] = [y2]
+   *
+   */
+
   // solving phase
+#ifndef WITH_MKL_PARDISO
   phase = 33;
 
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
 	   NULL, &nrhs,
 	   iparm , &msglvl, rhs_n, x_n, &error
-#ifndef WITH_MKL_PARDISO
 	   ,dparm
-#endif
-
   );
   assert(error == 0);
+#else
+
+  int iparm2[64] = {1, 2, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 1, 1, 0, 11, -1, 0, 0, 2, 6, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+
+  // forward substitution
+  phase = 331;
+  double z_n[nvec_size];
+  iparm[7] = 0;
+
+  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+      &n, eltsAug, rowptrAug, colidxAug,
+      NULL, &nrhs, iparm2, &msglvl, rhs_n, z_n, &error);
+  assert(error == 0);
+
+  // diagonal substitution
+  phase = 332;
+  double y_n[nvec_size];
+
+  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+      &n, eltsAug, rowptrAug, colidxAug,
+      NULL, &nrhs, iparm2, &msglvl, z_n, y_n, &error);
+  assert(error == 0);
+
+
+  // backward substitution
+  phase = 333;
+
+  for(int i = nvec_size - dim; i < nvec_size; ++i)
+//     y_n[i] = 0.0;
+
+  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+      &n, eltsAug, rowptrAug, colidxAug,
+      NULL, &nrhs, iparm2, &msglvl, y_n, x_n, &error);
+  assert(error == 0);
+
+#endif
 
 
   /////TODO remove when done debugging
@@ -1079,6 +1149,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
    }
 
    exit(1);
+
    //////////////////////////////////////
 
 #ifdef TIMING_FLOPS
@@ -1166,7 +1237,6 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
   //if (myRankp==0) msglvl=1;
 
   iparm[7] = 8; // max number of iterative refinement steps
-
 
   // todo this is not working at the moment
 #ifndef WITH_MKL_PARDISO

@@ -74,7 +74,6 @@ void PardisoIndefSolver::initPardiso()
    solver = 0; /* use sparse direct solver */
 
    pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
-
    if( error != 0 )
    {
       if( error == -10 )
@@ -93,9 +92,13 @@ void PardisoIndefSolver::initPardiso()
    /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
    //iparm[26] = 1;
    pardisoinit(pt, &mtype, iparm);
+
+#ifdef PARDISO_PARALLEL_AGGRESSIVE
+   iparm[23] = 1; // mkl pardiso iparm[23] = 1 does not work with iparm[10] = iparm[12] = 1
+   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
 #endif
 
-
+#endif
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
@@ -339,18 +342,18 @@ else
 #endif
 
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 
    #ifndef WITH_MKL_PARDISO
-   //iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0) no MKL equivalent
+   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   //iparm[27] = 1; // Parallel metis no MKL equivalent
    #else
+   iparm[23] = 1; // iparm[23] does NOT work with iparm[10] = iparm[12] = 1 for mkl pardiso
    iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
                   // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
    #endif
+#else
+   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
 #endif
-
    phase = 11;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
@@ -396,12 +399,13 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 {
 
 #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   assert(iparm[23] == 1);
 #ifndef WITH_MKL_PARDISO
+  assert(iparm[23] == 1);
   assert(iparm[24] == 1);
 #else
+  assert(iparm[23] == 1);
   assert(iparm[24] == 2);
-#endif
+  #endif
 #endif
 
    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
