@@ -446,7 +446,7 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
 
    assert(nnzcount == nnz);
 
-   return (new SparseSymMatrix(sizeSC, nnz, krowM, jcolM, M, 0, false));
+   return (new SparseSymMatrix(sizeSC, nnz, krowM, jcolM, M, 1, false));
 }
 
 

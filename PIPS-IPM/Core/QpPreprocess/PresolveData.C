@@ -139,6 +139,7 @@ bool PresolveData::combineColAdaptParent()
          addColToAdaptParent(colWithVal);
       }
 
+      delete[] displs;
       delete[] recvcounts;
       delete[] colIndicesLocal;
       delete[] valuesLocal;
