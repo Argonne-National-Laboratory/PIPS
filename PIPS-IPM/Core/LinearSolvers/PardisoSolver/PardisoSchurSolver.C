@@ -18,6 +18,7 @@ using namespace std;
 #include "pipsdef.h"
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 
 #include "Ma57Solver.h"
 
@@ -56,8 +57,6 @@ extern "C" void pardiso_chkvec     (int *, int *, double *, int *);
 extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
                            double *, int *);
 #endif
-
-int pardiso_stuff(int n, int nnz, int n0, int* rowptr, int* colidx, double* elts, const vector< vector<double> >& vRhs);
 
 int dumpAugMatrix(int n, int nnz, int nSys, //size, nnz and size of the (1,1) block
 		  double* eltsA, 
@@ -101,9 +100,18 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   // first solve call
 
   first = true; firstSolve = true;
+
 #ifndef WITH_MKL_PARDISO
   num_threads = PIPSgetnOMPthreads();
 #endif
+
+  maxfct = 1;
+  mnum = 1;
+  phase = 0;
+  msglvl = pardiso_verbosity;
+  solver = 0;
+  mtype = -2;
+  nrhs = 1;
 }
 
 PardisoSchur32Solver::PardisoSchur32Solver( SparseSymMatrix * sgm )
@@ -112,9 +120,8 @@ PardisoSchur32Solver::PardisoSchur32Solver( SparseSymMatrix * sgm )
 
 void PardisoSchurSolver::firstCall()
 {
-   int mtype = -2;
 #ifndef WITH_MKL_PARDISO
-   int solver = 0, error;
+   int error = 0;
    pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
 
    if( error != 0 )
@@ -123,17 +130,16 @@ void PardisoSchurSolver::firstCall()
       exit(1);
    }
 #else
-   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
-   //iparm[26] = 1;
    pardisoinit(pt, &mtype, iparm);
 #endif
+
+   setIparm(iparm);
 } 
 
 void PardisoSchur32Solver::firstCall()
 {
-   int mtype = -2;
 #ifndef WITH_MKL_PARDISO
-   int solver = 0, error;
+   int error = 0;
    pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);
 
    if( error != 0 )
@@ -142,16 +148,17 @@ void PardisoSchur32Solver::firstCall()
       assert(false);
    }
 #else
-   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
-   //iparm[26] = 1;
    pardisoinit(pt, &mtype, iparm);
 #endif
 
+   setIparm(iparm);
+
 #ifndef WITH_MKL_PARDISO
-   iparm[28]=1; //32-bit factorization
-#else 
-   iparm[27]=1; //input must be in single precision as well
+   iparm[28] = 1; //32-bit factorization
+#else
+   iparm[27] = 1; //input must be in single precision as well
 #endif
+
 } 
 
 // this function is called only once and creates the augmented system
@@ -402,61 +409,96 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   nvec=new double[n];
   nvec2=new double[n];
   nvec_size = n;
-
-   //
-   // symbolic analysis
-   //
-   /* same for mkl_pardiso and pardiso */
-//   mtype = -2;
-//   int phase = 11; // analysis
-//   int maxfct = 1, mnum = 1, nrhs = 1;
-//
-//   //iparm[1] = 2; // 2 is for metis, 0 for min degree
-//   iparm[7] = 8; // # iterative refinements
-//   //iparm[9] =10; // pivot perturbation 10^{-xxx}
-//   iparm[23] = 1; //Parallel Numerical Factorization (0 = used in the last years/INTEL calls it classical algorithm , 1 = two-level scheduling)
-//   int msglvl = 0; // with statistical information
-//
-//#ifndef WITH_MKL_PARDISO
-//   iparm[2] = num_threads;
-//   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-//   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-//                  // if needed, use 2 for advanced matchings and higer accuracy.
-//   iparm[32] = 1; // compute determinant - no equivalent for MKL_PARDISO
-//   iparm[37] = Msys->size(); //compute Schur-complement
-//#else
-//   /* From INTEL (instead of iparm[2] which is not defined there):
-//   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
-//   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
-//   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
-//   */
-//   iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
-//   iparm[12] = 1; // 0 disable matching, 1 enable matching, no other settings
-//
-//   // schur complement stuff
-//   iparm[35] and perm todo
-//#endif
-//
-//
-//   /* no dparm in MKL PARDISO anymore */
-//   pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, eltsAug, rowptrAug, colidxAug, 
-//	   NULL, &nrhs,
-//         iparm, &msglvl, NULL, NULL, &error
-//#ifndef WITH_MKL_PARDISO
-//         ,dparm
-//#endif
-//   );
-//
-//   if( error != 0 )
-//   {
-//      printf("PardisoSolver - ERROR during symbolic factorization: %d\n",
-//            error);
-//      assert(false);
-//   }
-
 } 
 
- 
+void PardisoSchurSolver::setIparm(int* iparm){
+
+   /* common parameters */
+   iparm[1] = 2; // 2 is for metis, 0 for min degree
+   /* NOTE: if iparm[9] is less than 13 mkl_pardiso will not consistently produce the same schur complement as the other pardiso (on some examples)
+    * this might not be an issue should be kept in mind though
+    */
+   iparm[9] = 13;// pivot perturbation 10^{-xxx}
+   iparm[30] = 0; // do not specify sparse rhs at this point ! MKL_PARDISO can either set iparm[35] or iparm[30]
+
+#ifndef WITH_MKL_PARDISO
+   iparm[2] = PIPSgetnOMPthreads();
+
+   iparm[7] = 0; // max number of iterative refinement steps
+   iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
+   iparm[12] = 2;// 0 disable matching, 1 enable matching, no other settings
+
+   #ifdef PARDISO_PARALLEL_AGGRESSIVE
+   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   iparm[24] = 1;// parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   #else
+   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential
+   #endif
+
+#else
+   /* From INTEL (instead of iparm[2] which is not defined there):
+    *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
+    *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
+    *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
+    */
+   iparm[7] = 0;
+   iparm[10] = 0; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+   iparm[12] = 0; // improved accuracy for IPM KKT; used with IPARM(11)=1; use 2 for advanced matchings and higher accuracy.
+
+   /* NOTE: requires iparm[23] = 1 which in return requires iparm[10] = iparm[12] = 0 */
+   /* even though the ducomentation does not tell so setting iparm[23] = 10 is highly unstable and might result in segmentation faults */
+   iparm[35] = -2; // compute the schur complement
+
+   #ifdef PARDISO_PARALLEL_AGGRESSIVE
+   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
+                     // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
+   #else
+   iparm[23] = 1; // only possible setting for computing the schur complement
+   iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential
+   #endif
+
+
+   /* mkl_pardiso has no chkmatrix method - insead one can set iparm[26] */
+   #ifndef NDEBUG
+   iparm[26] = 1;
+   #endif
+#endif
+
+}
+
+bool PardisoSchurSolver::iparmUnchanged(){
+
+   /* put all Parameters that should stay be checked against init into this array */
+   static const int check_iparm[] = { 1, 30, 10, 12, 23, 24 };
+
+   bool unchanged = true;
+   bool print = false;
+
+   int iparm_compare[64];
+   setIparm(iparm_compare);
+
+
+   vector<int> to_compare(check_iparm, check_iparm + sizeof(check_iparm) / sizeof(check_iparm[0]) );
+
+   for(int i = 0; i < 64; ++i)
+   {
+      // if entry should be compared
+      if(std::find(to_compare.begin(), to_compare.end(), i) != to_compare.end())
+      {
+         if(iparm[i] != iparm_compare[i])
+         {
+            if(print)
+               std::cout << "ERROR - PardisoSolver: elements in iparm changed at " << i << ": "
+                  << iparm[i] << " != " << iparm_compare[i] << "(new)" << std::endl;
+            unchanged = false;
+         }
+      }
+   }
+   return unchanged;
+}
+
 void PardisoSchurSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 {
   this->matrixChanged();
@@ -597,7 +639,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    }
 
    // call PARDISO
-   int mtype = -2, error;
+   int error = 0;
 
 #ifndef NDEBUG
 #ifndef WITH_MKL_PARDISO
@@ -607,9 +649,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
       cout << "PARDISO matrix error " << error << endl;
       exit(1);
    }
-#else
-   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
-   iparm[26] = 1;
 #endif
 #endif
 
@@ -623,50 +662,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    if( doSymbFact )
       phase = 12; // numerical factorization & symb analysis
 
-   int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
-   int mnum = 1; // actual matrix (as in index from 1 to maxfct)
-   int nrhs = 1;
-   int msglvl = pardiso_verbosity;
-   //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
-   //if (myRankp==0) msglvl=1;
-
-   iparm[7] = 8; // max number of iterative refinement steps
-   iparm[9] = 13;//todo was 1 // pivot perturbation 10^{-xxx} todo better 7 or higher?
-   iparm[30] = 0; // todo do not specify sparse rhs at this point
-
-#ifndef WITH_MKL_PARDISO
-   iparm[2] = num_threads;
-
-   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; use 2 for advanced matchings and higher accuracy.
-   // iparm[32] = 1; // compute determinant - not available in MKL_PARDISO
-#else
-   /* From INTEL (instead of iparm[2] which is not defined there):
-    *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
-    *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
-    *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
-    */
-   iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
-   iparm[12] = 1;// 0 disable matching, 1 enable matching, no other settings
-#endif
-
-
-#ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-
-   #ifndef WITH_MKL_PARDISO
-   // iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0) - not available in MKL_PARDISO
-   iparm[24] = 1;// parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   // iparm[27] = 1; // Parallel metis - not for MKL_PARDISO
-   #else
-   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
-                  // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
-   #endif
-#else
-   iparm[1] = 2; // 2 is for metis, 0 for min degree
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential
-#endif
+   assert(iparmUnchanged());
 
    /* compute schur complement */
 #ifndef WITH_MKL_PARDISO
@@ -688,7 +684,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    HPM_Stop("PARDISOFact");
  #endif
 
-   int nnzSC=iparm[38]; // todo
+   int nnzSC=iparm[38];
 
 #ifdef TIMING
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -714,14 +710,15 @@ void PardisoSchurSolver::computeSC(int nSCO,
    for( int it = 0; it < nnzSC; it++ )
       colidxSC[it]--;
 #else
-   // perm array has to be defined is of size of augmented system (dense) and inicates rows/colums we want to have in the schur complement with 1
-   // rest set to 0
-   // setting all entries to 1 will return the input matrix as schur complement
+   assert(iparm[35] == -2);
+   assert(iparm[23] == 1);
 
-   // iparm[35] < 0 only possible if iparm[23] != 0 and since iparm[23]=1 disables scaling and matching we have to set it to iparm[23]=10
-   iparm[23] = 1; // 10 will lead to a seg fault thrown in pardiso_export or weird behaviour of te first pardiso call (depending on iparm[35])
-   iparm[35] = -2;
-
+   /* perm array has to be defined - it is of size of augmented system (dense) and inicates rows/colums we want to have in the schur complement with 1
+    * rest set to 0
+    * if specified like {1, 0, 0, 1, 0, 0} mkl_pardiso will first reorder row 0 and 3 to the bottom (hopefully stable sort) and then use the last two rows for computing
+    * the schur complement
+    * setting all entries to 1 will return the input matrix as schur complement
+    */
    int perm[n] = {0};
    for(int i = n - nSC; i < n; ++i)
       perm[i] = 1;
@@ -733,21 +730,24 @@ void PardisoSchurSolver::computeSC(int nSCO,
    	   	   colidxAug, perm, &nrhs, iparm, &msglvl, NULL, NULL, &error);
 
    /* iparm[35] should now contain the number of non-zero entries in the Schur-complement */
+   /* if it does not most likely the general iparm setup is faulty */
    assert(error == 0); assert(iparm[35] >= 0);
 
    /* preallocation of schur matrix arrays */
    int nnzSC = iparm[35];
-   rowptrSC = new int[nSC + 1];
-   colidxSC = new int[iparm[35]];
-   eltsSC = new double[iparm[35]];
+
+   int* rowptrSCtransp = new int[nSC + 1];
+   int* colidxSCtransp = new int[nnzSC];
+   double* eltsSCtransp = new double[nnzSC];
 
    phase = 22;
-   /* reset iparm[35] to -2 */
+
+   /* reset iparm[35] to -2 necessary! */
    iparm[35] = -2;
    int step = 1;
 
    // mkl pardiso returns arrays with zero-based index via export
-   pardiso_export(pt, eltsSC, rowptrSC, colidxSC, &step, iparm, &error);
+   pardiso_export(pt, eltsSCtransp, rowptrSCtransp, colidxSCtransp, &step, iparm, &error);
 
    #ifdef TIMING
    //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
@@ -779,77 +779,20 @@ void PardisoSchurSolver::computeSC(int nSCO,
       exit(1);
    }
 
-
-   int ind, pend;
-
    /////////////////////////////////////////////////////
    // transpose the matrix since it is given in lower triangular form and we are using upper triangular form
    /////////////////////////////////////////////////////
-   // todo move somewhere else
+   SparseStorage schur_transposed( nSC, nSC, nnzSC, rowptrSCtransp, colidxSCtransp, eltsSCtransp, true);
 
-   //cummulative sum to find the number of elements in each row of At, ie column of A.
-   int w[n] = {0};
+   rowptrSC = new int[nSC + 1];
+   colidxSC = new int[nnzSC];
+   eltsSC = new double[nnzSC];
 
-   int* rowptrSCTP = new int[nSC + 1];
-   int* colidxSCTP = new int[nnzSC];
-   double* eltsSCTP = new double[nnzSC];
+   schur_transposed.transpose(rowptrSC, colidxSC, eltsSC);
 
-   for(int i = 0; i < nnzSC; i++)
-      w[ colidxSC[i] ]++;
-
-   rowptrSCTP[0] = 0;
-   for(int i = 1; i <= nSC; i++)
-   {
-      rowptrSCTP[i] = rowptrSCTP[i-1] + w[i-1];
-      w[i-1] = rowptrSCTP[i-1];
-   }
-
-   // populate colidxSCTP and eltsSCTP now
-   for(int i = 0; i < nSC; i++)
-   {
-      pend = rowptrSC[ i + 1 ];
-      for(int j = rowptrSC[i]; j < pend; j++)
-      {
-         ind = w[ colidxSC[j] ];
-         colidxSCTP[ ind ] = i;
-         eltsSCTP[ ind ] = eltsSC[j];
-         w[ colidxSC[j] ] = ind + 1;
-      }
-   }
-
-   for(int i = 0; i < nSC + 1; ++i)
-      rowptrSC[i] = rowptrSCTP[i];
-   for(int i = 0; i < nnzSC; ++i)
-   {
-      colidxSC[i] = colidxSCTP[i];
-      eltsSC[i] = eltsSCTP[i];
-   }
-
-   delete[] colidxSCTP;
-   delete[] eltsSCTP;
-   delete[] rowptrSCTP;
 #endif
 
-// TODO remove when finished debugging mkl - print schur matrix
-//   for( int it = 0; it < nSC; it++ )
-//   {
-//      int k = rowptrSC[it];
-//      for( int jt = 0; jt < nSC && k < rowptrSC[it + 1]; jt++ )
-//      {
-//         if( colidxSC[k] == jt )
-//         {
-//            std::cout << std::fixed << std::setprecision(2) << eltsSC[k]
-//                  << "\t";
-//            ++k;
-//         }
-//         else
-//            std::cout << "0\t";
-//      }
-//      std::cout << std::endl;
-//   }
-//   std::cout << "-----------------------------------------------------------------------------------" << std::endl;
    assert(subMatrixIsOrdered(rowptrSC, colidxSC, 0, nSC));
-
 }
 
 
@@ -857,47 +800,8 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 { 
   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
 
-  /* same for mkl_pardiso and pardiso */
-  int mtype=-2, error;
-  int phase = 33; // solve and iterative refinement
-  int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
-  int mnum = 1; // actual matrix (as in index from 1 to maxfct)
-  int nrhs = 1;
-
-  int msglvl = pardiso_verbosity;
-  //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
-  //if (myRankp==0) msglvl=1;
-
-  iparm[7] = 8; // max number of iterative refinement steps
-
-#ifndef WITH_MKL_PARDISO
-  iparm[2] = num_threads;
-
-  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; use 2 for advanced matchings and higher accuracy.
-#else
-  /* From INTEL (instead of iparm[2] which is not defined there):
-   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
-   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
-   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
-   */
-  iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
-  iparm[12] = 1;// 0 disable matching, 1 enable matching, no other settings
-#endif
-
-
-#ifdef PARDISO_PARALLEL_AGGRESSIVE
-  iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-
-#ifndef WITH_MKL_PARDISO
-  iparm[24] = 1;// parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-  // iparm[27] = 1; // Parallel metis - not for MKL_PARDISO
-#else
-  iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here; one rhs -> parallelization, multiple rhs -> parallel forward backward subst
-  #endif
-#else
-  iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-#endif
+  int error = 0;
+  assert(iparmUnchanged());
 
   assert(nvec_size == n);
   double* const x_n = nvec;
@@ -909,7 +813,6 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   memset(x_n, 0, dim * sizeof(double));
   memcpy(rhs_n, rhs.elements(), dim * sizeof(double));
 
-  // todo sparsity vector?
   if( n > dim )
      memset(&rhs_n[dim], 0, (n - dim) * sizeof(double));
 
@@ -917,45 +820,18 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
   HPM_Start("PARDISOSolve");
 #endif
 
-  // todo remove when done debugging
-  //////////////////////////////////////
-//  iparm[1-1] = 1;         /* No solver default */
-//  iparm[2-1] = 2;         /* Fill-in reordering from METIS */
-//  iparm[10-1] = 8;        /* Perturb the pivot elements with 1E-13 */
-//  iparm[11-1] = 0;        /* Use nonsymmetric permutation and scaling MPS */
-//  iparm[13-1] = 0;        /* Maximum weighted matching algorithm is switched-off (default for symmetric). Try iparm[12] = 1 in case of inappropriate accuracy */
-//  iparm[14-1] = 0;        /* Output: Number of perturbed pivots */
-//  iparm[18-1] = -1;       /* Output: Number of nonzeros in the factor LU */
-//  iparm[19-1] = -1;       /* Output: Mflops for LU factorization */
-//  iparm[36-1] = 1;        /* Use Schur complement */
-//  // added
-//  iparm[5] = 0;
-//  iparm[23] = 1;
-//  iparm[30] = 0;
-//  iparm[35] = -2;
-//  iparm[7] = 0;
-//  iparm[20] = 0;
-//  iparm[24] = 0;
-//  iparm[26] = 0;
+  // solving phase
+#ifndef WITH_MKL_PARDISO
+  phase = 33; /* solve - iterative refinement */
 
-  for( int it = 0; it < n; it++ )
-  {
-     int k = rowptrAug[it] - 1;
-     for( int jt = 0; jt < n && k < rowptrAug[it + 1] - 1; jt++ )
-     {
-        if( colidxAug[k] - 1 == jt )
-        {
-           std::cout << std::fixed << std::setprecision(4) << eltsAug[k]
-                 << "\t";
-           ++k;
-        }
-        else
-           std::cout << "0\t";
-     }
-     std::cout << std::endl;
-  }
-  //////////////////////////////////////
-
+  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+	   &n, eltsAug, rowptrAug, colidxAug,
+	   NULL, &nrhs,
+	   iparm , &msglvl, rhs_n, x_n, &error
+	   ,dparm
+  );
+  assert(error == 0);
+#else
   /* pardiso from mkl does not support same functionality as pardiso-project
    *
    * pardiso project:
@@ -988,169 +864,48 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
    *
    */
 
-  // solving phase
-#ifndef WITH_MKL_PARDISO
-  phase = 33;
-
-  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-	   &n, eltsAug, rowptrAug, colidxAug, 
-	   NULL, &nrhs,
-	   iparm , &msglvl, rhs_n, x_n, &error
-	   ,dparm
-  );
-  assert(error == 0);
-#else
-
-  int iparm2[64] = {1, 2, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 1, 1, 0, 11, -1, 0, 0, 2, 6, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, -2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 
   // forward substitution
-  phase = 331;
-  double z_n[nvec_size];
-  iparm[7] = 0;
+   double* z_n = new double[nvec_size];
+   assert(iparm[7] == 0);
+   assert(iparm[35] = -2);
 
-  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-      &n, eltsAug, rowptrAug, colidxAug,
-      NULL, &nrhs, iparm2, &msglvl, rhs_n, z_n, &error);
-  assert(error == 0);
+   // this is necessary for usage of stage = 331/332/333
+   iparm[9] = 0;
 
-  // diagonal substitution
-  phase = 332;
-  double y_n[nvec_size];
+   // HACK: keeping iparm[35] = -2 will, for some reason, not compute the correct result
+   // iparm[35] will be set to -2 after stage 333
+   iparm[35] = 2;
 
-  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-      &n, eltsAug, rowptrAug, colidxAug,
-      NULL, &nrhs, iparm2, &msglvl, z_n, y_n, &error);
-  assert(error == 0);
+   phase = 331;
+   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+         &n, eltsAug, rowptrAug, colidxAug,
+         NULL, &nrhs, iparm, &msglvl, rhs_n, z_n, &error);
+   assert(error == 0);
 
+   // diagonal substitution
+   phase = 332;
+   double* y_n = new double[nvec_size];
 
-  // backward substitution
-  phase = 333;
+   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+         &n, eltsAug, rowptrAug, colidxAug,
+         NULL, &nrhs, iparm, &msglvl, z_n, y_n, &error);
+   assert(error == 0);
 
-  for(int i = nvec_size - dim; i < nvec_size; ++i)
-//     y_n[i] = 0.0;
+   // backward substitution
+   for(int i = dim; i < nvec_size; ++i)
+      y_n[i] = 0.0;
+   phase = 333;
 
-  pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-      &n, eltsAug, rowptrAug, colidxAug,
-      NULL, &nrhs, iparm2, &msglvl, y_n, x_n, &error);
-  assert(error == 0);
+   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
+         &n, eltsAug, rowptrAug, colidxAug,
+         NULL, &nrhs, iparm, &msglvl, y_n, x_n, &error);
+   assert(error == 0);
+
+   iparm[35] = -2;
 
 #endif
 
-
-  /////TODO remove when done debugging
-  //////////////////////////////////////
-
-  // compute the full sparse representation of the sparse symmetric input
-  // cout elems per row
-  int nelems[n] = {0};
-  for(int i = 0; i < n; ++i)
-  {
-     // diag elem
-     for(int j = rowptrAug[i] - 1; j < rowptrAug[i + 1] - 1; ++j)
-     {
-        if(i == colidxAug[j] - 1)
-           nelems[i]++;
-        else
-        {
-           nelems[colidxAug[j] - 1]++;
-           nelems[i]++;
-        }
-     }
-  }
-
-  // fill rowptr array
-  int rowptrAugFull[n + 1];
-
-  rowptrAugFull[0] = 0;
-  for(int i = 0; i < n; ++i)
-     rowptrAugFull[i + 1] = rowptrAugFull[i] + nelems[i];
-
-  int colidxAugFull[rowptrAugFull[n]];
-  for( int i = 0; i < rowptrAugFull[n]; ++i)
-     colidxAugFull[i] = -1;
-
-  double eltsAugFull[rowptrAugFull[n]];
-
-  // fill in col and value
-  for(int i = 0; i < n; ++i)
-  {
-     int rowstart = rowptrAug[i] - 1;
-     int rowend = rowptrAug[i+1] - 1;
-
-     for(int k = rowstart; k < rowend; ++k)
-     {
-        double value = eltsAug[k];
-        int col = colidxAug[k] - 1;
-
-        int kk = rowptrAugFull[i];
-        int colfull = colidxAugFull[kk];
-        while(colfull != -1)
-        {
-           kk++;
-           colfull = colidxAugFull[kk];
-        }
-
-        colidxAugFull[kk] = col;
-        eltsAugFull[kk] = value;
-
-        if(col != i )
-        {
-           kk = rowptrAugFull[col];
-           int colfull = colidxAugFull[kk];
-
-           while(colfull != -1)
-           {
-              kk++;
-              colfull = colidxAugFull[kk];
-           }
-
-           colidxAugFull[kk] = i;
-           eltsAugFull[kk] = value;
-        }
-     }
-   }
-
-  // print full matrix
-   std::cout << std::endl << "dim: " << dim << "\tn: " << n << std::endl;
-   for( int it = 0; it < n; it++ )
-   {
-      int k = rowptrAugFull[it];
-      for( int jt = 0; jt < n && k < rowptrAugFull[it + 1]; jt++ )
-      {
-         if( colidxAugFull[k] == jt )
-         {
-            std::cout << std::fixed << std::setprecision(4) << eltsAugFull[k]
-                  << "\t";
-            ++k;
-         }
-         else
-            std::cout << "0\t";
-      }
-      std::cout << std::endl;
-   }
-
-   std::cout << std::endl;
-
-   // print x
-  for(int i = 0; i < n; ++i)
-     std::cout << x_n[i] << " ";
-   std::cout << std::endl;
-
-   // print Ax == b
-   double res[n];
-   for( int i = 0; i < n; ++i )
-   {
-      res[i] = 0.0;
-      for( int j = rowptrAugFull[i]; j < rowptrAugFull[i + 1]; ++j )
-         res[i] += eltsAugFull[j] * x_n[colidxAugFull[j]];
-      std::cout << res[i] << " == " << rhs_n[i] << std::endl;
-   }
-
-   exit(1);
-
-   //////////////////////////////////////
 
 #ifdef TIMING_FLOPS
   HPM_Stop("PARDISOSolve");
@@ -1204,16 +959,6 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 	 << " rel.res.nrmInf=" << res_nrmInf/rhsNorm 
 	 << " bicgiter=" << gOuterBiCGIter<< endl;
 
-    //if(res_norm2/rhsNorm>1e-4 && 0==gOuterBiCGIter) {
-    //  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    //  char tmp[1024];
-    //  sprintf(tmp, "augMat-r%d-i%g-s%g-b%d.dat", myRank, g_iterNumber,  g_scenNum+1, gOuterBiCGIter);
-      
-    //  cout << "saving matrix to " << tmp << endl;
-      
-    //  dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
-    //  dumpRhs(rhs);
-    //}
   }
   delete[] tmp_resid;
 #endif
@@ -1226,37 +971,9 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
 
   /* same for mkl_pardiso and pardiso */
-  int mtype=-2, error;
+  int error = 0;
   int phase = 33; // solve and iterative refinement
-  int maxfct = 1; // max number of fact having same sparsity pattern to keep at the same time
-  int mnum = 1; // actual matrix (as in index from 1 to maxfct)
-  int nrhs = 1;
 
-  int msglvl = pardiso_verbosity;
-  //int myRankp; MPI_Comm_rank(MPI_COMM_WORLD, &myRankp);
-  //if (myRankp==0) msglvl=1;
-
-  iparm[7] = 8; // max number of iterative refinement steps
-
-  // todo this is not working at the moment
-#ifndef WITH_MKL_PARDISO
-  iparm[2] = num_threads;
-
-  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; use 2 for advanced matchings and higher accuracy.
-#else
-  /* From INTEL (instead of iparm[2] which is not defined there):
-   *  You can control the parallel execution of the solver by explicitly setting the MKL_NUM_THREADS environment variable.
-   *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
-   *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
-   */
-  iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
-  iparm[12] = 1;// 0 disable matching, 1 enable matching, no other settings
-#endif
-
-  iparm[23] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-  iparm[24] = 0; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-  
   SimpleVector x_n(n);
   SimpleVector rhs_n(n);
   int dim=rhs.length();
@@ -1314,138 +1031,6 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
   memcpy(&rhs[0], x_n.elements(), dim*sizeof(double));
 }
 
-
-
-// void PardisoSchurSolver::solve( OoqpVector& rhs_in )
-// { 
-//   SimpleVector& rhs=dynamic_cast<SimpleVector&>(rhs_in);
-
-//   dumpRhs(rhs);
-
-//   int mtype=-2, error;
-//   int phase=33;      //solve and iterative refinement
-//   int maxfct=1, mnum=1, nrhs=1;
-//   iparm[2]=num_threads;
-//   //iparm[5]=1;    //replace rhs with sol 
-//   iparm[7]=0;    // # of iterative refinements
-//   //iparm[1] = 2;// 2 is for metis, 0 for min degree 
-//   //iparm[ 9] =12; // pivot perturbation 10^{-xxx} 
-//   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-//   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1; 
-//                  // if needed, use 2 for advanced matchings and higer accuracy.
-//   iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-//   int msglvl=0;  // with statistical information
-
-//   int dim=rhs.length();
-//   SimpleVector x(dim); x.setToZero();
-//   SimpleVector dx(nvec, dim);  
-//   SimpleVector b(dim); b.copyFrom(rhs);
-//   double rhsNorm = b.twonorm(); double relResNorm;
-//   int refinSteps=0;
-//   SimpleVector rhs_n(n);
-
-//   vector<double> histRelRes;
-//   SimpleVector x_last(dim);
-//   do {
-
-//     memcpy(&rhs_n[0], rhs.elements(), dim*sizeof(double));
-//     for(int i=dim; i<n; i++) rhs_n[i]=0.0;
-
-//     double start = MPI_Wtime();
-//     pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-// 	     &n, eltsAug, rowptrAug, colidxAug, 
-// 	     NULL, &nrhs,
-// 	     iparm , &msglvl, rhs_n.elements(), nvec, &error, dparm );   
-
-//     cout << "---pardiso:" << MPI_Wtime()-start << endl;
-
-//     if ( error != 0) {
-//       printf ("PardisoSchurSolver - ERROR during single rhs: %d\n", error );
-//       exit(0);
-//     }
-//     x.axpy(1.0,dx);
-//     //residual
-//     rhs.copyFrom(b);
-//     Msys->mult(1.0, rhs.elements(), 1,  -1.0, x.elements(),1);
-//     relResNorm = rhs.twonorm()/rhsNorm;
-
-//      //compute residual (alternative)
-//     double* tmp_resid=new double[dim];
-//     memcpy(tmp_resid, b.elements(), dim*sizeof(double));
-//     for(int i=0; i<dim; i++) {
-//       for(int p=rowptrAug[i]; p<rowptrAug[i+1]; p++) {
-// 	int j=colidxAug[p-1]-1;
-// 	if(j+1<=dim) {
-// 	  //r[i] = r[i] + M(i,j)*x(j)
-// 	  tmp_resid[i] -= eltsAug[p-1]*x[j];
-	
-// 	  if(j!=i) {
-// 	    //r[j] = r[j] + M(j,i)*x(i)
-// 	    tmp_resid[j] -=  eltsAug[p-1]*x[i];
-// 	  }
-// 	}
-//       }
-//     }
-
-//     double res_norm2=0.0; 
-//     for(int i=0; i<dim; i++) res_norm2 += tmp_resid[i]*tmp_resid[i];
-//     res_norm2 = sqrt(res_norm2);
-
-//     cout << "--- rhs.nrm=" << rhsNorm << " rel.res.nrm=" << relResNorm 
-// 	 << " rel.res.nrm=" << res_norm2/rhsNorm
-// 	 << endl;
-//     delete[] tmp_resid;
-
-//     if(histRelRes.size()>0) {
-//       if(histRelRes[histRelRes.size()-1] < relResNorm) {
-// 	cout << "PardisoSchurSolver::residual norm increase in iter refin, last="
-// 	     << histRelRes[histRelRes.size()-1] << " new=" << relResNorm 
-// 	     << ". Restoring iterate..." << endl;
-// 	x.copyFrom(x_last);
-// 	relResNorm=histRelRes[histRelRes.size()-1];
-// 	break;
-//       }
-//     }
-//     x_last.copyFrom(x);
-//     histRelRes.push_back(relResNorm);
-//     if(relResNorm<1e-9) {
-//       break;
-//     }
-//     refinSteps++;
-//   } while(refinSteps<=5);
-  
-//   if(relResNorm>1e-8) {
-
-//     Ma57Solver slv(Msys);
-//     slv.matrixChanged();
-//     SimpleVector x_ma(dim); x_ma.copyFrom(b);
-//     slv.solve(x_ma);
-    
-//     Msys->mult(1.0, b.elements(), 1,  -1.0, x_ma.elements(),1);
-//     double relResNorm_ma57 = b.twonorm()/rhsNorm;
-//     //cout <<"Ma57 rel resid norm:" << relResNorm_ma57 << endl << endl;
-//     if(relResNorm_ma57 < relResNorm) {
-//       x.copyFrom(x_ma);
-//       relResNorm=relResNorm_ma57;
-//     }
-//     if(relResNorm>1e-8) {
-
-//       cout << "Pardiso iter refinements: " << refinSteps 
-// 	   << "   rel resid nrm=" << relResNorm 
-// 	   << ". Ma57 rel resid=" << relResNorm_ma57 << endl;
-//       //cout << "Pardiso conv history:";
-//       //for(size_t it=0; it<histRelRes.size(); it++)
-//       //cout << histRelRes[it] << " ";
-//       //cout << endl;
-//       // cout <<"Ma57 rel resid norm:" << relResNorm_ma57 << endl << endl; 
-//     }
-//   }
-
-//   rhs.copyFrom(x);
-// }
-
-
-
 void PardisoSchurSolver::solve(GenMatrix& rhs_in)
 {
   assert(false && "Function not supported. Use PardisoSolver for this functionality.");
@@ -1454,8 +1039,8 @@ void PardisoSchurSolver::solve(GenMatrix& rhs_in)
 PardisoSchurSolver::~PardisoSchurSolver()
 {
   int phase = -1; /* Release internal memory . */
-  int mtype = -2;
-  int maxfct=  1, mnum=1, nrhs=1, msglvl=0, error;
+  msglvl = 0;
+  int error = 0;
   
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, NULL, rowptrAug, colidxAug, NULL, &nrhs,
@@ -1558,187 +1143,3 @@ int dumpRhs(SimpleVector& v)
   return 0;
 }
 #endif
-// int dumpSysMatrix(SparseSymMatrix& M)
-// {
-//   int n=M.size(), nnz=M.numberOfNonZeros();
-
-//   int*  rowptr = new int[n+1];
-//   int*  colidx = new int[nnz];
-//   double* elts = new double[nnz];
-
-//   M.getStorageRef().transpose(rowptr,colidx,elts);
-
-//   //FORTRAN indexes
-//   for(int it=0; it<n+1; it++) rowptr[it]++;
-//   for(int it=0; it<nnz; it++) colidx[it]++;
-
-//   char fname[128];
-//   strcpy(fname, "matDump.dat");
-//   dumpAugMatrix(n, nnz, elts, rowptr, colidx, fname);
-//   return 0;
-// }
-
-/*
-int pardiso_stuff(int n, int nnz, int n0, int* rowptr, int* colidx, double* elts, const vector< vector<double> >& vRhs)
-{
-  void  *pt[64];
-  int iparm[64];
-  double dparm[64];
-  int num_threads;
-
-  char *var = getenv("OMP_NUM_THREADS");
-  if(var != NULL) {
-    sscanf( var, "%d", &num_threads );
-    cout << "Using " << num_threads << " threads." << endl;
-  }
-  else {
-    printf("Set environment OMP_NUM_THREADS\n");
-    exit(1);
-  }
-  int solver=0, mtype=-2, error;
-  pardisoinit (pt,  &mtype, &solver, iparm, dparm, &error);
-  if (error!=0) {
-    cout << "Pardiso solver ERROR during pardisoinit:" << error << "." << endl;
-    exit(1);
-  }
-
-  pardiso_chkmatrix(&mtype, &n, elts, rowptr, colidx, &error);
-  if(0!=error)
-    cout << "Error in matrix detected: " << error << endl;
-  //int zero=0;
-  //pardiso_printstats (&mtype, &n, elts, rowptr, colidx, &zero, NULL, &error);
-
-  //
-  // symbolic analysis & numerical factorization
-  //
-  int phase=12; //analysis & fact
-  int maxfct=1, mnum=1, nrhs=1;
-  iparm[2]=num_threads;
-  iparm[7]=8;     //# iterative refinements
-  //iparm[1] = 2; // 2 is for metis, 0 for min degree
-  //iparm[ 9] =10; // pivot perturbation 10^{-xxx}
-  iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-  iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-                 // if needed, use 2 for advanced matchings and higer accuracy.
-  iparm[23] = 1; //Parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-
-  int msglvl=0;  // with statistical information
-  iparm[32] = 0; // compute determinant
-  if(n0!=n)  iparm[37] = n0; //compute Schur-complement
-
-  double start=omp_get_wtime();
-  pardiso (pt, &maxfct , &mnum, &mtype, &phase,
-           &n, elts, rowptr, colidx,
-           NULL, &nrhs,
-           iparm , &msglvl, NULL, NULL, &error, dparm );
-  cout << "Factorization: " << omp_get_wtime()-start << endl;
-  if ( error != 0) {
-    printf ("PardisoSolver - ERROR during factorization: %d\n", error );
-    exit(1);
-  }
-
-
-  ////////////////////////////////////////////////////////////
-  int nSC=n-n0;
-  if(nSC>0) {
-    int nnzSC=iparm[38];
-    int* rowptrSC =new int[nSC+1];
-    int* colidxSC =new int[nnzSC];
-    double* eltsSC=new double[nnzSC];
-    
-    pardiso_get_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
-    //!cout << "Schur complement (2nd stage) n=" << nSC << "   nnz=" << nnzSC << endl;
-    
-    //convert back to C/C++ indexing
-    for(int it=0; it<nSC+1; it++) rowptrSC[it]--;
-    for(int it=0; it<nnzSC; it++) colidxSC[it]--;
-    
-    
-    //for(int r=0; r<nSC; r++) {
-    //  for(int ci=rowptrSC[r]; ci<rowptrSC[r+1]; ci++) {
-    //	int c=colidxSC[ci];
-    //	SC0[r][c] += eltsSC[ci];
-    //	if(r!=c)
-    //	  SC0[c][r] += eltsSC[ci];
-    //}
-    //}
-    delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
-  }
-
-  
-
-
-
-  ////////////////////////////////////////////////////////////
-
-
-  double* rhs=new double[n];
-  double* sol=new double[n];
-  double* resid=new double[n0];
-  //solve with each rhs
-  for(int r=0; r<vRhs.size(); r++) {
-    memcpy(rhs,   &vRhs[r][0], n0*sizeof(double));
-    memcpy(resid, &vRhs[r][0], n0*sizeof(double));
-
-
-    //
-    // solve
-    //
-    phase=33;
-    iparm[7]=8;    // # of iterative refinements
-    int nrhs=1;
-    msglvl=0;
-
-    start = omp_get_wtime();
-    pardiso (pt , &maxfct , &mnum, &mtype, &phase,
-	     &n, elts, rowptr, colidx, 
-	     NULL, &nrhs,
-	     iparm , &msglvl, rhs, sol, &error, dparm );   
-    double t=omp_get_wtime()-start; 
-
-    //cout << "Sol:";
-    //for(int i=2000; i<2003; i++) cout << sol[i] << " ";
-    //cout << endl;
-
-    //compute residual
-    for(int i=0; i<n0; i++) {
-      for(int p=rowptr[i]; p<rowptr[i+1]; p++) {
-	int j=colidx[p-1]-1;
-	if(j+1<=n0) {
-	  //r[i] = r[i] + M(i,j)*x(j)
-	  resid[i] -= elts[p-1]*sol[j];
-	
-	  if(j!=i) {
-	    //r[j] = r[j] + M(j,i)*x(i)
-	    resid[j] -=  elts[p-1]*sol[i];
-	  }
-	}
-      }
-    }
-    double res_norm=0.0, rhs_norm=0.0;
-    for(int i=0; i<n0; i++) res_norm += resid[i]*resid[i];
-    for(int i=0; i<n0; i++) rhs_norm += rhs[i]*rhs[i];
-    res_norm=sqrt(res_norm); rhs_norm=sqrt(rhs_norm);
-    cout << "Solve: " << t << " sec."
-         << " Rhs.nrm: " << rhs_norm 
-	 << " Rel.resid.nrm=" << res_norm/rhs_norm
-	 << endl;
-  }
-  delete[] rhs; delete[] sol; delete[] resid;
-
-  //
-  // clean-up
-  //
-  phase = -1; // Release internal memory .
-
-  pardiso (pt, &maxfct, &mnum, &mtype, &phase,
-           &n, NULL, rowptr, colidx, NULL, &nrhs,
-           iparm, &msglvl, NULL, NULL, &error, dparm );
-  if ( error != 0) {
-    printf ("Pardiso solver - ERROR in pardiso release: %d", error );
-    exit(1);
-  }
-
-  return 0; 
-}
-*/

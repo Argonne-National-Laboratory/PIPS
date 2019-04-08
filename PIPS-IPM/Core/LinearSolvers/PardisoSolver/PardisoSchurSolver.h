@@ -77,7 +77,7 @@ protected:
   SparseSymMatrix* Msys; // this is the (1,1) block in the augmented system
   bool first;
   bool firstSolve;
-  void  *pt[10000];
+  void  *pt[64];
   int iparm[64];
 
 #ifndef WITH_MKL_PARDISO
@@ -85,15 +85,18 @@ protected:
   double dparm[64];
 #endif
 
+  /* pardiso params */
+  int maxfct, mnum, phase, msglvl, solver, mtype, nrhs;
+
   /** dimension of the PARDISO augmented system */
   int n; 
   /** dimension of the Schur complement (# of rhs) */
   int nSC; 
   /** number of nonzeros in the PARDISO augmented matrix */
-  int      nnz;
+  int nnz;
   /** storage for the upper triangular (in row-major format) */
-  int     *rowptrAug, *colidxAug;
-  double  *eltsAug;
+  int *rowptrAug, *colidxAug;
+  double *eltsAug;
   /** mapping from from the diagonals of the PIPS linear systems to 
       the diagonal elements of the (1,1) block  in the augmented system */
   map<int,int> diagMap;
@@ -103,6 +106,10 @@ protected:
   double* nvec2;
   int nvec_size; // to be save
   
+
+  void setIparm(int* iparm);
+  bool iparmUnchanged();
+
   virtual void computeSC(
             int nSCO,
             /*const*/ SparseGenMatrix& R,

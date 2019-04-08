@@ -60,6 +60,9 @@ class PardisoIndefSolver : public DoubleLinearSolver
       // todo delete
       virtual void factorizeFromDense();
       virtual void factorize();
+
+      virtual void setIparm(int* iparm);
+      virtual bool iparmUnchanged();
 };
 
 #endif /* _PARDISOINDEFSOLVER_H_ */
