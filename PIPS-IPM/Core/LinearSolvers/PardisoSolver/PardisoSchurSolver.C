@@ -737,6 +737,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    /* preallocation of schur matrix arrays */
    int nnzSC = iparm[35];
 
+   /* get deleted inside of destructor of schur_transposed */
    int* rowptrSCtransp = new int[nSC + 1];
    int* colidxSCtransp = new int[nnzSC];
    double* eltsSCtransp = new double[nnzSC];
@@ -905,6 +906,8 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
    iparm[35] = -2;
 
+   delete[] z_n;
+   delete[] y_n;
 #endif
 
 
