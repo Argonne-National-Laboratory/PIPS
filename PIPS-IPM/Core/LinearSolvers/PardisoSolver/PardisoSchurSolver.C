@@ -418,17 +418,18 @@ void PardisoSchurSolver::setIparm(int* iparm){
    /* NOTE: if iparm[9] is less than 13 mkl_pardiso will not consistently produce the same schur complement as the other pardiso (on some examples)
     * this might not be an issue should be kept in mind though
     */
-   iparm[9] = 13;// pivot perturbation 10^{-xxx}
    iparm[30] = 0; // do not specify sparse rhs at this point ! MKL_PARDISO can either set iparm[35] or iparm[30]
 
 #ifndef WITH_MKL_PARDISO
    iparm[2] = PIPSgetnOMPthreads();
 
-   iparm[7] = 0; // max number of iterative refinement steps
+   iparm[7] = 8; // max number of iterative refinement steps
+   iparm[9] = 6;// pivot perturbation 10^{-xxx}
    iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
    iparm[12] = 2;// 0 disable matching, 1 enable matching, no other settings
 
    #ifdef PARDISO_PARALLEL_AGGRESSIVE
+//   iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
    iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    iparm[24] = 1;// parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
    #else
@@ -442,12 +443,13 @@ void PardisoSchurSolver::setIparm(int* iparm){
     *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
     *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
     */
-   iparm[7] = 0;
+   iparm[7] = 0; // MKL_PARDISO runs into troubles otherwise
+   iparm[9] = 13; // MKL_PARDISO need this in order to compute same schur decomposition as schenk pardiso
    iparm[10] = 0; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 0; // improved accuracy for IPM KKT; used with IPARM(11)=1; use 2 for advanced matchings and higher accuracy.
 
    /* NOTE: requires iparm[23] = 1 which in return requires iparm[10] = iparm[12] = 0 */
-   /* even though the ducomentation does not tell so setting iparm[23] = 10 is highly unstable and might result in segmentation faults */
+   /* even though the documentation does not tell so setting iparm[23] = 10 is highly unstable and might result in segmentation faults */
    iparm[35] = -2; // compute the schur complement
 
    #ifdef PARDISO_PARALLEL_AGGRESSIVE
@@ -460,7 +462,7 @@ void PardisoSchurSolver::setIparm(int* iparm){
    #endif
 
 
-   /* mkl_pardiso has no chkmatrix method - insead one can set iparm[26] */
+   /* mkl_pardiso has no chkmatrix method - instead one can set iparm[26] */
    #ifndef NDEBUG
    iparm[26] = 1;
    #endif
@@ -657,7 +659,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
    if( (nIter % symbEvery) == 0 )
       doSymbFact = true;
 
-   /* same for mkl_pardiso and pardiso */
    int phase = 22; // numerical factorization
    if( doSymbFact )
       phase = 12; // numerical factorization & symb analysis

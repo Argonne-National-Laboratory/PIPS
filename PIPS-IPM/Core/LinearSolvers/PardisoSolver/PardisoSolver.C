@@ -142,8 +142,6 @@ void PardisoSolver::firstCall()
       assert(false);
    }
 #else
-   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
-   //iparm[26] = 1;
    pardisoinit(pt, &mtype, iparm);
 #endif
 
@@ -283,6 +281,11 @@ void PardisoSolver::setIparm(int* iparm){
    #else
    iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
    iparm[24] = 0;
+   #endif
+
+   #ifndef NDEBUG
+   // enable matrix checker - mkl pardiso has no chkmatrix method
+   iparm[26] = 1;
    #endif
 #endif
 

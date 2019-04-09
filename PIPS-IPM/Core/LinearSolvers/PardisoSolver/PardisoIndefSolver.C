@@ -65,6 +65,7 @@ PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 
 void PardisoIndefSolver::setIparm(int* iparm){
 
+   iparm[9] = 13; /* pivot perturbation 10^{-xxx} */
 
 #ifndef WITH_MKL_PARDISO
    /* From INTEL (instead of iparm[2] which is not defined there):
@@ -74,7 +75,6 @@ void PardisoIndefSolver::setIparm(int* iparm){
     */
    iparm[2] = PIPSgetnOMPthreads();
    iparm[7] = 8; /* max number of iterative refinement steps. */
-
    #ifdef PARDISOINDEF_SCALE
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
@@ -91,10 +91,9 @@ void PardisoIndefSolver::setIparm(int* iparm){
    iparm[24] = 0;
    #endif
 
-
 #else
 
-   iparm[7] = 0; //mkl runs into numerical problems when setting iparm[7] too high
+   iparm[7] = 0; /* mkl runs into numerical problems when setting iparm[7] too high */
 
    /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
    #ifndef NDEBUG
@@ -390,9 +389,6 @@ void PardisoIndefSolver::factorize()
       printf("\nERROR in consistency of matrix: %d", error);
       exit(1);
    }
-#else
-   /* enable matrix checker (default disabled) - mkl pardiso does not have chkmatrix */
-   iparm[26] = 1;
 #endif
 #endif
 #endif
