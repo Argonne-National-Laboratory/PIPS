@@ -44,7 +44,7 @@ struct xbounds_col_is_smaller
 };
 
 enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
-enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK};
+enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK, LINKING_CONS_BLOCK};
 
 
 class StochPresolverBase
@@ -73,7 +73,7 @@ protected:
    // todo rename for more clarity
    static const double tolerance1 = 1.0e-3;  // for model cleanup
    static const double tolerance2 = 1.0e-2;  // for model cleanup
-   static const double tol_matrix_entry = 1.0e-10; // for model cleanup
+   static const double tol_matrix_entry = 1.0; // for model cleanup // todo : was 1.0e-10
    static const double tolerance4 = 1.0e-12; // for variable fixing
    static const double limit1 = 1.0e3;   // for bound strengthening
    static const double limit2 = 1.0e8;   // for bound strengthening
@@ -125,6 +125,8 @@ protected:
    SimpleVector* currRedRow;
    SimpleVector* currNnzRow;
    SimpleVector* currRedRowLink;
+   SimpleVector* currNnzRowLink; // todo added
+
    SimpleVector* currRedColParent;
    SimpleVector* currRedColChild;
    SimpleVector* currNnzColParent;
@@ -155,7 +157,7 @@ protected:
    double indivObjOffset;
 
    /* swap two entries in the SparseStorageDynamic format */
-   void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims);
+   void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims, bool linking = false);
    void updateRhsNRowLink();
    void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
    void updateNnzColParent(MPI_Comm comm);
@@ -165,6 +167,8 @@ protected:
    // methods to update the transposed matrix:
    void updateTransposed(StochGenMatrix& matrix);
    void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd) const;
+   void updateTransposedSubmatrix(SparseStorageDynamic* transStorage, std::vector<std::pair<int,int> >& elements) const;
+
 
    void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq);
    bool newBoundsTightenOldBounds(double new_low, double new_upp, int index,
@@ -183,8 +187,22 @@ protected:
    bool updateCPforColAdaptF0( SystemType system_type );
    bool updateCPforAdaptFixationsBChild( int it, SystemType system_type);
 
+
+   /* updating all pointers */
+   void updatePointersForCurrentNode(int node, SystemType system_type);
+
+private:
+   /* return false if dummy node */
+   void setPointersMatrices(GenMatrixHandle mat, int node);
+   void setPointersMatrixBounds(SystemType system_type, int node);
+   void setPointersVarBounds(int node);
+   void setPointersObjective(int node);
+   void setReductionPointers(SystemType system_type, int node);
+
+protected:
    void setCPAmatsRoot(GenMatrixHandle matrixHandle);
    bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
+
    bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
    bool setPointersForAmatBmat(int node, SystemType system_type);
    bool setCPLinkConstraint(GenMatrixHandle matrixHandle, int it, SystemType system_type);

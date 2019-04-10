@@ -82,8 +82,8 @@ Data* StochPresolver::presolve()
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
    for( int i = 0; i < 1; ++i )
    {
-      presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
+      //presolverSR.applyPresolving();
+      //presolverBS.applyPresolving();
       // TODO bugged
       presolverCleanup.applyPresolving();
       //presolverParallelRow.applyPresolving();
@@ -120,6 +120,8 @@ Data* StochPresolver::presolve()
    std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
 #endif
 
+
+   exit(1);
    return finalPresData;
 }
 
