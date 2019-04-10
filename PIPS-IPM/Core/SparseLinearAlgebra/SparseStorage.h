@@ -190,6 +190,14 @@ public:
 
   void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
 
+  /*
+   * computes the full sparse matrix representation from a upper triangular symmetric sparse representation
+   *
+   * Must be square, the storage for the full representation will be allocated within the matrix and must be released later
+   */
+  void fullMatrixFromUpperTriangular(int*& rowPtrFull, int*& colIdxFull, double*& valuesFull) const;
+
+
   virtual ~SparseStorage();
 };
 

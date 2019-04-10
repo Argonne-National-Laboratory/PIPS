@@ -1804,6 +1804,87 @@ void SparseStorage::permuteCols(const std::vector<unsigned int>& permvec)
    delete[] bufferCol;
 }
 
+/*
+ * computes the full sparse matrix representation from a upper triangular symmetric sparse representation
+ *
+ * Must be square, the storage for the full representation will be allocated within the matrix and must be released later
+ */
+void SparseStorage::fullMatrixFromUpperTriangular(int*& rowPtrFull, int*& colIdxFull, double*& valuesFull) const
+{
+   assert(n == m);
+
+   /* cout elems per row and assert upper triangular */
+   int nelems[n] = {0};
+   for(int i = 0; i < n; ++i)
+   {
+      // diag elem
+      for(int j = krowM[i]; j < krowM[i + 1]; ++j)
+      {
+         assert(jcolM[j] >= i);
+
+         if(i == jcolM[j])
+            nelems[i]++;
+         else
+         {
+            nelems[jcolM[j]]++;
+            nelems[i]++;
+         }
+      }
+   }
+
+   // fill rowptr array
+   rowPtrFull = new int[n + 1];
+
+   rowPtrFull[0] = 0;
+   for(int i = 0; i < n; ++i)
+      rowPtrFull[i + 1] = rowPtrFull[i] + nelems[i];
+
+   colIdxFull = new int[rowPtrFull[n]];
+   for( int i = 0; i < rowPtrFull[n]; ++i)
+      colIdxFull[i] = -1;
+
+   valuesFull = new double[rowPtrFull[n]];
+
+   // fill in col and value
+   for(int i = 0; i < n; ++i)
+   {
+      int rowstart = krowM[i];
+      int rowend = krowM[i+1];
+
+      for(int k = rowstart; k < rowend; ++k)
+      {
+         double value = M[k];
+         int col = jcolM[k];
+
+         int kk = rowPtrFull[i];
+         int colfull = colIdxFull[kk];
+         while(colfull != -1)
+         {
+            kk++;
+            colfull = colIdxFull[kk];
+         }
+
+         colIdxFull[kk] = col;
+         valuesFull[kk] = value;
+
+         if(col != i )
+         {
+            kk = rowPtrFull[col];
+            int colfull = colIdxFull[kk];
+
+            while(colfull != -1)
+            {
+               kk++;
+               colfull = colIdxFull[kk];
+            }
+
+            colIdxFull[kk] = i;
+            valuesFull[kk] = value;
+         }
+      }
+    }
+}
+
 
 // concatenate matrices
 // if "diagonal", make a block diagonal matrix:
