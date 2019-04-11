@@ -82,13 +82,15 @@ Data* StochPresolver::presolve()
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
    for( int i = 0; i < 1; ++i )
    {
-      //presolverSR.applyPresolving();
-      //presolverBS.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverBS.applyPresolving();
       // TODO bugged
       presolverCleanup.applyPresolving();
-      //presolverParallelRow.applyPresolving();
-      //presolverSR.applyPresolving();
+      presolverParallelRow.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverCleanup.applyPresolving();
    }
+
 
 #ifndef NDEBUG
    assert( presolverSR.verifyNnzcounters() );
@@ -97,10 +99,10 @@ Data* StochPresolver::presolve()
    presolverSR.countRowsCols();
 #endif
 
+   //assert( rootNodeInSyncSData(*presData.presProb));
 
    // i assume we actually apply ur changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
-
 
    assert( rootNodeInSyncSData(*finalPresData) );
 
@@ -121,7 +123,7 @@ Data* StochPresolver::presolve()
 #endif
 
 
-   exit(1);
+//   exit(1);
    return finalPresData;
 }
 

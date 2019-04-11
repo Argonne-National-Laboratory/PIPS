@@ -38,24 +38,29 @@ void StochPresolverModelCleanup::applyPresolving()
 
 #ifndef NDEBUG
    if( myRank == 0 )
+   {
       std::cout << "Starting model cleanup..." << std::endl;
+      // todo remove when done debugging
+      std::cout << "Starting presolving, LINKING_CONSS A: "
+            << hasLinking(EQUALITY_SYSTEM) << "; C: " << hasLinking(INEQUALITY_SYSTEM) << std::endl;
+   }
    // todo this a non const function! watch out
-   // countRowsCols();
+//    countRowsCols();
 #endif
 
 
 
-   /* remove entries from A and C matrices */
+   /* remove entries from A and C matrices and updates transposed systems */
    n_elims += removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
-//   updateTransposed( dynamic_cast<StochGenMatrix&>(*presProb->A) );
+   assert(verifyNnzcounters());
 
    n_elims += removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
-//   updateTransposed( dynamic_cast<StochGenMatrix&>(*presProb->C) );
+   assert(verifyNnzcounters());
 
    // removal of redundant constraints
    int nRemovedRows = 0;
-//   nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
-//   nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
+   //nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
+   //nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    updateNnzColParent(MPI_COMM_WORLD);
@@ -377,156 +382,144 @@ void StochPresolverModelCleanup::checkRedundantLinkingRow(GenMatrixHandle matrix
    }
 }
 
+/* removes all small entries from the specified system
+ *
+ * While removing the reduction vectors in presData get set - nnzVectors are not updated an that must be
+ * done using updateNnzFromReductions if needed.
+ * Transposed matrices get updated in a subroutine - so after calling this method, tha matrix should
+ * be in a consistent state.
+ */
+
 int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_type)
 {
-   assert( dynamic_cast<StochGenMatrix&>(*(presProb->A)).children.size() == presData.nRowElemsA->children.size() ); // todo depends on system type
-   assert( dynamic_cast<StochGenMatrix&>(*(presProb->A)).children.size() == presData.redCol->children.size() ); // todo depends on system type
-   assert( dynamic_cast<StochGenMatrix&>(*(presProb->A)).children.size() == (size_t) nChildren );
-   assert( dynamic_cast<StochGenMatrix&>(*(presProb->C)).children.size() == (size_t) nChildren );
+   assert(dynamic_cast<StochGenMatrix&>(*(presProb->A)).children.size() == presData.nRowElemsA->children.size()); // todo depends on system type
+   assert(dynamic_cast<StochGenMatrix&>(*(presProb->A)).children.size() == presData.redCol->children.size()); // todo depends on system type
+   assert(dynamic_cast<StochGenMatrix&>(*(presProb->A)).children.size() == (size_t) nChildren);
+   assert(dynamic_cast<StochGenMatrix&>(*(presProb->C)).children.size() == (size_t) nChildren);
+
+   /* reset the linking row reduction buffers */
+   if(hasLinking(system_type))
+      (system_type == EQUALITY_SYSTEM) ? resetEqRhsAdaptionsLink() : resetIneqRhsAdaptionsLink();
 
    int n_elims = 0;
-   localNelims = 0; // todo?
+   presData.resetRedCounters();
 
    int myRank;
    bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   getRankDistributed(MPI_COMM_WORLD, myRank, iAmDistrib);
 
    /* reductions in root node */
-   n_elims += removeEntriesFromRootNode(system_type);
-   int nelimsB0 = 0;
-
-   if( myRank == 0 )
-      n_elims += nelimsB0;
-
-   // go through the children
-   for( int node = 0; node < nChildren; node++)
-   {
-      if( !nodeIsDummy(node, system_type) )
-      {
-         updatePointersForCurrentNode(node, system_type);
-         n_elims += removeTinyChild(node, system_type);
-
-         if(system_type == EQUALITY_SYSTEM)
-            updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nRowElemsA).children[node])->vec, currRedRow); // todo system_type wrapper
-         else
-            updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nRowElemsC).children[node])->vec, currRedRow);
-
-         updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nColElems).children[node])->vec, currRedColChild); // todo system_type wrapper ??
-
-         assert( dynamic_cast<StochVector*>((*presData.nRowElemsA).children[node])->vecl == NULL );
-         assert( dynamic_cast<StochVector*>((*presData.nRowElemsC).children[node])->vecl == NULL );
-      }
-   }
-
-   // update nColElems.vec via AllReduce
-   // todo is this needed here? can we do linking first?
-   if( iAmDistrib )
-   {
-      double* redColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
-      const int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
-      MPI_Allreduce(MPI_IN_PLACE, redColParent, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-   }
-   updateNnzUsingReductions((*presData.nColElems).vec, presData.redCol->vec);
-
-   // the linking rows:
-   if( hasLinking(system_type) )
-   {
-      // todo update method has to be changed
-      updatePointersForCurrentNode( -1, system_type );
-
-      int nelimsF0 = removeTinyInnerLoop( -1, system_type, LINKING_CONS_BLOCK);
-
-      // update nCol and nRowA using reductions:
-      updateNnzUsingReductions( (*presData.nColElems).vec, currRedColParent);
-
-      if(system_type == EQUALITY_SYSTEM)
-         updateNnzUsingReductions( (*presData.nRowElemsA).vecl, currRedRowLink); // todo
-      else
-         updateNnzUsingReductions( (*presData.nRowElemsC).vecl, currRedRowLink); // todo
-
-      if( myRank == 0 )
-         n_elims += nelimsF0;
-
-      // go through the children:
-      for( int node = 0; node < nChildren; node++)
-      {
-         if( !nodeIsDummy(node, system_type) )
-         {
-
-            updatePointersForCurrentNode(node, system_type);
-            n_elims += removeTinyInnerLoop( node, system_type, CHILD_BLOCK);
-
-            // update nCol using reductions:
-            updateNnzUsingReductions( dynamic_cast<StochVector*>((*presData.nColElems).children[node])->vec, currRedColChild);
-
-            if(system_type == EQUALITY_SYSTEM)
-               updateNnzUsingReductions( (*presData.nRowElemsA).vecl, currRedRowLink); // todo system_type wrapper
-            else
-               updateNnzUsingReductions( (*presData.nRowElemsC).vecl, currRedRowLink);
-         }
-      }
-
-      // update nRowElems.vecl via AllReduce:
-      // todo BUG? update changes of lhs and rhs of linking constraints!!!! remember changes and allreduce
-      if( iAmDistrib )
-      {
-         // TODO wrapper
-         if( system_type == EQUALITY_SYSTEM )
-         {
-            double* redRowLink = dynamic_cast<SimpleVector*>(presData.redRowA->vecl)->elements();
-            const int message_size = dynamic_cast<SimpleVector*>(presData.redRowA->vecl)->length();
-            MPI_Allreduce(MPI_IN_PLACE, redRowLink, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-         }
-         else
-         {
-            double* redRowLink = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->elements();
-            const int message_size = dynamic_cast<SimpleVector*>(presData.redRowC->vecl)->length();
-            MPI_Allreduce(MPI_IN_PLACE, redRowLink, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-         }
-      }
-   }
-
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &n_elims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-
-   return n_elims;
-}
-
-/* process B0 and Bl0
- *
- * todo: linking constraints need special treatment for strategy three
- * todo: linking constraints are not being processed here
- */
-int StochPresolverModelCleanup::removeEntriesFromRootNode(SystemType system_type)
-{
-   int eliminations = 0;
-
    if( !nodeIsDummy(-1, system_type) )
    {
       updatePointersForCurrentNode(-1, system_type);
 
-      eliminations += removeTinyInnerLoop(-1, system_type, CHILD_BLOCK);
-      eliminations += removeTinyInnerLoop(-1, system_type, LINKING_CONS_BLOCK);
-
-            updateNnzUsingReductions((*presData.nRowElemsA).vec, currRedRow) :
-            updateNnzUsingReductions((*presData.nRowElemsC).vec, currRedRow);
+      /* process B0 and Bl0 */
+      n_elims += removeTinyInnerLoop(-1, system_type, CHILD_BLOCK);
+      if( hasLinking(system_type) )
+         n_elims += removeTinyInnerLoop(-1, system_type, LINKING_CONS_BLOCK);
    }
 
-   assert( eliminations == localNelims);
-   return eliminations;
-}
+   // todo : traffic can be reduced by only zeroing the linking var col and the linking cons row
+   // and not the zero row too
+   /* count eliminations in B0 and Bl0 only once */
+   if( iAmDistrib && myRank != 0 )
+   {
+      presData.resetRedCounters();
+      /* only rank 0 keeps the changes in Bl0 */
+      (system_type == EQUALITY_SYSTEM) ? resetEqRhsAdaptionsLink() : resetIneqRhsAdaptionsLink();
+      n_elims = 0;
+   }
+
+   // go through the children
+   for( int node = 0; node < nChildren; node++ )
+   {
+      if( !nodeIsDummy(node, system_type) )
+      {
+         updatePointersForCurrentNode(node, system_type);
+
+         /* Amat */
+         n_elims += removeTinyInnerLoop(node, system_type, LINKING_VARS_BLOCK );
+
+         /* Bmat */
+         n_elims += removeTinyInnerLoop(node, system_type, CHILD_BLOCK );
+
+         /* this has to be synchronized */
+         /* Blmat */
+         if( hasLinking(system_type) )
+            n_elims += removeTinyInnerLoop(node, system_type, LINKING_CONS_BLOCK);
+         }
+   }
+
+   //todo make MPI_COMMUNICATOR flexible?
+   /* communicate the reductions */
+   if( iAmDistrib )
+   {
+      StochVectorHandle red_row = (system_type == EQUALITY_SYSTEM) ? presData.redRowA : presData.redRowC;
+
+      // allreduce local eliminations
+      MPI_Allreduce(MPI_IN_PLACE, &n_elims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
+
+      // allreduce the linking variables columns
+      double* red_col_linking_vars = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
+      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
+      MPI_Allreduce(MPI_IN_PLACE, red_col_linking_vars, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+
+      // allreduce B0 row
+      double* red_row_b0 = dynamic_cast<SimpleVector*>(red_row->vec)->elements();
+      message_size = dynamic_cast<SimpleVector*>(red_row->vec)->length();
+      MPI_Allreduce(MPI_IN_PLACE, red_row_b0, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+
+      if( hasLinking(system_type) )
+      {
+         // allreduce the linking conss rows
+         // non-zero counters
+         double* red_row_link = dynamic_cast<SimpleVector*>(red_row->vecl)->elements();
+         message_size = dynamic_cast<SimpleVector*>(red_row->vecl)->length();
+         MPI_Allreduce(MPI_IN_PLACE, red_row_link, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
 
 
-/** Calls removeTinyInnerLoop for a Child on the matrices Amat, Bmat which also adapts the rhs. */
-int StochPresolverModelCleanup::removeTinyChild( int it, SystemType system_type )
-{
-   // for Amat:
-   int nelims = removeTinyInnerLoop( it, system_type, LINKING_VARS_BLOCK );
+         // rhs lhs changes (which are actually the same, so it suffices to reduce either rhs or lhs for an
+         // INEQUALITY_SYSTEM
+         if(system_type == EQUALITY_SYSTEM)
+         {
+            assert(currEqRhsLink);
+            assert(presData.redRowA->vecl->n == currEqRhsLink->n);
 
-   // for Bmat:
-   nelims += removeTinyInnerLoop( it, system_type, CHILD_BLOCK );
+            MPI_Allreduce(MPI_IN_PLACE, currEqRhsAdaptionsLink, currEqRhsLink->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
 
-   return nelims;
+            // apply changes to rhs locally
+            for(int i = 0; i < currEqRhsLink->n; ++i)
+            {
+               currEqRhsLink->elements()[i] += currEqRhsAdaptionsLink[i];
+            }
+
+            resetEqRhsAdaptionsLink();
+         }
+         else
+         {
+            assert(currIneqRhsLink);
+            assert(currIneqLhsLink);
+            assert(presData.redRowC->vecl->n == currIneqRhsLink->n);
+            assert(presData.redRowC->vecl->n == currIneqLhsLink->n);
+
+            MPI_Allreduce(MPI_IN_PLACE, currInEqRhsAdaptionsLink, currIneqRhsLink->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+
+            // apply changes to lhs, rhs locally
+            for(int i = 0; i < currIneqRhsLink->n; ++i)
+            {
+               currIneqRhsLink->elements()[i] += currInEqRhsAdaptionsLink[i];
+               currIneqLhsLink->elements()[i] += currInEqLhsAdaptionsLink[i];
+            }
+
+            resetIneqRhsAdaptionsLink();
+         }
+      }
+   }
+
+   /* update local nnzCounters */
+   updateNnzFromReductions(system_type);
+
+   return n_elims;
 }
 
 /** Removes tiny entries in storage and adapts the rhs accordingly.
@@ -573,11 +566,16 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
    }
 
    /* set lhs rhs */
+   /* for linking conss we do not apply the updates directly but rather buffer them
+    * Note: the arrays will stay alive after deleting the simpleVecs
+    */
    if(system_type == EQUALITY_SYSTEM)
    {
       if(block_type == LINKING_CONS_BLOCK)
       {
-         rhs = lhs = lhs_idx = rhs_idx = currEqRhsLink;
+         assert(currEqRhsAdaptionsLink);
+         //rhs = lhs = lhs_idx = rhs_idx = currEqRhsLink;
+         rhs = lhs = lhs_idx = rhs_idx = new SimpleVector(currEqRhsAdaptionsLink, currEqRhsLink->n);
       }
       else
       {
@@ -588,9 +586,12 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
    {
       if(block_type == LINKING_CONS_BLOCK)
       {
-         rhs = currIneqRhsLink;
+         assert(currInEqRhsAdaptionsLink); assert(currInEqLhsAdaptionsLink);
+//         rhs = currIneqRhsLink;
+         rhs = new SimpleVector(currInEqRhsAdaptionsLink, currIneqRhsLink->n);
          rhs_idx = currIcuppLink;
-         lhs =  currIneqLhsLink;
+//         lhs =  currIneqLhsLink;
+         lhs = new SimpleVector(currInEqLhsAdaptionsLink, currIneqLhsLink->n);
          lhs_idx = currIclowLink;
       }
       else
@@ -615,11 +616,11 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
       }
       else
       {
-      x_lower = currxlowChild;
-      x_lower_idx = currIxlowChild;
+         x_lower = currxlowChild;
+         x_lower_idx = currIxlowChild;
 
-      x_upper = currxuppChild;
-      x_upper_idx = currIxuppChild;
+         x_upper = currxuppChild;
+         x_upper_idx = currIxuppChild;
       }
    }
    else if(block_type == LINKING_VARS_BLOCK)
@@ -651,15 +652,35 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
       redCol = currRedColParent;
    }
 
-   // todo correctly set?
-   nnzRow = currNnzRow;
+   /* set non-zero vectors */
+   if(node == -1)
+   {
+      if(block_type == LINKING_CONS_BLOCK)
+      {
+         assert(hasLinking(system_type));
+         nnzRow = currNnzRowLink;
+      }
+      else
+      {
+         assert(block_type == CHILD_BLOCK);
+         nnzRow = currNnzRow;
+      }
+   }
+   else
+   {
+      if(block_type == LINKING_CONS_BLOCK)
+         nnzRow = currNnzRowLink;
+      else
+         nnzRow = currNnzRow;
+   }
+
+   bool linking_row = (block_type == LINKING_CONS_BLOCK);
 
    // Setting all the pointers correctly
    int nelims = 0;
    SparseStorageDynamic* storage = mat;
    SparseStorageDynamic* storage_transp = mat_transp;
    assert(storage_transp);
-   // todo : instead update transposed right after elimination is done
 
    std::vector<std::pair<int, int> > eliminated_entries;
 
@@ -681,21 +702,27 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
          /* remove all small entries */
          if( fabs( mat_entry ) < tol_matrix_entry ) // todo bugged
          {
-
             std::pair<int,int> entry(r, col);
             eliminated_entries.push_back(entry);
 
-            updateAndSwap(storage, r, k, end, redCol->elements(), nelims);
+            updateAndSwap(storage, r, k, end, redCol->elements(), nelims, linking_row);
             continue;
          }
 
          /* remove entries where their corresponding variables have valid lower and upper bounds, that overall do not have a real influence though */
          if( x_upper_idx->elements()[col] != 0.0 && x_lower_idx->elements()[col] != 0.0 )
          {
-            if(fabs( mat_entry ) < tolerance1 && fabs( mat_entry ) * (x_upper->elements()[col] - x_lower->elements()[col]) * nnzRow->elements()[r] < tolerance2 * feastol )
+
+            double x = nnzRow->elements()[r];
+            x += x_upper->elements()[col];
+            x += x_lower->elements()[col];
+
+            if( (fabs( mat_entry ) < tolerance1 && fabs( mat_entry ) * (x_upper->elements()[col] - x_lower->elements()[col]) * nnzRow->elements()[r] < tolerance2 * feastol ))
             {
                if( system_type == EQUALITY_SYSTEM )
+               {
                   rhs->elements()[r] -= mat_entry * x_lower->elements()[col];
+               }
                else
                {
                   /* if has upper/lower bound */
@@ -708,7 +735,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
                std::pair<int,int> entry(r, col);
                eliminated_entries.push_back(entry);
 
-               updateAndSwap(storage, r, k, end, redCol->elements(), nelims);
+               updateAndSwap(storage, r, k, end, redCol->elements(), nelims, linking_row);
                continue;
             }
          }
@@ -725,9 +752,8 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
 
                   std::pair<int,int> entry(r, col);
                   eliminated_entries.push_back(entry);
-                  // storeRemovedEntryIndex(r, storage->jcolM[k], it, block_type);
 
-                  updateAndSwap(storage, r, k, end, redCol->elements(), nelims);
+                  updateAndSwap(storage, r, k, end, redCol->elements(), nelims, linking_row);
                   continue;
                }
             }
@@ -739,6 +765,22 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
    /* update the transposed if existent */
    if(storage_transp)
       updateTransposedSubmatrix(storage_transp, eliminated_entries);
+
+   /* free artificial SimpleVectors used for buffering linking constraint changes */
+   if( block_type == LINKING_CONS_BLOCK )
+   {
+      if( system_type == EQUALITY_SYSTEM )
+      {
+         assert(currEqRhsAdaptionsLink);
+         //rhs = lhs = lhs_idx = rhs_idx = currEqRhsLink;
+         delete rhs;
+      }
+      else
+      {
+         delete rhs;
+         delete lhs;
+      }
+   }
 
    return nelims;
 }

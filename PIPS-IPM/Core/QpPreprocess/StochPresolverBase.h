@@ -14,20 +14,6 @@
 #include "sData.h"
 #include <vector>
 
-// todo maybe make these std::pair?
-// eg typedef MTRXENTRY std::pair<int,int>
-typedef struct
-{
-   int rowIdx;
-   int colIdx;
-} MTRXENTRY;
-
-typedef struct
-{
-   int start;
-   int end;
-} BLOCKS;
-
 typedef struct
 {
    int colIdx;
@@ -68,12 +54,12 @@ public:
 
 protected:
    // todo do we want to make these adjustable?
-   static const double feastol = 1.0e-6;
+   static const double feastol = 1.0e-6; // was 1.0e-6
    static const double infinity = 1.0e30;
    // todo rename for more clarity
-   static const double tolerance1 = 1.0e-3;  // for model cleanup
-   static const double tolerance2 = 1.0e-2;  // for model cleanup
-   static const double tol_matrix_entry = 1.0; // for model cleanup // todo : was 1.0e-10
+   static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
+   static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
+   static const double tol_matrix_entry = 1.0e-10; // for model cleanup // was 1.0e-10
    static const double tolerance4 = 1.0e-12; // for variable fixing
    static const double limit1 = 1.0e3;   // for bound strengthening
    static const double limit2 = 1.0e8;   // for bound strengthening
@@ -114,11 +100,6 @@ protected:
    SimpleVector* currIneqRhsLink; // TODO rename ?
    SimpleVector* currIcuppLink;
 
-   // todo ? not nulled in setpointerstonull - probably intended not sure why though
-   double* currEqRhsAdaptionsLink;
-   double* currInEqRhsAdaptionsLink;
-   double* currInEqLhsAdaptionsLink;
-
    SimpleVector* currgParent;
    SimpleVector* currgChild;
 
@@ -132,24 +113,15 @@ protected:
    SimpleVector* currNnzColParent;
    SimpleVector* currNnzColChild;
 
+   // used for saving and synchronizing changes in the rhs/lhs of linking constraints
+   double* currEqRhsAdaptionsLink;
+   double* currInEqRhsAdaptionsLink;
+   double* currInEqLhsAdaptionsLink;
+
    /** the number of children */
    int nChildren;
    /** number of entry eliminations on this process in the current elimination routine */
    int localNelims;
-
-   /** vector containing the removed entries */
-   std::vector<MTRXENTRY> removedEntries;
-
-   /** array of length nChildren+1 to store start and end indices for removedEntries
-    * that correspond to the linking-variable block (usually Amat).
-    * As linkVarsBlocks[0] represents the parent block, the child block 'it' is accessed
-    * using the index 'it+1'. */
-   BLOCKS* linkVarsBlocks;
-   /** array of length nChildren+1 to store start and end indices for removedEntries
-    * that correspond to the child block (usually Bmat).
-    * As childBlocks[0] represents the parent block which has no 'free' block,
-    * the child block 'it' is accessed using the index 'it+1'. */
-   BLOCKS* childBlocks;
 
    std::vector<XBOUNDS> newBoundsParent;
 
@@ -159,16 +131,10 @@ protected:
    /* swap two entries in the SparseStorageDynamic format */
    void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims, bool linking = false);
    void updateRhsNRowLink();
-   void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
-   void updateNnzColParent(MPI_Comm comm);
    void allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptionsVector, SimpleVector& baseVector);
 
-   void storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type);
    // methods to update the transposed matrix:
-   void updateTransposed(StochGenMatrix& matrix);
-   void updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd) const;
    void updateTransposedSubmatrix(SparseStorageDynamic* transStorage, std::vector<std::pair<int,int> >& elements) const;
-
 
    void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq);
    bool newBoundsTightenOldBounds(double new_low, double new_upp, int index,
@@ -187,6 +153,11 @@ protected:
    bool updateCPforColAdaptF0( SystemType system_type );
    bool updateCPforAdaptFixationsBChild( int it, SystemType system_type);
 
+   /* update all nonzero vectors with the entries in the reduction vectors - zeros them after update */
+   void updateNnzFromReductions(SystemType system_type);
+   void updateNnzUsingReductions( StochVectorHandle nnz_vector, StochVectorHandle red_vector, SystemType system_type) const;
+   void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
+   void updateNnzColParent(MPI_Comm comm);//todo?
 
    /* updating all pointers */
    void updatePointersForCurrentNode(int node, SystemType system_type);
@@ -225,7 +196,6 @@ protected:
    void setCPRowLinkEquality();
    void setCPRhsLinkInequality();
 
-   void resetLinkvarsAndChildBlocks();
    void resetEqRhsAdaptionsLink();
    void resetIneqRhsAdaptionsLink();
 
@@ -237,7 +207,7 @@ protected:
    void removeRowInBblock(int rowIdx, SparseStorageDynamic* Bblock,
          SparseStorageDynamic* BblockTrans, SimpleVector* nnzColChild);
 
-   bool nodeIsDummy(int it, SystemType system_type);
+   bool nodeIsDummy(int it, SystemType system_type) const;
    bool hasLinking(SystemType system_type) const;
    void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
    void abortInfeasible(MPI_Comm comm) const;

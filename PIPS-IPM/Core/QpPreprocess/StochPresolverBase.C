@@ -46,18 +46,12 @@ StochPresolverBase::StochPresolverBase(PresolveData& presData) :
 
    localNelims = 0;
    nChildren = presData.getNChildren();
-   linkVarsBlocks = new BLOCKS[nChildren + 1];
-   childBlocks = new BLOCKS[nChildren + 1];
-   // zeros BLOCKs arrays
-   resetLinkvarsAndChildBlocks();
 
    indivObjOffset = 0.0;
 }
 
 StochPresolverBase::~StochPresolverBase()
 {
-   delete[] childBlocks;
-   delete[] linkVarsBlocks;
    delete[] currEqRhsAdaptionsLink;
    delete[] currInEqRhsAdaptionsLink;
    delete[] currInEqLhsAdaptionsLink;
@@ -144,6 +138,68 @@ void StochPresolverBase::updateRhsNRowLink()
    }
 }
 
+void StochPresolverBase::updateNnzFromReductions(SystemType system_type)
+{
+
+   // todo reductions in root nodes must be synced
+   StochVectorHandle red_vector;
+   StochVectorHandle nnz_vector;
+
+   /* update column non-zeros */
+   red_vector = presData.redCol;
+   nnz_vector = presData.nColElems;
+
+   // todo
+   if(nnz_vector->vec)
+      updateNnzUsingReductions(nnz_vector->vec, red_vector->vec);
+   for(size_t node = 0; node < red_vector->children.size(); ++node)
+      updateNnzUsingReductions(dynamic_cast<SimpleVector*>(nnz_vector->children[node]->vec),
+            dynamic_cast<SimpleVector*>(red_vector->children[node]->vec));
+
+   /* update row non-zeros for equality system */
+   if(system_type == EQUALITY_SYSTEM)
+   {
+      red_vector = presData.redRowA;
+      nnz_vector = presData.nRowElemsA;
+
+      updateNnzUsingReductions(nnz_vector, red_vector, EQUALITY_SYSTEM);
+   }
+
+   /* update row non-zeros for inequality sysyem */
+   if(system_type == INEQUALITY_SYSTEM)
+   {
+      red_vector = presData.redRowC;
+      nnz_vector = presData.nRowElemsC;
+
+      updateNnzUsingReductions(nnz_vector, red_vector, INEQUALITY_SYSTEM);
+   }
+
+   presData.resetRedCounters();
+}
+
+void StochPresolverBase::updateNnzUsingReductions( StochVectorHandle nnz_vector, StochVectorHandle red_vector, SystemType system_type) const
+{
+   /* root */
+   if(nnz_vector->vec)
+      updateNnzUsingReductions(nnz_vector->vec, red_vector->vec);
+
+   if(nnz_vector->vecl)
+      updateNnzUsingReductions(nnz_vector->vecl, red_vector->vecl);
+
+   /* children */
+   for(int node = 0; node < nChildren; ++node)
+   {
+      if(!nodeIsDummy(node, system_type)){
+         updateNnzUsingReductions(dynamic_cast<SimpleVector*>(nnz_vector->children[node]->vec),
+               dynamic_cast<SimpleVector*>(red_vector->children[node]->vec));
+
+         assert(nnz_vector->children[node]->vecl == NULL);
+         assert(red_vector->children[node]->vecl == NULL);
+      }
+   }
+}
+
+
 /** Update the nnzVector by subtracting the reductions vector. */
 void StochPresolverBase::updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const
 {
@@ -192,89 +248,10 @@ void StochPresolverBase::allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptio
    baseVector.axpy(1.0, adaptionsVector);
 }
 
-/** Add the MTRYENTRY (rowidx, colidx) to removedEntries and increment localNelims */
-void StochPresolverBase::storeRemovedEntryIndex(int rowidx, int colidx, int it, BlockType block_type)
-{
-   assert( (int)removedEntries.size() == localNelims );
-
-   if( block_type == LINKING_VARS_BLOCK )
-      assert( linkVarsBlocks[it+1].start <= localNelims );
-
-   else if( block_type == CHILD_BLOCK )
-      assert( childBlocks[it+1].start <= localNelims );
-
-   const MTRXENTRY entry = {rowidx, colidx};
-   removedEntries.push_back(entry);
-
-   localNelims++;
-}
-
-void StochPresolverBase::updateTransposed(StochGenMatrix& matrix)
-{
-   // update matrix' using removedEntries, linkVarsBlocks, childBlocks
-   // todo ? update Blmat blocks as well (used in tiny entries)
-
-   if( linkVarsBlocks[0].start != linkVarsBlocks[0].end )
-   {
-      assert(linkVarsBlocks[0].start < linkVarsBlocks[0].end);
-      SparseStorageDynamic& B0_trans = matrix.Bmat->getStorageDynamicTransposedRef();
-      updateTransposedSubmatrix(B0_trans, linkVarsBlocks[0].start, linkVarsBlocks[0].end);
-   }
-
-   for( int i = 1; i < nChildren+1; i++)
-   {
-      if( linkVarsBlocks[i].start != linkVarsBlocks[i].end )
-      {
-         assert(linkVarsBlocks[i].start < linkVarsBlocks[i].end);
-         SparseStorageDynamic& AChild_trans = matrix.children[i-1]->Amat->getStorageDynamicTransposedRef();
-         updateTransposedSubmatrix(AChild_trans, linkVarsBlocks[i].start, linkVarsBlocks[i].end);
-      }
-
-      if( childBlocks[i].start != childBlocks[i].end )
-      {
-         assert(childBlocks[i].start < childBlocks[i].end);
-         SparseStorageDynamic& BChild_trans = matrix.children[i-1]->Bmat->getStorageDynamicTransposedRef();
-         updateTransposedSubmatrix(BChild_trans, childBlocks[i].start, childBlocks[i].end);
-      }
-   }
-
-   // set localNelims, removedEntries, linkVarsBlocks, childBlocks to zero again.
-   localNelims = 0;
-   removedEntries.clear();
-   resetLinkvarsAndChildBlocks();
-}
-
-void StochPresolverBase::updateTransposedSubmatrix(SparseStorageDynamic& transStorage, const int blockStart, const int blockEnd) const
-{
-   assert( blockEnd <= (int)removedEntries.size());
-
-   for( int j = blockStart; j < blockEnd; j++)
-   {
-      const int row_A = removedEntries[j].rowIdx;
-      const int row_At = removedEntries[j].colIdx;
-
-      const int start = transStorage.rowptr[row_At].start;
-      const int end = transStorage.rowptr[row_At].end;
-      int col_At;
-
-      for( col_At = start; col_At < end; col_At++)
-      {
-         if( transStorage.jcolM[col_At] == row_A )
-            break;
-      }
-
-      std::swap(transStorage.M[col_At],transStorage.M[end-1]);
-      std::swap(transStorage.jcolM[col_At],transStorage.jcolM[end-1]);
-      transStorage.rowptr[row_At].end --;
-   }
-}
-
 void StochPresolverBase::updateTransposedSubmatrix(
       SparseStorageDynamic* transStorage,
       std::vector<std::pair<int, int> >& elements) const
 {
-
-
    for( size_t i = 0; i < elements.size(); ++i)
    {
       std::pair<int,int> entry = elements.at(i);
@@ -564,6 +541,7 @@ bool StochPresolverBase::updateCPforAdaptFixationsBChild( int it, SystemType sys
  */
 void StochPresolverBase::updatePointersForCurrentNode(int node, SystemType system_type)
 {
+   assert(!nodeIsDummy(node, system_type));
    assert(-1 <= node && node <= nChildren );
    assert(system_type == EQUALITY_SYSTEM || system_type == INEQUALITY_SYSTEM);
 
@@ -761,8 +739,11 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    }
    else
    {
-      currRedRow = dynamic_cast<SimpleVector*>(row_red.children[node]->vec);
+      assert(row_red.children[node]->vec != NULL);
+      assert(row_nnz.children[node]->vec != NULL);
+
       currNnzRow = dynamic_cast<SimpleVector*>(row_nnz.children[node]->vec);
+      currRedRow = dynamic_cast<SimpleVector*>(row_red.children[node]->vec);
 
       assert(row_red.children[node]->vecl == NULL);
       assert(row_nnz.children[node]->vecl == NULL);
@@ -983,17 +964,6 @@ void StochPresolverBase::setCPRhsLinkInequality()
    currIclowLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vecl);
 }
 
-void StochPresolverBase::resetLinkvarsAndChildBlocks()
-{
-   for( int i = 0; i < nChildren+1; i++)
-   {
-      linkVarsBlocks[i].start = 0;
-      linkVarsBlocks[i].end = 0;
-      childBlocks[i].start = 0;
-      childBlocks[i].end = 0;
-   }
-}
-
 void StochPresolverBase::resetEqRhsAdaptionsLink()
 {
    assert(hasLinking(EQUALITY_SYSTEM));
@@ -1105,7 +1075,7 @@ void StochPresolverBase::removeRowInBblock(int rowIdx, SparseStorageDynamic* Bbl
    clearRow(*Bblock, rowIdx);
 }
 
-bool StochPresolverBase::nodeIsDummy(int node, SystemType system_type)
+bool StochPresolverBase::nodeIsDummy(int node, SystemType system_type) const
 {
    assert( node >= -1 && node < nChildren );
    if( node == -1 )
@@ -1135,7 +1105,6 @@ bool StochPresolverBase::nodeIsDummy(int node, SystemType system_type)
          assert( presData.nRowElemsC->children[node]->isKindOf(kStochDummy) );
          assert( presData.redRowC->children[node]->isKindOf(kStochDummy) );
       }
-      setCurrentPointersToNull();
       return true;
    }
    return false;
@@ -1827,7 +1796,7 @@ bool StochPresolverBase::verifyNnzcounters()
    SimpleVector* nRowAOrigSimple = dynamic_cast<SimpleVector*>(nnzRowAOrig->vec);
    SimpleVector* nRowAUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
    assert( nRowAUpdatedSimple->n == nRowAOrigSimple->n );
-   for( int i=0; i<nRowAUpdatedSimple->n; i++)
+   for( int i=0; i < nRowAUpdatedSimple->n; i++)
    {
       if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
       {
@@ -1842,7 +1811,7 @@ bool StochPresolverBase::verifyNnzcounters()
       nRowAOrigSimple = dynamic_cast<SimpleVector*>(nnzRowAOrig->children[it]->vec);
       nRowAUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec);
       assert( nRowAUpdatedSimple->n == nRowAOrigSimple->n );
-      for( int i=0; i<nRowAUpdatedSimple->n; i++)
+      for( int i = 0; i < nRowAUpdatedSimple->n; i++)
       {
          if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
          {

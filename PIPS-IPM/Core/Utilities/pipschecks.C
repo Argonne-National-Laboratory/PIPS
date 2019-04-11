@@ -226,6 +226,7 @@ bool rootNodeInSyncStochVector(const StochVector& stoch_vec)
    assert( stoch_vec.vec );
 
    int my_rank, world_size;
+   assert(stoch_vec.mpiComm == MPI_COMM_WORLD);
    MPI_Comm_rank(stoch_vec.mpiComm, &my_rank);
    MPI_Comm_size(stoch_vec.mpiComm, &world_size);
 
@@ -251,7 +252,7 @@ bool rootNodeInSyncStochVector(const StochVector& stoch_vec)
       std::copy(vecl.elements(), vecl.elements() + vecl.length(), sendbuf + vec.length());
    }
    MPI_Reduce(sendbuf, recvbuf_max, static_cast<int>(count), MPI_DOUBLE, MPI_MAX, 0, stoch_vec.mpiComm);
-   MPI_Reduce(sendbuf, recvbuf_min, static_cast<int>(count), MPI_DOUBLE, MPI_MAX, 0, stoch_vec.mpiComm);
+   MPI_Reduce(sendbuf, recvbuf_min, static_cast<int>(count), MPI_DOUBLE, MPI_MIN, 0, stoch_vec.mpiComm);
 
 
    /* if rank == 0 check for sync */

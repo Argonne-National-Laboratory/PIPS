@@ -31,9 +31,7 @@ class StochPresolverModelCleanup : public StochPresolverBase
             double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant);
 
       int removeTinyEntriesFromSystem(SystemType system_type);
-      int removeEntriesFromRootNode(SystemType system_type);
 
-      int removeTinyChild( int it, SystemType system_type );
       int removeTinyInnerLoop( int it, SystemType system_type, BlockType block_type );
 
       void setPointersCurrentMatrix(int it, SystemType system_type, BlockType block_type);
