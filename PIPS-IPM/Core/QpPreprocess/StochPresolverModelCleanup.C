@@ -24,9 +24,6 @@ StochPresolverModelCleanup::~StochPresolverModelCleanup()
 
 void StochPresolverModelCleanup::applyPresolving()
 {
-   /* probably unnecessary */
-   setCurrentPointersToNull();
-
    /* ideally they are already zeroed */
    presData.resetRedCounters();
 
@@ -40,15 +37,10 @@ void StochPresolverModelCleanup::applyPresolving()
    if( myRank == 0 )
    {
       std::cout << "Starting model cleanup..." << std::endl;
-      // todo remove when done debugging
-      std::cout << "Starting presolving, LINKING_CONSS A: "
-            << hasLinking(EQUALITY_SYSTEM) << "; C: " << hasLinking(INEQUALITY_SYSTEM) << std::endl;
    }
    // todo this a non const function! watch out
 //    countRowsCols();
 #endif
-
-
 
    /* remove entries from A and C matrices and updates transposed systems */
    n_elims += removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
@@ -59,15 +51,15 @@ void StochPresolverModelCleanup::applyPresolving()
 
    // removal of redundant constraints
    int nRemovedRows = 0;
-   //nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
-   //nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
+   nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
+   nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    updateNnzColParent(MPI_COMM_WORLD);
    presData.resetRedCounters();
 
    if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD);
 
 #ifndef NDEBUG
    if( myRank == 0)
@@ -526,26 +518,26 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
  *  If block_type == LINKING_VARS_BLOCK, then block Amat is considered.
  *  If block_type == CHILD_BLOCK, then block Bmat is considered. */
 /* system type indicates matrix A or C, block_type indicates the block */
-// todo what is the proper order of criterion 1 to 3?
+// todo what is the proper order for criterion 1 to 3?
 // todo for criterion 3 - should ALL eliminations be considered?
 int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system_type, BlockType block_type)
 {
    if(nodeIsDummy(node, system_type))
       return 0;
 
-   SparseStorageDynamic* mat;
-   SparseStorageDynamic* mat_transp;
+   SparseStorageDynamic* mat = NULL;
+   SparseStorageDynamic* mat_transp = NULL;
 
-   SimpleVector* lhs;
-   SimpleVector* lhs_idx;
-   SimpleVector* rhs;
-   SimpleVector* rhs_idx;
-   SimpleVector* x_lower;
-   SimpleVector* x_lower_idx;
-   SimpleVector* x_upper;
-   SimpleVector* x_upper_idx;
-   SimpleVector* redCol;
-   SimpleVector* nnzRow;
+   SimpleVector* lhs = NULL;
+   SimpleVector* lhs_idx = NULL;
+   SimpleVector* rhs = NULL;
+   SimpleVector* rhs_idx = NULL;
+   SimpleVector* x_lower = NULL;
+   SimpleVector* x_lower_idx = NULL;
+   SimpleVector* x_upper = NULL;
+   SimpleVector* x_upper_idx = NULL;
+   SimpleVector* redCol = NULL;
+   SimpleVector* nnzRow = NULL;
 
    /* set matrix */
    if( block_type == CHILD_BLOCK )
