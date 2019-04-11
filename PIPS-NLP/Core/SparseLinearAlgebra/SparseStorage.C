@@ -1451,7 +1451,7 @@ void SparseStorage::atPutDiagonal( int idiag,
 
 */
 
-void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt)
+void SparseStorage::transpose(int* krowMt, int* jcolMt, double* Mt) const
 {
   int ind, pend;//,ptend;
   /////////////////////////////////////////////////////

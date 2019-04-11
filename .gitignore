@@ -1,4 +1,4 @@
-### .gitignore file
+#### .gitignore file
 ## C++ files, from
 ## https://raw.githubusercontent.com/github/gitignore/master/C++.gitignore
 # Compiled Object files
@@ -50,7 +50,9 @@ slurm*
 build
 SharedLibraries
 build_pips
-PARDISO
+# no additional .gitignore file for that
+ThirdPartyLibs/PARDISO
+pipstmp
 
 # Ignore the OS X DS_Store
 .DS_Store
@@ -60,3 +62,5 @@ PARDISO
 .project
 .cproject
 RemoteSystemsTempFiles*
+.cproject
+.settings
