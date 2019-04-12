@@ -32,9 +32,16 @@ PresolveData::PresolveData(const sData* sorigprob)
    objOffset = 0.0;
 
    nChildren = nColElems->children.size();
-   blocks = new int[nChildren + 3];
-   blocksIneq = new int[nChildren + 3];
-   resetBlocks();
+
+   /* zero initialized because of () */
+   blocks = new int[nChildren + 3]();
+   blocksIneq = new int[nChildren + 3]();
+
+   // initialize all dynamic transposed sub matrices
+   dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
+   dynamic_cast<StochGenMatrix&>(*presProb->C).initTransposed(true);
+
+   initNnzCounter();
 }
 
 PresolveData::~PresolveData()
@@ -43,17 +50,9 @@ PresolveData::~PresolveData()
    delete[] blocksIneq;
 }
 
-void PresolveData::initialize()
-{
-   // initialize all dynamic transposed sub matrices
-   dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
-   dynamic_cast<StochGenMatrix&>(*presProb->C).initTransposed(true);
-
-   initNnzCounter();
-}
-
 sData* PresolveData::finalize()
 {
+   // this removes all columns and rows that are now empty from the problem
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
 
    dynamic_cast<StochGenMatrix&>(*presProb->A).deleteTransposed();

@@ -115,12 +115,12 @@ OoqpVector* StochGenMatrix::getWorkPrimalVec(const StochVector& origin)
   return workPrimalVec;
 }
 
-int StochGenMatrix::isKindOf( int type )
+int StochGenMatrix::isKindOf( int type ) const
 {
   return type == kStochGenMatrix || type == kGenMatrix;
 }
 
-int StochGenDummyMatrix::isKindOf( int type )
+int StochGenDummyMatrix::isKindOf( int type ) const
 {
   return type == kStochGenDummyMatrix;
 }

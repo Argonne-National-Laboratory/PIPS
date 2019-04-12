@@ -119,7 +119,7 @@ void SimpleVector::max( double& m, int& index )
    }
 }
 
-int SimpleVector::isKindOf( int kind )
+int SimpleVector::isKindOf( int kind ) const
 {
   return (kind == kSimpleVector);
 }

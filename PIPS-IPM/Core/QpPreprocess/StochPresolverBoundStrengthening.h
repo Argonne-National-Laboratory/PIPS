@@ -15,7 +15,7 @@ class StochPresolverBoundStrengthening : public StochPresolverBase
 public:
    StochPresolverBoundStrengthening(PresolveData& presData);
 
-   ~StochPresolverBoundStrengthening();
+   virtual ~StochPresolverBoundStrengthening();
 
    virtual void applyPresolving();
 

@@ -22,7 +22,7 @@ public:
   DenseGenMatrix( int m, int n );
   DenseGenMatrix( double A[], int m, int n );
   
-  virtual int isKindOf( int matType );
+  virtual int isKindOf( int matType ) const;
 
   virtual void getSize( long long& m, long long& n );
   virtual void getSize( int& m, int& n );

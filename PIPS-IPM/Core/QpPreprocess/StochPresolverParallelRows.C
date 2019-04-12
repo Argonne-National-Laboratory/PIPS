@@ -215,6 +215,7 @@ void StochPresolverParallelRows::applyPresolving()
    // synchronize nRowElims:
    synchronize(nRowElims);
 
+   // todo linking constraints!!!
 
    if( myRank == 0 )
       cout<<"Removed "<<nRowElims<<" Rows in Parallel Row Presolving."<<endl;
@@ -307,7 +308,7 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
       return true;
    }
    // else, check if it is no dummy child and copy the matrices:
-   if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
+   if( !nodeIsDummy( it, EQUALITY_SYSTEM ) )
    {
       norm_Amat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamicRef());
       norm_AmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[it]->Amat)->getStorageDynamicTransposedRef());
@@ -344,7 +345,7 @@ bool StochPresolverParallelRows::setNormalizedPointers(int it, StochGenMatrix& m
 
       rowContainsSingletonVariableA = NULL;
    }
-   if( !childIsDummy(matrixC, it, INEQUALITY_SYSTEM) )
+   if( !nodeIsDummy( it, INEQUALITY_SYSTEM ) )
    {
       norm_Cmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamicRef());
       norm_CmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[it]->Amat)->getStorageDynamicTransposedRef());
@@ -474,7 +475,7 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int it, StochGenMatrix
       return;
    }
    bool childExists = false;
-   if( !childIsDummy(matrixA, it, EQUALITY_SYSTEM) )
+   if( !nodeIsDummy(it, EQUALITY_SYSTEM) )
    {
       childExists = true;
       assert( norm_Amat && norm_Bmat && norm_b );
@@ -487,7 +488,7 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int it, StochGenMatrix
       delete normNnzRowA;
       delete rowContainsSingletonVariableA;
    }
-   if( !childIsDummy(matrixC, it, INEQUALITY_SYSTEM) )
+   if( !nodeIsDummy(it, INEQUALITY_SYSTEM) )
    {
       childExists = true;
       assert( norm_Cmat && norm_Dmat && norm_cupp && norm_clow && norm_icupp && norm_iclow );

@@ -53,7 +53,7 @@ public:
    */  
   virtual int numberOfNonZeros();
 
-  virtual int isKindOf( int matType );
+  virtual int isKindOf( int matType ) const;
 
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent );

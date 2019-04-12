@@ -54,13 +54,13 @@ build_pips
 ThirdPartyLibs/PARDISO
 pipstmp
 
-
 # Ignore the OS X DS_Store
 .DS_Store
 
 # Ignore Eclipse files
 .metadata*
 .project
+
 RemoteSystemsTempFiles*
 .cproject
 .settings

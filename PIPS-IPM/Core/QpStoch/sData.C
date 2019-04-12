@@ -1494,12 +1494,12 @@ sData::getLocalG()
    return *Cst.Blmat;
 }
 
-void
-sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec)
+void sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC,
+      const StochVector& colNnzVec)
 {
    StochSymMatrix& Q_stoch = dynamic_cast<StochSymMatrix&>(*Q);
 
-   // todo only works if Q is empty
+   // todo only works if Q is empty - not existent?
    Q_stoch.deleteEmptyRowsCols(colNnzVec);
 
    // clean up equality system

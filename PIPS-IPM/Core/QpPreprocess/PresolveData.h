@@ -11,6 +11,8 @@
 #include "sData.h"
 #include <algorithm>
 
+
+// todo is this C++ style? rather std::pair ?
 typedef struct
 {
    int colIdx;
@@ -36,7 +38,7 @@ class PresolveData
       StochVectorHandle nColElems;
 
       // number of removed elements of each row / column
-      StochVectorHandle redRowA;
+      StochVectorHandle redRowA; // todo maybe rename ?
       StochVectorHandle redRowC;
       StochVectorHandle redCol;
 
@@ -46,7 +48,6 @@ class PresolveData
       PresolveData(const sData* sorigprob);
       ~PresolveData();
 
-      void initialize();
       sData* finalize();
 
       bool combineColAdaptParent();
@@ -89,11 +90,12 @@ class PresolveData
       // variables used for singleton row elimination:
       /** vector containing the row indices of singleton rows */
       std::vector<int> singletonRows;
+      std::vector<int> singletonRowsIneq;
+
       /** array of length nChildren+3 to store start indices for singletonRows
        * that correspond to the correct block. As blocks[0] represents the parent block,
        * the child block 'it' is accessed using the index 'it+1'.
        * The linking-row block is accessed using the index nChildren+2. */
-      std::vector<int> singletonRowsIneq;
       int* blocks;
       int* blocksIneq;
 
@@ -104,6 +106,7 @@ class PresolveData
 
       // initialize row and column nnz counter
       void initNnzCounter();
+      void initialize();
 
 };
 

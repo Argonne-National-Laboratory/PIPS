@@ -11,7 +11,7 @@
 #include <limits>
 #include "SparseSymMatrix.h"
 
-int SparseGenMatrix::isKindOf( int type )
+int SparseGenMatrix::isKindOf( int type ) const
 {
   return type == kSparseGenMatrix || type == kGenMatrix;
 }

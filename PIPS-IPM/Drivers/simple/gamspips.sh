@@ -10,7 +10,7 @@ scale=""
 stepLp=""
 presolve=""
 mins="60"
-mygams="/nfs/optimi/kombadon/bzfrehfe/projects/PIPSjsc/PIPS_beamme/PIPS-IPM/Drivers/gams25.0_linux_x64_64_sfx/gams"
+mygams="/nfs/optimi/kombadon/bzfkempk/sw/gams26.1_linux_x64_64_sfx/gams"
 
 
 for i in "$@"

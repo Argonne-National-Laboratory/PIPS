@@ -7,7 +7,8 @@
 
 //#define PIPS_DEBUG
 #include "StochPresolverSingletonRows.h"
-
+#include <limits>
+#include <cmath>
 
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData)
 : StochPresolverBase(presData)
@@ -47,7 +48,7 @@ void StochPresolverSingletonRows::applyPresolving()
    int globalIter = 0;
 
    // main loop:
-   while( (newSREq > 0 && iter < maxIterSR) || globalIter == 0 )
+   while( (newSREq + newSRIneq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
       // if( myRank == 0 ) cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
       while( newSREq > 0 && iter < maxIterSR)
@@ -104,6 +105,8 @@ void StochPresolverSingletonRows::applyPresolving()
       presData.resetRedCounters();
       int newSREqLink = 0;
       int newSRIneqLink = 0;
+
+      // todo what about inequalities?
       doSingletonLinkRows(newSREqLink, newSRIneqLink);
       synchronizeSum(newSREqLink, newSRIneqLink);
       newSREq += newSREqLink;
@@ -282,6 +285,7 @@ void StochPresolverSingletonRows::doSingletonRowsC(int& newSREq, int& newSRIneq)
 
 void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIneq)
 {
+   // todo what if !hasLinking(EQUALITY_SYSTEM), but hasLinking(INEQUALITY_SYSTEM)???
    if( hasLinking(EQUALITY_SYSTEM))
    {
       setCurrentPointersToNull();
@@ -293,7 +297,7 @@ void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIn
 
       for( size_t it = 0; it < presData.nRowElemsA->children.size(); it++)
       {
-         if( !childIsDummy( dynamic_cast<StochGenMatrix&>(*(presProb->A)), it, EQUALITY_SYSTEM))
+         if( !nodeIsDummy( it, EQUALITY_SYSTEM))
          {
             setCPBlmatsChild(presProb->A, (int)it);
             // set pointers ixlow etc and redColChild
@@ -314,6 +318,11 @@ void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIn
                   double aik = 0.0;
                   getValuesForSR(*currBlmat, rowIdx, colIdx, aik);
                   assert( colIdx >= 0 && colIdx < currgChild->n );
+                  assert(!PIPSisZero(aik));
+
+                  // todo
+                  //if( aik < tolerance3 )
+                  // continue;
 
                   const double val = currEqRhsLink->elements()[rowIdx] / aik;
 
@@ -380,6 +389,7 @@ void StochPresolverSingletonRows::doSingletonLinkRows(int& newSREq, int& newSRIn
       if( !presData.combineColAdaptParent() )
          abortInfeasible(MPI_COMM_WORLD);
 
+      // todo delete...summed up two times! (after function call)
       updateLinkingVarsBlocks(newSREq, newSRIneq);
       presData.resetRedCounters();
    }
@@ -765,7 +775,7 @@ bool StochPresolverSingletonRows::updateCPForSingletonRow(int it, SystemType sys
    setCPColumnRoot();
    currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
    for(int i=0; i<currgParent->n; i++)
-      assert( isfinite(currgParent->elements()[i]) );
+      assert( std::isfinite(currgParent->elements()[i]) );
 
    if( it == -1 )
    {

@@ -114,7 +114,7 @@ public:
   virtual void axdzpy( double alpha, OoqpVector& x,
 		       OoqpVector& z, OoqpVector& select );
 
-  virtual int isKindOf( int kind );
+  virtual int isKindOf( int kind ) const;
 
   virtual int somePositive( OoqpVector& select );
   virtual void divideSome( OoqpVector& div, OoqpVector& select );

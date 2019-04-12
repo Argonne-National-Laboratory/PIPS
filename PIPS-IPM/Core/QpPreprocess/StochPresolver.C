@@ -5,15 +5,19 @@
  *      Author: bzfrehfe
  */
 
-
 #include "StochPresolver.h"
-#include <cassert>
-#include <iostream>
-#include <cmath>
-#include <utility>
-#include <math.h>
 #include <algorithm>
+#include <cassert>
+#include <cmath>
+//#include <math.h>
+#include <iostream>
+#include <utility>
+#include <vector>
 
+#include "StochVector.h"
+#include "StochGenMatrix.h"
+#include "SmartPointer.h"
+#include "sData.h"
 #include "DoubleMatrix.h"
 #include "SparseGenMatrix.h"
 #include "StochVectorHandle.h"
@@ -27,12 +31,12 @@
 #include "StochPresolverParallelRows.h"
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
+#include "pipschecks.h"
 
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
 {
 }
-
 
 StochPresolver::~StochPresolver()
 {
@@ -43,23 +47,25 @@ Data* StochPresolver::presolve()
    int myRank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-   if( myRank == 0) std::cout << "start stoch presolving" << std::endl;
+   if( myRank == 0 )
+      std::cout << "start stoch presolving" << std::endl;
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
-   // clone and initialize dynamic storage
-
+#if 0 // todo add flag
    ofstream myfile;
-   /*myfile.open ("before.txt");
+   myfile.open ("before_presolving.txt");
    sorigprob->writeToStreamDense(myfile);
-   myfile.close();*/
+   myfile.close();
+#endif
 
-   // init presolve data presData:
+   /* initialize presolve data */
    PresolveData presData(sorigprob);
-   presData.initialize();
 
-   // init all presolvers:
+   assert( rootNodeInSyncSData(*sorigprob) );
 
+
+   /* initialize all presolvers */
    StochPresolverBoundStrengthening presolverBS(presData);
    StochPresolverParallelRows presolverParallelRow(presData);
    StochPresolverModelCleanup presolverCleanup(presData);
@@ -71,43 +77,53 @@ Data* StochPresolver::presolve()
    presolverSR.countRowsCols();
 #endif
 
-   presolverSR.applyPresolving();
-   presolverBS.applyPresolving();
-   presolverCleanup.applyPresolving();
-   presolverParallelRow.applyPresolving();
-   presolverSR.applyPresolving();
+   // todo loop, and not exhaustive
+   // some list holding all presolvers - eg one presolving run
+   // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
+   for( int i = 0; i < 1; ++i )
+   {
+      presolverSR.applyPresolving();
+      presolverBS.applyPresolving();
+      // TODO bugged
+      presolverCleanup.applyPresolving();
+      presolverParallelRow.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverCleanup.applyPresolving();
+   }
 
 
-/*   cout<<"nRowElemsA "<<endl;
-   nRowElemsA->writeToStreamAll(cout);
-   cout<<"nRowElemsC "<<endl;
-   nRowElemsC->writeToStreamAll(cout);
-   cout<<"nColElems "<<endl;
-   nColElems->writeToStreamAll(cout);
-*/
 #ifndef NDEBUG
    assert( presolverSR.verifyNnzcounters() );
    if( myRank == 0 )
-      cout<<"--- After Presolving:"<<endl;
+      std::cout << "--- After Presolving:" << std::endl;
    presolverSR.countRowsCols();
 #endif
-   //if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
+
+   //assert( rootNodeInSyncSData(*presData.presProb));
+
+   // i assume we actually apply ur changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
 
-   /*myfile.open("after.txt");
+   assert( rootNodeInSyncSData(*finalPresData) );
+
+#if 0
+   myfile.open("after_presolving.txt");
    finalPresData->writeToStreamDense(myfile);
-   myfile.close();*/
+   myfile.close();
+#endif
 
    if( myRank==0 )
    {
-      std::cout << "original problem: variables, equ. constraints., inequ. constraints" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
-      std::cout << "presolved problem: variables, equ. constraints., inequ. constraints " << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
+      std::cout << "original problem:\t" << sorigprob->nx << " variables\t" << sorigprob->my << " equ. conss\t" << sorigprob->mz << " ineq. conss" << std::endl;
+      std::cout << "presolved problem:\t" << finalPresData->nx << " variables\t" << finalPresData->my << " equ. conss\t" << finalPresData->mz << " ineq. conss" << std::endl;
    }
 #ifdef TIMING
    std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
    std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
 #endif
 
+
+//   exit(1);
    return finalPresData;
 }
 
