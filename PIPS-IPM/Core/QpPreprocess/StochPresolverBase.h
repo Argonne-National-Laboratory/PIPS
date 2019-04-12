@@ -90,14 +90,14 @@ protected:
    SimpleVector* currIxuppChild;
 
    SimpleVector* currEqRhs;
-   SimpleVector* currIneqLhs; // todo rename ?
+   SimpleVector* currIneqLhs;
    SimpleVector* currIclow;
-   SimpleVector* currIneqRhs; // TODO rename ?
+   SimpleVector* currIneqRhs;
    SimpleVector* currIcupp;
-   SimpleVector* currEqRhsLink; // TODO rename ?
-   SimpleVector* currIneqLhsLink; // TODO rename ?
+   SimpleVector* currEqRhsLink;
+   SimpleVector* currIneqLhsLink;
    SimpleVector* currIclowLink;
-   SimpleVector* currIneqRhsLink; // TODO rename ?
+   SimpleVector* currIneqRhsLink;
    SimpleVector* currIcuppLink;
 
    SimpleVector* currgParent;
@@ -106,7 +106,7 @@ protected:
    SimpleVector* currRedRow;
    SimpleVector* currNnzRow;
    SimpleVector* currRedRowLink;
-   SimpleVector* currNnzRowLink; // todo added
+   SimpleVector* currNnzRowLink;
 
    SimpleVector* currRedColParent;
    SimpleVector* currRedColChild;

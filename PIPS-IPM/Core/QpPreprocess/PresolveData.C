@@ -55,7 +55,6 @@ sData* PresolveData::finalize()
    // this removes all columns and rows that are now empty from the problem
    presProb->cleanUpPresolvedData(*nRowElemsA, *nRowElemsC, *nColElems);
 
-   // todo why we delete this?
    dynamic_cast<StochGenMatrix&>(*presProb->A).deleteTransposed();
    dynamic_cast<StochGenMatrix&>(*presProb->C).deleteTransposed();
 
@@ -76,7 +75,6 @@ void PresolveData::initNnzCounter()
 
    nColElems->axpy(1.0, *colClone);
 
-   // todo remove or define some print flag
 #if 0
    int rank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &rank);

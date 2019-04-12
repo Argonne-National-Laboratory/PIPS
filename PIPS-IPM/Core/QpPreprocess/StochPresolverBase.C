@@ -165,7 +165,7 @@ void StochPresolverBase::updateNnzFromReductions(SystemType system_type)
       updateNnzUsingReductions(nnz_vector, red_vector, EQUALITY_SYSTEM);
    }
 
-   /* update row non-zeros for inequality sysyem */
+   /* update row non-zeros for inequality system */
    if(system_type == INEQUALITY_SYSTEM)
    {
       red_vector = presData.redRowC;
