@@ -60,7 +60,7 @@ pipstmp
 # Ignore Eclipse files
 .metadata*
 .project
-.cproject
+
 RemoteSystemsTempFiles*
 .cproject
 .settings
