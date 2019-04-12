@@ -59,7 +59,7 @@ void StochPresolverModelCleanup::applyPresolving()
    presData.resetRedCounters();
 
    if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_INTEGER, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
 #ifndef NDEBUG
    if( myRank == 0)
