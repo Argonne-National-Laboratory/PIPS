@@ -73,7 +73,7 @@ Data* StochPresolver::presolve()
 
 #ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- Before Presolving:"<<endl;
+      std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
 #endif
 
@@ -96,12 +96,12 @@ Data* StochPresolver::presolve()
    assert( presolverSR.verifyNnzcounters() );
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
-   presolverSR.countRowsCols();
 #endif
+   //presolverCleanup.countRowsCols();
 
    //assert( rootNodeInSyncSData(*presData.presProb));
 
-   // i assume we actually apply ur changes here and then return a valid sData object to the caller
+   // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
 
    assert( rootNodeInSyncSData(*finalPresData) );

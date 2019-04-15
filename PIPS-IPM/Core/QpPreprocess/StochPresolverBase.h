@@ -161,7 +161,6 @@ protected:
 
    /* updating all pointers */
    void updatePointersForCurrentNode(int node, SystemType system_type);
-
 private:
    /* return false if dummy node */
    void setPointersMatrices(GenMatrixHandle mat, int node);
@@ -169,6 +168,10 @@ private:
    void setPointersVarBounds(int node);
    void setPointersObjective(int node);
    void setReductionPointers(SystemType system_type, int node);
+
+private:
+   void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
+   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const;
 
 protected:
    void setCPAmatsRoot(GenMatrixHandle matrixHandle);
@@ -243,10 +246,6 @@ protected:
          double& infRow, double& supRow,
          SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp);
 
-   void countRangedRowsBlock(int& nRangedRows, int& nRowsIneq) const;
-   void countEqualityRowsBlock(int& nRowsEq) const;
-   void countSingletonRowsBlock(int& nSingletonRows) const;
-   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars) const;
 };
 
 

@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+//#define NDEBUG_MODEL_CLEANUP
+
 StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData)
 : StochPresolverBase(presData)
 {
@@ -28,43 +30,58 @@ void StochPresolverModelCleanup::applyPresolving()
    presData.resetRedCounters();
 
    int n_elims = 0;
+   int nRemovedRows = 0;
 
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-#ifndef NDEBUG
-   if( myRank == 0 )
+#ifndef NDEBUG_MODEL_CLEANUP
+   if( myRank == 0)
    {
-      std::cout << "Starting model cleanup..." << std::endl;
+      std::cout << "//////////////////////////////////////////////////////////" << std::endl;
+      std::cout << "///////////////////// model cleanup //////////////////////" << std::endl;
+      std::cout << "//////////////////////////////////////////////////////////" << std::endl;
    }
-   // todo this a non const function! watch out
-//    countRowsCols();
 #endif
 
    /* remove entries from A and C matrices and updates transposed systems */
-   n_elims += removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
+   int n_elims_eq_sys = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
    assert(verifyNnzcounters());
+   if(myRank == 0)
+      std::cout << "removed " << n_elims_eq_sys << " entries in equality system" << std::endl;
 
-   n_elims += removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
+   int n_elims_ineq_sys = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
    assert(verifyNnzcounters());
+   if(myRank == 0)
+      std::cout << "removed " << n_elims_ineq_sys << " entries in inequality system" << std::endl;
+   n_elims = n_elims_ineq_sys + n_elims_eq_sys;
 
    // removal of redundant constraints
-   int nRemovedRows = 0;
-   nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
-   nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
+   int nRemovedRows_eq = removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
+   if(myRank == 0)
+      std::cout << "removed " << nRemovedRows_eq << " rows in inequality system" << std::endl;
+
+   int nRemovedRows_ineq = removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
+   if(myRank == 0)
+      std::cout << "removed " << nRemovedRows_ineq << " rows in inequality system" << std::endl;
+   nRemovedRows = nRemovedRows_eq + nRemovedRows_ineq;
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    updateNnzColParent(MPI_COMM_WORLD);
    presData.resetRedCounters();
 
    if( iAmDistrib )
+   {
       MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   }
 
-#ifndef NDEBUG
+#ifndef NDEBUG_MODEL_CLEANUP
+   if( myRank == 0 )
+      std::cout << "Model cleanup finished. Removed " << nRemovedRows << " redundant rows and " << n_elims << " entries in total."
+            << std::endl;
    if( myRank == 0)
-      std::cout << "Model cleanup finished. Removed " << nRemovedRows << " redundant rows and " << n_elims << " entries in total." << std::endl;
-   // countRowsCols();
+      std::cout << "//////////////////////////////////////////////////////////" << std::endl << std::endl;
 #endif
 }
 
@@ -121,7 +138,7 @@ int StochPresolverModelCleanup::removeRedundantRows(GenMatrixHandle matrixHandle
       if( myRank==0 )
       {
          nRemovedRows += nRemovedRowsLink;
-         cout<<"Removed Linking Constraints during model cleanup: "<< nRemovedRowsLink <<endl;
+         cout<<"\tRemoved Linking Constraints during model cleanup: "<< nRemovedRowsLink <<endl;
       }
    }
 
@@ -152,7 +169,7 @@ int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_t
 
    int nRemovedRows = 0;
 
-   // per row, compute activies and compare to lhs and rhs:
+   // per row, compute activities and compare to lhs and rhs:
    for( int r=0; r<currAmat->m; r++)
    {
       if( currNnzRow->elements()[r] == 0.0 ) // empty rows might still have a rhs but should be ignored.
@@ -390,11 +407,11 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    assert(dynamic_cast<StochGenMatrix&>(*(presProb->C)).children.size() == (size_t) nChildren);
 
    /* reset the linking row reduction buffers */
+   presData.resetRedCounters();
    if(hasLinking(system_type))
       (system_type == EQUALITY_SYSTEM) ? resetEqRhsAdaptionsLink() : resetIneqRhsAdaptionsLink();
 
    int n_elims = 0;
-   presData.resetRedCounters();
 
    int myRank;
    bool iAmDistrib;
@@ -692,7 +709,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
          const double mat_entry = storage->M[k];
 
          /* remove all small entries */
-         if( fabs( mat_entry ) < tol_matrix_entry ) // todo bugged
+         if( fabs( mat_entry ) < tol_matrix_entry )
          {
             std::pair<int,int> entry(r, col);
             eliminated_entries.push_back(entry);
