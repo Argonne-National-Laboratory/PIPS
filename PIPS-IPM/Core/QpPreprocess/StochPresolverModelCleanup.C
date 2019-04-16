@@ -57,6 +57,7 @@ void StochPresolverModelCleanup::applyPresolving()
       std::cout << "removed " << n_elims_ineq_sys << " entries in inequality system" << std::endl;
    n_elims = n_elims_ineq_sys + n_elims_eq_sys;
 
+   // todo bugged see issue #19
    // removal of redundant constraints
    int nRemovedRows_eq = removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
    if(myRank == 0)
@@ -288,6 +289,10 @@ int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matri
    else
       currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
 
+   // update the nnzColParent counters:
+   updateNnzColParent(MPI_COMM_WORLD);
+   presData.resetRedCounters();
+
    for( int r=0; r<nLinkRows; r++)
    {
       if( rowIsRedundant[r] )
@@ -296,8 +301,8 @@ int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matri
          nRemovedRows++;   // only count the removed row once
       }
    }
-   // update the nnzColParent counters:
-   updateNnzColParent(MPI_COMM_WORLD);
+
+   updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
    presData.resetRedCounters();
 
    delete[] minActivity;
