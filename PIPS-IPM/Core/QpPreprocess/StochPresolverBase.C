@@ -1017,6 +1017,7 @@ void StochPresolverBase::clearRow(SparseStorageDynamic& storage, const int rowId
  * Increments redColParent by one at each column index the row had an entry.
  * Decrements nnzColChild by one at each column index the row had an entry.
  */
+// todo : should rhs and lhs be set to zero too?
 void StochPresolverBase::removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
       SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
       SimpleVector& redColParent, SimpleVector* nnzColChild)

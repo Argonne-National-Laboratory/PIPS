@@ -53,6 +53,7 @@ build_pips
 # no additional .gitignore file for that
 ThirdPartyLibs/PARDISO
 pipstmp
+GAMSsmall
 
 # Ignore the OS X DS_Store
 .DS_Store

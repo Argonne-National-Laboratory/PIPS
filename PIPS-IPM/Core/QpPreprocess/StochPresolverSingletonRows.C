@@ -29,7 +29,7 @@ void StochPresolverSingletonRows::applyPresolving()
 
 #ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- Before singleton Row Presolving:"<<endl;
+      std::cout << "--- Before singleton Row Presolving:" << std::endl;
    countRowsCols();
 #endif
 
@@ -39,6 +39,7 @@ void StochPresolverSingletonRows::applyPresolving()
 
    presData.resetRedCounters();
    clearNewBoundsParent();
+
    newSREq = initSingletonRows(EQUALITY_SYSTEM);
    synchronize(newSREq);
    if( myRank == 0 )
@@ -50,10 +51,8 @@ void StochPresolverSingletonRows::applyPresolving()
    // main loop:
    while( (newSREq + newSRIneq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
-      // if( myRank == 0 ) cout<<"Main loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
       while( newSREq > 0 && iter < maxIterSR)
       {
-         // if( myRank == 0 )cout<<"SR(Equality) loop at iter "<<iter<<" and globalIter: "<<globalIter<<endl;
          if( globalIter > 0 )
             initSingletonRows(EQUALITY_SYSTEM);
          // main method:
@@ -119,23 +118,29 @@ void StochPresolverSingletonRows::applyPresolving()
 
 #ifdef TIMING
    if( myRank == 0 )
-      cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
+      std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
 #endif
+
+   if( myRank == 0 )
+      std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
 
 #ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- After singleton Row Presolving:"<<endl;
+      std::cout << "--- After singleton Row Presolving:" << std::endl;
    countRowsCols();
 #endif
 }
 
-/** Initializes the singletonRows list (acutally a vector<int> singletonRows)
+/** Initializes the singletonRows list (actually a vector<int> singletonRows)
  * and the blocks (int*) pointing to the start and end indices in singletonRows
  * for each block (parent, children, linking rows).
- * Attention: there is no communication over the preocesses to adapt the number of
+ * Attention: there is no communication over the processes to adapt the number of
  * singleton rows found (for performance reasons). If this is necessary, a simple
  * MPI_Allreduce call should be used right after calling this method.
  * Returns the number of singleton rows found (might be different for each process!).
+ *
+ * @note: only rank 0 counts singleton rows in B0 and linking rows
+ * todo : check linking row
  */
 int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 {
@@ -144,68 +149,42 @@ int StochPresolverSingletonRows::initSingletonRows(SystemType system_type)
 
    int nSingletonRows = 0;
 
-   if( system_type == EQUALITY_SYSTEM )
+   StochVectorHandle nnz_vec =
+         (system_type == EQUALITY_SYSTEM) ?
+               presData.nRowElemsA : presData.nRowElemsC;
+
+   assert(presData.getNumberSR() == 0);
+
+   /* B0 */
+   SimpleVector* nnz_block = dynamic_cast<SimpleVector*>(nnz_vec->vec);
+   const int n_singletons_B0 = initSingletonRowsBlock(-1, nnz_block);
+   if( myRank == 0 )
+      nSingletonRows += n_singletons_B0;
+
+   /* child rows Ai Bi */
+   assert( (int)nnz_vec->children.size() == nChildren);
+   for( size_t it = 0; it < nnz_vec->children.size(); it++ )
    {
-      assert(presData.getNumberSR() == 0);
-
-      SimpleVector* nRowASimple = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
-      const int nSingleRowsA0block =  initSingletonRowsBlock(-1, nRowASimple);
-      if( myRank == 0 )
-         nSingletonRows += nSingleRowsA0block;
-
-      assert((int)presData.nRowElemsA->children.size() == nChildren);
-      for( size_t it = 0; it < presData.nRowElemsA->children.size(); it++)
-      {
-         SimpleVector* nRowASimpleChild = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[it]->vec);
-         nSingletonRows += initSingletonRowsBlock(int(it), nRowASimpleChild);
-      }
-      presData.setBlocks(nChildren+1, presData.getNumberSR());
-
-      // todo: linking block nRowElemsA->vecl
-      //blocks[nChildren+2] = singletonRows.size();
-      if( hasLinking(EQUALITY_SYSTEM) && myRank == 0)
-      {
-         int nSRLink = 0;
-         SimpleVector* nnzRowLink = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
-
-         for( int i = 0; i < nnzRowLink->n; i++ )
-            if( nnzRowLink->elements()[i] == 1.0 )
-               nSRLink++;
-         PIPSdebugMessage("There are %d singleton rows among the linking constraints of A. \n", nSRLink);
-      }
+      nnz_block = dynamic_cast<SimpleVector*>(nnz_vec->children[it]->vec);
+      nSingletonRows += initSingletonRowsBlock(int(it), nnz_block);
    }
-   else
+   presData.setBlocks(nChildren + 1, presData.getNumberSR());
+
+   // todo: linking block nnz_vec->vecl these are not added to the overall system.. todo
+   //blocks[nChildren+2] = singletonRows.size();
+   /* linking rows */
+   if( hasLinking(system_type) && myRank == 0 )
    {
-      assert( system_type == INEQUALITY_SYSTEM );
-      assert(presData.getNumberSR() == 0);
+      int n_singletons_link = 0;
+      nnz_block = dynamic_cast<SimpleVector*>(nnz_vec->vecl);
 
-      SimpleVector* nRowCSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
-      const int nSingleRowsA0block =  initSingletonRowsBlock(-1, nRowCSimple);
-      if( myRank == 0 )
-         nSingletonRows += nSingleRowsA0block;
-
-      assert((int)presData.nRowElemsC->children.size() == nChildren);
-      for( size_t it = 0; it < presData.nRowElemsC->children.size(); it++)
-      {
-         SimpleVector* nRowCSimpleChild = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
-         nSingletonRows += initSingletonRowsBlock(int(it), nRowCSimpleChild);
-      }
-      presData.setBlocks(nChildren+1, presData.getNumberSR());
-
-      // todo: linking block nRowElemsC->vecl
-      //blocks[nChildren+2] = singletonRows.size();
-      if( hasLinking(INEQUALITY_SYSTEM) && myRank == 0)
-      {
-         int nSRLink = 0;
-         SimpleVector* nnzRowLink = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
-
-         for( int i = 0; i < nnzRowLink->n; i++ )
-            if( nnzRowLink->elements()[i] == 1.0 )
-               nSRLink++;
-         PIPSdebugMessage("There are %d singleton rows among the linking constraints of C. \n", nSRLink);
-      }
+      for( int i = 0; i < nnz_block->n; i++ )
+         if( nnz_block->elements()[i] == 1.0 )
+            n_singletons_link++;
+      PIPSdebugMessage(
+            "There are %d singleton rows among the linking constraints of A. \n",
+            n_singletons_link);
    }
-
    return nSingletonRows;
 }
 

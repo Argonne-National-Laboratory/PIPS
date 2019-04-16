@@ -9,6 +9,7 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERSINGLETONROWS_H_
 
 #include "StochPresolverBase.h"
+#include <vector>
 
 class StochPresolverSingletonRows : public StochPresolverBase
 {
@@ -21,8 +22,6 @@ public:
    virtual void applyPresolving();
 
 private:
-
-   // private methods:
    int initSingletonRows(SystemType system_type);
    int initSingletonRowsBlock(int it, SimpleVector const * nnzRowSimple);
    void doSingletonRowsA(int& newSREq, int& newSRIneq);
@@ -51,7 +50,5 @@ private:
    bool updateCPForSingletonRow(int it, SystemType system_type);
 
 };
-
-
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERSINGLETONROWS_H_ */

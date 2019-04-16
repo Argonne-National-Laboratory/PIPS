@@ -82,13 +82,13 @@ Data* StochPresolver::presolve()
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
    for( int i = 0; i < 1; ++i )
    {
+      /* singleton rows */
       presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
-      // TODO bugged
-      presolverCleanup.applyPresolving();
-      presolverParallelRow.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverCleanup.applyPresolving();
+//      presolverBS.applyPresolving();
+//      presolverCleanup.applyPresolving();
+//      presolverParallelRow.applyPresolving();
+//      presolverSR.applyPresolving();
+//      presolverCleanup.applyPresolving();
    }
 
 
@@ -97,7 +97,7 @@ Data* StochPresolver::presolve()
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
 #endif
-   //presolverCleanup.countRowsCols();
+   presolverCleanup.countRowsCols();
 
    //assert( rootNodeInSyncSData(*presData.presProb));
 
@@ -112,6 +112,7 @@ Data* StochPresolver::presolve()
    myfile.close();
 #endif
 
+   // todo wrong output - n and m in sData are broken
    if( myRank==0 )
    {
       std::cout << "original problem:\t" << sorigprob->nx << " variables\t" << sorigprob->my << " equ. conss\t" << sorigprob->mz << " ineq. conss" << std::endl;

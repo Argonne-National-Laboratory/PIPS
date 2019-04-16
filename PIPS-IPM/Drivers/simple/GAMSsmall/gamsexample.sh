@@ -1,12 +1,14 @@
 #!/bin/bash
 
 # set default values
+debug=false
 gams_file="eps"
 nblocks="3"
 np="1"
 scale=""
 stepLp=""
 presolve=""
+memcheck="false"
 
 for i in "$@"
 do
@@ -29,10 +31,18 @@ case $i in
     ;;
     -STEPLP=*|--STEPLP=*)
     stepLp="${i#*=}"
-    shift # past argument=value
+    shift # past argument=value 
     ;;
     -PRESOLVE=*|--PRESOLVE=*)
     presolve="${i#*=}"
+    shift # past argument=value
+    ;;
+    -DEBUG|--DEBUG)
+    debug=true
+    shift # past argument=value
+    ;;
+    -MEMCHECK|--MEMCHECK)
+    memcheck=true
     shift # past argument=value
     ;;
     *)
@@ -69,6 +79,17 @@ else
   scale=""
 fi
 
-mpirun -np $np ../../../../build_pips/gmspips $nblocks $gams_file $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
+if [ "$debug" = "true" ]; then
+  debug="gdb --args"
+else
+  debug=""
+fi
+
+if [ "$memcheck" = "true" ]; then
+  memcheck="valgrind"
+else
+  memcheck=""
+fi
+mpirun -np $np $memcheck $debug ../../../../build_pips/gmspips $nblocks $gams_file $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
 
 
