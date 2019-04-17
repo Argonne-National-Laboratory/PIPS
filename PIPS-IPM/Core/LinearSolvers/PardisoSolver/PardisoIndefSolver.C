@@ -161,6 +161,7 @@ void PardisoIndefSolver::initPardiso()
 
    mtype = -2;
    nrhs = 1;
+   iparm[0] = 0;
 
 #ifndef WITH_MKL_PARDISO
    int error = 0;

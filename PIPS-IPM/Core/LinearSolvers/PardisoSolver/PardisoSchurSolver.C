@@ -120,6 +120,8 @@ PardisoSchur32Solver::PardisoSchur32Solver( SparseSymMatrix * sgm )
 
 void PardisoSchurSolver::firstCall()
 {
+   iparm[0] = 0;
+
 #ifndef WITH_MKL_PARDISO
    int error = 0;
    pardisoinit(pt, &mtype, &solver, iparm, dparm, &error);

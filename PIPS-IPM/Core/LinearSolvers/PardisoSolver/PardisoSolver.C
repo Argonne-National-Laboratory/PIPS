@@ -130,6 +130,8 @@ int PardisoSolver::getNumberOfNonZeros(DenseSymMatrix& m)
 
 void PardisoSolver::firstCall()
 {
+   iparm[0] = 0;
+
 #ifndef WITH_MKL_PARDISO
    int error = 0;
    solver = 0; /* sparse direct solver */
