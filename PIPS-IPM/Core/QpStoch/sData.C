@@ -1055,6 +1055,7 @@ void sData::activateLinkStructureExploitation()
          std::cout << "not enough linking structure found" << std::endl;
       useLinkStructure = false;
    }
+//   useLinkStructure = true;
 
    if( useLinkStructure )
    {

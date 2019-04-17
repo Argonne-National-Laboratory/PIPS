@@ -51,10 +51,13 @@ void StochPresolverSingletonRows::applyPresolving()
    // main loop:
    while( (newSREq + newSRIneq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
+
+      /* eliminate all singleton rows in A */
       while( newSREq > 0 && iter < maxIterSR)
       {
          if( globalIter > 0 )
             initSingletonRows(EQUALITY_SYSTEM);
+
          // main method:
          doSingletonRows(newSREq, newSRIneq, EQUALITY_SYSTEM);
 
@@ -67,6 +70,7 @@ void StochPresolverSingletonRows::applyPresolving()
          iter++;
       }
       newSREq = 0;
+
       if( globalIter == 0 )
       {
          newSRIneq = initSingletonRows(INEQUALITY_SYSTEM);
@@ -390,8 +394,9 @@ void StochPresolverSingletonRows::procSingletonRowChild(int it, int& n_singleton
    if( hasLinking(system_type) )
       adaptChildBlmat( colAdaptLinkBlock, system_type);
 
-   updateCPforAdaptFixationsBChild( it, system_type );
-   adaptOtherSystemChildB( system_type, colAdaptLinkBlock, n_singleton_other_sys );
+   SystemType other_sys = (system_type == EQUALITY_SYSTEM) ? INEQUALITY_SYSTEM : EQUALITY_SYSTEM;
+   updateCPforAdaptFixationsBChild( it, other_sys );
+   adaptOtherSystemChildB( other_sys, colAdaptLinkBlock, n_singleton_other_sys );
 }
 
 void StochPresolverSingletonRows::procSingletonRowChildAmat(int it, SystemType system_type)
@@ -530,7 +535,6 @@ void StochPresolverSingletonRows::removeSingleRowEntryChildBmat(int rowIdx,
       // test if they imply infeasibility
       if( newBoundsImplyInfeasible(newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
          abortInfeasible(MPI_COMM_WORLD);
-
       // test if they imply fixation
       else if( newBoundsFixVariable(val, newxlow, newxupp, colIdx, ixlow, ixupp, xlow, xupp) )
       {

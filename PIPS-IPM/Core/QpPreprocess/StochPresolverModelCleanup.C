@@ -57,7 +57,6 @@ void StochPresolverModelCleanup::applyPresolving()
       std::cout << "removed " << n_elims_ineq_sys << " entries in inequality system" << std::endl;
    n_elims = n_elims_ineq_sys + n_elims_eq_sys;
 
-   // todo bugged see issue #19
    // removal of redundant constraints
    int nRemovedRows_eq = removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
    if(myRank == 0)

@@ -61,31 +61,31 @@ fi
 gams $gams_file --METHOD=PIPS > /dev/null
 ../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks $gams_file.gdx > /dev/null
 
-if [ "$stepLp" = "true" ]; then
+if [ "${stepLp,,}" = "true" ]; then
   stepLp="stepLp"
 else
   stepLp=""
 fi
 
-if [ "$presolve" = "true" ]; then
+if [ "${presolve,,}" = "true" ]; then
   presolve="presolve"
 else
   presolve=""
 fi
 
-if [ "$scale" = "true" ]; then
+if [ "${scale,,}" = "true" ]; then
   scale="scale"
 else
   scale=""
 fi
 
-if [ "$debug" = "true" ]; then
+if [ "${debug,,}" = "true" ]; then
   debug="gdb --args"
 else
   debug=""
 fi
 
-if [ "$memcheck" = "true" ]; then
+if [ "${memcheck,,}" = "true" ]; then
   memcheck="valgrind"
 else
   memcheck=""
