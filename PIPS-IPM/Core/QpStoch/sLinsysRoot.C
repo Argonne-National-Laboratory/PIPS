@@ -25,6 +25,10 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   : sLinsys(factory_, prob_), iAmDistrib(0), sparseKktBuffer(NULL)
 {
   assert(dd!=NULL);
+  xDiag = NULL;
+  zDiag = NULL;
+  zDiagLinkCons = NULL;
+
   createChildren(prob_);
 
   if(gOuterSolve) {
@@ -61,6 +65,10 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 			 OoqpVector* rhs_)
   : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0), sparseKktBuffer(NULL)
 {
+  xDiag = NULL;
+  zDiag = NULL;
+  zDiagLinkCons = NULL;
+
   createChildren(prob_);
 
   if(gOuterSolve) {

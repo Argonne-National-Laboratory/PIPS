@@ -906,15 +906,17 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    // update the KKT with the diagonals
    // xDiag is in fact diag(Q)+X^{-1}S
    /////////////////////////////////////////////////////////////
-   assert(xDiag);
-   const SimpleVector& sxDiag = dynamic_cast<const SimpleVector&>(*xDiag);
-
-   for( int i = 0; i < locnx; i++ )
+   if( xDiag )
    {
-      const int diagIdx = krowKkt[i];
-      assert(jcolKkt[diagIdx] == i);
+      const SimpleVector& sxDiag = dynamic_cast<const SimpleVector&>(*xDiag);
 
-      MKkt[diagIdx] += sxDiag[i];
+      for( int i = 0; i < locnx; i++ )
+      {
+         const int diagIdx = krowKkt[i];
+         assert(jcolKkt[diagIdx] == i);
+
+         MKkt[diagIdx] += sxDiag[i];
+      }
    }
 
    /////////////////////////////////////////////////////////////
@@ -922,6 +924,8 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    /////////////////////////////////////////////////////////////
    if( locmz > 0 )
    {
+      assert(zDiag);
+
       SparseGenMatrix& C = prob->getLocalD();
       C.matTransDinvMultMat(*zDiag, &CtDC);
       assert(CtDC->size() == locnx);
@@ -1081,6 +1085,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       }
 
       assert(zDiagLinkCons);
+
       const SimpleVector& szDiagLinkCons = dynamic_cast<const SimpleVector&>(*zDiagLinkCons);
 
       for( int i = 0, iKkt = locnx + locmy + locmyl; i < locmzl; ++i, ++iKkt )
@@ -1161,13 +1166,18 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
    // xDiag is in fact diag(Q)+X^{-1}S
    /////////////////////////////////////////////////////////////
    //kktd->atPutDiagonal( 0, *xDiag );
-   SimpleVector& sxDiag = dynamic_cast<SimpleVector&>(*xDiag);
-   for(int i=0; i<locnx; i++) dKkt[i][i] += sxDiag[i];
+   if( xDiag )
+   {
+      SimpleVector& sxDiag = dynamic_cast<SimpleVector&>(*xDiag);
+      for(int i=0; i<locnx; i++) dKkt[i][i] += sxDiag[i];
+   }
 
    /////////////////////////////////////////////////////////////
    // update the KKT with   - C' * diag(zDiag) *C
    /////////////////////////////////////////////////////////////
    if(locmz>0) {
+     assert(zDiag);
+
      SparseGenMatrix& C = prob->getLocalD();
      C.matTransDinvMultMat(*zDiag, &CtDC);
 
