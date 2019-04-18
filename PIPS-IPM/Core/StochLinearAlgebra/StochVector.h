@@ -154,6 +154,9 @@ public:
   virtual void removeEntries( const OoqpVector& select );
 
   int getSize() { return n; };
+
+  virtual bool isRootNodeInSync() const;
+
 };
 
 /** DUMMY VERSION 
@@ -275,6 +278,8 @@ public:
   virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec) {};
 
   int getSize() { return 0; };
+
+  virtual bool isRootNodeInSync() const { return true; };
 };
 
 

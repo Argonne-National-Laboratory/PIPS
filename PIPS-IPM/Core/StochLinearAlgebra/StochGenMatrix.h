@@ -217,6 +217,8 @@ public:
 
   virtual void permuteLinkingVars(const std::vector<unsigned int>& permvec);
   virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec);
+
+  virtual bool isRootNodeInSync() const;
 };
 
 
@@ -368,6 +370,8 @@ public:
 
   virtual void permuteLinkingVars(const std::vector<unsigned int>& permvec) {};
   virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec) {};
+
+  virtual bool isRootNodeInSync() const { return true; };
 };
 
 

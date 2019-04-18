@@ -126,7 +126,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* objective g */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.g)))
+   if(!dynamic_cast<const StochVector&>(*s_data.g).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: objective vector corrupted!" << std::endl;
@@ -134,7 +134,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* rhs equality bA */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.bA)))
+   if(!dynamic_cast<const StochVector&>(*s_data.bA).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: rhs of A corrupted!" << std::endl;
@@ -142,7 +142,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* upper bounds x bux */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.bux)))
+   if(!dynamic_cast<const StochVector&>(*s_data.bux).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: upper bounds x corrupted!" << std::endl;
@@ -150,7 +150,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* index for upper bounds x ixupp */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.ixupp)))
+   if(!dynamic_cast<const StochVector&>(*s_data.ixupp).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: index upper bounds x corrupted!" << std::endl;
@@ -158,7 +158,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* lower bounds x blx */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.blx)))
+   if(!dynamic_cast<const StochVector&>(*s_data.blx).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: lower bounds x corrupted!" << std::endl;
@@ -166,7 +166,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* index for lower bounds x ixlow */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.ixlow)))
+   if(!dynamic_cast<const StochVector&>(*s_data.ixlow).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: index lower bounds x corrupted!" << std::endl;
@@ -174,7 +174,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* upper bounds C bu */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.bu)))
+   if(!dynamic_cast<const StochVector&>(*s_data.bu).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: rhs C corrupted!" << std::endl;
@@ -182,7 +182,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* index upper bounds C icupp */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.icupp)))
+   if(!dynamic_cast<const StochVector&>(*s_data.icupp).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: index rhs C corrupted!" << std::endl;
@@ -190,7 +190,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* lower bounds C bl */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.bl)))
+   if(!dynamic_cast<const StochVector&>(*s_data.bl).isRootNodeInSync())
    {
       if(my_rank == 0)
          std::cout << "ERROR: lower bounds C corrupted!" << std::endl;
@@ -198,7 +198,7 @@ bool rootNodeInSyncSData(const sData& s_data)
    }
 
    /* index for lower bounds C iclow */
-   if(!rootNodeInSyncStochVector(dynamic_cast<const StochVector&>(*s_data.iclow)))
+   if(!dynamic_cast<const StochVector&>(*s_data.iclow).isRootNodeInSync() )
    {
       if(my_rank == 0)
          std::cout << "ERROR: index lower bounds C corrupted!" << std::endl;
@@ -210,64 +210,6 @@ bool rootNodeInSyncSData(const sData& s_data)
 
    if(my_rank == 0 && in_sync)
       std::cout << "root node data over all processes is in sync" << std::endl;
-
-   return in_sync;
-}
-
-// is root node data of StochVector same on all procs?
-bool rootNodeInSyncStochVector(const StochVector& stoch_vec)
-{
-   bool in_sync = true;
-
-   /* no need to check not distributed or not root node */
-   if( !stoch_vec.iAmDistrib || stoch_vec.parent != NULL)
-      return in_sync;
-
-   assert( stoch_vec.vec );
-
-   int my_rank, world_size;
-   assert(stoch_vec.mpiComm == MPI_COMM_WORLD);
-   MPI_Comm_rank(stoch_vec.mpiComm, &my_rank);
-   MPI_Comm_size(stoch_vec.mpiComm, &world_size);
-
-   const int vec_length = dynamic_cast<const SimpleVector&>(*stoch_vec.vec).length();
-   const int vecl_length = (stoch_vec.vecl) ? dynamic_cast<const SimpleVector&>(*stoch_vec.vecl).length() : 0;
-
-   const long long count = vec_length + vecl_length;
-
-   assert( count < std::numeric_limits<int>::max());
-
-   /* mpi reduce on vector */
-   /* rank 0 recieves max and min over arrays and checks for equality */
-   double sendbuf[count];
-   double recvbuf_max[count];
-   double recvbuf_min[count];
-
-   const SimpleVector& vec = dynamic_cast<const SimpleVector&>(*stoch_vec.vec);
-   std::copy(vec.elements(), vec.elements() + vec.length(), sendbuf);
-
-   if(stoch_vec.vecl)
-   {
-      const SimpleVector& vecl = dynamic_cast<const SimpleVector&>(*stoch_vec.vecl);
-      std::copy(vecl.elements(), vecl.elements() + vecl.length(), sendbuf + vec.length());
-   }
-   MPI_Reduce(sendbuf, recvbuf_max, static_cast<int>(count), MPI_DOUBLE, MPI_MAX, 0, stoch_vec.mpiComm);
-   MPI_Reduce(sendbuf, recvbuf_min, static_cast<int>(count), MPI_DOUBLE, MPI_MIN, 0, stoch_vec.mpiComm);
-
-
-   /* if rank == 0 check for sync */
-   if(my_rank == 0)
-   {
-      for(int i = 0; i < count; ++i){
-         if( !PIPSisEQ( recvbuf_max[i], recvbuf_min[i]) )
-         {
-            in_sync = false;
-         }
-      }
-   }
-
-   /* distribute result */
-   MPI_Bcast(&in_sync, 1, MPI_CXX_BOOL, 0, stoch_vec.mpiComm);
 
    return in_sync;
 }

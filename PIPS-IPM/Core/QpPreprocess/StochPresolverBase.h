@@ -63,7 +63,7 @@ protected:
    static const double tolerance4 = 1.0e-12; // for variable fixing
    static const double limit1 = 1.0e3;   // for bound strengthening
    static const double limit2 = 1.0e8;   // for bound strengthening
-   static const int maxIterSR = 20;
+   static const int maxIterSR = 1;
    static const double tol_compare_double = 1.0e-8;
 
    /* not owned by the class itself - given from the outside */

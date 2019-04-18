@@ -1585,3 +1585,55 @@ void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec
       dynamic_cast<SimpleVector*>(vecl)->permuteEntries(permvec);
 }
 
+// is root node data of StochVector same on all procs?
+bool StochVector::isRootNodeInSync() const
+{
+   assert( vec);
+   assert(mpiComm);
+
+   bool in_sync = true;
+   const SimpleVector& vec_simple = dynamic_cast<const SimpleVector&>(*vec);
+
+   /* no need to check if not distributed or not at root node */
+   if( !iAmDistrib || parent != NULL)
+      return in_sync;
+
+   int my_rank, world_size;
+   MPI_Comm_rank(mpiComm, &my_rank);
+   MPI_Comm_size(mpiComm, &world_size);
+
+   /* if there is a linking part we have to chekc it as well */
+   const int vec_length = vec_simple.length();
+   const int vecl_length = (vecl) ? dynamic_cast<const SimpleVector&>(*vecl).length() : 0;
+
+   const long long count = vec_length + vecl_length;
+
+   assert( count < std::numeric_limits<int>::max());
+
+   /* mpi reduce on vector */
+   double sendbuf[count];
+   double recvbuf[count];
+
+   std::copy(vec_simple.elements(), vec_simple.elements() + vec_simple.length(), sendbuf);
+
+   if( vecl )
+   {
+      const SimpleVector& vecl_simple = dynamic_cast<const SimpleVector&>(*vecl);
+      std::copy(vecl_simple.elements(), vecl_simple.elements() + vecl_simple.length(),
+            sendbuf + vec_simple.length());
+   }
+   MPI_Allreduce(sendbuf, recvbuf, static_cast<int>(count), MPI_DOUBLE, MPI_MAX, mpiComm);
+
+   for( int i = 0; i < count; ++i )
+   {
+      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
+      {
+         /* someone else had a higer value here */
+         in_sync = false;
+      }
+   }
+
+   return in_sync;
+}
+
+

@@ -1491,3 +1491,97 @@ void StochGenMatrix::updateTransposed()
      children[it]->updateTransposed();
 }
 
+// is root node data of StochMatrix same on all procs?
+// not checking dynamic storage ! todo !!!
+bool StochGenMatrix::isRootNodeInSync() const
+{
+   assert( Amat );
+   assert( Bmat );
+   assert( Blmat );
+
+   bool in_sync = true;
+
+   /* no need to check if not distributed or not root node */
+   if( !iAmDistrib || children.size() == 0)
+      return in_sync;
+
+   /* since we are in root node Amat should look as follows */
+   assert( Amat->getStorageRef().len == 0);
+   assert( Amat->getStorageRef().n == -1);
+
+   int my_rank, world_size;
+   MPI_Comm_rank(mpiComm, &my_rank);
+   MPI_Comm_size(mpiComm, &world_size);
+
+
+   const int lenght_entries_bmat = Bmat->getStorageRef().len;
+   const int length_columns_bmat = Bmat->getStorageRef().len;
+   const int lenght_rowoffest_bmat = Bmat->getStorageRef().m + 1;
+
+   const int lenght_entries_blmat = Blmat->getStorageRef().len;
+   const int length_columns_blmat = Blmat->getStorageRef().len;
+   const int lenght_rowoffest_blmat = Blmat->getStorageRef().m + 1;
+
+   const long long count_row_cols = length_columns_bmat + lenght_rowoffest_bmat + length_columns_blmat + lenght_rowoffest_blmat;
+   const long long count_entries = lenght_entries_bmat + lenght_entries_blmat;
+
+   assert( count_row_cols < std::numeric_limits<int>::max());
+   assert( count_entries < std::numeric_limits<int>::max());
+
+   double sendbuf_entries[count_entries];
+   double recvbuf_entries[count_entries];
+
+   int sendbuf_row_col[count_row_cols];
+   int recvbuf_row_col[count_row_cols];
+
+   /* fill Bmat into send buffers */
+   const double * M = Bmat->getStorageRef().M;
+   const int * krowM = Bmat->getStorageRef().krowM;
+   const int * jColM = Bmat->getStorageRef().jcolM;
+
+   std::copy(M, M + lenght_entries_bmat, sendbuf_entries);
+
+   std::copy(krowM, krowM + lenght_rowoffest_bmat, sendbuf_row_col);
+   std::copy(jColM, jColM + lenght_entries_bmat, sendbuf_row_col + lenght_rowoffest_bmat);
+
+   /* fill Blmat into send buffers */
+   const double * Ml = Blmat->getStorageRef().M;
+   const int * krowMl = Blmat->getStorageRef().krowM;
+   const int * jColMl = Blmat->getStorageRef().jcolM;
+
+   std::copy(Ml, Ml + lenght_entries_blmat, sendbuf_entries + lenght_entries_bmat);
+
+   std::copy(krowMl, krowMl + lenght_rowoffest_blmat, sendbuf_row_col + lenght_rowoffest_bmat + lenght_entries_bmat);
+   std::copy(jColMl, jColMl + lenght_entries_blmat, sendbuf_row_col + lenght_rowoffest_bmat + lenght_entries_bmat + lenght_rowoffest_blmat);
+
+
+   /* Reduce Bmat and Blmat buffers */
+   MPI_Allreduce(sendbuf_entries, recvbuf_entries, static_cast<int>(count_entries), MPI_DOUBLE, MPI_MAX, mpiComm);
+
+   MPI_Allreduce(sendbuf_row_col, recvbuf_row_col, static_cast<int>(count_row_cols), MPI_INT, MPI_MAX, mpiComm);
+
+   /* check recvbuf_entries */
+   for( int i = 0; i < count_entries; ++i )
+   {
+      if( !PIPSisEQ(sendbuf_entries[i], recvbuf_entries[i]) )
+      {
+         /* someone else had a higher value here */
+         in_sync = false;
+      }
+   }
+   for( int i = 0; i < count_row_cols; ++i )
+   {
+      if( !PIPSisEQ(sendbuf_row_col[i], recvbuf_row_col[i]) )
+      {
+         /* someone else had a higher value here */
+         in_sync = false;
+      }
+   }
+
+   return in_sync;
+}
+
+
+
+
+

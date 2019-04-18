@@ -1,3 +1,4 @@
+* if you wanna use this example please hack in useLinkStructure = true; in sData.C
 Set i rows    / i1*i14 /
 * subset of linking rows
     linkRows(i) / i13, i14 /

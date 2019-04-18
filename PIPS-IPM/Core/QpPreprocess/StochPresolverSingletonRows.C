@@ -24,6 +24,9 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
 
 void StochPresolverSingletonRows::applyPresolving()
 {
+
+   assert(true); // todo
+
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
@@ -52,24 +55,24 @@ void StochPresolverSingletonRows::applyPresolving()
    while( (newSREq + newSRIneq > 0 && iter < maxIterSR) || globalIter == 0 )
    {
 
-      /* eliminate all singleton rows in A */
-      while( newSREq > 0 && iter < maxIterSR)
-      {
-         if( globalIter > 0 )
-            initSingletonRows(EQUALITY_SYSTEM);
-
-         // main method:
-         doSingletonRows(newSREq, newSRIneq, EQUALITY_SYSTEM);
-
-         // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsA:
-         updateLinkingVarsBlocks(newSREq, newSRIneq);
-         synchronizeSum(newSREq, newSRIneq);
-
-         if( myRank == 0 )
-            PIPSdebugMessage("Found new singleton rows that were just created: %d in A and %d in C \n", newSREq, newSRIneq);
-         iter++;
-      }
-      newSREq = 0;
+//      /* eliminate all singleton rows in A */
+//      while( newSREq > 0 && iter < maxIterSR)
+//      {
+//         if( globalIter > 0 )
+//            initSingletonRows(EQUALITY_SYSTEM);
+//
+//         // main method:
+//         doSingletonRows(newSREq, newSRIneq, EQUALITY_SYSTEM);
+//
+//         // update the linking variable blocks (A,C,F,G) with the fixations found in doSingletonRowsA:
+//         updateLinkingVarsBlocks(newSREq, newSRIneq);
+//         synchronizeSum(newSREq, newSRIneq);
+//
+//         if( myRank == 0 )
+//            PIPSdebugMessage("Found new singleton rows that were just created: %d in A and %d in C \n", newSREq, newSRIneq);
+//         iter++;
+//      }
+//      newSREq = 0;
 
       if( globalIter == 0 )
       {

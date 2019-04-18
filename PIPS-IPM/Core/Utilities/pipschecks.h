@@ -29,9 +29,6 @@ void computeFortranCSRMatResidualNorms(const int* rowptr, const int* colidx, con
 // is root node data of sData object same on all procs?
 bool rootNodeInSyncSData(const sData& s_data);
 
-// is root node data of StochVector same on all procs?
-bool rootNodeInSyncStochVector(const StochVector& stoch_vec);
-
 // is root node data of StochMatrix same on all procs?
 // not checking dynamic storage !
 bool rootNodeInSyncStochGenMatrix(const StochGenMatrix& stoch_mat);
