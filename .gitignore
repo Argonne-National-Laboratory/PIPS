@@ -65,3 +65,4 @@ GAMSsmall
 RemoteSystemsTempFiles*
 .cproject
 .settings
+/Debug/

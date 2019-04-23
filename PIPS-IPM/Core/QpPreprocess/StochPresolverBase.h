@@ -246,6 +246,9 @@ protected:
          double& infRow, double& supRow,
          SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp);
 
+   void countSingletonRows(int& n_singletons_equality, int& n_singletons_inequality) const;
+   void countSingletonRowsSystem(int& n_singletons, SystemType system_type) const;
+
 };
 
 

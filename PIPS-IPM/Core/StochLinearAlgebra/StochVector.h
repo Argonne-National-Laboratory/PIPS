@@ -63,6 +63,8 @@ public:
   virtual int isKindOf( int kind ) const;
   virtual void setToZero();
   virtual void setToConstant( double c );
+  virtual bool isZero();
+
   virtual void randomize( double alpha, double beta, double *ix );
   virtual void copyFrom( OoqpVector& v );
   virtual void copyFromAbs(const OoqpVector& v);
@@ -187,6 +189,8 @@ public:
 
   virtual int isKindOf( int kind ) const {return kind == kStochDummy;}
   virtual void setToZero(){};
+  virtual bool isZero(){ return true; };
+
   virtual void setToConstant( double c ){};
   virtual void randomize( double alpha, double beta, double *ix ){};
   virtual void copyFrom( OoqpVector& v ){};

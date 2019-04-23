@@ -173,6 +173,16 @@ SimpleVector* SimpleVector::cloneFull() const
    return clone;
 }
 
+bool SimpleVector::isZero()
+{
+	bool is_zero = true;
+
+	for(int i = 0; i < n; ++i)
+		is_zero &= (v[i] == 0.0);
+
+	return is_zero;
+}
+
 void SimpleVector::setToZero()
 {
   int i;

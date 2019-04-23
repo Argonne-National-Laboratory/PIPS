@@ -22,31 +22,26 @@ public:
    virtual void applyPresolving();
 
 private:
-   int initSingletonRows(SystemType system_type);
-   int initSingletonRowsBlock(int it, SimpleVector const * nnzRowSimple);
    void doSingletonRows(int& n_sing_sys, int& n_sing_other_sys, SystemType system_type);
    void doSingletonLinkRows(int& newSREq, int& newSRIneq);
 
-   void procSingletonRowRoot(StochGenMatrix& stochMatrix, SystemType system_type);
+   void procSingletonRowRoot(SystemType system_type);
    void procSingletonRowChild(int it, int& n_singleton_sys, int& n_singleton_other_sys, SystemType system_type);
-   void procSingletonRowChildAmat(int it, SystemType system_type);
+   void StochPresolverSingletonRows::procSingletonRowChildNonLinking(int node, SystemType system_type, std::vector<COLUMNTOADAPT> linking_cols_to_adapt);
+
    void procSingletonRowChildBmat(int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR,
          SystemType system_type);
    void removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
 
-   void removeSingleRowEntryB0(SparseStorageDynamic& storage, int rowIdx);
-   void removeSingleRowEntryB0Inequality(SparseStorageDynamic& storage, SparseStorageDynamic& storageTransposed, int rowIdx);
+   void processSingletonBlock(SystemType system_type, BlockType block_type, int node)
 
    void calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik) const;
 
    void updateLinkingVarsBounds();
    void getValuesForSR(SparseStorageDynamic const & storage, int rowIdx, int& colIdx, double& aik) const;
 
-   /** initialize current pointer for matrices and vectors.
-    * If it==-1, we are at parent and want block B_0 (Bmat).
-    * Returns false if it is a dummy child. */
-   bool updateCPForSingletonRow(int it, SystemType system_type);
-
+   // todo move
+   bool tightenBounds(double new_xlow, double new_xupp, double& ixlow, double& old_xlow, double& ixupp, double& old_xupp) const;
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERSINGLETONROWS_H_ */

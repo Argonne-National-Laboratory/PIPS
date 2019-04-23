@@ -181,6 +181,13 @@ bool PresolveData::combineColAdaptParent()
    return true;
 }
 
+bool PresolveData::reductionsEmpty()
+{
+
+
+	return true;
+}
+
 void PresolveData::resetRedCounters()
 {
    redRowA->setToZero();
@@ -307,4 +314,3 @@ void PresolveData::clearColAdaptParent()
 {
    colAdaptParent.clear();
 }
-

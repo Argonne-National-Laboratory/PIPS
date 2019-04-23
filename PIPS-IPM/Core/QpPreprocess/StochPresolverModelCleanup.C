@@ -591,7 +591,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
       if(block_type == LINKING_CONS_BLOCK)
       {
          assert(currEqRhsAdaptionsLink);
-         //rhs = lhs = lhs_idx = rhs_idx = currEqRhsLink;
          rhs = lhs = lhs_idx = rhs_idx = new SimpleVector(currEqRhsAdaptionsLink, currEqRhsLink->n);
       }
       else
@@ -604,10 +603,8 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
       if(block_type == LINKING_CONS_BLOCK)
       {
          assert(currInEqRhsAdaptionsLink); assert(currInEqLhsAdaptionsLink);
-//         rhs = currIneqRhsLink;
          rhs = new SimpleVector(currInEqRhsAdaptionsLink, currIneqRhsLink->n);
          rhs_idx = currIcuppLink;
-//         lhs =  currIneqLhsLink;
          lhs = new SimpleVector(currInEqLhsAdaptionsLink, currIneqLhsLink->n);
          lhs_idx = currIclowLink;
       }

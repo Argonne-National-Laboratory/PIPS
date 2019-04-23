@@ -12,7 +12,6 @@
 #include <algorithm>
 
 
-// todo is this C++ style? rather std::pair ?
 typedef struct
 {
    int colIdx;
@@ -52,7 +51,9 @@ class PresolveData
 
       bool combineColAdaptParent();
 
+      bool reductionsEmpty();
       void resetRedCounters();
+
       void resetBlocks();
       // todo getter, setter for element access of nnz counter???
       int getNChildren() const;

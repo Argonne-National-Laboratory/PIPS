@@ -216,7 +216,7 @@ Data* StochPresolver::presolve()
 //      presData.presProb->writeToStreamDense(std::cout);
    // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
-//   finalPresData->writeToStreamDense(std::cout);
+   finalPresData->writeToStreamDense(std::cout);
 
    assert( rootNodeInSyncSData(*finalPresData) );
 

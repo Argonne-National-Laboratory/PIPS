@@ -50,6 +50,7 @@ public:
   virtual void copyIntoArray( double v[] ) const;
   virtual void copyFromArray( double v[] );
   virtual void copyFromArray( char   v[] );
+  virtual bool isZero();
   virtual void setToZero();
   virtual void setToConstant( double c );
   virtual void randomize( double alpha, double beta, double *ix );

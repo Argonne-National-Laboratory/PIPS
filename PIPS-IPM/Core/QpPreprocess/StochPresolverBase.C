@@ -284,7 +284,6 @@ void StochPresolverBase::updateTransposedSubmatrix(
  */
 void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
 {
-   //PIPSdebugMessage("colAdaptParent has size %d \n", presData.getNumberColAdParent());
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
@@ -1223,8 +1222,8 @@ void StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colA
 
 void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type)
 {
-   //PIPSdebugMessage("colAdaptBlock has size %d \n", (int)colAdaptBlock.size());
    assert(currBlmat != NULL);
+
    if( system_type == EQUALITY_SYSTEM )
    {
       assert( presData.redRowA->vecl->n == currRedRowLink->n );
@@ -1237,18 +1236,18 @@ void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & col
       assert( presData.redRowC->vecl->n == currBlmat->m );
    }
 
-   for(int i=0; i<(int)colAdaptBlock.size(); i++)
+   for(size_t i = 0; i < colAdaptBlock.size(); i++)
    {
       const int colIdx = colAdaptBlock[i].colIdx;
       const double val = colAdaptBlock[i].val;
 
-      for( int j = currBlmatTrans->rowptr[colIdx].start; j<currBlmatTrans->rowptr[colIdx].end; j++ )
+      for( int j = currBlmatTrans->rowptr[colIdx].start; j < currBlmatTrans->rowptr[colIdx].end; j++ )
       {
          const int rowIdx = currBlmatTrans->jcolM[j];
          double m = 0.0;
+
          if( !removeEntryInDynamicStorage(*currBlmat, rowIdx, colIdx, m) )
             continue;
-         //PIPSdebugMessage("Removed entry (%d, %d) with value %f of system_type %d \n", rowIdx, colIdx, m, system_type);
 
          if( system_type == EQUALITY_SYSTEM )
             currEqRhsAdaptionsLink[rowIdx] -= m * val;
@@ -1424,7 +1423,8 @@ bool StochPresolverBase::newBoundsImplyInfeasible(double newxlow, double newxupp
          || (ixupp[colIdx] != 0.0 && PIPSisRelLT(xupp[colIdx], newxlow) )
          || (newxlow > newxupp))
    {
-      cout<<"Infeasibility detected at variable "<<colIdx<<", new bounds= ["<<newxlow<<", "<<newxupp<<"]"<<endl;
+      std::cout << "Presolving detected infeasibility: variable: " << colIdx << "\tnew bounds = [" << newxlow << ", " << newxupp << "]" << "\told bounds: [" << xlow <<
+    		  ", " << xupp << "]" << endl;
       return true;
    }
    return false;
@@ -1507,17 +1507,24 @@ int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, Syst
 
 /** Stores the column index colIdx together with the value as a COLUMNTOADAPT in colAdaptParent.
  * Aborts if infeasibility is detected.
+ *
+ * todo : use std::find and stuff
  */
 void StochPresolverBase::storeColValInColAdaptParent(int colIdx, double value)
 {
    const COLUMNTOADAPT colWithVal = {colIdx, value};
+
    bool uniqueAdditionToOffset = true;
-   for(int i=0; i<presData.getNumberColAdParent(); i++)
+   for(int i = 0; i < presData.getNumberColAdParent(); i++)
    {
       if( presData.getColAdaptParent(i).colIdx == colIdx )
       {
+
          if( !PIPSisEQ(presData.getColAdaptParent(i).val, value) )
+         {
+            std::cout << "Presolving detected infeasibility : fixation of variable that has previously been fixed to a different value" << std::endl;
             abortInfeasible(MPI_COMM_WORLD);
+         }
 
          uniqueAdditionToOffset = false;
       }
@@ -1534,12 +1541,16 @@ void StochPresolverBase::storeNewBoundsParent(int colIdx, double newxlow, double
 {
    assert( colIdx >= 0 );
    XBOUNDS newXbounds = {colIdx, newxlow, newxupp};
-   for(int i=0; i<(int)newBoundsParent.size(); i++)
+   for(size_t i = 0; i < newBoundsParent.size(); i++)
    {
       if( newBoundsParent[i].colIdx == colIdx )
       {
          if( PIPSisLT(newxupp, newBoundsParent[i].newxlow) || PIPSisLT(newBoundsParent[i].newxupp, newxlow) )
+         {
+        	 std::cout << "Presolving detected infeasibility. Two change of bounds requested to invalid values: bounds_a = [" << newxlow << ", " << newxupp << "]\tbounds_b = ["
+        			 << newBoundsParent[i].newxlow << ", " << newBoundsParent[i].newxupp << "]" << std::endl;
             abortInfeasible(MPI_COMM_WORLD);
+         }
       }
    }
    newBoundsParent.push_back(newXbounds);
@@ -2153,3 +2164,40 @@ void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& 
    }
 }
 
+void StochPresolverBase::countSingletonRows(int& n_singletons_equality, int& n_singletons_inequality) const
+{
+	countSingletonRowsSystem(n_singletons_equality, EQUALITY_SYSTEM);
+	countSingletonRowsSystem(n_singletons_inequality, INEQUALITY_SYSTEM);
+}
+
+void StochPresolverBase::countSingletonRowsSystem(int& n_singletons, SystemType system_type) const
+{
+	n_singletons = 0;
+
+	StochVector& nnz_vec = (system_type == EQUALITY_SYSTEM) ? *presData.nRowElemsA : *presData.nRowElemsC;
+	assert(nnz_vec.vec);
+
+	/* root node */
+	SimpleVector& nnz_b0 = dynamic_cast<SimpleVector&>(*nnz_vec.vec);
+	for(long long i = 0; i < nnz_b0.length(); ++i)
+		if(nnz_b0[i] == 1.0)
+			n_singletons++;
+
+	if(nnz_vec.vecl)
+	{
+		SimpleVector& nnz_bl = dynamic_cast<SimpleVector&>(*nnz_vec.vecl);
+		for(long long i = 0; i < nnz_bl.length(); ++i)
+			if(nnz_bl[i] == 1.0)
+				n_singletons++;
+	}
+
+	for(size_t i = 0; i < nnz_vec.children.size(); ++i)
+	{
+		SimpleVector& nnz_al = dynamic_cast<SimpleVector&>(*nnz_vec.children[i]->vec);
+		for(long long i = 0; i < nnz_al.length(); ++i)
+			if(nnz_al[i] == 1.0)
+				n_singletons++;
+	}
+}
+
+// todo verify nonzeros also for dynamic storage
