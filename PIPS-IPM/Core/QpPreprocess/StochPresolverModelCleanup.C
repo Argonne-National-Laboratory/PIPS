@@ -471,70 +471,12 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    /* communicate the reductions */
    if( iAmDistrib )
    {
-      StochVectorHandle red_row = (system_type == EQUALITY_SYSTEM) ? presData.redRowA : presData.redRowC;
-
       // allreduce local eliminations
       MPI_Allreduce(MPI_IN_PLACE, &n_elims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
-
-      // allreduce the linking variables columns
-      double* red_col_linking_vars = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
-      MPI_Allreduce(MPI_IN_PLACE, red_col_linking_vars, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-      // allreduce B0 row
-      double* red_row_b0 = dynamic_cast<SimpleVector*>(red_row->vec)->elements();
-      message_size = dynamic_cast<SimpleVector*>(red_row->vec)->length();
-      MPI_Allreduce(MPI_IN_PLACE, red_row_b0, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-      if( hasLinking(system_type) )
-      {
-         // allreduce the linking conss rows
-         // non-zero counters
-         double* red_row_link = dynamic_cast<SimpleVector*>(red_row->vecl)->elements();
-         message_size = dynamic_cast<SimpleVector*>(red_row->vecl)->length();
-         MPI_Allreduce(MPI_IN_PLACE, red_row_link, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-
-         // rhs lhs changes (which are actually the same, so it suffices to reduce either rhs or lhs for an
-         // INEQUALITY_SYSTEM
-         if(system_type == EQUALITY_SYSTEM)
-         {
-            assert(currEqRhsLink);
-            assert(presData.redRowA->vecl->n == currEqRhsLink->n);
-
-            MPI_Allreduce(MPI_IN_PLACE, currEqRhsAdaptionsLink, currEqRhsLink->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-            // apply changes to rhs locally
-            for(int i = 0; i < currEqRhsLink->n; ++i)
-            {
-               currEqRhsLink->elements()[i] += currEqRhsAdaptionsLink[i];
-            }
-
-            resetEqRhsAdaptionsLink();
-         }
-         else
-         {
-            assert(currIneqRhsLink);
-            assert(currIneqLhsLink);
-            assert(presData.redRowC->vecl->n == currIneqRhsLink->n);
-            assert(presData.redRowC->vecl->n == currIneqLhsLink->n);
-
-            MPI_Allreduce(MPI_IN_PLACE, currInEqRhsAdaptionsLink, currIneqRhsLink->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-            // apply changes to lhs, rhs locally
-            for(int i = 0; i < currIneqRhsLink->n; ++i)
-            {
-               currIneqRhsLink->elements()[i] += currInEqRhsAdaptionsLink[i];
-               currIneqLhsLink->elements()[i] += currInEqLhsAdaptionsLink[i];
-            }
-
-            resetIneqRhsAdaptionsLink();
-         }
-      }
    }
 
-   /* update local nnzCounters */
-   updateNnzFromReductions(system_type);
+   allreduceAndApplyNnzReductions(system_type);
+   allreduceAndApplyRhsLhsReductions(system_type);
 
    return n_elims;
 }

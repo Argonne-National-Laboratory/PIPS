@@ -1643,7 +1643,7 @@ bool StochVector::isRootNodeInSync() const
    {
       if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
       {
-         /* someone else had a higer value here */
+         /* someone else had a higher value here */
          in_sync = false;
       }
    }

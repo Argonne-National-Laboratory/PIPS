@@ -112,96 +112,84 @@ bool rootNodeInSyncSData(const sData& s_data)
    /* matrix A */
    if(!rootNodeInSyncStochGenMatrix(dynamic_cast<const StochGenMatrix&>(*s_data.A)))
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: matrix A corrupted!" << std::endl;
+      std::cout << "ERROR: matrix A corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* matrix C */
-   if(!rootNodeInSyncStochGenMatrix(dynamic_cast<const StochGenMatrix&>(*s_data.C)))
+   if( !rootNodeInSyncStochGenMatrix( dynamic_cast<const StochGenMatrix&>(*s_data.C)) )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: matrix C corrupted!" << std::endl;
+      std::cout << "ERROR: matrix C corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* objective g */
-   if(!dynamic_cast<const StochVector&>(*s_data.g).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.g).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: objective vector corrupted!" << std::endl;
+      std::cout << "ERROR: objective vector corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* rhs equality bA */
-   if(!dynamic_cast<const StochVector&>(*s_data.bA).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.bA).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: rhs of A corrupted!" << std::endl;
+      std::cout << "ERROR: rhs of A corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* upper bounds x bux */
-   if(!dynamic_cast<const StochVector&>(*s_data.bux).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.bux).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: upper bounds x corrupted!" << std::endl;
+      std::cout << "ERROR: upper bounds x corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* index for upper bounds x ixupp */
-   if(!dynamic_cast<const StochVector&>(*s_data.ixupp).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.ixupp).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: index upper bounds x corrupted!" << std::endl;
+      std::cout << "ERROR: index upper bounds x corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* lower bounds x blx */
-   if(!dynamic_cast<const StochVector&>(*s_data.blx).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.blx).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: lower bounds x corrupted!" << std::endl;
+      std::cout << "ERROR: lower bounds x corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* index for lower bounds x ixlow */
-   if(!dynamic_cast<const StochVector&>(*s_data.ixlow).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.ixlow).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: index lower bounds x corrupted!" << std::endl;
+      std::cout << "ERROR: index lower bounds x corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* upper bounds C bu */
-   if(!dynamic_cast<const StochVector&>(*s_data.bu).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.bu).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: rhs C corrupted!" << std::endl;
+      std::cout << "ERROR: rhs C corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* index upper bounds C icupp */
-   if(!dynamic_cast<const StochVector&>(*s_data.icupp).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.icupp).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: index rhs C corrupted!" << std::endl;
+      std::cout << "ERROR: index rhs C corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* lower bounds C bl */
-   if(!dynamic_cast<const StochVector&>(*s_data.bl).isRootNodeInSync())
+   if( !dynamic_cast<const StochVector&>(*s_data.bl).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: lower bounds C corrupted!" << std::endl;
+      std::cout << "ERROR: lower bounds C corrupted!" << std::endl;
       in_sync = false;
    }
 
    /* index for lower bounds C iclow */
-   if(!dynamic_cast<const StochVector&>(*s_data.iclow).isRootNodeInSync() )
+   if( !dynamic_cast<const StochVector&>(*s_data.iclow).isRootNodeInSync() )
    {
-      if(my_rank == 0)
-         std::cout << "ERROR: index lower bounds C corrupted!" << std::endl;
+      std::cout << "ERROR: index lower bounds C corrupted!" << std::endl;
       in_sync = false;
    }
 

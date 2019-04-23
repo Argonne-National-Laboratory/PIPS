@@ -27,15 +27,14 @@ private:
 
    void procSingletonRowRoot(SystemType system_type);
    void procSingletonRowChild(int it, int& n_singleton_sys, int& n_singleton_other_sys, SystemType system_type);
-   void StochPresolverSingletonRows::procSingletonRowChildNonLinking(int node, SystemType system_type, std::vector<COLUMNTOADAPT> linking_cols_to_adapt);
 
-   void procSingletonRowChildBmat(int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR,
-         SystemType system_type);
+   void procSingletonRowChildBmat(int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR, SystemType system_type);
    void removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
 
-   void processSingletonBlock(SystemType system_type, BlockType block_type, int node)
+   void processSingletonBlock(SystemType system_type, BlockType block_type, int node);
 
-   void calculateNewBoundsOnVariable(double& newxlow, double& newxupp, int rowIdx, double aik) const;
+   void calculateNewBoundsOnVariable(double& new_xlow, double& new_xupp, const double& iclow, const double& clow,
+         const double& icupp, const double& cupp, double aik) const;
 
    void updateLinkingVarsBounds();
    void getValuesForSR(SparseStorageDynamic const & storage, int rowIdx, int& colIdx, double& aik) const;

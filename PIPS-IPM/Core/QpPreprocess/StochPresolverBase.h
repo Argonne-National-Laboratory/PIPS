@@ -63,7 +63,7 @@ protected:
    static const double tolerance4 = 1.0e-12; // for variable fixing
    static const double limit1 = 1.0e3;   // for bound strengthening
    static const double limit2 = 1.0e8;   // for bound strengthening
-   static const int maxIterSR = 1;
+   static const int maxIterSR = 10;
    static const double tol_compare_double = 1.0e-8;
 
    /* not owned by the class itself - given from the outside */
@@ -224,7 +224,7 @@ protected:
    void adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR);
 
    int colAdaptLinkVars(int it, SystemType system_type);
-   int colAdaptF0(SystemType system_type);
+   int colAdaptBl0(SystemType system_type);
 
    bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
@@ -249,6 +249,16 @@ protected:
    void countSingletonRows(int& n_singletons_equality, int& n_singletons_inequality) const;
    void countSingletonRowsSystem(int& n_singletons, SystemType system_type) const;
 
+   void allreduceAndApplyNnzReductions(SystemType system_type);
+   void allreduceAndApplyRhsLhsReductions(SystemType system_type);
+   void allreduceAndUpdateVarBounds();
+private:
+   void setVarboundsToInftyForAllreduce() const;
+protected:
+
+   /* deletes variable with index col_idx in node from both systems - only for non-linking variables */
+   void deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value);
+   void deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val);
 };
 
 

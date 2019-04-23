@@ -96,7 +96,9 @@ bool PresolveData::combineColAdaptParent()
    bool iAmDistrib = false;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   if( world_size > 1) iAmDistrib = true;
+
+   if( world_size > 1)
+      iAmDistrib = true;
 
    if( iAmDistrib )
    {
@@ -119,7 +121,7 @@ bool PresolveData::combineColAdaptParent()
       int lenghtGlobal = recvcounts[0];
       int* displs = new int[world_size];
       displs[0] = 0;
-      for(int i=1; i<world_size; i++)
+      for(int i = 1; i < world_size; i++)
       {
          lenghtGlobal += recvcounts[i];
          displs[i] = displs[i-1] + recvcounts[i-1];
@@ -148,20 +150,20 @@ bool PresolveData::combineColAdaptParent()
 
    // Sort colIndicesGlobal (and valuesGlobal accordingly), remove duplicates and find infeasibilities
    std::sort(colAdaptParent.begin(), colAdaptParent.end(), col_is_smaller());
-   for(int i=1; i<getNumberColAdParent(); i++)
+   for(int i = 1; i < getNumberColAdParent(); i++)
       assert( getColAdaptParent(i-1).colIdx <= getColAdaptParent(i).colIdx);
 
    if(getNumberColAdParent() > 0)
    {
       int colIdxCurrent = getColAdaptParent(0).colIdx;
       double valCurrent = getColAdaptParent(0).val;
-      for(int i=1; i<getNumberColAdParent(); i++)
+      for(int i = 1; i < getNumberColAdParent(); i++)
       {
          if( getColAdaptParent(i).colIdx == colIdxCurrent )
          {
             if( getColAdaptParent(i).val != valCurrent )
             {
-               cout<<"Detected infeasibility (in variable) "<<colIdxCurrent<<endl;
+               std::cout << "Detected infeasibility (in variable) " << colIdxCurrent << std::endl;
                return false;
             }
             else
@@ -181,8 +183,10 @@ bool PresolveData::combineColAdaptParent()
    return true;
 }
 
+// todo
 bool PresolveData::reductionsEmpty()
 {
+
 
 
 	return true;
