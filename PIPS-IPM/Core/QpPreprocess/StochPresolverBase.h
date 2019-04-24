@@ -72,7 +72,6 @@ protected:
    // pointers to the currently needed matrices and vectors for presolving
    sData* presProb;
 
-
    SparseStorageDynamic* currAmat;
    SparseStorageDynamic* currAmatTrans;
    SparseStorageDynamic* currBmat;
@@ -218,10 +217,10 @@ protected:
    void synchronizeSum(int& first, int& second) const;
 
 
-   void adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR);
-   void adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type);
+   void adaptChildBmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type, int& newSR);
+   void adaptChildBlmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type);
    int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
-   void adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR);
+   void adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNFORDELETION> const & colAdaptBblock, int& newSR);
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptBl0(SystemType system_type);
@@ -229,7 +228,7 @@ protected:
    bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;
    int fixVarInChildBlockAndStore(int colIdx, double val, SystemType system_type,
-         std::vector<COLUMNTOADAPT> & colAdaptLinkBlock);
+         std::vector<COLUMNFORDELETION> & colAdaptLinkBlock);
    void storeColValInColAdaptParent(int colIdx, double value);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
       double* ixlow, double* ixupp, double* xlow, double* xupp) const;

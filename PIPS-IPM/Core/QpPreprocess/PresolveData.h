@@ -16,11 +16,11 @@ typedef struct
 {
    int colIdx;
    double val;
-} COLUMNTOADAPT;
+} COLUMNFORDELETION;
 
 struct col_is_smaller
 {
-    bool operator()(const COLUMNTOADAPT& x, const COLUMNTOADAPT& y) const
+    bool operator()(const COLUMNFORDELETION& x, const COLUMNFORDELETION& y) const
     {
         return x.colIdx < y.colIdx;
     }
@@ -28,8 +28,10 @@ struct col_is_smaller
 
 class PresolveData
 {
+
    public:
       sData* presProb;
+
 
       // number of non-zero elements of each row / column
       StochVectorHandle nRowElemsA;
@@ -41,9 +43,8 @@ class PresolveData
       StochVectorHandle redRowC;
       StochVectorHandle redCol;
 
-      //StochGenMatrix& Apres;
-      //StochGenMatrix& Cpres;
 
+   public:
       PresolveData(const sData* sorigprob);
       ~PresolveData();
 
@@ -54,32 +55,15 @@ class PresolveData
       bool reductionsEmpty();
       void resetRedCounters();
 
-      void resetBlocks();
       // todo getter, setter for element access of nnz counter???
       int getNChildren() const;
       double getObjOffset() const;
       double addObjOffset(double addOffset);
       void setObjOffset(double offset);
 
-      int getSingletonRow(int i) const;
-      int getNumberSR() const;
-      void addSingletonRow(int value);
-      void setSingletonRow(int i, int value);
-      void clearSingletonRows();
-      int getSingletonRowIneq(int i) const;
-      int getNumberSRIneq() const;
-      void addSingletonRowIneq(int value);
-      void setSingletonRowIneq(int i, int value);
-      void clearSingletonRowsIneq();
-
-      void setBlocks(int i, double value);
-      double getBlocks(int i) const;
-      void setBlocksIneq(int i, double value);
-      double getBlocksIneq(int i) const;
-
-      COLUMNTOADAPT getColAdaptParent(int i) const;
+      COLUMNFORDELETION getColAdaptParent(int i) const;
       int getNumberColAdParent() const;
-      void addColToAdaptParent(COLUMNTOADAPT colToAdapt);
+      void addColToAdaptParent(COLUMNFORDELETION colToAdapt);
       void clearColAdaptParent();
 
    private:
@@ -88,22 +72,7 @@ class PresolveData
       // objective offset created by presolving
       double objOffset;
 
-      // variables used for singleton row elimination:
-      /** vector containing the row indices of singleton rows */
-      std::vector<int> singletonRows;
-      std::vector<int> singletonRowsIneq;
-
-      /** array of length nChildren+3 to store start indices for singletonRows
-       * that correspond to the correct block. As blocks[0] represents the parent block,
-       * the child block 'it' is accessed using the index 'it+1'.
-       * The linking-row block is accessed using the index nChildren+2. */
-      int* blocks;
-      int* blocksIneq;
-
-      /** vector containing the column indices of entries that were found during the
-       * singleton row routine. Along with the column index, the value needed for
-       * adaptation is stored. */
-      std::vector<COLUMNTOADAPT> colAdaptParent;
+      std::vector<COLUMNFORDELETION> linkingVariablesMarkedForDeletion;
 
       // initialize row and column nnz counter
       void initNnzCounter();

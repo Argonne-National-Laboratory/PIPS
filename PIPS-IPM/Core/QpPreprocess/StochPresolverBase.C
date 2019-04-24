@@ -211,7 +211,6 @@ void StochPresolverBase::updateNnzUsingReductions( StochVectorHandle nnz_vector,
    }
 }
 
-
 /** Update the nnzVector by subtracting the reductions vector. */
 void StochPresolverBase::updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const
 {
@@ -1197,7 +1196,7 @@ void StochPresolverBase::synchronizeSum(int& first, int& second) const
  * Given a vector<COLUMNTOADAPT>, this routine goes through all columns inside and removes them
  * from the current Bmat block. Depending on the system_type, rhs (and lhs) are updated.
  */
-void StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type, int& newSR )
+void StochPresolverBase::adaptChildBmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type, int& newSR )
 {
    for(int i=0; i<(int)colAdaptBlock.size(); i++)
    {
@@ -1235,7 +1234,7 @@ void StochPresolverBase::adaptChildBmat( std::vector<COLUMNTOADAPT> const & colA
    }
 }
 
-void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNTOADAPT> const & colAdaptBlock, SystemType system_type)
+void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type)
 {
    assert(currBlmat != NULL);
 
@@ -1445,7 +1444,7 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
 
 /** Given the vector<COLUMNTOADAPT>, both the block Bmat and Blat (if existent) are updated accordingly.
  */
-void StochPresolverBase::adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNTOADAPT> const & colAdaptBblock, int& newSR )
+void StochPresolverBase::adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNFORDELETION> const & colAdaptBblock, int& newSR )
 {
    // Bmat blocks
    adaptChildBmat(colAdaptBblock, system_type, newSR);
@@ -1648,7 +1647,7 @@ bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, dou
  * or the corresponding equivalent (if INEQUALITY_SYSTEM).
  */
 int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, SystemType system_type,
-      std::vector<COLUMNTOADAPT> & colAdaptLinkBlock )
+      std::vector<COLUMNFORDELETION> & colAdaptLinkBlock )
 {
    assert( currgChild );
    assert( colIdx >= 0 && colIdx < currgChild->n );
@@ -1659,7 +1658,7 @@ int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, Syst
    // adapt in the currBmat/currBmatTrans by removing column colIdx and store in colADaptLinkBlock for G, F, B:
    int newSR = adaptChildBmatCol(colIdx, val, system_type);
 
-   COLUMNTOADAPT colWithVal = {colIdx, val};
+   COLUMNFORDELETION colWithVal = {colIdx, val};
    colAdaptLinkBlock.push_back(colWithVal);
 
    return newSR;
@@ -1671,7 +1670,7 @@ int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, Syst
  */
 void StochPresolverBase::storeColValInColAdaptParent(int colIdx, double value)
 {
-   const COLUMNTOADAPT colWithVal = {colIdx, value};
+   const COLUMNFORDELETION colWithVal = {colIdx, value};
 
    bool uniqueAdditionToOffset = true;
 

@@ -26,7 +26,7 @@ private:
    double computeNewBound(bool rhs, double activity, double matrixEntry, int rowIdx, SystemType system_type);
    void strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
          int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type, bool atRoot,
-         std::vector<COLUMNTOADAPT>* colAdaptLinkBlock);
+         std::vector<COLUMNFORDELETION>* colAdaptLinkBlock);
    void setNewBoundsIfTighter(int index, double new_low, double new_upp,
          SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp);
    bool checkNewBoundTightens(bool uppLow, int colIdx, double newBound,

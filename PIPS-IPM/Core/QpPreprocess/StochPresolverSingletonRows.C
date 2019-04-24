@@ -69,7 +69,7 @@ void StochPresolverSingletonRows::applyPresolving()
       {
          assert(n_singleton_equality == 0);
 
-         // main method:
+         /* main method: */
          doSingletonRows(n_singleton_inequality, n_singleton_equality,
                INEQUALITY_SYSTEM);
       }

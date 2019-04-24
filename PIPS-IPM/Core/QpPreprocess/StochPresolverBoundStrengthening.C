@@ -140,7 +140,7 @@ void StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_t
 
 void StochPresolverBoundStrengthening::doBoundStrengthChild(int it, SystemType system_type)
 {
-   std::vector<COLUMNTOADAPT> colAdaptLinkBlock;
+   std::vector<COLUMNFORDELETION> colAdaptLinkBlock;
    for(int i=0; i<currAmat->m; i++) // i ~ rowIndex
    {
       // First, compute minActivity and maxActivity of the whole row (per block):
@@ -211,7 +211,7 @@ double StochPresolverBoundStrengthening::computeNewBound(bool rhs, double activi
  */
 void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
       int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type, bool atRoot,
-      std::vector<COLUMNTOADAPT>* colAdaptLinkBlock)
+      std::vector<COLUMNFORDELETION>* colAdaptLinkBlock)
 {
    assert( rowIdx >= 0 && rowIdx < matrix.m );
 

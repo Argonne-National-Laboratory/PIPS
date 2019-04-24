@@ -28,8 +28,8 @@ private:
    void procSingletonRowRoot(SystemType system_type);
    void procSingletonRowChild(int it, int& n_singleton_sys, int& n_singleton_other_sys, SystemType system_type);
 
-   void procSingletonRowChildBmat(int it, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, int& newSR, SystemType system_type);
-   void removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNTOADAPT> & colAdaptLinkBlock, SystemType system_type, int& newSR);
+   void procSingletonRowChildBmat(int it, std::vector<COLUMNFORDELETION> & colAdaptLinkBlock, int& newSR, SystemType system_type);
+   void removeSingleRowEntryChildBmat( int rowIdx, std::vector<COLUMNFORDELETION> & colAdaptLinkBlock, SystemType system_type, int& newSR);
 
    void processSingletonBlock(SystemType system_type, BlockType block_type, int node);
 
