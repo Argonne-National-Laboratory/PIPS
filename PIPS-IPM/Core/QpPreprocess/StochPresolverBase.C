@@ -312,8 +312,6 @@ void StochPresolverBase::updateLinkingVarsBlocks(int& newSREq, int& newSRIneq)
          const int colIdx = presData.getColAdaptParent(i).colIdx;
          const double value = presData.getColAdaptParent(i).val;
          indivObjOffset += currgParent->elements()[colIdx] * value;
-
-         currgParent->elements()[colIdx] = 0.0;
       }
    }
 
@@ -1004,7 +1002,7 @@ bool StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& stora
    int end = storage.rowptr[rowIdx].end;
    int start = storage.rowptr[rowIdx].start;
 
-   for( i=start; i<end; i++)
+   for( i = start; i < end; i++)
    {
       if( storage.jcolM[i] == colIdx )
          break;
@@ -1012,9 +1010,9 @@ bool StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& stora
    if( i < 0 || i == end )
       return false;
    m = storage.M[i];
-   std::swap(storage.M[i],storage.M[end-1]);
-   std::swap(storage.jcolM[i],storage.jcolM[end-1]);
-   storage.rowptr[rowIdx].end --;
+   std::swap(storage.M[i], storage.M[end-1]);
+   std::swap(storage.jcolM[i], storage.jcolM[end-1]);
+   storage.rowptr[rowIdx].end--;
 
    return true;
 }
@@ -1084,6 +1082,8 @@ void StochPresolverBase::removeRowInBblock(int rowIdx, SparseStorageDynamic* Bbl
       removeEntryInDynamicStorage(*BblockTrans, colIdx, rowIdx, tmp);
       // decrement nnzColChild[colIdx]:
       nnzColChild->elements()[colIdx]--;
+
+      assert( nnzColChild->elements()[colIdx] >= 0);
    }
    // delete row in Bblock:
    clearRow(*Bblock, rowIdx);
@@ -1192,6 +1192,7 @@ void StochPresolverBase::synchronizeSum(int& first, int& second) const
    }
 }
 
+// not used by presolvers directly
 /*
  * Given a vector<COLUMNTOADAPT>, this routine goes through all columns inside and removes them
  * from the current Bmat block. Depending on the system_type, rhs (and lhs) are updated.
@@ -1221,21 +1222,24 @@ void StochPresolverBase::adaptChildBmat( std::vector<COLUMNFORDELETION> const & 
 
          }
          currRedRow->elements()[rowIdx] ++;
-         currNnzRow->elements()[rowIdx] --;
-         currNnzColChild->elements()[colIdx] --;
-         currRedColChild->elements()[colIdx] ++;
+         currRedColChild->elements()[colIdx]++;
 
-         if( currNnzRow->elements()[rowIdx] == 1.0 )
+         if( currNnzRow->elements()[rowIdx] - currRedRow->elements()[i] == 1.0 )
             newSR++;
 
-         assert( currNnzColChild->elements()[colIdx] >= 0.0 );
+         assert( currNnzColChild->elements()[colIdx] - currRedColChild->elements()[colIdx] >= 0.0 );
       }
+
       clearRow(*currBmatTrans, colIdx);
    }
 }
 
 void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type)
 {
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+
    assert(currBlmat != NULL);
 
    if( system_type == EQUALITY_SYSTEM )
@@ -1271,13 +1275,19 @@ void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNFORDELETION> const &
                currInEqRhsAdaptionsLink[rowIdx] -= m * val;
             if( currIclowLink->elements()[rowIdx] != 0.0 )
                currInEqLhsAdaptionsLink[rowIdx] -=  m * val;
-
          }
-         currRedRowLink->elements()[rowIdx] ++;
-         currNnzColChild->elements()[colIdx] --;
-         currRedColChild->elements()[colIdx] ++;
 
-         assert( currNnzColChild->elements()[colIdx] >= 0.0 );
+         if( iAmDistrib)
+         {
+            if( myRank == 0)
+            currRedRowLink->elements()[rowIdx]++;
+         }
+         else
+            currRedRowLink->elements()[rowIdx]++;
+         currRedColChild->elements()[colIdx]++;
+
+         assert( currNnzColChild->elements()[colIdx] - currRedColChild->elements()[colIdx] >= 0.0 );
+         assert( currNnzRowLink->elements()[rowIdx] - currRedRowLink->elements()[rowIdx] >= 0.0 );
       }
       clearRow(*currBlmatTrans, colIdx);
    }
@@ -1288,8 +1298,11 @@ void StochPresolverBase::adaptChildBlmat( std::vector<COLUMNFORDELETION> const &
  * Adapt the rhs, the nnzRow, the nnzCol and all concerned entries in Bmat and BmatTransposed.
  * Return the number of newly found singleton rows.
  */
-int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType system_type)
+int StochPresolverBase::adaptChildBmatCol(bool atRoot, int colIdx, double val, SystemType system_type)
 {
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
    assert(currBmat && currBmatTrans && currNnzColChild && currRedColChild && currNnzRow && currRedRow);
    assert( colIdx >= 0 && colIdx < currNnzColChild->n );
    int newSingletonRows = 0;
@@ -1312,11 +1325,22 @@ int StochPresolverBase::adaptChildBmatCol(int colIdx, double val, SystemType sys
             currIneqLhs->elements()[rowIdxB] -=  m * val;
       }
 
-      currNnzColChild->elements()[colIdx] --;
-      currRedColChild->elements()[colIdx] ++;
-      currNnzRow->elements()[rowIdxB] --;
-      currRedRow->elements()[rowIdxB] ++;
-      assert( currNnzColChild->elements()[colIdx] >= 0.0 && currNnzRow->elements()[rowIdxB] >= 0.0 );
+      if(atRoot)
+      {
+         if(myRank == 0)
+         {
+            currRedColChild->elements()[colIdx] ++;
+            currRedRow->elements()[rowIdxB] ++;
+         }
+      }
+      else
+      {
+         currRedColChild->elements()[colIdx] ++;
+         currRedRow->elements()[rowIdxB] ++;
+      }
+
+      assert( currNnzColChild->elements()[colIdx] - currRedColChild->elements()[colIdx]  >= 0.0
+            && currNnzRow->elements()[rowIdxB] - currRedRow->elements()[rowIdxB] >= 0.0 );
 
       if(currNnzRow->elements()[rowIdxB] == 1)
          newSingletonRows++;
@@ -1349,8 +1373,6 @@ void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, do
    /* adjust objective function */
    updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
    indivObjOffset += currgChild->elements()[col_idx] * fixation_value;
-
-   currgChild->elements()[col_idx] = 0.0; // todo : necessary/good/usefull?
 }
 
 void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val)
@@ -1391,17 +1413,21 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
          {
             rhs->elements()[rowIdx] -= m * val;
 
-            // todo does not work from inequ sys - the rhs is not updated then
-//            /* fixation must be valid */
-//            if( nnz_row->elements()[col_idx] - curr_row_red->elements()[rowIdx] == 1 )
-//            {
-//               if( !PIPSisZero(rhs->elements()[rowIdx]) )
-//               {
-//                  std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value " << val << "\trhs " << rhs->elements()[rowIdx] << "\tmat" << m << std::endl;
-//                  std::cout << "Problem infeasible" << std::endl;
+            /* fixation must be valid */
+            if( nnz_row->elements()[col_idx] - curr_row_red->elements()[rowIdx] == 1 )
+            {
+               if( !PIPSisZero(rhs->elements()[rowIdx]) )
+               {
+                  std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value " << val << "\trhs " << rhs->elements()[rowIdx] << "\tmat" << m << std::endl;
+                  std::cout << val << "\t" << m << std::endl;
+                  if(icupp->elements()[rowIdx])
+                     std::cout << "upper bound: " << cupp->elements()[rowIdx] << std::endl;
+                  if(iclow->elements()[rowIdx])
+                     std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
+                  std::cout << "Problem infeasible" << std::endl;
 //                  abortInfeasible(MPI_COMM_WORLD );
-//               }
-//            }
+               }
+            }
          }
 
       }
@@ -1416,19 +1442,29 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
          }
          else
          {
+
             if( icupp->elements()[rowIdx] != 0.0 )
                cupp->elements()[rowIdx] -= m * val;
             if( iclow->elements()[rowIdx] != 0.0 )
+            {
+               std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
                clow->elements()[rowIdx] -= m * val;
+            }
 
             if(nnz_row->elements()[col_idx] - curr_row_red->elements()[rowIdx] == 1)
             {
-               if( (icupp->elements()[rowIdx] && !PIPSisLE(0.0, cupp->elements()[rowIdx]))
-                     || (iclow->elements()[rowIdx] && !PIPSisLE(clow->elements()[rowIdx], 0.0)))
+            // todo does not work from inequ sys - the rhs is not updated then
+               if( (icupp->elements()[rowIdx] == 1 && !PIPSisLE(0.0, cupp->elements()[rowIdx]))
+                     || (iclow->elements()[rowIdx] == 1 && !PIPSisLE(clow->elements()[rowIdx], 0.0)))
                {
                   std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value" << std::endl;
+                  std::cout << val << "\t" << m << std::endl;
+                  if(icupp->elements()[rowIdx])
+                     std::cout << "upper bound: " << cupp->elements()[rowIdx] << std::endl;
+                  if(iclow->elements()[rowIdx])
+                     std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
                   std::cout << "Problem infeasible" << std::endl;
-                  abortInfeasible(MPI_COMM_WORLD);
+//                  abortInfeasible(MPI_COMM_WORLD);
                }
             }
          }
@@ -1575,7 +1611,7 @@ int StochPresolverBase::colAdaptBl0(SystemType system_type)
 }
 
 bool StochPresolverBase::newBoundsImplyInfeasible(double new_xlow, double new_xupp, int colIdx,
-      double* ixlow, double* ixupp, double* xlow, double* xupp) const
+      const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const
 {
    assert( colIdx >= 0 );
    if( ( ixlow[colIdx] != 0.0 && PIPSisLT(new_xupp, xlow[colIdx]) )
@@ -1590,9 +1626,10 @@ bool StochPresolverBase::newBoundsImplyInfeasible(double new_xlow, double new_xu
 }
 
 bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
-      double* ixlow, double* ixupp, double* xlow, double* xupp) const
+      const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const
 {
    assert( colIdx >= 0 );
+
    if( PIPSisEQ(newxlow, newxupp)
          || ( ixlow[colIdx] != 0.0 && PIPSisEQ(xlow[colIdx], newxupp) ))
    {
@@ -1607,23 +1644,27 @@ bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, dou
 
    // if relative difference between newxlow and newxupp is below a threshold, fix the variable:
    double upperbound = newxupp;
-   if( ixupp[colIdx] != 0.0 && xupp[colIdx]<newxupp )
+
+   if( ixupp[colIdx] != 0.0 && xupp[colIdx] < newxupp )
       upperbound = xupp[colIdx];
+
    double lowerbound = newxlow;
-   if( ixlow[colIdx] != 0.0 && xlow[colIdx]>newxlow )
+   if( ixlow[colIdx] != 0.0 && xlow[colIdx] > newxlow )
       lowerbound = xlow[colIdx];
+
    double absmax = std::max(fabs(upperbound), fabs(lowerbound) );
    double absdiff = fabs( upperbound - lowerbound );
+
    if( absdiff / absmax < tolerance4 )
    {
       // verify if one of the bounds is integer:
       double intpart;
-      if( modf(lowerbound, &intpart) == 0.0 )
+      if( std::modf(lowerbound, &intpart) == 0.0 )
       {
          value = lowerbound;
          return true;
       }
-      else if( modf(upperbound, &intpart) == 0.0 )
+      else if( std::modf(upperbound, &intpart) == 0.0 )
       {
          value = upperbound;
          return true;
@@ -1646,7 +1687,7 @@ bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, dou
  * currNnzColChild, currRedColChild, currNnzRow, currRedRow and currEqRhs (if EQUALITY_SYSTEM)
  * or the corresponding equivalent (if INEQUALITY_SYSTEM).
  */
-int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, SystemType system_type,
+int StochPresolverBase::fixVarInChildBlockAndStore( bool atRoot, int colIdx, double val, SystemType system_type,
       std::vector<COLUMNFORDELETION> & colAdaptLinkBlock )
 {
    assert( currgChild );
@@ -1656,7 +1697,7 @@ int StochPresolverBase::fixVarInChildBlockAndStore( int colIdx, double val, Syst
    indivObjOffset += currgChild->elements()[colIdx] * val;
 
    // adapt in the currBmat/currBmatTrans by removing column colIdx and store in colADaptLinkBlock for G, F, B:
-   int newSR = adaptChildBmatCol(colIdx, val, system_type);
+   int newSR = adaptChildBmatCol(atRoot, colIdx, val, system_type);
 
    COLUMNFORDELETION colWithVal = {colIdx, val};
    colAdaptLinkBlock.push_back(colWithVal);

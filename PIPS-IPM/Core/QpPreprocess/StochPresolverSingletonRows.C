@@ -56,7 +56,7 @@ void StochPresolverSingletonRows::applyPresolving()
    int iter = 0;
 
    // main loop:
-   while( n_singleton_equality + n_singleton_inequality > 0 && iter < maxIterSR )
+   while(n_singleton_equality + n_singleton_inequality > 0 && iter < maxIterSR )
    {
       /* eliminate all singleton rows in equality system */
       if( n_singleton_equality > 0 )
@@ -67,7 +67,7 @@ void StochPresolverSingletonRows::applyPresolving()
       }
       else if( n_singleton_inequality > 0 )
       {
-         assert(n_singleton_equality == 0);
+         //assert(n_singleton_equality == 0);
 
          /* main method: */
          doSingletonRows(n_singleton_inequality, n_singleton_equality,
@@ -319,6 +319,8 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                abortInfeasible(MPI_COMM_WORLD );
             else if( newBoundsFixVariable(val, new_xlow, new_xupp, colIdx, ixlow, ixupp, xlow, xupp) )
             {
+               if(myRank == 0)
+                  std::cout << val << std::endl;
                /* for Amat we store deletions - collect them and apply them later */
                if( node == -1 || block_type == LINKING_VARS_BLOCK)
                {
@@ -365,6 +367,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
 
 bool StochPresolverSingletonRows::tightenBounds(double new_xlow, double new_xupp, double& ixlow, double& old_xlow, double& ixupp, double& old_xupp) const
 {
+   assert( !PIPSisEQ(new_xlow, new_xupp) );
    bool tightened = false;
 
    if( ixlow != 0.0 && PIPSisLT(old_xlow, new_xlow) )
@@ -390,12 +393,15 @@ bool StochPresolverSingletonRows::tightenBounds(double new_xlow, double new_xupp
       ixupp = 1.0;
       tightened = true;
    }
+
+   assert( !PIPSisEQ(new_xlow, new_xupp) );
    return tightened;
 }
 
 void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& new_xlow, double& new_xupp, const double& iclow, const double& clow,
       const double& icupp, const double& cupp, double aik) const
 {
+
    assert( !PIPSisZero(aik) );
 
    if( PIPSisLT(0.0, aik) )
@@ -412,6 +418,8 @@ void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& new_xlow,
       if( iclow != 0.0 )
          new_xupp = clow / aik;
    }
+//   std::cout << "newxlow: " << new_xlow << "\tnewxupp: " << new_xupp << "\ticlow: " << iclow << "\ticupp: " << icupp <<
+//         "\tcupp: " << cupp << "\tclow: " << clow << "\taik: " << aik << std::endl;
 }
 
 /** Should be called right after doSingletonRowsC() or another method that stores

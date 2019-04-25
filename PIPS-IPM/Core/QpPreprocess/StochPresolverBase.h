@@ -216,22 +216,23 @@ protected:
    void synchronize(int& value) const;
    void synchronizeSum(int& first, int& second) const;
 
-
+private:
    void adaptChildBmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type, int& newSR);
+   int adaptChildBmatCol(bool atRoot, int colIdx, double val, SystemType system_type);
+public:
    void adaptChildBlmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type);
-   int adaptChildBmatCol(int colIdx, double val, SystemType system_type);
    void adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNFORDELETION> const & colAdaptBblock, int& newSR);
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptBl0(SystemType system_type);
 
    bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
-      double* ixlow, double* ixupp, double* xlow, double* xupp) const;
-   int fixVarInChildBlockAndStore(int colIdx, double val, SystemType system_type,
+      const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
+   int fixVarInChildBlockAndStore(bool atRoot, int colIdx, double val, SystemType system_type,
          std::vector<COLUMNFORDELETION> & colAdaptLinkBlock);
    void storeColValInColAdaptParent(int colIdx, double value);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
-      double* ixlow, double* ixupp, double* xlow, double* xupp) const;
+      const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
    void storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
    void combineNewBoundsParent();
    XBOUNDS getNewBoundsParent(int i) const;

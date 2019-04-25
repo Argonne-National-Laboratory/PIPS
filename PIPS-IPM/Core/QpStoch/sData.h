@@ -71,6 +71,7 @@ class sData : public QpGenData {
   void activateLinkStructureExploitation();
 
   void sync();
+  bool isRootNodeInSync() const;
 
  public:
   virtual void writeToStreamDense(ostream& out) const;

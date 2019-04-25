@@ -9,6 +9,7 @@
 #include "StochPresolverBoundStrengthening.h"
 #include <limits>
 #include <cmath>
+#include "pipsdef.h"
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData) :
@@ -26,34 +27,39 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 
 void StochPresolverBoundStrengthening::applyPresolving()
 {
+   assert(presData.reductionsEmpty());//??
+   presData.resetRedCounters();
+
+   assert(this->verifyNnzcounters());
+
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
 #ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- Before Bound Strengthening Presolving:"<<endl;
+      std::cout << "--- Before Bound Strengthening Presolving:" << std::endl;
    countRowsCols();
 #endif
 
-   if( myRank == 0 ) cout<<"Start Bound Strengthening Presolving..."<<endl;
+   if( myRank == 0 )
+      std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
    indivObjOffset = 0.0;
    clearNewBoundsParent();
 
    // root:
-   setCPforBounds(presProb->A, -1, EQUALITY_SYSTEM);
    doBoundStrengthParent( EQUALITY_SYSTEM );
-   setCPforBounds(presProb->C, -1, INEQUALITY_SYSTEM);
    doBoundStrengthParent( INEQUALITY_SYSTEM );
 
    // children:
    for( int child_it = 0; child_it < nChildren; child_it++)
    {
       // dummy child?
-      if( setCPforBounds(presProb->A, child_it, EQUALITY_SYSTEM) )
+      if( !nodeIsDummy(child_it, EQUALITY_SYSTEM) )
          doBoundStrengthChild(child_it, EQUALITY_SYSTEM);
-      if( setCPforBounds(presProb->C, child_it, INEQUALITY_SYSTEM) )
+
+      if( !nodeIsDummy(child_it, INEQUALITY_SYSTEM) )
          doBoundStrengthChild(child_it, INEQUALITY_SYSTEM);
    }
    // Update nRowLink and lhs/rhs (Linking part) of both systems:
@@ -73,6 +79,9 @@ void StochPresolverBoundStrengthening::applyPresolving()
    int newSREq = 0, newSRIneq = 0;
    updateLinkingVarsBlocks(newSREq, newSRIneq);
 
+   allreduceAndApplyNnzReductions(EQUALITY_SYSTEM);
+   allreduceAndApplyNnzReductions(INEQUALITY_SYSTEM);
+
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
@@ -90,84 +99,51 @@ void StochPresolverBoundStrengthening::applyPresolving()
 #endif
 }
 
-/**
- * Set current pointers to the necessary elements: For all cases: currAmat and currxlowParent &co.
- * For equality system currEqRhs and for inequality system currIneqRhs &co.
- * For a child it: currBmat and currxlowChild &co.
- */
-bool StochPresolverBoundStrengthening::setCPforBounds(GenMatrixHandle matrixHandle, int it, SystemType system_type)
-{
-   assert( it >= -1 && it < nChildren );
-   setCurrentPointersToNull();
-   currgParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec);
-   for(int i=0; i<currgParent->n; i++)
-      assert( std::isfinite(currgParent->elements()[i]) );
-
-   if(it >= 0)
-   {
-      if( !setCPAmatsChild( matrixHandle, it, system_type) )  // currAmat(Trans)
-         return false;
-      setCPBmatsChild( matrixHandle, it, system_type );  // currBmat(Trans)
-      setCPColumnChild(it);   //currxlowChild etc.
-      if( system_type == INEQUALITY_SYSTEM )
-         setCPRowChildInequality(it);
-      else
-         setCPRowChildEquality(it);
-      currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec);
-      for(int i=0; i<currgChild->n; i++)
-         assert( std::isfinite(currgChild->elements()[i]) );
-      currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
-   }
-   else
-   {
-      setCPAmatsRoot( matrixHandle );  //currAmat(Trans)
-      // set rhs/lhs vectors:
-      if( system_type == INEQUALITY_SYSTEM )
-         setCPRowRootIneqOnlyLhsRhs();
-      else
-         currEqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec);
-   }
-   setCPColumnRoot();   //currxlowParent etc.
-
-   return true;
-}
-
 void StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_type)
 {
-   for(int rowIdx=0; rowIdx<currAmat->m; rowIdx++)
-      strenghtenBoundsInBlock( *currAmat, false, rowIdx, 0.0, 0.0, system_type, true, NULL);
+   updatePointersForCurrentNode(-1, system_type);
+
+   for(int rowIdx = 0; rowIdx < currBmat->m; rowIdx++)
+      strenghtenBoundsInBlock( *currBmat, false, rowIdx, 0.0, 0.0, system_type, true, NULL);
 }
 
 void StochPresolverBoundStrengthening::doBoundStrengthChild(int it, SystemType system_type)
 {
+   assert(it > -1);
+
+   updatePointersForCurrentNode(it, system_type);
+
    std::vector<COLUMNFORDELETION> colAdaptLinkBlock;
-   for(int i=0; i<currAmat->m; i++) // i ~ rowIndex
+
+   for(int i=0; i < currAmat->m; i++) // i ~ rowIndex
    {
       // First, compute minActivity and maxActivity of the whole row (per block):
       double partMinActivityA = 0.0, partMaxActivityA = 0.0, partMinActivityB = 0.0, partMaxActivityB = 0.0;
-      computeActivityBlockwise(*currAmat, i, -1, partMinActivityA, partMaxActivityA,
-            *currxlowParent, *currIxlowParent, *currxuppParent, *currIxuppParent);
-      computeActivityBlockwise(*currBmat, i, -1, partMinActivityB, partMaxActivityB,
-            *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
+      computeActivityBlockwise(*currAmat, i, -1, partMinActivityA, partMaxActivityA, *currxlowParent, *currIxlowParent, *currxuppParent, *currIxuppParent);
+      computeActivityBlockwise(*currBmat, i, -1, partMinActivityB, partMaxActivityB, *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
 
       strenghtenBoundsInBlock( *currAmat, false, i, partMinActivityB, partMaxActivityB, system_type, false, NULL);
-      strenghtenBoundsInBlock( *currBmat, true, i, partMinActivityA, partMaxActivityA, system_type, false,
-            &colAdaptLinkBlock);
+      strenghtenBoundsInBlock( *currBmat, true, i, partMinActivityA, partMaxActivityA, system_type, false, &colAdaptLinkBlock);
    }
+
    // use information in colAdaptLinkBlock to adapt the other blocks:
    // First, go through the columns in Blmat (of the same system)
    if( hasLinking(system_type) )
    {
-      updateCPforAdaptFixationsBChild( it, system_type );
+      updatePointersForCurrentNode(it, system_type);
+
       adaptChildBlmat( colAdaptLinkBlock, system_type);
    }
+
    // Second, go through the columns in Bmat and Blmat of the other system:
    SystemType other_system = EQUALITY_SYSTEM;
    if( system_type == EQUALITY_SYSTEM )
       other_system = INEQUALITY_SYSTEM;
-   updateCPforAdaptFixationsBChild( it, other_system );
 
    int tmp_newSR = 0;
+   // todo invalidates counters
+   updatePointersForCurrentNode(it, other_system);
+
    adaptOtherSystemChildB( other_system, colAdaptLinkBlock, tmp_newSR );
 }
 
@@ -176,44 +152,44 @@ void StochPresolverBoundStrengthening::doBoundStrengthChild(int it, SystemType s
  * Else, the boolean rhs defines if the lhs or the rhs of the inequality should be used as bA in the computation:
  * If rhs is true, then the right hand side cupp is used. If false, then the lhs clow is used.
  */
-double StochPresolverBoundStrengthening::computeNewBound(bool rhs, double activity, double matrixEntry, int rowIdx, SystemType system_type)
+double StochPresolverBoundStrengthening::computeNewBound(bool rhs, double activity, double matrixEntry, int rowIdx, SystemType system_type) const
 {
    assert( matrixEntry != 0.0 );
    assert( rowIdx >= 0 );
+
    if( system_type == EQUALITY_SYSTEM )
    {
-      assert( rowIdx >= 0 && rowIdx<currEqRhs->n);
+      assert( 0 <= rowIdx && rowIdx < currEqRhs->n);
       return (currEqRhs->elements()[rowIdx] - activity) / matrixEntry;
    }
-
-   // if INEQUALITY_SYSTEM:
-   assert( rowIdx >= 0 && rowIdx<currIneqRhs->n);
-   if( rhs )
+   else
    {
-      if( currIcupp->elements()[rowIdx] != 0.0 )
-         return ( currIneqRhs->elements()[rowIdx] - activity ) / matrixEntry;
-      else
-         return std::numeric_limits<double>::max() * matrixEntry; // *matrixEntry necessary for the correct sign
+      assert( 0 <= rowIdx && rowIdx < currIneqRhs->n);
+      if( rhs )
+      {
+         if( currIcupp->elements()[rowIdx] != 0.0 )
+            return (currIneqRhs->elements()[rowIdx] - activity) / matrixEntry;
+         else
+            return (matrixEntry < 0) ? -std::numeric_limits<double>::max() : std::numeric_limits<double>::max();
+      }
+      else // lhs is used
+      {
+         if( currIclow->elements()[rowIdx] != 0.0 )
+            return (currIneqLhs->elements()[rowIdx] - activity) / matrixEntry;
+         else
+            return (matrixEntry > 0) ? -std::numeric_limits<double>::max() : std::numeric_limits<double>::max();
+      }
    }
-   else  // lhs is used
-   {
-      if( currIclow->elements()[rowIdx] != 0.0 )
-         return ( currIneqLhs->elements()[rowIdx] - activity ) / matrixEntry;
-      else
-         return -std::numeric_limits<double>::max() * matrixEntry;
-   }
-
 }
 
 /**
  * Strengthen the variable bounds in the block matrix. If childBlock==true, then a block B_i or D_i is considered.
  * partMinActivity and partMaxActivity represent the partial row activity of the respective other block.
  */
-void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock,
-      int rowIdx, double partMinActivity, double partMaxActivity, SystemType system_type, bool atRoot,
-      std::vector<COLUMNFORDELETION>* colAdaptLinkBlock)
+void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock, int rowIdx, double partMinActivity,
+      double partMaxActivity, SystemType system_type, bool atRoot, std::vector<COLUMNFORDELETION>* colAdaptLinkBlock)
 {
-   assert( rowIdx >= 0 && rowIdx < matrix.m );
+   assert( 0 <= rowIdx && rowIdx < matrix.m );
 
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -257,7 +233,6 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
             newBoundUpp = computeNewBound(false, uis, a_ik, rowIdx, system_type);
       }
 
-      //PIPSdebugMessage("Row %d. At variable %d, newly found bounds are [%f, %f]. lis=%f, uis=%f \n", rowIdx, colIdx, newBoundLow, newBoundUpp, lis, uis);
       // tighten the bounds:
       if( childBlock )
       {
@@ -273,7 +248,7 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
             PIPSdebugMessage("New bounds imply fixation of variable %d to value=%f. original bounds:"
                   " [%f, %f] (if existent). Info from row %d \n", colIdx, varvalue, currxlowParent->elements()[colIdx],
                   currxuppParent->elements()[colIdx], rowIdx);
-            fixVarInChildBlockAndStore( colIdx, varvalue, system_type, *colAdaptLinkBlock);
+            fixVarInChildBlockAndStore( atRoot , colIdx, varvalue, system_type, *colAdaptLinkBlock);
          }
          else
             setNewBoundsIfTighter(colIdx, newBoundLow, newBoundUpp,
@@ -292,7 +267,7 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
          {
             PIPSdebugMessage("New bounds imply fixation of variable %d to value=%f. original bounds: [%f, %f] (if existent). \n", colIdx, varvalue, currxlowParent->elements()[colIdx], currxuppParent->elements()[colIdx]);
             // store the fixation to remove the column later after communicating
-            if( !atRoot || myRank==0 )
+            if( !atRoot || myRank == 0 )
               storeColValInColAdaptParent(colIdx, varvalue);
             // tighten the bounds to varvalue on this process:
             setNewBound(colIdx, varvalue, currxlowParent, currIxlowParent );
@@ -319,7 +294,7 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
  * checkNewBoundTightens() returns true.
  */
 void StochPresolverBoundStrengthening::setNewBoundsIfTighter(int index, double new_low, double new_upp,
-      SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp)
+      SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp) const
 {
    assert( index >= 0 && index < ilow.n );
    assert( low.n == ilow.n && iupp.n == ilow.n && upp.n == ilow.n );
@@ -343,22 +318,24 @@ void StochPresolverBoundStrengthening::setNewBoundsIfTighter(int index, double n
  * - the change in the bounds is at least limit1*epsilon = 1.0e3*1.0e-6.
  */
 bool StochPresolverBoundStrengthening::checkNewBoundTightens(bool uppLow, int colIdx, double newBound,
-      SimpleVector& ixbound, SimpleVector& xbound ) const
+      const SimpleVector& ixbound, const SimpleVector& xbound ) const
 {
    if( fabs(newBound) >= limit2 )
       return false;
-   if(uppLow)   // upper bound
+
+   if(uppLow)
    {
       if( (ixbound.elements()[colIdx] != 0.0 && xbound.elements()[colIdx] - newBound >= limit1 * feastol )
             || (ixbound.elements()[colIdx] == 0.0) )
          return true;
    }
-   else  // lower bound
+   else
    {
       if( (ixbound.elements()[colIdx] != 0.0 && newBound - xbound.elements()[colIdx] >= limit1 * feastol )
             || (ixbound.elements()[colIdx] == 0.0) )
          return true;
    }
+
    return false;
 }
 
@@ -368,14 +345,15 @@ bool StochPresolverBoundStrengthening::checkNewBoundTightens(bool uppLow, int co
  */
 void StochPresolverBoundStrengthening::strengthenLinkingVarsBounds()
 {
-   setCPColumnRoot();
+   updatePointersForCurrentNode(-1, EQUALITY_SYSTEM);
 
    // apply updated newBoundsParent to the variable bounds.
-   for(int i=0; i<getNumberNewBoundsParent(); i++)
+   for(int i=0; i < getNumberNewBoundsParent(); i++)
    {
       XBOUNDS newbounds = getNewBoundsParent(i);
       setNewBoundsIfTighter(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp, *currIxlowParent, *currxlowParent, *currIxuppParent, *currxuppParent);
    }
+
    clearNewBoundsParent();
 }
 

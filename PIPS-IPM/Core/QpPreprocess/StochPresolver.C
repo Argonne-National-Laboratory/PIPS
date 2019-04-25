@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-//#include <math.h>
+#include <limits>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -47,116 +47,6 @@ Data* StochPresolver::presolve()
    int myRank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-
-   if(myRank == 0)
-   {
-      // debugging objective
-      std::cout << "============================================================" << std::endl;
-      std::cout << "============================================================" << std::endl;
-   }
-      double absmin, absminnonzero, min, max, infnorm, onenorm, twonorm;
-      int min_idx, max_idx;
-      absmin = 0;
-      const sData* orig_prob = dynamic_cast<const sData*>(origprob);
-      StochVector* copy_g = dynamic_cast<const StochVector&>(*(orig_prob->g)).cloneFull();
-
-      StochGenMatrix* copy_mat = dynamic_cast<const StochGenMatrix&>(*orig_prob->C).cloneFull();
-//      copy_mat->Bmat->writeToStreamDense(std::cout);
-//      copy_mat->Amat->writeToStreamDense(std::cout);
-//      copy_mat->Blmat->writeToStreamDense(std::cout);
-
-//      for(size_t i = 0; i < copy_mat->children.size(); ++i)
-//      {
-//         std::cout << "============================================================" << std::endl;
-//
-//         dynamic_cast<StochGenMatrix*>(copy_mat->children[i])->Amat->writeToStreamDense(std::cout);
-//         dynamic_cast<StochGenMatrix*>(copy_mat->children[i])->Bmat->writeToStreamDense(std::cout);
-//         dynamic_cast<StochGenMatrix*>(copy_mat->children[i])->Blmat->writeToStreamDense(std::cout);
-//      }
-
-      /* lower bounds x */
-      StochVector* copy = dynamic_cast<const StochVector&>(*(orig_prob->blx)).cloneFull();
-      StochVector* copy_idx = dynamic_cast<const StochVector&>(*(orig_prob->ixlow)).cloneFull();
-      copy->componentMult(*copy_idx);
-
-      copy->absminNonZero(absminnonzero, 1e-16);
-      copy->min(min, min_idx);
-      copy->max(max, max_idx);
-      infnorm = copy->infnorm();
-      onenorm = copy->onenorm();
-      twonorm = copy->twonorm();
-
-      if(myRank == 0)
-         std::cout << "lower bounds x:" << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      copy->componentMult(*copy_g);
-
-      dynamic_cast<StochVector&>(*copy).absmin(absmin);
-      (dynamic_cast<StochVector&>(*copy)).absminNonZero(absminnonzero, 1e-16);
-      (dynamic_cast<StochVector&>(*copy)).min(min, min_idx);
-      (dynamic_cast<StochVector&>(*copy)).max(max, max_idx);
-      infnorm = (dynamic_cast<StochVector&>(*copy)).infnorm();
-      onenorm = (dynamic_cast<StochVector&>(*copy)).onenorm();
-      twonorm = (dynamic_cast<StochVector&>(*copy)).twonorm();
-      if(myRank == 0)
-      std::cout << "xl*g: " << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      /* upper bounds x */
-      copy = dynamic_cast<const StochVector&>(*(orig_prob->bux)).cloneFull();
-      copy_idx = dynamic_cast<const StochVector&>(*(orig_prob->ixupp)).cloneFull();
-      copy->componentMult(*copy_idx);
-
-      copy->absmin(absmin);
-      copy->absminNonZero(absminnonzero, 1e-16);
-      copy->min(min, min_idx);
-      copy->max(max, max_idx);
-      infnorm = copy->infnorm();
-      onenorm = copy->onenorm();
-      twonorm = copy->twonorm();
-
-      if(myRank == 0)
-         std::cout << "upper bounds x:" << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      copy->componentMult(*copy_g);
-
-      (dynamic_cast<StochVector&>(*copy)).absmin(absmin);
-      (dynamic_cast<StochVector&>(*copy)).absminNonZero(absminnonzero, 1e-16);
-      (dynamic_cast<StochVector&>(*copy)).min(min, min_idx);
-      (dynamic_cast<StochVector&>(*copy)).max(max, max_idx);
-      infnorm = (dynamic_cast<StochVector&>(*copy)).infnorm();
-      onenorm = (dynamic_cast<StochVector&>(*copy)).onenorm();
-      twonorm = (dynamic_cast<StochVector&>(*copy)).twonorm();
-      if(myRank == 0)
-      std::cout << "xu*g: " << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      /* objective */
-      copy = dynamic_cast<const StochVector&>(*(orig_prob->g)).cloneFull();
-
-      copy->absmin(absmin);
-      copy->absminNonZero(absminnonzero, 1e-16);
-      copy->min(min, min_idx);
-      copy->max(max, max_idx);
-      infnorm = copy->infnorm();
-      onenorm = copy->onenorm();
-      twonorm = copy->twonorm();
-      if(myRank == 0)
-      {
-      std::cout << "objective: " << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      std::cout << "============================================================" << std::endl;
-      std::cout << "============================================================" << std::endl;
-      }
-
    if( myRank == 0 )
       std::cout << "start stoch presolving" << std::endl;
 
@@ -172,7 +62,8 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob);
 
-   assert( rootNodeInSyncSData(*sorigprob) );
+   assert( sorigprob->isRootNodeInSync());
+   assert( presData.presProb->isRootNodeInSync() );
 
 
    /* initialize all presolvers */
@@ -186,7 +77,6 @@ Data* StochPresolver::presolve()
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
 #endif
-   presolverSR.countRowsCols();
 
 //   presData.presProb->writeToStreamDense(std::cout);
 
@@ -196,35 +86,42 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      presolverCleanup.applyPresolving();
+//      presolverCleanup.applyPresolving();
+//      assert(presolverSR.verifyNnzcounters());
+//
       presolverSR.applyPresolving();
+//      assert(presolverSR.verifyNnzcounters());
+//      assert(presolverSR.verifyNnzcounters());
+      //todo bug non-zero counters
 //      presolverBS.applyPresolving();
+//      assert(presolverSR.verifyNnzcounters());
+
 //      presolverParallelRow.applyPresolving();
+//      assert(presolverSR.verifyNnzcounters());
+//
 //      presolverSR.applyPresolving();
-      presolverCleanup.applyPresolving();
+//      assert(presolverSR.verifyNnzcounters());
+//
+//      presolverCleanup.applyPresolving();
+//      assert(presolverSR.verifyNnzcounters());
    }
 
 #ifndef NDEBUG
    assert( presolverSR.verifyNnzcounters() );
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
-#endif
    presolverCleanup.countRowsCols();
+#endif
 
-   //assert( rootNodeInSyncSData(*presData.presProb));
+   // todo not yet available for dynamic storage
+   assert( presData.presProb->isRootNodeInSync() );
 
 //      presData.presProb->writeToStreamDense(std::cout);
    // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);
 
-   assert( rootNodeInSyncSData(*finalPresData) );
-
-#if 0
-   myfile.open("after_presolving.txt");
-   finalPresData->writeToStreamDense(myfile);
-   myfile.close();
-#endif
+   assert( finalPresData->isRootNodeInSync() );
 
    // todo wrong output - n and m in sData are broken
    if( myRank==0 )
@@ -237,102 +134,6 @@ Data* StochPresolver::presolve()
    std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
 #endif
 
-
-
-   if(myRank == 0)
-   {
-      // debugging objective
-      std::cout << "============================================================" << std::endl;
-      std::cout << "============================================================" << std::endl;
-   }
-
-   StochVector* copy_xl = dynamic_cast<const StochVector&>(*(finalPresData->blx)).cloneFull();
-   StochVector* copy_xu = dynamic_cast<const StochVector&>(*(finalPresData->bux)).cloneFull();
-   StochVector* copy_xl_idx = dynamic_cast<const StochVector&>(*(finalPresData->ixlow)).cloneFull();
-   StochVector* copy_xu_idx = dynamic_cast<const StochVector&>(*(finalPresData->ixupp)).cloneFull();
-
-
-   copy_xl->componentMult(*copy_xl_idx);
-   copy_xu->componentMult(*copy_xu_idx);
-
-      /* lower bounds x */
-      (dynamic_cast<StochVector&>(*copy_xl)).absmin(absmin);
-      (dynamic_cast<StochVector&>(*copy_xl)).absminNonZero(absminnonzero, 1e-16);
-      (dynamic_cast<StochVector&>(*copy_xl)).min(min, min_idx);
-      (dynamic_cast<StochVector&>(*copy_xl)).max(max, max_idx);
-      infnorm = (dynamic_cast<StochVector&>(*copy_xl)).infnorm();
-      onenorm = (dynamic_cast<StochVector&>(*copy_xl)).onenorm();
-      twonorm = (dynamic_cast<StochVector&>(*copy_xl)).twonorm();
-      if(myRank == 0)
-      std::cout << "lower bounds x:" << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      /* upper bounds x */
-      (dynamic_cast<StochVector&>(*copy_xu)).absmin(absmin);
-      (dynamic_cast<StochVector&>(*copy_xu)).absminNonZero(absminnonzero, 1e-16);
-      (dynamic_cast<StochVector&>(*copy_xu)).min(min, min_idx);
-      (dynamic_cast<StochVector&>(*copy_xu)).max(max, max_idx);
-      infnorm = (dynamic_cast<StochVector&>(*copy_xu)).infnorm();
-      onenorm = (dynamic_cast<StochVector&>(*copy_xu)).onenorm();
-      twonorm = (dynamic_cast<StochVector&>(*copy_xu)).twonorm();
-      if(myRank == 0)
-      std::cout << "upper bounds x:" << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      /* objective */
-      (dynamic_cast<StochVector&>(*finalPresData->g)).absmin(absmin);
-      (dynamic_cast<StochVector&>(*finalPresData->g)).absminNonZero(absminnonzero, 1e-16);
-      (dynamic_cast<StochVector&>(*finalPresData->g)).min(min, min_idx);
-      (dynamic_cast<StochVector&>(*finalPresData->g)).max(max, max_idx);
-      infnorm = (dynamic_cast<StochVector&>(*finalPresData->g)).infnorm();
-      onenorm = (dynamic_cast<StochVector&>(*finalPresData->g)).onenorm();
-      twonorm = (dynamic_cast<StochVector&>(*finalPresData->g)).twonorm();
-      if(myRank == 0)
-      std::cout << "objective: " << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-      if(myRank == 0)
-      std::cout << "objective offset: " << presData.getObjOffset() << std::endl;
-
-
-      copy_g = dynamic_cast<const StochVector&>(*(finalPresData->g)).cloneFull();
-
-      copy_xl->componentMult(*copy_g);
-      copy_xu->componentMult(*copy_g);
-
-      dynamic_cast<StochVector&>(*copy_xl).absmin(absmin);
-      (dynamic_cast<StochVector&>(*copy_xl)).absminNonZero(absminnonzero, 1e-16);
-      (dynamic_cast<StochVector&>(*copy_xl)).min(min, min_idx);
-      (dynamic_cast<StochVector&>(*copy_xl)).max(max, max_idx);
-      infnorm = (dynamic_cast<StochVector&>(*copy_xl)).infnorm();
-      onenorm = (dynamic_cast<StochVector&>(*copy_xl)).onenorm();
-      twonorm = (dynamic_cast<StochVector&>(*copy_xl)).twonorm();
-      if(myRank == 0)
-      std::cout << "xl*g: " << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-      (dynamic_cast<StochVector&>(*copy_xu)).absmin(absmin);
-      (dynamic_cast<StochVector&>(*copy_xu)).absminNonZero(absminnonzero, 1e-16);
-      (dynamic_cast<StochVector&>(*copy_xu)).min(min, min_idx);
-      (dynamic_cast<StochVector&>(*copy_xu)).max(max, max_idx);
-      infnorm = (dynamic_cast<StochVector&>(*copy_xu)).infnorm();
-      onenorm = (dynamic_cast<StochVector&>(*copy_xu)).onenorm();
-      twonorm = (dynamic_cast<StochVector&>(*copy_xu)).twonorm();
-      if(myRank == 0)
-      std::cout << "xu*g: " << "\tabsmin: " << absmin << "\tabsminnonzero: " << absminnonzero
-            << "\tmin: " << min << "\tmax: " << max << "\tinfnorm: " << infnorm << "\tonenorm: " << onenorm
-            << "\ttwonorm: " << twonorm << std::endl;
-
-
-
-      if(myRank == 0)
-      std::cout << "============================================================" << std::endl;
-      if(myRank == 0)
-      std::cout << "============================================================" << std::endl;
-//   exit(1);
 
    return finalPresData;
 }
