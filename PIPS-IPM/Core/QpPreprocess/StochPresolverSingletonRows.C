@@ -23,14 +23,11 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
 
 void StochPresolverSingletonRows::applyPresolving()
 {
-
+   assert(presData.presProb->isRootNodeInSync());
+   assert(this->verifyNnzcounters());
+   assert(presData.reductionsEmpty());
    assert(true);
    // todo : assert some stuff :P
-   // assert(rootnodedatainsync)
-   //assert nnxconters correct
-   //   clearNewBoundsParent(); // rather - assert is empty...
-   assert(presData.reductionsEmpty());
-   presData.resetRedCounters();
 
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -85,11 +82,6 @@ void StochPresolverSingletonRows::applyPresolving()
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
 
-#ifdef TIMING
-   if( myRank == 0 )
-   std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
-#endif
-
    if( myRank == 0 )
       std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
 
@@ -98,6 +90,10 @@ void StochPresolverSingletonRows::applyPresolving()
       std::cout << "--- After singleton Row Presolving:" << std::endl;
    countRowsCols();
 #endif
+
+   assert(presData.presProb->isRootNodeInSync());
+   assert(this->verifyNnzcounters());
+   assert(presData.reductionsEmpty());
 }
 
 /** Does one round of singleton rows presolving for system A or C
@@ -115,21 +111,21 @@ StochPresolverSingletonRows::doSingletonRows(int& n_sing_sys, int& n_sing_other_
 
    /* processes root node - finds vars to delete and updates bounds */
    procSingletonRowRoot(system_type);
-
    /* remove singletons from children */
    for( int node = 0; node < nChildren; node++ )
    {
       procSingletonRowChild(node, n_sing_sys, n_sing_other_sys, system_type);
    }
-
    /* allreduce found deletions for linking variables */
    if( !presData.combineColAdaptParent() )
+   {
       abortInfeasible(MPI_COMM_WORLD );
+   }
    int a = 0;
    int b = 0;
    updateLinkingVarsBlocks(a, b);
 
-   /* allreduce rhs lhs changes and non-zero counters */
+   /* allreduce rhs lhs changes and rdeuction counters and apply them to non-zero counters */
    allreduceAndApplyNnzReductions(INEQUALITY_SYSTEM);
    allreduceAndApplyNnzReductions(EQUALITY_SYSTEM);
 
@@ -137,8 +133,6 @@ StochPresolverSingletonRows::doSingletonRows(int& n_sing_sys, int& n_sing_other_
 
    /* allreduce new var bounds */
    allreduceAndUpdateVarBounds();
-
-   // todo assert all reductions and stuff empty
 }
 
 /* Finds and stores fixations in colAdapParent, deletes singletons in INEQUALITY_SYSTEM and finds and stores fixations resulting from
@@ -165,7 +159,9 @@ void StochPresolverSingletonRows::procSingletonRowRoot(SystemType system_type)
 void StochPresolverSingletonRows::procSingletonRowChild(int node, int& n_singleton_sys, int& n_singleton_other_sys, SystemType system_type)
 {
    if( nodeIsDummy(node, system_type) )
+   {
       return;
+   }
 
    /* Amat - store deletions */
    processSingletonBlock(system_type, LINKING_VARS_BLOCK, node);
@@ -190,7 +186,6 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
    if( block_type == LINKING_CONS_BLOCK )
       if( !hasLinking(system_type) )
          return;
-
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
@@ -213,6 +208,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
 
    SparseStorageDynamic* matrix;
    SparseStorageDynamic* matrix_transp;
+
    if( block_type == LINKING_VARS_BLOCK )
    {
       assert(node != -1);
@@ -232,32 +228,14 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
    }
 
    /* set reduction vectors */
-   SimpleVector* redCol = NULL;
-   if( block_type == CHILD_BLOCK || block_type == LINKING_CONS_BLOCK )
-   {
-      if( node == -1 )
-      {
-         redCol = currRedColParent;
-      }
-      else
-      {
-         redCol = currRedColChild;
-      }
-   }
-   else if( block_type == LINKING_VARS_BLOCK )
-   {
-      assert(node != -1);
-      redCol = currRedColParent;
-   }
+   SimpleVector* redCol = (block_type == LINKING_VARS_BLOCK || node == -1) ? currRedColParent : currRedColChild;
    assert(redCol);
-
    SimpleVector* redRow = (block_type == LINKING_CONS_BLOCK) ? currRedRowLink : currRedRow;
 
-   bool linking_row = false;
-   if(block_type == LINKING_CONS_BLOCK)
-      linking_row = true;
+   bool linking_row = (block_type == LINKING_CONS_BLOCK);
 
-
+   assert(nnz_row->length() == matrix->m);
+   assert(nnz_row->length() == matrix_transp->n);
    /* go through matrix - store variables for deletion - always delete singleton inequality rows right away */
    for( int i = 0; i < nnz_row->length(); ++i )
    {
@@ -268,37 +246,60 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
          double aik = 0.0;
 
          getValuesForSR(*matrix, i, colIdx, aik);
+         assert( !PIPSisEQ(aik, 0.0) );
 
-         assert(!PIPSisEQ(aik, 0.0));
-
+         /* if in equality system fix variable */
          if( system_type == EQUALITY_SYSTEM )
          {
-            const double fixation_value = curr_eq_rhs->elements()[i] / aik;
+            const double rhs = (block_type == LINKING_CONS_BLOCK) ? curr_eq_rhs->elements()[i] + currEqRhsAdaptionsLink[i] : curr_eq_rhs->elements()[i];
+            const double fixation_value = rhs / aik;
 
-            if( (ixlow[colIdx] != 0.0 && PIPSisLT(fixation_value, xlow[colIdx]))
-                  || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], fixation_value)) )
+            if( !variableFixationValid(fixation_value, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx], true) )
+               abortInfeasible(MPI_COMM_WORLD);
+
+            /* for Amat we store deletions - collect them and apply them later */
+            if( node == -1 || block_type == LINKING_VARS_BLOCK )
             {
-               std::cout << "Singleton Row Presolving detected infeasibility : fixation of variable to invalid value in EQUALITY_SYSTEM B0" << std::endl;
-               std::cout << "variable index: " << colIdx << "\tvalue: " << fixation_value << "\tlower bound: " << xlow[colIdx] << "\tupper bound: " << xupp[colIdx] << std::endl;
-               abortInfeasible(MPI_COMM_WORLD );
+               /* only 0 process stores fixations in root node B0/Bl0 - this is to reduce MPI communications - it is not necessary*/
+               if( myRank == 0 && node == -1 )
+                  storeColValInColAdaptParent(colIdx, fixation_value);
+
+               if( block_type == LINKING_VARS_BLOCK )
+                  storeColValInColAdaptParent(colIdx, fixation_value);
             }
             else
             {
+               /* delete variable */
+               deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
+            }
+         }
+         else if( system_type == INEQUALITY_SYSTEM )
+         {
+            double new_xlow = -std::numeric_limits<double>::infinity();
+            double new_xupp = std::numeric_limits<double>::infinity();
+            double fixation_value = 0.0;
+
+            const double lhs = (block_type == LINKING_CONS_BLOCK) ? clow->elements()[i] + currInEqLhsAdaptionsLink[i] : clow->elements()[i];
+            const double rhs = (block_type == LINKING_CONS_BLOCK) ? cupp->elements()[i] + currInEqRhsAdaptionsLink[i] : cupp->elements()[i];
+
+            calculateNewBoundsOnVariable(new_xlow, new_xupp, iclow->elements()[i], lhs, icupp->elements()[i], rhs, aik);
+
+            if( newBoundsImplyInfeasible(new_xlow, new_xupp, colIdx, ixlow, ixupp, xlow, xupp) )
+               abortInfeasible(MPI_COMM_WORLD );
+            else if( newBoundsFixVariable(fixation_value, new_xlow, new_xupp, colIdx, ixlow, ixupp, xlow, xupp) )
+            {
+
+               if( !variableFixationValid(fixation_value, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx], true) )
+                  abortInfeasible(MPI_COMM_WORLD);
+
                /* for Amat we store deletions - collect them and apply them later */
                if( node == -1 || block_type == LINKING_VARS_BLOCK)
                {
-                  /* only 0 process stores fixations in root node B0/Bl0 */
                   if(myRank == 0 && node == -1)
-                  {
-                     assert(block_type != LINKING_VARS_BLOCK);
                      storeColValInColAdaptParent(colIdx, fixation_value);
-                  }
 
                   if(block_type == LINKING_VARS_BLOCK)
-                  {
-                     assert(node != -1);
                      storeColValInColAdaptParent(colIdx, fixation_value);
-                  }
                }
                else
                {
@@ -306,41 +307,24 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                   deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
                }
             }
-         }
-         else if( system_type == INEQUALITY_SYSTEM )
-         {
-            double new_xlow = -std::numeric_limits<double>::max();
-            double new_xupp = std::numeric_limits<double>::max();
-            double val = 0.0;
-
-            calculateNewBoundsOnVariable(new_xlow, new_xupp, iclow->elements()[i], clow->elements()[i], icupp->elements()[i], cupp->elements()[i], aik);
-
-            if( newBoundsImplyInfeasible(new_xlow, new_xupp, colIdx, ixlow, ixupp, xlow, xupp) )
-               abortInfeasible(MPI_COMM_WORLD );
-            else if( newBoundsFixVariable(val, new_xlow, new_xupp, colIdx, ixlow, ixupp, xlow, xupp) )
-            {
-               if(myRank == 0)
-                  std::cout << val << std::endl;
-               /* for Amat we store deletions - collect them and apply them later */
-               if( node == -1 || block_type == LINKING_VARS_BLOCK)
-               {
-                  if(myRank == 0 && node == -1)
-                     storeColValInColAdaptParent(colIdx, val);
-                  if(block_type == LINKING_VARS_BLOCK)
-                     storeColValInColAdaptParent(colIdx, val);
-               }
-               else
-               {
-                  /* delete variable */
-                  deleteNonlinkColumnFromSystem(node, colIdx, val);
-               }
-            }
             else
             {
                tightenBounds(new_xlow, new_xupp, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx]);
 
                /* remove entry and update reductions */
-               removeEntryInDynamicStorage(*matrix, i, colIdx, val);
+               double entry_matrix = 0.0;
+               double entry_matrix_transposed = 0.0;
+               bool removed_matrix = false;
+               bool removed_matrix_transposed = false;
+
+               // todo adjust rhs lhs! // todo check : when removing variable will bounds of var be 0 ? should be i guess.. // todo check when removing row : are rhs lhs bounds still valid?
+               removed_matrix = removeEntryInDynamicStorage(*matrix, i, colIdx, entry_matrix);
+               removed_matrix_transposed = removeEntryInDynamicStorage(*matrix_transp, colIdx, i, entry_matrix_transposed);
+
+               assert(removed_matrix);
+               assert(removed_matrix_transposed);
+               assert(entry_matrix == entry_matrix_transposed);
+               assert(entry_matrix != 0.0);
 
                if( node == -1 )
                {
@@ -356,8 +340,8 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                   redRow->elements()[i]++;
                }
 
-               // remove entry a_ik in transposed matrix as well
-               removeEntryInDynamicStorage(*matrix_transp, colIdx, i, val);
+               if(node != -1 || (node == -1 && myRank == 0))
+                  assert( nnz_row->elements()[i] - redRow->elements()[i] == 0.0 );
                assert(matrix->rowptr[i].start == matrix->rowptr[i].end);
             }
          }
@@ -401,8 +385,9 @@ bool StochPresolverSingletonRows::tightenBounds(double new_xlow, double new_xupp
 void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& new_xlow, double& new_xupp, const double& iclow, const double& clow,
       const double& icupp, const double& cupp, double aik) const
 {
-
    assert( !PIPSisZero(aik) );
+   new_xlow = -std::numeric_limits<double>::infinity();
+   new_xupp = std::numeric_limits<double>::infinity();
 
    if( PIPSisLT(0.0, aik) )
    {
@@ -418,8 +403,6 @@ void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& new_xlow,
       if( iclow != 0.0 )
          new_xupp = clow / aik;
    }
-//   std::cout << "newxlow: " << new_xlow << "\tnewxupp: " << new_xupp << "\ticlow: " << iclow << "\ticupp: " << icupp <<
-//         "\tcupp: " << cupp << "\tclow: " << clow << "\taik: " << aik << std::endl;
 }
 
 /** Should be called right after doSingletonRowsC() or another method that stores
@@ -453,3 +436,4 @@ void StochPresolverSingletonRows::getValuesForSR( SparseStorageDynamic const & s
    assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
    assert(aik != 0.0);
 }
+

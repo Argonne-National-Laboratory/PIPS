@@ -252,6 +252,9 @@ public:
    void allreduceAndApplyNnzReductions(SystemType system_type);
    void allreduceAndApplyRhsLhsReductions(SystemType system_type);
    void allreduceAndUpdateVarBounds();
+
+   bool variableFixationValid(double fixation_value, const double& ixlow, const double& xlow, const double& ixupp, const double& xupp, bool print_message = false) const;
+
 private:
    void setVarboundsToInftyForAllreduce() const;
 protected:

@@ -1007,8 +1007,10 @@ bool StochPresolverBase::removeEntryInDynamicStorage(SparseStorageDynamic& stora
       if( storage.jcolM[i] == colIdx )
          break;
    }
+
    if( i < 0 || i == end )
       return false;
+
    m = storage.M[i];
    std::swap(storage.M[i], storage.M[end-1]);
    std::swap(storage.jcolM[i], storage.jcolM[end-1]);
@@ -1350,6 +1352,7 @@ int StochPresolverBase::adaptChildBmatCol(bool atRoot, int colIdx, double val, S
    return newSingletonRows;
 }
 
+// todo
 void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value)
 {
    assert(node != -1);
@@ -1380,6 +1383,7 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
    /* assert non-linking */
    assert(block_type != LINKING_VARS_BLOCK);
    assert(node != -1);
+
    updatePointersForCurrentNode(node, system_type);
 
    SparseStorageDynamic& matrix = (block_type == CHILD_BLOCK) ? *currBmat : *currBlmat;
@@ -1614,6 +1618,7 @@ bool StochPresolverBase::newBoundsImplyInfeasible(double new_xlow, double new_xu
       const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const
 {
    assert( colIdx >= 0 );
+
    if( ( ixlow[colIdx] != 0.0 && PIPSisLT(new_xupp, xlow[colIdx]) )
          || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], new_xlow) )
          || (new_xlow > new_xupp))
@@ -1630,8 +1635,7 @@ bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, dou
 {
    assert( colIdx >= 0 );
 
-   if( PIPSisEQ(newxlow, newxupp)
-         || ( ixlow[colIdx] != 0.0 && PIPSisEQ(xlow[colIdx], newxupp) ))
+   if( PIPSisEQ(newxlow, newxupp) || ( ixlow[colIdx] != 0.0 && PIPSisEQ(xlow[colIdx], newxupp) ) )
    {
       value = newxupp;
       return true;
@@ -1644,36 +1648,31 @@ bool StochPresolverBase::newBoundsFixVariable(double& value, double newxlow, dou
 
    // if relative difference between newxlow and newxupp is below a threshold, fix the variable:
    double upperbound = newxupp;
-
+   double lowerbound = newxlow;
    if( ixupp[colIdx] != 0.0 && xupp[colIdx] < newxupp )
       upperbound = xupp[colIdx];
-
-   double lowerbound = newxlow;
    if( ixlow[colIdx] != 0.0 && xlow[colIdx] > newxlow )
       lowerbound = xlow[colIdx];
 
-   double absmax = std::max(fabs(upperbound), fabs(lowerbound) );
-   double absdiff = fabs( upperbound - lowerbound );
+   if( upperbound == std::numeric_limits<double>::max() || upperbound == std::numeric_limits<double>::infinity()
+         || lowerbound == -std::numeric_limits<double>::max() || lowerbound == -std::numeric_limits<double>::infinity() )
+      return false;
+
+   double absmax = std::max(std::fabs(upperbound), std::fabs(lowerbound) );
+   double absdiff = std::fabs( upperbound - lowerbound );
 
    if( absdiff / absmax < tolerance4 )
    {
       // verify if one of the bounds is integer:
       double intpart;
       if( std::modf(lowerbound, &intpart) == 0.0 )
-      {
-         value = lowerbound;
          return true;
-      }
       else if( std::modf(upperbound, &intpart) == 0.0 )
-      {
          value = upperbound;
-         return true;
-      }
       else  // set the variable to the arithmetic mean:
-      {
          value = (lowerbound + upperbound ) / 2.0;
-         return true;
-      }
+
+      return true;
    }
    return false;
 }
@@ -1719,7 +1718,6 @@ void StochPresolverBase::storeColValInColAdaptParent(int colIdx, double value)
    {
       if( presData.getColAdaptParent(i).colIdx == colIdx )
       {
-
          if( !PIPSisEQ(presData.getColAdaptParent(i).val, value) )
          {
             std::cout << "Presolving detected infeasibility : fixation of variable that has previously been fixed to a different value" << std::endl;
@@ -2550,6 +2548,16 @@ void StochPresolverBase::setVarboundsToInftyForAllreduce() const
       if(vec_ixupp.elements()[i] == 0.0)
          vec_xupp.elements()[i] = std::numeric_limits<double>::max();
    }
-
 }
 
+bool StochPresolverBase::variableFixationValid(double fixation_value, const double& ixlow, const double& xlow, const double& ixupp, const double& xupp, bool print_message) const
+{
+   if( (ixlow != 0.0 && PIPSisLT(fixation_value, xlow)) || (ixupp != 0.0 && PIPSisLT(xupp, fixation_value)) )
+   {
+      std::cout << "Presolve detected infeasibility! Fixation of variable to invalid value - value: " << fixation_value << "\t bounds: x € ["
+            << ((ixlow == 0.0) ? -std::numeric_limits<double>::infinity() : xlow) << ", " << ((ixupp == 0.0) ? std::numeric_limits<double>::infinity() : xupp) << "]" << std::endl;
+
+      return false;
+   }
+   return true;
+}
