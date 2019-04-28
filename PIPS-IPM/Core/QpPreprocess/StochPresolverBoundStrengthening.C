@@ -16,21 +16,20 @@ StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       StochPresolverBase(presData)
 {
    // todo
-   // we should add statistics data here maybe ? not sure
 }
 
 StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 {
- // todo
+   // todo
 }
 
 
 void StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());//??
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
    presData.resetRedCounters();
-
-   assert(this->verifyNnzcounters());
 
    int myRank;
    bool iAmDistrib;
@@ -97,6 +96,10 @@ void StochPresolverBoundStrengthening::applyPresolving()
       cout<<"--- After Bound Strengthening Presolving:"<<endl;
    countRowsCols();
 #endif
+
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
 }
 
 void StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_type)
