@@ -308,12 +308,16 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                   /* delete variable */
                   deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
                   assert(matrix->rowptr[i].start == matrix->rowptr[i].end);
-                  if(iclow->elements()[i] != 0.0 )
+                  if(iclow->elements()[i] != 0.0 && block_type != LINKING_CONS_BLOCK)
                      assert(clow->elements()[i] == 0);
-                  if(icupp->elements()[i] != 0.0)
+                  else if(iclow->elements()[i] != 0.0)
+                     assert(clow->elements()[i] + currInEqLhsAdaptionsLink[i] == 0);
+
+                  if(icupp->elements()[i] != 0.0 && block_type != LINKING_CONS_BLOCK)
                      assert(cupp->elements()[i] == 0);
+                  else if(icupp->elements()[i] != 0.0)
+                     assert(cupp->elements()[i] + currInEqRhsAdaptionsLink[i] == 0);
                }
-//               std::cout << std::endl;
             }
             else
             {
