@@ -1418,7 +1418,7 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
             rhs->elements()[rowIdx] -= m * val;
 
             /* fixation must be valid */
-            if( nnz_row->elements()[col_idx] - curr_row_red->elements()[rowIdx] == 1 )
+            if( nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 1 )
             {
                if( !PIPSisZero(rhs->elements()[rowIdx]) )
                {
@@ -1429,7 +1429,7 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
                   if(iclow->elements()[rowIdx])
                      std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
                   std::cout << "Problem infeasible" << std::endl;
-//                  abortInfeasible(MPI_COMM_WORLD );
+                  abortInfeasible(MPI_COMM_WORLD );
                }
             }
          }
@@ -1446,20 +1446,16 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
          }
          else
          {
-
             if( icupp->elements()[rowIdx] != 0.0 )
                cupp->elements()[rowIdx] -= m * val;
             if( iclow->elements()[rowIdx] != 0.0 )
-            {
-               std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
                clow->elements()[rowIdx] -= m * val;
-            }
 
-            if(nnz_row->elements()[col_idx] - curr_row_red->elements()[rowIdx] == 1)
+            if(nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 1)
             {
             // todo does not work from inequ sys - the rhs is not updated then
-               if( (icupp->elements()[rowIdx] == 1 && !PIPSisLE(0.0, cupp->elements()[rowIdx]))
-                     || (iclow->elements()[rowIdx] == 1 && !PIPSisLE(clow->elements()[rowIdx], 0.0)))
+               if( (icupp->elements()[rowIdx] == 1.0 && !PIPSisLE(0.0, cupp->elements()[rowIdx]) )
+                     || (iclow->elements()[rowIdx] == 1.0 && !PIPSisLE(clow->elements()[rowIdx], 0.0)))
                {
                   std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value" << std::endl;
                   std::cout << val << "\t" << m << std::endl;
@@ -1468,7 +1464,7 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
                   if(iclow->elements()[rowIdx])
                      std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
                   std::cout << "Problem infeasible" << std::endl;
-//                  abortInfeasible(MPI_COMM_WORLD);
+                  abortInfeasible(MPI_COMM_WORLD);
                }
             }
          }

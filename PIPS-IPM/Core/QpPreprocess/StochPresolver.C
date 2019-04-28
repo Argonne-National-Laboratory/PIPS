@@ -90,9 +90,7 @@ Data* StochPresolver::presolve()
 //      assert(presolverSR.verifyNnzcounters());
 //
       presolverSR.applyPresolving();
-//      assert(presolverSR.verifyNnzcounters());
-//      assert(presolverSR.verifyNnzcounters());
-      //todo bug non-zero counters
+//      todo bug non-zero counters
 //      presolverBS.applyPresolving();
 //      assert(presolverSR.verifyNnzcounters());
 
