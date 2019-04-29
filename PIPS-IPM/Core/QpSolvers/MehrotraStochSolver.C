@@ -4,6 +4,7 @@
 #include "LinearSystem.h"
 #include "Status.h"
 #include "Data.h"
+#include "sVars.h"
 #include "ProblemFormulation.h"
 
 #include "OoqpVector.h"
@@ -86,8 +87,15 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
 
     sys->factor(prob, iterate);
     sys->solve(prob, iterate, resid, step);
-    
     step->negate();
+
+    int myRank = 0;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    double onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
+    double twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
+    double infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
+    if(myRank == 0)
+       std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << std::endl;
     
     alpha = iterate->stepbound(step);
 
@@ -105,6 +113,11 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
     sys->solve(prob, iterate, resid, step);
     step->negate();
     
+    onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
+    twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
+    infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
+    if(myRank == 0)
+       std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << std::endl;
     
     // We've finally decided on a step direction, now calculate the
     // length using Mehrotra's heuristic.

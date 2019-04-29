@@ -22,6 +22,8 @@
 #include "QpGenStoch.h"
 #include "StochResourcesMonitor.h"
 
+#include "sVars.h"
+
 #include <cstring>
 #include <iostream>
 #include <fstream>
@@ -161,6 +163,14 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       sys->solve(prob, iterate, resid, step);
       step->negate();
 
+      int myRank = 0;
+      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+      double onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
+      double twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
+      double infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
+      if(myRank == 0)
+         std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << std::endl;
+
       iterate->stepbound_pd(step, alpha_pri, alpha_dual);
 
       // calculate centering parameter
@@ -185,6 +195,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       sys->solve(prob, iterate, corrector_resid, corrector_step);
       corrector_step->negate();
+
+      onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
+      twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
+      infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
+      if(myRank == 0)
+         std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << std::endl;
 
       // calculate weighted predictor-corrector step
       double weight_primal_candidate, weight_dual_candidate = -1.0;
