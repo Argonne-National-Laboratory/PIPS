@@ -1250,7 +1250,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    double* cVal=NULL;
    int cCnt=0, badCnt=0, numUels=0;
    int objDirection=1;
-   int objCoef=0.0;
+   double objCoef=0.0;
    char** varname = NULL;
    char** rowname = NULL;
    int* varstage = NULL;
