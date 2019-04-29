@@ -21,20 +21,24 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
    // todo
 }
 
+// todo print singleton rows removed
 void StochPresolverSingletonRows::applyPresolving()
 {
-   assert(presData.presProb->isRootNodeInSync());
-   assert(this->verifyNnzcounters());
    assert(presData.reductionsEmpty());
-   assert(true);
-   // todo : assert some stuff :P
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
 
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
 #ifndef NDEBUG
    if( myRank == 0 )
+   {
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before singleton Row Presolving:" << std::endl;
+   }
    countRowsCols();
 #endif
 
@@ -87,13 +91,17 @@ void StochPresolverSingletonRows::applyPresolving()
 
 #ifndef NDEBUG
    if( myRank == 0 )
-      std::cout << "--- After singleton Row Presolving:" << std::endl;
+      std::cout << "--- After singleton row presolving:" << std::endl;
    countRowsCols();
+   if(myRank == 0)
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
-   assert(presData.presProb->isRootNodeInSync());
-   assert(this->verifyNnzcounters());
    assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
 }
 
 /** Does one round of singleton rows presolving for system A or C
@@ -116,6 +124,7 @@ StochPresolverSingletonRows::doSingletonRows(int& n_sing_sys, int& n_sing_other_
    {
       procSingletonRowChild(node, n_sing_sys, n_sing_other_sys, system_type);
    }
+
    /* allreduce found deletions for linking variables */
    if( !presData.combineColAdaptParent() )
    {
@@ -380,39 +389,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
    }
 }
 
-bool StochPresolverSingletonRows::tightenBounds(double new_xlow, double new_xupp, double& ixlow, double& old_xlow, double& ixupp, double& old_xupp) const
-{
-   assert( !PIPSisEQ(new_xlow, new_xupp) );
-   bool tightened = false;
-
-   if( ixlow != 0.0 && PIPSisLT(old_xlow, new_xlow) )
-   {
-      old_xlow = new_xlow;
-      tightened = true;
-   }
-   else if( ixlow == 0.0 && new_xlow > -std::numeric_limits<double>::max() )
-   {
-      old_xlow = new_xlow;
-      ixlow = 1.0;
-      tightened = true;
-   }
-
-   if( ixupp != 0.0 && PIPSisLT(new_xupp, old_xupp) )
-   {
-      old_xupp = new_xupp;
-      tightened = true;
-   }
-   else if( ixupp == 0.0 && new_xupp < std::numeric_limits<double>::max() )
-   {
-      old_xupp = new_xupp;
-      ixupp = 1.0;
-      tightened = true;
-   }
-
-   assert( !PIPSisEQ(new_xlow, new_xupp) );
-   return tightened;
-}
-
+// todo move
 void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& new_xlow, double& new_xupp, const double& iclow, const double& clow,
       const double& icupp, const double& cupp, double aik) const
 {
@@ -434,28 +411,6 @@ void StochPresolverSingletonRows::calculateNewBoundsOnVariable(double& new_xlow,
       if( iclow != 0.0 )
          new_xupp = clow / aik;
    }
-}
-
-/** Should be called right after doSingletonRowsC() or another method that stores
- * information to update in newBoundsParent.
- * Updates the bounds on the linking variables.
- */
-void StochPresolverSingletonRows::updateLinkingVarsBounds()
-{
-   setCPColumnRoot();
-   double* ixlow = currIxlowParent->elements();
-   double* ixupp = currIxuppParent->elements();
-   double* xlow = currxlowParent->elements();
-   double* xupp = currxuppParent->elements();
-
-   // apply updated newBoundsParent to the variable bounds.
-   for( int i = 0; i < getNumberNewBoundsParent(); i++ )
-   {
-      XBOUNDS newbounds = getNewBoundsParent(i);
-      setNewBounds(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp,
-            ixlow, xlow, ixupp, xupp);
-   }
-   clearNewBoundsParent();
 }
 
 void StochPresolverSingletonRows::getValuesForSR( SparseStorageDynamic const & storage, int rowIdx, int& colIdx, double& aik) const

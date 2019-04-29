@@ -20,15 +20,11 @@ public:
    virtual void applyPresolving();
 
 private:
-   bool setCPforBounds(GenMatrixHandle matrixHandle, int it, SystemType system_type);
    void doBoundStrengthParent(SystemType system_type);
    void doBoundStrengthChild(int it, SystemType system_type);
-   double computeNewBound(bool rhs, double activity, double matrixEntry, int rowIdx, SystemType system_type) const;
-   void strenghtenBoundsInBlock( SparseStorageDynamic& matrix, bool childBlock, int rowIdx, double partMinActivity, double partMaxActivity,
-         SystemType system_type, bool atRoot, std::vector<COLUMNFORDELETION>* colAdaptLinkBlock);
-   void setNewBoundsIfTighter(int index, double new_low, double new_upp, SimpleVector& ilow, SimpleVector& low, SimpleVector& iupp, SimpleVector& upp) const;
-   bool checkNewBoundTightens(bool uppLow, int colIdx, double newBound, const SimpleVector& ixbound, const SimpleVector& xbound ) const;
-   void strengthenLinkingVarsBounds();
+   void strenghtenBoundsInBlock( SparseStorageDynamic& matrix, BlockType block_type, int rowIdx, double partMinActivity, double partMaxActivity,
+         SystemType system_type, int node);
+   double computeNewBound(const SimpleVector& bounds, double activity, double matrixEntry, int rowIdx) const;
 };
 
 

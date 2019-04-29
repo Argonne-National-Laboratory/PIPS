@@ -118,7 +118,6 @@ int GondzioSolver::solve(Data *prob, Variables *iterate, Residuals * resid )
       }
 
       // *** Corrector step ***
-      std::cout << "actually here " << std::endl;
       // form right hand side of linear system:
       resid->add_r3_xz_alpha( step, -sigma*mu );
 

@@ -36,10 +36,12 @@
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
 {
+   // todo
 }
 
 StochPresolver::~StochPresolver()
 {
+   // todo
 }
 
 Data* StochPresolver::presolve()
@@ -72,11 +74,9 @@ Data* StochPresolver::presolve()
    StochPresolverModelCleanup presolverCleanup(presData);
    StochPresolverSingletonRows presolverSR(presData);
 
-#ifndef NDEBUG
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
-#endif
 
 //   presData.presProb->writeToStreamDense(std::cout);
 
@@ -86,30 +86,22 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-//      presolverCleanup.applyPresolving();
-      assert(presolverSR.verifyNnzcounters());
-//
+      presolverCleanup.applyPresolving();
       presolverSR.applyPresolving();
-//      todo bug non-zero counters
-//      presolverBS.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverParallelRow.applyPresolving();
       assert(presolverSR.verifyNnzcounters());
 
-//      presolverParallelRow.applyPresolving();
-//      assert(presolverSR.verifyNnzcounters());
+      presolverSR.applyPresolving();
+      assert(presolverSR.verifyNnzcounters());
 //
-//      presolverSR.applyPresolving();
-//      assert(presolverSR.verifyNnzcounters());
-//
-//      presolverCleanup.applyPresolving();
-//      assert(presolverSR.verifyNnzcounters());
+      presolverCleanup.applyPresolving();
+      assert(presolverSR.verifyNnzcounters());
    }
 
-#ifndef NDEBUG
-   assert( presolverSR.verifyNnzcounters() );
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
-#endif
 
    // todo not yet available for dynamic storage
    assert( presData.presProb->isRootNodeInSync() );
@@ -120,17 +112,6 @@ Data* StochPresolver::presolve()
 //   finalPresData->writeToStreamDense(std::cout);
 
    assert( finalPresData->isRootNodeInSync() );
-
-   // todo wrong output - n and m in sData are broken
-   if( myRank==0 )
-   {
-      std::cout << "original problem:\t" << sorigprob->nx << " variables\t" << sorigprob->my << " equ. conss\t" << sorigprob->mz << " ineq. conss" << std::endl;
-      std::cout << "presolved problem:\t" << finalPresData->nx << " variables\t" << finalPresData->my << " equ. conss\t" << finalPresData->mz << " ineq. conss" << std::endl;
-   }
-#ifdef TIMING
-   std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
-   std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
-#endif
 
 //   exit(1);
    return finalPresData;

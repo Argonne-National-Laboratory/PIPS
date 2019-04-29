@@ -22,14 +22,39 @@ StochPresolverSingletonColumns::~StochPresolverSingletonColumns()
 
 void StochPresolverSingletonColumns::applyPresolving()
 {
-   // countSingletonColumns();
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
+
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   if( myRank == 0 ) cout<<"Start Singleton Column Presolving..."<<endl;
+#ifndef NDEBUG
+   if( myRank == 0 )
+   {
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+      std::cout << "--- Before singleton columns presolving:" << std::endl;
+   }
+   countRowsCols();
+#endif
 
-   // todo
+
+#ifndef NDEBUG
+   if( myRank == 0 )
+      std::cout << "--- After singleton columns presolving:" << std::endl;
+   countRowsCols();
+   if( myRank == 0 )
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+#endif
+
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
 }
 
 void StochPresolverSingletonColumns::countSingletonColumns()

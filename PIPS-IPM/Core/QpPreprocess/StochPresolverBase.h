@@ -42,7 +42,7 @@ public:
    // todo return bool whether enough eliminations
    virtual void applyPresolving() = 0;
 
-   bool verifyNnzcounters();
+   bool verifyNnzcounters(); // todo protected?
    void countRowsCols(); // theoretically const but sets pointers
 
    /** checks if all processes have the same root node data.
@@ -129,13 +129,12 @@ protected:
 
    /* swap two entries in the SparseStorageDynamic format */
    void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims, bool linking = false);
-   void updateRhsNRowLink();
    void allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptionsVector, SimpleVector& baseVector);
 
    // methods to update the transposed matrix:
    void updateTransposedSubmatrix(SparseStorageDynamic* transStorage, std::vector<std::pair<int,int> >& elements) const;
 
-   void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq);
+   void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq); // todo check
    bool newBoundsTightenOldBounds(double new_low, double new_upp, int index,
          double* ilow, double* iupp, double* low, double* upp) const;
    void setNewBounds(int index, double new_low, double new_upp,
@@ -145,16 +144,10 @@ protected:
 
    // methods to update the current pointers:
    void setCurrentPointersToNull();
-   /** initialize current pointer for matrices and vectors.
-    * If it==-1, we are at parent and want block B_0 (Bmat).
-    * Returns false if it is a dummy child. */
-   bool updateCurrentPointersForColAdapt(int it, SystemType system_type);
-   bool updateCPforColAdaptF0( SystemType system_type );
-   bool updateCPforAdaptFixationsBChild( int it, SystemType system_type);
 
    /* update all nonzero vectors with the entries in the reduction vectors - zeros them after update */
    void updateNnzFromReductions(SystemType system_type);
-   void updateNnzUsingReductions( StochVectorHandle nnz_vector, StochVectorHandle red_vector, SystemType system_type) const;
+   void updateNnzUsingReductions( StochVectorHandle nnz_vector, StochVectorHandle red_vector, SystemType system_type) const; // modelCleanupRows + parallelRows
    void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
    void updateNnzColParent(MPI_Comm comm);//todo?
 
@@ -173,33 +166,26 @@ private:
    void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const;
 
 protected:
-   void setCPAmatsRoot(GenMatrixHandle matrixHandle);
-   bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
+   void setCPAmatsRoot(GenMatrixHandle matrixHandle); //mcrow + parrow
+   bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //mcrow + parrow
 
    bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
-   bool setPointersForAmatBmat(int node, SystemType system_type);
-   bool setCPLinkConstraint(GenMatrixHandle matrixHandle, int it, SystemType system_type);
    void setCPBlmatsRoot(GenMatrixHandle matrixHandle);
    void setCPBlmatsChild(GenMatrixHandle matrixHandle, int it);
    void setCPColumnRoot();
    void setCPColumnChild(int it);
-
-   void setPointersRowRoot(SystemType system_type);
-   void setCPRowRootEquality();
-   void setCPRowRootInequality();
-
+   void setCPRowRootEquality(); //mcrow
+   void setCPRowRootInequality(); //mcrow
    void setCPRowRootIneqOnlyLhsRhs();
 
-   void setPointersRowChildNode(SystemType system_type, int node);
-   void setCPRowChildEquality(int it);
-   void setCPRowChildInequality(int it);
+   void setCPRowChildEquality(int it); //mcrow
+   void setCPRowChildInequality(int it); //mcrow ->setCPRowChildIneqOnlyLhsRhs
 
-   void setCPRowChildIneqOnlyLhsRhs(int it);
-   void setCPRowLinkEquality();
-   void setCPRhsLinkInequality();
+   void setCPRowChildIneqOnlyLhsRhs(int it); //parrow
+   void setCPRhsLinkInequality(); //mcrow
 
-   void resetEqRhsAdaptionsLink();
-   void resetIneqRhsAdaptionsLink();
+   void resetEqRhsAdaptionsLink(); // modelclanup allreduceAndApply
+   void resetIneqRhsAdaptionsLink(); // modelclanup allreduceAndApply
 
    bool removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m) const;
    void clearRow(SparseStorageDynamic& storage, const int rowIdx) const;
@@ -214,25 +200,22 @@ protected:
    void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
    void abortInfeasible(MPI_Comm comm) const;
    void synchronize(int& value) const;
-   void synchronizeSum(int& first, int& second) const;
 
 private:
    void adaptChildBmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type, int& newSR);
-   int adaptChildBmatCol(bool atRoot, int colIdx, double val, SystemType system_type);
 public:
-   void adaptChildBlmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type);
-   void adaptOtherSystemChildB(SystemType system_type, std::vector<COLUMNFORDELETION> const & colAdaptBblock, int& newSR);
 
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptBl0(SystemType system_type);
 
    bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
       const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
-   int fixVarInChildBlockAndStore(bool atRoot, int colIdx, double val, SystemType system_type,
-         std::vector<COLUMNFORDELETION> & colAdaptLinkBlock);
    void storeColValInColAdaptParent(int colIdx, double value);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
       const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
+
+
+   // todo use these instead of all reduce min and max? what is more expensive on average?
    void storeNewBoundsParent(int colIdx, double newxlow, double newxupp);
    void combineNewBoundsParent();
    XBOUNDS getNewBoundsParent(int i) const;
@@ -242,13 +225,14 @@ public:
    void clearNewBoundsParent();
 
    void sumIndivObjOffset();
-   void computeActivityBlockwise( SparseStorageDynamic& matrix, int rowIdx, int colIdx,
+   void computeActivityBlockwise( const SparseStorageDynamic& matrix, int rowIdx, int colIdx,
          double& infRow, double& supRow,
-         SimpleVector& xlow, SimpleVector& ixlow, SimpleVector& xupp, SimpleVector& ixupp);
+         const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
 
    void countSingletonRows(int& n_singletons_equality, int& n_singletons_inequality) const;
+private:
    void countSingletonRowsSystem(int& n_singletons, SystemType system_type) const;
-
+public:
    void allreduceAndApplyNnzReductions(SystemType system_type);
    void allreduceAndApplyRhsLhsReductions(SystemType system_type);
    void allreduceAndUpdateVarBounds();
@@ -258,10 +242,13 @@ public:
 private:
    void setVarboundsToInftyForAllreduce() const;
 protected:
-
    /* deletes variable with index col_idx in node from both systems - only for non-linking variables */
    void deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value);
    void deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val);
+
+   // todo : should be public?
+public:
+   bool tightenBounds(double new_xlow, double new_xupp, double& ixlow, double& old_xlow, double& ixupp, double& old_xupp) const;
 };
 
 

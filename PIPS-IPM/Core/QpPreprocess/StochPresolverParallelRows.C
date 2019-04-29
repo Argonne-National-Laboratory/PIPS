@@ -104,17 +104,24 @@ StochPresolverParallelRows::~StochPresolverParallelRows()
 
 void StochPresolverParallelRows::applyPresolving()
 {
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
+
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
 #ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- Before Parallel Row Presolving:"<<endl;
+   {
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+      std::cout << "--- Before parallel row presolving:" << std::endl;
+   }
    countRowsCols();
 #endif
-
-   if( myRank == 0 ) cout<<"Start Parallel Row Presolving..."<<endl;
 
    StochGenMatrix& matrixA = dynamic_cast<StochGenMatrix&>(*(presProb->A));
    StochGenMatrix& matrixC = dynamic_cast<StochGenMatrix&>(*(presProb->C));
@@ -218,22 +225,28 @@ void StochPresolverParallelRows::applyPresolving()
    // todo linking constraints!!!
 
    if( myRank == 0 )
-      cout<<"Removed "<<nRowElims<<" Rows in Parallel Row Presolving."<<endl;
+      std::cout << "Removed " << nRowElims << " Rows in Parallel Row Presolving." << std::endl;
 
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
 
-#ifdef TIMING
    if( myRank == 0 )
-      cout<<"Global objOffset is now: "<<presData.getObjOffset()<<endl;
-#endif
+      std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
 
 #ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- After Parallel Row Presolving:"<<endl;
+      std::cout << "--- After parallel row presolving:" << std::endl;
    countRowsCols();
+   if( myRank == 0 )
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
+
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
 }
 
 /** If it is no dummy child, sets normalized pointers:
