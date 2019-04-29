@@ -271,7 +271,16 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
             {
                /* delete variable */
                deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
+
+               /* line from matrix removed an rhs set to zero */
                assert(matrix->rowptr[i].start == matrix->rowptr[i].end);
+
+               if( block_type != LINKING_CONS_BLOCK)
+                  assert( PIPSisEQ(curr_eq_rhs->elements()[i], 0.0) );
+               else
+                  assert( PIPSisEQ(curr_eq_rhs->elements()[i] + currEqRhsAdaptionsLink[i], 0.0) );
+
+               assert( nnz_row->elements()[i] - redRow->elements()[i] == 0.0 );
             }
          }
          else if( system_type == INEQUALITY_SYSTEM )
@@ -285,14 +294,20 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
 
             calculateNewBoundsOnVariable(new_xlow, new_xupp, iclow->elements()[i], lhs, icupp->elements()[i], rhs, aik);
 
+            double llow = xlow[colIdx];
+            double uuppp = xupp[colIdx];
             if( newBoundsImplyInfeasible(new_xlow, new_xupp, colIdx, ixlow, ixupp, xlow, xupp) )
                abortInfeasible(MPI_COMM_WORLD );
             else if( newBoundsFixVariable(fixation_value, new_xlow, new_xupp, colIdx, ixlow, ixupp, xlow, xupp) )
             {
-//               std::cout << "xlow: " << xlow[colIdx] << " (" << ixlow[colIdx] << ")\txupp " << xupp[colIdx] << " (" << ixupp[colIdx] << ")" << std::endl;
-//               std::cout << "clow: " << clow->elements()[i] << " (" << iclow->elements()[i] << ")\tcupp " << cupp->elements()[i] << " (" << icupp->elements()[i] << ")" << std::endl;
                if( !variableFixationValid(fixation_value, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx], true) )
-                  abortInfeasible(MPI_COMM_WORLD);
+               {
+                 std::cout << new_xlow << "\t" << new_xupp << "\t" << iclow->elements()[i] << "\t" << lhs << "\t" << icupp->elements()[i] << "\t" <<  rhs << "\t" << aik << std::endl;
+                 std::cout << xlow[colIdx] << "\t" << xupp[colIdx] << std::endl;
+                 std::cout << llow << "\t" << uuppp << std::endl;
+                  std::cout << block_type << "\t" << ixlow[colIdx] << "\t" << ixupp[colIdx] << "\t" << lhs << "\t" << rhs << std::endl;
+                 abortInfeasible(MPI_COMM_WORLD);
+               }
 
                /* for Amat we store deletions - collect them and apply them later */
                if( node == -1 || block_type == LINKING_VARS_BLOCK)
@@ -307,16 +322,20 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                {
                   /* delete variable */
                   deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
-                  assert(matrix->rowptr[i].start == matrix->rowptr[i].end);
+
+                  /* matrix deleted from storage and rhs lhs set to zero */
+                  assert( matrix->rowptr[i].start == matrix->rowptr[i].end );
+                  assert( nnz_row->elements()[i] - redRow->elements()[i] == 0.0 );
+
                   if(iclow->elements()[i] != 0.0 && block_type != LINKING_CONS_BLOCK)
-                     assert(clow->elements()[i] == 0);
+                     assert( PIPSisLE(clow->elements()[i], 0.0));
                   else if(iclow->elements()[i] != 0.0)
-                     assert(clow->elements()[i] + currInEqLhsAdaptionsLink[i] == 0);
+                     assert( PIPSisLE(clow->elements()[i] + currInEqLhsAdaptionsLink[i], 0.0) );
 
                   if(icupp->elements()[i] != 0.0 && block_type != LINKING_CONS_BLOCK)
-                     assert(cupp->elements()[i] == 0);
+                     assert( PIPSisLE(0.0, cupp->elements()[i]) );
                   else if(icupp->elements()[i] != 0.0)
-                     assert(cupp->elements()[i] + currInEqRhsAdaptionsLink[i] == 0);
+                     assert( PIPSisLE(0.0, cupp->elements()[i] + currInEqRhsAdaptionsLink[i]) );
                }
             }
             else
@@ -332,8 +351,6 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                // todo adjust rhs lhs! // todo check : when removing variable will bounds of var be 0 ? should be i guess.. // todo check when removing row : are rhs lhs bounds still valid?
                removed_matrix = removeEntryInDynamicStorage(*matrix, i, colIdx, entry_matrix);
                removed_matrix_transposed = removeEntryInDynamicStorage(*matrix_transp, colIdx, i, entry_matrix_transposed);
-               clow->elements()[i] = 0;
-               cupp->elements()[i] = 0;
 
                assert(removed_matrix);
                assert(removed_matrix_transposed);
@@ -450,4 +467,3 @@ void StochPresolverSingletonRows::getValuesForSR( SparseStorageDynamic const & s
    assert(storage.rowptr[rowIdx].start +1 == storage.rowptr[rowIdx].end);
    assert(aik != 0.0);
 }
-

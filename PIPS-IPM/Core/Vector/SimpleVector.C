@@ -178,7 +178,7 @@ bool SimpleVector::isZero()
 	bool is_zero = true;
 
 	for(int i = 0; i < n; ++i)
-		is_zero &= (v[i] == 0.0);
+		is_zero = (is_zero && v[i] == 0.0);
 
 	return is_zero;
 }

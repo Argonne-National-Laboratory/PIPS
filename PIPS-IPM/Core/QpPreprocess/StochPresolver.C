@@ -87,12 +87,12 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
 //      presolverCleanup.applyPresolving();
-//      assert(presolverSR.verifyNnzcounters());
+      assert(presolverSR.verifyNnzcounters());
 //
       presolverSR.applyPresolving();
 //      todo bug non-zero counters
 //      presolverBS.applyPresolving();
-//      assert(presolverSR.verifyNnzcounters());
+      assert(presolverSR.verifyNnzcounters());
 
 //      presolverParallelRow.applyPresolving();
 //      assert(presolverSR.verifyNnzcounters());
@@ -132,7 +132,7 @@ Data* StochPresolver::presolve()
    std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
 #endif
 
-
+//   exit(1);
    return finalPresData;
 }
 

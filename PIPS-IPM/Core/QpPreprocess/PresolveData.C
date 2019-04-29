@@ -180,10 +180,12 @@ bool PresolveData::combineColAdaptParent()
 // todo
 bool PresolveData::reductionsEmpty()
 {
+   bool empty = true;
 
-
-
-	return true;
+   empty = (empty && redRowA->isZero());
+   empty = (empty && redRowC->isZero());
+   empty = (empty && redCol->isZero());
+	return empty;
 }
 
 void PresolveData::resetRedCounters()

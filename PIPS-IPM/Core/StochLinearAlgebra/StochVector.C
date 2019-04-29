@@ -305,13 +305,13 @@ bool StochVector::isZero()
 {
 	bool is_zero = true;
 
-	is_zero &= dynamic_cast<SimpleVector&>(*vec).isZero();
+	is_zero = (is_zero && dynamic_cast<SimpleVector&>(*vec).isZero());
 
 	if(vecl)
-		is_zero &= dynamic_cast<SimpleVector&>(*vecl).isZero();
+		is_zero = (is_zero && dynamic_cast<SimpleVector&>(*vecl).isZero());
 
 	for( size_t node = 0; node < children.size(); ++node )
-		is_zero &= children[node]->isZero();
+		is_zero = (is_zero && children[node]->isZero());
 
 	return is_zero;
 }
