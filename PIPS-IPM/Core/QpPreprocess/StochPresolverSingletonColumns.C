@@ -126,9 +126,10 @@ void StochPresolverSingletonColumns::initSingletonColsBlock(int it, SimpleVector
       if( nnzCol[i] == 1.0 )
          nSC++;
 
-   if( setCPBmatsChild(presProb->A, (int)it, EQUALITY_SYSTEM) )
+   if(true)
+//   if( setCPBmatsChild(presProb->A, (int)it, EQUALITY_SYSTEM) )
    {
-      setCPBlmatsChild(presProb->A, (int)it);
+//      setCPBlmatsChild(presProb->A, (int)it);
       for( int i = 0; i < nnzColSimple->n; i++ )
          if( nnzCol[i] == 1.0 )
             if( currBmatTrans->rowptr[i].start +1 == currBmatTrans->rowptr[i].end ||
@@ -155,9 +156,9 @@ void StochPresolverSingletonColumns::initSingletonColsBlock(int it, SimpleVector
                   nSColEqLinkRow++;
             }
    }
-   if( setCPBmatsChild(presProb->C, (int)it, INEQUALITY_SYSTEM) )
+//   if( setCPBmatsChild(presProb->C, (int)it, INEQUALITY_SYSTEM) )
    {
-      setCPBlmatsChild(presProb->C, (int)it);
+//      setCPBlmatsChild(presProb->C, (int)it);
       for( int i = 0; i < nnzColSimple->n; i++ )
          if( nnzCol[i] == 1.0 )
             if( currBmatTrans->rowptr[i].start +1 == currBmatTrans->rowptr[i].end ||

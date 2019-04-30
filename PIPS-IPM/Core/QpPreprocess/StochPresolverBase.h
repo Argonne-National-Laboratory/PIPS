@@ -166,23 +166,13 @@ private:
    void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const;
 
 protected:
-   void setCPAmatsRoot(GenMatrixHandle matrixHandle); //mcrow + parrow
-   bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //mcrow + parrow
-
-   bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type);
-   void setCPBlmatsRoot(GenMatrixHandle matrixHandle);
-   void setCPBlmatsChild(GenMatrixHandle matrixHandle, int it);
-   void setCPColumnRoot();
-   void setCPColumnChild(int it);
-   void setCPRowRootEquality(); //mcrow
-   void setCPRowRootInequality(); //mcrow
-   void setCPRowRootIneqOnlyLhsRhs();
-
-   void setCPRowChildEquality(int it); //mcrow
-   void setCPRowChildInequality(int it); //mcrow ->setCPRowChildIneqOnlyLhsRhs
-
+   void setCPAmatsRoot(GenMatrixHandle matrixHandle); //parrow
+   bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //parrow
+   bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //parrow
+   void setCPColumnRoot(); //parrow
+   void setCPColumnChild(int it); //parrow
+   void setCPRowRootIneqOnlyLhsRhs(); //parrow
    void setCPRowChildIneqOnlyLhsRhs(int it); //parrow
-   void setCPRhsLinkInequality(); //mcrow
 
    void resetEqRhsAdaptionsLink(); // modelclanup allreduceAndApply
    void resetIneqRhsAdaptionsLink(); // modelclanup allreduceAndApply

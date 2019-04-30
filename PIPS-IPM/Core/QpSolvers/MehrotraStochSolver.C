@@ -4,8 +4,10 @@
 #include "LinearSystem.h"
 #include "Status.h"
 #include "Data.h"
-#include "sVars.h"
 #include "ProblemFormulation.h"
+
+#include "sVars.h"
+#include "sData.h"
 
 #include "OoqpVector.h"
 #include "DoubleMatrix.h"
@@ -91,11 +93,13 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
 
     int myRank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+    StochVector* copy_x_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).cloneFull();
+    double obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
     double onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
     double twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
     double infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
     if(myRank == 0)
-       std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << std::endl;
+       std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
     
     alpha = iterate->stepbound(step);
 
@@ -116,8 +120,10 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
     onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
     twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
     infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
+    copy_x_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).cloneFull();
+    obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
     if(myRank == 0)
-       std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << std::endl;
+       std::cout << std::endl << "methrotrastoch\tonenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
     
     // We've finally decided on a step direction, now calculate the
     // length using Mehrotra's heuristic.

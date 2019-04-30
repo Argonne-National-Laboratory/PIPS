@@ -67,7 +67,6 @@ Data* StochPresolver::presolve()
    assert( sorigprob->isRootNodeInSync());
    assert( presData.presProb->isRootNodeInSync() );
 
-
    /* initialize all presolvers */
    StochPresolverBoundStrengthening presolverBS(presData);
    StochPresolverParallelRows presolverParallelRow(presData);
@@ -90,13 +89,7 @@ Data* StochPresolver::presolve()
       presolverSR.applyPresolving();
       presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
-      assert(presolverSR.verifyNnzcounters());
-
-      presolverSR.applyPresolving();
-      assert(presolverSR.verifyNnzcounters());
-//
       presolverCleanup.applyPresolving();
-      assert(presolverSR.verifyNnzcounters());
    }
 
    if( myRank == 0 )

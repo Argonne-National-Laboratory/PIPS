@@ -5,11 +5,12 @@
  *      Author: Svenja Uslu
  */
 
-//#define PIPS_DEBUG
 #include "StochPresolverBoundStrengthening.h"
 #include <limits>
 #include <cmath>
 #include "pipsdef.h"
+
+// todo exhaustive
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData) :
@@ -114,8 +115,8 @@ void StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_t
 {
    updatePointersForCurrentNode(-1, system_type);
 
-   for(int rowIdx = 0; rowIdx < currBmat->m; rowIdx++)
-      strenghtenBoundsInBlock( *currBmat, CHILD_BLOCK, rowIdx, 0.0, 0.0, system_type, -1);
+   for(int rowIdx = 0; rowIdx < currAmat->m; rowIdx++)
+      strenghtenBoundsInBlock( *currAmat, LINKING_VARS_BLOCK, rowIdx, 0.0, 0.0, system_type, -1);
 }
 
 // todo no Bl block
@@ -152,7 +153,7 @@ double StochPresolverBoundStrengthening::computeNewBound(const SimpleVector& bou
 void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, BlockType block_type, int rowIdx, double partMinActivity,
       double partMaxActivity, SystemType system_type, int node)
 {
-   updatePointersForCurrentNode(node, system_type);
+   updatePointersForCurrentNode(node, system_type); // todo
    assert( 0 <= rowIdx && rowIdx < matrix.m );
 
    int myRank;
@@ -256,8 +257,7 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
              /* only 0 process stores fixations in root node B0/Bl0 - this is to reduce MPI communications - it is not necessary */
              if( myRank == 0 && node == -1 )
                 storeColValInColAdaptParent(colIdx, fixation_value);
-
-             if( block_type == LINKING_VARS_BLOCK )
+             else if( block_type == LINKING_VARS_BLOCK )
                 storeColValInColAdaptParent(colIdx, fixation_value);
           }
           else

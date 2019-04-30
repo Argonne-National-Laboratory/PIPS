@@ -22,13 +22,11 @@ class StochPresolverModelCleanup : public StochPresolverBase
 
    private:
 
-      int removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type);
-      int removeRedundantRowsBlockwise(SystemType system_type, bool atRoot);
-      int removeRedundantLinkingRows(GenMatrixHandle matrixHandle, SystemType system_type);
-      void computeLinkingRowActivity(GenMatrixHandle matrixHandle, SystemType system_type,
-            double* minActivity, double* maxActivity, int nLinkRows);
-      void checkRedundantLinkingRow(GenMatrixHandle matrixHandle, SystemType system_type,
-            double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant);
+      int removeRedundantRows(SystemType system_type);
+      int removeRedundantRowsBlockwise(SystemType system_type, int node);
+      int removeRedundantLinkingRows(SystemType system_type);
+      void computeLinkingRowActivity(SystemType system_type, double* minActivity, double* maxActivity, int nLinkRows);
+      void checkRedundantLinkingRow(SystemType system_type, double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant);
 
       int removeTinyEntriesFromSystem(SystemType system_type);
 

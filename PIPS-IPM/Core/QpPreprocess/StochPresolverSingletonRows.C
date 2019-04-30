@@ -152,7 +152,7 @@ StochPresolverSingletonRows::doSingletonRows(int& n_sing_sys, int& n_sing_other_
 void StochPresolverSingletonRows::procSingletonRowRoot(SystemType system_type)
 {
    /* B0 node */
-   processSingletonBlock(system_type, CHILD_BLOCK, -1);
+   processSingletonBlock(system_type, LINKING_VARS_BLOCK, -1);
 
    /* linking vars Bl */
    processSingletonBlock(system_type, LINKING_CONS_BLOCK, -1);
@@ -220,7 +220,6 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
 
    if( block_type == LINKING_VARS_BLOCK )
    {
-      assert(node != -1);
       matrix = currAmat;
       matrix_transp = currAmatTrans;
    }
@@ -231,7 +230,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
    }
    else
    {
-      assert(block_type == CHILD_BLOCK);
+      assert(node != -1);
       matrix = currBmat;
       matrix_transp = currBmatTrans;
    }
@@ -272,8 +271,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                /* only 0 process stores fixations in root node B0/Bl0 - this is to reduce MPI communications - it is not necessary */
                if( myRank == 0 && node == -1 )
                   storeColValInColAdaptParent(colIdx, fixation_value);
-
-               if( block_type == LINKING_VARS_BLOCK )
+               else if( block_type == LINKING_VARS_BLOCK )
                   storeColValInColAdaptParent(colIdx, fixation_value);
             }
             else
@@ -323,8 +321,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                {
                   if(myRank == 0 && node == -1)
                      storeColValInColAdaptParent(colIdx, fixation_value);
-
-                  if(block_type == LINKING_VARS_BLOCK)
+                  else if(block_type == LINKING_VARS_BLOCK)
                      storeColValInColAdaptParent(colIdx, fixation_value);
                }
                else
