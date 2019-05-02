@@ -132,10 +132,34 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
 
-   // TODO write out bounds on x as well as x
 
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   {
+      std::ostringstream name;
+      name << myRank << "objective_before_stoch.txt";
+      std::ofstream ofs( name.str().c_str(), std::ofstream::out);
+      const StochVector& g  = dynamic_cast<const StochVector&>(*dynamic_cast<sData*>(prob)->g);
+
+      for( int j = 0; j < dynamic_cast<SimpleVector&>(*g.vec).n; ++j )
+      {
+         ofs << "node: " << -1 << "\tcol: " << j << "\tg = "
+               << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g).vec)[j] << std::endl;
+      }
+      for( size_t i = 0; i < g.children.size(); ++i )
+      {
+         if( g.children[i] )
+         {
+            for( int j = 0; j < dynamic_cast<SimpleVector&>(*g.children.at(i)->vec).n; ++j )
+            {
+               ofs << "node: " << i << "\tcol: " << j << "\tg = "
+                     << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g).children[i]->vec)[j] << std::endl;
+            }
+         }
+      }
+      ofs.close();
+      MPI_Barrier(MPI_COMM_WORLD );
+      }
 
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);

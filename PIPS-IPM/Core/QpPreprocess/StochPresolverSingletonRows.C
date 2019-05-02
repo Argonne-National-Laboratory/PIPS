@@ -445,7 +445,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                if(node != -1 || (node == -1 && myRank == 0))
                   assert( nnz_row->elements()[i] - redRow->elements()[i] == 0.0 );
                assert(matrix->rowptr[i].start == matrix->rowptr[i].end);
-            }
+               }
 
             ofs << "\tnewupp: " << ( (ixupp[colIdx] == 1.0) ? xupp[colIdx] : std::numeric_limits<double>::infinity() )
                   << "\tnewclow: " << ( (ixlow[colIdx] == 1.0) ? xlow[colIdx] : -std::numeric_limits<double>::infinity() ) << std::endl;
