@@ -907,6 +907,8 @@ void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, do
    /* adjust objective function */
    updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
    indivObjOffset += currgChild->elements()[col_idx] * fixation_value;
+   if( !PIPSisZero(currgChild->elements()[col_idx] * fixation_value) )
+      std::cout << indivObjOffset << std::endl;
 }
 
 void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val)
@@ -1152,8 +1154,9 @@ bool StochPresolverBase::newBoundsImplyInfeasible(double new_xlow, double new_xu
          || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], new_xlow) )
          || (new_xlow > new_xupp))
    {
-      std::cout << "Presolving detected infeasibility: variable: " << colIdx << "\tnew bounds = [" << new_xlow << ", " << new_xupp << "]" << "\told bounds: [" << xlow[colIdx] <<
-    		  ", " << xupp[colIdx] << "]" << std::endl;
+      std::cout << "Presolving detected infeasibility: variable: " << colIdx << "\tnew bounds = [" << new_xlow << ", " << new_xupp << "]" << "\told bounds: ["
+            << ( (ixlow[colIdx] == 0.0) ? -std::numeric_limits<double>::infinity() : xlow[colIdx] ) <<
+    		  ", " << ( (ixupp[colIdx] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[colIdx] ) << "]" << std::endl;
       return true;
    }
    return false;
@@ -2071,6 +2074,7 @@ bool StochPresolverBase::tightenBounds(double new_xlow, double new_xupp, double&
 
    if( ixlow != 0.0 && PIPSisLT(old_xlow, new_xlow) )
    {
+      assert(ixlow == 1.0);
       old_xlow = new_xlow;
       tightened = true;
    }
@@ -2083,6 +2087,7 @@ bool StochPresolverBase::tightenBounds(double new_xlow, double new_xupp, double&
 
    if( ixupp != 0.0 && PIPSisLT(new_xupp, old_xupp) )
    {
+      assert(ixupp == 1.0);
       old_xupp = new_xupp;
       tightened = true;
    }

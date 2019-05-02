@@ -165,6 +165,15 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
                status_code, 0);
       }
       // *** Predictor step ***
+      int myRank = 0;
+      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+      StochVector* copy_iterate_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).cloneFull();
+      double obj = copy_iterate_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
+      double onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).onenorm();
+      double twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).twonorm();
+      double infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).infnorm();
+      if(myRank == 0)
+         std::cout << std::endl << "GondzioStochLp\tIterate\tonenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
 
       resid->set_r3_xz_alpha(iterate, 0.0);
 
@@ -172,13 +181,11 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
       sys->solve(prob, iterate, resid, step);
       step->negate();
 
-      int myRank = 0;
-      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
       StochVector* copy_x_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).cloneFull();
-      double obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*(dynamic_cast<sData*>(prob)->g)));
-      double onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
-      double twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
-      double infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
+      obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*(dynamic_cast<sData*>(prob)->g)));
+      onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
+      twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
+      infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
       if(myRank == 0)
          std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
 

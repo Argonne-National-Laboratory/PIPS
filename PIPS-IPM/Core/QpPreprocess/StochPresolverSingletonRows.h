@@ -11,6 +11,7 @@
 #include "StochPresolverBase.h"
 #include "SparseStorageDynamic.h"
 #include "PresolveData.h"
+#include <fstream>
 
 class StochPresolverSingletonRows : public StochPresolverBase
 {
@@ -23,6 +24,8 @@ public:
    virtual void applyPresolving();
 
 private:
+   std::ofstream ofs;
+
    void doSingletonRows(int& n_sing_sys, int& n_sing_other_sys, SystemType system_type);
 
    void procSingletonRowRoot(SystemType system_type);

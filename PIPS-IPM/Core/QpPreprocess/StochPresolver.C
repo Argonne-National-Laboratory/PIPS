@@ -85,11 +85,11 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      presolverCleanup.applyPresolving();
+//      presolverCleanup.applyPresolving();
       presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
-      presolverParallelRow.applyPresolving();
-      presolverCleanup.applyPresolving();
+//      presolverBS.applyPresolving();
+//      presolverParallelRow.applyPresolving();
+//      presolverCleanup.applyPresolving();
    }
 
    if( myRank == 0 )
@@ -103,6 +103,35 @@ Data* StochPresolver::presolve()
    // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);
+
+//      if(myRank == 0)
+//      {
+//         for(int i = 0; i < dynamic_cast<StochVector&>(*finalPresData->g).children.size(); ++i)
+//         {
+//               StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*finalPresData->A);
+//
+//            if( !matrix.children[i]->isKindOf(kStochGenDummyMatrix))
+//            {
+//               for(int j = 0; j < dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->g).children.at(i)->vec)->n; ++j)
+//               {
+//                  SimpleVector* currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->g).children.at(i)->vec);
+//                  SimpleVector* currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->bux).children.at(i)->vec);
+//                  SimpleVector* currxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->ixupp).children.at(i)->vec);
+//                  SimpleVector* currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->blx).children.at(i)->vec);
+//                  SimpleVector* currxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->ixlow).children.at(i)->vec);
+//
+//                  if( currgChild->elements()[j] != 0 )
+//                  {
+//                     std::cout << "obj_child: " << currgChild->elements()[j] << std::endl;
+//                     std::cout << "x € [" << ( (currIxlowChild->elements()[j] == 0.0) ? -std::numeric_limits<double>::infinity() : currxlowChild->elements()[j] ) << ", "
+//                           << ( (currIxuppChild->elements()[j] == 0.0) ? std::numeric_limits<double>::infinity() : currxuppChild->elements()[j] ) << "]" << std::endl;
+//                  }
+//               }
+//            }
+//
+//         }
+//      }
+      MPI_Barrier(MPI_COMM_WORLD);
 
    assert( finalPresData->isRootNodeInSync() );
 

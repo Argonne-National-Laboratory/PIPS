@@ -9,6 +9,9 @@
 #include "StochPresolverSingletonRows.h"
 #include <limits>
 #include <cmath>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData) :
       StochPresolverBase(presData)
@@ -32,6 +35,33 @@ void StochPresolverSingletonRows::applyPresolving()
 
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   std::ostringstream name;
+   name << myRank << "check_singleton_rows.txt";
+   ofs.open( name.str().c_str(), std::ofstream::out);
+
+//
+//   if(myRank == 0)
+//   {
+//      for(int i = 0; i < nChildren; ++i)
+//      {
+//         if(!nodeIsDummy(i, EQUALITY_SYSTEM))
+//         {
+//            updatePointersForCurrentNode(i, EQUALITY_SYSTEM);
+//
+//            for(int j = 0; j < currgChild->length(); ++j)
+//            {
+//               if( currgChild->elements()[j] != 0 )
+//               {
+//                  std::cout << "obj_child: " << currgChild->elements()[j] << std::endl;
+//                  std::cout << "x € [" << ( (currIxlowChild->elements()[j] == 0.0) ? -std::numeric_limits<double>::infinity() : currxlowChild->elements()[j] ) << ", "
+//                        << ( (currIxuppChild->elements()[j] == 0.0) ? std::numeric_limits<double>::infinity() : currxuppChild->elements()[j] ) << "]" << std::endl;
+//               }
+//            }
+//         }
+//
+//      }
+//   }
+//   MPI_Barrier(MPI_COMM_WORLD);
 
 #ifndef NDEBUG
    if( myRank == 0 )
@@ -57,30 +87,31 @@ void StochPresolverSingletonRows::applyPresolving()
    int iter = 0;
 
    // main loop:
-   while(n_singleton_equality + n_singleton_inequality > 0 && iter < maxIterSR )
-   {
+//   while(n_singleton_equality + n_singleton_inequality > 0 && iter < maxIterSR )
+//   {
       /* eliminate all singleton rows in equality system */
-      if( n_singleton_equality > 0 )
-      {
-         // main method:
-         doSingletonRows(n_singleton_equality, n_singleton_inequality,
-               EQUALITY_SYSTEM);
-      }
-      else if( n_singleton_inequality > 0 )
-      {
+//      if( n_singleton_equality > 0 )
+//      {
+//         // main method:
+//         doSingletonRows(n_singleton_equality, n_singleton_inequality,
+//               EQUALITY_SYSTEM);
+//      }
+//      else if( n_singleton_inequality > 0 )
+//      {
          //assert(n_singleton_equality == 0);
+   ofs << "start" << std::endl;
 
          /* main method: */
          doSingletonRows(n_singleton_inequality, n_singleton_equality,
                INEQUALITY_SYSTEM);
-      }
+//      }
 
-      iter++;
+//      iter++;
 
       countSingletonRows(n_singleton_equality, n_singleton_inequality);
-   }
+//   }
 
-   assert( (n_singleton_equality == 0 && n_singleton_inequality == 0) || iter >= maxIterSR);
+//   assert( (n_singleton_equality == 0 && n_singleton_inequality == 0) || iter >= maxIterSR);
 
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
@@ -96,6 +127,31 @@ void StochPresolverSingletonRows::applyPresolving()
    if(myRank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
+
+//   if(myRank == 0)
+//   {
+//      for(int i = 0; i < nChildren; ++i)
+//      {
+//         if(!nodeIsDummy(i, EQUALITY_SYSTEM))
+//         {
+//            updatePointersForCurrentNode(i, EQUALITY_SYSTEM);
+//
+//            for(int j = 0; j < currgChild->length(); ++j)
+//            {
+//               if( currgChild->elements()[j] != 0 )
+//               {
+//                  std::cout << "obj_child: " << currgChild->elements()[j] << std::endl;
+//                  std::cout << "x € [" << ( (currIxlowChild->elements()[j] == 0.0) ? -std::numeric_limits<double>::infinity() : currxlowChild->elements()[j] ) << ", "
+//                        << ( (currIxuppChild->elements()[j] == 0.0) ? std::numeric_limits<double>::infinity() : currxuppChild->elements()[j] ) << "]" << std::endl;
+//               }
+//            }
+//         }
+//
+//      }
+//   }
+//   MPI_Barrier(MPI_COMM_WORLD);
+
+   ofs.close();
 
    assert(presData.reductionsEmpty());
    assert(presData.presProb->isRootNodeInSync());
@@ -118,7 +174,8 @@ StochPresolverSingletonRows::doSingletonRows(int& n_sing_sys, int& n_sing_other_
    n_sing_sys = 0;
 
    /* processes root node - finds vars to delete and updates bounds */
-   procSingletonRowRoot(system_type);
+//   procSingletonRowRoot(system_type);
+
    /* remove singletons from children */
    for( int node = 0; node < nChildren; node++ )
    {
@@ -192,6 +249,7 @@ void StochPresolverSingletonRows::procSingletonRowChild(int node, int& n_singlet
  */
 void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, BlockType block_type, int node)
 {
+
    if( block_type == LINKING_CONS_BLOCK )
       if( !hasLinking(system_type) )
          return;
@@ -250,6 +308,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
       /* if singleton row entry is in current block */
       if( nnz_row->elements()[i] - redRow->elements()[i] == 1.0 && matrix->rowptr[i].start + 1 == matrix->rowptr[i].end)
       {
+
          int colIdx = -1;
          double aik = 0.0;
 
@@ -259,6 +318,8 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
          /* if in equality system fix variable */
          if( system_type == EQUALITY_SYSTEM )
          {
+            assert(false);
+
             const double rhs = (block_type == LINKING_CONS_BLOCK) ? curr_eq_rhs->elements()[i] + currEqRhsAdaptionsLink[i] : curr_eq_rhs->elements()[i];
             const double fixation_value = rhs / aik;
 
@@ -299,6 +360,10 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
             const double lhs = (block_type == LINKING_CONS_BLOCK) ? clow->elements()[i] + currInEqLhsAdaptionsLink[i] : clow->elements()[i];
             const double rhs = (block_type == LINKING_CONS_BLOCK) ? cupp->elements()[i] + currInEqRhsAdaptionsLink[i] : cupp->elements()[i];
 
+            ofs << "node: " << node << "\trow: " << i << "\tcolIdx: " << colIdx << "\taik: " << aik << "\tlhs: " << ( (iclow->elements()[i] == 1.0) ? clow->elements()[i] : -std::numeric_limits<double>::infinity() )
+                  << " " << ( (iclow->elements()[i] == 1.0) ? lhs : -std::numeric_limits<double>::infinity() ) << "\trhs: " << ( (icupp->elements()[i] == 1.0) ? cupp->elements()[i] : std::numeric_limits<double>::infinity() )
+                  << " " << ( (icupp->elements()[i] == 1.0) ? rhs : std::numeric_limits<double>::infinity() ) << "\tx € [: " << ( (ixlow[colIdx] == 1.0) ? xlow[colIdx] : -std::numeric_limits<double>::infinity() )
+                  << ", " << ( (ixupp[colIdx] == 1.0) ? xupp[colIdx] : -std::numeric_limits<double>::infinity() ) << "]";
             calculateNewBoundsOnVariable(new_xlow, new_xupp, iclow->elements()[i], lhs, icupp->elements()[i], rhs, aik);
 
             double llow = xlow[colIdx];
@@ -309,11 +374,11 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
             {
                if( !variableFixationValid(fixation_value, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx], true) )
                {
-                 std::cout << new_xlow << "\t" << new_xupp << "\t" << iclow->elements()[i] << "\t" << lhs << "\t" << icupp->elements()[i] << "\t" <<  rhs << "\t" << aik << std::endl;
-                 std::cout << xlow[colIdx] << "\t" << xupp[colIdx] << std::endl;
-                 std::cout << llow << "\t" << uuppp << std::endl;
+                  std::cout << new_xlow << "\t" << new_xupp << "\t" << iclow->elements()[i] << "\t" << lhs << "\t" << icupp->elements()[i] << "\t" <<  rhs << "\t" << aik << std::endl;
+                  std::cout << xlow[colIdx] << "\t" << xupp[colIdx] << std::endl;
+                  std::cout << llow << "\t" << uuppp << std::endl;
                   std::cout << block_type << "\t" << ixlow[colIdx] << "\t" << ixupp[colIdx] << "\t" << lhs << "\t" << rhs << std::endl;
-                 abortInfeasible(MPI_COMM_WORLD);
+                  abortInfeasible(MPI_COMM_WORLD);
                }
 
                /* for Amat we store deletions - collect them and apply them later */
@@ -381,6 +446,9 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                   assert( nnz_row->elements()[i] - redRow->elements()[i] == 0.0 );
                assert(matrix->rowptr[i].start == matrix->rowptr[i].end);
             }
+
+            ofs << "\tnewupp: " << ( (ixupp[colIdx] == 1.0) ? xupp[colIdx] : std::numeric_limits<double>::infinity() )
+                  << "\tnewclow: " << ( (ixlow[colIdx] == 1.0) ? xlow[colIdx] : -std::numeric_limits<double>::infinity() ) << std::endl;
          }
       }
    }
