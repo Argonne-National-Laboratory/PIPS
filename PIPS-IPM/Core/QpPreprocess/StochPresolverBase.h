@@ -12,6 +12,7 @@
 #include "StochGenMatrix.h"
 #include "PresolveData.h"
 #include "sData.h"
+#include "SystemType.h"
 #include <vector>
 
 typedef struct
@@ -29,7 +30,6 @@ struct xbounds_col_is_smaller
     }
 };
 
-enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
 enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK, LINKING_CONS_BLOCK};
 
 
