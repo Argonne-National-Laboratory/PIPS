@@ -37,7 +37,7 @@ enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK, LINKING_CONS_BLOCK};
 class StochPresolverBase
 {
 public:
-   StochPresolverBase(PresolveData& presData);
+   StochPresolverBase(PresolveData& presData, const StochPostsolver* postsolver = NULL);
    virtual ~StochPresolverBase();
 
    // todo return bool whether enough eliminations
@@ -54,6 +54,8 @@ public:
    bool checkRootNodeDataInSync(const sData& sData) const;
 
 protected:
+   const StochPostsolver* postsolver;
+
    // todo do we want to make these adjustable?
    static const double feastol = 1.0e-6; // was 1.0e-6
    static const double infinity = 1.0e30;

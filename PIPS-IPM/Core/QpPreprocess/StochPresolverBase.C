@@ -17,8 +17,8 @@
 #include <cmath> // std::isfinite
 
 
-StochPresolverBase::StochPresolverBase(PresolveData& presData) :
-      presData(presData)
+StochPresolverBase::StochPresolverBase(PresolveData& presData, const StochPostsolver* postsolver) :
+      postsolver(postsolver), presData(presData)
 {
    presProb = presData.presProb;
 
