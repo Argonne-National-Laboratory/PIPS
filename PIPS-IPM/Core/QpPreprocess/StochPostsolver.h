@@ -10,17 +10,15 @@
 
 #include <vector>
 
+#include "QpPostsolver.h"
 #include "StochVector.h"
 #include "sData.h"
 #include "sVars.h"
 #include "SystemType.h"
 
-class StochPostsolver{
+
+class StochPostsolver : QpPostsolver{
 public:
-      enum PostsolveStatus
-      {
-         PRESOLVE_OK, PRESOLVE_FAIL
-      };
 
       StochPostsolver( const sData& original_problem, int n_rows_original, int n_cols_original);
       virtual ~StochPostsolver();
@@ -29,7 +27,7 @@ public:
       void notifyDeletedRow( SystemType system_type, int node, unsigned int row, bool linking_constraint);
       void notifyParallelColumns();
 
-      PostsolveStatus undo(const sVars& reduced_solution, sVars& original_solution) const;
+      PostsolveStatus postsolve(const sVars& reduced_solution, sVars& original_solution) const;
 
 protected:
 
@@ -41,8 +39,6 @@ protected:
          DELETED_ROW = 3
       };
 
-      const sData& original_problem;
-
       const unsigned int n_rows_original;
       const unsigned int n_cols_original;
 
@@ -51,7 +47,8 @@ protected:
       StochVector* mapping_to_origrow_inequality;
 
       std::vector<ReductionType> reductions;
-      std::vector<int> indices;
+      std::vector<unsigned int> indices;
+      std::vector<int> nodes;
       std::vector<double> values;
       std::vector<unsigned int> start_indices;
 

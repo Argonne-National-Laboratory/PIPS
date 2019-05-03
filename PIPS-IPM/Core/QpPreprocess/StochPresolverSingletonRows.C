@@ -205,7 +205,6 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
    double* xlow = (block_type == LINKING_VARS_BLOCK || node == -1) ? currxlowParent->elements() : currxlowChild->elements();
    double* xupp = (block_type == LINKING_VARS_BLOCK || node == -1) ? currxuppParent->elements() : currxuppChild->elements();
 
-   SimpleVector* nnz_col = (block_type == LINKING_VARS_BLOCK || node == -1) ? currNnzColParent : currNnzColChild;
    SimpleVector* nnz_row = (block_type == LINKING_CONS_BLOCK) ? currNnzRowLink : currNnzRow;
 
    SimpleVector* curr_eq_rhs = (block_type == LINKING_CONS_BLOCK) ? currEqRhsLink : currEqRhs;
@@ -239,8 +238,6 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
    SimpleVector* redCol = (block_type == LINKING_VARS_BLOCK || node == -1) ? currRedColParent : currRedColChild;
    assert(redCol);
    SimpleVector* redRow = (block_type == LINKING_CONS_BLOCK) ? currRedRowLink : currRedRow;
-
-   bool linking_row = (block_type == LINKING_CONS_BLOCK);
 
    assert(nnz_row->length() == matrix->m);
    assert(nnz_row->length() == matrix_transp->n);

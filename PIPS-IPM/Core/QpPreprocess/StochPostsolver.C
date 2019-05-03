@@ -12,7 +12,7 @@
 #include <stdexcept>
 
 StochPostsolver::StochPostsolver(const sData& original_problem, int n_rows_original, int n_cols_original) :
-      original_problem(original_problem), n_rows_original(n_rows_original), n_cols_original(n_cols_original)
+   QpPostsolver(original_problem), n_rows_original(n_rows_original), n_cols_original(n_cols_original)
 {
    // todo set up stochvectors for mapping
    mapping_to_origcol = dynamic_cast<StochVector*>(original_problem.g->clone());
@@ -30,9 +30,10 @@ StochPostsolver::~StochPostsolver(){}
 void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double value)
 {
    reductions.push_back(FIXED_COLUMN);
-   //indices.push_back( mapping_to_origcol[col]);
-//   values.push_back( value );
-   throw std::runtime_error("Not yet implemented");
+//   indices.push_back( mapping_to_origcol[col]);
+   nodes.push_back( node );
+   values.push_back( value );
+
    finishNotify();
 }
 
@@ -49,12 +50,15 @@ void StochPostsolver::notifyParallelColumns()
 void StochPostsolver::finishNotify()
 {
    assert( reductions.size() == start_indices.size() );
-   assert( values.size() == start_indices.size() );
+   assert( nodes.size() == start_indices.size() );
+   assert( values.size() == indices.size() ); // todo why ? probably padding
+
    start_indices.push_back( values.size() );
 }
 
+// todo : sort reductions by nodes ? and then reverse ?
 // todo : at the moment only replaces whatever is given as x with the x solution in the original soution space
-StochPostsolver::PostsolveStatus StochPostsolver::undo(const sVars& reduced_solution, sVars& original_solution) const
+PostsolveStatus StochPostsolver::postsolve(const sVars& reduced_solution, sVars& original_solution) const
 {
 
    /* primal variables */
@@ -84,15 +88,13 @@ StochPostsolver::PostsolveStatus StochPostsolver::undo(const sVars& reduced_solu
       {
          case FIXED_COLUMN:
          {
-            int node = indices[first];
-            int column = indices[first + 1];
+            int column = indices[first];
+            int node = nodes[first];
 
-            assert( -1 <= node && node < primal_vars_orig.children.size() );
+            assert( -1 <= node && node < static_cast<int>(primal_vars_orig.children.size()) );
 
             SimpleVector& orig_sol = (node == -1) ? dynamic_cast<SimpleVector&>(*primal_vars_orig.vec)
                   : dynamic_cast<SimpleVector&>(*primal_vars_orig.children[node]->vec);
-            const SimpleVector& red_sol = (node == -1) ? dynamic_cast<const SimpleVector&>(*primal_vars_reduced.vec)
-                  : dynamic_cast<const SimpleVector&>(*primal_vars_reduced.children[node]->vec);
 
             orig_sol[column] = values[first];
             break;
@@ -117,13 +119,11 @@ StochPostsolver::PostsolveStatus StochPostsolver::undo(const sVars& reduced_solu
             throw std::runtime_error("Tried to postsolve unknown reduction type"); // todo add what was passed
             break;
          }
+
+         // todo ? an isset array
+         // todo  check solution for feasibility - kkt checker
       }
    }
-
-
-
-   throw std::runtime_error("Not yet implemented");
-
 
    return PRESOLVE_OK;
 }

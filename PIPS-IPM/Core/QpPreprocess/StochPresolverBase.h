@@ -13,6 +13,7 @@
 #include "PresolveData.h"
 #include "sData.h"
 #include "SystemType.h"
+#include "StochPostsolver.h"
 #include <vector>
 
 typedef struct
