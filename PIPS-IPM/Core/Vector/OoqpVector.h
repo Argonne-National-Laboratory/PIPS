@@ -34,6 +34,8 @@ public:
 
   /** Set all elements of this OoqpVector to zero. */
   virtual void setToZero() = 0;
+  /** Check if all elemens in the vector are equal to zero. */
+  virtual bool isZero() const = 0;
   /** Set all elements of this OoqpVector to the constant value c */
   virtual void setToConstant( double c ) = 0;
   /** Fill this OoqpVector with random elements 
@@ -47,11 +49,11 @@ public:
   virtual void copyFrom( OoqpVector& v ) = 0;
   
   /** Return the infinity norm of this OoqpVector object. */
-  virtual double twonorm() = 0;
+  virtual double twonorm() const = 0;
   /** Return the infinity norm of this OoqpVector object. */
-  virtual double infnorm() = 0;
+  virtual double infnorm() const = 0;
   /** Return the one norm of this OoqpVector object. */
-  virtual double onenorm() = 0;
+  virtual double onenorm() const = 0;
 
   /** Multiply the components of this OoqpVector by the components of v. */
   virtual void componentMult( OoqpVector& v ) = 0;
@@ -107,27 +109,27 @@ public:
 
   /** Return the minimum value in this vector, and the index at 
    *  which it occurs. */
-  virtual void min( double& m, int& index ) = 0;
+  virtual void min( double& m, int& index ) const = 0;
 
   /** Return the maximum value in this vector, and the index at
    *  which it occurs. */
-  virtual void max( double& m, int& index ) = 0;
+  virtual void max( double& m, int& index ) const = 0;
 
   /** Return the absolute minimum value of this vector */
-  virtual void absmin(double& m) = 0;
+  virtual void absmin(double& m) const = 0;
 
-  virtual void absminVecUpdate(OoqpVector& absminvec) = 0;
+  virtual void absminVecUpdate(OoqpVector& absminvec) const = 0;
 
-  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) = 0;
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const = 0;
 
   /** Return the absolute minimum value of this vector bigger than tolerance */
-  virtual void absminNonZero(double& m, double tolerance = pips_eps) = 0;
+  virtual void absminNonZero(double& m, double tolerance = pips_eps) const = 0;
 
   /** Return the dot product of this OoqpVector with v */
-  virtual double dotProductWith( OoqpVector& v ) = 0;
+  virtual double dotProductWith( const OoqpVector& v ) const = 0;
 
   /** Return the scaled dot product of this (scaled) vector with itself  */
-  virtual double dotProductSelf(double scaleFactor) = 0;
+  virtual double dotProductSelf(double scaleFactor) const = 0;
 
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */

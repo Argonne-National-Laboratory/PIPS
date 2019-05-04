@@ -63,20 +63,20 @@ public:
   virtual int isKindOf( int kind ) const;
   virtual void setToZero();
   virtual void setToConstant( double c );
-  virtual bool isZero();
+  virtual bool isZero() const;
 
   virtual void randomize( double alpha, double beta, double *ix );
   virtual void copyFrom( OoqpVector& v );
   virtual void copyFromAbs(const OoqpVector& v);
-  virtual double twonorm();
-  virtual double infnorm();
-  virtual double onenorm();
-  virtual void min( double& m, int& index );
-  virtual void max( double& m, int& index );
-  virtual void absminVecUpdate(OoqpVector& absminvec);
-  virtual void absmaxVecUpdate(OoqpVector& absmaxvec);
-  virtual void absmin( double& m);
-  virtual void absminNonZero(double& m, double tolerance=pips_eps);
+  virtual double twonorm() const;
+  virtual double infnorm() const;
+  virtual double onenorm() const;
+  virtual void min( double& m, int& index ) const;
+  virtual void max( double& m, int& index ) const;
+  virtual void absminVecUpdate(OoqpVector& absminvec) const;
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const;
+  virtual void absmin( double& m ) const;
+  virtual void absminNonZero(double& m, double tolerance=pips_eps) const;
   virtual double stepbound(OoqpVector & v, double maxStep );
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -118,8 +118,8 @@ public:
 
   virtual void addConstant( double c );
   virtual void gondzioProjection( double rmin, double rmax );
-  virtual double dotProductWith( OoqpVector& v );
-  virtual double dotProductSelf(double scaleFactor);
+  virtual double dotProductWith( const OoqpVector& v ) const;
+  virtual double dotProductSelf(double scaleFactor) const;
 
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */
@@ -189,20 +189,21 @@ public:
 
   virtual int isKindOf( int kind ) const {return kind == kStochDummy;}
   virtual void setToZero(){};
-  virtual bool isZero(){ return true; };
+  virtual bool isZero() const { return true; };
 
   virtual void setToConstant( double c ){};
   virtual void randomize( double alpha, double beta, double *ix ){};
   virtual void copyFrom( OoqpVector& v ){};
   virtual void copyFromAbs(const OoqpVector& v) {};
-  virtual double twonorm(){return 0.0;}
-  virtual double infnorm(){return 0.0;}
-  virtual double onenorm(){return 0.0;}
-  virtual void min( double& m, int& index ){};
-  virtual void absminVecUpdate(OoqpVector& absminvec) {};
-  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) {};
-  virtual void absmin( double& m){};
-  virtual void absminNonZero(double& m, double tolerance=pips_eps){};
+  virtual double twonorm() const {return 0.0;}
+  virtual double infnorm() const {return 0.0;}
+  virtual double onenorm() const {return 0.0;}
+  virtual void min( double& m, int& index ) const {};
+  virtual void max( double& m, int& index ) const {};
+  virtual void absminVecUpdate(OoqpVector& absminvec) const {};
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const {};
+  virtual void absmin( double& m) const {};
+  virtual void absminNonZero(double& m, double tolerance=pips_eps) const {};
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -246,8 +247,8 @@ public:
 
   virtual void addConstant( double c ){};
   virtual void gondzioProjection( double rmin, double rmax ){};
-  virtual double dotProductWith( OoqpVector& v ){return 0.0;}
-  virtual double dotProductSelf(double scaleFactor = 1.0){return 0.0;};
+  virtual double dotProductWith( const OoqpVector& v ) const {return 0.0;}
+  virtual double dotProductSelf(double scaleFactor = 1.0) const {return 0.0;};
 
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */

@@ -19,7 +19,7 @@ long long SimpleVector::numberOfNonzeros()
   return count;
 }
 
-void SimpleVector::min( double& m, int& index )
+void SimpleVector::min( double& m, int& index ) const
 {
   if (n==0) {
     m=1e20;
@@ -35,7 +35,7 @@ void SimpleVector::min( double& m, int& index )
   }
 }
 
-void SimpleVector::absminVecUpdate(OoqpVector& absminvec)
+void SimpleVector::absminVecUpdate(OoqpVector& absminvec) const
 {
    const SimpleVector& absminvecSimple = dynamic_cast<const SimpleVector&>(absminvec);
    assert( absminvecSimple.length() == n );
@@ -49,7 +49,7 @@ void SimpleVector::absminVecUpdate(OoqpVector& absminvec)
    }
 }
 
-void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec)
+void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec) const
 {
    const SimpleVector& absmaxvecSimple = dynamic_cast<const SimpleVector&>(absmaxvec);
    assert( absmaxvecSimple.length() == n );
@@ -63,7 +63,7 @@ void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec)
    }
 }
 
-void SimpleVector::absmin(double& min)
+void SimpleVector::absmin(double& min) const
 {
    if (n==0) {
      min=1e20;
@@ -79,7 +79,7 @@ void SimpleVector::absmin(double& min)
 
 /** Compute the min absolute value that is at least as big as tolerance.
  * If there is no such value, return 0.0 */
-void SimpleVector::absminNonZero(double& min, double tolerance)
+void SimpleVector::absminNonZero(double& min, double tolerance) const
 {
    assert( tolerance >= 0.0 );
    if (n==0) {
@@ -99,7 +99,7 @@ void SimpleVector::absminNonZero(double& min, double tolerance)
       min = 0.0;
 }
 
-void SimpleVector::max( double& m, int& index )
+void SimpleVector::max( double& m, int& index ) const
 {
    if( n == 0 )
    {
@@ -173,7 +173,7 @@ SimpleVector* SimpleVector::cloneFull() const
    return clone;
 }
 
-bool SimpleVector::isZero()
+bool SimpleVector::isZero() const
 {
 	bool is_zero = true;
 
@@ -227,7 +227,7 @@ void SimpleVector::copyFromAbs(const OoqpVector& vec )
      v[i] = fabs( vecArr[i] );
 }
 
-double SimpleVector::infnorm()
+double SimpleVector::infnorm() const
 {
   double temp, norm = 0;
   int i;
@@ -249,7 +249,7 @@ double SimpleVector::infnorm()
   return norm;
 }
 
-double SimpleVector::onenorm()
+double SimpleVector::onenorm() const
 {
   double temp, norm = 0;
   int i;
@@ -259,7 +259,7 @@ double SimpleVector::onenorm()
   }
   return norm;
 }    
-double SimpleVector::twonorm()
+double SimpleVector::twonorm() const
 {
   double temp = dotProductWith(*this);
   return sqrt(temp);
@@ -516,10 +516,10 @@ void SimpleVector::axdzpy( double alpha, OoqpVector& xvec,
   }
 }
 
-double SimpleVector::dotProductWith( OoqpVector& vec )
+double SimpleVector::dotProductWith( const OoqpVector& vec ) const
 {
   assert( n == vec.length() );
-  SimpleVector & svec = dynamic_cast<SimpleVector &>(vec);
+  const SimpleVector & svec = dynamic_cast<const SimpleVector &>(vec);
   double * vvec = svec.v;
 
   double dot1 = 0.0;
@@ -545,7 +545,7 @@ double SimpleVector::dotProductWith( OoqpVector& vec )
   return dot2 + dot1;
 }
 
-double SimpleVector::dotProductSelf( double scaleFactor )
+double SimpleVector::dotProductSelf( double scaleFactor ) const
 {
    assert(scaleFactor >= 0.0);
 

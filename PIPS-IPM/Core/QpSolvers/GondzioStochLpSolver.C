@@ -133,32 +133,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    sys = factory->makeLinsys(prob);
 
 
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    {
-      std::ostringstream name;
-      name << myRank << "objective_before_stoch.txt";
-      std::ofstream ofs( name.str().c_str(), std::ofstream::out);
-      StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g);
+      // scoping for safety
+      int myRank;
+      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-      for( int j = 0; j < dynamic_cast<SimpleVector&>(*g.vec).n; ++j )
-      {
-         ofs << "node: " << -1 << "\tcol: " << j << "\tg = "
-               << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g).vec)[j] << std::endl;
-      }
-      for( size_t i = 0; i < g.children.size(); ++i )
-      {
-         if( g.children[i] )
-         {
-            for( int j = 0; j < dynamic_cast<SimpleVector&>(*g.children.at(i)->vec).n; ++j )
-            {
-               ofs << "node: " << i << "\tcol: " << j << "\tg = "
-                     << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g).children[i]->vec)[j] << std::endl;
-            }
-         }
-      }
-      ofs.close();
-      MPI_Barrier(MPI_COMM_WORLD );
+      const StochVector& g = dynamic_cast<const StochVector&>(*(dynamic_cast<sData*>(prob)->g));
 
       double obj_inf = g.infnorm();
       double obj_min = 0;
@@ -169,54 +149,13 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       g.max(obj_max, obj_max_idx);
       if( myRank == 0 )
          std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
+
+      MPI_Barrier(MPI_COMM_WORLD);
    }
 
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);
    stochFactory->iterateEnded();
-
-   {
-
-      StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g);
-      double obj_inf = g.infnorm();
-      double obj_min = 0;
-      int obj_min_idx = -1;
-      double obj_max = 0;
-      int obj_max_idx = -1;
-      g.min(obj_min, obj_min_idx);
-      g.max(obj_max, obj_max_idx);
-
-      if( myRank == 0 )
-         std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
-
-   std::ostringstream name;
-   name << myRank << "check_singleton_rows_before_stoch.txt";
-   std::ofstream ofs( name.str().c_str(), std::ofstream::out);
-   const StochVector& ixupp = dynamic_cast<const StochVector&>(*dynamic_cast<sData*>(prob)->ixupp);
-   const StochVector& ixlow  = dynamic_cast<const StochVector&>(*dynamic_cast<sData*>(prob)->ixlow);
-   const StochVector& xupp = dynamic_cast<const StochVector&>(*dynamic_cast<sData*>(prob)->bux);
-   const StochVector& xlow  = dynamic_cast<const StochVector&>(*dynamic_cast<sData*>(prob)->blx);
-
-   for( int j = 0; j < dynamic_cast<SimpleVector&>(*xupp.vec).n; ++j )
-   {
-      ofs << "node: " << -1 << "\tcol: " << j << "\tx = " << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).vec)[j] << " € [" << ((dynamic_cast<SimpleVector&>(*ixlow.vec)[j] == 1.0) ? dynamic_cast<SimpleVector&>(*xlow.vec)[j] : -std::numeric_limits<double>::infinity()) << ", "
-            << ((dynamic_cast<SimpleVector&>(*ixupp.vec)[j] == 1.0) ? dynamic_cast<SimpleVector&>(*xupp.vec)[j] : -std::numeric_limits<double>::infinity()) << "]" << std::endl;
-   }
-   for( size_t i = 0; i < xupp.children.size(); ++i )
-   {
-      if( xupp.children[i] )
-      {
-         for( int j = 0; j < dynamic_cast<SimpleVector&>(*xupp.children.at(i)->vec).n; ++j )
-         {
-            ofs << "node: " << i << "\tcol: " << j << "\tx = " << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).children[i]->vec)[j] << " € [" << ( ( dynamic_cast<SimpleVector&>(*ixlow.children[i]->vec)[j] == 1.0 ) ? dynamic_cast<SimpleVector&>(*xlow.children[i]->vec)[j] :
-                  -std::numeric_limits<double>::infinity() ) << ", " << ( ( dynamic_cast<SimpleVector&>(*ixupp.children[i]->vec)[j] == 1.0 ) ? dynamic_cast<SimpleVector&>(*xupp.children[i]->vec)[j] :
-                        -std::numeric_limits<double>::infinity() ) << "]" << std::endl;
-         }
-      }
-   }
-   ofs.close();
-   MPI_Barrier(MPI_COMM_WORLD );
-   }
 
    iter = 0;
    NumberGondzioCorrections = 0;
@@ -226,38 +165,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
    do
    {
-      if(iter > 0)
-      {
-         std::ostringstream name;
-         name << myRank << "check_singleton_rows_before_stoch_it_" << iter << ".txt";
-         std::ofstream ofs( name.str().c_str(), std::ofstream::out);
-
-         StochVector& ixupp = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->ixupp);
-         StochVector& ixlow = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->ixlow);
-         StochVector& xupp= dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->bux);
-         StochVector& xlow = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->blx);
-
-         for( int j = 0; j < dynamic_cast<SimpleVector&>(*xupp.vec).n; ++j )
-         {
-            ofs << "node: " << -1 << "\tcol: " << j << "\tx = " << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).vec)[j] << " € [" << ((dynamic_cast<SimpleVector&>(*ixlow.vec)[j] == 1.0) ? dynamic_cast<SimpleVector&>(*xlow.vec)[j] : -std::numeric_limits<double>::infinity()) << ", "
-                  << ((dynamic_cast<SimpleVector&>(*ixupp.vec)[j] == 1.0) ? dynamic_cast<SimpleVector&>(*xupp.vec)[j] : -std::numeric_limits<double>::infinity()) << "]" << std::endl;
-         }
-         for( size_t i = 0; i < xupp.children.size(); ++i )
-         {
-            if( xupp.children[i] )
-            {
-               for( int j = 0; j < dynamic_cast<SimpleVector&>(*xupp.children.at(i)->vec).n; ++j )
-               {
-                  ofs << "node: " << i << "\tcol: " << j << "\tx = " << dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).children[i]->vec)[j] << " € [" << ( ( dynamic_cast<SimpleVector&>(*ixlow.children[i]->vec)[j] == 1.0 ) ? dynamic_cast<SimpleVector&>(*xlow.children[i]->vec)[j] :
-                        -std::numeric_limits<double>::infinity() ) << ", " << ( ( dynamic_cast<SimpleVector&>(*ixupp.children[i]->vec)[j] == 1.0 ) ? dynamic_cast<SimpleVector&>(*xupp.children[i]->vec)[j] :
-                              -std::numeric_limits<double>::infinity() ) << "]" << std::endl;
-               }
-            }
-         }
-         ofs.close();
-         MPI_Barrier(MPI_COMM_WORLD);
-      }
-
       iter++;
       stochFactory->iterateStarted();
 
@@ -275,28 +182,13 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          this->doMonitorPd(prob, iterate, resid, alpha_pri, alpha_dual, sigma, iter, mu,
                status_code, 0);
       }
-      // *** Predictor step ***
-      StochVector* copy_iterate_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).cloneFull();
-      double obj = copy_iterate_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
-      double onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).onenorm();
-      double twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).twonorm();
-      double infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(iterate)->x).infnorm();
-      if(myRank == 0)
-         std::cout << std::endl << "GondzioStochLp\tIterate\tonenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
 
+      // *** Predictor step ***
       resid->set_r3_xz_alpha(iterate, 0.0);
 
       sys->factor(prob, iterate);
       sys->solve(prob, iterate, resid, step);
       step->negate();
-
-      StochVector* copy_x_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).cloneFull();
-      obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
-      onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
-      twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
-      infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
-      if(myRank == 0)
-         std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
 
       iterate->stepbound_pd(step, alpha_pri, alpha_dual);
 
@@ -314,7 +206,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       g_iterNumber+=0.5;
 
       // *** Corrector step ***
-
       corrector_resid->clear_r1r2();
 
       // form right hand side of linear system:
@@ -322,14 +213,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       sys->solve(prob, iterate, corrector_resid, corrector_step);
       corrector_step->negate();
-
-      onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).onenorm();
-      twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).twonorm();
-      infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).infnorm();
-      copy_x_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).cloneFull();
-      obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
-      if(myRank == 0)
-         std::cout << std::endl << "GondzioStochLP\tonenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
 
       // calculate weighted predictor-corrector step
       double weight_primal_candidate, weight_dual_candidate = -1.0;
