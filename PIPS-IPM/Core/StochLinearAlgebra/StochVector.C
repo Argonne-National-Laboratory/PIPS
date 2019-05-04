@@ -301,7 +301,7 @@ void StochVector::scale( double alpha )
     children[it]->scale(alpha);
 }
 
-bool StochVector::isZero()
+bool StochVector::isZero() const
 {
 	bool is_zero = true;
 
@@ -380,7 +380,7 @@ void StochVector::copyFromAbs(const OoqpVector& v_ )
     children[it]->copyFromAbs(*v.children[it]);
 }
 
-double StochVector::infnorm()
+double StochVector::infnorm() const
 {
   double infnrm;
 
@@ -402,7 +402,7 @@ double StochVector::infnorm()
   return infnrm; 
 }
 
-double StochVector::twonorm()
+double StochVector::twonorm() const
 {
 #if 0
   return sqrt(this->dotProductWith(*this));
@@ -417,7 +417,7 @@ double StochVector::twonorm()
 #endif
 }
 
-double StochVector::onenorm()
+double StochVector::onenorm() const
 {
   double onenrm = 0.0;
 
@@ -440,7 +440,7 @@ double StochVector::onenorm()
 }
 
 
-void StochVector::min( double& m, int& index )
+void StochVector::min( double& m, int& index ) const
 {
   double lMin; int lInd;
 
@@ -488,7 +488,7 @@ void StochVector::min( double& m, int& index )
 }
 
 
-void StochVector::max( double& m, int& index )
+void StochVector::max( double& m, int& index ) const
 {
    double lMax;
    int lInd;
@@ -540,7 +540,7 @@ void StochVector::max( double& m, int& index )
    }
 }
 
-void StochVector::absminVecUpdate(OoqpVector& absminvec)
+void StochVector::absminVecUpdate(OoqpVector& absminvec) const
 {
    StochVector& absminvecStoch = dynamic_cast<StochVector&>(absminvec);
    assert(absminvecStoch.children.size() == children.size());
@@ -557,7 +557,7 @@ void StochVector::absminVecUpdate(OoqpVector& absminvec)
       children[it]->absminVecUpdate(*(absminvecStoch.children[it]));
 }
 
-void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec)
+void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec) const
 {
    StochVector& absmaxvecStoch = dynamic_cast<StochVector&>(absmaxvec);
    assert(absmaxvecStoch.children.size() == children.size());
@@ -574,7 +574,7 @@ void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec)
       children[it]->absmaxVecUpdate(*(absmaxvecStoch.children[it]));
 }
 
-void StochVector::absmin(double& m)
+void StochVector::absmin(double& m) const
 {
    double lMin;
 
@@ -613,7 +613,7 @@ void StochVector::absmin(double& m)
    assert( m >= 0.0 );
 }
 
-void StochVector::absminNonZero(double& m, double tolerance)
+void StochVector::absminNonZero(double& m, double tolerance) const
 {
    double lMin;
    bool initialized = false;
@@ -1255,9 +1255,9 @@ void StochVector::gondzioProjection( double rmin, double rmax )
     children[it]->gondzioProjection( rmin, rmax );
 }
 
-double StochVector::dotProductWith( OoqpVector& v_ )
+double StochVector::dotProductWith( const OoqpVector& v_ ) const
 {
-  StochVector& v = dynamic_cast<StochVector&>(v_);
+  const StochVector& v = dynamic_cast<const StochVector&>(v_);
   assert(v.children.size() == children.size());
 
   double dotProd=0.0;
@@ -1283,7 +1283,7 @@ double StochVector::dotProductWith( OoqpVector& v_ )
   return dotProd;
 }
 
-double StochVector::dotProductSelf(double scaleFactor)
+double StochVector::dotProductSelf(double scaleFactor) const
 {
   double dotSelf = 0.0;
 

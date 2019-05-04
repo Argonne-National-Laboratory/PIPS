@@ -64,20 +64,6 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob);
 
-   {
-   StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(presData.presProb)->g);
-   double obj_inf = g.infnorm();
-   double obj_min = 0;
-   int obj_min_idx = -1;
-   double obj_max = 0;
-   int obj_max_idx = -1;
-   g.min(obj_min, obj_min_idx);
-   g.max(obj_max, obj_max_idx);
-
-   if( myRank == 0 )
-      std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
-   }
-
    assert( sorigprob->isRootNodeInSync());
    assert( presData.presProb->isRootNodeInSync() );
 
@@ -90,8 +76,6 @@ Data* StochPresolver::presolve()
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
-
-//   presData.presProb->writeToStreamDense(std::cout);
 
    // todo loop, and not exhaustive
    // some list holding all presolvers - eg one presolving run
@@ -131,53 +115,26 @@ Data* StochPresolver::presolve()
    // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
 
-   {
-   StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(finalPresData)->g);
-   double obj_inf = g.infnorm();
-   double obj_min = 0;
-   int obj_min_idx = -1;
-   double obj_max = 0;
-   int obj_max_idx = -1;
-   g.min(obj_min, obj_min_idx);
-   g.max(obj_max, obj_max_idx);
-
-   if( myRank == 0 )
-      std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
-   }
 //   finalPresData->writeToStreamDense(std::cout);
-
-//      if(myRank == 0)
-//      {
-//         for(int i = 0; i < dynamic_cast<StochVector&>(*finalPresData->g).children.size(); ++i)
-//         {
-//               StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*finalPresData->A);
-//
-//            if( !matrix.children[i]->isKindOf(kStochGenDummyMatrix))
-//            {
-//               for(int j = 0; j < dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->g).children.at(i)->vec)->n; ++j)
-//               {
-//                  SimpleVector* currgChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->g).children.at(i)->vec);
-//                  SimpleVector* currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->bux).children.at(i)->vec);
-//                  SimpleVector* currxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->ixupp).children.at(i)->vec);
-//                  SimpleVector* currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->blx).children.at(i)->vec);
-//                  SimpleVector* currxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*finalPresData->ixlow).children.at(i)->vec);
-//
-//                  if( currgChild->elements()[j] != 0 )
-//                  {
-//                     std::cout << "obj_child: " << currgChild->elements()[j] << std::endl;
-//                     std::cout << "x € [" << ( (currIxlowChild->elements()[j] == 0.0) ? -std::numeric_limits<double>::infinity() : currxlowChild->elements()[j] ) << ", "
-//                           << ( (currIxuppChild->elements()[j] == 0.0) ? std::numeric_limits<double>::infinity() : currxuppChild->elements()[j] ) << "]" << std::endl;
-//                  }
-//               }
-//            }
-//
-//         }
-//      }
-      MPI_Barrier(MPI_COMM_WORLD);
 
    assert( finalPresData->isRootNodeInSync() );
 
 //   exit(1);
+
+   {
+      StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(finalPresData)->g);
+      double obj_inf = g.infnorm();
+      double obj_min = 0;
+      int obj_min_idx = -1;
+      double obj_max = 0;
+      int obj_max_idx = -1;
+      g.min(obj_min, obj_min_idx);
+      g.max(obj_max, obj_max_idx);
+
+      if( myRank == 0 )
+         std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
+   }
+
    return finalPresData;
 }
 
