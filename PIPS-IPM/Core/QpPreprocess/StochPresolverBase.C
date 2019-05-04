@@ -907,7 +907,7 @@ void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, do
    /* adjust objective function */
    updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
    indivObjOffset += currgChild->elements()[col_idx] * fixation_value;
-   if( !PIPSisZero(currgChild->elements()[col_idx] * fixation_value) )
+   if( !PIPSisZero(currgChild->elements()[col_idx] * fixation_value) ) // todo remove
       std::cout << indivObjOffset << std::endl;
 }
 

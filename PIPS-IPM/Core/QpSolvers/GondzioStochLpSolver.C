@@ -166,7 +166,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       double obj_max = 0;
       int obj_max_idx = -1;
       g.min(obj_min, obj_min_idx);
-
+      g.max(obj_max, obj_max_idx);
       if( myRank == 0 )
          std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
    }
@@ -184,6 +184,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       double obj_max = 0;
       int obj_max_idx = -1;
       g.min(obj_min, obj_min_idx);
+      g.max(obj_max, obj_max_idx);
 
       if( myRank == 0 )
          std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;

@@ -64,6 +64,20 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob);
 
+   {
+   StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(presData.presProb)->g);
+   double obj_inf = g.infnorm();
+   double obj_min = 0;
+   int obj_min_idx = -1;
+   double obj_max = 0;
+   int obj_max_idx = -1;
+   g.min(obj_min, obj_min_idx);
+   g.max(obj_max, obj_max_idx);
+
+   if( myRank == 0 )
+      std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
+   }
+
    assert( sorigprob->isRootNodeInSync());
    assert( presData.presProb->isRootNodeInSync() );
 
@@ -96,12 +110,40 @@ Data* StochPresolver::presolve()
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
 
+   {
+   StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(presData.presProb)->g);
+   double obj_inf = g.infnorm();
+   double obj_min = 0;
+   int obj_min_idx = -1;
+   double obj_max = 0;
+   int obj_max_idx = -1;
+   g.min(obj_min, obj_min_idx);
+   g.max(obj_max, obj_max_idx);
+
+   if( myRank == 0 )
+      std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
+   }
+
    // todo not yet available for dynamic storage
    assert( presData.presProb->isRootNodeInSync() );
 
 //      presData.presProb->writeToStreamDense(std::cout);
    // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
+
+   {
+   StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(finalPresData)->g);
+   double obj_inf = g.infnorm();
+   double obj_min = 0;
+   int obj_min_idx = -1;
+   double obj_max = 0;
+   int obj_max_idx = -1;
+   g.min(obj_min, obj_min_idx);
+   g.max(obj_max, obj_max_idx);
+
+   if( myRank == 0 )
+      std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
+   }
 //   finalPresData->writeToStreamDense(std::cout);
 
 //      if(myRank == 0)
