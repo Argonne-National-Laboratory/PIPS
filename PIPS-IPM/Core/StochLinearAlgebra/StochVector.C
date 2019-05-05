@@ -608,10 +608,11 @@ void StochVector::absminNonZero(double& m, double zero_eps)
 
    assert(m >= zero_eps || m == -1.0);
 
+
    if( vecl )
    {
       vecl->absminNonZero(min, zero_eps);
-      if( min >= 0.0 && min < m )
+      if( min >= 0.0 && (min < m  || m < 0.0) )
       {
          m = min;
          assert(m >= zero_eps || m == -1.0);
@@ -621,7 +622,8 @@ void StochVector::absminNonZero(double& m, double zero_eps)
    for( size_t it = 0; it < children.size(); it++ )
    {
       children[it]->absminNonZero(min, zero_eps);
-      if( min >= 0.0 && min < m )
+
+      if( min >= 0.0 && (min < m  || m < 0.0) )
       {
          m = min;
          assert(m >= zero_eps || m == -1.0);
@@ -631,7 +633,7 @@ void StochVector::absminNonZero(double& m, double zero_eps)
    if( iAmDistrib == 1 )
    {
       double minG;
-      if( PIPSisEQ(m, -1.0) )
+      if( m < 0.0 )
       {
          min = std::numeric_limits<double>::max();
       }
