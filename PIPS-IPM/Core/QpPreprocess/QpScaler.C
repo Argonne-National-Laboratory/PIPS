@@ -23,7 +23,6 @@ QpScaler::QpScaler(Data * prob, bool bitshifting)
    vec_rowscaleA = NULL;
    vec_rowscaleC = NULL;
    vec_colscale = NULL;
-   factor_objscale = 1.0;
 
    Q = qpprob->Q;
    A = qpprob->A;
