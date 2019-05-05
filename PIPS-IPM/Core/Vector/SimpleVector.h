@@ -27,7 +27,7 @@ public:
   /**
    * Access the individual elements of this vector.
    */
-  double & operator[]( int i ) { 
+  double & operator[]( int i ) {
 #ifdef RANGECHECKS
     assert( i >= 0 && i < n );
 #endif
@@ -39,7 +39,7 @@ public:
     assert( i >= 0 && i < n );
 #endif
     return v[i];
-  } 
+  }
   //@}
 
   /* copy vector entries as well */
@@ -64,7 +64,7 @@ public:
   virtual void absminVecUpdate(OoqpVector& absminvec) const;
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const;
   virtual void absmin( double& m) const;
-  virtual void absminNonZero(double& m, double tolerance=pips_eps) const;
+  virtual void absminNonZero(double& m, double zero_eps) const;
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);
@@ -121,13 +121,13 @@ public:
   virtual void divideSome( OoqpVector& div, OoqpVector& select );
 
   virtual double stepbound(OoqpVector & v, double maxStep  );
-  virtual double findBlocking(OoqpVector & wstep_vec, 
-			      OoqpVector & u_vec, 
-			      OoqpVector & ustep_vec, 
+  virtual double findBlocking(OoqpVector & wstep_vec,
+			      OoqpVector & u_vec,
+			      OoqpVector & ustep_vec,
 			      double maxStep,
-			      double *w_elt, 
+			      double *w_elt,
 			      double *wstep_elt,
-			      double *u_elt, 
+			      double *u_elt,
 			      double *ustep_elt,
 			      int& first_or_second);
 

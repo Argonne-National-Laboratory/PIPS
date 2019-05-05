@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 
 long long SimpleVector::numberOfNonzeros()
 {
@@ -77,26 +78,27 @@ void SimpleVector::absmin(double& min) const
    }
 }
 
-/** Compute the min absolute value that is at least as big as tolerance.
- * If there is no such value, return 0.0 */
-void SimpleVector::absminNonZero(double& min, double tolerance) const
+/** Compute the min absolute value that is larger than zero_eps.
+ * If there is no such value, return -1.0 */
+void SimpleVector::absminNonZero(double& m, double zero_eps) const
 {
-   assert( tolerance >= 0.0 );
-   if (n==0) {
-        min=0.0;
-        return;
+   assert(zero_eps >= 0.0);
+
+   m = -1.0;
+
+   if( n == 0 )
+      return;
+
+   double min = std::numeric_limits<double>::max();
+
+   for( int i = 0; i < n; i++ )
+   {
+      if( fabs(v[i]) < min && fabs(v[i]) > zero_eps )
+         min = fabs(v[i]);
    }
-   bool initialized = false;
-   for( int i = 0; i < n; i++ ) {
-     if( fabs(v[i]) > tolerance ) {
-        if( !initialized || fabs(v[i]) < min ) {
-           min = fabs(v[i]);
-           initialized = true;
-        }
-     }
-   }
-   if( !initialized )
-      min = 0.0;
+
+   if( min < std::numeric_limits<double>::max() )
+      m = min;
 }
 
 void SimpleVector::max( double& m, int& index ) const
@@ -209,7 +211,7 @@ void SimpleVector::randomize( double alpha, double beta, double *ix )
   }
 }
 
-  
+
 void SimpleVector::copyFrom( OoqpVector& vec )
 {
   assert( vec.length() == n );
@@ -240,7 +242,7 @@ double SimpleVector::infnorm() const
 /*
   if(norm > 1.e-8) {
     for(int j=0; j<n; j++) {
-      if(fabs(v[j]) > .1*norm) 
+      if(fabs(v[j]) > .1*norm)
 	cout << " element " << j << " is " << v[j] << endl;
     }
   }
@@ -258,7 +260,7 @@ double SimpleVector::onenorm() const
     norm += temp;
   }
   return norm;
-}    
+}
 double SimpleVector::twonorm() const
 {
   double temp = dotProductWith(*this);
@@ -344,7 +346,7 @@ void SimpleVector::writefSomeToStream( ostream& out,
   double * s = 0;
   if( select.length() > 0 ) {
     s = sselect.v;
-  } 
+  }
   int i;
 
   for( i = 0; i < n; i++ ) {
@@ -404,7 +406,7 @@ void SimpleVector::writeMPSformatBoundsWithVar(ostream& out, string varStub, Ooq
 void SimpleVector::scale( double alpha )
 {
   int one = 1;
-  dscal_( &n, &alpha, v, &one ); 
+  dscal_( &n, &alpha, v, &one );
 }
 
 void SimpleVector::axpy( double alpha, OoqpVector& vec )
@@ -477,13 +479,13 @@ void SimpleVector::axdzpy( double alpha, OoqpVector& xvec,
   double * x = sxvec.v;
   SimpleVector & szvec = dynamic_cast<SimpleVector &>(zvec);
   double * z = szvec.v;
-  
+
   assert( n == xvec.length() &&
 	  n == zvec.length() );
 
   int i;
   for( i = 0; i < n; i++ ) {
-    //if(x[i] > 0 && z[i] > 0) 
+    //if(x[i] > 0 && z[i] > 0)
       v[i] += alpha * x[i] / z[i];
   }
 }
@@ -541,7 +543,7 @@ double SimpleVector::dotProductWith( const OoqpVector& vec ) const
   for( ; i < n; i++ ) {
     dot1 += v[i] * vvec[i];
   }
-  
+
   return dot2 + dot1;
 }
 
@@ -569,13 +571,13 @@ double SimpleVector::dotProductSelf( double scaleFactor ) const
    return dot;
 }
 
-double 
+double
 SimpleVector::shiftedDotProductWith( double alpha, OoqpVector& mystep,
 					 OoqpVector& yvec,
 					 double beta,  OoqpVector& ystep )
 {
   assert( n == mystep.length() &&
-	  n == yvec  .length() && 
+	  n == yvec  .length() &&
 	  n == ystep .length() );
 
   SimpleVector & syvec = dynamic_cast<SimpleVector &>(yvec);
@@ -606,7 +608,7 @@ SimpleVector::shiftedDotProductWith( double alpha, OoqpVector& mystep,
   for( ; i < n; i++ ) {
     dot1 += (v[i] + alpha * p[i]) * (y[i] + beta * q[i] );
   }
-  
+
   return dot2 + dot1;
 }
 
@@ -695,13 +697,13 @@ double SimpleVector::stepbound(OoqpVector & pvec, double maxStep )
   return bound;
 }
 
-double SimpleVector::findBlocking(OoqpVector & wstep_vec, 
-				      OoqpVector & u_vec, 
-				      OoqpVector & ustep_vec, 
+double SimpleVector::findBlocking(OoqpVector & wstep_vec,
+				      OoqpVector & u_vec,
+				      OoqpVector & ustep_vec,
 				      double maxStep,
-				      double *w_elt, 
+				      double *w_elt,
 				      double *wstep_elt,
-				      double *u_elt, 
+				      double *u_elt,
 				      double *ustep_elt,
 				      int& first_or_second)
 {
@@ -875,4 +877,3 @@ void SimpleVector::permuteEntries(const std::vector<unsigned int>& permvec)
 
    delete[] buffer;
 }
-

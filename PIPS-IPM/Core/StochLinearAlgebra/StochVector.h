@@ -34,7 +34,7 @@ public:
   /** Children of this node */
   std::vector<StochVector*> children;
 
-  /** Link to the parent of this node. Needed when we multiply a matrix 
+  /** Link to the parent of this node. Needed when we multiply a matrix
       with this vector
   */
   StochVector*              parent;
@@ -76,15 +76,15 @@ public:
   virtual void absminVecUpdate(OoqpVector& absminvec) const;
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const;
   virtual void absmin( double& m ) const;
-  virtual void absminNonZero(double& m, double tolerance=pips_eps) const;
+  virtual void absminNonZero(double& m, double zero_eps) const;
   virtual double stepbound(OoqpVector & v, double maxStep );
-  virtual double findBlocking(OoqpVector & wstep_vec, 
-			      OoqpVector & u_vec, 
-			      OoqpVector & ustep_vec, 
+  virtual double findBlocking(OoqpVector & wstep_vec,
+			      OoqpVector & u_vec,
+			      OoqpVector & ustep_vec,
 			      double maxStep,
-			      double *w_elt, 
+			      double *w_elt,
 			      double *wstep_elt,
-			      double *u_elt, 
+			      double *u_elt,
 			      double *ustep_elt,
 			      int& first_or_second);
   virtual void findBlocking_pd(const OoqpVector& wstep_vec,
@@ -161,7 +161,7 @@ public:
 
 };
 
-/** DUMMY VERSION 
+/** DUMMY VERSION
  *
  */
 class StochDummyVector : public StochVector {
@@ -195,6 +195,7 @@ public:
   virtual void randomize( double alpha, double beta, double *ix ){};
   virtual void copyFrom( OoqpVector& v ){};
   virtual void copyFromAbs(const OoqpVector& v) {};
+<<<<<<< HEAD
   virtual double twonorm() const {return 0.0;}
   virtual double infnorm() const {return 0.0;}
   virtual double onenorm() const {return 0.0;}
@@ -204,14 +205,24 @@ public:
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const {};
   virtual void absmin( double& m) const {};
   virtual void absminNonZero(double& m, double tolerance=pips_eps) const {};
+=======
+  virtual double twonorm(){return 0.0;}
+  virtual double infnorm(){return 0.0;}
+  virtual double onenorm(){return 0.0;}
+  virtual void min( double& m, int& index ){};
+  virtual void absminVecUpdate(OoqpVector& absminvec) {};
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) {};
+  virtual void absmin( double& m){};
+  virtual void absminNonZero(double& m, double zero_eps){m=-1.0;};
+>>>>>>> linking-zib-pardiso
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}
-  virtual double findBlocking(OoqpVector & wstep_vec, 
-			      OoqpVector & u_vec, 
-			      OoqpVector & ustep_vec, 
+  virtual double findBlocking(OoqpVector & wstep_vec,
+			      OoqpVector & u_vec,
+			      OoqpVector & ustep_vec,
 			      double maxStep,
-			      double *w_elt, 
+			      double *w_elt,
 			      double *wstep_elt,
-			      double *u_elt, 
+			      double *u_elt,
 			      double *ustep_elt,
 			      int& first_or_second){return maxStep;}
 
@@ -289,4 +300,3 @@ public:
 
 
 #endif
-

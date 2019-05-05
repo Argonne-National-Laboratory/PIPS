@@ -40,7 +40,7 @@ void GeoStochScaler::doObjScaling()
    assert(absmax >= 0.0 && absmax >= absmin);
 
    // all elements of scaled obj smaller than pips_eps?
-   if( PIPSisZero(absmin, pips_eps) )
+   if( PIPSisEQ(absmin, -1.0) )
    {
       assert(PIPSisZero(absmax, pips_eps));
 
