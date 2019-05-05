@@ -60,30 +60,30 @@ void StochPresolverSingletonRows::applyPresolving()
    int iter = 0;
 
    // main loop:
-//   while(n_singleton_equality + n_singleton_inequality > 0 && iter < maxIterSR )
-//   {
+   while(n_singleton_equality + n_singleton_inequality > 0 && iter < maxIterSR )
+   {
       /* eliminate all singleton rows in equality system */
-//      if( n_singleton_equality > 0 )
-//      {
-//         // main method:
-//         doSingletonRows(n_singleton_equality, n_singleton_inequality,
-//               EQUALITY_SYSTEM);
-//      }
-//      else if( n_singleton_inequality > 0 )
-//      {
-         //assert(n_singleton_equality == 0);
+      if( n_singleton_equality > 0 )
+      {
+         // main method:
+         doSingletonRows(n_singleton_equality, n_singleton_inequality,
+               EQUALITY_SYSTEM);
+      }
+      else if( n_singleton_inequality > 0 )
+      {
+         assert(n_singleton_equality == 0);
 
          /* main method: */
          doSingletonRows(n_singleton_inequality, n_singleton_equality,
                INEQUALITY_SYSTEM);
-//      }
+      }
 
-//      iter++;
+      iter++;
 
       countSingletonRows(n_singleton_equality, n_singleton_inequality);
-//   }
+   }
 
-//   assert( (n_singleton_equality == 0 && n_singleton_inequality == 0) || iter >= maxIterSR);
+   assert( (n_singleton_equality == 0 && n_singleton_inequality == 0) || iter >= maxIterSR);
 
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
@@ -121,7 +121,7 @@ StochPresolverSingletonRows::doSingletonRows(int& n_sing_sys, int& n_sing_other_
    n_sing_sys = 0;
 
    /* processes root node - finds vars to delete and updates bounds */
-//   procSingletonRowRoot(system_type);
+   procSingletonRowRoot(system_type);
 
    /* remove singletons from children */
    for( int node = 0; node < nChildren; node++ )

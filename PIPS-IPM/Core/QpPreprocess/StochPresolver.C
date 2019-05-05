@@ -108,11 +108,9 @@ Data* StochPresolver::presolve()
       std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
    }
 
-   // todo not yet available for dynamic storage
    assert( presData.presProb->isRootNodeInSync() );
 
 //      presData.presProb->writeToStreamDense(std::cout);
-   // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
 
 //   finalPresData->writeToStreamDense(std::cout);
@@ -137,5 +135,3 @@ Data* StochPresolver::presolve()
 
    return finalPresData;
 }
-
-

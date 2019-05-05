@@ -27,8 +27,6 @@ PresolveData::PresolveData(const sData* sorigprob)
 
    presProb = sorigprob->cloneFull(true);
 
-   //Apresa = dynamic_cast<StochGenMatrix&>(*presProb->A);
-   //Cpres = dynamic_cast<StochGenMatrix&>(*presProb->C);
    objOffset = 0.0;
 
    nChildren = nColElems->children.size();

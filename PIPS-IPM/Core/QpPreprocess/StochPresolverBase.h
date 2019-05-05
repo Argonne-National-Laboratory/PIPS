@@ -124,7 +124,7 @@ protected:
 
    std::vector<XBOUNDS> newBoundsParent;
 
-   /* objective offset resulting from local presolving*/
+   /* objective offset resulting from local presolving */
    double indivObjOffset;
 
    /* swap two entries in the SparseStorageDynamic format */
