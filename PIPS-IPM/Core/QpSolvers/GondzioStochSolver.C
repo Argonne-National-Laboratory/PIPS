@@ -71,8 +71,8 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    StepFactor1 = 1.5;
 
 #ifdef REDUCED_ACCURACY
-   artol = 1e-3;
-   mutol = 2.e-5;
+   artol = 1.e-3;
+   mutol = 1.e-5;
 #else
    mutol = 1.e-6; // todo parameter
 #endif
