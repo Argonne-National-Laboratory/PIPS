@@ -195,7 +195,6 @@ public:
   virtual void randomize( double alpha, double beta, double *ix ){};
   virtual void copyFrom( OoqpVector& v ){};
   virtual void copyFromAbs(const OoqpVector& v) {};
-<<<<<<< HEAD
   virtual double twonorm() const {return 0.0;}
   virtual double infnorm() const {return 0.0;}
   virtual double onenorm() const {return 0.0;}
@@ -204,17 +203,7 @@ public:
   virtual void absminVecUpdate(OoqpVector& absminvec) const {};
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const {};
   virtual void absmin( double& m) const {};
-  virtual void absminNonZero(double& m, double tolerance=pips_eps) const {};
-=======
-  virtual double twonorm(){return 0.0;}
-  virtual double infnorm(){return 0.0;}
-  virtual double onenorm(){return 0.0;}
-  virtual void min( double& m, int& index ){};
-  virtual void absminVecUpdate(OoqpVector& absminvec) {};
-  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) {};
-  virtual void absmin( double& m){};
-  virtual void absminNonZero(double& m, double zero_eps){m=-1.0;};
->>>>>>> linking-zib-pardiso
+  virtual void absminNonZero(double& m, double zero_eps) const {m=-1.0;};
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}
   virtual double findBlocking(OoqpVector & wstep_vec,
 			      OoqpVector & u_vec,
