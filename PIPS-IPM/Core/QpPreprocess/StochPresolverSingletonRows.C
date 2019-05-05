@@ -262,7 +262,6 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
          /* if in equality system fix variable */
          if( system_type == EQUALITY_SYSTEM )
          {
-            assert(false);
 
             const double rhs = (block_type == LINKING_CONS_BLOCK) ? curr_eq_rhs->elements()[i] + currEqRhsAdaptionsLink[i] : curr_eq_rhs->elements()[i];
             const double fixation_value = rhs / aik;
