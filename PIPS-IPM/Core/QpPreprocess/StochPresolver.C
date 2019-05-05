@@ -83,55 +83,25 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-//      presolverCleanup.applyPresolving();
+      presolverCleanup.applyPresolving();
       presolverSR.applyPresolving();
-//      presolverBS.applyPresolving();
-//      presolverParallelRow.applyPresolving();
-//      presolverCleanup.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverParallelRow.applyPresolving();
+      presolverCleanup.applyPresolving();
    }
 
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
 
-   {
-   StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(presData.presProb)->g);
-   double obj_inf = g.infnorm();
-   double obj_min = 0;
-   int obj_min_idx = -1;
-   double obj_max = 0;
-   int obj_max_idx = -1;
-   g.min(obj_min, obj_min_idx);
-   g.max(obj_max, obj_max_idx);
-
-   if( myRank == 0 )
-      std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
-   }
-
    assert( presData.presProb->isRootNodeInSync() );
-
 //      presData.presProb->writeToStreamDense(std::cout);
    sData* finalPresData = presData.finalize();
 
 //   finalPresData->writeToStreamDense(std::cout);
 
    assert( finalPresData->isRootNodeInSync() );
-
 //   exit(1);
-
-   {
-      StochVector& g  = dynamic_cast<StochVector&>(*dynamic_cast<sData*>(finalPresData)->g);
-      double obj_inf = g.infnorm();
-      double obj_min = 0;
-      int obj_min_idx = -1;
-      double obj_max = 0;
-      int obj_max_idx = -1;
-      g.min(obj_min, obj_min_idx);
-      g.max(obj_max, obj_max_idx);
-
-      if( myRank == 0 )
-         std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
-   }
 
    return finalPresData;
 }

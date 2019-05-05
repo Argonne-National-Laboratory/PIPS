@@ -132,27 +132,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
 
-
-   {
-      // scoping for safety
-      int myRank;
-      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
-      const StochVector& g = dynamic_cast<const StochVector&>(*(dynamic_cast<sData*>(prob)->g));
-
-      double obj_inf = g.infnorm();
-      double obj_min = 0;
-      int obj_min_idx = -1;
-      double obj_max = 0;
-      int obj_max_idx = -1;
-      g.min(obj_min, obj_min_idx);
-      g.max(obj_max, obj_max_idx);
-      if( myRank == 0 )
-         std::cout << "obj_inf: " << obj_inf << "\tobj_min: " << obj_min << " at " << obj_min_idx << "\tobj_max: " << obj_max << " at " << obj_max_idx << std::endl;
-
-      MPI_Barrier(MPI_COMM_WORLD);
-   }
-
    stochFactory->iterateStarted();
    this->start(factory, iterate, prob, resid, step);
    stochFactory->iterateEnded();

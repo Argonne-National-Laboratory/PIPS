@@ -930,7 +930,6 @@ void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType 
    SimpleVector* cupp = (block_type == CHILD_BLOCK) ? currIneqRhs : currIneqRhsLink;
 
    SimpleVector* nnz_row = (block_type == CHILD_BLOCK) ? currNnzRow : currNnzRowLink;
-   SimpleVector* nnz_col = currNnzColChild;
 
    assert(0 <= col_idx && col_idx <= matrix_transp.m);
    for( int j = matrix_transp.rowptr[col_idx].start; j < matrix_transp.rowptr[col_idx].end; j++ )
