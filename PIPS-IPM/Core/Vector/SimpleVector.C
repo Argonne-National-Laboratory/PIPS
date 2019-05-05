@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 
 long long SimpleVector::numberOfNonzeros()
 {
@@ -77,26 +78,27 @@ void SimpleVector::absmin(double& min)
    }
 }
 
-/** Compute the min absolute value that is at least as big as tolerance.
- * If there is no such value, return 0.0 */
-void SimpleVector::absminNonZero(double& min, double tolerance)
+/** Compute the min absolute value that is larger than zero_eps.
+ * If there is no such value, return -1.0 */
+void SimpleVector::absminNonZero(double& m, double zero_eps)
 {
-   assert( tolerance >= 0.0 );
-   if (n==0) {
-        min=0.0;
-        return;
+   assert(zero_eps >= 0.0);
+
+   m = -1.0;
+
+   if( n == 0 )
+      return;
+
+   double min = std::numeric_limits<double>::max();
+
+   for( int i = 0; i < n; i++ )
+   {
+      if( fabs(v[i]) < min && fabs(v[i]) > zero_eps )
+         min = fabs(v[i]);
    }
-   bool initialized = false;
-   for( int i = 0; i < n; i++ ) {
-     if( fabs(v[i]) > tolerance ) {
-        if( !initialized || fabs(v[i]) < min ) {
-           min = fabs(v[i]);
-           initialized = true;
-        }
-     }
-   }
-   if( !initialized )
-      min = 0.0;
+
+   if( min < std::numeric_limits<double>::max() )
+      m = min;
 }
 
 void SimpleVector::max( double& m, int& index )

@@ -598,56 +598,57 @@ void StochVector::absmin(double& m)
    assert( m >= 0.0 );
 }
 
-void StochVector::absminNonZero(double& m, double tolerance)
+void StochVector::absminNonZero(double& m, double zero_eps)
 {
-   double lMin;
-   bool initialized = false;
+   double min;
 
-   if(NULL==parent) {
-     vec->absminNonZero(m, tolerance);
-     if( m >= tolerance )
-        initialized = true;
-     if( vecl )
-     {
-        vecl->absminNonZero(lMin, tolerance);
-        if( lMin >= tolerance && (!initialized || lMin < m) )
-           m = lMin;
-     }
-   } else {
-     vec->absminNonZero(lMin, tolerance);
-     if( lMin >= tolerance )
-        initialized = true;
+   assert(zero_eps >= 0.0);
 
-     if( vecl )
-     {
-        double lMinlink;
-        vecl->absminNonZero(lMinlink, tolerance);
-        if( lMinlink >= tolerance && (!initialized || lMinlink < lMin) )
-        {
-           lMin = lMinlink;
-           initialized = true;
-        }
-     }
+   vec->absminNonZero(m, zero_eps);
 
-     if( initialized && lMin<m )
-       m = lMin;
+   assert(m >= zero_eps || m == -1.0);
+
+   if( vecl )
+   {
+      vecl->absminNonZero(min, zero_eps);
+      if( min >= 0.0 && min < m )
+      {
+         m = min;
+         assert(m >= zero_eps || m == -1.0);
+      }
    }
 
-   for(size_t it=0; it<children.size(); it++) {
-     children[it]->absminNonZero(m, tolerance);
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->absminNonZero(min, zero_eps);
+      if( min >= 0.0 && min < m )
+      {
+         m = min;
+         assert(m >= zero_eps || m == -1.0);
+      }
    }
 
-   if(iAmDistrib==1) {
-     double minG;
-     if( m == 0.0 )
-        m = std::numeric_limits<double>::max();
-     MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
-     if( minG < std::numeric_limits<double>::max() )
-        m = minG;
-     else
-        m = 0.0;
+   if( iAmDistrib == 1 )
+   {
+      double minG;
+      if( PIPSisEQ(m, -1.0) )
+      {
+         min = std::numeric_limits<double>::max();
+      }
+      else
+      {
+         min = m;
+         assert(min >= zero_eps);
+      }
+
+      MPI_Allreduce(&min, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+
+      if( minG < std::numeric_limits<double>::max() )
+         m = minG;
+      else
+         m = -1.0;
    }
-   assert( m >= tolerance || m == 0.0 );
+   assert(m >= zero_eps || m == -1.0);
 }
 
 

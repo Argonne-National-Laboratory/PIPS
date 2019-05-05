@@ -74,7 +74,7 @@ public:
   virtual void absminVecUpdate(OoqpVector& absminvec);
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec);
   virtual void absmin( double& m);
-  virtual void absminNonZero(double& m, double tolerance=pips_eps);
+  virtual void absminNonZero(double& m, double zero_eps);
   virtual double stepbound(OoqpVector & v, double maxStep );
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 
@@ -195,7 +195,7 @@ public:
   virtual void absminVecUpdate(OoqpVector& absminvec) {};
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec) {};
   virtual void absmin( double& m){};
-  virtual void absminNonZero(double& m, double tolerance=pips_eps){};
+  virtual void absminNonZero(double& m, double zero_eps){m=-1.0;};
   virtual double stepbound(OoqpVector & v, double maxStep ){return maxStep;}
   virtual double findBlocking(OoqpVector & wstep_vec, 
 			      OoqpVector & u_vec, 

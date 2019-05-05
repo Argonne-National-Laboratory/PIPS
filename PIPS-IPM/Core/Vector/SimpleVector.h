@@ -63,7 +63,7 @@ public:
   virtual void absminVecUpdate(OoqpVector& absminvec);
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec);
   virtual void absmin( double& m);
-  virtual void absminNonZero(double& m, double tolerance=pips_eps);
+  virtual void absminNonZero(double& m, double zero_eps);
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);

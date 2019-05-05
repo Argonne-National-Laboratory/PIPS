@@ -120,8 +120,8 @@ public:
 
   virtual void absmaxVecUpdate(OoqpVector& absmaxvec) = 0;
 
-  /** Return the absolute minimum value of this vector bigger than tolerance */
-  virtual void absminNonZero(double& m, double tolerance = pips_eps) = 0;
+  /** Return the absolute minimum value of this vector bigger than eps_zero, or -1 if none could be found */
+  virtual void absminNonZero(double& m, double zero_eps) = 0;
 
   /** Return the dot product of this OoqpVector with v */
   virtual double dotProductWith( OoqpVector& v ) = 0;
