@@ -77,8 +77,6 @@ Data* StochPresolver::presolve()
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
 
-//   presData.presProb->writeToStreamDense(std::cout);
-
    // todo loop, and not exhaustive
    // some list holding all presolvers - eg one presolving run
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
@@ -96,18 +94,14 @@ Data* StochPresolver::presolve()
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
 
-   // todo not yet available for dynamic storage
    assert( presData.presProb->isRootNodeInSync() );
-
 //      presData.presProb->writeToStreamDense(std::cout);
-   // i assume we actually apply our changes here and then return a valid sData object to the caller
    sData* finalPresData = presData.finalize();
+
 //   finalPresData->writeToStreamDense(std::cout);
 
    assert( finalPresData->isRootNodeInSync() );
-
 //   exit(1);
+
    return finalPresData;
 }
-
-

@@ -9,6 +9,9 @@
 #include "StochPresolverSingletonRows.h"
 #include <limits>
 #include <cmath>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData) :
       StochPresolverBase(presData)
@@ -68,7 +71,7 @@ void StochPresolverSingletonRows::applyPresolving()
       }
       else if( n_singleton_inequality > 0 )
       {
-         //assert(n_singleton_equality == 0);
+         assert(n_singleton_equality == 0);
 
          /* main method: */
          doSingletonRows(n_singleton_inequality, n_singleton_equality,
@@ -85,6 +88,7 @@ void StochPresolverSingletonRows::applyPresolving()
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
+   indivObjOffset = 0.0;
 
    if( myRank == 0 )
       std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
@@ -119,6 +123,7 @@ StochPresolverSingletonRows::doSingletonRows(int& n_sing_sys, int& n_sing_other_
 
    /* processes root node - finds vars to delete and updates bounds */
    procSingletonRowRoot(system_type);
+
    /* remove singletons from children */
    for( int node = 0; node < nChildren; node++ )
    {
@@ -192,6 +197,7 @@ void StochPresolverSingletonRows::procSingletonRowChild(int node, int& n_singlet
  */
 void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, BlockType block_type, int node)
 {
+
    if( block_type == LINKING_CONS_BLOCK )
       if( !hasLinking(system_type) )
          return;
@@ -247,6 +253,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
       /* if singleton row entry is in current block */
       if( nnz_row->elements()[i] - redRow->elements()[i] == 1.0 && matrix->rowptr[i].start + 1 == matrix->rowptr[i].end)
       {
+
          int colIdx = -1;
          double aik = 0.0;
 
@@ -256,6 +263,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
          /* if in equality system fix variable */
          if( system_type == EQUALITY_SYSTEM )
          {
+
             const double rhs = (block_type == LINKING_CONS_BLOCK) ? curr_eq_rhs->elements()[i] + currEqRhsAdaptionsLink[i] : curr_eq_rhs->elements()[i];
             const double fixation_value = rhs / aik;
 
@@ -306,11 +314,11 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
             {
                if( !variableFixationValid(fixation_value, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx], true) )
                {
-                 std::cout << new_xlow << "\t" << new_xupp << "\t" << iclow->elements()[i] << "\t" << lhs << "\t" << icupp->elements()[i] << "\t" <<  rhs << "\t" << aik << std::endl;
-                 std::cout << xlow[colIdx] << "\t" << xupp[colIdx] << std::endl;
-                 std::cout << llow << "\t" << uuppp << std::endl;
+                  std::cout << new_xlow << "\t" << new_xupp << "\t" << iclow->elements()[i] << "\t" << lhs << "\t" << icupp->elements()[i] << "\t" <<  rhs << "\t" << aik << std::endl;
+                  std::cout << xlow[colIdx] << "\t" << xupp[colIdx] << std::endl;
+                  std::cout << llow << "\t" << uuppp << std::endl;
                   std::cout << block_type << "\t" << ixlow[colIdx] << "\t" << ixupp[colIdx] << "\t" << lhs << "\t" << rhs << std::endl;
-                 abortInfeasible(MPI_COMM_WORLD);
+                  abortInfeasible(MPI_COMM_WORLD);
                }
 
                /* for Amat we store deletions - collect them and apply them later */
@@ -377,7 +385,7 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                if(node != -1 || (node == -1 && myRank == 0))
                   assert( nnz_row->elements()[i] - redRow->elements()[i] == 0.0 );
                assert(matrix->rowptr[i].start == matrix->rowptr[i].end);
-            }
+               }
          }
       }
    }

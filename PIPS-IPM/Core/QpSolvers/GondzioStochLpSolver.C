@@ -40,6 +40,11 @@ using namespace std;
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
 
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <limits>
+
 // gmu is needed by MA57!
 static double gmu;
 
@@ -156,23 +161,13 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          this->doMonitorPd(prob, iterate, resid, alpha_pri, alpha_dual, sigma, iter, mu,
                status_code, 0);
       }
-      // *** Predictor step ***
 
+      // *** Predictor step ***
       resid->set_r3_xz_alpha(iterate, 0.0);
 
       sys->factor(prob, iterate);
       sys->solve(prob, iterate, resid, step);
       step->negate();
-
-      int myRank = 0;
-      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-      StochVector* copy_x_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).cloneFull();
-      double obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
-      double onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).onenorm();
-      double twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).twonorm();
-      double infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(step)->x).infnorm();
-      if(myRank == 0)
-         std::cout << std::endl << "onenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
 
       iterate->stepbound_pd(step, alpha_pri, alpha_dual);
 
@@ -190,7 +185,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       g_iterNumber+=0.5;
 
       // *** Corrector step ***
-
       corrector_resid->clear_r1r2();
 
       // form right hand side of linear system:
@@ -198,14 +192,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       sys->solve(prob, iterate, corrector_resid, corrector_step);
       corrector_step->negate();
-
-      onenorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).onenorm();
-      twonorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).twonorm();
-      infnorm = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).infnorm();
-      copy_x_vars = dynamic_cast<StochVector&>(*dynamic_cast<sVars*>(corrector_step)->x).cloneFull();
-      obj = copy_x_vars->dotProductWith(dynamic_cast<StochVector&>(*dynamic_cast<sData*>(prob)->g));
-      if(myRank == 0)
-         std::cout << std::endl << "GondzioStochLP\tonenorm: " << onenorm << "\ttwonorm: " << twonorm << "\tinfnorm: " << infnorm << "\tobj: " << obj << std::endl;
 
       // calculate weighted predictor-corrector step
       double weight_primal_candidate, weight_dual_candidate = -1.0;

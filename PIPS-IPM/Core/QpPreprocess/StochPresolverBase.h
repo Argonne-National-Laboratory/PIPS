@@ -127,7 +127,7 @@ protected:
 
    std::vector<XBOUNDS> newBoundsParent;
 
-   /* objective offset resulting from local presolving*/
+   /* objective offset resulting from local presolving */
    double indivObjOffset;
 
    /* swap two entries in the SparseStorageDynamic format */
@@ -177,8 +177,8 @@ protected:
    void setCPRowRootIneqOnlyLhsRhs(); //parrow
    void setCPRowChildIneqOnlyLhsRhs(int it); //parrow
 
-   void resetEqRhsAdaptionsLink(); // modelclanup allreduceAndApply
-   void resetIneqRhsAdaptionsLink(); // modelclanup allreduceAndApply
+   void resetEqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
+   void resetIneqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
 
    bool removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m) const;
    void clearRow(SparseStorageDynamic& storage, const int rowIdx) const;

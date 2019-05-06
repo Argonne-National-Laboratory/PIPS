@@ -242,14 +242,14 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
          }
       }
 
-      /* check if new bounds valid */
-      if( newBoundsImplyInfeasible(newBoundLow, newBoundUpp, colIdx, xupp.elements(), ixupp.elements(), xlow.elements(), ixlow.elements()) )
+      /* check if new bounds valid */ // todo
+      if( newBoundsImplyInfeasible(newBoundLow, newBoundUpp, colIdx, ixlow.elements(), ixupp.elements(), xlow.elements(), xupp.elements()) )
          abortInfeasible(MPI_COMM_WORLD);
 
       /* check if new bounds imply fixation of the variable */
       double fixation_value = 0.0;
       if( newBoundsFixVariable(fixation_value, newBoundLow, newBoundUpp, colIdx, ixlow.elements(),
-            xupp.elements(), xlow.elements(), xupp.elements()) )
+            ixupp.elements(), xlow.elements(), xupp.elements()) )
       {
          /* for Amat we store deletions - collect them and apply them later */
           if( node == -1 || block_type == LINKING_VARS_BLOCK )

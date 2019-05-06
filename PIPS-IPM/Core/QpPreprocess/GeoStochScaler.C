@@ -33,15 +33,22 @@ void GeoStochScaler::doObjScaling()
    obj->componentMult(*vec_colscale);
 
    const double absmax = obj->infnorm();
-   assert(absmax >= 0);
-
    double absmin = 0.0;
+
    obj->absminNonZero( absmin, pips_eps );
 
-   if( absmin < pips_eps )
+   assert(absmax >= 0.0 && absmax >= absmin);
+
+   // all elements of scaled obj smaller than pips_eps?
+   if( PIPSisEQ(absmin, -1.0) )
    {
-      PIPSdebugMessage("Objective Scaling: absmin=%f < %f, setting objective to zero. \n", absmin, pips_eps);
-      obj->setToZero();
+      assert(PIPSisZero(absmax, pips_eps));
+
+      int myRank = 0;
+      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+      if( myRank == 0 )
+         std::cout << "Almost zero objective after geometric scaling!" << std::endl;
    }
    else
    {

@@ -27,7 +27,7 @@ public:
   /**
    * Access the individual elements of this vector.
    */
-  double & operator[]( int i ) { 
+  double & operator[]( int i ) {
 #ifdef RANGECHECKS
     assert( i >= 0 && i < n );
 #endif
@@ -39,7 +39,7 @@ public:
     assert( i >= 0 && i < n );
 #endif
     return v[i];
-  } 
+  }
   //@}
 
   /* copy vector entries as well */
@@ -50,21 +50,21 @@ public:
   virtual void copyIntoArray( double v[] ) const;
   virtual void copyFromArray( double v[] );
   virtual void copyFromArray( char   v[] );
-  virtual bool isZero();
+  virtual bool isZero() const;
   virtual void setToZero();
   virtual void setToConstant( double c );
   virtual void randomize( double alpha, double beta, double *ix );
   virtual void copyFrom( OoqpVector& v );
   virtual void copyFromAbs(const OoqpVector& v);
-  virtual double twonorm();
-  virtual double infnorm();
-  virtual double onenorm();
-  virtual void min( double& m, int& index );
-  virtual void max( double& m, int& index );
-  virtual void absminVecUpdate(OoqpVector& absminvec);
-  virtual void absmaxVecUpdate(OoqpVector& absmaxvec);
-  virtual void absmin( double& m);
-  virtual void absminNonZero(double& m, double tolerance=pips_eps);
+  virtual double twonorm() const;
+  virtual double infnorm() const;
+  virtual double onenorm() const ;
+  virtual void min( double& m, int& index ) const;
+  virtual void max( double& m, int& index ) const;
+  virtual void absminVecUpdate(OoqpVector& absminvec) const;
+  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const;
+  virtual void absmin( double& m) const;
+  virtual void absminNonZero(double& m, double zero_eps) const;
 
   virtual void componentMult( OoqpVector& v );
   virtual void scalarMult( double num);
@@ -92,8 +92,8 @@ public:
    * resulting value is less than -rmax, replace it by -rmax.
    * */
   virtual void gondzioProjection( double rmin, double rmax );
-  virtual double dotProductWith( OoqpVector& v );
-  virtual double dotProductSelf( double scaleFactor );
+  virtual double dotProductWith( const OoqpVector& v ) const;
+  virtual double dotProductSelf( double scaleFactor ) const;
 
   virtual double shiftedDotProductWith( double alpha, OoqpVector& mystep,
 					OoqpVector& yvec,
@@ -121,13 +121,13 @@ public:
   virtual void divideSome( OoqpVector& div, OoqpVector& select );
 
   virtual double stepbound(OoqpVector & v, double maxStep  );
-  virtual double findBlocking(OoqpVector & wstep_vec, 
-			      OoqpVector & u_vec, 
-			      OoqpVector & ustep_vec, 
+  virtual double findBlocking(OoqpVector & wstep_vec,
+			      OoqpVector & u_vec,
+			      OoqpVector & ustep_vec,
 			      double maxStep,
-			      double *w_elt, 
+			      double *w_elt,
 			      double *wstep_elt,
-			      double *u_elt, 
+			      double *u_elt,
 			      double *ustep_elt,
 			      int& first_or_second);
 
