@@ -88,6 +88,7 @@ void StochPresolverSingletonRows::applyPresolving()
    // Sum up individual objOffset and then add it to the global objOffset:
    sumIndivObjOffset();
    presData.addObjOffset(indivObjOffset);
+   indivObjOffset = 0.0;
 
    if( myRank == 0 )
       std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
