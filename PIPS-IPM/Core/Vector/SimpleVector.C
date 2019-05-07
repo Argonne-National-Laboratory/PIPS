@@ -20,7 +20,7 @@ long long SimpleVector::numberOfNonzeros()
   return count;
 }
 
-void SimpleVector::min( double& m, int& index )
+void SimpleVector::min( double& m, int& index ) const
 {
   if (n==0) {
     m=1e20;
@@ -36,7 +36,7 @@ void SimpleVector::min( double& m, int& index )
   }
 }
 
-void SimpleVector::absminVecUpdate(OoqpVector& absminvec)
+void SimpleVector::absminVecUpdate(OoqpVector& absminvec) const
 {
    const SimpleVector& absminvecSimple = dynamic_cast<const SimpleVector&>(absminvec);
    assert( absminvecSimple.length() == n );
@@ -50,7 +50,7 @@ void SimpleVector::absminVecUpdate(OoqpVector& absminvec)
    }
 }
 
-void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec)
+void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec) const
 {
    const SimpleVector& absmaxvecSimple = dynamic_cast<const SimpleVector&>(absmaxvec);
    assert( absmaxvecSimple.length() == n );
@@ -64,7 +64,7 @@ void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec)
    }
 }
 
-void SimpleVector::absmin(double& min)
+void SimpleVector::absmin(double& min) const
 {
    if (n==0) {
      min=1e20;
@@ -80,7 +80,7 @@ void SimpleVector::absmin(double& min)
 
 /** Compute the min absolute value that is larger than zero_eps.
  * If there is no such value, return -1.0 */
-void SimpleVector::absminNonZero(double& m, double zero_eps)
+void SimpleVector::absminNonZero(double& m, double zero_eps) const
 {
    assert(zero_eps >= 0.0);
 
@@ -101,7 +101,7 @@ void SimpleVector::absminNonZero(double& m, double zero_eps)
       m = min;
 }
 
-void SimpleVector::max( double& m, int& index )
+void SimpleVector::max( double& m, int& index ) const
 {
    if( n == 0 )
    {
@@ -175,6 +175,16 @@ SimpleVector* SimpleVector::cloneFull() const
    return clone;
 }
 
+bool SimpleVector::isZero() const
+{
+	bool is_zero = true;
+
+	for(int i = 0; i < n; ++i)
+		is_zero = (is_zero && v[i] == 0.0);
+
+	return is_zero;
+}
+
 void SimpleVector::setToZero()
 {
   int i;
@@ -201,7 +211,7 @@ void SimpleVector::randomize( double alpha, double beta, double *ix )
   }
 }
 
-  
+
 void SimpleVector::copyFrom( OoqpVector& vec )
 {
   assert( vec.length() == n );
@@ -219,7 +229,7 @@ void SimpleVector::copyFromAbs(const OoqpVector& vec )
      v[i] = fabs( vecArr[i] );
 }
 
-double SimpleVector::infnorm()
+double SimpleVector::infnorm() const
 {
   double temp, norm = 0;
   int i;
@@ -232,7 +242,7 @@ double SimpleVector::infnorm()
 /*
   if(norm > 1.e-8) {
     for(int j=0; j<n; j++) {
-      if(fabs(v[j]) > .1*norm) 
+      if(fabs(v[j]) > .1*norm)
 	cout << " element " << j << " is " << v[j] << endl;
     }
   }
@@ -241,7 +251,7 @@ double SimpleVector::infnorm()
   return norm;
 }
 
-double SimpleVector::onenorm()
+double SimpleVector::onenorm() const
 {
   double temp, norm = 0;
   int i;
@@ -250,8 +260,8 @@ double SimpleVector::onenorm()
     norm += temp;
   }
   return norm;
-}    
-double SimpleVector::twonorm()
+}
+double SimpleVector::twonorm() const
 {
   double temp = dotProductWith(*this);
   return sqrt(temp);
@@ -336,7 +346,7 @@ void SimpleVector::writefSomeToStream( ostream& out,
   double * s = 0;
   if( select.length() > 0 ) {
     s = sselect.v;
-  } 
+  }
   int i;
 
   for( i = 0; i < n; i++ ) {
@@ -396,7 +406,7 @@ void SimpleVector::writeMPSformatBoundsWithVar(ostream& out, string varStub, Ooq
 void SimpleVector::scale( double alpha )
 {
   int one = 1;
-  dscal_( &n, &alpha, v, &one ); 
+  dscal_( &n, &alpha, v, &one );
 }
 
 void SimpleVector::axpy( double alpha, OoqpVector& vec )
@@ -469,13 +479,13 @@ void SimpleVector::axdzpy( double alpha, OoqpVector& xvec,
   double * x = sxvec.v;
   SimpleVector & szvec = dynamic_cast<SimpleVector &>(zvec);
   double * z = szvec.v;
-  
+
   assert( n == xvec.length() &&
 	  n == zvec.length() );
 
   int i;
   for( i = 0; i < n; i++ ) {
-    //if(x[i] > 0 && z[i] > 0) 
+    //if(x[i] > 0 && z[i] > 0)
       v[i] += alpha * x[i] / z[i];
   }
 }
@@ -508,10 +518,10 @@ void SimpleVector::axdzpy( double alpha, OoqpVector& xvec,
   }
 }
 
-double SimpleVector::dotProductWith( OoqpVector& vec )
+double SimpleVector::dotProductWith( const OoqpVector& vec ) const
 {
   assert( n == vec.length() );
-  SimpleVector & svec = dynamic_cast<SimpleVector &>(vec);
+  const SimpleVector & svec = dynamic_cast<const SimpleVector &>(vec);
   double * vvec = svec.v;
 
   double dot1 = 0.0;
@@ -533,11 +543,11 @@ double SimpleVector::dotProductWith( OoqpVector& vec )
   for( ; i < n; i++ ) {
     dot1 += v[i] * vvec[i];
   }
-  
+
   return dot2 + dot1;
 }
 
-double SimpleVector::dotProductSelf( double scaleFactor )
+double SimpleVector::dotProductSelf( double scaleFactor ) const
 {
    assert(scaleFactor >= 0.0);
 
@@ -561,13 +571,13 @@ double SimpleVector::dotProductSelf( double scaleFactor )
    return dot;
 }
 
-double 
+double
 SimpleVector::shiftedDotProductWith( double alpha, OoqpVector& mystep,
 					 OoqpVector& yvec,
 					 double beta,  OoqpVector& ystep )
 {
   assert( n == mystep.length() &&
-	  n == yvec  .length() && 
+	  n == yvec  .length() &&
 	  n == ystep .length() );
 
   SimpleVector & syvec = dynamic_cast<SimpleVector &>(yvec);
@@ -598,7 +608,7 @@ SimpleVector::shiftedDotProductWith( double alpha, OoqpVector& mystep,
   for( ; i < n; i++ ) {
     dot1 += (v[i] + alpha * p[i]) * (y[i] + beta * q[i] );
   }
-  
+
   return dot2 + dot1;
 }
 
@@ -687,13 +697,13 @@ double SimpleVector::stepbound(OoqpVector & pvec, double maxStep )
   return bound;
 }
 
-double SimpleVector::findBlocking(OoqpVector & wstep_vec, 
-				      OoqpVector & u_vec, 
-				      OoqpVector & ustep_vec, 
+double SimpleVector::findBlocking(OoqpVector & wstep_vec,
+				      OoqpVector & u_vec,
+				      OoqpVector & ustep_vec,
 				      double maxStep,
-				      double *w_elt, 
+				      double *w_elt,
 				      double *wstep_elt,
-				      double *u_elt, 
+				      double *u_elt,
 				      double *ustep_elt,
 				      int& first_or_second)
 {
@@ -867,4 +877,3 @@ void SimpleVector::permuteEntries(const std::vector<unsigned int>& permvec)
 
    delete[] buffer;
 }
-

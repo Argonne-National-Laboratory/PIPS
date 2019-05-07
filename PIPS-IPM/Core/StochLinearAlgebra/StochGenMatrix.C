@@ -1491,3 +1491,254 @@ void StochGenMatrix::updateTransposed()
      children[it]->updateTransposed();
 }
 
+/* check whether root node date is same in all processes
+ *
+ * root node data is Amat (empty), Bmat and Blmat of root node. Children not checked.
+ */
+bool StochGenMatrix::isRootNodeInSync() const
+{
+   bool in_sync = true;
+
+   assert( Amat );
+   assert( Bmat );
+   assert( Blmat );
+
+   /* no need to check if not distributed or not in root node */
+   if( !iAmDistrib || children.size() == 0)
+      return in_sync;
+
+
+   int my_rank, world_size;
+   MPI_Comm_rank(mpiComm, &my_rank);
+   MPI_Comm_size(mpiComm, &world_size);
+
+   /* if matrix has static storage */
+   if(Amat->getStorage() != NULL || Bmat->getStorage() != NULL || Blmat->getStorage() != NULL)
+   {
+      assert(Amat->getStorage());
+      assert(Bmat->getStorage());
+      assert(Blmat->getStorage());
+
+      /* since we are in root node Amat should look as follows */
+      assert( Amat->getStorageRef().len == 0);
+      assert( Amat->getStorageRef().n == -1);
+
+      /* static storage */
+      const int lenght_entries_bmat = Bmat->getStorageRef().len;
+      const int length_columns_bmat = Bmat->getStorageRef().len;
+      const int lenght_rowoffest_bmat = Bmat->getStorageRef().m + 1;
+
+      const int lenght_entries_blmat = Blmat->getStorageRef().len;
+      const int length_columns_blmat = Blmat->getStorageRef().len;
+      const int lenght_rowoffest_blmat = Blmat->getStorageRef().m + 1;
+
+      const long long count_row_cols = length_columns_bmat + lenght_rowoffest_bmat + length_columns_blmat + lenght_rowoffest_blmat;
+      const long long count_entries = lenght_entries_bmat + lenght_entries_blmat;
+
+      assert( count_row_cols < std::numeric_limits<int>::max());
+      assert( count_entries < std::numeric_limits<int>::max());
+
+      double sendbuf_entries[count_entries] = {};
+      double recvbuf_entries[count_entries] = {};
+
+      int sendbuf_row_col[count_row_cols] = {};
+      int recvbuf_row_col[count_row_cols] = {};
+
+      /* fill Bmat into send buffers */
+      const double * M = Bmat->getStorageRef().M;
+      const int * krowM = Bmat->getStorageRef().krowM;
+      const int * jColM = Bmat->getStorageRef().jcolM;
+
+      std::copy(M, M + lenght_entries_bmat, sendbuf_entries);
+
+      std::copy(krowM, krowM + lenght_rowoffest_bmat, sendbuf_row_col);
+      std::copy(jColM, jColM + lenght_entries_bmat, sendbuf_row_col + lenght_rowoffest_bmat);
+
+      /* fill Blmat into send buffers */
+      const double * Ml = Blmat->getStorageRef().M;
+      const int * krowMl = Blmat->getStorageRef().krowM;
+      const int * jColMl = Blmat->getStorageRef().jcolM;
+
+      std::copy(Ml, Ml + lenght_entries_blmat, sendbuf_entries + lenght_entries_bmat);
+
+      std::copy(krowMl, krowMl + lenght_rowoffest_blmat, sendbuf_row_col + lenght_rowoffest_bmat + lenght_entries_bmat);
+      std::copy(jColMl, jColMl + lenght_entries_blmat, sendbuf_row_col + lenght_rowoffest_bmat + lenght_entries_bmat + lenght_rowoffest_blmat);
+
+      /* Reduce Bmat and Blmat buffers */
+      MPI_Allreduce(sendbuf_entries, recvbuf_entries, static_cast<int>(count_entries), MPI_DOUBLE, MPI_MAX, mpiComm);
+
+      MPI_Allreduce(sendbuf_row_col, recvbuf_row_col, static_cast<int>(count_row_cols), MPI_INT, MPI_MAX, mpiComm);
+
+      /* check recvbuf_entries */
+      for( int i = 0; i < count_entries; ++i )
+      {
+         if( !PIPSisEQ(sendbuf_entries[i], recvbuf_entries[i]) )
+         {
+            /* someone else had a higher value here */
+            if(my_rank == 0)
+               std::cout << "matrix entries out of sync" << std::endl;
+            in_sync = false;
+            break;
+         }
+      }
+
+      for( int i = 0; i < count_row_cols; ++i )
+      {
+         if( !PIPSisEQ(sendbuf_row_col[i], recvbuf_row_col[i]) )
+         {
+            /* someone else had a higher value here */
+            if(my_rank == 0)
+               std::cout << "matrix indices (col or row) out of sync" << std::endl;
+            in_sync = false;
+         }
+      }
+   }
+
+   /* if stoch mat has dynamic storage also check that */
+   if(Bmat->hasDynamicStorage() || Blmat->hasDynamicStorage())
+   {
+      assert(Bmat->hasDynamicStorage());
+      assert(Blmat->hasDynamicStorage());
+
+      SparseStorageDynamic& Bmat_dyn = Bmat->getStorageDynamicRef();
+      SparseStorageDynamic& Blmat_dyn = Blmat->getStorageDynamicRef();
+
+      /* dynamic storage */
+      int bmat_dyn_len = 0;
+      for(int i = 0; i < Bmat_dyn.m; ++i)
+         bmat_dyn_len += (Bmat_dyn.rowptr[i].end - Bmat_dyn.rowptr[i].start);
+
+      int blmat_dyn_len = 0;
+      for(int i = 0; i < Blmat_dyn.m; ++i)
+         blmat_dyn_len += (Blmat_dyn.rowptr[i].end - Blmat_dyn.rowptr[i].start);
+
+      const int lenght_entries_bmat_dynamic = bmat_dyn_len;
+      const int length_columns_bmat_dynamic = bmat_dyn_len;
+      const int lenght_rowoffest_bmat_dynamic = Bmat_dyn.m + 1;
+
+      const int lenght_entries_blmat_dynamic = blmat_dyn_len;
+      const int length_columns_blmat_dynamic = blmat_dyn_len;
+      const int lenght_rowoffest_blmat_dynamic = Blmat_dyn.m + 1;
+
+      const long long count_row_cols_dyn = length_columns_bmat_dynamic + 2 * lenght_rowoffest_bmat_dynamic + length_columns_blmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic;
+      const long long count_entries_dyn = lenght_entries_bmat_dynamic + lenght_entries_blmat_dynamic;
+
+      assert( count_row_cols_dyn < std::numeric_limits<int>::max());
+      assert( count_entries_dyn < std::numeric_limits<int>::max());
+
+      double sendbuf_entries_dynamic[count_entries_dyn] = {};
+      double recvbuf_entries_dynamic[count_entries_dyn] = {};
+
+      int sendbuf_row_col_dynamic[count_row_cols_dyn] = {};
+      int recvbuf_row_coldynamic[count_row_cols_dyn] = {};
+
+      /* fill Bmat into send buffers */
+      const double * M = Bmat_dyn.M;
+      const int * jColM = Bmat_dyn.jcolM;
+
+      int count_entries = 0;
+      int count_row_col = 0;
+
+      /* entries Bmat into double array */
+      for(int i = 0; i < Bmat_dyn.m; ++i)
+      {
+         for(int j = Bmat_dyn.rowptr[i].start; j < Bmat_dyn.rowptr[i].end; ++j)
+         {
+            sendbuf_entries_dynamic[count_entries] = M[j];
+            count_entries++;
+         }
+      }
+      assert(count_entries == lenght_entries_bmat_dynamic);
+
+      /* row pointers Bmat into int array */
+      for(int i = 0; i < lenght_rowoffest_bmat_dynamic; ++i)
+      {
+         sendbuf_row_col_dynamic[count_row_col] = Bmat_dyn.rowptr->start;
+         sendbuf_row_col_dynamic[count_row_col + 1] = Bmat_dyn.rowptr->end;
+         count_row_col += 2;
+      }
+      assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic);
+
+      /* col indices of Bmat into int array */
+      for(int i = 0; i < Bmat_dyn.m; ++i)
+      {
+         for(int j = Bmat_dyn.rowptr[i].start; j < Bmat_dyn.rowptr[i].end; ++j)
+         {
+            sendbuf_row_col_dynamic[count_row_col] = jColM[j];
+            count_row_col++;
+         }
+      }
+      assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic);
+
+      /* fill Blmat into send buffers */
+      const double * Ml = Blmat_dyn.M;
+      const int * jColMl = Blmat_dyn.jcolM;
+
+      /* entries Blmat into double array */
+      for(int i = 0; i < Blmat_dyn.m; ++i)
+      {
+         for(int j = Blmat_dyn.rowptr[i].start; j < Blmat_dyn.rowptr[i].end; ++j)
+         {
+            sendbuf_entries_dynamic[count_entries] = Ml[j];
+            count_entries++;
+         }
+      }
+      assert(count_entries == lenght_entries_bmat_dynamic + lenght_entries_blmat_dynamic);
+
+      /* row pointers Blmat into int array */
+      for(int i = 0; i < lenght_rowoffest_blmat_dynamic; ++i)
+      {
+         assert(2 * lenght_rowoffest_bmat_dynamic + lenght_entries_bmat_dynamic + 2 * i + 1 < count_row_cols_dyn);
+         sendbuf_row_col_dynamic[count_row_col] = Blmat_dyn.rowptr->start;
+         sendbuf_row_col_dynamic[count_row_col + 1] = Blmat_dyn.rowptr->end;
+         count_row_col += 2;
+      }
+      assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic);
+
+      /* col indices of Bmat into int array */
+      for(int i = 0; i < Blmat_dyn.m; ++i)
+      {
+         for(int j = Blmat_dyn.rowptr[i].start; j < Blmat_dyn.rowptr[i].end; ++j)
+         {
+            sendbuf_row_col_dynamic[count_row_col] = jColMl[j];
+            count_row_col++;
+         }
+      }
+      assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic + length_columns_blmat_dynamic);
+
+      /* Reduce Bmat and Blmat buffers */
+      MPI_Allreduce(sendbuf_entries_dynamic, recvbuf_entries_dynamic, static_cast<int>(count_entries_dyn), MPI_DOUBLE, MPI_MAX, mpiComm);
+
+      MPI_Allreduce(sendbuf_row_col_dynamic, recvbuf_row_coldynamic, static_cast<int>(count_row_cols_dyn), MPI_INT, MPI_MAX, mpiComm);
+
+      /* check recvbuf_entries */
+      for( int i = 0; i < count_entries_dyn; ++i )
+      {
+         if( !PIPSisEQ(sendbuf_entries_dynamic[i], recvbuf_entries_dynamic[i]) )
+         {
+            /* someone else had a higher value here */
+            if(my_rank == 0)
+               std::cout << "matrix entries in dynamic storage out of sync" << std::endl;
+            in_sync = false;
+         }
+      }
+      for( int i = 0; i < count_row_cols_dyn; ++i )
+      {
+         if( !PIPSisEQ(sendbuf_row_col_dynamic[i], recvbuf_row_coldynamic[i]) )
+         {
+            /* someone else had a higher value here */
+            if(my_rank == 0)
+               std::cout << "matrix indices in dynamic storage out of sync" << std::endl;
+            in_sync = false;
+         }
+      }
+   }
+
+
+   return in_sync;
+}
+
+
+
+
+

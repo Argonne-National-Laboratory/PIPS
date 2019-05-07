@@ -6,6 +6,9 @@
 #include "Data.h"
 #include "ProblemFormulation.h"
 
+#include "sVars.h"
+#include "sData.h"
+
 #include "OoqpVector.h"
 #include "DoubleMatrix.h"
 
@@ -81,14 +84,12 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
 		       alpha, sigma, iter, mu, status_code, 0 );
     }
     // *** Predictor step ***
-    
     resid->set_r3_xz_alpha(iterate, 0.0 );  //   resid->print();
 
     sys->factor(prob, iterate);
     sys->solve(prob, iterate, resid, step);
-    
     step->negate();
-    
+
     alpha = iterate->stepbound(step);
 
     // calculate centering parameter 
@@ -104,7 +105,6 @@ int MehrotraStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid
     
     sys->solve(prob, iterate, resid, step);
     step->negate();
-    
     
     // We've finally decided on a step direction, now calculate the
     // length using Mehrotra's heuristic.

@@ -27,15 +27,9 @@ PresolveData::PresolveData(const sData* sorigprob)
 
    presProb = sorigprob->cloneFull(true);
 
-   //Apresa = dynamic_cast<StochGenMatrix&>(*presProb->A);
-   //Cpres = dynamic_cast<StochGenMatrix&>(*presProb->C);
    objOffset = 0.0;
 
    nChildren = nColElems->children.size();
-
-   /* zero initialized because of () */
-   blocks = new int[nChildren + 3]();
-   blocksIneq = new int[nChildren + 3]();
 
    // initialize all dynamic transposed sub matrices
    dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
@@ -46,8 +40,6 @@ PresolveData::PresolveData(const sData* sorigprob)
 
 PresolveData::~PresolveData()
 {
-   delete[] blocks;
-   delete[] blocksIneq;
 }
 
 sData* PresolveData::finalize()
@@ -96,7 +88,9 @@ bool PresolveData::combineColAdaptParent()
    bool iAmDistrib = false;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   if( world_size > 1) iAmDistrib = true;
+
+   if( world_size > 1)
+      iAmDistrib = true;
 
    if( iAmDistrib )
    {
@@ -119,7 +113,7 @@ bool PresolveData::combineColAdaptParent()
       int lenghtGlobal = recvcounts[0];
       int* displs = new int[world_size];
       displs[0] = 0;
-      for(int i=1; i<world_size; i++)
+      for(int i = 1; i < world_size; i++)
       {
          lenghtGlobal += recvcounts[i];
          displs[i] = displs[i-1] + recvcounts[i-1];
@@ -134,7 +128,7 @@ bool PresolveData::combineColAdaptParent()
       clearColAdaptParent();
       for(int i=0; i<lenghtGlobal; i++)
       {
-         COLUMNTOADAPT colWithVal = {colIndicesGlobal[i], valuesGlobal[i]};
+         COLUMNFORDELETION colWithVal = {colIndicesGlobal[i], valuesGlobal[i]};
          addColToAdaptParent(colWithVal);
       }
 
@@ -147,26 +141,26 @@ bool PresolveData::combineColAdaptParent()
    }
 
    // Sort colIndicesGlobal (and valuesGlobal accordingly), remove duplicates and find infeasibilities
-   std::sort(colAdaptParent.begin(), colAdaptParent.end(), col_is_smaller());
-   for(int i=1; i<getNumberColAdParent(); i++)
+   std::sort(linkingVariablesMarkedForDeletion.begin(), linkingVariablesMarkedForDeletion.end(), col_is_smaller());
+   for(int i = 1; i < getNumberColAdParent(); i++)
       assert( getColAdaptParent(i-1).colIdx <= getColAdaptParent(i).colIdx);
 
    if(getNumberColAdParent() > 0)
    {
       int colIdxCurrent = getColAdaptParent(0).colIdx;
       double valCurrent = getColAdaptParent(0).val;
-      for(int i=1; i<getNumberColAdParent(); i++)
+      for(int i = 1; i < getNumberColAdParent(); i++)
       {
          if( getColAdaptParent(i).colIdx == colIdxCurrent )
          {
             if( getColAdaptParent(i).val != valCurrent )
             {
-               cout<<"Detected infeasibility (in variable) "<<colIdxCurrent<<endl;
+               std::cout << "Detected infeasibility (in variable) " << colIdxCurrent << std::endl;
                return false;
             }
             else
             {
-               colAdaptParent.erase(colAdaptParent.begin()+i);   //todo: implement more efficiently
+               linkingVariablesMarkedForDeletion.erase(linkingVariablesMarkedForDeletion.begin()+i);   //todo: implement more efficiently
                i--;
             }
          }
@@ -181,20 +175,22 @@ bool PresolveData::combineColAdaptParent()
    return true;
 }
 
+// todo
+bool PresolveData::reductionsEmpty()
+{
+   bool empty = true;
+
+   empty = (empty && redRowA->isZero());
+   empty = (empty && redRowC->isZero());
+   empty = (empty && redCol->isZero());
+	return empty;
+}
+
 void PresolveData::resetRedCounters()
 {
    redRowA->setToZero();
    redRowC->setToZero();
    redCol->setToZero();
-}
-
-void PresolveData::resetBlocks()
-{
-   for( int i = 0; i < nChildren+3; i++)
-   {
-      blocks[i] = 0;
-      blocksIneq[i] = 0;
-   }
 }
 
 int PresolveData::getNChildren() const
@@ -216,95 +212,20 @@ void PresolveData::setObjOffset(double offset)
    objOffset = offset;
 }
 
-int PresolveData::getSingletonRow(int i) const
-{
-   assert(i<getNumberSR() && i>=0);
-   return singletonRows[i];
-}
-int PresolveData::getNumberSR() const
-{
-   return (int)singletonRows.size();
-}
-void PresolveData::addSingletonRow(int i)
-{
-   singletonRows.push_back(i);
-}
-void PresolveData::setSingletonRow(int i, int value)
-{
-   assert(i>=0 && i<getNumberSR());
-   singletonRows[i] = value;
-}
-/* empties the singletonRows list. Verifies first if all elements were set to -1,
- * then clears the singletonRows list and resets the blocks. */
-void PresolveData::clearSingletonRows()
-{
-   for(int i = 0; i<getNumberSR(); i++)
-      assert(getSingletonRow(i) == -1);
-   singletonRows.clear();
-   resetBlocks();
-}
-int PresolveData::getSingletonRowIneq(int i) const
-{
-   assert(i<getNumberSRIneq() && i>=0);
-   return singletonRowsIneq[i];
-}
-int PresolveData::getNumberSRIneq() const
-{
-   return (int)singletonRowsIneq.size();
-}
-void PresolveData::addSingletonRowIneq(int i)
-{
-   singletonRowsIneq.push_back(i);
-}
-void PresolveData::setSingletonRowIneq(int i, int value)
-{
-   assert(i>=0 && i<getNumberSRIneq());
-   singletonRowsIneq[i] = value;
-}
-void PresolveData::clearSingletonRowsIneq()
-{
-   for(int i = 0; i<getNumberSRIneq(); i++)
-      assert(getSingletonRowIneq(i) == -1);
-   singletonRowsIneq.clear();
-   resetBlocks();
-}
-
-void PresolveData::setBlocks(int i, double value)
-{
-   assert(i<nChildren+3 && i>=0);
-   blocks[i] = value;
-}
-double PresolveData::getBlocks(int i) const
-{
-   assert(i<nChildren+3 && i>=0);
-   return blocks[i];
-}
-void PresolveData::setBlocksIneq(int i, double value)
-{
-   assert(i<nChildren+3 && i>=0);
-   blocksIneq[i] = value;
-}
-double PresolveData::getBlocksIneq(int i) const
-{
-   assert(i<nChildren+3 && i>=0);
-   return blocksIneq[i];
-}
-
-COLUMNTOADAPT PresolveData::getColAdaptParent(int i) const
+COLUMNFORDELETION PresolveData::getColAdaptParent(int i) const
 {
    assert( i<getNumberColAdParent() );
-   return colAdaptParent[i];
+   return linkingVariablesMarkedForDeletion[i];
 }
 int PresolveData::getNumberColAdParent() const
 {
-   return (int)colAdaptParent.size();
+   return (int)linkingVariablesMarkedForDeletion.size();
 }
-void PresolveData::addColToAdaptParent(COLUMNTOADAPT colToAdapt)
+void PresolveData::addColToAdaptParent(COLUMNFORDELETION colToAdapt)
 {
-   colAdaptParent.push_back(colToAdapt);
+   linkingVariablesMarkedForDeletion.push_back(colToAdapt);
 }
 void PresolveData::clearColAdaptParent()
 {
-   colAdaptParent.clear();
+   linkingVariablesMarkedForDeletion.clear();
 }
-

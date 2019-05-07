@@ -22,6 +22,9 @@
 #include "QpGenStoch.h"
 #include "StochResourcesMonitor.h"
 
+#include "sData.h"
+#include "sVars.h"
+
 #include <cstring>
 #include <iostream>
 #include <fstream>
@@ -36,6 +39,11 @@ using namespace std;
 #include "mpi.h"
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
+
+#include <fstream>
+#include <string>
+#include <sstream>
+#include <limits>
 
 // gmu is needed by MA57!
 static double gmu;
@@ -153,8 +161,8 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          this->doMonitorPd(prob, iterate, resid, alpha_pri, alpha_dual, sigma, iter, mu,
                status_code, 0);
       }
-      // *** Predictor step ***
 
+      // *** Predictor step ***
       resid->set_r3_xz_alpha(iterate, 0.0);
 
       sys->factor(prob, iterate);
@@ -177,7 +185,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       g_iterNumber+=0.5;
 
       // *** Corrector step ***
-
       corrector_resid->clear_r1r2();
 
       // form right hand side of linear system:

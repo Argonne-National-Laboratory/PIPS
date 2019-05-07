@@ -25,7 +25,7 @@ i5        4                       1     2
 i6   1    1    1                  1     1
 ;
 
-Positive Variables x(j)  / j1.lo 1, j3.up 10, j7.up 5 /;
+Positive Variables x(j)  / j1.lo 1, j3.up 10, j7.up 5 /; 
 *makes it infeasible: j2.up 0.5
 
 Variable           z      objective variable
