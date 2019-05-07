@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-//#include <math.h>
+#include <limits>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -36,10 +36,12 @@
 StochPresolver::StochPresolver(const Data* prob)
  : QpPresolver(prob)
 {
+   // todo
 }
 
 StochPresolver::~StochPresolver()
 {
+   // todo
 }
 
 Data* StochPresolver::presolve()
@@ -62,8 +64,8 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob);
 
-   assert( rootNodeInSyncSData(*sorigprob) );
-
+   assert( sorigprob->isRootNodeInSync());
+   assert( presData.presProb->isRootNodeInSync() );
 
    /* initialize all presolvers */
    StochPresolverBoundStrengthening presolverBS(presData);
@@ -71,60 +73,35 @@ Data* StochPresolver::presolve()
    StochPresolverModelCleanup presolverCleanup(presData);
    StochPresolverSingletonRows presolverSR(presData);
 
-#ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- Before Presolving:"<<endl;
+      std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
-#endif
 
    // todo loop, and not exhaustive
    // some list holding all presolvers - eg one presolving run
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
    for( int i = 0; i < 1; ++i )
    {
+      /* singleton rows */
+      presolverCleanup.applyPresolving();
       presolverSR.applyPresolving();
       presolverBS.applyPresolving();
-      // TODO bugged
-      presolverCleanup.applyPresolving();
       presolverParallelRow.applyPresolving();
-      presolverSR.applyPresolving();
       presolverCleanup.applyPresolving();
    }
 
-
-#ifndef NDEBUG
-   assert( presolverSR.verifyNnzcounters() );
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
-   presolverSR.countRowsCols();
-#endif
+   presolverCleanup.countRowsCols();
 
-   //assert( rootNodeInSyncSData(*presData.presProb));
-
-   // i assume we actually apply ur changes here and then return a valid sData object to the caller
+   assert( presData.presProb->isRootNodeInSync() );
+//      presData.presProb->writeToStreamDense(std::cout);
    sData* finalPresData = presData.finalize();
 
-   assert( rootNodeInSyncSData(*finalPresData) );
+//   finalPresData->writeToStreamDense(std::cout);
 
-#if 0
-   myfile.open("after_presolving.txt");
-   finalPresData->writeToStreamDense(myfile);
-   myfile.close();
-#endif
-
-   if( myRank==0 )
-   {
-      std::cout << "original problem:\t" << sorigprob->nx << " variables\t" << sorigprob->my << " equ. conss\t" << sorigprob->mz << " ineq. conss" << std::endl;
-      std::cout << "presolved problem:\t" << finalPresData->nx << " variables\t" << finalPresData->my << " equ. conss\t" << finalPresData->mz << " ineq. conss" << std::endl;
-   }
-#ifdef TIMING
-   std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
-   std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
-#endif
-
-
+   assert( finalPresData->isRootNodeInSync() );
 //   exit(1);
+
    return finalPresData;
 }
-
-

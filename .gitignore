@@ -53,6 +53,8 @@ build_pips
 # no additional .gitignore file for that
 ThirdPartyLibs/PARDISO
 pipstmp
+GAMSsmall
+PS-IPM/Drivers/simple/simple_data_12.gdx
 
 # Ignore the OS X DS_Store
 .DS_Store
@@ -64,3 +66,4 @@ pipstmp
 RemoteSystemsTempFiles*
 .cproject
 .settings
+/Debug/

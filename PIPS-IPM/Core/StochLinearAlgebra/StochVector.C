@@ -60,7 +60,7 @@ StochVector::~StochVector()
 {
   for (size_t it=0; it<children.size(); it++)
     delete children[it];
-  
+
   if( vec )
     delete vec;
 
@@ -112,7 +112,7 @@ StochVector* StochVector::cloneFull() const
 }
 
 
-void 
+void
 StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
 {
   SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
@@ -125,7 +125,7 @@ StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
   int n3 = sv3.length();
 
   assert(n1+n2+n3 == sv.length());
-  
+
   if(n1>0)
     memcpy(&sv[0], &sv1[0], n1*sizeof(double));
 
@@ -136,8 +136,8 @@ StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
     memcpy(&sv[n1+n2], &sv3[0], n3*sizeof(double));
 
   for(size_t it=0; it<children.size(); it++) {
-    children[it]->jointCopyFrom(*v1.children[it], 
-				*v2.children[it], 
+    children[it]->jointCopyFrom(*v1.children[it],
+				*v2.children[it],
 				*v3.children[it]);
   }
 
@@ -199,7 +199,7 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
 }
 
 
-void 
+void
 StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
 {
   SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
@@ -212,7 +212,7 @@ StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
   int n3 = sv3.length();
 
   assert(n1+n2+n3 == sv.length());
- 
+
   if(n1>0)
     memcpy(&sv1[0], &sv[0], n1*sizeof(double));
 
@@ -224,8 +224,8 @@ StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
 
 
   for(size_t it=0; it<children.size(); it++) {
-    children[it]->jointCopyTo(*v1.children[it], 
-			      *v2.children[it], 
+    children[it]->jointCopyTo(*v1.children[it],
+			      *v2.children[it],
 			      *v3.children[it]);
   }
 }
@@ -294,11 +294,26 @@ int StochVector::isKindOf( int kind ) const
 void StochVector::scale( double alpha )
 {
   vec->scale(alpha);
-  
+
   if( vecl ) vecl->scale(alpha);
 
   for(size_t it=0; it<children.size(); it++)
     children[it]->scale(alpha);
+}
+
+bool StochVector::isZero() const
+{
+	bool is_zero = true;
+
+	is_zero = (is_zero && dynamic_cast<SimpleVector&>(*vec).isZero());
+
+	if(vecl)
+		is_zero = (is_zero && dynamic_cast<SimpleVector&>(*vecl).isZero());
+
+	for( size_t node = 0; node < children.size(); ++node )
+		is_zero = (is_zero && children[node]->isZero());
+
+	return is_zero;
 }
 
 void StochVector::setToZero()
@@ -306,15 +321,15 @@ void StochVector::setToZero()
   vec->setToZero();
 
   if( vecl ) vecl->setToZero();
-  
+
   for(size_t it=0; it<children.size(); it++)
     children[it]->setToZero();
 }
 
-void StochVector::setToConstant( double c) 
+void StochVector::setToConstant( double c)
 {
   vec->setToConstant(c);
-  
+
   if( vecl ) vecl->setToConstant(c);
 
   for(size_t it=0; it<children.size(); it++)
@@ -365,7 +380,7 @@ void StochVector::copyFromAbs(const OoqpVector& v_ )
     children[it]->copyFromAbs(*v.children[it]);
 }
 
-double StochVector::infnorm()
+double StochVector::infnorm() const
 {
   double infnrm;
 
@@ -384,10 +399,10 @@ double StochVector::infnorm()
 
   if( vecl ) infnrm = std::max(vecl->infnorm(), infnrm);
 
-  return infnrm; 
+  return infnrm;
 }
 
-double StochVector::twonorm()
+double StochVector::twonorm() const
 {
 #if 0
   return sqrt(this->dotProductWith(*this));
@@ -402,7 +417,7 @@ double StochVector::twonorm()
 #endif
 }
 
-double StochVector::onenorm()
+double StochVector::onenorm() const
 {
   double onenrm = 0.0;
 
@@ -425,7 +440,7 @@ double StochVector::onenorm()
 }
 
 
-void StochVector::min( double& m, int& index )
+void StochVector::min( double& m, int& index ) const
 {
   double lMin; int lInd;
 
@@ -442,7 +457,7 @@ void StochVector::min( double& m, int& index )
     }
   } else {
     vec->min(lMin,lInd);
-    
+
     if( vecl )
     {
        double lMinlink;
@@ -469,11 +484,11 @@ void StochVector::min( double& m, int& index )
     double minG;
     MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
     m = minG;
-  }  
+  }
 }
 
 
-void StochVector::max( double& m, int& index )
+void StochVector::max( double& m, int& index ) const
 {
    double lMax;
    int lInd;
@@ -525,7 +540,7 @@ void StochVector::max( double& m, int& index )
    }
 }
 
-void StochVector::absminVecUpdate(OoqpVector& absminvec)
+void StochVector::absminVecUpdate(OoqpVector& absminvec) const
 {
    StochVector& absminvecStoch = dynamic_cast<StochVector&>(absminvec);
    assert(absminvecStoch.children.size() == children.size());
@@ -542,7 +557,7 @@ void StochVector::absminVecUpdate(OoqpVector& absminvec)
       children[it]->absminVecUpdate(*(absminvecStoch.children[it]));
 }
 
-void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec)
+void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec) const
 {
    StochVector& absmaxvecStoch = dynamic_cast<StochVector&>(absmaxvec);
    assert(absmaxvecStoch.children.size() == children.size());
@@ -559,7 +574,7 @@ void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec)
       children[it]->absmaxVecUpdate(*(absmaxvecStoch.children[it]));
 }
 
-void StochVector::absmin(double& m)
+void StochVector::absmin(double& m) const
 {
    double lMin;
 
@@ -598,7 +613,7 @@ void StochVector::absmin(double& m)
    assert( m >= 0.0 );
 }
 
-void StochVector::absminNonZero(double& m, double zero_eps)
+void StochVector::absminNonZero(double& m, double zero_eps) const
 {
    double min;
 
@@ -673,7 +688,7 @@ double StochVector::stepbound(OoqpVector & v_, double maxStep )
 
   for(size_t it=0; it<children.size(); it++)
     step = children[it]->stepbound(*v.children[it], step);
-  
+
   if(iAmDistrib==1) {
     double stepG=0.0;
     MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
@@ -682,13 +697,13 @@ double StochVector::stepbound(OoqpVector & v_, double maxStep )
   return step;
 }
 
-double StochVector::findBlocking(OoqpVector & wstep_vec, 
-			      OoqpVector & u_vec, 
-			      OoqpVector & ustep_vec, 
+double StochVector::findBlocking(OoqpVector & wstep_vec,
+			      OoqpVector & u_vec,
+			      OoqpVector & ustep_vec,
 			      double maxStep,
-			      double *w_elt, 
+			      double *w_elt,
 			      double *wstep_elt,
-			      double *u_elt, 
+			      double *u_elt,
 			      double *ustep_elt,
 			      int& first_or_second)
 {
@@ -700,7 +715,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
   const double local_eps = 1e-14;
 
   double step = maxStep;
-  
+
   // todo only if i am special?
   if( w.vecl )
   {
@@ -746,7 +761,7 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 
     int count;
     if( iHaveMinStep ) {
-      buffer[0]=*w_elt; buffer[1]=*wstep_elt; 
+      buffer[0]=*w_elt; buffer[1]=*wstep_elt;
       buffer[2]=*u_elt; buffer[3]=*ustep_elt;
       buffer[4]=first_or_second;
 
@@ -971,7 +986,7 @@ void StochVector::componentMult( OoqpVector& v_ )
   vec->componentMult(*v.vec);
   if( vecl ) vecl->componentMult(*v.vecl);
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->componentMult(*v.children[it]);
 }
 
@@ -983,7 +998,7 @@ void StochVector::componentDiv ( OoqpVector& v_ )
   vec->componentDiv(*v.vec);
   if( vecl ) vecl->componentDiv(*v.vecl);
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->componentDiv(*v.children[it]);
 }
 
@@ -992,7 +1007,7 @@ void StochVector::scalarMult( double num )
   vec->scalarMult(num);
   if( vecl ) vecl->scalarMult(num);
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->scalarMult(num);
 }
 
@@ -1072,7 +1087,7 @@ void StochVector::writeToStream( ostream& out ) const
   vec->writeToStream(out);
   if( vecl ) vecl->writeToStream(out);
   out << "~~~" << endl;
-  //for(size_t it=0; it<children.size(); it++) 
+  //for(size_t it=0; it<children.size(); it++)
   //  children[it]->writeToStream(out);
 }
 
@@ -1082,7 +1097,7 @@ void StochVector::writefToStream( ostream& out,
   vec->writefToStream(out, format);
   if( vecl ) vecl->writefToStream(out, format);
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->writefToStream(out, format);
 }
 
@@ -1227,7 +1242,7 @@ void StochVector::addConstant( double c )
 
   if( vecl ) vecl->addConstant(c);
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->addConstant(c);
 }
 
@@ -1243,14 +1258,14 @@ void StochVector::gondzioProjection( double rmin, double rmax )
     children[it]->gondzioProjection( rmin, rmax );
 }
 
-double StochVector::dotProductWith( OoqpVector& v_ )
+double StochVector::dotProductWith( const OoqpVector& v_ ) const
 {
-  StochVector& v = dynamic_cast<StochVector&>(v_);
+  const StochVector& v = dynamic_cast<const StochVector&>(v_);
   assert(v.children.size() == children.size());
 
   double dotProd=0.0;
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     dotProd += children[it]->dotProductWith(*v.children[it]);
 
   assert(!vecl || v.vecl);
@@ -1271,7 +1286,7 @@ double StochVector::dotProductWith( OoqpVector& v_ )
   return dotProd;
 }
 
-double StochVector::dotProductSelf(double scaleFactor)
+double StochVector::dotProductSelf(double scaleFactor) const
 {
   double dotSelf = 0.0;
 
@@ -1306,8 +1321,8 @@ double StochVector::shiftedDotProductWith( double alpha, OoqpVector& mystep_,
 
 
   double dotProd = 0.0;
-  for(size_t it=0; it<children.size(); it++) 
-    dotProd += children[it]->shiftedDotProductWith(alpha, *mystep.children[it], 
+  for(size_t it=0; it<children.size(); it++)
+    dotProd += children[it]->shiftedDotProductWith(alpha, *mystep.children[it],
 						   *yvec.children[it],
 						   beta, *ystep.children[it]);
   if(iAmDistrib) {
@@ -1316,7 +1331,7 @@ double StochVector::shiftedDotProductWith( double alpha, OoqpVector& mystep_,
     dotProd = dotProdG;
   }
 
-  dotProd += vec->shiftedDotProductWith(alpha, *mystep.vec, 
+  dotProd += vec->shiftedDotProductWith(alpha, *mystep.vec,
 					*yvec.vec,
 					beta, *ystep.vec);
 
@@ -1336,7 +1351,7 @@ void StochVector::negate()
   vec->negate();
   if( vecl ) vecl->negate();
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->negate();
 }
 
@@ -1386,7 +1401,7 @@ int StochVector::allPositive()
   int allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : 1);
   if (!allPos) return 0;
 
-  for(size_t it=0; it<children.size() && allPos; it++) 
+  for(size_t it=0; it<children.size() && allPos; it++)
     allPos = children[it]->allPositive();
 
   return allPos;
@@ -1407,7 +1422,7 @@ int StochVector::matchesNonZeroPattern( OoqpVector& select_ )
 
   if(!match) return 0;
 
-  for(size_t it=0; it<children.size() && match; it++) 
+  for(size_t it=0; it<children.size() && match; it++)
     match = children[it]->matchesNonZeroPattern(*select.children[it]);
 
   return match;
@@ -1426,7 +1441,7 @@ void StochVector::selectNonZeros( OoqpVector& select_ )
      vecl->selectNonZeros(*select.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->selectNonZeros(*select.children[it]);
 }
 
@@ -1435,7 +1450,7 @@ long long StochVector::numberOfNonzeros()
   //!opt - store the number of nnz to avoid communication
   long long nnz = 0;
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     nnz += children[it]->numberOfNonzeros();
 
   if(iAmDistrib) {
@@ -1462,7 +1477,7 @@ void StochVector::addSomeConstants( double c, OoqpVector& select_ )
      vecl->addSomeConstants(c, *select.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++) 
+  for(size_t it=0; it<children.size(); it++)
     children[it]->addSomeConstants(c, *select.children[it]);
 }
 
@@ -1515,7 +1530,7 @@ int StochVector::somePositive( OoqpVector& select_ )
 
   for(size_t it=0; it<children.size() && somePos; it++)
     somePos = children[it]->somePositive(*select.children[it]);
-  
+
   return somePos;
 }
 
@@ -1588,3 +1603,53 @@ void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec
       dynamic_cast<SimpleVector*>(vecl)->permuteEntries(permvec);
 }
 
+// is root node data of StochVector same on all procs?
+bool StochVector::isRootNodeInSync() const
+{
+   assert( vec);
+   assert(mpiComm);
+
+   bool in_sync = true;
+   const SimpleVector& vec_simple = dynamic_cast<const SimpleVector&>(*vec);
+
+   /* no need to check if not distributed or not at root node */
+   if( !iAmDistrib || parent != NULL)
+      return in_sync;
+
+   int my_rank, world_size;
+   MPI_Comm_rank(mpiComm, &my_rank);
+   MPI_Comm_size(mpiComm, &world_size);
+
+   /* if there is a linking part we have to chekc it as well */
+   const int vec_length = vec_simple.length();
+   const int vecl_length = (vecl) ? dynamic_cast<const SimpleVector&>(*vecl).length() : 0;
+
+   const long long count = vec_length + vecl_length;
+
+   assert( count < std::numeric_limits<int>::max());
+
+   /* mpi reduce on vector */
+   double sendbuf[count];
+   double recvbuf[count];
+
+   std::copy(vec_simple.elements(), vec_simple.elements() + vec_simple.length(), sendbuf);
+
+   if( vecl )
+   {
+      const SimpleVector& vecl_simple = dynamic_cast<const SimpleVector&>(*vecl);
+      std::copy(vecl_simple.elements(), vecl_simple.elements() + vecl_simple.length(),
+            sendbuf + vec_simple.length());
+   }
+   MPI_Allreduce(sendbuf, recvbuf, static_cast<int>(count), MPI_DOUBLE, MPI_MAX, mpiComm);
+
+   for( int i = 0; i < count; ++i )
+   {
+      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
+      {
+         /* someone else had a higher value here */
+         in_sync = false;
+      }
+   }
+
+   return in_sync;
+}

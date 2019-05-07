@@ -7,7 +7,7 @@
 #include "QpGenVars.h"
 #include "SparseLinearAlgebraPackage.h"
 #include "mpi.h"
-
+#include <iostream>
 
 static
 std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& perm)
@@ -1055,6 +1055,7 @@ void sData::activateLinkStructureExploitation()
          std::cout << "not enough linking structure found" << std::endl;
       useLinkStructure = false;
    }
+//   useLinkStructure = true;
 
    if( useLinkStructure )
    {
@@ -1591,4 +1592,113 @@ sData::sync()
    stochNode->syncStochGenMatrix(dynamic_cast<StochGenMatrix&>(*C));
 
    createChildren();
+}
+
+// is root node data of sData object same on all procs?
+bool sData::isRootNodeInSync() const
+{
+
+   int my_rank, world_size;
+   MPI_Comm_rank( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &my_rank);
+   MPI_Comm_size( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &world_size);
+
+   if(my_rank == 0)
+      std::cout << "checking if root node data over all processes is in sync" << std::endl;
+
+   bool in_sync = true;
+
+   /* matrix Q */
+   // todo
+
+   /* matrix A */
+   if(!dynamic_cast<const StochGenMatrix&>(*A).isRootNodeInSync())
+   {
+      std::cout << "ERROR: matrix A corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* matrix C */
+   if( !dynamic_cast<const StochGenMatrix&>(*C).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: matrix C corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* objective g */
+   if( !dynamic_cast<const StochVector&>(*g).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: objective vector corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* rhs equality bA */
+   if( !dynamic_cast<const StochVector&>(*bA).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: rhs of A corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* upper bounds x bux */
+   if( !dynamic_cast<const StochVector&>(*bux).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: upper bounds x corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* index for upper bounds x ixupp */
+   if( !dynamic_cast<const StochVector&>(*ixupp).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: index upper bounds x corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* lower bounds x blx */
+   if( !dynamic_cast<const StochVector&>(*blx).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: lower bounds x corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* index for lower bounds x ixlow */
+   if( !dynamic_cast<const StochVector&>(*ixlow).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: index lower bounds x corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* upper bounds C bu */
+   if( !dynamic_cast<const StochVector&>(*bu).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: rhs C corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* index upper bounds C icupp */
+   if( !dynamic_cast<const StochVector&>(*icupp).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: index rhs C corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* lower bounds C bl */
+   if( !dynamic_cast<const StochVector&>(*bl).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: lower bounds C corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* index for lower bounds C iclow */
+   if( !dynamic_cast<const StochVector&>(*iclow).isRootNodeInSync() )
+   {
+      std::cout << "ERROR: index lower bounds C corrupted!" << std::endl;
+      in_sync = false;
+   }
+
+   /* sacle sc */
+   // todo
+
+   if(my_rank == 0 && in_sync)
+      std::cout << "root node data over all processes is in sync" << std::endl;
+
+   return in_sync;
 }

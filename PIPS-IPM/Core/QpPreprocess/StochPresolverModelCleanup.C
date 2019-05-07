@@ -10,6 +10,8 @@
 #include <utility>
 #include <vector>
 
+//#define NDEBUG_MODEL_CLEANUP
+
 StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData)
 : StochPresolverBase(presData)
 {
@@ -24,10 +26,11 @@ StochPresolverModelCleanup::~StochPresolverModelCleanup()
 
 void StochPresolverModelCleanup::applyPresolving()
 {
-   /* ideally they are already zeroed */
-   presData.resetRedCounters();
-
-   int n_elims = 0;
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
 
    int myRank;
    bool iAmDistrib;
@@ -36,59 +39,65 @@ void StochPresolverModelCleanup::applyPresolving()
 #ifndef NDEBUG
    if( myRank == 0 )
    {
-      std::cout << "Starting model cleanup..." << std::endl;
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+      std::cout << "--- Before model cleanup:" << std::endl;
    }
-   // todo this a non const function! watch out
-//    countRowsCols();
+   countRowsCols();
 #endif
 
    /* remove entries from A and C matrices and updates transposed systems */
-   n_elims += removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
-   assert(verifyNnzcounters());
-
-   n_elims += removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
-   assert(verifyNnzcounters());
+   int n_elims_eq_sys = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
+   int n_elims_ineq_sys = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
+   int n_elims = n_elims_ineq_sys + n_elims_eq_sys;
 
    // removal of redundant constraints
-   int nRemovedRows = 0;
-   nRemovedRows += removeRedundantRows(presProb->A, EQUALITY_SYSTEM);
-   nRemovedRows += removeRedundantRows(presProb->C, INEQUALITY_SYSTEM);
+   int nRemovedRows_eq = removeRedundantRows(EQUALITY_SYSTEM);
+   int nRemovedRows_ineq = removeRedundantRows(INEQUALITY_SYSTEM);
+   int nRemovedRows = nRemovedRows_eq + nRemovedRows_ineq;
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    updateNnzColParent(MPI_COMM_WORLD);
    presData.resetRedCounters();
-
    if( iAmDistrib )
+   {
       MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   }
+
+   //todo : print specific stats
+#ifndef NDEBUG_MODEL_CLEANUP
+   if( myRank == 0 )
+      std::cout << "Model cleanup finished. Removed " << nRemovedRows << " redundant rows and " << n_elims << " entries in total."
+            << std::endl;
+#endif
 
 #ifndef NDEBUG
-   if( myRank == 0)
-      std::cout << "Model cleanup finished. Removed " << nRemovedRows << " redundant rows and " << n_elims << " entries in total." << std::endl;
-   // countRowsCols();
+   if( myRank == 0 )
+      std::cout << "--- After model cleanup:" << std::endl;
+   countRowsCols();
+   if(myRank == 0)
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
+
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
 }
 
 /** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity
  * with the row bounds (lhs and rhs). If a row is found to be redundant, it is removed.
  * If infeasiblity is detected, then Abort.
  */
-int StochPresolverModelCleanup::removeRedundantRows(GenMatrixHandle matrixHandle, SystemType system_type)
+int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type)
 {
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    int nRemovedRows = 0;
 
-   // set current pointers: currAmat, currBmat, lhr, rhs
    // root:
-   setCurrentPointersToNull();
-   setCPAmatsRoot(matrixHandle);
-   setCPColumnRoot();
-   if( system_type == EQUALITY_SYSTEM )
-      setCPRowRootEquality();
-   else
-      setCPRowRootInequality();
+   int nRemovedRowsRoot = removeRedundantRowsBlockwise(system_type, -1);
 
-   int nRemovedRowsRoot = removeRedundantRowsBlockwise(system_type, true);
    // update nnzColParent counters using redColParent:
    updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
    presData.resetRedCounters();
@@ -97,31 +106,21 @@ int StochPresolverModelCleanup::removeRedundantRows(GenMatrixHandle matrixHandle
       nRemovedRows += nRemovedRowsRoot;
 
    // children:
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(matrixHandle));
-   for( size_t it = 0; it< matrix.children.size(); it++)
+   for( int it = 0; it < nChildren; it++)
    {
-      if( setCPAmatsChild(matrixHandle, (int)it, system_type)) // Amat, AmatTrans
+      if( !nodeIsDummy( it, system_type) )
       {
-         setCPBmatsChild(matrixHandle, (int)it, system_type);  // Bmat, BmatTrans
-         setCPColumnRoot();                                    // redColParent, xlowParent etc
-         setCPColumnChild((int)it);
-         currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
-         if( system_type == EQUALITY_SYSTEM )
-            setCPRowChildEquality((int)it);                    // nnzRow, EqRhs
-         else
-            setCPRowChildInequality((int)it);                  // nnzRow, IneqLhs, IneqRhs
-
-         nRemovedRows += removeRedundantRowsBlockwise(system_type, false);
+         nRemovedRows += removeRedundantRowsBlockwise(system_type, it);
       }
    }
    // linking rows:
    if( hasLinking(system_type))
    {
-      int nRemovedRowsLink = removeRedundantLinkingRows(matrixHandle, system_type);
+      int nRemovedRowsLink = removeRedundantLinkingRows(system_type);
       if( myRank==0 )
       {
          nRemovedRows += nRemovedRowsLink;
-         cout<<"Removed Linking Constraints during model cleanup: "<< nRemovedRowsLink <<endl;
+         std::cout << "\tRemoved Linking Constraints during model cleanup: " << nRemovedRowsLink << std::endl;
       }
    }
 
@@ -129,39 +128,23 @@ int StochPresolverModelCleanup::removeRedundantRows(GenMatrixHandle matrixHandle
 }
 
 /** Find and remove redundant rows per child (!atRoot) or for the root block. */
-int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_type, bool atRoot)
+int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_type, int node)
 {
-   assert( currAmat && currAmatTrans );
-   assert( currxlowParent && currIxlowParent && currxuppParent && currIxuppParent );
-   assert( currRedColParent && currNnzRow );
-   if( atRoot )
-   {
-      assert( NULL==currBmat && NULL==currBmatTrans && NULL==currNnzColChild );
-      assert( NULL==currxlowChild && NULL==currIxlowChild && NULL==currxuppChild && NULL==currIxuppChild );
-   }
-   else
-   {
-      assert( currBmat && currBmatTrans );
-      assert( currxlowChild && currIxlowChild && currxuppChild && currIxuppChild );
-      assert( currNnzColChild );
-   }
-   if( system_type == EQUALITY_SYSTEM )
-      assert( currEqRhs );
-   else
-      assert( currIclow && currIcupp && currIneqLhs && currIneqRhs );
+   updatePointersForCurrentNode(node, system_type);
 
    int nRemovedRows = 0;
 
-   // per row, compute activies and compare to lhs and rhs:
-   for( int r=0; r<currAmat->m; r++)
+   // per row, compute activities and compare to lhs and rhs:
+   for( int r = 0; r < currAmat->m; r++)
    {
-      if( currNnzRow->elements()[r] == 0.0 ) // empty rows might still have a rhs but should be ignored.
+      if( currNnzRow->elements()[r] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
          continue;
 
       double minAct = 0.0;
       double maxAct = 0.0;
+
       computeActivityBlockwise(*currAmat, r, -1, minAct, maxAct, *currxlowParent, *currIxlowParent, *currxuppParent, *currIxuppParent);
-      if( !atRoot )
+      if( node != -1 )
          computeActivityBlockwise(*currBmat, r, -1, minAct, maxAct, *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
 
       if( system_type == EQUALITY_SYSTEM )
@@ -170,6 +153,8 @@ int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_t
             abortInfeasible(MPI_COMM_WORLD);
          else if( (minAct >= currEqRhs->elements()[r] - feastol) && (maxAct <= currEqRhs->elements()[r] + feastol) )
          {
+            if(node == -1)
+               assert(currBmat == NULL && currBmatTrans == NULL);
             // discard row r
             removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
             nRemovedRows++;
@@ -181,16 +166,22 @@ int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_t
          if( ( currIclow->elements()[r] != 0.0 && maxAct < currIneqLhs->elements()[r] - feastol )
                || ( currIcupp->elements()[r] != 0.0 && minAct > currIneqRhs->elements()[r] + feastol ) )
             abortInfeasible(MPI_COMM_WORLD);
-         if( (currIclow->elements()[r] == 0.0 || (currIclow->elements()[r] != 0.0 && currIneqLhs->elements()[r] <= -infinity)) &&
-               (currIcupp->elements()[r] == 0.0 || (currIcupp->elements()[r] != 0.0 && currIneqRhs->elements()[r] >= infinity)) )
-         {  // discard row r
+         if( (currIclow->elements()[r] == 0.0 || currIneqLhs->elements()[r] <= -infinity) &&
+               (currIcupp->elements()[r] == 0.0 || currIneqRhs->elements()[r] >= infinity) )
+         {
+            if( node == -1 )
+               assert(currBmat == NULL && currBmatTrans == NULL);
+            // discard row r
             removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
             nRemovedRows++;
          }
-         else if( (currIclow->elements()[r] == 0.0 || (currIclow->elements()[r] != 0.0 && minAct >= currIneqLhs->elements()[r] - feastol))
-               && (currIcupp->elements()[r] == 0.0 || (currIcupp->elements()[r] != 0.0 && maxAct <= currIneqRhs->elements()[r] + feastol)) )
+         else if( (currIclow->elements()[r] == 0.0 || minAct >= currIneqLhs->elements()[r] - feastol)
+               && (currIcupp->elements()[r] == 0.0 || maxAct <= currIneqRhs->elements()[r] + feastol) )
               // ( maxAct <= currIneqRhs->elements()[r] + feastol && minAct >= currIneqLhs->elements()[r] - feastol ) )
-         {  // discard row r
+         {
+            if( node == -1 )
+               assert(currBmat == NULL && currBmatTrans == NULL);
+            // discard row r
             removeRow(r, *currAmat, *currAmatTrans, currBmat, currBmatTrans, *currNnzRow, *currRedColParent, currNnzColChild);
             nRemovedRows++;
          }
@@ -200,9 +191,10 @@ int StochPresolverModelCleanup::removeRedundantRowsBlockwise(SystemType system_t
 }
 
 /** Find and remove redundant linking constraints. */
-int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matrixHandle, SystemType system_type)
+int StochPresolverModelCleanup::removeRedundantLinkingRows(SystemType system_type)
 {
    assert( hasLinking(system_type) );
+   updatePointersForCurrentNode(-1, system_type);
 
    int myRank;
    bool iAmDistrib;
@@ -210,38 +202,20 @@ int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matri
 
    int nRemovedRows = 0;
 
-   int nLinkRows = 0;
-   if( system_type== EQUALITY_SYSTEM)
-      nLinkRows = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl)->n;
-   else
-      nLinkRows = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl)->n;
-
-   // todo: use other structure supporting bound checks?
+   int nLinkRows = currNnzRowLink->n;
    double* minActivity = new double[nLinkRows];
    double* maxActivity = new double[nLinkRows];
    // bool array of length nLinkRows indicating if row is redundant:
    bool* rowIsRedundant = new bool[nLinkRows];
-   for( int i=0; i<nLinkRows; i++)
+   for( int i = 0; i < nLinkRows; i++)
    {
       minActivity[i] = 0.0;
       maxActivity[i] = 0.0;
       rowIsRedundant[i] = false;
    }
 
-   computeLinkingRowActivity(matrixHandle, system_type, minActivity, maxActivity, nLinkRows);
-
-   // set pointers for checkRedundantLinkingRow():
-   if( system_type == EQUALITY_SYSTEM )
-   {
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
-      currEqRhsLink = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vecl);
-   }
-   else
-   {
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
-      setCPRhsLinkInequality();
-   }
-   checkRedundantLinkingRow(matrixHandle, system_type, minActivity, maxActivity, nLinkRows, rowIsRedundant);
+   computeLinkingRowActivity(system_type, minActivity, maxActivity, nLinkRows);
+   checkRedundantLinkingRow(system_type, minActivity, maxActivity, nLinkRows, rowIsRedundant);
 
    // remove redundant rows indicated in rowIsRedundant:
    // per child, set pointers for F_i blocks
@@ -253,34 +227,32 @@ int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matri
    {
       if( !nodeIsDummy( it, system_type) )
       {
-         setCPBlmatsChild(matrixHandle, (int)it);
-         currNnzColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
+         updatePointersForCurrentNode(it, system_type);
 
-         for( int r=0; r < nLinkRows; r++)
+         for( int r = 0; r < nLinkRows; r++)
          {
             if( rowIsRedundant[r] )
                removeRowInBblock(r, currBlmat, currBlmatTrans, currNnzColChild);
          }
       }
    }
-   // F_0 block
-   setCPBlmatsRoot(matrixHandle);
-   currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
-   if( system_type == EQUALITY_SYSTEM )
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
-   else
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
 
-   for( int r=0; r<nLinkRows; r++)
+   // Bl_0 block
+   updatePointersForCurrentNode(-1, system_type);
+   // update the nnzColParent counters:
+   updateNnzColParent(MPI_COMM_WORLD);
+   presData.resetRedCounters();
+
+   for( int r=0; r < nLinkRows; r++)
    {
       if( rowIsRedundant[r] )
       {
-         removeRow(r, *currBlmat, *currBlmatTrans, NULL, NULL, *currNnzRow, *currRedColParent, NULL);
-         nRemovedRows++;   // only count the removed row once
+         removeRow(r, *currBlmat, *currBlmatTrans, NULL, NULL, *currNnzRowLink, *currRedColParent, NULL);
+         nRemovedRows++;   // only count the removed row once // todo? rank == 0
       }
    }
-   // update the nnzColParent counters:
-   updateNnzColParent(MPI_COMM_WORLD);
+
+   updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
    presData.resetRedCounters();
 
    delete[] minActivity;
@@ -291,7 +263,7 @@ int StochPresolverModelCleanup::removeRedundantLinkingRows(GenMatrixHandle matri
 }
 
 /** Compute the minimal and maximal row activities of the linking rows. */
-void StochPresolverModelCleanup::computeLinkingRowActivity(GenMatrixHandle matrixHandle, SystemType system_type,
+void StochPresolverModelCleanup::computeLinkingRowActivity(SystemType system_type,
       double* minActivity, double* maxActivity, int nLinkRows)
 {
    assert( hasLinking(system_type) );
@@ -300,12 +272,11 @@ void StochPresolverModelCleanup::computeLinkingRowActivity(GenMatrixHandle matri
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   // set pointers to F_0 and compute min/max activity of F0 block (only rank==0) :
+   // set pointers to F_0 and compute min/max activity of Bl0 block (only rank==0) :
    if( myRank == 0 )
    {
-      setCPBlmatsRoot(matrixHandle);   // set currBlmat, currBlmatTrans
-      setCPColumnRoot();               // redColParent, xlowParent etc
-      for( int r=0; r<nLinkRows; r++)
+      updatePointersForCurrentNode(-1, system_type);
+      for( int r = 0; r < nLinkRows; r++)
       {
          double minAct = 0.0;
          double maxAct = 0.0;
@@ -315,15 +286,13 @@ void StochPresolverModelCleanup::computeLinkingRowActivity(GenMatrixHandle matri
       }
    }
 
-   // go through children, set the pointers for F_i blocks. compute activity and sum them up
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*(matrixHandle));
-   for( size_t it = 0; it< matrix.children.size(); it++)
+   // go through children, set the pointers for Bl_i blocks. compute activity and sum them up
+   for( int it = 0; it < nChildren; it++)
    {
-      if( !nodeIsDummy( (int)it, system_type) )
+      if( !nodeIsDummy( it, system_type) )
       {
-         setCPBlmatsChild(matrixHandle, (int)it);
-         setCPColumnChild((int)it);
-         for( int r=0; r<nLinkRows; r++)
+         updatePointersForCurrentNode(it, system_type);
+         for( int r = 0; r < nLinkRows; r++)
          {
             double minAct = 0.0;
             double maxAct = 0.0;
@@ -334,7 +303,7 @@ void StochPresolverModelCleanup::computeLinkingRowActivity(GenMatrixHandle matri
       }
    }
 
-   // Allreduce sum over all activites
+   // Allreduce sum over all activities
    if( iAmDistrib )
    {
       MPI_Allreduce(MPI_IN_PLACE, minActivity, nLinkRows, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -344,19 +313,20 @@ void StochPresolverModelCleanup::computeLinkingRowActivity(GenMatrixHandle matri
 
 /** For each linking row, check if it is redundant using the minimal and maximal row activities
  * compared to the lhs and rhs. */
-void StochPresolverModelCleanup::checkRedundantLinkingRow(GenMatrixHandle matrixHandle, SystemType system_type,
+void StochPresolverModelCleanup::checkRedundantLinkingRow(SystemType system_type,
       double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant)
 {
    // check for redundant rows
-   for( int r=0; r<nLinkRows; r++)
+   for( int r = 0; r < nLinkRows; r++)
    {
-      if( currNnzRow->elements()[r] == 0.0 ) // empty rows might still have a rhs but should be ignored.
+      if( currNnzRowLink->elements()[r] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
          continue;
+
       if( system_type == EQUALITY_SYSTEM )
       {
          if( ( minActivity[r] > currEqRhsLink->elements()[r] + feastol ) || ( maxActivity[r] < currEqRhsLink->elements()[r] - feastol ) )
             abortInfeasible(MPI_COMM_WORLD);
-         else if( (minActivity[r] >= currEqRhsLink->elements()[r] - feastol) && (maxActivity[r] <= currEqRhsLink->elements()[r] + feastol) )
+         else if( ((minActivity[r] >= currEqRhsLink->elements()[r] - feastol) && (maxActivity[r] <= currEqRhsLink->elements()[r] + feastol)) )
             rowIsRedundant[r] = true;  // discard row r
       }
       else  // system_type == INEQUALITY_SYSTEM
@@ -364,11 +334,11 @@ void StochPresolverModelCleanup::checkRedundantLinkingRow(GenMatrixHandle matrix
          if( (currIclowLink->elements()[r] != 0.0 && maxActivity[r] < currIneqLhsLink->elements()[r] - feastol )
                ||( currIcuppLink->elements()[r] != 0.0 && minActivity[r] > currIneqRhsLink->elements()[r] + feastol ) )
             abortInfeasible(MPI_COMM_WORLD);
-         if( (currIclowLink->elements()[r] == 0.0 || (currIclowLink->elements()[r] != 0.0 && currIneqLhsLink->elements()[r] <= -infinity)) &&
-               (currIcuppLink->elements()[r] == 0.0 || (currIcuppLink->elements()[r] != 0.0 && currIneqRhsLink->elements()[r] >= infinity)) )
+         if( (currIclowLink->elements()[r] == 0.0 || currIneqLhsLink->elements()[r] <= -infinity) &&
+               (currIcuppLink->elements()[r] == 0.0 || currIneqRhsLink->elements()[r] >= infinity) )
             rowIsRedundant[r] = true;  // discard row r
-         else if( (currIclowLink->elements()[r] == 0.0 || (currIclowLink->elements()[r] != 0.0 && minActivity[r] >= currIneqLhsLink->elements()[r] - feastol))
-               && (currIcuppLink->elements()[r] == 0.0 || (currIcuppLink->elements()[r] != 0.0 && maxActivity[r] <= currIneqRhsLink->elements()[r] + feastol)) )
+         else if( ((currIclowLink->elements()[r] == 0.0 || minActivity[r] >= currIneqLhsLink->elements()[r] - feastol)
+               && (currIcuppLink->elements()[r] == 0.0 || maxActivity[r] <= currIneqRhsLink->elements()[r] + feastol)) )
             rowIsRedundant[r] = true;  // discard row r
       }
    }
@@ -389,12 +359,12 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    assert(dynamic_cast<StochGenMatrix&>(*(presProb->A)).children.size() == (size_t) nChildren);
    assert(dynamic_cast<StochGenMatrix&>(*(presProb->C)).children.size() == (size_t) nChildren);
 
-   /* reset the linking row reduction buffers */
+   /* reset the linking row reduction buffers */ // todo why? - assert empty?
+   presData.resetRedCounters();
    if(hasLinking(system_type))
       (system_type == EQUALITY_SYSTEM) ? resetEqRhsAdaptionsLink() : resetIneqRhsAdaptionsLink();
 
    int n_elims = 0;
-   presData.resetRedCounters();
 
    int myRank;
    bool iAmDistrib;
@@ -403,10 +373,8 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    /* reductions in root node */
    if( !nodeIsDummy(-1, system_type) )
    {
-      updatePointersForCurrentNode(-1, system_type);
-
       /* process B0 and Bl0 */
-      n_elims += removeTinyInnerLoop(-1, system_type, CHILD_BLOCK);
+      n_elims += removeTinyInnerLoop(-1, system_type, LINKING_VARS_BLOCK);
       if( hasLinking(system_type) )
          n_elims += removeTinyInnerLoop(-1, system_type, LINKING_CONS_BLOCK);
    }
@@ -418,7 +386,8 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    {
       presData.resetRedCounters();
       /* only rank 0 keeps the changes in Bl0 */
-      (system_type == EQUALITY_SYSTEM) ? resetEqRhsAdaptionsLink() : resetIneqRhsAdaptionsLink();
+      if(hasLinking(system_type))
+         (system_type == EQUALITY_SYSTEM) ? resetEqRhsAdaptionsLink() : resetIneqRhsAdaptionsLink();
       n_elims = 0;
    }
 
@@ -427,8 +396,6 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    {
       if( !nodeIsDummy(node, system_type) )
       {
-         updatePointersForCurrentNode(node, system_type);
-
          /* Amat */
          n_elims += removeTinyInnerLoop(node, system_type, LINKING_VARS_BLOCK );
 
@@ -446,70 +413,12 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    /* communicate the reductions */
    if( iAmDistrib )
    {
-      StochVectorHandle red_row = (system_type == EQUALITY_SYSTEM) ? presData.redRowA : presData.redRowC;
-
       // allreduce local eliminations
       MPI_Allreduce(MPI_IN_PLACE, &n_elims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
-
-      // allreduce the linking variables columns
-      double* red_col_linking_vars = dynamic_cast<SimpleVector*>(presData.redCol->vec)->elements();
-      int message_size = dynamic_cast<SimpleVector*>(presData.redCol->vec)->length();
-      MPI_Allreduce(MPI_IN_PLACE, red_col_linking_vars, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-      // allreduce B0 row
-      double* red_row_b0 = dynamic_cast<SimpleVector*>(red_row->vec)->elements();
-      message_size = dynamic_cast<SimpleVector*>(red_row->vec)->length();
-      MPI_Allreduce(MPI_IN_PLACE, red_row_b0, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-      if( hasLinking(system_type) )
-      {
-         // allreduce the linking conss rows
-         // non-zero counters
-         double* red_row_link = dynamic_cast<SimpleVector*>(red_row->vecl)->elements();
-         message_size = dynamic_cast<SimpleVector*>(red_row->vecl)->length();
-         MPI_Allreduce(MPI_IN_PLACE, red_row_link, message_size, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-
-         // rhs lhs changes (which are actually the same, so it suffices to reduce either rhs or lhs for an
-         // INEQUALITY_SYSTEM
-         if(system_type == EQUALITY_SYSTEM)
-         {
-            assert(currEqRhsLink);
-            assert(presData.redRowA->vecl->n == currEqRhsLink->n);
-
-            MPI_Allreduce(MPI_IN_PLACE, currEqRhsAdaptionsLink, currEqRhsLink->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-            // apply changes to rhs locally
-            for(int i = 0; i < currEqRhsLink->n; ++i)
-            {
-               currEqRhsLink->elements()[i] += currEqRhsAdaptionsLink[i];
-            }
-
-            resetEqRhsAdaptionsLink();
-         }
-         else
-         {
-            assert(currIneqRhsLink);
-            assert(currIneqLhsLink);
-            assert(presData.redRowC->vecl->n == currIneqRhsLink->n);
-            assert(presData.redRowC->vecl->n == currIneqLhsLink->n);
-
-            MPI_Allreduce(MPI_IN_PLACE, currInEqRhsAdaptionsLink, currIneqRhsLink->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-            // apply changes to lhs, rhs locally
-            for(int i = 0; i < currIneqRhsLink->n; ++i)
-            {
-               currIneqRhsLink->elements()[i] += currInEqRhsAdaptionsLink[i];
-               currIneqLhsLink->elements()[i] += currInEqLhsAdaptionsLink[i];
-            }
-
-            resetIneqRhsAdaptionsLink();
-         }
-      }
    }
 
-   /* update local nnzCounters */
-   updateNnzFromReductions(system_type);
+   allreduceAndApplyNnzReductions(system_type);
+   allreduceAndApplyRhsLhsReductions(system_type);
 
    return n_elims;
 }
@@ -524,6 +433,8 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
 {
    if(nodeIsDummy(node, system_type))
       return 0;
+
+   updatePointersForCurrentNode(node, system_type);
 
    SparseStorageDynamic* mat = NULL;
    SparseStorageDynamic* mat_transp = NULL;
@@ -542,12 +453,12 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
    /* set matrix */
    if( block_type == CHILD_BLOCK )
    {
+      assert(node != -1);
       mat = currBmat;
       mat_transp = currBmatTrans;
    }
    else if( block_type == LINKING_VARS_BLOCK )
    {
-      assert(node != -1);
       mat = currAmat;
       mat_transp = currAmatTrans;
    }
@@ -566,7 +477,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
       if(block_type == LINKING_CONS_BLOCK)
       {
          assert(currEqRhsAdaptionsLink);
-         //rhs = lhs = lhs_idx = rhs_idx = currEqRhsLink;
          rhs = lhs = lhs_idx = rhs_idx = new SimpleVector(currEqRhsAdaptionsLink, currEqRhsLink->n);
       }
       else
@@ -579,10 +489,8 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
       if(block_type == LINKING_CONS_BLOCK)
       {
          assert(currInEqRhsAdaptionsLink); assert(currInEqLhsAdaptionsLink);
-//         rhs = currIneqRhsLink;
          rhs = new SimpleVector(currInEqRhsAdaptionsLink, currIneqRhsLink->n);
          rhs_idx = currIcuppLink;
-//         lhs =  currIneqLhsLink;
          lhs = new SimpleVector(currInEqLhsAdaptionsLink, currIneqLhsLink->n);
          lhs_idx = currIclowLink;
       }
@@ -596,75 +504,16 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
    }
 
    /* set variables */
-   if(block_type == CHILD_BLOCK || block_type == LINKING_CONS_BLOCK)
-   {
-      if(node == -1)
-      {
-         x_lower = currxlowParent;
-         x_lower_idx = currIxlowParent;
-
-         x_upper = currxuppParent;
-         x_upper_idx = currIxuppParent;
-      }
-      else
-      {
-         x_lower = currxlowChild;
-         x_lower_idx = currIxlowChild;
-
-         x_upper = currxuppChild;
-         x_upper_idx = currIxuppChild;
-      }
-   }
-   else if(block_type == LINKING_VARS_BLOCK)
-   {
-      assert(node != -1);
-      x_lower = currxlowParent;
-      x_lower_idx = currIxlowParent;
-
-      x_upper = currxuppParent;
-      x_upper_idx = currIxuppParent;
-
-   }
+   x_lower = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currxlowParent : currxlowChild;
+   x_lower_idx = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currIxlowParent : currIxlowChild;
+   x_upper = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currxuppParent : currxuppChild;
+   x_upper_idx = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currIxuppParent : currIxuppChild;
 
    /* set reduction vectors */
-   if( block_type == CHILD_BLOCK || block_type == LINKING_CONS_BLOCK )
-   {
-      if( node == -1 )
-      {
-         redCol = currRedColParent;
-      }
-      else
-      {
-         redCol = currRedColChild;
-      }
-   }
-   else if( block_type == LINKING_VARS_BLOCK )
-   {
-      assert(node != -1);
-      redCol = currRedColParent;
-   }
+   redCol = (block_type == LINKING_VARS_BLOCK || node == -1) ? currRedColParent : currRedColChild;
 
-   /* set non-zero vectors */
-   if(node == -1)
-   {
-      if(block_type == LINKING_CONS_BLOCK)
-      {
-         assert(hasLinking(system_type));
-         nnzRow = currNnzRowLink;
-      }
-      else
-      {
-         assert(block_type == CHILD_BLOCK);
-         nnzRow = currNnzRow;
-      }
-   }
-   else
-   {
-      if(block_type == LINKING_CONS_BLOCK)
-         nnzRow = currNnzRowLink;
-      else
-         nnzRow = currNnzRow;
-   }
+   /* set non-zero row vectors */
+   nnzRow = (block_type == LINKING_CONS_BLOCK) ? currNnzRowLink : currNnzRow;
 
    bool linking_row = (block_type == LINKING_CONS_BLOCK);
 
@@ -692,7 +541,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( int node, SystemType system
          const double mat_entry = storage->M[k];
 
          /* remove all small entries */
-         if( fabs( mat_entry ) < tol_matrix_entry ) // todo bugged
+         if( fabs( mat_entry ) < tol_matrix_entry )
          {
             std::pair<int,int> entry(r, col);
             eliminated_entries.push_back(entry);
