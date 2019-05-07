@@ -664,22 +664,6 @@ void StochPresolverBase::setCPColumnChild(int it)
    currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
 }
 
-void StochPresolverBase::setCPRowRootIneqOnlyLhsRhs()
-{
-   currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec);
-   currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec);
-   currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
-   currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
-}
-
-void StochPresolverBase::setCPRowChildIneqOnlyLhsRhs(int it)
-{
-   assert( it >= 0 && it<nChildren );
-   currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec);
-   currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec);
-   currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec);
-   currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec);
-}
 
 void StochPresolverBase::resetEqRhsAdaptionsLink()
 {
@@ -766,6 +750,8 @@ void StochPresolverBase::removeRow(int rowIdx, SparseStorageDynamic& Ablock, Spa
    }
    // set nnzRow[rowIdx] to 0.0:
    nnzRow.elements()[rowIdx] = 0.0;
+
+   // todo : notify postsolver
 }
 
 /** Remove row rowIdx in Bblock which should not be a linking variable block.
@@ -795,6 +781,8 @@ void StochPresolverBase::removeRowInBblock(int rowIdx, SparseStorageDynamic* Bbl
    }
    // delete row in Bblock:
    clearRow(*Bblock, rowIdx);
+
+   // todo : notify postsolver
 }
 
 bool StochPresolverBase::nodeIsDummy(int node, SystemType system_type) const
@@ -884,6 +872,7 @@ void StochPresolverBase::synchronize(int& value) const
 }
 
 // todo description + use to notify column deletion
+// todo notify postsolver! rows and cols
 void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value)
 {
    assert(node != -1);

@@ -54,6 +54,7 @@ public:
    bool checkRootNodeDataInSync(const sData& sData) const;
 
 protected:
+   // if postsolver is NULL we do not have one and don't do postsolve / any notify
    const StochPostsolver* postsolver;
 
    // todo do we want to make these adjustable?
@@ -157,7 +158,6 @@ protected:
    /* updating all pointers */
    void updatePointersForCurrentNode(int node, SystemType system_type);
 private:
-   /* return false if dummy node */
    void setPointersMatrices(GenMatrixHandle mat, int node);
    void setPointersMatrixBounds(SystemType system_type, int node);
    void setPointersVarBounds(int node);
@@ -174,8 +174,6 @@ protected:
    bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //parrow
    void setCPColumnRoot(); //parrow
    void setCPColumnChild(int it); //parrow
-   void setCPRowRootIneqOnlyLhsRhs(); //parrow
-   void setCPRowChildIneqOnlyLhsRhs(int it); //parrow
 
    void resetEqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
    void resetIneqRhsAdaptionsLink(); // modelcleanup allreduceAndApply

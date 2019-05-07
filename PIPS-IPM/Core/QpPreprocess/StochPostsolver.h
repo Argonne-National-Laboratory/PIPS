@@ -31,6 +31,13 @@ public:
 
 protected:
 
+      /* can represent a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
+      typedef struct
+      {
+         int node;
+         int index;
+      } INDEX;
+
       enum ReductionType
       {
          FIXED_COLUMN = 0,
@@ -42,21 +49,20 @@ protected:
       const unsigned int n_rows_original;
       const unsigned int n_cols_original;
 
-      StochVector* mapping_to_origcol;
-      StochVector* mapping_to_origrow_equality;
-      StochVector* mapping_to_origrow_inequality;
+//      StochVector* mapping_to_origcol;
+//      StochVector* mapping_to_origrow_equality;
+//      StochVector* mapping_to_origrow_inequality;
 
       std::vector<ReductionType> reductions;
-      std::vector<unsigned int> indices;
-      std::vector<int> nodes;
+      std::vector<INDEX> indices;
       std::vector<double> values;
-      std::vector<unsigned int> start_indices;
+      std::vector<unsigned int> start_idx_values;
 
 
       // todo KKTchecker
 
-      void setReducedValuesInOrigVector(const StochVector& reduced_vector, StochVector& original_vector, const StochVector& mapping_to_original) const;
-      void setReducedValuesInOrigVector(const SimpleVector& reduced_vector, SimpleVector& original_vector, const SimpleVector& mapping_to_original) const;
+//      void setReducedValuesInOrigVector(const StochVector& reduced_vector, StochVector& original_vector, const StochVector& mapping_to_original) const;
+//      void setReducedValuesInOrigVector(const SimpleVector& reduced_vector, SimpleVector& original_vector, const SimpleVector& mapping_to_original) const;
 
 private:
       void finishNotify();
