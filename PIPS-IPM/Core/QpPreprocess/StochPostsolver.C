@@ -11,8 +11,8 @@
 
 #include <stdexcept>
 
-StochPostsolver::StochPostsolver(const sData& original_problem, int n_rows_original, int n_cols_original) :
-   QpPostsolver(original_problem), n_rows_original(n_rows_original), n_cols_original(n_cols_original)
+StochPostsolver::StochPostsolver(const sData& original_problem) :
+   QpPostsolver(original_problem), n_rows_original(original_problem.my + original_problem.mz), n_cols_original(original_problem.nx)
 {
 //   mapping_to_origcol = dynamic_cast<StochVector*>(original_problem.g->clone());
 //   mapping_to_origrow_equality = dynamic_cast<StochVector*>(original_problem.bu->clone());
@@ -23,7 +23,6 @@ StochPostsolver::StochPostsolver(const sData& original_problem, int n_rows_origi
 //   mapping_to_origrow_inequality->fillWithIndices();
 
    // count !? rows cols...
-
    start_idx_values.push_back(0);
 }
 
@@ -60,13 +59,16 @@ void StochPostsolver::finishNotify()
 
 // todo : sort reductions by nodes ? and then reverse ?
 // todo : at the moment only replaces whatever is given as x with the x solution in the original soution space
-PostsolveStatus StochPostsolver::postsolve(const sVars& reduced_solution, sVars& original_solution) const
+PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Variables& original_solution) const
 {
+   const sVars& stoch_reduced_sol = dynamic_cast<const sVars&>(reduced_solution);
+   sVars& stoch_original_sol = dynamic_cast<sVars&>(original_solution);
+
 
    /* primal variables */
 
-   const StochVector& primal_vars_reduced = dynamic_cast<const StochVector&>(*reduced_solution.x);
-   StochVector& primal_vars_orig = dynamic_cast<StochVector&>(*original_solution.x);
+   const StochVector& primal_vars_reduced = dynamic_cast<const StochVector&>(*stoch_reduced_sol.x);
+   StochVector& primal_vars_orig = dynamic_cast<StochVector&>(*stoch_original_sol.x);
 
    primal_vars_orig.setToZero(); // todo necessary?
 //   setReducedValuesInOrigVector( primal_vars_reduced, primal_vars_orig, *mapping_to_origcol);

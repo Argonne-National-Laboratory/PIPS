@@ -58,7 +58,7 @@ namespace rowlib
 class StochPresolverParallelRows : public StochPresolverBase
 {
 public:
-   StochPresolverParallelRows(PresolveData& presData);
+   StochPresolverParallelRows(PresolveData& presData, StochPostsolver* postsolver);
 
    ~StochPresolverParallelRows();
 

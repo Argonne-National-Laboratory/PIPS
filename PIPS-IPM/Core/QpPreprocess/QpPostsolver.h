@@ -26,8 +26,7 @@ class QpPostsolver : public Postsolver
       virtual ~QpPostsolver();
 
       /** postsolve reduced solution and set original solution accordingly */
-      virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) = 0;
-
+      virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const = 0;
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_QPPOSTSOLVER_H_ */

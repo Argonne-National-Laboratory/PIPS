@@ -17,18 +17,17 @@
 #include "SystemType.h"
 
 
-class StochPostsolver : QpPostsolver{
+class StochPostsolver : public QpPostsolver{
 public:
 
-      StochPostsolver( const sData& original_problem, int n_rows_original, int n_cols_original);
+      StochPostsolver( const sData& original_problem );
       virtual ~StochPostsolver();
 
       void notifyFixedColumn( int node, unsigned int col, double value);
       void notifyDeletedRow( SystemType system_type, int node, unsigned int row, bool linking_constraint);
       void notifyParallelColumns();
 
-      PostsolveStatus postsolve(const sVars& reduced_solution, sVars& original_solution) const;
-
+      virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
 protected:
 
       /* can represent a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */

@@ -28,7 +28,7 @@ public:
   virtual ~Postsolver() {};
 
   /** postsolve reduced solution and set original solution accordingly */
-  virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) = 0;
+  virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const = 0;
 
 };
 

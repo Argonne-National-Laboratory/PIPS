@@ -8,8 +8,8 @@
 #include "StochPresolverSingletonColumns.h"
 
 
-StochPresolverSingletonColumns::StochPresolverSingletonColumns(PresolveData& presData)
-: StochPresolverBase(presData)
+StochPresolverSingletonColumns::StochPresolverSingletonColumns(PresolveData& presData, StochPostsolver* postsolver)
+: StochPresolverBase(presData, postsolver)
 {
  // todo
 }

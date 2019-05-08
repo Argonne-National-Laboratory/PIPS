@@ -13,8 +13,8 @@
 // todo exhaustive
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
-      PresolveData& presData) :
-      StochPresolverBase(presData)
+      PresolveData& presData, StochPostsolver* postsolver) :
+      StochPresolverBase(presData, postsolver)
 {
    // todo
 }

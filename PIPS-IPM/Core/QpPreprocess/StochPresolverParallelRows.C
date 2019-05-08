@@ -53,8 +53,8 @@ namespace rowlib
    }
 }
 
-StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
-: StochPresolverBase(presData)
+StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, StochPostsolver* postsolver)
+: StochPresolverBase(presData, postsolver)
 {
    currCmat = NULL;
    currCmatTrans = NULL;
@@ -676,7 +676,7 @@ void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContai
       SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
       BlockType block_type)
 {
-   assert( colIdx >= 0 && colIdx < matrixTrans.m );
+   assert( 0 <= colIdx && colIdx < matrixTrans.m );
    assert( matrixTrans.rowptr[colIdx].start +1 == matrixTrans.rowptr[colIdx].end);
    assert( nnzRow.n == matrix.m );
    assert( matrix.n == nnzCol.n );
