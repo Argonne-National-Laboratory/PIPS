@@ -1621,7 +1621,9 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
    int n_singleton_rows_ineq = 0;
    int n_cols = 0;
    int n_boxed_cols = 0;
+   int n_onesided_cols = 0;
    int n_free_cols = 0;
+   int n_singleton_cols = 0;
 
    /* root nodes of equality and inequality system - linking and non linking */
    if( myRank == 0 )
@@ -1644,14 +1646,16 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       n_singleton_rows_ineq += n_rows_ineq_linking_singleton;
       n_ranged_rows += n_rows_linking_ranged;
 
-      countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, LINKING_VARS_BLOCK);
+      countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, LINKING_VARS_BLOCK);
 
-      std::cout << "#Linking_vars:\t" << n_cols << " (#free: " << n_free_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
+      std::cout << "#linking_vars:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
+            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
 
-      std::cout << "#rows B0:\t" << n_rows_eq << std::endl;
-      std::cout << "#rows Bl_0:\t" << n_rows_eq_linking << " (#singleton: " << n_rows_eq_linking_singleton << ")" << std::endl;
-      std::cout << "#rows D0:\t" << n_rows_ineq << std::endl;
-      std::cout << "#rows Dl_0:\t" << n_rows_ineq_linking << " (#singleton: " << n_rows_ineq_linking_singleton << ", #ranged: " << n_rows_linking_ranged << ")" << std::endl;
+      std::cout << "#rows B0:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
+      std::cout << "#rows Bl_0:\t" << n_rows_eq_linking << "\t(#singleton: " << n_rows_eq_linking_singleton << ")" << std::endl;
+      std::cout << "#rows D0:\t" << n_rows_ineq << "\t(#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
+      std::cout << "#rows Dl_0:\t" << n_rows_ineq_linking << "\t(#singleton: " << n_rows_ineq_linking_singleton << ", #ranged: "
+            << n_rows_linking_ranged << ", #fixed: " << n_fixed_rows << ")" << std::endl;
    }
 
    /* child nodes in both systems */
@@ -1673,7 +1677,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
          updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
          countRowsBlock(n_rows_ineq, n_ranged_rows, n_fixed_rows, n_singleton_rows_ineq, INEQUALITY_SYSTEM, CHILD_BLOCK);
 
-         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, CHILD_BLOCK);
+         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, CHILD_BLOCK);
       }
    }
 
@@ -1786,11 +1790,12 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
 
    if( myRank == 0 )
    {
-      std::cout << "#rows_total:\t" << n_rows_eq + n_rows_ineq << " (#fixed: " << n_fixed_rows << ", #ranged: " << n_ranged_rows << ", #singleton: " << n_singleton_rows_eq + n_singleton_rows_ineq<< ")" << std::endl;
-      std::cout << "#rows A:\t" << n_rows_eq << " (#singleton: " << n_singleton_rows_eq << ")" << std::endl;
-      std::cout << "#rows C:\t" << n_rows_ineq << " (#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
+      std::cout << "#rows_total:\t" << n_rows_eq + n_rows_ineq << "\t(#fixed: " << n_fixed_rows << ", #ranged: " << n_ranged_rows << ", #singleton: " << n_singleton_rows_eq + n_singleton_rows_ineq<< ")" << std::endl;
+      std::cout << "#rows A:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
+      std::cout << "#rows C:\t" << n_rows_ineq << "\t(#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
 
-      std::cout <<"#vars_total:\t" << n_cols << " (#bounded: " << n_boxed_cols << ", #free: " << n_free_cols << ")" << std::endl;
+      std::cout << "#vars_total:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
+            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
    }
 }
 
@@ -1847,7 +1852,7 @@ void StochPresolverBase::countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_
    }
 }
 
-void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const
+void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const
 {
    SimpleVector* ixlow = (block_type == LINKING_VARS_BLOCK) ? currIxlowParent : currIxlowChild;
    SimpleVector* ixupp = (block_type == LINKING_VARS_BLOCK) ? currIxuppParent : currIxuppChild;
@@ -1859,13 +1864,19 @@ void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& 
    {
       if( curr_nnz->elements()[i] != 0.0 )
       {
-         nColsTotal ++;
+         if(curr_nnz->elements()[i] == 1.0)
+            ++nSingletonVars;
+
+         nColsTotal++;
          if( ixlow->elements()[i] != 0.0 && ixupp->elements()[i] != 0.0 )
             nBoxCols++;
          else if( ixlow->elements()[i] == 0.0 && ixupp->elements()[i] == 0.0)
             nFreeVars++;
          else
+         {
             assert(ixlow->elements()[i] != 0.0 || ixupp->elements()[i] != 0.0);
+            ++nOnesidedVars;
+         }
       }
    }
 }
