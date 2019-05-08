@@ -33,7 +33,7 @@ StochPostsolver::~StochPostsolver(){}
 void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double value)
 {
    reductions.push_back( FIXED_COLUMN );
-   indices.push_back( INDEX(node, col) );
+//   indices.push_back( INDEX(node, col) );
    values.push_back( value );
 
    finishNotify();
@@ -51,8 +51,8 @@ void StochPostsolver::notifyParallelColumns()
 
 void StochPostsolver::finishNotify()
 {
-   assert( reductions.size() == start_indices.size() );
-   assert( nodes.size() == start_indices.size() );
+   assert( reductions.size() == start_idx_values.size() );
+   assert( indices.size() == start_idx_values.size() );
    assert( values.size() == indices.size() ); // todo why ? probably padding
 
    start_idx_values.push_back( values.size() );
@@ -83,15 +83,15 @@ PostsolveStatus StochPostsolver::postsolve(const sVars& reduced_solution, sVars&
    for( int i = reductions.size() - 1; i >= 0; --i )
    {
       int type = reductions[i];
-      unsigned int first = start_indices[i];
-      unsigned int last = start_indices[i + 1];
+      unsigned int first = start_idx_values[i];
+      unsigned int last = start_idx_values[i + 1];
 
       switch( type )
       {
          case FIXED_COLUMN:
          {
-            int column = indices[first];
-            int node = nodes[first];
+            int column = 0;//indices[first];
+            int node = 0;//indices[first];
 
             assert( -1 <= node && node < static_cast<int>(primal_vars_orig.children.size()) );
 

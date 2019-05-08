@@ -615,56 +615,6 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
       currRedColChild = currNnzColChild = NULL;
 }
 
-/** Set currAmat = root.Bmat */
-void StochPresolverBase::setCPAmatsRoot(GenMatrixHandle matrixHandle)
-{
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*matrixHandle);
-   currAmat = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamic();
-   currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamicTransposed();
-}
-
-bool StochPresolverBase::setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type)
-{
-   assert( it >= 0 && it<nChildren );
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*matrixHandle);
-   if( nodeIsDummy(it, system_type) )
-      return false;
-   currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
-   currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamicTransposed();
-   return true;
-}
-
-bool StochPresolverBase::setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type)
-{
-   assert( it >= 0 && it<nChildren );
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*matrixHandle);
-   if( nodeIsDummy(it, system_type) )
-      return false;
-   currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
-   currBmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamicTransposed();
-   return true;
-}
-
-void StochPresolverBase::setCPColumnRoot()
-{
-   currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
-   currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
-   currIxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
-   currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
-   currIxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
-}
-
-void StochPresolverBase::setCPColumnChild(int it)
-{
-   assert( it >= 0 && it < nChildren );
-   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
-   currxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->vec);
-   currxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->vec);
-   currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
-   currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
-}
-
-
 void StochPresolverBase::resetEqRhsAdaptionsLink()
 {
    assert(hasLinking(EQUALITY_SYSTEM));

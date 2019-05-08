@@ -169,12 +169,6 @@ private:
    void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const;
 
 protected:
-   void setCPAmatsRoot(GenMatrixHandle matrixHandle); //parrow
-   bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //parrow
-   bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //parrow
-   void setCPColumnRoot(); //parrow
-   void setCPColumnChild(int it); //parrow
-
    void resetEqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
    void resetIneqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
 

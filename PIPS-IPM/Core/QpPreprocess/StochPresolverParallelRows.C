@@ -544,7 +544,7 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    if( !norm_Amat && !norm_Cmat )
       assert(false);
 
-   if(norm_Amat && norm_Cmat)
+   if(node != -1 && norm_Amat && norm_Cmat)
    {
       assert( norm_Amat->n == norm_Cmat->n );
       assert( norm_Bmat->n == norm_Dmat->n );
@@ -1374,7 +1374,12 @@ void StochPresolverParallelRows::computeXminusYdivZ( double& result,
  */
 void StochPresolverParallelRows::tightenLinkingVarsBounds()
 {
-   setCPColumnRoot();
+   // probably unnecessary
+   currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
+   currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
+   currIxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
+   currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
+   currIxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
 
    // apply updated newBoundsParent to the variable bounds.
    for(int i=0; i<getNumberNewBoundsParent(); i++)
