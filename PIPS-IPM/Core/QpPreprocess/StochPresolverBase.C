@@ -870,7 +870,7 @@ void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& i
 /** Call MPI_Abort() and print an error message */
 void StochPresolverBase::abortInfeasible(MPI_Comm comm) const
 {
-   cout<<"Infesibility detected in presolving. Aborting now."<<endl;
+   std::cout << "Infesibility detected in presolving. Aborting now." << std::endl;
    MPI_Abort(comm, 1);
 }
 
@@ -907,8 +907,6 @@ void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, do
    /* adjust objective function */
    updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
    indivObjOffset += currgChild->elements()[col_idx] * fixation_value;
-   if( !PIPSisZero(currgChild->elements()[col_idx] * fixation_value) ) // todo remove
-      std::cout << indivObjOffset << std::endl;
 }
 
 void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val)
@@ -1483,9 +1481,10 @@ bool StochPresolverBase::verifyNnzcounters()
    {
       if( nColUpdatedSimple->elements()[i] != nColOrigSimple->elements()[i])
       {
-         cout<<"Nnz Counter linking column "<<i<<" not correct: "<<nColUpdatedSimple->elements()[i]<<" vs. "<<nColOrigSimple->elements()[i]<<endl;
+         std::cout << "Nnz Counter linking column " << i << " not correct: "
+               << nColUpdatedSimple->elements()[i] << " vs. " << nColOrigSimple->elements()[i] << std::endl;
          nnzCorrect = false;
-//         break;
+         break;
       }
    }
    // non linking variables:
@@ -1494,13 +1493,14 @@ bool StochPresolverBase::verifyNnzcounters()
       nColOrigSimple = dynamic_cast<SimpleVector*>(nnzColOrig->children[it]->vec);
       nColUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
       assert( nColUpdatedSimple->n == nColOrigSimple->n );
-      for( int i=0; i<nColUpdatedSimple->n; i++)
+      for( int i = 0; i < nColUpdatedSimple->n; i++)
       {
          if( nColUpdatedSimple->elements()[i] != nColOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter non-linking column "<<i<<" of child "<<(int)it<<" not correct: "<<nColUpdatedSimple->elements()[i]<<" vs. "<<nColOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter non-linking column " << i << " of child " << it << " not correct: "
+                  << nColUpdatedSimple->elements()[i] << " vs. " << nColOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1508,13 +1508,14 @@ bool StochPresolverBase::verifyNnzcounters()
    SimpleVector* nRowAOrigSimple = dynamic_cast<SimpleVector*>(nnzRowAOrig->vec);
    SimpleVector* nRowAUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
    assert( nRowAUpdatedSimple->n == nRowAOrigSimple->n );
-   for( int i=0; i < nRowAUpdatedSimple->n; i++)
+   for( int i = 0; i < nRowAUpdatedSimple->n; i++)
    {
       if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
       {
-         cout<<"Nnz Counter root A row "<<i<<" not correct: "<<nRowAUpdatedSimple->elements()[i]<<" vs. "<<nRowAOrigSimple->elements()[i]<<endl;
+         std::cout << "Nnz Counter root A row " << i << " not correct: " << nRowAUpdatedSimple->elements()[i] << " vs. "
+               << nRowAOrigSimple->elements()[i] << std::endl;
          nnzCorrect = false;
-//         break;
+         break;
       }
    }
    // child rows:
@@ -1527,9 +1528,10 @@ bool StochPresolverBase::verifyNnzcounters()
       {
          if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter non-linking A row "<<i<<" of child "<<(int)it<<" not correct: "<<nRowAUpdatedSimple->elements()[i]<<" vs. "<<nRowAOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter non-linking A row " << i << " of child " << it << " not correct: "
+                  << nRowAUpdatedSimple->elements()[i] << " vs. " << nRowAOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1542,9 +1544,10 @@ bool StochPresolverBase::verifyNnzcounters()
       {
          if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter linking row of A "<<i<<" not correct: "<<nRowAUpdatedSimple->elements()[i]<<" vs. "<<nRowAOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter linking row of A " << i << " not correct: " << nRowAUpdatedSimple->elements()[i] << " vs. "
+                  << nRowAOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1552,13 +1555,14 @@ bool StochPresolverBase::verifyNnzcounters()
    SimpleVector* nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzRowCOrig->vec);
    SimpleVector* nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
    assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
-   for( int i=0; i<nRowCUpdatedSimple->n; i++)
+   for( int i = 0; i < nRowCUpdatedSimple->n; i++)
    {
       if( nRowCUpdatedSimple->elements()[i] != nRowCOrigSimple->elements()[i])
       {
-         cout<<"Nnz Counter root C row "<<i<<" not correct: "<<nRowCUpdatedSimple->elements()[i]<<" vs. "<<nRowCOrigSimple->elements()[i]<<endl;
+         std::cout << "Nnz Counter root C row " << i << " not correct: " << nRowCUpdatedSimple->elements()[i] << " vs. "
+               << nRowCOrigSimple->elements()[i] << std::endl;
          nnzCorrect = false;
-//         break;
+         break;
       }
    }
    // child rows:
@@ -1567,13 +1571,14 @@ bool StochPresolverBase::verifyNnzcounters()
       nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzRowCOrig->children[it]->vec);
       nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
       assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
-      for( int i=0; i<nRowCUpdatedSimple->n; i++)
+      for( int i = 0; i < nRowCUpdatedSimple->n; i++)
       {
          if( nRowCUpdatedSimple->elements()[i] != nRowCOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter non-linking C row "<<i<<" of child "<<(int)it<<" not correct: "<<nRowCUpdatedSimple->elements()[i]<<" vs. "<<nRowCOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter non-linking C row " << i << " of child "<< it <<" not correct: "
+                  << nRowCUpdatedSimple->elements()[i] << " vs. " << nRowCOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1582,13 +1587,14 @@ bool StochPresolverBase::verifyNnzcounters()
       nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzRowCOrig->vecl);
       nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
       assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
-      for( int i=0; i<nRowCUpdatedSimple->n; i++)
+      for( int i = 0; i < nRowCUpdatedSimple->n; i++)
       {
          if( nRowCUpdatedSimple->elements()[i] != nRowCOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter linking row of C "<<i<<" not correct: "<<nRowCUpdatedSimple->elements()[i]<<" vs. "<<nRowCOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter linking row of C " << i << " not correct: " << nRowCUpdatedSimple->elements()[i]
+                  << " vs. " << nRowCOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
