@@ -13,8 +13,8 @@
 #include <sstream>
 #include <iostream>
 
-StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData) :
-      StochPresolverBase(presData)
+StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData, const sData& origProb) :
+      StochPresolverBase(presData, origProb)
 {
    // todo
 }

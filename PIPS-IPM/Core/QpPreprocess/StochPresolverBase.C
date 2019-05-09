@@ -17,8 +17,8 @@
 #include <cmath> // std::isfinite
 
 
-StochPresolverBase::StochPresolverBase(PresolveData& presData) :
-      presData(presData)
+StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& origProb) :
+      presData(presData), origProb(origProb)
 {
    presProb = presData.presProb;
 
@@ -1624,6 +1624,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
    int n_onesided_cols = 0;
    int n_free_cols = 0;
    int n_singleton_cols = 0;
+   int n_singleton_implied_free = 0;
 
    /* root nodes of equality and inequality system - linking and non linking */
    if( myRank == 0 )
@@ -1646,10 +1647,15 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       n_singleton_rows_ineq += n_rows_ineq_linking_singleton;
       n_ranged_rows += n_rows_linking_ranged;
 
-      countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, LINKING_VARS_BLOCK);
+      const SimpleVector& xlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.blx).vec);
+      const SimpleVector& xupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.bux).vec);
+      const SimpleVector& ixlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixlow).vec);
+      const SimpleVector& ixupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixupp).vec);
 
-      std::cout << "#linking_vars:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
-            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
+      countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, n_singleton_implied_free, ixlow_orig, xlow_orig, ixupp_orig, xupp_orig, LINKING_VARS_BLOCK);
+
+      std::cout << "#linking_vars:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #impliedFree: "
+            << n_singleton_implied_free << ", #onesided: " << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
 
       std::cout << "#rows B0:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
       std::cout << "#rows Bl_0:\t" << n_rows_eq_linking << "\t(#singleton: " << n_rows_eq_linking_singleton << ")" << std::endl;
@@ -1676,8 +1682,27 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       {
          updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
          countRowsBlock(n_rows_ineq, n_ranged_rows, n_fixed_rows, n_singleton_rows_ineq, INEQUALITY_SYSTEM, CHILD_BLOCK);
+      }
 
-         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, CHILD_BLOCK);
+      if( !nodeIsDummy( node, INEQUALITY_SYSTEM) )
+      {
+         const SimpleVector& xlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.blx).children[node]->vec);
+         const SimpleVector& xupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.bux).children[node]->vec);
+         const SimpleVector& ixlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixlow).children[node]->vec);
+         const SimpleVector& ixupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixupp).children[node]->vec);
+
+         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, n_singleton_implied_free, ixlow_orig, xlow_orig, ixupp_orig, xupp_orig, CHILD_BLOCK);
+      }
+      else if( !nodeIsDummy( node, EQUALITY_SYSTEM) )
+      {
+         updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+
+         const SimpleVector& xlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.blx).children[node]->vec);
+         const SimpleVector& xupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.bux).children[node]->vec);
+         const SimpleVector& ixlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixlow).children[node]->vec);
+         const SimpleVector& ixupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixupp).children[node]->vec);
+
+         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, n_singleton_implied_free, ixlow_orig, xlow_orig, ixupp_orig, xupp_orig, CHILD_BLOCK);
       }
    }
 
@@ -1763,7 +1788,8 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
    /* sync data */
    if( iAmDistrib )
    {
-      int* count = new int[9];
+
+      int* count = new int[12];
       count[0] = n_rows_eq;
       count[1] = n_rows_ineq;
       count[2] = n_fixed_rows;
@@ -1772,7 +1798,10 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       count[5] = n_singleton_rows_ineq;
       count[6] = n_cols;
       count[7] = n_boxed_cols;
-      count[8] = n_free_cols;
+      count[8] = n_onesided_cols;
+      count[9] = n_free_cols;
+      count[10] = n_singleton_cols;
+      count[11] = n_singleton_implied_free;
 
       MPI_Allreduce(MPI_IN_PLACE, count, 9, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
       n_rows_eq = count[0];
@@ -1783,7 +1812,10 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       n_singleton_rows_ineq = count[5];
       n_cols = count[6];
       n_boxed_cols = count[7];
-      n_free_cols = count[8];
+      n_onesided_cols = count[8];
+      n_free_cols = count[9];
+      n_singleton_cols = count[10];
+      n_singleton_implied_free = count[11];
 
       delete[] count;
    }
@@ -1794,8 +1826,8 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       std::cout << "#rows A:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
       std::cout << "#rows C:\t" << n_rows_ineq << "\t(#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
 
-      std::cout << "#vars_total:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
-            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
+      std::cout << "#vars_total:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #impliedFree: "
+            << n_singleton_implied_free << ", #onesided: " << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
    }
 }
 
@@ -1852,29 +1884,42 @@ void StochPresolverBase::countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_
    }
 }
 
-void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const
+void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, int& nSingletonVarsImpliedFree,
+      const SimpleVector& ixlow_orig, const SimpleVector& xlow_orig, const SimpleVector& ixupp_orig, const SimpleVector& xupp_orig, BlockType block_type) const
 {
-   SimpleVector* ixlow = (block_type == LINKING_VARS_BLOCK) ? currIxlowParent : currIxlowChild;
-   SimpleVector* ixupp = (block_type == LINKING_VARS_BLOCK) ? currIxuppParent : currIxuppChild;
-   SimpleVector* curr_nnz = (block_type == LINKING_VARS_BLOCK) ? currNnzColParent : currNnzColChild;
+   const SimpleVector& ixlow = (block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
+   const SimpleVector& ixupp = (block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
+   const SimpleVector& xlow = (block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
+   const SimpleVector& xupp = (block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
+   const SimpleVector& curr_nnz = (block_type == LINKING_VARS_BLOCK) ? *currNnzColParent : *currNnzColChild;
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   assert( ixlow.n == ixupp.n );
 
-   assert(curr_nnz); assert(ixlow); assert(ixupp); assert( ixlow->n == ixupp->n );
-
-   for( int i = 0; i < ixlow->n; i++ )
+   for( int i = 0; i < ixlow.n; i++ )
    {
-      if( curr_nnz->elements()[i] != 0.0 )
+      if( curr_nnz[i] != 0.0 )
       {
-         if(curr_nnz->elements()[i] == 1.0)
+         if(curr_nnz[i] == 1.0)
+         {
             ++nSingletonVars;
 
+            /* check whether or not implied free */
+            if( ( ixlow_orig[i] == 0.0 || PIPSisLT(xlow_orig[i], xlow[i]) ) && ( ixupp[i] == 0.0 && PIPSisLT(xupp[i], xupp_orig[i]) ) )
+            {
+               ++nSingletonVarsImpliedFree;
+            }
+         }
+
          nColsTotal++;
-         if( ixlow->elements()[i] != 0.0 && ixupp->elements()[i] != 0.0 )
+         if( ixlow[i] != 0.0 && ixupp[i] != 0.0 )
             nBoxCols++;
-         else if( ixlow->elements()[i] == 0.0 && ixupp->elements()[i] == 0.0)
+         else if( ixlow[i] == 0.0 && ixupp[i] == 0.0)
             nFreeVars++;
          else
          {
-            assert(ixlow->elements()[i] != 0.0 || ixupp->elements()[i] != 0.0);
+            assert(ixlow[i] != 0.0 || ixupp[i] != 0.0);
             ++nOnesidedVars;
          }
       }

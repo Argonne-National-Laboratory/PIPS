@@ -36,7 +36,7 @@ enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK, LINKING_CONS_BLOCK};
 class StochPresolverBase
 {
 public:
-   StochPresolverBase(PresolveData& presData);
+   StochPresolverBase(PresolveData& presData, const sData& origProb);
    virtual ~StochPresolverBase();
 
    // todo return bool whether enough eliminations
@@ -71,6 +71,8 @@ protected:
 
    // pointers to the currently needed matrices and vectors for presolving
    sData* presProb;
+   const sData& origProb;
+
 
    SparseStorageDynamic* currAmat;
    SparseStorageDynamic* currAmatTrans;
@@ -163,7 +165,8 @@ private:
 
 private:
    void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
-   void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const;
+   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, int& nSingletonVarsImpliedFree,
+         const SimpleVector& ixlow_orig, const SimpleVector& xlow_orig, const SimpleVector& ixupp_orig, const SimpleVector& xupp_orig, BlockType block_type) const;
 
 protected:
    void setCPAmatsRoot(GenMatrixHandle matrixHandle); //parrow

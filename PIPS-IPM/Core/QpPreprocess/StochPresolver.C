@@ -68,10 +68,10 @@ Data* StochPresolver::presolve()
    assert( presData.presProb->isRootNodeInSync() );
 
    /* initialize all presolvers */
-   StochPresolverBoundStrengthening presolverBS(presData);
-   StochPresolverParallelRows presolverParallelRow(presData);
-   StochPresolverModelCleanup presolverCleanup(presData);
-   StochPresolverSingletonRows presolverSR(presData);
+   StochPresolverBoundStrengthening presolverBS(presData, *sorigprob);
+   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
+   StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
+   StochPresolverSingletonRows presolverSR(presData, *sorigprob);
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
@@ -83,11 +83,16 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      presolverCleanup.applyPresolving();
-      presolverSR.applyPresolving();
+//      presolverCleanup.applyPresolving();
+//      presolverSR.applyPresolving();
       presolverBS.applyPresolving();
-      presolverParallelRow.applyPresolving();
-      presolverCleanup.applyPresolving();
+
+      presolverBS.applyPresolving();
+
+      presolverBS.applyPresolving();
+
+//      presolverParallelRow.applyPresolving();
+//      presolverCleanup.applyPresolving();
    }
 
    if( myRank == 0 )

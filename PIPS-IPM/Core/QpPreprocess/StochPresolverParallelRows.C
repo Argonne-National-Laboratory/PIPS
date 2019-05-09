@@ -53,8 +53,8 @@ namespace rowlib
    }
 }
 
-StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData)
-: StochPresolverBase(presData)
+StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, const sData& origProb)
+: StochPresolverBase(presData, origProb)
 {
    currCmat = NULL;
    currCmatTrans = NULL;
