@@ -182,9 +182,7 @@ protected:
 
    bool nodeIsDummy(int it, SystemType system_type) const;
    bool hasLinking(SystemType system_type) const;
-   void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
    void abortInfeasible(MPI_Comm comm) const;
-   void synchronize(int& value) const;
 
 private:
    void adaptChildBmat( std::vector<COLUMNFORDELETION> const & colAdaptBlock, SystemType system_type, int& newSR);
@@ -209,7 +207,6 @@ public:
    void addNewBoundsParent(XBOUNDS newXBounds);
    void clearNewBoundsParent();
 
-   void sumIndivObjOffset();
    void computeActivityBlockwise( const SparseStorageDynamic& matrix, int rowIdx, int colIdx,
          double& infRow, double& supRow,
          const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;

@@ -796,29 +796,11 @@ bool StochPresolverBase::hasLinking(SystemType system_type) const
    return false;
 }
 
-void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& iAmDistrib ) const
-{
-   MPI_Comm_rank(comm, &myRank);
-   int world_size;
-   MPI_Comm_size(comm, &world_size);
-   if( world_size > 1) iAmDistrib = true;
-   else iAmDistrib = false;
-}
-
 /** Call MPI_Abort() and print an error message */
 void StochPresolverBase::abortInfeasible(MPI_Comm comm) const
 {
    std::cout << "Infesibility detected in presolving. Aborting now." << std::endl;
    MPI_Abort(comm, 1);
-}
-
-void StochPresolverBase::synchronize(int& value) const
-{
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 }
 
 // todo description + use to notify column deletion
@@ -1322,20 +1304,6 @@ void StochPresolverBase::addNewBoundsParent(XBOUNDS newXBounds)
 void StochPresolverBase::clearNewBoundsParent()
 {
    newBoundsParent.clear();
-}
-
-/** Sum up the individual objective offset on all processes. */
-void StochPresolverBase::sumIndivObjOffset()
-{
-   int myRank;
-   bool iAmDistrib = false;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-   int world_size;
-   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-   if( world_size > 1) iAmDistrib = true;
-
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &indivObjOffset, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 }
 
 /**

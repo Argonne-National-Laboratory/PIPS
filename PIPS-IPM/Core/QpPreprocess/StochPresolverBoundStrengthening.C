@@ -86,7 +86,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    allreduceAndUpdateVarBounds();
 
    // Sum up individual objOffset and then add it to the global objOffset:
-   sumIndivObjOffset();
+   synchronize(indivObjOffset);
    presData.addObjOffset(indivObjOffset);
    indivObjOffset = 0;
 

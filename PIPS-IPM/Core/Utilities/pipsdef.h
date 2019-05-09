@@ -100,4 +100,35 @@ inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    return iAmSpecial;
 }
 
+inline void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib)
+{
+   MPI_Comm_rank(comm, &myRank);
+
+   int world_size;
+   MPI_Comm_size(comm, &world_size);
+
+   if( world_size > 1)
+      iAmDistrib = true;
+   else
+      iAmDistrib = false;
+}
+
+inline void synchronize(int& value)
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+}
+
+inline void synchronize(double& value)
+{
+   int myRank;
+   bool iAmDistrib;
+   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   if( iAmDistrib )
+      MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+}
+
 #endif

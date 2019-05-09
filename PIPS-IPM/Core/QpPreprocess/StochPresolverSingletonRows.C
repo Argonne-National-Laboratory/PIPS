@@ -86,7 +86,7 @@ void StochPresolverSingletonRows::applyPresolving()
    assert( (n_singleton_equality == 0 && n_singleton_inequality == 0) || iter >= maxIterSR);
 
    // Sum up individual objOffset and then add it to the global objOffset:
-   sumIndivObjOffset();
+   synchronize(indivObjOffset);
    presData.addObjOffset(indivObjOffset);
    indivObjOffset = 0.0;
 

@@ -225,7 +225,7 @@ void StochPresolverParallelRows::applyPresolving()
       std::cout << "Removed " << nRowElims << " Rows in Parallel Row Presolving." << std::endl;
 
    // Sum up individual objOffset and then add it to the global objOffset:
-   sumIndivObjOffset();
+   synchronize(indivObjOffset);
    presData.addObjOffset(indivObjOffset);
 
    if( myRank == 0 )
