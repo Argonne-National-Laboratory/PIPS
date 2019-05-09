@@ -44,8 +44,13 @@ public:
    virtual void applyPresolving() = 0;
 
    bool verifyNnzcounters(); // todo protected?
-   void countRowsCols(); // theoretically const but sets pointers
 
+   void countRowsCols(); // theoretically const but sets pointers
+private:
+   void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
+   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const;
+
+public:
    /** checks if all processes have the same root node data.
     *
     *  Applies a MIP_Reduce on all root node data (e.g. A_0, C_0, b_0, f_0...) and compares that
@@ -131,30 +136,29 @@ protected:
    /* objective offset resulting from local presolving */
    double indivObjOffset;
 
+
+   /* oparations that actually change the presolved problem - so all reductions etc */
+
    /* swap two entries in the SparseStorageDynamic format */
    void updateAndSwap( SparseStorageDynamic* storage, int rowidx, int& indexK, int& rowEnd, double* redCol, int& nelims, bool linking = false);
-   void allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptionsVector, SimpleVector& baseVector);
-
    // methods to update the transposed matrix:
    void updateTransposedSubmatrix(SparseStorageDynamic* transStorage, std::vector<std::pair<int,int> >& elements) const;
-
    void updateLinkingVarsBlocks(int& newSREq, int& newSRIneq); // todo check
-   bool newBoundsTightenOldBounds(double new_low, double new_upp, int index,
-         double* ilow, double* iupp, double* low, double* upp) const;
-   void setNewBounds(int index, double new_low, double new_upp,
-         double* ilow, double* low, double* iupp, double* upp) const;
-   void setNewBound(int index, double new_bound,
-         SimpleVector* bound_vector, SimpleVector* i_bound_vector) const;
 
-   // methods to update the current pointers:
-   void setCurrentPointersToNull();
+   void allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptionsVector, SimpleVector& baseVector); // todo
 
    /* update all nonzero vectors with the entries in the reduction vectors - zeros them after update */
    void updateNnzFromReductions(SystemType system_type);
    void updateNnzUsingReductions( StochVectorHandle nnz_vector, StochVectorHandle red_vector, SystemType system_type) const; // modelCleanupRows + parallelRows
    void updateNnzUsingReductions( OoqpVector* nnzVector, OoqpVector* redVector) const;
    void updateNnzColParent(MPI_Comm comm);//todo?
+   /* deletes variable with index col_idx in node from both systems - only for non-linking variables */
+   void deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value);
+   void deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val);
 
+
+   /* set all current pointers to NULL */
+   void setCurrentPointersToNull();
    /* updating all pointers */
    void updatePointersForCurrentNode(int node, SystemType system_type);
 private:
@@ -164,11 +168,19 @@ private:
    void setPointersObjective(int node);
    void setReductionPointers(SystemType system_type, int node);
 
-private:
-   void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
-   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const;
 
 protected:
+   bool newBoundsTightenOldBounds(double new_low, double new_upp, int index,
+         double* ilow, double* iupp, double* low, double* upp) const;
+   void setNewBounds(int index, double new_low, double new_upp,
+         double* ilow, double* low, double* iupp, double* upp) const;
+   void setNewBound(int index, double new_bound,
+         SimpleVector* bound_vector, SimpleVector* i_bound_vector) const;
+   bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
+         const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
+   bool variableFixationValid(double fixation_value, const double& ixlow, const double& xlow, const double& ixupp, const double& xupp, bool print_message = false) const;
+   bool tightenBounds(double new_xlow, double new_xupp, double& ixlow, double& old_xlow, double& ixupp, double& old_xupp) const;
+
    void resetEqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
    void resetIneqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
 
@@ -191,8 +203,6 @@ public:
    int colAdaptLinkVars(int it, SystemType system_type);
    int colAdaptBl0(SystemType system_type);
 
-   bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
-      const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
    void storeColValInColAdaptParent(int colIdx, double value);
    bool newBoundsImplyInfeasible(double newxlow, double newxupp, int colIdx,
       const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
@@ -211,26 +221,18 @@ public:
          double& infRow, double& supRow,
          const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
 
+protected:
    void countSingletonRows(int& n_singletons_equality, int& n_singletons_inequality) const;
 private:
    void countSingletonRowsSystem(int& n_singletons, SystemType system_type) const;
-public:
+
+protected:
    void allreduceAndApplyNnzReductions(SystemType system_type);
    void allreduceAndApplyRhsLhsReductions(SystemType system_type);
    void allreduceAndUpdateVarBounds();
 
-   bool variableFixationValid(double fixation_value, const double& ixlow, const double& xlow, const double& ixupp, const double& xupp, bool print_message = false) const;
-
 private:
    void setVarboundsToInftyForAllreduce() const;
-protected:
-   /* deletes variable with index col_idx in node from both systems - only for non-linking variables */
-   void deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value);
-   void deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val);
-
-   // todo : should be public?
-public:
-   bool tightenBounds(double new_xlow, double new_xupp, double& ixlow, double& old_xlow, double& ixupp, double& old_xupp) const;
 };
 
 
