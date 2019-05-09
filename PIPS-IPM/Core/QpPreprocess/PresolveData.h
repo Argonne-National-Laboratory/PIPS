@@ -43,12 +43,20 @@ class PresolveData
       StochVectorHandle redRowC;
       StochVectorHandle redCol;
 
+      StochVectorHandle max_act_eq;
+      StochVectorHandle min_act_eq;
+      StochVectorHandle max_act_ineq;
+      StochVectorHandle min_act_ineq;
+
 
    public:
       PresolveData(const sData* sorigprob);
       ~PresolveData();
 
       sData* finalize();
+
+      void recomputeActivities();
+
 
       bool combineColAdaptParent();
 

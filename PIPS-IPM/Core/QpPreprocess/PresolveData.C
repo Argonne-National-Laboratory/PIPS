@@ -10,20 +10,20 @@
 
 PresolveData::PresolveData(const sData* sorigprob)
 {
-   StochVectorHandle gclone(dynamic_cast<StochVector*>(sorigprob->g->clone()));
-   nColElems = gclone;
-   StochVectorHandle colClone(dynamic_cast<StochVector*>(sorigprob->g->clone()));
-   redCol = colClone;
+   nColElems = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->g->clone()));
+   redCol = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->g->clone()));
 
-   StochVectorHandle bAclone(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
-   nRowElemsA = bAclone;
-   StochVectorHandle rowAclone(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
-   redRowA = rowAclone;
+   nRowElemsA = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
+   redRowA = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
 
-   StochVectorHandle icuppclone(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
-   nRowElemsC = icuppclone;
-   StochVectorHandle rowCclone(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
-   redRowC = rowCclone;
+   nRowElemsC = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
+   redRowC = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
+
+   max_act_eq = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
+   min_act_eq = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->bA->clone()));
+   max_act_ineq = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
+   max_act_ineq = StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->icupp->clone()));
+
 
    presProb = sorigprob->cloneFull(true);
 
@@ -35,6 +35,7 @@ PresolveData::PresolveData(const sData* sorigprob)
    dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
    dynamic_cast<StochGenMatrix&>(*presProb->C).initTransposed(true);
 
+   recomputeActivities();
    initNnzCounter();
 }
 
@@ -51,6 +52,11 @@ sData* PresolveData::finalize()
    dynamic_cast<StochGenMatrix&>(*presProb->C).deleteTransposed();
 
    return presProb;
+}
+
+void PresolveData::recomputeActivities()
+{
+   // todo
 }
 
 void PresolveData::initNnzCounter()
@@ -175,15 +181,9 @@ bool PresolveData::combineColAdaptParent()
    return true;
 }
 
-// todo
 bool PresolveData::reductionsEmpty()
 {
-   bool empty = true;
-
-   empty = (empty && redRowA->isZero());
-   empty = (empty && redRowC->isZero());
-   empty = (empty && redCol->isZero());
-	return empty;
+   return redRowA->isZero() && redRowC->isZero() && redCol->isZero();
 }
 
 void PresolveData::resetRedCounters()
