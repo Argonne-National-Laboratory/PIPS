@@ -86,13 +86,13 @@ Data* StochPresolver::presolve()
 //      presolverCleanup.applyPresolving();
 //      presolverSR.applyPresolving();
       presolverBS.applyPresolving();
-
       presolverBS.applyPresolving();
 
       presolverBS.applyPresolving();
 
 //      presolverParallelRow.applyPresolving();
 //      presolverCleanup.applyPresolving();
+//      presolverParallelRow.applyPresolving();
    }
 
    if( myRank == 0 )
