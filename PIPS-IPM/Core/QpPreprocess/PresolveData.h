@@ -43,10 +43,19 @@ class PresolveData
       StochVectorHandle redRowC;
       StochVectorHandle redCol;
 
-      StochVectorHandle max_act_eq;
-      StochVectorHandle min_act_eq;
-      StochVectorHandle max_act_ineq;
-      StochVectorHandle min_act_ineq;
+
+      /* stuff for handling the update and changes of activities of certain rows */
+
+      StochVectorHandle actmax_eq;
+      StochVectorHandle actmin_eq;
+
+      StochVectorHandle actmax_ineq;
+      StochVectorHandle actmin_ineq;
+
+      SimpleVector actmax_eq_chgs;
+      SimpleVector actmin_eq_chgs;
+      SimpleVector actmax_ineq_chgs;
+      SimpleVector actmin_ineq_chgs;
 
 
    public:
@@ -55,8 +64,15 @@ class PresolveData
 
       sData* finalize();
 
-      void recomputeActivities();
 
+      /* compute and update activities */
+      void recomputeActivities() { recomputeActivities(false); }
+      void recomputeActivities(bool linking_only);
+      void updateLinkingRowsActivities();
+   private:
+      void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_activities, SimpleVector& max_activities,
+            const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
+   public:
 
       bool combineColAdaptParent();
 

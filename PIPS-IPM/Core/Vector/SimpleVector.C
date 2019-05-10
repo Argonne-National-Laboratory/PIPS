@@ -149,7 +149,7 @@ SimpleVector::SimpleVector( int n_ ) : OoqpVector( n_ )
   assert(n >= 0);
   preserveVec = 0;
   v = new double[n];
-  memset(v,0,n*sizeof(double));
+  memset(v, 0, n * sizeof(double) );
 }
 
 SimpleVector::SimpleVector( double * v_, int n_ )

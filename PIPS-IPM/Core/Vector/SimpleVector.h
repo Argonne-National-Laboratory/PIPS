@@ -21,7 +21,7 @@ protected:
   int preserveVec;
   double * v;
 public:
-  SimpleVector( int nx );
+  SimpleVector( int nx = 0);
   SimpleVector( double * v, int nx );
   //@{
   /**
