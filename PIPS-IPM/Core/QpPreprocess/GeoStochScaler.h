@@ -38,7 +38,7 @@ protected:
 
 public:
 
-  GeoStochScaler(Data * prob, bool equiScaling, bool bitshifting = true);
+  GeoStochScaler(Data * prob, bool equiScaling, bool bitshifting = false);
   virtual ~GeoStochScaler();
 
   /** scale */

@@ -30,7 +30,7 @@ protected:
   const bool with_sides; // consider lhs/rhs?
 
 public:
-  Scaler(Data * prob, bool bitshifting = true, bool usesides = true);
+  Scaler(Data * prob, bool bitshifting = false, bool usesides = false);
   virtual ~Scaler();
 
   /** scale */

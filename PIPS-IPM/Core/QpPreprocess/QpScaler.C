@@ -198,7 +198,9 @@ void QpScaler::scaleObjVector(double scaling_factor)
    }
 
    assert(obj);
-   obj->scalarMult(factor_objscale);
+
+   if( factor_objscale != 1.0 )
+      obj->scalarMult(factor_objscale);
 }
 
 QpScaler::~QpScaler()
