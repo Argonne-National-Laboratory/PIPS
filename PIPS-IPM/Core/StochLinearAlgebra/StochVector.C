@@ -322,7 +322,7 @@ void StochVector::setToZero()
 
   if( vecl ) vecl->setToZero();
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->setToZero();
 }
 
@@ -332,7 +332,7 @@ void StochVector::setToConstant( double c)
 
   if( vecl ) vecl->setToConstant(c);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->setToConstant(c);
 }
 

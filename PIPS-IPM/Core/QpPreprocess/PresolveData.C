@@ -8,6 +8,7 @@
 #include "PresolveData.h"
 #include "StochGenMatrix.h"
 #include "DoubleMatrixTypes.h"
+#include "pipsdef.h"
 #include <limits>
 
 PresolveData::PresolveData(const sData* sorigprob) :
@@ -15,15 +16,25 @@ PresolveData::PresolveData(const sData* sorigprob) :
       nRowElemsA(StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->bA->clone()))),
       nRowElemsC(StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->icupp->clone()))),
       nColElems(StochVectorHandle(dynamic_cast<StochVector*>(sorigprob->g->clone()))),
-      redRowA(nRowElemsA->clone()), redRowC(nRowElemsC->clone()), redCol(nColElems->clone()),
-      actmax_eq(nRowElemsA->clone()), actmin_eq(nRowElemsA->clone()), actmax_ineq(nRowElemsC->clone()),
+      redRowA(nRowElemsA->clone()),
+      redRowC(nRowElemsC->clone()),
+      redCol(nColElems->clone()),
+      outdated_activities(false),
+      actmax_eq(nRowElemsA->clone()),
+      actmin_eq(nRowElemsA->clone()),
+      actmax_ineq(nRowElemsC->clone()),
       actmin_ineq(nRowElemsC->clone()),
-      actmax_eq_chgs(dynamic_cast<const StochVector&>(*sorigprob->bA).vecl->n),
-      actmin_eq_chgs(actmax_eq_chgs.n),
-      actmax_ineq_chgs(dynamic_cast<const StochVector&>(*sorigprob->bu).vecl->n),
-      actmin_ineq_chgs(actmax_ineq_chgs.n),
-      nChildren(nColElems->children.size()), objOffset(0.0)
+      lenght_array_act_chgs(nRowElemsA->vecl->n * 2 + nRowElemsC->vecl->n * 2),
+      array_act_chgs( new double[lenght_array_act_chgs]),
+      actmax_eq_chgs(array_act_chgs, nRowElemsA->vecl->n),
+      actmin_eq_chgs(array_act_chgs + nRowElemsA->vecl->n, nRowElemsA->vecl->n),
+      actmax_ineq_chgs(array_act_chgs + 2 * nRowElemsA->vecl->n, nRowElemsC->vecl->n),
+      actmin_ineq_chgs(array_act_chgs + 2 * nRowElemsA->vecl->n + nRowElemsC->vecl->n, nRowElemsC->vecl->n),
+      nChildren(nColElems->children.size()),
+      objOffset(0.0)
 {
+   getRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
+
    // initialize all dynamic transposed sub matrices
    dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
    dynamic_cast<StochGenMatrix&>(*presProb->C).initTransposed(true);
@@ -34,6 +45,7 @@ PresolveData::PresolveData(const sData* sorigprob) :
 
 PresolveData::~PresolveData()
 {
+   delete[] array_act_chgs;
 }
 
 
@@ -47,6 +59,7 @@ sData* PresolveData::finalize()
 
    return presProb;
 }
+
 
 /** Recomputes the activities of all rows the process knows about. If linking_only is set to true only the linking_rows will get recomputed.
  *  Careful, recomputing linking rows requires MPI communication. Ideally all activities only have to be computed once, when creating the
@@ -63,6 +76,7 @@ void PresolveData::recomputeActivities(bool linking_only)
    const StochVector& xlow = dynamic_cast<StochVector&>(*presProb->blx);
    const StochVector& ixlow = dynamic_cast<StochVector&>(*presProb->ixlow);
 
+   /* reset vectors keeping track of activities */
    if(!linking_only)
    {
       actmin_eq->setToZero();
@@ -78,8 +92,12 @@ void PresolveData::recomputeActivities(bool linking_only)
       actmax_ineq->vecl->setToZero();
    }
 
-   /* compute activities at root node */
+   actmax_eq_chgs.setToZero();
+   actmin_eq_chgs.setToZero();
+   actmax_ineq_chgs.setToZero();
+   actmin_ineq_chgs.setToZero();
 
+   /* compute activities at root node */
    const SimpleVector& xupp_root = dynamic_cast<const SimpleVector&>(*xupp.vec);
    const SimpleVector& ixupp_root = dynamic_cast<const SimpleVector&>(*ixupp.vec);
    const SimpleVector& xlow_root = dynamic_cast<const SimpleVector&>(*xlow.vec);
@@ -95,18 +113,20 @@ void PresolveData::recomputeActivities(bool linking_only)
 
       addActivityOfBlock(mat_A.Bmat->getStorageDynamicRef(), actmin_eq_root, actmax_eq_root, xlow_root, ixlow_root, xupp_root, ixupp_root);
 
-      addActivityOfBlock(mat_C.Bmat->getStorageDynamicRef(),actmin_ineq_root, actmax_ineq_root, xlow_root, ixlow_root, xupp_root, ixupp_root);
+      addActivityOfBlock(mat_C.Bmat->getStorageDynamicRef(), actmin_ineq_root, actmax_ineq_root, xlow_root, ixlow_root, xupp_root, ixupp_root);
    }
 
-   /* Bl0 */
    SimpleVector& actmin_eq_link = dynamic_cast<SimpleVector&>(*actmin_eq->vecl);
    SimpleVector& actmax_eq_link = dynamic_cast<SimpleVector&>(*actmax_eq->vecl);
    SimpleVector& actmin_ineq_link = dynamic_cast<SimpleVector&>(*actmin_ineq->vecl);
    SimpleVector& actmax_ineq_link = dynamic_cast<SimpleVector&>(*actmax_ineq->vecl);
+   /* Bl0 */
+   if(my_rank == 0)
+   {
+      addActivityOfBlock(mat_A.Blmat->getStorageDynamicRef(), actmin_eq_link, actmax_eq_link, xlow_root, ixlow_root, xupp_root, ixupp_root);
 
-   addActivityOfBlock(mat_A.Blmat->getStorageDynamicRef(), actmin_eq_link, actmax_eq_link, xlow_root, ixlow_root, xupp_root, ixupp_root);
-
-   addActivityOfBlock(mat_C.Blmat->getStorageDynamicRef(), actmin_ineq_link, actmax_ineq_link, xlow_root, ixlow_root, xupp_root, ixupp_root);
+      addActivityOfBlock(mat_C.Blmat->getStorageDynamicRef(), actmin_ineq_link, actmax_ineq_link, xlow_root, ixlow_root, xupp_root, ixupp_root);
+   }
 
    /* child nodes */
    for(int node = 0; node < nChildren; ++node)
@@ -128,14 +148,14 @@ void PresolveData::recomputeActivities(bool linking_only)
             SimpleVector& actmax_eq_child = dynamic_cast<SimpleVector&>(*actmax_eq->children[node]->vec);
 
             /* Ai */
-            addActivityOfBlock(mat_A.children[node]->Amat->getStorageDynamicRef(), actmin_eq_child, actmax_eq_child, xlow_child, ixlow_child, xupp_child, ixupp_child);
+            addActivityOfBlock(mat_A.children[node]->Amat->getStorageDynamicRef(), actmin_eq_child, actmax_eq_child, xlow_root, ixlow_root, xupp_root, ixupp_root);
 
             /* Bi */
             addActivityOfBlock(mat_A.children[node]->Bmat->getStorageDynamicRef(), actmin_eq_child, actmax_eq_child, xlow_child, ixlow_child, xupp_child, ixupp_child);
          }
 
          /* Bli */
-         addActivityOfBlock(mat_A.children[node]->Blmat->getStorageDynamicRef(), actmin_eq_link, actmax_eq_link, xlow_root, ixlow_root, xupp_root, ixupp_root);
+         addActivityOfBlock(mat_A.children[node]->Blmat->getStorageDynamicRef(), actmin_eq_link, actmax_eq_link, xlow_child, ixlow_child, xupp_child, ixupp_child);
 
 
       }
@@ -148,23 +168,52 @@ void PresolveData::recomputeActivities(bool linking_only)
             SimpleVector& actmax_ineq_child = dynamic_cast<SimpleVector&>(*actmax_ineq->children[node]->vec);
 
             /* Ai */
-            addActivityOfBlock(mat_C.children[node]->Amat->getStorageDynamicRef(), actmin_ineq_child, actmax_ineq_child, xlow_child, ixlow_child, xupp_child, ixupp_child);
+            addActivityOfBlock(mat_C.children[node]->Amat->getStorageDynamicRef(), actmin_ineq_child, actmax_ineq_child, xlow_root, ixlow_root, xupp_root, ixupp_root);
 
             /* Bi */
             addActivityOfBlock(mat_C.children[node]->Bmat->getStorageDynamicRef(), actmin_ineq_child, actmax_ineq_child, xlow_child, ixlow_child, xupp_child, ixupp_child);
          }
 
          /* Bli */
-         addActivityOfBlock(mat_C.children[node]->Blmat->getStorageDynamicRef(), actmin_ineq_link, actmax_ineq_link, xlow_root, ixlow_root, xupp_root, ixupp_root);
-
-
+         addActivityOfBlock(mat_C.children[node]->Blmat->getStorageDynamicRef(), actmin_ineq_link, actmax_ineq_link, xlow_child, ixlow_child, xupp_child, ixupp_child);
       }
 
    }
 
    /* allreduce linking constraint activities */
-   // todo
+   if( distributed )
+   {
+      // todo is copying and then allreducing once cheaper than allreducing 4 times ?
 
+      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_eq->vecl)->elements(), actmin_eq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_eq->vecl)->elements(), actmax_eq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_ineq->vecl)->elements(), actmin_ineq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_ineq->vecl)->elements(), actmax_ineq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   }
+}
+
+/** allreduces changes in the activities of the linking rows and updates the linking row activities */
+void PresolveData::updateLinkingRowActivities()
+{
+   if(!distributed)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, array_act_chgs, lenght_array_act_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+   SimpleVector& actmin_eq_link = dynamic_cast<SimpleVector&>(*actmin_eq->vecl);
+   SimpleVector& actmax_eq_link = dynamic_cast<SimpleVector&>(*actmax_eq->vecl);
+   SimpleVector& actmin_ineq_link = dynamic_cast<SimpleVector&>(*actmin_ineq->vecl);
+   SimpleVector& actmax_ineq_link = dynamic_cast<SimpleVector&>(*actmax_ineq->vecl);
+
+   actmin_eq_link.axpy( 1.0, actmin_eq_chgs);
+   actmax_eq_link.axpy( 1.0, actmax_eq_chgs);
+   actmin_ineq_link.axpy( 1.0, actmin_ineq_chgs);
+   actmax_ineq_link.axpy( 1.0, actmax_ineq_chgs);
+
+   actmin_eq_chgs.setToZero();
+   actmax_eq_chgs.setToZero();
+   actmin_ineq_chgs.setToZero();
+   actmax_ineq_chgs.setToZero();
 }
 
 /** Computes minimal and maximal activity of all rows in given matrix. Adds activities to min/max_activities accordingly. */

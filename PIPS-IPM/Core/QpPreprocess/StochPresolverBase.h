@@ -190,7 +190,6 @@ protected:
 
    bool nodeIsDummy(int it, SystemType system_type) const;
    bool hasLinking(SystemType system_type) const;
-   void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
    void abortInfeasible(MPI_Comm comm) const;
    void synchronize(int& value) const;
 

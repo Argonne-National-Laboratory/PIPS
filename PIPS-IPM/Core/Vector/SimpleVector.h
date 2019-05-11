@@ -51,7 +51,7 @@ public:
   virtual void copyFromArray( double v[] );
   virtual void copyFromArray( char   v[] );
   virtual bool isZero() const;
-  virtual void setToZero();
+  virtual void setToZero() { setToConstant(0.0); };
   virtual void setToConstant( double c );
   virtual void randomize( double alpha, double beta, double *ix );
   virtual void copyFrom( OoqpVector& v );

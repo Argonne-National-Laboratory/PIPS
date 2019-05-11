@@ -185,12 +185,6 @@ bool SimpleVector::isZero() const
 	return is_zero;
 }
 
-void SimpleVector::setToZero()
-{
-  int i;
-  for( i = 0; i < n; i++ ) v[i] = 0.0;
-}
-
 void SimpleVector::setToConstant( double c)
 {
   int i;

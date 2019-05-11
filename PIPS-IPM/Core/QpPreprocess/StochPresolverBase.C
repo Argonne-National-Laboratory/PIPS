@@ -858,15 +858,6 @@ bool StochPresolverBase::hasLinking(SystemType system_type) const
    return false;
 }
 
-void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& iAmDistrib ) const
-{
-   MPI_Comm_rank(comm, &myRank);
-   int world_size;
-   MPI_Comm_size(comm, &world_size);
-   if( world_size > 1) iAmDistrib = true;
-   else iAmDistrib = false;
-}
-
 /** Call MPI_Abort() and print an error message */
 void StochPresolverBase::abortInfeasible(MPI_Comm comm) const
 {

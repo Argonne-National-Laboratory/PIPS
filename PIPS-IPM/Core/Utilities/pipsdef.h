@@ -100,4 +100,13 @@ inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    return iAmSpecial;
 }
 
+inline void getRankDistributed( MPI_Comm comm, int& my_rank, bool& i_am_distributed )
+{
+   MPI_Comm_rank(comm, &my_rank);
+   int world_size;
+   MPI_Comm_size(comm, &world_size);
+   if( world_size > 1) i_am_distributed = true;
+   else i_am_distributed = false;
+}
+
 #endif
