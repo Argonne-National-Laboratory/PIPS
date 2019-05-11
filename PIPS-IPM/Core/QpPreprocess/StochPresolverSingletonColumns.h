@@ -15,7 +15,7 @@
 class StochPresolverSingletonColumns : public StochPresolverBase
 {
 public:
-   StochPresolverSingletonColumns(PresolveData& presData, const sData& origProb);
+   StochPresolverSingletonColumns(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver);
 
    ~StochPresolverSingletonColumns();
 

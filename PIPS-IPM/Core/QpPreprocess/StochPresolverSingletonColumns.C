@@ -8,8 +8,8 @@
 #include "StochPresolverSingletonColumns.h"
 
 
-StochPresolverSingletonColumns::StochPresolverSingletonColumns(PresolveData& presData, const sData& origProb)
-: StochPresolverBase(presData, origProb)
+StochPresolverSingletonColumns::StochPresolverSingletonColumns(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver)
+   : StochPresolverBase(presData, origProb, postsolver)
 {
  // todo
 }
@@ -138,7 +138,7 @@ void StochPresolverSingletonColumns::initSingletonColsBlock(int it, SimpleVector
                nSColEq++;
                if(dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec)->elements()[i] == 0.0 )
                   nZeroCostSC++;
-               setCPColumnChild(it);
+//               setCPColumnChild(it);
                if( currIxlowChild->elements()[i]!=0.0 && currIxuppChild->elements()[i]!=0.0 )
                   nBothBounds++;
                else if( currIxlowChild->elements()[i]!=0.0 )

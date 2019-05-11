@@ -13,8 +13,8 @@
 // todo exhaustive
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
-      PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb)
+      PresolveData& presData, const sData& origProb, StochPostsolver* postsolver) :
+      StochPresolverBase(presData, origProb, postsolver)
 {
    // todo
 }
@@ -86,7 +86,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    allreduceAndUpdateVarBounds();
 
    // Sum up individual objOffset and then add it to the global objOffset:
-   sumIndivObjOffset();
+   synchronize(indivObjOffset);
    presData.addObjOffset(indivObjOffset);
    indivObjOffset = 0;
 

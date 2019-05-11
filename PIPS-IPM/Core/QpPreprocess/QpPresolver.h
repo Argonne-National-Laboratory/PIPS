@@ -11,7 +11,7 @@
 #include "Presolver.h"
 
 class Data;
-
+class Postsolver;
 /**  * @defgroup QpPreprocess
  *
  * QP scaler
@@ -26,9 +26,10 @@ class QpPresolver : public Presolver
 {
    protected:
       const Data* origprob;
+      Postsolver* const postsolver;
 
    public:
-      QpPresolver(const Data* prob);
+      QpPresolver(const Data* prob, Postsolver* postsolver = NULL);
       virtual ~QpPresolver();
 
       virtual Data* presolve() = 0;

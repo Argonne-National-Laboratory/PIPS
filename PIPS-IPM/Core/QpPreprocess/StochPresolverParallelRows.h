@@ -58,7 +58,7 @@ namespace rowlib
 class StochPresolverParallelRows : public StochPresolverBase
 {
 public:
-   StochPresolverParallelRows(PresolveData& presData, const sData& origProb);
+   StochPresolverParallelRows(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver);
 
    ~StochPresolverParallelRows();
 
@@ -108,8 +108,17 @@ private:
    boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > rowsFirstHashTable;
    boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> > rowsSecondHashTable;
 
-   bool setNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
-   void deleteNormalizedPointers(int it, StochGenMatrix& matrixA, StochGenMatrix& matrixC);
+   void setNormalizedPointers(int node);
+   void setNormalizedPointersMatrices(int node);
+   void setNormalizedPointersMatrixBounds(int node);
+   void setNormalizedNormFactors(int node);
+   void setNormalizedSingletonFlags(int node);
+   void setNormalizedReductionPointers(int node);
+   void updateExtendedPointersForCurrentNode(int node);
+   void deleteNormalizedPointers(int it);
+
+
+
    void removeSingletonVars();
    void removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
          SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,

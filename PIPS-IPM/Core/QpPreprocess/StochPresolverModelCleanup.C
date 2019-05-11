@@ -12,8 +12,8 @@
 
 //#define NDEBUG_MODEL_CLEANUP
 
-StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, const sData& origProb)
-: StochPresolverBase(presData, origProb)
+StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver)
+   : StochPresolverBase(presData, origProb, postsolver)
 {
  // todo
 }

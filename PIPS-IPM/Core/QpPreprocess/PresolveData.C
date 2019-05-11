@@ -60,7 +60,6 @@ sData* PresolveData::finalize()
    return presProb;
 }
 
-
 /** Recomputes the activities of all rows the process knows about. If linking_only is set to true only the linking_rows will get recomputed.
  *  Careful, recomputing linking rows requires MPI communication. Ideally all activities only have to be computed once, when creating the
  *  PresolveData.
@@ -263,9 +262,6 @@ void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, Simpl
       }
    }
 }
-
-
-
 
 void PresolveData::initNnzCounter()
 {

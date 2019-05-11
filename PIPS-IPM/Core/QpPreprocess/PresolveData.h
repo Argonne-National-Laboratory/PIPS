@@ -43,6 +43,11 @@ class PresolveData
       StochVectorHandle redRowC;
       StochVectorHandle redCol;
 
+      StochVectorHandle max_act_eq;
+      StochVectorHandle min_act_eq;
+      StochVectorHandle max_act_ineq;
+      StochVectorHandle min_act_ineq;
+
 
       /* stuff for handling the update and changes of activities of certain rows */
       bool outdated_activities;
@@ -78,7 +83,6 @@ class PresolveData
       ~PresolveData();
 
       sData* finalize();
-
 
       /* compute and update activities */
       void recomputeActivities() { recomputeActivities(false); }
