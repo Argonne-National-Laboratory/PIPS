@@ -332,6 +332,11 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 
   #MA86 is not needed at this time
   #find_library(MA86_LIBRARY hsl_ma86 PATHS ${MA86_DIR}/lib)
+  
+  #MUMPS Solver  
+  set(HAVE_MUMPS TRUE)
+  #message(STATUS "MUMPS lib: ${PARDISO_LIBRARY} and HAVE_PARDISO is ${HAVE_PARDISO}")
+
 
   #MKL_PARDISO Solver
   set(HAVE_MKL_PARDISO FALSE)
