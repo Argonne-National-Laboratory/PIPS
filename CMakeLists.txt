@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Mo
 # For optimized build, set CMAKE_BUILD_TYPE to RELEASE
 # For optimized build with debug info, set CMAKE_BUILD_TYPE to RELWITHDEBINFO
 # CMAKE_BUILD_TYPE should be set at the command line or in a toolchain file
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long") #  -std=c++11
 # set(CMAKE_BUILD_TYPE  RELEASE)
 if(CMAKE_BUILD_TYPE)
   message("CMake build type is ${CMAKE_BUILD_TYPE}")
@@ -314,6 +314,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   endif(MA27_LIBRARY)
 
   set(METIS_DIR ${SHARED_DIR}/METIS/src)
+  find_library(PARMETIS_LIBRARY NAME libparmetis.a HINTS ${METIS_DIR}/lib PATHS ${METIS_DIR}/lib)
   find_library(METIS_LIBRARY NAME libmetis.a HINTS ${METIS_DIR} PATHS ${METIS_DIR})
   find_path(METIS_INCLUDE_DIR NAME metis.h HINTS ${METIS_DIR}/Lib)
   if(METIS_INCLUDE_DIR AND METIS_LIBRARY)
@@ -333,9 +334,41 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   #MA86 is not needed at this time
   #find_library(MA86_LIBRARY hsl_ma86 PATHS ${MA86_DIR}/lib)
   
-  #MUMPS Solver  
-  set(HAVE_MUMPS TRUE)
-  #message(STATUS "MUMPS lib: ${PARDISO_LIBRARY} and HAVE_PARDISO is ${HAVE_PARDISO}")
+  #MUMPS Solver REMARK: Identical to the one from PIPS Master, so can simply be replaced if this branch is merged into master
+  set(MUMPS_DIR ${SHARED_DIR}/MUMPS)
+  find_library(MUMPS_LIBRARY libdmumps.a PATHS ${MUMPS_DIR}/lib)
+  find_path(MUMPS_INCLUDE_DIR NAME dmumps_c.h HINTS ${MUMPS_DIR}/include)
+    
+  if(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY AND PARMETIS_LIBRARY)
+    # we assume the other libraries are in there
+    set(HAVE_MUMPS TRUE)
+    # you may need parmetis if mumps was build with parmetis (we recommend using parmetis). For more info
+    # see the readme file in ThirdPartyLibs/MUMPS and the sample build file in PIPS-NLP/Core/LinearSolvers/MumpsSolver
+    # In short: insert something like the following line to MUMPS_LIBRARY below
+    # -L/home/petra1/work/installs/parmetis-4.0.3/lib -lparmetis
+    # hack(ish) way of specifying the many mumps libraries
+    # - put all the  mumps libraries: -ldmumps -lmumps_common -lpord
+    # - scalapack and blacs should be set in ${SCALAPACK_LIBRARIES} using Toolchain.cmake (or hardcoded here)
+    # - mpifort also needed
+    # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
+    if(NOT SCALAPACK_LIBRARIES)
+      MESSAGE("SCALAPACK_LIBRARIES for MUMPS not set. Default linking for Ubuntu.")
+      set(SCALAPACK_LIBRARIES "-lscalapack-openmpi -lblacs-openmpi  -lblacsF77init-openmpi -lblacsCinit-openmpi") 
+    endif(NOT SCALAPACK_LIBRARIES)
+    # -lmpi_mpifh includes the OpenMPI Fortran MPI interface used when
+    # building MUMPS. MPICH requires -lmpifort
+    if(NOT MUMPS_FORT_LIB)
+      MESSAGE("MUMPS_FORT_LIB not set for linking the Fortran MPI interface library required by MUMPS. Using OpenMPI Fortran interface -lmpi_mpifh")
+      set(MUMPS_FORT_LIB "-lmpi_mpifh")
+    endif(NOT MUMPS_FORT_LIB)
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord ${MUMPS_FORT_LIB} ${SCALAPACK_LIBRARIES}")
+    MESSAGE( "SCALAPACK_LIBRARIES: ${SCALAPACK_LIBRARIES}")
+    MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
+    include_directories(${MUMPS_INCLUDE_DIR})
+  else ()
+    message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
+    set(MUMPS_LIBRARY "")
+  endif(MUMPS_INCLUDE_DIR AND MUMPS_LIBRARY AND PARMETIS_LIBRARY) 
 
 
   #MKL_PARDISO Solver
