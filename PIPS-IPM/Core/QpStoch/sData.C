@@ -1597,7 +1597,6 @@ sData::sync()
 // is root node data of sData object same on all procs?
 bool sData::isRootNodeInSync() const
 {
-
    int my_rank, world_size;
    MPI_Comm_rank( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &my_rank);
    MPI_Comm_size( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &world_size);

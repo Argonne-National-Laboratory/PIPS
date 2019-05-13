@@ -138,14 +138,6 @@ void StochPresolverBoundStrengthening::doBoundStrengthChild(int it, SystemType s
    }
 }
 
-double StochPresolverBoundStrengthening::computeNewBound(const SimpleVector& bounds, double activity, double matrixEntry, int rowIdx) const
-{
-   assert( matrixEntry != 0.0 );
-   assert( 0 <= rowIdx && rowIdx <= bounds.n);
-
-   return (bounds[rowIdx] - activity) / matrixEntry;
-}
-
 /**
  * Strengthen the variable bounds in the block matrix. If childBlock==true, then a block B_i or D_i is considered.
  * partMinActivity and partMaxActivity represent the partial row activity of the respective other block.
@@ -272,3 +264,12 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
       }
    }
 }
+
+double StochPresolverBoundStrengthening::computeNewBound(const SimpleVector& bounds, double activity, double matrixEntry, int rowIdx) const
+{
+   assert( matrixEntry != 0.0 );
+   assert( 0 <= rowIdx && rowIdx <= bounds.n);
+
+   return (bounds[rowIdx] - activity) / matrixEntry;
+}
+

@@ -14,4 +14,11 @@ enum SystemType
    INEQUALITY_SYSTEM
 };
 
+enum BlockType
+{
+   LINKING_VARS_BLOCK,
+   CHILD_BLOCK,
+   LINKING_CONS_BLOCK
+};
+
 #endif /* SYSTEMTYPE_H_ */

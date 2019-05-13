@@ -25,7 +25,7 @@ class Postsolver;
 class QpPresolver : public Presolver
 {
    protected:
-      const Data* origprob;
+      const Data* const origprob;
       Postsolver* const postsolver;
 
    public:

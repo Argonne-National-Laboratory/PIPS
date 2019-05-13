@@ -9,14 +9,35 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_
 
 #include "sData.h"
+#include "StochVectorHandle.h"
+#include "SimpleVectorHandle.h"
+#include "SparseStorageDynamic.h"
+#include "SystemType.h"
 #include <algorithm>
-
+#include <list>
 
 typedef struct
 {
    int colIdx;
    double val;
 } COLUMNFORDELETION;
+
+struct sCOLINDEX
+{
+      sCOLINDEX(int node, int index) : node(node), index(index) {};
+      int node;
+      int index;
+};
+
+/* here we use node == -2 for the linking block in the root node */
+struct sROWINDEX
+{
+      sROWINDEX(int node, int index, SystemType system_type) :
+         node(node), index(index), system_type(system_type){};
+      int node;
+      int index;
+      SystemType system_type;
+};
 
 struct col_is_smaller
 {
@@ -32,16 +53,20 @@ class PresolveData
    public:
       sData* presProb;
 
+      bool outdated_activities;
+      bool outdated_bounds;
+      bool outdated_nnzs;
 
-      // number of non-zero elements of each row / column
-      StochVectorHandle nRowElemsA;
-      StochVectorHandle nRowElemsC;
-      StochVectorHandle nColElems;
+      // todo why handle? ..
+      /* number of non-zero elements of each row / column */
+      StochVectorHandle nnzs_row_A;
+      StochVectorHandle nnzs_row_C;
+      StochVectorHandle nnzs_col;
 
-      // number of removed elements of each row / column
-      StochVectorHandle redRowA; // todo maybe rename ?
-      StochVectorHandle redRowC;
-      StochVectorHandle redCol;
+      /* number of removed elements of linking rows/cols stored for update */
+      SimpleVectorHandle nnzs_row_A_chgs;
+      SimpleVectorHandle nnzs_row_C_chgs;
+      SimpleVectorHandle nnzs_col_chgs;
 
       StochVectorHandle max_act_eq;
       StochVectorHandle min_act_eq;
@@ -50,8 +75,6 @@ class PresolveData
 
 
       /* stuff for handling the update and changes of activities of certain rows */
-      bool outdated_activities;
-
       StochVectorHandle actmax_eq;
       StochVectorHandle actmin_eq;
 
@@ -62,10 +85,22 @@ class PresolveData
        * make four SimppleVectors each pointing to a part of it */
       int lenght_array_act_chgs;
       double* array_act_chgs;
-      SimpleVector actmax_eq_chgs;
-      SimpleVector actmin_eq_chgs;
-      SimpleVector actmax_ineq_chgs;
-      SimpleVector actmin_ineq_chgs;
+      SimpleVectorHandle actmax_eq_chgs;
+      SimpleVectorHandle actmin_eq_chgs;
+      SimpleVectorHandle actmax_ineq_chgs;
+      SimpleVectorHandle actmin_ineq_chgs;
+
+      /* handling changes in bounds */
+      int lenght_array_bound_chgs;
+      double* array_bound_chgs;
+      SimpleVectorHandle bound_chgs_A;
+      SimpleVectorHandle bound_chgs_C;
+
+
+      /* storing so far found singleton rows and columns */
+      std::list<sROWINDEX> singleton_rows;
+      std::list<sCOLINDEX> singleton_cols;
+
 
    private:
       int my_rank;
@@ -73,11 +108,21 @@ class PresolveData
 
       // number of children
       int nChildren;
+
       // objective offset created by presolving
       double objOffset;
+      double obj_offset_chgs;
+
+      int elements_deleted;
+      int elements_deleted_transposed;
 
       std::vector<COLUMNFORDELETION> linkingVariablesMarkedForDeletion;
 
+      /* methods for initializing the object */
+   private:
+      // initialize row and column nnz counter
+      void initNnzCounter();
+      void initSingletons();
    public:
       PresolveData(const sData* sorigprob);
       ~PresolveData();
@@ -87,32 +132,50 @@ class PresolveData
       /* compute and update activities */
       void recomputeActivities() { recomputeActivities(false); }
       void recomputeActivities(bool linking_only);
-      void updateLinkingRowActivities();
    private:
       void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_activities, SimpleVector& max_activities,
             const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
    public:
 
-      bool combineColAdaptParent();
+//      bool combineColAdaptParent();
 
       bool reductionsEmpty();
-      void resetRedCounters();
 
+public:
       // todo getter, setter for element access of nnz counter???
-      int getNChildren() const;
-      double getObjOffset() const;
+      double getObjOffset() const { return objOffset; };
       double addObjOffset(double addOffset);
       void setObjOffset(double offset);
+      int getNChildren() const { return nChildren; };
+//      COLUMNFORDELETION getColAdaptParent(int i) const;
+//      int getNumberColAdParent() const;
+//      void addColToAdaptParent(COLUMNFORDELETION colToAdapt);
+//      void clearColAdaptParent();
 
-      COLUMNFORDELETION getColAdaptParent(int i) const;
-      int getNumberColAdParent() const;
-      void addColToAdaptParent(COLUMNFORDELETION colToAdapt);
-      void clearColAdaptParent();
+      void allreduceAndApplyLinkingRowActivities();
+      void allreduceAndApplyNnzChanges();
+      void allreduceAndApplyBoundChanges();
 
+
+public:
+      /* call whenever a single entry has been deleted from the matrix */
+      void deleteEntry(SystemType system_type, int node, BlockType block_type, SparseStorageDynamic* storage,
+            int row_index, int& index_k, int& row_end);
+      void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
+      void updateTransposedSubmatrix( SparseStorageDynamic* transposed, std::vector<std::pair<int, int> >& elements);
+
+      void deleteColumn();
+      void deleteRow(SystemType system_type, int node, int idx, bool linking);
+
+      /* methods for verifying state of presData */
+public :
+      bool verifyNnzcounters();
+      bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
 private:
-      // initialize row and column nnz counter
-      void initNnzCounter();
-      void initialize();
+      void getStorageDynamic(SystemType system_type, int node, BlockType block_type, SparseGenMatrix* mat);
+      void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index);
+      void removeIndexColumn(int node, BlockType block_type, int col_index);
+
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_ */

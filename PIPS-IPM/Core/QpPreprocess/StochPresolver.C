@@ -25,12 +25,12 @@
 #include "StochGenMatrix.h"
 #include "sTreeCallbacks.h"
 #include "DoubleMatrixTypes.h"
-#include "StochPresolverSingletonRows.h"
-#include "StochPresolverSingletonColumns.h"
+//#include "StochPresolverSingletonRows.h"
+//#include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
 #include "StochPostsolver.h"
-#include "StochPresolverParallelRows.h"
-#include "StochPresolverBoundStrengthening.h"
+//#include "StochPresolverParallelRows.h"
+//#include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
 #include "pipschecks.h"
 
@@ -69,14 +69,14 @@ Data* StochPresolver::presolve()
    assert( presData.presProb->isRootNodeInSync() );
 
    /* initialize all presolvers */
-   StochPresolverBoundStrengthening presolverBS(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
-   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
+//   StochPresolverBoundStrengthening presolverBS(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
+//   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
    StochPresolverModelCleanup presolverCleanup(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
-   StochPresolverSingletonRows presolverSR(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
+//   StochPresolverSingletonRows presolverSR(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
-   presolverSR.countRowsCols();
+   presolverCleanup.countRowsCols();
 
    // todo loop, and exhaustive
    // some list holding all presolvers - eg one presolving run
@@ -84,9 +84,12 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-//      presolverCleanup.applyPresolving();
+      presolverCleanup.applyPresolving();
 //      presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
+//      presolverBS.applyPresolving();
+//      presolverBS.applyPresolving();
+
+//      presolverBS.applyPresolving();
 
 //      presolverParallelRow.applyPresolving();
 //      presolverCleanup.applyPresolving();
@@ -99,12 +102,11 @@ Data* StochPresolver::presolve()
 
    assert( presData.presProb->isRootNodeInSync() );
 //      presData.presProb->writeToStreamDense(std::cout);
+
    sData* finalPresData = presData.finalize();
-
 //   finalPresData->writeToStreamDense(std::cout);
-
    assert( finalPresData->isRootNodeInSync() );
-//   exit(1);
 
+   // exit(1);
    return finalPresData;
 }

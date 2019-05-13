@@ -1606,7 +1606,7 @@ void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec
 // is root node data of StochVector same on all procs?
 bool StochVector::isRootNodeInSync() const
 {
-   assert( vec);
+   assert(vec);
    assert(mpiComm);
 
    bool in_sync = true;
@@ -1620,18 +1620,17 @@ bool StochVector::isRootNodeInSync() const
    MPI_Comm_rank(mpiComm, &my_rank);
    MPI_Comm_size(mpiComm, &world_size);
 
-   /* if there is a linking part we have to chekc it as well */
+   /* if there is a linking part we have to check it as well */
    const int vec_length = vec_simple.length();
    const int vecl_length = (vecl) ? dynamic_cast<const SimpleVector&>(*vecl).length() : 0;
 
-   const long long count = vec_length + vecl_length;
+   const int count = vec_length + vecl_length;
 
    assert( count < std::numeric_limits<int>::max());
 
    /* mpi reduce on vector */
    double sendbuf[count];
    double recvbuf[count];
-
    std::copy(vec_simple.elements(), vec_simple.elements() + vec_simple.length(), sendbuf);
 
    if( vecl )
@@ -1640,8 +1639,7 @@ bool StochVector::isRootNodeInSync() const
       std::copy(vecl_simple.elements(), vecl_simple.elements() + vecl_simple.length(),
             sendbuf + vec_simple.length());
    }
-   MPI_Allreduce(sendbuf, recvbuf, static_cast<int>(count), MPI_DOUBLE, MPI_MAX, mpiComm);
-
+   MPI_Allreduce(sendbuf, recvbuf, count, MPI_DOUBLE, MPI_MAX, mpiComm);
    for( int i = 0; i < count; ++i )
    {
       if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
