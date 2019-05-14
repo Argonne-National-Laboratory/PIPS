@@ -55,7 +55,6 @@ private:
    void setPointersObjective(int node);
    void setReductionPointers(SystemType system_type, int node);
 protected:
-   bool nodeIsDummy(int it, SystemType system_type) const;
    bool hasLinking(SystemType system_type) const;
 
 public:

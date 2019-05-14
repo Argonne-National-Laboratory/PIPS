@@ -13,9 +13,6 @@
 #include <stdexcept>
 #include <limits>
 #include <algorithm>
-//      SimpleVectorHandle nnzs_row_A_chgs;
-//      SimpleVectorHandle nnzs_row_C_chgs;
-//      SimpleVectorHandle nnzs_col_chgs;
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
       outdated_activities(true),
@@ -86,7 +83,8 @@ sData* PresolveData::finalize()
 #ifndef NDEBUG
    if(distributed)
    {
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD); // todo make one array?
+      // todo make one array?
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
    }
@@ -230,7 +228,7 @@ void PresolveData::recomputeActivities(bool linking_only)
    /* allreduce linking constraint activities */
    if( distributed )
    {
-      // todo is copying and then allreducing once cheaper than allreducing 4 times ?
+      // todo is copying and then allreducing once cheaper than allreducing 4 times ? by a lot?
       MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_eq->vecl)->elements(), actmin_eq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_eq->vecl)->elements(), actmax_eq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_ineq->vecl)->elements(), actmin_ineq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -588,6 +586,9 @@ void PresolveData::adjustMatrixBoundsBy(SystemType system_type, int node, BlockT
 {
    assert( -1 <= node && node <= nChildren);
 
+   if( PIPSisEQ(value, 0.0) )
+      return;
+
    if(block_type == LINKING_CONS_BLOCK || node == -1)
       outdated_bounds = true;
 
@@ -663,12 +664,19 @@ void PresolveData::updateTransposedSubmatrix( SparseStorageDynamic* transposed, 
 void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount)
 {
    assert(-1 <= node && node <= nChildren);
-   assert(0 < amount);
+   assert(0 <= amount);
+
+   if(amount == 0)
+      return;
+
    /* linking constraints get stored */
    if(block_type == LINKING_CONS_BLOCK)
    {
       if(my_rank == 0 || node != -1)
+      {
          (system_type == EQUALITY_SYSTEM) ? ((*nnzs_row_A_chgs)[row_index] += amount) : ((*nnzs_row_C_chgs)[row_index] += amount);
+         outdated_nnzs = true;
+      }
    }
    else
    {
@@ -692,12 +700,17 @@ void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType bl
 void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_index, int amount)
 {
    assert(-1 <= node && node <= nChildren);
+   if(amount == 0)
+      return;
 
    /* linking constraints get stored */
    if(node == -1 || block_type == LINKING_VARS_BLOCK)
    {
       if(my_rank == 0 || node != -1)
+      {
          (*nnzs_col_chgs)[col_index] += amount;
+         outdated_nnzs = true;
+      }
    }
    else
    {
@@ -854,10 +867,16 @@ void PresolveData::removeColumn()
 //
 //   clearRow(matrix_transp, col_idx);
 //}
+void PresolveData::removeParallelRow(SystemType system_type, int node, int row, bool linking)
+{
+   throw std::runtime_error("Not yet implemented");
+//   if(postsolver)
+//      postsolver->notifyFixedColumn()
 
+   removeRow(system_type, node, row, linking);
+}
 void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
-   //assert(!nodeIsDummy())
    if(postsolver)
       postsolver->notifyRedundantRow(system_type, node, row, linking);
 
@@ -866,15 +885,18 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
 
 void PresolveData::removeRow(SystemType system_type, int node, int row, bool linking)
 {
-   //assert(!nodeIsDummy())
+   assert(!nodeIsDummy(node, system_type));
    if(linking)
    {
       assert(node == -1);
 
+      /* Bl0 */
       removeRowFromMatrix(system_type, -1, LINKING_CONS_BLOCK, row);
 
+      /* linking rows Bli */
       for(int child = 0; child < nChildren; ++child)
-         removeRowFromMatrix(system_type, child, LINKING_CONS_BLOCK, row);
+         if(!nodeIsDummy(child, system_type))
+            removeRowFromMatrix(system_type, child, LINKING_CONS_BLOCK, row);
    }
    else
    {
@@ -891,8 +913,8 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
 // todo : should rhs and lhs be set to zero too? -nah?
 void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row)
 {
-   SparseGenMatrix* mat = NULL;
-   getSparseGenMatrix(system_type, node, block_type, mat);
+   assert(!nodeIsDummy(node, system_type));
+   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
 
    assert(mat);
    assert(mat->hasDynamicStorage());
@@ -1081,21 +1103,55 @@ bool PresolveData::verifyNnzcounters()
    return nnzCorrect;
 }
 
-void PresolveData::getSparseGenMatrix(SystemType system_type, int node, BlockType block_type, SparseGenMatrix* mat)
+SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int node, BlockType block_type)
 {
    assert( -1 <= node && node <= nChildren );
+   assert(!nodeIsDummy(node, system_type));
+
    StochGenMatrix& sMat = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presProb->A) : dynamic_cast<StochGenMatrix&>(*presProb->C);
 
    if(node == -1)
-      mat = (block_type == LINKING_CONS_BLOCK) ? sMat.Blmat : sMat.Bmat;
+      return (block_type == LINKING_CONS_BLOCK) ? sMat.Blmat : sMat.Bmat;
    else
    {
       if(block_type == LINKING_VARS_BLOCK)
-         mat = sMat.children[node]->Amat;
+         return sMat.children[node]->Amat;
       else if(block_type == CHILD_BLOCK)
-         mat = sMat.children[node]->Bmat;
+         return sMat.children[node]->Bmat;
       else if(block_type == LINKING_CONS_BLOCK)
-         mat = sMat.children[node]->Blmat;
+         return sMat.children[node]->Blmat;
    }
+   return NULL;
 }
 
+bool PresolveData::nodeIsDummy(int node, SystemType system_type) const // todo change order
+{
+   assert( -1 <= node && node < nChildren );
+   if( node == -1 )
+      return false;
+   StochGenMatrix& matrix = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presProb->A) : dynamic_cast<StochGenMatrix&>(*presProb->C);
+   // todo : asserts
+   if( matrix.children[node]->isKindOf(kStochGenDummyMatrix))
+   {
+      assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[node]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[node]->isKindOf(kStochDummy) );
+
+      if( system_type == EQUALITY_SYSTEM)
+      {
+         assert( dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[node]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[node]->isKindOf(kStochDummy) );
+         assert( nnzs_row_A->children[node]->isKindOf(kStochDummy) );
+      }
+      else
+      {
+         assert( dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->bl)).children[node]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->icupp)).children[node]->isKindOf(kStochDummy) );
+         assert( dynamic_cast<StochVector&>(*(presProb->iclow)).children[node]->isKindOf(kStochDummy) );
+         assert( nnzs_row_C->children[node]->isKindOf(kStochDummy) );
+      }
+      return true;
+   }
+   return false;
+}

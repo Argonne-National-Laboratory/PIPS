@@ -97,24 +97,24 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
    /* child nodes in both systems */
    for( int node = 0; node < nChildren; node++)
    {
-      assert( (nodeIsDummy( node, EQUALITY_SYSTEM) && nodeIsDummy( node, INEQUALITY_SYSTEM)) ||
-            (!nodeIsDummy( node, EQUALITY_SYSTEM) && !nodeIsDummy( node, INEQUALITY_SYSTEM) ));
+      assert( (presData.nodeIsDummy( node, EQUALITY_SYSTEM) && presData.nodeIsDummy( node, INEQUALITY_SYSTEM)) ||
+            (!presData.nodeIsDummy( node, EQUALITY_SYSTEM) && !presData.nodeIsDummy( node, INEQUALITY_SYSTEM) ));
 
       /* equality system */
-      if(!nodeIsDummy( node, EQUALITY_SYSTEM))
+      if(!presData.nodeIsDummy( node, EQUALITY_SYSTEM))
       {
          updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
          countRowsBlock(n_rows_eq, n_ranged_rows, n_fixed_rows, n_singleton_rows_eq, EQUALITY_SYSTEM, CHILD_BLOCK);
       }
 
       /* inequality system */
-      if( !nodeIsDummy( node, INEQUALITY_SYSTEM) )
+      if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM) )
       {
          updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
          countRowsBlock(n_rows_ineq, n_ranged_rows, n_fixed_rows, n_singleton_rows_ineq, INEQUALITY_SYSTEM, CHILD_BLOCK);
       }
 
-      if( !nodeIsDummy( node, INEQUALITY_SYSTEM) )
+      if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM) )
       {
          const SimpleVector& xlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.blx).children[node]->vec);
          const SimpleVector& xupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.bux).children[node]->vec);
@@ -123,7 +123,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
 
          countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, n_singleton_implied_free, ixlow_orig, xlow_orig, ixupp_orig, xupp_orig, CHILD_BLOCK);
       }
-      else if( !nodeIsDummy( node, EQUALITY_SYSTEM) )
+      else if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM) )
       {
          updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
 
@@ -146,7 +146,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
          rowHasEntryInBlocks[i] = 0;
       for( size_t it = 0; it < presData.nRowElemsA->children.size(); it++)
       {
-         if( !nodeIsDummy( it, EQUALITY_SYSTEM))
+         if( !presData.nodeIsDummy( it, EQUALITY_SYSTEM))
          {
 //            setCPBlmatsChild(presProb->A, (int)it); // todo
             for( int i = 0; i < currNnzRow->n; i++ )
@@ -183,7 +183,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
          rowHasEntryInBlocks[i] = 0;
       for( size_t it = 0; it < presData.nRowElemsC->children.size(); it++)
       {
-         if( !nodeIsDummy( it, INEQUALITY_SYSTEM))
+         if( !presData.nodeIsDummy( it, INEQUALITY_SYSTEM))
          {
 //            setCPBlmatsChild(presProb->C, (int)it); // todo
             for( int i = 0; i < currNnzRow->n; i++ )
@@ -362,7 +362,7 @@ void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& 
  */
 void StochPresolverBase::updatePointersForCurrentNode(int node, SystemType system_type)
 {
-   assert( !nodeIsDummy(node, system_type) );
+   assert( !presData.nodeIsDummy(node, system_type) );
    assert(-1 <= node && node <= nChildren );
    assert(system_type == EQUALITY_SYSTEM || system_type == INEQUALITY_SYSTEM);
 
@@ -585,38 +585,6 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
       currNnzColChild = NULL;
 }
 
-bool StochPresolverBase::nodeIsDummy(int node, SystemType system_type) const
-{
-   assert( node >= -1 && node < nChildren );
-   if( node == -1 )
-      return false;
-   StochGenMatrix& matrix = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presData.presProb->A) : dynamic_cast<StochGenMatrix&>(*presData.presProb->C);
-   // todo : asserts
-   if( matrix.children[node]->isKindOf(kStochGenDummyMatrix))
-   {
-      assert( dynamic_cast<StochVector&>(*(presData.presProb->bux)).children[node]->isKindOf(kStochDummy) );
-      assert( dynamic_cast<StochVector&>(*(presData.presProb->blx)).children[node]->isKindOf(kStochDummy) );
-
-      if( system_type == EQUALITY_SYSTEM)
-      {
-         assert( dynamic_cast<StochVector&>(*(presData.presProb->bA)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presData.presProb->bux)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presData.presProb->blx)).children[node]->isKindOf(kStochDummy) );
-         assert( presData.nnzs_row_A->children[node]->isKindOf(kStochDummy) );
-      }
-      else
-      {
-         assert( dynamic_cast<StochVector&>(*(presData.presProb->bu)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presData.presProb->bl)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presData.presProb->icupp)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presData.presProb->iclow)).children[node]->isKindOf(kStochDummy) );
-         assert( presData.nnzs_row_C->children[node]->isKindOf(kStochDummy) );
-      }
-      return true;
-   }
-   return false;
-}
-
 bool StochPresolverBase::hasLinking(SystemType system_type) const
 {
    int mlink, nlink;
@@ -699,12 +667,12 @@ bool StochPresolverBase::hasLinking(SystemType system_type) const
 //   // apply updated colAdaptParent to the Amat blocks
 //   for( int node = -1; node < nChildren; node++ )
 //   {
-//      if( !nodeIsDummy(node, EQUALITY_SYSTEM) )
+//      if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
 //      {
 //         newSREq += colAdaptLinkVars(node, EQUALITY_SYSTEM);
 //      }
 //
-//      if( !nodeIsDummy(node, INEQUALITY_SYSTEM) )
+//      if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
 //      {
 //         newSRIneq += colAdaptLinkVars(node, INEQUALITY_SYSTEM);
 //      }

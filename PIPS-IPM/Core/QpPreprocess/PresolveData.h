@@ -171,6 +171,7 @@ public:
 
       void removeColumn();
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
+      void removeParallelRow(SystemType system_type, int node, int row, bool linking);
 private:
       void removeRow(SystemType system_type, int node, int row, bool linking);
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
@@ -181,9 +182,11 @@ public :
       bool verifyNnzcounters();
       bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
 private:
-      void getSparseGenMatrix(SystemType system_type, int node, BlockType block_type, SparseGenMatrix* mat);
+      SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type);
       void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
       void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
+public:
+      bool nodeIsDummy(int node, SystemType system_type) const;
 
 };
 
