@@ -20,7 +20,7 @@
 MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
  : verbosity(defaultVerbosity), maxNiterRefinments(defaultMaxNiterRefinments)
 {
-   PIPSdebugMessage("creating MUMPS solver \n");
+   printf("creating MUMPS solver \n");
 
    assert(sgm);
    assert(sizeof(MUMPS_INT) == sizeof(int));
