@@ -1597,6 +1597,34 @@ void SparseStorage::deleteEmptyRowsCols(const double* nnzRowVec, const double* n
    delete[] rowsmap;
 }
 
+void SparseStorage:: getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   int count = 0;
+   assert(len > 0);
+
+   irn = new int[len];
+   jcn = new int[len];
+   val = new double[len];
+
+   for( int r = 0; r < m; r++ )
+   {
+      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      {
+         const int col = jcolM[c];
+         const double value = M[c];
+
+         irn[count] = r + 1;
+         jcn[count] = col + 1;
+         val[count] = value;
+
+         count++;
+      }
+   }
+
+   assert(count == len);
+}
+
+
 void SparseStorage::addNnzPerRow(double* vec) const
 {
    for( int r = 0; r < m; r++ )

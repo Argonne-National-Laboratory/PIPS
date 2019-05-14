@@ -30,7 +30,9 @@ class MumpsSolver : public DoubleLinearSolver {
   void diagonalChanged( int idiag, int extent ) override;
   void matrixChanged() override;
   void solve( OoqpVector& rhs ) override;
-  void solve( GenMatrix& rhs ) override;
+
+  // rhs need to be in CSC Fortran format
+  void solve( GenMatrix& rhs_f, double* sol );
 
   static constexpr MumpsVerbosity defaultVerbosity = verb_standard;
   static constexpr unsigned defaultMaxNiterRefinments = 5;
@@ -60,7 +62,10 @@ class MumpsSolver : public DoubleLinearSolver {
   DMUMPS_STRUC_C* mumps;
   SparseSymMatrix* Msys;
 
-
+  // matrix pointer in triplet format
+  int* tripletIrn;
+  int* tripletJcn;
+  double* tripletA;
 };
 
 

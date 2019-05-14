@@ -365,9 +365,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
       MESSAGE("MUMPS_FORT_LIB not set for linking the Fortran MPI interface library required by MUMPS. Using OpenMPI Fortran interface -lmpi_mpifh")
       set(MUMPS_FORT_LIB "-lmpi_mpifh")
     endif(NOT MUMPS_FORT_LIB)
-#   set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord ${MUMPS_FORT_LIB} ${SCALAPACK_LIBRARIES}")
-    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -L/local/MUMPS_5.2.0/lib -L/local/PARMETIS/parmetis-4.0.3/build/Linux-x86_64/libmetis -L/local/PARMETIS/parmetis-4.0.3/build/Linux-x86_64/libparmetis ${MUMPS_FORT_LIB} -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi -fopenmp -I/usr/lib/openmpi/include -pthread -I/usr/lib/openmpi/lib -Wl,-rpath -Wl,/usr/lib/openmpi/lib -Wl,--enable-new-dtags -L/usr/lib/openmpi/lib -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lpord -lmumps_common ${SCALAPACK_LIBRARIES}")
-
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord ${MUMPS_FORT_LIB} ${SCALAPACK_LIBRARIES}")
 
     MESSAGE( "SCALAPACK_LIBRARIES: ${SCALAPACK_LIBRARIES}")
     MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")

@@ -190,6 +190,8 @@ public:
 
   void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
 
+  void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
+
   /*
    * computes the full sparse matrix representation from a upper triangular symmetric sparse representation
    *

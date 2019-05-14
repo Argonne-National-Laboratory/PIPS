@@ -358,3 +358,9 @@ void SparseSymMatrix::deleteEmptyRowsCols(const OoqpVector& nnzVec)
    mStorage->deleteEmptyRowsCols(vec.elements(), vec.elements());
 }
 
+void SparseSymMatrix::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   mStorage->getSparseTriplet_c2fortran(irn, jcn, val);
+}
+
+

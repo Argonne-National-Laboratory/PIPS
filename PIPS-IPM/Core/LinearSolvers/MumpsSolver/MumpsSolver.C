@@ -2,6 +2,8 @@
  * MumpsSolver.C
  */
 
+#define PIPS_DEBUG
+
 #include <stdlib.h>
 
 #include "MumpsSolver.h"
@@ -18,10 +20,16 @@
 MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
  : verbosity(defaultVerbosity), maxNiterRefinments(defaultMaxNiterRefinments)
 {
+   PIPSdebugMessage("creating MUMPS solver \n");
+
    assert(sgm);
+   assert(sizeof(MUMPS_INT) == sizeof(int));
 
    Msys = sgm;
    n = sgm->size();
+   tripletIrn = nullptr;
+   tripletJcn = nullptr;
+   tripletA = nullptr;
 
    setUpMpiData(MPI_COMM_SELF, MPI_COMM_WORLD);
    setUpMumps();
@@ -29,44 +37,57 @@ MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
 
 MumpsSolver::~MumpsSolver()
 {
-   if( mumps != NULL )
+   PIPSdebugMessage("deleting MUMPS solver \n");
+
+   if( mumps )
    {
       mumps->job = -2;
       dmumps_c (mumps);
 
       delete mumps;
    }
+
+   delete[] tripletIrn;
+   delete[] tripletJcn;
+   delete[] tripletA;
 }
 
 void
 MumpsSolver::diagonalChanged(int idiag, int extent)
 {
+   PIPSdebugMessage("MUMPS solver: diagonal changed \n");
+
    this->matrixChanged();
 }
 
 void
 MumpsSolver::matrixChanged()
 {
+   PIPSdebugMessage("MUMPS solver: matrix changed \n");
 
    if( mpiCommMumps == MPI_COMM_NULL )
       return;
 
    // todo: update only diagonal!
+   assert(Msys);
 
-   /*
-    if( Msys != NULL )
-    sysMatToSpTriplet();
-    */
+   delete[] tripletIrn;
+   delete[] tripletJcn;
+   delete[] tripletA;
+   Msys->getSparseTriplet_c2fortran(tripletIrn, tripletJcn, tripletA);
 
    mumps->n = n;
-
+   mumps->nnz = Msys->numberOfNonZeros();
+   mumps->irn = tripletIrn;
+   mumps->jcn = tripletJcn;
+   mumps->a = tripletA;
 
    // symmetric permutation for factorization, 7: automatic choice; meaningless if mumps->ICNTL(28) == 2
-   mumps->ICNTL(7)= 7;
+   mumps->ICNTL(7) = 7;
 
-   mumps->ICNTL(28)= 0; // choice of analysis, 0: automatic, 1: sequential, 2: parallel
+   mumps->ICNTL(28) = 0; // choice of analysis, 0: automatic, 1: sequential, 2: parallel
 
-   mumps->ICNTL(29)= 0; // parallel ordering, 0: automatic, 1: PT-SCOTCH, 2: ParMetis
+   mumps->ICNTL(29) = 0; // parallel ordering, 0: automatic, 1: PT-SCOTCH, 2: ParMetis
 
    // relative threshold for numerical pivoting; 0.01 is default for sym. indef., larger values increase accuracy
    //  mumps->ICNTL(1) = 0.01;
@@ -98,8 +119,6 @@ MumpsSolver::matrixChanged()
    processMumpsResultFactor(starttime);
 
    //saveOrderingPermutation();
-
-
 }
 
 
@@ -132,10 +151,17 @@ MumpsSolver::solve(double* vec)
 void
 MumpsSolver::solve(OoqpVector& rhs)
 {
+   PIPSdebugMessage("MUMPS solver: solve (single rhs) \n");
+
    SimpleVector& sv = dynamic_cast<SimpleVector &>(rhs);
 
    if( mpiCommMumps != MPI_COMM_NULL )
    {
+      assert(n == rhs.length());
+
+      mumps->nrhs = 1;
+      mumps->lrhs = n;
+
       mumps->ICNTL(20) = 0; // right-hand side is in dense format
       // todo try sparse also for single rhs?
       solve(sv.elements());
@@ -144,32 +170,39 @@ MumpsSolver::solve(OoqpVector& rhs)
 
 
 void
-MumpsSolver::solve(GenMatrix& rhs)
+MumpsSolver::solve(GenMatrix& rhs_f, double* sol)
 {
-   SparseGenMatrix& rhs_matrix = dynamic_cast<SparseGenMatrix &>(rhs);
+   PIPSdebugMessage("MUMPS solver: solve (multiple rhs) \n");
+
+   SparseGenMatrix& rhs_matrix = dynamic_cast<SparseGenMatrix &>(rhs_f);
 
    if( mpiCommMumps == MPI_COMM_NULL )
       return;
 
-   int* irhs_ptr = rhs_matrix.krowM;
-   int* irhs_sparse = rhs_matrix.jcolM;
-   double* rhs_sparse = rhs_matrix.M;
-   int n_rhs;
-   int m_rhs;
+   assert(sol);
 
-   rhs_matrix.getSize(m_rhs, n_rhs);
+   int* irhs_ptr = rhs_matrix.krowM();
+   int* irhs_sparse = rhs_matrix.jcolM();
+   double* rhs_sparse = rhs_matrix.M();
+   int n_csr;
+   int m_csr;
+
+   rhs_matrix.getSize(m_csr, n_csr);
+
+   // todo: user needs to provide interval for solution?
 
    // matrix should be in Fortran format
-   assert(irhs_ptr[0] == 1 && rhs_matrix.getStorage()->len == irhs_ptr[m_rhs] - 1);
+   assert(irhs_ptr[0] == 1 && rhs_matrix.getStorage()->len == irhs_ptr[m_csr] - 1);
 
-   mumps->nrhs = m_rhs; // MUMPS expects column major
-   mumps->nz_rhs = irhs_ptr[m_rhs] - 1;
-   mumps->lrhs = n_rhs;
+   mumps->nrhs = m_csr; // MUMPS expects column major
+   mumps->nz_rhs = irhs_ptr[m_csr] - 1;
+   mumps->lrhs = n_csr;
    mumps->irhs_ptr = irhs_ptr;
    mumps->irhs_sparse = irhs_sparse;
    mumps->rhs_sparse = rhs_sparse;
    mumps->ICNTL(20)= 3; // exploit sparsity during solve
-   solve(rhs_sparse);
+
+   solve(sol);
 }
 
 

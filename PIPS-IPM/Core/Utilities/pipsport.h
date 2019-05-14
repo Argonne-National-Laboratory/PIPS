@@ -13,6 +13,7 @@
 #define PRE_CPP11
 #define override
 #define constexpr const
+#define nullptr 0
 #endif
 
 
