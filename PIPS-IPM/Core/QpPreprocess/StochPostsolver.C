@@ -38,6 +38,14 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
    finishNotify();
 }
 
+/** postsolve for this is simply to set all dual variables to zero - the row itself has no primal impact */
+void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint )
+{
+   reductions.push_back( REDUNDANT_ROW );
+   indices.push_back( INDEX(node, row) );
+   values.push_back( ( (system_type == EQUALITY_SYSTEM ) ? 1 : -1 ) );
+}
+
 void StochPostsolver::notifyDeletedRow( SystemType system_type, int node, unsigned int row, bool linking_constraint)
 {
    throw std::runtime_error("Not yet implemented");

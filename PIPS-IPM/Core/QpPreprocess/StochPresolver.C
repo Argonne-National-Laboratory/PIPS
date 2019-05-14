@@ -63,16 +63,16 @@ Data* StochPresolver::presolve()
 #endif
 
    /* initialize presolve data */
-   PresolveData presData(sorigprob);
+   PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
    assert( sorigprob->isRootNodeInSync());
    assert( presData.presProb->isRootNodeInSync() );
 
    /* initialize all presolvers */
-//   StochPresolverBoundStrengthening presolverBS(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
-//   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
-   StochPresolverModelCleanup presolverCleanup(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
-//   StochPresolverSingletonRows presolverSR(presData, *sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
+//   StochPresolverBoundStrengthening presolverBS(presData, *sorigprob);
+//   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
+   StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
+//   StochPresolverSingletonRows presolverSR(presData, *sorigprob);
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;

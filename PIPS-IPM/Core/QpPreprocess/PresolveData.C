@@ -9,14 +9,16 @@
 #include "StochGenMatrix.h"
 #include "DoubleMatrixTypes.h"
 #include "pipsdef.h"
+
+#include <stdexcept>
 #include <limits>
-
-//      SimpleVectorHandle rhs_A_chgs;
-//      SimpleVectorHandle lhs_C_chgs;
-//      SimpleVectorHandle rhs_C_chgs;
-
-PresolveData::PresolveData(const sData* sorigprob) :
-      outdated_activities(false),
+#include <algorithm>
+//      SimpleVectorHandle nnzs_row_A_chgs;
+//      SimpleVectorHandle nnzs_row_C_chgs;
+//      SimpleVectorHandle nnzs_col_chgs;
+PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
+      postsolver(postsolver),
+      outdated_activities(true),
       outdated_bounds(false),
       outdated_nnzs(false),
       nnzs_row_A(dynamic_cast<StochVector*>(sorigprob->bA->clone())),
@@ -33,14 +35,17 @@ PresolveData::PresolveData(const sData* sorigprob) :
    presProb = sorigprob->cloneFull(true);
 
    int n_linking_vars = (nnzs_col->vec) ? nnzs_col->vec->n : 0;
-   nnzs_col_chgs = SimpleVectorHandle(new SimpleVector(n_linking_vars));
 
-   long long n_linking_A = (nnzs_row_A->vecl) ? nnzs_row_A->vecl->n : 0;
-   long long n_linking_C = (nnzs_row_C->vecl) ? nnzs_row_C->vecl->n : 0;
-   assert( 2 * n_linking_A + 2 * n_linking_C < std::numeric_limits<int>::max() );
+   int n_linking_A = (nnzs_row_A->vecl) ? nnzs_row_A->vecl->n : 0;
+   int n_linking_C = (nnzs_row_C->vecl) ? nnzs_row_C->vecl->n : 0;
+   assert( n_linking_vars + 2 * n_linking_A + 2 * n_linking_C < std::numeric_limits<int>::max() );
 
-   nnzs_row_A_chgs = SimpleVectorHandle(new SimpleVector(n_linking_A));
-   nnzs_row_C_chgs = SimpleVectorHandle(new SimpleVector(n_linking_C));
+   length_array_nnz_chgs = n_linking_vars + n_linking_A + n_linking_C;
+   array_nnz_chgs = new double[length_array_nnz_chgs]();
+
+   nnzs_col_chgs = SimpleVectorHandle(new SimpleVector(array_nnz_chgs, n_linking_vars));
+   nnzs_row_A_chgs = SimpleVectorHandle(new SimpleVector(array_nnz_chgs + n_linking_vars, n_linking_A));
+   nnzs_row_C_chgs = SimpleVectorHandle(new SimpleVector(array_nnz_chgs + n_linking_vars + n_linking_A, n_linking_C));
 
    lenght_array_act_chgs = n_linking_A * 2 + n_linking_C * 2;
    array_act_chgs = new double[lenght_array_act_chgs]();
@@ -69,6 +74,7 @@ PresolveData::PresolveData(const sData* sorigprob) :
 
 PresolveData::~PresolveData()
 {
+   delete[] array_nnz_chgs;
    delete[] array_act_chgs;
    delete[] array_bound_chgs;
 }
@@ -80,7 +86,7 @@ sData* PresolveData::finalize()
 #ifndef NDEBUG
    if(distributed)
    {
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD); // todo make one array?
       MPI_Allreduce(MPI_IN_PLACE, &outdated_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
    }
@@ -225,7 +231,6 @@ void PresolveData::recomputeActivities(bool linking_only)
    if( distributed )
    {
       // todo is copying and then allreducing once cheaper than allreducing 4 times ?
-
       MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_eq->vecl)->elements(), actmin_eq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_eq->vecl)->elements(), actmax_eq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_ineq->vecl)->elements(), actmin_ineq->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -238,10 +243,13 @@ void PresolveData::recomputeActivities(bool linking_only)
 /** allreduces changes in the activities of the linking rows and updates the linking row activities */
 void PresolveData::allreduceAndApplyLinkingRowActivities()
 {
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+
+   if(!outdated_activities)
+      return;
+
    if(distributed)
-   {
       MPI_Allreduce(MPI_IN_PLACE, array_act_chgs, lenght_array_act_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-   }
 
    dynamic_cast<SimpleVector&>(*actmin_eq->vecl).axpy( 1.0, *actmin_eq_chgs);
    dynamic_cast<SimpleVector&>(*actmax_eq->vecl).axpy( 1.0, *actmax_eq_chgs);
@@ -252,6 +260,8 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
    actmax_eq_chgs->setToZero();
    actmin_ineq_chgs->setToZero();
    actmax_ineq_chgs->setToZero();
+
+   outdated_activities = false;
 }
 
 /** Computes minimal and maximal activity of all rows in given matrix. Adds activities to min/max_activities accordingly. */
@@ -500,16 +510,13 @@ void PresolveData::setObjOffset(double offset)
 // todo make one vector?
 void PresolveData::allreduceAndApplyNnzChanges()
 {
-   // todo check if necessary
-   if( distributed )
-   {
-      /* allreduce the linking variable columns */
-      MPI_Allreduce(MPI_IN_PLACE, nnzs_col_chgs->elements(), nnzs_col_chgs->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
 
-      /* allreduce the linking cons rows */
-      MPI_Allreduce(MPI_IN_PLACE, nnzs_row_A_chgs->elements(), nnzs_row_A_chgs->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-      MPI_Allreduce(MPI_IN_PLACE, nnzs_row_C_chgs->elements(), nnzs_row_C_chgs->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-   }
+   if(!outdated_nnzs)
+      return;
+
+   if( distributed )
+      MPI_Allreduce(MPI_IN_PLACE, array_nnz_chgs, length_array_nnz_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
 
    /* update local nnzCounters */
    nnzs_col->vec->axpy(-1.0, *nnzs_col_chgs);
@@ -530,10 +537,17 @@ void PresolveData::allreduceAndApplyNnzChanges()
    nnzs_col_chgs->setToZero();
    nnzs_row_A_chgs->setToZero();
    nnzs_row_C_chgs->setToZero();
+
+   outdated_nnzs = false;
 }
 
 void PresolveData::allreduceAndApplyBoundChanges()
 {
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+
+   if(!outdated_bounds)
+      return;
+
    if(distributed)
    {
       MPI_Allreduce(MPI_IN_PLACE, array_bound_chgs, lenght_array_bound_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -545,15 +559,20 @@ void PresolveData::allreduceAndApplyBoundChanges()
 
    bound_chgs_A->setToZero();
    bound_chgs_C->setToZero();
+
+   outdated_bounds = false;
 }
 
 // todo : no postsolve required?
 void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block_type, SparseStorageDynamic* storage, int row_index,
       int& index_k, int& row_end)
 {
+   if(block_type == LINKING_CONS_BLOCK || block_type == LINKING_VARS_BLOCK || node == -1)
+      outdated_nnzs = true;
+
    /* adjust nnz counters */
-   removeIndexRow(system_type, node, block_type, row_index);
-   removeIndexColumn(node, block_type, storage->jcolM[index_k]);
+   removeIndexRow(system_type, node, block_type, row_index, 1);
+   removeIndexColumn(node, block_type, storage->jcolM[index_k], 1);
 
    std::swap(storage->M[index_k], storage->M[row_end - 1]);
    std::swap(storage->jcolM[index_k], storage->jcolM[row_end - 1]);
@@ -568,6 +587,9 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
 void PresolveData::adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value)
 {
    assert( -1 <= node && node <= nChildren);
+
+   if(block_type == LINKING_CONS_BLOCK || node == -1)
+      outdated_bounds = true;
 
    if(system_type == EQUALITY_SYSTEM)
    {
@@ -632,36 +654,42 @@ void PresolveData::updateTransposedSubmatrix( SparseStorageDynamic* transposed, 
 
       ++elements_deleted_transposed;
    }
+
+   assert(elements_deleted == elements_deleted_transposed);
+   elements_deleted = 0;
+   elements_deleted_transposed = 0;
 }
 
-void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index)
+void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount)
 {
    assert(-1 <= node && node <= nChildren);
-
+   assert(0 < amount);
    /* linking constraints get stored */
    if(block_type == LINKING_CONS_BLOCK)
    {
       if(my_rank == 0 || node != -1)
-         (system_type == EQUALITY_SYSTEM) ? ++(*nnzs_row_A_chgs)[row_index] : ++(*nnzs_row_C_chgs)[row_index];
+         (system_type == EQUALITY_SYSTEM) ? ((*nnzs_row_A_chgs)[row_index] += amount) : ((*nnzs_row_C_chgs)[row_index] += amount);
    }
    else
    {
       if(system_type == EQUALITY_SYSTEM)
       {
-         (node == -1) ? --dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[row_index] : --dynamic_cast<SimpleVector&>(*nnzs_row_A->children[node]->vec)[row_index];
-         assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[row_index]);
-         assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_A->children[node]->vec)[row_index]);
+         (node == -1) ? (dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[row_index] -= amount) :
+               (dynamic_cast<SimpleVector&>(*nnzs_row_A->children[node]->vec)[row_index] -= amount);
+         (node == -1) ? assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[row_index]) :
+               assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_A->children[node]->vec)[row_index]);
       }
       else
       {
-         (node == -1) ? --dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[row_index] : --dynamic_cast<SimpleVector&>(*nnzs_row_C->children[node]->vec)[row_index];
-         assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[row_index]);
-         assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_C->children[node]->vec)[row_index]);
+         (node == -1) ? (dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[row_index] -= amount) :
+               (dynamic_cast<SimpleVector&>(*nnzs_row_C->children[node]->vec)[row_index] -= amount);
+         (node == -1) ? assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[row_index]) :
+               assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_row_C->children[node]->vec)[row_index]);
       }
    }
 }
 
-void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_index)
+void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_index, int amount)
 {
    assert(-1 <= node && node <= nChildren);
 
@@ -669,24 +697,243 @@ void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_ind
    if(node == -1 || block_type == LINKING_VARS_BLOCK)
    {
       if(my_rank == 0 || node != -1)
-         ++(*nnzs_col_chgs)[col_index];
+         (*nnzs_col_chgs)[col_index] += amount;
    }
    else
    {
-      --dynamic_cast<SimpleVector&>(*nnzs_col->children[node]->vec)[col_index];
+      dynamic_cast<SimpleVector&>(*nnzs_col->children[node]->vec)[col_index] -= amount;
       assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_col->children[node]->vec)[col_index]);
    }
 }
 
-void PresolveData::deleteColumn()
+// todo notify
+void PresolveData::removeColumn()
 {
+   /* if linking column - save deletion for later sync and delete */
+   throw std::runtime_error("Not yet implemented");
 
+   /* if non-linking column - delete right away */
 }
-void PresolveData::deleteRow(SystemType system_type, int node, int idx, bool linking)
+
+//// todo description + use to notify column deletion
+//// todo notify postsolver! rows and cols
+//void PresolveData::deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value)
+//{
+//   assert(node != -1);
+//
+//   /* equality system */
+//   /* delete from Bmat */
+//   deleteNonlinkColumnFromSparseStorageDynamic(EQUALITY_SYSTEM, node, CHILD_BLOCK, col_idx, fixation_value);
+//
+//   /* delete from Blmat */
+//   if(hasLinking(EQUALITY_SYSTEM))
+//      deleteNonlinkColumnFromSparseStorageDynamic(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col_idx, fixation_value);
+//
+//   /* inequality system */
+//   /* delete from Bmat */
+//   deleteNonlinkColumnFromSparseStorageDynamic(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col_idx, fixation_value);
+//
+//   /* delete from Blmat */
+//   if(hasLinking(INEQUALITY_SYSTEM))
+//      deleteNonlinkColumnFromSparseStorageDynamic(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col_idx, fixation_value);
+//
+//   /* adjust objective function */
+//   updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+//   indivObjOffset += currgChild->elements()[col_idx] * fixation_value;
+//}
+//
+//void PresolveData::deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val)
+//{
+//   /* assert non-linking */
+//   assert(block_type != LINKING_VARS_BLOCK);
+//   assert(node != -1);
+//
+//   updatePointersForCurrentNode(node, system_type);
+//
+//   SparseStorageDynamic& matrix = (block_type == CHILD_BLOCK) ? *currBmat : *currBlmat;
+//   SparseStorageDynamic& matrix_transp = (block_type == CHILD_BLOCK) ? *currBmatTrans : *currBlmatTrans;
+//   SimpleVector* curr_row_red = (block_type == CHILD_BLOCK) ? currRedRow : currRedRowLink;
+//   SimpleVector* rhs = (block_type == CHILD_BLOCK) ? currEqRhs :currEqRhsLink;
+//
+//   SimpleVector* iclow = (block_type == CHILD_BLOCK) ? currIclow : currIclowLink;
+//   SimpleVector* clow = (block_type == CHILD_BLOCK) ? currIneqLhs : currIneqLhsLink;
+//   SimpleVector* icupp = (block_type == CHILD_BLOCK) ? currIcupp : currIcuppLink;
+//   SimpleVector* cupp = (block_type == CHILD_BLOCK) ? currIneqRhs : currIneqRhsLink;
+//
+//   SimpleVector* nnz_row = (block_type == CHILD_BLOCK) ? currNnzRow : currNnzRowLink;
+//
+//   assert(0 <= col_idx && col_idx <= matrix_transp.m);
+//   for( int j = matrix_transp.rowptr[col_idx].start; j < matrix_transp.rowptr[col_idx].end; j++ )
+//   {
+//      int rowIdx = matrix_transp.jcolM[j];
+//      double m = 0.0;
+//
+//      if( !removeEntryInDynamicStorage(matrix, rowIdx, col_idx, m) )
+//         continue;
+//
+//      curr_row_red->elements()[rowIdx]++;
+//      /* never linking vars */
+//      currnnzs_col_chgsChild->elements()[col_idx]++;
+//
+//      if( system_type == EQUALITY_SYSTEM )
+//      {
+//         if(block_type == LINKING_CONS_BLOCK)
+//         {
+//            currEqRhsAdaptionsLink[rowIdx] -= m * val;
+//         }
+//         else
+//         {
+//            rhs->elements()[rowIdx] -= m * val;
+//
+//            /* fixation must be valid */
+//            if( nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 0.0 )
+//            {
+//               assert(matrix.rowptr[rowIdx].start == matrix.rowptr[rowIdx].end);
+//               if( !PIPSisZero(rhs->elements()[rowIdx], 1e-10) )
+//               {
+//                  std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value " << val << "\trhs " << rhs->elements()[rowIdx] << "\tmat " << m << std::endl;
+//                  std::cout << "Problem infeasible" << std::endl;
+//                  abortInfeasible(MPI_COMM_WORLD );
+//               }
+//            }
+//         }
+//
+//      }
+//      else
+//      {
+//         if(block_type == LINKING_CONS_BLOCK)
+//         {
+//            if( icupp->elements()[rowIdx] != 0.0 )
+//               currInEqLhsAdaptionsLink[rowIdx] -= m * val;
+//            if( iclow->elements()[rowIdx] != 0.0 )
+//               currInEqRhsAdaptionsLink[rowIdx] -= m * val;
+//
+//            if(nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 0.0 )
+//            {
+//               if( (icupp->elements()[rowIdx] == 1.0 && !PIPSisLE(0.0, cupp->elements()[rowIdx] + currInEqRhsAdaptionsLink[rowIdx]) )
+//                 || (iclow->elements()[rowIdx] == 1.0 && !PIPSisLE(clow->elements()[rowIdx] + currInEqLhsAdaptionsLink[rowIdx], 0.0)))
+//               {
+//                     std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value" << std::endl;
+//                     std::cout << val << "\t" << m << std::endl;
+//                     if(icupp->elements()[rowIdx])
+//                        std::cout << "upper bound: " << cupp->elements()[rowIdx] << std::endl;
+//                     if(iclow->elements()[rowIdx])
+//                        std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
+//                     std::cout << "Problem infeasible" << std::endl;
+//                     abortInfeasible(MPI_COMM_WORLD);
+//                  }
+//               }
+//         }
+//         else
+//         {
+//            if( icupp->elements()[rowIdx] == 1.0 )
+//              cupp->elements()[rowIdx] -= m * val;
+//
+//            if( iclow->elements()[rowIdx] == 1.0 )
+//               clow->elements()[rowIdx] -= m * val;
+//
+//            if(nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 0.0 )
+//            {
+//            // todo does not work from inequ sys - the rhs is not updated then
+//               if( (icupp->elements()[rowIdx] == 1.0 && !PIPSisLE(0.0, cupp->elements()[rowIdx]) )
+//                     || (iclow->elements()[rowIdx] == 1.0 && !PIPSisLE(clow->elements()[rowIdx], 0.0)))
+//               {
+//                  std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value" << std::endl;
+//                  std::cout << val << "\t" << m << std::endl;
+//                  if(icupp->elements()[rowIdx])
+//                     std::cout << "upper bound: " << cupp->elements()[rowIdx] << std::endl;
+//                  if(iclow->elements()[rowIdx])
+//                     std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
+//                  std::cout << "Problem infeasible" << std::endl;
+//                  abortInfeasible(MPI_COMM_WORLD);
+//               }
+//            }
+//         }
+//      }
+//   }
+//
+//   clearRow(matrix_transp, col_idx);
+//}
+
+void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
+   //assert(!nodeIsDummy())
+   if(postsolver)
+      postsolver->notifyRedundantRow(system_type, node, row, linking);
 
+   removeRow(system_type, node, row, linking);
 }
 
+void PresolveData::removeRow(SystemType system_type, int node, int row, bool linking)
+{
+   //assert(!nodeIsDummy())
+   if(linking)
+   {
+      assert(node == -1);
+
+      removeRowFromMatrix(system_type, -1, LINKING_CONS_BLOCK, row);
+
+      for(int child = 0; child < nChildren; ++child)
+         removeRowFromMatrix(system_type, child, LINKING_CONS_BLOCK, row);
+   }
+   else
+   {
+      /* Amat */
+      removeRowFromMatrix(system_type, node, LINKING_VARS_BLOCK, row);
+
+      /* Bmat */
+      if(node != -1)
+         removeRowFromMatrix(system_type, node, CHILD_BLOCK, row);
+   }
+}
+
+
+// todo : should rhs and lhs be set to zero too? -nah?
+void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row)
+{
+   SparseGenMatrix* mat = NULL;
+   getSparseGenMatrix(system_type, node, block_type, mat);
+
+   assert(mat);
+   assert(mat->hasDynamicStorage());
+
+   SparseStorageDynamic* mat_storage = mat->getStorageDynamic();
+   SparseStorageDynamic* mat_transp_storage = mat->getStorageDynamicTransposed();
+   assert(mat_storage);
+   assert( 0 <= row && row < mat_storage->m);
+   assert(mat_transp_storage);
+
+   const int row_start = mat_storage->rowptr[row].start;
+   const int row_end = mat_storage->rowptr[row].end;
+
+   for(int k = row_start; k < row_end; k++)
+   {
+      const int col_idx = mat_storage->jcolM[k];
+
+      removeEntryInDynamicStorage(*mat_transp_storage, col_idx, row);
+      removeIndexColumn(node, block_type, col_idx, 1);
+   }
+
+   removeIndexRow(system_type, node, block_type, row, mat_storage->rowptr[row].end - mat_storage->rowptr[row].start);
+   mat_storage->rowptr[row].end = mat_storage->rowptr[row].start;
+}
+
+void PresolveData::removeEntryInDynamicStorage(SparseStorageDynamic& storage, int rowIdx, int colIdx) const
+{
+   int i = -1;
+   int end = storage.rowptr[rowIdx].end;
+   int start = storage.rowptr[rowIdx].start;
+
+   for( i = start; i < end; i++)
+   {
+      if( storage.jcolM[i] == colIdx )
+         break;
+   }
+
+   std::swap(storage.M[i], storage.M[end-1]);
+   std::swap(storage.jcolM[i], storage.jcolM[end-1]);
+   storage.rowptr[rowIdx].end--;
+}
 
 /** Verifies if the nnzCounters are still correct. */
 // todo make const!
@@ -834,30 +1081,21 @@ bool PresolveData::verifyNnzcounters()
    return nnzCorrect;
 }
 
-void PresolveData::getStorageDynamic(SystemType system_type, int node, BlockType block_type, SparseGenMatrix* mat)
+void PresolveData::getSparseGenMatrix(SystemType system_type, int node, BlockType block_type, SparseGenMatrix* mat)
 {
-//   if(system_type == EQUALITY_SYSTEM)
-//   {
-//      if(node == -1)
-//      {
-//         mat = (block_type == LINKING_CONS_BLOCK) ? dynamic_cast<StochGenMatrixHandle>(presProb->A)->Blmat :
-//               dynamic_cast<StochGenMatrixHandle>(presProb->A)->Bmat;
-//      }
-//      else
-//      {
-//         mat = ()
-//      }
-//   }
-//   else
-//   {
-//      if(node == -1)
-//      {
-//
-//      }
-//      else
-//      {
-//
-//      }
-//   }
+   assert( -1 <= node && node <= nChildren );
+   StochGenMatrix& sMat = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presProb->A) : dynamic_cast<StochGenMatrix&>(*presProb->C);
+
+   if(node == -1)
+      mat = (block_type == LINKING_CONS_BLOCK) ? sMat.Blmat : sMat.Bmat;
+   else
+   {
+      if(block_type == LINKING_VARS_BLOCK)
+         mat = sMat.children[node]->Amat;
+      else if(block_type == CHILD_BLOCK)
+         mat = sMat.children[node]->Bmat;
+      else if(block_type == LINKING_CONS_BLOCK)
+         mat = sMat.children[node]->Blmat;
+   }
 }
 

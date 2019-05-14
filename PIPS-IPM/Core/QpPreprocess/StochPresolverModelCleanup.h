@@ -13,7 +13,7 @@
 class StochPresolverModelCleanup : public StochPresolverBase
 {
    public:
-      StochPresolverModelCleanup(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver);
+      StochPresolverModelCleanup(PresolveData& presData, const sData& origProb);
 
       virtual ~StochPresolverModelCleanup();
 
@@ -21,6 +21,8 @@ class StochPresolverModelCleanup : public StochPresolverBase
       virtual void applyPresolving();
 
    private:
+      int removed_entries_total;
+      int removed_rows_total;
 
       int removeRedundantRows(SystemType system_type);
       int removeRedundantRows(SystemType system_type, int node);

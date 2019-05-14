@@ -9,6 +9,7 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_
 
 #include "sData.h"
+#include "StochPostsolver.h"
 #include "StochVectorHandle.h"
 #include "SimpleVectorHandle.h"
 #include "SparseStorageDynamic.h"
@@ -52,11 +53,13 @@ class PresolveData
 
    public:
       sData* presProb;
+private:
+      StochPostsolver* const postsolver;
 
       bool outdated_activities;
       bool outdated_bounds;
       bool outdated_nnzs;
-
+public:
       // todo why handle? ..
       /* number of non-zero elements of each row / column */
       StochVectorHandle nnzs_row_A;
@@ -64,6 +67,8 @@ class PresolveData
       StochVectorHandle nnzs_col;
 
       /* number of removed elements of linking rows/cols stored for update */
+      int length_array_nnz_chgs;
+      double* array_nnz_chgs;
       SimpleVectorHandle nnzs_row_A_chgs;
       SimpleVectorHandle nnzs_row_C_chgs;
       SimpleVectorHandle nnzs_col_chgs;
@@ -124,7 +129,7 @@ class PresolveData
       void initNnzCounter();
       void initSingletons();
    public:
-      PresolveData(const sData* sorigprob);
+      PresolveData(const sData* sorigprob, StochPostsolver* postsolver);
       ~PresolveData();
 
       sData* finalize();
@@ -164,17 +169,21 @@ public:
       void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
       void updateTransposedSubmatrix( SparseStorageDynamic* transposed, std::vector<std::pair<int, int> >& elements);
 
-      void deleteColumn();
-      void deleteRow(SystemType system_type, int node, int idx, bool linking);
+      void removeColumn();
+      void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
+private:
+      void removeRow(SystemType system_type, int node, int row, bool linking);
+      void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
+      void removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row_idx, int col_idx) const;
 
       /* methods for verifying state of presData */
 public :
       bool verifyNnzcounters();
       bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
 private:
-      void getStorageDynamic(SystemType system_type, int node, BlockType block_type, SparseGenMatrix* mat);
-      void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index);
-      void removeIndexColumn(int node, BlockType block_type, int col_index);
+      void getSparseGenMatrix(SystemType system_type, int node, BlockType block_type, SparseGenMatrix* mat);
+      void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
+      void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
 
 };
 

@@ -34,7 +34,7 @@ struct xbounds_col_is_smaller
 class StochPresolverBase
 {
 public:
-   StochPresolverBase(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver = NULL);
+   StochPresolverBase(PresolveData& presData, const sData& origProb);
    virtual ~StochPresolverBase();
 
    // todo return bool whether enough eliminations
@@ -70,16 +70,13 @@ protected:
    int my_rank;
    bool distributed;
 
-   // if postsolver is NULL we do not have one and don't do postsolve / any notify
-   StochPostsolver* const postsolver;
-
    // todo do we want to make these adjustable?
    static const double feastol = 1.0e-6; // was 1.0e-6
    static const double infinity = 1.0e30;
    // todo rename for more clarity
    static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
    static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
-   static const double tol_matrix_entry = 1;//1.0e-10; // for model cleanup // was 1.0e-10
+   static const double tol_matrix_entry = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
    static const double tolerance4 = 1.0e-12; // for variable fixing
    static const double limit1 = 1.0e3;   // for bound strengthening
    static const double limit2 = 1.0e8;   // for bound strengthening

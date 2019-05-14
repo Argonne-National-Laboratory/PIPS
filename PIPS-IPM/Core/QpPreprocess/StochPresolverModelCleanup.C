@@ -10,17 +10,13 @@
 #include <utility>
 #include <vector>
 
-//#define NDEBUG_MODEL_CLEANUP
-
-StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver)
-   : StochPresolverBase(presData, origProb, postsolver)
+StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, const sData& origProb)
+   : StochPresolverBase(presData, origProb), removed_entries_total(0), removed_rows_total(0)
 {
- // todo
 }
 
 StochPresolverModelCleanup::~StochPresolverModelCleanup()
 {
-   // todo
 }
 
 
@@ -41,16 +37,18 @@ void StochPresolverModelCleanup::applyPresolving()
    countRowsCols();
 #endif
 
+   int n_removed_entries = 0;
+   int n_removed_rows = 0;
+
    /* remove entries from A and C matrices and updates transposed systems */
-   int n_elims_eq_sys = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
-   int n_elims_ineq_sys = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
-   int n_elims = n_elims_ineq_sys + n_elims_eq_sys;
+   int n_removed_entries_eq = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
+   int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
+   n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
 
    // removal of redundant constraints
-//   int nRemovedRows_eq = removeRedundantRows(EQUALITY_SYSTEM);
-//   int nRemovedRows_ineq = removeRedundantRows(INEQUALITY_SYSTEM);
-//   int nRemovedRows = nRemovedRows_eq + nRemovedRows_ineq;
-   int nRemovedRows = 0;
+   int n_removed_rows_eq = removeRedundantRows(EQUALITY_SYSTEM);
+   int n_removed_rows_ineq = removeRedundantRows(INEQUALITY_SYSTEM);
+   n_removed_rows = n_removed_rows_eq + n_removed_rows_ineq;
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    presData.allreduceAndApplyNnzChanges();
@@ -59,15 +57,20 @@ void StochPresolverModelCleanup::applyPresolving()
    if( distributed )
    {
       // todo ? different communicator?
-      MPI_Allreduce(MPI_IN_PLACE, &n_elims, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
-      MPI_Allreduce(MPI_IN_PLACE, &nRemovedRows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &n_removed_entries, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD );
+      MPI_Allreduce(MPI_IN_PLACE, &n_removed_rows, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
    }
+   removed_entries_total += n_removed_entries;
+   removed_rows_total += n_removed_rows;
 
    //todo : print specific stats
 #ifndef NDEBUG_MODEL_CLEANUP
    if( my_rank == 0 )
-      std::cout << "Model cleanup finished. Removed " << nRemovedRows << " redundant rows and " << n_elims << " entries in total."
-            << std::endl;
+   {
+      std::cout << "Removed " << n_removed_rows << " redundant rows (" << n_removed_rows_eq << " equalitiy and " << n_removed_rows_ineq << " inequality rows)" << std::endl;
+      std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq << " entries in equality system and "
+            << n_removed_entries_ineq << " in inequality system)" << std::endl;
+   }
 #endif
 
 #ifndef NDEBUG
@@ -116,8 +119,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       n_removed_rows_link = removeRedundantRows(system_type, node, true);
 
 #ifndef NDEBUG
-
-   if( my_rank == 0 )
+   if( my_rank == 0 && node == -1 )
    {
       n_removed_rows += n_removed_rows_link;
       std::cout << "\tRemoved redundant linking constraints during model cleanup: " << n_removed_rows_link << std::endl;
@@ -184,7 +186,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
             abortInfeasible(MPI_COMM_WORLD);
          else if( PIPSisLE(rhs_eq[r], minAct, feastol) && PIPSisLE(maxAct, rhs_eq[r], feastol) )
          {
-            presData.deleteRow(system_type, node, r, linking);
+            presData.removeRedundantRow(system_type, node, r, linking);
             n_removed_rows++;
          }
       }
@@ -196,13 +198,13 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
          else if( ( iclow[r] == 0.0 || clow[r] <= -infinity) &&
                ( icupp[r] == 0.0 || cupp[r] >= infinity) )
          {
-            presData.deleteRow(system_type, node, r, linking);
+            presData.removeRedundantRow(system_type, node, r, linking);
             n_removed_rows++;
          }
          else if( ( iclow[r] == 0.0 || PIPSisLE( clow[r], minAct, feastol) )
                && ( icupp[r] == 0.0 || PIPSisLE( maxAct, cupp[r], feastol) ) )
          {
-            presData.deleteRow(system_type, node, r, linking);
+            presData.removeRedundantRow(system_type, node, r, linking);
             n_removed_rows++;
          }
       }

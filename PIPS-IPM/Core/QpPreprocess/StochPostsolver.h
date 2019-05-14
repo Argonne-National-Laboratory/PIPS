@@ -23,6 +23,8 @@ public:
       StochPostsolver( const sData& original_problem );
       virtual ~StochPostsolver();
 
+      void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint );
+
       void notifyFixedColumn( int node, unsigned int col, double value);
       void notifyDeletedRow( SystemType system_type, int node, unsigned int row, bool linking_constraint);
       void notifyParallelColumns();
@@ -31,18 +33,20 @@ public:
 protected:
 
       /* can represent a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
-      typedef struct
+      struct INDEX
       {
+         INDEX(int node, int index) : node(node), index(index) {};
          int node;
          int index;
-      } INDEX;
+      } ;
 
       enum ReductionType
       {
          FIXED_COLUMN = 0,
          SUBSTITUTED_COLUMN = 1,
          PARALLEL_COLUMN = 2,
-         DELETED_ROW = 3
+         DELETED_ROW = 3,
+         REDUNDANT_ROW = 4
       };
 
       const unsigned int n_rows_original;
