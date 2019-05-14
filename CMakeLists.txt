@@ -54,6 +54,10 @@ message(STATUS "WITH_MKL_PARDISO=${WITH_MKL_PARDISO}")
 option(WITH_PARDISOINDEF "Use Pardiso (if available) for summed Schur complement" ON)
 message(STATUS "WITH_PARDISOINDEF=${WITH_PARDISOINDEF}")
 
+#use (sparse) MUMPS solver for local Schur complement
+option(WITH_MUMPS_LEAF "Use MUMPS (if available) for (local) Schur complement at each leaf" OFF)
+message(STATUS "WITH_MUMPS_LEAF=${WITH_MUMPS_LEAF}")
+
 #use conserative step lengths in interior point algorithm
 option(WITH_STEPLENGTH_CONSERVATIVE "use conserative step lengths in interior point algorithm" OFF)
 message(STATUS "WITH_STEPLENGTH_CONSERVATIVE=${WITH_STEPLENGTH_CONSERVATIVE}")
@@ -361,7 +365,10 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
       MESSAGE("MUMPS_FORT_LIB not set for linking the Fortran MPI interface library required by MUMPS. Using OpenMPI Fortran interface -lmpi_mpifh")
       set(MUMPS_FORT_LIB "-lmpi_mpifh")
     endif(NOT MUMPS_FORT_LIB)
-    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord ${MUMPS_FORT_LIB} ${SCALAPACK_LIBRARIES}")
+#   set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -ldmumps -lmumps_common -lpord ${MUMPS_FORT_LIB} ${SCALAPACK_LIBRARIES}")
+    set(MUMPS_LIBRARY "-L${MUMPS_DIR}/lib -L/local/MUMPS_5.2.0/lib -L/local/PARMETIS/parmetis-4.0.3/build/Linux-x86_64/libmetis -L/local/PARMETIS/parmetis-4.0.3/build/Linux-x86_64/libparmetis ${MUMPS_FORT_LIB} -ldmumps -lgfortran -lblas -llapack -lmumps_common -lparmetis -lmetis -lmpi -fopenmp -I/usr/lib/openmpi/include -pthread -I/usr/lib/openmpi/lib -Wl,-rpath -Wl,/usr/lib/openmpi/lib -Wl,--enable-new-dtags -L/usr/lib/openmpi/lib -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lpord -lmumps_common ${SCALAPACK_LIBRARIES}")
+
+
     MESSAGE( "SCALAPACK_LIBRARIES: ${SCALAPACK_LIBRARIES}")
     MESSAGE( "MUMPS_LIBRARIES: ${MUMPS_LIBRARY}")
     include_directories(${MUMPS_INCLUDE_DIR})
@@ -490,6 +497,13 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   else(HAVE_PARDISO)
     set(PARDISO_LIBRARY "")
   endif(HAVE_PARDISO)
+  
+  if(HAVE_MUMPS)
+    if(WITH_MUMPS_LEAF)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MUMPS_LEAF")
+    endif(WITH_MUMPS_LEAF)
+  endif(HAVE_MUMPS)
+
   
   if(HAVE_MKL_PARDISO AND WITH_MKL_PARDISO)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MKL_PARDISO")

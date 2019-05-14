@@ -6,6 +6,7 @@
 
 #include "MumpsSolver.h"
 #include "SimpleVector.h"
+#include "SparseGenMatrix.h"
 
 
 #define ICNTL(I) icntl[(I)-1] // macro s.t. indices match documentation
@@ -13,29 +14,17 @@
 #define RINFOG(I) rinfog[(I)-1]
 
 
-MumpsSolver::MumpsSolver(long long n, MPI_Comm mpiCommPips, MPI_Comm mpiCommMumps)
- : n(n), mpiCommPips(mpiCommPips), mpiCommMumps(mpiCommMumps)
+
+MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
+ : verbosity(defaultVerbosity), maxNiterRefinments(defaultMaxNiterRefinments)
 {
-   maxNiterRefinments = defaultMaxNiterRefinments;
-   verbosity = defaultVerbosity;
+   assert(sgm);
 
-   rankMumps = -1;
+   Msys = sgm;
+   n = sgm->size();
 
-   if( mpiCommMumps == MPI_COMM_NULL )
-   {
-      mumps = NULL;
-   }
-   else
-   {
-      setUpMumps();
-      MPI_Comm_rank(mpiCommMumps, &rankMumps);
-      assert(rankMumps >= 0);
-   }
-
-   MPI_Comm_rank(mpiCommPips, &rankPips);
-
-   Msys = NULL;
-
+   setUpMpiData(MPI_COMM_SELF, MPI_COMM_WORLD);
+   setUpMumps();
 }
 
 MumpsSolver::~MumpsSolver()
@@ -95,7 +84,7 @@ MumpsSolver::matrixChanged()
    // do analysis
    dmumps_c(mumps);
 
-   processMumpsResultAnalysis(starttime, true);
+   processMumpsResultAnalysis(starttime);
 
 
    // factorization phase
@@ -106,7 +95,7 @@ MumpsSolver::matrixChanged()
    // do factorization
    dmumps_c(mumps);
 
-   processMumpsResultFactor(starttime, true);
+   processMumpsResultFactor(starttime);
 
    //saveOrderingPermutation();
 
@@ -117,19 +106,26 @@ MumpsSolver::matrixChanged()
 void
 MumpsSolver::solve(double* vec)
 {
+   assert(vec);
+   assert(mpiCommMumps != MPI_COMM_NULL);
+
    mumps->rhs = vec;
 
    // solution phase
    mumps->job = 3;
 
-   mumps->ICNTL(10) = maxNiterRefinments; //maximum number of iterative refinements
-   mumps->ICNTL(11) = 2; // error statistics, 0: disabled, 2: main statistics
+   mumps->ICNTL(10) = maxNiterRefinments; // maximum number of it. refinements; ignored for multiple rhs
+
+   if( verbosity == verb_mute ) // todo only print statistics for high verb
+      mumps->ICNTL(11) = 0; // error statistics, 0: disabled, 2: main statistics
+   else
+      mumps->ICNTL(11) = 2; // error statistics, 0: disabled, 2: main statistics
 
    const double starttime = MPI_Wtime();
 
    dmumps_c(mumps);
 
-   processMumpsResultSolve(starttime, true);
+   processMumpsResultSolve(starttime);
 }
 
 
@@ -139,11 +135,47 @@ MumpsSolver::solve(OoqpVector& rhs)
    SimpleVector& sv = dynamic_cast<SimpleVector &>(rhs);
 
    if( mpiCommMumps != MPI_COMM_NULL )
-      solve(&sv[0]);
+   {
+      mumps->ICNTL(20) = 0; // right-hand side is in dense format
+      // todo try sparse also for single rhs?
+      solve(sv.elements());
+   }
 }
 
+
 void
-MumpsSolver::processMumpsResultAnalysis(double starttime, bool verbose)
+MumpsSolver::solve(GenMatrix& rhs)
+{
+   SparseGenMatrix& rhs_matrix = dynamic_cast<SparseGenMatrix &>(rhs);
+
+   if( mpiCommMumps == MPI_COMM_NULL )
+      return;
+
+   int* irhs_ptr = rhs_matrix.krowM;
+   int* irhs_sparse = rhs_matrix.jcolM;
+   double* rhs_sparse = rhs_matrix.M;
+   int n_rhs;
+   int m_rhs;
+
+   rhs_matrix.getSize(m_rhs, n_rhs);
+
+   // matrix should be in Fortran format
+   assert(irhs_ptr[0] == 1 && rhs_matrix.getStorage()->len == irhs_ptr[m_rhs] - 1);
+
+   mumps->nrhs = m_rhs; // MUMPS expects column major
+   mumps->nz_rhs = irhs_ptr[m_rhs] - 1;
+   mumps->lrhs = n_rhs;
+   mumps->irhs_ptr = irhs_ptr;
+   mumps->irhs_sparse = irhs_sparse;
+   mumps->rhs_sparse = rhs_sparse;
+   mumps->ICNTL(20)= 3; // exploit sparsity during solve
+   solve(rhs_sparse);
+}
+
+
+
+void
+MumpsSolver::processMumpsResultAnalysis(double starttime)
 {
    const int errorCode = mumps->INFOG(1);
    if( errorCode != 0 )
@@ -154,7 +186,7 @@ MumpsSolver::processMumpsResultAnalysis(double starttime, bool verbose)
       exit(1);
    }
 
-   if( verbose )
+   if( verbosity != verb_mute )
    {
       if( starttime >= 0.0 )
       {
@@ -219,7 +251,7 @@ MumpsSolver::processMumpsResultAnalysis(double starttime, bool verbose)
 }
 
 void
-MumpsSolver::processMumpsResultFactor(double starttime, bool verbose)
+MumpsSolver::processMumpsResultFactor(double starttime)
 {
    const int errorCode = mumps->INFOG(1);
    if( errorCode != 0 )
@@ -263,7 +295,7 @@ MumpsSolver::processMumpsResultFactor(double starttime, bool verbose)
       exit(1);
    }
 
-   if( verbose && starttime >= 0.0  )
+   if( verbosity != verb_mute  && starttime >= 0.0  )
    {
       const double timeFactor = MPI_Wtime() - starttime;
 
@@ -273,7 +305,7 @@ MumpsSolver::processMumpsResultFactor(double starttime, bool verbose)
 }
 
 void
-MumpsSolver::processMumpsResultSolve(double starttime, bool verbose)
+MumpsSolver::processMumpsResultSolve(double starttime)
 {
    const int errorCode = mumps->INFOG(1);
    if( errorCode != 0 )
@@ -284,7 +316,7 @@ MumpsSolver::processMumpsResultSolve(double starttime, bool verbose)
       exit(1);
    }
 
-   if( verbose  )
+   if(  verbosity != verb_mute   )
    {
       if( starttime >= 0.0 )
       {
@@ -309,6 +341,23 @@ MumpsSolver::processMumpsResultSolve(double starttime, bool verbose)
 }
 
 void
+MumpsSolver::setUpMpiData(MPI_Comm mpiCommPips_c, MPI_Comm mpiCommMumps_c)
+{
+   rankMumps = -1;
+   this->mpiCommPips = mpiCommPips_c;
+   this->mpiCommMumps = mpiCommMumps_c;
+
+   if( mpiCommMumps != MPI_COMM_NULL )
+   {
+      MPI_Comm_rank(mpiCommMumps, &rankMumps);
+      assert(rankMumps >= 0);
+   }
+
+   MPI_Comm_rank(mpiCommPips, &rankPips);
+}
+
+
+void
 MumpsSolver::setUpMumps()
 {
    mumps = new DMUMPS_STRUC_C;
@@ -319,9 +368,9 @@ MumpsSolver::setUpMumps()
    mumps->a = NULL;
    memset(mumps->keep, 0, 400 * sizeof(int));
    mumps->comm_fortran = getFortranMPIComm(mpiCommMumps);
-   mumps->sym = 2; //general symetric matrix
-   mumps->job = -1; //initialization
-   mumps->par = 1; //host process involved in parallel computations
+   mumps->sym = 2; // general symmetric matrix
+   mumps->job = -1; // initialization
+   mumps->par = 1; // host process involved in parallel computations
    dmumps_c(mumps);
 
    if( mumps->INFOG(1) != 0 )
@@ -330,18 +379,20 @@ MumpsSolver::setUpMumps()
       exit(1);
    }
 
-  // setMumpsVerbosity(1); //3 moderately verbose, 1 only errors, 0 anything is surpressed
-
-   mumps->n = (int) n;
+   mumps->n = static_cast<int>(n);
 
    mumps->ICNTL(5) = 0; // 0: assembled format for matrix (triplet format)
    mumps->ICNTL(18) = 0; // 0: matrix centralized on rank 0
 
-#if 1
-   mumps->ICNTL(20) = 3; // 3: exploit sparsity during solve, 1: decide automatically
-#else
-   mumps->ICNTL(20) = 0; // right-hand side is in dense format
-#endif
+   mumps->ICNTL(21) = 0; // solution vector is assembled and stored in MUMPS structure member RHS
 
-   mumps->ICNTL(21) = 0; // solution vector is assembled and stored in mumps structure component RHS
+   if( verbosity == verb_mute )
+      mumps->ICNTL(4) = 0;  // nothing printed
+   else if( verbosity == verb_standard )
+      mumps->ICNTL(4) = 2; // errors, warnings, and main statistics printed
+   else
+   {
+      assert(verbosity == verb_high);
+      mumps->ICNTL(4) = 3; // errors and warnings and terse diagnostics (only first ten entries of arrays) printed.
+   }
 }

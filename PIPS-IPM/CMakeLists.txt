@@ -2,7 +2,7 @@
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpPreprocess Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
   Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver
-  Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver Core/LinearSolvers/BiCGStabSolver)
+  Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver Core/LinearSolvers/BiCGStabSolver Core/LinearSolvers/MumpsSolver)
 include_directories(Core/StochLinearAlgebra Core/QpStoch)
 add_subdirectory(Core)
 
@@ -150,7 +150,7 @@ target_link_libraries(pipsipmCallbackExample
     stochInput ${COIN_LIBS}
     ooqpstoch ooqpstochla ooqpgondziostoch ooqpqpscaler ooqpequistochscaler
     ooqpgensparse ooqpbase ooqpsparse ooqpdense ooqpqppresolver ooqpqpstochpresolver
-    ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY_CHOSEN} ${MATH_LIBS} ${COIN_LIBS})
+    ${MA27_LIBRARY} ${MA57_LIBRARY} ${MUMPS_LIBRARY} ${PARMETIS_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY_CHOSEN} ${MATH_LIBS} ${COIN_LIBS})
 if (BUILD_GDX_SOURCE)
    add_definitions(-D_P3_DllExport= -DSTDCALL= -DGDX_CALLCONV=unwanted -DLEG)
    add_library(statgdx
@@ -202,7 +202,7 @@ if (BUILD_GDX_SOURCE)
        stochInput ${COIN_LIBS}
        ooqpstoch ooqpstochla ooqpgondziostoch ooqpequistochscaler
        ooqpgensparse ooqpbase ooqpsparse ooqpdense ooqpqppresolver ooqpqpstochpresolver
-       ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY}  ${PARDISO_LIBRARY_CHOSEN} ${MATH_LIBS} ${COIN_LIBS})
+       ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MUMPS_LIBRARY}  ${PARDISO_LIBRARY_CHOSEN} ${MATH_LIBS} ${COIN_LIBS})
    
    add_executable(gmschk Drivers/gmspips/gmspipschk.cpp Drivers/gmspips/gmspipsio.c)
    target_include_directories(gmschk PUBLIC Drivers/statgdx Drivers/gmspips/)

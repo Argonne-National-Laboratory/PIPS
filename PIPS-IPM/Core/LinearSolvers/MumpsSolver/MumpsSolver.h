@@ -9,8 +9,8 @@
 #include "mpi.h"
 
 #include "DoubleLinearSolver.h"
-#include "SparseSymMatrixHandle.h"
-#include "OoqpVectorHandle.h"
+#include "SparseSymMatrix.h"
+#include "OoqpVector.h"
 #include "pipsport.h"
 
 enum MumpsVerbosity{verb_mute, verb_standard, verb_high};
@@ -23,31 +23,32 @@ class MumpsSolver : public DoubleLinearSolver {
   MumpsSolver() {};
 
  public:
-  MumpsSolver(long long n, MPI_Comm mpiCommPips, MPI_Comm mpiCommMumps);
+  MumpsSolver( SparseSymMatrix * sgm );
 
   ~MumpsSolver();
 
   void diagonalChanged( int idiag, int extent ) override;
   void matrixChanged() override;
   void solve( OoqpVector& rhs ) override;
+  void solve( GenMatrix& rhs ) override;
 
   static constexpr MumpsVerbosity defaultVerbosity = verb_standard;
   static constexpr unsigned defaultMaxNiterRefinments = 5;
 
  private:
 
-
   static MUMPS_INT getFortranMPIComm(MPI_Comm mpiComm_c)
   {
      return MUMPS_INT(MPI_Comm_c2f(mpiComm_c));
   };
 
-  void solve(double* vec);
-
+  void setUpMpiData(MPI_Comm mpiCommPips_c, MPI_Comm mpiCommMumps_c);
   void setUpMumps();
-  void processMumpsResultAnalysis(double starttime, bool verbose);
-  void processMumpsResultFactor(double starttime, bool verbose);
-  void processMumpsResultSolve(double starttime, bool verbose);
+  void processMumpsResultAnalysis(double starttime);
+  void processMumpsResultFactor(double starttime);
+  void processMumpsResultSolve(double starttime);
+
+  void solve(double* vec);
 
   long long n;
   MumpsVerbosity verbosity;
