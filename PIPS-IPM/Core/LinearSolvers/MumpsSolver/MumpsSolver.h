@@ -34,8 +34,10 @@ class MumpsSolver : public DoubleLinearSolver {
   // rhs need to be in CSC Fortran format
   void solve( GenMatrix& rhs_f, double* sol );
 
-  static constexpr MumpsVerbosity defaultVerbosity = verb_standard;
+  static constexpr MumpsVerbosity defaultVerbosity = verb_mute;// verb_standard;
   static constexpr unsigned defaultMaxNiterRefinments = 5;
+  static constexpr int maxNreallocs = 5;
+
 
  private:
 

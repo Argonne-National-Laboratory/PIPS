@@ -292,46 +292,42 @@ MumpsSolver::processMumpsResultAnalysis(double starttime)
 void
 MumpsSolver::processMumpsResultFactor(double starttime)
 {
-   const int errorCode = mumps->INFOG(1);
+   int errorCode = mumps->INFOG(1);
+
    if( errorCode != 0 )
    {
-      if( rankMumps == 0 )
-         printf("Error INFOG(1)=%d in MUMPS facorization phase. \n", errorCode);
-
       if( errorCode == -8 || errorCode == -9 )
       {
-         // todo allocate more memory
-#if 0
-         const int try_max = 10;
-         for( int tr = 0; tr < try_max; tr++ )
+         for( int i = 0; i < maxNreallocs; i++ )
          {
-            const double mem_percent = mumps_->icntl[13];
-            mumps_->icntl[13] = 2 * mumps_->icntl[13];
+            mumps->ICNTL(14) *= 2;
 
-            if( my_mumps_rank_ == 0 )
-            printf("Increased Mumps ICNTL(14) from %g to %d\n", mem_percent,
-                  mumps_->icntl[13]);
+            if( rankMumps == 0 && verbosity != verb_mute )
+               printf("Increased MUMPS memory parameter ICNTL(14) to %d \n", mumps->ICNTL(14));
 
-            dmumps_c(mumps_);
-            error = mumps_->infog[1 - 1];
+            dmumps_c(mumps);
+            errorCode = mumps->INFOG(1);
 
-            saveOrderingPermutation();
+            //saveOrderingPermutation();
 
-            if( error != -8 && error != -9 )
-            break;
+            if( errorCode != -8 && errorCode != -9 )
+               break;
          }
 
-         if( error == -8 || error == -9 )
+         if( errorCode == -8 || errorCode == -9 )
          {
-            if( my_mumps_rank_ == 0 )
-            printf(
-                  "Fatal error in Mumps: not able to obtain more memory (ICNTL(14)-related)\n");
-            exit(-1);
+            if( rankMumps == 0 )
+               printf("Fatal error in Mumps: not able to obtain more memory (ICNTL(14)-related)\n");
+            exit(1);
          }
-#endif
       }
 
-      exit(1);
+      if( errorCode != 0  )
+      {
+         if( rankMumps == 0 )
+            printf("Error INFOG(1)=%d in MUMPS facorization phase. \n", errorCode);
+         exit(1);
+      }
    }
 
    if( verbosity != verb_mute  && starttime >= 0.0  )
@@ -365,17 +361,19 @@ MumpsSolver::processMumpsResultSolve(double starttime)
             printf("MUMPS solution phase took %g seconds.\n", timeSolution);
       }
 
-      assert(mumps->ICNTL(11) == 1 || mumps->ICNTL(11) == 2);
+      // statistics computed?
+      if( mumps->ICNTL(11) != 0 )
+      {
+         const double infNormMatrix = mumps->RINFOG(4);
+         const double infNormSol = mumps->RINFOG(5);
+         const double residualScaled = mumps->RINFOG(6);
+         const double omega1 = mumps->RINFOG(7);
+         const double omega2 = mumps->RINFOG(8);
 
-      const double infNormMatrix = mumps->RINFOG(4);
-      const double infNormSol = mumps->RINFOG(5);
-      const double residualScaled = mumps->RINFOG(6);
-      const double omega1 = mumps->RINFOG(7);
-      const double omega2 = mumps->RINFOG(8);
-
-      if( rankMumps == 0 )
+         if( rankMumps == 0 )
          printf("backward errors: %f, %f; scaled residual: %f; infNormMatrix: %f infNormSol %f.\n",
-                  omega1, omega2, residualScaled, infNormMatrix, infNormSol);
+               omega1, omega2, residualScaled, infNormMatrix, infNormSol);
+      }
    }
 }
 
