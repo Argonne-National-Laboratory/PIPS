@@ -13,18 +13,15 @@
 class StochPresolverBoundStrengthening : public StochPresolverBase
 {
 public:
-   StochPresolverBoundStrengthening(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver);
+   StochPresolverBoundStrengthening(PresolveData& presData, const sData& origProb);
 
    virtual ~StochPresolverBoundStrengthening();
 
    virtual void applyPresolving();
 
 private:
-   void doBoundStrengthParent(SystemType system_type);
-   void doBoundStrengthChild(int it, SystemType system_type);
-   void strenghtenBoundsInBlock( SparseStorageDynamic& matrix, BlockType block_type, int rowIdx, double partMinActivity, double partMaxActivity,
-         SystemType system_type, int node);
-   double computeNewBound(const SimpleVector& bounds, double activity, double matrixEntry, int rowIdx) const;
+   void strenghtenBoundsInNode(SystemType system_type, int node);
+   void strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type);
 };
 
 

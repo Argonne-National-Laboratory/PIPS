@@ -16,8 +16,9 @@
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
       outdated_activities(true),
-      outdated_bounds(false),
+      outdated_lhsrhs(false),
       outdated_nnzs(false),
+      outdated_linking_var_bounds(false),
       nnzs_row_A(dynamic_cast<StochVector*>(sorigprob->bA->clone())),
       nnzs_row_C(dynamic_cast<StochVector*>(sorigprob->icupp->clone())),
       nnzs_col(dynamic_cast<StochVector*>(sorigprob->g->clone())),
@@ -67,6 +68,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    recomputeActivities();
    initNnzCounter();
    initSingletons();
+   initVarbounds();
 }
 
 PresolveData::~PresolveData()
@@ -76,6 +78,27 @@ PresolveData::~PresolveData()
    delete[] array_bound_chgs;
 }
 
+/* set non existent bounds on linking variables to +/- double max */
+void PresolveData::initVarbounds()
+{
+   StochVector& xlow = dynamic_cast<StochVector&>(*presProb->blx);
+   StochVector& ixlow = dynamic_cast<StochVector&>(*presProb->ixlow);
+   StochVector& xupp = dynamic_cast<StochVector&>(*presProb->bux);
+   StochVector& ixupp = dynamic_cast<StochVector&>(*presProb->ixupp);
+
+   SimpleVector& vec_xlow = dynamic_cast<SimpleVector&>(*xlow.vec);
+   SimpleVector& vec_ixlow = dynamic_cast<SimpleVector&>(*ixlow.vec);
+   SimpleVector& vec_xupp = dynamic_cast<SimpleVector&>(*xupp.vec);
+   SimpleVector& vec_ixupp = dynamic_cast<SimpleVector&>(*ixupp.vec);
+   for(int i = 0; i < vec_xlow.length(); ++i)
+   {
+      if(vec_ixlow.elements()[i] == 0.0)
+         vec_xlow.elements()[i] = -std::numeric_limits<double>::max();
+
+      if(vec_ixupp.elements()[i] == 0.0)
+         vec_xupp.elements()[i] = std::numeric_limits<double>::max();
+   }
+}
 
 sData* PresolveData::finalize()
 {
@@ -85,10 +108,11 @@ sData* PresolveData::finalize()
    {
       // todo make one array?
       MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
    }
-   assert(!outdated_activities && !outdated_bounds && !outdated_nnzs);
+   assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds);
 #endif
 
    // this removes all columns and rows that are now empty from the problem
@@ -238,6 +262,35 @@ void PresolveData::recomputeActivities(bool linking_only)
    outdated_activities = false;
 }
 
+void PresolveData::allreduceLinkingVarBounds()
+{
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+
+   if(!outdated_linking_var_bounds)
+      return;
+
+   if(distributed)
+   {
+      StochVector& xlow = dynamic_cast<StochVector&>(*presProb->blx);
+      StochVector& xupp = dynamic_cast<StochVector&>(*presProb->bux);
+      StochVector& ixlow = dynamic_cast<StochVector&>(*presProb->ixlow);
+      StochVector& ixupp = dynamic_cast<StochVector&>(*presProb->ixupp);
+
+      /* allreduce root node bounds */
+      SimpleVector& vec_xlow = dynamic_cast<SimpleVector&>(*xlow.vec);
+      SimpleVector& vec_ixlow = dynamic_cast<SimpleVector&>(*ixlow.vec);
+      SimpleVector& vec_xupp = dynamic_cast<SimpleVector&>(*xupp.vec);
+      SimpleVector& vec_ixupp = dynamic_cast<SimpleVector&>(*ixupp.vec);
+
+      MPI_Allreduce(MPI_IN_PLACE, vec_xlow.elements(), vec_xlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
+      MPI_Allreduce(MPI_IN_PLACE, vec_ixlow.elements(), vec_ixlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
+      MPI_Allreduce(MPI_IN_PLACE, vec_xupp.elements(), vec_xupp.length(), MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD );
+      MPI_Allreduce(MPI_IN_PLACE, vec_ixupp.elements(), vec_ixupp.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
+   }
+
+   outdated_linking_var_bounds = false;
+}
+
 /** allreduces changes in the activities of the linking rows and updates the linking row activities */
 void PresolveData::allreduceAndApplyLinkingRowActivities()
 {
@@ -260,6 +313,61 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
    actmax_ineq_chgs->setToZero();
 
    outdated_activities = false;
+}
+
+void PresolveData::allreduceAndApplyNnzChanges()
+{
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+
+   if(!outdated_nnzs)
+      return;
+
+   if( distributed )
+      MPI_Allreduce(MPI_IN_PLACE, array_nnz_chgs, length_array_nnz_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+
+   /* update local nnzCounters */
+   nnzs_col->vec->axpy(-1.0, *nnzs_col_chgs);
+   nnzs_row_A->vecl->axpy(-1.0, *nnzs_row_A_chgs);
+   nnzs_row_C->vecl->axpy(-1.0, *nnzs_row_C_chgs);
+
+#ifndef NDEBUG
+   double minval = -1.0;
+   int index = -1;
+   nnzs_col->min(minval, index);
+   assert( minval >= 0.0 );
+   nnzs_row_A->vecl->min(minval, index);
+   assert(minval >= 0.0);
+   nnzs_row_C->vecl->min(minval, index);
+   assert(minval >= 0.0);
+#endif
+
+   nnzs_col_chgs->setToZero();
+   nnzs_row_A_chgs->setToZero();
+   nnzs_row_C_chgs->setToZero();
+
+   outdated_nnzs = false;
+}
+
+void PresolveData::allreduceAndApplyBoundChanges()
+{
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+
+   if(!outdated_lhsrhs)
+      return;
+
+   if(distributed)
+   {
+      MPI_Allreduce(MPI_IN_PLACE, array_bound_chgs, lenght_array_bound_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   }
+
+   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bA).vecl)->axpy( 1.0, *bound_chgs_A);
+   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bl).vecl)->axpy( 1.0, *bound_chgs_C);
+   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bu).vecl)->axpy( 1.0, *bound_chgs_C);
+
+   bound_chgs_A->setToZero();
+   bound_chgs_C->setToZero();
+
+   outdated_lhsrhs = false;
 }
 
 /** Computes minimal and maximal activity of all rows in given matrix. Adds activities to min/max_activities accordingly. */
@@ -474,7 +582,14 @@ void PresolveData::initSingletons()
 
 bool PresolveData::reductionsEmpty()
 {
-   return nnzs_row_A_chgs->isZero() && nnzs_row_C_chgs->isZero() && nnzs_col_chgs->isZero();
+   if(distributed)
+   {
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
+   }
+   return !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs;
 }
 
 double PresolveData::addObjOffset(double addOffset)
@@ -505,63 +620,8 @@ void PresolveData::setObjOffset(double offset)
 //   linkingVariablesMarkedForDeletion.clear();
 //}
 
-// todo make one vector?
-void PresolveData::allreduceAndApplyNnzChanges()
-{
-   MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
-
-   if(!outdated_nnzs)
-      return;
-
-   if( distributed )
-      MPI_Allreduce(MPI_IN_PLACE, array_nnz_chgs, length_array_nnz_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
-
-   /* update local nnzCounters */
-   nnzs_col->vec->axpy(-1.0, *nnzs_col_chgs);
-   nnzs_row_A->vecl->axpy(-1.0, *nnzs_row_A_chgs);
-   nnzs_row_C->vecl->axpy(-1.0, *nnzs_row_C_chgs);
-
-#ifndef NDEBUG
-   double minval = -1.0;
-   int index = -1;
-   nnzs_col->min(minval, index);
-   assert( minval >= 0.0 );
-   nnzs_row_A->vecl->min(minval, index);
-   assert(minval >= 0.0);
-   nnzs_row_C->vecl->min(minval, index);
-   assert(minval >= 0.0);
-#endif
-
-   nnzs_col_chgs->setToZero();
-   nnzs_row_A_chgs->setToZero();
-   nnzs_row_C_chgs->setToZero();
-
-   outdated_nnzs = false;
-}
-
-void PresolveData::allreduceAndApplyBoundChanges()
-{
-   MPI_Allreduce(MPI_IN_PLACE, &outdated_bounds, 1, MPI_CXX_BOOL, MPI_LAND, MPI_COMM_WORLD);
-
-   if(!outdated_bounds)
-      return;
-
-   if(distributed)
-   {
-      MPI_Allreduce(MPI_IN_PLACE, array_bound_chgs, lenght_array_bound_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-   }
-
-   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bA).vecl)->axpy( 1.0, *bound_chgs_A);
-   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bl).vecl)->axpy( 1.0, *bound_chgs_C);
-   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bu).vecl)->axpy( 1.0, *bound_chgs_C);
-
-   bound_chgs_A->setToZero();
-   bound_chgs_C->setToZero();
-
-   outdated_bounds = false;
-}
-
-// todo : no postsolve required?
+// todo : if small entry was removed from system no postsolve is necessary - if coefficient was removed because impact of changes in variable are small
+// also rhs lhs will be adjusted - this has to be reversed later - there will also be a problem with the reduced costs in than particular row ?
 void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block_type, SparseStorageDynamic* storage, int row_index,
       int& index_k, int& row_end)
 {
@@ -581,7 +641,19 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    ++elements_deleted;
 }
 
-// todo : no postsolve necessary?
+void PresolveData::fixColumn(int node, int col, double value)
+{
+   postsolver->notifyFixedColumn(node, col, value);
+   // todo delete column from system
+}
+
+void PresolveData::rowProbagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx)
+{
+   // todo
+//   postsolver->notifyBoundsTightened(system_type, node, BlockType block_type, row, col, )
+}
+
+// todo : postsolve if bounds adjusted because of deleted matrix entry simply reverse the adjustment - no changes in multipliers - row stays active / inactive
 void PresolveData::adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value)
 {
    assert( -1 <= node && node <= nChildren);
@@ -590,7 +662,7 @@ void PresolveData::adjustMatrixBoundsBy(SystemType system_type, int node, BlockT
       return;
 
    if(block_type == LINKING_CONS_BLOCK || node == -1)
-      outdated_bounds = true;
+      outdated_lhsrhs = true;
 
    if(system_type == EQUALITY_SYSTEM)
    {
@@ -885,6 +957,8 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
 
 void PresolveData::removeRow(SystemType system_type, int node, int row, bool linking)
 {
+   // todo set activity to zero
+   // todo set lhs rhs to zero
    assert(!nodeIsDummy(node, system_type));
    if(linking)
    {

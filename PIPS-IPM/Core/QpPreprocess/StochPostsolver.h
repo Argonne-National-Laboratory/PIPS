@@ -26,7 +26,8 @@ public:
       void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint );
 
       void notifyFixedColumn( int node, unsigned int col, double value);
-      void notifyDeletedRow( SystemType system_type, int node, unsigned int row, bool linking_constraint);
+      void notifyRowProbagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
+      void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
 
       virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
@@ -46,7 +47,8 @@ protected:
          SUBSTITUTED_COLUMN = 1,
          PARALLEL_COLUMN = 2,
          DELETED_ROW = 3,
-         REDUNDANT_ROW = 4
+         REDUNDANT_ROW = 4,
+         BOUNDS_TIGHTENED
       };
 
       const unsigned int n_rows_original;

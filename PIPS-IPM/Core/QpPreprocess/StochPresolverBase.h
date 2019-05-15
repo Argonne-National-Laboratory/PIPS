@@ -50,7 +50,7 @@ protected:
    void updatePointersForCurrentNode(int node, SystemType system_type);
 private:
    void setPointersMatrices(GenMatrixHandle mat, int node);
-   void setPointersMatrixBounds(SystemType system_type, int node);
+   void setPointersMatrixBoundsActivities(SystemType system_type, int node);
    void setPointersVarBounds(int node);
    void setPointersObjective(int node);
    void setReductionPointers(SystemType system_type, int node);
@@ -103,6 +103,11 @@ protected:
    SimpleVector* currIxlowChild;
    SimpleVector* currxuppChild ;
    SimpleVector* currIxuppChild;
+
+   SimpleVector* currActMax;
+   SimpleVector* currActMin;
+   SimpleVector* currActMaxLink;
+   SimpleVector* currActMinLink;
 
    SimpleVector* currEqRhs;
    SimpleVector* currIneqLhs;
@@ -173,8 +178,6 @@ protected:
 //         const SimpleVector& ixlow_orig, const SimpleVector& xlow_orig, const SimpleVector& ixupp_orig, const SimpleVector& xupp_orig, BlockType block_type) const;
 //
 //protected:
-//   bool newBoundsFixVariable(double& value, double newxlow, double newxupp, int colIdx,
-//         const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const;
 //   bool variableFixationValid(double fixation_value, const double& ixlow, const double& xlow, const double& ixupp, const double& xupp, bool print_message = false) const;
 //   bool tightenBounds(double new_xlow, double new_xupp, double& ixlow, double& old_xlow, double& ixupp, double& old_xupp) const;
 //
@@ -208,7 +211,6 @@ protected:
 //
 //protected:
 //   void allreduceAndApplyRhsLhsReductions(SystemType system_type);
-//   void allreduceAndUpdateVarBounds();
 //
 //private:
 //   void setVarboundsToInftyForAllreduce() const;

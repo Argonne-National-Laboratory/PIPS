@@ -13,8 +13,8 @@
 // todo exhaustive
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
-      PresolveData& presData, const sData& origProb, StochPostsolver* postsolver) :
-      StochPresolverBase(presData, origProb, postsolver)
+      PresolveData& presData, const sData& origProb) :
+      StochPresolverBase(presData, origProb)
 {
    // todo
 }
@@ -25,20 +25,17 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 }
 
 // todo print variables bounds strengthened
+// todo print removed fixed cols
 void StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.presProb->isRootNodeInSync());
-   assert(verifyNnzcounters());
+   assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
    assert(newBoundsParent.size() == 0);
 
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-
 #ifndef NDEBUG
-   if( myRank == 0 )
+   if( my_rank == 0 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before Bound Strengthening Presolving:" << std::endl;
@@ -46,60 +43,40 @@ void StochPresolverBoundStrengthening::applyPresolving()
    countRowsCols();
 #endif
 
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-
-   // root:
-   doBoundStrengthParent( EQUALITY_SYSTEM );
-   doBoundStrengthParent( INEQUALITY_SYSTEM );
-
-   // children:
-   for( int child_it = 0; child_it < nChildren; child_it++)
+   do  // todo
    {
-      // dummy child?
-      if( !nodeIsDummy(child_it, EQUALITY_SYSTEM) )
-         doBoundStrengthChild(child_it, EQUALITY_SYSTEM);
+      /* root nodes */
+      strenghtenBoundsInNode( EQUALITY_SYSTEM, -1);
+      strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1);
 
-      if( !nodeIsDummy(child_it, INEQUALITY_SYSTEM) )
-         doBoundStrengthChild(child_it, INEQUALITY_SYSTEM);
+      // children:
+      for( int node = 0; node < nChildren; node++)
+      {
+         // dummy child?
+         if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
+            strenghtenBoundsInNode(EQUALITY_SYSTEM, node);
+
+         if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
+            strenghtenBoundsInNode(INEQUALITY_SYSTEM, node);
+      }
+
    }
+   while( false ); // todo exhaustive
 
-   /* allreduce found deletions for linking variables */
-   if( !presData.combineColAdaptParent() )
-   {
-      abortInfeasible(MPI_COMM_WORLD );
-   }
+   /* update bounds on all processors */
+   presData.allreduceLinkingVarBounds();
 
-   int a = 0;
-   int b = 0;
-   updateLinkingVarsBlocks(a, b);
-
-   /* allreduce rhs lhs changes and rdeuction counters and apply them to non-zero counters */
-   allreduceAndApplyNnzReductions(EQUALITY_SYSTEM);
-   allreduceAndApplyNnzReductions(INEQUALITY_SYSTEM);
-
-   allreduceAndApplyRhsLhsReductions(EQUALITY_SYSTEM);
-   allreduceAndApplyRhsLhsReductions(INEQUALITY_SYSTEM);
-
-   /* allreduce new var bounds */
-   allreduceAndUpdateVarBounds();
-
-   // Sum up individual objOffset and then add it to the global objOffset:
-   synchronize(indivObjOffset);
-   presData.addObjOffset(indivObjOffset);
-   indivObjOffset = 0;
-
-   if( myRank == 0 )
-   {
+   if( my_rank == 0 )
       std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
-   }
 
 #ifndef NDEBUG
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "--- After bound strengthening presolving:" << std::endl;
    countRowsCols();
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
@@ -110,53 +87,27 @@ void StochPresolverBoundStrengthening::applyPresolving()
    assert(newBoundsParent.size() == 0);
 }
 
-// todo no Bl0block?
-void StochPresolverBoundStrengthening::doBoundStrengthParent(SystemType system_type)
+void StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
 {
-   updatePointersForCurrentNode(-1, system_type);
+   assert( -1 <= node && node < nChildren );
 
-   for(int rowIdx = 0; rowIdx < currAmat->m; rowIdx++)
-      strenghtenBoundsInBlock( *currAmat, LINKING_VARS_BLOCK, rowIdx, 0.0, 0.0, system_type, -1);
-}
+   strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK);
+   if(hasLinking(system_type))
+      strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK);
 
-// todo no Bl block
-void StochPresolverBoundStrengthening::doBoundStrengthChild(int it, SystemType system_type)
-{
-   assert(it > -1);
+   if(node != -1)
+      strenghtenBoundsInBlock(system_type, node, CHILD_BLOCK);
 
-   updatePointersForCurrentNode(it, system_type);
-
-   for(int i=0; i < currAmat->m; i++) // i ~ rowIndex
-   {
-      // First, compute minActivity and maxActivity of the whole row (per block):
-      double partMinActivityA = 0.0, partMaxActivityA = 0.0, partMinActivityB = 0.0, partMaxActivityB = 0.0;
-      computeActivityBlockwise(*currAmat, i, -1, partMinActivityA, partMaxActivityA, *currxlowParent, *currIxlowParent, *currxuppParent, *currIxuppParent);
-      computeActivityBlockwise(*currBmat, i, -1, partMinActivityB, partMaxActivityB, *currxlowChild, *currIxlowChild, *currxuppChild, *currIxuppChild);
-
-      strenghtenBoundsInBlock( *currAmat, LINKING_VARS_BLOCK, i, partMinActivityB, partMaxActivityB, system_type, it);
-      strenghtenBoundsInBlock( *currBmat, CHILD_BLOCK, i, partMinActivityA, partMaxActivityA, system_type, it);
-   }
 }
 
 /**
  * Strengthen the variable bounds in the block matrix. If childBlock==true, then a block B_i or D_i is considered.
  * partMinActivity and partMaxActivity represent the partial row activity of the respective other block.
  */
-void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDynamic& matrix, BlockType block_type, int rowIdx, double partMinActivity,
-      double partMaxActivity, SystemType system_type, int node)
+void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type)
 {
-   updatePointersForCurrentNode(node, system_type); // todo
-   assert( 0 <= rowIdx && rowIdx < matrix.m );
-
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
-   if( (partMinActivity == -std::numeric_limits<double>::max() || partMinActivity == -std::numeric_limits<double>::infinity())
-         && (partMaxActivity == std::numeric_limits<double>::max() || partMaxActivity == std::numeric_limits<double>::infinity()) )
-      return;
-
-   double row_activity_min = partMinActivity;
-   double row_activity_max = partMaxActivity;
+   assert( 0 <= node && node < nChildren );
+   updatePointersForCurrentNode(node, system_type);
 
    SimpleVector& xlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
    SimpleVector& ixlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
@@ -170,106 +121,112 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SparseStorageDyn
 
    SimpleVector& rhs = (block_type == LINKING_CONS_BLOCK) ? *currEqRhsLink : *currEqRhs;
 
-   // Compute remaining activity of the (complete) row
-   computeActivityBlockwise(matrix, rowIdx, -1, row_activity_min, row_activity_max, xlow, ixlow, xupp, ixupp);
+   SimpleVector& actmin = (block_type == LINKING_CONS_BLOCK) ? *currActMinLink : *currActMin;
+   SimpleVector& actmax = (block_type == LINKING_CONS_BLOCK) ? *currActMaxLink : *currActMax;
 
-   if( (row_activity_min == -std::numeric_limits<double>::max() || row_activity_min == -std::numeric_limits<double>::infinity())
-         && (row_activity_max == std::numeric_limits<double>::max() || row_activity_max == std::numeric_limits<double>::infinity()) )
-      return;
-
-   for( int j = matrix.rowptr[rowIdx].start; j < matrix.rowptr[rowIdx].end; j++ )
+   SparseStorageDynamic* mat;
+   if(block_type == LINKING_CONS_BLOCK)
+      mat = currBlmat;
+   else if(block_type == LINKING_VARS_BLOCK)
+      mat = currAmat;
+   else
    {
-      // compute the possible new bounds on variable x_colIdx:
-      const int colIdx = matrix.jcolM[j];
-      const double a_ik = matrix.M[j];
-
-      assert( !PIPSisZero(a_ik) );
-      assert( ixlow[colIdx] != 0.0 || ixupp[colIdx] != 0.0 );
-
-      /* subtract current entry from row activity */
-      double row_activity_min_without_curr = ( PIPSisLE(a_ik, 0) ) ? row_activity_min - a_ik * xupp[colIdx] : row_activity_min - a_ik * xlow[colIdx];
-      double row_activity_max_without_curr = ( PIPSisLE(a_ik, 0) ) ? row_activity_max - a_ik * xlow[colIdx] : row_activity_max - a_ik * xupp[colIdx];
-
-      /** Computes the new bound (bA - activity)/matrixEntry.
-       * If systemType==EQUALITY_SYSTEM, then bA is the rhs currEqRhs.
-       * Else, the boolean rhs defines if the lhs or the rhs of the inequality should be used as bA in the computation:
-       * If rhs is true, then the right hand side cupp is used. If false, then the lhs clow is used.
-       */
-
-      double newBoundLow = -std::numeric_limits<double>::max();
-      double newBoundUpp = std::numeric_limits<double>::max();
-
-      if(system_type == EQUALITY_SYSTEM)
-      {
-         if( PIPSisLT(0.0, a_ik) )
-         {
-            if(row_activity_min_without_curr > -std::numeric_limits<double>::max())
-               newBoundUpp = computeNewBound(rhs, row_activity_min_without_curr, a_ik, rowIdx);
-            if(row_activity_max_without_curr < std::numeric_limits<double>::max())
-               newBoundLow = computeNewBound(rhs, row_activity_max_without_curr, a_ik, rowIdx);
-         }
-         else
-         {
-            if(row_activity_min_without_curr > -std::numeric_limits<double>::max())
-               newBoundLow = computeNewBound(rhs, row_activity_min_without_curr, a_ik, rowIdx);
-            if(row_activity_max_without_curr < std::numeric_limits<double>::max())
-               newBoundUpp = computeNewBound(rhs, row_activity_max_without_curr, a_ik, rowIdx);
-         }
-      }
-      else
-      {
-         if( PIPSisLT(0.0, a_ik) )
-         {
-            if(row_activity_min_without_curr > -std::numeric_limits<double>::max() && icupp[rowIdx] != 0.0)
-               newBoundUpp = computeNewBound(cupp, row_activity_min_without_curr, a_ik, rowIdx);
-            if(row_activity_max_without_curr < std::numeric_limits<double>::max() && iclow[rowIdx] != 0.0)
-               newBoundLow = computeNewBound(clow, row_activity_max_without_curr, a_ik, rowIdx);
-         }
-         else
-         {
-            if(row_activity_min_without_curr > -std::numeric_limits<double>::max() && icupp[rowIdx] != 0.0)
-               newBoundLow = computeNewBound(cupp, row_activity_min_without_curr, a_ik, rowIdx);
-            if(row_activity_max_without_curr < std::numeric_limits<double>::max() && iclow[rowIdx] != 0.0)
-               newBoundUpp = computeNewBound(clow, row_activity_max_without_curr, a_ik, rowIdx);
-         }
-      }
-
-      /* check if new bounds valid */ // todo
-      if( newBoundsImplyInfeasible(newBoundLow, newBoundUpp, colIdx, ixlow.elements(), ixupp.elements(), xlow.elements(), xupp.elements()) )
-         abortInfeasible(MPI_COMM_WORLD);
-
-      /* check if new bounds imply fixation of the variable */
-      double fixation_value = 0.0;
-      if( newBoundsFixVariable(fixation_value, newBoundLow, newBoundUpp, colIdx, ixlow.elements(),
-            ixupp.elements(), xlow.elements(), xupp.elements()) )
-      {
-         /* for Amat we store deletions - collect them and apply them later */
-          if( node == -1 || block_type == LINKING_VARS_BLOCK )
-          {
-             /* only 0 process stores fixations in root node B0/Bl0 - this is to reduce MPI communications - it is not necessary */
-             if( myRank == 0 && node == -1 )
-                storeColValInColAdaptParent(colIdx, fixation_value);
-             else if( block_type == LINKING_VARS_BLOCK )
-                storeColValInColAdaptParent(colIdx, fixation_value);
-          }
-          else
-          {
-             /* delete variable */
-             deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
-          }
-      }
-      else
-      {
-         tightenBounds(newBoundLow, newBoundUpp, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx]);
-      }
+      assert(node != -1);
+      mat = currBmat;
    }
-}
+   assert(mat);
 
-double StochPresolverBoundStrengthening::computeNewBound(const SimpleVector& bounds, double activity, double matrixEntry, int rowIdx) const
-{
-   assert( matrixEntry != 0.0 );
-   assert( 0 <= rowIdx && rowIdx <= bounds.n);
+   for(int row = 0; row < mat->m; ++row)
+   {
+      const double actmin_row = actmin[row];
+      const double actmax_row = actmax[row];
 
-   return (bounds[rowIdx] - activity) / matrixEntry;
+      // todo if actmin / actmax too high then the bounds deduced from them are not of precision feastol anymore
+      if( (actmin_row <= -std::numeric_limits<double>::max() ) && (row_activity_max >= std::numeric_limits<double>::max()) )
+         return;
+
+      for( int j = mat->rowptr[row].start; j < mat->rowptr[row].end; j++ )
+      {
+         // compute the possible new bounds on variable x_colIdx:
+         const int col = mat->jcolM[j];
+         const double a_ik = mat->M[j];
+
+         assert( !PIPSisZero(a_ik) );
+         assert( ixlow[col] != 0.0 || ixupp[col] != 0.0 );
+
+         /* subtract current entry from row activity */
+         const double actmin_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmin_row - a_ik * xupp[col] : actmin_row - a_ik * xlow[col];
+         const double actmax_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmax_row - a_ik * xlow[col] : actmax_row - a_ik * xupp[col];
+
+         double lbx_new = -std::numeric_limits<double>::max();
+         double ubx_new = std::numeric_limits<double>::max();
+
+         // todo : add safguard - if actmin_row... is too big and a_ik too small the computation will not make much sense anymore
+         if(system_type == EQUALITY_SYSTEM)
+         {
+            if( PIPSisLT(0.0, a_ik) )
+            {
+               if( actmin_row_without_curr > -std::numeric_limits<double>::max() )
+                  ubx_new = (rhs[row] - actmin_row_without_curr) / a_ik;
+               if(actmax_row_without_curr < std::numeric_limits<double>::max())
+                  lbx_new = (rhs[row] - actmax_row_without_curr) / a_ik;
+            }
+            else
+            {
+               if(actmin_row_without_curr > -std::numeric_limits<double>::max())
+                  lbx_new = (rhs[row] - actmin_row_without_curr) / a_ik;
+               if(actmax_row_without_curr < std::numeric_limits<double>::max())
+                  ubx_new = (rhs[row] - actmax_row_without_curr) / a_ik;
+            }
+         }
+         else
+         {
+            if( PIPSisLT(0.0, a_ik) )
+            {
+               if(actmin_row_without_curr > -std::numeric_limits<double>::max() && icupp[row] != 0.0)
+                  ubx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
+               if(actmax_row_without_curr < std::numeric_limits<double>::max() && iclow[row] != 0.0)
+                  lbx_new = (clow[row] - actmax_row_without_curr) / a_ik;
+            }
+            else
+            {
+               if(actmin_row_without_curr > -std::numeric_limits<double>::max() && icupp[row] != 0.0)
+                  lbx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
+               if(actmax_row_without_curr < std::numeric_limits<double>::max() && iclow[row] != 0.0)
+                  ubx_new = (clow[row] - actmax_row_without_curr) / a_ik;
+            }
+         }
+
+         presData.adjustMatrixBoundsBy(system_type, node, block_type, row, col, value);
+         /* check if new bounds valid */ // todo
+         if( newBoundsImplyInfeasible(newBoundLow, newBoundUpp, colIdx, ixlow.elements(), ixupp.elements(), xlow.elements(), xupp.elements()) )
+            abortInfeasible(MPI_COMM_WORLD);
+
+         /* check if new bounds imply fixation of the variable */
+         double fixation_value = 0.0;
+         if( newBoundsFixVariable(fixation_value, newBoundLow, newBoundUpp, colIdx, ixlow.elements(),
+               ixupp.elements(), xlow.elements(), xupp.elements()) )
+         {
+            /* for Amat we store deletions - collect them and apply them later */
+             if( node == -1 || block_type == LINKING_VARS_BLOCK )
+             {
+                /* only 0 process stores fixations in root node B0/Bl0 - this is to reduce MPI communications - it is not necessary */
+                if( myRank == 0 && node == -1 )
+                   storeColValInColAdaptParent(colIdx, fixation_value);
+                else if( block_type == LINKING_VARS_BLOCK )
+                   storeColValInColAdaptParent(colIdx, fixation_value);
+             }
+             else
+             {
+                /* delete variable */
+                deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
+             }
+         }
+         else
+         {
+            tightenBounds(newBoundLow, newBoundUpp, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx]);
+         }
+   }
+   }
 }
 

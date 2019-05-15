@@ -57,10 +57,10 @@ private:
       StochPostsolver* const postsolver;
 
       bool outdated_activities;
-      bool outdated_bounds;
+      bool outdated_lhsrhs;
       bool outdated_nnzs;
+      bool outdated_linking_var_bounds;
 public:
-      // todo why handle? ..
       /* number of non-zero elements of each row / column */
       StochVectorHandle nnzs_row_A;
       StochVectorHandle nnzs_row_C;
@@ -73,21 +73,14 @@ public:
       SimpleVectorHandle nnzs_row_C_chgs;
       SimpleVectorHandle nnzs_col_chgs;
 
-      StochVectorHandle max_act_eq;
-      StochVectorHandle min_act_eq;
-      StochVectorHandle max_act_ineq;
-      StochVectorHandle min_act_ineq;
-
-
-      /* stuff for handling the update and changes of activities of certain rows */
+      /* activities of rows */
       StochVectorHandle actmax_eq;
       StochVectorHandle actmin_eq;
 
       StochVectorHandle actmax_ineq;
       StochVectorHandle actmin_ineq;
 
-      /* for better MPI communication we allocate one contiguous array in storage and
-       * make four SimppleVectors each pointing to a part of it */
+      /* changes in row avtivities */
       int lenght_array_act_chgs;
       double* array_act_chgs;
       SimpleVectorHandle actmax_eq_chgs;
@@ -121,13 +114,15 @@ public:
       int elements_deleted;
       int elements_deleted_transposed;
 
-      std::vector<COLUMNFORDELETION> linkingVariablesMarkedForDeletion;
+//      std::vector<COLUMNFORDELETION> linkingVariablesMarkedForDeletion;
 
       /* methods for initializing the object */
    private:
       // initialize row and column nnz counter
       void initNnzCounter();
       void initSingletons();
+      void initVarbounds();
+
    public:
       PresolveData(const sData* sorigprob, StochPostsolver* postsolver);
       ~PresolveData();
@@ -157,6 +152,7 @@ public:
 //      void addColToAdaptParent(COLUMNFORDELETION colToAdapt);
 //      void clearColAdaptParent();
 
+      void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
       void allreduceAndApplyNnzChanges();
       void allreduceAndApplyBoundChanges();
@@ -168,6 +164,8 @@ public:
             int row_index, int& index_k, int& row_end);
       void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
       void updateTransposedSubmatrix( SparseStorageDynamic* transposed, std::vector<std::pair<int, int> >& elements);
+      void fixColumn(int node, int col, double value);
+      void rowProbagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
 
       void removeColumn();
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);

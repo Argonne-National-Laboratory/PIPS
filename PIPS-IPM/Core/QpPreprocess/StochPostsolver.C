@@ -28,11 +28,13 @@ StochPostsolver::StochPostsolver(const sData& original_problem) :
 
 StochPostsolver::~StochPostsolver(){}
 
-
+/** postsolve has to compute the optimal dual multipliers here and set the primal value accordingly */
+//  todo : is it fine to compute the multiplier for the whole column right away (reduced costs)? // yes, if not yet reintroduced rows have multiplier 0 it does not matter
+// (assuming the coefficients don't change - if they do we need to save the state of the row when it got removed)
 void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double value)
 {
    reductions.push_back( FIXED_COLUMN );
-//   indices.push_back( INDEX(node, col) );
+   indices.push_back( INDEX(node, col) );
    values.push_back( value );
 
    finishNotify();
@@ -44,9 +46,31 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
    reductions.push_back( REDUNDANT_ROW );
    indices.push_back( INDEX(node, row) );
    values.push_back( ( (system_type == EQUALITY_SYSTEM ) ? 1 : -1 ) );
+
+   finishNotify();
 }
 
-void StochPostsolver::notifyDeletedRow( SystemType system_type, int node, unsigned int row, bool linking_constraint)
+// todo : only store each version of each row once!
+void StochPostsolver::notifyRowProbagated( SystemType system_type, int node, int row, bool linking_constraint,
+      int column, double lb, double ub, double* values_row, int* indices_row, int length)
+{
+   /* store the row with which bound has been tightened */
+   reductions.push_back( BOUNDS_TIGHTENED );
+   indices.push_back( INDEX(node, row) );
+
+   /* values contains : {system_type (-1 or 1), tightened_column, new ub, new lb, length_row, values_row, col_indices_row */
+   values.push_back( (system_type == EQUALITY_SYSTEM ) ? 1 : -1 );
+   values.push_back( column );
+   values.push_back( ub );
+   values.push_back( lb );
+   values.push_back( length );
+   values.insert( values.end(), values, values + length );
+   values.insert( values.end(), indices_row, indices_row + length );
+
+   finishNotify();
+}
+
+void StochPostsolver::notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint)
 {
    throw std::runtime_error("Not yet implemented");
 }
@@ -98,6 +122,14 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
       switch( type )
       {
+         case REDUNDANT_ROW:
+         {
+            break;
+         }
+         case BOUNDS_TIGHTENED:
+         {
+            break;
+         }
          case FIXED_COLUMN:
          {
             int column = 0;//indices[first];
