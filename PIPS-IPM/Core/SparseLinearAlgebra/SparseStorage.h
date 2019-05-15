@@ -192,6 +192,14 @@ public:
 
   void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
 
+  void deleteEmptyRows(int*& orgIndex);
+
+  // should be used with care! other methods might nor work correctly todo: add flag to check in other methods
+  void c2fortran();
+
+  void fortran2c();
+
+
   /*
    * computes the full sparse matrix representation from a upper triangular symmetric sparse representation
    *

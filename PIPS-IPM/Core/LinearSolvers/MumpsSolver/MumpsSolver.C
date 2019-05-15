@@ -2,7 +2,7 @@
  * MumpsSolver.C
  */
 
-#define PIPS_DEBUG
+//#define PIPS_DEBUG
 
 #include <stdlib.h>
 
@@ -20,7 +20,7 @@
 MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
  : verbosity(defaultVerbosity), maxNiterRefinments(defaultMaxNiterRefinments)
 {
-   printf("creating MUMPS solver \n");
+   PIPSdebugMessage("creating MUMPS solver \n");
 
    assert(sgm);
    assert(sizeof(MUMPS_INT) == sizeof(int));
@@ -55,7 +55,7 @@ MumpsSolver::~MumpsSolver()
 void
 MumpsSolver::diagonalChanged(int idiag, int extent)
 {
-   PIPSdebugMessage("MUMPS solver: diagonal changed \n");
+   PIPSdebugMessage("diagonal changed \n");
 
    this->matrixChanged();
 }
@@ -63,7 +63,7 @@ MumpsSolver::diagonalChanged(int idiag, int extent)
 void
 MumpsSolver::matrixChanged()
 {
-   PIPSdebugMessage("MUMPS solver: matrix changed \n");
+   PIPSdebugMessage("matrix changed \n");
 
    if( mpiCommMumps == MPI_COMM_NULL )
       return;
@@ -133,12 +133,18 @@ MumpsSolver::solve(double* vec)
    // solution phase
    mumps->job = 3;
 
-   mumps->ICNTL(10) = maxNiterRefinments; // maximum number of it. refinements; ignored for multiple rhs
+   mumps->ICNTL(10) = maxNiterRefinments; // maximum number of it. refinements;
 
    if( verbosity == verb_mute ) // todo only print statistics for high verb
       mumps->ICNTL(11) = 0; // error statistics, 0: disabled, 2: main statistics
    else
       mumps->ICNTL(11) = 2; // error statistics, 0: disabled, 2: main statistics
+
+   if( mumps->nrhs > 1 )
+   {
+      mumps->ICNTL(10) = 0;
+      mumps->ICNTL(11) = 0;
+   }
 
    const double starttime = MPI_Wtime();
 

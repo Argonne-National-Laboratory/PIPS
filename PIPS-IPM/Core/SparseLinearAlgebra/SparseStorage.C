@@ -1597,7 +1597,7 @@ void SparseStorage::deleteEmptyRowsCols(const double* nnzRowVec, const double* n
    delete[] rowsmap;
 }
 
-void SparseStorage:: getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const
+void SparseStorage::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const
 {
    int count = 0;
    assert(len > 0);
@@ -1624,6 +1624,60 @@ void SparseStorage:: getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& v
    assert(count == len);
 }
 
+void SparseStorage::deleteEmptyRows(int*& orgIndex)
+{
+   assert(!neverDeleteElts);
+   assert(orgIndex == NULL);
+
+   int m_new = 0;
+
+   // count non-empty rows
+   for( int r = 0; r < m; r++ )
+      if( krowM[r] != krowM[r + 1] )
+         m_new++;
+
+   int* krowM_new = new int[m_new + 1];
+   orgIndex = new int[m_new + 1];
+
+   krowM_new[0] = 0;
+   m_new = 0;
+
+   for( int r = 0; r < m; r++ )
+      if( krowM[r] != krowM[r + 1] )
+      {
+         orgIndex[m_new] = r;
+         krowM_new[++m_new] = krowM[r + 1];
+      }
+
+   assert(krowM_new[m_new] == len);
+   m = m_new;
+
+   delete[] krowM;
+   krowM = krowM_new;
+}
+
+
+void SparseStorage::c2fortran()
+{
+   assert(krowM[0] == 0 && krowM[m] == len);
+
+   for( int i = 0; i <= m; i++ )
+      krowM[i]++;
+
+   for( int i = 0; i < len; i++ )
+      jcolM[i]++;
+}
+
+void SparseStorage::fortran2c()
+{
+   assert(krowM[0] == 1 && krowM[m] == len + 1);
+
+   for( int i = 0; i <= m; i++ )
+      krowM[i]--;
+
+   for( int i = 0; i < len; i++ )
+      jcolM[i]--;
+}
 
 void SparseStorage::addNnzPerRow(double* vec) const
 {

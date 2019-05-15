@@ -25,7 +25,7 @@ class sLinsysLeafMumps : public sLinsysLeaf
         OoqpVector* nomegaInv_,
         OoqpVector* rhs_, LINSOLVER* solver)
         : sLinsysLeaf(factory, prob_, dd_, dq_, nomegaInv_, rhs_, solver),
-          schurRightMatrix_csc(nullptr), schurRightNzColId(nullptr), nSC(-1), mSchurRight(-1) {};
+          schurRightMatrix_csc(nullptr), schurRightNzColId(nullptr), nSC(-1), mSchurRight(-1), nSchurRight(-1) {};
 
   ~sLinsysLeafMumps();
 
@@ -46,6 +46,8 @@ class sLinsysLeafMumps : public sLinsysLeaf
   int* schurRightNzColId;
   int nSC;
   int mSchurRight;
+  int nSchurRight;
+
 };
 
 
