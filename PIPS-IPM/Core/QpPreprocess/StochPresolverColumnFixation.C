@@ -56,21 +56,21 @@ void StochPresolverColumnFixation::applyPresolving()
       // todo : include also objective coefficient into this criterion ?
       double absmax_row = 1.0;
 
-      if(currIxlowParent[col] != 0.0 && currIxuppParent[col] != 0.0)
+      if( (*currIxlowParent)[col] != 0.0 && (*currIxuppParent)[col] != 0.0)
       {
-         assert(PIPSisLT(0.0, currxuppParent[col] - currxlowParent[col]));
+         assert(PIPSisLT(0.0, (*currxuppParent)[col] - (*currxlowParent)[col]));
 
-         if( PIPSisLT( (currxuppParent[col] - currxlowParent[col]) * absmax_row, tolerance4) )
+         if( PIPSisLT( ((*currxuppParent)[col] - (*currxlowParent)[col]) * absmax_row, tolerance4) )
          {
             // verify if one of the bounds is integer:
             double intpart = 0.0;
             double value = 0.0;
-            if( std::modf(currxlowParent[col], &intpart) == 0.0 )
-               value = currxlowParent[col];
-            else if( std::modf(currxuppParent[col], &intpart) == 0.0 )
-               value = currxuppParent[col];
+            if( std::modf( (*currxlowParent)[col], &intpart) == 0.0 )
+               value = (*currxlowParent)[col];
+            else if( std::modf( (*currxuppParent)[col], &intpart) == 0.0 )
+               value = (*currxuppParent)[col];
             else  // set the variable to the arithmetic mean:
-               value = (currxlowParent[col] + currxuppParent[col] ) / 2.0;
+               value = ( (*currxlowParent)[col] + (*currxuppParent)[col] ) / 2.0;
 
             presData.fixColumn(-1, col, value);
             ++fixed_columns;
@@ -94,21 +94,21 @@ void StochPresolverColumnFixation::applyPresolving()
          // todo : include also objective coefficient into this criterion ?
          double absmax_row = 1.0;
 
-         if(currIxlowChild[col] != 0.0 && currIxuppChild[col] != 0.0)
+         if( (*currIxlowChild)[col] != 0.0 && (*currIxuppChild)[col] != 0.0)
          {
-            assert(PIPSisLT(0.0, currxuppChild[col] - currxlowChild[col]));
+            assert(PIPSisLT(0.0, (*currxuppChild)[col] - (*currxlowChild)[col]));
 
-            if( PIPSisLT( (currxuppChild[col] - currxlowChild[col]) * absmax_row, tolerance4) )
+            if( PIPSisLT( ((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, tolerance4) )
             {
                // verify if one of the bounds is integer:
                double intpart = 0.0;
                double value = 0.0;
-               if( std::modf(currxlowChild[col], &intpart) == 0.0 )
-                  value = currxlowChild[col];
-               else if( std::modf(currxuppChild[col], &intpart) == 0.0 )
-                  value = currxuppChild[col];
+               if( std::modf( (*currxlowChild)[col], &intpart) == 0.0 )
+                  value = (*currxlowChild)[col];
+               else if( std::modf( (*currxuppChild)[col], &intpart) == 0.0 )
+                  value = (*currxuppChild)[col];
                else  // set the variable to the arithmetic mean:
-                  value = (currxlowChild[col] + currxuppChild[col] ) / 2.0;
+                  value = ( (*currxlowChild)[col] + (*currxuppChild)[col] ) / 2.0;
 
                presData.fixColumn(-1, col, value);
                ++fixed_columns;
@@ -141,7 +141,7 @@ void StochPresolverColumnFixation::applyPresolving()
 //   assert(fixed_columns in sync) todo -> should be the same over all processes - the variable bounds data was synchronized beforehand
    assert(presData.reductionsEmpty());
    assert(presData.presProb->isRootNodeInSync());
-   assert(verifyNnzcounters());
+   assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
    assert(newBoundsParent.size() == 0);
 }

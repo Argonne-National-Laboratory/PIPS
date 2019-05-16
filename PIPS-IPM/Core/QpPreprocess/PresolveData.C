@@ -13,6 +13,9 @@
 #include <stdexcept>
 #include <limits>
 #include <algorithm>
+#include <string>
+#include <cmath>
+
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
       outdated_activities(true),
@@ -68,7 +71,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    recomputeActivities();
    initNnzCounter();
    initSingletons();
-   initVarbounds();
+   setUndefinedVarboundsTo(std::numeric_limits<double>::max());
 }
 
 PresolveData::~PresolveData()
@@ -79,7 +82,7 @@ PresolveData::~PresolveData()
 }
 
 /* set non existent bounds on linking variables to +/- double max */
-void PresolveData::initVarbounds()
+void PresolveData::setUndefinedVarboundsTo(double value)
 {
    StochVector& xlow = dynamic_cast<StochVector&>(*presProb->blx);
    StochVector& ixlow = dynamic_cast<StochVector&>(*presProb->ixlow);
@@ -93,12 +96,13 @@ void PresolveData::initVarbounds()
    for(int i = 0; i < vec_xlow.length(); ++i)
    {
       if(vec_ixlow.elements()[i] == 0.0)
-         vec_xlow.elements()[i] = -std::numeric_limits<double>::max();
+         vec_xlow.elements()[i] = -value;
 
       if(vec_ixupp.elements()[i] == 0.0)
-         vec_xupp.elements()[i] = std::numeric_limits<double>::max();
+         vec_xupp.elements()[i] = value;
    }
 }
+
 
 sData* PresolveData::finalize()
 {
@@ -114,6 +118,7 @@ sData* PresolveData::finalize()
    }
    assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds);
 #endif
+   setUndefinedVarboundsTo(0.0);
 
    // this removes all columns and rows that are now empty from the problem
    presProb->cleanUpPresolvedData(*nnzs_row_A, *nnzs_row_C, *nnzs_col);
@@ -647,10 +652,57 @@ void PresolveData::fixColumn(int node, int col, double value)
    // todo delete column from system
 }
 
-void PresolveData::rowProbagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx)
+bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx)
 {
-   // todo
-//   postsolver->notifyBoundsTightened(system_type, node, BlockType block_type, row, col, )
+   assert( -1 <= node && node < nChildren );
+
+   SimpleVector& ixlow = (node == -1 ) ? dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->ixlow).vec)
+         : dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->ixlow).children[node]->vec);
+   SimpleVector& xlow = (node == -1 ) ? dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->blx).vec)
+         : dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->blx).children[node]->vec);
+   SimpleVector& ixupp = (node == -1 ) ? dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->ixupp).vec)
+         : dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->ixupp).children[node]->vec);
+   SimpleVector& xupp = (node == -1 ) ? dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->bux).vec)
+         : dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->bux).children[node]->vec);
+   assert(0 <= col && col < ixlow.n);
+
+   if( ( ixlow[col] != 0.0 && PIPSisLT(ubx, xlow[col]) )
+         || (ixupp[col] != 0.0 && PIPSisLT(xupp[col], lbx) )
+         || (lbx > ubx))
+      abortInfeasible(MPI_COMM_WORLD, "Row Probagation detected infeasible new bounds!", "PresolveData.C", "rowPropagetedBounds");
+
+   bool bounds_changed = false;
+
+   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
+   assert(row < mat->getStorageDynamic()->m );
+
+   int row_start = mat->getStorageDynamic()->rowptr[row].start;
+   int row_end = mat->getStorageDynamic()->rowptr[row].end;
+
+   assert(row_start < row_end);
+
+//   postsolver->notifyRowPropagated(system_type, node, row, (block_type == LINKING_CONS_BLOCK), col, lbx, ubx, mat->getStorageDynamic()->M + row_start,
+//         mat->getStorageDynamic()->jcolM + row_start, row_end - row_start );
+
+   // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
+   // set lower bound
+   if( fabs(lbx) < 1e8 && (ixlow[col] == 0.0  || feastol * 1e3 <= fabs(xlow[col] - lbx) ) )
+   {
+      xlow[col] = lbx;
+      ixlow[col] = 1.0;
+      bounds_changed = true;
+   }
+   if( fabs(ubx) < 1e8 && (ixupp[col] == 0.0  || feastol * 1e3 <= fabs(xupp[col] - ubx) ) )
+   {
+      xupp[col] = ubx;
+      ixupp[col] = 1.0;
+      bounds_changed = true;
+   }
+
+   if( bounds_changed && (block_type == LINKING_VARS_BLOCK || node == -1) )
+      outdated_linking_var_bounds = true;
+
+   return bounds_changed;
 }
 
 // todo : postsolve if bounds adjusted because of deleted matrix entry simply reverse the adjustment - no changes in multipliers - row stays active / inactive

@@ -9,6 +9,7 @@
 #include <cmath>
 #include <utility>
 #include <vector>
+#include <string>
 
 StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, const sData& origProb)
    : StochPresolverBase(presData, origProb), removed_entries_total(0), removed_rows_total(0)
@@ -183,7 +184,8 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       if( system_type == EQUALITY_SYSTEM )
       {
          if( PIPSisLT( rhs_eq[r], minAct, feastol) || PIPSisLT(maxAct, rhs_eq[r], feastol) )
-            abortInfeasible(MPI_COMM_WORLD);
+            abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
+                  "removeRedundantRows");
          else if( PIPSisLE(rhs_eq[r], minAct, feastol) && PIPSisLE(maxAct, rhs_eq[r], feastol) )
          {
             presData.removeRedundantRow(system_type, node, r, linking);
@@ -194,7 +196,8 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       {
          if( ( iclow[r] != 0.0 && PIPSisLT(maxAct, clow[r], feastol) )
                || ( icupp[r] != 0.0 && PIPSisLT( cupp[r], minAct, feastol) ) )
-            abortInfeasible(MPI_COMM_WORLD);
+            abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
+                  "removeRedundantRows");
          else if( ( iclow[r] == 0.0 || clow[r] <= -infinity) &&
                ( icupp[r] == 0.0 || cupp[r] >= infinity) )
          {

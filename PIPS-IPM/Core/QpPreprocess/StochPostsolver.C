@@ -51,7 +51,8 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
 }
 
 // todo : only store each version of each row once!
-void StochPostsolver::notifyRowProbagated( SystemType system_type, int node, int row, bool linking_constraint,
+// todo : store whole row
+void StochPostsolver::notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint,
       int column, double lb, double ub, double* values_row, int* indices_row, int length)
 {
    /* store the row with which bound has been tightened */
@@ -64,7 +65,7 @@ void StochPostsolver::notifyRowProbagated( SystemType system_type, int node, int
    values.push_back( ub );
    values.push_back( lb );
    values.push_back( length );
-   values.insert( values.end(), values, values + length );
+   values.insert( values.end(), values_row, values_row + length );
    values.insert( values.end(), indices_row, indices_row + length );
 
    finishNotify();
@@ -84,7 +85,7 @@ void StochPostsolver::finishNotify()
 {
    assert( reductions.size() == start_idx_values.size() );
    assert( indices.size() == start_idx_values.size() );
-   assert( values.size() == indices.size() ); // todo why ? probably padding
+//   assert( values.size() == indices.size() ); // todo why ? probably padding
 
    start_idx_values.push_back( values.size() );
 }

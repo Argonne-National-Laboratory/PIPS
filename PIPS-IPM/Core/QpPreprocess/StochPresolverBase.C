@@ -32,13 +32,6 @@ StochPresolverBase::~StochPresolverBase()
 {
 }
 
-/** Call MPI_Abort() and print an error message : todo make error message adjustable */
-void StochPresolverBase::abortInfeasible(MPI_Comm comm) const
-{
-   std::cout << "Infesibility detected in presolving. Aborting now." << std::endl;
-   MPI_Abort(comm, 1);
-}
-
 void StochPresolverBase::countRowsCols()// method is const but changes pointers
 {
    int n_rows_eq = 0;
@@ -452,8 +445,8 @@ void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_typ
    }
    else
    {
-      currActMax = dynamic_cast<SimpleVector*>(act_max.children[node].vec);
-      currActMin = dynamic_cast<SimpleVector*>(act_min.children[node].vec);
+      currActMax = dynamic_cast<SimpleVector*>(act_max.children[node]->vec);
+      currActMin = dynamic_cast<SimpleVector*>(act_min.children[node]->vec);
    }
 
    if( system_type == EQUALITY_SYSTEM )
@@ -950,22 +943,6 @@ bool StochPresolverBase::hasLinking(SystemType system_type) const
 //   return newSingletonRows;
 //}
 //
-//bool StochPresolverBase::newBoundsImplyInfeasible(double new_xlow, double new_xupp, int colIdx,
-//      const double* ixlow, const double* ixupp, const double* xlow, const double* xupp) const
-//{
-//   assert( colIdx >= 0 );
-//
-//   if( ( ixlow[colIdx] != 0.0 && PIPSisLT(new_xupp, xlow[colIdx]) )
-//         || (ixupp[colIdx] != 0.0 && PIPSisLT(xupp[colIdx], new_xlow) )
-//         || (new_xlow > new_xupp))
-//   {
-//      std::cout << "Presolving detected infeasibility: variable: " << colIdx << "\tnew bounds = [" << new_xlow << ", " << new_xupp << "]" << "\told bounds: ["
-//            << ( (ixlow[colIdx] == 0.0) ? -std::numeric_limits<double>::infinity() : xlow[colIdx] ) <<
-//    		  ", " << ( (ixupp[colIdx] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[colIdx] ) << "]" << std::endl;
-//      return true;
-//   }
-//   return false;
-//}
 ///** Stores colIndex value pair for later fixation.
 // *
 // * todo : use std::find and stuff

@@ -18,6 +18,18 @@
 const double pips_eps = 1e-13;
 const double pips_eps0 = 1e-40;
 
+static const double feastol = 1.0e-6; // was 1.0e-6
+static const double infinity = 1.0e30;
+// todo rename for more clarity
+static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
+static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
+static const double tol_matrix_entry = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
+static const double tolerance4 = 1.0e-12; // for variable fixing
+static const double limit1 = 1.0e3;   // for bound strengthening
+static const double limit2 = 1.0e8;   // for bound strengthening
+static const int maxIterSR = 10;
+static const double tol_compare_double = 1.0e-8;
+
 static inline double relativeDiff(double val1, double val2)
 {
    const double val1Abs = std::fabs(val1);
@@ -129,6 +141,15 @@ inline void synchronize(double& value)
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
    if( iAmDistrib )
       MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+}
+
+
+void inline abortInfeasible(MPI_Comm comm, std::string message, std::string file, std::string function)
+{
+   std::cerr << "Infesibility detected in " << file << " function " << function << "!" << std::endl;
+   std::cerr << "Message: " << message << std::endl;
+   std::cerr << "Aborting now." << std::endl;
+   MPI_Abort(comm, 1);
 }
 
 #endif

@@ -121,7 +121,7 @@ public:
       // initialize row and column nnz counter
       void initNnzCounter();
       void initSingletons();
-      void initVarbounds();
+      void setUndefinedVarboundsTo(double value);
 
    public:
       PresolveData(const sData* sorigprob, StochPostsolver* postsolver);
@@ -165,7 +165,7 @@ public:
       void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
       void updateTransposedSubmatrix( SparseStorageDynamic* transposed, std::vector<std::pair<int, int> >& elements);
       void fixColumn(int node, int col, double value);
-      void rowProbagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
+      bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
 
       void removeColumn();
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);

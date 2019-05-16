@@ -10,8 +10,7 @@
 #include <cmath>
 #include "pipsdef.h"
 
-// todo exhaustive
-
+// todo : make a list of fixed vars ? then variable fixing does not need to iterate the full matrix..
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData, const sData& origProb) :
       StochPresolverBase(presData, origProb)
@@ -46,25 +45,31 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   do  // todo
+   int max_iter = 1e3; // todo
+   int iter = 0;
+   bool tightened;
+
+   do
    {
+      ++iter;
+      tightened = false;
       /* root nodes */
-      strenghtenBoundsInNode( EQUALITY_SYSTEM, -1);
-      strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1);
+      tightened = tightened || strenghtenBoundsInNode( EQUALITY_SYSTEM, -1);
+      tightened = tightened || strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1);
 
       // children:
       for( int node = 0; node < nChildren; node++)
       {
          // dummy child?
          if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
-            strenghtenBoundsInNode(EQUALITY_SYSTEM, node);
+            tightened = tightened || strenghtenBoundsInNode(EQUALITY_SYSTEM, node);
 
          if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
-            strenghtenBoundsInNode(INEQUALITY_SYSTEM, node);
+            tightened = tightened || strenghtenBoundsInNode(INEQUALITY_SYSTEM, node);
       }
-
    }
-   while( false ); // todo exhaustive
+   while( tightened && iter < max_iter );
+
 
    /* update bounds on all processors */
    presData.allreduceLinkingVarBounds();
@@ -74,7 +79,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
 
 #ifndef NDEBUG
    if( my_rank == 0 )
-      std::cout << "--- After bound strengthening presolving:" << std::endl;
+      std::cout << "--- After " << iter << " rounds of bound strengthening:" << std::endl;
    countRowsCols();
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
@@ -82,31 +87,36 @@ void StochPresolverBoundStrengthening::applyPresolving()
 
    assert(presData.reductionsEmpty());
    assert(presData.presProb->isRootNodeInSync());
-   assert(verifyNnzcounters());
+   assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
    assert(newBoundsParent.size() == 0);
 }
 
-void StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
+bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
 {
    assert( -1 <= node && node < nChildren );
 
-   strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK);
+   bool tightened = false;
+
+   tightened = tightened || strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK);
    if(hasLinking(system_type))
-      strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK);
+      tightened = tightened || strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK);
 
    if(node != -1)
-      strenghtenBoundsInBlock(system_type, node, CHILD_BLOCK);
+      tightened = tightened || strenghtenBoundsInBlock(system_type, node, CHILD_BLOCK);
 
+   return tightened;
 }
 
 /**
  * Strengthen the variable bounds in the block matrix. If childBlock==true, then a block B_i or D_i is considered.
  * partMinActivity and partMaxActivity represent the partial row activity of the respective other block.
  */
-void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type)
+bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type)
 {
-   assert( 0 <= node && node < nChildren );
+   bool tightened = false;
+
+   assert( -1 <= node && node < nChildren );
    updatePointersForCurrentNode(node, system_type);
 
    SimpleVector& xlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
@@ -142,8 +152,8 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       const double actmax_row = actmax[row];
 
       // todo if actmin / actmax too high then the bounds deduced from them are not of precision feastol anymore
-      if( (actmin_row <= -std::numeric_limits<double>::max() ) && (row_activity_max >= std::numeric_limits<double>::max()) )
-         return;
+      if( (actmin_row <= -std::numeric_limits<double>::max() ) && (actmax_row >= std::numeric_limits<double>::max()) )
+         continue;
 
       for( int j = mat->rowptr[row].start; j < mat->rowptr[row].end; j++ )
       {
@@ -197,36 +207,10 @@ void StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             }
          }
 
-         presData.adjustMatrixBoundsBy(system_type, node, block_type, row, col, value);
-         /* check if new bounds valid */ // todo
-         if( newBoundsImplyInfeasible(newBoundLow, newBoundUpp, colIdx, ixlow.elements(), ixupp.elements(), xlow.elements(), xupp.elements()) )
-            abortInfeasible(MPI_COMM_WORLD);
+         tightened = tightened || presData.rowPropagatedBounds(system_type, node, block_type, row, col, ubx_new, lbx_new);
+      }
+   }
 
-         /* check if new bounds imply fixation of the variable */
-         double fixation_value = 0.0;
-         if( newBoundsFixVariable(fixation_value, newBoundLow, newBoundUpp, colIdx, ixlow.elements(),
-               ixupp.elements(), xlow.elements(), xupp.elements()) )
-         {
-            /* for Amat we store deletions - collect them and apply them later */
-             if( node == -1 || block_type == LINKING_VARS_BLOCK )
-             {
-                /* only 0 process stores fixations in root node B0/Bl0 - this is to reduce MPI communications - it is not necessary */
-                if( myRank == 0 && node == -1 )
-                   storeColValInColAdaptParent(colIdx, fixation_value);
-                else if( block_type == LINKING_VARS_BLOCK )
-                   storeColValInColAdaptParent(colIdx, fixation_value);
-             }
-             else
-             {
-                /* delete variable */
-                deleteNonlinkColumnFromSystem(node, colIdx, fixation_value);
-             }
-         }
-         else
-         {
-            tightenBounds(newBoundLow, newBoundUpp, ixlow[colIdx], xlow[colIdx], ixupp[colIdx], xupp[colIdx]);
-         }
-   }
-   }
+   return tightened;
 }
 

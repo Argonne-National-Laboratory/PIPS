@@ -40,7 +40,6 @@ public:
    // todo return bool whether enough eliminations
    virtual void applyPresolving() = 0;
 
-   void abortInfeasible(MPI_Comm comm) const;
    void countRowsCols(); // theoretically const but sets pointers
 private:
    void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
@@ -68,19 +67,6 @@ public:
 protected:
    int my_rank;
    bool distributed;
-
-   // todo do we want to make these adjustable?
-   static const double feastol = 1.0e-6; // was 1.0e-6
-   static const double infinity = 1.0e30;
-   // todo rename for more clarity
-   static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
-   static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
-   static const double tol_matrix_entry = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
-   static const double tolerance4 = 1.0e-12; // for variable fixing
-   static const double limit1 = 1.0e3;   // for bound strengthening
-   static const double limit2 = 1.0e8;   // for bound strengthening
-   static const int maxIterSR = 10;
-   static const double tol_compare_double = 1.0e-8;
 
    /* not owned by the class itself - given from the outside */
    PresolveData& presData;

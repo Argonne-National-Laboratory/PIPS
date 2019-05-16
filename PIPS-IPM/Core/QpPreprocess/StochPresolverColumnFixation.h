@@ -16,7 +16,7 @@ class StochPresolverColumnFixation: public StochPresolverBase
 
       StochPresolverColumnFixation(PresolveData& presData, const sData& origProb);
 
-      virtual ~StochPresolverBoundStrengthening();
+      virtual ~StochPresolverColumnFixation();
 
       virtual void applyPresolving();
 
