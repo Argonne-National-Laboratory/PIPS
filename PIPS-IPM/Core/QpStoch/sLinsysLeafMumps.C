@@ -222,9 +222,6 @@ void sLinsysLeafMumps::addTermToSchurComplMumps(sData *prob, bool sparseSC,
    MumpsSolver* const solverMumps = dynamic_cast<MumpsSolver*>(solver);
    assert(solverMumps);
 
-   std::cout << "mSchurRight=" << mSchurRight << std::endl;
-   std::cout << "nRuns=" << nRuns << std::endl;
-
    //  do block-wise computation of
    //
    //     SC +=  B^T K^-1 B
@@ -242,7 +239,7 @@ void sLinsysLeafMumps::addTermToSchurComplMumps(sData *prob, bool sparseSC,
    }
 
 
-#if 0
+#if DEBUG_WRITE
    // debug stuff
    int myrank;
    static int iteration = 0;

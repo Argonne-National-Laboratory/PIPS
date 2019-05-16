@@ -71,10 +71,23 @@ MumpsSolver::matrixChanged()
    // todo: update only diagonal!
    assert(Msys);
 
+#ifdef TIME_Triplet_c2fortran
+   const double t1 = MPI_Wtime();
+#endif
+
    delete[] tripletIrn;
    delete[] tripletJcn;
    delete[] tripletA;
+   tripletIrn = nullptr;
+   tripletJcn = nullptr;
+   tripletA = nullptr;
+
    Msys->getSparseTriplet_c2fortran(tripletIrn, tripletJcn, tripletA);
+
+#ifdef TIME_Triplet_c2fortran
+   const double t2 = MPI_Wtime();
+   std::cout << "Triplet_c2fortran time=" << t2 - t1 << std::endl;
+#endif
 
    mumps->n = n;
    mumps->nnz = Msys->numberOfNonZeros();
@@ -82,8 +95,9 @@ MumpsSolver::matrixChanged()
    mumps->jcn = tripletJcn;
    mumps->a = tripletA;
 
-   // symmetric permutation for factorization, 7: automatic choice; meaningless if mumps->ICNTL(28) == 2
-   mumps->ICNTL(7) = 7;
+   // todo test whether 7 or 5 is better
+   // symmetric permutation for factorization, 5: METIS, 7: automatic choice; meaningless if mumps->ICNTL(28) == 2
+   mumps->ICNTL(7) = 5;
 
    mumps->ICNTL(28) = 0; // choice of analysis, 0: automatic, 1: sequential, 2: parallel
 
@@ -98,7 +112,6 @@ MumpsSolver::matrixChanged()
 
    // analysis phase
    mumps->job = 1;
-
 
    double starttime = MPI_Wtime();
 
@@ -118,7 +131,7 @@ MumpsSolver::matrixChanged()
 
    processMumpsResultFactor(starttime);
 
-   //saveOrderingPermutation();
+   // todo save permutation for reuse?
 }
 
 
@@ -328,7 +341,7 @@ MumpsSolver::processMumpsResultFactor(double starttime)
             dmumps_c(mumps);
             errorCode = mumps->INFOG(1);
 
-            //saveOrderingPermutation();
+            // todo would also need to store permutation here
 
             if( errorCode != -8 && errorCode != -9 )
                break;
@@ -439,8 +452,8 @@ MumpsSolver::setUpMumps()
    mumps->n = static_cast<int>(n);
 
    mumps->ICNTL(5) = 0; // 0: assembled format for matrix (triplet format)
+   mumps->ICNTL(14) = 50; // percentage increase in the estimated working space; default: 20
    mumps->ICNTL(18) = 0; // 0: matrix centralized on rank 0
-
    mumps->ICNTL(21) = 0; // solution vector is assembled and stored in MUMPS structure member RHS
 
    if( verbosity == verb_mute )

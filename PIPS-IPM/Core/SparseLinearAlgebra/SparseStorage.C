@@ -1601,6 +1601,7 @@ void SparseStorage::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& va
 {
    int count = 0;
    assert(len > 0);
+   assert(!irn && !jcn && !val);
 
    irn = new int[len];
    jcn = new int[len];

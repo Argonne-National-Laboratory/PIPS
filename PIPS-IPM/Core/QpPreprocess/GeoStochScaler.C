@@ -33,18 +33,14 @@ void GeoStochScaler::doObjScaling()
 
    obj->componentMult(*vec_colscale);
 
-   const double absmax = obj->infnorm();
+ //  const double absmax = obj->infnorm();
    double absmin = 0.0;
 
    obj->absminNonZero( absmin, pips_eps );
 
-   assert(absmax >= 0.0 && absmax >= absmin);
-
    // all elements of scaled obj smaller than pips_eps?
    if( PIPSisEQ(absmin, -1.0) )
    {
-      assert(PIPSisZero(absmax, pips_eps));
-
       int myRank = 0;
       MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
