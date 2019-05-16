@@ -32,7 +32,7 @@ class MumpsSolver : public DoubleLinearSolver {
   void solve( OoqpVector& rhs ) override;
 
   // rhs need to be in CSC Fortran format
-  void solve( GenMatrix& rhs_f, double* sol );
+  void solve(/* const */ GenMatrix& rhs_f,  int startRow, int range, double* sol);
 
   static constexpr MumpsVerbosity defaultVerbosity = verb_mute;// verb_standard;
   static constexpr unsigned defaultMaxNiterRefinments = 5;

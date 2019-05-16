@@ -31,7 +31,7 @@ MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
    tripletJcn = nullptr;
    tripletA = nullptr;
 
-   setUpMpiData(MPI_COMM_SELF, MPI_COMM_WORLD);
+   setUpMpiData(MPI_COMM_WORLD, MPI_COMM_SELF);
    setUpMumps();
 }
 
@@ -176,39 +176,59 @@ MumpsSolver::solve(OoqpVector& rhs)
 
 
 void
-MumpsSolver::solve(GenMatrix& rhs_f, double* sol)
+MumpsSolver::solve(GenMatrix& rhs_f, int startRow, int range, double* sol)
 {
    PIPSdebugMessage("MUMPS solver: solve (multiple rhs) \n");
+
+   assert(sol);
+   assert(startRow >= 0 && range >= 1);
 
    SparseGenMatrix& rhs_matrix = dynamic_cast<SparseGenMatrix &>(rhs_f);
 
    if( mpiCommMumps == MPI_COMM_NULL )
       return;
 
-   assert(sol);
+   int m_org;
+   int n_org;
 
-   int* irhs_ptr = rhs_matrix.krowM();
-   int* irhs_sparse = rhs_matrix.jcolM();
-   double* rhs_sparse = rhs_matrix.M();
-   int n_csr;
-   int m_csr;
+   rhs_matrix.getSize(m_org, n_org);
 
-   rhs_matrix.getSize(m_csr, n_csr);
+   assert(startRow + range <= m_org);
 
-   // todo: user needs to provide interval for solution?
+   const int m_sub = range;
+   const int n_sub = n_org;
+
+   int* const ia_org = rhs_matrix.krowM();
+   int* const ja_org = rhs_matrix.jcolM();
+   double* const a_org = rhs_matrix.M();
 
    // matrix should be in Fortran format
-   assert(irhs_ptr[0] == 1 && rhs_matrix.getStorage()->len == irhs_ptr[m_csr] - 1);
+   assert(ia_org[0] == 1 && rhs_matrix.getStorage()->len == ia_org[m_org] - 1);
 
-   mumps->nrhs = m_csr; // MUMPS expects column major
-   mumps->nz_rhs = irhs_ptr[m_csr] - 1;
-   mumps->lrhs = n_csr;
-   mumps->irhs_ptr = irhs_ptr;
-   mumps->irhs_sparse = irhs_sparse;
-   mumps->rhs_sparse = rhs_sparse;
-   mumps->ICNTL(20)= 3; // exploit sparsity during solve
+
+   int* const ia_sub = new int[m_sub + 1];
+
+   for( int i = 0; i <= m_sub; i++)
+   {
+      const int newPos = ia_org[i + startRow] - ia_org[startRow] + 1;
+      assert(i == 0 || newPos >= ia_sub[i - 1]);
+
+      ia_sub[i] = newPos;
+   }
+
+   assert(ia_sub[0] == 1 && ia_sub[m_sub] == (ia_org[startRow + range] - ia_org[startRow] + 1));
+
+   mumps->nrhs = m_sub; // MUMPS expects column major
+   mumps->nz_rhs = ia_sub[m_sub] - 1;
+   mumps->lrhs = n_sub;
+   mumps->irhs_ptr = ia_sub;
+   mumps->irhs_sparse = &ja_org[ia_org[startRow] - 1];
+   mumps->rhs_sparse = &a_org[ia_org[startRow] - 1];
+   mumps->ICNTL(20) = 3; // exploit sparsity during solve
 
    solve(sol);
+
+   delete[] ia_sub;
 }
 
 

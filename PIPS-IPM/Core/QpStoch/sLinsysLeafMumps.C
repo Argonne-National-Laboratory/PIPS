@@ -7,6 +7,7 @@
 
 #include "sLinsysLeafMumps.h"
 #include "MumpsSolver.h"
+#include <algorithm>
 
 
 static
@@ -26,6 +27,7 @@ sLinsysLeafMumps::~sLinsysLeafMumps()
 {
    delete schurRightMatrix_csc;
    delete[] schurRightNzColId;
+   delete[] buffer;
 }
 
 void sLinsysLeafMumps::addTermToSparseSchurCompl( sData *prob,
@@ -185,42 +187,59 @@ void sLinsysLeafMumps::buildSchurRightMatrix(sData *prob, SymMatrix& SC)
 }
 
 
+
 void sLinsysLeafMumps::addTermToSchurComplMumps(sData *prob, bool sparseSC,
           SymMatrix& SC)
 {
    if( !schurRightMatrix_csc )
       buildSchurRightMatrix(prob, SC);
 
-   assert(mSchurRight >= 1 && nSchurRight >= 1);
+   const int nNzRhs = schurRightMatrix_csc->getStorage()->m;
+   const int solSize = nNzRhs * mSchurRight;
 
+   assert(solSize >= 1);
 
-   const int blocksizemax = nSchurRight; // todo nThreads, or 64?
+   if( bufferSize == -1 )
+   {
+      assert(!buffer);
 
+      if( solSize < bufferMaxSize )
+         bufferSize = solSize;
+      else
+         bufferSize = bufferMaxSize;
 
-   assert(nThreads >= 1);
+      buffer = new double[bufferSize];
+   }
 
-   // save columns in this array todo member variable, initialized at first call (if == NULL)
-   double* colsBlockDense = new double[blocksizemax * mSchurRight];
+   const int bufferNrhs = bufferSize / mSchurRight;
+   const int nRuns = nNzRhs / bufferNrhs;
+   const int leftoverNrhs = nNzRhs - bufferNrhs * nRuns;
 
+   assert(buffer);
+   assert(bufferNrhs >= 1);
+   assert(nRuns * bufferNrhs + leftoverNrhs == nNzRhs);
 
    MumpsSolver* const solverMumps = dynamic_cast<MumpsSolver*>(solver);
    assert(solverMumps);
 
+   std::cout << "mSchurRight=" << mSchurRight << std::endl;
+   std::cout << "nRuns=" << nRuns << std::endl;
 
    //  do block-wise computation of
    //
    //     SC +=  B^T K^-1 B
    //
-   //  ...and skip zero columns of B
+   for( int i = 0; i < nRuns; i++ )
+   {
+      solverMumps->solve(*schurRightMatrix_csc, i * bufferNrhs, bufferNrhs, buffer);
+      multLeftSchurComplBlocked(prob, buffer, schurRightNzColId + i * bufferNrhs, bufferNrhs, sparseSC, SC);
+   }
 
-
-   solverMumps->solve(*schurRightMatrix_csc, colsBlockDense);
-
-
-   int blocksize = schurRightMatrix_csc->getStorage()->m;
-
-   multLeftSchurComplBlocked(prob, colsBlockDense, schurRightNzColId, blocksize, sparseSC, SC);
-
+   if( leftoverNrhs > 0 )
+   {
+      solverMumps->solve(*schurRightMatrix_csc, nRuns * bufferNrhs, leftoverNrhs, buffer);
+      multLeftSchurComplBlocked(prob, buffer, schurRightNzColId + nRuns * bufferNrhs, leftoverNrhs, sparseSC, SC);
+   }
 
 
 #if 0
@@ -230,14 +249,13 @@ void sLinsysLeafMumps::addTermToSchurComplMumps(sData *prob, bool sparseSC,
    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
    ofstream myfile;
    char filename[50];
-   sprintf(filename, "../blocked_%d_%d.txt", myrank, iteration);
+   sprintf(filename, "../A1_%d_%d.txt", myrank, iteration);
    myfile.open(filename);
    iteration++;
    SC.writeToStream(myfile); // todo write out in each iteration with global counter and MPI rank!
    myfile.close();
 
-   assert(0);
+   if( iteration >= 100)
+      assert(0);
 #endif
-
-   delete[] colsBlockDense;
 }

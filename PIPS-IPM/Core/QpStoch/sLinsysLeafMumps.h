@@ -18,6 +18,8 @@ class sData;
 class sLinsysLeafMumps : public sLinsysLeaf
 {
  public:
+  static constexpr int bufferMaxSize = (1024*1024*64);
+
   template<class LINSOLVER>
   sLinsysLeafMumps(sFactory* factory,
         sData* prob_,
@@ -25,7 +27,8 @@ class sLinsysLeafMumps : public sLinsysLeaf
         OoqpVector* nomegaInv_,
         OoqpVector* rhs_, LINSOLVER* solver)
         : sLinsysLeaf(factory, prob_, dd_, dq_, nomegaInv_, rhs_, solver),
-          schurRightMatrix_csc(nullptr), schurRightNzColId(nullptr), nSC(-1), mSchurRight(-1), nSchurRight(-1) {};
+          schurRightMatrix_csc(nullptr), schurRightNzColId(nullptr), nSC(-1), mSchurRight(-1), nSchurRight(-1),
+          buffer(nullptr), bufferSize(-1) {};
 
   ~sLinsysLeafMumps();
 
@@ -36,6 +39,7 @@ class sLinsysLeafMumps : public sLinsysLeaf
             DenseSymMatrix& SC) override;
 
  private:
+
   void addTermToSchurComplMumps(sData *prob, bool sparseSC,
             SymMatrix& SC);
 
@@ -48,6 +52,8 @@ class sLinsysLeafMumps : public sLinsysLeaf
   int mSchurRight;
   int nSchurRight;
 
+  double* buffer;
+  int bufferSize;
 };
 
 
