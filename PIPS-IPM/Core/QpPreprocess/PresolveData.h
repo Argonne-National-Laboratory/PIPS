@@ -16,6 +16,7 @@
 #include "SystemType.h"
 #include <algorithm>
 #include <list>
+#include <limits>
 
 struct sCOLINDEX
 {
@@ -39,8 +40,6 @@ class PresolveData
 private:
       sData* presProb;
 
-
-
       StochPostsolver* const postsolver;
 
       bool outdated_activities;
@@ -60,20 +59,36 @@ private:
       SimpleVectorHandle nnzs_row_C_chgs;
       SimpleVectorHandle nnzs_col_chgs;
 
-      /* activities of rows */
-      StochVectorHandle actmax_eq;
-      StochVectorHandle actmin_eq;
 
-      StochVectorHandle actmax_ineq;
-      StochVectorHandle actmin_ineq;
+      /// activities are computed once in the constructor as pairs act_part (double)
+      /// and #unbounded vars (int) representing the part of the row activity that actually
+      /// can be computed (since there is proper bounds on the variables) and the variables
+      /// in that row that do not have respective upper and or lower bounds
+      StochVectorHandle actmax_eq_part;
+      StochVectorHandle actmin_eq_part;
 
-      /* changes in row activities */
+      StochVectorHandle actmax_eq_ubndd;
+      StochVectorHandle actmin_eq_ubndd;
+
+      StochVectorHandle actmax_ineq_part;
+      StochVectorHandle actmin_ineq_part;
+
+      StochVectorHandle actmax_ineq_ubndd;
+      StochVectorHandle actmin_ineq_ubndd;
+
+      /// changes in boundedness and activities of linking rows get stored and synchronized
       int lenght_array_act_chgs;
       double* array_act_chgs;
       SimpleVectorHandle actmax_eq_chgs;
       SimpleVectorHandle actmin_eq_chgs;
       SimpleVectorHandle actmax_ineq_chgs;
       SimpleVectorHandle actmin_ineq_chgs;
+
+      double* array_act_unbounded_chgs;
+      SimpleVectorHandle actmax_eq_ubndd_chgs;
+      SimpleVectorHandle actmin_eq_ubndd_chgs;
+      SimpleVectorHandle actmax_ineq_ubndd_chgs;
+      SimpleVectorHandle actmin_ineq_ubndd_chgs;
 
       /* handling changes in bounds */
       int lenght_array_bound_chgs;
@@ -83,8 +98,8 @@ private:
 
 
       /* storing so far found singleton rows and columns */
-      std::list<sROWINDEX> singleton_rows;
-      std::list<sCOLINDEX> singleton_cols;
+      std::vector<sROWINDEX> singleton_rows;
+      std::vector<sCOLINDEX> singleton_cols;
 
       int my_rank;
       bool distributed;
@@ -101,13 +116,22 @@ private:
 
 public :
       const sData& getPresProb() const { return *presProb; };
-      const StochVector& getActMaxEq() const { return *actmax_eq; };
-      const StochVector& getActMaxIneq() const { return *actmax_ineq; };
-      const StochVector& getActMinEq() const { return *actmin_eq; };
-      const StochVector& getActMinIneq() const { return *actmin_ineq; };
+
+      const StochVector& getActMaxEqPart() const { return *actmax_eq_part; };
+      const StochVector& getActMaxIneqPart() const { return *actmax_ineq_part; };
+      const StochVector& getActMinEqPart() const { return *actmin_eq_part; };
+      const StochVector& getActMinIneqPart() const { return *actmin_ineq_part; };
+
+      const StochVector& getActMaxEqUbndd() const { return *actmax_eq_ubndd; };
+      const StochVector& getActMaxIneqUbndd() const { return *actmax_ineq_ubndd; };
+      const StochVector& getActMinEqUbndd() const { return *actmin_eq_ubndd; };
+      const StochVector& getActMinIneqUbndd() const { return *actmin_ineq_ubndd; };
+
       const StochVector& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
       const StochVector& getNnzsRowC() const { return *nnzs_row_C; };
       const StochVector& getNnzsCol() const { return *nnzs_col; };
+      const std::vector<sROWINDEX>& getSingletonRows() const { return singleton_rows; };
+      const std::vector<sCOLINDEX>& getSingletonCols() const { return singleton_cols; };
 
       /* methods for initializing the object */
    private:
@@ -121,18 +145,15 @@ public :
       ~PresolveData();
 
       sData* finalize();
+      bool reductionsEmpty();
 
       /* compute and update activities */
       void recomputeActivities() { recomputeActivities(false); }
       void recomputeActivities(bool linking_only);
    private:
-      void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_activities, SimpleVector& max_activities,
-            const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
-   public:
+      void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVector& unbounded_min, SimpleVector& max_partact,
+            SimpleVector& unbounded_max, const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
 
-//      bool combineColAdaptParent();
-
-      bool reductionsEmpty();
 
 public:
       // todo getter, setter for element access of nnz counter???
@@ -148,7 +169,7 @@ public:
       void allreduceAndApplyBoundChanges();
 
       /// interface methods called from the presolvers when they detect a possible modification
-// todo make bool and ginve feedback or even better - return some enumn maybe?
+      // todo make bool and ginve feedback or even better - return some enum maybe?
       void fixColumn(int node, int col, double value);
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
@@ -156,11 +177,9 @@ public:
 
       /* call whenever a single entry has been deleted from the matrix */
       void deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index, int& index_k, int& row_end);
-      void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
       void updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements);
 
       /* methods for verifying state of presData or querying the problem */
-public :
       bool verifyNnzcounters();
       bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
 
@@ -168,9 +187,18 @@ public :
       bool hasLinking(SystemType system_type) const;
 
 private:
+      void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
 /// methods for modifying the problem
       void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
-      void setVarBoundTo(SystemType system_type, int node, double value); // todo use and implement
+      /// set bounds if new bound is better than old bound
+      bool updateUpperBoundVariable(SystemType system_type, BlockType block_type, int node, int col, double ubx)
+      { return updateBoundsVariable(system_type, block_type, node, col, ubx, -std::numeric_limits<double>::max()); };
+
+      bool updateLowerBoundVariable(SystemType system_type, BlockType block_type, int node, int col, double lbx)
+      { return updateBoundsVariable(system_type, block_type, node, col, std::numeric_limits<double>::max(), lbx); };
+
+      bool updateBoundsVariable(SystemType system_type, BlockType block_type, int node, int col, double ubx, double lbx);
+
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow(SystemType system_type, int node, int row, bool linking);

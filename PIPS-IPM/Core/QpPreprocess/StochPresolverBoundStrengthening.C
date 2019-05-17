@@ -13,14 +13,12 @@
 // todo : make a list of fixed vars ? then variable fixing does not need to iterate the full matrix..
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb)
+      StochPresolverBase(presData, origProb), tightenings(0)
 {
-   // todo
 }
 
 StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 {
-   // todo
 }
 
 // todo print variables bounds strengthened
@@ -73,12 +71,10 @@ void StochPresolverBoundStrengthening::applyPresolving()
    /* update bounds on all processors */
    presData.allreduceLinkingVarBounds();
 
-   if( my_rank == 0 )
-      std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
-
 #ifndef NDEBUG
+   MPI_Allreduce(MPI_IN_PLACE, &tightenings, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
    if( my_rank == 0 )
-      std::cout << "--- After " << iter << " rounds of bound strengthening:" << std::endl;
+      std::cout << "--- After " << iter << " rounds of bound strengthening and " << tightenings << " times of tightening bounds:" << std::endl;
    countRowsCols();
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
@@ -132,6 +128,8 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    const SimpleVector& actmin = (block_type == LINKING_CONS_BLOCK) ? *currActMinLink : *currActMin;
    const SimpleVector& actmax = (block_type == LINKING_CONS_BLOCK) ? *currActMaxLink : *currActMax;
 
+   const SimpleVector& nnzs_row = (block_type == LINKING_CONS_BLOCK) ? *currNnzRowLink : *currNnzRow;
+
    const SparseStorageDynamic* mat;
    if(block_type == LINKING_CONS_BLOCK)
       mat = currBlmat;
@@ -155,6 +153,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
       for( int j = mat->rowptr[row].start; j < mat->rowptr[row].end; j++ )
       {
+         assert( mat->rowptr[row].end - mat->rowptr[row].end < nnzs_row[row] );
          // compute the possible new bounds on variable x_colIdx:
          const int col = mat->jcolM[j];
          const double a_ik = mat->M[j];
@@ -163,8 +162,15 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          assert( ixlow[col] != 0.0 || ixupp[col] != 0.0 );
 
          /* subtract current entry from row activity */
-         const double actmin_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmin_row - a_ik * xupp[col] : actmin_row - a_ik * xlow[col];
-         const double actmax_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmax_row - a_ik * xlow[col] : actmax_row - a_ik * xupp[col];
+         double actmin_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmin_row - a_ik * xupp[col] : actmin_row - a_ik * xlow[col];
+         double actmax_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmax_row - a_ik * xlow[col] : actmax_row - a_ik * xupp[col];
+
+         /// a singleton row has no activity
+         if(nnzs_row[row] == 1)
+         {
+            actmin_row_without_curr = 0;
+            actmax_row_without_curr = 0;
+         }
 
          double lbx_new = -std::numeric_limits<double>::max();
          double ubx_new = std::numeric_limits<double>::max();
@@ -204,8 +210,11 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
                   ubx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
          }
+         bool row_propagated = presData.rowPropagatedBounds(system_type, node, block_type, row, col, ubx_new, lbx_new);
 
-         tightened = tightened || presData.rowPropagatedBounds(system_type, node, block_type, row, col, ubx_new, lbx_new);
+         if(row_propagated && (node != -1 || my_rank == 0))
+            ++tightenings;
+         tightened = tightened || row_propagated;
       }
    }
 

@@ -16,7 +16,7 @@
 class StochPresolverSingletonRows : public StochPresolverBase
 {
 public:
-   StochPresolverSingletonRows(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver);
+   StochPresolverSingletonRows(PresolveData& presData, const sData& origProb);
 
    ~StochPresolverSingletonRows();
 
@@ -24,6 +24,8 @@ public:
    virtual void applyPresolving();
 
 private:
+   long long removed_rows;
+
    void doSingletonRows(int& n_sing_sys, int& n_sing_other_sys, SystemType system_type);
 
    void procSingletonRowRoot(SystemType system_type);

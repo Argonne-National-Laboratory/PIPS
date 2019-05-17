@@ -20,6 +20,8 @@ public:
    virtual void applyPresolving();
 
 private:
+   long long tightenings;
+
    bool strenghtenBoundsInNode(SystemType system_type, int node);
    bool strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type);
 };

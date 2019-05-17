@@ -19,7 +19,6 @@ StochPresolverColumnFixation::StochPresolverColumnFixation(
 
 StochPresolverColumnFixation::~StochPresolverColumnFixation()
 {
-   // todo
 }
 
 
@@ -45,6 +44,7 @@ void StochPresolverColumnFixation::applyPresolving()
    /* remove fixed columns from system */
 
    updatePointersForCurrentNode(-1, EQUALITY_SYSTEM);
+
    /* linking variables */
    for( int col = 0; col < currgParent->n; ++col )
    {
@@ -72,7 +72,8 @@ void StochPresolverColumnFixation::applyPresolving()
                value = ( (*currxlowParent)[col] + (*currxuppParent)[col] ) / 2.0;
 
             presData.fixColumn(-1, col, value);
-            ++fixed_columns;
+            if(my_rank == 0)
+               ++fixed_columns;
          }
       }
    }
@@ -99,7 +100,7 @@ void StochPresolverColumnFixation::applyPresolving()
 
          if( (*currIxlowChild)[col] != 0.0 && (*currIxuppChild)[col] != 0.0)
          {
-            assert(PIPSisLT(0.0, (*currxuppChild)[col] - (*currxlowChild)[col]));
+            assert(PIPSisLE(0.0, (*currxuppChild)[col] - (*currxlowChild)[col]));
 
             if( PIPSisLT( ((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, tolerance4) )
             {
@@ -113,7 +114,7 @@ void StochPresolverColumnFixation::applyPresolving()
                else  // set the variable to the arithmetic mean:
                   value = ( (*currxlowChild)[col] + (*currxuppChild)[col] ) / 2.0;
 
-               presData.fixColumn(-1, col, value);
+               presData.fixColumn(node, col, value);
                ++fixed_columns;
             }
          }
@@ -132,6 +133,7 @@ void StochPresolverColumnFixation::applyPresolving()
 
 
 #ifndef NDEBUG
+   MPI_Allreduce(MPI_IN_PLACE, &fixed_columns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
    if( my_rank == 0 )
       std::cout << "Fixed " << fixed_columns << " colums so far" << std::endl;
    if( my_rank == 0 )

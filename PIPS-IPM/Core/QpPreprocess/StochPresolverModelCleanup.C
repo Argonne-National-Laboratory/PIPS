@@ -351,8 +351,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          {
             if( (fabs( mat_entry ) < tolerance1 && fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < tolerance2 * feastol ))
             {
-               presData.adjustMatrixBoundsBy(system_type, node, block_type, r, -mat_entry * (*x_lower)[col]);
-
                presData.deleteEntry(system_type, node, block_type, r, k, end);
 
                std::pair<int,int> entry(r, col);
