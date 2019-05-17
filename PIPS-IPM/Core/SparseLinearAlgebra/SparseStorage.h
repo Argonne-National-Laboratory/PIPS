@@ -68,6 +68,8 @@ public:
   int rows() { return m; }
   int cols() { return n; }
 
+  bool isValid(bool verbose = false) const;
+
   int length() { return len; };
   int numberOfNonZeros() const {	return krowM[m]; };
   virtual void fromGetDense( int row, int col, double * A, int lda,
@@ -198,6 +200,8 @@ public:
   void c2fortran();
 
   void fortran2c();
+
+  void deleteZeroRowsColsSym(int*& new2orgIdx);
 
 
   /*

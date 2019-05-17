@@ -288,6 +288,11 @@ void SparseSymMatrix::writeToStream(ostream& out) const
   mStorage->writeToStream( out );
 }
 
+void SparseSymMatrix::writeToStreamDense(ostream& out) const
+{
+  mStorage->writeToStreamDense( out );
+}
+
 void SparseSymMatrix::mult ( double beta,  double y[], int incy,
 				 double alpha, double x[], int incx )
 {
@@ -363,4 +368,9 @@ void SparseSymMatrix::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& 
    mStorage->getSparseTriplet_c2fortran(irn, jcn, val);
 }
 
+
+void SparseSymMatrix::deleteZeroRowsCols(int*& new2orgIdx)
+{
+   mStorage->deleteZeroRowsColsSym(new2orgIdx);
+}
 
