@@ -492,99 +492,6 @@ void PresolveData::initSingletons()
                singleton_cols.push_back( sCOLINDEX(i, j));
 }
 
-//bool PresolveData::combineColAdaptParent()
-//{
-//   int myRank, world_size;
-//   bool iAmDistrib = false;
-//   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-//   MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-//
-//   if( world_size > 1)
-//      iAmDistrib = true;
-//
-//   if( iAmDistrib )
-//   {
-//      // allgather the length of each colAdaptParent
-//      const int mylen = getNumberColAdParent();
-//      int* recvcounts = new int[world_size];
-//
-//      MPI_Allgather(&mylen, 1, MPI_INT, recvcounts, 1, MPI_INT, MPI_COMM_WORLD);
-//
-//      // allgatherv the actual colAdaptParents
-//      // First, extract the colIdx and val into int* and double* arrays:
-//      int* colIndicesLocal = new int[mylen];
-//      double* valuesLocal = new double[mylen];
-//      for(int i=0; i<mylen; i++)
-//      {
-//         colIndicesLocal[i] = getColAdaptParent(i).colIdx;
-//         valuesLocal[i] = getColAdaptParent(i).val;
-//      }
-//      // Second, prepare the receive buffers:
-//      int lenghtGlobal = recvcounts[0];
-//      int* displs = new int[world_size];
-//      displs[0] = 0;
-//      for(int i = 1; i < world_size; i++)
-//      {
-//         lenghtGlobal += recvcounts[i];
-//         displs[i] = displs[i-1] + recvcounts[i-1];
-//      }
-//      int* colIndicesGlobal = new int[lenghtGlobal];
-//      double* valuesGlobal = new double[lenghtGlobal];
-//      // Then, do the actual MPI communication:
-//      MPI_Allgatherv(colIndicesLocal, mylen, MPI_INT, colIndicesGlobal, recvcounts, displs , MPI_INT, MPI_COMM_WORLD);
-//      MPI_Allgatherv(valuesLocal, mylen, MPI_DOUBLE, valuesGlobal, recvcounts, displs , MPI_DOUBLE, MPI_COMM_WORLD);
-//
-//      // Reconstruct a colAdaptParent:
-//      clearColAdaptParent();
-//      for(int i=0; i<lenghtGlobal; i++)
-//      {
-//         COLUMNFORDELETION colWithVal = {colIndicesGlobal[i], valuesGlobal[i]};
-//         addColToAdaptParent(colWithVal);
-//      }
-//
-//      delete[] displs;
-//      delete[] recvcounts;
-//      delete[] colIndicesLocal;
-//      delete[] valuesLocal;
-//      delete[] colIndicesGlobal;
-//      delete[] valuesGlobal;
-//   }
-//
-//   // Sort colIndicesGlobal (and valuesGlobal accordingly), remove duplicates and find infeasibilities
-//   std::sort(linkingVariablesMarkedForDeletion.begin(), linkingVariablesMarkedForDeletion.end(), col_is_smaller());
-//   for(int i = 1; i < getNumberColAdParent(); i++)
-//      assert( getColAdaptParent(i-1).colIdx <= getColAdaptParent(i).colIdx);
-//
-//   if(getNumberColAdParent() > 0)
-//   {
-//      int colIdxCurrent = getColAdaptParent(0).colIdx;
-//      double valCurrent = getColAdaptParent(0).val;
-//      for(int i = 1; i < getNumberColAdParent(); i++)
-//      {
-//         if( getColAdaptParent(i).colIdx == colIdxCurrent )
-//         {
-//            if( getColAdaptParent(i).val != valCurrent )
-//            {
-//               std::cout << "Detected infeasibility (in variable) " << colIdxCurrent << std::endl;
-//               return false;
-//            }
-//            else
-//            {
-//               linkingVariablesMarkedForDeletion.erase(linkingVariablesMarkedForDeletion.begin()+i);   //todo: implement more efficiently
-//               i--;
-//            }
-//         }
-//         else{
-//            colIdxCurrent = getColAdaptParent(i).colIdx;
-//            valCurrent = getColAdaptParent(i).val;
-//         }
-//      }
-//   }
-//   assert( getNumberColAdParent() <= nnzs_col->vec->n );
-//
-//   return true;
-//}
-
 bool PresolveData::reductionsEmpty()
 {
    if(distributed)
@@ -607,29 +514,13 @@ void PresolveData::setObjOffset(double offset)
    objOffset = offset;
 }
 
-//COLUMNFORDELETION PresolveData::getColAdaptParent(int i) const
-//{
-//   assert( i<getNumberColAdParent() );
-//   return linkingVariablesMarkedForDeletion[i];
-//}
-//int PresolveData::getNumberColAdParent() const
-//{
-//   return (int)linkingVariablesMarkedForDeletion.size();
-//}
-//void PresolveData::addColToAdaptParent(COLUMNFORDELETION colToAdapt)
-//{
-//   linkingVariablesMarkedForDeletion.push_back(colToAdapt);
-//}
-//void PresolveData::clearColAdaptParent()
-//{
-//   linkingVariablesMarkedForDeletion.clear();
-//}
-
 // todo : if small entry was removed from system no postsolve is necessary - if coefficient was removed because impact of changes in variable are small
 // also rhs lhs will be adjusted - this has to be reversed later - there will also be a problem with the reduced costs in than particular row ?
-void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block_type, SparseStorageDynamic* storage, int row_index,
+void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index,
       int& index_k, int& row_end)
 {
+   SparseStorageDynamic* storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamic();
+
    if(block_type == LINKING_CONS_BLOCK || block_type == LINKING_VARS_BLOCK || node == -1)
       outdated_nnzs = true;
 
@@ -649,7 +540,8 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
 void PresolveData::fixColumn(int node, int col, double value)
 {
    postsolver->notifyFixedColumn(node, col, value);
-   // todo delete column from system
+
+   removeColumn(node, col, value);
 }
 
 bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx)
@@ -669,7 +561,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    if( ( ixlow[col] != 0.0 && PIPSisLT(ubx, xlow[col]) )
          || (ixupp[col] != 0.0 && PIPSisLT(xupp[col], lbx) )
          || (lbx > ubx))
-      abortInfeasible(MPI_COMM_WORLD, "Row Probagation detected infeasible new bounds!", "PresolveData.C", "rowPropagetedBounds");
+      abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagetedBounds");
 
    bool bounds_changed = false;
 
@@ -755,8 +647,10 @@ void PresolveData::adjustMatrixBoundsBy(SystemType system_type, int node, BlockT
    }
 }
 
-void PresolveData::updateTransposedSubmatrix( SparseStorageDynamic* transposed, std::vector<std::pair<int, int> >& elements)
+void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements)
 {
+   SparseStorageDynamic* transposed = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposed();
+
    for( size_t i = 0; i < elements.size(); ++i )
    {
       std::pair<int, int> entry = elements.at(i);
@@ -843,159 +737,79 @@ void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_ind
    }
 }
 
-// todo notify
-void PresolveData::removeColumn()
+void PresolveData::removeColumn(int node, int col, double fixation)
 {
-   /* if linking column - save deletion for later sync and delete */
-   throw std::runtime_error("Not yet implemented");
+   assert( -1 <= node && node < nChildren );
 
-   /* if non-linking column - delete right away */
+   if(node == -1)
+   {
+      removeColumnFromMatrix(EQUALITY_SYSTEM, node, LINKING_VARS_BLOCK, col, fixation);
+      removeColumnFromMatrix(INEQUALITY_SYSTEM, node, LINKING_VARS_BLOCK, col, fixation);
+
+      if(hasLinking(EQUALITY_SYSTEM))
+         removeColumnFromMatrix(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+      if( hasLinking(INEQUALITY_SYSTEM) )
+         removeColumnFromMatrix(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+
+      for(int i = 0; i < nChildren; ++i)
+      {
+         if(!nodeIsDummy(i, EQUALITY_SYSTEM))
+            removeColumnFromMatrix(EQUALITY_SYSTEM, i, LINKING_VARS_BLOCK, col, fixation);
+         if( !nodeIsDummy(i, INEQUALITY_SYSTEM) )
+            removeColumnFromMatrix(INEQUALITY_SYSTEM, i, LINKING_VARS_BLOCK, col, fixation);
+      }
+   }
+   else
+   {
+      removeColumnFromMatrix(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, fixation);
+
+      if(hasLinking(EQUALITY_SYSTEM))
+         removeColumnFromMatrix(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+      if(hasLinking(INEQUALITY_SYSTEM))
+         removeColumnFromMatrix(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+   }
+
+   /* adjust objective function */
+   if(node != -1 || my_rank == 0)
+   {
+      double objective_factor = ( ( node == -1 ) ? dynamic_cast<SimpleVector&>(*dynamic_cast<StochVector&>(*presProb->g).vec)[col]
+         : dynamic_cast<SimpleVector&>(*(dynamic_cast<StochVector&>(*presProb->g).children[node]->vec))[col] );
+      obj_offset_chgs += objective_factor * fixation;
+   }
 }
 
-//// todo description + use to notify column deletion
-//// todo notify postsolver! rows and cols
-//void PresolveData::deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value)
-//{
-//   assert(node != -1);
-//
-//   /* equality system */
-//   /* delete from Bmat */
-//   deleteNonlinkColumnFromSparseStorageDynamic(EQUALITY_SYSTEM, node, CHILD_BLOCK, col_idx, fixation_value);
-//
-//   /* delete from Blmat */
-//   if(hasLinking(EQUALITY_SYSTEM))
-//      deleteNonlinkColumnFromSparseStorageDynamic(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col_idx, fixation_value);
-//
-//   /* inequality system */
-//   /* delete from Bmat */
-//   deleteNonlinkColumnFromSparseStorageDynamic(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col_idx, fixation_value);
-//
-//   /* delete from Blmat */
-//   if(hasLinking(INEQUALITY_SYSTEM))
-//      deleteNonlinkColumnFromSparseStorageDynamic(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col_idx, fixation_value);
-//
-//   /* adjust objective function */
-//   updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
-//   indivObjOffset += currgChild->elements()[col_idx] * fixation_value;
-//}
-//
-//void PresolveData::deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val)
-//{
-//   /* assert non-linking */
-//   assert(block_type != LINKING_VARS_BLOCK);
-//   assert(node != -1);
-//
-//   updatePointersForCurrentNode(node, system_type);
-//
-//   SparseStorageDynamic& matrix = (block_type == CHILD_BLOCK) ? *currBmat : *currBlmat;
-//   SparseStorageDynamic& matrix_transp = (block_type == CHILD_BLOCK) ? *currBmatTrans : *currBlmatTrans;
-//   SimpleVector* curr_row_red = (block_type == CHILD_BLOCK) ? currRedRow : currRedRowLink;
-//   SimpleVector* rhs = (block_type == CHILD_BLOCK) ? currEqRhs :currEqRhsLink;
-//
-//   SimpleVector* iclow = (block_type == CHILD_BLOCK) ? currIclow : currIclowLink;
-//   SimpleVector* clow = (block_type == CHILD_BLOCK) ? currIneqLhs : currIneqLhsLink;
-//   SimpleVector* icupp = (block_type == CHILD_BLOCK) ? currIcupp : currIcuppLink;
-//   SimpleVector* cupp = (block_type == CHILD_BLOCK) ? currIneqRhs : currIneqRhsLink;
-//
-//   SimpleVector* nnz_row = (block_type == CHILD_BLOCK) ? currNnzRow : currNnzRowLink;
-//
-//   assert(0 <= col_idx && col_idx <= matrix_transp.m);
-//   for( int j = matrix_transp.rowptr[col_idx].start; j < matrix_transp.rowptr[col_idx].end; j++ )
-//   {
-//      int rowIdx = matrix_transp.jcolM[j];
-//      double m = 0.0;
-//
-//      if( !removeEntryInDynamicStorage(matrix, rowIdx, col_idx, m) )
-//         continue;
-//
-//      curr_row_red->elements()[rowIdx]++;
-//      /* never linking vars */
-//      currnnzs_col_chgsChild->elements()[col_idx]++;
-//
-//      if( system_type == EQUALITY_SYSTEM )
-//      {
-//         if(block_type == LINKING_CONS_BLOCK)
-//         {
-//            currEqRhsAdaptionsLink[rowIdx] -= m * val;
-//         }
-//         else
-//         {
-//            rhs->elements()[rowIdx] -= m * val;
-//
-//            /* fixation must be valid */
-//            if( nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 0.0 )
-//            {
-//               assert(matrix.rowptr[rowIdx].start == matrix.rowptr[rowIdx].end);
-//               if( !PIPSisZero(rhs->elements()[rowIdx], 1e-10) )
-//               {
-//                  std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value " << val << "\trhs " << rhs->elements()[rowIdx] << "\tmat " << m << std::endl;
-//                  std::cout << "Problem infeasible" << std::endl;
-//                  abortInfeasible(MPI_COMM_WORLD );
-//               }
-//            }
-//         }
-//
-//      }
-//      else
-//      {
-//         if(block_type == LINKING_CONS_BLOCK)
-//         {
-//            if( icupp->elements()[rowIdx] != 0.0 )
-//               currInEqLhsAdaptionsLink[rowIdx] -= m * val;
-//            if( iclow->elements()[rowIdx] != 0.0 )
-//               currInEqRhsAdaptionsLink[rowIdx] -= m * val;
-//
-//            if(nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 0.0 )
-//            {
-//               if( (icupp->elements()[rowIdx] == 1.0 && !PIPSisLE(0.0, cupp->elements()[rowIdx] + currInEqRhsAdaptionsLink[rowIdx]) )
-//                 || (iclow->elements()[rowIdx] == 1.0 && !PIPSisLE(clow->elements()[rowIdx] + currInEqLhsAdaptionsLink[rowIdx], 0.0)))
-//               {
-//                     std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value" << std::endl;
-//                     std::cout << val << "\t" << m << std::endl;
-//                     if(icupp->elements()[rowIdx])
-//                        std::cout << "upper bound: " << cupp->elements()[rowIdx] << std::endl;
-//                     if(iclow->elements()[rowIdx])
-//                        std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
-//                     std::cout << "Problem infeasible" << std::endl;
-//                     abortInfeasible(MPI_COMM_WORLD);
-//                  }
-//               }
-//         }
-//         else
-//         {
-//            if( icupp->elements()[rowIdx] == 1.0 )
-//              cupp->elements()[rowIdx] -= m * val;
-//
-//            if( iclow->elements()[rowIdx] == 1.0 )
-//               clow->elements()[rowIdx] -= m * val;
-//
-//            if(nnz_row->elements()[rowIdx] - curr_row_red->elements()[rowIdx] == 0.0 )
-//            {
-//            // todo does not work from inequ sys - the rhs is not updated then
-//               if( (icupp->elements()[rowIdx] == 1.0 && !PIPSisLE(0.0, cupp->elements()[rowIdx]) )
-//                     || (iclow->elements()[rowIdx] == 1.0 && !PIPSisLE(clow->elements()[rowIdx], 0.0)))
-//               {
-//                  std::cout << "Presolving detected infeasibility: Fixation of variable to invalid value" << std::endl;
-//                  std::cout << val << "\t" << m << std::endl;
-//                  if(icupp->elements()[rowIdx])
-//                     std::cout << "upper bound: " << cupp->elements()[rowIdx] << std::endl;
-//                  if(iclow->elements()[rowIdx])
-//                     std::cout << "lower bound: " << clow->elements()[rowIdx] << std::endl;
-//                  std::cout << "Problem infeasible" << std::endl;
-//                  abortInfeasible(MPI_COMM_WORLD);
-//               }
-//            }
-//         }
-//      }
-//   }
-//
-//   clearRow(matrix_transp, col_idx);
-//}
+/** remove column - adjust lhs, rhs and activity as well as nnz_counters */
+void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation)
+{
+   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
+
+   SparseStorageDynamic& matrix = mat->getStorageDynamicRef();
+   SparseStorageDynamic& matrix_transp = mat->getStorageDynamicTransposedRef();
+
+   assert(0 <= col && col <= matrix_transp.m);
+
+   for( int j = matrix_transp.rowptr[col].start; j < matrix_transp.rowptr[col].end; j++ )
+   {
+      const int row = matrix_transp.jcolM[j];
+      const double coeff = matrix_transp.M[j];
+
+      removeEntryInDynamicStorage(matrix, row, col);
+
+      removeIndexRow(system_type, node, block_type, row, 1);
+
+      adjustMatrixBoundsBy(system_type, node, block_type, row, - coeff * fixation);
+      adjustRowActivityFromDeletion(system_type, node, block_type, row, col, coeff);
+   }
+
+   removeIndexColumn(node, block_type, col, matrix_transp.rowptr[col].end - matrix_transp.rowptr[col].start);
+   matrix_transp.rowptr[col].end = matrix_transp.rowptr[col].start;
+}
+
 void PresolveData::removeParallelRow(SystemType system_type, int node, int row, bool linking)
 {
    throw std::runtime_error("Not yet implemented");
 //   if(postsolver)
-//      postsolver->notifyFixedColumn()
+//      postsolver->notifyParallelRow()
 
    removeRow(system_type, node, row, linking);
 }
@@ -1036,7 +850,7 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
 }
 
 
-// todo : should rhs and lhs be set to zero too? -nah?
+// todo : should rhs and lhs be set to zero too? -nah? activity !
 void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row)
 {
    assert(!nodeIsDummy(node, system_type));
@@ -1077,6 +891,7 @@ void PresolveData::removeEntryInDynamicStorage(SparseStorageDynamic& storage, in
       if( storage.jcolM[i] == colIdx )
          break;
    }
+   assert( storage.jcolM[i] == colIdx);
 
    std::swap(storage.M[i], storage.M[end-1]);
    std::swap(storage.jcolM[i], storage.jcolM[end-1]);
@@ -1280,4 +1095,36 @@ bool PresolveData::nodeIsDummy(int node, SystemType system_type) const // todo c
       return true;
    }
    return false;
+}
+
+bool PresolveData::hasLinking(SystemType system_type) const
+{
+   int mlink, nlink;
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      dynamic_cast<StochGenMatrix&>(*(presProb->A)).Blmat->getSize(mlink, nlink);
+      if( mlink > 0 )
+      {
+         // todo: assert that all vectors and matrices have linking part
+         return true;
+      }
+   }
+   else
+   {
+      dynamic_cast<StochGenMatrix&>(*(presProb->C)).Blmat->getSize(mlink, nlink);
+      if( mlink > 0 )
+      {
+         // todo: assert that all vectors and matrices have linking part
+         return true;
+      }
+   }
+   return false;
+}
+
+void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff)
+{
+   throw std::runtime_error("Not yet implemented");
+
+   /* depending on the sign of coeff add / substract lbx * coeff/ ubx * coeff from actmin and actmax */
+   //todo
 }

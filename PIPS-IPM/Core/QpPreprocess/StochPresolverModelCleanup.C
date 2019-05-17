@@ -24,10 +24,9 @@ StochPresolverModelCleanup::~StochPresolverModelCleanup()
 void StochPresolverModelCleanup::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
+   assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -83,10 +82,9 @@ void StochPresolverModelCleanup::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
+   assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
 }
 
 /** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity
@@ -138,36 +136,36 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
    assert( (linking && node == -1) || !linking );
    assert(!presData.nodeIsDummy(node, system_type));
 
-   if(linking && !hasLinking(system_type))
+   if(linking && !presData.hasLinking(system_type))
       return 0;
    updatePointersForCurrentNode(node, system_type);
 
    int n_removed_rows = 0;
 
-   SimpleVector& nnzs = (linking == false) ? *currNnzRow : *currNnzRowLink;
-   SimpleVector& rhs_eq = (linking == false) ? *currEqRhs : *currEqRhsLink;
-   SimpleVector& clow  = (linking == false) ? *currIneqLhs : *currIneqLhsLink;
-   SimpleVector& cupp = (linking == false) ? *currIneqRhs : *currIneqRhsLink;
-   SimpleVector& iclow = (linking == false) ? *currIclow : *currIclowLink;
-   SimpleVector& icupp = (linking == false) ? *currIcupp : *currIcuppLink;
+   const SimpleVector& nnzs = (linking == false) ? *currNnzRow : *currNnzRowLink;
+   const SimpleVector& rhs_eq = (linking == false) ? *currEqRhs : *currEqRhsLink;
+   const SimpleVector& clow  = (linking == false) ? *currIneqLhs : *currIneqLhsLink;
+   const SimpleVector& cupp = (linking == false) ? *currIneqRhs : *currIneqRhsLink;
+   const SimpleVector& iclow = (linking == false) ? *currIclow : *currIclowLink;
+   const SimpleVector& icupp = (linking == false) ? *currIcupp : *currIcuppLink;
 
-   SimpleVector* min_act;
-   SimpleVector* max_act;
+   const SimpleVector* min_act;
+   const SimpleVector* max_act;
 
    if( linking )
    {
-      min_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<SimpleVector*>(presData.actmin_eq->vecl) : dynamic_cast<SimpleVector*>(presData.actmin_ineq->vecl);
-      max_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<SimpleVector*>(presData.actmax_eq->vecl) : dynamic_cast<SimpleVector*>(presData.actmax_ineq->vecl);
+      min_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMinEq().vecl) : dynamic_cast<const SimpleVector*>(presData.getActMinIneq().vecl);
+      max_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEq().vecl) : dynamic_cast<const SimpleVector*>(presData.getActMaxIneq().vecl);
    }
    else if(system_type == EQUALITY_SYSTEM)
    {
-      min_act = (node == -1) ? dynamic_cast<SimpleVector*>(presData.actmin_eq->vec) : dynamic_cast<SimpleVector*>(presData.actmin_eq->children[node]->vec);
-      max_act = (node == -1) ? dynamic_cast<SimpleVector*>(presData.actmax_eq->vec) : dynamic_cast<SimpleVector*>(presData.actmax_eq->children[node]->vec);
+      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinEq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMinEq().children[node]->vec);
+      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMaxEq().children[node]->vec);
    }
    else
    {
-      min_act = (node == -1) ? dynamic_cast<SimpleVector*>(presData.actmin_ineq->vec) : dynamic_cast<SimpleVector*>(presData.actmin_ineq->children[node]->vec);
-      max_act = (node == -1) ? dynamic_cast<SimpleVector*>(presData.actmax_ineq->vec) : dynamic_cast<SimpleVector*>(presData.actmax_ineq->children[node]->vec);
+      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinIneq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMinIneq().children[node]->vec);
+      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxIneq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMaxIneq().children[node]->vec);
    }
 
    assert(min_act);
@@ -224,8 +222,8 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
  */
 int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_type)
 {
-   assert(dynamic_cast<StochGenMatrix&>(*(presData.presProb->A)).children.size() == (size_t) nChildren);
-   assert(dynamic_cast<StochGenMatrix&>(*(presData.presProb->C)).children.size() == (size_t) nChildren);
+   assert(dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().A)).children.size() == (size_t) nChildren);
+   assert(dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().C)).children.size() == (size_t) nChildren);
 
    int n_elims = 0;
 
@@ -234,7 +232,7 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    {
       /* process B0 and Bl0 */
       n_elims += removeTinyInnerLoop(system_type, -1, LINKING_VARS_BLOCK);
-      if( hasLinking(system_type) )
+      if( presData.hasLinking(system_type) )
          n_elims += removeTinyInnerLoop(system_type, -1, LINKING_CONS_BLOCK);
    }
 
@@ -257,7 +255,7 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
 
          /* this has to be synchronized */
          /* Blmat */
-         if( hasLinking(system_type) )
+         if( presData.hasLinking(system_type) )
             n_elims += removeTinyInnerLoop(system_type, node, LINKING_CONS_BLOCK);
          }
    }
@@ -278,14 +276,14 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 
    updatePointersForCurrentNode(node, system_type);
 
-   SparseStorageDynamic* mat = NULL;
-   SparseStorageDynamic* mat_transp = NULL;
+   const SparseStorageDynamic* mat = NULL;
+   const SparseStorageDynamic* mat_transp = NULL;
 
-   SimpleVector* x_lower = NULL;
-   SimpleVector* x_lower_idx = NULL;
-   SimpleVector* x_upper = NULL;
-   SimpleVector* x_upper_idx = NULL;
-   SimpleVector* nnzRow = NULL;
+   const SimpleVector* x_lower = NULL;
+   const SimpleVector* x_lower_idx = NULL;
+   const SimpleVector* x_upper = NULL;
+   const SimpleVector* x_upper_idx = NULL;
+   const SimpleVector* nnzRow = NULL;
 
    /* set matrix */
    if( block_type == CHILD_BLOCK )
@@ -319,8 +317,8 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 
    int n_elims = 0;
 
-   SparseStorageDynamic* storage = mat;
-   SparseStorageDynamic* storage_transp = mat_transp;
+   const SparseStorageDynamic* storage = mat;
+   const SparseStorageDynamic* storage_transp = mat_transp;
    assert(storage_transp);
 
    std::vector<std::pair<int, int> > eliminated_entries;
@@ -342,7 +340,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          /* remove all small entries */
          if( fabs( mat_entry ) < tol_matrix_entry )
          {
-            presData.deleteEntry(system_type, node, block_type, storage, r, k, end);
+            presData.deleteEntry(system_type, node, block_type, r, k, end);
 
             std::pair<int,int> entry(r, col);
             eliminated_entries.push_back(entry);
@@ -355,7 +353,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
             {
                presData.adjustMatrixBoundsBy(system_type, node, block_type, r, -mat_entry * (*x_lower)[col]);
 
-               presData.deleteEntry(system_type, node, block_type, storage, r, k, end);
+               presData.deleteEntry(system_type, node, block_type, r, k, end);
 
                std::pair<int,int> entry(r, col);
                eliminated_entries.push_back(entry);
@@ -373,7 +371,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
                {
                   total_sum_modifications_row += fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col]);
 
-                  presData.deleteEntry(system_type, node, block_type, storage, r, k, end);
+                  presData.deleteEntry(system_type, node, block_type, r, k, end);
 
                   std::pair<int,int> entry(r, col);
                   eliminated_entries.push_back(entry);
@@ -385,7 +383,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
       }
    }
 
-   presData.updateTransposedSubmatrix( mat_transp, eliminated_entries);
+   presData.updateTransposedSubmatrix( system_type, node, block_type, eliminated_entries);
 
    assert(presData.elementsDeletedInTransposed());
 

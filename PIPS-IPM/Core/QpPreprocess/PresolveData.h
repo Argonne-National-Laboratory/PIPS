@@ -17,12 +17,6 @@
 #include <algorithm>
 #include <list>
 
-typedef struct
-{
-   int colIdx;
-   double val;
-} COLUMNFORDELETION;
-
 struct sCOLINDEX
 {
       sCOLINDEX(int node, int index) : node(node), index(index) {};
@@ -40,27 +34,20 @@ struct sROWINDEX
       SystemType system_type;
 };
 
-struct col_is_smaller
-{
-    bool operator()(const COLUMNFORDELETION& x, const COLUMNFORDELETION& y) const
-    {
-        return x.colIdx < y.colIdx;
-    }
-};
-
 class PresolveData
 {
-
-   public:
-      sData* presProb;
 private:
+      sData* presProb;
+
+
+
       StochPostsolver* const postsolver;
 
       bool outdated_activities;
       bool outdated_lhsrhs;
       bool outdated_nnzs;
       bool outdated_linking_var_bounds;
-public:
+// todo make all private - forbid changing of these from external sources - only return const references / const pointers
       /* number of non-zero elements of each row / column */
       StochVectorHandle nnzs_row_A;
       StochVectorHandle nnzs_row_C;
@@ -80,7 +67,7 @@ public:
       StochVectorHandle actmax_ineq;
       StochVectorHandle actmin_ineq;
 
-      /* changes in row avtivities */
+      /* changes in row activities */
       int lenght_array_act_chgs;
       double* array_act_chgs;
       SimpleVectorHandle actmax_eq_chgs;
@@ -99,8 +86,6 @@ public:
       std::list<sROWINDEX> singleton_rows;
       std::list<sCOLINDEX> singleton_cols;
 
-
-   private:
       int my_rank;
       bool distributed;
 
@@ -114,7 +99,15 @@ public:
       int elements_deleted;
       int elements_deleted_transposed;
 
-//      std::vector<COLUMNFORDELETION> linkingVariablesMarkedForDeletion;
+public :
+      const sData& getPresProb() const { return *presProb; };
+      const StochVector& getActMaxEq() const { return *actmax_eq; };
+      const StochVector& getActMaxIneq() const { return *actmax_ineq; };
+      const StochVector& getActMinEq() const { return *actmin_eq; };
+      const StochVector& getActMinIneq() const { return *actmin_ineq; };
+      const StochVector& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
+      const StochVector& getNnzsRowC() const { return *nnzs_row_C; };
+      const StochVector& getNnzsCol() const { return *nnzs_col; };
 
       /* methods for initializing the object */
    private:
@@ -147,45 +140,47 @@ public:
       double addObjOffset(double addOffset);
       void setObjOffset(double offset);
       int getNChildren() const { return nChildren; };
-//      COLUMNFORDELETION getColAdaptParent(int i) const;
-//      int getNumberColAdParent() const;
-//      void addColToAdaptParent(COLUMNFORDELETION colToAdapt);
-//      void clearColAdaptParent();
 
+      /// synchronizing the problem over all mpi processes if necessary
       void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
       void allreduceAndApplyNnzChanges();
       void allreduceAndApplyBoundChanges();
 
-
-public:
-      /* call whenever a single entry has been deleted from the matrix */
-      void deleteEntry(SystemType system_type, int node, BlockType block_type, SparseStorageDynamic* storage,
-            int row_index, int& index_k, int& row_end);
-      void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
-      void updateTransposedSubmatrix( SparseStorageDynamic* transposed, std::vector<std::pair<int, int> >& elements);
+      /// interface methods called from the presolvers when they detect a possible modification
+// todo make bool and ginve feedback or even better - return some enumn maybe?
       void fixColumn(int node, int col, double value);
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
-
-      void removeColumn();
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
       void removeParallelRow(SystemType system_type, int node, int row, bool linking);
+
+      /* call whenever a single entry has been deleted from the matrix */
+      void deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index, int& index_k, int& row_end);
+      void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
+      void updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements);
+
+      /* methods for verifying state of presData or querying the problem */
+public :
+      bool verifyNnzcounters();
+      bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
+
+      bool nodeIsDummy(int node, SystemType system_type) const;
+      bool hasLinking(SystemType system_type) const;
+
 private:
+/// methods for modifying the problem
+      void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
+      void setVarBoundTo(SystemType system_type, int node, double value); // todo use and implement
+      void removeColumn(int node, int col, double fixation);
+      void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow(SystemType system_type, int node, int row, bool linking);
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
       void removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row_idx, int col_idx) const;
 
-      /* methods for verifying state of presData */
-public :
-      bool verifyNnzcounters();
-      bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
-private:
-      SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type);
       void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
       void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
-public:
-      bool nodeIsDummy(int node, SystemType system_type) const;
-
+/// methods for querying the problem in order to get certain structures etc.
+      SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type);
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_ */

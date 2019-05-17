@@ -28,10 +28,9 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 void StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
+   assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -86,10 +85,9 @@ void StochPresolverBoundStrengthening::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
+   assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
 }
 
 bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
@@ -99,7 +97,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
    bool tightened = false;
 
    tightened = tightened || strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK);
-   if(hasLinking(system_type))
+   if( presData.hasLinking(system_type) )
       tightened = tightened || strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK);
 
    if(node != -1)
@@ -119,22 +117,22 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    assert( -1 <= node && node < nChildren );
    updatePointersForCurrentNode(node, system_type);
 
-   SimpleVector& xlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
-   SimpleVector& ixlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
-   SimpleVector& xupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
-   SimpleVector& ixupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
+   const SimpleVector& xlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
+   const SimpleVector& ixlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
+   const SimpleVector& xupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
+   const SimpleVector& ixupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
 
-   SimpleVector& iclow = (block_type == LINKING_CONS_BLOCK) ? *currIclowLink : *currIclow;
-   SimpleVector& clow = (block_type == LINKING_CONS_BLOCK) ? *currIneqLhsLink : *currIneqLhs;
-   SimpleVector& icupp = (block_type == LINKING_CONS_BLOCK) ? *currIcuppLink : *currIcupp;
-   SimpleVector& cupp = (block_type == LINKING_CONS_BLOCK) ? *currIneqRhsLink : *currIneqRhs;
+   const SimpleVector& iclow = (block_type == LINKING_CONS_BLOCK) ? *currIclowLink : *currIclow;
+   const SimpleVector& clow = (block_type == LINKING_CONS_BLOCK) ? *currIneqLhsLink : *currIneqLhs;
+   const SimpleVector& icupp = (block_type == LINKING_CONS_BLOCK) ? *currIcuppLink : *currIcupp;
+   const SimpleVector& cupp = (block_type == LINKING_CONS_BLOCK) ? *currIneqRhsLink : *currIneqRhs;
 
-   SimpleVector& rhs = (block_type == LINKING_CONS_BLOCK) ? *currEqRhsLink : *currEqRhs;
+   const SimpleVector& rhs = (block_type == LINKING_CONS_BLOCK) ? *currEqRhsLink : *currEqRhs;
 
-   SimpleVector& actmin = (block_type == LINKING_CONS_BLOCK) ? *currActMinLink : *currActMin;
-   SimpleVector& actmax = (block_type == LINKING_CONS_BLOCK) ? *currActMaxLink : *currActMax;
+   const SimpleVector& actmin = (block_type == LINKING_CONS_BLOCK) ? *currActMinLink : *currActMin;
+   const SimpleVector& actmax = (block_type == LINKING_CONS_BLOCK) ? *currActMaxLink : *currActMax;
 
-   SparseStorageDynamic* mat;
+   const SparseStorageDynamic* mat;
    if(block_type == LINKING_CONS_BLOCK)
       mat = currBlmat;
    else if(block_type == LINKING_VARS_BLOCK)

@@ -67,7 +67,7 @@ Data* StochPresolver::presolve()
    PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
    assert( sorigprob->isRootNodeInSync());
-   assert( presData.presProb->isRootNodeInSync() );
+   assert( presData.getPresProb().isRootNodeInSync() );
 
    /* initialize all presolvers */
    StochPresolverBoundStrengthening presolverBS(presData, *sorigprob);
@@ -88,8 +88,8 @@ Data* StochPresolver::presolve()
       /* singleton rows */
 //      presolverCleanup.applyPresolving();
 //      presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
-//      presolverColFix.applyPresolving();
+//      presolverBS.applyPresolving();
+      presolverColFix.applyPresolving();
 //      presolverBS.applyPresolving();
 
 //      presolverBS.applyPresolving();
@@ -103,7 +103,7 @@ Data* StochPresolver::presolve()
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
 
-   assert( presData.presProb->isRootNodeInSync() );
+   assert( presData.getPresProb().isRootNodeInSync() );
 //      presData.presProb->writeToStreamDense(std::cout);
 
    sData* finalPresData = presData.finalize();

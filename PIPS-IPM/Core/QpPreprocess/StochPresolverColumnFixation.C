@@ -28,10 +28,9 @@ StochPresolverColumnFixation::~StochPresolverColumnFixation()
 void StochPresolverColumnFixation::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
+   assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -81,8 +80,12 @@ void StochPresolverColumnFixation::applyPresolving()
    /* child nodes */
    for(int node = 0; node < nChildren; ++node)
    {
-      if(presData.nodeIsDummy(node, EQUALITY_SYSTEM) && presData.nodeIsDummy(node, INEQUALITY_SYSTEM));
-      updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+      if(presData.nodeIsDummy(node, EQUALITY_SYSTEM) && presData.nodeIsDummy(node, INEQUALITY_SYSTEM))
+         continue;
+      else if(! presData.nodeIsDummy(node, EQUALITY_SYSTEM))
+         updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+      else
+         updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
 
       /* linking variables */
       for( int col = 0; col < currgChild->n; ++col )
@@ -140,8 +143,7 @@ void StochPresolverColumnFixation::applyPresolving()
 
 //   assert(fixed_columns in sync) todo -> should be the same over all processes - the variable bounds data was synchronized beforehand
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
+   assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
 }

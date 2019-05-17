@@ -54,8 +54,6 @@ private:
    void setPointersObjective(int node);
    void setReductionPointers(SystemType system_type, int node);
 protected:
-   bool hasLinking(SystemType system_type) const;
-
 public:
    /** checks if all processes have the same root node data.
     *
@@ -74,55 +72,55 @@ protected:
    // pointers to the currently needed matrices and vectors for presolving
    const sData& origProb;
 
-   SparseStorageDynamic* currAmat;
-   SparseStorageDynamic* currAmatTrans;
-   SparseStorageDynamic* currBmat;
-   SparseStorageDynamic* currBmatTrans;
-   SparseStorageDynamic* currBlmat;
-   SparseStorageDynamic* currBlmatTrans;
+   const SparseStorageDynamic* currAmat;
+   const SparseStorageDynamic* currAmatTrans;
+   const SparseStorageDynamic* currBmat;
+   const SparseStorageDynamic* currBmatTrans;
+   const SparseStorageDynamic* currBlmat;
+   const SparseStorageDynamic* currBlmatTrans;
 
-   SimpleVector* currxlowParent;
-   SimpleVector* currIxlowParent;
-   SimpleVector* currxuppParent;
-   SimpleVector* currIxuppParent;
-   SimpleVector* currxlowChild;
-   SimpleVector* currIxlowChild;
-   SimpleVector* currxuppChild ;
-   SimpleVector* currIxuppChild;
+   const SimpleVector* currxlowParent;
+   const SimpleVector* currIxlowParent;
+   const SimpleVector* currxuppParent;
+   const SimpleVector* currIxuppParent;
+   const SimpleVector* currxlowChild;
+   const SimpleVector* currIxlowChild;
+   const SimpleVector* currxuppChild ;
+   const SimpleVector* currIxuppChild;
 
-   SimpleVector* currActMax;
-   SimpleVector* currActMin;
-   SimpleVector* currActMaxLink;
-   SimpleVector* currActMinLink;
+   const SimpleVector* currActMax;
+   const SimpleVector* currActMin;
+   const SimpleVector* currActMaxLink;
+   const SimpleVector* currActMinLink;
 
-   SimpleVector* currEqRhs;
-   SimpleVector* currIneqLhs;
-   SimpleVector* currIclow;
-   SimpleVector* currIneqRhs;
-   SimpleVector* currIcupp;
-   SimpleVector* currEqRhsLink;
-   SimpleVector* currIneqLhsLink;
-   SimpleVector* currIclowLink;
-   SimpleVector* currIneqRhsLink;
-   SimpleVector* currIcuppLink;
+   const SimpleVector* currEqRhs;
+   const SimpleVector* currIneqLhs;
+   const SimpleVector* currIclow;
+   const SimpleVector* currIneqRhs;
+   const SimpleVector* currIcupp;
+   const SimpleVector* currEqRhsLink;
+   const SimpleVector* currIneqLhsLink;
+   const SimpleVector* currIclowLink;
+   const SimpleVector* currIneqRhsLink;
+   const SimpleVector* currIcuppLink;
 
-   SimpleVector* currgParent;
-   SimpleVector* currgChild;
+   const SimpleVector* currgParent;
+   const SimpleVector* currgChild;
 
-   SimpleVector* currNnzRow;
-   SimpleVector* currRedRowLink;
-   SimpleVector* currNnzRowLink;
+   const SimpleVector* currNnzRow;
+//   const SimpleVector* currRedRowLink;
+   const SimpleVector* currNnzRowLink;
 
-   SimpleVector* currRedColParent;
-   SimpleVector* currNnzColParent;
-   SimpleVector* currNnzColChild;
+//   const SimpleVector* currRedColParent;
+   const SimpleVector* currNnzColParent;
+   const SimpleVector* currNnzColChild;
 
    /** the number of children */
    int nChildren;
    /** number of entry eliminations on this process in the current elimination routine */
    int localNelims;
 
-   std::vector<XBOUNDS> newBoundsParent;
+//   std::vector<XBOUNDS> newBoundsParent;
 
    /* objective offset resulting from local presolving */
    double indivObjOffset;
@@ -140,8 +138,6 @@ protected:
 //         double* ilow, double* low, double* iupp, double* upp) const;
 //   void setNewBound(int index, double new_bound,
 //         SimpleVector* bound_vector, SimpleVector* i_bound_vector) const;
-//   void allreduceAndUpdate(MPI_Comm comm, SimpleVector& adaptionsVector, SimpleVector& baseVector);
-//   bool removeEntryInDynamicStorage(SparseStorageDynamic& storage, const int rowIdx, const int colIdx, double& m) const;
 //   void clearRow(SparseStorageDynamic& storage, const int rowIdx) const;
 //   void removeRow(int rowIdx, SparseStorageDynamic& Ablock, SparseStorageDynamic& AblockTrans,
 //         SparseStorageDynamic* Bblock, SparseStorageDynamic* BblockTrans, SimpleVector& nnzRow,
@@ -189,17 +185,6 @@ protected:
 //   int getNumberNewBoundsParent() const;
 //   void addNewBoundsParent(XBOUNDS newXBounds);
 //   void clearNewBoundsParent();
-//
-//protected:
-//   void countSingletonRows(int& n_singletons_equality, int& n_singletons_inequality) const;
-//private:
-//   void countSingletonRowsSystem(int& n_singletons, SystemType system_type) const;
-//
-//protected:
-//   void allreduceAndApplyRhsLhsReductions(SystemType system_type);
-//
-//private:
-//   void setVarboundsToInftyForAllreduce() const;
 };
 
 
