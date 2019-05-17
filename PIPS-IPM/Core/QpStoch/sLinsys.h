@@ -110,7 +110,7 @@ class sLinsys : public QpGenLinsys
   MPI_Comm mpiComm;
   sTree* stochNode;
 
- private:
+ protected:
   int nThreads;
 
   void multLeftSchurComplBlocked(/*const*/sData *prob, /*const*/double* colsBlockDense,

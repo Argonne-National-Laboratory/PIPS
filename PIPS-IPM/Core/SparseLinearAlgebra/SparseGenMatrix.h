@@ -169,11 +169,15 @@ public:
 
   void deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
 
+  void deleteEmptyRows(int*& orgIndex);
+
   void fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
         double* rowsArrayDense, int* rowSparsity = NULL);
 
   void fromGetColsBlock(const int* colIndices, int nCols, int arrayLineSize, int arrayLineOffset,
         double* colsArrayDense, int* rowSparsity = NULL);
+
+  bool hasTransposed() const;
 
   void freeDynamicStorage();
 

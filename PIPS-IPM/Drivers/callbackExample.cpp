@@ -2,6 +2,7 @@
 #include "PIPSIpmInterface.h"
 #include "sFactoryAug.h"
 #include "sFactoryAugSchurLeaf.h"
+#include "sFactoryAugMumpsLeaf.h"
 //#include "MehrotraStochSolver.h"
 #include "GondzioStochSolver.h"
 
@@ -577,8 +578,9 @@ int main(int argc, char ** argv) {
   /* use BiCGStab for outer solve */
   gOuterSolve = 2;
   gInnerSCsolve = 0;
-
-#if defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
+#if defined(WITH_MUMPS_LEAF)
+  PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH, PRESOLVER_NONE);
+#elif defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
   PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH, PRESOLVER_NONE);
 #else
   PIPSIpmInterface<sFactoryAug, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD, SCALER_EQUI_STOCH, PRESOLVER_NONE);

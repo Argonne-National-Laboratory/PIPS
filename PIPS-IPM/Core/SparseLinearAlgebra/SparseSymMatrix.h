@@ -96,6 +96,8 @@ public:
 
   void deleteEmptyRowsCols(const OoqpVector& nnzVec);
 
+  void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
+
   virtual ~SparseSymMatrix() {};
 };
 #endif
