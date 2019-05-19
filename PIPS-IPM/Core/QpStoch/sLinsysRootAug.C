@@ -859,8 +859,10 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 {
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
 
-   int* const krowKkt = kkts.krowM();
+#ifndef NDEBUG
    int* const jcolKkt = kkts.jcolM();
+#endif
+   int* const krowKkt = kkts.krowM();
    double* const MKkt = kkts.M();
    const int n0Links = prob->getN0LinkVars();
 
@@ -899,8 +901,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    /////////////////////////////////////////////////////////////
    // update the KKT with Q (DO NOT PUT DIAG)
    /////////////////////////////////////////////////////////////
-   SparseSymMatrix& Q = prob->getLocalQ();
-   assert(Q.krowM()[locnx] == 0 && "Q currently not supported for sparse kkt");
+   assert(prob->getLocalQ().krowM()[locnx] == 0 && "Q currently not supported for sparse kkt");
 
    /////////////////////////////////////////////////////////////
    // update the KKT with the diagonals
