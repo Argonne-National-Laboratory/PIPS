@@ -146,8 +146,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
    for(int row = 0; row < mat->m; ++row)
    {
-
-      // todo this is not true in a linkingconssblock.. - there might be buffered activity changes
       const double actmin_part_row = actmin_part[row];
       const double actmax_part_row = actmax_part[row];
 
@@ -185,8 +183,8 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          else if(actmin_ubndd_row == 1.0)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            if ( (PIPSisLE(a_ik, 0.0) && ixupp[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixlow[col] == 0.0) )
-               actmin_row_without_curr = actmin_part_row;
+            actmin_row_without_curr = actmin_part_row;
+            assert( (PIPSisLE(a_ik, 0.0) && ixupp[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixlow[col] == 0.0) );
          }
 
          if(actmax_ubndd_row == 0.0)
@@ -194,8 +192,8 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          else if(actmax_ubndd_row == 1.0)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            if( (PIPSisLE(a_ik, 0.0) && ixlow[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixupp[col] == 0.0) )
-               actmax_row_without_curr = actmax_part_row;
+            actmax_row_without_curr = actmax_part_row;
+            assert( (PIPSisLE(a_ik, 0.0) && ixlow[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixupp[col] == 0.0) );
          }
 
          /// a singleton row has zero activity without the current column
@@ -203,12 +201,8 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          {
             assert(actmin_ubndd_row <= 1);
             assert(actmax_ubndd_row <= 1);
-
             if( !PIPSisZero(actmax_row_without_curr) )
-            {
-               std::cout << actmin_ubndd_row << "\t" << actmax_ubndd_row << "\t" << ixlow[col] << "\t" << ixupp[col] << std::endl;
                std::cout << actmax_row_without_curr << std::endl;
-            }
             assert( PIPSisZero(actmin_row_without_curr) );
             assert( PIPSisZero(actmax_row_without_curr) );
          }

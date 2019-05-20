@@ -42,11 +42,14 @@ private:
 
       StochPostsolver* const postsolver;
 
-      bool outdated_activities;
+      // todo make these ints
       bool outdated_lhsrhs;
       bool outdated_nnzs;
       bool outdated_linking_var_bounds;
-// todo make all private - forbid changing of these from external sources - only return const references / const pointers
+
+      bool outdated_activities;
+      int linking_rows_need_act_computation;
+
       /* number of non-zero elements of each row / column */
       StochVectorHandle nnzs_row_A;
       StochVectorHandle nnzs_row_C;
@@ -59,11 +62,11 @@ private:
       SimpleVectorHandle nnzs_row_C_chgs;
       SimpleVectorHandle nnzs_col_chgs;
 
-
-      /// activities are computed once in the constructor as pairs act_part (double)
-      /// and #unbounded vars (int) representing the part of the row activity that actually
-      /// can be computed (since there is proper bounds on the variables) and the variables
-      /// in that row that do not have respective upper and or lower bounds
+      /// in the constructor all ubndd entries will be counted
+      /// these tell for every row how many entries with unbounded bounds (in the lower
+      /// / upper activities) there are
+      /// once these are less equal 1 we start computing and updating the activities of the rows
+      /* actmax and min will be computed once */
       StochVectorHandle actmax_eq_part;
       StochVectorHandle actmin_eq_part;
 
@@ -117,15 +120,7 @@ private:
 public :
       const sData& getPresProb() const { return *presProb; };
 
-      const StochVector& getActMaxEqPart() const { return *actmax_eq_part; };
-      const StochVector& getActMaxIneqPart() const { return *actmax_ineq_part; };
-      const StochVector& getActMinEqPart() const { return *actmin_eq_part; };
-      const StochVector& getActMinIneqPart() const { return *actmin_ineq_part; };
-
-      const StochVector& getActMaxEqUbndd() const { return *actmax_eq_ubndd; };
-      const StochVector& getActMaxIneqUbndd() const { return *actmax_ineq_ubndd; };
-      const StochVector& getActMinEqUbndd() const { return *actmin_eq_ubndd; };
-      const StochVector& getActMinIneqUbndd() const { return *actmin_ineq_ubndd; };
+      void getRowActivities(SystemType system_type, int node, BlockType block_type, int row, double& max_act, double& min_act, int& max_ubndd, int& min_ubndd);
 
       const StochVector& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
       const StochVector& getNnzsRowC() const { return *nnzs_row_C; };
@@ -149,6 +144,14 @@ public :
 
       /* compute and update activities */
       void recomputeActivities() { recomputeActivities(false); }
+
+      /* computes all row activities and number of unbounded variables per row
+       * If there is more than one unbounded variable in the min/max activity of a row
+       * +max()/-max() is stored. Else the actual partial activity is computed and stored.
+       * For rows with one unbounded variable we store the partial activity without that
+       * one variable, for rows with zero unbounded vars the stored activity is the actual
+       * activity of that row.
+       */
       void recomputeActivities(bool linking_only);
    private:
       void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVector& unbounded_min, SimpleVector& max_partact,
@@ -165,6 +168,7 @@ public:
       /// synchronizing the problem over all mpi processes if necessary
       void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
+      void allreduceAndApplyLinkingRowCounters();
       void allreduceAndApplyNnzChanges();
       void allreduceAndApplyBoundChanges();
 
@@ -197,8 +201,8 @@ private:
       bool updateLowerBoundVariable(SystemType system_type, BlockType block_type, int node, int col, double lbx)
       { return updateBoundsVariable(system_type, block_type, node, col, std::numeric_limits<double>::max(), lbx); };
 
-      bool updateBoundsVariable(SystemType system_type, BlockType block_type, int node, int col, double ubx, double lbx);
-      bool updateActitiviesColumn(SystemType system_type, BlockType block_type, int node, int col, double ubx, double lbx);
+      bool updateBoundsVariable(int node, int col, double ubx, double lbx);
+      void updateRowActivities(int node, int col, double ubx, double lbx, double old_ubx, double old_lbx);
 
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
@@ -210,6 +214,15 @@ private:
       void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
 /// methods for querying the problem in order to get certain structures etc.
       SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type);
+
+      SimpleVector& getSimpleVecRowFromStochVec(const OoqpVector& ooqpvec, int node, BlockType block_type) const
+         { return getSimpleVecRowFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node, block_type); };
+      SimpleVector& getSimpleVecColFromStochVec(const OoqpVector& ooqpvec, int node) const
+         { return getSimpleVecColFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node); };
+
+      SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
+      SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
+
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_ */
