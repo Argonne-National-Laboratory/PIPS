@@ -417,13 +417,16 @@ void StochPresolverBase::setPointersMatrices(const GenMatrixHandle mat, int node
    }
 }
 
+// todo make one for bounds one for activities
 void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_type, int node)
 {
    assert(-1 <= node && node < nChildren);
 
    /* non-linking constraints */
-   const StochVector& act_max = (system_type == EQUALITY_SYSTEM) ? presData.getActMaxEq() : presData.getActMaxIneq();
-   const StochVector& act_min = (system_type == EQUALITY_SYSTEM) ? presData.getActMinEq() : presData.getActMinIneq();
+   const StochVector& act_max = (system_type == EQUALITY_SYSTEM) ? presData.getActMaxEqPart() : presData.getActMaxIneqPart();
+   const StochVector& act_min = (system_type == EQUALITY_SYSTEM) ? presData.getActMinEqPart() : presData.getActMinIneqPart();
+   const StochVector& act_max_ubndd = (system_type == EQUALITY_SYSTEM) ? presData.getActMaxEqUbndd() : presData.getActMaxIneqUbndd();
+   const StochVector& act_min_ubndd = (system_type == EQUALITY_SYSTEM) ? presData.getActMinEqUbndd() : presData.getActMinIneqUbndd();
    const StochVector& lhs = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochVector&>(*(presData.getPresProb().bA))
          : dynamic_cast<const StochVector&>(*(presData.getPresProb().bl));
    const StochVector& lhs_idx = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochVector&>(*(presData.getPresProb().bA))
@@ -433,18 +436,24 @@ void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_typ
    const StochVector& rhs_idx = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochVector&>(*(presData.getPresProb().bA))
          : dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp));
 
-   currActMaxLink = dynamic_cast<const SimpleVector*>(act_max.vecl);
-   currActMinLink = dynamic_cast<const SimpleVector*>(act_min.vecl);
+   currActMaxLinkPart = dynamic_cast<const SimpleVector*>(act_max.vecl);
+   currActMinLinkPart = dynamic_cast<const SimpleVector*>(act_min.vecl);
+   currActMaxLinkUbndd = dynamic_cast<const SimpleVector*>(act_max_ubndd.vecl);
+   currActMinLinkUbndd = dynamic_cast<const SimpleVector*>(act_min_ubndd.vecl);
 
    if(node == -1)
    {
-      currActMax = dynamic_cast<const SimpleVector*>(act_max.vec);
-      currActMin = dynamic_cast<const SimpleVector*>(act_min.vec);
+      currActMaxPart = dynamic_cast<const SimpleVector*>(act_max.vec);
+      currActMinPart = dynamic_cast<const SimpleVector*>(act_min.vec);
+      currActMaxUbndd = dynamic_cast<const SimpleVector*>(act_max_ubndd.vec);
+      currActMinUbndd = dynamic_cast<const SimpleVector*>(act_min_ubndd.vec);
    }
    else
    {
-      currActMax = dynamic_cast<const SimpleVector*>(act_max.children[node]->vec);
-      currActMin = dynamic_cast<const SimpleVector*>(act_min.children[node]->vec);
+      currActMaxPart = dynamic_cast<const SimpleVector*>(act_max.children[node]->vec);
+      currActMinPart = dynamic_cast<const SimpleVector*>(act_min.children[node]->vec);
+      currActMaxUbndd = dynamic_cast<const SimpleVector*>(act_max_ubndd.children[node]->vec);
+      currActMinUbndd = dynamic_cast<const SimpleVector*>(act_min_ubndd.children[node]->vec);
    }
 
    if( system_type == EQUALITY_SYSTEM )

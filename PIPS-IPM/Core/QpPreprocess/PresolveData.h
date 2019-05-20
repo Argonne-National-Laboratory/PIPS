@@ -198,6 +198,7 @@ private:
       { return updateBoundsVariable(system_type, block_type, node, col, std::numeric_limits<double>::max(), lbx); };
 
       bool updateBoundsVariable(SystemType system_type, BlockType block_type, int node, int col, double ubx, double lbx);
+      bool updateActitiviesColumn(SystemType system_type, BlockType block_type, int node, int col, double ubx, double lbx);
 
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);

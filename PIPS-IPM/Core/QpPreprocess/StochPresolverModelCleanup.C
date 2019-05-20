@@ -151,21 +151,41 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
    const SimpleVector* min_act;
    const SimpleVector* max_act;
+   const SimpleVector* min_act_ubndd;
+   const SimpleVector* max_act_ubndd;
 
    if( linking )
    {
-      min_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMinEq().vecl) : dynamic_cast<const SimpleVector*>(presData.getActMinIneq().vecl);
-      max_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEq().vecl) : dynamic_cast<const SimpleVector*>(presData.getActMaxIneq().vecl);
+      min_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqPart().vecl)
+            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqPart().vecl);
+      max_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqPart().vecl)
+            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqPart().vecl);
+      min_act_ubndd = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqUbndd().vecl)
+            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqUbndd().vecl);
+      max_act_ubndd = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqUbndd().vecl)
+            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqUbndd().vecl);
    }
    else if(system_type == EQUALITY_SYSTEM)
    {
-      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinEq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMinEq().children[node]->vec);
-      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMaxEq().children[node]->vec);
+      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqPart().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMinEqPart().children[node]->vec);
+      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqPart().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMaxEqPart().children[node]->vec);
+      min_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqUbndd().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMinEqUbndd().children[node]->vec);
+      max_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqUbndd().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMaxEqUbndd().children[node]->vec);
    }
    else
    {
-      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinIneq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMinIneq().children[node]->vec);
-      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxIneq().vec) : dynamic_cast<const SimpleVector*>(presData.getActMaxIneq().children[node]->vec);
+      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinIneqPart().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqPart().children[node]->vec);
+      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxIneqPart().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqPart().children[node]->vec);
+      min_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinIneqUbndd().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqUbndd().children[node]->vec);
+      max_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxIneqUbndd().vec)
+            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqUbndd().children[node]->vec);
    }
 
    assert(min_act);
@@ -176,8 +196,8 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       if( nnzs[r] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
          continue;
 
-      double minAct = (*min_act)[r];
-      double maxAct = (*max_act)[r];
+      double minAct = ( (*min_act_ubndd)[r] > 0 ) ? -std::numeric_limits<double>::max() : (*min_act)[r];
+      double maxAct = ( (*max_act_ubndd)[r] > 0 ) ? std::numeric_limits<double>::max() :(*max_act)[r];
 
       if( system_type == EQUALITY_SYSTEM )
       {

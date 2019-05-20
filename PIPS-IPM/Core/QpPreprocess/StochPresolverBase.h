@@ -23,14 +23,6 @@ typedef struct
    double newxupp;
 } XBOUNDS;
 
-struct xbounds_col_is_smaller
-{
-    bool operator()(const XBOUNDS& x, const XBOUNDS& y) const
-    {
-        return x.colIdx < y.colIdx;
-    }
-};
-
 class StochPresolverBase
 {
 public:
@@ -79,10 +71,16 @@ protected:
    const SimpleVector* currxuppChild ;
    const SimpleVector* currIxuppChild;
 
-   const SimpleVector* currActMax;
-   const SimpleVector* currActMin;
-   const SimpleVector* currActMaxLink;
-   const SimpleVector* currActMinLink;
+   const SimpleVector* currActMaxPart;
+   const SimpleVector* currActMaxUbndd;
+   const SimpleVector* currActMinPart;
+   const SimpleVector* currActMinUbndd;
+
+   const SimpleVector* currActMaxLinkPart;
+   const SimpleVector* currActMaxLinkUbndd;
+   const SimpleVector* currActMinLinkPart;
+   const SimpleVector* currActMinLinkUbndd;
+
 
    const SimpleVector* currEqRhs;
    const SimpleVector* currIneqLhs;

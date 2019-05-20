@@ -1212,6 +1212,7 @@ bool PresolveData::hasLinking(SystemType system_type) const
    return false;
 }
 
+// todo change into a method adjust activity by and one that says adjust bla
 void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff)
 {
    assert(-1 <= node && node < nChildren);
@@ -1325,6 +1326,9 @@ bool PresolveData::updateBoundsVariable(SystemType system_type, BlockType block_
 
    if( ubx < std::numeric_limits<double>::max() && (ixupp[col] == 0.0 || ubx < xupp[col]) )
    {
+      /* if ixupp changed then the ubndd counter for that row changes */
+
+      /* else the row activitc simply gets adjusted */
       updated = true;
       ixupp[col] = 1.0;
       xupp[col] = ubx;
@@ -1341,6 +1345,11 @@ bool PresolveData::updateBoundsVariable(SystemType system_type, BlockType block_
       outdated_linking_var_bounds = true;
 
    return updated;
+}
+
+bool PresolveData::updateActitiviesColumn(SystemType system_type, BlockType block_type, int node, int col, double ubx, double lbx)
+{
+   /* go through blocks and update all activities accordingly */
 }
 
 //bool PresolveData::isRootInfoInSync()
