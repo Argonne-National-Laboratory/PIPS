@@ -618,7 +618,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     tchild_total +=  (MPI_Wtime()-taux);
 #endif
 
-  normr=r.twonorm();
+  normr = r.twonorm(); normr_act = normr;
 
   if( normr<=tolb ) {
     //initial guess is good enough
@@ -814,10 +814,12 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     relres = normr_act/n2b;
     if(myRank==0) {
       printf("INNER BiCGStab converged: normResid=%g relResid=%g iter=%g\n",
-	     normr_act, relres, iter);
-      }
+	        normr_act, relres, iter);
+    }
 #endif
-  } else {
+  } 
+  else 
+  {
     if(ii==maxit) flag=10;//aaa
     //FAILURE -> return minimum resid-norm iterate
     r.copyFrom(b); 

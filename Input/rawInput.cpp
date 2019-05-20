@@ -186,8 +186,7 @@ void rawInput::loadLocalScenData(int scen) {
 	string line;
 	getline(f,line);
 	getline(f,line);
-	size_t loc = line.find("Only Bounds Vary");
-	assert(loc == 0);
+	assert(line.find("Only Bounds Vary") == 0);
 	double scale = 1.0;
 	if (nScenariosTrue != nScenarios_) {
 		scale = static_cast<double>(nScenariosTrue)/static_cast<double>(nScenarios_);

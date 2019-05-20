@@ -365,6 +365,10 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
 
                assert(removed_matrix);
                assert(removed_matrix_transposed);
+               if(removed_matrix != removed_matrix_transposed)
+               {
+                  std::cout << "Matrix and it's transposed are out of sync! " << std::endl;
+               }
                assert(entry_matrix == entry_matrix_transposed);
                assert(entry_matrix != 0.0);
 
