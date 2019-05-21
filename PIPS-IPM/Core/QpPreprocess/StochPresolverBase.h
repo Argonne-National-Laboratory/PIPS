@@ -71,17 +71,6 @@ protected:
    const SimpleVector* currxuppChild ;
    const SimpleVector* currIxuppChild;
 
-   const SimpleVector* currActMaxPart;
-   const SimpleVector* currActMaxUbndd;
-   const SimpleVector* currActMinPart;
-   const SimpleVector* currActMinUbndd;
-
-   const SimpleVector* currActMaxLinkPart;
-   const SimpleVector* currActMaxLinkUbndd;
-   const SimpleVector* currActMinLinkPart;
-   const SimpleVector* currActMinLinkUbndd;
-
-
    const SimpleVector* currEqRhs;
    const SimpleVector* currIneqLhs;
    const SimpleVector* currIclow;

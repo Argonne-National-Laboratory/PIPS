@@ -149,83 +149,48 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
    const SimpleVector& iclow = (linking == false) ? *currIclow : *currIclowLink;
    const SimpleVector& icupp = (linking == false) ? *currIcupp : *currIcuppLink;
 
-   const SimpleVector* min_act;
-   const SimpleVector* max_act;
-   const SimpleVector* min_act_ubndd;
-   const SimpleVector* max_act_ubndd;
+   BlockType block_type = (linking) ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK;
 
-   if( linking )
+   for( int row = 0; row < nnzs.n; ++row)
    {
-      min_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqPart().vecl)
-            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqPart().vecl);
-      max_act = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqPart().vecl)
-            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqPart().vecl);
-      min_act_ubndd = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqUbndd().vecl)
-            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqUbndd().vecl);
-      max_act_ubndd = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqUbndd().vecl)
-            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqUbndd().vecl);
-   }
-   else if(system_type == EQUALITY_SYSTEM)
-   {
-      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqPart().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMinEqPart().children[node]->vec);
-      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqPart().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMaxEqPart().children[node]->vec);
-      min_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinEqUbndd().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMinEqUbndd().children[node]->vec);
-      max_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxEqUbndd().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMaxEqUbndd().children[node]->vec);
-   }
-   else
-   {
-      min_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinIneqPart().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqPart().children[node]->vec);
-      max_act = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxIneqPart().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqPart().children[node]->vec);
-      min_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMinIneqUbndd().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMinIneqUbndd().children[node]->vec);
-      max_act_ubndd = (node == -1) ? dynamic_cast<const SimpleVector*>(presData.getActMaxIneqUbndd().vec)
-            : dynamic_cast<const SimpleVector*>(presData.getActMaxIneqUbndd().children[node]->vec);
-   }
-
-   assert(min_act);
-   assert(max_act);
-
-   for( int r = 0; r < min_act->n; r++)
-   {
-      if( nnzs[r] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
+      if( nnzs[row] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
          continue;
 
-      double minAct = ( (*min_act_ubndd)[r] > 0 ) ? -std::numeric_limits<double>::max() : (*min_act)[r];
-      double maxAct = ( (*max_act_ubndd)[r] > 0 ) ? std::numeric_limits<double>::max() :(*max_act)[r];
+      double actmin_part, actmax_part;
+      int actmin_ubndd, actmax_ubndd;
+
+      presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
+
+      if( actmin_ubndd != 0 || actmax_ubndd != 0)
+         continue;
 
       if( system_type == EQUALITY_SYSTEM )
       {
-         if( PIPSisLT( rhs_eq[r], minAct, feastol) || PIPSisLT(maxAct, rhs_eq[r], feastol) )
+         if( PIPSisLT( rhs_eq[row], actmin_part, feastol) || PIPSisLT(actmax_part, rhs_eq[row], feastol) )
             abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
-         else if( PIPSisLE(rhs_eq[r], minAct, feastol) && PIPSisLE(maxAct, rhs_eq[r], feastol) )
+         else if( PIPSisLE(rhs_eq[row], actmin_part, feastol) && PIPSisLE(actmax_part, rhs_eq[row], feastol) )
          {
-            presData.removeRedundantRow(system_type, node, r, linking);
+            presData.removeRedundantRow(system_type, node, row, linking);
             n_removed_rows++;
          }
       }
       else
       {
-         if( ( iclow[r] != 0.0 && PIPSisLT(maxAct, clow[r], feastol) )
-               || ( icupp[r] != 0.0 && PIPSisLT( cupp[r], minAct, feastol) ) )
+         if( ( iclow[row] != 0.0 && PIPSisLT(actmax_part, clow[row], feastol) )
+               || ( icupp[row] != 0.0 && PIPSisLT( cupp[row], actmin_part, feastol) ) )
             abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
-         else if( ( iclow[r] == 0.0 || clow[r] <= -infinity) &&
-               ( icupp[r] == 0.0 || cupp[r] >= infinity) )
+         else if( ( iclow[row] == 0.0 || clow[row] <= -infinity) &&
+               ( icupp[row] == 0.0 || cupp[row] >= infinity) )
          {
-            presData.removeRedundantRow(system_type, node, r, linking);
+            presData.removeRedundantRow(system_type, node, row, linking);
             n_removed_rows++;
          }
-         else if( ( iclow[r] == 0.0 || PIPSisLE( clow[r], minAct, feastol) )
-               && ( icupp[r] == 0.0 || PIPSisLE( maxAct, cupp[r], feastol) ) )
+         else if( ( iclow[row] == 0.0 || PIPSisLE( clow[row], actmin_part, feastol) )
+               && ( icupp[row] == 0.0 || PIPSisLE( actmax_part, cupp[row], feastol) ) )
          {
-            presData.removeRedundantRow(system_type, node, r, linking);
+            presData.removeRedundantRow(system_type, node, row, linking);
             n_removed_rows++;
          }
       }

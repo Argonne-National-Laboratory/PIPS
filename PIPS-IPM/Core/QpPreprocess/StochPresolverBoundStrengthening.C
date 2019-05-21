@@ -125,11 +125,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
    const SimpleVector& rhs = (block_type == LINKING_CONS_BLOCK) ? *currEqRhsLink : *currEqRhs;
 
-   const SimpleVector& actmin_part = (block_type == LINKING_CONS_BLOCK) ? *currActMinLinkPart : *currActMinPart;
-   const SimpleVector& actmax_part = (block_type == LINKING_CONS_BLOCK) ? *currActMaxLinkPart : *currActMaxPart;
-   const SimpleVector& actmin_ubndd = (block_type == LINKING_CONS_BLOCK) ? *currActMinLinkUbndd : *currActMinUbndd;
-   const SimpleVector& actmax_ubndd = (block_type == LINKING_CONS_BLOCK) ? *currActMaxLinkUbndd : *currActMaxUbndd;
-
    const SimpleVector& nnzs_row = (block_type == LINKING_CONS_BLOCK) ? *currNnzRowLink : *currNnzRow;
 
    const SparseStorageDynamic* mat;
@@ -146,21 +141,20 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
    for(int row = 0; row < mat->m; ++row)
    {
-      const double actmin_part_row = actmin_part[row];
-      const double actmax_part_row = actmax_part[row];
+      double actmin_part, actmax_part;
+      int actmin_ubndd, actmax_ubndd;
 
-      const double actmin_ubndd_row = actmin_ubndd[row];
-      const double actmax_ubndd_row = actmax_ubndd[row];
+      presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       /* if there is only one unbounded variable in the row and the variable is us, then we can find new bounds for it */
       /* more than one or unbounded variables other than us indicate no useful bounds */
-      if( actmin_ubndd_row >= 2 && actmax_ubndd_row >= 2)
+      if( actmin_ubndd >= 2 && actmax_ubndd >= 2)
          continue;
 
       /* if the partial row activities (so the activities of all bounded variables) exceed some limit we skip the row since no useful
        * and numerically stable bounds will be obtained here
        */
-      if( (actmin_part_row <= -std::numeric_limits<double>::max() ) && (actmax_part_row >= std::numeric_limits<double>::max()) )
+      if( (actmin_part <= -std::numeric_limits<double>::max() ) && (actmax_part >= std::numeric_limits<double>::max()) )
          continue;
 
       for( int j = mat->rowptr[row].start; j < mat->rowptr[row].end; j++ )
@@ -171,44 +165,42 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          const double a_ik = mat->M[j];
 
          assert( !PIPSisZero(a_ik) );
-         assert( ixlow[col] != 0.0 || ixupp[col] != 0.0 );
-
 
          double actmin_row_without_curr = -std::numeric_limits<double>::max();
          double actmax_row_without_curr = std::numeric_limits<double>::max();
 
          /* subtract current entry from row activity */
-         if(actmin_ubndd_row == 0.0)
-            actmin_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmin_part_row - a_ik * xupp[col] : actmin_part_row - a_ik * xlow[col];
-         else if(actmin_ubndd_row == 1.0)
+         if(actmin_ubndd == 0.0)
+            actmin_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmin_part - a_ik * xupp[col] : actmin_part - a_ik * xlow[col];
+         else if(actmin_ubndd == 1.0)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            actmin_row_without_curr = actmin_part_row;
-            assert( (PIPSisLE(a_ik, 0.0) && ixupp[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixlow[col] == 0.0) );
+            if( (PIPSisLE(a_ik, 0.0) && ixupp[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixlow[col] == 0.0) )
+               actmin_row_without_curr = actmin_part;
          }
 
-         if(actmax_ubndd_row == 0.0)
-            actmax_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmax_part_row - a_ik * xlow[col] : actmax_part_row - a_ik * xupp[col];
-         else if(actmax_ubndd_row == 1.0)
+         if(actmax_ubndd == 0.0)
+            actmax_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmax_part - a_ik * xlow[col] : actmax_part - a_ik * xupp[col];
+         else if(actmax_ubndd == 1.0)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            actmax_row_without_curr = actmax_part_row;
-            assert( (PIPSisLE(a_ik, 0.0) && ixlow[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixupp[col] == 0.0) );
+            if( (PIPSisLE(a_ik, 0.0) && ixlow[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixupp[col] == 0.0) )
+               actmax_row_without_curr = actmax_part;
          }
 
          /// a singleton row has zero activity without the current column
          if(nnzs_row[row] == 1)
          {
-            assert(actmin_ubndd_row <= 1);
-            assert(actmax_ubndd_row <= 1);
+            assert(actmin_ubndd <= 1);
+            assert(actmax_ubndd <= 1);
             if( !PIPSisZero(actmax_row_without_curr) )
                std::cout << actmax_row_without_curr << std::endl;
             assert( PIPSisZero(actmin_row_without_curr) );
             assert( PIPSisZero(actmax_row_without_curr) );
          }
 
-         double lbx_new = -std::numeric_limits<double>::max();
-         double ubx_new = std::numeric_limits<double>::max();
+         double lbx_new = -std::numeric_limits<double>::infinity();
+         double ubx_new = std::numeric_limits<double>::infinity();
 
          // todo : add safguard - if actmin_row... is too big and a_ik too small the computation will not make much sense anymore
          if(system_type == EQUALITY_SYSTEM)

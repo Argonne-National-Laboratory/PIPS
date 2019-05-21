@@ -191,29 +191,40 @@ public:
       bool hasLinking(SystemType system_type) const;
 
 private:
-      void adjustMatrixBoundsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
+      void adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
 /// methods for modifying the problem
       void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
       /// set bounds if new bound is better than old bound
-      bool updateUpperBoundVariable(SystemType system_type, BlockType block_type, int node, int col, double ubx)
-      { return updateBoundsVariable(system_type, block_type, node, col, ubx, -std::numeric_limits<double>::max()); };
-
-      bool updateLowerBoundVariable(SystemType system_type, BlockType block_type, int node, int col, double lbx)
-      { return updateBoundsVariable(system_type, block_type, node, col, std::numeric_limits<double>::max(), lbx); };
+      bool updateUpperBoundVariable(int node, int col, double ubx)
+      { return updateBoundsVariable(node, col, ubx, -std::numeric_limits<double>::infinity()); };
+      bool updateLowerBoundVariable(int node, int col, double lbx)
+      { return updateBoundsVariable(node, col, std::numeric_limits<double>::infinity(), lbx); };
 
       bool updateBoundsVariable(int node, int col, double ubx, double lbx);
       void updateRowActivities(int node, int col, double ubx, double lbx, double old_ubx, double old_lbx);
+      void updateRowActivitiesLinkingConsBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
+            double old_bound, bool upper);
+      void updateRowActivitiesNonLinkingConsBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
+            double old_bound, bool upper);
+
+      // todo make one method each maybe ?
+      double computeLocalLinkingRowMinActivity(SystemType system_type, int row) const;
+      double computeLocalLinkingRowMaxActivity(SystemType system_type, int row) const;
+      void computeRowMinActivity(SystemType system_type, int node, BlockType block_type, int row);
+      void computeRowMaxActivity(SystemType system_type, int node, BlockType block_type, int row);
+
+
 
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow(SystemType system_type, int node, int row, bool linking);
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
-      void removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row_idx, int col_idx) const;
+      void removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
       void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
       void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
 /// methods for querying the problem in order to get certain structures etc.
-      SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type);
+      SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
 
       SimpleVector& getSimpleVecRowFromStochVec(const OoqpVector& ooqpvec, int node, BlockType block_type) const
          { return getSimpleVecRowFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node, block_type); };
