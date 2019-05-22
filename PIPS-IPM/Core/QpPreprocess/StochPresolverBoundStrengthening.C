@@ -193,8 +193,14 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          {
             assert(actmin_ubndd <= 1);
             assert(actmax_ubndd <= 1);
-            if( !PIPSisZero(actmax_row_without_curr) )
-               std::cout << actmax_row_without_curr << std::endl;
+            if( !PIPSisZero(actmax_row_without_curr) || !PIPSisZero(actmin_row_without_curr) )
+            {
+               std::cout << system_type << "\t" << node << "\t" << row << "\t" << block_type << std::endl;
+               std::cout << actmax_row_without_curr << "\t" << actmax_part << std::endl;
+               std::cout << actmin_row_without_curr << "\t" << actmin_part << std::endl;
+               std::cout << actmin_ubndd << "\t" << actmax_ubndd << std::endl;
+               std::cout << col << "\t" << ixlow[col] << " " << xlow[col] << "\t" << ixupp[col] << " " << xupp[col] << std::endl;
+            }
             assert( PIPSisZero(actmin_row_without_curr) );
             assert( PIPSisZero(actmax_row_without_curr) );
          }
@@ -202,7 +208,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          double lbx_new = -std::numeric_limits<double>::infinity();
          double ubx_new = std::numeric_limits<double>::infinity();
 
-         // todo : add safguard - if actmin_row... is too big and a_ik too small the computation will not make much sense anymore
+         // todo : add safeguard - if actmin_row... is too big and a_ik too small the computation will not make much sense anymore
          if(system_type == EQUALITY_SYSTEM)
          {
             if( PIPSisLT(0.0, a_ik) )
