@@ -80,6 +80,7 @@ void StochPresolverModelCleanup::applyPresolving()
    if(my_rank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
+   presData.getPresProb().writeToStreamDense(std::cout);
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -161,11 +162,11 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
       presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
-      if( actmin_ubndd != 0 || actmax_ubndd != 0)
-         continue;
-
       if( system_type == EQUALITY_SYSTEM )
       {
+         if( actmin_ubndd != 0 && actmax_ubndd != 0)
+            continue;
+
          if( PIPSisLT( rhs_eq[row], actmin_part, feastol) || PIPSisLT(actmax_part, rhs_eq[row], feastol) )
             abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
@@ -177,8 +178,8 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       }
       else
       {
-         if( ( iclow[row] != 0.0 && PIPSisLT(actmax_part, clow[row], feastol) )
-               || ( icupp[row] != 0.0 && PIPSisLT( cupp[row], actmin_part, feastol) ) )
+         if( ( iclow[row] != 0.0 && (actmax_ubndd == 0 && PIPSisLT(actmax_part, clow[row], feastol)) )
+               || ( icupp[row] != 0.0 && (actmin_ubndd == 0 && PIPSisLT( cupp[row], actmin_part, feastol)) ) )
             abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          else if( ( iclow[row] == 0.0 || clow[row] <= -infinity) &&
@@ -187,8 +188,8 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
             presData.removeRedundantRow(system_type, node, row, linking);
             n_removed_rows++;
          }
-         else if( ( iclow[row] == 0.0 || PIPSisLE( clow[row], actmin_part, feastol) )
-               && ( icupp[row] == 0.0 || PIPSisLE( actmax_part, cupp[row], feastol) ) )
+         else if( ( iclow[row] == 0.0 || (actmin_ubndd == 0 && PIPSisLE( clow[row], actmin_part, feastol)) )
+               && ( icupp[row] == 0.0 || (actmax_ubndd == 0 && PIPSisLE( actmax_part, cupp[row], feastol)) ) )
          {
             presData.removeRedundantRow(system_type, node, row, linking);
             n_removed_rows++;

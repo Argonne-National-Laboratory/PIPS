@@ -1002,6 +1002,23 @@ void StochVector::componentDiv ( OoqpVector& v_ )
     children[it]->componentDiv(*v.children[it]);
 }
 
+bool StochVector::componentEqual( const OoqpVector& v_, double tol) const
+{
+   const StochVector& v = dynamic_cast<const StochVector&>(v_);
+   assert(v.children.size() == children.size());
+
+   bool component_equal = true;
+
+   component_equal = (component_equal && vec->componentEqual(*v.vec, tol));
+   if( vecl )
+      component_equal = (component_equal && vecl->componentEqual(*v.vecl, tol));
+
+   for(size_t child = 0; child < children.size(); child++)
+      component_equal = (component_equal && children[child]->componentEqual(*v.children[child], tol));
+
+   return component_equal;
+}
+
 void StochVector::scalarMult( double num )
 {
   vec->scalarMult(num);

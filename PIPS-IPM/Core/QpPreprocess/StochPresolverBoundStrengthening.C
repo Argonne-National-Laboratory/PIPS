@@ -28,6 +28,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
+   assert(presData.verifyActivities());
    assert(indivObjOffset == 0.0);
 
 #ifndef NDEBUG
@@ -70,6 +71,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
 
    /* update bounds on all processors */
    presData.allreduceLinkingVarBounds();
+   presData.allreduceAndApplyLinkingRowActivities();
 
 #ifndef NDEBUG
    MPI_Allreduce(MPI_IN_PLACE, &tightenings, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
@@ -82,6 +84,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
+   assert(presData.verifyActivities());
    assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
 }
@@ -195,7 +198,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             assert(actmax_ubndd <= 1);
             if( !PIPSisZero(actmax_row_without_curr) || !PIPSisZero(actmin_row_without_curr) )
             {
-               std::cout << system_type << "\t" << node << "\t" << row << "\t" << block_type << std::endl;
+               std::cout << system_type << "\t" << node << "\t" << row << "\t" << block_type << "\t" << col << std::endl;
                std::cout << actmax_row_without_curr << "\t" << actmax_part << std::endl;
                std::cout << actmin_row_without_curr << "\t" << actmin_part << std::endl;
                std::cout << actmin_ubndd << "\t" << actmax_ubndd << std::endl;

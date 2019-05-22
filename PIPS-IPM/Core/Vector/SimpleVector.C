@@ -279,6 +279,20 @@ void SimpleVector::componentMult( OoqpVector& vec )
   for( i = 0; i < n; i++ ) v[i] *= y[i];
 }
 
+bool SimpleVector::componentEqual( const OoqpVector& vec, double tol) const
+{
+   assert( n == vec.length() );
+   const SimpleVector& sv = dynamic_cast<const SimpleVector&>(vec);
+
+   for(int i = 0; i < n; ++i)
+   {
+      if(v[i] != sv[i])
+         return false;
+   }
+   return true;
+}
+
+
 void SimpleVector::scalarMult( double num)
 {
   int i;

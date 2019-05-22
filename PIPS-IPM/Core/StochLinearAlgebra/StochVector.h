@@ -97,6 +97,7 @@ public:
 
   virtual void componentMult( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
+  virtual bool componentEqual( const OoqpVector& v, double tol) const;
   virtual void scalarMult( double num);
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamAll(ostream& out) const;
@@ -225,6 +226,7 @@ public:
 
   virtual void componentMult( OoqpVector& v ){};
   virtual void componentDiv ( OoqpVector& v ){};
+  virtual bool componentEqual( const OoqpVector& v, double tol) const { return v.isKindOf(kStochDummy); };
   virtual void scalarMult( double num){};
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamAll(ostream& out) const{};

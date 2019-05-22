@@ -131,7 +131,7 @@ public :
       /* methods for initializing the object */
    private:
       // initialize row and column nnz counter
-      void initNnzCounter();
+      void initNnzCounter(StochVector& nnzs_row_A, StochVector& nnzs_row_C, StochVector& nnzs_col) const;
       void initSingletons();
       void setUndefinedVarboundsTo(double value);
 
@@ -168,7 +168,6 @@ public:
       /// synchronizing the problem over all mpi processes if necessary
       void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
-      void allreduceAndApplyLinkingRowCounters();
       void allreduceAndApplyNnzChanges();
       void allreduceAndApplyBoundChanges();
 
@@ -184,7 +183,8 @@ public:
       void updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements);
 
       /* methods for verifying state of presData or querying the problem */
-      bool verifyNnzcounters();
+      bool verifyNnzcounters() const;
+      bool verifyActivities();
       bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
 
       bool nodeIsDummy(int node, SystemType system_type) const;

@@ -67,6 +67,7 @@ public:
   virtual void absminNonZero(double& m, double zero_eps) const;
 
   virtual void componentMult( OoqpVector& v );
+  virtual bool componentEqual( const OoqpVector& vec, double tol) const;
   virtual void scalarMult( double num);
   virtual void printSolutionToStdErr( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
