@@ -446,10 +446,10 @@ int main(int argc, char ** argv)
       if( printsol )
          primalSolVec = pipsIpm.gatherPrimalSolution();
 	}
-
-	else {
+	else
+	{
 #if defined(WITH_MUMPS_LEAF)
-      PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
+      PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #elif defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
