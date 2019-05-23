@@ -226,7 +226,8 @@ public:
 
   virtual void componentMult( OoqpVector& v ){};
   virtual void componentDiv ( OoqpVector& v ){};
-  virtual bool componentEqual( const OoqpVector& v, double tol) const { return v.isKindOf(kStochDummy); };
+  virtual bool componentEqual( const OoqpVector& v, double tol) const { if(!v.isKindOf(kStochDummy)) std::cout << "lol one should never end up here"
+        << std::endl; return v.isKindOf(kStochDummy); };
   virtual void scalarMult( double num){};
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamAll(ostream& out) const{};

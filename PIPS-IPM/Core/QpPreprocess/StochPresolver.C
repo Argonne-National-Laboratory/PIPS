@@ -89,7 +89,6 @@ Data* StochPresolver::presolve()
 //      presolverCleanup.applyPresolving();
 //      presolverSR.applyPresolving();
       presolverBS.applyPresolving();
-      presData.getPresProb().writeToStreamDense(std::cout);
 
 //      presolverColFix.applyPresolving();
 //      presolverBS.applyPresolving();

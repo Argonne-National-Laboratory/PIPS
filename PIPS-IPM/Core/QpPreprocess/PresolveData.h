@@ -120,7 +120,8 @@ private:
 public :
       const sData& getPresProb() const { return *presProb; };
 
-      void getRowActivities(SystemType system_type, int node, BlockType block_type, int row, double& max_act, double& min_act, int& max_ubndd, int& min_ubndd);
+      void getRowActivities(SystemType system_type, int node, BlockType block_type, int row,
+            double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
 
       const StochVector& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
       const StochVector& getNnzsRowC() const { return *nnzs_row_C; };

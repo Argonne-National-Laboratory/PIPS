@@ -1008,14 +1008,30 @@ bool StochVector::componentEqual( const OoqpVector& v_, double tol) const
    assert(v.children.size() == children.size());
 
    bool component_equal = true;
-
    component_equal = (component_equal && vec->componentEqual(*v.vec, tol));
+   if(!component_equal)
+   {
+      std::cout << "not equal in root node non-link" << std::endl;
+      return component_equal;
+   }
+
    if( vecl )
       component_equal = (component_equal && vecl->componentEqual(*v.vecl, tol));
+   if( !component_equal )
+   {
+      std::cout << "not equal in root node link" << std::endl;
+      return component_equal;
+   }
 
    for(size_t child = 0; child < children.size(); child++)
+   {
       component_equal = (component_equal && children[child]->componentEqual(*v.children[child], tol));
-
+      if( !component_equal )
+      {
+         std::cout << "not equal in root child node " << child << std::endl;
+         return component_equal;
+      }
+   }
    return component_equal;
 }
 

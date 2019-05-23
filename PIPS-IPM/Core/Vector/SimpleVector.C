@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <limits>
+#include <iomanip>
 
 long long SimpleVector::numberOfNonzeros()
 {
@@ -286,8 +287,13 @@ bool SimpleVector::componentEqual( const OoqpVector& vec, double tol) const
 
    for(int i = 0; i < n; ++i)
    {
-      if(v[i] != sv[i])
+      /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
+      if( !PIPSisRelEQ(v[i], sv[i], tol) && v[i] != sv[i])
+      {
+         std::cout << std::setprecision(15) << v[i] << " =!= " << sv[i] << std::endl;
+         std::cout << std::setprecision(6);
          return false;
+      }
    }
    return true;
 }

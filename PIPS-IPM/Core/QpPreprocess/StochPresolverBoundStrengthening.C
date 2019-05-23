@@ -43,7 +43,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   int max_iter = 1e3; // todo
+   int max_iter = 1; // todo
    int iter = 0;
    bool tightened;
 
@@ -65,11 +65,11 @@ void StochPresolverBoundStrengthening::applyPresolving()
          if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
             tightened = tightened || strenghtenBoundsInNode(INEQUALITY_SYSTEM, node);
       }
+   /* update bounds on all processors */
    }
    while( tightened && iter < max_iter );
 
 
-   /* update bounds on all processors */
    presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyLinkingRowActivities();
 
@@ -196,7 +196,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          {
             assert(actmin_ubndd <= 1);
             assert(actmax_ubndd <= 1);
-            if( !PIPSisZero(actmax_row_without_curr) || !PIPSisZero(actmin_row_without_curr) )
+            if( !PIPSisZero(actmax_row_without_curr, feastol) || !PIPSisZero(actmin_row_without_curr, feastol) )
             {
                std::cout << system_type << "\t" << node << "\t" << row << "\t" << block_type << "\t" << col << std::endl;
                std::cout << actmax_row_without_curr << "\t" << actmax_part << std::endl;
@@ -204,8 +204,9 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
                std::cout << actmin_ubndd << "\t" << actmax_ubndd << std::endl;
                std::cout << col << "\t" << ixlow[col] << " " << xlow[col] << "\t" << ixupp[col] << " " << xupp[col] << std::endl;
             }
-            assert( PIPSisZero(actmin_row_without_curr) );
-            assert( PIPSisZero(actmax_row_without_curr) );
+            assert( PIPSisZero(actmin_row_without_curr, feastol) );
+            assert( PIPSisZero(actmax_row_without_curr, feastol) );
+            actmin_row_without_curr = actmax_row_without_curr = 0;
          }
 
          double lbx_new = -std::numeric_limits<double>::infinity();

@@ -26,6 +26,7 @@ void StochPresolverModelCleanup::applyPresolving()
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
+   assert(presData.verifyActivities());
    assert(indivObjOffset == 0.0);
 
 #ifndef NDEBUG
@@ -40,15 +41,15 @@ void StochPresolverModelCleanup::applyPresolving()
    int n_removed_entries = 0;
    int n_removed_rows = 0;
 
-   /* remove entries from A and C matrices and updates transposed systems */
-   int n_removed_entries_eq = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
-   int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
-   n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
-
    // removal of redundant constraints
    int n_removed_rows_eq = removeRedundantRows(EQUALITY_SYSTEM);
    int n_removed_rows_ineq = removeRedundantRows(INEQUALITY_SYSTEM);
    n_removed_rows = n_removed_rows_eq + n_removed_rows_ineq;
+
+   /* remove entries from A and C matrices and updates transposed systems */
+   int n_removed_entries_eq = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
+   int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
+   n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    presData.allreduceAndApplyNnzChanges();
@@ -80,7 +81,6 @@ void StochPresolverModelCleanup::applyPresolving()
    if(my_rank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
-   presData.getPresProb().writeToStreamDense(std::cout);
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -131,6 +131,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
    return n_removed_rows;
 }
 
+// todo : deleting rows invalidates activities currently
 int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int node, bool linking)
 {
    assert(-1 <= node && node <= nChildren);
@@ -154,6 +155,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
    for( int row = 0; row < nnzs.n; ++row)
    {
+
       if( nnzs[row] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
          continue;
 
@@ -168,8 +170,13 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
             continue;
 
          if( PIPSisLT( rhs_eq[row], actmin_part, feastol) || PIPSisLT(actmax_part, rhs_eq[row], feastol) )
+         {
+            std::cout << actmin_part << " > " << rhs_eq[row] << " || " << actmax_part << " < " << rhs_eq[row] << std::endl;
+            std::cout << nnzs[row] << std::endl;
+            std::cout << "node: " << node << " systemtype " << system_type << "block_type " << block_type << " row " << row << std::endl;
             abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
+         }
          else if( PIPSisLE(rhs_eq[row], actmin_part, feastol) && PIPSisLE(actmax_part, rhs_eq[row], feastol) )
          {
             presData.removeRedundantRow(system_type, node, row, linking);
