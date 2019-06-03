@@ -19,7 +19,7 @@
 /* can specify a cloumn here which bound changes we wanna track maybe */
 //#ifndef NDEBUG
 //   #define TRACK_COLUMN
-//   #define COLUMN 0
+//   #define COLUMN 10
 //   #define NODE -1
 //#endif
 
@@ -284,11 +284,9 @@ void PresolveData::recomputeActivities(bool linking_only)
             addActivityOfBlock(mat_A.children[node]->Bmat->getStorageDynamicRef(), actmin_eq_child_part, actmin_eq_child_ubndd,
                   actmax_eq_child_part, actmax_eq_child_ubndd, xlow_child, ixlow_child, xupp_child, ixupp_child);
          }
-
          /* Bli */
          addActivityOfBlock(mat_A.children[node]->Blmat->getStorageDynamicRef(), actmin_eq_link_part, actmin_eq_link_ubndd, actmax_eq_link_part,
                actmax_eq_link_ubndd, xlow_child, ixlow_child, xupp_child, ixupp_child);
-
 
       }
       /* INEQUALITY_SYSTEM */
@@ -816,10 +814,16 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    // set lower bound
   // if( fabs(lbx) < 1e8 && (ixlow[col] == 0.0  || feastol * 1e3 <= fabs(xlow[col] - lbx) ) )
    if( ubx < std::numeric_limits<double>::max() )
-      bounds_changed = bounds_changed || updateUpperBoundVariable(node_var, col, ubx);
+   {
+      if( updateUpperBoundVariable(node_var, col, ubx) )
+         bounds_changed = true;
+   }
   // if( fabs(ubx) < 1e8 && (ixupp[col] == 0.0  || feastol * 1e3 <= fabs(xupp[col] - ubx) ) )
    if( lbx > -std::numeric_limits<double>::max() )
-      bounds_changed = bounds_changed || updateLowerBoundVariable(node_var, col, lbx);
+   {
+      if( updateLowerBoundVariable(node_var, col, lbx) )
+         bounds_changed = true;
+   }
 
    /// every process should have the same root node data thus all of them should propagate it's rows similarly
    if( bounds_changed && (node == -1 || block_type == LINKING_VARS_BLOCK) )
@@ -1641,6 +1645,12 @@ void PresolveData::computeRowMinActivity(SystemType system_type, int node, Block
       return;
    }
 
+   /* upper lower bounds linking vars */
+   const SimpleVector& ixlow_root = getSimpleVecColFromStochVec(*(presProb->ixlow), -1);
+   const SimpleVector& xlow_root = getSimpleVecColFromStochVec(*(presProb->blx), -1);
+   const SimpleVector& ixupp_root = getSimpleVecColFromStochVec(*(presProb->ixupp), -1);
+   const SimpleVector& xupp_root = getSimpleVecColFromStochVec(*(presProb->bux), -1);
+
    /* get upper, lower bounds */
    const SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), node);
    const SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), node);
@@ -1648,7 +1658,8 @@ void PresolveData::computeRowMinActivity(SystemType system_type, int node, Block
    const SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
 
    /* get matrix */
-   SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicRef();
+   SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK)->getStorageDynamicRef();
+   SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, CHILD_BLOCK)->getStorageDynamicRef();
 
    /* get activity vector */
    double& actmin_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row]
@@ -1656,25 +1667,50 @@ void PresolveData::computeRowMinActivity(SystemType system_type, int node, Block
 
    actmin_part = 0;
 
-   for( int j = mat.rowptr[row].start; j < mat.rowptr[row].end; j++)
+   for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++)
    {
-      const int col = mat.jcolM[j];
-      const double entry = mat.M[j];
+      const int col = Amat.jcolM[j];
+      const double entry = Amat.M[j];
 
-      assert( 0 <= col && col < ixlow.n );
+      assert( 0 <= col && col < ixlow_root.n );
       assert( !PIPSisZero(entry) );
 
       // add entry * lower_bound to min_partact
       if( PIPSisLT(0.0, entry) )
       {
-         if( ixlow[col] != 0.0)
-            actmin_part += entry * xlow[col];
+         if( ixlow_root[col] != 0.0)
+            actmin_part += entry * xlow_root[col];
       }
       // add entry * upper_bound to min_partact
       else
       {
-         if( ixupp[col] != 0.0 )
-            actmin_part += entry * xupp[col];
+         if( ixupp_root[col] != 0.0 )
+            actmin_part += entry * xupp_root[col];
+      }
+   }
+
+   if( node != -1 )
+   {
+      for( int j = Bmat.rowptr[row].start; j < Bmat.rowptr[row].end; j++ )
+      {
+         const int col = Bmat.jcolM[j];
+         const double entry = Bmat.M[j];
+
+         assert( 0 <= col && col < ixlow.n);
+         assert( !PIPSisZero(entry));
+
+         // add entry * lower_bound to min_partact
+         if( PIPSisLT(0.0, entry) )
+         {
+            if( ixlow[col] != 0.0 )
+               actmin_part += entry * xlow[col];
+         }
+         // add entry * upper_bound to min_partact
+         else
+         {
+            if( ixupp[col] != 0.0 )
+               actmin_part += entry * xupp[col];
+         }
       }
    }
 }
@@ -1689,6 +1725,12 @@ void PresolveData::computeRowMaxActivity(SystemType system_type, int node, Block
       return;
    }
 
+   /* upper lower bounds linking vars */
+   const SimpleVector& ixlow_root = getSimpleVecColFromStochVec(*(presProb->ixlow), -1);
+   const SimpleVector& xlow_root = getSimpleVecColFromStochVec(*(presProb->blx), -1);
+   const SimpleVector& ixupp_root = getSimpleVecColFromStochVec(*(presProb->ixupp), -1);
+   const SimpleVector& xupp_root = getSimpleVecColFromStochVec(*(presProb->bux), -1);
+
    /* get upper, lower bounds */
    const SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), node);
    const SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), node);
@@ -1696,7 +1738,8 @@ void PresolveData::computeRowMaxActivity(SystemType system_type, int node, Block
    const SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
 
    /* get matrix */
-   SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicRef();
+   SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK)->getStorageDynamicRef();
+   SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, CHILD_BLOCK)->getStorageDynamicRef();
 
    /* get activity vector */
    double& actmax_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row]
@@ -1704,25 +1747,50 @@ void PresolveData::computeRowMaxActivity(SystemType system_type, int node, Block
 
    actmax_part = 0;
 
-   for( int j = mat.rowptr[row].start; j < mat.rowptr[row].end; j++)
+   for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++)
    {
-      const int col = mat.jcolM[j];
-      const double entry = mat.M[j];
+      const int col = Amat.jcolM[j];
+      const double entry = Amat.M[j];
 
-      assert( 0 <= col && col < ixlow.n );
+      assert( 0 <= col && col < ixlow_root.n );
       assert( !PIPSisZero(entry) );
 
       // add entry * lower_bound to min_partact
       if( PIPSisLT(0.0, entry) )
       {
-         if( ixupp[col] != 0.0)
-            actmax_part += entry * xupp[col];
+         if( ixupp_root[col] != 0.0)
+            actmax_part += entry * xupp_root[col];
       }
       // add entry * upper_bound to min_partact
       else
       {
-         if( ixlow[col] != 0.0 )
-            actmax_part += entry * xlow[col];
+         if( ixlow_root[col] != 0.0 )
+            actmax_part += entry * xlow_root[col];
+      }
+   }
+
+   if( node != -1 )
+   {
+      for( int j = Bmat.rowptr[row].start; j < Bmat.rowptr[row].end; j++ )
+      {
+         const int col = Bmat.jcolM[j];
+         const double entry = Bmat.M[j];
+
+         assert( 0 <= col && col < ixlow.n);
+         assert( !PIPSisZero(entry));
+
+         // add entry * lower_bound to min_partact
+         if( PIPSisLT(0.0, entry) )
+         {
+            if( ixupp[col] != 0.0 )
+               actmax_part += entry * xupp[col];
+         }
+         // add entry * upper_bound to min_partact
+         else
+         {
+            if( ixlow[col] != 0.0 )
+               actmax_part += entry * xlow[col];
+         }
       }
    }
 }
@@ -2001,6 +2069,7 @@ void PresolveData::updateRowActivitiesNonLinkingConsBlock(SystemType system_type
    /* no changes if a worse bound has been found */
    if( (upper && !PIPSisLT( bound, old_bound)) || (!upper && PIPSisLT(bound, old_bound)) )
       return;
+
    SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
 
    assert(col < mat_transp.m);
@@ -2050,12 +2119,6 @@ void PresolveData::updateRowActivitiesNonLinkingConsBlock(SystemType system_type
          /* upper bound has been set from infinity to something else */
          --act_ubndd[row];
 
-         // todo : remove debug
-         if( act_ubndd[row] < 0 )
-         std::cout << "systemType: " << system_type << "\tnode: " << node << "\tcol: " << col << "\trow: " << row << "\toldbnd: " <<
-               old_bound << "\tbnd: " << bound <<
-               "\tupper?: " << upper << "\tentry: " << entry << "\tswitch?: " << switch_upperlower << "\tmaxunbdd: " << actmax_ubndd[row] <<
-               "\tminunbdd: " << actmin_ubndd[row] << "\tblocktype: " << block_type << " vs linkcons " << LINKING_CONS_BLOCK << std::endl;
          assert( 0 <= act_ubndd[row] );
 
          /* from now on activity of row has to be computed */
@@ -2237,3 +2300,60 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
    }
    return NULL;
 }
+
+/* only prints the part of a linking constraint the current process knows about */
+void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const
+{
+   out << "SystemType: " << system_type << "\tnode: " << node << "\tLinkingCons: " << (block_type == LINKING_CONS_BLOCK) << "\trow: " << row << std::endl;
+
+   if(system_type == EQUALITY_SYSTEM)
+   {
+      out << getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] << " = ";
+   }
+   else
+   {
+      double iclow = getSimpleVecRowFromStochVec(*presProb->iclow, node, block_type)[row];
+      double clow = (iclow == 1.0) ? getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] : -std::numeric_limits<double>::infinity();
+
+      out << clow << " <= ";
+   }
+
+   if(node != -1 && block_type != LINKING_CONS_BLOCK)
+   {
+      block_type = CHILD_BLOCK;
+      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK), node, row, getSimpleVecColFromStochVec(*presProb->ixupp, -1),
+            getSimpleVecColFromStochVec(*presProb->bux, -1), getSimpleVecColFromStochVec(*presProb->ixlow, -1), getSimpleVecColFromStochVec(*presProb->blx, -1));
+   }
+
+   writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, block_type), node, row, getSimpleVecColFromStochVec(*presProb->ixupp, node),
+         getSimpleVecColFromStochVec(*presProb->bux, node),getSimpleVecColFromStochVec(*presProb->ixlow, node),getSimpleVecColFromStochVec(*presProb->blx, node));
+
+
+   if(system_type == INEQUALITY_SYSTEM)
+   {
+      double icupp = getSimpleVecRowFromStochVec(*presProb->icupp, node, block_type)[row];
+      double cupp = (icupp == 1.0) ? getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row] : std::numeric_limits<double>::infinity();
+
+      out << " <= " << cupp;
+   }
+   out << std::endl;
+}
+
+void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
+      const SimpleVector& ixlow, const SimpleVector& xlow) const
+{
+   const SparseStorageDynamic& storage = mat.getStorageDynamicRef();
+
+   const int start = storage.rowptr[row].start;
+   const int end = storage.rowptr[row].end;
+
+   for(int k = start; k < end; ++k)
+   {
+      const double val = storage.M[k];
+      const int col = storage.jcolM[k];
+
+      out << " + " << val << " * x_" << node << "_" << col << " € [" << ( (ixlow[col] == 0.0) ? -std::numeric_limits<double>::infinity() : xlow[col]) << ", "
+            << ( (ixupp[col] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[col]) << "]";
+   }
+}
+

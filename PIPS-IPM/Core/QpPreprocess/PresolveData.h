@@ -235,6 +235,12 @@ private:
       SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
       SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
 
+public:
+      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const;
+private:
+      void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
+            const SimpleVector& ixlow, const SimpleVector& xlow) const;
+
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_ */

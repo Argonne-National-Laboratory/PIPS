@@ -169,11 +169,10 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
          if( actmin_ubndd != 0 && actmax_ubndd != 0)
             continue;
 
-         if( PIPSisLT( rhs_eq[row], actmin_part, feastol) || PIPSisLT(actmax_part, rhs_eq[row], feastol) )
+         if( (PIPSisLT( rhs_eq[row], actmin_part, feastol) && actmin_ubndd == 0)  || (PIPSisLT(actmax_part, rhs_eq[row], feastol) && actmax_ubndd == 0))
          {
-            std::cout << actmin_part << " > " << rhs_eq[row] << " || " << actmax_part << " < " << rhs_eq[row] << std::endl;
-            std::cout << nnzs[row] << std::endl;
-            std::cout << "node: " << node << " systemtype " << system_type << "block_type " << block_type << " row " << row << std::endl;
+
+            presData.writeRowLocalToStreamDense(std::cout, system_type, node, (linking == false) ? LINKING_VARS_BLOCK : LINKING_CONS_BLOCK, row);
             abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          }

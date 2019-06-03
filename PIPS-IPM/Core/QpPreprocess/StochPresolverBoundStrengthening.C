@@ -43,7 +43,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   int max_iter = 1; // todo
+   int max_iter = 3; // todo
    int iter = 0;
    bool tightened;
 
@@ -52,18 +52,26 @@ void StochPresolverBoundStrengthening::applyPresolving()
       ++iter;
       tightened = false;
       /* root nodes */
-      tightened = tightened || strenghtenBoundsInNode( EQUALITY_SYSTEM, -1);
-      tightened = tightened || strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1);
+      if( strenghtenBoundsInNode( EQUALITY_SYSTEM, -1) )
+         tightened = true;
+      if( strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1) )
+         tightened = true;
 
       // children:
       for( int node = 0; node < nChildren; node++)
       {
          // dummy child?
          if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
-            tightened = tightened || strenghtenBoundsInNode(EQUALITY_SYSTEM, node);
+         {
+            if( strenghtenBoundsInNode(EQUALITY_SYSTEM, node) )
+               tightened = true;
+         }
 
          if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
-            tightened = tightened || strenghtenBoundsInNode(INEQUALITY_SYSTEM, node);
+         {
+            if( strenghtenBoundsInNode(INEQUALITY_SYSTEM, node) )
+               tightened = true;
+         }
       }
    /* update bounds on all processors */
    }
@@ -95,12 +103,20 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
 
    bool tightened = false;
 
-   tightened = tightened || strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK);
+   if( strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK) )
+      tightened = true;
+
    if( presData.hasLinking(system_type) )
-      tightened = tightened || strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK);
+   {
+      if( strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK) )
+         tightened = true;
+   }
 
    if(node != -1)
-      tightened = tightened || strenghtenBoundsInBlock(system_type, node, CHILD_BLOCK);
+   {
+      if( strenghtenBoundsInBlock(system_type, node, CHILD_BLOCK) )
+         tightened = true;
+   }
 
    return tightened;
 }
@@ -206,6 +222,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             }
             assert( PIPSisZero(actmin_row_without_curr, feastol) );
             assert( PIPSisZero(actmax_row_without_curr, feastol) );
+
             actmin_row_without_curr = actmax_row_without_curr = 0;
          }
 
@@ -247,6 +264,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
                   ubx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
          }
+
          bool row_propagated = presData.rowPropagatedBounds(system_type, node, block_type, row, col, ubx_new, lbx_new);
 
          if(row_propagated && (node != -1 || my_rank == 0))

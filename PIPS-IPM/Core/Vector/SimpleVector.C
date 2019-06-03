@@ -290,7 +290,7 @@ bool SimpleVector::componentEqual( const OoqpVector& vec, double tol) const
       /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
       if( !PIPSisRelEQ(v[i], sv[i], tol) && v[i] != sv[i])
       {
-         std::cout << std::setprecision(15) << v[i] << " =!= " << sv[i] << std::endl;
+         std::cout << std::setprecision(15) << v[i] << " =!= " << sv[i] << "\t" << i << std::endl;
          std::cout << std::setprecision(6);
          return false;
       }
