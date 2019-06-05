@@ -27,7 +27,6 @@ void StochPresolverModelCleanup::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
-   assert(indivObjOffset == 0.0);
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -51,9 +50,10 @@ void StochPresolverModelCleanup::applyPresolving()
    int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
    n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
 
+
    // update all nnzCounters - set reductionStochvecs to zero afterwards
-   presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyBoundChanges();
+   presData.allreduceAndApplyNnzChanges();
 
    if( distributed )
    {
@@ -85,7 +85,6 @@ void StochPresolverModelCleanup::applyPresolving()
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
-   assert(indivObjOffset == 0.0);
 }
 
 /** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity

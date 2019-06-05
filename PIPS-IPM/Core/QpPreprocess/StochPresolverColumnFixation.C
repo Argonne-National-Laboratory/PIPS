@@ -28,8 +28,8 @@ void StochPresolverColumnFixation::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
+   assert(presData.verifyActivities());
    assert(presData.verifyNnzcounters());
-   assert(indivObjOffset == 0.0);
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -42,7 +42,6 @@ void StochPresolverColumnFixation::applyPresolving()
 
 
    /* remove fixed columns from system */
-
    updatePointersForCurrentNode(-1, EQUALITY_SYSTEM);
 
    /* linking variables */
@@ -122,14 +121,9 @@ void StochPresolverColumnFixation::applyPresolving()
    }
 
    /* communicate the local changes */
-   presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceAndApplyNnzChanges();
-
-   // Sum up individual objOffset and then add it to the global objOffset:
-   synchronize(indivObjOffset);
-   presData.addObjOffset(indivObjOffset);
-   indivObjOffset = 0;
+   presData.allreduceObjOffset();
 
 
 #ifndef NDEBUG
@@ -143,9 +137,8 @@ void StochPresolverColumnFixation::applyPresolving()
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
-//   assert(fixed_columns in sync) todo -> should be the same over all processes - the variable bounds data was synchronized beforehand
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
+   assert(presData.verifyActivities());
    assert(presData.verifyNnzcounters());
-   assert(indivObjOffset == 0.0);
 }

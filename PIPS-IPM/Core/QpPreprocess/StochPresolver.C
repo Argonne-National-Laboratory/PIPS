@@ -89,6 +89,8 @@ Data* StochPresolver::presolve()
 //      presolverCleanup.applyPresolving();
 //      presolverSR.applyPresolving();
       presolverBS.applyPresolving();
+      presolverColFix.applyPresolving();
+      presolverCleanup.applyPresolving();
 
 //      presolverColFix.applyPresolving();
 //      presolverBS.applyPresolving();
@@ -96,7 +98,6 @@ Data* StochPresolver::presolve()
 //      presolverBS.applyPresolving();
 
 //      presolverParallelRow.applyPresolving();
-      presolverCleanup.applyPresolving();
 //      presolverParallelRow.applyPresolving();
    }
 

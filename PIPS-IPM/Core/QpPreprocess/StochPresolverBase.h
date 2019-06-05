@@ -97,9 +97,6 @@ protected:
    int nChildren;
    /** number of entry eliminations on this process in the current elimination routine */
    int localNelims;
-
-   /* objective offset resulting from local presolving */
-   double indivObjOffset;
 };
 
 

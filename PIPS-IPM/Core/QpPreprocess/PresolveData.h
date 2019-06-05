@@ -162,8 +162,7 @@ public :
 public:
       // todo getter, setter for element access of nnz counter???
       double getObjOffset() const { return objOffset; };
-      double addObjOffset(double addOffset);
-      void setObjOffset(double offset);
+
       int getNChildren() const { return nChildren; };
 
       /// synchronizing the problem over all mpi processes if necessary
@@ -171,6 +170,7 @@ public:
       void allreduceAndApplyLinkingRowActivities();
       void allreduceAndApplyNnzChanges();
       void allreduceAndApplyBoundChanges();
+      void allreduceObjOffset();
 
       /// interface methods called from the presolvers when they detect a possible modification
       // todo make bool and ginve feedback or even better - return some enum maybe?
