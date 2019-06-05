@@ -85,6 +85,8 @@ protected:
   double dparm[64];
 #endif
 
+  int* shrinked2orgSC;
+
   /* pardiso params */
   int maxfct, mnum, phase, msglvl, solver, mtype, nrhs;
 

@@ -1798,7 +1798,6 @@ void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& 
    SimpleVector* curr_nnz = (block_type == LINKING_VARS_BLOCK) ? currNnzColParent : currNnzColChild;
 
    assert(curr_nnz); assert(ixlow); assert(ixupp); assert( ixlow->n == ixupp->n );
-
    for( int i = 0; i < ixlow->n; i++ )
    {
       if( curr_nnz->elements()[i] != 0.0 )
@@ -1807,6 +1806,7 @@ void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& 
             ++nSingletonVars;
 
          nColsTotal++;
+
          if( ixlow->elements()[i] != 0.0 && ixupp->elements()[i] != 0.0 )
             nBoxCols++;
          else if( ixlow->elements()[i] == 0.0 && ixupp->elements()[i] == 0.0)

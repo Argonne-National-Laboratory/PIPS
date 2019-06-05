@@ -19,6 +19,11 @@ endif(HAVE_MA57)
 #if(HAVE_MA86)
 #	set(solvers ${solvers} LinearSolvers/Ma86Solver/Ma86Solver.C QpGen/QpGenSparseMa86.C)
 #endif(HAVE_MA86)
+
+if(HAVE_MUMPS)
+	set(solvers ${solvers} LinearSolvers/MumpsSolver/MumpsSolver.C)
+endif(HAVE_MUMPS)
+
 if(HAVE_PARDISO)
 	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C LinearSolvers/PardisoSolver/PardisoSchurSolver.C LinearSolvers/PardisoSolver/PardisoIndefSolver.C)
 endif(HAVE_PARDISO)

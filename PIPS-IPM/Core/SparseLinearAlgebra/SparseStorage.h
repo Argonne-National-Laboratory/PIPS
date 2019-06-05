@@ -68,6 +68,8 @@ public:
   int rows() { return m; }
   int cols() { return n; }
 
+  bool isValid(bool verbose = false) const;
+
   int length() { return len; };
   int numberOfNonZeros() const {	return krowM[m]; };
   virtual void fromGetDense( int row, int col, double * A, int lda,
@@ -189,6 +191,18 @@ public:
   void dump(const string& filename);
 
   void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
+
+  void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
+
+  void deleteEmptyRows(int*& orgIndex);
+
+  // should be used with care! other methods might nor work correctly todo: add flag to check in other methods
+  void c2fortran();
+
+  void fortran2c();
+
+  void deleteZeroRowsColsSym(int*& new2orgIdx);
+
 
   /*
    * computes the full sparse matrix representation from a upper triangular symmetric sparse representation

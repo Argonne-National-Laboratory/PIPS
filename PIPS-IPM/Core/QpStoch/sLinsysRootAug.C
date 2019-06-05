@@ -618,7 +618,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     tchild_total +=  (MPI_Wtime()-taux);
 #endif
 
-  normr=r.twonorm();
+  normr = r.twonorm(); normr_act = normr;
 
   if( normr<=tolb ) {
     //initial guess is good enough
@@ -814,10 +814,12 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     relres = normr_act/n2b;
     if(myRank==0) {
       printf("INNER BiCGStab converged: normResid=%g relResid=%g iter=%g\n",
-	     normr_act, relres, iter);
-      }
+	        normr_act, relres, iter);
+    }
 #endif
-  } else {
+  } 
+  else 
+  {
     if(ii==maxit) flag=10;//aaa
     //FAILURE -> return minimum resid-norm iterate
     r.copyFrom(b); 
@@ -859,8 +861,10 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 {
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
 
-   int* const krowKkt = kkts.krowM();
+#ifndef NDEBUG
    int* const jcolKkt = kkts.jcolM();
+#endif
+   int* const krowKkt = kkts.krowM();
    double* const MKkt = kkts.M();
    const int n0Links = prob->getN0LinkVars();
 
@@ -899,8 +903,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
    /////////////////////////////////////////////////////////////
    // update the KKT with Q (DO NOT PUT DIAG)
    /////////////////////////////////////////////////////////////
-   SparseSymMatrix& Q = prob->getLocalQ();
-   assert(Q.krowM()[locnx] == 0 && "Q currently not supported for sparse kkt");
+   assert(prob->getLocalQ().krowM()[locnx] == 0 && "Q currently not supported for sparse kkt");
 
    /////////////////////////////////////////////////////////////
    // update the KKT with the diagonals

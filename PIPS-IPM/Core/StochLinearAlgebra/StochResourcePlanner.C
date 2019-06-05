@@ -709,7 +709,7 @@ void LoadBalancing::preAssignProcsToNodes(const vector<int>& nodes,
   //identify those nodes who should get less than 1 CPU and partition
   //them using NGP strategy
   int noProcs = ranks.size();
-  int noNodes = nodes.size(); assert(nodesLoad.size()-noNodes==0);
+  assert(nodesLoad.size() - static_cast<int>(nodes.size()) == 0);
   
   //identify those nodes who should get less than 1 CPU and partition
   //this using NGP strategy
@@ -987,15 +987,13 @@ LoadBalancing::updateMapping_N2P_PIdx(vector<vector<int> >& parts,
   assert(subParts.size()==nodes.size());
 
   for(isp=0; isp<nodes.size(); isp++) {
-    int ip = nodes[isp];
-
-    //!log 
-    //if(parts[ip].size()>0) {
-    //  printf("size(parts[%d])=%d\n",ip, parts[ip].size());
-    //  for(size_t j=0; j<parts[ip].size(); j++) printf("%d\n", parts[ip][j]);
+    //!log //int ip = nodes[isp];
+    //if(parts[nodes[isp]].size()>0) {
+    //  printf("size(parts[%d])=%d\n",nodes[isp], parts[nodes[isp]].size());
+    //  for(size_t j=0; j<parts[nodes[isp]].size(); j++) printf("%d\n", parts[nodes[isp]][j]);
     //}
 
-    assert(parts[ip].size()==0); //this node should not have been
+    assert(parts[nodes[isp]].size()==0); //this node should not have been
 				 //assigned before
     assert(subParts[isp].size()>0); //all the nodes were assigned
 				  //processes to 

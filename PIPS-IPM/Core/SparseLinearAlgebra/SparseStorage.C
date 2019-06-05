@@ -203,6 +203,39 @@ void SparseStorage::setToDiagonal( OoqpVector& vec_in )
   }
 }
 
+bool SparseStorage::isValid(bool verbose) const
+{
+   assert(krowM && jcolM && M);
+
+   if( m < 0 || n < 0 || len < 0)
+   {
+      printf("isValid: negative size parameter \n");
+      return false;
+   }
+
+   if( krowM[0] != 0 || krowM[m] != len )
+   {
+      printf("isValid: krowM broken \n");
+      return false;
+   }
+
+   for( int i = 0; i < len; i++ )
+      if( jcolM[i] >= n )
+      {
+         printf("isValid: column index out of bounds \n");
+         return false;
+      }
+
+   for( int i = 0; i < m; i++ )
+      if( krowM[i] > krowM[i + 1] )
+      {
+         printf("isValid: row indices wrongly ordered \n");
+         return false;
+      }
+
+   return true;
+}
+
 void SparseStorage::fromGetDense( int row, int col, double * A, int lda,
 		int rowExtent, int colExtent )
 {
@@ -1595,6 +1628,230 @@ void SparseStorage::deleteEmptyRowsCols(const double* nnzRowVec, const double* n
 
    delete[] colsmap;
    delete[] rowsmap;
+}
+
+
+void SparseStorage::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   int count = 0;
+   assert(len > 0);
+   assert(!irn && !jcn && !val);
+
+   irn = new int[len];
+   jcn = new int[len];
+   val = new double[len];
+
+   for( int r = 0; r < m; r++ )
+   {
+      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      {
+         const int col = jcolM[c];
+         const double value = M[c];
+
+         irn[count] = r + 1;
+         jcn[count] = col + 1;
+         val[count] = value;
+
+         count++;
+      }
+   }
+
+   assert(count == len);
+}
+
+void SparseStorage::deleteEmptyRows(int*& orgIndex)
+{
+   assert(!neverDeleteElts);
+   assert(orgIndex == NULL);
+
+   int m_new = 0;
+
+   // count non-empty rows
+   for( int r = 0; r < m; r++ )
+      if( krowM[r] != krowM[r + 1] )
+         m_new++;
+
+   int* krowM_new = new int[m_new + 1];
+   orgIndex = new int[m_new + 1];
+
+   krowM_new[0] = 0;
+   m_new = 0;
+
+   for( int r = 0; r < m; r++ )
+      if( krowM[r] != krowM[r + 1] )
+      {
+         orgIndex[m_new] = r;
+         krowM_new[++m_new] = krowM[r + 1];
+      }
+
+   assert(krowM_new[m_new] == len);
+   m = m_new;
+
+   delete[] krowM;
+   krowM = krowM_new;
+}
+
+
+void SparseStorage::c2fortran()
+{
+   assert(krowM[0] == 0 && krowM[m] == len);
+
+   for( int i = 0; i <= m; i++ )
+      krowM[i]++;
+
+   for( int i = 0; i < len; i++ )
+      jcolM[i]++;
+}
+
+void SparseStorage::fortran2c()
+{
+   assert(krowM[0] == 1 && krowM[m] == len + 1);
+
+   for( int i = 0; i <= m; i++ )
+      krowM[i]--;
+
+   for( int i = 0; i < len; i++ )
+      jcolM[i]--;
+}
+
+void SparseStorage::deleteZeroRowsColsSym(int*& new2orgIdx)
+{
+   assert(m == n);
+   assert(!neverDeleteElts);
+   assert(new2orgIdx == NULL);
+   assert(this->isValid());
+
+   int* const offset = new int[m];
+
+   for( int r = 0; r < m; r++ )
+      offset[r] = 0;
+
+   // mark rows (and columns) to be deleted
+   for( int r = 0; r < m; r++ )
+   {
+      const int start = krowM[r];
+      const int end = krowM[r + 1];
+
+      if( start == end )
+      {
+         offset[r] = -1;
+         continue;
+      }
+
+      int c = start;
+
+      for( ; c < end; c++ )
+         if( !PIPSisZero(M[c]) )
+            break;
+
+      // no non-zero found?
+      if( c == end )
+      {
+         offset[r] = -1;
+         continue;
+      }
+
+      offset[r] = -2;
+
+      for( c = start; c < end; c++ )
+      {
+         const int col = jcolM[c];
+
+         assert(offset[col] != 0);
+
+         if( !PIPSisZero(M[c]) && offset[col] == -1 )
+            offset[col] = -2;
+      }
+   }
+
+   int rowDeletes = 0;
+   int zeroEntryDeletes = 0;
+
+   // count column offsets and entries to be deleted
+   for( int r = 0; r < m; r++ )
+   {
+      const int start = krowM[r];
+      const int end = krowM[r + 1];
+
+      // row deleted?
+      if( offset[r] == -1 )
+      {
+         zeroEntryDeletes += end - start;
+         rowDeletes++;
+         continue;
+      }
+
+      for( int c = start; c < end; c++ )
+      {
+         const int col = jcolM[c];
+         assert(col < m);
+
+         if( offset[col] == -1 )
+         {
+            assert(PIPSisZero(M[c]));
+            zeroEntryDeletes++;
+         }
+      }
+
+      assert(offset[r] == -2);
+      offset[r] = rowDeletes;
+   }
+
+   const int m_new = m - rowDeletes;
+   const int len_new = len - zeroEntryDeletes;
+   assert(len_new >= 0 && m_new >= 0);
+
+   new2orgIdx = new int[m_new];
+   int* const krowM_new = new int[m_new + 1];
+   int* const jcolM_new = new int[len_new];
+   double* const M_new = new double[len_new];
+   int m_count = 0;
+   int len_count = 0;
+
+   // fill the new arrays
+   krowM_new[0] = 0;
+   for( int r = 0; r < m; r++ )
+   {
+      if( offset[r] == -1 )
+         continue;
+
+      for( int c = krowM[r]; c < krowM[r + 1]; c++ )
+      {
+         const int col = jcolM[c];
+         if( offset[col] == -1 )
+         {
+            assert(PIPSisZero(M[c]));
+            continue;
+         }
+
+         assert(col - offset[col] >= 0);
+
+         jcolM_new[len_count] = col - offset[col];
+
+         M_new[len_count++] = M[c];
+      }
+
+      new2orgIdx[m_count] = r;
+      krowM_new[++m_count] = len_count;
+      assert(krowM_new[m_count] > krowM_new[m_count - 1]);
+   }
+
+   assert(m_count == m_new);
+   assert(len_count == len_new);
+
+   delete[] krowM;
+   delete[] jcolM;
+   delete[] M;
+   delete[] offset;
+
+   m = m_new;
+   n = m_new;
+   len = len_new;
+   krowM = krowM_new;
+   jcolM = jcolM_new;
+   M = M_new;
+
+   assert(this->isValid());
 }
 
 void SparseStorage::addNnzPerRow(double* vec) const

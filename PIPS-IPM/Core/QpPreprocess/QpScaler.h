@@ -69,7 +69,7 @@ protected:
   void scaleObjVector(double scaling_factor);
 public:
 
-  QpScaler(Data* prob, bool bitshifting = true);
+  QpScaler(Data* prob, bool bitshifting = false);
   virtual ~QpScaler();
 
   /** scale */

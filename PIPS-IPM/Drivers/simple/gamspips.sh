@@ -3,7 +3,7 @@
 # set default values
 built_dir="pipstmp"
 regions="12"
-to="0.08"
+to="0.02"
 tbsize="8"
 np="1"
 scale=""

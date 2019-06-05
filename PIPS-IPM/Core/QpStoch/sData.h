@@ -8,6 +8,7 @@
 #include "StochVector.h"
 #include "DoubleMatrixHandle.h"
 #include "pipschecks.h"
+#include "pipsport.h"
 #include <vector>
 
 class sTree;
@@ -92,8 +93,8 @@ class sData : public QpGenData {
 
  private:
   int n0LinkVars;
-  const static int nLinkStats = 6;
-  const static double minStructuredLinksRatio = 0.5;
+  constexpr static int nLinkStats = 6;
+  constexpr static double minStructuredLinksRatio = 0.5;
   static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 

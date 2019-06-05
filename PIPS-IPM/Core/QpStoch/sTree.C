@@ -134,7 +134,8 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
 
   MPI_Group mpiWorldGroup; 
-  ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup); assert(ierr==MPI_SUCCESS);
+  ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup); assert(ierr == MPI_SUCCESS);
+  (void) ierr;
   for( size_t i = 0; i < children.size(); i++ )
   {
      const int noRanks4ThisChild = mapChildNodesToProcs[i].size();

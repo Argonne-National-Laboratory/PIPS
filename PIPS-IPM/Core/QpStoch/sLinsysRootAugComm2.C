@@ -395,7 +395,7 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
   int flag;
   double n2b;                  //norm of b 
   double normr, normrmin;      //norm of the residual and norm of residual at min-resid iterate
-  double normr_act;       // todo fixme this value may be used uninitialized
+  double normr_act;
   double tolb;                 //relative tolerance
   double rho, omega, alpha;
   int stag, maxmsteps, maxstagsteps, moresteps;
@@ -431,7 +431,7 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
     tchild_total +=  (MPI_Wtime()-taux);
 #endif
 
-  normr=r.twonorm();
+  normr=r.twonorm(); normr_act = normr;
 #ifdef TIMING
   if(myRank==0)
     cout << "BiCG: initial rel resid: " << normr/n2b << endl;
@@ -453,7 +453,9 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
   //////////////////////////////////////////////////////////////////
   // loop over maxit iterations
   //////////////////////////////////////////////////////////////////
-  int ii=0; while(ii<maxit) {
+  int ii=0;
+  while(ii<maxit)
+  {
     //cout << ii << " ";
     flag=-1;
     ///////////////////////////////
@@ -465,7 +467,8 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
     if(0.0==rho) { flag=4;  break; }
 
     if(ii==0) p.copyFrom(r);
-    else {
+    else 
+    {
       beta = (rho/rho1)*(alpha/omega);
       if(beta==0.0) { flag=4;  break; }
 
@@ -485,7 +488,7 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
     solver->solve(paux);
 
 #ifdef TIMING
-  troot_total += (MPI_Wtime()-taux);
+    troot_total += (MPI_Wtime()-taux);
 #endif 
     
     SCmult(0.0,v, 1.0,paux, prob);
@@ -502,36 +505,40 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
 
     // xhalf = x + alpha*ph and the associated residual
     xhalf.copyFrom(x); xhalf.axpy( alpha, ph);
-    s.    copyFrom(r);     s.axpy(-alpha, v);
+    s.copyFrom(r); s.axpy(-alpha, v);
     normr = s.twonorm(); normr_act = normr;
     resvec[2*ii] = normr;
 
     //printf("iter %g normr=%g\n", ii+0.5, normr);
     //-------- check for convergence in the middle of the iterate.  -------- 
-    if(normr<=tolb || stag>=maxstagsteps || moresteps) {
+    if(normr<=tolb || stag>=maxstagsteps || moresteps) 
+    {
       s.copyFrom(b);
       //applyA(1.0, s, -1.0, xhalf); // s=b-Ax
       SCmult(1.0,s, -1.0,xhalf, prob);
       normr_act = s.twonorm();
       
-      if(normr<=tolb) {
-	//converged
-	x.copyFrom(xhalf);	
-	flag = 0;
+      if(normr<=tolb) 
+      {
+	      //converged
+	      x.copyFrom(xhalf);	
+	      flag = 0;
 #ifdef TIMING
-	iter = 0.5+ii;
+	      iter = 0.5+ii;
 #endif
 	break;
-      } else {
-	if(stag>=maxstagsteps && moresteps==0) {
-	  stag=0;
-	}
-	moresteps++;
-	if(moresteps>=maxmsteps) {
-	  //method stagnated
-	  flag=3; x.copyFrom(xhalf);
-	  break;
-	}
+      } 
+      else 
+      {
+	      if(stag>=maxstagsteps && moresteps==0) {
+	        stag=0;
+	      }
+	      moresteps++;
+	      if(moresteps>=maxmsteps) {
+	        //method stagnated
+	        flag=3; x.copyFrom(xhalf);
+	        break;
+	      }
       }
     }
     if(stag>=maxstagsteps) { flag=3; break;} //stagnation
@@ -580,7 +587,8 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
     //	   stag, maxstagsteps, moresteps, normr);    
 
     //-------- check for convergence at the end of the iterate.  -------- 
-    if(normr<=tolb || stag>=maxstagsteps || moresteps) {
+    if(normr<=tolb || stag>=maxstagsteps || moresteps) 
+    {
       r.copyFrom(b); 
       //applyA(1.0, r, -1.0, x); //r=b-Ax
       SCmult(1.0,r, -1.0,x, prob);
@@ -593,15 +601,18 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
 #endif
          break;
       }
-      else {
-	if(stag>=maxstagsteps && moresteps==0) {
-	  stag = 0;
-	}
-	moresteps++;
-	if(moresteps>=maxmsteps) {
-	  //method stagnated
-	  flag=3; break;
-	}
+      else 
+      {
+      	if(stag>=maxstagsteps && moresteps==0) 
+        {
+      	  stag = 0;
+      	}
+      	moresteps++;
+      	if(moresteps>=maxmsteps) 
+        {
+      	  //method stagnated
+      	  flag=3; break;
+      	}
       }
     } // end convergence check
     if(stag>=maxstagsteps) { flag=3; break;} //stagnation
@@ -630,10 +641,11 @@ void sLinsysRootAugComm2::solveWithBiCGStab( sData *prob, SimpleVector& b)
 #ifdef TIMING
     relres = normr_act/n2b;
 
-    if(myRank==0) {
+    if(myRank==0) 
+    {
       printf("BiCGStab converged: normResid=%g relResid=%g iter=%g\n", 
-	     normr_act, relres, iter);
-      }
+	        normr_act, relres, iter);
+    }
 #endif
   } else {
     if(ii==maxit) flag=10;//aaa

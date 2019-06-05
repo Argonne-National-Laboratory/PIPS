@@ -206,7 +206,9 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    if (!fmap)
       return -1;
    
-   fscanf(fmap,"%d%d%d%d",&p2gN,&p2gM,&objvar,&objrow);
+   if(fscanf(fmap,"%d%d%d%d",&p2gN,&p2gM,&objvar,&objrow) != 4)
+      return -1;
+
    if (varl || varm)
    {
       assert(p2gN==numcol);
@@ -223,7 +225,8 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    for (j=0; j<numcol; j++)
    {
       int col;
-      fscanf(fmap,"%d",&col);
+      if(fscanf(fmap,"%d",&col) != 1)
+         return -1;
       if (p2gvmap)
          p2gvmap[j] = col;
    }
@@ -231,7 +234,8 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    for (i=0; i<numrow; i++)
    {
       int row;
-      fscanf(fmap,"%d",&row);
+      if(fscanf(fmap,"%d",&row) != 1)
+         return -1;
       if (p2gemap)
          p2gemap[i] = row;
    }
