@@ -17,7 +17,7 @@ if(CMAKE_BUILD_TYPE)
 else()
   message("CMAKE_BUILD_TYPE not set!")
 endif(CMAKE_BUILD_TYPE)
-  
+
 option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)
 option(BUILD_PIPS_IPM "Build PIPS-IPM" OFF)
@@ -339,7 +339,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
 
   #MA86 is not needed at this time
   #find_library(MA86_LIBRARY hsl_ma86 PATHS ${MA86_DIR}/lib)
-  
+
   #MUMPS Solver REMARK: Identical to the one from PIPS Master, so can simply be replaced if this branch is merged into master
   if(WITH_MUMPS_LEAF)
     set(MUMPS_DIR ${SHARED_DIR}/MUMPS)
@@ -347,9 +347,9 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     find_library(MUMPS_COMMON_LIBRARY libmumps_common.a PATHS ${MUMPS_DIR}/lib NO_DEFAULT_PATH)
     find_library(MUMPS_PORD_LIBRARY libpord.a PATHS ${MUMPS_DIR}/lib NO_DEFAULT_PATH)
     find_path(MUMPS_INCLUDE_DIR NAME dmumps_c.h HINTS ${MUMPS_DIR}/include NO_DEFAULT_PATH)
-    if(NOT MUMPS_D_LIBRARY)
+    if(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT IS_DIRECTORY(MUMPS_INCLUDE_DIR))
       message("-- WARNING: even though WITH_MUMPS_LEAF was specified : no MUMPS was found under ${MUMPS_DIR}/lib")
-    endif(NOT MUMPS_D_LIBRARY)
+    endif(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT IS_DIRECTORY(MUMPS_INCLUDE_DIR))
   endif(WITH_MUMPS_LEAF)
 
   if(MUMPS_INCLUDE_DIR AND MUMPS_D_LIBRARY AND PARMETIS_LIBRARY)
@@ -364,6 +364,9 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     # - scalapack should be set in ${SCALAPACK_LIBRARIES} using Toolchain.cmake (or hardcoded here)
     # - mpifort also needed
     # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
+    # NOTE: the version of METIS recieved with wgetMETIS in ThirdPartyLibs/METIS does not export all necessary symbols for parmetis and MumpsSolver
+    #    use either the metis shipped together with permetis or download seperately and link against it
+    #    related ERROR looks like: ... undefined reference to `metis_setdefaultoptions_'  
     if(NOT SCALAPACK_LIBRARIES)
       MESSAGE(STATUS "SCALAPACK_LIBRARIES for MUMPS not set. Default linking for Ubuntu.")
       find_library(SCALAPACK_OMPI_LIBRARY NAMES scalapack-openmpi)
@@ -386,9 +389,10 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     message(STATUS "MUMPS_LIBRARIES:=${MUMPS_LIBRARY}")
     include_directories(${MUMPS_INCLUDE_DIR})
   else ()
+     set(HAVE_MUMPS FALSE)
     message(STATUS "MUMPS library and/or headers are not present. Will build PIPS without MUMPS")
     set(MUMPS_LIBRARY "")
-  endif(MUMPS_INCLUDE_DIR AND MUMPS_D_LIBRARY AND PARMETIS_LIBRARY) 
+  endif(MUMPS_INCLUDE_DIR AND MUMPS_D_LIBRARY AND PARMETIS_LIBRARY)
 
 
   #MKL_PARDISO Solver
@@ -476,23 +480,23 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   #else(HAVE_MA57)
   #  set(MA86_LIBRARY "")
   #endif(HAVE_MA86)
-  
+
   if(WITH_STEPLENGTH_CONSERVATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSTEPLENGTH_CONSERVATIVE")
   endif(WITH_STEPLENGTH_CONSERVATIVE)
-  
+
   if(WITH_SPARSE_PRECOND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPARSE_PRECOND")
   endif(WITH_SPARSE_PRECOND)
-  
+
   if(WITH_REDUCED_ACCURACY)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DREDUCED_ACCURACY")
   endif(WITH_REDUCED_ACCURACY)
-  
+
   if(WITH_INNER_BICGSTAB)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINNER_BICGSTAB")
   endif(WITH_INNER_BICGSTAB)
-  
+
   if(HAVE_PARDISO)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISO")
     if(WITH_PARDISOINDEF)
@@ -503,21 +507,21 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     endif(WITH_PARDISO_PARALLEL)
     if(WITH_PARDISO_BLOCKSC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPARDISO_BLOCKSC")
-    endif(WITH_PARDISO_BLOCKSC)    
+    endif(WITH_PARDISO_BLOCKSC)
     if(WITH_PARDISOINDEF_SCALE)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPARDISOINDEF_SCALE")
     endif(WITH_PARDISOINDEF_SCALE)
   else(HAVE_PARDISO)
     set(PARDISO_LIBRARY "")
   endif(HAVE_PARDISO)
-  
+
   if(HAVE_MUMPS)
     if(WITH_MUMPS_LEAF)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MUMPS_LEAF")
     endif(WITH_MUMPS_LEAF)
   endif(HAVE_MUMPS)
 
-  
+
   if(HAVE_MKL_PARDISO AND WITH_MKL_PARDISO)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MKL_PARDISO")
   endif(HAVE_MKL_PARDISO AND WITH_MKL_PARDISO)

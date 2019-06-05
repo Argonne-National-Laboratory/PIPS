@@ -61,13 +61,13 @@ void StochPostsolver::finishNotify()
 // todo : at the moment only replaces whatever is given as x with the x solution in the original soution space
 PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Variables& original_solution) const
 {
-   const sVars& stoch_reduced_sol = dynamic_cast<const sVars&>(reduced_solution);
+   // const sVars& stoch_reduced_sol = dynamic_cast<const sVars&>(reduced_solution);
    sVars& stoch_original_sol = dynamic_cast<sVars&>(original_solution);
 
 
    /* primal variables */
 
-   const StochVector& primal_vars_reduced = dynamic_cast<const StochVector&>(*stoch_reduced_sol.x);
+   // const StochVector& primal_vars_reduced = dynamic_cast<const StochVector&>(*stoch_reduced_sol.x);
    StochVector& primal_vars_orig = dynamic_cast<StochVector&>(*stoch_original_sol.x);
 
    primal_vars_orig.setToZero(); // todo necessary?
@@ -86,7 +86,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    {
       int type = reductions[i];
       unsigned int first = start_idx_values[i];
-      unsigned int last = start_idx_values[i + 1];
+      // unsigned int last = start_idx_values[i + 1];
 
       switch( type )
       {
@@ -181,4 +181,3 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 //      original_vector[orig_col] = reduced_vector[i];
 //   }
 //}
-

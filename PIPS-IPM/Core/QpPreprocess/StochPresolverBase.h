@@ -167,8 +167,9 @@ private:
 
 private:
    void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
-   void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const;
+   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const;
 
+protected:
    void resetEqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
    void resetIneqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
 
@@ -182,7 +183,7 @@ private:
 
    bool nodeIsDummy(int it, SystemType system_type) const;
    bool hasLinking(SystemType system_type) const;
-   void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
+   void getRankDistributed(MPI_Comm comm, int&  myRank, bool& iAmDistrib) const;
    void abortInfeasible(MPI_Comm comm) const;
    void synchronize(int& value) const;
 
