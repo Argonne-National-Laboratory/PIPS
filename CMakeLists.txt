@@ -347,14 +347,15 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     find_library(MUMPS_COMMON_LIBRARY libmumps_common.a PATHS ${MUMPS_DIR}/lib NO_DEFAULT_PATH)
     find_library(MUMPS_PORD_LIBRARY libpord.a PATHS ${MUMPS_DIR}/lib NO_DEFAULT_PATH)
     find_path(MUMPS_INCLUDE_DIR NAME dmumps_c.h HINTS ${MUMPS_DIR}/include NO_DEFAULT_PATH)
-    if(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT IS_DIRECTORY(MUMPS_INCLUDE_DIR))
-      message("-- WARNING: even though WITH_MUMPS_LEAF was specified : no MUMPS was found under ${MUMPS_DIR}/lib")
-    endif(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT IS_DIRECTORY(MUMPS_INCLUDE_DIR))
+    if(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT MUMPS_INCLUDE_DIR)
+      message(WARNING "even though WITH_MUMPS_LEAF was specified : no MUMPS was found under ${MUMPS_DIR}/lib")
+   endif(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT MUMPS_INCLUDE_DIR)
   endif(WITH_MUMPS_LEAF)
 
   if(MUMPS_INCLUDE_DIR AND MUMPS_D_LIBRARY AND PARMETIS_LIBRARY)
     # we assume the other libraries are in there
     set(HAVE_MUMPS TRUE)
+    message(STATUS "FOUND MUMPS")
     # you may need parmetis if mumps was build with parmetis (we recommend using parmetis). For more info
     # see the readme file in ThirdPartyLibs/MUMPS and the sample build file in PIPS-NLP/Core/LinearSolvers/MumpsSolver
     # In short: insert something like the following line to MUMPS_LIBRARY below
@@ -366,7 +367,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
     # NOTE: the version of METIS recieved with wgetMETIS in ThirdPartyLibs/METIS does not export all necessary symbols for parmetis and MumpsSolver
     #    use either the metis shipped together with permetis or download seperately and link against it
-    #    related ERROR looks like: ... undefined reference to `metis_setdefaultoptions_'  
+    #    related ERROR looks like: ... undefined reference to `metis_setdefaultoptions_'
     if(NOT SCALAPACK_LIBRARIES)
       MESSAGE(STATUS "SCALAPACK_LIBRARIES for MUMPS not set. Default linking for Ubuntu.")
       find_library(SCALAPACK_OMPI_LIBRARY NAMES scalapack-openmpi)
