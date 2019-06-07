@@ -450,6 +450,138 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
 }
 
 
+SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist()
+{
+   assert(children.size() > 0);
+
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   const int mzl = getLocalmzl();
+   const int sizeSC = nx0 + my0 + myl + mzl;
+   const int nnz = getSchurCompMaxNnz();
+
+   assert(nnz > 0);
+   assert(myl >= 0 && mzl >= 0);
+
+   int* krowM = new int[sizeSC + 1];
+   int* jcolM = new int[nnz];
+   double* M = new double[nnz];
+
+   krowM[0] = 0;
+
+   // get B_0^T (resp. A_0^T)
+   SparseGenMatrix& Btrans = getLocalB().getTranspose();
+   int* const startRowBtrans = Btrans.krowM();
+   int* const colidxBtrans = Btrans.jcolM();
+
+#ifndef NDEBUG
+      int bm, bn;
+      Btrans.getSize(bm, bn);
+      assert(bm == nx0 && bn == my0);
+#endif
+
+   const int nx0NonZero = nx0 - n0LinkVars;
+   int nnzcount = 0;
+
+   assert(nx0NonZero >= 0);
+
+   // dense square block, B_0^T, and dense border blocks todo: add space for CDCt
+   for( int i = 0; i < nx0NonZero; ++i )
+   {
+      const int blength = startRowBtrans[i + 1] - startRowBtrans[i];
+      assert(blength >= 0);
+
+      krowM[i + 1] = krowM[i] + (nx0 - i) + blength + myl + mzl;
+
+      appendRowDense(i, nx0, nnzcount, jcolM);
+
+      appendRowSparse(startRowBtrans[i], startRowBtrans[i + 1], nx0, colidxBtrans, nnzcount, jcolM);
+
+      appendRowDense(nx0 + my0, nx0 + my0 + myl + mzl, nnzcount, jcolM);
+
+      assert(nnzcount == krowM[i + 1]);
+   }
+
+   // dense square block and rest of B_0, F_0^T, G_0^T
+   for( int i = nx0NonZero; i < nx0; ++i )
+   {
+      appendRowDense(i, nx0, nnzcount, jcolM);
+
+      appendRowSparse(startRowBtrans[i], startRowBtrans[i + 1], nx0, colidxBtrans, nnzcount, jcolM);
+
+      if( myl > 0 )
+      {
+         SparseGenMatrix& Ft = getLocalF().getTranspose();
+         const int* startRowFtrans = Ft.krowM();
+         const int* colidxFtrans = Ft.jcolM();
+
+         appendRowSparse(startRowFtrans[i], startRowFtrans[i + 1], nx0 + my0, colidxFtrans, nnzcount, jcolM);
+      }
+
+      if( mzl > 0 )
+      {
+         SparseGenMatrix& Gt = getLocalG().getTranspose();
+         const int* startRowGtrans = Gt.krowM();
+         const int* colidxGtrans = Gt.jcolM();
+
+         appendRowSparse(startRowGtrans[i], startRowGtrans[i + 1], nx0 + my0 + myl, colidxGtrans, nnzcount, jcolM);
+      }
+
+      krowM[i + 1] = nnzcount;
+   }
+
+   // empty rows; put diagonal for PARDISO
+   for( int i = nx0; i < nx0 + my0; ++i )
+   {
+      const int rowStartIdx = krowM[i];
+
+      jcolM[rowStartIdx] = i;
+      krowM[i + 1] = rowStartIdx + 1;
+   }
+
+   nnzcount += my0;
+
+   // equality linking: sparse diagonal blocks, and mixed rows
+   int blockStartrow = 0;
+   const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
+   const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
+   const int borderstartEq = nx0 + my0 + n2linksRowsEq;
+   const int n2linksRowsIneq = n2linksRows(linkStartBlockLengthsC);
+   const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
+   const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
+
+   assert(bordersizeEq >= 0 && n2linksRowsEq <= myl);
+   assert(bordersizeIneq >= 0 && n2linksRowsIneq <= mzl);
+
+   for( int i = nx0 + my0, j = 0, colIdxOffset = 0, blockStartrowMix = 0; i < nx0 + my0 + myl; ++i, ++j )
+   {
+      int blockrownnz = appendDiagBlocks(linkStartBlockIdA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j,
+            blockStartrow, nnzcount, jcolM);
+
+      blockrownnz += appendMixedBlocks(linkStartBlockIdA, linkStartBlockIdC, linkStartBlockLengthsA, linkStartBlockLengthsC,
+            (nx0 + my0 + myl), bordersizeIneq, j, colIdxOffset, blockStartrowMix, nnzcount, jcolM);
+
+      assert(blockStartrowMix == blockStartrow);
+
+      krowM[i + 1] = krowM[i] + blockrownnz;
+   }
+
+   // inequality linking: dense border block and sparse diagonal blocks
+   blockStartrow = 0;
+
+   for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; ++i, ++j )
+   {
+       const int blockrownnz = appendDiagBlocks(linkStartBlockIdC, linkStartBlockLengthsC, borderstartIneq, bordersizeIneq, i, j, blockStartrow, nnzcount, jcolM);
+
+       krowM[i + 1] = krowM[i] + blockrownnz;
+   }
+
+   assert(nnzcount == nnz);
+
+   return (new SparseSymMatrix(sizeSC, nnz, krowM, jcolM, M, 1, false));
+}
+
 std::vector<unsigned int> sData::get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount)
 {
    const int size = int(linkVarsNnzCount.size());
