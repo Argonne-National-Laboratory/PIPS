@@ -52,14 +52,18 @@ class sData : public QpGenData {
 
   int getLocalNnz(int& nnzQ, int& nnzB, int& nnzD);
   int getN0LinkVars() {return n0LinkVars;}
+
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
+
+  // distributed version
+  int getSchurCompMaxNnzDist(int blocksStart, int blocksEnd);
   bool exploitingLinkStructure() {return useLinkStructure;};
 
   SparseSymMatrix* createSchurCompSymbSparseUpper();
 
   // distributed version
-  SparseSymMatrix* createSchurCompSymbSparseUpperDist();
+  SparseSymMatrix* createSchurCompSymbSparseUpperDist(int blocksStart, int blocksEnd);
 
   SparseSymMatrix& getLocalQ();
   SparseGenMatrix& getLocalCrossHessian();
@@ -102,14 +106,30 @@ class sData : public QpGenData {
   static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
 
+  // returns number of block rows
+  static int getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths);
+
+  // returns number of block rows within specified range
+  static int getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths,
+        int blocksStart, int blocksEnd);
+
   // max nnz in Schur complement diagonal block signified by given vector
   static int getSCdiagBlocksMaxNnz(size_t nRows,
         const std::vector<int>& linkStartBlockLengths);
+
+  // distributed version
+  static int getSCdiagBlocksMaxNnzDist(size_t nRows,
+        const std::vector<int>& linkStartBlockLengths, int blocksStart, int blocksEnd);
 
   // max nnz in Schur complement mixed block signified by given vectors
   static int  getSCmixedBlocksMaxNnz(size_t nRows, size_t nCols,
         const std::vector<int>& linkStartBlockLength_Left,
         const std::vector<int>& linkStartBlockLength_Right);
+
+  // distributed version
+  static int  getSCmixedBlocksMaxNnzDist(size_t nRows, size_t nCols,
+        const std::vector<int>& linkStartBlockLength_Left,
+        const std::vector<int>& linkStartBlockLength_Right, int blocksStart, int blocksEnd);
 
   // number of sparse 2-link rows
   static int n2linksRows(const std::vector<int>& linkStartBlockLengths);

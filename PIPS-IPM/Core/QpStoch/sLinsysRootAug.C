@@ -59,7 +59,6 @@ sLinsysRootAug::~sLinsysRootAug()
   delete redRhs;
 }
 
-
 SymMatrix* 
 sLinsysRootAug::createKKT(sData* prob)
 {
@@ -72,8 +71,17 @@ sLinsysRootAug::createKKT(sData* prob)
       if( myRank == 0)
          std::cout << "getSchurCompMaxNnz " << prob->getSchurCompMaxNnz() << std::endl;
 
+#ifdef DIST_PRECOND
+      int childStart;
+      int childEnd;
+
+      this->getProperChildrenRange(childStart, childEnd);
+
+      SparseSymMatrix* sparsekkt = prob->createSchurCompSymbSparseUpperDist(childStart, childEnd);
+#else
       SparseSymMatrix* sparsekkt = prob->createSchurCompSymbSparseUpper();
 
+#endif
       assert(sparsekkt->size() == n);
 
       return sparsekkt;
@@ -555,6 +563,44 @@ void sLinsysRootAug::solveWithIterRef( sData *prob, SimpleVector& r)
   troot_total += (MPI_Wtime()-taux);
 #endif  
 }
+
+void sLinsysRootAug::getProperChildrenRange(int& childStart, int& childEnd)
+{
+   assert(children.size() > 0);
+
+   childStart = -1;
+   childEnd = -1;
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      if( childEnd != -1 )
+         assert(children[it]->isDummy());
+
+      if( children[it]->isDummy() )
+      {
+         // end of range?
+         if( childStart != -1 && childEnd == -1 )
+            childEnd = int(it);
+
+         continue;
+      }
+
+      // start of range?
+      if( childStart == -1 )
+         childStart = int(it);
+   }
+
+   assert(childStart >= 0);
+
+   if( childEnd == -1 )
+   {
+      assert(!children[children.size() - 1]->isDummy());
+      childEnd = int(children.size());
+   }
+
+    assert(childStart < childEnd && childEnd <= int(children.size()));
+
+}
+
 
 void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 {
