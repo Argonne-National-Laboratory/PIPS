@@ -67,21 +67,28 @@ sLinsysRootAug::createKKT(sData* prob)
    if( hasSparseKkt )
    {
       int myRank; MPI_Comm_rank(mpiComm, &myRank);
+      SparseSymMatrix* sparsekkt;
 
       if( myRank == 0)
          std::cout << "getSchurCompMaxNnz " << prob->getSchurCompMaxNnz() << std::endl;
 
-#ifdef DIST_PRECOND
-      int childStart;
-      int childEnd;
+      if( usePrecondDist )
+      {
+         int childStart;
+         int childEnd;
 
-      this->getProperChildrenRange(childStart, childEnd);
+         this->getProperChildrenRange(childStart, childEnd);
 
-      SparseSymMatrix* sparsekkt = prob->createSchurCompSymbSparseUpperDist(childStart, childEnd);
-#else
-      SparseSymMatrix* sparsekkt = prob->createSchurCompSymbSparseUpper();
+         std::cout << "myRank=" << myRank << "  childStart=" << childStart
+               << "  childEnd=" << childEnd << std::endl;
 
-#endif
+         sparsekkt = prob->createSchurCompSymbSparseUpperDist(childStart, childEnd);
+      }
+      else
+      {
+         sparsekkt = prob->createSchurCompSymbSparseUpper();
+      }
+
       assert(sparsekkt->size() == n);
 
       return sparsekkt;

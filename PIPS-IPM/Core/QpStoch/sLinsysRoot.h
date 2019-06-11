@@ -99,6 +99,8 @@ class sLinsysRoot : public sLinsys {
   double* sparseKktBuffer;
 
   bool hasSparseKkt;
+  bool usePrecondDist;
+
  private:
   void addTermToSchurCompl(sData* prob, size_t childindex);
   void reduceKKTdense();

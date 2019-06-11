@@ -94,7 +94,6 @@ int appendDiagBlocks(const std::vector<int>& linkStartBlockId, const std::vector
    return rownnz;
 }
 
-
 static
 int appendMixedBlocks(const std::vector<int>& linkStartBlockId_Left,
       const std::vector<int>& linkStartBlockId_Right,
@@ -278,7 +277,7 @@ int sData::getSCdiagBlocksMaxNnzDist(size_t nRows, const std::vector<int>& linkS
 
       assert(length > 0);
       assert(prevlength >= 0);
-      assert(block != linkStartBlockLengths.size() - 1); // length should be 0 for last block
+      assert(block != int(linkStartBlockLengths.size()) - 1); // length should be 0 for last block
 
       // diagonal block
       nnz += nnzTriangular(length);
@@ -620,15 +619,15 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
 
    assert(getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) == getSchurCompMaxNnz());
 
-   std::cout << getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) << "==" <<  getSchurCompMaxNnz() << std::endl;
-
+   // todo deleteme
    if( getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) != getSchurCompMaxNnz() )
+   {
       std::cout << "fail" << std::endl;
+      std::cout << getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) << "!=" <<  getSchurCompMaxNnz() << std::endl;
+      exit(1);
+   }
 
-   assert(0);
-   exit(1);
-
-
+   std::cout << "createSchurCompSymbSparseUpperDist" << std::endl;
 
    assert(blocksStart >= 0 && blocksStart < blocksEnd);
    assert(nnz > 0);
@@ -726,13 +725,19 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
 
    for( int i = nx0 + my0, j = 0, colIdxOffset = 0, blockStartrowMix = 0; i < nx0 + my0 + myl; ++i, ++j )
    {
-      int blockrownnz = appendDiagBlocks(linkStartBlockIdA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j,
-            blockStartrow, nnzcount, jcolM);
+      const int block = linkStartBlockIdA[j];
+      int blockrownnz = 0;
 
-      blockrownnz += appendMixedBlocks(linkStartBlockIdA, linkStartBlockIdC, linkStartBlockLengthsA, linkStartBlockLengthsC,
-            (nx0 + my0 + myl), bordersizeIneq, j, colIdxOffset, blockStartrowMix, nnzcount, jcolM);
+      if( block >= blocksStart && block < blocksEnd )
+      {
+         blockrownnz += appendDiagBlocks(linkStartBlockIdA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j,
+               blockStartrow, nnzcount, jcolM);
 
-      assert(blockStartrowMix == blockStartrow);
+         blockrownnz += appendMixedBlocks(linkStartBlockIdA, linkStartBlockIdC, linkStartBlockLengthsA, linkStartBlockLengthsC,
+               (nx0 + my0 + myl), bordersizeIneq, j, colIdxOffset, blockStartrowMix, nnzcount, jcolM);
+
+         assert(blockStartrowMix == blockStartrow);
+      }
 
       krowM[i + 1] = krowM[i] + blockrownnz;
    }
@@ -742,9 +747,14 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
 
    for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; ++i, ++j )
    {
-       const int blockrownnz = appendDiagBlocks(linkStartBlockIdC, linkStartBlockLengthsC, borderstartIneq, bordersizeIneq, i, j, blockStartrow, nnzcount, jcolM);
+      const int block = linkStartBlockIdC[j];
+      int blockrownnz = 0;
 
-       krowM[i + 1] = krowM[i] + blockrownnz;
+      if( block >= blocksStart && block < blocksEnd )
+         blockrownnz += appendDiagBlocks(linkStartBlockIdC, linkStartBlockLengthsC, borderstartIneq, bordersizeIneq, i, j,
+            blockStartrow, nnzcount, jcolM);
+
+      krowM[i + 1] = krowM[i] + blockrownnz;
    }
 
    assert(nnzcount == nnz);
