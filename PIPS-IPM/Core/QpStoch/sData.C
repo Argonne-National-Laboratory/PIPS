@@ -728,7 +728,7 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
       const int block = linkStartBlockIdA[j];
       int blockrownnz = 0;
 
-      if( block >= blocksStart && block < blocksEnd )
+      if( (block >= blocksStart && block < blocksEnd) || block == -1 )
       {
          blockrownnz += appendDiagBlocks(linkStartBlockIdA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j,
                blockStartrow, nnzcount, jcolM);
@@ -750,7 +750,7 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
       const int block = linkStartBlockIdC[j];
       int blockrownnz = 0;
 
-      if( block >= blocksStart && block < blocksEnd )
+      if( (block >= blocksStart && block < blocksEnd) || block == -1 )
          blockrownnz += appendDiagBlocks(linkStartBlockIdC, linkStartBlockLengthsC, borderstartIneq, bordersizeIneq, i, j,
             blockStartrow, nnzcount, jcolM);
 
