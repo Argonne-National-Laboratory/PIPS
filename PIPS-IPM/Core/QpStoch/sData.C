@@ -283,6 +283,12 @@ void appendMixedBlocksDist(const std::vector<int>& linkStartBlockId_Left,
 
             for( int i = 0; i < prevlength_Right; ++i )
                jcolM[nnz++] = (colStartIdx + i);
+         }
+
+         if( block >= 1 )
+         {
+            const int prevlength_Right = linkStartBlockLengths_Right[block - 1];
+            assert(prevlength_Right >= 0);
 
             colStartIdx += prevlength_Right;
          }
