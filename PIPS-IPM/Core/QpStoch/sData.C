@@ -596,7 +596,6 @@ int sData::getSCmixedBlocksMaxNnzDist(size_t nRows, size_t nCols,
       const int nRowsDense = int(nRows) - nRowsSparse;
       const int nColsDense = int(nCols) - nColsSparse;
 
-      nRowsSparse, nColsSparse, nRowsSparseRange, nColsSparseRange, nRows, nCols);
       nnz += nRowsDense * nColsSparseRange;  // lower left border part (without right border)
       nnz += nRowsSparseRange * nColsDense;  // upper right border
       nnz += nRowsDense * nColsDense;        // lower right border
