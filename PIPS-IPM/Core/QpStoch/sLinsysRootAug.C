@@ -79,9 +79,6 @@ sLinsysRootAug::createKKT(sData* prob)
 
          this->getProperChildrenRange(childStart, childEnd);
 
-         std::cout << "myRank=" << myRank << "  childStart=" << childStart
-               << "  childEnd=" << childEnd << std::endl;
-
          sparsekkt = prob->createSchurCompSymbSparseUpperDist(childStart, childEnd);
       }
       else
@@ -1373,10 +1370,17 @@ void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
   stochNode->resMon.recFactTmLocal_start();
   stochNode->resMon.recSchurMultLocal_start();
 
-  if( hasSparseKkt )
-     finalizeKKTsparse(prob, vars);
+  if( usePrecondDist )
+  {
+     // don't do anything, already done previously
+  }
   else
-     finalizeKKTdense(prob, vars);
+  {
+     if( hasSparseKkt )
+        finalizeKKTsparse(prob, vars);
+     else
+        finalizeKKTdense(prob, vars);
+  }
 
   stochNode->resMon.recSchurMultLocal_stop();
   stochNode->resMon.recFactTmLocal_stop();

@@ -692,9 +692,6 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
   }
 #endif
 
-  int todo;
-  std::cout << "ALL OK" << std::endl;
-exit(1);
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
 }
 

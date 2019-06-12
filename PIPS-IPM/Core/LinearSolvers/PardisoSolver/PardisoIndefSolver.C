@@ -218,6 +218,87 @@ void PardisoIndefSolver::matrixChanged()
    }
 }
 
+
+void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew )
+{
+   int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+   if( myrank == 0 )
+   {
+      SparseSymMatrix& matrixNewSym = dynamic_cast<SparseSymMatrix&>(matrixNew);
+
+      printf("\n Schur complement factorization is starting ...\n ");
+
+      assert(mStorageSparse);
+
+      factorizeFromSparse(matrixNewSym);
+
+      printf("\n Schur complement factorization completed \n ");
+   }
+}
+
+
+
+void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrixNew)
+{
+   assert(n == matrixNew.size());
+
+   const int nnz = matrixNew.numberOfNonZeros();
+   const int* const iaMatrix = matrixNew.krowM();
+   const int* const jaMatrix = matrixNew.jcolM();
+   const double* const aMatrix = matrixNew.M();
+
+   delete[] ia;  delete[] ja;  delete[] a;
+
+   ia = new int[n + 1];
+   ja = new int[nnz];
+   a = new double[nnz];
+
+   assert(n >= 0);
+
+   std::vector<double>diag(n);
+
+   const double t = precondDiagDomBound;
+
+   for( int r = 0; r < n; r++ )
+   {
+      const int j = iaMatrix[r];
+      assert(jaMatrix[j] == r);
+
+      diag[r] = fabs(aMatrix[j]) * t;
+   }
+
+   ia[0] = 1;
+   int kills = 0;
+   int nnznew = 0;
+
+   for( int r = 0; r < n; r++ )
+   {
+      for( int j = iaMatrix[r]; j < iaMatrix[r + 1]; j++ )
+      {
+         if( aMatrix[j] != 0.0 || jaMatrix[j] == r )
+         {
+            if( (fabs(aMatrix[j]) >= diag[r] || fabs(aMatrix[j]) >= diag[jaMatrix[j]]) )
+            {
+               ja[nnznew] = jaMatrix[j] + 1;
+               a[nnznew++] = aMatrix[j];
+            }
+            else
+            {
+               kills++;
+               assert(jaMatrix[j] != r);
+            }
+         }
+      }
+      ia[r + 1] = nnznew + 1;
+   }
+
+   std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
+
+   // matrix initialized, now do the actual factorization
+   factorize();
+}
+
 #define SELECT_NNZS
 
 void PardisoIndefSolver::factorizeFromSparse()
@@ -253,7 +334,7 @@ void PardisoIndefSolver::factorizeFromSparse()
 #ifdef SELECT_NNZS
    std::vector<double>diag(n);
 
-   const double t = 0.0001;
+   const double t = precondDiagDomBound;
 
    for( int r = 0; r < n; r++ )
    {
@@ -338,14 +419,9 @@ void PardisoIndefSolver::factorizeFromDense()
          if( mStorage->M[i][j] != 0.0 )
             nnz++;
 
-   if( ia )
-      delete[] ia;
-
-   if( ja )
-      delete[] ja;
-
-   if( a )
-      delete[] a;
+   delete[] ia;
+   delete[] ja;
+   delete[] a;
 
    ia = new int[n + 1];
    ja = new int[nnz];
@@ -405,11 +481,11 @@ void PardisoIndefSolver::factorize()
    }
 
    std::cout << "absmax=" << abs_max << " log=" << log10(abs_max) << std::endl;
-if( log10(abs_max) >= 13)
-{
-   iparm[9] = min(int(log10(abs_max)), 15);
-   std::cout << "new: param " << iparm[9] << std::endl;
-}
+   if( log10(abs_max) >= 13)
+   {
+      iparm[9] = min(int(log10(abs_max)), 15);
+      std::cout << "new: param " << iparm[9] << std::endl;
+   }
 else
 #endif
 

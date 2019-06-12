@@ -92,6 +92,8 @@ class sLinsysRoot : public sLinsys {
 
  protected: //buffers
 
+  SparseSymMatrix* kktDist;
+
   OoqpVector* zDiag;
   OoqpVector* zDiagLinkCons;
   OoqpVector* xDiag;
@@ -103,6 +105,7 @@ class sLinsysRoot : public sLinsys {
 
  private:
   void addTermToSchurCompl(sData* prob, size_t childindex);
+  void reduceKKTdist();
   void reduceKKTdense();
   void reduceKKTsparse();
 

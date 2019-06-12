@@ -28,6 +28,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   xDiag = NULL;
   zDiag = NULL;
   zDiagLinkCons = NULL;
+  kktDist = NULL;
 
   createChildren(prob_);
 
@@ -76,6 +77,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   xDiag = NULL;
   zDiag = NULL;
   zDiagLinkCons = NULL;
+  kktDist = NULL;
 
   createChildren(prob_);
 
@@ -176,7 +178,6 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 #ifdef TIMING
   afterFactor();
 #endif
-
   //gLackOfAccuracy=0;
 }
 
@@ -526,11 +527,29 @@ void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
       DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt);
       myAtPutZeros(kktd);
    }
+
+   if( usePrecondDist)
+   {
+      assert(hasSparseKkt);
+      // just call finalize from here?
+
+      int todo; // put A_0 G_0 etc.
+
+   }
 }
 
 void sLinsysRoot::reduceKKT()
 {
-   if( hasSparseKkt )
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   printf("all there \n");
+
+   exit(1);
+
+
+   if( usePrecondDist )
+      reduceKKTdist();
+   else if( hasSparseKkt )
       reduceKKTsparse();
    else
       reduceKKTdense();
@@ -642,6 +661,59 @@ void sLinsysRoot::reduceKKTsparse()
 #endif
 }
 
+
+void sLinsysRoot::reduceKKTdist()
+{
+   int todo; // here should be all the magic like building tmp sparsevector
+   assert(!kktDist); // disable usePrecondDist if not iAmDistrib
+
+
+
+   if( !iAmDistrib )
+      return;
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+   assert(kkt);
+
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+
+   int* const krowKkt = kkts.krowM();
+   double* const MKkt = kkts.M();
+   const int sizeKkt = locnx + locmy + locmyl + locmzl;
+   const int nnzKkt = krowKkt[sizeKkt];
+
+   assert(kkts.size() == sizeKkt);
+   assert(!kkts.isLower);
+
+   if( myRank == 0 && sparseKktBuffer == NULL )
+      sparseKktBuffer = new double[CHUNK_SIZE];
+
+   // todo: extra method
+
+   const int reps = nnzKkt / CHUNK_SIZE;
+   const int res = nnzKkt - CHUNK_SIZE * reps;
+   assert(res >= 0 && res < CHUNK_SIZE);
+
+   for( int i = 0; i < reps; i++ )
+   {
+      double* const start = &MKkt[i * CHUNK_SIZE];
+      MPI_Reduce(start, sparseKktBuffer, CHUNK_SIZE, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
+
+      if( myRank == 0 )
+         memcpy(start, sparseKktBuffer, size_t(CHUNK_SIZE) * sizeof(double));
+   }
+
+   if( res > 0 )
+   {
+      double* const start = &MKkt[reps * CHUNK_SIZE];
+      MPI_Reduce(start, sparseKktBuffer, res, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
+
+      if( myRank == 0 )
+         memcpy(start, sparseKktBuffer, size_t(res) * sizeof(double));
+   }
+}
+
 void sLinsysRoot::factorizeKKT()
 {
   //stochNode->resMon.recFactTmLocal_start();  
@@ -651,7 +723,14 @@ void sLinsysRoot::factorizeKKT()
   double st=MPI_Wtime();
 #endif
 
-  solver->matrixChanged();
+  int todo; // give new matrix
+  if( usePrecondDist )
+  {
+     assert(kkt);
+     solver->matrixRebuild(*kkt);
+  }
+  else
+     solver->matrixChanged();
 
   //stochNode->resMon.recFactTmLocal_stop(); 
 #ifdef TIMING

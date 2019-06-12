@@ -771,7 +771,6 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
    const int mzl = getLocalmzl();
    const int sizeSC = nx0 + my0 + myl + mzl;
    const int nnz = getSchurCompMaxNnzDist(blocksStart, blocksEnd);
-#if 1
 
    assert(getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) == getSchurCompMaxNnz());
 
@@ -782,8 +781,6 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
       std::cout << getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) << "!=" <<  getSchurCompMaxNnz() << std::endl;
       exit(1);
    }
-#endif
-   std::cout << "createSchurCompSymbSparseUpperDist" << std::endl;
 
    assert(blocksStart >= 0 && blocksStart < blocksEnd);
    assert(nnz > 0);
