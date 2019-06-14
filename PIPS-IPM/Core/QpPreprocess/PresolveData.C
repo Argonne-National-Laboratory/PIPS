@@ -380,12 +380,10 @@ void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, Simpl
 
          if( entry > 0)
          {
-            // add entry * lower_bound to min_partact
             if( ixlow[col] != 0.0)
                min_partact[row] += entry * xlow[col];
             else
                ++unbounded_min[row];
-            // add entry * upper_bound to max_partact
             if( ixupp[col] != 0.0 )
                max_partact[row] += entry * xupp[col];
             else
@@ -393,12 +391,10 @@ void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, Simpl
          }
          else
          {
-            // add entry * upper_bound to min_partact
             if( ixupp[col] != 0.0 )
                min_partact[row] += entry * xupp[col];
             else
                ++unbounded_min[row];
-            // add entry * lower_bound to max_partact
             if( ixlow[col] != 0.0 )
                max_partact[row] += entry * xlow[col];
             else
@@ -475,10 +471,14 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
    if(!outdated_activities && linking_rows_need_act_computation == 0)
       return;
 
+   /* allreduce unbounded changes, compute rows that now have at most one unbounded entry, strore the local
+    * rows in the changes array, allredues MPI_SUM the changes array and update local activities with the global ones
+    */
    if(distributed)
    {
       MPI_Allreduce(MPI_IN_PLACE, array_act_unbounded_chgs, lenght_array_act_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
    }
+
    dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vecl).axpy( 1.0, *actmin_eq_ubndd_chgs);
    dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->vecl).axpy( 1.0, *actmax_eq_ubndd_chgs);
    dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vecl).axpy( 1.0, *actmin_ineq_ubndd_chgs);
@@ -490,14 +490,14 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
       if( dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[row] == -std::numeric_limits<double>::infinity())
       {
-         (*actmin_eq_chgs)[row] = computeLocalLinkingRowMinActivity(EQUALITY_SYSTEM, row);
+         (*actmin_eq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(EQUALITY_SYSTEM, row, false);
          dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[row] = 0;
       }
 
       if( dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl)[row] == std::numeric_limits<double>::infinity())
       {
-         (*actmax_eq_chgs)[row] = computeLocalLinkingRowMaxActivity(EQUALITY_SYSTEM, row);
+         (*actmax_eq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(EQUALITY_SYSTEM, row, true);
          dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl)[row] = 0;
       }
    }
@@ -508,14 +508,14 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
       if( dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[row] == -std::numeric_limits<double>::infinity())
       {
-         (*actmin_ineq_chgs)[row] = computeLocalLinkingRowMinActivity(INEQUALITY_SYSTEM, row);
+         (*actmin_ineq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(INEQUALITY_SYSTEM, row, false);
          dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[row] = 0;
       }
 
       if( dynamic_cast<SimpleVector&>(*actmax_ineq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl)[row] == std::numeric_limits<double>::infinity())
       {
-         (*actmax_ineq_chgs)[row] = computeLocalLinkingRowMaxActivity(INEQUALITY_SYSTEM, row);
+         (*actmax_ineq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(INEQUALITY_SYSTEM, row, true);
          dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl)[row] = 0;
       }
    }
@@ -1501,7 +1501,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
       {
          --(*actmax_ubndd);
          if( actmax_ubndd_val == 2)
-            computeRowMaxActivity(system_type, node, block_type, row);
+            computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
       }
 
       if(ixlow[col] == 1.0 && xlow[col] != 0.0)
@@ -1510,7 +1510,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
       {
          --(*actmin_ubndd);
          if( actmin_ubndd_val == 2)
-            computeRowMinActivity(system_type, node, block_type, row);
+            computeRowMinOrMaxActivity(system_type, node, block_type, row, false);
       }
    }
    else
@@ -1521,7 +1521,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
       {
          --(*actmax_ubndd);
          if( actmax_ubndd_val == 2)
-            computeRowMaxActivity(system_type, node, block_type, row);
+            computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
       }
 
       if(ixupp[col] == 1.0 && xupp[col] != 0.0)
@@ -1530,18 +1530,17 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
       {
          --(*actmin_ubndd);
          if( actmin_ubndd_val == 2)
-            computeRowMinActivity(system_type, node, block_type, row);
+            computeRowMinOrMaxActivity(system_type, node, block_type, row, false);
       }
    }
 
    if( block_type == LINKING_CONS_BLOCK)
       outdated_activities = true;
 }
-
-double
-PresolveData::computeLocalLinkingRowMinActivity(SystemType system_type, int row) const
+/// computes min or max activity of linking row regardless of unbounded counters
+double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const
 {
-   double actmin_part = 0.0;
+   double act_part = 0.0;
 
    for( int node = -1; node < nChildren; ++node )
    {
@@ -1569,74 +1568,29 @@ PresolveData::computeLocalLinkingRowMinActivity(SystemType system_type, int row)
          assert( 0 <= col && col < ixlow.n);
          assert( !PIPSisZero(entry));
 
-         // add entry * lower_bound to min_partact
          if( PIPSisLT(0.0, entry) )
          {
-            if( ixlow[col] != 0.0 )
-               actmin_part += entry * xlow[col];
+            if( !upper && ixlow[col] != 0.0 )
+               act_part += entry * xlow[col];
+            if( upper && ixupp[col] != 0.0 )
+               act_part += entry * xupp[col];
          }
-         // add entry * upper_bound to min_partact
          else
          {
-            if( ixupp[col] != 0.0 )
-               actmin_part += entry * xupp[col];
+            if( !upper && ixupp[col] != 0.0 )
+               act_part += entry * xupp[col];
+            if( upper && ixlow[col] != 0.0 )
+               act_part += entry * xlow[col];
          }
       }
    }
 
-   return actmin_part;
+   return act_part;
 }
 
-double PresolveData::computeLocalLinkingRowMaxActivity(SystemType system_type, int row) const
-{
-   double actmax_part = 0.0;
-
-   for( int node = -1; node < nChildren; ++node )
-   {
-      /* Bl0 block is added only if my_rank == 0 */
-      if(node == -1 && my_rank != 0)
-         continue;
-
-      if( nodeIsDummy(node, system_type) )
-         continue;
-
-      /* get upper, lower bounds */
-      const SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), node);
-      const SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), node);
-      const SimpleVector& ixupp = getSimpleVecColFromStochVec(*(presProb->ixupp), node);
-      const SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
-
-      /* get matrix */
-      SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, LINKING_CONS_BLOCK)->getStorageDynamicRef();
-
-      for( int j = mat.rowptr[row].start; j < mat.rowptr[row].end; j++ )
-      {
-         const int col = mat.jcolM[j];
-         const double entry = mat.M[j];
-
-         assert( 0 <= col && col < ixlow.n);
-         assert( !PIPSisZero(entry));
-
-         // add entry * lower_bound to min_partact
-         if( PIPSisLT(0.0, entry) )
-         {
-            if( ixupp[col] != 0.0 )
-               actmax_part += entry * xupp[col];
-         }
-         // add entry * upper_bound to min_partact
-         else
-         {
-            if( ixlow[col] != 0.0 )
-               actmax_part += entry * xlow[col];
-         }
-      }
-   }
-
-   return actmax_part;
-}
-
-/** computes the activity of a locally available row or increases the recompute counter for linking constraints */
-void PresolveData::computeRowMinActivity(SystemType system_type, int node, BlockType block_type, int row)
+/// recomputes and updates the activity of a locally available row or increases the recompute counter for linking constraints
+/// does not compute activities for linking rows
+void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, BlockType block_type, int row, bool upper)
 {
    /* single linking rows that have to be computed for the first time */
    if( block_type == LINKING_CONS_BLOCK )
@@ -1662,10 +1616,20 @@ void PresolveData::computeRowMinActivity(SystemType system_type, int node, Block
    SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, CHILD_BLOCK)->getStorageDynamicRef();
 
    /* get activity vector */
-   double& actmin_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row]
-         : getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type)[row];
+   SimpleVector* act_vec;
+   if(system_type == EQUALITY_SYSTEM)
+   {
+      act_vec = (!upper) ? &getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type) :
+            &getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type);
+   }
+   else
+   {
+      act_vec = (upper) ? &getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type) :
+            &getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type);
+   }
 
-   actmin_part = 0;
+   double& act_part = (*act_vec)[row];
+   act_part = 0;
 
    for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++)
    {
@@ -1675,17 +1639,19 @@ void PresolveData::computeRowMinActivity(SystemType system_type, int node, Block
       assert( 0 <= col && col < ixlow_root.n );
       assert( !PIPSisZero(entry) );
 
-      // add entry * lower_bound to min_partact
       if( PIPSisLT(0.0, entry) )
       {
-         if( ixlow_root[col] != 0.0)
-            actmin_part += entry * xlow_root[col];
+         if( !upper && ixlow_root[col] != 0.0)
+            act_part += entry * xlow_root[col];
+         if( upper && ixupp_root[col] != 0.0)
+            act_part += entry * xupp_root[col];
       }
-      // add entry * upper_bound to min_partact
       else
       {
-         if( ixupp_root[col] != 0.0 )
-            actmin_part += entry * xupp_root[col];
+         if( !upper && ixupp_root[col] != 0.0 )
+            act_part += entry * xupp_root[col];
+         if( upper && ixlow_root[col] != 0.0 )
+            act_part += entry * xlow_root[col];
       }
    }
 
@@ -1699,97 +1665,19 @@ void PresolveData::computeRowMinActivity(SystemType system_type, int node, Block
          assert( 0 <= col && col < ixlow.n);
          assert( !PIPSisZero(entry));
 
-         // add entry * lower_bound to min_partact
          if( PIPSisLT(0.0, entry) )
          {
-            if( ixlow[col] != 0.0 )
-               actmin_part += entry * xlow[col];
+            if( !upper && ixlow[col] != 0.0 )
+               act_part += entry * xlow[col];
+            if( upper && ixupp[col] != 0.0 )
+               act_part += entry * xupp[col];
          }
-         // add entry * upper_bound to min_partact
          else
          {
-            if( ixupp[col] != 0.0 )
-               actmin_part += entry * xupp[col];
-         }
-      }
-   }
-}
-
-/** computes the activity of a locally available row or increases the recompute counter for linking constraints */
-void PresolveData::computeRowMaxActivity(SystemType system_type, int node, BlockType block_type, int row)
-{
-   /* single linking rows that have to be computed for the first time */
-   if( block_type == LINKING_CONS_BLOCK )
-   {
-      ++linking_rows_need_act_computation;
-      return;
-   }
-
-   /* upper lower bounds linking vars */
-   const SimpleVector& ixlow_root = getSimpleVecColFromStochVec(*(presProb->ixlow), -1);
-   const SimpleVector& xlow_root = getSimpleVecColFromStochVec(*(presProb->blx), -1);
-   const SimpleVector& ixupp_root = getSimpleVecColFromStochVec(*(presProb->ixupp), -1);
-   const SimpleVector& xupp_root = getSimpleVecColFromStochVec(*(presProb->bux), -1);
-
-   /* get upper, lower bounds */
-   const SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), node);
-   const SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), node);
-   const SimpleVector& ixupp = getSimpleVecColFromStochVec(*(presProb->ixupp), node);
-   const SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
-
-   /* get matrix */
-   SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK)->getStorageDynamicRef();
-   SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, CHILD_BLOCK)->getStorageDynamicRef();
-
-   /* get activity vector */
-   double& actmax_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row]
-         : getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type)[row];
-
-   actmax_part = 0;
-
-   for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++)
-   {
-      const int col = Amat.jcolM[j];
-      const double entry = Amat.M[j];
-
-      assert( 0 <= col && col < ixlow_root.n );
-      assert( !PIPSisZero(entry) );
-
-      // add entry * lower_bound to min_partact
-      if( PIPSisLT(0.0, entry) )
-      {
-         if( ixupp_root[col] != 0.0)
-            actmax_part += entry * xupp_root[col];
-      }
-      // add entry * upper_bound to min_partact
-      else
-      {
-         if( ixlow_root[col] != 0.0 )
-            actmax_part += entry * xlow_root[col];
-      }
-   }
-
-   if( node != -1 )
-   {
-      for( int j = Bmat.rowptr[row].start; j < Bmat.rowptr[row].end; j++ )
-      {
-         const int col = Bmat.jcolM[j];
-         const double entry = Bmat.M[j];
-
-         assert( 0 <= col && col < ixlow.n);
-         assert( !PIPSisZero(entry));
-
-         // add entry * lower_bound to min_partact
-         if( PIPSisLT(0.0, entry) )
-         {
-            if( ixupp[col] != 0.0 )
-               actmax_part += entry * xupp[col];
-         }
-         // add entry * upper_bound to min_partact
-         else
-         {
-            if( ixlow[col] != 0.0 )
-               actmax_part += entry * xlow[col];
+            if( !upper && ixupp[col] != 0.0 )
+               act_part += entry * xupp[col];
+            if( upper && ixlow[col] != 0.0 )
+               act_part += entry * xlow[col];
          }
       }
    }
@@ -2130,9 +2018,9 @@ void PresolveData::updateRowActivitiesNonLinkingConsBlock(SystemType system_type
       "\tact was: " << act_part[row] << std::endl;
 #endif
             if(switch_upperlower)
-               computeRowMaxActivity(system_type, node, block_type, row);
+               computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
             else
-               computeRowMinActivity(system_type, node, block_type, row);
+               computeRowMinOrMaxActivity(system_type, node, block_type, row, false);
 #ifdef TRACK_COLUMN
    if(NODE == node && COLUMN == col)
       std::cout << "is now: " << act_part[row] << std::endl;
@@ -2170,10 +2058,8 @@ void PresolveData::updateRowActivitiesNonLinkingConsBlock(SystemType system_type
    }
 }
 
-/// if there is more than one unbounded entry in the rows activities - return double inf()/-inf()
-/// else if the activity has not yet been computed compute it and return these values
-/// if any entry of the row is marked dirty recompute the activities
-// todo in fact we do not really need to check for the row counters.. - +- infinity is stored for those with >= 2 unboundeds
+/// returns activity and unbounded counters for specified row
+/// +/- infinity if there are two or more unbouded entries in a row
 void PresolveData::getRowActivities(SystemType system_type, int node, BlockType block_type, int row, double& max_act,
       double& min_act, int& max_ubndd, int& min_ubndd) const
 {
@@ -2194,39 +2080,36 @@ void PresolveData::getRowActivities(SystemType system_type, int node, BlockType 
    min_ubndd = static_cast<int>(row_min_counters);
 
 #ifndef NDEBUG
+   /// asserting that cast from double to int is correct
    double int_part_max, int_part_min;
    std::modf(row_max_counters, &int_part_max);
    std::modf(row_min_counters, &int_part_min);
    assert(int_part_max == max_ubndd);
    assert(int_part_min == min_ubndd);
+   assert(max_ubndd >= 0);
+   assert(min_ubndd >= 0);
 #endif
 
-   if( row_max_counters >= 2)
-      max_act = std::numeric_limits<double>::infinity();
-   else
+   max_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row]
+         : getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type)[row];
+   min_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row]
+         : getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type)[row];
+
+   if(block_type == LINKING_CONS_BLOCK)
    {
-      max_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row]
-            : getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type)[row];
-
-      if( block_type != LINKING_CONS_BLOCK)
-         assert(max_act < std::numeric_limits<double>::infinity());
-
-      if(block_type == LINKING_CONS_BLOCK)
-         max_act += (system_type == EQUALITY_SYSTEM) ? (*actmax_eq_chgs)[row] : (*actmax_ineq_chgs)[row];
+      max_act += (system_type == EQUALITY_SYSTEM) ? (*actmax_eq_chgs)[row] : (*actmax_ineq_chgs)[row];
+      min_act += (system_type == EQUALITY_SYSTEM) ? (*actmin_eq_chgs)[row] : (*actmin_ineq_chgs)[row];
    }
 
-   if( row_min_counters >= 2)
-      min_act = -std::numeric_limits<double>::infinity();
+   if( row_max_counters >= 2)
+   {
+      assert( max_act == std::numeric_limits<double>::infinity() );
+      assert( min_act = -std::numeric_limits<double>::infinity() );
+   }
    else
    {
-      min_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row]
-            : getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type)[row];
-
-      if( block_type != LINKING_CONS_BLOCK)
-         assert(-std::numeric_limits<double>::infinity() < min_act);
-
-      if(block_type == LINKING_CONS_BLOCK)
-         min_act += (system_type == EQUALITY_SYSTEM) ? (*actmin_eq_chgs)[row] : (*actmin_ineq_chgs)[row];
+      assert(max_act < std::numeric_limits<double>::infinity());
+      assert(-std::numeric_limits<double>::infinity() < min_act);
    }
 }
 

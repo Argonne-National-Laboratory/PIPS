@@ -48,6 +48,8 @@ private:
       bool outdated_linking_var_bounds;
 
       bool outdated_activities;
+
+      /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
 
       /* number of non-zero elements of each row / column */
@@ -55,18 +57,19 @@ private:
       StochVectorHandle nnzs_row_C;
       StochVectorHandle nnzs_col;
 
-      /* number of removed elements of linking rows/cols stored for update */
+      /* size of non-zero changes array = #linking rows A + #linking rows C + # linking variables */
       int length_array_nnz_chgs;
       double* array_nnz_chgs;
       SimpleVectorHandle nnzs_row_A_chgs;
       SimpleVectorHandle nnzs_row_C_chgs;
       SimpleVectorHandle nnzs_col_chgs;
 
-      /// in the constructor all ubndd entries will be counted
-      /// these tell for every row how many entries with unbounded bounds (in the lower
-      /// / upper activities) there are
-      /// once these are less equal 1 we start computing and updating the activities of the rows
-      /* actmax and min will be computed once */
+      /* In the constructor all unbounded entries will be counted.
+       * Unbounded entries mean variables with non-zero multiplier that are unbounded in either upper or lower direction.
+       * Activities will be computed once the amount of unbounded variables in upper or lower direction falls below 2 so
+       * that bound strengthening becomes possible.
+       */
+      /* StochVecs for upper and lower activities and unbounded entries */
       StochVectorHandle actmax_eq_part;
       StochVectorHandle actmin_eq_part;
 
@@ -99,7 +102,6 @@ private:
       SimpleVectorHandle bound_chgs_A;
       SimpleVectorHandle bound_chgs_C;
 
-
       /* storing so far found singleton rows and columns */
       std::vector<sROWINDEX> singleton_rows;
       std::vector<sCOLINDEX> singleton_cols;
@@ -114,6 +116,7 @@ private:
       double objOffset;
       double obj_offset_chgs;
 
+      // necessary ?
       int elements_deleted;
       int elements_deleted_transposed;
 
@@ -126,6 +129,7 @@ public :
       const StochVector& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
       const StochVector& getNnzsRowC() const { return *nnzs_row_C; };
       const StochVector& getNnzsCol() const { return *nnzs_col; };
+
       const std::vector<sROWINDEX>& getSingletonRows() const { return singleton_rows; };
       const std::vector<sCOLINDEX>& getSingletonCols() const { return singleton_cols; };
 
@@ -148,7 +152,7 @@ public :
 
       /* computes all row activities and number of unbounded variables per row
        * If there is more than one unbounded variable in the min/max activity of a row
-       * +max()/-max() is stored. Else the actual partial activity is computed and stored.
+       * +/-infinity() is stored. Else the actual partial activity is computed and stored.
        * For rows with one unbounded variable we store the partial activity without that
        * one variable, for rows with zero unbounded vars the stored activity is the actual
        * activity of that row.
@@ -173,7 +177,7 @@ public:
       void allreduceAndApplyBoundChanges();
 
       /// interface methods called from the presolvers when they detect a possible modification
-      // todo make bool and ginve feedback or even better - return some enum maybe?
+      // todo make bool and give feedback or even better - return some enum maybe?
       void fixColumn(int node, int col, double value);
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
@@ -208,13 +212,8 @@ private:
       void updateRowActivitiesNonLinkingConsBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
             double old_bound, bool upper);
 
-      // todo make one method each maybe ?
-      double computeLocalLinkingRowMinActivity(SystemType system_type, int row) const;
-      double computeLocalLinkingRowMaxActivity(SystemType system_type, int row) const;
-      void computeRowMinActivity(SystemType system_type, int node, BlockType block_type, int row);
-      void computeRowMaxActivity(SystemType system_type, int node, BlockType block_type, int row);
-
-
+      double computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const;
+      void computeRowMinOrMaxActivity(SystemType system_type, int node, BlockType block_type, int row, bool upper);
 
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
