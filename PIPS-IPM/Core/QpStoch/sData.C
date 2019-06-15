@@ -22,6 +22,12 @@ std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& 
 }
 
 static inline
+bool blockIsInRange(int block, int blocksStart, int blocksEnd)
+{
+   return ((block >= (blocksStart - 1) && block < blocksEnd) || block == -1);
+}
+
+static inline
 int nnzTriangular(int size)
 {
    assert(size >= 0);
@@ -102,9 +108,8 @@ void appendDiagBlocksDist(const std::vector<int>& linkStartBlockId, const std::v
 
    const int block = linkStartBlockId[rowBlock];
    const int lastBlock = blocksEnd - 1;
-   const bool blockInRange = ((block >= (blocksStart - 1) && block < blocksEnd) || block == -1);
 
-   if( blockInRange )
+   if( blockIsInRange(block, blocksStart, blocksEnd) )
    {
       const int currlength = (block >= 0) ? linkStartBlockLengths[block] : bordersize;
       const int rownnz = currlength - (rowBlock - blockStartrow);
@@ -259,7 +264,7 @@ void appendMixedBlocksDist(const std::vector<int>& linkStartBlockId_Left,
    assert(linkStartBlockLengths_Left.size() == linkStartBlockLengths_Right.size());
 
    const int block = linkStartBlockId_Left[rowIdx];
-   const bool blockInRange = ((block >= (blocksStart - 1) && block < blocksEnd) || block == -1);
+   const bool blockInRange = blockIsInRange(block, blocksStart, blocksEnd);
    const int nCols = int(linkStartBlockId_Right.size());
 
    assert(nCols >= bordersize_cols);
@@ -338,7 +343,7 @@ void appendMixedBlocksDist(const std::vector<int>& linkStartBlockId_Left,
       for( int i = 0; i < nCols; ++i )
       {
          const int blockRight = linkStartBlockId_Right[i];
-         const bool blockRightInRange = ((blockRight >= (blocksStart - 1) && blockRight < blocksEnd) || blockRight == -1);
+         const bool blockRightInRange = blockIsInRange(blockRight, blocksStart, blocksEnd);
 
          if( blockRightInRange )
             jcolM[nnz++] = colStartIdxSC + i;
@@ -906,6 +911,8 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
       std::cout << "\n ... nnzcount=" << nnzcount << " nnzmax=" << nnz  << " " << blocksStart << " - " << blocksEnd << std::endl;
 
    assert(nnzcount == nnz);
+
+   this->initDistMarker(blocksStart, blocksEnd);
 
    return (new SparseSymMatrix(sizeSC, nnzcount, krowM, jcolM, M, 1, false));
 }
@@ -2118,6 +2125,69 @@ sData::sync()
    stochNode->syncStochGenMatrix(dynamic_cast<StochGenMatrix&>(*C));
 
    createChildren();
+}
+
+
+void sData::initDistMarker(int blocksStart, int blocksEnd)
+{
+   assert(isSCrowLocal.size() == 0);
+   assert(isSCrowMyLocal.size() == 0);
+
+   assert(linkStartBlockIdA.size() > 0 && linkStartBlockIdC.size() > 0);
+   assert(blocksStart >= 0 && blocksStart < blocksEnd && blocksEnd <= int(linkStartBlockIdA.size()));
+
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   const int mzl = getLocalmzl();
+   const int sizeSC = nx0 + my0 + myl + mzl;
+
+   assert(sizeSC > 0);
+
+   isSCrowLocal.resize(sizeSC);
+   isSCrowMyLocal.resize(sizeSC);
+
+   for( int i = 0; i < nx0; i++ )
+   {
+      isSCrowLocal[i] = false;
+      isSCrowMyLocal[i] = false;
+   }
+
+   for( int i = nx0; i < nx0 + my0; i++ )
+   {
+      isSCrowLocal[i] = false;
+      isSCrowMyLocal[i] = false;
+   }
+
+   // equality linking
+   for( int i = nx0 + my0, j = 0; i < nx0 + my0 + myl; i++, j++ )
+   {
+      const int block = linkStartBlockIdA[j];
+      isSCrowLocal[i] = (block != -1);
+      isSCrowMyLocal[i] = (block >= blocksStart && block < blocksEnd);
+   }
+
+   // inequality linking
+   for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; i++, j++ )
+   {
+      const int block = linkStartBlockIdC[j];
+      isSCrowLocal[i] = (block != -1);
+      isSCrowMyLocal[i] = (block >= blocksStart && block < blocksEnd);
+   }
+}
+
+const std::vector<bool>& sData::getSCrowMarkerLocal()
+{
+   assert(isSCrowLocal.size() != 0);
+
+   return isSCrowLocal;
+}
+
+const std::vector<bool>& sData::getSCrowMarkerMyLocal()
+{
+   assert(isSCrowMyLocal.size() != 0);
+
+   return isSCrowMyLocal;
 }
 
 // is root node data of sData object same on all procs?

@@ -45,6 +45,7 @@ class sLinsysRoot : public sLinsys {
   /* Atoms methods of FACTOR2 for a non-leaf linear system */
   virtual void initializeKKT(sData* prob, Variables* vars);
   virtual void reduceKKT();
+  virtual void reduceKKT(sData *prob);
   virtual void factorizeKKT(); 
   virtual void finalizeKKT(sData* prob, Variables* vars)=0;
 
@@ -105,7 +106,7 @@ class sLinsysRoot : public sLinsys {
 
  private:
   void addTermToSchurCompl(sData* prob, size_t childindex);
-  void reduceKKTdist();
+  void reduceKKTdist(sData* prob);
   void reduceKKTdense();
   void reduceKKTsparse();
 

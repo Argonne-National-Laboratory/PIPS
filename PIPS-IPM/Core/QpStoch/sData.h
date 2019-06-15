@@ -93,6 +93,12 @@ class sData : public QpGenData {
 
   void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
 
+  // marker that indicates whether a Schur complement row is (2-link) local
+  const std::vector<bool>& getSCrowMarkerLocal();
+
+  // marker that indicates whether a Schur complement row is (2-link) local and owned by this MPI process
+  const std::vector<bool>& getSCrowMarkerMyLocal();
+
   virtual ~sData();
 
  protected:
@@ -145,6 +151,10 @@ class sData : public QpGenData {
   std::vector<unsigned int> linkVarsPermutation;
   std::vector<unsigned int> linkConsPermutationA;
   std::vector<unsigned int> linkConsPermutationC;
+  std::vector<bool> isSCrowLocal;
+  std::vector<bool> isSCrowMyLocal;
+
+  void initDistMarker(int blocksStart, int blocksEnd);
 
   void permuteLinkingVars();
   void permuteLinkingCons();

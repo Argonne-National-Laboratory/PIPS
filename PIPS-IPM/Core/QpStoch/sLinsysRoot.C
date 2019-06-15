@@ -63,7 +63,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   // use sparse KKT if link structure is present
   hasSparseKkt = prob_->exploitingLinkStructure();
 
-  usePrecondDist = usePrecondDist && hasSparseKkt;
+  usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -112,7 +112,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   // use sparse KKT if (enough) 2 links are present
   hasSparseKkt = prob_->exploitingLinkStructure();
 
-  usePrecondDist = usePrecondDist && hasSparseKkt;
+  usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
 }
 
 sLinsysRoot::~sLinsysRoot()
@@ -164,7 +164,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   stochNode->resMon.recReduceTmLocal_start();
 #endif 
 
-  reduceKKT();
+  reduceKKT(prob);
 
  #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
@@ -540,15 +540,13 @@ void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 
 void sLinsysRoot::reduceKKT()
 {
-   MPI_Barrier(MPI_COMM_WORLD);
+   reduceKKT(NULL);
+}
 
-   printf("all there \n");
-
-   exit(1);
-
-
+void sLinsysRoot::reduceKKT(sData* prob)
+{
    if( usePrecondDist )
-      reduceKKTdist();
+      reduceKKTdist(prob);
    else if( hasSparseKkt )
       reduceKKTsparse();
    else
@@ -662,26 +660,178 @@ void sLinsysRoot::reduceKKTsparse()
 }
 
 
-void sLinsysRoot::reduceKKTdist()
+void sLinsysRoot::reduceKKTdist(sData* prob)
 {
-   int todo; // here should be all the magic like building tmp sparsevector
-   assert(!kktDist); // disable usePrecondDist if not iAmDistrib
-
-
-
-   if( !iAmDistrib )
-      return;
-
-   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-
+   assert(prob);
+   assert(iAmDistrib);
    assert(kkt);
+
+   const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
+   const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
 
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
 
    int* const krowKkt = kkts.krowM();
+   int* const jColKkt = kkts.jcolM();
    double* const MKkt = kkts.M();
+
    const int sizeKkt = locnx + locmy + locmyl + locmzl;
    const int nnzKkt = krowKkt[sizeKkt];
+   int nnzDist;
+   int nnzDistMyLocal = 0;
+   int nnzDistShared = 0;
+   int nnzDistLocal;
+
+   std::vector<int> rowSizeMyLocal(sizeKkt, 0);
+   std::vector<int> rowSizeShared(sizeKkt, 0);
+   std::vector<int> rowSizeLocal(sizeKkt, 0);
+   std::vector<int> rowIndex(0);
+   std::vector<int> colIndex(0);
+
+   assert(int(rowIsLocal.size()) == sizeKkt);
+
+   // compute row lengths
+   for( int r = 0; r < sizeKkt; r++ )
+   {
+      if( rowIsMyLocal[r] )
+      {
+         const int rowNnz = krowKkt[r + 1] - krowKkt[r];
+         nnzDistMyLocal += rowNnz;
+         rowSizeMyLocal[r] = rowNnz;
+
+         for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
+         {
+            const int col = jColKkt[c];
+            rowIndex.push_back(r);
+            colIndex.push_back(col);
+         }
+
+         continue;
+      }
+
+      const bool rIsLocal = rowIsLocal[r];
+
+      for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
+      {
+         const int col = jColKkt[c];
+
+         // is (r, col) a shared entry?
+         if( !rIsLocal && !rowIsLocal[col] )
+         {
+            nnzDistShared++;
+            rowSizeShared[r]++;
+            assert(!rowIsMyLocal[col]);
+
+         }
+         else if( rowIsMyLocal[col] )
+         {
+            nnzDistMyLocal++;
+            rowSizeMyLocal[r]++;
+            rowIndex.push_back(r);
+            colIndex.push_back(col);
+         }
+      }
+   }
+
+   assert(int(rowIndex.size()) == nnzDistMyLocal);
+
+   // sum up local sizes
+   MPI_Allreduce(&nnzDistMyLocal, &nnzDistLocal, 1, MPI_INT, MPI_SUM, mpiComm);
+   MPI_Allreduce(&rowSizeMyLocal[0], &rowSizeLocal[0], sizeKkt, MPI_INT, MPI_SUM, mpiComm);
+
+#ifndef NDEBUG
+   {
+      int nnzDistSharedMax;
+      std::vector<int> rowSizeSharedMax(sizeKkt, 0);
+
+      MPI_Allreduce(&nnzDistShared, &nnzDistSharedMax, 1, MPI_INT, MPI_MAX, mpiComm);
+      MPI_Allreduce(&rowSizeShared[0], &rowSizeSharedMax[0], sizeKkt, MPI_INT, MPI_SUM, mpiComm);
+
+      assert(nnzDistSharedMax == nnzDistShared);
+      for( int i = 0; i < sizeKkt; i++ )
+         assert(rowSizeShared[i] == rowSizeSharedMax[i]);
+   }
+#endif
+
+   std::vector<int> rowIndexGathered(nnzDistLocal);
+   std::vector<int> colIndexGathered(nnzDistLocal);
+
+
+   printf("nnzShared + nnzLocal %d \n", nnzDistShared + nnzDistLocal);
+   printf("nnzKkt %d \n", nnzKkt);
+
+
+   nnzDist = nnzDistLocal + nnzDistShared;
+
+   assert(!kktDist || !kktDist->isLower);
+
+   // todo new method
+
+   delete kktDist;
+   kktDist = new SparseSymMatrix(nnzDist, sizeKkt, false);
+
+   int* const krowDist = kktDist->krowM();
+   int* const jColDist  = kktDist->jcolM();
+   double* const MDist = kktDist->M();
+
+   assert(krowDist[0] == 0);
+   assert(sizeKkt > 0 && krowDist[1] == 0);
+
+   for( int r = 1; r < sizeKkt; r++ )
+      krowDist[r + 1] = krowDist[r] + rowSizeLocal[r - 1] + rowSizeShared[r - 1];
+
+   // fill in global values
+   for( int r = 0; r < sizeKkt; r++ )
+   {
+      if( rowIsLocal[r] )
+         continue;
+
+      for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
+      {
+         const int col = jColKkt[c];
+
+         if( rowIsLocal[col] )
+            continue;
+
+         jColDist[krowDist[r + 1]++] = col;
+      }
+   }
+
+   // fill in gathered local values
+   for( int i = 0; i < nnzDistLocal; i++ )
+   {
+      const int row = rowIndexGathered[i];
+      const int col = colIndexGathered[i];
+
+      assert(row >= 0 && row < sizeKkt);
+      assert(col >= row && col < sizeKkt);
+      assert(krowDist[row + 1] < nnzDist);
+
+      jColDist[krowDist[row + 1]++] = col;
+   }
+
+#ifndef NDEBUG
+   assert(krowDist[0] == 0);
+   assert(krowDist[sizeKkt] == nnzDist);
+
+   for( int r = 0; r < sizeKkt; r++ )
+      assert(krowDist[r + 1] == krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]);
+#endif
+
+   // todo, we still need to sort...method for storage?
+
+   MPI_Barrier(MPI_COMM_WORLD);
+
+   printf("all there \n");
+
+   exit(1);
+
+
+
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+
 
    assert(kkts.size() == sizeKkt);
    assert(!kkts.isLower);
