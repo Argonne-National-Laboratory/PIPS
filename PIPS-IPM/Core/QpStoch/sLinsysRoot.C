@@ -745,7 +745,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       std::vector<int> rowSizeSharedMax(sizeKkt, 0);
 
       MPI_Allreduce(&nnzDistShared, &nnzDistSharedMax, 1, MPI_INT, MPI_MAX, mpiComm);
-      MPI_Allreduce(&rowSizeShared[0], &rowSizeSharedMax[0], sizeKkt, MPI_INT, MPI_SUM, mpiComm);
+      MPI_Allreduce(&rowSizeShared[0], &rowSizeSharedMax[0], sizeKkt, MPI_INT, MPI_MAX, mpiComm);
 
       assert(nnzDistSharedMax == nnzDistShared);
       for( int i = 0; i < sizeKkt; i++ )
