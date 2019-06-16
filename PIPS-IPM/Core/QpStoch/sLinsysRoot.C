@@ -677,7 +677,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
    const int sizeKkt = locnx + locmy + locmyl + locmzl;
    const int nnzKkt = krowKkt[sizeKkt];
-   int nnzDist;
    int nnzDistMyLocal = 0;
    int nnzDistShared = 0;
    int nnzDistLocal;
@@ -753,15 +752,18 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
-   std::vector<int> rowIndexGathered(nnzDistLocal);
-   std::vector<int> colIndexGathered(nnzDistLocal);
+   std::vector<int> rowIndexGathered = PIPSallgathervInt(rowIndex, mpiComm);
+   std::vector<int> colIndexGathered = PIPSallgathervInt(colIndex, mpiComm);
+
+   assert(int(rowIndexGathered.size()) == nnzDistLocal);
+   assert(int(colIndexGathered.size()) == nnzDistLocal);
 
 
    printf("nnzShared + nnzLocal %d \n", nnzDistShared + nnzDistLocal);
    printf("nnzKkt %d \n", nnzKkt);
 
 
-   nnzDist = nnzDistLocal + nnzDistShared;
+   const int nnzDist = nnzDistLocal + nnzDistShared;
 
    assert(!kktDist || !kktDist->isLower);
 
@@ -817,6 +819,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    for( int r = 0; r < sizeKkt; r++ )
       assert(krowDist[r + 1] == krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]);
 #endif
+
+   // allreduce on values
 
    // todo, we still need to sort...method for storage?
 

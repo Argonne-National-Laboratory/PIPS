@@ -13,6 +13,7 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <vector>
 #include <mpi.h>
 
 const double pips_eps = 1e-13;
@@ -98,6 +99,43 @@ inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    }
 
    return iAmSpecial;
+}
+
+inline std::vector<int> PIPSallgathervInt(const std::vector<int>& vecLocal, MPI_Comm mpiComm)
+{
+   int myrank; MPI_Comm_rank(mpiComm, &myrank);
+   int mysize; MPI_Comm_size(mpiComm, &mysize);
+
+   std::vector<int> vecGathered;
+
+   if( mysize > 0 )
+   {
+      // get all lengths
+      std::vector<int> recvcounts(mysize);
+      std::vector<int> recvoffsets(mysize);
+
+      int lengthLocal = int(vecLocal.size());
+
+      MPI_Allgather(&lengthLocal, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
+
+      // all-gather local components
+      recvoffsets[0] = 0;
+      for( int i = 1; i < mysize; ++i )
+         recvoffsets[i] = recvoffsets[i - 1] + recvcounts[i - 1];
+
+      const int lengthGathered = recvoffsets[mysize - 1] + recvcounts[mysize - 1];
+
+      vecGathered = std::vector<int>(lengthGathered);
+
+      MPI_Allgatherv(&vecLocal[0], lengthLocal, MPI_INT, &vecGathered[0],
+            &recvcounts[0], &recvoffsets[0], MPI_INT, mpiComm);
+   }
+   else
+   {
+      vecGathered = vecLocal;
+   }
+
+   return vecGathered;
 }
 
 #endif
