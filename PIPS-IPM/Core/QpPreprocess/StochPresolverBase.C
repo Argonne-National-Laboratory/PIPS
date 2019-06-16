@@ -24,8 +24,6 @@ StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& orig
 
    localNelims = 0;
    nChildren = presData.getNChildren();
-
-   indivObjOffset = 0.0;
 }
 
 StochPresolverBase::~StochPresolverBase()

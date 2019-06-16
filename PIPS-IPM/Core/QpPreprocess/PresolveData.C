@@ -23,12 +23,13 @@
 //   #define NODE -1
 //#endif
 
-// todo
-//#ifndef NDEBUG
-//   #define TRACK_ROW
-//   #define ROW
-//   #define NODE_ROW
-//#endif
+#ifndef NDEBUG
+   #define TRACK_ROW
+   #define ROW 26098
+   #define ROW_NODE 437
+   #define ROW_BLOCK LINKING_VARS_BLOCK
+   #define ROW_SYS EQUALITY_SYSTEM
+#endif
 
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
@@ -105,6 +106,14 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    std::cout << "xupp: " << getSimpleVecColFromStochVec( *presProb->bux, NODE)[COLUMN] << std::endl;
 #endif
 
+#ifdef TRACK_ROW
+   if(!nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: row " << ROW << " node " << ROW_NODE << " in BlockType " << ROW_BLOCK << " SystemType " << ROW_SYS << std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+   }
+#endif
+
    initSingletons();
    setUndefinedVarboundsTo(std::numeric_limits<double>::max());
 }
@@ -173,7 +182,6 @@ sData* PresolveData::finalize()
  */
 void PresolveData::recomputeActivities(bool linking_only)
 {
-
    const StochGenMatrix& mat_A = dynamic_cast<const StochGenMatrix&>(*presProb->A);
    const StochGenMatrix& mat_C = dynamic_cast<const StochGenMatrix&>(*presProb->C);
 
@@ -358,6 +366,25 @@ void PresolveData::recomputeActivities(bool linking_only)
    actmin_ineq_ubndd_chgs->setToZero();
 
    outdated_activities = false;
+
+#ifdef TRACK_ROW
+   if(!nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+   double act_min = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
+         getSimpleVecRowFromStochVec(*actmin_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
+   double act_max = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
+         getSimpleVecRowFromStochVec(*actmax_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
+
+   double act_min_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
+         getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
+   double act_max_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
+         getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
+
+
+   std::cout << "TRACKING: Recomputed activity of row " << ROW << std::endl;
+   std::cout << "\tnew min/max activity is: " << act_min << "/" << act_max << ", min/max unbounded counters are " << act_min_ubndd << "/" << act_max_ubndd << std::endl;
+   }
+#endif
 }
 
 
@@ -620,6 +647,15 @@ void PresolveData::allreduceAndApplyBoundChanges()
    outdated_lhsrhs = false;
 }
 
+void PresolveData::allreduceObjOffset()
+{
+   if(distributed)
+      MPI_Allreduce(MPI_IN_PLACE, &obj_offset_chgs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+   objOffset += obj_offset_chgs;
+   obj_offset_chgs = 0;
+}
+
 void PresolveData::initNnzCounter(StochVector& nnzs_row_A, StochVector& nnzs_row_C, StochVector& nnzs_col) const
 {
    StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
@@ -720,24 +756,17 @@ void PresolveData::initSingletons()
 
 bool PresolveData::reductionsEmpty()
 {
+   double recv = 0;
    if(distributed)
    {
       MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-   }
-   return !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs;
-}
 
-double PresolveData::addObjOffset(double addOffset)
-{
-   objOffset += addOffset;
-   return objOffset;
-}
-void PresolveData::setObjOffset(double offset)
-{
-   objOffset = offset;
+      MPI_Allreduce(&obj_offset_chgs, &recv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+   }
+   return !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0);
 }
 
 // todo : if small entry was removed from system no postsolve is necessary - if coefficient was removed because impact of changes in variable are small
@@ -776,11 +805,20 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    ++elements_deleted; // todo
 }
 
+
 void PresolveData::fixColumn(int node, int col, double value)
 {
    assert(-1 <= node && node < nChildren);
    assert(0 <= col);
    postsolver->notifyFixedColumn(node, col, value);
+
+
+   double ixlow = getSimpleVecColFromStochVec(*presProb->ixlow, node)[col];
+   double ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, node)[col];
+   double xlow = (ixupp == 1.0) ? getSimpleVecColFromStochVec(*presProb->blx, node)[col] : std::numeric_limits<double>::infinity();
+   double xupp = (ixlow == 1.0) ? getSimpleVecColFromStochVec(*presProb->bux, node)[col] : std::numeric_limits<double>::infinity();
+
+   updateRowActivities(node, col, 0.0, 0.0, xupp, xlow);
 
    removeColumn(node, col, value);
 }
@@ -853,6 +891,14 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockT
    if( PIPSisEQ(value, 0.0) )
       return;
 
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: RHS LHS of row " << ROW << " being adjusted by " << value << std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+   }
+#endif
+
    if(block_type == LINKING_CONS_BLOCK)
    {
       outdated_lhsrhs = true;
@@ -872,7 +918,16 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockT
       if( getSimpleVecRowFromStochVec(*presProb->iclow, node, block_type)[row] == 1.0 )
          getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] += value;
    }
+
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: after RHS LHS adjustment " << std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+   }
+#endif
 }
+
 
 // todo : make a finish block_deletion ?
 void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements)
@@ -1025,13 +1080,42 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
       const int row = matrix_transp.jcolM[j];
       const double coeff = matrix_transp.M[j];
 
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: fixation of column " << col << " in tracked row"<< std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+   }
+#endif
+
       /* remove the entry, adjust activity and row counters and rhs/lhs */
       removeEntryInDynamicStorage(matrix, row, col);
 
       removeIndexRow(system_type, node, block_type, row, 1);
 
       adjustMatrixRhsLhsBy(system_type, node, block_type, row, - coeff * fixation);
-      adjustRowActivityFromDeletion(system_type, node, block_type, row, col, coeff);
+//      adjustRowActivityFromDeletion(system_type, node, block_type, row, col, coeff);
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: after removal" << std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+
+      double act_min = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
+            getSimpleVecRowFromStochVec(*actmin_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
+      double act_max = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
+            getSimpleVecRowFromStochVec(*actmax_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
+
+      double act_min_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
+            getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
+      double act_max_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
+            getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
+
+      std::cout << "TRACKING: New activity of row " << ROW << std::endl;
+      std::cout << "\tnew min/max activity is: " << act_min << "/" << act_max << ", min/max unbounded counters are " << act_min_ubndd << "/" << act_max_ubndd << std::endl;
+   }
+#endif
+
    }
 
    /* adjust column counters */
@@ -1053,6 +1137,13 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
 // todo
 void PresolveData::removeParallelRow(SystemType system_type, int node, int row, bool linking)
 {
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: removal of tracked row as parallel row" << std::endl;
+   }
+#endif
+
    throw std::runtime_error("Not yet implemented");
 //   if(postsolver)
 //      postsolver->notifyParallelRow()
@@ -1064,14 +1155,21 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
    if(postsolver)
       postsolver->notifyRedundantRow(system_type, node, row, linking);
 
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: removal of tracked row as redundant row" << std::endl;
+   }
+#endif
+
    removeRow(system_type, node, row, linking);
 }
 
+/* removes row from local system - sets rhs lhs and activities to zero */
 void PresolveData::removeRow(SystemType system_type, int node, int row, bool linking)
 {
-   // todo set activity to zero
-   // todo set lhs rhs to zero
    assert(!nodeIsDummy(node, system_type));
+
    if(linking)
    {
       assert(node == -1);
@@ -1081,8 +1179,10 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
 
       /* linking rows Bli */
       for(int child = 0; child < nChildren; ++child)
+      {
          if(!nodeIsDummy(child, system_type))
             removeRowFromMatrix(system_type, child, LINKING_CONS_BLOCK, row);
+      }
    }
    else
    {
@@ -1093,9 +1193,61 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
       if(node != -1)
          removeRowFromMatrix(system_type, node, CHILD_BLOCK, row);
    }
+
+
+   BlockType block_type = ( linking ) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
+
+   /* set lhs rhs to zero */
+   if(system_type == EQUALITY_SYSTEM)
+      getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] = 0.0;
+   else
+   {
+      getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] = 0.0;
+      getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row] = 0.0;
+   }
+
+   /* set activities and unbounded counters to zero */
+   if(system_type == EQUALITY_SYSTEM)
+   {
+      getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row] = 0.0;
+      getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row] = 0.0;
+      getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type)[row] = 0.0;
+      getSimpleVecRowFromStochVec(*actmin_eq_ubndd, node, block_type)[row] = 0.0;
+
+      if(linking)
+      {
+         (*actmax_eq_chgs)[row] = 0.0;
+         (*actmin_eq_chgs)[row] = 0.0;
+         (*actmax_eq_ubndd_chgs)[row] = 0.0;
+         (*actmin_eq_ubndd_chgs)[row] = 0.0;
+      }
+   }
+   else
+   {
+      getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type)[row] = 0.0;
+      getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type)[row] = 0.0;
+      getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type)[row] = 0.0;
+      getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, node, block_type)[row] = 0.0;
+
+      if(linking)
+      {
+         (*actmax_ineq_chgs)[row] = 0.0;
+         (*actmin_ineq_chgs)[row] = 0.0;
+         (*actmax_ineq_ubndd_chgs)[row] = 0.0;
+         (*actmin_ineq_ubndd_chgs)[row] = 0.0;
+      }
+   }
+
+
+#ifndef NDEBUG
+   /* assert non-zero counters of row are zero */
+   if(system_type == EQUALITY_SYSTEM)
+      assert( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row] - getSimpleVecRowFromStochVec(*nnzs_row_A_chgs, node, block_type)[row] == 0.0 );
+   else
+      assert( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row] - getSimpleVecRowFromStochVec(*nnzs_row_C_chgs, node, block_type)[row] == 0.0 );
+#endif
 }
 
-// todo : should rhs and lhs be set to zero too? -nah? activity !? postsolve must know rhs lhs
 void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row)
 {
    assert(!nodeIsDummy(node, system_type));
@@ -1123,8 +1275,6 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
 
    removeIndexRow(system_type, node, block_type, row, mat_storage->rowptr[row].end - mat_storage->rowptr[row].start);
    mat_storage->rowptr[row].end = mat_storage->rowptr[row].start;
-
-   // todo set lhs rhs to zero and activity?
 }
 
 /** removes row col from dynamic storage */
@@ -1955,7 +2105,8 @@ void PresolveData::updateRowActivitiesNonLinkingConsBlock(SystemType system_type
       return;
 
    /* no changes if a worse bound has been found */
-   if( (upper && !PIPSisLT( bound, old_bound)) || (!upper && PIPSisLT(bound, old_bound)) )
+   if( (upper && (!PIPSisLT( bound, old_bound) || old_bound == std::numeric_limits<double>::infinity() )) ||
+         (!upper && ( PIPSisLT(bound, old_bound) || old_bound == -std::numeric_limits<double>::infinity() )) )
       return;
 
    SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();

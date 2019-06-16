@@ -29,7 +29,6 @@ void StochPresolverBoundStrengthening::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
-   assert(indivObjOffset == 0.0);
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -94,7 +93,6 @@ void StochPresolverBoundStrengthening::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyActivities());
    assert(presData.verifyNnzcounters());
-   assert(indivObjOffset == 0.0);
 }
 
 bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
