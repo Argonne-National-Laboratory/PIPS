@@ -183,8 +183,8 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
          assert( !PIPSisZero(a_ik) );
 
-         double actmin_row_without_curr = -std::numeric_limits<double>::max();
-         double actmax_row_without_curr = std::numeric_limits<double>::max();
+         double actmin_row_without_curr = -std::numeric_limits<double>::infinity();
+         double actmax_row_without_curr = std::numeric_limits<double>::infinity();
 
          /* subtract current entry from row activity */
          if(actmin_ubndd == 0.0)
@@ -212,11 +212,11 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             assert(actmax_ubndd <= 1);
             if( !PIPSisZero(actmax_row_without_curr, feastol) || !PIPSisZero(actmin_row_without_curr, feastol) )
             {
-               std::cout << system_type << "\t" << node << "\t" << row << "\t" << block_type << "\t" << col << std::endl;
-               std::cout << actmax_row_without_curr << "\t" << actmax_part << std::endl;
-               std::cout << actmin_row_without_curr << "\t" << actmin_part << std::endl;
-               std::cout << actmin_ubndd << "\t" << actmax_ubndd << std::endl;
-               std::cout << col << "\t" << ixlow[col] << " " << xlow[col] << "\t" << ixupp[col] << " " << xupp[col] << std::endl;
+               std::cout << "system_type " << system_type << "\tnode " << node << "\trow " << row << "\tblock_type " << block_type << "\tcol " << col << std::endl;
+               std::cout << "actmax_without curr " << actmax_row_without_curr << "\tactmax_part " << actmax_part << std::endl;
+               std::cout << "actmin_without_curr " << actmin_row_without_curr << "\tactmin_part " << actmin_part << std::endl;
+               std::cout << "actmin_unbndd " << actmin_ubndd << "\tactmax_unbndd " << actmax_ubndd << std::endl;
+               std::cout <<  "ixlow " << ixlow[col] << " xlow " << xlow[col] << "\tixupp " << ixupp[col] << " xupp " << xupp[col] << std::endl;
             }
             assert( PIPSisZero(actmin_row_without_curr, feastol) );
             assert( PIPSisZero(actmax_row_without_curr, feastol) );

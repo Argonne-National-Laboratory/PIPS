@@ -19,17 +19,18 @@
 /* can specify a cloumn here which bound changes we wanna track maybe */
 //#ifndef NDEBUG
 //   #define TRACK_COLUMN
-//   #define COLUMN 10
+//   #define COLUMN 1582
 //   #define NODE -1
 //#endif
 
-#ifndef NDEBUG
-   #define TRACK_ROW
-   #define ROW 26098
-   #define ROW_NODE 437
-   #define ROW_BLOCK LINKING_VARS_BLOCK
-   #define ROW_SYS EQUALITY_SYSTEM
-#endif
+//#ifndef NDEBUG
+//   #define TRACK_ROW
+//   #define ROW 101543
+//   #define ROW_NODE 62
+//   #define ROW_BLOCK LINKING_VARS_BLOCK
+//   #define ROW_IS_LINK false
+//   #define ROW_SYS INEQUALITY_SYSTEM
+//#endif
 
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
@@ -99,11 +100,14 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    initNnzCounter( *nnzs_row_A, *nnzs_row_C, *nnzs_col);
 
 #ifdef TRACK_COLUMN
-   std::cout << "inital column" << std::endl;
-   std::cout << "ixlow: " << getSimpleVecColFromStochVec( *presProb->ixlow, NODE)[COLUMN] << std::endl;
-   std::cout << "xlow: " << getSimpleVecColFromStochVec( *presProb->blx, NODE)[COLUMN] << std::endl;
-   std::cout << "ixupp: " << getSimpleVecColFromStochVec( *presProb->ixupp, NODE)[COLUMN] << std::endl;
-   std::cout << "xupp: " << getSimpleVecColFromStochVec( *presProb->bux, NODE)[COLUMN] << std::endl;
+   if(my_rank == 0 || NODE != -1)
+   {
+      std::cout << "inital column" << std::endl;
+      std::cout << "ixlow: " << getSimpleVecColFromStochVec( *presProb->ixlow, NODE)[COLUMN] << std::endl;
+      std::cout << "xlow: " << getSimpleVecColFromStochVec( *presProb->blx, NODE)[COLUMN] << std::endl;
+      std::cout << "ixupp: " << getSimpleVecColFromStochVec( *presProb->ixupp, NODE)[COLUMN] << std::endl;
+      std::cout << "xupp: " << getSimpleVecColFromStochVec( *presProb->bux, NODE)[COLUMN] << std::endl;
+   }
 #endif
 
 #ifdef TRACK_ROW
@@ -827,6 +831,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
 {
    assert( -1 <= node && node < nChildren );
 
+   /* check for infesibility of the newly found bounds */
    const SimpleVector& ixlow = (node == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->ixlow).vec)
          : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->ixlow).children[node]->vec);
    const SimpleVector& xlow = (node == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->blx).vec)
@@ -835,8 +840,18 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
          : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->ixupp).children[node]->vec);
    const SimpleVector& xupp = (node == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->bux).vec)
          : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->bux).children[node]->vec);
-
    assert(0 <= col && col < ixlow.n);
+
+#ifdef TRACK_COLUMN
+   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+   {
+      std::cout << "TRACKING COLUMN: new bounds [" << lbx << ", " << ubx << "] propagated for column " << COLUMN << " from row " << row << " node " << node << " in " <<
+            ( (system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ":" << std::endl;
+      writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
+      std::cout << "\tbounds were [" << xlow[col] << ", " << xupp[col] << "]" << std::endl;
+   }
+#endif
+
 
    if( ( ixlow[col] != 0.0 && PIPSisLT(ubx, xlow[col]) )
          || (ixupp[col] != 0.0 && PIPSisLT(xupp[col], lbx) )
@@ -851,14 +866,23 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
   // if( fabs(lbx) < 1e8 && (ixlow[col] == 0.0  || feastol * 1e3 <= fabs(xlow[col] - lbx) ) )
-   if( ubx < std::numeric_limits<double>::max() )
+   double numerical_threshold = std::numeric_limits<double>::max();
+   if( ubx < numerical_threshold && (ixupp[col] == 0.0 || PIPSisLT(ubx, xupp[col])) )
    {
+#ifdef TRACK_COLUMN
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+         std::cout << "TRACKING COLUMN: new upper bound through propagation" << std::endl;
+#endif
       if( updateUpperBoundVariable(node_var, col, ubx) )
          bounds_changed = true;
    }
   // if( fabs(ubx) < 1e8 && (ixupp[col] == 0.0  || feastol * 1e3 <= fabs(xupp[col] - ubx) ) )
-   if( lbx > -std::numeric_limits<double>::max() )
+   if( lbx > -numerical_threshold && (ixlow[col] == 0.0 || PIPSisLT(xlow[col], lbx)) )
    {
+#ifdef TRACK_COLUMN
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+         std::cout << "TRACKING COLUMN: new lower bound through propagation" << std::endl;
+#endif
       if( updateLowerBoundVariable(node_var, col, lbx) )
          bounds_changed = true;
    }
@@ -1742,6 +1766,17 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
 /// does not compute activities for linking rows
 void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, BlockType block_type, int row, bool upper)
 {
+#ifdef TRACK_ROW
+   if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+         ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
+   {
+      if( block_type == LINKING_CONS_BLOCK)
+         std::cout << "TRACKING ROW: tracked row is linking constraint and needs " << (upper ? "upper" : "lower") << " activity recomputation " << std::endl;
+      else
+         std::cout << "TRACKING ROW: computing " << (upper ? "upper" : "lower") << " activity of tracked row " << std::endl;
+   }
+#endif
+
    /* single linking rows that have to be computed for the first time */
    if( block_type == LINKING_CONS_BLOCK )
    {
@@ -1769,12 +1804,12 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    SimpleVector* act_vec;
    if(system_type == EQUALITY_SYSTEM)
    {
-      act_vec = (!upper) ? &getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type) :
+      act_vec = (!upper) ? &getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type) :
             &getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type);
    }
    else
    {
-      act_vec = (upper) ? &getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type) :
+      act_vec = (!upper) ? &getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type) :
             &getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type);
    }
 
@@ -1831,6 +1866,12 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
          }
       }
    }
+
+#ifdef TRACK_ROW
+   if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+         ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
+         std::cout << "TRACKING ROW: new " << (upper ? "upper" : "lower") << " activity is " << act_part << std::endl;
+#endif
 }
 
 /** updates the bounds on a variable as well as activities */
@@ -1841,21 +1882,22 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    SimpleVector& ixupp = getSimpleVecColFromStochVec(*(presProb->ixupp), node);
    SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
 
+#ifdef TRACK_COLUMN
+   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+      std::cout << "TRACKING COLUMN: updating column bounds from [" << xlow[col] << ", " << xupp[col] << "] for column " << COLUMN << " node " << node << " with [" <<
+            xl << ", " << xu << "]" << std::endl;
+#endif
+
    if( ( ixlow[col] != 0.0 && PIPSisLT(xu, xlow[col]) )
          || (ixupp[col] != 0.0 && PIPSisLT(xupp[col], xl) )
          || PIPSisLT(xu, xl) )
       abortInfeasible(MPI_COMM_WORLD, "Varbounds update detected infeasible new bounds!", "PresolveData.C", "updateBoundsVariable");
 
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " being changed: new xupp: " << xu << "\tnew xlow: " << xl << std::endl;
-#endif
-
    bool updated = false;
    double xu_old = std::numeric_limits<double>::infinity();
    double xl_old = -std::numeric_limits<double>::infinity();
 
-   if( xu < std::numeric_limits<double>::max() && (ixupp[col] == 0.0 || xu < xupp[col]) )
+   if( xu < std::numeric_limits<double>::max() && (ixupp[col] == 0.0 || PIPSisLT(xu, xupp[col])) )
    {
       updated = true;
       if(ixupp[col] == 1.0)
@@ -1865,7 +1907,7 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
       ixupp[col] = 1.0;
    }
 
-   if( -std::numeric_limits<double>::max() < xl && (ixlow[col] == 0.0 || xlow[col] < xl) )
+   if( -std::numeric_limits<double>::max() < xl && (ixlow[col] == 0.0 || PIPSisLE( xlow[col], xl)) )
    {
       updated = true;
       if(ixlow[col] == 1.0)
@@ -1878,19 +1920,21 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    if( updated )
    {
 #ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was updated: new xupp: " << xu << " vs old: " << xu_old << "\tnew xlow: " << xl <<
-         " vs old: " << xl_old << std::endl;
+      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+      {
+         std::cout << "TRACKING COLUMN: bounds are now [" << xlow[col] << ", " << xupp[col] << "]" << std::endl;
+         std::cout << "TRACKING COLUMN: moving on to update activities" << std::endl;
+      }
 #endif
       updateRowActivities(node, col, xu, xl, xu_old, xl_old);
    }
-#ifdef TRACK_COLUMN
    else
    {
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was not updated" << std::endl;
-   }
+#ifdef TRACK_COLUMN
+      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+         std::cout << "TRACKING COLUMN: col " << COLUMN << " was not updated" << std::endl;
 #endif
+   }
 
 
    if( updated && node == -1 )
@@ -1905,68 +1949,75 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
  */
 void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx, double old_ubx, double old_lbx)
 {
+#ifdef TRACK_COLUMN
+      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+      {
+         std::cout << "TRACKING COLUMN: col " << COLUMN << " node " << NODE << " gets it's activities updated" << std::endl;
+         std::cout << "\t bounds changed from [" << old_ubx << ", " << old_lbx << "] to [" << lbx << ", " << ubx << "]" << std::endl;
+      }
+#endif
+
    /* if node == -1 go through all linking var blocks of both systems */
    if( node == -1 )
    {
 #ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " is linking and gets it's activities updated" << std::endl;
+      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+         std::cout << "TRACKING COLUMN: the column is linking (root node)" << std::endl;
 #endif
       /* A0/B0 and C0/D0block */
-      updateRowActivitiesNonLinkingConsBlock(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesNonLinkingConsBlock(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
 
-      updateRowActivitiesNonLinkingConsBlock(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesNonLinkingConsBlock(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
 
       /* Bl0 and Dl0 */
-      updateRowActivitiesLinkingConsBlock(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesLinkingConsBlock(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
 
-      updateRowActivitiesLinkingConsBlock(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesLinkingConsBlock(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
 
       for(int child = 0; child < nChildren; ++child)
       {
          /* Ai and Ci */
-         updateRowActivitiesNonLinkingConsBlock(EQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-         updateRowActivitiesNonLinkingConsBlock(EQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
+         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
 
-         updateRowActivitiesNonLinkingConsBlock(INEQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-         updateRowActivitiesNonLinkingConsBlock(INEQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
+         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
       }
    }
    else
    {
 #ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " is non-linking and gets it's activities updated" << std::endl;
+      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+         std::cout << "TRACKING COLUMN: the column is non-linking (non-root)" << std::endl;
 #endif
       /* Bmat, Blmat */
       /* Bmat */
-      updateRowActivitiesNonLinkingConsBlock(EQUALITY_SYSTEM, node, CHILD_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesNonLinkingConsBlock(EQUALITY_SYSTEM, node, CHILD_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, CHILD_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, CHILD_BLOCK, col, lbx, old_lbx, false);
 
       /* Blmat */
-      updateRowActivitiesLinkingConsBlock(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesLinkingConsBlock(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
 
       /* Dmat Dlmat */
 
       /* Dmat */
-      updateRowActivitiesNonLinkingConsBlock(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesNonLinkingConsBlock(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, lbx, old_lbx, false);
 
       /* Dlmat */
-      updateRowActivitiesLinkingConsBlock(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesLinkingConsBlock(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
    }
 }
 
-void PresolveData::updateRowActivitiesLinkingConsBlock(SystemType system_type, int node, BlockType block_type, int col, double bound, double old_bound, bool upper)
+void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound, double old_bound, bool upper)
 {
    assert(-1 <= node && node < nChildren);
-   assert(block_type == LINKING_CONS_BLOCK);
    assert(0 <= col);
 
    /* dummies do not adjust anything */
@@ -1994,27 +2045,20 @@ void PresolveData::updateRowActivitiesLinkingConsBlock(SystemType system_type, i
    SimpleVector& actmin_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type) :
          getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type);
 
-  SimpleVector& actmax_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmax_eq_ubndd_chgs : *actmax_ineq_ubndd_chgs;
-  SimpleVector& actmin_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_ubndd_chgs : *actmin_ineq_ubndd_chgs;
-  SimpleVector& actmax_part_chgs = (system_type == EQUALITY_SYSTEM) ? *actmax_eq_chgs : *actmax_ineq_chgs;
-  SimpleVector& actmin_part_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_chgs : *actmin_ineq_chgs;
+   /* we always set these variables but only use them in case an actual linking row gets it's activities updated */
+   SimpleVector& actmax_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmax_eq_ubndd_chgs : *actmax_ineq_ubndd_chgs;
+   SimpleVector& actmin_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_ubndd_chgs : *actmin_ineq_ubndd_chgs;
+   SimpleVector& actmax_part_chgs = (system_type == EQUALITY_SYSTEM) ? *actmax_eq_chgs : *actmax_ineq_chgs;
+   SimpleVector& actmin_part_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_chgs : *actmin_ineq_chgs;
 
 #ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-   {
-      std::cout << "actually updating with a new bound of " << bound << " and an old one of " << old_bound << " (upper was " << upper << ")" << std::endl;
-      std::cout << mat_transp.rowptr[col].start << "\t" << mat_transp.rowptr[col].end << std::endl;
-   }
+   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+      std::cout << "TRACKING COLUMN: updating activities column " << col << " node " << node << " system " << ( (system_type == EQUALITY_SYSTEM) ? "EQ_SYS" : "INEQ_SYS" ) <<
+         " with new " << ( upper ? "upper" : "lower" ) << " bound " << bound << " from " << old_bound << std::endl;
 #endif
 
    for( int j = mat_transp.rowptr[col].start; j < mat_transp.rowptr[col].end; ++j )
    {
-
-   #ifdef TRACK_COLUMN
-      if(NODE == node && COLUMN == col)
-         std::cout << "col " << COLUMN << std::endl;
-   #endif
-
       const int row = mat_transp.jcolM[j];
       const double entry = mat_transp.M[j];
 
@@ -2030,17 +2074,36 @@ void PresolveData::updateRowActivitiesLinkingConsBlock(SystemType system_type, i
       SimpleVector& act_ubndd = (switch_upperlower) ? actmax_ubndd : actmin_ubndd;
       SimpleVector& act_ubndd_chgs = (switch_upperlower) ? actmax_ubndd_chgs : actmin_ubndd_chgs;
 
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was updated: first time computation of activity of row " << row << " node " << node <<
-      "\tact was: " << act_part[row] << std::endl;
+
+#ifdef TRACK_ROW
+   if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+         ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
+   {
+      std::cout << "TRACKING ROW: activities of tracked row are getting updated. Current state:" << std::endl;
+      if( ROW_BLOCK == LINKING_CONS_BLOCK)
+      {
+         std::cout << "\twas linking row with " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << act_part[row] << " + " << act_part_chgs[row] << "(changes) and " <<
+               (switch_upperlower ? "upper" : "lower" ) << " unbounded counters " << act_ubndd[row] << " + " << act_ubndd_chgs[row] << "(changes)" << std::endl;
+      }
+      else
+      {
+         std::cout << "\twas non-linking row with " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << act_part[row] << " and " << (switch_upperlower ? "upper" : "lower" ) <<
+               " unbounded counters " << act_ubndd[row] << std::endl;
+      }
+   }
 #endif
 
       /* if the old bound was not set we have to modify the unbounded counters */
       if( old_bound == std::numeric_limits<double>::infinity() || old_bound == -std::numeric_limits<double>::infinity() )
       {
-         /* upper bound has been set from infinity to something else */
-         if( node != -1 )
+#ifdef TRACK_ROW
+            if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+                  ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
+                  std::cout << "TRACKING ROW: ubndd counters are being changed" << std::endl;
+#endif
+
+         /* every process works the root node - even in the linking row case */
+         if( node != -1 && block_type == LINKING_CONS_BLOCK )
          {
             --act_ubndd_chgs[row];
             outdated_activities = true;
@@ -2048,16 +2111,39 @@ void PresolveData::updateRowActivitiesLinkingConsBlock(SystemType system_type, i
          else
             --act_ubndd[row];
 
-         assert( 0 <= act_ubndd[row] + act_ubndd_chgs[row]);
+         if(block_type == LINKING_CONS_BLOCK)
+            assert( 0 <= act_ubndd[row] + act_ubndd_chgs[row]);
+         else
+            assert( 0 <= act_ubndd[row]);
 
          /* from now on activity of row has to be computed */
-         if(act_ubndd[row] + act_ubndd_chgs[row] == 1)
+         if( (block_type == LINKING_CONS_BLOCK && (act_ubndd[row] + act_ubndd_chgs[row] == 1))
+               || (act_ubndd[row] == 1 && block_type != LINKING_CONS_BLOCK) )
          {
-            ++linking_rows_need_act_computation;
+#ifdef TRACK_ROW
+            if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+                  ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
+            {
+               if( ROW_IS_LINK )
+                  std::cout << "TRACKING ROW: " << ( switch_upperlower ? "upper" : "lower" ) << " now needs act computation " << std::endl;
+               else
+                  std::cout << "TRACKING ROW: first time computation of " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << std::endl;
+            }
+#endif
+            if(block_type == LINKING_CONS_BLOCK)
+               ++linking_rows_need_act_computation;
+            else
+               computeRowMinOrMaxActivity(system_type, node, block_type, row, switch_upperlower);
          }
-         else if(act_ubndd[row] + act_ubndd_chgs[row] == 0)
+         else if( (block_type == LINKING_CONS_BLOCK && act_ubndd[row] + act_ubndd_chgs[row] == 0) ||
+               (block_type != LINKING_CONS_BLOCK && act_ubndd[row] == 0) )
          {
-            if( node != -1)
+#ifdef TRACK_ROW
+            if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+                  ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
+                  std::cout << "TRACKING ROW: adjusting activities " << std::endl;
+#endif
+            if( node != -1 && block_type == LINKING_CONS_BLOCK)
                act_part_chgs[row] += bound * entry;
             else
                act_part[row] += bound * entry;
@@ -2065,147 +2151,43 @@ void PresolveData::updateRowActivitiesLinkingConsBlock(SystemType system_type, i
       }
       else
       {
-         /* better bound was found */
-         if(act_ubndd[row] + act_ubndd_chgs[row] <= 1)
-         {
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was updated: first time computation of activity of row " << row << " node " << node <<
-      "\tact was: " << act_part[row] << std::endl;
+#ifdef TRACK_ROW
+            if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+                  ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
+                  std::cout << "TRACKING ROW: " << " no changes in ubndd counters - only adjust activities" << std::endl;
 #endif
-            if( node != -1)
+         /* better bound was found */
+         if( (block_type == LINKING_CONS_BLOCK && act_ubndd[row] + act_ubndd_chgs[row] <= 1) ||
+               (block_type != LINKING_CONS_BLOCK && act_ubndd[row] <= 1) )
+         {
+
+            if( node != -1 && block_type == LINKING_CONS_BLOCK)
             {
                outdated_activities = true;
                act_part_chgs[row] += (bound - old_bound) * entry;
             }
             else
                act_part[row] += (bound - old_bound) * entry;
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "is now: " << act_part[row] << std::endl;
-#endif
          }
       }
-   }
-}
 
-void PresolveData::updateRowActivitiesNonLinkingConsBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
-      double old_bound, bool upper)
-{
-   assert(-1 <= node && node < nChildren);
-   assert(block_type != LINKING_CONS_BLOCK);
-   assert(0 <= col);
-
-   /* dummies do not adjust anything */
-   if( nodeIsDummy(node, system_type) )
-      return;
-
-   /* we do not have to adjust activities if no new bound was found */
-   if( bound == std::numeric_limits<double>::infinity() || bound == -std::numeric_limits<double>::infinity() )
-      return;
-
-   /* no changes if a worse bound has been found */
-   if( (upper && (!PIPSisLT( bound, old_bound) || old_bound == std::numeric_limits<double>::infinity() )) ||
-         (!upper && ( PIPSisLT(bound, old_bound) || old_bound == -std::numeric_limits<double>::infinity() )) )
-      return;
-
-   SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
-
-   assert(col < mat_transp.m);
-
-   SimpleVector& actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type);
-   SimpleVector& actmin_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, node, block_type);
-   SimpleVector& actmax_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type);
-   SimpleVector& actmin_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type);
-
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-   {
-      std::cout << "actually updating with a new bound of " << bound << " and an old one of " << old_bound << " (upper was " << upper << ")" << std::endl;
-      std::cout << mat_transp.rowptr[col].start << "\t" << mat_transp.rowptr[col].end << std::endl;
-   }
-#endif
-
-   for( int j = mat_transp.rowptr[col].start; j < mat_transp.rowptr[col].end; j++ )
-   {
-      const int row = mat_transp.jcolM[j];
-      const double entry = mat_transp.M[j];
-
-      assert( !PIPSisZero(entry) );
-
-      /* get affected partial activity and act_ubndd */
-      bool switch_upperlower = upper;
-      if( PIPSisLE(entry, 0.0) )
-         switch_upperlower = !upper;
-
-      SimpleVector& act_part = (switch_upperlower) ? actmax_part : actmin_part;
-      SimpleVector& act_ubndd = (switch_upperlower) ? actmax_ubndd : actmin_ubndd;
-
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was updated: first time computation of activity of row " << row << " node " << node <<
-      "\tact was: " << act_part[row] << std::endl;
-#endif
-
-
-      /* if the old bound was not set we have to modify the unbounded counters */
-      if( fabs(old_bound) == std::numeric_limits<double>::infinity() )
+#ifdef TRACK_ROW
+      if( ROW_NODE == node && ROW == row && ROW_SYS == system_type &&
+            ( (block_type == LINKING_CONS_BLOCK && ROW_IS_LINK) || (!ROW_IS_LINK)) && (my_rank == 0 || node != -1) )
       {
-         /* upper bound has been set from infinity to something else */
-         --act_ubndd[row];
-
-         assert( 0 <= act_ubndd[row] );
-
-         /* from now on activity of row has to be computed */
-         if(act_ubndd[row] == 1)
+         std::cout << "TRACKING ROW: activities of tracked row have been updated: " << std::endl;
+         if( ROW_BLOCK == LINKING_CONS_BLOCK)
          {
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was updated: first time computation of activity of row " << row << " node " << node <<
-      "\tact was: " << act_part[row] << std::endl;
-#endif
-            if(switch_upperlower)
-               computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
-            else
-               computeRowMinOrMaxActivity(system_type, node, block_type, row, false);
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "is now: " << act_part[row] << std::endl;
-#endif
+            std::cout << "\tnow linking row with " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << act_part[row] << " + " << act_part_chgs[row] << "(changes) and " <<
+                  (switch_upperlower ? "upper" : "lower" ) << " unbounded counters " << act_ubndd[row] << " + " << act_ubndd_chgs[row] << "(changes)" << std::endl;
          }
-         else if(act_ubndd[row] == 0)
+         else
          {
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was updated: update of activity of row - now complete : " << row << " node " << node << "\tact was: " << act_part[row] << std::endl;
-#endif
-            act_part[row] += bound * entry;
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "is now: " << act_part[row] << std::endl;
-#endif
+            std::cout << "\tnow non-linking row with " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << act_part[row] << " and " << (switch_upperlower ? "upper" : "lower" ) <<
+                  " unbounded counters " << act_ubndd[row] << std::endl;
          }
       }
-      else
-      {
-         /* better bound was found */
-         if(act_ubndd[row] <= 1)
-         {
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "col " << COLUMN << " was updated: update of activity of row " << row << " node " << node << "\tact was: " << act_part[row] << std::endl;
 #endif
-            act_part[row] += (bound - old_bound) * entry;
-#ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col)
-      std::cout << "is now: " << act_part[row] << std::endl;
-#endif
-         }
-      }
    }
 }
 
@@ -2214,6 +2196,8 @@ void PresolveData::updateRowActivitiesNonLinkingConsBlock(SystemType system_type
 void PresolveData::getRowActivities(SystemType system_type, int node, BlockType block_type, int row, double& max_act,
       double& min_act, int& max_ubndd, int& min_ubndd) const
 {
+   assert(!nodeIsDummy(node, system_type));
+
    double row_max_counters = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type)[row]
          : getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type)[row];
    double row_min_counters = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, node, block_type)[row]
@@ -2253,14 +2237,25 @@ void PresolveData::getRowActivities(SystemType system_type, int node, BlockType 
    }
 
    if( row_max_counters >= 2)
-   {
       assert( max_act == std::numeric_limits<double>::infinity() );
-      assert( min_act = -std::numeric_limits<double>::infinity() );
-   }
    else
    {
-      assert(max_act < std::numeric_limits<double>::infinity());
-      assert(-std::numeric_limits<double>::infinity() < min_act);
+      if( block_type != LINKING_CONS_BLOCK)
+      {
+         if( !(max_act < std::numeric_limits<double>::infinity()))
+            std::cout << row << " " << block_type << " " << node << " " << system_type << std::endl;
+         assert(max_act < std::numeric_limits<double>::infinity());
+      }
+   }
+
+   if( row_min_counters >= 2)
+      assert( min_act == -std::numeric_limits<double>::infinity() );
+   else
+   {
+      if( block_type != LINKING_CONS_BLOCK)
+      {
+         assert(-std::numeric_limits<double>::infinity() < min_act);
+      }
    }
 }
 
@@ -2336,8 +2331,15 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
 }
 
 /* only prints the part of a linking constraint the current process knows about */
+// todo does not yet print linking constraints
 void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const
 {
+   if(nodeIsDummy(node, system_type))
+      return;
+
+   if(node == -1 && block_type != LINKING_CONS_BLOCK && my_rank != 0)
+      return;
+
    out << "SystemType: " << system_type << "\tnode: " << node << "\tLinkingCons: " << (block_type == LINKING_CONS_BLOCK) << "\trow: " << row << std::endl;
 
    if(system_type == EQUALITY_SYSTEM)

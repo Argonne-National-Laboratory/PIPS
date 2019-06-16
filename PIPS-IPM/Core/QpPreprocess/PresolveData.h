@@ -207,9 +207,7 @@ private:
 
       bool updateBoundsVariable(int node, int col, double ubx, double lbx);
       void updateRowActivities(int node, int col, double ubx, double lbx, double old_ubx, double old_lbx);
-      void updateRowActivitiesLinkingConsBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
-            double old_bound, bool upper);
-      void updateRowActivitiesNonLinkingConsBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
+      void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
             double old_bound, bool upper);
 
       double computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const;

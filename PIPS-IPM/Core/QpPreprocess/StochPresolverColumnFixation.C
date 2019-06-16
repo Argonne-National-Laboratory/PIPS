@@ -56,7 +56,11 @@ void StochPresolverColumnFixation::applyPresolving()
 
       if( (*currIxlowParent)[col] != 0.0 && (*currIxuppParent)[col] != 0.0)
       {
-         assert(PIPSisLT(0.0, (*currxuppParent)[col] - (*currxlowParent)[col]));
+         cout.precision(17);
+         if(!PIPSisLE(0.0, (*currxuppParent)[col] - (*currxlowParent)[col], tolerance4))
+            std::cout << " 0.0 !< " << (*currxuppParent)[col] << " - " << (*currxlowParent)[col] << std::endl;
+
+         assert(PIPSisLE(0.0, (*currxuppParent)[col] - (*currxlowParent)[col], tolerance4));
 
          if( PIPSisLT( ((*currxuppParent)[col] - (*currxlowParent)[col]) * absmax_row, tolerance4) )
          {
