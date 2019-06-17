@@ -816,7 +816,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          {
             assert(krowDist[r + 1] < nnzDist);
 
-
             const int val = MKkt[c];
 
             MDist[krowDist[r + 1]] = val;
@@ -825,7 +824,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       }
    }
 
-   // fill in gathered local positions not owned by current MPI process
+   // fill in gathered local pairs not inserted yet
    for( int i = 0; i < nnzDistLocal; i++ )
    {
       const int row = rowIndexGathered[i];
@@ -835,7 +834,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       assert(col >= row && col < sizeKkt);
       assert(krowDist[row + 1] < nnzDist);
 
-      if( rowIsMyLocal[row] || rowIsMyLocal[col] )
+      // pair already added?
+      if( rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row]) )
          continue;
 
       assert(MDist[krowDist[row + 1]] == 0.0);
