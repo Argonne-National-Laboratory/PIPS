@@ -684,8 +684,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    std::vector<int> rowSizeMyLocal(sizeKkt, 0);
    std::vector<int> rowSizeShared(sizeKkt, 0);
    std::vector<int> rowSizeLocal(sizeKkt, 0);
-   std::vector<int> rowIndex(0);
-   std::vector<int> colIndex(0);
+   std::vector<int> rowIndexMyLocal(0);
+   std::vector<int> colIndexMyLocal(0);
 
    assert(int(rowIsLocal.size()) == sizeKkt);
 
@@ -701,8 +701,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
          {
             const int col = jColKkt[c];
-            rowIndex.push_back(r);
-            colIndex.push_back(col);
+            rowIndexMyLocal.push_back(r);
+            colIndexMyLocal.push_back(col);
          }
 
          continue;
@@ -722,17 +722,17 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
             assert(!rowIsMyLocal[col]);
 
          }
-         else if( rowIsMyLocal[col] )
+         else if( rowIsMyLocal[col] && !rIsLocal )
          {
             nnzDistMyLocal++;
             rowSizeMyLocal[r]++;
-            rowIndex.push_back(r);
-            colIndex.push_back(col);
+            rowIndexMyLocal.push_back(r);
+            colIndexMyLocal.push_back(col);
          }
       }
    }
 
-   assert(int(rowIndex.size()) == nnzDistMyLocal);
+   assert(int(rowIndexMyLocal.size()) == nnzDistMyLocal);
 
    // sum up local sizes
    MPI_Allreduce(&nnzDistMyLocal, &nnzDistLocal, 1, MPI_INT, MPI_SUM, mpiComm);
@@ -752,16 +752,11 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
-   std::vector<int> rowIndexGathered = PIPSallgathervInt(rowIndex, mpiComm);
-   std::vector<int> colIndexGathered = PIPSallgathervInt(colIndex, mpiComm);
+   std::vector<int> rowIndexGathered = PIPSallgathervInt(rowIndexMyLocal, mpiComm);
+   std::vector<int> colIndexGathered = PIPSallgathervInt(colIndexMyLocal, mpiComm);
 
    assert(int(rowIndexGathered.size()) == nnzDistLocal);
    assert(int(colIndexGathered.size()) == nnzDistLocal);
-
-
-   printf("nnzShared + nnzLocal %d \n", nnzDistShared + nnzDistLocal);
-   printf("nnzKkt %d \n", nnzKkt);
-
 
    const int nnzDist = nnzDistLocal + nnzDistShared;
 
@@ -770,7 +765,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    // todo new method
 
    delete kktDist;
-   kktDist = new SparseSymMatrix(nnzDist, sizeKkt, false);
+   kktDist = new SparseSymMatrix(sizeKkt, nnzDist, false);
 
    int* const krowDist = kktDist->krowM();
    int* const jColDist  = kktDist->jcolM();
@@ -779,12 +774,30 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    assert(krowDist[0] == 0);
    assert(sizeKkt > 0 && krowDist[1] == 0);
 
+   memset(MDist, 0, nnzDist * sizeof(double));
+
    for( int r = 1; r < sizeKkt; r++ )
       krowDist[r + 1] = krowDist[r] + rowSizeLocal[r - 1] + rowSizeShared[r - 1];
 
-   // fill in global values
+   // fill in global and locally owned positions and values
    for( int r = 0; r < sizeKkt; r++ )
    {
+      if( rowIsMyLocal[r] )
+      {
+         for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
+         {
+            assert(krowDist[r + 1] < nnzDist);
+
+            const int col = jColKkt[c];
+            const int val = MKkt[c];
+
+            MDist[krowDist[r + 1]] = val;
+            jColDist[krowDist[r + 1]++] = col;
+         }
+
+         continue;
+      }
+
       if( rowIsLocal[r] )
          continue;
 
@@ -792,14 +805,21 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       {
          const int col = jColKkt[c];
 
-         if( rowIsLocal[col] )
-            continue;
+         // is (r, col) a shared entry or locally owned?
+         if( !rowIsLocal[col] || rowIsMyLocal[col] )
+         {
+            assert(krowDist[r + 1] < nnzDist);
 
-         jColDist[krowDist[r + 1]++] = col;
+
+            const int val = MKkt[c];
+
+            MDist[krowDist[r + 1]] = val;
+            jColDist[krowDist[r + 1]++] = col;
+         }
       }
    }
 
-   // fill in gathered local values
+   // fill in gathered local positions not owned by current MPI process
    for( int i = 0; i < nnzDistLocal; i++ )
    {
       const int row = rowIndexGathered[i];
@@ -809,18 +829,39 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       assert(col >= row && col < sizeKkt);
       assert(krowDist[row + 1] < nnzDist);
 
+      if( rowIsMyLocal[row] || rowIsMyLocal[col] )
+         continue;
+
+      assert(MDist[krowDist[row + 1]] == 0.0);
       jColDist[krowDist[row + 1]++] = col;
    }
 
 #ifndef NDEBUG
    assert(krowDist[0] == 0);
    assert(krowDist[sizeKkt] == nnzDist);
-
+#if 0 // todo deleteme
    for( int r = 0; r < sizeKkt; r++ )
-      assert(krowDist[r + 1] == krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]);
+      if( !(krowDist[r + 1] == krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]) )
+      {
+         int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+         printf("%d %d \n", rowSizeLocal[r], rowSizeShared[r]);
+         printf("%d fail: r=%d %d %d \n", myRank, r, krowDist[r + 1], krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]);
+         printf("lengths: %d: %d \n", krowDist[r + 1] - krowDist[r], rowSizeLocal[r] + rowSizeShared[r]);
+         printf("...%d + %d \n", rowSizeLocal[r], rowSizeShared[r]);
+         printf("nextlengths: %d: %d \n", krowDist[r + 2] - krowDist[r + 1], rowSizeLocal[r + 1] + rowSizeShared[r + 1]);
+         printf("%d row is rowIsMyLocal: %d \n", myRank, rowIsMyLocal[r]);
+         printf("%d row is rowIsLocal: %d \n", myRank, rowIsLocal[r]);
+      }
 #endif
 
-   // allreduce on values
+   for( int r = 0; r < sizeKkt; r++ )
+   {
+      assert(krowDist[r + 1] == krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]);
+      assert(krowDist[r + 1] >= krowDist[r]);
+   }
+#endif
+
 
    // todo, we still need to sort...method for storage?
 
@@ -831,6 +872,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    exit(1);
 
 
+   // finally sum the values up (outource in next method!!!)
+   MPI_Allreduce(&nnzDistShared, MDist, sizeKkt, MPI_DOUBLE, MPI_SUM, mpiComm);
 
 
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
