@@ -602,7 +602,6 @@ void sLinsysRoot::reduceKKTdense()
   }
 }
 
-#define CHUNK_SIZE (1024*1024*64) //doubles = 128 MBytes (maximum)
 void sLinsysRoot::reduceKKTsparse()
 {
    if( !iAmDistrib )
@@ -622,16 +621,27 @@ void sLinsysRoot::reduceKKTsparse()
    assert(kkts.size() == sizeKkt);
    assert(!kkts.isLower);
 
+   reduceToProc0(nnzKkt, MKkt);
+}
+
+#define CHUNK_SIZE (1024*1024*64) //doubles = 128 MBytes (maximum)
+void sLinsysRoot::reduceToProc0(int size, double* values)
+{
+   assert(values && values != sparseKktBuffer);
+   assert(size > 0);
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
    if( myRank == 0 && sparseKktBuffer == NULL )
       sparseKktBuffer = new double[CHUNK_SIZE];
 
-   const int reps = nnzKkt / CHUNK_SIZE;
-   const int res = nnzKkt - CHUNK_SIZE * reps;
+   const int reps = size / CHUNK_SIZE;
+   const int res = size - CHUNK_SIZE * reps;
    assert(res >= 0 && res < CHUNK_SIZE);
 
    for( int i = 0; i < reps; i++ )
    {
-      double* const start = &MKkt[i * CHUNK_SIZE];
+      double* const start = &values[i * CHUNK_SIZE];
       MPI_Reduce(start, sparseKktBuffer, CHUNK_SIZE, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
 
       if( myRank == 0 )
@@ -640,7 +650,7 @@ void sLinsysRoot::reduceKKTsparse()
 
    if( res > 0 )
    {
-      double* const start = &MKkt[reps * CHUNK_SIZE];
+      double* const start = &values[reps * CHUNK_SIZE];
       MPI_Reduce(start, sparseKktBuffer, res, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
 
       if( myRank == 0 )
@@ -651,14 +661,12 @@ void sLinsysRoot::reduceKKTsparse()
    if( myRank == 0 && sparseKktBuffer == NULL )
       sparseKktBuffer = new double[nnzKkt];
 
-   // todo: replace by more sophisticated scheme
    MPI_Reduce(MKkt, sparseKktBuffer, nnzKkt, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
 
    if( myRank == 0 )
       memcpy(MKkt, sparseKktBuffer, size_t(nnzKkt) * sizeof(double));
 #endif
 }
-
 
 void sLinsysRoot::reduceKKTdist(sData* prob)
 {
@@ -762,8 +770,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
    assert(!kktDist || !kktDist->isLower);
 
-   // todo new method
-
    delete kktDist;
    kktDist = new SparseSymMatrix(sizeKkt, nnzDist, false);
 
@@ -862,53 +868,14 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
+   // todo, we still need to sort...method for storage!
 
-   // todo, we still need to sort...method for storage?
 
-   MPI_Barrier(MPI_COMM_WORLD);
+   reduceToProc0(nnzDist, MDist);
+
 
    printf("all there \n");
-
    exit(1);
-
-
-   // finally sum the values up (outource in next method!!!)
-   MPI_Allreduce(&nnzDistShared, MDist, sizeKkt, MPI_DOUBLE, MPI_SUM, mpiComm);
-
-
-   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-
-
-
-   assert(kkts.size() == sizeKkt);
-   assert(!kkts.isLower);
-
-   if( myRank == 0 && sparseKktBuffer == NULL )
-      sparseKktBuffer = new double[CHUNK_SIZE];
-
-   // todo: extra method
-
-   const int reps = nnzKkt / CHUNK_SIZE;
-   const int res = nnzKkt - CHUNK_SIZE * reps;
-   assert(res >= 0 && res < CHUNK_SIZE);
-
-   for( int i = 0; i < reps; i++ )
-   {
-      double* const start = &MKkt[i * CHUNK_SIZE];
-      MPI_Reduce(start, sparseKktBuffer, CHUNK_SIZE, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
-
-      if( myRank == 0 )
-         memcpy(start, sparseKktBuffer, size_t(CHUNK_SIZE) * sizeof(double));
-   }
-
-   if( res > 0 )
-   {
-      double* const start = &MKkt[reps * CHUNK_SIZE];
-      MPI_Reduce(start, sparseKktBuffer, res, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
-
-      if( myRank == 0 )
-         memcpy(start, sparseKktBuffer, size_t(res) * sizeof(double));
-   }
 }
 
 void sLinsysRoot::factorizeKKT()
@@ -920,11 +887,10 @@ void sLinsysRoot::factorizeKKT()
   double st=MPI_Wtime();
 #endif
 
-  int todo; // give new matrix
   if( usePrecondDist )
   {
-     assert(kkt);
-     solver->matrixRebuild(*kkt);
+     assert(kktDist);
+     solver->matrixRebuild(*kktDist);
   }
   else
      solver->matrixChanged();

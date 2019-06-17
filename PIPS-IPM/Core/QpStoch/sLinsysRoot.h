@@ -109,6 +109,7 @@ class sLinsysRoot : public sLinsys {
   void reduceKKTdist(sData* prob);
   void reduceKKTdense();
   void reduceKKTsparse();
+  void reduceToProc0(int size, double* values);
 
 #ifdef STOCH_TESTING
  protected: 
