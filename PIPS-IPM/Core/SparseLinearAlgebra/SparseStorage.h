@@ -188,6 +188,8 @@ public:
   void permuteRows(const std::vector<unsigned int>& permvec);
   void permuteCols(const std::vector<unsigned int>& permvec);
 
+  void sortCols();
+
   void dump(const string& filename);
 
   void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);

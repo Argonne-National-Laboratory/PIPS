@@ -2061,6 +2061,45 @@ void SparseStorage::permuteCols(const std::vector<unsigned int>& permvec)
    delete[] bufferCol;
 }
 
+
+void SparseStorage::sortCols()
+{
+   int* indexvec = new int[n];
+   int* bufferCol = new int[n];
+   double* bufferM = new double[n];
+
+   for( int r = 0; r < m; ++r )
+   {
+      const int row_start = krowM[r];
+      const int row_end = krowM[r + 1];
+      const int row_length = row_end - row_start;
+
+      if( row_length == 0 )
+         continue;
+
+      for( int i = 0; i < row_length; i++ )
+         indexvec[i] = i;
+
+      std::sort(indexvec, indexvec + row_length, index_sort(jcolM + row_start, row_length));
+
+      for( int i = 0; i < row_length; i++ )
+      {
+         assert(indexvec[i] < row_length);
+
+         bufferCol[i] = jcolM[row_start + indexvec[i]];
+         bufferM[i] = M[row_start + indexvec[i]];
+      }
+
+      memcpy(jcolM + row_start, bufferCol, row_length * sizeof(int));
+      memcpy(M + row_start, bufferM, row_length * sizeof(double));
+   }
+
+   delete[] indexvec;
+   delete[] bufferM;
+   delete[] bufferCol;
+}
+
+
 /*
  * computes the full sparse matrix representation from a upper triangular symmetric sparse representation
  *

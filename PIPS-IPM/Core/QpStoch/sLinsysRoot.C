@@ -868,11 +868,11 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
-   // todo, we still need to sort...method for storage!
+   kktDist->getStorage()->sortCols();
 
+   assert(kktDist->getStorage()->isValid());
 
    reduceToProc0(nnzDist, MDist);
-
 
    printf("all there \n");
    exit(1);
