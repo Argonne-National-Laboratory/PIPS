@@ -221,17 +221,17 @@ private:
 
       void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
       void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
+
 /// methods for querying the problem in order to get certain structures etc.
       SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
-
       SimpleVector& getSimpleVecRowFromStochVec(const OoqpVector& ooqpvec, int node, BlockType block_type) const
          { return getSimpleVecRowFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node, block_type); };
       SimpleVector& getSimpleVecColFromStochVec(const OoqpVector& ooqpvec, int node) const
          { return getSimpleVecColFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node); };
-
       SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
       SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
 
+/// methods for printing debug information
 public:
       void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const;
 private:

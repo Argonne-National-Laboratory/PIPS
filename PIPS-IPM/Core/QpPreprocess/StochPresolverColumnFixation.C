@@ -56,13 +56,10 @@ void StochPresolverColumnFixation::applyPresolving()
 
       if( (*currIxlowParent)[col] != 0.0 && (*currIxuppParent)[col] != 0.0)
       {
-         cout.precision(17);
-         if(!PIPSisLE(0.0, (*currxuppParent)[col] - (*currxlowParent)[col], tolerance4))
-            std::cout << " 0.0 !< " << (*currxuppParent)[col] << " - " << (*currxlowParent)[col] << std::endl;
 
          assert(PIPSisLE(0.0, (*currxuppParent)[col] - (*currxlowParent)[col], tolerance4));
 
-         if( PIPSisLT( ((*currxuppParent)[col] - (*currxlowParent)[col]) * absmax_row, tolerance4) )
+         if( PIPSisLT( fabs((*currxuppParent)[col] - (*currxlowParent)[col]) * absmax_row, tolerance4) )
          {
             // verify if one of the bounds is integer:
             double intpart = 0.0;
@@ -86,10 +83,13 @@ void StochPresolverColumnFixation::applyPresolving()
    {
       if(presData.nodeIsDummy(node, EQUALITY_SYSTEM) && presData.nodeIsDummy(node, INEQUALITY_SYSTEM))
          continue;
-      else if(! presData.nodeIsDummy(node, EQUALITY_SYSTEM))
-         updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
       else
-         updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
+      {
+         assert(!presData.nodeIsDummy(node, EQUALITY_SYSTEM));
+         assert(!presData.nodeIsDummy(node, INEQUALITY_SYSTEM));
+
+         updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+      }
 
       /* linking variables */
       for( int col = 0; col < currgChild->n; ++col )
@@ -105,7 +105,7 @@ void StochPresolverColumnFixation::applyPresolving()
          {
             assert(PIPSisLE(0.0, (*currxuppChild)[col] - (*currxlowChild)[col]));
 
-            if( PIPSisLT( ((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, tolerance4) )
+            if( PIPSisLT( fabs((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, tolerance4) )
             {
                // verify if one of the bounds is integer:
                double intpart = 0.0;
