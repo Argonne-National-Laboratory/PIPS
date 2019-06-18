@@ -147,16 +147,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     //---------------------------------------------
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
-#if 0
-  ofstream myfile;
 
-  myfile.open("../0A.txt");
-
-  kkt->writeToStream(myfile);
-  myfile.close();
-
-  assert(0);
-#endif
 
 
 #ifdef TIMING
@@ -165,6 +156,22 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 #endif 
 
   reduceKKT(prob);
+
+#if 1
+  ofstream myfile;
+
+#if 1
+  myfile.open("../ADist.txt");
+  kktDist->writeToStream(myfile);
+#else
+  myfile.open("../A.txt");
+  kkt->writeToStream(myfile);
+#endif
+  myfile.close();
+
+  printf("...exiting \n");
+  exit(1);
+#endif
 
  #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
@@ -795,7 +802,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
             assert(krowDist[r + 1] < nnzDist);
 
             const int col = jColKkt[c];
-            const int val = MKkt[c];
+            const double val = MKkt[c];
 
             MDist[krowDist[r + 1]] = val;
             jColDist[krowDist[r + 1]++] = col;
@@ -816,7 +823,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          {
             assert(krowDist[r + 1] < nnzDist);
 
-            const int val = MKkt[c];
+            const double val = MKkt[c];
 
             MDist[krowDist[r + 1]] = val;
             jColDist[krowDist[r + 1]++] = col;
@@ -873,9 +880,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    assert(kktDist->getStorage()->isValid());
 
    reduceToProc0(nnzDist, MDist);
-
-   printf("all there \n");
-   exit(1);
 }
 
 void sLinsysRoot::factorizeKKT()
