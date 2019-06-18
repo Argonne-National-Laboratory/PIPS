@@ -64,6 +64,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   hasSparseKkt = prob_->exploitingLinkStructure();
 
   usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
+  MatrixEntryTriplet_mpi = NULL;
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -113,6 +114,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   hasSparseKkt = prob_->exploitingLinkStructure();
 
   usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
+  MatrixEntryTriplet_mpi = NULL;
 }
 
 sLinsysRoot::~sLinsysRoot()
@@ -453,6 +455,42 @@ void sLinsysRoot::deleteChildren()
   children.clear();
 }
 
+void sLinsysRoot::getProperChildrenRange(int& childStart, int& childEnd)
+{
+   assert(children.size() > 0);
+
+   childStart = -1;
+   childEnd = -1;
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      if( childEnd != -1 )
+         assert(children[it]->isDummy());
+
+      if( children[it]->isDummy() )
+      {
+         // end of range?
+         if( childStart != -1 && childEnd == -1 )
+            childEnd = int(it);
+
+         continue;
+      }
+
+      // start of range?
+      if( childStart == -1 )
+         childStart = int(it);
+   }
+
+   assert(childStart >= 0);
+
+   if( childEnd == -1 )
+   {
+      assert(!children[children.size() - 1]->isDummy());
+      childEnd = int(children.size());
+   }
+
+    assert(childStart < childEnd && childEnd <= int(children.size()));
+}
+
 void sLinsysRoot::putXDiagonal( OoqpVector& xdiag_ )
 {
   StochVector& xdiag = dynamic_cast<StochVector&>(xdiag_);
@@ -680,6 +718,246 @@ void sLinsysRoot::reduceToProc0(int size, double* values)
 #endif
 }
 
+
+void sLinsysRoot::registerMatrixEntryTripletMPI()
+{
+   assert(!MatrixEntryTriplet_mpi);
+
+   const int nitems = 3;
+   int blocklengths[3] = { 1, 1, 1 };
+   MPI_Datatype Types[3] = { MPI_DOUBLE, MPI_INT, MPI_INT };
+   MPI_Aint offsets[3];
+
+   offsets[0] = offsetof(MatrixEntryTriplet, val);
+   offsets[1] = offsetof(MatrixEntryTriplet, row);
+   offsets[2] = offsetof(MatrixEntryTriplet, col);
+
+   MPI_Type_create_struct(nitems, blocklengths, offsets, Types, &MatrixEntryTriplet_mpi);
+   MPI_Type_commit(&MatrixEntryTriplet_mpi);
+}
+
+void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
+{
+   if( !iAmDistrib )
+      return;
+
+   assert(kkt && hasSparseKkt);
+
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+   const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
+   const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
+
+   int* const krowKkt = kkts.krowM();
+   int* const jColKkt = kkts.jcolM();
+   double* const MKkt = kkts.M();
+
+   int childStart;
+   int childEnd;
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   int size; MPI_Comm_size(mpiComm, &size);
+
+   assert(size > 1);
+
+   // MPI matrix entries triplet not registered yet?
+   if( !MatrixEntryTriplet_mpi )
+      registerMatrixEntryTripletMPI();
+
+   this->getProperChildrenRange(childStart, childEnd);
+
+   std::vector<MatrixEntryTriplet> myEntries(0);
+   std::vector<MatrixEntryTriplet> prevEntries = this->packKKTdistOutOfRangeEntries(prob, childStart, childEnd);
+
+   assert(prevEntries.size() > 0 && prevEntries[0].row == - 1 && prevEntries[0].col == - 1);
+
+   // odd processes send first (one process back)
+   if( myRank % 2 != 0 )
+   {
+      this->sendKKTdistLocalEntries(prevEntries);
+   }
+
+   // even processes (except last) receive first
+   if( myRank % 2 == 0 && myRank != size - 1 )
+   {
+      assert(myEntries.size() == 0);
+      myEntries = this->receiveKKTdistLocalEntries();
+   }
+
+   // even processes (except first) send
+   if( myRank % 2 == 0 && myRank > 0 )
+   {
+      this->sendKKTdistLocalEntries(prevEntries);
+   }
+
+   // odd processes (except last) receive
+   if( myRank % 2 != 0 && myRank != size - 1 )
+   {
+      assert(myEntries.size() == 0);
+      myEntries = this->receiveKKTdistLocalEntries();
+   }
+
+   assert(myEntries.size() > 0 || myRank == size - 1 );
+
+   int lastRow = 0;
+   int lastC = -1;
+
+   // finally, put received data into Schur complement matrix
+   for( size_t i = 1; i < myEntries.size(); i++ )
+   {
+      const double val = myEntries[i].val;
+      const int row = myEntries[i].row;
+      const int col = myEntries[i].col;
+
+      assert(myRank != size - 1);
+      assert(row >= 0 && row < locnx + locmy + locmyl + locmzl);
+      assert(col >= row && col < locnx + locmy + locmyl + locmzl);
+      assert(val == val); // catch NaNs
+
+      assert(rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row]));
+
+      int c;
+
+      // continue from last position?
+      if( row == lastRow )
+         c = lastC + 1;
+      else
+         c = krowKkt[row];
+
+      assert(col >= jColKkt[c]);
+
+      for( ; c < krowKkt[row + 1]; c++ )
+      {
+         const int colKkt = jColKkt[c];
+
+         if( colKkt == col )
+         {
+            MKkt[c] += val;
+
+            break;
+         }
+
+      }
+
+      assert(c != krowKkt[row + 1]);
+
+      lastRow = row;
+      lastC = c;
+   }
+
+
+   MPI_Barrier(mpiComm);
+   printf("here %d \n", 0);
+}
+
+
+std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::receiveKKTdistLocalEntries() const
+{
+   assert(kkt && hasSparseKkt);
+   assert(MatrixEntryTriplet_mpi);
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   int size; MPI_Comm_size(mpiComm, &size);
+   const int nextRank = myRank + 1;
+   assert(nextRank < size);
+
+   // receive data from next process
+
+   MPI_Status status;
+   MPI_Probe(nextRank, 0, mpiComm, &status);
+
+   int nEntries;
+   MPI_Get_count(&status, MatrixEntryTriplet_mpi, &nEntries);
+
+   assert(nEntries >= 1);
+
+   std::vector<MatrixEntryTriplet> entries(nEntries);
+
+   MPI_Recv((void*) &entries[0], nEntries, MatrixEntryTriplet_mpi, nextRank, 0, mpiComm, MPI_STATUS_IGNORE);
+
+   assert(entries[0].row == -1 && entries[0].col == -1); // dummy check
+
+
+   printf("myRank=%d received %d \n", myRank, nEntries);
+
+
+   return entries;
+}
+
+
+void sLinsysRoot::sendKKTdistLocalEntries(const std::vector<MatrixEntryTriplet>& prevEntries) const
+{
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   const int prevRank = myRank - 1;
+   const int nEntries = int(prevEntries.size());
+
+   assert(myRank >= 0);
+   assert(nEntries > 0);
+   assert(MatrixEntryTriplet_mpi);
+
+   printf("myRank=%d sends %d \n", myRank, nEntries);
+   MPI_Send(&prevEntries[0], nEntries, MatrixEntryTriplet_mpi, prevRank, 0, mpiComm);
+}
+
+std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeEntries(sData* prob, int childStart, int childEnd) const
+{
+   assert(kkt && hasSparseKkt);
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+   const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
+   const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
+   int* const krowKkt = kkts.krowM();
+   int* const jColKkt = kkts.jcolM();
+   double* const MKkt = kkts.M();
+   const int sizeKkt = locnx + locmy + locmyl + locmzl;
+
+   std::vector<MatrixEntryTriplet> packedEntries(0);
+
+   // add dummy value
+   packedEntries.push_back({-1.0, -1, -1});
+
+   if( childStart > 0 )
+   {
+      assert(myRank > 0);
+
+      // pack data
+      for( int r = 0; r < sizeKkt; r++ )
+      {
+         const bool rIsLocal = rowIsLocal[r];
+
+         if( rIsLocal && !rowIsMyLocal[r] )
+         {
+            for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
+            {
+               const int col = jColKkt[c];
+               const double val = MKkt[c];
+
+               packedEntries.push_back({val, r, col});
+            }
+         }
+
+         if( rIsLocal )
+            continue;
+
+         for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
+         {
+            const int col = jColKkt[c];
+
+            if( rowIsLocal[col] && !rowIsMyLocal[col] )
+            {
+               const double val = MKkt[c];
+
+               packedEntries.push_back({val, r, col});
+            }
+         }
+      }
+   }
+
+   return packedEntries;
+}
+
+
+
 void sLinsysRoot::reduceKKTdist(sData* prob)
 {
    assert(prob);
@@ -696,7 +974,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    double* const MKkt = kkts.M();
 
    const int sizeKkt = locnx + locmy + locmyl + locmzl;
-   const int nnzKkt = krowKkt[sizeKkt];
    int nnzDistMyLocal = 0;
    int nnzDistShared = 0;
    int nnzDistLocal;
@@ -708,6 +985,9 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    std::vector<int> colIndexMyLocal(0);
 
    assert(int(rowIsLocal.size()) == sizeKkt);
+
+   // add up locally owned rows and columns
+   this->syncKKTdistLocalEntries(prob);
 
    // compute row lengths
    for( int r = 0; r < sizeKkt; r++ )

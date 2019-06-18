@@ -44,8 +44,6 @@ class sLinsysRootAug : public sLinsysRoot {
   void solveWithIterRef( sData *prob, SimpleVector& b);
   void solveWithBiCGStab( sData *prob, SimpleVector& b);
 
-  void getProperChildrenRange(int& childStart, int& childEnd);
-
   /** y = beta*y - alpha* SC * x */
   void SCmult ( double beta, SimpleVector& y, double alpha, SimpleVector& x, sData* prob);
 

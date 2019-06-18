@@ -19,6 +19,14 @@ class sData;
  * ROOT (= NON-leaf) linear system
  */
 class sLinsysRoot : public sLinsys {
+ struct MatrixEntryTriplet
+ {
+    double val;
+    int row;
+    int col;
+ };
+
+
  protected:
   sLinsysRoot() {};
 
@@ -29,6 +37,9 @@ class sLinsysRoot : public sLinsys {
   virtual DoubleLinearSolver* 
                        createSolver  (sData* prob, 
 				      SymMatrix* kktmat) = 0;
+
+  void getProperChildrenRange(int& childStart, int& childEnd);
+
  public:
   std::vector<sLinsys*> children;
   int iAmDistrib;
@@ -105,11 +116,18 @@ class sLinsysRoot : public sLinsys {
   bool usePrecondDist;
 
  private:
+  void registerMatrixEntryTripletMPI();
   void addTermToSchurCompl(sData* prob, size_t childindex);
   void reduceKKTdist(sData* prob);
   void reduceKKTdense();
   void reduceKKTsparse();
   void reduceToProc0(int size, double* values);
+  void syncKKTdistLocalEntries(sData* prob);
+  void sendKKTdistLocalEntries(const std::vector<MatrixEntryTriplet>& prevEntries) const;
+  std::vector<MatrixEntryTriplet> receiveKKTdistLocalEntries() const;
+  std::vector<MatrixEntryTriplet> packKKTdistOutOfRangeEntries(sData* prob, int childStart, int childEnd) const;
+
+  MPI_Datatype MatrixEntryTriplet_mpi;
 
 #ifdef STOCH_TESTING
  protected: 

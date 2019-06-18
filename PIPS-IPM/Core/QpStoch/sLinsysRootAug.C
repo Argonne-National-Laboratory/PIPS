@@ -568,43 +568,6 @@ void sLinsysRootAug::solveWithIterRef( sData *prob, SimpleVector& r)
 #endif  
 }
 
-void sLinsysRootAug::getProperChildrenRange(int& childStart, int& childEnd)
-{
-   assert(children.size() > 0);
-
-   childStart = -1;
-   childEnd = -1;
-   for( size_t it = 0; it < children.size(); it++ )
-   {
-      if( childEnd != -1 )
-         assert(children[it]->isDummy());
-
-      if( children[it]->isDummy() )
-      {
-         // end of range?
-         if( childStart != -1 && childEnd == -1 )
-            childEnd = int(it);
-
-         continue;
-      }
-
-      // start of range?
-      if( childStart == -1 )
-         childStart = int(it);
-   }
-
-   assert(childStart >= 0);
-
-   if( childEnd == -1 )
-   {
-      assert(!children[children.size() - 1]->isDummy());
-      childEnd = int(children.size());
-   }
-
-    assert(childStart < childEnd && childEnd <= int(children.size()));
-
-}
-
 
 void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
 {
