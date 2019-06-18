@@ -159,15 +159,20 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
 #if 1
   ofstream myfile;
+  int mype; MPI_Comm_rank(mpiComm, &mype);
 
+
+  if( mype == 0 )
+  {
 #if 1
-  myfile.open("../ADist.txt");
-  kktDist->writeToStream(myfile);
+     myfile.open("../ADist.txt");
+     kktDist->writeToStream(myfile);
 #else
   myfile.open("../A.txt");
   kkt->writeToStream(myfile);
 #endif
-  myfile.close();
+     myfile.close();
+  }
 
   printf("...exiting \n");
   exit(1);
