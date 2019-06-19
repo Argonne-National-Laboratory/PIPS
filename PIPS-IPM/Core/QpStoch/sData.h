@@ -155,6 +155,8 @@ class sData : public QpGenData {
   std::vector<bool> isSCrowMyLocal;
 
   void initDistMarker(int blocksStart, int blocksEnd);
+  void getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+        int& local2linksStartIneq, int& local2linksEndIneq);
 
   void permuteLinkingVars();
   void permuteLinkingCons();

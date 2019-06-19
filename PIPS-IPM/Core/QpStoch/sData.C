@@ -56,6 +56,7 @@ void appendRowSparse(int startColIdx, int endColIdx, int colOffset, const int* j
       jcolM[nnz++] = colOffset + jcolM_append[c];
 }
 
+
 static
 int appendDiagBlocks(const std::vector<int>& linkStartBlockId, const std::vector<int>& linkStartBlockLengths, int borderstart, int bordersize, int rowSC,
                                           int rowBlock, int& blockStartrow, int& nnz, int* jcolM)
@@ -349,6 +350,31 @@ void appendMixedBlocksDist(const std::vector<int>& linkStartBlockId_Left,
             jcolM[nnz++] = colStartIdxSC + i;
       }
    }
+}
+
+void sData::getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+      int& local2linksStartIneq, int& local2linksEndIneq)
+{
+   const int blocksStartReal = (blocksStart > 0) ? (blocksStart - 1) : blocksStart;
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   local2linksStartEq = nx0 + my0;
+   local2linksStartIneq = nx0 + my0 + myl;
+
+   for( int block = 0; block < blocksStartReal; ++block )
+   {
+      const int lengthEq = linkStartBlockLengthsA[block];
+      const int lengthIneq = linkStartBlockLengthsC[block];
+
+      assert(lengthEq >= 0 && lengthIneq >= 0);
+
+      local2linksStartEq += lengthEq;
+      local2linksStartIneq += lengthIneq;
+   }
+
+   local2linksEndEq = local2linksStartEq + getSCdiagBlocksNRows(linkStartBlockLengthsA, blocksStart, blocksEnd);
+   local2linksEndIneq = local2linksStartIneq + getSCdiagBlocksNRows(linkStartBlockLengthsC, blocksStart, blocksEnd);
 }
 
 
@@ -774,6 +800,10 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
    const int my0 = getLocalmy();
    const int myl = getLocalmyl();
    const int mzl = getLocalmzl();
+   const int mylLocal = myl - getSCdiagBlocksNRows(linkStartBlockLengthsA)
+      + getSCdiagBlocksNRows(linkStartBlockLengthsA, blocksStart, blocksEnd);
+   const int mzlLocal = mzl - getSCdiagBlocksNRows(linkStartBlockLengthsC)
+      + getSCdiagBlocksNRows(linkStartBlockLengthsC, blocksStart, blocksEnd);
    const int sizeSC = nx0 + my0 + myl + mzl;
    const int nnz = getSchurCompMaxNnzDist(blocksStart, blocksEnd);
 
@@ -791,9 +821,9 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
    assert(nnz > 0);
    assert(myl >= 0 && mzl >= 0);
 
-   int* krowM = new int[sizeSC + 1];
-   int* jcolM = new int[nnz];
-   double* M = new double[nnz];
+   int* const krowM = new int[sizeSC + 1];
+   int* const jcolM = new int[nnz];
+   double* const M = new double[nnz];
 
    krowM[0] = 0;
 
@@ -808,10 +838,29 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
       assert(bm == nx0 && bn == my0);
 #endif
 
+
    const int nx0NonZero = nx0 - n0LinkVars;
-   int nnzcount = 0;
+   const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
+   const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
+   const int borderstartEq = nx0 + my0 + n2linksRowsEq;
+   const int n2linksRowsIneq = n2linksRows(linkStartBlockLengthsC);
+   const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
+   const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
+   int local2linksStartEq;
+   int local2linksEndEq;
+   int local2linksStartIneq;
+   int local2linksEndIneq;
+
+   this->getSCrangeMarkers(blocksStart, blocksEnd, local2linksStartEq, local2linksEndEq,
+         local2linksStartIneq, local2linksEndIneq);
 
    assert(nx0NonZero >= 0);
+   assert(bordersizeEq >= 0 && n2linksRowsEq <= myl);
+   assert(bordersizeIneq >= 0 && n2linksRowsIneq <= mzl);
+   assert(local2linksStartEq >= nx0 + my0 && local2linksEndEq <= borderstartEq);
+   assert(local2linksStartIneq >= nx0 + my0 + myl && local2linksEndIneq <= borderstartIneq);
+
+   int nnzcount = 0;
 
    // dense square block, B_0^T, and dense border blocks todo: add space for CDCt
    for( int i = 0; i < nx0NonZero; ++i )
@@ -819,13 +868,15 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
       const int blength = startRowBtrans[i + 1] - startRowBtrans[i];
       assert(blength >= 0);
 
-      krowM[i + 1] = krowM[i] + (nx0 - i) + blength + myl + mzl;
+      krowM[i + 1] = krowM[i] + (nx0 - i) + blength + mylLocal + mzlLocal;
 
       appendRowDense(i, nx0, nnzcount, jcolM);
-
       appendRowSparse(startRowBtrans[i], startRowBtrans[i + 1], nx0, colidxBtrans, nnzcount, jcolM);
 
-      appendRowDense(nx0 + my0, nx0 + my0 + myl + mzl, nnzcount, jcolM);
+      appendRowDense(local2linksStartEq, local2linksEndEq, nnzcount, jcolM);
+      appendRowDense(borderstartEq, borderstartEq + bordersizeEq, nnzcount, jcolM);
+      appendRowDense(local2linksStartIneq, local2linksEndIneq, nnzcount, jcolM);
+      appendRowDense(borderstartIneq, borderstartIneq + bordersizeIneq, nnzcount, jcolM);
 
       assert(nnzcount == krowM[i + 1]);
    }
@@ -871,15 +922,6 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
 
    // equality linking: sparse diagonal blocks, and mixed rows
    int blockStartrow = 0;
-   const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
-   const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
-   const int borderstartEq = nx0 + my0 + n2linksRowsEq;
-   const int n2linksRowsIneq = n2linksRows(linkStartBlockLengthsC);
-   const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
-   const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
-
-   assert(bordersizeEq >= 0 && n2linksRowsEq <= myl);
-   assert(bordersizeIneq >= 0 && n2linksRowsIneq <= mzl);
 
    for( int i = nx0 + my0, j = 0, colIdxOffset = 0, blockStartrowMix = 0; i < nx0 + my0 + myl; ++i, ++j )
    {
@@ -1929,8 +1971,8 @@ int sData::getSchurCompMaxNnzDist(int blocksStart, int blocksEnd)
    nnz += getLocalB().numberOfNonZeros();
 
    // add borders
-   nnz += myl * (n0 - n0LinkVars); // todo only local part! mylLocal
-   nnz += mzl * (n0 - n0LinkVars); // todo only local part! mzlLocal
+   nnz += mylLocal * (n0 - n0LinkVars);
+   nnz += mzlLocal * (n0 - n0LinkVars);
 
    // (empty) diagonal
    nnz += my;

@@ -812,6 +812,15 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
       assert(col >= row && col < locnx + locmy + locmyl + locmzl);
       assert(val == val); // catch NaNs
 
+      if( !(rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row])) )
+      {
+         int todo;
+         printf("%d FAIL: %d %d  with %d %d, %d %d val=%f\n", myRank, row, col,
+               rowIsMyLocal[row], rowIsMyLocal[col], rowIsLocal[row],
+               rowIsLocal[col], val);
+         exit(1);
+      }
+
       assert(rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row]));
 
       int c;
