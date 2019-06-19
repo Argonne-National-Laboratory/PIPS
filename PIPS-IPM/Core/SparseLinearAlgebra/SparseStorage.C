@@ -236,6 +236,25 @@ bool SparseStorage::isValid(bool verbose) const
    return true;
 }
 
+bool SparseStorage::isSorted() const
+{
+   assert(isValid(false));
+
+   for( int i = 0; i < m; i++ )
+   {
+      for( int j = krowM[i] + 1; j < krowM[i + 1]; j++ )
+      {
+         const int col = jcolM[j];
+         const int prevcol = jcolM[j - 1];
+
+         if( col <= prevcol )
+            return false;
+      }
+   }
+
+   return true;
+}
+
 void SparseStorage::fromGetDense( int row, int col, double * A, int lda,
 		int rowExtent, int colExtent )
 {

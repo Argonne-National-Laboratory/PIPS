@@ -134,7 +134,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
   // First tell children to factorize. 
   for(size_t c=0; c<children.size(); c++)
-    children[c]->factor2(prob->children[c], vars); // todo?
+    children[c]->factor2(prob->children[c], vars);
 
   for(size_t c=0; c<children.size(); c++) {
 #ifdef STOCH_TESTING
@@ -150,8 +150,6 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
     children[c]->stochNode->resMon.recFactTmChildren_stop();
   }
 
-
-
 #ifdef TIMING
   MPI_Barrier(MPI_COMM_WORLD);
   stochNode->resMon.recReduceTmLocal_start();
@@ -159,14 +157,14 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
   reduceKKT(prob);
 
-#if 1
+#if 0
   ofstream myfile;
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
 
   if( mype == 0 )
   {
-#if 1
+#if 0
      myfile.open("../ADist.txt");
      kktDist->writeToStream(myfile);
 #else
@@ -179,6 +177,8 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   printf("...exiting \n");
   exit(1);
 #endif
+  printf("...exiting \n");
+  exit(1);
 
  #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
@@ -764,8 +764,9 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
 
    this->getProperChildrenRange(childStart, childEnd);
 
-   std::vector<MatrixEntryTriplet> myEntries(0);
+   // pack the entries that will be send below
    std::vector<MatrixEntryTriplet> prevEntries = this->packKKTdistOutOfRangeEntries(prob, childStart, childEnd);
+   std::vector<MatrixEntryTriplet> myEntries(0);
 
    assert(prevEntries.size() > 0 && prevEntries[0].row == - 1 && prevEntries[0].col == - 1);
 
@@ -868,10 +869,6 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
       lastRow = row;
       lastC = c;
    }
-
-
-   MPI_Barrier(mpiComm);
-   printf("here %d \n", 0);
 }
 
 
@@ -974,6 +971,7 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
 
             if( rowIsLocal[col] && !rowIsMyLocal[col] )
             {
+               int todo; // don't add zero vals? also above might happen for F_0?
                const double val = MKkt[c];
                packedEntries.push_back({val, r, col});
             }
@@ -991,6 +989,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    assert(prob);
    assert(iAmDistrib);
    assert(kkt);
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
    const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
    const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
@@ -1016,6 +1016,10 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
    // add up locally owned rows and columns
    this->syncKKTdistLocalEntries(prob);
+
+   int todo; // now add B_0 (only on rank 0!), F_0, G_0 and diagonals (only local parts!), then allreduce diagonal (in new class), then do the preconditioning!
+      // new class precondDomDiag? also call that from PardisoSolver (precond. method is given diagonal as well!)
+      // todo: still some F_0 in 0-link vars part should be considered!!
 
    // compute row lengths
    for( int r = 0; r < sizeKkt; r++ )
@@ -1050,7 +1054,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
             assert(!rowIsMyLocal[col]);
 
          }
-         else if( rowIsMyLocal[col] && !rIsLocal )
+
+         if( rowIsMyLocal[col] )
          {
             nnzDistMyLocal++;
             rowSizeMyLocal[r]++;
@@ -1080,11 +1085,25 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
-   std::vector<int> rowIndexGathered = PIPSallgathervInt(rowIndexMyLocal, mpiComm);
-   std::vector<int> colIndexGathered = PIPSallgathervInt(colIndexMyLocal, mpiComm);
+   std::vector<int> rankMyLocal(rowIndexMyLocal.size(), myRank);
 
+   int localGatheredMyStart;
+   int localGatheredMyEnd;
+
+   std::vector<int> rowIndexGathered = PIPSallgathervInt(rowIndexMyLocal, mpiComm);
+   std::vector<int> colIndexGathered = PIPSallgathervInt(colIndexMyLocal, mpiComm, localGatheredMyStart, localGatheredMyEnd);
+
+#ifndef NDEBUG
    assert(int(rowIndexGathered.size()) == nnzDistLocal);
    assert(int(colIndexGathered.size()) == nnzDistLocal);
+   assert(localGatheredMyEnd - localGatheredMyStart == nnzDistMyLocal);
+
+   for( int i = 0; i < int(rowIndexMyLocal.size()); i++ )
+   {
+      assert(rowIndexMyLocal[i] == rowIndexGathered[i + localGatheredMyStart]);
+      assert(colIndexMyLocal[i] == colIndexGathered[i + localGatheredMyStart]);
+   }
+#endif
 
    const int nnzDist = nnzDistLocal + nnzDistShared;
 
@@ -1105,6 +1124,25 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    for( int r = 1; r < sizeKkt; r++ )
       krowDist[r + 1] = krowDist[r] + rowSizeLocal[r - 1] + rowSizeShared[r - 1];
 
+
+#if 0
+   for( int r = 0; r < sizeKkt; r++ )
+   {
+      for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
+      {
+         const int col = jColKkt[c];
+         const double val = MKkt[c];
+
+         if( r == 98 && col == 110 )
+         {
+            printf("%d owns (%d %d %f) \n", myRank, r, col, val);
+            printf("...%d: %d %d  with %d %d, %d %d val=%f c=%d \n", myRank, r,
+                  col, rowIsMyLocal[r], rowIsMyLocal[col], rowIsLocal[r],  rowIsLocal[col], val, c);
+         }
+      }
+   }
+#endif
+
    // fill in global and locally owned positions and values
    for( int r = 0; r < sizeKkt; r++ )
    {
@@ -1124,15 +1162,12 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          continue;
       }
 
-      if( rowIsLocal[r] )
-         continue;
-
       for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
       {
          const int col = jColKkt[c];
 
          // is (r, col) a shared entry or locally owned?
-         if( !rowIsLocal[col] || rowIsMyLocal[col] )
+         if( (!rowIsLocal[r] && !rowIsLocal[col]) || rowIsMyLocal[col] )
          {
             assert(krowDist[r + 1] < nnzDist);
 
@@ -1155,7 +1190,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       assert(krowDist[row + 1] < nnzDist);
 
       // pair already added?
-      if( rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row]) )
+      if( i >= localGatheredMyStart && i < localGatheredMyEnd )
          continue;
 
       assert(MDist[krowDist[row + 1]] == 0.0);
@@ -1193,6 +1228,9 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    assert(kktDist->getStorage()->isValid());
 
    reduceToProc0(nnzDist, MDist);
+
+   assert(kktDist->getStorage()->isValid());
+   assert(kktDist->getStorage()->isSorted());
 }
 
 void sLinsysRoot::factorizeKKT()

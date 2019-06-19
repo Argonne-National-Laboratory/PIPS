@@ -69,6 +69,8 @@ public:
   int cols() { return n; }
 
   bool isValid(bool verbose = false) const;
+  bool isSorted() const;
+
 
   int length() { return len; };
   int numberOfNonZeros() const {	return krowM[m]; };
