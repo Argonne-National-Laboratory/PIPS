@@ -18,11 +18,11 @@
 
 /* can specify a cloumn here which bound changes we wanna track maybe */
 
-//#ifndef NDEBUG
+// #ifndef NDEBUG
 //   #define TRACK_COLUMN
-//   #define COLUMN 1582
-//   #define NODE -1
-//#endif
+//   #define COLUMN 103327
+//   #define NODE 102
+// #endif
 
 // #ifndef NDEBUG
 //    #define TRACK_ROW
@@ -101,7 +101,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    initNnzCounter( *nnzs_row_A, *nnzs_row_C, *nnzs_col);
 
 #ifdef TRACK_COLUMN
-   if(my_rank == 0 || NODE != -1)
+   if( (my_rank == 0 || NODE != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
    {
       std::cout << "inital column" << std::endl;
       std::cout << "ixlow: " << getSimpleVecColFromStochVec( *presProb->ixlow, NODE)[COLUMN] << std::endl;
@@ -848,7 +848,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    assert(0 <= col && col < ixlow.n);
 
 #ifdef TRACK_COLUMN
-   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
    {
       std::cout << "TRACKING COLUMN: new bounds [" << lbx << ", " << ubx << "] propagated for column " << COLUMN << " from row " << row << " node " << node << " in " <<
             ( (system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ":" << std::endl;
@@ -862,7 +862,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
          || (ixupp[col] != 0.0 && PIPSisLT(xupp[col], lbx) )
          || ( PIPSisLT(ubx, lbx)) )
    {
-      abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagetedBounds");
+      abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
    }
 
    bool bounds_changed = false;
@@ -875,7 +875,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    if( ubx < numerical_threshold && (ixupp[col] == 0.0 || PIPSisLT(ubx, xupp[col])) )
    {
 #ifdef TRACK_COLUMN
-      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: new upper bound through propagation" << std::endl;
 #endif
       if( updateUpperBoundVariable(node_var, col, ubx) )
@@ -885,7 +885,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    if( lbx > -numerical_threshold && (ixlow[col] == 0.0 || PIPSisLT(xlow[col], lbx)) )
    {
 #ifdef TRACK_COLUMN
-      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: new lower bound through propagation" << std::endl;
 #endif
       if( updateLowerBoundVariable(node_var, col, lbx) )
@@ -1908,7 +1908,7 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
 
 #ifdef TRACK_COLUMN
-   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
       std::cout << "TRACKING COLUMN: updating column bounds from [" << xlow[col] << ", " << xupp[col] << "] for column " << COLUMN << " node " << node << " with [" <<
             xl << ", " << xu << "]" << std::endl;
 #endif
@@ -1945,7 +1945,7 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    if( updated )
    {
 #ifdef TRACK_COLUMN
-      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
       {
          std::cout << "TRACKING COLUMN: bounds are now [" << xlow[col] << ", " << xupp[col] << "]" << std::endl;
          std::cout << "TRACKING COLUMN: moving on to update activities" << std::endl;
@@ -1956,7 +1956,7 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    else
    {
 #ifdef TRACK_COLUMN
-      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: col " << COLUMN << " was not updated" << std::endl;
 #endif
    }
@@ -1977,7 +1977,7 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
    assert(-1 <= node && node <= nChildren);
 
 #ifdef TRACK_COLUMN
-   if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
    {
       std::cout << "TRACKING COLUMN: col " << COLUMN << " node " << NODE << " gets it's activities updated" << std::endl;
       std::cout << "\t bounds changed from [" << old_ubx << ", " << old_lbx << "] to [" << lbx << ", " << ubx << "]" << std::endl;
@@ -1988,7 +1988,7 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
    if( node == -1 )
    {
 #ifdef TRACK_COLUMN
-      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: the column is linking (root node)" << std::endl;
 #endif
       /* A0/B0 and C0/D0block */
@@ -2018,7 +2018,7 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
    else
    {
 #ifdef TRACK_COLUMN
-      if(NODE == node && COLUMN == col && (my_rank == 0 || node != -1))
+      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: the column is non-linking (non-root)" << std::endl;
 #endif
       /* Bmat, Blmat */
@@ -2079,7 +2079,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
    SimpleVector& actmin_part_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_chgs : *actmin_ineq_chgs;
 
 #ifdef TRACK_COLUMN
-   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) )
+   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
       std::cout << "TRACKING COLUMN: updating activities column " << col << " node " << node << " system " << ( (system_type == EQUALITY_SYSTEM) ? "EQ_SYS" : "INEQ_SYS" ) <<
          " with new " << ( upper ? "upper" : "lower" ) << " bound " << bound << " from " << old_bound << std::endl;
 #endif
