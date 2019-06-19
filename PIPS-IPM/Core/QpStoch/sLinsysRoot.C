@@ -157,7 +157,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
   reduceKKT(prob);
 
-#if 0
+#if 1
   ofstream myfile;
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
@@ -174,11 +174,11 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
      myfile.close();
   }
 
+  MPI_Barrier(mpiComm);
   printf("...exiting \n");
   exit(1);
 #endif
-  printf("...exiting \n");
-  exit(1);
+
 
  #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
