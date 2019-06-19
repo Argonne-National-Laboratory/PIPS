@@ -827,10 +827,29 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
 
       // continue from last position?
       if( row == lastRow )
-         c = lastC + 1;
-      else
-         c = krowKkt[row];
+      {
+         for( c = lastC + 1; c < krowKkt[row + 1]; c++ )
+         {
+            const int colKkt = jColKkt[c];
 
+            if( colKkt == col )
+            {
+               MKkt[c] += val;
+               break;
+            }
+         }
+
+         // found the correct entry in last row?
+         if( c != krowKkt[row + 1] )
+         {
+            assert(c < krowKkt[row + 1]);
+            lastRow = row;
+            lastC = c;
+            continue;
+         }
+      }
+
+      c = krowKkt[row];
       assert(col >= jColKkt[c]);
 
       for( ; c < krowKkt[row + 1]; c++ )
@@ -840,10 +859,8 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
          if( colKkt == col )
          {
             MKkt[c] += val;
-
             break;
          }
-
       }
 
       assert(c != krowKkt[row + 1]);
@@ -939,9 +956,12 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
             for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
             {
                const int col = jColKkt[c];
-               const double val = MKkt[c];
 
-               packedEntries.push_back({val, r, col});
+               if( !rowIsMyLocal[col] )
+               {
+                  const double val = MKkt[c];
+                  packedEntries.push_back({val, r, col});
+               }
             }
          }
 
@@ -955,7 +975,6 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
             if( rowIsLocal[col] && !rowIsMyLocal[col] )
             {
                const double val = MKkt[c];
-
                packedEntries.push_back({val, r, col});
             }
          }

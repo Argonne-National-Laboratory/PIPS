@@ -838,7 +838,6 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
       assert(bm == nx0 && bn == my0);
 #endif
 
-
    const int nx0NonZero = nx0 - n0LinkVars;
    const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
    const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
