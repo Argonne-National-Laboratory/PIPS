@@ -1252,11 +1252,16 @@ void sLinsysRoot::factorizeKKT()
 
   if( usePrecondDist )
   {
+     int todo; // apply precond here (in slinsysroot!)
      assert(kktDist);
      solver->matrixRebuild(*kktDist);
   }
   else
+  {
+     int todo; // also here, and call rebuild method (after enough tests) move it out of solver.
+     // in solver allocate memory once and only reallocate if more memory needed?
      solver->matrixChanged();
+  }
 
   //stochNode->resMon.recFactTmLocal_stop(); 
 #ifdef TIMING
