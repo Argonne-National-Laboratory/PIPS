@@ -753,10 +753,10 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
 
    // equality linking: sparse diagonal blocks, and mixed rows
    int blockStartrow = 0;
-   const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
+   const int n2linksRowsEq = n2linkRowsEq();
    const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
    const int borderstartEq = nx0 + my0 + n2linksRowsEq;
-   const int n2linksRowsIneq = n2linksRows(linkStartBlockLengthsC);
+   const int n2linksRowsIneq = n2linkRowsIneq();
    const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
    const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
 
@@ -839,10 +839,10 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
 #endif
 
    const int nx0NonZero = nx0 - n0LinkVars;
-   const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
+   const int n2linksRowsEq = n2linkRowsEq();
    const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
    const int borderstartEq = nx0 + my0 + n2linksRowsEq;
-   const int n2linksRowsIneq = n2linksRows(linkStartBlockLengthsC);
+   const int n2linksRowsIneq = n2linkRowsIneq();
    const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
    const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
    int local2linksStartEq;
@@ -1541,8 +1541,8 @@ void sData::activateLinkStructureExploitation()
       if( linkStartBlockIdC[i] >= 0 )
          n2LinksIneq++;
 
-   assert(n2LinksEq == n2linksRows(linkStartBlockLengthsA));
-   assert(n2LinksIneq == n2linksRows(linkStartBlockLengthsC));
+   assert(n2LinksEq == n2linkRowsEq());
+   assert(n2LinksIneq == n2linkRowsIneq());
 
    if( myrank == 0 )
    {
@@ -1563,7 +1563,6 @@ void sData::activateLinkStructureExploitation()
          std::cout << "not enough linking structure found" << std::endl;
       useLinkStructure = false;
    }
-//   useLinkStructure = true;
 
    if( useLinkStructure )
    {
@@ -2217,18 +2216,28 @@ void sData::initDistMarker(int blocksStart, int blocksEnd)
    }
 }
 
-const std::vector<bool>& sData::getSCrowMarkerLocal()
+const std::vector<bool>& sData::getSCrowMarkerLocal() const
 {
    assert(isSCrowLocal.size() != 0);
 
    return isSCrowLocal;
 }
 
-const std::vector<bool>& sData::getSCrowMarkerMyLocal()
+const std::vector<bool>& sData::getSCrowMarkerMyLocal() const
 {
    assert(isSCrowMyLocal.size() != 0);
 
    return isSCrowMyLocal;
+}
+
+int sData::n2linkRowsEq() const
+{
+   return n2linksRows(linkStartBlockLengthsA);
+}
+
+int sData::n2linkRowsIneq() const
+{
+   return n2linksRows(linkStartBlockLengthsC);
 }
 
 // is root node data of sData object same on all procs?

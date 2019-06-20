@@ -74,12 +74,7 @@ sLinsysRootAug::createKKT(sData* prob)
 
       if( usePrecondDist )
       {
-         int childStart;
-         int childEnd;
-
-         this->getProperChildrenRange(childStart, childEnd);
-
-         sparsekkt = prob->createSchurCompSymbSparseUpperDist(childStart, childEnd);
+         sparsekkt = prob->createSchurCompSymbSparseUpperDist(childrenProperStart, childrenProperEnd);
       }
       else
       {
@@ -132,6 +127,227 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 #ifdef TIMING
 static double t_start, troot_total, taux, tchild_total, tcomm_total;
 #endif
+
+
+void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
+{
+  stochNode->resMon.recFactTmLocal_start();
+  stochNode->resMon.recSchurMultLocal_start();
+
+  if( usePrecondDist )
+  {
+     // don't do anything, already done previously
+  }
+  else
+  {
+     if( hasSparseKkt )
+        finalizeKKTsparse(prob, vars);
+     else
+        finalizeKKTdense(prob, vars);
+  }
+
+  stochNode->resMon.recSchurMultLocal_stop();
+  stochNode->resMon.recFactTmLocal_stop();
+}
+
+
+void sLinsysRootAug::finalizeKKTdist(sData* prob)
+{
+   assert(kkt && hasSparseKkt && prob);
+
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   int mpiCommSize; MPI_Comm_size(mpiComm, &mpiCommSize);
+   const bool iAmLastRank = (myRank == mpiCommSize);
+   const int childStart = childrenProperStart;
+   const int childEnd = childrenProperEnd;
+
+#ifndef NDEBUG
+   int* const jcolKkt = kkts.jcolM();
+#endif
+   int* const krowKkt = kkts.krowM();
+   double* const MKkt = kkts.M();
+
+   assert(childStart >= 0 && childStart < childEnd);
+   assert(kkts.size() == locnx + locmy + locmyl + locmzl);
+   assert(!kkts.isLower);
+   assert(locmyl >= 0 && locmzl >= 0);
+   assert(prob->getLocalQ().krowM()[locnx] == 0 && "Q currently not supported for dist. sparse kkt");
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with the diagonals
+   // xDiag is in fact diag(Q)+X^{-1}S
+   /////////////////////////////////////////////////////////////
+   if( xDiag && iAmLastRank )
+   {
+      const SimpleVector& sxDiag = dynamic_cast<const SimpleVector&>(*xDiag);
+
+      for( int i = 0; i < locnx; i++ )
+      {
+         const int diagIdx = krowKkt[i];
+         assert(jcolKkt[diagIdx] == i);
+
+         MKkt[diagIdx] += sxDiag[i];
+      }
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with   - C' * diag(zDiag) *C
+   /////////////////////////////////////////////////////////////
+   if( locmz > 0 && iAmLastRank )
+   {
+      assert(zDiag);
+
+      SparseGenMatrix& C = prob->getLocalD();
+      C.matTransDinvMultMat(*zDiag, &CtDC);
+      assert(CtDC->size() == locnx);
+
+      //aliases for internal buffers of CtDC
+      SparseSymMatrix* CtDCsp = dynamic_cast<SparseSymMatrix*>(CtDC);
+      const int* krowCtDC = CtDCsp->krowM();
+      const int* jcolCtDC = CtDCsp->jcolM();
+      const double* dCtDC = CtDCsp->M();
+
+      for( int i = 0; i < locnx; i++ )
+      {
+         const int pend = krowCtDC[i + 1];
+         for( int p = krowCtDC[i]; p < pend; p++ )
+         {
+            const int col = jcolCtDC[p];
+
+            if( col >= i )
+            {
+               // get start position of dense kkt block
+               const int blockStart = krowKkt[i];
+               assert(col < locnx && jcolKkt[blockStart + col - i] == col);
+
+               MKkt[blockStart + col - i] -= dCtDC[p];
+            }
+         }
+      }
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with At (symmetric update forced)
+   /////////////////////////////////////////////////////////////
+   if( locmy > 0 && iAmLastRank )
+   {
+      SparseGenMatrix& At = prob->getLocalB().getTranspose(); // yes, B
+      const double* MAt = At.M();
+      const int* krowAt = At.krowM();
+
+      for( int i = 0; i < locnx; ++i )
+      {
+         const int pstart = krowAt[i];
+         const int pend = krowAt[i + 1];
+
+         // get start position of sparse kkt block
+         const int blockStart = krowKkt[i] + locnx - i;
+
+         assert(blockStart <= krowKkt[i + 1]);
+
+         for( int p = pstart; p < pend; ++p )
+         {
+            assert(At.jcolM()[p] < locmy);
+            assert(blockStart + (p - pstart) <= krowKkt[i + 1]);
+            assert(jcolKkt[blockStart + (p - pstart)] == (locnx + At.jcolM()[p]));
+
+            MKkt[blockStart + (p - pstart)] += MAt[p];
+         }
+      }
+   }
+
+   int local2linksStartEq;
+   int local2linksEndEq;
+   int local2linksStartIneq;
+   int local2linksEndIneq;
+
+   prob->getSCrangeMarkers(childStart, childEnd, local2linksStartEq, local2linksEndEq,
+         local2linksStartIneq, local2linksEndIneq);
+
+   const int n2linksRowsLocalEq = local2linksEndEq - local2linksStartEq;
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with Ft
+   /////////////////////////////////////////////////////////////
+   if( locmyl > 0 )
+   {
+      SparseGenMatrix& Ft = prob->getLocalF().getTranspose();
+
+      // add locally owned sparse part of Ft
+      addLinkConsBlock0Matrix(prob, Ft, 0, local2linksStartEq, local2linksEndEq);
+
+      if( myRank == 0 )
+      {
+         const int n2linksRowsEq = prob->n2linkRowsEq();
+         const int bordersizeEq = locmyl - n2linksRowsEq;
+         const int borderstartEq = locnx + locmy + n2linksRowsEq;
+
+         // add (shared) border part of Ft
+         addLinkConsBlock0Matrix(prob, Ft, n2linksRowsLocalEq, borderstartEq, borderstartEq + bordersizeEq);
+      }
+   }
+
+   /////////////////////////////////////////////////////////////
+   // update the KKT with Gt and add z diagonal
+   /////////////////////////////////////////////////////////////
+   if( locmzl > 0 )
+   {
+      SparseGenMatrix& Gt = prob->getLocalG().getTranspose();
+      const int n2linksRowsIneq = prob->n2linkRowsIneq();
+      const int bordersizeIneq = locmzl - n2linksRowsIneq;
+      const int borderstartIneq = locnx + locmy + locmyl + n2linksRowsIneq;
+
+      // add locally owned sparse part of Gt
+      addLinkConsBlock0Matrix(prob, Gt, n2linksRowsLocalEq, local2linksStartIneq, local2linksEndIneq);
+
+      if( myRank == 0 )
+      {
+         const int n2linksRowsLocalIneq = local2linksEndIneq - local2linksStartIneq;
+
+         // add (shared) border part of Gt
+         addLinkConsBlock0Matrix(prob, Gt, n2linksRowsLocalEq + n2linksRowsLocalIneq, borderstartIneq,
+               borderstartIneq + bordersizeIneq);
+      }
+
+      assert(zDiagLinkCons);
+      const SimpleVector& szDiagLinkCons = dynamic_cast<const SimpleVector&>(*zDiagLinkCons);
+
+      assert(local2linksStartIneq >= locnx + locmy + locmyl);
+      assert(local2linksEndIneq <= locnx + locmy + locmyl + locmzl);
+
+      const int szDiagLocalStart = local2linksStartIneq - (locnx + locmy + locmyl);
+      assert(szDiagLocalStart >= 0 && szDiagLocalStart < locmzl);
+
+      // add locally owned part of z diagonal
+      for( int i = szDiagLocalStart, iKkt = local2linksStartIneq; iKkt < local2linksStartIneq; ++i, ++iKkt )
+      {
+         const int idx = krowKkt[iKkt];
+         assert(jcolKkt[idx] == iKkt);
+         assert(i < locmzl);
+
+         MKkt[idx] += szDiagLinkCons[i];
+      }
+
+      if( myRank == 0 )
+      {
+         const int szDiagBorderStart = borderstartIneq - (locnx + locmy + locmyl);
+         assert(szDiagBorderStart >= 0 && szDiagBorderStart < locmzl);
+         assert(szDiagBorderStart + bordersizeIneq == locmzl);
+
+         // add border part of diagonal
+         for( int i = szDiagBorderStart, iKkt = borderstartIneq; iKkt < borderstartIneq + bordersizeIneq; ++i, ++iKkt )
+         {
+            const int idx = krowKkt[iKkt];
+            assert(jcolKkt[idx] == iKkt);
+            assert(i < locmzl);
+
+            MKkt[idx] += szDiagLinkCons[i];
+         }
+      }
+   }
+}
 
 
 extern int gLackOfAccuracy;
@@ -322,6 +538,95 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
     cout << "Root - Refin times: child=" << tchild_total << " root=" << troot_total
 	 << " comm=" << tcomm_total << " total=" << MPI_Wtime()-t_start << endl;
 #endif
+}
+
+/** Ht should be either Ft or Gt */
+void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, int nKktOffsetCols, int startCol, int endCol)
+{
+   assert(startCol >= 0 && startCol < endCol && nKktOffsetCols >= 0 && nKktOffsetCols <= startCol);
+
+   SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
+
+   int* const jcolKkt = kkts.jcolM();
+   int* const krowKkt = kkts.krowM();
+   double* const MKkt = kkts.M();
+   const double* const MHt = Ht.M();
+   const int* const krowHt = Ht.krowM();
+   const int* const jcolHt = Ht.jcolM();
+   const int n0Links = prob->getN0LinkVars();
+
+   /* main loop going over all rows of Ht */
+   for( int i = 0; i < locnx; ++i )
+   {
+      const bool sparseRow = (i >= locnx - n0Links);
+
+      // note: upper left block ignores 0-link variables pattern, since CtC pattern is not implemented
+      int pKkt = krowKkt[i] + locnx - i;
+
+      if( !sparseRow )
+         pKkt += nKktOffsetCols;
+
+      assert(pKkt <= krowKkt[i + 1]);
+      assert(pKkt == krowKkt[i + 1] || jcolKkt[pKkt] <= startCol);
+
+      // get first in-range entry of Kkt
+      for( ; pKkt < krowKkt[i + 1]; pKkt++ )
+      {
+         const int colKkt = jcolKkt[pKkt];
+         if( colKkt >= startCol && colKkt < endCol )
+            break;
+      }
+
+      // no entry of Kkt in range?
+      if( pKkt == krowKkt[i + 1] )
+      {
+         assert(startCol == endCol || sparseRow);
+         continue;
+      }
+
+      assert(pKkt < krowKkt[i + 1]);
+
+      int pHt;
+      int colHt = -1;
+
+      // get first in-range entry of Ht
+      for( pHt = krowHt[i]; pHt < krowHt[i + 1]; pHt++ )
+      {
+         colHt = jcolHt[pHt];
+         if( colHt >= startCol && colHt < endCol )
+            break;
+      }
+
+      // no entry of Ht in range?
+      if( pHt == krowHt[i + 1] )
+         continue;
+
+      assert(colHt >= startCol && colHt < endCol);
+
+      // add in-range entries of Ht to Kkt
+      for( ; pKkt < krowKkt[i + 1]; pKkt++ )
+      {
+         const int colKkt = jcolKkt[pKkt];
+
+         if( colKkt >= endCol )
+            break;
+
+         if( colKkt == colHt )
+         {
+            assert(pHt < krowHt[i + 1]);
+
+            MKkt[pKkt] += MHt[pHt++];
+
+            // end of Ht row reached?
+            if( pHt == krowHt[i + 1] )
+               break;
+
+            colHt = jcolHt[pHt];
+         }
+      }
+
+      assert(pHt == krowHt[i + 1] || jcolHt[pHt] >= endCol); // asserts that no entry of Ht has been missed
+   }
 }
 
 
@@ -1143,6 +1448,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
 
 }
 
+
 void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
 {
    int j, p, pend;
@@ -1327,24 +1633,3 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
    //myAtPutZeros(kktd, locnx, locnx, locmy, locmy);
 }
 
-
-void sLinsysRootAug::finalizeKKT(sData* prob, Variables* vars)
-{
-  stochNode->resMon.recFactTmLocal_start();
-  stochNode->resMon.recSchurMultLocal_start();
-
-  if( usePrecondDist )
-  {
-     // don't do anything, already done previously
-  }
-  else
-  {
-     if( hasSparseKkt )
-        finalizeKKTsparse(prob, vars);
-     else
-        finalizeKKTdense(prob, vars);
-  }
-
-  stochNode->resMon.recSchurMultLocal_stop();
-  stochNode->resMon.recFactTmLocal_stop();
-}

@@ -65,6 +65,8 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
 
   usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
   MatrixEntryTriplet_mpi = NULL;
+
+  initProperChildrenRange();
 }
 
 sLinsysRoot::sLinsysRoot(sFactory* factory_,
@@ -115,6 +117,8 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 
   usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
   MatrixEntryTriplet_mpi = NULL;
+
+  initProperChildrenRange();
 }
 
 sLinsysRoot::~sLinsysRoot()
@@ -158,28 +162,30 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   reduceKKT(prob);
 
 #if 1
-   ofstream myfile;
-   int mype;
-   MPI_Comm_rank(mpiComm, &mype);
-
-   if( mype == 0 )
    {
-      if( kktDist != NULL )
-      {
-         myfile.open("../ADist.txt");
-         kktDist->writeToStream(myfile);
-      }
-      else
-      {
-         myfile.open("../A.txt");
-         kkt->writeToStream(myfile);
-      }
-      myfile.close();
-   }
+      ofstream myfile;
+      int mype;
+      MPI_Comm_rank(mpiComm, &mype);
 
-   MPI_Barrier(mpiComm);
-   printf("...exiting \n");
-   exit(1);
+      if( mype == 0 )
+      {
+         if( kktDist != NULL )
+         {
+            myfile.open("../ADist.txt");
+            kktDist->writeToStream(myfile);
+         }
+         else
+         {
+            myfile.open("../A.txt");
+            kkt->writeToStream(myfile);
+         }
+         myfile.close();
+      }
+
+      MPI_Barrier(mpiComm);
+      printf("...exiting \n");
+      exit(1);
+  }
 #endif
 
 
@@ -458,12 +464,12 @@ void sLinsysRoot::deleteChildren()
   children.clear();
 }
 
-void sLinsysRoot::getProperChildrenRange(int& childStart, int& childEnd)
+void sLinsysRoot::initProperChildrenRange()
 {
    assert(children.size() > 0);
 
-   childStart = -1;
-   childEnd = -1;
+   int childStart = -1;
+   int childEnd = -1;
    for( size_t it = 0; it < children.size(); it++ )
    {
       if( childEnd != -1 )
@@ -492,6 +498,9 @@ void sLinsysRoot::getProperChildrenRange(int& childStart, int& childEnd)
    }
 
     assert(childStart < childEnd && childEnd <= int(children.size()));
+
+    childrenProperStart = childStart;
+    childrenProperEnd = childEnd;
 }
 
 void sLinsysRoot::putXDiagonal( OoqpVector& xdiag_ )
@@ -579,15 +588,6 @@ void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
    {
       DenseSymMatrix* kktd = dynamic_cast<DenseSymMatrix*>(kkt);
       myAtPutZeros(kktd);
-   }
-
-   if( usePrecondDist)
-   {
-      assert(hasSparseKkt);
-      // just call finalize from here?
-
-      int todo; // put A_0 G_0 etc.
-
    }
 }
 
@@ -754,8 +754,8 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
    int* const jColKkt = kkts.jcolM();
    double* const MKkt = kkts.M();
 
-   int childStart;
-   int childEnd;
+   const int childStart = childrenProperStart;
+   const int childEnd = childrenProperEnd;
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
    int size; MPI_Comm_size(mpiComm, &size);
 
@@ -764,8 +764,6 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
    // MPI matrix entries triplet not registered yet?
    if( !MatrixEntryTriplet_mpi )
       registerMatrixEntryTripletMPI();
-
-   this->getProperChildrenRange(childStart, childEnd);
 
    // pack the entries that will be send below
    std::vector<MatrixEntryTriplet> prevEntries = this->packKKTdistOutOfRangeEntries(prob, childStart, childEnd);
@@ -816,14 +814,15 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
       assert(col >= row && col < locnx + locmy + locmyl + locmzl);
       assert(val == val); // catch NaNs
 
+#if 0
       if( !(rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row])) )
       {
-         int todo;
          printf("%d FAIL: %d %d  with %d %d, %d %d val=%f\n", myRank, row, col,
                rowIsMyLocal[row], rowIsMyLocal[col], rowIsLocal[row],
                rowIsLocal[col], val);
          exit(1);
       }
+#endif
 
       assert(rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row]));
 
@@ -1003,7 +1002,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    int* const krowKkt = kkts.krowM();
    int* const jColKkt = kkts.jcolM();
    double* const MKkt = kkts.M();
-
    const int sizeKkt = locnx + locmy + locmyl + locmzl;
    int nnzDistMyLocal = 0;
    int nnzDistShared = 0;
@@ -1017,10 +1015,13 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
    assert(int(rowIsLocal.size()) == sizeKkt);
 
-   // add up locally owned rows and columns
+   // add up locally owned entries
    this->syncKKTdistLocalEntries(prob);
 
-   int todo; // now add B_0 (only on rank 0!), F_0, G_0 and diagonals (only local parts!), then allreduce diagonal (in new class), then do the preconditioning!
+   // add B_0, F_0, G_0 and diagonals (all scattered)
+   this->finalizeKKTdist(prob);
+
+   int todo; // then allreduce diagonal (in new class), then do the preconditioning!
       // new class precondDomDiag? also call that from PardisoSolver (precond. method is given diagonal as well!)
       // todo: still some F_0 in 0-link vars part should be considered!!
 
@@ -1055,7 +1056,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
             nnzDistShared++;
             rowSizeShared[r]++;
             assert(!rowIsMyLocal[col]);
-
          }
 
          if( rowIsMyLocal[col] )
@@ -1126,7 +1126,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
    for( int r = 1; r < sizeKkt; r++ )
       krowDist[r + 1] = krowDist[r] + rowSizeLocal[r - 1] + rowSizeShared[r - 1];
-
 
 #if 0
    for( int r = 0; r < sizeKkt; r++ )

@@ -38,8 +38,6 @@ class sLinsysRoot : public sLinsys {
                        createSolver  (sData* prob, 
 				      SymMatrix* kktmat) = 0;
 
-  void getProperChildrenRange(int& childStart, int& childEnd);
-
  public:
   std::vector<sLinsys*> children;
   int iAmDistrib;
@@ -59,7 +57,7 @@ class sLinsysRoot : public sLinsys {
   virtual void reduceKKT(sData *prob);
   virtual void factorizeKKT(); 
   virtual void finalizeKKT(sData* prob, Variables* vars)=0;
-
+  virtual void finalizeKKTdist(sData* prob) {assert("not implemented here \n" && 0);};
 
   virtual void Lsolve ( sData *prob, OoqpVector& x );
   virtual void Dsolve ( sData *prob, OoqpVector& x );
@@ -112,10 +110,13 @@ class sLinsysRoot : public sLinsys {
 
   double* sparseKktBuffer;
 
+  int childrenProperStart; // first non-dummy child
+  int childrenProperEnd;   // end of non-dummy children range (not included)
   bool hasSparseKkt;
   bool usePrecondDist;
 
  private:
+  void initProperChildrenRange();
   void registerMatrixEntryTripletMPI();
   void addTermToSchurCompl(sData* prob, size_t childindex);
   void reduceKKTdist(sData* prob);

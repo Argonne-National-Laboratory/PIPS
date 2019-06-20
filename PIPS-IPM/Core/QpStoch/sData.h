@@ -94,10 +94,19 @@ class sData : public QpGenData {
   void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
 
   // marker that indicates whether a Schur complement row is (2-link) local
-  const std::vector<bool>& getSCrowMarkerLocal();
+  const std::vector<bool>& getSCrowMarkerLocal() const;
 
   // marker that indicates whether a Schur complement row is (2-link) local and owned by this MPI process
-  const std::vector<bool>& getSCrowMarkerMyLocal();
+  const std::vector<bool>& getSCrowMarkerMyLocal() const;
+
+  // number of sparse 2-link equality rows
+  int n2linkRowsEq() const;
+
+  // number of sparse 2-link inequality rows
+  int n2linkRowsIneq() const;
+
+  void getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+        int& local2linksStartIneq, int& local2linksEndIneq);
 
   virtual ~sData();
 
@@ -155,8 +164,7 @@ class sData : public QpGenData {
   std::vector<bool> isSCrowMyLocal;
 
   void initDistMarker(int blocksStart, int blocksEnd);
-  void getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
-        int& local2linksStartIneq, int& local2linksEndIneq);
+
 
   void permuteLinkingVars();
   void permuteLinkingCons();
