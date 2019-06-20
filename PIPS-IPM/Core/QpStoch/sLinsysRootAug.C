@@ -571,18 +571,43 @@ void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, 
          pKkt += nKktOffsetCols;
 
       assert(pKkt <= krowKkt[i + 1]);
-      assert(pKkt == krowKkt[i + 1] || jcolKkt[pKkt] <= startCol);
+      assert(sparseRow || pKkt == krowKkt[i + 1] || jcolKkt[pKkt] <= startCol);
+
+      if( jcolKkt[pKkt] >= endCol )
+      {
+#ifndef NDEBUG
+         int pHt;
+
+         for( pHt = krowHt[i]; pHt < krowHt[i + 1]; pHt++ )
+         {
+            const int colHt = jcolHt[pHt];
+            if( colHt >= startCol && colHt < endCol )
+               break;
+         }
+
+         assert(pHt == krowHt[i + 1]);
+#endif
+         return;
+      }
+
+      bool hit = false;
 
       // get first in-range entry of Kkt
       for( ; pKkt < krowKkt[i + 1]; pKkt++ )
       {
          const int colKkt = jcolKkt[pKkt];
          if( colKkt >= startCol && colKkt < endCol )
+         {
+            hit = true;
+            break;
+         }
+
+         if( colKkt >= endCol )
             break;
       }
 
       // no entry of Kkt in range?
-      if( pKkt == krowKkt[i + 1] )
+      if( !hit )
       {
          assert(startCol == endCol || sparseRow);
          continue;
@@ -592,17 +617,24 @@ void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, 
 
       int pHt;
       int colHt = -1;
+      hit = false;
 
       // get first in-range entry of Ht
       for( pHt = krowHt[i]; pHt < krowHt[i + 1]; pHt++ )
       {
          colHt = jcolHt[pHt];
          if( colHt >= startCol && colHt < endCol )
+         {
+            hit = true;
+            break;
+         }
+
+         if( colHt >= endCol )
             break;
       }
 
       // no entry of Ht in range?
-      if( pHt == krowHt[i + 1] )
+      if( !hit )
          continue;
 
       assert(colHt >= startCol && colHt < endCol);
