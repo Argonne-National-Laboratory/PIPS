@@ -747,8 +747,6 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
    assert(kkt && hasSparseKkt);
 
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
-   const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
-   const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
 
    int* const krowKkt = kkts.krowM();
    int* const jColKkt = kkts.jcolM();
@@ -801,6 +799,11 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
 
    int lastRow = 0;
    int lastC = -1;
+
+#ifndef NDEBUG
+   const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
+   const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
+#endif
 
    // finally, put received data into Schur complement matrix
    for( size_t i = 1; i < myEntries.size(); i++ )

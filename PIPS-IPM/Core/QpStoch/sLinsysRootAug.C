@@ -543,7 +543,10 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
 /** Ht should be either Ft or Gt */
 void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, int nKktOffsetCols, int startCol, int endCol)
 {
-   assert(startCol >= 0 && startCol < endCol && nKktOffsetCols >= 0 && nKktOffsetCols <= startCol);
+   assert(startCol >= 0 && startCol <= endCol && nKktOffsetCols >= 0 && nKktOffsetCols <= startCol);
+
+   if( startCol == endCol )
+      return;
 
    SparseSymMatrix& kkts = dynamic_cast<SparseSymMatrix&>(*kkt);
 

@@ -446,7 +446,9 @@ int sData::getSCdiagBlocksMaxNnz(size_t nRows, const std::vector<int>& linkStart
 
 int sData::getSCdiagBlocksMaxNnzDist(size_t nRows, const std::vector<int>& linkStartBlockLengths, int blocksStart, int blocksEnd)
 {
+#ifndef NDEBUG
    const int nblocks = int(linkStartBlockLengths.size());
+#endif
    assert(blocksStart >= 0);
    assert(blocksStart < blocksEnd);
    assert(blocksEnd <= nblocks);
@@ -454,7 +456,6 @@ int sData::getSCdiagBlocksMaxNnzDist(size_t nRows, const std::vector<int>& linkS
 
    const int nRowsSparse = getSCdiagBlocksNRows(linkStartBlockLengths);
    const int nRowsSparseRange = getSCdiagBlocksNRows(linkStartBlockLengths, blocksStart, blocksEnd);
-   const int lastBlock = nblocks - 1;
 
    int nnz = 0;
 
@@ -470,7 +471,7 @@ int sData::getSCdiagBlocksMaxNnzDist(size_t nRows, const std::vector<int>& linkS
 
       assert(length > 0);
       assert(prevlength >= 0);
-      assert(block != lastBlock); // length should be 0 for last block
+      assert(block != nblocks - 1); // length should be 0 for last block
 
       // diagonal block
       nnz += nnzTriangular(length);
@@ -562,7 +563,9 @@ int sData::getSCmixedBlocksMaxNnzDist(size_t nRows, size_t nCols,
    assert(blocksStart >= 0);
    assert(blocksStart < blocksEnd);
 
+#ifndef NDEBUG
    const int nBlocks = int(linkStartBlockLength_Left.size());
+#endif
    const int blockLast = blocksEnd - 1;
    const int blocksStartReal =  (blocksStart > 0) ? (blocksStart - 1) : 0;
    const int nRowsSparse = getSCdiagBlocksNRows(linkStartBlockLength_Left);
@@ -585,10 +588,7 @@ int sData::getSCmixedBlocksMaxNnzDist(size_t nRows, size_t nCols,
       if( block != blocksStartReal )
       {
          assert(block >= 1);
-
-         const int prevlength_Right = linkStartBlockLength_Right[block - 1];
-
-         assert(prevlength_Right >= 0);
+         assert(linkStartBlockLength_Right[block - 1] >= 0);
 
          nnz += length_Left * length_Right;
       }
