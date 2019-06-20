@@ -161,6 +161,14 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
   reduceKKT(prob);
 
+
+ #ifdef TIMING
+  stochNode->resMon.recReduceTmLocal_stop();
+#endif
+
+  finalizeKKT(prob, vars);
+
+
 #if 1
    {
       ofstream myfile;
@@ -189,11 +197,6 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 #endif
 
 
- #ifdef TIMING
-  stochNode->resMon.recReduceTmLocal_stop();
-#endif  
-
-  finalizeKKT(prob, vars);
   factorizeKKT();
 
   //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd);

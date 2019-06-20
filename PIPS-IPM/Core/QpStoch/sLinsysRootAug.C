@@ -159,7 +159,7 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
 
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
    int mpiCommSize; MPI_Comm_size(mpiComm, &mpiCommSize);
-   const bool iAmLastRank = (myRank == mpiCommSize);
+   const bool iAmLastRank = (myRank == mpiCommSize - 1);
    const int childStart = childrenProperStart;
    const int childEnd = childrenProperEnd;
 
@@ -179,6 +179,7 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
    // update the KKT with the diagonals
    // xDiag is in fact diag(Q)+X^{-1}S
    /////////////////////////////////////////////////////////////
+
    if( xDiag && iAmLastRank )
    {
       const SimpleVector& sxDiag = dynamic_cast<const SimpleVector&>(*xDiag);
