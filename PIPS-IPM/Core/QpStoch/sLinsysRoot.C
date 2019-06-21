@@ -1196,11 +1196,12 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
       assert(row >= 0 && row < sizeKkt);
       assert(col >= row && col < sizeKkt);
-      assert(krowDist[row + 1] < nnzDist);
 
       // pair already added?
       if( i >= localGatheredMyStart && i < localGatheredMyEnd )
          continue;
+
+      assert(krowDist[row + 1] < nnzDist);
 
       assert(MDist[krowDist[row + 1]] == 0.0);
       jColDist[krowDist[row + 1]++] = col;
