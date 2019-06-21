@@ -322,7 +322,7 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
       assert(szDiagLocalStart >= 0 && szDiagLocalStart < locmzl);
 
       // add locally owned part of z diagonal
-      for( int i = szDiagLocalStart, iKkt = local2linksStartIneq; iKkt < local2linksStartIneq; ++i, ++iKkt )
+      for( int i = szDiagLocalStart, iKkt = local2linksStartIneq; iKkt < local2linksEndIneq; ++i, ++iKkt )
       {
          const int idx = krowKkt[iKkt];
          assert(jcolKkt[idx] == iKkt);
