@@ -46,7 +46,9 @@ class sLinsysRootAug : public sLinsysRoot {
   void finalizeKKTsparse( sData* prob, Variables* vars);
   void solveWithIterRef( sData *prob, SimpleVector& b);
   void solveWithBiCGStab( sData *prob, SimpleVector& b);
-  void addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, int nKktOffsetCols, int startCol, int endCol);
+
+  // add specified columns of given matrix Ht (either Ft or Gt) to Schur complement
+  void addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, int nHtOffsetCols, int nKktOffsetCols, int startCol, int endCol);
 
   /** y = beta*y - alpha* SC * x */
   void SCmult ( double beta, SimpleVector& y, double alpha, SimpleVector& x, sData* prob);

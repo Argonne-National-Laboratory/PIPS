@@ -352,6 +352,7 @@ void appendMixedBlocksDist(const std::vector<int>& linkStartBlockId_Left,
    }
 }
 
+
 void sData::getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
       int& local2linksStartIneq, int& local2linksEndIneq)
 {
@@ -377,12 +378,35 @@ void sData::getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksSt
    local2linksEndIneq = local2linksStartIneq + getSCdiagBlocksNRows(linkStartBlockLengthsC, blocksStart, blocksEnd);
 }
 
+void sData::getSCrangeMarkersMy(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+      int& local2linksStartIneq, int& local2linksEndIneq)
+{
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   local2linksStartEq = nx0 + my0;
+   local2linksStartIneq = nx0 + my0 + myl;
+
+   for( int block = 0; block < blocksStart; ++block )
+   {
+      const int lengthEq = linkStartBlockLengthsA[block];
+      const int lengthIneq = linkStartBlockLengthsC[block];
+
+      assert(lengthEq >= 0 && lengthIneq >= 0);
+
+      local2linksStartEq += lengthEq;
+      local2linksStartIneq += lengthIneq;
+   }
+
+   local2linksEndEq = local2linksStartEq + getSCdiagBlocksNRowsMy(linkStartBlockLengthsA, blocksStart, blocksEnd);
+   local2linksEndIneq = local2linksStartIneq + getSCdiagBlocksNRowsMy(linkStartBlockLengthsC, blocksStart, blocksEnd);
+}
+
 
 int sData::getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths,
       int blocksStart, int blocksEnd)
 {
-   assert(blocksStart >= 0);
-   assert(blocksStart < blocksEnd);
+   assert(blocksStart >= 0 && blocksStart < blocksEnd);
    assert(blocksEnd <= int(linkStartBlockLengths.size()));
 
    int nRowsRange = 0;
@@ -390,6 +414,26 @@ int sData::getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths,
 
    // main loop, going over specified 2-link blocks
    for( int block = blocksStartReal; block < blocksEnd; ++block )
+   {
+      const int length = linkStartBlockLengths[block];
+      assert(length >= 0);
+
+      nRowsRange += length;
+   }
+   return nRowsRange;
+}
+
+
+int sData::getSCdiagBlocksNRowsMy(const std::vector<int>& linkStartBlockLengths,
+      int blocksStart, int blocksEnd)
+{
+   assert(blocksStart >= 0 && blocksStart < blocksEnd);
+   assert(blocksEnd <= int(linkStartBlockLengths.size()));
+
+   int nRowsRange = 0;
+
+   // main loop, going over specified 2-link blocks
+   for( int block = blocksStart; block < blocksEnd; ++block )
    {
       const int length = linkStartBlockLengths[block];
       assert(length >= 0);

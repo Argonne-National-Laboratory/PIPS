@@ -105,7 +105,14 @@ class sData : public QpGenData {
   // number of sparse 2-link inequality rows
   int n2linkRowsIneq() const;
 
+  // start and end positions for local 2-links in Schur complement that are non-zero if only
+  // blocks greater equal blocksStart and smaller blocksEnd are considered
   void getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+        int& local2linksStartIneq, int& local2linksEndIneq);
+
+  // start and end positions for local 2-links in Schur complement that are owned by
+  // blocks greater equal blocksStart and smaller blocksEnd are considered
+  void getSCrangeMarkersMy(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
         int& local2linksStartIneq, int& local2linksEndIneq);
 
   virtual ~sData();
@@ -124,8 +131,12 @@ class sData : public QpGenData {
   // returns number of block rows
   static int getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths);
 
-  // returns number of block rows within specified range
+  // returns number of non-zero block rows within specified range
   static int getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths,
+        int blocksStart, int blocksEnd);
+
+  // returns number of owned block rows within specified range
+  static int getSCdiagBlocksNRowsMy(const std::vector<int>& linkStartBlockLengths,
         int blocksStart, int blocksEnd);
 
   // max nnz in Schur complement diagonal block signified by given vector

@@ -264,10 +264,14 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
    int local2linksStartIneq;
    int local2linksEndIneq;
 
-   prob->getSCrangeMarkers(childStart, childEnd, local2linksStartEq, local2linksEndEq,
+   prob->getSCrangeMarkersMy(childStart, childEnd, local2linksStartEq, local2linksEndEq,
          local2linksStartIneq, local2linksEndIneq);
 
    const int n2linksRowsLocalEq = local2linksEndEq - local2linksStartEq;
+
+   PIPSdebugMessage("rank %d FT local columns: %d-%d \n", myRank, local2linksStartEq, local2linksEndEq);
+   PIPSdebugMessage("rank %d GT local columns: %d-%d \n", myRank, local2linksStartIneq, local2linksEndIneq);
+   PIPSdebugMessage("rank %d FT local columns: %d-%d \n", myRank, local2linksStartEq, local2linksEndEq);
 
    /////////////////////////////////////////////////////////////
    // update the KKT with Ft
@@ -277,7 +281,7 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
       SparseGenMatrix& Ft = prob->getLocalF().getTranspose();
 
       // add locally owned sparse part of Ft
-      addLinkConsBlock0Matrix(prob, Ft, 0, local2linksStartEq, local2linksEndEq);
+      addLinkConsBlock0Matrix(prob, Ft, locnx + locmy, 0, local2linksStartEq, local2linksEndEq);
 
       if( myRank == 0 )
       {
@@ -285,8 +289,10 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
          const int bordersizeEq = locmyl - n2linksRowsEq;
          const int borderstartEq = locnx + locmy + n2linksRowsEq;
 
+         PIPSdebugMessage("rank %d FT border columns: %d-%d \n", myRank, borderstartEq, borderstartEq + bordersizeEq);
+
          // add (shared) border part of Ft
-         addLinkConsBlock0Matrix(prob, Ft, n2linksRowsLocalEq, borderstartEq, borderstartEq + bordersizeEq);
+         addLinkConsBlock0Matrix(prob, Ft, locnx + locmy, n2linksRowsLocalEq, borderstartEq, borderstartEq + bordersizeEq);
       }
    }
 
@@ -301,15 +307,16 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
       const int borderstartIneq = locnx + locmy + locmyl + n2linksRowsIneq;
 
       // add locally owned sparse part of Gt
-      addLinkConsBlock0Matrix(prob, Gt, n2linksRowsLocalEq, local2linksStartIneq, local2linksEndIneq);
+      addLinkConsBlock0Matrix(prob, Gt, locnx + locmy + locmyl, n2linksRowsLocalEq, local2linksStartIneq, local2linksEndIneq);
 
       if( myRank == 0 )
       {
          const int n2linksRowsLocalIneq = local2linksEndIneq - local2linksStartIneq;
+         PIPSdebugMessage("rank %d GT border columns: %d-%d\n", myRank, borderstartIneq, borderstartIneq + bordersizeIneq);
 
          // add (shared) border part of Gt
-         addLinkConsBlock0Matrix(prob, Gt, n2linksRowsLocalEq + n2linksRowsLocalIneq, borderstartIneq,
-               borderstartIneq + bordersizeIneq);
+         addLinkConsBlock0Matrix(prob, Gt, locnx + locmy + locmyl, n2linksRowsLocalEq + n2linksRowsLocalIneq,
+               borderstartIneq, borderstartIneq + bordersizeIneq);
       }
 
       assert(zDiagLinkCons);
@@ -542,7 +549,8 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
 }
 
 /** Ht should be either Ft or Gt */
-void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, int nKktOffsetCols, int startCol, int endCol)
+void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, int nHtOffsetCols,
+      int nKktOffsetCols, int startCol, int endCol)
 {
    assert(startCol >= 0 && startCol <= endCol && nKktOffsetCols >= 0 && nKktOffsetCols <= startCol);
 
@@ -576,11 +584,12 @@ void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, 
       if( jcolKkt[pKkt] >= endCol )
       {
 #ifndef NDEBUG
+         // make sure that there is no entry of Ht in the given range
          int pHt;
 
          for( pHt = krowHt[i]; pHt < krowHt[i + 1]; pHt++ )
          {
-            const int colHt = jcolHt[pHt];
+            const int colHt = jcolHt[pHt] + nHtOffsetCols;
             if( colHt >= startCol && colHt < endCol )
                break;
          }
@@ -622,7 +631,7 @@ void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, 
       // get first in-range entry of Ht
       for( pHt = krowHt[i]; pHt < krowHt[i + 1]; pHt++ )
       {
-         colHt = jcolHt[pHt];
+         colHt = jcolHt[pHt] + nHtOffsetCols;
          if( colHt >= startCol && colHt < endCol )
          {
             hit = true;
@@ -657,7 +666,7 @@ void sLinsysRootAug::addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, 
             if( pHt == krowHt[i + 1] )
                break;
 
-            colHt = jcolHt[pHt];
+            colHt = jcolHt[pHt] + nHtOffsetCols;
          }
       }
 
