@@ -341,7 +341,8 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
       if( myRank == 0 )
       {
          const int szDiagBorderStart = borderstartIneq - (locnx + locmy + locmyl);
-         assert(szDiagBorderStart >= 0 && szDiagBorderStart < locmzl);
+
+         assert(szDiagBorderStart >= 0 && szDiagBorderStart <= locmzl);
          assert(szDiagBorderStart + bordersizeIneq == locmzl);
 
          // add border part of diagonal

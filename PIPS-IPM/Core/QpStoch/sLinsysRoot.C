@@ -177,6 +177,8 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
       if( mype == 0 )
       {
+         printf("\n\n ...WRITE OUT! \n\n");
+
          if( kktDist != NULL )
          {
             myfile.open("../ADist.txt");
@@ -1029,7 +1031,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
    int todo; // then allreduce diagonal (in new class), then do the preconditioning!
       // new class precondDomDiag? also call that from PardisoSolver (precond. method is given diagonal as well!)
-      // todo: still some F_0 in 0-link vars part should be considered!!
 
    // compute row lengths
    for( int r = 0; r < sizeKkt; r++ )
