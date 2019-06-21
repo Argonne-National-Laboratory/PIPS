@@ -32,6 +32,8 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
 
   createChildren(prob_);
 
+  precondSC = SCsparsifier(-1.0, mpiComm);
+
   if(gOuterSolve) {
     // stuff for iterative refimenent and BiCG
     sol  = factory_->tree->newRhs();
@@ -83,6 +85,8 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   kktDist = NULL;
 
   createChildren(prob_);
+
+  precondSC = SCsparsifier(-1.0, mpiComm);
 
   if(gOuterSolve) {
       // stuff for iterative refimenent and BiCG 
@@ -169,7 +173,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   finalizeKKT(prob, vars);
 
 
-#if 1
+#if 0
    {
       ofstream myfile;
       int mype;
@@ -199,7 +203,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 #endif
 
 
-  factorizeKKT();
+  factorizeKKT(prob);
 
   //if (mype==0) dumpMatrix(-1, 0, "kkt", kktd);
 
@@ -967,6 +971,10 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
                if( !rowIsMyLocal[col] )
                {
                   const double val = MKkt[c];
+
+                  if( PIPSisZero(val) )
+                     continue;
+
                   packedEntries.push_back({val, r, col});
                }
             }
@@ -981,8 +989,11 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
 
             if( rowIsLocal[col] && !rowIsMyLocal[col] )
             {
-               int todo; // don't add zero vals? also above might happen for F_0?
                const double val = MKkt[c];
+
+               if( PIPSisZero(val) )
+                  continue;
+
                packedEntries.push_back({val, r, col});
             }
          }
@@ -991,7 +1002,6 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::packKKTdistOutOfRangeE
 
    return packedEntries;
 }
-
 
 
 void sLinsysRoot::reduceKKTdist(sData* prob)
@@ -1029,21 +1039,22 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    // add B_0, F_0, G_0 and diagonals (all scattered)
    this->finalizeKKTdist(prob);
 
-   int todo; // then allreduce diagonal (in new class), then do the preconditioning!
-      // new class precondDomDiag? also call that from PardisoSolver (precond. method is given diagonal as well!)
+   precondSC.unmarkDominatedSCdistEntries(*prob, kkts);
 
    // compute row lengths
    for( int r = 0; r < sizeKkt; r++ )
    {
       if( rowIsMyLocal[r] )
       {
-         const int rowNnz = krowKkt[r + 1] - krowKkt[r];
-         nnzDistMyLocal += rowNnz;
-         rowSizeMyLocal[r] = rowNnz;
-
          for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
          {
             const int col = jColKkt[c];
+
+            if( col < 0 )
+               continue;
+
+            nnzDistMyLocal++;
+            rowSizeMyLocal[r]++;
             rowIndexMyLocal.push_back(r);
             colIndexMyLocal.push_back(col);
          }
@@ -1056,6 +1067,9 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
       {
          const int col = jColKkt[c];
+
+         if( col < 0 )
+            continue;
 
          // is (r, col) a shared entry?
          if( !rIsLocal && !rowIsLocal[col] )
@@ -1074,6 +1088,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          }
       }
    }
+
+   precondSC.resetSCdistEntries(kkts);
 
    assert(int(rowIndexMyLocal.size()) == nnzDistMyLocal);
 
@@ -1133,24 +1149,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
    for( int r = 1; r < sizeKkt; r++ )
       krowDist[r + 1] = krowDist[r] + rowSizeLocal[r - 1] + rowSizeShared[r - 1];
-
-#if 0
-   for( int r = 0; r < sizeKkt; r++ )
-   {
-      for( int c = krowKkt[r]; c < krowKkt[r + 1]; c++ )
-      {
-         const int col = jColKkt[c];
-         const double val = MKkt[c];
-
-         if( r == 98 && col == 110 )
-         {
-            printf("%d owns (%d %d %f) \n", myRank, r, col, val);
-            printf("...%d: %d %d  with %d %d, %d %d val=%f c=%d \n", myRank, r,
-                  col, rowIsMyLocal[r], rowIsMyLocal[col], rowIsLocal[r],  rowIsLocal[col], val, c);
-         }
-      }
-   }
-#endif
 
    // fill in global and locally owned positions and values
    for( int r = 0; r < sizeKkt; r++ )
@@ -1245,6 +1243,11 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
 void sLinsysRoot::factorizeKKT()
 {
+   factorizeKKT(NULL);
+}
+
+void sLinsysRoot::factorizeKKT(sData* prob)
+{
   //stochNode->resMon.recFactTmLocal_start();  
 #ifdef TIMING
   MPI_Barrier(mpiComm);
@@ -1254,13 +1257,14 @@ void sLinsysRoot::factorizeKKT()
 
   if( usePrecondDist )
   {
-     int todo; // apply precond here (in slinsysroot!)
      assert(kktDist);
-     solver->matrixRebuild(*kktDist);
+     assert(prob);
+
+     precondSC.getSparsifiedSC_fortran(*prob, *kktDist);
+     solver->matrixRebuild(*kktDist, true);
   }
   else
   {
-     int todo; // also here, and call rebuild method (after enough tests) move it out of solver.
      // in solver allocate memory once and only reallocate if more memory needed?
      solver->matrixChanged();
   }

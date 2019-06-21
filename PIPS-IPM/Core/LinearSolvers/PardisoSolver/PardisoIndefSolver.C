@@ -219,13 +219,15 @@ void PardisoIndefSolver::matrixChanged()
 }
 
 
-void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew )
+void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew, bool formatFortran )
 {
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
    if( myrank == 0 )
    {
       SparseSymMatrix& matrixNewSym = dynamic_cast<SparseSymMatrix&>(matrixNew);
+
+      assert(formatFortran);
 
       printf("\n Schur complement factorization is starting ...\n ");
 
@@ -238,68 +240,25 @@ void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew )
 }
 
 
-
-void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrixNew)
+void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrix_fortran)
 {
-   assert(n == matrixNew.size());
+   assert(n == matrix_fortran.size());
+   assert(!ia && !ja && !a);
 
-   const int nnz = matrixNew.numberOfNonZeros();
-   const int* const iaMatrix = matrixNew.krowM();
-   const int* const jaMatrix = matrixNew.jcolM();
-   const double* const aMatrix = matrixNew.M();
+   ia = matrix_fortran.getStorage()->krowM;
+   ja = matrix_fortran.getStorage()->jcolM;
+   a = matrix_fortran.getStorage()->M;
 
-   delete[] ia;  delete[] ja;  delete[] a;
-
-   ia = new int[n + 1];
-   ja = new int[nnz];
-   a = new double[nnz];
-
-   assert(n >= 0);
-
-   std::vector<double>diag(n);
-
-   const double t = precondDiagDomBound;
-
-   for( int r = 0; r < n; r++ )
-   {
-      const int j = iaMatrix[r];
-      assert(jaMatrix[j] == r);
-
-      diag[r] = fabs(aMatrix[j]) * t;
-   }
-
-   ia[0] = 1;
-   int kills = 0;
-   int nnznew = 0;
-
-   for( int r = 0; r < n; r++ )
-   {
-      for( int j = iaMatrix[r]; j < iaMatrix[r + 1]; j++ )
-      {
-         if( aMatrix[j] != 0.0 || jaMatrix[j] == r )
-         {
-            if( (fabs(aMatrix[j]) >= diag[r] || fabs(aMatrix[j]) >= diag[jaMatrix[j]]) )
-            {
-               ja[nnznew] = jaMatrix[j] + 1;
-               a[nnznew++] = aMatrix[j];
-            }
-            else
-            {
-               kills++;
-               assert(jaMatrix[j] != r);
-            }
-         }
-      }
-      ia[r + 1] = nnznew + 1;
-   }
-
-   std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
+   assert(ia[0] == 1);
 
    // matrix initialized, now do the actual factorization
    factorize();
+
+   ia = NULL;
+   ja = NULL;
+   a = NULL;
 }
 
-#define SELECT_NNZS
 
 void PardisoIndefSolver::factorizeFromSparse()
 {
@@ -318,20 +277,10 @@ void PardisoIndefSolver::factorizeFromSparse()
       ia = new int[n + 1];
       ja = new int[nnz];
       a = new double[nnz];
-
-#ifndef SELECT_NNZS
-
-      for( int i = 0; i < n + 1; i++ )
-         ia[i] = iaStorage[i] + 1;
-
-      for( int i = 0; i < nnz; i++ )
-         ja[i] = jaStorage[i] + 1;
-#endif
    }
 
    assert(n >= 0);
 
-#ifdef SELECT_NNZS
    std::vector<double>diag(n);
 
    const double t = precondDiagDomBound;
@@ -352,7 +301,6 @@ void PardisoIndefSolver::factorizeFromSparse()
    {
       for( int j = iaStorage[r]; j < iaStorage[r + 1]; j++ )
       {
-         //if( fabs(aStorage[j]) > 1e-15 || jaStorage[j] == r )
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
 #ifdef SPARSE_PRECOND
@@ -377,16 +325,6 @@ void PardisoIndefSolver::factorizeFromSparse()
    }
 
    std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
-
-#else
-   for( int i = 0; i < nnz; i++ )
-      a[i] = aStorage[i];
-   for( int i = 0; i < n + 1; i++ )
-      assert(ia[i] == iaStorage[i] + 1);
-
-   for( int i = 0; i < nnz; i++ )
-      assert(ja[i] == jaStorage[i] + 1);
-#endif
 
    // matrix initialized, now do the actual factorization
    factorize();
@@ -457,17 +395,13 @@ void PardisoIndefSolver::factorize()
 
    assert(ia && ja && a);
 
-#ifndef NDEBUG
-#ifdef CHECK_PARDISO
-#ifndef WITH_MKL_PARDISO
+#if !defined(NDEBUG) && defined(CHECK_PARDISO) && !defined(WITH_MKL_PARDISO)
    pardiso_chkmatrix(&mtype, &n, a, ia, ja, &error);
    if( error != 0 )
    {
       printf("\nERROR in consistency of matrix: %d", error);
       exit(1);
    }
-#endif
-#endif
 #endif
 
 #if 0

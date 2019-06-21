@@ -7,8 +7,9 @@
 
 #include "sLinsys.h"
 #include "StochGenMatrix.h"
+#include "SCsparsifier.h"
 
-
+class SCsparsifier;
 class sFactory;
 class sData;
 
@@ -56,6 +57,7 @@ class sLinsysRoot : public sLinsys {
   virtual void reduceKKT();
   virtual void reduceKKT(sData *prob);
   virtual void factorizeKKT(); 
+  virtual void factorizeKKT(sData *prob);
   virtual void finalizeKKT(sData* prob, Variables* vars)=0;
   virtual void finalizeKKTdist(sData* prob) {assert("not implemented here \n" && 0);};
 
@@ -109,6 +111,8 @@ class sLinsysRoot : public sLinsys {
   OoqpVector* xDiag;
 
   double* sparseKktBuffer;
+
+  SCsparsifier precondSC;
 
   int childrenProperStart; // first non-dummy child
   int childrenProperEnd;   // end of non-dummy children range (not included)

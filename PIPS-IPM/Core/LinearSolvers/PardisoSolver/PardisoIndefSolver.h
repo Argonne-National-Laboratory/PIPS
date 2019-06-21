@@ -51,7 +51,7 @@ class PardisoIndefSolver : public DoubleLinearSolver
       PardisoIndefSolver(SparseSymMatrix * storage);
       void diagonalChanged(int idiag, int extent) override;
       void matrixChanged() override;
-      void matrixRebuild( DoubleMatrix& matrixNew ) override;
+      void matrixRebuild( DoubleMatrix& matrixNew, bool formatFortran ) override;
       void solve ( OoqpVector& vec ) override;
       void solve ( GenMatrix& vec ) override;
       virtual ~PardisoIndefSolver();
@@ -59,7 +59,7 @@ class PardisoIndefSolver : public DoubleLinearSolver
    private:
       void initPardiso();
       void factorizeFromSparse();
-      void factorizeFromSparse(SparseSymMatrix& matrixNew);
+      void factorizeFromSparse(SparseSymMatrix& matrix_fortran);
       void factorizeFromDense();
       void factorize();
 
