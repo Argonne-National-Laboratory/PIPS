@@ -220,7 +220,7 @@ void PardisoIndefSolver::matrixChanged()
 }
 
 
-void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew, bool formatFortran )
+void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew )
 {
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
@@ -228,7 +228,7 @@ void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew, bool formatFort
    {
       SparseSymMatrix& matrixNewSym = dynamic_cast<SparseSymMatrix&>(matrixNew);
 
-      assert(formatFortran);
+      assert(matrixNewSym.getStorageRef().fortranIndexed());
 
       printf("\n Schur complement factorization is starting ...\n ");
 
@@ -245,6 +245,7 @@ void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrix_fortran)
 {
    assert(n == matrix_fortran.size());
    assert(!deleteCSRpointers);
+   assert(matrix_fortran.getStorageRef().fortranIndexed());
 
    ia = matrix_fortran.getStorage()->krowM;
    ja = matrix_fortran.getStorage()->jcolM;

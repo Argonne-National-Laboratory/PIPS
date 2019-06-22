@@ -34,7 +34,7 @@ public:
   virtual void matrixChanged() = 0;
 
   /** called if new matrix (but same dimension) is to be used. Triggers factorization  */
-  virtual void matrixRebuild( DoubleMatrix& matrixNew, bool formatFortran ) { assert(0 && "Not implemented"); }
+  virtual void matrixRebuild( DoubleMatrix& matrixNew ) { assert(0 && "Not implemented"); }
 
   /** solves a linear system.
    *

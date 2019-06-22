@@ -912,9 +912,7 @@ std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::receiveKKTdistLocalEnt
 
    assert(entries[0].row == -1 && entries[0].col == -1); // dummy check
 
-
-   printf("myRank=%d received %d \n", myRank, nEntries);
-
+   PIPSdebugMessage("myRank=%d received %d \n", myRank, nEntries);
 
    return entries;
 }
@@ -930,7 +928,7 @@ void sLinsysRoot::sendKKTdistLocalEntries(const std::vector<MatrixEntryTriplet>&
    assert(nEntries > 0);
    assert(MatrixEntryTriplet_mpi);
 
-   printf("myRank=%d sends %d \n", myRank, nEntries);
+   PIPSdebugMessage("myRank=%d sends %d \n", myRank, nEntries);
    MPI_Send(&prevEntries[0], nEntries, MatrixEntryTriplet_mpi, prevRank, 0, mpiComm);
 }
 
@@ -1039,7 +1037,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    // add B_0, F_0, G_0 and diagonals (all scattered)
    this->finalizeKKTdist(prob);
 
-   precondSC.unmarkDominatedSCdistEntries(*prob, kkts);
+   precondSC.unmarkDominatedSCdistLocals(*prob, kkts);
 
    // compute row lengths
    for( int r = 0; r < sizeKkt; r++ )
@@ -1267,7 +1265,7 @@ void sLinsysRoot::factorizeKKT(sData* prob)
      assert(prob);
 
      precondSC.getSparsifiedSC_fortran(*prob, *kktDist);
-     solver->matrixRebuild(*kktDist, true);
+     solver->matrixRebuild(*kktDist);
   }
   else
   {

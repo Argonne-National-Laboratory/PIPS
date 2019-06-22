@@ -31,6 +31,8 @@ SparseStorage::SparseStorage( int m_, int n_, int len_ )
   }
   M      = new double[len];
 
+  isFortranIndexed = false;
+
   SparseStorage::instances++;
 }
 
@@ -47,6 +49,8 @@ SparseStorage::SparseStorage( int m_, int n_, int len_,
   jcolM           = jcolM_;
   krowM           = krowM_;
   M               = M_;
+
+  isFortranIndexed = false;
 
   SparseStorage::instances++;
 }
@@ -220,7 +224,7 @@ bool SparseStorage::isValid(bool verbose) const
    }
 
    for( int i = 0; i < len; i++ )
-      if( jcolM[i] >= n )
+      if( jcolM[i] < 0 || jcolM[i] >= n )
       {
          printf("isValid: column index out of bounds \n");
          return false;
@@ -1713,24 +1717,40 @@ void SparseStorage::deleteEmptyRows(int*& orgIndex)
 
 void SparseStorage::c2fortran()
 {
-   assert(krowM[0] == 0 && krowM[m] == len);
+   assert(krowM[0] == 0 && krowM[m] == len && !isFortranIndexed);
 
    for( int i = 0; i <= m; i++ )
       krowM[i]++;
 
    for( int i = 0; i < len; i++ )
       jcolM[i]++;
+
+   isFortranIndexed = true;
 }
 
 void SparseStorage::fortran2c()
 {
-   assert(krowM[0] == 1 && krowM[m] == len + 1);
+   assert(krowM[0] == 1 && krowM[m] == len + 1 && isFortranIndexed);
 
    for( int i = 0; i <= m; i++ )
       krowM[i]--;
 
    for( int i = 0; i < len; i++ )
       jcolM[i]--;
+
+   isFortranIndexed = false;
+}
+
+bool SparseStorage::fortranIndexed() const
+{
+   return isFortranIndexed;
+}
+
+void SparseStorage::set2FortranIndexed()
+{
+   assert(krowM[0] == 1 && krowM[m] == len + 1);
+
+   isFortranIndexed = true;
 }
 
 void SparseStorage::deleteZeroRowsColsSym(int*& new2orgIdx)

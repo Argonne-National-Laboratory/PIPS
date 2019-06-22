@@ -37,10 +37,13 @@ SCsparsifier::SCsparsifier(double diagDomBound_, MPI_Comm mpiComm_)
 
    mpiComm = mpiComm_;
 
-   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   if( mpiComm != MPI_COMM_NULL )
+   {
+      int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
-   if( myRank == 0 )
-      printf("SCsparsifier: diagDomBound=%f \n", diagDomBound);
+      if( myRank == 0 )
+         printf("SCsparsifier: diagDomBound=%f \n", diagDomBound);
+   }
 }
 
 
@@ -51,7 +54,7 @@ SCsparsifier::~SCsparsifier()
 
 
 void
-SCsparsifier::unmarkDominatedSCdistEntries(const sData& prob,
+SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
       SparseSymMatrix& sc) const
 {
    const std::vector<bool>& rowIsMyLocal = prob.getSCrowMarkerMyLocal();
@@ -120,6 +123,8 @@ SCsparsifier::resetSCdistEntries(SparseSymMatrix& sc) const
    for( int i = 0; i < nnz; i++ )
       if( jcolM[i] < 0 )
          jcolM[i] = -jcolM[i] - 1;
+
+   assert(sc.getStorageRef().isValid(false));
 }
 
 
@@ -127,6 +132,8 @@ void
 SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
       SparseSymMatrix& sc) const
 {
+   assert(!sc.getStorageRef().fortranIndexed());
+
    int* const krowM = sc.krowM();
    int* const jcolM = sc.jcolM();
    double* const M = sc.M();
@@ -191,6 +198,10 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
       rowStart = krowM[r + 1];
       krowM[r + 1] = nnznew + 1;
    }
+
+   sc.getStorageRef().len = nnznew;
+
+   sc.getStorageRef().set2FortranIndexed();
 }
 
 

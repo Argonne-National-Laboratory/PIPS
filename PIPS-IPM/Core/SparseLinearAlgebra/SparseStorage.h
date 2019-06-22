@@ -205,6 +205,10 @@ public:
 
   void fortran2c();
 
+  bool fortranIndexed() const;
+
+  void set2FortranIndexed();
+
   void deleteZeroRowsColsSym(int*& new2orgIdx);
 
 
@@ -217,6 +221,9 @@ public:
 
 
   virtual ~SparseStorage();
+
+private:
+  bool isFortranIndexed;
 };
 
 #endif
