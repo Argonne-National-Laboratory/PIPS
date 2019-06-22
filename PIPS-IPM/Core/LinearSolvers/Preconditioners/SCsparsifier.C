@@ -64,7 +64,7 @@ SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
    const double* const M = sc.M();
    const int sizeSC = sc.size();
 
-   std::vector<double> diag = getDomDiagDist(sc);
+   std::vector<double> diag = getDomDiagDist(prob, sc);
 
    /* loop over all rows */
    for( int r = 0; r < sizeSC; r++ )
@@ -205,11 +205,13 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 }
 
 
-std::vector<double> SCsparsifier::getDomDiagDist(SparseSymMatrix& sc) const
+std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const
 {
    int* const krowM = sc.krowM();
    double* const M = sc.M();
    const int sizeSC = sc.size();
+   const std::vector<bool>& rowIsLocal = prob.getSCrowMarkerLocal();
+   const std::vector<bool>& rowIsMyLocal = prob.getSCrowMarkerMyLocal();
 
    std::vector<double> diag(sizeSC, 0.0);
 
@@ -220,6 +222,9 @@ std::vector<double> SCsparsifier::getDomDiagDist(SparseSymMatrix& sc) const
 
       assert(sc.jcolM()[krowM[r]] == r);
 
+      if( rowIsLocal[r] && !rowIsMyLocal[r] )
+         continue;
+
       diag[r] = M[krowM[r]];
    }
 
@@ -227,6 +232,20 @@ std::vector<double> SCsparsifier::getDomDiagDist(SparseSymMatrix& sc) const
 
    for( size_t i = 0; i < diag.size(); ++i )
       diag[i] = fabs(diag[i]) * diagDomBound;
+
+#if 0
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+   if( myRank == 0 )
+   {
+      ofstream myfile;
+      myfile.open("../Ddist.txt");
+
+      for( int i = 0; i < sizeSC; i++ )
+            myfile << i << " " << diag[i] << endl;
+
+      myfile.close();
+   }
+#endif
 
    return diag;
 }

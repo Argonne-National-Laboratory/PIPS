@@ -173,7 +173,8 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
   finalizeKKT(prob, vars);
 
 
-#if 0
+#if 1
+   if( kktDist )
    {
       ofstream myfile;
       int mype;
@@ -185,6 +186,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
          if( kktDist != NULL )
          {
+            printf("...dist \n");
             myfile.open("../ADist.txt");
             kktDist->writeToStream(myfile);
          }
@@ -197,7 +199,7 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
       }
 
       MPI_Barrier(mpiComm);
-      printf("...exiting \n");
+      printf("...exiting (root) \n");
       exit(1);
   }
 #endif

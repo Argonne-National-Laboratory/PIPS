@@ -44,7 +44,7 @@ class SCsparsifier
       double diagDomBound;
       MPI_Comm mpiComm;
 
-      std::vector<double> getDomDiagDist(SparseSymMatrix& sc) const;
+      std::vector<double> getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const;
 
 };
 
