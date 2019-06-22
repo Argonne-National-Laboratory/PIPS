@@ -8,6 +8,7 @@
 
 #include "SCsparsifier.h"
 #include "pipsdef.h"
+#include "mpi.h"
 #include <cassert>
 
 
@@ -19,7 +20,7 @@ SCsparsifier::SCsparsifier()
 
 SCsparsifier::SCsparsifier(double diagDomBound_, MPI_Comm mpiComm_)
 {
-   assert(diagDomBound < 1.0);
+   assert(diagDomBound_ < 1.0);
 
    diagDomBound = diagDomBound_;
 
@@ -35,6 +36,11 @@ SCsparsifier::SCsparsifier(double diagDomBound_, MPI_Comm mpiComm_)
    }
 
    mpiComm = mpiComm_;
+
+   int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
+   if( myRank == 0 )
+      printf("SCsparsifier: diagDomBound=%f \n", diagDomBound);
 }
 
 
@@ -129,7 +135,7 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
    std::vector<double> diag(sizeSC);
 
-   const int t = diagDomBound;
+   const double t = diagDomBound;
 
    assert(t > 0.0 && t < 1.0);
 

@@ -1089,8 +1089,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       }
    }
 
-   precondSC.resetSCdistEntries(kkts);
-
    assert(int(rowIndexMyLocal.size()) == nnzDistMyLocal);
 
    // sum up local sizes
@@ -1160,6 +1158,10 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
             assert(krowDist[r + 1] < nnzDist);
 
             const int col = jColKkt[c];
+
+            if( col < 0 )
+               continue;
+
             const double val = MKkt[c];
 
             MDist[krowDist[r + 1]] = val;
@@ -1173,6 +1175,9 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
       {
          const int col = jColKkt[c];
 
+         if( col < 0 )
+            continue;
+
          // is (r, col) a shared entry or locally owned?
          if( (!rowIsLocal[r] && !rowIsLocal[col]) || rowIsMyLocal[col] )
          {
@@ -1185,6 +1190,8 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          }
       }
    }
+
+   precondSC.resetSCdistEntries(kkts);
 
    // fill in gathered local pairs not inserted yet
    for( int i = 0; i < nnzDistLocal; i++ )
@@ -1200,7 +1207,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          continue;
 
       assert(krowDist[row + 1] < nnzDist);
-
       assert(MDist[krowDist[row + 1]] == 0.0);
       jColDist[krowDist[row + 1]++] = col;
    }

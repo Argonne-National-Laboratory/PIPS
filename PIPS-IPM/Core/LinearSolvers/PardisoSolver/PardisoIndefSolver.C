@@ -159,6 +159,7 @@ void PardisoIndefSolver::initPardiso()
 {
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
+   deleteCSRpointers = false;
    mtype = -2;
    nrhs = 1;
    iparm[0] = 0;
@@ -243,7 +244,7 @@ void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew, bool formatFort
 void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrix_fortran)
 {
    assert(n == matrix_fortran.size());
-   assert(!ia && !ja && !a);
+   assert(!deleteCSRpointers);
 
    ia = matrix_fortran.getStorage()->krowM;
    ja = matrix_fortran.getStorage()->jcolM;
@@ -253,10 +254,6 @@ void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrix_fortran)
 
    // matrix initialized, now do the actual factorization
    factorize();
-
-   ia = NULL;
-   ja = NULL;
-   a = NULL;
 }
 
 
@@ -273,6 +270,7 @@ void PardisoIndefSolver::factorizeFromSparse()
    if( ia == NULL )
    {
       assert(ja == NULL && a == NULL);
+      deleteCSRpointers = true;
 
       ia = new int[n + 1];
       ja = new int[nnz];
@@ -357,13 +355,18 @@ void PardisoIndefSolver::factorizeFromDense()
          if( mStorage->M[i][j] != 0.0 )
             nnz++;
 
-   delete[] ia;
-   delete[] ja;
-   delete[] a;
+   if( deleteCSRpointers )
+   {
+      delete[] ia;
+      delete[] ja;
+      delete[] a;
+   }
 
    ia = new int[n + 1];
    ja = new int[nnz];
    a = new double[nnz];
+
+   deleteCSRpointers = true;
 
    nnz = 0;
    for( int j = 0; j < n; j++ )
@@ -467,7 +470,6 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 {
    assert(iparmUnchanged());
 
-
    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
@@ -569,8 +571,12 @@ PardisoIndefSolver::~PardisoIndefSolver()
 #endif
    );
 
-   delete[] ia;
-   delete[] ja;
-   delete[] a;
+   if( deleteCSRpointers )
+   {
+      delete[] ia;
+      delete[] ja;
+      delete[] a;
+   }
+
    delete[] x;
 }
