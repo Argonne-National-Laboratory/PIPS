@@ -292,19 +292,6 @@ void PardisoIndefSolver::factorizeFromSparse()
       diag[r] = fabs(aStorage[j]) * t;
    }
 
-#if 0
-   {
-      ofstream myfile;
-
-      myfile.open("../D.txt");
-
-      for( int i = 0; i < n; i++ )
-         myfile << i << " " << diag[i] << endl;
-
-      myfile.close();
-   }
-#endif
-
    ia[0] = 1;
    int kills = 0;
    int nnznew = 0;
@@ -338,29 +325,25 @@ void PardisoIndefSolver::factorizeFromSparse()
 
    std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
 
-#if 1
+#if 0
    {
       ofstream myfile;
-      int mype;
-      MPI_Comm_rank(MPI_COMM_WORLD, &mype);
+      int mype;  MPI_Comm_rank(MPI_COMM_WORLD, &mype);
+
+      printf("\n\n ...WRITE OUT! \n\n");
 
       if( mype == 0 )
       {
-         printf("\n\n ...WRITE OUT! \n\n");
          myfile.open("../A.txt");
 
          for( int i = 0; i < n; i++ )
-         {
             for( int k = ia[i]; k < ia[i + 1]; k++ )
-            {
-               myfile << i << '\t' << ja[k] << '\t' << a[k] << endl;
-            }
-         }
+               myfile << i << '\t' << ja[k - 1] << '\t' << a[k - 1] << endl;
 
          myfile.close();
       }
 
-      printf("...exiting (pardiso) \n");
+      printf("%d...exiting (pardiso) \n", mype);
       exit(1);
   }
 #endif

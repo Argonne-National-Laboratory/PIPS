@@ -165,45 +165,11 @@ void sLinsysRoot::factor2(sData *prob, Variables *vars)
 
   reduceKKT(prob);
 
-
  #ifdef TIMING
   stochNode->resMon.recReduceTmLocal_stop();
 #endif
 
   finalizeKKT(prob, vars);
-
-
-#if 1
-   if( kktDist )
-   {
-      ofstream myfile;
-      int mype;
-      MPI_Comm_rank(mpiComm, &mype);
-
-      if( mype == 0 )
-      {
-         printf("\n\n ...WRITE OUT! \n\n");
-
-         if( kktDist != NULL )
-         {
-            printf("...dist \n");
-            myfile.open("../ADist.txt");
-            kktDist->writeToStream(myfile);
-         }
-         else
-         {
-            myfile.open("../A.txt");
-            kkt->writeToStream(myfile);
-         }
-         myfile.close();
-      }
-
-      MPI_Barrier(mpiComm);
-      printf("...exiting (root) \n");
-      exit(1);
-  }
-#endif
-
 
   factorizeKKT(prob);
 
@@ -828,16 +794,6 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
       assert(col >= row && col < locnx + locmy + locmyl + locmzl);
       assert(val == val); // catch NaNs
 
-#if 0
-      if( !(rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row])) )
-      {
-         printf("%d FAIL: %d %d  with %d %d, %d %d val=%f\n", myRank, row, col,
-               rowIsMyLocal[row], rowIsMyLocal[col], rowIsLocal[row],
-               rowIsLocal[col], val);
-         exit(1);
-      }
-#endif
-
       assert(rowIsMyLocal[row] || (rowIsMyLocal[col] && !rowIsLocal[row]));
 
       int c;
@@ -1220,21 +1176,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 #ifndef NDEBUG
    assert(krowDist[0] == 0);
    assert(krowDist[sizeKkt] == nnzDist);
-#if 0 // todo deleteme
-   for( int r = 0; r < sizeKkt; r++ )
-      if( !(krowDist[r + 1] == krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]) )
-      {
-         int myRank; MPI_Comm_rank(mpiComm, &myRank);
-
-         printf("%d %d \n", rowSizeLocal[r], rowSizeShared[r]);
-         printf("%d fail: r=%d %d %d \n", myRank, r, krowDist[r + 1], krowDist[r] + rowSizeLocal[r] + rowSizeShared[r]);
-         printf("lengths: %d: %d \n", krowDist[r + 1] - krowDist[r], rowSizeLocal[r] + rowSizeShared[r]);
-         printf("...%d + %d \n", rowSizeLocal[r], rowSizeShared[r]);
-         printf("nextlengths: %d: %d \n", krowDist[r + 2] - krowDist[r + 1], rowSizeLocal[r + 1] + rowSizeShared[r + 1]);
-         printf("%d row is rowIsMyLocal: %d \n", myRank, rowIsMyLocal[r]);
-         printf("%d row is rowIsLocal: %d \n", myRank, rowIsLocal[r]);
-      }
-#endif
 
    for( int r = 0; r < sizeKkt; r++ )
    {
@@ -1273,6 +1214,31 @@ void sLinsysRoot::factorizeKKT(sData* prob)
      assert(prob);
 
      precondSC.getSparsifiedSC_fortran(*prob, *kktDist);
+
+#if 0
+      {
+         ofstream myfile;
+         int mype; MPI_Comm_rank(mpiComm, &mype);
+
+         if( mype == 0 )
+         {
+            printf("\n\n ...WRITE OUT kktDist! \n\n");
+            myfile.open("../ADist.txt");
+            int* ia = kktDist->krowM(); int* ja = kktDist->jcolM(); double* a = kktDist->M();
+
+            for( int i = 0; i < kktDist->size(); i++ )
+               for( int k = ia[i]; k < ia[i + 1]; k++ )
+                  myfile << i << '\t' << ja[k - 1] << '\t' << a[k - 1] << endl;
+
+            myfile.close();
+         }
+
+         MPI_Barrier(mpiComm);
+         printf("...exiting (root) \n");
+         exit(1);
+      }
+#endif
+
      solver->matrixRebuild(*kktDist);
   }
   else

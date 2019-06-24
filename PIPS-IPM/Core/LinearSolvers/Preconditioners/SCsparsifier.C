@@ -80,9 +80,7 @@ SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
 
             assert(col >= 0);
 
-            int todo;
-            // if( absM) < epsilonZero && col != r )
-            if( (absM == 0.0 && col != r) || (absM < diag[r] && absM < diag[col]) )
+            if( (absM < epsilonZero && col != r) || (absM < diag[r] && absM < diag[col]) )
             {
                assert(col != r);
                jcolM[j] = -jcolM[j] - 1;
@@ -101,9 +99,7 @@ SCsparsifier::unmarkDominatedSCdistLocals(const sData& prob,
          {
             const double absM = fabs(M[j]);
 
-            int todo;
-            // if( absM) < epsilonZero && col != r )
-            if( (absM == 0.0 && col != r) || (absM < diag[r] && absM < diag[col]) )
+            if( (absM < epsilonZero && col != r) || (absM < diag[r] && absM < diag[col]) )
             {
                assert(col != r);
                jcolM[j] = -jcolM[j] - 1;
@@ -232,20 +228,6 @@ std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMat
 
    for( size_t i = 0; i < diag.size(); ++i )
       diag[i] = fabs(diag[i]) * diagDomBound;
-
-#if 0
-   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-   if( myRank == 0 )
-   {
-      ofstream myfile;
-      myfile.open("../Ddist.txt");
-
-      for( int i = 0; i < sizeSC; i++ )
-            myfile << i << " " << diag[i] << endl;
-
-      myfile.close();
-   }
-#endif
 
    return diag;
 }
