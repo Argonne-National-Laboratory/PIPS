@@ -1683,4 +1683,83 @@ bool StochVector::isRootNodeInSync() const
    }
 
    return in_sync;
+ }
+
+std::vector<double> StochVector::gatherStochVector() const
+{
+   const SimpleVector& firstvec = dynamic_cast<const SimpleVector&>(*vec);
+   const size_t nChildren = children.size();
+
+   int myrank;
+   MPI_Comm_rank(mpiComm, &myrank);
+   int mysize;
+   MPI_Comm_size(mpiComm, &mysize);
+
+   std::vector<double> gatheredVecLocal;
+
+   for( size_t i = 0; i < nChildren; ++i )
+   {
+      const SimpleVector& vec = dynamic_cast<const SimpleVector&>(*children[i]->vec);
+
+      if( vec.length() > 0 )
+         gatheredVecLocal.insert(gatheredVecLocal.end(), &vec[0], &vec[0] + vec.length());
+   }
+
+   size_t solLength = firstvec.length();
+
+   // final vector
+   std::vector<double> gatheredVec(0);
+
+   if( mysize > 0 )
+   {
+      // get all lengths
+      std::vector<int> recvcounts(mysize);
+      std::vector<int> recvoffsets(mysize);
+
+      int mylength = int(gatheredVecLocal.size());
+
+      MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
+
+      // all-gather local components
+      recvoffsets[0] = 0;
+      for( size_t i = 1; i < size_t(mysize); ++i )
+         recvoffsets[i] = recvoffsets[i - 1] + recvcounts[i - 1];
+
+      if( myrank == 0 )
+      {
+         solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
+         gatheredVec = std::vector<double>(solLength);
+
+         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE,
+               &gatheredVec[0] + firstvec.length(), &recvcounts[0],
+               &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+      }
+      else
+      {
+         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, 0,
+               &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+      }
+   }
+   else
+   {
+      solLength += gatheredVecLocal.size();
+
+      gatheredVec = std::vector<double>(solLength);
+
+      std::copy(gatheredVecLocal.begin(), gatheredVecLocal.end(), gatheredVec.begin() + firstvec.length());
+   }
+
+   if( myrank == 0 )
+   {
+      std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &gatheredVec[0]);
+
+      if( vecl && vecl->length() > 0 )
+      {
+         const SimpleVector& linkvec = dynamic_cast<const SimpleVector&>(*vecl);
+         gatheredVec.insert(gatheredVec.end(), &linkvec[0], &linkvec[0] + linkvec.length());
+      }
+   }
+
+
+   return gatheredVec;
 }

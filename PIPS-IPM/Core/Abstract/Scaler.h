@@ -37,12 +37,22 @@ public:
   virtual void scale() = 0;
 
   /** unscale given objective value */
-  virtual double getOrigObj(double objval) = 0;
+  virtual double getOrigObj(double objval) const = 0;
 
   /** compute original vector from given primal vector */
-  virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) = 0;
+  virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) const = 0;
 
+  /** compute original vector from given dual vector */
+  virtual OoqpVector* getOrigDualEq(const OoqpVector& soldual) const = 0;
 
+  /** compute original vector from given dual vector */
+  virtual OoqpVector* getOrigDualIneq(const OoqpVector& soldual) const = 0;
+
+  /** compute original vector from given dual vector */
+  virtual OoqpVector* getOrigDualVarBoundsUpp(const OoqpVector& soldual) const = 0;
+
+  /** compute original vector from given dual vector */
+  virtual OoqpVector* getOrigDualVarBoundsLow(const OoqpVector& soldual) const = 0;
 };
 
 //@}

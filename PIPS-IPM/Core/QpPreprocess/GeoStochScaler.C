@@ -11,6 +11,9 @@
 #include <cmath>
 #include "pipsdef.h"
 
+static const double maxobjscale = 100.0;
+
+
 GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
   : QpScaler(prob, bitshifting)
 {
@@ -52,8 +55,12 @@ void GeoStochScaler::doObjScaling()
    }
    else
    {
-      const double scaleFactor = std::sqrt(absmax * absmin);
-      PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
+      int myRank = 0;
+      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+      const double scaleFactor = min(std::sqrt(absmax * absmin), maxobjscale);
+
+      if( myRank == 0) printf("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
 
       assert( scaleFactor >= 0.0 );
       scaleObjVector(scaleFactor);

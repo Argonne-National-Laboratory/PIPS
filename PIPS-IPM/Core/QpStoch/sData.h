@@ -37,9 +37,15 @@ class sData : public QpGenData {
  public:
   long long nxlow, nxupp, mclow, mcupp;
 
-  std::vector<unsigned int> getLinkVarsPermInv();
-  std::vector<unsigned int> getLinkConsEqPermInv();
-  std::vector<unsigned int> getLinkConsIneqPermInv();
+  // returns permutation vector or empty vector if no permutation has been performed
+  std::vector<unsigned int> getLinkVarsPerm() const;
+  // returns inverse permutation vector or empty vector if no permutation has been performed
+  std::vector<unsigned int> getLinkVarsPermInv() const;
+  // returns inverse permutation vector or empty vector if no permutation has been performed
+  std::vector<unsigned int> getLinkConsEqPermInv () const;
+  // returns inverse permutation vector or empty vector if no permutation has been performed
+  std::vector<unsigned int> getLinkConsIneqPermInv() const;
+
 
   int getLocalnx();
   int getLocalmy();
