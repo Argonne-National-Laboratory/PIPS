@@ -66,7 +66,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   hasSparseKkt = prob_->exploitingLinkStructure();
 
   usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
-  MatrixEntryTriplet_mpi = NULL;
+  MatrixEntryTriplet_mpi = MPI_DATATYPE_NULL;
 
   initProperChildrenRange();
 }
@@ -120,7 +120,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
   hasSparseKkt = prob_->exploitingLinkStructure();
 
   usePrecondDist = usePrecondDist && hasSparseKkt && iAmDistrib;
-  MatrixEntryTriplet_mpi = NULL;
+  MatrixEntryTriplet_mpi = MPI_DATATYPE_NULL;
 
   initProperChildrenRange();
 }
@@ -701,7 +701,7 @@ void sLinsysRoot::reduceToProc0(int size, double* values)
 
 void sLinsysRoot::registerMatrixEntryTripletMPI()
 {
-   assert(!MatrixEntryTriplet_mpi);
+   assert(MatrixEntryTriplet_mpi == MPI_DATATYPE_NULL);
 
    const int nitems = 3;
    int blocklengths[3] = { 1, 1, 1 };
@@ -737,7 +737,7 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
    assert(size > 1);
 
    // MPI matrix entries triplet not registered yet?
-   if( !MatrixEntryTriplet_mpi )
+   if( MatrixEntryTriplet_mpi == MPI_DATATYPE_NULL )
       registerMatrixEntryTripletMPI();
 
    // pack the entries that will be send below
@@ -847,7 +847,7 @@ void sLinsysRoot::syncKKTdistLocalEntries(sData* prob)
 std::vector<sLinsysRoot::MatrixEntryTriplet> sLinsysRoot::receiveKKTdistLocalEntries() const
 {
    assert(kkt && hasSparseKkt);
-   assert(MatrixEntryTriplet_mpi);
+   assert(MatrixEntryTriplet_mpi != MPI_DATATYPE_NULL);
 
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
    int size; MPI_Comm_size(mpiComm, &size);
@@ -884,7 +884,7 @@ void sLinsysRoot::sendKKTdistLocalEntries(const std::vector<MatrixEntryTriplet>&
 
    assert(myRank >= 0);
    assert(nEntries > 0);
-   assert(MatrixEntryTriplet_mpi);
+   assert(MatrixEntryTriplet_mpi != MPI_DATATYPE_NULL);
 
    PIPSdebugMessage("myRank=%d sends %d \n", myRank, nEntries);
    MPI_Send(&prevEntries[0], nEntries, MatrixEntryTriplet_mpi, prevRank, 0, mpiComm);
