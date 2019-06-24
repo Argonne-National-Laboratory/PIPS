@@ -99,7 +99,9 @@ void StochPostsolver::finishNotify()
 // todo : at the moment only replaces whatever is given as x with the x solution in the original soution space
 PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Variables& original_solution) const
 {
-   std::cout << "postsolve" << std::endl;
+   // todo if my_rank == 0
+   // if()
+   // std::cout << "postsolve" << std::endl;
 
    const sVars& stoch_reduced_sol = dynamic_cast<const sVars&>(reduced_solution);
    sVars& stoch_original_sol = dynamic_cast<sVars&>(original_solution);
@@ -141,8 +143,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             int node = indices[first].node;
 
             assert( -1 <= node && node < static_cast<int>(primal_vars_orig.children.size()) );
-            assert(getSimpleVecColFromStochVec(*padding_origcol, node)[column] = std::numeric_limits<double>::infinity());
+            assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1);
 
+            assert( fabs(values[first]) != std::numeric_limits<double>::infinity());
             getSimpleVecColFromStochVec(*padding_origcol, node)[column] = values[first];
             break;
          }
@@ -186,7 +189,7 @@ void StochPostsolver::setOriginalValuesFromReduced(StochVector& original_vector,
 
    if( reduced_vector.isKindOf(kStochDummy) )
    {
-      assert( original_vector.isKindOf(kStochDummy) && mapping_to_original.isKindOf(kStochDummy) );
+      assert( original_vector.isKindOf(kStochDummy) && padding_original.isKindOf(kStochDummy) );
       return;
    }
 
@@ -216,9 +219,9 @@ void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector
    unsigned int col_reduced = 0; 
    for(unsigned int i = 0; i < padding_original.length(); ++i)
    {
-      if(padding_original[i] == 0)
+      if(padding_original[i] == -1)
       {
-         original_vector[i] = std::numeric_limits<double>::infinity();
+         continue;
       }
       else
       {
@@ -233,7 +236,7 @@ void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector
 /// todo : codu duplication with presolveData.h
 SimpleVector& StochPostsolver::getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const
 {
-   assert(-1 <= node && node < nChildren);
+   assert(-1 <= node && node < static_cast<int>(stochvec.children.size()));
 
    if(node == -1)
    {
@@ -265,7 +268,7 @@ SimpleVector& StochPostsolver::getSimpleVecRowFromStochVec(const StochVector& st
 
 SimpleVector& StochPostsolver::getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const
 {
-   assert(-1 <= node && node < nChildren);
+   assert(-1 <= node && node < static_cast<int>(stochvec.children.size()));
 
    if(node == -1)
    {

@@ -1265,19 +1265,15 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
 
 
 #ifndef NDEBUG
-   /* assert non-zero counters of row are zero */
+   /* assert non-zero counters of row are zero - only works for non-linking rows */
    if(system_type == EQUALITY_SYSTEM)
    {
-      if(linking)
-         assert( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row] - (*nnzs_row_A_chgs)[row] == 0.0 );
-      else
+      if(!linking)
          assert( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row] == 0.0 );   
    }
    else
    {
-      if(linking)
-         assert( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row] - (*nnzs_row_C_chgs)[row] == 0.0 );
-      else
+      if(!linking)
          assert( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row] == 0.0 );
    }  
 #endif

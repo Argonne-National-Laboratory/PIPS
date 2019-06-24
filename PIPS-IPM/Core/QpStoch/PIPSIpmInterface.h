@@ -19,6 +19,8 @@
 #include "Presolver.h"
 #include "Postsolver.h"
 
+#include "sTreeCallbacks.h"
+
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
@@ -51,6 +53,7 @@ class PIPSIpmInterface
   std::vector<double> getFirstStageDualRowSolution() const;
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
+  void postsolveComputedSolution() const;
   //more get methods to follow here
 
   static bool isDistributed() { return true; }
@@ -573,51 +576,119 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
   //return std::vector<double>(&v[0],&v[0]+v.length());
 }
 
-// template<class FORMULATION, class IPMSOLVER>
-// void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
-// {
-//   int my_rank;
-//   MPI_Comm_rank(comm,&my_rank);
+template<class FORMULATION, class IPMSOLVER>
+void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
+{
+  int my_rank;
+  MPI_Comm_rank(comm,&my_rank);
 
-//   assert(origData);
-//   assert(data);
+  assert(origData);
+  assert(data);
 
-//   /* construct vars object from computed solution */
+  /* construct vars object from computed solution */
 
-//   /// primal solution
-//   /// unscale primal solution
-//   const StochVector& x = (scaler) ? dynamic_cast<StochVector&>(*scaler->getOrigPrimal(*vars->x)) :
-//     dynamic_cast<const StochVector&>(*vars->x).cloneFull();
-//   /// unpermute primal solution
-//   const std::vector<unsigned int> permInv = data->getLinkVarsPermInv();
-//   if( permInv.size() != 0 )
-//     x->permuteVec0Entries(permInv);
-
-//   /// dual solution
-//   /// dual equality constraints
-//   if( scaler )
-//      y = dynamic_cast<StochVector*>(scaler->getOrigDualEq(*vars->y));
-//   else
-//      y = dynamic_cast<const StochVector&>(*vars->y).cloneFull();
-
-
-
-//   /// sVars unscaled_solution()
-//   sVars* postsolved_vars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
-
+  /// primal solution
+  /// unscale primal solution
+  StochVector* const x = (scaler) ? dynamic_cast<StochVector*>(scaler->getOrigPrimal(*vars->x)) :
+    dynamic_cast<const StochVector&>(*vars->x).cloneFull();
+  assert(x);
   
-// //   // postsolver->postsolve(const Variables &reduced_solution, Variables &original_solution)
-// // //  postsolver->postsolve(*primal_unscaled_original, primal_unscaled_reduced);
+  /// unpermute primal solution
+  const std::vector<unsigned int> permInvx = data->getLinkVarsPermInv();
+  if( permInvx.size() != 0 )
+    x->permuteVec0Entries(permInvx);
 
+  /// dual solution
+  /// dual equality constraints
+  StochVector* const y = (scaler) ? dynamic_cast<StochVector*>(scaler->getOrigDualEq(*vars->y)) :
+    dynamic_cast<const StochVector&>(*vars->y).cloneFull();
+  assert(y);
 
-//   double obj_postsolved = data->objectiveValue(postsolved_vars);
-//   if( my_rank == 0)
-//     std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
+  const std::vector<unsigned int> permInvy = data->getLinkConsEqPermInv();
+  if( permInvy.size() != 0 )
+     y->permuteLinkingEntries(permInvy);
 
-//   /* compute residuals for postprocessed solution and check for feasibility */
+  /// dual inequality constraints
+  StochVector* const z = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->z)) :
+     dynamic_cast<const StochVector&>(*vars->z).cloneFull();
+  assert(z);
 
-//   // sVars *        vars;
-//   // sResiduals *   resids;
-// }
+  const std::vector<unsigned int> permInvz = data->getLinkConsIneqPermInv();
+  if( permInvz.size() != 0 )
+     z->permuteLinkingEntries(permInvz);
+
+  /// dual values ineqality upp
+  StochVector* const pi = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->pi)) :
+    dynamic_cast<const StochVector&>(*vars->pi).cloneFull();
+  assert(pi);
+
+  const std::vector<unsigned int> permInvpi = data->getLinkConsIneqPermInv();
+  if( permInvpi.size() != 0 )
+     pi->permuteLinkingEntries(permInvpi);
+
+  /// dual values inequality lower
+  StochVector* const lambda = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->lambda)) :
+    dynamic_cast<const StochVector&>(*vars->lambda).cloneFull();
+  assert(lambda);
+
+  const std::vector<unsigned int> permInvlambda = data->getLinkConsIneqPermInv();
+  if( permInvlambda.size() != 0 )
+     lambda->permuteLinkingEntries(permInvlambda);
+
+  /// dual values upper varbounds
+  StochVector* const phi = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsUpp(*vars->phi)) : 
+    dynamic_cast<const StochVector&>(*vars->phi).cloneFull();
+  assert(phi);
+
+  const std::vector<unsigned int> permInvphi = data->getLinkVarsPerm();
+  if( permInvphi.size() != 0 )
+     phi->permuteVec0Entries(permInvphi);
+
+  /// dual values lower varbounds
+  StochVector* gamma = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsLow(*vars->gamma)) : 
+    dynamic_cast<const StochVector&>(*vars->gamma).cloneFull();
+  assert(gamma);
+
+  const std::vector<unsigned int> permInvgamma = data->getLinkVarsPerm();
+  if( permInvgamma.size() != 0 )
+     gamma->permuteVec0Entries(permInvgamma);
+
+  sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
+  callbackTree.switchToOriginalData();
+
+  factory->data = origData;
+
+  // factory->tree->data = origData;
+  sVars* postsolved_vars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
+  
+  // OoqpVectorHandle s      = OoqpVectorHandle( factory->tree->newDualZVector() );
+  // OoqpVectorHandle v      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
+  // OoqpVectorHandle w      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
+  // OoqpVectorHandle t      = OoqpVectorHandle( factory->tree->newDualZVector() );
+  // OoqpVectorHandle u      = OoqpVectorHandle( factory->tree->newDualZVector() ); 
+  callbackTree.switchToPresolvedData();
+  sVars* unscaled_solution = new sVars(factory->tree, x, vars->s, y, z, vars->v, gamma, vars->w, phi,
+    vars->t, lambda, vars->u, pi, 
+    data->ixlow, data->ixlow->length(),
+    data->ixupp, data->ixupp->length(),
+    data->iclow, data->iclow->length(),
+    data->icupp, data->icupp->length()
+  );
+  
+  // postsolver->postsolve(const Variables &reduced_solution, Variables &original_solution)
+  postsolver->postsolve(*unscaled_solution, *postsolved_vars);
+
+  callbackTree.switchToOriginalData();
+  double obj_postsolved = origData->objectiveValue(postsolved_vars);
+  if( my_rank == 0)
+    std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
+
+  /* compute residuals for postprocessed solution and check for feasibility */
+
+  // sVars *        vars;
+  // sResiduals *   resids;
+
+  // todo delete sol
+}
 
 #endif
