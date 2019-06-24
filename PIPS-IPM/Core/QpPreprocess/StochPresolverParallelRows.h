@@ -58,7 +58,7 @@ namespace rowlib
 class StochPresolverParallelRows : public StochPresolverBase
 {
 public:
-   StochPresolverParallelRows(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver);
+   StochPresolverParallelRows(PresolveData& presData, const sData& origProb);
 
    ~StochPresolverParallelRows();
 
@@ -66,11 +66,11 @@ public:
    virtual void applyPresolving();
 
 private:
-   SparseStorageDynamic* currCmat;
-   SparseStorageDynamic* currCmatTrans;
-   SparseStorageDynamic* currDmat;
-   SparseStorageDynamic* currDmatTrans;
-   SimpleVector* currNnzRowC;
+   const SparseStorageDynamic* currCmat;
+   const SparseStorageDynamic* currCmatTrans;
+   const SparseStorageDynamic* currDmat;
+   const SparseStorageDynamic* currDmatTrans;
+   const SimpleVector* currNnzRowC;
 
    // pointers to the normalized and copied matrix blocks
    SparseStorageDynamic* norm_Amat;

@@ -53,9 +53,10 @@ namespace rowlib
    }
 }
 
-StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver)
-: StochPresolverBase(presData, origProb, postsolver)
+StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, const sData& origProb)
+: StochPresolverBase(presData, origProb)
 {
+   // todo necessary?
    currCmat = NULL;
    currCmatTrans = NULL;
    currDmat = NULL;
@@ -86,7 +87,7 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, c
    norm_DmatTrans = NULL;
    currgChild = NULL;
    currgParent = NULL;
-   gParentAdaptions = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec)->cloneFull();
+   gParentAdaptions = dynamic_cast<SimpleVector const *>(dynamic_cast<const StochVector&>(*presData.getPresProb().g).vec)->cloneFull();
    gParentAdaptions->setToZero();
 
    mA = 0;
@@ -111,12 +112,8 @@ void StochPresolverParallelRows::applyPresolving()
    assert(newBoundsParent.size() == 0);
    assert(gParentAdaptions->isZero());
 
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-
 #ifndef NDEBUG
-   if( myRank == 0 )
+   if( my_rank == 0 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before parallel row presolving:" << std::endl;
@@ -127,10 +124,10 @@ void StochPresolverParallelRows::applyPresolving()
    int nRowElims = 0;
 
    // for children:
-   for( int node = 0; node < nChildren; ++node)
+   for(int node = 0; node < nChildren; ++node)
    {
       // copy and normalize A,B,C,D and b,c,d:
-      if( !nodeIsDummy(node, EQUALITY_SYSTEM) || !nodeIsDummy(node, INEQUALITY_SYSTEM) )
+      if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) || !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
       {
          setNormalizedPointers(node);
 
@@ -176,7 +173,9 @@ void StochPresolverParallelRows::applyPresolving()
    tightenLinkingVarsBounds();
 
    // update NnzColParent:
-   updateNnzColParent(MPI_COMM_WORLD);
+   presData.allreduceAndApplyNnzChanges();
+   // presData.allreduceLinkingVarBounds();
+   presData.allreduceAndApplyBoundChanges();
    presData.resetRedCounters();
 
    rowsFirstHashTable.clear();
@@ -208,6 +207,7 @@ void StochPresolverParallelRows::applyPresolving()
       compareRowsInSecondHashTable(nRowElims, -1);
       rowsSecondHashTable.clear();
    }
+
    // update objective coefficients of linking variables (gParent):
    allreduceAndUpdate(MPI_COMM_WORLD, *gParentAdaptions, *currgParent);
 
@@ -256,8 +256,8 @@ void StochPresolverParallelRows::setNormalizedPointersMatrices(int node)
 {
    assert(-1 <= node && node <= nChildren);
 
-   const StochGenMatrix& matrixA = dynamic_cast<const StochGenMatrix&>(*(presProb->A));
-   const StochGenMatrix& matrixC = dynamic_cast<const StochGenMatrix&>(*(presProb->C));
+   const StochGenMatrix& matrixA = dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().A));
+   const StochGenMatrix& matrixC = dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().C));
 
    if(node == -1)
    {
@@ -278,7 +278,7 @@ void StochPresolverParallelRows::setNormalizedPointersMatrices(int node)
    else
    {
       /* EQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, EQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
          norm_Amat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[node]->Amat)->getStorageDynamicRef());
          norm_AmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixA.children[node]->Amat)->getStorageDynamicTransposedRef());
@@ -290,7 +290,7 @@ void StochPresolverParallelRows::setNormalizedPointersMatrices(int node)
          norm_Amat = norm_AmatTrans = norm_Bmat = norm_BmatTrans = NULL;
 
       /* INEQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, INEQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
          norm_Cmat = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[node]->Amat)->getStorageDynamicRef());
          norm_CmatTrans = new SparseStorageDynamic(dynamic_cast<SparseGenMatrix*>(matrixC.children[node]->Amat)->getStorageDynamicTransposedRef());
@@ -309,30 +309,30 @@ void StochPresolverParallelRows::setNormalizedPointersMatrixBounds(int node)
 
    if(node == -1)
    {
-      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec)->cloneFull();
+      norm_b = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).vec)->cloneFull();
 
-      norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec)->cloneFull();
-      norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec)->cloneFull();
-      norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec)->cloneFull();
-      norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec)->cloneFull();
+      norm_cupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).vec)->cloneFull();
+      norm_icupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).vec)->cloneFull();
+      norm_clow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bl)).vec)->cloneFull();
+      norm_iclow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).vec)->cloneFull();
    }
    else
    {
       /* EQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, EQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
-         norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->vec)->cloneFull();
+         norm_b = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).children[node]->vec)->cloneFull();
       }
       else
          norm_b = NULL;
 
       /* INEQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, INEQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
-         norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec)->cloneFull();
-         norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[node]->vec)->cloneFull();
-         norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[node]->vec)->cloneFull();
-         norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[node]->vec)->cloneFull();
+         norm_cupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).children[node]->vec)->cloneFull();
+         norm_clow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bl)).children[node]->vec)->cloneFull();
+         norm_icupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).children[node]->vec)->cloneFull();
+         norm_iclow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).children[node]->vec)->cloneFull();
       }
       else
          norm_cupp = norm_icupp = norm_clow = norm_iclow = NULL;
@@ -344,30 +344,30 @@ void StochPresolverParallelRows::setNormalizedPointersMatrixBounds(int node)
 void StochPresolverParallelRows::updateExtendedPointersForCurrentNode(int node)
 {
    assert(-1 <= node && node < nChildren);
-   assert(!nodeIsDummy(node, EQUALITY_SYSTEM) || !nodeIsDummy(node, INEQUALITY_SYSTEM));
+   assert(!presData.nodeIsDummy(node, EQUALITY_SYSTEM) || !presData.nodeIsDummy(node, INEQUALITY_SYSTEM));
 
    if(node == -1)
    {
       updatePointersForCurrentNode(-1, EQUALITY_SYSTEM);
 
       /* INEQUALITY_SYSTEM */
-      currCmat = dynamic_cast<SparseGenMatrix*>(dynamic_cast<const StochGenMatrix&>(*(presProb->C)).Bmat)->getStorageDynamic();
-      currCmatTrans = dynamic_cast<SparseGenMatrix*>(dynamic_cast<const StochGenMatrix&>(*(presProb->C)).Bmat)->getStorageDynamicTransposed();
+      currCmat = dynamic_cast<SparseGenMatrix*>(dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().C)).Bmat)->getStorageDynamic();
+      currCmatTrans = dynamic_cast<SparseGenMatrix*>(dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().C)).Bmat)->getStorageDynamicTransposed();
 
       currDmat = NULL;
       currDmatTrans = NULL;
 
-      currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec);
-      currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec);
-      currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
-      currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
+      currIneqRhs = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).vec);
+      currIneqLhs = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bl)).vec);
+      currIcupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).vec);
+      currIclow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).vec);
 
-      currNnzRowC = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
+      currNnzRowC = dynamic_cast<const SimpleVector*>(&presData.getNnzsRowC().vec);
    }
    else
    {
       /* EQUALITY_SYSTEM */
-      if(!nodeIsDummy(node, EQUALITY_SYSTEM))
+      if(!presData.nodeIsDummy(node, EQUALITY_SYSTEM))
       {
          updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
       }
@@ -379,7 +379,7 @@ void StochPresolverParallelRows::updateExtendedPointersForCurrentNode(int node)
       }
 
       /* INEQUALITY_SYSTEM */
-      if(!nodeIsDummy(-1, INEQUALITY_SYSTEM))
+      if(!presData.nodeIsDummy(-1, INEQUALITY_SYSTEM))
       {
          currCmat = dynamic_cast<SparseGenMatrix*>(dynamic_cast<const StochGenMatrix&>(*(presProb->C)).children[node]->Amat)->getStorageDynamic();
          currCmatTrans = dynamic_cast<SparseGenMatrix*>(dynamic_cast<const StochGenMatrix&>(*(presProb->C)).children[node]->Amat)->getStorageDynamicTransposed();
@@ -417,7 +417,7 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
    else
    {
       /* EQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, EQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
          norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->vec)->cloneFull();
          norm_factorA->setToZero();
@@ -426,7 +426,7 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
          norm_factorA = NULL;
 
       /* INEQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, INEQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
          norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec)->cloneFull();
          norm_factorC->setToZero();
@@ -458,7 +458,7 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
       singletonCoeffsColChild->setToZero();
 
       /* EQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, EQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
          rowContainsSingletonVariableA = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[node]->vec)->cloneFull();
          rowContainsSingletonVariableA->setToConstant( -1.0 );
@@ -467,7 +467,7 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
          rowContainsSingletonVariableA = NULL;
 
       /* INEQUALITY_SYSTEM */
-      if( !nodeIsDummy( node, INEQUALITY_SYSTEM ) )
+      if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
          rowContainsSingletonVariableC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec)->cloneFull();
          rowContainsSingletonVariableC->setToConstant( -1.0 );
@@ -492,15 +492,15 @@ void StochPresolverParallelRows::setNormalizedReductionPointers(int node)
    else
    {
       /* EQUALITY_SYSTEM */
-      normNnzRowA = (!nodeIsDummy( node, EQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[node]->vec)->cloneFull() : NULL;
+      normNnzRowA = (!presData.nodeIsDummy( node, EQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[node]->vec)->cloneFull() : NULL;
       /* INEQUALITY_SYSTEM */
-      normNnzRowC =(!nodeIsDummy( node, INEQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[node]->vec)->cloneFull() : NULL;
+      normNnzRowC =(!presData.nodeIsDummy( node, INEQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[node]->vec)->cloneFull() : NULL;
    }
 }
 
 void StochPresolverParallelRows::setNormalizedPointers(int node)
 {
-   assert(!nodeIsDummy(node, EQUALITY_SYSTEM) || !nodeIsDummy(node, INEQUALITY_SYSTEM));
+   assert(!presData.nodeIsDummy(node, EQUALITY_SYSTEM) || !presData.nodeIsDummy(node, INEQUALITY_SYSTEM));
    assert(-1 <= node && node <= nChildren );
 
    // todo watch out : is it bad that this also sets Blmat?
@@ -583,7 +583,7 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
    }
 
    bool childExists = false;
-   if( !nodeIsDummy(node, EQUALITY_SYSTEM) )
+   if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
    {
       childExists = true;
       assert( norm_Amat && norm_Bmat && norm_b );
@@ -597,7 +597,7 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
       delete rowContainsSingletonVariableA;
    }
 
-   if( !nodeIsDummy(node, INEQUALITY_SYSTEM) )
+   if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
    {
       childExists = true;
       assert( norm_Cmat && norm_Dmat && norm_cupp && norm_clow && norm_icupp && norm_iclow );
@@ -1326,41 +1326,41 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
    return true;
 }
 
-/**
- * Adapt the objective function, at coefficient of colIdx1 and if @param offset, then also the objOffset is adapted.
- */
-void StochPresolverParallelRows::adaptObjective( int colIdx1, int colIdx2, double t, double d, int it)
-{
-   assert( colIdx1 >= -1 && colIdx2 >= 0 );
-   assert( it >= -1 && it < nChildren );
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+// /**
+//  * Adapt the objective function, at coefficient of colIdx1 and if @param offset, then also the objOffset is adapted.
+//  */
+// void StochPresolverParallelRows::adaptObjective( int colIdx1, int colIdx2, double t, double d, int it)
+// {
+//    assert( colIdx1 >= -1 && colIdx2 >= 0 );
+//    assert( it >= -1 && it < nChildren );
+//    int myRank;
+//    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-   const double costOfVar2 = (colIdx2 < nA)
-         ? currgParent->elements()[colIdx2] : currgChild->elements()[colIdx2 - nA];
+//    const double costOfVar2 = (colIdx2 < nA)
+//          ? currgParent->elements()[colIdx2] : currgChild->elements()[colIdx2 - nA];
 
-   if( colIdx1 == -1 )
-   {  // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
-      if( myRank == 0 || it > -1 ) // only add the objective offset for root as process ZERO:
-         indivObjOffset += d * costOfVar2;
-   }
-   else if( colIdx1 >= nA )
-   {
-      currgChild->elements()[colIdx1 - nA] += t * costOfVar2;
-      indivObjOffset += d * costOfVar2;
-   }
-   else if( it > -1 )   // case singleColIdx1 a linking variable, and currently working on a child
-   {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
-      gParentAdaptions->elements()[colIdx1] += t * costOfVar2;
-      indivObjOffset += d * costOfVar2;
-   }
-   else  // case Parent block that all processes have
-   {
-      currgParent->elements()[colIdx1] += t * costOfVar2;
-      // only add the objective offset for root as process ZERO:
-      if( myRank == 0 ) indivObjOffset += d * costOfVar2;
-   }
-}
+//    if( colIdx1 == -1 )
+//    {  // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
+//       if( myRank == 0 || it > -1 ) // only add the objective offset for root as process ZERO:
+//          indivObjOffset += d * costOfVar2;
+//    }
+//    else if( colIdx1 >= nA )
+//    {
+//       currgChild->elements()[colIdx1 - nA] += t * costOfVar2;
+//       indivObjOffset += d * costOfVar2;
+//    }
+//    else if( it > -1 )   // case singleColIdx1 a linking variable, and currently working on a child
+//    {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
+//       gParentAdaptions->elements()[colIdx1] += t * costOfVar2;
+//       indivObjOffset += d * costOfVar2;
+//    }
+//    else  // case Parent block that all processes have
+//    {
+//       currgParent->elements()[colIdx1] += t * costOfVar2;
+//       // only add the objective offset for root as process ZERO:
+//       if( myRank == 0 ) indivObjOffset += d * costOfVar2;
+//    }
+// }
 
 void StochPresolverParallelRows::computeXminusYdivZ( double& result,
       SimpleVector& ixvec, SimpleVector& xvec, int index, double y, double z)
@@ -1372,21 +1372,21 @@ void StochPresolverParallelRows::computeXminusYdivZ( double& result,
 /** Should be called right after combineNewBoundsParent().
  * Updates the bounds on the linking variables.
  */
-void StochPresolverParallelRows::tightenLinkingVarsBounds()
-{
-   // probably unnecessary
-   currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
-   currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
-   currIxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
-   currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
-   currIxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
+// void StochPresolverParallelRows::tightenLinkingVarsBounds()
+// {
+//    // probably unnecessary
+//    currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
+//    currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
+//    currIxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
+//    currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
+//    currIxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
 
-   // apply updated newBoundsParent to the variable bounds.
-   for(int i=0; i<getNumberNewBoundsParent(); i++)
-   {
-      XBOUNDS newbounds = getNewBoundsParent(i);
-      assert( newbounds.colIdx >= 0 && newbounds.colIdx < nA );
-      tightenBoundsForSingleVar(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp);
-   }
-   clearNewBoundsParent();
-}
+//    // apply updated newBoundsParent to the variable bounds.
+//    for(int i=0; i<getNumberNewBoundsParent(); i++)
+//    {
+//       XBOUNDS newbounds = getNewBoundsParent(i);
+//       assert( newbounds.colIdx >= 0 && newbounds.colIdx < nA );
+//       tightenBoundsForSingleVar(newbounds.colIdx, newbounds.newxlow, newbounds.newxupp);
+//    }
+//    clearNewBoundsParent();
+// }

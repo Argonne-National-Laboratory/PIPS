@@ -177,7 +177,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   data->activateLinkStructureExploitation();
 #endif
 
-  vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
+  vars   = dynamic_cast<sVars*>( factory->makeVariables( data ) );
 #ifdef TIMING
   if(mype==0) printf("variables created\n");
 #endif
@@ -280,10 +280,6 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
     }
   }
 #endif
-
-   // todo postsolve an unscaled sVars object holding the solution
-
-
 }
 
 template<typename FORMULATION, typename SOLVER>
@@ -490,5 +486,52 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
   }
   //return std::vector<double>(&v[0],&v[0]+v.length());
 }
+
+// template<class FORMULATION, class IPMSOLVER>
+// void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
+// {
+//   int my_rank;
+//   MPI_Comm_rank(comm,&my_rank);
+
+//   assert(origData);
+//   assert(data);
+
+//   /* construct vars object from computed solution */
+
+//   /// primal solution
+//   /// unscale primal solution
+//   const StochVector& x = (scaler) ? dynamic_cast<StochVector&>(*scaler->getOrigPrimal(*vars->x)) :
+//     dynamic_cast<const StochVector&>(*vars->x).cloneFull();
+//   /// unpermute primal solution
+//   const std::vector<unsigned int> permInv = data->getLinkVarsPermInv();
+//   if( permInv.size() != 0 )
+//     x->permuteVec0Entries(permInv);
+
+//   /// dual solution
+//   /// dual equality constraints
+//   if( scaler )
+//      y = dynamic_cast<StochVector*>(scaler->getOrigDualEq(*vars->y));
+//   else
+//      y = dynamic_cast<const StochVector&>(*vars->y).cloneFull();
+
+
+
+//   /// sVars unscaled_solution()
+//   sVars* postsolved_vars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
+
+  
+// //   // postsolver->postsolve(const Variables &reduced_solution, Variables &original_solution)
+// // //  postsolver->postsolve(*primal_unscaled_original, primal_unscaled_reduced);
+
+
+//   double obj_postsolved = data->objectiveValue(postsolved_vars);
+//   if( my_rank == 0)
+//     std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
+
+//   /* compute residuals for postprocessed solution and check for feasibility */
+
+//   // sVars *        vars;
+//   // sResiduals *   resids;
+// }
 
 #endif
