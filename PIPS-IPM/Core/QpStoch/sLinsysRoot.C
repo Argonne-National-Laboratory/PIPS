@@ -1069,7 +1069,11 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          const int col = jColKkt[c];
 
          if( col < 0 )
+         {
+            assert(-col - 1 >= 0 && -col - 1 < sizeKkt);
+            assert((!(!rIsLocal && !rowIsLocal[-col - 1])));
             continue;
+         }
 
          // is (r, col) a shared entry?
          if( !rIsLocal && !rowIsLocal[col] )
@@ -1108,8 +1112,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          assert(rowSizeShared[i] == rowSizeSharedMax[i]);
    }
 #endif
-
-   std::vector<int> rankMyLocal(rowIndexMyLocal.size(), myRank);
 
    int localGatheredMyStart;
    int localGatheredMyEnd;
@@ -1176,7 +1178,11 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
          const int col = jColKkt[c];
 
          if( col < 0 )
+         {
+            assert(-col - 1 >= 0 && -col - 1 < sizeKkt);
+            assert(!(!rowIsLocal[r] && !rowIsLocal[-col - 1]));
             continue;
+         }
 
          // is (r, col) a shared entry or locally owned?
          if( (!rowIsLocal[r] && !rowIsLocal[col]) || rowIsMyLocal[col] )
