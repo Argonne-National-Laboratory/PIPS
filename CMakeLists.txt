@@ -58,6 +58,10 @@ message(STATUS "WITH_PARDISOINDEF=${WITH_PARDISOINDEF}")
 option(WITH_MUMPS_LEAF "Use MUMPS (if available) for (local) Schur complement at each leaf" OFF)
 message(STATUS "WITH_MUMPS_LEAF=${WITH_MUMPS_LEAF}")
 
+#use (sparse) MUMPS solver for global Schur complement
+option(WITH_MUMPS_ROOT "Use MUMPS (if available) for (global) Schur complement at root" OFF)
+message(STATUS "WITH_MUMPS_ROOT=${WITH_MUMPS_ROOT}")
+
 #use sparse preconditioner for global Schur complement
 option(WITH_DIST_PRECOND "use sparse preconditioner for global Schur complement" ON)
 message(STATUS "WITH_DIST_PRECOND=${WITH_DIST_PRECOND}")
@@ -344,7 +348,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   #find_library(MA86_LIBRARY hsl_ma86 PATHS ${MA86_DIR}/lib)
 
   #MUMPS Solver REMARK: Identical to the one from PIPS Master, so can simply be replaced if this branch is merged into master
-  if(WITH_MUMPS_LEAF)
+  if(WITH_MUMPS_LEAF OR WITH_MUMPS_ROOT)
     set(MUMPS_DIR ${SHARED_DIR}/MUMPS)
     find_library(MUMPS_D_LIBRARY libdmumps.a PATHS ${MUMPS_DIR}/lib NO_DEFAULT_PATH)
     find_library(MUMPS_COMMON_LIBRARY libmumps_common.a PATHS ${MUMPS_DIR}/lib NO_DEFAULT_PATH)
@@ -353,7 +357,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     if(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT MUMPS_INCLUDE_DIR)
       message(WARNING "even though WITH_MUMPS_LEAF was specified : no MUMPS was found under ${MUMPS_DIR}/lib")
    endif(NOT MUMPS_D_LIBRARY OR NOT MUMPS_COMMON_LIBRARY OR NOT MUMPS_PORD_LIBRARY OR NOT MUMPS_INCLUDE_DIR)
-  endif(WITH_MUMPS_LEAF)
+  endif(WITH_MUMPS_LEAF OR WITH_MUMPS_ROOT)
 
   if(MUMPS_INCLUDE_DIR AND MUMPS_D_LIBRARY AND PARMETIS_LIBRARY)
     # we assume the other libraries are in there
@@ -527,6 +531,9 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     if(WITH_MUMPS_LEAF)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MUMPS_LEAF")
     endif(WITH_MUMPS_LEAF)
+    if(WITH_MUMPS_ROOT)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_MUMPS_ROOT")
+    endif(WITH_MUMPS_ROOT)
   endif(HAVE_MUMPS)
 
 
