@@ -653,42 +653,50 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   if( permInvgamma.size() != 0 )
      gamma->permuteVec0Entries(permInvgamma);
 
-  sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
-  callbackTree.switchToOriginalData();
 
-  factory->data = origData;
-
-  // factory->tree->data = origData;
-  sVars* postsolved_vars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
-  
   // OoqpVectorHandle s      = OoqpVectorHandle( factory->tree->newDualZVector() );
   // OoqpVectorHandle v      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
   // OoqpVectorHandle w      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
   // OoqpVectorHandle t      = OoqpVectorHandle( factory->tree->newDualZVector() );
   // OoqpVectorHandle u      = OoqpVectorHandle( factory->tree->newDualZVector() ); 
-  callbackTree.switchToPresolvedData();
   sVars* unscaled_solution = new sVars(factory->tree, x, vars->s, y, z, vars->v, gamma, vars->w, phi,
     vars->t, lambda, vars->u, pi, 
-    data->ixlow, data->ixlow->length(),
-    data->ixupp, data->ixupp->length(),
-    data->iclow, data->iclow->length(),
-    data->icupp, data->icupp->length()
+    data->ixlow, data->ixlow->numberOfNonzeros(),
+    data->ixupp, data->ixupp->numberOfNonzeros(),
+    data->iclow, data->iclow->numberOfNonzeros(),
+    data->icupp, data->icupp->numberOfNonzeros()
   );
   
-  // postsolver->postsolve(const Variables &reduced_solution, Variables &original_solution)
+  sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
+  callbackTree.switchToOriginalData();
+
+  factory->data = origData;
+
+  sVars* postsolved_vars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
+  sResiduals* resids_orig = dynamic_cast<sResiduals*>( factory->makeResiduals( origData ) );
   postsolver->postsolve(*unscaled_solution, *postsolved_vars);
 
-  callbackTree.switchToOriginalData();
   double obj_postsolved = origData->objectiveValue(postsolved_vars);
   if( my_rank == 0)
     std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
 
   /* compute residuals for postprocessed solution and check for feasibility */
+  resids_orig->calcresids(origData, postsolved_vars);
+  
+  if( my_rank == 0)
+    std::cout << "Residuals after postsolve:\n" << "rA: " << resids->rA->onenorm() << "\nrC " << resids->rC << std::endl; 
 
-  // sVars *        vars;
-  // sResiduals *   resids;
-
-  // todo delete sol
+  // deleting solutions
+  delete unscaled_solution;
+  delete postsolved_vars;
+  delete x;
+  delete y;
+  delete z;
+  delete gamma;
+  delete phi;
+  delete lambda;
+  delete pi;
+  delete resids_orig;
 }
 
 #endif

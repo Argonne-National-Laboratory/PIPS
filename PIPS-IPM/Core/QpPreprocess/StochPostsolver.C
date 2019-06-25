@@ -29,7 +29,10 @@ StochPostsolver::StochPostsolver(const sData& original_problem) :
    start_idx_values.push_back(0);
 }
 
-StochPostsolver::~StochPostsolver(){}
+StochPostsolver::~StochPostsolver()
+{
+   delete padding_origcol;
+}
 
 /** postsolve has to compute the optimal dual multipliers here and set the primal value accordingly */
 //  todo : is it fine to compute the multiplier for the whole column right away (reduced costs)? // yes, if not yet reintroduced rows have multiplier 0 it does not matter
