@@ -28,13 +28,14 @@
 #include "StochPresolverSingletonRows.h"
 #include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
+#include "StochPostsolver.h"
 #include "StochPresolverParallelRows.h"
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
 #include "pipschecks.h"
 
-StochPresolver::StochPresolver(const Data* prob)
- : QpPresolver(prob)
+StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = NULL)
+ : QpPresolver(prob, postsolver)
 {
    // todo
 }
@@ -68,16 +69,16 @@ Data* StochPresolver::presolve()
    assert( presData.presProb->isRootNodeInSync() );
 
    /* initialize all presolvers */
-   StochPresolverBoundStrengthening presolverBS(presData);
-   StochPresolverParallelRows presolverParallelRow(presData);
-   StochPresolverModelCleanup presolverCleanup(presData);
-   StochPresolverSingletonRows presolverSR(presData);
+   StochPresolverBoundStrengthening presolverBS(presData, dynamic_cast<StochPostsolver*>(postsolver));
+   StochPresolverParallelRows presolverParallelRow(presData, dynamic_cast<StochPostsolver*>(postsolver));
+   StochPresolverModelCleanup presolverCleanup(presData, dynamic_cast<StochPostsolver*>(postsolver));
+   StochPresolverSingletonRows presolverSR(presData, dynamic_cast<StochPostsolver*>(postsolver));
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
 
-   // todo loop, and not exhaustive
+   // todo loop, and exhaustive
    // some list holding all presolvers - eg one presolving run
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
    for( int i = 0; i < 1; ++i )

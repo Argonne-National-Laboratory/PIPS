@@ -17,8 +17,8 @@
 #include <cmath> // std::isfinite
 
 
-StochPresolverBase::StochPresolverBase(PresolveData& presData) :
-      presData(presData)
+StochPresolverBase::StochPresolverBase(PresolveData& presData, StochPostsolver* postsolver) :
+      postsolver(postsolver), presData(presData)
 {
    presProb = presData.presProb;
 
@@ -615,72 +615,6 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
       currRedColChild = currNnzColChild = NULL;
 }
 
-/** Set currAmat = root.Bmat */
-void StochPresolverBase::setCPAmatsRoot(GenMatrixHandle matrixHandle)
-{
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*matrixHandle);
-   currAmat = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamic();
-   currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.Bmat)->getStorageDynamicTransposed();
-}
-
-bool StochPresolverBase::setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type)
-{
-   assert( it >= 0 && it<nChildren );
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*matrixHandle);
-   if( nodeIsDummy(it, system_type) )
-      return false;
-   currAmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamic();
-   currAmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Amat)->getStorageDynamicTransposed();
-   return true;
-}
-
-bool StochPresolverBase::setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type)
-{
-   assert( it >= 0 && it<nChildren );
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*matrixHandle);
-   if( nodeIsDummy(it, system_type) )
-      return false;
-   currBmat = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamic();
-   currBmatTrans = dynamic_cast<SparseGenMatrix*>(matrix.children[it]->Bmat)->getStorageDynamicTransposed();
-   return true;
-}
-
-void StochPresolverBase::setCPColumnRoot()
-{
-   currRedColParent = dynamic_cast<SimpleVector*>(presData.redCol->vec);
-   currxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).vec);
-   currIxlowParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).vec);
-   currxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).vec);
-   currIxuppParent = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).vec);
-}
-
-void StochPresolverBase::setCPColumnChild(int it)
-{
-   assert( it >= 0 && it < nChildren );
-   currRedColChild = dynamic_cast<SimpleVector*>(presData.redCol->children[it]->vec);
-   currxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->blx)).children[it]->vec);
-   currxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bux)).children[it]->vec);
-   currIxlowChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixlow)).children[it]->vec);
-   currIxuppChild = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->ixupp)).children[it]->vec);
-}
-
-void StochPresolverBase::setCPRowRootIneqOnlyLhsRhs()
-{
-   currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec);
-   currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec);
-   currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec);
-   currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec);
-}
-
-void StochPresolverBase::setCPRowChildIneqOnlyLhsRhs(int it)
-{
-   assert( it >= 0 && it<nChildren );
-   currIneqRhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[it]->vec);
-   currIneqLhs = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[it]->vec);
-   currIcupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[it]->vec);
-   currIclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[it]->vec);
-}
-
 void StochPresolverBase::resetEqRhsAdaptionsLink()
 {
    assert(hasLinking(EQUALITY_SYSTEM));
@@ -766,6 +700,8 @@ void StochPresolverBase::removeRow(int rowIdx, SparseStorageDynamic& Ablock, Spa
    }
    // set nnzRow[rowIdx] to 0.0:
    nnzRow.elements()[rowIdx] = 0.0;
+
+   // todo : notify postsolver
 }
 
 /** Remove row rowIdx in Bblock which should not be a linking variable block.
@@ -795,6 +731,8 @@ void StochPresolverBase::removeRowInBblock(int rowIdx, SparseStorageDynamic* Bbl
    }
    // delete row in Bblock:
    clearRow(*Bblock, rowIdx);
+
+   // todo : notify postsolver
 }
 
 bool StochPresolverBase::nodeIsDummy(int node, SystemType system_type) const
@@ -870,7 +808,7 @@ void StochPresolverBase::getRankDistributed( MPI_Comm comm, int& myRank, bool& i
 /** Call MPI_Abort() and print an error message */
 void StochPresolverBase::abortInfeasible(MPI_Comm comm) const
 {
-   cout<<"Infesibility detected in presolving. Aborting now."<<endl;
+   std::cout << "Infesibility detected in presolving. Aborting now." << std::endl;
    MPI_Abort(comm, 1);
 }
 
@@ -884,6 +822,7 @@ void StochPresolverBase::synchronize(int& value) const
 }
 
 // todo description + use to notify column deletion
+// todo notify postsolver! rows and cols
 void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, double fixation_value)
 {
    assert(node != -1);
@@ -907,8 +846,6 @@ void StochPresolverBase::deleteNonlinkColumnFromSystem(int node, int col_idx, do
    /* adjust objective function */
    updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
    indivObjOffset += currgChild->elements()[col_idx] * fixation_value;
-   if( !PIPSisZero(currgChild->elements()[col_idx] * fixation_value) ) // todo remove
-      std::cout << indivObjOffset << std::endl;
 }
 
 void StochPresolverBase::deleteNonlinkColumnFromSparseStorageDynamic(SystemType system_type, int node, BlockType block_type, int col_idx, double val)
@@ -1483,9 +1420,10 @@ bool StochPresolverBase::verifyNnzcounters()
    {
       if( nColUpdatedSimple->elements()[i] != nColOrigSimple->elements()[i])
       {
-         cout<<"Nnz Counter linking column "<<i<<" not correct: "<<nColUpdatedSimple->elements()[i]<<" vs. "<<nColOrigSimple->elements()[i]<<endl;
+         std::cout << "Nnz Counter linking column " << i << " not correct: "
+               << nColUpdatedSimple->elements()[i] << " vs. " << nColOrigSimple->elements()[i] << std::endl;
          nnzCorrect = false;
-//         break;
+         break;
       }
    }
    // non linking variables:
@@ -1494,13 +1432,14 @@ bool StochPresolverBase::verifyNnzcounters()
       nColOrigSimple = dynamic_cast<SimpleVector*>(nnzColOrig->children[it]->vec);
       nColUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nColElems->children[it]->vec);
       assert( nColUpdatedSimple->n == nColOrigSimple->n );
-      for( int i=0; i<nColUpdatedSimple->n; i++)
+      for( int i = 0; i < nColUpdatedSimple->n; i++)
       {
          if( nColUpdatedSimple->elements()[i] != nColOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter non-linking column "<<i<<" of child "<<(int)it<<" not correct: "<<nColUpdatedSimple->elements()[i]<<" vs. "<<nColOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter non-linking column " << i << " of child " << it << " not correct: "
+                  << nColUpdatedSimple->elements()[i] << " vs. " << nColOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1508,13 +1447,14 @@ bool StochPresolverBase::verifyNnzcounters()
    SimpleVector* nRowAOrigSimple = dynamic_cast<SimpleVector*>(nnzRowAOrig->vec);
    SimpleVector* nRowAUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec);
    assert( nRowAUpdatedSimple->n == nRowAOrigSimple->n );
-   for( int i=0; i < nRowAUpdatedSimple->n; i++)
+   for( int i = 0; i < nRowAUpdatedSimple->n; i++)
    {
       if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
       {
-         cout<<"Nnz Counter root A row "<<i<<" not correct: "<<nRowAUpdatedSimple->elements()[i]<<" vs. "<<nRowAOrigSimple->elements()[i]<<endl;
+         std::cout << "Nnz Counter root A row " << i << " not correct: " << nRowAUpdatedSimple->elements()[i] << " vs. "
+               << nRowAOrigSimple->elements()[i] << std::endl;
          nnzCorrect = false;
-//         break;
+         break;
       }
    }
    // child rows:
@@ -1527,9 +1467,10 @@ bool StochPresolverBase::verifyNnzcounters()
       {
          if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter non-linking A row "<<i<<" of child "<<(int)it<<" not correct: "<<nRowAUpdatedSimple->elements()[i]<<" vs. "<<nRowAOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter non-linking A row " << i << " of child " << it << " not correct: "
+                  << nRowAUpdatedSimple->elements()[i] << " vs. " << nRowAOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1542,9 +1483,10 @@ bool StochPresolverBase::verifyNnzcounters()
       {
          if( nRowAUpdatedSimple->elements()[i] != nRowAOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter linking row of A "<<i<<" not correct: "<<nRowAUpdatedSimple->elements()[i]<<" vs. "<<nRowAOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter linking row of A " << i << " not correct: " << nRowAUpdatedSimple->elements()[i] << " vs. "
+                  << nRowAOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1552,13 +1494,14 @@ bool StochPresolverBase::verifyNnzcounters()
    SimpleVector* nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzRowCOrig->vec);
    SimpleVector* nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec);
    assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
-   for( int i=0; i<nRowCUpdatedSimple->n; i++)
+   for( int i = 0; i < nRowCUpdatedSimple->n; i++)
    {
       if( nRowCUpdatedSimple->elements()[i] != nRowCOrigSimple->elements()[i])
       {
-         cout<<"Nnz Counter root C row "<<i<<" not correct: "<<nRowCUpdatedSimple->elements()[i]<<" vs. "<<nRowCOrigSimple->elements()[i]<<endl;
+         std::cout << "Nnz Counter root C row " << i << " not correct: " << nRowCUpdatedSimple->elements()[i] << " vs. "
+               << nRowCOrigSimple->elements()[i] << std::endl;
          nnzCorrect = false;
-//         break;
+         break;
       }
    }
    // child rows:
@@ -1567,13 +1510,14 @@ bool StochPresolverBase::verifyNnzcounters()
       nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzRowCOrig->children[it]->vec);
       nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[it]->vec);
       assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
-      for( int i=0; i<nRowCUpdatedSimple->n; i++)
+      for( int i = 0; i < nRowCUpdatedSimple->n; i++)
       {
          if( nRowCUpdatedSimple->elements()[i] != nRowCOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter non-linking C row "<<i<<" of child "<<(int)it<<" not correct: "<<nRowCUpdatedSimple->elements()[i]<<" vs. "<<nRowCOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter non-linking C row " << i << " of child "<< it <<" not correct: "
+                  << nRowCUpdatedSimple->elements()[i] << " vs. " << nRowCOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1582,13 +1526,14 @@ bool StochPresolverBase::verifyNnzcounters()
       nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzRowCOrig->vecl);
       nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
       assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
-      for( int i=0; i<nRowCUpdatedSimple->n; i++)
+      for( int i = 0; i < nRowCUpdatedSimple->n; i++)
       {
          if( nRowCUpdatedSimple->elements()[i] != nRowCOrigSimple->elements()[i])
          {
-            cout<<"Nnz Counter linking row of C "<<i<<" not correct: "<<nRowCUpdatedSimple->elements()[i]<<" vs. "<<nRowCOrigSimple->elements()[i]<<endl;
+            std::cout << "Nnz Counter linking row of C " << i << " not correct: " << nRowCUpdatedSimple->elements()[i]
+                  << " vs. " << nRowCOrigSimple->elements()[i] << std::endl;
             nnzCorrect = false;
-//            break;
+            break;
          }
       }
    }
@@ -1615,7 +1560,9 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
    int n_singleton_rows_ineq = 0;
    int n_cols = 0;
    int n_boxed_cols = 0;
+   int n_onesided_cols = 0;
    int n_free_cols = 0;
+   int n_singleton_cols = 0;
 
    /* root nodes of equality and inequality system - linking and non linking */
    if( myRank == 0 )
@@ -1638,14 +1585,16 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       n_singleton_rows_ineq += n_rows_ineq_linking_singleton;
       n_ranged_rows += n_rows_linking_ranged;
 
-      countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, LINKING_VARS_BLOCK);
+      countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, LINKING_VARS_BLOCK);
 
-      std::cout << "#Linking_vars:\t" << n_cols << " (#free: " << n_free_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
+      std::cout << "#linking_vars:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
+            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
 
-      std::cout << "#rows B0:\t" << n_rows_eq << std::endl;
-      std::cout << "#rows Bl_0:\t" << n_rows_eq_linking << " (#singleton: " << n_rows_eq_linking_singleton << ")" << std::endl;
-      std::cout << "#rows D0:\t" << n_rows_ineq << std::endl;
-      std::cout << "#rows Dl_0:\t" << n_rows_ineq_linking << " (#singleton: " << n_rows_ineq_linking_singleton << ", #ranged: " << n_rows_linking_ranged << ")" << std::endl;
+      std::cout << "#rows B0:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
+      std::cout << "#rows Bl_0:\t" << n_rows_eq_linking << "\t(#singleton: " << n_rows_eq_linking_singleton << ")" << std::endl;
+      std::cout << "#rows D0:\t" << n_rows_ineq << "\t(#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
+      std::cout << "#rows Dl_0:\t" << n_rows_ineq_linking << "\t(#singleton: " << n_rows_ineq_linking_singleton << ", #ranged: "
+            << n_rows_linking_ranged << ", #fixed: " << n_fixed_rows << ")" << std::endl;
    }
 
    /* child nodes in both systems */
@@ -1667,7 +1616,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
          updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
          countRowsBlock(n_rows_ineq, n_ranged_rows, n_fixed_rows, n_singleton_rows_ineq, INEQUALITY_SYSTEM, CHILD_BLOCK);
 
-         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, CHILD_BLOCK);
+         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, CHILD_BLOCK);
       }
    }
 
@@ -1780,11 +1729,12 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
 
    if( myRank == 0 )
    {
-      std::cout << "#rows_total:\t" << n_rows_eq + n_rows_ineq << " (#fixed: " << n_fixed_rows << ", #ranged: " << n_ranged_rows << ", #singleton: " << n_singleton_rows_eq + n_singleton_rows_ineq<< ")" << std::endl;
-      std::cout << "#rows A:\t" << n_rows_eq << " (#singleton: " << n_singleton_rows_eq << ")" << std::endl;
-      std::cout << "#rows C:\t" << n_rows_ineq << " (#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
+      std::cout << "#rows_total:\t" << n_rows_eq + n_rows_ineq << "\t(#fixed: " << n_fixed_rows << ", #ranged: " << n_ranged_rows << ", #singleton: " << n_singleton_rows_eq + n_singleton_rows_ineq<< ")" << std::endl;
+      std::cout << "#rows A:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
+      std::cout << "#rows C:\t" << n_rows_ineq << "\t(#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
 
-      std::cout <<"#vars_total:\t" << n_cols << " (#bounded: " << n_boxed_cols << ", #free: " << n_free_cols << ")" << std::endl;
+      std::cout << "#vars_total:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
+            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
    }
 }
 
@@ -1841,25 +1791,31 @@ void StochPresolverBase::countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_
    }
 }
 
-void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const
+void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const
 {
    SimpleVector* ixlow = (block_type == LINKING_VARS_BLOCK) ? currIxlowParent : currIxlowChild;
    SimpleVector* ixupp = (block_type == LINKING_VARS_BLOCK) ? currIxuppParent : currIxuppChild;
    SimpleVector* curr_nnz = (block_type == LINKING_VARS_BLOCK) ? currNnzColParent : currNnzColChild;
 
    assert(curr_nnz); assert(ixlow); assert(ixupp); assert( ixlow->n == ixupp->n );
-
    for( int i = 0; i < ixlow->n; i++ )
    {
       if( curr_nnz->elements()[i] != 0.0 )
       {
-         nColsTotal ++;
+         if(curr_nnz->elements()[i] == 1.0)
+            ++nSingletonVars;
+
+         nColsTotal++;
+
          if( ixlow->elements()[i] != 0.0 && ixupp->elements()[i] != 0.0 )
             nBoxCols++;
          else if( ixlow->elements()[i] == 0.0 && ixupp->elements()[i] == 0.0)
             nFreeVars++;
          else
+         {
             assert(ixlow->elements()[i] != 0.0 || ixupp->elements()[i] != 0.0);
+            ++nOnesidedVars;
+         }
       }
    }
 }

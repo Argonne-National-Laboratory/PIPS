@@ -11,6 +11,7 @@
 #include "QpPresolver.h"
 
 class Data;
+class Postsolver;
 
 
 /**  * @defgroup QpPreprocess
@@ -26,10 +27,9 @@ class StochPresolver : public QpPresolver
 {
 private:
 
-
 public:
 
-  StochPresolver(const Data* prob);
+  StochPresolver(const Data* prob, Postsolver* postsolver);
   virtual ~StochPresolver();
 
   virtual Data* presolve();
