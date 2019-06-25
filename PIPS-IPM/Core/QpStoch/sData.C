@@ -22,6 +22,12 @@ std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& 
 }
 
 static inline
+bool blockIsInRange(int block, int blocksStart, int blocksEnd)
+{
+   return ((block >= (blocksStart - 1) && block < blocksEnd) || block == -1);
+}
+
+static inline
 int nnzTriangular(int size)
 {
    assert(size >= 0);
@@ -49,6 +55,7 @@ void appendRowSparse(int startColIdx, int endColIdx, int colOffset, const int* j
    for( int c = startColIdx; c < endColIdx; c++ )
       jcolM[nnz++] = colOffset + jcolM_append[c];
 }
+
 
 static
 int appendDiagBlocks(const std::vector<int>& linkStartBlockId, const std::vector<int>& linkStartBlockLengths, int borderstart, int bordersize, int rowSC,
@@ -92,6 +99,60 @@ int appendDiagBlocks(const std::vector<int>& linkStartBlockId, const std::vector
    }
 
    return rownnz;
+}
+
+static
+void appendDiagBlocksDist(const std::vector<int>& linkStartBlockId, const std::vector<int>& linkStartBlockLengths, int borderstart, int bordersize, int rowSC,
+                                          int rowBlock, int blocksStart, int blocksEnd, int& blockStartrow, int& nnz, int* jcolM)
+{
+   assert(rowBlock >= blockStartrow && blockStartrow >= 0 && borderstart >= 0 && bordersize >= 0 && nnz >= 0);
+
+   const int block = linkStartBlockId[rowBlock];
+   const int lastBlock = blocksEnd - 1;
+
+   if( blockIsInRange(block, blocksStart, blocksEnd) )
+   {
+      const int currlength = (block >= 0) ? linkStartBlockLengths[block] : bordersize;
+      const int rownnz = currlength - (rowBlock - blockStartrow);
+
+      assert(currlength >= 1);
+
+      // add diagonal block (possibly up to the border)
+      for( int i = 0; i < rownnz; ++i )
+         jcolM[nnz++] = rowSC + i;
+
+      // with off-diagonal blocks? (at sparse part)
+      if( block >= 0 )
+      {
+         // add right off-diagonal block and border part
+
+         const int nextlength = (block == lastBlock) ? 0 : linkStartBlockLengths[block + 1];
+
+         assert(nextlength >= 0);
+         assert(block != int(linkStartBlockLengths.size()) - 1 || nextlength == 0);
+
+         for( int i = rownnz; i < rownnz + nextlength; ++i )
+            jcolM[nnz++] = rowSC + i;
+
+         for( int i = borderstart; i < borderstart + bordersize; ++i )
+            jcolM[nnz++] = i;
+
+         // last row of current block?
+         if( rowBlock + 1 == blockStartrow + currlength )
+            blockStartrow = rowBlock + 1;
+      }
+   }
+
+   // at sparse part?
+   if( block >= 0 )
+   {
+      const int currlength = linkStartBlockLengths[block];
+      assert(currlength >= 1);
+
+      // last row of current block?
+      if( rowBlock + 1 == blockStartrow + currlength )
+         blockStartrow = rowBlock + 1;
+   }
 }
 
 
@@ -189,6 +250,204 @@ int appendMixedBlocks(const std::vector<int>& linkStartBlockId_Left,
    return rownnz;
 }
 
+
+static
+void appendMixedBlocksDist(const std::vector<int>& linkStartBlockId_Left,
+      const std::vector<int>& linkStartBlockId_Right,
+      const std::vector<int>& linkStartBlockLengths_Left,
+      const std::vector<int>& linkStartBlockLengths_Right,
+      int colStartIdxSC, int bordersize_cols,
+      int rowIdx, int blocksStart, int blocksEnd,
+      int& colIdxOffset, int& rowBlockStartIdx, int& nnz, int* jcolM)
+{
+   assert(rowIdx >= rowBlockStartIdx && rowBlockStartIdx >= 0 && colStartIdxSC >= 0 && nnz >= 0);
+   assert(bordersize_cols >= 0 && colIdxOffset >= 0);
+   assert(linkStartBlockLengths_Left.size() == linkStartBlockLengths_Right.size());
+
+   const int block = linkStartBlockId_Left[rowIdx];
+   const bool blockInRange = blockIsInRange(block, blocksStart, blocksEnd);
+   const int nCols = int(linkStartBlockId_Right.size());
+
+   assert(nCols >= bordersize_cols);
+
+   // sparse row?
+   if( block >= 0 )
+   {
+      if( blockInRange )
+      {
+         const int length_Right = linkStartBlockLengths_Right[block];
+         const int colStartIdxBorderSC = colStartIdxSC + nCols - bordersize_cols;
+         int colStartIdx = colStartIdxSC + colIdxOffset;
+
+         assert(length_Right >= 0);
+
+         // 1) left off-diagonal block (not for first block)
+         if( block >= 1 && block != blocksStart - 1 )
+         {
+            const int prevlength_Right = linkStartBlockLengths_Right[block - 1];
+            assert(prevlength_Right >= 0);
+
+            for( int i = 0; i < prevlength_Right; ++i )
+               jcolM[nnz++] = (colStartIdx + i);
+         }
+
+         if( block >= 1 )
+         {
+            const int prevlength_Right = linkStartBlockLengths_Right[block - 1];
+            assert(prevlength_Right >= 0);
+
+            colStartIdx += prevlength_Right;
+         }
+
+         // 2) diagonal block
+         for( int i = 0; i < length_Right; ++i )
+            jcolM[nnz++] = (colStartIdx + i);
+
+         colStartIdx += length_Right;
+
+         // 3) right off-diagonal block (not for last block)
+         if( block != blocksEnd - 1 )
+         {
+            const int nextlength_Right = linkStartBlockLengths_Right[block + 1];
+
+            for( int i = 0; i < nextlength_Right; ++i )
+               jcolM[nnz++] = (colStartIdx + i);
+
+            colStartIdx += nextlength_Right;
+         }
+
+         assert(colStartIdx <= colStartIdxBorderSC);
+
+         // 4) right border
+         for( int i = 0; i < bordersize_cols; ++i )
+            jcolM[nnz++] = colStartIdxBorderSC + i;
+      }
+
+      // last row of current block?
+      if( rowIdx + 1 == rowBlockStartIdx + linkStartBlockLengths_Left[block] )
+      {
+         rowBlockStartIdx = rowIdx + 1;
+
+         if( block >= 1 )
+            colIdxOffset += linkStartBlockLengths_Right[block - 1];
+      }
+      else
+      {
+         assert(block == linkStartBlockId_Left[rowIdx + 1]);
+      }
+   }
+   else if( blockInRange )
+   {
+      assert(block == -1);
+
+      // append dense row, but skip entries not in range
+      for( int i = 0; i < nCols; ++i )
+      {
+         const int blockRight = linkStartBlockId_Right[i];
+         const bool blockRightInRange = blockIsInRange(blockRight, blocksStart, blocksEnd);
+
+         if( blockRightInRange )
+            jcolM[nnz++] = colStartIdxSC + i;
+      }
+   }
+}
+
+
+void sData::getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+      int& local2linksStartIneq, int& local2linksEndIneq)
+{
+   const int blocksStartReal = (blocksStart > 0) ? (blocksStart - 1) : blocksStart;
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   local2linksStartEq = nx0 + my0;
+   local2linksStartIneq = nx0 + my0 + myl;
+
+   for( int block = 0; block < blocksStartReal; ++block )
+   {
+      const int lengthEq = linkStartBlockLengthsA[block];
+      const int lengthIneq = linkStartBlockLengthsC[block];
+
+      assert(lengthEq >= 0 && lengthIneq >= 0);
+
+      local2linksStartEq += lengthEq;
+      local2linksStartIneq += lengthIneq;
+   }
+
+   local2linksEndEq = local2linksStartEq + getSCdiagBlocksNRows(linkStartBlockLengthsA, blocksStart, blocksEnd);
+   local2linksEndIneq = local2linksStartIneq + getSCdiagBlocksNRows(linkStartBlockLengthsC, blocksStart, blocksEnd);
+}
+
+void sData::getSCrangeMarkersMy(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+      int& local2linksStartIneq, int& local2linksEndIneq)
+{
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   local2linksStartEq = nx0 + my0;
+   local2linksStartIneq = nx0 + my0 + myl;
+
+   for( int block = 0; block < blocksStart; ++block )
+   {
+      const int lengthEq = linkStartBlockLengthsA[block];
+      const int lengthIneq = linkStartBlockLengthsC[block];
+
+      assert(lengthEq >= 0 && lengthIneq >= 0);
+
+      local2linksStartEq += lengthEq;
+      local2linksStartIneq += lengthIneq;
+   }
+
+   local2linksEndEq = local2linksStartEq + getSCdiagBlocksNRowsMy(linkStartBlockLengthsA, blocksStart, blocksEnd);
+   local2linksEndIneq = local2linksStartIneq + getSCdiagBlocksNRowsMy(linkStartBlockLengthsC, blocksStart, blocksEnd);
+}
+
+
+int sData::getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths,
+      int blocksStart, int blocksEnd)
+{
+   assert(blocksStart >= 0 && blocksStart < blocksEnd);
+   assert(blocksEnd <= int(linkStartBlockLengths.size()));
+
+   int nRowsRange = 0;
+   const int blocksStartReal = (blocksStart > 0) ? (blocksStart - 1) : blocksStart;
+
+   // main loop, going over specified 2-link blocks
+   for( int block = blocksStartReal; block < blocksEnd; ++block )
+   {
+      const int length = linkStartBlockLengths[block];
+      assert(length >= 0);
+
+      nRowsRange += length;
+   }
+   return nRowsRange;
+}
+
+
+int sData::getSCdiagBlocksNRowsMy(const std::vector<int>& linkStartBlockLengths,
+      int blocksStart, int blocksEnd)
+{
+   assert(blocksStart >= 0 && blocksStart < blocksEnd);
+   assert(blocksEnd <= int(linkStartBlockLengths.size()));
+
+   int nRowsRange = 0;
+
+   // main loop, going over specified 2-link blocks
+   for( int block = blocksStart; block < blocksEnd; ++block )
+   {
+      const int length = linkStartBlockLengths[block];
+      assert(length >= 0);
+
+      nRowsRange += length;
+   }
+   return nRowsRange;
+}
+
+int sData::getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths)
+{
+   return (getSCdiagBlocksNRows(linkStartBlockLengths, 0, int(linkStartBlockLengths.size())));
+}
+
 int sData::getSCdiagBlocksMaxNnz(size_t nRows, const std::vector<int>& linkStartBlockLengths)
 {
    const size_t nBlocks = linkStartBlockLengths.size();
@@ -228,6 +487,60 @@ int sData::getSCdiagBlocksMaxNnz(size_t nRows, const std::vector<int>& linkStart
    return nnz;
 }
 
+
+int sData::getSCdiagBlocksMaxNnzDist(size_t nRows, const std::vector<int>& linkStartBlockLengths, int blocksStart, int blocksEnd)
+{
+#ifndef NDEBUG
+   const int nblocks = int(linkStartBlockLengths.size());
+#endif
+   assert(blocksStart >= 0);
+   assert(blocksStart < blocksEnd);
+   assert(blocksEnd <= nblocks);
+   assert(nblocks >= 2);
+
+   const int nRowsSparse = getSCdiagBlocksNRows(linkStartBlockLengths);
+   const int nRowsSparseRange = getSCdiagBlocksNRows(linkStartBlockLengths, blocksStart, blocksEnd);
+
+   int nnz = 0;
+
+   // main loop, going over specified 2-link blocks
+   for( int block = blocksStart; block < blocksEnd; ++block )
+   {
+      const int length = linkStartBlockLengths[block];
+
+      if( length == 0 )
+         continue;
+
+      const int prevlength = (block == 0) ? 0 : linkStartBlockLengths[block - 1];
+
+      assert(length > 0);
+      assert(prevlength >= 0);
+      assert(block != nblocks - 1); // length should be 0 for last block
+
+      // diagonal block
+      nnz += nnzTriangular(length);
+
+      // above off-diagonal block
+      nnz += prevlength * length;
+   }
+
+   if( blocksStart > 0 )
+   {
+      const int prevlength = linkStartBlockLengths[blocksStart - 1];
+
+      nnz += nnzTriangular(prevlength);
+   }
+
+   // any rows left?
+   if( nRowsSparse < int(nRows) )
+   {
+      const int nRowsDense = int(nRows) - nRowsSparse;
+      nnz += nnzTriangular(nRowsDense);
+      nnz += nRowsDense * nRowsSparseRange;
+   }
+
+   return nnz;
+}
 
 int sData::getSCmixedBlocksMaxNnz(size_t nRows, size_t nCols,
       const std::vector<int>& linkStartBlockLength_Left,
@@ -279,6 +592,79 @@ int sData::getSCmixedBlocksMaxNnz(size_t nRows, size_t nCols,
 
       nnz += nRowsDense * nColsSparse; // lower border part without right border
       nnz += nColsDense * nRows;       // complete right border
+   }
+
+   return nnz;
+}
+
+
+int sData::getSCmixedBlocksMaxNnzDist(size_t nRows, size_t nCols,
+      const std::vector<int>& linkStartBlockLength_Left,
+      const std::vector<int>& linkStartBlockLength_Right,
+      int blocksStart, int blocksEnd)
+{
+   assert(linkStartBlockLength_Left.size() == linkStartBlockLength_Right.size());
+   assert(blocksStart >= 0);
+   assert(blocksStart < blocksEnd);
+
+#ifndef NDEBUG
+   const int nBlocks = int(linkStartBlockLength_Left.size());
+#endif
+   const int blockLast = blocksEnd - 1;
+   const int blocksStartReal =  (blocksStart > 0) ? (blocksStart - 1) : 0;
+   const int nRowsSparse = getSCdiagBlocksNRows(linkStartBlockLength_Left);
+   const int nColsSparse = getSCdiagBlocksNRows(linkStartBlockLength_Right);
+   const int nRowsSparseRange = getSCdiagBlocksNRows(linkStartBlockLength_Left, blocksStart, blocksEnd);
+   const int nColsSparseRange = getSCdiagBlocksNRows(linkStartBlockLength_Right, blocksStart, blocksEnd);
+
+   assert(nBlocks > 1 && blocksEnd <= nBlocks);
+   assert(linkStartBlockLength_Left[nBlocks - 1] == 0 && linkStartBlockLength_Right[nBlocks - 1] == 0);
+
+   int nnz = 0;
+
+   // main loop, going over all 2-link blocks
+   for( int block = blocksStartReal; block < blocksEnd; ++block )
+   {
+      const int length_Left = linkStartBlockLength_Left[block];
+      const int length_Right = linkStartBlockLength_Right[block];
+
+      // left off-diagonal block
+      if( block != blocksStartReal )
+      {
+         assert(block >= 1);
+         assert(linkStartBlockLength_Right[block - 1] >= 0);
+
+         nnz += length_Left * length_Right;
+      }
+
+      // diagonal block
+      nnz += length_Left * length_Right;
+
+      // right off-diagonal block
+      if( block != blockLast )
+      {
+         assert(block < nBlocks - 1);
+
+         const int nextlength_Right = linkStartBlockLength_Right[block + 1];
+
+         assert(nextlength_Right >= 0);
+
+         nnz += length_Left * nextlength_Right;
+      }
+   }
+
+   // dense (right or lower) border?
+   if( nRowsSparse < int(nRows) || nColsSparse < int(nCols) )
+   {
+      assert(nRowsSparse <= int(nRows) && nColsSparse <= int(nCols));
+
+      const int nRowsDense = int(nRows) - nRowsSparse;
+      const int nColsDense = int(nCols) - nColsSparse;
+
+      nnz += nRowsDense * nColsSparseRange;  // lower left border part (without right border)
+      nnz += nRowsSparseRange * nColsDense;  // upper right border
+      nnz += nRowsDense * nColsDense;        // lower right border
+
    }
 
    return nnz;
@@ -411,10 +797,10 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
 
    // equality linking: sparse diagonal blocks, and mixed rows
    int blockStartrow = 0;
-   const int n2linksRowsEq = n2linksRows(linkStartBlockLengthsA);
+   const int n2linksRowsEq = n2linkRowsEq();
    const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
    const int borderstartEq = nx0 + my0 + n2linksRowsEq;
-   const int n2linksRowsIneq = n2linksRows(linkStartBlockLengthsC);
+   const int n2linksRowsIneq = n2linkRowsIneq();
    const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
    const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
 
@@ -449,6 +835,172 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpper()
    return (new SparseSymMatrix(sizeSC, nnz, krowM, jcolM, M, 1, false));
 }
 
+
+SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int blocksEnd)
+{
+   assert(children.size() > 0);
+
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   const int mzl = getLocalmzl();
+   const int mylLocal = myl - getSCdiagBlocksNRows(linkStartBlockLengthsA)
+      + getSCdiagBlocksNRows(linkStartBlockLengthsA, blocksStart, blocksEnd);
+   const int mzlLocal = mzl - getSCdiagBlocksNRows(linkStartBlockLengthsC)
+      + getSCdiagBlocksNRows(linkStartBlockLengthsC, blocksStart, blocksEnd);
+   const int sizeSC = nx0 + my0 + myl + mzl;
+   const int nnz = getSchurCompMaxNnzDist(blocksStart, blocksEnd);
+
+   assert(getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) == getSchurCompMaxNnz());
+
+   // todo deleteme
+   if( getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) != getSchurCompMaxNnz() )
+   {
+      std::cout << "fail" << std::endl;
+      std::cout << getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) << "!=" <<  getSchurCompMaxNnz() << std::endl;
+      exit(1);
+   }
+
+   assert(blocksStart >= 0 && blocksStart < blocksEnd);
+   assert(nnz > 0);
+   assert(myl >= 0 && mzl >= 0);
+
+   int* const krowM = new int[sizeSC + 1];
+   int* const jcolM = new int[nnz];
+   double* const M = new double[nnz];
+
+   krowM[0] = 0;
+
+   // get B_0^T (resp. A_0^T)
+   SparseGenMatrix& Btrans = getLocalB().getTranspose();
+   int* const startRowBtrans = Btrans.krowM();
+   int* const colidxBtrans = Btrans.jcolM();
+
+#ifndef NDEBUG
+      int bm, bn;
+      Btrans.getSize(bm, bn);
+      assert(bm == nx0 && bn == my0);
+#endif
+
+   const int nx0NonZero = nx0 - n0LinkVars;
+   const int n2linksRowsEq = n2linkRowsEq();
+   const int bordersizeEq = linkStartBlockIdA.size() - n2linksRowsEq;
+   const int borderstartEq = nx0 + my0 + n2linksRowsEq;
+   const int n2linksRowsIneq = n2linkRowsIneq();
+   const int bordersizeIneq = linkStartBlockIdC.size() - n2linksRowsIneq;
+   const int borderstartIneq = nx0 + my0 + myl + n2linksRowsIneq;
+   int local2linksStartEq;
+   int local2linksEndEq;
+   int local2linksStartIneq;
+   int local2linksEndIneq;
+
+   this->getSCrangeMarkers(blocksStart, blocksEnd, local2linksStartEq, local2linksEndEq,
+         local2linksStartIneq, local2linksEndIneq);
+
+   assert(nx0NonZero >= 0);
+   assert(bordersizeEq >= 0 && n2linksRowsEq <= myl);
+   assert(bordersizeIneq >= 0 && n2linksRowsIneq <= mzl);
+   assert(local2linksStartEq >= nx0 + my0 && local2linksEndEq <= borderstartEq);
+   assert(local2linksStartIneq >= nx0 + my0 + myl && local2linksEndIneq <= borderstartIneq);
+
+   int nnzcount = 0;
+
+   // dense square block, B_0^T, and dense border blocks todo: add space for CDCt
+   for( int i = 0; i < nx0NonZero; ++i )
+   {
+      const int blength = startRowBtrans[i + 1] - startRowBtrans[i];
+      assert(blength >= 0);
+
+      krowM[i + 1] = krowM[i] + (nx0 - i) + blength + mylLocal + mzlLocal;
+
+      appendRowDense(i, nx0, nnzcount, jcolM);
+      appendRowSparse(startRowBtrans[i], startRowBtrans[i + 1], nx0, colidxBtrans, nnzcount, jcolM);
+
+      appendRowDense(local2linksStartEq, local2linksEndEq, nnzcount, jcolM);
+      appendRowDense(borderstartEq, borderstartEq + bordersizeEq, nnzcount, jcolM);
+      appendRowDense(local2linksStartIneq, local2linksEndIneq, nnzcount, jcolM);
+      appendRowDense(borderstartIneq, borderstartIneq + bordersizeIneq, nnzcount, jcolM);
+
+      assert(nnzcount == krowM[i + 1]);
+   }
+
+   // dense square block and rest of B_0, F_0^T, G_0^T
+   for( int i = nx0NonZero; i < nx0; ++i )
+   {
+      appendRowDense(i, nx0, nnzcount, jcolM);
+
+      appendRowSparse(startRowBtrans[i], startRowBtrans[i + 1], nx0, colidxBtrans, nnzcount, jcolM);
+
+      if( myl > 0 )
+      {
+         SparseGenMatrix& Ft = getLocalF().getTranspose();
+         const int* startRowFtrans = Ft.krowM();
+         const int* colidxFtrans = Ft.jcolM();
+
+         appendRowSparse(startRowFtrans[i], startRowFtrans[i + 1], nx0 + my0, colidxFtrans, nnzcount, jcolM);
+      }
+
+      if( mzl > 0 )
+      {
+         SparseGenMatrix& Gt = getLocalG().getTranspose();
+         const int* startRowGtrans = Gt.krowM();
+         const int* colidxGtrans = Gt.jcolM();
+
+         appendRowSparse(startRowGtrans[i], startRowGtrans[i + 1], nx0 + my0 + myl, colidxGtrans, nnzcount, jcolM);
+      }
+
+      krowM[i + 1] = nnzcount;
+   }
+
+   // empty rows; put diagonal for PARDISO
+   for( int i = nx0; i < nx0 + my0; ++i )
+   {
+      const int rowStartIdx = krowM[i];
+
+      jcolM[rowStartIdx] = i;
+      krowM[i + 1] = rowStartIdx + 1;
+   }
+
+   nnzcount += my0;
+
+   // equality linking: sparse diagonal blocks, and mixed rows
+   int blockStartrow = 0;
+
+   for( int i = nx0 + my0, j = 0, colIdxOffset = 0, blockStartrowMix = 0; i < nx0 + my0 + myl; ++i, ++j )
+   {
+      appendDiagBlocksDist(linkStartBlockIdA, linkStartBlockLengthsA, borderstartEq, bordersizeEq, i, j,
+            blocksStart, blocksEnd, blockStartrow, nnzcount, jcolM);
+
+      appendMixedBlocksDist(linkStartBlockIdA, linkStartBlockIdC, linkStartBlockLengthsA, linkStartBlockLengthsC, (nx0 + my0 + myl),
+            bordersizeIneq, j, blocksStart, blocksEnd, colIdxOffset, blockStartrowMix, nnzcount, jcolM);
+
+      assert(blockStartrowMix == blockStartrow);
+
+      krowM[i + 1] = nnzcount;
+   }
+
+   // inequality linking: dense border block and sparse diagonal blocks
+
+   blockStartrow = 0;
+
+   for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; ++i, ++j )
+   {
+      appendDiagBlocksDist(linkStartBlockIdC, linkStartBlockLengthsC, borderstartIneq, bordersizeIneq, i, j,
+            blocksStart, blocksEnd, blockStartrow, nnzcount, jcolM);
+
+      krowM[i + 1] = nnzcount;
+   }
+
+   // todo
+   if( nnz != nnzcount)
+      std::cout << "\n ... nnzcount=" << nnzcount << " nnzmax=" << nnz  << " " << blocksStart << " - " << blocksEnd << std::endl;
+
+   assert(nnzcount == nnz);
+
+   this->initDistMarker(blocksStart, blocksEnd);
+
+   return (new SparseSymMatrix(sizeSC, nnzcount, krowM, jcolM, M, 1, false));
+}
 
 std::vector<unsigned int> sData::get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount)
 {
@@ -1033,8 +1585,8 @@ void sData::activateLinkStructureExploitation()
       if( linkStartBlockIdC[i] >= 0 )
          n2LinksIneq++;
 
-   assert(n2LinksEq == n2linksRows(linkStartBlockLengthsA));
-   assert(n2LinksIneq == n2linksRows(linkStartBlockLengthsC));
+   assert(n2LinksEq == n2linkRowsEq());
+   assert(n2LinksIneq == n2linkRowsIneq());
 
    if( myrank == 0 )
    {
@@ -1055,7 +1607,6 @@ void sData::activateLinkStructureExploitation()
          std::cout << "not enough linking structure found" << std::endl;
       useLinkStructure = false;
    }
-//   useLinkStructure = true;
 
    if( useLinkStructure )
    {
@@ -1429,6 +1980,72 @@ int sData::getSchurCompMaxNnz()
    return nnz;
 }
 
+
+int sData::getSchurCompMaxNnzDist(int blocksStart, int blocksEnd)
+{
+   assert(children.size() > 0);
+
+   const int n0 = getLocalnx();
+   const int my = getLocalmy();
+   const int myl = getLocalmyl();
+   const int mzl = getLocalmzl();
+   const int mylLocal = myl - getSCdiagBlocksNRows(linkStartBlockLengthsA)
+      + getSCdiagBlocksNRows(linkStartBlockLengthsA, blocksStart, blocksEnd);
+   const int mzlLocal = mzl - getSCdiagBlocksNRows(linkStartBlockLengthsC)
+      + getSCdiagBlocksNRows(linkStartBlockLengthsC, blocksStart, blocksEnd);
+
+#ifndef NDEBUG
+   {
+      int mB, nB;
+      getLocalB().getSize(mB, nB);
+      assert(mB == my  && nB == n0);
+   }
+#endif
+
+   int nnz = 0;
+
+   assert(n0 >= n0LinkVars);
+
+   // sum up half of dense square
+   nnz += nnzTriangular(n0);
+
+   // add B_0 (or A_0, depending on notation)
+   nnz += getLocalB().numberOfNonZeros();
+
+   // add borders
+   nnz += mylLocal * (n0 - n0LinkVars);
+   nnz += mzlLocal * (n0 - n0LinkVars);
+
+   // (empty) diagonal
+   nnz += my;
+
+   // add linking equality parts
+   nnz += getSCdiagBlocksMaxNnzDist(linkStartBlockIdA.size(), linkStartBlockLengthsA, blocksStart, blocksEnd);
+
+   // add linking inequality parts
+   nnz += getSCdiagBlocksMaxNnzDist(linkStartBlockIdC.size(), linkStartBlockLengthsC, blocksStart, blocksEnd);
+
+   // add linking mixed parts
+   nnz += getSCmixedBlocksMaxNnzDist(linkStartBlockIdA.size(), linkStartBlockIdC.size(),
+                                 linkStartBlockLengthsA, linkStartBlockLengthsC, blocksStart, blocksEnd);
+
+   if( myl > 0 )
+   {
+      SparseGenMatrix& Ft = getLocalF().getTranspose();
+      const int* startRowFtrans = Ft.krowM();
+      nnz += startRowFtrans[n0] - startRowFtrans[n0 - n0LinkVars];
+   }
+
+   if( mzl > 0 )
+   {
+      SparseGenMatrix& Gt = getLocalG().getTranspose();
+      const int* startRowGtrans = Gt.krowM();
+      nnz += startRowGtrans[n0] - startRowGtrans[n0 - n0LinkVars];
+   }
+
+   return nnz;
+}
+
 SparseSymMatrix& sData::getLocalQ()
 {
    StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
@@ -1592,6 +2209,79 @@ sData::sync()
    stochNode->syncStochGenMatrix(dynamic_cast<StochGenMatrix&>(*C));
 
    createChildren();
+}
+
+
+void sData::initDistMarker(int blocksStart, int blocksEnd)
+{
+   assert(isSCrowLocal.size() == 0);
+   assert(isSCrowMyLocal.size() == 0);
+
+   assert(linkStartBlockIdA.size() > 0 && linkStartBlockIdC.size() > 0);
+   assert(blocksStart >= 0 && blocksStart < blocksEnd && blocksEnd <= int(linkStartBlockIdA.size()));
+
+   const int nx0 = getLocalnx();
+   const int my0 = getLocalmy();
+   const int myl = getLocalmyl();
+   const int mzl = getLocalmzl();
+   const int sizeSC = nx0 + my0 + myl + mzl;
+
+   assert(sizeSC > 0);
+
+   isSCrowLocal.resize(sizeSC);
+   isSCrowMyLocal.resize(sizeSC);
+
+   for( int i = 0; i < nx0; i++ )
+   {
+      isSCrowLocal[i] = false;
+      isSCrowMyLocal[i] = false;
+   }
+
+   for( int i = nx0; i < nx0 + my0; i++ )
+   {
+      isSCrowLocal[i] = false;
+      isSCrowMyLocal[i] = false;
+   }
+
+   // equality linking
+   for( int i = nx0 + my0, j = 0; i < nx0 + my0 + myl; i++, j++ )
+   {
+      const int block = linkStartBlockIdA[j];
+      isSCrowLocal[i] = (block != -1);
+      isSCrowMyLocal[i] = (block >= blocksStart && block < blocksEnd);
+   }
+
+   // inequality linking
+   for( int i = nx0 + my0 + myl, j = 0; i < nx0 + my0 + myl + mzl; i++, j++ )
+   {
+      const int block = linkStartBlockIdC[j];
+      isSCrowLocal[i] = (block != -1);
+      isSCrowMyLocal[i] = (block >= blocksStart && block < blocksEnd);
+   }
+}
+
+const std::vector<bool>& sData::getSCrowMarkerLocal() const
+{
+   assert(isSCrowLocal.size() != 0);
+
+   return isSCrowLocal;
+}
+
+const std::vector<bool>& sData::getSCrowMarkerMyLocal() const
+{
+   assert(isSCrowMyLocal.size() != 0);
+
+   return isSCrowMyLocal;
+}
+
+int sData::n2linkRowsEq() const
+{
+   return n2linksRows(linkStartBlockLengthsA);
+}
+
+int sData::n2linkRowsIneq() const
+{
+   return n2linksRows(linkStartBlockLengthsC);
 }
 
 // is root node data of sData object same on all procs?

@@ -7,8 +7,9 @@
 
 #include "sLinsys.h"
 #include "StochGenMatrix.h"
+#include "SCsparsifier.h"
 
-
+class SCsparsifier;
 class sFactory;
 class sData;
 
@@ -19,6 +20,14 @@ class sData;
  * ROOT (= NON-leaf) linear system
  */
 class sLinsysRoot : public sLinsys {
+ struct MatrixEntryTriplet
+ {
+    double val;
+    int row;
+    int col;
+ };
+
+
  protected:
   sLinsysRoot() {};
 
@@ -29,6 +38,7 @@ class sLinsysRoot : public sLinsys {
   virtual DoubleLinearSolver* 
                        createSolver  (sData* prob, 
 				      SymMatrix* kktmat) = 0;
+
  public:
   std::vector<sLinsys*> children;
   int iAmDistrib;
@@ -45,9 +55,11 @@ class sLinsysRoot : public sLinsys {
   /* Atoms methods of FACTOR2 for a non-leaf linear system */
   virtual void initializeKKT(sData* prob, Variables* vars);
   virtual void reduceKKT();
+  virtual void reduceKKT(sData *prob);
   virtual void factorizeKKT(); 
+  virtual void factorizeKKT(sData *prob);
   virtual void finalizeKKT(sData* prob, Variables* vars)=0;
-
+  virtual void finalizeKKTdist(sData* prob) {assert("not implemented here \n" && 0);};
 
   virtual void Lsolve ( sData *prob, OoqpVector& x );
   virtual void Dsolve ( sData *prob, OoqpVector& x );
@@ -92,17 +104,35 @@ class sLinsysRoot : public sLinsys {
 
  protected: //buffers
 
+  SparseSymMatrix* kktDist;
+
   OoqpVector* zDiag;
   OoqpVector* zDiagLinkCons;
   OoqpVector* xDiag;
 
   double* sparseKktBuffer;
 
+  SCsparsifier precondSC;
+
+  int childrenProperStart; // first non-dummy child
+  int childrenProperEnd;   // end of non-dummy children range (not included)
   bool hasSparseKkt;
+  bool usePrecondDist;
+
  private:
+  void initProperChildrenRange();
+  void registerMatrixEntryTripletMPI();
   void addTermToSchurCompl(sData* prob, size_t childindex);
+  void reduceKKTdist(sData* prob);
   void reduceKKTdense();
   void reduceKKTsparse();
+  void reduceToProc0(int size, double* values);
+  void syncKKTdistLocalEntries(sData* prob);
+  void sendKKTdistLocalEntries(const std::vector<MatrixEntryTriplet>& prevEntries) const;
+  std::vector<MatrixEntryTriplet> receiveKKTdistLocalEntries() const;
+  std::vector<MatrixEntryTriplet> packKKTdistOutOfRangeEntries(sData* prob, int childStart, int childEnd) const;
+
+  MPI_Datatype MatrixEntryTriplet_mpi;
 
 #ifdef STOCH_TESTING
  protected: 

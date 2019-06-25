@@ -1,7 +1,7 @@
 #add_definitions(-DTIMING -DSTOCH_TESTING) # timing output
 include_directories(Core/Abstract Core/Vector Core/Utilities Core/QpSolvers Core/QpPreprocess Core/QpGen
   Core/SparseLinearAlgebra Core/DenseLinearAlgebra Core/Readers
-  Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver
+  Core/LinearSolvers/Ma27Solver Core/LinearSolvers/Ma57Solver Core/LinearSolvers/Preconditioners
   Core/LinearSolvers/Ma86Solver Core/LinearSolvers/PardisoSolver Core/LinearSolvers/BiCGStabSolver Core/LinearSolvers/MumpsSolver)
 include_directories(Core/StochLinearAlgebra Core/QpStoch)
 add_subdirectory(Core)

@@ -58,6 +58,10 @@ message(STATUS "WITH_PARDISOINDEF=${WITH_PARDISOINDEF}")
 option(WITH_MUMPS_LEAF "Use MUMPS (if available) for (local) Schur complement at each leaf" OFF)
 message(STATUS "WITH_MUMPS_LEAF=${WITH_MUMPS_LEAF}")
 
+#use sparse preconditioner for global Schur complement
+option(WITH_DIST_PRECOND "use sparse preconditioner for global Schur complement" ON)
+message(STATUS "WITH_DIST_PRECOND=${WITH_DIST_PRECOND}")
+
 #use conserative step lengths in interior point algorithm
 option(WITH_STEPLENGTH_CONSERVATIVE "use conserative step lengths in interior point algorithm" OFF)
 message(STATUS "WITH_STEPLENGTH_CONSERVATIVE=${WITH_STEPLENGTH_CONSERVATIVE}")
@@ -488,7 +492,11 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   if(WITH_SPARSE_PRECOND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPARSE_PRECOND")
   endif(WITH_SPARSE_PRECOND)
-
+  
+  if(WITH_DIST_PRECOND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDIST_PRECOND")
+  endif(WITH_SPARSE_PRECOND)
+  
   if(WITH_REDUCED_ACCURACY)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DREDUCED_ACCURACY")
   endif(WITH_REDUCED_ACCURACY)

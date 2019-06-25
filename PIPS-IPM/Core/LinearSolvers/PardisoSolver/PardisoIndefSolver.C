@@ -159,6 +159,7 @@ void PardisoIndefSolver::initPardiso()
 {
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
+   deleteCSRpointers = false;
    mtype = -2;
    nrhs = 1;
    iparm[0] = 0;
@@ -218,7 +219,44 @@ void PardisoIndefSolver::matrixChanged()
    }
 }
 
-#define SELECT_NNZS
+
+void PardisoIndefSolver::matrixRebuild( DoubleMatrix& matrixNew )
+{
+   int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+   if( myrank == 0 )
+   {
+      SparseSymMatrix& matrixNewSym = dynamic_cast<SparseSymMatrix&>(matrixNew);
+
+      assert(matrixNewSym.getStorageRef().fortranIndexed());
+
+      printf("\n Schur complement factorization is starting ...\n ");
+
+      assert(mStorageSparse);
+
+      factorizeFromSparse(matrixNewSym);
+
+      printf("\n Schur complement factorization completed \n ");
+   }
+}
+
+
+void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrix_fortran)
+{
+   assert(n == matrix_fortran.size());
+   assert(!deleteCSRpointers);
+   assert(matrix_fortran.getStorageRef().fortranIndexed());
+
+   ia = matrix_fortran.getStorage()->krowM;
+   ja = matrix_fortran.getStorage()->jcolM;
+   a = matrix_fortran.getStorage()->M;
+
+   assert(ia[0] == 1);
+
+   // matrix initialized, now do the actual factorization
+   factorize();
+}
+
 
 void PardisoIndefSolver::factorizeFromSparse()
 {
@@ -233,27 +271,18 @@ void PardisoIndefSolver::factorizeFromSparse()
    if( ia == NULL )
    {
       assert(ja == NULL && a == NULL);
+      deleteCSRpointers = true;
 
       ia = new int[n + 1];
       ja = new int[nnz];
       a = new double[nnz];
-
-#ifndef SELECT_NNZS
-
-      for( int i = 0; i < n + 1; i++ )
-         ia[i] = iaStorage[i] + 1;
-
-      for( int i = 0; i < nnz; i++ )
-         ja[i] = jaStorage[i] + 1;
-#endif
    }
 
    assert(n >= 0);
 
-#ifdef SELECT_NNZS
    std::vector<double>diag(n);
 
-   const double t = 0.0001;
+   const double t = precondDiagDomBound;
 
    for( int r = 0; r < n; r++ )
    {
@@ -271,7 +300,6 @@ void PardisoIndefSolver::factorizeFromSparse()
    {
       for( int j = iaStorage[r]; j < iaStorage[r + 1]; j++ )
       {
-         //if( fabs(aStorage[j]) > 1e-15 || jaStorage[j] == r )
          if( aStorage[j] != 0.0 || jaStorage[j] == r )
          {
 #ifdef SPARSE_PRECOND
@@ -297,14 +325,27 @@ void PardisoIndefSolver::factorizeFromSparse()
 
    std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
 
-#else
-   for( int i = 0; i < nnz; i++ )
-      a[i] = aStorage[i];
-   for( int i = 0; i < n + 1; i++ )
-      assert(ia[i] == iaStorage[i] + 1);
+#if 0
+   {
+      ofstream myfile;
+      int mype;  MPI_Comm_rank(MPI_COMM_WORLD, &mype);
 
-   for( int i = 0; i < nnz; i++ )
-      assert(ja[i] == jaStorage[i] + 1);
+      printf("\n\n ...WRITE OUT! \n\n");
+
+      if( mype == 0 )
+      {
+         myfile.open("../A.txt");
+
+         for( int i = 0; i < n; i++ )
+            for( int k = ia[i]; k < ia[i + 1]; k++ )
+               myfile << i << '\t' << ja[k - 1] << '\t' << a[k - 1] << endl;
+
+         myfile.close();
+      }
+
+      printf("%d...exiting (pardiso) \n", mype);
+      exit(1);
+  }
 #endif
 
    // matrix initialized, now do the actual factorization
@@ -338,18 +379,18 @@ void PardisoIndefSolver::factorizeFromDense()
          if( mStorage->M[i][j] != 0.0 )
             nnz++;
 
-   if( ia )
+   if( deleteCSRpointers )
+   {
       delete[] ia;
-
-   if( ja )
       delete[] ja;
-
-   if( a )
       delete[] a;
+   }
 
    ia = new int[n + 1];
    ja = new int[nnz];
    a = new double[nnz];
+
+   deleteCSRpointers = true;
 
    nnz = 0;
    for( int j = 0; j < n; j++ )
@@ -381,17 +422,13 @@ void PardisoIndefSolver::factorize()
 
    assert(ia && ja && a);
 
-#ifndef NDEBUG
-#ifdef CHECK_PARDISO
-#ifndef WITH_MKL_PARDISO
+#if !defined(NDEBUG) && defined(CHECK_PARDISO) && !defined(WITH_MKL_PARDISO)
    pardiso_chkmatrix(&mtype, &n, a, ia, ja, &error);
    if( error != 0 )
    {
       printf("\nERROR in consistency of matrix: %d", error);
       exit(1);
    }
-#endif
-#endif
 #endif
 
 #if 0
@@ -405,11 +442,11 @@ void PardisoIndefSolver::factorize()
    }
 
    std::cout << "absmax=" << abs_max << " log=" << log10(abs_max) << std::endl;
-if( log10(abs_max) >= 13)
-{
-   iparm[9] = min(int(log10(abs_max)), 15);
-   std::cout << "new: param " << iparm[9] << std::endl;
-}
+   if( log10(abs_max) >= 13)
+   {
+      iparm[9] = min(int(log10(abs_max)), 15);
+      std::cout << "new: param " << iparm[9] << std::endl;
+   }
 else
 #endif
 
@@ -456,7 +493,6 @@ else
 void PardisoIndefSolver::solve ( OoqpVector& v )
 {
    assert(iparmUnchanged());
-
 
    int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
    int myrank; MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
@@ -559,8 +595,12 @@ PardisoIndefSolver::~PardisoIndefSolver()
 #endif
    );
 
-   delete[] ia;
-   delete[] ja;
-   delete[] a;
+   if( deleteCSRpointers )
+   {
+      delete[] ia;
+      delete[] ja;
+      delete[] a;
+   }
+
    delete[] x;
 }
