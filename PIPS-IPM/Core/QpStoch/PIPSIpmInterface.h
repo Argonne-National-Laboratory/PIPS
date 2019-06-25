@@ -683,8 +683,11 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   /* compute residuals for postprocessed solution and check for feasibility */
   resids_orig->calcresids(origData, postsolved_vars);
   
+  double onenorm_rA = resids->rA->onenorm();
+  double onenorm_rC = resids->rC->onenorm();
+
   if( my_rank == 0)
-    std::cout << "Residuals after postsolve:\n" << "rA: " << resids->rA->onenorm() << "\nrC " << resids->rC->onenorm() << std::endl; 
+    std::cout << "Residuals after postsolve:\n" << "rA: " << onenorm_rA << "\nrC " << onenorm_rC << std::endl; 
 
   // deleting solutions
   delete unscaled_solution;
