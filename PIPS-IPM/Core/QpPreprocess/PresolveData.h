@@ -162,7 +162,6 @@ public :
       void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVector& unbounded_min, SimpleVector& max_partact,
             SimpleVector& unbounded_max, const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
 
-
 public:
       // todo getter, setter for element access of nnz counter???
       double getObjOffset() const { return objOffset; };

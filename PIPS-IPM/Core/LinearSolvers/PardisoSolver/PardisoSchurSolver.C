@@ -82,6 +82,7 @@ extern "C" {
 }
 #endif
 
+#define SHRINK_SC
 
 PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 {
@@ -92,7 +93,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   rowptrAug = NULL;
   colidxAug = NULL;
   eltsAug = NULL;
-
+  shrinked2orgSC = NULL;
   nvec = NULL;
   nvec2 = NULL;
   nvec_size = -1;
@@ -179,7 +180,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
   R.getSize(nR,nx); nnz += R.numberOfNonZeros();
   A.getSize(nA,nx); nnz += A.numberOfNonZeros();
   C.getSize(nC,nx); nnz += C.numberOfNonZeros();
-  int Msize=Msys->size();
+  const int Msize = Msys->size();
 
   // todo not implemented yet
   assert(R.numberOfNonZeros() == 0);
@@ -369,9 +370,52 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
      }
   }
 
-  nnz=augSys.numberOfNonZeros();
 
-  // we need to transpose to get the augmented system in the row-major upper triangular format of  PARDISO 
+#ifdef SHRINK_SC
+
+  // remove empty or zero rows from augSys and check that in Msys none are removed!
+
+  int* shrinked2orgAug = NULL;
+
+  augSys.deleteZeroRowsCols(shrinked2orgAug);
+
+  n = augSys.size();
+
+  // todo: make it asserts
+  for( int i = 0; i < Msize; i++ )
+  {
+     if( i != shrinked2orgAug[i] )
+     {
+        std::cout << "zero row in (1,1) block of Schur complement!" << std::endl;
+        std::cout << "i=" << i << " shrinked2orgAug[i]=" << shrinked2orgAug[i] << std::endl;
+        exit(1);
+     }
+
+     if( Msys->getStorageRef().krowM[i] == Msys->getStorageRef().krowM[i + 1] )
+     {
+        std::cout << "(2) zero row in (1,1) block of Schur complement!"<< std::endl;
+        exit(1);
+     }
+   }
+
+  nSC = augSys.size() - Msize;
+
+  assert(shrinked2orgSC == NULL);
+  shrinked2orgSC = new int[nSC];
+
+  // shrinked2orgSC should only map Schur complement part of augmented saddle-point system
+  for( int i = 0; i < nSC; i++ )
+  {
+     shrinked2orgSC[i] = shrinked2orgAug[i + Msize] - Msize;
+     assert(shrinked2orgSC[i] >= i);
+  }
+
+  delete[] shrinked2orgAug;
+#endif
+
+  nnz = augSys.numberOfNonZeros();
+
+  // we need to transpose to get the augmented system in the row-major upper triangular format of PARDISO
   rowptrAug = new int[n+1];
   colidxAug = new int[nnz];
   eltsAug   = new double[nnz];
@@ -525,12 +569,35 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 				     SparseGenMatrix& G,
 				     DenseSymMatrix& SC0)
 {
-  int* rowptrSC;
-  int* colidxSC;
-  double* eltsSC;
+  int* rowptrSC = NULL;
+  int* colidxSC = NULL;
+  double* eltsSC = NULL;
 
   computeSC(SC0.size(), R, A, C, F, G, rowptrSC, colidxSC, eltsSC);
 
+#ifdef SHRINK_SC
+  for( int r = 0; r < nSC; r++ )
+  {
+     const int r_org = shrinked2orgSC[r];
+     assert(r_org >= r && r_org < SC0.size());
+
+     for( int ci = rowptrSC[r]; ci < rowptrSC[r + 1]; ci++ )
+     {
+        const int c = colidxSC[ci];
+        const int c_org = shrinked2orgSC[c];
+
+        assert(c >= r);
+        assert(c_org >= c && c_org < SC0.size());
+
+        SC0[c_org][r_org] += eltsSC[ci];
+
+#ifndef DENSE_USE_HALF
+        if( r_org != c_org )
+           SC0[r_org][c_org] += eltsSC[ci];
+#endif
+     }
+  }
+#else
   for( int r = 0; r < nSC; r++ )
   {
      for( int ci = rowptrSC[r]; ci < rowptrSC[r + 1]; ci++ )
@@ -546,6 +613,7 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 #endif
      }
   }
+#endif
 
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
 }
@@ -558,9 +626,9 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
                  SparseGenMatrix& G,
                  SparseSymMatrix& SC0)
 {
-  int* rowptrSC;
-  int* colidxSC;
-  double* eltsSC;
+  int* rowptrSC = NULL;
+  int* colidxSC = NULL;
+  double* eltsSC = NULL;
 
   computeSC(SC0.size(), R, A, C, F, G, rowptrSC, colidxSC, eltsSC);
 
@@ -568,7 +636,38 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
   int* colidxBase = SC0.jcolM();
   double* eltsBase = SC0.M();
 
+#ifdef SHRINK_SC
+  assert(SC0.size() >= nSC);
+
+  // add to summed Schur complement
+  for( int r = 0; r < nSC; r++ )
+  {
+     const int r_org = shrinked2orgSC[r];
+     assert(r_org >= r && r_org < SC0.size());
+
+     int cbase = rowptrBase[r_org];
+
+     // catch empty diagonal
+     if( rowptrSC[r + 1] - rowptrSC[r] == 1 && eltsSC[rowptrSC[r]] == 0.0 )
+        continue;
+
+     for( int j = rowptrSC[r]; j < rowptrSC[r + 1]; j++ )
+     {
+        const int c_org = shrinked2orgSC[colidxSC[j]];
+        assert(c_org >= colidxSC[j] && c_org < SC0.size());
+
+        while( colidxBase[cbase] != c_org )
+        {
+           cbase++;
+           assert(cbase < rowptrBase[r_org + 1]);
+        }
+
+        eltsBase[cbase] += eltsSC[j];
+     }
+  }
+#else
   assert(SC0.size() == nSC);
+
 
   // add to summed Schur complement todo: exploit block structure, get start and end of block
   for( int r = 0; r < nSC; r++ )
@@ -592,6 +691,7 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
         eltsBase[cbase] += eltsSC[j];
      }
   }
+#endif
 
   delete[] rowptrSC; delete[] colidxSC; delete[] eltsSC;
 }
@@ -604,6 +704,8 @@ void PardisoSchurSolver::computeSC(int nSCO,
 /*const*/SparseGenMatrix& F,
 /*const*/SparseGenMatrix& G, int*& rowptrSC, int*& colidxSC, double*& eltsSC)
 {
+   assert(!rowptrSC && !colidxSC && !eltsSC);
+
    bool doSymbFact = false;
    if( firstSolve )
    {
@@ -669,7 +771,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
 
    /* compute schur complement */
 #ifndef WITH_MKL_PARDISO
-   iparm[37] = nSC; // Msys->size(); // compute Schur-complement
+   iparm[37] = nSC; // compute Schur-complement
 
    #ifdef TIMING
    //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
@@ -687,7 +789,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    HPM_Stop("PARDISOFact");
  #endif
 
-   int nnzSC=iparm[38];
+   const int nnzSC = iparm[38];
 
 #ifdef TIMING
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -707,6 +809,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    eltsSC = new double[nnzSC];
 
    pardiso_get_schur(pt, &maxfct, &mnum, &mtype, eltsSC, rowptrSC, colidxSC);
+
    //convert back to C/C++ indexing
    for( int it = 0; it < nSC + 1; it++ )
       rowptrSC[it]--;
@@ -1059,12 +1162,12 @@ PardisoSchurSolver::~PardisoSchurSolver()
     printf ("PardisoSchurSolver - ERROR in pardiso release: %d", error ); 
   }
   
-  if(rowptrAug) delete[] rowptrAug;
-  if(colidxAug) delete[] colidxAug;
-  if(eltsAug)   delete[] eltsAug;
-  
-  if(nvec) delete[] nvec;
-  if(nvec2) delete[] nvec2;
+  delete[] rowptrAug;
+  delete[] colidxAug;
+  delete[] eltsAug;
+  delete[] shrinked2orgSC;
+  delete[] nvec;
+  delete[] nvec2;
 }
 
 #ifdef STOCH_TESTING

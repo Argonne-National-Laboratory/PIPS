@@ -154,13 +154,11 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
    for( int row = 0; row < nnzs.n; ++row)
    {
-
       if( nnzs[row] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
          continue;
 
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
-
       presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       if( system_type == EQUALITY_SYSTEM )
@@ -293,7 +291,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
       mat = currBlmat;
       mat_transp = currBlmatTrans;
    }
-
 
    /* set variables */
    x_lower = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currxlowParent : currxlowChild;

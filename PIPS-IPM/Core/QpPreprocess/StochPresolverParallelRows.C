@@ -120,7 +120,6 @@ void StochPresolverParallelRows::applyPresolving()
    }
    countRowsCols();
 #endif
-
    int nRowElims = 0;
 
    // for children:

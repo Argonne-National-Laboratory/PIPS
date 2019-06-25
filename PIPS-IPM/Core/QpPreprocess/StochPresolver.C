@@ -90,7 +90,6 @@ Data* StochPresolver::presolve()
       presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
       presolverCleanup.applyPresolving();
-
 //      presolverColFix.applyPresolving();
 //      presolverBS.applyPresolving();
 
@@ -102,14 +101,13 @@ Data* StochPresolver::presolve()
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
-
    assert( presData.getPresProb().isRootNodeInSync() );
 //      presData.presProb->writeToStreamDense(std::cout);
 
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);
    assert( finalPresData->isRootNodeInSync() );
-
    // exit(1);
+
    return finalPresData;
 }

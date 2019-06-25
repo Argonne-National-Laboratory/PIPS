@@ -68,6 +68,8 @@ public:
   int rows() { return m; }
   int cols() { return n; }
 
+  bool isValid(bool verbose = false) const;
+
   int length() { return len; };
   int numberOfNonZeros() const {	return krowM[m]; };
   virtual void fromGetDense( int row, int col, double * A, int lda,
@@ -189,6 +191,9 @@ public:
   void dump(const string& filename);
 
   void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
+
+  void deleteZeroRowsColsSym(int*& new2orgIdx);
+
 
   /*
    * computes the full sparse matrix representation from a upper triangular symmetric sparse representation

@@ -27,8 +27,6 @@ class StochPresolverModelCleanup : public StochPresolverBase
       int removeRedundantRows(SystemType system_type);
       int removeRedundantRows(SystemType system_type, int node);
       int removeRedundantRows(SystemType system_type, int node, bool linking);
-      int removeRedundantLinkingRows(SystemType system_type);
-
       int removeTinyEntriesFromSystem(SystemType system_type);
       int removeTinyInnerLoop(SystemType system_type, int node, BlockType block_type);
 };

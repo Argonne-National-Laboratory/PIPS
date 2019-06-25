@@ -2415,4 +2415,3 @@ void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGe
             << ( (ixupp[col] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[col]) << "]";
    }
 }
-

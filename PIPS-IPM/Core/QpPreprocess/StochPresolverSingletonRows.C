@@ -353,7 +353,6 @@ void StochPresolverSingletonRows::processSingletonBlock(SystemType system_type, 
                bool removed_matrix_transposed = false;
 
                // todo adjust rhs lhs! // todo check : when removing variable will bounds of var be 0 ? should be i guess.. // todo check when removing row : are rhs lhs bounds still valid?
-               // todo make accesible for postsolver
                removed_matrix = removeEntryInDynamicStorage(*matrix, i, colIdx, entry_matrix);
                removed_matrix_transposed = removeEntryInDynamicStorage(*matrix_transp, colIdx, i, entry_matrix_transposed);
 

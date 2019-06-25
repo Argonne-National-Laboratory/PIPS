@@ -79,6 +79,8 @@ public:
   
   virtual void writeToStream(ostream& out) const;
   
+  virtual void writeToStreamDense(ostream& out) const;
+
   virtual void randomizePSD(double *);
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
@@ -95,6 +97,8 @@ public:
   void reduceToLower();
 
   void deleteEmptyRowsCols(const OoqpVector& nnzVec);
+
+  void deleteZeroRowsCols(int*& new2orgIdx);
 
   virtual ~SparseSymMatrix() {};
 };
