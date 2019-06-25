@@ -12,6 +12,8 @@
 #include "StochGenMatrix.h"
 #include "PresolveData.h"
 #include "sData.h"
+#include "SystemType.h"
+#include "StochPostsolver.h"
 #include "pipsport.h"
 #include <vector>
 
@@ -30,14 +32,13 @@ struct xbounds_col_is_smaller
     }
 };
 
-enum SystemType {EQUALITY_SYSTEM, INEQUALITY_SYSTEM};
 enum BlockType {LINKING_VARS_BLOCK, CHILD_BLOCK, LINKING_CONS_BLOCK};
 
 
 class StochPresolverBase
 {
 public:
-   StochPresolverBase(PresolveData& presData);
+   StochPresolverBase(PresolveData& presData, StochPostsolver* postsolver = NULL);
    virtual ~StochPresolverBase();
 
    // todo return bool whether enough eliminations
@@ -54,6 +55,9 @@ public:
    bool checkRootNodeDataInSync(const sData& sData) const;
 
 protected:
+   // if postsolver is NULL we do not have one and don't do postsolve / any notify
+   StochPostsolver* const postsolver;
+
    // todo do we want to make these adjustable?
    static constexpr double feastol = 1.0e-6; // was 1.0e-6
    static constexpr double infinity = 1.0e30;
@@ -155,7 +159,6 @@ protected:
    /* updating all pointers */
    void updatePointersForCurrentNode(int node, SystemType system_type);
 private:
-   /* return false if dummy node */
    void setPointersMatrices(GenMatrixHandle mat, int node);
    void setPointersMatrixBounds(SystemType system_type, int node);
    void setPointersVarBounds(int node);
@@ -164,17 +167,9 @@ private:
 
 private:
    void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
-   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, BlockType block_type) const;
+   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const;
 
 protected:
-   void setCPAmatsRoot(GenMatrixHandle matrixHandle); //parrow
-   bool setCPAmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //parrow
-   bool setCPBmatsChild(GenMatrixHandle matrixHandle, int it, SystemType system_type); //parrow
-   void setCPColumnRoot(); //parrow
-   void setCPColumnChild(int it); //parrow
-   void setCPRowRootIneqOnlyLhsRhs(); //parrow
-   void setCPRowChildIneqOnlyLhsRhs(int it); //parrow
-
    void resetEqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
    void resetIneqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
 
@@ -188,7 +183,7 @@ protected:
 
    bool nodeIsDummy(int it, SystemType system_type) const;
    bool hasLinking(SystemType system_type) const;
-   void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib) const;
+   void getRankDistributed(MPI_Comm comm, int&  myRank, bool& iAmDistrib) const;
    void abortInfeasible(MPI_Comm comm) const;
    void synchronize(int& value) const;
 

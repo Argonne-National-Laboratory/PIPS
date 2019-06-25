@@ -10,7 +10,7 @@ scale=""
 stepLp=""
 presolve=""
 mins="60"
-mygams="/nfs/optimi/kombadon/bzfkempk/sw/gams26.1_linux_x64_64_sfx/gams"
+mygams="/opt/gams/gams26.1_linux_x64_64_sfx/gams"
 memcheck=false
 
 for i in "$@"

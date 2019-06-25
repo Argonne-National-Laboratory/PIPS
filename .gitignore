@@ -54,7 +54,7 @@ build_pips
 ThirdPartyLibs/PARDISO
 pipstmp
 GAMSsmall
-PS-IPM/Drivers/simple/simple_data_12.gdx
+PIPS-IPM/Drivers/simple/simple_data_12.gdx
 
 # Ignore the OS X DS_Store
 .DS_Store

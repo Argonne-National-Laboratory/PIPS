@@ -13,7 +13,7 @@
 class StochPresolverBoundStrengthening : public StochPresolverBase
 {
 public:
-   StochPresolverBoundStrengthening(PresolveData& presData);
+   StochPresolverBoundStrengthening(PresolveData& presData, StochPostsolver* postsolver);
 
    virtual ~StochPresolverBoundStrengthening();
 

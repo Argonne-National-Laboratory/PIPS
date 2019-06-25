@@ -13,6 +13,8 @@
 #include "StochPresolver.h"
 #include "IotrRefCount.h"
 #include "SmartPointer.h"
+#include "StochPostsolver.h"
+#include "sData.h"
 
 enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH, SCALER_GEO_EQUI_STOCH};
 enum PresolverType {PRESOLVER_NONE, PRESOLVER_STOCH};
@@ -35,16 +37,22 @@ public:
             }
       };
 
-      static Presolver* makePresolver(const Data* data, PresolverType type)
+      static Presolver* makePresolver(const Data* data, PresolverType type, Postsolver* postsolver = NULL)
       {
          switch( type )
             {
             case PRESOLVER_STOCH:
-               return new StochPresolver(data);
+               return new StochPresolver(data, postsolver);
             default:
                return 0;
             }
       };
+
+      // todo : not sure about the factory design here
+      static Postsolver* makePostsolver(const sData* data)
+      {
+         return new StochPostsolver(*data);
+      }
 
       static PreprocessFactory& getInstance()
       {

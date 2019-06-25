@@ -3,8 +3,6 @@
  *
  *      Author: bzfrehfe
  */
-
-
 #include "sLinsysLeafMumps.h"
 #include "MumpsSolver.h"
 #include <algorithm>
