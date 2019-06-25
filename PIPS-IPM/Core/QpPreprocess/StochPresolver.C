@@ -32,7 +32,7 @@
 #include "StochPresolverColumnFixation.h"
 //#include "StochPresolverSingletonRows.h"
 //#include "StochPresolverSingletonColumns.h"
-// #include "StochPresolverParallelRows.h"
+#include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
 
 StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = NULL)
@@ -71,7 +71,7 @@ Data* StochPresolver::presolve()
 
    /* initialize all presolvers */
    StochPresolverBoundStrengthening presolverBS(presData, *sorigprob);
-   // StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
+   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
    StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
    StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
 //   StochPresolverSingletonRows presolverSR(presData, *sorigprob);
@@ -90,12 +90,12 @@ Data* StochPresolver::presolve()
       presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
       presolverCleanup.applyPresolving();
+      presolverParallelRow.applyPresolving();
 //      presolverColFix.applyPresolving();
 //      presolverBS.applyPresolving();
 
 //      presolverBS.applyPresolving();
 
-     // presolverParallelRow.applyPresolving();
    }
 
    if( myRank == 0 )

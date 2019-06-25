@@ -106,10 +106,10 @@ StochPresolverParallelRows::~StochPresolverParallelRows()
 void StochPresolverParallelRows::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
-   assert(verifyNnzcounters());
-   assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
+   assert(presData.getPresProb().isRootNodeInSync());
+   assert(presData.verifyNnzcounters());
+   assert(presData.verifyActivities());
+
    assert(gParentAdaptions->isZero());
 
 #ifndef NDEBUG
@@ -166,16 +166,11 @@ void StochPresolverParallelRows::applyPresolving()
          deleteNormalizedPointers( node );
       }
    }
-   // combine the bounds of linking-variables:
-   combineNewBoundsParent();
-   // update the bounds of linking-variables:
-   tightenLinkingVarsBounds();
 
-   // update NnzColParent:
+   presData.allreduceLinkingVarBounds();
+   presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceAndApplyNnzChanges();
-   // presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyBoundChanges();
-   presData.resetRedCounters();
 
    rowsFirstHashTable.clear();
    rowsSecondHashTable.clear();
@@ -208,41 +203,35 @@ void StochPresolverParallelRows::applyPresolving()
    }
 
    // update objective coefficients of linking variables (gParent):
-   allreduceAndUpdate(MPI_COMM_WORLD, *gParentAdaptions, *currgParent);
+   //allreduceAndUpdate(MPI_COMM_WORLD, *gParentAdaptions, *currgParent); // todo
 
    deleteNormalizedPointers(-1);
 
-   // update NnzColParent: As all processses have the same information, no communication necessary
-   updateNnzUsingReductions(presData.nColElems->vec, presData.redCol->vec);
-   presData.resetRedCounters();
-   // synchronize nRowElims:
-   synchronize(nRowElims);
+   // todo : not necessary?
+   presData.allreduceLinkingVarBounds();
+   presData.allreduceAndApplyLinkingRowActivities();
+   presData.allreduceAndApplyNnzChanges();
+   presData.allreduceAndApplyBoundChanges();
 
    // todo linking constraints!!!
 
-   if( myRank == 0 )
+
+   synchronize(nRowElims);
+   if( my_rank == 0 )
       std::cout << "Removed " << nRowElims << " Rows in Parallel Row Presolving." << std::endl;
 
-   // Sum up individual objOffset and then add it to the global objOffset:
-   synchronize(indivObjOffset);
-   presData.addObjOffset(indivObjOffset);
-
-   if( myRank == 0 )
-      std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
-
 #ifndef NDEBUG
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "--- After parallel row presolving:" << std::endl;
    countRowsCols();
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
-   assert(verifyNnzcounters());
-   assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
+   assert(presData.getPresProb().isRootNodeInSync());
+   assert(presData.verifyNnzcounters());
+   assert(presData.verifyActivities());
 }
 
 /** If it is no dummy child, sets normalized pointers:
@@ -852,13 +841,10 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
  */
 void StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, int it)
 {
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
    if( rowsSecondHashTable.empty() )
       return;
 
-   for (size_t i=0; i<rowsSecondHashTable.bucket_count(); ++i)
+   for (size_t i = 0; i < rowsSecondHashTable.bucket_count(); ++i)
    {
       for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it1 = rowsSecondHashTable.begin(i);
             it1!=rowsSecondHashTable.end(i); ++it1)
@@ -871,7 +857,6 @@ void StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
             // When two parallel rows are found, check if they are both =, both <=, or = and <=
             if( checkRowsAreParallel( *it1, *it2) )
             {
-               //cout<<"Found two rows with parallel coefficients: Row "<<it1->id<<"("<<it1->lengthA+it1->lengthB<<")"<<" and "<<it2->id<<"("<<it2->lengthA+it2->lengthB<<")"<<endl;
                if( it1->id < mA && it2->id < mA )
                {
                   // Case both constraints are equalities:
@@ -903,9 +888,8 @@ void StochPresolverParallelRows::compareRowsInSecondHashTable(int& nRowElims, in
                   }
                   else
                   {
-                     //PIPSdebugMessage("Really Parallel Rows, case 1. \n");
-                     if(  !PIPSisEQ( norm_b->elements()[it1->id], norm_b->elements()[it2->id]) )
-                        abortInfeasible(MPI_COMM_WORLD);
+                     if( !PIPSisEQ( norm_b->elements()[it1->id], norm_b->elements()[it2->id]) )
+                        abortInfeasible(MPI_COMM_WORLD); // todo 
 
                      // delete row2 in the original system:
                      eliminateOriginalRow((int) it2->id, nRowElims);
@@ -1046,13 +1030,12 @@ bool StochPresolverParallelRows::checkRowsAreParallel( rowlib::rowWithEntries ro
 /** Eliminate the row in the original system. */
 void StochPresolverParallelRows::eliminateOriginalRow(int rowId, int& nRowElims)
 {
-   assert(rowId>=0);
+   assert(rowId >= 0);
    if(rowId < mA) // equality row
    {
       assert( norm_Amat );
       if(currNnzRow->elements()[rowId] != 0.0) // check if row was already removed
       {
-//         cout<<"Delete row in A with id# "<<rowId<<endl;
          nRowElims++;
          removeRow(rowId, *currAmat, *currAmatTrans, currBmat, currBmatTrans,
                *currNnzRow, *currRedColParent, currNnzColChild);
@@ -1176,8 +1159,6 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
    assert( rowId1 >= 0 && rowId1 < mA );
    assert( rowId2 >= 0 && rowId2 < mA );
    assert( it >= -1 && it < nChildren );
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    // calculate t and d:
    const int singleColIdx1 = rowContainsSingletonVariableA->elements()[rowId1];
@@ -1332,15 +1313,13 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
 // {
 //    assert( colIdx1 >= -1 && colIdx2 >= 0 );
 //    assert( it >= -1 && it < nChildren );
-//    int myRank;
-//    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
 //    const double costOfVar2 = (colIdx2 < nA)
 //          ? currgParent->elements()[colIdx2] : currgChild->elements()[colIdx2 - nA];
 
 //    if( colIdx1 == -1 )
 //    {  // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
-//       if( myRank == 0 || it > -1 ) // only add the objective offset for root as process ZERO:
+//       if( my_rank == 0 || it > -1 ) // only add the objective offset for root as process ZERO:
 //          indivObjOffset += d * costOfVar2;
 //    }
 //    else if( colIdx1 >= nA )
@@ -1357,7 +1336,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
 //    {
 //       currgParent->elements()[colIdx1] += t * costOfVar2;
 //       // only add the objective offset for root as process ZERO:
-//       if( myRank == 0 ) indivObjOffset += d * costOfVar2;
+//       if( my_rank == 0 ) indivObjOffset += d * costOfVar2;
 //    }
 // }
 
