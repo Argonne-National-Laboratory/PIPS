@@ -66,6 +66,8 @@ public:
    virtual void applyPresolving();
 
 private:
+   /// extension to the pointer set from StochPresolverBase to point to C and A at the same moment rather than
+   /// distinguishing between EQUALITY and INEQUALITY constraints
    const SparseStorageDynamic* currCmat;
    const SparseStorageDynamic* currCmatTrans;
    const SparseStorageDynamic* currDmat;
@@ -105,7 +107,8 @@ private:
    // number of columns of the A or C block
    int nA;
 
-   boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > rowsFirstHashTable;
+   // unordered set?
+   boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > row_support_hashtable;
    boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> > rowsSecondHashTable;
 
    void setNormalizedPointers(int node);
@@ -118,13 +121,14 @@ private:
    void deleteNormalizedPointers(int it);
 
 
-
    void removeSingletonVars();
    void removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
          SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
          BlockType block_type);
-   void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock,
-         SimpleVector& Rhs, SimpleVector* Lhs, SimpleVector* iRhs, SimpleVector* iLhs);
+   double removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
+
+   void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
+         SimpleVector* cupp, SimpleVector* clow, SimpleVector* iclow, SimpleVector* icupp) const;
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector& nnzRow );
    void compareRowsInSecondHashTable(int& nRowElims, int it);

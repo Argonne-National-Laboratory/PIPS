@@ -86,10 +86,8 @@ protected:
    const SimpleVector* currgChild;
 
    const SimpleVector* currNnzRow;
-//   const SimpleVector* currRedRowLink;
    const SimpleVector* currNnzRowLink;
 
-//   const SimpleVector* currRedColParent;
    const SimpleVector* currNnzColParent;
    const SimpleVector* currNnzColChild;
 
