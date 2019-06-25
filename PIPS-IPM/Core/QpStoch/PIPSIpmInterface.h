@@ -684,7 +684,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   resids_orig->calcresids(origData, postsolved_vars);
   
   if( my_rank == 0)
-    std::cout << "Residuals after postsolve:\n" << "rA: " << resids->rA->onenorm() << "\nrC " << resids->rC << std::endl; 
+    std::cout << "Residuals after postsolve:\n" << "rA: " << resids->rA->onenorm() << "\nrC " << resids->rC->onenorm() << std::endl; 
 
   // deleting solutions
   delete unscaled_solution;
