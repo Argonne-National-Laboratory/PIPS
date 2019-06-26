@@ -1210,10 +1210,13 @@ void sLinsysRoot::factorizeKKT(sData* prob)
 
   if( usePrecondDist )
   {
+     int myRank; MPI_Comm_rank(mpiComm, &myRank);
+
      assert(kktDist);
      assert(prob);
 
-     precondSC.getSparsifiedSC_fortran(*prob, *kktDist);
+     if( myRank == 0)
+        precondSC.getSparsifiedSC_fortran(*prob, *kktDist);
 
 #if 0
       {
