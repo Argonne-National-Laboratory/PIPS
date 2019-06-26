@@ -35,7 +35,6 @@ MumpsSolverRoot::matrixRebuild( DoubleMatrix& matrixNew )
 
    Msys = &dynamic_cast<SparseSymMatrix&>(matrixNew);
    assert(n == Msys->size());
-   assert(Msys->getStorageRef().fortranIndexed());
 
    delete[] tripletIrn;
    delete[] tripletJcn;
@@ -46,6 +45,8 @@ MumpsSolverRoot::matrixRebuild( DoubleMatrix& matrixNew )
 
    if( rankPips == 0 )
    {
+      assert(Msys->getStorageRef().fortranIndexed());
+
       // todo!
 #if 1
       Msys->getStorageRef().fortran2c();
