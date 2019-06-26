@@ -8,6 +8,7 @@
 #include "sLinsysRoot.h"
 #include "pipsport.h"
 
+
 class sData;
 /** 
  * ROOT (= NON-leaf) linear system in reduced augmented form

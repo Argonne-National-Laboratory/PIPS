@@ -6,14 +6,15 @@
 
 
 #include "sFactoryAugMumpsLeaf.h"
+
+#include "../LinearSolvers/MumpsSolver/MumpsSolverLeaf.h"
 #include "sLinsysLeafMumps.h"
-#include "MumpsSolver.h"
 
 
 sLinsysLeaf* sFactoryAugMumpsLeaf::newLinsysLeaf(sData* prob,
                    OoqpVector* dd,OoqpVector* dq,
                    OoqpVector* nomegaInv, OoqpVector* rhs)
 {
-   MumpsSolver* linSolver = NULL;
+   MumpsSolverLeaf* linSolver = NULL;
    return new sLinsysLeafMumps(this, prob, dd, dq, nomegaInv, rhs, linSolver);
 }

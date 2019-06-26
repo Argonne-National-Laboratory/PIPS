@@ -77,7 +77,7 @@ if (HAVE_PARDISO OR (HAVE_MKL_PARDISO AND WITH_MKL_PARDISO))
       stochInput ${COIN_LIBS}
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY_CHOSEN} ${MATH_LIBS})
+      ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY_CHOSEN} ${MUMPS_LIBRARY} ${MATH_LIBS})
 
     add_executable(pipsipmBatchFromRaw Drivers/pipsipmBatchFromRaw.cpp)
     target_link_libraries(pipsipmBatchFromRaw
@@ -113,7 +113,7 @@ if (HAVE_PARDISO OR (HAVE_MKL_PARDISO AND WITH_MKL_PARDISO))
       stochInput ${COIN_LIBS}
       ooqpstoch ooqpstochla ooqpmehrotrastoch
       ooqpgensparse ooqpbase ooqpsparse ooqpdense
-      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${PARDISO_LIBRARY_CHOSEN} ${MATH_LIBS})
+      ${MA27_LIBRARY} ${MA57_LIBRARY} ${METIS_LIBRARY} ${MUMPS_LIBRARY} ${PARDISO_LIBRARY_CHOSEN} ${MATH_LIBS})
 
       add_executable(meanSolveAndRecourseEval Drivers/meanSolveAndRecourseEval.cpp)
       target_link_libraries(meanSolveAndRecourseEval 
