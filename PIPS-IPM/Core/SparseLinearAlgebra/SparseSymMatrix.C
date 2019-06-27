@@ -368,6 +368,11 @@ void SparseSymMatrix::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& 
    mStorage->getSparseTriplet_c2fortran(irn, jcn, val);
 }
 
+void SparseSymMatrix::getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   mStorage->getSparseTriplet_fortran2fortran(irn, jcn, val);
+}
+
 
 void SparseSymMatrix::deleteZeroRowsCols(int*& new2orgIdx)
 {

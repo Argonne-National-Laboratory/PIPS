@@ -11,6 +11,8 @@
 #include "sData.h"
 #include "sTree.h"
 #include <limits>
+#include "MumpsSolverRoot.h"
+
 
 //#define DUMPKKT
 
@@ -27,6 +29,7 @@ extern double g_iterNumber;
 #endif
 extern int gInnerSCsolve;
 extern int gOuterSolve;
+
 
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
@@ -97,7 +100,19 @@ sLinsysRootAug::createSolver(sData* prob, SymMatrix* kktmat_)
 {
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
-#ifdef WITH_PARDISO
+
+#ifdef WITH_MUMPS_ROOT
+   if( hasSparseKkt )
+   {
+      if( 0 == myRank )
+         cout << "Using MUMPS for summed Schur complement - sLinsysRootAug" << endl;
+
+      SparseSymMatrix* kktmat = dynamic_cast<SparseSymMatrix*>(kktmat_);
+
+      return new MumpsSolverRoot(mpiComm, kktmat);
+   }
+   else
+#elif defined(WITH_PARDISO)
    if( hasSparseKkt )
    {
       if( 0 == myRank )

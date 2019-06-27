@@ -1682,6 +1682,36 @@ void SparseStorage::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& va
    assert(count == len);
 }
 
+
+void SparseStorage::getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   int count = 0;
+   assert(len > 0);
+   assert(!irn && !jcn && !val);
+   assert(fortranIndexed());
+
+   irn = new int[len];
+   jcn = new int[len];
+   val = new double[len];
+
+   for( int r = 0; r < m; r++ )
+   {
+      for( int c = krowM[r] - 1; c < krowM[r + 1] - 1; c++ )
+      {
+         const int col = jcolM[c];
+         const double value = M[c];
+
+         irn[count] = r + 1;
+         jcn[count] = col;
+         val[count] = value;
+
+         count++;
+      }
+   }
+
+   assert(count == len);
+}
+
 void SparseStorage::deleteEmptyRows(int*& orgIndex)
 {
    assert(!neverDeleteElts);

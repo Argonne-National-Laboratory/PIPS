@@ -198,6 +198,8 @@ public:
 
   void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
 
+  void getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const;
+
   void deleteEmptyRows(int*& orgIndex);
 
   // should be used with care! other methods might nor work correctly todo: add flag to check in other methods
