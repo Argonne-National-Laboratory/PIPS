@@ -18,6 +18,7 @@
 #include <cassert>
 #include "mpi.h"
 #include "omp.h"
+#include "pipsport.h"
 
 #define CHECK_PARDISO
 
@@ -163,6 +164,22 @@ void PardisoIndefSolver::initPardiso()
    mtype = -2;
    nrhs = 1;
    iparm[0] = 0;
+
+   useSparseRhs = false;
+
+   // todo proper parameter
+   char* var = getenv("PARDISO_SPARSE_RHS_ROOT");
+   if( var != NULL )
+   {
+      int use;
+      sscanf(var, "%d", &use);
+      if( use == 1 )
+      {
+         if( myRank == 0 )
+            printf("\n using PARDISO_SPARSE_RHS_ROOT \n");
+         useSparseRhs = true;
+      }
+   }
 
 #ifndef WITH_MKL_PARDISO
    int error = 0;
@@ -509,13 +526,29 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 #endif
    if( myrank == 0 )
    {
+      int* rhsSparsity = nullptr;
+
       int error;
 
       // first call?
       if( !x )
          x = new double[n];
 
-      pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, &idum, &nrhs,
+      if( useSparseRhs )
+      {
+         iparm[30] = 1; //sparse rhs
+         rhsSparsity = new int[n]();
+
+         for( int i = 0; i < n; i++  )
+            if( !PIPSisZero(b[i]) )
+               rhsSparsity[i] = 1;
+      }
+      else
+      {
+         iparm[30] = 0;
+      }
+
+      pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, a, ia, ja, rhsSparsity, &nrhs,
             iparm, &msglvl, b, x, &error
 #ifndef WITH_MKL_PARDISO
             ,dparm
@@ -559,6 +592,8 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
 
       if( size > 0 )
          MPI_Bcast(b, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+      delete[] rhsSparsity;
 
 #ifdef TIMING
       printf("sparse kkt iterative refinement steps: %d \n", iparm[6]);

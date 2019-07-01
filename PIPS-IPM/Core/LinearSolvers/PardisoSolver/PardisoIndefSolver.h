@@ -66,6 +66,7 @@ class PardisoIndefSolver : public DoubleLinearSolver
       void setIparm(int* iparm);
       bool iparmUnchanged();
 
+      bool useSparseRhs;
       bool deleteCSRpointers;
 };
 
