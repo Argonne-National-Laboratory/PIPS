@@ -559,6 +559,8 @@ void PardisoIndefSolver::solve ( OoqpVector& v )
          printf("\nERROR during solution: %d", error);
          exit(3);
       }
+
+      iparm[30] = 0;
 #if 0
       const double b2norm = sv.twonorm();
       const double binfnorm = sv.infnorm();
