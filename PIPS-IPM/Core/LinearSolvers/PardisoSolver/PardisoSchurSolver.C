@@ -126,9 +126,6 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
      sscanf(var, "%d", &use);
      if( use == 1 )
      {
-        if( myRank == 0 )
-           printf("\n NOT using PARDISO_SPARSE_RHS_LEAF \n");
-
         useSparseRhs = true;
      }
   }
