@@ -79,6 +79,8 @@ protected:
   bool firstSolve;
   void  *pt[64];
   int iparm[64];
+  bool useSparseRhs;
+
 
 #ifndef WITH_MKL_PARDISO
   int num_threads;

@@ -19,6 +19,7 @@ using namespace std;
 #include <cstdlib>
 #include <cmath>
 #include <algorithm>
+#include "pipsport.h"
 
 #include "Ma57Solver.h"
 
@@ -99,7 +100,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   nvec_size = -1;
   // - we do not have the augmented system yet; most of initialization done during the
   // first solve call
-
+  useSparseRhs = true;
   first = true; firstSolve = true;
 
 #ifndef WITH_MKL_PARDISO
@@ -112,6 +113,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   msglvl = pardiso_verbosity;
   solver = 0;
   mtype = -2;
+  useSparseRhs = true;
   nrhs = 1;
 }
 
@@ -464,6 +466,23 @@ void PardisoSchurSolver::setIparm(int* iparm){
     * this might not be an issue should be kept in mind though
     */
    iparm[30] = 0; // do not specify sparse rhs at this point ! MKL_PARDISO can either set iparm[35] or iparm[30]
+
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   // todo proper parameter
+   char* var = getenv("PARDISO_SPARSE_RHS_LEAF");
+   if( var != NULL )
+   {
+      int use;
+      sscanf(var, "%d", &use);
+      if( use == 0 )
+      {
+         if( myRank == 0 )
+            printf("\n NOT using PARDISO_SPARSE_RHS_LEAF \n");
+
+         useSparseRhs = false;
+      }
+   }
 
 #ifndef WITH_MKL_PARDISO
    iparm[2] = PIPSgetnOMPthreads();
@@ -930,12 +949,31 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 #ifndef WITH_MKL_PARDISO
   phase = 33; /* solve - iterative refinement */
 
+  int* rhsSparsity = nullptr;
+  if( useSparseRhs )
+  {
+     iparm[30] = 1; //sparse rhs
+     rhsSparsity = new int[n]();
+
+     for( int i = 0; i < dim; i++  )
+        if( !PIPSisZero(rhs_n[i]) )
+           rhsSparsity[i] = 1;
+  }
+  else
+  {
+     iparm[30] = 0;
+  }
+
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug,
-	   NULL, &nrhs,
+	   rhsSparsity, &nrhs,
 	   iparm , &msglvl, rhs_n, x_n, &error
 	   ,dparm
   );
+
+  iparm[30] = 0;
+  delete[] rhsSparsity;
+
   assert(error == 0);
 #else
   /* pardiso from mkl does not support same functionality as pardiso-project

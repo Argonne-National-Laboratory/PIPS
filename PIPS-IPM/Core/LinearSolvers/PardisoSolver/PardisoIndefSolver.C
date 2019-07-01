@@ -165,7 +165,7 @@ void PardisoIndefSolver::initPardiso()
    nrhs = 1;
    iparm[0] = 0;
 
-   useSparseRhs = false;
+   useSparseRhs = true;
 
    // todo proper parameter
    char* var = getenv("PARDISO_SPARSE_RHS_ROOT");
@@ -173,11 +173,12 @@ void PardisoIndefSolver::initPardiso()
    {
       int use;
       sscanf(var, "%d", &use);
-      if( use == 1 )
+      if( use == 0 )
       {
          if( myRank == 0 )
-            printf("\n using PARDISO_SPARSE_RHS_ROOT \n");
-         useSparseRhs = true;
+            printf("\n NOT using PARDISO_SPARSE_RHS_ROOT \n");
+
+         useSparseRhs = false;
       }
    }
 
