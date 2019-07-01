@@ -912,6 +912,49 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    return bounds_changed;
 }
 
+void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking)
+{
+   assert( -1 <= node && node <= nChildren);
+   assert( !linking );
+   assert(system_type == INEQUALITY_SYSTEM);
+
+   if( PIPSisEQ(value, 0.0) )
+      return;
+
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: RHS LHS of row " << ROW << " being adjusted by " << value << std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+   }
+#endif
+
+   if( linking )
+   {
+      outdated_lhsrhs = true;
+      (system_type == EQUALITY_SYSTEM) ? (*bound_chgs_A)[row] += value : (*bound_chgs_C)[row] += value;
+      return;
+   }
+
+   if(system_type == EQUALITY_SYSTEM)
+   {
+      getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] += value;
+   }
+   else
+   {
+      getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row] = std::min(getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row], rhs);
+      getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] = std::max(getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row], lhs);
+   }
+
+#ifdef TRACK_ROW
+   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: after RHS LHS adjustment " << std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+   }
+#endif
+}
+
 /** this methods does not call any postsolve procedures but simply changes the bounds (lhs, rhs) of either A or B by value */
 void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row, double value)
 {

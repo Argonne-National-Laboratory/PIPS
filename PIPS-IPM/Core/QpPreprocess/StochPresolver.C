@@ -30,7 +30,7 @@
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
 #include "StochPresolverColumnFixation.h"
-//#include "StochPresolverSingletonRows.h"
+// #include "StochPresolverSingletonRows.h"
 //#include "StochPresolverSingletonColumns.h"
 #include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
@@ -90,12 +90,12 @@ Data* StochPresolver::presolve()
       presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
       presolverCleanup.applyPresolving();
-      presolverParallelRow.applyPresolving();
 //      presolverColFix.applyPresolving();
 //      presolverBS.applyPresolving();
 
 //      presolverBS.applyPresolving();
 
+     presolverParallelRow.applyPresolving();
    }
 
    if( myRank == 0 )

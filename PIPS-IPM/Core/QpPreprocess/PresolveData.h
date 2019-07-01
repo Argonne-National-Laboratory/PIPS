@@ -182,6 +182,10 @@ public:
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
       void removeParallelRow(SystemType system_type, int node, int row, bool linking);
 
+      // todo : hackish functions not properly working with presolve
+      void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, bool linking, double lhs, double rhs);
+      void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
+
       /* call whenever a single entry has been deleted from the matrix */
       void deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index, int& index_k, int& row_end);
       void updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements);

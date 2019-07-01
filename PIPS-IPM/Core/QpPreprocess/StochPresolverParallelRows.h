@@ -109,7 +109,7 @@ private:
 
    // unordered set?
    boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > row_support_hashtable;
-   boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> > rowsSecondHashTable;
+   boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> > row_coefficients_hashtable;
 
    void setNormalizedPointers(int node);
    void setNormalizedPointersMatrices(int node);
@@ -130,11 +130,12 @@ private:
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
          SimpleVector* cupp, SimpleVector* clow, SimpleVector* iclow, SimpleVector* icupp) const;
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-         SparseStorageDynamic& Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector& nnzRow );
-   void compareRowsInSecondHashTable(int& nRowElims, int it);
+         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector* nnzRow );
+   void compareRowsInCoeffHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
-   void eliminateOriginalRow(int rowId, int& nRowElims);
-   void tightenOriginalBoundsOfRow1(int rowId1, int rowId2);
+
+   void tightenOriginalBoundsOfRow1(SystemType system_type, int node, int rowId1, int rowId2);
+
    double getSingletonCoefficient(int singleColIdx);
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
    bool doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
