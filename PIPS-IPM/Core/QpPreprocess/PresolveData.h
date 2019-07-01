@@ -183,7 +183,7 @@ public:
       void removeParallelRow(SystemType system_type, int node, int row, bool linking);
 
       // todo : hackish functions not properly working with presolve
-      void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, bool linking, double lhs, double rhs);
+      void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
 
       /* call whenever a single entry has been deleted from the matrix */

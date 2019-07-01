@@ -1107,43 +1107,37 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    double factor = (*norm_factorC)[rowId1];
 
    // Set norm_low/norm_upp to the bounds of the second inequality:
-   double norm_low = -std::numeric_limits<double>::max();
-   double norm_upp = std::numeric_limits<double>::max();
+   double norm_low_row2 = -std::numeric_limits<double>::infinity();
+   double norm_upp_row2 = std::numeric_limits<double>::infinity();
+
+   double norm_low_row1 = -std::numeric_limits<double>::infinity();
+   double norm_upp_row1 = std::numeric_limits<double>::infinity();
 
    if( (*norm_iclow)[rowId2] != 0.0 )
-      norm_low = (*norm_clow)[rowId2];
+      norm_low_row2 = (*norm_clow)[rowId2];
    if( (*norm_icupp)[rowId2] != 0.0 )
-      norm_upp = (*norm_cupp)[rowId2];
+      norm_upp_row2 = (*norm_cupp)[rowId2];
 
-   // test for infeasibility:
+   if( (*norm_iclow)[rowId1] != 0.0 )
+      norm_low_row1 = (*norm_clow)[rowId1];
+   if( (*norm_icupp)[rowId1] != 0.0 )
+      norm_upp_row1 = (*norm_cupp)[rowId1];
+
+   // test for infeasibility: // todo
    if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT(norm_upp, (*norm_clow)[rowId1]) )
          || ( (*norm_icupp)[rowId1] != 0.0 && PIPSisLT( (*norm_cupp)[rowId1], norm_low) ) )
    {
       abortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
    }
-   // test if the new bounds are tightening:
-   if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT( (*norm_clow)[rowId1], norm_low) )
-         || ( (*norm_iclow)[rowId1] == 0.0 && norm_low > -std::numeric_limits<double>::max() ))
-   {
-      // tighten normalized lower bound:
-      setNewBound( rowId1, norm_low, norm_clow, norm_iclow);
 
-      // tighten original lower (factor>0) or upper ((factor<0) bound:
-      (factor > 0) ? setNewBound( rowId1, factor * norm_low, currIneqLhs, currIclow) :
-            setNewBound( rowId1, factor * norm_low, currIneqRhs, currIcupp);
-   }
-   if( ( norm_icupp->elements()[rowId1] != 0.0 && PIPSisLT(norm_upp, norm_cupp->elements()[rowId1]) )
-         || ( norm_icupp->elements()[rowId1] == 0.0 && norm_upp < std::numeric_limits<double>::max() ))
-   {
-      // tighten normalized upper bound:
-      setNewBound( rowId1, norm_upp, norm_cupp, norm_icupp);
+   // todo numeric safeguards // todo check if inifty * factor == infty?
+   double new_lhs = ( PIPSisLT( 0.0, factor) ) ? std::max(norm_low_row1, norm_low_row2) : std::min(norm_upp_row1, norm_upp_row2);
+   double new_rhs = ( PIPSisLT( 0.0, factor) ) ? std::min(norm_upp_row1, norm_upp_row2) : std::max(norm_low_row1, norm_low_row2);
 
-      // tighten original upper (factor>0) or lower (factor<0) bound:
-      (factor>0) ? setNewBound( rowId1, factor * norm_upp, currIneqRhs, currIcupp) :
-         setNewBound( rowId1, factor * norm_upp, currIneqLhs, currIclow);
-   }
+   setNewBound( rowId1, new_lhs, norm_clow, norm_iclow);
+   setNewBound( rowId1, new_rhs, norm_cupp, norm_icupp);
 
-   presData.tightenRowBoundsParallelRow(INEQUALITY_SYSTEM, node, int rowId1, double lhs, double rhs, bool linking)
+   presData.tightenRowBoundsParallelRow(INEQUALITY_SYSTEM, node, rowId1, factor * new_lhs, factor * new_rhs, false);
 }
 
 void setNewBound(int index, double new_bound,
@@ -1152,9 +1146,12 @@ void setNewBound(int index, double new_bound,
    assert( bound_vector->n == i_bound_vector->n );
    assert( index >= 0 && index < bound_vector->n );
 
-   bound_vector->elements()[index] = new_bound;
-   if( i_bound_vector->elements()[index] == 0.0 )
-      i_bound_vector->elements()[index] = 1.0;
+   if( std::fabs(new_bound) == std::numeric_limits<double>::infinity() )
+      return;
+
+   (*bound_vector)[index] = new_bound;
+   if( (*i_bound_vector)[index] == 0.0 )
+      (*i_bound_vector)[index] = 1.0;
 }
 
 

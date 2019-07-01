@@ -918,40 +918,44 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
    assert( !linking );
    assert(system_type == INEQUALITY_SYSTEM);
 
-   if( PIPSisEQ(value, 0.0) )
-      return;
-
 #ifdef TRACK_ROW
-   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+/*   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
    {
       std::cout << "TRACKING: RHS LHS of row " << ROW << " being adjusted by " << value << std::endl;
       writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
-   }
+   }*/
 #endif
 
    if( linking )
    {
-      outdated_lhsrhs = true;
-      (system_type == EQUALITY_SYSTEM) ? (*bound_chgs_A)[row] += value : (*bound_chgs_C)[row] += value;
+      assert(false);
+      //outdated_lhsrhs = true;
+      //(system_type == EQUALITY_SYSTEM) ? (*bound_chgs_A)[row] += value : (*bound_chgs_C)[row] += value;
       return;
    }
 
    if(system_type == EQUALITY_SYSTEM)
    {
-      getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] += value;
+      assert(false);
+      //getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] += value;
    }
    else
    {
-      getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row] = std::min(getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row], rhs);
-      getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] = std::max(getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row], lhs);
+      if(lhs != -std::numeric_limits<double>::infinity())
+         getSimpleVecRowFromStochVec(*presProb->iclow, node, CHILD_BLOCK)[row] = 1.0;
+      if(rhs != std::numeric_limits<double>::infinity())
+         getSimpleVecRowFromStochVec(*presProb->icupp, node, CHILD_BLOCK)[row] = 1.0;
+
+      getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row] = std::min(getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row], rhs);
+      getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row] = std::max(getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row], lhs);
    }
 
 #ifdef TRACK_ROW
-   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+/*   if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
    {
       std::cout << "TRACKING: after RHS LHS adjustment " << std::endl;
       writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
-   }
+   }*/
 #endif
 }
 
