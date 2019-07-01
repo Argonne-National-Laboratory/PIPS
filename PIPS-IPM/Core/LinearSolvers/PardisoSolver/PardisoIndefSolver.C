@@ -174,12 +174,15 @@ void PardisoIndefSolver::initPardiso()
       int use;
       sscanf(var, "%d", &use);
       if( use == 0 )
-      {
-         if( myRank == 0 )
-            printf("\n NOT using PARDISO_SPARSE_RHS_ROOT \n");
-
          useSparseRhs = false;
-      }
+   }
+
+   if( myRank == 0 )
+   {
+      if( useSparseRhs )
+         printf(" using PARDISO_SPARSE_RHS_ROOT \n");
+      else
+         printf(" NOT using PARDISO_SPARSE_RHS_ROOT \n");
    }
 
 #ifndef WITH_MKL_PARDISO
