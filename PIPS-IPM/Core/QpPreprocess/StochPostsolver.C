@@ -51,6 +51,7 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 /** postsolve for this is simply to set all dual variables to zero - the row itself has no primal impact */
 void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint )
 {
+   return;
    reductions.push_back( REDUNDANT_ROW );
    indices.push_back( INDEX(node, row) );
    values.push_back( ( (system_type == EQUALITY_SYSTEM ) ? 1 : -1 ) );
@@ -63,6 +64,7 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
 void StochPostsolver::notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint,
       int column, double lb, double ub, double* values_row, int* indices_row, int length)
 {
+   return;
    /* store the row with which bound has been tightened */
    reductions.push_back( BOUNDS_TIGHTENED );
    indices.push_back( INDEX(node, row) );
@@ -142,8 +144,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          }
          case FIXED_COLUMN:
          {
-            int column = indices[first].index;
-            int node = indices[first].node;
+            int column = indices[i].index;
+            int node = indices[i].node;
 
             assert( -1 <= node && node < static_cast<int>(primal_vars_orig.children.size()) );
             assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1);

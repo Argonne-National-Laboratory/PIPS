@@ -21,7 +21,7 @@ StochPresolverColumnFixation::~StochPresolverColumnFixation()
 {
 }
 
-
+// todo atm can only be called once : does not recognize already fixed columns
 
 /* scan through columns and fix those that have tight bounds */
 void StochPresolverColumnFixation::applyPresolving()

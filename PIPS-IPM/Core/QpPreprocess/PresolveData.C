@@ -145,11 +145,11 @@ void PresolveData::setUndefinedVarboundsTo(double value)
    SimpleVector& vec_ixupp = dynamic_cast<SimpleVector&>(*ixupp.vec);
    for(int i = 0; i < vec_xlow.length(); ++i)
    {
-      if(vec_ixlow.elements()[i] == 0.0)
-         vec_xlow.elements()[i] = -value;
+      if( vec_ixlow[i] == 0.0)
+         vec_xlow[i] = -value;
 
-      if(vec_ixupp.elements()[i] == 0.0)
-         vec_xupp.elements()[i] = value;
+      if( vec_ixupp[i] == 0.0)
+         vec_xupp[i] = value;
    }
 }
 
