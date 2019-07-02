@@ -544,7 +544,6 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
    {
       assert(norm_Cmat);
-      assert(norm_Dmat);
       assert(norm_cupp);
       assert(norm_clow);
       assert(norm_icupp);
@@ -1016,7 +1015,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                      // nearly parallel case 2:
                      //PIPSdebugMessage("Nearly Parallel Rows, case 2. \n");
                      // compute the new variable bound for x_id1:
-                     const int singleColIdx = (*rowContainsSingletonVariableA)[id1];
+                     int singleColIdx = (*rowContainsSingletonVariableA)[id1];
                      double coeff_singleton = getSingletonCoefficient(singleColIdx);
 
                      double newxlow = - std::numeric_limits<double>::max();
@@ -1039,9 +1038,11 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                            newxupp = ( (*norm_b)[id1] - (*norm_cupp)[ineqRowId] ) * (*norm_factorA)[id1] / coeff_singleton;
                      }
 
-                     // effectively tighten bounds of variable x_id1:
-                     tightenBoundsForSingleVar(singleColIdx, newxlow, newxupp);
+                     BlockType block_type = LINKING_VARS_BLOCK;
+                     if(singleColIdx > nA)
+                        block_type = CHILD_BLOCK;
 
+                     presData.rowPropagatedBounds(EQUALITY_SYSTEM, node, block_type, id1, singleColIdx, newxupp, newxlow);
                      // remove inequality row -> after block
                   }
                   else
@@ -1124,8 +1125,8 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
       norm_upp_row1 = (*norm_cupp)[rowId1];
 
    // test for infeasibility: // todo
-   if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT(norm_upp, (*norm_clow)[rowId1]) )
-         || ( (*norm_icupp)[rowId1] != 0.0 && PIPSisLT( (*norm_cupp)[rowId1], norm_low) ) )
+   if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT( norm_upp_row2, (*norm_clow)[rowId1]) )
+         || ( (*norm_icupp)[rowId1] != 0.0 && PIPSisLT( (*norm_cupp)[rowId1], norm_low_row2) ) )
    {
       abortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
    }
@@ -1134,27 +1135,20 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    double new_lhs = ( PIPSisLT( 0.0, factor) ) ? std::max(norm_low_row1, norm_low_row2) : std::min(norm_upp_row1, norm_upp_row2);
    double new_rhs = ( PIPSisLT( 0.0, factor) ) ? std::min(norm_upp_row1, norm_upp_row2) : std::max(norm_low_row1, norm_low_row2);
 
-   setNewBound( rowId1, new_lhs, norm_clow, norm_iclow);
-   setNewBound( rowId1, new_rhs, norm_cupp, norm_icupp);
+   if( new_lhs != -std::numeric_limits<double>::infinity() )
+   {
+      (*norm_clow)[rowId1] = new_lhs;
+      (*norm_iclow)[rowId1] = 1.0;   
+   }
+
+   if( new_rhs != std::numeric_limits<double>::infinity() )
+   {
+      (*norm_cupp)[rowId1] = new_rhs;
+      (*norm_icupp)[rowId1] = 1.0;
+   }
 
    presData.tightenRowBoundsParallelRow(INEQUALITY_SYSTEM, node, rowId1, factor * new_lhs, factor * new_rhs, false);
 }
-
-void setNewBound(int index, double new_bound,
-      SimpleVector* bound_vector, SimpleVector* i_bound_vector) const
-{
-   assert( bound_vector->n == i_bound_vector->n );
-   assert( index >= 0 && index < bound_vector->n );
-
-   if( std::fabs(new_bound) == std::numeric_limits<double>::infinity() )
-      return;
-
-   (*bound_vector)[index] = new_bound;
-   if( (*i_bound_vector)[index] == 0.0 )
-      (*i_bound_vector)[index] = 1.0;
-}
-
-
 
 /** Returns the matrix coefficient of the singleton variable with index singleColIdx.
  * This index is possibly offset by nA, if it is in a B- or D-block.
@@ -1178,26 +1172,26 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
          (*singletonCoeffsColParent)[singleColIdx];
 }
 
-/** Tightens the bounds for a singleton variable with index singleColIdx.
- * @param newxlow and @param newxupp are the new candidate bounds.
- * This index is possibly offset by nA, if it is in a B- or D-block.
- */
-void StochPresolverParallelRows::tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp)
-{
-   assert( singleColIdx >= 0 );
+// /** Tightens the bounds for a singleton variable with index singleColIdx.
+//  * @param newxlow and @param newxupp are the new candidate bounds.
+//  * This index is possibly offset by nA, if it is in a B- or D-block.
+//  */
+// void StochPresolverParallelRows::tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp)
+// {
+//    assert( singleColIdx >= 0 );
 
-   if( singleColIdx < nA )   // variable x_1 is in the parent block Amat
-   {
-      setNewBounds(singleColIdx, newxlow, newxupp, currIxlowParent->elements(),
-            currxlowParent->elements(), currIxuppParent->elements(), currxuppParent->elements());
-   }
-   else   // variable x_1 is in the child block Bmat
-   {
-      assert( singleColIdx < nA + currxuppChild->n );
-      setNewBounds(singleColIdx-nA, newxlow, newxupp, currIxlowChild->elements(),
-            currxlowChild->elements(), currIxuppChild->elements(), currxuppChild->elements());
-   }
-}
+//    if( singleColIdx < nA )   // variable x_1 is in the parent block Amat
+//    {
+//       setNewBounds(singleColIdx, newxlow, newxupp, currIxlowParent->elements(),
+//             currxlowParent->elements(), currIxuppParent->elements(), currxuppParent->elements());
+//    }
+//    else   // variable x_1 is in the child block Bmat
+//    {
+//       assert( singleColIdx < nA + currxuppChild->n );
+//       setNewBounds(singleColIdx-nA, newxlow, newxupp, currIxlowChild->elements(),
+//             currxlowChild->elements(), currIxuppChild->elements(), currxuppChild->elements());
+//    }
+// }
 
 bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2, int it)
 {
@@ -1206,20 +1200,20 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
    assert( it >= -1 && it < nChildren );
 
    // calculate t and d:
-   const int singleColIdx1 = rowContainsSingletonVariableA->elements()[rowId1];
-   const int singleColIdx2 = rowContainsSingletonVariableA->elements()[rowId2];
+   const int singleColIdx1 = (*rowContainsSingletonVariableA)[rowId1];
+   const int singleColIdx2 = (*rowContainsSingletonVariableA)[rowId2];
 
    const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
    const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
-   const double s = norm_factorA->elements()[rowId1] / norm_factorA->elements()[rowId2];
+   const double s = (*norm_factorA)[rowId1] / (*norm_factorA)[rowId2];
    const double t = coeff_singleton1 / coeff_singleton2 / s;
-   const double d = (norm_b->elements()[rowId2] - norm_b->elements()[rowId1])
-            * norm_factorA->elements()[rowId2] / coeff_singleton2;
+   const double d = ( (*norm_b)[rowId2] - (*norm_b)[rowId1])
+            * (*norm_factorA)[rowId2] / coeff_singleton2;
 
    if( singleColIdx1 != -1.0 )
    {
       // tighten the bounds of variable x_1:
-      double newxlow = - std::numeric_limits<double>::max();
+      double newxlow = -std::numeric_limits<double>::max();
       double newxupp = std::numeric_limits<double>::max();
 
       // calculate new bounds depending on the sign of t:
@@ -1251,10 +1245,11 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
       }
 
       // effectively tighten bounds of variable x_id1:
-      if( singleColIdx1 >= nA || it == -1 )
-         tightenBoundsForSingleVar(singleColIdx1, newxlow, newxupp);
-      else  // if singleColIdx1 < nA && it > -1
-         storeNewBoundsParent(singleColIdx1, newxlow, newxupp);
+      BlockType block_type = LINKING_VARS_BLOCK;
+      if(singleColIdx1 > nA)
+         block_type = CHILD_BLOCK;
+
+      presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, block_type, rowId1, singleColIdx1 % nA, newxupp, newxlow);
 
       // adapt objective function:
       adaptObjective( singleColIdx1, singleColIdx2, t, d, it);
@@ -1351,43 +1346,43 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
    return true;
 }
 
-// /**
-//  * Adapt the objective function, at coefficient of colIdx1 and if @param offset, then also the objOffset is adapted.
-//  */
-// void StochPresolverParallelRows::adaptObjective( int colIdx1, int colIdx2, double t, double d, int it)
-// {
-//    assert( colIdx1 >= -1 && colIdx2 >= 0 );
-//    assert( it >= -1 && it < nChildren );
+/**
+ * Adapt the objective function, at coefficient of colIdx1 and if @param offset, then also the objOffset is adapted.
+ */
+void StochPresolverParallelRows::adaptObjective( int colIdx1, int colIdx2, double t, double d, int node)
+{
+   assert( colIdx1 >= -1 && colIdx2 >= 0 );
+   assert( node >= -1 && node < nChildren );
 
-//    const double costOfVar2 = (colIdx2 < nA)
-//          ? currgParent->elements()[colIdx2] : currgChild->elements()[colIdx2 - nA];
+   const double costOfVar2 = (colIdx2 < nA)
+         ? (*currgParent)[colIdx2] : (*currgChild)[colIdx2 - nA];
 
-//    if( colIdx1 == -1 )
-//    {  // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
-//       if( my_rank == 0 || it > -1 ) // only add the objective offset for root as process ZERO:
-//          indivObjOffset += d * costOfVar2;
-//    }
-//    else if( colIdx1 >= nA )
-//    {
-//       currgChild->elements()[colIdx1 - nA] += t * costOfVar2;
-//       indivObjOffset += d * costOfVar2;
-//    }
-//    else if( it > -1 )   // case singleColIdx1 a linking variable, and currently working on a child
-//    {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
-//       gParentAdaptions->elements()[colIdx1] += t * costOfVar2;
-//       indivObjOffset += d * costOfVar2;
-//    }
-//    else  // case Parent block that all processes have
-//    {
-//       currgParent->elements()[colIdx1] += t * costOfVar2;
-//       // only add the objective offset for root as process ZERO:
-//       if( my_rank == 0 ) indivObjOffset += d * costOfVar2;
-//    }
-// }
+   if( colIdx1 == -1 )
+   {  // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
+      if( my_rank == 0 || node > -1 ) // only add the objective offset for root as process ZERO:
+         presData.adaptObjectiveParallelRow(-1, -1, d * costOfVar2, std::numeric_limits<double>::infinity());
+   }
+   else if( colIdx1 >= nA )
+   {
+      presData.adaptObjectiveParallelRow(node, colIdx1 - nA, d * costOfVar2, t * costOfVar2);
+   }
+   else if( node > -1 )   // case singleColIdx1 a linking variable, and currently working on a child
+   {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
+      presData.adaptObjectiveParallelRow(-1, colIdx1, d * costOfVar2, t * costOfVar2);
+   }
+   else  // case Parent block that all processes have
+   {
+      presData.adaptObjectiveParallelRow(-1, colIdx1, 0.0, t * costOfVar2);
+
+      // only add the objective offset for root as process ZERO:
+      if( my_rank == 0 ) 
+         presData.adaptObjectiveParallelRow(-1, -1, d * costOfVar2, std::numeric_limits<double>::infinity());
+   }
+}
 
 void StochPresolverParallelRows::computeXminusYdivZ( double& result,
-      SimpleVector& ixvec, SimpleVector& xvec, int index, double y, double z)
+      const SimpleVector& ixvec, const SimpleVector& xvec, int index, double y, double z) const
 {
-   if( ixvec.elements()[index] != 0.0 )
-      result = ( xvec.elements()[index] - y ) / z;
+   if( ixvec[index] != 0.0 )
+      result = ( xvec[index] - y ) / z;
 }

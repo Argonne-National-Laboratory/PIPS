@@ -959,6 +959,19 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
 #endif
 }
 
+void PresolveData::adaptObjectiveParallelRow(int node, int col, double val_offset, double val_vec)
+{
+   assert( node >= -1 && node < nChildren );
+
+   if( std::fabs(val_vec) != std::numeric_limits<double>::infinity() )
+   {
+      getSimpleVecColFromStochVec(*presProb->g, node)[col] += val_vec;
+   }
+   obj_offset_chgs += val_offset;
+}
+
+
+
 /** this methods does not call any postsolve procedures but simply changes the bounds (lhs, rhs) of either A or B by value */
 void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row, double value)
 {

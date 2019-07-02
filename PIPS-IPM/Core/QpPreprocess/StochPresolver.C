@@ -86,10 +86,10 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-//      presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverCleanup.applyPresolving();
+     // presolverSR.applyPresolving();
+      // presolverBS.applyPresolving();
+      // presolverColFix.applyPresolving();
+      // presolverCleanup.applyPresolving();
 //      presolverColFix.applyPresolving();
 //      presolverBS.applyPresolving();
 

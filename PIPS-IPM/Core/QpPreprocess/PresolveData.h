@@ -185,6 +185,7 @@ public:
       // todo : hackish functions not properly working with presolve
       void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
+      void adaptObjectiveParallelRow(int node, int col, double val_offset, double val_vec);
 
       /* call whenever a single entry has been deleted from the matrix */
       void deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index, int& index_k, int& row_end);
