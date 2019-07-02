@@ -127,7 +127,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
    n_removed_rows += removeRedundantRows(system_type, node, false);
 
-   return n_removed_rows;
+   return n_removed_rows + n_removed_rows_link;
 }
 
 // todo : deleting rows invalidates activities currently
@@ -266,7 +266,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
    updatePointersForCurrentNode(node, system_type);
 
    const SparseStorageDynamic* mat = NULL;
-   const SparseStorageDynamic* mat_transp = NULL;
 
    const SimpleVector* x_lower = NULL;
    const SimpleVector* x_lower_idx = NULL;
@@ -279,17 +278,17 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
    {
       assert(node != -1);
       mat = currBmat;
-      mat_transp = currBmatTrans;
+      assert(currBmatTrans);
    }
    else if( block_type == LINKING_VARS_BLOCK )
    {
       mat = currAmat;
-      mat_transp = currAmatTrans;
+      assert(currAmatTrans);
    }
    else if( block_type == LINKING_CONS_BLOCK)
    {
       mat = currBlmat;
-      mat_transp = currBlmatTrans;
+      assert(currBlmatTrans);
    }
 
    /* set variables */
@@ -306,8 +305,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
    int n_elims = 0;
 
    const SparseStorageDynamic* storage = mat;
-   const SparseStorageDynamic* storage_transp = mat_transp;
-   assert(storage_transp);
 
    std::vector<std::pair<int, int> > eliminated_entries;
 

@@ -128,7 +128,7 @@ private:
    double removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
-         SimpleVector* cupp, SimpleVector* clow, SimpleVector* iclow, SimpleVector* icupp) const;
+         SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow) const;
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector* nnzRow );
    void compareRowsInCoeffHashTable(int& nRowElims, int it);

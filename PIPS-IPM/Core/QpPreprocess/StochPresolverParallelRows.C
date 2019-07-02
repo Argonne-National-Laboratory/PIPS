@@ -753,7 +753,7 @@ double StochPresolverParallelRows::removeEntryInDynamicStorage(SparseStorageDyna
 /// cupp can be either the rhs for the equality system or upper bounds for inequalities
 void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
-      SimpleVector* cupp, SimpleVector* clow, SimpleVector* iclow, SimpleVector* icupp) const
+      SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow) const
 {
    assert(a_mat);
    assert(cupp);
@@ -811,7 +811,8 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
 
       // normalize the row by dividing all entries by abs_max and possibly by -1 if negate_row.
       if(negate_row)
-         absmax *= -1.0;
+         absmax = absmax * -1.0;
+      
       for(int k = rowA_start; k < rowA_end; k++)
          a_mat->M[k] /= absmax;
 
@@ -833,7 +834,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
          if(negate_row)
          {
             std::swap( (*clow)[row], (*cupp)[row] );
-            std::swap( (*iclow)[row], (*icupp)[row]);
+            std::swap( (*iclow)[row], (*icupp)[row] );
          }
          (*norm_factorC)[row] = absmax;
       }
@@ -979,7 +980,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   else
                   {
                      // tighten bounds in original and normalized system:
-                     tightenOriginalBoundsOfRow1(INEQUALITY_SYSTEM, node, id1, id2);
+                     tightenOriginalBoundsOfRow1( INEQUALITY_SYSTEM, node, id1, id2 );
 
                      // delete row2 in the original system:
                      presData.removeRedundantRow( INEQUALITY_SYSTEM, node, id2, false);
@@ -1110,18 +1111,10 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    double norm_low_row2 = -std::numeric_limits<double>::infinity();
    double norm_upp_row2 = std::numeric_limits<double>::infinity();
 
-   double norm_low_row1 = -std::numeric_limits<double>::infinity();
-   double norm_upp_row1 = std::numeric_limits<double>::infinity();
-
    if( (*norm_iclow)[rowId2] != 0.0 )
       norm_low_row2 = (*norm_clow)[rowId2];
    if( (*norm_icupp)[rowId2] != 0.0 )
       norm_upp_row2 = (*norm_cupp)[rowId2];
-
-   if( (*norm_iclow)[rowId1] != 0.0 )
-      norm_low_row1 = (*norm_clow)[rowId1];
-   if( (*norm_icupp)[rowId1] != 0.0 )
-      norm_upp_row1 = (*norm_cupp)[rowId1];
 
    // test for infeasibility: // todo
    if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT( norm_upp_row2, (*norm_clow)[rowId1]) )
@@ -1130,23 +1123,31 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
       abortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
    }
 
+   double new_lhs = -std::numeric_limits<double>::infinity();
+   double new_rhs = std::numeric_limits<double>::infinity();
+
    // todo numeric safeguards // todo check if inifty * factor == infty?
-   double new_lhs = ( PIPSisLT( 0.0, factor) ) ? std::max(norm_low_row1, norm_low_row2) : std::min(norm_upp_row1, norm_upp_row2);
-   double new_rhs = ( PIPSisLT( 0.0, factor) ) ? std::min(norm_upp_row1, norm_upp_row2) : std::max(norm_low_row1, norm_low_row2);
-
-   if( new_lhs != -std::numeric_limits<double>::infinity() )
+   if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT( (*norm_clow)[rowId1], norm_low_row2) ) ||
+      ( (*norm_iclow)[rowId1] == 0.0 && norm_low_row2 > -std::numeric_limits<double>::infinity() ) )
    {
-      (*norm_clow)[rowId1] = new_lhs;
-      (*norm_iclow)[rowId1] = 1.0;   
+      (*norm_clow)[rowId1] = std::max(norm_low_row2, (*norm_clow)[rowId1]);
+      (*norm_iclow)[rowId1] = 1.0;
+
+
+      ( PIPSisLT( 0.0, factor) ) ? new_lhs = factor * norm_low_row2 : new_rhs = factor * norm_low_row2;
    }
 
-   if( new_rhs != std::numeric_limits<double>::infinity() )
+   if( ( (*norm_icupp)[rowId1] != 0.0 && PIPSisLT(norm_upp_row2, (*norm_cupp)[rowId1]) )
+         || ( (*norm_icupp)[rowId1] == 0.0 && norm_upp_row2 < std::numeric_limits<double>::infinity() ))
    {
-      (*norm_cupp)[rowId1] = new_rhs;
+      (*norm_cupp)[rowId1] = std::min(norm_upp_row2, (*norm_cupp)[rowId1]);
       (*norm_icupp)[rowId1] = 1.0;
+
+      ( PIPSisLT( 0.0, factor) ) ? new_rhs = factor * norm_upp_row2 : new_lhs = factor * norm_upp_row2;
    }
 
-   presData.tightenRowBoundsParallelRow(INEQUALITY_SYSTEM, node, rowId1, factor * new_lhs, factor * new_rhs, false);
+   assert( PIPSisLE( new_lhs, new_rhs) );
+   presData.tightenRowBoundsParallelRow(INEQUALITY_SYSTEM, node, rowId1, new_lhs, new_rhs, false);
 }
 
 /** Returns the matrix coefficient of the singleton variable with index singleColIdx.
