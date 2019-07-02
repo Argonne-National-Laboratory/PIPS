@@ -105,7 +105,7 @@ Data* StochPresolver::presolve()
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);
    assert( finalPresData->isRootNodeInSync() );
-   exit(0);
+   // exit(0);
 
    return finalPresData;
 }
