@@ -49,9 +49,9 @@ public:
       };
 
       // todo : not sure about the factory design here
-      static Postsolver* makePostsolver(const sData* data)
+      static Postsolver* makePostsolver(const Data* original_problem)
       {
-         return new StochPostsolver(*data);
+         return new StochPostsolver(dynamic_cast<const sData&>(*original_problem));
       }
 
       static PreprocessFactory& getInstance()

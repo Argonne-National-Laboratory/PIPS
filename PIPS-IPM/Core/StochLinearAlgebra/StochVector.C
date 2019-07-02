@@ -322,7 +322,7 @@ void StochVector::setToZero()
 
   if( vecl ) vecl->setToZero();
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->setToZero();
 }
 
@@ -332,7 +332,7 @@ void StochVector::setToConstant( double c)
 
   if( vecl ) vecl->setToConstant(c);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->setToConstant(c);
 }
 
@@ -1002,6 +1002,39 @@ void StochVector::componentDiv ( OoqpVector& v_ )
     children[it]->componentDiv(*v.children[it]);
 }
 
+bool StochVector::componentEqual( const OoqpVector& v_, double tol) const
+{
+   const StochVector& v = dynamic_cast<const StochVector&>(v_);
+   assert(v.children.size() == children.size());
+
+   bool component_equal = true;
+   component_equal = (component_equal && vec->componentEqual(*v.vec, tol));
+   if(!component_equal)
+   {
+      std::cout << "not equal in root node non-link" << std::endl;
+      return component_equal;
+   }
+
+   if( vecl )
+      component_equal = (component_equal && vecl->componentEqual(*v.vecl, tol));
+   if( !component_equal )
+   {
+      std::cout << "not equal in root node link" << std::endl;
+      return component_equal;
+   }
+
+   for(size_t child = 0; child < children.size(); child++)
+   {
+      component_equal = (component_equal && children[child]->componentEqual(*v.children[child], tol));
+      if( !component_equal )
+      {
+         std::cout << "not equal in root child node " << child << std::endl;
+         return component_equal;
+      }
+   }
+   return component_equal;
+}
+
 void StochVector::scalarMult( double num )
 {
   vec->scalarMult(num);
@@ -1606,7 +1639,7 @@ void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec
 // is root node data of StochVector same on all procs?
 bool StochVector::isRootNodeInSync() const
 {
-   assert( vec);
+   assert(vec);
    assert(mpiComm);
 
    bool in_sync = true;
@@ -1620,18 +1653,17 @@ bool StochVector::isRootNodeInSync() const
    MPI_Comm_rank(mpiComm, &my_rank);
    MPI_Comm_size(mpiComm, &world_size);
 
-   /* if there is a linking part we have to chekc it as well */
+   /* if there is a linking part we have to check it as well */
    const int vec_length = vec_simple.length();
    const int vecl_length = (vecl) ? dynamic_cast<const SimpleVector&>(*vecl).length() : 0;
 
-   const long long count = vec_length + vecl_length;
+   const int count = vec_length + vecl_length;
 
    assert( count < std::numeric_limits<int>::max());
 
    /* mpi reduce on vector */
    double sendbuf[count];
    double recvbuf[count];
-
    std::copy(vec_simple.elements(), vec_simple.elements() + vec_simple.length(), sendbuf);
 
    if( vecl )
@@ -1640,8 +1672,7 @@ bool StochVector::isRootNodeInSync() const
       std::copy(vecl_simple.elements(), vecl_simple.elements() + vecl_simple.length(),
             sendbuf + vec_simple.length());
    }
-   MPI_Allreduce(sendbuf, recvbuf, static_cast<int>(count), MPI_DOUBLE, MPI_MAX, mpiComm);
-
+   MPI_Allreduce(sendbuf, recvbuf, count, MPI_DOUBLE, MPI_MAX, mpiComm);
    for( int i = 0; i < count; ++i )
    {
       if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
@@ -1652,4 +1683,83 @@ bool StochVector::isRootNodeInSync() const
    }
 
    return in_sync;
+ }
+
+std::vector<double> StochVector::gatherStochVector() const
+{
+   const SimpleVector& firstvec = dynamic_cast<const SimpleVector&>(*vec);
+   const size_t nChildren = children.size();
+
+   int myrank;
+   MPI_Comm_rank(mpiComm, &myrank);
+   int mysize;
+   MPI_Comm_size(mpiComm, &mysize);
+
+   std::vector<double> gatheredVecLocal;
+
+   for( size_t i = 0; i < nChildren; ++i )
+   {
+      const SimpleVector& vec = dynamic_cast<const SimpleVector&>(*children[i]->vec);
+
+      if( vec.length() > 0 )
+         gatheredVecLocal.insert(gatheredVecLocal.end(), &vec[0], &vec[0] + vec.length());
+   }
+
+   size_t solLength = firstvec.length();
+
+   // final vector
+   std::vector<double> gatheredVec(0);
+
+   if( mysize > 0 )
+   {
+      // get all lengths
+      std::vector<int> recvcounts(mysize);
+      std::vector<int> recvoffsets(mysize);
+
+      int mylength = int(gatheredVecLocal.size());
+
+      MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
+
+      // all-gather local components
+      recvoffsets[0] = 0;
+      for( size_t i = 1; i < size_t(mysize); ++i )
+         recvoffsets[i] = recvoffsets[i - 1] + recvcounts[i - 1];
+
+      if( myrank == 0 )
+      {
+         solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
+         gatheredVec = std::vector<double>(solLength);
+
+         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE,
+               &gatheredVec[0] + firstvec.length(), &recvcounts[0],
+               &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+      }
+      else
+      {
+         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, 0,
+               &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+      }
+   }
+   else
+   {
+      solLength += gatheredVecLocal.size();
+
+      gatheredVec = std::vector<double>(solLength);
+
+      std::copy(gatheredVecLocal.begin(), gatheredVecLocal.end(), gatheredVec.begin() + firstvec.length());
+   }
+
+   if( myrank == 0 )
+   {
+      std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &gatheredVec[0]);
+
+      if( vecl && vecl->length() > 0 )
+      {
+         const SimpleVector& linkvec = dynamic_cast<const SimpleVector&>(*vecl);
+         gatheredVec.insert(gatheredVec.end(), &linkvec[0], &linkvec[0] + linkvec.length());
+      }
+   }
+
+
+   return gatheredVec;
 }

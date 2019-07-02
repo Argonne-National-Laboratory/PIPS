@@ -25,13 +25,14 @@
 #include "StochGenMatrix.h"
 #include "sTreeCallbacks.h"
 #include "DoubleMatrixTypes.h"
-#include "StochPresolverSingletonRows.h"
-#include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
 #include "StochPostsolver.h"
-#include "StochPresolverParallelRows.h"
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
+#include "StochPresolverColumnFixation.h"
+// #include "StochPresolverSingletonRows.h"
+//#include "StochPresolverSingletonColumns.h"
+#include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
 
 StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = NULL)
@@ -63,20 +64,21 @@ Data* StochPresolver::presolve()
 #endif
 
    /* initialize presolve data */
-   PresolveData presData(sorigprob);
+   PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
    assert( sorigprob->isRootNodeInSync());
-   assert( presData.presProb->isRootNodeInSync() );
+   assert( presData.getPresProb().isRootNodeInSync() );
 
    /* initialize all presolvers */
-   StochPresolverBoundStrengthening presolverBS(presData, dynamic_cast<StochPostsolver*>(postsolver));
-   StochPresolverParallelRows presolverParallelRow(presData, dynamic_cast<StochPostsolver*>(postsolver));
-   StochPresolverModelCleanup presolverCleanup(presData, dynamic_cast<StochPostsolver*>(postsolver));
-   StochPresolverSingletonRows presolverSR(presData, dynamic_cast<StochPostsolver*>(postsolver));
+   StochPresolverBoundStrengthening presolverBS(presData, *sorigprob);
+   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
+   StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
+   StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
+//   StochPresolverSingletonRows presolverSR(presData, *sorigprob);
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
-   presolverSR.countRowsCols();
+   presolverCleanup.countRowsCols();
 
    // todo loop, and exhaustive
    // some list holding all presolvers - eg one presolving run
@@ -84,25 +86,28 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      presolverCleanup.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
-      presolverParallelRow.applyPresolving();
-      presolverCleanup.applyPresolving();
+     // presolverSR.applyPresolving();
+      // presolverBS.applyPresolving();
+      // presolverColFix.applyPresolving();
+      // presolverCleanup.applyPresolving();
+//      presolverColFix.applyPresolving();
+//      presolverBS.applyPresolving();
+
+//      presolverBS.applyPresolving();
+
+     presolverParallelRow.applyPresolving();
    }
 
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
-
-   assert( presData.presProb->isRootNodeInSync() );
+   assert( presData.getPresProb().isRootNodeInSync() );
 //      presData.presProb->writeToStreamDense(std::cout);
+
    sData* finalPresData = presData.finalize();
-
 //   finalPresData->writeToStreamDense(std::cout);
-
    assert( finalPresData->isRootNodeInSync() );
-//   exit(1);
+   // exit(1);
 
    return finalPresData;
 }

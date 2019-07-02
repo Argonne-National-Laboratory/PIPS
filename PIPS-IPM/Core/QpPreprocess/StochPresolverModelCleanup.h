@@ -13,7 +13,7 @@
 class StochPresolverModelCleanup : public StochPresolverBase
 {
    public:
-      StochPresolverModelCleanup(PresolveData& presData, StochPostsolver* postsolver);
+      StochPresolverModelCleanup(PresolveData& presData, const sData& origProb);
 
       virtual ~StochPresolverModelCleanup();
 
@@ -21,20 +21,14 @@ class StochPresolverModelCleanup : public StochPresolverBase
       virtual void applyPresolving();
 
    private:
+      int removed_entries_total;
+      int removed_rows_total;
 
       int removeRedundantRows(SystemType system_type);
-      int removeRedundantRowsBlockwise(SystemType system_type, int node);
-      int removeRedundantLinkingRows(SystemType system_type);
-      void computeLinkingRowActivity(SystemType system_type, double* minActivity, double* maxActivity, int nLinkRows);
-      void checkRedundantLinkingRow(SystemType system_type, double* minActivity, double* maxActivity, int nLinkRows, bool* rowIsRedundant);
-
+      int removeRedundantRows(SystemType system_type, int node);
+      int removeRedundantRows(SystemType system_type, int node, bool linking);
       int removeTinyEntriesFromSystem(SystemType system_type);
-
-      int removeTinyInnerLoop( int it, SystemType system_type, BlockType block_type );
-
-      void setPointersCurrentMatrix(int it, SystemType system_type, BlockType block_type);
-
-
+      int removeTinyInnerLoop(SystemType system_type, int node, BlockType block_type);
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERMODELCLEANUP_H_ */

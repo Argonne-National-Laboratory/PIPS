@@ -59,6 +59,8 @@ public:
   virtual void componentMult( OoqpVector& v ) = 0;
   /** Divide the components of this OoqpVector by the components of v. */
   virtual void componentDiv ( OoqpVector& v ) = 0;
+  /** Compare two vectors with tolerance tol and tell if the are different */
+  virtual bool componentEqual( const OoqpVector& v, double tol ) const = 0;
   /** Write the components of this OoqpVector, one element per line, to
    *  the stream out.
    */

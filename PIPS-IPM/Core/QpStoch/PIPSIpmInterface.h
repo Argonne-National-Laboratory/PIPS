@@ -19,6 +19,8 @@
 #include "Presolver.h"
 #include "Postsolver.h"
 
+#include "sTreeCallbacks.h"
+
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
@@ -37,6 +39,13 @@ class PIPSIpmInterface
   void setDualTolerance(double val);
 
   std::vector<double> gatherPrimalSolution() const;
+  std::vector<double> gatherDualSolutionEq() const;
+  std::vector<double> gatherDualSolutionIneq() const;
+  std::vector<double> gatherDualSolutionIneqUpp() const;
+  std::vector<double> gatherDualSolutionIneqLow() const;
+  std::vector<double> gatherDualSolutionVarBoundsUpp() const;
+  std::vector<double> gatherDualSolutionVarBoundsLow() const;
+
 
   std::vector<double> getFirstStagePrimalColSolution() const;
   std::vector<double> getSecondStagePrimalColSolution(int scen) const;
@@ -44,6 +53,7 @@ class PIPSIpmInterface
   std::vector<double> getFirstStageDualRowSolution() const;
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
+  void postsolveComputedSolution() const;
   //more get methods to follow here
 
   static bool isDistributed() { return true; }
@@ -136,11 +146,6 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 
      origData = dynamic_cast<sData*>(factory->makeData());
 
-/*     ofstream myfile;
-     myfile.open ("PipsToMPS_original.mps");
-     origData->writeMPSformat(myfile);
-     myfile.close();*/
-
      MPI_Barrier(comm);
      const double t0_presolve = MPI_Wtime();
 
@@ -164,10 +169,12 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
      presolver = NULL;
   }
 
-/*  ofstream myfile;
+#if 0
+  ofstream myfile;
   myfile.open ("PipsToMPS_prslv.mps");
   data->writeMPSformat(myfile);
-  myfile.close();*/
+  myfile.close();
+#endif
 
 #ifdef TIMING
   if(mype==0) printf("data created\n");
@@ -177,7 +184,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   data->activateLinkStructureExploitation();
 #endif
 
-  vars   = dynamic_cast<sVars*>     ( factory->makeVariables( data ) );
+  vars   = dynamic_cast<sVars*>( factory->makeVariables( data ) );
 #ifdef TIMING
   if(mype==0) printf("variables created\n");
 #endif
@@ -280,10 +287,6 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
     }
   }
 #endif
-
-   // todo postsolve an unscaled sVars object holding the solution
-
-
 }
 
 template<typename FORMULATION, typename SOLVER>
@@ -324,77 +327,159 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherPrimalSolution() const
 {
-  StochVector* primalUnscaled = NULL;
+  StochVector* primalOrg = NULL;
 
   if( scaler )
-     primalUnscaled = dynamic_cast<StochVector*>(scaler->getOrigPrimal(*vars->x));
-
-  const StochVector& primalStochVec = (scaler) ? *primalUnscaled : dynamic_cast<const StochVector&>(*vars->x);
-
-  const SimpleVector& firstvec =  dynamic_cast<const SimpleVector&>(*primalStochVec.vec);
-  const size_t nChildren = primalStochVec.children.size();
-
-  int myrank; MPI_Comm_rank(comm, &myrank);
-  int mysize; MPI_Comm_size(comm, &mysize);
-
-  std::vector<double> primalVecLocal;
-
-  for( size_t i = 0; i < nChildren; ++i )
-  {
-     const SimpleVector& vec = dynamic_cast<const SimpleVector&>(*primalStochVec.children[i]->vec);
-
-     if( vec.length() > 0 )
-        primalVecLocal.insert(primalVecLocal.end(), &vec[0], &vec[0] + vec.length());
-  }
-
-  size_t solLength = firstvec.length();
-
-  // final vector
-  std::vector<double> primalVec(0);
-
-  if( mysize > 0 )
-  {
-     // get all lengths
-     std::vector<int> recvcounts(mysize);
-     std::vector<int> recvoffsets(mysize);
-
-     int mylength = int(primalVecLocal.size());
-
-     MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, comm);
-
-     // all-gather local components
-     recvoffsets[0] = 0;
-     for( size_t i = 1; i < size_t(mysize); ++i )
-        recvoffsets[i] = recvoffsets[i - 1] + recvcounts[i - 1];
-
-     if( myrank == 0 )
-     {
-        solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
-        primalVec = std::vector<double>(solLength);
-
-        MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, &primalVec[0] + firstvec.length(),
-              &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, comm);
-     }
-     else
-     {
-        MPI_Gatherv(&primalVecLocal[0], mylength, MPI_DOUBLE, 0, &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, comm);
-     }
-  }
+     primalOrg = dynamic_cast<StochVector*>(scaler->getOrigPrimal(*vars->x));
   else
-  {
-     solLength += primalVecLocal.size();
+     primalOrg = dynamic_cast<StochVector&>(*vars->x).cloneFull();
 
-     primalVec = std::vector<double>(solLength);
+  const std::vector<unsigned int> permInv = data->getLinkVarsPermInv();
 
-     std::copy(primalVecLocal.begin(), primalVecLocal.end(), primalVec.begin() + firstvec.length());
-  }
+  if( permInv.size() != 0 )
+     primalOrg->permuteVec0Entries(permInv);
 
-  if( myrank == 0 )
-     std::copy(&firstvec[0], &firstvec[0] + firstvec.length(), &primalVec[0]);
+  std::vector<double> primalVec = primalOrg->gatherStochVector();
 
-  delete primalUnscaled;
+  delete primalOrg;
 
   return primalVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionEq() const
+{
+  StochVector* dualOrg = NULL;
+
+  if( scaler )
+     dualOrg = dynamic_cast<StochVector*>(scaler->getOrigDualEq(*vars->y));
+  else
+     dualOrg = dynamic_cast<const StochVector&>(*vars->y).cloneFull();
+
+  const std::vector<unsigned int> permInv = data->getLinkConsEqPermInv();
+
+  if( permInv.size() != 0 )
+     dualOrg->permuteLinkingEntries(permInv);
+
+  std::vector<double> dualVec = dualOrg->gatherStochVector();
+
+  delete dualOrg;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionIneq() const
+{
+  StochVector* dualOrg = NULL;
+
+  if( scaler )
+     dualOrg = dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->z));
+  else
+     dualOrg = dynamic_cast<const StochVector&>(*vars->z).cloneFull();
+
+  const std::vector<unsigned int> permInv = data->getLinkConsIneqPermInv();
+
+  if( permInv.size() != 0 )
+     dualOrg->permuteLinkingEntries(permInv);
+  std::vector<double> dualVec = dualOrg->gatherStochVector();
+
+
+  delete dualOrg;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionIneqUpp() const
+{
+  StochVector* dualOrg = NULL;
+
+  if( scaler )
+     dualOrg = dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->pi));
+  else
+     dualOrg = dynamic_cast<const StochVector&>(*vars->pi).cloneFull();
+
+  const std::vector<unsigned int> permInv = data->getLinkConsIneqPermInv();
+
+  if( permInv.size() != 0 )
+     dualOrg->permuteLinkingEntries(permInv);
+
+  std::vector<double> dualVec = dualOrg->gatherStochVector();
+
+  delete dualOrg;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionIneqLow() const
+{
+  StochVector* dualOrg = NULL;
+
+  if( scaler )
+     dualOrg = dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->lambda));
+  else
+     dualOrg = dynamic_cast<const StochVector&>(*vars->lambda).cloneFull();
+
+  const std::vector<unsigned int> permInv = data->getLinkConsIneqPermInv();
+
+  if( permInv.size() != 0 )
+     dualOrg->permuteLinkingEntries(permInv);
+
+  std::vector<double> dualVec = dualOrg->gatherStochVector();
+
+  delete dualOrg;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBoundsUpp() const
+{
+  StochVector* dualOrg = NULL;
+
+  if( scaler )
+     dualOrg = dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsUpp(*vars->phi));
+  else
+     dualOrg = dynamic_cast<const StochVector&>(*vars->phi).cloneFull();
+
+  assert(!dualOrg->vecl);
+
+  const std::vector<unsigned int> perm = data->getLinkVarsPerm();
+
+  if( perm.size() != 0 )
+     dualOrg->permuteVec0Entries(perm);
+
+  std::vector<double> dualVec = dualOrg->gatherStochVector();
+
+  delete dualOrg;
+
+  return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBoundsLow() const
+{
+  StochVector* dualOrg = NULL;
+
+  if( scaler )
+     dualOrg = dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsLow(*vars->gamma));
+  else
+     dualOrg = dynamic_cast<const StochVector&>(*vars->gamma).cloneFull();
+
+  assert(!dualOrg->vecl);
+
+  const std::vector<unsigned int> perm = data->getLinkVarsPerm();
+
+  if( perm.size() != 0 )
+     dualOrg->permuteVec0Entries(perm);
+
+  std::vector<double> dualVec = dualOrg->gatherStochVector();
+
+  delete dualOrg;
+
+  return dualVec;
 }
 
 template<class FORMULATION, class IPMSOLVER>
@@ -489,6 +574,132 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
     return multipliers;
   }
   //return std::vector<double>(&v[0],&v[0]+v.length());
+}
+
+template<class FORMULATION, class IPMSOLVER>
+void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
+{
+  int my_rank;
+  MPI_Comm_rank(comm,&my_rank);
+
+  assert(origData);
+  assert(data);
+
+  /* construct vars object from computed solution */
+
+  /// primal solution
+  /// unscale primal solution
+  StochVector* const x = (scaler) ? dynamic_cast<StochVector*>(scaler->getOrigPrimal(*vars->x)) :
+    dynamic_cast<const StochVector&>(*vars->x).cloneFull();
+  assert(x);
+  
+  /// unpermute primal solution
+  const std::vector<unsigned int> permInvx = data->getLinkVarsPermInv();
+  if( permInvx.size() != 0 )
+    x->permuteVec0Entries(permInvx);
+
+  /// dual solution
+  /// dual equality constraints
+  StochVector* const y = (scaler) ? dynamic_cast<StochVector*>(scaler->getOrigDualEq(*vars->y)) :
+    dynamic_cast<const StochVector&>(*vars->y).cloneFull();
+  assert(y);
+
+  const std::vector<unsigned int> permInvy = data->getLinkConsEqPermInv();
+  if( permInvy.size() != 0 )
+     y->permuteLinkingEntries(permInvy);
+
+  /// dual inequality constraints
+  StochVector* const z = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->z)) :
+     dynamic_cast<const StochVector&>(*vars->z).cloneFull();
+  assert(z);
+
+  const std::vector<unsigned int> permInvz = data->getLinkConsIneqPermInv();
+  if( permInvz.size() != 0 )
+     z->permuteLinkingEntries(permInvz);
+
+  /// dual values ineqality upp
+  StochVector* const pi = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->pi)) :
+    dynamic_cast<const StochVector&>(*vars->pi).cloneFull();
+  assert(pi);
+
+  const std::vector<unsigned int> permInvpi = data->getLinkConsIneqPermInv();
+  if( permInvpi.size() != 0 )
+     pi->permuteLinkingEntries(permInvpi);
+
+  /// dual values inequality lower
+  StochVector* const lambda = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->lambda)) :
+    dynamic_cast<const StochVector&>(*vars->lambda).cloneFull();
+  assert(lambda);
+
+  const std::vector<unsigned int> permInvlambda = data->getLinkConsIneqPermInv();
+  if( permInvlambda.size() != 0 )
+     lambda->permuteLinkingEntries(permInvlambda);
+
+  /// dual values upper varbounds
+  StochVector* const phi = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsUpp(*vars->phi)) : 
+    dynamic_cast<const StochVector&>(*vars->phi).cloneFull();
+  assert(phi);
+
+  const std::vector<unsigned int> permInvphi = data->getLinkVarsPerm();
+  if( permInvphi.size() != 0 )
+     phi->permuteVec0Entries(permInvphi);
+
+  /// dual values lower varbounds
+  StochVector* gamma = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsLow(*vars->gamma)) : 
+    dynamic_cast<const StochVector&>(*vars->gamma).cloneFull();
+  assert(gamma);
+
+  const std::vector<unsigned int> permInvgamma = data->getLinkVarsPerm();
+  if( permInvgamma.size() != 0 )
+     gamma->permuteVec0Entries(permInvgamma);
+
+
+  // OoqpVectorHandle s      = OoqpVectorHandle( factory->tree->newDualZVector() );
+  // OoqpVectorHandle v      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
+  // OoqpVectorHandle w      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
+  // OoqpVectorHandle t      = OoqpVectorHandle( factory->tree->newDualZVector() );
+  // OoqpVectorHandle u      = OoqpVectorHandle( factory->tree->newDualZVector() ); 
+  sVars* unscaled_solution = new sVars(factory->tree, x, vars->s, y, z, vars->v, gamma, vars->w, phi,
+    vars->t, lambda, vars->u, pi, 
+    data->ixlow, data->ixlow->numberOfNonzeros(),
+    data->ixupp, data->ixupp->numberOfNonzeros(),
+    data->iclow, data->iclow->numberOfNonzeros(),
+    data->icupp, data->icupp->numberOfNonzeros()
+  );
+  
+  sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
+  callbackTree.switchToOriginalData();
+
+  factory->data = origData;
+
+  sVars* postsolved_vars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
+  sResiduals* resids_orig = dynamic_cast<sResiduals*>( factory->makeResiduals( origData ) );
+  postsolver->postsolve(*unscaled_solution, *postsolved_vars);
+
+  double obj_postsolved = origData->objectiveValue(postsolved_vars);
+  if( my_rank == 0)
+    std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
+
+  /* compute residuals for postprocessed solution and check for feasibility */
+  resids_orig->calcresids(origData, postsolved_vars);
+  
+  double onenorm_rA = resids->rA->onenorm();
+  double onenorm_rC = resids->rC->onenorm();
+
+  if( my_rank == 0)
+    std::cout << "Residuals after postsolve:\n" << "rA: " << onenorm_rA << "\nrC " << onenorm_rC << std::endl; 
+
+  // deleting solutions
+  delete unscaled_solution;
+  delete postsolved_vars;
+  delete x;
+  delete y;
+  delete z;
+  delete gamma;
+  delete phi;
+  delete lambda;
+  delete pi;
+  delete resids_orig;
 }
 
 #endif

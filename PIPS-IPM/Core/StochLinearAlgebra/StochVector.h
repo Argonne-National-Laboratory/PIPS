@@ -97,6 +97,7 @@ public:
 
   virtual void componentMult( OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
+  virtual bool componentEqual( const OoqpVector& v, double tol) const;
   virtual void scalarMult( double num);
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamAll(ostream& out) const;
@@ -151,6 +152,7 @@ public:
   virtual void copyFromArray( char v[] );
   virtual void permuteVec0Entries(const std::vector<unsigned int>& permvec);
   virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec);
+  virtual std::vector<double> gatherStochVector() const;
 
   /** remove entries i for which select[i] == 0 */
   virtual void removeEntries( const OoqpVector& select );
@@ -225,6 +227,8 @@ public:
 
   virtual void componentMult( OoqpVector& v ){};
   virtual void componentDiv ( OoqpVector& v ){};
+  virtual bool componentEqual( const OoqpVector& v, double tol) const { if(!v.isKindOf(kStochDummy)) std::cout << "lol one should never end up here"
+        << std::endl; return v.isKindOf(kStochDummy); };
   virtual void scalarMult( double num){};
   virtual void writeToStream(ostream& out) const{};
   virtual void writeToStreamAll(ostream& out) const{};
@@ -281,6 +285,7 @@ public:
   virtual void removeEntries( const OoqpVector& select ) {};
   virtual void permuteVec0(const std::vector<unsigned int>& permvec) {};
   virtual void permuteLinkingEntries(const std::vector<unsigned int>& permvec) {};
+  virtual std::vector<double> gatherStochVector() const {return std::vector<double>(0);};
 
   int getSize() { return 0; };
 

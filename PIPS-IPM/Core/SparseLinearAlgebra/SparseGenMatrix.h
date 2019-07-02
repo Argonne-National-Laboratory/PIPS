@@ -133,9 +133,13 @@ public:
   double * M() { return mStorage->M; }
 
   SparseStorageDynamic * getStorageDynamic() { assert(mStorageDynamic != NULL); return mStorageDynamic; }
+  const SparseStorageDynamic * getStorageDynamic() const { assert(mStorageDynamic != NULL); return mStorageDynamic; }
   SparseStorageDynamic& getStorageDynamicRef() { assert(mStorageDynamic != NULL); return *mStorageDynamic; }
+  const SparseStorageDynamic& getStorageDynamicRef() const { assert(mStorageDynamic != NULL); return *mStorageDynamic; }
   SparseStorageDynamic * getStorageDynamicTransposed() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
+  const SparseStorageDynamic * getStorageDynamicTransposed() const { assert(m_Mt != NULL && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
   SparseStorageDynamic& getStorageDynamicTransposedRef() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
+  const SparseStorageDynamic& getStorageDynamicTransposedRef() const { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
   bool hasDynamicStorage() { return (mStorageDynamic != NULL); }
 
   virtual void addNnzPerRow(OoqpVector& nnzVec);

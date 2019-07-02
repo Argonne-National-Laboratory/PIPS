@@ -1263,15 +1263,20 @@ sData::~sData()
       delete children[it];
 }
 
-std::vector<unsigned int> sData::getLinkVarsPermInv()
+std::vector<unsigned int> sData::getLinkVarsPerm() const
+{
+   std::vector<unsigned int> copy = linkVarsPermutation;
+   return copy;
+}
+std::vector<unsigned int> sData::getLinkVarsPermInv() const
 {
    return getInversePermuation(linkVarsPermutation);
 }
-std::vector<unsigned int> sData::getLinkConsEqPermInv()
+std::vector<unsigned int> sData::getLinkConsEqPermInv() const
 {
    return getInversePermuation(linkConsPermutationA);
 }
-std::vector<unsigned int> sData::getLinkConsIneqPermInv()
+std::vector<unsigned int> sData::getLinkConsIneqPermInv() const
 {
    return getInversePermuation(linkConsPermutationC);
 }
@@ -1597,7 +1602,6 @@ sData::sync()
 // is root node data of sData object same on all procs?
 bool sData::isRootNodeInSync() const
 {
-
    int my_rank, world_size;
    MPI_Comm_rank( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &my_rank);
    MPI_Comm_size( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &world_size);

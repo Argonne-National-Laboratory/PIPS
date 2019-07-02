@@ -45,10 +45,10 @@ public:
   OoqpVectorHandle z;
 
   OoqpVectorHandle v;
-  OoqpVectorHandle phi;
+  OoqpVectorHandle gamma;
 
   OoqpVectorHandle w;
-  OoqpVectorHandle gamma;
+  OoqpVectorHandle phi;
 
   OoqpVectorHandle t;
   OoqpVectorHandle lambda;

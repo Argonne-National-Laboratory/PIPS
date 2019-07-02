@@ -23,32 +23,39 @@ public:
       StochPostsolver( const sData& original_problem );
       virtual ~StochPostsolver();
 
+      void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint );
+
       void notifyFixedColumn( int node, unsigned int col, double value);
-      void notifyDeletedRow( SystemType system_type, int node, unsigned int row, bool linking_constraint);
+      void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
+      void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
 
       virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
 protected:
 
       /* can represent a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
-      typedef struct
+      struct INDEX
       {
+         INDEX(int node, int index) : node(node), index(index) {};
          int node;
          int index;
-      } INDEX;
+      } ;
 
       enum ReductionType
       {
          FIXED_COLUMN = 0,
          SUBSTITUTED_COLUMN = 1,
          PARALLEL_COLUMN = 2,
-         DELETED_ROW = 3
+         DELETED_ROW = 3,
+         REDUNDANT_ROW = 4,
+         BOUNDS_TIGHTENED = 5,
       };
 
       const unsigned int n_rows_original;
       const unsigned int n_cols_original;
 
-//      StochVector* mapping_to_origcol;
+      /// for now mapping will contain a dummy value for columns that have not been fixed and the value the columns has been fixed to otherwise
+      StochVector* padding_origcol;
 //      StochVector* mapping_to_origrow_equality;
 //      StochVector* mapping_to_origrow_inequality;
 
@@ -65,6 +72,18 @@ protected:
 
 private:
       void finishNotify();
+
+      SimpleVector& getSimpleVecRowFromStochVec(const OoqpVector& ooqpvec, int node, BlockType block_type) const
+         { return getSimpleVecRowFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node, block_type); };
+      SimpleVector& getSimpleVecColFromStochVec(const OoqpVector& ooqpvec, int node) const
+         { return getSimpleVecColFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node); };
+      SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
+      SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
+
+/// postsolve operations
+      void setOriginalValuesFromReduced(StochVector& original_vector, const StochVector& reduced_vector, const StochVector& padding_original) const;
+      void setOriginalValuesFromReduced(SimpleVector& original_vector, const SimpleVector& reduced_vector, const SimpleVector& padding_original) const;
+
 
 };
 

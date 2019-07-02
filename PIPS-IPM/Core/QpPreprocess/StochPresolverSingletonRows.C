@@ -13,31 +13,29 @@
 #include <sstream>
 #include <iostream>
 
+<<<<<<< HEAD
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData, StochPostsolver* postsolver) :
       StochPresolverBase(presData, postsolver)
+=======
+StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData, const sData& origProb) :
+      StochPresolverBase(presData, origProb), removed_rows(0)
+>>>>>>> nils-presolve-finish-singleton-columns
 {
-   // todo
 }
 
 StochPresolverSingletonRows::~StochPresolverSingletonRows()
 {
-   // todo
 }
 
-// todo print singleton rows removed
 void StochPresolverSingletonRows::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.presProb->isRootNodeInSync());
-   assert(verifyNnzcounters());
+   assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
-
-   int myRank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
 #ifndef NDEBUG
-   if( myRank == 0 )
+   if( my_rank == 0 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before singleton Row Presolving:" << std::endl;
@@ -45,14 +43,11 @@ void StochPresolverSingletonRows::applyPresolving()
    countRowsCols();
 #endif
 
-   indivObjOffset = 0.0;
    int n_singleton_equality = 0;
    int n_singleton_inequality = 0;
 
-   countSingletonRows(n_singleton_equality, n_singleton_inequality);
-
 #ifndef NDEBUG
-   if(myRank == 0)
+   if(my_rank == 0)
       std::cout << "Initially found " << n_singleton_equality << " equality and "
          << n_singleton_inequality << " inequality singletons" << std::endl;
 #endif
@@ -79,33 +74,36 @@ void StochPresolverSingletonRows::applyPresolving()
       }
 
       iter++;
-
-      countSingletonRows(n_singleton_equality, n_singleton_inequality);
    }
 
    assert( (n_singleton_equality == 0 && n_singleton_inequality == 0) || iter >= maxIterSR);
 
    // Sum up individual objOffset and then add it to the global objOffset:
-   sumIndivObjOffset();
+   synchronize(indivObjOffset);
    presData.addObjOffset(indivObjOffset);
    indivObjOffset = 0.0;
 
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
 
 #ifndef NDEBUG
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "--- After singleton row presolving:" << std::endl;
    countRowsCols();
-   if(myRank == 0)
+   if(my_rank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
+   // todo
+   presData.allreduceAndApplyBoundChanges();
+   presData.allreduceAndApplyNnzChanges();
+   presData.allreduceAndApplyLinkingRowActivities();
+   presData.allreduceLinkingVarBounds();
+
    assert(presData.reductionsEmpty());
    assert(presData.presProb->isRootNodeInSync());
-   assert(verifyNnzcounters());
+   assert(presData.verifyNnzcounters());
    assert(indivObjOffset == 0.0);
-   assert(newBoundsParent.size() == 0);
 }
 
 /** Does one round of singleton rows presolving for system A or C

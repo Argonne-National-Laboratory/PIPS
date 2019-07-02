@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdio>
 #include <limits>
+#include <iomanip>
 
 long long SimpleVector::numberOfNonzeros()
 {
@@ -149,7 +150,7 @@ SimpleVector::SimpleVector( int n_ ) : OoqpVector( n_ )
   assert(n >= 0);
   preserveVec = 0;
   v = new double[n];
-  memset(v,0,n*sizeof(double));
+  memset(v, 0, n * sizeof(double) );
 }
 
 SimpleVector::SimpleVector( double * v_, int n_ )
@@ -183,12 +184,6 @@ bool SimpleVector::isZero() const
 		is_zero = (is_zero && v[i] == 0.0);
 
 	return is_zero;
-}
-
-void SimpleVector::setToZero()
-{
-  int i;
-  for( i = 0; i < n; i++ ) v[i] = 0.0;
 }
 
 void SimpleVector::setToConstant( double c)
@@ -284,6 +279,25 @@ void SimpleVector::componentMult( OoqpVector& vec )
   int i;
   for( i = 0; i < n; i++ ) v[i] *= y[i];
 }
+
+bool SimpleVector::componentEqual( const OoqpVector& vec, double tol) const
+{
+   assert( n == vec.length() );
+   const SimpleVector& sv = dynamic_cast<const SimpleVector&>(vec);
+
+   for(int i = 0; i < n; ++i)
+   {
+      /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
+      if( !PIPSisRelEQ(v[i], sv[i], tol) && v[i] != sv[i])
+      {
+         std::cout << std::setprecision(15) << v[i] << " =!= " << sv[i] << "\t" << i << std::endl;
+         std::cout << std::setprecision(6);
+         return false;
+      }
+   }
+   return true;
+}
+
 
 void SimpleVector::scalarMult( double num)
 {

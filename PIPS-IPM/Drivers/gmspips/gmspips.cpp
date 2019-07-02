@@ -416,6 +416,13 @@ int main(int argc, char ** argv)
 #endif
 
    std::vector<double> primalSolVec;
+   std::vector<double> dualSolEqVec;
+   std::vector<double> dualSolIneqVec;
+   std::vector<double> dualSolIneqUppVec;
+   std::vector<double> dualSolIneqLowVec;
+   std::vector<double> dualSolVarBoundsUppVec;
+   std::vector<double> dualSolVarBoundsLowVec;
+
    double objective = 0.0;
 
 	if (stepDiffLp)
@@ -440,11 +447,20 @@ int main(int argc, char ** argv)
 		   cout << "solving..." << endl;
 
 		pipsIpm.go();
-
       objective = pipsIpm.getObjective();
+      if(presolve)
+         pipsIpm.postsolveComputedSolution();
 
       if( printsol )
+      {
          primalSolVec = pipsIpm.gatherPrimalSolution();
+         dualSolEqVec = pipsIpm.gatherDualSolutionEq();
+         dualSolIneqVec = pipsIpm.gatherDualSolutionIneq();
+         dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
+         dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
+         dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
+         dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
+      }
 	}
 	else
 	{
@@ -467,25 +483,32 @@ int main(int argc, char ** argv)
 
 		pipsIpm.go();
       objective = pipsIpm.getObjective();
+      if(presolve)
+         pipsIpm.postsolveComputedSolution();
+
+      std::vector<double> primalSolVec2 = pipsIpm.gatherPrimalSolution();
+
 
       if( printsol )
+      {
          primalSolVec = pipsIpm.gatherPrimalSolution();
+         dualSolEqVec = pipsIpm.gatherDualSolutionEq();
+         dualSolIneqVec = pipsIpm.gatherDualSolutionIneq();
+         dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
+         dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
+         dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
+         dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
+      }
 	}
    if( gmsRank == 0 )
       cout << "solving finished. \n ---Objective value: " << objective  << endl;
 
    if( printsol && gmsRank == 0 )
    {
-      double* varl;
       int rc;
-      
-      varl = (double*) malloc(primalSolVec.size()*sizeof(double));
-      for( size_t i = 0; i < primalSolVec.size(); i++ )
-         varl[i] = primalSolVec[i];
 
-      rc = writeSolution(fileName,primalSolVec.size(),0,objective,varl,NULL,NULL,NULL,pGDXDirectory);
+      rc = writeSolution(fileName,primalSolVec.size(),0,objective,&primalSolVec[0],NULL,NULL,NULL,pGDXDirectory);
       
-      free(varl);
       if (0==rc)
          std::cout << "Solution written to " << fileName << "_sol.gdx" << std::endl;
       else if (-1==rc)
