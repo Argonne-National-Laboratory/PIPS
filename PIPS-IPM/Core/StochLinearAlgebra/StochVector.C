@@ -1662,17 +1662,17 @@ bool StochVector::isRootNodeInSync() const
    assert( count < std::numeric_limits<int>::max());
 
    /* mpi reduce on vector */
-   double sendbuf[count];
-   double recvbuf[count];
-   std::copy(vec_simple.elements(), vec_simple.elements() + vec_simple.length(), sendbuf);
+   std::vector<double> sendbuf(count, 0.0);
+   std::vector<double> recvbuf(count, 0.0);
+   std::copy(vec_simple.elements(), vec_simple.elements() + vec_simple.length(), sendbuf.begin());
 
    if( vecl )
    {
       const SimpleVector& vecl_simple = dynamic_cast<const SimpleVector&>(*vecl);
       std::copy(vecl_simple.elements(), vecl_simple.elements() + vecl_simple.length(),
-            sendbuf + vec_simple.length());
+            sendbuf.begin() + vec_simple.length());
    }
-   MPI_Allreduce(sendbuf, recvbuf, count, MPI_DOUBLE, MPI_MAX, mpiComm);
+   MPI_Allreduce(&sendbuf[0], &recvbuf[0], count, MPI_DOUBLE, MPI_MAX, mpiComm);
    for( int i = 0; i < count; ++i )
    {
       if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
