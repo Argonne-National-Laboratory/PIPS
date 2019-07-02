@@ -4,8 +4,8 @@
  *      Author: bzfrehfe
  */
 #include "sLinsysLeafMumps.h"
-#include "MumpsSolver.h"
 #include <algorithm>
+#include "../LinearSolvers/MumpsSolver/MumpsSolverLeaf.h"
 
 
 static
@@ -217,7 +217,7 @@ void sLinsysLeafMumps::addTermToSchurComplMumps(sData *prob, bool sparseSC,
    assert(bufferNrhs >= 1);
    assert(nRuns * bufferNrhs + leftoverNrhs == nNzRhs);
 
-   MumpsSolver* const solverMumps = dynamic_cast<MumpsSolver*>(solver);
+   MumpsSolverLeaf* const solverMumps = dynamic_cast<MumpsSolverLeaf*>(solver);
    assert(solverMumps);
 
    //  do block-wise computation of

@@ -1,15 +1,15 @@
 #!/bin/sh
 echo " "
-echo "##### Downloading the third party packages for PIPS-NLP:"
+echo "##### Downloading the third party packages for  PIPS-IPM and PIPS-NLP:"
 echo " "
 
-fn=metis-4.0.3.tar.gz
-echo "### Downloading Metis:"
-if wget http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/OLD/${fn}
+fn=parmetis-4.0.3.tar.gz
+echo "### Downloading ParMetis:"
+if wget http://glaros.dtc.umn.edu/gkhome/fetch/sw/parmetis/${fn}
 then
-  echo "### Metis: Download Successful.\n"
+  echo "### ParMetis: Download Successful.\n"
 else
-  echo "### Metis: Download Failed.\n"
+  echo "### ParMetis: Download Failed.\n"
   exit 1
 fi
 
@@ -19,7 +19,10 @@ ln -s ./${name} ./src
 
 #compile metis
 cd src
-sed -i  "s/\bCOPTIONS =/COPTIONS = -O3 -fPIC /g" Makefile.in
-make -j$1
-
-
+make config prefix=$PWD/../
+make 
+make install
+cd metis
+make config prefix=$PWD/../../
+make 
+make install

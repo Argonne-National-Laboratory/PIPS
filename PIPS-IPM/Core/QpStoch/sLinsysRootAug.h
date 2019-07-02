@@ -6,7 +6,8 @@
 #define SAUGLINSYS
 
 #include "sLinsysRoot.h"
-//#include "pipschecks.h"
+#include "pipsport.h"
+
 
 class sData;
 /** 
@@ -34,15 +35,21 @@ class sLinsysRootAug : public sLinsysRoot {
   virtual ~sLinsysRootAug();
 
  public:
-  virtual void finalizeKKT( sData* prob, Variables* vars);
- protected:
-  virtual void solveReduced( sData *prob, SimpleVector& b);
-  virtual void solveReducedLinkCons( sData *prob, SimpleVector& b);
-  virtual void finalizeKKTdense( sData* prob, Variables* vars);
-  virtual void finalizeKKTsparse( sData* prob, Variables* vars);
+  void finalizeKKT( sData* prob, Variables* vars) override;
+  void finalizeKKTdist(sData* prob) override;
 
+ protected:
+  void solveReduced( sData *prob, SimpleVector& b) override;
+  void solveReducedLinkCons( sData *prob, SimpleVector& b) override;
+
+ private:
+  void finalizeKKTdense( sData* prob, Variables* vars);
+  void finalizeKKTsparse( sData* prob, Variables* vars);
   void solveWithIterRef( sData *prob, SimpleVector& b);
   void solveWithBiCGStab( sData *prob, SimpleVector& b);
+
+  // add specified columns of given matrix Ht (either Ft or Gt) to Schur complement
+  void addLinkConsBlock0Matrix( sData *prob, SparseGenMatrix& Ht, int nHtOffsetCols, int nKktOffsetCols, int startCol, int endCol);
 
   /** y = beta*y - alpha* SC * x */
   void SCmult ( double beta, SimpleVector& y, double alpha, SimpleVector& x, sData* prob);

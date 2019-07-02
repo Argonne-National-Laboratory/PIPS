@@ -1,23 +1,17 @@
 /*
- * MumpsSolver.C
+ * MumpsSolverBase.C
+ *
+ *  Created on: 25.06.2019
+ *      Author: bzfrehfe
  */
 
-//#define PIPS_DEBUG
-
 #include <stdlib.h>
-
-#include "MumpsSolver.h"
+#include "MumpsSolverBase.h"
 #include "SimpleVector.h"
 #include "SparseGenMatrix.h"
 
 
-#define ICNTL(I) icntl[(I)-1] // macro s.t. indices match documentation
-#define INFOG(I) infog[(I)-1]
-#define RINFOG(I) rinfog[(I)-1]
-
-
-
-MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
+MumpsSolverBase::MumpsSolverBase( MPI_Comm mpiCommPips_c, MPI_Comm mpiCommMumps_c, SparseSymMatrix * sgm )
  : verbosity(defaultVerbosity), maxNiterRefinments(defaultMaxNiterRefinments)
 {
    PIPSdebugMessage("creating MUMPS solver \n");
@@ -31,11 +25,17 @@ MumpsSolver::MumpsSolver( SparseSymMatrix * sgm )
    tripletJcn = nullptr;
    tripletA = nullptr;
 
-   setUpMpiData(MPI_COMM_WORLD, MPI_COMM_SELF);
+   setUpMpiData(mpiCommPips_c, mpiCommMumps_c);
    setUpMumps();
 }
 
-MumpsSolver::~MumpsSolver()
+MumpsSolverBase::MumpsSolverBase( SparseSymMatrix * sgm )
+ : MumpsSolverBase(MPI_COMM_WORLD, MPI_COMM_SELF, sgm)
+{
+
+}
+
+MumpsSolverBase::~MumpsSolverBase()
 {
    PIPSdebugMessage("deleting MUMPS solver \n");
 
@@ -53,90 +53,16 @@ MumpsSolver::~MumpsSolver()
 }
 
 void
-MumpsSolver::diagonalChanged(int idiag, int extent)
+MumpsSolverBase::diagonalChanged(int idiag, int extent)
 {
    PIPSdebugMessage("diagonal changed \n");
 
    this->matrixChanged();
 }
 
-void
-MumpsSolver::matrixChanged()
-{
-   PIPSdebugMessage("matrix changed \n");
-
-   if( mpiCommMumps == MPI_COMM_NULL )
-      return;
-
-   // todo: update only diagonal!
-   assert(Msys);
-
-#ifdef TIME_Triplet_c2fortran
-   const double t1 = MPI_Wtime();
-#endif
-
-   delete[] tripletIrn;
-   delete[] tripletJcn;
-   delete[] tripletA;
-   tripletIrn = nullptr;
-   tripletJcn = nullptr;
-   tripletA = nullptr;
-
-   Msys->getSparseTriplet_c2fortran(tripletIrn, tripletJcn, tripletA);
-
-#ifdef TIME_Triplet_c2fortran
-   const double t2 = MPI_Wtime();
-   std::cout << "Triplet_c2fortran time=" << t2 - t1 << std::endl;
-#endif
-
-   mumps->n = n;
-   mumps->nnz = Msys->numberOfNonZeros();
-   mumps->irn = tripletIrn;
-   mumps->jcn = tripletJcn;
-   mumps->a = tripletA;
-
-   // todo test whether 7 or 5 is better
-   // symmetric permutation for factorization, 5: METIS, 7: automatic choice; meaningless if mumps->ICNTL(28) == 2
-   mumps->ICNTL(7) = 5;
-
-   mumps->ICNTL(28) = 0; // choice of analysis, 0: automatic, 1: sequential, 2: parallel
-
-   mumps->ICNTL(29) = 0; // parallel ordering, 0: automatic, 1: PT-SCOTCH, 2: ParMetis
-
-   // relative threshold for numerical pivoting; 0.01 is default for sym. indef., larger values increase accuracy
-   //  mumps->ICNTL(1) = 0.01;
-
-   // relative threshold for static pivoting; -1.0: not used (default), 0.0: use with automatic choice of threshold
-   //  mumps->ICNTL(4) = -1.0;
-
-
-   // analysis phase
-   mumps->job = 1;
-
-   double starttime = MPI_Wtime();
-
-   // do analysis
-   dmumps_c(mumps);
-
-   processMumpsResultAnalysis(starttime);
-
-
-   // factorization phase
-   mumps->job = 2;
-
-   starttime = MPI_Wtime();
-
-   // do factorization
-   dmumps_c(mumps);
-
-   processMumpsResultFactor(starttime);
-
-   // todo save permutation for reuse?
-}
-
 
 void
-MumpsSolver::solve(double* vec)
+MumpsSolverBase::solve(double* vec)
 {
    assert(vec);
    assert(mpiCommMumps != MPI_COMM_NULL);
@@ -168,7 +94,7 @@ MumpsSolver::solve(double* vec)
 
 
 void
-MumpsSolver::solve(OoqpVector& rhs)
+MumpsSolverBase::solve(OoqpVector& rhs)
 {
    PIPSdebugMessage("MUMPS solver: solve (single rhs) \n");
 
@@ -189,73 +115,21 @@ MumpsSolver::solve(OoqpVector& rhs)
 
 
 void
-MumpsSolver::solve(GenMatrix& rhs_f, int startRow, int range, double* sol)
-{
-   PIPSdebugMessage("MUMPS solver: solve (multiple rhs) \n");
-
-   assert(sol);
-   assert(startRow >= 0 && range >= 1);
-
-   SparseGenMatrix& rhs_matrix = dynamic_cast<SparseGenMatrix &>(rhs_f);
-
-   if( mpiCommMumps == MPI_COMM_NULL )
-      return;
-
-   int m_org;
-   int n_org;
-
-   rhs_matrix.getSize(m_org, n_org);
-
-   assert(startRow + range <= m_org);
-
-   const int m_sub = range;
-   const int n_sub = n_org;
-
-   int* const ia_org = rhs_matrix.krowM();
-   int* const ja_org = rhs_matrix.jcolM();
-   double* const a_org = rhs_matrix.M();
-
-   // matrix should be in Fortran format
-   assert(ia_org[0] == 1 && rhs_matrix.getStorage()->len == ia_org[m_org] - 1);
-
-
-   int* const ia_sub = new int[m_sub + 1];
-
-   for( int i = 0; i <= m_sub; i++)
-   {
-      const int newPos = ia_org[i + startRow] - ia_org[startRow] + 1;
-      assert(i == 0 || newPos >= ia_sub[i - 1]);
-
-      ia_sub[i] = newPos;
-   }
-
-   assert(ia_sub[0] == 1 && ia_sub[m_sub] == (ia_org[startRow + range] - ia_org[startRow] + 1));
-
-   mumps->nrhs = m_sub; // MUMPS expects column major
-   mumps->nz_rhs = ia_sub[m_sub] - 1;
-   mumps->lrhs = n_sub;
-   mumps->irhs_ptr = ia_sub;
-   mumps->irhs_sparse = &ja_org[ia_org[startRow] - 1];
-   mumps->rhs_sparse = &a_org[ia_org[startRow] - 1];
-   mumps->ICNTL(20) = 3; // exploit sparsity during solve
-
-   solve(sol);
-
-   delete[] ia_sub;
-}
-
-
-
-void
-MumpsSolver::processMumpsResultAnalysis(double starttime)
+MumpsSolverBase::processMumpsResultAnalysis(double starttime)
 {
    const int errorCode = mumps->INFOG(1);
    if( errorCode != 0 )
    {
-      if( rankMumps == 0 )
-         printf("Error INFOG(1)=%d in MUMPS analysis phase. \n", errorCode);
+      if( errorCode < 0 )
+      {
+         if( rankMumps == 0 )
+         printf("Error INFOG(1)=%d INFOG(2)=%d in MUMPS analysis phase. \n", errorCode, mumps->INFOG(2));
 
-      exit(1);
+         exit(1);
+      }
+
+      if( rankMumps == 0 )
+         printf("Warning INFOG(1)=%d INFOG(2)=%d in MUMPS analysis phase. \n", errorCode, mumps->INFOG(2));
    }
 
    if( verbosity != verb_mute )
@@ -323,7 +197,7 @@ MumpsSolver::processMumpsResultAnalysis(double starttime)
 }
 
 void
-MumpsSolver::processMumpsResultFactor(double starttime)
+MumpsSolverBase::processMumpsResultFactor(double starttime)
 {
    int errorCode = mumps->INFOG(1);
 
@@ -373,7 +247,7 @@ MumpsSolver::processMumpsResultFactor(double starttime)
 }
 
 void
-MumpsSolver::processMumpsResultSolve(double starttime)
+MumpsSolverBase::processMumpsResultSolve(double starttime)
 {
    const int errorCode = mumps->INFOG(1);
    if( errorCode != 0 )
@@ -411,7 +285,7 @@ MumpsSolver::processMumpsResultSolve(double starttime)
 }
 
 void
-MumpsSolver::setUpMpiData(MPI_Comm mpiCommPips_c, MPI_Comm mpiCommMumps_c)
+MumpsSolverBase::setUpMpiData(MPI_Comm mpiCommPips_c, MPI_Comm mpiCommMumps_c)
 {
    rankMumps = -1;
    this->mpiCommPips = mpiCommPips_c;
@@ -428,7 +302,7 @@ MumpsSolver::setUpMpiData(MPI_Comm mpiCommPips_c, MPI_Comm mpiCommMumps_c)
 
 
 void
-MumpsSolver::setUpMumps()
+MumpsSolverBase::setUpMumps()
 {
    mumps = new DMUMPS_STRUC_C;
    mumps->n = 0;

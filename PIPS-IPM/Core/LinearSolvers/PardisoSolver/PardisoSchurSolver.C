@@ -19,6 +19,7 @@ using namespace std;
 #include <cstdlib>
 #include <cmath>
 #include <algorithm>
+#include "pipsport.h"
 
 #include "Ma57Solver.h"
 
@@ -99,7 +100,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   nvec_size = -1;
   // - we do not have the augmented system yet; most of initialization done during the
   // first solve call
-
+  useSparseRhs = false;
   first = true; firstSolve = true;
 
 #ifndef WITH_MKL_PARDISO
@@ -112,6 +113,31 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   msglvl = pardiso_verbosity;
   solver = 0;
   mtype = -2;
+  useSparseRhs = false;
+
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+  // todo proper parameter
+  char* var = getenv("PARDISO_SPARSE_RHS_LEAF");
+  assert(!useSparseRhs);
+  if( var != NULL )
+  {
+     int use;
+     sscanf(var, "%d", &use);
+     if( use == 1 )
+     {
+        useSparseRhs = true;
+     }
+  }
+
+  if( myRank == 0 )
+  {
+     if( useSparseRhs )
+        printf(" using PARDISO_SPARSE_RHS_LEAF \n");
+     else
+        printf(" NOT using PARDISO_SPARSE_RHS_LEAF \n");
+  }
+
   nrhs = 1;
 }
 
@@ -930,12 +956,31 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 #ifndef WITH_MKL_PARDISO
   phase = 33; /* solve - iterative refinement */
 
+  int* rhsSparsity = nullptr;
+  if( useSparseRhs )
+  {
+     iparm[30] = 1; //sparse rhs
+     rhsSparsity = new int[n]();
+
+     for( int i = 0; i < dim; i++  )
+        if( !PIPSisZero(rhs_n[i]) )
+           rhsSparsity[i] = 1;
+  }
+  else
+  {
+     iparm[30] = 0;
+  }
+
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug,
-	   NULL, &nrhs,
+	   rhsSparsity, &nrhs,
 	   iparm , &msglvl, rhs_n, x_n, &error
 	   ,dparm
   );
+
+  iparm[30] = 0;
+  delete[] rhsSparsity;
+
   assert(error == 0);
 #else
   /* pardiso from mkl does not support same functionality as pardiso-project

@@ -31,6 +31,8 @@ SparseStorage::SparseStorage( int m_, int n_, int len_ )
   }
   M      = new double[len];
 
+  isFortranIndexed = false;
+
   SparseStorage::instances++;
 }
 
@@ -47,6 +49,8 @@ SparseStorage::SparseStorage( int m_, int n_, int len_,
   jcolM           = jcolM_;
   krowM           = krowM_;
   M               = M_;
+
+  isFortranIndexed = false;
 
   SparseStorage::instances++;
 }
@@ -220,7 +224,7 @@ bool SparseStorage::isValid(bool verbose) const
    }
 
    for( int i = 0; i < len; i++ )
-      if( jcolM[i] >= n )
+      if( jcolM[i] < 0 || jcolM[i] >= n )
       {
          printf("isValid: column index out of bounds \n");
          return false;
@@ -232,6 +236,25 @@ bool SparseStorage::isValid(bool verbose) const
          printf("isValid: row indices wrongly ordered \n");
          return false;
       }
+
+   return true;
+}
+
+bool SparseStorage::isSorted() const
+{
+   assert(isValid(false));
+
+   for( int i = 0; i < m; i++ )
+   {
+      for( int j = krowM[i] + 1; j < krowM[i + 1]; j++ )
+      {
+         const int col = jcolM[j];
+         const int prevcol = jcolM[j - 1];
+
+         if( col <= prevcol )
+            return false;
+      }
+   }
 
    return true;
 }
@@ -1659,6 +1682,36 @@ void SparseStorage::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& va
    assert(count == len);
 }
 
+
+void SparseStorage::getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   int count = 0;
+   assert(len > 0);
+   assert(!irn && !jcn && !val);
+   assert(fortranIndexed());
+
+   irn = new int[len];
+   jcn = new int[len];
+   val = new double[len];
+
+   for( int r = 0; r < m; r++ )
+   {
+      for( int c = krowM[r] - 1; c < krowM[r + 1] - 1; c++ )
+      {
+         const int col = jcolM[c];
+         const double value = M[c];
+
+         irn[count] = r + 1;
+         jcn[count] = col;
+         val[count] = value;
+
+         count++;
+      }
+   }
+
+   assert(count == len);
+}
+
 void SparseStorage::deleteEmptyRows(int*& orgIndex)
 {
    assert(!neverDeleteElts);
@@ -1694,24 +1747,40 @@ void SparseStorage::deleteEmptyRows(int*& orgIndex)
 
 void SparseStorage::c2fortran()
 {
-   assert(krowM[0] == 0 && krowM[m] == len);
+   assert(krowM[0] == 0 && krowM[m] == len && !isFortranIndexed);
 
    for( int i = 0; i <= m; i++ )
       krowM[i]++;
 
    for( int i = 0; i < len; i++ )
       jcolM[i]++;
+
+   isFortranIndexed = true;
 }
 
 void SparseStorage::fortran2c()
 {
-   assert(krowM[0] == 1 && krowM[m] == len + 1);
+   assert(krowM[0] == 1 && krowM[m] == len + 1 && isFortranIndexed);
 
    for( int i = 0; i <= m; i++ )
       krowM[i]--;
 
    for( int i = 0; i < len; i++ )
       jcolM[i]--;
+
+   isFortranIndexed = false;
+}
+
+bool SparseStorage::fortranIndexed() const
+{
+   return isFortranIndexed;
+}
+
+void SparseStorage::set2FortranIndexed()
+{
+   assert(krowM[0] == 1 && krowM[m] == len + 1);
+
+   isFortranIndexed = true;
 }
 
 void SparseStorage::deleteZeroRowsColsSym(int*& new2orgIdx)
@@ -2060,6 +2129,45 @@ void SparseStorage::permuteCols(const std::vector<unsigned int>& permvec)
    delete[] bufferM;
    delete[] bufferCol;
 }
+
+
+void SparseStorage::sortCols()
+{
+   int* indexvec = new int[n];
+   int* bufferCol = new int[n];
+   double* bufferM = new double[n];
+
+   for( int r = 0; r < m; ++r )
+   {
+      const int row_start = krowM[r];
+      const int row_end = krowM[r + 1];
+      const int row_length = row_end - row_start;
+
+      if( row_length == 0 )
+         continue;
+
+      for( int i = 0; i < row_length; i++ )
+         indexvec[i] = i;
+
+      std::sort(indexvec, indexvec + row_length, index_sort(jcolM + row_start, row_length));
+
+      for( int i = 0; i < row_length; i++ )
+      {
+         assert(indexvec[i] < row_length);
+
+         bufferCol[i] = jcolM[row_start + indexvec[i]];
+         bufferM[i] = M[row_start + indexvec[i]];
+      }
+
+      memcpy(jcolM + row_start, bufferCol, row_length * sizeof(int));
+      memcpy(M + row_start, bufferM, row_length * sizeof(double));
+   }
+
+   delete[] indexvec;
+   delete[] bufferM;
+   delete[] bufferCol;
+}
+
 
 /*
  * computes the full sparse matrix representation from a upper triangular symmetric sparse representation

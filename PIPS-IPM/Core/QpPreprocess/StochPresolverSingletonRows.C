@@ -13,13 +13,8 @@
 #include <sstream>
 #include <iostream>
 
-<<<<<<< HEAD
-StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData, StochPostsolver* postsolver) :
-      StochPresolverBase(presData, postsolver)
-=======
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData, const sData& origProb) :
       StochPresolverBase(presData, origProb), removed_rows(0)
->>>>>>> nils-presolve-finish-singleton-columns
 {
 }
 

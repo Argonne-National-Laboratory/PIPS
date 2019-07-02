@@ -36,7 +36,7 @@ void GeoStochScaler::doObjScaling()
 
    obj->componentMult(*vec_colscale);
 
- //  const double absmax = obj->infnorm();
+   const double absmax = obj->infnorm();
    double absmin = 0.0;
 
    obj->absminNonZero( absmin, pips_eps );

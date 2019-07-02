@@ -69,6 +69,8 @@ public:
   int cols() { return n; }
 
   bool isValid(bool verbose = false) const;
+  bool isSorted() const;
+
 
   int length() { return len; };
   int numberOfNonZeros() const {	return krowM[m]; };
@@ -188,11 +190,15 @@ public:
   void permuteRows(const std::vector<unsigned int>& permvec);
   void permuteCols(const std::vector<unsigned int>& permvec);
 
+  void sortCols();
+
   void dump(const string& filename);
 
   void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
 
   void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
+
+  void getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const;
 
   void deleteEmptyRows(int*& orgIndex);
 
@@ -200,6 +206,10 @@ public:
   void c2fortran();
 
   void fortran2c();
+
+  bool fortranIndexed() const;
+
+  void set2FortranIndexed();
 
   void deleteZeroRowsColsSym(int*& new2orgIdx);
 
@@ -213,6 +223,9 @@ public:
 
 
   virtual ~SparseStorage();
+
+private:
+  bool isFortranIndexed;
 };
 
 #endif

@@ -21,12 +21,22 @@ endif(HAVE_MA57)
 #endif(HAVE_MA86)
 
 if(HAVE_MUMPS)
-	set(solvers ${solvers} LinearSolvers/MumpsSolver/MumpsSolver.C)
+	set(solvers ${solvers} LinearSolvers/MumpsSolver/MumpsSolverBase.C)
 endif(HAVE_MUMPS)
+
+if(WITH_MUMPS_LEAF)
+	set(solvers ${solvers} LinearSolvers/MumpsSolver/MumpsSolverLeaf.C)
+endif(WITH_MUMPS_LEAF)
+
+if(WITH_MUMPS_ROOT)
+	set(solvers ${solvers} LinearSolvers/MumpsSolver/MumpsSolverRoot.C)
+endif(WITH_MUMPS_ROOT)
 
 if(HAVE_PARDISO)
 	set(solvers ${solvers} LinearSolvers/PardisoSolver/PardisoSolver.C LinearSolvers/PardisoSolver/PardisoSchurSolver.C LinearSolvers/PardisoSolver/PardisoIndefSolver.C)
 endif(HAVE_PARDISO)
+
+set(solvers ${solvers} LinearSolvers/Preconditioners/SCsparsifier.C)
 
 add_library(ooqpgensparse 
   QpGen/QpGenVars.C QpGen/QpGenData.C QpGen/QpGenResiduals.C QpGen/QpGen.C QpGen/QpGenLinsys.C #QpGen

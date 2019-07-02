@@ -10,7 +10,6 @@
 #include "StochVector.h"
 #include "SimpleVector.h"
 #include "DoubleMatrixTypes.h"
-#include "StochResourcePlanner.h"
 #include <cmath>
 #include <algorithm>    // std::swap
 
