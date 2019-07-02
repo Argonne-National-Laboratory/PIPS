@@ -75,6 +75,21 @@ void PardisoIndefSolver::setIparm(int* iparm){
     *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
     */
    iparm[2] = PIPSgetnOMPthreads();
+
+   // check whether other environment variable has been set
+
+   /* Numbers of processors, value of OMP_NUM_THREADS */
+   char* var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
+   if( var != NULL )
+   {
+      int num_procs = -1;
+      sscanf(var, "%d", &num_procs);
+
+      assert(num_procs >= 1);
+
+      iparm[2] = num_procs;
+   }
+
    iparm[7] = 8; /* max number of iterative refinement steps. */
    #ifdef PARDISOINDEF_SCALE
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
@@ -208,6 +223,10 @@ void PardisoIndefSolver::initPardiso()
 #endif
 
    setIparm(iparm);
+
+
+   if( myRank == 0 )
+      printf("using %d threads for root Schur complement \n", iparm[2]);
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
