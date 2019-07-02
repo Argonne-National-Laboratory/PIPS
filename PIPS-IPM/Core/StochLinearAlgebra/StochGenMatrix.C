@@ -1493,6 +1493,7 @@ void StochGenMatrix::updateTransposed()
 
 /* check whether root node date is same in all processes
  *
+ * todo: make better use of std::vector and iterators
  * root node data is Amat (empty), Bmat and Blmat of root node. Children not checked.
  */
 bool StochGenMatrix::isRootNodeInSync() const
@@ -1538,36 +1539,35 @@ bool StochGenMatrix::isRootNodeInSync() const
       assert( count_row_cols < std::numeric_limits<int>::max());
       assert( count_entries < std::numeric_limits<int>::max());
 
-      double sendbuf_entries[count_entries] = {};
-      double recvbuf_entries[count_entries] = {};
+      std::vector<double> sendbuf_entries(count_entries, 0.0);
+      std::vector<double> recvbuf_entries(count_entries, 0.0);
 
-      int sendbuf_row_col[count_row_cols] = {};
-      int recvbuf_row_col[count_row_cols] = {};
+      std::vector<int> sendbuf_row_col(count_row_cols, 0);
+      std::vector<int> recvbuf_row_col(count_row_cols, 0);
 
       /* fill Bmat into send buffers */
       const double * M = Bmat->getStorageRef().M;
       const int * krowM = Bmat->getStorageRef().krowM;
       const int * jColM = Bmat->getStorageRef().jcolM;
 
-      std::copy(M, M + lenght_entries_bmat, sendbuf_entries);
+      std::copy(M, M + lenght_entries_bmat, sendbuf_entries.begin());
 
-      std::copy(krowM, krowM + lenght_rowoffest_bmat, sendbuf_row_col);
-      std::copy(jColM, jColM + lenght_entries_bmat, sendbuf_row_col + lenght_rowoffest_bmat);
+      std::copy(krowM, krowM + lenght_rowoffest_bmat, sendbuf_row_col.begin());
+      std::copy(jColM, jColM + lenght_entries_bmat, sendbuf_row_col.begin() + lenght_rowoffest_bmat);
 
       /* fill Blmat into send buffers */
       const double * Ml = Blmat->getStorageRef().M;
       const int * krowMl = Blmat->getStorageRef().krowM;
       const int * jColMl = Blmat->getStorageRef().jcolM;
 
-      std::copy(Ml, Ml + lenght_entries_blmat, sendbuf_entries + lenght_entries_bmat);
-
-      std::copy(krowMl, krowMl + lenght_rowoffest_blmat, sendbuf_row_col + lenght_rowoffest_bmat + lenght_entries_bmat);
-      std::copy(jColMl, jColMl + lenght_entries_blmat, sendbuf_row_col + lenght_rowoffest_bmat + lenght_entries_bmat + lenght_rowoffest_blmat);
+      std::copy(Ml, Ml + lenght_entries_blmat, sendbuf_entries.begin() + lenght_entries_bmat);
+      std::copy(krowMl, krowMl + lenght_rowoffest_blmat, sendbuf_row_col.begin() + lenght_rowoffest_bmat + lenght_entries_bmat);
+      std::copy(jColMl, jColMl + lenght_entries_blmat, sendbuf_row_col.begin() + lenght_rowoffest_bmat + lenght_entries_bmat + lenght_rowoffest_blmat);
 
       /* Reduce Bmat and Blmat buffers */
-      MPI_Allreduce(sendbuf_entries, recvbuf_entries, static_cast<int>(count_entries), MPI_DOUBLE, MPI_MAX, mpiComm);
+      MPI_Allreduce(&sendbuf_entries[0], &recvbuf_entries[0], static_cast<int>(count_entries), MPI_DOUBLE, MPI_MAX, mpiComm);
 
-      MPI_Allreduce(sendbuf_row_col, recvbuf_row_col, static_cast<int>(count_row_cols), MPI_INT, MPI_MAX, mpiComm);
+      MPI_Allreduce(&sendbuf_row_col[0], &recvbuf_row_col[0], static_cast<int>(count_row_cols), MPI_INT, MPI_MAX, mpiComm);
 
       /* check recvbuf_entries */
       for( int i = 0; i < count_entries; ++i )
@@ -1626,11 +1626,11 @@ bool StochGenMatrix::isRootNodeInSync() const
       assert( count_row_cols_dyn < std::numeric_limits<int>::max());
       assert( count_entries_dyn < std::numeric_limits<int>::max());
 
-      double sendbuf_entries_dynamic[count_entries_dyn] = {};
-      double recvbuf_entries_dynamic[count_entries_dyn] = {};
+      std::vector<double> sendbuf_entries_dynamic(count_entries_dyn, 0.0);
+      std::vector<double> recvbuf_entries_dynamic(count_entries_dyn, 0.0);
 
-      int sendbuf_row_col_dynamic[count_row_cols_dyn] = {};
-      int recvbuf_row_coldynamic[count_row_cols_dyn] = {};
+      std::vector<int> sendbuf_row_col_dynamic(count_row_cols_dyn, 0);
+      std::vector<int> recvbuf_row_coldynamic(count_row_cols_dyn, 0);;
 
       /* fill Bmat into send buffers */
       const double * M = Bmat_dyn.M;
@@ -1707,9 +1707,9 @@ bool StochGenMatrix::isRootNodeInSync() const
       assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic + length_columns_blmat_dynamic);
 
       /* Reduce Bmat and Blmat buffers */
-      MPI_Allreduce(sendbuf_entries_dynamic, recvbuf_entries_dynamic, static_cast<int>(count_entries_dyn), MPI_DOUBLE, MPI_MAX, mpiComm);
+      MPI_Allreduce(&sendbuf_entries_dynamic[0], &recvbuf_entries_dynamic[0], static_cast<int>(count_entries_dyn), MPI_DOUBLE, MPI_MAX, mpiComm);
 
-      MPI_Allreduce(sendbuf_row_col_dynamic, recvbuf_row_coldynamic, static_cast<int>(count_row_cols_dyn), MPI_INT, MPI_MAX, mpiComm);
+      MPI_Allreduce(&sendbuf_row_col_dynamic[0], &recvbuf_row_coldynamic[0], static_cast<int>(count_row_cols_dyn), MPI_INT, MPI_MAX, mpiComm);
 
       /* check recvbuf_entries */
       for( int i = 0; i < count_entries_dyn; ++i )
