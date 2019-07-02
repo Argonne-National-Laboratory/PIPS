@@ -492,7 +492,7 @@ void StochPresolverParallelRows::setNormalizedReductionPointers(int node)
    if(node == -1)
    {
       normNnzRowA = currNnzRow->cloneFull();
-      normNnzRowC = dynamic_cast<const SimpleVector*>(presData.getNnzsCol().vec)->cloneFull();
+      normNnzRowC = dynamic_cast<const SimpleVector*>(presData.getNnzsRowC().vec)->cloneFull();
    }
    else
    {
@@ -664,12 +664,12 @@ void StochPresolverParallelRows::removeSingletonVars()
          {
             // check if the singleton column is part of the current b_mat/d_mat
             // else, the singleton entry is in one of the other B_i or D_i blocks
-            if( norm_BmatTrans && (norm_BmatTrans->rowptr[col].start +1 == norm_BmatTrans->rowptr[col].end) )
+            if( norm_BmatTrans && (norm_BmatTrans->rowptr[col].start + 1 == norm_BmatTrans->rowptr[col].end) )
             {
                removeEntry(col, *rowContainsSingletonVariableA, *norm_Bmat, *norm_BmatTrans,
                      *normNnzRowA, *normNnzColChild, CHILD_BLOCK);
             }
-            else if(norm_DmatTrans && (norm_DmatTrans->rowptr[col].start +1 == norm_DmatTrans->rowptr[col].end) )
+            else if(norm_DmatTrans && (norm_DmatTrans->rowptr[col].start + 1 == norm_DmatTrans->rowptr[col].end) )
             {
                removeEntry(col, *rowContainsSingletonVariableC, *norm_Dmat, *norm_DmatTrans,
                      *normNnzRowC, *normNnzColChild, CHILD_BLOCK);
@@ -878,15 +878,18 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
          const int rowB_start = b_mat->rowptr[row].start;
          const int rowB_length = b_mat->rowptr[row].end - rowB_start;
 
+         if( rowA_length == 0 && rowB_length == 0 )
+            continue;
          // colIndices and normalized entries are set as pointers to the original data.
          // create and insert the new element:
-         assert( rowA_length != 0 || rowB_length != 0 );
          rows.emplace(rowId, nA, rowA_length, &(a_mat->jcolM[rowA_start]), &(a_mat->M[rowA_start]),
                rowB_length, &(b_mat->jcolM[rowB_start]), &(b_mat->M[rowB_start]));
       }
       else
       {
-         assert( rowA_length != 0 );
+         if(rowA_length == 0)
+            continue;
+
          rows.emplace(rowId, nA, rowA_length, &(a_mat->jcolM[rowA_start]),
                &(a_mat->M[rowA_start]), 0, NULL, NULL);
       }
@@ -986,12 +989,9 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                {  // Case one constraint is an equality, one an inequality
                   int id1 = it1->id;
                   int id2 = it2->id;
-                  bool swappedId1Id2 = false;
                   if( id1 >= mA )   // swap ids so that id2 is the inequality constraint.
-                  {
                      std::swap(id1, id2);
-                     swappedId1Id2 = true;
-                  }
+
                   const int ineqRowId = id2 - mA;
 
                   if( (*rowContainsSingletonVariableA)[id1] == -1.0
@@ -1050,8 +1050,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
 
                   // in both the parallel row case and in the nearly parallel row case,
                   // delete the inequality constraint id2 (which could be either it1 or it2 now):
-                  ( swappedId1Id2 ) ? presData.removeRedundantRow(INEQUALITY_SYSTEM, node, id1, false) : 
-                        presData.removeRedundantRow(INEQUALITY_SYSTEM, node, id2, false);
+                  presData.removeRedundantRow(INEQUALITY_SYSTEM, node, ineqRowId, false);
 
                }
             }

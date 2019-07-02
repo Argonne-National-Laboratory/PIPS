@@ -86,16 +86,16 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-     // presolverSR.applyPresolving();
-      // presolverBS.applyPresolving();
-      // presolverColFix.applyPresolving();
-      // presolverCleanup.applyPresolving();
-//      presolverColFix.applyPresolving();
-//      presolverBS.applyPresolving();
+      // presolverSR.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverColFix.applyPresolving();
+      presolverCleanup.applyPresolving();
+      presolverColFix.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverParallelRow.applyPresolving();
 
 //      presolverBS.applyPresolving();
 
-     presolverParallelRow.applyPresolving();
    }
 
    if( myRank == 0 )
