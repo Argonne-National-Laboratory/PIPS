@@ -88,8 +88,9 @@ Data* StochPresolver::presolve()
       /* singleton rows */
       // presolverSR.applyPresolving();
       presolverBS.applyPresolving();
-      presolverParallelRow.applyPresolving();
+      presolverCleanup.applyPresolving();
       presolverColFix.applyPresolving();
+      presolverParallelRow.applyPresolving();
       presolverCleanup.applyPresolving();
 //      presolverBS.applyPresolving();
 
