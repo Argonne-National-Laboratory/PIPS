@@ -11,8 +11,9 @@
 #include "sData.h"
 #include "sTree.h"
 #include <limits>
+#ifdef WITH_MUMPS_ROOT
 #include "MumpsSolverRoot.h"
-
+#endif
 
 //#define DUMPKKT
 
