@@ -342,7 +342,8 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
       assert(local2linksEndIneq <= locnx + locmy + locmyl + locmzl);
 
       const int szDiagLocalStart = local2linksStartIneq - (locnx + locmy + locmyl);
-      assert(szDiagLocalStart >= 0 && szDiagLocalStart < locmzl);
+      assert(szDiagLocalStart >= 0);
+      assert(szDiagLocalStart < locmzl || (szDiagLocalStart == locmzl && local2linksStartIneq == local2linksEndIneq));
 
       // add locally owned part of z diagonal
       for( int i = szDiagLocalStart, iKkt = local2linksStartIneq; iKkt < local2linksEndIneq; ++i, ++iKkt )
