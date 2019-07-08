@@ -649,7 +649,7 @@ int readBlockSqueezed(int numBlocks,         /** < total number of blocks n in p
       int mCStart, mCEnd;
       int mBLStart, mBLEnd;
       int mDLStart, mDLEnd;
-      int gmom = gmoM(fGMO), gmon = gmoN(fGMO), n0, pipsm, pipsn;
+      int gmom = gmoM(fGMO), gmon = gmoN(fGMO), n0=0, pipsm, pipsn;
       int* rowPerm;
       int* colPerm;
       
