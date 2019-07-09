@@ -1419,11 +1419,17 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    if ( 0 == actBlock )
       blk->ni = blk->n0;
 
-   if ( 0==blk->n0 || 0==blk->ni )
-   {
-      printf("Zero variable count: 0:%d %d:%d\n", blk->n0, actBlock, blk->ni);
-      return 1;
-   }
+   if ( 0==blk->ni )
+	   if ( 0==actBlock )
+       {
+          printf("Zero joint variable count!\n");
+          return 0;
+       }
+	   else
+       {
+          printf("Zero variable count for block %d!\n", actBlock);
+          return 1;
+       }
 
    /* Variable allocation */
    blk->c     = (double *)  calloc(blk->ni, sizeof(double)); 
