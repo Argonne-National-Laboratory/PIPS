@@ -8,28 +8,22 @@
 
 void printUsage(void)
 {
-   printf("Usage: [-hsSptTxXdD] [-g GAMSSysDir] [-b actBlock] [-o n] numBlocks dirStem\n");
+   printf("Usage: [-hsStTwWx] [-g GAMSSysDir] [-b actBlock] [-o n] numBlocks fileStem\n");
    printf("  -h        print usage\n");
    printf("  -s        strict mode\n");
    printf("  -S        very strict mode\n");
-   printf("  -p        GNUPlot output to stdout, cmd= 'plot \"file\" using 2:1 with dots'\n");
    printf("  -t        split GDX file into multiple GDX files\n");
    printf("  -T        split GDX file into multiple GDX files without uels and strings\n");
    printf("  -w        output of block structure counts to stdout\n");
    printf("  -W        output of block structure to stdout\n");
-   printf("  -x        dirStem is GDX file stem\n");
-   printf("  -X        dirStem is GDX file\n");
-   printf("  -d        dirStem is scratch directory stem (default)\n");
-   printf("  -D        dirStem is scratch directory\n");
+   printf("  -x        fileStem is GDX file stem\n");
    printf("  -g        specify GAMS system directory\n");
    printf("  -b        specify single block\n");
    printf("  -o        specify stage offset (default 1)\n");
    printf("  numblocks total number of blocks\n");
-   printf("  dirStem   scratch directory name stem\n");
+   printf("  fileStem  GDX file or file stem\n");
 }
 
-#define SCRDIRSTEM   1
-#define SCRDIR       2
 #define GDXFILESTEM 10
 #define GDXFILE     20
 
@@ -42,38 +36,12 @@ int  readOneBlock(const int numBlocks,
                   const char* pGAMSSysDir, 
                   GMSPIPSBlockData_t* block)
 {
-   int rc;
-   if ( SCRDIRSTEM == fType || SCRDIR == fType )
-   {
-
-#if !GDXSOURCE
-      char fname[GMS_SSSIZE], dname[GMS_SSSIZE];
-      
-      if ( SCRDIRSTEM == fType )
-      {
-         sprintf(fname,"%s%d\\gamscntr.dat", pDirStem, actBlock);
-         sprintf(dname,"%s%d\\gamsmat.dat", pDirStem, actBlock);
-      }
-      else
-      {
-         sprintf(fname,"%s\\gamscntr.dat", pDirStem);
-         sprintf(dname,"%s\\gamsmat.dat", pDirStem);
-      }
-      rc = readBlockSqueezed(numBlocks,actBlock,strict,fname,dname,pGAMSSysDir,block);
-#else
-      rc = 255;
-#endif   
-   }
+   char fname[GMS_SSSIZE];
+   if ( GDXFILESTEM == fType )
+      sprintf(fname,"%s%d.gdx", pDirStem, actBlock);
    else
-   {
-      char fname[GMS_SSSIZE];
-      if ( GDXFILESTEM == fType )
-         sprintf(fname,"%s%d.gdx", pDirStem, actBlock);
-      else
-         strcpy(fname,pDirStem);
-      rc = readBlock(numBlocks,actBlock,strict,offset,fname,pGAMSSysDir,block);
-   }
-   return rc;
+      strcpy(fname,pDirStem);
+   return readBlock(numBlocks,actBlock,strict,offset,fname,pGAMSSysDir,block);
 }   
 
 int main(int argc, char* argv[])
@@ -86,9 +54,9 @@ int main(int argc, char* argv[])
    int printMat = 0;
    int gdxSplit = 0;
    int rc = 0;
-   int fType = SCRDIRSTEM;
+   int fType = GDXFILE;
    char* pGAMSSysDir = NULL;
-   char* pDirStem = NULL;
+   char* pFileStem = NULL;
    
    while ( --argc > 0 )
    {
@@ -104,13 +72,9 @@ int main(int argc, char* argv[])
             case 'S': strict = 2; break;
             case 't': gdxSplit = 1; break;
             case 'T': gdxSplit = 2; break;
-            case 'p': gnuplot = 1; break;
             case 'w': printMat = 1; break;
             case 'W': printMat = 2; break;
-            case 'd': fType = SCRDIRSTEM; break;
-            case 'D': fType = SCRDIR; break;
             case 'x': fType = GDXFILESTEM; break;
-            case 'X': fType = GDXFILE; break;
             case 'h': printUsage(); exit(0); break;
          }
       }
@@ -123,9 +87,9 @@ int main(int argc, char* argv[])
       exit(1);
    }
    numBlocks = atoi(*argv); 
-   pDirStem = *++argv; 
+   pFileStem = *++argv; 
 
-   assert(pDirStem);
+   assert(pFileStem);
    assert(numBlocks>0);
    assert(actBlock<numBlocks);
    
@@ -133,7 +97,7 @@ int main(int argc, char* argv[])
    
    if ( gdxSplit && (fType == GDXFILE) )
    {
-      rc = gdxSplitting(numBlocks, offset, gdxSplit==2, pDirStem, pGAMSSysDir);
+      rc = gdxSplitting(numBlocks, offset, gdxSplit==2, pFileStem, pGAMSSysDir);
       if (rc)
          printf("gdxSplitting failed (rc=%d)\n", rc);
       return rc;
@@ -143,7 +107,7 @@ int main(int argc, char* argv[])
    {
       GMSPIPSBlockData_t block;
       
-      rc = readOneBlock(numBlocks, actBlock, strict, offset, fType, pDirStem, pGAMSSysDir, &block);
+      rc = readOneBlock(numBlocks, actBlock, strict, offset, fType, pFileStem, pGAMSSysDir, &block);
       if (rc)
       {
          printf("readOneBlock with actBlock=%d failed (rc=%d)\n", actBlock, rc);
@@ -169,7 +133,7 @@ int main(int argc, char* argv[])
       for (int blk=0; blk<numBlocks; blk++)
       {
          blocks[blk] = (GMSPIPSBlockData_t*) malloc(sizeof(GMSPIPSBlockData_t));
-         rc = readOneBlock(numBlocks, blk, strict, offset, fType, pDirStem, pGAMSSysDir, blocks[blk]);
+         rc = readOneBlock(numBlocks, blk, strict, offset, fType, pFileStem, pGAMSSysDir, blocks[blk]);
          if (rc)
          {
             printf("readOneBlock with blk=%d failed (rc=%d)\n", blk, rc);
@@ -185,42 +149,7 @@ int main(int argc, char* argv[])
             }
       }
       
-      if ( gnuplot )
-      {
-         /* Block 0 is the reference for all linking variables and constraints */
-          int nSum = 0;
-          int mSum = blocks[0]->mBL + blocks[0]->mDL;
-
-          
-#define plotmat(mat,matX,msum,nsum)                                                          \
-             if (blocks[blk]->nnz ## mat)                                                    \
-             {                                                                               \
-                for (int i=0; i<blocks[blk]->m ## matX; i++)                                 \
-                   for (int k=blocks[blk]->rm ## mat[i]; k<blocks[blk]->rm ## mat[i+1]; k++) \
-                      printf("-%d %d\n", i+1+msum, blocks[blk]->ci ## mat[k]+1+nsum);        \
-             }
-             
-          for (int blk=0; blk<numBlocks; blk++)                                              
-          {
-             //fprintf(stderr,"blk %d nSum=%d mSum=%d\n",blk,nSum,mSum);
-             //printf("BL\n");
-             plotmat(BL,BL,0, nSum);
-             //printf("DL\n");
-             plotmat(DL,DL,0, nSum);
-             //printf("A %d\n",blocks[blk]->mA);
-             plotmat(A,A,mSum,0);
-             //printf("B\n");
-             plotmat(B,A,mSum,nSum);
-             //printf("C %d\n",blocks[blk]->mC);
-             plotmat(C,C,mSum+blocks[blk]->mA,0);
-             //printf("D\n");
-             plotmat(D,C,mSum+blocks[blk]->mA,nSum);
-             mSum += blocks[blk]->mA + blocks[blk]->mC;
-             nSum += blocks[blk]->ni;
-          }
-          fprintf(stderr,"# All done\n");
-      }
-      else if ( printMat )
+      if ( printMat )
       {
          for (int blk=0; blk<numBlocks; blk++)
          {

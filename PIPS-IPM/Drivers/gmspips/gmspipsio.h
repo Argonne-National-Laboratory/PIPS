@@ -80,15 +80,6 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
                   double* equEm,            /** < equation =e= marginals */
                   double* equIm,            /** < equation =lg= marginals */
                   const char* GAMSSysDir);  /** < GAMS system directory to locate shared libraries (can be NULL) */                  
-#if !defined(GDXSOURCE)
-int readBlockSqueezed(int numBlocks,         /** < total number of blocks n in problem 0..n */
-              int actBlock,                  /** < number of block to read 0..n */
-              int strict,                    /** < indicator for clean blocks */
-              const char* cntrFilename,      /** < Control filename */
-              const char* blk0DictFilename,  /** < Dictionary file name for block 0 */
-              const char* GAMSSysDir,        /** < GAMS system directory to locate shared libraries (can be NULL) */
-              GMSPIPSBlockData_t* blk);      /** < block structure to be filled */
-#endif
 int readBlock(const int numBlocks,           /** < total number of blocks n in problem 0..n */
               const int actBlock,            /** < number of block to read 0..n */
               const int strict,              /** < indicator for clean blocks */
