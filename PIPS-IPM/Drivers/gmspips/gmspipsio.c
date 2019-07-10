@@ -489,6 +489,7 @@ if ( blk->nnz##mat )                                                   \
 }
 
 void copyGDXSymbol(int         numBlocks,
+                   int         actBlock,
                    gdxHandle_t bGDX[],
                    gdxHandle_t fGDX,
                    const char* symName,
@@ -513,10 +514,11 @@ void copyGDXSymbol(int         numBlocks,
    if (!rc && 0==strcmp(symName,"ANl"))
    {
       printf("Copying %s\n", symName); fflush(stdout);
-      for (k=0; k<numBlocks; k++)
+      for (k=(actBlock < 0)? 0:actBlock; k<numBlocks; k++)
       {
          GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, "Non-linear Jacobian indicator", 2, dt_par, 0));
          GDXSAVECALLX(bGDX[k],gdxDataWriteDone(bGDX[k]));
+		 if (actBlock >= 0) break;
       }
       return;      
    }
@@ -525,11 +527,12 @@ void copyGDXSymbol(int         numBlocks,
       printf("Copying %s\n", symName); fflush(stdout);
       vals[GMS_VAL_LEVEL] = 0;
       keyInt[0] = objRowUel;
-      for (k=0; k<numBlocks; k++)
+      for (k=(actBlock < 0)? 0:actBlock; k<numBlocks; k++)
       {
          GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, "Objective row (if reformulation possible, empty otherwise)", 1, dt_set, 0));
          GDXSAVECALLX(bGDX[k],gdxDataWriteRaw (bGDX[k], keyInt, vals));
          GDXSAVECALLX(bGDX[k],gdxDataWriteDone(bGDX[k]));
+ 		 if (actBlock >= 0) break;
       }
       return;      
    }
@@ -537,9 +540,10 @@ void copyGDXSymbol(int         numBlocks,
    GDXSAVECALLX(fGDX,gdxSymbolInfoX(fGDX, symNr, &recNr, &userInfo, symText));
    printf("Copying %s (#recs=%d)\n", symName, recNr); fflush(stdout);
 
-   for (k=0; k<numBlocks; k++)
+   for (k=(actBlock < 0)? 0:actBlock; k<numBlocks; k++)
    {
       GDXSAVECALLX(bGDX[k],gdxDataWriteRawStart(bGDX[k], symName, symText, symDim, symType, userInfo));
+      if (actBlock >= 0) break;
    }
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
 
@@ -554,22 +558,27 @@ void copyGDXSymbol(int         numBlocks,
             blk = stage[keyInt[0]-1-nUelOffSet];
          if (blk==linkingBlock)
          {
-            for (k=0; k<numBlocks; k++)
+            for (k=(actBlock < 0)? 0:actBlock; k<numBlocks; k++)
             {
                GDXSAVECALLX(bGDX[k],gdxDataWriteRaw (bGDX[k], keyInt, vals));      
+               if (actBlock >= 0) break;
             }
          }
          else
          {
             assert(blk<numBlocks);
-            GDXSAVECALLX(bGDX[blk],gdxDataWriteRaw (bGDX[blk], keyInt, vals));
+			if (actBlock<0 || actBlock==blk)
+			{
+				GDXSAVECALLX(bGDX[blk],gdxDataWriteRaw (bGDX[blk], keyInt, vals));
+			}
          }
       }
       else if ( 1 == readType )
       {
-         for (k=0; k<numBlocks; k++)
+         for (k=(actBlock < 0)? 0:actBlock; k<numBlocks; k++)
          {
             GDXSAVECALLX(bGDX[k],gdxDataWriteRaw (bGDX[k], keyInt, vals));
+            if (actBlock >= 0) break;
          }
       }
       else if ( 2 == readType )
@@ -582,39 +591,51 @@ void copyGDXSymbol(int         numBlocks,
                printf("*** Unexpected matrix coefficient %f of equation e%d (stage=%d) and variable x%d (stage=%d)\n", vals[GMS_VAL_LEVEL], row+1,estage[row]+offSet,col+1,vstage[col]+offSet);
             else if (iblk > 0)
             {
-               GDXSAVECALLX(bGDX[iblk],gdxDataWriteRaw (bGDX[iblk], keyInt, vals));      
+   			   if (actBlock<0 || actBlock==iblk)
+			   {
+				   GDXSAVECALLX(bGDX[iblk],gdxDataWriteRaw (bGDX[iblk], keyInt, vals));      
+			   }
             }
             else /* iblk == 0 */
             {
                assert(jblk<numBlocks);
-               GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));      
+   			   if (actBlock<0 || actBlock==jblk)
+			   {
+				   GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));
+			   }
             }
          }
          else /* linking constraint */
          {
             if ( keyInt[1] == objVarUel )
             {
-               for (k=0; k<numBlocks; k++)
+               for (k=(actBlock < 0)? 0:actBlock; k<numBlocks; k++)
                {
                   GDXSAVECALLX(bGDX[k],gdxDataWriteRaw (bGDX[k], keyInt, vals));      
+                  if (actBlock >= 0) break;
                }
             }
             else
             {
                assert(jblk<numBlocks);
-               GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));      
+   			   if (actBlock<0 || actBlock==jblk)
+			   {
+				   GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));      
+			   }
             }
          }
       }
    }
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
-   for (k=0; k<numBlocks; k++)
+   for (k=(actBlock < 0)? 0:actBlock; k<numBlocks; k++)
    {
       GDXSAVECALLX(bGDX[k],gdxDataWriteDone(bGDX[k]));
+      if (actBlock >= 0) break;
    }
 }
 
 int gdxSplitting(const int numBlocks,        /** < total number of blocks n in problem 0..n */
+              const int actBlock,            /** < block to split from big GDX file, -1 split all */
               const int offset,              /** < indicator for clean blocks */
               const int skipStrings,         /** < indicator for not registering uels and strings */
               const char* gdxFilename,       /** < GDX file name with CONVERTD jacobian structure */
@@ -669,13 +690,14 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &gdxM));
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
    rowstage = (int *)calloc(gdxM,sizeof(int));
-   isE = (int *)calloc(gdxM,sizeof(int));
+   if (actBlock <= 0)
+	   isE = (int *)calloc(gdxM,sizeof(int));
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "e", &symNr));
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &rc));
    while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
    {
       rowstage[keyInt[0]-1] = (int) vals[GMS_VAL_SCALE] - offset;
-	  if (vals[GMS_VAL_LOWER] == vals[GMS_VAL_UPPER])
+	  if ((actBlock <= 0) && (vals[GMS_VAL_LOWER] == vals[GMS_VAL_UPPER]))
 		  isE[keyInt[0]-1] = 1;
    }
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
@@ -685,12 +707,15 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &gdxN));
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
    varstage = (int *) calloc(gdxN,sizeof(int));
-   varlo = (double *) malloc(gdxN*sizeof(double));
-   varup = (double *) malloc(gdxN*sizeof(double));
-   for (j=0; j<gdxN; j++)
+   if (actBlock <= 0)
    {
-	   varlo[j] = GMS_SV_MINF;
-	   varup[j] = GMS_SV_PINF;
+	   varlo = (double *) malloc(gdxN*sizeof(double));
+       varup = (double *) malloc(gdxN*sizeof(double));
+       for (j=0; j<gdxN; j++)
+       {
+    	   varlo[j] = GMS_SV_MINF;
+    	   varup[j] = GMS_SV_PINF;
+       }
    }
    
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "x", &symNr));
@@ -699,8 +724,11 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    {
       int blk;
       blk = (int) vals[GMS_VAL_SCALE] - offset;
-      varlo[keyInt[0]-1-gdxM] = vals[GMS_VAL_LOWER];
-      varup[keyInt[0]-1-gdxM] = vals[GMS_VAL_UPPER];
+      if (actBlock <= 0)
+	  {
+		  varlo[keyInt[0]-1-gdxM] = vals[GMS_VAL_LOWER];
+          varup[keyInt[0]-1-gdxM] = vals[GMS_VAL_UPPER];
+	  }
       varstage[keyInt[0]-1-gdxM] = blk;
       if (blk>intMaxBlock)
          intMaxBlock = blk;
@@ -723,7 +751,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
 
    GDXSAVECALLX(fGDX,gdxSystemInfo (fGDX, &symNr, &numUels));
    bGDX = (gdxHandle_t*) calloc(numBlocks, sizeof(gdxHandle_t));
-   for (k=0; k<numBlocks; k++)
+   for (k=(actBlock < 0)? 0:actBlock;k<numBlocks; k++)
    {
       int nUel;
 #if !defined(GDXSOURCE)   
@@ -774,6 +802,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
           GDXSAVECALLX(bGDX[k],gdxDataWriteRaw (bGDX[k], keyInt, vals));      
           GDXSAVECALLX(bGDX[k],gdxDataWriteDone(bGDX[k]));
       }
+      if (actBlock >= 0)
+		  break;
+	  
    }
 
    /* Get objective uels */
@@ -810,6 +841,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
    assert(objRowUel);
    
    /* Create PIPS2GAMS mapping file */
+   if ( actBlock <= 0 )
    {
       FILE *fmap;
       int* p2gmap;
@@ -875,18 +907,19 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
   }
    
    /* Copy symbols */
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"i",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"jobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"iobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"objcoef",gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"e",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"A",      gdxM,offset,NULL,    varstage, rowstage,0        ,2,objVarUel,objRowUel);
-   copyGDXSymbol(numBlocks,bGDX,fGDX,"ANl",    gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"i",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"j",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"jobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"iobj",   gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"objcoef",gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"e",      gdxM,offset,rowstage,NULL,     NULL,    numBlocks,0,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"x",      gdxM,offset,varstage,NULL,     NULL,    0        ,3,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"A",      gdxM,offset,NULL,    varstage, rowstage,0        ,2,objVarUel,objRowUel);
+   copyGDXSymbol(numBlocks,actBlock,bGDX,fGDX,"ANl",    gdxM,offset,NULL,    NULL,     NULL,    0        ,1,objVarUel,objRowUel);
   
-   printf("gmspipscall: gmspips %d %s %s [scale] ...\n",numBlocks,bFileStem,GAMSSysDir);
-   for (k=0; k<numBlocks; k++)
+   if (actBlock <= 0)
+	   printf("gmspipscall: gmspips %d %s %s [scale] ...\n",numBlocks,bFileStem,GAMSSysDir);
+   for (k=(actBlock < 0)? 0:actBlock;k<numBlocks; k++)
    {
       int errNr = gdxGetLastError(bGDX[k]);
       if (errNr)
@@ -898,6 +931,9 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       assert(0==errNr);
       gdxClose(bGDX[k]);
       gdxFree(&(bGDX[k]));
+      if (actBlock >= 0)
+		  break;
+ 
    }
    gdxClose(fGDX);
    gdxFree(&fGDX);

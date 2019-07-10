@@ -88,6 +88,7 @@ int readBlock(const int numBlocks,           /** < total number of blocks n in p
               const char* GAMSSysDir,        /** < GAMS system directory to locate shared libraries (can be NULL) */
               GMSPIPSBlockData_t* blk);      /** < block structure to be filled */
 int gdxSplitting(const int numBlocks,        /** < total number of blocks n in problem 0..n */
+              const int actBlock,            /** < block to split from big GDX file, -1 split all */
               const int offset,              /** < indicator for clean blocks */
               const int skipStrings,         /** < indicator for not registering uels and strings */
               const char* gdxFilename,       /** < GDX file name with CONVERTD jacobian structure */

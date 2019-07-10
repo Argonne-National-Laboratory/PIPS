@@ -8,20 +8,27 @@
 
 void printUsage(void)
 {
-   printf("Usage: [-hsStTwWx] [-g GAMSSysDir] [-b actBlock] [-o n] numBlocks fileStem\n");
-   printf("  -h        print usage\n");
-   printf("  -s        strict mode\n");
-   printf("  -S        very strict mode\n");
-   printf("  -t        split GDX file into multiple GDX files\n");
-   printf("  -T        split GDX file into multiple GDX files without uels and strings\n");
-   printf("  -w        output of block structure counts to stdout\n");
-   printf("  -W        output of block structure to stdout\n");
-   printf("  -x        fileStem is GDX file stem\n");
-   printf("  -g        specify GAMS system directory\n");
-   printf("  -b        specify single block\n");
-   printf("  -o        specify stage offset (default 1)\n");
-   printf("  numblocks total number of blocks\n");
-   printf("  fileStem  GDX file or file stem\n");
+   printf("Usage: [-hsStTwWx] [-g GAMSSysDir] [-b actBlock] [-o n] numBlocks file[Stem]\n");
+   printf("  -h          print usage\n\n");
+   printf("  Splitting operation:\n");
+   printf("    -t        split GDX file into multiple GDX files\n");
+   printf("    -T        split GDX file into multiple GDX files without uels and strings\n");
+   printf("    -g        specify GAMS system directory\n");
+   printf("    -b        specify single block\n");
+   printf("    -o        specify stage offset (default 1)\n");
+   printf("    numblocks total number of blocks\n");
+   printf("    file      GDX file\n\n");
+   printf("  Analysis operation:\n");
+   printf("    -s        strict mode\n");
+   printf("    -S        very strict mode\n");
+   printf("    -w        output of block structure counts to stdout\n");
+   printf("    -W        output of block structure to stdout\n");
+   printf("    -x        fileStem is GDX file stem\n");
+   printf("    -g        specify GAMS system directory\n");
+   printf("    -b        specify single block\n");
+   printf("    -o        specify stage offset (default 1)\n");
+   printf("    numblocks total number of blocks\n");
+   printf("    fileStem  GDX file or file stem\n");
 }
 
 #define GDXFILESTEM 10
@@ -97,7 +104,7 @@ int main(int argc, char* argv[])
    
    if ( gdxSplit && (fType == GDXFILE) )
    {
-      rc = gdxSplitting(numBlocks, offset, gdxSplit==2, pFileStem, pGAMSSysDir);
+      rc = gdxSplitting(numBlocks, actBlock, offset, gdxSplit==2, pFileStem, pGAMSSysDir);
       if (rc)
          printf("gdxSplitting failed (rc=%d)\n", rc);
       return rc;
