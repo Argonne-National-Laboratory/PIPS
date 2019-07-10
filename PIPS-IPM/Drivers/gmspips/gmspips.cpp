@@ -496,9 +496,39 @@ int main(int argc, char ** argv)
    if( printsol && gmsRank == 0 )
    {
       int rc;
-
-      rc = writeSolution(fileName,primalSolVec.size(),0,objective,&primalSolVec[0],NULL,NULL,NULL,pGDXDirectory);
-      
+#if 0
+      cout << "primalSolVec " << primalSolVec.size() << endl;
+      cout << "dualSolEqVec " << dualSolEqVec.size() << endl;
+      cout << "dualSolIneqVec " << dualSolIneqVec.size() << endl;
+      cout << "dualSolIneqUppVec " << dualSolIneqUppVec.size() << endl;
+      cout << "dualSolIneqLowVec " << dualSolIneqLowVec.size() << endl;
+      cout << "dualSolVarBoundsUppVec " << dualSolVarBoundsUppVec.size() << endl;
+      cout << "dualSolVarBoundsLowVec " << dualSolVarBoundsLowVec.size() << endl;
+    
+      cout << "variables" << endl; 
+      for (unsigned int j=0; j<primalSolVec.size(); j++)
+          cout << j << " " << primalSolVec[j] << " " << dualSolVarBoundsUppVec[j] << " " << dualSolVarBoundsLowVec[j] << endl; 
+      cout << "=constraints" << endl; 
+      for (unsigned int j=0; j<dualSolEqVec.size(); j++)
+          cout << j << " " << dualSolEqVec[j] << endl; 
+      cout << "<constraints" << endl; 
+      for (unsigned int j=0; j<dualSolIneqVec.size(); j++)
+          cout << j << " " << dualSolIneqVec[j] << " " << dualSolIneqUppVec[j] << " " << dualSolIneqLowVec[j] << endl; 
+#endif
+       
+      rc = writeSolution(fileName,
+						 primalSolVec.size(),
+						 dualSolEqVec.size(),
+						 dualSolIneqVec.size(),
+						 objective,
+						 &primalSolVec[0],
+						 &dualSolVarBoundsLowVec[0],
+						 &dualSolVarBoundsUppVec[0],
+						 NULL,
+						 NULL,
+						 &dualSolEqVec[0],
+						 &dualSolIneqVec[0],
+						 pGDXDirectory);
       if (0==rc)
          std::cout << "Solution written to " << fileName << "_sol.gdx" << std::endl;
       else if (-1==rc)

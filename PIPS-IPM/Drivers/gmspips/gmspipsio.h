@@ -67,15 +67,19 @@ int initGMSPIPSIO();
 int writeBlock(const char* scrFilename,      /** < scratch file name. If NULL write ASCII to stdout */
                GMSPIPSBlockData_t* blk,      /** < block structure to write */
                int printLevel);
-int writeSolution(const char* gdxFileStem,   /** < GDX file stem */
-                  const int numcol,          /** < length of varl/varm array */
-                  const int numrow,          /** < length of equl/equm array */
-                  const double objval,       /** < objective value */
-                  double* varl,              /** < variable level */
-                  double* varm,              /** < variable marginals */
-                  double* equl,              /** < equation level */
-                  double* equm,              /** < equation marginals */
-                  const char* GAMSSysDir);   /** < GAMS system directory to locate shared libraries (can be NULL) */                  
+int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
+                  const int numcol,         /** < length of varl/varmlo/up array */
+                  const int numErow,        /** < length of equEm array */
+                  const int numIrow,        /** < length of equIl/equIm array */
+                  const double objval,      /** < objective value */
+                  double* varl,             /** < variable level (can be NULL) */
+                  double* varmlo,           /** < variable marginals (can be NULL) */
+                  double* varmup,           /** < variable marginals (can be NULL) */
+                  double* equEl,            /** < equation =e= level (can be NULL) */
+                  double* equIl,            /** < equation =lg= level (can be NULL) */
+                  double* equEm,            /** < equation =e= marginals */
+                  double* equIm,            /** < equation =lg= marginals */
+                  const char* GAMSSysDir);  /** < GAMS system directory to locate shared libraries (can be NULL) */                  
 #if !defined(GDXSOURCE)
 int readBlockSqueezed(int numBlocks,         /** < total number of blocks n in problem 0..n */
               int actBlock,                  /** < number of block to read 0..n */
