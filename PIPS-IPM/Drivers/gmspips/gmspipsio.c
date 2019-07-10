@@ -19,8 +19,8 @@
 extern "C" {
 #endif
 
-//#define debug(msg)   printf("%s\n", msg);
-#define debug(msg)   
+//#define DEBUG(msg)   printf("%s\n", msg);
+#define DEBUG(msg)   
 
 #define GDXSAVECALLX(gxf,f) {                                                  \
                                 int rc;                                        \
@@ -947,7 +947,7 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
 
 int readBlock(const int numBlocks,       /** < total number of blocks n in problem 0..n */
               const int actBlock,        /** < number of block to read 0..n */
-              const int strict,          /** < indicator for clean blocks */
+              const int debugMode,       /** < indicator for clean blocks */
               const int offset,          /** < indicator for clean blocks */
               const char* gdxFilename,   /** < GDX file name with CONVERTD jacobian structure */
               const char* GAMSSysDir,    /** < GAMS system directory to locate shared libraries (can be NULL) */
@@ -1027,7 +1027,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "j", &symNr));
    GDXSAVECALLX(fGDX,gdxSymbolInfoX (fGDX, symNr, &gdxN, &idummy, msg));
 
-   if ( strict )
+   if ( debugMode )
    {
       int i=0,j=0;
       GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "j", &symNr));
@@ -1088,7 +1088,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    blk->numBlocks = numBlocks;
    blk->blockID = actBlock;
    
-   debug("First pass over the variables to get variable counts right");
+   DEBUG("First pass over the variables to get variable counts right");
    /* First pass over the variables to get variable counts right */
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "j", &symNr));
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &idummy));
@@ -1117,7 +1117,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
          varPerm[n] = blockNr+1;
          blk->ni++;
       }
-      else if ( strict > 1 )
+      else if ( debugMode > 1 )
          printf("*** Variable %s with block index %d while scanning for block index %d\n", varname[n],blockNr+offset, actBlock+offset);
    }
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
@@ -1158,7 +1158,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    blk->ixlow = (int16_t *) calloc(blk->ni, sizeof(int16_t)); 
    blk->ixupp = (int16_t *) calloc(blk->ni, sizeof(int16_t));
    
-   debug("Second pass over the variables to get the bounds");
+   DEBUG("Second pass over the variables to get the bounds");
    /* Second pass over the variables to get the bounds */
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &idummy));
    {  int n=0;
@@ -1186,7 +1186,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    }
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
    
-   debug("First pass over the matrix to identify objective function");
+   DEBUG("First pass over the matrix to identify objective function");
    /* First pass over the matrix to identify objective function */
    cVal = (double *)malloc(gdxN*sizeof(double));
    cIdxUel = (int *)malloc(gdxN*sizeof(int));
@@ -1221,7 +1221,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    assert(cCnt==0 || objCoef>1e-9 || objCoef<-1e-9);
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
 
-   debug("First pass over the equations to get equation counts right");
+   DEBUG("First pass over the equations to get equation counts right");
    /* First pass over the equations to get equation counts right */
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "i", &symNr));
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &idummy));
@@ -1255,7 +1255,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
          else /* =e= */
             equTypeNr[m] = 3;
       }
-      else if ( strict > 1 )
+      else if ( debugMode > 1 )
          printf("*** Equation %s with block index %d while scanning for block index %d\n", rowname[m],blockNr+offset, actBlock+offset);
          
    }
@@ -1266,7 +1266,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
       int col = vemap[cIdxUel[j]-1]-1;
       if ( 0==varPerm[col] )
       {
-         if ( strict > 1)
+         if ( debugMode > 1)
             printf("*** Objective (%s) coefficient of variable %s with block index %d while scanning for block index %d\n", rowname[vemap[objRowUel-1]-1], varname[col], varstage[col], actBlock+offset);
          continue;
       }
@@ -1320,7 +1320,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
       blk->rmDL  = (int32_t *) calloc(blk->mDL+1, sizeof(int32_t));
    }      
    
-   debug("Second pass over the equations to get lhs/rhs");
+   DEBUG("Second pass over the equations to get lhs/rhs");
    /* Second pass over the equations to get lhs/rhs */
    {
       int mA=0, mC=0, mBL=0, mDL=0;
@@ -1375,7 +1375,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    //assert(0==blk->mBL);
    //assert(0==blk->mDL);
    
-   debug("Second pass over the matrix to get nnz counts right");
+   DEBUG("Second pass over the matrix to get nnz counts right");
    /* Second pass over the matrix to get nnz counts right */
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "A", &symNr));
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &gdxNNZ));
@@ -1400,7 +1400,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
       {
          badCnt++;
          //printf("i=%d j=%d row=%d col=%d  varPerm[col]=%d blk->n0=%d equTypeNr[row]=%d\n",keyInt[0],keyInt[1],row,col, varPerm[col], blk->n0, equTypeNr[row]);
-         if ( strict )
+         if ( debugMode )
             printf("*** Unexpected matrix coefficient %f of equation %s (stage=%d) and variable %s (stage=%d) while scanning for block index %d [col %d coluel %d vp %d row %d rowuel %d et %d]\n", vals[GMS_VAL_LEVEL], rowname[row],rowstage[row], varname[col], varstage[col], actBlock+offset,col,keyInt[1],varPerm[col],row,keyInt[0],equTypeNr[row]);
       }
       
@@ -1427,7 +1427,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    }
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
    if (badCnt)
-      printf("*** %d unexpected matrix coefficient var.stage <> equ.stage and not linking. %s\n", badCnt, strict?"":"Add -s to gmschk call to see details.");
+      printf("*** %d unexpected matrix coefficient var.stage <> equ.stage and not linking. %s\n", badCnt, debugMode?"":"Add -s to gmschk call to see details.");
    assert( 0 == badCnt );
   
    MATALLOC(A);
@@ -1437,7 +1437,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    MATALLOC(BL);
    MATALLOC(DL);
    
-   debug("Third pass over the matrix to setup the matrix structures");
+   DEBUG("Third pass over the matrix to setup the matrix structures");
    //printf("mA %d mC %d mBL %d mDL %d\n", blk->mA, blk->mC, blk->mBL, blk->mDL);
    //printf("n0 %d mi %d\n", blk->n0, blk->ni);
    /* Third pass over the matrix to setup the matrix structures */
@@ -1524,7 +1524,7 @@ if (blk->rm##mat)                                                               
    assert(blk->nnz##mat==blk->rm##mat[blk->m##mmat]);                                                  \
 }
 
-      debug("Finalize matrix structures");
+      DEBUG("Finalize matrix structures");
       FILLMAT(A,A);
       FILLMAT(C,C);
       FILLMAT(BL,BL);
@@ -1541,7 +1541,7 @@ if (blk->rm##mat)                                                               
    free(equTypeNr);
    free(vemap);
 
-   if (strict)
+   if (debugMode)
    {
       int i,j;
       for (j=0; j<gdxN; j++)
@@ -1553,7 +1553,7 @@ if (blk->rm##mat)                                                               
       free(rowname);
       free(rowstage);
    }
-   debug("Returning from readBlock");
+   DEBUG("Returning from readBlock");
    
    return 0;   
 

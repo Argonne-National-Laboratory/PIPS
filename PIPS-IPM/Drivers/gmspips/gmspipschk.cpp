@@ -8,7 +8,7 @@
 
 void printUsage(void)
 {
-   printf("Usage: [-hsStTwWx] [-g GAMSSysDir] [-b actBlock] [-o n] numBlocks file[Stem]\n");
+   printf("Usage: [-dhtTwWx] [-b actBlock] [-g GAMSSysDir] [-o n] numBlocks file[Stem]\n");
    printf("  -h          print usage\n\n");
    printf("  Splitting operation:\n");
    printf("    -t        split GDX file into multiple GDX files\n");
@@ -19,8 +19,7 @@ void printUsage(void)
    printf("    numblocks total number of blocks\n");
    printf("    file      GDX file\n\n");
    printf("  Analysis operation:\n");
-   printf("    -s        strict mode\n");
-   printf("    -S        very strict mode\n");
+   printf("    -d        debugging mode (unmatched vars, equs, and matrix elements with good names)\n");
    printf("    -w        output of block structure counts to stdout\n");
    printf("    -W        output of block structure to stdout\n");
    printf("    -x        fileStem is GDX file stem\n");
@@ -36,7 +35,7 @@ void printUsage(void)
 
 int  readOneBlock(const int numBlocks, 
                   const int actBlock, 
-                  const int strict, 
+                  const int debug, 
                   const int offset, 
                   const int fType, 
                   const char* pDirStem,
@@ -48,14 +47,14 @@ int  readOneBlock(const int numBlocks,
       sprintf(fname,"%s%d.gdx", pDirStem, actBlock);
    else
       strcpy(fname,pDirStem);
-   return readBlock(numBlocks,actBlock,strict,offset,fname,pGAMSSysDir,block);
+   return readBlock(numBlocks,actBlock,debug,offset,fname,pGAMSSysDir,block);
 }   
 
 int main(int argc, char* argv[])
 {
    int numBlocks = 0;
    int actBlock = -1;
-   int strict = 0;
+   int debug = 0;
    int offset = 1;
    int gnuplot = 0;
    int printMat = 0;
@@ -75,8 +74,7 @@ int main(int argc, char* argv[])
             case 'g': pGAMSSysDir = *++argv; argc--; break;
             case 'b': actBlock = atoi(*++argv); argc--; break;
             case 'o': offset = atoi(*++argv); argc--; break;
-            case 's': strict = 1; break;
-            case 'S': strict = 2; break;
+            case 'd': debug = 1; break;
             case 't': gdxSplit = 1; break;
             case 'T': gdxSplit = 2; break;
             case 'w': printMat = 1; break;
@@ -93,6 +91,8 @@ int main(int argc, char* argv[])
       printUsage();
       exit(1);
    }
+   if (debug && fType == GDXFILESTEM)
+	   debug = 2;
    numBlocks = atoi(*argv); 
    pFileStem = *++argv; 
 
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
    {
       GMSPIPSBlockData_t block;
       
-      rc = readOneBlock(numBlocks, actBlock, strict, offset, fType, pFileStem, pGAMSSysDir, &block);
+      rc = readOneBlock(numBlocks, actBlock, debug, offset, fType, pFileStem, pGAMSSysDir, &block);
       if (rc)
       {
          printf("readOneBlock with actBlock=%d failed (rc=%d)\n", actBlock, rc);
@@ -140,7 +140,7 @@ int main(int argc, char* argv[])
       for (int blk=0; blk<numBlocks; blk++)
       {
          blocks[blk] = (GMSPIPSBlockData_t*) malloc(sizeof(GMSPIPSBlockData_t));
-         rc = readOneBlock(numBlocks, blk, strict, offset, fType, pFileStem, pGAMSSysDir, blocks[blk]);
+         rc = readOneBlock(numBlocks, blk, debug, offset, fType, pFileStem, pGAMSSysDir, blocks[blk]);
          if (rc)
          {
             printf("readOneBlock with blk=%d failed (rc=%d)\n", blk, rc);
