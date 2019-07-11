@@ -68,6 +68,10 @@ public:
   int rows() { return m; }
   int cols() { return n; }
 
+  bool isValid(bool verbose = false) const;
+  bool isSorted() const;
+
+
   int length() { return len; };
   int numberOfNonZeros() const {	return krowM[m]; };
   virtual void fromGetDense( int row, int col, double * A, int lda,
@@ -186,11 +190,42 @@ public:
   void permuteRows(const std::vector<unsigned int>& permvec);
   void permuteCols(const std::vector<unsigned int>& permvec);
 
+  void sortCols();
+
   void dump(const string& filename);
 
   void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
 
+  void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
+
+  void getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const;
+
+  void deleteEmptyRows(int*& orgIndex);
+
+  // should be used with care! other methods might nor work correctly todo: add flag to check in other methods
+  void c2fortran();
+
+  void fortran2c();
+
+  bool fortranIndexed() const;
+
+  void set2FortranIndexed();
+
+  void deleteZeroRowsColsSym(int*& new2orgIdx);
+
+
+  /*
+   * computes the full sparse matrix representation from a upper triangular symmetric sparse representation
+   *
+   * Must be square, the storage for the full representation will be allocated within the matrix and must be released later
+   */
+  void fullMatrixFromUpperTriangular(int*& rowPtrFull, int*& colIdxFull, double*& valuesFull) const;
+
+
   virtual ~SparseStorage();
+
+private:
+  bool isFortranIndexed;
 };
 
 #endif

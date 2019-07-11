@@ -9,7 +9,6 @@
 #include "StochVector.h"
 #include "SimpleVector.h"
 #include "DoubleMatrixTypes.h"
-#include "StochResourcePlanner.h"
 
 #include <cmath>
 using namespace std;
@@ -134,50 +133,62 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
 
   MPI_Group mpiWorldGroup; 
-  ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup); assert(ierr==MPI_SUCCESS);
-  for(size_t i=0; i<children.size(); i++) {
+  ierr = MPI_Comm_group(commWrkrs, &mpiWorldGroup); assert(ierr == MPI_SUCCESS);
+  (void) ierr;
+  for( size_t i = 0; i < children.size(); i++ )
+  {
+     const int noRanks4ThisChild = mapChildNodesToProcs[i].size();
+     int * ranksToKeep = new int[noRanks4ThisChild];
 
-    int isChildInThisProcess=0;
-    int noRanks4ThisChild = mapChildNodesToProcs[i].size();
-    int * ranksToKeep = new int[noRanks4ThisChild];
+     bool isChildInThisProcess = false;
 
-    for(int proc=0; proc<noRanks4ThisChild; proc++) {
-      ranksToKeep[proc] = mapChildNodesToProcs[i][proc];
-      if(rankMe==ranksToKeep[proc])
-	isChildInThisProcess=1;
-    }   
+     for( int proc = 0; proc < noRanks4ThisChild; proc++ )
+     {
+        ranksToKeep[proc] = mapChildNodesToProcs[i][proc];
+        if( rankMe == ranksToKeep[proc] )
+           isChildInThisProcess = true;
+     }
 
-    vector<int> childRanks(noRanks4ThisChild);
-    for(int c=0; c<noRanks4ThisChild; c++) childRanks[c]=ranksToKeep[c];
+     vector<int> childRanks(noRanks4ThisChild);
+     for( int c = 0; c < noRanks4ThisChild; c++ )
+        childRanks[c] = ranksToKeep[c];
 
-    if(isChildInThisProcess) {
-   
-      if(noRanks4ThisChild==1) {
-	children[i]->assignProcesses(MPI_COMM_SELF,childRanks); 
-      } else {
-	//create the communicator this child should use
-	MPI_Comm  childComm; MPI_Group childGroup;
-	ierr = MPI_Group_incl(mpiWorldGroup, noRanks4ThisChild, ranksToKeep, &childGroup);
-	assert(ierr==MPI_SUCCESS);
-	delete[] ranksToKeep;
-	
-	ierr = MPI_Comm_create(commWrkrs, childGroup, &childComm); assert(ierr==MPI_SUCCESS);
-	MPI_Group_free(&childGroup); //MPI_Group_free(&mpiWorldGroup);
-	
-	//!log printf("----Node [%d] is on proc [%d]\n", i, rankMe);fflush(stdout); 
-	children[i]->assignProcesses(childComm,childRanks); 
-      } //END noRanks4ThisChild>1
-    } else { //this Child was not assigned to this CPU
-      delete[] ranksToKeep; 
-      //!log printf("---Node [%d] not on  proc [%d] \n", i, rankMe);fflush(stdout);
-      // continue solving the assignment problem so that 
-      // each node knows the CPUs the other nodes are on.
-      
-      children[i]->assignProcesses(MPI_COMM_NULL,childRanks); 
-    }
+     if( isChildInThisProcess )
+     {
+        if( noRanks4ThisChild == 1 )
+        {
+           children[i]->assignProcesses(MPI_COMM_SELF, childRanks);
+        }
+        else
+        {
+           //create the communicator this child should use
+           MPI_Comm childComm;
+           MPI_Group childGroup;
+           ierr = MPI_Group_incl(mpiWorldGroup, noRanks4ThisChild, ranksToKeep,
+                 &childGroup);
+           assert(ierr==MPI_SUCCESS);
+
+           ierr = MPI_Comm_create(commWrkrs, childGroup, &childComm);
+           assert(ierr==MPI_SUCCESS);
+           MPI_Group_free(&childGroup); //MPI_Group_free(&mpiWorldGroup);
+
+           //!log printf("----Node [%d] is on proc [%d]\n", i, rankMe);fflush(stdout);
+           children[i]->assignProcesses(childComm, childRanks);
+        } //END noRanks4ThisChild>1
+     }
+     else
+     { //this Child was not assigned to this CPU
+        //!log printf("---Node [%d] not on  proc [%d] \n", i, rankMe);fflush(stdout);
+        // continue solving the assignment problem so that
+        // each node knows the CPUs the other nodes are on.
+
+        children[i]->assignProcesses(MPI_COMM_NULL, childRanks);
+     }
+
+     delete[] ranksToKeep;
   }
-  MPI_Group_free(&mpiWorldGroup);
 
+  MPI_Group_free(&mpiWorldGroup);
 }
 
 

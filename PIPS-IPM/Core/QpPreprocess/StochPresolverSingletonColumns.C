@@ -8,8 +8,8 @@
 #include "StochPresolverSingletonColumns.h"
 
 
-StochPresolverSingletonColumns::StochPresolverSingletonColumns(PresolveData& presData)
-: StochPresolverBase(presData)
+StochPresolverSingletonColumns::StochPresolverSingletonColumns(PresolveData& presData, StochPostsolver* postsolver)
+: StochPresolverBase(presData, postsolver)
 {
  // todo
 }
@@ -22,14 +22,39 @@ StochPresolverSingletonColumns::~StochPresolverSingletonColumns()
 
 void StochPresolverSingletonColumns::applyPresolving()
 {
-   // countSingletonColumns();
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
+
    int myRank;
    bool iAmDistrib;
    getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
 
-   if( myRank == 0 ) cout<<"Start Singleton Column Presolving..."<<endl;
+#ifndef NDEBUG
+   if( myRank == 0 )
+   {
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+      std::cout << "--- Before singleton columns presolving:" << std::endl;
+   }
+   countRowsCols();
+#endif
 
-   // todo
+
+#ifndef NDEBUG
+   if( myRank == 0 )
+      std::cout << "--- After singleton columns presolving:" << std::endl;
+   countRowsCols();
+   if( myRank == 0 )
+      std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+#endif
+
+   assert(presData.reductionsEmpty());
+   assert(presData.presProb->isRootNodeInSync());
+   assert(verifyNnzcounters());
+   assert(indivObjOffset == 0.0);
+   assert(newBoundsParent.size() == 0);
 }
 
 void StochPresolverSingletonColumns::countSingletonColumns()
@@ -101,9 +126,10 @@ void StochPresolverSingletonColumns::initSingletonColsBlock(int it, SimpleVector
       if( nnzCol[i] == 1.0 )
          nSC++;
 
-   if( setCPBmatsChild(presProb->A, (int)it, EQUALITY_SYSTEM) )
+   if(true)
+//   if( setCPBmatsChild(presProb->A, (int)it, EQUALITY_SYSTEM) )
    {
-      setCPBlmatsChild(presProb->A, (int)it);
+//      setCPBlmatsChild(presProb->A, (int)it);
       for( int i = 0; i < nnzColSimple->n; i++ )
          if( nnzCol[i] == 1.0 )
             if( currBmatTrans->rowptr[i].start +1 == currBmatTrans->rowptr[i].end ||
@@ -112,7 +138,7 @@ void StochPresolverSingletonColumns::initSingletonColsBlock(int it, SimpleVector
                nSColEq++;
                if(dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).children[it]->vec)->elements()[i] == 0.0 )
                   nZeroCostSC++;
-               setCPColumnChild(it);
+//               setCPColumnChild(it);
                if( currIxlowChild->elements()[i]!=0.0 && currIxuppChild->elements()[i]!=0.0 )
                   nBothBounds++;
                else if( currIxlowChild->elements()[i]!=0.0 )
@@ -130,9 +156,9 @@ void StochPresolverSingletonColumns::initSingletonColsBlock(int it, SimpleVector
                   nSColEqLinkRow++;
             }
    }
-   if( setCPBmatsChild(presProb->C, (int)it, INEQUALITY_SYSTEM) )
+//   if( setCPBmatsChild(presProb->C, (int)it, INEQUALITY_SYSTEM) )
    {
-      setCPBlmatsChild(presProb->C, (int)it);
+//      setCPBlmatsChild(presProb->C, (int)it);
       for( int i = 0; i < nnzColSimple->n; i++ )
          if( nnzCol[i] == 1.0 )
             if( currBmatTrans->rowptr[i].start +1 == currBmatTrans->rowptr[i].end ||

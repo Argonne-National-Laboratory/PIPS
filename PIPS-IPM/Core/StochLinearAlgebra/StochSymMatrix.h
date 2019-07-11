@@ -43,7 +43,7 @@ public:
 
   virtual StochSymMatrix* clone() const;
 
-  virtual int isKindOf( int type );
+  virtual int isKindOf( int type ) const;
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent );
   virtual void fromGetDense( int row, int col, double * A, int lda,
@@ -124,7 +124,7 @@ public:
 
   virtual void AddChild(StochSymMatrix* child){};
 
-  virtual int isKindOf( int type );
+  virtual int isKindOf( int type ) const;
 
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent ){};

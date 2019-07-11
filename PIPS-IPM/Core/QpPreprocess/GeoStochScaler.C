@@ -6,6 +6,7 @@
  */
 
 //#define PIPS_DEBUG
+#define PIPS_OUTPUT_SCALER
 #include "GeoStochScaler.h"
 
 #include <cmath>
@@ -20,7 +21,7 @@ GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
    int myRank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-   if( myRank == 0) std::cout<<"Creating GeoStochScaler..."<<endl;
+   if( myRank == 0) std::cout<<"Creating GeoStochScaler... bitshifting="<< bitshifting <<endl;
    equilibrate = equiScaling;
 
    // todo: adjust parameters
@@ -35,25 +36,24 @@ void GeoStochScaler::doObjScaling()
 
    obj->componentMult(*vec_colscale);
 
-   const double absmax = obj->infnorm();
-   assert(absmax >= 0);
-
+ //  const double absmax = obj->infnorm();
    double absmin = 0.0;
+
    obj->absminNonZero( absmin, pips_eps );
 
-   if( absmin < pips_eps )
-   {
-      PIPSdebugMessage("Objective Scaling: absmin=%f < %f, setting objective to zero. \n", absmin, pips_eps);
-      obj->setToZero();
-   }
-   else
+   // all elements of scaled obj smaller than pips_eps?
+   if( PIPSisEQ(absmin, -1.0) )
    {
       int myRank = 0;
       MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-      const double scaleFactor = min(std::sqrt(absmax * absmin), maxobjscale);
-
-      if( myRank == 0) printf("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
+      if( myRank == 0 )
+         std::cout << "Almost zero objective after geometric scaling!" << std::endl;
+   }
+   else
+   {
+      const double scaleFactor = 1.0; //std::sqrt(absmax * absmin);
+      // PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
 
       assert( scaleFactor >= 0.0 );
       scaleObjVector(scaleFactor);
@@ -83,8 +83,11 @@ void GeoStochScaler::scale()
    const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, NULL);
    const double colratio = maxColRatio(*colmax, *colmin, NULL, NULL);
 
-   PIPSdebugMessage("rowratio before scaling %f \n", rowratio);
-   PIPSdebugMessage("colratio before scaling %f \n", colratio);
+   int myRank = 0;
+   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+
+   if( myRank == 0 ) printf("rowratio before scaling %f \n", rowratio);
+   if( myRank == 0 ) printf("colratio before scaling %f \n", colratio);
 
    double p0start, p1start;
    if( colratio < rowratio && !with_sides )
@@ -109,7 +112,7 @@ void GeoStochScaler::scale()
 
    if( !geoscale )
    {
-      PIPSdebugMessage("No geometric scaling done, ratio already good enough.\n");
+      if( myRank == 0 ) printf("No geometric scaling done, ratio already good enough.\n");
       if( !equilibrate )
          return;
       PIPSdebugMessage("But will still perform equilibrium scaling.\n");
@@ -175,7 +178,7 @@ void GeoStochScaler::scale()
 
    if( !geoscale && !equilibrate )
    {
-      PIPSdebugMessage("No geometric scaling done, improvement was not good enough.\n");
+      if( myRank == 0 ) std::cout<< "No geometric scaling done, improvement was not good enough..." << std::endl;
    }
    else
    {
@@ -217,7 +220,7 @@ void GeoStochScaler::scale()
             "objnorm: %f \n Anorm:  %f \n Cnorm  %f \n bAnorm %f \n rhsCnorm %f \n lhsCnorm %f \n buxnorm %f \n blxnorm %f \n  ",
             obj->infnorm(), A->abmaxnorm(), C->abmaxnorm(), bA->infnorm(), rhsC->infnorm(), lhsC->infnorm(), bux->infnorm(), blx->infnorm());
 
-#ifdef PIPS_DEBUG
+#ifdef PIPS_OUTPUT_SCALER
       StochVectorHandle xrowmaxA(dynamic_cast<StochVector*>(bA->clone()));
       StochVectorHandle xrowminA(dynamic_cast<StochVector*>(bA->clone()));
       StochVectorHandle xrowmaxC(dynamic_cast<StochVector*>(rhsC->clone()));
@@ -228,8 +231,8 @@ void GeoStochScaler::scale()
       const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, NULL);
       const double xcolratio = maxColRatio(*xcolmax, *xcolmin, NULL, NULL);
 
-      PIPSdebugMessage("rowratio after scaling %f \n", xrowratio);
-      PIPSdebugMessage("colratio after scaling %f \n", xcolratio);
+      if( myRank == 0 ) printf("rowratio after scaling %f \n", xrowratio);
+      if( myRank == 0 ) printf("colratio after scaling %f \n", xcolratio);
 #endif
 
       if( equilibrate )

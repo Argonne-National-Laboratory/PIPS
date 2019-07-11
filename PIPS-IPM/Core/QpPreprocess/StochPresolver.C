@@ -5,15 +5,19 @@
  *      Author: bzfrehfe
  */
 
-
 #include "StochPresolver.h"
-#include <cassert>
-#include <iostream>
-#include <cmath>
-#include <utility>
-#include <math.h>
 #include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <limits>
+#include <iostream>
+#include <utility>
+#include <vector>
 
+#include "StochVector.h"
+#include "StochGenMatrix.h"
+#include "SmartPointer.h"
+#include "sData.h"
 #include "DoubleMatrix.h"
 #include "SparseGenMatrix.h"
 #include "StochVectorHandle.h"
@@ -24,18 +28,21 @@
 #include "StochPresolverSingletonRows.h"
 #include "StochPresolverSingletonColumns.h"
 #include "PresolveData.h"
+#include "StochPostsolver.h"
 #include "StochPresolverParallelRows.h"
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
+#include "pipschecks.h"
 
-StochPresolver::StochPresolver(const Data* prob)
- : QpPresolver(prob)
+StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = NULL)
+ : QpPresolver(prob, postsolver)
 {
+   // todo
 }
-
 
 StochPresolver::~StochPresolver()
 {
+   // todo
 }
 
 Data* StochPresolver::presolve()
@@ -43,72 +50,59 @@ Data* StochPresolver::presolve()
    int myRank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-   if( myRank == 0) std::cout << "start stoch presolving" << std::endl;
+   if( myRank == 0 )
+      std::cout << "start stoch presolving" << std::endl;
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
-   // clone and initialize dynamic storage
-
+#if 0 // todo add flag
    ofstream myfile;
-   /*myfile.open ("before.txt");
+   myfile.open ("before_presolving.txt");
    sorigprob->writeToStreamDense(myfile);
-   myfile.close();*/
+   myfile.close();
+#endif
 
-   // init presolve data presData:
+   /* initialize presolve data */
    PresolveData presData(sorigprob);
-   presData.initialize();
 
-   // init all presolvers:
+   assert( sorigprob->isRootNodeInSync());
+   assert( presData.presProb->isRootNodeInSync() );
 
-   StochPresolverBoundStrengthening presolverBS(presData);
-   StochPresolverParallelRows presolverParallelRow(presData);
-   StochPresolverModelCleanup presolverCleanup(presData);
-   StochPresolverSingletonRows presolverSR(presData);
+   /* initialize all presolvers */
+   StochPresolverBoundStrengthening presolverBS(presData, dynamic_cast<StochPostsolver*>(postsolver));
+   StochPresolverParallelRows presolverParallelRow(presData, dynamic_cast<StochPostsolver*>(postsolver));
+   StochPresolverModelCleanup presolverCleanup(presData, dynamic_cast<StochPostsolver*>(postsolver));
+   StochPresolverSingletonRows presolverSR(presData, dynamic_cast<StochPostsolver*>(postsolver));
 
-#ifndef NDEBUG
    if( myRank == 0 )
-      cout<<"--- Before Presolving:"<<endl;
+      std::cout <<"--- Before Presolving: " << std::endl;
    presolverSR.countRowsCols();
-#endif
 
-   presolverSR.applyPresolving();
-   presolverBS.applyPresolving();
-   presolverCleanup.applyPresolving();
-   presolverParallelRow.applyPresolving();
-   presolverSR.applyPresolving();
+   // todo loop, and exhaustive
+   // some list holding all presolvers - eg one presolving run
+   // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
+   for( int i = 0; i < 1; ++i )
+   {
+      /* singleton rows */
+      presolverCleanup.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverParallelRow.applyPresolving();
+      presolverCleanup.applyPresolving();
+   }
 
-
-/*   cout<<"nRowElemsA "<<endl;
-   nRowElemsA->writeToStreamAll(cout);
-   cout<<"nRowElemsC "<<endl;
-   nRowElemsC->writeToStreamAll(cout);
-   cout<<"nColElems "<<endl;
-   nColElems->writeToStreamAll(cout);
-*/
-#ifndef NDEBUG
-   assert( presolverSR.verifyNnzcounters() );
    if( myRank == 0 )
-      cout<<"--- After Presolving:"<<endl;
-   presolverSR.countRowsCols();
-#endif
-   //if( myRank == 0) cout<<"Finalizing presolved Data."<<endl;
+      std::cout << "--- After Presolving:" << std::endl;
+   presolverCleanup.countRowsCols();
+
+   assert( presData.presProb->isRootNodeInSync() );
+//      presData.presProb->writeToStreamDense(std::cout);
    sData* finalPresData = presData.finalize();
 
-   /*myfile.open("after.txt");
-   finalPresData->writeToStreamDense(myfile);
-   myfile.close();*/
+//   finalPresData->writeToStreamDense(std::cout);
 
-   if( myRank==0 )
-   {
-      std::cout << "original problem: variables, equ. constraints., inequ. constraints" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
-      std::cout << "presolved problem: variables, equ. constraints., inequ. constraints " << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
-   }
-#ifdef TIMING
-   std::cout << "sorigprob nx, my, mz" << sorigprob->nx << " " << sorigprob->my << " " << sorigprob->mz << std::endl;
-   std::cout << "finalPresData nx, my, mz" << finalPresData->nx << " " << finalPresData->my << " " << finalPresData->mz << std::endl;
-#endif
+   assert( finalPresData->isRootNodeInSync() );
+//   exit(1);
 
    return finalPresData;
 }
-
-

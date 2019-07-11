@@ -7,15 +7,17 @@
 
 #include "stochasticInput.hpp"
 
-#include "Presolver.h"
+#include "sTree.h"
 #include "sData.h"
 #include "sResiduals.h"
 #include "sVars.h"
-#include "sTree.h"
 #include "StochMonitor.h"
-#include "Scaler.h"
 #include <cstdlib>
+
 #include "PreprocessFactory.h"
+#include "Scaler.h"
+#include "Presolver.h"
+#include "Postsolver.h"
 
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
@@ -62,6 +64,7 @@ class PIPSIpmInterface
   sResiduals *   resids;
 
   Presolver*    presolver;
+  Postsolver* postsolver;
   Scaler *      scaler;
   IPMSOLVER *   solver;
 
@@ -119,6 +122,7 @@ template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type,
       PresolverType presolver_type) : comm(comm)
 {
+  bool postsolve = true; // todo
 
   int mype;
   MPI_Comm_rank(comm,&mype);
@@ -142,7 +146,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
      MPI_Barrier(comm);
      const double t0_presolve = MPI_Wtime();
 
-     presolver = prefactory.makePresolver(origData, presolver_type);
+     postsolver = (postsolve == true) ? prefactory.makePostsolver(origData) : NULL;
+     presolver = prefactory.makePresolver(origData, presolver_type, postsolver);
 
      data = dynamic_cast<sData*>(presolver->presolve());
 
@@ -157,6 +162,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   {
      data = dynamic_cast<sData*>(factory->makeData());
      origData = NULL;
+     postsolver = NULL;
      presolver = NULL;
   }
 
@@ -279,6 +285,9 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   }
 #endif
 
+   // todo postsolve an unscaled sVars object holding the solution
+
+
 }
 
 template<typename FORMULATION, typename SOLVER>
@@ -311,6 +320,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete origData;
   delete factory;
   delete scaler;
+  delete postsolver;
   delete presolver;
 }
 
@@ -494,33 +504,45 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrim
 
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const 
-{
-  SimpleVector const &y     = *dynamic_cast<SimpleVector const*>( (dynamic_cast<StochVector const&>(*vars->y)).vec );
-  SimpleVector const &z     = *dynamic_cast<SimpleVector const*>( (dynamic_cast<StochVector const&>(*vars->z)).vec );
-  SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>( (dynamic_cast<StochVector const&>(*vars->iclow)).vec);
-  SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>( (dynamic_cast<StochVector const&>(*vars->icupp)).vec);
-  
-  if(!y.length() && !z.length()) 
-    return std::vector<double>(); //this vector is not on this processor
-  else {
-    std::vector<int> const &map=factory->tree->idx_EqIneq_Map;
-    
-    std::vector<double> multipliers(map.size());
-    for(size_t i=0; i<map.size(); i++) {
-      int idx=map[i];
-      if(idx<0) {
-	//equality
-	idx=-idx-1; assert(idx>=0);
-	multipliers[i]=y[idx];
-      } else {
-	//inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
-	//\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
-	assert(iclow[idx]>0 || icupp[idx]>0);
-	multipliers[i]=z[idx];
+
+   {
+      SimpleVector const &y =
+            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
+      SimpleVector const &z =
+            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
+
+
+      if( !y.length() && !z.length() )
+         return std::vector<double>(); //this vector is not on this processor
+      else
+      {
+         std::vector<int> const &map = factory->tree->idx_EqIneq_Map;
+
+         std::vector<double> multipliers(map.size());
+         for( size_t i = 0; i < map.size(); i++ )
+         {
+            int idx = map[i];
+            if( idx < 0 )
+            {
+               //equality
+               idx = -idx - 1;
+               assert(idx >= 0);
+               multipliers[i] = y[idx];
+            }
+            else
+            {
+               //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
+               //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
+#ifndef NDEBUG
+               SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->iclow)).vec);
+               SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->icupp)).vec);
+               assert(iclow[idx] > 0 || icupp[idx] > 0);
+#endif
+               multipliers[i] = z[idx];
+            }
+         }
+         return multipliers;
       }
-    }
-    return multipliers;    
-  }
 }
 
 

@@ -22,6 +22,9 @@
 #include "QpGenStoch.h"
 #include "StochResourcesMonitor.h"
 
+#include "sVars.h"
+#include "sData.h"
+
 #include <cstring>
 #include <iostream>
 #include <fstream>
@@ -68,8 +71,8 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    StepFactor1 = 1.5;
 
 #ifdef REDUCED_ACCURACY
-   artol = 1e-3;
-   mutol = 2.e-5;
+   artol = 1.e-3;
+   mutol = 1.e-5;
 #else
    mutol = 1.e-6; // todo parameter
 #endif
@@ -162,7 +165,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
                status_code, 0);
       }
       // *** Predictor step ***
-
       resid->set_r3_xz_alpha(iterate, 0.0);
 
       sys->factor(prob, iterate);
@@ -189,7 +191,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       // form right hand side of linear system:
       corrector_resid->set_r3_xz_alpha(step, -sigma * mu);
-
       sys->solve(prob, iterate, corrector_resid, corrector_step);
       corrector_step->negate();
 

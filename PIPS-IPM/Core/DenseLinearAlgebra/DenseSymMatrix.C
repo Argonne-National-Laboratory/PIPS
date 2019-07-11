@@ -22,7 +22,7 @@ extern "C" void  dsyrk_(char* UPLO, char* TRANS,
 			double* alpha, double* A, int* lda,
 			double* beta,  double* C, int* ldc);
 
-int DenseSymMatrix::isKindOf( int matrixType )
+int DenseSymMatrix::isKindOf( int matrixType ) const
 {
   return matrixType == kDenseSymMatrix || matrixType == kSymMatrix;
 }

@@ -34,7 +34,7 @@ public:
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
 
-  virtual int isKindOf( int type );
+  virtual int isKindOf( int type ) const;
 
   virtual void putSparseTriple( int irow[], int len, int jcol[], double A[], 
 				int& info );
@@ -79,6 +79,8 @@ public:
   
   virtual void writeToStream(ostream& out) const;
   
+  virtual void writeToStreamDense(ostream& out) const;
+
   virtual void randomizePSD(double *);
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
@@ -95,6 +97,13 @@ public:
   void reduceToLower();
 
   void deleteEmptyRowsCols(const OoqpVector& nnzVec);
+
+  void deleteZeroRowsCols(int*& new2orgIdx);
+
+  void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
+
+  void getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const;
+
 
   virtual ~SparseSymMatrix() {};
 };
