@@ -96,7 +96,7 @@ int writeBlock(const char* scrFilename,  /** < scratch file name. If NULL write 
       printf("mDL:       %5d\n", blk->mDL);
       if ( blk->mDL )
       {
-         PRINTV4(mBL,idlow,dlow,idupp,dupp);
+         PRINTV4(mDL,idlow,dlow,idupp,dupp);
          PRINTMAT(DL, mDL);
       }
    }
@@ -976,6 +976,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    int* varstage = NULL;
    int* rowstage = NULL;
    int* vemap = NULL;
+   int zjv=0;
 
    assert(blk);
    assert(numBlocks>0);   
@@ -1143,7 +1144,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
 	   if ( 0==actBlock )
        {
           printf("Zero joint variable count!\n");
-          return 0;
+		  zjv = 1;
        }
 	   else
        {
@@ -1151,45 +1152,48 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
           return 1;
        }
 
-   /* Variable allocation */
-   blk->c     = (double *)  calloc(blk->ni, sizeof(double)); 
-   blk->xlow  = (double *)  calloc(blk->ni, sizeof(double)); 
-   blk->xupp  = (double *)  calloc(blk->ni, sizeof(double)); 
-   blk->ixlow = (int16_t *) calloc(blk->ni, sizeof(int16_t)); 
-   blk->ixupp = (int16_t *) calloc(blk->ni, sizeof(int16_t));
-   
-   DEBUG("Second pass over the variables to get the bounds");
-   /* Second pass over the variables to get the bounds */
-   GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &idummy));
-   {  int n=0;
-      while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
-      {
-         int blockNr = (int) vals[GMS_VAL_SCALE] - offset;
-         if ( objVarUel==keyInt[0] ) /* skip objective variable */
-            continue;
-         if ( actBlock == blockNr )
+   if (!zjv)
+   {
+      /* Variable allocation */
+      blk->c     = (double *)  calloc(blk->ni, sizeof(double)); 
+      blk->xlow  = (double *)  calloc(blk->ni, sizeof(double)); 
+      blk->xupp  = (double *)  calloc(blk->ni, sizeof(double)); 
+      blk->ixlow = (int16_t *) calloc(blk->ni, sizeof(int16_t)); 
+      blk->ixupp = (int16_t *) calloc(blk->ni, sizeof(int16_t));
+      
+      DEBUG("Second pass over the variables to get the bounds");
+      /* Second pass over the variables to get the bounds */
+      GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &idummy));
+      {  int n=0;
+         while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
          {
-            if ( GMS_SV_MINF!=vals[GMS_VAL_LOWER] )
+            int blockNr = (int) vals[GMS_VAL_SCALE] - offset;
+            if ( objVarUel==keyInt[0] ) /* skip objective variable */
+               continue;
+            if ( actBlock == blockNr )
             {
-               blk->xlow[n] = vals[GMS_VAL_LOWER];
-               blk->ixlow[n] = 1;
+               if ( GMS_SV_MINF!=vals[GMS_VAL_LOWER] )
+               {
+                  blk->xlow[n] = vals[GMS_VAL_LOWER];
+                  blk->ixlow[n] = 1;
+               }
+               if ( GMS_SV_PINF!=vals[GMS_VAL_UPPER] )
+               {
+                  blk->xupp[n] = vals[GMS_VAL_UPPER];
+                  blk->ixupp[n] = 1;
+               }
+               n++;
+               assert(n<=blk->ni);
             }
-            if ( GMS_SV_PINF!=vals[GMS_VAL_UPPER] )
-            {
-               blk->xupp[n] = vals[GMS_VAL_UPPER];
-               blk->ixupp[n] = 1;
-            }
-            n++;
-            assert(n<=blk->ni);
          }
       }
+      GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
+      
+      DEBUG("First pass over the matrix to identify objective function");
+      /* First pass over the matrix to identify objective function */
+      cVal = (double *)malloc(gdxN*sizeof(double));
+      cIdxUel = (int *)malloc(gdxN*sizeof(int));
    }
-   GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
-   
-   DEBUG("First pass over the matrix to identify objective function");
-   /* First pass over the matrix to identify objective function */
-   cVal = (double *)malloc(gdxN*sizeof(double));
-   cIdxUel = (int *)malloc(gdxN*sizeof(int));
    
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "A", &symNr));
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &gdxNNZ));
@@ -1207,7 +1211,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
          objRowUel = keyInt[0];
          objCoef = vals[GMS_VAL_LEVEL];
       }
-      else if ( 0==objRowUel || keyInt[0] == objRowUel )
+      else if ((0==objRowUel || keyInt[0] == objRowUel) && !zjv )
       {
          cVal[cCnt] = vals[GMS_VAL_LEVEL];
          cIdxUel[cCnt] = keyInt[1];
@@ -1371,6 +1375,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
       assert(mDL==blk->mDL);
    }
    
+   if (zjv) goto skipMatrix;
    /* For now */
    //assert(0==blk->mBL);
    //assert(0==blk->mDL);
@@ -1533,10 +1538,12 @@ if (blk->rm##mat)                                                               
       FILLMAT(D,C);
    }
 
-   gdxClose(fGDX);
-   gdxFree(&fGDX);
    free(cVal);
    free(cIdxUel);
+
+   skipMatrix: 
+   gdxClose(fGDX);
+   gdxFree(&fGDX);
    free(varPerm);
    free(equTypeNr);
    free(vemap);
