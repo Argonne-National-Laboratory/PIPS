@@ -125,10 +125,20 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
      int use;
      sscanf(var, "%d", &use);
      if( use == 1 )
-     {
         useSparseRhs = true;
-     }
   }
+
+  var = getenv("PARDISO_SYMB_INTERVALL");
+  symbFactorInterval = symbFactorIntervalDefault;
+
+  if( var != NULL )
+  {
+     int interval;
+     sscanf(var, "%d", &interval);
+     if( interval >= 1 )
+        symbFactorInterval = interval;
+  }
+
 
   if( myRank == 0 )
   {
@@ -734,14 +744,12 @@ void PardisoSchurSolver::computeSC(int nSCO,
    bool doSymbFact = false;
    if( firstSolve )
    {
-
       firstSolveCall(R, A, C, F, G, nSCO);
       firstSolve = false;
       doSymbFact = true;
    }
    else
    {
-
       //update diagonal entries in the PARDISO aug sys
       const double* eltsMsys = Msys->getStorageRef().M;
       map<int, int>::iterator it;
@@ -784,9 +792,11 @@ void PardisoSchurSolver::computeSC(int nSCO,
 #endif
 
    const int nIter = (int) g_iterNumber;
-   const int symbEvery = 5;
-   if( (nIter % symbEvery) == 0 )
+
+   if( (nIter % symbFactorInterval) == 0 )
+   {
       doSymbFact = true;
+   }
 
    int phase = 22; // numerical factorization
    if( doSymbFact )
