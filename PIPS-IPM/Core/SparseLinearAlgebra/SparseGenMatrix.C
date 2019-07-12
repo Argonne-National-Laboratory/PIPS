@@ -11,7 +11,7 @@
 #include <limits>
 #include "SparseSymMatrix.h"
 
-int SparseGenMatrix::isKindOf( int type )
+int SparseGenMatrix::isKindOf( int type ) const
 {
   return type == kSparseGenMatrix || type == kGenMatrix;
 }
@@ -316,6 +316,7 @@ void SparseGenMatrix::transmultMatSymUpper( double beta, SymMatrix& y,
       double alpha, double x[], int yrowstart, int ycolstart ) const
 {
   assert(m_Mt);
+
   SparseSymMatrix& y_sparse = dynamic_cast<SparseSymMatrix &>(y);
   assert(!y_sparse.isLower);
 
@@ -667,6 +668,14 @@ void SparseGenMatrix::fromGetRowsBlock(const int* rowIndices, int nRows, int arr
    mStorage->fromGetRowsBlock(rowIndices, nRows, arrayLineSize, arrayLineOffset, rowsArrayDense, rowSparsity);
 }
 
+void SparseGenMatrix::deleteEmptyRows(int*& orgIndex)
+{
+   mStorage->deleteEmptyRows(orgIndex);
+
+   if( m_Mt )
+      this->updateTransposed();
+}
+
 void SparseGenMatrix::fromGetColsBlock(const int* colIndices, int nCols, int arrayLineSize, int arrayLineOffset,
        double* colsArrayDense, int* rowSparsity)
 {
@@ -677,6 +686,10 @@ void SparseGenMatrix::fromGetColsBlock(const int* colIndices, int nCols, int arr
          colsArrayDense, rowSparsity);
 }
 
+bool SparseGenMatrix::hasTransposed() const
+{
+   return (m_Mt != NULL);
+}
 
 void SparseGenMatrix::freeDynamicStorage()
 {

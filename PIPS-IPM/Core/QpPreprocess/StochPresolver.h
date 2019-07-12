@@ -9,13 +9,9 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVER_H_
 
 #include "QpPresolver.h"
-#include "StochVector.h"
-#include "StochGenMatrix.h"
-#include "SmartPointer.h"
-#include "sData.h"
-#include <vector>
 
 class Data;
+class Postsolver;
 
 
 /**  * @defgroup QpPreprocess
@@ -31,10 +27,9 @@ class StochPresolver : public QpPresolver
 {
 private:
 
-
 public:
 
-  StochPresolver(const Data* prob);
+  StochPresolver(const Data* prob, Postsolver* postsolver);
   virtual ~StochPresolver();
 
   virtual Data* presolve();

@@ -45,6 +45,7 @@ private:
   virtual void solve( GenMatrix& rhs, int *colSparsity);
   virtual void solve( int nrhss, double* rhss, int* colSparsity );
 
+
  // virtual void Lsolve( OoqpVector& x );
  // virtual void Dsolve( OoqpVector& x );
  // virtual void Ltsolve( OoqpVector& x );
@@ -52,6 +53,8 @@ private:
  private:
   //Helper functions for when the input is a dense matrix
   int getNumberOfNonZeros(DenseSymMatrix& m);
+  void setIparm(int* iparm);
+  bool iparmUnchanged();
   
  private:
   SparseSymMatrix* Msys;
@@ -59,9 +62,19 @@ private:
   bool first;
   void  *pt[64]; 
   int iparm[64];
+  int n;
+
+  int maxfct, mnum, phase, msglvl, solver, mtype;
+
+  int nrhs;
+  int error;
+
+
+
+#ifndef WITH_MKL_PARDISO
   int num_threads;
   double dparm[64];
-  int n;
+#endif
 
   /** storage for the upper triangular (in row-major format) */
   int     *krowM,    *jcolM;

@@ -46,17 +46,17 @@ public:
   SymMatrixHandle Q;
   GenMatrixHandle A;
   GenMatrixHandle C;
-  OoqpVectorHandle    g;
-  OoqpVectorHandle    bA;
-  OoqpVectorHandle    bux;
-  OoqpVectorHandle    ixupp;
-  OoqpVectorHandle    blx;
-  OoqpVectorHandle    ixlow;
-  OoqpVectorHandle    bu;
-  OoqpVectorHandle    icupp;
-  OoqpVectorHandle    bl;
-  OoqpVectorHandle    iclow;
-  OoqpVectorHandle    sc;
+  OoqpVectorHandle    g; // objective
+  OoqpVectorHandle    bA; // rhs equality
+  OoqpVectorHandle    bux; // upper bounds x
+  OoqpVectorHandle    ixupp; // index for upper bounds
+  OoqpVectorHandle    blx; // lower bounds x
+  OoqpVectorHandle    ixlow; // index for lower bounds
+  OoqpVectorHandle    bu; // upper bounds C
+  OoqpVectorHandle    icupp; // index upper bounds
+  OoqpVectorHandle    bl; // lower bounds C
+  OoqpVectorHandle    iclow; // index lower bounds
+  OoqpVectorHandle    sc; // scale
 
   long long nx, my, mz;
 

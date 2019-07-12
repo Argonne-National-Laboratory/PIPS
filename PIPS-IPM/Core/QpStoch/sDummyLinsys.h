@@ -2,6 +2,7 @@
 #define SDUMMYLINSYS
 
 #include "sLinsys.h"
+#include "pipsport.h"
 
 /** 
  * DUMMY Linear system class
@@ -54,6 +55,8 @@ class sDummyLinsys : public sLinsys
   virtual void computeU_V(sData *prob, DenseGenMatrix* U, DenseGenMatrix* V){};
   void sync(){};
   virtual void deleteChildren(){};
+
+  bool isDummy() const override { return true; };
 }; 
 
 #endif

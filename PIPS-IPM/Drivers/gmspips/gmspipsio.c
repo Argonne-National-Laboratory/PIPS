@@ -216,7 +216,9 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    if (!fmap)
       return -1;
    
-   fscanf(fmap,"%d%d%d%d",&p2gN,&p2gM,&objvar,&objrow);
+   if(fscanf(fmap,"%d%d%d%d",&p2gN,&p2gM,&objvar,&objrow) != 4)
+      return -1;
+
    if (varl || varmlo && varmup)
    {
       assert(p2gN==numcol);
@@ -239,25 +241,29 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    for (j=0; j<numcol; j++)
    {
       int col;
-	  double lo, up;
-      fscanf(fmap,"%d %lf %lf",&col,&lo,&up);
+	   double lo, up;
+      if( fscanf(fmap,"%d %lf %lf",&col,&lo,&up) != 3);
+         return -1;
+
       if (p2gvmap)
-	  {
+      {
          p2gvmap[j] = col;
          p2gvlo[j] = lo;
          p2gvup[j] = up;
-	  }
+	   }
    }
       
    for (i=0; i<numrow; i++)
    {
       int row, isE;
-      fscanf(fmap,"%d %d",&row,&isE);
+      if(fscanf(fmap,"%d %d",&row,&isE) != 2);
+         return -1;
+      
       if (p2gemap)
-	  {
+	   {
          p2gemap[i] = row;
          p2isE[i] = isE;
-	  }
+	   }
    }
    fclose(fmap);
    
@@ -822,13 +828,18 @@ int gdxSplitting(const int numBlocks,        /** < total number of blocks n in p
       GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &recNr));
       while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )
          if (objVarUel==keyInt[1])
+         {  
             if (objRowUel)
             {
                objRowUel = 0;
                break;
             }
             else
+            {
                objRowUel = keyInt[0];
+            }
+         }
+
       GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
    }
    else
@@ -970,7 +981,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    double* cVal=NULL;
    int cCnt=0, badCnt=0, numUels=0;
    int objDirection=1;
-   int objCoef=0.0;
+   double objCoef=0.0;
    char** varname = NULL;
    char** rowname = NULL;
    int* varstage = NULL;

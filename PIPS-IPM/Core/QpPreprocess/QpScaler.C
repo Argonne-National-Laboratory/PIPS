@@ -23,7 +23,6 @@ QpScaler::QpScaler(Data * prob, bool bitshifting)
    vec_rowscaleA = NULL;
    vec_rowscaleC = NULL;
    vec_colscale = NULL;
-   factor_objscale = 1.0;
 
    Q = qpprob->Q;
    A = qpprob->A;
@@ -246,7 +245,9 @@ void QpScaler::scaleObjVector(double scaling_factor)
    }
 
    assert(obj);
-   obj->scalarMult(factor_objscale);
+
+   if( factor_objscale != 1.0 )
+      obj->scalarMult(factor_objscale);
 }
 
 QpScaler::~QpScaler()

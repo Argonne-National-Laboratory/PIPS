@@ -53,6 +53,22 @@ Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
 #endif
   gamma_a = 1.0 / (1.0 - gamma_f);
 
+
+  printTimeStamp = false;
+  startTime = 0.0;
+
+  // todo proper parameter
+  char* var = getenv("PARDISO_PRINT_TIMESTAMP");
+  if( var != NULL )
+  {
+     int use;
+     sscanf(var, "%d", &use);
+     if( use == 1 )
+     {
+        printTimeStamp = true;
+        startTime = MPI_Wtime();
+     }
+  }
 }
 
 void Solver::start( ProblemFormulation * formulation,
@@ -392,9 +408,6 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
   phi = (rnorm + gap) / dnorm;
   phi_history[idx] = phi;
 
-#ifdef TIMING
-
-#endif
 
   if(idx > 0) {
     phi_min_history[idx] = phi_min_history[idx-1];
@@ -410,11 +423,15 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
 
   if( myrank == 0 )
   {
-    // std::cout << "artol=" << artol << " dnorm=" << dnorm  << std::endl;
-     std::cout << "mu/mutol: " << mu << "  " << mutol << "  ....   rnorm/limit: " << rnorm << " " << artol*dnorm  << std::endl;
+     std::cout << "mu/mutol: " << mu << "  " << mutol << "  ....   rnorm/limit: " << rnorm << " " << artol * dnorm << std::endl;
+
+     if( printTimeStamp )
+     {
+        const double timestamp = MPI_Wtime() - startTime;
+        std::cout << "time stamp: " << timestamp << std::endl;
+     }
   }
 
-  //if(iterate>=50) stop_code = SUCCESSFUL_TERMINATION;
   if(stop_code != NOT_FINISHED)  return stop_code;
 
   // check infeasibility condition
@@ -440,7 +457,6 @@ int Solver::defaultStatus(Data * /* data */, Variables * /* vars */,
     printf("dnorm=%g rnorm=%g artol=%g\n", rnorm, dnorm, artol);
   }
 
-  // todo use to start inner bicgstab?
   //if(mu<50*rnorm/dnorm || mu<1e-5) {
   if(mu<1.0e5*rnorm/dnorm) {
     //if(!onSafeSolver) {

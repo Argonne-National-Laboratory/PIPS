@@ -6,8 +6,13 @@
  */
 
 #include "pipschecks.h"
-#include <math.h>
+#include "pipsdef.h"
+#include "OoqpVector.h"
+#include "DoubleMatrixTypes.h"
+#include <cmath>
+#include <limits>
 #include <cassert>
+#include <algorithm>
 
 bool permutationIsValid(const std::vector<unsigned int>& perm)
 {
@@ -28,7 +33,6 @@ bool permutationIsValid(const std::vector<unsigned int>& perm)
 
    return true;
 }
-
 
 bool subMatrixIsOrdered(const int* rowptr, const int* colidx,
       int rowstart, int rowend)

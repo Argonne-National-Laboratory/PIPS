@@ -13,6 +13,7 @@
 #include "DenseSymMatrix.h"
 #include "SparseSymMatrix.h"
 #include "DenseStorageHandle.h"
+#include "pipsport.h"
 
 class PardisoIndefSolver : public DoubleLinearSolver
 {
@@ -20,7 +21,9 @@ class PardisoIndefSolver : public DoubleLinearSolver
       DenseStorageHandle mStorage;
       SparseStorageHandle mStorageSparse;
    protected:
-     // SparseSymMatrix *sparseMat; todo
+
+      static constexpr double precondDiagDomBound = 0.0001;
+
       double* x; /* solution vector */
 
       int mtype;
@@ -29,11 +32,13 @@ class PardisoIndefSolver : public DoubleLinearSolver
 
       int nrhs; /* Number of right hand sides. */
 
-      void *pt[64];  /* Internal solver memory pointer pt                  */
+      void *pt[64];  /* Internal solver memory pointer pt */
 
       /* Pardiso control parameters. */
       int iparm[64];
+#ifndef WITH_PARDISO_SOLVER
       double dparm[64];
+#endif
       int maxfct, mnum, phase, msglvl, solver;
       int* ia;
       int* ja;
@@ -44,21 +49,25 @@ class PardisoIndefSolver : public DoubleLinearSolver
    public:
       PardisoIndefSolver(DenseSymMatrix * storage);
       PardisoIndefSolver(SparseSymMatrix * storage);
-      virtual void
-      diagonalChanged(int idiag, int extent);
-      virtual void matrixChanged();
-      virtual void solve ( OoqpVector& vec );
-      virtual void solve ( GenMatrix& vec );
+      void diagonalChanged(int idiag, int extent) override;
+      void matrixChanged() override;
+      void matrixRebuild( DoubleMatrix& matrixNew ) override;
+      void solve ( OoqpVector& vec ) override;
+      void solve ( GenMatrix& vec ) override;
       virtual ~PardisoIndefSolver();
 
    private:
-      virtual void initPardiso();
-      virtual void factorizeFromSparse();
+      void initPardiso();
+      void factorizeFromSparse();
+      void factorizeFromSparse(SparseSymMatrix& matrix_fortran);
+      void factorizeFromDense();
+      void factorize();
 
-      // todo delete
-      virtual void factorizeFromDense();
-      virtual void factorize();
+      void setIparm(int* iparm);
+      bool iparmUnchanged();
 
+      bool useSparseRhs;
+      bool deleteCSRpointers;
 };
 
 #endif /* _PARDISOINDEFSOLVER_H_ */

@@ -8,6 +8,7 @@
 #include "StochVector.h"
 #include "DoubleMatrixHandle.h"
 #include "pipschecks.h"
+#include "pipsport.h"
 #include <vector>
 
 class sTree;
@@ -57,10 +58,18 @@ class sData : public QpGenData {
 
   int getLocalNnz(int& nnzQ, int& nnzB, int& nnzD);
   int getN0LinkVars() {return n0LinkVars;}
+
   // returns upper bound on number of non-zeroes in Schur complement
   int getSchurCompMaxNnz();
+
+  // distributed version
+  int getSchurCompMaxNnzDist(int blocksStart, int blocksEnd);
   bool exploitingLinkStructure() {return useLinkStructure;};
+
   SparseSymMatrix* createSchurCompSymbSparseUpper();
+
+  // distributed version
+  SparseSymMatrix* createSchurCompSymbSparseUpperDist(int blocksStart, int blocksEnd);
 
   SparseSymMatrix& getLocalQ();
   SparseGenMatrix& getLocalCrossHessian();
@@ -77,6 +86,7 @@ class sData : public QpGenData {
   void activateLinkStructureExploitation();
 
   void sync();
+  bool isRootNodeInSync() const;
 
  public:
   virtual void writeToStreamDense(ostream& out) const;
@@ -89,6 +99,28 @@ class sData : public QpGenData {
 
   void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
 
+  // marker that indicates whether a Schur complement row is (2-link) local
+  const std::vector<bool>& getSCrowMarkerLocal() const;
+
+  // marker that indicates whether a Schur complement row is (2-link) local and owned by this MPI process
+  const std::vector<bool>& getSCrowMarkerMyLocal() const;
+
+  // number of sparse 2-link equality rows
+  int n2linkRowsEq() const;
+
+  // number of sparse 2-link inequality rows
+  int n2linkRowsIneq() const;
+
+  // start and end positions for local 2-links in Schur complement that are non-zero if only
+  // blocks greater equal blocksStart and smaller blocksEnd are considered
+  void getSCrangeMarkers(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+        int& local2linksStartIneq, int& local2linksEndIneq);
+
+  // start and end positions for local 2-links in Schur complement that are owned by
+  // blocks greater equal blocksStart and smaller blocksEnd are considered
+  void getSCrangeMarkersMy(int blocksStart, int blocksEnd, int& local2linksStartEq, int& local2linksEndEq,
+        int& local2linksStartIneq, int& local2linksEndIneq);
+
   virtual ~sData();
 
  protected:
@@ -97,19 +129,39 @@ class sData : public QpGenData {
 
  private:
   int n0LinkVars;
-  const static int nLinkStats = 6;
-  const static double minStructuredLinksRatio = 0.5;
+  constexpr static int nLinkStats = 6;
+  constexpr static double minStructuredLinksRatio = 0.5;
   static std::vector<unsigned int> get0VarsRightPermutation(const std::vector<int>& linkVarsNnzCount);
   static std::vector<unsigned int> getAscending2LinkPermutation(std::vector<int>& linkStartBlocks, size_t nBlocks);
+
+  // returns number of block rows
+  static int getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths);
+
+  // returns number of non-zero block rows within specified range
+  static int getSCdiagBlocksNRows(const std::vector<int>& linkStartBlockLengths,
+        int blocksStart, int blocksEnd);
+
+  // returns number of owned block rows within specified range
+  static int getSCdiagBlocksNRowsMy(const std::vector<int>& linkStartBlockLengths,
+        int blocksStart, int blocksEnd);
 
   // max nnz in Schur complement diagonal block signified by given vector
   static int getSCdiagBlocksMaxNnz(size_t nRows,
         const std::vector<int>& linkStartBlockLengths);
 
+  // distributed version
+  static int getSCdiagBlocksMaxNnzDist(size_t nRows,
+        const std::vector<int>& linkStartBlockLengths, int blocksStart, int blocksEnd);
+
   // max nnz in Schur complement mixed block signified by given vectors
   static int  getSCmixedBlocksMaxNnz(size_t nRows, size_t nCols,
         const std::vector<int>& linkStartBlockLength_Left,
         const std::vector<int>& linkStartBlockLength_Right);
+
+  // distributed version
+  static int  getSCmixedBlocksMaxNnzDist(size_t nRows, size_t nCols,
+        const std::vector<int>& linkStartBlockLength_Left,
+        const std::vector<int>& linkStartBlockLength_Right, int blocksStart, int blocksEnd);
 
   // number of sparse 2-link rows
   static int n2linksRows(const std::vector<int>& linkStartBlockLengths);
@@ -125,6 +177,11 @@ class sData : public QpGenData {
   std::vector<unsigned int> linkVarsPermutation;
   std::vector<unsigned int> linkConsPermutationA;
   std::vector<unsigned int> linkConsPermutationC;
+  std::vector<bool> isSCrowLocal;
+  std::vector<bool> isSCrowMyLocal;
+
+  void initDistMarker(int blocksStart, int blocksEnd);
+
 
   void permuteLinkingVars();
   void permuteLinkingCons();

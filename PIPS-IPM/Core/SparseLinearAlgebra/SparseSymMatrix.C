@@ -10,7 +10,7 @@
 
 #include "DoubleMatrixTypes.h"
 
-int SparseSymMatrix::isKindOf( int type )
+int SparseSymMatrix::isKindOf( int type ) const
 {
   return type == kSparseSymMatrix || type == kSymMatrix;
 }
@@ -288,6 +288,11 @@ void SparseSymMatrix::writeToStream(ostream& out) const
   mStorage->writeToStream( out );
 }
 
+void SparseSymMatrix::writeToStreamDense(ostream& out) const
+{
+  mStorage->writeToStreamDense( out );
+}
+
 void SparseSymMatrix::mult ( double beta,  double y[], int incy,
 				 double alpha, double x[], int incx )
 {
@@ -356,5 +361,21 @@ void SparseSymMatrix::deleteEmptyRowsCols(const OoqpVector& nnzVec)
 {
    const SimpleVector& vec = dynamic_cast<const SimpleVector&>(nnzVec);
    mStorage->deleteEmptyRowsCols(vec.elements(), vec.elements());
+}
+
+void SparseSymMatrix::getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   mStorage->getSparseTriplet_c2fortran(irn, jcn, val);
+}
+
+void SparseSymMatrix::getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, double*& val) const
+{
+   mStorage->getSparseTriplet_fortran2fortran(irn, jcn, val);
+}
+
+
+void SparseSymMatrix::deleteZeroRowsCols(int*& new2orgIdx)
+{
+   mStorage->deleteZeroRowsColsSym(new2orgIdx);
 }
 

@@ -1,4 +1,4 @@
-### .gitignore file
+#### .gitignore file
 ## C++ files, from
 ## https://raw.githubusercontent.com/github/gitignore/master/C++.gitignore
 # Compiled Object files
@@ -50,6 +50,11 @@ slurm*
 build
 SharedLibraries
 build_pips
+# no additional .gitignore file for that
+ThirdPartyLibs/PARDISO
+pipstmp
+GAMSsmall
+PIPS-IPM/Drivers/simple/simple_data_12.gdx
 
 # Ignore the OS X DS_Store
 .DS_Store
@@ -57,4 +62,8 @@ build_pips
 # Ignore Eclipse files
 .metadata*
 .project
+
 RemoteSystemsTempFiles*
+.cproject
+.settings
+/Debug/

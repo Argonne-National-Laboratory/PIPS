@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
    int actBlock = -1;
    int debug = 0;
    int offset = 1;
-   int gnuplot = 0;
+   // int gnuplot = 0;
    int printMat = 0;
    int gdxSplit = 0;
    int rc = 0;

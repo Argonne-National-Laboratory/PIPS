@@ -1,10 +1,10 @@
 #if defined(GMS_PIPS)
 #include "StochInputTree.h"
 #include "PIPSIpmInterface.h"
-//#include "MehrotraStochSolver.h"
 #include "GondzioStochSolver.h"
 #include "GondzioStochLpSolver.h"
 #include "sFactoryAug.h"
+#include "sFactoryAugMumpsLeaf.h"
 #include "sFactoryAugSchurLeaf.h"
 #endif
 #if defined(GMS_MPI)
@@ -429,8 +429,10 @@ int main(int argc, char ** argv)
 	{
 	   if( gmsRank == 0 )
 	      cout << "Different steplengths in primal and dual direction are used." << endl;
-
-#if defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
+#if defined(WITH_MUMPS_LEAF)
+      PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
+            scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
+#elif defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochLpSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #else
@@ -458,8 +460,12 @@ int main(int argc, char ** argv)
          dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
       }
 	}
-	else {
-#if defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
+	else
+	{
+#if defined(WITH_MUMPS_LEAF)
+      PIPSIpmInterface<sFactoryAugMumpsLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
+            scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
+#elif defined(WITH_PARDISO) && !defined(PARDISO_BLOCKSC)
       PIPSIpmInterface<sFactoryAugSchurLeaf, GondzioStochSolver> pipsIpm(root, MPI_COMM_WORLD,
             scaler_type, presolve ? PRESOLVER_STOCH : PRESOLVER_NONE );
 #else

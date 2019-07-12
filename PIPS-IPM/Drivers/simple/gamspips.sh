@@ -3,15 +3,15 @@
 # set default values
 built_dir="pipstmp"
 regions="12"
-to="0.08"
+to="0.02"
 tbsize="8"
 np="1"
 scale=""
 stepLp=""
 presolve=""
 mins="60"
-mygams="/nfs/optimi/kombadon/bzfrehfe/projects/PIPSjsc/PIPS_beamme/PIPS-IPM/Drivers/gams25.0_linux_x64_64_sfx/gams"
-
+mygams="/nfs/optimi/usr/sw/gams25.0_linux_x64_64_sfx/gams"
+memcheck=false
 
 for i in "$@"
 do
@@ -43,6 +43,10 @@ case $i in
     -SCALE=*|--SCALE=*)
     scale="${i#*=}"
     shift # past argument=value
+    ;;
+    -MEMCHECK|--MEMCHECK)
+    memcheck=true
+    shift
     ;;
     -STEPLP=*|--STEPLP=*)
     stepLp="${i#*=}"
@@ -96,7 +100,13 @@ else
   scale=""
 fi
 
-echo "Calling: mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve"
-mpirun -np $np ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
+if [ "$memcheck" = true ]; then
+  memcheck="valgrind"
+else
+  memcheck=""
+fi
+
+echo "Calling: mpirun -np $np $memcheck ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve"
+mpirun -np $np $memcheck ../../../../build_pips/gmspips $nblocks allblocksPips $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
 
 

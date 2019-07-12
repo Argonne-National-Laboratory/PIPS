@@ -118,7 +118,7 @@ public:
    */  
   virtual int numberOfNonZeros();
 
-  virtual int isKindOf( int matType );
+  virtual int isKindOf( int matType ) const;
 
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent );
@@ -217,6 +217,8 @@ public:
 
   virtual void permuteLinkingVars(const std::vector<unsigned int>& permvec);
   virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec);
+
+  virtual bool isRootNodeInSync() const;
 };
 
 
@@ -252,7 +254,7 @@ public:
    */  
   virtual int numberOfNonZeros(){return 0;}
 
-  virtual int isKindOf( int matType );
+  virtual int isKindOf( int matType ) const;
 
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent ){};
@@ -368,6 +370,8 @@ public:
 
   virtual void permuteLinkingVars(const std::vector<unsigned int>& permvec) {};
   virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec) {};
+
+  virtual bool isRootNodeInSync() const { return true; };
 };
 
 
