@@ -12,6 +12,9 @@
 #include <cassert>
 
 
+extern int gOuterBiCGFails;
+extern int gOuterBiCGIter;
+
 SCsparsifier::SCsparsifier()
  : SCsparsifier(-1.0, MPI_COMM_NULL)
 {
@@ -126,7 +129,7 @@ SCsparsifier::resetSCdistEntries(SparseSymMatrix& sc) const
 
 void
 SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
-      SparseSymMatrix& sc) const
+      SparseSymMatrix& sc)
 {
    assert(!sc.getStorageRef().fortranIndexed());
 
@@ -137,6 +140,8 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
    const std::vector<bool>& rowIsLocal = prob.getSCrowMarkerLocal();
 
    std::vector<double> diag(sizeSC);
+
+   updateDiagDomBound();
 
    const double t = diagDomBound;
 
@@ -200,6 +205,27 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
    sc.getStorageRef().set2FortranIndexed();
 }
 
+
+void SCsparsifier::updateDiagDomBound()
+{
+   if( gOuterBiCGIter > 5 )
+   {
+      if( diagDomBound > diagDomBoundNormal )
+      {
+         diagDomBound = diagDomBoundNormal;
+         printf("\n SCsparsifier switched to diagDomBoundNormal \n");
+      }
+   }
+
+   if( gOuterBiCGFails >= 3 )
+   {
+      if( diagDomBound > diagDomBoundConservative )
+      {
+         diagDomBound = diagDomBoundConservative;
+         printf("\n SCsparsifier switched to diagDomBoundConservative  \n");
+      }
+   }
+}
 
 std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const
 {

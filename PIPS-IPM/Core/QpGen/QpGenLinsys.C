@@ -24,6 +24,8 @@ using namespace std;
 
 extern int gOuterSolve;
 extern int gOuterBiCGIter;
+extern int gOuterBiCGFails;
+
 
 // todo provide statistics vector, print if TIMING
 static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
@@ -49,6 +51,16 @@ static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
       std::cout << std::endl;
 
 }
+
+static void BiCGStabCommunicateStatus(int flag, int it)
+{
+   gOuterBiCGIter = it;
+
+   if( flag != 0 )
+      gOuterBiCGFails++;
+
+}
+
 
 static bool isZero(double val, int& flag)
 {
@@ -344,8 +356,10 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, eps);
    const int maxit = 75;
-   const int normrDivLimit = 3; // todo user parameter
-   const int stagsLimit = 3;
+   const int normrDivLimit = 4; // todo user parameter
+   const int stagsLimit = 4;
+
+   gOuterBiCGIter = 0;
 
    assert(n2b >= 0);
 
@@ -580,6 +594,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       std::cout << "outer BICGSTAB final normr_act=" <<  normr_act << "\n";
 
    BiCGStabPrintStatus(flag, it, normr_act/n2b, normr/n2b);
+   BiCGStabCommunicateStatus(flag, it);
 
    this->separateVars(stepx, stepy, stepz, x);
 }

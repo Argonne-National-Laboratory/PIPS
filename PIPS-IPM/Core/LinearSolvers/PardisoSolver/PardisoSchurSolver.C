@@ -128,7 +128,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
         useSparseRhs = true;
   }
 
-  var = getenv("PARDISO_SYMB_INTERVALL");
+  var = getenv("PARDISO_SYMB_INTERVAL");
   symbFactorInterval = symbFactorIntervalDefault;
 
   if( var != NULL )
@@ -792,10 +792,13 @@ void PardisoSchurSolver::computeSC(int nSCO,
 #endif
 
    const int nIter = (int) g_iterNumber;
+   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    if( (nIter % symbFactorInterval) == 0 )
    {
       doSymbFact = true;
+      if( myRank == 0 )
+         printf("PardisoSchur: starting symbolic analysis ... ");
    }
 
    int phase = 22; // numerical factorization
@@ -808,11 +811,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
 #ifndef WITH_MKL_PARDISO
    iparm[37] = nSC; // compute Schur-complement
 
-   #ifdef TIMING
-   //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
-   //double o=MPI_Wtime();
-   #endif
-
    #ifdef TIMING_FLOPS
    HPM_Start("PARDISOFact");
    #endif
@@ -823,6 +821,9 @@ void PardisoSchurSolver::computeSC(int nSCO,
  #ifdef TIMING_FLOPS
    HPM_Stop("PARDISOFact");
  #endif
+
+   if( doSymbFact && myRank == 0 )
+      printf("finished \n");
 
    const int nnzSC = iparm[38];
 
@@ -890,11 +891,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
 
    // mkl pardiso returns arrays with zero-based index via export
    pardiso_export(pt, eltsSCtransp, rowptrSCtransp, colidxSCtransp, &step, iparm, &error);
-
-   #ifdef TIMING
-   //dumpAugMatrix(n,nnz,iparm[37], eltsAug, rowptrAug, colidxAug);
-   //double o=MPI_Wtime();
-   #endif
 
    #ifdef TIMING_FLOPS
    HPM_Start("PARDISOFact");
