@@ -22,8 +22,11 @@ class SCsparsifier
       constexpr static double diagDomBoundAggressive = 0.001;
       constexpr static double diagDomBoundNormal = 0.0002;
       constexpr static double diagDomBoundConservative = 0.000025;
+#ifdef PRE_CPP11
+      constexpr static double diagDomBoundDefault = 0.001;
+#else
       constexpr static double diagDomBoundDefault = diagDomBoundAggressive;
-
+#endif
 
       constexpr static double epsilonZero = 1e-15;
 
