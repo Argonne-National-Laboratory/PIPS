@@ -208,7 +208,7 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
 void SCsparsifier::updateDiagDomBound()
 {
-   if( gOuterBiCGIter > 5 )
+   if( gOuterBiCGIter >= 5 )
    {
       if( diagDomBound > diagDomBoundNormal )
       {

@@ -20,9 +20,10 @@ class SCsparsifier
 {
    public:
       constexpr static double diagDomBoundAggressive = 0.001;
-      constexpr static double diagDomBoundNormal = 0.00025;
+      constexpr static double diagDomBoundNormal = 0.0002;
       constexpr static double diagDomBoundConservative = 0.000025;
       constexpr static double diagDomBoundDefault = diagDomBoundAggressive;
+
 
       constexpr static double epsilonZero = 1e-15;
 
