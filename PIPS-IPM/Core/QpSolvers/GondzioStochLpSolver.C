@@ -50,8 +50,8 @@ static double gmu;
 
 // double grnorm;
 extern int gOoqpPrintLevel;
+extern double g_iterNumber;
 
-static double g_iterNumber;
 
 
 GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points, bool adaptive_linesearch)
@@ -182,7 +182,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
                status_code, 2);
       }
 
-      g_iterNumber+=0.5;
+      g_iterNumber += 1.0;
 
       // *** Corrector step ***
       corrector_resid->clear_r1r2();
@@ -351,9 +351,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    {
       this->doMonitorPd(prob, iterate, resid, alpha_pri, alpha_dual, sigma, iter, mu, status_code, 1);
    }
-
-   // print the results, if you really want to..
-   // iterate->print();
 
    return status_code;
 }

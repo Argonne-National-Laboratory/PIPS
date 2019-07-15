@@ -21,6 +21,8 @@ int gOoqpPrintLevel = 1000;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
 
+int gOuterBiCGFails=0;
+
 int gOuterBiCGIter=0; //use for dumping matrices
 
 //controls the type of error absortion at the outer level

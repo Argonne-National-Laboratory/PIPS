@@ -45,7 +45,6 @@ static double gmu;
 
 // double grnorm;
 extern int gOoqpPrintLevel;
-
 double g_iterNumber;
 
 
@@ -183,7 +182,7 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
                status_code, 2);
       }
 
-      g_iterNumber+=0.5;
+      g_iterNumber += 1.0;
 
       // *** Corrector step ***
 
@@ -292,9 +291,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    {
       this->doMonitor(prob, iterate, resid, alpha, sigma, iter, mu, status_code, 1);
    }
-
-   // print the results, if you really want to..
-   // iterate->print();
 
    return status_code;
 }
