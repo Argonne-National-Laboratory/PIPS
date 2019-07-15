@@ -16,9 +16,9 @@ extern int gOuterBiCGFails;
 extern int gOuterBiCGIter;
 
 SCsparsifier::SCsparsifier()
- : SCsparsifier(-1.0, MPI_COMM_NULL)
 {
-
+   mpiComm = MPI_COMM_NULL;
+   diagDomBound = diagDomBoundDefault;
 }
 
 SCsparsifier::SCsparsifier(double diagDomBound_, MPI_Comm mpiComm_)
