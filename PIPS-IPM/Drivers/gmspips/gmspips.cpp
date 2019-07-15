@@ -420,8 +420,12 @@ int main(int argc, char ** argv)
    std::vector<double> dualSolIneqVec;
    std::vector<double> dualSolIneqUppVec;
    std::vector<double> dualSolIneqLowVec;
+   std::vector<double> dualSolVarBounds;
    std::vector<double> dualSolVarBoundsUppVec;
    std::vector<double> dualSolVarBoundsLowVec;
+
+   std::vector<double> eqValues;
+   std::vector<double> ineqValues;
 
    double objective = 0.0;
 
@@ -456,8 +460,11 @@ int main(int argc, char ** argv)
          dualSolIneqVec = pipsIpm.gatherDualSolutionIneq();
          dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
          dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
+         dualSolVarBounds = pipsIpm.gatherDualSolutionVarBounds();
          dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
          dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
+         eqValues = pipsIpm.gatherEqualityConsValues();
+         ineqValues = pipsIpm.gatherInequalityConsValues();
       }
 	}
 	else
@@ -492,8 +499,11 @@ int main(int argc, char ** argv)
          dualSolIneqVec = pipsIpm.gatherDualSolutionIneq();
          dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
          dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
+         dualSolVarBounds = pipsIpm.gatherDualSolutionVarBounds();
          dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
          dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
+         eqValues = pipsIpm.gatherEqualityConsValues();
+         ineqValues = pipsIpm.gatherInequalityConsValues();
       }
 	}
    if( gmsRank == 0 )

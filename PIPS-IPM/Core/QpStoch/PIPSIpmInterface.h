@@ -5,6 +5,9 @@
 #ifndef PIPSIPM_INTERFACE
 #define PIPSIPM_INTERFACE
 
+#include <algorithm>
+#include <functional>
+
 #include "stochasticInput.hpp"
 
 #include "sTree.h"
@@ -41,9 +44,9 @@ class PIPSIpmInterface
   std::vector<double> gatherDualSolutionIneq() const;
   std::vector<double> gatherDualSolutionIneqUpp() const;
   std::vector<double> gatherDualSolutionIneqLow() const;
+  std::vector<double> gatherDualSolutionVarBounds() const;
   std::vector<double> gatherDualSolutionVarBoundsUpp() const;
   std::vector<double> gatherDualSolutionVarBoundsLow() const;
-
 
   std::vector<double> getFirstStagePrimalColSolution() const;
   std::vector<double> getSecondStagePrimalColSolution(int scen) const;
@@ -51,6 +54,9 @@ class PIPSIpmInterface
   std::vector<double> getFirstStageDualRowSolution() const;
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
+
+  std::vector<double> gatherEqualityConsValues() const;
+  std::vector<double> gatherInequalityConsValues() const;
   //more get methods to follow here
 
   static bool isDistributed() { return true; }
@@ -436,6 +442,23 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolution
 }
 
 template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBounds() const
+{
+  std::vector<double> duals_varbounds_upp = gatherDualSolutionVarBoundsUpp();
+  std::vector<double> duals_varbounds_low = gatherDualSolutionVarBoundsLow();
+
+  assert(duals_varbounds_low.size() == duals_varbounds_upp.size());
+
+  std::vector<double> duals_varbounds;
+  duals_varbounds.reserve(duals_varbounds_low.size());
+
+  std::transform(duals_varbounds_low.begin(), duals_varbounds_low.end(), duals_varbounds_upp.begin(), std::back_inserter(duals_varbounds), std::minus<double>());
+
+  return duals_varbounds;
+}
+
+
+template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBoundsUpp() const
 {
   StochVector* dualOrg = NULL;
@@ -481,6 +504,55 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolution
   delete dualOrg;
 
   return dualVec;
+}
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherEqualityConsValues() const
+{
+  // return residuals rA + b
+  StochVector* eqValsOrg = NULL;
+
+  if( scaler )
+     eqValsOrg = dynamic_cast<StochVector*>(scaler->getOrigDualEq(*resids->rA));
+  else
+     eqValsOrg = dynamic_cast<const StochVector&>(*resids->rA).cloneFull();
+
+  const std::vector<unsigned int> permInv = data->getLinkConsEqPermInv();
+
+  if( permInv.size() != 0 )
+     eqValsOrg->permuteLinkingEntries(permInv);
+
+  eqValsOrg->axpy(1.0, *origData->bA);
+
+  std::vector<double> eqVals = eqValsOrg->gatherStochVector();
+
+  delete eqValsOrg;
+
+  return eqVals;
+
+}
+
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherInequalityConsValues() const
+{
+  StochVector* ineqValsOrg = NULL;
+
+  if( scaler )
+     ineqValsOrg = dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->s));
+  else
+     ineqValsOrg = dynamic_cast<const StochVector&>(*vars->s).cloneFull();
+
+  const std::vector<unsigned int> permInv = data->getLinkConsIneqPermInv();
+
+  if( permInv.size() != 0 )
+     ineqValsOrg->permuteLinkingEntries(permInv);
+
+  std::vector<double> ineqVals = ineqValsOrg->gatherStochVector();
+
+  delete ineqValsOrg;
+
+  return ineqVals;
 }
 
 template<class FORMULATION, class IPMSOLVER>
