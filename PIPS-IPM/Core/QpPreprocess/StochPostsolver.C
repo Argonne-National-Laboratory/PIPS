@@ -151,7 +151,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1);
 
             assert( fabs(values[first]) != std::numeric_limits<double>::infinity());
-            getSimpleVecColFromStochVec(*padding_origcol, node)[column] = values[first];
+            getSimpleVecColFromStochVec(primal_vars_orig, node)[column] = values[first];
             break;
          }
          case SUBSTITUTED_COLUMN:
@@ -230,6 +230,7 @@ void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector
       }
       else
       {
+         assert(padding_original[i] == 1);
          original_vector[i] = reduced_vector[col_reduced];
          ++col_reduced;
       }

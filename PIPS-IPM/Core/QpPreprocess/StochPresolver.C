@@ -74,7 +74,7 @@ Data* StochPresolver::presolve()
    StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
    StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
    StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
-//   StochPresolverSingletonRows presolverSR(presData, *sorigprob);
+  // StochPresolverSingletonRows presolverSR(presData, *sorigprob);
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
@@ -90,7 +90,7 @@ Data* StochPresolver::presolve()
       presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
       presolverCleanup.applyPresolving();
-      presolverParallelRow.applyPresolving();
+      // presolverParallelRow.applyPresolving();
       presolverColFix.applyPresolving();
       presolverCleanup.applyPresolving();
 //      presolverBS.applyPresolving();
