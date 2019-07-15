@@ -166,6 +166,8 @@ public:
   LinearSystem * getLinearSystem() { return sys; };
 protected:
   LinearSystem *sys;
+  bool printTimeStamp;
+  double startTime;
 };
 
 //@}
