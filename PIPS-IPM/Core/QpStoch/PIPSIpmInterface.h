@@ -55,7 +55,7 @@ class PIPSIpmInterface
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
-  //std::vector<double> gatherEqualityConsValues() const;
+  std::vector<double> gatherEqualityConsValues() const;
   std::vector<double> gatherInequalityConsValues() const;
   //more get methods to follow here
 
@@ -506,8 +506,35 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolution
   return dualVec;
 }
 
-template<class FORMULATION, class IMPSOLVER>
-std::vector<double> PIPSIpmInterface<FORMULATION, IMPSOLVER>::gatherInequalityConsValues() const
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherEqualityConsValues() const
+{
+  // return residuals rA + b
+  StochVector* eqValsOrg = NULL;
+
+  if( scaler )
+     eqValsOrg = dynamic_cast<StochVector*>(scaler->getOrigDualEq(*resids->rA));
+  else
+     eqValsOrg = dynamic_cast<const StochVector&>(*resids->rA).cloneFull();
+
+  const std::vector<unsigned int> permInv = data->getLinkConsEqPermInv();
+
+  if( permInv.size() != 0 )
+     eqValsOrg->permuteLinkingEntries(permInv);
+
+  eqValsOrg->axpy(1.0, *origData->bA);
+
+  std::vector<double> eqVals = eqValsOrg->gatherStochVector();
+
+  delete eqValsOrg;
+
+  return eqVals;
+
+}
+
+
+template<class FORMULATION, class IPMSOLVER>
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherInequalityConsValues() const
 {
   StochVector* ineqValsOrg = NULL;
 
