@@ -168,6 +168,8 @@ public:
 
       int getNChildren() const { return nChildren; };
 
+      void resetOriginallyFreeVarsBounds(const sData& orig_prob);
+
       /// synchronizing the problem over all mpi processes if necessary
       void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
@@ -200,6 +202,9 @@ public:
       bool hasLinking(SystemType system_type) const;
 
 private:
+      void resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
+
+
       void adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
 /// methods for modifying the problem
       void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);

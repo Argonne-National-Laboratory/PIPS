@@ -810,6 +810,43 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    ++elements_deleted; // todo
 }
 
+void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
+{
+
+#ifndef NDEBUG
+   if(my_rank == 0)
+      std::cout << "Resetting all presolved variable bounds of originally free variables" <<::endl; 
+#endif
+
+   for( int node = -1; node < nChildren; ++node )
+      resetOriginallyFreeVarsBounds( getSimpleVecColFromStochVec(*orig_prob.blx, node), getSimpleVecColFromStochVec(*orig_prob.bux, node), node);
+}
+
+void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node)
+{
+   if( nodeIsDummy( node, EQUALITY_SYSTEM ) && nodeIsDummy( node, INEQUALITY_SYSTEM ) )
+      return;
+
+   SimpleVector& ixlow = getSimpleVecColFromStochVec(*presProb->ixlow, node);
+   SimpleVector& ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, node);
+
+   SimpleVector& xlow = getSimpleVecColFromStochVec(*presProb->blx, node);
+   SimpleVector& xupp = getSimpleVecColFromStochVec(*presProb->bux, node);
+
+   SimpleVector& nnzs_col_vec = getSimpleVecColFromStochVec(*nnzs_col, node);
+
+   for(int i = 0; i < ixlow.n; ++i)
+   {
+      if(ixlow_orig[i] == 0.0 && ixupp_orig[i] == 0.0 && nnzs_col_vec[i] != 0)
+      {
+         ixlow[i] = 0;
+         ixupp[i] = 0;
+         xlow[i] = 0.0;
+         xupp[i] = 0.0;
+      }
+   }
+}
+
 
 void PresolveData::fixColumn(int node, int col, double value)
 {

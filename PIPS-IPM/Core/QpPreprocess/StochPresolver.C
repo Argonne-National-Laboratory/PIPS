@@ -13,6 +13,7 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <cstdlib>
 
 #include "StochVector.h"
 #include "StochGenMatrix.h"
@@ -34,6 +35,7 @@
 //#include "StochPresolverSingletonColumns.h"
 #include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
+
 
 StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = NULL)
  : QpPresolver(prob, postsolver)
@@ -103,10 +105,19 @@ Data* StochPresolver::presolve()
    assert( presData.getPresProb().isRootNodeInSync() );
 //      presData.presProb->writeToStreamDense(std::cout);
 
+
+   // todo : no idea how to postsolve this
+   if( getenv("PIPS_RESET_FREE_VARIABLES") != NULL )
+   {
+      presData.resetOriginallyFreeVarsBounds(*sorigprob);
+      presolverCleanup.countRowsCols();
+   }   
+
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);
    assert( finalPresData->isRootNodeInSync() );
    // exit(0);
+
 
    return finalPresData;
 }
