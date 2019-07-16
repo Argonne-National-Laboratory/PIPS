@@ -53,14 +53,20 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       actmin_ineq_ubndd(nnzs_row_C->clone()),
       nChildren(nnzs_col->children.size()),
       objOffset(0.0), obj_offset_chgs(0.0),
+      lower_bound_implied_by_singleton(nnzs_col->clone()),
+      upper_bound_implied_by_singleton(nnzs_col->clone()),
       elements_deleted(0), elements_deleted_transposed(0)
 {
+   lower_bound_implied_by_singleton->setToZero();
+   upper_bound_implied_by_singleton->setToZero();
+
    presProb = sorigprob->cloneFull(true);
 
    int n_linking_vars = (nnzs_col->vec) ? nnzs_col->vec->n : 0;
 
    int n_linking_A = (nnzs_row_A->vecl) ? nnzs_row_A->vecl->n : 0;
    int n_linking_C = (nnzs_row_C->vecl) ? nnzs_row_C->vecl->n : 0;
+
    assert( n_linking_vars + 2 * n_linking_A + 2 * n_linking_C < std::numeric_limits<int>::max() );
 
    length_array_nnz_chgs = n_linking_vars + n_linking_A + n_linking_C;
@@ -835,14 +841,21 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 
    SimpleVector& nnzs_col_vec = getSimpleVecColFromStochVec(*nnzs_col, node);
 
-   for(int i = 0; i < ixlow.n; ++i)
+   for(int col = 0; col < ixlow.n; ++col)
    {
-      if(ixlow_orig[i] == 0.0 && ixupp_orig[i] == 0.0 && nnzs_col_vec[i] != 0)
+      if( nnzs_col_vec[col] != 0)
       {
-         ixlow[i] = 0;
-         ixupp[i] = 0;
-         xlow[i] = 0.0;
-         xupp[i] = 0.0;
+         if( ixupp_orig[col] == 0.0 && getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node)[col] != 1.0 )
+         {
+            ixupp[col] = 0;
+            xupp[col] = 0.0;
+         }
+
+         if( ixlow_orig[col] == 0.0 && getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node)[col] != 1.0 )
+         {
+            ixlow[col] = 0;
+            xlow[col] = 0.0;
+         }
       }
    }
 }
@@ -872,17 +885,23 @@ void PresolveData::fixColumn(int node, int col, double value)
 bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx)
 {
    assert( -1 <= node && node < nChildren );
+   assert( 0 <= col && col < getSimpleVecColFromStochVec( *presProb->ixlow, node ).n );
+
+   const double numerical_threshold = 1e10; //std::numeric_limits<double>::max();
+
 
    /* check for infeasibility of the newly found bounds */
-   const SimpleVector& ixlow = (node == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->ixlow).vec)
-         : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->ixlow).children[node]->vec);
-   const SimpleVector& xlow = (node == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->blx).vec)
-         : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->blx).children[node]->vec);
-   const SimpleVector& ixupp = (node == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->ixupp).vec)
-         : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->ixupp).children[node]->vec);
-   const SimpleVector& xupp = (node == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->bux).vec)
-         : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*presProb->bux).children[node]->vec);
-   assert(0 <= col && col < ixlow.n);
+   const double ixlow = getSimpleVecColFromStochVec( *presProb->ixlow, node )[col];
+   const double xlow = getSimpleVecColFromStochVec( *presProb->blx, node )[col];
+   const double ixupp = getSimpleVecColFromStochVec( *presProb->ixupp, node )[col];
+   const double xupp = getSimpleVecColFromStochVec( *presProb->bux, node )[col];
+   const double nnzs_row = getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C, node, block_type)[col];
+
+   if( nnzs_row == 1.0 && PIPSisLT(ubx, numerical_threshold) )
+      getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node)[col] = 1.0;
+
+   if( nnzs_row == 1.0 && PIPSisLT(-lbx, numerical_threshold) )
+      getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node)[col] = 1.0;
 
 #ifdef TRACK_COLUMN
    if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -890,14 +909,13 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
       std::cout << "TRACKING COLUMN: new bounds [" << lbx << ", " << ubx << "] propagated for column " << COLUMN << " from row " << row << " node " << node << " in " <<
             ( (system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ":" << std::endl;
       writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
-      std::cout << "\tbounds were [" << xlow[col] << ", " << xupp[col] << "]" << std::endl;
+      std::cout << "\tbounds were [" << xlow<< ", " << xupp<< "]" << std::endl;
    }
 #endif
 
-
-   if( ( ixlow[col] != 0.0 && PIPSisLT(ubx, xlow[col]) )
-         || (ixupp[col] != 0.0 && PIPSisLT(xupp[col], lbx) )
-         || ( PIPSisLT(ubx, lbx)) )
+   if( ( ixlow != 0.0 && PIPSisLT(ubx, xlow) )
+         || ( ixupp != 0.0 && PIPSisLT(xupp, lbx) )
+         || PIPSisLT(ubx, lbx) )
    {
       abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
    }
@@ -907,9 +925,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
 
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
-  // if( fabs(lbx) < 1e8 && (ixlow[col] == 0.0  || feastol * 1e3 <= fabs(xlow[col] - lbx) ) )
-   double numerical_threshold = std::numeric_limits<double>::max();
-   if( ubx < numerical_threshold && (ixupp[col] == 0.0 || PIPSisLT(ubx, xupp[col])) )
+   // if( fabs(lbx) < 1e8 && (ixlow== 0.0  || feastol * 1e3 <= fabs(xlow- lbx) ) )
+   if( ubx < numerical_threshold && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -918,8 +935,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
       if( updateUpperBoundVariable(node_var, col, ubx) )
          bounds_changed = true;
    }
-  // if( fabs(ubx) < 1e8 && (ixupp[col] == 0.0  || feastol * 1e3 <= fabs(xupp[col] - ubx) ) )
-   if( lbx > -numerical_threshold && (ixlow[col] == 0.0 || PIPSisLT(xlow[col], lbx)) )
+  // if( fabs(ubx) < 1e8 && (ixupp== 0.0  || feastol * 1e3 <= fabs(xupp- ubx) ) )
+   if( lbx > -numerical_threshold && (ixlow== 0.0 || PIPSisLT(xlow, lbx)) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )

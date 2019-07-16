@@ -116,6 +116,10 @@ private:
       double objOffset;
       double obj_offset_chgs;
 
+      // store free variables which bounds are only implied by bound tightening to remove bounds later again
+      StochVectorHandle lower_bound_implied_by_singleton;
+      StochVectorHandle upper_bound_implied_by_singleton;
+
       // necessary ?
       int elements_deleted;
       int elements_deleted_transposed;

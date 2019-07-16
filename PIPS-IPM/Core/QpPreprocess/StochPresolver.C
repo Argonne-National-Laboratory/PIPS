@@ -107,11 +107,11 @@ Data* StochPresolver::presolve()
 
 
    // todo : no idea how to postsolve this
-   if( getenv("PIPS_RESET_FREE_VARIABLES") != NULL )
-   {
-      presData.resetOriginallyFreeVarsBounds(*sorigprob);
-      presolverCleanup.countRowsCols();
-   }   
+   //if( getenv("PIPS_RESET_FREE_VARIABLES") != NULL )
+   //{
+   //   presData.resetOriginallyFreeVarsBounds(*sorigprob);
+   //   presolverCleanup.countRowsCols();
+   //}   
 
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);
