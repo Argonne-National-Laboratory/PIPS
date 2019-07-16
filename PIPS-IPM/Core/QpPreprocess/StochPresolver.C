@@ -13,7 +13,9 @@
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <string>
 #include <cstdlib>
+#include <ctype.h>
 
 #include "StochVector.h"
 #include "StochGenMatrix.h"
@@ -107,11 +109,18 @@ Data* StochPresolver::presolve()
 
 
    // todo : no idea how to postsolve this
-   //if( getenv("PIPS_RESET_FREE_VARIABLES") != NULL )
-   //{
-   //   presData.resetOriginallyFreeVarsBounds(*sorigprob);
-   //   presolverCleanup.countRowsCols();
-   //}   
+
+   char* env = getenv("PIPS_RESET_FREE_VARIABLES");
+   if( env != NULL )
+   {
+      std::string reset_vars(env);
+      std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
+      if(reset_vars == "true")
+      {
+         presData.resetOriginallyFreeVarsBounds(*sorigprob);
+         presolverCleanup.countRowsCols();
+      }
+   }   
 
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);

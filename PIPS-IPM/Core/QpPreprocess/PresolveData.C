@@ -882,33 +882,34 @@ void PresolveData::fixColumn(int node, int col, double value)
    removeColumn(node, col, value);
 }
 
-bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx)
+bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, BlockType block_type, int row, int col, double ubx, double lbx)
 {
-   assert( -1 <= node && node < nChildren );
-   assert( 0 <= col && col < getSimpleVecColFromStochVec( *presProb->ixlow, node ).n );
+   assert( -1 <= node_row && node_row < nChildren );
 
-   const double numerical_threshold = 1e10; //std::numeric_limits<double>::max();
+   const double numerical_threshold = std::numeric_limits<double>::max();
+   const int node_var = (node_row == -1 || block_type == LINKING_VARS_BLOCK) ? -1 : node_row;
 
+   assert( 0 <= col && col < getSimpleVecColFromStochVec( *presProb->ixlow, node_var ).n );
 
    /* check for infeasibility of the newly found bounds */
-   const double ixlow = getSimpleVecColFromStochVec( *presProb->ixlow, node )[col];
-   const double xlow = getSimpleVecColFromStochVec( *presProb->blx, node )[col];
-   const double ixupp = getSimpleVecColFromStochVec( *presProb->ixupp, node )[col];
-   const double xupp = getSimpleVecColFromStochVec( *presProb->bux, node )[col];
-   const double nnzs_row = getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C, node, block_type)[col];
+   const double ixlow = getSimpleVecColFromStochVec( *presProb->ixlow, node_var )[col];
+   const double xlow = getSimpleVecColFromStochVec( *presProb->blx, node_var )[col];
+   const double ixupp = getSimpleVecColFromStochVec( *presProb->ixupp, node_var )[col];
+   const double xupp = getSimpleVecColFromStochVec( *presProb->bux, node_var )[col];
+   const double nnzs_row = getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C, node_row, block_type)[col];
 
-   if( nnzs_row == 1.0 && PIPSisLT(ubx, numerical_threshold) )
-      getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node)[col] = 1.0;
+   if( nnzs_row == 1.0 && ubx < numerical_threshold )
+      getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node_var)[col] = 1.0;
 
-   if( nnzs_row == 1.0 && PIPSisLT(-lbx, numerical_threshold) )
-      getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node)[col] = 1.0;
+   if( nnzs_row == 1.0 && lbx > -numerical_threshold )
+      getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node_var)[col] = 1.0;
 
 #ifdef TRACK_COLUMN
-   if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
+   if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
    {
-      std::cout << "TRACKING COLUMN: new bounds [" << lbx << ", " << ubx << "] propagated for column " << COLUMN << " from row " << row << " node " << node << " in " <<
+      std::cout << "TRACKING COLUMN: new bounds [" << lbx << ", " << ubx << "] propagated for column " << COLUMN << " from row " << row << " node " << node_row << " in " <<
             ( (system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ":" << std::endl;
-      writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
+      writeRowLocalToStreamDense(std::cout, system_type, node_row, block_type, row);
       std::cout << "\tbounds were [" << xlow<< ", " << xupp<< "]" << std::endl;
    }
 #endif
@@ -921,7 +922,6 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    }
 
    bool bounds_changed = false;
-   int node_var = (node == -1 || block_type == LINKING_VARS_BLOCK) ? -1 : node;
 
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
@@ -929,7 +929,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    if( ubx < numerical_threshold && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
    {
 #ifdef TRACK_COLUMN
-      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
+      if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: new upper bound through propagation" << std::endl;
 #endif
       if( updateUpperBoundVariable(node_var, col, ubx) )
@@ -939,7 +939,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    if( lbx > -numerical_threshold && (ixlow== 0.0 || PIPSisLT(xlow, lbx)) )
    {
 #ifdef TRACK_COLUMN
-      if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
+      if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: new lower bound through propagation" << std::endl;
 #endif
       if( updateLowerBoundVariable(node_var, col, lbx) )
@@ -947,12 +947,12 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
    }
 
    /// every process should have the same root node data thus all of them should propagate it's rows similarly
-   if( bounds_changed && (node == -1 || block_type == LINKING_VARS_BLOCK) )
+   if( bounds_changed && (node_row == -1 || block_type == LINKING_VARS_BLOCK) )
       assert(outdated_linking_var_bounds == true);
 
    // todo : how to undo propagations from linking constraint rows..
 // todo : in case a linking row propagated we'll have to store the whole linking row
-//   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
+//   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node_row, block_type);
 //   assert(row < mat->getStorageDynamic()->m );
 //
 //   int row_start = mat->getStorageDynamic()->rowptr[row].start;
@@ -960,7 +960,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node, BlockT
 //
 //   assert(row_start < row_end);
 // if bounds_changed
-//   postsolver->notifyRowPropagated(system_type, node, row, (block_type == LINKING_CONS_BLOCK), col, lbx, ubx, mat->getStorageDynamic()->M + row_start,
+//   postsolver->notifyRowPropagated(system_type, node_row, row, (block_type == LINKING_CONS_BLOCK), col, lbx, ubx, mat->getStorageDynamic()->M + row_start,
 //         mat->getStorageDynamic()->jcolM + row_start, row_end - row_start );
 
    return bounds_changed;
