@@ -11,7 +11,7 @@
 #include "DenseSymMatrix.h"
 #include "OoqpVectorHandle.h"
 #include "SparseStorage.h"
-
+#include "pipsport.h"
 #include <map>
 
 using namespace std;
@@ -29,6 +29,8 @@ using namespace std;
  */
  
 class PardisoSchurSolver : public DoubleLinearSolver {
+
+ constexpr static int symbFactorIntervalDefault = 3;
 protected:
   PardisoSchurSolver() {};
   
@@ -80,6 +82,7 @@ protected:
   void  *pt[64];
   int iparm[64];
   bool useSparseRhs;
+  int symbFactorInterval;
 
 
 #ifndef WITH_MKL_PARDISO

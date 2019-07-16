@@ -19,8 +19,16 @@ class sData;
 class SCsparsifier
 {
    public:
-      static constexpr double diagDomBoundDefault = 0.0001;
-      static constexpr double epsilonZero = 1e-15;
+      constexpr static double diagDomBoundAggressive = 0.001;
+      constexpr static double diagDomBoundNormal = 0.0002;
+      constexpr static double diagDomBoundConservative = 0.000025;
+#ifdef PRE_CPP11
+      constexpr static double diagDomBoundDefault = 0.001;
+#else
+      constexpr static double diagDomBoundDefault = diagDomBoundAggressive;
+#endif
+
+      constexpr static double epsilonZero = 1e-15;
 
       SCsparsifier();
 
@@ -37,13 +45,14 @@ class SCsparsifier
       void resetSCdistEntries(SparseSymMatrix& sc) const;
 
       // deletes dominated Schur complement entries and converts matrix to Fortran format
-      void getSparsifiedSC_fortran(const sData& prob, SparseSymMatrix& sc) const;
+      void getSparsifiedSC_fortran(const sData& prob, SparseSymMatrix& sc);
 
    private:
 
       double diagDomBound;
       MPI_Comm mpiComm;
 
+      void updateDiagDomBound();
       std::vector<double> getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const;
 
 };
