@@ -673,6 +673,8 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   factory->data = origData;
 
   sVars* postsolved_vars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
+
+
   sResiduals* resids_orig = dynamic_cast<sResiduals*>( factory->makeResiduals( origData ) );
   postsolver->postsolve(*unscaled_solution, *postsolved_vars);
 
@@ -680,14 +682,18 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   if( my_rank == 0)
     std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
 
+  assert( unscaled_solution->x->componentEqual(*(postsolved_vars->x), 1e-15));
+
   /* compute residuals for postprocessed solution and check for feasibility */
   resids_orig->calcresids(origData, postsolved_vars);
   
-  double onenorm_rA = resids->rA->onenorm();
-  double onenorm_rC = resids->rC->onenorm();
+  double infnorm_rA = resids_orig->rA->infnorm();
+  double infnorm_rC = resids_orig->rC->infnorm();
 
   if( my_rank == 0)
-    std::cout << "Residuals after postsolve:\n" << "rA: " << onenorm_rA << "\nrC " << onenorm_rC << std::endl; 
+  {
+    std::cout << "Residuals after postsolve:\n" << "rA: " << infnorm_rA << "\nrC " << infnorm_rC << std::endl; 
+  }
 
   // deleting solutions
   delete unscaled_solution;

@@ -42,7 +42,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   int max_iter = 3; // todo
+   int max_iter = 1; // todo
    int iter = 0;
    bool tightened;
 
@@ -51,10 +51,10 @@ void StochPresolverBoundStrengthening::applyPresolving()
       ++iter;
       tightened = false;
       /* root nodes */
-      if( strenghtenBoundsInNode( EQUALITY_SYSTEM, -1) )
-         tightened = true;
-      if( strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1) )
-         tightened = true;
+      //if( strenghtenBoundsInNode( EQUALITY_SYSTEM, -1) )
+      //   tightened = true;
+      //if( strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1) )
+      //   tightened = true;
 
       // children:
       for( int node = 0; node < nChildren; node++)
@@ -62,14 +62,14 @@ void StochPresolverBoundStrengthening::applyPresolving()
          // dummy child?
          if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
          {
-            if( strenghtenBoundsInNode(EQUALITY_SYSTEM, node) )
-               tightened = true;
+            //if( strenghtenBoundsInNode(EQUALITY_SYSTEM, node) )
+            //   tightened = true;
          }
 
          if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
          {
-            if( strenghtenBoundsInNode(INEQUALITY_SYSTEM, node) )
-               tightened = true;
+            //if( strenghtenBoundsInNode(INEQUALITY_SYSTEM, node) )
+            //   tightened = true;
          }
       }
    /* update bounds on all processors */

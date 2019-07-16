@@ -29,6 +29,7 @@ class StochPresolverModelCleanup : public StochPresolverBase
       int removeRedundantRows(SystemType system_type, int node, bool linking);
       int removeTinyEntriesFromSystem(SystemType system_type);
       int removeTinyInnerLoop(SystemType system_type, int node, BlockType block_type);
+      void fixEmptyColumns();
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERMODELCLEANUP_H_ */

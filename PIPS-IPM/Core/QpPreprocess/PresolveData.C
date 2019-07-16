@@ -174,7 +174,7 @@ sData* PresolveData::finalize()
    assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds);
 #endif
 
-   /* theoretically it should not matter but there is an assert later on which need all these to be zero */
+   /* theoretically it should not matter but there is an assert later which needs all these to be zero */
    setUndefinedVarboundsTo(0.0);
 
    // this removes all columns and rows that are now empty from the problem
@@ -825,7 +825,7 @@ void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
 #endif
 
    for( int node = -1; node < nChildren; ++node )
-      resetOriginallyFreeVarsBounds( getSimpleVecColFromStochVec(*orig_prob.blx, node), getSimpleVecColFromStochVec(*orig_prob.bux, node), node);
+      resetOriginallyFreeVarsBounds( getSimpleVecColFromStochVec(*orig_prob.ixlow, node), getSimpleVecColFromStochVec(*orig_prob.ixupp, node), node);
 }
 
 void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node)
@@ -843,15 +843,15 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 
    for(int col = 0; col < ixlow.n; ++col)
    {
-      if( nnzs_col_vec[col] != 0)
+      if( nnzs_col_vec[col] != 0 && ixupp_orig[col] == 0.0 && ixlow_orig[col] == 0.0)
       {
-         if( ixupp_orig[col] == 0.0 && getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node)[col] != 1.0 )
+         if( ixupp_orig[col] == 0.0 && getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node)[col] == 0.0 )
          {
             ixupp[col] = 0;
             xupp[col] = 0.0;
          }
 
-         if( ixlow_orig[col] == 0.0 && getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node)[col] != 1.0 )
+         if( ixlow_orig[col] == 0.0 && getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node)[col] == 0.0 )
          {
             ixlow[col] = 0;
             xlow[col] = 0.0;
@@ -880,6 +880,15 @@ void PresolveData::fixColumn(int node, int col, double value)
 #endif
 
    removeColumn(node, col, value);
+
+   // todo assert changes empty?
+   getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->bux, node)[col] = 0.0;
+
+   if( node != -1)
+      assert( getSimpleVecColFromStochVec(*nnzs_col, node)[col] == 0.0 );
 }
 
 bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, BlockType block_type, int row, int col, double ubx, double lbx)
@@ -887,7 +896,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    assert( -1 <= node_row && node_row < nChildren );
 
    const double numerical_threshold = std::numeric_limits<double>::max();
-   const int node_var = (node_row == -1 || block_type == LINKING_VARS_BLOCK) ? -1 : node_row;
+   const int node_var = (block_type == LINKING_VARS_BLOCK) ? -1 : node_row;
 
    assert( 0 <= col && col < getSimpleVecColFromStochVec( *presProb->ixlow, node_var ).n );
 
@@ -1170,13 +1179,13 @@ void PresolveData::removeColumn(int node, int col, double fixation)
 
    if(node == -1)
    {
-      removeColumnFromMatrix(EQUALITY_SYSTEM, node, LINKING_VARS_BLOCK, col, fixation);
-      removeColumnFromMatrix(INEQUALITY_SYSTEM, node, LINKING_VARS_BLOCK, col, fixation);
+      removeColumnFromMatrix(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, fixation);
+      removeColumnFromMatrix(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, fixation);
 
       if(hasLinking(EQUALITY_SYSTEM))
-         removeColumnFromMatrix(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+         removeColumnFromMatrix(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, fixation);
       if( hasLinking(INEQUALITY_SYSTEM) )
-         removeColumnFromMatrix(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+         removeColumnFromMatrix(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, fixation);
 
       for(int i = 0; i < nChildren; ++i)
       {
@@ -1202,7 +1211,9 @@ void PresolveData::removeColumn(int node, int col, double fixation)
    {
       double objective_factor = getSimpleVecColFromStochVec(*presProb->g, node)[col];
       obj_offset_chgs += objective_factor * fixation;
+
    }
+   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0;
 }
 
 /** remove column - adjust lhs, rhs and activity as well as nnz_counters */

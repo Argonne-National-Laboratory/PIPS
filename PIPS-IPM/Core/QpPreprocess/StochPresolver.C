@@ -91,12 +91,12 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
       // presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverCleanup.applyPresolving();
+      //presolverBS.applyPresolving();
+      //presolverColFix.applyPresolving();
+      //presolverCleanup.applyPresolving();
       // presolverParallelRow.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverCleanup.applyPresolving();
+      //presolverColFix.applyPresolving();
+      //presolverCleanup.applyPresolving();
 //      presolverBS.applyPresolving();
 
    }
@@ -110,23 +110,25 @@ Data* StochPresolver::presolve()
 
    // todo : no idea how to postsolve this
 
-   char* env = getenv("PIPS_RESET_FREE_VARIABLES");
-   if( env != NULL )
-   {
-      std::string reset_vars(env);
-      std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
-      if(reset_vars == "true")
-      {
-         presData.resetOriginallyFreeVarsBounds(*sorigprob);
-         presolverCleanup.countRowsCols();
-      }
-   }   
+   // char* env = getenv("PIPS_RESET_FREE_VARIABLES");
+   // if( env != NULL )
+   // {
+   //    std::string reset_vars(env);
+   //    for(unsigned int i = 0; i < reset_vars.length(); ++i)
+   //       reset_vars[i] = std::tolower(reset_vars[i]);
+   //    //std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
+   //    if(reset_vars == "true")
+   //    {
+   //       presData.resetOriginallyFreeVarsBounds(*sorigprob);
+   //       presolverCleanup.countRowsCols();
+   //    }
+   // }   
 
    sData* finalPresData = presData.finalize();
 //   finalPresData->writeToStreamDense(std::cout);
    assert( finalPresData->isRootNodeInSync() );
    // exit(0);
 
-
+   return sorigprob->cloneFull();
    return finalPresData;
 }

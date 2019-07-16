@@ -50,6 +50,7 @@ void StochPresolverModelCleanup::applyPresolving()
    int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
    n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
 
+   fixEmptyColumns();
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    presData.allreduceAndApplyBoundChanges();
@@ -372,4 +373,71 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 
    return n_elims;
 }
+
+
+/* Go through columns and fix all empty ones to the current variables lower/upper bound (depending on objective)
+ * Might detect unboundedness of problem.
+ */
+void StochPresolverModelCleanup::fixEmptyColumns()
+{
+
+   for(int node = -1; node < nChildren; ++node)
+   {
+      if( presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
+         continue;
+      
+      updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+
+      const SimpleVector& g = (node == -1) ? *currgParent : *currgChild;
+      const SimpleVector& ixupp = (node == -1) ? *currIxuppParent : *currIxuppChild;
+      const SimpleVector& ixlow = (node == -1) ? *currIxlowParent : *currIxlowChild;
+      const SimpleVector& xupp = (node == -1) ? *currxuppParent : *currxuppChild;
+      const SimpleVector& xlow = (node == -1) ? *currxlowParent : *currxlowChild;
+      const SimpleVector& nnzs_col = (node == -1) ? *currNnzColParent : *currNnzColChild;
+      for(int col = 0; col < nnzs_col.n; ++col)
+      {
+         /* column fixation candidate */
+         if( nnzs_col[col] == 0)
+         {
+
+            // todo : maybe this can also happen as an input? here we assume that the column has been fixed already
+            if( ixlow[col] == 0.0 && ixupp[col] == 0.0
+               && xlow[col] == 0.0 && xupp[col] == 0.0 
+               && g[col] == 0.0)
+               continue;
+
+            if( PIPSisLT( g[col], 0.0) )
+            {
+               if( ixupp[col] != 0.0 )
+               {
+                  presData.fixColumn(node, col, xupp[col]);
+               }
+               else
+               {
+                  abortInfeasible(MPI_COMM_WORLD, "Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!", 
+                     "StochPresolverModelCleanup.C", "fixEmptyColumns");
+               }
+            } 
+            else if( PIPSisLT(0.0, (*currgChild)[col]) )
+            {
+               if( ixlow[col] != 0.0 )
+               {
+                  presData.fixColumn(node, col, xlow[col]);
+               }
+               else
+               {
+                  abortInfeasible(MPI_COMM_WORLD, "Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!", 
+                     "StochPresolverModelCleanup.C", "fixEmptyColumns");
+               }
+            }
+            else
+            {
+               assert( PIPSisEQ( (*currgChild)[col], 0.0) );
+               presData.fixColumn(node, col, 0.0);
+            }
+         }
+      }
+   }
+}
+
 
