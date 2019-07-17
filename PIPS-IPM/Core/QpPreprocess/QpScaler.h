@@ -10,13 +10,7 @@
 
 #include "Scaler.h"
 #include "OoqpVector.h"
-#include "StochVector.h"
 #include "DoubleMatrix.h"
-#include "QpGenData.h"
-#include "QpGenResiduals.h"
-
-class Data;
-
 
 /**  * @defgroup QpPreprocess
  *
@@ -76,6 +70,8 @@ public:
   virtual void scale() = 0;
 
   virtual double getOrigObj(double objval) const;
+  virtual void unscaleVariables(Variables& vars) const;
+  virtual void unscaleResiduals(Residuals& resids) const;
   virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) const;
   virtual OoqpVector* getOrigDualEq(const OoqpVector& soldual) const;
   virtual OoqpVector* getOrigDualIneq(const OoqpVector& soldual) const;

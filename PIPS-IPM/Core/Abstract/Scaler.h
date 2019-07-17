@@ -10,6 +10,8 @@
 #include "OoqpVector.h"
 
 class Data;
+class Variables;
+class Residuals;
 
 /**  * @defgroup Preprocessing
  *
@@ -38,6 +40,12 @@ public:
 
   /** unscale given objective value */
   virtual double getOrigObj(double objval) const = 0;
+
+  /** compute original variables from given ones */
+  virtual void unscaleVariables(Variables& vars) const = 0;
+
+  /** compute original residuals from given ones */
+  virtual void unscaleResiduals(Residuals& resids) const = 0;
 
   /** compute original vector from given primal vector */
   virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) const = 0;
