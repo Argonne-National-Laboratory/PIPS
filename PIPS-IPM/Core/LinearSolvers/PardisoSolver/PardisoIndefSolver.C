@@ -90,6 +90,7 @@ void PardisoIndefSolver::setIparm(int* iparm){
       iparm[2] = num_procs;
    }
 
+   iparm[18] = 0; /* don't compute GFLOPS */
    iparm[7] = 8; /* max number of iterative refinement steps. */
    #ifdef PARDISOINDEF_SCALE
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
@@ -471,6 +472,8 @@ void PardisoIndefSolver::factorize()
    }
 #endif
 
+   iparm[17] = -1; /* compute number of nonzeros in factors */
+
 #if 0
    const int nnz = ia[n] - 1;
    double abs_max = 0.0;
@@ -510,7 +513,6 @@ else
    {
       printf("\nReordering completed: ");
       printf("\nNumber of nonzeros in factors  = %d", iparm[17]);
-      printf("          Number of factorization MFLOPS = %d", iparm[18]);
    }
 
    phase = 22;
