@@ -49,7 +49,7 @@ double QpScaler::getOrigObj(double objval) const
 
 void QpScaler::unscaleVariables(Variables& vars) const 
 {
-   // todo: Q
+   // todo : Q
    assert(problem);
    assert(vec_colscale);
    assert(vec_rowscaleA);
