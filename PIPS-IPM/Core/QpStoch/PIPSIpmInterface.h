@@ -593,7 +593,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
     dynamic_cast<const StochVector&>(*vars->x).cloneFull();
   assert(x);
   
-  /// unpermute primal solution
+  /// un-permute primal solution
   const std::vector<unsigned int> permInvx = data->getLinkVarsPermInv();
   if( permInvx.size() != 0 )
     x->permuteVec0Entries(permInvx);
@@ -634,6 +634,16 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   const std::vector<unsigned int> permInvlambda = data->getLinkConsIneqPermInv();
   if( permInvlambda.size() != 0 )
      lambda->permuteLinkingEntries(permInvlambda);
+
+#ifndef NDEBUG
+  StochVector* rZ = z->cloneFull();
+  rZ->axpy(-1.0, *lambda);
+  rZ->axpy(1.0, *pi);
+  double infnomr_rz = rZ->infnorm();
+  if(my_rank == 0)
+    std::cout << "infnorm rz: " << infnomr_rz << std::endl;
+  delete rZ;
+#endif
 
   /// dual values upper varbounds
   StochVector* const phi = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsUpp(*vars->phi)) : 
@@ -681,8 +691,6 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   double obj_postsolved = origData->objectiveValue(postsolved_vars);
   if( my_rank == 0)
     std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
-
-  assert( unscaled_solution->x->componentEqual(*(postsolved_vars->x), 1e-15));
 
   /* compute residuals for postprocessed solution and check for feasibility */
   resids_orig->calcresids(origData, postsolved_vars);
