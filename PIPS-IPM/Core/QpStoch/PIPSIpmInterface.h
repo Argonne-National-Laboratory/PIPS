@@ -357,7 +357,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getUnscaledUnpermVars()
 
   scaler->unscaleVariables(*unscaleUnpermVars);
 
-  // unpermute variables
+  data->undoVariablePermutation(*unscaleUnpermVars);  
 }
 
 template<class FORMULATION, class IPMSOLVER>
@@ -383,7 +383,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getUnscaledUnpermResids()
 
   scaler->unscaleResiduals(*unscaleUnpermResids);
 
-  // unpermute variables
+  data->undoResidualPermutation(*unscaleUnpermResids);  
 }
 
 
