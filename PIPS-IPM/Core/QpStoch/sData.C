@@ -4,7 +4,6 @@
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
-#include "QpGenVars.h"
 #include "SparseLinearAlgebraPackage.h"
 #include "mpi.h"
 #include <iostream>
@@ -1540,6 +1539,69 @@ void sData::permuteLinkingVars()
    dynamic_cast<StochVector&>(*blx).permuteVec0Entries(linkVarsPermutation);
    dynamic_cast<StochVector&>(*ixupp).permuteVec0Entries(linkVarsPermutation);
    dynamic_cast<StochVector&>(*ixlow).permuteVec0Entries(linkVarsPermutation);
+}
+
+void sData::undoVariablePermutation(QpGenVars& vars) const
+{
+
+   const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
+
+   if( perm_inv_link_vars.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*vars.x).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*vars.v).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*vars.w).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*vars.phi).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*vars.gamma).permuteVec0Entries(perm_inv_link_vars);   
+   }
+
+   if( perm_inv_link_cons_eq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*vars.y).permuteLinkingEntries(perm_inv_link_cons_eq);
+   }
+
+   if( perm_inv_link_cons_ineq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*vars.s).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*vars.z).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*vars.t).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*vars.u).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*vars.pi).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*vars.lambda).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+   }
+}
+
+void sData::undoResidualPermutation(QpGenResiduals& resids) const
+{
+   const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
+
+   if( perm_inv_link_vars.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*resids.rQ).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*resids.rv).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*resids.rw).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*resids.rgamma).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*resids.rphi).permuteVec0Entries(perm_inv_link_vars);   
+   }
+
+   if( perm_inv_link_cons_eq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*resids.rA).permuteLinkingEntries(perm_inv_link_cons_eq);
+   }
+
+   if( perm_inv_link_cons_ineq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*resids.rC).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*resids.rz).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*resids.rt).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*resids.ru).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*resids.rlambda).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*resids.rpi).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+   }
 }
 
 void sData::activateLinkStructureExploitation()
