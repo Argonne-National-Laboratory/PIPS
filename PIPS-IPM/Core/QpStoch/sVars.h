@@ -11,7 +11,7 @@ class LinearAlgebraPackage;
 class sTree;
 
 class sVars : public QpGenVars {
- public:
+public:
   sVars( sTree* tree,
 	 OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 	 OoqpVector * iclow_in, OoqpVector * icupp_in);
@@ -30,10 +30,12 @@ class sVars : public QpGenVars {
 	 OoqpVector * iclow_in, long long mclowGlobal,
 	 OoqpVector * icupp_in, long long mcuppGlobal);
 
+  sVars(const sVars& vars);
+
   virtual ~sVars();
   
   virtual void sync();
- protected:
+protected:
   void createChildren();
   std::vector<sVars*> children;
   void AddChild(sVars* child);

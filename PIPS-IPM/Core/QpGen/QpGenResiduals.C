@@ -62,6 +62,51 @@ QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
   }
 }
 
+QpGenResiduals::QpGenResiduals( const QpGenResiduals& res) : Residuals(res)
+{
+  nx = res.nx;
+  my = res.my;
+  mz = res.mz;
+
+  ixlow = OoqpVectorHandle(res.ixlow);
+  nxlow = ixlow->numberOfNonzeros();
+
+  ixupp = OoqpVectorHandle(res.ixupp);
+  nxupp = ixupp->numberOfNonzeros();
+
+  iclow = OoqpVectorHandle(res.iclow);
+  mclow = iclow->numberOfNonzeros();
+
+  icupp = OoqpVectorHandle(res.icupp);
+  mcupp = icupp->numberOfNonzeros();
+
+  rQ = OoqpVectorHandle(res.rQ->cloneFull());
+  rA = OoqpVectorHandle(res.rQ->cloneFull());
+  rC = OoqpVectorHandle(res.rC->cloneFull());
+
+  rz = OoqpVectorHandle(res.rz->cloneFull());
+  if ( mclow > 0 ) 
+  {
+    rt = OoqpVectorHandle(res.rt->cloneFull());
+    rlambda = OoqpVectorHandle(res.rlambda->cloneFull());
+  }
+  if ( mcupp > 0 ) 
+  {
+    ru = OoqpVectorHandle(res.ru->cloneFull());
+    rpi = OoqpVectorHandle(res.rpi->cloneFull());
+  }
+  if( nxlow > 0 ) 
+  {
+    rv = OoqpVectorHandle(res.rv->cloneFull());
+    rgamma = OoqpVectorHandle(res.rgamma->cloneFull());
+  }
+  if( nxupp > 0 ) {
+    rw = OoqpVectorHandle(res.rw->cloneFull());
+    rphi = OoqpVectorHandle(res.rphi->cloneFull());
+  }
+}
+
+
 void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 {
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -300,7 +345,6 @@ int QpGenResiduals::validNonZeroPattern()
 QpGenResiduals::~QpGenResiduals()
 {
 }
-
 
 void QpGenResiduals::writeToStream(ostream& out)
 {
