@@ -42,10 +42,10 @@ public:
   virtual double getOrigObj(double objval) const = 0;
 
   /** compute original variables from given ones */
-  virtual void unscaleVariables(Variables& vars) const = 0;
+  virtual Variables* getUnscaledVariables(const Variables& vars) const = 0;
 
   /** compute original residuals from given ones */
-  virtual void unscaleResiduals(Residuals& resids) const = 0;
+  virtual Residuals* getUnscaledResiduals(const Residuals& resids) const = 0;
 
   /** compute original vector from given primal vector */
   virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) const = 0;

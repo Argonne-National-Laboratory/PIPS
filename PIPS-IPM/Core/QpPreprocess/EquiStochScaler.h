@@ -8,7 +8,7 @@
 #ifndef PIPS_IPM_CORE_QPPREPROCESS_EQUISTOCHSCALER_H_
 #define PIPS_IPM_CORE_QPPREPROCESS_EQUISTOCHSCALER_H_
 
-#include "../QpPreprocess/QpScaler.h"
+#include "../QpPreprocess/StochScaler.h"
 
 class Data;
 
@@ -22,13 +22,12 @@ class Data;
 /**
  * Derived class for QP scalers.
  */
-class EquiStochScaler : public QpScaler
+class EquiStochScaler : public StochScaler
 {
 protected:
   virtual void doObjScaling();
 
 public:
-
   EquiStochScaler(Data * prob, bool bitshifting = true);
   virtual ~EquiStochScaler();
 

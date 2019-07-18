@@ -52,6 +52,9 @@ protected:
   double factor_objscale;
 
   virtual void applyScaling();
+  virtual void unscaleVars( Variables& vars ) const;
+  virtual void unscaleResids( Residuals& vars ) const;
+
   virtual void doObjScaling() = 0;
 
   /** get maximum absolute row ratio and write maximum row entries into vectors */
@@ -70,8 +73,8 @@ public:
   virtual void scale() = 0;
 
   virtual double getOrigObj(double objval) const;
-  virtual void unscaleVariables(Variables& vars) const;
-  virtual void unscaleResiduals(Residuals& resids) const;
+  virtual Variables* getUnscaledVariables(const Variables& vars) const;
+  virtual Residuals* getUnscaledResiduals(const Residuals& resids) const;
   virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) const;
   virtual OoqpVector* getOrigDualEq(const OoqpVector& soldual) const;
   virtual OoqpVector* getOrigDualIneq(const OoqpVector& soldual) const;
