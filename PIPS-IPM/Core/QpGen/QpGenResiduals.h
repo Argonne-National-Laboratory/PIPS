@@ -59,7 +59,10 @@ public:
 		  OoqpVector * ixlow, OoqpVector * ixupp,
 		  OoqpVector * iclow, OoqpVector * icupp );
 
+  QpGenResiduals( const QpGenResiduals& res);
 
+  virtual ~QpGenResiduals();
+  
   virtual void calcresids(Data *problem, Variables *vars);
 
   virtual void add_r3_xz_alpha(Variables *vars, double alpha);
@@ -74,8 +77,6 @@ public:
 
   virtual int  validNonZeroPattern();
   
-  virtual ~QpGenResiduals();
-
   virtual void writeToStream(std::ostream& out);
 };
 

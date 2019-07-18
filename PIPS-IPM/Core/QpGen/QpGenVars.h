@@ -74,6 +74,8 @@ public:
 	     OoqpVector * ixlow, OoqpVector * ixupp,
 	     OoqpVector * iclow, OoqpVector * icupp );
 
+  QpGenVars( const QpGenVars& vars);
+
   virtual ~QpGenVars();
   
   /** computes mu = (t'lambda +u'pi + v'gamma + w'phi)/(mclow+mcupp+nxlow+nxupp) */

@@ -104,6 +104,16 @@ sResiduals::sResiduals( sTree* tree,
   stochNode = tree;
 }
 
+sResiduals::sResiduals( const sResiduals& res ) : QpGenResiduals( res )
+{
+   stochNode = res.stochNode;
+
+   for(unsigned int i = 0; i < children.size(); ++i)
+   {
+       children.push_back( new sResiduals(*children[i]));
+   }
+}
+
 
 void sResiduals::AddChild(sResiduals* child)
 {

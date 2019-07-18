@@ -133,6 +133,15 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
   createChildren();
 }
 
+sVars::sVars(const sVars& vars)
+{
+  stochNode = vars.stochNode;
+  for(unsigned int i = 0; i < children.size(); ++i)
+  {
+    children.push_back( new sVars(*vars.children[i]));
+  }
+}
+
 sVars::~sVars()
 { 
   for (size_t c=0; c<children.size(); c++)
