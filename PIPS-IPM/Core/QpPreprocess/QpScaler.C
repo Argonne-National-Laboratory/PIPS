@@ -47,7 +47,23 @@ double QpScaler::getOrigObj(double objval) const
    return (objval / factor_objscale);
 }
 
-void QpScaler::unscaleVariables(Variables& vars) const 
+Variables* QpScaler::getUnscaledVariables(const Variables& vars) const
+{
+   QpGenVars* qp_vars = new QpGenVars(dynamic_cast<const QpGenVars&>(vars)); 
+   unscaleVars(*qp_vars);
+
+   return qp_vars;
+};
+
+Residuals* QpScaler::getUnscaledResiduals(const Residuals& resids) const
+{
+   QpGenResiduals* qp_resids = new QpGenResiduals(dynamic_cast<const QpGenResiduals&>(resids));
+   unscaleResids(*qp_resids);
+
+   return qp_resids;
+};
+
+void QpScaler::unscaleVars( Variables& vars ) const
 {
    // todo : Q
    assert(problem);
@@ -70,15 +86,15 @@ void QpScaler::unscaleVariables(Variables& vars) const
    qp_vars.lambda->componentMult(*vec_rowscaleC);
    qp_vars.u->componentDiv(*vec_rowscaleC);
    qp_vars.pi->componentMult(*vec_rowscaleC);
-};
+}
 
-void QpScaler::unscaleResiduals(Residuals& resids) const 
+void QpScaler::unscaleResids( Residuals& resids ) const
 {
    assert(problem);
    assert(vec_colscale);
    assert(vec_rowscaleA);
    assert(vec_rowscaleC);
-
+   
    QpGenResiduals& qp_resids = dynamic_cast<QpGenResiduals&>(resids);
 
    qp_resids.rQ->componentDiv(*vec_colscale);
@@ -90,7 +106,7 @@ void QpScaler::unscaleResiduals(Residuals& resids) const
    qp_resids.rt->componentDiv(*vec_rowscaleC);
    qp_resids.ru->componentDiv(*vec_rowscaleC);
    // nothing to to for rgamma, rphi, rlambda, rpi;
-};
+}
 
 OoqpVector* QpScaler::getOrigPrimal(const OoqpVector& solprimal) const
 {

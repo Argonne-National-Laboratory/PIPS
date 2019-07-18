@@ -349,12 +349,10 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getUnscaledUnpermVars()
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated solution");
 
-  unscaleUnpermVars = dynamic_cast<sVars*>( factory->makeVariables( data ) );
-  unscaleUnpermVars->copy(vars);
+  sVars* unscaled_vars = dynamic_cast<sVars*>(scaler->getUnscaledVariables(*vars));
+  //unscaleUnpermVars = data->getUnpermVars(*unscaled_vars);
 
-  scaler->unscaleVariables(*unscaleUnpermVars);
-
-  data->undoVariablePermutation(*unscaleUnpermVars);  
+  delete unscaled_vars;
 }
 
 template<class FORMULATION, class IPMSOLVER>
@@ -365,22 +363,10 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getUnscaledUnpermResids()
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated residuals");
 
-  unscaleUnpermResids = new sResiduals( factory->tree, resids->rQ, 
-        resids->rA, resids->rC, 
-        resids->rz, 
-        resids->rt, resids->rlambda, 
-        resids->ru, resids->rpi, 
-        resids->rv, resids->rgamma, 
-        resids->rw, resids->rphi, 
-        vars->ixlow, vars->ixlow->numberOfNonzeros(),
-        vars->ixupp, vars->ixupp->numberOfNonzeros(),
-        vars->iclow, vars->iclow->numberOfNonzeros(), 
-        vars->icupp, vars->icupp->numberOfNonzeros()
-  );
+  sResiduals* unscaled_resids = dynamic_cast<sResiduals*>(scaler->getUnscaledResiduals(*resids));
+  //unscaleUnpermResids = data->getUnpermuResiduals(unscaled_resids);
 
-  scaler->unscaleResiduals(*unscaleUnpermResids);
-
-  data->undoResidualPermutation(*unscaleUnpermResids);  
+  delete unscaled_resids;
 }
 
 
