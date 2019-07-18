@@ -54,7 +54,7 @@ class PIPSIpmInterface
   std::vector<double> getFirstStageDualRowSolution() const;
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
-  void postsolveComputedSolution() const;
+  void postsolveComputedSolution();
 
   std::vector<double> gatherEqualityConsValues();
   std::vector<double> gatherInequalityConsValues();
@@ -602,7 +602,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
 }
 
 template<class FORMULATION, class IPMSOLVER>
-void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
+void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
   int my_rank;
   MPI_Comm_rank(comm,&my_rank);
@@ -610,98 +610,12 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   assert(origData);
   assert(data);
 
-  /* construct vars object from computed solution */
+  if( unscaleUnpermVars == NULL)
+    this->getUnscaledUnpermVars();
 
-  /// primal solution
-  /// unscale primal solution
-  StochVector* const x = (scaler) ? dynamic_cast<StochVector*>(scaler->getOrigPrimal(*vars->x)) :
-    dynamic_cast<const StochVector&>(*vars->x).cloneFull();
-  assert(x);
-  
-  /// un-permute primal solution
-  const std::vector<unsigned int> permInvx = data->getLinkVarsPermInv();
-  if( permInvx.size() != 0 )
-    x->permuteVec0Entries(permInvx);
+  if( unscaleUnpermResids == NULL)
+    this->getUnscaledUnpermResids();
 
-  /// dual solution
-  /// dual equality constraints
-  StochVector* const y = (scaler) ? dynamic_cast<StochVector*>(scaler->getOrigDualEq(*vars->y)) :
-    dynamic_cast<const StochVector&>(*vars->y).cloneFull();
-  assert(y);
-
-  const std::vector<unsigned int> permInvy = data->getLinkConsEqPermInv();
-  if( permInvy.size() != 0 )
-     y->permuteLinkingEntries(permInvy);
-
-  /// dual inequality constraints
-  StochVector* const z = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->z)) :
-     dynamic_cast<const StochVector&>(*vars->z).cloneFull();
-  assert(z);
-
-  const std::vector<unsigned int> permInvz = data->getLinkConsIneqPermInv();
-  if( permInvz.size() != 0 )
-     z->permuteLinkingEntries(permInvz);
-
-  /// dual values ineqality upp
-  StochVector* const pi = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->pi)) :
-    dynamic_cast<const StochVector&>(*vars->pi).cloneFull();
-  assert(pi);
-
-  const std::vector<unsigned int> permInvpi = data->getLinkConsIneqPermInv();
-  if( permInvpi.size() != 0 )
-     pi->permuteLinkingEntries(permInvpi);
-
-  /// dual values inequality lower
-  StochVector* const lambda = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualIneq(*vars->lambda)) :
-    dynamic_cast<const StochVector&>(*vars->lambda).cloneFull();
-  assert(lambda);
-
-  const std::vector<unsigned int> permInvlambda = data->getLinkConsIneqPermInv();
-  if( permInvlambda.size() != 0 )
-     lambda->permuteLinkingEntries(permInvlambda);
-
-#ifndef NDEBUG
-  StochVector* rZ = z->cloneFull();
-  rZ->axpy(-1.0, *lambda);
-  rZ->axpy(1.0, *pi);
-  double infnomr_rz = rZ->infnorm();
-  if(my_rank == 0)
-    std::cout << "infnorm rz: " << infnomr_rz << std::endl;
-  delete rZ;
-#endif
-
-  /// dual values upper varbounds
-  StochVector* const phi = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsUpp(*vars->phi)) : 
-    dynamic_cast<const StochVector&>(*vars->phi).cloneFull();
-  assert(phi);
-
-  const std::vector<unsigned int> permInvphi = data->getLinkVarsPerm();
-  if( permInvphi.size() != 0 )
-     phi->permuteVec0Entries(permInvphi);
-
-  /// dual values lower varbounds
-  StochVector* gamma = ( scaler ) ? dynamic_cast<StochVector*>(scaler->getOrigDualVarBoundsLow(*vars->gamma)) : 
-    dynamic_cast<const StochVector&>(*vars->gamma).cloneFull();
-  assert(gamma);
-
-  const std::vector<unsigned int> permInvgamma = data->getLinkVarsPerm();
-  if( permInvgamma.size() != 0 )
-     gamma->permuteVec0Entries(permInvgamma);
-
-
-  // OoqpVectorHandle s      = OoqpVectorHandle( factory->tree->newDualZVector() );
-  // OoqpVectorHandle v      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
-  // OoqpVectorHandle w      = OoqpVectorHandle( factory->tree->newPrimalVector() ); 
-  // OoqpVectorHandle t      = OoqpVectorHandle( factory->tree->newDualZVector() );
-  // OoqpVectorHandle u      = OoqpVectorHandle( factory->tree->newDualZVector() ); 
-  sVars* unscaled_solution = new sVars(factory->tree, x, vars->s, y, z, vars->v, gamma, vars->w, phi,
-    vars->t, lambda, vars->u, pi, 
-    data->ixlow, data->ixlow->numberOfNonzeros(),
-    data->ixupp, data->ixupp->numberOfNonzeros(),
-    data->iclow, data->iclow->numberOfNonzeros(),
-    data->icupp, data->icupp->numberOfNonzeros()
-  );
-  
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();
 
@@ -711,7 +625,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
 
 
   sResiduals* resids_orig = dynamic_cast<sResiduals*>( factory->makeResiduals( origData ) );
-  postsolver->postsolve(*unscaled_solution, *postsolved_vars);
+  postsolver->postsolve(*unscaleUnpermVars, *postsolved_vars);
 
   double obj_postsolved = origData->objectiveValue(postsolved_vars);
   if( my_rank == 0)
@@ -720,8 +634,8 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   /* compute residuals for postprocessed solution and check for feasibility */
   resids_orig->calcresids(origData, postsolved_vars);
   
-  double infnorm_rA = resids_orig->rA->infnorm();
-  double infnorm_rC = resids_orig->rC->infnorm();
+  double infnorm_rA = unscaleUnpermResids->rA->infnorm();
+  double infnorm_rC = unscaleUnpermResids->rC->infnorm();
 
   if( my_rank == 0)
   {
@@ -729,16 +643,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution() const
   }
 
   // deleting solutions
-  delete unscaled_solution;
   delete postsolved_vars;
-  delete x;
-  delete y;
-  delete z;
-  delete gamma;
-  delete phi;
-  delete lambda;
-  delete pi;
-  delete resids_orig;
 }
 
 #endif
