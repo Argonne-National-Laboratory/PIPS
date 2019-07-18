@@ -301,8 +301,8 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 #endif
 
    // todo postsolve an unscaled sVars object holding the solution
-  getUnscaledUnpermVars();
-  getUnscaledUnpermResids();
+  // getUnscaledUnpermVars();
+  // getUnscaledUnpermResids();
 
 }
 

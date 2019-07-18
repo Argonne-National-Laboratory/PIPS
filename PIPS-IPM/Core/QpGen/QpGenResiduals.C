@@ -81,7 +81,7 @@ QpGenResiduals::QpGenResiduals( const QpGenResiduals& res) : Residuals(res)
   mcupp = icupp->numberOfNonzeros();
 
   rQ = OoqpVectorHandle(res.rQ->cloneFull());
-  rA = OoqpVectorHandle(res.rQ->cloneFull());
+  rA = OoqpVectorHandle(res.rA->cloneFull());
   rC = OoqpVectorHandle(res.rC->cloneFull());
 
   rz = OoqpVectorHandle(res.rz->cloneFull());
