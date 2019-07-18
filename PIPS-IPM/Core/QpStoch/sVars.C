@@ -133,7 +133,7 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
   createChildren();
 }
 
-sVars::sVars(const sVars& vars)
+sVars::sVars(const sVars& vars) : QpGenVars(vars)
 {
   stochNode = vars.stochNode;
   for(unsigned int i = 0; i < children.size(); ++i)
@@ -144,7 +144,7 @@ sVars::sVars(const sVars& vars)
 
 sVars::~sVars()
 { 
-  for (size_t c=0; c<children.size(); c++)
+  for (size_t c = 0; c < children.size(); c++)
     delete children[c];
 }
 

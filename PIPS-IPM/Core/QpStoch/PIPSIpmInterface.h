@@ -348,9 +348,11 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getUnscaledUnpermVars()
   assert(unscaleUnpermVars == NULL);
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated solution");
-
-  sVars* unscaled_vars = dynamic_cast<sVars*>(scaler->getUnscaledVariables(*vars));
-  //unscaleUnpermVars = data->getUnpermVars(*unscaled_vars);
+  
+  sVars* unscaled_vars = vars;
+  if( scaler )
+    unscaled_vars = dynamic_cast<sVars*>(scaler->getUnscaledVariables(*vars));
+  unscaleUnpermVars = data->getUnpermVars(*unscaled_vars);
 
   delete unscaled_vars;
 }
@@ -358,13 +360,15 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getUnscaledUnpermVars()
 template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getUnscaledUnpermResids()
 {
-  assert(unscaleUnpermResids== NULL);
+  assert(unscaleUnpermResids == NULL);
 
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated residuals");
 
-  sResiduals* unscaled_resids = dynamic_cast<sResiduals*>(scaler->getUnscaledResiduals(*resids));
-  //unscaleUnpermResids = data->getUnpermuResiduals(unscaled_resids);
+  sResiduals* unscaled_resids = resids;
+  if( scaler )
+    unscaled_resids = dynamic_cast<sResiduals*>(scaler->getUnscaledResiduals(*resids));
+  unscaleUnpermResids = data->getUnpermResids(*unscaled_resids);
 
   delete unscaled_resids;
 }
