@@ -234,6 +234,15 @@ void SCsparsifier::updateDiagDomBound()
          printf("\n SCsparsifier switched to diagDomBoundUltraConservative  \n");
       }
    }
+
+   if( gOuterBiCGFails >= 60 )
+   {
+      if( diagDomBound > diagDomBoundHyperConservative )
+      {
+         diagDomBound = diagDomBoundHyperConservative;
+         printf("\n SCsparsifier switched to diagDomBoundHyperConservative  \n");
+      }
+   }
 }
 
 std::vector<double> SCsparsifier::getDomDiagDist(const sData& prob, SparseSymMatrix& sc) const
