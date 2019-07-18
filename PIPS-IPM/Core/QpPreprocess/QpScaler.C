@@ -73,6 +73,8 @@ void QpScaler::unscaleVars( Variables& vars ) const
 
    QpGenVars& qp_vars = dynamic_cast<QpGenVars&>(vars); 
 
+   assert(qp_vars.x);
+   
    qp_vars.x->componentMult(*vec_colscale);
    qp_vars.s->componentDiv(*vec_rowscaleC);
    qp_vars.y->componentMult(*vec_rowscaleA);
