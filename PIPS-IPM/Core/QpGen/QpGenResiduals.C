@@ -23,6 +23,7 @@ QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
 				OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 				OoqpVector * iclow_in, OoqpVector * icupp_in )
 {
+  assert(false);
   nx = nx_;
   my = my_;
   mz = mz_;
@@ -69,16 +70,16 @@ QpGenResiduals::QpGenResiduals( const QpGenResiduals& res) : Residuals(res)
   mz = res.mz;
 
   ixlow = OoqpVectorHandle(res.ixlow);
-  nxlow = ixlow->numberOfNonzeros();
+  nxlow = res.nxlow;
 
   ixupp = OoqpVectorHandle(res.ixupp);
-  nxupp = ixupp->numberOfNonzeros();
+  nxupp = res.nxupp;
 
   iclow = OoqpVectorHandle(res.iclow);
-  mclow = iclow->numberOfNonzeros();
+  mclow = res.mclow;
 
   icupp = OoqpVectorHandle(res.icupp);
-  mcupp = icupp->numberOfNonzeros();
+  mcupp = res.mcupp;
 
   rQ = OoqpVectorHandle(res.rQ->cloneFull());
   rA = OoqpVectorHandle(res.rA->cloneFull());

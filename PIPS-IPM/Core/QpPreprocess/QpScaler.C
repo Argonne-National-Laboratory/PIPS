@@ -101,10 +101,18 @@ void QpScaler::unscaleResids( Residuals& resids ) const
    qp_resids.rA->componentDiv(*vec_rowscaleA);
    qp_resids.rC->componentDiv(*vec_rowscaleC);
    qp_resids.rz->componentMult(*vec_rowscaleC);
-   qp_resids.rv->componentMult(*vec_colscale);      
-   qp_resids.rw->componentMult(*vec_colscale);
-   qp_resids.rt->componentDiv(*vec_rowscaleC);
-   qp_resids.ru->componentDiv(*vec_rowscaleC);
+
+   if( qp_resids.getNxlow() > 0)
+      qp_resids.rv->componentMult(*vec_colscale);      
+
+   if( qp_resids.getNxupp() > 0)
+      qp_resids.rw->componentMult(*vec_colscale);
+
+   if( qp_resids.getMclow() > 0 )
+      qp_resids.rt->componentDiv(*vec_rowscaleC);
+
+   if( qp_resids.getMcupp() > 0)
+      qp_resids.ru->componentDiv(*vec_rowscaleC);
    // nothing to to for rgamma, rphi, rlambda, rpi;
 }
 
