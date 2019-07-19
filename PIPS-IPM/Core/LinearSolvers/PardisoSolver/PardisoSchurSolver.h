@@ -31,7 +31,7 @@ using namespace std;
 class PardisoSchurSolver : public DoubleLinearSolver {
 
  constexpr static int symbFactorIntervalDefault = 3;
- constexpr static int pivotPerturbationExpDefault = 6;
+ constexpr static int pivotPerturbationExpDefault = 8;
 
 protected:
   PardisoSchurSolver() {};

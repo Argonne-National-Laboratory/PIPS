@@ -15,10 +15,10 @@
 /*********************************************************************/
 
 #ifdef STOCH_TESTING
-extern double g_iterNumber;
 double g_scenNum;
 #endif
 
+extern double g_iterNumber;
 extern int gOuterSolve;
 
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
@@ -1292,6 +1292,10 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 
 void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
 {
+   // todo pretty bad hack, should be removed once user parameters are available
+
+   ipIterations = static_cast<int>(g_iterNumber);
+
    assert(childindex < prob->children.size());
 #ifdef PARDISO_BLOCKSC
    children[childindex]->addTermToSchurComplBlocked(prob->children[childindex], hasSparseKkt, *kkt);
