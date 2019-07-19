@@ -278,7 +278,7 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
    if ( 0 != result )
       return;
 
-   tmElapsed=MPI_Wtime()-tmElapsed;
+   tmElapsed = MPI_Wtime()-tmElapsed;
 
    const double objective = getObjective();
 
@@ -301,8 +301,8 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
 #endif
 
   // todo postsolve an unscaled sVars object holding the solution
-  // getUnscaledUnpermVars();
-  // getUnscaledUnpermResids();
+  getUnscaledUnpermVars();
+  getUnscaledUnpermResids();
 
 }
 
@@ -599,8 +599,8 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
       } else {
 	//inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
 	//\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
-	assert(iclow[idx]>0 || icupp[idx]>0);
-	multipliers[i]=z[idx];
+	assert(iclow[idx] > 0 || icupp[idx] > 0);
+	multipliers[i] = z[idx];
       }
     }
     return multipliers;
