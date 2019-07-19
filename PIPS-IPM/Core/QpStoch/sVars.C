@@ -18,6 +18,7 @@ sVars::sVars(sTree* tree,
 	     OoqpVector * iclow_in, OoqpVector * icupp_in)
   : QpGenVars()
 {
+  assert(false);
   SpReferTo( ixlow, ixlow_in );
   SpReferTo( ixupp, ixupp_in );
   SpReferTo( iclow, iclow_in );
@@ -60,7 +61,6 @@ sVars::sVars(sTree* tree,
     w   = OoqpVectorHandle( tree->newPrimalVector() );
     phi = OoqpVectorHandle( tree->newPrimalVector() );
   } 
-  assert(false);
   x = OoqpVectorHandle( tree->newPrimalVector() );
   y = OoqpVectorHandle( tree->newDualYVector() );
   z = OoqpVectorHandle( tree->newDualZVector() );

@@ -85,25 +85,18 @@ QpGenResiduals::QpGenResiduals( const QpGenResiduals& res) : Residuals(res)
   rC = OoqpVectorHandle(res.rC->cloneFull());
 
   rz = OoqpVectorHandle(res.rz->cloneFull());
-  if ( mclow > 0 ) 
-  {
-    rt = OoqpVectorHandle(res.rt->cloneFull());
-    rlambda = OoqpVectorHandle(res.rlambda->cloneFull());
-  }
-  if ( mcupp > 0 ) 
-  {
-    ru = OoqpVectorHandle(res.ru->cloneFull());
-    rpi = OoqpVectorHandle(res.rpi->cloneFull());
-  }
-  if( nxlow > 0 ) 
-  {
-    rv = OoqpVectorHandle(res.rv->cloneFull());
-    rgamma = OoqpVectorHandle(res.rgamma->cloneFull());
-  }
-  if( nxupp > 0 ) {
-    rw = OoqpVectorHandle(res.rw->cloneFull());
-    rphi = OoqpVectorHandle(res.rphi->cloneFull());
-  }
+
+  rt = OoqpVectorHandle(res.rt->cloneFull());
+  rlambda = OoqpVectorHandle(res.rlambda->cloneFull());
+
+  ru = OoqpVectorHandle(res.ru->cloneFull());
+  rpi = OoqpVectorHandle(res.rpi->cloneFull());
+
+  rv = OoqpVectorHandle(res.rv->cloneFull());
+  rgamma = OoqpVectorHandle(res.rgamma->cloneFull());
+  
+  rw = OoqpVectorHandle(res.rw->cloneFull());
+  rphi = OoqpVectorHandle(res.rphi->cloneFull());
 }
 
 
