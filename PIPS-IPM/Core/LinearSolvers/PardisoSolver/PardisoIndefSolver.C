@@ -334,7 +334,6 @@ void PardisoIndefSolver::factorizeFromSparse()
    }
 
    ia[0] = 1;
-   int kills = 0;
    int nnznew = 0;
 
    for( int r = 0; r < n; r++ )
@@ -351,7 +350,6 @@ void PardisoIndefSolver::factorizeFromSparse()
             }
             else
             {
-               kills++;
                assert(jaStorage[j] != r);
             }
 #else
@@ -364,7 +362,7 @@ void PardisoIndefSolver::factorizeFromSparse()
       ia[r + 1] = nnznew + 1;
    }
 
-   std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
+   std::cout << "real nnz in KKT: " << nnznew << " (ratio: " << double(nnznew) / double(iaStorage[n]) << ")" << std::endl;
 
 #if 0
    {

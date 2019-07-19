@@ -41,7 +41,7 @@ class SCsparsifier
 
       double getDiagDomBound() const { return diagDomBound; };
 
-      // set columns col of dominated local Schur complement (distributed) entries to -col
+      // set CSR column marker col of dominated local Schur complement (distributed) entries to -col
       void unmarkDominatedSCdistLocals(const sData& prob, SparseSymMatrix& sc) const;
 
       // resets unmarkDominatedSCdistEntries actions
