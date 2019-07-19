@@ -542,7 +542,7 @@ StochVector* sTree::newDualYVector() const
 StochVector* sTree::newDualZVector() const
 {
   //is this node a dead-end for this process?
-  if(commWrkrs==MPI_COMM_NULL)
+  if(commWrkrs == MPI_COMM_NULL)
     return new StochDummyVector();
 
   //length of linking part
