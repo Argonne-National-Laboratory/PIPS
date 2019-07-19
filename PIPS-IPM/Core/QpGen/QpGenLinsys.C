@@ -55,9 +55,11 @@ static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 static double biCGStabGetTolerance(int ipIterations)
 {
    double tolerance;
-   assert(ipIterations >= 0);
+   assert(ipIterations >= -1);
 
-   if( ipIterations <= 4 )
+   if( ipIterations == -1 )
+      tolerance = 1e-10;
+   else if( ipIterations <= 4 )
       tolerance = 1e-8;
    else if( ipIterations <= 8 )
       tolerance = 1e-9;
@@ -148,13 +150,13 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_,
      else if( print == 1 )
         printStatistics = true;
   }
-  ipIterations = -1;
+  ipIterations = -2;
 }
 
 QpGenLinsys::QpGenLinsys()
  : factory( NULL), rhs(NULL), dd(NULL), dq(NULL), useRefs(0),
    sol(NULL), res(NULL), resx(NULL), resy(NULL), resz(NULL),
-   sol2(NULL), res2(NULL), res3(NULL), res4(NULL), res5(NULL), printStatistics(false), ipIterations(-1)
+   sol2(NULL), res2(NULL), res3(NULL), res4(NULL), res5(NULL), printStatistics(false), ipIterations(-2)
 {
    // todo user parameter!
    char* var = getenv("PIPS_PRINT_STATISTICS");
@@ -456,7 +458,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       if( myRank == 0 )
       {
           std::cout << "global system infnorm=" << glbinfnorm << " x 1norm=" <<  xonenorm << " tolb/tolnew: "<< tolb << " " <<  (tol * xonenorm * glbinfnorm )  <<  std::endl;
-          std::cout << "outerBICG starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb << "(tolerance=" << tol << ")" <<  std::endl;
+          std::cout << "outerBICG starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb << " (tolerance=" << tol << ")" <<  std::endl;
       }
    }
 

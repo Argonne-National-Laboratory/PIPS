@@ -11,7 +11,7 @@
 #include "mpi.h"
 #include <cassert>
 
-
+extern double g_iterNumber;
 extern int gOuterBiCGFails;
 extern int gOuterBiCGIter;
 
@@ -208,7 +208,7 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
 void SCsparsifier::updateDiagDomBound()
 {
-   if( gOuterBiCGIter >= 5 )
+   if( gOuterBiCGIter >= 5 && static_cast<int>(g_iterNumber) > 0 )
    {
       if( diagDomBound > diagDomBoundNormal )
       {

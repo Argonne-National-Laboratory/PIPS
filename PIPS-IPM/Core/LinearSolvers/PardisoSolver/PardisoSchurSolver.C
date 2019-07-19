@@ -154,8 +154,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 
   if( myRank == 0 )
   {
-     printf(" using pivot perturbation 10^%d \n", pivotPerturbationExp);
-
+     printf(" using pivot perturbation 10^-%d \n", pivotPerturbationExp);
 
      if( useSparseRhs )
         printf(" using PARDISO_SPARSE_RHS_LEAF \n");
