@@ -522,7 +522,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherEqualityCons
   if( permInv.size() != 0 )
      eqValsOrg->permuteLinkingEntries(permInv);
 
-  eqValsOrg->axpy(1.0, *origData->bA);
+  eqValsOrg->axpy(1.0, *data->bA);
 
   std::vector<double> eqVals = eqValsOrg->gatherStochVector();
 
