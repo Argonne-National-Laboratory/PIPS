@@ -73,8 +73,7 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
                   const int numIrow,        /** < length of equIl/equIm array */
                   const double objval,      /** < objective value */
                   double* varl,             /** < variable level (can be NULL) */
-                  double* varmlo,           /** < variable marginals (can be NULL) */
-                  double* varmup,           /** < variable marginals (can be NULL) */
+                  double* varm,             /** < variable marginals (can be NULL) */
                   double* equEl,            /** < equation =e= level (can be NULL) */
                   double* equIl,            /** < equation =lg= level (can be NULL) */
                   double* equEm,            /** < equation =e= marginals */
