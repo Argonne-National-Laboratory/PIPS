@@ -1443,7 +1443,7 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    }
    GDXSAVECALLX(fGDX,gdxDataReadDone(fGDX));
    if (badCnt)
-      printf("*** %d unexpected matrix coefficient var.stage <> equ.stage and not linking. %s\n", badCnt, debugMode?"":"Add -s to gmschk call to see details.");
+      printf("*** %d unexpected matrix coefficient var.stage <> equ.stage and not linking. %s\n", badCnt, debugMode?"":"Add -d to gmschk call to see details.");
    assert( 0 == badCnt );
   
    MATALLOC(A);
