@@ -418,11 +418,11 @@ int main(int argc, char ** argv)
    std::vector<double> primalSolVec;
    std::vector<double> dualSolEqVec;
    std::vector<double> dualSolIneqVec;
-   std::vector<double> dualSolIneqUppVec;
-   std::vector<double> dualSolIneqLowVec;
+   //std::vector<double> dualSolIneqUppVec;
+   //std::vector<double> dualSolIneqLowVec;
    std::vector<double> dualSolVarBounds;
-   std::vector<double> dualSolVarBoundsUppVec;
-   std::vector<double> dualSolVarBoundsLowVec;
+   //std::vector<double> dualSolVarBoundsUppVec;
+   //std::vector<double> dualSolVarBoundsLowVec;
 
    std::vector<double> eqValues;
    std::vector<double> ineqValues;
@@ -458,11 +458,11 @@ int main(int argc, char ** argv)
          primalSolVec = pipsIpm.gatherPrimalSolution();
          dualSolEqVec = pipsIpm.gatherDualSolutionEq();
          dualSolIneqVec = pipsIpm.gatherDualSolutionIneq();
-         dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
-         dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
+         //dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
+         //dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
          dualSolVarBounds = pipsIpm.gatherDualSolutionVarBounds();
-         dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
-         dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
+         //dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
+         //dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
          eqValues = pipsIpm.gatherEqualityConsValues();
          ineqValues = pipsIpm.gatherInequalityConsValues();
       }
@@ -497,11 +497,11 @@ int main(int argc, char ** argv)
          primalSolVec = pipsIpm.gatherPrimalSolution();
          dualSolEqVec = pipsIpm.gatherDualSolutionEq();
          dualSolIneqVec = pipsIpm.gatherDualSolutionIneq();
-         dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
-         dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
+         //dualSolIneqUppVec = pipsIpm.gatherDualSolutionIneqUpp();
+         //dualSolIneqLowVec = pipsIpm.gatherDualSolutionIneqLow();
          dualSolVarBounds = pipsIpm.gatherDualSolutionVarBounds();
-         dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
-         dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
+         //dualSolVarBoundsUppVec = pipsIpm.gatherDualSolutionVarBoundsUpp();
+         //dualSolVarBoundsLowVec = pipsIpm.gatherDualSolutionVarBoundsLow();
          eqValues = pipsIpm.gatherEqualityConsValues();
          ineqValues = pipsIpm.gatherInequalityConsValues();
       }
@@ -516,20 +516,23 @@ int main(int argc, char ** argv)
       cout << "primalSolVec " << primalSolVec.size() << endl;
       cout << "dualSolEqVec " << dualSolEqVec.size() << endl;
       cout << "dualSolIneqVec " << dualSolIneqVec.size() << endl;
-      cout << "dualSolIneqUppVec " << dualSolIneqUppVec.size() << endl;
-      cout << "dualSolIneqLowVec " << dualSolIneqLowVec.size() << endl;
-      cout << "dualSolVarBoundsUppVec " << dualSolVarBoundsUppVec.size() << endl;
-      cout << "dualSolVarBoundsLowVec " << dualSolVarBoundsLowVec.size() << endl;
+      cout << "eqValues " << eqValues.size() << endl;
+      cout << "ineqValues " << ineqValues.size() << endl;
+      //cout << "dualSolIneqUppVec " << dualSolIneqUppVec.size() << endl;
+      //cout << "dualSolIneqLowVec " << dualSolIneqLowVec.size() << endl;
+      cout << "dualSolVarBounds " << dualSolVarBounds.size() << endl;
+      //cout << "dualSolVarBoundsUppVec " << dualSolVarBoundsUppVec.size() << endl;
+      //cout << "dualSolVarBoundsLowVec " << dualSolVarBoundsLowVec.size() << endl;
     
       cout << "variables" << endl; 
       for (unsigned int j=0; j<primalSolVec.size(); j++)
-          cout << j << " " << primalSolVec[j] << " " << dualSolVarBoundsUppVec[j] << " " << dualSolVarBoundsLowVec[j] << endl; 
+          cout << j << " " << primalSolVec[j] << " " << dualSolVarBounds[j] << endl; 
       cout << "=constraints" << endl; 
       for (unsigned int j=0; j<dualSolEqVec.size(); j++)
-          cout << j << " " << dualSolEqVec[j] << endl; 
+          cout << j << " " << eqValues[j] << " " << dualSolEqVec[j] << endl; 
       cout << "<constraints" << endl; 
       for (unsigned int j=0; j<dualSolIneqVec.size(); j++)
-          cout << j << " " << dualSolIneqVec[j] << " " << dualSolIneqUppVec[j] << " " << dualSolIneqLowVec[j] << endl; 
+          cout << j << " " << ineqValues[j] << " " << dualSolIneqVec[j] << endl; 
 #endif
        
       rc = writeSolution(fileName,
@@ -538,10 +541,9 @@ int main(int argc, char ** argv)
 						 dualSolIneqVec.size(),
 						 objective,
 						 &primalSolVec[0],
-						 &dualSolVarBoundsLowVec[0],
-						 &dualSolVarBoundsUppVec[0],
-						 NULL,
-						 NULL,
+						 &dualSolVarBounds[0],
+						 &eqValues[0],
+						 &ineqValues[0],
 						 &dualSolEqVec[0],
 						 &dualSolIneqVec[0],
 						 pGDXDirectory);
