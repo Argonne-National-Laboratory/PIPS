@@ -652,18 +652,18 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   double infnorm_rC_postsolved = resids_orig->rC->infnorm();
 
 #ifndef NDEBUG
-  assert( PIPSisEQ( vars->x->dotProductWith( data->g ), obj_postsolved) );
+  assert( PIPSisEQ( getObjective(), obj_postsolved, 1e-5) );
 
-  OoqpVector* rA_orig = origData->b->cloneFull();
-  OoqpVector* rA_post = data->b->cloneFull();
-  origData->Amult( -1, rA_orig, 1.0, postsolved_vars->x);
-  data->Amult( -1, rA_post, 1.0, vars->x);
+  OoqpVector* rA_orig = origData->bA->cloneFull();
+  OoqpVector* rA_post = data->bA->cloneFull();
+  origData->Amult( -1, *rA_orig, 1.0, *postsolved_vars->x);
+  data->Amult( -1, *rA_post, 1.0, *vars->x);
 
   // rC = data->b->cloneFull();
 
-  assert( PIPSisEQ( data->Amult() ) );
-  assert( PIPSisEQ( rA_orig->infnorm(), infnorm_rA_orig) );
-  assert( PIPSisEQ( rA_post->infnorm(), infnorm_rA_postsolved) );
+  //assert( PIPSisEQ( data->Amult() ) );
+  assert( PIPSisEQ( rA_orig->infnorm(), infnorm_rA_orig, 1e-5) );
+  assert( PIPSisEQ( rA_post->infnorm(), infnorm_rA_postsolved, 1e-5) );
   /** y = beta * y + alpha * A * x */
   // virtual void Amult( double beta,  OoqpVector& y,
   //         double alpha, OoqpVector& x);

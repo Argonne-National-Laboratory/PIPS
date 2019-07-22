@@ -33,7 +33,7 @@
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
 #include "StochPresolverColumnFixation.h"
-// #include "StochPresolverSingletonRows.h"
+#include "StochPresolverSingletonRows.h"
 //#include "StochPresolverSingletonColumns.h"
 #include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
@@ -78,7 +78,7 @@ Data* StochPresolver::presolve()
    StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
    StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
    StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
-  // StochPresolverSingletonRows presolverSR(presData, *sorigprob);
+   StochPresolverSingletonRows presolverSR(presData, *sorigprob);
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
@@ -90,7 +90,7 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      // presolverSR.applyPresolving();
+      //presolverSR.applyPresolving();
       //presolverBS.applyPresolving();
       //presolverColFix.applyPresolving();
       //presolverCleanup.applyPresolving();
@@ -125,10 +125,11 @@ Data* StochPresolver::presolve()
    // }   
 
    sData* finalPresData = presData.finalize();
-//   finalPresData->writeToStreamDense(std::cout);
+
+   // todo : verify presolver and postsolver have same amount of deleted rows and cols
+
    assert( finalPresData->isRootNodeInSync() );
    // exit(0);
-
    return sorigprob->cloneFull();
    return finalPresData;
 }

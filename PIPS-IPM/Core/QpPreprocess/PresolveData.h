@@ -25,14 +25,13 @@ struct sCOLINDEX
       int index;
 };
 
-/* here we use node == -2 for the linking block */
 struct sROWINDEX
 {
-      sROWINDEX(int node, int index, SystemType system_type) :
-         node(node), index(index), system_type(system_type){};
+      sROWINDEX(SystemType system_type, int node, int index ) :
+         system_type(system_type), node(node), index(index) {};
+      SystemType system_type;
       int node;
       int index;
-      SystemType system_type;
 };
 
 class PresolveData
@@ -134,9 +133,15 @@ public :
       const StochVector& getNnzsRowC() const { return *nnzs_row_C; };
       const StochVector& getNnzsCol() const { return *nnzs_col; };
 
-      const std::vector<sROWINDEX>& getSingletonRows() const { return singleton_rows; };
-      const std::vector<sCOLINDEX>& getSingletonCols() const { return singleton_cols; };
+      int getNnzsRowA(int node, BlockType block_type, int row) const { return getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row]; };
+      int getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row]; };
+      int getNnzsCol(int node, int col) const { return getSimpleVecColFromStochVec(*nnzs_col, node)[col]; };
 
+      std::vector<sROWINDEX>& getSingletonRows() { return singleton_rows; };
+      std::vector<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
+
+      void clearSingletonRows() { singleton_rows.clear(); };
+      void clearSingletonCols() { singleton_cols.clear(); };
       /* methods for initializing the object */
    private:
       // initialize row and column nnz counter
