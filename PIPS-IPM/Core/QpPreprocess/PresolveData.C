@@ -886,14 +886,19 @@ void PresolveData::fixColumn(int node, int col, double value)
 {
    assert(-1 <= node && node < nChildren);
    assert(0 <= col);
-   postsolver->notifyFixedColumn(node, col, value);
+   
+
+   /* current upper and lower bound as well als column - if linking variable then only proc zero stores current root column */
+   std::vector<int> idx;
+   std::vector<double> val;
+   buildColForPostsolve( node, col, idx, val);
+   postsolver->notifyFixedColumn(node, col, value, idx, val);
 
 #ifndef NDEBUG
    double ixlow = getSimpleVecColFromStochVec(*presProb->ixlow, node)[col];
    double ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, node)[col];
    double xlow = (ixupp == 1.0) ? getSimpleVecColFromStochVec(*presProb->blx, node)[col] : std::numeric_limits<double>::infinity();
    double xupp = (ixlow == 1.0) ? getSimpleVecColFromStochVec(*presProb->bux, node)[col] : std::numeric_limits<double>::infinity();
-
    assert(ixlow == 1.0);
    assert(ixupp == 1.0);
    assert(PIPSisEQ(xlow, xupp, 1e-10));
@@ -2566,3 +2571,155 @@ void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGe
             << ( (ixupp[col] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[col]) << "]";
    }
 }
+
+void PresolveData::buildRowForPostsolve( SystemType system_type, int node, BlockType block_type, int row, std::vector<int>& idx_row,
+   std::vector<double>& val_row)
+{
+   // todo
+};
+
+/*
+ * node != -1
+ * index: idx Bmat, inf, idx Blmat, inf, idx Cmat, inf, idx Clmat
+ * value: val Bmat, inf, val Blmat, inf, val Cmat, inf, val Clmat
+ *
+ * node == -1
+ * index: idx A0mat, inf, i, Aimat, inf, j, Ajmat, inf,..., inf, inf, idx C0mat, ...
+ * value: val A0mat, inf, val Aimat, inf, val Ajmat, int,..., inf, inf, val C0mat, ...
+ *
+ * only rank 0 gets A0mat and C0mat
+ */      
+void PresolveData::buildColForPostsolve( int node, int col, std::vector<int>& idx_col, std::vector<double>& val_col)
+{
+   idx_col.clear();
+   val_col.clear();
+
+   /* build linking column */
+   if(node == -1)
+   {
+      int start = -1;
+      int end = -1;
+
+      /* EQUALITY_SYSTEM */
+      if( my_rank == 0)
+      {
+         /* A0mat */
+         SparseStorageDynamic& a0mat_transp = getSparseGenMatrix(EQUALITY_SYSTEM, node, LINKING_VARS_BLOCK)->getStorageDynamicTransposedRef();
+         start = a0mat_transp.rowptr[col].start;
+         end = a0mat_transp.rowptr[col].end;
+
+         idx_col.insert(idx_col.end(), a0mat_transp.jcolM[start], a0mat_transp.jcolM[end]);
+         val_col.insert(val_col.end(), a0mat_transp.M[start], a0mat_transp.M[end]);
+
+         /* inf */
+         idx_col.push_back( std::numeric_limits<int>::infinity());
+         val_col.push_back( std::numeric_limits<double>::infinity());
+      }
+
+      for(int i = 0; i < nChildren; ++i)
+      {
+         if( nodeIsDummy( i, EQUALITY_SYSTEM) )
+            continue;
+
+         /* Aimat */
+         SparseStorageDynamic& aimat_transp = getSparseGenMatrix(EQUALITY_SYSTEM, i, LINKING_VARS_BLOCK)->getStorageDynamicTransposedRef();
+         start = aimat_transp.rowptr[col].start;
+         end = aimat_transp.rowptr[col].end;
+
+         idx_col.push_back(i);
+         idx_col.insert(idx_col.end(), aimat_transp.jcolM[start], aimat_transp.jcolM[end]);
+         val_col.insert(val_col.end(), aimat_transp.M[start], aimat_transp.M[end]);
+
+         /* inf */
+         idx_col.push_back( std::numeric_limits<int>::infinity());
+         val_col.push_back( std::numeric_limits<double>::infinity());
+      }
+
+      /* inf */
+      idx_col.push_back( std::numeric_limits<int>::infinity());
+      val_col.push_back( std::numeric_limits<double>::infinity());
+
+      /* INEQUALITY_SYSTEM */
+      if( my_rank == 0)
+      {
+         /* C0mat */
+         SparseStorageDynamic& c0mat_transp = getSparseGenMatrix(INEQUALITY_SYSTEM, node, LINKING_VARS_BLOCK)->getStorageDynamicTransposedRef();
+         start = c0mat_transp.rowptr[col].start;
+         end = c0mat_transp.rowptr[col].end;
+
+         idx_col.insert(idx_col.end(), c0mat_transp.jcolM[start], c0mat_transp.jcolM[end]);
+         val_col.insert(val_col.end(), c0mat_transp.M[start], c0mat_transp.M[end]);
+      }
+
+      for(int i = 0; i < nChildren; ++i)
+      {
+         if( nodeIsDummy( i, INEQUALITY_SYSTEM) )
+            continue;
+
+         /* inf */
+         idx_col.push_back( std::numeric_limits<int>::infinity());
+         val_col.push_back( std::numeric_limits<double>::infinity());
+
+         /* Cimat */
+         SparseStorageDynamic& cimat_transp = getSparseGenMatrix(INEQUALITY_SYSTEM, i, LINKING_VARS_BLOCK)->getStorageDynamicTransposedRef();
+         start = cimat_transp.rowptr[col].start;
+         end = cimat_transp.rowptr[col].end;
+
+         idx_col.push_back(i);
+         idx_col.insert(idx_col.end(), cimat_transp.jcolM[start], cimat_transp.jcolM[end]);
+         val_col.insert(val_col.end(), cimat_transp.M[start], cimat_transp.M[end]);
+
+         /* inf */
+         idx_col.push_back( std::numeric_limits<int>::infinity());
+         val_col.push_back( std::numeric_limits<double>::infinity());
+      }
+   }
+   else
+   {
+      int start = -1;
+      int end = -1;
+      /* add Bmat */
+      SparseStorageDynamic& bmat_transp = getSparseGenMatrix(EQUALITY_SYSTEM, node, CHILD_BLOCK)->getStorageDynamicTransposedRef();
+      start = bmat_transp.rowptr[col].start;
+      end = bmat_transp.rowptr[col].end;
+
+      idx_col.insert(idx_col.end(), bmat_transp.jcolM[start], bmat_transp.jcolM[end]);
+      val_col.insert(val_col.end(), bmat_transp.M[start], bmat_transp.M[end]);
+
+      /* inf */
+      idx_col.push_back( std::numeric_limits<int>::infinity());
+      val_col.push_back( std::numeric_limits<double>::infinity());
+
+      /* add Blmat */
+      SparseStorageDynamic& blmat_transp = getSparseGenMatrix(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK)->getStorageDynamicTransposedRef();
+      start = blmat_transp.rowptr[col].start;
+      end = blmat_transp.rowptr[col].end;
+
+      idx_col.insert(idx_col.end(), blmat_transp.jcolM[start], blmat_transp.jcolM[end]);
+      val_col.insert(val_col.end(), blmat_transp.M[start], blmat_transp.M[end]);
+
+      /* inf */
+      idx_col.push_back( std::numeric_limits<int>::infinity());
+      val_col.push_back( std::numeric_limits<double>::infinity());
+
+      /* Cmat */
+      SparseStorageDynamic& cmat_transp = getSparseGenMatrix(INEQUALITY_SYSTEM, node, CHILD_BLOCK)->getStorageDynamicTransposedRef();
+      start = cmat_transp.rowptr[col].start;
+      end = cmat_transp.rowptr[col].end;
+
+      idx_col.insert(idx_col.end(), cmat_transp.jcolM[start], cmat_transp.jcolM[end]);
+      val_col.insert(val_col.end(), cmat_transp.M[start], cmat_transp.M[end]);
+      
+      /* inf */
+      idx_col.push_back( std::numeric_limits<int>::infinity());
+      val_col.push_back( std::numeric_limits<double>::infinity());
+
+      /* Clmat */
+      SparseStorageDynamic& clmat_transp = getSparseGenMatrix(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK)->getStorageDynamicTransposedRef();
+      start = clmat_transp.rowptr[col].start;
+      end = clmat_transp.rowptr[col].end;
+
+      idx_col.insert(idx_col.end(), clmat_transp.jcolM[start], clmat_transp.jcolM[end]);
+      val_col.insert(val_col.end(), clmat_transp.M[start], clmat_transp.M[end]);
+   }
+};

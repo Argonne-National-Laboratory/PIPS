@@ -116,7 +116,6 @@ void StochPresolverColumnFixation::applyPresolving()
                   value = (*currxuppChild)[col];
                else  // set the variable to the arithmetic mean:
                   value = ( (*currxlowChild)[col] + (*currxuppChild)[col] ) / 2.0;
-
                presData.fixColumn(node, col, value);
                ++fixed_columns;
             }

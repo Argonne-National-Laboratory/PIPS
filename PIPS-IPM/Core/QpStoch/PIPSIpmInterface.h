@@ -662,8 +662,8 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   // rC = data->b->cloneFull();
 
   //assert( PIPSisEQ( data->Amult() ) );
-  assert( PIPSisEQ( rA_orig->infnorm(), infnorm_rA_orig, 1e-5) );
-  assert( PIPSisEQ( rA_post->infnorm(), infnorm_rA_postsolved, 1e-5) );
+  //assert( PIPSisEQ( rA_orig->infnorm(), infnorm_rA_orig, 1e-5) );
+  //assert( PIPSisEQ( rA_post->infnorm(), infnorm_rA_postsolved, 1e-5) );
   /** y = beta * y + alpha * A * x */
   // virtual void Amult( double beta,  OoqpVector& y,
   //         double alpha, OoqpVector& x);
@@ -671,8 +671,10 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   /** y = beta * y + alpha * C * x   */
   // virtual void Cmult( double beta,  OoqpVector& y,
           // double alpha, OoqpVector& x );
-
-
+  double a = rA_orig->infnorm();
+  double b = rA_post->infnorm();
+  if( my_rank == 0)
+    std::cout << a << "\t" << b << std::endl;
 #endif
 
 

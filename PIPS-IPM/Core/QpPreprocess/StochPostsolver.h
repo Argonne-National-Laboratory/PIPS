@@ -25,13 +25,16 @@ public:
 
       void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint );
 
-      void notifyFixedColumn( int node, unsigned int col, double value);
+      void notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col, const std::vector<double>& values_col);
       void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
 
       virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
 protected:
+
+      int my_rank;
+      bool distributed;
 
       /* can represent a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
       struct INDEX
@@ -56,12 +59,14 @@ protected:
 
       /// for now mapping will contain a dummy value for columns that have not been fixed and the value the columns has been fixed to otherwise
       StochVector* padding_origcol;
-//      StochVector* mapping_to_origrow_equality;
-//      StochVector* mapping_to_origrow_inequality;
+      StochVector* padding_origrow_equality;
+      StochVector* padding_origrow_inequality;
 
       std::vector<ReductionType> reductions;
       std::vector<INDEX> indices;
       std::vector<double> values;
+      std::vector<int> val_idx;
+      std::vector<int> start_idx_indices;
       std::vector<unsigned int> start_idx_values;
 
 
@@ -81,6 +86,9 @@ private:
       SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
 
 /// postsolve operations
+
+      void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
+
       void setOriginalValuesFromReduced(StochVector& original_vector, const StochVector& reduced_vector, const StochVector& padding_original) const;
       void setOriginalValuesFromReduced(SimpleVector& original_vector, const SimpleVector& reduced_vector, const SimpleVector& padding_original) const;
 

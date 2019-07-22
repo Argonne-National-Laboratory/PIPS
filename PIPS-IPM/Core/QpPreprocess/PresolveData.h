@@ -249,6 +249,9 @@ private:
       SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
       SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
 
+      void buildRowForPostsolve( SystemType system_type, int node, BlockType block_type, int row, std::vector<int>& idx_row, std::vector<double>& val_row);
+      void buildColForPostsolve( int node, int col, std::vector<int>& idx_col, std::vector<double>& val_col);
+
 /// methods for printing debug information
 public:
       void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const;
