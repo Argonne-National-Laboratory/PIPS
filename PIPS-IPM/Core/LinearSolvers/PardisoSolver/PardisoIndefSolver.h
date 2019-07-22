@@ -22,7 +22,10 @@ class PardisoIndefSolver : public DoubleLinearSolver
       SparseStorageHandle mStorageSparse;
    protected:
 
-      static constexpr double precondDiagDomBound = 0.0001;
+      constexpr static double precondDiagDomBound = 0.0001;
+      constexpr static int pivotPerturbationExpDefault = 8;
+      constexpr static bool highAccuracyDefault = true;
+      constexpr static bool useSparseRhsDefault = true;
 
       double* x; /* solution vector */
 
@@ -45,6 +48,9 @@ class PardisoIndefSolver : public DoubleLinearSolver
       double* a;
       int idum;
       double ddum;
+      int pivotPerturbationExp; // 10^-exp
+      int nThreads;
+      bool highAccuracy;
 
    public:
       PardisoIndefSolver(DenseSymMatrix * storage);

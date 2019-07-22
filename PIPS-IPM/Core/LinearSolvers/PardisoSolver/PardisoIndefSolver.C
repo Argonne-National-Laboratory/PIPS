@@ -74,31 +74,22 @@ void PardisoIndefSolver::setIparm(int* iparm){
     *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
     *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
     */
-   iparm[2] = PIPSgetnOMPthreads();
-
-   // check whether other environment variable has been set
-
-   /* Numbers of processors, value of OMP_NUM_THREADS */
-   char* var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
-   if( var != NULL )
-   {
-      int num_procs = -1;
-      sscanf(var, "%d", &num_procs);
-
-      assert(num_procs >= 1);
-
-      iparm[2] = num_procs;
-   }
-
+   assert(nThreads >= 1 && pivotPerturbationExp >= 1);
+   iparm[9] = pivotPerturbationExp;
+   iparm[2] = nThreads;
    iparm[18] = 0; /* don't compute GFLOPS */
    iparm[7] = 8; /* max number of iterative refinement steps. */
-   #ifdef PARDISOINDEF_SCALE
-   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-   #else
-   iparm[10] = 0;
-   iparm[12] = 0;
-   #endif
+
+   if( highAccuracy )
+   {
+      iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+      iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+   }
+   else
+   {
+      iparm[10] = 1;
+      iparm[12] = 0;
+   }
 
    #ifdef PARDISO_PARALLEL_AGGRESSIVE
    iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
@@ -117,13 +108,16 @@ void PardisoIndefSolver::setIparm(int* iparm){
    iparm[26] = 1;
    #endif
 
-   #ifdef PARDISOINDEF_SCALE
-   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-   iparm[12] = 1; // MKL does not have a =2 option here
-   #else
-   iparm[10] = 0;
-   iparm[12] = 0;
-   #endif
+   if( highAccuracy )
+   {
+      iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+      iparm[12] = 1;// MKL does not have a =2 option here
+   }
+   else
+   {
+      iparm[10] = 0;
+      iparm[12] = 0;
+   }
 
    #ifdef PARDISO_PARALLEL_AGGRESSIVE
    iparm[23] = 0; // iparm[23] does NOT work with iparm[10] = iparm[12] = 1 for mkl pardiso
@@ -181,7 +175,7 @@ void PardisoIndefSolver::initPardiso()
    nrhs = 1;
    iparm[0] = 0;
 
-   useSparseRhs = true;
+   useSparseRhs = useSparseRhsDefault;
 
    // todo proper parameter
    char* var = getenv("PARDISO_SPARSE_RHS_ROOT");
@@ -191,14 +185,63 @@ void PardisoIndefSolver::initPardiso()
       sscanf(var, "%d", &use);
       if( use == 0 )
          useSparseRhs = false;
+      else if( use == 1 )
+         useSparseRhs = true;
+   }
+
+   nThreads = PIPSgetnOMPthreads();
+
+   // todo proper parameter
+   var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
+   if( var != NULL )
+   {
+      int n = -1;
+      sscanf(var, "%d", &n);
+
+      assert(n >= 1);
+
+      nThreads = n;
+   }
+
+   pivotPerturbationExp = pivotPerturbationExpDefault;
+
+   // todo proper parameter
+   var = getenv("PARDISO_PIVOT_PERTURBATION_ROOT");
+   if( var != NULL )
+   {
+      int exp;
+      sscanf(var, "%d", &exp);
+      if( exp >= 1 )
+         pivotPerturbationExp = exp;
+   }
+
+   highAccuracy = highAccuracyDefault;
+
+   // todo proper parameter
+   var = getenv("PARDISO_HIGH_ACCURACY_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      if( n == 0 )
+         highAccuracy = false;
+      else if( n == 1 )
+         highAccuracy = true;
    }
 
    if( myRank == 0 )
    {
-      if( useSparseRhs )
-         printf(" using PARDISO_SPARSE_RHS_ROOT \n");
+      printf("PARDISO root: using pivot perturbation 10^-%d \n", pivotPerturbationExp);
+
+      if( highAccuracy )
+         printf("PARDISO root: using high accuracy \n");
       else
-         printf(" NOT using PARDISO_SPARSE_RHS_ROOT \n");
+         printf("PARDISO root: NOT using high accuracy \n");
+
+      if( useSparseRhs )
+         printf("PARDISO root: using sparse rhs \n");
+      else
+         printf("PARDISO root: NOT using sparse rhs \n");
    }
 
 #ifndef WITH_MKL_PARDISO
@@ -225,9 +268,8 @@ void PardisoIndefSolver::initPardiso()
 
    setIparm(iparm);
 
-
    if( myRank == 0 )
-      printf("using %d threads for root Schur complement \n", iparm[2]);
+      printf("PARDISO root: using %d threads \n", iparm[2]);
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */

@@ -141,7 +141,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   }
 
   // todo proper parameter
-  var = getenv("PARDISO_PIVOT_PERURBATION");
+  var = getenv("PARDISO_PIVOT_PERTURBATION");
   pivotPerturbationExp = pivotPerturbationExpDefault;
 
   if( var != NULL )
