@@ -24,7 +24,7 @@ public:
    virtual void applyPresolving();
 
 private:
-   long long removed_rows;
+   long long removed_rows; 
 
    void doSingletonRows(int& n_sing_sys, int& n_sing_other_sys, SystemType system_type);
 

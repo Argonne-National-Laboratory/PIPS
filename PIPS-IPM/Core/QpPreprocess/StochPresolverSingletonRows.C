@@ -21,13 +21,18 @@ StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData,
 StochPresolverSingletonRows::~StochPresolverSingletonRows()
 {
 }
-
+ 
 void StochPresolverSingletonRows::applyPresolving()
 {
+   presData.allreduceAndApplyNnzChanges();
+   presData.allreduceAndApplyBoundChanges();
+   presData.allreduceAndApplyLinkingRowActivities();
+   presData.allreduceLinkingVarBounds();
+
    assert(presData.reductionsEmpty());
-   assert(presData.presProb->isRootNodeInSync());
+   assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
-   assert(indivObjOffset == 0.0);
+   assert(presData.verifyActivities());
 
 #ifndef NDEBUG
    if( my_rank == 0 )

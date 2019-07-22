@@ -25,7 +25,7 @@ struct sCOLINDEX
       int index;
 };
 
-/* here we use node == -2 for the linking block in the root node */
+/* here we use node == -2 for the linking block */
 struct sROWINDEX
 {
       sROWINDEX(int node, int index, SystemType system_type) :

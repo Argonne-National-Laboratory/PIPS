@@ -5,6 +5,8 @@
  *      Author: bzfuslus
  */
 
+// todo : find some useful lenth to initialize singleton rows and singleton cols to - prealloc some storage
+
 #include "PresolveData.h"
 #include "StochGenMatrix.h"
 #include "DoubleMatrixTypes.h"
@@ -618,6 +620,25 @@ void PresolveData::allreduceAndApplyNnzChanges()
    nnzs_row_A->vecl->axpy(1.0, *nnzs_row_A_chgs);
    nnzs_row_C->vecl->axpy(1.0, *nnzs_row_C_chgs);
 
+   // todo : this can be done more efficiently, e.g. while substracting
+   for( int i = 0; i < nnzs_col_chgs->length(); ++i )
+   {
+      if( (*nnzs_col_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1 )
+         singleton_cols.push_back( sCOLINDEX(-1, i) );
+   }
+   
+   for( int i = 0; i < nnzs_row_A_chgs->length(); ++i )
+   {
+      if( (*nnzs_row_A_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[i] == 1 )
+         singleton_rows.push_back( sROWINDEX(-2, i, EQUALITY_SYSTEM) );
+   }
+   
+   for( int i = 0; i < nnzs_row_C_chgs->length(); ++i )
+   {
+      if( (*nnzs_row_C_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1 )
+         singleton_rows.push_back( sROWINDEX(-2, i, INEQUALITY_SYSTEM) );
+   }
+
 #ifndef NDEBUG
    double minval = -1.0;
    int index = -1;
@@ -1136,11 +1157,15 @@ void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType bl
       if(system_type == EQUALITY_SYSTEM)
       {
          getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] -= amount;
+         if( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index]  == 1)
+            singleton_rows.push_back( sROWINDEX( node, row_index, system_type ) );
          assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] );
       }
       else
       {
          getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] -= amount;
+         if( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index]  == 1)
+            singleton_rows.push_back( sROWINDEX( node, row_index, system_type ) );
          assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] );
       }
    }
@@ -1163,9 +1188,10 @@ void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_ind
    }
    else
    {
-      dynamic_cast<SimpleVector&>(*nnzs_col->children[node]->vec)[col_index] -= amount;
-
-      assert(0 <= dynamic_cast<SimpleVector&>(*nnzs_col->children[node]->vec)[col_index]);
+      getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] -= amount;
+      if( getSimpleVecColFromStochVec( *nnzs_col, node )[col_index]  == 1)
+         singleton_cols.push_back( sCOLINDEX( node, col_index ) );
+      assert(0 <= getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] );
    }
 }
 
