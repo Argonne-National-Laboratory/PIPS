@@ -8,10 +8,8 @@
 //#define PIPS_DEBUG
 #include "StochPresolverSingletonRows.h"
 #include <limits>
-#include <cmath>
-#include <fstream>
-#include <sstream>
 #include <iostream>
+#include <algorithm>
 
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData, const sData& origProb) :
       StochPresolverBase(presData, origProb), removed_rows(0)
@@ -43,13 +41,12 @@ void StochPresolverSingletonRows::applyPresolving()
    countRowsCols();
 #endif
 
-   if( presData.getSingletonRows().size() == 0 && presData.getSingletonCols().size() == 0 )
+   if( presData.getSingletonRows().size() == 0 )
    {
 #ifndef NDEBUG
       if( my_rank == 0)
          std::cout << "No more singletons left - exiting" << std::endl;
 #endif
-      return;
    }
 
 
@@ -104,14 +101,11 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
    double ubx = std::numeric_limits<double>::infinity();
    double lbx = -std::numeric_limits<double>::infinity();
    int col_idx = -1;
-
-   BlockType block_type = (node == -2) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
+   BlockType block_type = LINKING_CONS_BLOCK;
 
    getBoundsAndColFromSingletonRow( system_type, node, row_idx, block_type, col_idx, ubx, lbx );
 
    // todo : not sure whether linking conss get deleted even when block is dummy - they should..
-   if( presData.nodeIsDummy( node, system_type ) && block_type != LINKING_CONS_BLOCK )
-      return false;
 
    presData.rowPropagatedBounds( system_type, node, block_type, row_idx, col_idx, ubx, lbx );
    presData.removeRedundantRow( system_type, node, row_idx, (block_type == LINKING_CONS_BLOCK) );
@@ -122,15 +116,10 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
       return false;
 }
 
-void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType system_type, int& node, int row_idx, BlockType block_type, 
+void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType system_type, int& node, int row_idx, BlockType& block_type, 
    int& col_idx, double& ubx, double& lbx )
 {
-
-   if(system_type == EQUALITY_SYSTEM)
-      assert( presData.getNnzsRowA(node, block_type, row_idx) == 1.0 );
-   else
-      assert( presData.getNnzsRowC(node, block_type, row_idx) == 1.0 );
-
+   double value = 0.0; 
 
    if(node != -2)
    {
@@ -139,18 +128,82 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
       if(node == -1)
       {
          assert( currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1.0 );
+         col_idx = currAmat->jcolM[currAmat->rowptr[row_idx].start];
+         value = currAmat->M[currAmat->rowptr[row_idx].start];
+         block_type = LINKING_VARS_BLOCK;
       }
-
+      else
+      {
+         assert(currAmat);
+         assert(currBmat);
+         assert( row_idx < currAmat->m );
+         assert( row_idx < currBmat->m );
+         assert( (currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1.0) ||
+            (currBmat->rowptr[row_idx].end - currBmat->rowptr[row_idx].start == 1.0) );
+         
+         if(currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1.0)
+         {
+            col_idx = currAmat->jcolM[currAmat->rowptr[row_idx].start];
+            value = currAmat->M[currAmat->rowptr[row_idx].start];
+            block_type = LINKING_VARS_BLOCK;
+         }
+         else
+         {
+            col_idx = currBmat->jcolM[currBmat->rowptr[row_idx].start];
+            value = currBmat->M[currBmat->rowptr[row_idx].start];
+            block_type = CHILD_BLOCK;
+         }
+      }
    }
    else
    {
+      block_type = LINKING_CONS_BLOCK;
       // todo : implement this more efficiently - we don't want to go through all our children to check wether a singlton entry is on our process or not - ideally we
       // already know and also know the child
-      assert(node == -2);
+      assert( node == -2 );
+      for( int i = -1; i < presData.getNChildren(); ++i)
+      {
+         updatePointersForCurrentNode(node, system_type);
 
-
-
-
+         assert( currBlmat->rowptr[row_idx].end - currBlmat->rowptr[row_idx].start == 1.0 ||
+            currBlmat->rowptr[row_idx].end - currBlmat->rowptr[row_idx].start == 0.0 );
+      
+         if( currBlmat->rowptr[row_idx].end - currBlmat->rowptr[row_idx].start == 1.0 )
+         {
+            assert(node == -2);
+            col_idx = currBlmat->jcolM[currBlmat->rowptr[row_idx].start];
+            value = currBlmat->M[currBlmat->rowptr[row_idx].start];
+            node = i;
+            break;
+         }
+      }
+      if( node == -2 )
+         return;
    }
 
+   assert(value != 0.0);
+
+   if(system_type == EQUALITY_SYSTEM)
+   {
+      if(block_type != LINKING_CONS_BLOCK)
+         ubx = lbx = (*currEqRhs)[row_idx] / value;
+      if(block_type == LINKING_CONS_BLOCK)
+         ubx = lbx = (*currEqRhsLink)[row_idx] / value;
+   }
+   else
+   {
+
+      if(block_type != LINKING_CONS_BLOCK)
+      {
+         assert( (*currIclow)[row_idx] == 1.0 || (*currIcupp)[row_idx] == 1.0 );
+
+         if( (*currIclow)[row_idx] == 1.0 )
+            lbx = (*currIneqLhs)[row_idx] / value;
+         if( (*currIcupp)[row_idx] == 1.0 )
+            ubx = (*currIneqRhs)[row_idx] / value;
+
+         if( PIPSisLT( value, 0.0) )
+            std::swap( lbx, ubx );
+      }
+   }
 }

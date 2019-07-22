@@ -726,7 +726,7 @@ void PresolveData::initSingletons()
    /* children An + Bn */
    for(int i = 0; i < nChildren; ++i)
    {
-      if(nnzs_row_A->children[i]->vec != NULL)
+      if( !nodeIsDummy(i, EQUALITY_SYSTEM) )
       {
          for(int j = 0; j < nnzs_row_A->children[i]->vec->n; ++j)
          {
@@ -740,7 +740,7 @@ void PresolveData::initSingletons()
    /* B0 */
    for(int i = 0; i < nnzs_row_C->vec->n; ++i)
       if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1.0)
-         singleton_rows.push_back( sROWINDEX( EQUALITY_SYSTEM, -1, i ));
+         singleton_rows.push_back( sROWINDEX( INEQUALITY_SYSTEM, -1, i ));
 
    /* Bl0 */
    if( nnzs_row_C->vecl != NULL)
@@ -748,19 +748,19 @@ void PresolveData::initSingletons()
       for( int i = 0; i < nnzs_row_C->vecl->n; ++i )
       {
          if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vecl)[i] == 1.0 )
-            singleton_rows.push_back(sROWINDEX( EQUALITY_SYSTEM, -2, i ));
+            singleton_rows.push_back(sROWINDEX( INEQUALITY_SYSTEM, -2, i ));
       }
    }
 
    /* children An + Bn */
    for( int i = 0; i < nChildren; ++i )
    {
-      if( nnzs_row_C->children[i]->vec != NULL)
+      if( !nodeIsDummy(i, INEQUALITY_SYSTEM) )
       {
          for( int j = 0; j < nnzs_row_C->children[i]->vec->n; ++j )
          {
             if( dynamic_cast<SimpleVector&>(*nnzs_row_C->children[i]->vec)[j] == 1.0 )
-               singleton_rows.push_back(sROWINDEX( EQUALITY_SYSTEM, i, j ));
+               singleton_rows.push_back(sROWINDEX( INEQUALITY_SYSTEM, i, j ));
          }
       }
    }

@@ -27,7 +27,7 @@ private:
    long long removed_rows; 
 
    bool removeSingletonRow(SystemType system_type, int node, int row_idx);
-   void getBoundsAndColFromSingletonRow( SystemType system_type, int& node, int row_idx, BlockType block_type, int& col_idx, double& ubx, double& lbx );
+   void getBoundsAndColFromSingletonRow( SystemType system_type, int& node, int row_idx, BlockType& block_type, int& col_idx, double& ubx, double& lbx );
 
 };
 
