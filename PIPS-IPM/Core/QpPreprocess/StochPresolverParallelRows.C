@@ -59,37 +59,6 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, c
       StochPresolverBase(presData, origProb),
       gParentAdaptions(dynamic_cast<SimpleVector const *>(dynamic_cast<const StochVector&>(*presData.getPresProb().g).vec)->cloneFull())
 {
-   // todo necessary?
-//   currCmat = NULL;
-//   currCmatTrans = NULL;
-//   currDmat = NULL;
-//   currDmatTrans = NULL;
-//   currNnzRowC = NULL;
-//   norm_Amat = NULL;
-//   norm_Bmat= NULL;
-//   norm_Cmat = NULL;
-//   norm_Dmat = NULL;
-//   norm_b = NULL;
-//   norm_cupp = NULL;
-//   norm_clow = NULL;
-//   norm_icupp = NULL;
-//   norm_iclow = NULL;
-//   norm_factorA = NULL;
-//   rowContainsSingletonVariableA = NULL;
-//   norm_factorC = NULL;
-//   rowContainsSingletonVariableC = NULL;
-//   singletonCoeffsColParent = NULL;
-//   singletonCoeffsColChild = NULL;
-//   normNnzRowA = NULL;
-//   normNnzRowC = NULL;
-//   normNnzColParent = NULL;
-//   normNnzColChild = NULL;
-//   norm_AmatTrans = NULL;
-//   norm_BmatTrans = NULL;
-//   norm_CmatTrans = NULL;
-//   norm_DmatTrans = NULL;
-//   currgChild = NULL;
-//   currgParent = NULL;
    gParentAdaptions->setToZero();
 
    mA = 0;

@@ -74,8 +74,6 @@ void StochPresolverSingletonColumns::countSingletonColumns()
    int nSColIneqLinkrow=0;
    initSingletonColumns(nSColEq, nSColIneq, nZeroCostSc, nLowerBound, nUpperBound, nBothBounds, nNoBounds, nSColEqLinkRow, nSColIneqLinkrow, nSC);
 
-   //synchronizeSum(nSColEq, nSColIneq);
-   //synchronize(nZeroCostSc);
    synchronizeSumSeveral(nSColEq, nSColIneq, nZeroCostSc, nLowerBound, nUpperBound, nBothBounds, nNoBounds, nSColEqLinkRow, nSColIneqLinkrow ,nSC);
    assert( nSC == nSColEq + nSColIneq );
    if(myRank == 0)

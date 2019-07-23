@@ -931,7 +931,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    const double xlow = getSimpleVecColFromStochVec( *presProb->blx, node_var )[col];
    const double ixupp = getSimpleVecColFromStochVec( *presProb->ixupp, node_var )[col];
    const double xupp = getSimpleVecColFromStochVec( *presProb->bux, node_var )[col];
-   const double nnzs_row = getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C, node_row, block_type)[col];
+   const double nnzs_row = getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C, node_row, block_type)[row];
 
    if( nnzs_row == 1.0 && ubx < numerical_threshold )
       getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node_var)[col] = 1.0;
@@ -1333,7 +1333,14 @@ void PresolveData::removeParallelRow(SystemType system_type, int node, int row, 
 void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
    if(postsolver)
-      postsolver->notifyRedundantRow(system_type, node, row, linking);
+   {
+      std::vector<int> idx_row;
+      std::vector<double> val_row;
+      BlockType block_type = (linking) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
+      buildRowForPostsolve( system_type, node, block_type, row, idx_row, val_row);
+
+      postsolver->notifyRedundantRow(system_type, node, row, linking, idx_row, val_row);
+   }
 
 #ifdef TRACK_ROW
    if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
@@ -2576,16 +2583,39 @@ void PresolveData::buildRowForPostsolve( SystemType system_type, int node, Block
    std::vector<double>& val_row)
 {
    // todo
+   if(node == -1)
+   {
+      if( block_type == LINKING_CONS_BLOCK )
+      {
+         /* Bl0mat if rank = 0 */
+
+
+         /* Blimat */
+      }
+      else
+      {
+         /* A0mat for all */
+
+      }
+   }
+   else
+   {
+      /* Aimat */
+
+
+
+      /* Bmat */
+   }
 };
 
 /*
  * node != -1
  * index: idx Bmat, inf, idx Blmat, inf, idx Cmat, inf, idx Clmat
- * value: val Bmat, inf, val Blmat, inf, val Cmat, inf, val Clmat
+ * value: val Bmat, val Blmat, val Cmat, val Clmat
  *
  * node == -1
- * index: idx A0mat, inf, i, Aimat, inf, j, Ajmat, inf,..., inf, inf, idx C0mat, ...
- * value: val A0mat, inf, val Aimat, inf, val Ajmat, int,..., inf, inf, val C0mat, ...
+ * index: idx A0mat, inf, i, Aimat, inf, j, Ajmat, inf,..., inf, -1, idx Bl0mat, inf, inf, idx C0mat, ..., inf, -1, idx Dl0mat
+ * value: val A0mat, val Aimat, val Ajmat,..., val Bl0mat, val C0mat, ..., val Dl0mat
  *
  * only rank 0 gets A0mat and C0mat
  */      
@@ -2597,6 +2627,8 @@ void PresolveData::buildColForPostsolve( int node, int col, std::vector<int>& id
    /* build linking column */
    if(node == -1)
    {
+
+      // todo !!! Bl0 Cl0
       int start = -1;
       int end = -1;
 

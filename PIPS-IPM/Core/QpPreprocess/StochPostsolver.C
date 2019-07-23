@@ -68,10 +68,13 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 }
 
 /** postsolve for this is simply to set all dual variables to zero - the row itself has no primal impact */
-void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint )
+void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint, const std::vector<int>& indices_row,
+   const std::vector<double> values_row )
 {
-   assert( getSimpleVecColFromStochVec( (system_type == EQUALITY_SYSTEM) ? *padding_origrow_equality : *padding_origrow_inequality, node)[row] == 1 );
-   getSimpleVecColFromStochVec( (system_type == EQUALITY_SYSTEM) ? *padding_origrow_equality : *padding_origrow_inequality, node)[row] = -1;
+   assert( getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *padding_origrow_equality : *padding_origrow_inequality, node, 
+      (linking_constraint) ? LINKING_CONS_BLOCK : CHILD_BLOCK)[row] == 1 );
+   getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *padding_origrow_equality : *padding_origrow_inequality, node,
+      (linking_constraint) ? LINKING_CONS_BLOCK : CHILD_BLOCK)[row] = -1;
 
 
    reductions.push_back( REDUNDANT_ROW );
@@ -79,8 +82,10 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
    values.push_back( ( (system_type == EQUALITY_SYSTEM ) ? 0 : 1 ) );
    values.push_back( linking_constraint );
 
+   values.insert( values.end(), values_row.begin(), values_row.end() );
+   val_idx.insert( val_idx.end(), indices_row.begin(), indices_row.end() );
+
    finishNotify();
-   return;
 }
 
 // todo : only store each version of each row once!
@@ -168,7 +173,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          case REDUNDANT_ROW:
          {
             assert(first_val + 2 == last_val);
-
+            break;
+            // todo
             SystemType system_type = (values[first_val] == 0) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
             bool linking = values[first_val + 1];
             int node = indices[i].node;
@@ -197,9 +203,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          {
             /* the dual multiplier of the row that was responsible for the bound change gets adjusted */
 
-
-            throw std::runtime_error("BOUNDS_TIGHTENED not yet implemented");
+            
             break;
+            throw std::runtime_error("BOUNDS_TIGHTENED not yet implemented");
          }
          case FIXED_COLUMN:
          {
