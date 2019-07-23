@@ -25,14 +25,14 @@ class Data;
 class EquiStochScaler : public StochScaler
 {
 protected:
-  virtual void doObjScaling();
+  virtual void doObjScaling() override;
 
 public:
   EquiStochScaler(Data * prob, bool bitshifting = true);
   virtual ~EquiStochScaler();
 
   /** scale */
-  virtual void scale();
+  virtual void scale() override;
 };
 
 //@}

@@ -21,7 +21,7 @@ StochScaler::~StochScaler()
 {
 }
 
-Variables* StochScaler::getUnscaledVariables(const Variables& vars) const
+Variables* StochScaler::getVariablesUnscaled(const Variables& vars) const
 {
    Variables* s_vars = new sVars(dynamic_cast<const sVars&>(vars)); 
    assert(s_vars);
@@ -32,7 +32,7 @@ Variables* StochScaler::getUnscaledVariables(const Variables& vars) const
    return s_vars;
 };
 
-Residuals* StochScaler::getUnscaledResiduals(const Residuals& resids) const
+Residuals* StochScaler::getResidualsUnscaled(const Residuals& resids) const
 {
    Residuals* s_resids = new sResiduals(dynamic_cast<const sResiduals&>(resids));
    assert(s_resids);
