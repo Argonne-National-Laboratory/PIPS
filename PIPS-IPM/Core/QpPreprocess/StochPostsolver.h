@@ -23,6 +23,11 @@ public:
       StochPostsolver( const sData& original_problem );
       virtual ~StochPostsolver();
 
+
+      void notifySingletonEqualityRow( int node, int row, BlockType block_type, int col, double coeff, double rhs);
+      void notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs );
+
+
       void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint, const std::vector<int>& indices_row,
          const std::vector<double> values_row );
       void notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col, const std::vector<double>& values_col);
@@ -53,7 +58,8 @@ protected:
          DELETED_ROW = 3,
          REDUNDANT_ROW = 4,
          BOUNDS_TIGHTENED = 5,
-         SINGLETON_ROW = 6,
+         SINGLETON_EQUALITY_ROW = 6,
+         SINGLETON_INEQUALITY_ROW = 7,
       };
 
       const unsigned int n_rows_original;
@@ -66,9 +72,10 @@ protected:
 
       std::vector<ReductionType> reductions;
       std::vector<INDEX> indices;
-      std::vector<double> values;
+      
       std::vector<int> val_idx;
-      std::vector<int> start_idx_indices;
+      std::vector<unsigned int> start_idx_indices;
+      std::vector<double> values;
       std::vector<unsigned int> start_idx_values;
 
 

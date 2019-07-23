@@ -36,6 +36,45 @@ StochPostsolver::~StochPostsolver()
    delete padding_origcol;
 }
 
+void StochPostsolver::notifySingletonEqualityRow( int node, int row, BlockType block_type, int col, double coeff, double rhs)
+{
+   if( node == -1 )
+      assert(block_type == LINKING_VARS_BLOCK);
+   assert( block_type != LINKING_CONS_BLOCK );
+
+   assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1 );
+   getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
+
+   reductions.push_back( SINGLETON_EQUALITY_ROW );
+   indices.push_back( INDEX(node, row) );
+   values.push_back( coeff );
+   values.push_back( rhs );
+   val_idx.push_back( col );
+
+   finishNotify();
+}
+
+
+
+
+
+void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs )
+{
+   if( node == -1 )
+      assert(block_type == LINKING_VARS_BLOCK);
+   assert( block_type != LINKING_CONS_BLOCK );
+
+   reductions.push_back( SINGLETON_INEQUALITY_ROW);
+   indices.push_back( INDEX(node, row) );
+   values.push_back( coeff );
+   values.push_back( lhs );
+   values.push_back( rhs );
+   val_idx.push_back( col );
+
+   finishNotify();
+}
+
+
 /** postsolve has to compute the optimal dual multipliers here and set the primal value accordingly 
  * The column is passed in the following format:
  * 
@@ -242,6 +281,23 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          case DELETED_ROW:
          {
             throw std::runtime_error("DELETED_ROW not yet implemented");
+            break;
+         }
+         case SINGLETON_EQUALITY_ROW:
+         {
+            int node = indices[i].node;
+            int row = indices[i].index;
+            BlockType block_type = (node == -1) ? LINKING_VARS_BLOCK : CHILD_BLOCK;
+
+            break;
+         }
+         case SINGLETON_INEQUALITY_ROW:
+         {
+            int node = indices[i].node;
+            int row = indices[i].index;
+            BlockType block_type = (node == -1) ? LINKING_VARS_BLOCK : CHILD_BLOCK;
+
+            
             break;
          }
          default:

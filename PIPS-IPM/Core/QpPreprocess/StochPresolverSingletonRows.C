@@ -105,6 +105,13 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
 
    getBoundsAndColFromSingletonRow( system_type, node, row_idx, block_type, col_idx, ubx, lbx );
 
+   /* because of postsolve here we only remove correctly placed singelton rows */
+   if( node == -1 && block_type == LINKING_VARS_BLOCK)
+      return false;
+
+   if( block_type == LINKING_CONS_BLOCK )
+      return false;
+
    // todo : not sure whether linking conss get deleted even when block is dummy - they should..
 
    presData.rowPropagatedBounds( system_type, node, block_type, row_idx, col_idx, ubx, lbx );
