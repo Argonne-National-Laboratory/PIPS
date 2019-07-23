@@ -215,8 +215,10 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    if (!fmap)
       return -1;
    
-   if(fscanf(fmap,"%d%d%d%d",&p2gN,&p2gM,&objvar,&objrow) != 4)
-      return -1;
+   if(fscanf(fmap,"%d%d%d%d",&p2gN,&p2gM,&objvar,&objrow) != 4) {
+	   printf("bad header section in map file\n");
+       return -1;
+   }
 
    if (varl || varm)
    {
@@ -236,8 +238,10 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    for (j=0; j<numcol; j++)
    {
       int col;
-      if( fscanf(fmap,"%d",&col) != 1);
+      if( fscanf(fmap,"%d",&col) != 1 ) {
+		 printf("bad column section in map file\n");
          return -1;
+	  }
 
       if (p2gvmap)
       {
@@ -248,8 +252,10 @@ int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
    for (i=0; i<numrow; i++)
    {
       int row, isE;
-      if(fscanf(fmap,"%d %d",&row,&isE) != 2);
+      if(fscanf(fmap,"%d %d",&row,&isE) != 2) {
+	     printf("bad row section in map file\n");
          return -1;
+      }
       
       if (p2gemap)
 	   {
