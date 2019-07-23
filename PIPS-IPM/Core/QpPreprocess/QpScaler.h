@@ -8,6 +8,7 @@
 #ifndef PIPS_IPM_CORE_QPPREPROCESS_QPSCALER_H_
 #define PIPS_IPM_CORE_QPPREPROCESS_QPSCALER_H_
 
+
 #include "Scaler.h"
 #include "OoqpVector.h"
 #include "DoubleMatrix.h"
@@ -70,16 +71,16 @@ public:
   virtual ~QpScaler();
 
   /** scale */
-  virtual void scale() = 0;
+  virtual void scale() override = 0;
 
-  virtual double getOrigObj(double objval) const;
-  virtual Variables* getUnscaledVariables(const Variables& vars) const;
-  virtual Residuals* getUnscaledResiduals(const Residuals& resids) const;
-  virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal) const;
-  virtual OoqpVector* getOrigDualEq(const OoqpVector& soldual) const;
-  virtual OoqpVector* getOrigDualIneq(const OoqpVector& soldual) const;
-  virtual OoqpVector* getOrigDualVarBoundsUpp(const OoqpVector& soldual) const;
-  virtual OoqpVector* getOrigDualVarBoundsLow(const OoqpVector& soldual) const;
+  virtual double getObjUnscaled(double objval) const override;
+  virtual Variables* getVariablesUnscaled(const Variables& vars) const override;
+  virtual Residuals* getResidualsUnscaled(const Residuals& resids) const override;
+  virtual OoqpVector* getPrimalUnscaled(const OoqpVector& solprimal) const override;
+  virtual OoqpVector* getDualEqUnscaled(const OoqpVector& soldual) const override;
+  virtual OoqpVector* getDualIneqUnscaled(const OoqpVector& soldual) const override;
+  virtual OoqpVector* getDualVarBoundsUppUnscaled(const OoqpVector& soldual) const override;
+  virtual OoqpVector* getDualVarBoundsLowUnscaled(const OoqpVector& soldual) const override;
 };
 
 //@}

@@ -87,8 +87,8 @@ public:
   void printLinkConsStats();
 
   void activateLinkStructureExploitation();
-  sResiduals* getUnpermResids(const sResiduals& resids) const;
-  sVars* getUnpermVars(const sVars& vars) const;
+  sResiduals* getResidsUnperm(const sResiduals& resids) const;
+  sVars* getVarsUnperm(const sVars& vars) const;
 
   void sync();
   bool isRootNodeInSync() const;

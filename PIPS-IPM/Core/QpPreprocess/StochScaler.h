@@ -18,13 +18,13 @@ public:
 	StochScaler(Data* prob, bool bitshifting);
 	virtual ~StochScaler();
 
-	virtual void scale() = 0;
+	virtual void scale() override = 0;
 
-	virtual Variables* getUnscaledVariables(const Variables& vars) const;
-  	virtual Residuals* getUnscaledResiduals(const Residuals& resids) const;
+	virtual Variables* getVariablesUnscaled(const Variables& vars) const override;
+  	virtual Residuals* getResidualsUnscaled(const Residuals& resids) const override;
 
 protected:
-	virtual void doObjScaling() = 0;
+	virtual void doObjScaling() override = 0;
 };
 
 

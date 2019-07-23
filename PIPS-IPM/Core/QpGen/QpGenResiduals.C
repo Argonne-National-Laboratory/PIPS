@@ -23,7 +23,8 @@ QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
 				OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 				OoqpVector * iclow_in, OoqpVector * icupp_in )
 {
-  assert(false);
+  /* constructor not in use in PIPS-IPM */
+  assert(false); 
   nx = nx_;
   my = my_;
   mz = mz_;

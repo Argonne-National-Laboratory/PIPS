@@ -39,7 +39,7 @@ QpScaler::QpScaler(Data * prob, bool bitshifting)
    factor_objscale = 1.0;
 }
 
-double QpScaler::getOrigObj(double objval) const
+double QpScaler::getObjUnscaled(double objval) const
 {
    assert(vec_colscale != NULL);
    assert(factor_objscale > 0.0);
@@ -47,7 +47,7 @@ double QpScaler::getOrigObj(double objval) const
    return (objval / factor_objscale);
 }
 
-Variables* QpScaler::getUnscaledVariables(const Variables& vars) const
+Variables* QpScaler::getVariablesUnscaled(const Variables& vars) const
 {
    QpGenVars* qp_vars = new QpGenVars(dynamic_cast<const QpGenVars&>(vars)); 
    unscaleVars(*qp_vars);
@@ -55,7 +55,7 @@ Variables* QpScaler::getUnscaledVariables(const Variables& vars) const
    return qp_vars;
 };
 
-Residuals* QpScaler::getUnscaledResiduals(const Residuals& resids) const
+Residuals* QpScaler::getResidualsUnscaled(const Residuals& resids) const
 {
    QpGenResiduals* qp_resids = new QpGenResiduals(dynamic_cast<const QpGenResiduals&>(resids));
    unscaleResids(*qp_resids);
@@ -116,7 +116,7 @@ void QpScaler::unscaleResids( Residuals& resids ) const
    // nothing to to for rgamma, rphi, rlambda, rpi;
 }
 
-OoqpVector* QpScaler::getOrigPrimal(const OoqpVector& solprimal) const
+OoqpVector* QpScaler::getPrimalUnscaled(const OoqpVector& solprimal) const
 {
    assert(problem && vec_colscale);
    OoqpVector* unscaledprimal = solprimal.cloneFull();
@@ -127,7 +127,7 @@ OoqpVector* QpScaler::getOrigPrimal(const OoqpVector& solprimal) const
    return unscaledprimal;
 }
 
-OoqpVector* QpScaler::getOrigDualEq(const OoqpVector& soldual) const
+OoqpVector* QpScaler::getDualEqUnscaled(const OoqpVector& soldual) const
 {
    assert(problem && vec_rowscaleA);
    OoqpVector* unscaleddual = soldual.cloneFull();
@@ -138,7 +138,7 @@ OoqpVector* QpScaler::getOrigDualEq(const OoqpVector& soldual) const
    return unscaleddual;
 }
 
-OoqpVector* QpScaler::getOrigDualIneq(const OoqpVector& soldual) const
+OoqpVector* QpScaler::getDualIneqUnscaled(const OoqpVector& soldual) const
 {
    assert(problem && vec_rowscaleC);
    OoqpVector* unscaleddual = soldual.cloneFull();
@@ -149,7 +149,7 @@ OoqpVector* QpScaler::getOrigDualIneq(const OoqpVector& soldual) const
    return unscaleddual;
 }
 
-OoqpVector* QpScaler::getOrigDualVarBoundsUpp(const OoqpVector& soldual) const
+OoqpVector* QpScaler::getDualVarBoundsUppUnscaled(const OoqpVector& soldual) const
 {
    assert(problem && vec_colscale);
    OoqpVector* unscaleddual = soldual.cloneFull();
@@ -160,7 +160,7 @@ OoqpVector* QpScaler::getOrigDualVarBoundsUpp(const OoqpVector& soldual) const
    return unscaleddual;
 }
 
-OoqpVector* QpScaler::getOrigDualVarBoundsLow(const OoqpVector& soldual) const
+OoqpVector* QpScaler::getDualVarBoundsLowUnscaled(const OoqpVector& soldual) const
 {
    assert(problem && vec_colscale);
    OoqpVector* unscaleddual = soldual.cloneFull();

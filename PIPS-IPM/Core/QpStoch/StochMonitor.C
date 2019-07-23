@@ -57,7 +57,7 @@ void StochMonitor::doItStoch( Solver * solver, Data * data, Variables * vars,
   double objective = dynamic_cast<QpGenData*>(data)->objectiveValue(dynamic_cast<QpGenVars*>(vars));
 
   if( scaler )
-     objective = scaler->getOrigObj(objective);
+     objective = scaler->getObjUnscaled(objective);
 
   //log only on the first proc
    if( myRank > 0 )
