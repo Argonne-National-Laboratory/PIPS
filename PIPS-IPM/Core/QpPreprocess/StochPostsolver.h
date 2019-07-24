@@ -23,10 +23,8 @@ public:
       StochPostsolver( const sData& original_problem );
       virtual ~StochPostsolver();
 
-
       void notifySingletonEqualityRow( int node, int row, BlockType block_type, int col, double coeff, double rhs);
       void notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs );
-
 
       void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint, const std::vector<int>& indices_row,
          const std::vector<double> values_row );
