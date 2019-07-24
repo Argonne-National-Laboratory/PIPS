@@ -68,7 +68,7 @@ StochGenMatrix::StochGenMatrix(int id,
 StochGenMatrix::~StochGenMatrix()
 {
   //cout << "~~~~~~~~StochGenMatrix" << endl;
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     delete children[it];
 
   if (Amat)

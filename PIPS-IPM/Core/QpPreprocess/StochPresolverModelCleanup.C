@@ -310,18 +310,18 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
    std::vector<std::pair<int, int> > eliminated_entries;
 
    /* for every row in row in matrix */
-   for( int r = 0; r < storage->m; r++ )
+   for( int r = 0; r < storage->getM(); r++ )
    {
       double total_sum_modifications_row = 0.0;
 
-      int start = storage->rowptr[r].start;
-      int end = storage->rowptr[r].end;
+      int start = storage->getRowPtr(r).start;
+      int end = storage->getRowPtr(r).end;
 
       /* for every nonzero column in that row */
       for(int k = start; k < end; ++k )
       {
-         const int col = storage->jcolM[k];
-         const double mat_entry = storage->M[k];
+         const int col = storage->getJcolM(k);
+         const double mat_entry = storage->getMat(k);
 
          /* remove all small entries */
          if( fabs( mat_entry ) < tol_matrix_entry )

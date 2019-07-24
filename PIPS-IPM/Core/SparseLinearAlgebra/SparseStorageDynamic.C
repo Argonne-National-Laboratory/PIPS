@@ -3,7 +3,7 @@
  *
  *  Created on: 07.02.2018
  *      Author: bzfrehfe
- */
+ */ 
 
 #include "SparseStorageDynamic.h"
 #include <cassert>
@@ -14,7 +14,7 @@ int SparseStorageDynamic::instances = 0;
 
 
 SparseStorageDynamic::SparseStorageDynamic(int m, int n, int len, double spareRatio)
- : spareRatio(spareRatio), m(m), n(n), len(len)
+ : spareRatio(spareRatio), m(m), m_len(m), n(n), len(len)
 {
    assert(m >= 0 && len >= 0);
 
@@ -34,7 +34,7 @@ SparseStorageDynamic::SparseStorageDynamic(int m, int n, int len, double spareRa
 }
 
 SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double spareRatio)
- : spareRatio(spareRatio), m(storage.m), n(storage.n)
+ : spareRatio(spareRatio), m(storage.m), m_len(storage.m), n(storage.n)
 {
    assert(spareRatio >= 0.0);
    assert(m >= 0 && storage.len >= 0);
@@ -137,6 +137,24 @@ void SparseStorageDynamic::getSize(int& m, int& n)
 {
    m = this->m;
    n = this->n;
+}
+
+const ROWPTRS SparseStorageDynamic::getRowPtr(int i) const
+{
+   assert( 0 <= i && i < m );
+   return rowptr[i];
+}
+
+const int SparseStorageDynamic::getJcolM(int i) const
+{
+   assert( 0 <= i && i < len );
+   return jcolM[i];
+}
+
+const double SparseStorageDynamic::getMat(int i) const
+{
+   assert( 0 <= i && i < len );
+   return M[i];
 }
 
 SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* colNnz) const
@@ -427,6 +445,76 @@ void SparseStorageDynamic::restoreOrder()
    }
 }
 
+void SparseStorageDynamic::extendStorage()
+{
+   int len_tmp = len * 2;
+   int m_len_tmp = m_len * 2;
+
+   // todo : better values?
+   if( len == 0 )
+      len_tmp = 100;
+   if( m_len == 0 )
+      m_len_tmp = 10;
+
+   ROWPTRS* rowptr_tmp = new ROWPTRS[ m_len_tmp ]; // TODO
+   int * jcolM_tmp = new int[ len_tmp ];
+   double * M_tmp = new double[ len_tmp ];
+
+   std::copy(rowptr, rowptr + m + 1, rowptr_tmp);
+   if( len != 0 )
+   {
+      // todoC++11: std::begin(jcolM), std::end(jcolM)...
+      std::copy(jcolM, jcolM + len, jcolM_tmp);
+      std::copy(M, M + len, M_tmp);
+   }
+
+   delete[] rowptr;
+   delete[] jcolM;
+   delete[] M;
+
+   std::swap( rowptr, rowptr_tmp );
+   std::swap( jcolM, jcolM_tmp );
+   std::swap( M, M_tmp );
+   std::swap( len, len_tmp );
+   std::swap( m_len, m_len_tmp );
+}
+
+void SparseStorageDynamic::removeEntryAtIndex(int row, int col_idx)
+{
+   assert( 0 <= row && row <= m );
+   assert( rowptr[row].begin <= col_idx && col_idx < rowptr[row].end );
+
+   int& row_end = rowptr[row].end;
+
+   std::swap(M[col_idx], M[row_end - 1]);
+   std::swap(jcolM[col_idx], jcolM[row_end - 1]);
+   row_end--;
+}
+
+void SparseStorageDynamic::removeEntryAtRowCol(int row, int col)
+{
+   assert(0 <= row && row < m);
+   
+   int i = -1;
+   int end = rowptr[row].end;
+   int start = rowptr[row].start;
+
+   for( i = start; i < end; i++)
+   {
+      if( jcolM[i] == col )
+         break;
+   }
+   assert( jcolM[i] == col);
+
+   removeEntryAtIndex( row, i );
+}
+
+void SparseStorageDynamic::removeRow( int row )
+{
+   assert( 0 <= row && row < m );
+   rowptr[row].end = rowptr[row].start;
+}
+
 SparseStorageDynamic::~SparseStorageDynamic()
 {
    delete[] jcolM;
@@ -435,3 +523,4 @@ SparseStorageDynamic::~SparseStorageDynamic()
 
    SparseStorageDynamic::instances--;
 }
+
