@@ -152,9 +152,26 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
         pivotPerturbationExp = exp;
   }
 
+  // todo proper parameter
+  var = getenv("PARDISO_NITERATIVE_REFINS");
+  nIterativeRefins = nIterativeRefinsDefault;
+
+  if( var != NULL )
+  {
+     int n;
+     sscanf(var, "%d", &n);
+     assert(n >= 0);
+
+     if( n >= 0 )
+        nIterativeRefins = n;
+  }
+
+
   if( myRank == 0 )
   {
      printf(" using pivot perturbation 10^-%d \n", pivotPerturbationExp);
+
+     printf(" using maximum of %d iterative refinements  \n", nIterativeRefins);
 
      if( useSparseRhs )
         printf(" using PARDISO_SPARSE_RHS_LEAF \n");
@@ -518,7 +535,7 @@ void PardisoSchurSolver::setIparm(int* iparm){
 #ifndef WITH_MKL_PARDISO
    iparm[2] = PIPSgetnOMPthreads();
 
-   iparm[7] = 8; // max number of iterative refinement steps
+   iparm[7] = nIterativeRefins; // max number of iterative refinement steps
    iparm[9] = pivotPerturbationExp; // pivot perturbation 10^{-x} * |A|_\{\inf}
    iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
    iparm[12] = 2;// 0 disable matching, 1 enable matching, no other settings

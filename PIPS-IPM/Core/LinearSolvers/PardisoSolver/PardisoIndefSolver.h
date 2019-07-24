@@ -24,6 +24,7 @@ class PardisoIndefSolver : public DoubleLinearSolver
 
       constexpr static double precondDiagDomBound = 0.0001;
       constexpr static int pivotPerturbationExpDefault = 8;
+      constexpr static int nIterativeRefinsDefault = 8;
       constexpr static bool highAccuracyDefault = true;
       constexpr static bool useSparseRhsDefault = true;
 
@@ -50,6 +51,7 @@ class PardisoIndefSolver : public DoubleLinearSolver
       double ddum;
       int pivotPerturbationExp; // 10^-exp
       int nThreads;
+      int nIterativeRefins;
       bool highAccuracy;
 
    public:

@@ -78,7 +78,7 @@ void PardisoIndefSolver::setIparm(int* iparm){
    iparm[9] = pivotPerturbationExp;
    iparm[2] = nThreads;
    iparm[18] = 0; /* don't compute GFLOPS */
-   iparm[7] = 8; /* max number of iterative refinement steps. */
+   iparm[7] = nIterativeRefins; /* max number of iterative refinement steps. */
 
    if( highAccuracy )
    {
@@ -229,9 +229,26 @@ void PardisoIndefSolver::initPardiso()
          highAccuracy = true;
    }
 
+
+   nIterativeRefins = nIterativeRefinsDefault;
+
+   // todo proper parameter
+   var = getenv("PARDISO_NITERATIVE_REFINS_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      assert(n >= 0);
+
+      if( n >= 0 )
+         nIterativeRefins = n;
+   }
+
    if( myRank == 0 )
    {
       printf("PARDISO root: using pivot perturbation 10^-%d \n", pivotPerturbationExp);
+
+      printf("PARDISO root: using maximum of %d iterative refinements  \n", nIterativeRefins);
 
       if( highAccuracy )
          printf("PARDISO root: using high accuracy \n");

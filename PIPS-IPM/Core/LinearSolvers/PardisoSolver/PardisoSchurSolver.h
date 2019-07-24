@@ -32,6 +32,7 @@ class PardisoSchurSolver : public DoubleLinearSolver {
 
  constexpr static int symbFactorIntervalDefault = 3;
  constexpr static int pivotPerturbationExpDefault = 8;
+ constexpr static int nIterativeRefinsDefault = 8;
 
 protected:
   PardisoSchurSolver() {};
@@ -95,6 +96,7 @@ protected:
   int* shrinked2orgSC;
 
   int pivotPerturbationExp; // 10^-exp
+  int nIterativeRefins;
 
   /* pardiso params */
   int maxfct, mnum, phase, msglvl, solver, mtype, nrhs;
