@@ -143,8 +143,8 @@ void StochPostsolver::notifyRowPropagated( SystemType system_type, int node, int
    values.push_back( ub );
    values.push_back( lb );
    values.push_back( length );
-   values.insert( values.end(), values_row, values_row + length );
-   values.insert( values.end(), indices_row, indices_row + length );
+   //values.insert( values.end(), values_row, values_row + length );
+   //values.insert( values.end(), indices_row, indices_row + length );
 
    finishNotify();
 }
@@ -253,7 +253,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             double value = values[first_val];
 
             assert( -1 <= node && node < static_cast<int>(x_vec.children.size()) );
-            assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1);
+            assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1 );
             getSimpleVecColFromStochVec(x_vec, node)[column] = value;
             getSimpleVecColFromStochVec(v_vec, node)[column] = value;
             getSimpleVecColFromStochVec(w_vec, node)[column] = value;
@@ -297,7 +297,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             int row = indices[i].index;
             BlockType block_type = (node == -1) ? LINKING_VARS_BLOCK : CHILD_BLOCK;
 
-            
+
             break;
          }
          default:
