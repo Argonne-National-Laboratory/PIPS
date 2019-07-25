@@ -580,7 +580,9 @@ $  ifthene.blk %BLOCK%==-2
 $    include %gams.scrdir%annotate.gms
      put$(not %SUPPRESSDM%) fopt 'dictmap allblocks%GDXSUFFIX%_DM.gdx' /;
      putclose fopt 'jacobian allblocks%GDXSUFFIX%.gdx'
+*	 execute_loadpoint 'allblocks%GDXSUFFIX%_sol'; option lp=default;
      solve simple min OBJ use lp;
+*	 abort.noerror 'stop';
      execute 'mv -f %gams.scrdir%gamsdict.dat allblocks%GDXSUFFIX%_dict.gdx';
 
 $    ifthene.runpips %RUNPIPS%==1     
@@ -678,7 +680,7 @@ $offecho
 
 *ECAR_BALANCE.fx(t,r,shiftclass)=0;
 *ECAR_DELAY.fx(t,r,shiftclass)=0;
-
+execute_loadpoint '%sol%'; simple.limrow=200000; simple.limcol=20000;
    solve simple min OBJ use lp;
 
 $ENDIF.method
