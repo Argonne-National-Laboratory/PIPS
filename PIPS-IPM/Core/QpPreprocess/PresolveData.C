@@ -883,11 +883,23 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 }
 
 
+void PresolveData::fixEmptyColumn(int node, int col, double val)
+{
+   assert(-1 <= node && node < nChildren);
+   assert(0 <= col);
+   //todo
+   // postsolver->notifyFixedEmptyColumn(node, col, value);
+
+   removeColumn(node, col, val);
+
+   if( node != -1)
+      assert( getSimpleVecColFromStochVec(*nnzs_col, node)[col] == 0.0 );
+}
+
 void PresolveData::fixColumn(int node, int col, double value)
 {
    assert(-1 <= node && node < nChildren);
    assert(0 <= col);
-   
 
    /* current upper and lower bound as well als column - if linking variable then only proc zero stores current root column */
    std::vector<int> idx;
@@ -908,12 +920,6 @@ void PresolveData::fixColumn(int node, int col, double value)
 #endif
 
    removeColumn(node, col, value);
-
-   // todo assert changes empty?
-   getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->bux, node)[col] = 0.0;
 
    if( node != -1)
       assert( getSimpleVecColFromStochVec(*nnzs_col, node)[col] == 0.0 );
@@ -1244,6 +1250,12 @@ void PresolveData::removeColumn(int node, int col, double fixation)
       obj_offset_chgs += objective_factor * fixation;
 
    }
+
+   getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->bux, node)[col] = 0.0;
+
    getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0;
 }
 

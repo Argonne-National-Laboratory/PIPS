@@ -410,7 +410,7 @@ void StochPresolverModelCleanup::fixEmptyColumns()
             {
                if( ixupp[col] != 0.0 )
                {
-                  presData.fixColumn(node, col, xupp[col]);
+                  presData.fixEmptyColumn(node, col, xupp[col]);
                }
                else
                {
@@ -418,11 +418,11 @@ void StochPresolverModelCleanup::fixEmptyColumns()
                      "StochPresolverModelCleanup.C", "fixEmptyColumns");
                }
             } 
-            else if( PIPSisLT(0.0, (*currgChild)[col]) )
+            else if( PIPSisLT(0.0, g[col]) )
             {
                if( ixlow[col] != 0.0 )
                {
-                  presData.fixColumn(node, col, xlow[col]);
+                  presData.fixEmptyColumn(node, col, xlow[col]);
                }
                else
                {
@@ -432,8 +432,8 @@ void StochPresolverModelCleanup::fixEmptyColumns()
             }
             else
             {
-               assert( PIPSisEQ( (*currgChild)[col], 0.0) );
-               presData.fixColumn(node, col, 0.0);
+               assert( PIPSisEQ( g[col], 0.0) );
+               presData.fixEmptyColumn(node, col, 0.0);
             }
          }
       }

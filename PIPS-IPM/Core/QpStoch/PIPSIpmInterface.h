@@ -536,76 +536,85 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrim
 	if(!v.length())
 	  return std::vector<double>(); //this vector is not on this processor
 	else
-	  return std::vector<double>(&v[0],&v[0]+v.length());
+	  return std::vector<double>( &v[0], &v[0] + v.length() );
 }
 
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const
 {
-      SimpleVector const &y =
-            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
-      SimpleVector const &z =
-            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
+  SimpleVector const &y =
+        *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
+  SimpleVector const &z =
+        *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
 
 
-      if( !y.length() && !z.length() )
-         return std::vector<double>(); //this vector is not on this processor
-      else
-      {
-         std::vector<int> const &map = factory->tree->idx_EqIneq_Map;
+  if( !y.length() && !z.length() )
+     return std::vector<double>(); //this vector is not on this processor
+  else
+  {
+     std::vector<int> const &map = factory->tree->idx_EqIneq_Map;
 
-         std::vector<double> multipliers(map.size());
-         for( size_t i = 0; i < map.size(); i++ )
-         {
-            int idx = map[i];
-            if( idx < 0 )
-            {
-               //equality
-               idx = -idx - 1;
-               assert(idx >= 0);
-               multipliers[i] = y[idx];
-            }
-            else
-            {
-               //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
-               //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
+     std::vector<double> multipliers(map.size());
+     for( size_t i = 0; i < map.size(); i++ )
+     {
+        int idx = map[i];
+        if( idx < 0 )
+        {
+           //equality
+           idx = -idx - 1;
+           assert(idx >= 0);
+           multipliers[i] = y[idx];
+        }
+        else
+        {
+           //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
+           //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
 #ifndef NDEBUG
-               SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->iclow)).vec);
-               SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->icupp)).vec);
-               assert(iclow[idx] > 0 || icupp[idx] > 0);
+           SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->iclow)).vec);
+           SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->icupp)).vec);
+           assert(iclow[idx] > 0 || icupp[idx] > 0);
 #endif
-               multipliers[i] = z[idx];
-            }
-         }
-         return multipliers;
-      }
+           multipliers[i] = z[idx];
+        }
+     }
+     return multipliers;
+  }
 }
 
 
 template<class FORMULATION, class IPMSOLVER>
-std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDualRowSolution(int scen) const {
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDualRowSolution(int scen) const 
+{
   SimpleVector const &y = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->y).children[scen]->vec);
   SimpleVector const &z = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->z).children[scen]->vec);
   SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->iclow).children[scen]->vec);
   SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->icupp).children[scen]->vec);
   //assert(v.length());
-  if(!y.length() && !z.length())
+  if( !y.length() && !z.length() )
     return std::vector<double>(); //this vector is not on this processor
-  else {
+  else 
+  {
     std::vector<int> const &map=factory->tree->children[scen]->idx_EqIneq_Map;
 
     std::vector<double> multipliers(map.size());
-    for(size_t i=0; i<map.size(); i++) {
-      int idx=map[i];
-      if(idx<0) {
-	//equality
-	idx=-idx-1; assert(idx>=0);
-	multipliers[i]=y[idx];
-      } else {
-	//inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
-	//\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
-	assert(iclow[idx] > 0 || icupp[idx] > 0);
-	multipliers[i] = z[idx];
+    for(size_t i = 0; i < map.size(); i++)
+    {
+      int idx = map[i];
+      if(idx<0) 
+      {
+	      //equality
+	      idx =- idx - 1;
+        assert( idx >= 0 );
+        multipliers[i] = y[idx];
+      } 
+      else
+      {
+	      //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
+	      //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
+#ifndef NDEBUG
+	      assert(iclow[idx] > 0 || icupp[idx] > 0);
+	      multipliers[i] = z[idx];
+#endif
       }
     }
     return multipliers;
@@ -616,6 +625,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
 template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
+  return; // todo
   int my_rank;
   MPI_Comm_rank(comm,&my_rank);
 

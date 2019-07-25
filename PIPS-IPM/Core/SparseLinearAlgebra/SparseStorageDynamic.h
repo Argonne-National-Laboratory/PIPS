@@ -43,8 +43,12 @@ private:
   int * jcolM;
   double * M;
 
-  /* doubles the size of rowptr, jcolM and M and copies all old values */
-  void extendStorage();
+  /* doubles the size of rowptr */
+  void extendStorageRows();
+
+  /* compresses storage and doubles size of the col entry storage */
+  void extendStorageValues();
+
   /* shifts all rows such that every row is again row + spareRatio length */ 
   void compressStorage();
 
