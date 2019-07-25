@@ -10,6 +10,7 @@
 #include <cassert>
 #include <algorithm>
 #include <vector>
+#include <numeric>
 
 int SparseStorageDynamic::instances = 0;
 
@@ -366,8 +367,12 @@ SparseStorageDynamic* SparseStorageDynamic::getTranspose() const
 
 void SparseStorageDynamic::addNnzPerRow(double* vec) const
 {
+#ifdef PRE_CPP11
    for( int r = 0; r < m; r++ )
       vec[r] += rowptr[r].end - rowptr[r].start;
+#else
+   std::transform(rowptr, rowptr + m, vec, vec, [](ROWPTRS pt, double v)->double { return v + pt.end - pt.start; });
+#endif
 }
 
 void SparseStorageDynamic::writeToStreamDense( ostream& out) const
@@ -428,10 +433,10 @@ void SparseStorageDynamic::restoreOrder()
 {
    for(int i = 0; i < m; i++)  // row i
    {
-      int start = rowptr[i].start;
-      int end = rowptr[i].end;
+      const int start = rowptr[i].start;
+      const int end = rowptr[i].end;
 
-      // todo: this is too much overhead, better to implement a random access iterator
+      // todo: this is too much overhead, better to implement a random access iterator // how do you mean?
       std::vector<std::pair<int, double> > pairVector;
 
       for(int j = start; j < end; j++)
@@ -503,39 +508,39 @@ void SparseStorageDynamic::extendStorageValues(){}
 void SparseStorageDynamic::compressStorage(){}
 
 
-void SparseStorageDynamic::extendStorage()
-{
-   int len_tmp = len * 2;
-   int m_len_tmp = m_len * 2;
+// void SparseStorageDynamic::extendStorage()
+// {
+//    int len_tmp = len * 2;
+//    int m_len_tmp = m_len * 2;
 
-   // todo : better values?
-   if( len == 0 )
-      len_tmp = 100;
-   if( m_len == 0 )
-      m_len_tmp = 10;
+//    // todo : better values?
+//    if( len == 0 )
+//       len_tmp = 100;
+//    if( m_len == 0 )
+//       m_len_tmp = 10;
 
-   ROWPTRS* rowptr_tmp = new ROWPTRS[ m_len_tmp ]; // TODO
-   int * jcolM_tmp = new int[ len_tmp ];
-   double * M_tmp = new double[ len_tmp ];
+//    ROWPTRS* rowptr_tmp = new ROWPTRS[ m_len_tmp ]; // TODO
+//    int * jcolM_tmp = new int[ len_tmp ];
+//    double * M_tmp = new double[ len_tmp ];
 
-   std::copy(rowptr, rowptr + m + 1, rowptr_tmp);
-   if( len != 0 )
-   {
-      // todoC++11: std::begin(jcolM), std::end(jcolM)...
-      std::copy(jcolM, jcolM + len, jcolM_tmp);
-      std::copy(M, M + len, M_tmp);
-   }
+//    std::copy(rowptr, rowptr + m + 1, rowptr_tmp);
+//    if( len != 0 )
+//    {
+//       // todoC++11: std::begin(jcolM), std::end(jcolM)...
+//       std::copy(jcolM, jcolM + len, jcolM_tmp);
+//       std::copy(M, M + len, M_tmp);
+//    }
 
-   delete[] rowptr;
-   delete[] jcolM;
-   delete[] M;
+//    delete[] rowptr;
+//    delete[] jcolM;
+//    delete[] M;
 
-   std::swap( rowptr, rowptr_tmp );
-   std::swap( jcolM, jcolM_tmp );
-   std::swap( M, M_tmp );
-   std::swap( len, len_tmp );
-   std::swap( m_len, m_len_tmp );
-}
+//    std::swap( rowptr, rowptr_tmp );
+//    std::swap( jcolM, jcolM_tmp );
+//    std::swap( M, M_tmp );
+//    std::swap( len, len_tmp );
+//    std::swap( m_len, m_len_tmp );
+// }
 
 
 SparseStorageDynamic::~SparseStorageDynamic()
