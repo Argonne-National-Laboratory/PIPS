@@ -34,10 +34,12 @@ class SparseStorageDynamic : public DoubleStorage {
 
 private:
   const double spareRatio;
-  int m; // row
-  int m_len; // length row array
-  int n; // cols
-  int len; // length col/value array
+
+  int m;      // row
+  int m_len;  // length row array
+  int n;      // cols
+  int len;    // length col/value array
+  int len_free;
 
   ROWPTRS * rowptr;
   int * jcolM;
@@ -50,7 +52,7 @@ private:
   void extendStorageValues();
 
   /* shifts all rows such that every row is again row + spareRatio length */ 
-  void compressStorage();
+  void compressStorageValues();
 
 public:
   static int instances;
@@ -102,11 +104,10 @@ public:
   void removeEntryAtIndex(int row, int col_idx);
   void removeEntryAtRowCol(int row, int col);
 
-  void removeRow( int row );
-  void removeCol( int col );
+  void clearRow( int row );
+  void clearCol( int col );
 
-  void appendRow( const std::vector<double>& row );
-  void appendCol( const std::vector<double>& col );
+  void appendRow( const std::vector<double>& row, const std::vector<int>& idx );
 
   void scaleRow( int row, double factor );
 

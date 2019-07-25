@@ -1321,7 +1321,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    removeIndexColumn(node, block_type, col, matrix_transp.getRowPtr(col).end - matrix_transp.getRowPtr(col).start);
 
    /* update the transposed */
-   matrix_transp.removeRow( col );
+   matrix_transp.clearRow( col );
 
    // todo assert(transposed and normal matrix are in sync)
 }
@@ -1478,7 +1478,7 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
    }
 
    removeIndexRow(system_type, node, block_type, row, mat_storage.getRowPtr(row).end - mat_storage.getRowPtr(row).start);
-   mat_storage.removeRow(row);
+   mat_storage.clearRow(row);
 }
 
 bool PresolveData::verifyActivities()
