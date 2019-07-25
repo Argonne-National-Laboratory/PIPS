@@ -55,8 +55,13 @@ public:
   int getN() const { return n; }; // todo check for n when inserting rows cols etc
   //int getLen() const { return len; };
 
+  const ROWPTRS* getRowPtr() const { return rowptr; };
   const ROWPTRS getRowPtr(int i) const;
+
+  const int* getJcolM() const { return jcolM; };
   const int getJcolM(int i) const;
+  
+  const double* getMat() const { return M; };
   const double getMat(int i) const;
 
 
@@ -98,6 +103,8 @@ public:
 
   void appendRow( const std::vector<double>& row );
   void appendCol( const std::vector<double>& col );
+
+  void scaleRow( int row, double factor );
 
   void addNnzPerRow(double* vec) const;
 

@@ -1493,6 +1493,7 @@ void StochGenMatrix::updateTransposed()
 
 /* check whether root node date is same in all processes
  *
+ * todo: check this
  * todo: make better use of std::vector and iterators
  * root node data is Amat (empty), Bmat and Blmat of root node. Children not checked.
  */
@@ -1605,20 +1606,20 @@ bool StochGenMatrix::isRootNodeInSync() const
 
       /* dynamic storage */
       int bmat_dyn_len = 0;
-      for(int i = 0; i < Bmat_dyn.m; ++i)
-         bmat_dyn_len += (Bmat_dyn.rowptr[i].end - Bmat_dyn.rowptr[i].start);
+      for(int i = 0; i < Bmat_dyn.getM(); ++i)
+         bmat_dyn_len += (Bmat_dyn.getRowPtr(i).end - Bmat_dyn.getRowPtr(i).start);
 
       int blmat_dyn_len = 0;
-      for(int i = 0; i < Blmat_dyn.m; ++i)
-         blmat_dyn_len += (Blmat_dyn.rowptr[i].end - Blmat_dyn.rowptr[i].start);
+      for(int i = 0; i < Blmat_dyn.getM(); ++i)
+         blmat_dyn_len += (Blmat_dyn.getRowPtr(i).end - Blmat_dyn.getRowPtr(i).start);
 
       const int lenght_entries_bmat_dynamic = bmat_dyn_len;
       const int length_columns_bmat_dynamic = bmat_dyn_len;
-      const int lenght_rowoffest_bmat_dynamic = Bmat_dyn.m + 1;
+      const int lenght_rowoffest_bmat_dynamic = Bmat_dyn.getM() + 1;
 
       const int lenght_entries_blmat_dynamic = blmat_dyn_len;
       const int length_columns_blmat_dynamic = blmat_dyn_len;
-      const int lenght_rowoffest_blmat_dynamic = Blmat_dyn.m + 1;
+      const int lenght_rowoffest_blmat_dynamic = Blmat_dyn.getM() + 1;
 
       const long long count_row_cols_dyn = length_columns_bmat_dynamic + 2 * lenght_rowoffest_bmat_dynamic + length_columns_blmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic;
       const long long count_entries_dyn = lenght_entries_bmat_dynamic + lenght_entries_blmat_dynamic;
@@ -1633,16 +1634,16 @@ bool StochGenMatrix::isRootNodeInSync() const
       std::vector<int> recvbuf_row_coldynamic(count_row_cols_dyn, 0);;
 
       /* fill Bmat into send buffers */
-      const double * M = Bmat_dyn.M;
-      const int * jColM = Bmat_dyn.jcolM;
+      const double * M = Bmat_dyn.getMat();
+      const int * jColM = Bmat_dyn.getJcolM();
 
       int count_entries = 0;
       int count_row_col = 0;
 
       /* entries Bmat into double array */
-      for(int i = 0; i < Bmat_dyn.m; ++i)
+      for(int i = 0; i < Bmat_dyn.getM(); ++i)
       {
-         for(int j = Bmat_dyn.rowptr[i].start; j < Bmat_dyn.rowptr[i].end; ++j)
+         for(int j = Bmat_dyn.getRowPtr(i).start; j < Bmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_entries_dynamic[count_entries] = M[j];
             count_entries++;
@@ -1653,16 +1654,16 @@ bool StochGenMatrix::isRootNodeInSync() const
       /* row pointers Bmat into int array */
       for(int i = 0; i < lenght_rowoffest_bmat_dynamic; ++i)
       {
-         sendbuf_row_col_dynamic[count_row_col] = Bmat_dyn.rowptr->start;
-         sendbuf_row_col_dynamic[count_row_col + 1] = Bmat_dyn.rowptr->end;
+         sendbuf_row_col_dynamic[count_row_col] = Bmat_dyn.getRowPtr()->start;
+         sendbuf_row_col_dynamic[count_row_col + 1] = Bmat_dyn.getRowPtr()->end;
          count_row_col += 2;
       }
       assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic);
 
       /* col indices of Bmat into int array */
-      for(int i = 0; i < Bmat_dyn.m; ++i)
+      for(int i = 0; i < Bmat_dyn.getM(); ++i)
       {
-         for(int j = Bmat_dyn.rowptr[i].start; j < Bmat_dyn.rowptr[i].end; ++j)
+         for(int j = Bmat_dyn.getRowPtr(i).start; j < Bmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_row_col_dynamic[count_row_col] = jColM[j];
             count_row_col++;
@@ -1671,13 +1672,13 @@ bool StochGenMatrix::isRootNodeInSync() const
       assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic);
 
       /* fill Blmat into send buffers */
-      const double * Ml = Blmat_dyn.M;
-      const int * jColMl = Blmat_dyn.jcolM;
+      const double * Ml = Blmat_dyn.getMat();
+      const int * jColMl = Blmat_dyn.getJcolM();
 
       /* entries Blmat into double array */
-      for(int i = 0; i < Blmat_dyn.m; ++i)
+      for(int i = 0; i < Blmat_dyn.getM(); ++i)
       {
-         for(int j = Blmat_dyn.rowptr[i].start; j < Blmat_dyn.rowptr[i].end; ++j)
+         for(int j = Blmat_dyn.getRowPtr(i).start; j < Blmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_entries_dynamic[count_entries] = Ml[j];
             count_entries++;
@@ -1689,16 +1690,16 @@ bool StochGenMatrix::isRootNodeInSync() const
       for(int i = 0; i < lenght_rowoffest_blmat_dynamic; ++i)
       {
          assert(2 * lenght_rowoffest_bmat_dynamic + lenght_entries_bmat_dynamic + 2 * i + 1 < count_row_cols_dyn);
-         sendbuf_row_col_dynamic[count_row_col] = Blmat_dyn.rowptr->start;
-         sendbuf_row_col_dynamic[count_row_col + 1] = Blmat_dyn.rowptr->end;
+         sendbuf_row_col_dynamic[count_row_col] = Blmat_dyn.getRowPtr()->start;
+         sendbuf_row_col_dynamic[count_row_col + 1] = Blmat_dyn.getRowPtr()->end;
          count_row_col += 2;
       }
       assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic);
 
       /* col indices of Bmat into int array */
-      for(int i = 0; i < Blmat_dyn.m; ++i)
+      for(int i = 0; i < Blmat_dyn.getM(); ++i)
       {
-         for(int j = Blmat_dyn.rowptr[i].start; j < Blmat_dyn.rowptr[i].end; ++j)
+         for(int j = Blmat_dyn.getRowPtr(i).start; j < Blmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_row_col_dynamic[count_row_col] = jColMl[j];
             count_row_col++;

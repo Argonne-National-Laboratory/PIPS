@@ -145,9 +145,9 @@ SparseGenMatrix::writeToStreamDenseRow(stringstream& out, int rowidx) const
 {
    if( mStorageDynamic != NULL )
    {
-      if( mStorageDynamic->n > 0 )
+      if( mStorageDynamic->getN() > 0 )
       {
-         assert(rowidx < mStorageDynamic->m);
+         assert(rowidx < mStorageDynamic->getM());
          mStorageDynamic->writeToStreamDenseRow(out, rowidx);
       }
    }
@@ -167,9 +167,9 @@ SparseGenMatrix::writeToStreamDenseRow(int rowidx) const
    stringstream out;
    if( mStorageDynamic != NULL )
    {
-      if( mStorageDynamic->n > 0 )
+      if( mStorageDynamic->getN() > 0 )
       {
-         assert(rowidx < mStorageDynamic->m);
+         assert(rowidx < mStorageDynamic->getM());
          mStorageDynamic->writeToStreamDenseRow(out, rowidx);
       }
    }
@@ -230,8 +230,8 @@ void SparseGenMatrix::getSize( long long& m, long long& n )
 {
    if( mStorageDynamic != NULL )
    {
-      m = mStorageDynamic->m;
-      n = mStorageDynamic->n;
+      m = mStorageDynamic->getM();
+      n = mStorageDynamic->getN();
    }
    else
    {
@@ -243,8 +243,8 @@ void SparseGenMatrix::getSize( int& m, int& n )
 {
   if( mStorageDynamic != NULL )
   {
-     m = mStorageDynamic->m;
-     n = mStorageDynamic->n;
+     m = mStorageDynamic->getM();
+     n = mStorageDynamic->getN();
   }
   else
   {
@@ -538,7 +538,7 @@ SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
 
    if( mStorageDynamic != NULL )
    {
-      assert(vec.length() == mStorageDynamic->m);
+      assert(vec.length() == mStorageDynamic->getM());
       mStorageDynamic->addNnzPerRow(vec.elements());
    }
    else
@@ -558,7 +558,7 @@ SparseGenMatrix::addNnzPerCol(OoqpVector& nnzVec)
 
    if( m_Mt->mStorageDynamic != NULL  )
    {
-      assert(vec.length() == m_Mt->mStorageDynamic->m);
+      assert(vec.length() == m_Mt->mStorageDynamic->getM());
       m_Mt->mStorageDynamic->addNnzPerRow(vec.elements());
    }
    else

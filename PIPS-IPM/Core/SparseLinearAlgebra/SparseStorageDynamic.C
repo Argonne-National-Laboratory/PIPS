@@ -6,6 +6,7 @@
  */ 
 
 #include "SparseStorageDynamic.h"
+#include "pipsport.h"
 #include <cassert>
 #include <algorithm>
 #include <vector>
@@ -482,7 +483,7 @@ void SparseStorageDynamic::extendStorage()
 void SparseStorageDynamic::removeEntryAtIndex(int row, int col_idx)
 {
    assert( 0 <= row && row <= m );
-   assert( rowptr[row].begin <= col_idx && col_idx < rowptr[row].end );
+   assert( rowptr[row].start <= col_idx && col_idx < rowptr[row].end );
 
    int& row_end = rowptr[row].end;
 
@@ -514,6 +515,21 @@ void SparseStorageDynamic::removeRow( int row )
    assert( 0 <= row && row < m );
    rowptr[row].end = rowptr[row].start;
 }
+
+void SparseStorageDynamic::scaleRow( int row, double factor )
+{
+   assert( 0 <= row && row < m );
+
+#ifdef PRE_CPP11
+   for(int i = rowptr[row].start; i < rowptr[row].end; ++i)
+      M[i] *= factor;
+#else
+   std::transform( M + rowptr[row].start, M + rowptr[row].end, M + rowptr[row].start, 
+      [factor](double e) -> double { return e*factor ; } );
+#endif
+}
+
+
 
 SparseStorageDynamic::~SparseStorageDynamic()
 {

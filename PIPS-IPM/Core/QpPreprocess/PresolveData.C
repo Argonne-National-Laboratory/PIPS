@@ -1336,8 +1336,8 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
    {
       std::vector<int> idx_row;
       std::vector<double> val_row;
-      BlockType block_type = (linking) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
-      buildRowForPostsolve( system_type, node, block_type, row, idx_row, val_row);
+//      BlockType block_type = (linking) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
+//todo      // buildRowForPostsolve( system_type, node, block_type, row, idx_row, val_row);
 
       postsolver->notifyRedundantRow(system_type, node, row, linking, idx_row, val_row);
    }
