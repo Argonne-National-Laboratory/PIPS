@@ -666,7 +666,6 @@ void StochPresolverParallelRows::removeEntry(int col, SimpleVector& rowContainsS
 
    // get indices of the singleton entry int mat_trans
    const int row = matrixTrans.getJcolM(matrixTrans.getRowPtr(col).start);
-   const int val_trans = matrixTrans.getMat(row);
 
    assert( row < nnzRow.n );
 
@@ -697,6 +696,7 @@ void StochPresolverParallelRows::removeEntry(int col, SimpleVector& rowContainsS
          break;
    }
    assert( matrix.getJcolM(i) == col);
+   const double val = matrix.getMat(i);
 
    matrix.removeEntryAtIndex( row, i);
    matrixTrans.removeEntryAtIndex( col, matrixTrans.getRowPtr(col).start );
@@ -705,9 +705,9 @@ void StochPresolverParallelRows::removeEntry(int col, SimpleVector& rowContainsS
    nnzCol[col] = 0.0;
 
    if( block_type == LINKING_VARS_BLOCK )
-      (*singletonCoeffsColParent)[col] = val_trans;
+      (*singletonCoeffsColParent)[col] = val;
    else
-      (*singletonCoeffsColChild)[col] = val_trans;
+      (*singletonCoeffsColChild)[col] = val;
 }
 
 // todo there seems to be no numerical threshold for the normalization below .. this should be fixed - rows with fairly different coefficients could be regarded equal
