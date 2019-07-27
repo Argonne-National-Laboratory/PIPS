@@ -33,6 +33,9 @@ class PardisoSchurSolver : public DoubleLinearSolver {
  constexpr static int symbFactorIntervalDefault = 3;
  constexpr static int pivotPerturbationExpDefault = 8;
  constexpr static int nIterativeRefinsDefault = 8;
+ constexpr static bool parallelForwardBackwardDefault = true;
+ constexpr static bool factorizationTwoLevelDefault = true;
+
 
 protected:
   PardisoSchurSolver() {};
@@ -97,6 +100,8 @@ protected:
 
   int pivotPerturbationExp; // 10^-exp
   int nIterativeRefins;
+  bool parallelForwardBackward;
+  bool factorizationTwoLevel;
 
   /* pardiso params */
   int maxfct, mnum, phase, msglvl, solver, mtype, nrhs;

@@ -91,13 +91,15 @@ void PardisoIndefSolver::setIparm(int* iparm){
       iparm[12] = 0;
    }
 
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   #else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0;
-   #endif
+   if( factorizationTwoLevel )
+      iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   else
+      iparm[23] = 0;
+
+   if( parallelForwardBackward )
+      iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   else
+      iparm[24] = 0;
 
 #else
 
@@ -118,15 +120,6 @@ void PardisoIndefSolver::setIparm(int* iparm){
       iparm[10] = 0;
       iparm[12] = 0;
    }
-
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 0; // iparm[23] does NOT work with iparm[10] = iparm[12] = 1 for mkl pardiso
-   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
-                  // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
-   #else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0;
-   #endif
 #endif
 
 }
@@ -229,6 +222,33 @@ void PardisoIndefSolver::initPardiso()
          highAccuracy = true;
    }
 
+   parallelForwardBackward = parallelForwardBackwardDefault,
+
+   // todo proper parameter
+   var = getenv("PARDISO_PARALLEL_SOLVE_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      if( n == 0 )
+         parallelForwardBackward = false;
+      else if( n == 1 )
+         parallelForwardBackward = true;
+   }
+
+   factorizationTwoLevel = factorizationTwoLevelDefault,
+
+   // todo proper parameter
+   var = getenv("PARDISO_FACTORIZE_TWOLEVEL_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      if( n == 0 )
+         factorizationTwoLevel = false;
+      else if( n == 1 )
+         factorizationTwoLevel = true;
+   }
 
    nIterativeRefins = nIterativeRefinsDefault;
 
@@ -249,6 +269,16 @@ void PardisoIndefSolver::initPardiso()
       printf("PARDISO root: using pivot perturbation 10^-%d \n", pivotPerturbationExp);
 
       printf("PARDISO root: using maximum of %d iterative refinements  \n", nIterativeRefins);
+
+      if( parallelForwardBackward )
+         printf("PARDISO root: using parallel (forward/backward) solve \n");
+      else
+         printf("PARDISO root: NOT using parallel (forward/backward) solve \n");
+
+      if( factorizationTwoLevel )
+         printf("PARDISO root: using two-level scheduling for numerical factorization \n");
+      else
+         printf("PARDISO root: NOT using two-level scheduling for numerical factorization \n");
 
       if( highAccuracy )
          printf("PARDISO root: using high accuracy \n");

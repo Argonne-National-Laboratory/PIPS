@@ -166,6 +166,34 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
         nIterativeRefins = n;
   }
 
+  parallelForwardBackward = parallelForwardBackwardDefault,
+
+  // todo proper parameter
+  var = getenv("PARDISO_PARALLEL_SOLVE");
+  if( var != NULL )
+  {
+     int n;
+     sscanf(var, "%d", &n);
+     if( n == 0 )
+        parallelForwardBackward = false;
+     else if( n == 1 )
+        parallelForwardBackward = true;
+  }
+
+  factorizationTwoLevel = factorizationTwoLevelDefault,
+
+  // todo proper parameter
+  var = getenv("PARDISO_FACTORIZE_TWOLEVEL");
+  if( var != NULL )
+  {
+     int n;
+     sscanf(var, "%d", &n);
+     if( n == 0 )
+        factorizationTwoLevel = false;
+     else if( n == 1 )
+        factorizationTwoLevel = true;
+  }
+
 
   if( myRank == 0 )
   {
@@ -540,14 +568,15 @@ void PardisoSchurSolver::setIparm(int* iparm){
    iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
    iparm[12] = 2;// 0 disable matching, 1 enable matching, no other settings
 
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-//   iparm[1] = 3; // 3 Metis 5.1 (only for PARDISO >= 6.0)
-   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 1;// parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   #else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential
-   #endif
+   if( factorizationTwoLevel )
+      iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   else
+      iparm[23] = 0;
+
+   if( parallelForwardBackward )
+      iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   else
+      iparm[24] = 0;
 
 #else
    /* From INTEL (instead of iparm[2] which is not defined there):
@@ -563,16 +592,6 @@ void PardisoSchurSolver::setIparm(int* iparm){
    /* NOTE: requires iparm[23] = 1 which in return requires iparm[10] = iparm[12] = 0 */
    /* even though the documentation does not tell so setting iparm[23] = 10 is highly unstable and might result in segmentation faults */
    iparm[35] = -2; // compute the schur complement
-
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
-                     // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
-   #else
-   iparm[23] = 1; // only possible setting for computing the schur complement
-   iparm[24] = 0; // parallelization for the forward and backward solve. 0=sequential
-   #endif
-
 
    /* mkl_pardiso has no chkmatrix method - instead one can set iparm[26] */
    #ifndef NDEBUG

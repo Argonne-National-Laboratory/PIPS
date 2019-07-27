@@ -27,6 +27,9 @@ class PardisoIndefSolver : public DoubleLinearSolver
       constexpr static int nIterativeRefinsDefault = 8;
       constexpr static bool highAccuracyDefault = true;
       constexpr static bool useSparseRhsDefault = true;
+      constexpr static bool parallelForwardBackwardDefault = true;
+      constexpr static bool factorizationTwoLevelDefault = true;
+
 
       double* x; /* solution vector */
 
@@ -53,6 +56,8 @@ class PardisoIndefSolver : public DoubleLinearSolver
       int nThreads;
       int nIterativeRefins;
       bool highAccuracy;
+      bool parallelForwardBackward;
+      bool factorizationTwoLevel;
 
    public:
       PardisoIndefSolver(DenseSymMatrix * storage);
