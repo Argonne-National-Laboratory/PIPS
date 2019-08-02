@@ -107,7 +107,7 @@ public:
   void clearRow( int row );
   void clearCol( int col );
 
-  void appendRow( const std::vector<double>& row, const std::vector<int>& idx );
+  void appendRow( const OoqpVector& row );
 
   void scaleRow( int row, double factor );
 

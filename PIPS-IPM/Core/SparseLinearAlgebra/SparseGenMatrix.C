@@ -789,3 +789,12 @@ void SparseGenMatrix::permuteCols(const std::vector<unsigned int>& permvec)
       m_Mt->mStorage->permuteRows(permvec);
 }
 
+int SparseGenMatrix::appendRow(const OoqpVector& row)
+{
+   assert( hasDynamicStorage() );
+   assert( !hasTransposed() );
+
+   mStorageDynamic->appendRow( row );
+
+   return mStorageDynamic->getM() - 1;
+}

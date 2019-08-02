@@ -7,6 +7,7 @@
 
 #include "SparseStorageDynamic.h"
 #include "pipsport.h"
+#include "SimpleVector.h"
 #include <cassert>
 #include <algorithm>
 #include <vector>
@@ -511,13 +512,24 @@ void SparseStorageDynamic::clearCol( int col )
    }
 }
 
-void SparseStorageDynamic::appendRow( const std::vector<double>& val, const std::vector<int>& idx )
+void SparseStorageDynamic::appendRow( const OoqpVector& row )
 {
-   assert(val.size() == idx.size());
-   for(unsigned int i = 0; idx.size(); ++i)
+   assert( row.length() < n );
+   
+   const SimpleVector& simple_row = dynamic_cast<const SimpleVector&>(row);
+
+   std::vector<double> val;
+   std::vector<int> idx;
+   val.reserve(simple_row.length());
+   idx.reserve(simple_row.length());
+
+   for(long long i = 0; i < simple_row.length(); ++i)
    {
-      assert(val[i] != 0);
-      assert(idx[i] < n);
+      if( simple_row[i] != 0.0 )
+      {
+         val.push_back(simple_row[i]);
+         idx.push_back(i);
+      }
    }
 
    if( m == m_len )

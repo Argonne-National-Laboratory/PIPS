@@ -215,7 +215,7 @@ void StochGenMatrix::scalarMult( double num)
   Bmat->scalarMult(num);
   Blmat->scalarMult(num);
 
-  for (size_t it=0; it<children.size(); it++) 
+  for (size_t it = 0; it < children.size(); it++) 
     children[it]->scalarMult(num);
 }
 
@@ -1738,6 +1738,90 @@ bool StochGenMatrix::isRootNodeInSync() const
 
    return in_sync;
 }
+
+/* Find correct matrices to append row to
+ *  Can only be called in root node
+ *
+ *  Child -1 is parent
+ *
+ * @return rowindex (in specified block row) of newly appended row
+ */
+int StochGenMatrix::appendRow( const OoqpVector& row, int child, bool linking ) 
+{
+  const StochVector& stoch_row = dynamic_cast<const StochVector&>(row);
+
+  assert( stoch_row.children.size() == children.size() );
+  assert( stoch_row.vec );
+  assert( children.size() != 0 );
+  assert( -1 <= child && child <= (int) children.size() );
+
+  // check that row is in correct format
+  if( linking )
+  {
+    for(unsigned int i = 0; i < children.size(); ++i)
+      if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+        assert(stoch_row.children[i]->vec);
+      else
+        assert( stoch_row.children[i]->vec == NULL );
+  }
+  else
+  {
+    for(unsigned int i = 0; i < children.size(); ++i)
+    {
+      if(child == (int) i)
+      {
+        assert( stoch_row.children[i]->vec );        
+        assert( !children[i]->isKindOf(kStochGenDummyMatrix) );
+      }
+      else
+      {
+        assert( stoch_row.children[i]->vec == NULL );        
+      }
+    }
+  }
+
+  int index_row;
+
+  // append row to all matrices necessary
+  if(linking)
+  {
+    index_row = Blmat->appendRow(*stoch_row.vec);
+
+    for(unsigned int i = 0; i < children.size(); ++i)
+    { 
+#ifndef NDEBUG
+      int idx;
+      if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+        idx = children[i]->Blmat->appendRow(*stoch_row.children[i]->vec);
+      assert(index_row == idx);
+#else
+      if( !children[i]->isKindOf(kStochGenDummyMatrix) );
+        children[i]->Blmat->appendRow(*stoch_row.children[i]->vec);
+#endif
+    }
+  }
+  else
+  {
+    if(child != -1)
+    {
+      index_row = children[child]->Amat->appendRow(*stoch_row.vec);
+#ifndef NDEBUG
+      int idx;
+      idx = children[child]->Bmat->appendRow(*stoch_row.children[child]->vec);
+      assert(idx = index_row);
+#else
+      children[child]->Bmat->appendRow(*stoch_row.children[child]->vec);
+#endif
+    }
+    else
+    {
+      index_row = Amat->appendRow(*stoch_row.vec);
+    }
+  }
+
+  return index_row;
+};
+
 
 
 
