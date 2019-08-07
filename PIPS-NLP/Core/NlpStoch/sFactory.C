@@ -466,10 +466,9 @@ Variables* sFactory::makeVariables( Data * prob_in )
     z = OoqpVectorHandle(tree->newDualZVector());
   }
 
-    if (prob->nxlow > 0)
-    {
-      v = OoqpVectorHandle(tree->newPrimalVector());
-      gamma = OoqpVectorHandle(tree->newPrimalVector());
+  if (prob->nxlow > 0) {
+    v = OoqpVectorHandle(tree->newPrimalVector());
+    gamma = OoqpVectorHandle(tree->newPrimalVector());
   }else{
 	v 	= OoqpVectorHandle( tree->newPrimalVectorEmpty() ); 
 	gamma  = OoqpVectorHandle( tree->newPrimalVectorEmpty() );
