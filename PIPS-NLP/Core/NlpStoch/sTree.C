@@ -470,7 +470,13 @@ StochVector* sTree::newPrimalVector() const
   assert(x!=NULL);
 
   for(size_t it=0; it<children.size(); it++) {
-    StochVector* child = children[it]->newPrimalVector();
+    StochVector* child;
+    if (children[it]->nx() != 0) {
+      child = children[it]->newPrimalVector();
+    }
+    else {
+      child = children[it]->newPrimalVectorEmpty();
+    }
     x->AddChild(child);
   }
   return x;
@@ -485,7 +491,13 @@ StochVector* sTree::newDualYVector() const
   StochVector* y = new StochVector(my(), commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {
-    StochVector* child = children[it]->newDualYVector();
+    StochVector* child;
+    if (children[it]->my() != 0) {
+      child = children[it]->newDualYVector();
+    }
+    else {
+      child = children[it]->newDualYVectorEmpty();
+    }
     y->AddChild(child);
   }
   return y;
@@ -500,7 +512,13 @@ StochVector* sTree::newDualZVector() const
   StochVector* z = new StochVector(mz(), commWrkrs);
 
   for(size_t it=0; it<children.size(); it++) {
-    StochVector* child = children[it]->newDualZVector();
+    StochVector* child;
+    if (children[it]->mz() != 0) {
+      child = children[it]->newDualZVector();
+    }
+    else {
+      child = children[it]->newDualZVectorEmpty();
+    }
     z->AddChild(child);
   }
   return z;
