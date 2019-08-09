@@ -198,6 +198,8 @@ public:
 
   virtual ~StochDummyVector(){};
 
+  static StochDummyVector *dummy;
+
   void AddChild(StochVector* child){};
   void AddChild(OoqpVector* child){};
 

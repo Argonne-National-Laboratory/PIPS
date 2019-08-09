@@ -59,6 +59,18 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     assert(noProcs==1); 
     return;
   }
+  //   std::cout << children.size() << std::endl;
+  // if (1 == noProcs)
+  // {
+  //   assert(children.size() >= 1);
+  //   children[0]->assignProcesses(world, processes);
+  //   children[1]->assignProcesses(world, processes);
+
+  //   for (size_t c = 2; c < children.size(); c++)
+  //     children[c]->assignProcesses(MPI_COMM_NULL, processes);
+  //   return;
+  // }
+
 
   if(1==noProcs) {
     for(size_t c=0; c<children.size(); c++)
@@ -464,7 +476,7 @@ StochVector* sTree::newPrimalVector() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* x = new StochVector(nx(), commWrkrs);
   assert(x!=NULL);
@@ -473,11 +485,13 @@ StochVector* sTree::newPrimalVector() const
     StochVector* child;
     if (children[it]->nx() != 0) {
       child = children[it]->newPrimalVector();
+      x->AddChild(child);
     }
     else {
       child = children[it]->newPrimalVectorEmpty();
+      if (child != StochDummyVector::dummy)
+      x->AddChild(child);
     }
-    x->AddChild(child);
   }
   return x;
 }
@@ -486,7 +500,7 @@ StochVector* sTree::newDualYVector() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* y = new StochVector(my(), commWrkrs);
 
@@ -494,11 +508,12 @@ StochVector* sTree::newDualYVector() const
     StochVector* child;
     if (children[it]->my() != 0) {
       child = children[it]->newDualYVector();
+      y->AddChild(child);
     }
     else {
       child = children[it]->newDualYVectorEmpty();
+      y->AddChild(child);
     }
-    y->AddChild(child);
   }
   return y;
 }
@@ -507,7 +522,7 @@ StochVector* sTree::newDualZVector() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* z = new StochVector(mz(), commWrkrs);
 
@@ -515,11 +530,12 @@ StochVector* sTree::newDualZVector() const
     StochVector* child;
     if (children[it]->mz() != 0) {
       child = children[it]->newDualZVector();
+      z->AddChild(child);
     }
     else {
       child = children[it]->newDualZVectorEmpty();
+      z->AddChild(child);
     }
-    z->AddChild(child);
   }
   return z;
 }
@@ -529,7 +545,7 @@ StochVector* sTree::newPrimalVectorEmpty() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* x = new StochVector(0, commWrkrs);
 
@@ -544,7 +560,7 @@ StochVector* sTree::newDualYVectorEmpty() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* y = new StochVector(0, commWrkrs);
 
@@ -559,7 +575,7 @@ StochVector* sTree::newDualZVectorEmpty() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* z = new StochVector(0, commWrkrs);
 
@@ -575,7 +591,7 @@ StochVector* sTree::newRhs()
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* rhs = new StochVector(nx() + my() + mz(), commWrkrs);
 
@@ -591,7 +607,7 @@ StochVector* sTree::newRhsXSYZ()
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* rhs = new StochVector(nx() + mz() + my() + mz(), commWrkrs);
 

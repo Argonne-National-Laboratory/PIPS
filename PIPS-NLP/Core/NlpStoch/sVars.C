@@ -15,6 +15,7 @@
 
 #include <iostream> 
 #include <fstream>
+sVars *sVars::dummy = new sVars();
 using namespace std;
 
 sVars::sVars(sTree* tree, 
@@ -154,7 +155,8 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
 sVars::~sVars()
 { 
   for (size_t c=0; c<children.size(); c++)
-    delete children[c];
+    if(children[c] != sVars::dummy)
+      delete children[c];
 }
 
 void sVars::AddChild(sVars* child)
@@ -184,6 +186,10 @@ void sVars::createChildren()
     
 
   for (size_t it=0; it<xst.children.size(); it++) {
+    if (stochNode->children[it]->commWrkrs == MPI_COMM_NULL) {
+      AddChild(sVars::dummy);
+    }
+    else {
     AddChild( new sVars( stochNode->children[it],
 			 xst.children[it],     sst.children[it],
 			 yst.children[it],     zst.children[it],
@@ -197,6 +203,7 @@ void sVars::createChildren()
 			 icuppst.children[it], mcupp,
 			 nx, my, mz)
 	      );
+    }
   }
   
 }

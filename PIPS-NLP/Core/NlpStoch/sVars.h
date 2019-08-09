@@ -16,6 +16,7 @@ class sTree;
 
 class sVars : public NlpGenVars {
  public:
+  static sVars *dummy;
   sVars( sTree* tree,
 	 OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 	 OoqpVector * iclow_in, OoqpVector * icupp_in);

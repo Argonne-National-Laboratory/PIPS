@@ -14,6 +14,7 @@
 #include <iostream>
 #include <limits>
 #include <math.h>
+StochDummyVector *StochDummyVector::dummy = new StochDummyVector();
 
 StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
   : OoqpVector(n_), parent(NULL), mpiComm(mpiComm_), treeIDX(0), firstDoNumOfNonZero(true),
@@ -57,9 +58,10 @@ void StochVector::AddChild(OoqpVector* child_)
 StochVector::~StochVector()
 {
   for (size_t it=0; it<children.size(); it++)
-    delete children[it];
-  
-  if (vec)
+    if(children[it] != StochDummyVector::dummy)
+      delete children[it];
+
+  if (vec && this != StochDummyVector::dummy)
     delete vec;
 }
 
