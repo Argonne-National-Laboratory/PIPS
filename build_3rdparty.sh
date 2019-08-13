@@ -7,6 +7,7 @@ NUMTHREADS=4
 
 
 export CC='gcc'
+export CXX='g++'
 export CFLAGS='-O3'
 export CXXFLAGS='-O3'
 
