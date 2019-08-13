@@ -61,16 +61,16 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     return;
   }
     std::cout << children.size() << std::endl;
-  if (1 == noProcs)
-  {
-    assert(children.size() >= 1);
-    children[0]->assignProcesses(world, processes);
-    children[1]->assignProcesses(world, processes);
+  // if (1 == noProcs)
+  // {
+  //   assert(children.size() >= 1);
+  //   children[0]->assignProcesses(world, processes);
+  //   children[1]->assignProcesses(world, processes);
 
-    for (size_t c = 2; c < children.size(); c++)
-      children[c]->assignProcesses(MPI_COMM_NULL, processes);
-    return;
-  }
+  //   for (size_t c = 2; c < children.size(); c++)
+  //     children[c]->assignProcesses(MPI_COMM_NULL, processes);
+  //   return;
+  // }
 
 
   if(1==noProcs) {
