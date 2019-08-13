@@ -18,6 +18,7 @@ int sTree::rankMe    =-1;
 int sTree::rankZeroW = 0;
 int sTree::rankPrcnd =-1;
 int sTree::numProcs  =-1;
+sTree *sTree::dummy = NULL;
 
 sTree::sTree()
 : commP2ZeroW(MPI_COMM_NULL), np(-1), IPMIterExecTIME(-1)
@@ -59,17 +60,17 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     assert(noProcs==1); 
     return;
   }
-  //   std::cout << children.size() << std::endl;
-  // if (1 == noProcs)
-  // {
-  //   assert(children.size() >= 1);
-  //   children[0]->assignProcesses(world, processes);
-  //   children[1]->assignProcesses(world, processes);
+    std::cout << children.size() << std::endl;
+  if (1 == noProcs)
+  {
+    assert(children.size() >= 1);
+    children[0]->assignProcesses(world, processes);
+    children[1]->assignProcesses(world, processes);
 
-  //   for (size_t c = 2; c < children.size(); c++)
-  //     children[c]->assignProcesses(MPI_COMM_NULL, processes);
-  //   return;
-  // }
+    for (size_t c = 2; c < children.size(); c++)
+      children[c]->assignProcesses(MPI_COMM_NULL, processes);
+    return;
+  }
 
 
   if(1==noProcs) {
@@ -485,13 +486,11 @@ StochVector* sTree::newPrimalVector() const
     StochVector* child;
     if (children[it]->nx() != 0) {
       child = children[it]->newPrimalVector();
-      x->AddChild(child);
     }
     else {
       child = children[it]->newPrimalVectorEmpty();
-      if (child != StochDummyVector::dummy)
-      x->AddChild(child);
     }
+    x->AddChild(child);
   }
   return x;
 }
@@ -508,12 +507,11 @@ StochVector* sTree::newDualYVector() const
     StochVector* child;
     if (children[it]->my() != 0) {
       child = children[it]->newDualYVector();
-      y->AddChild(child);
     }
     else {
       child = children[it]->newDualYVectorEmpty();
-      y->AddChild(child);
     }
+    y->AddChild(child);
   }
   return y;
 }
@@ -530,12 +528,11 @@ StochVector* sTree::newDualZVector() const
     StochVector* child;
     if (children[it]->mz() != 0) {
       child = children[it]->newDualZVector();
-      z->AddChild(child);
     }
     else {
       child = children[it]->newDualZVectorEmpty();
-      z->AddChild(child);
     }
+    z->AddChild(child);
   }
   return z;
 }

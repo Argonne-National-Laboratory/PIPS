@@ -166,7 +166,7 @@ void NlpGenSparseLinsys::factor(Data *prob_in, Variables *vars,RegularizationAlg
     Num_NegEVal = solver->matrixChanged();
     
     if(gPipsPrtLV>=3) 
-      printf("NlpGenSparseLinsys (serial): Num_NegEVal is %d and  my+mz is %d\n", Num_NegEVal, my+mz);
+      printf("NlpGenSparseLinsys (serial): Num_NegEVal is %d and  my+mz is %lld\n", Num_NegEVal, my+mz);
 
     // check if matrix is singular
     if( Num_NegEVal < 0 || (Num_NegEVal < my+mz && RegInfo->DoEvalReg == 1) )
@@ -188,7 +188,7 @@ void NlpGenSparseLinsys::factor(Data *prob_in, Variables *vars,RegularizationAlg
     Num_NegEVal = solver->matrixChanged();	
 
     if(gPipsPrtLV>=3) 
-      printf("NlpGenSparseLinsys (serial): Num_NegEVal is %d and  my+mz is %d (on refactorization with regularizations: %g %g)\n", Num_NegEVal, my+mz, priReg, dualReg);
+      printf("NlpGenSparseLinsys (serial): Num_NegEVal is %d and  my+mz is %lld (on refactorization with regularizations: %g %g)\n", Num_NegEVal, my+mz, priReg, dualReg);
 
     // check if matrix is singular
     if(Num_NegEVal < 0)

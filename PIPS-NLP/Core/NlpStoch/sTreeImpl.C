@@ -20,6 +20,7 @@ sTreeImpl::sTreeImpl( stochasticInput &in_, MPI_Comm comm /*=MPI_COMM_WORLD*/)
   m_mz = in.nFirstStageCons() - m_my;
   m_mle = in.nLinkECons();
   m_mli = in.nLinkICons();
+  if (sTree::dummy == NULL) sTree::dummy = new sTreeImpl(1,in);
   for (int scen=0; scen<in.nScenarios(); scen++) {
     sTreeImpl* c = new sTreeImpl(scen+1,in);
     c->parent = this;
@@ -40,7 +41,7 @@ sTreeImpl::sTreeImpl(int id, stochasticInput &in_)
   m_mli = in.nLinkICons();
   // add children only if you have multi-stages
 }
-  
+
 sTreeImpl::~sTreeImpl()
 { 
   // parent deallocates children
@@ -132,7 +133,7 @@ StochVector* sTreeImpl::createc() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* svec = new StochVector(m_nx, commWrkrs);
   double* vec = ((SimpleVector*)svec->vec)->elements();  
@@ -166,7 +167,7 @@ StochVector* sTreeImpl::createb() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* svec = new StochVector(m_my, commWrkrs);
   double* vec = ((SimpleVector*)svec->vec)->elements();  
@@ -295,7 +296,8 @@ StochGenMatrix* sTreeImpl::createA()
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochGenDummyMatrix(m_id);
+    return StochGenDummyMatrix::dummy;
+    // return new StochGenDummyMatrix(m_id);
 
   StochGenMatrix* A = NULL;
   if (m_id==0) {
@@ -405,7 +407,8 @@ StochGenMatrix* sTreeImpl::createC()
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochGenDummyMatrix(m_id);
+    return StochGenDummyMatrix::dummy;
+    // return new StochGenDummyMatrix(m_id);
 
   StochGenMatrix* C = NULL;
   if (m_id==0) {
@@ -516,7 +519,7 @@ StochVector* sTreeImpl::createxlow()  const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
  
   StochVector* xlow = new StochVector(m_nx, commWrkrs);
   double* vec = ((SimpleVector*)xlow->vec)->elements();  
@@ -545,7 +548,7 @@ StochVector* sTreeImpl::createixlow() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
  
   StochVector* ixlow = new StochVector(m_nx, commWrkrs);
   double* vec = ((SimpleVector*)ixlow->vec)->elements();  
@@ -578,7 +581,7 @@ StochVector* sTreeImpl::createxupp()  const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* xupp = new StochVector(m_nx, commWrkrs);
   double* vec = ((SimpleVector*)xupp->vec)->elements();  
@@ -607,7 +610,7 @@ StochVector* sTreeImpl::createixupp() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* ixupp = new StochVector(m_nx, commWrkrs);
   double* vec = ((SimpleVector*)ixupp->vec)->elements();  
@@ -636,7 +639,7 @@ StochVector* sTreeImpl::createclow()  const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* svec = new StochVector(m_mz, commWrkrs);
   double* vec = ((SimpleVector*)svec->vec)->elements();  
@@ -673,7 +676,7 @@ StochVector* sTreeImpl::createiclow() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* svec = new StochVector(m_mz, commWrkrs);
   double* vec = ((SimpleVector*)svec->vec)->elements();  
@@ -710,7 +713,7 @@ StochVector* sTreeImpl::createcupp()  const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* svec = new StochVector(m_mz, commWrkrs);
   double* vec = ((SimpleVector*)svec->vec)->elements();  
@@ -747,7 +750,7 @@ StochVector* sTreeImpl::createicupp() const
 {
   //is this node a dead-end for this process?
   if(commWrkrs==MPI_COMM_NULL)
-    return new StochDummyVector();
+    return StochDummyVector::dummy;
 
   StochVector* svec = new StochVector(m_mz, commWrkrs);
   double* vec = ((SimpleVector*)svec->vec)->elements();  

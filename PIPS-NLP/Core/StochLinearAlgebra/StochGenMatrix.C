@@ -12,6 +12,9 @@
 
 using namespace std;
 
+StochGenDummyMatrix *StochGenDummyMatrix::dummy = new StochGenDummyMatrix(0);
+StochGenMatrix *StochGenMatrix::dummy = StochGenDummyMatrix::dummy;
+
 StochGenMatrix::StochGenMatrix(int id, 
 			       long long global_m, long long global_n,
 			       int A_m, int A_n, int A_nnz,
@@ -58,8 +61,8 @@ StochGenMatrix::StochGenMatrix(int id,
 StochGenMatrix::~StochGenMatrix()
 {
   //cout << "~~~~~~~~StochGenMatrix" << endl;
-  for(size_t it=0; it<children.size(); it++)
-    delete children[it];
+  for (size_t it = 0; it < children.size(); it++)
+    if (children[it] != StochGenDummyMatrix::dummy) delete children[it];
 
   if (Amat)
     delete Amat;

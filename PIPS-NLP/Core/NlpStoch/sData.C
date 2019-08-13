@@ -7,6 +7,7 @@
 
 #include "sData.h"
 #include "sTree.h"
+#include "sTreeImpl.h"
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
@@ -15,6 +16,7 @@
 
 
 #include "NlpInfo.h"
+sData * sData::dummy = NULL;
 
 sData::sData(sTree* tree)
 //  : NlpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
@@ -147,10 +149,33 @@ void sData::createChildren()
   StochVector& dampind_xU_wSt = dynamic_cast<StochVector&>(*dampind_xU_w);   
 
   StochVector& dampind_sL_tSt  = dynamic_cast<StochVector&>(*dampind_sL_t); 
-  StochVector& dampind_sU_uSt = dynamic_cast<StochVector&>(*dampind_sU_u); 
+  StochVector& dampind_sU_uSt = dynamic_cast<StochVector&>(*dampind_sU_u);
 
+  // Now we have valid data loaded to finally initialize the dummy.
 
+  // Look for first non empty and thus local child
+  // and take that as a dummy
+  for (size_t it = 0; it < gSt.children.size(); it++) {
+    if (stochNode->children[it]->commWrkrs != MPI_COMM_NULL) {
+      sData::dummy = new sData(
+          0, stochNode->children[it], gSt.children[it], QSt.children[it],
+          xlowSt.children[it], ixlowSt.children[it], nxlow, xuppSt.children[it],
+          ixuppSt.children[it], nxupp, ASt.children[it], bASt.children[it],
+          CSt.children[it], clowSt.children[it], iclowSt.children[it], mclow,
+          cuppSt.children[it], icuppSt.children[it], mcupp,
+          CeqBodySt.children[it], CIneqBodySt.children[it],
+          trialBarrGrad_xSt.children[it], trialBarrGrad_sSt.children[it],
+          trialCeqBodySt.children[it], trialCIneqBodySt.children[it],
+          dampind_xL_vSt.children[it], dampind_xU_wSt.children[it],
+          dampind_sL_tSt.children[it], dampind_sU_uSt.children[it]);
+      break;
+    }
+  }
   for(size_t it=0; it<gSt.children.size(); it++) {
+    if (stochNode->children[it]->commWrkrs == MPI_COMM_NULL) {
+      AddChild(sData::dummy);
+    }
+    else {
     AddChild(new sData(0,stochNode->children[it],
 	       gSt.children[it], QSt.children[it],
 	       xlowSt.children[it], ixlowSt.children[it], nxlow,
@@ -164,6 +189,7 @@ void sData::createChildren()
 	       trialCeqBodySt.children[it], trialCIneqBodySt.children[it], 
 	       dampind_xL_vSt.children[it], dampind_xU_wSt.children[it],
 	       dampind_sL_tSt.children[it], dampind_sU_uSt.children[it]));
+    }
   }
 
 }
@@ -207,7 +233,7 @@ void sData::createScaleFromQ()
 sData::~sData()
 {
   for(size_t it=0; it<children.size(); it++)
-    delete children[it];
+    if (children[it] != sData::dummy) delete children[it];
 }
 
 int sData::getLocalnx()

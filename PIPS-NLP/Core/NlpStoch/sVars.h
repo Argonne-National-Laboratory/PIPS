@@ -7,6 +7,7 @@
 
 #include "NlpGenVars.h"
 #include "OoqpVectorHandle.h"
+#include "StochVector.h"
 #include <vector>
 
 class NlpGen;
@@ -48,7 +49,7 @@ class sVars : public NlpGenVars {
 //  long long n2ndSlack;  
 //  long long nSlack;
 
-  std::vector<sVars*> children;
+  VectorCompressedDummy<sVars*,sVars> children;
 
  protected:
   sVars() {};

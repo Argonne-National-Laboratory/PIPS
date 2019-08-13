@@ -15,6 +15,7 @@
 #include <limits>
 #include <math.h>
 StochDummyVector *StochDummyVector::dummy = new StochDummyVector();
+StochVector *StochVector::dummy = StochDummyVector::dummy;
 
 StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
   : OoqpVector(n_), parent(NULL), mpiComm(mpiComm_), treeIDX(0), firstDoNumOfNonZero(true),
@@ -58,10 +59,10 @@ void StochVector::AddChild(OoqpVector* child_)
 StochVector::~StochVector()
 {
   for (size_t it=0; it<children.size(); it++)
-    if(children[it] != StochDummyVector::dummy)
+    if(children[it] != StochVector::dummy)
       delete children[it];
 
-  if (vec && this != StochDummyVector::dummy)
+  if (vec && this != StochVector::dummy)
     delete vec;
 }
 
@@ -71,7 +72,7 @@ OoqpVector* StochVector::dataClone() const
   return clone;
 }
 
-StochVector* StochVector::clone() const
+StochVector* StochVector::clone() 
 {
   StochVector* clone = new StochVector(this->vec->length(), mpiComm);
 
@@ -456,7 +457,7 @@ void StochVector::writeToStream( std::ostream& out ) const
 }
 
 void StochVector::writefToStream( std::ostream& out,
-				  const char format[] ) const
+				  const char format[] ) 
 {
   vec->writefToStream(out, format);
 
@@ -728,7 +729,7 @@ void StochVector::addSomeConstants( double c, OoqpVector& select_ )
 
 void StochVector::writefSomeToStream( std::ostream& out,
 			 const char format[],
-			 OoqpVector& select_ ) const
+			 OoqpVector& select_ ) 
 {
   assert( "Have not been yet implemented" && 0 );
 }
