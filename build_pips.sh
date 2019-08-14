@@ -13,7 +13,7 @@ cd build
 # BUILD_PIPS_DOC: Build the documentation target (make doc)
 # DUMP_ON: Dump 1st stage matrix
 
-cmake -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_ALL=OFF -DBUILD_PIPS_NLP=ON -B. -H..
+cmake -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_ALL=ON -B. -H..
 
 # Build using 4 processes.
 #make -j4
