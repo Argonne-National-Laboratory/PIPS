@@ -28,7 +28,6 @@
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
 #endif
-
 extern int gInnerSCsolve;
 extern int gOuterSolve;
 
@@ -213,12 +212,11 @@ void sLinsysRootAug::finalizeKKTdist(sData* prob)
    /////////////////////////////////////////////////////////////
    // update the KKT with   - C' * diag(zDiag) *C
    /////////////////////////////////////////////////////////////
-   if( locmz > 0 && (iAmLastRank || gInnerSCsolve == 2) )
+   if( locmz > 0 && iAmLastRank )
    {
       assert(zDiag);
 
       SparseGenMatrix& C = prob->getLocalD();
-      /* this call initializes CtDC */
       C.matTransDinvMultMat(*zDiag, &CtDC);
       assert(CtDC->size() == locnx);
 
@@ -512,14 +510,14 @@ void sLinsysRootAug::solveReducedLinkCons( sData *prob, SimpleVector& b)
   // we do not need the last locmz elements of r
   SimpleVector rshort(&r[0], locnx+locmy+locmyl+locmzl);
 
-  if(gInnerSCsolve == 0) {
+  if(gInnerSCsolve==0) {
     // Option 1. - solve with the factors
     solver->Dsolve(rshort);
-  } else if(gInnerSCsolve == 1) {
+  } else if(gInnerSCsolve==1) {
     // Option 2 - solve with the factors and perform iter. ref.
     solveWithIterRef(prob, rshort);
   } else {
-    assert(gInnerSCsolve == 2);
+    assert(gInnerSCsolve==2);
     // Option 3 - use the factors as preconditioner and apply BiCGStab
     solveWithBiCGStab(prob, rshort);
   }
@@ -715,8 +713,7 @@ void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy,
     SparseSymMatrix& Q = prob->getLocalQ();
     Q.mult(1.0,&rxy[0],1, alpha,&x[0],1);
 
-    if(locmz > 0) {
-      assert(CtDC);
+    if(locmz>0) {
       SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
       CtDC_sp->mult(1.0,&rxy[0],1, -alpha,&x[0],1);
     }
@@ -836,16 +833,12 @@ void sLinsysRootAug::solveWithIterRef( sData *prob, SimpleVector& r)
     //if (iAmDistrib) {
     //only one process substracts [ (Q+Dx0+C'*Dz0*C)*xx + A'*xy ] from r
     //                            [  A*xx                       ]
-    if( myRank == 0 )
-    {
+    if(myRank==0) {
       rxy.copyFrom(r);
-      if( locmz > 0 )
-      {
-	      assert(CtDC);
-        SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
-	      CtDC_sp->mult(1.0,&rxy[0],1, 1.0,&x[0],1);
+      if(locmz>0) {
+	SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
+	CtDC_sp->mult(1.0,&rxy[0],1, 1.0,&x[0],1);
       }
-
       SparseSymMatrix& Q = prob->getLocalQ();
       Q.mult(1.0,&rxy[0],1, -1.0,&x[0],1);
       
@@ -987,20 +980,19 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
      std::cout << "initial norm of b " << n2b << std::endl;
   taux = MPI_Wtime();
 #endif
-  // initial guess is b
+  //initial guess
   x.copyFrom(b);
 
   solver->Dsolve(x);
-  // initial residual
+  //initial residual
   r.copyFrom(b);
 
 #ifdef TIMING
   troot_total += (MPI_Wtime()-taux);
   taux = MPI_Wtime();
 #endif 
-  //applyA(1.0, r, -1.0, x);
 
-  // b - SC * b as initial residuum
+  //applyA(1.0, r, -1.0, x);
   SCmult(1.0,r, -1.0,x, prob);
 
 #ifdef TIMING
@@ -1067,17 +1059,11 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     SimpleVector& ph = paux;
 
     double rtv = rt.dotProductWith(v);
-    if(rtv==0.0) 
-    { 
-      flag=4; 
-      break; 
-    }
+    if(rtv==0.0) { flag=4; break; }
 
     alpha = rho/rtv;
-    if( fabs(alpha)*ph.twonorm() < EPS*x.twonorm() )
-      stag++;
-    else
-      stag=0;
+    if(fabs(alpha)*ph.twonorm()<EPS*x.twonorm()) stag++;
+    else                                         stag=0;
 
     // xhalf = x + alpha*ph and the associated residual
     xhalf.copyFrom(x); xhalf.axpy( alpha, ph);
@@ -1158,7 +1144,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
     //	   stag, maxstagsteps, moresteps, normr);    
 
     //-------- check for convergence at the end of the iterate.  -------- 
-    if(normr <= tolb || stag >= maxstagsteps || moresteps) {
+    if(normr<=tolb || stag>=maxstagsteps || moresteps) {
       r.copyFrom(b); 
       //applyA(1.0, r, -1.0, x); //r=b-Ax
       SCmult(1.0,r, -1.0,x, prob);
@@ -1325,7 +1311,6 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       assert(zDiag);
 
       SparseGenMatrix& C = prob->getLocalD();
-      /* this call initializes CtDC */
       C.matTransDinvMultMat(*zDiag, &CtDC);
       assert(CtDC->size() == locnx);
 
@@ -1575,20 +1560,17 @@ void sLinsysRootAug::finalizeKKTdense(sData* prob, Variables* vars)
    /////////////////////////////////////////////////////////////
    // update the KKT with   - C' * diag(zDiag) *C
    /////////////////////////////////////////////////////////////
-   if( locmz > 0 ) {
+   if(locmz>0) {
      assert(zDiag);
 
      SparseGenMatrix& C = prob->getLocalD();
-     /* this call initializes CtDC */
      C.matTransDinvMultMat(*zDiag, &CtDC);
 
      assert(CtDC->size() == locnx);
 
      //aliases for internal buffers of CtDC
      SparseSymMatrix* CtDCsp = reinterpret_cast<SparseSymMatrix*>(CtDC);
-     int* krowCtDC = CtDCsp->krowM();
-     int* jcolCtDC = CtDCsp->jcolM(); 
-     double* dCtDC = CtDCsp->M();
+     int* krowCtDC=CtDCsp->krowM(); int* jcolCtDC=CtDCsp->jcolM(); double* dCtDC=CtDCsp->M();
 
      for( int i = 0; i < locnx; i++ )
      {

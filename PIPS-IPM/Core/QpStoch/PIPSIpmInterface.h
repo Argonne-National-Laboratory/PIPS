@@ -6,7 +6,7 @@
 #define PIPSIPM_INTERFACE
 
 #include "stochasticInput.hpp"
- 
+
 #include "sTree.h"
 #include "sData.h"
 #include "sResiduals.h"
