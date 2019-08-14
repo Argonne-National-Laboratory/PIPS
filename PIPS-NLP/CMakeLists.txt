@@ -199,4 +199,8 @@ add_library(parpipsnlp SHARED Drivers/parallelPipsNlp_C_Callback.cpp)
   ${NO_WHOLE_ARCHIVE}
   ${MATH_LIBS} )
 
+install(TARGETS parpipsnlp LIBRARY DESTINATION lib)
+install(TARGETS pipsnlp LIBRARY DESTINATION lib)
+install(DIRECTORY ${COIN_DIR}/lib DESTINATION . FILES_MATCHING PATTERN "libCoinUtils.*")
+
 
