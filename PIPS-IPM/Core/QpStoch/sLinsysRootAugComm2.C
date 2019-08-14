@@ -269,11 +269,12 @@ void sLinsysRootAugComm2::solveWithIterRef( sData *prob, SimpleVector& r)
     //if (iAmDistrib) {
     //only one process substracts [ (Q+Dx0+C'*Dz0*C)*xx + A'*xy ] from r
     //                            [  A*xx                       ]
-    if(myRank==0) {
+    if( myRank == 0 ) 
+    {
       rxy.copyFrom(r);
-      if(locmz>0) {
-	SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
-	CtDC_sp->mult(1.0,&rxy[0],1, 1.0,&x[0],1);
+      if( locmz > 0 ) {
+	      SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
+	      CtDC_sp->mult(1.0,&rxy[0],1, 1.0,&x[0],1);
       }
       SparseSymMatrix& Q = prob->getLocalQ();
       Q.mult(1.0,&rxy[0],1, -1.0,&x[0],1);
@@ -728,7 +729,7 @@ void sLinsysRootAugComm2::finalizeKKT(sData* prob, Variables* vars)
   /////////////////////////////////////////////////////////////
   // update the KKT with   - C' * diag(zDiag) *C
   /////////////////////////////////////////////////////////////
-  if(locmz>0) {
+  if( locmz > 0 ) {
     SparseGenMatrix& C = prob->getLocalD();
     C.matTransDinvMultMat(*zDiag, &CtDC);
     assert(CtDC->size() == locnx);

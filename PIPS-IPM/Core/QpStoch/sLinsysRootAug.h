@@ -17,10 +17,8 @@ class sLinsysRootAug : public sLinsysRoot {
  protected:
   sLinsysRootAug() {};
 
-  virtual SymMatrix*   createKKT     (sData* prob);
-  virtual DoubleLinearSolver* 
-                       createSolver  (sData* prob, 
-				      SymMatrix* kktmat);
+  virtual SymMatrix* createKKT( sData* prob ) override;
+  virtual DoubleLinearSolver* createSolver( sData* prob, SymMatrix* kktmat ) override;
 
   //virtual void         createChildren(sData* prob) 
   //{sLinsysRootAug::createChildren(prob);};
