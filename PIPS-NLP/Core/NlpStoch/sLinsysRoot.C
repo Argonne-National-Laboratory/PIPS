@@ -261,7 +261,7 @@ void sLinsysRoot::afterFactor()
 {
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
-  //if( (mype/256)*256==mype) 
+  if( 0==mype) 
   {
 
       for (size_t c=0; c<children.size(); c++) {
@@ -402,7 +402,7 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
 #ifdef TIMING
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-  //if(256*(myRank/256) == myRank) 
+  if(0 == myRank) 
   {
       double tTotResChildren=0.0;
     for(size_t it=0; it<children.size(); it++) {
@@ -741,7 +741,7 @@ int sLinsysRoot::factorizeKKT()
   //MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  //if( (mype/256)*256==mype )
+  if( 0==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
   return negEValTemp;
