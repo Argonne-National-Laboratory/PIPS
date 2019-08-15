@@ -55,7 +55,6 @@ public:
 private:
   std::unordered_map<int, pTree> children;
   size_t size_ = 0;
-  size_t tablesize_ = 0;
 };
 
 
