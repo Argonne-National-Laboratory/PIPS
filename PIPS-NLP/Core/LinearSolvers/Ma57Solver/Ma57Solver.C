@@ -12,7 +12,6 @@
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
-#include <mpi.h>
 
 #include <cmath>
 #include <cstdio>
