@@ -60,7 +60,6 @@ void sTree::assignProcesses(MPI_Comm world, vector<int>& processes)
     assert(noProcs==1); 
     return;
   }
-    std::cout << children.size() << std::endl;
   // if (1 == noProcs)
   // {
   //   assert(children.size() >= 1);
