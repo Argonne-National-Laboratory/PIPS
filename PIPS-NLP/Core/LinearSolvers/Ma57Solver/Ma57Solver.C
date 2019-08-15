@@ -12,6 +12,7 @@
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
+#include <mpi.h>
 
 #include <cmath>
 #include <cstdio>
@@ -26,7 +27,6 @@
 extern int gOoqpPrintLevel;
 extern int gOuterSolve;
 extern int separateHandDiag;
-
 
 extern double gHSL_PivotLV;
 extern double gMA57_Ordering;
@@ -330,7 +330,6 @@ void Ma57Solver::solve( OoqpVector& rhs_in )
   SimpleVector & rhs = dynamic_cast<SimpleVector &>(rhs_in);
 
   double * drhs = rhs.elements();
-
   int * iwork = new int[5*n];
   double * work = new double[n];
 
@@ -410,10 +409,22 @@ void Ma57Solver::solve(GenMatrix& rhs_in)
   assert(n==N);
  
   // we need checks on the residuals, can't do that with multiple RHS
-  for (int i = 0; i < NRHS; i++) {
-    SimpleVector v(rhs[i],N);
-    solve(v);
-  } 
+
+  double *drhs = rhs.elements();
+  //std::cout << "[MA57] N: " << N << " NRHS: " << NRHS << std::endl;
+  int job = 1; // Solve using A
+  int one = 1;
+
+  int *iwork = new int[n];
+  double *work = new double[NRHS*n];
+  int lwork=NRHS*N;
+  FNAME(ma57cd)( &job,       &n,        
+      fact,       &lfact,    ifact,  &lifact,  
+      &NRHS,       drhs,      &n,   
+      work,      &lwork,        iwork, 
+      icntl,      info );
+  delete [] iwork;
+  delete [] work;
 }
 
 int* Ma57Solver::new_iworkn(int dim)
