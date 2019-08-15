@@ -12,6 +12,7 @@
 #include "OoqpVectorHandle.h"
 #include "OoqpVector.h"
 #include "DoubleMatrixHandle.h"
+#include "StochVector.h"
 
 #include <vector>
 
@@ -54,7 +55,8 @@ public:
 
   int locNx,locMy,locMz;
 
-  std::vector<sInfo*> children;
+  VectorCompressedDummy<sInfo*, sInfo> children;
+  static sInfo *dummy;
   
   sTree* stochNode;
 
@@ -120,6 +122,8 @@ protected:
 public:
   sInfoDummy()
     : sInfo() {};
+
+  static sInfoDummy *dummy;
 
   virtual void AddChild(sInfo* child){};
   virtual void createChildren(sData* data_in, stochasticInput& in) {};

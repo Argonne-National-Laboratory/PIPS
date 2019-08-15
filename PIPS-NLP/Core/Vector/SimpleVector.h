@@ -61,7 +61,7 @@ public:
   virtual void componentDiv ( OoqpVector& v );
   virtual void writeToStream(std::ostream& out) const;
   virtual void writefToStream( std::ostream& out,
-			       const char format[] ) const;
+			       const char format[] );
 
   virtual void scale( double alpha );
 
@@ -91,7 +91,7 @@ public:
   virtual void addSomeConstants( double c, OoqpVector& select );
   virtual void writefSomeToStream( std::ostream& out,
 				   const char format[],
-				   OoqpVector& select ) const;
+				   OoqpVector& select );
   virtual void axdzpy( double alpha, OoqpVector& x,
 		       OoqpVector& z, OoqpVector& select );
 
