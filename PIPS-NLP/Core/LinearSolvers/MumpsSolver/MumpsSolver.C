@@ -244,7 +244,6 @@ void MumpsDenseSolver::sysMatToSpTriplet()
 int MumpsSolver::matrixChanged()
 {
   if(mumpsMpiComm!=MPI_COMM_NULL) {
-    printf("mumps Rank %d says hello\n", my_mumps_rank_);
 #ifndef WITHOUT_PIPS
     if(Msys!=NULL)
       sysMatToSpTriplet();
