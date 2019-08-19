@@ -446,6 +446,8 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    if( normr <= tolb )
    {
       this->separateVars(stepx, stepy, stepz, x);
+      if( myRank == 0 )
+         std::cout << "outer BiCGStab skipped: " << normr << " <= " << tolb <<  std::endl;
       return;
    }
 
@@ -458,7 +460,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
       if( myRank == 0 )
       {
           std::cout << "global system infnorm=" << glbinfnorm << " x 1norm=" <<  xonenorm << " tolb/tolnew: "<< tolb << " " <<  (tol * xonenorm * glbinfnorm )  <<  std::endl;
-          std::cout << "outerBICG starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb << " (tolerance=" << tol << ")" <<  std::endl;
+          std::cout << "outer BiCGStab starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb << " (tolerance=" << tol << ")" <<  std::endl;
       }
    }
 

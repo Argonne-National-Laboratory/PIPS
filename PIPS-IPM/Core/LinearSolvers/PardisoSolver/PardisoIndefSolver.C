@@ -410,6 +410,8 @@ void PardisoIndefSolver::factorizeFromSparse()
 
    assert(n >= 0);
 
+   // todo the sparse precond. stuff should be moved out and handled by Sparsifier class
+#ifdef SPARSE_PRECOND
    std::vector<double>diag(n);
 
    const double t = precondDiagDomBound;
@@ -421,6 +423,7 @@ void PardisoIndefSolver::factorizeFromSparse()
 
       diag[r] = fabs(aStorage[j]) * t;
    }
+#endif
 
    ia[0] = 1;
    int nnznew = 0;
