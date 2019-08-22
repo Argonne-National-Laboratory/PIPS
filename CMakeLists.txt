@@ -17,7 +17,7 @@ if(CMAKE_BUILD_TYPE)
 else()
   message("CMAKE_BUILD_TYPE not set!")
 endif(CMAKE_BUILD_TYPE)
-  
+
 option(BUILD_ALL "Build all of PIPS (PIPS-S, PIPS-IPM, PIPS-NLP)" ON)
 option(BUILD_PIPS_S "Build PIPS-S" OFF)
 option(BUILD_PIPS_IPM "Build PIPS-IPM" OFF)
@@ -133,6 +133,10 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
       include_directories(${LIBGOMP_INCLUDE_DIR})
     endif()
   endif()
+elseif(APPLE)
+  set(HAVE_CLANG FALSE)
+  set(WHOLE_ARCHIVE "-Wl,-all_load")
+  set(NO_WHOLE_ARCHIVE "-Wl,-noall_load")
 else ()
   set(HAVE_CLANG FALSE)
   set(WHOLE_ARCHIVE "-Wl,--whole-archive")
@@ -364,7 +368,7 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     # - parmetis 5.0 or later required by mumps but no need to specify it here: it should be detected by the build system at this point
     if(NOT SCALAPACK_LIBRARIES)
       MESSAGE("SCALAPACK_LIBRARIES for MUMPS not set. Default linking for Ubuntu.")
-      set(SCALAPACK_LIBRARIES "-lscalapack-openmpi -lblacs-openmpi  -lblacsF77init-openmpi -lblacsCinit-openmpi") 
+      set(SCALAPACK_LIBRARIES "-lscalapack-openmpi -lblacs-openmpi  -lblacsF77init-openmpi -lblacsCinit-openmpi")
     endif(NOT SCALAPACK_LIBRARIES)
     # -lmpi_mpifh includes the OpenMPI Fortran MPI interface used when
     # building MUMPS. MPICH requires -lmpifort
