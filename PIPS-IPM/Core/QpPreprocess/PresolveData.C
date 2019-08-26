@@ -965,6 +965,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          || ( ixupp != 0.0 && PIPSisLT(xupp, lbx) )
          || PIPSisLT(ubx, lbx) )
    {
+      std::cout << "[" << lbx << ", " << ubx << "] not in [" << ((ixlow != 0.0) ? xlow : -std::numeric_limits<double>::infinity()) << ", " << 
+         ((ixupp != 0.0) ? xupp : std::numeric_limits<double>::infinity()) << "]" << std::endl;
       abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
    }
 

@@ -216,7 +216,22 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
             ubx = (*currIneqRhs)[row_idx] / value;
 
          if( PIPSisLT( value, 0.0) )
+         {
             std::swap( lbx, ubx );
+            if( (*currIclow)[row_idx] == 0.0 )
+               ubx = -ubx;
+            if( (*currIcupp)[row_idx] == 0.0 )
+               lbx = -lbx;
+         }  
+
+
       }
    }
+
+   if(!PIPSisLE(lbx, ubx))
+   {
+      presData.writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row_idx);
+      std::cout << lbx << "\t" << ubx << std::endl;
+   }
+   assert( PIPSisLE(lbx ,ubx) );
 }
