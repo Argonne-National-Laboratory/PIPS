@@ -442,11 +442,10 @@ Variables* sFactory::makeVariables( Data * prob_in )
 {
   sData* prob = dynamic_cast<sData*>(prob_in);
 
-  OoqpVectorHandle x      = OoqpVectorHandle( tree->newPrimalVector() );
-  OoqpVectorHandle s      = OoqpVectorHandle( tree->newDualZVector() );
-  OoqpVectorHandle y      = OoqpVectorHandle( tree->newDualYVector() );
-  OoqpVectorHandle z      = OoqpVectorHandle( tree->newDualZVector() );
-
+  OoqpVectorHandle x      ; 
+  OoqpVectorHandle s      ; 
+  OoqpVectorHandle y      ; 
+  OoqpVectorHandle z      ; 
   OoqpVectorHandle v      ; 
   OoqpVectorHandle gamma  ;
   OoqpVectorHandle w      ;
@@ -456,11 +455,30 @@ Variables* sFactory::makeVariables( Data * prob_in )
   OoqpVectorHandle u      ;
   OoqpVectorHandle pi     ;
 
+  if (prob->nx > 0) {
+    x = OoqpVectorHandle(tree->newPrimalVector());
+  }
+  else {
+    x = OoqpVectorHandle(tree->newPrimalVectorEmpty());
+  }
+  if (prob->my > 0) {
+    y = OoqpVectorHandle(tree->newDualYVector());
+  }
+  else {
+    y = OoqpVectorHandle(tree->newDualYVectorEmpty());
+  }
+  if (prob->mz > 0) {
+    s = OoqpVectorHandle(tree->newDualZVector());
+    z = OoqpVectorHandle(tree->newDualZVector());
+  }
+  else {
+    s = OoqpVectorHandle(tree->newDualZVectorEmpty());
+    z = OoqpVectorHandle(tree->newDualZVectorEmpty());
+  }
 
-
-  if ( prob->nxlow > 0 ) { 
-    v     = OoqpVectorHandle( tree->newPrimalVector() ); 
-    gamma  = OoqpVectorHandle( tree->newPrimalVector() );
+  if (prob->nxlow > 0) {
+    v = OoqpVectorHandle(tree->newPrimalVector());
+    gamma = OoqpVectorHandle(tree->newPrimalVector());
   }else{
 	v 	= OoqpVectorHandle( tree->newPrimalVectorEmpty() ); 
 	gamma  = OoqpVectorHandle( tree->newPrimalVectorEmpty() );

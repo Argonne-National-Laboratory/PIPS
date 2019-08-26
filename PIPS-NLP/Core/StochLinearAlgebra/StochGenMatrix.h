@@ -10,6 +10,7 @@
 
 #include "DoubleMatrix.h"
 #include "SparseGenMatrix.h"
+#include "StochVector.h"
 #include <vector>
 #include "mpi.h"
 
@@ -45,10 +46,11 @@ public:
 
   virtual void AddChild(StochGenMatrix* child);
 
-  std::vector<StochGenMatrix*> children;
+  VectorCompressedDummy<StochGenMatrix*, StochGenMatrix> children;
   SparseGenMatrix* Amat;
   SparseGenMatrix* Bmat;
   SparseGenMatrix* Cmat;
+  static StochGenMatrix *dummy;
   int id;
   long long m,n;
   MPI_Comm mpiComm;
@@ -150,6 +152,8 @@ public:
     : StochGenMatrix(id, 0, 0, 0, 0, 0, 0, 0, 0, MPI_COMM_NULL) {};
 
   virtual ~StochGenDummyMatrix(){};
+
+  static StochGenDummyMatrix *dummy;
 
   virtual void AddChild(StochGenMatrix* child){};
 

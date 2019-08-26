@@ -11,10 +11,52 @@
 #include "StochVectorHandle.h"
 #include "OoqpVector.h"
 #include "SimpleVector.h"
+#include <unordered_map>
 
 #include <vector>
 
 class StochTree;
+class StochDummyVector;
+
+template <class pTree, class sTree> class VectorCompressedDummy {
+
+public:
+
+ size_t size() const {
+   return size_;
+ }
+ void clear() {
+   size_ = 0;
+   children.clear();
+ }
+
+ pTree& operator[](std::size_t idx) {
+   if (children.find(idx) == children.end()) {
+     return sTree::dummy;
+   } else {
+     return children[idx];
+   }
+ }
+
+ const pTree& operator[](std::size_t idx) const {
+   if (children.find(idx) == children.end()) {
+     return sTree::dummy;
+   } else {
+     return children[idx];
+   }
+ }
+ void push_back(const pTree child) {
+   if (child != sTree::dummy) {
+     children[size_] = child;
+   }
+   size_++;
+ }
+
+private:
+  std::unordered_map<int, pTree> children;
+  size_t size_ = 0;
+};
+
 
 class StochVector : public OoqpVector {
 protected:
@@ -37,7 +79,7 @@ public:
   OoqpVector*               vec;
 
   /** Children of this node */
-  std::vector<StochVector*> children;
+  VectorCompressedDummy<StochVector*, StochVector> children;
 
   /** Link to the parent of this node. Needed when we multiply a matrix 
       with this vector
@@ -49,13 +91,14 @@ public:
   MPI_Comm mpiComm;
   /* flag used to indicate if the children are distributed or not. */
   int iAmDistrib;
+  static StochVector *dummy;
 
   /** Creates and returns a vector of the type used to store data in this node,
       i.e., same type as 'vec'.
       NO data is copied, for this use one of the 'copy...' functions.
   */
   virtual OoqpVector* dataClone() const;
-  virtual StochVector* clone() const;
+  virtual StochVector* clone();
 
   virtual void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3);
   virtual void jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3);
@@ -89,7 +132,7 @@ public:
   virtual void scalarMult( double num);
   virtual void writeToStream(std::ostream& out) const;
   virtual void writefToStream( std::ostream& out,
-			       const char format[] ) const;
+			       const char format[] );
 
   virtual void scale( double alpha );
 
@@ -118,7 +161,7 @@ public:
   virtual void addSomeConstants( double c, OoqpVector& select );
   virtual void writefSomeToStream( std::ostream& out,
 				   const char format[],
-				   OoqpVector& select ) const;
+				   OoqpVector& select );
   virtual void axdzpy( double alpha, OoqpVector& x,
 		       OoqpVector& z, OoqpVector& select );
 
@@ -197,6 +240,8 @@ public:
     : StochVector(0, MPI_COMM_NULL) {};
 
   virtual ~StochDummyVector(){};
+
+  static StochDummyVector *dummy;
 
   void AddChild(StochVector* child){};
   void AddChild(OoqpVector* child){};
