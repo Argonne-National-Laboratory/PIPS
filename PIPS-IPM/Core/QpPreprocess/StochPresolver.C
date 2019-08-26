@@ -60,13 +60,6 @@ Data* StochPresolver::presolve()
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
-#if 0 // todo add flag
-   ofstream myfile;
-   myfile.open ("before_presolving.txt");
-   sorigprob->writeToStreamDense(myfile);
-   myfile.close();
-#endif
-
    /* initialize presolve data */
    PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
@@ -87,20 +80,25 @@ Data* StochPresolver::presolve()
    // todo loop, and exhaustive
    // some list holding all presolvers - eg one presolving run
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
+   presolverCleanup.applyPresolving();
+   
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
       presolverSR.applyPresolving();
+      presolverColFix.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverColFix.applyPresolving();
+ 
       presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverCleanup.applyPresolving();
-      presolverColFix.applyPresolving();
       presolverBS.applyPresolving();
-
-      presolverCleanup.applyPresolving();
+      presolverColFix.applyPresolving();
    }
 
+   // before the finalize call fix all empty rows and columns not yet fixed
+   presolverCleanup.applyPresolving();
+   
    if( myRank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();

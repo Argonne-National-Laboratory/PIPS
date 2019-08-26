@@ -188,6 +188,7 @@ public:
 
       /// interface methods called from the presolvers when they detect a possible modification
       // todo make bool and give feedback or even better - return some enum maybe?
+      void fixEmptyColumn(int node, int col, double val);
       void fixColumn(int node, int col, double value);
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);

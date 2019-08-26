@@ -636,7 +636,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 
   double obj_postsolved = origData->objectiveValue(postsolved_vars);
   if( my_rank == 0)
-    std::cout << "Objective value after postsolve is given as: " << obj_postsolved << std::endl;
+    std::cout << "Objective value after postsolve: " << obj_postsolved << std::endl;
 
   /* compute residuals for postprocessed solution and check for feasibility */
   resids_orig->calcresids(origData, postsolved_vars);
@@ -653,8 +653,8 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 #ifndef NDEBUG
   assert( PIPSisEQ( getObjective(), obj_postsolved, 1e-5) );
 
-  OoqpVector* rA_orig = origData->bA->cloneFull();
-  OoqpVector* rA_post = data->bA->cloneFull();
+  StochVector* rA_orig = dynamic_cast<StochVector*>(origData->bA->cloneFull());
+  StochVector* rA_post = dynamic_cast<StochVector*>(data->bA->cloneFull());
   origData->Amult( -1, *rA_orig, 1.0, *postsolved_vars->x);
   data->Amult( -1, *rA_post, 1.0, *vars->x);
 
@@ -671,6 +671,40 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   // virtual void Cmult( double beta,  OoqpVector& y,
           // double alpha, OoqpVector& x );
   double a = rA_orig->infnorm();
+
+  if( my_rank == 0 )
+  {
+    for(int i = 0; i < rA_orig->vec->length(); ++i)
+    {
+      if( (*dynamic_cast<SimpleVector*>(rA_orig->vec))[i] > 1e10 )
+        std::cout << "node: -1\trow: " << i << "\tval: " << (*dynamic_cast<SimpleVector*>(rA_orig->vec))[i] << std::endl;
+    }
+    if( rA_orig->vecl )
+    {
+      for(int i = 0; i < rA_orig->vecl->length(); ++i)
+      {
+        if( (*dynamic_cast<SimpleVector*>(rA_orig->vecl))[i] > 1e10 )
+          std::cout << "node: -2\trow: " << i << "\tval: " << (*dynamic_cast<SimpleVector*>(rA_orig->vecl))[i] << std::endl;
+      }
+    }
+  }
+  MPI_Barrier(MPI_COMM_WORLD);
+  for(unsigned int it = 0; it < rA_orig->children.size(); ++it)
+  {
+    StochVector& child = *rA_orig->children[it];
+    if( !child.isKindOf(kStochDummy) )
+    {
+      assert( child.vec );
+      for(int i = 0; i < child.vec->length(); ++i)
+      {
+      if(  (*dynamic_cast<SimpleVector*>(child.vec))[i] > 1e10 )
+        std::cout << "node: " << it << "\trow" << i << "\tval: " <<  (*dynamic_cast<SimpleVector*>(child.vec))[i] << std::endl;
+      }
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+  }
+
   double b = rA_post->infnorm();
   if( my_rank == 0)
     std::cout << a << "\t" << b << std::endl;

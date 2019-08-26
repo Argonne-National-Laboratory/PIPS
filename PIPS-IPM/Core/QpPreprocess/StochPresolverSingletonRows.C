@@ -98,6 +98,12 @@ void StochPresolverSingletonRows::applyPresolving()
 bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int node, int row_idx)
 {
    assert( !presData.nodeIsDummy(node, system_type) || node == -2 );
+
+   // todo: redisign - actually done twice
+   updatePointersForCurrentNode(node, system_type);
+   if( (*currNnzRow)[row_idx] != 1.0 )
+      return false;
+
    double ubx = std::numeric_limits<double>::infinity();
    double lbx = -std::numeric_limits<double>::infinity();
    int col_idx = -1;
@@ -165,8 +171,8 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
    else
    {
       block_type = LINKING_CONS_BLOCK;
-      // todo : implement this more efficiently - we don't want to go through all our children to check wether a singlton entry is on our process or not - ideally we
-      // already know and also know the child
+      // todo : implement this more efficiently - we don't want to go through all our children to check wether a singleton entry is on our process or not
+      // ideally we already know and also know the child
       assert( node == -2 );
       for( int i = -1; i < presData.getNChildren(); ++i)
       {
