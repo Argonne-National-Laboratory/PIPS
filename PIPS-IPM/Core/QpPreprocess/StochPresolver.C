@@ -108,19 +108,22 @@ Data* StochPresolver::presolve()
 
    // todo : no idea how to postsolve this
 
-   // char* env = getenv("PIPS_RESET_FREE_VARIABLES");
-   // if( env != NULL )
-   // {
-   //    std::string reset_vars(env);
-   //    for(unsigned int i = 0; i < reset_vars.length(); ++i)
-   //       reset_vars[i] = std::tolower(reset_vars[i]);
-   //    //std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
-   //    if(reset_vars == "true")
-   //    {
-   //       presData.resetOriginallyFreeVarsBounds(*sorigprob);
-   //       presolverCleanup.countRowsCols();
-   //    }
-   // }   
+   char* env = getenv("PIPS_RESET_FREE_VARIABLES");
+   if( env != NULL )
+   {
+      std::string reset_vars(env);
+      for(unsigned int i = 0; i < reset_vars.length(); ++i)
+         reset_vars[i] = std::tolower(reset_vars[i]);
+      //std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
+      if(reset_vars == "true")
+      {
+          if( myRank == 0 )
+             std::cout << "Resetting bounds found in bound strengthening" << std::endl;
+
+          presData.resetOriginallyFreeVarsBounds(*sorigprob);
+          presolverCleanup.countRowsCols();
+      }
+   }   
 
    sData* finalPresData = presData.finalize();
 
