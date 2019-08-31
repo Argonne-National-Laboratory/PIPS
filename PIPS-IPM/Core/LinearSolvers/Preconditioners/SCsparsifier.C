@@ -14,6 +14,8 @@
 extern double g_iterNumber;
 extern int gOuterBiCGFails;
 extern int gOuterBiCGIter;
+extern int gInnerBiCGIter;
+extern int gInnerBiCGFails;
 
 SCsparsifier::SCsparsifier()
 {
@@ -208,7 +210,13 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
 void SCsparsifier::updateDiagDomBound()
 {
-   if( gOuterBiCGIter >= 5 && static_cast<int>(g_iterNumber) > 0 )
+   const int nIter = std::max(gOuterBiCGIter, gInnerBiCGIter);
+   const int nFails = std::max(gOuterBiCGFails, gInnerBiCGFails);
+
+   assert(nIter >= 0);
+   assert(nFails >= 0);
+
+   if( nIter >= 5 && static_cast<int>(g_iterNumber) > 0 )
    {
       if( diagDomBound > diagDomBoundNormal )
       {
@@ -217,7 +225,7 @@ void SCsparsifier::updateDiagDomBound()
       }
    }
 
-   if( gOuterBiCGFails >= 3 )
+   if( nFails >= 3 )
    {
       if( diagDomBound > diagDomBoundConservative )
       {
@@ -226,7 +234,7 @@ void SCsparsifier::updateDiagDomBound()
       }
    }
 
-   if( gOuterBiCGFails >= 20 )
+   if( nFails >= 20 )
    {
       if( diagDomBound > diagDomBoundUltraConservative )
       {
@@ -235,7 +243,7 @@ void SCsparsifier::updateDiagDomBound()
       }
    }
 
-   if( gOuterBiCGFails >= 60 )
+   if( nFails >= 60 )
    {
       if( diagDomBound > diagDomBoundHyperConservative )
       {

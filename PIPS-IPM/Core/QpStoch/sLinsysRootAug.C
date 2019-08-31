@@ -29,8 +29,18 @@
 extern double g_iterNumber;
 #endif
 extern int gInnerSCsolve;
-extern int gOuterSolve;
+extern int gInnerBiCGIter;
+extern int gInnerBiCGFails;
 
+
+
+static void biCGStabCommunicateStatus(int flag, int it)
+{
+   gInnerBiCGIter = it;
+
+   if( flag != 0 )
+      gInnerBiCGFails++;
+}
 
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
@@ -1239,6 +1249,8 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   if( myRank == 0 )
      std::cout << "innerBICG: " << "ii=" << ii << " flag=" << flag << " normr=" << normr << " normr_act="
         << normr_act << " tolb=" << tolb << std::endl;
+
+  biCGStabCommunicateStatus(flag, ii);
 
   b.copyFrom(x);
   delete[] resvec;
