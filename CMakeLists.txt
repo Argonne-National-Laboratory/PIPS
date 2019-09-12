@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Mo
 # For optimized build, set CMAKE_BUILD_TYPE to RELEASE
 # For optimized build with debug info, set CMAKE_BUILD_TYPE to RELWITHDEBINFO
 # CMAKE_BUILD_TYPE should be set at the command line or in a toolchain file
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long") 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -Wnon-virtual-dtor") 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

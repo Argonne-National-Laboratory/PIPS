@@ -67,6 +67,7 @@ class MatTimesVec {
  public:
   /** y = beta * y + alpha * A * x */
   virtual void doIt(double beta, OoqpVector& y, double alpha, OoqpVector& x) = 0;
+  virtual ~MatTimesVec();
 };
 
 /**
