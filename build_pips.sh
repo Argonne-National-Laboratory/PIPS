@@ -15,6 +15,8 @@ cd build
 
 cmake -DCMAKE_BUILD_TYPE=RELEASE -DBUILD_ALL=ON -B. -H..
 
-# Build using 4 processes. 
-make -j4
+# Build using 4 processes.
+#make -j4
+# Using 4 processes can result in errors related to MPI
+make
 
