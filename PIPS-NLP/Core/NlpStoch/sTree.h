@@ -35,6 +35,7 @@ class sTree
   static int rankPrcnd;   // rank of preconditioner
   static int rankZeroW;   // rank of the "special" worker (the root, or 0-rank process)
   static int rankMe;      // rank of the running process 
+  static sTree *dummy;
 
   void startMonitors(); void startNodeMonitors();
   void stopMonitors();  void stopNodeMonitors();
@@ -116,6 +117,8 @@ class sTree
 
   double IPMIterExecTIME;
   std::vector<sTree*> children;
+  // This would save memory, but it's linked to the partitioning in assignProcess()
+  // VectorCompressedDummy<sTree*,sTree> children;
   static int numProcs;
 
   StochNodeResourcesMonitor    resMon;

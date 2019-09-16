@@ -225,7 +225,7 @@ void SimpleVector::writeToStream(std::ostream& out) const
 }
 
 void SimpleVector::writefToStream( std::ostream& out,
-				       const char format[] ) const
+				       const char format[] ) 
 {
   SimpleVectorHandle empty( new SimpleVector(0) );
   this->writefSomeToStream( out, format, *empty );
@@ -233,7 +233,7 @@ void SimpleVector::writefToStream( std::ostream& out,
 
 void SimpleVector::writefSomeToStream( std::ostream& out,
 					   const char format[],
-					   OoqpVector& select ) const
+					   OoqpVector& select ) 
 {
   SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
   double * s = 0;

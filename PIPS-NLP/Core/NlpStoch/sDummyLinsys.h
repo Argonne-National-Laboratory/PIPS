@@ -23,7 +23,8 @@ class sDummyLinsys : public sLinsys
     };
 
 
-  virtual ~sDummyLinsys(){};
+  virtual ~sDummyLinsys(){}
+  static sDummyLinsys *dummy;
 
   virtual int factor2( sData *prob, Variables *vars){return 0;};
   virtual void Lsolve ( sData *prob, OoqpVector& x ){};

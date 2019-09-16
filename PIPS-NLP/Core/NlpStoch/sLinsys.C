@@ -233,7 +233,7 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
     Num_NegEVal = factor2(prob, vars);
   
     if(mype==0 && gPipsPrtLV>=3)
-      printf("sLinsys (parallel) Num_NegEVal is %d and my+mz is %d\n", Num_NegEVal, gbMy + gbMz);
+      printf("sLinsys (parallel) Num_NegEVal is %lld and my+mz is %lld\n", Num_NegEVal, gbMy + gbMz);
 
 #ifdef TIMING
     gprof.t_factor2+=MPI_Wtime()-stime;
@@ -283,7 +283,7 @@ void sLinsys::factor(Data *prob_, Variables *vars_in,RegularizationAlg *RegInfo)
 
 
     if(mype==0 && gPipsPrtLV>=3) 
-      printf("sLinsys (parallel) Num_NegEVal is %d and  my+mz is %d (on refactorization with regularizations: %g %g)\n", Num_NegEVal, my+mz, priReg, dualReg);
+      printf("sLinsys (parallel) Num_NegEVal is %lld and  my+mz is %lld (on refactorization with regularizations: %g %g)\n", Num_NegEVal, my+mz, priReg, dualReg);
     
     // check if matrix is singular
     if(Num_NegEVal < 0)

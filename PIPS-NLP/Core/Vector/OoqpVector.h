@@ -82,7 +82,7 @@ public:
    *         value.
    */
   virtual void writefToStream(std::ostream& out,
-			       const char format[] ) const = 0;
+			       const char format[] ) = 0;
 
   /** Scale each element of this OoqpVector by the constant alpha */
   virtual void scale( double alpha ) = 0;
@@ -153,7 +153,7 @@ public:
 
   virtual void writefSomeToStream( std::ostream& out,
 				   const char format[],
-				   OoqpVector& select ) const = 0;
+				   OoqpVector& select ) = 0;
   /** this += alpha * x / z
    *  @param select only perform the division on elements of x and z if the 
    *         corresponding element of select is non-zero. Generally we avoid

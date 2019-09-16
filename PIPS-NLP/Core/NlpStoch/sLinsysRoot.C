@@ -46,6 +46,7 @@ extern int gisNLP;
 #ifdef TIMING
 double t_start, troot_total, taux, tchild_total, tcomm_total;
 #endif
+sDummyLinsys *sDummyLinsys::dummy = NULL; 
 
 
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_, bool createChild)
@@ -141,13 +142,17 @@ sLinsysRoot::~sLinsysRoot()
 //  for(size_t c=0; c<children.size(); c++)
 //    delete children[c];
 
-  for(size_t it=0; it<children.size(); it++) {
+for (size_t it = 0; it < children.size(); it++) {
+  if (children[it] != sDummyLinsys::dummy) {
     children[it]->deleteChildren();
     delete children[it];
   }
-  children.clear();
+}
+children.clear();
 
-	if(dd) { delete dd; dd=NULL;} 
+if (dd) {
+  delete dd;
+  dd = NULL;} 
 	if(dq) { delete dq; dq=NULL;} 
 	if(rhs) { delete rhs; rhs=NULL;} 
 	if(nomegaInv) { delete nomegaInv; nomegaInv=NULL;} 
@@ -261,7 +266,7 @@ void sLinsysRoot::afterFactor()
 {
   int mype; MPI_Comm_rank(mpiComm, &mype);
 
-  //if( (mype/256)*256==mype) 
+  if( 0==mype) 
   {
 
       for (size_t c=0; c<children.size(); c++) {
@@ -402,7 +407,7 @@ void sLinsysRoot::Ltsolve( sData *prob, OoqpVector& x )
 #ifdef TIMING
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
-  //if(256*(myRank/256) == myRank) 
+  if(0 == myRank) 
   {
       double tTotResChildren=0.0;
     for(size_t it=0; it<children.size(); it++) {
@@ -475,10 +480,19 @@ void sLinsysRoot::createChildren(sData* prob)
   //get the communicator from one of the vectors
   this->mpiComm = ddst.mpiComm;
   this->iAmDistrib = ddst.iAmDistrib;
+  // Find first child with MPI_COMM_NULL
+  for(size_t it=0; it<prob->children.size(); it++) {
+    if (MPI_COMM_NULL == ddst.children[it]->mpiComm) {
+      // create the one needed dummy
+      sDummyLinsys::dummy = new sDummyLinsys(dynamic_cast<sFactory*>(factory),
+                                             prob->children[it]);
+      break;
+    }
+  }
   for(size_t it=0; it<prob->children.size(); it++) {
     assert(ddst.children[it]!=NULL); 
     if(MPI_COMM_NULL == ddst.children[it]->mpiComm) {
-	  child = new sDummyLinsys(dynamic_cast<sFactory*>(factory), prob->children[it]);
+	  child = sDummyLinsys::dummy; 
     } else {
 	  sFactory* stochFactory = dynamic_cast<sFactory*>(factory);
 	  if(prob->children[it]->children.size() == 0) {	
@@ -741,7 +755,7 @@ int sLinsysRoot::factorizeKKT()
   //MPI_Barrier(mpiComm);
   int mype; MPI_Comm_rank(mpiComm, &mype);
   // note, this will include noop scalapack processors
-  //if( (mype/256)*256==mype )
+  if( 0==mype )
     printf("  rank %d 1stSTAGE FACT %g SEC ITER %d\n", mype, st, (int)g_iterNumber);
 #endif
   return negEValTemp;

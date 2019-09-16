@@ -11,6 +11,9 @@
 #include "StochGenMatrix.h"
 #include "StochVector.h"
 
+sInfoDummy *sInfoDummy::dummy = new sInfoDummy();
+sInfo *sInfo::dummy = sInfoDummy::dummy;
+
 sInfo::~sInfo()
 {
 	destroyChildren();

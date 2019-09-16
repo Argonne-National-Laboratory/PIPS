@@ -19,7 +19,7 @@
 
 #include <vector>
 
-//class sTree;
+class sTree;
 class LinearAlgebraPackage;
 class NlpGenVars;
 class NlpInfo;
@@ -27,6 +27,7 @@ class NlpInfo;
 
 class sData : public NlpGenData {
  public:
+  static sData *dummy;
   std::string datarootname;
   std::string datalocalname;
   
@@ -50,7 +51,7 @@ class sData : public NlpGenData {
 	     OoqpVector * dampind_sL_t_in, OoqpVector *dampind_sU_u_in);
 
   
-  std::vector<sData*> children;
+  VectorCompressedDummy<sData*,sData> children;
   void AddChild(sData* child);
   sTree* stochNode;
  public:
