@@ -863,6 +863,10 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 
    SimpleVector& nnzs_col_vec = getSimpleVecColFromStochVec(*nnzs_col, node);
 
+
+   /* todo: actually need to check whether a bound is still an implied one - if so we can reset it - this needs more mechanisms */
+   /* store row that implied bound - if row still there - check if bound still implied (or even better bound implied) - if so - reset bound */
+   /* print stats on how many bounds were reset */
    for(int col = 0; col < ixlow.n; ++col)
    {
       /* do not reset fixed columns */
