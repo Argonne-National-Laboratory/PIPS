@@ -18,6 +18,7 @@ sVars::sVars(sTree* tree,
 	     OoqpVector * iclow_in, OoqpVector * icupp_in)
   : QpGenVars()
 {
+  assert(false);
   SpReferTo( ixlow, ixlow_in );
   SpReferTo( ixupp, ixupp_in );
   SpReferTo( iclow, iclow_in );
@@ -60,7 +61,6 @@ sVars::sVars(sTree* tree,
     w   = OoqpVectorHandle( tree->newPrimalVector() );
     phi = OoqpVectorHandle( tree->newPrimalVector() );
   } 
-  assert(false);
   x = OoqpVectorHandle( tree->newPrimalVector() );
   y = OoqpVectorHandle( tree->newDualYVector() );
   z = OoqpVectorHandle( tree->newDualZVector() );
@@ -133,9 +133,18 @@ sVars::sVars( sTree* tree, OoqpVector * x_in, OoqpVector * s_in,
   createChildren();
 }
 
+sVars::sVars(const sVars& vars) : QpGenVars(vars)
+{
+  stochNode = vars.stochNode;
+  for(unsigned int i = 0; i < children.size(); ++i)
+  {
+    children.push_back( new sVars(*vars.children[i]));
+  }
+}
+
 sVars::~sVars()
 { 
-  for (size_t c=0; c<children.size(); c++)
+  for (size_t c = 0; c < children.size(); c++)
     delete children[c];
 }
 
