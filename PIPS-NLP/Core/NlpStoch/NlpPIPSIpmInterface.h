@@ -27,7 +27,7 @@ class NlpPIPSIpmInterface
   int go(int addslack=0);
 
   double getObjective() const;
-  void computeProblemSize(int&, int&);
+  void computeProblemSize(long int&, long int&);
   double getFirstStageObjective() const;
 
 
@@ -131,16 +131,16 @@ int NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
   	 
       std::cout << nscens << " scenarios." << endl;
   	}
-    int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
+    long int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
     for(int j=0;j<nscens;j++){
       sum_var += data->children[j]->getLocalnx();
       sum_econ += data->children[j]->getLocalmy();
       sum_icon += data->children[j]->getLocalmz();
     }
 
-    MPI_Allreduce(&sum_var, &total_var, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_var, &total_var, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
 
     if(mype==0) {
         std::cout << "Total " << data->getLocalnx() + total_var << " variables, "
@@ -195,18 +195,18 @@ double NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::getObjective() const {
 }
 
 template<typename  FORMULATION, typename SOLVER, typename UPDATENLP>
-void NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::computeProblemSize(int& nvar, int& ncon){
+void NlpPIPSIpmInterface<FORMULATION,SOLVER,UPDATENLP>::computeProblemSize(long int& nvar, long int& ncon){
   int nscens=data->children.size();
-  int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
+  long int sum_var=0,sum_icon=0,sum_econ=0,total_var=0,total_icon=0,total_econ=0;
   for(int j=0;j<nscens;j++){
     sum_var += data->children[j]->getLocalnx();
     sum_econ += data->children[j]->getLocalmy();
     sum_icon += data->children[j]->getLocalmz();
   }
 
-  MPI_Allreduce(&sum_var, &total_var, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&sum_var, &total_var, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
   nvar = total_var;
   ncon = total_econ + total_icon;
 }
