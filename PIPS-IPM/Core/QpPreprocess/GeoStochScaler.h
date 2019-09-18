@@ -8,7 +8,7 @@
 #ifndef PIPS_IPM_CORE_QPPREPROCESS_GEOSTOCHSCALER_H_
 #define PIPS_IPM_CORE_QPPREPROCESS_GEOSTOCHSCALER_H_
 
-#include "../QpPreprocess/QpScaler.h"
+#include "../QpPreprocess/StochScaler.h"
 #include "StochVector.h"
 
 class Data;
@@ -23,7 +23,7 @@ class Data;
 /**
  * Derived class for Geometric scaler.
  */
-class GeoStochScaler : public QpScaler
+class GeoStochScaler : public StochScaler
 {
    bool equilibrate;
    int maxIters;
@@ -31,7 +31,8 @@ class GeoStochScaler : public QpScaler
    double goodEnough;
 
 protected:
-  virtual void doObjScaling();
+  void doObjScaling() override;
+  
   void applyGeoMean(StochVector& maxvec, StochVector& minvec);
   void postEquiScale();
   void setScalingVecsToOne();
@@ -42,7 +43,7 @@ public:
   virtual ~GeoStochScaler();
 
   /** scale */
-  virtual void scale();
+  void scale() override;
 };
 
 //@}

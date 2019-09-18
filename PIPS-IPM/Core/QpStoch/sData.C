@@ -4,7 +4,6 @@
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
-#include "QpGenVars.h"
 #include "SparseLinearAlgebraPackage.h"
 #include "mpi.h"
 #include <iostream>
@@ -1540,6 +1539,77 @@ void sData::permuteLinkingVars()
    dynamic_cast<StochVector&>(*blx).permuteVec0Entries(linkVarsPermutation);
    dynamic_cast<StochVector&>(*ixupp).permuteVec0Entries(linkVarsPermutation);
    dynamic_cast<StochVector&>(*ixlow).permuteVec0Entries(linkVarsPermutation);
+}
+
+
+sVars* sData::getVarsUnperm(const sVars& vars) const
+{
+   const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
+
+   sVars* unperm_vars = new sVars(vars);
+
+   if( perm_inv_link_vars.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*unperm_vars->x).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_vars->v).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_vars->w).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_vars->phi).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_vars->gamma).permuteVec0Entries(perm_inv_link_vars);   
+   }
+
+   if( perm_inv_link_cons_eq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*unperm_vars->y).permuteLinkingEntries(perm_inv_link_cons_eq);
+   }
+
+   if( perm_inv_link_cons_ineq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*unperm_vars->s).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*unperm_vars->z).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*unperm_vars->t).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*unperm_vars->u).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*unperm_vars->pi).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*unperm_vars->lambda).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+   }
+
+   return unperm_vars;
+}
+
+sResiduals* sData::getResidsUnperm(const sResiduals& resids) const
+{
+   const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
+   const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
+
+   sResiduals* unperm_resids = new sResiduals(resids);
+
+   if( perm_inv_link_vars.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*unperm_resids->rQ).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_resids->rv).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_resids->rw).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_resids->rgamma).permuteVec0Entries(perm_inv_link_vars);   
+      dynamic_cast<StochVector&>(*unperm_resids->rphi).permuteVec0Entries(perm_inv_link_vars);   
+   }
+
+   if( perm_inv_link_cons_eq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*unperm_resids->rA).permuteLinkingEntries(perm_inv_link_cons_eq);
+   }
+
+   if( perm_inv_link_cons_ineq.size() != 0 )
+   {
+      dynamic_cast<StochVector&>(*unperm_resids->rC).permuteLinkingEntries(perm_inv_link_cons_ineq); 
+      dynamic_cast<StochVector&>(*unperm_resids->rz).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*unperm_resids->rt).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*unperm_resids->ru).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*unperm_resids->rlambda).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*unperm_resids->rpi).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+   }
+
+   return unperm_resids;
 }
 
 void sData::activateLinkStructureExploitation()

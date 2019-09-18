@@ -49,7 +49,7 @@ sResiduals::sResiduals( sTree* tree,
 sResiduals::sResiduals( sTree* tree,
 			OoqpVector * ixlow_, OoqpVector * ixupp_,
 			OoqpVector * iclow_, OoqpVector * icupp_ )
-  :QpGenResiduals()
+  : QpGenResiduals()
 {
 
   SpReferTo( ixlow, ixlow_ );
@@ -102,6 +102,16 @@ sResiduals::sResiduals( sTree* tree,
   }
   
   stochNode = tree;
+}
+
+sResiduals::sResiduals( const sResiduals& res ) : QpGenResiduals( res )
+{
+   stochNode = res.stochNode;
+
+   for(unsigned int i = 0; i < res.children.size(); ++i)
+   {
+       children.push_back( new sResiduals(*children[i]) );
+   }
 }
 
 

@@ -2,6 +2,8 @@
 #define DATAQPSTOCH
 
 #include "QpGenData.h"
+#include "sResiduals.h"
+#include "sVars.h"
 #include "StochSymMatrix.h"
 #include "SparseSymMatrix.h"
 #include "StochGenMatrix.h"
@@ -13,7 +15,6 @@
 
 class sTree;
 class LinearAlgebraPackage;
-class QpGenVars;
 
 class sData : public QpGenData {
  public:
@@ -35,9 +36,11 @@ class sData : public QpGenData {
   void AddChild(sData* child);
   sTree* stochNode;
 
- public:
+public:
   long long nxlow, nxupp, mclow, mcupp;
 
+  
+private: 
   // returns permutation vector or empty vector if no permutation has been performed
   std::vector<unsigned int> getLinkVarsPerm() const;
   // returns inverse permutation vector or empty vector if no permutation has been performed
@@ -47,7 +50,7 @@ class sData : public QpGenData {
   // returns inverse permutation vector or empty vector if no permutation has been performed
   std::vector<unsigned int> getLinkConsIneqPermInv() const;
 
-
+public:
   int getLocalnx();
   int getLocalmy();
   int getLocalmyl();
@@ -84,6 +87,8 @@ class sData : public QpGenData {
   void printLinkConsStats();
 
   void activateLinkStructureExploitation();
+  sResiduals* getResidsUnperm(const sResiduals& resids) const;
+  sVars* getVarsUnperm(const sVars& vars) const;
 
   void sync();
   bool isRootNodeInSync() const;

@@ -35,6 +35,8 @@ public:
 	      OoqpVector * ixlow_, OoqpVector * ixupp_,
 	      OoqpVector * iclow_, OoqpVector * icupp_ );
   
+  sResiduals( const sResiduals& res );
+
   virtual void sync();
  private:
   std::vector<sResiduals*> children;

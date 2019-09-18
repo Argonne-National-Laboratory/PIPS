@@ -542,7 +542,7 @@ StochVector* sTree::newDualYVector() const
 StochVector* sTree::newDualZVector() const
 {
   //is this node a dead-end for this process?
-  if(commWrkrs==MPI_COMM_NULL)
+  if(commWrkrs == MPI_COMM_NULL)
     return new StochDummyVector();
 
   //length of linking part
@@ -582,7 +582,7 @@ StochVector* sTree::newDualYVectorEmpty() const
 
   StochVector* y = new StochVector(0, commWrkrs);
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it = 0; it < children.size(); it++) {
     StochVector* child = children[it]->newDualYVector();
     y->AddChild(child);
   }
@@ -592,12 +592,12 @@ StochVector* sTree::newDualYVectorEmpty() const
 StochVector* sTree::newDualZVectorEmpty() const
 {
   //is this node a dead-end for this process?
-  if(commWrkrs==MPI_COMM_NULL)
+  if(commWrkrs == MPI_COMM_NULL)
     return new StochDummyVector();
 
   StochVector* z = new StochVector(0, commWrkrs);
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it = 0; it < children.size(); it++) {
     StochVector* child = children[it]->newDualZVector();
     z->AddChild(child);
   }
