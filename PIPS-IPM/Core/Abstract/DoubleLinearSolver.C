@@ -15,7 +15,7 @@ DoubleIterativeLinearSolver::DoubleIterativeLinearSolver()
 DoubleIterativeLinearSolver::~DoubleIterativeLinearSolver()
 { }
 
-void 
+void
 DoubleIterativeLinearSolver::diagonalChanged( int idiag, int extent )
 { }
 
@@ -23,20 +23,20 @@ void
 DoubleIterativeLinearSolver::matrixChanged()
 { }
 
-void DoubleIterativeLinearSolver::applyA (double beta, OoqpVector& res, 
+void DoubleIterativeLinearSolver::applyA (double beta, OoqpVector& res,
 					  double alpha, OoqpVector& x)
 {
   A->doIt(beta,res,alpha,x);
 }
 
 
-void DoubleIterativeLinearSolver::applyM1(double beta, OoqpVector& res, 
+void DoubleIterativeLinearSolver::applyM1(double beta, OoqpVector& res,
 					  double alpha, OoqpVector& x)
 {
   ML->doIt(beta,res,alpha,x);
 }
 
-void DoubleIterativeLinearSolver::applyM2(double beta,  OoqpVector& res, 
+void DoubleIterativeLinearSolver::applyM2(double beta,  OoqpVector& res,
 					  double alpha, OoqpVector& x)
 {
   if(NULL==MR) {
@@ -45,12 +45,12 @@ void DoubleIterativeLinearSolver::applyM2(double beta,  OoqpVector& res,
       if(alpha==1.0) {res.copyFrom(x);return;}
       //alpha not zero
       res.setToZero();
-      
+
     } else if(beta!=1.0) res.scale(beta);
-    
+
     //beta not 0.0 and alpha not 1.0
     if(alpha!=0) res.axpy(alpha, x);
-    
+
   } else         MR->doIt(beta,res,alpha,x);
 }
 
@@ -65,7 +65,7 @@ StoredMatTimesVec::StoredMatTimesVec(DoubleMatrix* mat)
 { };
 
 
-void StoredMatTimesVec::doIt(double beta, OoqpVector& y_, 
+void StoredMatTimesVec::doIt(double beta, OoqpVector& y_,
 			     double alpha, OoqpVector& x_)
 {
   SimpleVector& x = dynamic_cast<SimpleVector&>(x_);
@@ -74,7 +74,7 @@ void StoredMatTimesVec::doIt(double beta, OoqpVector& y_,
   int m,n; mMat->getSize(m,n);
   assert(x.length() == n);
   assert(y.length() == m);
-  
+
   mMat->mult(beta, y, alpha, x);
 }
 /**********************************************************************
@@ -86,7 +86,7 @@ StoredMatTransTimesVec::StoredMatTransTimesVec(DoubleMatrix* mat)
 { };
 
 
-void StoredMatTransTimesVec::doIt(double beta, OoqpVector& y_, 
+void StoredMatTransTimesVec::doIt(double beta, OoqpVector& y_,
 				  double alpha, OoqpVector& x_)
 {
   SimpleVector& x = dynamic_cast<SimpleVector&>(x_);
@@ -95,6 +95,6 @@ void StoredMatTransTimesVec::doIt(double beta, OoqpVector& y_,
   int m,n; mMat->getSize(m,n);
   assert(x.length() == m);
   assert(y.length() == n);
-  
+
   mMat->transMult(beta, y, alpha, x);
 }

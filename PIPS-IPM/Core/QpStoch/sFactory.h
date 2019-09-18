@@ -26,12 +26,12 @@ class sLinsysLeaf;
 class sFactory : public QpGen {
  protected:
   int m_blocks;
-  
+
   long long nnzQ, nnzA, nnzC;
  public:
   sFactory( stochasticInput&, MPI_Comm comm=MPI_COMM_WORLD );
 
-  /** This is a obsolete constructor since it uses sTreeCallbacks to create 
+  /** This is a obsolete constructor since it uses sTreeCallbacks to create
    *   data objects
    */
   sFactory( StochInputTree*, MPI_Comm comm=MPI_COMM_WORLD );
@@ -39,7 +39,7 @@ class sFactory : public QpGen {
  protected:
   sFactory( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ );
   sFactory();
-  
+
  public:
 
   virtual ~sFactory();
@@ -62,12 +62,11 @@ class sFactory : public QpGen {
   virtual sLinsysRoot* newLinsysRoot(sData* prob,
 				     OoqpVector* dd,OoqpVector* dq,
 				     OoqpVector* nomegaInv, OoqpVector* rhs) = 0;
-  
-  virtual sLinsysLeaf* newLinsysLeaf();
+
   virtual sLinsysLeaf* newLinsysLeaf(sData* prob,
 				     OoqpVector* dd,OoqpVector* dq,
 				     OoqpVector* nomegaInv, OoqpVector* rhs);
-  
+
 
   sTree * tree;
   sData * data;
@@ -79,7 +78,7 @@ class sFactory : public QpGen {
 
   sResiduals *resid;
   vector<sVars*> registeredVars;
- 
+
   sLinsysRoot* linsys;
 
   StochIterateResourcesMonitor iterTmMonitor;

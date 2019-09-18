@@ -37,6 +37,8 @@ class MumpsSolverBase : public DoubleLinearSolver {
 
   void diagonalChanged( int idiag, int extent ) override;
   void matrixChanged() override = 0;
+
+  using DoubleLinearSolver::solve;
   void solve( OoqpVector& rhs ) override;
 
   static constexpr MumpsVerbosity defaultVerbosity = verb_mute;

@@ -89,7 +89,6 @@ class sData : public QpGenData {
   virtual sData* cloneFull(bool switchToDynamicStorage = false) const;
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
-  virtual void datainput() {};
 
   void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
 

@@ -15,7 +15,7 @@
 /**
  * Implements the main solver for linear systems that arise in
  * primal-dual interior-point methods for QP.
- * @ingroup LinearSolvers 
+ * @ingroup LinearSolvers
  * @ingroup AbstractLinearAlgebra
  */
 class DoubleLinearSolver {
@@ -40,15 +40,16 @@ public:
    *
    * @param x on entry the right hand side of the system to be solved.
    *           On exit, the solution.  */
-  virtual void solve ( OoqpVector& x ) = 0;
+   virtual void solve ( OoqpVector& x ) = 0;
 
-  // solve with multiple RHS
-  virtual void solve ( GenMatrix& rhs ) { assert(0 && "Not implemented"); }
+   // solve with multiple RHS
+   virtual void solve ( GenMatrix& rhs ) { assert(0 && "Not implemented"); }
 
-  // solve with multiple RHS and column sparsity array (can be NULL)
-  virtual void solve ( int nrhss, double* rhss, int* colSparsity ) { assert(0 && "Not implemented"); }
+   // solve with multiple RHS and column sparsity array (can be NULL)
+   virtual void solve ( int nrhss, double* rhss, int* colSparsity ) { assert(0 && "Not implemented"); }
 
   virtual void Lsolve  ( OoqpVector& x ) {}
+  virtual void Lsolve  ( GenMatrix& mat ) { assert(0 && "Not implemented"); }
   virtual void Dsolve  ( OoqpVector& x ) { solve(x);}
   virtual void Ltsolve ( OoqpVector& x ) {}
 
@@ -57,9 +58,9 @@ public:
 };
 
 /**
- * The abstract  interface to a mat-vec operation required by 
+ * The abstract  interface to a mat-vec operation required by
  * the iterative solvers.
- * @ingroup LinearSolvers 
+ * @ingroup LinearSolvers
  * @ingroup AbstractLinearAlgebra
  */
 
@@ -71,9 +72,9 @@ class MatTimesVec {
 };
 
 /**
- * The abstract interface for a linear iterative solver for linear systems 
+ * The abstract interface for a linear iterative solver for linear systems
  * that arise in primal-dual interior-point methods for QP.
- * @ingroup LinearSolvers 
+ * @ingroup LinearSolvers
  * @ingroup AbstractLinearAlgebra
  */
 
@@ -83,8 +84,6 @@ class DoubleIterativeLinearSolver : public DoubleLinearSolver {
 
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
-
-  virtual void solve( OoqpVector& rhs ) = 0;
 
   virtual ~DoubleIterativeLinearSolver();
  protected:
@@ -101,10 +100,10 @@ class DoubleIterativeLinearSolver : public DoubleLinearSolver {
   void applyM2(double beta, OoqpVector& res, double alpha, OoqpVector& x);
 };
 
-/** 
+/**
  * An implementation of the abstract class @MatTimesVec that performs a mat-vec
  * with both the matrix and vector being on the same processor.
- * 
+ *
  * It can use OOQP matrix and the implementation is based on SimpleVector class.
  */
 class StoredMatTimesVec : public MatTimesVec {
@@ -116,10 +115,10 @@ class StoredMatTimesVec : public MatTimesVec {
  protected:
   DoubleMatrix* mMat;
 };
-/** 
- * An implementation of the abstract class @MatTimesVec that performs a 
+/**
+ * An implementation of the abstract class @MatTimesVec that performs a
  * mat transpose-vec with both the matrix and vector being on the same processor.
- * 
+ *
  * It can use OOQP matrix and the implementation is based on SimpleVector class.
  */
 class StoredMatTransTimesVec : public MatTimesVec {
@@ -132,7 +131,3 @@ class StoredMatTransTimesVec : public MatTimesVec {
   DoubleMatrix* mMat;
 };
 #endif
-
-
-
-

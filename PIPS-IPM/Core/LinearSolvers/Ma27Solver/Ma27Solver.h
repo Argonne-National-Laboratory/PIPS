@@ -9,11 +9,12 @@
 #include "SparseSymMatrixHandle.h"
 #include "SparseStorageHandle.h"
 #include "OoqpVectorHandle.h"
+#include "pipsport.h"
 
 
 #ifndef FNAME
 #ifndef __bg__
-#define FNAME(f) f ## _ 
+#define FNAME(f) f ## _
 #else
 #define FNAME(f) f // no underscores for fortran names on bgp
 #endif
@@ -23,10 +24,10 @@
 extern "C" {
   void FNAME(ma27id)( int icntl[],    double cntl[] );
 
-  void FNAME(ma27ad)( int * n,        int * nz,       
-		int irn[],      int icn[],      
+  void FNAME(ma27ad)( int * n,        int * nz,
+		int irn[],      int icn[],
 		int iw[],       int * liw,
-		int ikeep[],    int iw1[],      
+		int ikeep[],    int iw1[],
 		int * nsteps,   int * iflag,
 		int icntl[],    double cntl[],
 		int info[],     double * ops );
@@ -37,10 +38,10 @@ extern "C" {
 		int iw[],       int * liw,
 		int ikeep[],    int * nsteps,
 		int * maxfrt,   int iw1[],
-		int icntl[],    double cntl[], 
+		int icntl[],    double cntl[],
 		int  info[] );
 
-  void FNAME(ma27cd)( int * n,        
+  void FNAME(ma27cd)( int * n,
 		double a[],     int * la,
 		int iw[],       int * liw,
 		double w[],     int * maxfrt,
@@ -51,7 +52,7 @@ extern "C" {
 
 /** implements the linear solver class using the HSL MA27 solver
  *
- * @ingroup LinearSolvers 
+ * @ingroup LinearSolvers
  */
 class Ma27SolverBase : public DoubleLinearSolver {
 protected:
@@ -112,7 +113,7 @@ public:
    * kThresholdPivoting, kThresholdPivotingMax,
    * kThresholdPivotingFactor, kPrecision, ipessimism,rpessimism */
   Ma27SolverBase( int n, int nnz );
-  
+
   /** the Threshold Pivoting parameter, stored as U in the ma27dd
    *  common block. Takes values in the range [0,1]. Larger values
    *  enforce greater stability in the factorization as they insist on
@@ -134,7 +135,7 @@ public:
 
   /** change format for row/column index matrices, in preparation for
    * call to MA27 FORTRAN routines
-   * 
+   *
    * @param irowM array of nnz elements indicating row index (in range
    * 1..n) of the corresponding matrix element
    *
@@ -155,23 +156,13 @@ public:
    */
   virtual void basicSolve( double drhs[], int n );
 
-  /** version of the main solve routine that takes argument as an
-   * OoqpVector
-   *
-   * @param drhs on input contains the right-hand side; on output
-   * contains the solution
-   *
-   * @param n dimension of the system 
-   */
-  virtual void solve( OoqpVector& rhs ) = 0;
-
   /** destructor */
   virtual ~Ma27SolverBase();
 };
 
 /** implements the linear solver class using the HSL MA27 solver
  *
- * @ingroup LinearSolvers 
+ * @ingroup LinearSolvers
  */
 class Ma27Solver : public Ma27SolverBase {
 protected:
@@ -184,16 +175,16 @@ public:
   /** sets mMat to refer to the argument sgm */
   Ma27Solver( SparseSymMatrix * sgm );
 
-  /** copy the contents of the matrix into fact 
+  /** copy the contents of the matrix into fact
    *
    * @param fact on exit, contains the nonzero elements of the
-   * original matrix, stored as an array of doubles 
+   * original matrix, stored as an array of doubles
    */
   virtual void copyMatrixElements( double fact[], int lfact );
 
 /** change format for row/column index matrices, in preparation for
    * call to MA27 FORTRAN routines
-   * 
+   *
    * @param irowM array of nnz elements indicating row index (in range
    * 1..n) of the corresponding matrix element
    *
@@ -208,10 +199,9 @@ public:
    * contains the solution
    *
    * @param n dimension of the system */
-  virtual void solve( OoqpVector& rhs );
+  using Ma27SolverBase::solve;
+  void solve( OoqpVector& rhs ) override;
+
 };
 
 #endif
-
-
-

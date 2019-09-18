@@ -27,8 +27,8 @@ QpGenStoch::QpGenStoch( StochInputTree* inputTree)
   //now the sizes of the problem are available, set them
   tree->GetGlobalSizes(nx, my, mz);
 
-  //decide how the CPUs are assigned 
-  tree->assignProcesses(); 
+  //decide how the CPUs are assigned
+  tree->assignProcesses();
 }
 
 QpGenStoch::QpGenStoch( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
@@ -61,20 +61,20 @@ Data * QpGenStoch::makeData()
   StochGenMatrixHandle     A( tree->createA() );
   StochVectorHandle        b( tree->createb() );
 
-  StochGenMatrixHandle     C( tree->createC()     );  
+  StochGenMatrixHandle     C( tree->createC()     );
   StochVectorHandle     clow( tree->createclow()  );
   StochVectorHandle    iclow( tree->createiclow() );
   StochVectorHandle     cupp( tree->createcupp()  );
   StochVectorHandle    icupp( tree->createicupp() );
 
-  data = new QpGenStochData( tree, 
-			     c, Q, 
+  data = new QpGenStochData( tree,
+			     c, Q,
 			     xlow, ixlow, ixlow->numberOfNonzeros(),
 			     xupp, ixupp, ixupp->numberOfNonzeros(),
 			     A, b,
 			     C, clow, iclow, iclow->numberOfNonzeros(),
 			     cupp, icupp, icupp->numberOfNonzeros() );
-  
+
   return data;
 }
 
@@ -87,23 +87,23 @@ Variables* QpGenStoch::makeVariables( Data * prob_in )
   OoqpVector * s      = tree->newDualZVector();
   OoqpVector * y      = tree->newDualYVector();
   OoqpVector * z      = tree->newDualZVector();
-  OoqpVector * v      = tree->newPrimalVector(); 
+  OoqpVector * v      = tree->newPrimalVector();
   OoqpVector * gamma  = tree->newPrimalVector();
-  OoqpVector * w      = tree->newPrimalVector(); 
+  OoqpVector * w      = tree->newPrimalVector();
   OoqpVector * phi    = tree->newPrimalVector();
   OoqpVector * t      = tree->newDualZVector();
   OoqpVector * lambda = tree->newDualZVector();
-  OoqpVector * u      = tree->newDualZVector(); 
+  OoqpVector * u      = tree->newDualZVector();
   OoqpVector * pi     = tree->newDualZVector();
-  OoqpVector * ixlow  = tree->newPrimalVector(); 
+  OoqpVector * ixlow  = tree->newPrimalVector();
   OoqpVector * ixupp  = tree->newPrimalVector();
-  OoqpVector * iclow  = tree->newDualZVector(); 
+  OoqpVector * iclow  = tree->newDualZVector();
   OoqpVector * icupp  = tree->newDualZVector();
 
   //vars = new QpGenVars( x, s, y, z,
   sVars* vars = new sVars( tree, x, s, y, z,
 			   v, gamma, w, phi,
-			   t, lambda, u, pi, 
+			   t, lambda, u, pi,
 			   prob->ixlow, prob->ixlow->numberOfNonzeros(),
 			   prob->ixupp, prob->ixupp->numberOfNonzeros(),
 			   prob->iclow, prob->iclow->numberOfNonzeros(),
@@ -118,7 +118,7 @@ Residuals* QpGenStoch::makeResiduals( Data * prob_in )
 {
   QpGenStochData* prob = dynamic_cast<QpGenStochData*>(prob_in);
 
-  resid =  new QpGenResiduals2(tree, 
+  resid =  new QpGenResiduals2(tree,
 			       prob->ixlow, prob->ixupp,
 			       prob->iclow, prob->icupp);
   return resid;
@@ -127,19 +127,13 @@ Residuals* QpGenStoch::makeResiduals( Data * prob_in )
 
 
 LinearSystem* QpGenStoch::makeLinsys( Data * prob_in )
-{  
+{
   QpGenStochData* prob = dynamic_cast<QpGenStochData*>(prob_in);
   linsys = newLinsysRoot();
-  return linsys; 
+  return linsys;
 }
 
-QpGenStochLinsysLeaf* 
-QpGenStoch::newLinsysLeaf()
-{
-  assert(false && "not supported");
-  return NULL;
-}
-QpGenStochLinsysLeaf* 
+QpGenStochLinsysLeaf*
 QpGenStoch::newLinsysLeaf(QpGenStochData* prob,
 			  OoqpVector* dd, OoqpVector* dq,
 			  OoqpVector* nomegaInv, OoqpVector* rhs)
@@ -173,12 +167,12 @@ void QpGenStoch::iterateEnded()
   if(tree->balanceLoad()) {
     // balance needed
     data->sync();
-      
+
     for(int i=0; i<registeredVars.size(); i++)
       registeredVars[i]->sync();
-    
+
     resid->sync();
-    
+
     linsys->sync();
 
     printf("Should not get here! OMG OMG OMG\n");
@@ -192,4 +186,3 @@ void QpGenStoch::iterateEnded()
     printf("ITERATION WALLTIME: iter=%g  Total=%g\n", iterTmMonitor.tmIterate, m_tmTotal);
 #endif
 }
-

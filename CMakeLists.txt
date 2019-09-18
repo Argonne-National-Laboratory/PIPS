@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Mo
 # For optimized build, set CMAKE_BUILD_TYPE to RELEASE
 # For optimized build with debug info, set CMAKE_BUILD_TYPE to RELWITHDEBINFO
 # CMAKE_BUILD_TYPE should be set at the command line or in a toolchain file
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -Wnon-virtual-dtor") 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -Wnon-virtual-dtor -Woverloaded-virtual")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -230,7 +230,7 @@ if(MATH_LIBS)
 	message(STATUS "Using user-defined MATH_LIBS=${MATH_LIBS}")
 elseif(IS_DIRECTORY $ENV{MKLROOT})
     #set(MATH_LIBS "-Wl,--start-group -Wl,--no-as-needed -L$ENV{MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_lapack95_lp64 -lmkl_sequential -lmkl_core -lgfortran -fopenmp -lpthread -lm -Wl,--end-group -std=c++11 -Wall -O3")
-    
+
     set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
     #set(MATH_LIBS "-Wl,--start-group  -L$ENV{MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_avx -lmkl_def -liomp5 -lgfortran -lpthread -lm -ldl")
     #     set(MATH_LIBS "-mkl=parallel")
@@ -493,11 +493,11 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   if(WITH_SPARSE_PRECOND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPARSE_PRECOND")
   endif(WITH_SPARSE_PRECOND)
-  
+
   if(WITH_DIST_PRECOND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDIST_PRECOND")
   endif(WITH_DIST_PRECOND)
-  
+
   if(WITH_REDUCED_ACCURACY)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DREDUCED_ACCURACY")
   endif(WITH_REDUCED_ACCURACY)
