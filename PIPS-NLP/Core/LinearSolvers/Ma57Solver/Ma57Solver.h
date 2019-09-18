@@ -64,6 +64,10 @@ extern "C" {
 class Ma57Solver : public DoubleLinearSolver {
 private:
   Ma57Solver() {};
+
+  /** store as a sparse symmetric matrix */
+  SparseSymMatrixHandle mMat;
+
   void SetUpMa57Solver( SparseSymMatrix * sgm);
 protected:
   int     icntl[20];
@@ -132,6 +136,7 @@ public:
   virtual void diagonalChanged( int idiag, int extent );
   virtual int matrixChanged();
   virtual void solve( OoqpVector& rhs );
+  virtual void BasicSolve(GenMatrix& rhs_in, int NRHS_in = 0);
   virtual void solve( GenMatrix& rhs);
 
   //virtual void Lsolve  ( OoqpVector& x );
