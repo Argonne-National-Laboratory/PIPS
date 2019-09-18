@@ -328,8 +328,8 @@ void Ma27Solver::solve( OoqpVector& rhs_in )
   rhsnorm = rhs.infnorm();
 
   for(int i=0; i<n; i++) {
-    assert(false==isnan(drhs[i]));
-    assert(false==isinf(drhs[i]));
+    assert(false==::isnan(drhs[i]));
+    assert(false==::isinf(drhs[i]));
   }
 
   // compute norm of rhs, and save it
