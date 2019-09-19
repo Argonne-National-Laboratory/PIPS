@@ -1,4 +1,4 @@
-/* PIPS-IPM                                                             
+/* PIPS-IPM
  * Authors: Cosmin G. Petra, Miles Lubin
  * (C) 2012 Argonne National Laboratory, see documentation for copyright
  */
@@ -18,7 +18,7 @@ using namespace std;
 
 #ifndef FNAME
 #ifndef __bg__
-#define FNAME(f) f ## _ 
+#define FNAME(f) f ## _
 #else
 #define FNAME(f) f // no underscores for fortran names on bgp
 #endif
@@ -27,47 +27,55 @@ using namespace std;
 
 /** implements the linear solver class using the Pardiso SC solver
  */
- 
+
 class PardisoSchurSolver : public DoubleLinearSolver {
 
  constexpr static int symbFactorIntervalDefault = 3;
+ constexpr static int pivotPerturbationExpDefault = 8;
+ constexpr static int nIterativeRefinsDefault = 8;
+ constexpr static bool parallelForwardBackwardDefault = true;
+ constexpr static bool factorizationTwoLevelDefault = true;
+
+
 protected:
   PardisoSchurSolver() {};
-  
+
  public:
   virtual void firstCall(); //first factorization call
-  void firstSolveCall(SparseGenMatrix& R, 
+  void firstSolveCall(SparseGenMatrix& R,
 		      SparseGenMatrix& A,
 		      SparseGenMatrix& C,
 		      SparseGenMatrix& F,
 		      SparseGenMatrix& G,
 		      int nSC0); //first solve call
-  
+
   /** sets mStorage to refer to the argument sgm */
-  PardisoSchurSolver( SparseSymMatrix * sgm ); 
-  
-  
+  PardisoSchurSolver( SparseSymMatrix * sgm );
+
+
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
-  virtual void solve( OoqpVector& rhs );
-  virtual void solve( GenMatrix& rhs);
- 
+
+  using DoubleLinearSolver::solve;
+  void solve( OoqpVector& rhs ) override;
+  void solve( GenMatrix& rhs) override;
+
   /** Functions specific to the Schur approach. The last argument is the Schur first
    * stage matrix that will be updated.
    * 1. schur_solver( rhs, SC)
    *  - this is the generic function
    *
-   * 2. schur_solve(R,A,B, SC) 
+   * 2. schur_solve(R,A,B, SC)
    *  - avoids forming the matrix rhs [R' A' B']'
    *  - assumes rhs does not change
    */
-  virtual void schur_solve(/*const*/ SparseGenMatrix& R, 
+  virtual void schur_solve(/*const*/ SparseGenMatrix& R,
 			   /*const*/ SparseGenMatrix& A,
 			   /*const*/ SparseGenMatrix& C,
 			   /*const*/ SparseGenMatrix& F,
 			   /*const*/ SparseGenMatrix& G,
 			   DenseSymMatrix& SC);
-  
+
   virtual void schur_solve_sparse(/*const*/ SparseGenMatrix& R,
             /*const*/ SparseGenMatrix& A,
             /*const*/ SparseGenMatrix& C,
@@ -92,19 +100,24 @@ protected:
 
   int* shrinked2orgSC;
 
+  int pivotPerturbationExp; // 10^-exp
+  int nIterativeRefins;
+  bool parallelForwardBackward;
+  bool factorizationTwoLevel;
+
   /* pardiso params */
   int maxfct, mnum, phase, msglvl, solver, mtype, nrhs;
 
   /** dimension of the PARDISO augmented system */
-  int n; 
+  int n;
   /** dimension of the Schur complement (# of rhs) */
-  int nSC; 
+  int nSC;
   /** number of nonzeros in the PARDISO augmented matrix */
   int nnz;
   /** storage for the upper triangular (in row-major format) */
   int *rowptrAug, *colidxAug;
   double *eltsAug;
-  /** mapping from from the diagonals of the PIPS linear systems to 
+  /** mapping from from the diagonals of the PIPS linear systems to
       the diagonal elements of the (1,1) block  in the augmented system */
   map<int,int> diagMap;
 
@@ -112,7 +125,7 @@ protected:
   double* nvec;
   double* nvec2;
   int nvec_size; // to be save
-  
+
 
   void setIparm(int* iparm);
   bool iparmUnchanged();
@@ -135,13 +148,13 @@ protected:
 class PardisoSchur32Solver : public PardisoSchurSolver
 {
  public:
-    PardisoSchur32Solver( SparseSymMatrix * sgm ); 
- private: 
+    PardisoSchur32Solver( SparseSymMatrix * sgm );
+ private:
     PardisoSchur32Solver () {};
  public:
     virtual void firstCall(); //first factorization call
+    using PardisoSchurSolver::solve;
     virtual void solve (OoqpVector& rhs );
-    
 };
 
 #endif

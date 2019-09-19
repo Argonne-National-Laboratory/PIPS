@@ -1,6 +1,6 @@
 /* OOQP                                                               *
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
- * (C) 2001 University of Chicago. See Copyright Notification in OOQP 
+ * (C) 2001 University of Chicago. See Copyright Notification in OOQP
  *
  * C. Petra Added multiple Lsolve with multiple right hand sides      */
 
@@ -12,6 +12,7 @@
 #include "DenseSymMatrixHandle.h"
 #include "OoqpVectorHandle.h"
 #include "DenseGenMatrix.h"
+#include "pipsport.h"
 
 /** A linear solver for dense, symmetric positive-definite systems.
  *  @ingroup DenseLinearAlgebra
@@ -24,10 +25,13 @@ public:
   DeSymPSDSolver( DenseSymMatrix * dsm );
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
-  virtual void solve ( OoqpVector& x );
+
+  using DoubleLinearSolver::solve;
+  void solve ( OoqpVector& x ) override;
 
   //specialized method that uses BLAS-3 function DTRSM for the triagular solve.
-  void Lsolve( DenseGenMatrix& R);
+  using DoubleLinearSolver::Lsolve;
+  void Lsolve ( GenMatrix& mat ) override;
 
   virtual ~DeSymPSDSolver();
 };

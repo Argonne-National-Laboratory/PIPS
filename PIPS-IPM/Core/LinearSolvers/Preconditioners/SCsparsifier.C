@@ -11,9 +11,11 @@
 #include "mpi.h"
 #include <cassert>
 
-
+extern double g_iterNumber;
 extern int gOuterBiCGFails;
 extern int gOuterBiCGIter;
+extern int gInnerBiCGIter;
+extern int gInnerBiCGFails;
 
 SCsparsifier::SCsparsifier()
 {
@@ -208,7 +210,13 @@ SCsparsifier::getSparsifiedSC_fortran(const sData& prob,
 
 void SCsparsifier::updateDiagDomBound()
 {
-   if( gOuterBiCGIter >= 5 )
+   const int nIter = std::max(gOuterBiCGIter, gInnerBiCGIter);
+   const int nFails = std::max(gOuterBiCGFails, gInnerBiCGFails);
+
+   assert(nIter >= 0);
+   assert(nFails >= 0);
+
+   if( nIter >= 5 && static_cast<int>(g_iterNumber) > 0 )
    {
       if( diagDomBound > diagDomBoundNormal )
       {
@@ -217,12 +225,30 @@ void SCsparsifier::updateDiagDomBound()
       }
    }
 
-   if( gOuterBiCGFails >= 3 )
+   if( nFails >= 3 )
    {
       if( diagDomBound > diagDomBoundConservative )
       {
          diagDomBound = diagDomBoundConservative;
          printf("\n SCsparsifier switched to diagDomBoundConservative  \n");
+      }
+   }
+
+   if( nFails >= 20 )
+   {
+      if( diagDomBound > diagDomBoundUltraConservative )
+      {
+         diagDomBound = diagDomBoundUltraConservative;
+         printf("\n SCsparsifier switched to diagDomBoundUltraConservative  \n");
+      }
+   }
+
+   if( nFails >= 60 )
+   {
+      if( diagDomBound > diagDomBoundHyperConservative )
+      {
+         diagDomBound = diagDomBoundHyperConservative;
+         printf("\n SCsparsifier switched to diagDomBoundHyperConservative  \n");
       }
    }
 }

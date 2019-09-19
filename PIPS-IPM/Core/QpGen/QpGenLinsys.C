@@ -28,7 +28,7 @@ extern int gOuterBiCGFails;
 
 
 // todo provide statistics vector, print if TIMING
-static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
+static void biCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 {
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
@@ -52,7 +52,24 @@ static void BiCGStabPrintStatus(int flag, int it, double resnorm, double rnorm)
 
 }
 
-static void BiCGStabCommunicateStatus(int flag, int it)
+static double biCGStabGetTolerance(int ipIterations)
+{
+   double tolerance;
+   assert(ipIterations >= -1);
+
+   if( ipIterations == -1 )
+      tolerance = 1e-10;
+   else if( ipIterations <= 4 )
+      tolerance = 1e-8;
+   else if( ipIterations <= 8 )
+      tolerance = 1e-9;
+   else
+      tolerance = 1e-10;
+
+   return tolerance;
+}
+
+static void biCGStabCommunicateStatus(int flag, int it)
 {
    gOuterBiCGIter = it;
 
@@ -119,13 +136,39 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_,
     sol = res = resx = resy = resz = NULL;
     sol2 = res2 = res3 = res4 = res5 = NULL;
   }
+
+  printStatistics = false;
+
+  // todo user parameter!
+  char* var = getenv("PIPS_PRINT_STATISTICS");
+  if( var != NULL )
+  {
+     int print = -1;
+     sscanf(var, "%d", &print);
+     if( print == 0 )
+        printStatistics = false;
+     else if( print == 1 )
+        printStatistics = true;
+  }
+  ipIterations = -2;
 }
 
 QpGenLinsys::QpGenLinsys()
  : factory( NULL), rhs(NULL), dd(NULL), dq(NULL), useRefs(0),
    sol(NULL), res(NULL), resx(NULL), resy(NULL), resz(NULL),
-   sol2(NULL), res2(NULL), res3(NULL), res4(NULL), res5(NULL)
+   sol2(NULL), res2(NULL), res3(NULL), res4(NULL), res5(NULL), printStatistics(false), ipIterations(-2)
 {
+   // todo user parameter!
+   char* var = getenv("PIPS_PRINT_STATISTICS");
+   if( var != NULL )
+   {
+      int print = -1;
+      sscanf(var, "%d", &print);
+      if( print == 0 )
+         printStatistics = false;
+      else if( print == 1 )
+         printStatistics = true;
+   }
 }
 
 QpGenLinsys::~QpGenLinsys()
@@ -351,7 +394,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    OoqpVector &r0 = *res2, &dx = *sol2, &v = *res3, &t = *res4, &p = *res5;
    OoqpVector &x = *sol, &r = *res, &b = *rhs;
 
-   const double tol = 1e-10;
+   const double tol = biCGStabGetTolerance(ipIterations);
    const double eps = 1e-15;
    const double n2b = b.twonorm();
    const double tolb = max(n2b * tol, eps);
@@ -374,13 +417,7 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    //initial residual: res=res-A*x
    r.copyFrom(b);
    matXYZMult(1.0, r, -1.0, x, data, stepx, stepy, stepz);
-#if 0
-   OoqpVector* test = resx->clone();
-   data->C->addColSums(*test);
-   data->C->writeToStreamDense(std::cout);
-   std::cout << setprecision(12) <<"inf " << test->infnorm() << std::endl ;
-   delete test;
-#endif
+
    double normr = r.twonorm(), normr_min = normr, normr_act = normr;
 
 #ifdef TIMING
@@ -409,17 +446,22 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
    if( normr <= tolb )
    {
       this->separateVars(stepx, stepy, stepz, x);
+      if( myRank == 0 )
+         std::cout << "outer BiCGStab skipped: " << normr << " <= " << tolb <<  std::endl;
       return;
    }
 
-   const double infb = b.infnorm();
-   const double glbinfnorm = matXYZinfnorm(data, stepx, stepy, stepz);
-   double xonenorm = x.onenorm();
-
-   if( myRank == 0 )
+   if( printStatistics )
    {
-       std::cout << "global system infnorm=" << glbinfnorm << " x1norm=" <<  xonenorm << " tolb/tolnew: "<< tolb << " " <<  (tol * xonenorm * glbinfnorm )  <<  std::endl;
-       std::cout << "outerBICG starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb <<  std::endl;
+      const double infb = b.infnorm();
+      const double glbinfnorm = matXYZinfnorm(data, stepx, stepy, stepz);
+      const double xonenorm = x.onenorm();
+
+      if( myRank == 0 )
+      {
+          std::cout << "global system infnorm=" << glbinfnorm << " x 1norm=" <<  xonenorm << " tolb/tolnew: "<< tolb << " " <<  (tol * xonenorm * glbinfnorm )  <<  std::endl;
+          std::cout << "outer BiCGStab starts: " << normr << " > " << tolb <<  " normb2=" << n2b << " normbinf=" << infb << " (tolerance=" << tol << ")" <<  std::endl;
+      }
    }
 
    r0.copyFrom(r);
@@ -590,11 +632,8 @@ void QpGenLinsys::solveCompressedBiCGStab(OoqpVector& stepx,
 
    } //~ end of BiCGStab loop
 
-   if( myRank == 0 )
-      std::cout << "outer BICGSTAB final normr_act=" <<  normr_act << "\n";
-
-   BiCGStabPrintStatus(flag, it, normr_act/n2b, normr/n2b);
-   BiCGStabCommunicateStatus(flag, it);
+   biCGStabPrintStatus(flag, it, normr_act/n2b, normr/n2b);
+   biCGStabCommunicateStatus(flag, it);
 
    this->separateVars(stepx, stepy, stepz, x);
 }

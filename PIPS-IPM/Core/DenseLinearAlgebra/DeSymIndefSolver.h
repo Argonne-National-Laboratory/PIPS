@@ -9,9 +9,10 @@
 #include "DenseSymMatrixHandle.h"
 #include "SparseSymMatrix.h"
 #include "DenseStorageHandle.h"
+#include "pipsport.h"
 
-/** A linear solver for dense, symmetric indefinite systems 
- * @ingroup DenseLinearAlgebra 
+/** A linear solver for dense, symmetric indefinite systems
+ * @ingroup DenseLinearAlgebra
  * @ingroup LinearSolvers
  */
 class DeSymIndefSolver : public DoubleLinearSolver {
@@ -24,10 +25,12 @@ protected:
 public:
   DeSymIndefSolver( DenseSymMatrix * storage );
   DeSymIndefSolver( SparseSymMatrix * storage );
-  virtual void diagonalChanged( int idiag, int extent );
-  virtual void matrixChanged();
-  virtual void solve ( OoqpVector& vec );
-  virtual void solve ( GenMatrix& vec );
+  void diagonalChanged( int idiag, int extent ) override;
+  void matrixChanged() override;
+
+  using DoubleLinearSolver::solve;
+  void solve ( OoqpVector& vec ) override;
+  void solve ( GenMatrix& vec ) override;
   virtual ~DeSymIndefSolver();
 };
 

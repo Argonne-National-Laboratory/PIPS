@@ -6,9 +6,10 @@
 #include "DenseSymMatrixHandle.h"
 #include "SparseSymMatrix.h"
 #include "DenseStorageHandle.h"
+#include "pipsport.h"
 
-/** A linear solver for dense, symmetric indefinite systems 
- * @ingroup DenseLinearAlgebra 
+/** A linear solver for dense, symmetric indefinite systems
+ * @ingroup DenseLinearAlgebra
  * @ingroup LinearSolvers
  */
 class DeSymIndefSolverMagma : public DoubleLinearSolver {
@@ -26,8 +27,9 @@ public:
   DeSymIndefSolverMagma( SparseSymMatrix * storage );
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
-  virtual void solve ( OoqpVector& vec );
-  virtual void solve ( GenMatrix& vec );
+  using DoubleLinearSolver::solve;
+  void solve ( OoqpVector& vec ) override;
+  void solve ( GenMatrix& vec ) override;
   virtual ~DeSymIndefSolverMagma();
 };
 

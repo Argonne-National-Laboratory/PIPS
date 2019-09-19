@@ -61,6 +61,10 @@ protected:
   OoqpVector *sol, *res, *resx, *resy, *resz;
   /** Work vectors for BiCGStab */
   OoqpVector *sol2, *res2, *res3, *res4, *res5;
+
+  bool printStatistics;
+  int ipIterations;
+
 public:
   QpGenLinsys(  QpGen * factory,
 		QpGenData * data,
