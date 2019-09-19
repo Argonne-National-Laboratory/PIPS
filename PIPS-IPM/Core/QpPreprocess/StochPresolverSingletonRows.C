@@ -98,6 +98,12 @@ void StochPresolverSingletonRows::applyPresolving()
 bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int node, int row_idx)
 {
    assert( !presData.nodeIsDummy(node, system_type) || node == -2 );
+
+   // todo: redisign - actually done twice
+   updatePointersForCurrentNode(node, system_type);
+   if( (*currNnzRow)[row_idx] != 1.0 )
+      return false;
+
    double ubx = std::numeric_limits<double>::infinity();
    double lbx = -std::numeric_limits<double>::infinity();
    int col_idx = -1;
@@ -165,8 +171,8 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
    else
    {
       block_type = LINKING_CONS_BLOCK;
-      // todo : implement this more efficiently - we don't want to go through all our children to check wether a singlton entry is on our process or not - ideally we
-      // already know and also know the child
+      // todo : implement this more efficiently - we don't want to go through all our children to check wether a singleton entry is on our process or not
+      // ideally we already know and also know the child
       assert( node == -2 );
       for( int i = -1; i < presData.getNChildren(); ++i)
       {
@@ -210,7 +216,22 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
             ubx = (*currIneqRhs)[row_idx] / value;
 
          if( PIPSisLT( value, 0.0) )
+         {
             std::swap( lbx, ubx );
+            if( (*currIclow)[row_idx] == 0.0 )
+               ubx = -ubx;
+            if( (*currIcupp)[row_idx] == 0.0 )
+               lbx = -lbx;
+         }  
+
+
       }
    }
+
+   if(!PIPSisLE(lbx, ubx))
+   {
+      presData.writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row_idx);
+      std::cout << lbx << "\t" << ubx << std::endl;
+   }
+   assert( PIPSisLE(lbx ,ubx) );
 }

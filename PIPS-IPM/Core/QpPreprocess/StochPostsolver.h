@@ -29,6 +29,7 @@ public:
       void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint, const std::vector<int>& indices_row,
          const std::vector<double> values_row );
       void notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col, const std::vector<double>& values_col);
+      void notifyFixedEmptyColumn( int node, unsigned int col, double value);
 
       void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
@@ -58,6 +59,7 @@ protected:
          BOUNDS_TIGHTENED = 5,
          SINGLETON_EQUALITY_ROW = 6,
          SINGLETON_INEQUALITY_ROW = 7,
+         FIXED_EMPTY_COLUMN = 8,
       };
 
       const unsigned int n_rows_original;
@@ -71,8 +73,6 @@ protected:
       std::vector<ReductionType> reductions;
       std::vector<INDEX> indices;
       
-      std::vector<int> val_idx;
-      std::vector<unsigned int> start_idx_indices;
       std::vector<double> values;
       std::vector<unsigned int> start_idx_values;
 

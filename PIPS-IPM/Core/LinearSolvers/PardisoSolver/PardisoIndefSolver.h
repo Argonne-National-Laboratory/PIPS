@@ -22,7 +22,14 @@ class PardisoIndefSolver : public DoubleLinearSolver
       SparseStorageHandle mStorageSparse;
    protected:
 
-      static constexpr double precondDiagDomBound = 0.0001;
+      constexpr static double precondDiagDomBound = 0.0001;
+      constexpr static int pivotPerturbationExpDefault = 8;
+      constexpr static int nIterativeRefinsDefault = 8;
+      constexpr static bool highAccuracyDefault = true;
+      constexpr static bool useSparseRhsDefault = true;
+      constexpr static bool parallelForwardBackwardDefault = true;
+      constexpr static bool factorizationTwoLevelDefault = true;
+
 
       double* x; /* solution vector */
 
@@ -45,6 +52,12 @@ class PardisoIndefSolver : public DoubleLinearSolver
       double* a;
       int idum;
       double ddum;
+      int pivotPerturbationExp; // 10^-exp
+      int nThreads;
+      int nIterativeRefins;
+      bool highAccuracy;
+      bool parallelForwardBackward;
+      bool factorizationTwoLevel;
 
    public:
       PardisoIndefSolver(DenseSymMatrix * storage);
@@ -52,6 +65,8 @@ class PardisoIndefSolver : public DoubleLinearSolver
       void diagonalChanged(int idiag, int extent) override;
       void matrixChanged() override;
       void matrixRebuild( DoubleMatrix& matrixNew ) override;
+
+      using DoubleLinearSolver::solve;
       void solve ( OoqpVector& vec ) override;
       void solve ( GenMatrix& vec ) override;
       virtual ~PardisoIndefSolver();

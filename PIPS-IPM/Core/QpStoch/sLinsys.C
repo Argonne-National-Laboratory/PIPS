@@ -19,7 +19,6 @@
 
 extern int gOuterIterRefin;
 
-
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
   : QpGenLinsys(), kkt(NULL), solver(NULL), nThreads(PIPSgetnOMPthreads())
 {

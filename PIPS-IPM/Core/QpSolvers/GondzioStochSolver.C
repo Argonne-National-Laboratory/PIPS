@@ -40,12 +40,9 @@ using namespace std;
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
 
-// gmu is needed by MA57!
-static double gmu;
-
-// double grnorm;
 extern int gOoqpPrintLevel;
-double g_iterNumber;
+extern double g_iterNumber;
+extern bool ipStartFound;
 
 
 GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points,
@@ -127,9 +124,8 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
 
-   gmu = 1000;
-   //  grnorm = 1000;
    dnorm = prob->datanorm();
+
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
 
@@ -137,11 +133,12 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
    this->start(factory, iterate, prob, resid, step);
    stochFactory->iterateEnded();
 
+   assert(!ipStartFound);
+   ipStartFound = true;
    iter = 0;
    NumberGondzioCorrections = 0;
    done = 0;
    mu = iterate->mu();
-   gmu = mu;
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
    do
@@ -277,7 +274,6 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       iterate->saxpy(step, alpha);
       mu = iterate->mu();
-      gmu = mu;
 
       if( 0 == myRank )
          std::cout << "final alpha: " << alpha << " mu: " << mu <<   std::endl;

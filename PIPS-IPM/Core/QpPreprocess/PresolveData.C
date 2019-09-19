@@ -621,6 +621,7 @@ void PresolveData::allreduceAndApplyNnzChanges()
    nnzs_row_C->vecl->axpy(1.0, *nnzs_row_C_chgs);
 
    // todo : this can be done more efficiently, e.g. while substracting
+   // todo : this has still flaws - new singleton rows in B0 and D0 are not communicated properly for some reason - might happen else where
    for( int i = 0; i < nnzs_col_chgs->length(); ++i )
    {
       if( (*nnzs_col_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1 )
@@ -863,10 +864,17 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 
    SimpleVector& nnzs_col_vec = getSimpleVecColFromStochVec(*nnzs_col, node);
 
+
+   /* todo: actually need to check whether a bound is still an implied one - if so we can reset it - this needs more mechanisms */
+   /* store row that implied bound - if row still there - check if bound still implied (or even better bound implied) - if so - reset bound */
+   /* print stats on how many bounds were reset */
    for(int col = 0; col < ixlow.n; ++col)
    {
+      /* do not reset fixed columns */
       if( nnzs_col_vec[col] != 0 && ixupp_orig[col] == 0.0 && ixlow_orig[col] == 0.0)
       {
+
+         /* do not reset bounds implied by singleton rows since these rows are already removed from the problem */
          if( ixupp_orig[col] == 0.0 && getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node)[col] == 0.0 )
          {
             ixupp[col] = 0;
@@ -882,13 +890,12 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
    }
 }
 
-
 void PresolveData::fixEmptyColumn(int node, int col, double val)
 {
    assert(-1 <= node && node < nChildren);
    assert(0 <= col);
    //todo
-   // postsolver->notifyFixedEmptyColumn(node, col, value);
+   postsolver->notifyFixedEmptyColumn(node, col, val);
 
    removeColumn(node, col, val);
 
@@ -905,7 +912,8 @@ void PresolveData::fixColumn(int node, int col, double value)
    std::vector<int> idx;
    std::vector<double> val;
    
-   //buildColForPostsolve( node, col, idx, val); todo
+   // todo
+   //buildColForPostsolve( node, col, idx, val);
    postsolver->notifyFixedColumn(node, col, value, idx, val);
 
 #ifndef NDEBUG
@@ -961,6 +969,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          || ( ixupp != 0.0 && PIPSisLT(xupp, lbx) )
          || PIPSisLT(ubx, lbx) )
    {
+      std::cout << "[" << lbx << ", " << ubx << "] not in [" << ((ixlow != 0.0) ? xlow : -std::numeric_limits<double>::infinity()) << ", " << 
+         ((ixupp != 0.0) ? xupp : std::numeric_limits<double>::infinity()) << "]" << std::endl;
       abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
    }
 
@@ -1251,12 +1261,12 @@ void PresolveData::removeColumn(int node, int col, double fixation)
 
    }
 
+   /* mark column as removed */
+   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0; // todo?
    getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->bux, node)[col] = 0.0;
-
-   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0;
 }
 
 /** remove column - adjust lhs, rhs and activity as well as nnz_counters */
@@ -1348,12 +1358,13 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
    {
       std::vector<int> idx_row;
       std::vector<double> val_row;
-//      BlockType block_type = (linking) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
-//todo      // buildRowForPostsolve( system_type, node, block_type, row, idx_row, val_row);
+      //BlockType block_type = (linking) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
+      // todo
+      //buildRowForPostsolve( system_type, node, block_type, row, idx_row, val_row);
 
       postsolver->notifyRedundantRow(system_type, node, row, linking, idx_row, val_row);
    }
-
+ 
 #ifdef TRACK_ROW
    if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
    {

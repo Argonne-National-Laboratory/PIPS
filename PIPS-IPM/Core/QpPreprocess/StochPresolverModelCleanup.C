@@ -43,18 +43,19 @@ void StochPresolverModelCleanup::applyPresolving()
    // removal of redundant constraints
    int n_removed_rows_eq = removeRedundantRows(EQUALITY_SYSTEM);
    int n_removed_rows_ineq = removeRedundantRows(INEQUALITY_SYSTEM);
-   n_removed_rows = n_removed_rows_eq + n_removed_rows_ineq;
+   //n_removed_rows = n_removed_rows_eq + n_removed_rows_ineq;
 
    /* remove entries from A and C matrices and updates transposed systems */
-   int n_removed_entries_eq = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
-   int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
-   n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
+   //int n_removed_entries_eq = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
+   //int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
+   //n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
+
+   presData.allreduceAndApplyNnzChanges();
 
    fixEmptyColumns();
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    presData.allreduceAndApplyBoundChanges();
-   presData.allreduceAndApplyNnzChanges();
 
    if( distributed )
    {
@@ -70,8 +71,8 @@ void StochPresolverModelCleanup::applyPresolving()
    if( my_rank == 0 )
    {
       std::cout << "Removed " << n_removed_rows << " redundant rows (" << n_removed_rows_eq << " equalitiy and " << n_removed_rows_ineq << " inequality rows)" << std::endl;
-      std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq << " entries in equality system and "
-            << n_removed_entries_ineq << " in inequality system)" << std::endl;
+    //  std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq << " entries in equality system and "
+      //      << n_removed_entries_ineq << " in inequality system)" << std::endl;
    }
 #endif
 
@@ -164,7 +165,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
       if( system_type == EQUALITY_SYSTEM )
       {
-         if( actmin_ubndd != 0 && actmax_ubndd != 0)
+         if( actmin_ubndd != 0 || actmax_ubndd != 0)
             continue;
 
          if( (PIPSisLT( rhs_eq[row], actmin_part, feastol) && actmin_ubndd == 0)  || (PIPSisLT(actmax_part, rhs_eq[row], feastol) && actmax_ubndd == 0))
@@ -394,12 +395,12 @@ void StochPresolverModelCleanup::fixEmptyColumns()
       const SimpleVector& xupp = (node == -1) ? *currxuppParent : *currxuppChild;
       const SimpleVector& xlow = (node == -1) ? *currxlowParent : *currxlowChild;
       const SimpleVector& nnzs_col = (node == -1) ? *currNnzColParent : *currNnzColChild;
+
       for(int col = 0; col < nnzs_col.n; ++col)
       {
          /* column fixation candidate */
          if( nnzs_col[col] == 0)
          {
-
             // todo : maybe this can also happen as an input? here we assume that the column has been fixed already
             if( ixlow[col] == 0.0 && ixupp[col] == 0.0
                && xlow[col] == 0.0 && xupp[col] == 0.0 

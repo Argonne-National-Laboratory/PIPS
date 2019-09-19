@@ -8,7 +8,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Mo
 # For optimized build, set CMAKE_BUILD_TYPE to RELEASE
 # For optimized build with debug info, set CMAKE_BUILD_TYPE to RELWITHDEBINFO
 # CMAKE_BUILD_TYPE should be set at the command line or in a toolchain file
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long") 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -Wnon-virtual-dtor -Woverloaded-virtual")
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -82,14 +82,8 @@ message(STATUS "WITH_REDUCED_ACCURACY=${WITH_REDUCED_ACCURACY}")
 option(WITH_INNER_BICGSTAB "use inner bicgstab" OFF)
 message(STATUS "WITH_INNER_BICGSTAB=${WITH_INNER_BICGSTAB}")
 
-option(WITH_PARDISO_PARALLEL "Use Pardiso (if available) in fully parallel mode" ON)
-message(STATUS "WITH_PARDISO_PARALLEL=${WITH_PARDISO_PARALLEL}")
-
 option(WITH_PARDISO_BLOCKSC "Use Pardiso (if available) for comuting the Schur complement in blocks" OFF)
 message(STATUS "WITH_PARDISO_BLOCKSC=${WITH_PARDISO_BLOCKSC}")
-
-option(WITH_PARDISOINDEF_SCALE "Scale in Pardiso indef. (if available) " ON)
-message(STATUS "WITH_PARDISOINDEF_SCALE=${WITH_PARDISOINDEF_SCALE}")
 
 option(BUILD_GDX_SOURCE "Build GDX Source" OFF)
 message(STATUS "BUILD_GDX_SOURCE=${BUILD_GDX_SOURCE}")
@@ -236,7 +230,7 @@ if(MATH_LIBS)
 	message(STATUS "Using user-defined MATH_LIBS=${MATH_LIBS}")
 elseif(IS_DIRECTORY $ENV{MKLROOT})
     #set(MATH_LIBS "-Wl,--start-group -Wl,--no-as-needed -L$ENV{MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_lapack95_lp64 -lmkl_sequential -lmkl_core -lgfortran -fopenmp -lpthread -lm -Wl,--end-group -std=c++11 -Wall -O3")
-    
+
     set(MATH_LIBS "-Wl,--start-group  $ENV{MKLROOT}/lib/intel64/libmkl_intel_lp64.a $ENV{MKLROOT}/lib/intel64/libmkl_sequential.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lgfortran -ldl")
     #set(MATH_LIBS "-Wl,--start-group  -L$ENV{MKLROOT}/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -lmkl_avx -lmkl_def -liomp5 -lgfortran -lpthread -lm -ldl")
     #     set(MATH_LIBS "-mkl=parallel")
@@ -499,11 +493,11 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
   if(WITH_SPARSE_PRECOND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPARSE_PRECOND")
   endif(WITH_SPARSE_PRECOND)
-  
+
   if(WITH_DIST_PRECOND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDIST_PRECOND")
   endif(WITH_DIST_PRECOND)
-  
+
   if(WITH_REDUCED_ACCURACY)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DREDUCED_ACCURACY")
   endif(WITH_REDUCED_ACCURACY)
@@ -517,15 +511,9 @@ if(BUILD_PIPS_IPM OR BUILD_PIPS_NLP)
     if(WITH_PARDISOINDEF)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_PARDISOINDEF")
     endif(WITH_PARDISOINDEF)
-    if(WITH_PARDISO_PARALLEL)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPARDISO_PARALLEL_AGGRESSIVE")
-    endif(WITH_PARDISO_PARALLEL)
     if(WITH_PARDISO_BLOCKSC)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPARDISO_BLOCKSC")
     endif(WITH_PARDISO_BLOCKSC)
-    if(WITH_PARDISOINDEF_SCALE)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPARDISOINDEF_SCALE")
-    endif(WITH_PARDISOINDEF_SCALE)
   else(HAVE_PARDISO)
     set(PARDISO_LIBRARY "")
   endif(HAVE_PARDISO)

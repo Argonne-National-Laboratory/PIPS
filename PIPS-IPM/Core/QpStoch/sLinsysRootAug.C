@@ -29,8 +29,18 @@
 extern double g_iterNumber;
 #endif
 extern int gInnerSCsolve;
-extern int gOuterSolve;
+extern int gInnerBiCGIter;
+extern int gInnerBiCGFails;
 
+
+
+static void biCGStabCommunicateStatus(int flag, int it)
+{
+   gInnerBiCGIter = it;
+
+   if( flag != 0 )
+      gInnerBiCGFails++;
+}
 
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
   : sLinsysRoot(factory_, prob_), CtDC(NULL)
@@ -705,7 +715,11 @@ void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy,
   //                           [  G*xx                           + Omega * xyl ]
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-  if(myRank==0) {
+  int mpiCommSize; MPI_Comm_size(mpiComm, &mpiCommSize);
+  const bool iAmLastRank = (myRank == mpiCommSize - 1);
+  assert(mpiCommSize >= 1);
+
+  if( iAmLastRank ) { // needs to be the last rank because only this rank is guaranteed to have CtDC
     assert(rxy.length() == locnx + locmy + locmyl + locmzl);
 
     //only this proc subtracts from rxy
@@ -715,6 +729,8 @@ void sLinsysRootAug::SCmult( double beta, SimpleVector& rxy,
 
     if(locmz>0) {
       SparseSymMatrix* CtDC_sp = dynamic_cast<SparseSymMatrix*>(CtDC);
+      assert(CtDC_sp);
+
       CtDC_sp->mult(1.0,&rxy[0],1, -alpha,&x[0],1);
     }
 
@@ -942,7 +958,7 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   int n = b.length();
 
   const int maxit=75; //500
-  const double tol=1e-12, EPS=1e-15; // EPS=2e-16
+  const double tol=1e-10, EPS=1e-15; // EPS=2e-16
 
   int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
@@ -1233,6 +1249,8 @@ void sLinsysRootAug::solveWithBiCGStab( sData *prob, SimpleVector& b)
   if( myRank == 0 )
      std::cout << "innerBICG: " << "ii=" << ii << " flag=" << flag << " normr=" << normr << " normr_act="
         << normr_act << " tolb=" << tolb << std::endl;
+
+  biCGStabCommunicateStatus(flag, ii);
 
   b.copyFrom(x);
   delete[] resvec;

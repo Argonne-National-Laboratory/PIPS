@@ -8,9 +8,10 @@
 #include "DoubleLinearSolver.h"
 #include "DenseSymMatrixHandle.h"
 #include "DenseStorageHandle.h"
+#include "pipsport.h"
 
-/** Specialized LDL^T solver for saddle point systems 
- * @ingroup DenseLinearAlgebra 
+/** Specialized LDL^T solver for saddle point systems
+ * @ingroup DenseLinearAlgebra
  * @ingroup LinearSolvers
  */
 class DeSymIndefSolver2 : public DoubleLinearSolver {
@@ -22,7 +23,8 @@ public:
   DeSymIndefSolver2( DenseSymMatrix * storage, int nx );
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
-  virtual void solve ( OoqpVector& vec );
+  using DoubleLinearSolver::solve;
+  void solve ( OoqpVector& vec ) override;
   virtual ~DeSymIndefSolver2();
 };
 

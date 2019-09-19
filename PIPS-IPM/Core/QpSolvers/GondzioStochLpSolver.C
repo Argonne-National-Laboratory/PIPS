@@ -45,13 +45,9 @@ using namespace std;
 #include <sstream>
 #include <limits>
 
-// gmu is needed by MA57!
-static double gmu;
-
-// double grnorm;
 extern int gOoqpPrintLevel;
 extern double g_iterNumber;
-
+extern bool ipStartFound;
 
 
 GondzioStochLpSolver::GondzioStochLpSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points, bool adaptive_linesearch)
@@ -126,8 +122,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    QpGenStoch* stochFactory = reinterpret_cast<QpGenStoch*>(factory);
    g_iterNumber = 0.0;
 
-   gmu = 1000;
-   //  grnorm = 1000;
    dnorm = prob->datanorm();
    // initialization of (x,y,z) and factorization routine.
    sys = factory->makeLinsys(prob);
@@ -136,11 +130,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
    this->start(factory, iterate, prob, resid, step);
    stochFactory->iterateEnded();
 
+   assert(!ipStartFound);
+   ipStartFound = true;
    iter = 0;
    NumberGondzioCorrections = 0;
    done = 0;
    mu = iterate->mu();
-   gmu = mu;
 
    do
    {
@@ -340,7 +335,6 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       iterate->saxpy_pd(step, alpha_pri, alpha_dual);
       mu = iterate->mu();
-      gmu = mu;
 
       stochFactory->iterateEnded();
    }

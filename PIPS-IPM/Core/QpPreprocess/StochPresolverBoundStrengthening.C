@@ -125,10 +125,14 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
  */
 bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type)
 {
-   bool tightened = false;
-
    assert( -1 <= node && node < nChildren );
    updatePointersForCurrentNode(node, system_type);
+
+   // todo : if bound is too big we do not accept it
+   // todo : if current entry is too small we assume that dividing by it is not numerically stable and skip it
+   const double numeric_limit_entry = 1e-7;
+   const double numeric_limit_bounds = 1e12; // todo
+   bool tightened = false;
 
    const SimpleVector& xlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
    const SimpleVector& ixlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
@@ -144,6 +148,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    const SimpleVector& nnzs_row = (block_type == LINKING_CONS_BLOCK) ? *currNnzRowLink : *currNnzRow;
 
    const SparseStorageDynamic* mat;
+
    if(block_type == LINKING_CONS_BLOCK)
       mat = currBlmat;
    else if(block_type == LINKING_VARS_BLOCK)
@@ -155,6 +160,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    }
    assert(mat);
 
+   /* for every row in the current block and every entry in said row check if we can improve on the currently known bounds */
    for(int row = 0; row < mat->getM(); ++row)
    {
       double actmin_part, actmax_part;
@@ -162,8 +168,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
       presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
-      /* if there is only one unbounded variable in the row and the variable is us, then we can find new bounds for it */
-      /* more than one or unbounded variables other than us indicate no useful bounds */
+      /* two or more unbounded variables make it impossible to derive new bounds so skip the row completely */
       if( actmin_ubndd >= 2 && actmax_ubndd >= 2)
          continue;
 
@@ -176,12 +181,16 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       for( int j = mat->getRowPtr(row).start; j < mat->getRowPtr(row).end; j++ )
       {
          assert( mat->getRowPtr(row).end - mat->getRowPtr(row).end < nnzs_row[row] );
+
          // compute the possible new bounds on variable x_colIdx:
          const int col = mat->getJcolM(j);
          const double a_ik = mat->getMat(j);
 
          assert( !PIPSisZero(a_ik) );
+         if( PIPSisLT(std::fabs(a_ik), numeric_limit_entry) )
+            continue;
 
+         /* row activities without the entry currently in focus */
          double actmin_row_without_curr = -std::numeric_limits<double>::infinity();
          double actmax_row_without_curr = std::numeric_limits<double>::infinity();
 
@@ -204,19 +213,11 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
                actmax_row_without_curr = actmax_part;
          }
 
-         /// a singleton row has zero activity without the current column
+         /* a singleton row has zero activity without the current column */
          if(nnzs_row[row] == 1)
          {
             assert(actmin_ubndd <= 1);
             assert(actmax_ubndd <= 1);
-            if( !PIPSisZero(actmax_row_without_curr, feastol) || !PIPSisZero(actmin_row_without_curr, feastol) )
-            {
-               std::cout << "system_type " << system_type << "\tnode " << node << "\trow " << row << "\tblock_type " << block_type << "\tcol " << col << std::endl;
-               std::cout << "actmax_without curr " << actmax_row_without_curr << "\tactmax_part " << actmax_part << std::endl;
-               std::cout << "actmin_without_curr " << actmin_row_without_curr << "\tactmin_part " << actmin_part << std::endl;
-               std::cout << "actmin_unbndd " << actmin_ubndd << "\tactmax_unbndd " << actmax_ubndd << std::endl;
-               std::cout <<  "ixlow " << ixlow[col] << " xlow " << xlow[col] << "\tixupp " << ixupp[col] << " xupp " << xupp[col] << std::endl;
-            }
             assert( PIPSisZero(actmin_row_without_curr, feastol) );
             assert( PIPSisZero(actmax_row_without_curr, feastol) );
 
@@ -226,41 +227,41 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          double lbx_new = -std::numeric_limits<double>::infinity();
          double ubx_new = std::numeric_limits<double>::infinity();
 
-         // todo : add safeguard - if actmin_row... is too big and a_ik too small the computation will not make much sense anymore
          if(system_type == EQUALITY_SYSTEM)
          {
             if( PIPSisLT(0.0, a_ik) )
             {
-               if( actmin_row_without_curr > -std::numeric_limits<double>::max() )
-                  ubx_new = (rhs[row] - actmin_row_without_curr) / a_ik;
-               if(actmax_row_without_curr < std::numeric_limits<double>::max())
-                  lbx_new = (rhs[row] - actmax_row_without_curr) / a_ik;
+               ubx_new = (rhs[row] - actmin_row_without_curr) / a_ik;
+               lbx_new = (rhs[row] - actmax_row_without_curr) / a_ik;
             }
             else
             {
-               if(actmin_row_without_curr > -std::numeric_limits<double>::max())
-                  lbx_new = (rhs[row] - actmin_row_without_curr) / a_ik;
-               if(actmax_row_without_curr < std::numeric_limits<double>::max())
-                  ubx_new = (rhs[row] - actmax_row_without_curr) / a_ik;
+               lbx_new = (rhs[row] - actmin_row_without_curr) / a_ik;
+               ubx_new = (rhs[row] - actmax_row_without_curr) / a_ik;
             }
          }
          else
          {
             if( PIPSisLT(0.0, a_ik) )
             {
-               if(actmin_row_without_curr > -std::numeric_limits<double>::max() && icupp[row] != 0.0)
+               if( icupp[row] != 0.0 )
                   ubx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
-               if(actmax_row_without_curr < std::numeric_limits<double>::max() && iclow[row] != 0.0)
+               if( iclow[row] != 0.0 )
                   lbx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
             else
             {
-               if(actmin_row_without_curr > -std::numeric_limits<double>::max() && icupp[row] != 0.0)
+               if( icupp[row] != 0.0 )
                   lbx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
-               if(actmax_row_without_curr < std::numeric_limits<double>::max() && iclow[row] != 0.0)
+               if( iclow[row] != 0.0 )
                   ubx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
          }
+
+         if( std::fabs(ubx_new) > numeric_limit_bounds )
+            ubx_new = std::numeric_limits<double>::infinity();
+         if( std::fabs(lbx_new) > numeric_limit_bounds )
+            lbx_new = -std::numeric_limits<double>::infinity();
 
          bool row_propagated = presData.rowPropagatedBounds(system_type, node, block_type, row, col, ubx_new, lbx_new);
 

@@ -16,14 +16,16 @@
 
 #include "mpi.h"
 
-
+bool ipStartFound = false;
+double g_iterNumber = 0.0;
 int gOoqpPrintLevel = 1000;
 int gLackOfAccuracy=0;
 int onSafeSolver=0;
 
 int gOuterBiCGFails=0;
-
-int gOuterBiCGIter=0; //use for dumping matrices
+int gOuterBiCGIter=0;
+int gInnerBiCGIter=0;
+int gInnerBiCGFails=0;
 
 //controls the type of error absortion at the outer level
 // - 0:no error absortion (OOQP works just fine)
