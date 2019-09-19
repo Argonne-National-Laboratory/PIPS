@@ -116,8 +116,13 @@ private:
       double obj_offset_chgs;
 
       // store free variables which bounds are only implied by bound tightening to remove bounds later again
-      StochVectorHandle lower_bound_implied_by_singleton;
-      StochVectorHandle upper_bound_implied_by_singleton;
+      StochVectorHandle lower_bound_implied_by_system;
+      StochVectorHandle lower_bound_implied_by_row;
+      StochVectorHandle lower_bound_implied_by_node;
+
+      StochVectorHandle upper_bound_implied_by_system;
+      StochVectorHandle upper_bound_implied_by_row;
+      StochVectorHandle upper_bound_implied_by_node;
 
       // necessary ?
       int elements_deleted;
@@ -212,7 +217,7 @@ public:
       bool hasLinking(SystemType system_type) const;
 
 private:
-      void resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
+      long resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
 
 
       void adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);

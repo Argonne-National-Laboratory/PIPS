@@ -55,12 +55,20 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       actmin_ineq_ubndd(nnzs_row_C->clone()),
       nChildren(nnzs_col->children.size()),
       objOffset(0.0), obj_offset_chgs(0.0),
-      lower_bound_implied_by_singleton(nnzs_col->clone()),
-      upper_bound_implied_by_singleton(nnzs_col->clone()),
+      lower_bound_implied_by_system(nnzs_col->clone()),
+      lower_bound_implied_by_row(nnzs_col->clone()),
+      lower_bound_implied_by_node(nnzs_col->clone()),
+      upper_bound_implied_by_system(nnzs_col->clone()),
+      upper_bound_implied_by_row(nnzs_col->clone()),
+      upper_bound_implied_by_node(nnzs_col->clone()),
       elements_deleted(0), elements_deleted_transposed(0)
 {
-   lower_bound_implied_by_singleton->setToZero();
-   upper_bound_implied_by_singleton->setToZero();
+      lower_bound_implied_by_system->setToConstant(-10);
+      lower_bound_implied_by_row->setToConstant(-10);
+      lower_bound_implied_by_node->setToConstant(-10);
+      upper_bound_implied_by_system->setToConstant(-10);
+      upper_bound_implied_by_row->setToConstant(-10);
+      upper_bound_implied_by_node->setToConstant(-10);
 
    presProb = sorigprob->cloneFull(true);
 
@@ -845,15 +853,30 @@ void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
    if(my_rank == 0)
       std::cout << "Resetting all presolved variable bounds of originally free variables" <<::endl; 
 #endif
-
+   unsigned long long n = 0;
    for( int node = -1; node < nChildren; ++node )
-      resetOriginallyFreeVarsBounds( getSimpleVecColFromStochVec(*orig_prob.ixlow, node), getSimpleVecColFromStochVec(*orig_prob.ixupp, node), node);
+   {
+      n += resetOriginallyFreeVarsBounds( getSimpleVecColFromStochVec(*orig_prob.ixlow, node), getSimpleVecColFromStochVec(*orig_prob.ixupp, node), node);
+      if(my_rank != 0 && node == -1)
+      {
+         n = 0;
+      }
+   }
+
+#ifndef NDEBUG
+   MPI_Allreduce(MPI_IN_PLACE, &n, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+
+   if(my_rank == 0)
+      std::cout << "Reset " << n << " bounds" << std::endl;
+#endif
 }
 
-void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node)
+long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node)
 {
+   long reset_bounds = 0;
+
    if( nodeIsDummy( node, EQUALITY_SYSTEM ) && nodeIsDummy( node, INEQUALITY_SYSTEM ) )
-      return;
+      return reset_bounds;
 
    SimpleVector& ixlow = getSimpleVecColFromStochVec(*presProb->ixlow, node);
    SimpleVector& ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, node);
@@ -863,6 +886,9 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 
    SimpleVector& nnzs_col_vec = getSimpleVecColFromStochVec(*nnzs_col, node);
 
+   /* check whether row that implied bound is still there - if so, and if the variable is still in that row we can remove the bound again
+    * since it should still be implied 
+    */
 
    /* todo: actually need to check whether a bound is still an implied one - if so we can reset it - this needs more mechanisms */
    /* store row that implied bound - if row still there - check if bound still implied (or even better bound implied) - if so - reset bound */
@@ -870,23 +896,55 @@ void PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
    for(int col = 0; col < ixlow.n; ++col)
    {
       /* do not reset fixed columns */
-      if( nnzs_col_vec[col] != 0 && ixupp_orig[col] == 0.0 && ixlow_orig[col] == 0.0)
+      if( nnzs_col_vec[col] != 0 && (ixupp_orig[col] == 0.0 || ixlow_orig[col] == 0.0) )
       {
+         int sys_row_lower = getSimpleVecColFromStochVec(*lower_bound_implied_by_system, node)[col];
+         int row_lower = getSimpleVecColFromStochVec(*lower_bound_implied_by_row, node)[col];
+         int node_row_lower = getSimpleVecColFromStochVec(*lower_bound_implied_by_node, node)[col];
+         int sys_row_upper = getSimpleVecColFromStochVec(*upper_bound_implied_by_system, node)[col];
+         int row_upper = getSimpleVecColFromStochVec(*upper_bound_implied_by_row, node)[col];
+         int node_row_upper = getSimpleVecColFromStochVec(*upper_bound_implied_by_node, node)[col];
 
          /* do not reset bounds implied by singleton rows since these rows are already removed from the problem */
-         if( ixupp_orig[col] == 0.0 && getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node)[col] == 0.0 )
+         if( ixupp_orig[col] == 0.0 && ixupp[col] == 1.0 )
          {
-            ixupp[col] = 0;
-            xupp[col] = 0.0;
+            if( !(0 <= sys_row_upper && sys_row_upper <= 1) )
+               std::cout << sys_row_upper << std::endl;
+            assert( 0 <= sys_row_upper && sys_row_upper <= 1);
+            assert(row_upper != -10);
+            assert(node_row_upper != -10);
+
+            const StochVector& nnzs = (sys_row_upper == 0) ? *nnzs_row_A : *nnzs_row_C;
+
+            if( getSimpleVecRowFromStochVec(nnzs, (node_row_upper == -2) ? -1 : node_row_upper, 
+               (node_row_upper == -2) ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK)[row_upper] != 0.0 )
+            {
+               ixupp[col] = 0;
+               xupp[col] = 0.0;
+               ++reset_bounds;
+            }
          }
 
-         if( ixlow_orig[col] == 0.0 && getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node)[col] == 0.0 )
+         if( ixlow_orig[col] == 0.0 && ixlow[col] == 1.0 )
          {
-            ixlow[col] = 0;
-            xlow[col] = 0.0;
+            assert( 0 <= sys_row_lower && sys_row_lower <= 1);
+            assert(row_lower != -10);
+            assert(node_row_lower != -10);
+
+            const StochVector& nnzs = (sys_row_lower == 0) ? *nnzs_row_A : *nnzs_row_C;
+
+            // todo : problably should also check whether variable is still in row - not necessary for so far implemented presolvers
+            if( getSimpleVecRowFromStochVec(nnzs, (node_row_lower == -2) ? -1 : node_row_lower, 
+               (row_lower == -2) ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK)[row_lower] != 0.0 )
+            {
+               ixlow[col] = 0;
+               xlow[col] = 0.0;
+               ++reset_bounds;
+            }
          }
       }
    }
+   return reset_bounds;
 }
 
 void PresolveData::fixEmptyColumn(int node, int col, double val)
@@ -947,13 +1005,6 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    const double xlow = getSimpleVecColFromStochVec( *presProb->blx, node_var )[col];
    const double ixupp = getSimpleVecColFromStochVec( *presProb->ixupp, node_var )[col];
    const double xupp = getSimpleVecColFromStochVec( *presProb->bux, node_var )[col];
-   const double nnzs_row = getSimpleVecRowFromStochVec( (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C, node_row, block_type)[row];
-
-   if( nnzs_row == 1.0 && ubx < numerical_threshold )
-      getSimpleVecColFromStochVec(*upper_bound_implied_by_singleton, node_var)[col] = 1.0;
-
-   if( nnzs_row == 1.0 && lbx > -numerical_threshold )
-      getSimpleVecColFromStochVec(*lower_bound_implied_by_singleton, node_var)[col] = 1.0;
 
 #ifdef TRACK_COLUMN
    if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -974,6 +1025,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
       abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
    }
 
+   /* adjust bounds */
    bool bounds_changed = false;
 
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
@@ -986,24 +1038,38 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          std::cout << "TRACKING COLUMN: new upper bound through propagation" << std::endl;
 #endif
       if( updateUpperBoundVariable(node_var, col, ubx) )
+      {
+         /* store node and row that implied the bound (necessary for resetting bounds later on) */
+         getSimpleVecColFromStochVec(*upper_bound_implied_by_system, node_var)[col] = system_type;
+         getSimpleVecColFromStochVec(*upper_bound_implied_by_row, node_var)[col] = row;
+         getSimpleVecColFromStochVec(*upper_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
+
          bounds_changed = true;
+      }
    }
   // if( fabs(ubx) < 1e8 && (ixupp== 0.0  || feastol * 1e3 <= fabs(xupp- ubx) ) )
-   if( lbx > -numerical_threshold && (ixlow== 0.0 || PIPSisLT(xlow, lbx)) )
+   if( lbx > -numerical_threshold && ( ixlow == 0.0 || PIPSisLT(xlow, lbx)) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
          std::cout << "TRACKING COLUMN: new lower bound through propagation" << std::endl;
 #endif
       if( updateLowerBoundVariable(node_var, col, lbx) )
+      {
+         /* store node and row that implied the bound (necessary for resetting bounds later on) */
+         getSimpleVecColFromStochVec(*lower_bound_implied_by_system, node_var)[col] = system_type;
+         getSimpleVecColFromStochVec(*lower_bound_implied_by_row, node_var)[col] = row;
+         getSimpleVecColFromStochVec(*lower_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
+
          bounds_changed = true;
+      }
    }
 
    /// every process should have the same root node data thus all of them should propagate it's rows similarly
    if( bounds_changed && (node_row == -1 || block_type == LINKING_VARS_BLOCK) )
       assert(outdated_linking_var_bounds == true);
 
-   // todo : how to undo propagations from linking constraint rows..
+// todo : how to undo propagations from linking constraint rows..
 // todo : in case a linking row propagated we'll have to store the whole linking row
 //   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node_row, block_type);
 //   assert(row < mat->getStorageDynamic()->m );
@@ -1264,7 +1330,7 @@ void PresolveData::removeColumn(int node, int col, double fixation)
    }
 
    /* mark column as removed */
-   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0; // this too?
    getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
