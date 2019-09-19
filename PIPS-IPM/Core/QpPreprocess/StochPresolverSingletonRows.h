@@ -11,7 +11,6 @@
 #include "StochPresolverBase.h"
 #include "SparseStorageDynamic.h"
 #include "PresolveData.h"
-#include <fstream>
 
 class StochPresolverSingletonRows : public StochPresolverBase
 {

@@ -49,7 +49,6 @@ void StochPresolverSingletonRows::applyPresolving()
 #endif
    }
 
-
    // main loop:
    while( !presData.getSingletonRows().empty() )
    {
