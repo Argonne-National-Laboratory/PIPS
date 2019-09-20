@@ -45,6 +45,14 @@ void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType 
    throw std::runtime_error("Not yet implemented");
 }
 
+void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
+{
+   // todo mark row as deleted
+   // save dual postsolve info
+   reductions.push_back( COLUMN_SINGLETON );
+   throw std::runtime_error("Not yet implemented");
+}
+
 
 /** postsolve has to compute the optimal dual multipliers here and set the primal value accordingly */
 void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col,
@@ -52,6 +60,7 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 {
    assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1 );
    getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
+   // todo for dual postsolve
    // todo assert correct format
    // todo add matrix of columns
    /* store current upper and lower bounds of x and the local column */

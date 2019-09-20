@@ -26,7 +26,8 @@ private:
    long long removed_cols;
 
    bool removeSingletonColumn(int node, int col);
-
+   bool findRowForColumnSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& node_col, const int& col );
+   void checkColImpliedFree( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, bool& lb_implied_free, bool& ub_implied_free);
 };
 
 

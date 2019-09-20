@@ -34,7 +34,7 @@
 #include "StochPresolverModelCleanup.h"
 #include "StochPresolverColumnFixation.h"
 #include "StochPresolverSingletonRows.h"
-//#include "StochPresolverSingletonColumns.h"
+#include "StochPresolverSingletonColumns.h"
 #include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
 
@@ -72,6 +72,7 @@ Data* StochPresolver::presolve()
    StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
    StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
    StochPresolverSingletonRows presolverSR(presData, *sorigprob);
+   StochPresolverSingletonColumns presolverSC(presData, *sorigprob);
 
    if( myRank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
@@ -94,6 +95,7 @@ Data* StochPresolver::presolve()
       presolverParallelRow.applyPresolving();
       presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
+      presolverSC.applyPresolving();
    }
 
    // before the finalize call fix all empty rows and columns not yet fixed

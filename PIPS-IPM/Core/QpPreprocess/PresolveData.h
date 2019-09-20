@@ -198,6 +198,7 @@ public:
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
       void removeParallelRow(SystemType system_type, int node, int row, bool linking);
+      void removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
 
       // todo : hackish functions not properly working with presolve
       void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);
@@ -216,12 +217,12 @@ public:
       bool nodeIsDummy(int node, SystemType system_type) const;
       bool hasLinking(SystemType system_type) const;
 
+      bool varBoundImpliedFreeBy( bool upper, int node_col, int col, SystemType system_type, int node_row, int row, bool linking_row );
 private:
       long resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
 
-
       void adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
-/// methods for modifying the problem
+      /// methods for modifying the problem
       void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
       /// set bounds if new bound is better than old bound
       bool updateUpperBoundVariable(int node, int col, double ubx)

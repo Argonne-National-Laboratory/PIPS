@@ -947,6 +947,25 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
    return reset_bounds;
 }
 
+bool PresolveData::varBoundImpliedFreeBy( bool upper, int node_col, int col, SystemType system_type, int node_row, int row, bool linking_row )
+{
+   node_row = ( !linking_row) ? node_row : -2;
+
+   if( upper )
+   {
+      return (getSimpleVecColFromStochVec( *upper_bound_implied_by_system, node_col)[col] == system_type && 
+         getSimpleVecColFromStochVec( *upper_bound_implied_by_node, node_col)[col] == node_row &&
+         getSimpleVecColFromStochVec( *upper_bound_implied_by_row, node_col)[col] == row);
+   }
+   else
+   {
+      return (getSimpleVecColFromStochVec( *lower_bound_implied_by_system, node_col)[col] == system_type && 
+         getSimpleVecColFromStochVec( *lower_bound_implied_by_node, node_col)[col] == node_row &&
+         getSimpleVecColFromStochVec( *lower_bound_implied_by_row, node_col)[col] == row);
+   }
+
+}
+
 void PresolveData::fixEmptyColumn(int node, int col, double val)
 {
    assert(-1 <= node && node < nChildren);
@@ -1441,6 +1460,28 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
 #endif
 
    removeRow(system_type, node, row, linking);
+}
+
+void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
+{
+   // todo need row at that time for postsolve
+   if(postsolver)
+   {
+      //postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+   }
+#ifdef TRACK_COLUMN
+  if( NODE == node_col && COLUMN == col && (my_rank == 0 || node_col != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
+  {
+     std::cout << "TRACKING: tracked column removed as (implied) free column singelton" << std::endl;
+  }
+#endif
+#ifdef TRACK_ROW
+   if(row == ROW && node_row == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
+   {
+      std::cout << "TRACKING: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
+   }
+#endif
+   removeRow(system_type, node_row, row, linking_row);
 }
 
 /* removes row from local system - sets rhs lhs and activities to zero */

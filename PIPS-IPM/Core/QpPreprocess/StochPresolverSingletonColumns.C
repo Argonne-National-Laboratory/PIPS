@@ -40,7 +40,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    countRowsCols();
 #endif
 
-   if( presData.getSingletonRows().size() == 0 )
+   if( presData.getSingletonCols().size() == 0 )
    {
 #ifndef NDEBUG
       if( my_rank == 0)
@@ -48,13 +48,11 @@ void StochPresolverSingletonColumns::applyPresolving()
 #endif
    }
 
-
    while( !presData.getSingletonCols().empty() )
    {
-      //todo
       bool removed = false;
-      //removed = removeSingletonCol( presData.getSingletonRows().back().system_type, presData.getSingletonRows().back().node, 
-      //   presData.getSingletonRows().back().index );      
+      removed = removeSingletonColumn( presData.getSingletonCols().back().node, 
+         presData.getSingletonCols().back().index );      
       
       if(removed)
          ++removed_cols;
@@ -85,12 +83,239 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.verifyActivities());  
 }
 
-bool StochPresolverSingletonColumns::removeSingletonColumn(int node, int col)
+bool StochPresolverSingletonColumns::removeSingletonColumn(int node_col, int col)
 {
+   /* this should not happen - singeltons are collected locally */
+   if( presData.nodeIsDummy(node_col, EQUALITY_SYSTEM) )
+      assert( false );
 
+   const SimpleVector& nnzs_col = (node_col == -1) ? *currNnzColParent : *currNnzColChild;
+   if(!(nnzs_col[col] <= 1))
+      std::cout << "sing col with " << nnzs_col[col] << " entries" << std::endl;
+   assert( nnzs_col[col] <= 1 );
+   if( nnzs_col[col] == 0 )
+      return false;
+
+   int node_row = -3;
+   int row = -3;
+   bool linking_row = false; 
+   SystemType system_type = EQUALITY_SYSTEM;
+   /* find the associated row via checking the transposed matices */
+   bool found = findRowForColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+
+   if( !found )
+   {
+      assert( node_col == -1 );
+      return false;
+   }
+
+   updatePointersForCurrentNode( node_row, system_type );
+   
+   /* check whether col is free / implied free */
+   bool lb_implied_free = false;
+   bool ub_implied_free = false;
+
+   checkColImpliedFree( system_type, node_row, row, linking_row, node_col, col, lb_implied_free, ub_implied_free);
+   bool implied_free = lb_implied_free && ub_implied_free;
+
+   /* if objective of variable is zero we can just remove it from the problem together with the containing row */
+   double obj = (node_col == -1) ? (*currgParent)[col] : (*currgChild)[col];
+   if( implied_free && PIPSisEQ(obj, 0.0) )
+   {
+      presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+      return true;
+   }  
+
+   /* equalitiy singleton variables */
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      /* (originally) free singleton columns just get deleted together with their row */
+      if( implied_free )
+         presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+      return true;
+   }
+
+   /* inequality singleton variables */
+   // TODO
 
    return false;
-
 }
 
+bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& system_type, int& node_row, int& row, bool& linking,
+   const int& node_col, const int& col )
+{
+   if( node_col == -1 )
+   {
+      /* go through all children and check linking variables for the singleton row */
+      
+      /* equality part */
+      system_type = EQUALITY_SYSTEM;
+      linking = false;
 
+      for( int node_row = -1; node_row < nChildren; ++ node_row)
+      {
+         if( !presData.nodeIsDummy( node_row, system_type) )
+         {
+            updatePointersForCurrentNode( node_row, system_type );
+
+            /* check transposed for entry */
+            if( node_row == -1 )
+            {
+               /* Amat */
+               assert(currAmatTrans);
+               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               {
+                  assert( (currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end) == 1);
+                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  return true;
+               }
+               /* Blmat */
+               assert(currBlmatTrans);
+               if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+               {
+                  assert( (currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end) == 1);
+                  row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+                  linking = true;
+                  return true;
+               }
+            }
+            else
+            {
+               /* Amat */
+               assert(currAmatTrans);
+               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               {
+                  assert( (currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end) == 1);
+                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  return true;
+               }
+            }
+         }
+      }
+
+      /* inequality part */
+      system_type = INEQUALITY_SYSTEM;
+
+      for( int node_row = -1; node_row < nChildren; ++ node_row)
+      {
+         if( !presData.nodeIsDummy( node_row, system_type) )
+         {
+            updatePointersForCurrentNode( node_row, system_type );
+
+            /* check transposed for entry */
+            if( node_row == -1 )
+            {
+               /* Amat */
+               assert(currAmatTrans);
+               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               {
+                  assert( (currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end) == 1);
+                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  return true;
+               }
+               /* Blmat */
+               assert(currBlmatTrans);
+               if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+               {
+                  assert( (currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end) == 1);
+                  row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+                  linking = true;
+                  return true;
+               }
+            }
+            else
+            {
+               /* Amat */
+               assert(currAmatTrans);
+               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               {
+                  assert( (currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end) == 1);
+                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  return true;
+               }
+            }
+         }
+      }
+   }
+   else
+   {
+      assert( 0 <= node_col && node_col < nChildren );
+      /* check Bmat and Blmat for the singleton row */
+
+      system_type = EQUALITY_SYSTEM;
+      node_row = node_col;
+      /* equality part */
+      if( presData.nodeIsDummy( node_row, system_type) )
+      {
+         updatePointersForCurrentNode( node_row, system_type );
+
+         /* Bmat */
+         assert(currBmatTrans);
+         if(currBmatTrans->rowptr[col].start != currBmatTrans->rowptr[col].end)
+         {
+            assert( (currBmatTrans->rowptr[col].start != currBmatTrans->rowptr[col].end) == 1);
+            row = currBmatTrans->jcolM[currBmatTrans->rowptr[col].start];
+            return true;
+         }
+         /* Blmat */
+         assert(currBlmatTrans);
+         if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+         {
+            assert( (currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end) == 1);
+            row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+            linking = true;
+            return true;
+         }
+      }
+
+      /* inequality part */
+      system_type = INEQUALITY_SYSTEM;
+      if( presData.nodeIsDummy( node_row, system_type) )
+      {
+         updatePointersForCurrentNode( node_row, system_type );
+
+         /* Bmat */
+         assert(currBmatTrans);
+         if(currBmatTrans->rowptr[col].start != currBmatTrans->rowptr[col].end)
+         {
+            assert( (currBmatTrans->rowptr[col].start != currBmatTrans->rowptr[col].end) == 1);
+            row = currBmatTrans->jcolM[currBmatTrans->rowptr[col].start];
+            return true;
+         }
+         /* Blmat */
+         assert(currBlmatTrans);
+         if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+         {
+            assert( (currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end) == 1);
+            row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+            linking = true;
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
+void StochPresolverSingletonColumns::checkColImpliedFree( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, 
+   bool& lb_implied_free, bool& ub_implied_free)
+{
+   ub_implied_free = lb_implied_free = false;
+
+   updatePointersForCurrentNode( node_row, system_type );
+
+   /* check whether originally free */
+   const SimpleVector& ixupp_orig = (node_col == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixupp).vec) 
+      : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixupp).children[node_col]->vec);
+   const SimpleVector& ixlow_orig = (node_col == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixlow).vec) 
+      : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixlow).children[node_col]->vec);
+
+   if( ixupp_orig[col] == 0.0 )
+      ub_implied_free = true;
+   if( ixlow_orig[col] == 0.0 )
+      lb_implied_free = true;
+
+   /* check whether bound tightening found bounds from the variables row that make it implied free */
+   ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy( true, node_col, col, system_type, node_row, row, linking_row );
+   lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy( false, node_col, col, system_type, node_row, row, linking_row );
+}
