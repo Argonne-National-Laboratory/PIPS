@@ -14,6 +14,7 @@
 #include "DenseGenMatrix.h"
 
 #include <cmath>
+#include <limits>
 #include <cstdio>
 
 
@@ -29,6 +30,8 @@ extern int separateHandDiag;
 
 extern double gHSL_PivotLV;
 extern double gMA57_Ordering;
+
+const double kInitPrecision   = 1.e-7;
 
 #ifndef MIN
 #define MIN(a,b) ((a > b) ? b : a)
@@ -101,6 +104,7 @@ void Ma57Solver::SetUpMa57Solver( SparseSymMatrix * sgm )
 	M	= mStorage->M;	
   }
   
+  SpReferTo( mMat, sgm );  
 }
 
 
@@ -397,7 +401,7 @@ void Ma57Solver::solve(int solveType, OoqpVector& rhs_in)
   //delete [] iwork; //!using a sort of cache now
 }
 
-void Ma57Solver::solve(GenMatrix& rhs_in)
+void Ma57Solver::BasicSolve(GenMatrix& rhs_in, int NRHS_in)
 {
   if(n==0) return; 
   
@@ -405,6 +409,8 @@ void Ma57Solver::solve(GenMatrix& rhs_in)
   int N,NRHS;
   // rhs vectors are on the "rows", for continuous memory
   rhs.getSize(NRHS,N);
+  if (NRHS_in > 0)
+    NRHS = (NRHS < NRHS_in)? NRHS: NRHS_in;
   assert(n==N);
  
   // we need checks on the residuals, can't do that with multiple RHS
@@ -422,8 +428,120 @@ void Ma57Solver::solve(GenMatrix& rhs_in)
       &NRHS,       drhs,      &n,   
       work,      &lwork,        iwork, 
       icntl,      info );
+
   delete [] iwork;
   delete [] work;
+}
+
+void Ma57Solver::solve(GenMatrix& rhs_in)
+{
+  // do at least one basicSolve
+//  this->BasicSolve( sol_best );
+//  return;
+
+  if(n==0) return; 
+  
+  DenseGenMatrix &sol_best = dynamic_cast<DenseGenMatrix&>(rhs_in);
+  int N,NRHS;
+  // rhs vectors are on the "rows", for continuous memory
+  sol_best.getSize(NRHS,N);
+ 
+  assert(n==N);
+ 
+  // define structures to save rhs and store residuals
+  DenseGenMatrix rhsMtx_ori(NRHS,N);
+  DenseGenMatrix rhsMtx_resid(NRHS,N);
+  sol_best.fromGetDense( 0, 0, rhsMtx_ori.elements(), N, NRHS, N);
+  sol_best.fromGetDense( 0, 0, rhsMtx_resid.elements(), N, NRHS, N);
+
+  SimpleVectorHandle vsol_temp  ( new SimpleVector(N) );
+
+  int *done = new int[NRHS]{0};
+  int sumDone{0};
+  int maxIR{10}, n_IR{0};
+  double *rnorm = new double[NRHS]{0};
+  double *rnormRHS = new double[NRHS]{0};
+  int norm_temp;
+  int *ori_col_idx = new int[NRHS]{0};
+  int col_idx;
+
+  int next_NRHS = 0;
+  int curr_NRHS = NRHS;
+ 
+  for (int i = 0; i < curr_NRHS; i++) {
+    SimpleVector vresid(rhsMtx_ori[i],N);
+    rnormRHS[i] = vresid.twonorm();
+    ori_col_idx[i] = i;
+  }
+
+  // do at least one basicSolve
+  this->BasicSolve( sol_best );
+  
+  // compute residuals  
+  for (int i = 0; i < curr_NRHS; i++) {
+    SimpleVector vsol(sol_best[i],N);
+    SimpleVector vrhs_resid(rhsMtx_resid[i],N);
+    	
+    mMat->mult(-1.0, vrhs_resid.elements(), 1, 1.0, vsol.elements(), 1);
+    rnorm[i] = vrhs_resid.twonorm();
+
+    if(rnorm[i] < kInitPrecision*(1.e0+rnormRHS[i]) ){
+      // residuals are small enough, Skip IR for this RHS
+    }else { 
+      // requires IR for this RHS
+      SimpleVector vrhs_resid_next(rhsMtx_resid[next_NRHS],N);
+      vrhs_resid_next.copyFrom(vrhs_resid);
+      ori_col_idx[next_NRHS] = i;
+      next_NRHS++;
+    }
+  }
+ 
+  // Do IR
+  while (next_NRHS != 0 && n_IR < maxIR ) {
+    
+    this->BasicSolve( rhsMtx_resid,next_NRHS);
+
+    curr_NRHS = next_NRHS;
+    next_NRHS = 0;
+    
+    // compute new residuals
+    for (int i = 0; i < curr_NRHS; i++) {
+	col_idx = ori_col_idx[i];
+
+  	SimpleVector vsol_best(sol_best[col_idx],N);
+  	SimpleVector vrhs_ori(rhsMtx_ori[col_idx],N);
+  	SimpleVector vrhs_resid(rhsMtx_resid[i],N);
+	
+	vsol_temp->copyFrom(vsol_best);
+        vsol_temp->axpy(1.0,vrhs_resid);
+	vrhs_resid.copyFrom(vrhs_ori);
+  	
+	mMat->mult(-1.0, vrhs_resid.elements(), 1, 1.0, vsol_temp->elements(), 1);
+
+	norm_temp = vrhs_resid.twonorm();
+	if(norm_temp < rnorm[col_idx]){ 
+	  // has improvement, take this IR step and continues IR for this RHS
+	  vsol_best.copyFrom(*vsol_temp);
+	  rnorm[col_idx] = norm_temp;
+	  SimpleVector vrhs_resid_next(rhsMtx_resid[next_NRHS],N);
+	  vrhs_resid_next.copyFrom(vrhs_resid);
+	  ori_col_idx[next_NRHS] = col_idx;
+	  next_NRHS++;
+	}else if(norm_temp < kInitPrecision*(1.e0+rnorm[col_idx]) ){
+	  // residuals are small enough, take this IR step and terminates IR for this RHS
+	  vsol_best.copyFrom(*vsol_temp);
+	  rnorm[col_idx] = norm_temp;
+ 	}else { 
+	  // no improvement, do not take this IR step and terminates IR for this RHS
+	}
+    }
+    n_IR++;
+  }
+
+  delete [] done;
+  delete [] rnorm;
+  delete [] rnormRHS;
+  delete [] ori_col_idx;
 }
 
 int* Ma57Solver::new_iworkn(int dim)

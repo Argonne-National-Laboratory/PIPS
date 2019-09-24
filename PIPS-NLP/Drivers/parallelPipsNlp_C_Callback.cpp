@@ -207,7 +207,7 @@ double PipsNlpProblemStructGetObjective(PipsNlpProblemStruct* prob)
 }
 
 extern "C"
-int PipsNlpProblemStructGetTotalVars(PipsNlpProblemStruct* prob)
+long int PipsNlpProblemStructGetTotalVars(PipsNlpProblemStruct* prob)
 {
   if(prob)
       return prob->nvars;
@@ -216,7 +216,7 @@ int PipsNlpProblemStructGetTotalVars(PipsNlpProblemStruct* prob)
 }
 
 extern "C"
-int PipsNlpProblemStructGetTotalCons(PipsNlpProblemStruct* prob)
+long int PipsNlpProblemStructGetTotalCons(PipsNlpProblemStruct* prob)
 {
   if(prob)
       return prob->ncons;

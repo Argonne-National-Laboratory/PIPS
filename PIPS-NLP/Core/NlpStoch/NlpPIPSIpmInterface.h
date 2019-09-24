@@ -27,7 +27,7 @@ class NlpPIPSIpmInterface
   int go(int addslack=0);
 
   double getObjective() const;
-  void computeProblemSize(long int&, long int&);
+  void computeProblemSize(int&, int&);
   double getFirstStageObjective() const;
 
 
@@ -139,6 +139,7 @@ int NlpPIPSIpmInterface<FORMULATION,IPMSOLVER,UPDATENLP>::go(int addSlack) {
         sum_icon += data->children[j]->getLocalmz();
       }
     }
+
     MPI_Allreduce(&sum_var, &total_var, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&sum_econ, &total_econ, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce(&sum_icon, &total_icon, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
