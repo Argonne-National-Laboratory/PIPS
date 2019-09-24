@@ -27,7 +27,7 @@ class NlpPIPSIpmInterface
   int go(int addslack=0);
 
   double getObjective() const;
-  void computeProblemSize(int&, int&);
+  void computeProblemSize(long int&, long int&);
   double getFirstStageObjective() const;
 
 
