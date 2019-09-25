@@ -89,7 +89,6 @@ Data* StochPresolver::presolve()
  
       presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
-      presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
    }
 
@@ -101,7 +100,7 @@ Data* StochPresolver::presolve()
    presolverCleanup.countRowsCols();
    assert( presData.getPresProb().isRootNodeInSync() );
 
-   // exit(1);
+   exit(1);
 
    // todo : no idea how to postsolve this
 
@@ -127,6 +126,5 @@ Data* StochPresolver::presolve()
    // todo : verify presolver and postsolver have same amount of deleted rows and cols
 
    assert( finalPresData->isRootNodeInSync() );
-   // exit(0);
    return finalPresData;
 }
