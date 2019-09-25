@@ -21,15 +21,15 @@ class QpGenStochLinsysLeaf;
 class QpGenStoch : public QpGen {
  protected:
   int m_blocks;
-  
+
   int nnzQ, nnzA, nnzC;
-  
+
  public:
   QpGenStoch( StochInputTree* );
  protected:
   QpGenStoch( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ );
   QpGenStoch();
-  
+
  public:
 
   virtual ~QpGenStoch();
@@ -53,11 +53,10 @@ class QpGenStoch : public QpGen {
 					      OoqpVector* dd,OoqpVector* dq,
 					      OoqpVector* nomegaInv, OoqpVector* rhs) = 0;
 
-  virtual QpGenStochLinsysLeaf* newLinsysLeaf();
   virtual QpGenStochLinsysLeaf* newLinsysLeaf(QpGenStochData* prob,
 					      OoqpVector* dd,OoqpVector* dq,
 					      OoqpVector* nomegaInv, OoqpVector* rhs);
-  
+
 
   StochTree* tree;
   QpGenStochData * data;
@@ -68,7 +67,7 @@ class QpGenStoch : public QpGen {
 
   QpGenResiduals2 *resid;
   vector<QpGenStochVars*> registeredVars;
- 
+
   QpGenStochLinsys* linsys;
 
   StochIterateResourcesMonitor iterTmMonitor;

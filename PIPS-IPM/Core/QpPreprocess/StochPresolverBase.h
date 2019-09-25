@@ -166,9 +166,10 @@ private:
    void setReductionPointers(SystemType system_type, int node);
 
 private:
-   void countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const;
-   void countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const;
-
+   void countRowsBlock(int& n_rows_total, int& n_rows_empty, int& n_rows_onesided, int& n_rows_boxed, int& n_rows_fixed, int& n_rows_singleton, 
+      SystemType system_type, BlockType block_type) const;
+   void countBoxedColumns( int& n_cols_total, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, int& n_cols_singleton, 
+      BlockType block_type) const;
 protected:
    void resetEqRhsAdaptionsLink(); // modelcleanup allreduceAndApply
    void resetIneqRhsAdaptionsLink(); // modelcleanup allreduceAndApply

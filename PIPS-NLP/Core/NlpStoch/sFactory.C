@@ -39,7 +39,7 @@
 
 #ifdef WITH_UMFPACK
 #include "UmfPackSolver.h"
-#endif 
+#endif
 
 
 #include <stdio.h>
@@ -61,7 +61,7 @@ sFactory::sFactory( stochasticInput& in, MPI_Comm comm)
 {
   tree = new sTreeImpl(in, comm);
 
-  //decide how the CPUs are assigned 
+  //decide how the CPUs are assigned
   tree->assignProcesses(comm);
   tree->loadLocalSizes();
 
@@ -71,7 +71,7 @@ sFactory::sFactory( stochasticInput& in, MPI_Comm comm)
   datarootname = in.datarootname;
 }
 
- 
+
 sFactory::sFactory( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
   : NlpGen( nx_, my_, mz_ ),
     nnzQ(nnzQ_), nnzA(nnzA_), nnzC(nnzC_),
@@ -94,7 +94,7 @@ sFactory::newLinsysLeaf()
   assert(false && "not supported");
   return NULL;
 }
-sLinsysLeaf* 
+sLinsysLeaf*
 sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* dd, OoqpVector* dq,
 			OoqpVector* nomegaInv, OoqpVector* rhs, OoqpVector* additiveDiag_)
@@ -105,29 +105,29 @@ sFactory::newLinsysLeaf(sData* prob,
 #endif
   if(0==gSymLinearSolver){
 #ifdef WITH_MA27
-	Ma27Solver* sMA27=NULL; 
+	Ma27Solver* sMA27=NULL;
 	resultSLin = new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, additiveDiag_, sMA27);
-#endif    
+#endif
   }else if(1==gSymLinearSolver){
 #ifdef WITH_MA57
-	Ma57Solver* sMA57=NULL; 
+	Ma57Solver* sMA57=NULL;
 	resultSLin = new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, additiveDiag_, sMA57);
-#endif   
+#endif
   }else if(2==gSymLinearSolver){
 #ifdef WITH_PARDISO
-	PardisoSolver* sPardiso=NULL; 
+	PardisoSolver* sPardiso=NULL;
 	resultSLin = new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, additiveDiag_, sPardiso);
 #endif
   }else if(3==gSymLinearSolver){
 #ifdef WITH_UMFPACK
-	UmfPackSolver* sUmfPack=NULL; 
+	UmfPackSolver* sUmfPack=NULL;
     resultSLin = new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, additiveDiag_, sUmfPack);
 #endif
   }else if(4==gSymLinearSolver){ //sMA57 as dummy
 #ifdef WITH_MA57
-//	Ma57Solver* sMA57=NULL; 
+//	Ma57Solver* sMA57=NULL;
 //	resultSLin = new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, additiveDiag_, sMA57);
-#endif 
+#endif
   }
   if(NULL==resultSLin) assert(0 && "PIPS was not compiled with the linear solver required");
 
@@ -150,18 +150,18 @@ void dumpaug(int nx, SparseGenMatrix &A, SparseGenMatrix &C) {
     A.getSize(my,nx_1);
     C.getSize(mz,nx_2);
     assert(nx_1 == nx_2);
-	
+
     int nnzA = A.numberOfNonZeros();
     int nnzC = C.numberOfNonZeros();
     cout << "augdump  nx=" << nx << endl;
     cout << "A: " << my << "x" << nx_1 << "   nnz=" << nnzA << endl
 	 << "C: " << mz << "x" << nx_1 << "   nnz=" << nnzC << endl;
-	
+
 	vector<double> eltsA(nnzA), eltsC(nnzC), elts(nnzA+nnzC);
 	vector<int> colptrA(nx_1+1),colptrC(nx_1+1), colptr(nx_1+1), rowidxA(nnzA), rowidxC(nnzC), rowidx(nnzA+nnzC);
 	A.getStorageRef().transpose(&colptrA[0],&rowidxA[0],&eltsA[0]);
 	C.getStorageRef().transpose(&colptrC[0],&rowidxC[0],&eltsC[0]);
-	
+
 	int nnz = 0;
 	for (int col = 0; col < nx_1; col++) {
 		colptr[col] = nnz;
@@ -215,7 +215,7 @@ Data * sFactory::makeData()
   StochVectorHandle        b( tree->createb() );
   REP("b");
   TIM;
-  StochGenMatrixHandle     Jineq( tree->createC() );  
+  StochGenMatrixHandle     Jineq( tree->createC() );
   REP("C");
   TIM;
   StochVectorHandle     clow( tree->createclow()  );
@@ -269,12 +269,12 @@ Data * sFactory::makeData()
   TIM;
   StochVectorHandle	 trialCIneqBody( tree->newDualZVector() );
   REP("trialCIneqBody");
-  
+
   TIM;
-  StochVectorHandle dampind_xL_v  ( tree->newPrimalVector()  ); 
+  StochVectorHandle dampind_xL_v  ( tree->newPrimalVector()  );
   REP("dampind_xL_v");
   TIM;
-  StochVectorHandle dampind_xU_w  ( tree->newPrimalVector()  );  
+  StochVectorHandle dampind_xU_w  ( tree->newPrimalVector()  );
   REP("dampind_xU_w");
   TIM;
   StochVectorHandle dampind_sL_t  ( tree->newDualZVector()   );
@@ -282,9 +282,6 @@ Data * sFactory::makeData()
   TIM;
   StochVectorHandle dampind_sU_u  ( tree->newDualZVector()   );
   REP("dampind_sU_u");
-  
-
-  
 
 #ifdef TIMING
   MPI_Barrier(tree->commWrkrs);
@@ -294,9 +291,9 @@ Data * sFactory::makeData()
   }
 #endif
 
-  
-  data = new sData( 0, tree, 
-		    grad, Q, 
+
+  data = new sData( 0, tree,
+		    grad, Q,
 		    xlow, ixlow, ixlow->numberOfNonzeros(),
 		    xupp, ixupp, ixupp->numberOfNonzeros(),
 		    Jeq, b,
@@ -309,7 +306,7 @@ Data * sFactory::makeData()
 	        dampind_sL_t, dampind_sU_u);
 
   data->datarootname = datarootname;
-  	
+
   return data;
 }
 
@@ -330,7 +327,7 @@ Data * sFactory::makeDataMulti()
   StochVectorHandle        b( tree->createb() );
   REP("b");
   TIM;
-  StochGenMatrixHandle     Jineq( tree->createC() );  
+  StochGenMatrixHandle     Jineq( tree->createC() );
   REP("C");
   TIM;
   StochVectorHandle     clow( tree->createclow()  );
@@ -384,12 +381,12 @@ Data * sFactory::makeDataMulti()
   TIM;
   StochVectorHandle	 trialCIneqBody( tree->newDualZVector() );
   REP("trialCIneqBody");
-  
+
   TIM;
-  StochVectorHandle dampind_xL_v  ( tree->newPrimalVector()  ); 
+  StochVectorHandle dampind_xL_v  ( tree->newPrimalVector()  );
   REP("dampind_xL_v");
   TIM;
-  StochVectorHandle dampind_xU_w  ( tree->newPrimalVector()  );  
+  StochVectorHandle dampind_xU_w  ( tree->newPrimalVector()  );
   REP("dampind_xU_w");
   TIM;
   StochVectorHandle dampind_sL_t  ( tree->newDualZVector()   );
@@ -397,9 +394,9 @@ Data * sFactory::makeDataMulti()
   TIM;
   StochVectorHandle dampind_sU_u  ( tree->newDualZVector()   );
   REP("dampind_sU_u");
-  
 
-  
+
+
 
 #ifdef TIMING
   MPI_Barrier(tree->commWrkrs);
@@ -409,9 +406,9 @@ Data * sFactory::makeDataMulti()
   }
 #endif
 
-  
-  data = new sData( 1, tree, 
-		    grad, Q, 
+
+  data = new sData( 1, tree,
+		    grad, Q,
 		    xlow, ixlow, ixlow->numberOfNonzeros(),
 		    xupp, ixupp, ixupp->numberOfNonzeros(),
 		    Jeq, b,
@@ -424,7 +421,7 @@ Data * sFactory::makeDataMulti()
 	        dampind_sL_t, dampind_sU_u);
 
   data->datarootname = datarootname;
-  	
+
   return data;
 }
 
@@ -434,8 +431,8 @@ Data * sFactory::makeData(NlpInfo *updateNlp)
   data = dynamic_cast<sData*> (makeData());
 
   data->SetInputNlpPara(updateNlp);
- 
-  data->inputNlp = updateNlp; 
+
+  data->inputNlp = updateNlp;
 
   return data;
 }
@@ -450,7 +447,7 @@ Variables* sFactory::makeVariables( Data * prob_in )
   OoqpVectorHandle y      = OoqpVectorHandle( tree->newDualYVector() );
   OoqpVectorHandle z      = OoqpVectorHandle( tree->newDualZVector() );
 
-  OoqpVectorHandle v      ; 
+  OoqpVectorHandle v      ;
   OoqpVectorHandle gamma  ;
   OoqpVectorHandle w      ;
   OoqpVectorHandle phi    ;
@@ -461,50 +458,50 @@ Variables* sFactory::makeVariables( Data * prob_in )
 
 
 
-  if ( prob->nxlow > 0 ) { 
-    v     = OoqpVectorHandle( tree->newPrimalVector() ); 
+  if ( prob->nxlow > 0 ) {
+    v     = OoqpVectorHandle( tree->newPrimalVector() );
     gamma  = OoqpVectorHandle( tree->newPrimalVector() );
   }else{
-	v 	= OoqpVectorHandle( tree->newPrimalVectorEmpty() ); 
+	v 	= OoqpVectorHandle( tree->newPrimalVectorEmpty() );
 	gamma  = OoqpVectorHandle( tree->newPrimalVectorEmpty() );
   }
-  if ( prob->nxupp > 0 ) { 
-    w     = OoqpVectorHandle( tree->newPrimalVector() ); 
+  if ( prob->nxupp > 0 ) {
+    w     = OoqpVectorHandle( tree->newPrimalVector() );
     phi  = OoqpVectorHandle( tree->newPrimalVector() );
   }else{
-	w 	= OoqpVectorHandle( tree->newPrimalVectorEmpty() ); 
+	w 	= OoqpVectorHandle( tree->newPrimalVectorEmpty() );
 	phi  = OoqpVectorHandle( tree->newPrimalVectorEmpty() );
   }
-  if ( prob->mclow > 0 ) { 
-    t     = OoqpVectorHandle( tree->newDualZVector() ); 
+  if ( prob->mclow > 0 ) {
+    t     = OoqpVectorHandle( tree->newDualZVector() );
     lambda  = OoqpVectorHandle( tree->newDualZVector() );
   }else{
-	t	  = OoqpVectorHandle( tree->newDualZVectorEmpty() ); 
+	t	  = OoqpVectorHandle( tree->newDualZVectorEmpty() );
 	lambda  = OoqpVectorHandle( tree->newDualZVectorEmpty() );
-  }  
-  if ( prob->mcupp > 0 ) { 
-    u     = OoqpVectorHandle( tree->newDualZVector() ); 
+  }
+  if ( prob->mcupp > 0 ) {
+    u     = OoqpVectorHandle( tree->newDualZVector() );
     pi  = OoqpVectorHandle( tree->newDualZVector() );
   }else{
-	u 	= OoqpVectorHandle( tree->newDualZVectorEmpty() ); 
+	u 	= OoqpVectorHandle( tree->newDualZVectorEmpty() );
 	pi  = OoqpVectorHandle( tree->newDualZVectorEmpty() );
   }
-  
+
   // OoqpVector * s      = tree->newDualZVector();
   // OoqpVector * y      = tree->newDualYVector();
   // OoqpVector * z      = tree->newDualZVector();
-  // OoqpVector * v      = tree->newPrimalVector(); 
+  // OoqpVector * v      = tree->newPrimalVector();
   // OoqpVector * gamma  = tree->newPrimalVector();
-  // OoqpVector * w      = tree->newPrimalVector(); 
+  // OoqpVector * w      = tree->newPrimalVector();
   // OoqpVector * phi    = tree->newPrimalVector();
   // OoqpVector * t      = tree->newDualZVector();
   // OoqpVector * lambda = tree->newDualZVector();
-  // OoqpVector * u      = tree->newDualZVector(); 
+  // OoqpVector * u      = tree->newDualZVector();
   // OoqpVector * pi     = tree->newDualZVector();
 
   sVars* vars = new sVars( tree, x, s, y, z,
 			   v, gamma, w, phi,
-			   t, lambda, u, pi, 
+			   t, lambda, u, pi,
 			   prob->ixlow, prob->ixlow->numberOfNonzeros(),
 			   prob->ixupp, prob->ixupp->numberOfNonzeros(),
 			   prob->iclow, prob->iclow->numberOfNonzeros(),
@@ -517,21 +514,21 @@ Variables* sFactory::makeVariables( Data * prob_in )
 Residuals* sFactory::makeResiduals( Data * prob_in )
 {
   sData* prob = dynamic_cast<sData*>(prob_in);
-  resid =  new sResiduals(tree, 
+  resid =  new sResiduals(tree,
 			  prob->ixlow, prob->ixupp,
 			  prob->iclow, prob->icupp);
-  return resid; 
+  return resid;
 }
 
 
 
 LinearSystem* sFactory::makeLinsys( Data * prob_in )
-{  
+{
   linsys = NULL;
   linsys = newLinsysRoot();
 
   assert(linsys);
-  return linsys; 
+  return linsys;
 }
 
 void sFactory::joinRHS( OoqpVector& rhs_in,  OoqpVector& rhs1_in,
@@ -551,13 +548,13 @@ void sFactory::joinRHSXSYZ( OoqpVector& rhs_in,  OoqpVector& rhs1_in,
 		  OoqpVector& rhs2_in, OoqpVector& rhs3_in, OoqpVector& rhs4_in )
 {
   assert(0 && "not implemented here");
-}		  
+}
 
-void sFactory::separateVarsXSYZ( OoqpVector& x_in, OoqpVector& s_in, 
+void sFactory::separateVarsXSYZ( OoqpVector& x_in, OoqpVector& s_in,
 		  OoqpVector& y_in, OoqpVector& z_in, OoqpVector& vars_in)
 {
   assert(0 && "not implemented here");
-}		  
+}
 
 
 void sFactory::iterateStarted()
@@ -574,12 +571,12 @@ void sFactory::iterateEnded()
   if(tree->balanceLoad()) {
     // balance needed
     data->sync();
-      
+
     for(size_t i=0; i<registeredVars.size(); i++)
       registeredVars[i]->sync();
-    
+
     resid->sync();
-    
+
     linsys->sync();
 
     printf("Should not get here! OMG OMG OMG\n");
@@ -597,4 +594,3 @@ void sFactory::iterateEnded()
 #endif
   }
 }
-

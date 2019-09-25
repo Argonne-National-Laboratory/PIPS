@@ -65,6 +65,8 @@ class PardisoIndefSolver : public DoubleLinearSolver
       void diagonalChanged(int idiag, int extent) override;
       void matrixChanged() override;
       void matrixRebuild( DoubleMatrix& matrixNew ) override;
+
+      using DoubleLinearSolver::solve;
       void solve ( OoqpVector& vec ) override;
       void solve ( GenMatrix& vec ) override;
       virtual ~PardisoIndefSolver();

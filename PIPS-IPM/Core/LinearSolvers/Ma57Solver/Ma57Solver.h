@@ -10,11 +10,12 @@
 #include "SparseStorageHandle.h"
 #include "OoqpVectorHandle.h"
 #include "SparseStorage.h"
+#include "pipsport.h"
 
 
 #ifndef FNAME
 #ifndef __bg__
-#define FNAME(f) f ## _ 
+#define FNAME(f) f ## _
 #else
 #define FNAME(f) f // no underscores for fortran names on bgp
 #endif
@@ -24,7 +25,7 @@
 extern "C" {
   void FNAME(ma57id)( double cntl[],  int icntl[] );
 
-  void FNAME(ma57ad)( int * n,        int * ne,       int irn[],     
+  void FNAME(ma57ad)( int * n,        int * ne,       int irn[],
 		int jcn[],      int * lkeep,    int keep[],
 		int iwork[],    int icntl[],    int info[],
 		double rinfo[] );
@@ -54,7 +55,7 @@ extern "C" {
 
 /** implements the linear solver class using the HSL MA57 solver
  *
- * @ingroup LinearSolvers 
+ * @ingroup LinearSolvers
  */
 class Ma57Solver : public DoubleLinearSolver {
 private:
@@ -134,11 +135,12 @@ protected:
 public:
   /** sets mStorage to refer to the argument sgm */
   Ma57Solver( SparseSymMatrix * sgm );
-  
+
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();
-  virtual void solve( OoqpVector& rhs );
-  virtual void solve( GenMatrix& rhs);
+  using DoubleLinearSolver::solve;
+  void solve( OoqpVector& rhs ) override;
+  void solve( GenMatrix& rhs) override;
 
   //virtual void Lsolve  ( OoqpVector& x );
   //virtual void Dsolve  ( OoqpVector& x );
@@ -147,7 +149,7 @@ public:
  private:
   void solve(int solveType, OoqpVector& rhs);
 
-  int* iworkn, niworkn;  
+  int* iworkn, niworkn;
   int* new_iworkn(int dim);
 
   double* dworkn; int ndworkn;
@@ -159,7 +161,7 @@ public:
 
   /** set the Pivoting Threshold parameter in the MA27 data structures
    *  to the current value of kThresholdPivoting */
-  double setThresholdPivoting() { return cntl[0] = kThresholdPivoting; }  
+  double setThresholdPivoting() { return cntl[0] = kThresholdPivoting; }
 
   /** destructor */
   virtual ~Ma57Solver();
