@@ -1542,59 +1542,82 @@ bool StochPresolverBase::verifyNnzcounters()
 
 void StochPresolverBase::countRowsCols()// method is const but changes pointers
 {
-   assert( static_cast<int>(presData.nRowElemsC->children.size()) == nChildren);
-   assert( presData.nRowElemsA->children.size() == presData.nRowElemsC->children.size());
-   assert( static_cast<int>(dynamic_cast<StochVector&>(*(presProb->icupp)).children.size()) == nChildren);
+   int my_rank;
+   bool distributed;
+   getRankDistributed( MPI_COMM_WORLD, my_rank, distributed );
 
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
+   int zero_dummy = 0; 
 
+   int n_rows_empty_eq = 0;
+   int n_rows_empty_ineq = 0;
    int n_rows_eq = 0;
-   int n_rows_eq_linking = 0;
    int n_rows_ineq = 0;
-   int n_rows_ineq_linking = 0;
-   int n_fixed_rows = 0;
-   int n_ranged_rows = 0;
-   int n_singleton_rows_eq = 0;
-   int n_singleton_rows_ineq = 0;
+
+   int n_rows_fixed_eq = 0;
+   int n_rows_fixed_ineq = 0;
+   int n_rows_boxed_ineq = 0;
+   int n_rows_onsided_ineq = 0;
+
+   int n_rows_singleton_eq = 0;
+   int n_rows_singleton_ineq = 0;
+   
    int n_cols = 0;
-   int n_boxed_cols = 0;
-   int n_onesided_cols = 0;
-   int n_free_cols = 0;
-   int n_singleton_cols = 0;
+   int n_cols_empty = 0;
+   int n_cols_free = 0;
+   int n_cols_onesided = 0;
+   int n_cols_boxed = 0;
+   int n_cols_singleton = 0;
 
-   /* root nodes of equality and inequality system - linking and non linking */
-   if( myRank == 0 )
+   /* root nodes of equality and inequality system - linking varaiables and linking constraints */
+   if( my_rank == 0 )
    {
+
+      int n_rows_linking_eq = 0;
+      int n_rows_linking_ineq = 0;
+      int n_rows_empty_linking_eq = 0;
+      int n_rows_empty_linking_ineq = 0;
+      int n_rows_singleton_linking_eq = 0;
+      int n_rows_singleton_linking_ineq = 0;
+
       updatePointersForCurrentNode(-1, EQUALITY_SYSTEM);
+      
+      countRowsBlock(n_rows_eq, n_rows_empty_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_eq, EQUALITY_SYSTEM, LINKING_VARS_BLOCK);
+      assert( n_rows_eq - n_rows_empty_eq == n_rows_fixed_eq );
+      countRowsBlock(n_rows_linking_eq, n_rows_empty_linking_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_linking_eq, EQUALITY_SYSTEM, 
+         LINKING_CONS_BLOCK); 
 
-      int n_rows_linking_ranged = 0;
-      int n_rows_eq_linking_singleton = 0;
-      int n_rows_ineq_linking_singleton = 0;
-
-      countRowsBlock(n_rows_eq, n_ranged_rows, n_fixed_rows, n_singleton_rows_eq, EQUALITY_SYSTEM, LINKING_VARS_BLOCK);
-      countRowsBlock(n_rows_eq_linking, n_rows_linking_ranged, n_fixed_rows, n_rows_eq_linking_singleton, EQUALITY_SYSTEM, LINKING_CONS_BLOCK);
-      n_singleton_rows_eq += n_rows_eq_linking_singleton;
-      assert(n_rows_linking_ranged == 0);
+      assert( zero_dummy == 0 );
 
       updatePointersForCurrentNode(-1, INEQUALITY_SYSTEM);
+      countRowsBlock(n_rows_ineq, n_rows_empty_ineq, n_rows_onsided_ineq, n_rows_boxed_ineq, n_rows_fixed_ineq, n_rows_singleton_ineq, INEQUALITY_SYSTEM,
+         LINKING_VARS_BLOCK);
+      countRowsBlock(n_rows_linking_ineq, n_rows_empty_linking_ineq, n_rows_onsided_ineq, n_rows_boxed_ineq, n_rows_fixed_ineq, n_rows_singleton_linking_ineq,
+         INEQUALITY_SYSTEM, LINKING_CONS_BLOCK);
 
-      countRowsBlock(n_rows_ineq, n_ranged_rows, n_fixed_rows, n_singleton_rows_ineq, INEQUALITY_SYSTEM, LINKING_VARS_BLOCK);
-      countRowsBlock(n_rows_ineq_linking, n_rows_linking_ranged, n_fixed_rows, n_rows_ineq_linking_singleton, INEQUALITY_SYSTEM, LINKING_CONS_BLOCK);
-      n_singleton_rows_ineq += n_rows_ineq_linking_singleton;
-      n_ranged_rows += n_rows_linking_ranged;
+      countBoxedColumns(n_cols, n_cols_empty, n_cols_free, n_cols_onesided, n_cols_boxed, n_cols_singleton, LINKING_VARS_BLOCK);
 
-      countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, LINKING_VARS_BLOCK);
+      assert( n_cols - n_cols_empty == n_cols_free + n_cols_onesided + n_cols_boxed);
 
-      std::cout << "#linking_vars:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
-            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
+      std::cout << "#linking_vars:\t\t" << n_cols << "\t(#empty: n_cols_empty " << n_cols_empty << ", #singleton: " << n_cols_singleton << 
+         ", #free: " << n_cols_free << ", #onesided: " << n_cols_onesided << ", #boxed: " << n_cols_boxed << ")" << std::endl;
 
-      std::cout << "#rows B0:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
-      std::cout << "#rows Bl_0:\t" << n_rows_eq_linking << "\t(#singleton: " << n_rows_eq_linking_singleton << ")" << std::endl;
-      std::cout << "#rows D0:\t" << n_rows_ineq << "\t(#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
-      std::cout << "#rows Dl_0:\t" << n_rows_ineq_linking << "\t(#singleton: " << n_rows_ineq_linking_singleton << ", #ranged: "
-            << n_rows_linking_ranged << ", #fixed: " << n_fixed_rows << ")" << std::endl;
+      std::cout << "#rows B0:\t\t" << n_rows_eq << "\t(#empty: n_rows_empty " << n_rows_empty_eq << ", #singleton: " << n_rows_singleton_eq << ")" << std::endl;
+      std::cout << "#rows Bl_0:\t\t" << n_rows_linking_eq << "\t(#empty: n_rows_empty " << n_rows_empty_linking_eq << ", #singleton: " <<
+         n_rows_singleton_linking_eq << ")" << std::endl;
+      std::cout << "#rows D0:\t\t" << n_rows_ineq << "\t(#empty: n_rows_empty " << n_rows_empty_ineq << ", #singleton: " << n_rows_singleton_ineq << ")" << std::endl;
+      std::cout << "#rows Dl_0:\t\t" << n_rows_linking_ineq << "\t(#empty: n_rows_empty " << n_rows_empty_linking_ineq << ", #singleton: " << 
+         n_rows_singleton_linking_ineq << ")" << std::endl;
+
+      n_rows_eq += n_rows_linking_eq;
+      n_rows_empty_eq += n_rows_empty_linking_eq;
+      n_rows_singleton_eq += n_rows_singleton_linking_eq;
+      
+      n_rows_ineq += n_rows_linking_ineq;
+      n_rows_empty_ineq += n_rows_empty_linking_ineq;
+      n_rows_singleton_ineq += n_rows_singleton_linking_ineq;
+
+      assert( n_rows_eq - n_rows_empty_eq == n_rows_fixed_eq );
+      assert( n_rows_ineq - n_rows_empty_ineq == n_rows_onsided_ineq + n_rows_boxed_ineq + n_rows_fixed_ineq );
    }
 
    /* child nodes in both systems */
@@ -1603,219 +1626,190 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       assert( (nodeIsDummy( node, EQUALITY_SYSTEM) && nodeIsDummy( node, INEQUALITY_SYSTEM)) ||
             (!nodeIsDummy( node, EQUALITY_SYSTEM) && !nodeIsDummy( node, INEQUALITY_SYSTEM) ));
 
+      if( nodeIsDummy( node, EQUALITY_SYSTEM) )
+         continue;
+
       /* equality system */
-      if(!nodeIsDummy( node, EQUALITY_SYSTEM))
-      {
-         updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
-         countRowsBlock(n_rows_eq, n_ranged_rows, n_fixed_rows, n_singleton_rows_eq, EQUALITY_SYSTEM, CHILD_BLOCK);
-      }
+      updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+      countRowsBlock(n_rows_eq, n_rows_empty_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_eq, EQUALITY_SYSTEM, CHILD_BLOCK);
+      assert( zero_dummy == 0 );
+      assert( n_rows_eq - n_rows_empty_eq == n_rows_fixed_eq );
 
       /* inequality system */
-      if( !nodeIsDummy( node, INEQUALITY_SYSTEM) )
-      {
-         updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
-         countRowsBlock(n_rows_ineq, n_ranged_rows, n_fixed_rows, n_singleton_rows_ineq, INEQUALITY_SYSTEM, CHILD_BLOCK);
+      updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
+      countRowsBlock(n_rows_ineq, n_rows_empty_ineq, n_rows_onsided_ineq, n_rows_boxed_ineq, n_rows_fixed_ineq, n_rows_singleton_ineq, INEQUALITY_SYSTEM, 
+         CHILD_BLOCK);
+      assert( n_rows_ineq - n_rows_empty_ineq == n_rows_onsided_ineq + n_rows_boxed_ineq + n_rows_fixed_ineq );
 
-         countBoxedColumns( n_boxed_cols, n_cols, n_free_cols, n_onesided_cols, n_singleton_cols, CHILD_BLOCK);
-      }
+      countBoxedColumns(n_cols, n_cols_empty, n_cols_free, n_cols_onesided, n_cols_boxed, n_cols_singleton, CHILD_BLOCK);
+      assert( n_cols - n_cols_empty == n_cols_free + n_cols_onesided + n_cols_boxed);
    }
 
 #if 0//TIMING // TODO
    // count how many linking rows do not really link two blocks:
-   if( hasLinking(EQUALITY_SYSTEM) )
-   {
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
-      int* rowHasEntryInBlocks = new int[currNnzRow->n];
-      for( int i = 0; i < currNnzRow->n; i++ )
-         rowHasEntryInBlocks[i] = 0;
-      for( size_t it = 0; it < presData.nRowElemsA->children.size(); it++)
-      {
-         if( !nodeIsDummy( it, EQUALITY_SYSTEM))
-         {
-//            setCPBlmatsChild(presProb->A, (int)it); // todo
-            for( int i = 0; i < currNnzRow->n; i++ )
-            {
-               if( currNnzRow->elements()[i] != 0.0 )
-                  if( currBlmat->rowptr[i].start != currBlmat->rowptr[i].end)
-                     rowHasEntryInBlocks[i]++;
-            }
-         }
-         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vecl);
-
-      }
-      MPI_Allreduce(MPI_IN_PLACE, rowHasEntryInBlocks, currNnzRow->n, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-      int linkRows1Blocks = 0;
-      int linkRows2Blocks = 0;
-      for( int i = 0; i < currNnzRow->n; i++ )
-      {
-         if(rowHasEntryInBlocks[i] == 1)
-            linkRows1Blocks++;
-         if(rowHasEntryInBlocks[i] == 2)
-            linkRows2Blocks++;
-      }
-      if( myRank == 0 )
-      {
-         cout<<"1-link rows in A: "<<linkRows1Blocks<<endl;
-         cout<<"2-link rows in A: "<<linkRows2Blocks<<endl;
-      }
-   }
-   if( hasLinking(INEQUALITY_SYSTEM) )
-   {
-      currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
-      int* rowHasEntryInBlocks = new int[currNnzRow->n];
-      for( int i = 0; i < currNnzRow->n; i++ )
-         rowHasEntryInBlocks[i] = 0;
-      for( size_t it = 0; it < presData.nRowElemsC->children.size(); it++)
-      {
-         if( !nodeIsDummy( it, INEQUALITY_SYSTEM))
-         {
-//            setCPBlmatsChild(presProb->C, (int)it); // todo
-            for( int i = 0; i < currNnzRow->n; i++ )
-            {
-               if( currNnzRow->elements()[i] != 0.0 )
-                  if( currBlmat->rowptr[i].start != currBlmat->rowptr[i].end)
-                     rowHasEntryInBlocks[i]++;
-            }
-         }
-         currNnzRow = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vecl);
-      }
-
-      MPI_Allreduce(MPI_IN_PLACE, rowHasEntryInBlocks, currNnzRow->n, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
-      int linkRows1Blocks = 0;
-      int linkRows2Blocks = 0;
-
-      for( int i = 0; i < currNnzRow->n; i++ )
-      {
-         if(rowHasEntryInBlocks[i] == 1)
-            linkRows1Blocks++;
-         if(rowHasEntryInBlocks[i] == 2)
-            linkRows2Blocks++;
-      }
-      if( myRank == 0 )
-      {
-         cout<<"1-link rows in C: "<<linkRows1Blocks<<endl;
-         cout<<"2-link rows in C: "<<linkRows2Blocks<<endl;
-      }
-   }
 #endif
 
    /* sync data */
-   if( iAmDistrib )
+   if( distributed )
    {
-      int* count = new int[9];
+      int* count = new int[15];
+
       count[0] = n_rows_eq;
       count[1] = n_rows_ineq;
-      count[2] = n_fixed_rows;
-      count[3] = n_ranged_rows;
-      count[4] = n_singleton_rows_eq;
-      count[5] = n_singleton_rows_ineq;
-      count[6] = n_cols;
-      count[7] = n_boxed_cols;
-      count[8] = n_free_cols;
+      count[2] = n_rows_empty_eq;
+      count[3] = n_rows_empty_ineq;
+      count[4] = n_rows_fixed_ineq;
+      count[5] = n_rows_boxed_ineq;
+      count[6] = n_rows_onsided_ineq;
+      count[7] = n_rows_singleton_eq;
+      count[8] = n_rows_singleton_ineq;
+      count[9] = n_cols;
+      count[10] = n_cols_empty;
+      count[11] = n_cols_free;
+      count[12] = n_cols_onesided;
+      count[13] = n_cols_boxed;
+      count[14] = n_cols_singleton;
 
-      MPI_Allreduce(MPI_IN_PLACE, count, 9, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, count, 15, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+
       n_rows_eq = count[0];
       n_rows_ineq = count[1];
-      n_fixed_rows = count[2];
-      n_ranged_rows = count[3];
-      n_singleton_rows_eq = count[4];
-      n_singleton_rows_ineq = count[5];
-      n_cols = count[6];
-      n_boxed_cols = count[7];
-      n_free_cols = count[8];
-
+      n_rows_empty_eq = count[2];
+      n_rows_empty_ineq = count[3];
+      n_rows_fixed_ineq = count[4];
+      n_rows_boxed_ineq = count[5];
+      n_rows_onsided_ineq = count[6];
+      n_rows_singleton_eq = count[7];
+      n_rows_singleton_ineq = count[8];
+      n_cols = count[9];
+      n_cols_empty = count[10];
+      n_cols_free = count[11];
+      n_cols_onesided = count[12];
+      n_cols_boxed = count[13];
+      n_cols_singleton = count[14];
+      
       delete[] count;
    }
+   n_rows_fixed_eq = n_rows_eq - n_rows_empty_eq; 
 
-   if( myRank == 0 )
+   if( my_rank == 0 )
    {
-      std::cout << "#rows_total:\t" << n_rows_eq + n_rows_ineq << "\t(#fixed: " << n_fixed_rows << ", #ranged: " << n_ranged_rows << ", #singleton: " << n_singleton_rows_eq + n_singleton_rows_ineq<< ")" << std::endl;
-      std::cout << "#rows A:\t" << n_rows_eq << "\t(#singleton: " << n_singleton_rows_eq << ")" << std::endl;
-      std::cout << "#rows C:\t" << n_rows_ineq << "\t(#singleton: " << n_singleton_rows_ineq << ")" << std::endl;
-
-      std::cout << "#vars_total:\t" << n_cols << "\t(#singleton: " << n_singleton_cols << ", #free: " << n_free_cols << ", #onesided: "
-            << n_onesided_cols << ", #boxed: " << n_boxed_cols << ")" << std::endl;
+      std::cout << "#rows_total:\t\t" << n_rows_eq + n_rows_ineq << "\t(#empty: " << n_rows_empty_eq + n_rows_empty_ineq << ", #fixed: " << 
+         n_rows_fixed_eq + n_rows_fixed_ineq << ", #boxed: " << n_rows_boxed_ineq << ", #onesided: " << n_rows_onsided_ineq << ", #singleton: " << 
+         n_rows_singleton_eq + n_rows_singleton_ineq << ")" << std::endl;
+      std::cout << "#rows non-empty A:\t" << n_rows_eq - n_rows_empty_eq << "\t(#singleton: " << n_rows_singleton_eq << ")" << std::endl;
+      std::cout << "#rows non-empty C:\t" << n_rows_ineq - n_rows_empty_ineq << "\t(#singleton: " << n_rows_singleton_ineq << ")" << std::endl;
+      
+      std::cout << "#vars_total:\t\t" << n_cols << "\t(#empty: " << n_cols_empty << ", #free: " << n_cols_free << ", #onesided: " << n_cols_onesided << 
+         ", #boxed: " << n_cols_boxed << ", #singleton: " << n_cols_singleton << ")" << std::endl;
    }
 }
 
-void StochPresolverBase::countRowsBlock(int& n_rows, int& n_ranged_rows, int& n_fixed_rows, int& n_singleton_rows, SystemType system_type, BlockType block_type) const
+void StochPresolverBase::countRowsBlock(int& n_rows_total, int& n_rows_empty, int& n_rows_onesided, int& n_rows_boxed, int& n_rows_fixed, int& n_rows_singleton, 
+   SystemType system_type, BlockType block_type) const
 {
    if(block_type == LINKING_CONS_BLOCK)
       if( !hasLinking(system_type) )
          return;
 
-   SimpleVector* nnz_row = (block_type != LINKING_CONS_BLOCK) ? currNnzRow : currNnzRowLink;
-   SimpleVector* iclow = (block_type != LINKING_CONS_BLOCK) ? currIclow : currIclowLink;
-   SimpleVector* lhs = (block_type != LINKING_CONS_BLOCK) ? currIneqLhs : currIneqLhsLink;
-   SimpleVector* icupp = (block_type != LINKING_CONS_BLOCK) ? currIcupp : currIcuppLink;
-   SimpleVector* rhs = (block_type != LINKING_CONS_BLOCK) ? currIneqRhs : currIneqRhsLink;
-
+   const SimpleVector* nnz_row = (block_type != LINKING_CONS_BLOCK) ? currNnzRow : currNnzRowLink;
+   const SimpleVector* iclow = (block_type != LINKING_CONS_BLOCK) ? currIclow : currIclowLink;
+   const SimpleVector* lhs = (block_type != LINKING_CONS_BLOCK) ? currIneqLhs : currIneqLhsLink;
+   const SimpleVector* icupp = (block_type != LINKING_CONS_BLOCK) ? currIcupp : currIcuppLink;
+   const SimpleVector* rhs = (block_type != LINKING_CONS_BLOCK) ? currIneqRhs : currIneqRhsLink;
    if(system_type == EQUALITY_SYSTEM)
       rhs = (block_type != LINKING_CONS_BLOCK) ? currEqRhs : currEqRhsLink;
 
-   assert(nnz_row);
+#ifndef NDEBUG
    if(system_type == EQUALITY_SYSTEM)
    {
       assert(rhs); assert(lhs == NULL); assert(iclow == NULL); assert(icupp == NULL);
+      assert( nnz_row->n == rhs->n );
    }
    else
    {
-      assert(lhs); assert(rhs); assert(iclow); assert(icupp); assert( iclow->n == icupp->n );
+      assert(lhs); assert(rhs); assert(iclow); assert(icupp);
+      assert( lhs->n == rhs->n );
+      assert( iclow->n == icupp->n );
+      assert( lhs->n == nnz_row->n );
+      assert( iclow->n == nnz_row->n );
    }
+#endif
+
+   n_rows_total += rhs->n;
 
    for(int i = 0; i < rhs->n; ++i)
    {
-      if(nnz_row->elements()[i] != 0.0)
+      if( (*nnz_row)[i] != 0.0)
       {
-         n_rows++;
-         if(nnz_row->elements()[i] == 1.0)
-            n_singleton_rows++;
+         if( (*nnz_row)[i] == 1.0)
+            ++n_rows_singleton;
 
          if(system_type == EQUALITY_SYSTEM)
          {
-            n_fixed_rows++;
+            /* row with rhs = lhs */
+            ++n_rows_fixed;
          }
          else
          {
-            if( iclow->elements()[i] != 0.0 && icupp->elements()[i] != 0.0 )
+            if( (*iclow)[i] != 0.0 && (*icupp)[i] != 0.0 )
             {
-               if( PIPSisEQ(lhs->elements()[i], rhs->elements()[i]))
-                  n_fixed_rows++;
+               if( PIPSisEQ( (*lhs)[i], (*rhs)[i]) )
+                  ++n_rows_fixed;
                else
-                  n_ranged_rows++;
+                  ++n_rows_boxed;
             }
             else
-               assert(iclow->elements()[i] != 0.0 || icupp->elements()[i] != 0.0);
+            {
+               assert( (*iclow)[i] != 0.0 || (*icupp)[i] != 0.0);
+               ++n_rows_onesided;
+            }
          }
+      }
+      else
+      {
+         ++n_rows_empty;
       }
    }
 }
 
-void StochPresolverBase::countBoxedColumns(int& nBoxCols, int& nColsTotal, int& nFreeVars, int& nOnesidedVars, int& nSingletonVars, BlockType block_type) const
+void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, 
+   int& n_cols_singleton, BlockType block_type) const
 {
-   SimpleVector* ixlow = (block_type == LINKING_VARS_BLOCK) ? currIxlowParent : currIxlowChild;
-   SimpleVector* ixupp = (block_type == LINKING_VARS_BLOCK) ? currIxuppParent : currIxuppChild;
-   SimpleVector* curr_nnz = (block_type == LINKING_VARS_BLOCK) ? currNnzColParent : currNnzColChild;
+   const SimpleVector& ixlow = (block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
+   const SimpleVector& ixupp = (block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
+   const SimpleVector& curr_nnz = (block_type == LINKING_VARS_BLOCK) ? *currNnzColParent : *currNnzColChild;
 
-   assert(curr_nnz); assert(ixlow); assert(ixupp); assert( ixlow->n == ixupp->n );
-   for( int i = 0; i < ixlow->n; i++ )
+#ifndef NDEBUG
+   const SimpleVector& xupp = (block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
+   const SimpleVector& xlow = (block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
+   assert( ixlow.n == ixupp.n );
+   assert( ixlow.n == xlow.n );
+   assert( xlow.n == xupp.n );
+   assert( ixlow.n == curr_nnz.n );
+#endif
+
+   n_cols_total += ixlow.n;
+
+   for( int i = 0; i < ixlow.n; i++ )
    {
-      if( curr_nnz->elements()[i] != 0.0 )
+      if( curr_nnz[i] != 0.0 )
       {
-         if(curr_nnz->elements()[i] == 1.0)
-            ++nSingletonVars;
-
-         nColsTotal++;
-
-         if( ixlow->elements()[i] != 0.0 && ixupp->elements()[i] != 0.0 )
-            nBoxCols++;
-         else if( ixlow->elements()[i] == 0.0 && ixupp->elements()[i] == 0.0)
-            nFreeVars++;
-         else
+         if( curr_nnz[i] == 1.0 )
          {
-            assert(ixlow->elements()[i] != 0.0 || ixupp->elements()[i] != 0.0);
-            ++nOnesidedVars;
+            ++n_cols_singleton;
          }
+
+         if( ixlow[i] != 0.0 && ixupp[i] != 0.0 )
+            ++n_cols_boxed;
+         else if( ixlow[i] == 0.0 && ixupp[i] == 0.0)
+            ++n_cols_free;
+         else
+            ++n_cols_onesided;
+      }
+      else
+      {
+         ++n_cols_empty;
       }
    }
 }
