@@ -86,9 +86,6 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
       presolverSR.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverColFix.applyPresolving();
  
       presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
@@ -103,8 +100,8 @@ Data* StochPresolver::presolve()
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
    assert( presData.getPresProb().isRootNodeInSync() );
-//      presData.presProb->writeToStreamDense(std::cout);
 
+   // exit(1);
 
    // todo : no idea how to postsolve this
 
