@@ -37,10 +37,11 @@ public:
 protected:
    void updatePointersForCurrentNode(int node, SystemType system_type);
 private:
-   void countRowsBlock(int& n_rows, int& n_rows_empty, int& n_rows_onesided, int& n_rows_boxed, int& n_rows_fixed, int& n_rows_singleton, SystemType system_type, 
+   void countRowsBlock(int& n_rows_total, int& n_rows_empty, int& n_rows_onesided, int& n_rows_boxed, int& n_rows_fixed, int& n_rows_singleton, SystemType system_type, 
       BlockType block_type) const; 
-   void countBoxedColumns( int& n_cols, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, int& n_cols_singleton,
-      const SimpleVector& ixlow_orig, const SimpleVector& xlow_orig, const SimpleVector& ixupp_orig, const SimpleVector& xupp_orig, BlockType block_type) const;
+   void countBoxedColumns( int& n_cols_total, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, int& n_cols_singleton, 
+      int& n_cols_orig_free, int& n_cols_orig_free_removed, const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig,
+      BlockType block_type) const;
 
    void setPointersMatrices(GenMatrixHandle mat, int node);
    void setPointersMatrixBoundsActivities(SystemType system_type, int node);
