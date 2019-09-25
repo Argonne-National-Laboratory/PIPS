@@ -84,11 +84,11 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      // presolverCleanup.applyPresolving();
-      // presolverSR.applyPresolving();
-      // presolverBS.applyPresolving();
+      presolverCleanup.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
-      // presolverCleanup.applyPresolving();
+      presolverCleanup.applyPresolving();
    }
 
    if( myRank == 0 )
@@ -102,7 +102,7 @@ Data* StochPresolver::presolve()
 //   finalPresData->writeToStreamDense(std::cout);
 
    assert( finalPresData->isRootNodeInSync() );
-   exit(1);
+   // exit(1);
 
    return finalPresData;
 }
