@@ -914,6 +914,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
 
                      // case two is basically case one
                      doNearlyParallelRowCase1(id1, id2, node);
+
                      // delete the inequality constraint id2 (which could be either it1 or it2 now):
                      (swappedId1Id2) ?
                         presData.removeRedundantRow( EQUALITY_SYSTEM, node, id1, false) : 
@@ -924,7 +925,6 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                      if( !PIPSisEQ( (*norm_b)[id1], (*norm_b)[id2]) )
                         abortInfeasible(MPI_COMM_WORLD, "Found parallel equality rows with non-compatible right hand sides",
                            "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable"); 
-
                      // delete row2 in the original system:
                      presData.removeRedundantRow( EQUALITY_SYSTEM, node, id2, false);
                   }
@@ -1176,7 +1176,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
    const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
    const double s = (*norm_factorA)[rowId1] / (*norm_factorA)[rowId2];
    const double t = coeff_singleton1 / coeff_singleton2 / s;
-   const double d = ( (*norm_b)[rowId2] - (*norm_b)[rowId1])
+   const double d = ( (*norm_b)[rowId2] - (*norm_b)[rowId1] )
             * (*norm_factorA)[rowId2] / coeff_singleton2;
 
    if( singleColIdx1 != -1.0 )
@@ -1215,7 +1215,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
 
       // effectively tighten bounds of variable x_id1:
       BlockType block_type = LINKING_VARS_BLOCK;
-      if(singleColIdx1 > nA)
+      if( singleColIdx1 >= nA )
          block_type = CHILD_BLOCK;
 
       presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, block_type, rowId1, singleColIdx1 % nA, newxupp, newxlow);
@@ -1311,7 +1311,6 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
    const double t = coeff_singleton1 / coeff_singleton2 / s;
 
    adaptObjective( singleColIdx1, singleColIdx2, t, 0.0, it);
-
    return true;
 }
 

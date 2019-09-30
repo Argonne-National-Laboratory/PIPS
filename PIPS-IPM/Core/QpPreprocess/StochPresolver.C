@@ -86,10 +86,9 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
       presolverSR.applyPresolving();
- 
-      presolverBS.applyPresolving();
+      // presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
-      presolverColFix.applyPresolving();
+      // presolverColFix.applyPresolving();
    }
 
    // before the finalize call fix all empty rows and columns not yet fixed
@@ -100,7 +99,7 @@ Data* StochPresolver::presolve()
    presolverCleanup.countRowsCols();
    assert( presData.getPresProb().isRootNodeInSync() );
 
-   // exit(1);
+   exit(1);
 
    // todo : no idea how to postsolve this
 
@@ -126,5 +125,6 @@ Data* StochPresolver::presolve()
    // todo : verify presolver and postsolver have same amount of deleted rows and cols
 
    assert( finalPresData->isRootNodeInSync() );
+
    return finalPresData;
 }
