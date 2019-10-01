@@ -36,7 +36,7 @@ SparseGenMatrix::SparseGenMatrix( int rows, int cols, int nnz,
   : mStorageDynamic(NULL), m_Mt(NULL)
 {
   //cout << "SparseGenMatrix1  " << rows << " " << cols << " " << nnz << endl;
-  mStorage = SparseStorageHandle( new SparseStorage( rows, cols,nnz, 
+  mStorage = SparseStorageHandle( new SparseStorage( rows, cols,nnz,
 						     krowM, jcolM, M,
 						     deleteElts) );
 }
@@ -79,12 +79,12 @@ SparseGenMatrix* SparseGenMatrix::cloneFull(bool switchToDynamicStorage) const
    {
       assert(clone->m_Mt == NULL);
 
-      SparseStorage* storage_t = m_Mt->getStorage();
-      clone->m_Mt = new SparseGenMatrix(storage_t->m, storage_t->n, storage_t->len);
+      SparseStorage& storage_t = m_Mt->getStorageRef();
+      clone->m_Mt = new SparseGenMatrix(storage_t.m, storage_t.n, storage_t.len);
 
       SparseGenMatrix* clone_t = clone->m_Mt;
 
-      storage_t->copyFrom(clone_t->krowM(), clone_t->jcolM(), clone_t->M());
+      storage_t.copyFrom(clone_t->krowM(), clone_t->jcolM(), clone_t->M());
    }
 
    return clone;
@@ -104,7 +104,7 @@ void SparseGenMatrix::fromGetDense( int row, int col, double * A, int lda,
 {
   mStorage->fromGetDense( row, col, A, lda, rowExtent, colExtent );
 }
-  
+
 
 void SparseGenMatrix::fromGetSpRow( int row, int col,
 				    double A[], int lenA,
@@ -117,7 +117,7 @@ void SparseGenMatrix::fromGetSpRow( int row, int col,
 
 
 void SparseGenMatrix::putSparseTriple( int irow[], int len,
-					   int jcol[], double A[], 
+					   int jcol[], double A[],
 					   int& info )
 {
   mStorage->putSparseTriple( irow, len, jcol, A, info );
@@ -219,7 +219,7 @@ int SparseGenMatrix::numberOfNonZeros()
 }
 
 
-void SparseGenMatrix::symmetrize( int& info ) 
+void SparseGenMatrix::symmetrize( int& info )
 {
   mStorage->symmetrize( info );
   assert(m_Mt == NULL);
@@ -286,7 +286,7 @@ void SparseGenMatrix::mult ( double beta,  OoqpVector& y_in,
 {
   SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
-  
+
   assert( x.n == mStorage->n && y.n == mStorage->m );
 
   double *xv = 0, *yv = 0;
@@ -345,7 +345,7 @@ void SparseGenMatrix::transMult( double beta,  OoqpVector& y_in, int incy,
 {
   SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
-  
+
   assert(x.n>0 && y.n>0);
   assert(x.n>=incx*mStorage->m);
   assert(y.n>=incy*mStorage->n);
@@ -433,19 +433,19 @@ void SparseGenMatrix::matTransDMultMat(OoqpVector& d_, SymMatrix** res)
 
     //find the sparsity pattern of the product -> the buffers for result will be allocated
     int* krowMtM=NULL; int* jcolMtM=NULL; double* dMtM=NULL;
-    mStorage->matTransDSymbMultMat(&d[0], 
+    mStorage->matTransDSymbMultMat(&d[0],
 				   m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M(),
 				   &krowMtM, &jcolMtM, &dMtM);
 
     *res = new SparseSymMatrix(n, krowMtM[n], krowMtM, jcolMtM, dMtM, 1);
   }
 
-  assert(res); 
+  assert(res);
   assert(m_Mt);
 
   SparseSymMatrix* MtDM = dynamic_cast<SparseSymMatrix*>(*res);
 
-  mStorage->matTransDMultMat(&d[0], 
+  mStorage->matTransDMultMat(&d[0],
 			     m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M(),
 			     MtDM->krowM(), MtDM->jcolM(), MtDM->M());
 }
@@ -487,25 +487,25 @@ void SparseGenMatrix::matTransDinvMultMat(OoqpVector& d_, SymMatrix** res)
 
     //find the sparsity pattern of the product -> the buffers for result will be allocated
     int* krowMtM=NULL; int* jcolMtM=NULL; double* dMtM=NULL;
-    mStorage->matTransDSymbMultMat(&d[0], 
+    mStorage->matTransDSymbMultMat(&d[0],
 				   m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M(),
 				   &krowMtM, &jcolMtM, &dMtM);
 
     *res = new SparseSymMatrix(n, krowMtM[n], krowMtM, jcolMtM, dMtM, 1);
   }
 
-  assert(res); 
+  assert(res);
   assert(m_Mt);
 
   SparseSymMatrix* MtDM = dynamic_cast<SparseSymMatrix*>(*res);
 
-  mStorage->matTransDinvMultMat(&d[0], 
+  mStorage->matTransDinvMultMat(&d[0],
 			     m_Mt->krowM(), m_Mt->jcolM(), m_Mt->M(),
 			     MtDM->krowM(), MtDM->jcolM(), MtDM->M());
 }
 void SparseGenMatrix::matMultTrans(SymMatrix** res)
 {
-  int m=mStorage->m; int n=mStorage->n; 
+  int m=mStorage->m; int n=mStorage->n;
   int nnz=mStorage->numberOfNonZeros();
 
   SimpleVector d(n); d.setToConstant(1.0);
@@ -519,7 +519,7 @@ void SparseGenMatrix::matMultTrans(SymMatrix** res)
     //find the sparsity pattern of the product -> the buffers for result will be allocated
     int* krowMtM=NULL; int* jcolMtM=NULL; double* dMtM=NULL;
 
-    m_Mt->mStorage->matTransDSymbMultMat(&d[0], 
+    m_Mt->mStorage->matTransDSymbMultMat(&d[0],
 					 krowM(), jcolM(), M(),
 					 &krowMtM, &jcolMtM, &dMtM);
     *res = new SparseSymMatrix(m, krowMtM[m], krowMtM, jcolMtM, dMtM, 1);
@@ -788,4 +788,3 @@ void SparseGenMatrix::permuteCols(const std::vector<unsigned int>& permvec)
    if( m_Mt )
       m_Mt->mStorage->permuteRows(permvec);
 }
-

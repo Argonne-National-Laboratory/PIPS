@@ -41,7 +41,7 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
 
 PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 {
-  mStorage = DenseStorageHandle( dm->getStorage() );
+  mStorage = dm->getStorageHandle();
   mStorageSparse = NULL;
 
   assert(mStorage);
@@ -55,7 +55,7 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 {
   mStorage = NULL;
-  mStorageSparse = SparseStorageHandle( sm->getStorage() );
+  mStorageSparse = sm->getStorageHandle();
 
   assert(mStorageSparse);
 
@@ -377,9 +377,9 @@ void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrix_fortran)
    assert(!deleteCSRpointers);
    assert(matrix_fortran.getStorageRef().fortranIndexed());
 
-   ia = matrix_fortran.getStorage()->krowM;
-   ja = matrix_fortran.getStorage()->jcolM;
-   a = matrix_fortran.getStorage()->M;
+   ia = matrix_fortran.krowM();
+   ja = matrix_fortran.jcolM();
+   a = matrix_fortran.M();
 
    assert(ia[0] == 1);
 

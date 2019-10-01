@@ -78,8 +78,8 @@ StochSymMatrix::~StochSymMatrix()
 
 StochSymMatrix* StochSymMatrix::clone() const
 {
-   const int local_n = diag->getStorage()->n;
-   const int local_nnz = diag->getStorage()->len;
+   const int local_n = diag->getStorageRef().n;
+   const int local_nnz = diag->getStorageRef().len;
 
    StochSymMatrix* clone = new StochSymMatrix(id, n, local_n, local_nnz, mpiComm);
 

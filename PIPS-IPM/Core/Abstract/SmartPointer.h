@@ -9,23 +9,23 @@
  * @file SmartPointer.h
  *
  * A module for supporting automatic management of reference-counted objects.
- * 
+ *
  * @ingroup ReferenceCounting
  */
 #include <cassert>
-
+#include "pipsport.h"
 /**
  * A class whose instances act like pointers that manage their
  * reference count automatically.
  *
  * Use smart pointers when you wish to keep a reference to a instance of
  * a subclass of IotrRefCount. Do not use a smart pointer to refer to an
- * object passed in as a parameter to a routine, unless you intend to keep 
+ * object passed in as a parameter to a routine, unless you intend to keep
  * the reference after the routine has exited.
  *
  * Instances of this class are created by value. In other words definitions
  * such as @verbatim SmartPointer<T> t; @endverbatim
- * are encouraged, whereas pointers to objects of type SmartPointer<T> should 
+ * are encouraged, whereas pointers to objects of type SmartPointer<T> should
  * not be used.
  *
  * Method calls through a smart pointer look like calls to a regular pointer.
@@ -36,7 +36,7 @@
  *       void myMethod();
  * };
  * // ...
- * {    
+ * {
  *   SmartPointer<T> t;
  *    // ...
  *     t->myMethod();
@@ -79,13 +79,13 @@
  * be a "drop-in" replacement to traditional pointers when calling
  * routines.
  * @code
- * class T { // ... 
+ * class T { // ...
  * };
  * // ...
  * void myRoutine( T * t );
- * 
+ *
  * //...
- * { 
+ * {
  *     SmartPointer<T> t;
  *     // ...
  *     myRoutine t );
@@ -94,7 +94,7 @@
  * When returning pointers from a function, be sure to use SpAsPointer()
  * to obtain the traditional pointer to the object.
  * @code
- * class T { // ... 
+ * class T { // ...
  * };
  * // ...
  * T * myFunction( T * t );
@@ -104,14 +104,14 @@
  *     return SpAsPointer( t );
  * }
  * @endcode
- * @see IotrRefCount 
+ * @see IotrRefCount
  * @see ReferenceCounting
  * @ingroup ReferenceCounting */
 template <class T>
 class SmartPointer {
 public:
   /** Default constructor; creates a SmartPointer referring to nothing. */
-  SmartPointer() : obj(0) {};
+  SmartPointer() : obj(nullptr) {};
   //@{
   /** Copy constructor; creates a new smart pointer referring to the same
    *  object. Increments the reference count of the object.
@@ -144,9 +144,9 @@ public:
   {
     T * newobj = sp.ptr();
     if( this->obj ) IotrRelease( &this->obj );
-    
+
     this->obj = newobj;
-    
+
     return *this;
   };
 #ifdef HAVE_MEMBER_TEMPLATES
@@ -155,9 +155,9 @@ public:
   {
     S * ptrin = sp.ptr();
     if( this->obj ) IotrRelease( &this->obj );
-    
+
     this->obj = ptrin;
-    
+
     return *this;
   }
 #endif
@@ -173,10 +173,10 @@ public:
   /**
    * Send a message to, or access a data memeber of, the object
    * to which this is a reference. */
-  T * operator->() { 
+  T * operator->() {
     return obj;
   }
-  const T * operator->() const { 
+  const T * operator->() const {
     return obj;
   }
   //@}
@@ -193,7 +193,7 @@ public:
   static void bind( SmartPointer<T>& sp, T ** obj )
   {
     sp.obj = *obj;
-    *obj   = 0;
+    *obj   = nullptr;
   }
   /** Call SpReferTo() instead of this method; make a SmartPointer refer
    *  to the same object as a traditional pointer. */
@@ -201,9 +201,11 @@ public:
   {
     if( obj )    IotrAddRef( &obj );
     if( sp.obj ) IotrRelease( &sp.obj );
-    
+
     sp.obj = obj;
   }
+
+private:
   /** Call SpAsPointer() instead; return a traditional pointer to the
    *  underlying object.  */
   T * ptr() const
@@ -213,11 +215,17 @@ public:
     return obj;
   }
 
+public:
   /** returns pointer without increasing reference count; use with care!
    */
   T * ptr_unsave()
   {
     return obj;
+  }
+  
+  bool notNil() const
+  {
+    return obj != nullptr;
   }
 
   /** Allow EXPLICIT conversion from a (T*) to a SmartPointer to
@@ -225,7 +233,7 @@ public:
    *  subtle, unintended consequences. */
 #ifdef HAVE_EXPLICIT
   explicit
-#endif 
+#endif
 	SmartPointer( T * t ) { obj = t; }
 protected:
   /** a traditional pointer to the object being referenced. */
@@ -238,7 +246,7 @@ protected:
 template <class T>
 inline void SpNil( SmartPointer<T>& sp )
 {
-  T * t = 0;
+  T * t = nullptr;
   SmartPointer<T>::bind( sp, &t );
 }
 
@@ -250,20 +258,6 @@ template <class T>
 inline void SpReferTo( SmartPointer<T>& sp, T * obj )
 {
   SmartPointer<T>::referTo( sp, obj );
-}
-
-
-/** Call SpAsPointer instead; returns a traditional pointer to the
- *  underlying object. This pointer has its reference count
- *  incremented so that it will continue to exist after the
- *  SmartPointer goes out of scope. Use this method to return a
- *  pointer to the object, or to create a new traditional pointer
- *  reference to the object 
- * @ingroup ReferenceCounting */
-template <class T>
-inline T * SpAsPointer( SmartPointer<T>& sp )
-{
-  return sp.ptr();
 }
 
 #endif

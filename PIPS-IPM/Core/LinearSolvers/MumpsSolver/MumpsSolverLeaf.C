@@ -124,7 +124,7 @@ MumpsSolverLeaf::solve(GenMatrix& rhs_f, int startRow, int range, double* sol)
    double* const a_org = rhs_matrix.M();
 
    // matrix should be in Fortran format
-   assert(ia_org[0] == 1 && rhs_matrix.getStorage()->len == ia_org[m_org] - 1);
+   assert(ia_org[0] == 1 && rhs_matrix.getStorageRef().len == ia_org[m_org] - 1);
 
 
    int* const ia_sub = new int[m_sub + 1];
