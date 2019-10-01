@@ -1185,14 +1185,14 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
-   kktDist->getStorage()->sortCols();
+   kktDist->getStorageRef().sortCols();
 
-   assert(kktDist->getStorage()->isValid());
+   assert(kktDist->getStorageRef().isValid());
 
    reduceToProc0(nnzDist, MDist);
 
-   assert(kktDist->getStorage()->isValid());
-   assert(kktDist->getStorage()->isSorted());
+   assert(kktDist->getStorageRef().isValid());
+   assert(kktDist->getStorageRef().isSorted());
 }
 
 void sLinsysRoot::factorizeKKT()

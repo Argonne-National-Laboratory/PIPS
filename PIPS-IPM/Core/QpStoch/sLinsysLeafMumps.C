@@ -177,11 +177,11 @@ void sLinsysLeafMumps::buildSchurRightMatrix(sData *prob, SymMatrix& SC)
    schurRightMatrix_csc->writeToStreamDense(cout);
 
    if( schurRightNzColId )
-      for( int i = 0; i < schurRightMatrix_csc->getStorage()->m; i++ )
+      for( int i = 0; i < schurRightMatrix_csc->getStorageRef().m; i++ )
          std::cout << schurRightNzColId[i] << std::endl;
 #endif
 
-   schurRightMatrix_csc->getStorage()->c2fortran();
+   schurRightMatrix_csc->getStorageRef().c2fortran();
 }
 
 
@@ -192,7 +192,7 @@ void sLinsysLeafMumps::addTermToSchurComplMumps(sData *prob, bool sparseSC,
    if( !schurRightMatrix_csc )
       buildSchurRightMatrix(prob, SC);
 
-   const int nNzRhs = schurRightMatrix_csc->getStorage()->m;
+   const int nNzRhs = schurRightMatrix_csc->getStorageRef().m;
    const int solSize = nNzRhs * mSchurRight;
 
    assert(solSize >= 1);

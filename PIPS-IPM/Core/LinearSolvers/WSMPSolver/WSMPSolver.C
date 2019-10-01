@@ -52,16 +52,16 @@ int WSMPSolver::instances = 0;
 
 WSMPSolver::WSMPSolver( SparseSymMatrix * sgm ) : first(true)
 {
-	
+
 	nnz = sgm->numberOfNonZeros();
 	n = sgm->size();
-  mStorage = SparseStorageHandle( sgm->getStorage() );
+  mStorage = sgm->getStorageHandle();
 
 
 	krowMt = new int[n+1];
 	jcolMt = new int[nnz];
 	Mt     = new double[nnz];
-	
+
 	//wsmp_initialize();
 	perm = new int[n];
 	invp = new int[n];
@@ -69,7 +69,7 @@ WSMPSolver::WSMPSolver( SparseSymMatrix * sgm ) : first(true)
     iparm[0] = 0;
 	iparm[1] = 0;
 	iparm[2] = 0;
-	
+
 	nthreads = omp_get_max_threads();
 	// set default values
 #ifdef __bg__
@@ -104,7 +104,7 @@ WSMPSolver::WSMPSolver( SparseSymMatrix * sgm ) : first(true)
 	iparm[18] = 0;
 	iparm[19] = 1;
 	iparm[26] = 1;
-  
+
 #ifdef PIVOT
 	iparm[30] = 2; // LDLt with pivoting
 #else
@@ -115,7 +115,7 @@ WSMPSolver::WSMPSolver( SparseSymMatrix * sgm ) : first(true)
   iparm[5] = 1;
 
 //#ifndef __bg__
-  // turn off scaling, otherwise can't solve against 
+  // turn off scaling, otherwise can't solve against
   // factors correctly.
   // this took 3 days of debugging to discover
 //  iparm[9] = 2;
@@ -176,7 +176,7 @@ void WSMPSolver::firstCall()
 	assert(iparm[63] == 0);
 	//printf("symbolic done\n");
   first = false;
-}  
+}
 
 
 void WSMPSolver::diagonalChanged( int /* idiag */, int /* extent */ )
@@ -188,7 +188,7 @@ void WSMPSolver::diagonalChanged( int /* idiag */, int /* extent */ )
 void WSMPSolver::matrixChanged()
 {
 	omp_set_num_threads(1);
-	
+
 	if (first) {
     firstCall();
   } else {
@@ -201,14 +201,14 @@ void WSMPSolver::matrixChanged()
 		wrecallmat_(&instance,&iparm[63]);
   	assert(iparm[63] == 0);
   }
-  
+
   int mype; MPI_Comm_rank(MPI_COMM_WORLD,&mype);
   /*char fname[50];
   int i;
   sprintf(fname, "dump-node-%d-iter-%d.dat",mype,(int)g_iterNumber);
   printf("iter = %d, fname = %s\n", (int)g_iterNumber, fname);
   ofstream fd(fname);
-  fd << scientific; 
+  fd << scientific;
   fd.precision(16);
   fd << n << endl;
   fd << nnz << endl;
@@ -227,7 +227,7 @@ void WSMPSolver::matrixChanged()
 */
 
 	bool redo = false;
-  do { 
+  do {
     // numerical factorization
     iparm[1] = 3;
     iparm[2] = 3;
@@ -255,7 +255,7 @@ void WSMPSolver::matrixChanged()
 
 	omp_set_num_threads(nthreads);
 }
- 
+
 void WSMPSolver::solve( OoqpVector& rhs_in )
 {
   omp_set_num_threads(1);
@@ -299,7 +299,7 @@ void WSMPSolver::solve( OoqpVector& rhs_in )
 	assert(iparm[63] == 0);
 
   delete [] rhscpy;
-	
+
 	omp_set_num_threads(nthreads);
 
 }
@@ -381,7 +381,7 @@ void WSMPSolver::solve(GenMatrix& rhs_in)
   sprintf(fname, "dump-node-%d-iter-%d.dat",mype,(int)g_iterNumber);
   printf("NRHS = %d, iter = %d, fname = %s\n", NRHS,(int)g_iterNumber, fname);
   ofstream fd(fname);
-  fd << scientific; 
+  fd << scientific;
   fd.precision(16);
   fd << n << endl;
   fd << nnz << endl;
@@ -417,7 +417,7 @@ void WSMPSolver::solve(GenMatrix& rhs_in)
 		double *drhs = rhs[startcol];
 		int endcol = MIN(startcol+BLOCKSIZE,NRHS);
 		int numcols = endcol-startcol;
-	
+
 		iparm[1] = 4;
     iparm[2] = 5;
 		wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,drhs,&n,&numcols,NULL,&zero,NULL,iparm, dparm);
@@ -440,6 +440,3 @@ void WSMPSolver::solve(GenMatrix& rhs_in)
 
 	omp_set_num_threads(nthreads);
 }
-
-
-

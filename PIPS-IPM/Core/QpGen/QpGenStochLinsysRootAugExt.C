@@ -128,7 +128,7 @@ void QpGenStochLinsysRootAugExt::factor2(QpGenStochData *prob, Variables *vars)
   if(iAmDistrib) {
 
     double* buffer=new double[locnx*locnx];
-    MPI_Allreduce(&(UtV->getStorage()->M[0][0]),
+    MPI_Allreduce(&(UtV->getStorageRef().M[0][0]),
 		  buffer,
 		  locnx*locnx,
 		  MPI_DOUBLE,
