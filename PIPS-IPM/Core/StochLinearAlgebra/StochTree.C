@@ -763,7 +763,7 @@ void StochTree::syncStochSymMatrix(StochSymMatrix& mat)
 
 	int dims[3];
 	dims[0] = mat.children[it]->mat->size();
-	dims[1] = mat.children[it]->mat->getStorage()->numberOfNonZeros();
+	dims[1] = mat.children[it]->mat->getStorageRef().numberOfNonZeros();
 	dims[2] = mat.children[it]->n;
 
 	MPI_Send(dims, 3, MPI_INT, partner, children[it]->id(), MPI_COMM_WORLD);
@@ -835,9 +835,9 @@ void StochTree::syncStochGenMatrix(StochGenMatrix& mat)
 
 	int dims[8];
 	mat.children[it]->Amat->getSize(*dims, *(dims+1));
-	dims[2] = mat.children[it]->Amat->getStorage()->numberOfNonZeros();
+	dims[2] = mat.children[it]->Amat->getStorageRef().numberOfNonZeros();
 	mat.children[it]->Bmat->getSize(*(dims+3), *(dims+4));
-	dims[5] = mat.children[it]->Bmat->getStorage()->numberOfNonZeros();
+	dims[5] = mat.children[it]->Bmat->getStorageRef().numberOfNonZeros();
 	dims[6] = mat.children[it]->n; dims[7] = mat.children[it]->m;
 
 	assert(dims[0]==dims[3]);

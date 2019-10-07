@@ -99,7 +99,7 @@ Data* StochPresolver::presolve()
    presolverCleanup.countRowsCols();
    assert( presData.getPresProb().isRootNodeInSync() );
 
-   exit(1);
+   // exit(1);
 
    // todo : no idea how to postsolve this
 

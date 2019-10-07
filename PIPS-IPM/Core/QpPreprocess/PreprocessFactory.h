@@ -22,6 +22,7 @@ enum PresolverType {PRESOLVER_NONE, PRESOLVER_STOCH};
 class PreprocessFactory : public IotrRefCount
 {
 public:
+  
       static Scaler* makeScaler(Data* data, ScalerType type)
       {
          switch( type )
@@ -53,22 +54,7 @@ public:
       {
          return new StochPostsolver(dynamic_cast<const sData&>(*original_problem));
       }
-
-      static PreprocessFactory& getInstance()
-      {
-         static PreprocessFactory* instance = new PreprocessFactory;
-         return *instance;
-      }
-private:
-      // we need to make some given functions private to finish the definition of the singleton
-      PreprocessFactory(){}
-
-      PreprocessFactory(const PreprocessFactory &old); // disallow copy constructor
-      const PreprocessFactory& operator=(const PreprocessFactory &old); //disallow assignment operator
-
-      ~PreprocessFactory(){}
 };
-
 
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PREPROCESSFACTORY_H_ */

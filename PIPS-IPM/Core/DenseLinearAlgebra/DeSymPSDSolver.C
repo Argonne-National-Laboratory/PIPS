@@ -32,7 +32,7 @@ extern "C" void dtrsm_(char* side,
 
 DeSymPSDSolver::DeSymPSDSolver( DenseSymMatrix * dsm )
 {
-  mStorage = DenseStorageHandle( dsm->getStorage() );
+  mStorage = dsm->getStorageHandle();
 }
 
 void DeSymPSDSolver::matrixChanged()
@@ -111,8 +111,8 @@ void DeSymPSDSolver::Lsolve( GenMatrix& mat)
 	 &colst,
 	 &nt,
  	 &onet,
-	 &AA.getStorage()->M[0][0], &nt,
-	 &BB.getStorage()->M[0][0],
+	 &AA.getStorageRef().M[0][0], &nt,
+	 &BB.getStorageRef().M[0][0],
 	 &colst);
 
   //for(int i=0; i<3; i++) { for(int j=0; j<2; j++) printf("%5.3f ", BB[i][j]); printf("\n"); }; printf("----------------\n");

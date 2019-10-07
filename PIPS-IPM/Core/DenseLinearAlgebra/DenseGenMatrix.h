@@ -21,7 +21,7 @@ public:
   DenseGenMatrix( int size );
   DenseGenMatrix( int m, int n );
   DenseGenMatrix( double A[], int m, int n );
-  
+
   virtual int isKindOf( int matType ) const;
 
   virtual void getSize( long long& m, long long& n );
@@ -30,9 +30,9 @@ public:
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent );
 
-  /** Fill a region of this matrix with zeros. 
-   *  
-   *  The region starts at (row, col) and extends rowExtent rows 
+  /** Fill a region of this matrix with zeros.
+   *
+   *  The region starts at (row, col) and extends rowExtent rows
    *  and colExtent columns.
    */
   virtual void atPutZeros( int row, int col,
@@ -49,7 +49,7 @@ public:
   virtual void atPutSpRow( int row, double A[], int lenA, int jcolA[],
 			   int& info );
 
-  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[], 
+  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[],
 				int& info );
 
   virtual void mult ( double beta,  OoqpVector& y,
@@ -97,7 +97,7 @@ public:
   double **Mat() { return mStorage->M; };
 
   DenseStorage& getStorageRef() { return *mStorage; }
-  DenseStorage* getStorage() { return mStorage.ptr(); }
+  DenseStorageHandle getStorageHandle() { return mStorage; }
 
   /* the following functions added by C.Petra 09/09 */
 
@@ -107,8 +107,8 @@ public:
    *
    * op(...) specifies whether to use the matrix or its transpose
    */
-  virtual void matMult(double alpha, 
-		       DenseGenMatrix& A, int transA, 
+  virtual void matMult(double alpha,
+		       DenseGenMatrix& A, int transA,
 		       DenseGenMatrix& B, int transB,
 		       double beta);
 
