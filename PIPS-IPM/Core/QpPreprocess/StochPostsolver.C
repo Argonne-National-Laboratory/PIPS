@@ -74,6 +74,10 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 
 void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value)
 {
+   // TODO
+   if( getSimpleVecColFromStochVec(*padding_origcol, node)[col] != 1 )
+      return;
+
    assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1);
    getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
    assert( std::fabs(value) < 1e10 );

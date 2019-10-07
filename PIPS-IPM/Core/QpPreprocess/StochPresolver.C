@@ -87,13 +87,8 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
       presolverSR.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverColFix.applyPresolving();
- 
       presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
-      presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
       presolverSC.applyPresolving();
    }
@@ -105,8 +100,8 @@ Data* StochPresolver::presolve()
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
    assert( presData.getPresProb().isRootNodeInSync() );
-//      presData.presProb->writeToStreamDense(std::cout);
 
+   exit(1);
 
    // todo : no idea how to postsolve this
 
@@ -132,6 +127,6 @@ Data* StochPresolver::presolve()
    // todo : verify presolver and postsolver have same amount of deleted rows and cols
 
    assert( finalPresData->isRootNodeInSync() );
-   // exit(0);
+
    return finalPresData;
 }

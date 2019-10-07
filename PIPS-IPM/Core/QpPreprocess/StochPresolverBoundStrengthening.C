@@ -106,8 +106,8 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
 
    if( presData.hasLinking(system_type) )
    {
-      if( strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK) )
-         tightened = true;
+      //if( strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK) )
+      //   tightened = true;
    }
 
    if(node != -1)

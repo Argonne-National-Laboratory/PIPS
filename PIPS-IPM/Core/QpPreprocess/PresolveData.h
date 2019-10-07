@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <list>
 #include <limits>
+#include <queue>
 
 struct sCOLINDEX
 {
@@ -102,8 +103,8 @@ private:
       SimpleVectorHandle bound_chgs_C;
 
       /* storing so far found singleton rows and columns */
-      std::vector<sROWINDEX> singleton_rows;
-      std::vector<sCOLINDEX> singleton_cols;
+      std::queue<sROWINDEX> singleton_rows;
+      std::queue<sCOLINDEX> singleton_cols;
 
       int my_rank;
       bool distributed;
@@ -142,11 +143,9 @@ public :
       int getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row]; };
       int getNnzsCol(int node, int col) const { return getSimpleVecColFromStochVec(*nnzs_col, node)[col]; };
 
-      std::vector<sROWINDEX>& getSingletonRows() { return singleton_rows; };
-      std::vector<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
+      std::queue<sROWINDEX>& getSingletonRows() { return singleton_rows; };
+      std::queue<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
 
-      void clearSingletonRows() { singleton_rows.clear(); };
-      void clearSingletonCols() { singleton_cols.clear(); };
       /* methods for initializing the object */
    private:
       // initialize row and column nnz counter

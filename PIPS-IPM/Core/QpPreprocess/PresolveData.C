@@ -633,19 +633,19 @@ void PresolveData::allreduceAndApplyNnzChanges()
    for( int i = 0; i < nnzs_col_chgs->length(); ++i )
    {
       if( (*nnzs_col_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1 )
-         singleton_cols.push_back( sCOLINDEX(-1, i) );
+         singleton_cols.push( sCOLINDEX(-1, i) );
    }
    
    for( int i = 0; i < nnzs_row_A_chgs->length(); ++i )
    {
       if( (*nnzs_row_A_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[i] == 1 )
-         singleton_rows.push_back( sROWINDEX(EQUALITY_SYSTEM, -2, i) );
+         singleton_rows.push( sROWINDEX(EQUALITY_SYSTEM, -2, i) );
    }
    
    for( int i = 0; i < nnzs_row_C_chgs->length(); ++i )
    {
       if( (*nnzs_row_C_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1 )
-         singleton_rows.push_back( sROWINDEX(INEQUALITY_SYSTEM, -2, i) );
+         singleton_rows.push( sROWINDEX(INEQUALITY_SYSTEM, -2, i) );
    }
 
 #ifndef NDEBUG
@@ -719,7 +719,7 @@ void PresolveData::initSingletons()
    for(int i = 0; i < nnzs_row_A->vec->n; ++i)
    if( dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[i] == 1.0)
    {
-      singleton_rows.push_back( sROWINDEX( EQUALITY_SYSTEM, -1, i ));
+      singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, -1, i ));
    }
 
    /* Bl0 */
@@ -728,7 +728,7 @@ void PresolveData::initSingletons()
       for(int i = 0; i < nnzs_row_A->vecl->n; ++i)
       {
          if( dynamic_cast<SimpleVector&>(*nnzs_row_A->vecl)[i] == 1.0)
-            singleton_rows.push_back( sROWINDEX( EQUALITY_SYSTEM, -2, i ));
+            singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, -2, i ));
       }
    }
 
@@ -740,7 +740,7 @@ void PresolveData::initSingletons()
          for(int j = 0; j < nnzs_row_A->children[i]->vec->n; ++j)
          {
             if( dynamic_cast<SimpleVector&>(*nnzs_row_A->children[i]->vec)[j] == 1.0)
-               singleton_rows.push_back( sROWINDEX( EQUALITY_SYSTEM, i, j ));
+               singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, i, j ));
          }
       }
    }
@@ -749,7 +749,7 @@ void PresolveData::initSingletons()
    /* B0 */
    for(int i = 0; i < nnzs_row_C->vec->n; ++i)
       if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1.0)
-         singleton_rows.push_back( sROWINDEX( INEQUALITY_SYSTEM, -1, i ));
+         singleton_rows.push( sROWINDEX( INEQUALITY_SYSTEM, -1, i ));
 
    /* Bl0 */
    if( nnzs_row_C->vecl != NULL)
@@ -757,7 +757,7 @@ void PresolveData::initSingletons()
       for( int i = 0; i < nnzs_row_C->vecl->n; ++i )
       {
          if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vecl)[i] == 1.0 )
-            singleton_rows.push_back(sROWINDEX( INEQUALITY_SYSTEM, -2, i ));
+            singleton_rows.push(sROWINDEX( INEQUALITY_SYSTEM, -2, i ));
       }
    }
 
@@ -769,7 +769,7 @@ void PresolveData::initSingletons()
          for( int j = 0; j < nnzs_row_C->children[i]->vec->n; ++j )
          {
             if( dynamic_cast<SimpleVector&>(*nnzs_row_C->children[i]->vec)[j] == 1.0 )
-               singleton_rows.push_back(sROWINDEX( INEQUALITY_SYSTEM, i, j ));
+               singleton_rows.push(sROWINDEX( INEQUALITY_SYSTEM, i, j ));
          }
       }
    }
@@ -778,7 +778,7 @@ void PresolveData::initSingletons()
    for(int i = 0; i < nnzs_col->vec->n; ++i)
    {
       if( dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1.0)
-         singleton_cols.push_back( sCOLINDEX(-1, i));
+         singleton_cols.push( sCOLINDEX(-1, i));
    }
 
    for(int i = 0; i < nChildren; ++i)
@@ -788,7 +788,7 @@ void PresolveData::initSingletons()
          for(int j = 0; j < nnzs_col->children[i]->vec->n; ++j)
          {
             if( dynamic_cast<SimpleVector&>(*nnzs_col->children[i]->vec)[j] == 1.0)
-               singleton_cols.push_back( sCOLINDEX(i, j));
+               singleton_cols.push( sCOLINDEX(i, j));
          }
       }
    }
@@ -1049,7 +1049,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
-   // if( fabs(lbx) < 1e8 && (ixlow== 0.0  || feastol * 1e3 <= fabs(xlow- lbx) ) )
+   // if( fabs(lbx) < 1e8 && (ixlow== 0.0  || feastol * 1e3 <= fabs(xlow - lbx) ) )
    if( ubx < numerical_threshold && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
    {
 #ifdef TRACK_COLUMN
@@ -1266,14 +1266,14 @@ void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType bl
       {
          getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] -= amount;
          if( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index]  == 1)
-            singleton_rows.push_back( sROWINDEX( system_type, node, row_index ) );
+            singleton_rows.push( sROWINDEX( system_type, node, row_index ) );
          assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] );
       }
       else
       {
          getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] -= amount;
          if( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index]  == 1)
-            singleton_rows.push_back( sROWINDEX( system_type, node, row_index ) );
+            singleton_rows.push( sROWINDEX( system_type, node, row_index ) );
          assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] );
       }
    }
@@ -1298,7 +1298,7 @@ void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_ind
    {
       getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] -= amount;
       if( getSimpleVecColFromStochVec( *nnzs_col, node )[col_index]  == 1)
-         singleton_cols.push_back( sCOLINDEX( node, col_index ) );
+         singleton_cols.push( sCOLINDEX( node, col_index ) );
       assert(0 <= getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] );
    }
 }

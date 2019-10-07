@@ -53,16 +53,24 @@ void StochPresolverSingletonRows::applyPresolving()
    while( !presData.getSingletonRows().empty() )
    {
       bool removed = false;
-      removed = removeSingletonRow( presData.getSingletonRows().back().system_type, presData.getSingletonRows().back().node, 
-         presData.getSingletonRows().back().index );      
+      removed = removeSingletonRow( presData.getSingletonRows().front().system_type, presData.getSingletonRows().front().node, 
+         presData.getSingletonRows().front().index );      
       
       if(removed)
          ++removed_rows;
-      presData.getSingletonRows().pop_back();
+      presData.getSingletonRows().pop();
    }
 
+   assert( presData.getSingletonRows().empty() );
+
+   // todo
+   presData.allreduceAndApplyBoundChanges();
+   presData.allreduceAndApplyNnzChanges();
+   presData.allreduceAndApplyLinkingRowActivities();
+   presData.allreduceLinkingVarBounds();
    // todo : should be enough to allreduce the offset once after all of presolving
    presData.allreduceObjOffset();
+
    if( my_rank == 0 )
       std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
 
@@ -73,12 +81,6 @@ void StochPresolverSingletonRows::applyPresolving()
    if(my_rank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
-
-   // todo
-   presData.allreduceAndApplyBoundChanges();
-   presData.allreduceAndApplyNnzChanges();
-   presData.allreduceAndApplyLinkingRowActivities();
-   presData.allreduceLinkingVarBounds();
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -111,7 +113,7 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
    getBoundsAndColFromSingletonRow( system_type, node, row_idx, block_type, col_idx, ubx, lbx );
 
    /* because of postsolve here we only remove correctly placed singelton rows */
-   if( node == -1 && block_type == LINKING_VARS_BLOCK)
+   if( node != -1 && block_type == LINKING_VARS_BLOCK)
       return false;
 
    if( block_type == LINKING_CONS_BLOCK )
@@ -121,6 +123,13 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
 
    presData.rowPropagatedBounds( system_type, node, block_type, row_idx, col_idx, ubx, lbx );
    presData.removeRedundantRow( system_type, node, row_idx, (block_type == LINKING_CONS_BLOCK) );
+
+   updatePointersForCurrentNode(node, system_type);
+   double ubx_new = (node == -1) ? (*currxuppParent)[col_idx] : (*currxuppChild)[col_idx];
+   double lbx_new = (node == -1) ? (*currxlowParent)[col_idx] : (*currxlowChild)[col_idx];
+   if( PIPSisEQ(ubx_new, lbx_new) )
+      presData.fixColumn( node, col_idx, ubx_new);
+
 
    if( my_rank == 0 || block_type != LINKING_CONS_BLOCK )
       return true;
@@ -146,10 +155,7 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
       }
       else
       {
-         assert(currAmat);
-         assert(currBmat);
-         assert( row_idx < currAmat->m );
-         assert( row_idx < currBmat->m );
+         assert(currAmat); assert(currBmat); assert( row_idx < currAmat->m ); assert( row_idx < currBmat->m );
          assert( (currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1.0) ||
             (currBmat->rowptr[row_idx].end - currBmat->rowptr[row_idx].start == 1.0) );
          
@@ -193,7 +199,7 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
          return;
    }
 
-   assert(value != 0.0);
+   assert( !PIPSisEQ(value, 0.0) );
 
    if(system_type == EQUALITY_SYSTEM)
    {
@@ -204,33 +210,28 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
    }
    else
    {
-
       if(block_type != LINKING_CONS_BLOCK)
       {
          assert( (*currIclow)[row_idx] == 1.0 || (*currIcupp)[row_idx] == 1.0 );
 
-         if( (*currIclow)[row_idx] == 1.0 )
-            lbx = (*currIneqLhs)[row_idx] / value;
-         if( (*currIcupp)[row_idx] == 1.0 )
-            ubx = (*currIneqRhs)[row_idx] / value;
-
-         if( PIPSisLT( value, 0.0) )
+         if( PIPSisLT(value, 0.0) )
          {
-            std::swap( lbx, ubx );
-            if( (*currIclow)[row_idx] == 0.0 )
-               ubx = -ubx;
-            if( (*currIcupp)[row_idx] == 0.0 )
-               lbx = -lbx;
-         }  
-
-
+            if( (*currIcupp)[row_idx] == 1.0 )
+               lbx = (*currIneqRhs)[row_idx] / value;
+            if( (*currIclow)[row_idx] == 1.0 )
+               ubx = (*currIneqLhs)[row_idx] / value;
+         }
+         else
+         {
+            if( (*currIclow)[row_idx] == 1.0 )
+               lbx = (*currIneqLhs)[row_idx] / value;
+            if( (*currIcupp)[row_idx] == 1.0 )
+               ubx = (*currIneqRhs)[row_idx] / value;
+         }
       }
-   }
+      else
+         assert(block_type != LINKING_CONS_BLOCK); // todo : can is possible
 
-   if(!PIPSisLE(lbx, ubx))
-   {
-      presData.writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row_idx);
-      std::cout << lbx << "\t" << ubx << std::endl;
    }
    assert( PIPSisLE(lbx ,ubx) );
 }
