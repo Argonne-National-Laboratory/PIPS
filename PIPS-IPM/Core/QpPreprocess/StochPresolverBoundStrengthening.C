@@ -138,7 +138,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( myRank == 0 )
    {
       std::cout << "lower bound infnorm: " << lower_inf_after << "\t\tupper bound infnorm: " << upper_inf_after << std::endl;
-      std::cout << "lower bound infnorm: " << lower_two_after << "\t\tupper bound infnorm: " << upper_two_after << std::endl;
+      std::cout << "lower bound twonorm: " << lower_two_after << "\t\tupper bound twonorm: " << upper_two_after << std::endl;
    }
 #endif
 
