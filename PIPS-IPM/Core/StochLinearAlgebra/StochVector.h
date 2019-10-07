@@ -95,7 +95,7 @@ public:
   				   double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
 				   bool& primalBlocking, bool& dualBlocking) const;
 
-  virtual void componentMult( OoqpVector& v );
+  virtual void componentMult( const OoqpVector& v );
   virtual void componentDiv ( OoqpVector& v );
   virtual bool componentEqual( const OoqpVector& v, double tol) const;
   virtual void scalarMult( double num);
@@ -225,7 +225,7 @@ public:
                double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
                bool& primalBlocking, bool& dualBlocking) const {};
 
-  virtual void componentMult( OoqpVector& v ){};
+  virtual void componentMult( const OoqpVector& v ){};
   virtual void componentDiv ( OoqpVector& v ){};
   virtual bool componentEqual( const OoqpVector& v, double tol) const { if(!v.isKindOf(kStochDummy)) std::cout << "lol one should never end up here"
         << std::endl; return v.isKindOf(kStochDummy); };

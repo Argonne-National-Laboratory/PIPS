@@ -63,7 +63,7 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
-   assert( sorigprob->isRootNodeInSync());
+   assert( sorigprob->isRootNodeInSync() );
    assert( presData.getPresProb().isRootNodeInSync() );
 
    /* initialize all presolvers */
@@ -99,7 +99,7 @@ Data* StochPresolver::presolve()
    presolverCleanup.countRowsCols();
    assert( presData.getPresProb().isRootNodeInSync() );
 
-   // exit(1);
+   exit(1);
 
    // todo : no idea how to postsolve this
 

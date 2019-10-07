@@ -56,7 +56,7 @@ public:
   virtual double onenorm() const = 0;
 
   /** Multiply the components of this OoqpVector by the components of v. */
-  virtual void componentMult( OoqpVector& v ) = 0;
+  virtual void componentMult( const OoqpVector& v ) = 0;
   /** Divide the components of this OoqpVector by the components of v. */
   virtual void componentDiv ( OoqpVector& v ) = 0;
   /** Compare two vectors with tolerance tol and tell if the are different */
