@@ -1479,7 +1479,8 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
       std::cout << "TRACKING: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
    }
 #endif
-   removeRow(system_type, node_row, row, linking_row);
+   removeRow( system_type, node_row, row, linking_row );
+   removeColumn( node_col, col, 0.0);
 }
 
 /* removes row from local system - sets rhs lhs and activities to zero */

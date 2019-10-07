@@ -54,7 +54,7 @@ void StochPresolverSingletonColumns::applyPresolving()
       removed = removeSingletonColumn( presData.getSingletonCols().front().node, 
          presData.getSingletonCols().front().index );      
       
-      if(removed)
+      if(removed && ( presData.getSingletonCols().front().node != -1 || my_rank == 0) )
          ++removed_cols;
       presData.getSingletonCols().pop();
    }
@@ -63,7 +63,10 @@ void StochPresolverSingletonColumns::applyPresolving()
 
 #ifndef NDEBUG
    if( my_rank == 0 )
+   {
       std::cout << "--- After singleton columns presolving:" << std::endl;
+      std::cout << "--- Removed " << removed_cols << " singleton columns" << std::endl;
+   }
    countRowsCols();
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
@@ -83,6 +86,7 @@ void StochPresolverSingletonColumns::applyPresolving()
 
 bool StochPresolverSingletonColumns::removeSingletonColumn(int node_col, int col)
 {
+   assert( -1 <= node_col && node_col < nChildren );
    updatePointersForCurrentNode(node_col, EQUALITY_SYSTEM);
 
    /* this should not happen - singeltons are collected locally */
@@ -104,12 +108,13 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(int node_col, int col
    bool found = findRowForColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
 
    if( !found )
-   {
+   {  // TODO
       std::cout << "node_col, col: " << node_col << ", " << col << std::endl; 
       assert( node_col == -1 );
       return false;
    }
 
+   assert( -1 <= node_row && node_row < nChildren );
    updatePointersForCurrentNode( node_row, system_type );
    
    /* check whether col is free / implied free */
@@ -153,7 +158,7 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
       system_type = EQUALITY_SYSTEM;
       linking = false;
 
-      for( int node_row = -1; node_row < nChildren; ++ node_row)
+      for( node_row = -1; node_row < nChildren; ++node_row)
       {
          if( !presData.nodeIsDummy( node_row, system_type) )
          {
@@ -197,7 +202,7 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
       /* inequality part */
       system_type = INEQUALITY_SYSTEM;
 
-      for( int node_row = -1; node_row < nChildren; ++ node_row)
+      for( node_row = -1; node_row < nChildren; ++ node_row)
       {
          if( !presData.nodeIsDummy( node_row, system_type) )
          {

@@ -87,10 +87,10 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
       presolverSR.applyPresolving();
-      // presolverBS.applyPresolving();
-      // presolverParallelRow.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverParallelRow.applyPresolving();
+      // presolverSC.applyPresolving();
       presolverColFix.applyPresolving();
-      presolverSC.applyPresolving();
    }
 
    // before the finalize call fix all empty rows and columns not yet fixed
