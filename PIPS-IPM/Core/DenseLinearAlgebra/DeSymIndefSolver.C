@@ -12,7 +12,7 @@
 
 #ifndef FNAME
 #ifndef __bg__
-#define FNAME(f) f ## _ 
+#define FNAME(f) f ## _
 #else
 #define FNAME(f) f // no underscores for fortran names on bgp
 #endif
@@ -25,25 +25,25 @@
 
 // declarations for LAPACK functions used to factor/solve:
 
-// dsytrf_() factors a symmetric indefinite matrix A, see LAPACK 
+// dsytrf_() factors a symmetric indefinite matrix A, see LAPACK
 // documentation for more details.
-extern "C" void FNAME(dsytrf)(char *uplo, 
-			int *n, 
-			double A[], 
-			int *lda, 
-			int ipiv[], 
+extern "C" void FNAME(dsytrf)(char *uplo,
+			int *n,
+			double A[],
+			int *lda,
+			int ipiv[],
 			double work[],
-			int *lwork, 
+			int *lwork,
 			int *info);
 
 // dsytrs_() solves the system Ax = b using the factor obtained by dsytrf_().
-extern "C" void FNAME(dsytrs)(char *uplo, 
-			int *n, 
-			int *nrhs, 
-			double A[], 
-			int *lda, 
-			int ipiv[], 
-			double b[], 
+extern "C" void FNAME(dsytrs)(char *uplo,
+			int *n,
+			int *nrhs,
+			double A[],
+			int *lda,
+			int ipiv[],
+			double b[],
 			int *ldb,
 			int *info);
 
@@ -59,17 +59,17 @@ extern "C" {
 }
 #endif
 
-  
+
 DeSymIndefSolver::DeSymIndefSolver( DenseSymMatrix * dm )
 {
-  mStorage = DenseStorageHandle( dm->getStorage() );
+  mStorage = dm->getStorageHandle();
 
   int size = mStorage->n;
   ipiv = new int[size];
   lwork = -1;
   work = NULL;
   sparseMat = 0;
-  
+
 }
 
 DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
@@ -82,7 +82,7 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
   work = NULL;
   sparseMat = sm;
 
-  
+
 
 }
 
@@ -129,8 +129,8 @@ void DeSymIndefSolver::matrixChanged()
   double lworkNew;
   FNAME(dsytrf)( &fortranUplo, &n, &mStorage->M[0][0], &n,
 	   ipiv, &lworkNew, &lwork, &info );
-  
-  lwork = (int)lworkNew; 
+
+  lwork = (int)lworkNew;
   if(work) delete[] work;
   work = new double[lwork];
 

@@ -3,6 +3,7 @@
 #include "StochVector.h"
 #include "SimpleVector.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 #include <limits>
 #include <algorithm>
 using namespace std;
@@ -1514,15 +1515,16 @@ bool StochGenMatrix::isRootNodeInSync() const
    MPI_Comm_size(mpiComm, &world_size);
 
    /* if matrix has static storage */
-   if(Amat->getStorage() != NULL || Bmat->getStorage() != NULL || Blmat->getStorage() != NULL)
+   if( Amat->getStorageHandle().notNil() || Bmat->getStorageHandle().notNil() ||
+	    Blmat->getStorageHandle().notNil() )
    {
-      assert(Amat->getStorage());
-      assert(Bmat->getStorage());
-      assert(Blmat->getStorage());
+		  assert( Amat->getStorageHandle().notNil() );
+      assert( Bmat->getStorageHandle().notNil() );
+      assert( Blmat->getStorageHandle().notNil() );
 
       /* since we are in root node Amat should look as follows */
-      assert( Amat->getStorageRef().len == 0);
-      assert( Amat->getStorageRef().n == -1);
+      assert( Amat->getStorageRef().len == 0 );
+      assert( Amat->getStorageRef().n == -1 );
 
       /* static storage */
       const int lenght_entries_bmat = Bmat->getStorageRef().len;

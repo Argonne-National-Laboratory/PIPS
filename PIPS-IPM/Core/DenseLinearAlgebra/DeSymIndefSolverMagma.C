@@ -21,7 +21,7 @@
 
 #ifndef FNAME
   #ifndef __bg__
-    #define FNAME(f) f ## _ 
+    #define FNAME(f) f ## _
   #else
     #define FNAME(f) f // no underscores for fortran names on bgp
   #endif
@@ -29,7 +29,7 @@
 
 // declarations for LAPACK functions used to factor/solve:
 
-// dsytrf_() factors a symmetric indefinite matrix A, see LAPACK 
+// dsytrf_() factors a symmetric indefinite matrix A, see LAPACK
 // documentation for more details.
 
 #ifdef GPUCODE
@@ -51,28 +51,28 @@ extern "C" void FNAME(magmaf_dgetrs_gpu)(char* trans,
 				   int *info);
 #else
 extern "C" void FNAME(dgetrf)(int* m,
-                        int *n, 
-                        double* A, 
-                        int *lda, 
-                        int* ipiv, 
+                        int *n,
+                        double* A,
+                        int *lda,
+                        int* ipiv,
                         int *info);
 
 extern "C" void FNAME(dgetrs)(char* trans,
-			int *n, 
-			int *nrhs, 
-			double* A, 
-			int *lda, 
-			int* ipiv, 
-			double* b, 
+			int *n,
+			int *nrhs,
+			double* A,
+			int *lda,
+			int* ipiv,
+			double* b,
 			int *ldb,
 			int *info);
 #endif
-   
+
 DeSymIndefSolverMagma::DeSymIndefSolverMagma( DenseSymMatrix * dm )
 {
 
   cout << "creating GPUCODE solver" << endl;
-  mStorage = DenseStorageHandle( dm->getStorage() );
+  mStorage = dm->getStorageHandle();
 
   int size = mStorage->n;
   ipiv = new int[size];
@@ -86,15 +86,15 @@ DeSymIndefSolverMagma::DeSymIndefSolverMagma( DenseSymMatrix * dm )
   //CUDA_SAFE_CALL(cudaMalloc(&mFact_gpu, sizeof(double) * size * size));
   cudaMalloc(&mFact_gpu, sizeof(double) * size * size);
   assert(mFact_gpu!=NULL);
-  
+
   mRhs_gpu = NULL;
   cudaMalloc(&mRhs_gpu, sizeof(double) * size);
   assert(mRhs_gpu!=NULL);
-#else 
+#else
   cout << "DeSymIndefSolverMagma used but GPU code is not enabled" << endl;
 #endif
 
-  cout << "MAGMA: size of matrix is " << size << "done with MAGMA constructor" << endl;  
+  cout << "MAGMA: size of matrix is " << size << "done with MAGMA constructor" << endl;
 }
 
 DeSymIndefSolverMagma::DeSymIndefSolverMagma( SparseSymMatrix * sm )
@@ -104,7 +104,7 @@ DeSymIndefSolverMagma::DeSymIndefSolverMagma( SparseSymMatrix * sm )
     cout << "Magma solver : sparse matrix -------------" << endl;
   int size = sm->size();
   mStorage = DenseStorageHandle( new DenseStorage(size,size) );
- 
+
   ipiv = new int[size];
   sparseMat = sm;
   */
@@ -121,8 +121,8 @@ void DeSymIndefSolverMagma::matrixChanged()
 
   //factorize
 #ifdef GPUCODE
-  cudaMemcpy(mFact_gpu, 
-	     &mStorage->M[0][0], sizeof(double) * n * n, 
+  cudaMemcpy(mFact_gpu,
+	     &mStorage->M[0][0], sizeof(double) * n * n,
 	     cudaMemcpyHostToDevice);
   FNAME(magmaf_dgetrf_gpu)( &n, &n, &mFact_gpu, &n, ipiv, &info );
 #else

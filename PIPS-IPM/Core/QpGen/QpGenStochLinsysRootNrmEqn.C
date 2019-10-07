@@ -422,7 +422,7 @@ void QpGenStochLinsysRootNrmEqn::
 myDenseFromSparseTrans(DenseGenMatrix& D, SparseGenMatrix& S)
 {
   int m, n; D.getSize(n,m);
-  assert(S.getStorage()->m==m);   assert(S.getStorage()->n==n);
+  assert(S.getStorageRef().m==m);   assert(S.getStorageRef().n==n);
   int* krowM = S.krowM(); int* jcolM=S.jcolM(); double *M=S.M();
 
   int i, j, k, jcurrent;

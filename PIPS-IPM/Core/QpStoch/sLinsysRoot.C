@@ -131,6 +131,8 @@ sLinsysRoot::~sLinsysRoot()
   for(size_t c=0; c<children.size(); c++)
     delete children[c];
 
+  delete kktDist;
+
   delete[] sparseKktBuffer;
 }
 
@@ -967,8 +969,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    assert(iAmDistrib);
    assert(kkt);
 
-   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-
    const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
    const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
 
@@ -1185,14 +1185,14 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
-   kktDist->getStorage()->sortCols();
+   kktDist->getStorageRef().sortCols();
 
-   assert(kktDist->getStorage()->isValid());
+   assert(kktDist->getStorageRef().isValid());
 
    reduceToProc0(nnzDist, MDist);
 
-   assert(kktDist->getStorage()->isValid());
-   assert(kktDist->getStorage()->isSorted());
+   assert(kktDist->getStorageRef().isValid());
+   assert(kktDist->getStorageRef().isSorted());
 }
 
 void sLinsysRoot::factorizeKKT()
