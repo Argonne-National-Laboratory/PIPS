@@ -161,7 +161,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    assert(mat);
 
    /* for every row in the current block and every entry in said row check if we can improve on the currently known bounds */
-   for(int row = 0; row < mat->m; ++row)
+   for(int row = 0; row < mat->getM(); ++row)
    {
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
@@ -172,14 +172,19 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       if( actmin_ubndd >= 2 && actmax_ubndd >= 2)
          continue;
 
-      /* for every entry of the current row check the associated variable for tighter bounds */
-      for( int j = mat->rowptr[row].start; j < mat->rowptr[row].end; j++ )
+      /* if the partial row activities (so the activities of all bounded variables) exceed some limit we skip the row since no useful
+       * and numerically stable bounds will be obtained here
+       */
+      if( (actmin_part <= -std::numeric_limits<double>::max() ) && (actmax_part >= std::numeric_limits<double>::max()) )
+         continue;
+
+      for( int j = mat->getRowPtr(row).start; j < mat->getRowPtr(row).end; j++ )
       {
-         assert( mat->rowptr[row].end - mat->rowptr[row].end < nnzs_row[row] );
+         assert( mat->getRowPtr(row).end - mat->getRowPtr(row).end < nnzs_row[row] );
 
          // compute the possible new bounds on variable x_colIdx:
-         const int col = mat->jcolM[j];
-         const double a_ik = mat->M[j];
+         const int col = mat->getJcolM(j);
+         const double a_ik = mat->getMat(j);
 
          assert( !PIPSisZero(a_ik) );
          if( PIPSisLT(std::fabs(a_ik), numeric_limit_entry) )

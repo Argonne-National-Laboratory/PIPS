@@ -413,16 +413,16 @@ void PresolveData::recomputeActivities(bool linking_only)
 void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVector& unbounded_min, SimpleVector& max_partact,
       SimpleVector& unbounded_max, const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const
 {
-   assert( xlow.n == matrix.n && ixlow.n == matrix.n && xupp.n == matrix.n && ixupp.n == matrix.n );
-   assert( max_partact.n == matrix.m && min_partact.n == matrix.m);
-   assert( unbounded_min.n == matrix.m && unbounded_max.n == matrix.m);
+   assert( xlow.n == matrix.getN() && ixlow.n == matrix.getN() && xupp.n == matrix.getN() && ixupp.n == matrix.getN());
+   assert( max_partact.n == matrix.getM() && min_partact.n == matrix.getM());
+   assert( unbounded_min.n == matrix.getM() && unbounded_max.n == matrix.getM());
 
-   for( int row = 0; row < matrix.m; ++row)
+   for( int row = 0; row < matrix.getM(); ++row)
    {
-      for( int j = matrix.rowptr[row].start; j < matrix.rowptr[row].end; j++)
+      for( int j = matrix.getRowPtr(row).start; j < matrix.getRowPtr(row).end; j++)
       {
-         const int col = matrix.jcolM[j];
-         const double entry = matrix.M[j];
+         const int col = matrix.getJcolM(j);
+         const double entry = matrix.getMat(j);
 
          assert( !PIPSisZero(entry) );
 
@@ -814,13 +814,21 @@ bool PresolveData::reductionsEmpty()
 // also rhs lhs will be adjusted - this has to be reversed later - there will also be a problem with the reduced costs in than particular row ?
 // todo : postsolve if bounds adjusted because of deleted matrix entry simply reverse the adjustment - no changes in multipliers
 //- row stays active / inactive ? not true..
-void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index,
-      int& index_k, int& row_end)
+void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block_type, int row,
+      int& col_idx, int& row_end)
 {
    assert(-1 <= node && node < nChildren);
 
-   SparseStorageDynamic* storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamic();
-   assert(0 <= row_index && row_index <= storage->m);
+   SparseStorageDynamic& storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamicRef();
+   
+   double val = storage.getMat(col_idx);
+   int col = storage.getJcolM(col_idx);
+
+   storage.removeEntryAtIndex(row, col_idx);
+
+   --col_idx;
+   --row_end;
+   ++elements_deleted;
 
    SimpleVector& xlower = getSimpleVecColFromStochVec(*presProb->blx, node);
 
@@ -828,22 +836,15 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
       outdated_nnzs = true;
 
    /* adjust rhs and lhs */
-   adjustMatrixRhsLhsBy(system_type, node, block_type, row_index, -storage->M[index_k] * xlower[storage->jcolM[index_k]]);
+   adjustMatrixRhsLhsBy(system_type, node, block_type, row, -val * xlower[col]);
 
    /* adjust activity */
    // todo : necessary ? impact should be low
 
    /* adjust nnz counters */
-   removeIndexRow(system_type, node, block_type, row_index, 1);
-   removeIndexColumn(node, block_type, storage->jcolM[index_k], 1);
+   removeIndexRow(system_type, node, block_type, row, 1);
+   removeIndexColumn(node, block_type, col, 1);
 
-   std::swap(storage->M[index_k], storage->M[row_end - 1]);
-   std::swap(storage->jcolM[index_k], storage->jcolM[row_end - 1]);
-   storage->rowptr[row_index].end--;
-   row_end = storage->rowptr[row_index].end;
-   index_k--;
-
-   ++elements_deleted; // todo
 }
 
 void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
@@ -970,7 +971,7 @@ void PresolveData::fixEmptyColumn(int node, int col, double val)
 {
    assert(-1 <= node && node < nChildren);
    assert(0 <= col);
-
+   //todo
    postsolver->notifyFixedEmptyColumn(node, col, val);
 
    removeColumn(node, col, val);
@@ -981,9 +982,8 @@ void PresolveData::fixEmptyColumn(int node, int col, double val)
 
 void PresolveData::fixColumn(int node, int col, double value)
 {
-   assert( -1 <= node && node < nChildren );
-   assert( 0 <= col );
-   
+   assert(-1 <= node && node < nChildren);
+   assert(0 <= col);
 
    /* current upper and lower bound as well als column - if linking variable then only proc zero stores current root column */
    std::vector<int> idx;
@@ -1213,7 +1213,7 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockT
 // todo : make a finish block_deletion ?
 void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements)
 {
-   SparseStorageDynamic* transposed = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposed();
+   SparseStorageDynamic& transposed = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
 
    for( size_t i = 0; i < elements.size(); ++i )
    {
@@ -1221,19 +1221,17 @@ void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, 
       const int row_A = entry.first;
       const int row_At = entry.second;
 
-      const int start = transposed->rowptr[row_At].start;
-      const int end = transposed->rowptr[row_At].end;
+      const int start = transposed.getRowPtr(row_At).start;
+      const int end = transposed.getRowPtr(row_At).end;
       int col_At;
 
       for( col_At = start; col_At < end; col_At++ )
       {
-         if( transposed->jcolM[col_At] == row_A )
+         if( transposed.getJcolM(col_At) == row_A )
             break;
       }
 
-      std::swap(transposed->M[col_At], transposed->M[end - 1]);
-      std::swap(transposed->jcolM[col_At], transposed->jcolM[end - 1]);
-      transposed->rowptr[row_At].end--;
+      transposed.removeEntryAtIndex(row_At, col_At);
 
       ++elements_deleted_transposed;
    }
@@ -1349,7 +1347,7 @@ void PresolveData::removeColumn(int node, int col, double fixation)
    }
 
    /* mark column as removed */
-   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0; // this too?
+   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
@@ -1364,13 +1362,13 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    SparseStorageDynamic& matrix = mat->getStorageDynamicRef();
    SparseStorageDynamic& matrix_transp = mat->getStorageDynamicTransposedRef();
 
-   assert(0 <= col && col < matrix_transp.m);
+   assert(0 <= col && col < matrix_transp.getM());
 
    /* remove all entries in column from the sparse storage dynamic */
-   for( int j = matrix_transp.rowptr[col].start; j < matrix_transp.rowptr[col].end; j++ )
+   for( int j = matrix_transp.getRowPtr(col).start; j < matrix_transp.getRowPtr(col).end; j++ )
    {
-      const int row = matrix_transp.jcolM[j];
-      const double coeff = matrix_transp.M[j];
+      const int row = matrix_transp.getJcolM(j);
+      const double coeff = matrix_transp.getMat(j);
 
       assert( !PIPSisEQ(0.0, coeff) );
 
@@ -1383,7 +1381,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
 #endif
 
       /* remove the entry, adjust activity and row counters and rhs/lhs */
-      removeEntryInDynamicStorage(matrix, row, col);
+      matrix.removeEntryAtRowCol(row, col);
 
       removeIndexRow(system_type, node, block_type, row, 1);
 
@@ -1415,10 +1413,10 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    }
 
    /* adjust column counters */
-   removeIndexColumn(node, block_type, col, matrix_transp.rowptr[col].end - matrix_transp.rowptr[col].start);
+   removeIndexColumn(node, block_type, col, matrix_transp.getRowPtr(col).end - matrix_transp.getRowPtr(col).start);
 
    /* update the transposed */
-   matrix_transp.rowptr[col].end = matrix_transp.rowptr[col].start;
+   matrix_transp.clearRow( col );
 
    // todo assert(transposed and normal matrix are in sync)
 }
@@ -1582,44 +1580,23 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
    assert(mat);
    assert(mat->hasDynamicStorage());
 
-   SparseStorageDynamic* mat_storage = mat->getStorageDynamic();
-   SparseStorageDynamic* mat_transp_storage = mat->getStorageDynamicTransposed();
-   assert(mat_storage);
-   assert( 0 <= row && row < mat_storage->m);
-   assert(mat_transp_storage);
+   SparseStorageDynamic& mat_storage = mat->getStorageDynamicRef();
+   SparseStorageDynamic& mat_transp_storage = mat->getStorageDynamicTransposedRef();
+   assert( 0 <= row && row < mat_storage.getM());
 
-   const int row_start = mat_storage->rowptr[row].start;
-   const int row_end = mat_storage->rowptr[row].end;
+   const int row_start = mat_storage.getRowPtr(row).start;
+   const int row_end = mat_storage.getRowPtr(row).end;
 
    for(int k = row_start; k < row_end; k++)
    {
-      const int col_idx = mat_storage->jcolM[k];
+      const int col = mat_storage.getJcolM(k);
 
-      removeEntryInDynamicStorage(*mat_transp_storage, col_idx, row);
-      removeIndexColumn(node, block_type, col_idx, 1);
+      mat_transp_storage.removeEntryAtRowCol(col, row);
+      removeIndexColumn(node, block_type, col, 1);
    }
 
-   removeIndexRow(system_type, node, block_type, row, mat_storage->rowptr[row].end - mat_storage->rowptr[row].start);
-   mat_storage->rowptr[row].end = mat_storage->rowptr[row].start;
-}
-
-/** removes row col from dynamic storage */
-void PresolveData::removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const
-{
-   int i = -1;
-   int end = storage.rowptr[row].end;
-   int start = storage.rowptr[row].start;
-
-   for( i = start; i < end; i++)
-   {
-      if( storage.jcolM[i] == col )
-         break;
-   }
-   assert( storage.jcolM[i] == col);
-
-   std::swap(storage.M[i], storage.M[end-1]);
-   std::swap(storage.jcolM[i], storage.jcolM[end-1]);
-   storage.rowptr[row].end--;
+   removeIndexRow(system_type, node, block_type, row, mat_storage.getRowPtr(row).end - mat_storage.getRowPtr(row).start);
+   mat_storage.clearRow(row);
 }
 
 bool PresolveData::verifyActivities()
@@ -2050,10 +2027,10 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
       /* get matrix */
       SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, LINKING_CONS_BLOCK)->getStorageDynamicRef();
 
-      for( int j = mat.rowptr[row].start; j < mat.rowptr[row].end; j++ )
+      for( int j = mat.getRowPtr(row).start; j < mat.getRowPtr(row).end; j++ )
       {
-         const int col = mat.jcolM[j];
-         const double entry = mat.M[j];
+         const int col = mat.getJcolM(j);
+         const double entry = mat.getMat(j);
 
          assert( 0 <= col && col < ixlow.n);
          assert( !PIPSisZero(entry));
@@ -2132,10 +2109,10 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    double& act_part = (*act_vec)[row];
    act_part = 0;
 
-   for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++)
+   for( int j = Amat.getRowPtr(row).start; j < Amat.getRowPtr(row).end; j++)
    {
-      const int col = Amat.jcolM[j];
-      const double entry = Amat.M[j];
+      const int col = Amat.getJcolM(j);
+      const double entry = Amat.getMat(j);
 
       assert( 0 <= col && col < ixlow_root.n );
       assert( !PIPSisZero(entry) );
@@ -2158,10 +2135,10 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
 
    if( node != -1 )
    {
-      for( int j = Bmat.rowptr[row].start; j < Bmat.rowptr[row].end; j++ )
+      for( int j = Bmat.getRowPtr(row).start; j < Bmat.getRowPtr(row).end; j++ )
       {
-         const int col = Bmat.jcolM[j];
-         const double entry = Bmat.M[j];
+         const int col = Bmat.getJcolM(j);
+         const double entry = Bmat.getMat(j);
 
          assert( 0 <= col && col < ixlow.n);
          assert( !PIPSisZero(entry));
@@ -2352,7 +2329,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
 
    SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
 
-   assert(col < mat_transp.m);
+   assert(col < mat_transp.getM() );
 
    SimpleVector& actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type) :
          getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type);
@@ -2375,10 +2352,10 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
          " with new " << ( upper ? "upper" : "lower" ) << " bound " << bound << " from " << old_bound << std::endl;
 #endif
 
-   for( int j = mat_transp.rowptr[col].start; j < mat_transp.rowptr[col].end; ++j )
+   for( int j = mat_transp.getRowPtr(col).start; j < mat_transp.getRowPtr(col).end; ++j )
    {
-      const int row = mat_transp.jcolM[j];
-      const double entry = mat_transp.M[j];
+      const int row = mat_transp.getJcolM(j);
+      const double entry = mat_transp.getMat(j);
 
       assert( !PIPSisZero(entry) );
 
@@ -2698,13 +2675,13 @@ void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGe
 {
    const SparseStorageDynamic& storage = mat.getStorageDynamicRef();
 
-   const int start = storage.rowptr[row].start;
-   const int end = storage.rowptr[row].end;
+   const int start = storage.getRowPtr(row).start;
+   const int end = storage.getRowPtr(row).end;
 
    for(int k = start; k < end; ++k)
    {
-      const double val = storage.M[k];
-      const int col = storage.jcolM[k];
+      const double val = storage.getMat(k);
+      const int col = storage.getJcolM(k);
 
       out << " + " << val << " * x_" << node << "_" << col << " € [" << ( (ixlow[col] == 0.0) ? -std::numeric_limits<double>::infinity() : xlow[col]) << ", "
             << ( (ixupp[col] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[col]) << "]";

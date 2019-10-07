@@ -5,6 +5,9 @@
 #ifndef PIPSIPM_INTERFACE
 #define PIPSIPM_INTERFACE
 
+#include <algorithm>
+#include <functional>
+
 #include "stochasticInput.hpp"
 
 #include "sTree.h"
@@ -15,6 +18,7 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <algorithm>
+
 
 #include "PreprocessFactory.h"
 #include "Scaler.h"
@@ -66,7 +70,7 @@ class PIPSIpmInterface
   static bool isDistributed() { return true; }
 
  protected:
- 
+
   FORMULATION * factory;
   PreprocessFactory * prefactory;
   sData *        data;       // possibly presolved data
@@ -83,7 +87,7 @@ class PIPSIpmInterface
 
   PIPSIpmInterface() {};
   MPI_Comm comm;
-  
+
   bool ran_solver;
 };
 
@@ -236,18 +240,18 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   if(0 == mype) cout << "solving ..." << endl;
 
   if(mype==0) {
-    cout << "1st stage " << data->getLocalnx() << " variables, " << data->getLocalmy() 
+    cout << "1st stage " << data->getLocalnx() << " variables, " << data->getLocalmy()
 	 << " equality constraints, " << data->getLocalmz() << " inequality constraints." << endl;
-    
+
     int nscens=data->children.size();
     if(nscens) {
-      cout << "2nd stage " << data->children[0]->getLocalnx() << " variables, " 
-	   << data->children[0]->getLocalmy() << " equality constraints, " 
+      cout << "2nd stage " << data->children[0]->getLocalnx() << " variables, "
+	   << data->children[0]->getLocalmy() << " equality constraints, "
 	   << data->children[0]->getLocalmz() << " inequality constraints." << endl;
-      
+
       cout << nscens << " scenarios." << endl;
-      cout << "Total " << data->getLocalnx()+nscens*data->children[0]->getLocalnx() << " variables, " 
-	   << data->getLocalmy()+nscens*data->children[0]->getLocalmy()  << " equality constraints, " 
+      cout << "Total " << data->getLocalnx()+nscens*data->children[0]->getLocalnx() << " variables, "
+	   << data->getLocalmy()+nscens*data->children[0]->getLocalmy()  << " equality constraints, "
 	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
     }
   }
@@ -276,6 +280,8 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   
   ran_solver = true;
 
+  ran_solver = true;
+
 #ifdef TIMING
    if ( 0 != result )
       return;
@@ -285,10 +291,10 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
    const double objective = getObjective();
 
    if( 0 == mype ) {
-    //cout << " " << data->nx << " variables, " << data->my  
+    //cout << " " << data->nx << " variables, " << data->my
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
-    
-    cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
+
+    cout << " Iterates: " << solver->iter <<",    Optimal Solution:  "
 	 << objective << endl;
 
     cout << "Solve time: " << tmElapsed << " seconds." << endl;
@@ -333,7 +339,7 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
 
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
-{ 
+{
   delete solver;
   delete scaler;
   delete unscaleUnpermResids;
@@ -354,7 +360,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getVarsUnscaledUnperm()
   assert(unscaleUnpermVars == NULL);
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated solution");
-  
+
   if( scaler )
   {
     sVars* unscaled_vars = dynamic_cast<sVars*>(scaler->getVariablesUnscaled(*vars));
@@ -456,7 +462,6 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolution
   return duals_varbounds;
 }
 
-
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBoundsUpp()
 {
@@ -487,7 +492,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherEqualityCons
 
   StochVector* eq_vals = dynamic_cast<StochVector*>(unscaleUnpermResids->rA->cloneFull());
 
-  eq_vals->axpy(1.0, *origData->bA);
+  eq_vals->axpy(1.0, *data->bA);
 
   std::vector<double> eq_vals_vec = eq_vals->gatherStochVector();
 
@@ -530,79 +535,88 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrim
 	//MPI_Comm_rank(comm,&mype);
 	//if (!v.length()) printf("oops, asked for scen %d on proc %d\n", scen, mype);
 	//assert(v.length());
-	if(!v.length()) 
+	if(!v.length())
 	  return std::vector<double>(); //this vector is not on this processor
 	else
-	  return std::vector<double>(&v[0],&v[0]+v.length());
+	  return std::vector<double>( &v[0], &v[0] + v.length() );
 }
 
 template<class FORMULATION, class IPMSOLVER>
-std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const 
-   {
-      SimpleVector const &y =
-            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
-      SimpleVector const &z =
-            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const
+{
+  SimpleVector const &y =
+        *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
+  SimpleVector const &z =
+        *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
 
 
-      if( !y.length() && !z.length() )
-         return std::vector<double>(); //this vector is not on this processor
-      else
-      {
-         std::vector<int> const &map = factory->tree->idx_EqIneq_Map;
+  if( !y.length() && !z.length() )
+     return std::vector<double>(); //this vector is not on this processor
+  else
+  {
+     std::vector<int> const &map = factory->tree->idx_EqIneq_Map;
 
-         std::vector<double> multipliers(map.size());
-         for( size_t i = 0; i < map.size(); i++ )
-         {
-            int idx = map[i];
-            if( idx < 0 )
-            {
-               //equality
-               idx = -idx - 1;
-               assert(idx >= 0);
-               multipliers[i] = y[idx];
-            }
-            else
-            {
-               //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
-               //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
+     std::vector<double> multipliers(map.size());
+     for( size_t i = 0; i < map.size(); i++ )
+     {
+        int idx = map[i];
+        if( idx < 0 )
+        {
+           //equality
+           idx = -idx - 1;
+           assert(idx >= 0);
+           multipliers[i] = y[idx];
+        }
+        else
+        {
+           //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
+           //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
 #ifndef NDEBUG
-               SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->iclow)).vec);
-               SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->icupp)).vec);
-               assert(iclow[idx] > 0 || icupp[idx] > 0);
+           SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->iclow)).vec);
+           SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->icupp)).vec);
+           assert(iclow[idx] > 0 || icupp[idx] > 0);
 #endif
-               multipliers[i] = z[idx];
-            }
-         }
-         return multipliers;
-      }
+           multipliers[i] = z[idx];
+        }
+     }
+     return multipliers;
+  }
 }
 
 
 template<class FORMULATION, class IPMSOLVER>
-std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDualRowSolution(int scen) const {
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDualRowSolution(int scen) const 
+{
   SimpleVector const &y = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->y).children[scen]->vec);
   SimpleVector const &z = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->z).children[scen]->vec);
   SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->iclow).children[scen]->vec);
   SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->icupp).children[scen]->vec);
   //assert(v.length());
-  if(!y.length() && !z.length()) 
+  if( !y.length() && !z.length() )
     return std::vector<double>(); //this vector is not on this processor
-  else {
+  else 
+  {
     std::vector<int> const &map=factory->tree->children[scen]->idx_EqIneq_Map;
-    
+
     std::vector<double> multipliers(map.size());
-    for(size_t i=0; i<map.size(); i++) {
-      int idx=map[i];
-      if(idx<0) {
-	//equality
-	idx=-idx-1; assert(idx>=0);
-	multipliers[i]=y[idx];
-      } else {
-	//inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
-	//\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
-	assert(iclow[idx] > 0 || icupp[idx] > 0);
-	multipliers[i] = z[idx];
+    for(size_t i = 0; i < map.size(); i++)
+    {
+      int idx = map[i];
+      if(idx<0) 
+      {
+	      //equality
+	      idx =- idx - 1;
+        assert( idx >= 0 );
+        multipliers[i] = y[idx];
+      } 
+      else
+      {
+	      //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
+	      //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
+#ifndef NDEBUG
+	      assert(iclow[idx] > 0 || icupp[idx] > 0);
+	      multipliers[i] = z[idx];
+#endif
       }
     }
     return multipliers;

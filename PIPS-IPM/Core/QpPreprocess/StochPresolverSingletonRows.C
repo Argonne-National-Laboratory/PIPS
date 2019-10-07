@@ -148,27 +148,30 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
 
       if(node == -1)
       {
-         assert( currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1.0 );
-         col_idx = currAmat->jcolM[currAmat->rowptr[row_idx].start];
-         value = currAmat->M[currAmat->rowptr[row_idx].start];
+         assert( currAmat->getRowPtr(row_idx).end - currAmat->getRowPtr(row_idx).start == 1.0 );
+         col_idx = currAmat->getJcolM(currAmat->getRowPtr(row_idx).start);
+         value = currAmat->getMat(currAmat->getRowPtr(row_idx).start);
          block_type = LINKING_VARS_BLOCK;
       }
       else
       {
-         assert(currAmat); assert(currBmat); assert( row_idx < currAmat->m ); assert( row_idx < currBmat->m );
-         assert( (currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1.0) ||
-            (currBmat->rowptr[row_idx].end - currBmat->rowptr[row_idx].start == 1.0) );
+         assert(currAmat);
+         assert(currBmat);
+         assert( row_idx < currAmat->getM() );
+         assert( row_idx < currBmat->getM() );
+         assert( (currAmat->getRowPtr(row_idx).end - currAmat->getRowPtr(row_idx).start == 1.0) ||
+            (currBmat->getRowPtr(row_idx).end - currBmat->getRowPtr(row_idx).start == 1.0) );
          
-         if(currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1.0)
+         if(currAmat->getRowPtr(row_idx).end - currAmat->getRowPtr(row_idx).start == 1.0)
          {
-            col_idx = currAmat->jcolM[currAmat->rowptr[row_idx].start];
-            value = currAmat->M[currAmat->rowptr[row_idx].start];
+            col_idx = currAmat->getJcolM(currAmat->getRowPtr(row_idx).start);
+            value = currAmat->getMat(currAmat->getRowPtr(row_idx).start);
             block_type = LINKING_VARS_BLOCK;
          }
          else
          {
-            col_idx = currBmat->jcolM[currBmat->rowptr[row_idx].start];
-            value = currBmat->M[currBmat->rowptr[row_idx].start];
+            col_idx = currBmat->getJcolM(currBmat->getRowPtr(row_idx).start);
+            value = currBmat->getMat(currBmat->getRowPtr(row_idx).start);
             block_type = CHILD_BLOCK;
          }
       }
@@ -183,14 +186,14 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
       {
          updatePointersForCurrentNode(node, system_type);
 
-         assert( currBlmat->rowptr[row_idx].end - currBlmat->rowptr[row_idx].start == 1.0 ||
-            currBlmat->rowptr[row_idx].end - currBlmat->rowptr[row_idx].start == 0.0 );
+         assert( currBlmat->getRowPtr(row_idx).end - currBlmat->getRowPtr(row_idx).start == 1.0 ||
+            currBlmat->getRowPtr(row_idx).end - currBlmat->getRowPtr(row_idx).start == 0.0 );
       
-         if( currBlmat->rowptr[row_idx].end - currBlmat->rowptr[row_idx].start == 1.0 )
+         if( currBlmat->getRowPtr(row_idx).end - currBlmat->getRowPtr(row_idx).start == 1.0 )
          {
             assert(node == -2);
-            col_idx = currBlmat->jcolM[currBlmat->rowptr[row_idx].start];
-            value = currBlmat->M[currBlmat->rowptr[row_idx].start];
+            col_idx = currBlmat->getJcolM(currBlmat->getRowPtr(row_idx).start);
+            value = currBlmat->getMat(currBlmat->getRowPtr(row_idx).start);
             node = i;
             break;
          }

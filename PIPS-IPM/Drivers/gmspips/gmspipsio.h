@@ -67,24 +67,18 @@ int initGMSPIPSIO();
 int writeBlock(const char* scrFilename,      /** < scratch file name. If NULL write ASCII to stdout */
                GMSPIPSBlockData_t* blk,      /** < block structure to write */
                int printLevel);
-int writeSolution(const char* gdxFileStem,   /** < GDX file stem */
-                  const int numcol,          /** < length of varl/varm array */
-                  const int numrow,          /** < length of equl/equm array */
-                  const double objval,       /** < objective value */
-                  double* varl,              /** < variable level */
-                  double* varm,              /** < variable marginals */
-                  double* equl,              /** < equation level */
-                  double* equm,              /** < equation marginals */
-                  const char* GAMSSysDir);   /** < GAMS system directory to locate shared libraries (can be NULL) */                  
-#if !defined(GDXSOURCE)
-int readBlockSqueezed(int numBlocks,         /** < total number of blocks n in problem 0..n */
-              int actBlock,                  /** < number of block to read 0..n */
-              int strict,                    /** < indicator for clean blocks */
-              const char* cntrFilename,      /** < Control filename */
-              const char* blk0DictFilename,  /** < Dictionary file name for block 0 */
-              const char* GAMSSysDir,        /** < GAMS system directory to locate shared libraries (can be NULL) */
-              GMSPIPSBlockData_t* blk);      /** < block structure to be filled */
-#endif
+int writeSolution(const char* gdxFileStem,  /** < GDX file stem */
+                  const int numcol,         /** < length of varl/varmlo/up array */
+                  const int numErow,        /** < length of equEm array */
+                  const int numIrow,        /** < length of equIl/equIm array */
+                  const double objval,      /** < objective value */
+                  double* varl,             /** < variable level (can be NULL) */
+                  double* varm,             /** < variable marginals (can be NULL) */
+                  double* equEl,            /** < equation =e= level (can be NULL) */
+                  double* equIl,            /** < equation =lg= level (can be NULL) */
+                  double* equEm,            /** < equation =e= marginals */
+                  double* equIm,            /** < equation =lg= marginals */
+                  const char* GAMSSysDir);  /** < GAMS system directory to locate shared libraries (can be NULL) */                  
 int readBlock(const int numBlocks,           /** < total number of blocks n in problem 0..n */
               const int actBlock,            /** < number of block to read 0..n */
               const int strict,              /** < indicator for clean blocks */
@@ -93,6 +87,7 @@ int readBlock(const int numBlocks,           /** < total number of blocks n in p
               const char* GAMSSysDir,        /** < GAMS system directory to locate shared libraries (can be NULL) */
               GMSPIPSBlockData_t* blk);      /** < block structure to be filled */
 int gdxSplitting(const int numBlocks,        /** < total number of blocks n in problem 0..n */
+              const int actBlock,            /** < block to split from big GDX file, -1 split all */
               const int offset,              /** < indicator for clean blocks */
               const int skipStrings,         /** < indicator for not registering uels and strings */
               const char* gdxFilename,       /** < GDX file name with CONVERTD jacobian structure */

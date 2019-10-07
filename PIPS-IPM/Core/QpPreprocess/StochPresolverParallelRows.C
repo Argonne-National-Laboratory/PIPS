@@ -8,6 +8,7 @@
 // todo: should we ever decide to switch to a newer c++ standard - this can be optimized
 
 //#define PIPS_DEBUG
+#include "pipsport.h"
 #include "StochPresolverParallelRows.h"
 
 namespace rowlib
@@ -126,7 +127,7 @@ void StochPresolverParallelRows::applyPresolving()
             assert(normNnzRowC);
             insertRowsIntoHashtable( row_support_hashtable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC );
          }
-         assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Cmat->m);
+         assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Cmat->getM() );
 
          // Second Hashing: Per bucket, do Second Hashing:
          row_coefficients_hashtable.clear();
@@ -166,10 +167,10 @@ void StochPresolverParallelRows::applyPresolving()
    // First Hashing: Fill 'row_support_hashtable':
    if( norm_Amat )
       insertRowsIntoHashtable( row_support_hashtable, norm_Amat, NULL, EQUALITY_SYSTEM, normNnzRowA );
-   assert( (int)row_support_hashtable.size() <= mA );
+   assert( (int) row_support_hashtable.size() <= mA );
    if( norm_Cmat )
       insertRowsIntoHashtable( row_support_hashtable, norm_Cmat, NULL, INEQUALITY_SYSTEM, normNnzRowC );
-   assert( (int)row_support_hashtable.size() <= mA + norm_Cmat->m);
+   assert( (int) row_support_hashtable.size() <= mA + norm_Cmat->getM() );
    // Second Hashing: Per bucket, do Second Hashing:
    for( size_t i = 0; i < row_support_hashtable.bucket_count(); ++i )
    {
@@ -495,8 +496,8 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    setNormalizedReductionPointers(node);
 
    /* set mA, nA */ // todo what is this for?
-   mA = (norm_Amat) ? norm_Amat->m : 0;
-   nA = (norm_Amat) ? norm_Amat->n : 0;
+   mA = (norm_Amat) ? norm_Amat->getM() : 0;
+   nA = (norm_Amat) ? norm_Amat->getN() : 0;
 
    /* remove singleton columns before normalization */
    removeSingletonVars();
@@ -525,10 +526,10 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
 
    if(node != -1 && norm_Amat && norm_Cmat)
    {
-      assert( norm_Amat->n == norm_Cmat->n );
-      assert( norm_Bmat->n == norm_Dmat->n );
-      assert( norm_Amat->m == norm_Bmat->m );
-      assert( norm_Cmat->m == norm_Dmat->m );
+      assert( norm_Amat->getN() == norm_Cmat->getN() );
+      assert( norm_Bmat->getN() == norm_Dmat->getN() );
+      assert( norm_Amat->getM() == norm_Bmat->getM() );
+      assert( norm_Cmat->getM() == norm_Dmat->getM() );
    }
 }
 
@@ -610,12 +611,12 @@ void StochPresolverParallelRows::removeSingletonVars()
          {
             // check if the singleton column is part of the current a_mat/c_mat
             // else, the singleton entry is in one of the other A_i or C_i blocks
-            if( norm_AmatTrans && (norm_AmatTrans->rowptr[col].start + 1 == norm_AmatTrans->rowptr[col].end) )
+            if( norm_AmatTrans && (norm_AmatTrans->getRowPtr(col).start + 1 == norm_AmatTrans->getRowPtr(col).end) )
             {
                removeEntry(col, *rowContainsSingletonVariableA, *norm_Amat, *norm_AmatTrans,
                      *normNnzRowA, *normNnzColParent, LINKING_VARS_BLOCK);
             }
-            else if(norm_CmatTrans && (norm_CmatTrans->rowptr[col].start +1 == norm_CmatTrans->rowptr[col].end) )
+            else if(norm_CmatTrans && (norm_CmatTrans->getRowPtr(col).start +1 == norm_CmatTrans->getRowPtr(col).end) )
             {
                removeEntry(col, *rowContainsSingletonVariableC, *norm_Cmat, *norm_CmatTrans,
                      *normNnzRowC, *normNnzColParent, LINKING_VARS_BLOCK);
@@ -633,12 +634,12 @@ void StochPresolverParallelRows::removeSingletonVars()
          {
             // check if the singleton column is part of the current b_mat/d_mat
             // else, the singleton entry is in one of the other B_i or D_i blocks
-            if( norm_BmatTrans && (norm_BmatTrans->rowptr[col].start + 1 == norm_BmatTrans->rowptr[col].end) )
+            if( norm_BmatTrans && (norm_BmatTrans->getRowPtr(col).start + 1 == norm_BmatTrans->getRowPtr(col).end) )
             {
                removeEntry(col, *rowContainsSingletonVariableA, *norm_Bmat, *norm_BmatTrans,
                      *normNnzRowA, *normNnzColChild, CHILD_BLOCK);
             }
-            else if(norm_DmatTrans && (norm_DmatTrans->rowptr[col].start + 1 == norm_DmatTrans->rowptr[col].end) )
+            else if(norm_DmatTrans && (norm_DmatTrans->getRowPtr(col).start + 1 == norm_DmatTrans->getRowPtr(col).end) )
             {
                removeEntry(col, *rowContainsSingletonVariableC, *norm_Dmat, *norm_DmatTrans,
                      *normNnzRowC, *normNnzColChild, CHILD_BLOCK);
@@ -648,75 +649,66 @@ void StochPresolverParallelRows::removeSingletonVars()
    }
 }
 
-/** Removes a singleton entry in column colIdx in matrix and matrix_trans and adapts
+/** Removes a singleton entry in column col in matrix and matrix_trans and adapts
  * the nnz vectors nnzRow and nnzColChild accordingly. Sets the entries in
  * rowContainsSingletonVar to the corresponding column index in which the singleton entry occurs.
  */
-void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
+void StochPresolverParallelRows::removeEntry(int col, SimpleVector& rowContainsSingletonVar,
       SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
       BlockType block_type)
 {
-   assert( 0 <= colIdx && colIdx < matrixTrans.m );
-   assert( matrixTrans.rowptr[colIdx].start +1 == matrixTrans.rowptr[colIdx].end);
-   assert( nnzRow.n == matrix.m );
-   assert( matrix.n == nnzCol.n );
-   assert( nnzCol.n == matrixTrans.m );
-   assert( nnzCol.elements()[colIdx] == 1.0 );
+   assert( 0 <= col && col < matrixTrans.getM() );
+   assert( matrixTrans.getRowPtr(col).start + 1 == matrixTrans.getRowPtr(col).end);
+   assert( nnzRow.n == matrix.getM() );
+   assert( matrix.getN() == nnzCol.n );
+   assert( nnzCol.n == matrixTrans.getM() );
+   assert( nnzCol[col] == 1.0 );
 
-   // First, find indices of the singleton entry:
-   const int k = matrixTrans.rowptr[colIdx].start;
-   const int rowIdx = matrixTrans.jcolM[k];
-   assert( rowIdx < nnzRow.n );
+   // get indices of the singleton entry int mat_trans
+   const int row = matrixTrans.getJcolM(matrixTrans.getRowPtr(col).start);
+
+   assert( row < nnzRow.n );
 
    // check if there are no more than one singleton entry in this row
    // if so the row is neither parallel nor nearly parallel to any other row
-   if( 0 <= rowContainsSingletonVar[rowIdx] )
+   if( 0 <= rowContainsSingletonVar[row] )
    {
-      rowContainsSingletonVar[rowIdx] = -2.0;
+      rowContainsSingletonVar[row] = -2.0;
       return;
    }
 
-   // store the colIdx in rowContainsSingletonVar
-   // (possibly add offset to colIdx so that Amat and Bmat are distinct)
+   // store the col in rowContainsSingletonVar
+   // (possibly add offset to col so that Amat and Bmat are distinct)
    if( block_type == LINKING_VARS_BLOCK )
-      rowContainsSingletonVar[rowIdx] = colIdx;
+      rowContainsSingletonVar[row] = col;
    else // if( block_type == CHILD_BLOCK )
-      rowContainsSingletonVar[rowIdx] = colIdx + nA;
+      rowContainsSingletonVar[row] = col + nA;
 
-   // Second, remove the entry from norm_Bmat and norm_BmatTrans:
-   const double coeff = removeEntryInDynamicStorage(matrix, rowIdx, colIdx);
-
-   matrixTrans.rowptr[colIdx].end--;
-   nnzRow[rowIdx]--;
-   nnzCol[colIdx] = 0.0;
-
-   if( block_type == LINKING_VARS_BLOCK )
-      singletonCoeffsColParent->elements()[colIdx] = coeff;
-   else
-      singletonCoeffsColChild->elements()[colIdx] = coeff;
-}
-
-/** removes row col from dynamic storage */
-double StochPresolverParallelRows::removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const
-{
+   // find row in matrix
+   assert(0 <= row && row < matrix.getM());
    int i = -1;
-   int end = storage.rowptr[row].end;
-   int start = storage.rowptr[row].start;
+   int end = matrix.getRowPtr(row).end;
+   int start = matrix.getRowPtr(row).start;
 
    for( i = start; i < end; i++)
    {
-      if( storage.jcolM[i] == col )
+      if( matrix.getJcolM(i) == col )
          break;
    }
-   assert( storage.jcolM[i] == col);
-   const double coeff = storage.M[i];
-   std::swap(storage.M[i], storage.M[end-1]);
+   assert( matrix.getJcolM(i) == col);
+   const double val = matrix.getMat(i);
 
-   std::swap(storage.jcolM[i], storage.jcolM[end-1]);
-   storage.rowptr[row].end--;
-   return coeff;
+   matrix.removeEntryAtIndex( row, i);
+   matrixTrans.removeEntryAtIndex( col, matrixTrans.getRowPtr(col).start );
+
+   nnzRow[row]--;
+   nnzCol[col] = 0.0;
+
+   if( block_type == LINKING_VARS_BLOCK )
+      (*singletonCoeffsColParent)[col] = val;
+   else
+      (*singletonCoeffsColChild)[col] = val;
 }
-
 
 // todo there seems to be no numerical threshold for the normalization below .. this should be fixed - rows with fairly different coefficients could be regarded equal
 /// cupp can be either the rhs for the equality system or upper bounds for inequalities
@@ -726,9 +718,9 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
 {
    assert(a_mat);
    assert(cupp);
-   assert( a_mat->m == cupp->n );
+   assert( a_mat->getM() == cupp->n );
    if( b_mat )
-      assert( a_mat->m == b_mat->m);
+      assert( a_mat->getM() == b_mat->getM());
 
    if( system_type == INEQUALITY_SYSTEM )
    {
@@ -737,7 +729,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
    }
 
 
-   int n_rows = a_mat->m;
+   int n_rows = a_mat->getM();
 
    /// for every row find the max value and normalize by that
    for( int row = 0; row < n_rows; row++)
@@ -745,17 +737,17 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       double absmax = 0.0;
       bool negate_row = false;
 
-      const int rowA_start = a_mat->rowptr[row].start;
-      const int rowA_end = a_mat->rowptr[row].end;
+      const int rowA_start = a_mat->getRowPtr(row).start;
+      const int rowA_end = a_mat->getRowPtr(row).end;
       if( rowA_start < rowA_end )
       {
-         if( a_mat->M[rowA_start] < 0)
+         if( a_mat->getMat(rowA_start) < 0)
             negate_row = true;
 
          for(int k = rowA_start; k < rowA_end; k++)
          {
-            if( absmax < std::fabs(a_mat->M[k]) )
-               absmax = std::fabs(a_mat->M[k]);
+            if( absmax < std::fabs(a_mat->getMat(k)) )
+               absmax = std::fabs(a_mat->getMat(k));
          }
       }
 
@@ -763,18 +755,18 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       int rowB_end = 0;
       if( b_mat )
       {
-         rowB_start = b_mat->rowptr[row].start;
-         rowB_end = b_mat->rowptr[row].end;
+         rowB_start = b_mat->getRowPtr(row).start;
+         rowB_end = b_mat->getRowPtr(row).end;
          if( rowB_start < rowB_end )
          {
             // todo: this seems wrong to me - I think here we can only decide about negation if the row in a_mat is empty EDIT: fixed it?
             //if( rowA_start == rowA_end && b_mat->M[rowB_start] < 0)
-            if( b_mat->M[rowB_start] < 0)
+            if( b_mat->getMat()[rowB_start] < 0)
                negate_row = true;
             for(int k = rowB_start; k < rowB_end; k++)
             {
-               if( absmax < std::fabs(b_mat->M[k]) )
-                  absmax = std::fabs(b_mat->M[k]);
+               if( absmax < std::fabs(b_mat->getMat(k)) )
+                  absmax = std::fabs(b_mat->getMat(k));
             }
          }
       }
@@ -783,11 +775,9 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       if(negate_row)
          absmax = absmax * -1.0;
       
-      for(int k = rowA_start; k < rowA_end; k++)
-         a_mat->M[k] /= absmax;
-
-      for(int k = rowB_start; k < rowB_end; k++)
-            b_mat->M[k] /= absmax;
+      a_mat->scaleRow( row, 1.0 / absmax );
+      if( b_mat )
+         b_mat->scaleRow( row, 1.0 / absmax );
 
       if( system_type == EQUALITY_SYSTEM )
       {
@@ -821,11 +811,11 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
 {
    assert(a_mat);
    if(b_mat)
-     assert( a_mat->m == b_mat->m );
+     assert( a_mat->getM() == b_mat->getM() );
    if( system_type == EQUALITY_SYSTEM )
-      assert( mA == a_mat->m );
+      assert( mA == a_mat->getM() );
 
-   for(int row = 0; row < a_mat->m; row++)
+   for(int row = 0; row < a_mat->getM(); row++)
    {
       // ignore rows containing more than one singleton entry:
       if( system_type == EQUALITY_SYSTEM && (*rowContainsSingletonVariableA)[row] == -2.0 )
@@ -841,28 +831,28 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
          rowId += mA;
 
       // calculate rowlength of a_mat and b_mat
-      const int rowA_start =  a_mat->rowptr[row].start;
-      const int rowA_length = a_mat->rowptr[row].end - rowA_start;
+      const int rowA_start =  a_mat->getRowPtr(row).start;
+      const int rowA_length = a_mat->getRowPtr(row).end - rowA_start;
       
       if( b_mat )
       {
-         const int rowB_start = b_mat->rowptr[row].start;
-         const int rowB_length = b_mat->rowptr[row].end - rowB_start;
+         const int rowB_start = b_mat->getRowPtr(row).start;
+         const int rowB_length = b_mat->getRowPtr(row).end - rowB_start;
 
          if( rowA_length == 0 && rowB_length == 0 )
             continue;
          // colIndices and normalized entries are set as pointers to the original data.
          // create and insert the new element:
-         rows.emplace(rowId, nA, rowA_length, &(a_mat->jcolM[rowA_start]), &(a_mat->M[rowA_start]),
-               rowB_length, &(b_mat->jcolM[rowB_start]), &(b_mat->M[rowB_start]));
+         rows.emplace( rowId, nA, rowA_length, a_mat->getJcolM() + rowA_start, a_mat->getMat() + rowA_start,
+               rowB_length, b_mat->getJcolM() + rowB_start, b_mat->getMat() + rowB_start );
       }
       else
       {
          if(rowA_length == 0)
             continue;
 
-         rows.emplace(rowId, nA, rowA_length, &(a_mat->jcolM[rowA_start]),
-               &(a_mat->M[rowA_start]), 0, NULL, NULL);
+         rows.emplace(rowId, nA, rowA_length, a_mat->getJcolM() + rowA_start,
+               a_mat->getMat() + rowA_start, 0, NULL, NULL );
       }
    }
 }
@@ -1071,8 +1061,8 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    assert( system_type == INEQUALITY_SYSTEM);
    assert( currCmat );
    assert( rowId1 >= 0 && rowId2 >= 0 );
-   assert( rowId1 < currCmat->m && rowId2 < currCmat->m );
-   assert( norm_factorC && norm_factorC->n == currCmat->m );
+   assert( rowId1 < currCmat->getM() && rowId2 < currCmat->getM() );
+   assert( norm_factorC && norm_factorC->n == currCmat->getM() );
 
    // the normalizing factor of the first inequality:
    double factor = (*norm_factorC)[rowId1];

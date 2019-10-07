@@ -125,7 +125,6 @@ private:
    void removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
          SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
          BlockType block_type);
-   double removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
          SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow) const;

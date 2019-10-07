@@ -164,18 +164,18 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
             {
                /* Amat */
                assert(currAmatTrans);
-               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
                {
-                  assert( (currAmatTrans->rowptr[col].end - currAmatTrans->rowptr[col].start) == 1);
-                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
+                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
                   return true;
                }
                /* Blmat */
                assert(currBlmatTrans);
-               if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+               if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
                {
-                  assert( (currBlmatTrans->rowptr[col].end - currBlmatTrans->rowptr[col].start) == 1);
-                  row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+                  assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
+                  row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
                   linking = true;
                   return true;
                }
@@ -184,10 +184,10 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
             {
                /* Amat */
                assert(currAmatTrans);
-               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
                {
-                  assert( (currAmatTrans->rowptr[col].end - currAmatTrans->rowptr[col].start) == 1);
-                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
+                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
                   return true;
                }
             }
@@ -208,18 +208,18 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
             {
                /* Amat */
                assert(currAmatTrans);
-               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
                {
-                  assert( (currAmatTrans->rowptr[col].end - currAmatTrans->rowptr[col].start) == 1);
-                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
+                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
                   return true;
                }
                /* Blmat */
                assert(currBlmatTrans);
-               if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+               if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
                {
-                  assert( (currBlmatTrans->rowptr[col].end - currBlmatTrans->rowptr[col].start) == 1);
-                  row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+                  assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
+                  row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
                   linking = true;
                   return true;
                }
@@ -228,10 +228,10 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
             {
                /* Amat */
                assert(currAmatTrans);
-               if(currAmatTrans->rowptr[col].start != currAmatTrans->rowptr[col].end)
+               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
                {
-                  assert( (currAmatTrans->rowptr[col].end - currAmatTrans->rowptr[col].start) == 1);
-                  row = currAmatTrans->jcolM[currAmatTrans->rowptr[col].start];
+                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
+                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
                   return true;
                }
             }
@@ -252,18 +252,18 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
 
          /* Bmat */
          assert(currBmatTrans);
-         if(currBmatTrans->rowptr[col].start != currBmatTrans->rowptr[col].end)
+         if(currBmatTrans->getRowPtr()[col].start != currBmatTrans->getRowPtr()[col].end)
          {
-            assert( (currBmatTrans->rowptr[col].end - currBmatTrans->rowptr[col].start) == 1);
-            row = currBmatTrans->jcolM[currBmatTrans->rowptr[col].start];
+            assert( (currBmatTrans->getRowPtr()[col].end - currBmatTrans->getRowPtr()[col].start) == 1);
+            row = currBmatTrans->getJcolM()[currBmatTrans->getRowPtr()[col].start];
             return true;
          }
          /* Blmat */
          assert(currBlmatTrans);
-         if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+         if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
          {
-            assert( (currBlmatTrans->rowptr[col].end - currBlmatTrans->rowptr[col].start) == 1);
-            row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+            assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
+            row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
             linking = true;
             return true;
          }
@@ -277,18 +277,18 @@ bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& syst
 
          /* Bmat */
          assert(currBmatTrans);
-         if(currBmatTrans->rowptr[col].start != currBmatTrans->rowptr[col].end)
+         if(currBmatTrans->getRowPtr()[col].start != currBmatTrans->getRowPtr()[col].end)
          {
-            assert( (currBmatTrans->rowptr[col].end - currBmatTrans->rowptr[col].start) == 1);
-            row = currBmatTrans->jcolM[currBmatTrans->rowptr[col].start];
+            assert( (currBmatTrans->getRowPtr()[col].end - currBmatTrans->getRowPtr()[col].start) == 1);
+            row = currBmatTrans->getJcolM()[currBmatTrans->getRowPtr()[col].start];
             return true;
          }
          /* Blmat */
          assert(currBlmatTrans);
-         if(currBlmatTrans->rowptr[col].start != currBlmatTrans->rowptr[col].end)
+         if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
          {
-            assert( (currBlmatTrans->rowptr[col].end - currBlmatTrans->rowptr[col].start) == 1);
-            row = currBlmatTrans->jcolM[currBlmatTrans->rowptr[col].start];
+            assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
+            row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
             linking = true;
             return true;
          }

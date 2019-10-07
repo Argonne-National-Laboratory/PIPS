@@ -192,8 +192,9 @@ public:
 
       /// interface methods called from the presolvers when they detect a possible modification
       // todo make bool and give feedback or even better - return some enum maybe?
-      void fixEmptyColumn(int node, int col, double val);
       void fixColumn(int node, int col, double value);
+      void fixEmptyColumn(int node, int col, double val);
+
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
       void removeParallelRow(SystemType system_type, int node, int row, bool linking);
@@ -205,7 +206,7 @@ public:
       void adaptObjectiveParallelRow(int node, int col, double val_offset, double val_vec);
 
       /* call whenever a single entry has been deleted from the matrix */
-      void deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index, int& index_k, int& row_end);
+      void deleteEntry(SystemType system_type, int node, BlockType block_type, int row, int& col_idx, int& row_end);
       void updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements);
 
       /* methods for verifying state of presData or querying the problem */
@@ -241,7 +242,6 @@ private:
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow(SystemType system_type, int node, int row, bool linking);
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
-      void removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
       void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
       void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
@@ -254,9 +254,6 @@ private:
          { return getSimpleVecColFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node); };
       SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
       SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
-
-      void buildRowForPostsolve( SystemType system_type, int node, BlockType block_type, int row, std::vector<int>& idx_row, std::vector<double>& val_row);
-      void buildColForPostsolve( int node, int col, std::vector<int>& idx_col, std::vector<double>& val_col);
 
 /// methods for printing debug information
 public:

@@ -31,7 +31,7 @@ protected:
 
 public:
 
-  SparseGenMatrix( );
+  SparseGenMatrix();
 
   void updateTransposed();
   void deleteTransposed();
@@ -40,7 +40,6 @@ public:
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
 		   int deleteElts=0);
-  //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
 
   virtual SparseGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
@@ -184,6 +183,8 @@ public:
   bool hasTransposed() const;
 
   void freeDynamicStorage();
+
+  virtual int appendRow( const OoqpVector& row );
 
   virtual ~SparseGenMatrix();
 
