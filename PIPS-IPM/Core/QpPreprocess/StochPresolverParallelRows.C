@@ -768,7 +768,8 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
          if( rowB_start < rowB_end )
          {
             // todo: this seems wrong to me - I think here we can only decide about negation if the row in a_mat is empty EDIT: fixed it?
-            if( rowA_start == rowA_end && b_mat->M[rowB_start] < 0)
+            //if( rowA_start == rowA_end && b_mat->M[rowB_start] < 0)
+            if( b_mat->M[rowB_start] < 0)
                negate_row = true;
             for(int k = rowB_start; k < rowB_end; k++)
             {

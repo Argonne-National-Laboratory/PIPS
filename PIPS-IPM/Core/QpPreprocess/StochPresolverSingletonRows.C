@@ -200,7 +200,7 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
          return;
    }
 
-   assert(value != 0.0);
+   assert( !PIPSisEQ(value, 0.0) );
 
    if(system_type == EQUALITY_SYSTEM)
    {
@@ -211,27 +211,28 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
    }
    else
    {
-
       if(block_type != LINKING_CONS_BLOCK)
       {
          assert( (*currIclow)[row_idx] == 1.0 || (*currIcupp)[row_idx] == 1.0 );
 
-         if( (*currIclow)[row_idx] == 1.0 )
-            lbx = (*currIneqLhs)[row_idx] / value;
-         if( (*currIcupp)[row_idx] == 1.0 )
-            ubx = (*currIneqRhs)[row_idx] / value;
-
-         if( PIPSisLT( value, 0.0) )
+         if( PIPSisLT(value, 0.0) )
          {
-            std::swap( lbx, ubx );
-            if( (*currIclow)[row_idx] == 0.0 )
-               ubx = -ubx;
-            if( (*currIcupp)[row_idx] == 0.0 )
-               lbx = -lbx;
-         }  
-
-
+            if( (*currIcupp)[row_idx] == 1.0 )
+               lbx = (*currIneqRhs)[row_idx] / value;
+            if( (*currIclow)[row_idx] == 1.0 )
+               ubx = (*currIneqLhs)[row_idx] / value;
+         }
+         else
+         {
+            if( (*currIclow)[row_idx] == 1.0 )
+               lbx = (*currIneqLhs)[row_idx] / value;
+            if( (*currIcupp)[row_idx] == 1.0 )
+               ubx = (*currIneqRhs)[row_idx] / value;
+         }
       }
+      else
+         assert(block_type != LINKING_CONS_BLOCK); // todo : can is possible
+
    }
    assert( PIPSisLE(lbx ,ubx) );
 }
