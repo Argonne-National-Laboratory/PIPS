@@ -48,11 +48,16 @@ void StochPresolverBoundStrengthening::applyPresolving()
    blx_clone_before->componentMult(*presData.getPresProb().ixlow);
    bux_clone_before->componentMult(*presData.getPresProb().ixupp);
 
-   double lower = blx_clone_before->infnorm();
-   double upper = bux_clone_before->infnorm();
+   double lower_inf_before = blx_clone_before->infnorm();
+   double lower_two_before = blx_clone_before->twonorm();
+   double upper_inf_before = bux_clone_before->infnorm();
+   double upper_two_before = bux_clone_before->twonorm();
 
    if( my_rank == 0 )
-      std::cout << "lower bound infnorm: " << lower << "\t\tupper bound infnorm: " << upper << std::endl;
+   {
+      std::cout << "lower bound infnorm: " << lower_inf_before << "\t\tupper bound infnorm: " << upper_inf_before << std::endl;
+      std::cout << "lower bound twonorm: " << lower_two_before << "\t\tupper bound twonorm: " << upper_two_before << std::endl;
+   }
 
    int max_iter = 1; // todo
    int iter = 0;
@@ -107,11 +112,16 @@ void StochPresolverBoundStrengthening::applyPresolving()
    blx_clone_after->componentMult(*presData.getPresProb().ixlow);
    bux_clone_after->componentMult(*presData.getPresProb().ixupp);
 
-   double lower_after = blx_clone_after->infnorm();
-   double upper_after = bux_clone_after->infnorm();
+   double lower_inf_after = blx_clone_after->infnorm();
+   double lower_two_after = blx_clone_after->twonorm();
+   double upper_inf_after = bux_clone_after->infnorm();
+   double upper_two_after = bux_clone_after->twonorm();
 
    if( my_rank == 0 )
-      std::cout << "lower bound infnorm: " << lower_after << "\t\tupper bound infnorm: " << upper_after << std::endl;
+   {
+      std::cout << "lower bound infnorm: " << lower_inf_after << "\t\tupper bound infnorm: " << upper_inf_after << std::endl;
+      std::cout << "lower bound twonorm: " << lower_two_after << "\t\tupper bound twonorm: " << upper_two_after << std::endl;
+   }
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
