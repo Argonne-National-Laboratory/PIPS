@@ -2783,7 +2783,7 @@ void PresolveData::printVarBoundStatistics(std::ostream& out) const
    xupp_def->componentMult(ixupp);
 
    double nr_bounds_upper = ixupp.dotProductSelf(1.0);
-   double nr_bounds_lower = ixupp.dotProductSelf(1.0);
+   double nr_bounds_lower = ixlow.dotProductSelf(1.0);
 
    double xupp_twonorm = xupp_def->twonorm();
    double xupp_infnorm = xupp_def->infnorm();
@@ -2810,15 +2810,21 @@ void PresolveData::printVarBoundStatistics(std::ostream& out) const
       std::cout << "____________________Stats__Bounds____________________" << std::endl;
       std::cout << "_____________________________________________________" << std::endl;
 
-      std::cout << "xlow :" << std::endl;
-      std::cout << "nr_bounds \t" << nr_bounds_lower << std::endl;
-      std::cout << "twonorm \t" << xlow_twonorm << "\t onenorm \t" << xlow_onenorm << "\t infnorm \t" << xlow_infnorm << std::endl;
-      std::cout << "min \t" << min_low << "\t max \t" << max_low << std::endl;
-
-      std::cout << "xupp :" << std::endl;
-      std::cout << "nr_bounds \t" << nr_bounds_upper << std::endl;
-      std::cout << "twonorm \t" << xupp_twonorm << "\t onenorm \t" << xupp_onenorm << "\t infnorm \t" << xupp_infnorm << std::endl;
-      std::cout << "min \t" << min_upp << "\t max \t" << max_upp << std::endl;
+      std::cout << "xlow:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_bounds_lower << std::endl;
+      std::cout << "twonorm  \t" << xlow_twonorm << std::endl;
+      std::cout << "onenorm  \t" << xlow_onenorm << std::endl;
+      std::cout << "infnorm  \t" << xlow_infnorm << std::endl;
+      std::cout << "min      \t" << max_low << std::endl; 
+      std::cout << "max      \t" << max_low << std::endl;
+      std::cout << std::endl;
+      std::cout << "xupp:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_bounds_upper << std::endl;
+      std::cout << "twonorm  \t" << xupp_twonorm << std::endl;
+      std::cout << "onenorm  \t" << xupp_onenorm << std::endl;
+      std::cout << "infnorm  \t" << xupp_infnorm << std::endl;
+      std::cout << "min      \t" << min_upp << std::endl;
+      std::cout << "max      \t" << max_upp << std::endl;
 
       std::cout << "_____________________________________________________" << std::endl;
       std::cout << "_____________________________________________________" << std::endl;
