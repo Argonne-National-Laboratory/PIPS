@@ -2768,3 +2768,59 @@ void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGe
             << ( (ixupp[col] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[col]) << "]";
    }
 }
+
+void PresolveData::printVarBoundStatistics(std::ostream& out) const
+{
+   const StochVector& xupp = dynamic_cast<const StochVector&>(*presProb->bux);
+   const StochVector& xlow = dynamic_cast<const StochVector&>(*presProb->blx);
+   const StochVector& ixupp = dynamic_cast<const StochVector&>(*presProb->ixupp);
+   const StochVector& ixlow = dynamic_cast<const StochVector&>(*presProb->ixlow);
+
+   StochVectorHandle xlow_def = StochVectorHandle(xlow.cloneFull());
+   StochVectorHandle xupp_def = StochVectorHandle(xupp.cloneFull());
+
+   xlow_def->componentMult(ixlow);
+   xupp_def->componentMult(ixupp);
+
+   double nr_bounds_upper = ixupp.dotProductSelf(1.0);
+   double nr_bounds_lower = ixupp.dotProductSelf(1.0);
+
+   double xupp_twonorm = xupp_def->twonorm();
+   double xupp_infnorm = xupp_def->infnorm();
+   double xupp_onenorm = xupp_def->onenorm();
+
+   double xlow_twonorm = xlow_def->twonorm();
+   double xlow_infnorm = xlow_def->infnorm();
+   double xlow_onenorm = xlow_def->onenorm();
+
+   double min_low;
+   double max_low;
+   double min_upp;
+   double max_upp;
+   int a;
+
+   xupp_def->min(min_upp, a);
+   xupp_def->max(max_upp, a);
+   xlow_def->min(min_low, a);
+   xlow_def->max(max_low, a);
+
+   if(distributed && my_rank == 0)
+   {
+      std::cout << "_____________________________________________________" << std::endl;
+      std::cout << "____________________Stats__Bounds____________________" << std::endl;
+      std::cout << "_____________________________________________________" << std::endl;
+
+      std::cout << "xlow :" << std::endl;
+      std::cout << "nr_bounds \t" << nr_bounds_lower << std::endl;
+      std::cout << "twonorm \t" << xlow_twonorm << "\t onenorm \t" << xlow_onenorm << "\t infnorm \t" << xlow_infnorm << std::endl;
+      std::cout << "min \t" << min_low << "\t max \t" << max_low << std::endl;
+
+      std::cout << "xupp :" << std::endl;
+      std::cout << "nr_bounds \t" << nr_bounds_upper << std::endl;
+      std::cout << "twonorm \t" << xupp_twonorm << "\t onenorm \t" << xupp_onenorm << "\t infnorm \t" << xupp_infnorm << std::endl;
+      std::cout << "min \t" << min_upp << "\t max \t" << max_upp << std::endl;
+
+      std::cout << "_____________________________________________________" << std::endl;
+      std::cout << "_____________________________________________________" << std::endl;
+   }
+}

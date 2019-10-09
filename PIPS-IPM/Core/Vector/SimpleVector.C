@@ -271,11 +271,11 @@ double SimpleVector::twonorm() const
   */
 }
 
-void SimpleVector::componentMult( OoqpVector& vec )
+void SimpleVector::componentMult( const OoqpVector& vec )
 {
   assert( n == vec.length() );
-  SimpleVector & sv = dynamic_cast<SimpleVector &>(vec);
-  double * y = sv.v;
+  const SimpleVector & sv = dynamic_cast<const SimpleVector &>(vec);
+  const double * y = sv.v;
   int i;
   for( i = 0; i < n; i++ ) v[i] *= y[i];
 }
@@ -317,13 +317,13 @@ void SimpleVector::printSolutionToStdErr( OoqpVector &vec)
   fprintf( stderr, "******");
 }
 
-void SimpleVector::componentDiv ( OoqpVector& vec )
+void SimpleVector::componentDiv ( const OoqpVector& vec )
 {
   assert( n == vec.length() );
   double * pv = v, *lv = v + n;
 
-  SimpleVector & sv = dynamic_cast<SimpleVector &>(vec);
-  double * y = sv.v;
+  const SimpleVector & sv = dynamic_cast<const SimpleVector &>(vec);
+  const double * y = sv.v;
 
   for( ; pv < lv; pv++, y++ ) *pv /= *y;
 }
