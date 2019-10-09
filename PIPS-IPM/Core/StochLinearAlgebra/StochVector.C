@@ -990,9 +990,9 @@ void StochVector::componentMult( const OoqpVector& v_ )
     children[it]->componentMult(*v.children[it]);
 }
 
-void StochVector::componentDiv ( OoqpVector& v_ )
+void StochVector::componentDiv ( const OoqpVector& v_ )
 {
-  StochVector& v = dynamic_cast<StochVector&>(v_);
+  const StochVector& v = dynamic_cast<const StochVector&>(v_);
   assert(v.children.size() == children.size());
 
   vec->componentDiv(*v.vec);

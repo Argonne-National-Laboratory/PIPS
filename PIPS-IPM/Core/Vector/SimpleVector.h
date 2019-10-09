@@ -70,7 +70,7 @@ public:
   virtual bool componentEqual( const OoqpVector& vec, double tol) const;
   virtual void scalarMult( double num);
   virtual void printSolutionToStdErr( OoqpVector& v );
-  virtual void componentDiv ( OoqpVector& v );
+  virtual void componentDiv ( const OoqpVector& v );
   virtual void writeToStream(ostream& out) const;
   virtual void writeToStreamAll(ostream& out) const;
   virtual void writeToStreamAllStringStream(stringstream& sout) const;

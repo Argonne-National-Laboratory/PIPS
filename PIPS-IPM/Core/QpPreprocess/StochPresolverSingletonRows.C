@@ -39,6 +39,8 @@ void StochPresolverSingletonRows::applyPresolving()
       std::cout << "--- Before singleton Row Presolving:" << std::endl;
    }
    countRowsCols();
+   presData.printVarBoundStatistics(std::cout);
+
 #endif
 
    if( presData.getSingletonRows().size() == 0 )
@@ -79,6 +81,7 @@ void StochPresolverSingletonRows::applyPresolving()
    if( my_rank == 0 )
       std::cout << "--- After singleton row presolving:" << std::endl;
    countRowsCols();
+   presData.printVarBoundStatistics(std::cout);
    if(my_rank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
@@ -87,7 +90,8 @@ void StochPresolverSingletonRows::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
-}
+
+   }
 
 /** Does one round of singleton rows presolving for system A or C
  *
