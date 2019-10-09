@@ -25,7 +25,7 @@ public:
 private:
    long long removed_cols;
 
-   bool removeSingletonColumn(int node, int col);
+   bool removeSingletonColumn(const int& node, int col);
    bool findRowForColumnSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& node_col, const int& col );
    bool findRowForLinkingSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& col);
    bool findRowForLinkingSingletonInSystem( SystemType system_type, int& node_row, int& row, bool& linking, const int& col);

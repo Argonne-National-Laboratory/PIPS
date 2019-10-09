@@ -82,7 +82,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.verifyActivities());  
 }
 
-bool StochPresolverSingletonColumns::removeSingletonColumn(int node_col, int col)
+bool StochPresolverSingletonColumns::removeSingletonColumn(const int& node_col, int col)
 {
    assert( -1 <= node_col && node_col < nChildren );
 
@@ -129,23 +129,22 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(int node_col, int col
 
    /* if objective of variable is zero we can just remove it from the problem together with the containing row */
    double obj = (node_col == -1) ? (*currgParent)[col] : (*currgChild)[col];
-   // if( implied_free && PIPSisEQ(obj, 0.0) )
-   // {
-   //    std::cout << "A" << std::endl;
-   //    presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
-   //    return true;
-   // }  
-
-   /* equalitiy singleton variables */
-   if( system_type == EQUALITY_SYSTEM )
+   if( implied_free && PIPSisEQ(obj, 0.0) )
    {
-      /* (originally) free singleton columns just get deleted together with their row */
-      if( implied_free )
-      {
-         presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
-         return true;
-      }
-   }
+      presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+      return true;
+   }  
+
+   // /* equalitiy singleton variables */
+   // if( system_type == EQUALITY_SYSTEM )
+   // {
+   //    /* (originally) free singleton columns just get deleted together with their row */
+   //    if( implied_free )
+   //    {
+   //       presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+   //       return true;
+   //    }
+   // }
 
    /* inequality singleton variables */
    // TODO

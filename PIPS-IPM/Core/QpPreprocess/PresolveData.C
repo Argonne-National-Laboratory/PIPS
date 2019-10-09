@@ -1501,7 +1501,9 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
       std::cout << "TRACKING: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
    }
 #endif
- 
+   assert( !linking_row );
+   assert( system_type == EQUALITY_SYSTEM );
+
    adaptObjectiveSubstitutedRow( system_type, node_row, row, linking_row, node_col, col );
 
    removeRow( system_type, node_row, row, linking_row );
@@ -1512,56 +1514,51 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
 void PresolveData::adaptObjectiveSubstitutedRow( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
 {
    assert( system_type == EQUALITY_SYSTEM );
-   assert( -1 <= node_row && node_row < nChildren );
    assert( !linking_row );
+   assert( -1 <= node_row && node_row < nChildren );
    assert( -1 <= node_col && node_col < nChildren );
 
-   const SparseStorageDynamic& a_mat_storage = getSparseGenMatrix(system_type, node_row, LINKING_VARS_BLOCK)->getStorageDynamicRef();
+   BlockType block_col = ( node_col == -1) ? LINKING_VARS_BLOCK : CHILD_BLOCK; 
+   const SparseStorageDynamic& col_mat_tp = getSparseGenMatrix(system_type, node_row, block_col)->getStorageDynamicTransposedRef();
+   const double col_coef = col_mat_tp.getMat(col_mat_tp.getRowPtr(col).start);
+   const double obj_coef = getSimpleVecColFromStochVec( *presProb->g, node_col)[col];
 
-   const double obj_coeff = getSimpleVecColFromStochVec( *presProb->g, node_col)[col];
+   assert( (col_mat_tp.getRowPtr(col).end - col_mat_tp.getRowPtr(col).start) == 1 );
+   assert( row == col_mat_tp.getJcolM(col_mat_tp.getRowPtr(col).start) );
+   assert( ! PIPSisZero(col_coef) );
+   
+   if( PIPSisZero(obj_coef) )
+      return;
+
    const double rhs = getSimpleVecRowFromStochVec( *presProb->bA, node_row, CHILD_BLOCK)[row];
+   
+   const SparseStorageDynamic& a_mat = getSparseGenMatrix(system_type, node_row, LINKING_VARS_BLOCK)->getStorageDynamicRef();
 
-   const SparseStorageDynamic& col_mat_storage = 
-      getSparseGenMatrix(system_type, node_row, ((node_col == -1) ? LINKING_VARS_BLOCK : CHILD_BLOCK))->getStorageDynamicRef();
-   double col_coeff = 0.0;
-   bool found = false;
-   for(int i = col_mat_storage.getRowPtr(row).start; i < col_mat_storage.getRowPtr(row).end; ++i)
+   for(int i = a_mat.getRowPtr(row).start ; i < a_mat.getRowPtr(row).end; ++i)
    {
-      if( col_mat_storage.getJcolM(i) == col )
+      const int col_idx = a_mat.getJcolM(i);
+
+      if(col_idx != col || node_col != -1)
       {
-         found = true; 
-         col_coeff = col_mat_storage.getMat(i);
-
-         assert( !PIPSisZero(col_coeff) );
-      }
-   }
-   assert(found);
-
-   for(int i = a_mat_storage.getRowPtr(row).start ; i < a_mat_storage.getRowPtr(row).end; ++i)
-   {
-      const int col_idx = a_mat_storage.getJcolM(i);
-
-      if(col_idx != col)
-      {
-         (*obj_vector_chgs)[col_idx] -= obj_coeff * a_mat_storage.getMat(i) / col_coeff;
+         (*obj_vector_chgs)[col_idx] -= obj_coef * a_mat.getMat(i) / col_coef;
          outdated_objvector = true;
       }
    }
 
    if( node_row != -1 )
    {
-      const SparseStorageDynamic& b_mat_storage = getSparseGenMatrix(system_type, node_row, CHILD_BLOCK)->getStorageDynamicRef();
+      const SparseStorageDynamic& b_mat = getSparseGenMatrix(system_type, node_row, CHILD_BLOCK)->getStorageDynamicRef();
       
-      for(int i = b_mat_storage.getRowPtr(row).start; i < b_mat_storage.getRowPtr(row).end; ++i)
+      for(int i = b_mat.getRowPtr(row).start; i < b_mat.getRowPtr(row).end; ++i)
       {
-         const int col_idx = b_mat_storage.getJcolM(i);
+         const int col_idx = b_mat.getJcolM(i);
 
-         if(col_idx != col)
-            getSimpleVecColFromStochVec( *presProb->g, node_row)[col_idx] -= obj_coeff * b_mat_storage.getMat(i) / col_coeff;
+         if(col_idx != col || node_col != node_row)
+            getSimpleVecColFromStochVec( *presProb->g, node_row)[col_idx] -= obj_coef * b_mat.getMat(i) / col_coef;
       }
    }
 
-   obj_offset_chgs += col_coeff * rhs / col_coeff;
+   obj_offset_chgs += obj_coef * rhs / col_coef;
 
    getSimpleVecColFromStochVec( *presProb->g, node_col)[col] = 0.0;
 }
