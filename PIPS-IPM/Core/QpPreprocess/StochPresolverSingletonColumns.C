@@ -156,158 +156,137 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(int node_col, int col
 bool StochPresolverSingletonColumns::findRowForColumnSingleton( SystemType& system_type, int& node_row, int& row, bool& linking,
    const int& node_col, const int& col )
 {
+   assert( -1 <= node_col && node_col < nChildren );
    if( node_col == -1 )
    {
+      if( findRowForLinkingSingleton( system_type, node_row, row, linking, col) )
+         return true;
+   }
+   else
+   {
+      node_row = node_col;
+      if( findRowForNonlinkingSingelton( system_type, row, linking, node_col, col ) )
+         return true;      
+   }
+   
+   return false;
+}
+
+bool StochPresolverSingletonColumns::findRowForLinkingSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& col)
+{
       /* go through all children and check linking variables for the singleton row */
       
       /* equality part */
       system_type = EQUALITY_SYSTEM;
-      linking = false;
-
-      for( node_row = -1; node_row < nChildren; ++node_row)
-      {
-         if( !presData.nodeIsDummy( node_row, system_type) )
-         {
-            updatePointersForCurrentNode( node_row, system_type );
-
-            /* check transposed for entry */
-            if( node_row == -1 )
-            {
-               /* Amat */
-               assert(currAmatTrans);
-               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
-               {
-                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
-                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
-                  return true;
-               }
-               /* Blmat */
-               assert(currBlmatTrans);
-               if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
-               {
-                  assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
-                  row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
-                  linking = true;
-                  return true;
-               }
-            }
-            else
-            {
-               /* Amat */
-               assert(currAmatTrans);
-               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
-               {
-                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
-                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
-                  return true;
-               }
-            }
-         }
-      }
-
+      if( findRowForLinkingSingletonInSystem( system_type, node_row, row, linking, col) )
+         return true;
+      
       /* inequality part */
       system_type = INEQUALITY_SYSTEM;
+      if( findRowForLinkingSingletonInSystem( system_type, node_row, row, linking, col) )
+         return true;
 
-      for( node_row = -1; node_row < nChildren; ++ node_row)
-      {
-         if( !presData.nodeIsDummy( node_row, system_type) )
-         {
-            updatePointersForCurrentNode( node_row, system_type );
+      return false;
+}
 
-            /* check transposed for entry */
-            if( node_row == -1 )
-            {
-               /* Amat */
-               assert(currAmatTrans);
-               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
-               {
-                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
-                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
-                  return true;
-               }
-               /* Blmat */
-               assert(currBlmatTrans);
-               if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
-               {
-                  assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
-                  row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
-                  linking = true;
-                  return true;
-               }
-            }
-            else
-            {
-               /* Amat */
-               assert(currAmatTrans);
-               if(currAmatTrans->getRowPtr()[col].start != currAmatTrans->getRowPtr()[col].end)
-               {
-                  assert( (currAmatTrans->getRowPtr()[col].end - currAmatTrans->getRowPtr()[col].start) == 1);
-                  row = currAmatTrans->getJcolM()[currAmatTrans->getRowPtr()[col].start];
-                  return true;
-               }
-            }
-         }
-      }
-   }
-   else
+bool StochPresolverSingletonColumns::findRowForNonlinkingSingelton( SystemType& system_type, int& row, bool& linking, const int& node_col, const int& col)
+{
+   /* check Bmat and Blmat for the singleton row */
+   system_type = EQUALITY_SYSTEM;
+   linking = false;
+
+   /* equality part */
+   if( !presData.nodeIsDummy( node_col, system_type) )
    {
-      assert( 0 <= node_col && node_col < nChildren );
-      /* check Bmat and Blmat for the singleton row */
+      updatePointersForCurrentNode( node_col, system_type );
+      
+      /* Bmat */
+      assert(currBmatTrans);
+      if( findRowForSingletonColumnInMatrix( *currBmatTrans, row, col) )
+         return true;
 
-      system_type = EQUALITY_SYSTEM;
-      node_row = node_col;
-      /* equality part */
-      if( !presData.nodeIsDummy( node_row, system_type) )
+      /* Blmat */
+      assert(currBlmatTrans);
+      if( findRowForSingletonColumnInMatrix( *currBlmatTrans, row, col) )
       {
-         updatePointersForCurrentNode( node_row, system_type );
-
-         /* Bmat */
-         assert(currBmatTrans);
-         if(currBmatTrans->getRowPtr()[col].start != currBmatTrans->getRowPtr()[col].end)
-         {
-            assert( (currBmatTrans->getRowPtr()[col].end - currBmatTrans->getRowPtr()[col].start) == 1);
-            row = currBmatTrans->getJcolM()[currBmatTrans->getRowPtr()[col].start];
-            return true;
-         }
-         /* Blmat */
-         assert(currBlmatTrans);
-         if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
-         {
-            assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
-            row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
-            linking = true;
-            return true;
-         }
-      }
-
-      /* inequality part */
-      system_type = INEQUALITY_SYSTEM;
-      if( !presData.nodeIsDummy( node_row, system_type) )
-      {
-         updatePointersForCurrentNode( node_row, system_type );
-
-         /* Bmat */
-         assert(currBmatTrans);
-         if(currBmatTrans->getRowPtr()[col].start != currBmatTrans->getRowPtr()[col].end)
-         {
-            assert( (currBmatTrans->getRowPtr()[col].end - currBmatTrans->getRowPtr()[col].start) == 1);
-            row = currBmatTrans->getJcolM()[currBmatTrans->getRowPtr()[col].start];
-            return true;
-         }
-         /* Blmat */
-         assert(currBlmatTrans);
-         if(currBlmatTrans->getRowPtr()[col].start != currBlmatTrans->getRowPtr()[col].end)
-         {
-            assert( (currBlmatTrans->getRowPtr()[col].end - currBlmatTrans->getRowPtr()[col].start) == 1);
-            row = currBlmatTrans->getJcolM()[currBlmatTrans->getRowPtr()[col].start];
-            linking = true;
-            return true;
-         }
+         linking = true;
+         return true;
       }
    }
 
+   /* inequality part */
+   system_type = INEQUALITY_SYSTEM;
+   if( !presData.nodeIsDummy( node_col, system_type) )
+   {
+      updatePointersForCurrentNode( node_col, system_type );
+
+      /* Bmat */
+      assert(currBmatTrans);
+      if( findRowForSingletonColumnInMatrix( *currBmatTrans, row, col) )
+         return true;
+
+      /* Blmat */
+      assert(currBlmatTrans);
+      if( findRowForSingletonColumnInMatrix( *currBlmatTrans, row, col) )
+      {
+         linking = true;
+         return true;
+      }
+   }
    return false;
 }
+
+bool StochPresolverSingletonColumns::findRowForLinkingSingletonInSystem( SystemType system_type, int& node_row, int& row, bool& linking, const int& col)
+{
+   linking = false;
+
+   for( node_row = -1; node_row < nChildren; ++node_row)
+   {
+      if( !presData.nodeIsDummy( node_row, system_type) )
+      {
+         updatePointersForCurrentNode( node_row, system_type );
+
+         /* check transposed for entry */
+         if( node_row == -1 )
+         {
+            /* Amat */
+            assert(currAmatTrans);
+            if( findRowForSingletonColumnInMatrix( *currAmatTrans, row, col) )
+               return true;
+
+            /* Blmat */
+            assert(currBlmatTrans);
+            if( findRowForSingletonColumnInMatrix( *currBlmatTrans, row, col) )
+            {
+               linking = true;
+               return true;
+            }
+         }
+         else
+         {
+            /* Amat */
+            assert(currAmatTrans);
+            if( findRowForSingletonColumnInMatrix( *currAmatTrans, row, col) )
+               return true;
+         }
+      }
+   }
+   return false;
+}
+
+
+bool StochPresolverSingletonColumns::findRowForSingletonColumnInMatrix( const SparseStorageDynamic& mat, int& row, const int& col)
+{
+   assert( col < mat.getM() );
+   if( mat.getRowPtr(col).start != mat.getRowPtr(col).end )
+   {
+      assert( (mat.getRowPtr(col).end - mat.getRowPtr(col).start) == 1);
+      row = mat.getJcolM(mat.getRowPtr(col).start);
+      return true;
+   }
+   return false;
+}
+
 
 void StochPresolverSingletonColumns::checkColImpliedFree( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, 
    bool& lb_implied_free, bool& ub_implied_free)
@@ -321,6 +300,9 @@ void StochPresolverSingletonColumns::checkColImpliedFree( SystemType system_type
       : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixupp).children[node_col]->vec);
    const SimpleVector& ixlow_orig = (node_col == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixlow).vec) 
       : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixlow).children[node_col]->vec);
+
+   assert( col < ixupp_orig.length() );
+   assert( col < ixlow_orig.length() );
 
    if( ixupp_orig[col] == 0.0 )
       ub_implied_free = true;

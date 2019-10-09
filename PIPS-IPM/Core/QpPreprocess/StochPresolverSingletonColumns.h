@@ -27,6 +27,12 @@ private:
 
    bool removeSingletonColumn(int node, int col);
    bool findRowForColumnSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& node_col, const int& col );
+   bool findRowForLinkingSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& col);
+   bool findRowForLinkingSingletonInSystem( SystemType system_type, int& node_row, int& row, bool& linking, const int& col);
+   bool findRowForNonlinkingSingelton( SystemType& system_type, int& row, bool& linking, const int& node_col, const int& col);
+   bool findRowForSingletonColumnInMatrix( const SparseStorageDynamic& mat, int& row, const int& col);
+
+
    void checkColImpliedFree( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, bool& lb_implied_free, bool& ub_implied_free);
 };
 

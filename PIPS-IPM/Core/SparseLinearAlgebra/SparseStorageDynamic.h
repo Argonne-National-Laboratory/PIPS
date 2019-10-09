@@ -35,7 +35,7 @@ class SparseStorageDynamic : public DoubleStorage {
 private:
   const double spareRatio;
 
-  int m;      // row
+  int m;      // rows
   int m_len;  // length row array
   int n;      // cols
   int len;    // length col/value array
