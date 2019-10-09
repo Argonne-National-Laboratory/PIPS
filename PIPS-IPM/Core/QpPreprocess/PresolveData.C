@@ -995,7 +995,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 {
    assert( -1 <= node_row && node_row < nChildren );
 
-   const double numerical_threshold = std::numeric_limits<double>::max();
+   //const double numerical_upper_threshold = std::numeric_limits<double>::max();
+
    const int node_var = (block_type == LINKING_VARS_BLOCK) ? -1 : node_row;
 
    assert( 0 <= col && col < getSimpleVecColFromStochVec( *presProb->ixlow, node_var ).n );
@@ -1031,7 +1032,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
    // if( fabs(lbx) < 1e8 && (ixlow== 0.0  || feastol * 1e3 <= fabs(xlow - lbx) ) )
-   if( ubx < numerical_threshold && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
+   if( ubx < std::numeric_limits<double>::infinity() && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -1048,7 +1049,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
       }
    }
   // if( fabs(ubx) < 1e8 && (ixupp== 0.0  || feastol * 1e3 <= fabs(xupp- ubx) ) )
-   if( lbx > -numerical_threshold && ( ixlow == 0.0 || PIPSisLT(xlow, lbx)) )
+   if( - std::numeric_limits<double>::infinity() < lbx && ( ixlow == 0.0 || PIPSisLT(xlow, lbx)) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
