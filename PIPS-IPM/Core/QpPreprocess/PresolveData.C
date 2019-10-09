@@ -41,6 +41,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       outdated_nnzs(false),
       outdated_linking_var_bounds(false),
       outdated_activities(true),
+      outdated_objvector(false),
       linking_rows_need_act_computation(0),
       nnzs_row_A(dynamic_cast<StochVector*>(sorigprob->bA->clone())),
       nnzs_row_C(dynamic_cast<StochVector*>(sorigprob->icupp->clone())),
@@ -53,6 +54,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       actmin_ineq_part(nnzs_row_C->clone()),
       actmax_ineq_ubndd(nnzs_row_C->clone()),
       actmin_ineq_ubndd(nnzs_row_C->clone()),
+      obj_vector_chgs(dynamic_cast<SimpleVector*>(dynamic_cast<SimpleVector*>(nnzs_col->vec)->cloneFull())),
       nChildren(nnzs_col->children.size()),
       objOffset(0.0), obj_offset_chgs(0.0),
       lower_bound_implied_by_system(nnzs_col->clone()),
@@ -63,12 +65,13 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       upper_bound_implied_by_node(nnzs_col->clone()),
       elements_deleted(0), elements_deleted_transposed(0)
 {
-      lower_bound_implied_by_system->setToConstant(-10);
-      lower_bound_implied_by_row->setToConstant(-10);
-      lower_bound_implied_by_node->setToConstant(-10);
-      upper_bound_implied_by_system->setToConstant(-10);
-      upper_bound_implied_by_row->setToConstant(-10);
-      upper_bound_implied_by_node->setToConstant(-10);
+   lower_bound_implied_by_system->setToConstant(-10);
+   lower_bound_implied_by_row->setToConstant(-10);
+   lower_bound_implied_by_node->setToConstant(-10);
+   upper_bound_implied_by_system->setToConstant(-10);
+   upper_bound_implied_by_row->setToConstant(-10);
+   upper_bound_implied_by_node->setToConstant(-10);
+   obj_vector_chgs->setToZero();
 
    presProb = sorigprob->cloneFull(true);
 
@@ -180,8 +183,9 @@ sData* PresolveData::finalize()
       MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_objvector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
    }
-   assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds);
+   assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds && !outdated_objvector);
 #endif
 
    /* theoretically it should not matter but there is an assert later which needs all these to be zero */
@@ -688,6 +692,22 @@ void PresolveData::allreduceAndApplyBoundChanges()
    outdated_lhsrhs = false;
 }
 
+void PresolveData::allreduceAndApplyObjVectorChanges()
+{
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_objvector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+
+   if(!outdated_objvector)
+      return;
+
+   if(distributed)
+      MPI_Allreduce(MPI_IN_PLACE, obj_vector_chgs->elements(), obj_vector_chgs->length(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->g).vec)->axpy( 1.0, *obj_vector_chgs);
+
+   obj_vector_chgs->setToZero();
+   outdated_objvector = false;
+}
+
 void PresolveData::allreduceObjOffset()
 {
    if(distributed)
@@ -806,8 +826,9 @@ bool PresolveData::reductionsEmpty()
       MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
 
       MPI_Allreduce(&obj_offset_chgs, &recv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_objvector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD );
    }
-   return !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0);
+   return !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0) && !outdated_objvector;
 }
 
 // todo : if small entry was removed from system no postsolve is necessary - if coefficient was removed because impact of changes in variable are small
@@ -1465,6 +1486,7 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
    // todo need row at that time for postsolve
    if(postsolver)
    {
+      //todo
       //postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
    }
 #ifdef TRACK_COLUMN
@@ -1479,8 +1501,69 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
       std::cout << "TRACKING: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
    }
 #endif
+ 
+   adaptObjectiveSubstitutedRow( system_type, node_row, row, linking_row, node_col, col );
+
    removeRow( system_type, node_row, row, linking_row );
    removeColumn( node_col, col, 0.0);
+}
+
+/* column col getting substituted with row row */ 
+void PresolveData::adaptObjectiveSubstitutedRow( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
+{
+   assert( system_type == EQUALITY_SYSTEM );
+   assert( -1 <= node_row && node_row < nChildren );
+   assert( !linking_row );
+   assert( -1 <= node_col && node_col < nChildren );
+
+   const SparseStorageDynamic& a_mat_storage = getSparseGenMatrix(system_type, node_row, LINKING_VARS_BLOCK)->getStorageDynamicRef();
+
+   const double obj_coeff = getSimpleVecColFromStochVec( *presProb->g, node_col)[col];
+   const double rhs = getSimpleVecRowFromStochVec( *presProb->bA, node_row, CHILD_BLOCK)[row];
+
+   const SparseStorageDynamic& col_mat_storage = 
+      getSparseGenMatrix(system_type, node_row, ((node_col == -1) ? LINKING_VARS_BLOCK : CHILD_BLOCK))->getStorageDynamicRef();
+   double col_coeff = 0.0;
+   bool found = false;
+   for(int i = col_mat_storage.getRowPtr(row).start; i < col_mat_storage.getRowPtr(row).end; ++i)
+   {
+      if( col_mat_storage.getJcolM(i) == col )
+      {
+         found = true; 
+         col_coeff = col_mat_storage.getMat(i);
+
+         assert( !PIPSisZero(col_coeff) );
+      }
+   }
+   assert(found);
+
+   for(int i = a_mat_storage.getRowPtr(row).start ; i < a_mat_storage.getRowPtr(row).end; ++i)
+   {
+      const int col_idx = a_mat_storage.getJcolM(i);
+
+      if(col_idx != col)
+      {
+         (*obj_vector_chgs)[col_idx] -= obj_coeff * a_mat_storage.getMat(i) / col_coeff;
+         outdated_objvector = true;
+      }
+   }
+
+   if( node_row != -1 )
+   {
+      const SparseStorageDynamic& b_mat_storage = getSparseGenMatrix(system_type, node_row, CHILD_BLOCK)->getStorageDynamicRef();
+      
+      for(int i = b_mat_storage.getRowPtr(row).start; i < b_mat_storage.getRowPtr(row).end; ++i)
+      {
+         const int col_idx = b_mat_storage.getJcolM(i);
+
+         if(col_idx != col)
+            getSimpleVecColFromStochVec( *presProb->g, node_row)[col_idx] -= obj_coeff * b_mat_storage.getMat(i) / col_coeff;
+      }
+   }
+
+   obj_offset_chgs += col_coeff * rhs / col_coeff;
+
+   getSimpleVecColFromStochVec( *presProb->g, node_col)[col] = 0.0;
 }
 
 /* removes row from local system - sets rhs lhs and activities to zero */

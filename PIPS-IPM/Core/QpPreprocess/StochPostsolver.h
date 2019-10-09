@@ -30,7 +30,8 @@ public:
          const std::vector<double> values_row );
       void notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col, const std::vector<double>& values_col);
       void notifyFixedEmptyColumn( int node, unsigned int col, double value);     
-      void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
+      void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, OoqpVector& deleted_row );
+
 
       void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
@@ -61,7 +62,7 @@ protected:
          SINGLETON_EQUALITY_ROW = 6,
          SINGLETON_INEQUALITY_ROW = 7,
          FIXED_EMPTY_COLUMN = 8,
-         COLUMN_SINGLETON = 9,
+         FREE_COLUMN_SINGLETON = 9,
       };
 
       const unsigned int n_rows_original;

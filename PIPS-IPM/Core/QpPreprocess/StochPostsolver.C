@@ -5,7 +5,7 @@
  *      Author: Nils-Christian Kempke
  */
 
-
+#include "OoqpVector.h"
 #include "StochPostsolver.h"
 #include "pipsdef.h"
 
@@ -45,11 +45,16 @@ void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType 
    throw std::runtime_error("Not yet implemented");
 }
 
-void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
+// todo for now equality rows only
+void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, OoqpVector& deleted_row )
 {
+   assert(system_type == EQUALITY_SYSTEM);
    // todo mark row as deleted
+   // todo mark column as deleted
    // save dual postsolve info
-   reductions.push_back( COLUMN_SINGLETON );
+   // save row for primal postsolve info
+
+   reductions.push_back( FREE_COLUMN_SINGLETON );
    throw std::runtime_error("Not yet implemented");
 }
 
@@ -218,6 +223,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          case SINGLETON_INEQUALITY_ROW:
          {
             throw std::runtime_error("SINGLETON_INEQUALITY_ROW not yet implemented");
+            break;
+         }
+         case FREE_COLUMN_SINGLETON:
+         {
+            // get index of substituted column and deleted row
+            // restore primal value of column
+            throw std::runtime_error("FREE_COLUMN_SINGLETON not yet implemented");
             break;
          }
          default:

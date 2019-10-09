@@ -49,6 +49,9 @@ private:
 
       bool outdated_activities;
 
+      bool outdated_objvector;
+
+
       /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
 
@@ -101,6 +104,9 @@ private:
       double* array_bound_chgs;
       SimpleVectorHandle bound_chgs_A;
       SimpleVectorHandle bound_chgs_C;
+
+      /* changes in objective vector root node */
+      SimpleVectorHandle obj_vector_chgs;
 
       /* storing so far found singleton rows and columns */
       std::queue<sROWINDEX> singleton_rows;
@@ -188,6 +194,7 @@ public:
       void allreduceAndApplyLinkingRowActivities();
       void allreduceAndApplyNnzChanges();
       void allreduceAndApplyBoundChanges();
+      void allreduceAndApplyObjVectorChanges();
       void allreduceObjOffset();
 
       /// interface methods called from the presolvers when they detect a possible modification
@@ -200,7 +207,9 @@ public:
       void removeParallelRow(SystemType system_type, int node, int row, bool linking);
       void removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
 
-      // todo : hackish functions not properly working with presolve
+      void adaptObjectiveSubstitutedRow( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
+
+      // todo : hackish functions not properly working with presolve/postsolve
       void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
       void adaptObjectiveParallelRow(int node, int col, double val_offset, double val_vec);
