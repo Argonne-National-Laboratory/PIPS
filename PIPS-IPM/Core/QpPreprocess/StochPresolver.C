@@ -88,7 +88,7 @@ Data* StochPresolver::presolve()
       presolverSR.applyPresolving();
       presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
-      presolverColFix.applyPresolving();
+      // presolverColFix.applyPresolving();
    }
 
    // before the finalize call fix all empty rows and columns not yet fixed
