@@ -36,6 +36,9 @@ void GeoStochScaler::doObjScaling()
 
    obj->componentMult(*vec_colscale);
 
+   assert(factor_objscale == 1.0);
+
+#if 0   // note: seems to deteriorate performance and stability
    const double absmax = obj->infnorm();
    double absmin = 0.0;
 
@@ -52,12 +55,8 @@ void GeoStochScaler::doObjScaling()
    }
    else
    {
-      int myRank = 0;
-      MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-
-      const double scaleFactor = min(std::sqrt(absmax * absmin), maxobjscale);
-
-      if( myRank == 0) printf("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
+      const double scaleFactor = std::sqrt(absmax * absmin);
+      PIPSdebugMessage("Objective Scaling: absmin=%f, absmax=%f, scaleFactor=%f \n", absmin, absmax, scaleFactor);
 
       assert( scaleFactor >= 0.0 );
       scaleObjVector(scaleFactor);
@@ -69,6 +68,7 @@ void GeoStochScaler::doObjScaling()
          scaleObjVector(absmax2);
       }
    }
+#endif
 }
 
 void GeoStochScaler::scale()
