@@ -135,16 +135,16 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int& node_col, 
       return true;
    }  
 
-   // /* equalitiy singleton variables */
-   // if( system_type == EQUALITY_SYSTEM )
-   // {
-   //    /* (originally) free singleton columns just get deleted together with their row */
-   //    if( implied_free )
-   //    {
-   //       presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
-   //       return true;
-   //    }
-   // }
+   /* equalitiy singleton variables */
+   if( system_type == EQUALITY_SYSTEM )
+   {
+      /* (originally) free singleton columns just get deleted together with their row */
+      if( implied_free )
+      {
+         presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+         return true;
+      }
+   }
 
    /* inequality singleton variables */
    // TODO

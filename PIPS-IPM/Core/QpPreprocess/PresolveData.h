@@ -271,6 +271,9 @@ public:
 private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
             const SimpleVector& ixlow, const SimpleVector& xlow) const;
+      StochVector* getRowAsStochVector(SystemType system_type, int node, int row, bool linking);
+      StochVector* getColAsStochVector(SystemType system_type, int node, int col);
+
 
 };
 

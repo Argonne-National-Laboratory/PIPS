@@ -1770,7 +1770,7 @@ int StochGenMatrix::appendRow( const OoqpVector& row, int child, bool linking )
   {
     for(unsigned int i = 0; i < children.size(); ++i)
     {
-      if(child == (int) i)
+      if(child == (int) i) 
       {
         assert( stoch_row.children[i]->vec );        
         assert( !children[i]->isKindOf(kStochGenDummyMatrix) );
