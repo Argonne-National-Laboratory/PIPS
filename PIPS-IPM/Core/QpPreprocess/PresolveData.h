@@ -266,6 +266,7 @@ private:
 
 /// methods for printing debug information
 public:
+      void printVarBoundStatistics(std::ostream& out) const;
       void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const;
 private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,

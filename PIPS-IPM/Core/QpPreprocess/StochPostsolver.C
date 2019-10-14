@@ -376,8 +376,6 @@ void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector
          ++col_reduced;
       }
    }
-   if( col_reduced != reduced_vector.length())
-      std::cout << col_reduced << "\t" << reduced_vector.length() << "\t" << original_vector.length() << std::endl;
    assert(col_reduced == reduced_vector.length());
 }
 

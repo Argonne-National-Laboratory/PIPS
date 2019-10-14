@@ -22,10 +22,10 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
  
 void StochPresolverSingletonRows::applyPresolving()
 {
-   // presData.allreduceAndApplyNnzChanges();
-   // presData.allreduceAndApplyBoundChanges();
-   // presData.allreduceAndApplyLinkingRowActivities();
-   // presData.allreduceLinkingVarBounds();
+   presData.allreduceAndApplyNnzChanges();
+   presData.allreduceAndApplyBoundChanges();
+   presData.allreduceAndApplyLinkingRowActivities();
+   presData.allreduceLinkingVarBounds();
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -86,7 +86,8 @@ void StochPresolverSingletonRows::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
-}
+
+   }
 
 /** Does one round of singleton rows presolving for system A or C
  *
@@ -207,9 +208,15 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
    if(system_type == EQUALITY_SYSTEM)
    {
       if(block_type != LINKING_CONS_BLOCK)
-         ubx = lbx = (*currEqRhs)[row_idx] / value;
+      {
+         ubx = (*currEqRhs)[row_idx] / value;
+         lbx = (*currEqRhs)[row_idx] / value;
+      }
       if(block_type == LINKING_CONS_BLOCK)
-         ubx = lbx = (*currEqRhsLink)[row_idx] / value;
+      {
+         ubx = (*currEqRhsLink)[row_idx] / value;
+         lbx = (*currEqRhsLink)[row_idx] / value;
+      }  
    }
    else
    {

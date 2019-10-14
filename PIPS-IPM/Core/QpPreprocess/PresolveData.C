@@ -1035,7 +1035,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 {
    assert( -1 <= node_row && node_row < nChildren );
 
-   const double numerical_threshold = std::numeric_limits<double>::max();
+   //const double numerical_upper_threshold = std::numeric_limits<double>::max();
+
    const int node_var = (block_type == LINKING_VARS_BLOCK) ? -1 : node_row;
 
    assert( 0 <= col && col < getSimpleVecColFromStochVec( *presProb->ixlow, node_var ).n );
@@ -1071,7 +1072,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
    // if( fabs(lbx) < 1e8 && (ixlow== 0.0  || feastol * 1e3 <= fabs(xlow - lbx) ) )
-   if( ubx < numerical_threshold && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
+   if( ubx < std::numeric_limits<double>::infinity() && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -1088,7 +1089,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
       }
    }
   // if( fabs(ubx) < 1e8 && (ixupp== 0.0  || feastol * 1e3 <= fabs(xupp- ubx) ) )
-   if( lbx > -numerical_threshold && ( ixlow == 0.0 || PIPSisLT(xlow, lbx)) )
+   if( - std::numeric_limits<double>::infinity() < lbx && ( ixlow == 0.0 || PIPSisLT(xlow, lbx)) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -2766,5 +2767,67 @@ void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGe
 
       out << " + " << val << " * x_" << node << "_" << col << " € [" << ( (ixlow[col] == 0.0) ? -std::numeric_limits<double>::infinity() : xlow[col]) << ", "
             << ( (ixupp[col] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[col]) << "]";
+   }
+}
+
+void PresolveData::printVarBoundStatistics(std::ostream& out) const
+{
+   const StochVector& xupp = dynamic_cast<const StochVector&>(*presProb->bux);
+   const StochVector& xlow = dynamic_cast<const StochVector&>(*presProb->blx);
+   const StochVector& ixupp = dynamic_cast<const StochVector&>(*presProb->ixupp);
+   const StochVector& ixlow = dynamic_cast<const StochVector&>(*presProb->ixlow);
+
+   StochVectorHandle xlow_def = StochVectorHandle(xlow.cloneFull());
+   StochVectorHandle xupp_def = StochVectorHandle(xupp.cloneFull());
+
+   xlow_def->componentMult(ixlow);
+   xupp_def->componentMult(ixupp);
+
+   double nr_bounds_upper = ixupp.dotProductSelf(1.0);
+   double nr_bounds_lower = ixlow.dotProductSelf(1.0);
+
+   double xupp_twonorm = xupp_def->twonorm();
+   double xupp_infnorm = xupp_def->infnorm();
+   double xupp_onenorm = xupp_def->onenorm();
+
+   double xlow_twonorm = xlow_def->twonorm();
+   double xlow_infnorm = xlow_def->infnorm();
+   double xlow_onenorm = xlow_def->onenorm();
+
+   double min_low;
+   double max_low;
+   double min_upp;
+   double max_upp;
+   int a;
+
+   xupp_def->min(min_upp, a);
+   xupp_def->max(max_upp, a);
+   xlow_def->min(min_low, a);
+   xlow_def->max(max_low, a);
+
+   if(distributed && my_rank == 0)
+   {
+      std::cout << "_____________________________________________________" << std::endl;
+      std::cout << "____________________Stats__Bounds____________________" << std::endl;
+      std::cout << "_____________________________________________________" << std::endl;
+
+      std::cout << "xlow:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_bounds_lower << std::endl;
+      std::cout << "twonorm  \t" << xlow_twonorm << std::endl;
+      std::cout << "onenorm  \t" << xlow_onenorm << std::endl;
+      std::cout << "infnorm  \t" << xlow_infnorm << std::endl;
+      std::cout << "min      \t" << max_low << std::endl; 
+      std::cout << "max      \t" << max_low << std::endl;
+      std::cout << std::endl;
+      std::cout << "xupp:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_bounds_upper << std::endl;
+      std::cout << "twonorm  \t" << xupp_twonorm << std::endl;
+      std::cout << "onenorm  \t" << xupp_onenorm << std::endl;
+      std::cout << "infnorm  \t" << xupp_infnorm << std::endl;
+      std::cout << "min      \t" << min_upp << std::endl;
+      std::cout << "max      \t" << max_upp << std::endl;
+
+      std::cout << "_____________________________________________________" << std::endl;
+      std::cout << "_____________________________________________________" << std::endl;
    }
 }

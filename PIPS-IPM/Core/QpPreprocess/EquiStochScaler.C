@@ -27,10 +27,12 @@ void EquiStochScaler::doObjScaling()
 
    obj->componentMult(*vec_colscale);
 
+#if 0 // note: seems to deteriorate performance and stability
    const double absmax = obj->infnorm();
    assert(absmax >= 0);
 
    scaleObjVector(absmax);
+#endif
 }
 
 // todo scale Q

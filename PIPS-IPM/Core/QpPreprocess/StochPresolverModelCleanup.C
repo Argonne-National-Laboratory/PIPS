@@ -43,12 +43,12 @@ void StochPresolverModelCleanup::applyPresolving()
    // removal of redundant constraints
    int n_removed_rows_eq = removeRedundantRows(EQUALITY_SYSTEM);
    int n_removed_rows_ineq = removeRedundantRows(INEQUALITY_SYSTEM);
-   //n_removed_rows = n_removed_rows_eq + n_removed_rows_ineq;
+   n_removed_rows = n_removed_rows_eq + n_removed_rows_ineq;
 
    /* remove entries from A and C matrices and updates transposed systems */
-   //int n_removed_entries_eq = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
-   //int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
-   //n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
+   int n_removed_entries_eq = removeTinyEntriesFromSystem(EQUALITY_SYSTEM);
+   int n_removed_entries_ineq = removeTinyEntriesFromSystem(INEQUALITY_SYSTEM);
+   n_removed_entries = n_removed_entries_eq + n_removed_entries_ineq;
 
    presData.allreduceAndApplyNnzChanges();
 
@@ -71,8 +71,8 @@ void StochPresolverModelCleanup::applyPresolving()
    if( my_rank == 0 )
    {
       std::cout << "Removed " << n_removed_rows << " redundant rows (" << n_removed_rows_eq << " equalitiy and " << n_removed_rows_ineq << " inequality rows)" << std::endl;
-    //  std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq << " entries in equality system and "
-      //      << n_removed_entries_ineq << " in inequality system)" << std::endl;
+      std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq << " entries in equality system and "
+         << n_removed_entries_ineq << " in inequality system)" << std::endl;
    }
 #endif
 
