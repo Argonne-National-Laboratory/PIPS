@@ -754,7 +754,7 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
   assert(SC0.size() == nSC);
 
 
-  // add to summed Schur complement todo: exploit block structure, get start and end of block
+  // add to summed Schur complement
   for( int r = 0; r < nSC; r++ )
   {
      int cbase = rowptrBase[r];
@@ -878,7 +878,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
    const int nnzSC = iparm[38];
 
 #ifdef TIMING
-   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    if(1001*(myRank/1001)==myRank)
    printf("rank %d perturbPiv %d peakmem %d\n", myRank, iparm[13], iparm[14]); // same for MKL and pardiso
    //cout << "NNZ(SCHUR) " << nnzSC << "    SPARSITY " << nnzSC/(1.0*nSC*nSC) << endl;
@@ -955,7 +954,6 @@ void PardisoSchurSolver::computeSC(int nSCO,
    #endif
 
    #ifdef TIMING
-   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    if(1001*(myRank/1001)==myRank)
       printf("rank %d perturbPiv %d peakmem %d\n", myRank, iparm[13], iparm[14]); // same for MKL and pardiso
    //cout << "NNZ(SCHUR) " << nnzSC << "    SPARSITY " << nnzSC/(1.0*nSC*nSC) << endl;
