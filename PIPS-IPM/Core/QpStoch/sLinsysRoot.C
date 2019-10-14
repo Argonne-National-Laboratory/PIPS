@@ -32,7 +32,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   kktDist = NULL;
 
 #ifdef TIMING
-  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
   if( myRank == 0 )
      std::cout << "Rank 0: create LinSys children ..." << std::endl;
 #endif
