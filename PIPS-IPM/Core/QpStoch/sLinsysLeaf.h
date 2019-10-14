@@ -74,6 +74,12 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
 
   prob->getLocalNnz(nnzQ, nnzB, nnzD);
 
+#ifdef TIMING
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  if( myRank == 0 )
+     std::cout << "Rank 0: building local Schur matrix ..." << std::endl;
+#endif
+
   //alocate the matrix and copy the data into
   SparseSymMatrix* kktsp = new SparseSymMatrix(n, n+nnzQ+nnzB+nnzD);
   kkt = kktsp;
@@ -89,6 +95,11 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
     
   } else
     mySymAtPutSubmatrix(*kkt, prob->getLocalB(), prob->getLocalD(), locnx, locmy, locmz);
+
+#ifdef TIMING
+  if( myRank == 0 )
+     std::cout << "Rank 0: finished " << std::endl;
+#endif
 
   // create the solver for the linear system
   solver = new LINSOLVER(kktsp);

@@ -31,7 +31,18 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   zDiagLinkCons = NULL;
   kktDist = NULL;
 
+#ifdef TIMING
+  int myRank; MPI_Comm_rank(mpiComm, &myRank);
+  if( myRank == 0 )
+     std::cout << "Rank 0: create LinSys children ..." << std::endl;
+#endif
+
   createChildren(prob_);
+
+#ifdef TIMING
+  if( myRank == 0 )
+     std::cout << "Rank 0: children created" << std::endl;
+#endif
 
   precondSC = SCsparsifier(-1.0, mpiComm);
 
