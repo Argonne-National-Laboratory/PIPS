@@ -98,6 +98,21 @@ StochGenMatrix* StochGenMatrix::cloneFull(bool switchToDynamicStorage) const
    for( size_t it = 0; it < children.size(); it++ )
       clone->children.push_back(children[it]->cloneFull(switchToDynamicStorage));
 
+   return clone;	
+}
+
+StochGenMatrix* StochGenMatrix::cloneEmptyRows(bool switchToDynamicStorage) const
+{
+   StochGenMatrix* clone = new StochGenMatrix(id, m, n, mpiComm);
+
+   // clone submatrices
+   clone->Amat = Amat->cloneEmptyRows(switchToDynamicStorage);
+   clone->Bmat = Bmat->cloneEmptyRows(switchToDynamicStorage);
+	 clone->Blmat = Blmat->cloneEmptyRows(switchToDynamicStorage);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      clone->children.push_back(children[it]->cloneEmptyRows(switchToDynamicStorage));
+
    return clone;
 }
 

@@ -1485,12 +1485,9 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
 void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
 {
    // todo need row at that time for postsolve
-   if(postsolver)
-   {
-      //todo : g is only dummy so far!
-      StochVector* vec = getRowAsStochVector(system_type, node_row, row, linking_row);
-      postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, *vec);
-   }
+   StochVector* vec = getRowAsStochVector(system_type, node_row, row, linking_row);
+   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, *vec);
+
 #ifdef TRACK_COLUMN
   if( NODE == node_col && COLUMN == col && (my_rank == 0 || node_col != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
   {

@@ -41,6 +41,7 @@ public:
 		   int krowM[], int jcolM[], double M[],
 		   int deleteElts=0);
 
+  virtual SparseGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const;
   virtual SparseGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
   virtual void getSize( long long& m, long long& n );

@@ -39,7 +39,6 @@ void StochPresolverSingletonRows::applyPresolving()
       std::cout << "--- Before singleton Row Presolving:" << std::endl;
    }
    countRowsCols();
-   presData.printVarBoundStatistics(std::cout);
 
 #endif
 
@@ -80,7 +79,6 @@ void StochPresolverSingletonRows::applyPresolving()
    if( my_rank == 0 )
       std::cout << "--- After singleton row presolving:" << std::endl;
    countRowsCols();
-   presData.printVarBoundStatistics(std::cout);
    if(my_rank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif

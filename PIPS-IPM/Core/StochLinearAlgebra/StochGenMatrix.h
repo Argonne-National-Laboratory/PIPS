@@ -42,6 +42,7 @@ public:
   // constructor for combining scenarios
   virtual ~StochGenMatrix();
 
+  virtual StochGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const;
   virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
   virtual void AddChild(StochGenMatrix* child);
@@ -247,6 +248,7 @@ public:
   virtual void getSize( int& m, int& n ) override {m=0; n=0;}
   virtual void getSize( long long& m, long long& n ) override {m=0; n=0;}
 
+  virtual StochGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const override { return new StochGenDummyMatrix(id); };
   virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const  override { return new StochGenDummyMatrix(id); };
 
 

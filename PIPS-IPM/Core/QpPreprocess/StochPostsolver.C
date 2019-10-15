@@ -14,9 +14,13 @@
 #include <iostream>
 
 StochPostsolver::StochPostsolver(const sData& original_problem) :
-   QpPostsolver(original_problem), n_rows_original(original_problem.my + original_problem.mz), n_cols_original(original_problem.nx),
-      padding_origcol(dynamic_cast<StochVector*>(original_problem.g->clone())), padding_origrow_equality(dynamic_cast<StochVector*>(original_problem.bA->clone())),
-      padding_origrow_inequality(dynamic_cast<StochVector*>(original_problem.bu->clone()))
+   QpPostsolver(original_problem),
+   n_rows_original(original_problem.my + original_problem.mz), 
+   n_cols_original(original_problem.nx),
+   padding_origcol( dynamic_cast<StochVector*>(original_problem.g->clone()) ),
+   padding_origrow_equality( dynamic_cast<StochVector*>(original_problem.bA->clone()) ),
+   padding_origrow_inequality( dynamic_cast<StochVector*>(original_problem.bu->clone()) ),
+   stored_rows( dynamic_cast<const StochGenMatrix&>(*original_problem.A).cloneEmptyRows(true) )
 {
    getRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
 
@@ -46,16 +50,21 @@ void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType 
 }
 
 // todo for now equality rows only
-void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, OoqpVector& deleted_row )
+void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, const OoqpVector& deleted_row )
 {
+   BlockType block_type = (linking_row) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
+   //todo INEQUALITY system?  
    assert(system_type == EQUALITY_SYSTEM);
-   // todo mark row as deleted
-   // todo mark column as deleted
+   assert( getSimpleVecRowFromStochVec(*padding_origrow_equality, node_row, block_type)[row] == 1 );
+   assert( getSimpleVecColFromStochVec(*padding_origcol, node_col)[col] == 1 );
+
+   getSimpleVecRowFromStochVec(*padding_origrow_equality, node_row, block_type)[row] = -1;
+   getSimpleVecColFromStochVec(*padding_origcol, node_col)[col] = -1;
+   
    // save dual postsolve info
    // save row for primal postsolve info
-
+   stored_rows->appendRow(deleted_row, node_row, linking_row);
    reductions.push_back( FREE_COLUMN_SINGLETON );
-   throw std::runtime_error("Not yet implemented");
 }
 
 
@@ -79,10 +88,6 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 
 void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value)
 {
-   // TODO
-   if( getSimpleVecColFromStochVec(*padding_origcol, node)[col] != 1 )
-      assert(false);
-
    assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1);
    getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
    assert( std::fabs(value) < 1e10 );
