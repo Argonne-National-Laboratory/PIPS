@@ -1487,8 +1487,9 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
    // todo need row at that time for postsolve
    if(postsolver)
    {
-      //todo
-      //postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
+      //todo : g is only dummy so far!
+      StochVector* vec = getRowAsStochVector(system_type, node_row, row, linking_row);
+      postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, *vec);
    }
 #ifdef TRACK_COLUMN
   if( NODE == node_col && COLUMN == col && (my_rank == 0 || node_col != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -2768,6 +2769,72 @@ void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGe
       out << " + " << val << " * x_" << node << "_" << col << " € [" << ( (ixlow[col] == 0.0) ? -std::numeric_limits<double>::infinity() : xlow[col]) << ", "
             << ( (ixupp[col] == 0.0) ? std::numeric_limits<double>::infinity() : xupp[col]) << "]";
    }
+}
+
+StochVector* PresolveData::getRowAsStochVector(SystemType system_type, int node, int row, bool linking_row)
+{
+   // create new StochVector and set pattern according to row   
+   StochVector* svec;
+   if(!linking_row)
+   {
+      svec = new StochVector( nnzs_col->vec->length(), MPI_COMM_WORLD, -1);
+      const SparseStorageDynamic& amat = getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK)->getStorageDynamicRef();
+      // todo assert size is correct
+      
+      /* copy Amat */
+      for(int i = amat.getRowPtr(row).start; i < amat.getRowPtr(row).end; ++i)
+      {
+        dynamic_cast<SimpleVector&>(*svec->vec)[amat.getJcolM(i)] = amat.getMat(i);
+      }
+      
+      /* copy bmat and add dummy children */
+      for(int child = 0; child < nChildren; ++child)
+      {
+        if(child != node)
+        {
+           svec->AddChild( new StochDummyVector() );
+        }
+        else
+        {
+          StochVector* child_vec = new StochVector( nnzs_col->children[node]->length(), MPI_COMM_WORLD, -1);
+          const SparseStorageDynamic& bmat = getSparseGenMatrix(system_type, node, CHILD_BLOCK)->getStorageDynamicRef();
+          // todo assert size is correct
+          
+          for(int i = bmat.getRowPtr(row).start; i < bmat.getRowPtr(row).end; ++i)
+          {
+            dynamic_cast<SimpleVector&>(*child_vec->vec)[bmat.getJcolM(i)] = bmat.getMat(i);
+          }
+          svec->AddChild(child_vec);
+        }
+      }
+   }
+   else
+   {
+     svec = nnzs_col->clone();
+     /* copy all blmat */
+     for(int child = -1; child < nChildren; ++child)
+     {
+       if( !nodeIsDummy(child, system_type) )
+       {
+          const SparseStorageDynamic& blmat = getSparseGenMatrix(system_type, child, LINKING_CONS_BLOCK)->getStorageDynamicRef();
+          // todo assert size is correct
+          
+          for(int i = blmat.getRowPtr(row).start; i < blmat.getRowPtr(row).end; ++i)
+          {
+            getSimpleVecColFromStochVec(*svec, child)[blmat.getJcolM(i)] = blmat.getMat(i);
+          }
+       }
+     }
+   }
+   return svec;
+}
+
+StochVector* PresolveData::getColAsStochVector(SystemType system_type, int node, int col)
+{
+  // create new StochVector and set pattern according to row
+  // todo: we need two vectors to display one column
+  assert(false);
+  return NULL;
 }
 
 void PresolveData::printVarBoundStatistics(std::ostream& out) const
