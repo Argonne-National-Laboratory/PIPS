@@ -691,9 +691,9 @@ void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContai
    nnzCol[colIdx] = 0.0;
 
    if( block_type == LINKING_VARS_BLOCK )
-      singletonCoeffsColParent->elements()[colIdx] = coeff;
+      (*singletonCoeffsColParent)[colIdx] = coeff;
    else
-      singletonCoeffsColChild->elements()[colIdx] = coeff;
+      (*singletonCoeffsColChild)[colIdx] = coeff;
 }
 
 /** removes row col from dynamic storage */
@@ -1217,9 +1217,13 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
       // effectively tighten bounds of variable x_id1:
       BlockType block_type = LINKING_VARS_BLOCK;
       if( singleColIdx1 >= nA )
+      {
          block_type = CHILD_BLOCK;
+         presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, block_type, rowId1, singleColIdx1 - nA, newxupp, newxlow);
+      }
+      else
+         presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, block_type, rowId1, singleColIdx1, newxupp, newxlow);
 
-      presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, block_type, rowId1, singleColIdx1 % nA, newxupp, newxlow);
 
       // adapt objective function:
       adaptObjective( singleColIdx1, singleColIdx2, t, d, it);
@@ -1245,7 +1249,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
 
    // First, do all the checks to verify if the third case applies and all conditions are met.
    // check s>0:
-   const double s = norm_factorC->elements()[rowId1] / norm_factorC->elements()[rowId2];
+   const double s = (*norm_factorC)[rowId1] / (*norm_factorC)[rowId2];
    if( s <= 0)
       return false;
 

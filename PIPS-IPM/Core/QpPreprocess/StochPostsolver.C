@@ -67,7 +67,7 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
 {
    // TODO
    if( getSimpleVecColFromStochVec(*padding_origcol, node)[col] != 1 )
-      return;
+      assert(false);
 
    assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1);
    getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
