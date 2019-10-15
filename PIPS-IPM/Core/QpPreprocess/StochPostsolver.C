@@ -81,7 +81,7 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
 {
    // TODO
    if( getSimpleVecColFromStochVec(*padding_origcol, node)[col] != 1 )
-      return;
+      assert(false);
 
    assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1);
    getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
@@ -376,8 +376,6 @@ void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector
          ++col_reduced;
       }
    }
-   if( col_reduced != reduced_vector.length())
-      std::cout << col_reduced << "\t" << reduced_vector.length() << "\t" << original_vector.length() << std::endl;
    assert(col_reduced == reduced_vector.length());
 }
 
