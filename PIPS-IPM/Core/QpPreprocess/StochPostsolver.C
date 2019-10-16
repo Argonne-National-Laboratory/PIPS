@@ -64,7 +64,7 @@ void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int nod
    
    // save dual postsolve info
    // save row for primal postsolve info
-   int row_idx = stored_rows->appendRow(current_prob, node_row, linking_row);
+   int row_idx = stored_rows->appendRow(matrix_row, node_row, row, linking_row);
 
    indices.push_back( INDEX(node_col, col) );
    values.push_back( (linking_row) ? 1.0 : 0.0 );

@@ -512,28 +512,29 @@ void SparseStorageDynamic::clearCol( int col )
    }
 }
 
-void SparseStorageDynamic::appendRow( const OoqpVector& row )
+void SparseStorageDynamic::appendRow( const SparseStorageDynamic& storage, int row )
 {
-   assert( row.length() <= n );
+   assert( storage.getN() <= n );
    if(m_len == 0)
    {
       rowptr[0].start = rowptr[0].end = 0;
    }
    
-   const SimpleVector& simple_row = dynamic_cast<const SimpleVector&>(row);
-
    /* extract nonzero entries from row */
    std::vector<double> val;
    std::vector<int> idx;
-   val.reserve(simple_row.length());
-   idx.reserve(simple_row.length());
+   const int length_row_in_storage = storage.getRowPtr(row).end - storage.getRowPtr(row).start;
 
-   for(long long i = 0; i < simple_row.length(); ++i)
+   // todo: theoretically this copying is not necessary..
+   val.reserve(length_row_in_storage);
+   idx.reserve(length_row_in_storage);
+
+   for(int i = storage.getRowPtr(row).start; i < storage.getRowPtr(row).end; ++i)
    {
-      if( !PIPSisZero(simple_row[i]) )
+      if( !PIPSisZero( storage.getMat(i) ) )
       {
-         val.push_back(simple_row[i]);
-         idx.push_back(i);
+         val.push_back(storage.getMat(i));
+         idx.push_back(storage.getJcolM(i));
       }
    }
 

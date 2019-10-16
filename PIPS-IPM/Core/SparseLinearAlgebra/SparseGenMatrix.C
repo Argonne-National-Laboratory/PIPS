@@ -810,12 +810,12 @@ void SparseGenMatrix::permuteCols(const std::vector<unsigned int>& permvec)
       m_Mt->mStorage->permuteRows(permvec);
 }
 
-int SparseGenMatrix::appendRow(const OoqpVector& row)
+int SparseGenMatrix::appendRow(const SparseGenMatrix& matrix_row, int row)
 {
    assert( hasDynamicStorage() );
    assert( !hasTransposed() );
 
-   mStorageDynamic->appendRow( row );
+   mStorageDynamic->appendRow( matrix_row.getStorageDynamicRef(), row );
 
    return mStorageDynamic->getM() - 1;
 }

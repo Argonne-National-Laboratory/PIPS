@@ -185,7 +185,7 @@ public:
 
   void freeDynamicStorage();
 
-  virtual int appendRow( const OoqpVector& row );
+  virtual int appendRow( const SparseGenMatrix& matrix_row, int row );
 
   virtual ~SparseGenMatrix();
 

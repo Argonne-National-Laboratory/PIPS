@@ -1486,7 +1486,8 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
 {
    // todo need row at that time for postsolve
    // StochVectorHandle vec = getRowAsStochVector(system_type, node_row, row, linking_row);
-   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, *presProb);
+   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, 
+      dynamic_cast<const StochGenMatrix&>( (system_type == EQUALITY_SYSTEM) ? *presProb->A : *presProb->C ) );
 
 #ifdef TRACK_COLUMN
   if( NODE == node_col && COLUMN == col && (my_rank == 0 || node_col != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )

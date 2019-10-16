@@ -107,7 +107,7 @@ public:
   void clearRow( int row );
   void clearCol( int col );
 
-  void appendRow( const OoqpVector& row );
+  void appendRow( const SparseStorageDynamic& storage, int row );
 
   void scaleRow( int row, double factor );
 

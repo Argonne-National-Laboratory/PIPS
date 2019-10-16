@@ -221,7 +221,7 @@ public:
 
   virtual bool isRootNodeInSync() const;
 
-  virtual int appendRow( const OoqpVector& row, int child, bool linking );
+  virtual int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking );
 };
 
 
@@ -377,7 +377,7 @@ public:
 
   virtual bool isRootNodeInSync() const override { return true; };
 
-  virtual int appendRow( const OoqpVector& row, int child, bool linking ) override { assert("CANNOT APEND ROW TO DUMMY MATRIX"); return -1; };
+  virtual int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking ) override { assert("CANNOT APEND ROW TO DUMMY MATRIX"); return -1; };
 };
 
 
