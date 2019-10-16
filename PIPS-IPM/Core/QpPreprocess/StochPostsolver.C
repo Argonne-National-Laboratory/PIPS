@@ -50,7 +50,8 @@ void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType 
 }
 
 // todo for now equality rows only
-void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, const OoqpVector& deleted_row )
+void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, 
+   const StochGenMatrix& matrix_row )
 {
    BlockType block_type = (linking_row) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
    //todo INEQUALITY system?  
@@ -63,8 +64,16 @@ void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int nod
    
    // save dual postsolve info
    // save row for primal postsolve info
-   stored_rows->appendRow(deleted_row, node_row, linking_row);
+   int row_idx = stored_rows->appendRow(current_prob, node_row, linking_row);
+
+   indices.push_back( INDEX(node_col, col) );
+   values.push_back( (linking_row) ? 1.0 : 0.0 );
+   values.push_back( row_idx );
+   values.push_back( node_row );
+   values.push_back( row );
    reductions.push_back( FREE_COLUMN_SINGLETON );
+
+   finishNotify();
 }
 
 

@@ -637,19 +637,19 @@ void PresolveData::allreduceAndApplyNnzChanges()
    for( int i = 0; i < nnzs_col_chgs->length(); ++i )
    {
       if( (*nnzs_col_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1 )
-         singleton_cols.push( sCOLINDEX(-1, i) );
+         singleton_cols.push_back( sCOLINDEX(-1, i) );
    }
    
    for( int i = 0; i < nnzs_row_A_chgs->length(); ++i )
    {
       if( (*nnzs_row_A_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[i] == 1 )
-         singleton_rows.push( sROWINDEX(EQUALITY_SYSTEM, -2, i) );
+         singleton_rows.push_back( sROWINDEX(EQUALITY_SYSTEM, -2, i) );
    }
    
    for( int i = 0; i < nnzs_row_C_chgs->length(); ++i )
    {
       if( (*nnzs_row_C_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1 )
-         singleton_rows.push( sROWINDEX(INEQUALITY_SYSTEM, -2, i) );
+         singleton_rows.push_back( sROWINDEX(INEQUALITY_SYSTEM, -2, i) );
    }
 
 #ifndef NDEBUG
@@ -739,7 +739,7 @@ void PresolveData::initSingletons()
    for(int i = 0; i < nnzs_row_A->vec->n; ++i)
    if( dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[i] == 1.0)
    {
-      singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, -1, i ));
+      singleton_rows.push_back( sROWINDEX( EQUALITY_SYSTEM, -1, i ));
    }
 
    /* Bl0 */
@@ -748,7 +748,7 @@ void PresolveData::initSingletons()
       for(int i = 0; i < nnzs_row_A->vecl->n; ++i)
       {
          if( dynamic_cast<SimpleVector&>(*nnzs_row_A->vecl)[i] == 1.0)
-            singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, -2, i ));
+            singleton_rows.push_back( sROWINDEX( EQUALITY_SYSTEM, -2, i ));
       }
    }
 
@@ -760,7 +760,7 @@ void PresolveData::initSingletons()
          for(int j = 0; j < nnzs_row_A->children[i]->vec->n; ++j)
          {
             if( dynamic_cast<SimpleVector&>(*nnzs_row_A->children[i]->vec)[j] == 1.0)
-               singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, i, j ));
+               singleton_rows.push_back( sROWINDEX( EQUALITY_SYSTEM, i, j ));
          }
       }
    }
@@ -769,7 +769,7 @@ void PresolveData::initSingletons()
    /* B0 */
    for(int i = 0; i < nnzs_row_C->vec->n; ++i)
       if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1.0)
-         singleton_rows.push( sROWINDEX( INEQUALITY_SYSTEM, -1, i ));
+         singleton_rows.push_back( sROWINDEX( INEQUALITY_SYSTEM, -1, i ));
 
    /* Bl0 */
    if( nnzs_row_C->vecl != NULL)
@@ -777,7 +777,7 @@ void PresolveData::initSingletons()
       for( int i = 0; i < nnzs_row_C->vecl->n; ++i )
       {
          if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vecl)[i] == 1.0 )
-            singleton_rows.push(sROWINDEX( INEQUALITY_SYSTEM, -2, i ));
+            singleton_rows.push_back(sROWINDEX( INEQUALITY_SYSTEM, -2, i ));
       }
    }
 
@@ -789,7 +789,7 @@ void PresolveData::initSingletons()
          for( int j = 0; j < nnzs_row_C->children[i]->vec->n; ++j )
          {
             if( dynamic_cast<SimpleVector&>(*nnzs_row_C->children[i]->vec)[j] == 1.0 )
-               singleton_rows.push(sROWINDEX( INEQUALITY_SYSTEM, i, j ));
+               singleton_rows.push_back(sROWINDEX( INEQUALITY_SYSTEM, i, j ));
          }
       }
    }
@@ -798,7 +798,7 @@ void PresolveData::initSingletons()
    for(int i = 0; i < nnzs_col->vec->n; ++i)
    {
       if( dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1.0)
-         singleton_cols.push( sCOLINDEX(-1, i));
+         singleton_cols.push_back( sCOLINDEX(-1, i));
    }
 
    for(int i = 0; i < nChildren; ++i)
@@ -808,7 +808,7 @@ void PresolveData::initSingletons()
          for(int j = 0; j < nnzs_col->children[i]->vec->n; ++j)
          {
             if( dynamic_cast<SimpleVector&>(*nnzs_col->children[i]->vec)[j] == 1.0)
-               singleton_cols.push( sCOLINDEX(i, j));
+               singleton_cols.push_back( sCOLINDEX(i, j));
          }
       }
    }
@@ -1286,14 +1286,14 @@ void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType bl
       {
          getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] -= amount;
          if( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index]  == 1)
-            singleton_rows.push( sROWINDEX( system_type, node, row_index ) );
+            singleton_rows.push_back( sROWINDEX( system_type, node, row_index ) );
          assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] );
       }
       else
       {
          getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] -= amount;
          if( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index]  == 1)
-            singleton_rows.push( sROWINDEX( system_type, node, row_index ) );
+            singleton_rows.push_back( sROWINDEX( system_type, node, row_index ) );
          assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] );
       }
    }
@@ -1318,7 +1318,7 @@ void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_ind
    {
       getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] -= amount;
       if( getSimpleVecColFromStochVec( *nnzs_col, node )[col_index]  == 1)
-         singleton_cols.push( sCOLINDEX( node, col_index ) );
+         singleton_cols.push_back( sCOLINDEX( node, col_index ) );
       assert(0 <= getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] );
    }
 }
@@ -1485,8 +1485,8 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
 void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
 {
    // todo need row at that time for postsolve
-   StochVector* vec = getRowAsStochVector(system_type, node_row, row, linking_row);
-   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, *vec);
+   // StochVectorHandle vec = getRowAsStochVector(system_type, node_row, row, linking_row);
+   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, *presProb);
 
 #ifdef TRACK_COLUMN
   if( NODE == node_col && COLUMN == col && (my_rank == 0 || node_col != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -2768,7 +2768,8 @@ void PresolveData::writeMatrixRowToStreamDense(std::ostream& out, const SparseGe
    }
 }
 
-StochVector* PresolveData::getRowAsStochVector(SystemType system_type, int node, int row, bool linking_row)
+/* stupid slow - do not use this for things.. */
+StochVectorHandle PresolveData::getRowAsStochVector(SystemType system_type, int node, int row, bool linking_row)
 {
    // create new StochVector and set pattern according to row   
    StochVector* svec;
@@ -2823,10 +2824,10 @@ StochVector* PresolveData::getRowAsStochVector(SystemType system_type, int node,
        }
      }
    }
-   return svec;
+   return StochVectorHandle(svec);
 }
 
-StochVector* PresolveData::getColAsStochVector(SystemType system_type, int node, int col)
+StochVectorHandle PresolveData::getColAsStochVector(SystemType system_type, int node, int col)
 {
   // create new StochVector and set pattern according to row
   // todo: we need two vectors to display one column

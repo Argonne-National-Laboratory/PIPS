@@ -1763,7 +1763,7 @@ bool StochGenMatrix::isRootNodeInSync() const
  *
  * @return rowindex (in specified block row) of newly appended row
  */
-int StochGenMatrix::appendRow( const OoqpVector& row, int child, bool linking ) 
+int StochGenMatrix::appendRow( const StochGenMatrix& row, int child, bool linking ) 
 {
   const StochVector& stoch_row = dynamic_cast<const StochVector&>(row);
 
@@ -1779,7 +1779,7 @@ int StochGenMatrix::appendRow( const OoqpVector& row, int child, bool linking )
       if( !children[i]->isKindOf(kStochGenDummyMatrix) )
         assert(stoch_row.children[i]->vec);
       else
-        assert( stoch_row.children[i]->vec == NULL );
+        assert( stoch_row.children[i]->isKindOf(kStochDummy) );
   }
   else
   {
@@ -1787,12 +1787,12 @@ int StochGenMatrix::appendRow( const OoqpVector& row, int child, bool linking )
     {
       if(child == (int) i) 
       {
-        assert( stoch_row.children[i]->vec );        
         assert( !children[i]->isKindOf(kStochGenDummyMatrix) );
+        assert( stoch_row.children[i]->vec );        
       }
       else
       {
-        assert( stoch_row.children[i]->vec == NULL );        
+        assert( stoch_row.children[i]->isKindOf(kStochDummy) );        
       }
     }
   }
@@ -1825,7 +1825,7 @@ int StochGenMatrix::appendRow( const OoqpVector& row, int child, bool linking )
 #ifndef NDEBUG
       int idx;
       idx = children[child]->Bmat->appendRow(*stoch_row.children[child]->vec);
-      assert(idx = index_row);
+      assert(idx == index_row);
 #else
       children[child]->Bmat->appendRow(*stoch_row.children[child]->vec);
 #endif

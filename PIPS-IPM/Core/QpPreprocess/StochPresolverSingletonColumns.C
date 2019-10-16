@@ -47,12 +47,15 @@ void StochPresolverSingletonColumns::applyPresolving()
    while( !presData.getSingletonCols().empty() )
    {
       bool removed = false;
-      removed = removeSingletonColumn( presData.getSingletonCols().front().node, 
-         presData.getSingletonCols().front().index );      
+
+      const int node = presData.getSingletonCols().back().node;
+      const int index = presData.getSingletonCols().back().index;
+      presData.getSingletonCols().pop_back();
+
+      removed = removeSingletonColumn( node, index );      
       
-      if(removed && ( presData.getSingletonCols().front().node != -1 || my_rank == 0) )
+      if(removed && ( node != -1 || my_rank == 0) )
          ++removed_cols;
-      presData.getSingletonCols().pop();
    }
 
    assert( presData.getSingletonCols().empty() );
@@ -94,8 +97,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int& node_col, 
       assert( false );
    if( nnzs_col[col] == 0 )
       return false;
-   assert( nnzs_col[col] <= 1 );
-
+   assert( nnzs_col[col] == 1 );
 
    int node_row = -3;
    int row = -3;

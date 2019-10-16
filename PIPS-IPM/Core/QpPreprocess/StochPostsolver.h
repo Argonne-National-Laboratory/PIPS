@@ -30,7 +30,7 @@ public:
          const std::vector<double> values_row );
       void notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col, const std::vector<double>& values_col);
       void notifyFixedEmptyColumn( int node, unsigned int col, double value);     
-      void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, const OoqpVector& deleted_row );
+      void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, const StochGenMatrix& matrix_row );
 
 
       void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);

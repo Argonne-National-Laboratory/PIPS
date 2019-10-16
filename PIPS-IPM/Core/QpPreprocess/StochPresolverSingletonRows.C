@@ -54,12 +54,16 @@ void StochPresolverSingletonRows::applyPresolving()
    while( !presData.getSingletonRows().empty() )
    {
       bool removed = false;
-      removed = removeSingletonRow( presData.getSingletonRows().front().system_type, presData.getSingletonRows().front().node, 
-         presData.getSingletonRows().front().index );      
+
+      const SystemType system_type = presData.getSingletonRows().back().system_type;
+      const int node = presData.getSingletonRows().back().node;
+      const int index = presData.getSingletonRows().back().index;
+      presData.getSingletonRows().pop_back();
+      
+      removed = removeSingletonRow( system_type, node, index );      
       
       if(removed)
          ++removed_rows;
-      presData.getSingletonRows().pop();
    }
 
    assert( presData.getSingletonRows().empty() );

@@ -109,8 +109,8 @@ private:
       SimpleVectorHandle obj_vector_chgs;
 
       /* storing so far found singleton rows and columns */
-      std::queue<sROWINDEX> singleton_rows;
-      std::queue<sCOLINDEX> singleton_cols;
+      std::vector<sROWINDEX> singleton_rows;
+      std::vector<sCOLINDEX> singleton_cols;
 
       int my_rank;
       bool distributed;
@@ -149,8 +149,8 @@ public :
       int getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row]; };
       int getNnzsCol(int node, int col) const { return getSimpleVecColFromStochVec(*nnzs_col, node)[col]; };
 
-      std::queue<sROWINDEX>& getSingletonRows() { return singleton_rows; };
-      std::queue<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
+      std::vector<sROWINDEX>& getSingletonRows() { return singleton_rows; };
+      std::vector<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
 
       /* methods for initializing the object */
    private:
@@ -271,8 +271,10 @@ public:
 private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
             const SimpleVector& ixlow, const SimpleVector& xlow) const;
-      StochVector* getRowAsStochVector(SystemType system_type, int node, int row, bool linking);
-      StochVector* getColAsStochVector(SystemType system_type, int node, int col);
+
+      /* stupid slow.. */
+      StochVectorHandle getRowAsStochVector(SystemType system_type, int node, int row, bool linking);
+      StochVectorHandle getColAsStochVector(SystemType system_type, int node, int col);
 
 
 };

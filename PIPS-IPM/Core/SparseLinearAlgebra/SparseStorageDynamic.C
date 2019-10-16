@@ -514,10 +514,15 @@ void SparseStorageDynamic::clearCol( int col )
 
 void SparseStorageDynamic::appendRow( const OoqpVector& row )
 {
-   assert( row.length() < n );
+   assert( row.length() <= n );
+   if(m_len == 0)
+   {
+      rowptr[0].start = rowptr[0].end = 0;
+   }
    
    const SimpleVector& simple_row = dynamic_cast<const SimpleVector&>(row);
 
+   /* extract nonzero entries from row */
    std::vector<double> val;
    std::vector<int> idx;
    val.reserve(simple_row.length());
@@ -525,25 +530,36 @@ void SparseStorageDynamic::appendRow( const OoqpVector& row )
 
    for(long long i = 0; i < simple_row.length(); ++i)
    {
-      if( simple_row[i] != 0.0 )
+      if( !PIPSisZero(simple_row[i]) )
       {
          val.push_back(simple_row[i]);
          idx.push_back(i);
       }
    }
 
+   /* try to add a new row to the storage and extend the row ptr if necessary */
    if( m == m_len )
       extendStorageRows();
 
+   assert(m_len > m);
+
+   /* length of row that should be appended */
    const int total_length_row = val.size() + int(val.size() * spareRatio);
-   // check storage space
+   
+   /* check storage space */
    assert( rowptr[m].start == rowptr[m].end );
-   if( total_length_row > (len - rowptr[m].start))
+   assert( (len - rowptr[m].start) >= 0 );
+   
+   bool extended = false;
+   while( total_length_row > (len - rowptr[m].start) )
    {
-      if(len_free > (int) val.size())
+      if( ( (len_free - len*spareRatio) > (int) val.size()) && !extended)
+      {
+         extended = true;
          compressStorageValues();
-      else
-         extendStorageValues();
+      }
+
+      extendStorageValues();
    }
    assert( total_length_row <= (len - rowptr[m].start) );
 
@@ -554,7 +570,9 @@ void SparseStorageDynamic::appendRow( const OoqpVector& row )
    rowptr[m].end = rowptr[m].start + val.size();
    rowptr[m + 1].start = rowptr[m + 1].end = rowptr[m].start + total_length_row;
    ++m;
+
    len_free -= val.size();
+
    assert(len_free >= 0);
 }
 
@@ -576,30 +594,46 @@ void SparseStorageDynamic::extendStorageRows()
 {
    assert(m == m_len);
 
+   /* double size of old array */
    int m_len_tmp = 2 * m_len;
-   // todo random value...
+
    if(m_len == 0)
-      m_len_tmp = 10;
+      m_len_tmp = 2;
 
-   ROWPTRS* rowptr_tmp = new ROWPTRS[m_len];
+   /* extend the storage */
+   ROWPTRS* rowptr_tmp = new ROWPTRS[m_len_tmp + 1];
 
-   std::copy(rowptr, rowptr + m_len, rowptr_tmp);
+   std::copy(rowptr, rowptr + m_len + 1, rowptr_tmp);
 
    std::swap(rowptr_tmp, rowptr);
    std::swap(m_len_tmp, m_len);
+
+   assert( rowptr[m].start == rowptr[m].end );
 
    delete[] rowptr_tmp;
 }
 
 void SparseStorageDynamic::extendStorageValues()
 {
-   int len_tmp = len * 2;
    // todo : random value...
-   if( len == 0 )
-      len_tmp = 100;
+   int len_tmp = len;
+   /* if initial size of storage was zero set it to 100 */
+   if( len_tmp == 0 )
+   {
+      len_tmp = 2;
 
+      assert(len_free == 0);
+   }
+   else
+   {
+      /* double the storage size */
+      len_tmp *= 2;
+   }
+
+   assert(len_tmp > len);
    len_free += len_tmp - len;
 
+   /* extend the stroage */
    int * jcolM_tmp = new int[ len_tmp ];
    double * M_tmp = new double[ len_tmp ];
 
@@ -613,21 +647,24 @@ void SparseStorageDynamic::extendStorageValues()
    std::swap( M, M_tmp );
    std::swap( len, len_tmp );
 
-   delete[] jcolM;
-   delete[] M;
+   delete[] jcolM_tmp;
+   delete[] M_tmp;
 
 #ifndef NDEBUG
 #ifndef PRE_CPP11
-   assert( len_free == len - std::accumulate(rowptr, rowptr + m, 0, [](int a, ROWPTRS rp)->int { return a + (rp.end - rp.start); }));
+   assert( len_free == (len - std::accumulate(rowptr, rowptr + m, 0, [](const int& a, const ROWPTRS& rp)->int { return a + (rp.end - rp.start); })) );
 #endif
 #endif
 }
 
 void SparseStorageDynamic::compressStorageValues()
 {  
-   if( int((len - len_free) * spareRatio) > len) 
+   /* extend storage until we can actually restore the spareRatio */
+   assert(len >= len_free);
+   while( int( (len - len_free) * spareRatio ) > len_free ) 
       extendStorageValues();
 
+   /* reorded the entries and restore the sparse storage pattern with spareRatio*/
    int offset = 0;
    for( int i = 0; i <= m; ++i)
    {
@@ -637,8 +674,9 @@ void SparseStorageDynamic::compressStorageValues()
 
       assert(offset + range < len);
 
-      std::memmove(M + offset, M + start, range * sizeof(double));
-      std::memmove(jcolM + offset, jcolM + start, range * sizeof(int));
+      // todo does only work for shrinking arrays...
+      std::memmove(M + offset, M + start, range * sizeof(M[0]));
+      std::memmove(jcolM + offset, jcolM + start, range * sizeof(jcolM[0]));
 
       rowptr[i].start = offset;
       rowptr[i].end = offset + range;
