@@ -1790,17 +1790,17 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
   {
     if(child != -1)
     {
-      index_row = children[child]->Amat->appendRow( *matrix_row.children[row]->Amat, row );
+      index_row = children[child]->Amat->appendRow( *matrix_row.children[child]->Amat, row );
 #ifndef NDEBUG
-      const int index_row1 = children[child]->Bmat->appendRow( *matrix_row.children[row]->Bmat, row );
+      const int index_row1 = children[child]->Bmat->appendRow( *matrix_row.children[child]->Bmat, row );
 #else
-      children[child]->Bmat->appendRow( *matrix_row.children[row]->Bmat, row );
+      children[child]->Bmat->appendRow( *matrix_row.children[child]->Bmat, row );
 #endif
       assert(index_row1 == index_row);
     }
     else
     {
-      index_row = Amat->appendRow( *matrix_row.children[row]->Amat, row );
+      index_row = Amat->appendRow( *matrix_row.Amat, row );
     }
   }
 
