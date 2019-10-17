@@ -1142,27 +1142,6 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
          (*singletonCoeffsColParent)[singleColIdx];
 }
 
-// /** Tightens the bounds for a singleton variable with index singleColIdx.
-//  * @param newxlow and @param newxupp are the new candidate bounds.
-//  * This index is possibly offset by nA, if it is in a B- or D-block.
-//  */
-// void StochPresolverParallelRows::tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp)
-// {
-//    assert( singleColIdx >= 0 );
-
-//    if( singleColIdx < nA )   // variable x_1 is in the parent block Amat
-//    {
-//       setNewBounds(singleColIdx, newxlow, newxupp, currIxlowParent->elements(),
-//             currxlowParent->elements(), currIxuppParent->elements(), currxuppParent->elements());
-//    }
-//    else   // variable x_1 is in the child block Bmat
-//    {
-//       assert( singleColIdx < nA + currxuppChild->n );
-//       setNewBounds(singleColIdx-nA, newxlow, newxupp, currIxlowChild->elements(),
-//             currxlowChild->elements(), currIxuppChild->elements(), currxuppChild->elements());
-//    }
-// }
-
 bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2, int it)
 {
    assert( rowId1 >= 0 && rowId1 < mA );
@@ -1254,49 +1233,49 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
       return false;
 
    // check a_q!=0.0, a_r!=0.0:
-   const int singleColIdx1 = rowContainsSingletonVariableC->elements()[rowId1];
-   const int singleColIdx2 = rowContainsSingletonVariableC->elements()[rowId2];
+   const int singleColIdx1 = (*rowContainsSingletonVariableC)[rowId1];
+   const int singleColIdx2 = (*rowContainsSingletonVariableC)[rowId2];
    const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
    const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
    if( coeff_singleton1 == 0.0 || coeff_singleton2 == 0.0 )
       return false;
 
    // check d_q == s * d_r (here s==1, so just d_q == d_r:
-   if( (norm_iclow->elements()[rowId1] != 0.0 && norm_iclow->elements()[rowId1] == 0.0 )
-      || (norm_iclow->elements()[rowId1] == 0.0 && norm_iclow->elements()[rowId1] != 0.0) )
+   if( ((*norm_iclow)[rowId1] != 0.0 && (*norm_iclow)[rowId1] == 0.0 )
+      || ((*norm_iclow)[rowId1] == 0.0 && (*norm_iclow)[rowId1] != 0.0) )
       return false;
-   if( (norm_iclow->elements()[rowId1] != 0.0 && norm_iclow->elements()[rowId1] != 0.0)
-         && ( !PIPSisEQ(norm_clow->elements()[rowId1], norm_clow->elements()[rowId2], tol_compare_double) ) )
+   if( ((*norm_iclow)[rowId1] != 0.0 && (*norm_iclow)[rowId1] != 0.0)
+         && ( !PIPSisEQ((*norm_clow)[rowId1], (*norm_clow)[rowId2], tol_compare_double) ) )
       return false;
 
    // check f_q == f_r
-   if( (norm_icupp->elements()[rowId1] != 0.0 && norm_icupp->elements()[rowId1] == 0.0 )
-      || (norm_icupp->elements()[rowId1] == 0.0 && norm_icupp->elements()[rowId1] != 0.0) )
+   if( ((*norm_icupp)[rowId1] != 0.0 && (*norm_icupp)[rowId1] == 0.0 )
+      || ((*norm_icupp)[rowId1] == 0.0 && (*norm_icupp)[rowId1] != 0.0) )
       return false;
-   if( (norm_icupp->elements()[rowId1] != 0.0 && norm_icupp->elements()[rowId1] != 0.0)
-         && ( !PIPSisEQ(norm_cupp->elements()[rowId1], norm_cupp->elements()[rowId2], tol_compare_double) ) )
+   if( ((*norm_icupp)[rowId1] != 0.0 && (*norm_icupp)[rowId1] != 0.0)
+         && ( !PIPSisEQ((*norm_cupp)[rowId1], (*norm_cupp)[rowId2], tol_compare_double) ) )
       return false;
 
    // check c_1*c_2 >= 0:
-   const double c1 = (singleColIdx1 < nA) ? currgParent->elements()[singleColIdx1] : currgChild->elements()[singleColIdx1 - nA];
-   const double c2 = (singleColIdx2 < nA) ? currgParent->elements()[singleColIdx2] : currgChild->elements()[singleColIdx2 - nA];
+   const double c1 = (singleColIdx1 < nA) ? (*currgParent)[singleColIdx1] : (*currgChild)[singleColIdx1 - nA];
+   const double c2 = (singleColIdx2 < nA) ? (*currgParent)[singleColIdx2] : (*currgChild)[singleColIdx2 - nA];
    if( c1 * c2 < 0 )
       return false;
 
    // check lower and upper bounds:
-   double ixlow1 = (singleColIdx1 < nA) ? currIxlowParent->elements()[singleColIdx1] : currIxlowChild->elements()[singleColIdx1 - nA];
-   double ixupp1 = (singleColIdx1 < nA) ? currIxuppParent->elements()[singleColIdx1] : currIxuppChild->elements()[singleColIdx1 - nA];
-   double ixlow2 = (singleColIdx2 < nA) ? currIxlowParent->elements()[singleColIdx2] : currIxlowChild->elements()[singleColIdx2 - nA];
-   double ixupp2 = (singleColIdx2 < nA) ? currIxuppParent->elements()[singleColIdx2] : currIxuppChild->elements()[singleColIdx2 - nA];
+   double ixlow1 = (singleColIdx1 < nA) ? (*currIxlowParent)[singleColIdx1] : (*currIxlowChild)[singleColIdx1 - nA];
+   double ixupp1 = (singleColIdx1 < nA) ? (*currIxuppParent)[singleColIdx1] : (*currIxuppChild)[singleColIdx1 - nA];
+   double ixlow2 = (singleColIdx2 < nA) ? (*currIxlowParent)[singleColIdx2] : (*currIxlowChild)[singleColIdx2 - nA];
+   double ixupp2 = (singleColIdx2 < nA) ? (*currIxuppParent)[singleColIdx2] : (*currIxuppChild)[singleColIdx2 - nA];
 
-   double xlow1 = (singleColIdx1 < nA) ? currxlowParent->elements()[singleColIdx1] : currxlowChild->elements()[singleColIdx1 - nA];
-   double xupp1 = (singleColIdx1 < nA) ? currxuppParent->elements()[singleColIdx1] : currxuppChild->elements()[singleColIdx1 - nA];
-   double xlow2 = (singleColIdx2 < nA) ? currxlowParent->elements()[singleColIdx2] : currxlowChild->elements()[singleColIdx2 - nA];
-   double xupp2 = (singleColIdx2 < nA) ? currxuppParent->elements()[singleColIdx2] : currxuppChild->elements()[singleColIdx2 - nA];
+   double xlow1 = (singleColIdx1 < nA) ? (*currxlowParent)[singleColIdx1] : (*currxlowChild)[singleColIdx1 - nA];
+   double xupp1 = (singleColIdx1 < nA) ? (*currxuppParent)[singleColIdx1] : (*currxuppChild)[singleColIdx1 - nA];
+   double xlow2 = (singleColIdx2 < nA) ? (*currxlowParent)[singleColIdx2] : (*currxlowChild)[singleColIdx2 - nA];
+   double xupp2 = (singleColIdx2 < nA) ? (*currxuppParent)[singleColIdx2] : (*currxuppChild)[singleColIdx2 - nA];
 
    // check aq * l1 = s * ar * l2:
    if( ixlow1 != 0.0 && ixlow2 != 0.0 &&
-         !PIPSisEQ(coeff_singleton1 * xlow1, s* coeff_singleton2 * xlow2, tol_compare_double))
+         !PIPSisEQ(coeff_singleton1 * xlow1, s * coeff_singleton2 * xlow2, tol_compare_double) )
       return false;
    if( ixlow1 != 0.0 && ixlow2 == 0.0 && xlow1 > -std::numeric_limits<double>::max() )
       return false;
@@ -1305,7 +1284,7 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
 
    // check aq * u1 = s * ar * u2:
    if( ixupp1 != 0.0 && ixupp2 != 0.0 &&
-         !PIPSisEQ(coeff_singleton1 * xupp1, s* coeff_singleton2 * xupp2, tol_compare_double))
+         !PIPSisEQ(coeff_singleton1 * xupp1, s * coeff_singleton2 * xupp2, tol_compare_double) )
       return false;
    if( ixupp1 != 0.0 && ixupp2 == 0.0 && xupp1 < std::numeric_limits<double>::max() )
       return false;
