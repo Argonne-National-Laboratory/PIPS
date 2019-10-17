@@ -86,6 +86,45 @@ void StochPresolverParallelRows::applyPresolving()
 
    assert(gParentAdaptions->isZero());
 
+   const StochVector& clow = dynamic_cast<const StochVector&>(*presData.getPresProb().bl);
+   const StochVector& iclow = dynamic_cast<const StochVector&>(*presData.getPresProb().iclow);
+   const StochVector& cupp = dynamic_cast<const StochVector&>(*presData.getPresProb().bu);
+   const StochVector& icupp = dynamic_cast<const StochVector&>(*presData.getPresProb().icupp);
+
+   StochVectorHandle clow_def = StochVectorHandle(clow.cloneFull());
+   StochVectorHandle cupp_def = StochVectorHandle(cupp.cloneFull());
+
+   double clow_twonorm = clow_def->twonorm();
+   double clow_infnorm = clow_def->infnorm();
+   double clow_onenorm = clow_def->onenorm();
+
+   double cupp_twonorm = cupp_def->twonorm();
+   double cupp_onenorm = cupp_def->onenorm();
+   double cupp_infnorm = cupp_def->infnorm();
+
+   clow_def->componentMult(iclow);
+   cupp_def->componentMult(icupp);
+
+   double nr_ineq_rhs = icupp.dotProductSelf(1.0);
+   double nr_ineq_lhs = iclow.dotProductSelf(1.0);
+
+   if(my_rank == 0)
+   {
+      std::cout << "clow:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_ineq_lhs << std::endl;
+      std::cout << "twonorm  \t" << clow_twonorm << std::endl;
+      std::cout << "onenorm  \t" << clow_onenorm << std::endl;
+      std::cout << "infnorm  \t" << clow_infnorm << std::endl;      
+      std::cout << std::endl;
+
+      std::cout << "cupp:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_ineq_rhs << std::endl;
+      std::cout << "twonorm  \t" << cupp_twonorm << std::endl;
+      std::cout << "onenorm  \t" << cupp_onenorm << std::endl;
+      std::cout << "infnorm  \t" << cupp_infnorm << std::endl;
+      std::cout << std::endl;
+   }
+
 #ifndef NDEBUG
    if( my_rank == 0 )
    {
@@ -213,6 +252,41 @@ void StochPresolverParallelRows::applyPresolving()
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
+
+   clow_def = StochVectorHandle(clow.cloneFull());
+   cupp_def = StochVectorHandle(cupp.cloneFull());
+
+   clow_twonorm = clow_def->twonorm();
+   clow_infnorm = clow_def->infnorm();
+   clow_onenorm = clow_def->onenorm();
+
+   cupp_twonorm = cupp_def->twonorm();
+   cupp_onenorm = cupp_def->onenorm();
+   cupp_infnorm = cupp_def->infnorm();
+
+   clow_def->componentMult(iclow);
+   cupp_def->componentMult(icupp);
+
+   nr_ineq_rhs = icupp.dotProductSelf(1.0);
+   nr_ineq_lhs = iclow.dotProductSelf(1.0);
+
+   if(my_rank == 0)
+   {
+      std::cout << "clow:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_ineq_lhs << std::endl;
+      std::cout << "twonorm  \t" << clow_twonorm << std::endl;
+      std::cout << "onenorm  \t" << clow_onenorm << std::endl;
+      std::cout << "infnorm  \t" << clow_infnorm << std::endl;      
+      std::cout << std::endl;
+
+      std::cout << "cupp:" << std::endl;
+      std::cout << "nr_bounds\t" << nr_ineq_rhs << std::endl;
+      std::cout << "twonorm  \t" << cupp_twonorm << std::endl;
+      std::cout << "onenorm  \t" << cupp_onenorm << std::endl;
+      std::cout << "infnorm  \t" << cupp_infnorm << std::endl;
+      std::cout << std::endl;
+   }
+
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -1100,7 +1174,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT( (*norm_clow)[rowId1], norm_low_row2) ) ||
       ( (*norm_iclow)[rowId1] == 0.0 && norm_low_row2 > -std::numeric_limits<double>::infinity() ) )
    {
-      (*norm_clow)[rowId1] = std::max(norm_low_row2, (*norm_clow)[rowId1]);
+      (*norm_clow)[rowId1] = /*std::max(*/norm_low_row2;//, (*norm_clow)[rowId1]);
       (*norm_iclow)[rowId1] = 1.0;
 
 
@@ -1110,7 +1184,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    if( ( (*norm_icupp)[rowId1] != 0.0 && PIPSisLT(norm_upp_row2, (*norm_cupp)[rowId1]) )
          || ( (*norm_icupp)[rowId1] == 0.0 && norm_upp_row2 < std::numeric_limits<double>::infinity() ))
    {
-      (*norm_cupp)[rowId1] = std::min(norm_upp_row2, (*norm_cupp)[rowId1]);
+      (*norm_cupp)[rowId1] = /*std::min(*/norm_upp_row2;/*, (*norm_cupp)[rowId1]);*/ // todo!!!
       (*norm_icupp)[rowId1] = 1.0;
 
       ( PIPSisLT( 0.0, factor) ) ? new_rhs = factor * norm_upp_row2 : new_lhs = factor * norm_upp_row2;
