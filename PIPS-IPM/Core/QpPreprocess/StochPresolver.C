@@ -89,7 +89,6 @@ Data* StochPresolver::presolve()
       presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
       presolverColFix.applyPresolving();
-      // presData.printVarBoundStatistics(std::cout);
    }
 
    // before the finalize call fix all empty rows and columns not yet fixed

@@ -1115,15 +1115,29 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
    }
    else
    {
-      if(lhs != -std::numeric_limits<double>::infinity())
+      if( lhs != -std::numeric_limits<double>::infinity() )
       {
-         getSimpleVecRowFromStochVec(*presProb->iclow, node, CHILD_BLOCK)[row] = 1.0;
-         getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row] = /*std::max(getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row],*/ lhs;
+         if( !PIPSisEQ(getSimpleVecRowFromStochVec(*presProb->iclow, node, CHILD_BLOCK)[row], 1.0) )
+         {
+            getSimpleVecRowFromStochVec(*presProb->iclow, node, CHILD_BLOCK)[row] = 1.0;
+            getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row] = lhs;
+
+         }
+         else
+            getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row] = 
+               std::max(getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row], lhs);
       }
-      if(rhs != std::numeric_limits<double>::infinity())
+      if( rhs != std::numeric_limits<double>::infinity() )
       {
-         getSimpleVecRowFromStochVec(*presProb->icupp, node, CHILD_BLOCK)[row] = 1.0;
-         getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row] = /*std::min(getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row], */rhs;
+         if( !PIPSisEQ(getSimpleVecRowFromStochVec(*presProb->icupp, node, CHILD_BLOCK)[row], 1.0) )
+         {
+            getSimpleVecRowFromStochVec(*presProb->icupp, node, CHILD_BLOCK)[row] = 1.0;
+         }
+         else
+         {
+            getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row] = 
+               std::min(getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row], rhs);
+         }
       }
       // todo!
    }
