@@ -141,8 +141,6 @@ private:
    bool doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
    bool doNearlyParallelRowCase3(int rowId1, int rowId2, int it);
    void adaptObjective( int colIdx1, int colIdx2, double t, double d, int it);
-   void computeXminusYdivZ( double& result, const SimpleVector& ixvec, const SimpleVector& xvec,
-         int index, double y, double z) const;
    void tightenLinkingVarsBounds();
 
 };
