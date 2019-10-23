@@ -974,15 +974,11 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   if( !PIPSisEQ((*rowContainsSingletonVariableA)[id1], -1.0)
                         || !PIPSisEQ((*rowContainsSingletonVariableA)[id2], -1.0) )
                   {
-                     // TODO: produces wrong postsolve
                      // nearly parallel case 1:
                      // make sure that a_r2 != 0, otherwise switch ids.
-                     bool swappedId1Id2 = false;
                      if( (*rowContainsSingletonVariableA)[id2] == -1.0 )
-                     {   // swap ids so that id2 has a singleton entry:
                         std::swap(id1, id2);
-                        swappedId1Id2 = true;
-                     }
+
                      assert( (*rowContainsSingletonVariableA)[id2] != -1.0 );
                      // if row id1 was already deleted, do not continue the procedure:
                      if( (id1 < mA && (*currNnzRow)[id1] == 0.0) )
@@ -990,11 +986,6 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
 
                      // case two is basically case one
                      doNearlyParallelRowCase1(id1, id2, node);
-
-                     // delete the inequality constraint id2 (which could be either it1 or it2 now):
-                     (swappedId1Id2) ?
-                        presData.removeRedundantRow( EQUALITY_SYSTEM, node, it1->id, false) : 
-                           presData.removeRedundantRow( EQUALITY_SYSTEM, node, it2->id, false);
                   }
                   else
                   {
@@ -1018,8 +1009,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                      if( (*rowContainsSingletonVariableC)[id1] != -1.0
                         && (*rowContainsSingletonVariableC)[id2] != -1.0 )
                      {
-                        if( doNearlyParallelRowCase3(id1, id2, node) )
-                           presData.removeRedundantRow( INEQUALITY_SYSTEM, node, id2, false);
+                        doNearlyParallelRowCase3(id1, id2, node);
                      }
                   }
                   else
@@ -1217,7 +1207,7 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
          (*singletonCoeffsColParent)[singleColIdx];
 }
 
-bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2, int it)
+void StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2, int it)
 {
    /* assert both rows are equality constraints */
    assert( rowId1 >= 0 && rowId1 < mA );
@@ -1241,7 +1231,11 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
       double newxlow = -std::numeric_limits<double>::max();
       double newxupp = std::numeric_limits<double>::max();
 
+      const int col1_idx = (singleColIdx1 < nA) ? singleColIdx1 : (singleColIdx1 - nA);
       const int col2_idx = (singleColIdx2 < nA) ? singleColIdx2 : (singleColIdx2 - nA);
+      const int node_var1 = (singleColIdx1 < nA) ? -1 : it;
+      const int node_var2 = (singleColIdx2 < nA) ? -1 : it;
+
       const SimpleVector* ixlow = (singleColIdx2 < nA) ? currIxlowParent : currIxlowChild;
       const SimpleVector* ixupp = (singleColIdx2 < nA) ? currIxuppParent : currIxuppChild;
       const SimpleVector* xlow = (singleColIdx2 < nA) ? currxlowParent : currxlowChild;
@@ -1259,105 +1253,104 @@ bool StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
       if( PIPSisEQ( (*ixupp)[col2_idx], 1.0 ) )
          newxupp = ((*xupp)[col2_idx] - d) / t;
 
+      presData.substituteVariableParallelRows(EQUALITY_SYSTEM, it, col1_idx, rowId1, node_var1, col2_idx, rowId2, node_var2, t, d);
       // effectively tighten bounds of variable x_id1:
-      if( singleColIdx1 >= nA )
-         presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, CHILD_BLOCK, rowId1, singleColIdx1 - nA, newxupp, newxlow);
-      else
-         presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, LINKING_VARS_BLOCK, rowId1, singleColIdx1, newxupp, newxlow);
+      presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, CHILD_BLOCK, rowId1, col1_idx, newxupp, newxlow);
 
 
-      // adapt objective function:
+      // adapt objective function of reduced problem -> should be move into substituteVariablesParallelRows
       adaptObjective( singleColIdx1, singleColIdx2, t, d, it);
    }
    else
    {
+      // can this even happen?!
+      assert(false);
       adaptObjective( -1, singleColIdx2, t, d, it);
    }
-   return true;
 }
 /**
  * Executes the Nearly Parallel Row Case 3: Both constraints are inequalities and both contain
  * a singleton variable entry.
  * The row indices rowId1, rowId2 are already de-offset, so they should be in the range [0,Cmat->m).
  */
-bool StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2, int it)
+void StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2, int it)
 {
    assert( rowId1 >= 0 && rowId2 >= 0 );
    assert( rowContainsSingletonVariableC );
    assert( rowId1 < rowContainsSingletonVariableC->n );
    assert( rowId2 < rowContainsSingletonVariableC->n );
    assert( norm_factorC );
+   assert( !PIPSisZero((*norm_factorC)[rowId2]) );
 
    // First, do all the checks to verify if the third case applies and all conditions are met.
-   // check s>0:
-   const double s = (*norm_factorC)[rowId1] / (*norm_factorC)[rowId2];
-   if( s <= 0)
-      return false;
 
-   // check a_q!=0.0, a_r!=0.0:
    const int singleColIdx1 = (*rowContainsSingletonVariableC)[rowId1];
    const int singleColIdx2 = (*rowContainsSingletonVariableC)[rowId2];
+   const int col1_idx = (singleColIdx1 < nA) ? singleColIdx1 : singleColIdx1 - nA;
+   const int col2_idx = (singleColIdx2 < nA) ? singleColIdx2 : singleColIdx2 - nA;
    const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
    const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
-   if( coeff_singleton1 == 0.0 || coeff_singleton2 == 0.0 )
-      return false;
+   const double s = (*norm_factorC)[rowId1] / (*norm_factorC)[rowId2];
 
-   // check d_q == s * d_r (here s==1, so just d_q == d_r:
-   if( ((*norm_iclow)[rowId1] != 0.0 && (*norm_iclow)[rowId1] == 0.0 )
-      || ((*norm_iclow)[rowId1] == 0.0 && (*norm_iclow)[rowId1] != 0.0) )
-      return false;
-   if( ((*norm_iclow)[rowId1] != 0.0 && (*norm_iclow)[rowId1] != 0.0)
-         && ( !PIPSisEQ((*norm_clow)[rowId1], (*norm_clow)[rowId2], tol_compare_double) ) )
-      return false;
+   assert(col1_idx < nA);
+   assert(col2_idx < nA);
+   
+   // check s > 0:
+   if( PIPSisLT(s, 0.0) )
+      return;
+   // check a_q != 0.0, a_r!= 0.0:
+   if( PIPSisZero(coeff_singleton1) || PIPSisZero(coeff_singleton2) )
+      return;
 
-   // check f_q == f_r
-   if( ((*norm_icupp)[rowId1] != 0.0 && (*norm_icupp)[rowId1] == 0.0 )
-      || ((*norm_icupp)[rowId1] == 0.0 && (*norm_icupp)[rowId1] != 0.0) )
-      return false;
-   if( ((*norm_icupp)[rowId1] != 0.0 && (*norm_icupp)[rowId1] != 0.0)
-         && ( !PIPSisEQ((*norm_cupp)[rowId1], (*norm_cupp)[rowId2], tol_compare_double) ) )
-      return false;
+   // check d_q == s * d_r (here s == 1, so just d_q == d_r) and f_q == f_r
+   if(   !PIPSisEQ( (*norm_iclow)[rowId1], (*norm_iclow)[rowId2] )
+      || !PIPSisEQ( (*norm_icupp)[rowId1], (*norm_icupp)[rowId2] ) )
+      return;
 
-   // check c_1*c_2 >= 0:
-   const double c1 = (singleColIdx1 < nA) ? (*currgParent)[singleColIdx1] : (*currgChild)[singleColIdx1 - nA];
-   const double c2 = (singleColIdx2 < nA) ? (*currgParent)[singleColIdx2] : (*currgChild)[singleColIdx2 - nA];
+   if( !PIPSisZero( (*norm_iclow)[rowId1] ) && !PIPSisEQ( (*norm_clow)[rowId1], (*norm_clow)[rowId2] ) )
+      return;
+   if( !PIPSisZero( (*norm_icupp)[rowId1] ) && !PIPSisEQ( (*norm_cupp)[rowId1], (*norm_cupp)[rowId2] ) )
+      return;
+
+   // check c_1 * c_2 >= 0:
+   const double c1 = (singleColIdx1 < nA) ? (*currgParent)[col1_idx] : (*currgChild)[col1_idx];
+   const double c2 = (singleColIdx2 < nA) ? (*currgParent)[col2_idx] : (*currgChild)[col2_idx];
    if( c1 * c2 < 0 )
-      return false;
+      return;
 
    // check lower and upper bounds:
-   double ixlow1 = (singleColIdx1 < nA) ? (*currIxlowParent)[singleColIdx1] : (*currIxlowChild)[singleColIdx1 - nA];
-   double ixupp1 = (singleColIdx1 < nA) ? (*currIxuppParent)[singleColIdx1] : (*currIxuppChild)[singleColIdx1 - nA];
-   double ixlow2 = (singleColIdx2 < nA) ? (*currIxlowParent)[singleColIdx2] : (*currIxlowChild)[singleColIdx2 - nA];
-   double ixupp2 = (singleColIdx2 < nA) ? (*currIxuppParent)[singleColIdx2] : (*currIxuppChild)[singleColIdx2 - nA];
+   const double ixlow1 = (singleColIdx1 < nA) ? (*currIxlowParent)[col1_idx] : (*currIxlowChild)[col1_idx];
+   const double ixupp1 = (singleColIdx1 < nA) ? (*currIxuppParent)[col1_idx] : (*currIxuppChild)[col1_idx];
+   const double ixlow2 = (singleColIdx2 < nA) ? (*currIxlowParent)[col2_idx] : (*currIxlowChild)[col2_idx];
+   const double ixupp2 = (singleColIdx2 < nA) ? (*currIxuppParent)[col2_idx] : (*currIxuppChild)[col2_idx];
 
-   double xlow1 = (singleColIdx1 < nA) ? (*currxlowParent)[singleColIdx1] : (*currxlowChild)[singleColIdx1 - nA];
-   double xupp1 = (singleColIdx1 < nA) ? (*currxuppParent)[singleColIdx1] : (*currxuppChild)[singleColIdx1 - nA];
-   double xlow2 = (singleColIdx2 < nA) ? (*currxlowParent)[singleColIdx2] : (*currxlowChild)[singleColIdx2 - nA];
-   double xupp2 = (singleColIdx2 < nA) ? (*currxuppParent)[singleColIdx2] : (*currxuppChild)[singleColIdx2 - nA];
+   const double xlow1 = (singleColIdx1 < nA) ? (*currxlowParent)[col1_idx] : (*currxlowChild)[col1_idx];
+   const double xupp1 = (singleColIdx1 < nA) ? (*currxuppParent)[col1_idx] : (*currxuppChild)[col1_idx];
+   const double xlow2 = (singleColIdx2 < nA) ? (*currxlowParent)[col2_idx] : (*currxlowChild)[col2_idx];
+   const double xupp2 = (singleColIdx2 < nA) ? (*currxuppParent)[col2_idx] : (*currxuppChild)[col2_idx];
 
    // check aq * l1 = s * ar * l2:
-   if( ixlow1 != 0.0 && ixlow2 != 0.0 &&
-         !PIPSisEQ(coeff_singleton1 * xlow1, s * coeff_singleton2 * xlow2, tol_compare_double) )
-      return false;
-   if( ixlow1 != 0.0 && ixlow2 == 0.0 && xlow1 > -std::numeric_limits<double>::max() )
-      return false;
-   if( ixlow1 == 0.0 && ixlow2 != 0.0 && xlow2 > -std::numeric_limits<double>::max() )
-      return false;
+   if( !PIPSisEQ(ixlow1, ixlow2) )
+      return;
+   if( !PIPSisZero(ixlow1) && !PIPSisZero(ixlow2) &&
+         !PIPSisEQ(coeff_singleton1 * xlow1, s * coeff_singleton2 * xlow2) )
+      return;
 
    // check aq * u1 = s * ar * u2:
-   if( ixupp1 != 0.0 && ixupp2 != 0.0 &&
-         !PIPSisEQ(coeff_singleton1 * xupp1, s * coeff_singleton2 * xupp2, tol_compare_double) )
-      return false;
-   if( ixupp1 != 0.0 && ixupp2 == 0.0 && xupp1 < std::numeric_limits<double>::max() )
-      return false;
-   if( ixupp1 == 0.0 && ixupp2 != 0.0 && xupp2 < std::numeric_limits<double>::max() )
-      return false;
+   if( !PIPSisEQ(ixupp1, ixupp2) )
+      return;
+   if( !PIPSisZero(ixupp1) && !PIPSisZero(ixupp2) &&
+         !PIPSisEQ(coeff_singleton1 * xupp1, s * coeff_singleton2 * xupp2) )
+      return;
 
    // Second, aggregate x_2: adapt objectiveCost(x_1)
+   const int node_var1 = (singleColIdx1 < nA) ? -1 : it;
+   const int node_var2 = (singleColIdx2 < nA) ? -1 : it;
    const double t = coeff_singleton1 / coeff_singleton2 / s;
 
+   presData.substituteVariableParallelRows(INEQUALITY_SYSTEM, it, col1_idx, rowId1, node_var1, col2_idx, rowId2, node_var2, t, 0.0);
+
    adaptObjective( singleColIdx1, singleColIdx2, t, 0.0, it);
-   return true;
 }
 
 /**

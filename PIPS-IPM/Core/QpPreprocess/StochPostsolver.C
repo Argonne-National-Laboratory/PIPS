@@ -45,6 +45,25 @@ void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType 
    throw std::runtime_error("Not yet implemented");
 }
 
+/* substitute var2 with scalar*var1 + translation */
+void StochPostsolver::notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2, 
+   int node_var2, double scalar, double translation)
+{
+   assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node_var2)[var2], 1) );
+   assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node_var1)[var1], 1) );
+
+   reductions.push_back(PARALLEL_ROW_SUBSTITUTION);
+
+   indices.push_back( INDEX(node_var2, var2) );
+   getSimpleVecColFromStochVec(*padding_origcol, node_var2)[var2] = -1;
+
+   values.push_back( var1 );
+   values.push_back( node_var1 );
+   values.push_back( scalar );
+   values.push_back( translation );
+
+   finishNotify();
+}
 
 /** postsolve has to compute the optimal dual multipliers here and set the primal value accordingly */
 void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col,
@@ -72,6 +91,7 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
    assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1);
    getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
    assert( std::fabs(value) < 1e10 );
+
    reductions.push_back( FIXED_EMPTY_COLUMN );   
    indices.push_back( INDEX(node, col) );
    values.push_back( value );
@@ -168,6 +188,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             assert( -1 <= node && node < static_cast<int>(x_vec.children.size()) );
             assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1 );
 
+            getSimpleVecColFromStochVec(*padding_origcol, node)[column] = 1;
             getSimpleVecColFromStochVec(x_vec, node)[column] = value;
 
             break;
@@ -182,6 +203,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
             assert( -1 <= node && node < static_cast<int>(x_vec.children.size()) );
             assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1 );
+
+            getSimpleVecColFromStochVec(*padding_origcol, node)[column] = 1;
             getSimpleVecColFromStochVec(x_vec, node)[column] = value;
 
             break;
@@ -209,6 +232,28 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          case SINGLETON_INEQUALITY_ROW:
          {
             throw std::runtime_error("SINGLETON_INEQUALITY_ROW not yet implemented");
+            break;
+         }
+         case PARALLEL_ROW_SUBSTITUTION:
+         {
+            int column = indices.at(i).index;
+            int node = indices.at(i).node;
+
+            assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node)[column], -1) );
+            assert( first_val == last_val - 4 );
+
+            int col_sub = values.at(first_val);
+            int node_sub = values.at(first_val + 1);
+            double scalar = values.at(first_val + 2);
+            double translation = values.at(first_val + 3);
+
+            assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node_sub)[col_sub], 1) );
+            const double val_sub = getSimpleVecColFromStochVec(x_vec, node_sub)[col_sub]; 
+
+            getSimpleVecColFromStochVec(*padding_origcol, node)[column] = 1;
+            getSimpleVecColFromStochVec(x_vec, node)[column] = scalar * val_sub + translation;
+
+
             break;
          }
          default:

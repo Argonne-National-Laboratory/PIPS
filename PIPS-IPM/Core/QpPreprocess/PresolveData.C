@@ -1439,6 +1439,33 @@ void PresolveData::removeParallelRow(SystemType system_type, int node, int row, 
 
    removeRow(system_type, node, row, linking);
 }
+
+/* a singleton variable is substituted out of the problem and then it's original row can be removed from the problem */
+void PresolveData::substituteVariableParallelRows(SystemType system_type, int node, int var1, int row1, int node_var1, int var2, int row2, int node_var2,
+   double scalar, double translation)
+{
+#ifdef TRACK_ROW
+// todo
+#endif
+   
+   postsolver->notifyParallelRowSubstitution(system_type, node, var1, row1, node_var1, var2, row2, node_var2, scalar, translation);
+
+   // delete the equality constraint which contained var2 (the substituted variable)
+   removeRedundantRow( system_type, node, row2, false);
+
+   
+
+   /* mark column as removed - var2 has been substituted out of the problem */
+   getSimpleVecColFromStochVec(*presProb->g, node_var2)[var2] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->ixlow, node_var2)[var2] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->ixupp, node_var2)[var2] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->blx, node_var2)[var2] = 0.0;
+   getSimpleVecColFromStochVec(*presProb->bux, node_var2)[var2] = 0.0;
+
+   assert( PIPSisZero(getSimpleVecColFromStochVec(*nnzs_col, node_var2)[var2]) );
+}
+
+
 void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
    if(postsolver)

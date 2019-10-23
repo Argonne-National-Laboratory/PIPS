@@ -36,6 +36,9 @@ public:
       void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
+      void notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2, 
+         int node_var2, double scalar, double translation);
+
 
       virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
 protected:
@@ -62,6 +65,7 @@ protected:
          SINGLETON_EQUALITY_ROW = 6,
          SINGLETON_INEQUALITY_ROW = 7,
          FIXED_EMPTY_COLUMN = 8,
+         PARALLEL_ROW_SUBSTITUTION = 9,
       };
 
       const unsigned int n_rows_original;

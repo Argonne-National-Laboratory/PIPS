@@ -195,6 +195,8 @@ public:
       void fixEmptyColumn(int node, int col, double val);
       void fixColumn(int node, int col, double value);
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
+      void substituteVariableParallelRows(SystemType system_type, int node, int var1, int row1, int node_var1, int var2, int row2, int node_var2,
+            double scalar, double translation);
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
       void removeParallelRow(SystemType system_type, int node, int row, bool linking);
 
