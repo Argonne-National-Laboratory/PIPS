@@ -237,7 +237,7 @@ void StochPresolverParallelRows::applyPresolving()
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyBoundChanges();
-
+   presData.allreduceAndApplyObjVecChanges();
    // todo linking constraints!!!
 
 
@@ -1217,29 +1217,31 @@ void StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
    // calculate t and d:
    const int singleColIdx1 = (*rowContainsSingletonVariableA)[rowId1];
    const int singleColIdx2 = (*rowContainsSingletonVariableA)[rowId2];
+   assert( !PIPSisEQ(singleColIdx2, -1) );
 
    const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
    const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
+   assert( !PIPSisZero(coeff_singleton2) );
+
    const double s = (*norm_factorA)[rowId1] / (*norm_factorA)[rowId2];
    const double t = coeff_singleton1 / coeff_singleton2 / s;
    const double d = ( (*norm_b)[rowId2] - (*norm_b)[rowId1] )
             * (*norm_factorA)[rowId2] / coeff_singleton2;
+
+   const int col1_idx = (singleColIdx1 < nA) ? singleColIdx1 : (singleColIdx1 - nA);
+   const int col2_idx = (singleColIdx2 < nA) ? singleColIdx2 : (singleColIdx2 - nA);
+   const int node_var1 = (singleColIdx1 < nA) ? -1 : it;
+   const int node_var2 = (singleColIdx2 < nA) ? -1 : it;     
+   const SimpleVector* ixlow = (singleColIdx2 < nA) ? currIxlowParent : currIxlowChild;
+   const SimpleVector* ixupp = (singleColIdx2 < nA) ? currIxuppParent : currIxuppChild;
+   const SimpleVector* xlow = (singleColIdx2 < nA) ? currxlowParent : currxlowChild;
+   const SimpleVector* xupp = (singleColIdx2 < nA) ? currxuppParent : currxuppChild;
 
    if( !PIPSisEQ(singleColIdx1, -1.0) )
    {
       // tighten the bounds of variable x_1:
       double newxlow = -std::numeric_limits<double>::max();
       double newxupp = std::numeric_limits<double>::max();
-
-      const int col1_idx = (singleColIdx1 < nA) ? singleColIdx1 : (singleColIdx1 - nA);
-      const int col2_idx = (singleColIdx2 < nA) ? singleColIdx2 : (singleColIdx2 - nA);
-      const int node_var1 = (singleColIdx1 < nA) ? -1 : it;
-      const int node_var2 = (singleColIdx2 < nA) ? -1 : it;
-
-      const SimpleVector* ixlow = (singleColIdx2 < nA) ? currIxlowParent : currIxlowChild;
-      const SimpleVector* ixupp = (singleColIdx2 < nA) ? currIxuppParent : currIxuppChild;
-      const SimpleVector* xlow = (singleColIdx2 < nA) ? currxlowParent : currxlowChild;
-      const SimpleVector* xupp = (singleColIdx2 < nA) ? currxuppParent : currxuppChild;
 
       // calculate new bounds depending on the sign of t:
       if( PIPSisLT(t, 0) )
@@ -1256,16 +1258,13 @@ void StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
       presData.substituteVariableParallelRows(EQUALITY_SYSTEM, it, col1_idx, rowId1, node_var1, col2_idx, rowId2, node_var2, t, d);
       // effectively tighten bounds of variable x_id1:
       presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, CHILD_BLOCK, rowId1, col1_idx, newxupp, newxlow);
-
-
-      // adapt objective function of reduced problem -> should be move into substituteVariablesParallelRows
-      adaptObjective( singleColIdx1, singleColIdx2, t, d, it);
    }
    else
    {
-      // can this even happen?!
-      assert(false);
-      adaptObjective( -1, singleColIdx2, t, d, it);
+      /* row1 does not have a singleton variable - row2 does */
+      /* var2 = d */
+      assert( PIPSisZero(t) );
+      presData.fixColumn( node_var2, col2_idx, d );
    }
 }
 /**
@@ -1349,40 +1348,4 @@ void StochPresolverParallelRows::doNearlyParallelRowCase3(int rowId1, int rowId2
    const double t = coeff_singleton1 / coeff_singleton2 / s;
 
    presData.substituteVariableParallelRows(INEQUALITY_SYSTEM, it, col1_idx, rowId1, node_var1, col2_idx, rowId2, node_var2, t, 0.0);
-
-   adaptObjective( singleColIdx1, singleColIdx2, t, 0.0, it);
-}
-
-/**
- * Adapt the objective function, at coefficient of colIdx1 and if @param offset, then also the objOffset is adapted.
- */
-void StochPresolverParallelRows::adaptObjective( int colIdx1, int colIdx2, double t, double d, int node)
-{
-   assert( colIdx1 >= -1 && colIdx2 >= 0 );
-   assert( node >= -1 && node < nChildren );
-
-   const double costOfVar2 = (colIdx2 < nA)
-         ? (*currgParent)[colIdx2] : (*currgChild)[colIdx2 - nA];
-
-   if( colIdx1 == -1 )
-   {  // in case a_q1 == 0.0 ( singleColIdx1 == -1.0), only adapt objective offset:
-      if( my_rank == 0 || node > -1 ) // only add the objective offset for root as process ZERO:
-         presData.adaptObjectiveParallelRow(-1, -1, d * costOfVar2, std::numeric_limits<double>::infinity());
-   }
-   else if( colIdx1 >= nA )
-   {
-      presData.adaptObjectiveParallelRow(node, colIdx1 - nA, d * costOfVar2, t * costOfVar2);
-   }
-   else if( node > -1 )   // case singleColIdx1 a linking variable, and currently working on a child
-   {  // do not adapt currgParent directly, but save the adaption to communicate it at the end:
-      presData.adaptObjectiveParallelRow(-1, colIdx1, d * costOfVar2, t * costOfVar2);
-   }
-   else  // case Parent block that all processes have
-   {
-      presData.adaptObjectiveParallelRow(-1, colIdx1, 0.0, t * costOfVar2);
-
-      // only add the objective offset for root as process ZERO:
-      if( my_rank == 0 ) 
-         presData.adaptObjectiveParallelRow(-1, -1, d * costOfVar2, std::numeric_limits<double>::infinity());
-   }
 }

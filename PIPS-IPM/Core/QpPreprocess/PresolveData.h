@@ -46,8 +46,8 @@ private:
       bool outdated_lhsrhs;
       bool outdated_nnzs;
       bool outdated_linking_var_bounds;
-
       bool outdated_activities;
+      bool outdated_obj_vector;
 
       /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
@@ -115,6 +115,7 @@ private:
       // objective offset created by presolving
       double objOffset;
       double obj_offset_chgs;
+      SimpleVectorHandle objective_vec_chgs;
 
       // store free variables which bounds are only implied by bound tightening to remove bounds later again
       StochVectorHandle lower_bound_implied_by_system;
@@ -188,6 +189,7 @@ public:
       void allreduceAndApplyLinkingRowActivities();
       void allreduceAndApplyNnzChanges();
       void allreduceAndApplyBoundChanges();
+      void allreduceAndApplyObjVecChanges();
       void allreduceObjOffset();
 
       /// interface methods called from the presolvers when they detect a possible modification
@@ -203,7 +205,6 @@ public:
       // todo : hackish functions not properly working with presolve
       void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
-      void adaptObjectiveParallelRow(int node, int col, double val_offset, double val_vec);
 
       /* call whenever a single entry has been deleted from the matrix */
       void deleteEntry(SystemType system_type, int node, BlockType block_type, int row_index, int& index_k, int& row_end);

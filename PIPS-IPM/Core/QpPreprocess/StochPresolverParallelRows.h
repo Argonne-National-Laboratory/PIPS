@@ -140,7 +140,6 @@ private:
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
    void doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
    void doNearlyParallelRowCase3(int rowId1, int rowId2, int it);
-   void adaptObjective( int colIdx1, int colIdx2, double t, double d, int it);
    void tightenLinkingVarsBounds();
 
 };

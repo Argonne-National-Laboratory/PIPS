@@ -41,6 +41,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       outdated_nnzs(false),
       outdated_linking_var_bounds(false),
       outdated_activities(true),
+      outdated_obj_vector(false),
       linking_rows_need_act_computation(0),
       nnzs_row_A(dynamic_cast<StochVector*>(sorigprob->bA->clone())),
       nnzs_row_C(dynamic_cast<StochVector*>(sorigprob->icupp->clone())),
@@ -55,6 +56,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       actmin_ineq_ubndd(nnzs_row_C->clone()),
       nChildren(nnzs_col->children.size()),
       objOffset(0.0), obj_offset_chgs(0.0),
+      objective_vec_chgs(dynamic_cast<SimpleVector*>(nnzs_col->vec->cloneFull())),
       lower_bound_implied_by_system(nnzs_col->clone()),
       lower_bound_implied_by_row(nnzs_col->clone()),
       lower_bound_implied_by_node(nnzs_col->clone()),
@@ -180,8 +182,9 @@ sData* PresolveData::finalize()
       MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_obj_vector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
    }
-   assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds);
+   assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds && !outdated_obj_vector);
 #endif
 
    /* theoretically it should not matter but there is an assert later which needs all these to be zero */
@@ -688,6 +691,22 @@ void PresolveData::allreduceAndApplyBoundChanges()
    outdated_lhsrhs = false;
 }
 
+void PresolveData::allreduceAndApplyObjVecChanges()
+{
+   MPI_Allreduce(MPI_IN_PLACE, &outdated_obj_vector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+
+   if(!outdated_obj_vector)
+      return;
+
+   if(distributed)
+      MPI_Allreduce(MPI_IN_PLACE, objective_vec_chgs->elements(), objective_vec_chgs->length(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+   dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->g).vec)->axpy(1.0, *objective_vec_chgs);
+
+   objective_vec_chgs->setToZero();
+   outdated_obj_vector = false;
+}
+
 void PresolveData::allreduceObjOffset()
 {
    if(distributed)
@@ -804,10 +823,11 @@ bool PresolveData::reductionsEmpty()
       MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, &outdated_obj_vector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
 
       MPI_Allreduce(&obj_offset_chgs, &recv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
    }
-   return !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0);
+   return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0);
 }
 
 // todo : if small entry was removed from system no postsolve is necessary - if coefficient was removed because impact of changes in variable are small
@@ -1151,19 +1171,6 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
 #endif
 }
 
-void PresolveData::adaptObjectiveParallelRow(int node, int col, double val_offset, double val_vec)
-{
-   assert( node >= -1 && node < nChildren );
-
-   if( std::fabs(val_vec) != std::numeric_limits<double>::infinity() )
-   {
-      getSimpleVecColFromStochVec(*presProb->g, node)[col] += val_vec;
-   }
-   obj_offset_chgs += val_offset;
-}
-
-
-
 /** this methods does not call any postsolve procedures but simply changes the bounds (lhs, rhs) of either A or B by value */
 void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row, double value)
 {
@@ -1349,7 +1356,7 @@ void PresolveData::removeColumn(int node, int col, double fixation)
    }
 
    /* mark column as removed */
-   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0; // this too?
+   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
    getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
@@ -1452,19 +1459,36 @@ void PresolveData::substituteVariableParallelRows(SystemType system_type, int no
 
    // delete the equality constraint which contained var2 (the substituted variable)
    removeRedundantRow( system_type, node, row2, false);
-
-   
-
-   /* mark column as removed - var2 has been substituted out of the problem */
-   getSimpleVecColFromStochVec(*presProb->g, node_var2)[var2] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->ixlow, node_var2)[var2] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->ixupp, node_var2)[var2] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->blx, node_var2)[var2] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->bux, node_var2)[var2] = 0.0;
-
    assert( PIPSisZero(getSimpleVecColFromStochVec(*nnzs_col, node_var2)[var2]) );
-}
+   
+   const double obj_var2 = getSimpleVecColFromStochVec(*presProb->g, node_var2)[var2];
+   const double val_offset = translation * obj_var2;
+   const double change_obj_var1 = scalar * obj_var2;
 
+   removeColumn( node_var2, var2, 0.0 );
+
+   if( node_var1 != -1 )
+   {
+      getSimpleVecColFromStochVec(*presProb->g, node)[var1] += change_obj_var1;
+      obj_offset_chgs += val_offset;
+   }
+   else if( node == -1 )  
+   {
+      /* parallel rows in parent block - all processes should have detected this */
+      getSimpleVecColFromStochVec(*presProb->g, -1)[var1] += change_obj_var1;
+
+      // only add the objective offset for root as process ZERO:
+      if( my_rank == 0 ) 
+         obj_offset_chgs += val_offset;
+   }
+   else
+   {
+      /* var1 is a linking variable - store objective adaptions and allreduce them */
+      (*objective_vec_chgs)[var1] += change_obj_var1;
+      outdated_obj_vector = true; 
+      obj_offset_chgs += val_offset;
+   }
+}
 
 void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
