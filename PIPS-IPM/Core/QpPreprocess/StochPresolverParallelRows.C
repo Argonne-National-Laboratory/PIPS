@@ -56,11 +56,8 @@ namespace rowlib
 }
 
 StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb),
-      gParentAdaptions(dynamic_cast<SimpleVector const *>(dynamic_cast<const StochVector&>(*presData.getPresProb().g).vec)->cloneFull())
+      StochPresolverBase(presData, origProb)
 {
-   gParentAdaptions->setToZero();
-
    mA = 0;
    nA = 0;
 }
@@ -70,9 +67,6 @@ StochPresolverParallelRows::~StochPresolverParallelRows()
  // todo : check what this line does
    row_support_hashtable = boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> >();
    row_coefficients_hashtable  = boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> >();
-
-   delete gParentAdaptions;
-
 }
 
 /// presolve assumes that all rows are in their correct blocks -> linking rows are not pure local/linking rows with one singleton column cannot be local up to that singleton column
@@ -83,47 +77,6 @@ void StochPresolverParallelRows::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
-
-   assert(gParentAdaptions->isZero());
-
-   const StochVector& clow = dynamic_cast<const StochVector&>(*presData.getPresProb().bl);
-   const StochVector& iclow = dynamic_cast<const StochVector&>(*presData.getPresProb().iclow);
-   const StochVector& cupp = dynamic_cast<const StochVector&>(*presData.getPresProb().bu);
-   const StochVector& icupp = dynamic_cast<const StochVector&>(*presData.getPresProb().icupp);
-
-   StochVectorHandle clow_def = StochVectorHandle(clow.cloneFull());
-   StochVectorHandle cupp_def = StochVectorHandle(cupp.cloneFull());
-
-   double clow_twonorm = clow_def->twonorm();
-   double clow_infnorm = clow_def->infnorm();
-   double clow_onenorm = clow_def->onenorm();
-
-   double cupp_twonorm = cupp_def->twonorm();
-   double cupp_onenorm = cupp_def->onenorm();
-   double cupp_infnorm = cupp_def->infnorm();
-
-   clow_def->componentMult(iclow);
-   cupp_def->componentMult(icupp);
-
-   double nr_ineq_rhs = icupp.dotProductSelf(1.0);
-   double nr_ineq_lhs = iclow.dotProductSelf(1.0);
-
-   if(my_rank == 0)
-   {
-      std::cout << "clow:" << std::endl;
-      std::cout << "nr_bounds\t" << nr_ineq_lhs << std::endl;
-      std::cout << "twonorm  \t" << clow_twonorm << std::endl;
-      std::cout << "onenorm  \t" << clow_onenorm << std::endl;
-      std::cout << "infnorm  \t" << clow_infnorm << std::endl;      
-      std::cout << std::endl;
-
-      std::cout << "cupp:" << std::endl;
-      std::cout << "nr_bounds\t" << nr_ineq_rhs << std::endl;
-      std::cout << "twonorm  \t" << cupp_twonorm << std::endl;
-      std::cout << "onenorm  \t" << cupp_onenorm << std::endl;
-      std::cout << "infnorm  \t" << cupp_infnorm << std::endl;
-      std::cout << std::endl;
-   }
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -227,9 +180,6 @@ void StochPresolverParallelRows::applyPresolving()
       row_coefficients_hashtable.clear();
    }
 
-   // update objective coefficients of linking variables (gParent):
-   //allreduceAndUpdate(MPI_COMM_WORLD, *gParentAdaptions, *currgParent); // todo
-
    deleteNormalizedPointers(-1);
 
    // todo : not necessary?
@@ -238,7 +188,8 @@ void StochPresolverParallelRows::applyPresolving()
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyObjVecChanges();
-   // todo linking constraints!!!
+
+   // TODO:add detection forlinking constraints!!!
 
 
    synchronize(nRowElims);
@@ -252,41 +203,6 @@ void StochPresolverParallelRows::applyPresolving()
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
-
-   clow_def = StochVectorHandle(clow.cloneFull());
-   cupp_def = StochVectorHandle(cupp.cloneFull());
-
-   clow_twonorm = clow_def->twonorm();
-   clow_infnorm = clow_def->infnorm();
-   clow_onenorm = clow_def->onenorm();
-
-   cupp_twonorm = cupp_def->twonorm();
-   cupp_onenorm = cupp_def->onenorm();
-   cupp_infnorm = cupp_def->infnorm();
-
-   clow_def->componentMult(iclow);
-   cupp_def->componentMult(icupp);
-
-   nr_ineq_rhs = icupp.dotProductSelf(1.0);
-   nr_ineq_lhs = iclow.dotProductSelf(1.0);
-
-   if(my_rank == 0)
-   {
-      std::cout << "clow:" << std::endl;
-      std::cout << "nr_bounds\t" << nr_ineq_lhs << std::endl;
-      std::cout << "twonorm  \t" << clow_twonorm << std::endl;
-      std::cout << "onenorm  \t" << clow_onenorm << std::endl;
-      std::cout << "infnorm  \t" << clow_infnorm << std::endl;      
-      std::cout << std::endl;
-
-      std::cout << "cupp:" << std::endl;
-      std::cout << "nr_bounds\t" << nr_ineq_rhs << std::endl;
-      std::cout << "twonorm  \t" << cupp_twonorm << std::endl;
-      std::cout << "onenorm  \t" << cupp_onenorm << std::endl;
-      std::cout << "infnorm  \t" << cupp_infnorm << std::endl;
-      std::cout << std::endl;
-   }
-
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -680,7 +596,7 @@ void StochPresolverParallelRows::removeSingletonVars()
    // linking variable block a_mat
    for( int col = 0; col < normNnzColParent->n; col++ )
       {
-         if( (*normNnzColParent)[col] == 1.0 )
+         if( PIPSisEQ((*normNnzColParent)[col], 1.0) )
          {
             // check if the singleton column is part of the current a_mat/c_mat
             // else, the singleton entry is in one of the other A_i or C_i blocks
@@ -703,7 +619,7 @@ void StochPresolverParallelRows::removeSingletonVars()
    {
       for( int col = 0; col < normNnzColChild->n; col++ )
       {
-         if( (*normNnzColChild)[col] == 1.0 )
+         if( PIPSisEQ((*normNnzColChild)[col], 1.0) )
          {
             // check if the singleton column is part of the current b_mat/d_mat
             // else, the singleton entry is in one of the other B_i or D_i blocks
@@ -735,7 +651,7 @@ void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContai
    assert( nnzRow.n == matrix.m );
    assert( matrix.n == nnzCol.n );
    assert( nnzCol.n == matrixTrans.m );
-   assert( nnzCol.elements()[colIdx] == 1.0 );
+   assert( PIPSisEQ( nnzCol[colIdx], 1.0 ) );
 
    // First, find indices of the singleton entry:
    const int k = matrixTrans.rowptr[colIdx].start;
@@ -902,14 +818,14 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
    for(int row = 0; row < a_mat->m; row++)
    {
       // ignore rows containing more than one singleton entry:
-      if( system_type == EQUALITY_SYSTEM && (*rowContainsSingletonVariableA)[row] == -2.0 )
+      if( system_type == EQUALITY_SYSTEM && PIPSisEQ( (*rowContainsSingletonVariableA)[row], -2.0) )
          continue;
-      if( system_type == INEQUALITY_SYSTEM && (*rowContainsSingletonVariableC)[row] == -2.0 )
+      if( system_type == INEQUALITY_SYSTEM && PIPSisEQ( (*rowContainsSingletonVariableC)[row], -2.0) )
          continue;
 
       // calculate rowId including possible offset (for Inequality rows):
       int rowId = row;
-      if( (*nnzRow)[rowId] == 0.0 )
+      if( PIPSisZero((*nnzRow)[rowId]) )
          continue;
       if( system_type == INEQUALITY_SYSTEM )
          rowId += mA;
@@ -976,12 +892,12 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   {
                      // nearly parallel case 1:
                      // make sure that a_r2 != 0, otherwise switch ids.
-                     if( (*rowContainsSingletonVariableA)[id2] == -1.0 )
+                     if( PIPSisEQ((*rowContainsSingletonVariableA)[id2], -1.0) )
                         std::swap(id1, id2);
 
-                     assert( (*rowContainsSingletonVariableA)[id2] != -1.0 );
+                     assert( !PIPSisEQ((*rowContainsSingletonVariableA)[id2], -1.0) );
                      // if row id1 was already deleted, do not continue the procedure:
-                     if( (id1 < mA && (*currNnzRow)[id1] == 0.0) )
+                     if( (id1 < mA && PIPSisZero((*currNnzRow)[id1])) )
                         continue;
 
                      // case two is basically case one
@@ -1030,8 +946,8 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
 
                   const int ineqRowId = id2 - mA;
 
-                  if( (*rowContainsSingletonVariableA)[id1] == -1.0
-                        && (*rowContainsSingletonVariableC)[ineqRowId] == -1.0 )
+                  if( PIPSisEQ((*rowContainsSingletonVariableA)[id1], -1.0)
+                        && PIPSisEQ((*rowContainsSingletonVariableC)[ineqRowId], -1.0) )
                   {
                      //PIPSdebugMessage("Really Parallel Rows, case 2. \n");
                      // check for infeasibility:
