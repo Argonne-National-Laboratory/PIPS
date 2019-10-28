@@ -62,17 +62,22 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
 			 LINSOLVER* thesolver)
   : sLinsys(factory_, prob, dd_, dq_, nomegaInv_, rhs_)
 {
-  //int rank; MPI_Comm_rank(MPI_COMM_WORLD,&rank);
-  //double t = MPI_Wtime();
+#ifdef TIMING
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  const double t0 = MPI_Wtime();
+#endif
 
-  // create the KKT system matrix
   // size = ?  nnz = ?
   int nnzQ, nnzB, nnzD;
 
   prob->getLocalSizes(locnx, locmy, locmz, locmyl, locmzl);
-  int n = locnx+locmy+locmz;
+  const int n = locnx+locmy+locmz;
 
   prob->getLocalNnz(nnzQ, nnzB, nnzD);
+
+#ifdef TIMING
+  if( myRank == 0 ) std::cout << "Rank 0: building local Schur matrix ..." << std::endl;
+#endif
 
   //alocate the matrix and copy the data into
   SparseSymMatrix* kktsp = new SparseSymMatrix(n, n+nnzQ+nnzB+nnzD);
@@ -90,11 +95,17 @@ sLinsysLeaf::sLinsysLeaf(sFactory *factory_, sData* prob,
   } else
     mySymAtPutSubmatrix(*kkt, prob->getLocalB(), prob->getLocalD(), locnx, locmy, locmz);
 
+#ifdef TIMING
+  if( myRank == 0 ) std::cout << "Rank 0: finished " << std::endl;
+#endif
+
   // create the solver for the linear system
   solver = new LINSOLVER(kktsp);
 
-  //t = MPI_Wtime() - t;
-  //if (rank == 0) printf("new sLinsysLeaf took %f sec\n",t);
+#ifdef TIMING
+  const double t1 = MPI_Wtime() - t0;
+  if (myRank == 0) printf("Rank 0: new sLinsysLeaf took %f sec\n",t1);
+#endif
 
   mpiComm = (dynamic_cast<StochVector*>(dd_))->mpiComm;
 }

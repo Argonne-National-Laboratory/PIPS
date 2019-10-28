@@ -76,7 +76,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceLinkingVarBounds();
-   presData.allreduceAndApplyObjVectorChanges();
+   presData.allreduceAndApplyObjVecChanges();
    presData.allreduceObjOffset();
 
    assert(presData.reductionsEmpty());
