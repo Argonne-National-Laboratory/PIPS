@@ -140,7 +140,7 @@ public:
   const SparseStorageDynamic * getStorageDynamicTransposed() const { assert(m_Mt != NULL && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
   SparseStorageDynamic& getStorageDynamicTransposedRef() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
   const SparseStorageDynamic& getStorageDynamicTransposedRef() const { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
-  bool hasDynamicStorage() { return (mStorageDynamic != NULL); }
+  bool hasDynamicStorage() const { return (mStorageDynamic != NULL); };
 
   virtual void addNnzPerRow(OoqpVector& nnzVec);
   virtual void addNnzPerCol(OoqpVector& nnzVec);

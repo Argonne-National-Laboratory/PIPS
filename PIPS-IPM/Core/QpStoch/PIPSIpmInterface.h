@@ -58,6 +58,7 @@ class PIPSIpmInterface
   std::vector<double> getFirstStageDualRowSolution() const;
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
+
   void postsolveComputedSolution();
 
   std::vector<double> gatherEqualityConsValues();
@@ -87,7 +88,6 @@ class PIPSIpmInterface
 
   PIPSIpmInterface() {};
   MPI_Comm comm;
-
   bool ran_solver;
 };
 
@@ -341,6 +341,7 @@ template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
 {
   delete solver;
+  delete unscaleUnpermResids;
   delete scaler;
   delete unscaleUnpermResids;
   delete resids;
@@ -360,7 +361,6 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getVarsUnscaledUnperm()
   assert(unscaleUnpermVars == NULL);
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated solution");
-
   if( scaler )
   {
     sVars* unscaled_vars = dynamic_cast<sVars*>(scaler->getVariablesUnscaled(*vars));
@@ -407,9 +407,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolution
 {
   if( unscaleUnpermVars == NULL)
     this->getVarsUnscaledUnperm();
-
   std::vector<double> vec = dynamic_cast<const StochVector&>(*unscaleUnpermVars->y).gatherStochVector();
-
   return vec;
 }
 
@@ -548,7 +546,6 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualR
         *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
   SimpleVector const &z =
         *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
-
 
   if( !y.length() && !z.length() )
      return std::vector<double>(); //this vector is not on this processor

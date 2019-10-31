@@ -138,10 +138,10 @@ QpGenVars::QpGenVars( LinearAlgebraPackage * la,
 
 QpGenVars::QpGenVars( const QpGenVars& vars) : Variables(vars)
 {
-   ixlow = OoqpVectorHandle(vars.ixlow);
-   ixupp = OoqpVectorHandle(vars.ixupp);
-   iclow = OoqpVectorHandle(vars.iclow);
-   icupp = OoqpVectorHandle(vars.icupp);
+   ixlow = OoqpVectorHandle( vars.ixlow->cloneFull() );
+   ixupp = OoqpVectorHandle( vars.ixupp->cloneFull() );
+   iclow = OoqpVectorHandle( vars.iclow->cloneFull() );
+   icupp = OoqpVectorHandle( vars.icupp->cloneFull() );
 
    nx = vars.nx;
    my = vars.my;

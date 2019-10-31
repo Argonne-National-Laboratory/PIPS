@@ -476,12 +476,397 @@ void freeBlock(GMSPIPSBlockData_t* blk)
    }
 }
 
+#define PRINTANDEXIT(...) { printf (__VA_ARGS__); return 1; }
 #define MATALLOC(mat)                                                  \
 if ( blk->nnz##mat )                                                   \
 {                                                                      \
    blk->ci##mat = (int32_t *) malloc(blk->nnz##mat * sizeof(int32_t)); \
    blk->val##mat = (double *) malloc(blk->nnz##mat * sizeof(double));  \
 }
+
+#if !defined(GDXSOURCE)
+int doColumnPermutation(const gmoHandle_t gmo, const int strict, const int n, const int stageI, const int stage0,
+                     int32_t* n0, int32_t* ni, int perm[] )
+{
+   /* Permute the column variables */
+   int j,rc;
+   char colname[GMS_SSSIZE];
+
+   double* stages = (double *) malloc(n*sizeof(double));
+   rc = gmoGetVarScale(gmo,stages);
+   if ( rc )
+      PRINTANDEXIT("Problems accessing variable stages");
+
+   for ( j=0; j<n; j++ )
+   {
+      if ( stageI == stages[j] )
+      {
+         (*ni)++;
+      }
+      else if ( stage0 == stages[j] )
+      {
+         (*n0)++;
+      }
+      else if ( strict )
+         PRINTANDEXIT("Unmatched stage %d of column %s while reading stage %d", (int) stages[j], gmoGetVarNameOne(gmo,j,colname), stageI);
+   }
+   *ni = *n0;
+   *n0 = 0;
+   for ( j=0; j<n; j++ )
+   {
+      if ( stageI == stages[j] )
+      {
+         perm[(*ni)++] = j;
+      }
+      else if ( stage0 == stages[j] )
+      {
+         perm[(*n0)++] = j;
+      }
+   }
+
+   return 0;
+}
+
+int doRowPermutation(const gmoHandle_t gmo, const int strict, const int m, const int stageI, const int stageN,
+                     int32_t* meq, int32_t* mleq, int32_t* mLeq, int32_t* mLleq, int perm[] )
+{
+   /* Permute the row =,<=,linking =, linking <= */
+   int i,rc;
+   char rowname[GMS_SSSIZE];
+
+   double* stages = (double *) malloc(m*sizeof(double));
+   int* eTypes = (int *) malloc(m*sizeof(int));
+   rc = gmoGetEquScale(gmo,stages);
+   if ( rc )
+      PRINTANDEXIT("Problems accessing equation stages");
+   rc = gmoGetEquType(gmo, eTypes);
+   if ( rc )
+      PRINTANDEXIT("Problems accessing equation types");
+
+   for ( i=0; i<m; i++ )
+   {
+      if ( gmoequ_N == eTypes[i] )
+         continue;
+      if ( eTypes[i] > gmoequ_N )
+         PRINTANDEXIT("Unknown row type %d in row %s", eTypes[i], gmoGetEquNameOne(gmo,i,rowname));
+
+      if ( stageI == stages[i] )
+      {
+         if ( gmoequ_E == eTypes[i] )
+            (*meq)++;
+         else
+            (*mleq)++;
+      }
+      else if ( stageN == stages[i] )
+      {
+         if ( gmoequ_E == eTypes[i] )
+            (*mLeq)++;
+         else
+            (*mLleq)++;
+      }
+      else if ( strict )
+         PRINTANDEXIT("Unmatched stage %d of row %s while reading stage %d of %d stages", (int) stages[i], gmoGetEquNameOne(gmo,i,rowname), stageI, stageN);
+   }
+   *mLleq = *meq + *mleq + *mLeq;
+   *mLeq = *meq + *mleq;
+   *mleq = *meq;
+   *meq = 0;
+
+   for ( i=0; i<m; i++ )
+   {
+      if ( gmoequ_N == eTypes[i] )
+         continue;
+      if ( stageI == stages[i] )
+      {
+         if ( gmoequ_E == eTypes[i] )
+            perm[(*meq)++] = i;
+         else
+            perm[(*mleq)++] = i;
+      }
+      else if ( stageN == stages[i] )
+      {
+         if ( gmoequ_E == eTypes[i] )
+            perm[(*mLeq)++] = i;
+         else
+            perm[(*mLleq)++] = i;
+      }
+   }
+
+   return 0;
+}
+
+int fillMatrix(const gmoHandle_t gmo, const int mStart, const int mEnd, int32_t rm[], int col[], double val[], int64_t* nnz)
+{
+   int m = mEnd - mStart;
+   int i, nz, nlnz, n=gmoN(gmo);
+   int* colidx = (int *) malloc(n*sizeof(int));
+   double* jacval = (double *) malloc(n*sizeof(double));
+
+   assert(m);
+   rm[0] = 0;
+   for ( i=0; i<m; i++)
+   {
+      if ( gmoGetRowSparse (gmo,i+mStart,colidx,jacval,NULL,&nz,&nlnz) )
+         PRINTANDEXIT("Cannot get row %d in sparse format", i+mStart);
+      assert(0==nlnz);
+      rm[i+1] = rm[i] + nz;
+      memcpy(col+rm[i],colidx,nz*sizeof(int));
+      memcpy(val+rm[i],jacval,nz*sizeof(double));
+   }
+   *nnz = rm[m];
+   free(colidx);
+   free(jacval);
+   return 0;
+}
+
+int readBlockSqueezed(int numBlocks,         /** < total number of blocks n in problem 0..n */
+              int actBlock,                  /** < number of block to read 0..n */
+              int strict,                    /** < indicator for clean blocks */
+              const char* cntrFilename,      /** < Control filename */
+              const char* blk0DictFilename,  /** < Dictionary file name for block 0 */
+              const char* GAMSSysDir,        /** < GAMS system directory to locate shared libraries (can be NULL) */
+              GMSPIPSBlockData_t* blk)       /** < block structure to be filled */
+{
+   gevHandle_t  fGEV=NULL;
+   gmoHandle_t  fGMO=NULL;
+   char msg[GMS_SSSIZE];
+   int rc=0;
+
+   assert(blk);
+   assert(numBlocks>0);
+   assert(actBlock>=0 && actBlock<numBlocks);
+
+   memset(blk,0,sizeof(GMSPIPSBlockData_t)); /* Initialize everything to 0/NULL */
+   blk->numBlocks = numBlocks;
+   blk->blockID = actBlock;
+
+   if ( GAMSSysDir )
+   {
+      rc = gevCreateD (&fGEV, GAMSSysDir, msg, sizeof(msg));
+      if (!rc)
+         PRINTANDEXIT("Could not create gev object: %s\n", msg);
+      rc = gmoCreateD (&fGMO, GAMSSysDir, msg, sizeof(msg));
+      if (!rc)
+         PRINTANDEXIT("Could not create gmo object: %s\n", msg);
+   }
+   else
+   {
+      rc = gevCreate (&fGEV, msg, sizeof(msg));
+      if (!rc)
+         PRINTANDEXIT("Could not create gev object: %s\n", msg);
+      rc = gmoCreate (&fGMO, msg, sizeof(msg));
+      if (!rc)
+         PRINTANDEXIT("Could not create gmo object: %s\n", msg);
+   }
+
+   assert(cntrFilename);
+   rc = gevInitEnvironmentLegacy(fGEV,cntrFilename);
+   if (rc)
+      PRINTANDEXIT("Failed gevInitEnvironmentLegacy\n");
+
+   rc = gmoRegisterEnvironment(fGMO, fGEV, msg);
+   if (rc)
+      PRINTANDEXIT("Could not register gev environment: %s\n", msg);
+
+   rc = gmoLoadDataLegacy(fGMO, msg);
+   if (rc)
+      PRINTANDEXIT("Could not load data: %s\n", msg);
+
+   /* Make sure objective variable and objective row are at the end */
+   gmoIndexBaseSet(fGMO, 0);
+   if ( gmoN(fGMO)!=gmoObjVar(fGMO)-1 )
+      PRINTANDEXIT("Objective variable not at the of columns\n");
+
+   if ( gmoM(fGMO)!=gmoObjRow(fGMO)-1 )
+      PRINTANDEXIT("Objective equation not at the of rows\n");
+
+   /* First we set some GMO objective function flavors */
+   gmoObjStyleSet(fGMO, gmoObjType_Fun);
+   gmoObjReformSet(fGMO, 1);
+
+   if ( 0 == actBlock )
+   {
+      int mAStart, mAEnd;
+      int mCStart, mCEnd;
+      int mBLStart, mBLEnd;
+      int mDLStart, mDLEnd;
+      int gmom = gmoM(fGMO), gmon = gmoN(fGMO), n0, pipsm, pipsn;
+      int* rowPerm;
+      int* colPerm;
+
+      rowPerm = (int *) malloc(gmom * sizeof(int));
+      colPerm = (int *) malloc(gmon * sizeof(int));
+
+      rc = doRowPermutation(fGMO, gmom, strict, actBlock+OFFSET, numBlocks+OFFSET, &(blk->mA), &(blk->mC), &(blk->mBL), &(blk->mDL), rowPerm);
+      assert(0==rc);
+
+      rc = doColumnPermutation(fGMO, gmon, strict, actBlock+OFFSET, OFFSET, &(blk->ni), &n0, colPerm);
+      assert(0==rc);
+
+      pipsn = blk->ni;
+      pipsm = blk->mA + blk->mC + blk->mBL + blk->mDL;
+
+      rc = gmoSetRvEquPermutation(fGMO, rowPerm, pipsm);
+      if (rc)
+         PRINTANDEXIT("Could not install row permutation\n");
+      free(rowPerm);
+
+      rc = gmoSetRvVarPermutation(fGMO, colPerm, pipsn);
+      if (rc)
+         PRINTANDEXIT("Could not install column permutation\n");
+      free(colPerm);
+
+      /* Now fill the block */
+
+      mAStart  = 0;      mAEnd  = mAStart  + blk->mA;
+      mCStart  = mAEnd;  mCEnd  = mCStart  + blk->mC;
+      mBLStart = mCEnd;  mBLEnd = mBLStart + blk->mBL;
+      mDLStart = mBLEnd; mDLEnd = mDLStart + blk->mDL;
+
+#if defined(GMSGENPIPSINPUTMAIN)
+      /* Write row permutation for linking constraints to disk */
+      {
+         FILE* fpLinkingRowsPerm;
+         int i;
+         if ( (fpLinkingRowsPerm = fopen("block0LCPerm.txt", "w")) == NULL )
+            PRINTANDEXIT("Error opening block0LCPerm.txt for writing\n");
+         fprintf(fpLinkingRowsPerm,"%d %d\n",gmom,mDLEnd-mBLStart);
+         for ( i=mBLStart; i<mDLEnd; i++ )
+            fprintf(fpLinkingRowsPerm,"%d %d\n",i,rowPerm[i]);
+         fclose(fpLinkingRowsPerm);
+      }
+      /* Write column permutation for linking variables to disk */
+      {
+         FILE* fpLinkingColumnsPerm;
+         int j;
+         if ( (fpLinkingColumnsPerm = fopen("block0LVPerm.txt", "w")) == NULL )
+            PRINTANDEXIT("Error opening block0LVPerm.txt for writing\n");
+         fprintf(fpLinkingColumnsPerm,"%d %d\n",gmon,pipsn);
+         for ( j=0; j<pipsn; j++ )
+            fprintf(fpLinkingColumnsPerm,"%d %d\n",j,colPerm[j]);
+         fclose(fpLinkingColumnsPerm);
+      }
+#endif
+
+      /* Variable allocation */
+      blk->c     = (double *)  calloc(blk->ni, sizeof(double));
+      blk->xlow  = (double *)  calloc(blk->ni, sizeof(double));
+      blk->xupp  = (double *)  calloc(blk->ni, sizeof(double));
+      blk->ixlow = (int16_t *) calloc(blk->ni, sizeof(int16_t));
+      blk->ixupp = (int16_t *) calloc(blk->ni, sizeof(int16_t));
+
+      if (!gmoGetObjVector(fGMO,blk->c,NULL))
+         PRINTANDEXIT("Could not get objective vector\n");
+      if (!gmoGetVarLower(fGMO, blk->xlow))
+         PRINTANDEXIT("Could not get variable lower bound\n");
+      if (!gmoGetVarUpper(fGMO, blk->xupp))
+         PRINTANDEXIT("Could not get variable lower bound\n");
+      /* Set indicator vectors */
+      {
+         int j;
+         for ( j=0; j<gmon; j++)
+         {
+            if (blk->xlow[j]!=GMS_SV_MINF)
+               blk->ixlow[j] = 1;
+            if (blk->xupp[j]!=GMS_SV_PINF)
+               blk->ixupp[j] = 1;
+         }
+      }
+      if ( blk->mA )
+         blk->b     = (double *)  calloc(blk->mA,   sizeof(double));
+      if ( blk->mC )
+      {
+         blk->clow  = (double *)  calloc(blk->mC,   sizeof(double));
+         blk->cupp  = (double *)  calloc(blk->mC,   sizeof(double));
+         blk->iclow = (int16_t *) calloc(blk->mC,   sizeof(int16_t));
+         blk->icupp = (int16_t *) calloc(blk->mC,   sizeof(int16_t));
+      }
+      if ( blk->mBL )
+         blk->bL    = (double *)  calloc(blk->mBL,  sizeof(double));
+      if ( blk->mDL )
+      {
+         blk->dlow  = (double *)  calloc(blk->mDL,  sizeof(double));
+         blk->dupp  = (double *)  calloc(blk->mDL,  sizeof(double));
+         blk->idlow = (int16_t *) calloc(blk->mDL,  sizeof(int16_t));
+         blk->idupp = (int16_t *) calloc(blk->mDL,  sizeof(int16_t));
+      }
+
+      {
+         int i;
+         double* rhs = (double *)  malloc(gmom*sizeof(double));
+         int* eType = (int *)  malloc(gmom*sizeof(double));
+
+         if (!gmoGetRhs(fGMO,rhs))
+            PRINTANDEXIT("Could not get rhs vector\n");
+         if (!gmoGetEquType(fGMO,eType))
+            PRINTANDEXIT("Could not get equation type vector\n");
+
+         if ( blk->mA )
+            memcpy(blk->b,   rhs+mAStart ,blk->mA *sizeof(double));
+         if ( blk->mC )
+         {
+            memcpy(blk->clow,rhs+mCStart ,blk->mC *sizeof(double));
+            memcpy(blk->cupp,rhs+mCStart ,blk->mC *sizeof(double));
+            memcpy(blk->bL,  rhs+mBLStart,blk->mBL*sizeof(double));
+         }
+         if ( blk->mDL )
+         {
+            memcpy(blk->dlow,rhs+mDLStart,blk->mDL*sizeof(double));
+            memcpy(blk->dupp,rhs+mDLStart,blk->mDL*sizeof(double));
+         }
+
+         for ( i=mCStart; i<mCEnd; i++ )
+         {
+            assert(eType[i]==gmoequ_L || eType[i]==gmoequ_G);
+            if ( gmoequ_L == eType[i] )
+               blk->icupp[i-mCStart] = 1;
+            else
+               blk->iclow[i-mCStart] = 1;
+         }
+         for ( i=mDLStart; i<mDLEnd; i++ )
+         {
+            assert(eType[i]==gmoequ_L || eType[i]==gmoequ_G);
+            if ( gmoequ_L == eType[i])
+               blk->idupp[i-mDLStart] = 1;
+            else
+               blk->idlow[i-mDLStart] = 1;
+         }
+         free(rhs);
+         free(eType);
+      }
+
+#define FILLMATRIX(mat)                                                                              \
+         if ( blk->m##mat )                                                                          \
+         {                                                                                           \
+            blk->rm##mat  = (int32_t *) calloc(blk->m##mat+1, sizeof(int32_t));                      \
+            if ( fillMatrix(fGMO,m##mat##Start,m##mat##End,blk->rm##mat,jcol,jval,&(blk->nnz##mat)) )\
+               return 1;                                                                             \
+            MATALLOC(mat);                                                                           \
+            memcpy(blk->ci##mat,jcol,sizeof(int)*blk->nnz##mat);                                     \
+            memcpy(blk->val##mat,jcol,sizeof(double)*blk->nnz##mat);                                 \
+         }
+
+      /* Fill matrices */
+      {
+         int gmonz = gmoNZ(fGMO);
+         int* jcol = (int *) malloc(gmonz * sizeof(int));
+         double* jval = (double *) malloc(gmonz * sizeof(double));
+
+         FILLMATRIX(A);
+         FILLMATRIX(C);
+         FILLMATRIX(BL);
+         FILLMATRIX(DL);
+
+         free(jcol);
+         free(jval);
+      }
+   }
+
+   gmoFree(&fGMO);
+   gevFree(&fGEV);
+   return 0;
+}
+#endif
 
 void copyGDXSymbol(int         numBlocks,
                    int         actBlock,
@@ -586,18 +971,18 @@ void copyGDXSymbol(int         numBlocks,
                printf("*** Unexpected matrix coefficient %f of equation e%d (stage=%d) and variable x%d (stage=%d)\n", vals[GMS_VAL_LEVEL], row+1,estage[row]+offSet,col+1,vstage[col]+offSet);
             else if (iblk > 0)
             {
-   			   if (actBlock<0 || actBlock==iblk)
-			   {
-				   GDXSAVECALLX(bGDX[iblk],gdxDataWriteRaw (bGDX[iblk], keyInt, vals));      
-			   }
+     			   if (actBlock<0 || actBlock==iblk)
+	     		   {
+			   	   GDXSAVECALLX(bGDX[iblk],gdxDataWriteRaw (bGDX[iblk], keyInt, vals));      
+			      }
             }
             else /* iblk == 0 */
             {
                assert(jblk<numBlocks);
    			   if (actBlock<0 || actBlock==jblk)
-			      {
-				   GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));
-			      }
+   			   {
+	  		    	   GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));
+		    	   }
             }
          }
          else /* linking constraint */
@@ -614,8 +999,8 @@ void copyGDXSymbol(int         numBlocks,
             {
                assert(jblk<numBlocks);
    			   if (actBlock<0 || actBlock==jblk)
-			      {
-				   GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));      
+   			   {
+	     			   GDXSAVECALLX(bGDX[jblk],gdxDataWriteRaw (bGDX[jblk], keyInt, vals));      
 			      }
             }
          }
@@ -1424,7 +1809,6 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
    MATALLOC(DL);
    
    DEBUG("Third pass over the matrix to setup the matrix structures");
-
    //printf("mA %d mC %d mBL %d mDL %d\n", blk->mA, blk->mC, blk->mBL, blk->mDL);
    //printf("n0 %d mi %d\n", blk->n0, blk->ni);
    /* Third pass over the matrix to setup the matrix structures */

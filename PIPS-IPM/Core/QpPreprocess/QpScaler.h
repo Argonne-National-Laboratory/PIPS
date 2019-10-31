@@ -73,14 +73,14 @@ public:
   /** scale */
   virtual void scale() override = 0;
 
-  virtual double getObjUnscaled(double objval) const override;
-  virtual Variables* getVariablesUnscaled(const Variables& vars) const override;
-  virtual Residuals* getResidualsUnscaled(const Residuals& resids) const override;
-  virtual OoqpVector* getPrimalUnscaled(const OoqpVector& solprimal) const override;
-  virtual OoqpVector* getDualEqUnscaled(const OoqpVector& soldual) const override;
-  virtual OoqpVector* getDualIneqUnscaled(const OoqpVector& soldual) const override;
-  virtual OoqpVector* getDualVarBoundsUppUnscaled(const OoqpVector& soldual) const override;
-  virtual OoqpVector* getDualVarBoundsLowUnscaled(const OoqpVector& soldual) const override;
+  double getObjUnscaled(double objval) const override;
+  Variables* getVariablesUnscaled(const Variables& vars) const override;
+  Residuals* getResidualsUnscaled(const Residuals& resids) const override;
+  OoqpVector* getPrimalUnscaled(const OoqpVector& solprimal) const override;
+  OoqpVector* getDualEqUnscaled(const OoqpVector& soldual) const override;
+  OoqpVector* getDualIneqUnscaled(const OoqpVector& soldual) const override;
+  OoqpVector* getDualVarBoundsUppUnscaled(const OoqpVector& soldual) const override;
+  OoqpVector* getDualVarBoundsLowUnscaled(const OoqpVector& soldual) const override;
 };
 
 //@}

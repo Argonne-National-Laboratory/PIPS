@@ -243,7 +243,7 @@ int main(int argc, char ** argv)
       setParams(scaler_type, stepDiffLp, presolve, printsol, argv[i - 1]);
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
-#if 0
+#if 0 // todo : is this still needed?
    int nBlock0 = 0;
    cout << "Start reading data from GDX and preparing the blocks" << endl;
    for (int blk=0; blk<numBlocks; blk++)
@@ -540,17 +540,17 @@ int main(int argc, char ** argv)
 #endif
        
       rc = writeSolution(fileName,
-                   primalSolVec.size(),
-                   dualSolEqVec.size(),
-                   dualSolIneqVec.size(),
-                   objective,
-                   &primalSolVec[0],
-                   &dualSolVarBounds[0],
-                   &eqValues[0],
-                   &ineqValues[0],
-                   &dualSolEqVec[0],
-                   &dualSolIneqVec[0],
-                   pGDXDirectory);
+						 primalSolVec.size(),
+						 dualSolEqVec.size(),
+						 dualSolIneqVec.size(),
+						 objective,
+						 &primalSolVec[0],
+						 &dualSolVarBounds[0],
+						 &eqValues[0],
+						 &ineqValues[0],
+						 &dualSolEqVec[0],
+						 &dualSolIneqVec[0],
+						 pGDXDirectory);
       if (0==rc)
          std::cout << "Solution written to " << fileName << "_sol.gdx" << std::endl;
       else if (-1==rc)

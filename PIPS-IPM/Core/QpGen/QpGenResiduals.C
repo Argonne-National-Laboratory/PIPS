@@ -70,16 +70,16 @@ QpGenResiduals::QpGenResiduals( const QpGenResiduals& res) : Residuals(res)
   my = res.my;
   mz = res.mz;
 
-  ixlow = OoqpVectorHandle(res.ixlow);
+  ixlow = OoqpVectorHandle( res.ixlow->cloneFull() );
   nxlow = res.nxlow;
 
-  ixupp = OoqpVectorHandle(res.ixupp);
+  ixupp = OoqpVectorHandle( res.ixupp->cloneFull() );
   nxupp = res.nxupp;
 
-  iclow = OoqpVectorHandle(res.iclow);
+  iclow = OoqpVectorHandle( res.iclow->cloneFull() );
   mclow = res.mclow;
 
-  icupp = OoqpVectorHandle(res.icupp);
+  icupp = OoqpVectorHandle( res.icupp->cloneFull() );
   mcupp = res.mcupp;
 
   rQ = OoqpVectorHandle(res.rQ->cloneFull());
