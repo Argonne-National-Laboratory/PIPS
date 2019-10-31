@@ -8,11 +8,12 @@
 //#define PIPS_DEBUG
 #include "EquiStochScaler.h"
 #include "StochVector.h"
-#include <cmath>
 #include "pipsdef.h"
 
+#include <cmath>
+
 EquiStochScaler::EquiStochScaler(Data* prob, bool bitshifting)
-  : QpScaler(prob, bitshifting)
+  : StochScaler(prob, bitshifting)
 {
    int myRank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);

@@ -23,6 +23,8 @@ QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
 				OoqpVector * ixlow_in, OoqpVector * ixupp_in,
 				OoqpVector * iclow_in, OoqpVector * icupp_in )
 {
+  /* constructor not in use in PIPS-IPM */
+  assert(false); 
   nx = nx_;
   my = my_;
   mz = mz_;
@@ -61,6 +63,44 @@ QpGenResiduals::QpGenResiduals( LinearAlgebraPackage * la,
     rphi = OoqpVectorHandle( la->newVector( nx ) );
   }
 }
+
+QpGenResiduals::QpGenResiduals( const QpGenResiduals& res) : Residuals(res)
+{
+  nx = res.nx;
+  my = res.my;
+  mz = res.mz;
+
+  ixlow = OoqpVectorHandle( res.ixlow->cloneFull() );
+  nxlow = res.nxlow;
+
+  ixupp = OoqpVectorHandle( res.ixupp->cloneFull() );
+  nxupp = res.nxupp;
+
+  iclow = OoqpVectorHandle( res.iclow->cloneFull() );
+  mclow = res.mclow;
+
+  icupp = OoqpVectorHandle( res.icupp->cloneFull() );
+  mcupp = res.mcupp;
+
+  rQ = OoqpVectorHandle(res.rQ->cloneFull());
+  rA = OoqpVectorHandle(res.rA->cloneFull());
+  rC = OoqpVectorHandle(res.rC->cloneFull());
+
+  rz = OoqpVectorHandle(res.rz->cloneFull());
+
+  rt = OoqpVectorHandle(res.rt->cloneFull());
+  rlambda = OoqpVectorHandle(res.rlambda->cloneFull());
+
+  ru = OoqpVectorHandle(res.ru->cloneFull());
+  rpi = OoqpVectorHandle(res.rpi->cloneFull());
+
+  rv = OoqpVectorHandle(res.rv->cloneFull());
+  rgamma = OoqpVectorHandle(res.rgamma->cloneFull());
+  
+  rw = OoqpVectorHandle(res.rw->cloneFull());
+  rphi = OoqpVectorHandle(res.rphi->cloneFull());
+}
+
 
 void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
 {
@@ -300,7 +340,6 @@ int QpGenResiduals::validNonZeroPattern()
 QpGenResiduals::~QpGenResiduals()
 {
 }
-
 
 void QpGenResiduals::writeToStream(ostream& out)
 {

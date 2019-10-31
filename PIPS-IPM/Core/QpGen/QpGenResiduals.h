@@ -26,16 +26,16 @@ class QpGenResiduals : public Residuals {
 protected:
   long long nx, my, mz;
 
-  double nxupp;
+  long long nxupp;
   OoqpVectorHandle ixupp;
 
-  double nxlow;
+  long long nxlow;
   OoqpVectorHandle ixlow;
 
-  double mcupp;
+  long long mcupp;
   OoqpVectorHandle icupp;
 
-  double mclow;
+  long long mclow;
   OoqpVectorHandle iclow;
 
   QpGenResiduals() {};
@@ -59,7 +59,15 @@ public:
 		  OoqpVector * ixlow, OoqpVector * ixupp,
 		  OoqpVector * iclow, OoqpVector * icupp );
 
+  QpGenResiduals( const QpGenResiduals& res);
 
+  const long long& getNxupp() { return nxupp; };
+  const long long& getNxlow() { return nxlow; };
+  const long long& getMcupp() { return mcupp; };
+  const long long& getMclow() { return mclow; };
+
+  virtual ~QpGenResiduals();
+  
   virtual void calcresids(Data *problem, Variables *vars);
 
   virtual void add_r3_xz_alpha(Variables *vars, double alpha);
@@ -74,8 +82,6 @@ public:
 
   virtual int  validNonZeroPattern();
   
-  virtual ~QpGenResiduals();
-
   virtual void writeToStream(std::ostream& out);
 };
 

@@ -45,10 +45,10 @@ public:
   OoqpVectorHandle z;
 
   OoqpVectorHandle v;
-  OoqpVectorHandle phi;
+  OoqpVectorHandle gamma;
 
   OoqpVectorHandle w;
-  OoqpVectorHandle gamma;
+  OoqpVectorHandle phi;
 
   OoqpVectorHandle t;
   OoqpVectorHandle lambda;
@@ -73,6 +73,8 @@ public:
 	     long long nx_, long long my_, long long mz_,
 	     OoqpVector * ixlow, OoqpVector * ixupp,
 	     OoqpVector * iclow, OoqpVector * icupp );
+
+  QpGenVars( const QpGenVars& vars);
 
   virtual ~QpGenVars();
   

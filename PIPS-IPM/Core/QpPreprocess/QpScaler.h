@@ -8,15 +8,10 @@
 #ifndef PIPS_IPM_CORE_QPPREPROCESS_QPSCALER_H_
 #define PIPS_IPM_CORE_QPPREPROCESS_QPSCALER_H_
 
+
 #include "Scaler.h"
 #include "OoqpVector.h"
-#include "StochVector.h"
 #include "DoubleMatrix.h"
-#include "QpGenData.h"
-#include "QpGenResiduals.h"
-
-class Data;
-
 
 /**  * @defgroup QpPreprocess
  *
@@ -58,6 +53,9 @@ protected:
   double factor_objscale;
 
   virtual void applyScaling();
+  virtual void unscaleVars( Variables& vars ) const;
+  virtual void unscaleResids( Residuals& vars ) const;
+
   virtual void doObjScaling() = 0;
 
   /** get maximum absolute row ratio and write maximum row entries into vectors */
@@ -73,11 +71,16 @@ public:
   virtual ~QpScaler();
 
   /** scale */
-  virtual void scale() = 0;
+  void scale() override = 0;
 
-  virtual double getOrigObj(double objval);
-  virtual OoqpVector* getOrigPrimal(const OoqpVector& solprimal);
-
+  double getObjUnscaled(double objval) const override;
+  Variables* getVariablesUnscaled(const Variables& vars) const override;
+  Residuals* getResidualsUnscaled(const Residuals& resids) const override;
+  OoqpVector* getPrimalUnscaled(const OoqpVector& solprimal) const override;
+  OoqpVector* getDualEqUnscaled(const OoqpVector& soldual) const override;
+  OoqpVector* getDualIneqUnscaled(const OoqpVector& soldual) const override;
+  OoqpVector* getDualVarBoundsUppUnscaled(const OoqpVector& soldual) const override;
+  OoqpVector* getDualVarBoundsLowUnscaled(const OoqpVector& soldual) const override;
 };
 
 //@}

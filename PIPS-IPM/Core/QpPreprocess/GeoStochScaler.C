@@ -8,12 +8,15 @@
 //#define PIPS_DEBUG
 #define PIPS_OUTPUT_SCALER
 #include "GeoStochScaler.h"
-
-#include <cmath>
 #include "pipsdef.h"
 
+#include <cmath>
+
+static const double maxobjscale = 100.0;
+
+
 GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
-  : QpScaler(prob, bitshifting)
+  : StochScaler(prob, bitshifting)
 {
    int myRank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);

@@ -136,6 +136,42 @@ QpGenVars::QpGenVars( LinearAlgebraPackage * la,
 
 }
 
+QpGenVars::QpGenVars( const QpGenVars& vars) : Variables(vars)
+{
+   ixlow = OoqpVectorHandle( vars.ixlow->cloneFull() );
+   ixupp = OoqpVectorHandle( vars.ixupp->cloneFull() );
+   iclow = OoqpVectorHandle( vars.iclow->cloneFull() );
+   icupp = OoqpVectorHandle( vars.icupp->cloneFull() );
+
+   nx = vars.nx;
+   my = vars.my;
+   mz = vars.mz;
+
+   nxlow = ixlow->numberOfNonzeros();
+   nxupp = ixupp->numberOfNonzeros();
+   mclow = iclow->numberOfNonzeros();
+   mcupp = icupp->numberOfNonzeros();
+  
+   s = OoqpVectorHandle( vars.s->cloneFull() );
+
+   t = OoqpVectorHandle( vars.t->cloneFull() );
+   lambda = OoqpVectorHandle( vars.lambda->cloneFull() );
+
+   u = OoqpVectorHandle( vars.u->cloneFull() );
+   pi = OoqpVectorHandle( vars.pi->cloneFull() );
+
+   v = OoqpVectorHandle( vars.v->cloneFull() );
+   gamma = OoqpVectorHandle( vars.gamma->cloneFull() );
+ 	
+   w = OoqpVectorHandle( vars.w->cloneFull() );
+   phi = OoqpVectorHandle( vars.phi->cloneFull() );
+ 
+   x = OoqpVectorHandle( vars.x->cloneFull() );
+   y = OoqpVectorHandle( vars.y->cloneFull() );
+   z = OoqpVectorHandle( vars.z->cloneFull() );
+   nComplementaryVariables = mclow + mcupp + nxlow + nxupp;
+}
+
 double QpGenVars::mu()
 {
   double mu  = 0.0;
