@@ -1759,7 +1759,5 @@ std::vector<double> StochVector::gatherStochVector() const
          gatheredVec.insert(gatheredVec.end(), &linkvec[0], &linkvec[0] + linkvec.length());
       }
    }
-
-
    return gatheredVec;
 }

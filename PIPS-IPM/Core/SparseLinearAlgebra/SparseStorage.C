@@ -2179,7 +2179,7 @@ void SparseStorage::fullMatrixFromUpperTriangular(int*& rowPtrFull, int*& colIdx
    assert(n == m);
 
    /* cout elems per row and assert upper triangular */
-   int nelems[n] = {0};
+   std::vector<int> nelems(n, 0);
    for(int i = 0; i < n; ++i)
    {
       // diag elem

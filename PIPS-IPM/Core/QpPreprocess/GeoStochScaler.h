@@ -31,7 +31,7 @@ class GeoStochScaler : public StochScaler
    double goodEnough;
 
 protected:
-  virtual void doObjScaling() override;
+  void doObjScaling() override;
   
   void applyGeoMean(StochVector& maxvec, StochVector& minvec);
   void postEquiScale();
@@ -43,7 +43,7 @@ public:
   virtual ~GeoStochScaler();
 
   /** scale */
-  virtual void scale() override;
+  void scale() override;
 };
 
 //@}

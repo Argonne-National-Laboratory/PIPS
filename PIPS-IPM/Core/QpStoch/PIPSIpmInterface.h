@@ -5,6 +5,9 @@
 #ifndef PIPSIPM_INTERFACE
 #define PIPSIPM_INTERFACE
 
+#include <algorithm>
+#include <functional>
+
 #include "stochasticInput.hpp"
 
 #include "sTree.h"
@@ -54,6 +57,7 @@ class PIPSIpmInterface
   std::vector<double> getFirstStageDualRowSolution() const;
   //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
+
   void postsolveComputedSolution();
 
   std::vector<double> gatherEqualityConsValues();
@@ -66,7 +70,7 @@ class PIPSIpmInterface
   static bool isDistributed() { return true; }
 
  protected:
- 
+
   FORMULATION * factory;
   PreprocessFactory * prefactory;
   sData *        data;       // possibly presolved data
@@ -83,7 +87,6 @@ class PIPSIpmInterface
 
   PIPSIpmInterface() {};
   MPI_Comm comm;
-  
   bool ran_solver;
 };
 
@@ -236,18 +239,18 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   if(0 == mype) cout << "solving ..." << endl;
 
   if(mype==0) {
-    cout << "1st stage " << data->getLocalnx() << " variables, " << data->getLocalmy() 
+    cout << "1st stage " << data->getLocalnx() << " variables, " << data->getLocalmy()
 	 << " equality constraints, " << data->getLocalmz() << " inequality constraints." << endl;
-    
+
     int nscens=data->children.size();
     if(nscens) {
-      cout << "2nd stage " << data->children[0]->getLocalnx() << " variables, " 
-	   << data->children[0]->getLocalmy() << " equality constraints, " 
+      cout << "2nd stage " << data->children[0]->getLocalnx() << " variables, "
+	   << data->children[0]->getLocalmy() << " equality constraints, "
 	   << data->children[0]->getLocalmz() << " inequality constraints." << endl;
-      
+
       cout << nscens << " scenarios." << endl;
-      cout << "Total " << data->getLocalnx()+nscens*data->children[0]->getLocalnx() << " variables, " 
-	   << data->getLocalmy()+nscens*data->children[0]->getLocalmy()  << " equality constraints, " 
+      cout << "Total " << data->getLocalnx()+nscens*data->children[0]->getLocalnx() << " variables, "
+	   << data->getLocalmy()+nscens*data->children[0]->getLocalmy()  << " equality constraints, "
 	   << data->getLocalmz()+nscens*data->children[0]->getLocalmz() << " inequality constraints." << endl;
     }
   }
@@ -276,6 +279,8 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   
   ran_solver = true;
 
+  ran_solver = true;
+
 #ifdef TIMING
    if ( 0 != result )
       return;
@@ -285,10 +290,10 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
    const double objective = getObjective();
 
    if( 0 == mype ) {
-    //cout << " " << data->nx << " variables, " << data->my  
+    //cout << " " << data->nx << " variables, " << data->my
     // << " equality constraints, " << data->mz << " inequality constraints.\n";
-    
-    cout << " Iterates: " << solver->iter <<",    Optimal Solution:  " 
+
+    cout << " Iterates: " << solver->iter <<",    Optimal Solution:  "
 	 << objective << endl;
 
     cout << "Solve time: " << tmElapsed << " seconds." << endl;
@@ -333,8 +338,9 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getFirstStageObjective() const {
 
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
-{ 
+{
   delete solver;
+  delete unscaleUnpermResids;
   delete scaler;
   delete unscaleUnpermResids;
   delete resids;
@@ -354,7 +360,6 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getVarsUnscaledUnperm()
   assert(unscaleUnpermVars == NULL);
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated solution");
-  
   if( scaler )
   {
     sVars* unscaled_vars = dynamic_cast<sVars*>(scaler->getVariablesUnscaled(*vars));
@@ -401,9 +406,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolution
 {
   if( unscaleUnpermVars == NULL)
     this->getVarsUnscaledUnperm();
-
   std::vector<double> vec = dynamic_cast<const StochVector&>(*unscaleUnpermVars->y).gatherStochVector();
-
   return vec;
 }
 
@@ -530,14 +533,14 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrim
 	//MPI_Comm_rank(comm,&mype);
 	//if (!v.length()) printf("oops, asked for scen %d on proc %d\n", scen, mype);
 	//assert(v.length());
-	if(!v.length()) 
+	if(!v.length())
 	  return std::vector<double>(); //this vector is not on this processor
 	else
 	  return std::vector<double>(&v[0],&v[0]+v.length());
 }
 
 template<class FORMULATION, class IPMSOLVER>
-std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const 
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const
    {
       SimpleVector const &y =
             *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
@@ -586,11 +589,11 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
   SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->iclow).children[scen]->vec);
   SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->icupp).children[scen]->vec);
   //assert(v.length());
-  if(!y.length() && !z.length()) 
+  if(!y.length() && !z.length())
     return std::vector<double>(); //this vector is not on this processor
   else {
     std::vector<int> const &map=factory->tree->children[scen]->idx_EqIneq_Map;
-    
+
     std::vector<double> multipliers(map.size());
     for(size_t i=0; i<map.size(); i++) {
       int idx=map[i];
