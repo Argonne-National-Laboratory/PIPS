@@ -243,7 +243,7 @@ int main(int argc, char ** argv)
       setParams(scaler_type, stepDiffLp, presolve, printsol, argv[i - 1]);
 
    blocks = (GMSPIPSBlockData_t**) calloc(numBlocks,sizeof(GMSPIPSBlockData_t*));
-#if 0
+#if 0 // todo : is this still needed?
    int nBlock0 = 0;
    cout << "Start reading data from GDX and preparing the blocks" << endl;
    for (int blk=0; blk<numBlocks; blk++)

@@ -18,6 +18,7 @@ sVars::sVars(sTree* tree,
 	     OoqpVector * iclow_in, OoqpVector * icupp_in)
   : QpGenVars()
 {
+  /* not in use anymore */
   assert(false);
   SpReferTo( ixlow, ixlow_in );
   SpReferTo( ixupp, ixupp_in );

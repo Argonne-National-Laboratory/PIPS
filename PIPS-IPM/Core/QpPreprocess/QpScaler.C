@@ -311,8 +311,6 @@ void QpScaler::scaleObjVector(double scaling_factor)
          factor_objscale = std::ldexp(0.5, exp + 1);
       else
          factor_objscale = std::ldexp(0.5, exp);
-
-      exit(1);
    }
 
    assert(obj);
