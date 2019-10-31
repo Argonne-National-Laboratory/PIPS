@@ -19,11 +19,14 @@ class sData;
 class SCsparsifier
 {
    public:
-      constexpr static double diagDomBoundAggressive = 0.001;
-      constexpr static double diagDomBoundNormal = 0.0002;
-      constexpr static double diagDomBoundConservative = 0.000025;
+      constexpr static double diagDomBoundAggressive        = 0.001;
+      constexpr static double diagDomBoundNormal            = 0.0002;
+      constexpr static double diagDomBoundConservative      = 0.000025;
+      constexpr static double diagDomBoundUltraConservative = 0.000005;
+      constexpr static double diagDomBoundHyperConservative = 0.000001;
+
 #ifdef PRE_CPP11
-      constexpr static double diagDomBoundDefault = 0.001;
+      constexpr static double diagDomBoundDefault           = 0.001;
 #else
       constexpr static double diagDomBoundDefault = diagDomBoundAggressive;
 #endif
@@ -38,7 +41,7 @@ class SCsparsifier
 
       double getDiagDomBound() const { return diagDomBound; };
 
-      // set columns col of dominated local Schur complement (distributed) entries to -col
+      // set CSR column marker col of dominated local Schur complement (distributed) entries to -col
       void unmarkDominatedSCdistLocals(const sData& prob, SparseSymMatrix& sc) const;
 
       // resets unmarkDominatedSCdistEntries actions

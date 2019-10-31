@@ -13,7 +13,7 @@ class sData;
 // DEBUG only
 //#include "ScaDenSymMatrix.h"
 
-/** 
+/**
  * ROOT (= NON-leaf) linear system
  */
 class sLinsysRootComm2 : public sLinsysRoot {
@@ -22,20 +22,24 @@ class sLinsysRootComm2 : public sLinsysRoot {
  public:
   sLinsysRootComm2(sFactory * factory_, sData * prob_);
   sLinsysRootComm2(sFactory* factory,
-	      sData* prob_,				    
+	      sData* prob_,
 	      OoqpVector* dd_, OoqpVector* dq_, OoqpVector* nomegaInv_,
 	      OoqpVector* rhs_);
 
   virtual SymMatrix*   createKKT     (sData* prob) = 0;
-  virtual DoubleLinearSolver* 
-                       createSolver  (sData* prob, 
+  virtual DoubleLinearSolver*
+                       createSolver  (sData* prob,
 				      SymMatrix* kktmat) = 0;
 
 
   virtual void factor2(sData *prob, Variables *vars);
   /* Atoms methods of FACTOR2 for a non-leaf linear system */
+  using sLinsysRoot::reduceKKT;
   virtual void reduceKKT();
-  virtual void factorizeKKT(); 
+
+  using sLinsysRoot::factorizeKKT;
+  virtual void factorizeKKT();
+
   virtual void finalizeKKT(sData* prob, Variables* vars)=0;
 
   virtual void Dsolve ( sData *prob, OoqpVector& x);
@@ -45,11 +49,10 @@ class sLinsysRootComm2 : public sLinsysRoot {
  public:
   virtual ~sLinsysRootComm2();
 
-  void submatrixReduce(DenseSymMatrix* A, 
+  void submatrixReduce(DenseSymMatrix* A,
 			  int row, int col, int drow, int dcol,
 			  MPI_Comm comm);
 
 };
 
 #endif
-

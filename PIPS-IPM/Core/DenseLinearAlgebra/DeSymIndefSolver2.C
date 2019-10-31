@@ -11,7 +11,7 @@
 
 #ifndef FNAME
 #ifndef __bg__
-#define FNAME(f) f ## _ 
+#define FNAME(f) f ## _
 #else
 #define FNAME(f) f // no underscores for fortran names on bgp
 #endif
@@ -40,14 +40,14 @@ extern "C" void FNAME(dtrsv)(char *uplo,
 extern "C" void FNAME(dscal)(int *n,
       double *alpha, double *x, int *incx);
 
-  
+
 DeSymIndefSolver2::DeSymIndefSolver2( DenseSymMatrix * dm, int nx ) : nx(nx)
 {
-  mStorage = DenseStorageHandle( dm->getStorage() );
+  mStorage = dm->getStorageHandle();
 
   n = mStorage->n;
   ny = n - nx;
-  
+
 }
 //#include "mpi.h"
 void DeSymIndefSolver2::matrixChanged()
@@ -70,7 +70,7 @@ void DeSymIndefSolver2::matrixChanged()
   start with:
   [Q A^T
    *  0]
-  
+
   cholesky on Q to get M^T
   trsm to get M^-1A^T
   syrk to form (M^-1A^T)^T(M^-1A^T)
@@ -86,11 +86,11 @@ void DeSymIndefSolver2::matrixChanged()
   if (ny == 0) return;
 
   printf("dtrsm\n");
-  
+
   FNAME(dtrsm)(&fortranL,&fortranUplo,&fortranT,
     &fortranN,&nx,&ny,&one,mat,&n,
     mat+nx*n,&n);
-  
+
   printf("dsyrk\n");
 
   FNAME(dsyrk)(&fortranUplo,&fortranT,&ny,&nx,&one,
@@ -124,10 +124,10 @@ void DeSymIndefSolver2::solve ( OoqpVector& v )
 
   FNAME(dtrsv)(&fortranUplo,&fortranT,&fortranN,
     &n,mat,&n,rhs,&one);
-  
-  if (ny > 0) 
+
+  if (ny > 0)
     FNAME(dscal)(&ny,&minus1,rhs+nx,&one);
-  
+
   FNAME(dtrsv)(&fortranUplo,&fortranN,&fortranN,
     &n,mat,&n,rhs,&one);
 

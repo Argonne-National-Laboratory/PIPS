@@ -15,10 +15,11 @@
 /*********************************************************************/
 
 #ifdef STOCH_TESTING
-extern double g_iterNumber;
 double g_scenNum;
 #endif
 
+extern double g_iterNumber;
+extern bool ipStartFound;
 extern int gOuterSolve;
 
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
@@ -30,7 +31,18 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
   zDiagLinkCons = NULL;
   kktDist = NULL;
 
+#ifdef TIMING
+  int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+  if( myRank == 0 )
+     std::cout << "Rank 0: create LinSys children ..." << std::endl;
+#endif
+
   createChildren(prob_);
+
+#ifdef TIMING
+  if( myRank == 0 )
+     std::cout << "Rank 0: children created" << std::endl;
+#endif
 
   precondSC = SCsparsifier(-1.0, mpiComm);
 
@@ -129,6 +141,8 @@ sLinsysRoot::~sLinsysRoot()
 {
   for(size_t c=0; c<children.size(); c++)
     delete children[c];
+
+  delete kktDist;
 
   delete[] sparseKktBuffer;
 }
@@ -966,8 +980,6 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    assert(iAmDistrib);
    assert(kkt);
 
-   int myRank; MPI_Comm_rank(mpiComm, &myRank);
-
    const std::vector<bool>& rowIsLocal = prob->getSCrowMarkerLocal();
    const std::vector<bool>& rowIsMyLocal = prob->getSCrowMarkerMyLocal();
 
@@ -1184,14 +1196,14 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
    }
 #endif
 
-   kktDist->getStorage()->sortCols();
+   kktDist->getStorageRef().sortCols();
 
-   assert(kktDist->getStorage()->isValid());
+   assert(kktDist->getStorageRef().isValid());
 
    reduceToProc0(nnzDist, MDist);
 
-   assert(kktDist->getStorage()->isValid());
-   assert(kktDist->getStorage()->isSorted());
+   assert(kktDist->getStorageRef().isValid());
+   assert(kktDist->getStorageRef().isSorted());
 }
 
 void sLinsysRoot::factorizeKKT()
@@ -1292,6 +1304,9 @@ void sLinsysRoot::myAtPutZeros(DenseSymMatrix* mat)
 
 void sLinsysRoot::addTermToSchurCompl(sData* prob, size_t childindex)
 {
+   // todo bad hack, should be removed once user parameters are available (along all global variables)
+   ipIterations = ipStartFound ? static_cast<int>(g_iterNumber) : -1;
+
    assert(childindex < prob->children.size());
 #ifdef PARDISO_BLOCKSC
    children[childindex]->addTermToSchurComplBlocked(prob->children[childindex], hasSparseKkt, *kkt);

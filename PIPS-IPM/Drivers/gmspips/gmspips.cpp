@@ -56,7 +56,8 @@ if (!blocks[blk])                                                               
    if ( !allGDX )                                                                 \
    {                                                                              \
       char fname[256];                                                            \
-      snprintf(fname, 256, "%s%d.gdx", fileName, blk);                            \
+      int r = snprintf(fname, 256, "%s%d.gdx", fileName, blk);                    \
+      if( r < 0 )  abort();                                                       \
       rc = readBlock(numBlocks,blk,0,1,fname,pGDXDirectory,blocks[blk]);          \
    }                                                                              \
    else                                                                           \
@@ -178,12 +179,12 @@ int fnonzeroQ(void* user_data, int id, int* nnz)
 
 int fmatQ(void* user_data, int id, int* krowM, int* jcolM, double* M)
 {
-   GMSPIPSBlockData_t* blk = ((GMSPIPSBlockData_t**) user_data)[id]; 
+   GMSPIPSBlockData_t* blk = ((GMSPIPSBlockData_t**) user_data)[id];
    assert(blk);
-    
+
    for(int i = 0; i <= blk->ni; i++ )
        krowM[i] = 0;
-   
+
    return 0;
 }
 
@@ -205,8 +206,8 @@ static void setParams(ScalerType& scaler_type, bool& stepDiffLp, bool& presolve,
       printsol = true;
 }
 
-int main(int argc, char ** argv) 
-{  
+int main(int argc, char ** argv)
+{
 
 #if defined(GMS_MPI)
    MPI_Init(&argc, &argv);
@@ -215,7 +216,7 @@ int main(int argc, char ** argv)
    const double t0 = MPI_Wtime();
 #endif
 
-   initGMSPIPSIO();   
+   initGMSPIPSIO();
 
    GMSPIPSBlockData_t** blocks;
    ScalerType scaler_type = SCALER_NONE;
@@ -228,7 +229,7 @@ int main(int argc, char ** argv)
       cout << "Usage: " << argv[0] << " numBlocks all.gdx|blockstem [GDXLibDir] [scale] [stepLp] [presolve] [printsol]" << endl;
       exit(1);
    }
-   
+
    allGDX = strstr(argv[2],".gdx")!=NULL;
    numBlocks = atoi(argv[1]);
    strcpy(fileName,argv[2]);
@@ -237,7 +238,7 @@ int main(int argc, char ** argv)
       strcpy(GDXDirectory,argv[3]);
       pGDXDirectory = &GDXDirectory[0];
    }
-   
+
    for( int i = 5; i <= argc; i++ )
       setParams(scaler_type, stepDiffLp, presolve, printsol, argv[i - 1]);
 
@@ -269,7 +270,7 @@ int main(int argc, char ** argv)
    FNNZ fsni   = &fsizeni   ;
    FNNZ fsmA   = &fsizemA   ;
    FNNZ fsmC   = &fsizemC   ;
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
    FNNZ fsmBL  = &fsizemBL  ;
    FNNZ fsmDL  = &fsizemDL  ;
 #endif
@@ -278,7 +279,7 @@ int main(int argc, char ** argv)
    FNNZ fnnzB  = &fnonzeroB ;
    FNNZ fnnzC  = &fnonzeroC ;
    FNNZ fnnzD  = &fnonzeroD ;
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
    FNNZ fnnzBL = &fnonzeroBL;
    FNNZ fnnzDL = &fnonzeroDL;
 #endif
@@ -292,19 +293,19 @@ int main(int argc, char ** argv)
    FVEC ficlow = &fveciclow;
    FVEC fcupp  = &fveccupp ;
    FVEC ficupp = &fvecicupp;
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
    FVEC fbL    = &fvecbL   ;
    FVEC fdlow  = &fvecdlow ;
    FVEC fidlow = &fvecidlow;
    FVEC fdupp  = &fvecdupp ;
    FVEC fidupp = &fvecidupp;
 #endif
-   
+
    FMAT fA  = &fmatA ;
    FMAT fB  = &fmatB ;
    FMAT fC  = &fmatC ;
    FMAT fD  = &fmatD ;
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
    FMAT fBL = &fmatBL;
    FMAT fDL = &fmatDL;
 #endif
@@ -313,34 +314,34 @@ int main(int argc, char ** argv)
 #if defined(GMS_PIPS)
    //build the problem tree
    StochInputTree::StochInputNode data(blocks, 0,
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
       fsni, fsmA, fsmBL, fsmC, fsmDL,
 #else
       fsni, fsmA, fsmC,
-#endif      
+#endif
       fQ,  fnnzQ, fc,
       fA,  fnnzA,
       fB,  fnnzB,
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
       fBL, fnnzBL,
-#endif      
-      fb,  
-#if defined(LINKCONSTR)   
+#endif
+      fb,
+#if defined(LINKCONSTR)
       fbL,
-#endif      
+#endif
       fC,  fnnzC,
       fD,  fnnzD,
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
       fDL, fnnzDL,
-#endif      
+#endif
       fclow, ficlow, fcupp, ficupp,
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
       fdlow, fidlow, fdupp, fidupp,
-#endif      
+#endif
       fxlow, fixlow, fxupp, fixupp, false );
    StochInputTree* root = new StochInputTree(data);
 #endif
-   for( int blk = 1; blk < numBlocks; blk++ ) 
+   for( int blk = 1; blk < numBlocks; blk++ )
    {
 
 #if defined(GMS_PIPS)
@@ -353,29 +354,29 @@ int main(int argc, char ** argv)
          fQ,  fnnzQ, fc,
          fA,  fnnzA,
          fB,  fnnzB,
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
          fBL, fnnzBL,
-#endif      
-         fb,  
-#if defined(LINKCONSTR)   
+#endif
+         fb,
+#if defined(LINKCONSTR)
          fbL,
-#endif      
+#endif
          fC,  fnnzC,
          fD,  fnnzD,
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
          fDL, fnnzDL,
-#endif      
+#endif
          fclow, ficlow, fcupp, ficupp,
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
          fdlow, fidlow, fdupp, fidupp,
-#endif      
+#endif
          fxlow, fixlow, fxupp, fixupp, false );
 
        root->AddChild(new StochInputTree(data));
-#endif       
+#endif
    }
 
-#if defined(GMS_MPI)   
+#if defined(GMS_MPI)
    MPI_Comm_rank(MPI_COMM_WORLD, &gmsRank);
    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
@@ -387,13 +388,13 @@ int main(int argc, char ** argv)
 #endif
    fLog = fopen(fbuf, "w+");
    fprintf(fLog, "PIPS Log for gmsRank %d\n", gmsRank);
-#endif  
+#endif
    if( gmsRank == 0 )
-#if defined(LINKCONSTR)   
+#if defined(LINKCONSTR)
       cout << "Using version with linking constraint." << endl;
 #else
       cout << "Using version without linking constraint." << endl;
-#endif      
+#endif
    if( gmsRank == 0 )
       cout << "Using a total of " << size << " MPI processes." << endl;
 
@@ -554,7 +555,7 @@ int main(int argc, char ** argv)
       else
          std::cout << "Other error writing solution: rc=" << rc << std::endl;
    }
-   
+
    // free memory
   delete root;
 
@@ -567,8 +568,8 @@ int main(int argc, char ** argv)
      free(blocks[blk]);
   }
   free(blocks);
-  
-#if defined(GMS_MPI)   
+
+#if defined(GMS_MPI)
   MPI_Barrier(MPI_COMM_WORLD);
   const double t1 = MPI_Wtime();
 
@@ -576,8 +577,8 @@ int main(int argc, char ** argv)
      std::cout << "---total time (in sec.): " << t1 - t0 << std::endl;
 
   MPI_Finalize();
-#endif 
+#endif
   fclose(fLog);
- 
+
   return 0;
 }

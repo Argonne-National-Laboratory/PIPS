@@ -10,7 +10,7 @@ scale=""
 stepLp=""
 presolve=""
 mins="60"
-mygams="/nfs/optimi/usr/sw/gams25.0_linux_x64_64_sfx/gams"
+mygams="$GAMSSYSDIR/gams"
 memcheck=false
 
 for i in "$@"

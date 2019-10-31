@@ -25,7 +25,7 @@ public:
   //SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks); not needed anymore; cpetra
 
   SparseStorage&  getStorageRef() { return *mStorage; }
-  SparseStorage*  getStorage() { return mStorage.ptr(); }
+  SparseStorageHandle  getStorageHandle() { return mStorage; }
 
   // is lower part of matrix stored? (otherwise upper part is stored)
   const bool isLower;
@@ -36,7 +36,7 @@ public:
 
   virtual int isKindOf( int type ) const;
 
-  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[], 
+  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[],
 				int& info );
   virtual void fromGetDense( int row, int col, double * A, int lda,
 			     int rowExtent, int colExtent );
@@ -68,7 +68,7 @@ public:
 		      double alpha, double x[], int incx );
   virtual void transMult ( double beta,  double y[], int incy,
 			   double alpha, double x[], int incx );
-  
+
   virtual void mult ( double beta,  OoqpVector& y,
                       double alpha, OoqpVector& x );
 
@@ -76,9 +76,9 @@ public:
                            double alpha,  OoqpVector& x );
 
   virtual double abmaxnorm();
-  
+
   virtual void writeToStream(ostream& out) const;
-  
+
   virtual void writeToStreamDense(ostream& out) const;
 
   virtual void randomizePSD(double *);
@@ -90,7 +90,7 @@ public:
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
    *  are treated as non-zero even though their value happens to be zero.
-   */  
+   */
   int numberOfNonZeros() { return mStorage->numberOfNonZeros(); }
 
   /** Reduce the matrix to lower triangular */

@@ -67,6 +67,7 @@ class PIPSIpmInterface
  protected:
 
   FORMULATION * factory;
+  PreprocessFactory * prefactory;
   sData *        data;       // possibly presolved data
   sData *        origData;   // original data
   sVars *        vars;
@@ -148,7 +149,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("factory created\n");
 #endif
 
-  const PreprocessFactory& prefactory = PreprocessFactory::getInstance();
+  prefactory = new PreprocessFactory();
 
   // presolving activated?
   if( presolver_type != PRESOLVER_NONE )
@@ -159,8 +160,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
      MPI_Barrier(comm);
      const double t0_presolve = MPI_Wtime();
 
-     postsolver = (postsolve == true) ? prefactory.makePostsolver(origData) : NULL;
-     presolver = prefactory.makePresolver(origData, presolver_type, postsolver);
+     postsolver = (postsolve == true) ? prefactory->makePostsolver(origData) : NULL;
+     presolver = prefactory->makePresolver(origData, presolver_type, postsolver);
 
      data = dynamic_cast<sData*>(presolver->presolve());
 
@@ -204,7 +205,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("resids created\n");
 #endif
 
-  scaler = prefactory.makeScaler(data, scaler_type);
+  scaler = prefactory->makeScaler(data, scaler_type);
 
 #ifdef TIMING
   if(mype==0) printf("scaler created\n");
@@ -335,15 +336,16 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
 {
   delete solver;
   delete unscaleUnpermResids;
+  delete scaler;
   delete resids;
   delete unscaleUnpermVars;
   delete vars;
   delete data;
-  delete origData;
-  delete factory;
-  delete scaler;
   delete postsolver;
   delete presolver;
+  delete origData;
+  delete prefactory;
+  delete factory;
 }
 
 template<class FORMULATION, class IPMSOLVER>

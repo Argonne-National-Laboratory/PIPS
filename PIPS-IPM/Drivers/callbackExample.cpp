@@ -168,7 +168,7 @@ int vecEqRhs(void* user_data, int id, double* vec, int len)
    }
    else if( id == 2 )
    {
-      vec[0] = 0.0;
+      vec[0] = 2.0;
       vec[1] = 7.0;
    }
 
@@ -281,8 +281,6 @@ int matEqStage1(void* user_data, int id, int* krowM, int* jcolM, double* M)
    else if( id == 2 )
    {
       M[0] = 2.0;
-      M[0] = 0.0;
-
       M[1] = 4.0;
 
       krowM[0] = 0;

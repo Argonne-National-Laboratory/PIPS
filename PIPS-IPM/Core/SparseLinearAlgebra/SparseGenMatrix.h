@@ -41,7 +41,7 @@ public:
 		   int krowM[], int jcolM[], double M[],
 		   int deleteElts=0);
   //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
-  
+
   virtual SparseGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
   virtual void getSize( long long& m, long long& n );
@@ -50,7 +50,7 @@ public:
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
    *  are treated as non-zero even though their value happens to be zero.
-   */  
+   */
   virtual int numberOfNonZeros();
 
   virtual int isKindOf( int matType ) const;
@@ -72,7 +72,7 @@ public:
   virtual void atPutSpRow( int col, double A[], int lenA, int jcolA[],
 			   int& info );
 
-  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[], 
+  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[],
 				int& info );
 
   virtual void getDiagonal( OoqpVector& vec );
@@ -106,7 +106,7 @@ public:
 
   /** C = this * this^T */
   virtual void matMultTrans(SymMatrix** res);
-  
+
   virtual double abmaxnorm();
 
   virtual void writeToStream(ostream& out) const;
@@ -126,7 +126,7 @@ public:
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );
 
-  SparseStorage * getStorage() { return mStorage.ptr(); }
+  SparseStorageHandle getStorageHandle() { return mStorage; }
   SparseStorage& getStorageRef() { return *mStorage; }
   int * krowM() { return mStorage->krowM; }
   int * jcolM() { return mStorage->jcolM; }
@@ -136,7 +136,7 @@ public:
   SparseStorageDynamic& getStorageDynamicRef() { assert(mStorageDynamic != NULL); return *mStorageDynamic; }
   SparseStorageDynamic * getStorageDynamicTransposed() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
   SparseStorageDynamic& getStorageDynamicTransposedRef() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
-  bool hasDynamicStorage() { return (mStorageDynamic != NULL); }
+  bool hasDynamicStorage() const { return (mStorageDynamic != NULL); };
 
   virtual void addNnzPerRow(OoqpVector& nnzVec);
   virtual void addNnzPerCol(OoqpVector& nnzVec);

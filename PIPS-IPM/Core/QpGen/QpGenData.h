@@ -20,7 +20,7 @@ class QpGenDataTester;
 
 /**
  * Data for the general QP formulation.
- * 
+ *
  * @ingroup QpGen
  */
 
@@ -120,7 +120,7 @@ public:
   virtual void CTransmult( double beta,  OoqpVector& y,
 			   double alpha, OoqpVector& x );
 
-  //  virtual void addSymProdCRowToAt(double alpha, int i, 
+  //  virtual void addSymProdCRowToAt(double alpha, int i,
   //				  SymMatrix& M, int rowcol );
 
   virtual void getg(  OoqpVector& cout );
@@ -153,7 +153,7 @@ public:
   virtual double datanorm();
   virtual void datainput() {};
   virtual void datainput( MpsReader * reader, int& iErr );
-  /** Create a random problem 
+  /** Create a random problem
    *  @param (x,y,z,s) the solution to the random problem
    */
   virtual void datarandom( OoqpVector  & x, OoqpVector  & y,

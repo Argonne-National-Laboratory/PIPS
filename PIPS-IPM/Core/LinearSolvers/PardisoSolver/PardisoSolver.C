@@ -255,16 +255,7 @@ void PardisoSolver::setIparm(int* iparm){
    iparm[7] = 2; // max number of iterative refinements
    iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
    iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-                  // if needed, use 2 for advanced matchings and higer accuracy.
-
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   #else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0;
-   #endif
-
+                  // if needed, use 2 for advanced matchings and higher accuracy.
 
 #else
    /* From INTEL (instead of iparm[2] which is not defined there):
@@ -275,15 +266,6 @@ void PardisoSolver::setIparm(int* iparm){
    iparm[7] = 0; // mkl runs into numerical problems when setting iparm[7] too high
    iparm[10] = 1; // default, scaling for IPM KKT used with either mtype=11/13 or mtype=-2/-4/6 and iparm[12]=1
    iparm[12] = 1; // 0 disable matching, 1 enable matching, no other settings
-
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 0; // iparm[23] does not work with iparm[10] = iparm[12] = 1 for mkl pardiso
-   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
-                  // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
-   #else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0;
-   #endif
 
    #ifndef NDEBUG
    // enable matrix checker - mkl pardiso has no chkmatrix method

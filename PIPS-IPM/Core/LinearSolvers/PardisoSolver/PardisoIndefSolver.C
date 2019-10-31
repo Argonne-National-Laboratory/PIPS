@@ -41,7 +41,7 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
 
 PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 {
-  mStorage = DenseStorageHandle( dm->getStorage() );
+  mStorage = dm->getStorageHandle();
   mStorageSparse = NULL;
 
   assert(mStorage);
@@ -55,7 +55,7 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 {
   mStorage = NULL;
-  mStorageSparse = SparseStorageHandle( sm->getStorage() );
+  mStorageSparse = sm->getStorageHandle();
 
   assert(mStorageSparse);
 
@@ -74,38 +74,32 @@ void PardisoIndefSolver::setIparm(int* iparm){
     *  If fewer OpenMP threads are available than specified, the execution may slow down instead of speeding up.
     *  If MKL_NUM_THREADS is not defined, then the solver uses all available processors.
     */
-   iparm[2] = PIPSgetnOMPthreads();
+   assert(nThreads >= 1 && pivotPerturbationExp >= 1);
+   iparm[9] = pivotPerturbationExp;
+   iparm[2] = nThreads;
+   iparm[18] = 0; /* don't compute GFLOPS */
+   iparm[7] = nIterativeRefins; /* max number of iterative refinement steps. */
 
-   // check whether other environment variable has been set
-
-   /* Numbers of processors, value of OMP_NUM_THREADS */
-   char* var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
-   if( var != NULL )
+   if( highAccuracy )
    {
-      int num_procs = -1;
-      sscanf(var, "%d", &num_procs);
-
-      assert(num_procs >= 1);
-
-      iparm[2] = num_procs;
+      iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+      iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
+   }
+   else
+   {
+      iparm[10] = 1;
+      iparm[12] = 0;
    }
 
-   iparm[7] = 8; /* max number of iterative refinement steps. */
-   #ifdef PARDISOINDEF_SCALE
-   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-   iparm[12] = 2; // improved accuracy for IPM KKT; used with IPARM(11)=1;
-   #else
-   iparm[10] = 0;
-   iparm[12] = 0;
-   #endif
+   if( factorizationTwoLevel )
+      iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
+   else
+      iparm[23] = 0;
 
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 1; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
-   #else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0;
-   #endif
+   if( parallelForwardBackward )
+      iparm[24] = 1; // parallelization for the forward and backward solve. 0=sequential, 1=parallel solve.
+   else
+      iparm[24] = 0;
 
 #else
 
@@ -116,22 +110,16 @@ void PardisoIndefSolver::setIparm(int* iparm){
    iparm[26] = 1;
    #endif
 
-   #ifdef PARDISOINDEF_SCALE
-   iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
-   iparm[12] = 1; // MKL does not have a =2 option here
-   #else
-   iparm[10] = 0;
-   iparm[12] = 0;
-   #endif
-
-   #ifdef PARDISO_PARALLEL_AGGRESSIVE
-   iparm[23] = 0; // iparm[23] does NOT work with iparm[10] = iparm[12] = 1 for mkl pardiso
-   iparm[24] = 2; // not sure but two seems to be the appropriate equivalent here
-                  // one rhs -> parallelization, multiple rhs -> parallel forward backward subst
-   #else
-   iparm[23] = 0; // parallel Numerical Factorization (0=used in the last years, 1=two-level scheduling)
-   iparm[24] = 0;
-   #endif
+   if( highAccuracy )
+   {
+      iparm[10] = 1; // scaling for IPM KKT; used with IPARM(13)=1 or 2
+      iparm[12] = 1;// MKL does not have a =2 option here
+   }
+   else
+   {
+      iparm[10] = 0;
+      iparm[12] = 0;
+   }
 #endif
 
 }
@@ -180,7 +168,7 @@ void PardisoIndefSolver::initPardiso()
    nrhs = 1;
    iparm[0] = 0;
 
-   useSparseRhs = true;
+   useSparseRhs = useSparseRhsDefault;
 
    // todo proper parameter
    char* var = getenv("PARDISO_SPARSE_RHS_ROOT");
@@ -190,14 +178,117 @@ void PardisoIndefSolver::initPardiso()
       sscanf(var, "%d", &use);
       if( use == 0 )
          useSparseRhs = false;
+      else if( use == 1 )
+         useSparseRhs = true;
+   }
+
+   nThreads = PIPSgetnOMPthreads();
+
+   // todo proper parameter
+   var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
+   if( var != NULL )
+   {
+      int n = -1;
+      sscanf(var, "%d", &n);
+
+      assert(n >= 1);
+
+      nThreads = n;
+   }
+
+   pivotPerturbationExp = pivotPerturbationExpDefault;
+
+   // todo proper parameter
+   var = getenv("PARDISO_PIVOT_PERTURBATION_ROOT");
+   if( var != NULL )
+   {
+      int exp;
+      sscanf(var, "%d", &exp);
+      if( exp >= 1 )
+         pivotPerturbationExp = exp;
+   }
+
+   highAccuracy = highAccuracyDefault;
+
+   // todo proper parameter
+   var = getenv("PARDISO_HIGH_ACCURACY_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      if( n == 0 )
+         highAccuracy = false;
+      else if( n == 1 )
+         highAccuracy = true;
+   }
+
+   parallelForwardBackward = parallelForwardBackwardDefault,
+
+   // todo proper parameter
+   var = getenv("PARDISO_PARALLEL_SOLVE_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      if( n == 0 )
+         parallelForwardBackward = false;
+      else if( n == 1 )
+         parallelForwardBackward = true;
+   }
+
+   factorizationTwoLevel = factorizationTwoLevelDefault,
+
+   // todo proper parameter
+   var = getenv("PARDISO_FACTORIZE_TWOLEVEL_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      if( n == 0 )
+         factorizationTwoLevel = false;
+      else if( n == 1 )
+         factorizationTwoLevel = true;
+   }
+
+   nIterativeRefins = nIterativeRefinsDefault;
+
+   // todo proper parameter
+   var = getenv("PARDISO_NITERATIVE_REFINS_ROOT");
+   if( var != NULL )
+   {
+      int n;
+      sscanf(var, "%d", &n);
+      assert(n >= 0);
+
+      if( n >= 0 )
+         nIterativeRefins = n;
    }
 
    if( myRank == 0 )
    {
-      if( useSparseRhs )
-         printf(" using PARDISO_SPARSE_RHS_ROOT \n");
+      printf("PARDISO root: using pivot perturbation 10^-%d \n", pivotPerturbationExp);
+
+      printf("PARDISO root: using maximum of %d iterative refinements  \n", nIterativeRefins);
+
+      if( parallelForwardBackward )
+         printf("PARDISO root: using parallel (forward/backward) solve \n");
       else
-         printf(" NOT using PARDISO_SPARSE_RHS_ROOT \n");
+         printf("PARDISO root: NOT using parallel (forward/backward) solve \n");
+
+      if( factorizationTwoLevel )
+         printf("PARDISO root: using two-level scheduling for numerical factorization \n");
+      else
+         printf("PARDISO root: NOT using two-level scheduling for numerical factorization \n");
+
+      if( highAccuracy )
+         printf("PARDISO root: using high accuracy \n");
+      else
+         printf("PARDISO root: NOT using high accuracy \n");
+
+      if( useSparseRhs )
+         printf("PARDISO root: using sparse rhs \n");
+      else
+         printf("PARDISO root: NOT using sparse rhs \n");
    }
 
 #ifndef WITH_MKL_PARDISO
@@ -224,9 +315,8 @@ void PardisoIndefSolver::initPardiso()
 
    setIparm(iparm);
 
-
    if( myRank == 0 )
-      printf("using %d threads for root Schur complement \n", iparm[2]);
+      printf("PARDISO root: using %d threads \n", iparm[2]);
 
    maxfct = 1; /* Maximum number of numerical factorizations.  */
    mnum = 1; /* Which factorization to use. */
@@ -287,9 +377,9 @@ void PardisoIndefSolver::factorizeFromSparse(SparseSymMatrix& matrix_fortran)
    assert(!deleteCSRpointers);
    assert(matrix_fortran.getStorageRef().fortranIndexed());
 
-   ia = matrix_fortran.getStorage()->krowM;
-   ja = matrix_fortran.getStorage()->jcolM;
-   a = matrix_fortran.getStorage()->M;
+   ia = matrix_fortran.krowM();
+   ja = matrix_fortran.jcolM();
+   a = matrix_fortran.M();
 
    assert(ia[0] == 1);
 
@@ -320,6 +410,8 @@ void PardisoIndefSolver::factorizeFromSparse()
 
    assert(n >= 0);
 
+   // todo the sparse precond. stuff should be moved out and handled by Sparsifier class
+#ifdef SPARSE_PRECOND
    std::vector<double>diag(n);
 
    const double t = precondDiagDomBound;
@@ -331,9 +423,9 @@ void PardisoIndefSolver::factorizeFromSparse()
 
       diag[r] = fabs(aStorage[j]) * t;
    }
+#endif
 
    ia[0] = 1;
-   int kills = 0;
    int nnznew = 0;
 
    for( int r = 0; r < n; r++ )
@@ -350,7 +442,6 @@ void PardisoIndefSolver::factorizeFromSparse()
             }
             else
             {
-               kills++;
                assert(jaStorage[j] != r);
             }
 #else
@@ -363,7 +454,7 @@ void PardisoIndefSolver::factorizeFromSparse()
       ia[r + 1] = nnznew + 1;
    }
 
-   std::cout << "real nnz in KKT: " << nnznew << " (kills: " << kills << ")" << std::endl;
+   std::cout << "real nnz in KKT: " << nnznew << " (ratio: " << double(nnznew) / double(iaStorage[n]) << ")" << std::endl;
 
 #if 0
    {
@@ -471,6 +562,8 @@ void PardisoIndefSolver::factorize()
    }
 #endif
 
+   iparm[17] = -1; /* compute number of nonzeros in factors */
+
 #if 0
    const int nnz = ia[n] - 1;
    double abs_max = 0.0;
@@ -510,7 +603,6 @@ else
    {
       printf("\nReordering completed: ");
       printf("\nNumber of nonzeros in factors  = %d", iparm[17]);
-      printf("          Number of factorization MFLOPS = %d", iparm[18]);
    }
 
    phase = 22;
