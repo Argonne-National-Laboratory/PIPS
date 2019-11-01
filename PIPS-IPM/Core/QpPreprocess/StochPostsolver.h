@@ -41,7 +41,7 @@ public:
 
 
       virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
-protected:
+private:
 
       int my_rank;
       bool distributed;
@@ -87,10 +87,6 @@ protected:
       StochGenMatrixHandle stored_rows;
       // todo KKTchecker
 
-//      void setReducedValuesInOrigVector(const StochVector& reduced_vector, StochVector& original_vector, const StochVector& mapping_to_original) const;
-//      void setReducedValuesInOrigVector(const SimpleVector& reduced_vector, SimpleVector& original_vector, const SimpleVector& mapping_to_original) const;
-
-private:
       void finishNotify();
 
       SimpleVector& getSimpleVecRowFromStochVec(const OoqpVector& ooqpvec, int node, BlockType block_type) const
