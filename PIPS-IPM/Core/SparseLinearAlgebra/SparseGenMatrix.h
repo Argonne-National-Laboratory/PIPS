@@ -10,6 +10,7 @@
 #include "SparseStorage.h"
 #include "SparseStorageDynamic.h"
 #include "SparseGenMatrixHandle.h"
+#include "SimpleVector.h"
 #include <vector>
 
 /** Represents sparse non-symmetric, possibly non-square matrices stored in
@@ -186,9 +187,9 @@ public:
   void freeDynamicStorage();
 
   virtual int appendRow( const SparseGenMatrix& matrix_row, int row );
+  virtual double localRowTimesVec( const SimpleVector& vec, int row );
 
   virtual ~SparseGenMatrix();
-
 };
 
 #endif

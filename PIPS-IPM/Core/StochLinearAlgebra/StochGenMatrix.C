@@ -1773,6 +1773,7 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
   int index_row;
 
   // append row to all matrices necessary
+  // todo maybe this can be done nicer - maybe we can just recursively call some method also on the dummies 
   if(linking)
   {
     index_row = Blmat->appendRow( *matrix_row.Blmat, row );
@@ -1806,3 +1807,37 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
 
   return index_row;
 };
+
+double StochGenMatrix::localRowTimesVec( const StochVector& vec, int child, int row, bool linking )
+{
+  assert(vec.children.size() == children.size());
+  assert(-1 <= child && child <= (int) children.size());
+  
+  double res = 0.0;
+
+  /* go through all available children and multiply the vec times row in submatrix */
+  if( linking )
+  {
+    res += Blmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row );
+
+    for( unsigned int i = 0; i < children.size(); ++i )
+    {
+      if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+        res += children[i]->Blmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.children[i]->vec), row);
+    }
+  }
+  else
+  {
+    if(child == -1)
+    {
+      res += Amat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row);
+    }
+    else
+    {
+      res += children[child]->Amat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row);
+      res += children[child]->Bmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.children[child]->vec), row);
+    }
+  }
+
+  return res;
+}

@@ -222,6 +222,12 @@ public:
   virtual bool isRootNodeInSync() const;
 
   virtual int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking );
+
+  /** calculate vec^T * row where row is linking or not in child child and with row index row
+   *  for a linking row only the available blocks will be multiplied - currently only possible for dynamic storage! (since 
+   *  this was its foremost usecase)
+   */
+  virtual double localRowTimesVec( const StochVector& vec, int child, int row, bool linking );
 };
 
 
@@ -377,7 +383,8 @@ public:
 
   virtual bool isRootNodeInSync() const override { return true; };
 
-  virtual int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking ) override { assert("CANNOT APEND ROW TO DUMMY MATRIX"); return -1; };
+  int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking ) override { assert("CANNOT APPEND ROW TO DUMMY MATRIX"); return -1; };
+  double localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) override { assert("CANNOT MULTIPLY ROW WITH DUMMY MATRIX"); return -1; };
 };
 
 

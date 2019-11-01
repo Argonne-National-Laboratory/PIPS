@@ -819,3 +819,10 @@ int SparseGenMatrix::appendRow(const SparseGenMatrix& matrix_row, int row)
 
    return mStorageDynamic->getM() - 1;
 }
+
+double SparseGenMatrix::localRowTimesVec( const SimpleVector& vec, int row )
+{
+  assert( hasDynamicStorage() );
+
+  return mStorageDynamic->rowTimesVec( vec.elements(), vec.length(), row);
+}

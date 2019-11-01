@@ -7,7 +7,7 @@
 
 #include "SparseStorageDynamic.h"
 #include "pipsport.h"
-#include "SimpleVector.h"
+#include "pipsdef.h"
 #include <cassert>
 #include <algorithm>
 #include <vector>
@@ -531,6 +531,7 @@ void SparseStorageDynamic::appendRow( const SparseStorageDynamic& storage, int r
 
    for(int i = storage.getRowPtr(row).start; i < storage.getRowPtr(row).end; ++i)
    {
+      // todo - PIPSisZero or nomal one?
       if( !PIPSisZero( storage.getMat(i) ) )
       {
          val.push_back(storage.getMat(i));
@@ -693,6 +694,22 @@ void SparseStorageDynamic::compressStorageValues()
 #endif
 #endif
 }
+
+double SparseStorageDynamic::rowTimesVec( const double* vec, int length, int row) const
+{
+   assert(0 <= row && row < m);
+   assert(length == n);
+
+   double res = 0.0;
+   for( int i = rowptr[row].start; i < rowptr[row].end; ++i)
+   {
+      assert(jcolM[i] < length);
+      res += vec[jcolM[i]] * M[i];
+   }
+
+   return res;
+}
+
 
 SparseStorageDynamic::~SparseStorageDynamic()
 {
