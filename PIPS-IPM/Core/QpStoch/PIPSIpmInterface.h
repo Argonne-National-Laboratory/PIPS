@@ -326,7 +326,7 @@ double PIPSIpmInterface<FORMULATION,SOLVER>::getObjective() {
 
   double obj;
   if(postsolvedVars != NULL)
-    obj = data->objectiveValue(postsolvedVars);
+    obj = origData->objectiveValue(postsolvedVars);
   else
   {
     obj = data->objectiveValue(vars);
@@ -705,6 +705,15 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 
   if( unscaleUnpermResids == NULL)
     this->getResidsUnscaledUnperm();
+
+  if( postsolvedVars != NULL || postsolvedResids != NULL )
+    return;
+
+  if( postsolver == NULL )
+  {
+    assert( "no postsolver available" && 0 );
+    return;
+  }
 
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();

@@ -291,7 +291,7 @@ void StochPostsolver::setOriginalVarsFromReduced(const sVars& reduced_vars, sVar
    StochVector& x_orig = dynamic_cast<StochVector&>(*original_vars.x);
    setOriginalValuesFromReduced(x_orig, x_reduced, *padding_origcol);
 
-   /* s */
+   // /* s */
    // const StochVector& s_reduced = dynamic_cast<const StochVector&>(*reduced_vars.s);
    // StochVector& s_orig = dynamic_cast<StochVector&>(*original_vars.s);
    // setOriginalValuesFromReduced(s_orig, s_reduced, *padding_origrow_inequality);
@@ -400,10 +400,12 @@ void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector
          ++col_reduced;
       }
    }
+
+   /* assert all entries are set */
    assert(col_reduced == reduced_vector.length());
 }
 
-/// todo : code duplication with presolveData.h
+/// todo : code duplication with presolveData.h -- move to StochVector at some point ?
 SimpleVector& StochPostsolver::getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const
 {
    assert(-1 <= node && node < static_cast<int>(stochvec.children.size()));
