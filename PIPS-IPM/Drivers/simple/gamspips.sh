@@ -44,9 +44,9 @@ case $i in
     scale="${i#*=}"
     shift # past argument=value
     ;;
-    -MEMCHECK|--MEMCHECK)
-    memcheck=true
-    shift
+    -MEMCHECK=*|--MEMCHECK=*)
+    memcheck="${i#*=}"
+    shift # past argument=value
     ;;
     -STEPLP=*|--STEPLP=*)
     stepLp="${i#*=}"
@@ -100,8 +100,12 @@ else
   scale=""
 fi
 
-if [ "$memcheck" = true ]; then
-  memcheck="valgrind"
+echo "$memcheck"
+
+if [ "$memcheck" = "valgrind" ]; then
+  memcheck="valgrind --leak-check=full -v"
+elif [ "$memcheck" = "intel" ]; then
+  memcheck="inspxe-cl -r memcheck -collect mi3 -trace-mpi"
 else
   memcheck=""
 fi
