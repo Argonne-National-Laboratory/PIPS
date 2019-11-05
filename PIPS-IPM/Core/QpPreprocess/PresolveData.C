@@ -1535,9 +1535,11 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
 
 void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col )
 {
-   // todo need row at that time for postsolve
-   // StochVectorHandle vec = getRowAsStochVector(system_type, node_row, row, linking_row);
-   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col, 
+   assert( system_type == EQUALITY_SYSTEM );
+
+   const double rhs = getSimpleVecRowFromStochVec( *presProb->bA, node_row, (linking_row) ? LINKING_CONS_BLOCK : CHILD_BLOCK )[row];
+
+   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, rhs, node_col, col, 
       dynamic_cast<const StochGenMatrix&>( (system_type == EQUALITY_SYSTEM) ? *presProb->A : *presProb->C ) );
 
 #ifdef TRACK_COLUMN

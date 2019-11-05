@@ -187,7 +187,7 @@ public:
   void freeDynamicStorage();
 
   virtual int appendRow( const SparseGenMatrix& matrix_row, int row );
-  virtual double localRowTimesVec( const SimpleVector& vec, int row );
+  virtual double localRowTimesVec( const SimpleVector& vec, int row ) const;
 
   virtual ~SparseGenMatrix();
 };

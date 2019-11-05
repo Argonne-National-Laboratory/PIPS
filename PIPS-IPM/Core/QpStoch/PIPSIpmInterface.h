@@ -27,6 +27,8 @@
 
 #include "sTreeCallbacks.h"
 
+// #define PRESOLVE_POSTSOLVE_ONLY // will not call solve routine an just presolve and then postsolve the problem - for debugging presolve
+
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
 {
@@ -274,15 +276,18 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
      if( mype == 0 )
         std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
   }
+
+#if defined(PRESOLVE_POSTSOLVE_ONLY) && !defined(NDEBUG)
+  const int result = 0;
+#else
   //---------------------------------------------
   const int result = solver->solve(data,vars,resids);
   //---------------------------------------------
+#endif
 
   if( result != 0 && mype == 0 )
      std::cout << "failed to solve instance, result code: " << result << std::endl;
   
-  ran_solver = true;
-
   ran_solver = true;
 
 #ifdef TIMING
@@ -311,9 +316,9 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   }
 #endif
 
-  // todo postsolve an unscaled sVars object holding the solution
-  getVarsUnscaledUnperm();
-  getResidsUnscaledUnperm();
+#if !defined(NDEBUG) && defined(PRESOLVE_POSTSOLVE_ONLY)
+  postsolveComputedSolution();
+#endif
 }
 
 template<typename FORMULATION, typename SOLVER>
@@ -707,6 +712,10 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   assert(origData);
   assert(data);
 
+#if !defined(NDEBUG) && defined(PRESOLVE_POSTSOLVE_ONLY) // todo : resids for C also need recomputation.. - s variable
+  resids->calcresids(data, vars);
+#endif
+
   if( unscaleUnpermVars == NULL)
     this->getVarsUnscaledUnperm();
 
@@ -740,22 +749,34 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   /* compute residuals for postprocessed solution and check for feasibility */
   postsolvedResids->calcresids(origData, postsolvedVars);
   
-  double infnorm_rA_orig = resids->rA->infnorm();
-  double infnorm_rC_orig = resids->rC->infnorm();
+  const double infnorm_rA_orig = resids->rA->infnorm();
+  const double infnorm_rC_orig = resids->rC->infnorm();
+  const double onenorm_rA_orig = resids->rA->onenorm();
+  const double onenorm_rC_orig = resids->rC->onenorm();
 
-  double infnorm_rA = unscaleUnpermResids->rA->infnorm();
-  double infnorm_rC = unscaleUnpermResids->rC->infnorm();
+  const double infnorm_rA = unscaleUnpermResids->rA->infnorm();
+  const double infnorm_rC = unscaleUnpermResids->rC->infnorm();
+  const double onenorm_rA = unscaleUnpermResids->rA->onenorm();
+  const double onenorm_rC = unscaleUnpermResids->rC->onenorm();
 
-  double infnorm_rA_postsolved = postsolvedResids->rA->infnorm();
-  double infnorm_rC_postsolved = postsolvedResids->rC->infnorm();
+  const double infnorm_rA_postsolved = postsolvedResids->rA->infnorm();
+  const double infnorm_rC_postsolved = postsolvedResids->rC->infnorm();
+  const double onenorm_rA_postsolved = postsolvedResids->rA->onenorm();
+  const double onenorm_rC_postsolved = postsolvedResids->rC->onenorm();
 
   if( my_rank == 0)
   {
-    std::cout << "Residuals of reduced problem:\n" << "rA: " << infnorm_rA_orig << "\nrC: " << infnorm_rC_orig << std::endl;
-    std::cout << "Residuals after unscaling:\n" << "rA: " << infnorm_rA << "\nrC: " << infnorm_rC << std::endl; 
-    std::cout << "Residuals after postsolve:\n" << "rA: " << infnorm_rA_postsolved << "\nrC: " << infnorm_rC_postsolved << std::endl; 
+    std::cout << "\t||.||_inf\t ||.||_1" << std::endl;
+    std::cout << "Residuals of reduced problem:" << std::endl;
+    std::cout << "rA:\t" << infnorm_rA_orig << "\t" << onenorm_rA_orig << std::endl;
+    std::cout << "rC:\t" << infnorm_rC_orig << "\t" << onenorm_rC_orig << std::endl;
+    std::cout << "Residuals after unscaling:" << std::endl;
+    std::cout << "rA:\t" << infnorm_rA << "\t" << onenorm_rA << std::endl;
+    std::cout << "rC:\t" << infnorm_rC << "\t" << onenorm_rC << std::endl; 
+    std::cout << "Residuals after postsolve:" << std::endl;
+    std::cout << "rA:\t" << infnorm_rA_postsolved << "\t" << onenorm_rA_postsolved << std::endl;
+    std::cout << "rC:\t" << infnorm_rC_postsolved << "\t" << onenorm_rC_postsolved << std::endl; 
   }
-
 }
 
 #endif

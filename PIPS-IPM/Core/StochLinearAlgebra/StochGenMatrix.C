@@ -1808,10 +1808,12 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
   return index_row;
 };
 
-double StochGenMatrix::localRowTimesVec( const StochVector& vec, int child, int row, bool linking )
+double StochGenMatrix::localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const
 {
   assert(vec.children.size() == children.size());
-  assert(-1 <= child && child <= (int) children.size());
+  if(-1 > child || child >= (int) children.size())
+    std::cout << child << " vs " << children.size() << std::endl;
+  assert(-1 <= child && child < (int) children.size());
   
   double res = 0.0;
 
