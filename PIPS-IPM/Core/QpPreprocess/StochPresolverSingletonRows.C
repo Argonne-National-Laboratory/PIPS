@@ -106,7 +106,7 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
 {
    assert( !presData.nodeIsDummy(node, system_type) || node == -2 );
 
-   // todo: redisign - actually done twice
+   // todo: redesign - actually done twice
    updatePointersForCurrentNode(node, system_type);
    if( (*currNnzRow)[row_idx] != 1.0 )
       return false;

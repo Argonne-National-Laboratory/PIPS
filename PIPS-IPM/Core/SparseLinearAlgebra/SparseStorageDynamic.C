@@ -617,7 +617,7 @@ void SparseStorageDynamic::extendStorageRows()
 
 void SparseStorageDynamic::extendStorageValues()
 {
-   // todo : random value...
+   // todo : this is a random value...
    int len_tmp = len;
    /* if initial size of storage was zero set it to 100 */
    if( len_tmp == 0 )

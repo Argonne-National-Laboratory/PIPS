@@ -356,7 +356,7 @@ void StochPresolverBase::setPointersMatrices(const GenMatrixHandle mat, int node
    assert(-1 <= node && node < nChildren);
    const StochGenMatrix& smat = dynamic_cast<const StochGenMatrix&>(*mat);
 
-   /* in root node only A0 and Bl0 are present */
+   /* in root node only B0 and Bl0 are present */
    if( node == -1 )
    {
       currAmat = dynamic_cast<const SparseGenMatrix*>(smat.Bmat)->getStorageDynamic();
