@@ -1801,7 +1801,7 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
     }
     else
     {
-      index_row = Amat->appendRow( *matrix_row.Amat, row );
+      index_row = Bmat->appendRow( *matrix_row.Bmat, row );
     }
   }
 
@@ -1811,8 +1811,6 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
 double StochGenMatrix::localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const
 {
   assert(vec.children.size() == children.size());
-  if(-1 > child || child >= (int) children.size())
-    std::cout << child << " vs " << children.size() << std::endl;
   assert(-1 <= child && child < (int) children.size());
   
   double res = 0.0;
@@ -1832,7 +1830,7 @@ double StochGenMatrix::localRowTimesVec( const StochVector& vec, int child, int 
   {
     if(child == -1)
     {
-      res += Amat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row);
+      res += Bmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row);
     }
     else
     {
