@@ -475,10 +475,10 @@ void PresolveData::allreduceLinkingVarBounds()
       SimpleVector& ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, -1);
 
       /* copy old values for later compairson */
-      SimpleVector& xlow_old = *xlow.cloneFull();
-      SimpleVector& xupp_old = *xupp.cloneFull();
-      SimpleVector& ixlow_old = *ixlow.cloneFull();
-      SimpleVector& ixupp_old = *ixupp.cloneFull();
+      SimpleVector* xlow_old = xlow.cloneFull();
+      SimpleVector* xupp_old = xupp.cloneFull();
+      SimpleVector* ixlow_old =  xlow.cloneFull();
+      SimpleVector* ixupp_old =  xupp.cloneFull();
 
       MPI_Allreduce(MPI_IN_PLACE, xlow.elements(), xlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
       MPI_Allreduce(MPI_IN_PLACE, ixlow.elements(), ixlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
@@ -494,10 +494,10 @@ void PresolveData::allreduceLinkingVarBounds()
          double xu = std::numeric_limits<double>::infinity();
          double xl = -std::numeric_limits<double>::infinity();
 
-         if( ixupp_old[col] == 1.0 )
-            xu_old = xupp_old[col];
-         if( ixlow_old[col] == 1.0 )
-            xl_old = xlow_old[col];
+         if( (*ixupp_old)[col] == 1.0 )
+            xu_old = (*xupp_old)[col];
+         if( (*ixlow_old)[col] == 1.0 )
+            xl_old = (*xlow_old)[col];
          if( ixupp[col] == 1.0 )
             xu = xupp[col];
          if( ixlow[col] == 1.0 )
@@ -505,7 +505,13 @@ void PresolveData::allreduceLinkingVarBounds()
 
          updateRowActivities(-1, col, xu, xl, xu_old, xl_old);
       }
-   }
+      
+      delete xlow_old;
+      delete xupp_old;
+      delete ixlow_old;
+      delete ixupp_old;
+      
+      }
 
    outdated_linking_var_bounds = false;
 }
