@@ -477,8 +477,8 @@ void PresolveData::allreduceLinkingVarBounds()
       /* copy old values for later compairson */
       SimpleVector* xlow_old = xlow.cloneFull();
       SimpleVector* xupp_old = xupp.cloneFull();
-      SimpleVector* ixlow_old =  xlow.cloneFull();
-      SimpleVector* ixupp_old =  xupp.cloneFull();
+      SimpleVector* ixlow_old =  ixlow.cloneFull();
+      SimpleVector* ixupp_old =  ixupp.cloneFull();
 
       MPI_Allreduce(MPI_IN_PLACE, xlow.elements(), xlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
       MPI_Allreduce(MPI_IN_PLACE, ixlow.elements(), ixlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
