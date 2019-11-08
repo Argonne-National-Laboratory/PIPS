@@ -3,8 +3,8 @@
 
 #include "IotrRefCount.h"
 #include "SmartPointer.h"
+#include "StochVector_fwd.h"
 
-class StochVector;
 typedef SmartPointer<StochVector> StochVectorHandle;
 
 #endif

@@ -7,8 +7,8 @@
 
 #include "OoqpVectorHandle.h"
 #include "SmartPointer.h"
+#include "SimpleVector_fwd.h"
 
-class SimpleVector;
 typedef SmartPointer<SimpleVector> SimpleVectorHandle;
 
 #endif

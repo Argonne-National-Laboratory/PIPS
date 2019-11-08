@@ -2,33 +2,34 @@
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 
-#include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "VectorUtilities.h"
-#include "OoqpBlas.h"
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <limits>
+#include <algorithm>
 
-long long SimpleVector::numberOfNonzeros()
+template <typename T>
+int SimpleVectorBase<T>::numberOfNonzeros() const
 {
   int i, count = 0;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     if( v[i] != 0 ) count++;
   }
   return count;
 }
 
-void SimpleVector::min( double& m, int& index ) const
+template<typename T>
+void SimpleVectorBase<T>::min( T& m, int& index ) const
 {
-  if (n==0) {
-    m=1e20;
+  if( this->n == 0 ) {
+    m = 1e20;
     return;
   }
   index = 0;
   m     = v[0];
-  for( int i = 0; i < n; i++ ) {
+  for( int i = 0; i < this->n; i++ ) {
     if( v[i] < m ) {
       m     = v[i];
       index = i;
@@ -36,42 +37,45 @@ void SimpleVector::min( double& m, int& index ) const
   }
 }
 
-void SimpleVector::absminVecUpdate(OoqpVector& absminvec) const
+template<typename T>
+void SimpleVectorBase<T>::absminVecUpdate( OoqpVectorBase<T>& absminvec) const
 {
-   const SimpleVector& absminvecSimple = dynamic_cast<const SimpleVector&>(absminvec);
-   assert( absminvecSimple.length() == n );
-   double* const absminvecArr = absminvecSimple.elements();
+   const SimpleVectorBase<T>& absminvecSimple = dynamic_cast<const SimpleVectorBase<T>&>(absminvec);
+   assert( absminvecSimple.length() == this->n );
+   T* const absminvecArr = absminvecSimple.elements();
 
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
    {
-      const double abs = fabs(v[i]);
+      const T abs = fabs(v[i]);
       if( abs < absminvecArr[i] && abs > pips_eps )
          absminvecArr[i] = abs;
    }
 }
 
-void SimpleVector::absmaxVecUpdate(OoqpVector& absmaxvec) const
+template<typename T>
+void SimpleVectorBase<T>::absmaxVecUpdate( OoqpVectorBase<T>& absmaxvec) const
 {
-   const SimpleVector& absmaxvecSimple = dynamic_cast<const SimpleVector&>(absmaxvec);
-   assert( absmaxvecSimple.length() == n );
-   double* const absmaxvecArr = absmaxvecSimple.elements();
+   const SimpleVectorBase<T>& absmaxvecSimple = dynamic_cast<const SimpleVectorBase<T>&>(absmaxvec);
+   assert( absmaxvecSimple.length() == this->n );
+   T* const absmaxvecArr = absmaxvecSimple.elements();
 
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
    {
-      const double abs = fabs(v[i]);
+      const T abs = fabs(v[i]);
       if( abs > absmaxvecArr[i] )
          absmaxvecArr[i] = abs;
    }
 }
 
-void SimpleVector::absmin(double& min) const
+template<typename T>
+void SimpleVectorBase<T>::absmin(T& min) const
 {
-   if (n==0) {
+   if (this->n == 0) {
      min=1e20;
      return;
    }
    min = fabs(v[0]);
-   for( int i = 0; i < n; i++ ) {
+   for( int i = 0; i < this->n; i++ ) {
      if( fabs(v[i]) < min ) {
         min = fabs(v[i]);
      }
@@ -80,30 +84,32 @@ void SimpleVector::absmin(double& min) const
 
 /** Compute the min absolute value that is larger than zero_eps.
  * If there is no such value, return -1.0 */
-void SimpleVector::absminNonZero(double& m, double zero_eps) const
+ template<typename T>
+void SimpleVectorBase<T>::absminNonZero(T& m, T zero_eps) const
 {
    assert(zero_eps >= 0.0);
 
    m = -1.0;
 
-   if( n == 0 )
+   if( this->n == 0 )
       return;
 
-   double min = std::numeric_limits<double>::max();
+   T min = std::numeric_limits<T>::max();
 
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
    {
       if( fabs(v[i]) < min && fabs(v[i]) > zero_eps )
          min = fabs(v[i]);
    }
 
-   if( min < std::numeric_limits<double>::max() )
+   if( min < std::numeric_limits<T>::max() )
       m = min;
 }
 
-void SimpleVector::max( double& m, int& index ) const
+template<typename T>
+void SimpleVectorBase<T>::max( T& m, int& index ) const
 {
-   if( n == 0 )
+   if( this->n == 0 )
    {
       index = -1;
       m = -1e20;
@@ -111,7 +117,7 @@ void SimpleVector::max( double& m, int& index ) const
    }
    index = 0;
    m = v[0];
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
    {
       if( v[i] > m )
       {
@@ -121,235 +127,241 @@ void SimpleVector::max( double& m, int& index ) const
    }
 }
 
-int SimpleVector::isKindOf( int kind ) const
+template<typename T>
+bool SimpleVectorBase<T>::isKindOf( int kind ) const
 {
   return (kind == kSimpleVector);
 }
 
-void SimpleVector::copyIntoArray( double w[] ) const
+template<typename T>
+void SimpleVectorBase<T>::copyIntoArray( T w[] ) const
 {
-  memcpy( w, this->v, n * sizeof( double ) );
+  memcpy( w, this->v, this->n * sizeof( T ) );
 }
 
-void SimpleVector::copyFromArray( double w[] )
+template<typename T>
+void SimpleVectorBase<T>::copyFromArray( const T w[] )
 {
-  memcpy( this->v, w, n * sizeof( double ) );
+  memcpy( this->v, w, this->n * sizeof( T ) );
 }
 
-void SimpleVector::copyFromArray( char w[] )
+template<typename T>
+void SimpleVectorBase<T>::copyFromArray( const char w[] )
 {
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     this->v[i] = w[i];
   }
 }
 
-SimpleVector::SimpleVector( int n_ ) : OoqpVector( n_ )
+template<typename T>
+SimpleVectorBase<T>::SimpleVectorBase( int n_ ) : OoqpVectorBase<T>( n_ )
 {
-  assert(n >= 0);
+  assert(this->n >= 0);
   preserveVec = 0;
-  v = new double[n];
-  memset(v,0,n*sizeof(double));
+  v = new T[this->n];
+  memset(v, 0, this->n * sizeof(T));
 }
 
-SimpleVector::SimpleVector( double * v_, int n_ )
-  : OoqpVector( n_ )
+template<typename T>
+SimpleVectorBase<T>::SimpleVectorBase( T * v_, int n_ )
+  : OoqpVectorBase<T>( n_ )
 {
   preserveVec = 1;
   v = v_;
 }
 
-
-SimpleVector::~SimpleVector()
+template<typename T>
+SimpleVectorBase<T>::~SimpleVectorBase()
 {
   if( !preserveVec ) {
     delete [] v;
   }
 }
 
-SimpleVector* SimpleVector::cloneFull() const
+template<typename T>
+SimpleVectorBase<T>* SimpleVectorBase<T>::cloneFull() const
 {
-   SimpleVector* clone = new SimpleVector(n);
+   SimpleVectorBase<T>* clone = new SimpleVectorBase<T>(this->n);
    clone->copyFromArray(v);
 
    return clone;
 }
 
-bool SimpleVector::isZero() const
+template<typename T>
+bool SimpleVectorBase<T>::isZero() const
 {
 	bool is_zero = true;
 
-	for(int i = 0; i < n; ++i)
+	for(int i = 0; i < this->n; ++i)
 		is_zero = (is_zero && v[i] == 0.0);
 
 	return is_zero;
 }
 
-void SimpleVector::setToZero()
+template<typename T>
+void SimpleVectorBase<T>::setToZero()
 {
   int i;
-  for( i = 0; i < n; i++ ) v[i] = 0.0;
+  for( i = 0; i < this->n; i++ ) v[i] = 0.0;
 }
 
-void SimpleVector::setToConstant( double c)
+template<typename T>
+void SimpleVectorBase<T>::setToConstant( T c)
 {
   int i;
-  for( i = 0; i < n; i++ ) v[i] = c;
+  for( i = 0; i < this->n; i++ ) v[i] = c;
 }
 
-void SimpleVector::randomize( double alpha, double beta, double *ix )
+template<typename T>
+void SimpleVectorBase<T>::randomize( T alpha, T beta, T *ix )
 {
   assert( beta > alpha);
 
-  double drand(double *);
-  double scale = beta - alpha;
-  double shift = alpha/scale;
+  T drand(T *);
+  T scale = beta - alpha;
+  T shift = alpha/scale;
 
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     v[i] = scale * (drand(ix) + shift);
   }
 }
 
-
-void SimpleVector::copyFrom( OoqpVector& vec )
+template<typename T>
+void SimpleVectorBase<T>::copyFrom( const OoqpVectorBase<T>& vec )
 {
-  assert( vec.length() == n );
+  assert( vec.length() == this->n );
 
   vec.copyIntoArray( this->v );
 }
 
-void SimpleVector::copyFromAbs(const OoqpVector& vec )
+template<typename T>
+void SimpleVectorBase<T>::copyFromAbs(const OoqpVectorBase<T>& vec )
 {
-   const SimpleVector& vecSimple = dynamic_cast<const SimpleVector&>(vec);
-   assert( vec.length() == n );
-   double* const vecArr = vecSimple.elements();
+   const SimpleVectorBase<T>& vecSimple = dynamic_cast<const SimpleVectorBase<T>&>(vec);
+   assert( vec.length() == this->n );
+   T* const vecArr = vecSimple.elements();
 
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
      v[i] = fabs( vecArr[i] );
 }
 
-double SimpleVector::infnorm() const
+template<typename T>
+T SimpleVectorBase<T>::infnorm() const
 {
-  double temp, norm = 0;
+  T temp, norm = 0;
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     temp = fabs( v[i] );
     // Subtle reversal of the logic to handle NaNs
     if( ! ( temp <=  norm ) ) norm = temp;
   }
 
-/*
-  if(norm > 1.e-8) {
-    for(int j=0; j<n; j++) {
-      if(fabs(v[j]) > .1*norm)
-	cout << " element " << j << " is " << v[j] << endl;
-    }
-  }
-*/
-
   return norm;
 }
 
-double SimpleVector::onenorm() const
+template<typename T>
+T SimpleVectorBase<T>::onenorm() const
 {
-  double temp, norm = 0;
+  T temp, norm = 0;
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     temp = fabs( v[i] );
     norm += temp;
   }
   return norm;
 }
-double SimpleVector::twonorm() const
+
+template<typename T>
+double SimpleVectorBase<T>::twonorm() const
 {
-  double temp = dotProductWith(*this);
+  T temp = dotProductWith(*this);
   return sqrt(temp);
-  /*
-  double temp, norm = 0;
-  int i;
-  for( i = 0; i < n; i++ ) {
-    temp =  v[i];
-    norm += temp*temp;
-  }
-  return sqrt(norm);
-  */
 }
 
-void SimpleVector::componentMult( OoqpVector& vec )
+template<typename T>
+void SimpleVectorBase<T>::componentMult( const OoqpVectorBase<T>& vec )
 {
-  assert( n == vec.length() );
-  SimpleVector & sv = dynamic_cast<SimpleVector &>(vec);
-  double * y = sv.v;
+  assert( this->n == vec.length() );
+  const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
+  T * y = sv.v;
   int i;
-  for( i = 0; i < n; i++ ) v[i] *= y[i];
+  for( i = 0; i < this->n; i++ ) v[i] *= y[i];
 }
 
-void SimpleVector::scalarMult( double num)
+template<typename T>
+void SimpleVectorBase<T>::scalarMult( T num)
 {
   int i;
-  for( i = 0; i < n; i++) v[i] *= num;
+  for( i = 0; i < this->n; i++) v[i] *= num;
 }
 
 // Print first 10 entries of solution vector to stderr.
 // Useful for debugging purposes...
-void SimpleVector::printSolutionToStdErr( OoqpVector &vec)
+template<typename T>
+void SimpleVectorBase<T>::printSolutionToStdErr( OoqpVectorBase<T> &vec)
 {
   int i;
   for( i = 0; i < 10; i++ )
-    {
-    fprintf( stderr, "%f", v[i]);
-    }
-  fprintf( stderr, "******");
+  {
+     std::cerr << v[i] << std::endl;
+   }
+  std::cerr << "******" << std::endl;
 }
 
-void SimpleVector::componentDiv ( OoqpVector& vec )
+template<typename T>
+void SimpleVectorBase<T>::componentDiv ( const OoqpVectorBase<T>& vec )
 {
-  assert( n == vec.length() );
-  double * pv = v, *lv = v + n;
+  assert( this->n == vec.length() );
+  T * pv = v, *lv = v + this->n;
 
-  SimpleVector & sv = dynamic_cast<SimpleVector &>(vec);
-  double * y = sv.v;
+  const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
+  T * y = sv.v;
 
   for( ; pv < lv; pv++, y++ ) *pv /= *y;
 }
 
-void SimpleVector::writeToStream(ostream& out) const
+template<typename T>
+void SimpleVectorBase<T>::writeToStream(std::ostream& out) const
 {
   this->writefToStream( out, "%{value}" );
 }
 
-void SimpleVector::writeToStreamAll(ostream& out) const
+template<typename T>
+void SimpleVectorBase<T>::writeToStreamAll(std::ostream& out) const
 {
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
       out << v[i] << "\n";
 }
 
-void SimpleVector::writeToStreamAllStringStream(stringstream& sout) const
+template<typename T>
+void SimpleVectorBase<T>::writeToStreamAllStringStream(std::stringstream& sout) const
 {
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
       sout << v[i] << "\n";
 }
 
-void SimpleVector::writefToStream( ostream& out,
-				       const char format[] ) const
+template<typename T>
+void SimpleVectorBase<T>::writefToStream( std::ostream& out, const char format[] ) const
 {
-  SimpleVectorHandle empty( new SimpleVector(0) );
+  SimpleVectorHandle empty( new SimpleVectorBase<T>(0) );
   this->writefSomeToStream( out, format, *empty );
 }
 
-void SimpleVector::writefSomeToStream( ostream& out,
+template<typename T>
+void SimpleVectorBase<T>::writefSomeToStream( std::ostream& out,
 					   const char format[],
-					   OoqpVector& select ) const
+					   const OoqpVectorBase<T>& select ) const
 {
-  SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
-  double * s = 0;
+  const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);
+  T * s = 0;
   if( select.length() > 0 ) {
     s = sselect.v;
   }
   int i;
 
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     if( !s || s[i] != 0.0 ) {
       int j = 0;
       char c;
@@ -376,58 +388,69 @@ void SimpleVector::writefSomeToStream( ostream& out,
   }
 }
 
-void SimpleVector::writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const
+template<typename T>
+void SimpleVectorBase<T>::writeMPSformatOnlyRhs(std::ostream& out, const std::string rowName, const OoqpVectorBase<T>* irhs) const
 {
    if( irhs )
       assert( this->n == irhs->n );
 
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
    {
-      if( !irhs || ( irhs && dynamic_cast<SimpleVector *>(irhs)->elements()[i] != 0.0 ) )
-         out <<rowName<< i <<" "<< v[i] << "\n";
+      if( !irhs || ( irhs && dynamic_cast<const SimpleVectorBase<T> *>(irhs)->elements()[i] != 0.0 ) )
+         out << rowName << i << " " << v[i] << "\n";
    }
 }
 
-void SimpleVector::writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const
+template<typename T>
+void SimpleVectorBase<T>::writeMPSformatBoundsWithVar(std::ostream& out, const std::string varStub, const OoqpVectorBase<T>* ix, bool upperBound) const
 {
-   assert( n == dynamic_cast<SimpleVector*>(ix)->n );
-   string boundType = (upperBound) ? " UP" : " LO";
-   string infiniteBound = (upperBound) ? " PL" : " MI";
+   assert( this->n == dynamic_cast<const SimpleVectorBase<T>*>(ix)->n );
+   std::string boundType = (upperBound) ? " UP" : " LO";
+   std::string infiniteBound = (upperBound) ? " PL" : " MI";
 
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
    {
-      if( dynamic_cast<SimpleVector*>(ix)->elements()[i] != 0.0  )
-         out <<boundType<<" BND "<<varStub<< i <<" "<< v[i] << "\n";
+      if( dynamic_cast<const SimpleVectorBase<T>*>(ix)->elements()[i] != 0.0  )
+         out << boundType << " BND " << varStub << i << " " << v[i] << "\n";
       else
-         out <<infiniteBound<<" BND "<<varStub<< i <<" "<< "\n";
+         out << infiniteBound << " BND " << varStub << i << " " << "\n";
    }
 }
 
-void SimpleVector::scale( double alpha )
+template<typename T>
+void SimpleVectorBase<T>::scale( T alpha )
 {
-  int one = 1;
-  dscal_( &n, &alpha, v, &one );
+   //todo : correct?
+  // int one = 1;
+ // dscal_( &this->n, dynamic_cast<double*>(&alpha), dynamic_cast<double*>(v), &one );
+   std::transform( this->v, this->v + this->n, this->v, [alpha](T a) { return alpha * a; } );
 }
 
-void SimpleVector::axpy( double alpha, OoqpVector& vec )
+template<typename T>
+void SimpleVectorBase<T>::axpy( T alpha, const OoqpVectorBase<T>& vec )
 {
-  assert( n == vec.length() );
-  SimpleVector & sv = dynamic_cast<SimpleVector &>(vec);
+  assert( this->n == vec.length() );
+  const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
 
-  int one = 1;
-  daxpy_( &n, &alpha, sv.v, &one, v, &one );
+  // todo: correct?
+  // int one = 1
+  // daxpy_( &this->n, &alpha, sv.v, &one, v, &one );
+  std::transform( this->v, this->v + this->n, sv.v, this->v,
+      [alpha](T a, T b) { return alpha * a + b; });
 }
 
-void SimpleVector::addConstant( double c )
+template<typename T>
+void SimpleVectorBase<T>::addConstant( T c )
 {
   int i;
-  for( i = 0; i < n; i++ ) v[i] += c;
+  for( i = 0; i < this->n; i++ ) v[i] += c;
 }
 
-void SimpleVector::gondzioProjection( double rmin, double rmax )
+template<typename T>
+void SimpleVectorBase<T>::gondzioProjection( T rmin, T rmax )
 {
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     if( v[i] < rmin ) {
       v[i] = rmin - v[i];
     } else if ( v[i] > rmax ) {
@@ -440,19 +463,20 @@ void SimpleVector::gondzioProjection( double rmin, double rmax )
   }
 }
 
-void SimpleVector::axzpy( double alpha, OoqpVector& xvec,
-			      OoqpVector& zvec )
+template<typename T>
+void SimpleVectorBase<T>::axzpy( T alpha, const OoqpVectorBase<T>& xvec,
+			      const OoqpVectorBase<T>& zvec )
 {
-  assert( n == xvec.length() &&
-	  n == zvec.length() );
+  assert( this->n == xvec.length() &&
+	  this->n == zvec.length() );
 
-  SimpleVector & sxvec = dynamic_cast<SimpleVector &>(xvec);
-  SimpleVector & szvec = dynamic_cast<SimpleVector &>(zvec);
+  const SimpleVectorBase<T> & sxvec = dynamic_cast<const SimpleVectorBase<T> &>(xvec);
+  const SimpleVectorBase<T> & szvec = dynamic_cast<const SimpleVectorBase<T> &>(zvec);
 
-  double * x = sxvec.v;
-  double * z = szvec.v;
-  double * lx = x + n;
-  double * w = v;
+  T * x = sxvec.v;
+  T * z = szvec.v;
+  T * lx = x + this->n;
+  T * w = v;
 
   if( alpha == 1.0 ) {
     while( x < lx ) {
@@ -472,63 +496,66 @@ void SimpleVector::axzpy( double alpha, OoqpVector& xvec,
   }
 }
 
-void SimpleVector::axdzpy( double alpha, OoqpVector& xvec,
-			       OoqpVector& zvec )
+template<typename T>
+void SimpleVectorBase<T>::axdzpy( T alpha, const OoqpVectorBase<T>& xvec,
+   const OoqpVectorBase<T>& zvec )
 {
-  SimpleVector & sxvec = dynamic_cast<SimpleVector &>(xvec);
-  double * x = sxvec.v;
-  SimpleVector & szvec = dynamic_cast<SimpleVector &>(zvec);
-  double * z = szvec.v;
+  const SimpleVectorBase<T> & sxvec = dynamic_cast<const SimpleVectorBase<T> &>(xvec);
+  T * x = sxvec.v;
+  const SimpleVectorBase<T> & szvec = dynamic_cast<const SimpleVectorBase<T> &>(zvec);
+  T * z = szvec.v;
 
-  assert( n == xvec.length() &&
-	  n == zvec.length() );
+  assert( this->n == xvec.length() &&
+	  this->n == zvec.length() );
 
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     //if(x[i] > 0 && z[i] > 0)
       v[i] += alpha * x[i] / z[i];
   }
 }
 
-void SimpleVector::axdzpy( double alpha, OoqpVector& xvec,
-			       OoqpVector& zvec, OoqpVector& select )
+template<typename T>
+void SimpleVectorBase<T>::axdzpy( T alpha, const OoqpVectorBase<T>& xvec,
+			       const OoqpVectorBase<T>& zvec, const OoqpVectorBase<T>& select )
 {
-  assert( n == xvec.length() &&
-	  n == zvec.length() );
+  assert( this->n == xvec.length() &&
+	  this->n == zvec.length() );
 
-  SimpleVector & sxvec = dynamic_cast<SimpleVector &>(xvec);
-  double * x = sxvec.v;
-  SimpleVector & szvec = dynamic_cast<SimpleVector &>(zvec);
-  double * z = szvec.v;
-  SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
-  double * s   = sselect.v;
+  const SimpleVectorBase<T> & sxvec = dynamic_cast<const SimpleVectorBase<T> &>(xvec);
+  T * x = sxvec.v;
+  const SimpleVectorBase<T> & szvec = dynamic_cast<const SimpleVectorBase<T> &>(zvec);
+  T * z = szvec.v;
+  const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);
+  T * s   = sselect.v;
   int i;
   if( alpha == 1.0 ) {
-    for( i = 0; i < n; i++ ) {
+    for( i = 0; i < this->n; i++ ) {
       if( 0.0 != s[i] ) v[i] += x[i] / z[i];
     }
   } else if ( alpha == -1.0 ) {
-    for( i = 0; i < n; i++ ) {
+    for( i = 0; i < this->n; i++ ) {
       if( 0.0 != s[i] ) v[i] -= x[i] / z[i];
     }
   } else {
-    for( i = 0; i < n; i++ ) {
+    for( i = 0; i < this->n; i++ ) {
       if( 0.0 != s[i] ) v[i] += alpha * x[i] / z[i];
     }
   }
 }
 
-double SimpleVector::dotProductWith( const OoqpVector& vec ) const
+template<typename T>
+T SimpleVectorBase<T>::dotProductWith( const OoqpVectorBase<T>& vec ) const
 {
-  assert( n == vec.length() );
-  const SimpleVector & svec = dynamic_cast<const SimpleVector &>(vec);
-  double * vvec = svec.v;
+  assert( this->n == vec.length() );
+  const SimpleVectorBase<T> & svec = dynamic_cast<const SimpleVectorBase<T> &>(vec);
+  T * vvec = svec.v;
 
-  double dot1 = 0.0;
-  double dot2 = 0.0;
+  T dot1 = 0.0;
+  T dot2 = 0.0;
 
   const int size = 8196;
-  int kmax       = n / size;
+  int kmax       = this->n / size;
   int i          = 0;
 
   int k, imax;
@@ -540,30 +567,31 @@ double SimpleVector::dotProductWith( const OoqpVector& vec ) const
     dot2 += dot1;
     dot1  = 0;
   }
-  for( ; i < n; i++ ) {
+  for( ; i < this->n; i++ ) {
     dot1 += v[i] * vvec[i];
   }
 
   return dot2 + dot1;
 }
 
-double SimpleVector::dotProductSelf( double scaleFactor ) const
+template<typename T>
+T SimpleVectorBase<T>::dotProductSelf( T scaleFactor ) const
 {
    assert(scaleFactor >= 0.0);
 
-   double dot = 0.0;
+   T dot = 0.0;
 
    if( scaleFactor == 1.0 )
    {
-      for( int i = 0; i < n; i++ )
+      for( int i = 0; i < this->n; i++ )
          if( !PIPSisZero(v[i]) )
             dot += v[i] * v[i];
    }
    else
    {
-      for( int i = 0; i < n; i++ )
+      for( int i = 0; i < this->n; i++ )
       {
-         const double valScaled = v[i] * scaleFactor;
+         const T valScaled = v[i] * scaleFactor;
          if( !PIPSisZero(valScaled) )
             dot += valScaled * valScaled;
       }
@@ -571,29 +599,29 @@ double SimpleVector::dotProductSelf( double scaleFactor ) const
    return dot;
 }
 
-double
-SimpleVector::shiftedDotProductWith( double alpha, OoqpVector& mystep,
-					 OoqpVector& yvec,
-					 double beta,  OoqpVector& ystep )
+template<typename T>
+T SimpleVectorBase<T>::shiftedDotProductWith( T alpha, const OoqpVectorBase<T>& mystep,
+					 const OoqpVectorBase<T>& yvec,
+					 T beta, const OoqpVectorBase<T>& ystep ) const
 {
-  assert( n == mystep.length() &&
-	  n == yvec  .length() &&
-	  n == ystep .length() );
+  assert( this->n == mystep.length() &&
+	  this->n == yvec.length() &&
+	  this->n == ystep.length() );
 
-  SimpleVector & syvec = dynamic_cast<SimpleVector &>(yvec);
-  double * y = syvec.v;
+  const SimpleVectorBase<T> & syvec = dynamic_cast<const SimpleVectorBase<T> &>(yvec);
+  T * y = syvec.v;
 
-  SimpleVector & smystep = dynamic_cast<SimpleVector &>(mystep);
-  double * p = smystep.v;
+  const SimpleVectorBase<T> & smystep = dynamic_cast<const SimpleVectorBase<T> &>(mystep);
+  T * p = smystep.v;
 
-  SimpleVector & systep = dynamic_cast<SimpleVector &>(ystep);
-  double * q = systep.v;
+  const SimpleVectorBase<T> & systep = dynamic_cast<const SimpleVectorBase<T> &>(ystep);
+  T * q = systep.v;
 
-  double dot1 = 0.0;
-  double dot2 = 0.0;
+  T dot1 = 0.0;
+  T dot2 = 0.0;
 
   const int size = 8196;
-  int kmax       = n / size;
+  int kmax       = this->n / size;
   int i          = 0;
 
   int k, imax;
@@ -605,51 +633,56 @@ SimpleVector::shiftedDotProductWith( double alpha, OoqpVector& mystep,
     dot2 += dot1;
     dot1  = 0;
   }
-  for( ; i < n; i++ ) {
+  for( ; i < this->n; i++ ) {
     dot1 += (v[i] + alpha * p[i]) * (y[i] + beta * q[i] );
   }
 
   return dot2 + dot1;
 }
 
-void SimpleVector::negate()
+template<typename T>
+void SimpleVectorBase<T>::negate()
 {
   int i;
-  for( i = 0; i < n; i++ ) v[i] = -v[i];
+  for( i = 0; i < this->n; i++ ) v[i] = -v[i];
 }
 
-void SimpleVector::invert()
+template<typename T>
+void SimpleVectorBase<T>::invert()
 {
-  for( int i = 0; i < n; i++ )
+  for( int i = 0; i < this->n; i++ )
   {
     assert(v[i] != 0.0);
-    v[i] = 1/v[i];
+    v[i] = 1 / v[i];
   }
 }
 
-void SimpleVector::invertSave( double zeroReplacementVal )
+template<typename T>
+void SimpleVectorBase<T>::invertSave( T zeroReplacementVal )
 {
-  for( int i = 0; i < n; i++ )
+  for( int i = 0; i < this->n; i++ )
   {
      if( v[i] != 0.0 )
-        v[i] = 1/v[i];
+        v[i] = 1 / v[i];
      else
         v[i] = zeroReplacementVal;
   }
 }
 
-void SimpleVector::applySqrt()
+template<typename T>
+void SimpleVectorBase<T>::applySqrt()
 {
-   for( int i = 0; i < n; i++)
+   for( int i = 0; i < this->n; i++)
    {
       assert( v[i] >= 0.0 );
       v[i] = std::sqrt(v[i]);
    }
 }
 
-void SimpleVector::roundToPow2()
+template<typename T>
+void SimpleVectorBase<T>::roundToPow2()
 {
-  for( int i = 0; i < n; i++ )
+  for( int i = 0; i < this->n; i++ )
   {
      int exp;
 #if 0
@@ -666,159 +699,168 @@ void SimpleVector::roundToPow2()
   }
 }
 
-int SimpleVector::allPositive()
+template<typename T>
+bool SimpleVectorBase<T>::allPositive() const
 {
   int i;
-  for( i = 0; i < n; i++ ) {
-    if( v[i] <= 0 ) return 0;
+  for( i = 0; i < this->n; i++ ) {
+    if( v[i] <= 0 ) return false;
   }
-  return 1;
+  return true;
 }
 
-double SimpleVector::stepbound(OoqpVector & pvec, double maxStep )
+template<typename T>
+T SimpleVectorBase<T>::stepbound( const OoqpVectorBase<T> & pvec, T maxStep ) const
 {
-  assert( n == pvec.length() );
+  assert( this->n == pvec.length() );
 
-  SimpleVector & spvec = dynamic_cast<SimpleVector &>(pvec);
-  double * p = spvec.v;
-  double * w = v;
-  double bound = maxStep;
+  const SimpleVectorBase<T> & spvec = dynamic_cast<const SimpleVectorBase<T> &>(pvec);
+  T * p = spvec.v;
+  T * w = v;
+  T bound = maxStep;
 
   int i;
-  for( i = 0; i < n; i++ ) {
-    double temp = p[i];
+  for( i = 0; i < this->n; i++ ) {
+    T temp = p[i];
     if( w[i] >= 0 && temp < 0 ) {
       temp = -w[i]/temp;
       if( temp < bound ) {
-	bound = temp;
+	        bound = temp;
       }
     }
   }
   return bound;
 }
 
-double SimpleVector::findBlocking(OoqpVector & wstep_vec,
-				      OoqpVector & u_vec,
-				      OoqpVector & ustep_vec,
-				      double maxStep,
-				      double *w_elt,
-				      double *wstep_elt,
-				      double *u_elt,
-				      double *ustep_elt,
-				      int& first_or_second)
+template<typename T>
+T SimpleVectorBase<T>::findBlocking( const OoqpVectorBase<T> & wstep_vec,
+				      const OoqpVectorBase<T> & u_vec,
+				      const OoqpVectorBase<T> & ustep_vec,
+                  T maxStep,
+				      T *w_elt,
+				      T *wstep_elt,
+				      T *u_elt,
+				      T *ustep_elt,
+				      int& first_or_second) const
 {
-  double * w     = v;
-  SimpleVector & swstep = dynamic_cast<SimpleVector &>(wstep_vec);
-  double * wstep = swstep.v;
+  T * w     = v;
+  const SimpleVectorBase<T> & swstep = dynamic_cast<const SimpleVectorBase<T> &>(wstep_vec);
+  T * wstep = swstep.v;
 
-  SimpleVector & su_vec = dynamic_cast<SimpleVector &>(u_vec);
-  double * u     = su_vec.v;
+  const SimpleVectorBase<T> & su_vec = dynamic_cast<const SimpleVectorBase<T> &>(u_vec);
+  T * u     = su_vec.v;
 
-  SimpleVector & sustep_vec = dynamic_cast<SimpleVector &>(ustep_vec);
-  double * ustep = sustep_vec.v;
+  const SimpleVectorBase<T> & sustep_vec = dynamic_cast<const SimpleVectorBase<T> &>(ustep_vec);
+  T * ustep = sustep_vec.v;
 
-  return ::find_blocking( w, n, 1, wstep, 1, u, 1, ustep, 1, maxStep,
+  return ::find_blocking( w, this->n, 1, wstep, 1, u, 1, ustep, 1, maxStep,
 			  w_elt, wstep_elt, u_elt, ustep_elt,
 			  first_or_second );
 }
 
-void SimpleVector::findBlocking_pd(const OoqpVector & wstep_vec,
-						const OoqpVector & u_vec, const OoqpVector & ustep_vec,
-						double& maxStepPri, double& maxStepDual,
-						double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
-						double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
+template<typename T>
+void SimpleVectorBase<T>::findBlocking_pd(const OoqpVectorBase<T> & wstep_vec,
+						const OoqpVectorBase<T> & u_vec, const OoqpVectorBase<T> & ustep_vec,
+						T& maxStepPri, T& maxStepDual,
+						T& w_elt_p, T& wstep_elt_p, T& u_elt_p, T& ustep_elt_p,
+						T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
 						bool& primalBlocking, bool& dualBlocking) const {
-	const double * w = v;
-	const SimpleVector & swstep = dynamic_cast<const SimpleVector &>(wstep_vec);
-	const double * wstep = swstep.v;
+	const T * w = v;
+	const SimpleVectorBase<T> & swstep = dynamic_cast<const SimpleVectorBase<T> &>(wstep_vec);
+	const T * wstep = swstep.v;
 
-	const SimpleVector & su_vec = dynamic_cast<const SimpleVector &>(u_vec);
-	const double * u = su_vec.v;
+	const SimpleVectorBase<T> & su_vec = dynamic_cast<const SimpleVectorBase<T> &>(u_vec);
+	const T * u = su_vec.v;
 
-	const SimpleVector & sustep_vec = dynamic_cast<const SimpleVector &>(ustep_vec);
-	const double * ustep = sustep_vec.v;
+	const SimpleVectorBase<T> & sustep_vec = dynamic_cast<const SimpleVectorBase<T> &>(ustep_vec);
+	const T * ustep = sustep_vec.v;
 
-	::find_blocking_pd(w, n, wstep, u, ustep, maxStepPri,
+	::find_blocking_pd(w, this->n, wstep, u, ustep, maxStepPri,
 			maxStepDual, w_elt_p, wstep_elt_p, u_elt_p, ustep_elt_p, w_elt_d,
 			wstep_elt_d, u_elt_d, ustep_elt_d,
 			primalBlocking, dualBlocking);
 }
 
-int SimpleVector::matchesNonZeroPattern( OoqpVector& select )
+template<typename T>
+bool SimpleVectorBase<T>::matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const
 {
-  SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
-  double * map = sselect.v;
+  const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);
+  T * map = sselect.v;
 
-  double * lmap = map + n;
-  assert( n == select.length() );
+  T * lmap = map + this->n;
+  assert( this->n == select.length() );
 
-  double *w = v;
+  T *w = v;
   while( map < lmap ) {
-    if( *map == 0.0 && *w != 0.0  ) return 0;
+    if( *map == 0.0 && *w != 0.0  ) return false;
     map++;
     w++;
   }
 
-  return 1;
+  return true;
 }
 
-void SimpleVector::selectNonZeros( OoqpVector& select )
+template<typename T>
+void SimpleVectorBase<T>::selectNonZeros( const OoqpVectorBase<T>& select )
 {
-  SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
-  double * map = sselect.v;
+  const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);
+  T * map = sselect.v;
 
-  assert( n == select.length() );
+  assert( this->n == select.length() );
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     if( 0.0 == map[i] ) v[i] = 0.0;
   }
 }
 
-void SimpleVector::addSomeConstants( double c, OoqpVector& select )
+template<typename T>
+void SimpleVectorBase<T>::addSomeConstants( T c, const OoqpVectorBase<T>& select )
 {
-  SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
-  double * map = sselect.v;
+  const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);
+  T * map = sselect.v;
 
   int i;
-  assert( n == select.length() );
-  for( i = 0; i < n; i++ ) {
+  assert( this->n == select.length() );
+  for( i = 0; i < this->n; i++ ) {
     if( map[i] ) v[i] += c;
   }
 }
 
-int SimpleVector::somePositive( OoqpVector& select )
+template<typename T>
+bool SimpleVectorBase<T>::somePositive( const OoqpVectorBase<T>& select ) const
 {
-  SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
-  double * map = sselect.v;
+  const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);
+  T * map = sselect.v;
 
-  assert( n == select.length() );
+  assert( this->n == select.length() );
 
   int i;
-  for( i = 0; i < n; i++ ) {
+  for( i = 0; i < this->n; i++ ) {
     if( 0.0 != map[i] && v[i] <= 0 ) {
-      cout << "Element " << i << " is nonpositive: " << v[i] << endl;
-      return 0;
+      std::cout << "Element " << i << " is nonpositive: " << v[i] << std::endl;
+      return false;
     }
   }
-  return 1;
+  return true;
 }
 
-void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
+template<typename T>
+void SimpleVectorBase<T>::divideSome( const OoqpVectorBase<T>& div, const OoqpVectorBase<T>& select )
 {
-  if( n == 0 ) return;
+  if( this->n == 0 ) return;
 
-  SimpleVector & sselect = dynamic_cast<SimpleVector &>(select);
-  double * map = sselect.v;
+  const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);
+  T * map = sselect.v;
 
-  SimpleVector & sdiv = dynamic_cast<SimpleVector &>(div);
-  double * q   = sdiv.v;
-  assert( n == div.length() && n == select.length() );
+  const SimpleVectorBase<T> & sdiv = dynamic_cast<const SimpleVectorBase<T> &>(div);
+  T * q   = sdiv.v;
+  assert( this->n == div.length() && this->n == select.length() );
 
   // todo Daniel Rehfeldt: this expects non-aliasing; think there is no need for pointer arithmetic
   // as the run-time is dominated by the division.
 #if 0
-  double * lmap = map + n;
-  double * w = v;
+  T * lmap = map + this->n;
+  T * w = v;
   while( map < lmap ) {
     if( 0 != *map ) {
       *w  /= *q;
@@ -828,7 +870,7 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
     q++;
   }
 #else
-  for( int i = 0; i < n; i++ )
+  for( int i = 0; i < this->n; i++ )
   {
      if( 0.0 != map[i] )
      {
@@ -840,36 +882,37 @@ void SimpleVector::divideSome( OoqpVector& div, OoqpVector& select )
 
 }
 
-void SimpleVector::removeEntries(const OoqpVector& select)
+template<typename T>
+void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<T>& select)
 {
-   const SimpleVector& selectSimple = dynamic_cast<const SimpleVector&>(select);
-   const double* const selectArr = selectSimple.v;
+   const SimpleVectorBase<T>& selectSimple = dynamic_cast<const SimpleVectorBase<T>&>(select);
+   const T* const selectArr = selectSimple.v;
 
-   assert(n == selectSimple.length());
+   assert(this->n == selectSimple.length());
 
    int nNew = 0;
 
-   for( int i = 0; i < n; i++ )
+   for( int i = 0; i < this->n; i++ )
       if( selectArr[i] != 0.0 )
          v[nNew++] = v[i];
 
-   n = nNew;
+   this->n = nNew;
 }
 
-
-void SimpleVector::permuteEntries(const std::vector<unsigned int>& permvec)
+template<typename T>
+void SimpleVectorBase<T>::permuteEntries(const std::vector<unsigned int>& permvec)
 {
-   if( n == 0 )
+   if( this->n == 0 )
       return;
 
-   assert(n > 0);
-   assert(permvec.size() == size_t(n));
+   assert(this->n > 0);
+   assert(permvec.size() == size_t(this->n));
 
-   double* buffer = new double[n];
+   T* buffer = new T[this->n];
 
    for( size_t i = 0; i < permvec.size(); i++ )
    {
-      assert(permvec[i] < unsigned(n));
+      assert(permvec[i] < unsigned(this->n));
       buffer[i] = v[permvec[i]];
    }
 

@@ -7,33 +7,36 @@
 
 
 #include "OoqpVector.h"
+#include "SimpleVector_fwd.h"
 #include "SimpleVectorHandle.h"
 #include "pipsdef.h"
-#include "vector"
+
+#include <vector>
 
 /**
  * Simple sequential vectors with element access.
  * @ingroup SparseLinearAlgebra
  * @ingroup DenseLinearAlgebra
  */
-class SimpleVector : public OoqpVector {
+template <typename T>
+class SimpleVectorBase : public OoqpVectorBase<T> {
 protected:
   int preserveVec;
-  double * v;
+  T * v;
 public:
-  SimpleVector( int nx = 0 );
-  SimpleVector( double * v, int nx );
+  SimpleVectorBase( int nx = 0 );
+  SimpleVectorBase( T * v, int nx );
   //@{
   /**
    * Access the individual elements of this vector.
    */
-  double & operator[]( int i ) {
+  T & operator[]( int i ) {
 #ifdef RANGECHECKS
     assert( i >= 0 && i < n );
 #endif
     return v[i];
  }
-  const double & operator[]( int i ) const
+  const T & operator[]( int i ) const
   {
 #ifdef RANGECHECKS
     assert( i >= 0 && i < n );
@@ -43,107 +46,107 @@ public:
   //@}
 
   /* copy vector entries as well */
-  virtual SimpleVector* cloneFull() const;
+  virtual SimpleVectorBase<T>* cloneFull() const;
 
-  virtual ~SimpleVector();
+  virtual ~SimpleVectorBase();
 
-  virtual void copyIntoArray( double v[] ) const;
-  virtual void copyFromArray( double v[] );
-  virtual void copyFromArray( char   v[] );
-  virtual bool isZero() const;
-  virtual void setToZero();
-  virtual void setToConstant( double c );
-  virtual void randomize( double alpha, double beta, double *ix );
-  virtual void copyFrom( OoqpVector& v );
-  virtual void copyFromAbs(const OoqpVector& v);
-  virtual double twonorm() const;
-  virtual double infnorm() const;
-  virtual double onenorm() const ;
-  virtual void min( double& m, int& index ) const;
-  virtual void max( double& m, int& index ) const;
-  virtual void absminVecUpdate(OoqpVector& absminvec) const;
-  virtual void absmaxVecUpdate(OoqpVector& absmaxvec) const;
-  virtual void absmin( double& m) const;
-  virtual void absminNonZero(double& m, double zero_eps) const;
+  void copyIntoArray( T v[] ) const override;
+  void copyFromArray( const T v[] ) override;
+  void copyFromArray( const char v[] ) override;
+  bool isZero() const override;
+  void setToZero() override;
+  void setToConstant( T c ) override;
+  void randomize( T alpha, T beta, T *ix ) override;
+  void copyFrom( const OoqpVectorBase<T>& v ) override;
+  void copyFromAbs(const OoqpVectorBase<T>& v) override;
+  double twonorm() const override;
+  T infnorm() const override;
+  T onenorm() const override;
+  void min( T& m, int& index ) const;
+  void max( T& m, int& index ) const;
+  void absminVecUpdate(OoqpVectorBase<T>& absminvec) const;
+  void absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const;
+  void absmin( T& m) const;
+  void absminNonZero(T& m, T zero_eps) const;
 
-  virtual void componentMult( OoqpVector& v );
-  virtual void scalarMult( double num);
-  virtual void printSolutionToStdErr( OoqpVector& v );
-  virtual void componentDiv ( OoqpVector& v );
-  virtual void writeToStream(ostream& out) const;
-  virtual void writeToStreamAll(ostream& out) const;
-  virtual void writeToStreamAllStringStream(stringstream& sout) const;
-  virtual void writefToStream( ostream& out,
-			       const char format[] ) const;
-  virtual void writeMPSformatOnlyRhs(ostream& out, string rowName, OoqpVector* irhs) const;
-  virtual void writeMPSformatBoundsWithVar(ostream& out, string varStub, OoqpVector* ix, bool upperBound) const;
+  void componentMult( const OoqpVectorBase<T>& v ) override;
+  void scalarMult( T num) override;
+  virtual void printSolutionToStdErr( OoqpVectorBase<T>& v );
+  void componentDiv( const OoqpVectorBase<T>& v ) override;
+  void writeToStream( std::ostream& out ) const override;
+  void writeToStreamAll( std::ostream& out ) const override;
+  void writeToStreamAllStringStream( std::stringstream& sout ) const override;
+  void writefToStream( std::ostream& out, const char format[] ) const override;
+  void writeMPSformatOnlyRhs(std::ostream& out, const std::string rowName, const OoqpVectorBase<T>* irhs) const override;
+  void writeMPSformatBoundsWithVar(std::ostream& out, const std::string varStub, const OoqpVectorBase<T>* ix, bool upperBound) const override;
 
-  virtual void scale( double alpha );
+  void scale( T alpha ) override;
 
-  virtual void axpy  ( double alpha, OoqpVector& x );
-  virtual void axzpy ( double alpha, OoqpVector& x, OoqpVector& z );
-  virtual void axdzpy( double alpha, OoqpVector& x, OoqpVector& z );
+  void axpy  ( T alpha, const OoqpVectorBase<T>& x ) override;
+  void axzpy ( T alpha, const OoqpVectorBase<T>& x, const OoqpVectorBase<T>& z ) override;
+  void axdzpy( T alpha, const OoqpVectorBase<T>& x, const OoqpVectorBase<T>& z ) override;
 
-  virtual void addConstant( double c );
+   void addConstant( T c ) override;
 
 /** perform the projection operation required by Gondzio algorithm:
    * replace each component of the vector v by vp_i - v_i, where vp_i
    * is the projection of v_i onto the box [rmin, rmax]. Then if the
    * resulting value is less than -rmax, replace it by -rmax.
    * */
-  virtual void gondzioProjection( double rmin, double rmax );
-  virtual double dotProductWith( const OoqpVector& v ) const;
-  virtual double dotProductSelf( double scaleFactor ) const;
+  void gondzioProjection( T rmin, T rmax ) override;
+  T dotProductWith( const OoqpVectorBase<T>& v ) const override;
+  T dotProductSelf( T scaleFactor ) const override;
 
-  virtual double shiftedDotProductWith( double alpha, OoqpVector& mystep,
-					OoqpVector& yvec,
-					double beta,  OoqpVector& ystep );
-  virtual void negate();
-  virtual void invert();
-  virtual void invertSave( double zeroReplacementVal = 0.0 );
-  virtual void applySqrt();
-  virtual void roundToPow2();
-  virtual int allPositive();
-  virtual long long numberOfNonzeros();
+  T shiftedDotProductWith( T alpha, const OoqpVectorBase<T>& mystep,
+					const OoqpVectorBase<T>& yvec,
+					T beta,  const OoqpVectorBase<T>& ystep ) const override;
+   void negate() override;
+   void invert() override;
+   void invertSave( T zeroReplacementVal = 0.0 ) override;
+   void applySqrt() override;
+   void roundToPow2() override;
+   bool allPositive() const override;
+   int numberOfNonzeros() const override;
 
-  virtual int matchesNonZeroPattern( OoqpVector& select );
-  virtual void selectNonZeros( OoqpVector& select );
-  virtual void addSomeConstants( double c, OoqpVector& select );
-  virtual void writefSomeToStream( ostream& out,
-				   const char format[],
-				   OoqpVector& select ) const;
-  virtual void axdzpy( double alpha, OoqpVector& x,
-		       OoqpVector& z, OoqpVector& select );
+  bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override;
+  void selectNonZeros( const OoqpVectorBase<T>& select ) override;
+  void addSomeConstants( T c, const OoqpVectorBase<T>& select ) override;
+  void writefSomeToStream( std::ostream& out, const char format[],
+				   const OoqpVectorBase<T>& select ) const override;
+  void axdzpy( T alpha, const OoqpVectorBase<T>& x,
+		       const OoqpVectorBase<T>& z, const OoqpVectorBase<T>& select ) override;
 
-  virtual int isKindOf( int kind ) const;
+  bool isKindOf( int kind ) const override;
 
-  virtual int somePositive( OoqpVector& select );
-  virtual void divideSome( OoqpVector& div, OoqpVector& select );
+  bool somePositive( const OoqpVectorBase<T>& select ) const override;
+  void divideSome( const OoqpVectorBase<T>& div, const OoqpVectorBase<T>& select ) override;
 
-  virtual double stepbound(OoqpVector & v, double maxStep  );
-  virtual double findBlocking(OoqpVector & wstep_vec,
-			      OoqpVector & u_vec,
-			      OoqpVector & ustep_vec,
-			      double maxStep,
-			      double *w_elt,
-			      double *wstep_elt,
-			      double *u_elt,
-			      double *ustep_elt,
-			      int& first_or_second);
+  T stepbound(const OoqpVectorBase<T>& v, T maxStep ) const override;
+  T findBlocking(const OoqpVectorBase<T> & wstep_vec,
+			      const OoqpVectorBase<T> & u_vec,
+			      const OoqpVectorBase<T> & ustep_vec,
+			      T maxStep,
+			      T *w_elt,
+			      T *wstep_elt,
+			      T *u_elt,
+			      T *ustep_elt,
+			      int& first_or_second) const override;
 
-  virtual void findBlocking_pd(const OoqpVector & wstep_vec,
-                      const OoqpVector & u_vec, const OoqpVector & ustep_vec,
-                      double& maxStepPri, double& maxStepDual,
-                      double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
-                      double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
-                      bool& primalBlocking, bool& dualBlocking) const;
+  void findBlocking_pd(const OoqpVectorBase<T> & wstep_vec,
+                      const OoqpVectorBase<T> & u_vec, const OoqpVectorBase<T> & ustep_vec,
+                      T& maxStepPri, T& maxStepDual,
+                      T& w_elt_p, T& wstep_elt_p, T& u_elt_p, T& ustep_elt_p,
+                      T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
+                      bool& primalBlocking, bool& dualBlocking) const override;
 
-  virtual void removeEntries(const OoqpVector& select);
+  void removeEntries(const OoqpVectorBase<T>& select) override;
 
   void permuteEntries(const std::vector<unsigned int>& permvec);
 
   /** Returns a pointer to the elements of this vector. */
-  double * elements() const { return v; };
+  T * elements() const { return v; };
 };
+
+#include "SimpleVector.C"
 
 #endif

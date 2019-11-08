@@ -2,10 +2,11 @@
 #define STOCHRESIDUALS
 
 #include "QpGenResiduals.h"
+#include "StochVector_fwd.h"
 #include <vector>
 
 class sTree;
-class StochVector;
+
 /** 
  * Class added to supply a more generic constructor for its parent, QpGenResiduals.
  * The default constructor of QpGenResiduals can not be always used since it assumes that vectors

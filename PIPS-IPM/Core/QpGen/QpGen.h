@@ -6,13 +6,13 @@
 #define QPGENFACTORY
 
 #include "ProblemFormulation.h"
+#include "OoqpVector_fwd.h"
 
 class Data;
 class Residuals;
 class LinearSystem;
 class Variables;
 class LinearAlgebraPackage;
-class OoqpVector;
 
 /**
  * @defgroup QpGen
