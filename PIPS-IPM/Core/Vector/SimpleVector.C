@@ -423,7 +423,6 @@ void SimpleVectorBase<T>::writeMPSformatBoundsWithVar(std::ostream& out, const s
 template<typename T>
 void SimpleVectorBase<T>::scale( T alpha )
 {
-   //todo : correct?
   // int one = 1;
   // dscal_( &this->n, &alpha, v, &one );
    std::transform( this->v, this->v + this->n, this->v, [alpha](T a)->T { return alpha * a; } );
@@ -435,7 +434,6 @@ void SimpleVectorBase<T>::axpy( T alpha, const OoqpVectorBase<T>& vec )
   assert( this->n == vec.length() );
   const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
 
-  // todo: correct?
   // int one = 1;
   // daxpy_( &this->n, &alpha, sv.v, &one, v, &one );
   std::transform( this->v, this->v + this->n, sv.v, this->v,
