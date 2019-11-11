@@ -106,7 +106,7 @@ public:
    void applySqrt() override;
    void roundToPow2() override;
    bool allPositive() const override;
-   int numberOfNonzeros() const override;
+   long long numberOfNonzeros() const override;
 
   bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override;
   void selectNonZeros( const OoqpVectorBase<T>& select ) override;
@@ -146,7 +146,5 @@ public:
   /** Returns a pointer to the elements of this vector. */
   T * elements() const { return v; };
 };
-
-#include "SimpleVector.C"
 
 #endif

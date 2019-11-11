@@ -191,4 +191,58 @@ inline std::vector<int> PIPSallgathervInt(const std::vector<int>& vecLocal, MPI_
    return vecGathered;
 }
 
+inline int PIPS_MPIgetRank(MPI_Comm mpiComm)
+{
+   int myrank;
+   MPI_Comm_rank(mpiComm, &myrank);
+   return myrank;
+}
+
+inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
+{
+   int mysize;
+   MPI_Comm_size(mpiComm, &mysize);
+   return mysize;
+}
+
+inline double PIPS_MPIgetMin(double localmin, MPI_Comm mpiComm)
+{
+   double globalmin = 0.0;
+   MPI_Allreduce(&localmin, &globalmin, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+
+   return globalmin;
+}
+
+inline double PIPS_MPIgetMax(double localmax, MPI_Comm mpiComm)
+{
+   double globalmax = 0.0;
+   MPI_Allreduce(&localmax, &globalmax, 1, MPI_DOUBLE, MPI_MAX, mpiComm);
+
+   return globalmax;
+}
+
+inline double PIPS_MPIgetSum(double localsummand, MPI_Comm mpiComm)
+{
+   double sum;
+   MPI_Allreduce(&localsummand, &sum, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+
+   return sum;
+}
+
+inline void PIPS_MPIsumArray(MPI_Comm mpiComm, int length, double* elements)
+{
+   assert(length >= 0);
+
+   if( length == 0 )
+      return;
+
+   double* buffer = new double[length];
+
+   MPI_Allreduce(elements, buffer, length, MPI_DOUBLE, MPI_SUM, mpiComm);
+   memcpy(elements, buffer, length * sizeof( double ));
+
+   delete[] buffer;
+}
+
+
 #endif

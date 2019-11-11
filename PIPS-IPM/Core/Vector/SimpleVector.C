@@ -4,6 +4,9 @@
 
 #include "SimpleVectorHandle.h"
 #include "VectorUtilities.h"
+#include "SimpleVector.h"
+#include "drand.h"
+#include "OoqpBlas.h"
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -11,9 +14,9 @@
 #include <algorithm>
 
 template <typename T>
-int SimpleVectorBase<T>::numberOfNonzeros() const
+long long SimpleVectorBase<T>::numberOfNonzeros() const
 {
-  int i, count = 0;
+  long long i, count = 0;
   for( i = 0; i < this->n; i++ ) {
     if( v[i] != 0 ) count++;
   }
@@ -24,7 +27,7 @@ template<typename T>
 void SimpleVectorBase<T>::min( T& m, int& index ) const
 {
   if( this->n == 0 ) {
-    m = 1e20;
+    m = std::numeric_limits<T>::max();
     return;
   }
   index = 0;
@@ -71,7 +74,7 @@ template<typename T>
 void SimpleVectorBase<T>::absmin(T& min) const
 {
    if (this->n == 0) {
-     min=1e20;
+     min = std::numeric_limits<T>::max();
      return;
    }
    min = fabs(v[0]);
@@ -112,7 +115,7 @@ void SimpleVectorBase<T>::max( T& m, int& index ) const
    if( this->n == 0 )
    {
       index = -1;
-      m = -1e20;
+      m = -std::numeric_limits<T>::max();
       return;
    }
    index = 0;
@@ -218,7 +221,7 @@ void SimpleVectorBase<T>::randomize( T alpha, T beta, T *ix )
 {
   assert( beta > alpha);
 
-  T drand(T *);
+  // T drand(T *);
   T scale = beta - alpha;
   T shift = alpha/scale;
 
@@ -345,7 +348,7 @@ void SimpleVectorBase<T>::writeToStreamAllStringStream(std::stringstream& sout) 
 template<typename T>
 void SimpleVectorBase<T>::writefToStream( std::ostream& out, const char format[] ) const
 {
-  SimpleVectorHandle empty( new SimpleVectorBase<T>(0) );
+  SimpleVectorBaseHandle<T> empty( new SimpleVectorBase<T>(0) );
   this->writefSomeToStream( out, format, *empty );
 }
 
@@ -383,7 +386,7 @@ void SimpleVectorBase<T>::writefSomeToStream( std::ostream& out,
 	}
 	j++;
       }
-      out << endl;
+      out << std::endl;
     }
   }
 }
@@ -422,8 +425,8 @@ void SimpleVectorBase<T>::scale( T alpha )
 {
    //todo : correct?
   // int one = 1;
- // dscal_( &this->n, dynamic_cast<double*>(&alpha), dynamic_cast<double*>(v), &one );
-   std::transform( this->v, this->v + this->n, this->v, [alpha](T a) { return alpha * a; } );
+  // dscal_( &this->n, &alpha, v, &one );
+   std::transform( this->v, this->v + this->n, this->v, [alpha](T a)->T { return alpha * a; } );
 }
 
 template<typename T>
@@ -433,10 +436,10 @@ void SimpleVectorBase<T>::axpy( T alpha, const OoqpVectorBase<T>& vec )
   const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
 
   // todo: correct?
-  // int one = 1
+  // int one = 1;
   // daxpy_( &this->n, &alpha, sv.v, &one, v, &one );
   std::transform( this->v, this->v + this->n, sv.v, this->v,
-      [alpha](T a, T b) { return alpha * a + b; });
+      [alpha](T a, T b)->T { return a + alpha * b; });
 }
 
 template<typename T>
@@ -920,3 +923,7 @@ void SimpleVectorBase<T>::permuteEntries(const std::vector<unsigned int>& permve
 
    delete[] buffer;
 }
+
+template class SimpleVectorBase<int>;
+// template class SimpleVectorBase<bool>;
+template class SimpleVectorBase<double>;

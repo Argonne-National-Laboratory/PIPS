@@ -6,6 +6,7 @@
 #include "QpGenVars.h"
 #include "DoubleMatrix.h"
 #include "OoqpVector.h"
+#include "drand.h"
 #include <cmath>
 
 #include "SimpleVector.h"
@@ -198,7 +199,7 @@ QpGenData::randomlyChooseBoundedVariables( OoqpVector& x,
 					   double percentBound )
 {
   int i;
-  double drand( double * );
+  // double drand( double * );
   // Initialize the upper and lower bounds on x
   int n = x.length();
 

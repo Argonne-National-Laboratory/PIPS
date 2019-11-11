@@ -16,6 +16,7 @@
 #include "SparseSymMatrix.h"
 
 #include "DoubleMatrixTypes.h"
+#include "drand.h"
 
 extern "C" void  dsyrk_(char* UPLO, char* TRANS,
 			int* N, int* K,
@@ -218,7 +219,7 @@ void DenseSymMatrix:: randomizePSD(double * seed)
 {  
   int n = mStorage->n;
   double ** M = mStorage->M;
-  double drand(double*);
+  // double drand(double*);
   int i, j, k;
 
   mStorage->atPutZeros( 0, 0, n, n );

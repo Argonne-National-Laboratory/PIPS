@@ -1,6 +1,7 @@
 /* OOQP                                                               *
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
+#include "OoqpVector.h"
 
 template<typename T>
 OoqpVectorBase<T>::OoqpVectorBase( int n_ )
@@ -26,3 +27,8 @@ void OoqpVectorBase<T>::writefToStreamStats( std::ostream& out, std::string pres
    std::cout << prestring << " length=" << n << " min=" << min <<  " max=" <<
       max << " infnorm=" << this->infnorm() << std::endl;
 }
+
+
+template class OoqpVectorBase<int>;
+// template class OoqpVectorBase<bool>;
+template class OoqpVectorBase<double>;

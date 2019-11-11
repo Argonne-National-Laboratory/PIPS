@@ -5,6 +5,9 @@
 #include "SmartPointer.h"
 #include "StochVector_fwd.h"
 
-typedef SmartPointer<StochVector> StochVectorHandle;
+template<typename T>
+using StochVectorBaseHandle = SmartPointer<StochVectorBase<T> >;
+
+using StochVectorHandle = SmartPointer<StochVector>;
 
 #endif

@@ -57,8 +57,8 @@ public:
 
   virtual void jointCopyFrom(const StochVectorBase<T>& v1, const StochVectorBase<T>& v2, const StochVectorBase<T>& v3);
   virtual void jointCopyFromLinkCons(const StochVectorBase<T>& vx, const StochVectorBase<T>& vy, const StochVectorBase<T>& vz);
-  virtual void jointCopyTo(const StochVectorBase<T>& v1, const StochVectorBase<T>& v2, const StochVectorBase<T>& v3);
-  virtual void jointCopyToLinkCons(const StochVectorBase<T>& vx, const StochVectorBase<T>& vy, const StochVectorBase<T>& vz);
+  virtual void jointCopyTo(StochVectorBase<T>& v1, StochVectorBase<T>& v2, StochVectorBase<T>& v3) const;
+  virtual void jointCopyToLinkCons(StochVectorBase<T>& vx, StochVectorBase<T>& vy,StochVectorBase<T>& vz) const;
 
   bool isKindOf( int kind ) const override;
   void setToZero() override;
@@ -136,7 +136,7 @@ public:
 
    bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override;
    void selectNonZeros( const OoqpVectorBase<T>& select ) override;
-   int numberOfNonzeros() const override;
+   long long numberOfNonzeros() const override;
    void addSomeConstants( T c, const OoqpVectorBase<T>& select ) override;
    void writefSomeToStream( std::ostream& out,
 				   const char format[],
@@ -156,7 +156,7 @@ public:
    /** remove entries i for which select[i] == 0 */
    void removeEntries( const OoqpVectorBase<T>& select ) override;
 
-   int getSize() const { return this.n; };
+   virtual int getSize() const { return this->n; };
 
    virtual bool isRootNodeInSync() const;
 
@@ -175,8 +175,8 @@ public:
 
   virtual ~StochDummyVectorBase(){};
 
-  void AddChild(StochVector* child) override {};
-  void AddChild(OoqpVector* child) override {};
+  void AddChild(StochVectorBase<T>* child) override {};
+  void AddChild(OoqpVectorBase<T>* child) override {};
 
   /** Creates and returns a vector of the type used to store data in this node,
       i.e., same type as 'vec'.
@@ -186,108 +186,108 @@ public:
    StochVectorBase<T>* clone() const override { return new StochDummyVectorBase<T>();}
    StochVectorBase<T>* cloneFull() const override { return new StochDummyVectorBase<T>();}
 
-   void jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)override {};
-   void jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)override {};
+   void jointCopyFrom(const StochVectorBase<T>& v1, const StochVectorBase<T>& v2, const StochVectorBase<T>& v3) override {};
+   void jointCopyTo(StochVectorBase<T>& v1, StochVectorBase<T>& v2, StochVectorBase<T>& v3) const override {};
 
-   int isKindOf( int kind ) const override {return kind == kStochDummy;}
+   bool isKindOf( int kind ) const override {return kind == kStochDummy;}
    void setToZero()override {};
    bool isZero() const override { return true; };
 
-   void setToConstant( double c )override {};
-   void randomize( double alpha, double beta, double *ix )override {};
-   void copyFrom( OoqpVectorBase<T>& v )override {};
+   void setToConstant( T c )override {};
+   void randomize( T alpha, T beta, T *ix ) override {};
+   void copyFrom( const OoqpVectorBase<T>& v ) override {};
    void copyFromAbs(const OoqpVectorBase<T>& v) override {};
    double twonorm() const override {return 0.0;}
-   double infnorm() const override {return 0.0;}
-   double onenorm() const override {return 0.0;}
-   void min( double& m, int& index ) const override {};
-   void max( double& m, int& index ) const override {};
+   T infnorm() const override {return 0.0;}
+   T onenorm() const override {return 0.0;}
+   void min( T& m, int& index ) const override {};
+   void max( T& m, int& index ) const override {};
    void absminVecUpdate(OoqpVectorBase<T>& absminvec) const override {};
    void absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const override {};
-   void absmin( double& m) const override {};
-   void absminNonZero(double& m, double zero_eps) const override {m=-1.0;};
-   T stepbound(OoqpVectorBase<T> & v, double maxStep ) override {return maxStep;}
-   double findBlocking(OoqpVectorBase<T> & wstep_vec,
-			      OoqpVectorBase<T> & u_vec,
-			      OoqpVectorBase<T> & ustep_vec,
-			      double maxStep,
-			      double *w_elt,
-			      double *wstep_elt,
-			      double *u_elt,
-			      double *ustep_elt,
-			      int& first_or_second)override {return maxStep;}
+   void absmin( T& m) const override {};
+   void absminNonZero(T& m, T zero_eps) const override {m=-1.0;};
+   T stepbound( const OoqpVectorBase<T> & v, T maxStep ) const override { return maxStep; }
+   T findBlocking(const OoqpVectorBase<T> & wstep_vec,
+			      const OoqpVectorBase<T> & u_vec,
+			      const OoqpVectorBase<T> & ustep_vec,
+			      T maxStep,
+			      T *w_elt,
+			      T *wstep_elt,
+			      T *u_elt,
+			      T *ustep_elt,
+			      int& first_or_second) const override {return maxStep;}
 
    void findBlocking_pd(const OoqpVectorBase<T>& wstep_vec,
                const OoqpVectorBase<T>& u_vec,
                const OoqpVectorBase<T>& ustep_vec,
-               double& maxStepPri, double& maxStepDual,
-               double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
-               double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
+               T& maxStepPri, T& maxStepDual,
+               T& w_elt_p, T& wstep_elt_p, T& u_elt_p, T& ustep_elt_p,
+               T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
                bool& primalBlocking, bool& dualBlocking) const override {};
 
-   void componentMult( OoqpVectorBase<T>& v )override {};
-   void componentDiv ( OoqpVectorBase<T>& v )override {};
-   void scalarMult( double num)override {};
+   void componentMult( const OoqpVectorBase<T>& v )override {};
+   void componentDiv ( const OoqpVectorBase<T>& v )override {};
+   void scalarMult( T num) override {};
    void writeToStream(std::ostream& out) const override {};
    void writeToStreamAll(std::ostream& out) const override {};
    void writeToStreamAllChild( std::stringstream& sout ) const override {};
    void writefToStream( std::ostream& out,
 			       const char format[] ) const override {};
-   void writeMPSformatOnlyRhs(std::ostream& out, const std::string rowName, OoqpVectorBase<T>* irhs) const override {};
-   void writeMPSformatRhs(std::ostream& out, int rowType, OoqpVectorBase<T>* irhs) const override {};
-   void writeMPSformatBounds(std::ostream& out, OoqpVectorBase<T>* ix, bool upperBound) const override {};
-   void writeMPSformatBoundsWithVar(std::ostream& out, const std::string varStub, OoqpVectorBase<T>* ix, bool upperBound) const override {};
+   void writeMPSformatOnlyRhs(std::ostream& out, const std::string rowName, const OoqpVectorBase<T>* irhs) const override {};
+   void writeMPSformatRhs(std::ostream& out, int rowType, const OoqpVectorBase<T>* irhs) const override {};
+   void writeMPSformatBounds(std::ostream& out, const OoqpVectorBase<T>* ix, bool upperBound) const override {};
+   void writeMPSformatBoundsWithVar(std::ostream& out, const std::string varStub, const OoqpVectorBase<T>* ix, bool upperBound) const override {};
 
-   void scale( double alpha )override {};
+   void scale( T alpha )override {};
 
   /** this += alpha * x */
-   void axpy  ( double alpha, OoqpVectorBase<T>& x )override {};
+   void axpy  ( T alpha, const OoqpVectorBase<T>& x ) override {};
   /** this += alpha * x * z */
-   void axzpy ( double alpha, OoqpVectorBase<T>& x, OoqpVectorBase<T>& z )override {};
+   void axzpy ( T alpha, const OoqpVectorBase<T>& x, const OoqpVectorBase<T>& z ) override {};
   /** this += alpha * x / z */
-   void axdzpy( double alpha, OoqpVectorBase<T>& x, OoqpVectorBase<T>& z )override {};
+   void axdzpy( T alpha, const OoqpVectorBase<T>& x, const OoqpVectorBase<T>& z ) override {};
 
-   void addConstant( double c )override {};
-   void gondzioProjection( double rmin, double rmax )override {};
-   double dotProductWith( const OoqpVectorBase<T>& v ) const override {return 0.0;}
-   double dotProductSelf(double scaleFactor = 1.0) const override {return 0.0;};
+   void addConstant( T c )override {};
+   void gondzioProjection( T rmin, T rmax )override {};
+   T dotProductWith( const OoqpVectorBase<T>& v ) const override {return 0.0;}
+   T dotProductSelf(T scaleFactor = 1.0) const override {return 0.0;};
 
   /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
    */
-   double shiftedDotProductWith( double alpha, OoqpVectorBase<T>& mystep,
-					OoqpVectorBase<T>& yvec,
-					double beta,  OoqpVectorBase<T>& ystep )override {return 0.0;}
+   T shiftedDotProductWith( T alpha, const OoqpVectorBase<T>& mystep,
+					const OoqpVectorBase<T>& yvec,
+					T beta,  const OoqpVectorBase<T>& ystep ) const override {return 0.0;}
    void negate()override {};
    void invert()override {};
-   void invertSave( double zeroReplacementVal = 0.0 )override {};
-   void applySqrt()override {};
-   void roundToPow2()override {};
-   int allPositive()override {return 1;}
+   void invertSave( T zeroReplacementVal = 0.0 ) override {};
+   void applySqrt() override {};
+   void roundToPow2() override {};
+   bool allPositive() const override {return true;}
 
-   int matchesNonZeroPattern( OoqpVectorBase<T>& select )override {return 1;}
-   void selectNonZeros( OoqpVectorBase<T>& select )override {};
-   long long numberOfNonzeros()override {return 0;}
-   void addSomeConstants( double c, OoqpVectorBase<T>& select )override {};
+   bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override {return true;}
+   void selectNonZeros( const OoqpVectorBase<T>& select ) override {};
+   long long numberOfNonzeros() const override {return 0;}
+   void addSomeConstants( T c, const OoqpVectorBase<T>& select )override {};
    void writefSomeToStream( std::ostream& out,
 				   const char format[],
-				   OoqpVectorBase<T>& select ) const override {};
-   void axdzpy( double alpha, OoqpVectorBase<T>& x,
-		       OoqpVectorBase<T>& z, OoqpVectorBase<T>& select )override {};
+				   const OoqpVectorBase<T>& select ) const override {};
+   void axdzpy( T alpha, const OoqpVectorBase<T>& x,
+		       const OoqpVectorBase<T>& z, const OoqpVectorBase<T>& select )override {};
 
-   int somePositive( OoqpVectorBase<T>& select )override {return 1;}
-   void divideSome( OoqpVectorBase<T>& div, OoqpVectorBase<T>& select )override {};
-   void copyIntoArray( double v[] ) const override {};
-   void copyFromArray( double v[] )override {};
-   void copyFromArray( char v[] )override {};
+   bool somePositive( const OoqpVectorBase<T>& select ) const override {return 1;}
+   void divideSome( const OoqpVectorBase<T>& div, const OoqpVectorBase<T>& select )override {};
+   void copyIntoArray( T v[] ) const override {};
+   void copyFromArray( const T v[] )override {};
+   void copyFromArray( const char v[] )override {};
 
    void removeEntries( const OoqpVectorBase<T>& select ) override {};
-   void permuteVec0(const std::vector<unsigned int>& permvec) override {};
+   void permuteVec0Entries(const std::vector<unsigned int>& permvec) override {};
    void permuteLinkingEntries(const std::vector<unsigned int>& permvec) override {};
-   std::vector<double> gatherStochVector() const override {return std::vector<double>(0);};
+   std::vector<T> gatherStochVector() const override {return std::vector<T>(0);};
 
-  int getSize() override { return 0; };
+   int getSize() const override { return 0; };
 
-  bool isRootNodeInSync() const override { return true; };
+   bool isRootNodeInSync() const override { return true; };
 };
 
 using StochDummyVector = StochDummyVectorBase<double>;

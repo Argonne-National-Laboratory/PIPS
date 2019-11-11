@@ -159,7 +159,7 @@ public:
   virtual bool allPositive() const = 0;
 
   /** Return the number of non-zero elements in this OoqpVector. */
-  virtual int numberOfNonzeros() const = 0;
+  virtual long long numberOfNonzeros() const = 0;
 
   /** True if this OoqpVector has the same non-zero pattern as select. */
   virtual bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const = 0;
@@ -277,7 +277,5 @@ public:
 
 enum { kSimpleVector = 0, kPetscVector, kStochVector, kStochDummy,
 	kScaVector, kEmtlVector};
-
-#include "OoqpVector.C"
 
 #endif
