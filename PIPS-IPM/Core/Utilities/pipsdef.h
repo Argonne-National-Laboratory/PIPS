@@ -321,4 +321,19 @@ inline void PIPS_MPImaxArray(T* source, T* dest, int length, MPI_Comm mpiComm)
    MPI_Allreduce(source, dest, length, get_mpi_datatype(source[0]), MPI_MAX, mpiComm);
 }
 
+template <typename T>
+inline void PIPS_MPIgatherv(T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, int* recvoffsets, int root, MPI_Comm mpiComm)
+{
+   // todo assert at least one element in any of the buffers.. 
+   MPI_Gatherv(sendbuf, sendcnt, get_mpi_datatype(sendbuf[0]), recvbuf, recvcnts, recvoffsets, get_mpi_datatype(recvbuf[0]), root, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIallgather( T* sendbuf, int sendcnt, T* recvbuf, int recvcnt, MPI_Comm mpiComm)
+{
+   // todo assert at least one element in any of the buffers.. 
+
+   MPI_Allgather(sendbuf, sendcnt, get_mpi_datatype(recvbuf[0]), recvbuf, recvcnt, get_mpi_datatype(recvbuf[0]), mpiComm);
+}
+
 #endif

@@ -724,7 +724,6 @@ T StochVectorBase<T>::stepbound(const OoqpVectorBase<T> & v_, T maxStep ) const
   return step;
 }
 
-// todo : template type ?
 template<typename T>
 T StochVectorBase<T>::findBlocking(const OoqpVectorBase<T> & wstep_vec,
 			      const OoqpVectorBase<T> & u_vec,
@@ -830,7 +829,7 @@ T StochVectorBase<T>::findBlocking(const OoqpVectorBase<T> & wstep_vec,
     T bufferOut[5];
     PIPS_MPImaxArray(buffer, bufferOut, 5, mpiComm);
 
-    //MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm); // todo : not working properly in templated version
+    //MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
     *w_elt = bufferOut[0]; *wstep_elt=bufferOut[1];
     *u_elt = bufferOut[2]; *ustep_elt=bufferOut[3];
@@ -999,7 +998,7 @@ void StochVectorBase<T>::findBlocking_pd(const OoqpVectorBase<T> & wstep_vec,
 
       T bufferOut[10];
       PIPS_MPIsumArray(buffer, bufferOut, 10, mpiComm);
-      // MPI_Allreduce(buffer, bufferOut, 10, MPI_DOUBLE, MPI_MAX, mpiComm); // todo : not working properly in templated version
+      // MPI_Allreduce(buffer, bufferOut, 10, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
       w_elt_p = bufferOut[0];
       wstep_elt_p = bufferOut[1];
@@ -1718,7 +1717,8 @@ std::vector<T> StochVectorBase<T>::gatherStochVector() const
 
       int mylength = int(gatheredVecLocal.size());
 
-      MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm); // todo
+      PIPS_MPIallgather(&mylength, 1, &recvcounts[0], 1, mpiComm);
+      // MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
 
       // all-gather local components
       recvoffsets[0] = 0;
@@ -1730,14 +1730,18 @@ std::vector<T> StochVectorBase<T>::gatherStochVector() const
          solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
          gatheredVec = std::vector<T>(solLength);
 
-         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, // todo
-               &gatheredVec[0] + firstvec.length(), &recvcounts[0],
-               &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+         PIPS_MPIgatherv(&gatheredVecLocal[0], mylength, &gatheredVec[0] + firstvec.length(),
+            &recvcounts[0], &recvoffsets[0], 0, mpiComm);
+         // MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE,
+         //       &gatheredVec[0] + firstvec.length(), &recvcounts[0],
+         //       &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
       }
       else
       {
-         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, 0, // todo
-               &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+        T dummy;
+        PIPS_MPIgatherv(&gatheredVecLocal[0], mylength, &dummy, &recvcounts[0], &recvoffsets[0], 0, mpiComm);
+         // MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, 0,
+         //       &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
       }
    }
    else
@@ -1758,7 +1762,7 @@ std::vector<T> StochVectorBase<T>::gatherStochVector() const
          const SimpleVectorBase<T>& linkvec = dynamic_cast<const SimpleVectorBase<T>&>(*vecl);
          gatheredVec.insert(gatheredVec.end(), &linkvec[0], &linkvec[0] + linkvec.length());
       }
-   }// todo : not working properly in templated version
+   }
    return gatheredVec;
 }
 
@@ -1800,7 +1804,7 @@ bool StochVectorBase<T>::isRootNodeInSync() const
             sendbuf.begin() + vec_simple.length());
    }
    PIPS_MPImaxArray(&sendbuf[0], &recvbuf[0], count, mpiComm);
-   // MPI_Allreduce(&sendbuf[0], &recvbuf[0], count, MPI_DOUBLE, MPI_MAX, mpiComm); // todo : not working properly in templated version
+   // MPI_Allreduce(&sendbuf[0], &recvbuf[0], count, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
    for( int i = 0; i < count; ++i )
    {
