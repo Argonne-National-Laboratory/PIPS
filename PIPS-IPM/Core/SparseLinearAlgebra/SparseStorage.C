@@ -9,7 +9,6 @@
 #include "OoqpVector.h"
 #include "SimpleVector.h"
 #include "pipsdef.h"
-#include "drand.h"
 #include <limits>
 #include <fstream>
 #include <string>
@@ -1180,7 +1179,7 @@ void SparseStorage::randomize( double alpha, double beta, double * seed )
   double scale = beta - alpha;
   double shift = alpha/scale;
 
-  // double drand( double * );
+  double drand( double * );
 
   // Knuth's algorithm for choosing length elements out of NN elts.
   NN        = m * n;

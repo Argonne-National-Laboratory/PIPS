@@ -425,7 +425,7 @@ double StochVectorBase<T>::twonorm() const
 #if 0
   return sqrt(this->dotProductWith(*this));
 #else
-  const double scale = this->infnorm();
+  const T scale = this->infnorm();
   assert(scale >= 0.0);
 
   if( PIPSisZero(scale) )
@@ -555,7 +555,7 @@ void StochVectorBase<T>::max( T& m, int& index ) const
 
    if( iAmDistrib == 1 )
    {
-      double maxG = PIPS_MPIgetMax(m, mpiComm);
+      T maxG = PIPS_MPIgetMax(m, mpiComm);
       // MPI_Allreduce(&m, &maxG, 1, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
       m = maxG;
    }
@@ -630,7 +630,7 @@ void StochVectorBase<T>::absmin(T& m) const
    }
 
    if(iAmDistrib == 1) {
-     double minG = PIPS_MPIgetMin(m, mpiComm);
+     T minG = PIPS_MPIgetMin(m, mpiComm);
      // MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
      m = minG;
    }
@@ -1462,7 +1462,7 @@ template<typename T>
 bool StochVectorBase<T>::allPositive() const
 {
   //!parallel
-  bool allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : 1);
+  bool allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : true);
   if (!allPos) return false;
 
   for(size_t it = 0; it < children.size() && allPos; it++)

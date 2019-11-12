@@ -1,11 +1,8 @@
 /* OOQP                                                               *
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
-#ifndef DRAND
-#define DRAND
 
-template <typename T>
-T drand(T *ix)
+double drand(double *ix)
 {
   double a, b15, b16, p, xhi, xalo, leftlo, fhi, k;
   int xhiint, leftloint, kint;
@@ -29,7 +26,5 @@ T drand(T *ix)
   *ix = (((xalo - leftlo * b16) - p ) + (fhi - k * b15) * b16) + k;
   if(*ix < 0.0) *ix = *ix + p;
 
-  return (T)(*ix * 4.656612875e-10);
+  return *ix * 4.656612875e-10;
 }
-
-#endif

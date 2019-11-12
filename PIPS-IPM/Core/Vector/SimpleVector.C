@@ -5,7 +5,6 @@
 #include "SimpleVectorHandle.h"
 #include "VectorUtilities.h"
 #include "SimpleVector.h"
-#include "drand.h"
 #include "OoqpBlas.h"
 #include <cassert>
 #include <cmath>
@@ -216,19 +215,27 @@ void SimpleVectorBase<T>::setToConstant( T c)
   for( i = 0; i < this->n; i++ ) v[i] = c;
 }
 
-template<typename T>
-void SimpleVectorBase<T>::randomize( T alpha, T beta, T *ix )
+// specialiced for double only
+template<>
+void SimpleVectorBase<double>::randomize( double alpha, double beta, double *ix )
 {
   assert( beta > alpha);
 
-  // T drand(T *);
-  T scale = beta - alpha;
-  T shift = alpha/scale;
+  double drand(double *);
+  double scale = beta - alpha;
+  double shift = alpha/scale;
 
   int i;
   for( i = 0; i < this->n; i++ ) {
     v[i] = scale * (drand(ix) + shift);
   }
+}
+
+template<typename T>
+void SimpleVectorBase<T>::randomize( T alpha, T beta, T *ix )
+{
+  assert( 0 && "not implemented here" );
+  return;
 }
 
 template<typename T>

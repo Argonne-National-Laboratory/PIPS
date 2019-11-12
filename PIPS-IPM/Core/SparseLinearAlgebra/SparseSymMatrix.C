@@ -7,7 +7,6 @@
 #include <cassert>
 #include <cmath>
 #include "SimpleVector.h"
-#include "drand.h"
 
 #include "DoubleMatrixTypes.h"
 
@@ -107,7 +106,7 @@ void SparseSymMatrix::randomizePSD(double * seed)
   int k, NN, chosen, icurrent;
   int nnz;
 
-  // double drand( double * );
+  double drand( double * );
   int n       = mStorage->n;
   double * M  = mStorage->M;
   int * krowM = mStorage->krowM;

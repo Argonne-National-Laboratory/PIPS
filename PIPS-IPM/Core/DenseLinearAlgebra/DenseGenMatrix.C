@@ -11,7 +11,6 @@
 #include "DenseGenMatrix.h"
 #include "DenseSymMatrix.h"
 #include "OoqpBlas.h"
-#include "drand.h"
 #include "SimpleVector.h"
 
 #include "DoubleMatrixTypes.h"
@@ -237,7 +236,7 @@ void DenseGenMatrix::randomize( double alpha, double beta, double * seed )
 {
   int m = mStorage->m, n = mStorage->n;
   double ** M = mStorage->M;
-  // double drand(double *);
+  double drand(double *);
   int i, j;
 
   double scale = beta - alpha;
