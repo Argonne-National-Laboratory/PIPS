@@ -8,7 +8,7 @@ add_subdirectory(QpStoch)
 add_library(ooqpbase Abstract/OoqpVersion.C Abstract/Variables.C Abstract/Data.C Abstract/Solver.C Abstract/Status.C Abstract/Scaler.C
   Abstract/OoqpMonitor.C Abstract/IotrRefCount.C Abstract/DoubleLinearSolver.C 
   Vector/OoqpVector.C Vector/SimpleVector.C Vector/VectorUtilities.C
-  Utilities/sort.C Utilities/drand.C Utilities/pipschecks.C)
+  Utilities/drand.C Utilities/sort.C Utilities/pipschecks.C)
 
 if(HAVE_MA27)
 	set(solvers LinearSolvers/Ma27Solver/Ma27Solver.C QpGen/QpGenSparseMa27.C)

@@ -18,7 +18,7 @@ void set_to_zero( T v[], int n, int stride )
 }
 
 template<typename T>
-void writef_to_stream( T v[], int n, int stride,
+void writef_to_stream( const T v[], int n, int stride,
 		       std::ostream& out, const char format[] )
 {
   int i;
@@ -29,7 +29,7 @@ void writef_to_stream( T v[], int n, int stride,
     char c;
     while( (c = format[j]) != 0 ) {
       if( c != '%' ) {
-	out << c;
+	      out << c;
       } else {
 	// Brain-dead variable substitution, but good enough for this
 	// simple case
@@ -66,66 +66,80 @@ void add_constant( T v[], int n, int stride, T c )
 }
 
 template<typename T>
-T stepbound( T v[], int n, int incv,
-				  T s[], int incs, T max )
+T stepbound( const T v[], int n, int incv,
+				  const T s[], int incs, T max )
 {
   T bound = max;
-  T *pv = v;
-  T *ps = s, *lasts = s + n * incs;
-  for( ; ps < lasts; ps += incs, pv += incv ) {
-	T ss = *ps;
-	if( ss < 0 ) {
-	  T cbnd = - *pv / ss;
-	  if( cbnd < bound ) bound = cbnd;
-	}
+  const T *pv = v;
+  const T *ps = s, *lasts = s + n * incs;
+
+  for( ; ps < lasts; ps += incs, pv += incv )
+  {
+	  T ss = *ps;
+	  if( ss < 0 ) {
+	    T cbnd = - *pv / ss;
+	  if( cbnd < bound )
+      bound = cbnd;
+	  }
   }
   return bound;
 }
 
 template<typename T>
-T stepbound( T v[], int n, int incv,
-				  T s[], int incs,
-				  T b[], int incb, T u[], int incu,
+T stepbound( const T v[], int n, int incv,
+				  const T s[], int incs,
+				  const T b[], int incb, const T u[], int incu,
 				  T max )
 {
   T bound = max;
-  T *pv = v;
-  T *ps = s, *lasts = s + n * incs;
-  int i;
-  for( i = 0; ps < lasts; ps += incs, pv += incv, i++ ) {
-	T ss = *ps;
-	T cbnd;
-	if( ss > 0 ) {
-	  cbnd = ( u[i*incu] - *pv ) / ss;
-	} else if ( ss < 0 ) {
-	  cbnd = ( b[i*incb] - *pv ) / ss;
-	} else {
-	  continue; // Next element
-	}
-	if( cbnd < bound ) bound = cbnd;
+  const T *pv = v;
+  const T *ps = s, *lasts = s + n * incs;
+
+  for( int i = 0; ps < lasts; ps += incs, pv += incv, i++ )
+  {
+	  T ss = *ps;
+  	T cbnd;
+
+  	if( ss > 0 ) 
+    {
+	    cbnd = ( u[i*incu] - *pv ) / ss;
+	  } 
+    else if ( ss < 0 )
+    {
+	    cbnd = ( b[i*incb] - *pv ) / ss;
+	  } 
+    else 
+    {
+	    continue; // Next element
+	  }
+	  if( cbnd < bound )
+      bound = cbnd;
   }
+
   return bound;
 }
 
 template<typename T>
 void axdzpy( int n, T alpha,
-	     T x[], int incx, T z[], int incz,
-	     T y[], int incy )
+	     const T x[], int incx, const T z[], int incz,
+	     const T y[], int incy )
 {
-  T *px = x, *py = y, *pz = z, *lastx = x + incx * n;
-  for( ; px < lastx; px += incx, py += incy, pz += incz ) {
+  const T *px = x, *pz = z, *lastx = x + incx * n;
+  T* py = y;
+  for( ; px < lastx; px += incx, py += incy, pz += incz ) 
+  {
     *py += alpha * (*px / *pz);
   }
 }
 
 template<typename T>
-T find_blocking( T w[],     int n, int incw,
-		    T wstep[],        int incwstep,
-		    T u[],            int incu,
-		    T ustep[],        int incustep,
+T find_blocking( const T w[], int n, int incw,
+		    const T wstep[], int incwstep,
+		    const T u[], int incu,
+		    const T ustep[], int incustep,
 		    T maxStep,
-		    T *w_elt,          T *wstep_elt,
-		    T *u_elt,          T *ustep_elt,
+		    T *w_elt, T *wstep_elt,
+		    T *u_elt, T *ustep_elt,
 		    int& first_or_second )
 {
   T bound = maxStep;
@@ -137,10 +151,10 @@ T find_blocking( T w[],     int n, int incw,
   // which returns the processor with smallest rank where a min occurs.
   //
   // Still, going backward is ugly!
-  T *pw     = w     + (n - 1) * incw;
-  T *pwstep = wstep + (n - 1) * incwstep;
-  T *pu     = u     + (n - 1) * incu;
-  T *pustep = ustep + (n - 1) * incustep;
+  const T *pw     = w     + (n - 1) * incw;
+  const T *pwstep = wstep + (n - 1) * incwstep;
+  const  T *pu     = u     + (n - 1) * incu;
+  const T *pustep = ustep + (n - 1) * incustep;
 
   while( i >= 0 ) {
     T temp = *pwstep;
@@ -237,7 +251,5 @@ void find_blocking_pd( const T w[], const int n,
      ustep_elt_d = ustep[lastBlockingDual];
    }
 }
-
-
 
 #endif

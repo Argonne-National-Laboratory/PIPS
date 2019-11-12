@@ -236,8 +236,13 @@ MPI_Datatype get_mpi_datatype(const T& arg) {
 }
 
 template <typename T>
-MPI_Datatype get_mpi_datatype() {
-   return get_mpi_datatype(T());
+MPI_Datatype get_mpi_datatype(T* arg) {
+   return get_mpi_datatype_t<T>::value;
+}
+
+template <typename T>
+MPI_Datatype get_mpi_datatype(const T* arg) {
+   return get_mpi_datatype_t<T>::value;
 }
 
 inline int PIPS_MPIgetRank(MPI_Comm mpiComm)
@@ -255,7 +260,7 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetMin(T localmin, MPI_Comm mpiComm)
+inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm)
 {
    T globalmin = 0.0;
    MPI_Allreduce(&localmin, &globalmin, 1, get_mpi_datatype(localmin), MPI_MIN, mpiComm);
@@ -264,7 +269,7 @@ inline T PIPS_MPIgetMin(T localmin, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetMax(T localmax, MPI_Comm mpiComm)
+inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
 {
    T globalmax = 0.0;
    MPI_Allreduce(&localmax, &globalmax, 1, get_mpi_datatype(localmax), MPI_MAX, mpiComm);
@@ -273,7 +278,7 @@ inline T PIPS_MPIgetMax(T localmax, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetSum(T localsummand, MPI_Comm mpiComm)
+inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
 {
    T sum;
    MPI_Allreduce(&localsummand, &sum, 1, get_mpi_datatype(localsummand), MPI_SUM, mpiComm);
@@ -289,7 +294,7 @@ inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
    if( length == 0 )
       return;
 
-   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements[0]), MPI_SUM, mpiComm);
+   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_SUM, mpiComm);
 }
 
 template <typename T>
@@ -300,7 +305,7 @@ inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiC
    if(length == 0)
       return;
 
-   MPI_Allreduce(source, dest, length, get_mpi_datatype(source[0]), MPI_SUM, mpiComm);
+   MPI_Allreduce(source, dest, length, get_mpi_datatype(source), MPI_SUM, mpiComm);
 }
 
 template <typename T>
@@ -309,31 +314,31 @@ inline void PIPS_MPImaxArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
    assert(length >= 0);
    if(length == 0)
       return;
-   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements[0]), MPI_MAX, mpiComm);
+   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_MAX, mpiComm);
 }
 
 template <typename T>
-inline void PIPS_MPImaxArray(T* source, T* dest, int length, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiComm)
 {
    assert(length >= 0);
    if(length == 0)
       return;
-   MPI_Allreduce(source, dest, length, get_mpi_datatype(source[0]), MPI_MAX, mpiComm);
+   MPI_Allreduce(source, dest, length, get_mpi_datatype(source), MPI_MAX, mpiComm);
 }
 
 template <typename T>
-inline void PIPS_MPIgatherv(T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, int* recvoffsets, int root, MPI_Comm mpiComm)
+inline void PIPS_MPIgatherv(const T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, const int* recvoffsets, int root, MPI_Comm mpiComm)
 {
-   // todo assert at least one element in any of the buffers.. 
-   MPI_Gatherv(sendbuf, sendcnt, get_mpi_datatype(sendbuf[0]), recvbuf, recvcnts, recvoffsets, get_mpi_datatype(recvbuf[0]), root, mpiComm);
+   assert(sendcnt >= 0);
+   MPI_Gatherv(sendbuf, sendcnt, get_mpi_datatype(sendbuf), recvbuf, recvcnts, recvoffsets, get_mpi_datatype(recvbuf), root, mpiComm);
 }
 
 template <typename T>
-inline void PIPS_MPIallgather( T* sendbuf, int sendcnt, T* recvbuf, int recvcnt, MPI_Comm mpiComm)
+inline void PIPS_MPIallgather( const T* sendbuf, int sendcnt, T* recvbuf, int recvcnt, MPI_Comm mpiComm)
 {
-   // todo assert at least one element in any of the buffers.. 
-
-   MPI_Allgather(sendbuf, sendcnt, get_mpi_datatype(recvbuf[0]), recvbuf, recvcnt, get_mpi_datatype(recvbuf[0]), mpiComm);
+   assert(sendcnt >= 0);
+   assert(recvcnt >= 0);
+   MPI_Allgather(sendbuf, sendcnt, get_mpi_datatype(recvbuf), recvbuf, recvcnt, get_mpi_datatype(recvbuf), mpiComm);
 }
 
 #endif

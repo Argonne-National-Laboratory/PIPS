@@ -26,5 +26,5 @@ double drand(double *ix)
   *ix = (((xalo - leftlo * b16) - p ) + (fhi - k * b15) * b16) + k;
   if(*ix < 0.0) *ix = *ix + p;
 
-  return *ix * 4.656612875e-10;
+  return (*ix * 4.656612875e-10);
 }
