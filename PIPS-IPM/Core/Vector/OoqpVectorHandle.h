@@ -7,8 +7,7 @@
 
 #include "IotrRefCount.h"
 #include "SmartPointer.h"
-
-class OoqpVector;
+#include "OoqpVector_fwd.h"
 
 typedef SmartPointer<OoqpVector> OoqpVectorHandle;
 

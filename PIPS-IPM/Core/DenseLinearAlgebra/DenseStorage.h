@@ -7,6 +7,7 @@
 
 #include "DoubleMatrix.h"
 #include "DenseStorageHandle.h"
+#include "OoqpVector_fwd.h"
 
 extern int DenseStorageInstances;
 

@@ -3,6 +3,7 @@
 
 #include "StochInputTree.h"
 #include "StochResourcesMonitor.h"
+#include "StochVector_fwd.h"
 
 #ifdef __bg__
 #define MPICH_SKIP_MPICXX
@@ -11,13 +12,13 @@
 
 #include <vector>
 #include <list>
+
 class Data;
 class QpGen;
 class QpGenStoch;
 class sData;
 class StochSymMatrix;
 class StochGenMatrix;
-class StochVector;
 class QpGenStochLinsys;
 
 //#define POOLSCEN 1
