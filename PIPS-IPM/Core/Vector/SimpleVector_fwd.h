@@ -11,6 +11,6 @@
  template<typename T>
  class SimpleVectorBase;
  
- using SimpleVector = SimpleVectorBase<double>;
+ typedef SimpleVectorBase<double> SimpleVector;
  
  #endif

@@ -81,7 +81,7 @@ public:
   void writeMPSformatBoundsWithVar(std::ostream& out, const std::string varStub, const OoqpVectorBase<T>* ix, bool upperBound) const override;
 
   void scale( T alpha ) override;
-
+  
   void axpy  ( T alpha, const OoqpVectorBase<T>& x ) override;
   void axzpy ( T alpha, const OoqpVectorBase<T>& x, const OoqpVectorBase<T>& z ) override;
   void axdzpy( T alpha, const OoqpVectorBase<T>& x, const OoqpVectorBase<T>& z ) override;

@@ -348,7 +348,7 @@ void SimpleVectorBase<T>::writeToStreamAllStringStream(std::stringstream& sout) 
 template<typename T>
 void SimpleVectorBase<T>::writefToStream( std::ostream& out, const char format[] ) const
 {
-  SimpleVectorBaseHandle<T> empty( new SimpleVectorBase<T>(0) );
+  SmartPointer<SimpleVectorBase<T>> empty( new SimpleVectorBase<T>(0) );
   this->writefSomeToStream( out, format, *empty );
 }
 
@@ -420,24 +420,40 @@ void SimpleVectorBase<T>::writeMPSformatBoundsWithVar(std::ostream& out, const s
    }
 }
 
+template<>
+void SimpleVectorBase<double>::scale( double alpha )
+{
+  int one = 1;
+  dscal_( &this->n, &alpha, v, &one );
+}
+
+// generic implementation without boost 
 template<typename T>
 void SimpleVectorBase<T>::scale( T alpha )
 {
-  // int one = 1;
-  // dscal_( &this->n, &alpha, v, &one );
-   std::transform( this->v, this->v + this->n, this->v, [alpha](T a)->T { return alpha * a; } );
+  assert(0 && "not implemented here");
+   // std::transform( this->v, this->v + this->n, this->v, [alpha](T a)->T { return alpha * a; } );
+}
+
+template<>
+void SimpleVectorBase<double>::axpy( double alpha, const OoqpVectorBase<double>& vec )
+{
+  assert( this->n == vec.length() );
+  const SimpleVectorBase<double> & sv = dynamic_cast<const SimpleVectorBase<double> &>(vec);
+
+  int one = 1;
+  daxpy_( &this->n, &alpha, sv.v, &one, v, &one );
 }
 
 template<typename T>
 void SimpleVectorBase<T>::axpy( T alpha, const OoqpVectorBase<T>& vec )
 {
-  assert( this->n == vec.length() );
-  const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
+  assert(0 && "not implemented here");
 
-  // int one = 1;
-  // daxpy_( &this->n, &alpha, sv.v, &one, v, &one );
-  std::transform( this->v, this->v + this->n, sv.v, this->v,
-      [alpha](T a, T b)->T { return a + alpha * b; });
+  // assert( this->n == vec.length() );
+  // const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
+  // std::transform( this->v, this->v + this->n, sv.v, this->v,
+      // [alpha](T a, T b)->T { return a + alpha * b; });
 }
 
 template<typename T>

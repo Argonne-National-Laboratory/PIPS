@@ -9,9 +9,9 @@
 #include "SmartPointer.h"
 #include "SimpleVector_fwd.h"
 
-template<typename T>
-using SimpleVectorBaseHandle = SmartPointer<SimpleVectorBase<T> >;
+// template<typename T>
+// using SimpleVectorBaseHandle = SmartPointer<SimpleVectorBase<T> >;
 
-using SimpleVectorHandle = SmartPointer<SimpleVector>;
+typedef SmartPointer<SimpleVector> SimpleVectorHandle;
 
 #endif

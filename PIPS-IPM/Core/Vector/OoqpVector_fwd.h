@@ -11,6 +11,6 @@
  template<typename T>
  class OoqpVectorBase;
  
- using OoqpVector = OoqpVectorBase<double>;
+ typedef OoqpVectorBase<double> OoqpVector;
  
  #endif
