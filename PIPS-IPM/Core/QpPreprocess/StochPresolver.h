@@ -32,7 +32,7 @@ public:
   StochPresolver(const Data* prob, Postsolver* postsolver);
   virtual ~StochPresolver();
 
-  virtual Data* presolve();
+  Data* presolve() override;
 
 };
 

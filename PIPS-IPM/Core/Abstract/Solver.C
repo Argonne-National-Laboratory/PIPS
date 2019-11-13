@@ -214,7 +214,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 #endif
 	  break;
 	default:
-	  cout << "Can't get here: firstOrSecond=" << firstOrSecond << endl;
+	  std::cout << "Can't get here: firstOrSecond=" << firstOrSecond << std::endl;
 	  assert( 0 && "Can't get here" );
           break;
 	}
