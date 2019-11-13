@@ -140,7 +140,7 @@ public:
                       T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
                       bool& primalBlocking, bool& dualBlocking) const override;
 
-  void removeEntries(const OoqpVectorBase<T>& select) override;
+  void removeEntries(const OoqpVectorBase<int>& select) override;
 
   void permuteEntries(const std::vector<unsigned int>& permvec);
 

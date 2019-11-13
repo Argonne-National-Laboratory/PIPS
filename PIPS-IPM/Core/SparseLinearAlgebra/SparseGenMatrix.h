@@ -156,7 +156,7 @@ public:
   virtual void addRowSums( OoqpVector& sumVec );
   virtual void addColSums( OoqpVector& sumVec );
 
-  void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec);
+  void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>* colNnzVec);
 
   void permuteRows(const std::vector<unsigned int>& permvec);
 
@@ -171,7 +171,7 @@ public:
 
   SparseGenMatrix& getTranspose();
 
-  void deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
+  void deleteEmptyRowsCols(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec);
 
   void deleteEmptyRows(int*& orgIndex);
 

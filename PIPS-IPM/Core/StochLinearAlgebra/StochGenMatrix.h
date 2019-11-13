@@ -80,9 +80,9 @@ public:
   /** row scale method for children */
   virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec );
 
-  virtual void getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent);
+  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent);
 
-  virtual void getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent);
+  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent);
 
   virtual void addRowSums( OoqpVector& sumVec, OoqpVector* linkParent );
   virtual void addColSums( OoqpVector& sumVec, OoqpVector* linkParent );
@@ -96,7 +96,7 @@ public:
 
 
   virtual void initTransposedChild(bool dynamic);
-  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec);
+  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec);
 
   virtual void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec);
 
@@ -176,12 +176,12 @@ public:
   void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
 
-  virtual void getNnzPerRow(OoqpVector& nnzVec)
+  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec)
   {
      getNnzPerRow(nnzVec, NULL);
   };
 
-  virtual void getNnzPerCol(OoqpVector& nnzVec)
+  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec)
   {
      getNnzPerCol(nnzVec, NULL);
   };
@@ -203,7 +203,7 @@ public:
   virtual void addRowSums( OoqpVector& sumVec ) {addRowSums(sumVec, NULL);};
   virtual void addColSums( OoqpVector& sumVec ) {addColSums(sumVec, NULL);};
 
-  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
+  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec)
   {
      initStaticStorageFromDynamic(rowNnzVec, colNnzVec, NULL, NULL);
   };
@@ -333,13 +333,13 @@ public:
   virtual void initTransposed(bool dynamic = false) {};
   virtual void deleteTransposed() {};
 
-  virtual void getNnzPerRow(OoqpVector& nnzVec, OoqpVector* linkParent) {};
+  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent) {};
 
-  virtual void getNnzPerCol(OoqpVector& nnzVec, OoqpVector* linkParent) {};
+  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent) {};
 
-  virtual void getNnzPerRow(OoqpVector& nnzVec) {};
+  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec) {};
 
-  virtual void getNnzPerCol(OoqpVector& nnzVec) {};
+  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec) {};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};
@@ -358,8 +358,8 @@ public:
   virtual void addRowSums( OoqpVector& vec ) {};
   virtual void addColSums( OoqpVector& vec ) {};
 
-  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec) {};
-  virtual void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec) {};
+  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec) {};
+  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec) {};
 
   virtual void freeDynamicStorage() {};
 

@@ -2187,8 +2187,8 @@ sData::getLocalG()
    return *Cst.Blmat;
 }
 
-void sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC,
-      const StochVector& colNnzVec)
+void sData::cleanUpPresolvedData(const StochVectorBase<int>& rowNnzVecA, const StochVectorBase<int>& rowNnzVecC,
+      const StochVectorBase<int>& colNnzVec)
 {
    StochSymMatrix& Q_stoch = dynamic_cast<StochSymMatrix&>(*Q);
 

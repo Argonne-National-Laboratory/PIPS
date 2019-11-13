@@ -15,14 +15,8 @@
 #include "SystemType.h"
 #include "StochPostsolver.h"
 #include "pipsport.h"
-#include <vector>
 
-typedef struct
-{
-   int colIdx;
-   double newxlow;
-   double newxupp;
-} XBOUNDS;
+#include <vector>
 
 class StochPresolverBase
 {
@@ -89,11 +83,11 @@ protected:
    const SimpleVector* currgParent;
    const SimpleVector* currgChild;
 
-   const SimpleVector* currNnzRow;
-   const SimpleVector* currNnzRowLink;
+   const SimpleVectorBase<int>* currNnzRow;
+   const SimpleVectorBase<int>* currNnzRowLink;
 
-   const SimpleVector* currNnzColParent;
-   const SimpleVector* currNnzColChild;
+   const SimpleVectorBase<int>* currNnzColParent;
+   const SimpleVectorBase<int>* currNnzColChild;
 
    /** the number of children */
    int nChildren;

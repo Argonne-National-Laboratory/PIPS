@@ -17,7 +17,7 @@
 #include "SystemType.h"
 
 
-class StochPostsolver : public QpPostsolver{
+class StochPostsolver : public QpPostsolver {
 public:
 
       StochPostsolver( const sData& original_problem );
@@ -72,9 +72,9 @@ private:
       const unsigned int n_cols_original;
 
       /// for now mapping will contain a dummy value for columns that have not been fixed and the value the columns has been fixed to otherwise
-      StochVector* padding_origcol;
-      StochVector* padding_origrow_equality;
-      StochVector* padding_origrow_inequality;
+      StochVectorBase<int>* padding_origcol;
+      StochVectorBase<int>* padding_origrow_equality;
+      StochVectorBase<int>* padding_origrow_inequality;
 
       std::vector<ReductionType> reductions;
       std::vector<INDEX> indices;
@@ -87,19 +87,18 @@ private:
 
       void finishNotify();
 
-      SimpleVector& getSimpleVecRowFromStochVec(const OoqpVector& ooqpvec, int node, BlockType block_type) const
-         { return getSimpleVecRowFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node, block_type); };
-      SimpleVector& getSimpleVecColFromStochVec(const OoqpVector& ooqpvec, int node) const
-         { return getSimpleVecColFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node); };
-      SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
-      SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
-
 /// postsolve operations
-
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 
-      void setOriginalValuesFromReduced(StochVector& original_vector, const StochVector& reduced_vector, const StochVector& padding_original) const;
-      void setOriginalValuesFromReduced(SimpleVector& original_vector, const SimpleVector& reduced_vector, const SimpleVector& padding_original) const;
+      template <typename T>
+      void setOriginalValuesFromReduced(StochVectorBase<T>& original_vector,
+         const StochVectorBase<T>& reduced_vector,
+         const StochVectorBase<int>& padding_original) const;
+
+      template <typename T>
+      void setOriginalValuesFromReduced(SimpleVectorBase<T>& original_vector,
+         const SimpleVectorBase<T>& reduced_vector,
+         const SimpleVectorBase<int>& padding_original) const;
 
 
 };

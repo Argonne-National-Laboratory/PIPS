@@ -80,7 +80,7 @@ public:
 
   void restoreOrder();
 
-  SparseStorage* getStaticStorage(double* rowNnz, double* colNnz) const;
+  SparseStorage* getStaticStorage(const int* rowNnz, const int* colNnz) const;
   SparseStorageDynamic* getTranspose() const;
 };
 

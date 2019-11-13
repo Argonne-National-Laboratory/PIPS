@@ -101,7 +101,7 @@ public:
   virtual double objectiveValue( QpGenVars * vars );
   virtual void createScaleFromQ();
 
-  void cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC, const StochVector& colNnzVec);
+  void cleanUpPresolvedData(const StochVectorBase<int>& rowNnzVecA, const StochVectorBase<int>& rowNnzVecC, const StochVectorBase<int>& colNnzVec);
 
   // marker that indicates whether a Schur complement row is (2-link) local
   const std::vector<bool>& getSCrowMarkerLocal() const;

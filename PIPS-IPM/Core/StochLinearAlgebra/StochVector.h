@@ -51,6 +51,7 @@ public:
   */
   virtual OoqpVectorBase<T>* dataClone() const;
   virtual OoqpVectorBase<T>* dataCloneLinkCons() const;
+
   virtual StochVectorBase<T>* clone() const;
   /* copy vector entries as well */
   virtual StochVectorBase<T>* cloneFull() const;
@@ -156,7 +157,7 @@ public:
    virtual std::vector<T> gatherStochVector() const;
 
    /** remove entries i for which select[i] == 0 */
-   void removeEntries( const OoqpVectorBase<T>& select ) override;
+   void removeEntries( const OoqpVectorBase<int>& select ) override;
 
    virtual int getSize() const { return this->n; };
 
@@ -284,7 +285,7 @@ public:
    void copyFromArray( const T v[] )override {};
    void copyFromArray( const char v[] )override {};
 
-   void removeEntries( const OoqpVectorBase<T>& select ) override {};
+   void removeEntries( const OoqpVectorBase<int>& select ) override {};
    void permuteVec0Entries(const std::vector<unsigned int>& permvec) override {};
    void permuteLinkingEntries(const std::vector<unsigned int>& permvec) override {};
    std::vector<T> gatherStochVector() const override {return std::vector<T>(0);};

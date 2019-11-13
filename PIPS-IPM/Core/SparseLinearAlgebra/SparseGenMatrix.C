@@ -637,12 +637,12 @@ void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
 }
 
-void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec)
+void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>* colNnzVec)
 {
    assert(mStorageDynamic != NULL);
 
-   const SimpleVector& rowNnzVecSimple = dynamic_cast<const SimpleVector&>(rowNnzVec);
-   const SimpleVector* const colNnzVecSimple = dynamic_cast<const SimpleVector*>(colNnzVec);
+   const SimpleVectorBase<int>& rowNnzVecSimple = dynamic_cast<const SimpleVectorBase<int>&>(rowNnzVec);
+   const SimpleVectorBase<int>* const colNnzVecSimple = dynamic_cast<const SimpleVectorBase<int>*>(colNnzVec);
 
    mStorageDynamic->restoreOrder();
    SparseStorageHandle staticStorage(mStorageDynamic->getStaticStorage(rowNnzVecSimple.elements(),
@@ -653,10 +653,10 @@ void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, 
    assert(mStorage->refs() == 2);
 }
 
-void SparseGenMatrix::deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec)
+void SparseGenMatrix::deleteEmptyRowsCols(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec)
 {
-   const SimpleVector& rowNnzVecSimple = dynamic_cast<const SimpleVector&>(rowNnzVec);
-   const SimpleVector& colNnzVecSimple = dynamic_cast<const SimpleVector&>(colNnzVec);
+   const SimpleVectorBase<int>& rowNnzVecSimple = dynamic_cast<const SimpleVectorBase<int>&>(rowNnzVec);
+   const SimpleVectorBase<int>& colNnzVecSimple = dynamic_cast<const SimpleVectorBase<int>&>(colNnzVec);
 
    mStorage->deleteEmptyRowsCols(rowNnzVecSimple.elements(), colNnzVecSimple.elements());
 }

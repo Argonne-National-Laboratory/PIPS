@@ -139,7 +139,7 @@ void SparseStorageDynamic::getSize(int& m, int& n)
    n = this->n;
 }
 
-SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* colNnz) const
+SparseStorage* SparseStorageDynamic::getStaticStorage(const int* rowNnz, const int* colNnz) const
 {
    int m_static = 0;
 

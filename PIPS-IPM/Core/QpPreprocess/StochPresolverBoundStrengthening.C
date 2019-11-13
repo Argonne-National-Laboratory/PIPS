@@ -145,7 +145,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    const SimpleVector& cupp = (block_type == LINKING_CONS_BLOCK) ? *currIneqRhsLink : *currIneqRhs;
    const SimpleVector& rhs = (block_type == LINKING_CONS_BLOCK) ? *currEqRhsLink : *currEqRhs;
 
-   const SimpleVector& nnzs_row = (block_type == LINKING_CONS_BLOCK) ? *currNnzRowLink : *currNnzRow;
+   const SimpleVectorBase<int>& nnzs_row = (block_type == LINKING_CONS_BLOCK) ? *currNnzRowLink : *currNnzRow;
 
    const SparseStorageDynamic* mat;
 
@@ -239,16 +239,16 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          {
             if( PIPSisLT(0.0, a_ik) )
             {
-               if( icupp[row] != 0.0 )
+               if( !PIPSisZero(icupp[row]) )
                   ubx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
-               if( iclow[row] != 0.0 )
+               if( !PIPSisZero(iclow[row]) )
                   lbx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
             else
             {
-               if( icupp[row] != 0.0 )
+               if( !PIPSisZero(icupp[row]) )
                   lbx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
-               if( iclow[row] != 0.0 )
+               if( !PIPSisZero(iclow[row]) )
                   ubx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
          }

@@ -41,7 +41,6 @@ StochVectorBase<T>::StochVectorBase(int n_, int nl_, MPI_Comm mpiComm_, int isDi
     MPI_Comm_size(mpiComm, &size);
     iAmDistrib = (size == 1) ? 0 : 1;
   }
-
 }
 
 template<typename T>
@@ -1666,9 +1665,9 @@ void StochVectorBase<T>::copyFromArray( const char v[] )
 }
 
 template<typename T>
-void StochVectorBase<T>::removeEntries( const OoqpVectorBase<T>& select )
+void StochVectorBase<T>::removeEntries( const OoqpVectorBase<int>& select )
 {
-   const StochVectorBase<T>& selectStoch = dynamic_cast<const StochVectorBase<T>&>(select);
+   const StochVectorBase<int>& selectStoch = dynamic_cast<const StochVectorBase<int>&>(select);
 
    assert(children.size() == selectStoch.children.size());
 
@@ -1830,5 +1829,4 @@ bool StochVectorBase<T>::isRootNodeInSync() const
 }
 
 template class StochVectorBase<int>;
-// template class StochVectorBase<bool>;
 template class StochVectorBase<double>;

@@ -169,7 +169,8 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       count[15] = n_cols_orig_free;
       count[16] = n_cols_orig_free_removed;
 
-      MPI_Allreduce(MPI_IN_PLACE, count, 15, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(count, 15, MPI_COMM_WORLD);
+
       n_rows_eq = count[0];
       n_rows_ineq = count[1];
       n_rows_empty_eq = count[2];
@@ -213,7 +214,7 @@ void StochPresolverBase::countRowsBlock(int& n_rows_total, int& n_rows_empty, in
       if( !presData.hasLinking(system_type) )
          return;
 
-   const SimpleVector* nnz_row = (block_type != LINKING_CONS_BLOCK) ? currNnzRow : currNnzRowLink;
+   const SimpleVectorBase<int>* nnz_row = (block_type != LINKING_CONS_BLOCK) ? currNnzRow : currNnzRowLink;
    const SimpleVector* iclow = (block_type != LINKING_CONS_BLOCK) ? currIclow : currIclowLink;
    const SimpleVector* lhs = (block_type != LINKING_CONS_BLOCK) ? currIneqLhs : currIneqLhsLink;
    const SimpleVector* icupp = (block_type != LINKING_CONS_BLOCK) ? currIcupp : currIcuppLink;
@@ -279,7 +280,7 @@ void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty
 {
    const SimpleVector& ixlow = (block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
    const SimpleVector& ixupp = (block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
-   const SimpleVector& curr_nnz = (block_type == LINKING_VARS_BLOCK) ? *currNnzColParent : *currNnzColChild;
+   const SimpleVectorBase<int>& curr_nnz = (block_type == LINKING_VARS_BLOCK) ? *currNnzColParent : *currNnzColChild;
 
 #ifndef NDEBUG
    const SimpleVector& xupp = (block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
@@ -294,7 +295,7 @@ void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty
 
    for( int i = 0; i < ixlow.n; i++ )
    {
-      if( ixupp_orig[i] == 0.0 && ixlow_orig[i] == 0.0 )
+      if( PIPSisZero(ixupp_orig[i]) && PIPSisZero(ixlow_orig[i]) )
          ++n_cols_orig_free;
 
       if( curr_nnz[i] != 0.0 )
@@ -304,7 +305,7 @@ void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty
             ++n_cols_singleton;
          }
 
-         if( ixlow[i] != 0.0 && ixupp[i] != 0.0 )
+         if( !PIPSisZero(ixlow[i]) && !PIPSisZero(ixupp[i]) )
             ++n_cols_boxed;
          else if( ixlow[i] == 0.0 && ixupp[i] == 0.0)
             ++n_cols_free;
@@ -313,7 +314,7 @@ void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty
       }
       else
       {
-         if( ixupp_orig[i] == 0.0 && ixlow_orig[i] == 0.0 )
+         if( PIPSisZero(ixupp_orig[i]) && PIPSisZero(ixlow_orig[i]) )
             ++n_cols_orig_free_removed;
          ++n_cols_empty;
       }
@@ -509,37 +510,37 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    assert(-1 <= node && node <= nChildren);
 
 //   const SimpleVectorHandle row_red = (system_type == EQUALITY_SYSTEM) ? presData.nnzs_row_A_chgs : presData.nnzs_row_C_chgs;
-   const StochVector& row_nnz = (system_type == EQUALITY_SYSTEM) ? presData.getNnzsRowA() : presData.getNnzsRowC();
+   const StochVectorBase<int>& row_nnz = (system_type == EQUALITY_SYSTEM) ? presData.getNnzsRowA() : presData.getNnzsRowC();
 
    /* rows */
    if( node == -1)
    {
-      currNnzRow = dynamic_cast<const SimpleVector*>(row_nnz.vec);
+      currNnzRow = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vec);
    }
    else
    {
       assert(row_nnz.children[node]->vec != NULL);
 
-      currNnzRow = dynamic_cast<const SimpleVector*>(row_nnz.children[node]->vec);
+      currNnzRow = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.children[node]->vec);
    }
 
    if( presData.hasLinking(system_type) )
    {
 //      currRedRowLink = &(*row_red);
-      currNnzRowLink = dynamic_cast<const SimpleVector*>(row_nnz.vecl);;
+      currNnzRowLink = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vecl);;
    }
    else
 //      currRedRowLink = currNnzRowLink = NULL;
       ;
    /* colums */
 //   currRedColParent = &(*presData.nnzs_col_chgs);
-   currNnzColParent = dynamic_cast<const SimpleVector*>(presData.getNnzsCol().vec);;
+   currNnzColParent = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().vec);;
 
    assert(presData.getNnzsCol().vecl == NULL);
 
    if(node != -1)
    {
-      currNnzColChild = dynamic_cast<const SimpleVector*>(presData.getNnzsCol().children[node]->vec);
+      currNnzColChild = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().children[node]->vec);
 
       assert(presData.getNnzsCol().children[node]->vecl == NULL);
    }

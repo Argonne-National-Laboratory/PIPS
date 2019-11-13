@@ -926,10 +926,10 @@ void SimpleVectorBase<T>::divideSome( const OoqpVectorBase<T>& div, const OoqpVe
 }
 
 template<typename T>
-void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<T>& select)
+void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<int>& select)
 {
-   const SimpleVectorBase<T>& selectSimple = dynamic_cast<const SimpleVectorBase<T>&>(select);
-   const T* const selectArr = selectSimple.v;
+   const SimpleVectorBase<int>& selectSimple = dynamic_cast<const SimpleVectorBase<int>&>(select);
+   const int* const selectArr = selectSimple.elements();
 
    assert(this->n == selectSimple.length());
 
@@ -937,7 +937,7 @@ void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<T>& select)
 
    for( int i = 0; i < this->n; i++ )
       if( selectArr[i] != 0.0 )
-         v[nNew++] = v[i];
+         v[nNew++] = 0.0;
 
    this->n = nNew;
 }
@@ -965,5 +965,4 @@ void SimpleVectorBase<T>::permuteEntries(const std::vector<unsigned int>& permve
 }
 
 template class SimpleVectorBase<int>;
-// template class SimpleVectorBase<bool>;
 template class SimpleVectorBase<double>;

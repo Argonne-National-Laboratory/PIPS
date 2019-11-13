@@ -274,7 +274,7 @@ struct get_mpi_datatype_t<char> {
 
 template <>
 struct get_mpi_datatype_t<bool> {
-   static constexpr MPI_Datatype value = MPI_C_BOOL;
+   static constexpr MPI_Datatype value = MPI_CXX_BOOL;
 };
 
 template <>
@@ -330,12 +330,53 @@ inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
 }
 
 template <typename T>
+inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
+{
+   assert(length >= 0);
+   if(length == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, localmax, length, get_mpi_datatype(localmax), MPI_MAX, mpiComm);
+}
+
+template <typename T>
 inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
 {
    T sum;
    MPI_Allreduce(&localsummand, &sum, 1, get_mpi_datatype(localsummand), MPI_SUM, mpiComm);
 
    return sum;
+}
+
+template <typename T>
+inline void PIPS_MPIgetLogicOrInPlace(T& localval, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &localval, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
+}
+
+template <typename T>
+inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm)
+{
+   T lor;
+   MPI_Allreduce(&localval, &lor, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
+
+   return lor;
+}
+
+template <typename T>
+inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+{
+   assert( length >= 0 );
+   if(length == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_LOR, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &sum, 1, get_mpi_datatype(sum), MPI_SUM, mpiComm);
 }
 
 template <typename T>
@@ -358,15 +399,6 @@ inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiC
       return;
 
    MPI_Allreduce(source, dest, length, get_mpi_datatype(source), MPI_SUM, mpiComm);
-}
-
-template <typename T>
-inline void PIPS_MPImaxArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
-{
-   assert(length >= 0);
-   if(length == 0)
-      return;
-   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_MAX, mpiComm);
 }
 
 template <typename T>

@@ -10,6 +10,7 @@
 #include "PresolveData.h"
 #include "StochGenMatrix.h"
 #include "DoubleMatrixTypes.h"
+#include "StochVectorUtilities.h"
 #include "pipsdef.h"
 
 #include <stdexcept>
@@ -37,21 +38,23 @@
 
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
-      outdated_lhsrhs(false),
-      outdated_nnzs(false),
-      outdated_linking_var_bounds(false),
-      outdated_activities(true),
-      outdated_obj_vector(false),
+      length_array_outdated_indicators(5),
+      array_outdated_indicators(new bool[length_array_outdated_indicators]),
+      outdated_lhsrhs(array_outdated_indicators[0]),
+      outdated_nnzs(array_outdated_indicators[1]),
+      outdated_linking_var_bounds(array_outdated_indicators[2]),
+      outdated_activities(array_outdated_indicators[3]),
+      outdated_obj_vector(array_outdated_indicators[4]),
       linking_rows_need_act_computation(0),
-      nnzs_row_A(dynamic_cast<StochVector*>(sorigprob->bA->clone())),
-      nnzs_row_C(dynamic_cast<StochVector*>(sorigprob->icupp->clone())),
-      nnzs_col(dynamic_cast<StochVector*>(sorigprob->g->clone())),
-      actmax_eq_part(nnzs_row_A->clone()),
-      actmin_eq_part(nnzs_row_A->clone()),
+      nnzs_row_A(cloneStochVector<double,int>(*sorigprob->bA)),
+      nnzs_row_C(cloneStochVector<double,int>(*sorigprob->icupp)),
+      nnzs_col(cloneStochVector<double,int>(*sorigprob->g)),
+      actmax_eq_part(cloneStochVector<int,double>(*nnzs_row_A)),
+      actmin_eq_part(actmax_eq_part->clone()),
       actmax_eq_ubndd(nnzs_row_A->clone()),
       actmin_eq_ubndd(nnzs_row_A->clone()),
-      actmax_ineq_part(nnzs_row_C->clone()),
-      actmin_ineq_part(nnzs_row_C->clone()),
+      actmax_ineq_part(cloneStochVector<int,double>(*nnzs_row_C)),
+      actmin_ineq_part(actmax_ineq_part->clone()),
       actmax_ineq_ubndd(nnzs_row_C->clone()),
       actmin_ineq_ubndd(nnzs_row_C->clone()),
       nChildren(nnzs_col->children.size()),
@@ -65,12 +68,15 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       upper_bound_implied_by_node(nnzs_col->clone()),
       elements_deleted(0), elements_deleted_transposed(0)
 {
-      lower_bound_implied_by_system->setToConstant(-10);
-      lower_bound_implied_by_row->setToConstant(-10);
-      lower_bound_implied_by_node->setToConstant(-10);
-      upper_bound_implied_by_system->setToConstant(-10);
-      upper_bound_implied_by_row->setToConstant(-10);
-      upper_bound_implied_by_node->setToConstant(-10);
+   std::memset(array_outdated_indicators, 0, length_array_outdated_indicators * sizeof(bool) );
+   outdated_activities = true;
+
+   lower_bound_implied_by_system->setToConstant(-10);
+   lower_bound_implied_by_row->setToConstant(-10);
+   lower_bound_implied_by_node->setToConstant(-10);
+   upper_bound_implied_by_system->setToConstant(-10);
+   upper_bound_implied_by_row->setToConstant(-10);
+   upper_bound_implied_by_node->setToConstant(-10);
 
    presProb = sorigprob->cloneFull(true);
 
@@ -82,29 +88,33 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    assert( n_linking_vars + 2 * n_linking_A + 2 * n_linking_C < std::numeric_limits<int>::max() );
 
    length_array_nnz_chgs = n_linking_vars + n_linking_A + n_linking_C;
-   array_nnz_chgs = new double[length_array_nnz_chgs]();
+   array_nnz_chgs = new int[length_array_nnz_chgs];
+   std::memset(array_nnz_chgs, 0, length_array_nnz_chgs * sizeof(int));
 
-   nnzs_col_chgs = SimpleVectorHandle(new SimpleVector(array_nnz_chgs, n_linking_vars));
-   nnzs_row_A_chgs = SimpleVectorHandle(new SimpleVector(array_nnz_chgs + n_linking_vars, n_linking_A));
-   nnzs_row_C_chgs = SimpleVectorHandle(new SimpleVector(array_nnz_chgs + n_linking_vars + n_linking_A, n_linking_C));
+   nnzs_col_chgs = SmartPointer<SimpleVectorBase<int>>(new SimpleVectorBase<int>(array_nnz_chgs, n_linking_vars));
+   nnzs_row_A_chgs = SmartPointer<SimpleVectorBase<int>>(new SimpleVectorBase<int>(array_nnz_chgs + n_linking_vars, n_linking_A));
+   nnzs_row_C_chgs = SmartPointer<SimpleVectorBase<int>>(new SimpleVectorBase<int>(array_nnz_chgs + n_linking_vars + n_linking_A, n_linking_C));
 
    lenght_array_act_chgs = n_linking_A * 2 + n_linking_C * 2;
-   array_act_chgs = new double[lenght_array_act_chgs]();
+   array_act_chgs = new double[lenght_array_act_chgs];
+   std::memset(array_act_chgs, 0.0, lenght_array_act_chgs * sizeof(double));
 
    actmax_eq_chgs = SimpleVectorHandle( new SimpleVector(array_act_chgs, n_linking_A));
    actmin_eq_chgs = SimpleVectorHandle( new SimpleVector(array_act_chgs + n_linking_A, n_linking_A));
    actmax_ineq_chgs = SimpleVectorHandle( new SimpleVector(array_act_chgs + 2 * n_linking_A, n_linking_C));
    actmin_ineq_chgs = SimpleVectorHandle( new SimpleVector(array_act_chgs + 2 * n_linking_A + n_linking_C, n_linking_C));
 
-   array_act_unbounded_chgs = new double[lenght_array_act_chgs]();
+   array_act_unbounded_chgs = new int[lenght_array_act_chgs];
+   std::memset(array_act_unbounded_chgs, 0, lenght_array_act_chgs * sizeof(int));
 
-   actmax_eq_ubndd_chgs = SimpleVectorHandle( new SimpleVector(array_act_unbounded_chgs, n_linking_A));
-   actmin_eq_ubndd_chgs = SimpleVectorHandle( new SimpleVector(array_act_unbounded_chgs + n_linking_A, n_linking_A));
-   actmax_ineq_ubndd_chgs = SimpleVectorHandle( new SimpleVector(array_act_unbounded_chgs + 2 * n_linking_A, n_linking_C));
-   actmin_ineq_ubndd_chgs = SimpleVectorHandle( new SimpleVector(array_act_unbounded_chgs + 2 * n_linking_A + n_linking_C, n_linking_C));
+   actmax_eq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs, n_linking_A));
+   actmin_eq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs + n_linking_A, n_linking_A));
+   actmax_ineq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs + 2 * n_linking_A, n_linking_C));
+   actmin_ineq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs + 2 * n_linking_A + n_linking_C, n_linking_C));
 
    lenght_array_bound_chgs = n_linking_A + n_linking_C;
-   array_bound_chgs = new double[lenght_array_bound_chgs]();
+   array_bound_chgs = new double[lenght_array_bound_chgs];
+   std::memset(array_bound_chgs, 0.0, lenght_array_bound_chgs * sizeof(double));
 
    bound_chgs_A = SimpleVectorHandle( new SimpleVector(array_bound_chgs, n_linking_A));
    bound_chgs_C = SimpleVectorHandle( new SimpleVector(array_bound_chgs + n_linking_A, n_linking_C));
@@ -122,10 +132,10 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    if( (my_rank == 0 || NODE != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
    {
       std::cout << "inital column" << std::endl;
-      std::cout << "ixlow: " << getSimpleVecColFromStochVec( *presProb->ixlow, NODE)[COLUMN] << std::endl;
-      std::cout << "xlow: " << getSimpleVecColFromStochVec( *presProb->blx, NODE)[COLUMN] << std::endl;
-      std::cout << "ixupp: " << getSimpleVecColFromStochVec( *presProb->ixupp, NODE)[COLUMN] << std::endl;
-      std::cout << "xupp: " << getSimpleVecColFromStochVec( *presProb->bux, NODE)[COLUMN] << std::endl;
+      std::cout << "ixlow: " << getSimpleVecFromColStochVec( *presProb->ixlow, NODE)[COLUMN] << std::endl;
+      std::cout << "xlow: " << getSimpleVecFromColStochVec( *presProb->blx, NODE)[COLUMN] << std::endl;
+      std::cout << "ixupp: " << getSimpleVecFromColStochVec( *presProb->ixupp, NODE)[COLUMN] << std::endl;
+      std::cout << "xupp: " << getSimpleVecFromColStochVec( *presProb->bux, NODE)[COLUMN] << std::endl;
    }
 #endif
 
@@ -143,6 +153,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
 
 PresolveData::~PresolveData()
 {
+   delete[] array_outdated_indicators;
    delete[] array_nnz_chgs;
    delete[] array_act_chgs;
    delete[] array_bound_chgs;
@@ -163,10 +174,10 @@ void PresolveData::setUndefinedVarboundsTo(double value)
    SimpleVector& vec_ixupp = dynamic_cast<SimpleVector&>(*ixupp.vec);
    for(int i = 0; i < vec_xlow.length(); ++i)
    {
-      if( vec_ixlow[i] == 0.0)
+      if( PIPSisZero(vec_ixlow[i]) )
          vec_xlow[i] = -value;
 
-      if( vec_ixupp[i] == 0.0)
+      if( PIPSisZero(vec_ixupp[i]) )
          vec_xupp[i] = value;
    }
 }
@@ -178,11 +189,7 @@ sData* PresolveData::finalize()
    if(distributed)
    {
       // todo make one array?
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_obj_vector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE, array_outdated_indicators, length_array_outdated_indicators, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
    }
    assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds && !outdated_obj_vector);
 #endif
@@ -254,10 +261,10 @@ void PresolveData::recomputeActivities(bool linking_only)
       SimpleVector& actmin_ineq_root_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part->vec);
       SimpleVector& actmax_ineq_root_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part->vec);
 
-      SimpleVector& actmin_eq_root_ubndd = dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vec);
-      SimpleVector& actmax_eq_root_ubndd = dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->vec);
-      SimpleVector& actmin_ineq_root_ubndd = dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vec);
-      SimpleVector& actmax_ineq_root_ubndd = dynamic_cast<SimpleVector&>(*actmax_ineq_ubndd->vec);
+      SimpleVectorBase<int>& actmin_eq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vec);
+      SimpleVectorBase<int>& actmax_eq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vec);
+      SimpleVectorBase<int>& actmin_ineq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vec);
+      SimpleVectorBase<int>& actmax_ineq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vec);
 
       addActivityOfBlock(mat_A.Bmat->getStorageDynamicRef(), actmin_eq_root_part, actmin_eq_root_ubndd, actmax_eq_root_part, actmax_eq_root_ubndd,
             xlow_root, ixlow_root, xupp_root, ixupp_root);
@@ -271,10 +278,10 @@ void PresolveData::recomputeActivities(bool linking_only)
    SimpleVector& actmin_ineq_link_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl);
    SimpleVector& actmax_ineq_link_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl);
 
-   SimpleVector& actmin_eq_link_ubndd = dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vecl);
-   SimpleVector& actmax_eq_link_ubndd = dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->vecl);
-   SimpleVector& actmin_ineq_link_ubndd = dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vecl);
-   SimpleVector& actmax_ineq_link_ubndd = dynamic_cast<SimpleVector&>(*actmax_ineq_ubndd->vecl);
+   SimpleVectorBase<int>& actmin_eq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl);
+   SimpleVectorBase<int>& actmax_eq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vecl);
+   SimpleVectorBase<int>& actmin_ineq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vecl);
+   SimpleVectorBase<int>& actmax_ineq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vecl);
 
    /* Bl0 */
    if(my_rank == 0)
@@ -305,8 +312,8 @@ void PresolveData::recomputeActivities(bool linking_only)
             SimpleVector& actmin_eq_child_part = dynamic_cast<SimpleVector&>(*actmin_eq_part->children[node]->vec);
             SimpleVector& actmax_eq_child_part = dynamic_cast<SimpleVector&>(*actmax_eq_part->children[node]->vec);
 
-            SimpleVector& actmin_eq_child_ubndd = dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->children[node]->vec);
-            SimpleVector& actmax_eq_child_ubndd = dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->children[node]->vec);
+            SimpleVectorBase<int>& actmin_eq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->children[node]->vec);
+            SimpleVectorBase<int>& actmax_eq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->children[node]->vec);
 
             /* Ai */
             addActivityOfBlock(mat_A.children[node]->Amat->getStorageDynamicRef(), actmin_eq_child_part, actmin_eq_child_ubndd, actmax_eq_child_part,
@@ -329,8 +336,8 @@ void PresolveData::recomputeActivities(bool linking_only)
             SimpleVector& actmin_ineq_child_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part->children[node]->vec);
             SimpleVector& actmax_ineq_child_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part->children[node]->vec);
 
-            SimpleVector& actmin_ineq_child_ubndd = dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->children[node]->vec);
-            SimpleVector& actmax_ineq_child_ubndd = dynamic_cast<SimpleVector&>(*actmax_ineq_ubndd->children[node]->vec);
+            SimpleVectorBase<int>& actmin_ineq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->children[node]->vec);
+            SimpleVectorBase<int>& actmax_ineq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->children[node]->vec);
 
             /* Ai */
             addActivityOfBlock(mat_C.children[node]->Amat->getStorageDynamicRef(), actmin_ineq_child_part, actmin_ineq_child_ubndd, actmax_ineq_child_part,
@@ -352,30 +359,30 @@ void PresolveData::recomputeActivities(bool linking_only)
    if( distributed )
    {
       // todo is copying and then allreducing once cheaper than allreducing 4 times ? by a lot?
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_eq_part->vecl)->elements(), actmin_eq_part->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_eq_part->vecl)->elements(), actmax_eq_part->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_ineq_part->vecl)->elements(), actmin_ineq_part->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_ineq_part->vecl)->elements(), actmax_ineq_part->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_eq_part->vecl)->elements(), actmin_eq_part->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_eq_part->vecl)->elements(), actmax_eq_part->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_part->vecl)->elements(), actmin_ineq_part->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_part->vecl)->elements(), actmax_ineq_part->vecl->n, MPI_COMM_WORLD);
 
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_eq_ubndd->vecl)->elements(), actmin_eq_ubndd->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_eq_ubndd->vecl)->elements(), actmax_eq_ubndd->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmin_ineq_ubndd->vecl)->elements(), actmin_ineq_ubndd->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, dynamic_cast<SimpleVector*>(actmax_ineq_ubndd->vecl)->elements(), actmax_ineq_ubndd->vecl->n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_eq_ubndd->vecl)->elements(), actmin_eq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_eq_ubndd->vecl)->elements(), actmax_eq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_ubndd->vecl)->elements(), actmin_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_ubndd->vecl)->elements(), actmax_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
    }
 
    /* set activities to infinity // theoretically not necessary but for debugging */
    for(int row = 0; row < actmin_eq_part->vecl->n; ++row)
    {
-      if( dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vecl)[row] >= 2 )
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl)[row] >= 2 )
          dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[row] = -std::numeric_limits<double>::infinity();
-      if( dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->vecl)[row] >= 2 )
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vecl)[row] >= 2 )
          dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl)[row] = std::numeric_limits<double>::infinity();
    }
    for(int row = 0; row < actmin_ineq_part->vecl->n; ++row)
    {
-      if( dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vecl)[row] >= 2 )
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vecl)[row] >= 2 )
          dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[row] = -std::numeric_limits<double>::infinity();
-      if( dynamic_cast<SimpleVector&>(*actmax_ineq_ubndd->vecl)[row] >= 2 )
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vecl)[row] >= 2 )
          dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl)[row] = std::numeric_limits<double>::infinity();
    }
 
@@ -394,15 +401,15 @@ void PresolveData::recomputeActivities(bool linking_only)
 #ifdef TRACK_ROW
    if(!nodeIsDummy(ROW_NODE, ROW_SYS))
    {
-   double act_min = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
-         getSimpleVecRowFromStochVec(*actmin_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
-   double act_max = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
-         getSimpleVecRowFromStochVec(*actmax_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
+   double act_min = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, ROW_NODE, ROW_IS_LINK )[ROW] :
+         getSimpleVecFromRowStochVec(*actmin_ineq_part, ROW_NODE, ROW_IS_LINK )[ROW];
+   double act_max = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, ROW_NODE, ROW_IS_LINK )[ROW] :
+         getSimpleVecFromRowStochVec(*actmax_ineq_part, ROW_NODE, ROW_IS_LINK )[ROW];
 
-   double act_min_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
-         getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
-   double act_max_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
-         getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
+   int act_min_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW] :
+         getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW];
+   int act_max_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW] :
+         getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, ROW_NODE, ROW_IS_LINK )[ROW];
 
 
    std::cout << "TRACKING: Recomputed activity of row " << ROW << std::endl;
@@ -413,8 +420,9 @@ void PresolveData::recomputeActivities(bool linking_only)
 
 
 /** Computes minimal and maximal activity of all rows in given matrix. Adds activities to min/max_activities accordingly. */
-void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVector& unbounded_min, SimpleVector& max_partact,
-      SimpleVector& unbounded_max, const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const
+void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVectorBase<int>& unbounded_min,
+   SimpleVector& max_partact, SimpleVectorBase<int>& unbounded_max, const SimpleVector& xlow, const SimpleVector& ixlow,
+   const SimpleVector& xupp, const SimpleVector& ixupp) const
 {
    assert( xlow.n == matrix.n && ixlow.n == matrix.n && xupp.n == matrix.n && ixupp.n == matrix.n );
    assert( max_partact.n == matrix.m && min_partact.n == matrix.m);
@@ -431,22 +439,22 @@ void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, Simpl
 
          if( entry > 0)
          {
-            if( ixlow[col] != 0.0)
+            if( !PIPSisZero(ixlow[col]) )
                min_partact[row] += entry * xlow[col];
             else
                ++unbounded_min[row];
-            if( ixupp[col] != 0.0 )
+            if( !PIPSisZero(ixupp[col]) )
                max_partact[row] += entry * xupp[col];
             else
                ++unbounded_max[row];
          }
          else
          {
-            if( ixupp[col] != 0.0 )
+            if( !PIPSisZero(ixupp[col]) )
                min_partact[row] += entry * xupp[col];
             else
                ++unbounded_min[row];
-            if( ixlow[col] != 0.0 )
+            if( !PIPSisZero(ixlow[col]) )
                max_partact[row] += entry * xlow[col];
             else
                ++unbounded_max[row];
@@ -461,30 +469,28 @@ void PresolveData::addActivityOfBlock( const SparseStorageDynamic& matrix, Simpl
 
 void PresolveData::allreduceLinkingVarBounds()
 {
-   MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace( outdated_linking_var_bounds, MPI_COMM_WORLD );
 
    if(!outdated_linking_var_bounds)
       return;
 
    if(distributed)
    {
-
-      SimpleVector& xlow = getSimpleVecColFromStochVec(*presProb->blx, -1);
-      SimpleVector& xupp = getSimpleVecColFromStochVec(*presProb->bux, -1);
-      SimpleVector& ixlow = getSimpleVecColFromStochVec(*presProb->ixlow, -1);
-      SimpleVector& ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, -1);
+      SimpleVector& xlow = getSimpleVecFromColStochVec(*presProb->blx, -1);
+      SimpleVector& xupp = getSimpleVecFromColStochVec(*presProb->bux, -1);
+      SimpleVector& ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, -1);
+      SimpleVector& ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, -1);
 
       /* copy old values for later compairson */
       SimpleVector* xlow_old = xlow.cloneFull();
       SimpleVector* xupp_old = xupp.cloneFull();
-      SimpleVector* ixlow_old =  ixlow.cloneFull();
-      SimpleVector* ixupp_old =  ixupp.cloneFull();
+      SimpleVector* ixlow_old = ixlow.cloneFull();
+      SimpleVector* ixupp_old = ixupp.cloneFull();
 
-      MPI_Allreduce(MPI_IN_PLACE, xlow.elements(), xlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
-      MPI_Allreduce(MPI_IN_PLACE, ixlow.elements(), ixlow.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
-      MPI_Allreduce(MPI_IN_PLACE, xupp.elements(), xupp.length(), MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD );
-      MPI_Allreduce(MPI_IN_PLACE, ixupp.elements(), ixupp.length(), MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD );
-
+      PIPS_MPImaxArrayInPlace(xlow.elements(), xlow.length(), MPI_COMM_WORLD);
+      PIPS_MPImaxArrayInPlace(ixlow.elements(), ixlow.length(), MPI_COMM_WORLD);
+      PIPS_MPImaxArrayInPlace(xupp.elements(), xupp.length(), MPI_COMM_WORLD);
+      PIPS_MPImaxArrayInPlace(ixupp.elements(), ixupp.length(), MPI_COMM_WORLD);
 
       // this will affect the activities of basically all rows - use with care
       for(int col = 0; col < xlow.length(); ++col)
@@ -494,13 +500,13 @@ void PresolveData::allreduceLinkingVarBounds()
          double xu = std::numeric_limits<double>::infinity();
          double xl = -std::numeric_limits<double>::infinity();
 
-         if( (*ixupp_old)[col] == 1.0 )
+         if( PIPSisEQ( (*ixupp_old)[col], 1.0) )
             xu_old = (*xupp_old)[col];
-         if( (*ixlow_old)[col] == 1.0 )
+         if( PIPSisEQ( (*ixlow_old)[col], 1.0) )
             xl_old = (*xlow_old)[col];
-         if( ixupp[col] == 1.0 )
+         if( PIPSisEQ( ixupp[col], 1.0) )
             xu = xupp[col];
-         if( ixlow[col] == 1.0 )
+         if( PIPSisEQ( ixlow[col], 1.0) )
             xl = xlow[col];
 
          updateRowActivities(-1, col, xu, xl, xu_old, xl_old);
@@ -520,10 +526,9 @@ void PresolveData::allreduceLinkingVarBounds()
 void PresolveData::allreduceAndApplyLinkingRowActivities()
 {
    /* check for new linking rows that have to be computed */
-   MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-
-   // todo : better criterion - if this and that many changes etc
-   MPI_Allreduce(MPI_IN_PLACE, &linking_rows_need_act_computation, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_activities, MPI_COMM_WORLD);
+   // todo : better criterion - if there have been this and that many changes etc
+   PIPS_MPIgetSumInPlace(linking_rows_need_act_computation, MPI_COMM_WORLD);
 
    if(!outdated_activities && linking_rows_need_act_computation == 0)
       return;
@@ -533,25 +538,25 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
     */
    if(distributed)
    {
-      MPI_Allreduce(MPI_IN_PLACE, array_act_unbounded_chgs, lenght_array_act_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(array_act_unbounded_chgs, lenght_array_act_chgs, MPI_COMM_WORLD);
    }
 
-   dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vecl).axpy( 1.0, *actmin_eq_ubndd_chgs);
-   dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->vecl).axpy( 1.0, *actmax_eq_ubndd_chgs);
-   dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vecl).axpy( 1.0, *actmin_ineq_ubndd_chgs);
-   dynamic_cast<SimpleVector&>(*actmax_ineq_ubndd->vecl).axpy( 1.0, *actmax_ineq_ubndd_chgs);
+   dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl).axpy( 1.0, *actmin_eq_ubndd_chgs);
+   dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vecl).axpy( 1.0, *actmax_eq_ubndd_chgs);
+   dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vecl).axpy( 1.0, *actmin_ineq_ubndd_chgs);
+   dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vecl).axpy( 1.0, *actmax_ineq_ubndd_chgs);
 
    /* equality system */
    for(int row = 0; row < actmin_eq_ubndd->vecl->n; ++row)
    {
-      if( dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vecl)[row] < 2
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[row] == -std::numeric_limits<double>::infinity())
       {
          (*actmin_eq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(EQUALITY_SYSTEM, row, false);
          dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[row] = 0;
       }
 
-      if( dynamic_cast<SimpleVector&>(*actmax_eq_ubndd->vecl)[row] < 2
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl)[row] == std::numeric_limits<double>::infinity())
       {
          (*actmax_eq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(EQUALITY_SYSTEM, row, true);
@@ -562,14 +567,14 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
    /* inequality system */
    for(int row = 0; row < actmin_ineq_ubndd->vecl->n; ++row)
    {
-      if( dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vecl)[row] < 2
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[row] == -std::numeric_limits<double>::infinity())
       {
          (*actmin_ineq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(INEQUALITY_SYSTEM, row, false);
          dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[row] = 0;
       }
 
-      if( dynamic_cast<SimpleVector&>(*actmax_ineq_ubndd->vecl)[row] < 2
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vecl)[row] < 2
             && dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl)[row] == std::numeric_limits<double>::infinity())
       {
          (*actmax_ineq_chgs)[row] = computeLocalLinkingRowMinOrMaxActivity(INEQUALITY_SYSTEM, row, true);
@@ -578,7 +583,7 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
    }
 
    if( distributed )
-      MPI_Allreduce(MPI_IN_PLACE, array_act_chgs, lenght_array_act_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(array_act_chgs, lenght_array_act_chgs, MPI_COMM_WORLD);
 
    dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl).axpy( 1.0, *actmin_eq_chgs);
    dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl).axpy( 1.0, *actmax_eq_chgs);
@@ -603,7 +608,7 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
 
    for(int i = 0; i < actmin_eq_ubndd->vecl->n; ++i)
    {
-      if( dynamic_cast<SimpleVector&>(*actmin_eq_ubndd->vecl)[i] < 2 )
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl)[i] < 2 )
          assert( std::fabs(dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[i]) != std::numeric_limits<double>::infinity() );
       else
          assert( dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[i] == -std::numeric_limits<double>::infinity() );
@@ -611,7 +616,7 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
 
    for(int i = 0; i < actmin_ineq_ubndd->vecl->n; ++i)
    {
-      if( dynamic_cast<SimpleVector&>(*actmin_ineq_ubndd->vecl)[i] < 2 )
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vecl)[i] < 2 )
          assert( std::fabs(dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[i]) != std::numeric_limits<double>::infinity() );
       else
          assert( dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[i] == -std::numeric_limits<double>::infinity() );
@@ -622,15 +627,13 @@ void PresolveData::allreduceAndApplyLinkingRowActivities()
 /** allreduce changes in the nnz counters and apply them locally */
 void PresolveData::allreduceAndApplyNnzChanges()
 {
-   MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_nnzs, MPI_COMM_WORLD);
 
-   MPI_Barrier(MPI_COMM_WORLD);
    if(!outdated_nnzs)
       return;
-   MPI_Barrier(MPI_COMM_WORLD);
 
    if( distributed )
-      MPI_Allreduce(MPI_IN_PLACE, array_nnz_chgs, length_array_nnz_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD );
+      PIPS_MPIsumArrayInPlace(array_nnz_chgs, length_array_nnz_chgs, MPI_COMM_WORLD);
 
    /* update local nnzCounters */
    nnzs_col->vec->axpy(1.0, *nnzs_col_chgs);
@@ -641,24 +644,24 @@ void PresolveData::allreduceAndApplyNnzChanges()
    // todo : this has still flaws - new singleton rows in B0 and D0 are not communicated properly for some reason - might happen else where
    for( int i = 0; i < nnzs_col_chgs->length(); ++i )
    {
-      if( (*nnzs_col_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1 )
+      if( (*nnzs_col_chgs)[i] > 0.0 && dynamic_cast<SimpleVectorBase<int>&>(*nnzs_col->vec)[i] == 1 )
          singleton_cols.push( sCOLINDEX(-1, i) );
    }
    
    for( int i = 0; i < nnzs_row_A_chgs->length(); ++i )
    {
-      if( (*nnzs_row_A_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[i] == 1 )
+      if( (*nnzs_row_A_chgs)[i] > 0.0 && dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_A->vec)[i] == 1 )
          singleton_rows.push( sROWINDEX(EQUALITY_SYSTEM, -2, i) );
    }
    
    for( int i = 0; i < nnzs_row_C_chgs->length(); ++i )
    {
-      if( (*nnzs_row_C_chgs)[i] > 0.0 && dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1 )
+      if( (*nnzs_row_C_chgs)[i] > 0.0 && dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_C->vec)[i] == 1 )
          singleton_rows.push( sROWINDEX(INEQUALITY_SYSTEM, -2, i) );
    }
 
 #ifndef NDEBUG
-   double minval = -1.0;
+   int minval = -1.0;
    int index = -1;
    nnzs_col->min(minval, index);
    assert( minval >= 0.0 );
@@ -677,14 +680,14 @@ void PresolveData::allreduceAndApplyNnzChanges()
 
 void PresolveData::allreduceAndApplyBoundChanges()
 {
-   MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_lhsrhs, MPI_COMM_WORLD);
 
    if(!outdated_lhsrhs)
       return;
 
    if(distributed)
    {
-      MPI_Allreduce(MPI_IN_PLACE, array_bound_chgs, lenght_array_bound_chgs, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(array_bound_chgs, lenght_array_bound_chgs, MPI_COMM_WORLD);
    }
 
    dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->bA).vecl)->axpy( 1.0, *bound_chgs_A);
@@ -699,13 +702,13 @@ void PresolveData::allreduceAndApplyBoundChanges()
 
 void PresolveData::allreduceAndApplyObjVecChanges()
 {
-   MPI_Allreduce(MPI_IN_PLACE, &outdated_obj_vector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+   PIPS_MPIgetLogicOrInPlace(outdated_obj_vector, MPI_COMM_WORLD);
 
    if(!outdated_obj_vector)
       return;
 
    if(distributed)
-      MPI_Allreduce(MPI_IN_PLACE, objective_vec_chgs->elements(), objective_vec_chgs->length(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(objective_vec_chgs->elements(), objective_vec_chgs->length(), MPI_COMM_WORLD);
 
    dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*presProb->g).vec)->axpy(1.0, *objective_vec_chgs);
 
@@ -716,18 +719,18 @@ void PresolveData::allreduceAndApplyObjVecChanges()
 void PresolveData::allreduceObjOffset()
 {
    if(distributed)
-      MPI_Allreduce(MPI_IN_PLACE, &obj_offset_chgs, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      PIPS_MPIgetSumInPlace(obj_offset_chgs, MPI_COMM_WORLD);
 
    objOffset += obj_offset_chgs;
    obj_offset_chgs = 0;
 }
 
-void PresolveData::initNnzCounter(StochVector& nnzs_row_A, StochVector& nnzs_row_C, StochVector& nnzs_col) const
+void PresolveData::initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorBase<int>& nnzs_row_C, StochVectorBase<int>& nnzs_col) const
 {
    StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
    StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*(presProb->C));
 
-   StochVectorHandle colClone(dynamic_cast<StochVector*>(nnzs_col.clone()));
+   SmartPointer<StochVectorBase<int>> colClone(dynamic_cast<StochVectorBase<int>*>(nnzs_col.clone()));
 
    A.getNnzPerRow(nnzs_row_A);
    C.getNnzPerRow(nnzs_row_C);
@@ -742,9 +745,9 @@ void PresolveData::initSingletons()
    /* rows of A */
    /* B0 */
    for(int i = 0; i < nnzs_row_A->vec->n; ++i)
-   if( dynamic_cast<SimpleVector&>(*nnzs_row_A->vec)[i] == 1.0)
    {
-      singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, -1, i ));
+      if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_A->vec)[i] == 1.0)
+         singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, -1, i ));
    }
 
    /* Bl0 */
@@ -752,7 +755,7 @@ void PresolveData::initSingletons()
    {
       for(int i = 0; i < nnzs_row_A->vecl->n; ++i)
       {
-         if( dynamic_cast<SimpleVector&>(*nnzs_row_A->vecl)[i] == 1.0)
+         if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_A->vecl)[i] == 1.0)
             singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, -2, i ));
       }
    }
@@ -764,7 +767,7 @@ void PresolveData::initSingletons()
       {
          for(int j = 0; j < nnzs_row_A->children[i]->vec->n; ++j)
          {
-            if( dynamic_cast<SimpleVector&>(*nnzs_row_A->children[i]->vec)[j] == 1.0)
+            if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_A->children[i]->vec)[j] == 1.0)
                singleton_rows.push( sROWINDEX( EQUALITY_SYSTEM, i, j ));
          }
       }
@@ -773,7 +776,7 @@ void PresolveData::initSingletons()
    /* rows of C */
    /* B0 */
    for(int i = 0; i < nnzs_row_C->vec->n; ++i)
-      if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vec)[i] == 1.0)
+      if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_C->vec)[i] == 1.0)
          singleton_rows.push( sROWINDEX( INEQUALITY_SYSTEM, -1, i ));
 
    /* Bl0 */
@@ -781,7 +784,7 @@ void PresolveData::initSingletons()
    {
       for( int i = 0; i < nnzs_row_C->vecl->n; ++i )
       {
-         if( dynamic_cast<SimpleVector&>(*nnzs_row_C->vecl)[i] == 1.0 )
+         if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_C->vecl)[i] == 1.0 )
             singleton_rows.push(sROWINDEX( INEQUALITY_SYSTEM, -2, i ));
       }
    }
@@ -793,7 +796,7 @@ void PresolveData::initSingletons()
       {
          for( int j = 0; j < nnzs_row_C->children[i]->vec->n; ++j )
          {
-            if( dynamic_cast<SimpleVector&>(*nnzs_row_C->children[i]->vec)[j] == 1.0 )
+            if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_row_C->children[i]->vec)[j] == 1.0 )
                singleton_rows.push(sROWINDEX( INEQUALITY_SYSTEM, i, j ));
          }
       }
@@ -802,7 +805,7 @@ void PresolveData::initSingletons()
    /* columns */
    for(int i = 0; i < nnzs_col->vec->n; ++i)
    {
-      if( dynamic_cast<SimpleVector&>(*nnzs_col->vec)[i] == 1.0)
+      if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_col->vec)[i] == 1.0)
          singleton_cols.push( sCOLINDEX(-1, i));
    }
 
@@ -812,7 +815,7 @@ void PresolveData::initSingletons()
       {
          for(int j = 0; j < nnzs_col->children[i]->vec->n; ++j)
          {
-            if( dynamic_cast<SimpleVector&>(*nnzs_col->children[i]->vec)[j] == 1.0)
+            if( dynamic_cast<SimpleVectorBase<int>&>(*nnzs_col->children[i]->vec)[j] == 1.0)
                singleton_cols.push( sCOLINDEX(i, j));
          }
       }
@@ -825,13 +828,9 @@ bool PresolveData::reductionsEmpty()
    double recv = 0;
    if(distributed)
    {
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_activities, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_lhsrhs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_nnzs, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_linking_var_bounds, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-      MPI_Allreduce(MPI_IN_PLACE, &outdated_obj_vector, 1, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
+      PIPS_MPIlogicOrArrayInPlace(array_outdated_indicators, length_array_outdated_indicators, MPI_COMM_WORLD);
 
-      MPI_Allreduce(&obj_offset_chgs, &recv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      recv = PIPS_MPIgetSum(obj_offset_chgs, MPI_COMM_WORLD);
    }
    return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0);
 }
@@ -848,7 +847,7 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    SparseStorageDynamic* storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamic();
    assert(0 <= row_index && row_index <= storage->m);
 
-   SimpleVector& xlower = getSimpleVecColFromStochVec(*presProb->blx, node);
+   SimpleVector& xlower = getSimpleVecFromColStochVec(*presProb->blx, node);
 
    if(block_type == LINKING_CONS_BLOCK || block_type == LINKING_VARS_BLOCK || node == -1)
       outdated_nnzs = true;
@@ -879,10 +878,10 @@ void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
    if(my_rank == 0)
       std::cout << "Resetting all presolved variable bounds of originally free variables" <<::endl; 
 #endif
-   unsigned long long n = 0;
+   long long n = 0;
    for( int node = -1; node < nChildren; ++node )
    {
-      n += resetOriginallyFreeVarsBounds( getSimpleVecColFromStochVec(*orig_prob.ixlow, node), getSimpleVecColFromStochVec(*orig_prob.ixupp, node), node);
+      n += resetOriginallyFreeVarsBounds( getSimpleVecFromColStochVec(*orig_prob.ixlow, node), getSimpleVecFromColStochVec(*orig_prob.ixupp, node), node);
       if(my_rank != 0 && node == -1)
       {
          n = 0;
@@ -890,13 +889,13 @@ void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
    }
 
 #ifndef NDEBUG
-   MPI_Allreduce(MPI_IN_PLACE, &n, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
-
+   PIPS_MPIgetSumInPlace(n, MPI_COMM_WORLD);
    if(my_rank == 0)
       std::cout << "Reset " << n << " bounds" << std::endl;
 #endif
 }
 
+// todo the -2 thing..
 long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node)
 {
    long reset_bounds = 0;
@@ -904,13 +903,13 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
    if( nodeIsDummy( node, EQUALITY_SYSTEM ) && nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       return reset_bounds;
 
-   SimpleVector& ixlow = getSimpleVecColFromStochVec(*presProb->ixlow, node);
-   SimpleVector& ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, node);
+   SimpleVector& ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, node);
+   SimpleVector& ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, node);
 
-   SimpleVector& xlow = getSimpleVecColFromStochVec(*presProb->blx, node);
-   SimpleVector& xupp = getSimpleVecColFromStochVec(*presProb->bux, node);
+   SimpleVector& xlow = getSimpleVecFromColStochVec(*presProb->blx, node);
+   SimpleVector& xupp = getSimpleVecFromColStochVec(*presProb->bux, node);
 
-   SimpleVector& nnzs_col_vec = getSimpleVecColFromStochVec(*nnzs_col, node);
+   SimpleVectorBase<int>& nnzs_col_vec = getSimpleVecFromColStochVec(*nnzs_col, node);
 
    /* check whether row that implied bound is still there - if so, and if the variable is still in that row we can remove the bound again
     * since it should still be implied 
@@ -922,17 +921,17 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
    for(int col = 0; col < ixlow.n; ++col)
    {
       /* do not reset fixed columns */
-      if( nnzs_col_vec[col] != 0 && (ixupp_orig[col] == 0.0 || ixlow_orig[col] == 0.0) )
+      if( nnzs_col_vec[col] != 0 && ( PIPSisZero(ixupp_orig[col]) || PIPSisZero(ixlow_orig[col]) ) )
       {
-         int sys_row_lower = getSimpleVecColFromStochVec(*lower_bound_implied_by_system, node)[col];
-         int row_lower = getSimpleVecColFromStochVec(*lower_bound_implied_by_row, node)[col];
-         int node_row_lower = getSimpleVecColFromStochVec(*lower_bound_implied_by_node, node)[col];
-         int sys_row_upper = getSimpleVecColFromStochVec(*upper_bound_implied_by_system, node)[col];
-         int row_upper = getSimpleVecColFromStochVec(*upper_bound_implied_by_row, node)[col];
-         int node_row_upper = getSimpleVecColFromStochVec(*upper_bound_implied_by_node, node)[col];
+         int sys_row_lower = getSimpleVecFromColStochVec(*lower_bound_implied_by_system, node)[col];
+         int row_lower = getSimpleVecFromColStochVec(*lower_bound_implied_by_row, node)[col];
+         int node_row_lower = getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node)[col];
+         int sys_row_upper = getSimpleVecFromColStochVec(*upper_bound_implied_by_system, node)[col];
+         int row_upper = getSimpleVecFromColStochVec(*upper_bound_implied_by_row, node)[col];
+         int node_row_upper = getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node)[col];
 
          /* do not reset bounds implied by singleton rows since these rows are already removed from the problem */
-         if( ixupp_orig[col] == 0.0 && ixupp[col] == 1.0 )
+         if( PIPSisZero(ixupp_orig[col]) && PIPSisEQ(ixupp[col], 1.0) )
          {
             if( !(0 <= sys_row_upper && sys_row_upper <= 1) )
                std::cout << sys_row_upper << std::endl;
@@ -940,10 +939,10 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
             assert(row_upper != -10);
             assert(node_row_upper != -10);
 
-            const StochVector& nnzs = (sys_row_upper == 0) ? *nnzs_row_A : *nnzs_row_C;
+            const StochVectorBase<int>& nnzs = (sys_row_upper == 0) ? *nnzs_row_A : *nnzs_row_C;
 
-            if( getSimpleVecRowFromStochVec(nnzs, (node_row_upper == -2) ? -1 : node_row_upper, 
-               (node_row_upper == -2) ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK)[row_upper] != 0.0 )
+            if( getSimpleVecFromRowStochVec(nnzs, (node_row_upper == -2) ? -1 : node_row_upper, 
+               (node_row_upper == -2) )[row_upper] != 0.0 )
             {
                ixupp[col] = 0;
                xupp[col] = 0.0;
@@ -951,17 +950,17 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
             }
          }
 
-         if( ixlow_orig[col] == 0.0 && ixlow[col] == 1.0 )
+         if( PIPSisZero(ixlow_orig[col]) && PIPSisEQ(ixlow[col], 1.0) )
          {
             assert( 0 <= sys_row_lower && sys_row_lower <= 1);
             assert(row_lower != -10);
             assert(node_row_lower != -10);
 
-            const StochVector& nnzs = (sys_row_lower == 0) ? *nnzs_row_A : *nnzs_row_C;
+            const StochVectorBase<int>& nnzs = (sys_row_lower == 0) ? *nnzs_row_A : *nnzs_row_C;
 
             // todo : problably should also check whether variable is still in row - not necessary for so far implemented presolvers
-            if( getSimpleVecRowFromStochVec(nnzs, (node_row_lower == -2) ? -1 : node_row_lower, 
-               (row_lower == -2) ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK)[row_lower] != 0.0 )
+            if( getSimpleVecFromRowStochVec(nnzs, (node_row_lower == -2) ? -1 : node_row_lower, 
+               (row_lower == -2) )[row_lower] != 0.0 )
             {
                ixlow[col] = 0;
                xlow[col] = 0.0;
@@ -983,7 +982,7 @@ void PresolveData::fixEmptyColumn(int node, int col, double val)
    removeColumn(node, col, val);
 
    if( node != -1)
-      assert( getSimpleVecColFromStochVec(*nnzs_col, node)[col] == 0.0 );
+      assert( getSimpleVecFromColStochVec(*nnzs_col, node)[col] == 0.0 );
 }
 
 void PresolveData::fixColumn(int node, int col, double value)
@@ -991,30 +990,28 @@ void PresolveData::fixColumn(int node, int col, double value)
    assert( -1 <= node && node < nChildren );
    assert( 0 <= col );
    
-
    /* current upper and lower bound as well als column - if linking variable then only proc zero stores current root column */
    std::vector<int> idx;
    std::vector<double> val;
    
    // todo
-   //buildColForPostsolve( node, col, idx, val);
    postsolver->notifyFixedColumn(node, col, value, idx, val);
 
 #ifndef NDEBUG
-   double ixlow = getSimpleVecColFromStochVec(*presProb->ixlow, node)[col];
-   double ixupp = getSimpleVecColFromStochVec(*presProb->ixupp, node)[col];
-   double xlow = (ixupp == 1.0) ? getSimpleVecColFromStochVec(*presProb->blx, node)[col] : std::numeric_limits<double>::infinity();
-   double xupp = (ixlow == 1.0) ? getSimpleVecColFromStochVec(*presProb->bux, node)[col] : std::numeric_limits<double>::infinity();
-   assert(ixlow == 1.0);
-   assert(ixupp == 1.0);
-   assert(PIPSisEQ(xlow, xupp, 1e-10));
-   assert(PIPSisEQ(xlow, value, 1e-10));
+   double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, node)[col];
+   double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, node)[col];
+   double xlow = (ixupp == 1.0) ? getSimpleVecFromColStochVec(*presProb->blx, node)[col] : std::numeric_limits<double>::infinity();
+   double xupp = (ixlow == 1.0) ? getSimpleVecFromColStochVec(*presProb->bux, node)[col] : std::numeric_limits<double>::infinity();
+   assert( PIPSisEQ(ixlow, 1.0) );
+   assert( PIPSisEQ(ixupp, 1.0) );
+   assert( PIPSisEQ(xlow, xupp, 1e-10) );
+   assert( PIPSisEQ(xlow, value, 1e-10) );
 #endif
 
    removeColumn(node, col, value);
 
    if( node != -1)
-      assert( getSimpleVecColFromStochVec(*nnzs_col, node)[col] == 0.0 );
+      assert( getSimpleVecFromColStochVec(*nnzs_col, node)[col] == 0.0 );
 }
 
 bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, BlockType block_type, int row, int col, double ubx, double lbx)
@@ -1025,13 +1022,13 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 
    const int node_var = (block_type == LINKING_VARS_BLOCK) ? -1 : node_row;
 
-   assert( 0 <= col && col < getSimpleVecColFromStochVec( *presProb->ixlow, node_var ).n );
+   assert( 0 <= col && col < getSimpleVecFromColStochVec( *presProb->ixlow, node_var ).n );
 
    /* check for infeasibility of the newly found bounds */
-   const double ixlow = getSimpleVecColFromStochVec( *presProb->ixlow, node_var )[col];
-   const double xlow = getSimpleVecColFromStochVec( *presProb->blx, node_var )[col];
-   const double ixupp = getSimpleVecColFromStochVec( *presProb->ixupp, node_var )[col];
-   const double xupp = getSimpleVecColFromStochVec( *presProb->bux, node_var )[col];
+   const double ixlow = getSimpleVecFromColStochVec( *presProb->ixlow, node_var )[col];
+   const double xlow = getSimpleVecFromColStochVec( *presProb->blx, node_var )[col];
+   const double ixupp = getSimpleVecFromColStochVec( *presProb->ixupp, node_var )[col];
+   const double xupp = getSimpleVecFromColStochVec( *presProb->bux, node_var )[col];
 
 #ifdef TRACK_COLUMN
    if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -1043,12 +1040,12 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    }
 #endif
 
-   if( ( ixlow != 0.0 && PIPSisLT(ubx, xlow) )
-         || ( ixupp != 0.0 && PIPSisLT(xupp, lbx) )
+   if( ( !PIPSisZero(ixlow) && PIPSisLT(ubx, xlow) )
+         || ( !PIPSisZero(ixupp) && PIPSisLT(xupp, lbx) )
          || PIPSisLT(ubx, lbx) )
    {
-      std::cout << "[" << lbx << ", " << ubx << "] not in [" << ((ixlow != 0.0) ? xlow : -std::numeric_limits<double>::infinity()) << ", " << 
-         ((ixupp != 0.0) ? xupp : std::numeric_limits<double>::infinity()) << "]" << std::endl;
+      std::cout << "[" << lbx << ", " << ubx << "] not in [" << ( !PIPSisZero(ixlow) ? xlow : -std::numeric_limits<double>::infinity()) << ", " << 
+         ( !PIPSisZero(ixupp) ? xupp : std::numeric_limits<double>::infinity()) << "]" << std::endl;
       abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
    }
 
@@ -1057,8 +1054,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
-   // if( fabs(lbx) < 1e8 && (ixlow== 0.0  || feastol * 1e3 <= fabs(xlow - lbx) ) )
-   if( ubx < std::numeric_limits<double>::infinity() && ( ixupp == 0.0 || PIPSisLT(ubx, xupp) ) )
+   // if( fabs(lbx) < 1e8 && (ixlow == 0.0  || feastol * 1e3 <= fabs(xlow - lbx) ) )
+   if( ubx < std::numeric_limits<double>::infinity() && ( PIPSisZero(ixupp) || PIPSisLT(ubx, xupp) ) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -1067,15 +1064,15 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
       if( updateUpperBoundVariable(node_var, col, ubx) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
-         getSimpleVecColFromStochVec(*upper_bound_implied_by_system, node_var)[col] = system_type;
-         getSimpleVecColFromStochVec(*upper_bound_implied_by_row, node_var)[col] = row;
-         getSimpleVecColFromStochVec(*upper_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
+         getSimpleVecFromColStochVec(*upper_bound_implied_by_system, node_var)[col] = system_type;
+         getSimpleVecFromColStochVec(*upper_bound_implied_by_row, node_var)[col] = row;
+         getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
 
          bounds_changed = true;
       }
    }
   // if( fabs(ubx) < 1e8 && (ixupp== 0.0  || feastol * 1e3 <= fabs(xupp- ubx) ) )
-   if( - std::numeric_limits<double>::infinity() < lbx && ( ixlow == 0.0 || PIPSisLT(xlow, lbx)) )
+   if( -std::numeric_limits<double>::infinity() < lbx && ( PIPSisZero(ixlow) || PIPSisLT(xlow, lbx)) )
    {
 #ifdef TRACK_COLUMN
       if( NODE == node_var && COLUMN == col && (my_rank == 0 || node_var != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -1084,9 +1081,9 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
       if( updateLowerBoundVariable(node_var, col, lbx) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
-         getSimpleVecColFromStochVec(*lower_bound_implied_by_system, node_var)[col] = system_type;
-         getSimpleVecColFromStochVec(*lower_bound_implied_by_row, node_var)[col] = row;
-         getSimpleVecColFromStochVec(*lower_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
+         getSimpleVecFromColStochVec(*lower_bound_implied_by_system, node_var)[col] = system_type;
+         getSimpleVecFromColStochVec(*lower_bound_implied_by_row, node_var)[col] = row;
+         getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
 
          bounds_changed = true;
       }
@@ -1114,8 +1111,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 
 void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking)
 {
-   assert( -1 <= node && node <= nChildren);
-   assert( !linking );
+   assert(-1 <= node && node <= nChildren);
+   assert(!linking);
    assert(system_type == INEQUALITY_SYSTEM);
 
 #ifdef TRACK_ROW
@@ -1137,32 +1134,32 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
    if(system_type == EQUALITY_SYSTEM)
    {
       assert(false);
-      //getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] += value;
+      //getSimpleVecFromRowStochVec(*presProb->bA, node, linking)[row] += value;
    }
    else
    {
       if( lhs != -std::numeric_limits<double>::infinity() )
       {
-         if( !PIPSisEQ(getSimpleVecRowFromStochVec(*presProb->iclow, node, CHILD_BLOCK)[row], 1.0) )
+         if( !PIPSisEQ(getSimpleVecFromRowStochVec(*presProb->iclow, node, linking)[row], 1.0) )
          {
-            getSimpleVecRowFromStochVec(*presProb->iclow, node, CHILD_BLOCK)[row] = 1.0;
-            getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row] = lhs;
+            getSimpleVecFromRowStochVec(*presProb->iclow, node, linking)[row] = 1.0;
+            getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row] = lhs;
 
          }
          else
-            getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row] = 
-               std::max(getSimpleVecRowFromStochVec(*presProb->bl, node, CHILD_BLOCK)[row], lhs);
+            getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row] = 
+               std::max(getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row], lhs);
       }
       if( rhs != std::numeric_limits<double>::infinity() )
       {
-         if( !PIPSisEQ(getSimpleVecRowFromStochVec(*presProb->icupp, node, CHILD_BLOCK)[row], 1.0) )
+         if( !PIPSisEQ(getSimpleVecFromRowStochVec(*presProb->icupp, node, linking)[row], 1.0) )
          {
-            getSimpleVecRowFromStochVec(*presProb->icupp, node, CHILD_BLOCK)[row] = 1.0;
+            getSimpleVecFromRowStochVec(*presProb->icupp, node, linking)[row] = 1.0;
          }
          else
          {
-            getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row] = 
-               std::min(getSimpleVecRowFromStochVec(*presProb->bu, node, CHILD_BLOCK)[row], rhs);
+            getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row] = 
+               std::min(getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row], rhs);
          }
       }
       // todo!
@@ -1181,9 +1178,10 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
 void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row, double value)
 {
    assert( -1 <= node && node <= nChildren);
-
    if( PIPSisEQ(value, 0.0) )
       return;
+
+   const bool linking = (block_type == LINKING_CONS_BLOCK);
 
 #ifdef TRACK_ROW
    if(row == ROW && node == ROW_NODE && system_type == ROW_SYS && !nodeIsDummy(ROW_NODE, ROW_SYS))
@@ -1202,15 +1200,15 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockT
 
    if(system_type == EQUALITY_SYSTEM)
    {
-      getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] += value;
+      getSimpleVecFromRowStochVec(*presProb->bA, node, linking )[row] += value;
    }
    else
    {
-      if( getSimpleVecRowFromStochVec(*presProb->icupp, node, block_type)[row] == 1.0)
-         getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row] += value;
+      if( getSimpleVecFromRowStochVec(*presProb->icupp, node, linking )[row] == 1.0)
+         getSimpleVecFromRowStochVec(*presProb->bu, node, linking )[row] += value;
 
-      if( getSimpleVecRowFromStochVec(*presProb->iclow, node, block_type)[row] == 1.0 )
-         getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] += value;
+      if( getSimpleVecFromRowStochVec(*presProb->iclow, node, linking )[row] == 1.0 )
+         getSimpleVecFromRowStochVec(*presProb->bl, node, linking )[row] += value;
    }
 
 #ifdef TRACK_ROW
@@ -1223,7 +1221,7 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockT
 }
 
 
-// todo : make a finish block_deletion ?
+// todo : make a finish block_deletion ? // todo - remove this and always update both matrices..
 void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements)
 {
    SparseStorageDynamic* transposed = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposed();
@@ -1264,8 +1262,10 @@ void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType bl
    if(amount == 0)
       return;
 
+   const bool linking = ( block_type == LINKING_CONS_BLOCK );
+
    /* linking constraints get stored */
-   if(block_type == LINKING_CONS_BLOCK)
+   if( linking )
    {
       if(my_rank == 0 || node != -1)
       {
@@ -1277,17 +1277,17 @@ void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType bl
    {
       if(system_type == EQUALITY_SYSTEM)
       {
-         getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] -= amount;
-         if( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index]  == 1)
+         getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking )[row_index] -= amount;
+         if( getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking )[row_index] == 1)
             singleton_rows.push( sROWINDEX( system_type, node, row_index ) );
-         assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row_index] );
+         assert( 0 <= getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking )[row_index] );
       }
       else
       {
-         getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] -= amount;
-         if( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index]  == 1)
+         getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking )[row_index] -= amount;
+         if( getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking )[row_index] == 1)
             singleton_rows.push( sROWINDEX( system_type, node, row_index ) );
-         assert( 0 <= getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row_index] );
+         assert( 0 <= getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking )[row_index] );
       }
    }
 }
@@ -1309,10 +1309,10 @@ void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_ind
    }
    else
    {
-      getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] -= amount;
-      if( getSimpleVecColFromStochVec( *nnzs_col, node )[col_index]  == 1)
+      getSimpleVecFromColStochVec( *nnzs_col, node )[col_index] -= amount;
+      if( getSimpleVecFromColStochVec( *nnzs_col, node )[col_index] == 1)
          singleton_cols.push( sCOLINDEX( node, col_index ) );
-      assert(0 <= getSimpleVecColFromStochVec( *nnzs_col, node )[col_index] );
+      assert(0 <= getSimpleVecFromColStochVec( *nnzs_col, node )[col_index] );
    }
 }
 
@@ -1356,17 +1356,17 @@ void PresolveData::removeColumn(int node, int col, double fixation)
    /* adjust objective function */
    if(node != -1 || my_rank == 0)
    {
-      double objective_factor = getSimpleVecColFromStochVec(*presProb->g, node)[col];
+      double objective_factor = getSimpleVecFromColStochVec(*presProb->g, node)[col];
       obj_offset_chgs += objective_factor * fixation;
 
    }
 
    /* mark column as removed */
-   getSimpleVecColFromStochVec(*presProb->g, node)[col] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->ixlow, node)[col] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->ixupp, node)[col] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->blx, node)[col] = 0.0;
-   getSimpleVecColFromStochVec(*presProb->bux, node)[col] = 0.0;
+   getSimpleVecFromColStochVec(*presProb->g, node)[col] = 0.0;
+   getSimpleVecFromColStochVec(*presProb->ixlow, node)[col] = 0.0;
+   getSimpleVecFromColStochVec(*presProb->ixupp, node)[col] = 0.0;
+   getSimpleVecFromColStochVec(*presProb->blx, node)[col] = 0.0;
+   getSimpleVecFromColStochVec(*presProb->bux, node)[col] = 0.0;
 }
 
 /** remove column - adjust lhs, rhs and activity as well as nnz_counters */
@@ -1410,15 +1410,15 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
       std::cout << "TRACKING ROW: after removal" << std::endl;
       writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
 
-      double act_min = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
-            getSimpleVecRowFromStochVec(*actmin_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
-      double act_max = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, ROW_NODE, ROW_BLOCK)[ROW] :
-            getSimpleVecRowFromStochVec(*actmax_ineq_part, ROW_NODE, ROW_BLOCK)[ROW];
+      double act_min = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, ROW_NODE, ROW_IS_LINK)[ROW] :
+            getSimpleVecFromRowStochVec(*actmin_ineq_part, ROW_NODE, ROW_IS_LINK)[ROW];
+      double act_max = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, ROW_NODE, ROW_IS_LINK)[ROW] :
+            getSimpleVecFromRowStochVec(*actmax_ineq_part, ROW_NODE, ROW_IS_LINK)[ROW];
 
-      double act_min_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
-            getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
-      double act_max_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, ROW_NODE, ROW_BLOCK)[ROW] :
-            getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, ROW_NODE, ROW_BLOCK)[ROW];
+      int act_min_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, ROW_NODE, ROW_IS_LINK)[ROW] :
+            getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, ROW_NODE, ROW_IS_LINK)[ROW];
+      int act_max_ubndd = (ROW_SYS == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, ROW_NODE, ROW_IS_LINK)[ROW] :
+            getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, ROW_NODE, ROW_IS_LINK)[ROW];
 
       std::cout << "TRACKING: New activity of row " << ROW << std::endl;
       std::cout << "\tnew min/max activity is: " << act_min << "/" << act_max << ", min/max unbounded counters are " << act_min_ubndd << "/" << act_max_ubndd << std::endl;
@@ -1465,9 +1465,9 @@ void PresolveData::substituteVariableParallelRows(SystemType system_type, int no
 
    // delete the equality constraint which contained var2 (the substituted variable)
    removeRedundantRow( system_type, node, row2, false);
-   assert( PIPSisZero(getSimpleVecColFromStochVec(*nnzs_col, node_var2)[var2]) );
+   assert( PIPSisZero(getSimpleVecFromColStochVec(*nnzs_col, node_var2)[var2]) );
    
-   const double obj_var2 = getSimpleVecColFromStochVec(*presProb->g, node_var2)[var2];
+   const double obj_var2 = getSimpleVecFromColStochVec(*presProb->g, node_var2)[var2];
    const double val_offset = translation * obj_var2;
    const double change_obj_var1 = scalar * obj_var2;
 
@@ -1475,13 +1475,13 @@ void PresolveData::substituteVariableParallelRows(SystemType system_type, int no
 
    if( node_var1 != -1 )
    {
-      getSimpleVecColFromStochVec(*presProb->g, node)[var1] += change_obj_var1;
+      getSimpleVecFromColStochVec(*presProb->g, node)[var1] += change_obj_var1;
       obj_offset_chgs += val_offset;
    }
    else if( node == -1 )  
    {
       /* parallel rows in parent block - all processes should have detected this */
-      getSimpleVecColFromStochVec(*presProb->g, -1)[var1] += change_obj_var1;
+      getSimpleVecFromColStochVec(*presProb->g, -1)[var1] += change_obj_var1;
 
       // only add the objective offset for root as process ZERO:
       if( my_rank == 0 ) 
@@ -1504,7 +1504,6 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
       std::vector<double> val_row;
       //BlockType block_type = (linking) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
       // todo
-      //buildRowForPostsolve( system_type, node, block_type, row, idx_row, val_row);
 
       postsolver->notifyRedundantRow(system_type, node, row, linking, idx_row, val_row);
    }
@@ -1550,24 +1549,22 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
    }
 
 
-   BlockType block_type = ( linking ) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
-
    /* set lhs rhs to zero */
    if(system_type == EQUALITY_SYSTEM)
-      getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*presProb->bA, node, linking)[row] = 0.0;
    else
    {
-      getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] = 0.0;
-      getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row] = 0.0;
    }
 
    /* set activities and unbounded counters to zero */
    if(system_type == EQUALITY_SYSTEM)
    {
-      getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row] = 0.0;
-      getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row] = 0.0;
-      getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type)[row] = 0.0;
-      getSimpleVecRowFromStochVec(*actmin_eq_ubndd, node, block_type)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking)[row] = 0.0;
 
       if(linking)
       {
@@ -1579,10 +1576,10 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
    }
    else
    {
-      getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type)[row] = 0.0;
-      getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type)[row] = 0.0;
-      getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type)[row] = 0.0;
-      getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, node, block_type)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking)[row] = 0.0;
+      getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, linking)[row] = 0.0;
 
       if(linking)
       {
@@ -1599,12 +1596,12 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
    if(system_type == EQUALITY_SYSTEM)
    {
       if(!linking)
-         assert( getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row] == 0.0 );   
+         assert( getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking)[row] == 0.0 );   
    }
    else
    {
       if(!linking)
-         assert( getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row] == 0.0 );
+         assert( getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking)[row] == 0.0 );
    }  
 #endif
 }
@@ -1666,14 +1663,14 @@ bool PresolveData::verifyActivities()
    StochVectorHandle actmax_eq_part_old(actmax_eq_part->cloneFull());
    StochVectorHandle actmin_eq_part_old(actmin_eq_part->cloneFull());
 
-   StochVectorHandle actmax_eq_ubndd_old(actmax_eq_ubndd->cloneFull());
-   StochVectorHandle actmin_eq_ubndd_old(actmin_eq_ubndd->cloneFull());
+   SmartPointer<StochVectorBase<int>> actmax_eq_ubndd_old(actmax_eq_ubndd->cloneFull());
+   SmartPointer<StochVectorBase<int>> actmin_eq_ubndd_old(actmin_eq_ubndd->cloneFull());
 
    StochVectorHandle actmax_ineq_part_old(actmax_ineq_part->cloneFull());
    StochVectorHandle actmin_ineq_part_old(actmin_ineq_part->cloneFull());
 
-   StochVectorHandle actmax_ineq_ubndd_old(actmax_ineq_ubndd->cloneFull());
-   StochVectorHandle actmin_ineq_ubndd_old(actmin_ineq_ubndd->cloneFull());
+   SmartPointer<StochVectorBase<int>> actmax_ineq_ubndd_old(actmax_ineq_ubndd->cloneFull());
+   SmartPointer<StochVectorBase<int>> actmin_ineq_ubndd_old(actmin_ineq_ubndd->cloneFull());
 
    actmax_eq_part->setToZero();
    actmin_eq_part->setToZero();
@@ -1691,11 +1688,10 @@ bool PresolveData::verifyActivities()
 
    if( !actmax_eq_part_old->componentEqual(*actmax_eq_part, feastol))
    {
-      if(my_rank == 14)
+      if(my_rank == 0)
          std::cout << "actmax_eq_part not correct" << std::endl;
       activities_correct = false;
    }
-   MPI_Barrier(MPI_COMM_WORLD);
 
    if( !actmin_eq_part_old->componentEqual(*actmin_eq_part, feastol))
    {
@@ -1757,9 +1753,9 @@ bool PresolveData::verifyNnzcounters() const
    assert(!outdated_nnzs);
 
    bool nnzCorrect = true;
-   StochVectorHandle nnzs_col_new(nnzs_col->cloneFull());
-   StochVectorHandle nnzs_row_A_new(nnzs_row_A->cloneFull());
-   StochVectorHandle nnzs_row_C_new(nnzs_row_C->cloneFull());
+   SmartPointer<StochVectorBase<int>> nnzs_col_new(nnzs_col->cloneFull());
+   SmartPointer<StochVectorBase<int>> nnzs_row_A_new(nnzs_row_A->cloneFull());
+   SmartPointer<StochVectorBase<int>> nnzs_row_C_new(nnzs_row_C->cloneFull());
 
    nnzs_col_new->setToZero();
    nnzs_row_A_new->setToZero();
@@ -1768,8 +1764,8 @@ bool PresolveData::verifyNnzcounters() const
    initNnzCounter(*nnzs_row_A_new, *nnzs_row_C_new, *nnzs_col_new);
 
    // linking variables:
-   SimpleVector* nColOrigSimple = dynamic_cast<SimpleVector*>(nnzs_col_new->vec);
-   SimpleVector* nColUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_col->vec);
+   SimpleVectorBase<int>* nColOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_col_new->vec);
+   SimpleVectorBase<int>* nColUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_col->vec);
    assert( nColUpdatedSimple->n == nColOrigSimple->n );
    for( int i = 0; i < nColUpdatedSimple->n; i++)
    {
@@ -1784,8 +1780,8 @@ bool PresolveData::verifyNnzcounters() const
    // non linking variables:
    for( int it = 0; it < nChildren; it++)
    {
-      nColOrigSimple = dynamic_cast<SimpleVector*>(nnzs_col_new->children[it]->vec);
-      nColUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_col->children[it]->vec);
+      nColOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_col_new->children[it]->vec);
+      nColUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_col->children[it]->vec);
       assert( nColUpdatedSimple->n == nColOrigSimple->n );
       for( int i = 0; i < nColUpdatedSimple->n; i++)
       {
@@ -1800,8 +1796,8 @@ bool PresolveData::verifyNnzcounters() const
    }
 
    // rows A:
-   SimpleVector* nRowAOrigSimple = dynamic_cast<SimpleVector*>(nnzs_row_A_new->vec);
-   SimpleVector* nRowAUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_row_A->vec);
+   SimpleVectorBase<int>* nRowAOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_A_new->vec);
+   SimpleVectorBase<int>* nRowAUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_A->vec);
    assert( nRowAUpdatedSimple->n == nRowAOrigSimple->n );
    for( int i = 0; i < nRowAUpdatedSimple->n; i++)
    {
@@ -1816,8 +1812,8 @@ bool PresolveData::verifyNnzcounters() const
    // child rows:
    for( int it = 0; it < nChildren; it++)
    {
-      nRowAOrigSimple = dynamic_cast<SimpleVector*>(nnzs_row_A_new->children[it]->vec);
-      nRowAUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_row_A->children[it]->vec);
+      nRowAOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_A_new->children[it]->vec);
+      nRowAUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_A->children[it]->vec);
       assert( nRowAUpdatedSimple->n == nRowAOrigSimple->n );
       for( int i = 0; i < nRowAUpdatedSimple->n; i++)
       {
@@ -1832,8 +1828,8 @@ bool PresolveData::verifyNnzcounters() const
    }
    if(nnzs_row_A_new->vecl) // linking rows:
    {
-      nRowAOrigSimple = dynamic_cast<SimpleVector*>(nnzs_row_A_new->vecl);
-      nRowAUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_row_A->vecl);
+      nRowAOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_A_new->vecl);
+      nRowAUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_A->vecl);
       assert( nRowAUpdatedSimple->n == nRowAOrigSimple->n );
       for( int i=0; i<nRowAUpdatedSimple->n; i++)
       {
@@ -1847,8 +1843,8 @@ bool PresolveData::verifyNnzcounters() const
       }
    }
    // rows C:
-   SimpleVector* nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzs_row_C_new->vec);
-   SimpleVector* nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_row_C->vec);
+   SimpleVectorBase<int>* nRowCOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_C_new->vec);
+   SimpleVectorBase<int>* nRowCUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_C->vec);
    assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
    for( int i = 0; i < nRowCUpdatedSimple->n; i++)
    {
@@ -1863,8 +1859,8 @@ bool PresolveData::verifyNnzcounters() const
    // child rows:
    for( int it = 0; it < nChildren; it++)
    {
-      nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzs_row_C_new->children[it]->vec);
-      nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_row_C->children[it]->vec);
+      nRowCOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_C_new->children[it]->vec);
+      nRowCUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_C->children[it]->vec);
       assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
       for( int i = 0; i < nRowCUpdatedSimple->n; i++)
       {
@@ -1879,8 +1875,8 @@ bool PresolveData::verifyNnzcounters() const
    }
    if(nnzs_row_C_new->vecl) // linking rows:
    {
-      nRowCOrigSimple = dynamic_cast<SimpleVector*>(nnzs_row_C_new->vecl);
-      nRowCUpdatedSimple = dynamic_cast<SimpleVector*>(nnzs_row_C->vecl);
+      nRowCOrigSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_C_new->vecl);
+      nRowCUpdatedSimple = dynamic_cast<SimpleVectorBase<int>*>(nnzs_row_C->vecl);
       assert( nRowCUpdatedSimple->n == nRowCOrigSimple->n );
       for( int i = 0; i < nRowCUpdatedSimple->n; i++)
       {
@@ -1962,26 +1958,28 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    assert( !nodeIsDummy(node, system_type) );
 
    /* get upper and lower bound on variable */
-   const SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
-   const SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
-   const SimpleVector& ixupp = getSimpleVecColFromStochVec(*(presProb->ixupp), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
-   const SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
+   const SimpleVector& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
+   const SimpleVector& xlow = getSimpleVecFromColStochVec(*(presProb->blx), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
+   const SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
+   const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
 
-   assert(ixlow[col] == 1.0);
-   assert(ixupp[col] == 1.0);
+   const bool linking = ( block_type == LINKING_CONS_BLOCK );
+
+   assert(PIPSisEQ(ixlow[col], 1.0));
+   assert(PIPSisEQ(ixupp[col], 1.0));
    assert(PIPSisEQ(xlow[col], xupp[col], 1e-10));
 
    /* get unbounded counters */
-   double* actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type)[row]
-         : &getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type)[row];
-   double* actmin_ubndd = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecRowFromStochVec(*actmin_eq_ubndd, node, block_type)[row]
-         : &getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, node, block_type)[row];
+   int* actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row]
+         : &getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking)[row];
+   int* actmin_ubndd = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking)[row]
+         : &getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, linking)[row];
 
    /* sum of reduction and counters */
-   double actmax_ubndd_val = *actmax_ubndd;
-   double actmin_ubndd_val = *actmin_ubndd;
+   int actmax_ubndd_val = *actmax_ubndd;
+   int actmin_ubndd_val = *actmin_ubndd;
 
-   if(block_type == LINKING_CONS_BLOCK)
+   if( linking )
    {
       actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? &(*actmax_eq_ubndd_chgs)[row]
             : &(*actmax_ineq_ubndd_chgs)[row];
@@ -1996,10 +1994,10 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    assert(0 <= actmin_ubndd_val);
 
    /* get partial activities */
-   double* actmax_part = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row]
-         : &getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type)[row];
-   double* actmin_part = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row]
-         : &getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type)[row];
+   double* actmax_part = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking)[row]
+         : &getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking)[row];
+   double* actmin_part = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row]
+         : &getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking)[row];
 
    if(block_type == LINKING_CONS_BLOCK)
    {
@@ -2016,7 +2014,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    /* depending on the sign of coeff add / substract lbx * coeff/ ubx * coeff from actmin and actmax */
    if( PIPSisLT(0.0, coeff) )
    {
-      if(ixupp[col] == 1.0)
+      if( PIPSisEQ(ixupp[col], 1.0) )
          (*actmax_part) -= coeff * xupp[col];
       else
       {
@@ -2026,7 +2024,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
             computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
       }
 
-      if(ixlow[col] == 1.0)
+      if( PIPSisEQ(ixlow[col], 1.0) )
          (*actmin_part) -= coeff * xlow[col];
       else
       {
@@ -2038,7 +2036,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    }
    else
    {
-      if(ixlow[col] == 1.0)
+      if( PIPSisEQ(ixlow[col], 1.0) )
          (*actmax_part) -= coeff*xlow[col];
       else
       {
@@ -2048,7 +2046,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
             computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
       }
 
-      if(ixupp[col] == 1.0)
+      if( PIPSisEQ(ixupp[col], 1.0) )
          (*actmin_part) -= coeff*xupp[col];
       else
       {
@@ -2062,6 +2060,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    if( block_type == LINKING_CONS_BLOCK)
       outdated_activities = true;
 }
+
 /// computes min or max activity of linking row regardless of unbounded counters
 double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const
 {
@@ -2077,10 +2076,10 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
          continue;
 
       /* get upper, lower bounds */
-      const SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), node);
-      const SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), node);
-      const SimpleVector& ixupp = getSimpleVecColFromStochVec(*(presProb->ixupp), node);
-      const SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
+      const SimpleVector& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), node);
+      const SimpleVector& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node);
+      const SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node);
+      const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
       /* get matrix */
       SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, LINKING_CONS_BLOCK)->getStorageDynamicRef();
@@ -2095,16 +2094,16 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
 
          if( PIPSisLT(0.0, entry) )
          {
-            if( !upper && ixlow[col] != 0.0 )
+            if( !upper && !PIPSisZero(ixlow[col]) )
                act_part += entry * xlow[col];
-            if( upper && ixupp[col] != 0.0 )
+            if( upper && !PIPSisZero(ixupp[col]) )
                act_part += entry * xupp[col];
          }
          else
          {
-            if( !upper && ixupp[col] != 0.0 )
+            if( !upper && !PIPSisZero(ixupp[col]) )
                act_part += entry * xupp[col];
-            if( upper && ixlow[col] != 0.0 )
+            if( upper && !PIPSisZero(ixlow[col]) )
                act_part += entry * xlow[col];
          }
       }
@@ -2136,16 +2135,18 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    }
 
    /* upper lower bounds linking vars */
-   const SimpleVector& ixlow_root = getSimpleVecColFromStochVec(*(presProb->ixlow), -1);
-   const SimpleVector& xlow_root = getSimpleVecColFromStochVec(*(presProb->blx), -1);
-   const SimpleVector& ixupp_root = getSimpleVecColFromStochVec(*(presProb->ixupp), -1);
-   const SimpleVector& xupp_root = getSimpleVecColFromStochVec(*(presProb->bux), -1);
+   const SimpleVector& ixlow_root = getSimpleVecFromColStochVec(*(presProb->ixlow), -1);
+   const SimpleVector& xlow_root = getSimpleVecFromColStochVec(*(presProb->blx), -1);
+   const SimpleVector& ixupp_root = getSimpleVecFromColStochVec(*(presProb->ixupp), -1);
+   const SimpleVector& xupp_root = getSimpleVecFromColStochVec(*(presProb->bux), -1);
 
    /* get upper, lower bounds */
-   const SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), node);
-   const SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), node);
-   const SimpleVector& ixupp = getSimpleVecColFromStochVec(*(presProb->ixupp), node);
-   const SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
+   const SimpleVector& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), node);
+   const SimpleVector& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node);
+   const SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node);
+   const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
+
+   const bool linking = ( block_type == LINKING_CONS_BLOCK );
 
    /* get matrix */
    SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK)->getStorageDynamicRef();
@@ -2155,13 +2156,13 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    SimpleVector* act_vec;
    if(system_type == EQUALITY_SYSTEM)
    {
-      act_vec = (!upper) ? &getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type) :
-            &getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type);
+      act_vec = (!upper) ? &getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking) :
+            &getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking);
    }
    else
    {
-      act_vec = (!upper) ? &getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type) :
-            &getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type);
+      act_vec = (!upper) ? &getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking) :
+            &getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking);
    }
 
    double& act_part = (*act_vec)[row];
@@ -2177,16 +2178,16 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
 
       if( PIPSisLT(0.0, entry) )
       {
-         if( !upper && ixlow_root[col] != 0.0)
+         if( !upper && !PIPSisZero(ixlow_root[col]) )
             act_part += entry * xlow_root[col];
-         if( upper && ixupp_root[col] != 0.0)
+         if( upper && !PIPSisZero(ixupp_root[col]) )
             act_part += entry * xupp_root[col];
       }
       else
       {
-         if( !upper && ixupp_root[col] != 0.0 )
+         if( !upper && !PIPSisZero(ixupp_root[col]) )
             act_part += entry * xupp_root[col];
-         if( upper && ixlow_root[col] != 0.0 )
+         if( upper && !PIPSisZero(ixlow_root[col]) )
             act_part += entry * xlow_root[col];
       }
    }
@@ -2203,16 +2204,16 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
 
          if( PIPSisLT(0.0, entry) )
          {
-            if( !upper && ixlow[col] != 0.0 )
+            if( !upper && !PIPSisZero(ixlow[col]) )
                act_part += entry * xlow[col];
-            if( upper && ixupp[col] != 0.0 )
+            if( upper && !PIPSisZero(ixupp[col]) )
                act_part += entry * xupp[col];
          }
          else
          {
-            if( !upper && ixupp[col] != 0.0 )
+            if( !upper && !PIPSisZero(ixupp[col]) )
                act_part += entry * xupp[col];
-            if( upper && ixlow[col] != 0.0 )
+            if( upper && !PIPSisZero(ixlow[col]) )
                act_part += entry * xlow[col];
          }
       }
@@ -2228,10 +2229,10 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
 /** updates the bounds on a variable as well as activities */
 bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
 {
-   SimpleVector& ixlow = getSimpleVecColFromStochVec(*(presProb->ixlow), node);
-   SimpleVector& xlow = getSimpleVecColFromStochVec(*(presProb->blx), node);
-   SimpleVector& ixupp = getSimpleVecColFromStochVec(*(presProb->ixupp), node);
-   SimpleVector& xupp = getSimpleVecColFromStochVec(*(presProb->bux), node);
+   SimpleVector& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), node);
+   SimpleVector& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node);
+   SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node);
+   SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
 #ifdef TRACK_COLUMN
    if( NODE == node && COLUMN == col && (my_rank == 0 || node != -1) && !nodeIsDummy(NODE, EQUALITY_SYSTEM) )
@@ -2239,8 +2240,8 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
             xl << ", " << xu << "]" << std::endl;
 #endif
 
-   if( ( ixlow[col] != 0.0 && PIPSisLT(xu, xlow[col]) )
-         || (ixupp[col] != 0.0 && PIPSisLT(xupp[col], xl) )
+   if( ( !PIPSisZero(ixlow[col]) && PIPSisLT(xu, xlow[col]) )
+         || ( !PIPSisZero(ixupp[col]) && PIPSisLT(xupp[col], xl) )
          || PIPSisLT(xu, xl) )
       abortInfeasible(MPI_COMM_WORLD, "Varbounds update detected infeasible new bounds!", "PresolveData.C", "updateBoundsVariable");
 
@@ -2248,20 +2249,20 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    double xu_old = std::numeric_limits<double>::infinity();
    double xl_old = -std::numeric_limits<double>::infinity();
 
-   if( xu < std::numeric_limits<double>::max() && (ixupp[col] == 0.0 || PIPSisLT(xu, xupp[col])) )
+   if( xu < std::numeric_limits<double>::max() && ( PIPSisZero(ixupp[col]) || PIPSisLT(xu, xupp[col])) )
    {
       updated = true;
-      if(ixupp[col] == 1.0)
+      if( PIPSisEQ(ixupp[col], 1.0) )
          xu_old = xupp[col];
 
       xupp[col] = xu;
       ixupp[col] = 1.0;
    }
 
-   if( -std::numeric_limits<double>::max() < xl && (ixlow[col] == 0.0 || PIPSisLE( xlow[col], xl)) )
+   if( -std::numeric_limits<double>::max() < xl && ( PIPSisZero(ixlow[col]) || PIPSisLE( xlow[col], xl)) )
    {
       updated = true;
-      if(ixlow[col] == 1.0)
+      if( PIPSisEQ(ixlow[col], 1.0) )
          xl_old = xlow[col];
 
       xlow[col] = xl;
@@ -2386,21 +2387,22 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
       return;
 
    SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
+   const bool linking = ( block_type == LINKING_CONS_BLOCK );
 
    assert(col < mat_transp.m);
 
-   SimpleVector& actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type);
-   SimpleVector& actmin_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, node, block_type);
-   SimpleVector& actmax_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type);
-   SimpleVector& actmin_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type) :
-         getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type);
+   SimpleVectorBase<int>& actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking) :
+         getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking);
+   SimpleVectorBase<int>& actmin_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking) :
+         getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, linking);
+   SimpleVector& actmax_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking) :
+         getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking);
+   SimpleVector& actmin_part = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking) :
+         getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking);
 
    /* we always set these variables but only use them in case an actual linking row gets it's activities updated */
-   SimpleVector& actmax_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmax_eq_ubndd_chgs : *actmax_ineq_ubndd_chgs;
-   SimpleVector& actmin_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_ubndd_chgs : *actmin_ineq_ubndd_chgs;
+   SimpleVectorBase<int>& actmax_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmax_eq_ubndd_chgs : *actmax_ineq_ubndd_chgs;
+   SimpleVectorBase<int>& actmin_ubndd_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_ubndd_chgs : *actmin_ineq_ubndd_chgs;
    SimpleVector& actmax_part_chgs = (system_type == EQUALITY_SYSTEM) ? *actmax_eq_chgs : *actmax_ineq_chgs;
    SimpleVector& actmin_part_chgs = (system_type == EQUALITY_SYSTEM) ? *actmin_eq_chgs : *actmin_ineq_chgs;
 
@@ -2424,8 +2426,8 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
 
       SimpleVector& act_part = (switch_upperlower) ? actmax_part : actmin_part;
       SimpleVector& act_part_chgs = (switch_upperlower) ? actmax_part_chgs : actmin_part_chgs;
-      SimpleVector& act_ubndd = (switch_upperlower) ? actmax_ubndd : actmin_ubndd;
-      SimpleVector& act_ubndd_chgs = (switch_upperlower) ? actmax_ubndd_chgs : actmin_ubndd_chgs;
+      SimpleVectorBase<int>& act_ubndd = (switch_upperlower) ? actmax_ubndd : actmin_ubndd;
+      SimpleVectorBase<int>& act_ubndd_chgs = (switch_upperlower) ? actmax_ubndd_chgs : actmin_ubndd_chgs;
 
 
 #ifdef TRACK_ROW
@@ -2545,55 +2547,43 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
 }
 
 /// returns activity and unbounded counters for specified row
-/// +/- infinity if there are two or more unbouded entries in a row
+/// +/- infinity if there are two or more unbouded entries in a row // todo remove block_type replace with linking
 void PresolveData::getRowActivities(SystemType system_type, int node, BlockType block_type, int row, double& max_act,
       double& min_act, int& max_ubndd, int& min_ubndd) const
 {
    assert(!nodeIsDummy(node, system_type));
 
-   double row_max_counters = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_ubndd, node, block_type)[row]
-         : getSimpleVecRowFromStochVec(*actmax_ineq_ubndd, node, block_type)[row];
-   double row_min_counters = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_ubndd, node, block_type)[row]
-         : getSimpleVecRowFromStochVec(*actmin_ineq_ubndd, node, block_type)[row];
+   const bool linking = ( block_type == LINKING_CONS_BLOCK );
 
-   if(block_type == LINKING_CONS_BLOCK)
+   max_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row]
+         : getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking)[row];
+   min_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking)[row]
+         : getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, linking)[row];
+
+   if( linking )
    {
-      row_max_counters += (system_type == EQUALITY_SYSTEM) ? (*actmax_eq_ubndd_chgs)[row]
+      max_ubndd += (system_type == EQUALITY_SYSTEM) ? (*actmax_eq_ubndd_chgs)[row]
             : (*actmax_ineq_ubndd_chgs)[row];
-      row_min_counters += (system_type == EQUALITY_SYSTEM) ? (*actmin_eq_ubndd_chgs)[row]
+      min_ubndd += (system_type == EQUALITY_SYSTEM) ? (*actmin_eq_ubndd_chgs)[row]
             : (*actmin_ineq_ubndd_chgs)[row];
    }
 
-   max_ubndd = static_cast<int>(row_max_counters);
-   min_ubndd = static_cast<int>(row_min_counters);
+   max_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking)[row]
+         : getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking)[row];
+   min_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row]
+         : getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking)[row];
 
-#ifndef NDEBUG
-   /// asserting that cast from double to int is correct
-   double int_part_max, int_part_min;
-   std::modf(row_max_counters, &int_part_max);
-   std::modf(row_min_counters, &int_part_min);
-   assert(int_part_max == max_ubndd);
-   assert(int_part_min == min_ubndd);
-   assert(max_ubndd >= 0);
-   assert(min_ubndd >= 0);
-#endif
-
-   max_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmax_eq_part, node, block_type)[row]
-         : getSimpleVecRowFromStochVec(*actmax_ineq_part, node, block_type)[row];
-   min_act = (system_type == EQUALITY_SYSTEM) ? getSimpleVecRowFromStochVec(*actmin_eq_part, node, block_type)[row]
-         : getSimpleVecRowFromStochVec(*actmin_ineq_part, node, block_type)[row];
-
-   if(block_type == LINKING_CONS_BLOCK)
+   if( linking )
    {
       max_act += (system_type == EQUALITY_SYSTEM) ? (*actmax_eq_chgs)[row] : (*actmax_ineq_chgs)[row];
       min_act += (system_type == EQUALITY_SYSTEM) ? (*actmin_eq_chgs)[row] : (*actmin_ineq_chgs)[row];
    }
 
-   if( row_max_counters >= 2)
+   if( max_ubndd >= 2)
       assert( max_act == std::numeric_limits<double>::infinity() );
    else
    {
-      if( block_type != LINKING_CONS_BLOCK)
+      if( !linking )
       {
          if( !(max_act < std::numeric_limits<double>::infinity()))
             std::cout << row << " " << block_type << " " << node << " " << system_type << std::endl;
@@ -2601,64 +2591,14 @@ void PresolveData::getRowActivities(SystemType system_type, int node, BlockType 
       }
    }
 
-   if( row_min_counters >= 2)
+   if( min_ubndd >= 2)
       assert( min_act == -std::numeric_limits<double>::infinity() );
    else
    {
-      if( block_type != LINKING_CONS_BLOCK)
+      if( !linking )
       {
          assert(-std::numeric_limits<double>::infinity() < min_act);
       }
-   }
-}
-
-SimpleVector& PresolveData::getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const
-{
-   assert(-1 <= node && node < nChildren);
-
-   if(node == -1)
-   {
-      if(block_type == LINKING_CONS_BLOCK)
-      {
-         assert(stochvec.vecl);
-         return dynamic_cast<SimpleVector&>(*(stochvec.vecl));
-      }
-      else
-      {
-         assert(stochvec.vec);
-         return dynamic_cast<SimpleVector&>(*(stochvec.vec));
-      }
-   }
-   else
-   {
-      if(block_type == CHILD_BLOCK || block_type == LINKING_VARS_BLOCK)
-      {
-         assert(stochvec.children[node]->vec);
-         return dynamic_cast<SimpleVector&>(*(stochvec.children[node]->vec));
-      }
-      else
-      {
-         assert(stochvec.vecl);
-         return dynamic_cast<SimpleVector&>(*(stochvec.vecl));
-      }
-   }
-}
-
-SimpleVector& PresolveData::getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const
-{
-   assert(-1 <= node && node < nChildren);
-
-   if(node == -1)
-   {
-      assert(stochvec.vecl == NULL);
-      assert(stochvec.vec);
-      return dynamic_cast<SimpleVector&>(*(stochvec.vec));
-   }
-   else
-   {
-      assert(stochvec.children[node]->vecl == NULL);
-      assert(stochvec.children[node]->vec);
-      return dynamic_cast<SimpleVector&>(*(stochvec.children[node]->vec));
    }
 }
 
@@ -2687,41 +2627,43 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
 // todo does not yet print linking constraints
 void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const
 {
+   const bool linking = ( block_type == LINKING_CONS_BLOCK );
+   
    if(nodeIsDummy(node, system_type))
       return;
 
-   if(node == -1 && block_type != LINKING_CONS_BLOCK && my_rank != 0)
+   if(node == -1 && !linking && my_rank != 0)
       return;
 
    out << "SystemType: " << system_type << "\tnode: " << node << "\tLinkingCons: " << (block_type == LINKING_CONS_BLOCK) << "\trow: " << row << std::endl;
 
    if(system_type == EQUALITY_SYSTEM)
    {
-      out << getSimpleVecRowFromStochVec(*presProb->bA, node, block_type)[row] << " = ";
+      out << getSimpleVecFromRowStochVec(*presProb->bA, node, linking)[row] << " = ";
    }
    else
    {
-      double iclow = getSimpleVecRowFromStochVec(*presProb->iclow, node, block_type)[row];
-      double clow = (iclow == 1.0) ? getSimpleVecRowFromStochVec(*presProb->bl, node, block_type)[row] : -std::numeric_limits<double>::infinity();
+      double iclow = getSimpleVecFromRowStochVec(*presProb->iclow, node, linking)[row];
+      double clow = (iclow == 1.0) ? getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row] : -std::numeric_limits<double>::infinity();
 
       out << clow << " <= ";
    }
 
-   if(node != -1 && block_type != LINKING_CONS_BLOCK)
+   if(node != -1 && !linking)
    {
       block_type = CHILD_BLOCK;
-      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK), node, row, getSimpleVecColFromStochVec(*presProb->ixupp, -1),
-            getSimpleVecColFromStochVec(*presProb->bux, -1), getSimpleVecColFromStochVec(*presProb->ixlow, -1), getSimpleVecColFromStochVec(*presProb->blx, -1));
+      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, -1),
+            getSimpleVecFromColStochVec(*presProb->bux, -1), getSimpleVecFromColStochVec(*presProb->ixlow, -1), getSimpleVecFromColStochVec(*presProb->blx, -1));
    }
 
-   writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, block_type), node, row, getSimpleVecColFromStochVec(*presProb->ixupp, node),
-         getSimpleVecColFromStochVec(*presProb->bux, node),getSimpleVecColFromStochVec(*presProb->ixlow, node),getSimpleVecColFromStochVec(*presProb->blx, node));
+   writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, block_type), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, node),
+         getSimpleVecFromColStochVec(*presProb->bux, node),getSimpleVecFromColStochVec(*presProb->ixlow, node),getSimpleVecFromColStochVec(*presProb->blx, node));
 
 
    if(system_type == INEQUALITY_SYSTEM)
    {
-      double icupp = getSimpleVecRowFromStochVec(*presProb->icupp, node, block_type)[row];
-      double cupp = (icupp == 1.0) ? getSimpleVecRowFromStochVec(*presProb->bu, node, block_type)[row] : std::numeric_limits<double>::infinity();
+      double icupp = getSimpleVecFromRowStochVec(*presProb->icupp, node, linking)[row];
+      double cupp = (icupp == 1.0) ? getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row] : std::numeric_limits<double>::infinity();
 
       out << " <= " << cupp;
    }

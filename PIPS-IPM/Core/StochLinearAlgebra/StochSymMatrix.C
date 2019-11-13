@@ -382,13 +382,13 @@ void StochSymMatrix::scalarMult( double num )
 }
 
 
-void StochSymMatrix::deleteEmptyRowsCols(const OoqpVector& nnzVec, const OoqpVector* linkParent)
+void StochSymMatrix::deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec, const OoqpVectorBase<int>* linkParent)
 {
-   const StochVector& nnzVecStoch = dynamic_cast<const StochVector&>(nnzVec);
+   const StochVectorBase<int>& nnzVecStoch = dynamic_cast<const StochVectorBase<int>&>(nnzVec);
 
    assert(children.size() == nnzVecStoch.children.size());
 
-   const SimpleVector* const vec = dynamic_cast<const SimpleVector*>(nnzVecStoch.vec);
+   const SimpleVectorBase<int>* const vec = dynamic_cast<const SimpleVectorBase<int>*>(nnzVecStoch.vec);
 
    diag->deleteEmptyRowsCols(*vec);
 
