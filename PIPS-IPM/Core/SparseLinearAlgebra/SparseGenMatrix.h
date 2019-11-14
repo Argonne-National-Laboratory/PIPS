@@ -142,8 +142,8 @@ public:
   const SparseStorageDynamic& getStorageDynamicTransposedRef() const { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
   bool hasDynamicStorage() const { return (mStorageDynamic != NULL); };
 
-  virtual void addNnzPerRow(OoqpVector& nnzVec);
-  virtual void addNnzPerCol(OoqpVector& nnzVec);
+  virtual void addNnzPerRow(OoqpVectorBase<int>& nnzVec);
+  virtual void addNnzPerCol(OoqpVectorBase<int>& nnzVec);
 
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,

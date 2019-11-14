@@ -6,6 +6,7 @@
  */
 
 #include "SparseStorageDynamic.h"
+#include "pipsdef.h"
 #include <cassert>
 #include <algorithm>
 #include <vector>
@@ -182,7 +183,7 @@ SparseStorage* SparseStorageDynamic::getStaticStorage(const int* rowNnz, const i
       {
          assert(jcolM[j] < n);
 
-         if( M[j] == 0.0 )
+         if( PIPSisZero(M[j]) )
             continue;
 
          cols[jcolM[j]] = true;
@@ -345,7 +346,7 @@ SparseStorageDynamic* SparseStorageDynamic::getTranspose() const
 }
 
 
-void SparseStorageDynamic::addNnzPerRow(double* vec) const
+void SparseStorageDynamic::addNnzPerRow(int* vec) const
 {
    for( int r = 0; r < m; r++ )
       vec[r] += rowptr[r].end - rowptr[r].start;

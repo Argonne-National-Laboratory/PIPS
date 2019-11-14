@@ -72,7 +72,7 @@ private:
    const SparseStorageDynamic* currCmatTrans;
    const SparseStorageDynamic* currDmat;
    const SparseStorageDynamic* currDmatTrans;
-   const SimpleVector* currNnzRowC;
+   const SimpleVectorBase<int>* currNnzRowC;
 
    // pointers to the normalized and copied matrix blocks
    SparseStorageDynamic* norm_Amat;
@@ -88,14 +88,14 @@ private:
    SimpleVector* norm_factorA;
 
    // data for the nearly parallel row case
-   SimpleVector* rowContainsSingletonVariableA;
-   SimpleVector* rowContainsSingletonVariableC;
+   SimpleVectorBase<int>* rowContainsSingletonVariableA;
+   SimpleVectorBase<int>* rowContainsSingletonVariableC;
    SimpleVector* singletonCoeffsColParent;
    SimpleVector* singletonCoeffsColChild;
-   SimpleVector* normNnzRowA;
-   SimpleVector* normNnzRowC;
-   SimpleVector* normNnzColParent;
-   SimpleVector* normNnzColChild;
+   SimpleVectorBase<int>* normNnzRowA;
+   SimpleVectorBase<int>* normNnzRowC;
+   SimpleVectorBase<int>* normNnzColParent;
+   SimpleVectorBase<int>* normNnzColChild;
    SparseStorageDynamic* norm_AmatTrans;
    SparseStorageDynamic* norm_BmatTrans;
    SparseStorageDynamic* norm_CmatTrans;
@@ -121,15 +121,15 @@ private:
 
 
    void removeSingletonVars();
-   void removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
-         SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
+   void removeEntry(int colIdx, SimpleVectorBase<int>& rowContainsSingletonVar,
+         SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVectorBase<int>& nnzRow, SimpleVectorBase<int>& nnzCol,
          BlockType block_type);
    double removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
          SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow) const;
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVector* nnzRow );
+         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVectorBase<int>* nnzRow );
    void compareRowsInCoeffHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
 

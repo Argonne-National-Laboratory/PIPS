@@ -189,7 +189,7 @@ void StochPresolverParallelRows::applyPresolving()
    presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyObjVecChanges();
 
-   // TODO:add detection forlinking constraints!!!
+   // TODO:add detection for linking constraints
 
 
    synchronize(nRowElims);
@@ -273,19 +273,19 @@ void StochPresolverParallelRows::setNormalizedPointersMatrixBounds(int node)
 
    if(node == -1)
    {
-      norm_b = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).vec)->cloneFull();
+      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).vec->clone());
 
-      norm_cupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).vec)->cloneFull();
-      norm_icupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).vec)->cloneFull();
-      norm_clow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bl)).vec)->cloneFull();
-      norm_iclow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).vec)->cloneFull();
+      norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).vec->clone());
+      norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).vec->clone());
+      norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bl)).vec->clone());
+      norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).vec->clone());
    }
    else
    {
       /* EQUALITY_SYSTEM */
       if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
-         norm_b = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).children[node]->vec)->cloneFull();
+         norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).children[node]->vec->clone());
       }
       else
          norm_b = NULL;
@@ -293,10 +293,10 @@ void StochPresolverParallelRows::setNormalizedPointersMatrixBounds(int node)
       /* INEQUALITY_SYSTEM */
       if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
-         norm_cupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).children[node]->vec)->cloneFull();
-         norm_clow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bl)).children[node]->vec)->cloneFull();
-         norm_icupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).children[node]->vec)->cloneFull();
-         norm_iclow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).children[node]->vec)->cloneFull();
+         norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).children[node]->vec->clone());
+         norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bl)).children[node]->vec->clone());
+         norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).children[node]->vec->clone());
+         norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).children[node]->vec->clone());
       }
       else
          norm_cupp = norm_icupp = norm_clow = norm_iclow = NULL;
@@ -326,7 +326,7 @@ void StochPresolverParallelRows::updateExtendedPointersForCurrentNode(int node)
       currIcupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).vec);
       currIclow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).vec);
 
-      currNnzRowC = dynamic_cast<const SimpleVector*>(presData.getNnzsRowC().vec);
+      currNnzRowC = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsRowC().vec);
    }
    else
    {
@@ -339,7 +339,8 @@ void StochPresolverParallelRows::updateExtendedPointersForCurrentNode(int node)
       {
          updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
          currAmat = currAmatTrans = currBmat = currBmatTrans = currBlmat = currBlmatTrans = NULL;
-         currEqRhs = currEqRhsLink = currNnzRow = currNnzRowLink = NULL;
+         currNnzRow = currNnzRowLink = NULL;
+         currEqRhs = currEqRhsLink = NULL;
       }
 
       /* INEQUALITY_SYSTEM */
@@ -356,7 +357,7 @@ void StochPresolverParallelRows::updateExtendedPointersForCurrentNode(int node)
          currIcupp = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp)).children[node]->vec);
          currIclow = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow)).children[node]->vec);
 
-         currNnzRowC = dynamic_cast<const SimpleVector*>(presData.getNnzsRowC().children[node]->vec);
+         currNnzRowC = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsRowC().children[node]->vec);
       }
       else
       {
@@ -373,9 +374,9 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
 
    if(node == -1)
    {
-      norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).vec)->cloneFull();
+      norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).vec->clone());
       norm_factorA->setToZero();
-      norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).vec)->cloneFull();
+      norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).vec->clone());
       norm_factorC->setToZero();
    }
    else
@@ -383,7 +384,7 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
       /* EQUALITY_SYSTEM */
       if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
-         norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).children[node]->vec)->cloneFull();
+         norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bA)).children[node]->vec->clone());
          norm_factorA->setToZero();
       }
       else
@@ -392,7 +393,7 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
       /* INEQUALITY_SYSTEM */
       if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
-         norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).children[node]->vec)->cloneFull();
+         norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).children[node]->vec->clone());
          norm_factorC->setToZero();
       }
       else
@@ -404,27 +405,27 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
 {
    assert(-1 <= node && node <= nChildren);
 
-   singletonCoeffsColParent = dynamic_cast<SimpleVector*>(presData.getNnzsCol().vec)->cloneFull();
+   singletonCoeffsColParent = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*presData.getPresProb().g).vec->clone());
    singletonCoeffsColParent->setToZero();
 
    if(node == -1)
    {
-      rowContainsSingletonVariableA = dynamic_cast<const SimpleVector*>(presData.getNnzsRowA().vec)->cloneFull();
+      rowContainsSingletonVariableA = new SimpleVectorBase<int>(presData.getNnzsRowA().vec->length());
       rowContainsSingletonVariableA->setToConstant( -1.0 );
-      rowContainsSingletonVariableC = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).vec)->cloneFull();
+      rowContainsSingletonVariableC = new SimpleVectorBase<int>(presData.getNnzsRowC().vec->length());
       rowContainsSingletonVariableC->setToConstant( -1.0 );
 
       singletonCoeffsColChild = NULL;
    }
    else
    {
-      singletonCoeffsColChild = dynamic_cast<const SimpleVector*>(presData.getNnzsCol().children[node]->vec)->cloneFull();
+      singletonCoeffsColChild = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*presData.getPresProb().g).children[node]->vec->clone());
       singletonCoeffsColChild->setToZero();
 
       /* EQUALITY_SYSTEM */
       if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
-         rowContainsSingletonVariableA = dynamic_cast<const SimpleVector*>(presData.getNnzsRowA().children[node]->vec)->cloneFull();
+         rowContainsSingletonVariableA = new SimpleVectorBase<int>(presData.getNnzsRowA().children[node]->vec->length());
          rowContainsSingletonVariableA->setToConstant( -1.0 );
       }
       else
@@ -433,7 +434,7 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
       /* INEQUALITY_SYSTEM */
       if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
-         rowContainsSingletonVariableC = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bu)).children[node]->vec)->cloneFull();
+         rowContainsSingletonVariableC = new SimpleVectorBase<int>(presData.getNnzsRowC().children[node]->vec->length());
          rowContainsSingletonVariableC->setToConstant( -1.0 );
       }
       else
@@ -445,20 +446,23 @@ void StochPresolverParallelRows::setNormalizedReductionPointers(int node)
 {
    assert(-1 <= node && node <= nChildren);
 
-   normNnzColParent = dynamic_cast<const SimpleVector*>(presData.getNnzsCol().vec)->cloneFull();
-   normNnzColChild = (node == -1) ? NULL : dynamic_cast<const SimpleVector*>(presData.getNnzsCol().children[node]->vec)->cloneFull();;
+   normNnzColParent = dynamic_cast<SimpleVectorBase<int>*>(presData.getNnzsCol().vec->cloneFull());
+   normNnzColChild = (node == -1) ? NULL : 
+      dynamic_cast<SimpleVectorBase<int>*>(presData.getNnzsCol().children[node]->vec->cloneFull());
 
    if(node == -1)
    {
-      normNnzRowA = currNnzRow->cloneFull();
-      normNnzRowC = dynamic_cast<const SimpleVector*>(presData.getNnzsRowC().vec)->cloneFull();
+      normNnzRowA = dynamic_cast<SimpleVectorBase<int>*>(currNnzRow->cloneFull());
+      normNnzRowC = dynamic_cast<SimpleVectorBase<int>*>(presData.getNnzsRowC().vec->cloneFull());
    }
    else
    {
       /* EQUALITY_SYSTEM */
-      normNnzRowA = (!presData.nodeIsDummy( node, EQUALITY_SYSTEM )) ? dynamic_cast<const SimpleVector*>(presData.getNnzsRowA().children[node]->vec)->cloneFull() : NULL;
+      normNnzRowA = (!presData.nodeIsDummy( node, EQUALITY_SYSTEM )) ? 
+         dynamic_cast<SimpleVectorBase<int>*>(presData.getNnzsRowA().children[node]->vec->cloneFull()) : NULL;
       /* INEQUALITY_SYSTEM */
-      normNnzRowC =(!presData.nodeIsDummy( node, INEQUALITY_SYSTEM )) ? dynamic_cast<const SimpleVector*>(presData.getNnzsRowC().children[node]->vec)->cloneFull() : NULL;
+      normNnzRowC =(!presData.nodeIsDummy( node, INEQUALITY_SYSTEM )) ? 
+         dynamic_cast<SimpleVectorBase<int>*>(presData.getNnzsRowC().children[node]->vec->cloneFull()) : NULL;
    }
 }
 
@@ -596,7 +600,7 @@ void StochPresolverParallelRows::removeSingletonVars()
    // linking variable block a_mat
    for( int col = 0; col < normNnzColParent->n; col++ )
       {
-         if( PIPSisEQ((*normNnzColParent)[col], 1.0) )
+         if( (*normNnzColParent)[col] == 1.0 )
          {
             // check if the singleton column is part of the current a_mat/c_mat
             // else, the singleton entry is in one of the other A_i or C_i blocks
@@ -619,7 +623,7 @@ void StochPresolverParallelRows::removeSingletonVars()
    {
       for( int col = 0; col < normNnzColChild->n; col++ )
       {
-         if( PIPSisEQ((*normNnzColChild)[col], 1.0) )
+         if( (*normNnzColChild)[col] == 1 )
          {
             // check if the singleton column is part of the current b_mat/d_mat
             // else, the singleton entry is in one of the other B_i or D_i blocks
@@ -642,16 +646,16 @@ void StochPresolverParallelRows::removeSingletonVars()
  * the nnz vectors nnzRow and nnzColChild accordingly. Sets the entries in
  * rowContainsSingletonVar to the corresponding column index in which the singleton entry occurs.
  */
-void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContainsSingletonVar,
-      SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVector& nnzRow, SimpleVector& nnzCol,
+void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVectorBase<int>& rowContainsSingletonVar,
+      SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVectorBase<int>& nnzRow, SimpleVectorBase<int>& nnzCol,
       BlockType block_type)
 {
    assert( 0 <= colIdx && colIdx < matrixTrans.m );
-   assert( matrixTrans.rowptr[colIdx].start +1 == matrixTrans.rowptr[colIdx].end);
+   assert( matrixTrans.rowptr[colIdx].start + 1 == matrixTrans.rowptr[colIdx].end);
    assert( nnzRow.n == matrix.m );
    assert( matrix.n == nnzCol.n );
    assert( nnzCol.n == matrixTrans.m );
-   assert( PIPSisEQ( nnzCol[colIdx], 1.0 ) );
+   assert( nnzCol[colIdx] == 1 );
 
    // First, find indices of the singleton entry:
    const int k = matrixTrans.rowptr[colIdx].start;
@@ -662,7 +666,7 @@ void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContai
    // if so the row is neither parallel nor nearly parallel to any other row
    if( 0 <= rowContainsSingletonVar[rowIdx] )
    {
-      rowContainsSingletonVar[rowIdx] = -2.0;
+      rowContainsSingletonVar[rowIdx] = -2;
       return;
    }
 
@@ -678,7 +682,7 @@ void StochPresolverParallelRows::removeEntry(int colIdx, SimpleVector& rowContai
 
    matrixTrans.rowptr[colIdx].end--;
    nnzRow[rowIdx]--;
-   nnzCol[colIdx] = 0.0;
+   nnzCol[colIdx] = 0;
 
    if( block_type == LINKING_VARS_BLOCK )
       (*singletonCoeffsColParent)[colIdx] = coeff;
@@ -786,9 +790,9 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       }
       else
       {
-         if( (*iclow)[row] != 0.0 )
+         if( !PIPSisZero((*iclow)[row]) )
             (*clow)[row] /= absmax;
-         if( (*icupp)[row] != 0.0 )
+         if( !PIPSisZero((*icupp)[row]) )
             (*cupp)[row] /= absmax;
          // if multiplied by a negative value, lhs and rhs have to be swapped:
          if(negate_row)
@@ -807,7 +811,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
  */
 // todo : I think this is wrong or at least not complete - in theory we should sort the rows first (according to the colindices)
 void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-      SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat, SystemType system_type, SimpleVector* nnzRow )
+      SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat, SystemType system_type, SimpleVectorBase<int>* nnzRow )
 {
    assert(a_mat);
    if(b_mat)
@@ -818,14 +822,14 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
    for(int row = 0; row < a_mat->m; row++)
    {
       // ignore rows containing more than one singleton entry:
-      if( system_type == EQUALITY_SYSTEM && PIPSisEQ( (*rowContainsSingletonVariableA)[row], -2.0) )
+      if( system_type == EQUALITY_SYSTEM && (*rowContainsSingletonVariableA)[row] == -2 )
          continue;
-      if( system_type == INEQUALITY_SYSTEM && PIPSisEQ( (*rowContainsSingletonVariableC)[row], -2.0) )
+      if( system_type == INEQUALITY_SYSTEM && (*rowContainsSingletonVariableC)[row] == -2 )
          continue;
 
       // calculate rowId including possible offset (for Inequality rows):
       int rowId = row;
-      if( PIPSisZero((*nnzRow)[rowId]) )
+      if( (*nnzRow)[rowId] == 0 )
          continue;
       if( system_type == INEQUALITY_SYSTEM )
          rowId += mA;
@@ -887,17 +891,17 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   int id2 = it2->id;
                   // Case both constraints are equalities:
                   // check if one of them contains a singleton variable:
-                  if( !PIPSisEQ((*rowContainsSingletonVariableA)[id1], -1.0)
-                        || !PIPSisEQ((*rowContainsSingletonVariableA)[id2], -1.0) )
+                  if( (*rowContainsSingletonVariableA)[id1] != -1
+                        || (*rowContainsSingletonVariableA)[id2] != -1 )
                   {
                      // nearly parallel case 1:
                      // make sure that a_r2 != 0, otherwise switch ids.
-                     if( PIPSisEQ((*rowContainsSingletonVariableA)[id2], -1.0) )
+                     if( (*rowContainsSingletonVariableA)[id2] != -1 )
                         std::swap(id1, id2);
 
-                     assert( !PIPSisEQ((*rowContainsSingletonVariableA)[id2], -1.0) );
+                     assert( (*rowContainsSingletonVariableA)[id2] != -1 );
                      // if row id1 was already deleted, do not continue the procedure:
-                     if( (id1 < mA && PIPSisZero((*currNnzRow)[id1])) )
+                     if( (id1 < mA && (*currNnzRow)[id1]) == 0 )
                         continue;
 
                      // case two is basically case one
@@ -918,12 +922,12 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   const int id1 = it1->id - mA;
                   const int id2 = it2->id - mA;
 
-                  if( (*rowContainsSingletonVariableC)[id1] != -1.0
-                        || (*rowContainsSingletonVariableC)[id2] != -1.0 )
+                  if( (*rowContainsSingletonVariableC)[id1] != -1
+                        || (*rowContainsSingletonVariableC)[id2] != -1 )
                   {
                      // nearly parallel case 3:
-                     if( (*rowContainsSingletonVariableC)[id1] != -1.0
-                        && (*rowContainsSingletonVariableC)[id2] != -1.0 )
+                     if( (*rowContainsSingletonVariableC)[id1] != -1
+                        && (*rowContainsSingletonVariableC)[id2] != -1 )
                      {
                         doNearlyParallelRowCase3(id1, id2, node);
                      }
@@ -946,23 +950,23 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
 
                   const int ineqRowId = id2 - mA;
 
-                  if( PIPSisEQ((*rowContainsSingletonVariableA)[id1], -1.0)
-                        && PIPSisEQ((*rowContainsSingletonVariableC)[ineqRowId], -1.0) )
+                  if( (*rowContainsSingletonVariableA)[id1] == -1
+                        && (*rowContainsSingletonVariableC)[ineqRowId] == -1 )
                   {
                      //PIPSdebugMessage("Really Parallel Rows, case 2. \n");
                      // check for infeasibility:
-                     if( (*norm_iclow)[ineqRowId] != 0.0
-                           && (*norm_clow)[ineqRowId] > (*norm_b)[id1] )
+                     if( !PIPSisZero((*norm_iclow)[ineqRowId])
+                           && PIPSisLT( (*norm_b)[id1], (*norm_clow)[ineqRowId]) )
                         abortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
                            "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable"); 
-                     if( (*norm_icupp)[ineqRowId] != 0.0
-                           && (*norm_cupp)[ineqRowId] < (*norm_b)[id1] )
+                     if( !PIPSisZero((*norm_icupp)[ineqRowId])
+                           && PIPSisLT((*norm_cupp)[ineqRowId], (*norm_b)[id1]) )
                         abortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
                            "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable"); 
                      // remove inequality row.
                   }
-                  else if( (*rowContainsSingletonVariableA)[id1] != -1.0
-                        && (*rowContainsSingletonVariableC)[ineqRowId] == -1.0 )
+                  else if( (*rowContainsSingletonVariableA)[id1] != -1
+                        && (*rowContainsSingletonVariableC)[ineqRowId] == -1 )
                   {
                      // nearly parallel case 2:
                      PIPSdebugMessage("Nearly Parallel Rows, case 2. \n");
@@ -977,16 +981,16 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                      double faq = (*norm_factorA)[id1] * coeff_singleton;
                      if( faq > 0 )
                      {
-                        if( (*norm_iclow)[ineqRowId] != 0.0 )
+                        if( !PIPSisZero((*norm_iclow)[ineqRowId]) )
                            newxupp = ( (*norm_b)[id1] - (*norm_clow)[ineqRowId] ) * (*norm_factorA)[id1] / coeff_singleton;
-                        if( (*norm_icupp)[ineqRowId] != 0.0 )
+                        if( !PIPSisZero((*norm_icupp)[ineqRowId]) )
                            newxlow = ( (*norm_b)[id1] - (*norm_cupp)[ineqRowId] ) * (*norm_factorA)[id1] / coeff_singleton;
                      }
                      else  //if( fq*aq < 0 )
                      {
-                        if( (*norm_iclow)[ineqRowId] != 0.0 )
+                        if( !PIPSisZero((*norm_iclow)[ineqRowId]) )
                            newxlow = ( (*norm_b)[id1] - (*norm_clow)[ineqRowId] ) * (*norm_factorA)[id1] / coeff_singleton;
-                        if( (*norm_icupp)[ineqRowId] != 0.0 )
+                        if( !PIPSisZero((*norm_icupp)[ineqRowId]) )
                            newxupp = ( (*norm_b)[id1] - (*norm_cupp)[ineqRowId] ) * (*norm_factorA)[id1] / coeff_singleton;
                      }
 
@@ -1062,14 +1066,14 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    double norm_low_row2 = -std::numeric_limits<double>::infinity();
    double norm_upp_row2 = std::numeric_limits<double>::infinity();
 
-   if( (*norm_iclow)[rowId2] != 0.0 )
+   if( !PIPSisZero((*norm_iclow)[rowId2]) )
       norm_low_row2 = (*norm_clow)[rowId2];
-   if( (*norm_icupp)[rowId2] != 0.0 )
+   if( !PIPSisZero((*norm_icupp)[rowId2]) )
       norm_upp_row2 = (*norm_cupp)[rowId2];
 
    // test for infeasibility: // todo
-   if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT( norm_upp_row2, (*norm_clow)[rowId1]) )
-         || ( (*norm_icupp)[rowId1] != 0.0 && PIPSisLT( (*norm_cupp)[rowId1], norm_low_row2) ) )
+   if( ( !PIPSisZero((*norm_iclow)[rowId1]) && PIPSisLT( norm_upp_row2, (*norm_clow)[rowId1]) )
+         || ( !PIPSisZero((*norm_icupp)[rowId1]) && PIPSisLT( (*norm_cupp)[rowId1], norm_low_row2) ) )
    {
       abortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
    }
@@ -1078,8 +1082,8 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    double new_rhs = std::numeric_limits<double>::infinity();
 
    // todo numeric safeguards // todo check if inifty * factor == infty?
-   if( ( (*norm_iclow)[rowId1] != 0.0 && PIPSisLT( (*norm_clow)[rowId1], norm_low_row2) ) ||
-      ( (*norm_iclow)[rowId1] == 0.0 && norm_low_row2 > -std::numeric_limits<double>::infinity() ) )
+   if( ( !PIPSisZero((*norm_iclow)[rowId1]) && PIPSisLT( (*norm_clow)[rowId1], norm_low_row2) ) ||
+      ( PIPSisZero((*norm_iclow)[rowId1]) && norm_low_row2 > -std::numeric_limits<double>::infinity() ) )
    {
       (*norm_clow)[rowId1] = /*std::max(*/norm_low_row2;//, (*norm_clow)[rowId1]);
       (*norm_iclow)[rowId1] = 1.0;
@@ -1088,8 +1092,8 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
       ( PIPSisLT( 0.0, factor) ) ? new_lhs = factor * norm_low_row2 : new_rhs = factor * norm_low_row2;
    }
 
-   if( ( (*norm_icupp)[rowId1] != 0.0 && PIPSisLT(norm_upp_row2, (*norm_cupp)[rowId1]) )
-         || ( (*norm_icupp)[rowId1] == 0.0 && norm_upp_row2 < std::numeric_limits<double>::infinity() ))
+   if( ( !PIPSisZero((*norm_icupp)[rowId1]) && PIPSisLT(norm_upp_row2, (*norm_cupp)[rowId1]) )
+         || ( PIPSisZero((*norm_icupp)[rowId1]) && norm_upp_row2 < std::numeric_limits<double>::infinity() ))
    {
       (*norm_cupp)[rowId1] = /*std::min(*/norm_upp_row2;/*, (*norm_cupp)[rowId1]);*/ // todo!!!
       (*norm_icupp)[rowId1] = 1.0;

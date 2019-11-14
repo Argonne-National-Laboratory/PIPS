@@ -52,9 +52,9 @@ public:
   virtual OoqpVectorBase<T>* dataClone() const;
   virtual OoqpVectorBase<T>* dataCloneLinkCons() const;
 
-  virtual StochVectorBase<T>* clone() const;
+  OoqpVectorBase<T>* clone() const override;
   /* copy vector entries as well */
-  virtual StochVectorBase<T>* cloneFull() const;
+  OoqpVectorBase<T>* cloneFull() const override;
 
   virtual void jointCopyFrom(const StochVectorBase<T>& v1, const StochVectorBase<T>& v2, const StochVectorBase<T>& v3);
   virtual void jointCopyFromLinkCons(const StochVectorBase<T>& vx, const StochVectorBase<T>& vy, const StochVectorBase<T>& vz);
@@ -230,7 +230,7 @@ public:
 
    void componentMult( const OoqpVectorBase<T>& v )override {};
    void componentDiv ( const OoqpVectorBase<T>& v )override {};
-   bool componentEqual( const OoqpVector& v, double tol) const override { if(!v.isKindOf(kStochDummy)) std::cout << "one should never end up here"
+   bool componentEqual( const OoqpVectorBase<T>& v, T tol) const override { if(!v.isKindOf(kStochDummy)) std::cout << "one should never end up here"
      << std::endl; return v.isKindOf(kStochDummy); };
    void scalarMult( T num) override {};
    void writeToStream(std::ostream& out) const override {};

@@ -532,9 +532,9 @@ void SparseGenMatrix::matMultTrans(SymMatrix** res)
 
 
 void
-SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
+SparseGenMatrix::addNnzPerRow(OoqpVectorBase<int>& nnzVec)
 {
-   SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
+   SimpleVectorBase<int>& vec = dynamic_cast<SimpleVectorBase<int>&>(nnzVec);
 
    if( mStorageDynamic != NULL )
    {
@@ -549,9 +549,9 @@ SparseGenMatrix::addNnzPerRow(OoqpVector& nnzVec)
 }
 
 void
-SparseGenMatrix::addNnzPerCol(OoqpVector& nnzVec)
+SparseGenMatrix::addNnzPerCol(OoqpVectorBase<int>& nnzVec)
 {
-   SimpleVector& vec = dynamic_cast<SimpleVector&>(nnzVec);
+   SimpleVectorBase<int>& vec = dynamic_cast<SimpleVectorBase<int>&>(nnzVec);
 
    if( !m_Mt)
       initTransposed();
@@ -642,7 +642,7 @@ void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& ro
    assert(mStorageDynamic != NULL);
 
    const SimpleVectorBase<int>& rowNnzVecSimple = dynamic_cast<const SimpleVectorBase<int>&>(rowNnzVec);
-   const SimpleVectorBase<int>* const colNnzVecSimple = dynamic_cast<const SimpleVectorBase<int>*>(colNnzVec);
+   const SimpleVectorBase<int>* colNnzVecSimple = dynamic_cast<const SimpleVectorBase<int>*>(colNnzVec);
 
    mStorageDynamic->restoreOrder();
    SparseStorageHandle staticStorage(mStorageDynamic->getStaticStorage(rowNnzVecSimple.elements(),

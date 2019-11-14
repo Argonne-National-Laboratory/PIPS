@@ -177,7 +177,7 @@ public:
         double* rowsArrayDense, int* rowSparsity = NULL);
 
   /** add nnz per row to given array (of size nRows) */
-  void addNnzPerRow(double* vec) const;
+  void addNnzPerRow(int* vec) const;
   void getLinkVarsNnz(std::vector<int>& vec) const;
 
   /** add abs. sum per row to given array (of size nRows) */
@@ -194,7 +194,7 @@ public:
 
   void dump(const string& filename);
 
-  void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
+  void deleteEmptyRowsCols(const int* nnzRowVec, const int* nnzColVec);
 
   void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
 

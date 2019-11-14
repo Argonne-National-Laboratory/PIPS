@@ -340,6 +340,16 @@ inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
+inline void PIPS_MPIminArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
+{
+   assert(length >= 0);
+   if(length == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, localmax, length, get_mpi_datatype(localmax), MPI_MIN, mpiComm);
+}
+
+template <typename T>
 inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
 {
    T sum;

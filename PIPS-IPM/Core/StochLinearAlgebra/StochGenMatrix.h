@@ -96,7 +96,8 @@ public:
 
 
   virtual void initTransposedChild(bool dynamic);
-  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec);
+  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec,
+    const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec);
 
   virtual void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec);
 
@@ -359,7 +360,8 @@ public:
   virtual void addColSums( OoqpVector& vec ) {};
 
   virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec) {};
-  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec) {};
+  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, 
+    const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec) {};
 
   virtual void freeDynamicStorage() {};
 

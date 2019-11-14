@@ -592,7 +592,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   N = locnx+locmy+locmz;
 
   SimpleVector col(N);
-  SimpleVector nnzPerColRAC(nxP);
+  SimpleVectorBase<int> nnzPerColRAC(nxP);
 
   if( withR )
      R.addNnzPerCol(nnzPerColRAC);
@@ -644,7 +644,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   // do we have linking equality constraints?
   if( withMyl )
   {
-    SimpleVector nnzPerColFt(locmyl);
+    SimpleVectorBase<int> nnzPerColFt(locmyl);
     F.addNnzPerRow(nnzPerColFt);
 
     // do column-wise multiplication for columns containing Ft (F transposed)
@@ -679,7 +679,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   // do we have linking inequality constraints?
   if( withMzl )
   {
-    SimpleVector nnzPerColGt(locmzl);
+    SimpleVectorBase<int> nnzPerColGt(locmzl);
     G.addNnzPerRow(nnzPerColGt);
 
     // do column-wise multiplication for columns containing Gt (G transposed)
@@ -770,7 +770,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
 
    N = locnx + locmy + locmz;
 
-   SimpleVector nnzPerColRAC(nxP);
+   SimpleVectorBase<int> nnzPerColRAC(nxP);
 
    if( withR )
       R.addNnzPerCol(nnzPerColRAC);
@@ -846,7 +846,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
       //     SC +=  B^T  K^-1  (0  )
       //                       (0  )
 
-      SimpleVector nnzPerColFt(locmyl);
+      SimpleVectorBase<int> nnzPerColFt(locmyl);
       F.addNnzPerRow(nnzPerColFt);
 
       colpos = 0;
@@ -887,7 +887,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
       //     SC +=  B^T  K^-1  (0  )
       //                       (0  )
 
-      SimpleVector nnzPerColGt(locmzl);
+      SimpleVectorBase<int> nnzPerColGt(locmzl);
       G.addNnzPerRow(nnzPerColGt);
 
       colpos = 0;

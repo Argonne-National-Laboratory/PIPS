@@ -871,7 +871,7 @@ void StochGenMatrix::matTransDinvMultMat(OoqpVector& d, SymMatrix** res)
 
 void StochGenMatrix::getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent)
 {
-   StochVector& nnzVecStoch = dynamic_cast<StochVectorBase<int>&>(nnzVec);
+   StochVectorBase<int>& nnzVecStoch = dynamic_cast<StochVectorBase<int>&>(nnzVec);
 
    // assert tree compatibility
    assert(nnzVecStoch.children.size() == children.size());
@@ -904,7 +904,7 @@ void StochGenMatrix::getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
    // distributed, with linking constraints, and at root?
    if( iAmDistrib && nnzVecStoch.vecl != NULL && linkParent == NULL )
    {
-      PIPS_MPIsumArrayInPlace(nnzvecl->elements(), locn, mpiComm);
+      PIPS_MPIsumArrayInPlace(nnzvecl->elements(), nnzvecl->length(), mpiComm);
    }
 }
 
@@ -941,7 +941,7 @@ void StochGenMatrix::getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
    // distributed and at root?
    if( iAmDistrib && linkParent == NULL )
    {
-      PIPS_MPIsumArrayInPlace(vec->elements(), locn, mpiComm);
+      PIPS_MPIsumArrayInPlace(vec->elements(), vec->length(), mpiComm);
    }
 }
 
@@ -1011,17 +1011,10 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
       assert(mvecl != NULL);
 
       // sum up linking constraints vectors
-      const int locn = mvecl->length();
-      double* buffer = new double[locn];
-
       if( getMin )
-         MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_MIN, mpiComm);
+        PIPS_MPIminArrayInPlace(mvecl->elements(), mvecl->length(), mpiComm);
       else
-         MPI_Allreduce(mvecl->elements(), buffer, locn, MPI_DOUBLE, MPI_MAX, mpiComm);
-
-      mvecl->copyFromArray(buffer);
-
-      delete[] buffer;
+        PIPS_MPImaxArrayInPlace(mvecl->elements(), mvecl->length(), mpiComm);
    }
 }
 
@@ -1192,7 +1185,8 @@ void StochGenMatrix::addColSums( OoqpVector& sumVec, OoqpVector* linkParent )
    }
 }
 
-void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, const OoqpVector* rowLinkVec, const OoqpVector* colParentVec)
+void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec,
+  const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec)
 {
    const StochVectorBase<int>& rowNnzVecStoch = dynamic_cast<const StochVectorBase<int>&>(rowNnzVec);
    const StochVectorBase<int>& colNnzVecStoch = dynamic_cast<const StochVectorBase<int>&>(colNnzVec);
@@ -1203,6 +1197,7 @@ void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& row
    const SimpleVectorBase<int>* const colvec = dynamic_cast<const SimpleVectorBase<int>*>(colNnzVecStoch.vec);
 
    const SimpleVectorBase<int>* const rowlink = dynamic_cast<const SimpleVectorBase<int>*>(rowNnzVecStoch.vecl);
+   assert(rowvec); assert(colvec);
 
    Amat->initStaticStorageFromDynamic(*rowvec, colParentVec); // initialized with colVec == NULL for parent
    Bmat->initStaticStorageFromDynamic(*rowvec, colvec);

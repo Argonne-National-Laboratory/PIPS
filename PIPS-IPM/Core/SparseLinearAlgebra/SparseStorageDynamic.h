@@ -73,10 +73,10 @@ public:
   virtual void RowScale ( OoqpVector& vec ) { assert(0 && "not implemented here"); };
   virtual void scalarMult( double num ) { assert(0 && "not implemented here"); };
 
-  void addNnzPerRow(double* vec) const;
+  void addNnzPerRow(int* vec) const;
 
-  void writeToStreamDense( ostream& out) const;
-  void writeToStreamDenseRow( stringstream& out, int rowidx) const;
+  void writeToStreamDense( std::ostream& out) const;
+  void writeToStreamDenseRow( std::stringstream& out, int rowidx) const;
 
   void restoreOrder();
 

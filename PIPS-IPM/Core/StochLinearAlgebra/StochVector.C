@@ -88,7 +88,7 @@ OoqpVectorBase<T>* StochVectorBase<T>::dataCloneLinkCons() const
 }
 
 template<typename T>
-StochVectorBase<T>* StochVectorBase<T>::clone() const
+OoqpVectorBase<T>* StochVectorBase<T>::clone() const
 {
   StochVectorBase<T>* clone;
   if( vecl )
@@ -103,7 +103,7 @@ StochVectorBase<T>* StochVectorBase<T>::clone() const
 }
 
 template<typename T>
-StochVectorBase<T>* StochVectorBase<T>::cloneFull() const
+OoqpVectorBase<T>* StochVectorBase<T>::cloneFull() const
 {
    StochVectorBase<T>* clone = new StochVectorBase<T>(vec->length(), (vecl != NULL) ? vecl->length() : -1, mpiComm, -1);
 
@@ -1676,7 +1676,6 @@ void StochVectorBase<T>::removeEntries( const OoqpVectorBase<int>& select )
 
    if( vecl )
    {
-      assert(selectStoch.vecl);
       vecl->removeEntries(*selectStoch.vecl);
    }
 

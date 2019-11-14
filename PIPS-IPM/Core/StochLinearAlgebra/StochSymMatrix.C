@@ -389,6 +389,7 @@ void StochSymMatrix::deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec, cons
    assert(children.size() == nnzVecStoch.children.size());
 
    const SimpleVectorBase<int>* const vec = dynamic_cast<const SimpleVectorBase<int>*>(nnzVecStoch.vec);
+   assert(vec);
 
    diag->deleteEmptyRowsCols(*vec);
 
@@ -401,6 +402,7 @@ void StochSymMatrix::deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec, cons
    else
    {
      // adapt border
+      assert(dynamic_cast<const SimpleVectorBase<int>*>(linkParent));
       border->deleteEmptyRowsCols(*vec, *linkParent);
    }
 }

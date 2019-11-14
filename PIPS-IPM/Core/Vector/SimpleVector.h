@@ -45,8 +45,9 @@ public:
   }
   //@}
 
+  OoqpVectorBase<T>* clone() const override;
   /* copy vector entries as well */
-  virtual SimpleVectorBase<T>* cloneFull() const;
+  OoqpVectorBase<T>* cloneFull() const override;
 
   virtual ~SimpleVectorBase();
 

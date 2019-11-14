@@ -50,22 +50,22 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       nnzs_row_C(cloneStochVector<double,int>(*sorigprob->icupp)),
       nnzs_col(cloneStochVector<double,int>(*sorigprob->g)),
       actmax_eq_part(cloneStochVector<int,double>(*nnzs_row_A)),
-      actmin_eq_part(actmax_eq_part->clone()),
-      actmax_eq_ubndd(nnzs_row_A->clone()),
-      actmin_eq_ubndd(nnzs_row_A->clone()),
+      actmin_eq_part(dynamic_cast<StochVector*>(actmax_eq_part->clone())),
+      actmax_eq_ubndd(dynamic_cast<StochVectorBase<int>*>(nnzs_row_A->clone())),
+      actmin_eq_ubndd(dynamic_cast<StochVectorBase<int>*>(nnzs_row_A->clone())),
       actmax_ineq_part(cloneStochVector<int,double>(*nnzs_row_C)),
-      actmin_ineq_part(actmax_ineq_part->clone()),
-      actmax_ineq_ubndd(nnzs_row_C->clone()),
-      actmin_ineq_ubndd(nnzs_row_C->clone()),
+      actmin_ineq_part(dynamic_cast<StochVector*>(actmax_ineq_part->clone())),
+      actmax_ineq_ubndd(dynamic_cast<StochVectorBase<int>*>(nnzs_row_C->clone())),
+      actmin_ineq_ubndd(dynamic_cast<StochVectorBase<int>*>(nnzs_row_C->clone())),
       nChildren(nnzs_col->children.size()),
       objOffset(0.0), obj_offset_chgs(0.0),
       objective_vec_chgs(dynamic_cast<SimpleVector*>(nnzs_col->vec->cloneFull())),
-      lower_bound_implied_by_system(nnzs_col->clone()),
-      lower_bound_implied_by_row(nnzs_col->clone()),
-      lower_bound_implied_by_node(nnzs_col->clone()),
-      upper_bound_implied_by_system(nnzs_col->clone()),
-      upper_bound_implied_by_row(nnzs_col->clone()),
-      upper_bound_implied_by_node(nnzs_col->clone()),
+      lower_bound_implied_by_system(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
+      lower_bound_implied_by_row(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
+      lower_bound_implied_by_node(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
+      upper_bound_implied_by_system(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
+      upper_bound_implied_by_row(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
+      upper_bound_implied_by_node(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
       elements_deleted(0), elements_deleted_transposed(0)
 {
    std::memset(array_outdated_indicators, 0, length_array_outdated_indicators * sizeof(bool) );
@@ -187,10 +187,7 @@ sData* PresolveData::finalize()
 
 #ifndef NDEBUG
    if(distributed)
-   {
-      // todo make one array?
-      MPI_Allreduce(MPI_IN_PLACE, array_outdated_indicators, length_array_outdated_indicators, MPI_CXX_BOOL, MPI_LOR, MPI_COMM_WORLD);
-   }
+      PIPS_MPIlogicOrArrayInPlace(array_outdated_indicators, length_array_outdated_indicators, MPI_COMM_WORLD);
    assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds && !outdated_obj_vector);
 #endif
 
@@ -364,10 +361,10 @@ void PresolveData::recomputeActivities(bool linking_only)
       PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_part->vecl)->elements(), actmin_ineq_part->vecl->n, MPI_COMM_WORLD);
       PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_part->vecl)->elements(), actmax_ineq_part->vecl->n, MPI_COMM_WORLD);
 
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_eq_ubndd->vecl)->elements(), actmin_eq_ubndd->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_eq_ubndd->vecl)->elements(), actmax_eq_ubndd->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_ubndd->vecl)->elements(), actmin_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_ubndd->vecl)->elements(), actmax_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_eq_ubndd->vecl)->elements(), actmin_eq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_eq_ubndd->vecl)->elements(), actmax_eq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_ineq_ubndd->vecl)->elements(), actmin_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_ineq_ubndd->vecl)->elements(), actmax_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
    }
 
    /* set activities to infinity // theoretically not necessary but for debugging */
@@ -482,10 +479,10 @@ void PresolveData::allreduceLinkingVarBounds()
       SimpleVector& ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, -1);
 
       /* copy old values for later compairson */
-      SimpleVector* xlow_old = xlow.cloneFull();
-      SimpleVector* xupp_old = xupp.cloneFull();
-      SimpleVector* ixlow_old = ixlow.cloneFull();
-      SimpleVector* ixupp_old = ixupp.cloneFull();
+      SimpleVector* xlow_old = dynamic_cast<SimpleVector*>(xlow.cloneFull());
+      SimpleVector* xupp_old = dynamic_cast<SimpleVector*>(xupp.cloneFull());
+      SimpleVector* ixlow_old = dynamic_cast<SimpleVector*>(ixlow.cloneFull());
+      SimpleVector* ixupp_old = dynamic_cast<SimpleVector*>(ixupp.cloneFull());
 
       PIPS_MPImaxArrayInPlace(xlow.elements(), xlow.length(), MPI_COMM_WORLD);
       PIPS_MPImaxArrayInPlace(ixlow.elements(), ixlow.length(), MPI_COMM_WORLD);
@@ -737,7 +734,7 @@ void PresolveData::initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorB
    A.getNnzPerCol(nnzs_col);
    C.getNnzPerCol(*colClone);
 
-   nnzs_col.axpy(1.0, *colClone);
+   nnzs_col.axpy(1, *colClone);
 }
 
 void PresolveData::initSingletons()
@@ -1660,17 +1657,17 @@ bool PresolveData::verifyActivities()
 
    bool activities_correct = true;
 
-   StochVectorHandle actmax_eq_part_old(actmax_eq_part->cloneFull());
-   StochVectorHandle actmin_eq_part_old(actmin_eq_part->cloneFull());
+   StochVectorHandle actmax_eq_part_old(dynamic_cast<StochVector*>(actmax_eq_part->cloneFull()));
+   StochVectorHandle actmin_eq_part_old(dynamic_cast<StochVector*>(actmin_eq_part->cloneFull()));
 
-   SmartPointer<StochVectorBase<int>> actmax_eq_ubndd_old(actmax_eq_ubndd->cloneFull());
-   SmartPointer<StochVectorBase<int>> actmin_eq_ubndd_old(actmin_eq_ubndd->cloneFull());
+   SmartPointer<StochVectorBase<int>> actmax_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_eq_ubndd->cloneFull()));
+   SmartPointer<StochVectorBase<int>> actmin_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_eq_ubndd->cloneFull()));
 
-   StochVectorHandle actmax_ineq_part_old(actmax_ineq_part->cloneFull());
-   StochVectorHandle actmin_ineq_part_old(actmin_ineq_part->cloneFull());
+   StochVectorHandle actmax_ineq_part_old(dynamic_cast<StochVector*>(actmax_ineq_part->cloneFull()));
+   StochVectorHandle actmin_ineq_part_old(dynamic_cast<StochVector*>(actmin_ineq_part->cloneFull()));
 
-   SmartPointer<StochVectorBase<int>> actmax_ineq_ubndd_old(actmax_ineq_ubndd->cloneFull());
-   SmartPointer<StochVectorBase<int>> actmin_ineq_ubndd_old(actmin_ineq_ubndd->cloneFull());
+   SmartPointer<StochVectorBase<int>> actmax_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_ineq_ubndd->cloneFull()));
+   SmartPointer<StochVectorBase<int>> actmin_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_ineq_ubndd->cloneFull()));
 
    actmax_eq_part->setToZero();
    actmin_eq_part->setToZero();
@@ -1753,9 +1750,9 @@ bool PresolveData::verifyNnzcounters() const
    assert(!outdated_nnzs);
 
    bool nnzCorrect = true;
-   SmartPointer<StochVectorBase<int>> nnzs_col_new(nnzs_col->cloneFull());
-   SmartPointer<StochVectorBase<int>> nnzs_row_A_new(nnzs_row_A->cloneFull());
-   SmartPointer<StochVectorBase<int>> nnzs_row_C_new(nnzs_row_C->cloneFull());
+   SmartPointer<StochVectorBase<int>> nnzs_col_new(dynamic_cast<StochVectorBase<int>*>(nnzs_col->cloneFull()));
+   SmartPointer<StochVectorBase<int>> nnzs_row_A_new(dynamic_cast<StochVectorBase<int>*>(nnzs_row_A->cloneFull()));
+   SmartPointer<StochVectorBase<int>> nnzs_row_C_new(dynamic_cast<StochVectorBase<int>*>(nnzs_row_C->cloneFull()));
 
    nnzs_col_new->setToZero();
    nnzs_row_A_new->setToZero();
@@ -2695,8 +2692,8 @@ void PresolveData::printVarBoundStatistics(std::ostream& out) const
    const StochVector& ixupp = dynamic_cast<const StochVector&>(*presProb->ixupp);
    const StochVector& ixlow = dynamic_cast<const StochVector&>(*presProb->ixlow);
 
-   StochVectorHandle xlow_def = StochVectorHandle(xlow.cloneFull());
-   StochVectorHandle xupp_def = StochVectorHandle(xupp.cloneFull());
+   StochVectorHandle xlow_def = StochVectorHandle(dynamic_cast<StochVector*>(xlow.cloneFull()));
+   StochVectorHandle xupp_def = StochVectorHandle(dynamic_cast<StochVector*>(xupp.cloneFull()));
 
    xlow_def->componentMult(ixlow);
    xupp_def->componentMult(ixupp);

@@ -1592,7 +1592,7 @@ void SparseStorage::dump(const string& filename)
   }
 }
 
-void SparseStorage::deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec)
+void SparseStorage::deleteEmptyRowsCols(const int* nnzRowVec, const int* nnzColVec)
 {
    assert(nnzRowVec != NULL && nnzColVec != NULL);
 
@@ -1923,7 +1923,7 @@ void SparseStorage::deleteZeroRowsColsSym(int*& new2orgIdx)
    assert(this->isValid());
 }
 
-void SparseStorage::addNnzPerRow(double* vec) const
+void SparseStorage::addNnzPerRow(int* vec) const
 {
    for( int r = 0; r < m; r++ )
       vec[r] += krowM[r + 1] - krowM[r];
