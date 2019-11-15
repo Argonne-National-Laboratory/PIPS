@@ -77,59 +77,56 @@ Data* StochPresolver::presolve()
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverCleanup.countRowsCols();
 
-   // // todo loop, and exhaustive
-   // // some list holding all presolvers - eg one presolving run
-   // // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
-   // // presolverCleanup.applyPresolving();
+   // todo loop, and exhaustive
+   // some list holding all presolvers - eg one presolving run
+   // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
+   // presolverCleanup.applyPresolving();
    
-   // for( int i = 0; i < 1; ++i )
-   // {
-   //    /* singleton rows */
-   //    // presolverSR.applyPresolving();
-   //    // presolverBS.applyPresolving();
-   //    // presolverParallelRow.applyPresolving();
-   //    // presolverColFix.applyPresolving();
-   // }
+   for( int i = 0; i < 1; ++i )
+   {
+      /* singleton rows */
+      // presolverSR.applyPresolving();
+      // presolverBS.applyPresolving();
+      // presolverParallelRow.applyPresolving();
+      // presolverColFix.applyPresolving();
+   }
 
-   // // before the finalize call fix all empty rows and columns not yet fixed
-   // // presolverCleanup.applyPresolving();
+   // before the finalize call fix all empty rows and columns not yet fixed
+   // presolverCleanup.applyPresolving();
    
-   // if( myRank == 0 )
-   //    std::cout << "--- After Presolving:" << std::endl;
-   // presolverCleanup.countRowsCols();
-   // assert( presData.getPresProb().isRootNodeInSync() );
+   if( myRank == 0 )
+      std::cout << "--- After Presolving:" << std::endl;
+   presolverCleanup.countRowsCols();
+   assert( presData.getPresProb().isRootNodeInSync() );
 
-   // // exit(1);
+   // exit(1);
 
-   // // todo : no idea how to postsolve this
+   // todo : no idea how to postsolve this
 
-   // char* env = getenv("PIPS_RESET_FREE_VARIABLES");
-   // if( env != NULL )
-   // {
-   //    std::string reset_vars(env);
-   //    for(unsigned int i = 0; i < reset_vars.length(); ++i)
-   //       reset_vars[i] = std::tolower(reset_vars[i]);
-   //    //std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
-   //    if(reset_vars == "true")
-   //    {
-   //        if( myRank == 0 )
-   //           std::cout << "Resetting bounds found in bound strengthening" << std::endl;
+   char* env = getenv("PIPS_RESET_FREE_VARIABLES");
+   if( env != NULL )
+   {
+      std::string reset_vars(env);
+      for(unsigned int i = 0; i < reset_vars.length(); ++i)
+         reset_vars[i] = std::tolower(reset_vars[i]);
+      //std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
+      if(reset_vars == "true")
+      {
+          if( myRank == 0 )
+             std::cout << "Resetting bounds found in bound strengthening" << std::endl;
 
-   //        presData.resetOriginallyFreeVarsBounds(*sorigprob);
-   //        presolverCleanup.countRowsCols();
-   //    }
-   // }   
+          presData.resetOriginallyFreeVarsBounds(*sorigprob);
+          presolverCleanup.countRowsCols();
+      }
+   }   
 
    sData* finalPresData = presData.finalize();
-   assert(finalPresData);
-   std::cout << dynamic_cast<const StochVector&>(*finalPresData->g).children.size() << std::endl;
-   PresolveData presData2(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
-   StochPresolverBoundStrengthening presolverBS2(presData, *sorigprob);
 
-   presolverBS2.countRowsCols();
+   assert( finalPresData );
+   assert( finalPresData->isRootNodeInSync() );
+
    // todo : verify presolver and postsolver have same amount of deleted rows and cols
 
-   // assert( finalPresData->isRootNodeInSync() );
 
    return finalPresData;
 }

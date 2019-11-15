@@ -527,14 +527,14 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    if( presData.hasLinking(system_type) )
    {
 //      currRedRowLink = &(*row_red);
-      currNnzRowLink = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vecl);;
+      currNnzRowLink = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vecl);
    }
    else
 //      currRedRowLink = currNnzRowLink = NULL;
       ;
    /* colums */
 //   currRedColParent = &(*presData.nnzs_col_chgs);
-   currNnzColParent = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().vec);;
+   currNnzColParent = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().vec);
 
    assert(presData.getNnzsCol().vecl == NULL);
 

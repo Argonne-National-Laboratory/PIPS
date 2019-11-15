@@ -8,9 +8,16 @@
 #include "OoqpVectorHandle.h"
 #include "SmartPointer.h"
 #include "SimpleVector_fwd.h"
+#include "pipsport.h"
 
-// template<typename T>
-// using SimpleVectorBaseHandle = SmartPointer<SimpleVectorBase<T> >;
+#ifndef PRE_CPP11
+	template<typename T>
+	using SimpleVectorBaseHandle = SmartPointer<SimpleVectorBase<T> >;
+#else
+	#define SimpleVectorBaseHandle<int> SmartPointer<StochVectorBase<int> >
+	#define SimpleVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
+#endif 
+
 
 typedef SmartPointer<SimpleVector> SimpleVectorHandle;
 

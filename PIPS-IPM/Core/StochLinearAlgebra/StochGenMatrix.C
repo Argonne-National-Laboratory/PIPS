@@ -915,7 +915,7 @@ void StochGenMatrix::getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
    // assert tree compatibility
    assert(nnzVecStoch.children.size() == children.size());
 
-   SimpleVectorBase<int>* const vec = dynamic_cast<SimpleVectorBase<int>*>(nnzVecStoch.vec);
+   SimpleVectorBase<int>* vec = dynamic_cast<SimpleVectorBase<int>*>(nnzVecStoch.vec);
 
    if( iAmSpecial(iAmDistrib, mpiComm) || linkParent != NULL )
    {

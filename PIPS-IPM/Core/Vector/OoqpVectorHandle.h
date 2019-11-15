@@ -8,6 +8,15 @@
 #include "IotrRefCount.h"
 #include "SmartPointer.h"
 #include "OoqpVector_fwd.h"
+#include "pipsport.h"
+
+#ifndef PRE_CPP11
+	template<typename T>
+	using OoqpVectorBaseHandle = SmartPointer<OoqpVectorBase<T> >;
+#else
+	#define OoqpVectorBaseHandle<int> SmartPointer<StochVectorBase<int> >
+	#define OoqpVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
+#endif 
 
 typedef SmartPointer<OoqpVector> OoqpVectorHandle;
 

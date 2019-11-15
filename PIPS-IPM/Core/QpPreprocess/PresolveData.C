@@ -91,9 +91,9 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    array_nnz_chgs = new int[length_array_nnz_chgs];
    std::memset(array_nnz_chgs, 0, length_array_nnz_chgs * sizeof(int));
 
-   nnzs_col_chgs = SmartPointer<SimpleVectorBase<int>>(new SimpleVectorBase<int>(array_nnz_chgs, n_linking_vars));
-   nnzs_row_A_chgs = SmartPointer<SimpleVectorBase<int>>(new SimpleVectorBase<int>(array_nnz_chgs + n_linking_vars, n_linking_A));
-   nnzs_row_C_chgs = SmartPointer<SimpleVectorBase<int>>(new SimpleVectorBase<int>(array_nnz_chgs + n_linking_vars + n_linking_A, n_linking_C));
+   nnzs_col_chgs = SimpleVectorBaseHandle<int>(new SimpleVectorBase<int>(array_nnz_chgs, n_linking_vars));
+   nnzs_row_A_chgs = SimpleVectorBaseHandle<int>(new SimpleVectorBase<int>(array_nnz_chgs + n_linking_vars, n_linking_A));
+   nnzs_row_C_chgs = SimpleVectorBaseHandle<int>(new SimpleVectorBase<int>(array_nnz_chgs + n_linking_vars + n_linking_A, n_linking_C));
 
    lenght_array_act_chgs = n_linking_A * 2 + n_linking_C * 2;
    array_act_chgs = new double[lenght_array_act_chgs];
@@ -107,10 +107,10 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    array_act_unbounded_chgs = new int[lenght_array_act_chgs];
    std::memset(array_act_unbounded_chgs, 0, lenght_array_act_chgs * sizeof(int));
 
-   actmax_eq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs, n_linking_A));
-   actmin_eq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs + n_linking_A, n_linking_A));
-   actmax_ineq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs + 2 * n_linking_A, n_linking_C));
-   actmin_ineq_ubndd_chgs = SmartPointer<SimpleVectorBase<int> >( new SimpleVectorBase<int>(array_act_unbounded_chgs + 2 * n_linking_A + n_linking_C, n_linking_C));
+   actmax_eq_ubndd_chgs = SimpleVectorBaseHandle<int>( new SimpleVectorBase<int>(array_act_unbounded_chgs, n_linking_A));
+   actmin_eq_ubndd_chgs = SimpleVectorBaseHandle<int>( new SimpleVectorBase<int>(array_act_unbounded_chgs + n_linking_A, n_linking_A));
+   actmax_ineq_ubndd_chgs = SimpleVectorBaseHandle<int>( new SimpleVectorBase<int>(array_act_unbounded_chgs + 2 * n_linking_A, n_linking_C));
+   actmin_ineq_ubndd_chgs = SimpleVectorBaseHandle<int>( new SimpleVectorBase<int>(array_act_unbounded_chgs + 2 * n_linking_A + n_linking_C, n_linking_C));
 
    lenght_array_bound_chgs = n_linking_A + n_linking_C;
    array_bound_chgs = new double[lenght_array_bound_chgs];
@@ -727,7 +727,7 @@ void PresolveData::initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorB
    StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
    StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*(presProb->C));
 
-   SmartPointer<StochVectorBase<int>> colClone(dynamic_cast<StochVectorBase<int>*>(nnzs_col.clone()));
+   StochVectorBaseHandle<int> colClone(dynamic_cast<StochVectorBase<int>*>(nnzs_col.clone()));
 
    A.getNnzPerRow(nnzs_row_A);
    C.getNnzPerRow(nnzs_row_C);
@@ -1660,14 +1660,14 @@ bool PresolveData::verifyActivities()
    StochVectorHandle actmax_eq_part_old(dynamic_cast<StochVector*>(actmax_eq_part->cloneFull()));
    StochVectorHandle actmin_eq_part_old(dynamic_cast<StochVector*>(actmin_eq_part->cloneFull()));
 
-   SmartPointer<StochVectorBase<int>> actmax_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_eq_ubndd->cloneFull()));
-   SmartPointer<StochVectorBase<int>> actmin_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_eq_ubndd->cloneFull()));
+   StochVectorBaseHandle<int> actmax_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_eq_ubndd->cloneFull()));
+   StochVectorBaseHandle<int> actmin_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_eq_ubndd->cloneFull()));
 
    StochVectorHandle actmax_ineq_part_old(dynamic_cast<StochVector*>(actmax_ineq_part->cloneFull()));
    StochVectorHandle actmin_ineq_part_old(dynamic_cast<StochVector*>(actmin_ineq_part->cloneFull()));
 
-   SmartPointer<StochVectorBase<int>> actmax_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_ineq_ubndd->cloneFull()));
-   SmartPointer<StochVectorBase<int>> actmin_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_ineq_ubndd->cloneFull()));
+   StochVectorBaseHandle<int> actmax_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_ineq_ubndd->cloneFull()));
+   StochVectorBaseHandle<int> actmin_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_ineq_ubndd->cloneFull()));
 
    actmax_eq_part->setToZero();
    actmin_eq_part->setToZero();
@@ -1750,9 +1750,9 @@ bool PresolveData::verifyNnzcounters() const
    assert(!outdated_nnzs);
 
    bool nnzCorrect = true;
-   SmartPointer<StochVectorBase<int>> nnzs_col_new(dynamic_cast<StochVectorBase<int>*>(nnzs_col->cloneFull()));
-   SmartPointer<StochVectorBase<int>> nnzs_row_A_new(dynamic_cast<StochVectorBase<int>*>(nnzs_row_A->cloneFull()));
-   SmartPointer<StochVectorBase<int>> nnzs_row_C_new(dynamic_cast<StochVectorBase<int>*>(nnzs_row_C->cloneFull()));
+   StochVectorBaseHandle<int> nnzs_col_new(dynamic_cast<StochVectorBase<int>*>(nnzs_col->cloneFull()));
+   StochVectorBaseHandle<int> nnzs_row_A_new(dynamic_cast<StochVectorBase<int>*>(nnzs_row_A->cloneFull()));
+   StochVectorBaseHandle<int> nnzs_row_C_new(dynamic_cast<StochVectorBase<int>*>(nnzs_row_C->cloneFull()));
 
    nnzs_col_new->setToZero();
    nnzs_row_A_new->setToZero();

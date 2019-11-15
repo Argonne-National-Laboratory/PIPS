@@ -947,7 +947,7 @@ void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<int>& select)
 
    for( int i = 0; i < this->n; i++ )
       if( selectArr[i] != 0 )
-         v[nNew++] = 0.0;
+         v[nNew++] = v[i];
 
    this->n = nNew;
 }

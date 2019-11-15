@@ -177,12 +177,12 @@ public:
   void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
 
-  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec)
+  void getNnzPerRow(OoqpVectorBase<int>& nnzVec) override
   {
      getNnzPerRow(nnzVec, NULL);
   };
 
-  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec)
+  void getNnzPerCol(OoqpVectorBase<int>& nnzVec) override
   {
      getNnzPerCol(nnzVec, NULL);
   };
@@ -334,13 +334,13 @@ public:
   virtual void initTransposed(bool dynamic = false) {};
   virtual void deleteTransposed() {};
 
-  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent) {};
+  void getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent) override {};
 
-  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent) {};
+  void getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent) override {};
 
-  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec) {};
+  void getNnzPerRow(OoqpVectorBase<int>& nnzVec) override {};
 
-  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec) {};
+  void getNnzPerCol(OoqpVectorBase<int>& nnzVec) override {};
 
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};
