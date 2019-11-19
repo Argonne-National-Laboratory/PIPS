@@ -1828,8 +1828,4 @@ bool StochVectorBase<T>::isRootNodeInSync() const
 }
 
 template class StochVectorBase<int>;
-<<<<<<< HEAD
-=======
-// template class StochVectorBase<bool>;
->>>>>>> 00f56646... fix wrong mpi call
 template class StochVectorBase<double>;
