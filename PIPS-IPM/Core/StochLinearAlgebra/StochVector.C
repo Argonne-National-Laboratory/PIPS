@@ -984,7 +984,7 @@ void StochVectorBase<T>::findBlocking_pd(const OoqpVectorBase<T> & wstep_vec,
       }
 
       T bufferOut[10];
-      PIPS_MPIsumArray(buffer, bufferOut, 10, mpiComm);
+      PIPS_MPImaxArray(buffer, bufferOut, 10, mpiComm);
 
       w_elt_p = bufferOut[0];
       wstep_elt_p = bufferOut[1];
@@ -1828,4 +1828,8 @@ bool StochVectorBase<T>::isRootNodeInSync() const
 }
 
 template class StochVectorBase<int>;
+<<<<<<< HEAD
+=======
+// template class StochVectorBase<bool>;
+>>>>>>> 00f56646... fix wrong mpi call
 template class StochVectorBase<double>;
