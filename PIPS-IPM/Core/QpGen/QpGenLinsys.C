@@ -226,8 +226,6 @@ void QpGenLinsys::computeDiagonals( OoqpVector& dd_, OoqpVector& omega,
   omega.setToZero();
   if ( mclow > 0 ) omega.axdzpy( 1.0, lambda, t, *iclow );
   if ( mcupp > 0 ) omega.axdzpy( 1.0, pi,     u, *icupp );
-  
-  // std::cout << "HI " << std::endl;
   // assert( omega.allPositive() );
 }
 

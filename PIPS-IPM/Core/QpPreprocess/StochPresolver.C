@@ -101,8 +101,8 @@ Data* StochPresolver::presolve()
 
    // exit(1);
 
-   // todo : no idea how to postsolve this
 
+// todo : tell postsolver aboud released variables
    char* env = getenv("PIPS_RESET_FREE_VARIABLES");
    if( env != NULL )
    {

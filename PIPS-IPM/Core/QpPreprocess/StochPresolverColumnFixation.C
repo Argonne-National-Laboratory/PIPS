@@ -101,7 +101,7 @@ void StochPresolverColumnFixation::applyPresolving()
          // todo : include also objective coefficient into this criterion ?
          double absmax_row = 1.0;
 
-         if( (*currIxlowChild)[col] != 0.0 && (*currIxuppChild)[col] != 0.0)
+         if( !PIPSisZero((*currIxlowChild)[col]) && !PIPSisZero((*currIxuppChild)[col]) )
          {
             assert(PIPSisLE(0.0, (*currxuppChild)[col] - (*currxlowChild)[col]));
 
@@ -130,7 +130,7 @@ void StochPresolverColumnFixation::applyPresolving()
 
 
 #ifndef NDEBUG
-   MPI_Allreduce(MPI_IN_PLACE, &fixed_columns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   fixed_columns = PIPS_MPIgetSum(fixed_columns, MPI_COMM_WORLD);
    if( my_rank == 0 )
       std::cout << "Fixed " << fixed_columns << " colums so far" << std::endl;
    if( my_rank == 0 )

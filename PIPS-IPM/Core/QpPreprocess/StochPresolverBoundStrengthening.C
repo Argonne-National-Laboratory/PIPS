@@ -195,7 +195,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          else if(actmin_ubndd == 1.0)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            if( (PIPSisLE(a_ik, 0.0) && ixupp[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixlow[col] == 0.0) )
+            if( (PIPSisLE(a_ik, 0.0) && PIPSisZero(ixupp[col])) || (PIPSisLE(0.0, a_ik) && PIPSisZero(ixlow[col])) )
                actmin_row_without_curr = actmin_part;
          }
 
@@ -204,7 +204,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          else if(actmax_ubndd == 1.0)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            if( (PIPSisLE(a_ik, 0.0) && ixlow[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixupp[col] == 0.0) )
+            if( (PIPSisLE(a_ik, 0.0) && PIPSisZero(ixlow[col])) || (PIPSisLE(0.0, a_ik) && PIPSisZero(ixupp[col])) )
                actmax_row_without_curr = actmax_part;
          }
 
