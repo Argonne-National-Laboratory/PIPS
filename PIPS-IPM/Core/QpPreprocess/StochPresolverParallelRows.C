@@ -488,9 +488,10 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    /* set reduction pointers columns and rows */
    setNormalizedReductionPointers(node);
 
+   assert(norm_Bmat);
    /* set mA, nA */ // todo what is this for?
-   mA = (norm_Amat) ? norm_Amat->m : 0;
-   nA = (norm_Amat) ? norm_Amat->n : 0;
+   mA = (norm_Amat) ? norm_Amat->m : norm_Bmat->m;
+   nA = (norm_Amat) ? norm_Amat->n : norm_Bmat->n;
 
    /* remove singleton columns before normalization */
    removeSingletonVars();
