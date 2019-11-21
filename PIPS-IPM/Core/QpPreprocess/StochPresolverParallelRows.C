@@ -822,9 +822,11 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
    assert(b_mat);
    if(a_mat)
      assert( a_mat->m == b_mat->m );
-   if( system_type == EQUALITY_SYSTEM )
+   if( system_type == EQUALITY_SYSTEM && (b_mat != NULL && a_mat == NULL) )
       assert( mA == b_mat->m );
-
+   if( system_type == EQUALITY_SYSTEM && a_mat != NULL)
+      assert( mA == a_mat->m );
+      
    for(int row = 0; row < b_mat->m; row++)
    {
       // ignore rows containing more than one singleton entry:
