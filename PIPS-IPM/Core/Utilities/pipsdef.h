@@ -98,7 +98,7 @@ inline int PIPSgetnOMPthreads()
    return num_procs;
 }
 
-inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
 {
    bool iAmSpecial = true;
 
@@ -114,7 +114,7 @@ inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    return iAmSpecial;
 }
 
-inline void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib)
+inline void PIPS_MPIgetRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib)
 {
    MPI_Comm_rank(comm, &myRank);
 
@@ -127,26 +127,12 @@ inline void getRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib)
       iAmDistrib = false;
 }
 
-inline void synchronize(int& value)
+inline void PIPS_MPIgetRank(MPI_Comm comm, int& my_rank)
 {
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   MPI_Comm_rank(comm, &my_rank);
 }
 
-inline void synchronize(double& value)
-{
-   int myRank;
-   bool iAmDistrib;
-   getRankDistributed( MPI_COMM_WORLD, myRank, iAmDistrib );
-   if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &value, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-}
-
-
-void inline abortInfeasible(MPI_Comm comm, std::string message, std::string file, std::string function)
+void inline PIPS_MPIabortInfeasible(MPI_Comm comm, std::string message, std::string file, std::string function)
 {
    std::cerr << "Infesibility detected in " << file << " function " << function << "!" << std::endl;
    std::cerr << "Message: " << message << std::endl;

@@ -20,7 +20,7 @@
 StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& origProb) :
       presData(presData), origProb(origProb)
 {
-   getRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
+   PIPS_MPIgetRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
 
    localNelims = 0;
    nChildren = presData.getNChildren();
@@ -69,24 +69,25 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
 
       updatePointersForCurrentNode(-1, EQUALITY_SYSTEM);
       
-      countRowsBlock(n_rows_eq, n_rows_empty_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_eq, EQUALITY_SYSTEM, LINKING_VARS_BLOCK);
+      countRowsBlock(n_rows_eq, n_rows_empty_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_eq, EQUALITY_SYSTEM, B_MAT);
       assert( n_rows_eq - n_rows_empty_eq == n_rows_fixed_eq );
+
       countRowsBlock(n_rows_linking_eq, n_rows_empty_linking_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_linking_eq, EQUALITY_SYSTEM, 
-         LINKING_CONS_BLOCK); 
+         BL_MAT); 
 
       assert( zero_dummy == 0 );
 
       updatePointersForCurrentNode(-1, INEQUALITY_SYSTEM);
       countRowsBlock(n_rows_ineq, n_rows_empty_ineq, n_rows_onsided_ineq, n_rows_boxed_ineq, n_rows_fixed_ineq, n_rows_singleton_ineq, INEQUALITY_SYSTEM,
-         LINKING_VARS_BLOCK);
+         B_MAT);
       countRowsBlock(n_rows_linking_ineq, n_rows_empty_linking_ineq, n_rows_onsided_ineq, n_rows_boxed_ineq, n_rows_fixed_ineq, n_rows_singleton_linking_ineq,
-         INEQUALITY_SYSTEM, LINKING_CONS_BLOCK);
+         INEQUALITY_SYSTEM, BL_MAT);
 
       const SimpleVector& ixlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixlow).vec);
       const SimpleVector& ixupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixupp).vec);
 
       countBoxedColumns(n_cols, n_cols_empty, n_cols_free, n_cols_onesided, n_cols_boxed, n_cols_singleton, n_cols_orig_free, n_cols_orig_free_removed, 
-         ixlow_orig, ixupp_orig, LINKING_VARS_BLOCK);
+         ixlow_orig, ixupp_orig, B_MAT);
 
       assert( n_cols - n_cols_empty == n_cols_free + n_cols_onesided + n_cols_boxed);
 
@@ -124,21 +125,21 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
 
       /* equality system */
       updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
-      countRowsBlock(n_rows_eq, n_rows_empty_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_eq, EQUALITY_SYSTEM, CHILD_BLOCK);
+      countRowsBlock(n_rows_eq, n_rows_empty_eq, zero_dummy, zero_dummy, n_rows_fixed_eq, n_rows_singleton_eq, EQUALITY_SYSTEM, A_MAT);
       assert( zero_dummy == 0 );
       assert( n_rows_eq - n_rows_empty_eq == n_rows_fixed_eq );
 
       /* inequality system */
       updatePointersForCurrentNode(node, INEQUALITY_SYSTEM);
       countRowsBlock(n_rows_ineq, n_rows_empty_ineq, n_rows_onsided_ineq, n_rows_boxed_ineq, n_rows_fixed_ineq, n_rows_singleton_ineq, INEQUALITY_SYSTEM, 
-         CHILD_BLOCK);
+         A_MAT);
       assert( n_rows_ineq - n_rows_empty_ineq == n_rows_onsided_ineq + n_rows_boxed_ineq + n_rows_fixed_ineq );
 
       const SimpleVector& ixlow_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixlow).children[node]->vec);
       const SimpleVector& ixupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixupp).children[node]->vec);
 
       countBoxedColumns(n_cols, n_cols_empty, n_cols_free, n_cols_onesided, n_cols_boxed, n_cols_singleton, n_cols_orig_free, n_cols_orig_free_removed, 
-         ixlow_orig, ixupp_orig, CHILD_BLOCK);
+         ixlow_orig, ixupp_orig, B_MAT);
       assert( n_cols - n_cols_empty == n_cols_free + n_cols_onesided + n_cols_boxed);
    }
 
@@ -211,17 +212,17 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
 void StochPresolverBase::countRowsBlock(int& n_rows_total, int& n_rows_empty, int& n_rows_onesided, int& n_rows_boxed, int& n_rows_fixed, int& n_rows_singleton, 
    SystemType system_type, BlockType block_type) const
 {
-   if(block_type == LINKING_CONS_BLOCK)
+   if(block_type == BL_MAT)
       if( !presData.hasLinking(system_type) )
          return;
 
-   const SimpleVectorBase<int>* nnz_row = (block_type != LINKING_CONS_BLOCK) ? currNnzRow : currNnzRowLink;
-   const SimpleVector* iclow = (block_type != LINKING_CONS_BLOCK) ? currIclow : currIclowLink;
-   const SimpleVector* lhs = (block_type != LINKING_CONS_BLOCK) ? currIneqLhs : currIneqLhsLink;
-   const SimpleVector* icupp = (block_type != LINKING_CONS_BLOCK) ? currIcupp : currIcuppLink;
-   const SimpleVector* rhs = (block_type != LINKING_CONS_BLOCK) ? currIneqRhs : currIneqRhsLink;
+   const SimpleVectorBase<int>* nnz_row = (block_type != BL_MAT) ? currNnzRow : currNnzRowLink;
+   const SimpleVector* iclow = (block_type != BL_MAT) ? currIclow : currIclowLink;
+   const SimpleVector* lhs = (block_type != BL_MAT) ? currIneqLhs : currIneqLhsLink;
+   const SimpleVector* icupp = (block_type != BL_MAT) ? currIcupp : currIcuppLink;
+   const SimpleVector* rhs = (block_type != BL_MAT) ? currIneqRhs : currIneqRhsLink;
    if(system_type == EQUALITY_SYSTEM)
-      rhs = (block_type != LINKING_CONS_BLOCK) ? currEqRhs : currEqRhsLink;
+      rhs = (block_type != BL_MAT) ? currEqRhs : currEqRhsLink;
 
 #ifndef NDEBUG
    if(system_type == EQUALITY_SYSTEM)
@@ -361,11 +362,11 @@ void StochPresolverBase::setPointersMatrices(const GenMatrixHandle mat, int node
    /* in root node only A0 and Bl0 are present */
    if( node == -1 )
    {
-      currAmat = dynamic_cast<const SparseGenMatrix*>(smat.Bmat)->getStorageDynamic();
-      currAmatTrans = dynamic_cast<const SparseGenMatrix*>(smat.Bmat)->getStorageDynamicTransposed();
+      currAmat = NULL;
+      currAmatTrans = NULL;
 
-      currBmat = NULL;
-      currBmatTrans = NULL;
+      currBmat = dynamic_cast<const SparseGenMatrix*>(smat.Bmat)->getStorageDynamic();
+      currBmatTrans = dynamic_cast<const SparseGenMatrix*>(smat.Bmat)->getStorageDynamicTransposed();
 
       currBlmat =
             dynamic_cast<const SparseGenMatrix*>(smat.Blmat)->getStorageDynamic();
@@ -510,14 +511,11 @@ void StochPresolverBase::setPointersObjective(int node)
 void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    assert(-1 <= node && node <= nChildren);
 
-//   const SimpleVectorHandle row_red = (system_type == EQUALITY_SYSTEM) ? presData.nnzs_row_A_chgs : presData.nnzs_row_C_chgs;
    const StochVectorBase<int>& row_nnz = (system_type == EQUALITY_SYSTEM) ? presData.getNnzsRowA() : presData.getNnzsRowC();
 
    /* rows */
    if( node == -1)
-   {
       currNnzRow = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vec);
-   }
    else
    {
       assert(row_nnz.children[node]->vec != NULL);
@@ -526,15 +524,9 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    }
 
    if( presData.hasLinking(system_type) )
-   {
-//      currRedRowLink = &(*row_red);
       currNnzRowLink = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vecl);
-   }
-   else
-//      currRedRowLink = currNnzRowLink = NULL;
-      ;
+
    /* colums */
-//   currRedColParent = &(*presData.nnzs_col_chgs);
    currNnzColParent = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().vec);
 
    assert(presData.getNnzsCol().vecl == NULL);

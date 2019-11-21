@@ -123,7 +123,7 @@ private:
    void removeSingletonVars();
    void removeEntry(int colIdx, SimpleVectorBase<int>& rowContainsSingletonVar,
          SparseStorageDynamic& matrix, SparseStorageDynamic& matrixTrans, SimpleVectorBase<int>& nnzRow, SimpleVectorBase<int>& nnzCol,
-         BlockType block_type);
+         bool parent);
    double removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,

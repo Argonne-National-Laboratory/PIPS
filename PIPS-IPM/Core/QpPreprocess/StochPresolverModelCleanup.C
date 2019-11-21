@@ -69,9 +69,10 @@ void StochPresolverModelCleanup::applyPresolving()
 #ifndef NDEBUG
    if( my_rank == 0 )
    {
-      std::cout << "Removed " << n_removed_rows << " redundant rows (" << n_removed_rows_eq << " equalitiy and " << n_removed_rows_ineq << " inequality rows)" << std::endl;
-      std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq << " entries in equality system and "
-         << n_removed_entries_ineq << " in inequality system)" << std::endl;
+      std::cout << "Removed " << n_removed_rows << " redundant rows (" << n_removed_rows_eq <<
+         " equalitiy and " << n_removed_rows_ineq << " inequality rows)" << std::endl;
+      std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq <<
+         " entries in equality system and " << n_removed_entries_ineq << " in inequality system)" << std::endl;
    }
 #endif
 
@@ -152,8 +153,6 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
    const SimpleVector& iclow = (linking == false) ? *currIclow : *currIclowLink;
    const SimpleVector& icupp = (linking == false) ? *currIcupp : *currIcuppLink;
 
-   BlockType block_type = (linking) ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK;
-
    for( int row = 0; row < nnzs.n; ++row)
    {
       if( nnzs[row] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
@@ -161,7 +160,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
-      presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
+      presData.getRowActivities(system_type, node, linking, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       if( system_type == EQUALITY_SYSTEM )
       {
@@ -170,8 +169,6 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
          if( (PIPSisLT( rhs_eq[row], actmin_part, feastol) && actmin_ubndd == 0)  || (PIPSisLT(actmax_part, rhs_eq[row], feastol) && actmax_ubndd == 0))
          {
-
-            presData.writeRowLocalToStreamDense(std::cout, system_type, node, (linking == false) ? LINKING_VARS_BLOCK : LINKING_CONS_BLOCK, row);
             abortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          }
@@ -222,9 +219,9 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    if( !presData.nodeIsDummy(-1, system_type) )
    {
       /* process B0 and Bl0 */
-      n_elims += removeTinyInnerLoop(system_type, -1, LINKING_VARS_BLOCK);
+      n_elims += removeTinyInnerLoop(system_type, -1, B_MAT);
       if( presData.hasLinking(system_type) )
-         n_elims += removeTinyInnerLoop(system_type, -1, LINKING_CONS_BLOCK);
+         n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
    }
 
    // todo : traffic can be reduced by only zeroing the linking var col and the linking cons row
@@ -239,15 +236,15 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
       if( !presData.nodeIsDummy(node, system_type) )
       {
          /* Amat */
-         n_elims += removeTinyInnerLoop(system_type, node, LINKING_VARS_BLOCK );
+         n_elims += removeTinyInnerLoop(system_type, node, A_MAT );
 
          /* Bmat */
-         n_elims += removeTinyInnerLoop(system_type, node, CHILD_BLOCK );
+         n_elims += removeTinyInnerLoop(system_type, node, B_MAT );
 
          /* this has to be synchronized */
          /* Blmat */
          if( presData.hasLinking(system_type) )
-            n_elims += removeTinyInnerLoop(system_type, node, LINKING_CONS_BLOCK);
+            n_elims += removeTinyInnerLoop(system_type, node, BL_MAT);
          }
    }
 
@@ -276,33 +273,33 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
    const SimpleVectorBase<int>* nnzRow = NULL;
 
    /* set matrix */
-   if( block_type == CHILD_BLOCK )
+   if( block_type == B_MAT )
    {
-      assert(node != -1);
       mat = currBmat;
       assert(currBmatTrans);
    }
-   else if( block_type == LINKING_VARS_BLOCK )
+   else if( block_type == A_MAT )
    {
+      assert(node != -1);
       mat = currAmat;
       assert(currAmatTrans);
    }
-   else if( block_type == LINKING_CONS_BLOCK)
+   else if( block_type == BL_MAT)
    {
       mat = currBlmat;
       assert(currBlmatTrans);
    }
 
    /* set variables */
-   x_lower = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currxlowParent : currxlowChild;
-   x_lower_idx = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currIxlowParent : currIxlowChild;
-   x_upper = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currxuppParent : currxuppChild;
-   x_upper_idx = ( block_type == LINKING_VARS_BLOCK || node == -1) ? currIxuppParent : currIxuppChild;
+   x_lower = ( block_type == A_MAT || node == -1) ? currxlowParent : currxlowChild;
+   x_lower_idx = ( block_type == A_MAT || node == -1) ? currIxlowParent : currIxlowChild;
+   x_upper = ( block_type == A_MAT || node == -1) ? currxuppParent : currxuppChild;
+   x_upper_idx = ( block_type == A_MAT || node == -1) ? currIxuppParent : currIxuppChild;
 
    /* set reduction vectors */
 
    /* set non-zero row vectors */
-   nnzRow = (block_type == LINKING_CONS_BLOCK) ? currNnzRowLink : currNnzRow;
+   nnzRow = (block_type == BL_MAT) ? currNnzRowLink : currNnzRow;
 
    int n_elims = 0;
 

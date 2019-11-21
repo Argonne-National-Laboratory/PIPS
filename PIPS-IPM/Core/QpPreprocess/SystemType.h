@@ -16,9 +16,9 @@ enum SystemType
 
 enum BlockType
 {
-   LINKING_VARS_BLOCK,
-   CHILD_BLOCK,
-   LINKING_CONS_BLOCK
+   A_MAT,
+   B_MAT,
+   BL_MAT
 };
 
 #endif /* SYSTEMTYPE_H_ */

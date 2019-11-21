@@ -31,7 +31,7 @@
 //    #define TRACK_R
 //    #define ROW 42
 //    #define ROW_NODE 2
-//    #define ROW_BLOCK LINKING_VARS_BLOCK
+//    #define ROW_BLOCK BL_MAT
 //    #define ROW_IS_LINK false
 //    #define ROW_SYS EQUALITY_SYSTEM
 // #endif
@@ -156,7 +156,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    bound_chgs_A = SimpleVectorHandle( new SimpleVector(array_bound_chgs, n_linking_A));
    bound_chgs_C = SimpleVectorHandle( new SimpleVector(array_bound_chgs + n_linking_A, n_linking_C));
 
-   getRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
+   PIPS_MPIgetRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
 
    // initialize all dynamic transposed sub matrices
    dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
@@ -771,6 +771,7 @@ void PresolveData::initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorB
    nnzs_col.axpy(1, *colClone);
 }
 
+// todo : for columns also find row - then later no lookup is required
 void PresolveData::initSingletons()
 {
    /* rows of A */
@@ -880,7 +881,7 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
 
    SimpleVector& xlower = getSimpleVecFromColStochVec(*presProb->blx, node);
 
-   if(block_type == LINKING_CONS_BLOCK || block_type == LINKING_VARS_BLOCK || node == -1)
+   if(block_type == BL_MAT || block_type == A_MAT || node == -1)
       outdated_nnzs = true;
 
    /* adjust rhs and lhs */
@@ -1054,7 +1055,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 {
    assert( -1 <= node_row && node_row < nChildren );
    
-   const int node_var = (block_type == LINKING_VARS_BLOCK) ? -1 : node_row;
+   const int node_var = (block_type == A_MAT) ? -1 : node_row;
    assert( 0 <= col && col < getSimpleVecFromColStochVec( *presProb->ixlow, node_var ).n );
 
    // todo : choose numerical threshold
@@ -1096,7 +1097,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
          getSimpleVecFromColStochVec(*upper_bound_implied_by_system, node_var)[col] = system_type;
          getSimpleVecFromColStochVec(*upper_bound_implied_by_row, node_var)[col] = row;
-         getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
+         getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node_var)[col] = (block_type == BL_MAT) ? -2 : node_row; // -2 for linking rows
 
          bounds_changed = true;
       }
@@ -1109,14 +1110,14 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
          getSimpleVecFromColStochVec(*lower_bound_implied_by_system, node_var)[col] = system_type;
          getSimpleVecFromColStochVec(*lower_bound_implied_by_row, node_var)[col] = row;
-         getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node_var)[col] = (block_type == LINKING_CONS_BLOCK) ? -2 : node_row; // -2 for linking rows
+         getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node_var)[col] = (block_type == BL_MAT) ? -2 : node_row; // -2 for linking rows
 
          bounds_changed = true;
       }
    }
 
    /// every process should have the same root node data thus all of them should propagate it's rows similarly
-   if( bounds_changed && (node_row == -1 || block_type == LINKING_VARS_BLOCK) )
+   if( bounds_changed && (node_row == -1 || block_type == A_MAT) )
       assert(outdated_linking_var_bounds == true);
 
 // todo : how to undo propagations from linking constraint rows..
@@ -1129,7 +1130,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 //
 //   assert(row_start < row_end);
 // if bounds_changed
-//   postsolver->notifyRowPropagated(system_type, node_row, row, (block_type == LINKING_CONS_BLOCK), col, lbx, ubx, mat->getStorageDynamic()->M + row_start,
+//   postsolver->notifyRowPropagated(system_type, node_row, row, (block_type == BL_MAT), col, lbx, ubx, mat->getStorageDynamic()->M + row_start,
 //         mat->getStorageDynamic()->jcolM + row_start, row_end - row_start );
 
    return bounds_changed;
@@ -1140,7 +1141,7 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
    if( TRACK_ROW(node, row, system_type, linking) )
    {
       std::cout << "TRACKING_ROW: before RHS LHS adjustment" << std::endl;
-      writeRowLocalToStreamDense(std::cout, system_type, node, linking ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK, row);
+      writeRowLocalToStreamDense(std::cout, system_type, node, linking, row);
    }
 
    assert(-1 <= node && node <= nChildren);
@@ -1193,19 +1194,17 @@ void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node,
    if( TRACK_ROW(node, row, system_type, linking) )
    {
       std::cout << "TRACKING_ROW: after RHS LHS adjustment " << std::endl;
-      writeRowLocalToStreamDense(std::cout, system_type, node, linking ? LINKING_CONS_BLOCK : LINKING_VARS_BLOCK, row);
+      writeRowLocalToStreamDense(std::cout, system_type, node, linking, row);
    }
 }
 
 /** this methods does not call any postsolve procedures but simply changes the bounds (lhs, rhs) of either A or B by value */
-void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row, double value)
+void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, bool linking, int row, double value)
 {
-   const bool linking = (block_type == LINKING_CONS_BLOCK);
-
    if( TRACK_ROW(node, row, system_type, linking) )
    {
       std::cout << "TRACKING_ROW: RHS LHS of row " << row << " being adjusted by " << value << std::endl;
-      writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
+      writeRowLocalToStreamDense(std::cout, system_type, node, linking, row);
    }
 
    assert( -1 <= node && node <= nChildren);
@@ -1213,7 +1212,7 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockT
       return;
 
 
-   if(block_type == LINKING_CONS_BLOCK)
+   if(linking)
    {
       outdated_lhsrhs = true;
       (system_type == EQUALITY_SYSTEM) ? (*bound_chgs_A)[row] += value : (*bound_chgs_C)[row] += value;
@@ -1236,7 +1235,7 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockT
    if( TRACK_ROW(node, row, system_type, linking) )
    {
       std::cout << "TRACKING_ROW: after RHS LHS adjustment " << std::endl;
-      writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
+      writeRowLocalToStreamDense(std::cout, system_type, node, linking, row);
    }
 }
 
@@ -1274,15 +1273,13 @@ void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, 
    elements_deleted_transposed = 0;
 }
 
-void PresolveData::removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount)
+void PresolveData::removeIndexRow(SystemType system_type, int node, bool linking, int row_index, int amount)
 {
    assert(-1 <= node && node <= nChildren);
    assert(0 <= amount);
 
    if(amount == 0)
       return;
-
-   const bool linking = ( block_type == LINKING_CONS_BLOCK );
 
    /* linking constraints get stored */
    if( linking )
@@ -1319,7 +1316,7 @@ void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_ind
       return;
 
    /* linking constraints get stored */
-   if(node == -1 || block_type == LINKING_VARS_BLOCK)
+   if(node == -1 || block_type == A_MAT)
    {
       if(my_rank == 0 || node != -1)
       {
@@ -1346,31 +1343,31 @@ void PresolveData::removeColumn(int node, int col, double fixation)
 
    if(node == -1)
    {
-      removeColumnFromMatrix(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, fixation);
-      removeColumnFromMatrix(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, fixation);
+      removeColumnFromMatrix(EQUALITY_SYSTEM, -1, B_MAT, col, fixation);
+      removeColumnFromMatrix(INEQUALITY_SYSTEM, -1, B_MAT, col, fixation);
 
       if(hasLinking(EQUALITY_SYSTEM))
-         removeColumnFromMatrix(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, fixation);
+         removeColumnFromMatrix(EQUALITY_SYSTEM, -1, BL_MAT, col, fixation);
       if( hasLinking(INEQUALITY_SYSTEM) )
-         removeColumnFromMatrix(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, fixation);
+         removeColumnFromMatrix(INEQUALITY_SYSTEM, -1, BL_MAT, col, fixation);
 
       for(int i = 0; i < nChildren; ++i)
       {
          if(!nodeIsDummy(i, EQUALITY_SYSTEM))
-            removeColumnFromMatrix(EQUALITY_SYSTEM, i, LINKING_VARS_BLOCK, col, fixation);
+            removeColumnFromMatrix(EQUALITY_SYSTEM, i, A_MAT, col, fixation);
          if( !nodeIsDummy(i, INEQUALITY_SYSTEM) )
-            removeColumnFromMatrix(INEQUALITY_SYSTEM, i, LINKING_VARS_BLOCK, col, fixation);
+            removeColumnFromMatrix(INEQUALITY_SYSTEM, i, A_MAT, col, fixation);
       }
    }
    else
    {
-      removeColumnFromMatrix(EQUALITY_SYSTEM, node, CHILD_BLOCK, col, fixation);
-      removeColumnFromMatrix(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, fixation);
+      removeColumnFromMatrix(EQUALITY_SYSTEM, node, B_MAT, col, fixation);
+      removeColumnFromMatrix(INEQUALITY_SYSTEM, node, B_MAT, col, fixation);
 
       if(hasLinking(EQUALITY_SYSTEM))
-         removeColumnFromMatrix(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+         removeColumnFromMatrix(EQUALITY_SYSTEM, node, BL_MAT, col, fixation);
       if(hasLinking(INEQUALITY_SYSTEM))
-         removeColumnFromMatrix(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, fixation);
+         removeColumnFromMatrix(INEQUALITY_SYSTEM, node, BL_MAT, col, fixation);
    }
 
    /* adjust objective function */
@@ -1392,6 +1389,7 @@ void PresolveData::removeColumn(int node, int col, double fixation)
 /** remove column - adjust lhs, rhs and activity as well as nnz_counters */
 void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation)
 {
+   const bool linking = block_type == BL_MAT;
    SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
 
    SparseStorageDynamic& matrix = mat->getStorageDynamicRef();
@@ -1407,10 +1405,10 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
 
       assert( !PIPSisEQ(0.0, coeff) );
 
-      if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+      if( TRACK_ROW(node, row, system_type, linking) )
       {
          std::cout << "TRACKING_ROW: fixation of column " << col << " in tracked row"<< std::endl;
-         writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
+         writeRowLocalToStreamDense(std::cout, system_type, node, linking, row);
       }
 
       /* remove the entry, adjust activity and row counters and rhs/lhs */
@@ -1422,20 +1420,20 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
 
       adjustRowActivityFromDeletion(system_type, node, block_type, row, col, coeff);
 
-      if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+      if( TRACK_ROW(node, row, system_type, linking) )
       {
          std::cout << "TRACKING_ROW: after removal of column" << std::endl;
          writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
 
-         double act_min = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, node, block_type == LINKING_CONS_BLOCK)[row] :
-               getSimpleVecFromRowStochVec(*actmin_ineq_part, node, block_type == LINKING_CONS_BLOCK)[row];
-         double act_max = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, node, block_type == LINKING_CONS_BLOCK)[row] :
-               getSimpleVecFromRowStochVec(*actmax_ineq_part, node, block_type == LINKING_CONS_BLOCK)[row];
+         double act_min = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row] :
+               getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking)[row];
+         double act_max = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking)[row] :
+               getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking)[row];
 
-         int act_min_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, block_type == LINKING_CONS_BLOCK)[row] :
-               getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, block_type == LINKING_CONS_BLOCK)[row];
-         int act_max_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, block_type == LINKING_CONS_BLOCK)[row] :
-               getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, block_type == LINKING_CONS_BLOCK)[row];
+         int act_min_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking)[row] :
+               getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, linking)[row];
+         int act_max_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row] :
+               getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking)[row];
 
          std::cout << "TRACKING_ROW: New activity of row " << row << std::endl;
          std::cout << "\tnew min/max activity is: " << act_min << "/" << act_max << ", min/max unbounded counters are " << act_min_ubndd << "/" << act_max_ubndd << std::endl;
@@ -1968,12 +1966,12 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    assert( !nodeIsDummy(node, system_type) );
 
    /* get upper and lower bound on variable */
-   const SimpleVector& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
-   const SimpleVector& xlow = getSimpleVecFromColStochVec(*(presProb->blx), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
-   const SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
-   const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), (block_type == LINKING_VARS_BLOCK) ? -1 : node);
+   const SimpleVector& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), (block_type == A_MAT) ? -1 : node);
+   const SimpleVector& xlow = getSimpleVecFromColStochVec(*(presProb->blx), (block_type == A_MAT) ? -1 : node);
+   const SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), (block_type == A_MAT) ? -1 : node);
+   const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), (block_type == A_MAT) ? -1 : node);
 
-   const bool linking = ( block_type == LINKING_CONS_BLOCK );
+   const bool linking = ( block_type == BL_MAT );
 
    assert(PIPSisEQ(ixlow[col], 1.0));
    assert(PIPSisEQ(ixupp[col], 1.0));
@@ -2009,7 +2007,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    double* actmin_part = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row]
          : &getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking)[row];
 
-   if(block_type == LINKING_CONS_BLOCK)
+   if( linking )
    {
       actmax_part = (system_type == EQUALITY_SYSTEM) ? &(*actmax_eq_chgs)[row] : &(*actmax_ineq_chgs)[row];
       actmin_part = (system_type == EQUALITY_SYSTEM) ? &(*actmin_eq_chgs)[row] : &(*actmin_ineq_chgs)[row];
@@ -2067,7 +2065,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
       }
    }
 
-   if( block_type == LINKING_CONS_BLOCK)
+   if( linking )
       outdated_activities = true;
 }
 
@@ -2124,18 +2122,18 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
 
 /// recomputes and updates the activity of a locally available row or increases the recompute counter for linking constraints
 /// does not compute activities for linking rows
-void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, BlockType block_type, int row, bool upper)
+void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, bool linking, int row, bool upper)
 {
-   if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+   if( TRACK_ROW(node, row, system_type, linking) )
    {
-      if( block_type == LINKING_CONS_BLOCK)
+      if( linking)
          std::cout << "TRACKING_ROW: tracked row is linking constraint and needs " << (upper ? "upper" : "lower") << " activity recomputation " << std::endl;
       else
          std::cout << "TRACKING_ROW: computing " << (upper ? "upper" : "lower") << " activity of tracked row " << std::endl;
    }
 
    /* single linking rows that have to be computed for the first time */
-   if( block_type == LINKING_CONS_BLOCK )
+   if( linking )
    {
       ++linking_rows_need_act_computation;
       return;
@@ -2153,7 +2151,7 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    const SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node);
    const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
-   const bool linking = ( block_type == LINKING_CONS_BLOCK );
+   const bool linking = ( linking );
 
    /* get matrix */
    SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK)->getStorageDynamicRef();
@@ -2226,7 +2224,7 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
       }
    }
 
-   if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+   if( TRACK_ROW(node, row, system_type, linking) )
          std::cout << "TRACKING_ROW: new " << (upper ? "upper" : "lower") << " activity is " << act_part << std::endl;
 }
 
@@ -2239,8 +2237,9 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
    if( TRACK_COLUMN(node, col) )
-      std::cout << "TRACKING_COLUMN: updating column bounds from [" << xlow[col] << ", " << xupp[col] << "] for column " << col << " node " << node << " with [" <<
-            xl << ", " << xu << "]" << std::endl;
+      std::cout << "TRACKING_COLUMN: updating column bounds from [" << xlow[col] << ", " << 
+         xupp[col] << "] for column " << col << " node " << node << " with [" <<
+         xl << ", " << xu << "]" << std::endl;
 
    if( ( !PIPSisZero(ixlow[col]) && PIPSisLT(xu, xlow[col]) )
          || ( !PIPSisZero(ixupp[col]) && PIPSisLT(xupp[col], xl) )
@@ -2313,27 +2312,27 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
       if( TRACK_COLUMN(node,col) )
          std::cout << "TRACKING_COLUMN: the column is linking (root node)" << std::endl;
       /* A0/B0 and C0/D0block */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, B_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, B_MAT, col, lbx, old_lbx, false);
 
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, B_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, B_MAT, col, lbx, old_lbx, false);
 
       /* Bl0 and Dl0 */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, BL_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, BL_MAT, col, lbx, old_lbx, false);
 
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, BL_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, BL_MAT, col, lbx, old_lbx, false);
 
       for(int child = 0; child < nChildren; ++child)
       {
          /* Ai and Ci */
-         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, A_MAT, col, ubx, old_ubx, true);
+         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, A_MAT, col, lbx, old_lbx, false);
 
-         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, ubx, old_ubx, true);
-         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, LINKING_VARS_BLOCK, col, lbx, old_lbx, false);
+         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, A_MAT, col, ubx, old_ubx, true);
+         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, A_MAT, col, lbx, old_lbx, false);
       }
    }
    else
@@ -2342,22 +2341,22 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
          std::cout << "TRACKING_COLUMN: the column is non-linking (non-root)" << std::endl;
       /* Bmat, Blmat */
       /* Bmat */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, CHILD_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, CHILD_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, B_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, B_MAT, col, lbx, old_lbx, false);
 
       /* Blmat */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, BL_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, BL_MAT, col, lbx, old_lbx, false);
 
       /* Dmat Dlmat */
 
       /* Dmat */
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, CHILD_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, B_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, B_MAT, col, lbx, old_lbx, false);
 
       /* Dlmat */
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, LINKING_CONS_BLOCK, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, BL_MAT, col, ubx, old_ubx, true);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, BL_MAT, col, lbx, old_lbx, false);
    }
 }
 
@@ -2379,7 +2378,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
       return;
 
    SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
-   const bool linking = ( block_type == LINKING_CONS_BLOCK );
+   const bool linking = ( block_type == BL_MAT );
 
    assert(col < mat_transp.m);
 
@@ -2420,10 +2419,10 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
       SimpleVectorBase<int>& act_ubndd_chgs = (switch_upperlower) ? actmax_ubndd_chgs : actmin_ubndd_chgs;
 
 
-      if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+      if( TRACK_ROW(node, row, system_type, linking) )
       {
          std::cout << "TRACKING_ROW: activities of tracked row are getting updated. Current state:" << std::endl;
-         if( block_type == LINKING_CONS_BLOCK)
+         if( linking)
          {
             std::cout << "\twas linking row with " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << act_part[row] << " + " << act_part_chgs[row] << "(changes) and " <<
                   (switch_upperlower ? "upper" : "lower" ) << " unbounded counters " << act_ubndd[row] << " + " << act_ubndd_chgs[row] << "(changes)" << std::endl;
@@ -2438,11 +2437,11 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
       /* if the old bound was not set we have to modify the unbounded counters */
       if( old_bound == std::numeric_limits<double>::infinity() || old_bound == -std::numeric_limits<double>::infinity() )
       {
-         if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+         if( TRACK_ROW(node, row, system_type, block_type == linking ) )
                std::cout << "TRACKING_ROW: ubndd counters are being changed" << std::endl;
 
          /* every process works the root node - even in the linking row case */
-         if( node != -1 && block_type == LINKING_CONS_BLOCK )
+         if( node != -1 && linking  )
          {
             --act_ubndd_chgs[row];
             outdated_activities = true;
@@ -2450,36 +2449,36 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
          else
             --act_ubndd[row];
 
-         if(block_type == LINKING_CONS_BLOCK)
+         if(linking )
             assert( 0 <= act_ubndd[row] + act_ubndd_chgs[row]);
          else
             assert( 0 <= act_ubndd[row]);
 
          /* from now on activity of row has to be computed */
-         if( (block_type == LINKING_CONS_BLOCK && (act_ubndd[row] + act_ubndd_chgs[row] == 1))
-               || (act_ubndd[row] == 1 && block_type != LINKING_CONS_BLOCK) )
+         if( (linking  && (act_ubndd[row] + act_ubndd_chgs[row] == 1))
+               || (act_ubndd[row] == 1 && !linking) )
          {
 
-            if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+            if( TRACK_ROW(node, row, system_type, linking ) )
             {
-               if( block_type == LINKING_CONS_BLOCK )
+               if( linking  )
                   std::cout << "TRACKING_ROW: " << ( switch_upperlower ? "upper" : "lower" ) << " now needs act computation " << std::endl;
                else
                   std::cout << "TRACKING_ROW: first time computation of " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << std::endl;
             }
 
-            if(block_type == LINKING_CONS_BLOCK)
+            if(linking )
                ++linking_rows_need_act_computation;
             else
                computeRowMinOrMaxActivity(system_type, node, block_type, row, switch_upperlower);
          }
-         else if( (block_type == LINKING_CONS_BLOCK && act_ubndd[row] + act_ubndd_chgs[row] == 0) ||
-               (block_type != LINKING_CONS_BLOCK && act_ubndd[row] == 0) )
+         else if( (linking  && act_ubndd[row] + act_ubndd_chgs[row] == 0) ||
+               (!linking && act_ubndd[row] == 0) )
          {
-            if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+            if( TRACK_ROW(node, row, system_type, linking ) )
                   std::cout << "TRACKING_ROW: adjusting activities " << std::endl;
 
-            if( node != -1 && block_type == LINKING_CONS_BLOCK)
+            if( node != -1 && linking )
                act_part_chgs[row] += bound * entry;
             else
                act_part[row] += bound * entry;
@@ -2487,15 +2486,15 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
       }
       else
       {
-            if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+            if( TRACK_ROW(node, row, system_type, linking ) )
                   std::cout << "TRACKING_ROW: " << " no changes in ubndd counters - only adjust activities" << std::endl;
 
          /* better bound was found */
-         if( (block_type == LINKING_CONS_BLOCK && act_ubndd[row] + act_ubndd_chgs[row] <= 1) ||
-               (block_type != LINKING_CONS_BLOCK && act_ubndd[row] <= 1) )
+         if( (linking  && act_ubndd[row] + act_ubndd_chgs[row] <= 1) ||
+               (!linking && act_ubndd[row] <= 1) )
          {
 
-            if( node != -1 && block_type == LINKING_CONS_BLOCK)
+            if( node != -1 && linking )
             {
                outdated_activities = true;
                act_part_chgs[row] += (bound - old_bound) * entry;
@@ -2505,31 +2504,32 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
          }
       }
 
-      if( TRACK_ROW(node, row, system_type, block_type == LINKING_CONS_BLOCK) )
+      if( TRACK_ROW(node, row, system_type, linking ) )
       {
          std::cout << "TRACKING_ROW: activities of tracked row have been updated: " << std::endl;
-         if( block_type == LINKING_CONS_BLOCK)
+         if( linking )
          {
-            std::cout << "\tnow linking row with " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << act_part[row] << " + " << act_part_chgs[row] << "(changes) and " <<
-                  (switch_upperlower ? "upper" : "lower" ) << " unbounded counters " << act_ubndd[row] << " + " << act_ubndd_chgs[row] << "(changes)" << std::endl;
+            std::cout << "\tnow linking row with " << ( switch_upperlower ? "upper" : "lower" ) <<
+               " activity " << act_part[row] << " + " << act_part_chgs[row] << "(changes) and " <<
+               (switch_upperlower ? "upper" : "lower" ) << " unbounded counters " << 
+               act_ubndd[row] << " + " << act_ubndd_chgs[row] << "(changes)" << std::endl;
          }
          else
          {
-            std::cout << "\tnow non-linking row with " << ( switch_upperlower ? "upper" : "lower" ) << " activity " << act_part[row] << " and " << (switch_upperlower ? "upper" : "lower" ) <<
-                  " unbounded counters " << act_ubndd[row] << std::endl;
+            std::cout << "\tnow non-linking row with " << ( switch_upperlower ? "upper" : "lower" ) <<
+            " activity " << act_part[row] << " and " << (switch_upperlower ? "upper" : "lower" ) <<
+            " unbounded counters " << act_ubndd[row] << std::endl;
          }
       }
    }
 }
 
 /// returns activity and unbounded counters for specified row
-/// +/- infinity if there are two or more unbouded entries in a row // todo remove block_type replace with linking
-void PresolveData::getRowActivities(SystemType system_type, int node, BlockType block_type, int row, double& max_act,
+/// +/- infinity if there are two or more unbouded entries in a row 
+void PresolveData::getRowActivities(SystemType system_type, int node, bool linking, int row, double& max_act,
       double& min_act, int& max_ubndd, int& min_ubndd) const
 {
    assert(!nodeIsDummy(node, system_type));
-
-   const bool linking = ( block_type == LINKING_CONS_BLOCK );
 
    max_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row]
          : getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking)[row];
@@ -2561,8 +2561,6 @@ void PresolveData::getRowActivities(SystemType system_type, int node, BlockType 
    {
       if( !linking )
       {
-         if( !(max_act < std::numeric_limits<double>::infinity()))
-            std::cout << row << " " << block_type << " " << node << " " << system_type << std::endl;
          assert(max_act < std::numeric_limits<double>::infinity());
       }
    }
@@ -2586,14 +2584,22 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
    StochGenMatrix& sMat = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presProb->A) : dynamic_cast<StochGenMatrix&>(*presProb->C);
 
    if(node == -1)
-      return (block_type == LINKING_CONS_BLOCK) ? sMat.Blmat : sMat.Bmat;
+   {
+      if(block_type == BL_MAT)
+         return sMat.Blmat;
+      else 
+      {
+         assert(block_type == B_MAT);
+         return sMat.Bmat;
+      }
+   }
    else
    {
-      if(block_type == LINKING_VARS_BLOCK)
+      if(block_type == A_MAT)
          return sMat.children[node]->Amat;
-      else if(block_type == CHILD_BLOCK)
+      else if(block_type == B_MAT)
          return sMat.children[node]->Bmat;
-      else if(block_type == LINKING_CONS_BLOCK)
+      else if(block_type == BL_MAT)
          return sMat.children[node]->Blmat;
    }
    return NULL;
@@ -2601,17 +2607,15 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
 
 /* only prints the part of a linking constraint the current process knows about */
 // todo does not yet print linking constraints
-void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const
+void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const
 {
-   const bool linking = ( block_type == LINKING_CONS_BLOCK );
-   
    if(nodeIsDummy(node, system_type))
       return;
 
    if(node == -1 && !linking && my_rank != 0)
       return;
 
-   out << "SystemType: " << system_type << "\tnode: " << node << "\tLinkingCons: " << (block_type == LINKING_CONS_BLOCK) << "\trow: " << row << std::endl;
+   out << "SystemType: " << system_type << "\tnode: " << node << "\tLinkingCons: " << linking << "\trow: " << row << std::endl;
 
    if(system_type == EQUALITY_SYSTEM)
    {
@@ -2627,12 +2631,11 @@ void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType syst
 
    if(node != -1 && !linking)
    {
-      block_type = CHILD_BLOCK;
-      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, -1),
+      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, A_MAT), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, -1),
             getSimpleVecFromColStochVec(*presProb->bux, -1), getSimpleVecFromColStochVec(*presProb->ixlow, -1), getSimpleVecFromColStochVec(*presProb->blx, -1));
    }
 
-   writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, block_type), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, node),
+   writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, B_MAT), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, node),
          getSimpleVecFromColStochVec(*presProb->bux, node),getSimpleVecFromColStochVec(*presProb->ixlow, node),getSimpleVecFromColStochVec(*presProb->blx, node));
 
 

@@ -110,21 +110,21 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
    double ubx = std::numeric_limits<double>::infinity();
    double lbx = -std::numeric_limits<double>::infinity();
    int col_idx = -1;
-   BlockType block_type = LINKING_CONS_BLOCK;
+   BlockType block_type = BL_MAT;
 
    getBoundsAndColFromSingletonRow( system_type, node, row_idx, block_type, col_idx, ubx, lbx );
 
    /* because of postsolve here we only remove correctly placed singelton rows */
-   if( node != -1 && block_type == LINKING_VARS_BLOCK)
+   if( node != -1 && block_type == A_MAT)
       return false;
 
-   if( block_type == LINKING_CONS_BLOCK )
+   if( block_type == BL_MAT )
       return false;
 
    // todo : not sure whether linking conss get deleted even when block is dummy - they should..
 
    presData.rowPropagatedBounds( system_type, node, block_type, row_idx, col_idx, ubx, lbx );
-   presData.removeRedundantRow( system_type, node, row_idx, (block_type == LINKING_CONS_BLOCK) );
+   presData.removeRedundantRow( system_type, node, row_idx, (block_type == BL_MAT) );
 
    updatePointersForCurrentNode(node, system_type);
    double ubx_new = (node == -1) ? (*currxuppParent)[col_idx] : (*currxuppChild)[col_idx];
@@ -133,7 +133,7 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
       presData.fixColumn( node, col_idx, ubx_new);
 
 
-   if( my_rank == 0 || block_type != LINKING_CONS_BLOCK )
+   if( my_rank == 0 || block_type != BL_MAT )
       return true;
    else
       return false;
@@ -150,10 +150,10 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
 
       if(node == -1)
       {
-         assert( currAmat->rowptr[row_idx].end - currAmat->rowptr[row_idx].start == 1 );
-         col_idx = currAmat->jcolM[currAmat->rowptr[row_idx].start];
-         value = currAmat->M[currAmat->rowptr[row_idx].start];
-         block_type = LINKING_VARS_BLOCK;
+         assert( currBmat->rowptr[row_idx].end - currBmat->rowptr[row_idx].start == 1 );
+         col_idx = currBmat->jcolM[currBmat->rowptr[row_idx].start];
+         value = currBmat->M[currBmat->rowptr[row_idx].start];
+         block_type = B_MAT;
       }
       else
       {
@@ -165,19 +165,19 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
          {
             col_idx = currAmat->jcolM[currAmat->rowptr[row_idx].start];
             value = currAmat->M[currAmat->rowptr[row_idx].start];
-            block_type = LINKING_VARS_BLOCK;
+            block_type = A_MAT;
          }
          else
          {
             col_idx = currBmat->jcolM[currBmat->rowptr[row_idx].start];
             value = currBmat->M[currBmat->rowptr[row_idx].start];
-            block_type = CHILD_BLOCK;
+            block_type = B_MAT;
          }
       }
    }
    else
    {
-      block_type = LINKING_CONS_BLOCK;
+      block_type = BL_MAT;
       // todo : implement this more efficiently - we don't want to go through all our children to check wether a singleton entry is on our process or not
       // ideally we already know and also know the child
       assert( node == -2 );
@@ -205,12 +205,12 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
 
    if(system_type == EQUALITY_SYSTEM)
    {
-      if(block_type != LINKING_CONS_BLOCK)
+      if(block_type != BL_MAT)
       {
          ubx = (*currEqRhs)[row_idx] / value;
          lbx = (*currEqRhs)[row_idx] / value;
       }
-      if(block_type == LINKING_CONS_BLOCK)
+      if(block_type == BL_MAT)
       {
          ubx = (*currEqRhsLink)[row_idx] / value;
          lbx = (*currEqRhsLink)[row_idx] / value;
@@ -218,7 +218,7 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
    }
    else
    {
-      if(block_type != LINKING_CONS_BLOCK)
+      if(block_type != BL_MAT)
       {
          assert( PIPSisEQ((*currIclow)[row_idx], 1.0) || PIPSisEQ((*currIcupp)[row_idx], 1.0));
 
@@ -238,7 +238,7 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
          }
       }
       else
-         assert(block_type != LINKING_CONS_BLOCK); // todo : can is possible
+         assert(block_type != BL_MAT); // todo : can is possible
 
    }
    assert( PIPSisLE(lbx ,ubx) );

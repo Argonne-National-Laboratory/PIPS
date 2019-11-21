@@ -81,7 +81,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    presData.allreduceAndApplyLinkingRowActivities();
 
 #ifndef NDEBUG
-   MPI_Allreduce(MPI_IN_PLACE, &tightenings, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+   tightenings = PIPS_MPIgetSum(tightenings, MPI_COMM_WORLD);
    if( my_rank == 0 )
       std::cout << "--- After " << iter << " rounds of bound strengthening and " << tightenings << " times of tightening bounds:" << std::endl;
    countRowsCols();
@@ -101,18 +101,18 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
 
    bool tightened = false;
 
-   if( strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK) )
+   if( strenghtenBoundsInBlock(system_type, node, B_MAT) )
       tightened = true;
 
    if( presData.hasLinking(system_type) )
    {
-      if( strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK) )
+      if( strenghtenBoundsInBlock(system_type, node, BL_MAT) )
         tightened = true;
    }
 
    if(node != -1)
    {
-      if( strenghtenBoundsInBlock(system_type, node, CHILD_BLOCK) )
+      if( strenghtenBoundsInBlock(system_type, node, A_MAT) )
          tightened = true;
    }
 
@@ -134,30 +134,31 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    const double numeric_limit_bounds = 1e12; // todo
    bool tightened = false;
 
-   const SimpleVector& xlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
-   const SimpleVector& ixlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
-   const SimpleVector& xupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
-   const SimpleVector& ixupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
+   const SimpleVector& xlow = (node == -1 || block_type == A_MAT) ? *currxlowParent : *currxlowChild;
+   const SimpleVector& ixlow = (node == -1 || block_type == A_MAT) ? *currIxlowParent : *currIxlowChild;
+   const SimpleVector& xupp = (node == -1 || block_type == A_MAT) ? *currxuppParent : *currxuppChild;
+   const SimpleVector& ixupp = (node == -1 || block_type == A_MAT) ? *currIxuppParent : *currIxuppChild;
 
-   const SimpleVector& iclow = (block_type == LINKING_CONS_BLOCK) ? *currIclowLink : *currIclow;
-   const SimpleVector& clow = (block_type == LINKING_CONS_BLOCK) ? *currIneqLhsLink : *currIneqLhs;
-   const SimpleVector& icupp = (block_type == LINKING_CONS_BLOCK) ? *currIcuppLink : *currIcupp;
-   const SimpleVector& cupp = (block_type == LINKING_CONS_BLOCK) ? *currIneqRhsLink : *currIneqRhs;
-   const SimpleVector& rhs = (block_type == LINKING_CONS_BLOCK) ? *currEqRhsLink : *currEqRhs;
+   const SimpleVector& iclow = (block_type == BL_MAT) ? *currIclowLink : *currIclow;
+   const SimpleVector& clow = (block_type == BL_MAT) ? *currIneqLhsLink : *currIneqLhs;
+   const SimpleVector& icupp = (block_type == BL_MAT) ? *currIcuppLink : *currIcupp;
+   const SimpleVector& cupp = (block_type == BL_MAT) ? *currIneqRhsLink : *currIneqRhs;
+   const SimpleVector& rhs = (block_type == BL_MAT) ? *currEqRhsLink : *currEqRhs;
 
-   const SimpleVectorBase<int>& nnzs_row = (block_type == LINKING_CONS_BLOCK) ? *currNnzRowLink : *currNnzRow;
+   const SimpleVectorBase<int>& nnzs_row = (block_type == BL_MAT) ? *currNnzRowLink : *currNnzRow;
 
    const SparseStorageDynamic* mat;
 
-   if(block_type == LINKING_CONS_BLOCK)
+   if(block_type == BL_MAT)
       mat = currBlmat;
-   else if(block_type == LINKING_VARS_BLOCK)
-      mat = currAmat;
-   else
+   else if(block_type == A_MAT)
    {
       assert(node != -1);
-      mat = currBmat;
+      mat = currAmat;
    }
+   else
+      mat = currBmat;
+
    assert(mat);
 
    /* for every row in the current block and every entry in said row check if we can improve on the currently known bounds */

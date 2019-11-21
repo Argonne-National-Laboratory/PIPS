@@ -143,7 +143,7 @@ public :
       double getObjOffset() const { return objOffset; };
       int getNChildren() const { return nChildren; };
 
-      void getRowActivities(SystemType system_type, int node, BlockType block_type, int row,
+      void getRowActivities(SystemType system_type, int node, bool linking, int row,
             double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
 
       const StochVectorBase<int>& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date

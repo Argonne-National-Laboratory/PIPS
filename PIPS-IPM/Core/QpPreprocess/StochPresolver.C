@@ -52,10 +52,10 @@ StochPresolver::~StochPresolver()
 
 Data* StochPresolver::presolve()
 {
-   int myRank = 0;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+   int my_rank = 0;
+   PIPS_MPIgetRank(MPI_COMM_WORLD, my_rank);
 
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "start stoch presolving" << std::endl;
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
@@ -73,7 +73,7 @@ Data* StochPresolver::presolve()
    StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
    StochPresolverSingletonRows presolverSR(presData, *sorigprob);
 
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverCleanup.countRowsCols();
 
@@ -94,7 +94,7 @@ Data* StochPresolver::presolve()
    // before the finalize call fix all empty rows and columns not yet fixed
    presolverCleanup.applyPresolving();
    
-   if( myRank == 0 )
+   if( my_rank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
    assert( presData.getPresProb().isRootNodeInSync() );
@@ -112,7 +112,7 @@ Data* StochPresolver::presolve()
       //std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
       if(reset_vars == "true")
       {
-          if( myRank == 0 )
+          if( my_rank == 0 )
              std::cout << "Resetting bounds found in bound strengthening" << std::endl;
 
           presData.resetOriginallyFreeVarsBounds(*sorigprob);
