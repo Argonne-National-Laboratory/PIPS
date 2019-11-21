@@ -875,6 +875,7 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
       int& index_k, int& row_end)
 {
    assert(-1 <= node && node < nChildren);
+   assert(node != -1 || block_type != A_MAT);
    const bool linking = (block_type == BL_MAT);
 
    SparseStorageDynamic* storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamic();
@@ -1244,6 +1245,8 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, bool l
 // todo : make a finish block_deletion ? // todo - remove this and always update both matrices..
 void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements)
 {
+   assert(-1 <= node && node <= nChildren);
+   assert(node != -1 || block_type != A_MAT);
    SparseStorageDynamic* transposed = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposed();
 
    for( size_t i = 0; i < elements.size(); ++i )
@@ -1390,7 +1393,9 @@ void PresolveData::removeColumn(int node, int col, double fixation)
 /** remove column - adjust lhs, rhs and activity as well as nnz_counters */
 void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation)
 {
-   const bool linking = block_type == BL_MAT;
+   assert(-1 <= node && node <= nChildren);
+   assert(node != -1 || block_type != A_MAT);
+   const bool linking = (block_type == BL_MAT);
    SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
 
    SparseStorageDynamic& matrix = mat->getStorageDynamicRef();
@@ -1618,6 +1623,8 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
 void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row)
 {
    assert(!nodeIsDummy(node, system_type));
+   assert(-1 <= node && node <= nChildren);
+   assert(node != -1 || block_type != A_MAT);
    SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
 
    assert(mat);
@@ -2127,6 +2134,8 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
 /// does not compute activities for linking rows
 void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, bool linking, int row, bool upper)
 {
+   assert( -1 <= node && node <= nChildren);
+   
    if( TRACK_ROW(node, row, system_type, linking) )
    {
       if( linking)
@@ -2155,7 +2164,6 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
    /* get matrix */
-   SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, A_MAT)->getStorageDynamicRef();
    SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, B_MAT)->getStorageDynamicRef();
 
    /* get activity vector */
@@ -2202,6 +2210,7 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    /* Amat */
    if( node != -1 )
    {
+      SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, A_MAT)->getStorageDynamicRef();
       for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++ )
       {
          const int col = Amat.jcolM[j];
