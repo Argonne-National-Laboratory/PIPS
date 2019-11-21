@@ -35,7 +35,7 @@ private:
       BlockType block_type) const; 
    void countBoxedColumns( int& n_cols_total, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, int& n_cols_singleton, 
       int& n_cols_orig_free, int& n_cols_orig_free_removed, const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig,
-      BlockType block_type) const;
+      bool at_root_node) const;
 
    void setPointersMatrices(GenMatrixHandle mat, int node);
    void setPointersMatrixBoundsActivities(SystemType system_type, int node);

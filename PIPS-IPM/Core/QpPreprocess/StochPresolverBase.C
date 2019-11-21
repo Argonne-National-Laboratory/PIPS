@@ -87,7 +87,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       const SimpleVector& ixupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixupp).vec);
 
       countBoxedColumns(n_cols, n_cols_empty, n_cols_free, n_cols_onesided, n_cols_boxed, n_cols_singleton, n_cols_orig_free, n_cols_orig_free_removed, 
-         ixlow_orig, ixupp_orig, B_MAT);
+         ixlow_orig, ixupp_orig, true);
 
       assert( n_cols - n_cols_empty == n_cols_free + n_cols_onesided + n_cols_boxed);
 
@@ -139,7 +139,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       const SimpleVector& ixupp_orig = dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector& >(*origProb.ixupp).children[node]->vec);
 
       countBoxedColumns(n_cols, n_cols_empty, n_cols_free, n_cols_onesided, n_cols_boxed, n_cols_singleton, n_cols_orig_free, n_cols_orig_free_removed, 
-         ixlow_orig, ixupp_orig, B_MAT);
+         ixlow_orig, ixupp_orig, false);
       assert( n_cols - n_cols_empty == n_cols_free + n_cols_onesided + n_cols_boxed);
    }
 
@@ -205,7 +205,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
       std::cout << "#vars_total:\t\t" << n_cols << "\t(#empty: " << n_cols_empty << ", #free: " << n_cols_free << ", #onesided: " << n_cols_onesided << 
          ", #boxed: " << n_cols_boxed << ", #singleton: " << n_cols_singleton << ", #orig_free_non_empty: " << n_cols_orig_free - n_cols_orig_free_removed << 
          ")" << std::endl;
-      std::cout << "#vars non_empty:\t" << n_cols - n_cols_empty << std::endl;
+         std::cout << "#vars non_empty:\t" << n_cols - n_cols_empty << std::endl;
    }
 }
 
@@ -278,15 +278,15 @@ void StochPresolverBase::countRowsBlock(int& n_rows_total, int& n_rows_empty, in
 }
 
 void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, int& n_cols_singleton, 
-   int& n_cols_orig_free, int& n_cols_orig_free_removed, const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, BlockType block_type) const
+   int& n_cols_orig_free, int& n_cols_orig_free_removed, const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, bool at_root_node) const
 {
-   const SimpleVector& ixlow = (block_type == B_MAT) ? *currIxlowParent : *currIxlowChild;
-   const SimpleVector& ixupp = (block_type == B_MAT) ? *currIxuppParent : *currIxuppChild;
-   const SimpleVectorBase<int>& curr_nnz = (block_type == B_MAT) ? *currNnzColParent : *currNnzColChild;
+   const SimpleVector& ixlow = (at_root_node) ? *currIxlowParent : *currIxlowChild;
+   const SimpleVector& ixupp = (at_root_node) ? *currIxuppParent : *currIxuppChild;
+   const SimpleVectorBase<int>& curr_nnz = (at_root_node) ? *currNnzColParent : *currNnzColChild;
 
 #ifndef NDEBUG
-   const SimpleVector& xupp = (block_type == B_MAT) ? *currxuppParent : *currxuppChild;
-   const SimpleVector& xlow = (block_type == B_MAT) ? *currxlowParent : *currxlowChild;
+   const SimpleVector& xupp = (at_root_node) ? *currxuppParent : *currxuppChild;
+   const SimpleVector& xlow = (at_root_node) ? *currxlowParent : *currxlowChild;
    assert( ixlow.n == ixupp.n );
    assert( ixlow.n == xlow.n );
    assert( xlow.n == xupp.n );
