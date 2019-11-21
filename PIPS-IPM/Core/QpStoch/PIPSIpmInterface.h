@@ -19,12 +19,15 @@
 #include <stdexcept>
 #include <algorithm>
 
+
 #include "PreprocessFactory.h"
 #include "Scaler.h"
 #include "Presolver.h"
 #include "Postsolver.h"
 
 #include "sTreeCallbacks.h"
+
+#define PRESOLVE_POSTSOLVE_ONLY // will not call solve routine an just presolve and then postsolve the problem - for debugging presolve
 
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
@@ -273,15 +276,18 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
      if( mype == 0 )
         std::cout << "---scaling time (in sec.): " << t_scaling - t0_scaling << std::endl;
   }
+
+#if defined(PRESOLVE_POSTSOLVE_ONLY) && !defined(NDEBUG)
+  const int result = 0;
+#else
   //---------------------------------------------
   const int result = solver->solve(data,vars,resids);
   //---------------------------------------------
+#endif
 
   if( result != 0 && mype == 0 )
      std::cout << "failed to solve instance, result code: " << result << std::endl;
   
-  ran_solver = true;
-
   ran_solver = true;
 
 #ifdef TIMING
@@ -310,9 +316,9 @@ void PIPSIpmInterface<FORMULATION,IPMSOLVER>::go() {
   }
 #endif
 
-  // todo postsolve an unscaled sVars object holding the solution
-  getVarsUnscaledUnperm();
-  getResidsUnscaledUnperm();
+#if !defined(NDEBUG) && defined(PRESOLVE_POSTSOLVE_ONLY)
+  postsolveComputedSolution();
+#endif
 }
 
 template<typename FORMULATION, typename SOLVER>
@@ -508,7 +514,6 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolution
   return duals_varbounds;
 }
 
-
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherDualSolutionVarBoundsUpp()
 {
@@ -562,7 +567,6 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::gatherEqualityCons
   else
     eq_vals->axpy(1.0, *origData->bA);
 
-
   std::vector<double> eq_vals_vec = eq_vals->gatherStochVector();
 
   delete eq_vals;
@@ -614,76 +618,84 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStagePrim
 	if(!v.length())
 	  return std::vector<double>(); //this vector is not on this processor
 	else
-	  return std::vector<double>(&v[0],&v[0]+v.length());
+	  return std::vector<double>( &v[0], &v[0] + v.length() );
 }
 
 template<class FORMULATION, class IPMSOLVER>
 std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getFirstStageDualRowSolution() const
-   {
-      SimpleVector const &y =
-            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
-      SimpleVector const &z =
-            *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
+{
+  SimpleVector const &y =
+        *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->y)).vec);
+  SimpleVector const &z =
+        *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->z)).vec);
 
+  if( !y.length() && !z.length() )
+     return std::vector<double>(); //this vector is not on this processor
+  else
+  {
+     std::vector<int> const &map = factory->tree->idx_EqIneq_Map;
 
-      if( !y.length() && !z.length() )
-         return std::vector<double>(); //this vector is not on this processor
-      else
-      {
-         std::vector<int> const &map = factory->tree->idx_EqIneq_Map;
-
-         std::vector<double> multipliers(map.size());
-         for( size_t i = 0; i < map.size(); i++ )
-         {
-            int idx = map[i];
-            if( idx < 0 )
-            {
-               //equality
-               idx = -idx - 1;
-               assert(idx >= 0);
-               multipliers[i] = y[idx];
-            }
-            else
-            {
-               //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
-               //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
+     std::vector<double> multipliers(map.size());
+     for( size_t i = 0; i < map.size(); i++ )
+     {
+        int idx = map[i];
+        if( idx < 0 )
+        {
+           //equality
+           idx = -idx - 1;
+           assert(idx >= 0);
+           multipliers[i] = y[idx];
+        }
+        else
+        {
+           //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
+           //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
 #ifndef NDEBUG
-               SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->iclow)).vec);
-               SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->icupp)).vec);
-               assert(iclow[idx] > 0 || icupp[idx] > 0);
+           SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->iclow)).vec);
+           SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>((dynamic_cast<StochVector const&>(*vars->icupp)).vec);
+           assert(iclow[idx] > 0 || icupp[idx] > 0);
 #endif
-               multipliers[i] = z[idx];
-            }
-         }
-         return multipliers;
-      }
+           multipliers[i] = z[idx];
+        }
+     }
+     return multipliers;
+  }
 }
 
 
 template<class FORMULATION, class IPMSOLVER>
-std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDualRowSolution(int scen) const {
+std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDualRowSolution(int scen) const 
+{
   SimpleVector const &y = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->y).children[scen]->vec);
   SimpleVector const &z = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->z).children[scen]->vec);
   SimpleVector const &iclow = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->iclow).children[scen]->vec);
   SimpleVector const &icupp = *dynamic_cast<SimpleVector const*>(dynamic_cast<StochVector const&>(*vars->icupp).children[scen]->vec);
   //assert(v.length());
-  if(!y.length() && !z.length())
+  if( !y.length() && !z.length() )
     return std::vector<double>(); //this vector is not on this processor
-  else {
+  else 
+  {
     std::vector<int> const &map=factory->tree->children[scen]->idx_EqIneq_Map;
 
     std::vector<double> multipliers(map.size());
-    for(size_t i=0; i<map.size(); i++) {
-      int idx=map[i];
-      if(idx<0) {
-	//equality
-	idx=-idx-1; assert(idx>=0);
-	multipliers[i]=y[idx];
-      } else {
-	//inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
-	//\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
-	assert(iclow[idx] > 0 || icupp[idx] > 0);
-	multipliers[i] = z[idx];
+    for(size_t i = 0; i < map.size(); i++)
+    {
+      int idx = map[i];
+      if(idx<0) 
+      {
+	      //equality
+	      idx =- idx - 1;
+        assert( idx >= 0 );
+        multipliers[i] = y[idx];
+      } 
+      else
+      {
+	      //inequality - since, we have z-\lambda+\pi=0, where \lambda is the multiplier for low and
+	      //\pi is the multiplier for upp, therefore z containts the right multiplier for this row.
+#ifndef NDEBUG
+	      assert(iclow[idx] > 0 || icupp[idx] > 0);
+	      multipliers[i] = z[idx];
+#endif
       }
     }
     return multipliers;
@@ -699,6 +711,10 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 
   assert(origData);
   assert(data);
+
+#if !defined(NDEBUG) && defined(PRESOLVE_POSTSOLVE_ONLY) // todo : resids for C also need recomputation.. - s variable
+  resids->calcresids(data, vars);
+#endif
 
   if( unscaleUnpermVars == NULL)
     this->getVarsUnscaledUnperm();
@@ -733,22 +749,34 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   /* compute residuals for postprocessed solution and check for feasibility */
   postsolvedResids->calcresids(origData, postsolvedVars);
   
-  double infnorm_rA_orig = resids->rA->infnorm();
-  double infnorm_rC_orig = resids->rC->infnorm();
+  const double infnorm_rA_orig = resids->rA->infnorm();
+  const double infnorm_rC_orig = resids->rC->infnorm();
+  const double onenorm_rA_orig = resids->rA->onenorm();
+  const double onenorm_rC_orig = resids->rC->onenorm();
 
-  double infnorm_rA = unscaleUnpermResids->rA->infnorm();
-  double infnorm_rC = unscaleUnpermResids->rC->infnorm();
+  const double infnorm_rA = unscaleUnpermResids->rA->infnorm();
+  const double infnorm_rC = unscaleUnpermResids->rC->infnorm();
+  const double onenorm_rA = unscaleUnpermResids->rA->onenorm();
+  const double onenorm_rC = unscaleUnpermResids->rC->onenorm();
 
-  double infnorm_rA_postsolved = postsolvedResids->rA->infnorm();
-  double infnorm_rC_postsolved = postsolvedResids->rC->infnorm();
+  const double infnorm_rA_postsolved = postsolvedResids->rA->infnorm();
+  const double infnorm_rC_postsolved = postsolvedResids->rC->infnorm();
+  const double onenorm_rA_postsolved = postsolvedResids->rA->onenorm();
+  const double onenorm_rC_postsolved = postsolvedResids->rC->onenorm();
 
   if( my_rank == 0)
   {
-    std::cout << "Residuals of reduced problem:\n" << "rA: " << infnorm_rA_orig << "\nrC: " << infnorm_rC_orig << std::endl;
-    std::cout << "Residuals after unscaling:\n" << "rA: " << infnorm_rA << "\nrC: " << infnorm_rC << std::endl; 
-    std::cout << "Residuals after postsolve:\n" << "rA: " << infnorm_rA_postsolved << "\nrC: " << infnorm_rC_postsolved << std::endl; 
+    std::cout << "\t||.||_inf\t ||.||_1" << std::endl;
+    std::cout << "Residuals of reduced problem:" << std::endl;
+    std::cout << "rA:\t" << infnorm_rA_orig << "\t" << onenorm_rA_orig << std::endl;
+    std::cout << "rC:\t" << infnorm_rC_orig << "\t" << onenorm_rC_orig << std::endl;
+    std::cout << "Residuals after unscaling:" << std::endl;
+    std::cout << "rA:\t" << infnorm_rA << "\t" << onenorm_rA << std::endl;
+    std::cout << "rC:\t" << infnorm_rC << "\t" << onenorm_rC << std::endl; 
+    std::cout << "Residuals after postsolve:" << std::endl;
+    std::cout << "rA:\t" << infnorm_rA_postsolved << "\t" << onenorm_rA_postsolved << std::endl;
+    std::cout << "rC:\t" << infnorm_rC_postsolved << "\t" << onenorm_rC_postsolved << std::endl; 
   }
-
 }
 
 #endif
