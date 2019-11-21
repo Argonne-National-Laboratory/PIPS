@@ -22,7 +22,7 @@ StochPostsolver::StochPostsolver(const sData& original_problem) :
    padding_origrow_equality( cloneStochVector<double, int>(*original_problem.bA) ),
    padding_origrow_inequality( cloneStochVector<double, int>(*original_problem.bu) )
 {
-   getRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
+   PIPS_MPIgetRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
 
    padding_origcol->setToConstant(1);
    padding_origrow_equality->setToConstant(1);

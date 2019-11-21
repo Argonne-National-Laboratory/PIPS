@@ -98,6 +98,7 @@ inline int PIPSgetnOMPthreads()
    return num_procs;
 }
 
+
 inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
 {
    bool iAmSpecial = true;
@@ -112,6 +113,11 @@ inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    }
 
    return iAmSpecial;
+}
+
+inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+{
+   return PIPS_MPIiAmSpecial(iAmDistrib, mpiComm);
 }
 
 inline void PIPS_MPIgetRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib)

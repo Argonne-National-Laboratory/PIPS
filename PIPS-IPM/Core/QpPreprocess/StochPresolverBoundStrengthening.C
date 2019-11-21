@@ -159,6 +159,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    else
       mat = currBmat;
 
+   const bool linking = (block_type == BL_MAT);
    assert(mat);
 
    /* for every row in the current block and every entry in said row check if we can improve on the currently known bounds */
@@ -167,7 +168,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
 
-      presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
+      presData.getRowActivities(system_type, node, linking, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       /* two or more unbounded variables make it impossible to derive new bounds so skip the row completely */
       if( actmin_ubndd >= 2 && actmax_ubndd >= 2)

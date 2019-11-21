@@ -875,6 +875,7 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
       int& index_k, int& row_end)
 {
    assert(-1 <= node && node < nChildren);
+   const bool linking = (block_type == BL_MAT);
 
    SparseStorageDynamic* storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamic();
    assert(0 <= row_index && row_index <= storage->m);
@@ -885,13 +886,13 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
       outdated_nnzs = true;
 
    /* adjust rhs and lhs */
-   adjustMatrixRhsLhsBy(system_type, node, block_type, row_index, -storage->M[index_k] * xlower[storage->jcolM[index_k]]);
+   adjustMatrixRhsLhsBy(system_type, node, linking, row_index, -storage->M[index_k] * xlower[storage->jcolM[index_k]]);
 
    /* adjust activity */
    // todo : necessary ? impact should be low
 
    /* adjust nnz counters */
-   removeIndexRow(system_type, node, block_type, row_index, 1);
+   removeIndexRow(system_type, node, linking, row_index, 1);
    removeIndexColumn(node, block_type, storage->jcolM[index_k], 1);
 
    std::swap(storage->M[index_k], storage->M[row_end - 1]);
@@ -1081,7 +1082,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    {
       std::cout << "[" << lbx << ", " << ubx << "] not in [" << ( !PIPSisZero(ixlow) ? xlow : -std::numeric_limits<double>::infinity()) << ", " << 
          ( !PIPSisZero(ixupp) ? xupp : std::numeric_limits<double>::infinity()) << "]" << std::endl;
-      abortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
+      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Row Propagation detected infeasible new bounds!", "PresolveData.C", "rowPropagatedBounds");
    }
 
    /* adjust bounds */
@@ -1414,9 +1415,9 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
       /* remove the entry, adjust activity and row counters and rhs/lhs */
       removeEntryInDynamicStorage(matrix, row, col);
 
-      removeIndexRow(system_type, node, block_type, row, 1);
+      removeIndexRow(system_type, node, linking, row, 1);
 
-      adjustMatrixRhsLhsBy(system_type, node, block_type, row, - coeff * fixation);
+      adjustMatrixRhsLhsBy(system_type, node, linking, row, - coeff * fixation);
 
       adjustRowActivityFromDeletion(system_type, node, block_type, row, col, coeff);
 
@@ -1537,23 +1538,23 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
       assert(node == -1);
 
       /* Bl0 */
-      removeRowFromMatrix(system_type, -1, LINKING_CONS_BLOCK, row);
+      removeRowFromMatrix(system_type, -1, BL_MAT, row);
 
       /* linking rows Bli */
       for(int child = 0; child < nChildren; ++child)
       {
          if(!nodeIsDummy(child, system_type))
-            removeRowFromMatrix(system_type, child, LINKING_CONS_BLOCK, row);
+            removeRowFromMatrix(system_type, child, BL_MAT, row);
       }
    }
    else
    {
-      /* Amat */
-      removeRowFromMatrix(system_type, node, LINKING_VARS_BLOCK, row);
-
       /* Bmat */
+      removeRowFromMatrix(system_type, node, B_MAT, row);
+
+      /* Amat */
       if(node != -1)
-         removeRowFromMatrix(system_type, node, CHILD_BLOCK, row);
+         removeRowFromMatrix(system_type, node, A_MAT, row);
    }
 
 
@@ -1638,8 +1639,10 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
       removeEntryInDynamicStorage(*mat_transp_storage, col_idx, row);
       removeIndexColumn(node, block_type, col_idx, 1);
    }
+   
+   const bool linking = (block_type == BL_MAT);
 
-   removeIndexRow(system_type, node, block_type, row, mat_storage->rowptr[row].end - mat_storage->rowptr[row].start);
+   removeIndexRow(system_type, node, linking, row, mat_storage->rowptr[row].end - mat_storage->rowptr[row].start);
    mat_storage->rowptr[row].end = mat_storage->rowptr[row].start;
 }
 
@@ -2029,7 +2032,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
          assert(1 <= actmax_ubndd_val);
          --(*actmax_ubndd);
          if( actmax_ubndd_val == 2)
-            computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
+            computeRowMinOrMaxActivity(system_type, node, linking, row, true);
       }
 
       if( PIPSisEQ(ixlow[col], 1.0) )
@@ -2039,7 +2042,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
          assert(1 <= actmin_ubndd_val);
          --(*actmin_ubndd);
          if( actmin_ubndd_val == 2)
-            computeRowMinOrMaxActivity(system_type, node, block_type, row, false);
+            computeRowMinOrMaxActivity(system_type, node, linking, row, false);
       }
    }
    else
@@ -2051,7 +2054,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
          assert(1 <= actmax_ubndd_val);
          --(*actmax_ubndd);
          if( actmax_ubndd_val == 2)
-            computeRowMinOrMaxActivity(system_type, node, block_type, row, true);
+            computeRowMinOrMaxActivity(system_type, node, linking, row, true);
       }
 
       if( PIPSisEQ(ixupp[col], 1.0) )
@@ -2061,7 +2064,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
          assert(1 <= actmin_ubndd_val);
          --(*actmin_ubndd);
          if( actmin_ubndd_val == 2)
-            computeRowMinOrMaxActivity(system_type, node, block_type, row, false);
+            computeRowMinOrMaxActivity(system_type, node, linking, row, false);
       }
    }
 
@@ -2090,7 +2093,7 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
       const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
       /* get matrix */
-      SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, LINKING_CONS_BLOCK)->getStorageDynamicRef();
+      SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, BL_MAT)->getStorageDynamicRef();
 
       for( int j = mat.rowptr[row].start; j < mat.rowptr[row].end; j++ )
       {
@@ -2151,11 +2154,9 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    const SimpleVector& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node);
    const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
-   const bool linking = ( linking );
-
    /* get matrix */
-   SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, LINKING_VARS_BLOCK)->getStorageDynamicRef();
-   SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, CHILD_BLOCK)->getStorageDynamicRef();
+   SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, A_MAT)->getStorageDynamicRef();
+   SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, B_MAT)->getStorageDynamicRef();
 
    /* get activity vector */
    SimpleVector* act_vec;
@@ -2173,53 +2174,55 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    double& act_part = (*act_vec)[row];
    act_part = 0;
 
-   for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++)
+   /* Bmat */
+   for( int j = Bmat.rowptr[row].start; j < Bmat.rowptr[row].end; j++)
    {
-      const int col = Amat.jcolM[j];
-      const double entry = Amat.M[j];
+      const int col = Bmat.jcolM[j];
+      const double entry = Bmat.M[j];
 
-      assert( 0 <= col && col < ixlow_root.n );
+      assert( 0 <= col && col < ixlow.n );
       assert( !PIPSisZero(entry) );
 
       if( PIPSisLT(0.0, entry) )
       {
-         if( !upper && !PIPSisZero(ixlow_root[col]) )
-            act_part += entry * xlow_root[col];
-         if( upper && !PIPSisZero(ixupp_root[col]) )
-            act_part += entry * xupp_root[col];
+         if( !upper && !PIPSisZero(ixlow[col]) )
+            act_part += entry * xlow[col];
+         if( upper && !PIPSisZero(ixupp[col]) )
+            act_part += entry * xupp[col];
       }
       else
       {
-         if( !upper && !PIPSisZero(ixupp_root[col]) )
-            act_part += entry * xupp_root[col];
-         if( upper && !PIPSisZero(ixlow_root[col]) )
-            act_part += entry * xlow_root[col];
+         if( !upper && !PIPSisZero(ixupp[col]) )
+            act_part += entry * xupp[col];
+         if( upper && !PIPSisZero(ixlow[col]) )
+            act_part += entry * xlow[col];
       }
    }
 
+   /* Amat */
    if( node != -1 )
    {
-      for( int j = Bmat.rowptr[row].start; j < Bmat.rowptr[row].end; j++ )
+      for( int j = Amat.rowptr[row].start; j < Amat.rowptr[row].end; j++ )
       {
-         const int col = Bmat.jcolM[j];
-         const double entry = Bmat.M[j];
+         const int col = Amat.jcolM[j];
+         const double entry = Amat.M[j];
 
-         assert( 0 <= col && col < ixlow.n);
+         assert( 0 <= col && col < ixlow_root.n);
          assert( !PIPSisZero(entry));
 
          if( PIPSisLT(0.0, entry) )
          {
-            if( !upper && !PIPSisZero(ixlow[col]) )
-               act_part += entry * xlow[col];
-            if( upper && !PIPSisZero(ixupp[col]) )
-               act_part += entry * xupp[col];
+            if( !upper && !PIPSisZero(ixlow_root[col]) )
+               act_part += entry * xlow_root[col];
+            if( upper && !PIPSisZero(ixupp_root[col]) )
+               act_part += entry * xupp_root[col];
          }
          else
          {
-            if( !upper && !PIPSisZero(ixupp[col]) )
-               act_part += entry * xupp[col];
-            if( upper && !PIPSisZero(ixlow[col]) )
-               act_part += entry * xlow[col];
+            if( !upper && !PIPSisZero(ixupp_root[col]) )
+               act_part += entry * xupp_root[col];
+            if( upper && !PIPSisZero(ixlow_root[col]) )
+               act_part += entry * xlow_root[col];
          }
       }
    }
@@ -2244,7 +2247,7 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    if( ( !PIPSisZero(ixlow[col]) && PIPSisLT(xu, xlow[col]) )
          || ( !PIPSisZero(ixupp[col]) && PIPSisLT(xupp[col], xl) )
          || PIPSisLT(xu, xl) )
-      abortInfeasible(MPI_COMM_WORLD, "Varbounds update detected infeasible new bounds!", "PresolveData.C", "updateBoundsVariable");
+      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Varbounds update detected infeasible new bounds!", "PresolveData.C", "updateBoundsVariable");
 
    bool updated = false;
    double xu_old = std::numeric_limits<double>::infinity();
@@ -2470,7 +2473,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
             if(linking )
                ++linking_rows_need_act_computation;
             else
-               computeRowMinOrMaxActivity(system_type, node, block_type, row, switch_upperlower);
+               computeRowMinOrMaxActivity(system_type, node, linking, row, switch_upperlower);
          }
          else if( (linking  && act_ubndd[row] + act_ubndd_chgs[row] == 0) ||
                (!linking && act_ubndd[row] == 0) )

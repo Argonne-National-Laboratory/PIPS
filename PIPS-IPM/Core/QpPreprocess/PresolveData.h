@@ -213,7 +213,7 @@ public :
 
       /// methods for printing debug information
       void printVarBoundStatistics(std::ostream& out) const;
-      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const;
+      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const;
 
 private:
       // initialize row and column nnz counter
@@ -230,7 +230,7 @@ private:
 
       long resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
 
-      void adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
+      void adjustMatrixRhsLhsBy(SystemType system_type, int node, bool linking, int row_index, double value);
       /// methods for modifying the problem
       void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
       /// set bounds if new bound is better than old bound
@@ -245,7 +245,7 @@ private:
             double old_bound, bool upper);
 
       double computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const;
-      void computeRowMinOrMaxActivity(SystemType system_type, int node, BlockType block_type, int row, bool upper);
+      void computeRowMinOrMaxActivity(SystemType system_type, int node, bool linking, int row, bool upper);
 
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
@@ -253,7 +253,7 @@ private:
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
       void removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
-      void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
+      void removeIndexRow(SystemType system_type, int node, bool linking, int row_index, int amount);
       void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
 
       /// methods for querying the problem in order to get certain structures etc. todo: move?

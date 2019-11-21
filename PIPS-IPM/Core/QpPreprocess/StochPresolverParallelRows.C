@@ -155,13 +155,13 @@ void StochPresolverParallelRows::applyPresolving()
 
    // for the A_0 and C_0 blocks:
    setNormalizedPointers(-1);
+   assert(norm_Bmat); assert(norm_Dmat);
    // First Hashing: Fill 'row_support_hashtable':
-   if( norm_Amat )
-      insertRowsIntoHashtable( row_support_hashtable, norm_Amat, NULL, EQUALITY_SYSTEM, normNnzRowA );
-   assert( (int)row_support_hashtable.size() <= mA );
-   if( norm_Cmat )
-      insertRowsIntoHashtable( row_support_hashtable, norm_Cmat, NULL, INEQUALITY_SYSTEM, normNnzRowC );
-   assert( (int)row_support_hashtable.size() <= mA + norm_Cmat->m);
+   insertRowsIntoHashtable( row_support_hashtable, NULL, norm_Bmat, EQUALITY_SYSTEM, normNnzRowA );
+   assert( static_cast<int>(row_support_hashtable.size()) <= mA );
+
+   insertRowsIntoHashtable( row_support_hashtable, NULL, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC );
+   assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Dmat->m);
    // Second Hashing: Per bucket, do Second Hashing:
    for( size_t i = 0; i < row_support_hashtable.bucket_count(); ++i )
    {
@@ -192,7 +192,7 @@ void StochPresolverParallelRows::applyPresolving()
    // TODO:add detection for linking constraints
 
 
-   synchronize(nRowElims);
+   nRowElims = PIPS_MPIgetMax(nRowElims, MPI_COMM_WORLD);
    if( my_rank == 0 )
       std::cout << "Removed " << nRowElims << " Rows in Parallel Row Presolving." << std::endl;
 
@@ -508,7 +508,7 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    {
       assert(norm_Dmat);
       if(node != -1)
-         assert(norm_Cmat)
+         assert(norm_Cmat);
       assert(norm_cupp);
       assert(norm_clow);
       assert(norm_icupp);
@@ -598,23 +598,27 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
 
 void StochPresolverParallelRows::removeSingletonVars()
 {
-   assert(normNnzColParent);
-
-   for( int col = 0; col < normNnzColChild->n; col++ )
+   assert(normNnzColChild || normNnzColParent);
+   const bool at_root_node = (normNnzColChild == NULL);
+   
+   SimpleVectorBase<int>* nnzs_bmat = (at_root_node) ? normNnzColParent :
+      normNnzColChild;
+   
+   for( int col = 0; col < nnzs_bmat->n; col++ )
    {
-      if( (*normNnzColChild)[col] == 1 )
+      if( (*nnzs_bmat)[col] == 1 )
       {
          // check if the singleton column is part of the current b_mat/d_mat
          // else, the singleton entry is in one of the other B_i or D_i blocks
          if( norm_BmatTrans && (norm_BmatTrans->rowptr[col].start + 1 == norm_BmatTrans->rowptr[col].end) )
          {
             removeEntry(col, *rowContainsSingletonVariableA, *norm_Bmat, *norm_BmatTrans,
-                  *normNnzRowA, *normNnzColChild, (normNnzColChild == NULL) ? true : false);
+                  *normNnzRowA, *nnzs_bmat, at_root_node);
          }
          else if(norm_DmatTrans && (norm_DmatTrans->rowptr[col].start + 1 == norm_DmatTrans->rowptr[col].end) )
          {
             removeEntry(col, *rowContainsSingletonVariableC, *norm_Dmat, *norm_DmatTrans,
-                  *normNnzRowC, *normNnzColChild, (normNnzColChild == NULL) ? true : false);
+                  *normNnzRowC, *nnzs_bmat, at_root_node);
          }
       }
    }
@@ -757,7 +761,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
 
       int row_A_start = 0;
       int row_A_end = 0;
-      if( A_mat )
+      if( a_mat )
       {
          row_A_start = a_mat->rowptr[row].start;
          row_A_end = a_mat->rowptr[row].end;
@@ -912,7 +916,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   else
                   {
                      if( !PIPSisEQ( (*norm_b)[id1], (*norm_b)[id2]) )
-                        abortInfeasible(MPI_COMM_WORLD, "Found parallel equality rows with non-compatible right hand sides",
+                        PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel equality rows with non-compatible right hand sides",
                            "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable"); 
                      // delete row2 in the original system:
                      presData.removeRedundantRow( EQUALITY_SYSTEM, node, id2, false);
@@ -959,11 +963,11 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                      // check for infeasibility:
                      if( !PIPSisZero((*norm_iclow)[ineqRowId])
                            && PIPSisLT( (*norm_b)[id1], (*norm_clow)[ineqRowId]) )
-                        abortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
+                        PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
                            "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable"); 
                      if( !PIPSisZero((*norm_icupp)[ineqRowId])
                            && PIPSisLT((*norm_cupp)[ineqRowId], (*norm_b)[id1]) )
-                        abortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
+                        PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
                            "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable"); 
                      // remove inequality row.
                   }
@@ -1077,7 +1081,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    if( ( !PIPSisZero((*norm_iclow)[rowId1]) && PIPSisLT( norm_upp_row2, (*norm_clow)[rowId1]) )
          || ( !PIPSisZero((*norm_icupp)[rowId1]) && PIPSisLT( (*norm_cupp)[rowId1], norm_low_row2) ) )
    {
-      abortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
+      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
    }
 
    double new_lhs = -std::numeric_limits<double>::infinity();

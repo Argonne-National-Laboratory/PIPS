@@ -150,6 +150,7 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
 
       if(node == -1)
       {
+         assert(currBmat);
          assert( currBmat->rowptr[row_idx].end - currBmat->rowptr[row_idx].start == 1 );
          col_idx = currBmat->jcolM[currBmat->rowptr[row_idx].start];
          value = currBmat->M[currBmat->rowptr[row_idx].start];

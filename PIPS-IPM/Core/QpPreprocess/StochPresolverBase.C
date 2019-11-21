@@ -280,13 +280,13 @@ void StochPresolverBase::countRowsBlock(int& n_rows_total, int& n_rows_empty, in
 void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, int& n_cols_singleton, 
    int& n_cols_orig_free, int& n_cols_orig_free_removed, const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, BlockType block_type) const
 {
-   const SimpleVector& ixlow = (block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
-   const SimpleVector& ixupp = (block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
-   const SimpleVectorBase<int>& curr_nnz = (block_type == LINKING_VARS_BLOCK) ? *currNnzColParent : *currNnzColChild;
+   const SimpleVector& ixlow = (block_type == B_MAT) ? *currIxlowParent : *currIxlowChild;
+   const SimpleVector& ixupp = (block_type == B_MAT) ? *currIxuppParent : *currIxuppChild;
+   const SimpleVectorBase<int>& curr_nnz = (block_type == B_MAT) ? *currNnzColParent : *currNnzColChild;
 
 #ifndef NDEBUG
-   const SimpleVector& xupp = (block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
-   const SimpleVector& xlow = (block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
+   const SimpleVector& xupp = (block_type == B_MAT) ? *currxuppParent : *currxuppChild;
+   const SimpleVector& xlow = (block_type == B_MAT) ? *currxlowParent : *currxlowChild;
    assert( ixlow.n == ixupp.n );
    assert( ixlow.n == xlow.n );
    assert( xlow.n == xupp.n );
