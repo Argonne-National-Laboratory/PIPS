@@ -13,9 +13,9 @@
 
 #include "DoubleMatrixHandle.h"
 #include "IotrRefCount.h"
+#include "OoqpVector_fwd.h"
 
 class DoubleLinearSolver;
-class OoqpVector;
 
 /**
  * A class whose instances creates matrices and vectors of

@@ -1,8 +1,7 @@
-#include "StochVector.h"
-#include "StochTree.h"
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "VectorUtilities.h"
+#include "StochVector.h"
 
 #include <cassert>
 #include <cstring>
@@ -10,55 +9,60 @@
 #include <limits>
 #include <math.h>
 
-StochVector::StochVector(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
-  : OoqpVector(n_), vecl(NULL), parent(NULL), mpiComm(mpiComm_),
+template<typename T>
+StochVectorBase<T>::StochVectorBase(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
+  : OoqpVectorBase<T>(n_), vecl(NULL), parent(NULL), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
-  vec = new SimpleVector(n_);
+  vec = new SimpleVectorBase<T>(n_);
 
-  if(-1==iAmDistrib && MPI_COMM_NULL!=mpiComm) {
+  if( -1 == iAmDistrib && MPI_COMM_NULL != mpiComm) {
     int size;
     MPI_Comm_size(mpiComm, &size);
-    iAmDistrib = size==1?0:1;
+    iAmDistrib = (size == 1) ? 0 : 1;
   }
   vecl = NULL;
 }
 
-StochVector::StochVector(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed)
-  : OoqpVector(n_), parent(NULL), mpiComm(mpiComm_),
+template<typename T>
+StochVectorBase<T>::StochVectorBase(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed)
+  : OoqpVectorBase<T>(n_), parent(NULL), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
-  vec = new SimpleVector(n_);
+  vec = new SimpleVectorBase<T>(n_);
 
   if( nl_ >= 0 )
-    vecl = new SimpleVector(nl_);
+    vecl = new SimpleVectorBase<T>(nl_);
   else
 	 vecl = NULL;
 
-  if(-1==iAmDistrib && MPI_COMM_NULL!=mpiComm) {
+  if( -1 == iAmDistrib && MPI_COMM_NULL != mpiComm) {
     int size;
     MPI_Comm_size(mpiComm, &size);
-    iAmDistrib = size==1?0:1;
+    iAmDistrib = (size == 1) ? 0 : 1;
   }
 
 }
 
-void StochVector::AddChild(StochVector* child)
+template<typename T>
+void StochVectorBase<T>::AddChild(StochVectorBase<T>* child)
 {
   child->parent = this;
   children.push_back(child);
-  n += child->n;
+  this->n += child->n;
 }
 
-void StochVector::AddChild(OoqpVector* child_)
+template<typename T>
+void StochVectorBase<T>::AddChild(OoqpVectorBase<T>* child_)
 {
-  StochVector* child = reinterpret_cast<StochVector*>(child_);
+  StochVectorBase<T>* child = reinterpret_cast<StochVectorBase<T>*>(child_);
   AddChild(child);
 }
 
-StochVector::~StochVector()
+template<typename T>
+StochVectorBase<T>::~StochVectorBase()
 {
-  for (size_t it=0; it<children.size(); it++)
+  for (size_t it = 0; it < children.size(); it++)
     delete children[it];
 
   if( vec )
@@ -68,37 +72,41 @@ StochVector::~StochVector()
 	 delete vecl;
 }
 
-OoqpVector* StochVector::dataClone() const
+template<typename T>
+OoqpVectorBase<T>* StochVectorBase<T>::dataClone() const
 {
   assert(!vecl);
-  OoqpVector* clone = new SimpleVector(vec->length());
+  OoqpVectorBase<T>* clone = new SimpleVectorBase<T>(vec->length());
   return clone;
 }
 
-OoqpVector* StochVector::dataCloneLinkCons() const
+template<typename T>
+OoqpVectorBase<T>* StochVectorBase<T>::dataCloneLinkCons() const
 {
   assert(vecl);
-  OoqpVector* clone = new SimpleVector(vecl->length());
+  OoqpVectorBase<T>* clone = new SimpleVectorBase<T>(vecl->length());
   return clone;
 }
 
-StochVector* StochVector::clone() const
+template<typename T>
+OoqpVectorBase<T>* StochVectorBase<T>::clone() const
 {
-  StochVector* clone;
+  StochVectorBase<T>* clone;
   if( vecl )
-    clone = new StochVector(vec->length(), vecl->length(), mpiComm, -1);
+    clone = new StochVectorBase<T>(vec->length(), vecl->length(), mpiComm, -1);
   else
-	 clone = new StochVector(vec->length(), mpiComm);
+	 clone = new StochVectorBase<T>(vec->length(), mpiComm);
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it = 0; it < children.size(); it++) {
     clone->AddChild(children[it]->clone());
   }
   return clone;
 }
 
-StochVector* StochVector::cloneFull() const
+template<typename T>
+OoqpVectorBase<T>* StochVectorBase<T>::cloneFull() const
 {
-   StochVector* clone = new StochVector(vec->length(), (vecl != NULL) ? vecl->length() : -1, mpiComm, -1);
+   StochVectorBase<T>* clone = new StochVectorBase<T>(vec->length(), (vecl != NULL) ? vecl->length() : -1, mpiComm, -1);
 
    clone->vec->copyFrom(*vec);
 
@@ -112,30 +120,30 @@ StochVector* StochVector::cloneFull() const
 }
 
 
-void
-StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
+template<typename T>
+void StochVectorBase<T>::jointCopyFrom(const StochVectorBase<T>& v1, const StochVectorBase<T>& v2, const StochVectorBase<T>& v3)
 {
-  SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
-  SimpleVector& sv1 = dynamic_cast<SimpleVector&>(*v1.vec);
-  SimpleVector& sv2 = dynamic_cast<SimpleVector&>(*v2.vec);
-  SimpleVector& sv3 = dynamic_cast<SimpleVector&>(*v3.vec);
+  SimpleVectorBase<T>& sv  = dynamic_cast<SimpleVectorBase<T>&>(*this->vec);
+  SimpleVectorBase<T>& sv1 = dynamic_cast<SimpleVectorBase<T>&>(*v1.vec);
+  SimpleVectorBase<T>& sv2 = dynamic_cast<SimpleVectorBase<T>&>(*v2.vec);
+  SimpleVectorBase<T>& sv3 = dynamic_cast<SimpleVectorBase<T>&>(*v3.vec);
 
   int n1 = sv1.length();
   int n2 = sv2.length();
   int n3 = sv3.length();
 
-  assert(n1+n2+n3 == sv.length());
+  assert( n1 + n2 + n3 == sv.length() );
 
-  if(n1>0)
-    memcpy(&sv[0], &sv1[0], n1*sizeof(double));
+  if( n1 > 0 )
+    memcpy(&sv[0], &sv1[0], n1 * sizeof(T));
 
-  if(n2>0)
-    memcpy(&sv[n1], &sv2[0], n2*sizeof(double));
+  if( n2 > 0 )
+    memcpy(&sv[n1], &sv2[0], n2 * sizeof(T));
 
-  if(n3>0)
-    memcpy(&sv[n1+n2], &sv3[0], n3*sizeof(double));
+  if( n3 > 0 )
+    memcpy(&sv[n1 + n2], &sv3[0], n3 * sizeof(T));
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it = 0; it < children.size(); it++) {
     children[it]->jointCopyFrom(*v1.children[it],
 				*v2.children[it],
 				*v3.children[it]);
@@ -143,13 +151,13 @@ StochVector::jointCopyFrom(StochVector& v1, StochVector& v2, StochVector& v3)
 
 }
 
-void
-StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector& vz)
+template<typename T>
+void StochVectorBase<T>::jointCopyFromLinkCons(const StochVectorBase<T>& vx, const StochVectorBase<T>& vy, const StochVectorBase<T>& vz)
 {
-  SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
-  SimpleVector& svx = dynamic_cast<SimpleVector&>(*vx.vec);
-  SimpleVector& svy = dynamic_cast<SimpleVector&>(*vy.vec);
-  SimpleVector& svz = dynamic_cast<SimpleVector&>(*vz.vec);
+  SimpleVectorBase<T>& sv  = dynamic_cast<SimpleVectorBase<T>&>(*this->vec);
+  SimpleVectorBase<T>& svx = dynamic_cast<SimpleVectorBase<T>&>(*vx.vec);
+  SimpleVectorBase<T>& svy = dynamic_cast<SimpleVectorBase<T>&>(*vy.vec);
+  SimpleVectorBase<T>& svz = dynamic_cast<SimpleVectorBase<T>&>(*vz.vec);
 
   int n1 = svx.length();
   int n2 = svy.length();
@@ -158,40 +166,40 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
   int n5 = 0;
 
   assert(n1+n2+n3 <= sv.length());
-  assert(sizeof(double) == sizeof(sv[0]));
+  assert( sizeof(T) == sizeof(sv[0]) );
 
-  if(n1>0)
-    memcpy(&sv[0], &svx[0], n1*sizeof(double));
+  if( n1 > 0 )
+    memcpy(&sv[0], &svx[0], n1 * sizeof(T));
 
-  if(n2>0)
-    memcpy(&sv[n1], &svy[0], n2*sizeof(double));
+  if( n2 > 0 )
+    memcpy(&sv[n1], &svy[0], n2 * sizeof(T));
 
-  if(n3>0)
-    memcpy(&sv[n1+n2], &svz[0], n3*sizeof(double));
+  if( n3 > 0 )
+    memcpy(&sv[n1 + n2], &svz[0], n3 * sizeof(T));
 
   if( vy.vecl )
   {
-    SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
+    SimpleVectorBase<T>& svyl = dynamic_cast<SimpleVectorBase<T>&>(*vy.vecl);
     n4 = svyl.length();
-    assert(n4 >= 0);
+    assert( n4 >= 0 );
 
     if( n4 > 0 )
-      memcpy(&sv[n1+n2+n3], &svyl[0], n4*sizeof(double));
+      memcpy(&sv[n1 + n2 + n3], &svyl[0], n4 * sizeof(T));
   }
 
   if( vz.vecl )
   {
-    SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
+    SimpleVectorBase<T>& svzl = dynamic_cast<SimpleVectorBase<T>&>(*vz.vecl);
     n5 = svzl.length();
-    assert(n5 >= 0);
+    assert( n5 >= 0 );
 
     if( n5 > 0 )
-      memcpy(&sv[n1+n2+n3+n4], &svzl[0], n5*sizeof(double));
+      memcpy(&sv[n1 + n2 + n3 + n4], &svzl[0], n5 * sizeof(T));
   }
 
   assert(n1+n2+n3+n4+n5 == sv.length());
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it = 0; it < children.size(); it++) {
     children[it]->jointCopyFromLinkCons(*vx.children[it],
 				*vy.children[it],
 				*vz.children[it]);
@@ -199,13 +207,13 @@ StochVector::jointCopyFromLinkCons(StochVector& vx, StochVector& vy, StochVector
 }
 
 
-void
-StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
+template<typename T>
+void StochVectorBase<T>::jointCopyTo(StochVectorBase<T>& v1, StochVectorBase<T>& v2, StochVectorBase<T>& v3) const
 {
-  SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
-  SimpleVector& sv1 = dynamic_cast<SimpleVector&>(*v1.vec);
-  SimpleVector& sv2 = dynamic_cast<SimpleVector&>(*v2.vec);
-  SimpleVector& sv3 = dynamic_cast<SimpleVector&>(*v3.vec);
+  const SimpleVectorBase<T>& sv  = dynamic_cast<const SimpleVectorBase<T>&>(*this->vec);
+  SimpleVectorBase<T>& sv1 = dynamic_cast<SimpleVectorBase<T>&>(*v1.vec);
+  SimpleVectorBase<T>& sv2 = dynamic_cast<SimpleVectorBase<T>&>(*v2.vec);
+  SimpleVectorBase<T>& sv3 = dynamic_cast<SimpleVectorBase<T>&>(*v3.vec);
 
   int n1 = sv1.length();
   int n2 = sv2.length();
@@ -213,30 +221,30 @@ StochVector::jointCopyTo(StochVector& v1, StochVector& v2, StochVector& v3)
 
   assert(n1+n2+n3 == sv.length());
 
-  if(n1>0)
-    memcpy(&sv1[0], &sv[0], n1*sizeof(double));
+  if(n1 > 0)
+    memcpy(&sv1[0], &sv[0], n1 * sizeof(T));
 
-  if(n2>0)
-    memcpy(&sv2[0], &sv[n1], n2*sizeof(double));
+  if(n2 > 0)
+    memcpy(&sv2[0], &sv[n1], n2 * sizeof(T));
 
-  if(n3>0)
-    memcpy(&sv3[0], &sv[n1+n2], n3*sizeof(double));
+  if(n3 > 0)
+    memcpy(&sv3[0], &sv[n1+n2], n3 * sizeof(T));
 
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it = 0; it < children.size(); it++) {
     children[it]->jointCopyTo(*v1.children[it],
 			      *v2.children[it],
 			      *v3.children[it]);
   }
 }
 
-void
-StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& vz)
+template<typename T>
+void StochVectorBase<T>::jointCopyToLinkCons(StochVectorBase<T>& vx, StochVectorBase<T>& vy, StochVectorBase<T>& vz) const
 {
-  SimpleVector& sv  = dynamic_cast<SimpleVector&>(*this->vec);
-  SimpleVector& svx = dynamic_cast<SimpleVector&>(*vx.vec);
-  SimpleVector& svy = dynamic_cast<SimpleVector&>(*vy.vec);
-  SimpleVector& svz = dynamic_cast<SimpleVector&>(*vz.vec);
+  const SimpleVectorBase<T>& sv  = dynamic_cast<const SimpleVectorBase<T>&>(*this->vec);
+  SimpleVectorBase<T>& svx = dynamic_cast<SimpleVectorBase<T>&>(*vx.vec);
+  SimpleVectorBase<T>& svy = dynamic_cast<SimpleVectorBase<T>&>(*vy.vec);
+  SimpleVectorBase<T>& svz = dynamic_cast<SimpleVectorBase<T>&>(*vz.vec);
 
   int n1 = svx.length();
   int n2 = svy.length();
@@ -244,41 +252,41 @@ StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& 
   int n4 = 0;
   int n5 = 0;
 
-  assert(n1+n2+n3 <= sv.length());
-  assert(sizeof(double) == sizeof(sv[0]));
+  assert( n1 + n2 + n3 <= sv.length() );
+  assert( sizeof(T) == sizeof(sv[0]) );
 
-  if(n1>0)
-    memcpy(&svx[0], &sv[0], n1*sizeof(double));
+  if(n1 > 0)
+    memcpy(&svx[0], &sv[0], n1 * sizeof(T));
 
-  if(n2>0)
-    memcpy(&svy[0], &sv[n1], n2*sizeof(double));
+  if(n2 > 0)
+    memcpy(&svy[0], &sv[n1], n2 * sizeof(T));
 
-  if(n3>0)
-    memcpy(&svz[0], &sv[n1+n2], n3*sizeof(double));
+  if(n3 > 0)
+    memcpy(&svz[0], &sv[n1 + n2], n3 * sizeof(T));
 
   if( vy.vecl )
   {
-     SimpleVector& svyl = dynamic_cast<SimpleVector&>(*vy.vecl);
+     SimpleVectorBase<T>& svyl = dynamic_cast<SimpleVectorBase<T>&>(*vy.vecl);
      n4 = svyl.length();
      assert(n4 >= 0);
 
      if( n4 > 0 )
-       memcpy(&svyl[0], &sv[n1+n2+n3], n4*sizeof(double));
+       memcpy(&svyl[0], &sv[n1 + n2 + n3], n4 * sizeof(T));
   }
 
   if( vz.vecl )
   {
-     SimpleVector& svzl = dynamic_cast<SimpleVector&>(*vz.vecl);
+     SimpleVectorBase<T>& svzl = dynamic_cast<SimpleVectorBase<T>&>(*vz.vecl);
      n5 = svzl.length();
      assert(n5>= 0);
 
      if( n5 > 0 )
-       memcpy(&svzl[0], &sv[n1+n2+n3+n4], n5*sizeof(double));
+       memcpy(&svzl[0], &sv[n1 + n2 + n3 + n4], n5 * sizeof(T));
   }
 
-  assert(n1+n2+n3+n4+n5 == sv.length());
+  assert(n1 + n2 + n3 + n4 + n5 == sv.length());
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it = 0; it < children.size(); it++) {
     children[it]->jointCopyToLinkCons(*vx.children[it],
 			      *vy.children[it],
 			      *vz.children[it]);
@@ -286,29 +294,32 @@ StochVector::jointCopyToLinkCons(StochVector& vx, StochVector& vy, StochVector& 
 }
 
 
-int StochVector::isKindOf( int kind ) const
+template<typename T>
+bool StochVectorBase<T>::isKindOf( int kind ) const
 {
   return kind==kStochVector;
 }
 
-void StochVector::scale( double alpha )
+template<typename T>
+void StochVectorBase<T>::scale( T alpha )
 {
   vec->scale(alpha);
 
   if( vecl ) vecl->scale(alpha);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->scale(alpha);
 }
 
-bool StochVector::isZero() const
+template<typename T>
+bool StochVectorBase<T>::isZero() const
 {
 	bool is_zero = true;
 
-	is_zero = (is_zero && dynamic_cast<SimpleVector&>(*vec).isZero());
+	is_zero = (is_zero && dynamic_cast<SimpleVectorBase<T>&>(*vec).isZero());
 
 	if(vecl)
-		is_zero = (is_zero && dynamic_cast<SimpleVector&>(*vecl).isZero());
+		is_zero = (is_zero && dynamic_cast<SimpleVectorBase<T>&>(*vecl).isZero());
 
 	for( size_t node = 0; node < children.size(); ++node )
 		is_zero = (is_zero && children[node]->isZero());
@@ -316,35 +327,39 @@ bool StochVector::isZero() const
 	return is_zero;
 }
 
-void StochVector::setToZero()
+template<typename T>
+void StochVectorBase<T>::setToZero()
 {
   vec->setToZero();
 
   if( vecl ) vecl->setToZero();
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it<children.size(); it++)
     children[it]->setToZero();
 }
 
-void StochVector::setToConstant( double c)
+template<typename T>
+void StochVectorBase<T>::setToConstant( T c)
 {
   vec->setToConstant(c);
 
   if( vecl ) vecl->setToConstant(c);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it<children.size(); it++)
     children[it]->setToConstant(c);
 }
 
-void StochVector::randomize( double alpha, double beta, double *ix )
+template<typename T>
+void StochVectorBase<T>::randomize( T alpha, T beta, T *ix )
 {
   assert( "Not implemented" && 0 );
 }
 
 
-void StochVector::copyFrom( OoqpVector& v_ )
+template<typename T>
+void StochVectorBase<T>::copyFrom( const OoqpVectorBase<T>& v_ )
 {
-  StochVector& v = dynamic_cast<StochVector&>(v_);
+  const StochVectorBase<T>& v = dynamic_cast<const StochVectorBase<T>&>(v_);
 
   this->vec->copyFrom(*v.vec);
 
@@ -357,13 +372,14 @@ void StochVector::copyFrom( OoqpVector& v_ )
   //assert tree compatibility
   assert(children.size() == v.children.size());
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it  =0; it < children.size(); it++)
     children[it]->copyFrom(*v.children[it]);
 }
 
-void StochVector::copyFromAbs(const OoqpVector& v_ )
+template<typename T>
+void StochVectorBase<T>::copyFromAbs(const OoqpVectorBase<T>& v_ )
 {
-  const StochVector& v = dynamic_cast<const StochVector&>(v_);
+  const StochVectorBase<T>& v = dynamic_cast<const StochVectorBase<T>&>(v_);
 
   this->vec->copyFromAbs(*v.vec);
 
@@ -376,22 +392,23 @@ void StochVector::copyFromAbs(const OoqpVector& v_ )
   //assert tree compatibility
   assert(children.size() == v.children.size());
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->copyFromAbs(*v.children[it]);
 }
 
-double StochVector::infnorm() const
+template<typename T>
+T StochVectorBase<T>::infnorm() const
 {
-  double infnrm;
+  T infnrm;
 
   infnrm = 0.0;
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     infnrm = std::max(infnrm, children[it]->infnorm());
 
   if(iAmDistrib) {
-    double infnrmG=0.0;
-    MPI_Allreduce(&infnrm, &infnrmG, 1, MPI_DOUBLE, MPI_MAX, mpiComm);
+    T infnrmG = PIPS_MPIgetMax(infnrm, mpiComm);
+    // MPI_Allreduce(&infnrm, &infnrmG, 1, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
     infnrm = infnrmG;
   }
 
@@ -402,12 +419,13 @@ double StochVector::infnorm() const
   return infnrm;
 }
 
-double StochVector::twonorm() const
+template<typename T>
+double StochVectorBase<T>::twonorm() const
 {
 #if 0
   return sqrt(this->dotProductWith(*this));
 #else
-  const double scale = this->infnorm();
+  const T scale = this->infnorm();
   assert(scale >= 0.0);
 
   if( PIPSisZero(scale) )
@@ -417,17 +435,18 @@ double StochVector::twonorm() const
 #endif
 }
 
-double StochVector::onenorm() const
+template<typename T>
+T StochVectorBase<T>::onenorm() const
 {
-  double onenrm = 0.0;
+  T onenrm = 0.0;
 
   for( size_t it = 0; it < children.size(); it++ )
      onenrm += children[it]->onenorm();
 
   if( iAmDistrib == 1 )
   {
-     double sum;
-     MPI_Allreduce(&onenrm, &sum, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+     T sum = PIPS_MPIgetSum(onenrm, mpiComm);
+     // MPI_Allreduce(&onenrm, &sum, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
      onenrm = sum;
   }
 
@@ -440,11 +459,12 @@ double StochVector::onenorm() const
 }
 
 
-void StochVector::min( double& m, int& index ) const
+template<typename T>
+void StochVectorBase<T>::min( T& m, int& index ) const
 {
-  double lMin; int lInd;
+  T lMin; int lInd;
 
-  if(NULL==parent) {
+  if(NULL == parent) {
     vec->min(m,index);
     if( vecl )
     {
@@ -460,7 +480,7 @@ void StochVector::min( double& m, int& index ) const
 
     if( vecl )
     {
-       double lMinlink;
+       T lMinlink;
        int lIndlink;
        vecl->min(lMinlink,lIndlink);
        if( lMinlink < lMin )
@@ -470,27 +490,28 @@ void StochVector::min( double& m, int& index ) const
        }
     }
 
-    if(lMin<m) {
+    if(lMin < m) {
       m = lMin;
       index = lInd + parent->n - this->n;
     }
   }
 
-  for(size_t it=0; it<children.size(); it++) {
+  for(size_t it  =0; it < children.size(); it++) {
     children[it]->min(m,index);
   }
 
-  if(iAmDistrib==1) {
-    double minG;
-    MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+  if(iAmDistrib == 1) {
+    T minG = PIPS_MPIgetMin(m, mpiComm);
+    // MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
     m = minG;
   }
 }
 
 
-void StochVector::max( double& m, int& index ) const
+template<typename T>
+void StochVectorBase<T>::max( T& m, int& index ) const
 {
-   double lMax;
+   T lMax;
    int lInd;
 
    if( NULL == parent )
@@ -512,7 +533,7 @@ void StochVector::max( double& m, int& index ) const
 
       if( vecl )
       {
-         double lMaxlink;
+         T lMaxlink;
          int lIndlink;
          vecl->max(lMaxlink, lIndlink);
          if( lMaxlink > lMax )
@@ -534,15 +555,16 @@ void StochVector::max( double& m, int& index ) const
 
    if( iAmDistrib == 1 )
    {
-      double maxG;
-      MPI_Allreduce(&m, &maxG, 1, MPI_DOUBLE, MPI_MAX, mpiComm);
+      T maxG = PIPS_MPIgetMax(m, mpiComm);
+      // MPI_Allreduce(&m, &maxG, 1, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
       m = maxG;
    }
 }
 
-void StochVector::absminVecUpdate(OoqpVector& absminvec) const
+template<typename T>
+void StochVectorBase<T>::absminVecUpdate(OoqpVectorBase<T>& absminvec) const
 {
-   StochVector& absminvecStoch = dynamic_cast<StochVector&>(absminvec);
+   StochVectorBase<T>& absminvecStoch = dynamic_cast<StochVectorBase<T>&>(absminvec);
    assert(absminvecStoch.children.size() == children.size());
 
    if( vecl )
@@ -557,9 +579,10 @@ void StochVector::absminVecUpdate(OoqpVector& absminvec) const
       children[it]->absminVecUpdate(*(absminvecStoch.children[it]));
 }
 
-void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec) const
+template<typename T>
+void StochVectorBase<T>::absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const
 {
-   StochVector& absmaxvecStoch = dynamic_cast<StochVector&>(absmaxvec);
+   StochVectorBase<T>& absmaxvecStoch = dynamic_cast<StochVectorBase<T>&>(absmaxvec);
    assert(absmaxvecStoch.children.size() == children.size());
 
    if( vecl )
@@ -574,9 +597,10 @@ void StochVector::absmaxVecUpdate(OoqpVector& absmaxvec) const
       children[it]->absmaxVecUpdate(*(absmaxvecStoch.children[it]));
 }
 
-void StochVector::absmin(double& m) const
+template<typename T>
+void StochVectorBase<T>::absmin(T& m) const
 {
-   double lMin;
+   T lMin;
 
    if(NULL==parent) {
      vec->absmin(m);
@@ -591,13 +615,13 @@ void StochVector::absmin(double& m) const
 
      if( vecl )
      {
-        double lMinlink;
+        T lMinlink;
         vecl->absmin(lMinlink);
         if( lMinlink < lMin )
            lMin = lMinlink;
      }
 
-     if(lMin<m)
+     if(lMin < m)
        m = lMin;
    }
 
@@ -605,17 +629,18 @@ void StochVector::absmin(double& m) const
      children[it]->absmin(m);
    }
 
-   if(iAmDistrib==1) {
-     double minG;
-     MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+   if(iAmDistrib == 1) {
+     T minG = PIPS_MPIgetMin(m, mpiComm);
+     // MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
      m = minG;
    }
    assert( m >= 0.0 );
 }
 
-void StochVector::absminNonZero(double& m, double zero_eps) const
+template<typename T>
+void StochVectorBase<T>::absminNonZero(T& m, T zero_eps) const
 {
-   double min;
+   T min;
 
    assert(zero_eps >= 0.0);
 
@@ -647,10 +672,10 @@ void StochVector::absminNonZero(double& m, double zero_eps) const
 
    if( iAmDistrib == 1 )
    {
-      double minG;
+      T minG;
       if( m < 0.0 )
       {
-         min = std::numeric_limits<double>::max();
+         min = std::numeric_limits<T>::max();
       }
       else
       {
@@ -658,9 +683,10 @@ void StochVector::absminNonZero(double& m, double zero_eps) const
          assert(min >= zero_eps);
       }
 
-      MPI_Allreduce(&min, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+      minG = PIPS_MPIgetMin(min, mpiComm);
+      // MPI_Allreduce(&min, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
 
-      if( minG < std::numeric_limits<double>::max() )
+      if( minG < std::numeric_limits<T>::max() )
          m = minG;
       else
          m = -1.0;
@@ -669,16 +695,17 @@ void StochVector::absminNonZero(double& m, double zero_eps) const
 }
 
 
-double StochVector::stepbound(OoqpVector & v_, double maxStep )
+template<typename T>
+T StochVectorBase<T>::stepbound(const OoqpVectorBase<T> & v_, T maxStep ) const
 {
-  StochVector& v = dynamic_cast<StochVector&>(v_);
+  const StochVectorBase<T>& v = dynamic_cast<const StochVectorBase<T>&>(v_);
 
-  double step = this->vec->stepbound(*v.vec, maxStep);
+  T step = this->vec->stepbound(*v.vec, maxStep);
 
   if( vecl )
   {
      assert(v.vecl);
-     double stepl = vecl->stepbound(*v.vecl, maxStep);
+     T stepl = vecl->stepbound(*v.vecl, maxStep);
      if( stepl < step )
         step = stepl;
   }
@@ -686,35 +713,36 @@ double StochVector::stepbound(OoqpVector & v_, double maxStep )
   //check tree compatibility
   assert(children.size() == v.children.size());
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     step = children[it]->stepbound(*v.children[it], step);
 
-  if(iAmDistrib==1) {
-    double stepG=0.0;
-    MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+  if(iAmDistrib == 1) {
+    T stepG = PIPS_MPIgetMin(step, mpiComm);
+    // MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
     step = stepG;
   }
   return step;
 }
 
-double StochVector::findBlocking(OoqpVector & wstep_vec,
-			      OoqpVector & u_vec,
-			      OoqpVector & ustep_vec,
-			      double maxStep,
-			      double *w_elt,
-			      double *wstep_elt,
-			      double *u_elt,
-			      double *ustep_elt,
-			      int& first_or_second)
+template<typename T>
+T StochVectorBase<T>::findBlocking(const OoqpVectorBase<T> & wstep_vec,
+			      const OoqpVectorBase<T> & u_vec,
+			      const OoqpVectorBase<T> & ustep_vec,
+			      T maxStep,
+			      T *w_elt,
+			      T *wstep_elt,
+			      T *u_elt,
+			      T *ustep_elt,
+			      int& first_or_second) const
 {
-  StochVector& w = *this;
-  StochVector& u = dynamic_cast<StochVector&>(u_vec);
+  const StochVectorBase<T>& w = *this;
+  const StochVectorBase<T>& u = dynamic_cast<const StochVectorBase<T>&>(u_vec);
 
-  StochVector& wstep = dynamic_cast<StochVector&>(wstep_vec);
-  StochVector& ustep = dynamic_cast<StochVector&>(ustep_vec);
-  const double local_eps = 1e-14;
+  const StochVectorBase<T>& wstep = dynamic_cast<const StochVectorBase<T>&>(wstep_vec);
+  const StochVectorBase<T>& ustep = dynamic_cast<const StochVectorBase<T>&>(ustep_vec);
+  const T local_eps = 1e-14;
 
-  double step = maxStep;
+  T step = maxStep;
 
   // todo only if i am special?
   if( w.vecl )
@@ -734,11 +762,11 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 
   int nChildren=w.children.size();
   //check tree compatibility
-  assert( nChildren             - u.children.size() == 0);
+  assert( nChildren - u.children.size() == 0);
   assert( wstep.children.size() == ustep.children.size() );
-  assert( nChildren             - ustep.children.size() == 0);
+  assert( nChildren - ustep.children.size() == 0);
 
-  for(int it=0; it<nChildren; it++) {
+  for(int it = 0; it < nChildren; it++) {
     step = w.children[it]->findBlocking(*wstep.children[it],
 			       *u.children[it],
 			       *ustep.children[it],
@@ -747,17 +775,18 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
 			       wstep_elt,u_elt,ustep_elt, first_or_second);
   }
 
-  if(iAmDistrib==1) {
-    double stepG;
+  if(iAmDistrib == 1) {
+    T stepG;
     assert(PIPSisLE(step, 1.0));
     assert(PIPSisLE(0.0, step));
 
-    MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+    stepG = PIPS_MPIgetMin(step, mpiComm);
+    // MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); not working properly in templated version
     const bool iHaveMinStep = PIPSisEQ(step, stepG, local_eps);
 
     //we prefer a AllReduce instead of a bcast, since the step==stepG m
     //may occur for two different processes and a deadlock may occur.
-    double buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
+    T buffer[5]; //0-primal val, 1-primal step, 2-dual value, 3-step, 4-1st or 2nd
 
     int count;
     if( iHaveMinStep ) {
@@ -769,10 +798,11 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
     } else {
 
       count = 0;
-      buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
+      buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<T>::max();
     }
 
-    MPI_Allreduce(MPI_IN_PLACE, &count, 1, MPI_INT, MPI_SUM, mpiComm);
+    count = PIPS_MPIgetSum(count, mpiComm);
+    // MPI_Allreduce(MPI_IN_PLACE, &count, 1, MPI_INT, MPI_SUM, mpiComm); // not working properly in templated version
     assert(count >= 1);
 
     // is there more than one process with step==stepG?
@@ -788,15 +818,18 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
        else
           mineqrank = std::numeric_limits<int>::max();
 
-       MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
+       mineqrank = PIPS_MPIgetMin(mineqrank, mpiComm);
+       // MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm); // not working properly in templated version
 
        // step==stepG and not smallest rank?
       if( iHaveMinStep && mineqrank != myrank )
-         buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
+         buffer[0]=buffer[1]=buffer[2]=buffer[3]=buffer[4]= -std::numeric_limits<T>::max();
     }
 
-    double bufferOut[5];
-    MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm);
+    T bufferOut[5];
+    PIPS_MPImaxArray(buffer, bufferOut, 5, mpiComm);
+
+    //MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
     *w_elt = bufferOut[0]; *wstep_elt=bufferOut[1];
     *u_elt = bufferOut[2]; *ustep_elt=bufferOut[3];
@@ -814,20 +847,21 @@ double StochVector::findBlocking(OoqpVector & wstep_vec,
   return step;
 }
 
-void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
-			      const OoqpVector & u_vec,
-			      const OoqpVector & ustep_vec,
-			      double& maxStepPri, double& maxStepDual,
-			      double& w_elt_p, double& wstep_elt_p, double& u_elt_p, double& ustep_elt_p,
-				   double& w_elt_d, double& wstep_elt_d, double& u_elt_d, double& ustep_elt_d,
+template<typename T>
+void StochVectorBase<T>::findBlocking_pd(const OoqpVectorBase<T> & wstep_vec,
+			      const OoqpVectorBase<T> & u_vec,
+			      const OoqpVectorBase<T> & ustep_vec,
+			      T& maxStepPri, T& maxStepDual,
+			      T& w_elt_p, T& wstep_elt_p, T& u_elt_p, T& ustep_elt_p,
+				   T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
 				   bool& primalBlocking, bool& dualBlocking) const
 {
-  const StochVector& w = *this;
-  const StochVector& u = dynamic_cast<const StochVector&>(u_vec);
-  const double local_eps = 1e-14;
+  const StochVectorBase<T>& w = *this;
+  const StochVectorBase<T>& u = dynamic_cast<const StochVectorBase<T>&>(u_vec);
+  const T local_eps = 1e-14;
 
-  const StochVector& wstep = dynamic_cast<const StochVector&>(wstep_vec);
-  const StochVector& ustep = dynamic_cast<const StochVector&>(ustep_vec);
+  const StochVectorBase<T>& wstep = dynamic_cast<const StochVectorBase<T>&>(wstep_vec);
+  const StochVectorBase<T>& ustep = dynamic_cast<const StochVectorBase<T>&>(ustep_vec);
 
   // todo only if i am special?
   if( w.vecl )
@@ -865,18 +899,20 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
 
    if( iAmDistrib == 1 )
    {
-      double maxStepGlobalPri, maxStepGlobalDual;
+      T maxStepGlobalPri, maxStepGlobalDual;
       assert(PIPSisLE(maxStepPri, 1.0) && PIPSisLE(maxStepDual, 1.0));
       assert(PIPSisLE(0.0, maxStepPri) && PIPSisLE(0.0, maxStepDual));
 
-      MPI_Allreduce(&maxStepPri, &maxStepGlobalPri, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
-      MPI_Allreduce(&maxStepDual, &maxStepGlobalDual, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+      maxStepGlobalPri = PIPS_MPIgetMin(maxStepPri, mpiComm);
+      maxStepGlobalDual = PIPS_MPIgetMin(maxStepDual, mpiComm);
+      // MPI_Allreduce(&maxStepPri, &maxStepGlobalPri, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
+      // MPI_Allreduce(&maxStepDual, &maxStepGlobalDual, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
       const bool iHaveMinStepPri = PIPSisEQ(maxStepPri, maxStepGlobalPri, local_eps);
       const bool iHaveMinStepDual = PIPSisEQ(maxStepDual, maxStepGlobalDual, local_eps);
 
       //we prefer a AllReduce instead of a bcast, since the step==stepG
       //may occur for two different processes and a deadlock may occur.
-      double buffer[10];
+      T buffer[10];
       int count[2];
       //values for computation of the primal steplength:
       //0-primal val, 1-primal step, 2-dual value, 3-dual step, 4-primalBlocking
@@ -893,7 +929,7 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
       else
       {
          buffer[0] = buffer[1] = buffer[2] = buffer[3] = buffer[4] =
-               -std::numeric_limits<double>::max();
+               -std::numeric_limits<T>::max();
          count[0] = 0;
       }
 
@@ -912,11 +948,12 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
       else
       {
          buffer[5] = buffer[6] = buffer[7] = buffer[8] = buffer[9] =
-               -std::numeric_limits<double>::max();
+               -std::numeric_limits<T>::max();
          count[1] = 0;
       }
 
-      MPI_Allreduce(MPI_IN_PLACE, count, 2, MPI_INT, MPI_SUM, mpiComm);
+      PIPS_MPIsumArrayInPlace(count, 2, mpiComm);
+      // MPI_Allreduce(MPI_IN_PLACE, count, 2, MPI_INT, MPI_SUM, mpiComm);
 
       assert(count[0] >= 1 && count[1] >= 1);
 
@@ -933,11 +970,12 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
          else
             mineqrank = std::numeric_limits<int>::max();
 
-         MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
+          mineqrank = PIPS_MPIgetMin(mineqrank, mpiComm);
+         // MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
 
          // step==stepG and not smallest rank?
          if( iHaveMinStepPri && mineqrank != myrank )
-            buffer[0] = buffer[1] = buffer[2] = buffer[3]=buffer[4]= -std::numeric_limits<double>::max();
+            buffer[0] = buffer[1] = buffer[2] = buffer[3]=buffer[4]= -std::numeric_limits<T>::max();
       }
 
       // is there more than one process with maxStepDual==stepF?
@@ -950,15 +988,17 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
          else
             mineqrank = std::numeric_limits<int>::max();
 
-         MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
+          mineqrank = PIPS_MPIgetMin(mineqrank, mpiComm);
+         // MPI_Allreduce(MPI_IN_PLACE, &mineqrank, 1, MPI_INT, MPI_MIN, mpiComm);
 
          // stepDual==stepF and not smallest rank?
          if( iHaveMinStepDual && mineqrank != myrank )
-            buffer[5]=buffer[6]=buffer[7]=buffer[8]=buffer[9]= -std::numeric_limits<double>::max();
+            buffer[5]=buffer[6]=buffer[7]=buffer[8]=buffer[9]= -std::numeric_limits<T>::max();
       }
 
-      double bufferOut[10];
-      MPI_Allreduce(buffer, bufferOut, 10, MPI_DOUBLE, MPI_MAX, mpiComm);
+      T bufferOut[10];
+      PIPS_MPImaxArray(buffer, bufferOut, 10, mpiComm);
+      // MPI_Allreduce(buffer, bufferOut, 10, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
       w_elt_p = bufferOut[0];
       wstep_elt_p = bufferOut[1];
@@ -978,40 +1018,44 @@ void StochVector::findBlocking_pd(const OoqpVector & wstep_vec,
    }
 }
 
-void StochVector::componentMult( OoqpVector& v_ )
+template<typename T>
+void StochVectorBase<T>::componentMult( const OoqpVectorBase<T>& v_ )
 {
-  StochVector& v = dynamic_cast<StochVector&>(v_);
+  const StochVectorBase<T>& v = dynamic_cast<const StochVectorBase<T>&>(v_);
   assert(v.children.size() == children.size());
 
   vec->componentMult(*v.vec);
   if( vecl ) vecl->componentMult(*v.vecl);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->componentMult(*v.children[it]);
 }
 
-void StochVector::componentDiv ( OoqpVector& v_ )
+template<typename T>
+void StochVectorBase<T>::componentDiv ( const OoqpVectorBase<T>& v_ )
 {
-  StochVector& v = dynamic_cast<StochVector&>(v_);
+  const StochVectorBase<T>& v = dynamic_cast<const StochVectorBase<T>&>(v_);
   assert(v.children.size() == children.size());
 
   vec->componentDiv(*v.vec);
   if( vecl ) vecl->componentDiv(*v.vecl);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->componentDiv(*v.children[it]);
 }
 
-void StochVector::scalarMult( double num )
+template<typename T>
+void StochVectorBase<T>::scalarMult( T num )
 {
   vec->scalarMult(num);
   if( vecl ) vecl->scalarMult(num);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->scalarMult(num);
 }
 
-void StochVector::writeToStreamAll( ostream& out ) const
+template<typename T>
+void StochVectorBase<T>::writeToStreamAll( std::ostream& out ) const
 {
    int rank;
    MPI_Comm_rank(mpiComm, &rank);
@@ -1019,11 +1063,11 @@ void StochVector::writeToStreamAll( ostream& out ) const
    MPI_Comm_size(mpiComm, &world_size);
    MPI_Status status;
    int l;
-   stringstream sout;
+   std::stringstream sout;
 
    if( rank == 0)
    {
-      sout << "----" << endl;
+      sout << "----" << std::endl;
       vec->writeToStreamAllStringStream(sout);
 
       for( size_t it = 0; it < children.size(); it++ )
@@ -1038,16 +1082,16 @@ void StochVector::writeToStreamAll( ostream& out ) const
          MPI_Get_count(&status, MPI_CHAR, &l);
          char *buf = new char[l];
          MPI_Recv(buf, l, MPI_CHAR, p, p, mpiComm, &status);
-         string rowPartFromP(buf, l);
+         std::string rowPartFromP(buf, l);
          out << rowPartFromP;
          delete[] buf;
       }
       if( vecl )
       {
-         sout << "---" << endl;
+         sout << "---" << std::endl;
          vecl->writeToStreamAllStringStream(sout);
       }
-      sout << "----" << endl;
+      sout << "----" << std::endl;
       out << sout.str();
    }
    else if( iAmDistrib==1 )
@@ -1060,38 +1104,41 @@ void StochVector::writeToStreamAll( ostream& out ) const
 
    }
 
-   if( iAmDistrib==1 )
+   if( iAmDistrib == 1 )
       MPI_Barrier(mpiComm);
 }
 
-void StochVector::writeToStreamAllChild( stringstream& sout ) const
+template<typename T>
+void StochVectorBase<T>::writeToStreamAllChild( std::stringstream& sout ) const
 {
-   sout << "--" << endl;
+   sout << "--" << std::endl;
    vec->writeToStreamAllStringStream(sout);
 
    for( size_t it = 0; it < children.size(); it++ ){
-      sout << "-- " << endl;
+      sout << "-- " << std::endl;
       children[it]->writeToStreamAllChild(sout);
    }
 
    if( vecl )
    {
-      sout << "---" << endl;
+      sout << "---" << std::endl;
       vecl->writeToStreamAllStringStream(sout);
    }
 }
 
-void StochVector::writeToStream( ostream& out ) const
+template<typename T>
+void StochVectorBase<T>::writeToStream( std::ostream& out ) const
 {
-  out << "---" << endl;
+  out << "---" << std::endl;
   vec->writeToStream(out);
   if( vecl ) vecl->writeToStream(out);
-  out << "~~~" << endl;
+  out << "~~~" << std::endl;
   //for(size_t it=0; it<children.size(); it++)
   //  children[it]->writeToStream(out);
 }
 
-void StochVector::writefToStream( ostream& out,
+template<typename T>
+void StochVectorBase<T>::writefToStream( std::ostream& out,
 				  const char format[] ) const
 {
   vec->writefToStream(out, format);
@@ -1101,11 +1148,12 @@ void StochVector::writefToStream( ostream& out,
     children[it]->writefToStream(out, format);
 }
 
-void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs) const
+template<typename T>
+void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, const OoqpVectorBase<T>* irhs) const
 {
    int myRank;
    MPI_Comm_rank(mpiComm, &myRank);
-   string rt;
+   std::string rt;
    if( rowType == 0 )
       rt = "E";
    else if( rowType == 1 )
@@ -1115,26 +1163,26 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
    else
       assert(0);
 
-   StochVector* ic = NULL;
+   const StochVectorBase<T>* ic = NULL;
    if( irhs )
-      ic = dynamic_cast<StochVector*>(irhs);
+      ic = dynamic_cast<const StochVectorBase<T>*>(irhs);
 
-   if( myRank==0 )
+   if( myRank == 0 )
    {
-      string rowNameStub = " B row_";
-      rowNameStub+= rt;
-      rowNameStub+="_R_";
+      std::string rowNameStub = " B row_";
+      rowNameStub += rt;
+      rowNameStub += "_R_";
       if( irhs && ic )
-         vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<SimpleVector*>(ic->vec));
+         vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->vec));
       else
          vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
       if(vecl)
       {
          rowNameStub = " B row_";
-         rowNameStub+= rt;
-         rowNameStub+="_L_";
+         rowNameStub += rt;
+         rowNameStub += "_L_";
          if( irhs )
-            vecl->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<SimpleVector*>(ic->vecl));
+            vecl->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->vecl));
          else
             vecl->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
       }
@@ -1143,39 +1191,41 @@ void StochVector::writeMPSformatRhs(ostream& out, int rowType, OoqpVector* irhs)
    {
       std::stringstream sstm;
       sstm << " B row_" << rt << "_" << it << "_";
-      string rowNameStub = sstm.str();
+      std::string rowNameStub = sstm.str();
       if( irhs )
-         children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<SimpleVector*>(ic->children[it]->vec));
+         children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->children[it]->vec));
       else
          children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
    }
 }
 
-void StochVector::writeMPSformatBounds(ostream& out, OoqpVector* ix, bool upperBound) const
+template<typename T>
+void StochVectorBase<T>::writeMPSformatBounds(std::ostream& out, const OoqpVectorBase<T>* ix, bool upperBound) const
 {
    int myRank;
    MPI_Comm_rank(mpiComm, &myRank);
 
-   StochVector* ixStoch = dynamic_cast<StochVector*>(ix);
+   const StochVectorBase<T>* ixStoch = dynamic_cast<const StochVectorBase<T>*>(ix);
 
    if( myRank==0 )
    {
-      string varNameStub = "var_L_";
+      std::string varNameStub = "var_L_";
       vec->writeMPSformatBoundsWithVar(out, varNameStub, (ixStoch->vec), upperBound);
    }
    for(int it=0; it<(int)children.size(); it++)
    {
       std::stringstream sstm2;
       sstm2 << "var_" << it << "_";
-      string varNameStub = sstm2.str();
+      std::string varNameStub = sstm2.str();
       children[it]->vec->writeMPSformatBoundsWithVar(out, varNameStub, (ixStoch->children[it]->vec), upperBound);
    }
 }
 
 /** this += alpha * x */
-void StochVector::axpy  ( double alpha, OoqpVector& x_ )
+template<typename T>
+void StochVectorBase<T>::axpy ( T alpha, const OoqpVectorBase<T>& x_ )
 {
-  StochVector& x = dynamic_cast<StochVector&>(x_);
+  const StochVectorBase<T>& x = dynamic_cast<const StochVectorBase<T>&>(x_);
   assert(x.children.size() == children.size());
 
   if( alpha == 0.0)
@@ -1189,15 +1239,16 @@ void StochVector::axpy  ( double alpha, OoqpVector& x_ )
      vecl->axpy(alpha, *x.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it<children.size(); it++)
     children[it]->axpy(alpha, *x.children[it]);
 }
 
 /** this += alpha * x * z */
-void StochVector::axzpy ( double alpha, OoqpVector& x_, OoqpVector& z_ )
+template<typename T>
+void StochVectorBase<T>::axzpy ( T alpha, const OoqpVectorBase<T>& x_, const OoqpVectorBase<T>& z_ )
 {
-  StochVector& x = dynamic_cast<StochVector&>(x_);
-  StochVector& z = dynamic_cast<StochVector&>(z_);
+  const StochVectorBase<T>& x = dynamic_cast<const StochVectorBase<T>&>(x_);
+  const StochVectorBase<T>& z = dynamic_cast<const StochVectorBase<T>&>(z_);
   assert(x.children.size() == children.size());
   assert(z.children.size() == children.size());
 
@@ -1210,15 +1261,16 @@ void StochVector::axzpy ( double alpha, OoqpVector& x_, OoqpVector& z_ )
      vecl->axzpy(alpha, *x.vecl, *z.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->axzpy(alpha, *x.children[it], *z.children[it]);
 }
 
 /** this += alpha * x / z */
-void StochVector::axdzpy( double alpha, OoqpVector& x_, OoqpVector& z_ )
+template<typename T>
+void StochVectorBase<T>::axdzpy( T alpha, const OoqpVectorBase<T>& x_, const OoqpVectorBase<T>& z_ )
 {
-  StochVector& x = dynamic_cast<StochVector&>(x_);
-  StochVector& z = dynamic_cast<StochVector&>(z_);
+  const StochVectorBase<T>& x = dynamic_cast<const StochVectorBase<T>&>(x_);
+  const StochVectorBase<T>& z = dynamic_cast<const StochVectorBase<T>&>(z_);
   assert(x.children.size() == children.size());
   assert(z.children.size() == children.size());
 
@@ -1231,49 +1283,53 @@ void StochVector::axdzpy( double alpha, OoqpVector& x_, OoqpVector& z_ )
     vecl->axdzpy(alpha, *x.vecl, *z.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->axdzpy(alpha, *x.children[it], *z.children[it]);
 }
 
 
-void StochVector::addConstant( double c )
+template<typename T>
+void StochVectorBase<T>::addConstant( T c )
 {
   vec->addConstant(c);
 
   if( vecl ) vecl->addConstant(c);
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->addConstant(c);
 }
 
 
-void StochVector::gondzioProjection( double rmin, double rmax )
+template<typename T>
+void StochVectorBase<T>::gondzioProjection( T rmin, T rmax )
 {
   vec->gondzioProjection( rmin, rmax );
 
 
   if( vecl ) vecl->gondzioProjection( rmin, rmax );
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->gondzioProjection( rmin, rmax );
 }
 
-double StochVector::dotProductWith( const OoqpVector& v_ ) const
+template<typename T>
+T StochVectorBase<T>::dotProductWith( const OoqpVectorBase<T>& v_ ) const
 {
-  const StochVector& v = dynamic_cast<const StochVector&>(v_);
+  const StochVectorBase<T>& v = dynamic_cast<const StochVectorBase<T>&>(v_);
   assert(v.children.size() == children.size());
 
-  double dotProd=0.0;
+  T dotProd = 0.0;
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     dotProd += children[it]->dotProductWith(*v.children[it]);
 
   assert(!vecl || v.vecl);
 
-  if(iAmDistrib==1) {
-    double dotProdG = 0.0;
+  if(iAmDistrib == 1) {
+    T dotProdG = 0.0;
 
-    MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+    dotProdG = PIPS_MPIgetSum(dotProd, mpiComm);
+    // MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
 
     dotProd = dotProdG;
   }
@@ -1286,17 +1342,17 @@ double StochVector::dotProductWith( const OoqpVector& v_ ) const
   return dotProd;
 }
 
-double StochVector::dotProductSelf(double scaleFactor) const
+template<typename T>
+T StochVectorBase<T>::dotProductSelf(T scaleFactor) const
 {
-  double dotSelf = 0.0;
+  T dotSelf = 0.0;
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
      dotSelf += children[it]->dotProductSelf(scaleFactor);
 
-  if(iAmDistrib==1) {
-    double dotSelfG = 0.0;
-
-    MPI_Allreduce(&dotSelf, &dotSelfG, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+  if(iAmDistrib == 1) {
+    T dotSelfG = PIPS_MPIgetSum(dotSelf, mpiComm);
+    // MPI_Allreduce(&dotSelf, &dotSelfG, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
 
     dotSelf = dotSelfG;
   }
@@ -1311,23 +1367,25 @@ double StochVector::dotProductSelf(double scaleFactor) const
 
 /** Return the inner product <this + alpha * mystep, yvec + beta * ystep >
  */
-double StochVector::shiftedDotProductWith( double alpha, OoqpVector& mystep_,
-					OoqpVector& yvec_,
-					double beta,  OoqpVector& ystep_ )
+template<typename T>
+T StochVectorBase<T>::shiftedDotProductWith( T alpha, const OoqpVectorBase<T>& mystep_,
+					const OoqpVectorBase<T>& yvec_,
+					T beta,  const OoqpVectorBase<T>& ystep_ ) const
 {
-  StochVector& mystep = dynamic_cast<StochVector&>(mystep_);
-  StochVector& yvec   = dynamic_cast<StochVector&>(yvec_);
-  StochVector& ystep  = dynamic_cast<StochVector&>(ystep_);
+  const StochVectorBase<T>& mystep = dynamic_cast<const StochVectorBase<T>&>(mystep_);
+  const StochVectorBase<T>& yvec   = dynamic_cast<const StochVectorBase<T>&>(yvec_);
+  const StochVectorBase<T>& ystep  = dynamic_cast<const StochVectorBase<T>&>(ystep_);
 
 
-  double dotProd = 0.0;
+  T dotProd = 0.0;
   for(size_t it=0; it<children.size(); it++)
     dotProd += children[it]->shiftedDotProductWith(alpha, *mystep.children[it],
 						   *yvec.children[it],
 						   beta, *ystep.children[it]);
   if(iAmDistrib) {
-    double dotProdG=0.0;
-    MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm);
+    T dotProdG=0.0;
+    dotProdG = PIPS_MPIgetSum(dotProd, mpiComm);
+    // MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
     dotProd = dotProdG;
   }
 
@@ -1346,26 +1404,29 @@ double StochVector::shiftedDotProductWith( double alpha, OoqpVector& mystep_,
   return dotProd;
 }
 
-void StochVector::negate()
+template<typename T>
+void StochVectorBase<T>::negate()
 {
   vec->negate();
   if( vecl ) vecl->negate();
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->negate();
 }
 
-void StochVector::invert()
+template<typename T>
+void StochVectorBase<T>::invert()
 {
   vec->invert();
 
   if( vecl ) vecl->invert();
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->invert();
 }
 
-void StochVector::invertSave(double zeroReplacementVal)
+template<typename T>
+void StochVectorBase<T>::invertSave(T zeroReplacementVal)
 {
   vec->invertSave(zeroReplacementVal);
 
@@ -1375,7 +1436,8 @@ void StochVector::invertSave(double zeroReplacementVal)
     children[it]->invertSave(zeroReplacementVal);
 }
 
-void StochVector::applySqrt()
+template<typename T>
+void StochVectorBase<T>::applySqrt()
 {
    vec->applySqrt();
 
@@ -1385,7 +1447,8 @@ void StochVector::applySqrt()
       children[it]->applySqrt();
 }
 
-void StochVector::roundToPow2()
+template<typename T>
+void StochVectorBase<T>::roundToPow2()
 {
   vec->roundToPow2();
 
@@ -1395,24 +1458,26 @@ void StochVector::roundToPow2()
      children[it]->roundToPow2();
 }
 
-int StochVector::allPositive()
+template<typename T>
+bool StochVectorBase<T>::allPositive() const
 {
   //!parallel
-  int allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : 1);
-  if (!allPos) return 0;
+  bool allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : true);
+  if (!allPos) return false;
 
-  for(size_t it=0; it<children.size() && allPos; it++)
+  for(size_t it = 0; it < children.size() && allPos; it++)
     allPos = children[it]->allPositive();
 
   return allPos;
 }
 
-int StochVector::matchesNonZeroPattern( OoqpVector& select_ )
+template<typename T>
+bool StochVectorBase<T>::matchesNonZeroPattern( const OoqpVectorBase<T>& select_ ) const
 {
-  StochVector& select = dynamic_cast<StochVector&>(select_);
+  const StochVectorBase<T>& select = dynamic_cast<const StochVectorBase<T>&>(select_);
   assert(children.size() == select.children.size());
 
-  int match = vec->matchesNonZeroPattern(*select.vec);
+  bool match = vec->matchesNonZeroPattern(*select.vec);
 
   if( vecl )
   {
@@ -1420,17 +1485,18 @@ int StochVector::matchesNonZeroPattern( OoqpVector& select_ )
      match = match && vecl->matchesNonZeroPattern(*select.vecl);
   }
 
-  if(!match) return 0;
+  if(!match) return false;
 
-  for(size_t it=0; it<children.size() && match; it++)
+  for(size_t it = 0; it < children.size() && match; it++)
     match = children[it]->matchesNonZeroPattern(*select.children[it]);
 
   return match;
 }
 
-void StochVector::selectNonZeros( OoqpVector& select_ )
+template<typename T>
+void StochVectorBase<T>::selectNonZeros( const OoqpVectorBase<T>& select_ )
 {
-  StochVector& select = dynamic_cast<StochVector&>(select_);
+  const StochVectorBase<T>& select = dynamic_cast<const StochVectorBase<T>&>(select_);
   assert(children.size() == select.children.size());
 
   vec->selectNonZeros(*select.vec);
@@ -1441,21 +1507,23 @@ void StochVector::selectNonZeros( OoqpVector& select_ )
      vecl->selectNonZeros(*select.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->selectNonZeros(*select.children[it]);
 }
 
-long long StochVector::numberOfNonzeros()
+template<typename T>
+long long StochVectorBase<T>::numberOfNonzeros() const
 {
   //!opt - store the number of nnz to avoid communication
   long long nnz = 0;
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     nnz += children[it]->numberOfNonzeros();
 
   if(iAmDistrib) {
     long long nnzG = 0;
-    MPI_Allreduce(&nnz, &nnzG, 1, MPI_LONG_LONG, MPI_SUM, mpiComm);
+    nnzG = PIPS_MPIgetSum(nnz, mpiComm);
+    // MPI_Allreduce(&nnz, &nnzG, 1, MPI_LONG_LONG, MPI_SUM, mpiComm);
     nnz = nnzG;
   }
   nnz += vec->numberOfNonzeros();
@@ -1464,9 +1532,11 @@ long long StochVector::numberOfNonzeros()
 
   return nnz;
 }
-void StochVector::addSomeConstants( double c, OoqpVector& select_ )
+
+template<typename T>
+void StochVectorBase<T>::addSomeConstants( T c, const OoqpVectorBase<T>& select_ )
 {
-  StochVector& select = dynamic_cast<StochVector&>(select_);
+  const StochVectorBase<T>& select = dynamic_cast<const StochVectorBase<T>&>(select_);
   assert(children.size() == select.children.size());
 
   vec->addSomeConstants(c, *select.vec);
@@ -1477,23 +1547,25 @@ void StochVector::addSomeConstants( double c, OoqpVector& select_ )
      vecl->addSomeConstants(c, *select.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->addSomeConstants(c, *select.children[it]);
 }
 
-void StochVector::writefSomeToStream( ostream& out,
+template<typename T>
+void StochVectorBase<T>::writefSomeToStream( std::ostream& out,
 			 const char format[],
-			 OoqpVector& select_ ) const
+			 const OoqpVectorBase<T>& select_ ) const
 {
   assert( "Have not been yet implemented" && 0 );
 }
 
-void StochVector::axdzpy( double alpha, OoqpVector& x_,
-		       OoqpVector& z_, OoqpVector& select_ )
+template<typename T>
+void StochVectorBase<T>::axdzpy( T alpha, const OoqpVectorBase<T>& x_,
+		       const OoqpVectorBase<T>& z_, const OoqpVectorBase<T>& select_ )
 {
-  StochVector& select = dynamic_cast<StochVector&>(select_);
-  StochVector&      x = dynamic_cast<StochVector&>(x_);
-  StochVector&      z = dynamic_cast<StochVector&>(z_);
+  const StochVectorBase<T>& select = dynamic_cast<const StochVectorBase<T>&>(select_);
+  const StochVectorBase<T>&      x = dynamic_cast<const StochVectorBase<T>&>(x_);
+  const StochVectorBase<T>&      z = dynamic_cast<const StochVectorBase<T>&>(z_);
 
   assert(children.size() == select.children.size());
   assert(children.size() == x.     children.size());
@@ -1509,18 +1581,19 @@ void StochVector::axdzpy( double alpha, OoqpVector& x_,
      vecl->axdzpy(alpha, *x.vecl, *z.vecl, *select.vecl);
   }
 
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->axdzpy(alpha, *x.children[it], *z.children[it], *select.children[it]);
 }
 
-int StochVector::somePositive( OoqpVector& select_ )
+template<typename T>
+bool StochVectorBase<T>::somePositive( const OoqpVectorBase<T>& select_ ) const
 {
-  StochVector& select = dynamic_cast<StochVector&>(select_);
+  const StochVectorBase<T>& select = dynamic_cast<const StochVectorBase<T>&>(select_);
   assert(children.size() == select.children.size());
 
   //!parallel stuff needed
 
-  int somePos = vec->somePositive(*select.vec);
+  bool somePos = vec->somePositive(*select.vec);
 
   if( vecl )
   {
@@ -1528,16 +1601,17 @@ int StochVector::somePositive( OoqpVector& select_ )
     somePos = somePos && vecl->somePositive(*select.vecl);
   }
 
-  for(size_t it=0; it<children.size() && somePos; it++)
+  for(size_t it = 0; it < children.size() && somePos; it++)
     somePos = children[it]->somePositive(*select.children[it]);
 
   return somePos;
 }
 
-void StochVector::divideSome( OoqpVector& div_, OoqpVector& select_ )
+template<typename T>
+void StochVectorBase<T>::divideSome( const OoqpVectorBase<T>& div_, const OoqpVectorBase<T>& select_ )
 {
-  StochVector& div    = dynamic_cast<StochVector&>(div_);
-  StochVector& select = dynamic_cast<StochVector&>(select_);
+  const StochVectorBase<T>& div    = dynamic_cast<const StochVectorBase<T>&>(div_);
+  const StochVectorBase<T>& select = dynamic_cast<const StochVectorBase<T>&>(select_);
 
   assert(children.size() == div.   children.size());
   assert(children.size() == select.children.size());
@@ -1555,29 +1629,33 @@ void StochVector::divideSome( OoqpVector& div_, OoqpVector& select_ )
     children[it]->divideSome(*div.children[it], *select.children[it]);
 }
 
-void StochVector::copyIntoArray( double v[] ) const
+template<typename T>
+void StochVectorBase<T>::copyIntoArray( T v[] ) const
 {
   assert( "Not supported" && 0 );
 }
 
-void StochVector::copyFromArray( double v[] )
+template<typename T>
+void StochVectorBase<T>::copyFromArray( const T v[] )
 {
   assert( "Not supported" && 0 );
 }
 
-void StochVector::copyFromArray( char v[] )
+template<typename T>
+void StochVectorBase<T>::copyFromArray( const char v[] )
 {
   assert( "Not supported" && 0 );
 }
 
-void StochVector::removeEntries( const OoqpVector& select )
+template<typename T>
+void StochVectorBase<T>::removeEntries( const OoqpVectorBase<T>& select )
 {
-   const StochVector& selectStoch = dynamic_cast<const StochVector&>(select);
+   const StochVectorBase<T>& selectStoch = dynamic_cast<const StochVectorBase<T>&>(select);
 
    assert(children.size() == selectStoch.children.size());
 
    vec->removeEntries(*selectStoch.vec);
-   n = vec->n;
+   this->n = vec->n;
 
    if( vecl )
    {
@@ -1588,24 +1666,27 @@ void StochVector::removeEntries( const OoqpVector& select )
    for( size_t it = 0; it < children.size(); it++ )
    {
       children[it]->removeEntries(*selectStoch.children[it]);
-      n += children[it]->n;
+      this->n += children[it]->n;
    }
 }
 
-void StochVector::permuteVec0Entries(const std::vector<unsigned int>& permvec)
+template<typename T>
+void StochVectorBase<T>::permuteVec0Entries(const std::vector<unsigned int>& permvec)
 {
-   dynamic_cast<SimpleVector*>(vec)->permuteEntries(permvec);
+   dynamic_cast<SimpleVectorBase<T>*>(vec)->permuteEntries(permvec);
 }
 
-void StochVector::permuteLinkingEntries(const std::vector<unsigned int>& permvec)
+template<typename T>
+void StochVectorBase<T>::permuteLinkingEntries(const std::vector<unsigned int>& permvec)
 {
    if( vecl )
-      dynamic_cast<SimpleVector*>(vecl)->permuteEntries(permvec);
+      dynamic_cast<SimpleVectorBase<T>*>(vecl)->permuteEntries(permvec);
 }
 
-std::vector<double> StochVector::gatherStochVector() const
+template<typename T>
+std::vector<T> StochVectorBase<T>::gatherStochVector() const
 {
-   const SimpleVector& firstvec = dynamic_cast<const SimpleVector&>(*vec);
+   const SimpleVectorBase<T>& firstvec = dynamic_cast<const SimpleVectorBase<T>&>(*vec);
    const size_t nChildren = children.size();
 
    int myrank;
@@ -1613,11 +1694,11 @@ std::vector<double> StochVector::gatherStochVector() const
    int mysize;
    MPI_Comm_size(mpiComm, &mysize);
 
-   std::vector<double> gatheredVecLocal;
+   std::vector<T> gatheredVecLocal(0);
 
    for( size_t i = 0; i < nChildren; ++i )
    {
-      const SimpleVector& vec = dynamic_cast<const SimpleVector&>(*children[i]->vec);
+      const SimpleVectorBase<T>& vec = dynamic_cast<const SimpleVectorBase<T>&>(*children[i]->vec);
 
       if( vec.length() > 0 )
          gatheredVecLocal.insert(gatheredVecLocal.end(), &vec[0], &vec[0] + vec.length());
@@ -1626,7 +1707,7 @@ std::vector<double> StochVector::gatherStochVector() const
    size_t solLength = firstvec.length();
 
    // final vector
-   std::vector<double> gatheredVec(0);
+   std::vector<T> gatheredVec(0);
 
    if( mysize > 0 )
    {
@@ -1636,7 +1717,8 @@ std::vector<double> StochVector::gatherStochVector() const
 
       int mylength = int(gatheredVecLocal.size());
 
-      MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
+      PIPS_MPIallgather(&mylength, 1, &recvcounts[0], 1, mpiComm);
+      // MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
 
       // all-gather local components
       recvoffsets[0] = 0;
@@ -1646,23 +1728,27 @@ std::vector<double> StochVector::gatherStochVector() const
       if( myrank == 0 )
       {
          solLength += recvoffsets[mysize - 1] + recvcounts[mysize - 1];
-         gatheredVec = std::vector<double>(solLength);
+         gatheredVec = std::vector<T>(solLength);
 
-         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE,
-               &gatheredVec[0] + firstvec.length(), &recvcounts[0],
-               &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+         PIPS_MPIgatherv(&gatheredVecLocal[0], mylength, &gatheredVec[0] + firstvec.length(),
+            &recvcounts[0], &recvoffsets[0], 0, mpiComm);
+         // MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE,
+         //       &gatheredVec[0] + firstvec.length(), &recvcounts[0],
+         //       &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
       }
       else
       {
-         MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, 0,
-               &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
+        T dummy;
+        PIPS_MPIgatherv(&gatheredVecLocal[0], mylength, &dummy, &recvcounts[0], &recvoffsets[0], 0, mpiComm);
+         // MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, 0,
+         //       &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
       }
    }
    else
    {
       solLength += gatheredVecLocal.size();
 
-      gatheredVec = std::vector<double>(solLength);
+      gatheredVec = std::vector<T>(solLength);
 
       std::copy(gatheredVecLocal.begin(), gatheredVecLocal.end(), gatheredVec.begin() + firstvec.length());
    }
@@ -1673,7 +1759,7 @@ std::vector<double> StochVector::gatherStochVector() const
 
       if( vecl && vecl->length() > 0 )
       {
-         const SimpleVector& linkvec = dynamic_cast<const SimpleVector&>(*vecl);
+         const SimpleVectorBase<T>& linkvec = dynamic_cast<const SimpleVectorBase<T>&>(*vecl);
          gatheredVec.insert(gatheredVec.end(), &linkvec[0], &linkvec[0] + linkvec.length());
       }
    }
@@ -1681,13 +1767,14 @@ std::vector<double> StochVector::gatherStochVector() const
 }
 
 // is root node data of StochVector same on all procs?
-bool StochVector::isRootNodeInSync() const
+template<typename T>
+bool StochVectorBase<T>::isRootNodeInSync() const
 {
    assert( vec);
    assert(mpiComm);
 
    bool in_sync = true;
-   const SimpleVector& vec_simple = dynamic_cast<const SimpleVector&>(*vec);
+   const SimpleVectorBase<T>& vec_simple = dynamic_cast<const SimpleVectorBase<T>&>(*vec);
 
    /* no need to check if not distributed or not at root node */
    if( !iAmDistrib || parent != NULL)
@@ -1699,24 +1786,25 @@ bool StochVector::isRootNodeInSync() const
 
    /* if there is a linking part we have to chekc it as well */
    const int vec_length = vec_simple.length();
-   const int vecl_length = (vecl) ? dynamic_cast<const SimpleVector&>(*vecl).length() : 0;
+   const int vecl_length = (vecl) ? dynamic_cast<const SimpleVectorBase<T>&>(*vecl).length() : 0;
 
    const long long count = vec_length + vecl_length;
 
    assert( count < std::numeric_limits<int>::max());
 
    /* mpi reduce on vector */
-   std::vector<double> sendbuf(count, 0.0);
-   std::vector<double> recvbuf(count, 0.0);
+   std::vector<T> sendbuf(count, 0.0);
+   std::vector<T> recvbuf(count, 0.0);
    std::copy(vec_simple.elements(), vec_simple.elements() + vec_simple.length(), sendbuf.begin());
 
    if( vecl )
    {
-      const SimpleVector& vecl_simple = dynamic_cast<const SimpleVector&>(*vecl);
+      const SimpleVectorBase<T>& vecl_simple = dynamic_cast<const SimpleVectorBase<T>&>(*vecl);
       std::copy(vecl_simple.elements(), vecl_simple.elements() + vecl_simple.length(),
             sendbuf.begin() + vec_simple.length());
    }
-   MPI_Allreduce(&sendbuf[0], &recvbuf[0], count, MPI_DOUBLE, MPI_MAX, mpiComm);
+   PIPS_MPImaxArray(&sendbuf[0], &recvbuf[0], count, mpiComm);
+   // MPI_Allreduce(&sendbuf[0], &recvbuf[0], count, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
    for( int i = 0; i < count; ++i )
    {
@@ -1729,3 +1817,7 @@ bool StochVector::isRootNodeInSync() const
 
    return in_sync;
 }
+
+template class StochVectorBase<int>;
+// template class StochVectorBase<bool>;
+template class StochVectorBase<double>;

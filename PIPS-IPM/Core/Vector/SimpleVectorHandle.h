@@ -7,8 +7,11 @@
 
 #include "OoqpVectorHandle.h"
 #include "SmartPointer.h"
+#include "SimpleVector_fwd.h"
 
-class SimpleVector;
+// template<typename T>
+// using SimpleVectorBaseHandle = SmartPointer<SimpleVectorBase<T> >;
+
 typedef SmartPointer<SimpleVector> SimpleVectorHandle;
 
 #endif

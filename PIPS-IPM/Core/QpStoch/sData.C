@@ -1435,16 +1435,16 @@ sData::cloneFull(bool switchToDynamicStorage) const
    StochGenMatrixHandle A_clone(dynamic_cast<const StochGenMatrix&>(*A).cloneFull(switchToDynamicStorage));
    StochGenMatrixHandle C_clone(dynamic_cast<const StochGenMatrix&>(*C).cloneFull(switchToDynamicStorage));
 
-   StochVectorHandle c_clone (dynamic_cast<const StochVector&>(*g).cloneFull());
-   StochVectorHandle bA_clone ( dynamic_cast<const StochVector&>(*bA).cloneFull());
-   StochVectorHandle xupp_clone (dynamic_cast<const StochVector&>(*bux).cloneFull());
-   StochVectorHandle ixupp_clone (dynamic_cast<const StochVector&>(*ixupp).cloneFull());
-   StochVectorHandle xlow_clone ( dynamic_cast<const StochVector&>(*blx).cloneFull());
-   StochVectorHandle ixlow_clone ( dynamic_cast<const StochVector&>(*ixlow).cloneFull());
-   StochVectorHandle cupp_clone ( dynamic_cast<const StochVector&>(*bu).cloneFull());
-   StochVectorHandle icupp_clone ( dynamic_cast<const StochVector&>(*icupp).cloneFull());
-   StochVectorHandle clow_clone ( dynamic_cast<const StochVector&>(*bl).cloneFull());
-   StochVectorHandle iclow_clone ( dynamic_cast<const StochVector&>(*iclow).cloneFull());
+   StochVectorHandle c_clone (dynamic_cast<StochVector*>(g->cloneFull()));
+   StochVectorHandle bA_clone (dynamic_cast<StochVector*>(bA->cloneFull()));
+   StochVectorHandle xupp_clone (dynamic_cast<StochVector*>(bux->cloneFull()));
+   StochVectorHandle ixupp_clone (dynamic_cast<StochVector*>(ixupp->cloneFull()));
+   StochVectorHandle xlow_clone (dynamic_cast<StochVector*>(blx->cloneFull()));
+   StochVectorHandle ixlow_clone (dynamic_cast<StochVector*>(ixlow->cloneFull()));
+   StochVectorHandle cupp_clone (dynamic_cast<StochVector*>(bu->cloneFull()));
+   StochVectorHandle icupp_clone (dynamic_cast<StochVector*>(icupp->cloneFull()));
+   StochVectorHandle clow_clone (dynamic_cast<StochVector*>(bl->cloneFull()));
+   StochVectorHandle iclow_clone (dynamic_cast<StochVector*>(iclow->cloneFull()));
 
    sTree* tree_clone = stochNode; // todo
 
