@@ -36,4 +36,4 @@ Variables * QpGen::makeVariables( Data * prob_in )
 			prob->iclow, prob->icupp );
 }
 
-void QpGen::writeProblemToStream(ostream& out) const {}
+void QpGen::writeProblemToStream(std::ostream& out) const {}

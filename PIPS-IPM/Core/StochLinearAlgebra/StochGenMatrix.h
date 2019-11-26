@@ -1,13 +1,13 @@
 #ifndef STOCHGENMATRIX_H
 #define STOCHGENMATRIX_H
 
+#include "StochVector_fwd.h"
+#include "OoqpVector_fwd.h"
 #include "DoubleMatrix.h"
 #include "SparseGenMatrix.h"
-#include <vector>
 #include "mpi.h"
 
-class OoqpVector;
-class StochVector;
+#include <vector>
 
 class StochGenMatrix : public GenMatrix {
 protected:

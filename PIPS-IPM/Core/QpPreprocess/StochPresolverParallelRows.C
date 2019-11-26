@@ -86,7 +86,7 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, S
    norm_DmatTrans = NULL;
    currgChild = NULL;
    currgParent = NULL;
-   gParentAdaptions = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->g)).vec)->cloneFull();
+   gParentAdaptions = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*(presProb->g)).vec->cloneFull());
    gParentAdaptions->setToZero();
 
    mA = 0;
@@ -309,30 +309,30 @@ void StochPresolverParallelRows::setNormalizedPointersMatrixBounds(int node)
 
    if(node == -1)
    {
-      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec)->cloneFull();
+      norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec->cloneFull());
 
-      norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec)->cloneFull();
-      norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec)->cloneFull();
-      norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec)->cloneFull();
-      norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec)->cloneFull();
+      norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec->cloneFull());
+      norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).vec->cloneFull());
+      norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).vec->cloneFull());
+      norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).vec->cloneFull());
    }
    else
    {
       /* EQUALITY_SYSTEM */
       if( !nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
-         norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->vec)->cloneFull();
+         norm_b = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->vec->cloneFull());
       }
       else
          norm_b = NULL;
 
       /* INEQUALITY_SYSTEM */
       if( !nodeIsDummy( node, INEQUALITY_SYSTEM ) )
-      {
-         norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec)->cloneFull();
-         norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[node]->vec)->cloneFull();
-         norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[node]->vec)->cloneFull();
-         norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[node]->vec)->cloneFull();
+     {
+         norm_cupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec->cloneFull());
+         norm_clow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bl)).children[node]->vec->cloneFull());
+         norm_icupp = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->icupp)).children[node]->vec->cloneFull());
+         norm_iclow = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->iclow)).children[node]->vec->cloneFull());
       }
       else
          norm_cupp = norm_icupp = norm_clow = norm_iclow = NULL;
@@ -409,9 +409,9 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
 
    if(node == -1)
    {
-      norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec)->cloneFull();
+      norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).vec->cloneFull());
       norm_factorA->setToZero();
-      norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec)->cloneFull();
+      norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec->cloneFull());
       norm_factorC->setToZero();
    }
    else
@@ -419,7 +419,7 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
       /* EQUALITY_SYSTEM */
       if( !nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
-         norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->vec)->cloneFull();
+         norm_factorA = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->vec->cloneFull());
          norm_factorA->setToZero();
       }
       else
@@ -428,7 +428,7 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
       /* INEQUALITY_SYSTEM */
       if( !nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
-         norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec)->cloneFull();
+         norm_factorC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec->cloneFull());
          norm_factorC->setToZero();
       }
       else
@@ -440,27 +440,27 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
 {
    assert(-1 <= node && node <= nChildren);
 
-   singletonCoeffsColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
+   singletonCoeffsColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec->cloneFull());
    singletonCoeffsColParent->setToZero();
 
    if(node == -1)
    {
-      rowContainsSingletonVariableA = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec)->cloneFull();
+      rowContainsSingletonVariableA = dynamic_cast<SimpleVector*>(presData.nRowElemsA->vec->cloneFull());
       rowContainsSingletonVariableA->setToConstant( -1.0 );
-      rowContainsSingletonVariableC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec)->cloneFull();
+      rowContainsSingletonVariableC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).vec->cloneFull());
       rowContainsSingletonVariableC->setToConstant( -1.0 );
 
       singletonCoeffsColChild = NULL;
    }
    else
    {
-      singletonCoeffsColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[node]->vec)->cloneFull();
+      singletonCoeffsColChild = dynamic_cast<SimpleVector*>(presData.nColElems->children[node]->vec->cloneFull());
       singletonCoeffsColChild->setToZero();
 
       /* EQUALITY_SYSTEM */
       if( !nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
-         rowContainsSingletonVariableA = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[node]->vec)->cloneFull();
+         rowContainsSingletonVariableA = dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[node]->vec->cloneFull());
          rowContainsSingletonVariableA->setToConstant( -1.0 );
       }
       else
@@ -469,7 +469,7 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
       /* INEQUALITY_SYSTEM */
       if( !nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
-         rowContainsSingletonVariableC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec)->cloneFull();
+         rowContainsSingletonVariableC = dynamic_cast<SimpleVector*>(dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->vec->cloneFull());
          rowContainsSingletonVariableC->setToConstant( -1.0 );
       }
       else
@@ -481,20 +481,20 @@ void StochPresolverParallelRows::setNormalizedReductionPointers(int node)
 {
    assert(-1 <= node && node <= nChildren);
 
-   normNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec)->cloneFull();
-   normNnzColChild = (node == -1) ? NULL : dynamic_cast<SimpleVector*>(presData.nColElems->children[node]->vec)->cloneFull();;
+   normNnzColParent = dynamic_cast<SimpleVector*>(presData.nColElems->vec->cloneFull());
+   normNnzColChild = (node == -1) ? NULL : dynamic_cast<SimpleVector*>(presData.nColElems->children[node]->vec->cloneFull());
 
    if(node == -1)
    {
-      normNnzRowA = currNnzRow->cloneFull();
-      normNnzRowC = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec)->cloneFull();
+      normNnzRowA = dynamic_cast<SimpleVector*>(currNnzRow->cloneFull());
+      normNnzRowC = dynamic_cast<SimpleVector*>(presData.nRowElemsC->vec->cloneFull());
    }
    else
    {
       /* EQUALITY_SYSTEM */
-      normNnzRowA = (!nodeIsDummy( node, EQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[node]->vec)->cloneFull() : NULL;
+      normNnzRowA = (!nodeIsDummy( node, EQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsA->children[node]->vec->cloneFull()) : NULL;
       /* INEQUALITY_SYSTEM */
-      normNnzRowC =(!nodeIsDummy( node, INEQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[node]->vec)->cloneFull() : NULL;
+      normNnzRowC =(!nodeIsDummy( node, INEQUALITY_SYSTEM )) ? dynamic_cast<SimpleVector*>(presData.nRowElemsC->children[node]->vec->cloneFull()) : NULL;
    }
 }
 

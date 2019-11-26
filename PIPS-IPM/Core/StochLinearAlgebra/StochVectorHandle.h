@@ -3,8 +3,11 @@
 
 #include "IotrRefCount.h"
 #include "SmartPointer.h"
+#include "StochVector_fwd.h"
 
-class StochVector;
+// template<typename T>
+// using StochVectorBaseHandle = SmartPointer<StochVectorBase<T> >;
+
 typedef SmartPointer<StochVector> StochVectorHandle;
 
 #endif
