@@ -10,6 +10,7 @@
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
+#include "pipsport.h"
 
 #ifdef HAVE_GETRUSAGE
 #include <sys/time.h>
@@ -46,7 +47,7 @@ Ma57Solver::Ma57Solver( SparseSymMatrix * sgm )
   ifact = 0;
   keep  = 0;
 
-  iworkn  = NULL; dworkn = NULL;
+  iworkn  = nullptr; dworkn = nullptr;
   niworkn = ndworkn = 0;
 
   ipessimism = 1.4;
@@ -487,7 +488,7 @@ int* Ma57Solver::new_iworkn(int dim)
     iworkn = new int[dim];
     niworkn=dim;
   }else {
-    if(NULL == iworkn)
+    if(nullptr == iworkn)
       iworkn = new int[dim];
   }
   return iworkn;
@@ -500,7 +501,7 @@ double* Ma57Solver::new_dworkn(int dim)
     dworkn = new double[dim];
     ndworkn = dim;
   }else {
-    if(NULL == dworkn)
+    if(nullptr == dworkn)
       dworkn = new double[dim];
   }
   return dworkn;

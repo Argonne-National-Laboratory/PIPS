@@ -42,7 +42,7 @@ extern "C" void pardiso_printstats (int *, int *, double *, int *, int *, int *,
 PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 {
   mStorage = dm->getStorageHandle();
-  mStorageSparse = NULL;
+  mStorageSparse = nullptr;
 
   assert(mStorage);
 
@@ -54,7 +54,7 @@ PardisoIndefSolver::PardisoIndefSolver( DenseSymMatrix * dm )
 
 PardisoIndefSolver::PardisoIndefSolver( SparseSymMatrix * sm )
 {
-  mStorage = NULL;
+  mStorage = nullptr;
   mStorageSparse = sm->getStorageHandle();
 
   assert(mStorageSparse);
@@ -172,7 +172,7 @@ void PardisoIndefSolver::initPardiso()
 
    // todo proper parameter
    char* var = getenv("PARDISO_SPARSE_RHS_ROOT");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int use;
       sscanf(var, "%d", &use);
@@ -186,7 +186,7 @@ void PardisoIndefSolver::initPardiso()
 
    // todo proper parameter
    var = getenv("OMP_NUM_THREADS_PIPS_ROOT");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int n = -1;
       sscanf(var, "%d", &n);
@@ -200,7 +200,7 @@ void PardisoIndefSolver::initPardiso()
 
    // todo proper parameter
    var = getenv("PARDISO_PIVOT_PERTURBATION_ROOT");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int exp;
       sscanf(var, "%d", &exp);
@@ -212,7 +212,7 @@ void PardisoIndefSolver::initPardiso()
 
    // todo proper parameter
    var = getenv("PARDISO_HIGH_ACCURACY_ROOT");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int n;
       sscanf(var, "%d", &n);
@@ -226,7 +226,7 @@ void PardisoIndefSolver::initPardiso()
 
    // todo proper parameter
    var = getenv("PARDISO_PARALLEL_SOLVE_ROOT");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int n;
       sscanf(var, "%d", &n);
@@ -240,7 +240,7 @@ void PardisoIndefSolver::initPardiso()
 
    // todo proper parameter
    var = getenv("PARDISO_FACTORIZE_TWOLEVEL_ROOT");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int n;
       sscanf(var, "%d", &n);
@@ -254,7 +254,7 @@ void PardisoIndefSolver::initPardiso()
 
    // todo proper parameter
    var = getenv("PARDISO_NITERATIVE_REFINS_ROOT");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int n;
       sscanf(var, "%d", &n);
@@ -322,13 +322,13 @@ void PardisoIndefSolver::initPardiso()
    mnum = 1; /* Which factorization to use. */
 
    msglvl = 0; /* Print statistical information?  */
-   ia = NULL;
-   ja = NULL;
-   a = NULL;
+   ia = nullptr;
+   ja = nullptr;
+   a = nullptr;
    ddum = -1.0;
    idum = -1;
    phase = 11;
-   x = NULL;
+   x = nullptr;
 }
 
 
@@ -398,9 +398,9 @@ void PardisoIndefSolver::factorizeFromSparse()
    const double* const aStorage = mStorageSparse->M;
 
    // first call?
-   if( ia == NULL )
+   if( ia == nullptr )
    {
-      assert(ja == NULL && a == NULL);
+      assert(ja == nullptr && a == nullptr);
       deleteCSRpointers = true;
 
       ia = new int[n + 1];

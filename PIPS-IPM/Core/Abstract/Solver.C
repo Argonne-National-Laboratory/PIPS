@@ -2,6 +2,7 @@
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 
+#include "pipsport.h"
 #include "Solver.h"
 #include "OoqpMonitor.h"
 #include "Status.h"
@@ -63,7 +64,7 @@ Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
 
   // todo proper parameter
   char* var = getenv("PARDISO_PRINT_TIMESTAMP");
-  if( var != NULL )
+  if( var != nullptr )
   {
      int use;
      sscanf(var, "%d", &use);

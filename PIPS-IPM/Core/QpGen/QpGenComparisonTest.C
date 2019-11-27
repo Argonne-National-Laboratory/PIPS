@@ -3,6 +3,7 @@
 #include "QpGenDriver.h"
 #include "QpGenSparseMa57.h"
 #include "MehrotraSolver.h"
+#include "pipsport.h"
 
 int solveQPSparse(int levels, int printx);
 int solveQPStoch(int levels, int printx);
@@ -166,7 +167,7 @@ int main( int argc, char *argv[] )
 
 int solveQPStoch(int levels, int printx)
 {
-  void* usrdata=NULL;
+  void* usrdata=nullptr;
   StochTree::TreeNode node( usrdata, 0, 
 			    5, 2, 2,
 			    fQ0, fnnzQ0, fc0,
@@ -207,7 +208,7 @@ int solveQPStoch(int levels, int printx)
   StochRunParams* params = defaultStochRunParams();
   params->printx = printx;
 
-  MehrotraSolver* method=NULL;
+  MehrotraSolver* method=nullptr;
   qpgenstoch_solve(&root, method, params);
 
   delete params;

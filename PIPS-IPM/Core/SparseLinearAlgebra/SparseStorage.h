@@ -8,13 +8,13 @@
 #include "DoubleMatrix.h"
 #include "SparseStorageHandle.h"
 #include "OoqpVectorHandle.h"
+#include "pipsport.h"
 
 #include <cstring>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <vector>
-using namespace std;
 
 /** A class for managing the matrix elements used by sparse matrices.
  *  @ingroup SparseLinearAlgebra
@@ -174,10 +174,10 @@ public:
   void fromGetColBlock(int col, double *A, int lda, int colExtent, int* colSparsity, bool &allzero);
 
   void fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
-        double* rowsArrayDense, int* rowSparsity = NULL);
+        double* rowsArrayDense, int* rowSparsity = nullptr);
 
   /** add nnz per row to given array (of size nRows) */
-  void addNnzPerRow(double* vec) const;
+  void addNnzPerRow(int* vec) const;
   void getLinkVarsNnz(std::vector<int>& vec) const;
 
   /** add abs. sum per row to given array (of size nRows) */
@@ -194,7 +194,7 @@ public:
 
   void dump(const string& filename);
 
-  void deleteEmptyRowsCols(const double* nnzRowVec, const double* nnzColVec);
+  void deleteEmptyRowsCols(const int* nnzRowVec, const int* nnzColVec);
 
   void getSparseTriplet_c2fortran(int*& irn, int*& jcn, double*& val) const;
 

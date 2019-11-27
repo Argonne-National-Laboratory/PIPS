@@ -16,9 +16,22 @@
 #include <vector>
 #include <mpi.h>
 #include <assert.h>
+#include "pipsport.h"
 
 const double pips_eps = 1e-13;
 const double pips_eps0 = 1e-40;
+
+static const double feastol = 1.0e-6; // was 1.0e-6
+static const double infinity = 1.0e30;
+// todo rename for more clarity
+static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
+static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
+static const double tol_matrix_entry = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
+static const double tolerance4 = 1.0e-12; // for variable fixing
+static const double limit1 = 1.0e3;   // for bound strengthening
+static const double limit2 = 1.0e8;   // for bound strengthening
+static const int maxIterSR = 10;
+static const double tol_compare_double = 1.0e-8;
 
 static inline double relativeDiff(double val1, double val2)
 {
@@ -75,7 +88,7 @@ inline int PIPSgetnOMPthreads()
 
    /* Numbers of processors, value of OMP_NUM_THREADS */
    char* var = getenv("OMP_NUM_THREADS");
-   if( var != NULL )
+   if( var != nullptr )
       sscanf(var, "%d", &num_procs);
    else
    {
@@ -86,7 +99,8 @@ inline int PIPSgetnOMPthreads()
    return num_procs;
 }
 
-inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+
+inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
 {
    bool iAmSpecial = true;
 
@@ -100,6 +114,30 @@ inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    }
 
    return iAmSpecial;
+}
+
+inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+{
+   return PIPS_MPIiAmSpecial(iAmDistrib, mpiComm);
+}
+
+inline bool PIPS_MPIgetDistributed(MPI_Comm comm)
+{
+   int world_size;
+   MPI_Comm_size(comm, &world_size);
+
+   if( world_size > 1)
+      return true;
+   else
+      return false;
+}
+
+void inline PIPS_MPIabortInfeasible(MPI_Comm comm, std::string message, std::string file, std::string function)
+{
+   std::cerr << "Infesibility detected in " << file << " function " << function << "!" << std::endl;
+   std::cerr << "Message: " << message << std::endl;
+   std::cerr << "Aborting now." << std::endl;
+   MPI_Abort(comm, 1);
 }
 
 inline std::vector<int> PIPSallgathervInt(const std::vector<int>& vecLocal, MPI_Comm mpiComm)
@@ -222,7 +260,7 @@ struct get_mpi_datatype_t<char> {
 
 template <>
 struct get_mpi_datatype_t<bool> {
-   static constexpr MPI_Datatype value = MPI_C_BOOL;
+   static constexpr MPI_Datatype value = MPI_CXX_BOOL;
 };
 
 template <>
@@ -278,6 +316,44 @@ inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
 }
 
 template <typename T>
+inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
+{
+   assert(length >= 0);
+   if(length == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, localmax, length, get_mpi_datatype(localmax), MPI_MAX, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPImaxArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if(elements.size() == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_MAX, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+{
+   assert(length >= 0);
+   if(length == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_MIN, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIminArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if(elements.size() == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_MIN, mpiComm);
+}
+
+template <typename T>
 inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
 {
    T sum;
@@ -287,6 +363,47 @@ inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
 }
 
 template <typename T>
+inline void PIPS_MPIgetLogicOrInPlace(T& localval, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &localval, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
+}
+
+template <typename T>
+inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm)
+{
+   T lor;
+   MPI_Allreduce(&localval, &lor, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
+
+   return lor;
+}
+
+template <typename T>
+inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+{
+   assert( length >= 0 );
+   if(length == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_LOR, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if(elements.size() == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_LOR, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &sum, 1, get_mpi_datatype(sum), MPI_SUM, mpiComm);
+}
+
+template <typename T>
+
 inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 {
    assert(length >= 0);
@@ -298,6 +415,15 @@ inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
+inline void PIPS_MPIsumArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if( elements.size() == 0 )
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_SUM, mpiComm);
+}
+
+template <typename T>
 inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiComm )
 {
    assert(length >= 0);
@@ -306,15 +432,6 @@ inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiC
       return;
 
    MPI_Allreduce(source, dest, length, get_mpi_datatype(source), MPI_SUM, mpiComm);
-}
-
-template <typename T>
-inline void PIPS_MPImaxArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
-{
-   assert(length >= 0);
-   if(length == 0)
-      return;
-   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_MAX, mpiComm);
 }
 
 template <typename T>

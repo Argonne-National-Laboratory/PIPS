@@ -2,14 +2,15 @@
 #include "QpGenStoch.h"
 #include "QpGenStochData.h"
 #include "DeSymIndefSolver.h"
+#include "pipsport.h"
 
 QpStochLinsysRootAugRedPrCG::QpStochLinsysRootAugRedPrCG(QpGenStoch * factory_, 
 							 QpGenStochData * prob)
   : QpGenStochLinsysRootAugRedPrecond()
 { 
   factory = factory_;
-  kkt = NULL;
-  solver = NULL;
+  kkt = nullptr;
+  solver = nullptr;
 
   nx = prob->nx; my = prob->my; mz = prob->mz;
   ixlow = prob->ixlow;
@@ -39,10 +40,10 @@ QpStochLinsysRootAugRedPrCG::QpStochLinsysRootAugRedPrCG(QpGenStoch * factory_,
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
   //QpGenStochLinsyRootAug
-  CtDC=NULL;
+  CtDC=nullptr;
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
 
@@ -50,7 +51,7 @@ QpStochLinsysRootAugRedPrCG::QpStochLinsysRootAugRedPrCG(QpGenStoch * factory_,
   redRhs = new SimpleVector(locnx+locmy+locmz);
 
   //QpGenStochLinsyRootAugPrecond
-  tmpVec1=NULL;
+  tmpVec1=nullptr;
 
   //intializations related to this class 
   me = whoAmI();
@@ -100,16 +101,16 @@ QpStochLinsysRootAugRedPrCG(QpGenStoch* factory_,
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
   //QpGenStochLinsyRootAug
-  CtDC=NULL;
+  CtDC=nullptr;
   redRhs = new SimpleVector(locnx+locmy+locmz);
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
 
   //QpGenStochLinsyRootAugPrecond
-  tmpVec1=NULL;
+  tmpVec1=nullptr;
 
   //intializations related to this class 
   me = whoAmI();
@@ -146,10 +147,10 @@ QpStochLinsysRootAugRedPrCG::createSolver(QpGenStochData* prob,
       // Special worker
       /////////////////////////////////////////////////////
       DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-      if(NULL==Amult) Amult = new StoredMatTimesVec(kktmat);
+      if(nullptr==Amult) Amult = new StoredMatTimesVec(kktmat);
 
       StochTreePrecond* stochNodePr = dynamic_cast<StochTreePrecond*>(stochNode);
-      if(NULL==Pmult) Pmult = new RemoteMatTimesVec(stochNodePr);
+      if(nullptr==Pmult) Pmult = new RemoteMatTimesVec(stochNodePr);
 
       //return new BiCGStabSolver(Amult, Pmult);
       return new CGSolver(Amult, Pmult);

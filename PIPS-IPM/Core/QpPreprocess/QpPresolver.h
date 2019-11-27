@@ -9,6 +9,7 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_QPPRESOLVER_H_
 
 #include "Presolver.h"
+#include "pipsport.h"
 
 class Data;
 class Postsolver;
@@ -25,11 +26,11 @@ class Postsolver;
 class QpPresolver : public Presolver
 {
    protected:
-      const Data* origprob;
+      const Data* const origprob;
       Postsolver* const postsolver;
 
    public:
-      QpPresolver(const Data* prob, Postsolver* postsolver = NULL);
+      QpPresolver(const Data* prob, Postsolver* postsolver = nullptr);
       virtual ~QpPresolver();
 
       virtual Data* presolve() = 0;

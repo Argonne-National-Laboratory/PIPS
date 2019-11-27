@@ -17,8 +17,7 @@
 #include "IotrRefCount.h"
 #include "OoqpVectorHandle.h"
 #include "pipsdef.h"
-
-
+#include "pipsport.h"
 
 /** An abstract class representing the implementation of a OoqpVectorTemplate.
  *
@@ -64,6 +63,8 @@ public:
   virtual void componentMult( const OoqpVectorBase<T>& v ) = 0;
   /** Divide the components of this OoqpVector by the components of v. */
   virtual void componentDiv ( const OoqpVectorBase<T>& v ) = 0;
+  /** Compare two vectors with tolerance tol and tell if the are different */
+  virtual bool componentEqual( const OoqpVectorBase<T>& v, T tol ) const = 0;
   /** Write the components of this OoqpVector, one element per line, to
    *  the stream out.
    */
@@ -265,13 +266,13 @@ public:
   virtual void copyFromArray( const char v[] ) = 0;
 
   /** remove entries i for which select[i] == 0 */
-  virtual void removeEntries( const OoqpVectorBase<T>& select ) { assert(0 && "not implemented here"); };
+  virtual void removeEntries( const OoqpVectorBase<int>& select ) { assert(0 && "not implemented here"); };
 
   /** Copy the absolute values of elements of v_in into this OoqpVector object. */
   virtual void copyFromAbs(const OoqpVectorBase<T>& v) = 0;
 
-  virtual OoqpVectorBase<T>* clone() const { assert(0 && "not implemented here"); return NULL; };
-  virtual OoqpVectorBase<T>* cloneFull() const { assert(0 && "not implemented here"); return NULL; };
+  virtual OoqpVectorBase<T>* clone() const { assert(0 && "not implemented here"); return nullptr; };
+  virtual OoqpVectorBase<T>* cloneFull() const { assert(0 && "not implemented here"); return nullptr; };
 };
 
 

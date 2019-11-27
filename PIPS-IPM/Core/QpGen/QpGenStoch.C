@@ -6,6 +6,7 @@
 #include "StochSymMatrix.h"
 #include "StochGenMatrix.h"
 #include "StochVector.h"
+#include "pipsport.h"
 
 #include "sVars.h"
 #include "QpGenResiduals2.h"
@@ -33,7 +34,7 @@ QpGenStoch::QpGenStoch( StochInputTree* inputTree)
 
 QpGenStoch::QpGenStoch( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
   : QpGen( nx_, my_, mz_ ),
-    data(NULL),tree(NULL), resid(NULL), linsys(NULL),
+    data(nullptr),tree(nullptr), resid(nullptr), linsys(nullptr),
     nnzQ(nnzQ_), nnzA(nnzA_), nnzC(nnzC_), m_tmTotal(0.0)
 { };
 

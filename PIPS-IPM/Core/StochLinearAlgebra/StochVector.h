@@ -51,9 +51,10 @@ public:
   */
   virtual OoqpVectorBase<T>* dataClone() const;
   virtual OoqpVectorBase<T>* dataCloneLinkCons() const;
-  virtual OoqpVectorBase<T>* clone() const override;
+
+  OoqpVectorBase<T>* clone() const override;
   /* copy vector entries as well */
-  virtual OoqpVectorBase<T>* cloneFull() const override;
+  OoqpVectorBase<T>* cloneFull() const override;
 
   virtual void jointCopyFrom(const StochVectorBase<T>& v1, const StochVectorBase<T>& v2, const StochVectorBase<T>& v3);
   virtual void jointCopyFromLinkCons(const StochVectorBase<T>& vx, const StochVectorBase<T>& vy, const StochVectorBase<T>& vz);
@@ -73,8 +74,8 @@ public:
    T onenorm() const override;
    void min( T& m, int& index ) const override;
    void max( T& m, int& index ) const override;
-   void absminVecUpdate(OoqpVectorBase<T>& absminvec) const override;
-   void absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const override;
+   void absminVecUpdate( OoqpVectorBase<T>& absminvec) const override;
+   void absmaxVecUpdate( OoqpVectorBase<T>& absmaxvec) const override;
    void absmin( T& m ) const override;
    void absminNonZero(T& m, T zero_eps) const override;
    T stepbound(const OoqpVectorBase<T> & v, T maxStep ) const override;
@@ -97,6 +98,8 @@ public:
 
    void componentMult( const OoqpVectorBase<T>& v ) override;
    void componentDiv ( const OoqpVectorBase<T>& v ) override;
+   bool componentEqual( const OoqpVectorBase<T>& v , T tol) const override;
+
    void scalarMult( T num ) override;
    void writeToStream(std::ostream& out) const override;
    void writeToStreamAll(std::ostream& out) const override;
@@ -154,7 +157,7 @@ public:
    virtual std::vector<T> gatherStochVector() const;
 
    /** remove entries i for which select[i] == 0 */
-   void removeEntries( const OoqpVectorBase<T>& select ) override;
+   void removeEntries( const OoqpVectorBase<int>& select ) override;
 
    virtual int getSize() const { return this->n; };
 
@@ -190,9 +193,8 @@ public:
    void jointCopyTo(StochVectorBase<T>& v1, StochVectorBase<T>& v2, StochVectorBase<T>& v3) const override {};
 
    bool isKindOf( int kind ) const override {return kind == kStochDummy;}
-   void setToZero() override {};
    bool isZero() const override { return true; };
-
+   void setToZero() override {};
    void setToConstant( T c ) override {};
    void randomize( T alpha, T beta, T *ix ) override {};
    void copyFrom( const OoqpVectorBase<T>& v ) override {};
@@ -227,6 +229,8 @@ public:
 
    void componentMult( const OoqpVectorBase<T>& v ) override {};
    void componentDiv ( const OoqpVectorBase<T>& v ) override {};
+   bool componentEqual( const OoqpVectorBase<T>& v, T tol) const override { if(!v.isKindOf(kStochDummy)) std::cout << "one should never end up here"
+     << std::endl; return v.isKindOf(kStochDummy); };
    void scalarMult( T num) override {};
    void writeToStream(std::ostream& out) const override {};
    void writeToStreamAll(std::ostream& out) const override {};
@@ -280,7 +284,7 @@ public:
    void copyFromArray( const T v[] ) override {};
    void copyFromArray( const char v[] ) override {};
 
-   void removeEntries( const OoqpVectorBase<T>& select ) override {};
+   void removeEntries( const OoqpVectorBase<int>& select ) override {};
    void permuteVec0Entries(const std::vector<unsigned int>& permvec) override {};
    void permuteLinkingEntries(const std::vector<unsigned int>& permvec) override {};
    std::vector<T> gatherStochVector() const override {return std::vector<T>(0);};

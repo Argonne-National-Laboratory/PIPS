@@ -15,6 +15,7 @@
 #include "SmartPointer.h"
 #include "StochPostsolver.h"
 #include "sData.h"
+#include "pipsport.h"
 
 enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH, SCALER_GEO_EQUI_STOCH};
 enum PresolverType {PRESOLVER_NONE, PRESOLVER_STOCH};
@@ -38,7 +39,7 @@ public:
             }
       };
 
-      static Presolver* makePresolver(const Data* data, PresolverType type, Postsolver* postsolver = NULL)
+      static Presolver* makePresolver(const Data* data, PresolverType type, Postsolver* postsolver = nullptr)
       {
          switch( type )
             {
@@ -50,10 +51,10 @@ public:
       };
 
       // todo : not sure about the factory design here
-      static Postsolver* makePostsolver(const sData* data)
+      static Postsolver* makePostsolver(const Data* original_problem)
       {
-         return new StochPostsolver(*data);
-      }    
+         return new StochPostsolver(dynamic_cast<const sData&>(*original_problem));
+      }
 };
 
 

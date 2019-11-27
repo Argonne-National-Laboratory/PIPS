@@ -3,7 +3,7 @@
 #include "QpGenStochData.h"
 #include "QpGenStochLinsysLeaf.h"
 #include "DeSymPSDSolver.h"
-
+#include "pipsport.h"
 
 
 void addUtVToKKT(double alpha, DenseSymMatrix& UtV, DenseSymMatrix& kkt, int nx); 
@@ -12,11 +12,11 @@ QpGenStochLinsysRootNrmEqnPrecond::
 QpGenStochLinsysRootNrmEqnPrecond(QpGenStoch * factory_, 
 				  QpGenStochData * prob)
   : QpGenStochLinsysRootNrmEqn(),
-    Pmult(NULL), Amult(NULL), tmpVec1(NULL)
+    Pmult(nullptr), Amult(nullptr), tmpVec1(nullptr)
 { 
   factory = factory_;
-  kkt = NULL;
-  solver = NULL;
+  kkt = nullptr;
+  solver = nullptr;
 
   nx = prob->nx; my = prob->my; mz = prob->mz;
   ixlow = prob->ixlow;
@@ -46,16 +46,16 @@ QpGenStochLinsysRootNrmEqnPrecond(QpGenStoch * factory_,
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
   //QpGenStochLinsyRootAugRed
-  CtDC=NULL;
+  CtDC=nullptr;
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
   redRhs = new SimpleVector(locnx+locmy+locmz);
 
   //QpGenStochLinsysRootNrmEqn parent
-  AQinvAt=NULL; solver2=NULL;
+  AQinvAt=nullptr; solver2=nullptr;
 
   //intializations related to this class 
   me = whoAmI();
@@ -69,7 +69,7 @@ QpGenStochLinsysRootNrmEqnPrecond::QpGenStochLinsysRootNrmEqnPrecond(QpGenStoch*
 					   OoqpVector* nomegaInv_,
 					   OoqpVector* rhs_)
   : QpGenStochLinsysRootNrmEqn(),
-    Pmult(NULL), Amult(NULL), tmpVec1(NULL) 
+    Pmult(nullptr), Amult(nullptr), tmpVec1(nullptr) 
 { 
   //QpGenStochLinsy
   factory = factory_;
@@ -105,16 +105,16 @@ QpGenStochLinsysRootNrmEqnPrecond::QpGenStochLinsysRootNrmEqnPrecond(QpGenStoch*
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
     //QpGenStochLinsyRootAugRed
-  CtDC=NULL;
+  CtDC=nullptr;
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
   redRhs = new SimpleVector(locnx+locmy+locmz);
 
   //QpGenStochLinsysRootNrmEqn parent
-  AQinvAt=NULL; solver2=NULL;
+  AQinvAt=nullptr; solver2=nullptr;
 
   //intializations related to this class 
   me = whoAmI();
@@ -132,7 +132,7 @@ QpGenStochLinsysRootNrmEqnPrecond::~QpGenStochLinsysRootNrmEqnPrecond()
 void QpGenStochLinsysRootNrmEqnPrecond::factor2(QpGenStochData *prob, Variables *vars)
 {
   assert( children.size() == prob->children.size() );
-  double* buffer=NULL;
+  double* buffer=nullptr;
 
   this->updateKKT(prob, vars);
 
@@ -143,8 +143,8 @@ void QpGenStochLinsysRootNrmEqnPrecond::factor2(QpGenStochData *prob, Variables 
   
   if(me==ePrecond) 
     buffer = new double[locnx*locnx]; 
-  DenseGenMatrix* U = NULL;
-  DenseGenMatrix* V = NULL;
+  DenseGenMatrix* U = nullptr;
+  DenseGenMatrix* V = nullptr;
   
   stochNode->resMon.recSchurMultLocal_start();
   allocUtV();  initializeUtV();
@@ -155,7 +155,7 @@ void QpGenStochLinsysRootNrmEqnPrecond::factor2(QpGenStochData *prob, Variables 
 
   for(int it=0; it<children.size(); it++) {
 
-    if(children[it]->mpiComm == MPI_COMM_NULL) continue;
+    if(children[it]->mpiComm == MPI_COMM_nullptr) continue;
 
     children[it]->stochNode->resMon.recFactTmChildren_start();    
     children[it]->allocU(&U, locnx); children[it]->allocV(&V, locnx);
@@ -175,7 +175,7 @@ void QpGenStochLinsysRootNrmEqnPrecond::factor2(QpGenStochData *prob, Variables 
 	///////////////////////////////////////
 	// WORKERS  ->   send to precond
 	///////////////////////////////////////
-	MPI_Reduce(&(UtV->mStorage->M[0][0]), NULL, locnx*locnx, 
+	MPI_Reduce(&(UtV->mStorage->M[0][0]), nullptr, locnx*locnx, 
 		   MPI_DOUBLE, MPI_SUM, 
 		   rankPrecond, mpiComm);
 	//null out Schur complement so the existing info will no more be added
@@ -221,11 +221,11 @@ void QpGenStochLinsysRootNrmEqnPrecond::factor2(QpGenStochData *prob, Variables 
 	  //printf("W computed  %g sec\n"   , MPI_Wtime()-st);st=MPI_Wtime(); 
 	  
 	  //rank-k update
-	  if(AQinvAt==NULL) AQinvAt = new DenseSymMatrix(locmy);
+	  if(AQinvAt==nullptr) AQinvAt = new DenseSymMatrix(locmy);
 	  AQinvAt->atRankkUpdate(0.0, 1.0, W, 1);
 	  //printf("rank-k update done  %g sec\\n" , MPI_Wtime()-st);st=MPI_Wtime();   
 	  
-	  if(solver2==NULL) solver2 = new DeSymPSDSolver(AQinvAt);
+	  if(solver2==nullptr) solver2 = new DeSymPSDSolver(AQinvAt);
 	  solver2->matrixChanged();
 
 	  stochNode->resMon.recSchurMultLocal_stop();  //~~~1~~~ 
@@ -247,7 +247,7 @@ void QpGenStochLinsysRootNrmEqnPrecond::factor2(QpGenStochData *prob, Variables 
     int rankZeroW = stochNode->rankZeroW;
     if(me==eSpecialWorker) {
       double* buffer=new double[locnx*locnx];
-      if(buffer==NULL) printf("PANIC !!!! not enough memory in doing the reduce !!!!\n");
+      if(buffer==nullptr) printf("PANIC !!!! not enough memory in doing the reduce !!!!\n");
 
       MPI_Reduce(&(UtV->mStorage->M[0][0]), buffer, locnx*locnx,
 		 MPI_DOUBLE, MPI_SUM, rankZeroW, mpiComm);
@@ -263,7 +263,7 @@ void QpGenStochLinsysRootNrmEqnPrecond::factor2(QpGenStochData *prob, Variables 
       addUtVToKKT(1.0, *UtV, *kktd, locnx);
     } else {
       // REGULAR worker and preconditioner
-      MPI_Reduce(&(UtV->mStorage->M[0][0]), NULL, locnx*locnx,
+      MPI_Reduce(&(UtV->mStorage->M[0][0]), nullptr, locnx*locnx,
 		 MPI_DOUBLE, MPI_SUM, 
 		 rankZeroW, mpiComm);
     }
@@ -304,7 +304,7 @@ QpGenStochLinsysRootNrmEqnPrecond::Dsolve( QpGenStochData *prob, OoqpVector& b_ 
   // PRECONDITIONER waits to be signaled
   ///////////////////////////////////////////////////////////////////////
   if(me==ePrecond) {
-    if(NULL==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
+    if(nullptr==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
 
     SimpleVector rhs(tmpVec1, n); //shortcut
     MPI_Status status;
@@ -329,7 +329,7 @@ QpGenStochLinsysRootNrmEqnPrecond::Dsolve( QpGenStochData *prob, OoqpVector& b_ 
   //   - broadcasts the solution to the other workers
   ///////////////////////////////////////////////////////////////////////
   if(me==eSpecialWorker) {
-    if(NULL==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
+    if(nullptr==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
     //allocate the buffer here reuse these buffer in the MatVec
     Pmult->setTmpVec1(tmpVec1);
 
@@ -350,7 +350,7 @@ QpGenStochLinsysRootNrmEqnPrecond::Dsolve( QpGenStochData *prob, OoqpVector& b_ 
 void 
 QpGenStochLinsysRootNrmEqnPrecond::createChildren(QpGenStochData* prob)
 {
-  QpGenStochLinsys* child=NULL;
+  QpGenStochLinsys* child=nullptr;
   StochVector& ddst = dynamic_cast<StochVector&>(*dd);
   StochVector& dqst = dynamic_cast<StochVector&>(*dq);
   StochVector& nomegaInvst = dynamic_cast<StochVector&>(*nomegaInv);
@@ -367,7 +367,7 @@ QpGenStochLinsysRootNrmEqnPrecond::createChildren(QpGenStochData* prob)
   
   for(int it=0; it<prob->children.size(); it++) {
     
-    if(MPI_COMM_NULL == ddst.children[it]->mpiComm) {
+    if(MPI_COMM_nullptr == ddst.children[it]->mpiComm) {
       child = new QpGenStochDummyLinsys(dynamic_cast<QpGenStoch*>(factory), prob->children[it]);
     } else {
       
@@ -414,10 +414,10 @@ QpGenStochLinsysRootNrmEqnPrecond::createSolver(QpGenStochData* prob,
       // Special worker
       /////////////////////////////////////////////////////
       DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-      if(NULL==Amult) Amult = new StoredMatTimesVec(kktmat);
+      if(nullptr==Amult) Amult = new StoredMatTimesVec(kktmat);
 
       StochTreePrecond* stochNodePr = dynamic_cast<StochTreePrecond*>(stochNode);
-      if(NULL==Pmult) Pmult = new RemoteMatTimesVec(stochNodePr);
+      if(nullptr==Pmult) Pmult = new RemoteMatTimesVec(stochNodePr);
 
       return new CGSolver(Amult, Pmult);
       //return new DeSymIndefSolver(kktmat);

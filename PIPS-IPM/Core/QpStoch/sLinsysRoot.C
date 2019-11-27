@@ -10,6 +10,8 @@
 #include "sLinsysLeaf.h"
 #include "math.h"
 
+#include "pipsport.h"
+
 /*********************************************************************/
 /************************** ROOT *************************************/
 /*********************************************************************/
@@ -23,13 +25,13 @@ extern bool ipStartFound;
 extern int gOuterSolve;
 
 sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
-  : sLinsys(factory_, prob_), iAmDistrib(0), sparseKktBuffer(NULL)
+  : sLinsys(factory_, prob_), iAmDistrib(0), sparseKktBuffer(nullptr)
 {
-  assert(dd!=NULL);
-  xDiag = NULL;
-  zDiag = NULL;
-  zDiagLinkCons = NULL;
-  kktDist = NULL;
+  assert(dd!=nullptr);
+  xDiag = nullptr;
+  zDiag = nullptr;
+  zDiagLinkCons = nullptr;
+  kktDist = nullptr;
 
 #ifdef TIMING
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -61,11 +63,11 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
       res4 = factory_->tree->newRhs();
       res5 = factory_->tree->newRhs();
     } else {
-      sol2 = res2 = res3 = res4 = res5 = NULL;
+      sol2 = res2 = res3 = res4 = res5 = nullptr;
     }
   } else {
-    sol  = res  = resx = resy = resz = NULL;
-    sol2 = res2 = res3 = res4 = res5 = NULL;
+    sol  = res  = resx = resy = resz = nullptr;
+    sol2 = res2 = res3 = res4 = res5 = nullptr;
   }
 
 #ifdef DIST_PRECOND
@@ -89,12 +91,12 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
 			 OoqpVector* dq_,
 			 OoqpVector* nomegaInv_,
 			 OoqpVector* rhs_)
-  : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0), sparseKktBuffer(NULL)
+  : sLinsys(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), iAmDistrib(0), sparseKktBuffer(nullptr)
 {
-  xDiag = NULL;
-  zDiag = NULL;
-  zDiagLinkCons = NULL;
-  kktDist = NULL;
+  xDiag = nullptr;
+  zDiag = nullptr;
+  zDiagLinkCons = nullptr;
+  kktDist = nullptr;
 
   createChildren(prob_);
 
@@ -115,11 +117,11 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
       res4 = factory_->tree->newRhs();
       res5 = factory_->tree->newRhs();
     } else {
-      sol2 = res2 = res3 = res4 = res5 = NULL;
+      sol2 = res2 = res3 = res4 = res5 = nullptr;
     }
   } else {
-      sol  = res  = resx = resy = resz = NULL;
-      sol2 = res2 = res3 = res4 = res5 = NULL;
+      sol  = res  = resx = resy = resz = nullptr;
+      sol2 = res2 = res3 = res4 = res5 = nullptr;
   }
 
 #ifdef DIST_PRECOND
@@ -409,9 +411,9 @@ void sLinsysRoot::Dsolve( sData *prob, OoqpVector& x )
 
 void sLinsysRoot::createChildren(sData* prob)
 {
-  sLinsys* child=NULL;
-  assert(dd!=NULL);
-  assert(dynamic_cast<StochVector*>(dd) !=NULL);
+  sLinsys* child=nullptr;
+  assert(dd!=nullptr);
+  assert(dynamic_cast<StochVector*>(dd) !=nullptr);
   StochVector& ddst = dynamic_cast<StochVector&>(*dd);
   StochVector& dqst = dynamic_cast<StochVector&>(*dq);
   StochVector& nomegaInvst = dynamic_cast<StochVector&>(*nomegaInv);
@@ -421,7 +423,7 @@ void sLinsysRoot::createChildren(sData* prob)
   this->mpiComm = ddst.mpiComm;
   this->iAmDistrib = ddst.iAmDistrib;
   for(size_t it=0; it<prob->children.size(); it++) {
-      assert(ddst.children[it]!=NULL); 
+      assert(ddst.children[it]!=nullptr); 
       if(MPI_COMM_NULL == ddst.children[it]->mpiComm) {
 	  child = new sDummyLinsys(dynamic_cast<sFactory*>(factory), prob->children[it]);
       } else {
@@ -584,7 +586,7 @@ void sLinsysRoot::initializeKKT(sData* prob, Variables* vars)
 
 void sLinsysRoot::reduceKKT()
 {
-   reduceKKT(NULL);
+   reduceKKT(nullptr);
 }
 
 void sLinsysRoot::reduceKKT(sData* prob)
@@ -676,7 +678,7 @@ void sLinsysRoot::reduceToProc0(int size, double* values)
 
    int myRank; MPI_Comm_rank(mpiComm, &myRank);
 
-   if( myRank == 0 && sparseKktBuffer == NULL )
+   if( myRank == 0 && sparseKktBuffer == nullptr )
       sparseKktBuffer = new double[CHUNK_SIZE];
 
    const int reps = size / CHUNK_SIZE;
@@ -702,7 +704,7 @@ void sLinsysRoot::reduceToProc0(int size, double* values)
    }
 
 #if 0
-   if( myRank == 0 && sparseKktBuffer == NULL )
+   if( myRank == 0 && sparseKktBuffer == nullptr )
       sparseKktBuffer = new double[nnzKkt];
 
    MPI_Reduce(MKkt, sparseKktBuffer, nnzKkt, MPI_DOUBLE, MPI_SUM, 0, mpiComm);
@@ -1208,7 +1210,7 @@ void sLinsysRoot::reduceKKTdist(sData* prob)
 
 void sLinsysRoot::factorizeKKT()
 {
-   factorizeKKT(NULL);
+   factorizeKKT(nullptr);
 }
 
 void sLinsysRoot::factorizeKKT(sData* prob)

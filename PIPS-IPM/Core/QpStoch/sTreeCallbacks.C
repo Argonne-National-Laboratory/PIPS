@@ -12,8 +12,7 @@
 #include "DoubleMatrixTypes.h"
 #include <cmath>
 #include <algorithm>    // std::swap
-
-using namespace std;
+#include "pipsport.h"
 
 #ifndef UCTRANS // see note in smlParDriver.C
 #define UCTRANS
@@ -33,7 +32,7 @@ sTreeCallbacks::sTreeCallbacks()
     N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
     nx_active(0),  my_active(0),  mz_active(0),  myl_active(0),  mzl_active(0),
     nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
-    isDataPresolved(false), hasPresolvedData(false), data(NULL), tree(NULL), fakedata(NULL)
+    isDataPresolved(false), hasPresolvedData(false), data(nullptr), tree(nullptr), fakedata(nullptr)
 
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -47,7 +46,7 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree* inputTree)
     N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
     nx_active(0),  my_active(0),  mz_active(0),  myl_active(0),  mzl_active(0),
     nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
-    isDataPresolved(false), hasPresolvedData(false), tree(NULL), fakedata(NULL)
+    isDataPresolved(false), hasPresolvedData(false), tree(nullptr), fakedata(nullptr)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -69,7 +68,7 @@ sTreeCallbacks::sTreeCallbacks(const vector<StochInputTree::StochInputNode*> &lo
     N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
     nx_active(0),  my_active(0),  mz_active(0),  myl_active(0),  mzl_active(0),
     nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
-    isDataPresolved(false), hasPresolvedData(false), data(NULL), tree(NULL), scens(localscens)
+    isDataPresolved(false), hasPresolvedData(false), data(nullptr), tree(nullptr), scens(localscens)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -87,7 +86,7 @@ sTreeCallbacks::sTreeCallbacks(StochInputTree::StochInputNode* data_)
     N_INACTIVE(-1), MY_INACTIVE(-1), MZ_INACTIVE(-1),
     nx_active(data_->n),  my_active(data_->my),  mz_active(data_->mz),  myl_active(data_->myl),  mzl_active(data_->mzl),
     nx_inactive(-1),  my_inactive(-1),  mz_inactive(-1),  myl_inactive(-1),  mzl_inactive(-1),
-    isDataPresolved(false), hasPresolvedData(false), data(data_), tree(NULL), fakedata(NULL)
+    isDataPresolved(false), hasPresolvedData(false), data(data_), tree(nullptr), fakedata(nullptr)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
   if(-1==numProcs) MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
@@ -183,8 +182,8 @@ void sTreeCallbacks::initPresolvedData(const StochSymMatrix& Q, const StochGenMa
    assert(A.children.size() == children.size());
    assert(C.children.size() == children.size());
 
-   assert(fakedata == NULL);
-   assert(tree == NULL);
+   assert(fakedata == nullptr);
+   assert(tree == nullptr);
 
    const SimpleVector& nxVecSimple = dynamic_cast<const SimpleVector&>(*nxVec.vec);
    const SimpleVector& myVecSimple = dynamic_cast<const SimpleVector&>(*myVec.vec);
@@ -200,7 +199,7 @@ void sTreeCallbacks::initPresolvedData(const StochSymMatrix& Q, const StochGenMa
    my_inactive = MY_INACTIVE;
    mz_inactive = MZ_INACTIVE;
 
-   if( myVecSimpleLink != NULL )
+   if( myVecSimpleLink != nullptr )
    {
       assert(np == -1);
       myl_inactive = myVecSimpleLink->n;
@@ -210,7 +209,7 @@ void sTreeCallbacks::initPresolvedData(const StochSymMatrix& Q, const StochGenMa
       myl_inactive = mylParent;
    }
 
-   if( mzVecSimpleLink != NULL )
+   if( mzVecSimpleLink != nullptr )
    {
       assert(np == -1);
       mzl_inactive = mzVecSimpleLink->n;
@@ -450,7 +449,7 @@ StochSymMatrix* sTreeCallbacks::createQ() const
     return Q;
   } else {
     assert(false);
-    return NULL;
+    return nullptr;
     /*
     assert(real_children.size() > 0);
     vector<StochSymMatrix*> v(real_children.size());
@@ -474,7 +473,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
     return new StochGenDummyMatrix(id());
   }
 
-  StochGenMatrix* A = NULL;
+  StochGenMatrix* A = nullptr;
   if (!fakedata) {
 
 	 if (data->fnnzBl && data->nnzBl < 0)
@@ -557,7 +556,7 @@ StochGenMatrix* sTreeCallbacks::createA() const
     }
   } else {
     assert(false);
-    return NULL;
+    return nullptr;
 
   }
   return A;
@@ -569,7 +568,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochGenDummyMatrix(id());
 
-  StochGenMatrix* C = NULL;
+  StochGenMatrix* C = nullptr;
   if (!fakedata) {
 
     if (data->fnnzDl && data->nnzDl < 0)
@@ -653,7 +652,7 @@ StochGenMatrix* sTreeCallbacks::createC() const
     }
   } else {
     assert(false);
-    return NULL;
+    return nullptr;
   }
   return C;
 }
@@ -758,7 +757,7 @@ StochVector* sTreeCallbacks::createb() const
   StochVector* b = new StochVector(my(), yl, commWrkrs, -1);
 
   double* vData = ((SimpleVector*)b->vec)->elements();
-  double* vDataLinkCons = NULL;
+  double* vDataLinkCons = nullptr;
 
   if (np == -1 && b->vecl )
      vDataLinkCons = ((SimpleVector*)b->vecl)->elements();
@@ -917,7 +916,7 @@ StochVector* sTreeCallbacks::createclow() const
 
   StochVector* clow = new StochVector(mz(), zl, commWrkrs, -1);
   double* vData = ((SimpleVector*)clow->vec)->elements();
-  double* vDataLinkCons = NULL;
+  double* vDataLinkCons = nullptr;
 
   if (np == -1 && clow->vecl )
      vDataLinkCons = ((SimpleVector*)clow->vecl)->elements();
@@ -965,7 +964,7 @@ StochVector* sTreeCallbacks::createiclow() const
 
   StochVector* iclow = new StochVector(mz(), zl, commWrkrs, -1);
   double* vData = ((SimpleVector*)iclow->vec)->elements();  
-  double* vDataLinkCons = NULL;
+  double* vDataLinkCons = nullptr;
 
   if (np == -1 && iclow->vecl )
     vDataLinkCons = ((SimpleVector*)iclow->vecl)->elements();
@@ -1012,7 +1011,7 @@ StochVector* sTreeCallbacks::createcupp() const
 
   StochVector* cupp = new StochVector(mz(), zl, commWrkrs, -1);
   double* vData = ((SimpleVector*)cupp->vec)->elements();  
-  double* vDataLinkCons = NULL;
+  double* vDataLinkCons = nullptr;
 
   if (np == -1 && cupp->vecl)
     vDataLinkCons = ((SimpleVector*)cupp->vecl)->elements();
@@ -1060,7 +1059,7 @@ StochVector* sTreeCallbacks::createicupp() const
 
   StochVector* icupp = new StochVector(mz(), zl, commWrkrs, -1);
   double* vData = ((SimpleVector*)icupp->vec)->elements();
-  double* vDataLinkCons = NULL;
+  double* vDataLinkCons = nullptr;
 
   if (np == -1 && icupp->vecl)
      vDataLinkCons = ((SimpleVector*)icupp->vecl)->elements();

@@ -2,6 +2,7 @@
  * Authors: E. Michael Gertz, Stephen J. Wright                       *
  * (C) 2001 University of Chicago. See Copyright Notification in OOQP */
 
+#include "pipsport.h"
 #include "DeSymIndefSolver.h"
 #include "SimpleVector.h"
 #include <cassert>
@@ -67,7 +68,7 @@ DeSymIndefSolver::DeSymIndefSolver( DenseSymMatrix * dm )
   int size = mStorage->n;
   ipiv = new int[size];
   lwork = -1;
-  work = NULL;
+  work = nullptr;
   sparseMat = 0;
 
 }
@@ -79,7 +80,7 @@ DeSymIndefSolver::DeSymIndefSolver( SparseSymMatrix * sm )
 
   ipiv = new int[size];
   lwork = -1;
-  work = NULL;
+  work = nullptr;
   sparseMat = sm;
 
 

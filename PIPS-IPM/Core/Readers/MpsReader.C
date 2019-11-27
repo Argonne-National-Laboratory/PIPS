@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <cmath>
+#include "pipsport.h"
 
 extern int gOoqpPrintLevel;
 
@@ -1045,7 +1046,7 @@ MpsReader * MpsReader::newReadingFile( char filename[], int& iErr )
 void MpsReader::findFile( FILE*& file, char*& resolvedName,
 			  char filename[] )
 {
-  file = NULL; resolvedName = 0;
+  file = nullptr; resolvedName = 0;
   int lfilename = strlen( filename );
 
   file = fopen( filename, "r" );
@@ -1116,10 +1117,10 @@ void MpsReader::readProblemName2( char line[], int& iErr, int kindOfLine )
 
         // Split the extracted line into tokens delimited by space...
         arrayOfTokens[0] = token;
-        arrayOfTokens[1] = strtok( NULL, " ");
+        arrayOfTokens[1] = strtok( nullptr, " ");
 
         // Field 1: Tag "Name"
-        if( arrayOfTokens[0] != NULL){
+        if( arrayOfTokens[0] != nullptr){
             strcpy(tag, arrayOfTokens[0]);
             
             if( strncmp( "NAME", tag, 4 ) ) {
@@ -1136,7 +1137,7 @@ void MpsReader::readProblemName2( char line[], int& iErr, int kindOfLine )
             }
 
         // Field 2: Problem Name
-        if( arrayOfTokens[1] != NULL){
+        if( arrayOfTokens[1] != nullptr){
             this->string_copy(problemName, arrayOfTokens[1], 16);
             
             if( strlen( arrayOfTokens[1]) > 16){
@@ -1175,7 +1176,7 @@ void MpsReader::readObjectiveSense( char line[], int& iErr, int kindOfLine )
         arrayOfTokens[0] = token;
 
         // Field 1: "MAX" or "MIN"
-        if( arrayOfTokens[0] != NULL){
+        if( arrayOfTokens[0] != nullptr){
             strncpy( objectiveSense, arrayOfTokens[0], 3);
 
             if( strncmp( "MAX", objectiveSense, 3 ) && strncmp( "MIN", objectiveSense, 3) ) {
@@ -1984,10 +1985,10 @@ int MpsReader::ParseRowsLine2( char line[],  char code[], char name1[] )
 
     // Split the extracted line into tokens delimited by space...
     arrayOfTokens[0] = token;
-    arrayOfTokens[1] = strtok( NULL, " ");
+    arrayOfTokens[1] = strtok( nullptr, " ");
 
     // Field 1: Row type
-    if( arrayOfTokens[0] != NULL){
+    if( arrayOfTokens[0] != nullptr){
         strcpy(code, arrayOfTokens[0]);         
         }
     else{
@@ -1996,7 +1997,7 @@ int MpsReader::ParseRowsLine2( char line[],  char code[], char name1[] )
         }
 
     // Field 2: Row name
-    if( arrayOfTokens[1] != NULL){
+    if( arrayOfTokens[1] != nullptr){
         strcpy(name1, arrayOfTokens[1]);         
         }
     else{
@@ -2131,11 +2132,11 @@ int MpsReader::ParseBoundsLine2( char line[], int& code, char name1[],
 
     // Split the extracted line into tokens delimited by space...
     for( i = 1; i < 4; i++){       
-        arrayOfTokens[i] = strtok( NULL, " ");
+        arrayOfTokens[i] = strtok( nullptr, " ");
         }
 
     // Field 1: Specifies the types of bound
-    if( arrayOfTokens[0] != NULL){
+    if( arrayOfTokens[0] != nullptr){
         strcpy(codeStr, arrayOfTokens[0]);         
         }
     else{
@@ -2167,19 +2168,19 @@ int MpsReader::ParseBoundsLine2( char line[], int& code, char name1[],
 	// The presence of kFreeBound, kMInftyBound or kPInftyBound and 3 tokens indicates
 	// that a bounds label is present.
 	if( (code == kFreeBound) || (code == kMInftyBound) || (code == kPInftyBound)){
-		if( arrayOfTokens[2] != NULL)
+		if( arrayOfTokens[2] != nullptr)
 			boundsLabelPresent = true;
 		}
 	// The presence of kLowerBound, kUpperBound or kFixedBound and 4 tokens indicates 
 	// that a bounds label is present
 	else if( (code == kLowerBound) || (code == kUpperBound) || (code == kFixedBound)){
-		if( arrayOfTokens[3] != NULL)
+		if( arrayOfTokens[3] != nullptr)
 			boundsLabelPresent = true;
 		}
 
     // Field 2: Bounds Label
     if( boundsLabelPresent){
-	if( arrayOfTokens[1] != NULL){
+	if( arrayOfTokens[1] != nullptr){
 		strcpy(name1, arrayOfTokens[1]);        
 		}
 	else{
@@ -2195,7 +2196,7 @@ int MpsReader::ParseBoundsLine2( char line[], int& code, char name1[],
 		}
 
     // Field 3: Column Label
-    if( arrayOfTokens[tokIndex] != NULL){
+    if( arrayOfTokens[tokIndex] != nullptr){
         strcpy(name2, arrayOfTokens[tokIndex]); 
 		tokIndex++;
         }
@@ -2214,7 +2215,7 @@ int MpsReader::ParseBoundsLine2( char line[], int& code, char name1[],
   default:
 
     // Field 4 (Optional): Bound value
-    if( arrayOfTokens[tokIndex] != NULL){
+    if( arrayOfTokens[tokIndex] != nullptr){
         *val = strtod( arrayOfTokens[tokIndex], &endptr );
 
         if( endptr[0] != ' ' && endptr[0] != '\0')
@@ -2396,14 +2397,14 @@ int MpsReader::ParseDataLine2( char line[],  char code[],
 
     token = strtok( tempLine, " ");
     arrayOfTokens[0] = token;
-    if( arrayOfTokens[0] != NULL) 
+    if( arrayOfTokens[0] != nullptr) 
     	numberOfTokens++;
 
     // Split the extracted line into tokens delimited by space...
     for( i = 1; i < 5; i++){       
-        arrayOfTokens[i] = strtok( NULL, " ");
+        arrayOfTokens[i] = strtok( nullptr, " ");
 
-	if( arrayOfTokens[i] != NULL)
+	if( arrayOfTokens[i] != nullptr)
 		numberOfTokens++;
         }
 
@@ -2413,13 +2414,13 @@ int MpsReader::ParseDataLine2( char line[],  char code[],
 	}
 
     // Field 2: Column/RHS/Right-hand side range vector Identifier
-    if( hasName1 && arrayOfTokens[tokIndex] != NULL){
+    if( hasName1 && arrayOfTokens[tokIndex] != nullptr){
         strcpy(name1, arrayOfTokens[tokIndex]);         
         tokIndex++;
 	}
 
     // Field 3: Row identifier
-    if( arrayOfTokens[tokIndex] != NULL){
+    if( arrayOfTokens[tokIndex] != nullptr){
         strcpy(name2, arrayOfTokens[tokIndex]);
 	tokIndex++;
         }
@@ -2429,7 +2430,7 @@ int MpsReader::ParseDataLine2( char line[],  char code[],
         }
 
     // Field 4: Value of matrix coefficient specified by fields 2 and 3
-    if( arrayOfTokens[tokIndex] != NULL){
+    if( arrayOfTokens[tokIndex] != nullptr){
 
         *val1 = strtod( arrayOfTokens[tokIndex], &endptr );
 	tokIndex++;
@@ -2444,14 +2445,14 @@ int MpsReader::ParseDataLine2( char line[],  char code[],
         }
 
     // Field 5 (Optional): Row identifier
-    if( arrayOfTokens[tokIndex] != NULL){
+    if( arrayOfTokens[tokIndex] != nullptr){
 		hasSecondValue = 1;
 		strcpy(name3, arrayOfTokens[tokIndex]);
 		tokIndex++;
         }
 
     // Field 6 (Optional): Value of matrix coefficient specified by fields 2 and 5
-    if( arrayOfTokens[tokIndex] != NULL){
+    if( arrayOfTokens[tokIndex] != nullptr){
         *val2 = strtod( arrayOfTokens[tokIndex], &endptr );
 	tokIndex++;
 
@@ -2590,7 +2591,7 @@ int MpsRowTypeFromCode( char code[2] )
 
 char * MpsReader::defaultOutputFilename( int& iErr )
 {
-  if(infilename == NULL) {
+  if(infilename == nullptr) {
     // Why are we here, if there was no input file?
     fprintf( stderr,
 	     "Apparently no input file, so can't construct an output file.\n");
@@ -2600,11 +2601,11 @@ char * MpsReader::defaultOutputFilename( int& iErr )
  // Figure out what the output file name should be.
   // Was there a "qps" suffix?
   char * suffix = strstr(infilename,".qps");
-  if( suffix == NULL ) { // no qps suffix. How about an .mps suffix
+  if( suffix == nullptr ) { // no qps suffix. How about an .mps suffix
     suffix = strstr(infilename,".mps");
   }
   char * outfilename;
-  if(suffix != NULL) {
+  if(suffix != nullptr) {
     // apparently there is a suffix; strip it off
     int len = strlen(infilename) - strlen(suffix);
     outfilename = new char[ len + 5 ];
@@ -2644,7 +2645,7 @@ void MpsReader::printSolution( double x[],      int     nx,
     if( 0 != iErr ) return;
 
     outfile = fopen( outfilename, "w");
-    if (outfile == NULL) {
+    if (outfile == nullptr) {
       fprintf(stderr,
 	      "Unable to open output file '%s'; solution not printed.\n", 
 	      outfilename);

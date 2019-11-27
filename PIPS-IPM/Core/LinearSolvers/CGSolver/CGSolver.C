@@ -1,5 +1,6 @@
 #include "CGSolver.h"
 #include "SimpleVector.h"
+#include "pipsport.h"
 
 #include <math.h>
 
@@ -13,7 +14,7 @@ CGSolver::CGSolver( MatTimesVec* A, MatTimesVec* M1, MatTimesVec* M2)
   tol = 5.0e-13;
   maxit = 10; iter=-1;
   flag = -1;
-  tmpVec1 = tmpVec2 = tmpVec3 = tmpVec4 = tmpVec5 = tmpVec6 =NULL;
+  tmpVec1 = tmpVec2 = tmpVec3 = tmpVec4 = tmpVec5 = tmpVec6 =nullptr;
   //firstSolve = 1;
 };
 
@@ -39,12 +40,12 @@ void CGSolver::solve( OoqpVector& rhs_ )
   double n2b  = b.twonorm();
   double tolb = n2b*tol;
 
-  if(tmpVec1==NULL) tmpVec1=new double[n];
-  if(tmpVec2==NULL) tmpVec2=new double[n];
-  if(tmpVec3==NULL) tmpVec3=new double[n];
-  if(tmpVec4==NULL) tmpVec4=new double[n];
-  if(tmpVec5==NULL) tmpVec5=new double[n];
-  if(tmpVec6==NULL) tmpVec6=new double[n];
+  if(tmpVec1==nullptr) tmpVec1=new double[n];
+  if(tmpVec2==nullptr) tmpVec2=new double[n];
+  if(tmpVec3==nullptr) tmpVec3=new double[n];
+  if(tmpVec4==nullptr) tmpVec4=new double[n];
+  if(tmpVec5==nullptr) tmpVec5=new double[n];
+  if(tmpVec6==nullptr) tmpVec6=new double[n];
 
   SimpleVector x(tmpVec1, n);      //iterate
   SimpleVector r(tmpVec2,n);      //residual

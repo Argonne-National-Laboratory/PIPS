@@ -14,8 +14,9 @@
 #include "SimpleVector.h"
 #include "LinearAlgebraPackage.h"
 #include "QpGen.h"
-#include <limits>
 #include "mpi.h"
+#include "pipsport.h"
+#include <limits>
 #include <vector>
 #include <algorithm>
 
@@ -93,7 +94,7 @@ static bool isZero(double val, int& flag)
 QpGenLinsys::QpGenLinsys( QpGen * factory_,
 			  QpGenData * prob,
 			  LinearAlgebraPackage * la ) 
-: factory( factory_), rhs(NULL), dd(NULL), dq(NULL), useRefs(0)
+: factory( factory_), rhs(nullptr), dd(nullptr), dq(nullptr), useRefs(0)
 {
 
   nx = prob->nx; my = prob->my; mz = prob->mz;
@@ -130,18 +131,18 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_,
       res4  = la->newVector( nx + my + mz );
       res5  = la->newVector( nx + my + mz );
     } else {
-      sol2 = res2 = res3 = res4 = res5 = NULL;
+      sol2 = res2 = res3 = res4 = res5 = nullptr;
     }
   } else {
-    sol = res = resx = resy = resz = NULL;
-    sol2 = res2 = res3 = res4 = res5 = NULL;
+    sol = res = resx = resy = resz = nullptr;
+    sol2 = res2 = res3 = res4 = res5 = nullptr;
   }
 
   printStatistics = false;
 
   // todo user parameter!
   char* var = getenv("PIPS_PRINT_STATISTICS");
-  if( var != NULL )
+  if( var != nullptr )
   {
      int print = -1;
      sscanf(var, "%d", &print);
@@ -154,13 +155,13 @@ QpGenLinsys::QpGenLinsys( QpGen * factory_,
 }
 
 QpGenLinsys::QpGenLinsys()
- : factory( NULL), rhs(NULL), dd(NULL), dq(NULL), useRefs(0),
-   sol(NULL), res(NULL), resx(NULL), resy(NULL), resz(NULL),
-   sol2(NULL), res2(NULL), res3(NULL), res4(NULL), res5(NULL), printStatistics(false), ipIterations(-2)
+ : factory( nullptr), rhs(nullptr), dd(nullptr), dq(nullptr), useRefs(0),
+   sol(nullptr), res(nullptr), resx(nullptr), resy(nullptr), resz(nullptr),
+   sol2(nullptr), res2(nullptr), res3(nullptr), res4(nullptr), res5(nullptr), printStatistics(false), ipIterations(-2)
 {
    // todo user parameter!
    char* var = getenv("PIPS_PRINT_STATISTICS");
-   if( var != NULL )
+   if( var != nullptr )
    {
       int print = -1;
       sscanf(var, "%d", &print);
@@ -226,7 +227,7 @@ void QpGenLinsys::computeDiagonals( OoqpVector& dd_, OoqpVector& omega,
   omega.setToZero();
   if ( mclow > 0 ) omega.axdzpy( 1.0, lambda, t, *iclow );
   if ( mcupp > 0 ) omega.axdzpy( 1.0, pi,     u, *icupp );
-  //assert( omega->allPositive() );
+  // assert( omega.allPositive() );
 }
 
 void QpGenLinsys::solve(Data * prob_in, Variables *vars_in,

@@ -9,6 +9,8 @@
 #include "SparseLinearAlgebraPackage.h"
 #include "math.h"
 
+#include "pipsport.h"
+
 #ifdef _OPENMP
 #include "omp.h"
 #endif
@@ -20,7 +22,7 @@
 extern int gOuterIterRefin;
 
 sLinsys::sLinsys(sFactory* factory_, sData* prob)
-  : QpGenLinsys(), kkt(NULL), solver(NULL), nThreads(PIPSgetnOMPthreads())
+  : QpGenLinsys(), kkt(nullptr), solver(nullptr), nThreads(PIPSgetnOMPthreads())
 {
   factory = factory_;
 
@@ -39,16 +41,16 @@ sLinsys::sLinsys(sFactory* factory_, sData* prob)
 
   //if( nxupp + nxlow > 0 ) {
   dd      = factory_->tree->newPrimalVector();
-  assert(dd!=NULL);
+  assert(dd!=nullptr);
   
   dq      = factory_->tree->newPrimalVector();
-  assert(dq!=NULL);
+  assert(dq!=nullptr);
   prob->getDiagonalOfQ( *dq );
     //}
   nomegaInv   = factory_->tree->newDualZVector();
   rhs         = factory_->tree->newRhs();
 
-  assert(dd!=NULL);
+  assert(dd!=nullptr);
 
   useRefs=0;
   data = prob;
@@ -61,7 +63,7 @@ sLinsys::sLinsys(sFactory* factory_,
 		 OoqpVector* dq_,
 		 OoqpVector* nomegaInv_,
 		 OoqpVector* rhs_)
-  : QpGenLinsys(), kkt(NULL), solver(NULL), nThreads(PIPSgetnOMPthreads())
+  : QpGenLinsys(), kkt(nullptr), solver(nullptr), nThreads(PIPSgetnOMPthreads())
 {
   factory = factory_;
 
@@ -198,7 +200,7 @@ void sLinsys::computeU_V(sData *prob,
 void sLinsys::allocU(DenseGenMatrix ** U, int n0)
 {
   int lines,cols;
-  if(*U==NULL) {
+  if(*U==nullptr) {
     *U = new DenseGenMatrix(locnx+locmy+locmz, n0);
   } else {
     (*U)->getSize(lines,cols);
@@ -214,7 +216,7 @@ void sLinsys::allocU(DenseGenMatrix ** U, int n0)
 void sLinsys::allocV(DenseGenMatrix ** V, int n0)
 {
   int lines,cols;
-  if(*V==NULL)
+  if(*V==nullptr)
     *V = new DenseGenMatrix(locnx+locmy+locmz, n0);
   else {
     (*V)->getSize(lines,cols);
@@ -492,7 +494,7 @@ void sLinsys::addTermToSchurResidual(sData* prob,
 
   bool ispardiso=false;
   PardisoSolver* pardisoSlv = dynamic_cast<PardisoSolver*>(solver);
-  int* colSparsity=NULL;
+  int* colSparsity=nullptr;
   if(pardisoSlv) {
     ispardiso=true;
     colSparsity=new int[N];
@@ -592,7 +594,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   N = locnx+locmy+locmz;
 
   SimpleVector col(N);
-  SimpleVector nnzPerColRAC(nxP);
+  SimpleVectorBase<int> nnzPerColRAC(nxP);
 
   if( withR )
      R.addNnzPerCol(nnzPerColRAC);
@@ -644,7 +646,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   // do we have linking equality constraints?
   if( withMyl )
   {
-    SimpleVector nnzPerColFt(locmyl);
+    SimpleVectorBase<int> nnzPerColFt(locmyl);
     F.addNnzPerRow(nnzPerColFt);
 
     // do column-wise multiplication for columns containing Ft (F transposed)
@@ -679,7 +681,7 @@ void sLinsys::addTermToDenseSchurCompl(sData *prob,
   // do we have linking inequality constraints?
   if( withMzl )
   {
-    SimpleVector nnzPerColGt(locmzl);
+    SimpleVectorBase<int> nnzPerColGt(locmzl);
     G.addNnzPerRow(nnzPerColGt);
 
     // do column-wise multiplication for columns containing Gt (G transposed)
@@ -770,7 +772,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
 
    N = locnx + locmy + locmz;
 
-   SimpleVector nnzPerColRAC(nxP);
+   SimpleVectorBase<int> nnzPerColRAC(nxP);
 
    if( withR )
       R.addNnzPerCol(nnzPerColRAC);
@@ -788,7 +790,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
    assert(nThreads >= 1);
    //std::cout << "blocksizemax " << blocksizemax << std::endl;
 
-   // save columns in this array todo member variable, initialized at first call (if == NULL)
+   // save columns in this array todo member variable, initialized at first call (if == nullptr)
    double* colsBlockDense = new double[blocksizemax * N];
 
    // to save original column index of each column in colsBlockTrans
@@ -796,7 +798,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
 #if 1
    int* colSparsity = new int[N];
 #else
-   int* colSparsity = NULL;
+   int* colSparsity = nullptr;
 #endif
 
 #ifdef TIME_SCHUR
@@ -846,7 +848,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
       //     SC +=  B^T  K^-1  (0  )
       //                       (0  )
 
-      SimpleVector nnzPerColFt(locmyl);
+      SimpleVectorBase<int> nnzPerColFt(locmyl);
       F.addNnzPerRow(nnzPerColFt);
 
       colpos = 0;
@@ -887,7 +889,7 @@ void sLinsys::addTermToSchurComplBlocked(sData *prob, bool sparseSC,
       //     SC +=  B^T  K^-1  (0  )
       //                       (0  )
 
-      SimpleVector nnzPerColGt(locmzl);
+      SimpleVectorBase<int> nnzPerColGt(locmzl);
       G.addNnzPerRow(nnzPerColGt);
 
       colpos = 0;

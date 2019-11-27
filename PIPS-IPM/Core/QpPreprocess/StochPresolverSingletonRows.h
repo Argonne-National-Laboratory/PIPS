@@ -16,7 +16,7 @@
 class StochPresolverSingletonRows : public StochPresolverBase
 {
 public:
-   StochPresolverSingletonRows(PresolveData& presData, StochPostsolver* postsolver);
+   StochPresolverSingletonRows(PresolveData& presData, const sData& origProb);
 
    ~StochPresolverSingletonRows();
 
@@ -24,17 +24,10 @@ public:
    virtual void applyPresolving();
 
 private:
-   void doSingletonRows(int& n_sing_sys, int& n_sing_other_sys, SystemType system_type);
+   long long removed_rows; 
 
-   void procSingletonRowRoot(SystemType system_type);
-   void procSingletonRowChild(int it, int& n_singleton_sys, int& n_singleton_other_sys, SystemType system_type);
-
-   void processSingletonBlock(SystemType system_type, BlockType block_type, int node);
-
-   void calculateNewBoundsOnVariable(double& new_xlow, double& new_xupp, const double& iclow, const double& clow,
-         const double& icupp, const double& cupp, double aik) const;
-
-   void getValuesForSR(SparseStorageDynamic const & storage, int rowIdx, int& colIdx, double& aik) const;
+   bool removeSingletonRow(SystemType system_type, int node, int row_idx);
+   void getBoundsAndColFromSingletonRow( SystemType system_type, int& node, int row_idx, BlockType& block_type, int& col_idx, double& ubx, double& lbx );
 
 };
 

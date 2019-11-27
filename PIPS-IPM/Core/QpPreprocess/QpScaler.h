@@ -71,7 +71,7 @@ public:
   virtual ~QpScaler();
 
   /** scale */
-  void scale() override = 0;
+  virtual void scale() override = 0;
 
   double getObjUnscaled(double objval) const override;
   Variables* getVariablesUnscaled(const Variables& vars) const override;

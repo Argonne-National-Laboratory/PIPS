@@ -96,7 +96,7 @@ public:
   /** Reduce the matrix to lower triangular */
   void reduceToLower();
 
-  void deleteEmptyRowsCols(const OoqpVector& nnzVec);
+  void deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec);
 
   void deleteZeroRowsCols(int*& new2orgIdx);
 

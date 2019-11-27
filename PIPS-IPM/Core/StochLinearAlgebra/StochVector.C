@@ -2,6 +2,7 @@
 #include "SimpleVectorHandle.h"
 #include "VectorUtilities.h"
 #include "StochVector.h"
+#include "pipsport.h"
 
 #include <cassert>
 #include <cstring>
@@ -11,7 +12,7 @@
 
 template<typename T>
 StochVectorBase<T>::StochVectorBase(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
-  : OoqpVectorBase<T>(n_), vecl(NULL), parent(NULL), mpiComm(mpiComm_),
+  : OoqpVectorBase<T>(n_), vecl(nullptr), parent(nullptr), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
   vec = new SimpleVectorBase<T>(n_);
@@ -21,12 +22,12 @@ StochVectorBase<T>::StochVectorBase(int n_, MPI_Comm mpiComm_, int isDistributed
     MPI_Comm_size(mpiComm, &size);
     iAmDistrib = (size == 1) ? 0 : 1;
   }
-  vecl = NULL;
+  vecl = nullptr;
 }
 
 template<typename T>
 StochVectorBase<T>::StochVectorBase(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed)
-  : OoqpVectorBase<T>(n_), parent(NULL), mpiComm(mpiComm_),
+  : OoqpVectorBase<T>(n_), parent(nullptr), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
   vec = new SimpleVectorBase<T>(n_);
@@ -34,14 +35,13 @@ StochVectorBase<T>::StochVectorBase(int n_, int nl_, MPI_Comm mpiComm_, int isDi
   if( nl_ >= 0 )
     vecl = new SimpleVectorBase<T>(nl_);
   else
-	 vecl = NULL;
+	 vecl = nullptr;
 
   if( -1 == iAmDistrib && MPI_COMM_NULL != mpiComm) {
     int size;
     MPI_Comm_size(mpiComm, &size);
     iAmDistrib = (size == 1) ? 0 : 1;
   }
-
 }
 
 template<typename T>
@@ -106,7 +106,7 @@ OoqpVectorBase<T>* StochVectorBase<T>::clone() const
 template<typename T>
 OoqpVectorBase<T>* StochVectorBase<T>::cloneFull() const
 {
-   StochVectorBase<T>* clone = new StochVectorBase<T>(vec->length(), (vecl != NULL) ? vecl->length() : -1, mpiComm, -1);
+   StochVectorBase<T>* clone = new StochVectorBase<T>(vec->length(), (vecl != nullptr) ? vecl->length() : -1, mpiComm, -1);
 
    clone->vec->copyFrom(*vec);
 
@@ -334,7 +334,7 @@ void StochVectorBase<T>::setToZero()
 
   if( vecl ) vecl->setToZero();
 
-  for(size_t it = 0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->setToZero();
 }
 
@@ -345,7 +345,7 @@ void StochVectorBase<T>::setToConstant( T c)
 
   if( vecl ) vecl->setToConstant(c);
 
-  for(size_t it = 0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     children[it]->setToConstant(c);
 }
 
@@ -408,7 +408,6 @@ T StochVectorBase<T>::infnorm() const
 
   if(iAmDistrib) {
     T infnrmG = PIPS_MPIgetMax(infnrm, mpiComm);
-    // MPI_Allreduce(&infnrm, &infnrmG, 1, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
     infnrm = infnrmG;
   }
 
@@ -446,7 +445,6 @@ T StochVectorBase<T>::onenorm() const
   if( iAmDistrib == 1 )
   {
      T sum = PIPS_MPIgetSum(onenrm, mpiComm);
-     // MPI_Allreduce(&onenrm, &sum, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
      onenrm = sum;
   }
 
@@ -464,7 +462,7 @@ void StochVectorBase<T>::min( T& m, int& index ) const
 {
   T lMin; int lInd;
 
-  if(NULL == parent) {
+  if(nullptr == parent) {
     vec->min(m,index);
     if( vecl )
     {
@@ -502,7 +500,6 @@ void StochVectorBase<T>::min( T& m, int& index ) const
 
   if(iAmDistrib == 1) {
     T minG = PIPS_MPIgetMin(m, mpiComm);
-    // MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
     m = minG;
   }
 }
@@ -514,7 +511,7 @@ void StochVectorBase<T>::max( T& m, int& index ) const
    T lMax;
    int lInd;
 
-   if( NULL == parent )
+   if( nullptr == parent )
    {
       vec->max(m, index);
       if( vecl )
@@ -556,7 +553,6 @@ void StochVectorBase<T>::max( T& m, int& index ) const
    if( iAmDistrib == 1 )
    {
       T maxG = PIPS_MPIgetMax(m, mpiComm);
-      // MPI_Allreduce(&m, &maxG, 1, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
       m = maxG;
    }
 }
@@ -602,7 +598,7 @@ void StochVectorBase<T>::absmin(T& m) const
 {
    T lMin;
 
-   if(NULL==parent) {
+   if(nullptr==parent) {
      vec->absmin(m);
      if( vecl )
      {
@@ -631,7 +627,6 @@ void StochVectorBase<T>::absmin(T& m) const
 
    if(iAmDistrib == 1) {
      T minG = PIPS_MPIgetMin(m, mpiComm);
-     // MPI_Allreduce(&m, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
      m = minG;
    }
    assert( m >= 0.0 );
@@ -684,7 +679,6 @@ void StochVectorBase<T>::absminNonZero(T& m, T zero_eps) const
       }
 
       minG = PIPS_MPIgetMin(min, mpiComm);
-      // MPI_Allreduce(&min, &minG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
 
       if( minG < std::numeric_limits<T>::max() )
          m = minG;
@@ -718,7 +712,6 @@ T StochVectorBase<T>::stepbound(const OoqpVectorBase<T> & v_, T maxStep ) const
 
   if(iAmDistrib == 1) {
     T stepG = PIPS_MPIgetMin(step, mpiComm);
-    // MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); // not working properly in templated version
     step = stepG;
   }
   return step;
@@ -781,7 +774,6 @@ T StochVectorBase<T>::findBlocking(const OoqpVectorBase<T> & wstep_vec,
     assert(PIPSisLE(0.0, step));
 
     stepG = PIPS_MPIgetMin(step, mpiComm);
-    // MPI_Allreduce(&step, &stepG, 1, MPI_DOUBLE, MPI_MIN, mpiComm); not working properly in templated version
     const bool iHaveMinStep = PIPSisEQ(step, stepG, local_eps);
 
     //we prefer a AllReduce instead of a bcast, since the step==stepG m
@@ -828,8 +820,6 @@ T StochVectorBase<T>::findBlocking(const OoqpVectorBase<T> & wstep_vec,
 
     T bufferOut[5];
     PIPS_MPImaxArray(buffer, bufferOut, 5, mpiComm);
-
-    //MPI_Allreduce(buffer, bufferOut, 5, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
     *w_elt = bufferOut[0]; *wstep_elt=bufferOut[1];
     *u_elt = bufferOut[2]; *ustep_elt=bufferOut[3];
@@ -905,8 +895,6 @@ void StochVectorBase<T>::findBlocking_pd(const OoqpVectorBase<T> & wstep_vec,
 
       maxStepGlobalPri = PIPS_MPIgetMin(maxStepPri, mpiComm);
       maxStepGlobalDual = PIPS_MPIgetMin(maxStepDual, mpiComm);
-      // MPI_Allreduce(&maxStepPri, &maxStepGlobalPri, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
-      // MPI_Allreduce(&maxStepDual, &maxStepGlobalDual, 1, MPI_DOUBLE, MPI_MIN, mpiComm);
       const bool iHaveMinStepPri = PIPSisEQ(maxStepPri, maxStepGlobalPri, local_eps);
       const bool iHaveMinStepDual = PIPSisEQ(maxStepDual, maxStepGlobalDual, local_eps);
 
@@ -998,7 +986,6 @@ void StochVectorBase<T>::findBlocking_pd(const OoqpVectorBase<T> & wstep_vec,
 
       T bufferOut[10];
       PIPS_MPImaxArray(buffer, bufferOut, 10, mpiComm);
-      // MPI_Allreduce(buffer, bufferOut, 10, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
       w_elt_p = bufferOut[0];
       wstep_elt_p = bufferOut[1];
@@ -1042,6 +1029,40 @@ void StochVectorBase<T>::componentDiv ( const OoqpVectorBase<T>& v_ )
 
   for(size_t it = 0; it < children.size(); it++)
     children[it]->componentDiv(*v.children[it]);
+}
+
+template<typename T>
+bool StochVectorBase<T>::componentEqual( const OoqpVectorBase<T>& v_, T tol) const
+{
+   const StochVectorBase<T>& v = dynamic_cast<const StochVectorBase<T>&>(v_);
+   assert(v.children.size() == children.size());
+
+   bool component_equal = true;
+   component_equal = (component_equal && vec->componentEqual(*v.vec, tol));
+   if(!component_equal)
+   {
+      std::cout << "not equal in root node non-link" << std::endl;
+      return component_equal;
+   }
+
+   if( vecl )
+      component_equal = (component_equal && vecl->componentEqual(*v.vecl, tol));
+   if( !component_equal )
+   {
+      std::cout << "not equal in root node link" << std::endl;
+      return component_equal;
+   }
+
+   for(size_t child = 0; child < children.size(); child++)
+   {
+      component_equal = (component_equal && children[child]->componentEqual(*v.children[child], tol));
+      if( !component_equal )
+      {
+         std::cout << "not equal in root child node " << child << std::endl;
+         return component_equal;
+      }
+   }
+   return component_equal;
 }
 
 template<typename T>
@@ -1163,7 +1184,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
    else
       assert(0);
 
-   const StochVectorBase<T>* ic = NULL;
+   const StochVectorBase<T>* ic = nullptr;
    if( irhs )
       ic = dynamic_cast<const StochVectorBase<T>*>(irhs);
 
@@ -1175,7 +1196,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
       if( irhs && ic )
          vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->vec));
       else
-         vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
+         vec->writeMPSformatOnlyRhs( out, rowNameStub, nullptr);
       if(vecl)
       {
          rowNameStub = " B row_";
@@ -1184,7 +1205,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
          if( irhs )
             vecl->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->vecl));
          else
-            vecl->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
+            vecl->writeMPSformatOnlyRhs( out, rowNameStub, nullptr);
       }
    }
    for(int it=0; it<(int)children.size(); it++)
@@ -1195,7 +1216,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
       if( irhs )
          children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->children[it]->vec));
       else
-         children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
+         children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, nullptr);
    }
 }
 
@@ -1329,7 +1350,6 @@ T StochVectorBase<T>::dotProductWith( const OoqpVectorBase<T>& v_ ) const
     T dotProdG = 0.0;
 
     dotProdG = PIPS_MPIgetSum(dotProd, mpiComm);
-    // MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
 
     dotProd = dotProdG;
   }
@@ -1352,7 +1372,6 @@ T StochVectorBase<T>::dotProductSelf(T scaleFactor) const
 
   if(iAmDistrib == 1) {
     T dotSelfG = PIPS_MPIgetSum(dotSelf, mpiComm);
-    // MPI_Allreduce(&dotSelf, &dotSelfG, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
 
     dotSelf = dotSelfG;
   }
@@ -1385,7 +1404,6 @@ T StochVectorBase<T>::shiftedDotProductWith( T alpha, const OoqpVectorBase<T>& m
   if(iAmDistrib) {
     T dotProdG=0.0;
     dotProdG = PIPS_MPIgetSum(dotProd, mpiComm);
-    // MPI_Allreduce(&dotProd, &dotProdG, 1, MPI_DOUBLE, MPI_SUM, mpiComm); // not working properly in templated version
     dotProd = dotProdG;
   }
 
@@ -1462,7 +1480,7 @@ template<typename T>
 bool StochVectorBase<T>::allPositive() const
 {
   //!parallel
-  bool allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : true);
+  bool allPos = vec->allPositive() && ((vecl != nullptr) ? vecl->allPositive() : true);
   if (!allPos) return false;
 
   for(size_t it = 0; it < children.size() && allPos; it++)
@@ -1648,9 +1666,9 @@ void StochVectorBase<T>::copyFromArray( const char v[] )
 }
 
 template<typename T>
-void StochVectorBase<T>::removeEntries( const OoqpVectorBase<T>& select )
+void StochVectorBase<T>::removeEntries( const OoqpVectorBase<int>& select )
 {
-   const StochVectorBase<T>& selectStoch = dynamic_cast<const StochVectorBase<T>&>(select);
+   const StochVectorBase<int>& selectStoch = dynamic_cast<const StochVectorBase<int>&>(select);
 
    assert(children.size() == selectStoch.children.size());
 
@@ -1659,7 +1677,6 @@ void StochVectorBase<T>::removeEntries( const OoqpVectorBase<T>& select )
 
    if( vecl )
    {
-      assert(selectStoch.vecl);
       vecl->removeEntries(*selectStoch.vecl);
    }
 
@@ -1718,7 +1735,6 @@ std::vector<T> StochVectorBase<T>::gatherStochVector() const
       int mylength = int(gatheredVecLocal.size());
 
       PIPS_MPIallgather(&mylength, 1, &recvcounts[0], 1, mpiComm);
-      // MPI_Allgather(&mylength, 1, MPI_INT, &recvcounts[0], 1, MPI_INT, mpiComm);
 
       // all-gather local components
       recvoffsets[0] = 0;
@@ -1732,16 +1748,11 @@ std::vector<T> StochVectorBase<T>::gatherStochVector() const
 
          PIPS_MPIgatherv(&gatheredVecLocal[0], mylength, &gatheredVec[0] + firstvec.length(),
             &recvcounts[0], &recvoffsets[0], 0, mpiComm);
-         // MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE,
-         //       &gatheredVec[0] + firstvec.length(), &recvcounts[0],
-         //       &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
       }
       else
       {
         T dummy;
         PIPS_MPIgatherv(&gatheredVecLocal[0], mylength, &dummy, &recvcounts[0], &recvoffsets[0], 0, mpiComm);
-         // MPI_Gatherv(&gatheredVecLocal[0], mylength, MPI_DOUBLE, 0,
-         //       &recvcounts[0], &recvoffsets[0], MPI_DOUBLE, 0, mpiComm);
       }
    }
    else
@@ -1777,7 +1788,7 @@ bool StochVectorBase<T>::isRootNodeInSync() const
    const SimpleVectorBase<T>& vec_simple = dynamic_cast<const SimpleVectorBase<T>&>(*vec);
 
    /* no need to check if not distributed or not at root node */
-   if( !iAmDistrib || parent != NULL)
+   if( !iAmDistrib || parent != nullptr)
       return in_sync;
 
    int my_rank, world_size;
@@ -1804,7 +1815,6 @@ bool StochVectorBase<T>::isRootNodeInSync() const
             sendbuf.begin() + vec_simple.length());
    }
    PIPS_MPImaxArray(&sendbuf[0], &recvbuf[0], count, mpiComm);
-   // MPI_Allreduce(&sendbuf[0], &recvbuf[0], count, MPI_DOUBLE, MPI_MAX, mpiComm); // not working properly in templated version
 
    for( int i = 0; i < count; ++i )
    {
@@ -1819,5 +1829,4 @@ bool StochVectorBase<T>::isRootNodeInSync() const
 }
 
 template class StochVectorBase<int>;
-// template class StochVectorBase<bool>;
 template class StochVectorBase<double>;

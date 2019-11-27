@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include "SimpleVector.h"
+#include "pipsport.h"
 
 #include "DoubleMatrixTypes.h"
 
@@ -18,7 +19,7 @@ int SparseSymMatrix::isKindOf( int type ) const
 SparseSymMatrix::SparseSymMatrix()
  : isLower(true)
 {
-  mStorage = NULL;
+  mStorage = nullptr;
 }
 
 SparseSymMatrix::SparseSymMatrix( int size, int nnz, bool isLower )
@@ -357,9 +358,9 @@ void SparseSymMatrix::reduceToLower()
 }
 
 
-void SparseSymMatrix::deleteEmptyRowsCols(const OoqpVector& nnzVec)
+void SparseSymMatrix::deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec)
 {
-   const SimpleVector& vec = dynamic_cast<const SimpleVector&>(nnzVec);
+   const SimpleVectorBase<int>& vec = dynamic_cast<const SimpleVectorBase<int>&>(nnzVec);
    mStorage->deleteEmptyRowsCols(vec.elements(), vec.elements());
 }
 

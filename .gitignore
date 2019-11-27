@@ -52,6 +52,7 @@ SharedLibraries
 build_pips
 # no additional .gitignore file for that
 ThirdPartyLibs/PARDISO
+ThirdPartyLibs/MUMPS
 pipstmp
 GAMSsmall
 PIPS-IPM/Drivers/simple/simple_data_12.gdx

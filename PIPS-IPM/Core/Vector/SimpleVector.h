@@ -26,7 +26,6 @@ protected:
 public:
   SimpleVectorBase( int nx = 0 );
   SimpleVectorBase( T * v, int nx );
-
   //@{
   /**
    * Access the individual elements of this vector.
@@ -46,6 +45,7 @@ public:
   }
   //@}
 
+  OoqpVectorBase<T>* clone() const override;
   /* copy vector entries as well */
   OoqpVectorBase<T>* cloneFull() const override;
 
@@ -74,6 +74,7 @@ public:
   void scalarMult( T num) override;
   virtual void printSolutionToStdErr( OoqpVectorBase<T>& v );
   void componentDiv( const OoqpVectorBase<T>& v ) override;
+  bool componentEqual( const OoqpVectorBase<T>& vec, T tol) const override;
   void writeToStream( std::ostream& out ) const override;
   void writeToStreamAll( std::ostream& out ) const override;
   void writeToStreamAllStringStream( std::stringstream& sout ) const override;
@@ -140,7 +141,7 @@ public:
                       T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
                       bool& primalBlocking, bool& dualBlocking) const override;
 
-  void removeEntries(const OoqpVectorBase<T>& select) override;
+  void removeEntries(const OoqpVectorBase<int>& select) override;
 
   void permuteEntries(const std::vector<unsigned int>& permvec);
 

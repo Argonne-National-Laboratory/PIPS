@@ -7,6 +7,7 @@
 
 #include "OoqpVectorHandle.h"
 #include "DoubleMatrix.h"
+#include "pipsport.h"
 
 /**
  * @defgroup LinearSolvers
@@ -45,7 +46,7 @@ public:
    // solve with multiple RHS
    virtual void solve ( GenMatrix& rhs ) { assert(0 && "Not implemented"); }
 
-   // solve with multiple RHS and column sparsity array (can be NULL)
+   // solve with multiple RHS and column sparsity array (can be nullptr)
    virtual void solve ( int nrhss, double* rhss, int* colSparsity ) { assert(0 && "Not implemented"); }
 
   virtual void Lsolve  ( OoqpVector& x ) {}
@@ -80,7 +81,7 @@ class MatTimesVec {
 
 class DoubleIterativeLinearSolver : public DoubleLinearSolver {
  public:
-  DoubleIterativeLinearSolver( MatTimesVec* A, MatTimesVec* M1, MatTimesVec* M2=NULL );
+  DoubleIterativeLinearSolver( MatTimesVec* A, MatTimesVec* M1, MatTimesVec* M2=nullptr );
 
   virtual void diagonalChanged( int idiag, int extent );
   virtual void matrixChanged();

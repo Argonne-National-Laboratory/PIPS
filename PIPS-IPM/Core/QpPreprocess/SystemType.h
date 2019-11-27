@@ -14,4 +14,11 @@ enum SystemType
    INEQUALITY_SYSTEM
 };
 
+enum BlockType
+{
+   A_MAT,
+   B_MAT,
+   BL_MAT
+};
+
 #endif /* SYSTEMTYPE_H_ */

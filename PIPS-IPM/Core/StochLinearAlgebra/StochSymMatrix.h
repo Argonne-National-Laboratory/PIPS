@@ -4,6 +4,7 @@
 #include "DoubleMatrix.h"
 #include "SparseSymMatrix.h"
 #include "SparseGenMatrix.h"
+#include "pipsport.h"
 
 #include <vector>
 #include <iostream>
@@ -16,7 +17,7 @@ class StochSymMatrix : public SymMatrix {
 private:
 
   // note: also used for dummy class!
-  virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec, const OoqpVector* linkParent);
+  virtual void deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec, const OoqpVectorBase<int>* linkParent);
 
 public:
   /** Constructs a matrix with local size 'local_n' having 'local_nnz' local nonzeros
@@ -96,9 +97,9 @@ public:
   virtual void scalarMult( double num );
 
   // note: also used for dummy class!
-  virtual void deleteEmptyRowsCols(const OoqpVector& nnzVec)
+  virtual void deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec)
   {
-     deleteEmptyRowsCols(nnzVec, NULL);
+     deleteEmptyRowsCols(nnzVec, nullptr);
   }
 
 

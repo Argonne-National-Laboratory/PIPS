@@ -6,6 +6,9 @@
  */
 
 #include "SparseStorageDynamic.h"
+#include "pipsdef.h"
+#include "pipsport.h"
+
 #include <cassert>
 #include <algorithm>
 #include <vector>
@@ -27,8 +30,8 @@ SparseStorageDynamic::SparseStorageDynamic(int m, int n, int len, double spareRa
    }
    else
    {
-      M = NULL;
-      jcolM = NULL;
+      M = nullptr;
+      jcolM = nullptr;
    }
    SparseStorageDynamic::instances++;
 }
@@ -64,8 +67,8 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
    }
    else
    {
-      jcolM = NULL;
-      M = NULL;
+      jcolM = nullptr;
+      M = nullptr;
    }
 
    rowptr = new ROWPTRS[m + 1];
@@ -126,8 +129,8 @@ SparseStorageDynamic::SparseStorageDynamic( const SparseStorageDynamic &dynamicS
    }
    else
    {
-      jcolM = NULL;
-      M = NULL;
+      jcolM = nullptr;
+      M = nullptr;
    }
 
    SparseStorageDynamic::instances++;
@@ -139,7 +142,7 @@ void SparseStorageDynamic::getSize(int& m, int& n)
    n = this->n;
 }
 
-SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* colNnz) const
+SparseStorage* SparseStorageDynamic::getStaticStorage(const int* rowNnz, const int* colNnz) const
 {
    int m_static = 0;
 
@@ -147,8 +150,8 @@ SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* co
    if( n <= 0 )
    {
       assert(len == 0);
-      assert(colNnz == NULL);
-      assert(rowNnz != NULL);
+      assert(colNnz == nullptr);
+      assert(rowNnz != nullptr);
 
       for( int r = 0; r < m; r++ )
          if( rowNnz[r] != 0.0 )
@@ -159,7 +162,7 @@ SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* co
       return staticStorage;
    }
 
-   assert(rowNnz != NULL && colNnz != NULL);
+   assert(rowNnz != nullptr && colNnz != nullptr);
 
    // get m, n, len for new storage
 
@@ -182,7 +185,7 @@ SparseStorage* SparseStorageDynamic::getStaticStorage(double* rowNnz, double* co
       {
          assert(jcolM[j] < n);
 
-         if( M[j] == 0.0 )
+         if( PIPSisZero(M[j]) )
             continue;
 
          cols[jcolM[j]] = true;
@@ -345,7 +348,7 @@ SparseStorageDynamic* SparseStorageDynamic::getTranspose() const
 }
 
 
-void SparseStorageDynamic::addNnzPerRow(double* vec) const
+void SparseStorageDynamic::addNnzPerRow(int* vec) const
 {
    for( int r = 0; r < m; r++ )
       vec[r] += rowptr[r].end - rowptr[r].start;

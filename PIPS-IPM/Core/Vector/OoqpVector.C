@@ -30,5 +30,4 @@ void OoqpVectorBase<T>::writefToStreamStats( std::ostream& out, std::string pres
 
 
 template class OoqpVectorBase<int>;
-// template class OoqpVectorBase<bool>;
 template class OoqpVectorBase<double>;

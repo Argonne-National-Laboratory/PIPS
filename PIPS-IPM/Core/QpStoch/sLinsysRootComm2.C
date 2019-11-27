@@ -9,6 +9,8 @@
 #include "sData.h"
 #include "sDummyLinsys.h"
 #include "sLinsysLeaf.h"
+#include "pipsport.h"
+
 /*********************************************************************/
 /************************** ROOT *************************************/
 /*********************************************************************/
@@ -137,7 +139,7 @@ void sLinsysRootComm2::Lsolve(sData *prob, OoqpVector& x)
       b0.copyFromArray(buffer);
       delete[] buffer;
     } else 
-      MPI_Reduce(b0.elements(),NULL,b0.length(),
+      MPI_Reduce(b0.elements(),nullptr,b0.length(),
 		 MPI_DOUBLE, MPI_SUM, 0, mpiComm);
   }
 #ifdef TIMING 

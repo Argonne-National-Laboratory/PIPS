@@ -453,6 +453,8 @@ int main(int argc, char ** argv)
 
 		pipsIpm.go();
       objective = pipsIpm.getObjective();
+      if(presolve)
+         pipsIpm.postsolveComputedSolution();
 
       if( printsol )
       {
@@ -489,6 +491,8 @@ int main(int argc, char ** argv)
 
 		pipsIpm.go();
       objective = pipsIpm.getObjective();
+      if(presolve)
+         pipsIpm.postsolveComputedSolution();
 
       std::vector<double> primalSolVec2 = pipsIpm.gatherPrimalSolution();
 

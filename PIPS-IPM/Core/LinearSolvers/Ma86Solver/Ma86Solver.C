@@ -12,6 +12,7 @@ using namespace std;
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
+#include "pipsport.h"
 
 #include <cstdlib>
 #include "time.h"
@@ -124,7 +125,7 @@ void Ma86Solver::matrixChanged()
 	//clock_t startTime = clock();
   // if we use clock(), the time is wrong when the   OMP_NUM_THREADS>=2; instead use omp_get_wtime() in the driver file
 
-	ma86_factor_d(n, ptr, row, val, order, &keep, &control, &info, NULL);
+	ma86_factor_d(n, ptr, row, val, order, &keep, &control, &info, nullptr);
   if (info.flag < 0) {
     printf("Failure during factor with info. flag = %i\n", info.flag);
   }
@@ -147,7 +148,7 @@ void Ma86Solver::solve( OoqpVector& rhs_in )
 
   // Solve
 
-	ma86_solve_d(0, 1, n, sol, order, &keep, &control, &info, NULL);
+	ma86_solve_d(0, 1, n, sol, order, &keep, &control, &info, nullptr);
   if (info.flag < 0) 
 	{
     printf("Failure during factor with info. flag = %i\n", info.flag);	
@@ -169,7 +170,7 @@ void Ma86Solver::solve(GenMatrix& rhs_in)
   assert(nrows==n);
 
   // Solve
-  ma86_solve_d(0, 1, n, sol, order, &keep, &control, &info, NULL);
+  ma86_solve_d(0, 1, n, sol, order, &keep, &control, &info, nullptr);
   if (info.flag < 0) {
     printf("Failure during factor with info. flag = %i\n", info.flag);	
 	}
@@ -195,7 +196,7 @@ void Ma86Solver::solve(SimpleVector& rhs_in)
 
   // Solve
 
-	ma86_solve_d(0, 1, n, x, order, &keep, &control, &info, NULL);
+	ma86_solve_d(0, 1, n, x, order, &keep, &control, &info, nullptr);
   if (info.flag < 0) {
     printf("Failure during factor with info. flag = %i\n", info.flag);	
   }

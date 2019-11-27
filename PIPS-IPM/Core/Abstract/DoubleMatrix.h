@@ -254,10 +254,10 @@ public:
   virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const {}
 
   /** get number of elements per row to given vector */
-  virtual void getNnzPerRow(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
+  virtual void getNnzPerRow(OoqpVectorBase<int>& nnzVec) { assert(0 && "not implemented"); };
 
   /** get number of elements per column to given vector */
-  virtual void getNnzPerCol(OoqpVector& nnzVec) { assert(0 && "not implemented"); };
+  virtual void getNnzPerCol(OoqpVectorBase<int>& nnzVec) { assert(0 && "not implemented"); };
 
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
