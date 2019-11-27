@@ -754,12 +754,20 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
          }
       }
 
+      if( PIPSisZero(absmax) )
+      {
+         if(system_type == EQUALITY_SYSTEM)
+            (*norm_factorA)[row] = absmax;
+         else
+            (*norm_factorC)[row] = absmax;
+
+         continue;
+      }
+
       // normalize the row by dividing all entries by abs_max and possibly by -1 if negate_row.
       if(negate_row)
          absmax = absmax * -1.0;
       
-      assert(row_B_start < row_B_end || row_A_start < row_A_end );
-      assert(!PIPSisZero(absmax));
 
       for(int k = row_B_start; k < row_B_end; k++)
          b_mat->M[k] /= absmax;
