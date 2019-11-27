@@ -304,8 +304,6 @@ void StochPresolverBase::updatePointersForCurrentNode(int node, SystemType syste
    /* set x lower upper bounds */
    setPointersVarBounds(node);
 
-   /* set adaptions ? todo */
-
    /* set objective function pointers */
    setPointersObjective(node);
 
@@ -355,71 +353,37 @@ void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_typ
 {
    assert(-1 <= node && node < nChildren);
 
-   /* non-linking constraints */
-   const StochVector& lhs = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochVector&>(*(presData.getPresProb().bA))
-         : dynamic_cast<const StochVector&>(*(presData.getPresProb().bl));
-   const StochVector& lhs_idx = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochVector&>(*(presData.getPresProb().bA))
-         : dynamic_cast<const StochVector&>(*(presData.getPresProb().iclow));
-   const StochVector& rhs = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochVector&>(*(presData.getPresProb().bA))
-         : dynamic_cast<const StochVector&>(*(presData.getPresProb().bu));
-   const StochVector& rhs_idx = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochVector&>(*(presData.getPresProb().bA))
-         : dynamic_cast<const StochVector&>(*(presData.getPresProb().icupp));
-
    if( system_type == EQUALITY_SYSTEM )
    {
-      if( node == -1 )
-      {
-         currEqRhs = dynamic_cast<const SimpleVector*>(rhs.vec);
-      }
-      else
-      {
-         currEqRhs = dynamic_cast<const SimpleVector*>(rhs.children[node]->vec);
-         assert(rhs.children[node]->vecl == NULL);
-      }
+      currEqRhs = &getSimpleVecFromRowStochVec( *presData.getPresProb().bA, node, false );
+
       currIneqLhs = currIclow = currIneqRhs = currIcupp = currIneqLhsLink =
             currIclowLink = currIneqRhsLink = currIcuppLink = NULL;
 
       if( presData.hasLinking(system_type) )
-         currEqRhsLink = dynamic_cast<const SimpleVector*>(rhs.vecl);
+         currEqRhsLink = &getSimpleVecFromRowStochVec( *presData.getPresProb().bA, node, true );
       else
          currEqRhsLink = NULL;
+
    }
    else
    {
+      currIneqLhs = &getSimpleVecFromRowStochVec(*presData.getPresProb().bl, node, false);
+      currIclow = &getSimpleVecFromRowStochVec(*presData.getPresProb().iclow, node, false);
+      currIneqRhs = &getSimpleVecFromRowStochVec(*presData.getPresProb().bu, node, false);
+      currIcupp = &getSimpleVecFromRowStochVec(*presData.getPresProb().icupp, node, false);
 
-      if( node == -1 )
-      {
-         currIneqLhs = dynamic_cast<const SimpleVector*>(lhs.vec);
-         currIclow = dynamic_cast<const SimpleVector*>(lhs_idx.vec);
-         currIneqRhs = dynamic_cast<const SimpleVector*>(rhs.vec);
-         currIcupp = dynamic_cast<const SimpleVector*>(rhs_idx.vec);
-      }
-      else
-      {
-         currIneqLhs = dynamic_cast<const SimpleVector*>(lhs.children[node]->vec);
-         currIclow = dynamic_cast<const SimpleVector*>(lhs_idx.children[node]->vec);
-         currIneqRhs = dynamic_cast<const SimpleVector*>(rhs.children[node]->vec);
-         currIcupp = dynamic_cast<const SimpleVector*>(rhs_idx.children[node]->vec);
-
-         assert(lhs.children[node]->vecl == NULL);
-         assert(lhs_idx.children[node]->vecl == NULL);
-         assert(rhs.children[node]->vecl == NULL);
-         assert(rhs_idx.children[node]->vecl == NULL);
-      }
-
-      currEqRhs = currEqRhsLink = NULL;
+      currIneqLhsLink = currIclowLink = currIneqRhsLink = currIcuppLink = NULL;
 
       if( presData.hasLinking(system_type) )
       {
-         currIneqLhsLink = dynamic_cast<const SimpleVector*>(lhs.vecl);
-         currIclowLink = dynamic_cast<const SimpleVector*>(lhs_idx.vecl);
-         currIneqRhsLink = dynamic_cast<const SimpleVector*>(rhs.vecl);
-         currIcuppLink = dynamic_cast<const SimpleVector*>(rhs_idx.vecl);
+         currIneqLhsLink = &getSimpleVecFromRowStochVec(*presData.getPresProb().bl, node, true);
+         currIclowLink = &getSimpleVecFromRowStochVec(*presData.getPresProb().iclow, node, true);
+         currIneqRhsLink = &getSimpleVecFromRowStochVec(*presData.getPresProb().bu, node, true);
+         currIcuppLink = &getSimpleVecFromRowStochVec(*presData.getPresProb().icupp, node, true);
       }
       else
-      {
-         currIneqLhsLink = currIclowLink = currIneqRhsLink = currIcuppLink = NULL;
-      }
+         currEqRhs = currEqRhsLink = NULL;
    }
 }
 
@@ -427,27 +391,17 @@ void StochPresolverBase::setPointersVarBounds(int node)
 {
    assert(-1 <= node && node < nChildren);
 
-   currxlowParent = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().blx)).vec);
-   currIxlowParent = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixlow)).vec);
-   currxuppParent = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bux)).vec);
-   currIxuppParent = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixupp)).vec);
-
-   assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().blx)).vecl == NULL);
-   assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixlow)).vecl == NULL);
-   assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().bux)).vecl == NULL);
-   assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixupp)).vecl == NULL);
+   currxlowParent = &getSimpleVecFromColStochVec(*presData.getPresProb().blx, -1);
+   currIxlowParent = &getSimpleVecFromColStochVec(*presData.getPresProb().ixlow, -1);
+   currxuppParent = &getSimpleVecFromColStochVec(*presData.getPresProb().bux, -1);
+   currIxuppParent = &getSimpleVecFromColStochVec(*presData.getPresProb().ixupp, -1);
 
    if(node != -1)
    {
-      currxlowChild = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().blx)).children[node]->vec);
-      currxuppChild = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().bux)).children[node]->vec);
-      currIxlowChild = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixlow)).children[node]->vec);
-      currIxuppChild = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixupp)).children[node]->vec);
-
-      assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().blx)).children[node]->vecl == NULL);
-      assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().bux)).children[node]->vecl == NULL);
-      assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixlow)).children[node]->vecl == NULL);
-      assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixupp)).children[node]->vecl == NULL);
+      currxlowChild = &getSimpleVecFromColStochVec(*presData.getPresProb().blx, node);
+      currIxlowChild = &getSimpleVecFromColStochVec(*presData.getPresProb().ixlow, node);
+      currxuppChild = &getSimpleVecFromColStochVec(*presData.getPresProb().bux, node);
+      currIxuppChild = &getSimpleVecFromColStochVec(*presData.getPresProb().ixupp, node);
    }
    else
       currxlowChild = currxuppChild = currIxlowChild = currIxuppChild = NULL;
@@ -455,17 +409,11 @@ void StochPresolverBase::setPointersVarBounds(int node)
 
 void StochPresolverBase::setPointersObjective(int node)
 {
-   currgParent = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().g)).vec);
+   currgParent = &getSimpleVecFromColStochVec(*presData.getPresProb().g, -1);
    if(node != -1)
-   {
-      currgChild = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().g)).children[node]->vec);
-      assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().g)).children[node]->vecl == NULL);
-   }
+      currgChild = &getSimpleVecFromColStochVec(*presData.getPresProb().g, node);
    else
       currgChild = NULL;
-
-   assert(dynamic_cast<const StochVector&>(*(presData.getPresProb().g)).vecl == NULL);
-
 }
 
 void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
@@ -474,29 +422,18 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    const StochVectorBase<int>& row_nnz = (system_type == EQUALITY_SYSTEM) ? presData.getNnzsRowA() : presData.getNnzsRowC();
 
    /* rows */
-   if( node == -1)
-      currNnzRow = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vec);
-   else
-   {
-      assert(row_nnz.children[node]->vec != NULL);
-
-      currNnzRow = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.children[node]->vec);
-   }
+   currNnzRow = &getSimpleVecFromRowStochVec(row_nnz, node, false);
 
    if( presData.hasLinking(system_type) )
-      currNnzRowLink = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vecl);
-
+      currNnzRowLink = &getSimpleVecFromRowStochVec(row_nnz, node, true);
+   else
+      currNnzRowLink = nullptr;
+   
    /* columns */
-   currNnzColParent = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().vec);
-
-   assert(presData.getNnzsCol().vecl == NULL);
+   currNnzColParent = &getSimpleVecFromColStochVec(presData.getNnzsCol(), -1);
 
    if(node != -1)
-   {
-      currNnzColChild = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().children[node]->vec);
-
-      assert(presData.getNnzsCol().children[node]->vecl == NULL);
-   }
+      currNnzColChild = &getSimpleVecFromColStochVec(presData.getNnzsCol(), node);
    else
       currNnzColChild = NULL;
 }
