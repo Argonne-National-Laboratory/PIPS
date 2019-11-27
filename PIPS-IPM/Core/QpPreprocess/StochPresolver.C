@@ -52,8 +52,7 @@ StochPresolver::~StochPresolver()
 
 Data* StochPresolver::presolve()
 {
-   int my_rank = 0;
-   PIPS_MPIgetRank(MPI_COMM_WORLD, my_rank);
+   const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
 
    if( my_rank == 0 )
       std::cout << "start stoch presolving" << std::endl;

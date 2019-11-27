@@ -44,8 +44,8 @@ private:
    void setReductionPointers(SystemType system_type, int node);
 
 protected:
-   int my_rank;
-   bool distributed;
+   const int my_rank;
+   const bool distributed;
 
    /* not owned by the class itself - given from the outside */
    PresolveData& presData;

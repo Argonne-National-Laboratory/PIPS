@@ -120,22 +120,15 @@ inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    return PIPS_MPIiAmSpecial(iAmDistrib, mpiComm);
 }
 
-inline void PIPS_MPIgetRankDistributed(MPI_Comm comm, int& myRank, bool& iAmDistrib)
+inline bool PIPS_MPIgetDistributed(MPI_Comm comm)
 {
-   MPI_Comm_rank(comm, &myRank);
-
    int world_size;
    MPI_Comm_size(comm, &world_size);
 
    if( world_size > 1)
-      iAmDistrib = true;
+      return true;
    else
-      iAmDistrib = false;
-}
-
-inline void PIPS_MPIgetRank(MPI_Comm comm, int& my_rank)
-{
-   MPI_Comm_rank(comm, &my_rank);
+      return false;
 }
 
 void inline PIPS_MPIabortInfeasible(MPI_Comm comm, std::string message, std::string file, std::string function)
@@ -332,13 +325,31 @@ inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIminArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if(elements.size() == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_MAX, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 {
    assert(length >= 0);
    if(length == 0)
       return;
 
-   MPI_Allreduce(MPI_IN_PLACE, localmax, length, get_mpi_datatype(localmax), MPI_MIN, mpiComm);
+   MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_MIN, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIminArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if(elements.size() == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_MIN, mpiComm);
 }
 
 template <typename T>
@@ -376,6 +387,15 @@ inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiCom
 }
 
 template <typename T>
+inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if(elements.size() == 0)
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_LOR, mpiComm);
+}
+
+template <typename T>
 inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm)
 {
    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, get_mpi_datatype(sum), MPI_SUM, mpiComm);
@@ -390,6 +410,15 @@ inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
       return;
 
    MPI_Allreduce(MPI_IN_PLACE, elements, length, get_mpi_datatype(elements), MPI_SUM, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIsumArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+{
+   if( elements.size() == 0 )
+      return;
+
+   MPI_Allreduce(MPI_IN_PLACE, &elements[0], elements.size(), get_mpi_datatype(&elements[0]), MPI_SUM, mpiComm);
 }
 
 template <typename T>

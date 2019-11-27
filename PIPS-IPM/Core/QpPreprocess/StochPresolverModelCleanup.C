@@ -135,7 +135,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 // todo : deleting rows invalidates activities currently
 int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int node, bool linking)
 {
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
    assert( (linking && node == -1) || !linking );
    assert(!presData.nodeIsDummy(node, system_type));
 
@@ -155,7 +155,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
    for( int row = 0; row < nnzs.n; ++row)
    {
-      if( nnzs[row] == 0.0 ) // empty rows might still have a rhs but should be ignored. // todo?
+      if( nnzs[row] == 0 ) // empty rows might still have a rhs but should be ignored. // todo?
          continue;
 
       double actmin_part, actmax_part;

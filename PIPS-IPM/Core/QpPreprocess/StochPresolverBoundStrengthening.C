@@ -192,18 +192,18 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          double actmax_row_without_curr = std::numeric_limits<double>::infinity();
 
          /* subtract current entry from row activity */
-         if(actmin_ubndd == 0.0)
+         if(actmin_ubndd == 0)
             actmin_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmin_part - a_ik * xupp[col] : actmin_part - a_ik * xlow[col];
-         else if(actmin_ubndd == 1.0)
+         else if(actmin_ubndd == 1)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
             if( (PIPSisLE(a_ik, 0.0) && PIPSisZero(ixupp[col])) || (PIPSisLE(0.0, a_ik) && PIPSisZero(ixlow[col])) )
                actmin_row_without_curr = actmin_part;
          }
 
-         if(actmax_ubndd == 0.0)
+         if(actmax_ubndd == 0)
             actmax_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmax_part - a_ik * xlow[col] : actmax_part - a_ik * xupp[col];
-         else if(actmax_ubndd == 1.0)
+         else if(actmax_ubndd == 1)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
             if( (PIPSisLE(a_ik, 0.0) && PIPSisZero(ixlow[col])) || (PIPSisLE(0.0, a_ik) && PIPSisZero(ixupp[col])) )

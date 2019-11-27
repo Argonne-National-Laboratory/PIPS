@@ -218,7 +218,7 @@ void StochPresolverParallelRows::applyPresolving()
 // todo does not set Bl mat - maybe not needed
 void StochPresolverParallelRows::setNormalizedPointersMatrices(int node)
 {
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
 
    const StochGenMatrix& matrixA = dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().A));
    const StochGenMatrix& matrixC = dynamic_cast<const StochGenMatrix&>(*(presData.getPresProb().C));
@@ -269,7 +269,7 @@ void StochPresolverParallelRows::setNormalizedPointersMatrices(int node)
 
 void StochPresolverParallelRows::setNormalizedPointersMatrixBounds(int node)
 {
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
 
    if(node == -1)
    {
@@ -370,7 +370,7 @@ void StochPresolverParallelRows::updateExtendedPointersForCurrentNode(int node)
 
 void StochPresolverParallelRows::setNormalizedNormFactors(int node)
 {
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
 
    if(node == -1)
    {
@@ -403,7 +403,7 @@ void StochPresolverParallelRows::setNormalizedNormFactors(int node)
 
 void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
 {
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
 
    singletonCoeffsColParent = dynamic_cast<SimpleVector*>(dynamic_cast<const StochVector&>(*presData.getPresProb().g).vec->clone());
    singletonCoeffsColParent->setToZero();
@@ -411,9 +411,9 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
    if(node == -1)
    {
       rowContainsSingletonVariableA = new SimpleVectorBase<int>(presData.getNnzsRowA().vec->length());
-      rowContainsSingletonVariableA->setToConstant( -1.0 );
+      rowContainsSingletonVariableA->setToConstant( -1 );
       rowContainsSingletonVariableC = new SimpleVectorBase<int>(presData.getNnzsRowC().vec->length());
-      rowContainsSingletonVariableC->setToConstant( -1.0 );
+      rowContainsSingletonVariableC->setToConstant( -1 );
 
       singletonCoeffsColChild = NULL;
    }
@@ -426,7 +426,7 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
       if( !presData.nodeIsDummy( node, EQUALITY_SYSTEM ) )
       {
          rowContainsSingletonVariableA = new SimpleVectorBase<int>(presData.getNnzsRowA().children[node]->vec->length());
-         rowContainsSingletonVariableA->setToConstant( -1.0 );
+         rowContainsSingletonVariableA->setToConstant( -1 );
       }
       else
          rowContainsSingletonVariableA = NULL;
@@ -435,7 +435,7 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
       if( !presData.nodeIsDummy( node, INEQUALITY_SYSTEM ) )
       {
          rowContainsSingletonVariableC = new SimpleVectorBase<int>(presData.getNnzsRowC().children[node]->vec->length());
-         rowContainsSingletonVariableC->setToConstant( -1.0 );
+         rowContainsSingletonVariableC->setToConstant( -1 );
       }
       else
          rowContainsSingletonVariableC = NULL;
@@ -444,7 +444,7 @@ void StochPresolverParallelRows::setNormalizedSingletonFlags(int node)
 
 void StochPresolverParallelRows::setNormalizedReductionPointers(int node)
 {
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
 
    normNnzColParent = dynamic_cast<SimpleVectorBase<int>*>(presData.getNnzsCol().vec->cloneFull());
    normNnzColChild = (node == -1) ? NULL : 
@@ -469,7 +469,7 @@ void StochPresolverParallelRows::setNormalizedReductionPointers(int node)
 void StochPresolverParallelRows::setNormalizedPointers(int node)
 {
    assert( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) || !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) );
-   assert(-1 <= node && node <= nChildren );
+   assert(-1 <= node && node < nChildren );
 
    updateExtendedPointersForCurrentNode(node);
 
@@ -630,7 +630,7 @@ void StochPresolverParallelRows::removeSingletonVars()
    {
    for( int col = 0; col < normNnzColParent->n; col++ )
       {
-         if( (*normNnzColParent)[col] == 1.0 )
+         if( (*normNnzColParent)[col] == 1 )
          {
             // check if the singleton column is part of the current a_mat/c_mat
             // else, the singleton entry is in one of the other A_i or C_i blocks
@@ -639,7 +639,7 @@ void StochPresolverParallelRows::removeSingletonVars()
                removeEntry(col, *rowContainsSingletonVariableA, *norm_Amat, *norm_AmatTrans,
                      *normNnzRowA, *normNnzColParent, true);
             }
-            else if(norm_CmatTrans && (norm_CmatTrans->rowptr[col].start +1 == norm_CmatTrans->rowptr[col].end) )
+            else if(norm_CmatTrans && (norm_CmatTrans->rowptr[col].start + 1 == norm_CmatTrans->rowptr[col].end) )
             {
                removeEntry(col, *rowContainsSingletonVariableC, *norm_Cmat, *norm_CmatTrans,
                      *normNnzRowC, *normNnzColParent, true);
@@ -1120,7 +1120,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
  */
 double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
 {
-   assert( singleColIdx >= -1.0);
+   assert( singleColIdx >= -1);
    if( singleColIdx >= nA )
    {
       assert( singletonCoeffsColChild );
@@ -1129,7 +1129,7 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
    else
       assert( singletonCoeffsColParent );
 
-   if( singleColIdx == -1.0 )
+   if( singleColIdx == -1 )
       return 0.0;
 
    return ( singleColIdx >= nA ) ? (*singletonCoeffsColChild)[singleColIdx - nA] :

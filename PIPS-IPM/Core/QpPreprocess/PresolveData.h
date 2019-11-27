@@ -109,11 +109,11 @@ private:
       std::queue<sROWINDEX> singleton_rows;
       std::queue<sCOLINDEX> singleton_cols;
 
-      int my_rank;
-      bool distributed;
+      const int my_rank;
+      const bool distributed;
 
       // number of children
-      int nChildren;
+      const int nChildren;
 
       // objective offset created by presolving
       double objOffset;

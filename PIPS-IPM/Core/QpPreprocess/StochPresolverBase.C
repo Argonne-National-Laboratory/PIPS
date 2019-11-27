@@ -18,10 +18,10 @@
 
 
 StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& origProb) :
+      my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
+      distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
       presData(presData), origProb(origProb)
 {
-   PIPS_MPIgetRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
-
    localNelims = 0;
    nChildren = presData.getNChildren();
 }
@@ -32,29 +32,31 @@ StochPresolverBase::~StochPresolverBase()
 
 void StochPresolverBase::countRowsCols()// method is const but changes pointers
 {
+   std::vector<int> count(17, 0);
+
    int zero_dummy = 0; 
 
-   int n_rows_empty_eq = 0;
-   int n_rows_empty_ineq = 0;
-   int n_rows_eq = 0;
-   int n_rows_ineq = 0;
+   int& n_rows_eq = count[0];
+   int& n_rows_ineq = count[1];
+   int& n_rows_empty_eq = count[2];
+   int& n_rows_empty_ineq = count[3];
 
    int n_rows_fixed_eq = 0;
-   int n_rows_fixed_ineq = 0;
-   int n_rows_boxed_ineq = 0;
-   int n_rows_onsided_ineq = 0;
+   int& n_rows_fixed_ineq = count[4];
+   int& n_rows_boxed_ineq = count[5];
+   int& n_rows_onsided_ineq = count[6];
 
-   int n_rows_singleton_eq = 0;
-   int n_rows_singleton_ineq = 0;
+   int& n_rows_singleton_eq = count[7];
+   int& n_rows_singleton_ineq = count[8];
    
-   int n_cols = 0;
-   int n_cols_empty = 0;
-   int n_cols_free = 0;
-   int n_cols_onesided = 0;
-   int n_cols_boxed = 0;
-   int n_cols_singleton = 0;
-   int n_cols_orig_free = 0;
-   int n_cols_orig_free_removed = 0;
+   int& n_cols = count[9];
+   int& n_cols_empty = count[10];
+   int& n_cols_free = count[11];
+   int& n_cols_onesided = count[12];
+   int& n_cols_boxed = count[13];
+   int& n_cols_singleton = count[14];
+   int& n_cols_orig_free = count[15];
+   int& n_cols_orig_free_removed = count[16];
 
    /* root nodes of equality and inequality system - linking varaiables and linking constraints */
    if( my_rank == 0 )
@@ -150,48 +152,9 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
    /* sync data */
    if( distributed )
    {
-      int* count = new int[17];
-
-      count[0] = n_rows_eq;
-      count[1] = n_rows_ineq;
-      count[2] = n_rows_empty_eq;
-      count[3] = n_rows_empty_ineq;
-      count[4] = n_rows_fixed_ineq;
-      count[5] = n_rows_boxed_ineq;
-      count[6] = n_rows_onsided_ineq;
-      count[7] = n_rows_singleton_eq;
-      count[8] = n_rows_singleton_ineq;
-      count[9] = n_cols;
-      count[10] = n_cols_empty;
-      count[11] = n_cols_free;
-      count[12] = n_cols_onesided;
-      count[13] = n_cols_boxed;
-      count[14] = n_cols_singleton;
-      count[15] = n_cols_orig_free;
-      count[16] = n_cols_orig_free_removed;
-
-      PIPS_MPIsumArrayInPlace(count, 15, MPI_COMM_WORLD);
-
-      n_rows_eq = count[0];
-      n_rows_ineq = count[1];
-      n_rows_empty_eq = count[2];
-      n_rows_empty_ineq = count[3];
-      n_rows_fixed_ineq = count[4];
-      n_rows_boxed_ineq = count[5];
-      n_rows_onsided_ineq = count[6];
-      n_rows_singleton_eq = count[7];
-      n_rows_singleton_ineq = count[8];
-      n_cols = count[9];
-      n_cols_empty = count[10];
-      n_cols_free = count[11];
-      n_cols_onesided = count[12];
-      n_cols_boxed = count[13];
-      n_cols_singleton = count[14];
-      n_cols_orig_free = count[15];
-      n_cols_orig_free_removed = count[16];
-      
-      delete[] count;
+      PIPS_MPIsumArrayInPlace(count, MPI_COMM_WORLD);
    }
+
    n_rows_fixed_eq = n_rows_eq - n_rows_empty_eq; 
 
    if( my_rank == 0 )
@@ -244,9 +207,9 @@ void StochPresolverBase::countRowsBlock(int& n_rows_total, int& n_rows_empty, in
 
    for(int i = 0; i < rhs->n; ++i)
    {
-      if( (*nnz_row)[i] != 0.0)
+      if( (*nnz_row)[i] != 0)
       {
-         if( (*nnz_row)[i] == 1.0)
+         if( (*nnz_row)[i] == 1)
             ++n_rows_singleton;
 
          if(system_type == EQUALITY_SYSTEM)
@@ -300,9 +263,9 @@ void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty
       if( PIPSisZero(ixupp_orig[i]) && PIPSisZero(ixlow_orig[i]) )
          ++n_cols_orig_free;
 
-      if( curr_nnz[i] != 0.0 )
+      if( curr_nnz[i] != 0 )
       {
-         if( curr_nnz[i] == 1.0 )
+         if( curr_nnz[i] == 1 )
          {
             ++n_cols_singleton;
          }
@@ -330,7 +293,7 @@ void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty
 void StochPresolverBase::updatePointersForCurrentNode(int node, SystemType system_type)
 {
    assert( !presData.nodeIsDummy(node, system_type) );
-   assert(-1 <= node && node <= nChildren );
+   assert(-1 <= node && node < nChildren );
    assert(system_type == EQUALITY_SYSTEM || system_type == INEQUALITY_SYSTEM);
 
    const GenMatrixHandle matrix = (system_type == EQUALITY_SYSTEM) ? presData.getPresProb().A : presData.getPresProb().C;
@@ -465,7 +428,7 @@ void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_typ
 
 void StochPresolverBase::setPointersVarBounds(int node)
 {
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
 
    currxlowParent = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().blx)).vec);
    currIxlowParent = dynamic_cast<const SimpleVector*>(dynamic_cast<const StochVector&>(*(presData.getPresProb().ixlow)).vec);
@@ -509,7 +472,7 @@ void StochPresolverBase::setPointersObjective(int node)
 }
 
 void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
-   assert(-1 <= node && node <= nChildren);
+   assert(-1 <= node && node < nChildren);
 
    const StochVectorBase<int>& row_nnz = (system_type == EQUALITY_SYSTEM) ? presData.getNnzsRowA() : presData.getNnzsRowC();
 
@@ -526,7 +489,7 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    if( presData.hasLinking(system_type) )
       currNnzRowLink = dynamic_cast<const SimpleVectorBase<int>*>(row_nnz.vecl);
 
-   /* colums */
+   /* columns */
    currNnzColParent = dynamic_cast<const SimpleVectorBase<int>*>(presData.getNnzsCol().vec);
 
    assert(presData.getNnzsCol().vecl == NULL);

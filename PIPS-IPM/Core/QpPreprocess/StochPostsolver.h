@@ -43,8 +43,8 @@ public:
       virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
 private:
 
-      int my_rank;
-      bool distributed;
+      const int my_rank;
+      const bool distributed;
 
       /* can represent a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
       struct INDEX

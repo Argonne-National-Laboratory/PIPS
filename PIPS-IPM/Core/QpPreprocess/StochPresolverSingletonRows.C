@@ -104,7 +104,7 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
 
    // todo: redisign - actually done twice
    updatePointersForCurrentNode(node, system_type);
-   if( (*currNnzRow)[row_idx] != 1.0 )
+   if( (*currNnzRow)[row_idx] != 1 )
       return false;
 
    double ubx = std::numeric_limits<double>::infinity();

@@ -16,14 +16,14 @@
 
 StochPostsolver::StochPostsolver(const sData& original_problem) :
    QpPostsolver(original_problem),
+   my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
+   distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
    n_rows_original(original_problem.my + original_problem.mz),
    n_cols_original(original_problem.nx),
    padding_origcol( cloneStochVector<double, int>(*original_problem.g) ),
    padding_origrow_equality( cloneStochVector<double, int>(*original_problem.bA) ),
    padding_origrow_inequality( cloneStochVector<double, int>(*original_problem.bu) )
 {
-   PIPS_MPIgetRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
-
    padding_origcol->setToConstant(1);
    padding_origrow_equality->setToConstant(1);
    padding_origrow_inequality->setToConstant(1);
