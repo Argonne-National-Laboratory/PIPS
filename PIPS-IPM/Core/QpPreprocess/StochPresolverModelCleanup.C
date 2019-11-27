@@ -105,7 +105,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type)
 
    // children:
    for( int node = 0; node < nChildren; node++)
-      if( !presData.nodeIsDummy( node, system_type) )
+      if( !presData.nodeIsDummy( node ) )
          nRemovedRows += removeRedundantRows(system_type, node);
 
    return nRemovedRows;
@@ -113,7 +113,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type)
 
 int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int node)
 {
-   assert(!presData.nodeIsDummy(node, system_type));
+   assert(!presData.nodeIsDummy(node));
    int n_removed_rows = 0;
    int n_removed_rows_link = 0;
    if(node == -1)
@@ -137,7 +137,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 {
    assert(-1 <= node && node < nChildren);
    assert( (linking && node == -1) || !linking );
-   assert(!presData.nodeIsDummy(node, system_type));
+   assert(!presData.nodeIsDummy(node));
 
    if(linking && !presData.hasLinking(system_type))
       return 0;
@@ -215,14 +215,14 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
 
    int n_elims = 0;
 
+   assert(!presData.nodeIsDummy(-1));
+
    /* reductions in root node */
-   if( !presData.nodeIsDummy(-1, system_type) )
-   {
-      /* process B0 and Bl0 */
-      n_elims += removeTinyInnerLoop(system_type, -1, B_MAT);
-      if( presData.hasLinking(system_type) )
-         n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
-   }
+   /* process B0 and Bl0 */
+   n_elims += removeTinyInnerLoop(system_type, -1, B_MAT);
+   if (presData.hasLinking(system_type))
+	n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
+
 
    // todo : traffic can be reduced by only zeroing the linking var col and the linking cons row
    // and not the zero row too
@@ -233,7 +233,7 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    // go through the children
    for( int node = 0; node < nChildren; node++ )
    {
-      if( !presData.nodeIsDummy(node, system_type) )
+      if( !presData.nodeIsDummy(node) )
       {
          /* Amat */
          n_elims += removeTinyInnerLoop(system_type, node, A_MAT );
@@ -259,7 +259,7 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
 // todo for criterion 3 - should ALL eliminations be considered?
 int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int node, BlockType block_type)
 {
-   if(presData.nodeIsDummy(node, system_type))
+   if(presData.nodeIsDummy(node))
       return 0;
 
    updatePointersForCurrentNode(node, system_type);
@@ -381,7 +381,7 @@ void StochPresolverModelCleanup::fixEmptyColumns()
 
    for(int node = -1; node < nChildren; ++node)
    {
-      if( presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
+      if( presData.nodeIsDummy(node) )
          continue;
       
       updatePointersForCurrentNode(node, EQUALITY_SYSTEM);

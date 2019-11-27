@@ -81,15 +81,10 @@ void StochPresolverColumnFixation::applyPresolving()
    /* child nodes */
    for(int node = 0; node < nChildren; ++node)
    {
-      if(presData.nodeIsDummy(node, EQUALITY_SYSTEM) && presData.nodeIsDummy(node, INEQUALITY_SYSTEM))
+      if(presData.nodeIsDummy(node) )
          continue;
-      else
-      {
-         assert(!presData.nodeIsDummy(node, EQUALITY_SYSTEM));
-         assert(!presData.nodeIsDummy(node, INEQUALITY_SYSTEM));
 
-         updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
-      }
+      updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
 
       /* linking variables */
       for( int col = 0; col < currgChild->n; ++col )

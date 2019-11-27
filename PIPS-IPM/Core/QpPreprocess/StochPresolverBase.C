@@ -119,10 +119,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
    /* child nodes in both systems */
    for( int node = 0; node < nChildren; node++)
    {
-      assert( (presData.nodeIsDummy( node, EQUALITY_SYSTEM) && presData.nodeIsDummy( node, INEQUALITY_SYSTEM)) ||
-            (!presData.nodeIsDummy( node, EQUALITY_SYSTEM) && !presData.nodeIsDummy( node, INEQUALITY_SYSTEM) ));
-
-      if( presData.nodeIsDummy( node, EQUALITY_SYSTEM) )
+      if( presData.nodeIsDummy( node ) )
          continue;
 
       /* equality system */
@@ -292,7 +289,7 @@ void StochPresolverBase::countBoxedColumns( int& n_cols_total, int& n_cols_empty
  */
 void StochPresolverBase::updatePointersForCurrentNode(int node, SystemType system_type)
 {
-   assert( !presData.nodeIsDummy(node, system_type) );
+   assert( !presData.nodeIsDummy(node) );
    assert(-1 <= node && node < nChildren );
    assert(system_type == EQUALITY_SYSTEM || system_type == INEQUALITY_SYSTEM);
 

@@ -40,7 +40,7 @@
 #define TRACK_COLUMN(node, col)                    \
    (COL_NODE == node && PIPSisEQ(COLUMN, col)      \
       && (my_rank == 0 || node != -1)              \
-      && !nodeIsDummy(COL_NODE, EQUALITY_SYSTEM))
+      && !nodeIsDummy(COL_NODE))
 #else
 #define TRACK_COLUMN(node, col) false
 #endif
@@ -49,7 +49,7 @@
 #define TRACK_ROW(node, row, sys, link)            \
    (PIPSisEQ(row, ROW) && node == ROW_NODE         \
       && sys == ROW_SYS                            \
-      && !nodeIsDummy(ROW_NODE, ROW_SYS)           \
+      && !nodeIsDummy(ROW_NODE)           \
       && (my_rank == 0 || link ||                  \
          ROW_NODE != -1) )
 #else
@@ -58,7 +58,7 @@
 
 #ifdef TRACK_R
 #define I_TRACK_ROW                                \
-   (!nodeIsDummy(ROW_NODE, EQUALITY_SYSTEM)        \
+   (!nodeIsDummy(ROW_NODE)        \
       && (my_rank == 0 || ROW_IS_LINK              \
          || ROW_NODE != -1))
 #else
@@ -67,7 +67,7 @@
 
 #ifdef TRACK_C
 #define I_TRACK_COLUMN                             \
-   !nodeIsDummy(COL_NODE, EQUALITY_SYSTEM)         \
+   !nodeIsDummy(COL_NODE)         \
       && (my_rank == 0 || COL_NODE != -1)
 #else
 #define I_TRACK_COLUMN false
@@ -795,7 +795,7 @@ void PresolveData::initSingletons()
    /* children An + Bn */
    for(int i = 0; i < nChildren; ++i)
    {
-      if( !nodeIsDummy(i, EQUALITY_SYSTEM) )
+      if( !nodeIsDummy(i) )
       {
          for(int j = 0; j < nnzs_row_A->children[i]->vec->n; ++j)
          {
@@ -824,7 +824,7 @@ void PresolveData::initSingletons()
    /* children An + Bn */
    for( int i = 0; i < nChildren; ++i )
    {
-      if( !nodeIsDummy(i, INEQUALITY_SYSTEM) )
+      if( !nodeIsDummy(i) )
       {
          for( int j = 0; j < nnzs_row_C->children[i]->vec->n; ++j )
          {
@@ -890,11 +890,11 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    adjustMatrixRhsLhsBy(system_type, node, linking, row_index, -storage->M[index_k] * xlower[storage->jcolM[index_k]]);
 
    /* adjust activity */
-   // todo : necessary ? impact should be low
+   outdated_activities = true;
 
    /* adjust nnz counters */
-   removeIndexRow(system_type, node, linking, row_index, 1);
-   removeIndexColumn(node, block_type, storage->jcolM[index_k], 1);
+   reduceNnzCounterRow(system_type, node, linking, row_index, 1);
+   reduceNnzCounterColumn(node, block_type, storage->jcolM[index_k], 1);
 
    std::swap(storage->M[index_k], storage->M[row_end - 1]);
    std::swap(storage->jcolM[index_k], storage->jcolM[row_end - 1]);
@@ -934,7 +934,7 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 {
    long reset_bounds = 0;
 
-   if( nodeIsDummy( node, EQUALITY_SYSTEM ) && nodeIsDummy( node, INEQUALITY_SYSTEM ) )
+   if( nodeIsDummy( node ) )
       return reset_bounds;
 
    SimpleVector& ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, node);
@@ -1277,7 +1277,7 @@ void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, 
    elements_deleted_transposed = 0;
 }
 
-void PresolveData::removeIndexRow(SystemType system_type, int node, bool linking, int row_index, int amount)
+void PresolveData::reduceNnzCounterRow(SystemType system_type, int node, bool linking, int row_index, int amount)
 {
    assert(-1 <= node && node < nChildren);
    assert(0 <= amount);
@@ -1313,7 +1313,7 @@ void PresolveData::removeIndexRow(SystemType system_type, int node, bool linking
    }
 }
 
-void PresolveData::removeIndexColumn(int node, BlockType block_type, int col_index, int amount)
+void PresolveData::reduceNnzCounterColumn(int node, BlockType block_type, int col_index, int amount)
 {
    assert(-1 <= node && node < nChildren);
    if(amount == 0)
@@ -1357,10 +1357,11 @@ void PresolveData::removeColumn(int node, int col, double fixation)
 
       for(int i = 0; i < nChildren; ++i)
       {
-         if(!nodeIsDummy(i, EQUALITY_SYSTEM))
+         if(!nodeIsDummy(i))
+         {
             removeColumnFromMatrix(EQUALITY_SYSTEM, i, A_MAT, col, fixation);
-         if( !nodeIsDummy(i, INEQUALITY_SYSTEM) )
             removeColumnFromMatrix(INEQUALITY_SYSTEM, i, A_MAT, col, fixation);
+         }
       }
    }
    else
@@ -1420,7 +1421,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
       /* remove the entry, adjust activity and row counters and rhs/lhs */
       removeEntryInDynamicStorage(matrix, row, col);
 
-      removeIndexRow(system_type, node, linking, row, 1);
+      reduceNnzCounterRow(system_type, node, linking, row, 1);
 
       adjustMatrixRhsLhsBy(system_type, node, linking, row, - coeff * fixation);
 
@@ -1447,7 +1448,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    }
 
    /* adjust column counters */
-   removeIndexColumn(node, block_type, col, matrix_transp.rowptr[col].end - matrix_transp.rowptr[col].start);
+   reduceNnzCounterColumn(node, block_type, col, matrix_transp.rowptr[col].end - matrix_transp.rowptr[col].start);
 
    /* update the transposed */
    matrix_transp.rowptr[col].end = matrix_transp.rowptr[col].start;
@@ -1536,7 +1537,7 @@ void PresolveData::removeRedundantRow(SystemType system_type, int node, int row,
 void PresolveData::removeRow(SystemType system_type, int node, int row, bool linking)
 {
    assert(-1 <= node && node < nChildren);
-   assert(!nodeIsDummy(node, system_type));
+   assert(!nodeIsDummy(node));
 
    if(linking)
    {
@@ -1548,7 +1549,7 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
       /* linking rows Bli */
       for(int child = 0; child < nChildren; ++child)
       {
-         if(!nodeIsDummy(child, system_type))
+         if(!nodeIsDummy(child))
             removeRowFromMatrix(system_type, child, BL_MAT, row);
       }
    }
@@ -1622,7 +1623,7 @@ void PresolveData::removeRow(SystemType system_type, int node, int row, bool lin
 
 void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row)
 {
-   assert(!nodeIsDummy(node, system_type));
+   assert(!nodeIsDummy(node));
    assert(-1 <= node && node < nChildren);
    assert(node != -1 || block_type != A_MAT);
    SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
@@ -1644,12 +1645,12 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
       const int col_idx = mat_storage->jcolM[k];
 
       removeEntryInDynamicStorage(*mat_transp_storage, col_idx, row);
-      removeIndexColumn(node, block_type, col_idx, 1);
+      reduceNnzCounterColumn(node, block_type, col_idx, 1);
    }
    
    const bool linking = (block_type == BL_MAT);
 
-   removeIndexRow(system_type, node, linking, row, mat_storage->rowptr[row].end - mat_storage->rowptr[row].start);
+   reduceNnzCounterRow(system_type, node, linking, row, mat_storage->rowptr[row].end - mat_storage->rowptr[row].start);
    mat_storage->rowptr[row].end = mat_storage->rowptr[row].start;
 }
 
@@ -1910,35 +1911,36 @@ bool PresolveData::verifyNnzcounters() const
    return nnzCorrect;
 }
 
-bool PresolveData::nodeIsDummy(int node, SystemType system_type) const // todo change order
+bool PresolveData::nodeIsDummy(int node) const
 {
    assert( -1 <= node && node < nChildren );
+
    if( node == -1 )
       return false;
-   StochGenMatrix& matrix = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presProb->A) : dynamic_cast<StochGenMatrix&>(*presProb->C);
+
+   assert(dynamic_cast<StochGenMatrix&>(*presProb->A).children[node]->isKindOf(kStochGenDummyMatrix)
+		   == dynamic_cast<StochGenMatrix&>(*presProb->C).children[node]->isKindOf(kStochGenDummyMatrix));
+
+   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*presProb->A);
    // todo : asserts
    if( matrix.children[node]->isKindOf(kStochGenDummyMatrix))
    {
       assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[node]->isKindOf(kStochDummy) );
       assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[node]->isKindOf(kStochDummy) );
 
-      if( system_type == EQUALITY_SYSTEM)
-      {
-         assert( dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[node]->isKindOf(kStochDummy) );
-         assert( nnzs_row_A->children[node]->isKindOf(kStochDummy) );
-      }
-      else
-      {
-         assert( dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presProb->bl)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presProb->icupp)).children[node]->isKindOf(kStochDummy) );
-         assert( dynamic_cast<StochVector&>(*(presProb->iclow)).children[node]->isKindOf(kStochDummy) );
-         assert( nnzs_row_C->children[node]->isKindOf(kStochDummy) );
-      }
+      assert( dynamic_cast<StochVector&>(*(presProb->bA)).children[node]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->bux)).children[node]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->blx)).children[node]->isKindOf(kStochDummy) );
+      assert( nnzs_row_A->children[node]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->bu)).children[node]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->bl)).children[node]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->icupp)).children[node]->isKindOf(kStochDummy) );
+      assert( dynamic_cast<StochVector&>(*(presProb->iclow)).children[node]->isKindOf(kStochDummy) );
+      assert( nnzs_row_C->children[node]->isKindOf(kStochDummy) );
+
       return true;
    }
+
    return false;
 }
 
@@ -1973,7 +1975,7 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    assert(0 <= col);
    assert(0 <= row);
    assert( !PIPSisZero(coeff) );
-   assert( !nodeIsDummy(node, system_type) );
+   assert( !nodeIsDummy(node) );
 
    /* get upper and lower bound on variable */
    const SimpleVector& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), (block_type == A_MAT) ? -1 : node);
@@ -2090,7 +2092,7 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
       if(node == -1 && my_rank != 0)
          continue;
 
-      if( nodeIsDummy(node, system_type) )
+      if( nodeIsDummy(node) )
          continue;
 
       /* get upper, lower bounds */
@@ -2324,27 +2326,18 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
       if( TRACK_COLUMN(node,col) )
          std::cout << "TRACKING_COLUMN: the column is linking (root node)" << std::endl;
       /* A0/B0 and C0/D0block */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, B_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, B_MAT, col, lbx, old_lbx, false);
-
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, B_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, B_MAT, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, B_MAT, col, ubx, lbx, old_ubx, old_lbx);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, B_MAT, col, ubx, lbx, old_ubx, old_lbx);
 
       /* Bl0 and Dl0 */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, BL_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, BL_MAT, col, lbx, old_lbx, false);
-
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, BL_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, BL_MAT, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, BL_MAT, col, ubx, lbx, old_ubx, old_lbx);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, -1, BL_MAT, col, ubx, lbx, old_ubx, old_lbx);
 
       for(int child = 0; child < nChildren; ++child)
       {
          /* Ai and Ci */
-         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, A_MAT, col, ubx, old_ubx, true);
-         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, A_MAT, col, lbx, old_lbx, false);
-
-         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, A_MAT, col, ubx, old_ubx, true);
-         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, A_MAT, col, lbx, old_lbx, false);
+         updateRowActivitiesBlock(EQUALITY_SYSTEM, child, A_MAT, col, ubx, lbx, old_ubx, old_lbx);
+         updateRowActivitiesBlock(INEQUALITY_SYSTEM, child, A_MAT, col, ubx, lbx, old_ubx, old_lbx);
       }
    }
    else
@@ -2353,24 +2346,29 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
          std::cout << "TRACKING_COLUMN: the column is non-linking (non-root)" << std::endl;
       /* Bmat, Blmat */
       /* Bmat */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, B_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, B_MAT, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, B_MAT, col, ubx, lbx, old_ubx, old_lbx);
 
       /* Blmat */
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, BL_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, BL_MAT, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(EQUALITY_SYSTEM, node, BL_MAT, col, ubx, lbx, old_ubx, old_lbx);
 
       /* Dmat Dlmat */
 
       /* Dmat */
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, B_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, B_MAT, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, B_MAT, col, ubx, lbx, old_ubx, old_lbx);
 
       /* Dlmat */
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, BL_MAT, col, ubx, old_ubx, true);
-      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, BL_MAT, col, lbx, old_lbx, false);
+      updateRowActivitiesBlock(INEQUALITY_SYSTEM, node, BL_MAT, col, ubx, lbx, old_ubx, old_lbx);
    }
 }
+
+
+void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col,
+		 double ubx, double lbx, double old_ubx, double old_lbx)
+{
+	updateRowActivitiesBlock(system_type, node, block_type, col, lbx, old_lbx, false);
+	updateRowActivitiesBlock(system_type, node, block_type, col, ubx, old_ubx, true);
+}
+
 
 void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound, double old_bound, bool upper)
 {
@@ -2378,7 +2376,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
    assert(0 <= col);
 
    /* dummies do not adjust anything */
-   if( nodeIsDummy(node, system_type) )
+   if( nodeIsDummy(node) )
       return;
 
    /* we do not have to adjust activities if no new bound was found */
@@ -2541,7 +2539,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
 void PresolveData::getRowActivities(SystemType system_type, int node, bool linking, int row, double& max_act,
       double& min_act, int& max_ubndd, int& min_ubndd) const
 {
-   assert(!nodeIsDummy(node, system_type));
+   assert(!nodeIsDummy(node));
 
    max_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row]
          : getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking)[row];
@@ -2591,7 +2589,7 @@ void PresolveData::getRowActivities(SystemType system_type, int node, bool linki
 SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const
 {
    assert( -1 <= node && node < nChildren );
-   assert(!nodeIsDummy(node, system_type));
+   assert(!nodeIsDummy(node));
 
    StochGenMatrix& sMat = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presProb->A) : dynamic_cast<StochGenMatrix&>(*presProb->C);
 
@@ -2621,7 +2619,7 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
 // todo does not yet print linking constraints
 void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const
 {
-   if(nodeIsDummy(node, system_type))
+   if(nodeIsDummy(node))
       return;
 
    if(node == -1 && !linking && my_rank != 0)

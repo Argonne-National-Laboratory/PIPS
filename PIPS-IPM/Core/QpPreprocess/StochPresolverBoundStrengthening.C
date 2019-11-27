@@ -60,14 +60,11 @@ void StochPresolverBoundStrengthening::applyPresolving()
       for( int node = 0; node < nChildren; node++)
       {
          // dummy child?
-         if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
+         if( !presData.nodeIsDummy(node) )
          {
             if( strenghtenBoundsInNode(EQUALITY_SYSTEM, node) )
               tightened = true;
-         }
 
-         if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
-         {
             if( strenghtenBoundsInNode(INEQUALITY_SYSTEM, node) )
               tightened = true;
          }

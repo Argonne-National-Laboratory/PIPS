@@ -40,7 +40,7 @@ public:
          int node_var2, double scalar, double translation);
 
 
-      virtual PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const;
+      PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const override;
 private:
 
       const int my_rank;

@@ -44,7 +44,7 @@ private:
 
       StochPostsolver* const postsolver;
 
-      int length_array_outdated_indicators;
+      const int length_array_outdated_indicators;
       bool* array_outdated_indicators;
       bool& outdated_lhsrhs;
       bool& outdated_nnzs;
@@ -208,7 +208,7 @@ public :
       bool verifyActivities();
       bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
 
-      bool nodeIsDummy(int node, SystemType system_type) const;
+      bool nodeIsDummy(int node) const;
       bool hasLinking(SystemType system_type) const;
 
       /// methods for printing debug information
@@ -241,6 +241,10 @@ private:
 
       bool updateBoundsVariable(int node, int col, double ubx, double lbx);
       void updateRowActivities(int node, int col, double ubx, double lbx, double old_ubx, double old_lbx);
+
+      void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col,
+      		 double ubx, double lbx, double old_ubx, double old_lbx);
+
       void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
             double old_bound, bool upper);
 
@@ -253,8 +257,8 @@ private:
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
       void removeEntryInDynamicStorage(SparseStorageDynamic& storage, int row, int col) const;
 
-      void removeIndexRow(SystemType system_type, int node, bool linking, int row_index, int amount);
-      void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
+      void reduceNnzCounterRow(SystemType system_type, int node, bool linking, int row_index, int amount);
+      void reduceNnzCounterColumn(int node, BlockType block_type, int col_index, int amount);
 
       /// methods for querying the problem in order to get certain structures etc. todo: move?
       SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
