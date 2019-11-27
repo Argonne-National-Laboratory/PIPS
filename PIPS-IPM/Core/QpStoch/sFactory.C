@@ -25,6 +25,7 @@
 #include "PardisoSolver.h"
 #include "DeSymIndefSolver.h"
 
+#include "pipsport.h"
 #include "mpi.h"
 
 #include <stdio.h>
@@ -32,7 +33,7 @@
 
 
 sFactory::sFactory( stochasticInput& in, MPI_Comm comm)
-  : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
+  : QpGen(0,0,0), data(nullptr), m_tmTotal(0.0)
 {
   tree = new sTreeImpl(in, comm);
   //tree->computeGlobalSizes();
@@ -44,7 +45,7 @@ sFactory::sFactory( stochasticInput& in, MPI_Comm comm)
 
 
 sFactory::sFactory( StochInputTree* inputTree, MPI_Comm comm)
-  : QpGen(0,0,0), data(NULL), m_tmTotal(0.0)
+  : QpGen(0,0,0), data(nullptr), m_tmTotal(0.0)
 {
 
   tree = new sTreeCallbacks(inputTree);
@@ -61,7 +62,7 @@ sFactory::sFactory( StochInputTree* inputTree, MPI_Comm comm)
 sFactory::sFactory( int nx_, int my_, int mz_, int nnzQ_, int nnzA_, int nnzC_ )
   : QpGen( nx_, my_, mz_ ),
     nnzQ(nnzQ_), nnzA(nnzA_), nnzC(nnzC_),
-    tree(NULL), data(NULL), resid(NULL), linsys(NULL),
+    tree(nullptr), data(nullptr), resid(nullptr), linsys(nullptr),
     m_tmTotal(0.0)
 { };
 
@@ -80,9 +81,9 @@ sFactory::newLinsysLeaf(sData* prob,
 			OoqpVector* nomegaInv, OoqpVector* rhs)
 {
 #ifdef WITH_PARDISO
-   PardisoSolver* s=NULL;
+   PardisoSolver* s=nullptr;
 #else
-   Ma27Solver* s=NULL;
+   Ma27Solver* s=nullptr;
 #endif
 
   return new sLinsysLeaf(this, prob, dd, dq, nomegaInv, rhs, s);

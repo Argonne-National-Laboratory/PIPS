@@ -324,7 +324,6 @@ bool SimpleVectorBase<T>::componentEqual( const OoqpVectorBase<T>& vec, T tol) c
    return true;
 }
 
-
 template<typename T>
 void SimpleVectorBase<T>::scalarMult( T num)
 {
@@ -941,6 +940,7 @@ void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<int>& select)
    const SimpleVectorBase<int>& selectSimple = dynamic_cast<const SimpleVectorBase<int>&>(select);
    const int* const selectArr = selectSimple.elements();
    assert(selectArr);
+
    assert(this->n == selectSimple.length());
 
    int nNew = 0;

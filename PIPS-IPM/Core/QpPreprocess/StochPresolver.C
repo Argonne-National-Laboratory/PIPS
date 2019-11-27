@@ -37,9 +37,9 @@
 //#include "StochPresolverSingletonColumns.h"
 #include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
+#include "pipsport.h"
 
-
-StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = NULL)
+StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullptr)
  : QpPresolver(prob, postsolver)
 {
    // todo
@@ -103,7 +103,7 @@ Data* StochPresolver::presolve()
 
 // todo : tell postsolver aboud released variables
    char* env = getenv("PIPS_RESET_FREE_VARIABLES");
-   if( env != NULL )
+   if( env != nullptr )
    {
       std::string reset_vars(env);
       for(unsigned int i = 0; i < reset_vars.length(); ++i)

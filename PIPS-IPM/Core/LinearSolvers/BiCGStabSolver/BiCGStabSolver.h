@@ -4,6 +4,7 @@
 #include "DoubleLinearSolver.h"
 #include "DoubleMatrix.h"
 #include "SimpleVector.h"
+#include "pipsport.h"
 
 class MatTimesVec;
 
@@ -16,7 +17,7 @@ public:
   /** build the class for the linear system 
    *  for Ax=b preconditioned with M1 (or M1 and M2)
    */
-  BiCGStabSolver( MatTimesVec* A, MatTimesVec* M1, MatTimesVec* M2=NULL );
+  BiCGStabSolver( MatTimesVec* A, MatTimesVec* M1, MatTimesVec* M2=nullptr );
 
   virtual ~BiCGStabSolver() {};
 

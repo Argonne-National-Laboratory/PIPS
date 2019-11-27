@@ -63,9 +63,9 @@ int dumpAugMatrix(int n, int nnz, int nSys, //size, nnz and size of the (1,1) bl
 		  double* eltsA, 
 		  int* rowptr, 
 		  int* colidx, 
-		  const char* fname=NULL);
+		  const char* fname=nullptr);
 int dumpSysMatrix(SparseSymMatrix* Msys,
-                  const char* fname=NULL);
+                  const char* fname=nullptr);
 int dumpRhs(SimpleVector& v);
 
 const static int pardiso_verbosity = 0;
@@ -91,12 +91,12 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   n = -1;
   nnz = -1;
   nSC = -1;
-  rowptrAug = NULL;
-  colidxAug = NULL;
-  eltsAug = NULL;
-  shrinked2orgSC = NULL;
-  nvec = NULL;
-  nvec2 = NULL;
+  rowptrAug = nullptr;
+  colidxAug = nullptr;
+  eltsAug = nullptr;
+  shrinked2orgSC = nullptr;
+  nvec = nullptr;
+  nvec2 = nullptr;
   nvec_size = -1;
   // - we do not have the augmented system yet; most of initialization done during the
   // first solve call
@@ -120,7 +120,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   // todo proper parameter
   char* var = getenv("PARDISO_SPARSE_RHS_LEAF");
   assert(!useSparseRhs);
-  if( var != NULL )
+  if( var != nullptr )
   {
      int use;
      sscanf(var, "%d", &use);
@@ -132,7 +132,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   var = getenv("PARDISO_SYMB_INTERVAL");
   symbFactorInterval = symbFactorIntervalDefault;
 
-  if( var != NULL )
+  if( var != nullptr )
   {
      int interval;
      sscanf(var, "%d", &interval);
@@ -144,7 +144,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   var = getenv("PARDISO_PIVOT_PERTURBATION");
   pivotPerturbationExp = pivotPerturbationExpDefault;
 
-  if( var != NULL )
+  if( var != nullptr )
   {
      int exp;
      sscanf(var, "%d", &exp);
@@ -156,7 +156,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
   var = getenv("PARDISO_NITERATIVE_REFINS");
   nIterativeRefins = nIterativeRefinsDefault;
 
-  if( var != NULL )
+  if( var != nullptr )
   {
      int n;
      sscanf(var, "%d", &n);
@@ -170,7 +170,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 
   // todo proper parameter
   var = getenv("PARDISO_PARALLEL_SOLVE");
-  if( var != NULL )
+  if( var != nullptr )
   {
      int n;
      sscanf(var, "%d", &n);
@@ -184,7 +184,7 @@ PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 
   // todo proper parameter
   var = getenv("PARDISO_FACTORIZE_TWOLEVEL");
-  if( var != NULL )
+  if( var != nullptr )
   {
      int n;
      sscanf(var, "%d", &n);
@@ -469,7 +469,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 #ifdef SHRINK_SC
 
   // remove empty or zero rows from augSys and check that in Msys none are removed!
-  int* shrinked2orgAug = NULL;
+  int* shrinked2orgAug = nullptr;
 
   augSys.deleteZeroRowsCols(shrinked2orgAug);
 
@@ -494,7 +494,7 @@ void PardisoSchurSolver::firstSolveCall(SparseGenMatrix& R,
 
   nSC = augSys.size() - Msize;
 
-  assert(shrinked2orgSC == NULL);
+  assert(shrinked2orgSC == nullptr);
   shrinked2orgSC = new int[nSC];
 
   // shrinked2orgSC should only map Schur complement part of augmented saddle-point system
@@ -654,9 +654,9 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 				     SparseGenMatrix& G,
 				     DenseSymMatrix& SC0)
 {
-  int* rowptrSC = NULL;
-  int* colidxSC = NULL;
-  double* eltsSC = NULL;
+  int* rowptrSC = nullptr;
+  int* colidxSC = nullptr;
+  double* eltsSC = nullptr;
 
   computeSC(SC0.size(), R, A, C, F, G, rowptrSC, colidxSC, eltsSC);
 
@@ -711,9 +711,9 @@ void PardisoSchurSolver::schur_solve_sparse(SparseGenMatrix& R,
                  SparseGenMatrix& G,
                  SparseSymMatrix& SC0)
 {
-  int* rowptrSC = NULL;
-  int* colidxSC = NULL;
-  double* eltsSC = NULL;
+  int* rowptrSC = nullptr;
+  int* colidxSC = nullptr;
+  double* eltsSC = nullptr;
 
   computeSC(SC0.size(), R, A, C, F, G, rowptrSC, colidxSC, eltsSC);
 
@@ -866,7 +866,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    #endif
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, eltsAug, rowptrAug,
-         colidxAug, NULL, &nrhs, iparm, &msglvl, NULL, NULL, &error ,dparm);
+         colidxAug, nullptr, &nrhs, iparm, &msglvl, nullptr, nullptr, &error ,dparm);
 
  #ifdef TIMING_FLOPS
    HPM_Stop("PARDISOFact");
@@ -918,7 +918,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
    phase = 11;
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, eltsAug, rowptrAug,
-   	   	   colidxAug, perm, &nrhs, iparm, &msglvl, NULL, NULL, &error);
+   	   	   colidxAug, perm, &nrhs, iparm, &msglvl, nullptr, nullptr, &error);
 
    /* iparm[35] should now contain the number of non-zero entries in the Schur-complement */
    /* if it does not most likely the general iparm setup is faulty */
@@ -947,7 +947,7 @@ void PardisoSchurSolver::computeSC(int nSCO,
 
    /* factorization call */
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, eltsAug, rowptrAug,
-         colidxAug, perm, &nrhs, iparm, &msglvl, NULL, NULL, &error);
+         colidxAug, perm, &nrhs, iparm, &msglvl, nullptr, nullptr, &error);
 
    #ifdef TIMING_FLOPS
    HPM_Stop("PARDISOFact");
@@ -1085,7 +1085,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
    phase = 331;
    pardiso (pt , &maxfct , &mnum, &mtype, &phase,
          &n, eltsAug, rowptrAug, colidxAug,
-         NULL, &nrhs, iparm, &msglvl, rhs_n, z_n, &error);
+         nullptr, &nrhs, iparm, &msglvl, rhs_n, z_n, &error);
    assert(error == 0);
 
    // diagonal substitution
@@ -1094,7 +1094,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
    pardiso (pt , &maxfct , &mnum, &mtype, &phase,
          &n, eltsAug, rowptrAug, colidxAug,
-         NULL, &nrhs, iparm, &msglvl, z_n, y_n, &error);
+         nullptr, &nrhs, iparm, &msglvl, z_n, y_n, &error);
    assert(error == 0);
 
    // backward substitution
@@ -1104,7 +1104,7 @@ void PardisoSchurSolver::solve( OoqpVector& rhs_in )
 
    pardiso (pt , &maxfct , &mnum, &mtype, &phase,
          &n, eltsAug, rowptrAug, colidxAug,
-         NULL, &nrhs, iparm, &msglvl, y_n, x_n, &error);
+         nullptr, &nrhs, iparm, &msglvl, y_n, x_n, &error);
    assert(error == 0);
 
    iparm[35] = -2;
@@ -1190,7 +1190,7 @@ void PardisoSchur32Solver::solve( OoqpVector& rhs_in )
   //double start = MPI_Wtime();
   pardiso (pt , &maxfct , &mnum, &mtype, &phase,
 	   &n, eltsAug, rowptrAug, colidxAug, 
-	   NULL, &nrhs,
+	   nullptr, &nrhs,
 	   iparm , &msglvl, rhs_n.elements(), x_n.elements(), &error
 #ifndef WITH_MKL_PARDISO
 	   ,dparm
@@ -1250,8 +1250,8 @@ PardisoSchurSolver::~PardisoSchurSolver()
   int error = 0;
   
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
-	   &n, NULL, rowptrAug, colidxAug, NULL, &nrhs,
-	   iparm, &msglvl, NULL, NULL, &error
+	   &n, nullptr, rowptrAug, colidxAug, nullptr, &nrhs,
+	   iparm, &msglvl, nullptr, nullptr, &error
 #ifndef WITH_MKL_PARDISO
 	   , dparm
 #endif
@@ -1275,7 +1275,7 @@ int dumpAugMatrix(int n, int nnz, int nSys,
 {
   char filename[1024];
   int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-  if(fname==NULL) 
+  if(fname==nullptr) 
     sprintf(filename, "augMat-r%d-i%g-s%g.dat", myRank, g_iterNumber,  g_scenNum+1);
   else 
     sprintf(filename, "%s-r%d-i%g-s%g.dat", fname, myRank, g_iterNumber,  g_scenNum+1);
@@ -1298,7 +1298,7 @@ int dumpAugMatrix(int n, int nnz, int nSys,
 int dumpSysMatrix(SparseSymMatrix* Msys, const char* fname)
 {
   char filename[1024];
-  if(fname==NULL) 
+  if(fname==nullptr) 
     sprintf(filename, "Qdump-%g-s%g.dat", g_iterNumber,  g_scenNum+1);
   else 
     sprintf(filename, "%s-%g-s%g.dat", fname, g_iterNumber,  g_scenNum+1);

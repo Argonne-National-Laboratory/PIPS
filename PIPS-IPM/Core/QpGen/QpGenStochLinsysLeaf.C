@@ -7,6 +7,7 @@
 #include "SparseGenMatrix.h"
 #include "Ma57Solver.h"
 #include "Ma27Solver.h"
+#include "pipsport.h"
 
 void mySymAtPutSubmatrix(SymMatrix& kkt, 
 			 GenMatrix& B, GenMatrix& D, 
@@ -18,7 +19,7 @@ QpGenStochLinsysLeaf::QpGenStochLinsysLeaf(QpGenStoch *factory_, QpGenStochData*
 					   OoqpVector* nomegaInv_,
 					   OoqpVector* rhs_)
   : QpGenStochLinsys(factory_, prob, dd_, dq_, nomegaInv_, rhs_)
-    //,    kkt(NULL), solver(NULL)
+    //,    kkt(nullptr), solver(nullptr)
 {
   // create the KKT system matrix
   // size = ?  nnz = ?

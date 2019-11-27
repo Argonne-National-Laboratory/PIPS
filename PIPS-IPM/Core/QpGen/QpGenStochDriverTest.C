@@ -2,6 +2,7 @@
 #include "QpGenStochDriver.h"
 #include "MehrotraSolver.h"
 #include "mpi.h"
+#include "pipsport.h"
 
 #include <math.h>
 #include <vector>
@@ -223,7 +224,7 @@ int generateAndSolveArtificalProblem( int argc, char* argv[],
   StochRunParams* params = defaultStochRunParams();
   //  params->printx = 1;
  
-  MehrotraSolver* method=NULL;
+  MehrotraSolver* method=nullptr;
   qpgenstoch_solve( root, method, params);
   
   delete params;  
@@ -250,7 +251,7 @@ int main( int argc, char *argv[] )
     generateAndSolveArtificalProblem( argc, argv, levels, noSubnodes, n);
 
   } else {
-    void* usrdata=NULL;
+    void* usrdata=nullptr;
     StochInputTree::StochInputNode node( usrdata, 0, 
 			      5, 2, 2,
 			      fQ0, fnnzQ0, fc0,
@@ -290,7 +291,7 @@ int main( int argc, char *argv[] )
     
     StochRunParams* params = defaultStochRunParams();
     
-    MehrotraSolver* method=NULL;
+    MehrotraSolver* method=nullptr;
     qpgenstoch_solve( argc, argv, &root, method, params);
     
     delete params;

@@ -1,6 +1,6 @@
 #include "DoubleLinearSolver.h"
 #include "SimpleVector.h"
-
+#include "pipsport.h"
 DoubleIterativeLinearSolver::
 DoubleIterativeLinearSolver( MatTimesVec* Ain, MatTimesVec* M1in, MatTimesVec* M2in )
 : A(Ain), ML(M1in), MR(M2in)
@@ -9,7 +9,7 @@ DoubleIterativeLinearSolver( MatTimesVec* Ain, MatTimesVec* M1in, MatTimesVec* M
 }
 
 DoubleIterativeLinearSolver::DoubleIterativeLinearSolver()
-  : A(NULL), ML(NULL), MR(NULL)
+  : A(nullptr), ML(nullptr), MR(nullptr)
 { }
 
 DoubleIterativeLinearSolver::~DoubleIterativeLinearSolver()
@@ -39,7 +39,7 @@ void DoubleIterativeLinearSolver::applyM1(double beta, OoqpVector& res,
 void DoubleIterativeLinearSolver::applyM2(double beta,  OoqpVector& res,
 					  double alpha, OoqpVector& x)
 {
-  if(NULL==MR) {
+  if(nullptr==MR) {
     //just a identity precond
     if(beta==0.0) {
       if(alpha==1.0) {res.copyFrom(x);return;}

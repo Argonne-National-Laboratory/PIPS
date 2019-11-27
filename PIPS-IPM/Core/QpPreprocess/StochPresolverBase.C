@@ -10,6 +10,7 @@
 #include "DoubleMatrixTypes.h"
 #include "SmartPointer.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 
 #include <algorithm>
 #include <cassert>
@@ -187,7 +188,7 @@ void StochPresolverBase::countRowsBlock(int& n_rows_total, int& n_rows_empty, in
 #ifndef NDEBUG
    if(system_type == EQUALITY_SYSTEM)
    {
-      assert(rhs); assert(lhs == NULL); assert(iclow == NULL); assert(icupp == NULL);
+      assert(rhs); assert(lhs == nullptr); assert(iclow == nullptr); assert(icupp == nullptr);
       assert( nnz_row->n == rhs->n );
    }
    else
@@ -311,7 +312,7 @@ void StochPresolverBase::updatePointersForCurrentNode(int node, SystemType syste
    setReductionPointers(system_type, node);
 }
 
-// todo : set pointers NULL if no linking constraints?
+// todo : set pointers nullptr if no linking constraints?
 void StochPresolverBase::setPointersMatrices(const GenMatrixHandle mat, int node)
 {
    assert(-1 <= node && node < nChildren);
@@ -320,8 +321,8 @@ void StochPresolverBase::setPointersMatrices(const GenMatrixHandle mat, int node
    /* in root node only A0 and Bl0 are present */
    if( node == -1 )
    {
-      currAmat = NULL;
-      currAmatTrans = NULL;
+      currAmat = nullptr;
+      currAmatTrans = nullptr;
 
       currBmat = dynamic_cast<const SparseGenMatrix*>(smat.Bmat)->getStorageDynamic();
       currBmatTrans = dynamic_cast<const SparseGenMatrix*>(smat.Bmat)->getStorageDynamicTransposed();
@@ -358,12 +359,12 @@ void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_typ
       currEqRhs = &getSimpleVecFromRowStochVec( *presData.getPresProb().bA, node, false );
 
       currIneqLhs = currIclow = currIneqRhs = currIcupp = currIneqLhsLink =
-            currIclowLink = currIneqRhsLink = currIcuppLink = NULL;
+            currIclowLink = currIneqRhsLink = currIcuppLink = nullptr;
 
       if( presData.hasLinking(system_type) )
          currEqRhsLink = &getSimpleVecFromRowStochVec( *presData.getPresProb().bA, node, true );
       else
-         currEqRhsLink = NULL;
+         currEqRhsLink = nullptr;
 
    }
    else
@@ -373,7 +374,7 @@ void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_typ
       currIneqRhs = &getSimpleVecFromRowStochVec(*presData.getPresProb().bu, node, false);
       currIcupp = &getSimpleVecFromRowStochVec(*presData.getPresProb().icupp, node, false);
 
-      currIneqLhsLink = currIclowLink = currIneqRhsLink = currIcuppLink = NULL;
+      currIneqLhsLink = currIclowLink = currIneqRhsLink = currIcuppLink = nullptr;
 
       if( presData.hasLinking(system_type) )
       {
@@ -383,7 +384,7 @@ void StochPresolverBase::setPointersMatrixBoundsActivities(SystemType system_typ
          currIcuppLink = &getSimpleVecFromRowStochVec(*presData.getPresProb().icupp, node, true);
       }
       else
-         currEqRhs = currEqRhsLink = NULL;
+         currEqRhs = currEqRhsLink = nullptr;
    }
 }
 
@@ -404,7 +405,7 @@ void StochPresolverBase::setPointersVarBounds(int node)
       currIxuppChild = &getSimpleVecFromColStochVec(*presData.getPresProb().ixupp, node);
    }
    else
-      currxlowChild = currxuppChild = currIxlowChild = currIxuppChild = NULL;
+      currxlowChild = currxuppChild = currIxlowChild = currIxuppChild = nullptr;
 }
 
 void StochPresolverBase::setPointersObjective(int node)
@@ -413,7 +414,7 @@ void StochPresolverBase::setPointersObjective(int node)
    if(node != -1)
       currgChild = &getSimpleVecFromColStochVec(*presData.getPresProb().g, node);
    else
-      currgChild = NULL;
+      currgChild = nullptr;
 }
 
 void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
@@ -435,5 +436,5 @@ void StochPresolverBase::setReductionPointers(SystemType system_type, int node){
    if(node != -1)
       currNnzColChild = &getSimpleVecFromColStochVec(presData.getNnzsCol(), node);
    else
-      currNnzColChild = NULL;
+      currNnzColChild = nullptr;
 }

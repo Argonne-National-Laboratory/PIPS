@@ -13,6 +13,7 @@
 #include "SparseSymMatrix.h"
 #include "SparseGenMatrix.h"
 
+#include "pipsport.h"
 
 /** This class solves the linear system corresponding to a leaf node.
  *  It just redirects the call to QpGenSparseLinsys.
@@ -25,7 +26,7 @@ class sLinsysLeaf : public sLinsys
     sLinsysLeaf(sFactory* factory,
 		sData* prob_,				    
 		OoqpVector* dd_, OoqpVector* dq_, OoqpVector* nomegaInv_,
-		OoqpVector* rhs_, LINSOLVER *linsolver=NULL);
+		OoqpVector* rhs_, LINSOLVER *linsolver=nullptr);
 
   virtual ~sLinsysLeaf();
 

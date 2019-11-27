@@ -15,6 +15,7 @@
 #include "SmartPointer.h"
 #include "StochPostsolver.h"
 #include "sData.h"
+#include "pipsport.h"
 
 enum ScalerType {SCALER_NONE, SCALER_EQUI_STOCH, SCALER_GEO_STOCH, SCALER_GEO_EQUI_STOCH};
 enum PresolverType {PRESOLVER_NONE, PRESOLVER_STOCH};
@@ -38,7 +39,7 @@ public:
             }
       };
 
-      static Presolver* makePresolver(const Data* data, PresolverType type, Postsolver* postsolver = NULL)
+      static Presolver* makePresolver(const Data* data, PresolverType type, Postsolver* postsolver = nullptr)
       {
          switch( type )
             {

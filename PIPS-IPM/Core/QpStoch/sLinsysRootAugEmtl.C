@@ -8,13 +8,14 @@
 #include "EmtlGenIndefSolver.h"
 #include "EmtlSymPSDSolver.h"
 #include "EmtlVector.h"
+#include "pipsport.h"
 
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
 #endif
 
 sLinsysRootAugEmtl::sLinsysRootAugEmtl(sFactory * factory_, QpGenStochData * prob_, const EmtlContext &ctx_)
-  : sLinsysRoot(factory_, prob_), ctx(ctx_), CtDC(NULL)
+  : sLinsysRoot(factory_, prob_), ctx(ctx_), CtDC(nullptr)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
   kkt = createKKT(prob_);
@@ -32,7 +33,7 @@ sLinsysRootAugEmtl::sLinsysRootAugEmtl(sFactory* factory_,
 			       OoqpVector* rhs_,
 			       const EmtlContext &ctx_)
   : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), 
-    ctx(ctx_), CtDC(NULL)
+    ctx(ctx_), CtDC(nullptr)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
   kkt = createKKT(prob_);

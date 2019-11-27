@@ -13,6 +13,8 @@
 #include "DoubleMatrixTypes.h"
 #include <cmath>
 
+#include "pipsport.h"
+
 #ifdef DEBUG
 extern int sleepFlag;
 #endif
@@ -30,7 +32,7 @@ int StochTree::rankPrcnd =-1;
 int StochTree::numProcs  =-1;
 
 StochTree::StochTree() 
-  : commP2ZeroW(MPI_COMM_NULL), data(NULL), tree(NULL), fakedata(NULL), 
+  : commP2ZeroW(MPI_COMM_NULL), data(nullptr), tree(nullptr), fakedata(nullptr), 
      np(-1), IPMIterExecTIME(-1)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -38,7 +40,7 @@ StochTree::StochTree()
 }
 
 StochTree::StochTree(StochInputTree* inputTree)
-  : commP2ZeroW(MPI_COMM_NULL), tree(NULL), fakedata(NULL), 
+  : commP2ZeroW(MPI_COMM_NULL), tree(nullptr), fakedata(nullptr), 
     np(-1), IPMIterExecTIME(-1)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -54,7 +56,7 @@ StochTree::StochTree(StochInputTree* inputTree)
 
 // np==-1 is used to indicate the root node. these can't be root nodes
 StochTree::StochTree(const vector<StochInputTree::StochInputNode*> &localscens)
-  : commP2ZeroW(MPI_COMM_NULL), data(NULL), tree(NULL), scens(localscens), 
+  : commP2ZeroW(MPI_COMM_NULL), data(nullptr), tree(nullptr), scens(localscens), 
     np(0), IPMIterExecTIME(-1) 
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -67,7 +69,7 @@ StochTree::StochTree(const vector<StochInputTree::StochInputNode*> &localscens)
 	}
 }
 StochTree::StochTree(StochInputTree::StochInputNode* data_)
-  : commP2ZeroW(MPI_COMM_NULL), data(data_), tree(NULL), fakedata(NULL),
+  : commP2ZeroW(MPI_COMM_NULL), data(data_), tree(nullptr), fakedata(nullptr),
     np(0), IPMIterExecTIME(-1)
 {
   if(-1==rankMe) MPI_Comm_rank(MPI_COMM_WORLD, &rankMe);
@@ -302,7 +304,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
 
   int noProcs = processes.size();
 
-  if (1 == noProcs && tree==NULL) {
+  if (1 == noProcs && tree==nullptr) {
     for(size_t i = 0; i < real_children.size(); i++) {
       real_children[i]->assignProcesses(commWrkrs, myProcs);
     }
@@ -395,7 +397,7 @@ void StochTree::assignProcesses(MPI_Comm world, vector<int>& processes)
       children[p]->assignProcesses(MPI_COMM_NULL, s);
     }
   }
-  tree = NULL;
+  tree = nullptr;
   computeGlobalSizes(); // recompute so children nodes have values
 }
 #endif
@@ -568,7 +570,7 @@ StochGenMatrix* StochTree::createA() const
     return new StochGenDummyMatrix(id());
   }
 
-  StochGenMatrix* A = NULL;
+  StochGenMatrix* A = nullptr;
   if (!fakedata) {
     if (np==-1) {
 
@@ -636,7 +638,7 @@ StochGenMatrix* StochTree::createC() const
     return new StochGenDummyMatrix(id());
 
 
-  StochGenMatrix* C = NULL;
+  StochGenMatrix* C = nullptr;
   if (!fakedata) {
     if (np==-1) {
 

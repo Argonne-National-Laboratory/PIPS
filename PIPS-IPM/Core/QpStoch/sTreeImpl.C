@@ -7,9 +7,10 @@
 #include "StochVector.h"
 #include "StochGenMatrix.h"
 #include "StochSymMatrix.h"
+#include "pipsport.h"
 
 sTreeImpl::sTreeImpl( stochasticInput &in_, MPI_Comm comm /*=MPI_COMM_WORLD*/)
-  : sTree(), m_id(0), in(in_), parent(NULL)
+  : sTree(), m_id(0), in(in_), parent(nullptr)
 {
   if(-1==rankMe) MPI_Comm_rank(comm, &rankMe);
   if(-1==numProcs) MPI_Comm_size(comm, &numProcs);
@@ -64,7 +65,7 @@ StochSymMatrix* sTreeImpl::createQ() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochSymDummyMatrix(m_id);
 
-  StochSymMatrix* Q = NULL;
+  StochSymMatrix* Q = nullptr;
 
   if (m_id==0) {
     // get the Hessian from stochasticInput and get it in row-major
@@ -119,7 +120,7 @@ StochSymMatrix* sTreeImpl::createQ() const
       Q->AddChild(child);
     }
     return Q;
-  return NULL;
+  return nullptr;
 }
 
 static double RESCALE=1.0;
@@ -293,7 +294,7 @@ StochGenMatrix* sTreeImpl::createA() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochGenDummyMatrix(m_id);
 
-  StochGenMatrix* A = NULL;
+  StochGenMatrix* A = nullptr;
   if (m_id==0) {
     CoinPackedMatrix Arow; 
     Arow.reverseOrderedCopyOf( in.getFirstStageConstraints() );
@@ -354,7 +355,7 @@ StochGenMatrix* sTreeImpl::createC() const
   if(commWrkrs==MPI_COMM_NULL)
     return new StochGenDummyMatrix(m_id);
 
-  StochGenMatrix* C = NULL;
+  StochGenMatrix* C = nullptr;
   if (m_id==0) {
     CoinPackedMatrix Crow; 
     Crow.reverseOrderedCopyOf( in.getFirstStageConstraints() );

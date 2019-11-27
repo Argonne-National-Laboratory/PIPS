@@ -9,6 +9,7 @@
 #define PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERMODELCLEANUP_H_
 
 #include "StochPresolverBase.h"
+#include "pipsport.h"
 
 class StochPresolverModelCleanup : public StochPresolverBase
 {
@@ -18,7 +19,7 @@ class StochPresolverModelCleanup : public StochPresolverBase
       virtual ~StochPresolverModelCleanup();
 
       // remove small matrix entries
-      virtual void applyPresolving();
+      void applyPresolving() override;
 
    private:
       int removed_entries_total;

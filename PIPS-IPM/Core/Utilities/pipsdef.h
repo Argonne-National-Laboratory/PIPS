@@ -16,6 +16,7 @@
 #include <vector>
 #include <mpi.h>
 #include <assert.h>
+#include "pipsport.h"
 
 const double pips_eps = 1e-13;
 const double pips_eps0 = 1e-40;
@@ -87,7 +88,7 @@ inline int PIPSgetnOMPthreads()
 
    /* Numbers of processors, value of OMP_NUM_THREADS */
    char* var = getenv("OMP_NUM_THREADS");
-   if( var != NULL )
+   if( var != nullptr )
       sscanf(var, "%d", &num_procs);
    else
    {
@@ -402,6 +403,7 @@ inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm)
 }
 
 template <typename T>
+
 inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 {
    assert(length >= 0);

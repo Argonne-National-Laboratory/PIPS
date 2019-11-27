@@ -8,6 +8,7 @@
 #include "DenseGenMatrix.h"
 #include "SimpleVector.h"
 #include "StochVector.h"
+#include "pipsport.h"
 
 #include <vector>
 
@@ -82,7 +83,7 @@ class QpGenStochDummyLinsys : public QpGenStochLinsys
 {
  public:
   QpGenStochDummyLinsys(QpGenStoch* factory, QpGenStochData* prob)
-    : QpGenStochLinsys(factory, prob, NULL, NULL, NULL, NULL) 
+    : QpGenStochLinsys(factory, prob, nullptr, nullptr, nullptr, nullptr) 
     {
       mpiComm = MPI_COMM_NULL;
     };

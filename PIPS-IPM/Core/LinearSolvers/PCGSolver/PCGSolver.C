@@ -1,5 +1,6 @@
 #include "PCGSolver.h"
 #include "SimpleVector.h"
+#include "pipsport.h"
 
 #include <math.h>
 
@@ -9,12 +10,12 @@ extern int gOoqpPrintLevel;
 
 PCGSolver::PCGSolver( MatTimesVec* H_in, MatTimesVec* P_in, MatTimesVec* At_in,
 		      int n_in, int m_in)
-  : DoubleIterativeLinearSolver(H_in, P_in, NULL), n(n_in), m(m_in)
+  : DoubleIterativeLinearSolver(H_in, P_in, nullptr), n(n_in), m(m_in)
 { 
   tol = 4.0e-12;
   maxit = 10; iter=-1;
   flag = -1;
-  tmpVec1 = tmpVec2 = tmpVec3 = tmpVec4 = tmpVec5 = tmpVec6 =NULL;
+  tmpVec1 = tmpVec2 = tmpVec3 = tmpVec4 = tmpVec5 = tmpVec6 =nullptr;
   At = At_in;
 };
 
@@ -45,12 +46,12 @@ void PCGSolver::solvefull( OoqpVector& rhs_ )
   double n2b  = b.twonorm();
   double tolb = n2b*tol;
 
-  if(tmpVec1==NULL) tmpVec1=new double[n+m];
-  if(tmpVec2==NULL) tmpVec2=new double[n+m];
-  if(tmpVec3==NULL) tmpVec3=new double[n];
-  if(tmpVec4==NULL) tmpVec4=new double[n];
-  if(tmpVec5==NULL) tmpVec5=new double[n];
-  if(tmpVec6==NULL) tmpVec6=new double[n+m];
+  if(tmpVec1==nullptr) tmpVec1=new double[n+m];
+  if(tmpVec2==nullptr) tmpVec2=new double[n+m];
+  if(tmpVec3==nullptr) tmpVec3=new double[n];
+  if(tmpVec4==nullptr) tmpVec4=new double[n];
+  if(tmpVec5==nullptr) tmpVec5=new double[n];
+  if(tmpVec6==nullptr) tmpVec6=new double[n+m];
 
   SimpleVector xy(tmpVec1, n+m);      //iterate
   SimpleVector auxnm(tmpVec2,n+m);      //auxiliary

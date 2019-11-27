@@ -4,6 +4,7 @@
 #include "DoubleMatrix.h"
 #include "SparseSymMatrix.h"
 #include "SparseGenMatrix.h"
+#include "pipsport.h"
 
 #include <vector>
 #include <iostream>
@@ -98,7 +99,7 @@ public:
   // note: also used for dummy class!
   virtual void deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec)
   {
-     deleteEmptyRowsCols(nnzVec, NULL);
+     deleteEmptyRowsCols(nnzVec, nullptr);
   }
 
 

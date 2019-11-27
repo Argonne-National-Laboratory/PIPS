@@ -16,6 +16,7 @@ using namespace std;
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 #include <cstdlib>
 
 #include "mpi.h"
@@ -54,7 +55,7 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
 	cout << "PardisoSolver::PardisoSolver (sparse input)" << endl;
 #endif
   Msys = sgm;
-  Mdsys=NULL;
+  Mdsys=nullptr;
   n = sgm->size();
   nnz=sgm->numberOfNonZeros();
 
@@ -62,7 +63,7 @@ PardisoSolver::PardisoSolver( SparseSymMatrix * sgm )
   jcolM = new int[nnz];
   M = new double[nnz];
 
-  sol = NULL;
+  sol = nullptr;
   sz_sol = 0;
 
   first = true;
@@ -87,17 +88,17 @@ PardisoSolver::PardisoSolver( DenseSymMatrix * m )
     if(myRank==0)
 	cout << "PardisoSolver created (dense input)" << endl;
 #endif
-  Msys = NULL;
+  Msys = nullptr;
   Mdsys = m;
   n = m->size();
   
   nnz=0; //getNumberOfNonZeros(*Mdsys);
 
-  krowM = NULL;//new int[n+1];
-  jcolM = NULL;//new int[nnz];
-  M = NULL;//new double[nnz];
+  krowM = nullptr;//new int[n+1];
+  jcolM = nullptr;//new int[nnz];
+  M = nullptr;//new double[nnz];
 
-  sol = NULL;
+  sol = nullptr;
   sz_sol = 0;
 
   first = true;
@@ -373,8 +374,8 @@ void PardisoSolver::matrixChanged()
 
    assert(iparmUnchanged());
 
-     pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, NULL, &nrhs,
-         iparm, &msglvl, NULL, NULL, &error
+     pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM, nullptr, &nrhs,
+         iparm, &msglvl, nullptr, nullptr, &error
 #ifndef WITH_MKL_PARDISO
          ,dparm
 #endif
@@ -404,7 +405,7 @@ void PardisoSolver::solve( OoqpVector& rhs_in )
    assert(iparmUnchanged());
 
    pardiso(pt, &maxfct, &mnum, &mtype, &phase, &n, M, krowM, jcolM,
-         NULL, &nrhs, iparm, &msglvl, rhs.elements(), sol_local, &error
+         nullptr, &nrhs, iparm, &msglvl, rhs.elements(), sol_local, &error
 #ifndef WITH_MKL_PARDISO
          ,dparm
 #endif
@@ -440,7 +441,7 @@ void PardisoSolver::solve( GenMatrix& rhs_in )
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
 	   &n, M, krowM, jcolM, 
-	   NULL, &nrhs ,
+	   nullptr, &nrhs ,
 	   iparm, &msglvl, 
 	   &rhs[0][0], sol,
 	   &error
@@ -562,8 +563,8 @@ PardisoSolver::~PardisoSolver()
   nrhs = 1;
 
   pardiso (pt, &maxfct, &mnum, &mtype, &phase,
-	   &n, NULL, krowM, jcolM, NULL, &nrhs,
-	   iparm, &msglvl, NULL, NULL, &error
+	   &n, nullptr, krowM, jcolM, nullptr, &nrhs,
+	   iparm, &msglvl, nullptr, nullptr, &error
 #ifndef WITH_MKL_PARDISO
 	   , dparm
 #endif

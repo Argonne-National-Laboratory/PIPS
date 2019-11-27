@@ -9,6 +9,7 @@
 #include "EquiStochScaler.h"
 #include "StochVector.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 
 #include <cmath>
 
@@ -23,7 +24,7 @@ EquiStochScaler::EquiStochScaler(Data* prob, bool bitshifting)
 
 void EquiStochScaler::doObjScaling()
 {
-   assert(vec_colscale != NULL);
+   assert(vec_colscale != nullptr);
 
    obj->componentMult(*vec_colscale);
 
@@ -50,8 +51,8 @@ void EquiStochScaler::scale()
    StochVector* colmax = dynamic_cast<StochVector*>(bux->clone());
    StochVector* colmin = dynamic_cast<StochVector*>(bux->clone());
 
-   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, NULL);
-   const double colratio = maxColRatio(*colmax, *colmin, NULL, NULL);
+   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, nullptr);
+   const double colratio = maxColRatio(*colmax, *colmin, nullptr, nullptr);
 
    PIPSdebugMessage("rowratio %f \n", rowratio);
    PIPSdebugMessage("colratio %f \n", colratio);
@@ -61,7 +62,7 @@ void EquiStochScaler::scale()
    delete rowminC;
    delete colmin;
 
-   assert(vec_rowscaleA == NULL && vec_rowscaleC == NULL && vec_colscale == NULL);
+   assert(vec_rowscaleA == nullptr && vec_rowscaleC == nullptr && vec_colscale == nullptr);
 
    vec_colscale = colmax;
    vec_rowscaleA = rowmaxA;
@@ -107,8 +108,8 @@ void EquiStochScaler::scale()
    StochVectorHandle xcolmax(dynamic_cast<StochVector*>(bux->clone()));
    StochVectorHandle xcolmin(dynamic_cast<StochVector*>(bux->clone()));
 
-   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, NULL);
-   const double xcolratio = maxColRatio(*xcolmax, *xcolmin, NULL, NULL);
+   const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, nullptr);
+   const double xcolratio = maxColRatio(*xcolmax, *xcolmin, nullptr, nullptr);
 
    PIPSdebugMessage("rowratio after scaling %f \n", xrowratio);
    PIPSdebugMessage("colratio after scaling %f \n", xcolratio);

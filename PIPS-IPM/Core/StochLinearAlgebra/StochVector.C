@@ -2,6 +2,7 @@
 #include "SimpleVectorHandle.h"
 #include "VectorUtilities.h"
 #include "StochVector.h"
+#include "pipsport.h"
 
 #include <cassert>
 #include <cstring>
@@ -11,7 +12,7 @@
 
 template<typename T>
 StochVectorBase<T>::StochVectorBase(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
-  : OoqpVectorBase<T>(n_), vecl(NULL), parent(NULL), mpiComm(mpiComm_),
+  : OoqpVectorBase<T>(n_), vecl(nullptr), parent(nullptr), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
   vec = new SimpleVectorBase<T>(n_);
@@ -21,12 +22,12 @@ StochVectorBase<T>::StochVectorBase(int n_, MPI_Comm mpiComm_, int isDistributed
     MPI_Comm_size(mpiComm, &size);
     iAmDistrib = (size == 1) ? 0 : 1;
   }
-  vecl = NULL;
+  vecl = nullptr;
 }
 
 template<typename T>
 StochVectorBase<T>::StochVectorBase(int n_, int nl_, MPI_Comm mpiComm_, int isDistributed)
-  : OoqpVectorBase<T>(n_), parent(NULL), mpiComm(mpiComm_),
+  : OoqpVectorBase<T>(n_), parent(nullptr), mpiComm(mpiComm_),
     iAmDistrib(isDistributed)
 {
   vec = new SimpleVectorBase<T>(n_);
@@ -34,7 +35,7 @@ StochVectorBase<T>::StochVectorBase(int n_, int nl_, MPI_Comm mpiComm_, int isDi
   if( nl_ >= 0 )
     vecl = new SimpleVectorBase<T>(nl_);
   else
-	 vecl = NULL;
+	 vecl = nullptr;
 
   if( -1 == iAmDistrib && MPI_COMM_NULL != mpiComm) {
     int size;
@@ -105,7 +106,7 @@ OoqpVectorBase<T>* StochVectorBase<T>::clone() const
 template<typename T>
 OoqpVectorBase<T>* StochVectorBase<T>::cloneFull() const
 {
-   StochVectorBase<T>* clone = new StochVectorBase<T>(vec->length(), (vecl != NULL) ? vecl->length() : -1, mpiComm, -1);
+   StochVectorBase<T>* clone = new StochVectorBase<T>(vec->length(), (vecl != nullptr) ? vecl->length() : -1, mpiComm, -1);
 
    clone->vec->copyFrom(*vec);
 
@@ -461,7 +462,7 @@ void StochVectorBase<T>::min( T& m, int& index ) const
 {
   T lMin; int lInd;
 
-  if(NULL == parent) {
+  if(nullptr == parent) {
     vec->min(m,index);
     if( vecl )
     {
@@ -510,7 +511,7 @@ void StochVectorBase<T>::max( T& m, int& index ) const
    T lMax;
    int lInd;
 
-   if( NULL == parent )
+   if( nullptr == parent )
    {
       vec->max(m, index);
       if( vecl )
@@ -597,7 +598,7 @@ void StochVectorBase<T>::absmin(T& m) const
 {
    T lMin;
 
-   if(NULL==parent) {
+   if(nullptr==parent) {
      vec->absmin(m);
      if( vecl )
      {
@@ -1183,7 +1184,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
    else
       assert(0);
 
-   const StochVectorBase<T>* ic = NULL;
+   const StochVectorBase<T>* ic = nullptr;
    if( irhs )
       ic = dynamic_cast<const StochVectorBase<T>*>(irhs);
 
@@ -1195,7 +1196,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
       if( irhs && ic )
          vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->vec));
       else
-         vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
+         vec->writeMPSformatOnlyRhs( out, rowNameStub, nullptr);
       if(vecl)
       {
          rowNameStub = " B row_";
@@ -1204,7 +1205,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
          if( irhs )
             vecl->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->vecl));
          else
-            vecl->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
+            vecl->writeMPSformatOnlyRhs( out, rowNameStub, nullptr);
       }
    }
    for(int it=0; it<(int)children.size(); it++)
@@ -1215,7 +1216,7 @@ void StochVectorBase<T>::writeMPSformatRhs( std::ostream& out, int rowType, cons
       if( irhs )
          children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, dynamic_cast<const SimpleVectorBase<T>*>(ic->children[it]->vec));
       else
-         children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, NULL);
+         children[it]->vec->writeMPSformatOnlyRhs( out, rowNameStub, nullptr);
    }
 }
 
@@ -1479,7 +1480,7 @@ template<typename T>
 bool StochVectorBase<T>::allPositive() const
 {
   //!parallel
-  bool allPos = vec->allPositive() && ((vecl != NULL) ? vecl->allPositive() : true);
+  bool allPos = vec->allPositive() && ((vecl != nullptr) ? vecl->allPositive() : true);
   if (!allPos) return false;
 
   for(size_t it = 0; it < children.size() && allPos; it++)
@@ -1787,7 +1788,7 @@ bool StochVectorBase<T>::isRootNodeInSync() const
    const SimpleVectorBase<T>& vec_simple = dynamic_cast<const SimpleVectorBase<T>&>(*vec);
 
    /* no need to check if not distributed or not at root node */
-   if( !iAmDistrib || parent != NULL)
+   if( !iAmDistrib || parent != nullptr)
       return in_sync;
 
    int my_rank, world_size;

@@ -56,11 +56,11 @@ SimpleVectorBase<T>& getSimpleVecFromStochVec(const StochVectorBase<T>& stochvec
 
 template <typename T>
 SimpleVectorBase<T>& getSimpleVecFromRowStochVec(const OoqpVectorBase<T>& ooqpvec, int node, bool linking)
-{ return getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), node, linking); };
+{ return getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), node, linking); }
 
 template <typename T>
 SimpleVectorBase<T>& getSimpleVecFromColStochVec(const OoqpVectorBase<T>& ooqpvec, int node)
-   { return getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), node, false); };
+   { return getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), node, false); }
 
 
 

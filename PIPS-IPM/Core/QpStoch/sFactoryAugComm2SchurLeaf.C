@@ -14,6 +14,8 @@
 #include "sLinsysRootAugComm2.h"
 #include "sLinsysLeafSchurSlv.h"
 
+#include "pipsport.h"
+
 sLinsysLeaf* 
 sFactoryAugComm2SchurLeaf::newLinsysLeaf(sData* prob,
 					 OoqpVector* dd,
@@ -22,7 +24,7 @@ sFactoryAugComm2SchurLeaf::newLinsysLeaf(sData* prob,
 					 OoqpVector* rhs)
 {
     //cout << "sFactoryAugComm2SchurLeaf::newLinsysLeaf  returns  a sLinsysLeafSchurSlv" << endl;
-  PardisoSchurSolver* linSolver=NULL;
+  PardisoSchurSolver* linSolver=nullptr;
   return new sLinsysLeafSchurSlv(this, prob, dd, dq, nomegaInv, rhs, linSolver);
 }
 

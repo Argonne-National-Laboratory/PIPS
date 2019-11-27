@@ -9,6 +9,7 @@
 #include "MumpsSolverBase.h"
 #include "SimpleVector.h"
 #include "SparseGenMatrix.h"
+#include "pipsport.h"
 
 
 MumpsSolverBase::MumpsSolverBase( MPI_Comm mpiCommPips_c, MPI_Comm mpiCommMumps_c, SparseSymMatrix * sgm )
@@ -307,9 +308,9 @@ MumpsSolverBase::setUpMumps()
    mumps = new DMUMPS_STRUC_C;
    mumps->n = 0;
    mumps->nnz = 0;
-   mumps->irn = NULL;
-   mumps->jcn = NULL;
-   mumps->a = NULL;
+   mumps->irn = nullptr;
+   mumps->jcn = nullptr;
+   mumps->a = nullptr;
    memset(mumps->keep, 0, 400 * sizeof(int));
    mumps->comm_fortran = getFortranMPIComm(mpiCommMumps);
    mumps->sym = 2; // general symmetric matrix

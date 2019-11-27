@@ -22,6 +22,7 @@
 #include <fstream>
 #endif
 
+#include "pipsport.h"
 #include <unistd.h>
 #include "math.h"
 
@@ -43,7 +44,7 @@ static void biCGStabCommunicateStatus(int flag, int it)
 }
 
 sLinsysRootAug::sLinsysRootAug(sFactory * factory_, sData * prob_)
-  : sLinsysRoot(factory_, prob_), CtDC(NULL)
+  : sLinsysRoot(factory_, prob_), CtDC(nullptr)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz, locmyl, locmzl);
   kkt = createKKT(prob_);
@@ -58,7 +59,7 @@ sLinsysRootAug::sLinsysRootAug(sFactory* factory_,
 			       OoqpVector* dq_,
 			       OoqpVector* nomegaInv_,
 			       OoqpVector* rhs_)
-  : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(NULL)
+  : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(nullptr)
 { 
   assert(locmyl == 0 && locmzl == 0);
 
@@ -1397,7 +1398,7 @@ void sLinsysRootAug::finalizeKKTsparse(sData* prob, Variables* vars)
       const int* krowFt = Ft.krowM();
       const int* jcolFt = Ft.jcolM();
 
-      int* krowGt = NULL;
+      int* krowGt = nullptr;
 
       if( locmzl > 0 )
       {

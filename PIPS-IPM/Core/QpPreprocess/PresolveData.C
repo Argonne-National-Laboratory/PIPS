@@ -11,7 +11,9 @@
 #include "StochGenMatrix.h"
 #include "DoubleMatrixTypes.h"
 #include "StochVectorUtilities.h"
+#include "StochMatrixUtilities.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 
 #include <stdexcept>
 #include <limits>
@@ -783,7 +785,7 @@ void PresolveData::initSingletons()
    }
 
    /* Bl0 */
-   if(nnzs_row_A->vecl != NULL)
+   if(nnzs_row_A->vecl != nullptr)
    {
       for(int i = 0; i < nnzs_row_A->vecl->n; ++i)
       {
@@ -812,7 +814,7 @@ void PresolveData::initSingletons()
          singleton_rows.push( sROWINDEX( INEQUALITY_SYSTEM, -1, i ));
 
    /* Bl0 */
-   if( nnzs_row_C->vecl != NULL)
+   if( nnzs_row_C->vecl != nullptr)
    {
       for( int i = 0; i < nnzs_row_C->vecl->n; ++i )
       {
@@ -843,7 +845,7 @@ void PresolveData::initSingletons()
 
    for(int i = 0; i < nChildren; ++i)
    {
-      if(nnzs_col->children[i]->vec != NULL)
+      if(nnzs_col->children[i]->vec != nullptr)
       {
          for(int j = 0; j < nnzs_col->children[i]->vec->n; ++j)
          {
@@ -2591,28 +2593,10 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
    assert( -1 <= node && node < nChildren );
    assert(!nodeIsDummy(node));
 
-   StochGenMatrix& sMat = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<StochGenMatrix&>(*presProb->A) : dynamic_cast<StochGenMatrix&>(*presProb->C);
-
-   if(node == -1)
-   {
-      if(block_type == BL_MAT)
-         return sMat.Blmat;
-      else 
-      {
-         assert(block_type == B_MAT);
-         return sMat.Bmat;
-      }
-   }
-   else
-   {
-      if(block_type == A_MAT)
-         return sMat.children[node]->Amat;
-      else if(block_type == B_MAT)
-         return sMat.children[node]->Bmat;
-      else if(block_type == BL_MAT)
-         return sMat.children[node]->Blmat;
-   }
-   return NULL;
+   const StochGenMatrix& sMat = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochGenMatrix&>(*presProb->A) : 
+      dynamic_cast<const StochGenMatrix&>(*presProb->C);
+   SparseGenMatrix* res = getSparseGenMatrixFromStochMat(sMat, node, block_type);
+   return res;
 }
 
 /* only prints the part of a linking constraint the current process knows about */

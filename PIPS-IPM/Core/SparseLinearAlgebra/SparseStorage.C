@@ -13,6 +13,7 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
+#include "pipsport.h"
 
 int SparseStorage::instances = 0;
 
@@ -1594,7 +1595,7 @@ void SparseStorage::dump(const string& filename)
 
 void SparseStorage::deleteEmptyRowsCols(const int* nnzRowVec, const int* nnzColVec)
 {
-   assert(nnzRowVec != NULL && nnzColVec != NULL);
+   assert(nnzRowVec != nullptr && nnzColVec != nullptr);
 
    int m_new = 0;
    int n_new = 0;
@@ -1715,7 +1716,7 @@ void SparseStorage::getSparseTriplet_fortran2fortran(int*& irn, int*& jcn, doubl
 void SparseStorage::deleteEmptyRows(int*& orgIndex)
 {
    assert(!neverDeleteElts);
-   assert(orgIndex == NULL);
+   assert(orgIndex == nullptr);
 
    int m_new = 0;
 
@@ -1787,7 +1788,7 @@ void SparseStorage::deleteZeroRowsColsSym(int*& new2orgIdx)
 {
    assert(m == n);
    assert(!neverDeleteElts);
-   assert(new2orgIdx == NULL);
+   assert(new2orgIdx == nullptr);
    assert(this->isValid());
 
    int* const offset = new int[m];
@@ -1941,7 +1942,7 @@ void SparseStorage::addRowSums(double* vec) const
 
 void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const
 {
-   const bool coscale = (colScaleVec != NULL);
+   const bool coscale = (colScaleVec != nullptr);
 
    if( coscale )
    {
@@ -1981,7 +1982,7 @@ void SparseStorage::getRowMinVec(const double* colScaleVec, double* vec) const
 
 void SparseStorage::getRowMaxVec(const double* colScaleVec, double* vec) const
 {
-   const bool coscale = (colScaleVec != NULL);
+   const bool coscale = (colScaleVec != nullptr);
 
    if( coscale )
    {

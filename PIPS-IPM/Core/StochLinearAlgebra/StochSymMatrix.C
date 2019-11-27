@@ -1,14 +1,13 @@
 #include "StochSymMatrix.h"
 #include "StochVector.h"
 #include "DoubleMatrixTypes.h"
+#include "pipsport.h"
 
 #include <cassert>
 
-using namespace std;
-
 /**
  * This the constructor is usually called for the root node. In this case
- * parent is set to NULL; the cross Hessian does not exist, so
+ * parent is set to nullptr; the cross Hessian does not exist, so
  * border is set up to be an empty matrix. 
  *
  * If it is called to create a child, the calling code should call 
@@ -18,10 +17,10 @@ using namespace std;
  */
 StochSymMatrix::StochSymMatrix(int id, long long global_n, int local_n, int local_nnz, 
 			       MPI_Comm mpiComm_)
-  :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(NULL)
+  :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(nullptr)
 {
   diag = new SparseSymMatrix(local_n, local_nnz);
-  // the cross Hessian is NULL for the root node; it may be also NULL for 
+  // the cross Hessian is nullptr for the root node; it may be also nullptr for 
   // children in the case when the Hessian does not have cross terms and
   // the children are created with this constructor. The border will be 
   // set up to correct sizes later for this case.
@@ -37,7 +36,7 @@ StochSymMatrix::StochSymMatrix( int id, long long global_n,
 				int nrows, int diag_nnz, 
 				int nbordercols, int border_nnz,
 				MPI_Comm mpiComm_)
-  :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(NULL)
+  :id(id), n(global_n), mpiComm(mpiComm_), iAmDistrib(0), parent(nullptr)
 {
   diag = new SparseSymMatrix(nrows, diag_nnz);
   //printf("Creating cross Hessian: m=%d n=%d  nnz=%d\n", nbordercols, nrows, border_nnz);
@@ -195,7 +194,7 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
     return;
   } else {
 
-    bool iAmRoot = (parent==NULL);
+    bool iAmRoot = (parent==nullptr);
     bool iAmSpecial = true; //the process that computes Q_0 * x_0
     int rank; MPI_Comm_rank(mpiComm, &rank);
     if (rank>0) iAmSpecial = false;
@@ -394,7 +393,7 @@ void StochSymMatrix::deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec, cons
    diag->deleteEmptyRowsCols(*vec);
 
    // at root?
-   if( linkParent == NULL )
+   if( linkParent == nullptr )
    {
       for( size_t it = 0; it < children.size(); it++ )
          children[it]->deleteEmptyRowsCols(*nnzVecStoch.children[it], vec);
@@ -425,7 +424,7 @@ int StochSymDummyMatrix::isKindOf( int type ) const
 
   mat = new SparseSymMatrix(v);
 
-  border = NULL;
+  border = nullptr;
 
 }
 */

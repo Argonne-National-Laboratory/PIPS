@@ -2,6 +2,7 @@
 #include "DeSymIndefSolver.h"
 #include "DeSymPSDSolver.h"
 #include "QpGenStochData.h"
+#include "pipsport.h"
 
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
@@ -11,7 +12,7 @@ double randN(double a, double b);
 
 QpGenStochLinsysRootAugRed::QpGenStochLinsysRootAugRed(QpGenStoch * factory_, 
 						       QpGenStochData * prob_)
-  : QpGenStochLinsysRootAug(factory_, prob_), CtDC(NULL)
+  : QpGenStochLinsysRootAug(factory_, prob_), CtDC(nullptr)
 { 
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
@@ -24,7 +25,7 @@ QpGenStochLinsysRootAugRed::QpGenStochLinsysRootAugRed(QpGenStoch* factory_,
 					   OoqpVector* dq_,
 					   OoqpVector* nomegaInv_,
 					   OoqpVector* rhs_)
-  : QpGenStochLinsysRootAug(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(NULL)
+  : QpGenStochLinsysRootAug(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(nullptr)
 { 
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);
@@ -76,8 +77,8 @@ void QpGenStochLinsysRootAugRed::factor2(QpGenStochData *prob, Variables *vars)
   //          - U=Li^{-1} Gi^T
   //          - V=Di^{-1} U
 
-  DenseGenMatrix* U = NULL;
-  DenseGenMatrix* V = NULL;
+  DenseGenMatrix* U = nullptr;
+  DenseGenMatrix* V = nullptr;
   
   for(int it=0; it<children.size(); it++) {
 

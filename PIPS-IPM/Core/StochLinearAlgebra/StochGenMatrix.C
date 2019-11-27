@@ -15,7 +15,7 @@ StochGenMatrix::StochGenMatrix(int id,
 			       MPI_Comm mpiComm_)
   : id(id), m(global_m), n(global_n), 
     mpiComm(mpiComm_), iAmDistrib(0),
-    workPrimalVec(NULL)
+    workPrimalVec(nullptr)
 {
   //cout << "StochGenMatrix-> " << A_m << " " << A_n << " " << B_m << " " << B_n << " " << endl;
 
@@ -37,7 +37,7 @@ StochGenMatrix::StochGenMatrix(int id,
 			       MPI_Comm mpiComm_)
   : id(id), m(global_m), n(global_n),
     mpiComm(mpiComm_), iAmDistrib(0),
-    workPrimalVec(NULL)
+    workPrimalVec(nullptr)
 {
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
@@ -54,11 +54,11 @@ StochGenMatrix::StochGenMatrix(int id,
                 MPI_Comm mpiComm_)
   : id(id), m(global_m), n(global_n),
     mpiComm(mpiComm_), iAmDistrib(0),
-    workPrimalVec(NULL)
+    workPrimalVec(nullptr)
 {
-  Amat = NULL;
-  Bmat = NULL;
-  Blmat = NULL;
+  Amat = nullptr;
+  Bmat = nullptr;
+  Blmat = nullptr;
 
   if(mpiComm!=MPI_COMM_NULL) {
     int size; MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -109,7 +109,7 @@ void StochGenMatrix::AddChild(StochGenMatrix* child)
 
 OoqpVector* StochGenMatrix::getWorkPrimalVec(const StochVector& origin)
 {
-  if(NULL == workPrimalVec)
+  if(nullptr == workPrimalVec)
     workPrimalVec = origin.dataClone();
   else
     assert(workPrimalVec->length() == origin.vec->length());
@@ -753,7 +753,7 @@ void StochGenMatrix::writeMPSformatRows(ostream& out, int rowType, OoqpVector* i
    if( irhs )
       irhsStoch = dynamic_cast<StochVector*>(irhs);
    else
-      irhsStoch = NULL;
+      irhsStoch = nullptr;
 
    int m, n;
    if( myRank == 0)
@@ -827,7 +827,7 @@ void StochGenMatrix::initTransposedChild(bool dynamic)
    Amat->initTransposed(dynamic);
    Bmat->initTransposed(dynamic);
 
-   if( Blmat != NULL )
+   if( Blmat != nullptr )
       Blmat->initTransposed(dynamic);
 }
 
@@ -876,24 +876,24 @@ void StochGenMatrix::getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
    // assert tree compatibility
    assert(nnzVecStoch.children.size() == children.size());
 
-   SimpleVectorBase<int>* nnzvecl = NULL;
+   SimpleVectorBase<int>* nnzvecl = nullptr;
 
    Bmat->addNnzPerRow(*(nnzVecStoch.vec));
 
-   if( linkParent != NULL )
+   if( linkParent != nullptr )
       Amat->addNnzPerRow(*(nnzVecStoch.vec));
 
    /* with linking constraints? */
    if( nnzVecStoch.vecl || linkParent )
    {
-      assert(nnzVecStoch.vecl == NULL || linkParent == NULL);
+      assert(nnzVecStoch.vecl == nullptr || linkParent == nullptr);
 
       if( linkParent )
          nnzvecl = dynamic_cast<SimpleVectorBase<int>*>(linkParent);
       else
          nnzvecl = dynamic_cast<SimpleVectorBase<int>*>(nnzVecStoch.vecl);
 
-      if( linkParent != NULL || iAmSpecial(iAmDistrib, mpiComm) )
+      if( linkParent != nullptr || iAmSpecial(iAmDistrib, mpiComm) )
          Blmat->addNnzPerRow(*nnzvecl);
    }
 
@@ -902,7 +902,7 @@ void StochGenMatrix::getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
      children[it]->getNnzPerRow(*(nnzVecStoch.children[it]), nnzvecl);
 
    // distributed, with linking constraints, and at root?
-   if( iAmDistrib && nnzVecStoch.vecl != NULL && linkParent == NULL )
+   if( iAmDistrib && nnzVecStoch.vecl != nullptr && linkParent == nullptr )
    {
       PIPS_MPIsumArrayInPlace(nnzvecl->elements(), nnzvecl->length(), mpiComm);
    }
@@ -917,7 +917,7 @@ void StochGenMatrix::getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
 
    SimpleVectorBase<int>* vec = dynamic_cast<SimpleVectorBase<int>*>(nnzVecStoch.vec);
 
-   if( iAmSpecial(iAmDistrib, mpiComm) || linkParent != NULL )
+   if( iAmSpecial(iAmDistrib, mpiComm) || linkParent != nullptr )
    {
       Bmat->addNnzPerCol(*(vec));
 
@@ -930,7 +930,7 @@ void StochGenMatrix::getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
    }
 
    // not at root?
-   if( linkParent != NULL )
+   if( linkParent != nullptr )
       Amat->addNnzPerCol(*linkParent);
    else
    {
@@ -939,7 +939,7 @@ void StochGenMatrix::getNnzPerCol(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<in
    }
 
    // distributed and at root?
-   if( iAmDistrib && linkParent == NULL )
+   if( iAmDistrib && linkParent == nullptr )
    {
       PIPS_MPIsumArrayInPlace(vec->elements(), vec->length(), mpiComm);
    }
@@ -951,10 +951,10 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    StochVector& minmaxVecStoch = dynamic_cast<StochVector&>(minmaxVec);
    const StochVector* const colScaleVecStoch = dynamic_cast<const StochVector*>(colScaleVec);
 
-   SimpleVector* mvecl = NULL;
+   SimpleVector* mvecl = nullptr;
    const SimpleVector* const covecparent = dynamic_cast<const SimpleVector*>(colScaleParent);
-   const SimpleVector* const covec = colScaleVecStoch != NULL ?
-         dynamic_cast<SimpleVector*>(colScaleVecStoch->vec) : NULL;
+   const SimpleVector* const covec = colScaleVecStoch != nullptr ?
+         dynamic_cast<SimpleVector*>(colScaleVecStoch->vec) : nullptr;
 
    // assert tree compatibility
    assert(minmaxVecStoch.children.size() == children.size());
@@ -962,16 +962,16 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    Bmat->getRowMinMaxVec(getMin, initializeVec, covec, *(minmaxVecStoch.vec));
 
    // not at root?
-   if( linkParent != NULL )
+   if( linkParent != nullptr )
       Amat->getRowMinMaxVec(getMin, false, covecparent, *(minmaxVecStoch.vec));
 
    /* with linking constraints? */
    if( minmaxVecStoch.vecl || linkParent )
    {
-      assert(minmaxVecStoch.vecl == NULL || linkParent == NULL);
+      assert(minmaxVecStoch.vecl == nullptr || linkParent == nullptr);
 
       // at root?
-      if( linkParent == NULL )
+      if( linkParent == nullptr )
       {
          mvecl = dynamic_cast<SimpleVector*>(minmaxVecStoch.vecl);
 
@@ -988,11 +988,11 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
          mvecl = dynamic_cast<SimpleVector*>(linkParent);
       }
 
-      if( linkParent != NULL || iAmSpecial(iAmDistrib, mpiComm) )
+      if( linkParent != nullptr || iAmSpecial(iAmDistrib, mpiComm) )
          Blmat->getRowMinMaxVec(getMin, false, covec, *mvecl);
    }
 
-   if( colScaleVec != NULL )
+   if( colScaleVec != nullptr )
    {
       for( size_t it = 0; it < children.size(); it++ )
          children[it]->getRowMinMaxVec(getMin, initializeVec, colScaleVecStoch->children[it], covec,
@@ -1001,14 +1001,14 @@ void StochGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
    else
    {
       for( size_t it = 0; it < children.size(); it++ )
-         children[it]->getRowMinMaxVec(getMin, initializeVec, NULL, NULL,
+         children[it]->getRowMinMaxVec(getMin, initializeVec, nullptr, nullptr,
                *(minmaxVecStoch.children[it]), mvecl);
    }
 
    // distributed, with linking constraints, and at root?
-   if( iAmDistrib && minmaxVecStoch.vecl != NULL && linkParent == NULL )
+   if( iAmDistrib && minmaxVecStoch.vecl != nullptr && linkParent == nullptr )
    {
-      assert(mvecl != NULL);
+      assert(mvecl != nullptr);
 
       // sum up linking constraints vectors
       if( getMin )
@@ -1028,37 +1028,37 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
    assert(minmaxVecStoch.children.size() == children.size());
 
    SimpleVector* const mvec = dynamic_cast<SimpleVector*>(minmaxVecStoch.vec);
-   const SimpleVector* const covec = rowScaleVecStoch != NULL ?
-         dynamic_cast<SimpleVector*>(rowScaleVecStoch->vec) : NULL;
+   const SimpleVector* const covec = rowScaleVecStoch != nullptr ?
+         dynamic_cast<SimpleVector*>(rowScaleVecStoch->vec) : nullptr;
 
    Bmat->getColMinMaxVec(getMin, initializeVec, covec, *(mvec));
 
    int blm, bln;
    Blmat->getSize(blm, bln);
 
-   const SimpleVector* covecl = NULL;
+   const SimpleVector* covecl = nullptr;
 
    /* with linking constraints? */
    if( blm > 0 )
    {
       // with rowScale vector?
-      if( rowScaleVecStoch != NULL )
+      if( rowScaleVecStoch != nullptr )
       {
          // at root?
-         if( minmaxParent == NULL )
+         if( minmaxParent == nullptr )
             covecl = dynamic_cast<SimpleVector*>(rowScaleVecStoch->vecl);
          else
             covecl = dynamic_cast<const SimpleVector*>(rowScaleLink);
 
-         assert(covecl != NULL);
+         assert(covecl != nullptr);
       }
 
-      if( iAmSpecial(iAmDistrib, mpiComm) || minmaxParent != NULL )
+      if( iAmSpecial(iAmDistrib, mpiComm) || minmaxParent != nullptr )
          Blmat->getColMinMaxVec(getMin, false, covecl, *mvec);
    }
 
    // not at root?
-   if( minmaxParent != NULL )
+   if( minmaxParent != nullptr )
       Amat->getColMinMaxVec(getMin, false, covec, *(minmaxParent));
    else
    {
@@ -1070,12 +1070,12 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
       else
       {
          for( size_t it = 0; it < children.size(); it++ )
-            children[it]->getColMinMaxVec(getMin, initializeVec, NULL, NULL, *(minmaxVecStoch.children[it]), mvec);
+            children[it]->getColMinMaxVec(getMin, initializeVec, nullptr, nullptr, *(minmaxVecStoch.children[it]), mvec);
       }
    }
 
    // distributed and at root?
-   if( iAmDistrib && minmaxParent == NULL )
+   if( iAmDistrib && minmaxParent == nullptr )
    {
       const int locn = mvec->length();
       double* const entries = mvec->elements();
@@ -1096,7 +1096,7 @@ void StochGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
 void StochGenMatrix::addRowSums( OoqpVector& sumVec, OoqpVector* linkParent )
 {
    StochVector& sumVecStoch = dynamic_cast<StochVector&>(sumVec);
-   SimpleVector* mvecl = NULL;
+   SimpleVector* mvecl = nullptr;
 
    // assert tree compatibility
    assert(sumVecStoch.children.size() == children.size());
@@ -1104,21 +1104,21 @@ void StochGenMatrix::addRowSums( OoqpVector& sumVec, OoqpVector* linkParent )
    Bmat->addRowSums(*sumVecStoch.vec);
 
    // not at root?
-   if( linkParent != NULL )
+   if( linkParent != nullptr )
       Amat->addRowSums(*sumVecStoch.vec);
 
    /* with linking constraints? */
    if( sumVecStoch.vecl || linkParent )
    {
-      assert(sumVecStoch.vecl == NULL || linkParent == NULL);
+      assert(sumVecStoch.vecl == nullptr || linkParent == nullptr);
 
       // at root?
-      if( linkParent == NULL )
+      if( linkParent == nullptr )
          mvecl = dynamic_cast<SimpleVector*>(sumVecStoch.vecl);
       else
          mvecl = dynamic_cast<SimpleVector*>(linkParent);
 
-      if( linkParent != NULL || iAmSpecial(iAmDistrib, mpiComm) )
+      if( linkParent != nullptr || iAmSpecial(iAmDistrib, mpiComm) )
          Blmat->addRowSums(*mvecl);
    }
 
@@ -1126,9 +1126,9 @@ void StochGenMatrix::addRowSums( OoqpVector& sumVec, OoqpVector* linkParent )
       children[it]->addRowSums(*(sumVecStoch.children[it]), mvecl);
 
    // distributed, with linking constraints, and at root?
-   if( iAmDistrib && sumVecStoch.vecl != NULL && linkParent == NULL )
+   if( iAmDistrib && sumVecStoch.vecl != nullptr && linkParent == nullptr )
    {
-      assert(mvecl != NULL);
+      assert(mvecl != nullptr);
 
       // sum up linking constraints vectors
       const int locn = mvecl->length();
@@ -1151,18 +1151,18 @@ void StochGenMatrix::addColSums( OoqpVector& sumVec, OoqpVector* linkParent )
 
    SimpleVector* const mvec = dynamic_cast<SimpleVector*>(sumVecStoch.vec);
 
-   if( iAmSpecial(iAmDistrib, mpiComm) || linkParent != NULL )
+   if( iAmSpecial(iAmDistrib, mpiComm) || linkParent != nullptr )
       Bmat->addColSums(*mvec);
 
    int blm, bln;
    Blmat->getSize(blm, bln);
 
    /* with linking constraints? */
-   if( blm > 0 && (iAmSpecial(iAmDistrib, mpiComm) || linkParent != NULL) )
+   if( blm > 0 && (iAmSpecial(iAmDistrib, mpiComm) || linkParent != nullptr) )
       Blmat->addColSums(*mvec);
 
    // not at root?
-   if( linkParent != NULL )
+   if( linkParent != nullptr )
       Amat->addColSums(*linkParent);
    else
    {
@@ -1171,7 +1171,7 @@ void StochGenMatrix::addColSums( OoqpVector& sumVec, OoqpVector* linkParent )
    }
 
    // distributed and at root?
-   if( iAmDistrib && linkParent == NULL )
+   if( iAmDistrib && linkParent == nullptr )
    {
       const int locn = mvec->length();
       double* const entries = mvec->elements();
@@ -1199,15 +1199,15 @@ void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& row
    const SimpleVectorBase<int>* const rowlink = dynamic_cast<const SimpleVectorBase<int>*>(rowNnzVecStoch.vecl);
    assert(rowvec); assert(colvec);
 
-   Amat->initStaticStorageFromDynamic(*rowvec, colParentVec); // initialized with colVec == NULL for parent
+   Amat->initStaticStorageFromDynamic(*rowvec, colParentVec); // initialized with colVec == nullptr for parent
    Bmat->initStaticStorageFromDynamic(*rowvec, colvec);
 
    // at root?
-   if( colParentVec == NULL )
+   if( colParentVec == nullptr )
    {
-      assert(rowLinkVec == NULL);
+      assert(rowLinkVec == nullptr);
 
-      if( rowlink != NULL )
+      if( rowlink != nullptr )
          Blmat->initStaticStorageFromDynamic(*rowlink, colvec);
 
       for( size_t it = 0; it < children.size(); it++ )
@@ -1215,7 +1215,7 @@ void StochGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& row
    }
    else
    {
-      if( rowLinkVec != NULL)
+      if( rowLinkVec != nullptr)
          Blmat->initStaticStorageFromDynamic(*rowLinkVec, colvec);
    }
 
@@ -1233,7 +1233,7 @@ void StochGenMatrix::freeDynamicStorage()
 
 void StochGenMatrix::updateKLinkConsCount(std::vector<int>& linkCount) const
 {
-   if( Blmat == NULL )
+   if( Blmat == nullptr )
       return;
 
    int m, n;
@@ -1277,7 +1277,7 @@ void StochGenMatrix::updateKLinkVarsCount(std::vector<int>& linkCount) const
 
 std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
 {
-   if( Blmat == NULL )
+   if( Blmat == nullptr )
       return std::vector<int>();
 
    int m, n;

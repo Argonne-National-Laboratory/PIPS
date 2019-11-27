@@ -14,17 +14,17 @@
 #include "QpGenVars.h"
 #include "QpGenResiduals.h"
 #include "pipsdef.h"
-
+#include "pipsport.h"
 
 QpScaler::QpScaler(Data * prob, bool bitshifting)
 : Scaler(prob, bitshifting)
 {
    QpGenData* qpprob = dynamic_cast<QpGenData*>(prob);
 
-   vec_rowscaleQ = NULL;
-   vec_rowscaleA = NULL;
-   vec_rowscaleC = NULL;
-   vec_colscale = NULL;
+   vec_rowscaleQ = nullptr;
+   vec_rowscaleA = nullptr;
+   vec_rowscaleC = nullptr;
+   vec_colscale = nullptr;
 
    Q = qpprob->Q;
    A = qpprob->A;
@@ -41,7 +41,7 @@ QpScaler::QpScaler(Data * prob, bool bitshifting)
 
 double QpScaler::getObjUnscaled(double objval) const
 {
-   assert(vec_colscale != NULL);
+   assert(vec_colscale != nullptr);
    assert(factor_objscale > 0.0);
 
    return (objval / factor_objscale);

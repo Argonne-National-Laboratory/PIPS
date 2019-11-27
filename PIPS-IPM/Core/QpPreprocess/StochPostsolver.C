@@ -9,6 +9,7 @@
 #include "StochPostsolver.h"
 #include "StochVectorUtilities.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 
 #include <limits>
 #include <stdexcept>
@@ -360,9 +361,9 @@ void StochPostsolver::setOriginalValuesFromReduced(StochVectorBase<T>& original_
 {
    assert( reduced_vector.children.size() == original_vector.children.size() );
    assert( padding_original.children.size() == reduced_vector.children.size() );
-   assert( reduced_vector.vec != NULL && original_vector.vec != NULL && padding_original.vec != NULL );
-   assert( (reduced_vector.vecl != NULL && original_vector.vecl != NULL && padding_original.vecl != NULL)
-         || (reduced_vector.vecl == NULL && original_vector.vecl == NULL && padding_original.vecl == NULL) );
+   assert( reduced_vector.vec != nullptr && original_vector.vec != nullptr && padding_original.vec != nullptr );
+   assert( (reduced_vector.vecl != nullptr && original_vector.vecl != nullptr && padding_original.vecl != nullptr)
+         || (reduced_vector.vecl == nullptr && original_vector.vecl == nullptr && padding_original.vecl == nullptr) );
 
    if( reduced_vector.isKindOf(kStochDummy) )
    {

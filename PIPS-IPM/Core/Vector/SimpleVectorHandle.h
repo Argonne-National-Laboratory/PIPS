@@ -18,7 +18,6 @@
 	#define SimpleVectorBaseHandle<double> SmartPointer<StochVectorBase<double> >
 #endif 
 
-
 typedef SmartPointer<SimpleVector> SimpleVectorHandle;
 
 #endif

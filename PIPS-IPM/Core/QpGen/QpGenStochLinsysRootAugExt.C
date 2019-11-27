@@ -1,6 +1,7 @@
 #include "QpGenStochLinsysRootAugExt.h"
 #include "DeSymIndefSolver.h"
 #include "QpGenStochData.h"
+#include "pipsport.h"
 
 QpGenStochLinsysRootAugExt::QpGenStochLinsysRootAugExt(QpGenStoch * factory_, QpGenStochData * prob_)
   : QpGenStochLinsysRootAug(factory_, prob_)
@@ -79,8 +80,8 @@ void QpGenStochLinsysRootAugExt::factor2(QpGenStochData *prob, Variables *vars)
   //          - U=Li^{-1} Gi^T
   //          - V=Di^{-1} U
 
-  DenseGenMatrix* U = NULL;
-  DenseGenMatrix* V = NULL;
+  DenseGenMatrix* U = nullptr;
+  DenseGenMatrix* V = nullptr;
   
 
   stochNode->resMon.recSchurMultLocal_start();

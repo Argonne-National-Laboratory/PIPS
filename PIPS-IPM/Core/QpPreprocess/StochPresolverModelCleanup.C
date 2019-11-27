@@ -264,13 +264,13 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 
    updatePointersForCurrentNode(node, system_type);
 
-   const SparseStorageDynamic* mat = NULL;
+   const SparseStorageDynamic* mat = nullptr;
 
-   const SimpleVector* x_lower = NULL;
-   const SimpleVector* x_lower_idx = NULL;
-   const SimpleVector* x_upper = NULL;
-   const SimpleVector* x_upper_idx = NULL;
-   const SimpleVectorBase<int>* nnzRow = NULL;
+   const SimpleVector* x_lower = nullptr;
+   const SimpleVector* x_lower_idx = nullptr;
+   const SimpleVector* x_upper = nullptr;
+   const SimpleVector* x_upper_idx = nullptr;
+   const SimpleVectorBase<int>* nnzRow = nullptr;
 
    /* set matrix */
    if( block_type == B_MAT )

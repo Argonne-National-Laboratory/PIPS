@@ -8,13 +8,14 @@
 #include "ScaGenIndefSolver.h"
 #include "ScaSymPSDSolver.h"
 #include "ScaVector.h"
+#include "pipsport.h"
 
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
 #endif
 
 sLinsysRootAugSca::sLinsysRootAugSca(sFactory * factory_, QpGenStochData * prob_, COMMINFO &cinfo_)
-  : sLinsysRoot(factory_, prob_), CtDC(NULL)
+  : sLinsysRoot(factory_, prob_), CtDC(nullptr)
 { 
   cinfo = cinfo_;
   prob_->getLocalSizes(locnx, locmy, locmz);
@@ -32,7 +33,7 @@ sLinsysRootAugSca::sLinsysRootAugSca(sFactory* factory_,
 			       OoqpVector* nomegaInv_,
 			       OoqpVector* rhs_,
 			       COMMINFO &cinfo_)
-  : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(NULL)
+  : sLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(nullptr)
 { 
   cinfo = cinfo_;
   prob_->getLocalSizes(locnx, locmy, locmz);

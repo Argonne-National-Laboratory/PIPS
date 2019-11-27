@@ -8,6 +8,7 @@
 #include "SimpleVector.h"
 #include "SimpleVectorHandle.h"
 #include "DenseGenMatrix.h"
+#include "pipsport.h"
 
 #ifdef HAVE_GETRUSAGE
 #include <sys/time.h>
@@ -81,11 +82,11 @@ WSMPSolver::WSMPSolver( SparseSymMatrix * sgm ) : first(true)
   #pragma omp parallel if (nthreads == 4)
   {
     #pragma omp single
-    wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,NULL,&zero,&zero,NULL,&zero,NULL,iparm, dparm);
+    wssmp_(&n,krowMt,jcolMt,Mt,nullptr,perm,invp,nullptr,&zero,&zero,nullptr,&zero,nullptr,iparm, dparm);
   }
   omp_set_num_threads(nthreads);
 #else
-  wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,NULL,&zero,&zero,NULL,&zero,NULL,iparm, dparm);
+  wssmp_(&n,krowMt,jcolMt,Mt,nullptr,perm,invp,nullptr,&zero,&zero,nullptr,&zero,nullptr,iparm, dparm);
 #endif
 
   if (iparm[63] != 0) {
@@ -169,7 +170,7 @@ void WSMPSolver::firstCall()
   // ordering and symbolic factorization
 	iparm[1] = 1;
 	iparm[2] = 2;
-	wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,NULL,&zero,&zero,NULL,&zero,NULL,iparm, dparm);
+	wssmp_(&n,krowMt,jcolMt,Mt,nullptr,perm,invp,nullptr,&zero,&zero,nullptr,&zero,nullptr,iparm, dparm);
 	if (iparm[63] != 0) {
 		printf("WSMP ordering/symbolic factorization error: %d\n", iparm[63]);
 	}
@@ -232,7 +233,7 @@ void WSMPSolver::matrixChanged()
     iparm[1] = 3;
     iparm[2] = 3;
     if (redo) dparm[14] = 1.0;
-    wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,NULL,&zero,&zero,NULL,&zero,NULL,iparm, dparm);
+    wssmp_(&n,krowMt,jcolMt,Mt,nullptr,perm,invp,nullptr,&zero,&zero,nullptr,&zero,nullptr,iparm, dparm);
     if (iparm[63] != 0) {
       printf("WSMP numerical factorization error: %d on rank %d\n", iparm[63],mype);
       if (iparm[63] > 0 && dparm[10] < kThresholdPivotingMax) {
@@ -274,7 +275,7 @@ void WSMPSolver::solve( OoqpVector& rhs_in )
     iparm[2] = 5;
     iparm[29] = 0;
 
-    wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,drhs,&n,&one,NULL,&zero,NULL,iparm, dparm);
+    wssmp_(&n,krowMt,jcolMt,Mt,nullptr,perm,invp,drhs,&n,&one,nullptr,&zero,nullptr,iparm, dparm);
     if (iparm[63] != 0) {
       printf("WSMP backsolve error: %d\n", iparm[63]);
     }
@@ -346,7 +347,7 @@ void WSMPSolver::solve(int solveType, OoqpVector& rhs_in)
 	iparm[2] = 4;
 	iparm[29] = solveType;
 
-	wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,drhs,&n,&one,NULL,&zero,NULL,iparm, dparm);
+	wssmp_(&n,krowMt,jcolMt,Mt,nullptr,perm,invp,drhs,&n,&one,nullptr,&zero,nullptr,iparm, dparm);
 	if (iparm[63] != 0) {
 		printf("WSMP backsolve error: %d\n", iparm[63]);
 	}
@@ -420,7 +421,7 @@ void WSMPSolver::solve(GenMatrix& rhs_in)
 
 		iparm[1] = 4;
     iparm[2] = 5;
-		wssmp_(&n,krowMt,jcolMt,Mt,NULL,perm,invp,drhs,&n,&numcols,NULL,&zero,NULL,iparm, dparm);
+		wssmp_(&n,krowMt,jcolMt,Mt,nullptr,perm,invp,drhs,&n,&numcols,nullptr,&zero,nullptr,iparm, dparm);
 		if (iparm[63] != 0) {
 			printf("WSMP backsolve error (multiple RHS): %d\n", iparm[63]);
 		}

@@ -6,6 +6,7 @@
 #include "MehrotraStochSolver.h"
 #include "sFactoryAug.h"
 #include "mpi.h"
+#include "pipsport.h"
 
 class CallbackData
 {
@@ -14,7 +15,7 @@ public:
   stochasticInput &in;
 };
 
-CallbackData* callbackData=NULL;
+CallbackData* callbackData=nullptr;
 
 
 
@@ -43,7 +44,7 @@ int fixupp (void* user_data, int id, double* vec, int len);
 
 
 sInterfaceCallbacks::sInterfaceCallbacks(stochasticInput &in)
-  : inputTree(NULL)
+  : inputTree(nullptr)
 {
   callbackData=new CallbackData(in);
   loadData();
@@ -102,8 +103,8 @@ void sInterfaceCallbacks::go()
   double t = MPI_Wtime();
   StochRunParams* params = defaultStochRunParams();
 
-  MehrotraStochSolver* method=NULL;
-  sFactoryAug* formulation=NULL;
+  MehrotraStochSolver* method=nullptr;
+  sFactoryAug* formulation=nullptr;
 
   qpstoch_solve(inputTree,params,method,formulation);
 

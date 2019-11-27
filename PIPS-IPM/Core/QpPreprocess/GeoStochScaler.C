@@ -9,6 +9,7 @@
 #define PIPS_OUTPUT_SCALER
 #include "GeoStochScaler.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 
 #include <cmath>
 
@@ -32,7 +33,7 @@ GeoStochScaler::GeoStochScaler(Data* prob, bool equiScaling, bool bitshifting)
 
 void GeoStochScaler::doObjScaling()
 {
-   assert(vec_colscale != NULL);
+   assert(vec_colscale != nullptr);
 
    obj->componentMult(*vec_colscale);
 
@@ -84,8 +85,8 @@ void GeoStochScaler::scale()
    StochVector* colmax = dynamic_cast<StochVector*>(bux->clone());
    StochVector* colmin = dynamic_cast<StochVector*>(bux->clone());
 
-   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, NULL);
-   const double colratio = maxColRatio(*colmax, *colmin, NULL, NULL);
+   const double rowratio = maxRowRatio(*rowmaxA, *rowmaxC, *rowminA, *rowminC, nullptr);
+   const double colratio = maxColRatio(*colmax, *colmin, nullptr, nullptr);
 
    int myRank = 0;
    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
@@ -105,7 +106,7 @@ void GeoStochScaler::scale()
       p1start = colratio;
    }
 
-   assert(vec_rowscaleA == NULL && vec_rowscaleC == NULL && vec_colscale == NULL);
+   assert(vec_rowscaleA == nullptr && vec_rowscaleC == nullptr && vec_colscale == nullptr);
 
    vec_rowscaleA = rowmaxA;
    vec_rowscaleC = rowmaxC;
@@ -232,8 +233,8 @@ void GeoStochScaler::scale()
       StochVectorHandle xcolmax(dynamic_cast<StochVector*>(bux->clone()));
       StochVectorHandle xcolmin(dynamic_cast<StochVector*>(bux->clone()));
 
-      const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, NULL);
-      const double xcolratio = maxColRatio(*xcolmax, *xcolmin, NULL, NULL);
+      const double xrowratio = maxRowRatio(*xrowmaxA, *xrowmaxC, *xrowminA, *xrowminC, nullptr);
+      const double xcolratio = maxColRatio(*xcolmax, *xcolmin, nullptr, nullptr);
 
       if( myRank == 0 ) printf("rowratio after scaling %f \n", xrowratio);
       if( myRank == 0 ) printf("colratio after scaling %f \n", xcolratio);
@@ -274,7 +275,7 @@ void GeoStochScaler::applyGeoMean(StochVector& maxvec, StochVector& minvec)
  */
 void GeoStochScaler::postEquiScale()
 {
-   assert(vec_rowscaleA != NULL && vec_rowscaleC != NULL && vec_colscale != NULL);
+   assert(vec_rowscaleA != nullptr && vec_rowscaleC != nullptr && vec_colscale != nullptr);
 
    StochVector* rowmaxA = dynamic_cast<StochVector*>(bA->clone());
    StochVector* rowminA = dynamic_cast<StochVector*>(bA->clone());

@@ -5,6 +5,7 @@
 #include "QpGenStoch.h"
 #include "sFactory.h"
 #include "Scaler.h"
+#include "pipsport.h"
 
 class Solver;
 class Data;
@@ -22,8 +23,8 @@ class StochMonitor : public OoqpMonitor
         int level );
 
  public:  
-  StochMonitor(QpGenStoch* qp, Scaler* scaler = NULL);
-  StochMonitor(sFactory* qp, Scaler* scaler = NULL);
+  StochMonitor(QpGenStoch* qp, Scaler* scaler = nullptr);
+  StochMonitor(sFactory* qp, Scaler* scaler = nullptr);
   virtual void doIt( Solver * solver, Data * data, Variables * vars,
 		     Residuals * resids,
 		     double alpha, double sigma,

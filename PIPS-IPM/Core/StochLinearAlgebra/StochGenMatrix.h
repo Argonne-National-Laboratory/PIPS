@@ -6,6 +6,7 @@
 #include "DoubleMatrix.h"
 #include "SparseGenMatrix.h"
 #include "mpi.h"
+#include "pipsport.h"
 
 #include <vector>
 
@@ -33,7 +34,7 @@ public:
 		 int Bl_m, int Bl_n, int Bl_nnz,
 		 MPI_Comm mpiComm_);
 
-  /** Constructs a matrix with local A, B, and Bl (linking constraints) blocks set to NULL */
+  /** Constructs a matrix with local A, B, and Bl (linking constraints) blocks set to nullptr */
   StochGenMatrix(int id,
        long long global_m, long long global_n,
        MPI_Comm mpiComm_);
@@ -179,34 +180,34 @@ public:
 
   void getNnzPerRow(OoqpVectorBase<int>& nnzVec) override
   {
-     getNnzPerRow(nnzVec, NULL);
+     getNnzPerRow(nnzVec, nullptr);
   };
 
   void getNnzPerCol(OoqpVectorBase<int>& nnzVec) override
   {
-     getNnzPerCol(nnzVec, NULL);
+     getNnzPerCol(nnzVec, nullptr);
   };
 
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* colScaleVec, OoqpVector& minmaxVec )
   {
-     getRowMinMaxVec(getMin, initializeVec, colScaleVec, NULL, minmaxVec, NULL);
+     getRowMinMaxVec(getMin, initializeVec, colScaleVec, nullptr, minmaxVec, nullptr);
   };
 
   /** fill vector with absolute minimum/maximum value of each column */
   virtual void getColMinMaxVec( bool getMin, bool initializeVec,
         const OoqpVector* rowScaleVec, OoqpVector& minmaxVec )
   {
-     getColMinMaxVec(getMin, initializeVec, rowScaleVec, NULL, minmaxVec, NULL);
+     getColMinMaxVec(getMin, initializeVec, rowScaleVec, nullptr, minmaxVec, nullptr);
   };
 
-  virtual void addRowSums( OoqpVector& sumVec ) {addRowSums(sumVec, NULL);};
-  virtual void addColSums( OoqpVector& sumVec ) {addColSums(sumVec, NULL);};
+  virtual void addRowSums( OoqpVector& sumVec ) {addRowSums(sumVec, nullptr);};
+  virtual void addColSums( OoqpVector& sumVec ) {addColSums(sumVec, nullptr);};
 
   virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec)
   {
-     initStaticStorageFromDynamic(rowNnzVec, colNnzVec, NULL, NULL);
+     initStaticStorageFromDynamic(rowNnzVec, colNnzVec, nullptr, nullptr);
   };
   virtual void freeDynamicStorage();
 

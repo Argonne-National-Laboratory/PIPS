@@ -117,8 +117,9 @@ private:
    void setNormalizedSingletonFlags(int node);
    void setNormalizedReductionPointers(int node);
    void updateExtendedPointersForCurrentNode(int node);
-   void deleteNormalizedPointers(int it);
+   void deleteNormalizedPointers(int node);
 
+   void setExtendedPointersToNull();
 
    void removeSingletonVars();
    void removeEntry(int colIdx, SimpleVectorBase<int>& rowContainsSingletonVar,
