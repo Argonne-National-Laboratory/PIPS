@@ -1787,11 +1787,11 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
    for(int k = row_start; k < row_end; k++)
    {
       const int col = mat_storage.getJcolM(k);
+      mat_transp_storage.removeEntryAtRowCol(col, row);
       reduceNnzCounterColumn(node, block_type, col, 1);
    }
 
    mat_storage.clearRow(row);
-   mat_transp_storage.clearCol(row);
 }
 
 bool PresolveData::verifyActivities()

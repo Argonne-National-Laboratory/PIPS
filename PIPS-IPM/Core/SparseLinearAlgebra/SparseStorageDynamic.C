@@ -503,6 +503,7 @@ void SparseStorageDynamic::clearRow( int row )
    rowptr[row].end = rowptr[row].start;
 }
 
+/* slow ! */
 void SparseStorageDynamic::clearCol( int col )
 {
    assert( 0 <= col && col < n);
