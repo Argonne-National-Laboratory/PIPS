@@ -7,6 +7,7 @@
 #include "SparseLinearAlgebraPackage.h"
 #include "mpi.h"
 #include <iostream>
+#include "pipsport.h"
 
 static
 std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& perm)
@@ -1082,7 +1083,7 @@ std::vector<unsigned int> sData::getAscending2LinkPermutation(std::vector<int>& 
 }
 
 sData::sData(sTree* tree)
-//  : QpGenData(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL)
+//  : QpGenData(nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr)
 {
    stochNode = tree;
    Q = SymMatrixHandle(tree->createQ());
@@ -1201,7 +1202,7 @@ void sData::writeMPSformat(ostream& out)
    out << " N COST" <<endl;
 
    // write all row names and if they are E, L or G
-   (*A).writeMPSformatRows(out, 0, NULL);
+   (*A).writeMPSformatRows(out, 0, nullptr);
    (*C).writeMPSformatRows(out, 1, icupp);
    (*C).writeMPSformatRows(out, 2, iclow);
 
@@ -1212,7 +1213,7 @@ void sData::writeMPSformat(ostream& out)
    // write all rhs / lhs
    out <<  "RHS " << endl;
 
-   (*bA).writeMPSformatRhs(out, 0, NULL);
+   (*bA).writeMPSformatRhs(out, 0, nullptr);
    (*bu).writeMPSformatRhs(out, 1, icupp);
    (*bl).writeMPSformatRhs(out, 2, iclow);
 
@@ -1427,24 +1428,23 @@ void sData::writeMPSColumns(ostream& out)
 
 }
 
-sData*
-sData::cloneFull(bool switchToDynamicStorage) const
+sData* sData::cloneFull(bool switchToDynamicStorage) const
 {
    // todo Q is empty!
    StochSymMatrixHandle Q_clone(dynamic_cast<const StochSymMatrix&>(*Q).clone());
    StochGenMatrixHandle A_clone(dynamic_cast<const StochGenMatrix&>(*A).cloneFull(switchToDynamicStorage));
    StochGenMatrixHandle C_clone(dynamic_cast<const StochGenMatrix&>(*C).cloneFull(switchToDynamicStorage));
 
-   StochVectorHandle c_clone (dynamic_cast<const StochVector&>(*g).cloneFull());
-   StochVectorHandle bA_clone ( dynamic_cast<const StochVector&>(*bA).cloneFull());
-   StochVectorHandle xupp_clone (dynamic_cast<const StochVector&>(*bux).cloneFull());
-   StochVectorHandle ixupp_clone (dynamic_cast<const StochVector&>(*ixupp).cloneFull());
-   StochVectorHandle xlow_clone ( dynamic_cast<const StochVector&>(*blx).cloneFull());
-   StochVectorHandle ixlow_clone ( dynamic_cast<const StochVector&>(*ixlow).cloneFull());
-   StochVectorHandle cupp_clone ( dynamic_cast<const StochVector&>(*bu).cloneFull());
-   StochVectorHandle icupp_clone ( dynamic_cast<const StochVector&>(*icupp).cloneFull());
-   StochVectorHandle clow_clone ( dynamic_cast<const StochVector&>(*bl).cloneFull());
-   StochVectorHandle iclow_clone ( dynamic_cast<const StochVector&>(*iclow).cloneFull());
+   StochVectorHandle c_clone (dynamic_cast<StochVector*>(g->cloneFull()));
+   StochVectorHandle bA_clone ( dynamic_cast<StochVector*>(bA->cloneFull()));
+   StochVectorHandle xupp_clone (dynamic_cast<StochVector*>(bux->cloneFull()));
+   StochVectorHandle ixupp_clone (dynamic_cast<StochVector*>(ixupp->cloneFull()));
+   StochVectorHandle xlow_clone (dynamic_cast<StochVector*>(blx->cloneFull()));
+   StochVectorHandle ixlow_clone (dynamic_cast<StochVector*>(ixlow->cloneFull()));
+   StochVectorHandle cupp_clone (dynamic_cast<StochVector*>(bu->cloneFull()));
+   StochVectorHandle icupp_clone (dynamic_cast<StochVector*>(icupp->cloneFull()));
+   StochVectorHandle clow_clone (dynamic_cast<StochVector*>(bl->cloneFull()));
+   StochVectorHandle iclow_clone (dynamic_cast<StochVector*>(iclow->cloneFull()));
 
    sTree* tree_clone = stochNode; // todo
 
@@ -2187,8 +2187,8 @@ sData::getLocalG()
    return *Cst.Blmat;
 }
 
-void sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVector& rowNnzVecC,
-      const StochVector& colNnzVec)
+void sData::cleanUpPresolvedData(const StochVectorBase<int>& rowNnzVecA, const StochVectorBase<int>& rowNnzVecC,
+      const StochVectorBase<int>& colNnzVec)
 {
    StochSymMatrix& Q_stoch = dynamic_cast<StochSymMatrix&>(*Q);
 
@@ -2233,7 +2233,7 @@ void sData::cleanUpPresolvedData(const StochVector& rowNnzVecA, const StochVecto
    bu_stoch.removeEntries(rowNnzVecC);
    icupp_stoch.removeEntries(rowNnzVecC);
 
-   assert(stochNode != NULL);
+   assert(stochNode != nullptr);
 
    // adapt sizes and tree
    sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*stochNode);

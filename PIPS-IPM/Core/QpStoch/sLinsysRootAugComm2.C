@@ -12,6 +12,7 @@
 
 #include <unistd.h>
 #include "math.h"
+#include "pipsport.h"
 
 #ifdef STOCH_TESTING
 extern double g_iterNumber;
@@ -20,7 +21,7 @@ extern int gInnerSCsolve;
 extern int gOuterSolve;
 
 sLinsysRootAugComm2::sLinsysRootAugComm2(sFactory * factory_, sData * prob_)
-  : sLinsysRootComm2(factory_, prob_), CtDC(NULL)
+  : sLinsysRootComm2(factory_, prob_), CtDC(nullptr)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
   kkt = createKKT(prob_);
@@ -34,7 +35,7 @@ sLinsysRootAugComm2::sLinsysRootAugComm2(sFactory* factory_,
 			       OoqpVector* dq_,
 			       OoqpVector* nomegaInv_,
 			       OoqpVector* rhs_)
-  : sLinsysRootComm2(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(NULL)
+  : sLinsysRootComm2(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), CtDC(nullptr)
 { 
   kkt = createKKT(prob_);
   solver = createSolver(prob_, kkt);

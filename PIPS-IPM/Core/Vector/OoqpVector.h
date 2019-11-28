@@ -17,8 +17,7 @@
 #include "IotrRefCount.h"
 #include "OoqpVectorHandle.h"
 #include "pipsdef.h"
-
-
+#include "pipsport.h"
 
 /** An abstract class representing the implementation of a OoqpVectorTemplate.
  *
@@ -267,13 +266,13 @@ public:
   virtual void copyFromArray( const char v[] ) = 0;
 
   /** remove entries i for which select[i] == 0 */
-  virtual void removeEntries( const OoqpVectorBase<T>& select ) { assert(0 && "not implemented here"); };
+  virtual void removeEntries( const OoqpVectorBase<int>& select ) { assert(0 && "not implemented here"); };
 
   /** Copy the absolute values of elements of v_in into this OoqpVector object. */
   virtual void copyFromAbs(const OoqpVectorBase<T>& v) = 0;
 
-  virtual OoqpVectorBase<T>* clone() const { assert(0 && "not implemented here"); return NULL; };
-  virtual OoqpVectorBase<T>* cloneFull() const { assert(0 && "not implemented here"); return NULL; };
+  virtual OoqpVectorBase<T>* clone() const { assert(0 && "not implemented here"); return nullptr; };
+  virtual OoqpVectorBase<T>* cloneFull() const { assert(0 && "not implemented here"); return nullptr; };
 };
 
 

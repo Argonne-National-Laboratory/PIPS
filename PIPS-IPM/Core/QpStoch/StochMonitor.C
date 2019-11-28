@@ -8,8 +8,7 @@
 #include "sTree.h"
 #include <iostream>
 #include <cstdio>
-
-using namespace std;
+#include "pipsport.h"
 
 StochMonitor::StochMonitor(QpGenStoch* qp_, Scaler* scaler)
   : qp(qp_), scaler(scaler)
@@ -20,7 +19,7 @@ StochMonitor::StochMonitor(QpGenStoch* qp_, Scaler* scaler)
 }
 
 StochMonitor::StochMonitor(sFactory* qp_, Scaler* scaler)
-  : qp(NULL), scaler(scaler)
+  : qp(nullptr), scaler(scaler)
 {
   mpiComm = qp_->tree->commWrkrs;
   MPI_Comm_rank(mpiComm, &myRank);

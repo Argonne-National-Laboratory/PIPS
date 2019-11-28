@@ -3,10 +3,11 @@
 #include "QpGenStoch.h"
 #include "QpGenStochData.h"
 #include "SparseLinearAlgebraPackage.h"
+#include "pipsport.h"
 
 
 QpGenStochLinsys::QpGenStochLinsys(QpGenStoch* factory_, QpGenStochData* prob)
-  : QpGenLinsys(), kkt(NULL), solver(NULL)
+  : QpGenLinsys(), kkt(nullptr), solver(nullptr)
 {
   factory = factory_;
 
@@ -40,7 +41,7 @@ QpGenStochLinsys::QpGenStochLinsys(QpGenStoch* factory_,
 				   OoqpVector* dq_,
 				   OoqpVector* nomegaInv_,
 				   OoqpVector* rhs_)
-  : QpGenLinsys(), kkt(NULL), solver(NULL)
+  : QpGenLinsys(), kkt(nullptr), solver(nullptr)
 {
   factory = factory_;
 
@@ -166,7 +167,7 @@ void QpGenStochLinsys::computeU_V(QpGenStochData *prob,
 void QpGenStochLinsys::allocU(DenseGenMatrix ** U, int n0)
 {
   int lines,cols;
-  if(*U==NULL) {
+  if(*U==nullptr) {
     *U = new DenseGenMatrix(locnx+locmy+locmz, n0);
   } else {
     (*U)->getSize(lines,cols);
@@ -182,7 +183,7 @@ void QpGenStochLinsys::allocU(DenseGenMatrix ** U, int n0)
 void QpGenStochLinsys::allocV(DenseGenMatrix ** V, int n0)
 {
   int lines,cols;
-  if(*V==NULL)
+  if(*V==nullptr)
     *V = new DenseGenMatrix(locnx+locmy+locmz, n0);
   else {
     (*V)->getSize(lines,cols);

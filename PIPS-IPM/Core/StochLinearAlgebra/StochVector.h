@@ -15,7 +15,7 @@ template <typename T>
 class StochVectorBase : public OoqpVectorBase<T> {
 private:
 
-  virtual void writeToStreamAllChild( std::stringstream& sout ) const;
+  void writeToStreamAllChild( std::stringstream& sout ) const override;
 
 public:
   StochVectorBase( int n, MPI_Comm mpiComm, int isDistributed = -1);
@@ -51,9 +51,10 @@ public:
   */
   virtual OoqpVectorBase<T>* dataClone() const;
   virtual OoqpVectorBase<T>* dataCloneLinkCons() const;
-  virtual StochVectorBase<T>* clone() const;
+
+  OoqpVectorBase<T>* clone() const override;
   /* copy vector entries as well */
-  virtual StochVectorBase<T>* cloneFull() const;
+  OoqpVectorBase<T>* cloneFull() const override;
 
   virtual void jointCopyFrom(const StochVectorBase<T>& v1, const StochVectorBase<T>& v2, const StochVectorBase<T>& v3);
   virtual void jointCopyFromLinkCons(const StochVectorBase<T>& vx, const StochVectorBase<T>& vy, const StochVectorBase<T>& vz);
@@ -99,7 +100,7 @@ public:
    void componentDiv ( const OoqpVectorBase<T>& v ) override;
    bool componentEqual( const OoqpVectorBase<T>& v , T tol) const override;
 
-   void scalarMult( T num) override;
+   void scalarMult( T num ) override;
    void writeToStream(std::ostream& out) const override;
    void writeToStreamAll(std::ostream& out) const override;
    void writefToStream( std::ostream& out,
@@ -156,7 +157,7 @@ public:
    virtual std::vector<T> gatherStochVector() const;
 
    /** remove entries i for which select[i] == 0 */
-   void removeEntries( const OoqpVectorBase<T>& select ) override;
+   void removeEntries( const OoqpVectorBase<int>& select ) override;
 
    virtual int getSize() const { return this->n; };
 
@@ -172,7 +173,7 @@ class StochDummyVectorBase : public StochVectorBase<T> {
 protected:
 
 public:
-  StochDummyVectorBase(  )
+  StochDummyVectorBase()
     : StochVectorBase<T>(0, MPI_COMM_NULL) {};
 
   virtual ~StochDummyVectorBase(){};
@@ -192,10 +193,9 @@ public:
    void jointCopyTo(StochVectorBase<T>& v1, StochVectorBase<T>& v2, StochVectorBase<T>& v3) const override {};
 
    bool isKindOf( int kind ) const override {return kind == kStochDummy;}
-   void setToZero()override {};
    bool isZero() const override { return true; };
-
-   void setToConstant( T c )override {};
+   void setToZero() override {};
+   void setToConstant( T c ) override {};
    void randomize( T alpha, T beta, T *ix ) override {};
    void copyFrom( const OoqpVectorBase<T>& v ) override {};
    void copyFromAbs(const OoqpVectorBase<T>& v) override {};
@@ -227,9 +227,9 @@ public:
                T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
                bool& primalBlocking, bool& dualBlocking) const override {};
 
-   void componentMult( const OoqpVectorBase<T>& v )override {};
-   void componentDiv ( const OoqpVectorBase<T>& v )override {};
-   bool componentEqual( const OoqpVector& v, double tol) const override { if(!v.isKindOf(kStochDummy)) std::cout << "one should never end up here"
+   void componentMult( const OoqpVectorBase<T>& v ) override {};
+   void componentDiv ( const OoqpVectorBase<T>& v ) override {};
+   bool componentEqual( const OoqpVectorBase<T>& v, T tol) const override { if(!v.isKindOf(kStochDummy)) std::cout << "one should never end up here"
      << std::endl; return v.isKindOf(kStochDummy); };
    void scalarMult( T num) override {};
    void writeToStream(std::ostream& out) const override {};
@@ -242,7 +242,7 @@ public:
    void writeMPSformatBounds(std::ostream& out, const OoqpVectorBase<T>* ix, bool upperBound) const override {};
    void writeMPSformatBoundsWithVar(std::ostream& out, const std::string varStub, const OoqpVectorBase<T>* ix, bool upperBound) const override {};
 
-   void scale( T alpha )override {};
+   void scale( T alpha ) override {};
 
   /** this += alpha * x */
    void axpy  ( T alpha, const OoqpVectorBase<T>& x ) override {};
@@ -251,8 +251,8 @@ public:
   /** this += alpha * x / z */
    void axdzpy( T alpha, const OoqpVectorBase<T>& x, const OoqpVectorBase<T>& z ) override {};
 
-   void addConstant( T c )override {};
-   void gondzioProjection( T rmin, T rmax )override {};
+   void addConstant( T c ) override {};
+   void gondzioProjection( T rmin, T rmax ) override {};
    T dotProductWith( const OoqpVectorBase<T>& v ) const override {return 0.0;}
    T dotProductSelf(T scaleFactor = 1.0) const override {return 0.0;};
 
@@ -271,20 +271,20 @@ public:
    bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override {return true;}
    void selectNonZeros( const OoqpVectorBase<T>& select ) override {};
    long long numberOfNonzeros() const override {return 0;}
-   void addSomeConstants( T c, const OoqpVectorBase<T>& select )override {};
+   void addSomeConstants( T c, const OoqpVectorBase<T>& select ) override {};
    void writefSomeToStream( std::ostream& out,
 				   const char format[],
 				   const OoqpVectorBase<T>& select ) const override {};
    void axdzpy( T alpha, const OoqpVectorBase<T>& x,
-		       const OoqpVectorBase<T>& z, const OoqpVectorBase<T>& select )override {};
+		       const OoqpVectorBase<T>& z, const OoqpVectorBase<T>& select ) override {};
 
    bool somePositive( const OoqpVectorBase<T>& select ) const override {return 1;}
    void divideSome( const OoqpVectorBase<T>& div, const OoqpVectorBase<T>& select )override {};
    void copyIntoArray( T v[] ) const override {};
-   void copyFromArray( const T v[] )override {};
-   void copyFromArray( const char v[] )override {};
+   void copyFromArray( const T v[] ) override {};
+   void copyFromArray( const char v[] ) override {};
 
-   void removeEntries( const OoqpVectorBase<T>& select ) override {};
+   void removeEntries( const OoqpVectorBase<int>& select ) override {};
    void permuteVec0Entries(const std::vector<unsigned int>& permvec) override {};
    void permuteLinkingEntries(const std::vector<unsigned int>& permvec) override {};
    std::vector<T> gatherStochVector() const override {return std::vector<T>(0);};

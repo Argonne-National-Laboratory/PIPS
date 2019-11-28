@@ -78,7 +78,7 @@ class StochInputTree {
   protected:
     //callback functions
 
-    //callback functions nCall, myCall, mzCall, mylCall, mzlCall can be NULL if data is provided through int n,my,mz,myl,mzl
+    //callback functions nCall, myCall, mzCall, mylCall, mzlCall can be nullptr if data is provided through int n,my,mz,myl,mzl
     FNNZ nCall, myCall, mzCall, mylCall, mzlCall;
     FNNZ fnnzQ, fnnzA, fnnzB, fnnzBl, fnnzC, fnnzD, fnnzDl;
     FMAT fQ, fA, fB, fBl, fC, fD, fDl;

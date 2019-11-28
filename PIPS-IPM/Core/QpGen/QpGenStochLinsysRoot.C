@@ -3,6 +3,7 @@
 #include "QpGenStoch.h"
 #include "QpGenStochData.h"
 #include "QpGenStochLinsysLeaf.h"
+#include "pipsport.h"
 /*********************************************************************/
 /************************** ROOT *************************************/
 /*********************************************************************/
@@ -37,7 +38,7 @@ QpGenStochLinsysRoot::~QpGenStochLinsysRoot()
 void QpGenStochLinsysRoot::createChildren(QpGenStochData* prob)
 {
 
-  QpGenStochLinsys* child=NULL;
+  QpGenStochLinsys* child=nullptr;
   StochVector& ddst = dynamic_cast<StochVector&>(*dd);
   StochVector& dqst = dynamic_cast<StochVector&>(*dq);
   StochVector& nomegaInvst = dynamic_cast<StochVector&>(*nomegaInv);

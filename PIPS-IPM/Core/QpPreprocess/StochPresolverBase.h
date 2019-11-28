@@ -15,14 +15,8 @@
 #include "SystemType.h"
 #include "StochPostsolver.h"
 #include "pipsport.h"
-#include <vector>
 
-typedef struct
-{
-   int colIdx;
-   double newxlow;
-   double newxupp;
-} XBOUNDS;
+#include <vector>
 
 class StochPresolverBase
 {
@@ -41,7 +35,7 @@ private:
       BlockType block_type) const; 
    void countBoxedColumns( int& n_cols_total, int& n_cols_empty, int& n_cols_free, int& n_cols_onesided, int& n_cols_boxed, int& n_cols_singleton, 
       int& n_cols_orig_free, int& n_cols_orig_free_removed, const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig,
-      BlockType block_type) const;
+      bool at_root_node) const;
 
    void setPointersMatrices(GenMatrixHandle mat, int node);
    void setPointersMatrixBoundsActivities(SystemType system_type, int node);
@@ -50,8 +44,8 @@ private:
    void setReductionPointers(SystemType system_type, int node);
 
 protected:
-   int my_rank;
-   bool distributed;
+   const int my_rank;
+   const bool distributed;
 
    /* not owned by the class itself - given from the outside */
    PresolveData& presData;
@@ -89,11 +83,11 @@ protected:
    const SimpleVector* currgParent;
    const SimpleVector* currgChild;
 
-   const SimpleVector* currNnzRow;
-   const SimpleVector* currNnzRowLink;
+   const SimpleVectorBase<int>* currNnzRow;
+   const SimpleVectorBase<int>* currNnzRowLink;
 
-   const SimpleVector* currNnzColParent;
-   const SimpleVector* currNnzColChild;
+   const SimpleVectorBase<int>* currNnzColParent;
+   const SimpleVectorBase<int>* currNnzColChild;
 
    /** the number of children */
    int nChildren;

@@ -9,9 +9,9 @@
 #include "StochVector.h"
 #include "SimpleVector.h"
 #include "DoubleMatrixTypes.h"
+#include "pipsport.h"
 
 #include <cmath>
-using namespace std;
 
 StochIterateResourcesMonitor sTree::iterMon;
 
@@ -512,7 +512,7 @@ StochVector* sTree::newPrimalVector() const
     return new StochDummyVector();
 
   StochVector* x = new StochVector(nx(), commWrkrs);
-  assert(x!=NULL);
+  assert(x!=nullptr);
 
   for(size_t it=0; it<children.size(); it++) {
     StochVector* child = children[it]->newPrimalVector();

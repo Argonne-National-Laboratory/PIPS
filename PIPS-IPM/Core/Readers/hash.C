@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include "pipsport.h"
 
 // modified 5/21/04 based on the new primes in PCx
 /* 2015. Modified by Feng Qiang to support C++11*/
@@ -90,7 +91,7 @@ HashTable      *NewHashTable(int size)
     table->list = 0;
     table->list = new ListPtr[size];
     for (i = 0; i < size; i++)
-      table->list[i] = NULL;
+      table->list[i] = nullptr;
     
   } catch (...) {
     if( table ) {
@@ -140,7 +141,7 @@ int             GetIndex(HashTable *table, char *name)
   i = hash(table, name);
 
   match = -1;
-  for (ptr = table->list[i]; ptr != NULL; ptr = ptr->next)
+  for (ptr = table->list[i]; ptr != nullptr; ptr = ptr->next)
     if (strcmp(ptr->entry, name) == 0) {
       match = ptr->index;
       break;
@@ -162,11 +163,11 @@ int Insert(HashTable *table, char *name, int index)
 
   i = hash(table, name);
 
-  for (ptr = table->list[i]; ptr != NULL; ptr = ptr->next)
+  for (ptr = table->list[i]; ptr != nullptr; ptr = ptr->next)
     if (strcmp(ptr->entry, name) == 0)
       break;
 
-  if (ptr == NULL) {		/* no entry with "name" was found */
+  if (ptr == nullptr) {		/* no entry with "name" was found */
     try {
       ptr = new List;
       ptr->entry = StrDup(name, "entry");
@@ -192,7 +193,7 @@ int PrintHashTable(HashTable *table)
 
   for (i = 0; i < table->size; i++) {
     printf("%d:\n", i);
-    for (ptr = table->list[i]; ptr != NULL; ptr = ptr->next)
+    for (ptr = table->list[i]; ptr != nullptr; ptr = ptr->next)
       printf(" %d '%s'\n", ptr->index, ptr->entry);
   }
   return 0;
@@ -206,7 +207,7 @@ int DeleteHashTable(HashTable *table)
 
   for (i = 0; i < table->size; i++) {
     ptr = table->list[i];
-    while (ptr != NULL) {
+    while (ptr != nullptr) {
       ListPtr next = ptr->next;
       delete [] ptr->entry;
       delete ptr;
@@ -226,7 +227,7 @@ int PrintHashTableStats(HashTable *table)
 
   for (i = 0; i < table->size; i++) {
     count = 0;
-    for (ptr = table->list[i]; ptr != NULL; ptr = ptr->next)
+    for (ptr = table->list[i]; ptr != nullptr; ptr = ptr->next)
       count++;
 
     if (count > max)

@@ -68,9 +68,8 @@ public:
   const int getJcolM(int i) const;
   
   const double* getMat() const { return M; };
-  const double getMat(int i) const;
-
-
+  const double& getMat(int i) const;
+  void setMat(int i, double val);
 
   SparseStorageDynamic( const SparseStorage& storage, double spareRatio = 0.2 );
   SparseStorageDynamic( int m, int n, int len, double spareRatio = 0.2 );
@@ -113,16 +112,16 @@ public:
 
   void scaleRow( int row, double factor );
 
-  void addNnzPerRow(double* vec) const;
+  void addNnzPerRow(int* vec) const;
 
-  void writeToStreamDense( ostream& out) const;
-  void writeToStreamDenseRow( stringstream& out, int rowidx) const;
+  void writeToStreamDense( std::ostream& out) const;
+  void writeToStreamDenseRow( std::stringstream& out, int rowidx) const;
 
   void restoreOrder();
 
   bool isTransposedOf( const SparseStorageDynamic& mat_tp) const; //todo!
 
-  SparseStorage* getStaticStorage(double* rowNnz, double* colNnz) const;
+  SparseStorage* getStaticStorage(const int* rowNnz, const int* colNnz) const;
   SparseStorageDynamic* getTranspose() const;
 };
 

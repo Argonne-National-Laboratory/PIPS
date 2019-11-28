@@ -7,14 +7,15 @@
 #include "RemoteMatTimesVec.h"
 #include "Ma57Solver.h"
 #include "Ma27Solver.h"
+#include "pipsport.h"
 
 QpStochLinsysRootAugRedPrPCG::QpStochLinsysRootAugRedPrPCG(QpGenStoch * factory_, QpGenStochData * prob)
   : QpGenStochLinsysRootAugRed(),
-    Pmult(NULL), Qmult(NULL), Atmult(NULL), tmpVec1(NULL)
+    Pmult(nullptr), Qmult(nullptr), Atmult(nullptr), tmpVec1(nullptr)
 { 
   factory = factory_;
-  kkt = NULL;
-  solver = NULL;
+  kkt = nullptr;
+  solver = nullptr;
 
   nx = prob->nx; my = prob->my; mz = prob->mz;
   ixlow = prob->ixlow;
@@ -44,10 +45,10 @@ QpStochLinsysRootAugRedPrPCG::QpStochLinsysRootAugRedPrPCG(QpGenStoch * factory_
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
   //QpGenStochLinsyRootAug
-  CtDC=NULL;
+  CtDC=nullptr;
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
 
@@ -55,8 +56,8 @@ QpStochLinsysRootAugRedPrPCG::QpStochLinsysRootAugRedPrPCG(QpGenStoch * factory_
   redRhs = new SimpleVector(locnx+locmy+locmz);
 
   //intializations related to this class 
-  AAt = NULL;
-  AAtSolver = NULL;
+  AAt = nullptr;
+  AAtSolver = nullptr;
   me = whoAmI();
   createChildren(prob);
 };
@@ -68,7 +69,7 @@ QpStochLinsysRootAugRedPrPCG::QpStochLinsysRootAugRedPrPCG(QpGenStoch* factory_,
 					   OoqpVector* nomegaInv_,
 					   OoqpVector* rhs_)
   : QpGenStochLinsysRootAugRed(),
-    Pmult(NULL), Qmult(NULL), Atmult(NULL), tmpVec1(NULL)
+    Pmult(nullptr), Qmult(nullptr), Atmult(nullptr), tmpVec1(nullptr)
 { 
   //QpGenStochLinsy
   factory = factory_;
@@ -104,17 +105,17 @@ QpStochLinsysRootAugRedPrPCG::QpStochLinsysRootAugRedPrPCG(QpGenStoch* factory_,
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
   //QpGenStochLinsyRootAug
-  CtDC=NULL;
+  CtDC=nullptr;
   redRhs = new SimpleVector(locnx+locmy+locmz);
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
 
   //intializations related to this class 
-  AAt = NULL;
-  AAtSolver = NULL;
+  AAt = nullptr;
+  AAtSolver = nullptr;
   me = whoAmI();
   createChildren(prob);
 };
@@ -150,8 +151,8 @@ void QpStochLinsysRootAugRedPrPCG::factor2(QpGenStochData *prob, Variables *vars
     children[it]->factor2(prob->children[it], vars);
   }
   
-  DenseGenMatrix* U = NULL;
-  DenseGenMatrix* V = NULL;
+  DenseGenMatrix* U = nullptr;
+  DenseGenMatrix* V = nullptr;
 
   int childrenDone=0;
 
@@ -159,7 +160,7 @@ void QpStochLinsysRootAugRedPrPCG::factor2(QpGenStochData *prob, Variables *vars
     // Allocate  U if necessary. If the sizes of 
     // the previous child are good, reuse the mem.
 
-    if(children[it]->mpiComm == MPI_COMM_NULL)
+    if(children[it]->mpiComm == MPI_COMM_nullptr)
       continue;
     children[it]->stochNode->resMon.recFactTmChildren_start();    
     //-----------------------------------------------------------
@@ -244,13 +245,13 @@ void QpStochLinsysRootAugRedPrPCG::factor2(QpGenStochData *prob, Variables *vars
     MPI_Comm commWorkers = stochNodePrcnd ->commWorkers;
     int rankZeroW = stochNodePrcnd->rankZeroW;
 #ifdef DEBUG
-    if(me!=ePrecond) assert(commWorkers!=MPI_COMM_NULL);
+    if(me!=ePrecond) assert(commWorkers!=MPI_COMM_nullptr);
 #endif
     if(me==eSpecialWorker) {
       workerReduce_target(kktd, rankZeroW, commWorkers);
       updateKKT(prob, vars);
-      if(AAt==NULL) {
-	assert(AAtSolver==NULL);
+      if(AAt==nullptr) {
+	assert(AAtSolver==nullptr);
 	SparseGenMatrix& A = prob->getLocalB();
 	
 	A.matMultTrans(&AAt);
@@ -285,7 +286,7 @@ void QpStochLinsysRootAugRedPrPCG::Dsolve( QpGenStochData *prob, OoqpVector& x )
   // precond waits to be signaled to apply preconditioner
   ///////////////////////////////////////////////////////////////////////
   if(me==ePrecond) {
-    if(NULL==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
+    if(nullptr==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
 
     SimpleVector rhs(tmpVec1, n);
     MPI_Status status;
@@ -309,7 +310,7 @@ void QpStochLinsysRootAugRedPrPCG::Dsolve( QpGenStochData *prob, OoqpVector& x )
   //   - broadcasts the solution to the other workers
   ///////////////////////////////////////////////////////////////////////
   if(me==eSpecialWorker) {
-    if(NULL==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
+    if(nullptr==tmpVec1) tmpVec1 = new double[n+PREC_EXTRA_DOUBLES];
     //allocate the buffer here reuse these buffer in the MatVec
     Pmult->setTmpVec1(tmpVec1);
     solveReduced(prob, b);
@@ -449,13 +450,13 @@ QpStochLinsysRootAugRedPrPCG::createSolver(QpGenStochData* prob, SymMatrix* kktm
       // Special worker
       /////////////////////////////////////////////////////
       DenseSymMatrix* kktmat = dynamic_cast<DenseSymMatrix*>(kktmat_);
-      if(NULL==Qmult) Qmult = new StoredMatTimesVec(kktmat);
+      if(nullptr==Qmult) Qmult = new StoredMatTimesVec(kktmat);
 
       StochTreePrecond* stochNodePr = dynamic_cast<StochTreePrecond*>(stochNode);
-      if(NULL==Pmult) Pmult = new RemoteMatTimesVec(stochNodePr);
+      if(nullptr==Pmult) Pmult = new RemoteMatTimesVec(stochNodePr);
 
       SparseGenMatrix & A = prob->getLocalB();
-      if(NULL==Atmult) Atmult = new StoredMatTransTimesVec(&A);
+      if(nullptr==Atmult) Atmult = new StoredMatTransTimesVec(&A);
 
       return new PCGSolver(Qmult, Pmult, Atmult, locnx, locmy);
       //return new CGSolver(Amult, Pmult);
@@ -592,7 +593,7 @@ QpStochLinsysRootAugRedPrPCG::workerReduce_source(DenseSymMatrix* M,
   int irow=0;
 
   while(true) {
-    MPI_Reduce(&(M->mStorage->M[irow][0]), NULL, chunksize, 
+    MPI_Reduce(&(M->mStorage->M[irow][0]), nullptr, chunksize, 
 	       MPI_DOUBLE, MPI_SUM, target, comm);
     irow += rows_in_chunk;
     if(irow>=locnx) break;
@@ -646,7 +647,7 @@ QpStochLinsysRootAugRedPrPCG::precndReduce_source(DenseSymMatrix* M,
     for(int i=irow; i<irow+rows_in_chunk; i++)
       memcpy(&buffer[(i-irow)*locnx], &(M->mStorage->M[i][0]), locnx*sizeof(double));
     
-    MPI_Reduce(buffer, NULL, chunksize, 
+    MPI_Reduce(buffer, nullptr, chunksize, 
 	       MPI_DOUBLE, MPI_SUM, target, comm);
       
     irow += rows_in_chunk;

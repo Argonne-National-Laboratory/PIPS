@@ -1,6 +1,6 @@
 #include "RemoteMatTimesVec.h"
 #include "SimpleVector.h"
-
+#include "pipsport.h"
 #include "mpi.h"
 
 /************************************************************************
@@ -10,16 +10,16 @@
  */
 
 RemoteMatTimesVec::RemoteMatTimesVec(StochTreePrecond* tree_)
-  : stochNode(tree_), tmpVec1(NULL), delTmpVec1(0)
+  : stochNode(tree_), tmpVec1(nullptr), delTmpVec1(0)
 {};
 
 RemoteMatTimesVec::RemoteMatTimesVec()
-  : tmpVec1(NULL), delTmpVec1(0)
+  : tmpVec1(nullptr), delTmpVec1(0)
 { }
 
 RemoteMatTimesVec::~RemoteMatTimesVec()
 { 
-  if(delTmpVec1==1 && tmpVec1!=NULL) delete[] tmpVec1;
+  if(delTmpVec1==1 && tmpVec1!=nullptr) delete[] tmpVec1;
 };
 
  /** y = beta * y + alpha * A * x */
@@ -28,7 +28,7 @@ void RemoteMatTimesVec::doIt(double beta, OoqpVector& y,
 {
   int n = y.length(); assert(x.length()==n);
 
-  if(tmpVec1==NULL) { tmpVec1 = new double[n]; delTmpVec1=1; }
+  if(tmpVec1==nullptr) { tmpVec1 = new double[n]; delTmpVec1=1; }
 
   int mpiComm     = stochNode->commWrkrs;
   int rankPrcnd   = stochNode->rankPrcnd;
@@ -58,7 +58,7 @@ void RemoteMatTimesVec::doIt(double beta, OoqpVector& y,
 
 void RemoteMatTimesVec::setTmpVec1(double* buf)
 {
-  if(tmpVec1!=NULL && delTmpVec1==1) delete[] tmpVec1;
+  if(tmpVec1!=nullptr && delTmpVec1==1) delete[] tmpVec1;
   delTmpVec1 = 0;
   tmpVec1=buf;
 }

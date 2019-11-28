@@ -8,6 +8,7 @@
 #include "QpGenSparseMa27.h"
 //#include "QpGenStochAugExt.h"
 #include "QpGenStochNrmEqn.h"
+#include "pipsport.h"
 
 #include <stdio.h>
 #include <math.h>
@@ -230,8 +231,8 @@ void stochSolve(int argc, char *argv[], PbData& pbData, int printx)
   StochRunParams* params = defaultStochRunParams();
   params->printx = printx;
 
-  MehrotraStochSolver* method=NULL;
-  QpGenStochNrmEqn* formulation=NULL;
+  MehrotraStochSolver* method=nullptr;
+  QpGenStochNrmEqn* formulation=nullptr;
   qpgenstoch_solve( root, params, method, formulation);
   
   delete params;

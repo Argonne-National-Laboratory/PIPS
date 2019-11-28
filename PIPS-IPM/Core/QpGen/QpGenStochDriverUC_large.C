@@ -16,6 +16,7 @@
 #include "sFactoryAugSca.h"
 #include "sFactoryAugEmtl.h"
 #include "sFactoryAugEmtlSym.h"
+#include "pipsport.h"
 
 #include "StochResourcePlanner.h"
 
@@ -317,37 +318,37 @@ void stochSolve(int argc, char *argv[], PbData& pbData, int printx, int solveWit
   StochRunParams* params = defaultStochRunParams();
   params->printx = printx;
 
-  MehrotraStochSolver* method=NULL;
+  MehrotraStochSolver* method=nullptr;
   
   if(solveWith==10) {
-    QpGenStochAugRed* formulation=NULL;
+    QpGenStochAugRed* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==11) {
-    QpGenStochAugRedPr* formulation=NULL;
+    QpGenStochAugRedPr* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==12) {
-    QpStochAugRedPrPCG* formulation=NULL;
+    QpStochAugRedPrPCG* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==13) {
-    QpStochAugRedPrCG* formulation=NULL;
+    QpStochAugRedPrCG* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==20) {
-    QpGenStochNrmEqn* formulation=NULL;
+    QpGenStochNrmEqn* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==1) {
-    QpGenStochAugExt* formulation=NULL;
+    QpGenStochAugExt* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==2) {
-    sFactoryAug* formulation=NULL;
+    sFactoryAug* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==4) {
-    sFactoryAugSca* formulation=NULL;
+    sFactoryAugSca* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==5) {
-    sFactoryAugEmtl* formulation=NULL;
+    sFactoryAugEmtl* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   } else if(solveWith==6) {
-    sFactoryAugEmtlSym* formulation=NULL;
+    sFactoryAugEmtlSym* formulation=nullptr;
     qpgenstoch_solve( root, params, method, formulation);
   }
 

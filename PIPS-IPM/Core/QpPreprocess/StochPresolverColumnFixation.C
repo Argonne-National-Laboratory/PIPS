@@ -54,7 +54,7 @@ void StochPresolverColumnFixation::applyPresolving()
       // todo : include also objective coefficient into this criterion ?
       double absmax_row = 1.0;
 
-      if( (*currIxlowParent)[col] != 0.0 && (*currIxuppParent)[col] != 0.0)
+      if( !PIPSisZero((*currIxlowParent)[col]) && !PIPSisZero((*currIxuppParent)[col]))
       {
 
          assert(PIPSisLE(0.0, (*currxuppParent)[col] - (*currxlowParent)[col], tolerance4));
@@ -81,15 +81,10 @@ void StochPresolverColumnFixation::applyPresolving()
    /* child nodes */
    for(int node = 0; node < nChildren; ++node)
    {
-      if(presData.nodeIsDummy(node, EQUALITY_SYSTEM) && presData.nodeIsDummy(node, INEQUALITY_SYSTEM))
+      if(presData.nodeIsDummy(node) )
          continue;
-      else
-      {
-         assert(!presData.nodeIsDummy(node, EQUALITY_SYSTEM));
-         assert(!presData.nodeIsDummy(node, INEQUALITY_SYSTEM));
 
-         updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
-      }
+      updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
 
       /* linking variables */
       for( int col = 0; col < currgChild->n; ++col )
@@ -101,11 +96,11 @@ void StochPresolverColumnFixation::applyPresolving()
          // todo : include also objective coefficient into this criterion ?
          double absmax_row = 1.0;
 
-         if( (*currIxlowChild)[col] != 0.0 && (*currIxuppChild)[col] != 0.0)
+         if( !PIPSisZero((*currIxlowChild)[col]) && !PIPSisZero((*currIxuppChild)[col]) )
          {
             assert(PIPSisLE(0.0, (*currxuppChild)[col] - (*currxlowChild)[col]));
 
-            if( PIPSisLT( fabs((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, tolerance4) )
+            if( PIPSisLT( ((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, tolerance4) )
             {
                // verify if one of the bounds is integer:
                double intpart = 0.0;
@@ -130,9 +125,9 @@ void StochPresolverColumnFixation::applyPresolving()
 
 
 #ifndef NDEBUG
-   MPI_Allreduce(MPI_IN_PLACE, &fixed_columns, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   fixed_columns = PIPS_MPIgetSum(fixed_columns, MPI_COMM_WORLD);
    if( my_rank == 0 )
-      std::cout << "Fixed " << fixed_columns << " colums so far" << std::endl;
+      std::cout << "Fixed " << fixed_columns << " columns so far" << std::endl;
    if( my_rank == 0 )
       std::cout << "--- After column fixation presolving:" << std::endl;
    countRowsCols();

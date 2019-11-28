@@ -18,7 +18,7 @@ long long SimpleVectorBase<T>::numberOfNonzeros() const
 {
   long long i, count = 0;
   for( i = 0; i < this->n; i++ ) {
-    if( v[i] != 0 ) count++;
+    if( v[i] != (T) 0.0 ) count++;
   }
   return count;
 }
@@ -183,12 +183,18 @@ SimpleVectorBase<T>::~SimpleVectorBase()
 }
 
 template<typename T>
-SimpleVectorBase<T>* SimpleVectorBase<T>::cloneFull() const
+OoqpVectorBase<T>* SimpleVectorBase<T>::cloneFull() const
 {
    SimpleVectorBase<T>* clone = new SimpleVectorBase<T>(this->n);
    clone->copyFromArray(v);
 
    return clone;
+}
+
+template<typename T>
+OoqpVectorBase<T>* SimpleVectorBase<T>::clone() const
+{
+  return new SimpleVectorBase<T>(this->n);
 }
 
 template<typename T>
@@ -317,7 +323,6 @@ bool SimpleVectorBase<T>::componentEqual( const OoqpVectorBase<T>& vec, T tol) c
    }
    return true;
 }
-
 
 template<typename T>
 void SimpleVectorBase<T>::scalarMult( T num)
@@ -474,12 +479,16 @@ void SimpleVectorBase<double>::axpy( double alpha, const OoqpVectorBase<double>&
 template<typename T>
 void SimpleVectorBase<T>::axpy( T alpha, const OoqpVectorBase<T>& vec )
 {
-  assert(0 && "not implemented here");
+  assert( this->n == vec.length() );
+  const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
 
-  // assert( this->n == vec.length() );
-  // const SimpleVectorBase<T> & sv = dynamic_cast<const SimpleVectorBase<T> &>(vec);
-  // std::transform( this->v, this->v + this->n, sv.v, this->v,
-      // [alpha](T a, T b)->T { return a + alpha * b; });
+#ifndef PRE_CPP11
+  std::transform( this->v, this->v + this->n, sv.v, this->v,
+      [alpha](T a, T b)->T { return a + alpha * b; });
+#else
+  for(int i = 0; i < this->n; ++i)
+    this->v[i] += alpha*sv[i];
+#endif
 }
 
 template<typename T>
@@ -926,17 +935,18 @@ void SimpleVectorBase<T>::divideSome( const OoqpVectorBase<T>& div, const OoqpVe
 }
 
 template<typename T>
-void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<T>& select)
+void SimpleVectorBase<T>::removeEntries(const OoqpVectorBase<int>& select)
 {
-   const SimpleVectorBase<T>& selectSimple = dynamic_cast<const SimpleVectorBase<T>&>(select);
-   const T* const selectArr = selectSimple.v;
+   const SimpleVectorBase<int>& selectSimple = dynamic_cast<const SimpleVectorBase<int>&>(select);
+   const int* const selectArr = selectSimple.elements();
+   assert(selectArr);
 
    assert(this->n == selectSimple.length());
 
    int nNew = 0;
 
    for( int i = 0; i < this->n; i++ )
-      if( selectArr[i] != 0.0 )
+      if( selectArr[i] != 0 )
          v[nNew++] = v[i];
 
    this->n = nNew;
@@ -965,5 +975,4 @@ void SimpleVectorBase<T>::permuteEntries(const std::vector<unsigned int>& permve
 }
 
 template class SimpleVectorBase<int>;
-// template class SimpleVectorBase<bool>;
 template class SimpleVectorBase<double>;

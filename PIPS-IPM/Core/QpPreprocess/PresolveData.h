@@ -14,6 +14,8 @@
 #include "SimpleVectorHandle.h"
 #include "SparseStorageDynamic.h"
 #include "SystemType.h"
+#include "StochVectorUtilities.h"
+
 #include <algorithm>
 #include <list>
 #include <limits>
@@ -42,12 +44,13 @@ private:
 
       StochPostsolver* const postsolver;
 
-      // todo make these ints
-      bool outdated_lhsrhs;
-      bool outdated_nnzs;
-      bool outdated_linking_var_bounds;
-      bool outdated_activities;
-      bool outdated_obj_vector;
+      const int length_array_outdated_indicators;
+      bool* array_outdated_indicators;
+      bool& outdated_lhsrhs;
+      bool& outdated_nnzs;
+      bool& outdated_linking_var_bounds;
+      bool& outdated_activities;
+      bool& outdated_obj_vector;
 
       bool outdated_objvector;
 
@@ -56,16 +59,16 @@ private:
       int linking_rows_need_act_computation;
 
       /* number of non-zero elements of each row / column */
-      StochVectorHandle nnzs_row_A;
-      StochVectorHandle nnzs_row_C;
-      StochVectorHandle nnzs_col;
+      StochVectorBaseHandle<int> nnzs_row_A;
+      StochVectorBaseHandle<int> nnzs_row_C;
+      StochVectorBaseHandle<int> nnzs_col;
 
       /* size of non-zero changes array = #linking rows A + #linking rows C + # linking variables */
       int length_array_nnz_chgs;
-      double* array_nnz_chgs;
-      SimpleVectorHandle nnzs_row_A_chgs;
-      SimpleVectorHandle nnzs_row_C_chgs;
-      SimpleVectorHandle nnzs_col_chgs;
+      int* array_nnz_chgs;
+      SimpleVectorBaseHandle<int> nnzs_row_A_chgs;
+      SimpleVectorBaseHandle<int> nnzs_row_C_chgs;
+      SimpleVectorBaseHandle<int> nnzs_col_chgs;
 
       /* In the constructor all unbounded entries will be counted.
        * Unbounded entries mean variables with non-zero multiplier that are unbounded in either upper or lower direction.
@@ -76,14 +79,14 @@ private:
       StochVectorHandle actmax_eq_part;
       StochVectorHandle actmin_eq_part;
 
-      StochVectorHandle actmax_eq_ubndd;
-      StochVectorHandle actmin_eq_ubndd;
+      StochVectorBaseHandle<int> actmax_eq_ubndd;
+      StochVectorBaseHandle<int> actmin_eq_ubndd;
 
       StochVectorHandle actmax_ineq_part;
       StochVectorHandle actmin_ineq_part;
 
-      StochVectorHandle actmax_ineq_ubndd;
-      StochVectorHandle actmin_ineq_ubndd;
+      StochVectorBaseHandle<int> actmax_ineq_ubndd;
+      StochVectorBaseHandle<int> actmin_ineq_ubndd;
 
       /// changes in boundedness and activities of linking rows get stored and synchronized
       int lenght_array_act_chgs;
@@ -93,11 +96,11 @@ private:
       SimpleVectorHandle actmax_ineq_chgs;
       SimpleVectorHandle actmin_ineq_chgs;
 
-      double* array_act_unbounded_chgs;
-      SimpleVectorHandle actmax_eq_ubndd_chgs;
-      SimpleVectorHandle actmin_eq_ubndd_chgs;
-      SimpleVectorHandle actmax_ineq_ubndd_chgs;
-      SimpleVectorHandle actmin_ineq_ubndd_chgs;
+      int* array_act_unbounded_chgs;
+      SimpleVectorBaseHandle<int> actmax_eq_ubndd_chgs;
+      SimpleVectorBaseHandle<int> actmin_eq_ubndd_chgs;
+      SimpleVectorBaseHandle<int> actmax_ineq_ubndd_chgs;
+      SimpleVectorBaseHandle<int> actmin_ineq_ubndd_chgs;
 
       /* handling changes in bounds */
       int lenght_array_bound_chgs;
@@ -105,18 +108,15 @@ private:
       SimpleVectorHandle bound_chgs_A;
       SimpleVectorHandle bound_chgs_C;
 
-      /* changes in objective vector root node */
-      SimpleVectorHandle obj_vector_chgs;
-
       /* storing so far found singleton rows and columns */
-      std::vector<sROWINDEX> singleton_rows;
-      std::vector<sCOLINDEX> singleton_cols;
+      std::queue<sROWINDEX> singleton_rows;
+      std::queue<sCOLINDEX> singleton_cols;
 
-      int my_rank;
-      bool distributed;
+      const int my_rank;
+      const bool distributed;
 
       // number of children
-      int nChildren;
+      const int nChildren;
 
       // objective offset created by presolving
       double objOffset;
@@ -124,48 +124,57 @@ private:
       SimpleVectorHandle objective_vec_chgs;
 
       // store free variables which bounds are only implied by bound tightening to remove bounds later again
-      StochVectorHandle lower_bound_implied_by_system;
-      StochVectorHandle lower_bound_implied_by_row;
-      StochVectorHandle lower_bound_implied_by_node;
+      StochVectorBaseHandle<int> lower_bound_implied_by_system;
+      StochVectorBaseHandle<int> lower_bound_implied_by_row;
+      StochVectorBaseHandle<int> lower_bound_implied_by_node;
 
-      StochVectorHandle upper_bound_implied_by_system;
-      StochVectorHandle upper_bound_implied_by_row;
-      StochVectorHandle upper_bound_implied_by_node;
+      StochVectorBaseHandle<int> upper_bound_implied_by_system;
+      StochVectorBaseHandle<int> upper_bound_implied_by_row;
+      StochVectorBaseHandle<int> upper_bound_implied_by_node;
 
       // necessary ?
       int elements_deleted;
       int elements_deleted_transposed;
 
 public :
-      const sData& getPresProb() const { return *presProb; };
 
-      void getRowActivities(SystemType system_type, int node, BlockType block_type, int row,
-            double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
-
-      const StochVector& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
-      const StochVector& getNnzsRowC() const { return *nnzs_row_C; };
-      const StochVector& getNnzsCol() const { return *nnzs_col; };
-
-      int getNnzsRowA(int node, BlockType block_type, int row) const { return getSimpleVecRowFromStochVec(*nnzs_row_A, node, block_type)[row]; };
-      int getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecRowFromStochVec(*nnzs_row_C, node, block_type)[row]; };
-      int getNnzsCol(int node, int col) const { return getSimpleVecColFromStochVec(*nnzs_col, node)[col]; };
-
-      std::vector<sROWINDEX>& getSingletonRows() { return singleton_rows; };
-      std::vector<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
-
-      /* methods for initializing the object */
-   private:
-      // initialize row and column nnz counter
-      void initNnzCounter(StochVector& nnzs_row_A, StochVector& nnzs_row_C, StochVector& nnzs_col) const;
-      void initSingletons();
-      void setUndefinedVarboundsTo(double value);
-
-   public:
       PresolveData(const sData* sorigprob, StochPostsolver* postsolver);
       ~PresolveData();
 
+      const sData& getPresProb() const { return *presProb; };
+
+      double getObjOffset() const { return objOffset; };
+      int getNChildren() const { return nChildren; };
+
+      void getRowActivities(SystemType system_type, int node, bool linking, int row,
+            double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
+
+      const StochVectorBase<int>& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
+      const StochVectorBase<int>& getNnzsRowC() const { return *nnzs_row_C; };
+      const StochVectorBase<int>& getNnzsCol() const { return *nnzs_col; };
+
+      int getNnzsRowA(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_A, node, block_type)[row]; };
+      int getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_C, node, block_type)[row]; };
+      int getNnzsCol(int node, int col) const { return getSimpleVecFromColStochVec(*nnzs_col, node)[col]; };
+
+      std::queue<sROWINDEX>& getSingletonRows() { return singleton_rows; };
+      std::queue<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
+
       sData* finalize();
+
+      /* reset originally free variables' bounds to +- inf iff their current bounds are still implied by the problem */
+      void resetOriginallyFreeVarsBounds( const sData& orig_prob );
+
+      /* whether or not there is currently changes buffered that need synchronization among all procs */
       bool reductionsEmpty();
+
+      /// synchronizing the problem over all mpi processes if necessary
+      void allreduceLinkingVarBounds();
+      void allreduceAndApplyLinkingRowActivities();
+      void allreduceAndApplyNnzChanges();
+      void allreduceAndApplyBoundChanges();
+      void allreduceAndApplyObjVecChanges();
+      void allreduceObjOffset();
 
       /* compute and update activities */
       void recomputeActivities() { recomputeActivities(false); }
@@ -178,25 +187,6 @@ public :
        * activity of that row.
        */
       void recomputeActivities(bool linking_only);
-   private:
-      void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, SimpleVector& unbounded_min, SimpleVector& max_partact,
-            SimpleVector& unbounded_max, const SimpleVector& xlow, const SimpleVector& ixlow, const SimpleVector& xupp, const SimpleVector& ixupp) const;
-
-public:
-      // todo getter, setter for element access of nnz counter???
-      double getObjOffset() const { return objOffset; };
-
-      int getNChildren() const { return nChildren; };
-
-      void resetOriginallyFreeVarsBounds(const sData& orig_prob);
-
-      /// synchronizing the problem over all mpi processes if necessary
-      void allreduceLinkingVarBounds();
-      void allreduceAndApplyLinkingRowActivities();
-      void allreduceAndApplyNnzChanges();
-      void allreduceAndApplyBoundChanges();
-      void allreduceAndApplyObjVecChanges();
-      void allreduceObjOffset();
 
       /// interface methods called from the presolvers when they detect a possible modification
       // todo make bool and give feedback or even better - return some enum maybe?
@@ -225,14 +215,27 @@ public:
       bool verifyActivities();
       bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
 
-      bool nodeIsDummy(int node, SystemType system_type) const;
+      bool nodeIsDummy(int node) const;
       bool hasLinking(SystemType system_type) const;
 
       bool varBoundImpliedFreeBy( bool upper, int node_col, int col, SystemType system_type, int node_row, int row, bool linking_row );
+      /// methods for printing debug information
 private:
+      // initialize row and column nnz counter
+      void initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorBase<int>& nnzs_row_C, StochVectorBase<int>& nnzs_col) const;
+      void initSingletons();
+
+      void setUndefinedVarboundsTo(double value);
+
+      void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, 
+            SimpleVectorBase<int>& unbounded_min, SimpleVector& max_partact,
+            SimpleVectorBase<int>& unbounded_max, const SimpleVector& xlow, 
+            const SimpleVector& ixlow, const SimpleVector& xupp, 
+            const SimpleVector& ixupp) const ;
+
       long resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
 
-      void adjustMatrixRhsLhsBy(SystemType system_type, int node, BlockType block_type, int row_index, double value);
+      void adjustMatrixRhsLhsBy(SystemType system_type, int node, bool linking, int row_index, double value);
       /// methods for modifying the problem
       void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
       /// set bounds if new bound is better than old bound
@@ -243,40 +246,34 @@ private:
 
       bool updateBoundsVariable(int node, int col, double ubx, double lbx);
       void updateRowActivities(int node, int col, double ubx, double lbx, double old_ubx, double old_lbx);
+
+      void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col,
+      		 double ubx, double lbx, double old_ubx, double old_lbx);
+
       void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
             double old_bound, bool upper);
 
       double computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const;
-      void computeRowMinOrMaxActivity(SystemType system_type, int node, BlockType block_type, int row, bool upper);
+      void computeRowMinOrMaxActivity(SystemType system_type, int node, bool linking, int row, bool upper);
 
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow(SystemType system_type, int node, int row, bool linking);
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
 
-      void removeIndexRow(SystemType system_type, int node, BlockType block_type, int row_index, int amount);
-      void removeIndexColumn(int node, BlockType block_type, int col_index, int amount);
+      void reduceNnzCounterRow(SystemType system_type, int node, bool linking, int row_index, int amount);
+      void reduceNnzCounterColumn(int node, BlockType block_type, int col_index, int amount);
 
-/// methods for querying the problem in order to get certain structures etc.
+      /// methods for querying the problem in order to get certain structures etc. todo: move?
       SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
-      SimpleVector& getSimpleVecRowFromStochVec(const OoqpVector& ooqpvec, int node, BlockType block_type) const
-         { return getSimpleVecRowFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node, block_type); };
-      SimpleVector& getSimpleVecColFromStochVec(const OoqpVector& ooqpvec, int node) const
-         { return getSimpleVecColFromStochVec(dynamic_cast<const StochVector&>(ooqpvec), node); };
-      SimpleVector& getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const;
-      SimpleVector& getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const;
 
-/// methods for printing debug information
-public:
-      void printVarBoundStatistics(std::ostream& out) const;
-      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, BlockType block_type, int row) const;
-private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
             const SimpleVector& ixlow, const SimpleVector& xlow) const;
+      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const;
+      void printVarBoundStatistics(std::ostream& out) const;
 
-      /* stupid slow.. */
-      StochVectorHandle getRowAsStochVector(SystemType system_type, int node, int row, bool linking);
-      StochVectorHandle getColAsStochVector(SystemType system_type, int node, int col);
+      StochVectorHandle getRowAsStochVector(SystemType system_type, int node, int row, bool linking_row) const;
+      StochVectorHandle getColAsStochVector(SystemType system_type, int node, int col) const;
 
 
 };

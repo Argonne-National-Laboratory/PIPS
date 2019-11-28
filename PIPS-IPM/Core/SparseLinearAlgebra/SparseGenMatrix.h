@@ -12,6 +12,7 @@
 #include "SparseGenMatrixHandle.h"
 #include "SimpleVector.h"
 #include <vector>
+#include "pipsport.h"
 
 /** Represents sparse non-symmetric, possibly non-square matrices stored in
  *  row-major Harwell-Boeing format.
@@ -133,18 +134,18 @@ public:
   int * jcolM() { return mStorage->jcolM; }
   double * M() { return mStorage->M; }
 
-  SparseStorageDynamic * getStorageDynamic() { assert(mStorageDynamic != NULL); return mStorageDynamic; }
-  const SparseStorageDynamic * getStorageDynamic() const { assert(mStorageDynamic != NULL); return mStorageDynamic; }
-  SparseStorageDynamic& getStorageDynamicRef() { assert(mStorageDynamic != NULL); return *mStorageDynamic; }
-  const SparseStorageDynamic& getStorageDynamicRef() const { assert(mStorageDynamic != NULL); return *mStorageDynamic; }
-  SparseStorageDynamic * getStorageDynamicTransposed() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
-  const SparseStorageDynamic * getStorageDynamicTransposed() const { assert(m_Mt != NULL && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
-  SparseStorageDynamic& getStorageDynamicTransposedRef() { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
-  const SparseStorageDynamic& getStorageDynamicTransposedRef() const { assert(m_Mt != NULL && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
-  bool hasDynamicStorage() const { return (mStorageDynamic != NULL); };
+  SparseStorageDynamic * getStorageDynamic() { assert(mStorageDynamic != nullptr); return mStorageDynamic; }
+  const SparseStorageDynamic * getStorageDynamic() const { assert(mStorageDynamic != nullptr); return mStorageDynamic; }
+  SparseStorageDynamic& getStorageDynamicRef() { assert(mStorageDynamic != nullptr); return *mStorageDynamic; }
+  const SparseStorageDynamic& getStorageDynamicRef() const { assert(mStorageDynamic != nullptr); return *mStorageDynamic; }
+  SparseStorageDynamic * getStorageDynamicTransposed() { assert(m_Mt != nullptr && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
+  const SparseStorageDynamic * getStorageDynamicTransposed() const { assert(m_Mt != nullptr && m_Mt->hasDynamicStorage() ); return m_Mt->getStorageDynamic(); }
+  SparseStorageDynamic& getStorageDynamicTransposedRef() { assert(m_Mt != nullptr && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
+  const SparseStorageDynamic& getStorageDynamicTransposedRef() const { assert(m_Mt != nullptr && m_Mt->hasDynamicStorage()); return m_Mt->getStorageDynamicRef(); }
+  bool hasDynamicStorage() const { return (mStorageDynamic != nullptr); };
 
-  virtual void addNnzPerRow(OoqpVector& nnzVec);
-  virtual void addNnzPerCol(OoqpVector& nnzVec);
+  virtual void addNnzPerRow(OoqpVectorBase<int>& nnzVec);
+  virtual void addNnzPerCol(OoqpVectorBase<int>& nnzVec);
 
   /** fill vector with absolute minimum/maximum value of each row */
   virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
@@ -157,7 +158,7 @@ public:
   virtual void addRowSums( OoqpVector& sumVec );
   virtual void addColSums( OoqpVector& sumVec );
 
-  void initStaticStorageFromDynamic(const OoqpVector& rowNnzVec, const OoqpVector* colNnzVec);
+  void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>* colNnzVec);
 
   void permuteRows(const std::vector<unsigned int>& permvec);
 
@@ -172,15 +173,15 @@ public:
 
   SparseGenMatrix& getTranspose();
 
-  void deleteEmptyRowsCols(const OoqpVector& rowNnzVec, const OoqpVector& colNnzVec);
+  void deleteEmptyRowsCols(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec);
 
   void deleteEmptyRows(int*& orgIndex);
 
   void fromGetRowsBlock(const int* rowIndices, int nRows, int arrayLineSize, int arrayLineOffset,
-        double* rowsArrayDense, int* rowSparsity = NULL);
+        double* rowsArrayDense, int* rowSparsity = nullptr);
 
   void fromGetColsBlock(const int* colIndices, int nCols, int arrayLineSize, int arrayLineOffset,
-        double* colsArrayDense, int* rowSparsity = NULL);
+        double* colsArrayDense, int* rowSparsity = nullptr);
 
   bool hasTransposed() const;
 

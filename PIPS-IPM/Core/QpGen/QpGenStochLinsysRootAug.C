@@ -1,9 +1,10 @@
 #include "QpGenStochLinsysRootAug.h"
 #include "DeSymIndefSolver.h"
 #include "QpGenStochData.h"
+#include "pipsport.h"
 
 QpGenStochLinsysRootAug::QpGenStochLinsysRootAug(QpGenStoch * factory_, QpGenStochData * prob_)
-  : QpGenStochLinsysRoot(factory_, prob_), UtV(NULL)
+  : QpGenStochLinsysRoot(factory_, prob_), UtV(nullptr)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
 
@@ -17,7 +18,7 @@ QpGenStochLinsysRootAug::QpGenStochLinsysRootAug(QpGenStoch* factory_,
 					   OoqpVector* dq_,
 					   OoqpVector* nomegaInv_,
 					   OoqpVector* rhs_)
-  : QpGenStochLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), UtV(NULL)
+  : QpGenStochLinsysRoot(factory_, prob_, dd_, dq_, nomegaInv_, rhs_), UtV(nullptr)
 { 
   prob_->getLocalSizes(locnx, locmy, locmz);
 
@@ -151,7 +152,7 @@ void QpGenStochLinsysRootAug::Dsolve( QpGenStochData *prob, OoqpVector& x )
 
 void QpGenStochLinsysRootAug::allocUtV()
 {
-  if(UtV==NULL)
+  if(UtV==nullptr)
     UtV = new DenseSymMatrix(locnx);
 }
 
@@ -184,7 +185,7 @@ void QpGenStochLinsysRootAug::initializeUtV()
 }
 void QpGenStochLinsysRootAug::deleteUtV()
 {
-  delete UtV; UtV = NULL; 
+  delete UtV; UtV = nullptr; 
 }
 
 

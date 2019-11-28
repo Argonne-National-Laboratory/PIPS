@@ -2,6 +2,7 @@
  * Authors: Cosmin Petra, Olaf Schenk (USI), Dmitry Mikushin (USI)    *
  * (C) 2013 Argonne National Laboratory. See Copyright Notification   */
 
+#include "pipsport.h"
 #include "DeSymIndefSolverMagma.h"
 #include "SimpleVector.h"
 #include <cassert>
@@ -77,19 +78,19 @@ DeSymIndefSolverMagma::DeSymIndefSolverMagma( DenseSymMatrix * dm )
   int size = mStorage->n;
   ipiv = new int[size];
   //lwork = -1;
-  //work = NULL;
+  //work = nullptr;
   sparseMat = 0;
 
 
 #ifdef GPUCODE
-  mFact_gpu = NULL;
+  mFact_gpu = nullptr;
   //CUDA_SAFE_CALL(cudaMalloc(&mFact_gpu, sizeof(double) * size * size));
   cudaMalloc(&mFact_gpu, sizeof(double) * size * size);
-  assert(mFact_gpu!=NULL);
+  assert(mFact_gpu!=nullptr);
 
-  mRhs_gpu = NULL;
+  mRhs_gpu = nullptr;
   cudaMalloc(&mRhs_gpu, sizeof(double) * size);
-  assert(mRhs_gpu!=NULL);
+  assert(mRhs_gpu!=nullptr);
 #else
   cout << "DeSymIndefSolverMagma used but GPU code is not enabled" << endl;
 #endif

@@ -6,6 +6,7 @@
 #include "GondzioSolver.h"
 #include "QpGenSparseMa57.h"
 #include "QpGenStochAugExt.h"
+#include "pipsport.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -234,8 +235,8 @@ void stochSolve(int argc, char *argv[], int ns, int nt, int nx, int printx)
   StochRunParams* params = defaultStochRunParams();
   params->printx = printx;
 
-  MehrotraStochSolver* method=NULL;
-  QpGenStochAugExt* formulation=NULL;
+  MehrotraStochSolver* method=nullptr;
+  QpGenStochAugExt* formulation=nullptr;
   qpgenstoch_solve( root, params, method, formulation);
   
   delete params;

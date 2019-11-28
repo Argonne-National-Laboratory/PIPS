@@ -60,14 +60,11 @@ void StochPresolverBoundStrengthening::applyPresolving()
       for( int node = 0; node < nChildren; node++)
       {
          // dummy child?
-         if( !presData.nodeIsDummy(node, EQUALITY_SYSTEM) )
+         if( !presData.nodeIsDummy(node) )
          {
             if( strenghtenBoundsInNode(EQUALITY_SYSTEM, node) )
               tightened = true;
-         }
 
-         if( !presData.nodeIsDummy(node, INEQUALITY_SYSTEM) )
-         {
             if( strenghtenBoundsInNode(INEQUALITY_SYSTEM, node) )
               tightened = true;
          }
@@ -81,7 +78,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    presData.allreduceAndApplyLinkingRowActivities();
 
 #ifndef NDEBUG
-   MPI_Allreduce(MPI_IN_PLACE, &tightenings, 1, MPI_LONG_LONG, MPI_SUM, MPI_COMM_WORLD);
+   tightenings = PIPS_MPIgetSum(tightenings, MPI_COMM_WORLD);
    if( my_rank == 0 )
       std::cout << "--- After " << iter << " rounds of bound strengthening and " << tightenings << " times of tightening bounds:" << std::endl;
    countRowsCols();
@@ -101,18 +98,18 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
 
    bool tightened = false;
 
-   if( strenghtenBoundsInBlock(system_type, node, LINKING_VARS_BLOCK) )
+   if( strenghtenBoundsInBlock(system_type, node, B_MAT) )
       tightened = true;
 
    if( presData.hasLinking(system_type) )
    {
-      if( strenghtenBoundsInBlock(system_type, node, LINKING_CONS_BLOCK) )
+      if( strenghtenBoundsInBlock(system_type, node, BL_MAT) )
         tightened = true;
    }
 
    if(node != -1)
    {
-      if( strenghtenBoundsInBlock(system_type, node, CHILD_BLOCK) )
+      if( strenghtenBoundsInBlock(system_type, node, A_MAT) )
          tightened = true;
    }
 
@@ -134,30 +131,32 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    const double numeric_limit_bounds = 1e12; // todo
    bool tightened = false;
 
-   const SimpleVector& xlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxlowParent : *currxlowChild;
-   const SimpleVector& ixlow = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxlowParent : *currIxlowChild;
-   const SimpleVector& xupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currxuppParent : *currxuppChild;
-   const SimpleVector& ixupp = (node == -1 || block_type == LINKING_VARS_BLOCK) ? *currIxuppParent : *currIxuppChild;
+   const SimpleVector& xlow = (node == -1 || block_type == A_MAT) ? *currxlowParent : *currxlowChild;
+   const SimpleVector& ixlow = (node == -1 || block_type == A_MAT) ? *currIxlowParent : *currIxlowChild;
+   const SimpleVector& xupp = (node == -1 || block_type == A_MAT) ? *currxuppParent : *currxuppChild;
+   const SimpleVector& ixupp = (node == -1 || block_type == A_MAT) ? *currIxuppParent : *currIxuppChild;
 
-   const SimpleVector& iclow = (block_type == LINKING_CONS_BLOCK) ? *currIclowLink : *currIclow;
-   const SimpleVector& clow = (block_type == LINKING_CONS_BLOCK) ? *currIneqLhsLink : *currIneqLhs;
-   const SimpleVector& icupp = (block_type == LINKING_CONS_BLOCK) ? *currIcuppLink : *currIcupp;
-   const SimpleVector& cupp = (block_type == LINKING_CONS_BLOCK) ? *currIneqRhsLink : *currIneqRhs;
-   const SimpleVector& rhs = (block_type == LINKING_CONS_BLOCK) ? *currEqRhsLink : *currEqRhs;
+   const SimpleVector& iclow = (block_type == BL_MAT) ? *currIclowLink : *currIclow;
+   const SimpleVector& clow = (block_type == BL_MAT) ? *currIneqLhsLink : *currIneqLhs;
+   const SimpleVector& icupp = (block_type == BL_MAT) ? *currIcuppLink : *currIcupp;
+   const SimpleVector& cupp = (block_type == BL_MAT) ? *currIneqRhsLink : *currIneqRhs;
+   const SimpleVector& rhs = (block_type == BL_MAT) ? *currEqRhsLink : *currEqRhs;
 
-   const SimpleVector& nnzs_row = (block_type == LINKING_CONS_BLOCK) ? *currNnzRowLink : *currNnzRow;
+   const SimpleVectorBase<int>& nnzs_row = (block_type == BL_MAT) ? *currNnzRowLink : *currNnzRow;
 
    const SparseStorageDynamic* mat;
 
-   if(block_type == LINKING_CONS_BLOCK)
+   if(block_type == BL_MAT)
       mat = currBlmat;
-   else if(block_type == LINKING_VARS_BLOCK)
-      mat = currAmat;
-   else
+   else if(block_type == A_MAT)
    {
       assert(node != -1);
-      mat = currBmat;
+      mat = currAmat;
    }
+   else
+      mat = currBmat;
+
+   const bool linking = (block_type == BL_MAT);
    assert(mat);
 
    /* for every row in the current block and every entry in said row check if we can improve on the currently known bounds */
@@ -166,7 +165,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
 
-      presData.getRowActivities(system_type, node, block_type, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
+      presData.getRowActivities(system_type, node, linking, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       /* two or more unbounded variables make it impossible to derive new bounds so skip the row completely */
       if( actmin_ubndd >= 2 && actmax_ubndd >= 2)
@@ -195,21 +194,21 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          double actmax_row_without_curr = std::numeric_limits<double>::infinity();
 
          /* subtract current entry from row activity */
-         if(actmin_ubndd == 0.0)
+         if(actmin_ubndd == 0)
             actmin_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmin_part - a_ik * xupp[col] : actmin_part - a_ik * xlow[col];
-         else if(actmin_ubndd == 1.0)
+         else if(actmin_ubndd == 1)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            if( (PIPSisLE(a_ik, 0.0) && ixupp[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixlow[col] == 0.0) )
+            if( (PIPSisLE(a_ik, 0.0) && PIPSisZero(ixupp[col])) || (PIPSisLE(0.0, a_ik) && PIPSisZero(ixlow[col])) )
                actmin_row_without_curr = actmin_part;
          }
 
-         if(actmax_ubndd == 0.0)
+         if(actmax_ubndd == 0)
             actmax_row_without_curr = ( PIPSisLE(a_ik, 0) ) ? actmax_part - a_ik * xlow[col] : actmax_part - a_ik * xupp[col];
-         else if(actmax_ubndd == 1.0)
+         else if(actmax_ubndd == 1)
          {
             /* if the current entry is the unbounded one we can deduce bounds and the partial activity is the row activity excluding the current col */
-            if( (PIPSisLE(a_ik, 0.0) && ixlow[col] == 0.0) || (PIPSisLE(0.0, a_ik) && ixupp[col] == 0.0) )
+            if( (PIPSisLE(a_ik, 0.0) && PIPSisZero(ixlow[col])) || (PIPSisLE(0.0, a_ik) && PIPSisZero(ixupp[col])) )
                actmax_row_without_curr = actmax_part;
          }
 
@@ -244,16 +243,16 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          {
             if( PIPSisLT(0.0, a_ik) )
             {
-               if( icupp[row] != 0.0 )
+               if( !PIPSisZero(icupp[row]) )
                   ubx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
-               if( iclow[row] != 0.0 )
+               if( !PIPSisZero(iclow[row]) )
                   lbx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
             else
             {
-               if( icupp[row] != 0.0 )
+               if( !PIPSisZero(icupp[row]) )
                   lbx_new = (cupp[row] - actmin_row_without_curr) / a_ik;
-               if( iclow[row] != 0.0 )
+               if( !PIPSisZero(iclow[row]) )
                   ubx_new = (clow[row] - actmax_row_without_curr) / a_ik;
             }
          }

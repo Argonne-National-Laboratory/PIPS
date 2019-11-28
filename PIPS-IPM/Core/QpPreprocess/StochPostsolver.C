@@ -7,7 +7,9 @@
 
 #include "OoqpVector.h"
 #include "StochPostsolver.h"
+#include "StochVectorUtilities.h"
 #include "pipsdef.h"
+#include "pipsport.h"
 
 #include <limits>
 #include <stdexcept>
@@ -15,15 +17,16 @@
 
 StochPostsolver::StochPostsolver(const sData& original_problem) :
    QpPostsolver(original_problem),
-   n_rows_original(original_problem.my + original_problem.mz), 
+   my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
+   distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
+   n_rows_original(original_problem.my + original_problem.mz),
    n_cols_original(original_problem.nx),
-   padding_origcol( dynamic_cast<StochVector*>(original_problem.g->clone()) ),
-   padding_origrow_equality( dynamic_cast<StochVector*>(original_problem.bA->clone()) ),
-   padding_origrow_inequality( dynamic_cast<StochVector*>(original_problem.bu->clone()) ),
+   padding_origcol( cloneStochVector<double, int>(*original_problem.g) ),
+   padding_origrow_equality( cloneStochVector<double, int>(*original_problem.bA) ),
+   padding_origrow_inequality( cloneStochVector<double, int>(*original_problem.bu) ),
    stored_rows( dynamic_cast<const StochGenMatrix&>(*original_problem.A).cloneEmptyRows(true) )
 {
    assert(stored_rows->children.size() == dynamic_cast<const StochGenMatrix&>(*original_problem.A).children.size() );
-   getRankDistributed(MPI_COMM_WORLD, my_rank, distributed);
 
    padding_origcol->setToConstant(1);
    padding_origrow_equality->setToConstant(1);
@@ -54,14 +57,13 @@ void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType 
 void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, double rhs, int node_col, int col, 
    const StochGenMatrix& matrix_row )
 {
-   BlockType block_type = (linking_row) ? LINKING_CONS_BLOCK : CHILD_BLOCK;
    //todo INEQUALITY system?  
    assert(system_type == EQUALITY_SYSTEM);
-   assert( getSimpleVecRowFromStochVec(*padding_origrow_equality, node_row, block_type)[row] == 1 );
-   assert( getSimpleVecColFromStochVec(*padding_origcol, node_col)[col] == 1 );
+   assert( getSimpleVecFromRowStochVec(*padding_origrow_equality, node_row, linking_row)[row] == 1 );
+   assert( getSimpleVecFromColStochVec(*padding_origcol, node_col)[col] == 1 );
 
-   getSimpleVecRowFromStochVec(*padding_origrow_equality, node_row, block_type)[row] = -1;
-   getSimpleVecColFromStochVec(*padding_origcol, node_col)[col] = -1;
+   getSimpleVecFromRowStochVec(*padding_origrow_equality, node_row, linking_row)[row] = -1;
+   getSimpleVecFromColStochVec(*padding_origcol, node_col)[col] = -1;
    
    // save dual postsolve info
    // save row for primal postsolve info
@@ -82,13 +84,13 @@ void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int nod
 void StochPostsolver::notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2, 
    int node_var2, double scalar, double translation)
 {
-   assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node_var2)[var2], 1) );
-   assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node_var1)[var1], 1) );
+   assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node_var2)[var2], 1) );
+   assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node_var1)[var1], 1) );
 
    reductions.push_back(PARALLEL_ROW_SUBSTITUTION);
 
    indices.push_back( INDEX(node_var2, var2) );
-   getSimpleVecColFromStochVec(*padding_origcol, node_var2)[var2] = -1;
+   getSimpleVecFromColStochVec(*padding_origcol, node_var2)[var2] = -1;
 
    values.push_back( var1 );
    values.push_back( node_var1 );
@@ -102,9 +104,9 @@ void StochPostsolver::notifyParallelRowSubstitution(SystemType system_type, int 
 void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col,
    const std::vector<double>& values_col)
 {
-   assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1 );
-   getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
    // todo for dual postsolve
+   assert( getSimpleVecFromColStochVec(*padding_origcol, node)[col] == 1 );
+   getSimpleVecFromColStochVec(*padding_origcol, node)[col] = -1;
    // todo assert correct format
    // todo add matrix of columns
    /* store current upper and lower bounds of x and the local column */
@@ -118,8 +120,12 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 
 void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value)
 {
-   assert( getSimpleVecColFromStochVec(*padding_origcol, node)[col] == 1);
-   getSimpleVecColFromStochVec(*padding_origcol, node)[col] = -1;
+   // TODO
+   if( getSimpleVecFromColStochVec(*padding_origcol, node)[col] != 1 )
+      assert(false);
+
+   assert( getSimpleVecFromColStochVec(*padding_origcol, node)[col] == 1);
+   getSimpleVecFromColStochVec(*padding_origcol, node)[col] = -1;
    assert( std::fabs(value) < 1e10 );
 
    reductions.push_back( FIXED_EMPTY_COLUMN );   
@@ -219,10 +225,10 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             const double value = values[first_val];
 
             assert( -1 <= node && node < static_cast<int>(x_vec.children.size()) );
-            assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1 );
+            assert( getSimpleVecFromColStochVec(*padding_origcol, node)[column] == -1 );
 
-            getSimpleVecColFromStochVec(*padding_origcol, node)[column] = 1;
-            getSimpleVecColFromStochVec(x_vec, node)[column] = value;
+            getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
+            getSimpleVecFromColStochVec(x_vec, node)[column] = value;
 
             break;
          }
@@ -235,10 +241,10 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             const double value = values.at(first_val);
 
             assert( -1 <= node && node < static_cast<int>(x_vec.children.size()) );
-            assert( getSimpleVecColFromStochVec(*padding_origcol, node)[column] == -1 );
+            assert( getSimpleVecFromColStochVec(*padding_origcol, node)[column] == -1 );
 
-            getSimpleVecColFromStochVec(*padding_origcol, node)[column] = 1;
-            getSimpleVecColFromStochVec(x_vec, node)[column] = value;
+            getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
+            getSimpleVecFromColStochVec(x_vec, node)[column] = value;
 
             break;
          }
@@ -272,7 +278,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             const int column = indices.at(i).index;
             const int node_column = indices.at(i).node;
 
-            assert( PIPSisEQ( getSimpleVecColFromStochVec( *padding_origcol, node_column)[column], -1) );
+            assert( PIPSisEQ( getSimpleVecFromColStochVec( *padding_origcol, node_column)[column], -1) );
             assert( first_val == last_val - 5 );
 
             const bool linking_row = ( PIPSisEQ(values.at(first_val), 1.0) ) ? true : false;
@@ -284,13 +290,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             // todo INEQUALITY_SYSTEM
             // const SystemType system_type = EQUALITY_SYSTEM; todo : needed?
 
-            getSimpleVecColFromStochVec( *padding_origcol, node_column)[column] = 1;
-            getSimpleVecColFromStochVec( x_vec, node_column)[column] = 0;
+            getSimpleVecFromColStochVec( *padding_origcol, node_column)[column] = 1;
+            getSimpleVecFromColStochVec( x_vec, node_column)[column] = 0;
 
             double value_row = stored_rows->localRowTimesVec( x_vec, node_row, row_idx, linking_row);
             assert( std::abs(value_row) != std::numeric_limits<double>::infinity() );
 
-            getSimpleVecColFromStochVec( x_vec, node_column)[column] = rhs - value_row;            
+            getSimpleVecFromColStochVec( x_vec, node_column)[column] = rhs - value_row;            
 
             break;
          }
@@ -299,7 +305,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             const int column = indices.at(i).index;
             const int node = indices.at(i).node;
 
-            assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node)[column], -1) );
+            assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node)[column], -1) );
             assert( first_val == last_val - 4 );
 
             const int col_sub = values.at(first_val);
@@ -307,11 +313,11 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             const double scalar = values.at(first_val + 2);
             const double translation = values.at(first_val + 3);
 
-            assert( PIPSisEQ( getSimpleVecColFromStochVec(*padding_origcol, node_sub)[col_sub], 1) );
-            const double val_sub = getSimpleVecColFromStochVec(x_vec, node_sub)[col_sub]; 
+            assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node_sub)[col_sub], 1) );
+            const double val_sub = getSimpleVecFromColStochVec(x_vec, node_sub)[col_sub]; 
 
-            getSimpleVecColFromStochVec(*padding_origcol, node)[column] = 1;
-            getSimpleVecColFromStochVec(x_vec, node)[column] = scalar * val_sub + translation;
+            getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
+            getSimpleVecFromColStochVec(x_vec, node)[column] = scalar * val_sub + translation;
 
             break;
          }
@@ -348,7 +354,7 @@ void StochPostsolver::setOriginalVarsFromReduced(const sVars& reduced_vars, sVar
    /* x */
    const StochVector& x_reduced = dynamic_cast<const StochVector&>(*reduced_vars.x);
    StochVector& x_orig = dynamic_cast<StochVector&>(*original_vars.x);
-   setOriginalValuesFromReduced(x_orig, x_reduced, *padding_origcol);
+   setOriginalValuesFromReduced<>(x_orig, x_reduced, *padding_origcol);
 
    // /* s */
    // const StochVector& s_reduced = dynamic_cast<const StochVector&>(*reduced_vars.s);
@@ -408,13 +414,16 @@ void StochPostsolver::setOriginalVarsFromReduced(const sVars& reduced_vars, sVar
 
 
 /// fills vars_orig with vars_reduced padded with zeros - padding is done via the padding_map
-void StochPostsolver::setOriginalValuesFromReduced(StochVector& original_vector, const StochVector& reduced_vector, const StochVector& padding_original) const
+template <typename T>
+void StochPostsolver::setOriginalValuesFromReduced(StochVectorBase<T>& original_vector,
+   const StochVectorBase<T>& reduced_vector,
+   const StochVectorBase<int>& padding_original) const
 {
    assert( reduced_vector.children.size() == original_vector.children.size() );
    assert( padding_original.children.size() == reduced_vector.children.size() );
-   assert( reduced_vector.vec != NULL && original_vector.vec != NULL && padding_original.vec != NULL );
-   assert( (reduced_vector.vecl != NULL && original_vector.vecl != NULL && padding_original.vecl != NULL)
-         || (reduced_vector.vecl == NULL && original_vector.vecl == NULL && padding_original.vecl == NULL) );
+   assert( reduced_vector.vec != nullptr && original_vector.vec != nullptr && padding_original.vec != nullptr );
+   assert( (reduced_vector.vecl != nullptr && original_vector.vecl != nullptr && padding_original.vecl != nullptr)
+         || (reduced_vector.vecl == nullptr && original_vector.vecl == nullptr && padding_original.vecl == nullptr) );
 
    if( reduced_vector.isKindOf(kStochDummy) )
    {
@@ -424,29 +433,32 @@ void StochPostsolver::setOriginalValuesFromReduced(StochVector& original_vector,
 
    /* root node */
    /* vec */
-   setOriginalValuesFromReduced( dynamic_cast<SimpleVector&>(*original_vector.vec), dynamic_cast<const SimpleVector&>(*reduced_vector.vec),
-      dynamic_cast<const SimpleVector&>(*padding_original.vec));
+   setOriginalValuesFromReduced( dynamic_cast<SimpleVectorBase<T>&>(*original_vector.vec), dynamic_cast<const SimpleVectorBase<T>&>(*reduced_vector.vec),
+      dynamic_cast<const SimpleVectorBase<int>&>(*padding_original.vec));
 
    /* vecl */
    if( reduced_vector.vecl )
    {
-      setOriginalValuesFromReduced( dynamic_cast<SimpleVector&>(*original_vector.vecl), dynamic_cast<const SimpleVector&>(*reduced_vector.vecl),
-         dynamic_cast<const SimpleVector&>(*padding_original.vecl));
+      setOriginalValuesFromReduced( dynamic_cast<SimpleVectorBase<T>&>(*original_vector.vecl), dynamic_cast<const SimpleVectorBase<T>&>(*reduced_vector.vecl),
+         dynamic_cast<const SimpleVectorBase<int>&>(*padding_original.vecl));
    }
 
    /* child nodes */
-   for( unsigned int i = 0; i < reduced_vector.children.size(); ++i )
+   for( int i = 0; i < static_cast<int>(reduced_vector.children.size()); ++i )
    {
       setOriginalValuesFromReduced( *original_vector.children[i],  *reduced_vector.children[i], *padding_original.children[i] );
    }
 }
 
-void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector, const SimpleVector& reduced_vector, const SimpleVector& padding_original) const
+template <typename T>
+void StochPostsolver::setOriginalValuesFromReduced(SimpleVectorBase<T>& original_vector,
+   const SimpleVectorBase<T>& reduced_vector,
+   const SimpleVectorBase<int>& padding_original) const
 {
    assert( original_vector.length() == padding_original.length() );
 
-   unsigned int col_reduced = 0; 
-   for(unsigned int i = 0; i < padding_original.length(); ++i)
+   int col_reduced = 0; 
+   for(int i = 0; i < padding_original.length(); ++i)
    {
       if(padding_original[i] == -1)
       {
@@ -462,55 +474,4 @@ void StochPostsolver::setOriginalValuesFromReduced(SimpleVector& original_vector
 
    /* assert all entries are set */
    assert(col_reduced == reduced_vector.length());
-}
-
-/// todo : code duplication with presolveData.h -- move to StochVector at some point ?
-SimpleVector& StochPostsolver::getSimpleVecRowFromStochVec(const StochVector& stochvec, int node, BlockType block_type) const
-{
-   assert(-1 <= node && node < static_cast<int>(stochvec.children.size()));
-
-   if(node == -1)
-   {
-      if(block_type == LINKING_CONS_BLOCK)
-      {
-         assert(stochvec.vecl);
-         return dynamic_cast<SimpleVector&>(*(stochvec.vecl));
-      }
-      else
-      {
-         assert(stochvec.vec);
-         return dynamic_cast<SimpleVector&>(*(stochvec.vec));
-      }
-   }
-   else
-   {
-      if(block_type == CHILD_BLOCK || block_type == LINKING_VARS_BLOCK)
-      {
-         assert(stochvec.children[node]->vec);
-         return dynamic_cast<SimpleVector&>(*(stochvec.children[node]->vec));
-      }
-      else
-      {
-         assert(stochvec.vecl);
-         return dynamic_cast<SimpleVector&>(*(stochvec.vecl));
-      }
-   }
-}
-
-SimpleVector& StochPostsolver::getSimpleVecColFromStochVec(const StochVector& stochvec, int node) const
-{
-   assert(-1 <= node && node < static_cast<int>(stochvec.children.size()));
-
-   if(node == -1)
-   {
-      assert(stochvec.vecl == NULL);
-      assert(stochvec.vec);
-      return dynamic_cast<SimpleVector&>(*(stochvec.vec));
-   }
-   else
-   {
-      assert(stochvec.children[node]->vecl == NULL);
-      assert(stochvec.children[node]->vec);
-      return dynamic_cast<SimpleVector&>(*(stochvec.children[node]->vec));
-   }
 }

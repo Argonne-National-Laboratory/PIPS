@@ -109,7 +109,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
   QpGenData * prob = (QpGenData *) prob_in;
 
   double componentNorm, norm=0.0, gap=0.0;
-   
+ 
   prob->getg( *rQ );
   prob->Qmult( 1.0, *rQ,  1.0, *vars->x );
 
@@ -238,7 +238,7 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in)
     //    cout << " rw norm = " << componentNorm << endl;
     if( componentNorm > norm ) norm = componentNorm;
   }
-  
+   
   mDualityGap = gap;
   mResidualNorm = norm; 
 }

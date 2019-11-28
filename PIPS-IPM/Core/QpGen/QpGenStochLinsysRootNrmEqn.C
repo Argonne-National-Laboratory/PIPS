@@ -3,15 +3,16 @@
 #include "DeSymIndefSolver.h"
 #include "DeSymPSDSolver.h"
 #include "QpGenStochData.h"
+#include "pipsport.h"
 
 QpGenStochLinsysRootNrmEqn::QpGenStochLinsysRootNrmEqn(QpGenStoch * factory_, 
 						       QpGenStochData * prob)
   : QpGenStochLinsysRootAugRed(),
-    AQinvAt(NULL), solver2(NULL)
+    AQinvAt(nullptr), solver2(nullptr)
 { 
   factory = factory_;
-  kkt = NULL;
-  solver = NULL;
+  kkt = nullptr;
+  solver = nullptr;
 
   nx = prob->nx; my = prob->my; mz = prob->mz;
   ixlow = prob->ixlow;
@@ -41,10 +42,10 @@ QpGenStochLinsysRootNrmEqn::QpGenStochLinsysRootNrmEqn(QpGenStoch * factory_,
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
   //QpGenStochLinsyRootAugRed
-  CtDC=NULL;
+  CtDC=nullptr;
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
   redRhs = new SimpleVector(locnx+locmy+locmz);
@@ -59,7 +60,7 @@ QpGenStochLinsysRootNrmEqn::QpGenStochLinsysRootNrmEqn(QpGenStoch* factory_,
 					   OoqpVector* nomegaInv_,
 					   OoqpVector* rhs_)
   : QpGenStochLinsysRootAugRed(), 
-    AQinvAt(NULL), solver2(NULL)
+    AQinvAt(nullptr), solver2(nullptr)
 { 
   //QpGenStochLinsy
   factory = factory_;
@@ -95,10 +96,10 @@ QpGenStochLinsysRootNrmEqn::QpGenStochLinsysRootNrmEqn(QpGenStoch* factory_,
 
   //QpGenStochLinsyRootAug
   prob->getLocalSizes(locnx, locmy, locmz);
-  UtV = NULL;
+  UtV = nullptr;
 
     //QpGenStochLinsyRootAugRed
-  CtDC=NULL;
+  CtDC=nullptr;
   kkt = createKKT(prob);
   solver = createSolver(prob, kkt);
   redRhs = new SimpleVector(locnx+locmy+locmz);
@@ -215,8 +216,8 @@ void QpGenStochLinsysRootNrmEqn::factor2(QpGenStochData *prob, Variables *vars)
   //          - U=Li^{-1} Gi^T
   //          - V=Di^{-1} U
 
-  DenseGenMatrix* U = NULL;
-  DenseGenMatrix* V = NULL;
+  DenseGenMatrix* U = nullptr;
+  DenseGenMatrix* V = nullptr;
   
 
   stochNode->resMon.recSchurMultLocal_start();
@@ -231,7 +232,7 @@ void QpGenStochLinsysRootNrmEqn::factor2(QpGenStochData *prob, Variables *vars)
     // Allocate  U if necessary. If the sizes of 
     // the previous child are good, reuse the mem.
 
-    if(children[it]->mpiComm == MPI_COMM_NULL)
+    if(children[it]->mpiComm == MPI_COMM_nullptr)
       continue;
     children[it]->stochNode->resMon.recFactTmChildren_start();    
 
@@ -314,11 +315,11 @@ void QpGenStochLinsysRootNrmEqn::factor2(QpGenStochData *prob, Variables *vars)
     //printf("W computed  %g sec\n"   , MPI_Wtime()-st);st=MPI_Wtime(); 
 
     //rank-k update
-    if(AQinvAt==NULL) AQinvAt = new DenseSymMatrix(locmy);
+    if(AQinvAt==nullptr) AQinvAt = new DenseSymMatrix(locmy);
     AQinvAt->atRankkUpdate(0.0, 1.0, W, 1);
     //printf("rank-k update done  %g sec\\n" , MPI_Wtime()-st);st=MPI_Wtime();   
 
-    if(solver2==NULL) solver2 = new DeSymPSDSolver(AQinvAt);
+    if(solver2==nullptr) solver2 = new DeSymPSDSolver(AQinvAt);
     solver2->matrixChanged();
     
     //printf("fact2 took %g\n", MPI_Wtime()-st);st=MPI_Wtime();

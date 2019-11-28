@@ -2,6 +2,7 @@
 #define RAND_UTILS
 
 #include "time.h"
+#include "pipsport.h"
 
 /* FORTRAN functions */
 
@@ -35,13 +36,13 @@ void zufall_(int* n, double* numbers);
 */
 inline void normalRand(int n, double* vals)
 {
-  int tm=time(NULL);
+  int tm=time(nullptr);
   zufalli_(&tm);
   normalen_(&n, vals);
 }
 inline void normalRand(double mean, double std, int n, double* vals)
 {
-  int tm=time(NULL);
+  int tm=time(nullptr);
   zufalli_(&tm);
   normalen_(&n, vals);
 

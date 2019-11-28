@@ -45,8 +45,9 @@ public:
   }
   //@}
 
+  OoqpVectorBase<T>* clone() const override;
   /* copy vector entries as well */
-  virtual SimpleVectorBase<T>* cloneFull() const;
+  OoqpVectorBase<T>* cloneFull() const override;
 
   virtual ~SimpleVectorBase();
 
@@ -62,12 +63,12 @@ public:
   double twonorm() const override;
   T infnorm() const override;
   T onenorm() const override;
-  void min( T& m, int& index ) const;
-  void max( T& m, int& index ) const;
-  void absminVecUpdate(OoqpVectorBase<T>& absminvec) const;
-  void absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const;
-  void absmin( T& m) const;
-  void absminNonZero(T& m, T zero_eps) const;
+  void min( T& m, int& index ) const override;
+  void max( T& m, int& index ) const override;
+  void absminVecUpdate(OoqpVectorBase<T>& absminvec) const override;
+  void absmaxVecUpdate(OoqpVectorBase<T>& absmaxvec) const override;
+  void absmin( T& m) const override;
+  void absminNonZero(T& m, T zero_eps) const override;
 
   void componentMult( const OoqpVectorBase<T>& v ) override;
   void scalarMult( T num) override;
@@ -140,7 +141,7 @@ public:
                       T& w_elt_d, T& wstep_elt_d, T& u_elt_d, T& ustep_elt_d,
                       bool& primalBlocking, bool& dualBlocking) const override;
 
-  void removeEntries(const OoqpVectorBase<T>& select) override;
+  void removeEntries(const OoqpVectorBase<int>& select) override;
 
   void permuteEntries(const std::vector<unsigned int>& permvec);
 
