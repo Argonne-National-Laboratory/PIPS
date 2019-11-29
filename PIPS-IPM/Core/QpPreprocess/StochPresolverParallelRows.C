@@ -827,8 +827,8 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
       {
          // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
          // Here: pairwise comparison: // todo make lexicographical
-         for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it2 = it1;
-                                    it2 != row_coefficients_hashtable.end(i); ++it2)
+         boost::unordered_set<rowlib::rowWithEntries>::local_iterator it2 = it1;
+         while ( ++it2 != row_coefficients_hashtable.end(i) )
          {
             // When two parallel rows are found, check if they are both =, both <=, or = and <=
             if( checkRowsAreParallel( *it1, *it2) )
@@ -844,8 +844,12 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   {
                      // nearly parallel case 1:
                      // make sure that a_r2 != 0, otherwise switch ids.
+                     bool swapped = false;
                      if( (*rowContainsSingletonVariableA)[id2] != -1 )
+                     {
                         std::swap(id1, id2);
+                        swapped = true;
+                     }
 
                      assert( (*rowContainsSingletonVariableA)[id2] != -1 );
                      // if row id1 was already deleted, do not continue the procedure:
@@ -854,6 +858,10 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
 
                      // case two is basically case one
                      doNearlyParallelRowCase1(id1, id2, node);
+                     
+                     /* got to next it1 since old one is no longer valid */
+                     if(swapped)
+                        break;
                   }
                   else
                   {
@@ -893,9 +901,15 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                {  // Case one constraint is an equality, one an inequality
                   int id1 = it1->id;
                   int id2 = it2->id;
-                  if( id1 >= mA )   // swap ids so that id2 is the inequality constraint.
-                     std::swap(id1, id2);
+                  bool swapped = false;
 
+                  // swap ids so that id2 is the inequality constraint.
+                  if( id1 >= mA ) 
+                  {
+                     std::swap(id1, id2);
+                     swapped = true;
+                  }  
+                     
                   const int ineqRowId = id2 - mA;
 
                   if( (*rowContainsSingletonVariableA)[id1] == -1
@@ -955,7 +969,10 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                   // in both the parallel row case and in the nearly parallel row case,
                   // delete the inequality constraint id2 (which could be either it1 or it2 now):
                   presData.removeRedundantRow(INEQUALITY_SYSTEM, node, ineqRowId, false);
-
+                  
+                  /* go next it1 since the old one has been removed */
+                  if(swapped)
+                     break;
                }
             }
          }
@@ -1078,6 +1095,7 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
 void StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2, int it)
 {
    /* assert both rows are equality constraints */
+   assert( rowId1 != rowId2 );
    assert( rowId1 >= 0 && rowId1 < mA );
    assert( rowId2 >= 0 && rowId2 < mA );
    assert( it >= -1 && it < nChildren );

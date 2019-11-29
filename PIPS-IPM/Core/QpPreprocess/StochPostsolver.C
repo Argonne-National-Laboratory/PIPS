@@ -84,8 +84,8 @@ void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int nod
 void StochPostsolver::notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2, 
    int node_var2, double scalar, double translation)
 {
-   assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node_var2)[var2], 1) );
-   assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node_var1)[var1], 1) );
+   assert( getSimpleVecFromColStochVec(*padding_origcol, node_var2)[var2] == 1 );
+   assert( getSimpleVecFromColStochVec(*padding_origcol, node_var1)[var1] == 1 );
 
    reductions.push_back(PARALLEL_ROW_SUBSTITUTION);
 
