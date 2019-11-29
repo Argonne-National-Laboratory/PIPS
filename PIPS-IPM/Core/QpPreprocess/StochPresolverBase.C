@@ -149,9 +149,7 @@ void StochPresolverBase::countRowsCols()// method is const but changes pointers
 
    /* sync data */
    if( distributed )
-   {
       PIPS_MPIsumArrayInPlace(count, MPI_COMM_WORLD);
-   }
 
    n_rows_fixed_eq = n_rows_eq - n_rows_empty_eq; 
 

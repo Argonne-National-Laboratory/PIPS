@@ -326,7 +326,7 @@ inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPImaxArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 {
    if(elements.size() == 0)
       return;
@@ -345,7 +345,7 @@ inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIminArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+inline void PIPS_MPIminArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 {
    if(elements.size() == 0)
       return;
@@ -388,7 +388,7 @@ inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiCom
 }
 
 template <typename T>
-inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 {
    if(elements.size() == 0)
       return;
@@ -415,7 +415,7 @@ inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIsumArrayInPlace(std::vector<T> elements, MPI_Comm mpiComm)
+inline void PIPS_MPIsumArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 {
    if( elements.size() == 0 )
       return;
