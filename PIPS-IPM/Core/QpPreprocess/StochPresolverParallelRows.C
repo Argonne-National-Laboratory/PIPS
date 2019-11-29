@@ -105,7 +105,6 @@ void StochPresolverParallelRows::applyPresolving()
          row_support_hashtable.clear();
 
          // Per row, add row to the set 'row_support_hashtable':
-
          assert(norm_Amat);
          assert(norm_Bmat);
          assert(normNnzRowA);
@@ -119,7 +118,7 @@ void StochPresolverParallelRows::applyPresolving()
 
          insertRowsIntoHashtable( row_support_hashtable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC );
 
-         assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Cmat->getM());
+         assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Cmat->getM() );
 
          // Second Hashing: Per bucket, do Second Hashing:
          row_coefficients_hashtable.clear();

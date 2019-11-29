@@ -243,9 +243,9 @@ bool StochPresolverSingletonColumns::findRowForLinkingSingletonInSystem( SystemT
          /* check transposed for entry */
          if( node_row == -1 )
          {
-            /* Amat */
-            assert(currAmatTrans);
-            if( findRowForSingletonColumnInMatrix( *currAmatTrans, row, col) )
+            /* Bmat */
+            assert(currBmatTrans);
+            if( findRowForSingletonColumnInMatrix( *currBmatTrans, row, col) )
                return true;
 
             /* Blmat */

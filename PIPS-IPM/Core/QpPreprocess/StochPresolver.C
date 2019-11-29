@@ -60,6 +60,7 @@ Data* StochPresolver::presolve()
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
 
+
    /* initialize presolve data */
    PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
@@ -86,11 +87,11 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
-      presolverParallelRow.applyPresolving();
-      // presolverSC.applyPresolving();
-      presolverColFix.applyPresolving();
+      // presolverSR.applyPresolving();
+      // presolverBS.applyPresolving();
+      // presolverParallelRow.applyPresolving();
+      presolverSC.applyPresolving();
+      // presolverColFix.applyPresolving();
    }
 
    // before the finalize call fix all empty rows and columns not yet fixed
@@ -124,6 +125,9 @@ Data* StochPresolver::presolve()
 
    sData* finalPresData = presData.finalize();
 
+   sorigprob->writeToStreamDense(std::cout);
+   finalPresData->writeToStreamDense(std::cout);
+   
    assert( finalPresData );
    assert( finalPresData->isRootNodeInSync() );
 
