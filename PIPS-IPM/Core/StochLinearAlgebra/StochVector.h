@@ -294,6 +294,4 @@ public:
    bool isRootNodeInSync() const override { return true; };
 };
 
-using StochDummyVector = StochDummyVectorBase<double>;
-
 #endif

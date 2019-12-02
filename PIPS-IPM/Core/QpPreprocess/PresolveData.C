@@ -10,10 +10,10 @@
 #include "PresolveData.h"
 #include "StochGenMatrix.h"
 #include "DoubleMatrixTypes.h"
-#include "StochVectorUtilities.h"
 #include "StochMatrixUtilities.h"
 #include "pipsdef.h"
 #include "pipsport.h"
+#include "StochVectorUtilities.h"
 
 #include <stdexcept>
 #include <limits>
@@ -239,6 +239,11 @@ sData* PresolveData::finalize()
 
    return presProb;
 }
+
+int PresolveData::getNnzsRowA(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_A, node, block_type)[row]; };
+int PresolveData::getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_C, node, block_type)[row]; };
+int PresolveData::getNnzsCol(int node, int col) const { return getSimpleVecFromColStochVec(*nnzs_col, node)[col]; };
+
 
 /** Recomputes the activities of all rows the process knows about. If linking_only is set to true only the linking_rows will get recomputed.
  *  Careful, recomputing linking rows requires MPI communication. Ideally all activities only have to be computed once, when creating the
@@ -2812,7 +2817,7 @@ StochVectorHandle PresolveData::getRowAsStochVector(SystemType system_type, int 
       {
         if(child != node)
         {
-           svec->AddChild( new StochDummyVector() );
+           svec->AddChild( new StochDummyVectorBase<double>() );
         }
         else
         {

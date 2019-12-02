@@ -7,9 +7,9 @@
 
 #include "OoqpVector.h"
 #include "StochPostsolver.h"
-#include "StochVectorUtilities.h"
 #include "pipsdef.h"
 #include "pipsport.h"
+#include "StochVectorUtilities.h"
 
 #include <limits>
 #include <stdexcept>

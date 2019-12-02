@@ -11,6 +11,7 @@
 #include "pipsport.h"
 #include "StochPresolverParallelRows.h"
 #include "pipsport.h"
+#include "StochVectorUtilities.h"
 
 namespace rowlib
 {

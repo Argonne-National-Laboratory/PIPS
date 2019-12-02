@@ -7,6 +7,8 @@
 
 //#define PIPS_DEBUG
 #include "StochPresolverSingletonRows.h"
+#include "StochVectorUtilities.h"
+
 #include <limits>
 #include <iostream>
 #include <algorithm>

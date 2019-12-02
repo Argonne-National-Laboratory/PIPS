@@ -6,11 +6,12 @@
 #include "StochVector.h"
 #include "SparseLinearAlgebraPackage.h"
 #include "mpi.h"
-#include <iostream>
 #include "pipsport.h"
+#include "StochVectorUtilities.h"
 
-static
-std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& perm)
+#include <iostream>
+
+static std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& perm)
 {
    size_t size = perm.size();
    std::vector<unsigned int> perm_inv(size, 0);
@@ -1161,14 +1162,12 @@ void sData::writeToStreamDense(ostream& out) const
    (*g).writeToStreamAll(out);
    if( myRank == 0 ) out <<  "bA: " << std::endl;
    (*bA).writeToStreamAll(out);
-   if( myRank == 0 ) out <<  "xupp: " << std::endl;
-   (*bux).writeToStreamAll(out);
-   if( myRank == 0 ) out <<  "ixupp: " << std::endl;
-   (*ixupp).writeToStreamAll(out);
-   if( myRank == 0 ) out <<  "xlow: " << std::endl;
-   (*blx).writeToStreamAll(out);
-   if( myRank == 0 ) out <<  "ixlow: " << std::endl;
-   (*ixlow).writeToStreamAll(out);
+   
+   writeLBltXltUBtoStreamDense( out, dynamic_cast<const StochVector&>(*blx), 
+      dynamic_cast<const StochVector&>(*ixlow),
+      dynamic_cast<const StochVector&>(*bux),
+      dynamic_cast<const StochVector&>(*ixupp), MPI_COMM_WORLD );
+
    if( myRank == 0 ) out <<  "cupp: " << std::endl;
    (*bu).writeToStreamAll(out);
    if( myRank == 0 ) out <<  "icupp: " << std::endl;

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <limits>
 #include <math.h>
+#include "StochVector_fwd.h"
 
 template<typename T>
 StochVectorBase<T>::StochVectorBase(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)

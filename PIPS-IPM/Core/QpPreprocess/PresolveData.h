@@ -14,7 +14,6 @@
 #include "SimpleVectorHandle.h"
 #include "SparseStorageDynamic.h"
 #include "SystemType.h"
-#include "StochVectorUtilities.h"
 
 #include <algorithm>
 #include <list>
@@ -153,9 +152,9 @@ public :
       const StochVectorBase<int>& getNnzsRowC() const { return *nnzs_row_C; };
       const StochVectorBase<int>& getNnzsCol() const { return *nnzs_col; };
 
-      int getNnzsRowA(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_A, node, block_type)[row]; };
-      int getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_C, node, block_type)[row]; };
-      int getNnzsCol(int node, int col) const { return getSimpleVecFromColStochVec(*nnzs_col, node)[col]; };
+      int getNnzsRowA(int node, BlockType block_type, int row) const;
+      int getNnzsRowC(int node, BlockType block_type, int row) const ;
+      int getNnzsCol(int node, int col) const;
 
       std::queue<sROWINDEX>& getSingletonRows() { return singleton_rows; };
       std::queue<sCOLINDEX>& getSingletonCols() { return singleton_cols; };

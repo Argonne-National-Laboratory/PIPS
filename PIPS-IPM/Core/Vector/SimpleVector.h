@@ -5,7 +5,6 @@
 #ifndef SIMPLEVECTOR
 #define SIMPLEVECTOR
 
-
 #include "OoqpVector.h"
 #include "SimpleVector_fwd.h"
 #include "SimpleVectorHandle.h"
