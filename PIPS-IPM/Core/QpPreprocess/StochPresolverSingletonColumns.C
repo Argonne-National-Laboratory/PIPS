@@ -6,7 +6,7 @@
  */
 
 #include "StochPresolverSingletonColumns.h"
-
+#include "StochVectorUtilities.h"
 
 StochPresolverSingletonColumns::StochPresolverSingletonColumns(PresolveData& presData, const sData& origProb)
    : StochPresolverBase(presData, origProb), removed_cols(0)
@@ -129,6 +129,8 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int& node_col, 
    double obj = (node_col == -1) ? (*currgParent)[col] : (*currgChild)[col];
    if( implied_free && PIPSisEQ(obj, 0.0) )
    {
+      presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
+      std::cout << node_col << "\taa\t" << col << std::endl;
       presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
       return true;
    }  
@@ -139,6 +141,8 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int& node_col, 
       /* (originally) free singleton columns just get deleted together with their row */
       if( implied_free )
       {
+         presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
+         std::cout << node_col << "\tbb\t" << col << std::endl;
          presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
          return true;
       }
@@ -292,17 +296,12 @@ void StochPresolverSingletonColumns::checkColImpliedFree( SystemType system_type
    updatePointersForCurrentNode( node_row, system_type );
 
    /* check whether originally free */
-   const SimpleVector& ixupp_orig = (node_col == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixupp).vec) 
-      : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixupp).children[node_col]->vec);
-   const SimpleVector& ixlow_orig = (node_col == -1) ? dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixlow).vec) 
-      : dynamic_cast<const SimpleVector&>(*dynamic_cast<const StochVector&>(*origProb.ixlow).children[node_col]->vec);
+   const double ixupp_orig = getSimpleVecFromColStochVec(*origProb.ixupp, node_col)[col];
+   const double ixlow_orig = getSimpleVecFromColStochVec(*origProb.ixlow, node_col)[col];
 
-   assert( col < ixupp_orig.length() );
-   assert( col < ixlow_orig.length() );
-
-   if( ixupp_orig[col] == 0.0 )
+   if( PIPSisZero(ixupp_orig) )
       ub_implied_free = true;
-   if( ixlow_orig[col] == 0.0 )
+   if( PIPSisZero(ixlow_orig) )
       lb_implied_free = true;
 
    /* check whether bound tightening found bounds from the variables row that make it implied free */

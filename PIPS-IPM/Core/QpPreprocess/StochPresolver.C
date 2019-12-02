@@ -87,7 +87,7 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      // presolverSR.applyPresolving();
+      presolverSR.applyPresolving();
       // presolverBS.applyPresolving();
       // presolverParallelRow.applyPresolving();
       presolverSC.applyPresolving();
@@ -105,7 +105,7 @@ Data* StochPresolver::presolve()
    // exit(1);
 
 
-// todo : tell postsolver about released variables
+   // todo : tell postsolver about released variables
    char* env = getenv("PIPS_RESET_FREE_VARIABLES");
    if( env != nullptr )
    {

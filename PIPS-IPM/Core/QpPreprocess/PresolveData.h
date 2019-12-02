@@ -267,9 +267,11 @@ private:
       /// methods for querying the problem in order to get certain structures etc. todo: move?
       SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
 
+public:
+      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const;
+private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
             const SimpleVector& ixlow, const SimpleVector& xlow) const;
-      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const;
       void printVarBoundStatistics(std::ostream& out) const;
 
       StochVectorHandle getRowAsStochVector(SystemType system_type, int node, int row, bool linking_row) const;

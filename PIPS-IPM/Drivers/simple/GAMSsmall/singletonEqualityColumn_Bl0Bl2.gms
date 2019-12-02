@@ -1,4 +1,4 @@
-* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=./singletonEqualityColumn_B0 -PRESOLVE=true
+* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=./singletonEqualityColumn_Bl0Bl2 -PRESOLVE=true
 
 
 * if you wanna use this example please hack in useLinkStructure = true; in sData.C
@@ -6,7 +6,7 @@ Set i rows    / i1*i20 /
 * subset of linking rows
     j columns / j1*j15 /;
 
-parameter g(j) obj coefficients / j1 0, j2 -10, j3 0, j4 0, j5 0, j6 0, j7 -10, j8 0, j9 0, j10 0, j11 0, j12 0, j13 1, j14 1, j15 1 /
+parameter g(j) obj coefficients / j1 -10, j2 -10, j3 0, j4 0, j5 0, j6 0, j7 -10, j8 0, j9 0, j10 0, j11 0, j12 0, j13 1, j14 1, j15 1 /
           bA(i) right hand side  / i1 0, i2 1, i3 -2, i4 0, i5 1, i6 -2, i7 0, i8 0, i9 1, i10 0, i11 -2, i12 0, i13 1, i14 -2, i15 0, i16 -10, i17 -5, i18 -8, i19 -3, i20 4 /
 *          clow(i) c left hand side   / i1 0, i2 1, i3 -1, i4 -100, i5 -100, i6 -100, i7 -100, i8 -100, i9 -100, i10 -100, i11 -100, i12 -100, i13 -100, i14 -100, i15 -100, i16 -100, i17 -100, i18 -100, i19 -100/
           cupp(i) c right hand side   / i1 100, i2 100, i3 100, i4 100, i5 100, i6 100, i7 100, i8 100, i9 100, i10 100, i11 100, i12 100, i13 100, i14 100, i15 100, i16 100, i17 100, i18 100, i19 100, i20 0/
@@ -38,7 +38,6 @@ i20              1                 1                       1                 1
 ; 
 *                1    -2    -2     1          -2    -2     1    -2    -2     1    -2    -2
 * expected values for x full determined by Ax=b
-* expected obj is -9
 
 Table C(i,j)
     j1    j2    j3    j4    j5    j6    j7    j8    j9   j10   j11   j12   j13   j14   j15
@@ -150,7 +149,7 @@ $ifthen %METHOD%==PIPS
 
 
 *For creation of gdx files:
-$ echo jacobian singletonEqualityColumn_multiple_noLink.gdx > convertd.opt
+$ echo jacobian singletonEqualityColumn_Bl0Bl2.gdx > convertd.opt
   option lp=convertd;
   m.optfile = 1;
   solve m use lp min z;
