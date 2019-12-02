@@ -63,7 +63,6 @@ void StochPostsolver::notifyFreeColumnSingleton( SystemType system_type, int nod
    assert( getSimpleVecFromColStochVec(*padding_origcol, node_col)[col] == 1 );
 
    getSimpleVecFromRowStochVec(*padding_origrow_equality, node_row, linking_row)[row] = -1;
-   getSimpleVecFromColStochVec(*padding_origcol, node_col)[col] = -1;
    
    // save dual postsolve info
    // save row for primal postsolve info
@@ -122,7 +121,10 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
 {
    // TODO
    if( getSimpleVecFromColStochVec(*padding_origcol, node)[col] != 1 )
+   {
+      std::cout << getSimpleVecFromColStochVec(*padding_origcol, node)[col] << std::endl;
       assert(false);
+   }
 
    assert( getSimpleVecFromColStochVec(*padding_origcol, node)[col] == 1);
    getSimpleVecFromColStochVec(*padding_origcol, node)[col] = -1;
@@ -157,6 +159,14 @@ void StochPostsolver::notifyRowPropagated( SystemType system_type, int node, int
 void StochPostsolver::notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint)
 {
    throw std::runtime_error("Not yet implemented");
+}
+
+void StochPostsolver::putLinkingVarsSyncEvent() 
+{
+   reductions.push_back( LINKING_VARS_SYNC_EVENT );
+   /// dummy : todo change structure - actually we only need a reduction, nothing else..
+   indices.push_back( INDEX( -2, -2 ) );
+   finishNotify();
 }
 
 void StochPostsolver::notifyParallelColumns()
@@ -278,7 +288,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             const int column = indices.at(i).index;
             const int node_column = indices.at(i).node;
 
-            assert( PIPSisEQ( getSimpleVecFromColStochVec( *padding_origcol, node_column)[column], -1) );
+            assert( getSimpleVecFromColStochVec( *padding_origcol, node_column)[column] == 1 );
+            assert( PIPSisZero(getSimpleVecFromColStochVec(x_vec, node_column)[column]) );
             assert( first_val == last_val - 5 );
 
             const bool linking_row = ( PIPSisEQ(values.at(first_val), 1.0) ) ? true : false;
@@ -319,6 +330,36 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
             getSimpleVecFromColStochVec(x_vec, node)[column] = scalar * val_sub + translation;
 
+            break;
+         }
+         case LINKING_VARS_SYNC_EVENT:
+         {
+            const int length_link_vars = x_vec.vec->length();
+            SimpleVector& link_vars = dynamic_cast<SimpleVector&>(*x_vec.vec);
+            
+            double* copy_x_link_max = new double[length_link_vars];
+            double* copy_x_link_min = new double[length_link_vars];
+            std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_max);
+            std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_min);
+            
+            PIPS_MPIminArrayInPlace(copy_x_link_min, length_link_vars, MPI_COMM_WORLD);
+            PIPS_MPImaxArrayInPlace(copy_x_link_max, length_link_vars, MPI_COMM_WORLD);
+
+            /* changing vars must have been set to 0 ! */ 
+            for(int j = 0; j < length_link_vars; ++j)
+            {
+               if( !PIPSisEQ(copy_x_link_min[j], copy_x_link_max[j]) )
+               {
+                  assert( PIPSisZero(copy_x_link_max[j]) || PIPSisZero(copy_x_link_min[j]) );
+                  assert( PIPSisEQ(link_vars[j], copy_x_link_min[j]) || PIPSisEQ(link_vars[j], copy_x_link_max[j]) );
+
+                  if( !PIPSisZero(copy_x_link_min[j]) )
+                     link_vars[j] = copy_x_link_min[j];
+                  else
+                     link_vars[j] = copy_x_link_max[j];
+               }
+            }
+                        
             break;
          }
          default:

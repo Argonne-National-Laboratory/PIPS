@@ -51,9 +51,6 @@ private:
       bool& outdated_activities;
       bool& outdated_obj_vector;
 
-      bool outdated_objvector;
-
-
       /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
 
@@ -174,6 +171,10 @@ public :
       void allreduceAndApplyBoundChanges();
       void allreduceAndApplyObjVecChanges();
       void allreduceObjOffset();
+
+      /// postsolve sync events that need to be set
+      void putLinkingVarsSyncEvent();
+
 
       /* compute and update activities */
       void recomputeActivities() { recomputeActivities(false); }

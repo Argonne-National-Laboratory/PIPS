@@ -27,6 +27,8 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
 
+   presData.putLinkingVarsSyncEvent();
+
 #ifndef NDEBUG
    if( my_rank == 0 )
    {
@@ -304,6 +306,6 @@ void StochPresolverSingletonColumns::checkColImpliedFree( SystemType system_type
       lb_implied_free = true;
 
    /* check whether bound tightening found bounds from the variables row that make it implied free */
-   ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy( true, node_col, col, system_type, node_row, row, linking_row );
-   lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy( false, node_col, col, system_type, node_row, row, linking_row );
+   // ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy( true, node_col, col, system_type, node_row, row, linking_row );
+   // lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy( false, node_col, col, system_type, node_row, row, linking_row );
 }

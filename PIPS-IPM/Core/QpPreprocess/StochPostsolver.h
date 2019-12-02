@@ -41,6 +41,9 @@ public:
          int node_var2, double scalar, double translation);
 
 
+      /// synchronization events
+      void putLinkingVarsSyncEvent(); 
+
       PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const override;
 private:
 
@@ -68,6 +71,7 @@ private:
          FIXED_EMPTY_COLUMN = 8,
          FREE_COLUMN_SINGLETON = 9,
          PARALLEL_ROW_SUBSTITUTION = 10,
+         LINKING_VARS_SYNC_EVENT = 11,
       };
 
       const unsigned int n_rows_original;

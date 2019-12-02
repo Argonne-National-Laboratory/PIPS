@@ -7,51 +7,51 @@ Set i rows    / i1*i15 /
     linkRows(i) / i13, i14 /
     j columns / j1*j13 /;
 
-parameter g(j) obj coefficients / j1 -10, j2 0, j3 0, j4 0, j5 1, j6 1, j7 1, j8 0, j9 0, j10 0, j11 1, j12 1, j13 1 /
-          bA(i) right hand side  / i1 1, i2 -2, i3 0, i4 1, i5 -2, i6 0, i7 1, i8 0, i9 -2, i10 0, i11 1, i12 -2, i13 0, i14 -10, i15 -1 /
+parameter g(j) obj coefficients / j1 -10, j2 1, j3 1, j4 1, j5 1, j6 1, j7 1, j8 0, j9 0, j10 0, j11 1, j12 1, j13 1 /
+          bA(i) right hand side  / i1 1, i2 -2, i3 0, i4 1, i5 -2, i6 0, i7 1, i8 0, i9 -2, i10 0, i11 1, i12 -2, i13 0, i14 -10, i15 -3 /
 *          clow(i) c left hand side    / i1 0, i2 1, i3 -1, i4 -100, i5 -100, i6 -100, i7 -100, i8 -100, i9 -100, i10 -100, i11 -100, i12 -100, i13 -100, i14 -100, i15 -100 /
           cupp(i) c right hand side   / i1 100, i2 1, i3 -1, i4 100, i5 100, i6 100, i7 100, i8 100, i9 100, i10 100, i11 0, i12 0, i13 100, i14 100, i15 100 /
 
 
 * in this example the singletonColumnPresolver should substitute j1 (free) and put it into the objective
 Table A(i,j)
-     j1    j2    j3     j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
+     j1    j2    j3    j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
 i1          3     2    -1
 i2          2    -2     4
 i3         -1   0.5    -1
-i4                             3     2    -1
-i5                             2    -2     4
-i6                            -1   0.5    -1
-i7                                               3     2    -1
-i8    1                                        0.1   0.1   0.1
-i9                                               2    -2     4
-i10                                             -1   0.5    -1
-i11                                                                3     2    -1
-i12                                                                2    -2     4
-i13                                                               -1   0.5    -1
-i14         1     1     1      1     1     1     1     1           1     1     1
-i15         1     1 
+i4                            3     2    -1
+i5                            2    -2     4
+i6                           -1   0.5    -1
+i7                                              3     2    -1
+i8    1                                       0.1   0.1   0.1
+i9                                              2    -2     4
+i10                                            -1   0.5    -1
+i11                                                               3     2    -1
+i12                                                               2    -2     4
+i13                                                              -1   0.5    -1
+i14         1     1     1     1     1     1    1     1            1     1     1
+i15         1     1                 1
 ; 
-*           1    -2    -2      1    -2    -2     1    -2    -2     1    -2    -2
+*           1    -2    -2     1    -2    -2    1    -2    -2     1    -2    -2
 * expected values for x full determined by Ax=b
 
 Table C(i,j)
-    j1    j2    j3     j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
+    j1    j2    j3    j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
 i1         1
 i2         1     1  
 i3                     1
-i4                            1
-i5                                        1
-i6                                  1     1
-i7                                              1     1
-i8                                                    1
+i4                           1
+i5                                       1
+i6                                 1     1
+i7                                             1     1
+i8                                                   1
 i9                                                         1
-i10                                                                           1
-i11                                                                     1     
-i12                                             1                             1
-i13        1     1
-i14        1 
-i15        1     1
+i10                                                                          1
+i11                                                                    1     
+i12                                                                          1
+i13        1     1           1
+i14        1           1     1
+i15        1     1                 1
 ;
 
 Variables          x(j) / j2.lo -5 /

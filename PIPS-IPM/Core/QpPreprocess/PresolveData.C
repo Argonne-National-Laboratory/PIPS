@@ -765,6 +765,13 @@ void PresolveData::allreduceObjOffset()
    obj_offset_chgs = 0;
 }
 
+void PresolveData::putLinkingVarsSyncEvent()
+{
+   assert( reductionsEmpty() );
+   postsolver->putLinkingVarsSyncEvent();
+}
+
+
 void PresolveData::initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorBase<int>& nnzs_row_C, StochVectorBase<int>& nnzs_col) const
 {
    StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
@@ -1576,8 +1583,27 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
 
    adaptObjectiveSubstitutedRow( system_type, node_row, row, linking_row, node_col, col );
 
+   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
    removeRow( system_type, node_row, row, linking_row );
-   removeColumn( node_col, col, 0.0);
+
+   /* set bounds of variable to zero and mark bounds as outdated */
+   getSimpleVecFromColStochVec(*(presProb->ixlow), node_col)[col] = 1;
+   getSimpleVecFromColStochVec(*(presProb->blx), node_col)[col] = 0;
+   getSimpleVecFromColStochVec(*(presProb->ixupp), node_col)[col] = 1;
+   getSimpleVecFromColStochVec(*(presProb->bux), node_col)[col] = 0;
+
+   if(node_col == -1)
+      outdated_linking_var_bounds = true;
+
+   if(node_col == -1)
+   {
+      assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, -1)[col] + (*objective_vec_chgs)[col]) );
+   }
+   else
+   {
+      assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, node_col)[col]) );
+      assert( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col] == 0 );
+   }
 }
 
 /* column col getting substituted with row row */ 
@@ -1632,7 +1658,7 @@ void PresolveData::adaptObjectiveSubstitutedRow( SystemType system_type, int nod
             if( col_idx != col || block_col != A_MAT )
             {
                (*objective_vec_chgs)[col_idx] -= obj_coef * a_mat.getMat(i) / col_coef;
-               outdated_objvector = true;
+               outdated_obj_vector = true;
             }
          }
       }
@@ -1649,7 +1675,7 @@ void PresolveData::adaptObjectiveSubstitutedRow( SystemType system_type, int nod
          if( col_idx != col || node_col != -1 )
          {
             (*objective_vec_chgs)[col_idx] -= obj_coef * bl0_mat.getMat(i) / col_coef;
-            outdated_objvector = true;
+            outdated_obj_vector = true;
          }
       }
 
@@ -1677,7 +1703,13 @@ void PresolveData::adaptObjectiveSubstitutedRow( SystemType system_type, int nod
    const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row)[row];
    obj_offset_chgs += obj_coef * rhs / col_coef;
 
-   getSimpleVecFromColStochVec( *presProb->g, node_col)[col] = 0.0;
+   if(node_col == -1 && block_col != B_MAT)
+   {
+      outdated_obj_vector = true;
+      (*objective_vec_chgs)[col] -= getSimpleVecFromColStochVec( *presProb->g, node_col)[col];
+   }
+   else
+      getSimpleVecFromColStochVec( *presProb->g, node_col)[col] = 0;
 }
 
 /* removes row from local system - sets rhs lhs and activities to zero */
