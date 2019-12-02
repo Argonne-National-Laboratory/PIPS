@@ -4,7 +4,6 @@
 * if you wanna use this example please hack in useLinkStructure = true; in sData.C
 Set i rows    / i1*i15 /
 * subset of linking rows
-    linkRows(i) / i13, i14 /
     j columns / j1*j13 /;
 
 parameter g(j) obj coefficients / j1 -10, j2 1, j3 1, j4 1, j5 1, j6 1, j7 1, j8 0, j9 0, j10 0, j11 1, j12 1, j13 1 /
