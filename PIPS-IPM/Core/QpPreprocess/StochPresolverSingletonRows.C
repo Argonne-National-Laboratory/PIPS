@@ -100,7 +100,7 @@ void StochPresolverSingletonRows::applyPresolving()
  */
 bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int node, int row_idx)
 {
-   assert( !presData.nodeIsDummy(node) || node == -2 );
+   assert( node == -2 || !presData.nodeIsDummy(node) );
 
    // todo: redisign - actually done twice
    updatePointersForCurrentNode(node, system_type);
