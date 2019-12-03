@@ -129,8 +129,8 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int& node_col, 
    double obj = (node_col == -1) ? (*currgParent)[col] : (*currgChild)[col];
    if( implied_free && PIPSisEQ(obj, 0.0) )
    {
-      presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
-      std::cout << node_col << "\taa\t" << col << std::endl;
+      // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
+      // std::cout << node_col << "\taa\t" << col << std::endl;
       presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
       return true;
    }  
@@ -141,8 +141,8 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int& node_col, 
       /* (originally) free singleton columns just get deleted together with their row */
       if( implied_free )
       {
-         presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
-         std::cout << node_col << "\tbb\t" << col << std::endl;
+         // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
+         // std::cout << node_col << "\tbb\t" << col << std::endl;
          presData.removeImpliedFreeColumnSingleton( system_type, node_row, row, linking_row, node_col, col );
          return true;
       }
@@ -305,6 +305,6 @@ void StochPresolverSingletonColumns::checkColImpliedFree( SystemType system_type
       lb_implied_free = true;
 
    /* check whether bound tightening found bounds from the variables row that make it implied free */
-   // ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy( true, node_col, col, system_type, node_row, row, linking_row );
-   // lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy( false, node_col, col, system_type, node_row, row, linking_row );
+   ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy( true, node_col, col, system_type, node_row, row, linking_row );
+   lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy( false, node_col, col, system_type, node_row, row, linking_row );
 }

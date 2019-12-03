@@ -87,7 +87,7 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      presolverSR.applyPresolving();
+      // presolverSR.applyPresolving();
       // presolverBS.applyPresolving();
       // presolverParallelRow.applyPresolving();
       presolverSC.applyPresolving();
@@ -100,8 +100,9 @@ Data* StochPresolver::presolve()
    if( my_rank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
+   if( my_rank == 0 )
+      std::cout << "Objective offset: " << presData.getObjOffset() << std::endl;
    assert( presData.getPresProb().isRootNodeInSync() );
-
    // exit(1);
 
 
@@ -125,8 +126,8 @@ Data* StochPresolver::presolve()
 
    sData* finalPresData = presData.finalize();
 
-   sorigprob->writeToStreamDense(std::cout);
-   finalPresData->writeToStreamDense(std::cout);
+   // sorigprob->writeToStreamDense(std::cout);
+   // finalPresData->writeToStreamDense(std::cout);
    
    assert( finalPresData );
    assert( finalPresData->isRootNodeInSync() );
