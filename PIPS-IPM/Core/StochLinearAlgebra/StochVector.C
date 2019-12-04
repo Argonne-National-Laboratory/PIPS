@@ -1042,7 +1042,8 @@ bool StochVectorBase<T>::componentEqual( const OoqpVectorBase<T>& v_, T tol) con
    component_equal = (component_equal && vec->componentEqual(*v.vec, tol));
    if(!component_equal)
    {
-      std::cout << "not equal in root node non-link" << std::endl;
+      if(parent == NULL)
+        std::cout << "not equal in root node non-link" << std::endl;
       return component_equal;
    }
 
