@@ -56,6 +56,8 @@ void StochPresolverModelCleanup::applyPresolving()
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    presData.allreduceAndApplyBoundChanges();
+   presData.allreduceObjOffset();
+   presData.allreduceAndApplyLinkingRowActivities();
 
    if( distributed )
    {
@@ -87,6 +89,7 @@ void StochPresolverModelCleanup::applyPresolving()
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
+   assert(presData.verifyActivities());
 }
 
 /** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity

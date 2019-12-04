@@ -173,15 +173,21 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
 #ifdef TRACK_C
    if( I_TRACK_COLUMN )
    {
+      const double xupp = getSimpleVecFromColStochVec(*presProb->bux, COL_NODE)[COLUMN];
+      const double xlow = getSimpleVecFromColStochVec(*presProb->blx, COL_NODE)[COLUMN];
+      const double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, COL_NODE)[COLUMN];
+      const double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, COL_NODE)[COLUMN];
       std::cout << "TRACKING_COLUMN: colum " << COLUMN << " node " << COL_NODE << std::endl;
+      std::cout << "\tbound x € [" << ((PIPSisZero(ixlow)) ? -std::numeric_limits<double>::infinity() : xlow) 
+         << ", " << ((PIPSisZero(ixupp)) ? std::numeric_limits<double>::infinity() : xupp) << "]" << std::endl;
    }
 #endif
 
 #ifdef TRACK_R
    if( I_TRACK_ROW )
    {
-      std::cout << "TRACKING_ROW: row " << ROW << " node " << ROW_NODE << " in BlockType " << ROW_BLOCK << " SystemType " << ROW_SYS << std::endl;
-      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_BLOCK, ROW);
+      std::cout << "TRACKING_ROW: row " << ROW << " node " << ROW_NODE << " linking " << ROW_IS_LINK << " SystemType " << ROW_SYS << std::endl;
+      writeRowLocalToStreamDense(std::cout, ROW_SYS, ROW_NODE, ROW_IS_LINK, ROW);
    }
 #endif
 }
@@ -522,7 +528,7 @@ void PresolveData::allreduceLinkingVarBounds()
 
       PIPS_MPImaxArrayInPlace(xlow.elements(), xlow.length(), MPI_COMM_WORLD);
       PIPS_MPImaxArrayInPlace(ixlow.elements(), ixlow.length(), MPI_COMM_WORLD);
-      PIPS_MPImaxArrayInPlace(xupp.elements(), xupp.length(), MPI_COMM_WORLD);
+      PIPS_MPIminArrayInPlace(xupp.elements(), xupp.length(), MPI_COMM_WORLD);
       PIPS_MPImaxArrayInPlace(ixupp.elements(), ixupp.length(), MPI_COMM_WORLD);
 
       // this will affect the activities of basically all rows - use with care
@@ -892,7 +898,8 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    adjustMatrixRhsLhsBy(system_type, node, linking, row_index, -storage->M[index_k] * xlower[storage->jcolM[index_k]]);
 
    /* adjust activity */
-   outdated_activities = true;
+   /* deletion of entry acts on activities like fixing it's value to zero */
+   adjustRowActivityFromDeletion(system_type, node, block_type, row_index, storage->jcolM[index_k], storage->M[index_k]);
 
    /* adjust nnz counters */
    reduceNnzCounterRow(system_type, node, linking, row_index, 1);
@@ -904,7 +911,7 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    row_end = storage->rowptr[row_index].end;
    index_k--;
 
-   ++elements_deleted; // todo
+   ++elements_deleted; // todo : working?
 }
 
 void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
@@ -1076,7 +1083,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
       std::cout << "TRACKING_COLUMN: new bounds [" << lbx << ", " << ubx << "] propagated for column " << 
          col << " from row " << row << " node " << node_row << " in " <<
          ( (system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ":" << std::endl;
-      std::cout << "\tbounds were [" << xlow << ", " << xupp << "]" << std::endl;
+      std::cout << "\tbounds were [" << ((PIPSisZero(ixlow)) ? -std::numeric_limits<double>::infinity() : xlow) 
+         << ", " << ((PIPSisZero(ixupp)) ? std::numeric_limits<double>::infinity() : xupp) << "]" << std::endl;
    }
 
    if( ( !PIPSisZero(ixlow) && PIPSisLT(ubx, xlow) )
@@ -1673,6 +1681,7 @@ void PresolveData::removeEntryInDynamicStorage(SparseStorageDynamic& storage, in
    std::swap(storage.M[i], storage.M[end-1]);
    std::swap(storage.jcolM[i], storage.jcolM[end-1]);
    storage.rowptr[row].end--;
+   assert(storage.rowptr[row].start <= storage.rowptr[row].end);
 }
 
 bool PresolveData::verifyActivities()
@@ -1706,60 +1715,60 @@ bool PresolveData::verifyActivities()
    actmin_ineq_ubndd->setToZero();
 
    recomputeActivities();
-
+   const int tracked_rank = -3;
    if( !actmax_eq_part_old->componentEqual(*actmax_eq_part, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmax_eq_part not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmax_eq_part not correct" << std::endl;
       activities_correct = false;
    }
 
    if( !actmin_eq_part_old->componentEqual(*actmin_eq_part, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmin_eq_part not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmin_eq_part not correct" << std::endl;
       activities_correct = false;
    }
 
    if( !actmax_eq_ubndd_old->componentEqual(*actmax_eq_ubndd, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmax_eq_ubndd not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmax_eq_ubndd not correct" << std::endl;
       activities_correct = false;
    }
 
    if( !actmin_eq_ubndd_old->componentEqual(*actmin_eq_ubndd, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmin_eq_ubndd not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmin_eq_ubndd not correct" << std::endl;
       activities_correct = false;
    }
 
    if( !actmax_ineq_part_old->componentEqual(*actmax_ineq_part, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmax_ineq_part not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmax_ineq_part not correct" << std::endl;
       activities_correct = false;
    }
 
    if( !actmin_ineq_part_old->componentEqual(*actmin_ineq_part, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmin_ineq_part not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmin_ineq_part not correct" << std::endl;
       activities_correct = false;
    }
 
    if( !actmax_ineq_ubndd_old->componentEqual(*actmax_ineq_ubndd, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmax_ineq_ubndd not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmax_ineq_ubndd not correct" << std::endl;
       activities_correct = false;
    }
 
    if( !actmin_ineq_ubndd_old->componentEqual(*actmin_ineq_ubndd, feastol))
    {
-      if(my_rank == 0)
-         std::cout << "actmin_ineq_ubndd not correct" << std::endl;
+      if(my_rank == tracked_rank)
+         std::cout << "on rank " << my_rank << " found actmin_ineq_ubndd not correct" << std::endl;
       activities_correct = false;
    }
 
@@ -1970,7 +1979,9 @@ bool PresolveData::hasLinking(SystemType system_type) const
    return false;
 }
 
-/** adjusts unbounded counters of row as well as activity (if applicable) */ // todo refactor
+/** adjusts unbounded counters of row as well as activity (if applicable) 
+ *  assumes col has been fixed to coeff
+ */ // todo refactor
 void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff)
 {
    assert(-1 <= node && node < nChildren);
@@ -1986,10 +1997,6 @@ void PresolveData::adjustRowActivityFromDeletion(SystemType system_type, int nod
    const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), (block_type == A_MAT) ? -1 : node);
 
    const bool linking = ( block_type == BL_MAT );
-
-   assert(PIPSisEQ(ixlow[col], 1.0));
-   assert(PIPSisEQ(ixupp[col], 1.0));
-   assert(PIPSisEQ(xlow[col], xupp[col], 1e-10));
 
    /* get unbounded counters */
    int* actmax_ubndd = (system_type == EQUALITY_SYSTEM) ? &getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row]
@@ -2253,8 +2260,12 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
    SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
    if( TRACK_COLUMN(node, col) )
-      std::cout << "TRACKING_COLUMN: updating column bounds from [" << xlow[col] << ", " << 
-         xupp[col] << "] for column " << col << " node " << node << " with [" <<
+   {
+      std::cout << getSimpleVecFromRowStochVec(*nnzs_row_A, 6, false)[68080] << std::endl;
+   }
+   if( TRACK_COLUMN(node, col) )
+      std::cout << "TRACKING_COLUMN: updating column bounds from [" << (PIPSisZero(ixlow[col]) ? -std::numeric_limits<double>::infinity() : xlow[col])
+          << ", " << (PIPSisZero(ixupp[col]) ? std::numeric_limits<double>::infinity() : xupp[col]) << "] for column " << col << " node " << node << " with [" <<
          xl << ", " << xu << "]" << std::endl;
 
    if( ( !PIPSisZero(ixlow[col]) && PIPSisLT(xu, xlow[col]) )
@@ -2276,7 +2287,7 @@ bool PresolveData::updateBoundsVariable(int node, int col, double xu, double xl)
       ixupp[col] = 1.0;
    }
 
-   if( -std::numeric_limits<double>::max() < xl && ( PIPSisZero(ixlow[col]) || PIPSisLE( xlow[col], xl)) )
+   if( -std::numeric_limits<double>::max() < xl && ( PIPSisZero(ixlow[col]) || PIPSisLT( xlow[col], xl)) )
    {
       updated = true;
       if( PIPSisEQ(ixlow[col], 1.0) )
@@ -2319,7 +2330,7 @@ void PresolveData::updateRowActivities(int node, int col, double ubx, double lbx
    if( TRACK_COLUMN(node,col) )
    {
       std::cout << "TRACKING_COLUMN: col " << col << " node " << node << " gets it's activities updated" << std::endl;
-      std::cout << "\t bounds changed from [" << old_ubx << ", " << old_lbx << "] to [" << lbx << ", " << ubx << "]" << std::endl;
+      std::cout << "\t bounds changed from [" << old_lbx << ", " << old_ubx << "] to [" << lbx << ", " << ubx << "]" << std::endl;
    }
 
    /* if node == -1 go through all linking var blocks of both systems */
@@ -2422,7 +2433,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
 
       /* get affected partial activity and act_ubndd */
       bool switch_upperlower = upper;
-      if( PIPSisLE(entry, 0.0) )
+      if( PIPSisLT(entry, 0.0) )
          switch_upperlower = !upper;
 
       SimpleVector& act_part = (switch_upperlower) ? actmax_part : actmin_part;
@@ -2449,7 +2460,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
       /* if the old bound was not set we have to modify the unbounded counters */
       if( old_bound == std::numeric_limits<double>::infinity() || old_bound == -std::numeric_limits<double>::infinity() )
       {
-         if( TRACK_ROW(node, row, system_type, block_type == linking ) )
+         if( TRACK_ROW(node, row, system_type, linking ) )
                std::cout << "TRACKING_ROW: ubndd counters are being changed" << std::endl;
 
          /* every process works the root node - even in the linking row case */
@@ -2491,7 +2502,10 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
                   std::cout << "TRACKING_ROW: adjusting activities " << std::endl;
 
             if( node != -1 && linking )
+            {
+               outdated_activities = true;
                act_part_chgs[row] += bound * entry;
+            }
             else
                act_part[row] += bound * entry;
          }

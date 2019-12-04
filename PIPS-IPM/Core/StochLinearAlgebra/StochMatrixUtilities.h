@@ -14,7 +14,7 @@
 
 #include <vector>
 
-SparseGenMatrix* getSparseGenMatrixFromStochMat(const StochGenMatrix& sMat, int node, BlockType block_type)
+inline SparseGenMatrix* getSparseGenMatrixFromStochMat(const StochGenMatrix& sMat, int node, BlockType block_type)
 {
    assert( -1 <= node && node < static_cast<int>(sMat.children.size()) );
 
