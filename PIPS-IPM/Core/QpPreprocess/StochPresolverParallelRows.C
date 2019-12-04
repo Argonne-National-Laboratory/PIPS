@@ -967,7 +967,9 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                      if(singleColIdx > nA || node == -1)
                         block_type = B_MAT;
 
-                     presData.rowPropagatedBounds(EQUALITY_SYSTEM, node, block_type, id1, singleColIdx, newxupp, newxlow);
+                     const int col = (singleColIdx > nA ) ? (singleColIdx - nA) : singleColIdx;
+
+                     presData.rowPropagatedBounds(EQUALITY_SYSTEM, node, block_type, id1, col, newxupp, newxlow);
                      // remove inequality row -> after block
                   }
                   else

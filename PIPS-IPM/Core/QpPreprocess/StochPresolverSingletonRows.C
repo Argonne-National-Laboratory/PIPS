@@ -22,11 +22,6 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
  
 void StochPresolverSingletonRows::applyPresolving()
 {
-   presData.allreduceAndApplyNnzChanges();
-   presData.allreduceAndApplyBoundChanges();
-   presData.allreduceAndApplyLinkingRowActivities();
-   presData.allreduceLinkingVarBounds();
-
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
@@ -87,8 +82,7 @@ void StochPresolverSingletonRows::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
-
-   }
+}
 
 /** Does one round of singleton rows presolving for system A or C
  *

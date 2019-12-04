@@ -89,9 +89,12 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 
 void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value)
 {
-   // TODO
    if( getSimpleVecFromColStochVec(*padding_origcol, node)[col] != 1 )
-      assert(false);
+   {
+      std::cout << "WARNING: attempt to fix col " << col << " on node " 
+         << node << " a second time even though it has already been fixed" << std::endl;
+      return;
+   }
 
    assert( getSimpleVecFromColStochVec(*padding_origcol, node)[col] == 1);
    getSimpleVecFromColStochVec(*padding_origcol, node)[col] = -1;
