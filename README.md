@@ -79,8 +79,11 @@ Contributions from:
 
 Developed by:
  * Naiyuan Chiang - while at Argonne National Laboratory
- * Cosmin G. Petra - Lawrence Livermore 	 National Laboratory
+ * Cosmin G. Petra - Lawrence Livermore National Laboratory
+ * Michel Schanen - Argonne National Laboratory
+ 
 Contributions from:
+ * Yankai Cao - The University of British Columbia
  * Victor Zavala - Univ. of Wisconsin-Madison
 
 
