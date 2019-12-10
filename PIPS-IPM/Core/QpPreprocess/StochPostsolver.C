@@ -161,6 +161,19 @@ void StochPostsolver::notifyDeletedRow( SystemType system_type, int node, int ro
    throw std::runtime_error("Not yet implemented");
 }
 
+bool StochPostsolver::wasColumnFixed(int node, int col) const
+{
+   return getSimpleVecFromColStochVec(*padding_origcol, node)[col] == -1;
+}
+
+bool StochPostsolver::wasRowFixed(SystemType system_type, int node, bool linking, int row) const
+{
+   if(system_type == EQUALITY_SYSTEM)
+      return getSimpleVecFromRowStochVec(*padding_origrow_equality, node, linking)[row] == -1;
+   else
+      return getSimpleVecFromRowStochVec(*padding_origrow_inequality, node, linking)[row] == -1;
+}
+
 void StochPostsolver::putLinkingVarsSyncEvent() 
 {
    reductions.push_back( LINKING_VARS_SYNC_EVENT );
@@ -218,155 +231,156 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 #endif
       switch( type )
       {
-         case REDUNDANT_ROW:
+      case REDUNDANT_ROW:
+      {
+         throw std::runtime_error("REDUNDANT_ROW not yet implemented");
+         break;
+      }
+      case BOUNDS_TIGHTENED:
+      {
+         throw std::runtime_error("BOUNDS_TIGHTENED not yet implemented");
+         break;
+      }
+      case FIXED_COLUMN:
+      {
+         const int column = indices.at(i).index;
+         const int node = indices.at(i).node;
+         const double value = values[first_val];
+
+         assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
+         assert(getSimpleVecFromColStochVec(*padding_origcol, node)[column] == -1);
+
+         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
+         getSimpleVecFromColStochVec(x_vec, node)[column] = value;
+
+         break;
+      }
+      case FIXED_EMPTY_COLUMN:
+      {
+         assert(first_val == last_val - 1);
+
+         const int column = indices.at(i).index;
+         const int node = indices.at(i).node;
+         const double value = values.at(first_val);
+
+         assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
+         assert(getSimpleVecFromColStochVec(*padding_origcol, node)[column] == -1);
+
+         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
+         getSimpleVecFromColStochVec(x_vec, node)[column] = value;
+
+         break;
+      }
+      case SUBSTITUTED_COLUMN:
+      {
+         throw std::runtime_error("SUBSTITUTED_COLUMN not yet implemented");
+         break;
+      }
+      case PARALLEL_COLUMN:
+      {
+         throw std::runtime_error("PARALLEL_COLUMN not yet implemented");
+         break;
+      }
+      case DELETED_ROW:
+      {
+         throw std::runtime_error("DELETED_ROW not yet implemented");
+         break;
+      }
+      case SINGLETON_EQUALITY_ROW:
+      {
+         throw std::runtime_error("SINGLETON_EQUALITY_ROW not yet implemented");
+         break;
+      }
+      case SINGLETON_INEQUALITY_ROW:
+      {
+         throw std::runtime_error("SINGLETON_INEQUALITY_ROW not yet implemented");
+         break;
+      }
+      case FREE_COLUMN_SINGLETON:
+      {
+         const int column = indices.at(i).index;
+         const int node_column = indices.at(i).node;
+
+         assert(getSimpleVecFromColStochVec(*padding_origcol, node_column)[column] == 1);
+         assert(PIPSisZero(getSimpleVecFromColStochVec(x_vec, node_column)[column]));
+         assert(first_val == last_val - 5);
+
+         const bool linking_row = (PIPSisEQ(values.at(first_val), 1.0)) ? true : false;
+         assert(!linking_row);
+         const int row_idx = values.at(first_val + 1);
+         const int node_row = values.at(first_val + 2);
+         // const int row = values.at(first_val + 3); todo : needed?
+         const double rhs = values.at(first_val + 4);
+         // todo INEQUALITY_SYSTEM
+         // const SystemType system_type = EQUALITY_SYSTEM; todo : needed?
+
+         getSimpleVecFromColStochVec(*padding_origcol, node_column)[column] = 1;
+         getSimpleVecFromColStochVec(x_vec, node_column)[column] = 0;
+
+         double value_row = stored_rows->localRowTimesVec(x_vec, node_row, row_idx, linking_row);
+         assert(std::abs(value_row) != std::numeric_limits<double>::infinity());
+
+         getSimpleVecFromColStochVec(x_vec, node_column)[column] = rhs - value_row;
+
+         break;
+      }
+      case PARALLEL_ROW_SUBSTITUTION:
+      {
+         const int column = indices.at(i).index;
+         const int node = indices.at(i).node;
+
+         assert(PIPSisEQ(getSimpleVecFromColStochVec(*padding_origcol, node)[column], -1));
+         assert(first_val == last_val - 4);
+
+         const int col_sub = values.at(first_val);
+         const int node_sub = values.at(first_val + 1);
+         const double scalar = values.at(first_val + 2);
+         const double translation = values.at(first_val + 3);
+
+         assert(PIPSisEQ(getSimpleVecFromColStochVec(*padding_origcol, node_sub)[col_sub], 1));
+         const double val_sub = getSimpleVecFromColStochVec(x_vec, node_sub)[col_sub];
+
+         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
+         getSimpleVecFromColStochVec(x_vec, node)[column] = scalar * val_sub + translation;
+
+         break;
+      }
+      case LINKING_VARS_SYNC_EVENT:
+      {
+         const int length_link_vars = x_vec.vec->length();
+         SimpleVector &link_vars = dynamic_cast<SimpleVector&>(*x_vec.vec);
+
+         double *copy_x_link_max = new double[length_link_vars];
+         double *copy_x_link_min = new double[length_link_vars];
+         std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_max);
+         std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_min);
+
+         PIPS_MPIminArrayInPlace(copy_x_link_min, length_link_vars, MPI_COMM_WORLD);
+         PIPS_MPImaxArrayInPlace(copy_x_link_max, length_link_vars, MPI_COMM_WORLD);
+
+         /* changing vars must have been set to 0 ! */
+         for( int j = 0; j < length_link_vars; ++j )
          {
-            throw std::runtime_error("REDUNDANT_ROW not yet implemented");
-            break;
-         }
-         case BOUNDS_TIGHTENED:
-         {
-            throw std::runtime_error("BOUNDS_TIGHTENED not yet implemented");
-            break;
-         }
-         case FIXED_COLUMN:
-         {
-            const int column = indices.at(i).index;
-            const int node = indices.at(i).node;
-            const double value = values[first_val];
-
-            assert( -1 <= node && node < static_cast<int>(x_vec.children.size()) );
-            assert( getSimpleVecFromColStochVec(*padding_origcol, node)[column] == -1 );
-
-            getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
-            getSimpleVecFromColStochVec(x_vec, node)[column] = value;
-
-            break;
-         }
-         case FIXED_EMPTY_COLUMN:
-         {
-            assert( first_val == last_val -1 );
-
-            const int column = indices.at(i).index;
-            const int node = indices.at(i).node;
-            const double value = values.at(first_val);
-
-            assert( -1 <= node && node < static_cast<int>(x_vec.children.size()) );
-            assert( getSimpleVecFromColStochVec(*padding_origcol, node)[column] == -1 );
-
-            getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
-            getSimpleVecFromColStochVec(x_vec, node)[column] = value;
-
-            break;
-         }
-         case SUBSTITUTED_COLUMN:
-         {            
-            throw std::runtime_error("SUBSTITUTED_COLUMN not yet implemented");
-            break;
-         }
-         case PARALLEL_COLUMN:
-         {
-            throw std::runtime_error("PARALLEL_COLUMN not yet implemented");
-            break;
-         }
-         case DELETED_ROW:
-         {
-            throw std::runtime_error("DELETED_ROW not yet implemented");
-            break;
-         }
-         case SINGLETON_EQUALITY_ROW:
-         {
-            throw std::runtime_error("SINGLETON_EQUALITY_ROW not yet implemented");
-            break;
-         }
-         case SINGLETON_INEQUALITY_ROW:
-         {
-            throw std::runtime_error("SINGLETON_INEQUALITY_ROW not yet implemented");
-            break;
-         }
-         case FREE_COLUMN_SINGLETON:
-         {
-            const int column = indices.at(i).index;
-            const int node_column = indices.at(i).node;
-
-            assert( getSimpleVecFromColStochVec( *padding_origcol, node_column)[column] == 1 );
-            assert( PIPSisZero(getSimpleVecFromColStochVec(x_vec, node_column)[column]) );
-            assert( first_val == last_val - 5 );
-
-            const bool linking_row = ( PIPSisEQ(values.at(first_val), 1.0) ) ? true : false;
-            assert(!linking_row);
-            const int row_idx = values.at(first_val + 1);
-            const int node_row = values.at(first_val + 2);
-            // const int row = values.at(first_val + 3); todo : needed?
-            const double rhs = values.at(first_val + 4);
-            // todo INEQUALITY_SYSTEM
-            // const SystemType system_type = EQUALITY_SYSTEM; todo : needed?
-
-            getSimpleVecFromColStochVec( *padding_origcol, node_column)[column] = 1;
-            getSimpleVecFromColStochVec( x_vec, node_column)[column] = 0;
-
-            double value_row = stored_rows->localRowTimesVec( x_vec, node_row, row_idx, linking_row);
-            assert( std::abs(value_row) != std::numeric_limits<double>::infinity() );
-
-            getSimpleVecFromColStochVec( x_vec, node_column)[column] = rhs - value_row;            
-
-            break;
-         }
-         case PARALLEL_ROW_SUBSTITUTION:
-         {
-            const int column = indices.at(i).index;
-            const int node = indices.at(i).node;
-
-            assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node)[column], -1) );
-            assert( first_val == last_val - 4 );
-
-            const int col_sub = values.at(first_val);
-            const int node_sub = values.at(first_val + 1);
-            const double scalar = values.at(first_val + 2);
-            const double translation = values.at(first_val + 3);
-
-            assert( PIPSisEQ( getSimpleVecFromColStochVec(*padding_origcol, node_sub)[col_sub], 1) );
-            const double val_sub = getSimpleVecFromColStochVec(x_vec, node_sub)[col_sub]; 
-
-            getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
-            getSimpleVecFromColStochVec(x_vec, node)[column] = scalar * val_sub + translation;
-
-            break;
-         }
-         case LINKING_VARS_SYNC_EVENT:
-         {
-            const int length_link_vars = x_vec.vec->length();
-            SimpleVector& link_vars = dynamic_cast<SimpleVector&>(*x_vec.vec);
-            
-            double* copy_x_link_max = new double[length_link_vars];
-            double* copy_x_link_min = new double[length_link_vars];
-            std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_max);
-            std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_min);
-            
-            PIPS_MPIminArrayInPlace(copy_x_link_min, length_link_vars, MPI_COMM_WORLD);
-            PIPS_MPImaxArrayInPlace(copy_x_link_max, length_link_vars, MPI_COMM_WORLD);
-
-            /* changing vars must have been set to 0 ! */ 
-            for(int j = 0; j < length_link_vars; ++j)
+            /* the second check is necessary for things like +- inf used by the postsolver */
+            if( !PIPSisEQ(copy_x_link_min[j], copy_x_link_max[j]) && copy_x_link_max[j] != copy_x_link_min[j] )
             {
-               if( !PIPSisEQ(copy_x_link_min[j], copy_x_link_max[j]) )
-               {
-                  assert( PIPSisZero(copy_x_link_max[j]) || PIPSisZero(copy_x_link_min[j]) );
-                  assert( PIPSisEQ(link_vars[j], copy_x_link_min[j]) || PIPSisEQ(link_vars[j], copy_x_link_max[j]) );
+               assert(PIPSisZero(copy_x_link_max[j]) || PIPSisZero(copy_x_link_min[j]));
+               assert(PIPSisEQ(link_vars[j], copy_x_link_min[j]) || PIPSisEQ(link_vars[j], copy_x_link_max[j]));
 
-                  if( !PIPSisZero(copy_x_link_min[j]) )
-                     link_vars[j] = copy_x_link_min[j];
-                  else
-                     link_vars[j] = copy_x_link_max[j];
-               }
+               if( !PIPSisZero(copy_x_link_min[j]) )
+                  link_vars[j] = copy_x_link_min[j];
+               else
+                  link_vars[j] = copy_x_link_max[j];
             }
-                        
-            break;
          }
-         default:
-         {
-            throw std::runtime_error("Tried to postsolve unknown reduction type"); // todo add what was passed
-            break;
-         }
+
+         break;
+      }
+      default:
+      {
+         throw std::runtime_error("Tried to postsolve unknown reduction type"); // todo add what was passed
+         break;
+      }
 
          // todo ? an is-set array
          // todo  check solution for feasibility - kkt checker ?
@@ -374,7 +388,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    }
 
    /* compute all s, t and u that have not yet been computed */
-
 
 #ifdef NDEBUG
    /* assert that all primal variables have been set */
@@ -384,9 +397,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    assert( x_vec->isRootNodeInSync() );
 #endif
 
-   if(my_rank == 0)
+   if( my_rank == 0 )
       std::cout << "finished postsolving... " << std::endl;
-   
+
    return PRESOLVE_OK;
 }
 

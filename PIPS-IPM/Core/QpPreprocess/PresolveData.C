@@ -250,6 +250,15 @@ int PresolveData::getNnzsRowA(int node, BlockType block_type, int row) const { r
 int PresolveData::getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_C, node, block_type)[row]; };
 int PresolveData::getNnzsCol(int node, int col) const { return getSimpleVecFromColStochVec(*nnzs_col, node)[col]; };
 
+bool PresolveData::wasColumnFixed(int node, int col) const
+{
+   return postsolver->wasColumnFixed(node, col);
+}
+
+bool PresolveData::wasRowFixed(SystemType system_type, int node, bool linking, int row) const
+{
+   return postsolver->wasRowFixed(system_type, node, linking, row);
+}
 
 /** Recomputes the activities of all rows the process knows about. If linking_only is set to true only the linking_rows will get recomputed.
  *  Careful, recomputing linking rows requires MPI communication. Ideally all activities only have to be computed once, when creating the
@@ -1594,10 +1603,10 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
    /* remove row and mark column as empty - will be removed in model cleanup on all processes */
    removeRow( system_type, node_row, row, linking_row );
 
-   /* set bounds of variable to zero and mark bounds as outdated */
-   getSimpleVecFromColStochVec(*(presProb->ixlow), node_col)[col] = 1;
+   /* remove row and mark it for the fix empty columns presolver */
+   getSimpleVecFromColStochVec(*(presProb->ixlow), node_col)[col] = 0;
    getSimpleVecFromColStochVec(*(presProb->blx), node_col)[col] = 0;
-   getSimpleVecFromColStochVec(*(presProb->ixupp), node_col)[col] = 1;
+   getSimpleVecFromColStochVec(*(presProb->ixupp), node_col)[col] = 0;
    getSimpleVecFromColStochVec(*(presProb->bux), node_col)[col] = 0;
 
    if(node_col == -1)

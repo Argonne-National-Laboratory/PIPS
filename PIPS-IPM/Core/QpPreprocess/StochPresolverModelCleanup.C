@@ -401,11 +401,14 @@ void StochPresolverModelCleanup::fixEmptyColumns()
          /* column fixation candidate */
          if( nnzs_col[col] == 0)
          {
-            // todo : maybe this can also happen as an input? here we assume that the column has been fixed already
+            /* ask whether column was is fixed already */
             if( PIPSisZero(ixlow[col]) && PIPSisZero(ixupp[col])
                && PIPSisZero(xlow[col]) && PIPSisZero(xupp[col]) 
                && PIPSisZero(g[col]))
-               continue;
+            {
+               if( presData.wasColumnFixed(node, col) )
+                  continue;
+            }
 
             if( PIPSisLT( g[col], 0.0) )
             {

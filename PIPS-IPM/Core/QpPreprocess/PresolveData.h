@@ -188,6 +188,9 @@ public :
        */
       void recomputeActivities(bool linking_only);
 
+      bool wasColumnFixed(int node, int col) const;
+      bool wasRowFixed(SystemType system_type, int node, bool linking, int row) const;
+
       /// interface methods called from the presolvers when they detect a possible modification
       // todo make bool and give feedback or even better - return some enum maybe?
       void fixColumn(int node, int col, double value);

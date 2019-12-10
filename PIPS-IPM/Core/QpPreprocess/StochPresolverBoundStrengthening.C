@@ -226,6 +226,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          double lbx_new = -std::numeric_limits<double>::infinity();
          double ubx_new = std::numeric_limits<double>::infinity();
 
+         // todo : simplify the if else?
          if(system_type == EQUALITY_SYSTEM)
          {
             if( PIPSisLT(0.0, a_ik) )

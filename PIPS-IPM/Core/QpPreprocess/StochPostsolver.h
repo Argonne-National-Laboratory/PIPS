@@ -40,6 +40,8 @@ public:
       void notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2, 
          int node_var2, double scalar, double translation);
 
+      bool wasColumnFixed(int node, int col) const;
+      bool wasRowFixed(SystemType system_type, int node, bool linking, int row) const;
 
       /// synchronization events
       void putLinkingVarsSyncEvent(); 
