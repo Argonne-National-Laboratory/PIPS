@@ -331,10 +331,10 @@ void StochPresolverSingletonColumns::checkColImpliedFree(
       || presData.varBoundImpliedFreeBy(true, node_col, col, system_type, node_row, row, linking_row);
    lb_implied_free = lb_implied_free
       || presData.varBoundImpliedFreeBy(false, node_col, col, system_type, node_row, row, linking_row);
-   // todo : after removing this column from the problem no other varaiable can be implied free anymore by that row - also the row is gone..
+   // todo : after removing this column from the problem no other variable can be implied free anymore by that row - also the row is gone..
 
 #ifndef NDEBUG
-   /* calculate implied bounds again and check whether the col is actually still implied */
+   /* calculate implied bounds again and check whether the col bounds are actually still implied */
    if( !(PIPSisZero(ixupp_orig) && PIPSisZero(ixlow_orig)) )
    {
       updatePointersForCurrentNode(node_row, system_type);
@@ -424,7 +424,6 @@ void StochPresolverSingletonColumns::checkColImpliedFree(
       /* assert bound implied by row or originally free var */
       if( ub_implied_free && !PIPSisZero(ixupp_orig) )
       {
-         std::cout << " chekcing " << std::endl;
          if( 0.0 < coeff )
          {
             assert(!PIPSisZero(icupp) || system_type == EQUALITY_SYSTEM);
@@ -441,7 +440,6 @@ void StochPresolverSingletonColumns::checkColImpliedFree(
 
       if( lb_implied_free && !PIPSisZero(ixlow_orig) )
       {
-         std::cout << " chekcing " << std::endl;
          if( coeff < 0 )
          {
             assert(!PIPSisZero(iclow) || system_type == EQUALITY_SYSTEM);
