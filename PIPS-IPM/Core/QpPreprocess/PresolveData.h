@@ -222,8 +222,11 @@ public :
       bool hasLinking(SystemType system_type) const;
 
       bool varBoundImpliedFreeBy( bool upper, int node_col, int col, SystemType system_type, int node_row, int row, bool linking_row );
-      /// methods for printing debug information
 private:
+      void varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, int node_col,
+         int col, SystemType system_type, int node_row, int row, bool linking_row) const;
+
+      /// methods for printing debug information
       // initialize row and column nnz counter
       void initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorBase<int>& nnzs_row_C, StochVectorBase<int>& nnzs_col) const;
       void initSingletons();

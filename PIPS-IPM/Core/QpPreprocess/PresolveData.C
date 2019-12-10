@@ -1038,23 +1038,143 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
    return reset_bounds;
 }
 
+/* returns whether or not the current bound on col is implied by row */
 bool PresolveData::varBoundImpliedFreeBy( bool upper, int node_col, int col, SystemType system_type, int node_row, int row, bool linking_row )
 {
+   // todo : theoretically there might be nnzs changes in some buffers somewhere - should not happen but how to check?
+   // todo : should this be only one method varBoundsImpliedFree?
+   if( 0 == getSimpleVecFromRowStochVec( system_type == EQUALITY_SYSTEM ? *nnzs_row_A : *nnzs_row_C, node_row, linking_row)[row] )
+      return false;
+
    node_row = ( !linking_row) ? node_row : -2;
 
+   bool res = false;
    if( upper )
    {
-      return (getSimpleVecFromColStochVec( *upper_bound_implied_by_system, node_col)[col] == system_type && 
+      res = (getSimpleVecFromColStochVec( *upper_bound_implied_by_system, node_col)[col] == system_type &&
          getSimpleVecFromColStochVec( *upper_bound_implied_by_node, node_col)[col] == node_row &&
          getSimpleVecFromColStochVec( *upper_bound_implied_by_row, node_col)[col] == row);
    }
    else
    {
-      return (getSimpleVecFromColStochVec( *lower_bound_implied_by_system, node_col)[col] == system_type && 
+      res = (getSimpleVecFromColStochVec( *lower_bound_implied_by_system, node_col)[col] == system_type &&
          getSimpleVecFromColStochVec( *lower_bound_implied_by_node, node_col)[col] == node_row &&
          getSimpleVecFromColStochVec( *lower_bound_implied_by_row, node_col)[col] == row);
    }
 
+   if( res == true )
+   {
+      bool upper_implied, lower_implied;
+      varboundImpliedFreeFullCheck(upper_implied, lower_implied, node_col, col, system_type, node_row, row, linking_row);
+      if(upper)
+         assert(upper_implied);
+      else
+         assert(lower_implied);
+   }
+
+   return res;
+}
+
+/* uses current activities (non-updated) to check whether said column's bounds are implied by row */
+void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, int node_col,
+   int col, SystemType system_type, int node_row, int row, bool linking_row) const
+{
+   upper_implied = false;
+   lower_implied = false;
+
+   /* calculate implied bounds again and check whether the col bounds are actually still implied */
+   /* get activities */
+   double max_act, min_act;
+   int max_ubndd, min_ubndd;
+   getRowActivities(system_type, node_row, linking_row, row, max_act, min_act, max_ubndd, min_ubndd);
+
+   /* block in which column is located */
+   BlockType block_type = (linking_row) ? BL_MAT : ((node_col == -1 && node_row != -1) ? A_MAT : B_MAT);
+
+   /* get matrix in order to get the coefficient of col in row */
+   const SparseStorageDynamic& mat = (system_type == EQUALITY_SYSTEM) ?
+      getSparseGenMatrixFromStochMat(dynamic_cast<const StochGenMatrix&>(*presProb->A), node_row, block_type)->getStorageDynamicRef() :
+      getSparseGenMatrixFromStochMat(dynamic_cast<const StochGenMatrix&>(*presProb->C), node_row, block_type)->getStorageDynamicRef();
+
+   const int row_start = mat.getRowPtr(row).start;
+   const int row_end = mat.getRowPtr(row).end;
+   int col_idx;
+
+   /* find coefficient and column */
+   for( col_idx = row_start; col_idx < row_end; ++col_idx )
+   {
+      int col_mat = mat.getJcolM(col_idx);
+      if( col == col_mat )
+         break;
+
+   }
+   /* assert something was found */
+   assert(col_idx != row_end);
+
+   /* coefficient of col in row */
+   const double coeff = mat.getMat(col_idx);
+   assert(!PIPSisZero(coeff));
+
+   /* current bounds */
+   const double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, node_col)[col];
+   const double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, node_col)[col];
+   const double xupp = getSimpleVecFromColStochVec(*presProb->bux, node_col)[col];
+   const double xlow = getSimpleVecFromColStochVec(*presProb->blx, node_col)[col];
+
+   if( coeff > 0 )
+   {
+      min_act -= coeff * xlow;
+      max_act -= coeff * xupp;
+   }
+   else
+   {
+      min_act -= coeff * xupp;
+      max_act -= coeff * xlow;
+   }
+
+   const double rhs = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*presProb->bA, node_row, linking_row)[row] :
+      getSimpleVecFromRowStochVec(*presProb->bu, node_row, linking_row)[row];
+   const double lhs = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*presProb->bA, node_row, linking_row)[row] :
+      getSimpleVecFromRowStochVec(*presProb->bl, node_row, linking_row)[row];
+
+   const double icupp = getSimpleVecFromRowStochVec(*presProb->icupp, node_row, linking_row)[row];
+   const double iclow = getSimpleVecFromRowStochVec(*presProb->iclow, node_row, linking_row)[row];
+
+   /* check bound implied by row */
+
+   /* calculate an check implied upper bound */
+   if( max_ubndd == 0 && !PIPSisZero(ixupp) )
+   {
+      if( 0.0 < coeff )
+      {
+         assert(system_type == EQUALITY_SYSTEM || !PIPSisZero(icupp));
+         const double implied_upperbound = (rhs - min_act) / coeff;
+         upper_implied = PIPSisLE(implied_upperbound, xupp);
+      }
+      else
+      {
+         assert(system_type == EQUALITY_SYSTEM || !PIPSisZero(iclow));
+         const double implied_upperbound = (lhs - max_act) / coeff;
+         upper_implied = PIPSisLE(implied_upperbound, xupp);
+      }
+   }
+
+   /* calculate an check implied lower bound */
+   if( min_ubndd == 0 && !PIPSisZero(ixlow) )
+   {
+      if( coeff < 0.0 )
+      {
+         assert(system_type == EQUALITY_SYSTEM || !PIPSisZero(iclow));
+         const double implied_lowerbound = (lhs - max_act) / coeff;
+         lower_implied = PIPSisLE(xlow, implied_lowerbound);
+      }
+      else
+      {
+         assert(system_type == EQUALITY_SYSTEM || !PIPSisZero(icupp));
+         const double implied_lowerbound = (rhs - min_act) / coeff;
+         lower_implied = PIPSisLE(xlow, implied_lowerbound);
+      }
+   }
 }
 
 void PresolveData::fixEmptyColumn(int node, int col, double val)
