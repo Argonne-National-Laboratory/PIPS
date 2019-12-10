@@ -339,7 +339,7 @@ void StochPresolverSingletonColumns::checkColImpliedFree(
    {
       updatePointersForCurrentNode(node_row, system_type);
 
-      /* get activites */
+      /* get activities */
       double max_act;
       double min_act;
       int max_ubndd;
