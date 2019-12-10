@@ -1041,6 +1041,7 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
 /* returns whether or not the current bound on col is implied by row */
 bool PresolveData::varBoundImpliedFreeBy( bool upper, int node_col, int col, SystemType system_type, int node_row, int row, bool linking_row )
 {
+   // todo : not sure whether there is an instance that ever calls this
    // todo : theoretically there might be nnzs changes in some buffers somewhere - should not happen but how to check?
    // todo : should this be only one method varBoundsImpliedFree?
    if( 0 == getSimpleVecFromRowStochVec( system_type == EQUALITY_SYSTEM ? *nnzs_row_A : *nnzs_row_C, node_row, linking_row)[row] )
