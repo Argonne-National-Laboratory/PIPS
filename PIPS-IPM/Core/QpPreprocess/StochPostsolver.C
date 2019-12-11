@@ -423,60 +423,60 @@ void StochPostsolver::setOriginalVarsFromReduced(const sVars& reduced_vars, sVar
    StochVector &x_orig = dynamic_cast<StochVector&>(*original_vars.x);
    setOriginalValuesFromReduced<>(x_orig, x_reduced, *padding_origcol);
 
-//   /* s */
-//   const StochVector &s_reduced = dynamic_cast<const StochVector&>(*reduced_vars.s);
-//   StochVector &s_orig = dynamic_cast<StochVector&>(*original_vars.s);
-//   setOriginalValuesFromReduced(s_orig, s_reduced, *padding_origrow_inequality);
-//
-//   /* y */
-//   const StochVector &y_reduced = dynamic_cast<const StochVector&>(*reduced_vars.y);
-//   StochVector &y_orig = dynamic_cast<StochVector&>(*original_vars.y);
-//   setOriginalValuesFromReduced(y_orig, y_reduced, *padding_origrow_equality);
-//
-//   /* z */
-//   const StochVector &z_reduced = dynamic_cast<const StochVector&>(*reduced_vars.z);
-//   StochVector &z_orig = dynamic_cast<StochVector&>(*original_vars.z);
-//   setOriginalValuesFromReduced(z_orig, z_reduced, *padding_origrow_inequality);
-//
-//   /* v */
-//   const StochVector &v_reduced = dynamic_cast<const StochVector&>(*reduced_vars.v);
-//   StochVector &v_orig = dynamic_cast<StochVector&>(*original_vars.v);
-//   setOriginalValuesFromReduced(v_orig, v_reduced, *padding_origcol);
-//
-//   /* gamma */
-//   const StochVector &gamma_reduced = dynamic_cast<const StochVector&>(*reduced_vars.gamma);
-//   StochVector &gamma_orig = dynamic_cast<StochVector&>(*original_vars.gamma);
-//   setOriginalValuesFromReduced(gamma_orig, gamma_reduced, *padding_origcol);
-//
-//   /* w */
-//   const StochVector &w_reduced = dynamic_cast<const StochVector&>(*reduced_vars.w);
-//   StochVector &w_orig = dynamic_cast<StochVector&>(*original_vars.w);
-//   setOriginalValuesFromReduced(w_orig, w_reduced, *padding_origcol);
-//
-//   /* phi */
-//   const StochVector &phi_reduced = dynamic_cast<const StochVector&>(*reduced_vars.phi);
-//   StochVector &phi_orig = dynamic_cast<StochVector&>(*original_vars.phi);
-//   setOriginalValuesFromReduced(phi_orig, phi_reduced, *padding_origcol);
-//
-//   /* t */
-//   const StochVector &t_reduced = dynamic_cast<const StochVector&>(*reduced_vars.t);
-//   StochVector &t_orig = dynamic_cast<StochVector&>(*original_vars.t);
-//   setOriginalValuesFromReduced(t_orig, t_reduced, *padding_origrow_inequality);
-//
-//   /* lambda */
-//   const StochVector &lambda_reduced = dynamic_cast<const StochVector&>(*reduced_vars.lambda);
-//   StochVector &lambda_orig = dynamic_cast<StochVector&>(*original_vars.lambda);
-//   setOriginalValuesFromReduced(lambda_orig, lambda_reduced, *padding_origrow_inequality);
-//
-//   /* u */
-//   const StochVector &u_reduced = dynamic_cast<const StochVector&>(*reduced_vars.u);
-//   StochVector &u_orig = dynamic_cast<StochVector&>(*original_vars.u);
-//   setOriginalValuesFromReduced(u_orig, u_reduced, *padding_origrow_inequality);
-//
-//   /* pi */
-//   const StochVector &pi_reduced = dynamic_cast<const StochVector&>(*reduced_vars.pi);
-//   StochVector &pi_orig = dynamic_cast<StochVector&>(*original_vars.pi);
-//   setOriginalValuesFromReduced(pi_orig, pi_reduced, *padding_origrow_inequality);
+   /* s */
+   const StochVector &s_reduced = dynamic_cast<const StochVector&>(*reduced_vars.s);
+   StochVector &s_orig = dynamic_cast<StochVector&>(*original_vars.s);
+   setOriginalValuesFromReduced(s_orig, s_reduced, *padding_origrow_inequality);
+
+   /* y */
+   const StochVector &y_reduced = dynamic_cast<const StochVector&>(*reduced_vars.y);
+   StochVector &y_orig = dynamic_cast<StochVector&>(*original_vars.y);
+   setOriginalValuesFromReduced(y_orig, y_reduced, *padding_origrow_equality);
+
+   /* z */
+   const StochVector &z_reduced = dynamic_cast<const StochVector&>(*reduced_vars.z);
+   StochVector &z_orig = dynamic_cast<StochVector&>(*original_vars.z);
+   setOriginalValuesFromReduced(z_orig, z_reduced, *padding_origrow_inequality);
+
+   /* v */
+   const StochVector &v_reduced = dynamic_cast<const StochVector&>(*reduced_vars.v);
+   StochVector &v_orig = dynamic_cast<StochVector&>(*original_vars.v);
+   setOriginalValuesFromReduced(v_orig, v_reduced, *padding_origcol);
+
+   /* gamma */
+   const StochVector &gamma_reduced = dynamic_cast<const StochVector&>(*reduced_vars.gamma);
+   StochVector &gamma_orig = dynamic_cast<StochVector&>(*original_vars.gamma);
+   setOriginalValuesFromReduced(gamma_orig, gamma_reduced, *padding_origcol);
+
+   /* w */
+   const StochVector &w_reduced = dynamic_cast<const StochVector&>(*reduced_vars.w);
+   StochVector &w_orig = dynamic_cast<StochVector&>(*original_vars.w);
+   setOriginalValuesFromReduced(w_orig, w_reduced, *padding_origcol);
+
+   /* phi */
+   const StochVector &phi_reduced = dynamic_cast<const StochVector&>(*reduced_vars.phi);
+   StochVector &phi_orig = dynamic_cast<StochVector&>(*original_vars.phi);
+   setOriginalValuesFromReduced(phi_orig, phi_reduced, *padding_origcol);
+
+   /* t */
+   const StochVector &t_reduced = dynamic_cast<const StochVector&>(*reduced_vars.t);
+   StochVector &t_orig = dynamic_cast<StochVector&>(*original_vars.t);
+   setOriginalValuesFromReduced(t_orig, t_reduced, *padding_origrow_inequality);
+
+   /* lambda */
+   const StochVector &lambda_reduced = dynamic_cast<const StochVector&>(*reduced_vars.lambda);
+   StochVector &lambda_orig = dynamic_cast<StochVector&>(*original_vars.lambda);
+   setOriginalValuesFromReduced(lambda_orig, lambda_reduced, *padding_origrow_inequality);
+
+   /* u */
+   const StochVector &u_reduced = dynamic_cast<const StochVector&>(*reduced_vars.u);
+   StochVector &u_orig = dynamic_cast<StochVector&>(*original_vars.u);
+   setOriginalValuesFromReduced(u_orig, u_reduced, *padding_origrow_inequality);
+
+   /* pi */
+   const StochVector &pi_reduced = dynamic_cast<const StochVector&>(*reduced_vars.pi);
+   StochVector &pi_orig = dynamic_cast<StochVector&>(*original_vars.pi);
+   setOriginalValuesFromReduced(pi_orig, pi_reduced, *padding_origrow_inequality);
 }
 
 

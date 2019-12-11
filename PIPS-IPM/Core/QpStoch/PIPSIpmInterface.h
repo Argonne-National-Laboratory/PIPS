@@ -28,7 +28,7 @@
 #include "sTreeCallbacks.h"
 #include "pipsport.h"
 
-//#define PRESOLVE_POSTSOLVE_ONLY // will not call solve routine an just presolve and then postsolve the problem - for debugging presolve and postsolve operations
+#define PRESOLVE_POSTSOLVE_ONLY // will not call solve routine an just presolve and then postsolve the problem - for debugging presolve and postsolve operations
 
 template<class FORMULATION, class IPMSOLVER> 
 class PIPSIpmInterface 
