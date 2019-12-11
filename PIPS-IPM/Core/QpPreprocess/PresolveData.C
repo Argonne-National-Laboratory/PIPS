@@ -1180,8 +1180,12 @@ void PresolveData::fixEmptyColumn(int node, int col, double val)
 {
    assert(-1 <= node && node < nChildren);
    assert(0 <= col);
-   //todo
-   postsolver->notifyFixedEmptyColumn(node, col, val);
+
+   if(postsolver)
+   {
+      const double obj_value = getSimpleVecFromColStochVec(*presProb->g, node)[col];
+      postsolver->notifyFixedEmptyColumn(node, col, val, obj_value);
+   }
 
    removeColumn(node, col, val);
 

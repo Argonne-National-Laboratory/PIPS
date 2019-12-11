@@ -123,17 +123,18 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 }
 
 
-void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value)
+void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value, double obj_value)
 {
    assert(!wasColumnRemoved(node, col));
    markColumnRemoved(node, col);
 
-   // todo
+   // todo : ?
    assert(std::fabs(value) < 1e10);
 
    reductions.push_back(FIXED_EMPTY_COLUMN);
    indices.push_back(INDEX(COL,node, col));
    float_values.push_back(value);
+   float_values.push_back(obj_value);
 
    finishNotify();
 }
@@ -277,6 +278,12 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    StochVector& s_vec = dynamic_cast<StochVector&>(*stoch_original_sol.s);
    StochVector& t_vec = dynamic_cast<StochVector&>(*stoch_original_sol.t);
    StochVector& u_vec = dynamic_cast<StochVector&>(*stoch_original_sol.u);
+
+   StochVector& gamma_vec = dynamic_cast<StochVector&>(*stoch_original_sol.gamma);
+   StochVector& phi_vec = dynamic_cast<StochVector&>(*stoch_original_sol.phi);
+   StochVector& v_vec = dynamic_cast<StochVector&>(*stoch_original_sol.v);
+   StochVector& w_vec = dynamic_cast<StochVector&>(*stoch_original_sol.w);
+
    // todo
    /* dual solution is now reduced solution padded with zeros */
 
@@ -298,6 +305,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       {
       case REDUNDANT_ROW:
       {
+         /* only dual postsolve */
          assert(first_index + 1 == next_first_index);
          assert(first_float_val + 2 == next_first_float_val);
          assert(first_int_val + 3 == next_first_int_val);
@@ -391,7 +399,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       case FIXED_EMPTY_COLUMN:
       {
          assert(first_index + 1 == next_first_index);
-         assert(first_float_val + 1 == next_first_float_val);
+         assert(first_float_val + 4 == next_first_float_val);
          assert(first_int_val == next_first_int_val);
 
          const INDEX& idx_col = indices.at(first_index);
@@ -400,15 +408,36 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int column = idx_col.index;
          const int node = idx_col.node;
          const double value = float_values.at(first_float_val);
-
+         const double obj_value = float_values.at(first_float_val + 1);
+         const double lbx = float_values.at(first_float_val + 2);// todo lbs uubx and ixlo ixupp..
+         const double ubx = float_values.at(first_float_val + 3);
          assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
          assert(wasColumnRemoved(node, column));
 
+         /* primal */
          /* mark entry as set and set x value to fixation */
          getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
          getSimpleVecFromColStochVec(x_vec, node)[column] = value;
 
+         assert(PIPSisLT(lbx, value));
+         assert(PIPSisLT(value, ubx));
+         /* dual */
          // todo : dual postsolve
+         getSimpleVecFromColStochVec(gamma_vec, node)[column] = 0;
+         getSimpleVecFromColStochVec(phi_vec, node)[column] = 0;
+
+         if(!PIPSisZero(obj_value))
+         {
+            if( obj_value < 0 )
+               getSimpleVecFromColStochVec(gamma_vec, node)[column] = obj_value;
+            else
+               getSimpleVecFromColStochVec(phi_vec, node)[column] = obj_value;
+         }
+
+         getSimpleVecFromColStochVec(v_vec, node)[column] = value - lbx;
+         getSimpleVecFromColStochVec(w_vec, node)[column] = ubx - value;
+         assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]));
+         assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]));
          break;
       }
       case SUBSTITUTED_COLUMN:
