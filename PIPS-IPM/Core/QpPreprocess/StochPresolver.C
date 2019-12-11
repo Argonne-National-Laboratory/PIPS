@@ -87,15 +87,15 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-//      presolverSR.applyPresolving();
-//      presolverBS.applyPresolving();
-//      presolverParallelRow.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverParallelRow.applyPresolving();
 //      presolverSC.applyPresolving();
-//      presolverColFix.applyPresolving();
+      presolverColFix.applyPresolving();
    }
    // presData.getPresProb().writeToStreamDense(std::cout);
    // before the finalize call fix all empty rows and columns not yet fixed
-//   presolverCleanup.applyPresolving();
+   presolverCleanup.applyPresolving();
    
    if( my_rank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
