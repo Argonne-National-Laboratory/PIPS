@@ -56,8 +56,8 @@ public:
   virtual void fsymAtPutSpRow( int row, double A[], int lenA, int jcolA[],
 			       int& info );
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
 
   virtual long long size();
 
@@ -138,8 +138,8 @@ public:
   virtual void fsymAtPutSpRow( int row, double A[], int lenA, int jcolA[],
 			       int& info ){};
 
-  virtual void getSize( long long& m, long long& n ){m=0;n=0;}
-  virtual void getSize( int& m, int& n ){m=0;n=0;}
+  void getSize( long long& m, long long& n ) const override { m = 0; n = 0; }
+  void getSize( int& m, int& n ) const override { m = 0; n = 0; }
 
   virtual long long size(){return 0;}
 

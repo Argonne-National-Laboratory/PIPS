@@ -53,8 +53,8 @@ public:
 
   virtual void symPutZeroes();
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
   virtual long long size();
 
   virtual void getDiagonal( OoqpVector& vec );

@@ -37,7 +37,7 @@ public:
                              double A[], int lenA, int jcolA[], int& nnz,
                              int colExtent, int& info ) = 0;
 
-  virtual void getSize( int& m, int& n )  = 0;
+  virtual void getSize( int& m, int& n ) const = 0;
 
   virtual void getDiagonal( OoqpVector& vec ) = 0;
   virtual void setToDiagonal( OoqpVector& vec ) = 0;
@@ -149,8 +149,8 @@ public:
   virtual void RowScale ( OoqpVector& vec ) = 0;
   virtual void scalarMult( double num) = 0;
 
-  virtual void getSize( long long& m, long long& n )  = 0;
-  virtual void getSize( int& m,       int& n )  = 0;
+  virtual void getSize( long long& m, long long& n ) const = 0;
+  virtual void getSize( int& m, int& n ) const = 0;
 
   virtual ~DoubleMatrix() {};
 };
@@ -158,7 +158,7 @@ public:
 /** Parent of all Symmetric matrices. 
  * @ingroup AbstractLinearAlgebra
  */
-class SymMatrix    : public DoubleMatrix {
+class SymMatrix : public DoubleMatrix {
 public:
 
   /** Put a submatrix of M into this matrix.

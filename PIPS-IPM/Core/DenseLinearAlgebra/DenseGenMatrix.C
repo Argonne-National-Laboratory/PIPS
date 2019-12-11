@@ -90,18 +90,17 @@ void DenseGenMatrix::setToDiagonal( OoqpVector& vec )
   mStorage->setToDiagonal( vec );
 }
 
-void DenseGenMatrix::getSize( long long& m, long long& n )
+void DenseGenMatrix::getSize( long long& m, long long& n ) const
 {
   m = mStorage->m;
   n = mStorage->n;
 }
 
-void DenseGenMatrix::getSize( int& m, int& n )
+void DenseGenMatrix::getSize( int& m, int& n ) const
 {
   m = mStorage->m;
   n = mStorage->n;
 }
-
 
 void DenseGenMatrix::atPutSubmatrix( int destRow, int destCol,
 					 DoubleMatrix & Mat,

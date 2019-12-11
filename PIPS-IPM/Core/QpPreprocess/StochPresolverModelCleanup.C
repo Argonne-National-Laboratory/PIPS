@@ -401,12 +401,12 @@ void StochPresolverModelCleanup::fixEmptyColumns()
          /* column fixation candidate */
          if( nnzs_col[col] == 0)
          {
-            /* ask whether column was is fixed already */
+            /* check whether column was removed already */
             if( PIPSisZero(ixlow[col]) && PIPSisZero(ixupp[col])
                && PIPSisZero(xlow[col]) && PIPSisZero(xupp[col]) 
                && PIPSisZero(g[col]))
             {
-               if( presData.wasColumnFixed(node, col) )
+               if( presData.wasColumnRemoved(node, col) )
                   continue;
             }
 

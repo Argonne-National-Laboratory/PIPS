@@ -46,8 +46,8 @@ public:
   virtual SparseGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const;
   virtual SparseGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  virtual void getSize( long long& m, long long& n ) const;
+  virtual void getSize( int& m, int& n ) const;
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that

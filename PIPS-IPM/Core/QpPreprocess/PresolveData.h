@@ -188,8 +188,8 @@ public :
        */
       void recomputeActivities(bool linking_only);
 
-      bool wasColumnFixed(int node, int col) const;
-      bool wasRowFixed(SystemType system_type, int node, bool linking, int row) const;
+      bool wasColumnRemoved(int node, int col) const;
+      bool wasRowRemoved(SystemType system_type, int node, int row, bool linking_row) const;
 
       /// interface methods called from the presolvers when they detect a possible modification
       // todo make bool and give feedback or even better - return some enum maybe?
@@ -271,6 +271,7 @@ private:
       void reduceNnzCounterColumn(int node, BlockType block_type, int col_index, int amount);
 
       /// methods for querying the problem in order to get certain structures etc. todo: move?
+      StochGenMatrix& getSystemMatrix(SystemType system_type) const;
       SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
 
 public:

@@ -111,8 +111,8 @@ public:
  public:
   virtual void updateTransposed();
 
-  void getSize( long long& m, long long& n ) override;
-  void getSize( int& m, int& n ) override;
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
@@ -252,8 +252,8 @@ public:
  public:
   void updateTransposed() override {};
 
-  void getSize( int& m, int& n ) override {m=0; n=0;}
-  void getSize( long long& m, long long& n ) override {m=0; n=0;}
+  void getSize( int& m, int& n ) const override { m = 0; n = 0; }
+  void getSize( long long& m, long long& n ) const override { m = 0; n = 0; }
 
   StochGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const override { return new StochGenDummyMatrix(id); };
   StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const  override { return new StochGenDummyMatrix(id); };

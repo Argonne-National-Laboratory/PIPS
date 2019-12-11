@@ -26,8 +26,7 @@ public:
       void notifySingletonEqualityRow( int node, int row, BlockType block_type, int col, double coeff, double rhs);
       void notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs );
 
-      void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint, const std::vector<int>& indices_row,
-         const std::vector<double> values_row );
+      void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint, const StochGenMatrix& matrix_row);
       void notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col, const std::vector<double>& values_col);
       void notifyFixedEmptyColumn( int node, unsigned int col, double value);     
       void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, double rhs,
@@ -40,9 +39,13 @@ public:
       void notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2, 
          int node_var2, double scalar, double translation);
 
-      bool wasColumnFixed(int node, int col) const;
-      bool wasRowFixed(SystemType system_type, int node, bool linking, int row) const;
+      bool wasColumnRemoved(int node, int col) const;
+      bool wasRowRemoved(SystemType system_type, int node, int row, bool linking_row) const;
+private:
+      void markColumnRemoved(int node, int col);
+      void markRowRemoved(SystemType system_type, int node, int row, bool linking_row);
 
+public:
       /// synchronization events
       void putLinkingVarsSyncEvent(); 
 
@@ -87,13 +90,12 @@ private:
       std::vector<ReductionType> reductions;
       std::vector<INDEX> indices;
       
-      // TODO add different vector that can store integers exactly 
+      // TODO add third vector that can store integers exactly
       std::vector<double> values;
       std::vector<unsigned int> start_idx_values;
 
       // StochGenMatrixHandle stored_cols; maybe change clone method
       StochGenMatrixHandle stored_rows;
-      // todo KKTchecker
 
       void finishNotify();
 

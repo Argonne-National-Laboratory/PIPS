@@ -226,14 +226,14 @@ void SparseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
 }
 
 // Pass these to storage
-void SparseSymMatrix::getSize( long long& m, long long& n )
+void SparseSymMatrix::getSize( long long& m, long long& n ) const
 {
   int mint, nint;
   mStorage->getSize( mint, nint );
   m=mint; n=nint;
 }
 
-void SparseSymMatrix::getSize( int& m, int& n )
+void SparseSymMatrix::getSize( int& m, int& n ) const
 {
   mStorage->getSize( m, n);
 }

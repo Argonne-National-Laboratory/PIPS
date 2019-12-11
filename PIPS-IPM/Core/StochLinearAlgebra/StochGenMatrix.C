@@ -140,11 +140,11 @@ int StochGenDummyMatrix::isKindOf( int type ) const
 {
   return type == kStochGenDummyMatrix;
 }
-void StochGenMatrix::getSize( long long& m_out, long long& n_out )
+void StochGenMatrix::getSize( long long& m_out, long long& n_out ) const
 {
   m_out = m; n_out=n;
 }
-void StochGenMatrix::getSize( int& m_out, int& n_out )
+void StochGenMatrix::getSize( int& m_out, int& n_out ) const
 {
   m_out = m; n_out=n;
 }

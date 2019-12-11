@@ -714,6 +714,8 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   assert(data);
 
 #if !defined(NDEBUG) && defined(PRESOLVE_POSTSOLVE_ONLY) // todo : resids for C also need recomputation.. - s variable
+  /* todo: randomize x since it has not actually been set to anything */
+  vars->x->setToConstant(0.1);
   resids->calcresids(data, vars);
 #endif
 

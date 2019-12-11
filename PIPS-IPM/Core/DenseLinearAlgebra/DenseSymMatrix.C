@@ -90,13 +90,13 @@ void DenseSymMatrix::fromGetSpRow( int row, int col,
 }
 
 
-void DenseSymMatrix::getSize( long long& m, long long& n )
+void DenseSymMatrix::getSize( long long& m, long long& n ) const
 {
   m = mStorage->m;
   n = mStorage->n;
 }
 
-void DenseSymMatrix::getSize( int& m, int& n )
+void DenseSymMatrix::getSize( int& m, int& n ) const
 {
   m = mStorage->m;
   n = mStorage->n;

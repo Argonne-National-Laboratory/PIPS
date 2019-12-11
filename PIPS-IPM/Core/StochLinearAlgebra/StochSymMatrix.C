@@ -124,12 +124,12 @@ void StochSymMatrix::fsymAtPutSpRow( int row,
   assert( "Not implemented" && 0 );
 }
 
-void StochSymMatrix::getSize( long long& m_, long long& n_ )
+void StochSymMatrix::getSize( long long& m_, long long& n_ ) const
 {
   m_=n; n_=n;
 }
 
-void StochSymMatrix::getSize( int& m_, int& n_ )
+void StochSymMatrix::getSize( int& m_, int& n_ ) const
 {
   m_=n; n_=n;
 }

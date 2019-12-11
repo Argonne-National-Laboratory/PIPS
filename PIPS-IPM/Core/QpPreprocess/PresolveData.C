@@ -163,8 +163,8 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    bound_chgs_C = SimpleVectorHandle( new SimpleVector(array_bound_chgs + n_linking_A, n_linking_C));
 
    // initialize all dynamic transposed sub matrices
-   dynamic_cast<StochGenMatrix&>(*presProb->A).initTransposed(true);
-   dynamic_cast<StochGenMatrix&>(*presProb->C).initTransposed(true);
+   getSystemMatrix(EQUALITY_SYSTEM).initTransposed(true);
+   getSystemMatrix(INEQUALITY_SYSTEM).initTransposed(true);
 
    recomputeActivities();
    initNnzCounter( *nnzs_row_A, *nnzs_row_C, *nnzs_col);
@@ -240,8 +240,8 @@ sData* PresolveData::finalize()
    // this removes all columns and rows that are now empty from the problem
    presProb->cleanUpPresolvedData(*nnzs_row_A, *nnzs_row_C, *nnzs_col);
 
-   dynamic_cast<StochGenMatrix&>(*presProb->A).deleteTransposed();
-   dynamic_cast<StochGenMatrix&>(*presProb->C).deleteTransposed();
+   getSystemMatrix(EQUALITY_SYSTEM).deleteTransposed();
+   getSystemMatrix(INEQUALITY_SYSTEM).deleteTransposed();
 
    return presProb;
 }
@@ -250,14 +250,14 @@ int PresolveData::getNnzsRowA(int node, BlockType block_type, int row) const { r
 int PresolveData::getNnzsRowC(int node, BlockType block_type, int row) const { return getSimpleVecFromRowStochVec(*nnzs_row_C, node, block_type)[row]; };
 int PresolveData::getNnzsCol(int node, int col) const { return getSimpleVecFromColStochVec(*nnzs_col, node)[col]; };
 
-bool PresolveData::wasColumnFixed(int node, int col) const
+bool PresolveData::wasColumnRemoved(int node, int col) const
 {
-   return postsolver->wasColumnFixed(node, col);
+   return postsolver->wasColumnRemoved(node, col);
 }
 
-bool PresolveData::wasRowFixed(SystemType system_type, int node, bool linking, int row) const
+bool PresolveData::wasRowRemoved(SystemType system_type, int node, int row, bool linking_row ) const
 {
-   return postsolver->wasRowFixed(system_type, node, linking, row);
+   return postsolver->wasRowRemoved(system_type, node, row, linking_row);
 }
 
 /** Recomputes the activities of all rows the process knows about. If linking_only is set to true only the linking_rows will get recomputed.
@@ -267,8 +267,8 @@ bool PresolveData::wasRowFixed(SystemType system_type, int node, bool linking, i
  */
 void PresolveData::recomputeActivities(bool linking_only)
 {
-   const StochGenMatrix& mat_A = dynamic_cast<const StochGenMatrix&>(*presProb->A);
-   const StochGenMatrix& mat_C = dynamic_cast<const StochGenMatrix&>(*presProb->C);
+   const StochGenMatrix& mat_A = getSystemMatrix(EQUALITY_SYSTEM);
+   const StochGenMatrix& mat_C = getSystemMatrix(INEQUALITY_SYSTEM);
 
    const StochVector& xupp = dynamic_cast<StochVector&>(*presProb->bux);
    const StochVector& ixupp = dynamic_cast<StochVector&>(*presProb->ixupp);
@@ -789,8 +789,8 @@ void PresolveData::putLinkingVarsSyncEvent()
 
 void PresolveData::initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorBase<int>& nnzs_row_C, StochVectorBase<int>& nnzs_col) const
 {
-   StochGenMatrix& A = dynamic_cast<StochGenMatrix&>(*(presProb->A));
-   StochGenMatrix& C = dynamic_cast<StochGenMatrix&>(*(presProb->C));
+   StochGenMatrix& A = getSystemMatrix(EQUALITY_SYSTEM);
+   StochGenMatrix& C = getSystemMatrix(INEQUALITY_SYSTEM);
 
    StochVectorBaseHandle<int> colClone(dynamic_cast<StochVectorBase<int>*>(nnzs_col.clone()));
 
@@ -1093,9 +1093,7 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
    BlockType block_type = (linking_row) ? BL_MAT : ((node_col == -1 && node_row != -1) ? A_MAT : B_MAT);
 
    /* get matrix in order to get the coefficient of col in row */
-   const SparseStorageDynamic& mat = (system_type == EQUALITY_SYSTEM) ?
-      getSparseGenMatrixFromStochMat(dynamic_cast<const StochGenMatrix&>(*presProb->A), node_row, block_type)->getStorageDynamicRef() :
-      getSparseGenMatrixFromStochMat(dynamic_cast<const StochGenMatrix&>(*presProb->C), node_row, block_type)->getStorageDynamicRef();
+   const SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node_row, block_type)->getStorageDynamicRef();
 
    const int row_start = mat.getRowPtr(row).start;
    const int row_end = mat.getRowPtr(row).end;
@@ -1686,13 +1684,7 @@ void PresolveData::substituteVariableParallelRows(SystemType system_type, int no
 void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
    if(postsolver)
-   {
-      // todo : adjust interface here
-      std::vector<int> idx_row;
-      std::vector<double> val_row;
-
-      postsolver->notifyRedundantRow(system_type, node, row, linking, idx_row, val_row);
-   }
+      postsolver->notifyRedundantRow(system_type, node, row, linking, getSystemMatrix(system_type));
  
    if( TRACK_ROW(node, row, system_type, linking) )
    {
@@ -1716,8 +1708,7 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
 
    const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row )[row];
 
-   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, rhs, node_col, col, 
-      dynamic_cast<const StochGenMatrix&>( (system_type == EQUALITY_SYSTEM) ? *presProb->A : *presProb->C ) );
+   postsolver->notifyFreeColumnSingleton( system_type, node_row, row, linking_row, rhs, node_col, col, getSystemMatrix(system_type));
 
    adaptObjectiveSubstitutedRow( system_type, node_row, row, linking_row, node_col, col );
 
@@ -2214,10 +2205,10 @@ bool PresolveData::nodeIsDummy(int node) const
    if( node == -1 )
       return false;
 
-   assert(dynamic_cast<StochGenMatrix&>(*presProb->A).children[node]->isKindOf(kStochGenDummyMatrix)
-		   == dynamic_cast<StochGenMatrix&>(*presProb->C).children[node]->isKindOf(kStochGenDummyMatrix));
+   assert( getSystemMatrix(EQUALITY_SYSTEM).children[node]->isKindOf(kStochGenDummyMatrix)
+		   == getSystemMatrix(INEQUALITY_SYSTEM).children[node]->isKindOf(kStochGenDummyMatrix));
 
-   StochGenMatrix& matrix = dynamic_cast<StochGenMatrix&>(*presProb->A);
+   StochGenMatrix& matrix = getSystemMatrix(EQUALITY_SYSTEM);
    // todo : asserts
    if( matrix.children[node]->isKindOf(kStochGenDummyMatrix))
    {
@@ -2243,23 +2234,12 @@ bool PresolveData::nodeIsDummy(int node) const
 bool PresolveData::hasLinking(SystemType system_type) const
 {
    int mlink, nlink;
-   if( system_type == EQUALITY_SYSTEM )
+   const SparseGenMatrix* mat = getSparseGenMatrix(system_type, -1, BL_MAT);
+   mat->getSize(mlink, nlink);
+   if( mlink > 0 )
    {
-      dynamic_cast<StochGenMatrix&>(*(presProb->A)).Blmat->getSize(mlink, nlink);
-      if( mlink > 0 )
-      {
-         // todo: assert that all vectors and matrices have linking part
-         return true;
-      }
-   }
-   else
-   {
-      dynamic_cast<StochGenMatrix&>(*(presProb->C)).Blmat->getSize(mlink, nlink);
-      if( mlink > 0 )
-      {
-         // todo: assert that all vectors and matrices have linking part
-         return true;
-      }
+      // todo: assert that all vectors and matrices have linking part
+      return true;
    }
    return false;
 }
@@ -2887,13 +2867,23 @@ void PresolveData::getRowActivities(SystemType system_type, int node, bool linki
    }
 }
 
+StochGenMatrix& PresolveData::getSystemMatrix(SystemType system_type) const
+{
+   if( system_type == EQUALITY_SYSTEM )
+      return dynamic_cast<StochGenMatrix&>(*presProb->A);
+   else
+   {
+      assert(system_type == INEQUALITY_SYSTEM);
+      return dynamic_cast<StochGenMatrix&>(*presProb->C);
+   }
+}
+
 SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const
 {
    assert( -1 <= node && node < nChildren );
    assert(!nodeIsDummy(node));
 
-   const StochGenMatrix& sMat = (system_type == EQUALITY_SYSTEM) ? dynamic_cast<const StochGenMatrix&>(*presProb->A) : 
-      dynamic_cast<const StochGenMatrix&>(*presProb->C);
+   const StochGenMatrix& sMat = getSystemMatrix(system_type);
    SparseGenMatrix* res = getSparseGenMatrixFromStochMat(sMat, node, block_type);
    return res;
 }

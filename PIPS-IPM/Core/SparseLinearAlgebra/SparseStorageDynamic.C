@@ -118,8 +118,9 @@ SparseStorageDynamic::SparseStorageDynamic(const SparseStorage& storage, double 
    SparseStorageDynamic::instances++;
 }
 
-SparseStorageDynamic::SparseStorageDynamic( const SparseStorageDynamic &dynamicStorage)
-: spareRatio(dynamicStorage.spareRatio), m(dynamicStorage.m), n(dynamicStorage.n), len(dynamicStorage.len), len_free(dynamicStorage.len_free)
+SparseStorageDynamic::SparseStorageDynamic(const SparseStorageDynamic &dynamicStorage) :
+   spareRatio(dynamicStorage.spareRatio), m(dynamicStorage.m), m_len(dynamicStorage.m_len), n(dynamicStorage.n), len(
+      dynamicStorage.len), len_free(dynamicStorage.len_free)
 {
    assert(m >= 0 && len >= 0);
 
@@ -142,7 +143,7 @@ SparseStorageDynamic::SparseStorageDynamic( const SparseStorageDynamic &dynamicS
    SparseStorageDynamic::instances++;
 }
 
-void SparseStorageDynamic::getSize(int& m, int& n)
+void SparseStorageDynamic::getSize(int& m, int& n) const
 {
    m = this->m;
    n = this->n;

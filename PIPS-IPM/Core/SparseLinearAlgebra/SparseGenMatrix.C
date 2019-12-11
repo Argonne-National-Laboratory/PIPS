@@ -248,7 +248,7 @@ void SparseGenMatrix::symmetrize( int& info )
 }
 
 
-void SparseGenMatrix::getSize( long long& m, long long& n )
+void SparseGenMatrix::getSize( long long& m, long long& n ) const
 {
    if( mStorageDynamic != nullptr )
    {
@@ -261,7 +261,7 @@ void SparseGenMatrix::getSize( long long& m, long long& n )
       n = mStorage->n;
    }
 }
-void SparseGenMatrix::getSize( int& m, int& n )
+void SparseGenMatrix::getSize( int& m, int& n ) const
 {
   if( mStorageDynamic != nullptr )
   {

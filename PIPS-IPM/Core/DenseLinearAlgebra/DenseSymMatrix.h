@@ -35,8 +35,8 @@ public:
   virtual void transMult ( double beta,  OoqpVector& y,
 			   double alpha, OoqpVector& x );
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
 
   virtual double abmaxnorm();
   virtual void writeToStream(ostream& out) const;

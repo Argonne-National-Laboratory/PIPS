@@ -64,7 +64,7 @@ public:
   void copyFrom(int * krowM_, int * jcolM_, double * M_) const;
 
   void shiftRows( int row, int shift, int& info );
-  virtual void getSize( int& m, int& n );
+  void getSize( int& m, int& n ) const override;
   int rows() { return m; }
   int cols() { return n; }
 

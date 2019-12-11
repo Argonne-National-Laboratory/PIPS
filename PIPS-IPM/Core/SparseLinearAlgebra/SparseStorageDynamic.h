@@ -88,17 +88,17 @@ public:
                              double A[], int lenA, int jcolA[], int& nnz,
                              int colExtent, int& info ) override { assert(0 && "not implemented here"); };
 
-  virtual void getSize( int& m, int& n ) override;
+  void getSize( int& m, int& n ) const override;
 
-  virtual void getDiagonal( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
-  virtual void setToDiagonal( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
+  void getDiagonal( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
+  void setToDiagonal( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
 
-  virtual void atPutDiagonal( int idiag, OoqpVector& x ) override { assert(0 && "not implemented here"); };
-  virtual void fromGetDiagonal( int idiag, OoqpVector& x ) override { assert(0 && "not implemented here"); };
-  virtual void SymmetricScale ( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
-  virtual void ColumnScale ( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
-  virtual void RowScale ( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
-  virtual void scalarMult( double num ) override { assert(0 && "not implemented here"); };
+  void atPutDiagonal( int idiag, OoqpVector& x ) override { assert(0 && "not implemented here"); };
+  void fromGetDiagonal( int idiag, OoqpVector& x ) override { assert(0 && "not implemented here"); };
+  void SymmetricScale ( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
+  void ColumnScale ( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
+  void RowScale ( OoqpVector& vec ) override { assert(0 && "not implemented here"); };
+  void scalarMult( double num ) override { assert(0 && "not implemented here"); };
 
   void removeEntryAtIndex(int row, int col_idx);
   void removeEntryAtRowCol(int row, int col);
