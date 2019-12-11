@@ -139,8 +139,13 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
 }
 
 /** postsolve for this is simply to set all dual variables to zero - the row itself has no primal impact */
-void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_row, const StochGenMatrix& matrix_row )
+void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_row,
+   int iclow, int icupp, double lhs, double rhs, const StochGenMatrix& matrix_row )
 {
+   assert(iclow == 1 || iclow == 0);
+   assert(icupp == 1 || icupp == 0);
+   assert(iclow + icupp > 0);
+
    assert(!wasRowRemoved(system_type, node, linking_row, row));
    markRowRemoved(system_type, node, row, linking_row);
 
@@ -150,7 +155,11 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
 
    int index_stored_row = stored_rows->appendRow(matrix_row, node, row, linking_row);
 
+   float_values.push_back(lhs);
+   float_values.push_back(rhs);
    int_values.push_back(index_stored_row);
+   int_values.push_back(iclow);
+   int_values.push_back(icupp);
 
    finishNotify();
 }
@@ -201,7 +210,14 @@ bool StochPostsolver::wasColumnRemoved(int node, int col) const
 
 void StochPostsolver::markColumnRemoved(int node, int col)
 {
+   assert(!wasColumnRemoved(node, col));
    getSimpleVecFromColStochVec(*padding_origcol, node)[col] = -1;
+}
+
+void StochPostsolver::markColumnAdded(int node, int col)
+{
+   assert(wasColumnRemoved(node, col));
+   getSimpleVecFromColStochVec(*padding_origcol, node)[col] = 1;
 }
 
 bool StochPostsolver::wasRowRemoved(SystemType system_type, int node, int row, bool linking_row) const
@@ -214,10 +230,21 @@ bool StochPostsolver::wasRowRemoved(SystemType system_type, int node, int row, b
 
 void StochPostsolver::markRowRemoved(SystemType system_type, int node, int row, bool linking_row)
 {
+   assert(!wasRowRemoved(system_type, node, row, linking_row));
    if(system_type == EQUALITY_SYSTEM)
       getSimpleVecFromRowStochVec(*padding_origrow_equality, node, linking_row)[row] = -1;
    else
       getSimpleVecFromRowStochVec(*padding_origrow_inequality, node, linking_row)[row] = -1;
+}
+
+// todo use somehow?
+void StochPostsolver::markRowAdded(SystemType system_type, int node, int row, bool linking_row)
+{
+   assert(wasRowRemoved(system_type, node, row, linking_row));
+   if(system_type == EQUALITY_SYSTEM)
+      getSimpleVecFromRowStochVec(*padding_origrow_equality, node, linking_row)[row] = 1;
+   else
+      getSimpleVecFromRowStochVec(*padding_origrow_inequality, node, linking_row)[row] = 1;
 }
 
 // todo : usage and check of padding origrow - can already be done - even without any dual postsolve stuff
@@ -236,14 +263,21 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    /* original variables are now reduced vars padded with zeros */
    setOriginalVarsFromReduced(stoch_reduced_sol, stoch_original_sol);
 
+   /* primal variables */
    StochVector& x_vec = dynamic_cast<StochVector&>(*stoch_original_sol.x);
-
-
 
    /* dual variables */
 
-   // todo
+   StochVector& y_vec = dynamic_cast<StochVector&>(*stoch_original_sol.y);
 
+   StochVector& z_vec = dynamic_cast<StochVector&>(*stoch_original_sol.z);
+   StochVector& lambda_vec = dynamic_cast<StochVector&>(*stoch_original_sol.lambda);
+   StochVector& pi_vec = dynamic_cast<StochVector&>(*stoch_original_sol.pi);
+
+   StochVector& s_vec = dynamic_cast<StochVector&>(*stoch_original_sol.s);
+   StochVector& t_vec = dynamic_cast<StochVector&>(*stoch_original_sol.t);
+   StochVector& u_vec = dynamic_cast<StochVector&>(*stoch_original_sol.u);
+   // todo
    /* dual solution is now reduced solution padded with zeros */
 
    /* post-solve the reductions in reverse order */
@@ -264,7 +298,66 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       {
       case REDUNDANT_ROW:
       {
-         throw std::runtime_error("REDUNDANT_ROW not yet implemented");
+         assert(first_index + 1 == next_first_index);
+         assert(first_float_val + 2 == next_first_float_val);
+         assert(first_int_val + 3 == next_first_int_val);
+
+         const INDEX& row_idx = indices.at(first_index);
+         assert(row_idx.index_type == ROW);
+
+         const int row = row_idx.index;
+         const int node = row_idx.node;
+         const bool linking_row = row_idx.linking;
+         const SystemType system_type = row_idx.system_type;
+         assert(!linking_row); // todo
+
+         const double lhs = float_values.at(first_float_val);
+         const double rhs = float_values.at(first_float_val + 1);
+
+         const int index_stored_row = int_values.at(first_int_val);
+         const int iclow = int_values.at(first_int_val + 1);
+         const int icupp = int_values.at(first_int_val + 2);
+         assert(iclow + icupp >= 1);
+
+         double value_row = stored_rows->localRowTimesVec(x_vec, node, index_stored_row, linking_row);
+
+         if( system_type == EQUALITY_SYSTEM )
+         {
+            assert(-1 <= node && node < static_cast<int>(y_vec.children.size()));
+            assert(wasRowRemoved(system_type, node, row, linking_row));
+            assert(PIPSisEQ(lhs, rhs));
+            assert(PIPSisEQ(value_row, rhs));
+
+            /* set dual multiplier to zero and mark row as added */
+            getSimpleVecFromRowStochVec(*padding_origrow_equality, node, linking_row)[row] = 1;
+            getSimpleVecFromRowStochVec(y_vec, node, linking_row)[row] = 0;
+         }
+         else
+         {
+            assert(-1 <= node && node < static_cast<int>(z_vec.children.size()));
+            assert(wasRowRemoved(system_type, node, row, linking_row));
+
+            /* set dual multipliers to zero and mark row as added */
+            getSimpleVecFromRowStochVec(*padding_origrow_inequality, node, linking_row)[row] = 1;
+
+            getSimpleVecFromRowStochVec(z_vec, node, linking_row)[row] = 0;
+            getSimpleVecFromRowStochVec(lambda_vec, node, linking_row)[row] = 0;
+            getSimpleVecFromRowStochVec(pi_vec, node, linking_row)[row] = 0;
+
+            getSimpleVecFromRowStochVec(s_vec, node, linking_row)[row] = value_row;
+
+            assert(PIPSisLE(lhs, value_row));
+            assert(PIPSisLE(value_row, rhs));
+            if( iclow == 1)
+               getSimpleVecFromRowStochVec(t_vec, node, linking_row)[row] = value_row - lhs;
+            else
+               getSimpleVecFromRowStochVec(t_vec, node, linking_row)[row] = 0;
+
+            if( icupp == 1)
+               getSimpleVecFromRowStochVec(u_vec, node, linking_row)[row] = rhs - value_row;
+            else
+               getSimpleVecFromRowStochVec(u_vec, node, linking_row)[row] = 0;
+         }
          break;
       }
       case BOUNDS_TIGHTENED:

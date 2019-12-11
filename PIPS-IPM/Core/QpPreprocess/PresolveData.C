@@ -1682,7 +1682,15 @@ void PresolveData::substituteVariableParallelRows(SystemType system_type, int no
 void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
    if(postsolver)
-      postsolver->notifyRedundantRow(system_type, node, row, linking, getSystemMatrix(system_type));
+   {
+      const double rhs = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromColStochVec(*presProb->bA, node)[row] :
+         getSimpleVecFromColStochVec(*presProb->bu, node)[row];
+      const double lhs = (system_type == EQUALITY_SYSTEM) ? rhs : getSimpleVecFromColStochVec(*presProb->bl, node)[row];
+      const int iclow = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromColStochVec(*presProb->iclow, node)[row];
+      const int icupp = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromColStochVec(*presProb->icupp, node)[row];
+
+      postsolver->notifyRedundantRow(system_type, node, row, linking, iclow, icupp, lhs, rhs, getSystemMatrix(system_type));
+   }
  
    if( TRACK_ROW(node, row, system_type, linking) )
    {
