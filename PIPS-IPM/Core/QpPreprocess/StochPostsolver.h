@@ -27,8 +27,8 @@ public:
       void notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs );
 
       void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint, const StochGenMatrix& matrix_row);
-      void notifyFixedColumn( int node, unsigned int col, double value, const std::vector<int>& indices_col, const std::vector<double>& values_col);
-      void notifyFixedEmptyColumn( int node, unsigned int col, double value);     
+      void notifyFixedColumn( int node, unsigned int col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
+      void notifyFixedEmptyColumn( int node, unsigned int col, double value);
       void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, double rhs,
          int node_col, int col, const StochGenMatrix& matrix_row );
 
@@ -36,7 +36,7 @@ public:
       void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
-      void notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2, 
+      void notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2,
          int node_var2, double scalar, double translation);
 
       bool wasColumnRemoved(int node, int col) const;
@@ -47,7 +47,7 @@ private:
 
 public:
       /// synchronization events
-      void putLinkingVarsSyncEvent(); 
+      void putLinkingVarsSyncEvent();
 
       PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const override;
 private:
@@ -55,12 +55,19 @@ private:
       const int my_rank;
       const bool distributed;
 
-      /* can represent a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
+      /* can point to a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
+      enum IndexType {COL, ROW};
+
       struct INDEX
       {
-         INDEX(int node, int index) : node(node), index(index) {};
+         INDEX(IndexType index_type, int node, int index, bool linking = false, SystemType system_type = EQUALITY_SYSTEM) :
+            index_type(index_type), node(node), index(index), linking(linking), system_type(system_type){};
+
+         IndexType index_type;
          int node;
          int index;
+         bool linking;
+         SystemType system_type;
       } ;
 
       enum ReductionType
@@ -89,10 +96,13 @@ private:
 
       std::vector<ReductionType> reductions;
       std::vector<INDEX> indices;
-      
-      // TODO add third vector that can store integers exactly
-      std::vector<double> values;
-      std::vector<unsigned int> start_idx_values;
+      std::vector<unsigned int> start_idx_indices;
+
+      std::vector<double> float_values;
+      std::vector<int> int_values;
+
+      std::vector<unsigned int> start_idx_float_values;
+      std::vector<unsigned int> start_idx_int_values;
 
       // StochGenMatrixHandle stored_cols; maybe change clone method
       StochGenMatrixHandle stored_rows;

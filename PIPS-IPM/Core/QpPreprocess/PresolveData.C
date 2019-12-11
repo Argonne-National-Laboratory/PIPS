@@ -1200,11 +1200,9 @@ void PresolveData::fixColumn(int node, int col, double value)
    assert( 0 <= col );
    
    /* current upper and lower bound as well als column - if linking variable then only proc zero stores current root column */
-   std::vector<int> idx;
-   std::vector<double> val;
    
-   // todo
-   postsolver->notifyFixedColumn(node, col, value, idx, val);
+   // todo : dual info
+   postsolver->notifyFixedColumn(node, col, value, getSystemMatrix(EQUALITY_SYSTEM), getSystemMatrix(INEQUALITY_SYSTEM));
 
 #ifndef NDEBUG
    double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, node)[col];
