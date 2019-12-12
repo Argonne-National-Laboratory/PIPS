@@ -1264,7 +1264,8 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    }
 
    /* adjust bounds */
-   bool bounds_changed = false;
+   bool upper_bound_changed = false;
+   bool lower_bound_changed = false;
 
    // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
    // set lower bound
@@ -1278,7 +1279,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          getSimpleVecFromColStochVec(*upper_bound_implied_by_row, node_var)[col] = row;
          getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node_var)[col] = (block_type == BL_MAT) ? -2 : node_row; // -2 for linking rows
 
-         bounds_changed = true;
+         upper_bound_changed = true;
       }
    }
   // if( fabs(ubx) < 1e8 && (PIPSisZero(ixupp) || feastol * 1e3 <= fabs(xupp- ubx) ) )
@@ -1291,12 +1292,12 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          getSimpleVecFromColStochVec(*lower_bound_implied_by_row, node_var)[col] = row;
          getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node_var)[col] = (block_type == BL_MAT) ? -2 : node_row; // -2 for linking rows
 
-         bounds_changed = true;
+         lower_bound_changed = true;
       }
    }
 
-   /// every process should have the same root node data thus all of them should propagate it's rows similarly
-   if( bounds_changed && (node_row == -1 || block_type == A_MAT) )
+   /// every process should have the same root node data thus all of them should propagate their rows similarly
+   if( (lower_bound_changed || upper_bound_changed) && (node_row == -1 || block_type == A_MAT) )
       assert(outdated_linking_var_bounds == true);
 
 // todo : how to undo propagations from linking constraint rows..
@@ -1312,7 +1313,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 //   postsolver->notifyRowPropagated(system_type, node_row, row, (block_type == BL_MAT), col, lbx, ubx, mat->getStorageDynamic()->M + row_start,
 //         mat->getStorageDynamic()->jcolM + row_start, row_end - row_start );
 
-   return bounds_changed;
+   return (lower_bound_changed || upper_bound_changed);
 }
 
 void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking)

@@ -23,6 +23,9 @@ public:
       StochPostsolver( const sData& original_problem );
       virtual ~StochPostsolver();
 
+      void notifyRowModified( SystemType system_type, int node, int row, bool linking_row );
+      void notifyColModified( int node, int col );
+
       void notifySingletonEqualityRow( int node, int row, BlockType block_type, int col, double coeff, double rhs);
       void notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs );
 
@@ -33,7 +36,8 @@ public:
       void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, double rhs,
          int node_col, int col, const StochGenMatrix& matrix_row );
 
-      void notifyRowPropagated( SystemType system_type, int node, int row, bool linking_constraint, int column, double lb, double ub, double* values, int* indices, int length);
+      void notifyRowPropagatedBound( SystemType system_type, int node, int row, bool linking_constraint, int column,
+         int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound_tightened, double rhslhs, const StochGenMatrix& matrix_row);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
       void notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2,
@@ -41,11 +45,20 @@ public:
 
       bool wasColumnRemoved(int node, int col) const;
       bool wasRowRemoved(SystemType system_type, int node, int row, bool linking_row) const;
+
 private:
       void markColumnRemoved(int node, int col);
       void markColumnAdded(int node, int col);
       void markRowRemoved(SystemType system_type, int node, int row, bool linking_row);
       void markRowAdded(SystemType system_type, int node, int row, bool linking_row);
+
+      /// stores row in specified node and returns it's new row index
+      int storeRow( SystemType system_type, int node, int row, bool linking_row, const StochGenMatrix& matrix_row);
+      /// stores col in specified node and returns it's new col index
+      int storeColumn( int node, int col, const StochGenMatrix& matrix_col_eq, const StochGenMatrix& matrix_col_ineq);
+
+      bool isRowModified(SystemType system_type, int node, int row, bool linking_row) const;
+      bool isColModified(int node, int col) const;
 
 public:
       /// synchronization events
@@ -92,10 +105,19 @@ private:
       const unsigned int n_cols_original;
 
       /// for now mapping will contain a dummy value for columns that have not been fixed and the value the columns has been fixed to otherwise
+      /// 1 indicates that the row / col has not been removed from the problem - -1 indicates the row / col has been removed */
       StochVectorBase<int>* padding_origcol;
       StochVectorBase<int>* padding_origrow_equality;
       StochVectorBase<int>* padding_origrow_inequality;
 
+      /// has a row been modified since last storing it
+      /// 1 if yes, -1 if not
+      StochVectorBase<int>* eq_row_marked_modified;
+      StochVectorBase<int>* ineq_row_marked_modified;
+      /// has a column been modified
+      StochVectorBase<int>* column_marked_modified;
+
+      /// vectors for storing ints and doubles containting information needed by postsolve
       std::vector<ReductionType> reductions;
       std::vector<INDEX> indices;
       std::vector<unsigned int> start_idx_indices;
@@ -108,6 +130,14 @@ private:
 
       // StochGenMatrixHandle stored_cols; maybe change clone method
       StochGenMatrixHandle stored_rows;
+
+      StochGenMatrixHandle stored_cols_eq;
+      StochGenMatrixHandle stored_cols_ineq;
+
+      /// stores the index for a row/col indicating where in stored_rows/cols that row/col was stored last
+      StochVectorBase<int>* eq_row_stored_last_at;
+      StochVectorBase<int>* ineq_row_stored_last_at;
+      StochVectorBase<int>* col_stored_last_at;
 
       void finishNotify();
 
