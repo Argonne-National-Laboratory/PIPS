@@ -27,15 +27,12 @@ StochPostsolver::StochPostsolver(const sData& original_problem) :
    eq_row_marked_modified( dynamic_cast<StochVectorBase<int>*>(padding_origrow_equality->clone()) ),
    ineq_row_marked_modified( dynamic_cast<StochVectorBase<int>*>(padding_origrow_inequality->clone()) ),
    column_marked_modified( dynamic_cast<StochVectorBase<int>*>(padding_origcol->clone()) ),
-   stored_rows( dynamic_cast<const StochGenMatrix&>(*original_problem.A).cloneEmptyRows(true) ),
-   stored_cols_eq( dynamic_cast<const StochGenMatrix&>(*original_problem.A).cloneEmptyRows(true) ),// todo
-   stored_cols_ineq( dynamic_cast<const StochGenMatrix&>(*original_problem.C).cloneEmptyRows(true) ),// todo cloneEmptyCols?
+   row_storage( dynamic_cast<const StochGenMatrix&>(*original_problem.A) ),
+   col_storage( dynamic_cast<const StochGenMatrix&>(*original_problem.A), dynamic_cast<const StochGenMatrix&>(*original_problem.C) ),
    eq_row_stored_last_at( dynamic_cast<StochVectorBase<int>*>(padding_origrow_equality->clone()) ),
    ineq_row_stored_last_at( dynamic_cast<StochVectorBase<int>*>(padding_origrow_inequality->clone()) ),
    col_stored_last_at( dynamic_cast<StochVectorBase<int>*>(padding_origcol->clone()) )
 {
-   assert(stored_rows->children.size() == dynamic_cast<const StochGenMatrix&>(*original_problem.A).children.size() );
-
    padding_origcol->setToConstant(1);
    padding_origrow_equality->setToConstant(1);
    padding_origrow_inequality->setToConstant(1);
@@ -96,7 +93,7 @@ bool StochPostsolver::isColModified(int node, int col) const
 int StochPostsolver::storeRow( SystemType system_type, int node, int row, bool linking_row, const StochGenMatrix& matrix_row)
 {
    if( isRowModified(system_type, node, row, linking_row) )
-      return stored_rows->appendRow(matrix_row, node, row, linking_row);
+      return row_storage.storeRow(node, row, linking_row, matrix_row);
    else
    {
       if(system_type == EQUALITY_SYSTEM)
@@ -115,7 +112,7 @@ int StochPostsolver::storeRow( SystemType system_type, int node, int row, bool l
 int StochPostsolver::storeColumn( int node, int col, const StochGenMatrix& matrix_col_eq, const StochGenMatrix& matrix_col_ineq)
 {
    if( isColModified(node, col) )
-      return 0; // todo
+      return col_storage.storeCol(node, col, matrix_col_eq, matrix_col_ineq);
    else
    {
       assert(getSimpleVecFromColStochVec(*col_stored_last_at, node)[col] != -1);
@@ -410,7 +407,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int icupp = int_values.at(first_int_val + 2);
          assert(iclow + icupp >= 1);
 
-         double value_row = stored_rows->localRowTimesVec(x_vec, node, index_stored_row, linking_row);
+         double value_row = row_storage.multRowTimesVec(node, row, index_stored_row, x_vec);
 
          if( system_type == EQUALITY_SYSTEM )
          {
@@ -591,7 +588,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          getSimpleVecFromColStochVec(*padding_origcol, node_column)[column] = 1;
          getSimpleVecFromColStochVec(x_vec, node_column)[column] = 0;
 
-         double value_row = stored_rows->localRowTimesVec(x_vec, node_row, stored_row_idx, linking_row);
+         double value_row = row_storage.multRowTimesVec(node_row, stored_row_idx, linking_row, x_vec);
          assert(std::abs(value_row) != std::numeric_limits<double>::infinity());
 
          getSimpleVecFromColStochVec(x_vec, node_column)[column] = rhs - value_row;

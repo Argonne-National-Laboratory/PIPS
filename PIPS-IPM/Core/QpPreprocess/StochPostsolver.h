@@ -15,7 +15,8 @@
 #include "sData.h"
 #include "sVars.h"
 #include "SystemType.h"
-
+#include "StochRowStorage.h"
+#include "StochColumnStorage.h"
 
 class StochPostsolver : public QpPostsolver {
 public:
@@ -128,11 +129,9 @@ private:
       std::vector<unsigned int> start_idx_float_values;
       std::vector<unsigned int> start_idx_int_values;
 
-      // StochGenMatrixHandle stored_cols; maybe change clone method
-      StochGenMatrixHandle stored_rows;
+      StochRowStorage row_storage;
 
-      StochGenMatrixHandle stored_cols_eq;
-      StochGenMatrixHandle stored_cols_ineq;
+      StochColumnStorage col_storage;
 
       /// stores the index for a row/col indicating where in stored_rows/cols that row/col was stored last
       StochVectorBase<int>* eq_row_stored_last_at;
