@@ -914,6 +914,12 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    const double val = storage.getMat(col_idx);
    const int col = storage.getJcolM(col_idx);
 
+   if( postsolver )
+   {
+      const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
+      postsolver->notifyColModified(node_col, col);
+      postsolver->notifyRowModified(system_type, node, row, linking);
+   }
    storage.removeEntryAtIndex(row, col_idx);
 
    --col_idx;
@@ -1595,6 +1601,12 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
       }
 
       /* remove the entry, adjust activity and row counters and rhs/lhs */
+      if(postsolver)
+      {
+         const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
+         postsolver->notifyRowModified(system_type, node, row, linking);
+         postsolver->notifyColModified( node_col, col);
+      }
       matrix.removeEntryAtRowCol(row, col);
 
       reduceNnzCounterRow(system_type, node, linking, row, 1);
@@ -1608,14 +1620,14 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
          std::cout << "TRACKING_ROW: after removal of column" << std::endl;
          writeRowLocalToStreamDense(std::cout, system_type, node, block_type, row);
 
-         double act_min = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row] :
+         const double act_min = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row] :
                getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking)[row];
-         double act_max = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking)[row] :
+         const double act_max = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking)[row] :
                getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking)[row];
 
-         int act_min_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking)[row] :
+         const int act_min_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking)[row] :
                getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, linking)[row];
-         int act_max_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row] :
+         const int act_max_ubndd = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking)[row] :
                getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking)[row];
 
          std::cout << "TRACKING_ROW: New activity of row " << row << std::endl;
@@ -1968,6 +1980,13 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
    for(int k = row_start; k < row_end; k++)
    {
       const int col = mat_storage.getJcolM(k);
+
+      if(postsolver)
+      {
+         const int node_col = ( block_type == A_MAT || node == -1) ? -1 : node;
+         postsolver->notifyColModified(node_col, col);
+         postsolver->notifyRowModified(system_type, node, row, linking);
+      }
       mat_transp_storage.removeEntryAtRowCol(col, row);
       reduceNnzCounterColumn(node, block_type, col, 1);
    }
