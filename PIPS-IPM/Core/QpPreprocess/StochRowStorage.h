@@ -20,7 +20,9 @@ public:
    int storeRow( int node, int row, bool linking_row, const StochGenMatrix& matrix_row);
 
    double multRowTimesVec( int node, int row, bool linking_row, const StochVector& vec ) const;
-   double getRowCoefficientAtColumn( int node, int row, bool linking_row, int colum ) const;
+   double multLinkingRowTimesVecWithoutB0( int row, const StochVector& vec) const;
+
+   double getRowCoefficientAtColumn( int node_row, int row, bool linking_row, int node_column, int colum ) const;
 
    // todo : deleteRowFromStorage
 private:

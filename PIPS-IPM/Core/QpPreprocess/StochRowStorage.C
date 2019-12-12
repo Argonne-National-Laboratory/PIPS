@@ -6,7 +6,7 @@
  */
 
 #include "StochRowStorage.h"
-
+#include "StochMatrixUtilities.h"
 
 StochRowStorage::StochRowStorage(const StochGenMatrix& system_matrix) :
    row_storage(system_matrix.cloneEmptyRows(true))
@@ -27,12 +27,35 @@ int StochRowStorage::storeRow( int node, int row, bool linking_row, const StochG
 
 double StochRowStorage::multRowTimesVec( int node, int row, bool linking_row, const StochVector& vec ) const
 {
-   /// if we multiply a linking row but are not root - we do not add the bl0 matrix to the result
-   return 0;
+   const double res = row_storage->localRowTimesVec(vec, node, row, linking_row);
+   return res;
 }
 
-double StochRowStorage::getRowCoefficientAtColumn( int node, int row, bool linking_row, int colum ) const
+double StochRowStorage::multLinkingRowTimesVecWithoutB0( int row, const StochVector& vec) const
 {
-   // todo
-   return 0;
+   const double res_full = row_storage->localRowTimesVec(vec, -1, row, true);
+   const double res_b0 = row_storage->Blmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+
+   return res_full - res_b0;
+}
+
+double StochRowStorage::getRowCoefficientAtColumn( int node_row, int row, bool linking_row, int node_column, int column ) const
+{
+   BlockType block_col = B_MAT;
+   if( linking_row )
+      block_col = BL_MAT;
+   if( node_column == -1 && node_row != 1)
+      block_col = A_MAT;
+
+   const SparseStorageDynamic& mat = *getSparseGenMatrixFromStochMat(*row_storage, node_row, block_col )->getStorageDynamic();
+
+   const int row_start = mat.getRowPtr(row).start;
+   const int row_end = mat.getRowPtr(row).end;
+
+   for(int i = row_start; i < row_end; ++i)
+   {
+      if( mat.getJcolM(i) == column )
+         return mat.getMat(i);
+   }
+   return 0.0;
 }
