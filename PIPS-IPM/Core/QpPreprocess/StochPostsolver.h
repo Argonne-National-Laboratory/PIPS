@@ -29,7 +29,7 @@ public:
       void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint,
          int iclow, int icupp, double lhs, double rhs, const StochGenMatrix& matrix_row);
       void notifyFixedColumn( int node, unsigned int col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
-      void notifyFixedEmptyColumn( int node, unsigned int col, double value, double obj_value);
+      void notifyFixedEmptyColumn(int node, unsigned int col, double value, double obj_value, int ixlow, int ixupp, double lhs, double rhs);
       void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, double rhs,
          int node_col, int col, const StochGenMatrix& matrix_row );
 

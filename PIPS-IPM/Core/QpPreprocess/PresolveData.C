@@ -1184,7 +1184,11 @@ void PresolveData::fixEmptyColumn(int node, int col, double val)
    if(postsolver)
    {
       const double obj_value = getSimpleVecFromColStochVec(*presProb->g, node)[col];
-      postsolver->notifyFixedEmptyColumn(node, col, val, obj_value);
+      const double lbx = getSimpleVecFromColStochVec(*presProb->blx, node)[col];
+      const double ubx = getSimpleVecFromColStochVec(*presProb->bux, node)[col];
+      const int ixlow = getSimpleVecFromColStochVec(*presProb->ixupp, node)[col];
+      const int ixupp = getSimpleVecFromColStochVec(*presProb->ixlow, node)[col];
+      postsolver->notifyFixedEmptyColumn(node, col, val, obj_value, ixlow, ixupp, lbx, ubx);
    }
 
    removeColumn(node, col, val);

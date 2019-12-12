@@ -123,7 +123,7 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
 }
 
 
-void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value, double obj_value)
+void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value, double obj_value, int ixlow, int ixupp, double lbx, double ubx)
 {
    assert(!wasColumnRemoved(node, col));
    markColumnRemoved(node, col);
@@ -135,6 +135,10 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
    indices.push_back(INDEX(COL,node, col));
    float_values.push_back(value);
    float_values.push_back(obj_value);
+   float_values.push_back(lbx);
+   float_values.push_back(ubx);
+   int_values.push_back(ixlow);
+   int_values.push_back(ixupp);
 
    finishNotify();
 }
@@ -400,7 +404,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       {
          assert(first_index + 1 == next_first_index);
          assert(first_float_val + 4 == next_first_float_val);
-         assert(first_int_val == next_first_int_val);
+         assert(first_int_val + 2 == next_first_int_val);
 
          const INDEX& idx_col = indices.at(first_index);
          assert(idx_col.index_type == COL);
@@ -409,8 +413,10 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int node = idx_col.node;
          const double value = float_values.at(first_float_val);
          const double obj_value = float_values.at(first_float_val + 1);
-         const double lbx = float_values.at(first_float_val + 2);// todo lbs uubx and ixlo ixupp..
+         const double lbx = float_values.at(first_float_val + 2);
          const double ubx = float_values.at(first_float_val + 3);
+         const int ixlow = int_values.at(first_int_val);
+         const int ixupp = int_values.at(first_int_val + 1);
          assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
          assert(wasColumnRemoved(node, column));
 
@@ -419,12 +425,14 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
          getSimpleVecFromColStochVec(x_vec, node)[column] = value;
 
-         assert(PIPSisLT(lbx, value));
-         assert(PIPSisLT(value, ubx));
+         if( ixlow == 1 )
+            assert(PIPSisLT(lbx, value));
+         if( ixupp == 1 )
+            assert(PIPSisLT(value, ubx));
+
          /* dual */
-         // todo : dual postsolve
-         getSimpleVecFromColStochVec(gamma_vec, node)[column] = 0;
-         getSimpleVecFromColStochVec(phi_vec, node)[column] = 0;
+         getSimpleVecFromColStochVec(gamma_vec, node)[column] = 0.0;
+         getSimpleVecFromColStochVec(phi_vec, node)[column] = 0.0;
 
          if(!PIPSisZero(obj_value))
          {
@@ -434,8 +442,16 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                getSimpleVecFromColStochVec(phi_vec, node)[column] = obj_value;
          }
 
-         getSimpleVecFromColStochVec(v_vec, node)[column] = value - lbx;
-         getSimpleVecFromColStochVec(w_vec, node)[column] = ubx - value;
+         if(ixlow == 1)
+            getSimpleVecFromColStochVec(v_vec, node)[column] = value - lbx;
+         else
+            getSimpleVecFromColStochVec(v_vec, node)[column] = 0.0;
+
+         if( ixupp == 1)
+            getSimpleVecFromColStochVec(w_vec, node)[column] = ubx - value;
+         else
+            getSimpleVecFromColStochVec(w_vec, node)[column] = 0.0;
+
          assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]));
          assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]));
          break;
