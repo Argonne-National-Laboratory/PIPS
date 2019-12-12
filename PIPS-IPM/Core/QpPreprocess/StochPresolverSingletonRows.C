@@ -175,8 +175,9 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType sy
    else
    {
       block_type = BL_MAT;
-      // todo : implement this more efficiently - we don't want to go through all our children to check wether a singleton entry is on our process or not
+      // todo : implement this more efficiently - we don't want to go through all our children to check whether a singleton entry is on our process or not
       // ideally we already know and also know the child
+      // same should hold for singelton columns..
       assert( node == -2 );
       for( int i = -1; i < presData.getNChildren(); ++i)
       {
