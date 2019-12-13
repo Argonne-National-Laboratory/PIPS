@@ -59,6 +59,7 @@ SparseGenMatrix::~SparseGenMatrix()
   delete mStorageDynamic;
 }
 
+/* create a matrix with the same amount of columns but no rows in it */
 SparseGenMatrix* SparseGenMatrix::cloneEmptyRows(bool switchToDynamicStorage) const
 {
   SparseGenMatrix* clone;
@@ -76,6 +77,29 @@ SparseGenMatrix* SparseGenMatrix::cloneEmptyRows(bool switchToDynamicStorage) co
   {
      assert(clone->m_Mt == NULL);
      clone->m_Mt = new SparseGenMatrix(0, m_Mt->getStorageRef().n, 0);
+  }
+
+  return clone;
+}
+
+/* same as clone empty rows but transposes the matrix first */
+SparseGenMatrix* SparseGenMatrix::cloneEmptyRowsTransposed(bool switchToDynamicStorage) const
+{
+  SparseGenMatrix* clone;
+
+  if( switchToDynamicStorage )
+  {
+     clone = new SparseGenMatrix();
+     clone->mStorageDynamic = new SparseStorageDynamic(0, mStorage->m, 0);
+     assert(!m_Mt);
+  }
+  else
+     clone = new SparseGenMatrix(0, mStorage->m, 0);
+
+  if( m_Mt )
+  {
+     assert(clone->m_Mt == NULL);
+     clone->m_Mt = new SparseGenMatrix(0, m_Mt->getStorageRef().m, 0);
   }
 
   return clone;

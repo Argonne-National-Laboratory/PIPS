@@ -101,6 +101,7 @@ StochGenMatrix* StochGenMatrix::cloneFull(bool switchToDynamicStorage) const
    return clone;	
 }
 
+/* creates an empty copy of the matrix with n = 0 for all submatrices and m (cols) as before */
 StochGenMatrix* StochGenMatrix::cloneEmptyRows(bool switchToDynamicStorage) const
 {
    StochGenMatrix* clone = new StochGenMatrix(id, m, n, mpiComm);
@@ -115,7 +116,6 @@ StochGenMatrix* StochGenMatrix::cloneEmptyRows(bool switchToDynamicStorage) cons
 
    return clone;
 }
-
 
 void StochGenMatrix::AddChild(StochGenMatrix* child)
 {
