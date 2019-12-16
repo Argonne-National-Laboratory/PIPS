@@ -3,6 +3,23 @@
  *
  *  Created on: 12.12.2019
  *      Author: Nils-Christian Kempke
+ *
+ *
+ *
+ *  stored_cols_eq/ineq:
+ *      | 0   |
+ *      | Bl1 | B1 |
+ *      | Bl2 |    | B2 |
+ *         .            | B3 |
+ *         .                   ...
+ *         .
+ *      | BlN |                    | BN |
+ *      | Bl0 | A1 | A2 | A3 | ... | AN |
+ *
+ *  b0_block_linking_cols_eq/ineq
+ *      | B0  |
+ *
+ *
  */
 
 #include "StochColumnStorage.h"
@@ -63,6 +80,20 @@ void StochColumnStorage::createStorageMatrix(SparseGenMatrix* b0_block_storage, 
 }
 
 int StochColumnStorage::storeCol( int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
+{
+   if( node == -1 )
+      return storeLinkingCol(col, matrix_eq_part, matrix_ineq_part);
+   else
+      return storeLocalCol(node, col, matrix_eq_part, matrix_ineq_part);
+}
+
+int StochColumnStorage::storeLinkingCol(int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
+{
+
+   return 0;
+}
+
+int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
 
    return 0;

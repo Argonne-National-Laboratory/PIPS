@@ -33,6 +33,8 @@ private:
    StochGenMatrixHandle stored_cols_ineq;
    SparseGenMatrixHandle b0_block_linking_cols_ineq;
 
+   int storeLinkingCol(int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
+   int storeLocalCol(int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
    void createStorageMatrix(SparseGenMatrix* b0_block_storage, StochGenMatrix* col_storage, const StochGenMatrix& sys_matrix);
 };
 
