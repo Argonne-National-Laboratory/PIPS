@@ -21,6 +21,7 @@
  *
  *
  */
+// todo improve description
 
 #include "StochColumnStorage.h"
 #include "DoubleMatrixTypes.h"
@@ -202,28 +203,103 @@ double StochColumnStorage::multColTimesVec( int node, int col, const StochVector
       return multiplyLocalColTimesVec(node, col, vec_eq, vec_ineq);
 }
 
+double StochColumnStorage::multColTimesVecWithoutRootNode( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
+{
+   assert(-1 <= node && node < static_cast<int>(nChildren));
+   assert(nChildren == vec_eq.children.size());
+   assert(nChildren == vec_ineq.children.size());
+
+   if(node == -1)
+      return multiplyLinkingColTimesVecWithoutRootNode(col, vec_eq, vec_ineq);
+   else
+      return multiplyLocalColTimesVec(node, col, vec_eq, vec_ineq);
+}
+
 double StochColumnStorage::multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
 {
-   return 0;
+   double res = 0.0;
+
+   /* equality system */
+   const SparseGenMatrix& Bl0_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, -1, BL_MAT);
+
+   res += B0_eq->localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, -1, false), col);
+   res += Bl0_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, -1, true), col);
+
+   /* inequality system */
+   const SparseGenMatrix& Dl0_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, -1, BL_MAT);
+
+   res += B0_ineq->localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, -1, false), col);
+   res += Dl0_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, -1, true), col);
+
+   /* Amat equality and inequality */
+   for(unsigned int i = 0; i < nChildren; ++i)
+   {
+      if( !vec_eq.children[i]->isKindOf(kStochDummy) )
+      {
+         assert(!vec_ineq.children[i]->isKindOf(kStochDummy));
+
+         const SparseGenMatrix& A_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, -1, BL_MAT);
+         assert(vec_eq.children[i]->vec);
+
+         const SimpleVector& a_vec = dynamic_cast<const SimpleVector&>(*vec_eq.children[i]->vec);
+         res += A_mat.localRowTimesVec(a_vec, col);
+
+         const SparseGenMatrix& C_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, -1, BL_MAT);
+         assert(vec_ineq.children[i]->vec);
+
+         const SimpleVector& c_vec = dynamic_cast<const SimpleVector&>(*vec_ineq.children[i]->vec);
+         res += C_mat.localRowTimesVec(c_vec, col);
+      }
+   }
+
+   return res;
+}
+
+double StochColumnStorage::multiplyLinkingColTimesVecWithoutRootNode(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
+{
+   double res = 0.0;
+
+   /* Amat equality and inequality */
+   for(unsigned int i = 0; i < nChildren; ++i)
+   {
+      if( !vec_eq.children[i]->isKindOf(kStochDummy) )
+      {
+         assert(!vec_ineq.children[i]->isKindOf(kStochDummy));
+
+         const SparseGenMatrix& A_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, -1, BL_MAT);
+         assert(vec_eq.children[i]->vec);
+
+         const SimpleVector& a_vec = dynamic_cast<const SimpleVector&>(*vec_eq.children[i]->vec);
+         res += A_mat.localRowTimesVec(a_vec, col);
+
+         const SparseGenMatrix& C_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, -1, BL_MAT);
+         assert(vec_ineq.children[i]->vec);
+
+         const SimpleVector& c_vec = dynamic_cast<const SimpleVector&>(*vec_ineq.children[i]->vec);
+         res += C_mat.localRowTimesVec(c_vec, col);
+      }
+   }
+
+   return res;
 }
 
 double StochColumnStorage::multiplyLocalColTimesVec(int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
 {
    double res = 0.0;
-
+   assert(!vec_eq.isKindOf(kStochDummy) && !vec_ineq.isKindOf(kStochDummy));
    /* equality system */
    const SparseGenMatrix& Bi_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, B_MAT);
    const SparseGenMatrix& Bli_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, A_MAT);
 
    res += Bi_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, node, false), node);
-   res += Bli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, node, true), node);
+   res += Bli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, -1, true), node);
 
    /* inequality system */
    const SparseGenMatrix& Di_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, B_MAT);
    const SparseGenMatrix& Dli_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, A_MAT);
 
    res += Di_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, node, false), node);
-   res += Dli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, node, true), node);
+   res += Dli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, -1, true), node);
 
    return res;
 }

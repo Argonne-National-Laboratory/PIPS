@@ -21,6 +21,7 @@ public:
    int storeCol( int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
 
    double multColTimesVec( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
+   double multColTimesVecWithoutRootNode( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
    double getColCoefficientAtRow( SystemType system_type, int node, int col, int row) const;
 
    // todo: delete Column from storage
@@ -41,6 +42,7 @@ private:
 
    double multiplyLocalColTimesVec(int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
    double multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
+   double multiplyLinkingColTimesVecWithoutRootNode(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
 
    void createStorageMatrix(SparseGenMatrix* b0_block_storage, StochGenMatrix* col_storage, const StochGenMatrix& sys_matrix);
 };
