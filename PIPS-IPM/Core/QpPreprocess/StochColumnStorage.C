@@ -24,6 +24,8 @@
 
 #include "StochColumnStorage.h"
 #include "DoubleMatrixTypes.h"
+#include "SystemType.h"
+#include "StochMatrixUtilities.h"
 
 StochColumnStorage::StochColumnStorage(const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
@@ -89,14 +91,40 @@ int StochColumnStorage::storeCol( int node, int col, const StochGenMatrix& matri
 
 int StochColumnStorage::storeLinkingCol(int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
-
    return 0;
 }
 
 int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
+   assert( 0 <= node && node < static_cast<int>(matrix_eq_part.children.size()) );
+   assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
 
-   return 0;
+   const SparseGenMatrix& Bi = *getSparseGenMatrixFromStochMat(matrix_eq_part, node, B_MAT);
+   const SparseGenMatrix& Di = *getSparseGenMatrixFromStochMat(matrix_ineq_part, node, BL_MAT);
+   const SparseGenMatrix& Bli = *getSparseGenMatrixFromStochMat(matrix_eq_part, node, B_MAT);
+   const SparseGenMatrix& Dli = *getSparseGenMatrixFromStochMat(matrix_ineq_part, node, BL_MAT);
+
+   SparseGenMatrix& Bi_storage = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, B_MAT);
+   SparseGenMatrix& Di_storage = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, A_MAT);
+   SparseGenMatrix& Bli_storage = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, B_MAT);
+   SparseGenMatrix& Dli_storage = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, A_MAT);
+
+   const int Bi_index = Bi_storage.appendRow(Bi, col);
+#ifndef NDEBUG
+   const int Di_index = Di_storage.appendRow(Di, col);
+   const int Bli_index = Bli_storage.appendRow(Bli, col);
+   const int Dli_index = Dli_storage.appendRow(Dli, col);
+
+   assert(Bi_index == Di_index);
+   assert(Bli_index == Dli_index);
+   assert(Bi_index == Bli_index);
+#else
+   Di_storage.appendRow(Di, col);
+   Bli_storage.appendRow(Bli, col);
+   Dli_storage.appendRow(Dli, col);
+#endif
+
+   return Bi_index;
 }
 
 double StochColumnStorage::multColTimesVec( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
