@@ -190,10 +190,11 @@ int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& m
 
 double StochColumnStorage::multColTimesVec( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
 {
+
    return 0;
 }
 
-double StochColumnStorage::getColCoefficientAtRow( int node, int col, int row) const
+double StochColumnStorage::getColCoefficientAtRow( SystemType system_type, int node, int col, int row) const
 {
    return 0;
 }
