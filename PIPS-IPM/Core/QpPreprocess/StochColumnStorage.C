@@ -26,6 +26,7 @@
 #include "DoubleMatrixTypes.h"
 #include "SystemType.h"
 #include "StochMatrixUtilities.h"
+#include "StochVectorUtilities.h"
 
 StochColumnStorage::StochColumnStorage(const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part) :
  nChildren(matrix_eq_part.children.size() )
@@ -97,7 +98,6 @@ int StochColumnStorage::storeLinkingCol(int col, const StochGenMatrix& matrix_eq
 {
    assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
    assert( matrix_eq_part.children.size() == stored_cols_eq->children.size() );
-   const int nChildren = matrix_eq_part.children.size();
 
    const SparseGenMatrix& B0 = *getSparseGenMatrixFromStochMat(matrix_eq_part, -1, B_MAT);
    const SparseGenMatrix& D0 = *getSparseGenMatrixFromStochMat(matrix_ineq_part, -1, B_MAT);
@@ -204,13 +204,28 @@ double StochColumnStorage::multColTimesVec( int node, int col, const StochVector
 
 double StochColumnStorage::multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
 {
-
    return 0;
 }
 
 double StochColumnStorage::multiplyLocalColTimesVec(int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
 {
-   return 0;
+   double res = 0.0;
+
+   /* equality system */
+   const SparseGenMatrix& Bi_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, B_MAT);
+   const SparseGenMatrix& Bli_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, A_MAT);
+
+   res += Bi_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, node, false), node);
+   res += Bli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, node, true), node);
+
+   /* inequality system */
+   const SparseGenMatrix& Di_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, B_MAT);
+   const SparseGenMatrix& Dli_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, A_MAT);
+
+   res += Di_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, node, false), node);
+   res += Dli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, node, true), node);
+
+   return res;
 }
 
 double StochColumnStorage::getColCoefficientAtRow( SystemType system_type, int node, int col, int row) const
