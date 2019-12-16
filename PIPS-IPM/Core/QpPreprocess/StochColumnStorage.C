@@ -29,8 +29,8 @@
 
 StochColumnStorage::StochColumnStorage(const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
-   createStorageMatrix(b0_block_linking_cols_eq, stored_cols_eq, matrix_eq_part);
-   createStorageMatrix(b0_block_linking_cols_ineq, stored_cols_ineq, matrix_ineq_part);
+   createStorageMatrix(B0_eq, stored_cols_eq, matrix_eq_part);
+   createStorageMatrix(B0_ineq, stored_cols_ineq, matrix_ineq_part);
 }
 
 StochColumnStorage::~StochColumnStorage()
@@ -83,6 +83,8 @@ void StochColumnStorage::createStorageMatrix(SparseGenMatrix* b0_block_storage, 
 
 int StochColumnStorage::storeCol( int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
+   assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
+
    if( node == -1 )
       return storeLinkingCol(col, matrix_eq_part, matrix_ineq_part);
    else
@@ -91,13 +93,72 @@ int StochColumnStorage::storeCol( int node, int col, const StochGenMatrix& matri
 
 int StochColumnStorage::storeLinkingCol(int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
-   return 0;
+   assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
+   assert( matrix_eq_part.children.size() == stored_cols_eq->children.size() );
+   const int nChildren = matrix_eq_part.children.size();
+
+   const SparseGenMatrix& B0 = *getSparseGenMatrixFromStochMat(matrix_eq_part, -1, B_MAT);
+   const SparseGenMatrix& D0 = *getSparseGenMatrixFromStochMat(matrix_ineq_part, -1, B_MAT);
+   const SparseGenMatrix& Bl0 = *getSparseGenMatrixFromStochMat(matrix_eq_part, -1, BL_MAT);
+   const SparseGenMatrix& Dl0 = *getSparseGenMatrixFromStochMat(matrix_ineq_part, -1, BL_MAT);
+
+   SparseGenMatrix& Bl0_storage = *getSparseGenMatrixFromStochMat(*stored_cols_eq, -1, BL_MAT);
+   SparseGenMatrix& Dl0_storage = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, -1, BL_MAT);
+
+   const int B0_index = B0_eq->appendRow(B0, col);
+#ifndef NDEBUG
+   const int D0_index = B0_ineq->appendRow(D0, col);
+   const int Bl0_index = Bl0_storage.appendRow(Bl0, col);
+   const int Dl0_index = Dl0_storage.appendRow(Dl0, col);
+   assert(B0_index == D0_index);
+   assert(Bl0_index == Dl0_index);
+   assert(B0_index == Bl0_index);
+#else
+   B0_ineq->appendRow(D0, col);
+   Bl0_storage.appendRow(Bl0, col);
+   Dl0_storage.appendRow(Dl0, col);
+#endif
+
+   for(unsigned int i = 0; i < nChildren; ++i)
+   {
+      const SparseGenMatrix& Ai = *getSparseGenMatrixFromStochMat(matrix_eq_part, i, A_MAT);
+      const SparseGenMatrix& Ci = *getSparseGenMatrixFromStochMat(matrix_ineq_part, i, A_MAT);
+
+      SparseGenMatrix& Ai_storage = *getSparseGenMatrixFromStochMat(*stored_cols_eq, i, BL_MAT);
+      SparseGenMatrix& Ci_storage = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, i, BL_MAT);
+
+      if( Ai.isKindOf(kStochGenDummyMatrix) )
+      {
+         assert( Ci.isKindOf(kStochGenDummyMatrix) );
+         assert( Ai_storage.isKindOf(kStochGenDummyMatrix) );
+         assert( Ci_storage.isKindOf(kStochGenDummyMatrix) );
+      }
+      else
+      {
+         assert( !Ci.isKindOf(kStochGenDummyMatrix) );
+         assert( !Ai_storage.isKindOf(kStochGenDummyMatrix) );
+         assert( !Ci_storage.isKindOf(kStochGenDummyMatrix) );
+      }
+
+#ifndef NDEBUG
+      const int Ai_index = Ai_storage.appendRow(Ai, col);
+      const int Ci_index = Ci_storage.appendRow(Ci, col);
+      assert(Ai_index == Ci_index);
+      assert(Ai_index == B0_index);
+#else
+      Ai_storage.appendRow(Ai, col);
+      Ci_storage.appendRow(Ci, col);
+#endif
+   }
+
+   return B0_index;
 }
 
 int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
    assert( 0 <= node && node < static_cast<int>(matrix_eq_part.children.size()) );
    assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
+   assert( matrix_eq_part.children.size() == stored_cols_eq->children.size() );
 
    const SparseGenMatrix& Bi = *getSparseGenMatrixFromStochMat(matrix_eq_part, node, B_MAT);
    const SparseGenMatrix& Di = *getSparseGenMatrixFromStochMat(matrix_ineq_part, node, BL_MAT);
