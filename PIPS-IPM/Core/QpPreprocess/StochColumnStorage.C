@@ -27,8 +27,10 @@
 #include "SystemType.h"
 #include "StochMatrixUtilities.h"
 
-StochColumnStorage::StochColumnStorage(const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
+StochColumnStorage::StochColumnStorage(const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part) :
+ nChildren(matrix_eq_part.children.size() )
 {
+   assert(matrix_ineq_part.children.size() == nChildren );
    createStorageMatrix(B0_eq, stored_cols_eq, matrix_eq_part);
    createStorageMatrix(B0_ineq, stored_cols_ineq, matrix_ineq_part);
 }
@@ -190,7 +192,24 @@ int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& m
 
 double StochColumnStorage::multColTimesVec( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
 {
+   assert(-1 <= node && node < static_cast<int>(nChildren));
+   assert(nChildren == vec_eq.children.size());
+   assert(nChildren == vec_ineq.children.size());
 
+   if(node == -1)
+      return multiplyLinkingColTimesVec(col, vec_eq, vec_ineq);
+   else
+      return multiplyLocalColTimesVec(node, col, vec_eq, vec_ineq);
+}
+
+double StochColumnStorage::multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
+{
+
+   return 0;
+}
+
+double StochColumnStorage::multiplyLocalColTimesVec(int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
+{
    return 0;
 }
 

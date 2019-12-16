@@ -10,6 +10,7 @@
 
 #include "StochGenMatrix.h"
 #include "StochVector.h"
+#include "SystemType.h"
 
 class StochColumnStorage
 {
@@ -33,8 +34,14 @@ private:
    SparseGenMatrixHandle B0_ineq;
    StochGenMatrixHandle stored_cols_ineq;
 
+   unsigned int nChildren;
+
    int storeLinkingCol(int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
    int storeLocalCol(int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
+
+   double multiplyLocalColTimesVec(int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
+   double multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
+
    void createStorageMatrix(SparseGenMatrix* b0_block_storage, StochGenMatrix* col_storage, const StochGenMatrix& sys_matrix);
 };
 
