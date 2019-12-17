@@ -536,6 +536,51 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                getSimpleVecFromColStochVec(v_vec, node)[column] += new_bound - old_bound;
             }
          }
+         /* bound was tight */
+         else
+         {
+            /* If the bound was tight all other variables in that row must have been at their respective upper
+             * and lower bounds (depending on sings and orientation and upper/lower).
+             * This fact will be used to adjust their duals which can be non-zero then since v/w were zero.
+             */
+            assert(!PIPSisEQ(old_bound, curr_x));
+
+            /* adjust slack v/w */
+            if(is_upper_bound)
+            {
+               assert(PIPSisLT(0, new_bound - curr_x));
+               assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node)[column]));
+               getSimpleVecFromColStochVec(w_vec, node)[column] = new_bound - curr_x;
+            }
+            else
+            {
+               assert(PIPSisLT(0, curr_x - new_bound));
+               assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node)[column]));
+               getSimpleVecFromColStochVec(v_vec, node)[column] = curr_x - new_bound;
+            }
+
+            /* adjust duals gamma and phi if necessary and use stored col to update */
+            if(is_upper_bound)
+            {
+               double& phi = getSimpleVecFromColStochVec(phi_vec, node)[column];
+               if(!PIPSisZero(phi * new_bound - curr_x))
+               {
+                  const double old_phi = phi;
+                  phi = 0;
+
+               }
+            }
+            else
+            {
+               double& gamma = getSimpleVecFromColStochVec(phi_vec, node)[column];
+               if(!PIPSisZero(gamma * curr_x - new_bound))
+               {
+                  const double old_gamma = gamma;
+                  gamma = 0;
+
+               }
+            }
+         }
 
          throw std::runtime_error("BOUNDS_TIGHTENED not yet implemented");
          break;
