@@ -73,7 +73,6 @@ void StochPresolverBoundStrengthening::applyPresolving()
    }
    while( tightened && iter < max_iter );
 
-
    presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyLinkingRowActivities();
 
