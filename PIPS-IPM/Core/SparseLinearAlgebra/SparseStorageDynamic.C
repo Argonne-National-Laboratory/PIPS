@@ -540,7 +540,7 @@ void SparseStorageDynamic::appendRow( const SparseStorageDynamic& storage, int r
 
    for(int i = storage.getRowPtr(row).start; i < storage.getRowPtr(row).end; ++i)
    {
-      // todo - PIPSisZero or nomal one?
+      // todo - PIPSisZero or normal one?
       if( !PIPSisZero( storage.getMat(i) ) )
       {
          val.push_back(storage.getMat(i));
@@ -706,6 +706,8 @@ void SparseStorageDynamic::compressStorageValues()
 
 double SparseStorageDynamic::rowTimesVec( const double* vec, int length, int row) const
 {
+   if(row > m)
+      std::cout << "m " << m << " row " << row << " n " << n << " length " << length << std::endl;
    assert(0 <= row && row < m);
    assert(length == n);
 

@@ -59,6 +59,8 @@ private:
       int storeColumn( int node, int col, const StochGenMatrix& matrix_col_eq, const StochGenMatrix& matrix_col_ineq);
 
       bool isRowModified(SystemType system_type, int node, int row, bool linking_row) const;
+      void markRowClean(SystemType system_type, int node, int row, bool linking_row);
+      void markColClean(int node, int col);
       bool isColModified(int node, int col) const;
 
 public:

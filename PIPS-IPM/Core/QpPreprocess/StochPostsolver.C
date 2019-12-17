@@ -85,6 +85,19 @@ bool StochPostsolver::isRowModified(SystemType system_type, int node, int row, b
       return getSimpleVecFromRowStochVec(*ineq_row_marked_modified, node, linking_row)[row] == 1;
 }
 
+void StochPostsolver::markRowClean(SystemType system_type, int node, int row, bool linking_row)
+{
+   if(system_type == EQUALITY_SYSTEM)
+      getSimpleVecFromRowStochVec(*eq_row_marked_modified, node, linking_row)[row] = -1;
+   else
+      getSimpleVecFromRowStochVec(*ineq_row_marked_modified, node, linking_row)[row] = -1;
+}
+
+void StochPostsolver::markColClean(int node, int col)
+{
+   getSimpleVecFromColStochVec(*col_stored_last_at, node)[col] = -1;
+}
+
 bool StochPostsolver::isColModified(int node, int col) const
 {
    return getSimpleVecFromColStochVec(*column_marked_modified, node)[col] == 1;
@@ -93,7 +106,16 @@ bool StochPostsolver::isColModified(int node, int col) const
 int StochPostsolver::storeRow( SystemType system_type, int node, int row, bool linking_row, const StochGenMatrix& matrix_row)
 {
    if( isRowModified(system_type, node, row, linking_row) )
-      return row_storage.storeRow(node, row, linking_row, matrix_row);
+   {
+      markRowClean(system_type, node, row, linking_row);
+
+      const int stored_at = row_storage.storeRow(node, row, linking_row, matrix_row);
+      if( system_type == EQUALITY_SYSTEM )
+         getSimpleVecFromRowStochVec(*eq_row_stored_last_at, node, linking_row)[row] = stored_at;
+      else
+         getSimpleVecFromRowStochVec(*ineq_row_stored_last_at, node, linking_row)[row] = stored_at;
+      return stored_at;
+   }
    else
    {
       if(system_type == EQUALITY_SYSTEM)
@@ -112,7 +134,14 @@ int StochPostsolver::storeRow( SystemType system_type, int node, int row, bool l
 int StochPostsolver::storeColumn( int node, int col, const StochGenMatrix& matrix_col_eq, const StochGenMatrix& matrix_col_ineq)
 {
    if( isColModified(node, col) )
-      return col_storage.storeCol(node, col, matrix_col_eq, matrix_col_ineq);
+   {
+      markColClean(node, col);
+      const int stored_at = col_storage.storeCol(node, col, matrix_col_eq, matrix_col_ineq);
+
+      getSimpleVecFromColStochVec(*col_stored_last_at, node)[col] = stored_at;
+
+      return stored_at;
+   }
    else
    {
       assert(getSimpleVecFromColStochVec(*col_stored_last_at, node)[col] != -1);
@@ -407,7 +436,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int icupp = int_values.at(first_int_val + 2);
          assert(iclow + icupp >= 1);
 
-         double value_row = row_storage.multRowTimesVec(node, row, index_stored_row, x_vec);
+         double value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
 
          if( system_type == EQUALITY_SYSTEM )
          {
@@ -628,6 +657,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case LINKING_VARS_SYNC_EVENT:
       {
+         // todo : dual part of this
          const int length_link_vars = x_vec.vec->length();
          SimpleVector &link_vars = dynamic_cast<SimpleVector&>(*x_vec.vec);
 
