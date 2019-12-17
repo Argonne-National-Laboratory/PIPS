@@ -304,19 +304,3 @@ double StochColumnStorage::multiplyLocalColTimesVec(int node, int col, const Sto
    return res;
 }
 
-double StochColumnStorage::getColCoefficientAtRow( SystemType system_type, int node_col, int col, int row, int block_type, bool linking_col) const
-{
-   if(system_type == EQUALITY_SYSTEM)
-   {
-      if(node == -1)
-      {
-
-      }
-      return 0;
-   }
-   else
-   {
-
-      return 0;
-   }
-}
