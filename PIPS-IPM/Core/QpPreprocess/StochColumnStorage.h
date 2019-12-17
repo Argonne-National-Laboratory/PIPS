@@ -22,7 +22,7 @@ public:
 
    double multColTimesVec( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
    double multColTimesVecWithoutRootNode( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
-   double getColCoefficientAtRow( SystemType system_type, int node, int col, int row) const;
+   double getColCoefficientAtRow( SystemType system_type, int node, int col, int row, int block_type) const;
 
    // todo: delete Column from storage
 private:
