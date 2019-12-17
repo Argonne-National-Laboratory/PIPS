@@ -171,10 +171,10 @@ void StochSymMatrix::atPutZeros( int row, int col, int rowExtent, int colExtent 
  * Here Qi are diagonal blocks, Ri are left bordering blocks
  */
 void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
-			    double alpha, OoqpVector& x_ )
+			    double alpha, const OoqpVector& x_ ) const
 {
 //   return;
-  StochVector & x = dynamic_cast<StochVector&>(x_);
+  const StochVector & x = dynamic_cast<const StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
   //check the tree compatibility
@@ -187,7 +187,7 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
   assert(this->diag->size() == x.vec->length());
 
   SimpleVector & yvec = dynamic_cast<SimpleVector&>(*y.vec);
-  SimpleVector & xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector & xvec = dynamic_cast<const SimpleVector&>(*x.vec);
 
   if (0.0 == alpha) {
     yvec.scale( beta );
@@ -197,14 +197,14 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
     bool iAmRoot = (parent==nullptr);
     bool iAmSpecial = true; //the process that computes Q_0 * x_0
     int rank; MPI_Comm_rank(mpiComm, &rank);
-    if (rank>0) iAmSpecial = false;
+    if(rank > 0) iAmSpecial = false;
 
-    if (iAmRoot)
+    if(iAmRoot)
       // y0=beta*y0 + alpha * Q0*x0
-      if (iAmSpecial)
-	diag->mult( beta, yvec, alpha, xvec ); 
+      if(iAmSpecial)
+         diag->mult( beta, yvec, alpha, xvec );
       else
-	yvec.setToZero();
+         yvec.setToZero();
     else
       // yi=beta*yi + alpha * Qi*xi
       diag->mult( beta, yvec, alpha, xvec ); 
@@ -238,14 +238,14 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
     }
   }
   // reccursively multiply the children
-  for (size_t it=0; it<nChildren; it++) {
+  for (size_t it = 0; it < nChildren; it++) {
     children[it]->mult(beta, *(y.children[it]), alpha, *(x.children[it]));
   }
 }
 
 /** y = beta * y + alpha * this^T * x */
 void StochSymMatrix::transMult ( double beta,  OoqpVector& y_,
-				 double alpha, OoqpVector& x_)
+				 double alpha, const OoqpVector& x_) const
 {
   // We are symmetric, this^T = this, therefore call 'mult' method
   this->mult(beta, y_, alpha, x_);

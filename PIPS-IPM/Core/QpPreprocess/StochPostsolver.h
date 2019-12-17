@@ -37,7 +37,7 @@ public:
       void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, double rhs,
          int node_col, int col, const StochGenMatrix& matrix_row );
 
-      void notifyRowPropagatedBound( SystemType system_type, int node, int row, bool linking_row, int column,
+      void notifyRowPropagatedBound( SystemType system_type, int node, int row, bool linking_row, int column, int node_column,
          int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, double rhslhs, const StochGenMatrix& matrix_row);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();

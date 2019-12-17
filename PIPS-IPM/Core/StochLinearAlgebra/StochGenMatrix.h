@@ -63,7 +63,7 @@ public:
   /** trans mult method for children with linking constraints */
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent, OoqpVector& xvecl );
+		    OoqpVector& yvecParent, const OoqpVector& xvecl ) const;
 
   /** trans mult method for children; does not support linking constraints */
   virtual void transMult2 ( double beta,   StochVector& y,
@@ -147,10 +147,10 @@ public:
 
   /** y = beta * y + alpha * this * x */
   void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x ) override;
+                      double alpha, const OoqpVector& x ) const override;
 
   void transMult ( double beta,   OoqpVector& y,
-                           double alpha,  OoqpVector& x ) override;
+                           double alpha,  const OoqpVector& x ) const override;
 
   double abmaxnorm() override;
 
@@ -294,7 +294,7 @@ public:
 
   /** y = beta * y + alpha * this * x */
   void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x ) override {};
+                      double alpha, const OoqpVector& x ) const override {};
 
   /** mult method for children; needed only for linking constraints */
   void mult2 ( double beta,  OoqpVector& y,
@@ -302,11 +302,11 @@ public:
 						   OoqpVector& yvecParent ) override {};
 
   void transMult ( double beta,   OoqpVector& y,
-                           double alpha,  OoqpVector& x ) override {};
+                           double alpha,  const OoqpVector& x ) const override {};
 
   void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent, OoqpVector& xvecl ) override {};
+		    OoqpVector& yvecParent, const OoqpVector& xvecl ) const override {};
 
   void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,

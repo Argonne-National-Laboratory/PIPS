@@ -52,15 +52,15 @@ public:
   virtual void putSparseTriple( int irow[], int len, int jcol[], double A[],
 				int& info );
 
-  virtual void mult ( double beta,  OoqpVector& y,
-		      double alpha, OoqpVector& x );
+  void mult ( double beta,  OoqpVector& y,
+		      double alpha, const OoqpVector& x ) const override;
   virtual void mult ( double beta,  double y[], int incy,
-		      double alpha, double x[], int incx );
+		      double alpha, const double x[], int incx ) const;
 
-  virtual void transMult ( double beta,  OoqpVector& y,
-			   double alpha, OoqpVector& x );
+  void transMult ( double beta,  OoqpVector& y,
+			   double alpha, const OoqpVector& x ) const override;
   virtual void transMult ( double beta,  double y[], int incy,
-			   double alpha, double x[], int incx );
+			   double alpha, const double x[], int incx ) const;
 
   virtual void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);

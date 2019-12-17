@@ -134,7 +134,7 @@ void DenseSymMatrix::symAtPutSubmatrix( int destRow, int destCol,
 
 
 void DenseSymMatrix::mult ( double beta,  double y[], int incy,
-				double alpha, double x[], int incx )
+				double alpha, const double x[], int incx ) const
 {
   char fortranUplo = 'U';
   int n = mStorage->n;
@@ -145,7 +145,7 @@ void DenseSymMatrix::mult ( double beta,  double y[], int incy,
 
 
 void DenseSymMatrix::mult ( double beta,  OoqpVector& y_in,
-				double alpha, OoqpVector& x_in )
+				double alpha, const OoqpVector& x_in ) const
 {
   char fortranUplo = 'U';
   int n = mStorage->n;
@@ -161,7 +161,7 @@ void DenseSymMatrix::mult ( double beta,  OoqpVector& y_in,
 
 
 void DenseSymMatrix::transMult ( double beta,  OoqpVector& y,
-				     double alpha, OoqpVector& x )
+				     double alpha, const OoqpVector& x ) const
 {
   // We're symmetric silly
   this->mult( beta, y, alpha, x );
@@ -169,7 +169,7 @@ void DenseSymMatrix::transMult ( double beta,  OoqpVector& y,
 
 
 void DenseSymMatrix::transMult ( double beta,  double y[], int incy,
-				     double alpha, double x[], int incx )
+				     double alpha, const double x[], int incx ) const
 {
   // We're symmetric silly
   this->mult( beta, y, incy, alpha, x, incx );

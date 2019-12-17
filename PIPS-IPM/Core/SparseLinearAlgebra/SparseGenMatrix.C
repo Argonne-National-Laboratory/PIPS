@@ -328,9 +328,9 @@ void SparseGenMatrix::atPutSubmatrix( int destRow, int destCol,
 
 
 void SparseGenMatrix::mult ( double beta,  OoqpVector& y_in,
-				 double alpha, OoqpVector& x_in )
+				 double alpha, const OoqpVector& x_in ) const
 {
-  SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
+  const SimpleVector & x = dynamic_cast<const SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
 
   assert( x.n == mStorage->n && y.n == mStorage->m );
@@ -370,9 +370,9 @@ void SparseGenMatrix::transmultMatSymUpper( double beta, SymMatrix& y,
 }
 
 void SparseGenMatrix::transMult ( double beta,   OoqpVector& y_in,
-				  double alpha,  OoqpVector& x_in )
+				  double alpha,  const OoqpVector& x_in ) const
 {
-  SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
+  const SimpleVector & x = dynamic_cast<const SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
 
   assert( x.n == mStorage->m && y.n == mStorage->n );

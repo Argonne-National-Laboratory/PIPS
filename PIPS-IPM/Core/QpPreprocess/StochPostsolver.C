@@ -273,7 +273,7 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
 }
 
 // todo : notify for linking constraints will be a sync event
-void StochPostsolver::notifyRowPropagatedBound( SystemType system_type, int node, int row, bool linking_row,
+void StochPostsolver::notifyRowPropagatedBound( SystemType system_type, int node, int row, bool linking_row, int node_column,
       int column, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, double rhslhs, const StochGenMatrix& matrix_row)
 {
    assert(!PIPSisEQ(old_bound, new_bound));
@@ -289,6 +289,7 @@ void StochPostsolver::notifyRowPropagatedBound( SystemType system_type, int node
    int index_stored_row = storeRow(system_type, node, row, linking_row, matrix_row);
 
    int_values.push_back(column);
+   int_values.push_back(node_column);
    int_values.push_back(old_ixlowupp);
    int_values.push_back(is_upper_bound);
    int_values.push_back(index_stored_row);
@@ -496,26 +497,27 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       {
          assert(first_index + 1 == next_first_index);
          assert(first_float_val + 3 == next_first_float_val);
-         assert(first_int_val + 4 == next_first_int_val);
+         assert(first_int_val + 5 == next_first_int_val);
 
          const INDEX& row_idx = indices.at(first_index);
          assert(row_idx.index_type == ROW);
 
-         const int node = row_idx.node;
+         const int node_row = row_idx.node;
          const int row = row_idx.index;
-         const bool linking = row_idx.linking;
+         const bool linking_row = row_idx.linking;
          const SystemType system_type = row_idx.system_type;
 
          const int column = int_values[first_int_val];
-         const int old_ixlowupp = int_values[first_int_val + 1];
-         const bool is_upper_bound = (int_values[first_int_val + 2] == 1) ? true : false;
-         const int index_stored_row = int_values[first_int_val + 3];
+         const int node_column = int_values[first_int_val + 1];
+         const int old_ixlowupp = int_values[first_int_val + 2];
+         const bool is_upper_bound = (int_values[first_int_val + 3] == 1) ? true : false;
+         const int index_stored_row = int_values[first_int_val + 4];
 
          const double old_bound = float_values[first_float_val];
          const double new_bound = float_values[first_float_val + 1];
          const double rhslhs = float_values[first_float_val + 2];
 
-         const double curr_x = getSimpleVecFromColStochVec(x_vec, node)[column];
+         const double curr_x = getSimpleVecFromColStochVec(x_vec, node_column)[column];
 
          if(is_upper_bound)
             assert( PIPSisLT(curr_x, new_bound) );
@@ -528,12 +530,12 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             if(is_upper_bound)
             {
                assert(PIPSisLT(new_bound, old_bound));
-               getSimpleVecFromColStochVec(w_vec, node)[column] += old_bound - new_bound;
+               getSimpleVecFromColStochVec(w_vec, node_column)[column] += old_bound - new_bound;
             }
             else
             {
                assert(PIPSisLT(old_bound, new_bound));
-               getSimpleVecFromColStochVec(v_vec, node)[column] += new_bound - old_bound;
+               getSimpleVecFromColStochVec(v_vec, node_column)[column] += new_bound - old_bound;
             }
          }
          /* bound was tight */
@@ -549,35 +551,53 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             if(is_upper_bound)
             {
                assert(PIPSisLT(0, new_bound - curr_x));
-               assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node)[column]));
-               getSimpleVecFromColStochVec(w_vec, node)[column] = new_bound - curr_x;
+               assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node_column)[column]));
+               getSimpleVecFromColStochVec(w_vec, node_column)[column] = new_bound - curr_x;
             }
             else
             {
                assert(PIPSisLT(0, curr_x - new_bound));
-               assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node)[column]));
-               getSimpleVecFromColStochVec(v_vec, node)[column] = curr_x - new_bound;
+               assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node_column)[column]));
+               getSimpleVecFromColStochVec(v_vec, node_column)[column] = curr_x - new_bound;
             }
 
             /* adjust duals gamma and phi if necessary and use stored col to update */
+            StochVector& dual_vec = (system_type == EQUALITY_SYSTEM) ? y_vec : z_vec;
+
             if(is_upper_bound)
             {
-               double& phi = getSimpleVecFromColStochVec(phi_vec, node)[column];
+               double& phi = getSimpleVecFromColStochVec(phi_vec, node_column)[column];
                if(!PIPSisZero(phi * new_bound - curr_x))
                {
                   const double old_phi = phi;
                   phi = 0;
 
+                  const double coeff = row_storage.getRowCoefficientAtColumn(node_row, index_stored_row, linking_row, node_column, column);
+                  /* set z/y of corresponding row such that c_i* deltaz//a_i* deltay = phi */
+                  assert(!PIPSisZero(coeff));
+                  const double change_dual_row = old_phi/coeff;
+                  if(coeff < 1e-13)
+                     std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
+
+                  /* add z/y * row to gamma and phi */
+                  // todo function for row storage that does vec = vec + alpha*A*x;
                }
             }
             else
             {
-               double& gamma = getSimpleVecFromColStochVec(phi_vec, node)[column];
+               double& gamma = getSimpleVecFromColStochVec(phi_vec, node_column)[column];
                if(!PIPSisZero(gamma * curr_x - new_bound))
                {
                   const double old_gamma = gamma;
                   gamma = 0;
 
+                  const double coeff = row_storage.getRowCoefficientAtColumn(node_row, index_stored_row, linking_row, node_column, column);
+                  /* set z/y of corresponding row such that coeff*z//coeff*y = - gamma */
+                  assert(!PIPSisZero(coeff));
+                  const double change_dual_row = -old_gamma/coeff;
+
+                  /* add z/y * row to gamma and phi */
+                  // todo: function for multiplication in row storage
                }
             }
          }

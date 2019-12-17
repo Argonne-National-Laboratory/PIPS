@@ -125,7 +125,7 @@ void DenseGenMatrix::atPutSubmatrix( int destRow, int destCol,
 
 
 void DenseGenMatrix::mult ( double beta,  double y[], int incy,
-				double alpha, double x[], int incx )
+				double alpha, const double x[], int incx ) const
 {
   char fortranTrans = 'T';
   int n = mStorage->n, m = mStorage->m;
@@ -136,14 +136,14 @@ void DenseGenMatrix::mult ( double beta,  double y[], int incy,
 
 
 void DenseGenMatrix::mult ( double beta,  OoqpVector& y_in,
-				double alpha, OoqpVector& x_in )
+				double alpha, const OoqpVector& x_in ) const
 {
   char fortranTrans = 'T';
   int n = mStorage->n, m = mStorage->m;
   double ** M = mStorage->M;
   int incx = 1, incy = 1;
 
-  SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
+  const SimpleVector & x = dynamic_cast<const SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
 
   if( n != 0 && m != 0 ) {
@@ -156,7 +156,7 @@ void DenseGenMatrix::mult ( double beta,  OoqpVector& y_in,
 
 
 void DenseGenMatrix::transMult ( double beta,  double y[], int incy,
-				     double alpha, double x[], int incx )
+				     double alpha, const double x[], int incx ) const
 {
   char fortranTrans = 'N';
   int n = mStorage->n, m = mStorage->m; 
@@ -168,12 +168,12 @@ void DenseGenMatrix::transMult ( double beta,  double y[], int incy,
 
 
 void DenseGenMatrix::transMult ( double beta,  OoqpVector& y_in,
-				     double alpha, OoqpVector& x_in )
+				     double alpha, const OoqpVector& x_in ) const
 {
   char fortranTrans = 'N';
   int n = mStorage->n, m = mStorage->m;
   double ** M = mStorage->M;
-  SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
+  const SimpleVector & x = dynamic_cast<const SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
   int incx = 1, incy = 1;
   

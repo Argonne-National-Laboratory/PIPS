@@ -72,10 +72,10 @@ public:
 
   virtual void atPutZeros( int row, int col,
 			   int rowExtent, int colExtent );
-  virtual void mult ( double beta,  OoqpVector& y,
-		      double alpha, OoqpVector& x );
-  virtual void transMult ( double beta,  OoqpVector& y,
-			   double alpha, OoqpVector& x );
+  void mult ( double beta,  OoqpVector& y,
+		      double alpha, const OoqpVector& x ) const override;
+  void transMult ( double beta,  OoqpVector& y,
+			   double alpha, const OoqpVector& x ) const override;
   
   virtual double abmaxnorm();
   
@@ -121,62 +121,62 @@ public:
 
   virtual ~StochSymDummyMatrix(){};
 
-  virtual StochSymDummyMatrix* clone() const { return new StochSymDummyMatrix(id); };
+  StochSymDummyMatrix* clone() const override { return new StochSymDummyMatrix(id); };
 
-  virtual void AddChild(StochSymMatrix* child){};
+  void AddChild(StochSymMatrix* child) override {};
 
-  virtual int isKindOf( int type ) const;
+  int isKindOf( int type ) const override;
 
-  virtual void atPutDense( int row, int col, double * A, int lda,
-			   int rowExtent, int colExtent ){};
-  virtual void fromGetDense( int row, int col, double * A, int lda,
-			     int rowExtent, int colExtent ){};
+  void atPutDense( int row, int col, double * A, int lda,
+			   int rowExtent, int colExtent ) override {};
+  void fromGetDense( int row, int col, double * A, int lda,
+			     int rowExtent, int colExtent ) override {};
 
-  virtual void symAtPutSpRow( int row, double A[], int lenA, int jcolA[],
-			      int& info ){};
+  void symAtPutSpRow( int row, double A[], int lenA, int jcolA[],
+			      int& info ) override {};
 
-  virtual void fsymAtPutSpRow( int row, double A[], int lenA, int jcolA[],
-			       int& info ){};
+  void fsymAtPutSpRow( int row, double A[], int lenA, int jcolA[],
+			       int& info ) override {};
 
   void getSize( long long& m, long long& n ) const override { m = 0; n = 0; }
   void getSize( int& m, int& n ) const override { m = 0; n = 0; }
 
-  virtual long long size(){return 0;}
+  long long size() override { return 0; }
 
-  virtual void symAtPutSubmatrix( int destRow, int destCol,
+  void symAtPutSubmatrix( int destRow, int destCol,
 				  DoubleMatrix& M,
 				  int srcRow, int srcCol,
-				  int rowExtent, int colExtent ){};
+				  int rowExtent, int colExtent ) override {};
 
-  virtual void fromGetSpRow( int row, int col,
+  void fromGetSpRow( int row, int col,
                              double A[], int lenA, int irowA[], int& nnz,
-                             int rowExtent, int& info ){};
+                             int rowExtent, int& info ) override {};
 
-  virtual void atPutZeros( int row, int col,
-			   int rowExtent, int colExtent ){};
-  virtual void mult ( double beta,  OoqpVector& y,
-		      double alpha, OoqpVector& x ){};
-  virtual void transMult ( double beta,  OoqpVector& y,
-			   double alpha, OoqpVector& x ){};
+  void atPutZeros( int row, int col,
+			   int rowExtent, int colExtent ) override {};
+  void mult ( double beta,  OoqpVector& y,
+		      double alpha, const OoqpVector& x ) const override {};
+  void transMult ( double beta,  OoqpVector& y,
+			   double alpha, const OoqpVector& x ) const override {};
   
-  virtual double abmaxnorm(){return 0.0;}
+  double abmaxnorm() override {return 0.0;}
   
-  virtual void writeToStream(ostream& out) const{};
+  void writeToStream(ostream& out) const{};
 
-  virtual void randomizePSD(double * seed){};
+  void randomizePSD(double * seed) override {};
   
-  virtual void getDiagonal( OoqpVector& vec ){};
-  virtual void setToDiagonal( OoqpVector& vec ){};
-  virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
-  virtual void fromGetDiagonal( int idiag, OoqpVector& x ){};
+  void getDiagonal( OoqpVector& vec ) override {};
+  void setToDiagonal( OoqpVector& vec ) override {};
+  void atPutDiagonal( int idiag, OoqpVector& v ) override {};
+  void fromGetDiagonal( int idiag, OoqpVector& x ) override {};
 
-  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[], 
-				int& info ){};
+  void putSparseTriple( int irow[], int len, int jcol[], double A[],
+				int& info ) override {};
 
-  virtual void SymmetricScale ( OoqpVector& vec ){};
-  virtual void ColumnScale ( OoqpVector& vec ){};
-  virtual void RowScale ( OoqpVector& vec ){};
-  virtual void scalarMult( double num ){};
+  void SymmetricScale ( OoqpVector& vec ) override {};
+  void ColumnScale ( OoqpVector& vec ) override {};
+  void RowScale ( OoqpVector& vec ) override {};
+  void scalarMult( double num ) override {};
 };
 
 typedef SmartPointer<StochSymMatrix> StochSymMatrixHandle;

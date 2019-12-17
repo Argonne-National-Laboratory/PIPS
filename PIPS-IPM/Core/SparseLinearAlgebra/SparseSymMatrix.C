@@ -244,14 +244,15 @@ long long SparseSymMatrix::size()
   return mStorage->rows();
 }
 void SparseSymMatrix::mult ( double beta,  OoqpVector& y_in,
-				 double alpha, OoqpVector& x_in )
+				 double alpha, const OoqpVector& x_in ) const
 {
-  SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
+  const SimpleVector & x = dynamic_cast<const SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
   
   assert( x.n == mStorage->n &&  y.n == mStorage->m );
   
-  double *xv = 0, *yv = 0;
+  const double *xv = nullptr;
+  double* yv = nullptr;
   if( x.n > 0 ) xv = &x[0];
   if( y.n > 0 ) yv = &y[0];
 
@@ -259,14 +260,15 @@ void SparseSymMatrix::mult ( double beta,  OoqpVector& y_in,
 }
 
 void SparseSymMatrix::transMult ( double beta,   OoqpVector& y_in,
-				      double alpha,  OoqpVector& x_in )
+				      double alpha,  const OoqpVector& x_in ) const
 {
-  SimpleVector & x = dynamic_cast<SimpleVector &>(x_in);
+  const SimpleVector & x = dynamic_cast<const SimpleVector &>(x_in);
   SimpleVector & y = dynamic_cast<SimpleVector &>(y_in);
   
   assert( x.n == mStorage->n &&  y.n == mStorage->m );
   
-  double *xv = 0, *yv = 0;
+  const double *xv = nullptr;
+  double *yv = nullptr;
   if( x.n > 0 ) xv = &x[0];
   if( y.n > 0 ) yv = &y[0];
 
@@ -274,7 +276,7 @@ void SparseSymMatrix::transMult ( double beta,   OoqpVector& y_in,
 }
   
 void SparseSymMatrix::transMult ( double beta,  double y[], int incy,
-				      double alpha, double x[], int incx )
+				      double alpha, const double x[], int incx ) const
 {
   this->mult( beta, y, incy, alpha, x, incx );
 }
@@ -295,7 +297,7 @@ void SparseSymMatrix::writeToStreamDense(ostream& out) const
 }
 
 void SparseSymMatrix::mult ( double beta,  double y[], int incy,
-				 double alpha, double x[], int incx )
+				 double alpha, const double x[], int incx ) const
 {
   int m, n, i, j, k;
   this->getSize(m, n); 

@@ -841,7 +841,7 @@ void indexedLexSort( int first[], int n, int swapFirst,
 
 
 void SparseStorage::mult( double beta,  double y[], int incy,
-			      double alpha, double x[], int incx )
+			      double alpha, const double x[], int incx ) const
 {
   int i, j, k;
   double temp;
@@ -851,7 +851,7 @@ void SparseStorage::mult( double beta,  double y[], int incy,
       j = jcolM[k];
       temp += M[k] * x[j * incx];
 #ifndef NDEBUG
-      assert(j<n);
+      assert(j < n);
 #endif
     }
     y[i * incy] = beta * y[i * incy] + alpha * temp;
@@ -859,7 +859,7 @@ void SparseStorage::mult( double beta,  double y[], int incy,
 }
 
 void SparseStorage::transMult( double beta,  double y[], int incy,
-			       double alpha, double x[], int incx )
+			       double alpha, const double x[], int incx ) const
 {
   int i, j, k;
   if(beta!=1.0) {
@@ -871,7 +871,7 @@ void SparseStorage::transMult( double beta,  double y[], int incy,
     for( k = krowM[i]; k < krowM[i+1]; k++ ) {
       j = jcolM[k];
 #ifndef NDEBUG
-      assert(j<n);
+      assert(j < n);
 #endif
       y[j * incy] += alpha * M[k] * x[i * incx];
     }

@@ -24,6 +24,10 @@ int StochRowStorage::storeRow( int node, int row, bool linking_row, const StochG
    return stored_row_index;
 }
 
+void StochRowStorage::mult(double beta, StochVector &y, double alpha, const StochVector &x) const
+{
+   row_storage->mult(beta, y, alpha, x);
+}
 
 double StochRowStorage::multRowTimesVec( int node, int row, bool linking_row, const StochVector& vec ) const
 {

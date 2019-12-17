@@ -291,22 +291,22 @@ void StochGenMatrix::setToDiagonal( OoqpVector& vec_ )
 
 /* y = beta * y + alpha * this * x */
 void StochGenMatrix::mult( double beta,  OoqpVector& y_,
-			   double alpha, OoqpVector& x_ )
+			   double alpha, const OoqpVector& x_ ) const
 {
-  StochVector & x = dynamic_cast<StochVector&>(x_);
+  const StochVector & x = dynamic_cast<const StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
   //assert tree compatibility
   assert(y.children.size() - children.size() == 0);
   assert(x.children.size() - children.size() == 0);
 
-  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector& xvec = dynamic_cast<const SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
 
   if (0.0 == alpha) {
     y.vec->scale( beta );
 
-    for(size_t it=0; it<children.size(); it++)
+    for(size_t it = 0; it < children.size(); it++)
       children[it]->mult(beta, *y.children[it], alpha, *x.children[it]);
 
     return;
@@ -344,12 +344,12 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 	else
 	  yvecl.setToZero();
 
-    for(size_t it=0; it<children.size(); it++)
+    for(size_t it = 0; it < children.size(); it++)
 	   children[it]->mult2(beta, *y.children[it], alpha, *x.children[it], yvecl);
 
 	if(iAmDistrib) {
 	  // sum up linking constraints vectors
-	  int locn=yvecl.length();
+	  int locn = yvecl.length();
 	  double* buffer = new double[locn];
 
 	  MPI_Allreduce(yvecl.elements(), buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
@@ -395,16 +395,16 @@ void StochGenMatrix::mult2( double beta,  OoqpVector& y_,
 
 
 void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
-				 double alpha,  OoqpVector& x_ )
+				 double alpha,  const OoqpVector& x_ ) const
 {
-  StochVector & x = dynamic_cast<StochVector&>(x_);
+  const StochVector & x = dynamic_cast<const StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
   // assert tree compatibility
   assert(y.children.size() == children.size());
   assert(x.children.size() == children.size());
 
-  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector& xvec = dynamic_cast<const SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
 
   int blm, bln;
@@ -414,7 +414,7 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   if( blm > 0 )
   {
     assert(x.vecl);
-    SimpleVector& xvecl = dynamic_cast<SimpleVector&>(*x.vecl);
+    const SimpleVector& xvecl = dynamic_cast<const SimpleVector&>(*x.vecl);
 
     if( iAmSpecial(iAmDistrib, mpiComm) )
     {
@@ -432,7 +432,7 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
     //!opt alloc buffer here and send it through the tree to be used by
     //!children when MPI_Allreduce
     //let the children compute their contribution
-    for(size_t it=0; it<children.size(); it++) {
+    for(size_t it = 0; it < children.size(); it++) {
       children[it]->transMult2(beta, *y.children[it], alpha, *x.children[it], yvec, xvecl);
     }
   }
@@ -462,13 +462,13 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
 
 void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
 				  double alpha,  StochVector& x,
-				  OoqpVector& yvecParent, OoqpVector& xvecl)
+				  OoqpVector& yvecParent, const OoqpVector& xvecl) const
 {
   //assert tree compatibility
   assert(y.children.size() - children.size() == 0);
   assert(x.children.size() - children.size() == 0);
 
-  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector& xvec = dynamic_cast<const SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
 
 #ifdef STOCH_TESTING

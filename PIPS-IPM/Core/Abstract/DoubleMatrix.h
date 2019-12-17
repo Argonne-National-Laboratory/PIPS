@@ -104,11 +104,11 @@ public:
 
   /** y = beta * y + alpha * this * x */
   virtual void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x ) = 0;
+                      double alpha, const OoqpVector& x ) const = 0;
 
   /** y = beta * y + alpha * this^T * x */
   virtual void transMult ( double beta,   OoqpVector& y,
-                           double alpha,  OoqpVector& x ) = 0;
+                           double alpha,  const OoqpVector& x ) const = 0;
 
   /** the magnitude of the element in this matrix with largest absolute value.
    */
