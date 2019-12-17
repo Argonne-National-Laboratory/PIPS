@@ -19,8 +19,8 @@ public:
 
    int storeRow( int node, int row, bool linking_row, const StochGenMatrix& matrix_row);
 
-   /** y = beta * y + alpha * this * x */
-   void mult(double beta, StochVector &y, double alpha, const StochVector &x) const;
+   /** y = beta * y + alpha * stored */
+   void mult(double beta, StochVector &y, double alpha, const StochVector &stored_vec, int node, int row, bool linking_row) const;
    double multRowTimesVec(int node, int row, bool linking_row, const StochVector &vec) const;
    double multLinkingRowTimesVecWithoutB0(int row, const StochVector &vec) const;
 
