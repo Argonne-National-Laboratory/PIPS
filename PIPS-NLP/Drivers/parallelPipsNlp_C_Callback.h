@@ -8,6 +8,10 @@
 
 #include "mpi.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void * UserDataPtr;
 
 /*
@@ -37,7 +41,7 @@ typedef CallBackData * CallBackDataPtr;
  *
  * note: row and col node ids from the cbd should always be equal.
  */
-extern "C" typedef int (*str_init_x0_cb)(double* x0, CallBackDataPtr cbd);
+typedef int (*str_init_x0_cb)(double* x0, CallBackDataPtr cbd);
 
 /*
  * This function is used to request the values and sizes of the col and row's lower and upper bound vectors.
@@ -49,7 +53,7 @@ extern "C" typedef int (*str_init_x0_cb)(double* x0, CallBackDataPtr cbd);
  *  	Therefore, it is wise to order the constraint in a way that always keeps the equality constraints in front of the
  *  	inequality constraints to keep everything else consistent.
  */
-extern "C" typedef int (*str_prob_info_cb)(int* n, double* col_lb, double* col_up, int* m, double* row_lb, double* row_up, CallBackDataPtr cbd);
+typedef int (*str_prob_info_cb)(int* n, double* col_lb, double* col_up, int* m, double* row_lb, double* row_up, CallBackDataPtr cbd);
 
 /*
  * This function evaluates the value of the objective function declared at the node whose Id is specified in the CallBackData.
@@ -57,7 +61,7 @@ extern "C" typedef int (*str_prob_info_cb)(int* n, double* col_lb, double* col_u
  * If the objective function on the root node (i.e. the only node in first stage) is requested, x0 and x1 are the same and both point to
  * the first stage variable values.
  */
-extern "C" typedef int (*str_eval_f_cb)(double* x0, double* x1, double *obj, CallBackDataPtr cbd);
+typedef int (*str_eval_f_cb)(double* x0, double* x1, double *obj, CallBackDataPtr cbd);
 
 /*
  * This function computes the constraint value at current x0 and x1, where x0 and x1 are the first and second stage variable values respectively.
@@ -65,7 +69,7 @@ extern "C" typedef int (*str_eval_f_cb)(double* x0, double* x1, double *obj, Cal
  * If the constraints to be evaluated are in the root node, x0 and x1 are the same and both point to the first stage variable values.
  *
  */
-extern "C" typedef int (*str_eval_g_cb)(double* x0, double* x1, double* eq_g,double* inq_g, CallBackDataPtr cbd);
+typedef int (*str_eval_g_cb)(double* x0, double* x1, double* eq_g,double* inq_g, CallBackDataPtr cbd);
 
 /*
  * This function evaluates the objective gradient sub-vector. The objective function to be considered is declared in node with node id equals to row_node_id
@@ -82,7 +86,7 @@ extern "C" typedef int (*str_eval_g_cb)(double* x0, double* x1, double* eq_g,dou
  * 		equals to (1,1).
  *
  */
-extern "C" typedef int (*str_eval_grad_f_cb)(double* x0, double* x1, double* vec_grad_f, CallBackDataPtr cbd);
+typedef int (*str_eval_grad_f_cb)(double* x0, double* x1, double* vec_grad_f, CallBackDataPtr cbd);
 
 /*
  * This function evaluates the structures or values of the sub-matrix of the Jacobian in two separate CCS constructs. One is for the
@@ -96,7 +100,7 @@ extern "C" typedef int (*str_eval_grad_f_cb)(double* x0, double* x1, double* vec
  * (e_elts, e_rowidx, e_colptr) represents the Jacobian block of the equality constraints
  * (i_elts, i_rowidx, i_colptr) represents the Jacobian block of the inequality constraints
  */
-extern "C" typedef int (*str_eval_jac_g_cb)(double* x0, double* x1,
+typedef int (*str_eval_jac_g_cb)(double* x0, double* x1,
 		int* e_nz, double* e_elts, int* e_rowidx, int *e_colptr,
 		int* i_nz, double* i_elts, int* i_rowidx, int *i_colptr,
 		CallBackDataPtr cbd);
@@ -127,77 +131,77 @@ extern "C" typedef int (*str_eval_jac_g_cb)(double* x0, double* x1,
  *
  * Of course, the nz values of the above mentioned blocks should be computed when setting elts to NULL pointer.
  */
-extern "C" typedef int (*str_eval_h_cb)(double* x0, double* x1, double* lamdba,
+typedef int (*str_eval_h_cb)(double* x0, double* x1, double* lamdba,
 		int* nz, double* elts, int* rowidx, int *colptr,
 		CallBackDataPtr cbd);
 
 /*
  * write solution when it is done.
  */
-extern "C" typedef int (*str_write_solution_cb)(double* x, double* lam_eq, double* lam_ieq, CallBackDataPtr cbd);
+typedef int (*str_write_solution_cb)(double* x, double* lam_eq, double* lam_ieq, CallBackDataPtr cbd);
 
+struct PipsNlpProblemStruct {
+  MPI_Comm comm;
+  int nscen;
+  str_init_x0_cb init_x0;
+  str_prob_info_cb prob_info;
+  str_eval_f_cb eval_f;
+  str_eval_g_cb eval_g;
+  str_eval_grad_f_cb eval_grad_f;
+  str_eval_jac_g_cb eval_jac_g;
+  str_eval_h_cb eval_h;
+  str_write_solution_cb write_solution;
+  UserDataPtr userdata;
+  // holders for optimal solution and objective
+  double objective;
+  int nvars;
+  int ncons;
+};
 
-extern "C"
-{
-  struct PipsNlpProblemStruct
-  {
-    MPI_Comm comm;
-    int nscen;
-    str_init_x0_cb init_x0;
-    str_prob_info_cb prob_info;
-    str_eval_f_cb eval_f;
-    str_eval_g_cb eval_g;
-    str_eval_grad_f_cb eval_grad_f;
-    str_eval_jac_g_cb eval_jac_g;
-    str_eval_h_cb eval_h;
-    str_write_solution_cb write_solution;
-    UserDataPtr userdata;
-    // holders for optimal solution and objective
-    double objective;
-    int nvars;
-    int ncons;
-  };
-  typedef struct PipsNlpProblemStruct* PipsNlpProblemStructPtr; 	/** Pointer to a pips_nlp Problem. **/
+typedef struct PipsNlpProblemStruct* PipsNlpProblemStructPtr; 	/** Pointer to a pips_nlp Problem. **/
 
-  PipsNlpProblemStructPtr 
-  CreatePipsNlpProblemStruct(MPI_Comm comm,
-			     int nscen, /** number of scenarios **/
-			     str_init_x0_cb init_x0,
-			     str_prob_info_cb prob_info,
-			     str_eval_f_cb eval_f, /** Callback function of objective function **/
-			     str_eval_g_cb eval_g, /** Callback function of constraint body **/
-			     str_eval_grad_f_cb eval_grad_f, /** Callback function of objective gradient **/
-			     str_eval_jac_g_cb eval_jac_g, /** Callback function of constraint Jacobian **/
-			     str_eval_h_cb eval_h, /** Callback function of Lagrangian Hessian **/
-			     str_write_solution_cb write_solution, /** Callback function to write back solution **/
-			     UserDataPtr userdata
-			     );
-
-  void FreePipsNlpProblemStruct(PipsNlpProblemStruct* prob);
-
-  int PipsNlpSolveStruct(PipsNlpProblemStruct* prob);
-
+PipsNlpProblemStructPtr CreatePipsNlpProblemStruct(MPI_Comm comm,
+						   int nscen, /** number of scenarios **/
+						   str_init_x0_cb init_x0,
+						   str_prob_info_cb prob_info,
+						   str_eval_f_cb eval_f, /** Callback function of objective function **/
+						   str_eval_g_cb eval_g, /** Callback function of constraint body **/
+						   str_eval_grad_f_cb eval_grad_f, /** Callback function of objective gradient **/
+						   str_eval_jac_g_cb eval_jac_g, /** Callback function of constraint Jacobian **/
+						   str_eval_h_cb eval_h, /** Callback function of Lagrangian Hessian **/
+						   str_write_solution_cb write_solution, /** Callback function to write back solution **/
+						   UserDataPtr userdata
+						   );
+  
+  void FreePipsNlpProblemStruct(PipsNlpProblemStructPtr prob);
+  
+  int PipsNlpSolveStruct(PipsNlpProblemStructPtr prob);
+  
   /*
    * Get primal-dual solution corresponding to node Id specified in the CallBackData.
    * The vector for primal (x) and dual variables (lam_eq and lam_ieq) should be allocated
    * when calling the function.
    */
-   int get_x(CallBackDataPtr cbd,double* x, double* lam_eq, double* lam_ieq);
-
+  int get_x(CallBackDataPtr cbd,double* x, double* lam_eq, double* lam_ieq);
+  
   /*
    * Get the objective value
    */
-  double PipsNlpProblemStructGetObjective(PipsNlpProblemStruct* prob);
-
+  double PipsNlpProblemStructGetObjective(PipsNlpProblemStructPtr prob);
+  
   /*
    * Get the number of total variables
    */
-  int PipsNlpProblemStructGetTotalVars(PipsNlpProblemStruct* prob);
+  int PipsNlpProblemStructGetTotalVars(PipsNlpProblemStructPtr prob);
+  
+  /*
+   * Get the number of total constraints
+   */
+  int PipsNlpProblemStructGetTotalCons(PipsNlpProblemStructPtr prob);
+  
+#ifdef __cplusplus
+}
+#endif
 
-   /*
-    * Get the number of total constraints
-    */
-  int PipsNlpProblemStructGetTotalCons(PipsNlpProblemStruct* prob);
-};
 #endif
 
