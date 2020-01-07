@@ -343,7 +343,7 @@ int str_eval_h(double* x0, double* x1, double* lambda, int* nz, double* elts,
 			colptr[1] = 1;
 			colptr[2] = 2;
 			elts[0] = 1.0 + 1.0*lambda[0];
-			elts[0] = 1.0;
+			elts[1] = 1.0;
 		} else if (row == 0 && col == 2) {
 			rowidx[0] = 0;
 			rowidx[1] = 0;
@@ -351,7 +351,7 @@ int str_eval_h(double* x0, double* x1, double* lambda, int* nz, double* elts,
 			colptr[1] = 1;
 			colptr[2] = 2;
 			elts[0] = 1.0;
-			elts[0] = 1.0 + 1.0*lambda[0];
+			elts[1] = 1.0 + 1.0*lambda[0];
 		} else
 			assert(false);
 	}
