@@ -201,9 +201,9 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 #ifdef TIMING
   if(mype==0) printf("data created\n");
 #endif
-
+  data->writeToStreamDense(std::cout);
 #ifdef WITH_PARDISOINDEF
-  data->activateLinkStructureExploitation();
+//  data->activateLinkStructureExploitation();
 #endif
 
   vars   = dynamic_cast<sVars*>( factory->makeVariables( data ) );
