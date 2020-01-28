@@ -229,6 +229,10 @@ public:
    *  this was its foremost usecase)
    */
   virtual double localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const;
+
+  /* y += alpha * RowAt(child, row, linking) */
+  virtual void axpyWithRowAt( double alpha, StochVector& y, int child, int row, bool linking) const;
+
 };
 
 

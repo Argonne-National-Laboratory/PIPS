@@ -26,13 +26,11 @@ int StochRowStorage::storeRow( int node, int row, bool linking_row, const StochG
 
 /* TODO : it would probably be nice to have something like a StochVectorView that one can create at this point and then use like a normal StochVec.. */
 /** y = beta * y + alpha * stored */
-void StochRowStorage::mult(double beta, StochVector &y, double alpha, const StochVector &stored_vec, int node, int row, bool linking_row) const
+void StochRowStorage::axpyAtRow(double beta, StochVector &y, double alpha, int node, int row, bool linking_row) const
 {
+   y.scale(beta);
 
-
-   /* multiply using stochVector implementation */
-
-   /* release StochVector but keep arrays */
+   row_storage->axpyWithRowAt(beta, y, node, row, linking_row);
 }
 
 double StochRowStorage::multRowTimesVec( int node, int row, bool linking_row, const StochVector& vec ) const

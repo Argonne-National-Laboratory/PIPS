@@ -190,6 +190,7 @@ public:
 
   virtual int appendRow( const SparseGenMatrix& matrix_row, int row );
   virtual double localRowTimesVec( const SimpleVector& vec, int row ) const;
+  virtual void axpyWithRowAt(double alpha, SimpleVector& y, int row) const;
 
   virtual ~SparseGenMatrix();
 };

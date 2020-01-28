@@ -1786,36 +1786,92 @@ int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int 
   return index_row;
 };
 
-double StochGenMatrix::localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const
+/* y += alpha RowAt(child, row, linking) */
+void StochGenMatrix::axpyWithRowAt( double alpha, StochVector& y, int child, int row, bool linking) const
 {
-  assert(vec.children.size() == children.size());
-  assert(-1 <= child && child < (int) children.size());
-  
-  double res = 0.0;
+   assert(-1 <= child && child < static_cast<int>(children.size()));
+   assert(y.children.size() == children.size());
 
-  /* go through all available children and multiply the vec times row in submatrix */
-  if( linking )
-  {
-    res += Blmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row );
+   /* go through all available children and calculate y += alpha * rowAt(row) */
+   if( linking )
+   {
+      assert(Blmat);
+      assert(y.vec);
+      Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
 
-    for( unsigned int i = 0; i < children.size(); ++i )
-    {
-      if( !children[i]->isKindOf(kStochGenDummyMatrix) )
-        res += children[i]->Blmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.children[i]->vec), row);
-    }
-  }
-  else
-  {
-    if(child == -1)
-    {
-      res += Bmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row);
-    }
-    else
-    {
-      res += children[child]->Amat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.vec), row);
-      res += children[child]->Bmat->localRowTimesVec( dynamic_cast<const SimpleVector&>(*vec.children[child]->vec), row);
-    }
-  }
+      for( unsigned int i = 0; i < children.size(); ++i )
+      {
+         if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+         {
+            assert(children[i]->Blmat);
+            assert(y.children[i]->vec);
+            children[i]->Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.children[i]->vec), row);
+         }
+      }
+   }
+   else
+   {
+      if( child == -1 )
+      {
+         assert(Bmat);
+         assert(y.vec);
+         Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
+      }
+      else
+      {
+         assert(children[child]->Amat);
+         assert(children[child]->Bmat);
+         assert(y.vec);
+         assert(y.children[child]->vec);
+         children[child]->Amat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
+         children[child]->Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.children[child]->vec), row);
+      }
+   }
+}
 
-  return res;
+
+double StochGenMatrix::localRowTimesVec(const StochVector &vec, int child, int row, bool linking) const
+{
+   assert(-1 <= child && child < static_cast<int>(children.size()));
+   assert(vec.children.size() == children.size());
+
+   double res = 0.0;
+
+   /* go through all available children and multiply the vec times row in submatrix */
+   if( linking )
+   {
+      assert(Blmat);
+      assert(vec.vec);
+      res += Blmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+
+      for( unsigned int i = 0; i < children.size(); ++i )
+      {
+         if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+         {
+            assert(children[i]->Blmat);
+            assert(vec.children[i]->vec);
+            res += children[i]->Blmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.children[i]->vec), row);
+         }
+      }
+   }
+   else
+   {
+      if( child == -1 )
+      {
+         assert(Bmat);
+         assert(vec.vec);
+         res += Bmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+      }
+      else
+      {
+         assert(children[child]->Amat);
+         assert(children[child]->Bmat);
+         assert(vec.vec);
+         assert(vec.children[child]->vec);
+         res += children[child]->Amat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+         res += children[child]->Bmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.children[child]->vec), row);
+      }
+   }
+
+   return res;
 }

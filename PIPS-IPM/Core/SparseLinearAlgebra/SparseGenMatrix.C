@@ -847,6 +847,14 @@ int SparseGenMatrix::appendRow(const SparseGenMatrix& matrix_row, int row)
    return mStorageDynamic->getM() - 1;
 }
 
+void SparseGenMatrix::axpyWithRowAt(double alpha, SimpleVector& y, int row) const
+{
+   assert( hasDynamicStorage() );
+
+   mStorageDynamic->axpyWithRowAt(alpha, y.elements(), y.length(), row);
+}
+
+
 double SparseGenMatrix::localRowTimesVec( const SimpleVector& vec, int row ) const
 {
   assert( hasDynamicStorage() );
