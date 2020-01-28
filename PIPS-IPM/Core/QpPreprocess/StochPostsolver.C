@@ -274,7 +274,7 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
 
 // todo : notify for linking constraints will be a sync event
 void StochPostsolver::notifyRowPropagatedBound( SystemType system_type, int node, int row, bool linking_row, int node_column,
-      int column, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, double rhslhs, const StochGenMatrix& matrix_row)
+      int column, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row)
 {
    assert(!PIPSisEQ(old_bound, new_bound));
    if(is_upper_bound)
@@ -295,7 +295,6 @@ void StochPostsolver::notifyRowPropagatedBound( SystemType system_type, int node
    int_values.push_back(index_stored_row);
    float_values.push_back(old_bound);
    float_values.push_back(new_bound);
-   float_values.push_back(rhslhs);
 
    finishNotify();
 }
@@ -493,10 +492,11 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          }
          break;
       }
+      // TODO : linking vars missing so far - deactivated in bound tightening
       case BOUNDS_TIGHTENED:
       {
          assert(first_index + 1 == next_first_index);
-         assert(first_float_val + 3 == next_first_float_val);
+         assert(first_float_val + 2 == next_first_float_val);
          assert(first_int_val + 5 == next_first_int_val);
 
          const INDEX& row_idx = indices.at(first_index);
@@ -515,7 +515,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          const double old_bound = float_values[first_float_val];
          const double new_bound = float_values[first_float_val + 1];
-         const double rhslhs = float_values[first_float_val + 2];
 
          const double curr_x = getSimpleVecFromColStochVec(x_vec, node_column)[column];
 
@@ -524,19 +523,26 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          else
             assert( PIPSisLT(new_bound, curr_x) );
 
+         double& slack = (is_upper_bound) ? getSimpleVecFromColStochVec(w_vec, node_column)[column] :
+            getSimpleVecFromColStochVec(v_vec, node_column)[column];
+
          // TODO : merge slack computations of tight and non-tight == refactoring
          /* if bound is not tight only adjust v/w */
          if( !PIPSisEQ(curr_x, new_bound ) )
          {
-            if(is_upper_bound)
+            if(old_ixlowupp == 0)
+            {
+               slack = 0;
+            }
+            else if(is_upper_bound)
             {
                assert(PIPSisLT(new_bound, old_bound));
-               getSimpleVecFromColStochVec(w_vec, node_column)[column] += old_bound - new_bound;
+               slack += old_bound - new_bound;
             }
             else
             {
                assert(PIPSisLT(old_bound, new_bound));
-               getSimpleVecFromColStochVec(v_vec, node_column)[column] += new_bound - old_bound;
+               slack += new_bound - old_bound;
             }
          }
          /* bound was tight */
@@ -545,14 +551,16 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             /* If the bound was tight all other variables in that row must have been at their respective upper
              * and lower bounds (depending on sings and orientation and upper/lower).
              * This fact will be used to adjust their duals which can be non-zero then since v/w were zero.
+             * TODO : assert that
              */
             assert(!PIPSisEQ(old_bound, curr_x));
 
-            double& slack = (is_upper_bound) ? getSimpleVecFromColStochVec(w_vec, node_column)[column] :
-               getSimpleVecFromColStochVec(v_vec, node_column)[column];
-
             /* adjust slack v/w */
-            if(is_upper_bound)
+            if(old_ixlowupp == 0)
+            {
+               slack = 0;
+            }
+            else if(is_upper_bound)
             {
                assert(PIPSisLT(0, new_bound - curr_x));
                assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node_column)[column]));
@@ -566,16 +574,15 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             }
 
             /* adjust duals gamma and phi if necessary and use stored col to update */
-            StochVector& dual_vec = (system_type == EQUALITY_SYSTEM) ? y_vec : z_vec;
+            double& dual_row = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(y_vec, node_row, linking_row)[row] :
+               getSimpleVecFromRowStochVec(z_vec, node_row, linking_row)[row];
 
             if(is_upper_bound)
             {
-               double& phi = getSimpleVecFromColStochVec(phi_vec, node_column)[column];\
-               // TODO : here we should only require the feasibility tolerances
-               if(!PIPSisZero(phi * slack))
+               double& phi = getSimpleVecFromColStochVec(phi_vec, node_column)[column];
+               if(!PIPSisZeroFeas(phi * slack))
                {
                   const double old_phi = phi;
-                  phi = 0;
 
                   const double coeff = row_storage.getRowCoefficientAtColumn(node_row, index_stored_row, linking_row, node_column, column);
                   /* set z/y of corresponding row such that c_i* deltaz//a_i* deltay = phi */
@@ -584,31 +591,55 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                   if(coeff < 1e-13)
                      std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
 
-                  /* add z/y * row to gamma and phi */
-                  // todo function for row storage that does vec = vec + alpha*A*x;
+                  /* add z/y * row to gamma/phi */
+                  StochVectorHandle tmp_pos(dynamic_cast<StochVector*>(gamma_vec.clone()));
+
+                  /* calculate multiplier_change times row */
+                  row_storage.axpyAtRow(0.0, *tmp_pos, change_dual_row, node_row, index_stored_row, linking_row);
+                  StochVectorHandle tmp_neg(dynamic_cast<StochVector*>(tmp_pos->cloneFull()));
+
+                  tmp_pos->selectPositive();
+                  tmp_neg->selectNegative();
+
+                  phi_vec.axpy(1.0, *tmp_pos);
+                  gamma_vec.axpy(1.0, *tmp_neg);
+
+                  dual_row += change_dual_row;
+
+                  assert(PIPSisZero(phi));
                }
             }
             else
             {
-               double& gamma = getSimpleVecFromColStochVec(phi_vec, node_column)[column];
-               // TODO : here we should only require the feasibility tolerances
-               if(!PIPSisZero(gamma * slack))
+               double& gamma = getSimpleVecFromColStochVec(gamma_vec, node_column)[column];
+               if(!PIPSisZeroFeas(gamma * slack))
                {
                   const double old_gamma = gamma;
-                  gamma = 0;
 
                   const double coeff = row_storage.getRowCoefficientAtColumn(node_row, index_stored_row, linking_row, node_column, column);
-                  /* set z/y of corresponding row such that coeff*z//coeff*y = - gamma */
+                  /* set z/y of corresponding row such that coeff*z//coeff*y = -gamma */
                   assert(!PIPSisZero(coeff));
                   const double change_dual_row = -old_gamma/coeff;
 
-                  /* add z/y * row to gamma and phi */
-                  // todo: function for multiplication in row storage
+                  /* add z/y * row to gamma/phi */
+                  StochVectorHandle tmp_pos(dynamic_cast<StochVector*>(gamma_vec.clone()));
+
+                  /* calculate -multiplier_change times row */
+                  row_storage.axpyAtRow(0.0, *tmp_pos, -change_dual_row, node_row, index_stored_row, linking_row);
+                  StochVectorHandle tmp_neg(dynamic_cast<StochVector*>(tmp_pos->cloneFull()));
+
+                  tmp_pos->selectPositive();
+                  tmp_neg->selectNegative();
+
+                  phi_vec.axpy(1.0, *tmp_pos);
+                  gamma_vec.axpy(1.0, *tmp_neg);
+
+                  dual_row += change_dual_row;
+
+                  assert(PIPSisZero(gamma));
                }
             }
          }
-
-         throw std::runtime_error("BOUNDS_TIGHTENED not yet implemented");
          break;
       }
       case FIXED_COLUMN:

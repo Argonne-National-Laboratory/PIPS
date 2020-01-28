@@ -1532,6 +1532,30 @@ void StochVectorBase<T>::selectNonZeros( const OoqpVectorBase<T>& select_ )
 }
 
 template<typename T>
+void StochVectorBase<T>::selectPositive()
+{
+   vec->selectPositive();
+
+   if( vecl )
+      vecl->selectPositive();
+
+   for(size_t it = 0; it < children.size(); it++)
+     children[it]->selectPositive();
+}
+
+template<typename T>
+void StochVectorBase<T>::selectNegative()
+{
+   vec->selectNegative();
+
+   if( vecl )
+      vecl->selectNegative();
+
+   for(size_t it = 0; it < children.size(); it++)
+     children[it]->selectNegative();
+}
+
+template<typename T>
 long long StochVectorBase<T>::numberOfNonzeros() const
 {
   //!opt - store the number of nnz to avoid communication

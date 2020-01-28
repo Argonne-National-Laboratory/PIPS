@@ -111,6 +111,8 @@ public:
 
   bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override;
   void selectNonZeros( const OoqpVectorBase<T>& select ) override;
+  void selectPositive() override;
+  void selectNegative() override;
   void addSomeConstants( T c, const OoqpVectorBase<T>& select ) override;
   void writefSomeToStream( std::ostream& out, const char format[],
 				   const OoqpVectorBase<T>& select ) const override;

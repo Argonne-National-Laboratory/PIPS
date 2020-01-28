@@ -28,7 +28,8 @@ int StochRowStorage::storeRow( int node, int row, bool linking_row, const StochG
 /** y = beta * y + alpha * stored */
 void StochRowStorage::axpyAtRow(double beta, StochVector &y, double alpha, int node, int row, bool linking_row) const
 {
-   y.scale(beta);
+   if(!PIPSisEQ(beta, 1.0))
+      y.scale(beta);
 
    row_storage->axpyWithRowAt(beta, y, node, row, linking_row);
 }

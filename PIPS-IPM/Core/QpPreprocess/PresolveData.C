@@ -1240,24 +1240,25 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    assert( -1 <= node_row && node_row < nChildren );
    
    const int node_var = (block_type == A_MAT) ? -1 : node_row;
+   const bool linking_row = (block_type == BL_MAT);
+
    assert( 0 <= col && col < getSimpleVecFromColStochVec( *presProb->ixlow, node_var ).n );
 
    // todo : choose numerical threshold
    //const double numerical_upper_threshold = std::numeric_limits<double>::max();
 
    /* check for infeasibility of the newly found bounds */
-   const double ixlow = getSimpleVecFromColStochVec( *presProb->ixlow, node_var )[col];
-   const double xlow = getSimpleVecFromColStochVec( *presProb->blx, node_var )[col];
-   const double ixupp = getSimpleVecFromColStochVec( *presProb->ixupp, node_var )[col];
-   const double xupp = getSimpleVecFromColStochVec( *presProb->bux, node_var )[col];
+   const int ixlow = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, node_var )[col]) ) ? 0 : 1;
+   const double xlow = (ixlow) ? getSimpleVecFromColStochVec( *presProb->blx, node_var )[col] : -std::numeric_limits<double>::infinity();
+   const int ixupp = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, node_var )[col]) ) ? 0 : 1;
+   const double xupp = (ixupp) ? getSimpleVecFromColStochVec( *presProb->bux, node_var )[col] : std::numeric_limits<double>::infinity();
    
    if( TRACK_COLUMN(node_var,col) )
    {
       std::cout << "TRACKING_COLUMN: new bounds [" << lbx << ", " << ubx << "] propagated for column " << 
          col << " from row " << row << " node " << node_row << " in " <<
          ( (system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ":" << std::endl;
-      std::cout << "\tbounds were [" << ((PIPSisZero(ixlow)) ? -std::numeric_limits<double>::infinity() : xlow) 
-         << ", " << ((PIPSisZero(ixupp)) ? std::numeric_limits<double>::infinity() : xupp) << "]" << std::endl;
+      std::cout << "\tbounds were [" << xlow << ", " << xupp << "]" << std::endl;
    }
 
    if( ( !PIPSisZero(ixlow) && PIPSisLT(ubx, xlow) )
@@ -1283,7 +1284,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
          getSimpleVecFromColStochVec(*upper_bound_implied_by_system, node_var)[col] = system_type;
          getSimpleVecFromColStochVec(*upper_bound_implied_by_row, node_var)[col] = row;
-         getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node_var)[col] = (block_type == BL_MAT) ? -2 : node_row; // -2 for linking rows
+         getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node_var)[col] = (linking_row) ? -2 : node_row; // -2 for linking rows
 
          upper_bound_changed = true;
       }
@@ -1296,7 +1297,7 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
          getSimpleVecFromColStochVec(*lower_bound_implied_by_system, node_var)[col] = system_type;
          getSimpleVecFromColStochVec(*lower_bound_implied_by_row, node_var)[col] = row;
-         getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node_var)[col] = (block_type == BL_MAT) ? -2 : node_row; // -2 for linking rows
+         getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node_var)[col] = (linking_row) ? -2 : node_row; // -2 for linking rows
 
          lower_bound_changed = true;
       }
@@ -1306,18 +1307,11 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    if( (lower_bound_changed || upper_bound_changed) && (node_row == -1 || block_type == A_MAT) )
       assert(outdated_linking_var_bounds == true);
 
-// todo : how to undo propagations from linking constraint rows..
-// todo : in case a linking row propagated we'll have to store the whole linking row
-//   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node_row, block_type);
-//   assert(row < mat->getStorageDynamic()->m );
-//
-//   int row_start = mat->getStorageDynamic()->rowptr[row].start;
-//   int row_end = mat->getStorageDynamic()->rowptr[row].end;
-//
-//   assert(row_start < row_end);
-// if bounds_changed
-//   postsolver->notifyRowPropagated(system_type, node_row, row, (block_type == BL_MAT), col, lbx, ubx, mat->getStorageDynamic()->M + row_start,
-//         mat->getStorageDynamic()->jcolM + row_start, row_end - row_start );
+   // todo : in case a linking row propagated we'll have to store the whole linking row
+   if( lower_bound_changed )
+      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, col, node_var, ixlow, xlow, lbx, false, getSystemMatrix(system_type));
+   if( upper_bound_changed )
+      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, col, node_var, ixupp, xupp, ubx, true, getSystemMatrix(system_type));
 
    return (lower_bound_changed || upper_bound_changed);
 }

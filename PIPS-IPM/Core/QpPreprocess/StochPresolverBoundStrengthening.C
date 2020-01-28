@@ -100,11 +100,11 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
    if( strenghtenBoundsInBlock(system_type, node, B_MAT) )
       tightened = true;
 
-   if( presData.hasLinking(system_type) )
-   {
-      if( strenghtenBoundsInBlock(system_type, node, BL_MAT) )
-        tightened = true;
-   }
+//   if( presData.hasLinking(system_type) )
+//   {
+//      if( strenghtenBoundsInBlock(system_type, node, BL_MAT) )
+//        tightened = true;
+//   }
 
    if(node != -1)
    {

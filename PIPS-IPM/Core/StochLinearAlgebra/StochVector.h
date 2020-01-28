@@ -139,6 +139,8 @@ public:
 
    bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override;
    void selectNonZeros( const OoqpVectorBase<T>& select ) override;
+   void selectPositive() override;
+   void selectNegative() override;
    long long numberOfNonzeros() const override;
    void addSomeConstants( T c, const OoqpVectorBase<T>& select ) override;
    void writefSomeToStream( std::ostream& out,
@@ -270,6 +272,8 @@ public:
 
    bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override {return true;}
    void selectNonZeros( const OoqpVectorBase<T>& select ) override {};
+   void selectPositive() override {};
+   void selectNegative() override {};
    long long numberOfNonzeros() const override {return 0;}
    void addSomeConstants( T c, const OoqpVectorBase<T>& select ) override {};
    void writefSomeToStream( std::ostream& out,
