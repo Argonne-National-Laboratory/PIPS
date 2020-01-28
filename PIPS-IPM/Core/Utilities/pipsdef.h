@@ -60,14 +60,31 @@ inline bool PIPSisRelEQ(double val1, double val2, double eps = pips_eps)
    return (std::fabs(reldiff) <= eps);
 }
 
+inline bool PIPSisRelEQFeas(double val1, double val2)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return std::fabs(reldiff) <= feastol;
+}
+
 inline bool PIPSisLE(double val1, double val2, double eps = pips_eps)
 {
    return (val1 <= val2 + eps);
 }
 
+inline bool PIPSisLEFeas(double val1, double val2)
+{
+   return (val1 <= val2 + feastol);
+}
+
 inline bool PIPSisLT(double val1, double val2, double eps = pips_eps)
 {
    return (val1 < val2 - eps);
+}
+
+inline bool PIPSisLTFeas(double val1, double val2)
+{
+   return (val1 < val2 - feastol);
 }
 
 inline bool PIPSisRelLT(double val1, double val2, double eps = pips_eps)
@@ -77,9 +94,21 @@ inline bool PIPSisRelLT(double val1, double val2, double eps = pips_eps)
    return (reldiff < -eps);
 }
 
+inline bool PIPSisRelLTFeas(double val1, double val2)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return (reldiff < -feastol);
+}
+
 inline bool PIPSisZero(double val, double eps0 = pips_eps0)
 {
    return (std::fabs(val) < eps0);
+}
+
+inline bool PIPSisZeroFeas(double val)
+{
+   return (std::fabs(val) < feastol);
 }
 
 inline int PIPSgetnOMPthreads()

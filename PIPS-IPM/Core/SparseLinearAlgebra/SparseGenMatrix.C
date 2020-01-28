@@ -335,7 +335,8 @@ void SparseGenMatrix::mult ( double beta,  OoqpVector& y_in,
 
   assert( x.n == mStorage->n && y.n == mStorage->m );
 
-  double *xv = 0, *yv = 0;
+  const double *xv = 0;
+  double *yv = 0;
 
   if( x.n > 0 ) xv = &x[0];
   if( y.n > 0 ) yv = &y[0];
@@ -377,7 +378,8 @@ void SparseGenMatrix::transMult ( double beta,   OoqpVector& y_in,
 
   assert( x.n == mStorage->m && y.n == mStorage->n );
 
-  double *xv = 0, *yv = 0;
+  const double* xv = 0;
+  double* yv = 0;
 
   if( x.n > 0 ) xv = &x[0];
   if( y.n > 0 ) yv = &y[0];

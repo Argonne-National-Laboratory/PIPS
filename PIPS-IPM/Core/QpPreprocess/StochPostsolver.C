@@ -524,6 +524,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          else
             assert( PIPSisLT(new_bound, curr_x) );
 
+         // TODO : merge slack computations of tight and non-tight == refactoring
          /* if bound is not tight only adjust v/w */
          if( !PIPSisEQ(curr_x, new_bound ) )
          {
@@ -547,18 +548,21 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
              */
             assert(!PIPSisEQ(old_bound, curr_x));
 
+            double& slack = (is_upper_bound) ? getSimpleVecFromColStochVec(w_vec, node_column)[column] :
+               getSimpleVecFromColStochVec(v_vec, node_column)[column];
+
             /* adjust slack v/w */
             if(is_upper_bound)
             {
                assert(PIPSisLT(0, new_bound - curr_x));
                assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node_column)[column]));
-               getSimpleVecFromColStochVec(w_vec, node_column)[column] = new_bound - curr_x;
+               slack = new_bound - curr_x;
             }
             else
             {
                assert(PIPSisLT(0, curr_x - new_bound));
                assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node_column)[column]));
-               getSimpleVecFromColStochVec(v_vec, node_column)[column] = curr_x - new_bound;
+               slack = curr_x - new_bound;
             }
 
             /* adjust duals gamma and phi if necessary and use stored col to update */
@@ -566,8 +570,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
             if(is_upper_bound)
             {
-               double& phi = getSimpleVecFromColStochVec(phi_vec, node_column)[column];
-               if(!PIPSisZero(phi * new_bound - curr_x))
+               double& phi = getSimpleVecFromColStochVec(phi_vec, node_column)[column];\
+               // TODO : here we should only require the feasibility tolerances
+               if(!PIPSisZero(phi * slack))
                {
                   const double old_phi = phi;
                   phi = 0;
@@ -586,7 +591,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             else
             {
                double& gamma = getSimpleVecFromColStochVec(phi_vec, node_column)[column];
-               if(!PIPSisZero(gamma * curr_x - new_bound))
+               // TODO : here we should only require the feasibility tolerances
+               if(!PIPSisZero(gamma * slack))
                {
                   const double old_gamma = gamma;
                   gamma = 0;

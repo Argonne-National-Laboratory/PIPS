@@ -22,7 +22,7 @@ public:
    /** y = beta * y + alpha * stored */
    void mult(double beta, StochVector &y, double alpha, const StochVector &stored_vec, int node, int row, bool linking_row) const;
    double multRowTimesVec(int node, int row, bool linking_row, const StochVector &vec) const;
-   double multLinkingRowTimesVecWithoutB0(int row, const StochVector &vec) const;
+   double multLinkingRowTimesVecWithoutBl0(int row, const StochVector &vec) const;
 
    double getRowCoefficientAtColumn( int node_row, int row, bool linking_row, int node_column, int colum ) const;
 

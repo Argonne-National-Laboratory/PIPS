@@ -24,9 +24,10 @@ int StochRowStorage::storeRow( int node, int row, bool linking_row, const StochG
    return stored_row_index;
 }
 
+/* TODO : it would probably be nice to have something like a StochVectorView that one can create at this point and then use like a normal StochVec.. */
+/** y = beta * y + alpha * stored */
 void StochRowStorage::mult(double beta, StochVector &y, double alpha, const StochVector &stored_vec, int node, int row, bool linking_row) const
 {
-   /* create StochVector pointing to stored row correctly */
 
 
    /* multiply using stochVector implementation */
@@ -40,12 +41,12 @@ double StochRowStorage::multRowTimesVec( int node, int row, bool linking_row, co
    return res;
 }
 
-double StochRowStorage::multLinkingRowTimesVecWithoutB0( int row, const StochVector& vec) const
+double StochRowStorage::multLinkingRowTimesVecWithoutBl0( int row, const StochVector& vec) const
 {
    const double res_full = row_storage->localRowTimesVec(vec, -1, row, true);
-   const double res_b0 = row_storage->Blmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+   const double res_bl0 = row_storage->Blmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
 
-   return res_full - res_b0;
+   return res_full - res_bl0;
 }
 
 double StochRowStorage::getRowCoefficientAtColumn( int node_row, int row, bool linking_row, int node_column, int column ) const
