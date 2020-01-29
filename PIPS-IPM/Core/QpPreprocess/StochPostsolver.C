@@ -234,7 +234,12 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
    // todo : ?
    assert(std::fabs(value) < 1e10);
 
-   reductions.push_back(FIXED_EMPTY_COLUMN);
+   if(ixlow == 1)
+      assert(PIPSisLEFeas(lbx, value));
+   if(ixupp == 1)
+      assert(PIPSisLEFeas(value, ubx));
+
+      reductions.push_back(FIXED_EMPTY_COLUMN);
    indices.push_back(INDEX(COL,node, col));
    float_values.push_back(value);
    float_values.push_back(obj_value);
@@ -252,9 +257,11 @@ void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsi
 {
    assert(iclow == 1 || iclow == 0);
    assert(icupp == 1 || icupp == 0);
-   assert(iclow + icupp > 0);
 
-   assert(!wasRowRemoved(system_type, node, linking_row, row));
+   if(system_type == INEQUALITY_SYSTEM)
+      assert(iclow + icupp > 0);
+
+   assert(!wasRowRemoved(system_type, node, row, linking_row));
    markRowRemoved(system_type, node, row, linking_row);
 
    /* save row for postsolve */
@@ -441,7 +448,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int node = row_idx.node;
          const bool linking_row = row_idx.linking;
          const SystemType system_type = row_idx.system_type;
-         assert(!linking_row); // todo
 
          const double lhs = float_values.at(first_float_val);
          const double rhs = float_values.at(first_float_val + 1);
@@ -451,14 +457,33 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int icupp = int_values.at(first_int_val + 2);
          assert(iclow + icupp >= 1);
 
-         double value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
+         double value_row = 0.0;
+
+         /* get current row activity - redundant linking rows have to lie on the stack in the same order */
+         if(linking_row)
+         {
+            assert(node == -1);
+#ifndef NDEBUG
+            const int max = PIPS_MPIgetMax(row, MPI_COMM_WORLD);;
+            const int min = PIPS_MPIgetMin(row, MPI_COMM_WORLD);
+            assert(max == min);
+#endif
+
+            if(my_rank == 0)
+               value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
+            else
+               value_row = row_storage.multLinkingRowTimesVecWithoutBl0(index_stored_row, x_vec);
+            PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
+         }
+         else
+            value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
 
          if( system_type == EQUALITY_SYSTEM )
          {
             assert(-1 <= node && node < static_cast<int>(y_vec.children.size()));
             assert(wasRowRemoved(system_type, node, row, linking_row));
             assert(PIPSisEQ(lhs, rhs));
-            assert(PIPSisEQ(value_row, rhs));
+            assert(PIPSisLEFeas(value_row, rhs));
 
             /* set dual multiplier to zero and mark row as added */
             getSimpleVecFromRowStochVec(*padding_origrow_equality, node, linking_row)[row] = 1;
@@ -478,8 +503,18 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
             getSimpleVecFromRowStochVec(s_vec, node, linking_row)[row] = value_row;
 
-            assert(PIPSisLE(lhs, value_row));
-            assert(PIPSisLE(value_row, rhs));
+            if( iclow == 1 )
+               assert(PIPSisLEFeas(lhs, value_row));
+            if( icupp == 1 )
+            {
+               if(!PIPSisLEFeas(value_row, rhs))
+               {
+                  std::cout << system_type << " " << node << " " << linking_row << " " << row << std::endl;
+                  std::cout << value_row << " " << rhs << " " << lhs << " " << iclow << " " << icupp << std::endl;
+               }
+               assert(PIPSisLEFeas(value_row, rhs));
+            }
+
             if( iclow == 1)
                getSimpleVecFromRowStochVec(t_vec, node, linking_row)[row] = value_row - lhs;
             else
@@ -562,13 +597,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             }
             else if(is_upper_bound)
             {
-               assert(PIPSisLT(0, new_bound - curr_x));
+               assert(PIPSisLE(0, new_bound - curr_x));
                assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node_column)[column]));
                slack = new_bound - curr_x;
             }
             else
             {
-               assert(PIPSisLT(0, curr_x - new_bound));
+               assert(PIPSisLE(0, curr_x - new_bound));
                assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node_column)[column]));
                slack = curr_x - new_bound;
             }
@@ -691,9 +726,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          getSimpleVecFromColStochVec(x_vec, node)[column] = value;
 
          if( ixlow == 1 )
-            assert(PIPSisLT(lbx, value));
+            assert(PIPSisLEFeas(lbx, value));
          if( ixupp == 1 )
-            assert(PIPSisLT(value, ubx));
+            assert(PIPSisLEFeas(value, ubx));
 
          /* dual */
          getSimpleVecFromColStochVec(gamma_vec, node)[column] = 0.0;

@@ -158,8 +158,11 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
    for( int row = 0; row < nnzs.n; ++row)
    {
-      if( nnzs[row] == 0 ) // empty rows might still have a rhs but should be ignored. // todo?
+      if( presData.wasRowRemoved(system_type, node, row, linking) )
+      {
+         assert(nnzs[row] == 0);
          continue;
+      }
 
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
@@ -183,8 +186,11 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       }
       else
       {
-         if( ( !PIPSisZero(iclow[row]) && (actmax_ubndd == 0 && PIPSisLT(actmax_part, clow[row], feastol)) )
-               || ( !PIPSisZero(icupp[row]) && (actmin_ubndd == 0 && PIPSisLT( cupp[row], actmin_part, feastol)) ) )
+         assert(!presData.wasRowRemoved(system_type, node, row, linking));
+         assert( PIPSisLT(0.0, iclow[row] + icupp[row]) );
+
+         if( ( !PIPSisZero(iclow[row]) && (actmax_ubndd == 0 && PIPSisLTFeas(actmax_part, clow[row])) )
+               || ( !PIPSisZero(icupp[row]) && (actmin_ubndd == 0 && PIPSisLTFeas(cupp[row], actmin_part)) ) )
             PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");// todo infinity??
          else if( ( PIPSisZero(iclow[row]) || PIPSisLE(clow[row], -infinity) ) &&
@@ -193,8 +199,8 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
             presData.removeRedundantRow(system_type, node, row, linking);
             n_removed_rows++;
          }
-         else if( ( PIPSisZero(iclow[row]) || (actmin_ubndd == 0 && PIPSisLE( clow[row], actmin_part, feastol)) )
-               && ( PIPSisZero(icupp[row]) || (actmax_ubndd == 0 && PIPSisLE( actmax_part, cupp[row], feastol)) ) )
+         else if( ( PIPSisZero(iclow[row]) || (actmin_ubndd == 0 && PIPSisLEFeas(clow[row], actmin_part)) )
+               && ( PIPSisZero(icupp[row]) || (actmax_ubndd == 0 && PIPSisLEFeas(actmax_part, cupp[row])) ) )
          {
             presData.removeRedundantRow(system_type, node, row, linking);
             n_removed_rows++;

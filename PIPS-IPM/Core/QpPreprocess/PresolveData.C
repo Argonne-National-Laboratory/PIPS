@@ -31,11 +31,11 @@
 
 // #ifndef NDEBUG
 //    #define TRACK_R
-//    #define ROW 42
-//    #define ROW_NODE 2
+//    #define ROW 23
+//    #define ROW_NODE -1
 //    #define ROW_BLOCK BL_MAT
-//    #define ROW_IS_LINK false
-//    #define ROW_SYS EQUALITY_SYSTEM
+//    #define ROW_IS_LINK true
+//    #define ROW_SYS INEQUALITY_SYSTEM
 // #endif
 
 #ifdef TRACK_C
@@ -1192,8 +1192,14 @@ void PresolveData::fixEmptyColumn(int node, int col, double val)
       const double obj_value = getSimpleVecFromColStochVec(*presProb->g, node)[col];
       const double lbx = getSimpleVecFromColStochVec(*presProb->blx, node)[col];
       const double ubx = getSimpleVecFromColStochVec(*presProb->bux, node)[col];
-      const int ixlow = getSimpleVecFromColStochVec(*presProb->ixupp, node)[col];
-      const int ixupp = getSimpleVecFromColStochVec(*presProb->ixlow, node)[col];
+      const int ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, node)[col];
+      const int ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, node)[col];
+
+      if(ixlow == 1)
+         assert(PIPSisLE(lbx, val) );
+      if(ixupp == 1)
+         assert(PIPSisLE(val, ubx));
+
       postsolver->notifyFixedEmptyColumn(node, col, val, obj_value, ixlow, ixupp, lbx, ubx);
    }
 
@@ -1696,13 +1702,40 @@ void PresolveData::substituteVariableParallelRows(SystemType system_type, int no
 
 void PresolveData::removeRedundantRow(SystemType system_type, int node, int row, bool linking)
 {
+   assert(!postsolver->wasRowRemoved(system_type, node, row, linking));
+
    if(postsolver)
    {
-      const double rhs = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromColStochVec(*presProb->bA, node)[row] :
-         getSimpleVecFromColStochVec(*presProb->bu, node)[row];
-      const double lhs = (system_type == EQUALITY_SYSTEM) ? rhs : getSimpleVecFromColStochVec(*presProb->bl, node)[row];
-      const int iclow = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromColStochVec(*presProb->iclow, node)[row];
-      const int icupp = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromColStochVec(*presProb->icupp, node)[row];
+      const double rhs = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*presProb->bA, node, linking)[row] :
+         getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row];
+      const double lhs = (system_type == EQUALITY_SYSTEM) ? rhs : getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row];
+      const int iclow = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromRowStochVec(*presProb->iclow, node, linking)[row];
+      const int icupp = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromRowStochVec(*presProb->icupp, node, linking)[row];
+
+#ifndef NDEBUG
+      double max_act = 0;
+      double min_act = 0;
+
+      int max_ubndd = 0;
+      int min_ubndd = 0;
+
+      getRowActivities(system_type, node, linking, row, max_act, min_act, max_ubndd, min_ubndd);
+
+      if(iclow)
+      {
+         assert(min_ubndd == 0);
+         assert(PIPSisLEFeas(lhs, min_act));
+      }
+      if(icupp)
+      {
+         assert(max_ubndd == 0);
+         assert(PIPSisLEFeas(max_act, rhs));
+      }
+#endif
+
+      assert( PIPSisLE(0.0, iclow) );
+      assert( PIPSisLE(0.0, icupp) );
+      assert( PIPSisLT(0.0, iclow + icupp) );
 
       postsolver->notifyRedundantRow(system_type, node, row, linking, iclow, icupp, lhs, rhs, getSystemMatrix(system_type));
    }
@@ -1724,7 +1757,7 @@ void PresolveData::removeImpliedFreeColumnSingleton( SystemType system_type, int
 
   if( TRACK_COLUMN(node_col, col) )
      std::cout << "TRACKING: tracked column removed as (implied) free column singelton" << std::endl;
-   if(TRACK_ROW(node_row, row, system_type, linking) )
+   if(TRACK_ROW(node_row, row, system_type, linking_row) )
       std::cout << "TRACKING: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
 
    const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row )[row];
@@ -2917,7 +2950,7 @@ SparseGenMatrix* PresolveData::getSparseGenMatrix(SystemType system_type, int no
 }
 
 /* only prints the part of a linking constraint the current process knows about */
-// todo does not yet print linking constraints
+// todo so far only prints linking constraints on MPI proc 1
 void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const
 {
    if(nodeIsDummy(node))
@@ -2940,15 +2973,31 @@ void PresolveData::writeRowLocalToStreamDense(std::ostream& out, SystemType syst
       out << clow << " <= ";
    }
 
-   if(node != -1 && !linking)
+   if( !linking )
    {
-      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, A_MAT), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, -1),
+      if(node != -1)
+      {
+         writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, A_MAT), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, -1),
             getSimpleVecFromColStochVec(*presProb->bux, -1), getSimpleVecFromColStochVec(*presProb->ixlow, -1), getSimpleVecFromColStochVec(*presProb->blx, -1));
-   }
+      }
 
-   writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, B_MAT), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, node),
+      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, B_MAT), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, node),
+         getSimpleVecFromColStochVec(*presProb->bux, node),getSimpleVecFromColStochVec(*presProb->ixlow, node),getSimpleVecFromColStochVec(*presProb->blx, node));
+   }
+   else if( linking )
+   {
+      assert(node == -1);
+      writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, node, BL_MAT), node, row, getSimpleVecFromColStochVec(*presProb->ixupp, node),
          getSimpleVecFromColStochVec(*presProb->bux, node),getSimpleVecFromColStochVec(*presProb->ixlow, node),getSimpleVecFromColStochVec(*presProb->blx, node));
 
+      for(int child = 0; child < nChildren; ++child)
+      {
+         if(nodeIsDummy(child))
+            continue;
+         writeMatrixRowToStreamDense(out, *getSparseGenMatrix(system_type, child, BL_MAT), child, row, getSimpleVecFromColStochVec(*presProb->ixupp, child),
+            getSimpleVecFromColStochVec(*presProb->bux, child),getSimpleVecFromColStochVec(*presProb->ixlow, child),getSimpleVecFromColStochVec(*presProb->blx, child));
+      }
+   }
 
    if(system_type == INEQUALITY_SYSTEM)
    {
