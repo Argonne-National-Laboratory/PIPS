@@ -519,9 +519,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const double curr_x = getSimpleVecFromColStochVec(x_vec, node_column)[column];
 
          if(is_upper_bound)
-            assert( PIPSisLT(curr_x, new_bound) );
+            assert( PIPSisLEFeas(curr_x, new_bound) );
          else
-            assert( PIPSisLT(new_bound, curr_x) );
+            assert( PIPSisLEFeas(new_bound, curr_x) );
 
          double& slack = (is_upper_bound) ? getSimpleVecFromColStochVec(w_vec, node_column)[column] :
             getSimpleVecFromColStochVec(v_vec, node_column)[column];

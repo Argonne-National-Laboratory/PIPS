@@ -1309,9 +1309,9 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
 
    // todo : in case a linking row propagated we'll have to store the whole linking row
    if( lower_bound_changed )
-      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, col, node_var, ixlow, xlow, lbx, false, getSystemMatrix(system_type));
+      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, node_var, col, ixlow, xlow, lbx, false, getSystemMatrix(system_type));
    if( upper_bound_changed )
-      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, col, node_var, ixupp, xupp, ubx, true, getSystemMatrix(system_type));
+      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, node_var, col, ixupp, xupp, ubx, true, getSystemMatrix(system_type));
 
    return (lower_bound_changed || upper_bound_changed);
 }
