@@ -225,21 +225,17 @@ void StochPostsolver::notifyFixedColumn( int node, unsigned int col, double valu
    finishNotify();
 }
 
-
 void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double value, double obj_value, int ixlow, int ixupp, double lbx, double ubx)
 {
    assert(!wasColumnRemoved(node, col));
    markColumnRemoved(node, col);
-
-   // todo : ?
-   assert(std::fabs(value) < 1e10);
 
    if(ixlow == 1)
       assert(PIPSisLEFeas(lbx, value));
    if(ixupp == 1)
       assert(PIPSisLEFeas(value, ubx));
 
-      reductions.push_back(FIXED_EMPTY_COLUMN);
+   reductions.push_back(FIXED_EMPTY_COLUMN);
    indices.push_back(INDEX(COL,node, col));
    float_values.push_back(value);
    float_values.push_back(obj_value);
@@ -251,7 +247,6 @@ void StochPostsolver::notifyFixedEmptyColumn(int node, unsigned int col, double 
    finishNotify();
 }
 
-/** postsolve for this is simply to set all dual variables to zero - the row itself has no primal impact */
 void StochPostsolver::notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_row,
    int iclow, int icupp, double lhs, double rhs, const StochGenMatrix& matrix_row )
 {
@@ -436,6 +431,14 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       {
       case REDUNDANT_ROW:
       {
+         /**
+          * postsolve for this is simply to set all dual variables to zero - the row itself has no primal impact
+          * for linking rows:
+          *    all processes should have removed them in the same order
+          *       -> assert in place to check this
+          *    the current activity gets synchronized for slack computation
+          */
+
          /* only dual postsolve */
          assert(first_index + 1 == next_first_index);
          assert(first_float_val + 2 == next_first_float_val);
@@ -459,15 +462,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          double value_row = 0.0;
 
+         // TODO: this could be optimized - all linking rows will be after each other - we could wait with allreduce
+         // until the current boost of linking rows is processed and then allreduce all activities at once and unpate the slacks then only
          /* get current row activity - redundant linking rows have to lie on the stack in the same order */
          if(linking_row)
          {
             assert(node == -1);
-#ifndef NDEBUG
-            const int max = PIPS_MPIgetMax(row, MPI_COMM_WORLD);;
-            const int min = PIPS_MPIgetMin(row, MPI_COMM_WORLD);
-            assert(max == min);
-#endif
+            assert(PIPS_MPIisValueEqual(row, MPI_COMM_WORLD));
 
             if(my_rank == 0)
                value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
@@ -703,6 +704,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case FIXED_EMPTY_COLUMN:
       {
+         /**
+          * recover primal value
+          * dual multiplies will be set to zero
+          * compute slack variables
+          * no special treatment for linking variables since all processes should fix them simultaneously and in the same order
+          *    -> assert is in place to check this
+          */
          assert(first_index + 1 == next_first_index);
          assert(first_float_val + 4 == next_first_float_val);
          assert(first_int_val + 2 == next_first_int_val);
@@ -720,6 +728,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int ixupp = int_values.at(first_int_val + 1);
          assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
          assert(wasColumnRemoved(node, column));
+
+         if(node == -1)
+            assert(PIPS_MPIisValueEqual(column, MPI_COMM_WORLD));
 
          /* primal */
          /* mark entry as set and set x value to fixation */

@@ -77,13 +77,14 @@
 
 PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) :
       postsolver(postsolver),
-      length_array_outdated_indicators(5),
+      length_array_outdated_indicators(6),
       array_outdated_indicators(new bool[length_array_outdated_indicators]),
       outdated_lhsrhs(array_outdated_indicators[0]),
       outdated_nnzs(array_outdated_indicators[1]),
       outdated_linking_var_bounds(array_outdated_indicators[2]),
       outdated_activities(array_outdated_indicators[3]),
       outdated_obj_vector(array_outdated_indicators[4]),
+      postsolve_linking_row_propagation_needed(array_outdated_indicators[5]),
       linking_rows_need_act_computation(0),
       nnzs_row_A(cloneStochVector<double,int>(*sorigprob->bA)),
       nnzs_row_C(cloneStochVector<double,int>(*sorigprob->icupp)),
@@ -231,7 +232,7 @@ sData* PresolveData::finalize()
 #ifndef NDEBUG
    if(distributed)
       PIPS_MPIlogicOrArrayInPlace(array_outdated_indicators, length_array_outdated_indicators, MPI_COMM_WORLD);
-   assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds && !outdated_obj_vector);
+   assert(!outdated_activities && !outdated_lhsrhs && !outdated_nnzs && !outdated_linking_var_bounds && !outdated_obj_vector && !postsolve_linking_row_propagation_needed);
 #endif
 
    /* theoretically it should not matter but there is an assert later which needs all these to be zero */
@@ -903,7 +904,7 @@ bool PresolveData::reductionsEmpty()
 
       recv = PIPS_MPIgetSum(obj_offset_chgs, MPI_COMM_WORLD);
    }
-   return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0);
+   return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0) && !postsolve_linking_row_propagation_needed;
 }
 
 bool PresolveData::presDataInSync() const
@@ -1264,7 +1265,6 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    assert( 0 <= col && col < getSimpleVecFromColStochVec( *presProb->ixlow, node_var ).n );
 
    // todo : choose numerical threshold
-   //const double numerical_upper_threshold = std::numeric_limits<double>::max();
 
    /* check for infeasibility of the newly found bounds */
    const int ixlow = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, node_var )[col]) ) ? 0 : 1;
@@ -1293,11 +1293,12 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    bool upper_bound_changed = false;
    bool lower_bound_changed = false;
 
-   // we do not tighten bounds if impact is too low or bound is bigger than 10e8 // todo : maybe different limit
+   // we do not tighten bounds if impact is too low or bound is bigger than threshold_bound_tightening
    // set lower bound
-   // if( fabs(lbx) < 1e8 && (PIPSisZERO(ixlow) || feastol * 1e3 <= fabs(xlow - lbx) ) )
-   if( ubx < std::numeric_limits<double>::infinity() && ( PIPSisZero(ixupp) || PIPSisLT(ubx, xupp) ) )
+   if( PIPSisLT(std::fabs(ubx), threshold_bound_tightening) && ( PIPSisZero(ixupp) || PIPSisLE(feastol * 1e3, ubx - xupp ) ) )
    {
+      assert(PIPSisLT(ubx, xupp));
+      assert(ubx != std::numeric_limits<double>::infinity());
       if( updateUpperBoundVariable(node_var, col, ubx) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
@@ -1309,8 +1310,10 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
       }
    }
   // if( fabs(ubx) < 1e8 && (PIPSisZero(ixupp) || feastol * 1e3 <= fabs(xupp- ubx) ) )
-   if( -std::numeric_limits<double>::infinity() < lbx && ( PIPSisZero(ixlow) || PIPSisLT(xlow, lbx)) )
+   if( PIPSisLT(std::fabs(lbx), threshold_bound_tightening) && ( PIPSisZero(ixlow) || PIPSisLT(feastol * 1e3, lbx - xlow)) )
    {
+      assert(PIPSisLT(xlow, lbx));
+      assert(lbx != -std::numeric_limits<double>::infinity());
       if( updateLowerBoundVariable(node_var, col, lbx) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
@@ -1326,13 +1329,31 @@ bool PresolveData::rowPropagatedBounds( SystemType system_type, int node_row, Bl
    if( (lower_bound_changed || upper_bound_changed) && (node_row == -1 || block_type == A_MAT) )
       assert(outdated_linking_var_bounds == true);
 
-   // todo : in case a linking row propagated we'll have to store the whole linking row
-   if( lower_bound_changed )
-      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, node_var, col, ixlow, xlow, lbx, false, getSystemMatrix(system_type));
-   if( upper_bound_changed )
-      postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, node_var, col, ixupp, xupp, ubx, true, getSystemMatrix(system_type));
+   /// linking rows require a different postsolve event since propagatin linkin rows need to be stored by every process and need to be postsolved at the same time
+   if(!linking_row)
+   {
+      if( lower_bound_changed )
+         postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, node_var, col, ixlow, xlow, lbx, false, getSystemMatrix(system_type));
+      if( upper_bound_changed )
+         postsolver->notifyRowPropagatedBound(system_type, node_row, row, linking_row, node_var, col, ixupp, xupp, ubx, true, getSystemMatrix(system_type));
+   }
+   else if( lower_bound_changed || upper_bound_changed )
+   {
+      postsolve_linking_row_propagation_needed = true;
+      // todo store which row propagated
+      // sync when syncing the bounds
+   }
 
    return (lower_bound_changed || upper_bound_changed);
+}
+
+void PresolveData::syncPostsolveOfBoundsPropagatedByLinkingRows()
+{
+   PIPS_MPIgetLogicOrInPlace(postsolve_linking_row_propagation_needed, MPI_COMM_WORLD);
+
+   if( !postsolve_linking_row_propagation_needed )
+      return;
+   // todo sync postsolve events on the stack
 }
 
 void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking)

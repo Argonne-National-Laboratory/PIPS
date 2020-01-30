@@ -50,6 +50,7 @@ private:
       bool& outdated_linking_var_bounds;
       bool& outdated_activities;
       bool& outdated_obj_vector;
+      bool& postsolve_linking_row_propagation_needed;
 
       /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
@@ -186,7 +187,9 @@ public :
       void fixColumn(int node, int col, double value);
       void fixEmptyColumn(int node, int col, double val);
 
+      void syncPostsolveOfBoundsPropagatedByLinkingRows();
       bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
+
       void substituteVariableParallelRows(SystemType system_type, int node, int var1, int row1, int node_var1, int var2, int row2, int node_var2,
             double scalar, double translation);
       void removeRedundantRow(SystemType system_type, int node, int row, bool linking);

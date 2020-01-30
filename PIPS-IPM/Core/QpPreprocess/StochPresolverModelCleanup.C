@@ -180,7 +180,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
          if( ( !PIPSisZero(iclow[row]) && (actmax_ubndd == 0 && PIPSisLTFeas(actmax_part, clow[row])) )
                || ( !PIPSisZero(icupp[row]) && (actmin_ubndd == 0 && PIPSisLTFeas(cupp[row], actmin_part)) ) )
             PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
-                  "removeRedundantRows");// todo infinity??
+                  "removeRedundantRows");
          else if( ( PIPSisZero(iclow[row]) || PIPSisLE(clow[row], -infinity) ) &&
                ( PIPSisZero(icupp[row]) || PIPSisLE(infinity, cupp[row])) )
          {

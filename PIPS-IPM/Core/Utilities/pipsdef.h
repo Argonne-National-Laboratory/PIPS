@@ -27,6 +27,8 @@ static const double infinity = 1.0e30;
 static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
 static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
 static const double tol_matrix_entry = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
+static const double threshold_bound_tightening = 1e10;
+
 static const double tolerance4 = 1.0e-12; // for variable fixing
 static const double limit1 = 1.0e3;   // for bound strengthening
 static const double limit2 = 1.0e8;   // for bound strengthening
@@ -324,6 +326,14 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
    int mysize;
    MPI_Comm_size(mpiComm, &mysize);
    return mysize;
+}
+
+template <typename T>
+inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm)
+{
+   const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
+   const int min = PIPS_MPIgetMin(val, MPI_COMM_WORLD);
+   return (max == min);
 }
 
 template <typename T>

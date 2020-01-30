@@ -62,6 +62,8 @@ void StochPresolverSingletonRows::applyPresolving()
 
    assert( presData.getSingletonRows().empty() );
 
+   presData.syncPostsolveOfBoundsPropagatedByLinkingRows();
+
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyLinkingRowActivities();
@@ -109,17 +111,17 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
 
    getBoundsAndColFromSingletonRow( system_type, node, row_idx, block_type, col_idx, ubx, lbx );
 
+   const bool linking_row = (block_type == BL_MAT);
+
    /* because of postsolve here we only remove correctly placed singelton rows */
    if( node != -1 && block_type == A_MAT)
       return false;
 
-   if( block_type == BL_MAT )
-      return false;
-
-   // todo : not sure whether linking conss get deleted even when block is dummy - they should..
-
    presData.rowPropagatedBounds( system_type, node, block_type, row_idx, col_idx, ubx, lbx );
-   presData.removeRedundantRow( system_type, node, row_idx, (block_type == BL_MAT) );
+
+   /* singleton linking rows will not get deleted here but later by model cleanup for synchronization reasons */
+   if(!linking_row)
+      presData.removeRedundantRow( system_type, node, row_idx, linking_row );
 
    updatePointersForCurrentNode(node, system_type);
    double ubx_new = (node == -1) ? (*currxuppParent)[col_idx] : (*currxuppChild)[col_idx];
@@ -128,7 +130,7 @@ bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int
       presData.fixColumn( node, col_idx, ubx_new);
 
 
-   if( my_rank == 0 || block_type != BL_MAT )
+   if( my_rank == 0 || !linking_row )
       return true;
    else
       return false;
