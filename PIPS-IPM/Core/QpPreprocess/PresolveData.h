@@ -164,6 +164,9 @@ public :
       /* whether or not there is currently changes buffered that need synchronization among all procs */
       bool reductionsEmpty();
 
+      /* checks activities, non-zeros and root node */
+      bool presDataInSync() const;
+
       /// synchronizing the problem over all mpi processes if necessary
       void allreduceLinkingVarBounds();
       void allreduceAndApplyLinkingRowActivities();
@@ -174,19 +177,6 @@ public :
 
       /// postsolve sync events that need to be set
       void putLinkingVarsSyncEvent();
-
-
-      /* compute and update activities */
-      void recomputeActivities() { recomputeActivities(false); }
-
-      /* computes all row activities and number of unbounded variables per row
-       * If there is more than one unbounded variable in the min/max activity of a row
-       * +/-infinity() is stored. Else the actual partial activity is computed and stored.
-       * For rows with one unbounded variable we store the partial activity without that
-       * one variable, for rows with zero unbounded vars the stored activity is the actual
-       * activity of that row.
-       */
-      void recomputeActivities(bool linking_only);
 
       bool wasColumnRemoved(int node, int col) const;
       bool wasRowRemoved(SystemType system_type, int node, int row, bool linking_row) const;
@@ -215,8 +205,8 @@ public :
 
       /* methods for verifying state of presData or querying the problem */
       bool verifyNnzcounters() const;
-      bool verifyActivities();
-      bool elementsDeletedInTransposed() { return elements_deleted == elements_deleted_transposed; };
+      bool verifyActivities() const;
+      bool elementsDeletedInTransposed() const { return elements_deleted == elements_deleted_transposed; };
 
       bool nodeIsDummy(int node) const;
       bool hasLinking(SystemType system_type) const;
@@ -258,6 +248,22 @@ private:
 
       void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
             double old_bound, bool upper);
+
+      /* compute and update activities */
+      void recomputeActivities() { recomputeActivities(false); }
+
+      /* computes all row activities and number of unbounded variables per row
+       * If there is more than one unbounded variable in the min/max activity of a row
+       * +/-infinity() is stored. Else the actual partial activity is computed and stored.
+       * For rows with one unbounded variable we store the partial activity without that
+       * one variable, for rows with zero unbounded vars the stored activity is the actual
+       * activity of that row.
+       */
+      void recomputeActivities(bool linking_only);
+
+      void recomputeActivities(bool linkinig_only, StochVector& actmax_eq_part, StochVector& actmin_eq_part, StochVectorBase<int>& actmax_eq_ubndd,
+         StochVectorBase<int>& actmin_eq_ubndd, StochVector& actmax_ineq_part, StochVector& actmin_ineq_part, StochVectorBase<int>& actmax_ineq_ubndd,
+         StochVectorBase<int>& actmin_ineq_ubndd) const;
 
       double computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const;
       void computeRowMinOrMaxActivity(SystemType system_type, int node, bool linking, int row, bool upper);

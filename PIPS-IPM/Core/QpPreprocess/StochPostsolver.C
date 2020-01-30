@@ -473,6 +473,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
             else
                value_row = row_storage.multLinkingRowTimesVecWithoutBl0(index_stored_row, x_vec);
+            /* this might get very expensive if there is many redundant linking rows */
             PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
          }
          else

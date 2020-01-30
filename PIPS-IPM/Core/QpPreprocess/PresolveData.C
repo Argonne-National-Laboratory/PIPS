@@ -260,12 +260,32 @@ bool PresolveData::wasRowRemoved(SystemType system_type, int node, int row, bool
    return postsolver->wasRowRemoved(system_type, node, row, linking_row);
 }
 
+void PresolveData::recomputeActivities(bool linking_only)
+{
+   recomputeActivities(linking_only, *actmax_eq_part, *actmin_eq_part, *actmax_eq_ubndd, *actmin_eq_ubndd, *actmax_ineq_part,
+      *actmin_ineq_part, *actmax_ineq_ubndd, *actmin_ineq_ubndd);
+
+   actmax_eq_chgs->setToZero();
+   actmin_eq_chgs->setToZero();
+   actmax_ineq_chgs->setToZero();
+   actmin_ineq_chgs->setToZero();
+
+   actmax_eq_ubndd_chgs->setToZero();
+   actmin_eq_ubndd_chgs->setToZero();
+   actmax_ineq_ubndd_chgs->setToZero();
+   actmin_ineq_ubndd_chgs->setToZero();
+
+   outdated_activities = false;
+}
+
 /** Recomputes the activities of all rows the process knows about. If linking_only is set to true only the linking_rows will get recomputed.
  *  Careful, recomputing linking rows requires MPI communication. Ideally all activities only have to be computed once, when creating the
  *  PresolveData.
  *  After that changes in the activities of linking rows will get stored in the SimpleVectors
  */
-void PresolveData::recomputeActivities(bool linking_only)
+void PresolveData::recomputeActivities(bool linking_only, StochVector& actmax_eq_part, StochVector& actmin_eq_part, StochVectorBase<int>& actmax_eq_ubndd,
+   StochVectorBase<int>& actmin_eq_ubndd, StochVector& actmax_ineq_part, StochVector& actmin_ineq_part,
+   StochVectorBase<int>& actmax_ineq_ubndd, StochVectorBase<int>& actmin_ineq_ubndd) const
 {
    const StochGenMatrix& mat_A = getSystemMatrix(EQUALITY_SYSTEM);
    const StochGenMatrix& mat_C = getSystemMatrix(INEQUALITY_SYSTEM);
@@ -278,27 +298,27 @@ void PresolveData::recomputeActivities(bool linking_only)
    /* reset vectors keeping track of activities */
    if(!linking_only)
    {
-      actmin_eq_part->setToZero();
-      actmax_eq_part->setToZero();
-      actmin_ineq_part->setToZero();
-      actmax_ineq_part->setToZero();
+      actmin_eq_part.setToZero();
+      actmax_eq_part.setToZero();
+      actmin_ineq_part.setToZero();
+      actmax_ineq_part.setToZero();
 
-      actmin_eq_ubndd->setToZero();
-      actmax_eq_ubndd->setToZero();
-      actmin_ineq_ubndd->setToZero();
-      actmax_ineq_ubndd->setToZero();
+      actmin_eq_ubndd.setToZero();
+      actmax_eq_ubndd.setToZero();
+      actmin_ineq_ubndd.setToZero();
+      actmax_ineq_ubndd.setToZero();
    }
    else
    {
-      actmin_eq_part->vecl->setToZero();
-      actmax_eq_part->vecl->setToZero();
-      actmin_ineq_part->vecl->setToZero();
-      actmax_ineq_part->vecl->setToZero();
+      actmin_eq_part.vecl->setToZero();
+      actmax_eq_part.vecl->setToZero();
+      actmin_ineq_part.vecl->setToZero();
+      actmax_ineq_part.vecl->setToZero();
 
-      actmin_eq_ubndd->vecl->setToZero();
-      actmax_eq_ubndd->vecl->setToZero();
-      actmin_ineq_ubndd->vecl->setToZero();
-      actmax_ineq_ubndd->vecl->setToZero();
+      actmin_eq_ubndd.vecl->setToZero();
+      actmax_eq_ubndd.vecl->setToZero();
+      actmin_ineq_ubndd.vecl->setToZero();
+      actmax_ineq_ubndd.vecl->setToZero();
    }
 
    /* compute activities at root node */
@@ -310,15 +330,15 @@ void PresolveData::recomputeActivities(bool linking_only)
    /* A0/B0 */
    if(!linking_only)
    {
-      SimpleVector& actmin_eq_root_part = dynamic_cast<SimpleVector&>(*actmin_eq_part->vec);
-      SimpleVector& actmax_eq_root_part = dynamic_cast<SimpleVector&>(*actmax_eq_part->vec);
-      SimpleVector& actmin_ineq_root_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part->vec);
-      SimpleVector& actmax_ineq_root_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part->vec);
+      SimpleVector& actmin_eq_root_part = dynamic_cast<SimpleVector&>(*actmin_eq_part.vec);
+      SimpleVector& actmax_eq_root_part = dynamic_cast<SimpleVector&>(*actmax_eq_part.vec);
+      SimpleVector& actmin_ineq_root_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part.vec);
+      SimpleVector& actmax_ineq_root_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part.vec);
 
-      SimpleVectorBase<int>& actmin_eq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vec);
-      SimpleVectorBase<int>& actmax_eq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vec);
-      SimpleVectorBase<int>& actmin_ineq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vec);
-      SimpleVectorBase<int>& actmax_ineq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vec);
+      SimpleVectorBase<int>& actmin_eq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd.vec);
+      SimpleVectorBase<int>& actmax_eq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd.vec);
+      SimpleVectorBase<int>& actmin_ineq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd.vec);
+      SimpleVectorBase<int>& actmax_ineq_root_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd.vec);
 
       addActivityOfBlock(mat_A.Bmat->getStorageDynamicRef(), actmin_eq_root_part, actmin_eq_root_ubndd, actmax_eq_root_part, actmax_eq_root_ubndd,
             xlow_root, ixlow_root, xupp_root, ixupp_root);
@@ -327,15 +347,15 @@ void PresolveData::recomputeActivities(bool linking_only)
             xlow_root, ixlow_root, xupp_root, ixupp_root);
    }
 
-   SimpleVector& actmin_eq_link_part = dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl);
-   SimpleVector& actmax_eq_link_part = dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl);
-   SimpleVector& actmin_ineq_link_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl);
-   SimpleVector& actmax_ineq_link_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl);
+   SimpleVector& actmin_eq_link_part = dynamic_cast<SimpleVector&>(*actmin_eq_part.vecl);
+   SimpleVector& actmax_eq_link_part = dynamic_cast<SimpleVector&>(*actmax_eq_part.vecl);
+   SimpleVector& actmin_ineq_link_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part.vecl);
+   SimpleVector& actmax_ineq_link_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part.vecl);
 
-   SimpleVectorBase<int>& actmin_eq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl);
-   SimpleVectorBase<int>& actmax_eq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vecl);
-   SimpleVectorBase<int>& actmin_ineq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vecl);
-   SimpleVectorBase<int>& actmax_ineq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vecl);
+   SimpleVectorBase<int>& actmin_eq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd.vecl);
+   SimpleVectorBase<int>& actmax_eq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd.vecl);
+   SimpleVectorBase<int>& actmin_ineq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd.vecl);
+   SimpleVectorBase<int>& actmax_ineq_link_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd.vecl);
 
    /* Bl0 */
    if(my_rank == 0)
@@ -363,11 +383,11 @@ void PresolveData::recomputeActivities(bool linking_only)
       {
          if( !linking_only )
          {
-            SimpleVector& actmin_eq_child_part = dynamic_cast<SimpleVector&>(*actmin_eq_part->children[node]->vec);
-            SimpleVector& actmax_eq_child_part = dynamic_cast<SimpleVector&>(*actmax_eq_part->children[node]->vec);
+            SimpleVector& actmin_eq_child_part = dynamic_cast<SimpleVector&>(*actmin_eq_part.children[node]->vec);
+            SimpleVector& actmax_eq_child_part = dynamic_cast<SimpleVector&>(*actmax_eq_part.children[node]->vec);
 
-            SimpleVectorBase<int>& actmin_eq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->children[node]->vec);
-            SimpleVectorBase<int>& actmax_eq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->children[node]->vec);
+            SimpleVectorBase<int>& actmin_eq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd.children[node]->vec);
+            SimpleVectorBase<int>& actmax_eq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd.children[node]->vec);
 
             /* Ai */
             addActivityOfBlock(mat_A.children[node]->Amat->getStorageDynamicRef(), actmin_eq_child_part, actmin_eq_child_ubndd, actmax_eq_child_part,
@@ -387,11 +407,11 @@ void PresolveData::recomputeActivities(bool linking_only)
       {
          if( !linking_only )
          {
-            SimpleVector& actmin_ineq_child_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part->children[node]->vec);
-            SimpleVector& actmax_ineq_child_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part->children[node]->vec);
+            SimpleVector& actmin_ineq_child_part = dynamic_cast<SimpleVector&>(*actmin_ineq_part.children[node]->vec);
+            SimpleVector& actmax_ineq_child_part = dynamic_cast<SimpleVector&>(*actmax_ineq_part.children[node]->vec);
 
-            SimpleVectorBase<int>& actmin_ineq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->children[node]->vec);
-            SimpleVectorBase<int>& actmax_ineq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->children[node]->vec);
+            SimpleVectorBase<int>& actmin_ineq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd.children[node]->vec);
+            SimpleVectorBase<int>& actmax_ineq_child_ubndd = dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd.children[node]->vec);
 
             /* Ai */
             addActivityOfBlock(mat_C.children[node]->Amat->getStorageDynamicRef(), actmin_ineq_child_part, actmin_ineq_child_ubndd, actmax_ineq_child_part,
@@ -413,44 +433,32 @@ void PresolveData::recomputeActivities(bool linking_only)
    if( distributed )
    {
       // todo is copying and then allreducing once cheaper than allreducing 4 times ? by a lot?
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_eq_part->vecl)->elements(), actmin_eq_part->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_eq_part->vecl)->elements(), actmax_eq_part->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_part->vecl)->elements(), actmin_ineq_part->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_part->vecl)->elements(), actmax_ineq_part->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_eq_part.vecl)->elements(), actmin_eq_part.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_eq_part.vecl)->elements(), actmax_eq_part.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmin_ineq_part.vecl)->elements(), actmin_ineq_part.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVector*>(actmax_ineq_part.vecl)->elements(), actmax_ineq_part.vecl->n, MPI_COMM_WORLD);
 
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_eq_ubndd->vecl)->elements(), actmin_eq_ubndd->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_eq_ubndd->vecl)->elements(), actmax_eq_ubndd->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_ineq_ubndd->vecl)->elements(), actmin_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
-      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_ineq_ubndd->vecl)->elements(), actmax_ineq_ubndd->vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_eq_ubndd.vecl)->elements(), actmin_eq_ubndd.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_eq_ubndd.vecl)->elements(), actmax_eq_ubndd.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmin_ineq_ubndd.vecl)->elements(), actmin_ineq_ubndd.vecl->n, MPI_COMM_WORLD);
+      PIPS_MPIsumArrayInPlace(dynamic_cast<SimpleVectorBase<int>*>(actmax_ineq_ubndd.vecl)->elements(), actmax_ineq_ubndd.vecl->n, MPI_COMM_WORLD);
    }
 
    /* set activities to infinity // theoretically not necessary but for debugging */
-   for(int row = 0; row < actmin_eq_part->vecl->n; ++row)
+   for(int row = 0; row < actmin_eq_part.vecl->n; ++row)
    {
-      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd->vecl)[row] >= 2 )
-         dynamic_cast<SimpleVector&>(*actmin_eq_part->vecl)[row] = -std::numeric_limits<double>::infinity();
-      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd->vecl)[row] >= 2 )
-         dynamic_cast<SimpleVector&>(*actmax_eq_part->vecl)[row] = std::numeric_limits<double>::infinity();
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_eq_ubndd.vecl)[row] >= 2 )
+         dynamic_cast<SimpleVector&>(*actmin_eq_part.vecl)[row] = -std::numeric_limits<double>::infinity();
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_eq_ubndd.vecl)[row] >= 2 )
+         dynamic_cast<SimpleVector&>(*actmax_eq_part.vecl)[row] = std::numeric_limits<double>::infinity();
    }
-   for(int row = 0; row < actmin_ineq_part->vecl->n; ++row)
+   for(int row = 0; row < actmin_ineq_part.vecl->n; ++row)
    {
-      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd->vecl)[row] >= 2 )
-         dynamic_cast<SimpleVector&>(*actmin_ineq_part->vecl)[row] = -std::numeric_limits<double>::infinity();
-      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd->vecl)[row] >= 2 )
-         dynamic_cast<SimpleVector&>(*actmax_ineq_part->vecl)[row] = std::numeric_limits<double>::infinity();
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmin_ineq_ubndd.vecl)[row] >= 2 )
+         dynamic_cast<SimpleVector&>(*actmin_ineq_part.vecl)[row] = -std::numeric_limits<double>::infinity();
+      if( dynamic_cast<SimpleVectorBase<int>&>(*actmax_ineq_ubndd.vecl)[row] >= 2 )
+         dynamic_cast<SimpleVector&>(*actmax_ineq_part.vecl)[row] = std::numeric_limits<double>::infinity();
    }
-
-   actmax_eq_chgs->setToZero();
-   actmin_eq_chgs->setToZero();
-   actmax_ineq_chgs->setToZero();
-   actmin_ineq_chgs->setToZero();
-
-   actmax_eq_ubndd_chgs->setToZero();
-   actmin_eq_ubndd_chgs->setToZero();
-   actmax_ineq_ubndd_chgs->setToZero();
-   actmin_ineq_ubndd_chgs->setToZero();
-
-   outdated_activities = false;
 
 #ifdef TRACK_R
    if( I_TRACK_ROW )
@@ -896,6 +904,11 @@ bool PresolveData::reductionsEmpty()
       recv = PIPS_MPIgetSum(obj_offset_chgs, MPI_COMM_WORLD);
    }
    return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0);
+}
+
+bool PresolveData::presDataInSync() const
+{
+   return presProb->isRootNodeInSync() && verifyNnzcounters() && verifyActivities();
 }
 
 // todo : if small entry was removed from system no postsolve is necessary - if coefficient was removed because impact of changes in variable are small
@@ -2021,88 +2034,90 @@ void PresolveData::removeRowFromMatrix(SystemType system_type, int node, BlockTy
    mat_storage.clearRow(row);
 }
 
-bool PresolveData::verifyActivities()
+bool PresolveData::verifyActivities() const
 {
    assert(!outdated_activities && linking_rows_need_act_computation == 0);
 
    bool activities_correct = true;
 
-   StochVectorHandle actmax_eq_part_old(dynamic_cast<StochVector*>(actmax_eq_part->cloneFull()));
-   StochVectorHandle actmin_eq_part_old(dynamic_cast<StochVector*>(actmin_eq_part->cloneFull()));
+   StochVectorHandle actmax_eq_part_new(dynamic_cast<StochVector*>(actmax_eq_part->clone()));
+   StochVectorHandle actmin_eq_part_new(dynamic_cast<StochVector*>(actmin_eq_part->clone()));
 
-   StochVectorBaseHandle<int> actmax_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_eq_ubndd->cloneFull()));
-   StochVectorBaseHandle<int> actmin_eq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_eq_ubndd->cloneFull()));
+   StochVectorBaseHandle<int> actmax_eq_ubndd_new(dynamic_cast<StochVectorBase<int>*>(actmax_eq_ubndd->clone()));
+   StochVectorBaseHandle<int> actmin_eq_ubndd_new(dynamic_cast<StochVectorBase<int>*>(actmin_eq_ubndd->clone()));
 
-   StochVectorHandle actmax_ineq_part_old(dynamic_cast<StochVector*>(actmax_ineq_part->cloneFull()));
-   StochVectorHandle actmin_ineq_part_old(dynamic_cast<StochVector*>(actmin_ineq_part->cloneFull()));
+   StochVectorHandle actmax_ineq_part_new(dynamic_cast<StochVector*>(actmax_ineq_part->clone()));
+   StochVectorHandle actmin_ineq_part_new(dynamic_cast<StochVector*>(actmin_ineq_part->clone()));
 
-   StochVectorBaseHandle<int> actmax_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmax_ineq_ubndd->cloneFull()));
-   StochVectorBaseHandle<int> actmin_ineq_ubndd_old(dynamic_cast<StochVectorBase<int>*>(actmin_ineq_ubndd->cloneFull()));
+   StochVectorBaseHandle<int> actmax_ineq_ubndd_new(dynamic_cast<StochVectorBase<int>*>(actmax_ineq_ubndd->clone()));
+   StochVectorBaseHandle<int> actmin_ineq_ubndd_new(dynamic_cast<StochVectorBase<int>*>(actmin_ineq_ubndd->clone()));
 
-   actmax_eq_part->setToZero();
-   actmin_eq_part->setToZero();
+   actmax_eq_part_new->setToZero();
+   actmin_eq_part_new->setToZero();
 
-   actmax_eq_ubndd->setToZero();
-   actmin_eq_ubndd->setToZero();
+   actmax_eq_ubndd_new->setToZero();
+   actmin_eq_ubndd_new->setToZero();
 
-   actmax_ineq_part->setToZero();
-   actmin_ineq_part->setToZero();
+   actmax_ineq_part_new->setToZero();
+   actmin_ineq_part_new->setToZero();
 
-   actmax_ineq_ubndd->setToZero();
-   actmin_ineq_ubndd->setToZero();
+   actmax_ineq_ubndd_new->setToZero();
+   actmin_ineq_ubndd_new->setToZero();
 
-   recomputeActivities();
+   recomputeActivities(false, *actmax_eq_part_new, *actmin_eq_part_new, *actmax_eq_ubndd_new, *actmin_eq_ubndd_new, *actmax_ineq_part_new, *actmin_ineq_part_new,
+      *actmax_ineq_ubndd_new, *actmin_ineq_ubndd_new);
+
    const int tracked_rank = -3;
-   if( !actmax_eq_part_old->componentEqual(*actmax_eq_part, feastol))
+   if( !actmax_eq_part_new->componentEqual(*actmax_eq_part, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmax_eq_part not correct" << std::endl;
       activities_correct = false;
    }
 
-   if( !actmin_eq_part_old->componentEqual(*actmin_eq_part, feastol))
+   if( !actmin_eq_part_new->componentEqual(*actmin_eq_part, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmin_eq_part not correct" << std::endl;
       activities_correct = false;
    }
 
-   if( !actmax_eq_ubndd_old->componentEqual(*actmax_eq_ubndd, feastol))
+   if( !actmax_eq_ubndd_new->componentEqual(*actmax_eq_ubndd, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmax_eq_ubndd not correct" << std::endl;
       activities_correct = false;
    }
 
-   if( !actmin_eq_ubndd_old->componentEqual(*actmin_eq_ubndd, feastol))
+   if( !actmin_eq_ubndd_new->componentEqual(*actmin_eq_ubndd, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmin_eq_ubndd not correct" << std::endl;
       activities_correct = false;
    }
 
-   if( !actmax_ineq_part_old->componentEqual(*actmax_ineq_part, feastol))
+   if( !actmax_ineq_part_new->componentEqual(*actmax_ineq_part, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmax_ineq_part not correct" << std::endl;
       activities_correct = false;
    }
 
-   if( !actmin_ineq_part_old->componentEqual(*actmin_ineq_part, feastol))
+   if( !actmin_ineq_part_new->componentEqual(*actmin_ineq_part, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmin_ineq_part not correct" << std::endl;
       activities_correct = false;
    }
 
-   if( !actmax_ineq_ubndd_old->componentEqual(*actmax_ineq_ubndd, feastol))
+   if( !actmax_ineq_ubndd_new->componentEqual(*actmax_ineq_ubndd, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmax_ineq_ubndd not correct" << std::endl;
       activities_correct = false;
    }
 
-   if( !actmin_ineq_ubndd_old->componentEqual(*actmin_ineq_ubndd, feastol))
+   if( !actmin_ineq_ubndd_new->componentEqual(*actmin_ineq_ubndd, feastol))
    {
       if(my_rank == tracked_rank)
          std::cout << "on rank " << my_rank << " found actmin_ineq_ubndd not correct" << std::endl;

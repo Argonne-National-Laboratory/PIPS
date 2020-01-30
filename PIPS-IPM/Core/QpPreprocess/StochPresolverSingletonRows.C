@@ -24,10 +24,8 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
  
 void StochPresolverSingletonRows::applyPresolving()
 {
+   assert(presData.presDataInSync());
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());  
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -37,42 +35,43 @@ void StochPresolverSingletonRows::applyPresolving()
    }
    countRowsCols();
 
-#endif
-
    if( presData.getSingletonRows().size() == 0 )
    {
-#ifndef NDEBUG
       if( my_rank == 0)
          std::cout << "No more singletons left - exiting" << std::endl;
-#endif
    }
+#endif
 
+   int removed_rows_local = 0;
    // main loop:
    while( !presData.getSingletonRows().empty() )
    {
       bool removed = false;
-      removed = removeSingletonRow( presData.getSingletonRows().front().system_type, presData.getSingletonRows().front().node, 
-         presData.getSingletonRows().front().index );      
+      const sROWINDEX& row_idx = presData.getSingletonRows().front();
+
+      removed = removeSingletonRow( row_idx.system_type, row_idx.node, row_idx.index );
       
-      if(removed)
-         ++removed_rows;
+      if(removed && (row_idx.node > 0 || my_rank == 0))
+         ++removed_rows_local;
       presData.getSingletonRows().pop();
    }
 
+   PIPS_MPIgetSumInPlace(removed_rows_local, MPI_COMM_WORLD);
+
+   removed_rows += removed_rows_local;
+
    assert( presData.getSingletonRows().empty() );
 
-   // todo
-   presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyNnzChanges();
+   presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceLinkingVarBounds();
-   // todo : should be enough to allreduce the offset once after all of presolving
-   presData.allreduceObjOffset();
 
-   if( my_rank == 0 )
-      std::cout << "Global objOffset is now: " << presData.getObjOffset() << std::endl;
 
 #ifndef NDEBUG
+   if(my_rank == 0)
+      std::cout << "\tRemoved singleton rows during singleton row elimination: " << removed_rows << std::endl;
+
    if( my_rank == 0 )
       std::cout << "--- After singleton row presolving:" << std::endl;
    countRowsCols();
@@ -86,7 +85,7 @@ void StochPresolverSingletonRows::applyPresolving()
    assert(presData.verifyActivities());
 }
 
-/** Does one round of singleton rows presolving for system A or C
+/** Does one round of singleton row presolving for system A or C
  *
  * the blocks B,D,Fi,Gi (the blocks Bmat and Blmat of both A and C), the fixation and updating
  * of the columns is done. The fixed variables in one of the Amat blocks are stored in the

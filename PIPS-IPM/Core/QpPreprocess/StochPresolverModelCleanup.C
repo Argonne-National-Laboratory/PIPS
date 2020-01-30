@@ -24,9 +24,7 @@ StochPresolverModelCleanup::~StochPresolverModelCleanup()
 void StochPresolverModelCleanup::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -67,29 +65,21 @@ void StochPresolverModelCleanup::applyPresolving()
    removed_entries_total += n_removed_entries;
    removed_rows_total += n_removed_rows;
 
-   //todo : print specific stats
 #ifndef NDEBUG
    if( my_rank == 0 )
    {
-      std::cout << "Removed " << n_removed_rows << " redundant rows (" << n_removed_rows_eq <<
-         " equalitiy and " << n_removed_rows_ineq << " inequality rows)" << std::endl;
-      std::cout << "Removed " << n_removed_entries << " entries (" << n_removed_entries_eq <<
-         " entries in equality system and " << n_removed_entries_ineq << " in inequality system)" << std::endl;
-   }
-#endif
-
-#ifndef NDEBUG
-   if( my_rank == 0 )
+      std::cout << "\tRemoved redundant rows in model cleanup: " << removed_rows_total << std::endl;
+      std::cout << "\tRemoved tiny entries in model cleanup: " << removed_entries_total << std::endl;
       std::cout << "--- After model cleanup:" << std::endl;
+   }
+
    countRowsCols();
    if(my_rank == 0)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 }
 
 /** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity
@@ -135,7 +125,6 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
    return n_removed_rows + n_removed_rows_link;
 }
 
-// todo : deleting rows invalidates activities currently
 int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int node, bool linking)
 {
    assert(-1 <= node && node < nChildren);
@@ -148,7 +137,6 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
    int n_removed_rows = 0;
 
-   // todo
    const SimpleVectorBase<int>& nnzs = (linking == false) ? *currNnzRow : *currNnzRowLink;
    const SimpleVector& rhs_eq = (linking == false) ? *currEqRhs : *currEqRhsLink;
    const SimpleVector& clow  = (linking == false) ? *currIneqLhs : *currIneqLhsLink;
@@ -233,8 +221,6 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
 	n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
 
 
-   // todo : traffic can be reduced by only zeroing the linking var col and the linking cons row
-   // and not the zero row too
    /* count eliminations in B0 and Bl0 only once */
    if( distributed && my_rank != 0 )
       n_elims = 0;
