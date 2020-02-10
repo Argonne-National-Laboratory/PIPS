@@ -144,53 +144,54 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
    const SimpleVector& iclow = (linking == false) ? *currIclow : *currIclowLink;
    const SimpleVector& icupp = (linking == false) ? *currIcupp : *currIcuppLink;
 
-   for( int row = 0; row < nnzs.n; ++row)
+   for( int row_index = 0; row_index < nnzs.n; ++row_index)
    {
-      if( presData.wasRowRemoved(system_type, node, row, linking) )
+      const INDEX row(ROW, node, row_index, linking, system_type);
+      if( presData.wasRowRemoved( row ) )
       {
-         assert(nnzs[row] == 0);
+         assert(nnzs[row_index] == 0);
          continue;
       }
 
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
-      presData.getRowActivities(system_type, node, linking, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
+      presData.getRowActivities(row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       if( system_type == EQUALITY_SYSTEM )
       {
          if( actmin_ubndd != 0 || actmax_ubndd != 0)
             continue;
 
-         if( (PIPSisLT( rhs_eq[row], actmin_part, feastol) && actmin_ubndd == 0)  || (PIPSisLT(actmax_part, rhs_eq[row], feastol) && actmax_ubndd == 0))
+         if( (PIPSisLT( rhs_eq[row_index], actmin_part, feastol) && actmin_ubndd == 0)  || (PIPSisLT(actmax_part, rhs_eq[row_index], feastol) && actmax_ubndd == 0))
          {
             PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          }
-         else if( PIPSisLE(rhs_eq[row], actmin_part, feastol) && PIPSisLE(actmax_part, rhs_eq[row], feastol) )
+         else if( PIPSisLE(rhs_eq[row_index], actmin_part, feastol) && PIPSisLE(actmax_part, rhs_eq[row_index], feastol) )
          {
-            presData.removeRedundantRow(system_type, node, row, linking);
+            presData.removeRedundantRow( row );
             n_removed_rows++;
          }
       }
       else
       {
-         assert(!presData.wasRowRemoved(system_type, node, row, linking));
-         assert( PIPSisLT(0.0, iclow[row] + icupp[row]) );
+         assert(!presData.wasRowRemoved( row ));
+         assert( PIPSisLT(0.0, iclow[row_index] + icupp[row_index]) );
 
-         if( ( !PIPSisZero(iclow[row]) && (actmax_ubndd == 0 && PIPSisLTFeas(actmax_part, clow[row])) )
-               || ( !PIPSisZero(icupp[row]) && (actmin_ubndd == 0 && PIPSisLTFeas(cupp[row], actmin_part)) ) )
+         if( ( !PIPSisZero(iclow[row_index]) && (actmax_ubndd == 0 && PIPSisLTFeas(actmax_part, clow[row_index])) )
+               || ( !PIPSisZero(icupp[row_index]) && (actmin_ubndd == 0 && PIPSisLTFeas(cupp[row_index], actmin_part)) ) )
             PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
-         else if( ( PIPSisZero(iclow[row]) || PIPSisLE(clow[row], -infinity) ) &&
-               ( PIPSisZero(icupp[row]) || PIPSisLE(infinity, cupp[row])) )
+         else if( ( PIPSisZero(iclow[row_index]) || PIPSisLE(clow[row_index], -infinity) ) &&
+               ( PIPSisZero(icupp[row_index]) || PIPSisLE(infinity, cupp[row_index])) )
          {
-            presData.removeRedundantRow(system_type, node, row, linking);
+            presData.removeRedundantRow( row );
             n_removed_rows++;
          }
-         else if( ( PIPSisZero(iclow[row]) || (actmin_ubndd == 0 && PIPSisLEFeas(clow[row], actmin_part)) )
-               && ( PIPSisZero(icupp[row]) || (actmax_ubndd == 0 && PIPSisLEFeas(actmax_part, cupp[row])) ) )
+         else if( ( PIPSisZero(iclow[row_index]) || (actmin_ubndd == 0 && PIPSisLEFeas(clow[row_index], actmin_part)) )
+               && ( PIPSisZero(icupp[row_index]) || (actmax_ubndd == 0 && PIPSisLEFeas(actmax_part, cupp[row_index])) ) )
          {
-            presData.removeRedundantRow(system_type, node, row, linking);
+            presData.removeRedundantRow( row );
             n_removed_rows++;
          }
       }
@@ -388,25 +389,26 @@ void StochPresolverModelCleanup::fixEmptyColumns()
       const SimpleVector& xlow = (node == -1) ? *currxlowParent : *currxlowChild;
       const SimpleVectorBase<int>& nnzs_col = (node == -1) ? *currNnzColParent : *currNnzColChild;
 
-      for(int col = 0; col < nnzs_col.n; ++col)
+      for(int col_index = 0; col_index < nnzs_col.n; ++col_index)
       {
+         const INDEX col(COL, node, col_index);
          /* column fixation candidate */
-         if( nnzs_col[col] == 0)
+         if( nnzs_col[col_index] == 0)
          {
             /* check whether column was removed already */
-            if( PIPSisZero(ixlow[col]) && PIPSisZero(ixupp[col])
-               && PIPSisZero(xlow[col]) && PIPSisZero(xupp[col]) 
-               && PIPSisZero(g[col]))
+            if( PIPSisZero(ixlow[col_index]) && PIPSisZero(ixupp[col_index])
+               && PIPSisZero(xlow[col_index]) && PIPSisZero(xupp[col_index])
+               && PIPSisZero(g[col_index]))
             {
-               if( presData.wasColumnRemoved(node, col) )
+               if( presData.wasColumnRemoved(col) )
                   continue;
             }
 
-            if( PIPSisLT( g[col], 0.0) )
+            if( PIPSisLT( g[col_index], 0.0) )
             {
-               if( !PIPSisZero(ixupp[col]) )
+               if( !PIPSisZero(ixupp[col_index]) )
                {
-                  presData.fixEmptyColumn(node, col, xupp[col]);
+                  presData.fixEmptyColumn(col, xupp[col_index]);
                }
                else
                {
@@ -414,11 +416,11 @@ void StochPresolverModelCleanup::fixEmptyColumns()
                      "StochPresolverModelCleanup.C", "fixEmptyColumns");
                }
             } 
-            else if( PIPSisLT(0.0, g[col]) )
+            else if( PIPSisLT(0.0, g[col_index]) )
             {
-               if( !PIPSisZero(ixlow[col]) )
+               if( !PIPSisZero(ixlow[col_index]) )
                {
-                  presData.fixEmptyColumn(node, col, xlow[col]);
+                  presData.fixEmptyColumn(col, xlow[col_index]);
                }
                else
                {
@@ -428,8 +430,8 @@ void StochPresolverModelCleanup::fixEmptyColumns()
             }
             else
             {
-               assert( PIPSisEQ( g[col], 0.0) );
-               presData.fixEmptyColumn(node, col, 0.0);
+               assert( PIPSisEQ( g[col_index], 0.0) );
+               presData.fixEmptyColumn(col, 0.0);
             }
          }
       }

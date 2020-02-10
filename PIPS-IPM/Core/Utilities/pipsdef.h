@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include <mpi.h>
+#include <limits>
 #include <assert.h>
 #include "pipsport.h"
 
@@ -23,7 +24,12 @@ const double pips_eps0 = 1e-40;
 
 static const double feastol = 1.0e-6; // was 1.0e-6
 static const double infinity = 1.0e30;
+static const double eps_bounds_nontight = 1.0e-8;
+
 // todo rename for more clarity
+static const double INF_NEG_PRES = -std::numeric_limits<double>::infinity();
+static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
+
 static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
 static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
 static const double tol_matrix_entry = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10

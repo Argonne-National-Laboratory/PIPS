@@ -100,11 +100,11 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
    if( strenghtenBoundsInBlock(system_type, node, B_MAT) )
       tightened = true;
 
-//   if( presData.hasLinking(system_type) )
-//   {
-//      if( strenghtenBoundsInBlock(system_type, node, BL_MAT) )
-//        tightened = true;
-//   }
+   if( presData.hasLinking(system_type) )
+   {
+      if( strenghtenBoundsInBlock(system_type, node, BL_MAT) )
+        tightened = true;
+   }
 
    if(node != -1)
    {
@@ -262,7 +262,9 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          if( std::fabs(lbx_new) > numeric_limit_bounds )
             lbx_new = -std::numeric_limits<double>::infinity();
 
-         bool row_propagated = presData.rowPropagatedBounds(system_type, node, block_type, row, col, ubx_new, lbx_new);
+         const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
+         bool row_propagated = presData.rowPropagatedBounds( INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), ubx_new, lbx_new);
+//         bool row_propagated = presData.rowPropagatedBoundsNonTight(INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), ubx_new, lbx_new, a_ik);
 
          if(row_propagated && (node != -1 || my_rank == 0))
             ++tightenings;

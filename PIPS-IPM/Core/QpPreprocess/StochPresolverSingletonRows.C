@@ -47,11 +47,12 @@ void StochPresolverSingletonRows::applyPresolving()
    while( !presData.getSingletonRows().empty() )
    {
       bool removed = false;
-      const sROWINDEX& row_idx = presData.getSingletonRows().front();
+      const INDEX& row = presData.getSingletonRows().front();
+      assert(row.isRow());
 
-      removed = removeSingletonRow( row_idx.system_type, row_idx.node, row_idx.index );
+      removed = removeSingletonRow( row );
       
-      if(removed && (row_idx.node > 0 || my_rank == 0))
+      if(removed && (row.node > 0 || my_rank == 0))
          ++removed_rows_local;
       presData.getSingletonRows().pop();
    }
@@ -95,150 +96,144 @@ void StochPresolverSingletonRows::applyPresolving()
  * in updateLinkingVarsBlocks() which should be called after this method.
  * Returns the number of newly found singleton rows (equality/inequality system) during adaption of B,D,Fi,Gi.
  */
-bool StochPresolverSingletonRows::removeSingletonRow(SystemType system_type, int node, int row_idx)
+bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
 {
-   assert( node == -2 || !presData.nodeIsDummy(node) );
+   assert( !presData.nodeIsDummy(row.node) );
 
-   // todo: redesign - actually done twice
-   updatePointersForCurrentNode(node, system_type);
-   if( (*currNnzRow)[row_idx] != 1 )
+   if(presData.getNnzsRow(row) != 1)
       return false;
 
-   double ubx = std::numeric_limits<double>::infinity();
-   double lbx = -std::numeric_limits<double>::infinity();
+   double xlow_new = INF_NEG_PRES;
+   double xupp_new = INF_POS_PRES;
+
    int col_idx = -1;
-   BlockType block_type = BL_MAT;
+   int node_col = -2;
 
-   getBoundsAndColFromSingletonRow( system_type, node, row_idx, block_type, col_idx, ubx, lbx );
+   getBoundsAndColFromSingletonRow( row, node_col, col_idx, xlow_new, xupp_new );
 
-   const bool linking_row = (block_type == BL_MAT);
+   /* if the singleton entry was not found it was probably linking and someone else will remove it */
+   if(node_col == -2 || col_idx == -1)
+   {
+      assert(row.linking);
+      return false;
+   }
 
-   /* because of postsolve here we only remove correctly placed singelton rows */
-   if( node != -1 && block_type == A_MAT)
+   /* because of postsolve here we only remove correctly placed singleton rows */
+   if( row.node != -1 && node_col == -1)
       return false;
 
-   presData.rowPropagatedBounds( system_type, node, block_type, row_idx, col_idx, ubx, lbx );
+   presData.removeSingletonRow(row, INDEX(COL, node_col, col_idx), xlow_new, xupp_new);
 
-   /* singleton linking rows will not get deleted here but later by model cleanup for synchronization reasons */
-   if(!linking_row)
-      presData.removeRedundantRow( system_type, node, row_idx, linking_row );
-
-   updatePointersForCurrentNode(node, system_type);
-   double ubx_new = (node == -1) ? (*currxuppParent)[col_idx] : (*currxuppChild)[col_idx];
-   double lbx_new = (node == -1) ? (*currxlowParent)[col_idx] : (*currxlowChild)[col_idx];
-   if( PIPSisEQ(ubx_new, lbx_new) )
-      presData.fixColumn( node, col_idx, ubx_new);
-
-
-   if( my_rank == 0 || !linking_row )
+   if( my_rank == 0 || !row.linking )
       return true;
    else
       return false;
 }
 
-void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow( SystemType system_type, int& node, int row_idx, BlockType& block_type, 
-   int& col_idx, double& ubx, double& lbx )
+void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow(const INDEX& row, int& node_col, int& col_idx, double& xlow_new, double& xupp_new)
 {
-   double value = 0.0; 
+   double coeff_singleton = 0.0;
 
-   if(node != -2)
+   const int node_row = row.node;
+   const int row_index = row.index;
+   const SystemType system_type = row.system_type;
+   const bool linking = row.linking;
+
+   node_col = -2;
+   col_idx = -1;
+
+   if( !linking )
    {
-      updatePointersForCurrentNode(node, system_type);
+      updatePointersForCurrentNode(node_row, system_type);
 
-      if(node == -1)
+      if(node_row == -1)
       {
          assert(currBmat);
-         assert( currBmat->getRowPtr(row_idx).end - currBmat->getRowPtr(row_idx).start == 1 );
-         col_idx = currBmat->getJcolM(currBmat->getRowPtr(row_idx).start);
-         value = currBmat->getMat(currBmat->getRowPtr(row_idx).start);
-         block_type = B_MAT;
+         assert(currBmat->getRowPtr(row_index).end - currBmat->getRowPtr(row_index).start == 1);
+         coeff_singleton = currBmat->getMat(currBmat->getRowPtr(row_index).start);
+         col_idx = currBmat->getJcolM(currBmat->getRowPtr(row_index).start);
+         node_col = -1;
       }
       else
       {
-         assert(currAmat); assert(currBmat); assert( row_idx < currAmat->getM() ); assert( row_idx < currBmat->getM() );
-         assert( (currAmat->getRowPtr(row_idx).end - currAmat->getRowPtr(row_idx).start == 1) ||
-            (currBmat->getRowPtr(row_idx).end - currBmat->getRowPtr(row_idx).start == 1) );
+         assert(currAmat); assert(currBmat); assert( row_index < currAmat->getM() ); assert( row_index < currBmat->getM() );
+         assert( (currAmat->getRowPtr(row_index).end - currAmat->getRowPtr(row_index).start == 1) ||
+            (currBmat->getRowPtr(row_index).end - currBmat->getRowPtr(row_index).start == 1) );
          
-         if(currAmat->getRowPtr(row_idx).end - currAmat->getRowPtr(row_idx).start == 1)
+         if(currAmat->getRowPtr(row_index).end - currAmat->getRowPtr(row_index).start == 1)
          {
-            col_idx = currAmat->getJcolM(currAmat->getRowPtr(row_idx).start);
-            value = currAmat->getMat(currAmat->getRowPtr(row_idx).start);
-            block_type = A_MAT;
+            coeff_singleton = currAmat->getMat(currAmat->getRowPtr(row_index).start);
+            col_idx = currAmat->getJcolM(currAmat->getRowPtr(row_index).start);
+            node_col = -1;
          }
          else
          {
-            col_idx = currBmat->getJcolM(currBmat->getRowPtr(row_idx).start);
-            value = currBmat->getMat(currBmat->getRowPtr(row_idx).start);
-            block_type = B_MAT;
+            coeff_singleton = currBmat->getMat(currBmat->getRowPtr(row_index).start);
+            col_idx = currBmat->getJcolM(currBmat->getRowPtr(row_index).start);
+            node_col = node_row;
          }
       }
    }
    else
    {
-      block_type = BL_MAT;
       // todo : implement this more efficiently - we don't want to go through all our children to check whether a singleton entry is on our process or not
       // ideally we already know and also know the child
       // same should hold for singelton columns..
-      assert( node == -2 );
+
       for( int i = -1; i < presData.getNChildren(); ++i)
       {
-         updatePointersForCurrentNode(node, system_type);
+         updatePointersForCurrentNode(i, system_type);
 
-         assert( currBlmat->getRowPtr(row_idx).end - currBlmat->getRowPtr(row_idx).start == 1 ||
-            currBlmat->getRowPtr(row_idx).end - currBlmat->getRowPtr(row_idx).start == 0 );
+         assert( currBlmat->getRowPtr(row_index).end - currBlmat->getRowPtr(row_index).start == 1 ||
+            currBlmat->getRowPtr(row_index).end - currBlmat->getRowPtr(row_index).start == 0 );
       
-         if( currBlmat->getRowPtr(row_idx).end - currBlmat->getRowPtr(row_idx).start == 1 )
+         if( currBlmat->getRowPtr(row_index).end - currBlmat->getRowPtr(row_index).start == 1 )
          {
-            assert(node == -2);
-            col_idx = currBlmat->getJcolM(currBlmat->getRowPtr(row_idx).start);
-            value = currBlmat->getMat(currBlmat->getRowPtr(row_idx).start);
-            node = i;
+            coeff_singleton = currBlmat->getMat(currBlmat->getRowPtr(row_index).start);
+            col_idx = currBlmat->getJcolM(currBlmat->getRowPtr(row_index).start);
+            node_col = i;
             break;
          }
       }
-      if( node == -2 )
+
+      /* singleton is not stored on our process */
+      if( node_col == -2 )
          return;
    }
 
-   assert( !PIPSisEQ(value, 0) );
+   assert( !PIPSisEQ(coeff_singleton, 0) );
 
    if(system_type == EQUALITY_SYSTEM)
    {
-      if(block_type != BL_MAT)
-      {
-         ubx = (*currEqRhs)[row_idx] / value;
-         lbx = (*currEqRhs)[row_idx] / value;
-      }
-      if(block_type == BL_MAT)
-      {
-         ubx = (*currEqRhsLink)[row_idx] / value;
-         lbx = (*currEqRhsLink)[row_idx] / value;
-      }  
+      const double& rhs = (linking) ? (*currEqRhsLink)[row_index] : (*currEqRhs)[row_index];
+
+      xlow_new = rhs / coeff_singleton;
+      xupp_new = rhs / coeff_singleton;
    }
    else
    {
-      if(block_type != BL_MAT)
-      {
-         assert( PIPSisEQ((*currIclow)[row_idx], 1.0) || PIPSisEQ((*currIcupp)[row_idx], 1.0));
+      const double& iclow = (linking) ? (*currIclowLink)[row_index] : (*currIclow)[row_index];
+      const double& icupp = (linking) ? (*currIcuppLink)[row_index] : (*currIcupp)[row_index];
+      const double& clow = (linking) ? (*currIneqLhsLink)[row_index] : (*currIneqLhs)[row_index];
+      const double& cupp = (linking) ? (*currIneqRhsLink)[row_index] : (*currIneqRhs)[row_index];
 
-         if( PIPSisLT(value, 0.0) )
-         {
-            if( PIPSisEQ((*currIcupp)[row_idx], 1.0) )
-               lbx = (*currIneqRhs)[row_idx] / value;
-            if( PIPSisEQ((*currIclow)[row_idx], 1.0) )
-               ubx = (*currIneqLhs)[row_idx] / value;
-         }
-         else
-         {
-            if( PIPSisEQ((*currIclow)[row_idx], 1.0) )
-               lbx = (*currIneqLhs)[row_idx] / value;
-            if( PIPSisEQ((*currIcupp)[row_idx], 1.0) )
-               ubx = (*currIneqRhs)[row_idx] / value;
-         }
+
+      assert( PIPSisEQ((*currIclow)[row_index], 1.0) || PIPSisEQ((*currIcupp)[row_index], 1.0));
+
+      if( PIPSisLT(coeff_singleton, 0.0) )
+      {
+         if( PIPSisEQ( icupp, 1.0) )
+            xlow_new = cupp / coeff_singleton;
+         if( PIPSisEQ( iclow, 1.0) )
+            xupp_new = clow / coeff_singleton;
       }
       else
-         assert(block_type != BL_MAT); // todo : can is possible
-
+      {
+         if( PIPSisEQ( iclow , 1.0) )
+            xlow_new = clow / coeff_singleton;
+         if( PIPSisEQ( icupp, 1.0) )
+            xupp_new = cupp / coeff_singleton;
+      }
    }
-   assert( PIPSisLE(lbx ,ubx) );
+   assert( PIPSisLE(xlow_new, xupp_new) );
 }

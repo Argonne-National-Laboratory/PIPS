@@ -956,13 +956,10 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                            newxupp = ( (*norm_b)[id1] - (*norm_cupp)[ineqRowId] ) * (*norm_factorA)[id1] / coeff_singleton;
                      }
 
-                     BlockType block_type = A_MAT;
-                     if(singleColIdx > nA || node == -1)
-                        block_type = B_MAT;
-
                      const int col = (singleColIdx > nA ) ? (singleColIdx - nA) : singleColIdx;
-
-                     presData.rowPropagatedBounds(EQUALITY_SYSTEM, node, block_type, id1, col, newxupp, newxlow);
+                     const int node_col = (singleColIdx > nA ) ? node : -1;
+                     const bool linking_row = false;
+                     presData.rowPropagatedBounds( INDEX(ROW, node, linking_row, id1, EQUALITY_SYSTEM), INDEX(COL, node_col, col), newxupp, newxlow);
                      // remove inequality row -> after block
                   }
                   else
@@ -1145,7 +1142,8 @@ void StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2
 
       presData.substituteVariableParallelRows(EQUALITY_SYSTEM, it, col1_idx, rowId1, node_var1, col2_idx, rowId2, node_var2, t, d);
       // effectively tighten bounds of variable x_id1:
-      presData.rowPropagatedBounds(EQUALITY_SYSTEM, it, B_MAT, rowId1, col1_idx, newxupp, newxlow);
+      const bool linking_row = false;
+      presData.rowPropagatedBounds(INDEX(ROW, it, rowId1, linking_row, EQUALITY_SYSTEM), INDEX(COL, node_var1, col1_idx), newxupp, newxlow);
    }
    else
    {

@@ -20,22 +20,6 @@
 #include <limits>
 #include <queue>
 
-struct sCOLINDEX
-{
-      sCOLINDEX(int node, int index) : node(node), index(index) {};
-      int node;
-      int index;
-};
-
-struct sROWINDEX
-{
-      sROWINDEX(SystemType system_type, int node, int index ) :
-         system_type(system_type), node(node), index(index) {};
-      SystemType system_type;
-      int node;
-      int index;
-};
-
 class PresolveData
 {
 private:
@@ -51,6 +35,7 @@ private:
       bool& outdated_activities;
       bool& outdated_obj_vector;
       bool& postsolve_linking_row_propagation_needed;
+
 
       /* counter to indicate how many linking row bounds got changed locally and thus need activity recomputation */
       int linking_rows_need_act_computation;
@@ -106,8 +91,14 @@ private:
       SimpleVectorHandle bound_chgs_C;
 
       /* storing so far found singleton rows and columns */
-      std::queue<sROWINDEX> singleton_rows;
-      std::queue<sCOLINDEX> singleton_cols;
+      std::queue<INDEX> singleton_rows;
+      std::queue<INDEX> singleton_cols;
+
+      /* SimpleVectors indicating which linking rows propagated bounds and thus need to be stored */
+//      SimpleVectorBaseHandle<int> eq_linking_row_propagated_bound;
+//      SimpleVectorBaseHandle<int> ineq_linking_row_propagated_bound;
+//
+//      SimpleVectorBaseHandle<int> linking_var_bound_implied_by_linking_row;
 
       const int my_rank;
       const bool distributed;
@@ -143,19 +134,19 @@ public :
       double getObjOffset() const { return objOffset; };
       int getNChildren() const { return nChildren; };
 
-      void getRowActivities(SystemType system_type, int node, bool linking, int row,
-            double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
+      void getRowActivities( const INDEX& row, double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
 
+
+      const StochVectorBase<int>& getNnzsRow(SystemType system_type) const { return (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C; }
       const StochVectorBase<int>& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date
       const StochVectorBase<int>& getNnzsRowC() const { return *nnzs_row_C; };
       const StochVectorBase<int>& getNnzsCol() const { return *nnzs_col; };
 
-      int getNnzsRowA(int node, BlockType block_type, int row) const;
-      int getNnzsRowC(int node, BlockType block_type, int row) const ;
-      int getNnzsCol(int node, int col) const;
+      int getNnzsRow(const INDEX& row) const;
+      int getNnzsCol(const INDEX& col) const;
 
-      std::queue<sROWINDEX>& getSingletonRows() { return singleton_rows; };
-      std::queue<sCOLINDEX>& getSingletonCols() { return singleton_cols; };
+      std::queue<INDEX>& getSingletonRows() { return singleton_rows; };
+      std::queue<INDEX>& getSingletonCols() { return singleton_cols; };
 
       sData* finalize();
 
@@ -179,21 +170,24 @@ public :
       /// postsolve sync events that need to be set
       void putLinkingVarsSyncEvent();
 
-      bool wasColumnRemoved(int node, int col) const;
-      bool wasRowRemoved(SystemType system_type, int node, int row, bool linking_row) const;
+      bool wasColumnRemoved( const INDEX& col ) const;
+      bool wasRowRemoved( const INDEX& row ) const;
 
       /// interface methods called from the presolvers when they detect a possible modification
       // todo make bool and give feedback or even better - return some enum maybe?
-      void fixColumn(int node, int col, double value);
-      void fixEmptyColumn(int node, int col, double val);
+      void fixColumn( const INDEX& col, double value);
+      void fixEmptyColumn( const INDEX& col, double val);
+
+      void removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new);
 
       void syncPostsolveOfBoundsPropagatedByLinkingRows();
-      bool rowPropagatedBounds( SystemType system_type, int node, BlockType block_type, int row, int col, double ubx, double lbx);
+      bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var);
+      bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
 
       void substituteVariableParallelRows(SystemType system_type, int node, int var1, int row1, int node_var1, int var2, int row2, int node_var2,
             double scalar, double translation);
-      void removeRedundantRow(SystemType system_type, int node, int row, bool linking);
-      void removeParallelRow(SystemType system_type, int node, int row, bool linking);
+      void removeRedundantRow( const INDEX& row );
+      void removeParallelRow( const INDEX& row );
       void removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
 
       void adaptObjectiveSubstitutedRow( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
@@ -238,16 +232,16 @@ private:
       /// methods for modifying the problem
       void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
       /// set bounds if new bound is better than old bound
-      bool updateUpperBoundVariable(int node, int col, double ubx)
-      { return updateBoundsVariable(node, col, ubx, -std::numeric_limits<double>::infinity()); };
-      bool updateLowerBoundVariable(int node, int col, double lbx)
-      { return updateBoundsVariable(node, col, std::numeric_limits<double>::infinity(), lbx); };
+      bool updateUpperBoundVariable( const INDEX& col, double xupp_new)
+      { return updateBoundsVariable( col, INF_NEG_PRES, xupp_new ); };
+      bool updateLowerBoundVariable( const INDEX& col, double xlow_new)
+      { return updateBoundsVariable( col, xlow_new, INF_POS_PRES); };
 
-      bool updateBoundsVariable(int node, int col, double ubx, double lbx);
-      void updateRowActivities(int node, int col, double ubx, double lbx, double old_ubx, double old_lbx);
+      bool updateBoundsVariable( const INDEX& col, double xlow_new, double xupp_new );
+      void updateRowActivities( const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
 
       void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col,
-      		 double ubx, double lbx, double old_ubx, double old_lbx);
+      		 double xlow_new, double xupp_new, double xlow_old, double xupp_old);
 
       void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
             double old_bound, bool upper);
@@ -273,7 +267,7 @@ private:
 
       void removeColumn(int node, int col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
-      void removeRow(SystemType system_type, int node, int row, bool linking);
+      void removeRow( const INDEX& row );
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
 
       void reduceNnzCounterRow(SystemType system_type, int node, bool linking, int row_index, int amount);
@@ -283,6 +277,7 @@ private:
       StochGenMatrix& getSystemMatrix(SystemType system_type) const;
       SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
 
+      void checkBoundsInfeasible(const INDEX& col, double xlow_new, double xupp_new) const;
 public:
       void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const;
 private:

@@ -24,44 +24,40 @@ public:
       StochPostsolver( const sData& original_problem );
       virtual ~StochPostsolver();
 
-      void notifyRowModified( SystemType system_type, int node, int row, bool linking_row );
-      void notifyColModified( int node, int col );
+      void notifyRowModified( const INDEX& row );
+      void notifyColModified( const INDEX& col );
 
       void notifySingletonEqualityRow( int node, int row, BlockType block_type, int col, double coeff, double rhs);
       void notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs );
 
-      void notifyRedundantRow( SystemType system_type, int node, unsigned int row, bool linking_constraint,
-         int iclow, int icupp, double lhs, double rhs, const StochGenMatrix& matrix_row);
-      void notifyFixedColumn( int node, unsigned int col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
-      void notifyFixedEmptyColumn(int node, unsigned int col, double value, double obj_value, int ixlow, int ixupp, double lhs, double rhs);
-      void notifyFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, double rhs,
-         int node_col, int col, const StochGenMatrix& matrix_row );
+      void notifyRedundantRow( const INDEX& row, int iclow, int icupp, double lhs, double rhs, const StochGenMatrix& matrix_row);
+      void notifyFixedColumn( const INDEX& col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
+      void notifyFixedEmptyColumn( const INDEX& col, double value, double obj_value, int ixlow, int ixupp, double lhs, double rhs);
+      void notifyFreeColumnSingleton( const INDEX& row, double rhs, const INDEX& col, const StochGenMatrix& matrix_row );
 
-      void notifyRowPropagatedBound( SystemType system_type, int node, int row, bool linking_row, int column, int node_column,
-         int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
+      void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
-      void notifyParallelRowSubstitution(SystemType system_type, int node_row, int var1, int row1, int node_var1, int var2, int row2,
-         int node_var2, double scalar, double translation);
+      void notifyParallelRowSubstitution( const INDEX& row1, const INDEX& row2_index, const INDEX& col1, const INDEX& col2, double scalar, double translation);
 
-      bool wasColumnRemoved(int node, int col) const;
-      bool wasRowRemoved(SystemType system_type, int node, int row, bool linking_row) const;
+      bool wasColumnRemoved(const INDEX& col) const;
+      bool wasRowRemoved(const INDEX& row) const;
 
 private:
-      void markColumnRemoved(int node, int col);
-      void markColumnAdded(int node, int col);
-      void markRowRemoved(SystemType system_type, int node, int row, bool linking_row);
-      void markRowAdded(SystemType system_type, int node, int row, bool linking_row);
+      void markColumnRemoved(const INDEX& col);
+      void markColumnAdded(const INDEX& col);
+      void markRowRemoved(const INDEX& row );
+      void markRowAdded(const INDEX& row );
 
       /// stores row in specified node and returns it's new row index
-      int storeRow( SystemType system_type, int node, int row, bool linking_row, const StochGenMatrix& matrix_row);
+      int storeRow( const INDEX& row, const StochGenMatrix& matrix_row);
       /// stores col in specified node and returns it's new col index
-      int storeColumn( int node, int col, const StochGenMatrix& matrix_col_eq, const StochGenMatrix& matrix_col_ineq);
+      int storeColumn( const INDEX& col, const StochGenMatrix& matrix_col_eq, const StochGenMatrix& matrix_col_ineq);
 
-      bool isRowModified(SystemType system_type, int node, int row, bool linking_row) const;
-      void markRowClean(SystemType system_type, int node, int row, bool linking_row);
-      void markColClean(int node, int col);
-      bool isColModified(int node, int col) const;
+      bool isRowModified(const INDEX& row) const;
+      void markRowClean(const INDEX& row);
+      void markColClean(const INDEX& col);
+      bool isColModified(const INDEX& col) const;
 
 public:
       /// synchronization events
@@ -72,21 +68,6 @@ private:
 
       const int my_rank;
       const bool distributed;
-
-      /* can point to a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
-      enum IndexType {COL, ROW};
-
-      struct INDEX
-      {
-         INDEX(IndexType index_type, int node, int index, bool linking = false, SystemType system_type = EQUALITY_SYSTEM) :
-            index_type(index_type), node(node), index(index), linking(linking), system_type(system_type){};
-
-         IndexType index_type;
-         int node;
-         int index;
-         bool linking;
-         SystemType system_type;
-      } ;
 
       enum ReductionType
       {
