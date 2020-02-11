@@ -38,7 +38,7 @@ public:
       void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
-      void notifyParallelRowSubstitution( const INDEX& row1, const INDEX& row2_index, const INDEX& col1, const INDEX& col2, double scalar, double translation);
+      void notifyParallelRowSubstitution( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation);
 
       bool wasColumnRemoved(const INDEX& col) const;
       bool wasRowRemoved(const INDEX& row) const;

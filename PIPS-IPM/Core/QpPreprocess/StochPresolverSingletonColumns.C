@@ -127,7 +127,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int &node_col, 
    {
       // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
       // std::cout << node_col << "\taa\t" << col << std::endl;
-      presData.removeImpliedFreeColumnSingleton(system_type, node_row, row, linking_row, node_col, col);
+      presData.removeImpliedFreeColumnSingleton( INDEX(ROW, node_row, row, linking_row, system_type), INDEX(COL, node_col, col) );
       return true;
    }
 
@@ -139,7 +139,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int &node_col, 
       {
          // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
          // std::cout << node_col << "\tbb\t" << col << std::endl;
-         presData.removeImpliedFreeColumnSingleton(system_type, node_row, row, linking_row, node_col, col);
+         presData.removeImpliedFreeColumnSingleton( INDEX(ROW, node_row, row, linking_row, system_type), INDEX(COL, node_col, col) );
          return true;
       }
    }
@@ -328,8 +328,8 @@ void StochPresolverSingletonColumns::checkColImpliedFree(
 
    /* check whether bound tightening found bounds from the variables row that make it implied free */
    ub_implied_free = ub_implied_free
-      || presData.varBoundImpliedFreeBy(true, node_col, col, system_type, node_row, row, linking_row);
+      || presData.varBoundImpliedFreeBy(true, INDEX(COL, node_col, col), INDEX(ROW, node_row, row, linking_row, system_type) );
    lb_implied_free = lb_implied_free
-      || presData.varBoundImpliedFreeBy(false, node_col, col, system_type, node_row, row, linking_row);
+      || presData.varBoundImpliedFreeBy(false, INDEX(COL, node_col, col), INDEX(ROW, node_row, row, linking_row, system_type) );
 
 }

@@ -71,7 +71,7 @@ void StochPresolverColumnFixation::applyPresolving()
             else  // set the variable to the arithmetic mean:
                value = ( (*currxlowParent)[col] + (*currxuppParent)[col] ) / 2.0;
 
-            presData.fixColumn(-1, col, value);
+            presData.fixColumn( INDEX(COL, -1, col), value);
             if(my_rank == 0)
                ++fixed_columns;
          }
@@ -111,7 +111,7 @@ void StochPresolverColumnFixation::applyPresolving()
                   value = (*currxuppChild)[col];
                else  // set the variable to the arithmetic mean:
                   value = ( (*currxlowChild)[col] + (*currxuppChild)[col] ) / 2.0;
-               presData.fixColumn(node, col, value);
+               presData.fixColumn( INDEX(COL, node, col), value);
                ++fixed_columns;
             }
          }

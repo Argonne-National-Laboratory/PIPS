@@ -112,14 +112,6 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
    if(node == -1)
       n_removed_rows_link = removeRedundantRows(system_type, node, true);
 
-#ifndef NDEBUG
-   if( my_rank == 0 && node == -1 )
-   {
-      n_removed_rows += n_removed_rows_link;
-      std::cout << "\tRemoved redundant linking constraints during model cleanup: " << n_removed_rows_link << std::endl;
-   }
-#endif
-
    n_removed_rows += removeRedundantRows(system_type, node, false);
 
    return n_removed_rows + n_removed_rows_link;

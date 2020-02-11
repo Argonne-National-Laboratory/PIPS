@@ -184,13 +184,12 @@ public :
       bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var);
       bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
 
-      void substituteVariableParallelRows(SystemType system_type, int node, int var1, int row1, int node_var1, int var2, int row2, int node_var2,
-            double scalar, double translation);
+      void substituteVariableParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation);
       void removeRedundantRow( const INDEX& row );
       void removeParallelRow( const INDEX& row );
-      void removeImpliedFreeColumnSingleton( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
+      void removeImpliedFreeColumnSingleton( const INDEX& row, const INDEX& col );
 
-      void adaptObjectiveSubstitutedRow( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col );
+      void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col );
 
       // todo : hackish functions not properly working with presolve/postsolve
       void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);
@@ -208,10 +207,9 @@ public :
       bool nodeIsDummy(int node) const;
       bool hasLinking(SystemType system_type) const;
 
-      bool varBoundImpliedFreeBy( bool upper, int node_col, int col, SystemType system_type, int node_row, int row, bool linking_row );
+      bool varBoundImpliedFreeBy( bool upper, const INDEX& col, const INDEX& row);
 private:
-      void varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, int node_col,
-         int col, SystemType system_type, int node_row, int row, bool linking_row) const;
+      void varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, const INDEX& col, const INDEX& row) const;
 
       /// methods for printing debug information
       // initialize row and column nnz counter
@@ -265,7 +263,7 @@ private:
       double computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const;
       void computeRowMinOrMaxActivity(SystemType system_type, int node, bool linking, int row, bool upper);
 
-      void removeColumn(int node, int col, double fixation);
+      void removeColumn(const INDEX& col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow( const INDEX& row );
       void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
