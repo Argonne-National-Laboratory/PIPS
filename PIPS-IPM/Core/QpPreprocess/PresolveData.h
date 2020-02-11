@@ -277,7 +277,7 @@ private:
 
       void checkBoundsInfeasible(const INDEX& col, double xlow_new, double xupp_new) const;
 public:
-      void writeRowLocalToStreamDense(std::ostream& out, SystemType system_type, int node, bool linking, int row) const;
+      void writeRowLocalToStreamDense(std::ostream& out, const INDEX& row) const;
 private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
             const SimpleVector& ixlow, const SimpleVector& xlow) const;

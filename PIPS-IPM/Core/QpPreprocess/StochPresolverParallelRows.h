@@ -138,8 +138,8 @@ private:
 
    double getSingletonCoefficient(int singleColIdx);
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
-   void doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
-   void doNearlyParallelRowCase3(int rowId1, int rowId2, int it);
+   void doNearlyParallelRowCase1(int rowId1, int rowId2, int node);
+   void doNearlyParallelRowCase3(int rowId1, int rowId2, int node);
    void tightenLinkingVarsBounds();
 
 };

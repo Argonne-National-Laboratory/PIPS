@@ -1844,7 +1844,7 @@ bool StochVectorBase<T>::isRootNodeInSync() const
 
    for( int i = 0; i < count; ++i )
    {
-      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
+      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) && (sendbuf[i] != recvbuf[i]) )
       {
          /* someone else had a higher value here */
          in_sync = false;
