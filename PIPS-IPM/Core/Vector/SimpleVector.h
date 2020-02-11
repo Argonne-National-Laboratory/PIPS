@@ -12,6 +12,8 @@
 
 #include <vector>
 
+//#define RANGECHECKS
+
 /**
  * Simple sequential vectors with element access.
  * @ingroup SparseLinearAlgebra
@@ -31,14 +33,14 @@ public:
    */
   T & operator[]( int i ) {
 #ifdef RANGECHECKS
-    assert( i >= 0 && i < n );
+    assert( i >= 0 && i < this->n );
 #endif
     return v[i];
  }
   const T & operator[]( int i ) const
   {
 #ifdef RANGECHECKS
-    assert( i >= 0 && i < n );
+    assert( i >= 0 && i < this->n );
 #endif
     return v[i];
   }

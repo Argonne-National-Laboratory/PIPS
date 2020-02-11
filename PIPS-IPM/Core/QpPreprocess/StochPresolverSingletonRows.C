@@ -106,10 +106,12 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
    double xlow_new = INF_NEG_PRES;
    double xupp_new = INF_POS_PRES;
 
+   double coeff = 0.0;
+
    int col_idx = -1;
    int node_col = -2;
 
-   getBoundsAndColFromSingletonRow( row, node_col, col_idx, xlow_new, xupp_new );
+   getBoundsAndColFromSingletonRow( row, node_col, col_idx, xlow_new, xupp_new, coeff );
 
    /* if the singleton entry was not found it was probably linking and someone else will remove it */
    if(node_col == -2 || col_idx == -1)
@@ -122,7 +124,8 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
    if( row.node != -1 && node_col == -1)
       return false;
 
-   presData.removeSingletonRow(row, INDEX(COL, node_col, col_idx), xlow_new, xupp_new);
+   assert(!PIPSisZero(coeff));
+   presData.removeSingletonRow(row, INDEX(COL, node_col, col_idx), xlow_new, xupp_new, coeff);
 
    if( my_rank == 0 || !row.linking )
       return true;
@@ -130,7 +133,7 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
       return false;
 }
 
-void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow(const INDEX& row, int& node_col, int& col_idx, double& xlow_new, double& xupp_new)
+void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow(const INDEX& row, int& node_col, int& col_idx, double& xlow_new, double& xupp_new, double& coeff)
 {
    double coeff_singleton = 0.0;
 
@@ -235,5 +238,6 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow(const INDEX& r
             xupp_new = cupp / coeff_singleton;
       }
    }
+   coeff = coeff_singleton;
    assert( PIPSisLE(xlow_new, xupp_new) );
 }

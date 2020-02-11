@@ -178,7 +178,7 @@ public :
       void fixColumn( const INDEX& col, double value);
       void fixEmptyColumn( const INDEX& col, double val);
 
-      void removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new);
+      void removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff);
 
       void syncPostsolveOfBoundsPropagatedByLinkingRows();
       bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var);

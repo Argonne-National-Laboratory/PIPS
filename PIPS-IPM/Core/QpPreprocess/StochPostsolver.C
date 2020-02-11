@@ -227,6 +227,38 @@ void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const IND
    finishNotify();
 }
 
+/** bounds got tightened by propagating a singleton row - not necessary to store whole row */
+void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const INDEX& col, double xlow_old, double xupp_old, double xlow_new, double xupp_new, double coeff )
+{
+   assert(row.isRow());
+   assert(col.isCol());
+   assert(!row.linking);
+   assert(PIPSisLE(xlow_new, xupp_new));
+   assert(xupp_new != INF_POS_PRES || xlow_new != INF_NEG_PRES);
+   assert(!PIPSisZero(coeff));
+
+   assert(!wasRowRemoved(row));
+   assert(!wasColumnRemoved(col));
+
+   ReductionType red = (row.system_type == EQUALITY_SYSTEM) ? SINGLETON_EQUALITY_ROW : SINGLETON_INEQUALITY_ROW;
+
+   if(red == SINGLETON_EQUALITY_ROW)
+      assert(xupp_new == xlow_new);
+
+   reductions.push_back(red);
+
+   indices.push_back(row);
+   indices.push_back(col);
+
+   float_values.push_back(xlow_old);
+   float_values.push_back(xupp_old);
+   float_values.push_back(xlow_new);
+   float_values.push_back(xupp_new);
+   float_values.push_back(coeff);
+
+   finishNotify();
+}
+
 /** postsolve has to compute the optimal dual multipliers here and set the primal value accordingly */
 void StochPostsolver::notifyFixedColumn( const INDEX& col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat)
 {
@@ -816,12 +848,133 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case SINGLETON_EQUALITY_ROW:
       {
-         throw std::runtime_error("SINGLETON_EQUALITY_ROW not yet implemented");
+         assert(first_index + 2 == next_first_index);
+         assert(first_float_val + 5 == next_first_float_val);
+         assert(first_int_val == next_first_int_val);
+
+         const INDEX& row = indices.at(first_index);
+         const INDEX& col = indices.at(first_index + 1);
+
+         assert(row.isRow());
+         assert(row.system_type == EQUALITY_SYSTEM);
+         assert(col.isCol());
+
+         const double xlow_old = float_values.at(first_float_val);
+         const double xupp_old = float_values.at(first_float_val + 1);
+//         const double xlow_new = float_values.at(first_float_val + 2);
+//         const double xupp_new = float_values.at(first_float_val + 3);
+         const double coeff = float_values.at(first_float_val + 4);
+
+         assert(!PIPSisZero(coeff));
+
+         const double curr_x = getSimpleVecFromColStochVec(x_vec, col.node)[col.index];
+         double& slack_lower = getSimpleVecFromColStochVec(v_vec, col.node)[col.index];
+         double& slack_upper = getSimpleVecFromColStochVec(w_vec, col.node)[col.index];
+
+         /* if bound is not tight only adjust slack v/w */
+         if(xupp_old == INF_POS_PRES)
+            slack_upper = 0;
+         else
+         {
+            slack_upper = xupp_old - curr_x;
+            assert(PIPSisLT(0.0, slack_upper));
+            assert(std::fabs(slack_upper) != INF_POS_PRES);
+         }
+
+         if(xlow_old == INF_NEG_PRES)
+            slack_lower = 0;
+         else
+         {
+            slack_lower = curr_x - xlow_old;
+            assert(PIPSisLE(0.0, slack_lower));
+            assert(std::fabs(slack_lower) != INF_POS_PRES);
+         }
+
+         double& dual_singelton_row = getSimpleVecFromRowStochVec(y_vec, row.node, row.linking)[row.index];
+         double& dual_lower = getSimpleVecFromColStochVec(gamma_vec, col.node)[col.index];
+         double& dual_upper = getSimpleVecFromColStochVec(phi_vec, col.node)[col.index];
+
+         double error_in_reduced_costs = 0.0;
+
+         /* adjust duals if necessary */
+         if( !PIPSisZero(slack_lower) )
+         {
+            error_in_reduced_costs -= dual_lower;
+            dual_lower = 0.0;
+         }
+
+         if( !PIPSisZero(slack_upper) )
+         {
+            error_in_reduced_costs += dual_upper;
+            dual_upper = 0.0;
+         }
+
+         if(!PIPSisZero(error_in_reduced_costs))
+         {
+            /* we use the coeff*dual_singleton_row to balance the error in th reduced costs */
+            double diff_dual_row = error_in_reduced_costs / coeff;
+            dual_singelton_row += diff_dual_row;
+            assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
+         }
          break;
       }
       case SINGLETON_INEQUALITY_ROW:
       {
-         throw std::runtime_error("SINGLETON_INEQUALITY_ROW not yet implemented");
+         assert(first_index + 2 == next_first_index);
+         assert(first_float_val + 5 == next_first_float_val);
+         assert(first_int_val == next_first_int_val);
+
+         const INDEX& row = indices.at(first_index);
+         const INDEX& col = indices.at(first_index + 1);
+
+         assert(row.isRow());
+         assert(row.system_type == INEQUALITY_SYSTEM);
+         assert(col.isCol());
+
+         const double xlow_old = float_values.at(first_float_val);
+         const double xupp_old = float_values.at(first_float_val + 1);
+         const double xlow_new = float_values.at(first_float_val + 2);
+         const double xupp_new = float_values.at(first_float_val + 3);
+         const double coeff = float_values.at(first_float_val + 4);
+
+         assert(!PIPSisZero(coeff));
+         assert(xlow_new == INF_NEG_PRES || xupp_new == INF_POS_PRES);
+         assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
+
+         bool lower_bound_changed = (xlow_new != INF_NEG_PRES);
+
+         const double curr_x = getSimpleVecFromColStochVec(x_vec, col.node)[col.index];
+
+         double& slack = lower_bound_changed ? getSimpleVecFromColStochVec(v_vec, col.node)[col.index] : getSimpleVecFromColStochVec(w_vec, col.node)[col.index];
+         const double old_bound = (xupp_new != INF_POS_PRES) ? xupp_old : xlow_old;
+
+         /* if bound is not tight only adjust slack v/w */
+         if(std::fabs(old_bound) == INF_POS_PRES)
+            slack = 0;
+         else
+         {
+            slack = std::fabs(old_bound - curr_x);
+            assert(PIPSisLT(0.0, slack));
+            assert(std::fabs(slack) != INF_POS_PRES);
+         }
+
+         double& dual_singelton_row = getSimpleVecFromRowStochVec(z_vec, row.node, row.linking)[row.index];
+         double& dual_bound = lower_bound_changed ? getSimpleVecFromColStochVec(gamma_vec, col.node)[col.index] : getSimpleVecFromColStochVec(phi_vec, col.node)[col.index];
+
+         double error_in_reduced_costs = 0.0;
+         if(PIPSisZero(slack))
+         {
+            error_in_reduced_costs = lower_bound_changed ? -dual_bound : dual_bound;
+            dual_bound = 0.0;
+         }
+
+         if(!PIPSisZero(error_in_reduced_costs))
+         {
+            /* we use the coeff*dual_singleton_row to balance the error in th reduced costs */
+            double diff_dual_row = error_in_reduced_costs / coeff;
+            dual_singelton_row += diff_dual_row;
+            assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
+         }
          break;
       }
       case FREE_COLUMN_SINGLETON:
@@ -832,8 +985,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          const INDEX& idx_col = indices.at(first_index);
          const INDEX& idx_row = indices.at(first_index + 1);
-         assert(idx_col.index_type == COL);
-         assert(idx_row.index_type == ROW);
+         assert(idx_col.isCol());
+         assert(idx_row.isRow());
 
          const int column = idx_col.index;
          const int node_column = idx_col.node;

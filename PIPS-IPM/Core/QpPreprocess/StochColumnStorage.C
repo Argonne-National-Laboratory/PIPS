@@ -33,22 +33,26 @@ StochColumnStorage::StochColumnStorage(const StochGenMatrix& matrix_eq_part, con
  nChildren(matrix_eq_part.children.size() )
 {
    assert(matrix_ineq_part.children.size() == nChildren );
-   createStorageMatrix(B0_eq, stored_cols_eq, matrix_eq_part);
-   createStorageMatrix(B0_ineq, stored_cols_ineq, matrix_ineq_part);
+
+   createStorageMatrix(EQUALITY_SYSTEM, matrix_eq_part);
+   createStorageMatrix(INEQUALITY_SYSTEM, matrix_ineq_part);
 }
 
 StochColumnStorage::~StochColumnStorage()
 {
 }
 
-void StochColumnStorage::createStorageMatrix(SparseGenMatrix* b0_block_storage, StochGenMatrix* col_storage, const StochGenMatrix& sys_matrix)
+void StochColumnStorage::createStorageMatrix(SystemType system_type, const StochGenMatrix& sys_matrix)
 {
+   SparseGenMatrixHandle& b0_block_storage = (system_type == EQUALITY_SYSTEM) ? B0_eq : B0_ineq;
+   StochGenMatrixHandle& col_storage = (system_type == EQUALITY_SYSTEM) ? stored_cols_eq : stored_cols_ineq;
+
    /* extra storage for b0mat entries in linking variable column we want to store */
    assert(sys_matrix.Bmat);
-   b0_block_storage = sys_matrix.Bmat->cloneEmptyRowsTransposed(true);
+   b0_block_storage = SparseGenMatrixHandle(sys_matrix.Bmat->cloneEmptyRowsTransposed(true));
 
    // todo : n, m are wrong here but the counters are broken anyways?
-   col_storage = new StochGenMatrix(sys_matrix.id, sys_matrix.n, sys_matrix.m, sys_matrix.mpiComm);
+   col_storage = StochGenMatrixHandle(new StochGenMatrix(sys_matrix.id, sys_matrix.n, sys_matrix.m, sys_matrix.mpiComm));
 
 
    /* the rest of the matrix is going to get transposed - note that this would noramlly reverse the dummy non-dummy structure of the matrix

@@ -23,11 +23,11 @@
 
 /* can specify a cloumn here which bound changes we wanna track maybe */
 
- #ifndef NDEBUG
-   #define TRACK_C
-   #define COLUMN_INDEX 82
-   #define COL_NODE -1
- #endif
+// #ifndef NDEBUG
+//   #define TRACK_C
+//   #define COLUMN_INDEX 82
+//   #define COL_NODE -1
+// #endif
 
 // #ifndef NDEBUG
 //    #define TRACK_R
@@ -1368,7 +1368,7 @@ bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& c
 }
 
 // todo : do we need to store that a bound was implied by a singleton row ? I don't think so since singletons get removed from the system anyway
-void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new)
+void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff)
 {
    assert(!row.linking);
    assert(row.isRow());
@@ -1384,15 +1384,24 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
    /* check for infeasibility of the newly found bounds */
    checkBoundsInfeasible(col, xlow_new, xupp_new);
 
+
+   const double xlow_old = getSimpleVecFromColStochVec(*presProb->blx, col.node)[col.index];
+   const double xupp_old = getSimpleVecFromColStochVec(*presProb->bux, col.node)[col.index];
+
+   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col.node)[col.index]) || xlow_old == INF_NEG_PRES );
+   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col.node)[col.index]) || xupp_old == INF_POS_PRES );
+
    /* adjust bounds of column - singletons columns will always be used here since we want to remove the corresponding row */
-   updateBoundsVariable(col, xlow_new, xupp_new);
+   bool tightened = updateBoundsVariable(col, xlow_new, xupp_new);
+
+   /* notify postsolver */
+   if(tightened && postsolver)
+      postsolver->notifySingletonRowBoundsTightened(row, col, xlow_old, xupp_old, xlow_new, xupp_new, coeff);
 
    /* remove redundant row */
    /* singleton linking rows will not get deleted here but later by model cleanup since they become redundant (for synchronization reasons) */
    if(!row.linking)
       removeRedundantRow( row );
-
-   /* fixation of the column will and must be done later */
 }
 
 bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new)

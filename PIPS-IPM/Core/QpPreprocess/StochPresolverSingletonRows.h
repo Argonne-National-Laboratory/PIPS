@@ -26,7 +26,7 @@ private:
    long long removed_rows; 
 
    bool removeSingletonRow( const INDEX& row );
-   void getBoundsAndColFromSingletonRow( const INDEX& row, int& node_col, int& col_idx, double& xlow_new, double& xupp_new);
+   void getBoundsAndColFromSingletonRow( const INDEX& row, int& node_col, int& col_idx, double& xlow_new, double& xupp_new, double& coeff);
 
 };
 

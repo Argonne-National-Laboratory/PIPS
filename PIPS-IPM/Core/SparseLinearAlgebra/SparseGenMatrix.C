@@ -86,7 +86,6 @@ SparseGenMatrix* SparseGenMatrix::cloneEmptyRows(bool switchToDynamicStorage) co
 SparseGenMatrix* SparseGenMatrix::cloneEmptyRowsTransposed(bool switchToDynamicStorage) const
 {
   SparseGenMatrix* clone;
-
   if( switchToDynamicStorage )
   {
      clone = new SparseGenMatrix();

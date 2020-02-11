@@ -43,7 +43,7 @@ private:
    double multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
    double multiplyLinkingColTimesVecWithoutRootNode(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
 
-   void createStorageMatrix(SparseGenMatrix* b0_block_storage, StochGenMatrix* col_storage, const StochGenMatrix& sys_matrix);
+   void createStorageMatrix(SystemType system_type, const StochGenMatrix& sys_matrix);
 };
 
 
