@@ -32,7 +32,7 @@ public:
 
       void notifySingletonRowBoundsTightened( const INDEX& row, const INDEX& col, double xlow_old, double xupp_old, double xlow_new, double xupp_new, double coeff );
       void notifyRedundantRow( const INDEX& row, int iclow, int icupp, double lhs, double rhs, const StochGenMatrix& matrix_row);
-      void notifyFixedColumn( const INDEX& col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
+      void notifyFixedColumn( const INDEX& col, double value, double obj_coeff, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
       void notifyFixedEmptyColumn( const INDEX& col, double value, double obj_value, int ixlow, int ixupp, double lhs, double rhs);
       void notifyFreeColumnSingleton( const INDEX& row, double rhs, const INDEX& col, const StochGenMatrix& matrix_row );
 

@@ -89,14 +89,15 @@ void StochColumnStorage::createStorageMatrix(SystemType system_type, const Stoch
    }
 }
 
-int StochColumnStorage::storeCol( int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
+int StochColumnStorage::storeCol( const INDEX& col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
+   assert(col.isCol());
    assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
 
-   if( node == -1 )
-      return storeLinkingCol(col, matrix_eq_part, matrix_ineq_part);
+   if( col.node == -1 )
+      return storeLinkingCol(col.index, matrix_eq_part, matrix_ineq_part);
    else
-      return storeLocalCol(node, col, matrix_eq_part, matrix_ineq_part);
+      return storeLocalCol(col, matrix_eq_part, matrix_ineq_part);
 }
 
 int StochColumnStorage::storeLinkingCol(int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
@@ -161,8 +162,11 @@ int StochColumnStorage::storeLinkingCol(int col, const StochGenMatrix& matrix_eq
    return B0_index;
 }
 
-int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
+int StochColumnStorage::storeLocalCol(const INDEX& col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
+   const int node = col.node;
+   const int col_index = col.index;
+
    assert( 0 <= node && node < static_cast<int>(matrix_eq_part.children.size()) );
    assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
    assert( matrix_eq_part.children.size() == stored_cols_eq->children.size() );
@@ -177,11 +181,11 @@ int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& m
    SparseGenMatrix& Bli_storage = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, B_MAT);
    SparseGenMatrix& Dli_storage = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, A_MAT);
 
-   const int Bi_index = Bi_storage.appendRow(Bi, col);
+   const int Bi_index = Bi_storage.appendRow(Bi, col_index);
 #ifndef NDEBUG
-   const int Di_index = Di_storage.appendRow(Di, col);
-   const int Bli_index = Bli_storage.appendRow(Bli, col);
-   const int Dli_index = Dli_storage.appendRow(Dli, col);
+   const int Di_index = Di_storage.appendRow(Di, col_index);
+   const int Bli_index = Bli_storage.appendRow(Bli, col_index);
+   const int Dli_index = Dli_storage.appendRow(Dli, col_index);
 
    assert(Bi_index == Di_index);
    assert(Bli_index == Dli_index);
@@ -195,28 +199,28 @@ int StochColumnStorage::storeLocalCol(int node, int col, const StochGenMatrix& m
    return Bi_index;
 }
 
-double StochColumnStorage::multColTimesVec( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
+double StochColumnStorage::multColTimesVec( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
 {
-   assert(-1 <= node && node < static_cast<int>(nChildren));
+   assert(-1 <= col.node && col.node < static_cast<int>(nChildren));
    assert(nChildren == vec_eq.children.size());
    assert(nChildren == vec_ineq.children.size());
 
-   if(node == -1)
-      return multiplyLinkingColTimesVec(col, vec_eq, vec_ineq);
+   if(col.node == -1)
+      return multiplyLinkingColTimesVec(col.index, vec_eq, vec_ineq);
    else
-      return multiplyLocalColTimesVec(node, col, vec_eq, vec_ineq);
+      return multiplyLocalColTimesVec(col, vec_eq, vec_ineq);
 }
 
-double StochColumnStorage::multColTimesVecWithoutRootNode( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
+double StochColumnStorage::multColTimesVecWithoutRootNode( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
 {
-   assert(-1 <= node && node < static_cast<int>(nChildren));
+   assert(-1 <= col.node && col.node < static_cast<int>(nChildren));
    assert(nChildren == vec_eq.children.size());
    assert(nChildren == vec_ineq.children.size());
 
-   if(node == -1)
-      return multiplyLinkingColTimesVecWithoutRootNode(col, vec_eq, vec_ineq);
+   if(col.node == -1)
+      return multiplyLinkingColTimesVecWithoutRootNode(col.index, vec_eq, vec_ineq);
    else
-      return multiplyLocalColTimesVec(node, col, vec_eq, vec_ineq);
+      return multiplyLocalColTimesVec(col, vec_eq, vec_ineq);
 }
 
 double StochColumnStorage::multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
@@ -287,23 +291,25 @@ double StochColumnStorage::multiplyLinkingColTimesVecWithoutRootNode(int col, co
    return res;
 }
 
-double StochColumnStorage::multiplyLocalColTimesVec(int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq) const
+double StochColumnStorage::multiplyLocalColTimesVec( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq) const
 {
+   const int node = col.node;
+   const int col_index = col.index;
    double res = 0.0;
    assert(!vec_eq.isKindOf(kStochDummy) && !vec_ineq.isKindOf(kStochDummy));
    /* equality system */
    const SparseGenMatrix& Bi_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, B_MAT);
    const SparseGenMatrix& Bli_mat = *getSparseGenMatrixFromStochMat(*stored_cols_eq, node, A_MAT);
 
-   res += Bi_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, node, false), node);
-   res += Bli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, -1, true), node);
+   res += Bi_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, node, false), col_index);
+   res += Bli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_eq, -1, true), col_index);
 
    /* inequality system */
    const SparseGenMatrix& Di_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, B_MAT);
    const SparseGenMatrix& Dli_mat = *getSparseGenMatrixFromStochMat(*stored_cols_ineq, node, A_MAT);
 
-   res += Di_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, node, false), node);
-   res += Dli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, -1, true), node);
+   res += Di_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, node, false), col_index);
+   res += Dli_mat.localRowTimesVec(getSimpleVecFromRowStochVec(vec_ineq, -1, true), col_index);
 
    return res;
 }

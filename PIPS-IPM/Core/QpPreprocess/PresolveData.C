@@ -1308,20 +1308,22 @@ void PresolveData::fixEmptyColumn(const INDEX& col, double val)
 
 void PresolveData::fixColumn( const INDEX& col, double value)
 {
-   assert(col.isCol());
+   assert( col.isCol() );
+   assert( -1 <= col.node && col.node < nChildren );
+   assert( 0 <= col.index );
 
    if( TRACK_COLUMN(col.node, col.index) )
    {
       std::cout << "TRACKING_COLUMN: column " << col.index << " node " << col.node << " got fixed to " << value << std::endl;
    }
 
-   assert( -1 <= col.node && col.node < nChildren );
-   assert( 0 <= col.index );
    
-   /* current upper and lower bound as well als column - if linking variable then only proc zero stores current root column */
-   
-   // todo : dual info
-   postsolver->notifyFixedColumn(col, value, getSystemMatrix(EQUALITY_SYSTEM), getSystemMatrix(INEQUALITY_SYSTEM));
+   /* current upper and lower bound as well as column - linking variables have to be done by all processes simultaneously because communication in postsolve is required */
+   if(postsolver)
+   {
+      const double obj_coeff = getSimpleVecFromColStochVec(*presProb->g, col.node)[col.index];
+      postsolver->notifyFixedColumn(col, value, obj_coeff, getSystemMatrix(EQUALITY_SYSTEM), getSystemMatrix(INEQUALITY_SYSTEM));
+   }
 
 #ifndef NDEBUG
    double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, col.node)[col.index];

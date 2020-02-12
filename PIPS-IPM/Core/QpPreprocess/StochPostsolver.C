@@ -152,7 +152,7 @@ int StochPostsolver::storeColumn( const INDEX& col, const StochGenMatrix& matrix
    if( isColModified(col) )
    {
       markColClean(col);
-      const int stored_at = col_storage.storeCol(node, col_index, matrix_col_eq, matrix_col_ineq);
+      const int stored_at = col_storage.storeCol(col, matrix_col_eq, matrix_col_ineq);
 
       getSimpleVecFromColStochVec(*col_stored_last_at, node)[col_index] = stored_at;
 
@@ -260,20 +260,23 @@ void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const
 }
 
 /** postsolve has to compute the optimal dual multipliers here and set the primal value accordingly */
-void StochPostsolver::notifyFixedColumn( const INDEX& col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat)
+void StochPostsolver::notifyFixedColumn( const INDEX& col, double value, double obj_coeff, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat)
 {
    assert(col.isCol());
    assert(!wasColumnRemoved(col));
    markColumnRemoved(col);
 
-   // todo : dual postsolve
-   // todo : add matrix to store columns
-   // todo : store column
-
    /* store current upper and lower bounds of x and the local column */
+   const int col_index = col_storage.storeCol(col, eq_mat, ineq_mat);
+
    reductions.push_back(FIXED_COLUMN);
+
    indices.push_back(col);
+
+   int_values.push_back(col_index);
+
    float_values.push_back(value);
+   float_values.push_back(obj_coeff);
 
    finishNotify();
 }
@@ -438,7 +441,6 @@ void StochPostsolver::markRowAdded(const INDEX& row )
 
 // todo : usage and check of padding origrow - can already be done - even without any dual postsolve stuff
 // todo : sort reductions by nodes ? and then reverse ?
-// todo : at the moment only replaces whatever is given as x with the x solution in the original soution space
 PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Variables& original_solution) const
 {
    if(my_rank == 0)
@@ -471,9 +473,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    StochVector& phi_vec = dynamic_cast<StochVector&>(*stoch_original_sol.phi);
    StochVector& v_vec = dynamic_cast<StochVector&>(*stoch_original_sol.v);
    StochVector& w_vec = dynamic_cast<StochVector&>(*stoch_original_sol.w);
-
-   // todo
-   /* dual solution is now reduced solution padded with zeros */
 
    /* post-solve the reductions in reverse order */
    for( int i = reductions.size() - 1; i >= 0; --i )
@@ -561,6 +560,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             /* set dual multipliers to zero and mark row as added */
             getSimpleVecFromRowStochVec(*padding_origrow_inequality, node, linking_row)[row] = 1;
 
+            /* dual of row is zero */
             getSimpleVecFromRowStochVec(z_vec, node, linking_row)[row] = 0;
             getSimpleVecFromRowStochVec(lambda_vec, node, linking_row)[row] = 0;
             getSimpleVecFromRowStochVec(pi_vec, node, linking_row)[row] = 0;
@@ -570,15 +570,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             if( iclow == 1 )
                assert(PIPSisLEFeas(lhs, value_row));
             if( icupp == 1 )
-            {
-               if(!PIPSisLEFeas(value_row, rhs))
-               {
-                  std::cout << system_type << " " << node << " " << linking_row << " " << row << std::endl;
-                  std::cout << value_row << " " << rhs << " " << lhs << " " << iclow << " " << icupp << std::endl;
-               }
                assert(PIPSisLEFeas(value_row, rhs));
-            }
 
+            /* set correct slacks */
             if( iclow == 1)
                getSimpleVecFromRowStochVec(t_vec, node, linking_row)[row] = value_row - lhs;
             else
@@ -745,24 +739,47 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       case FIXED_COLUMN:
       {
          assert(first_index + 1 == next_first_index);
-         assert(first_float_val + 1 == next_first_float_val);
-         assert(first_int_val == next_first_int_val);
+         assert(first_float_val + 2 == next_first_float_val);
+         assert(first_int_val + 1 == next_first_int_val);
 
          const INDEX& idx_col = indices.at(first_index);
          assert(idx_col.index_type == COL);
 
          const int column = idx_col.index;
          const int node = idx_col.node;
-         const double value = float_values[first_float_val];
+         const int index_stored_col = int_values.at(first_int_val);
+         const double value = float_values.at(first_float_val);
+         const double obj_coeff = float_values.at(first_float_val + 1);
 
          assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
          assert(wasColumnRemoved(idx_col));
 
          /* mark entry as set and set x value to fixation */
-         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
+         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1.0;
+
+         /* set x value */
          getSimpleVecFromColStochVec(x_vec, node)[column] = value;
 
-         // todo : dual postsolve
+         /* set slacks for x bounds to zero (bounds were tight) */
+         getSimpleVecFromColStochVec(v_vec, node)[column] = 0.0;
+         getSimpleVecFromColStochVec(w_vec, node)[column] = 0.0;
+
+         /* set duals for bounds to satisfy reduced costs of reintroduced column times x */
+         const double col_times_duals = col_storage.multColTimesVec( INDEX(COL, node, index_stored_col), y_vec, z_vec);
+         const double reduced_costs = obj_coeff - col_times_duals;
+
+         /* set duals of bounds of x */
+         double& gamma = getSimpleVecFromColStochVec(gamma_vec, node)[column];
+         double& phi = getSimpleVecFromColStochVec(phi_vec, node)[column];
+
+         gamma = 0.0;
+         phi = 0.0;
+         if( PIPSisLT(reduced_costs, 0.0) )
+            phi = -reduced_costs;
+         else if( PIPSisLT(0.0, reduced_costs) )
+            gamma = reduced_costs;
+
+         assert( PIPSisZero(reduced_costs - gamma + phi) );
          break;
       }
       case FIXED_EMPTY_COLUMN:

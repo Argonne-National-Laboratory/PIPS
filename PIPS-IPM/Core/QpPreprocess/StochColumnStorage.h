@@ -18,10 +18,10 @@ public:
    StochColumnStorage( const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
    ~StochColumnStorage();
 
-   int storeCol( int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
+   int storeCol( const INDEX& col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
 
-   double multColTimesVec( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
-   double multColTimesVecWithoutRootNode( int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
+   double multColTimesVec( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
+   double multColTimesVecWithoutRootNode( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq ) const;
 
    // todo: delete Column from storage
 private:
@@ -37,9 +37,9 @@ private:
    unsigned int nChildren;
 
    int storeLinkingCol(int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
-   int storeLocalCol(int node, int col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
+   int storeLocalCol( const INDEX& col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part);
 
-   double multiplyLocalColTimesVec(int node, int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
+   double multiplyLocalColTimesVec( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
    double multiplyLinkingColTimesVec(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
    double multiplyLinkingColTimesVecWithoutRootNode(int col, const StochVector& vec_eq, const StochVector& vec_ineq) const;
 
