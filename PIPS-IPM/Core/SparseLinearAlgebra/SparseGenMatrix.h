@@ -189,6 +189,9 @@ public:
   void freeDynamicStorage();
 
   virtual int appendRow( const SparseGenMatrix& matrix_row, int row );
+  /** appends col - need matrix_col to have a transposed! */
+  virtual int appendCol(const SparseGenMatrix& matrix_col, int col);
+
   virtual double localRowTimesVec( const SimpleVector& vec, int row ) const;
   virtual void axpyWithRowAt(double alpha, SimpleVector& y, int row) const;
 

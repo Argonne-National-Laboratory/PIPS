@@ -765,7 +765,21 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          getSimpleVecFromColStochVec(w_vec, node)[column] = 0.0;
 
          /* set duals for bounds to satisfy reduced costs of reintroduced column times x */
-         const double col_times_duals = col_storage.multColTimesVec( INDEX(COL, node, index_stored_col), y_vec, z_vec);
+         double col_times_duals = 0.0;
+         if(node == -1)
+         {
+            /* we need to synchronize the column times duals in this case */
+            if(my_rank == 0)
+               col_times_duals = col_storage.multColTimesVec(INDEX(COL, node, index_stored_col), y_vec, z_vec);
+            else
+               col_times_duals = col_storage.multColTimesVecWithoutRootNode(INDEX(COL, node, index_stored_col), y_vec, z_vec);
+
+            PIPS_MPIgetSumInPlace(col_times_duals, MPI_COMM_WORLD);
+         }
+         else
+         {
+            col_times_duals = col_storage.multColTimesVec( INDEX(COL, node, index_stored_col), y_vec, z_vec);
+         }
          const double reduced_costs = obj_coeff - col_times_duals;
 
          /* set duals of bounds of x */
@@ -778,7 +792,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             phi = -reduced_costs;
          else if( PIPSisLT(0.0, reduced_costs) )
             gamma = reduced_costs;
-
          assert( PIPSisZero(reduced_costs - gamma + phi) );
          break;
       }

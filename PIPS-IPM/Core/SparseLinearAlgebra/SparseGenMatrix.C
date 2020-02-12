@@ -97,7 +97,7 @@ SparseGenMatrix* SparseGenMatrix::cloneEmptyRowsTransposed(bool switchToDynamicS
 
   if( m_Mt )
   {
-     assert(clone->m_Mt == NULL);
+     assert(clone->m_Mt == nullptr);
      clone->m_Mt = new SparseGenMatrix(0, m_Mt->getStorageRef().m, 0);
   }
 
@@ -840,8 +840,21 @@ int SparseGenMatrix::appendRow(const SparseGenMatrix& matrix_row, int row)
 {
    assert( hasDynamicStorage() );
    assert( !hasTransposed() );
+   assert( matrix_row.hasDynamicStorage() );
 
    mStorageDynamic->appendRow( matrix_row.getStorageDynamicRef(), row );
+
+   return mStorageDynamic->getM() - 1;
+}
+
+int SparseGenMatrix::appendCol(const SparseGenMatrix& matrix_col, int col)
+{
+   assert( matrix_col.hasTransposed() );
+   assert( matrix_col.hasDynamicStorage() );
+   assert( hasDynamicStorage() );
+   assert( !hasTransposed() );
+
+   mStorageDynamic->appendRow( matrix_col.getStorageDynamicTransposedRef(), col );
 
    return mStorageDynamic->getM() - 1;
 }

@@ -17,8 +17,6 @@ StochGenMatrix::StochGenMatrix(int id,
     mpiComm(mpiComm_), iAmDistrib(0),
     workPrimalVec(nullptr)
 {
-  //cout << "StochGenMatrix-> " << A_m << " " << A_n << " " << B_m << " " << B_n << " " << endl;
-
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
   Blmat = new SparseGenMatrix(0, 0, 0);
@@ -68,7 +66,6 @@ StochGenMatrix::StochGenMatrix(int id,
 
 StochGenMatrix::~StochGenMatrix()
 {
-  //cout << "~~~~~~~~StochGenMatrix" << endl;
   for(size_t it = 0; it < children.size(); it++)
     delete children[it];
 
