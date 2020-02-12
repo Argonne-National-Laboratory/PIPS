@@ -263,7 +263,7 @@ void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const
 void StochPostsolver::notifyFixedColumn( const INDEX& col, double value, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat)
 {
    assert(col.isCol());
-   assert( !wasColumnRemoved(col) );
+   assert(!wasColumnRemoved(col));
    markColumnRemoved(col);
 
    // todo : dual postsolve
