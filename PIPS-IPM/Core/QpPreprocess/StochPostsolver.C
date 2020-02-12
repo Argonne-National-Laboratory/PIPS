@@ -792,7 +792,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             phi = -reduced_costs;
          else if( PIPSisLT(0.0, reduced_costs) )
             gamma = reduced_costs;
-         assert( PIPSisZero(reduced_costs - gamma + phi) );
+
+         assert( PIPSisZeroFeas(reduced_costs - gamma + phi) );
          break;
       }
       case FIXED_EMPTY_COLUMN:
