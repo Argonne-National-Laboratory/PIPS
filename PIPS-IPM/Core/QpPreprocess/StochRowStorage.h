@@ -10,6 +10,7 @@
 
 #include "StochGenMatrix.h"
 #include "StochVector.h"
+#include "SystemType.h"
 
 class StochRowStorage
 {
@@ -17,14 +18,14 @@ public:
    StochRowStorage(const StochGenMatrix& system_matrix);
    ~StochRowStorage();
 
-   int storeRow( int node, int row, bool linking_row, const StochGenMatrix& matrix_row);
+   int storeRow( const INDEX& row, const StochGenMatrix& matrix_row);
 
    /** y = beta * y + alpha * stored */
-   void axpyAtRow(double beta, StochVector &y, double alpha, int node, int row, bool linking_row) const;
-   double multRowTimesVec(int node, int row, bool linking_row, const StochVector &vec) const;
+   void axpyAtRow(double beta, StochVector &y, double alpha, const INDEX& row ) const;
+   double multRowTimesVec(const INDEX& row, const StochVector &vec) const;
    double multLinkingRowTimesVecWithoutBl0(int row, const StochVector &vec) const;
 
-   double getRowCoefficientAtColumn( int node_row, int row, bool linking_row, int node_column, int colum ) const;
+   double getRowCoefficientAtColumn( const INDEX& row, const INDEX& col ) const;
 
    // todo : deleteRowFromStorage
 private:

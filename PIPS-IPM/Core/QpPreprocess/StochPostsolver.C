@@ -121,7 +121,7 @@ int StochPostsolver::storeRow( const INDEX& row, const StochGenMatrix& matrix_ro
    {
       markRowClean(row);
 
-      const int stored_at = row_storage.storeRow(node, row_index, linking_row, matrix_row);
+      const int stored_at = row_storage.storeRow(row, matrix_row);
       if( system_type == EQUALITY_SYSTEM )
          getSimpleVecFromRowStochVec(*eq_row_stored_last_at, node, linking_row)[row_index] = stored_at;
       else
@@ -175,7 +175,7 @@ void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType 
    throw std::runtime_error("Not yet implemented");
 }
 
-void StochPostsolver::notifyFreeColumnSingleton( const INDEX& row, double rhs, const INDEX& col, const StochGenMatrix& matrix_row )
+void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row )
 {
    assert(row.isRow());
    assert(col.isCol());
@@ -188,14 +188,18 @@ void StochPostsolver::notifyFreeColumnSingleton( const INDEX& row, double rhs, c
    
    // save dual postsolve info
    // save row for primal postsolve info
-   int stored_row_idx = storeRow(row, matrix_row);
+   const int stored_row_idx = storeRow(row, matrix_row);
+
+   reductions.push_back( FREE_COLUMN_SINGLETON_EQUALITY );
 
    indices.push_back(col);
    indices.push_back(row);
 
    float_values.push_back(rhs);
+   float_values.push_back(obj_coeff);
+   float_values.push_back(xlow);
+   float_values.push_back(xupp);
    int_values.push_back(stored_row_idx);
-   reductions.push_back( FREE_COLUMN_SINGLETON );
 
    finishNotify();
 }
@@ -429,7 +433,7 @@ void StochPostsolver::markRowRemoved(const INDEX& row)
 }
 
 // todo use somehow?
-void StochPostsolver::markRowAdded(const INDEX& row )
+void StochPostsolver::markRowAdded(const INDEX& row)
 {
    assert(row.isRow());
    assert(wasRowRemoved(row));
@@ -532,14 +536,14 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             assert(PIPS_MPIisValueEqual(row, MPI_COMM_WORLD));
 
             if(my_rank == 0)
-               value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
+               value_row = row_storage.multRowTimesVec( INDEX(ROW, node, index_stored_row, linking_row, EQUALITY_SYSTEM), x_vec );
             else
                value_row = row_storage.multLinkingRowTimesVecWithoutBl0(index_stored_row, x_vec);
             /* this might get very expensive if there is many redundant linking rows */
             PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
          }
          else
-            value_row = row_storage.multRowTimesVec(node, index_stored_row, linking_row, x_vec);
+            value_row = row_storage.multRowTimesVec( INDEX(ROW, node, index_stored_row, linking_row, EQUALITY_SYSTEM), x_vec );
 
          if( system_type == EQUALITY_SYSTEM )
          {
@@ -678,7 +682,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                {
                   const double old_phi = phi;
 
-                  const double coeff = row_storage.getRowCoefficientAtColumn(node_row, index_stored_row, linking_row, node_column, column);
+                  const double coeff = row_storage.getRowCoefficientAtColumn( INDEX(ROW, node_row, index_stored_row, linking_row, EQUALITY_SYSTEM), INDEX(COL, node_column, column) );
                   /* set z/y of corresponding row such that c_i* deltaz//a_i* deltay = phi */
                   assert(!PIPSisZero(coeff));
                   const double change_dual_row = old_phi/coeff;
@@ -689,7 +693,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                   StochVectorHandle tmp_pos(dynamic_cast<StochVector*>(gamma_vec.clone()));
 
                   /* calculate multiplier_change times row */
-                  row_storage.axpyAtRow(0.0, *tmp_pos, change_dual_row, node_row, index_stored_row, linking_row);
+                  row_storage.axpyAtRow(0.0, *tmp_pos, change_dual_row, INDEX(ROW, node_row, index_stored_row, linking_row, EQUALITY_SYSTEM) );
                   StochVectorHandle tmp_neg(dynamic_cast<StochVector*>(tmp_pos->cloneFull()));
 
                   tmp_pos->selectPositive();
@@ -710,7 +714,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                {
                   const double old_gamma = gamma;
 
-                  const double coeff = row_storage.getRowCoefficientAtColumn(node_row, index_stored_row, linking_row, node_column, column);
+                  const double coeff = row_storage.getRowCoefficientAtColumn( INDEX(ROW, node_row, index_stored_row, linking_row, EQUALITY_SYSTEM), INDEX(COL, node_column, column) );
                   /* set z/y of corresponding row such that coeff*z//coeff*y = -gamma */
                   assert(!PIPSisZero(coeff));
                   const double change_dual_row = -old_gamma/coeff;
@@ -719,7 +723,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                   StochVectorHandle tmp_pos(dynamic_cast<StochVector*>(gamma_vec.clone()));
 
                   /* calculate -multiplier_change times row */
-                  row_storage.axpyAtRow(0.0, *tmp_pos, -change_dual_row, node_row, index_stored_row, linking_row);
+                  row_storage.axpyAtRow(0.0, *tmp_pos, -change_dual_row, INDEX(ROW, node_row, index_stored_row, linking_row, EQUALITY_SYSTEM) );
                   StochVectorHandle tmp_neg(dynamic_cast<StochVector*>(tmp_pos->cloneFull()));
 
                   tmp_pos->selectPositive();
@@ -889,11 +893,11 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert(row.isRow());
          assert(row.system_type == EQUALITY_SYSTEM);
          assert(col.isCol());
+         assert(wasRowRemoved(row));
+         assert(wasColumnRemoved(col));
 
          const double xlow_old = float_values.at(first_float_val);
          const double xupp_old = float_values.at(first_float_val + 1);
-//         const double xlow_new = float_values.at(first_float_val + 2);
-//         const double xupp_new = float_values.at(first_float_val + 3);
          const double coeff = float_values.at(first_float_val + 4);
 
          assert(!PIPSisZero(coeff));
@@ -972,6 +976,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert(xlow_new == INF_NEG_PRES || xupp_new == INF_POS_PRES);
          assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
 
+         assert(wasRowRemoved(row));
+
          bool lower_bound_changed = (xlow_new != INF_NEG_PRES);
 
          const double curr_x = getSimpleVecFromColStochVec(x_vec, col.node)[col.index];
@@ -1008,42 +1014,81 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          }
          break;
       }
-      case FREE_COLUMN_SINGLETON:
+      case FREE_COLUMN_SINGLETON_EQUALITY:
       {
          assert(first_index + 2 == next_first_index);
-         assert(first_float_val + 1 == next_first_float_val);
+         assert(first_float_val + 4 == next_first_float_val);
          assert(first_int_val + 1 == next_first_int_val);
 
-         const INDEX& idx_col = indices.at(first_index);
-         const INDEX& idx_row = indices.at(first_index + 1);
-         assert(idx_col.isCol());
-         assert(idx_row.isRow());
+         const INDEX& col = indices.at(first_index);
+         const INDEX& row = indices.at(first_index + 1);
+         assert(col.isCol());
+         assert(row.isRow());
+         assert(row.system_type == EQUALITY_SYSTEM);
 
-         const int column = idx_col.index;
-         const int node_column = idx_col.node;
+         const int col_index = col.index;
+         const int node_col = col.node;
 
-         const bool linking_row = idx_row.linking;
-//         const int row_idx = idx_row.index;
-         const int node_row = idx_row.node;
-//         const SystemType system_type = idx_row.system_type;
+         const bool linking_row = row.linking;
+         const int row_index = row.index;
+         const int node_row = row.node;
 
          const double rhs = float_values.at(first_float_val);
+         const double obj_coeff = float_values.at(first_float_val + 1);
+         const double xlow = float_values.at(first_float_val + 2);
+         const double xupp = float_values.at(first_float_val + 3);
+
          const int stored_row_idx = int_values.at(first_int_val);
 
          assert(!linking_row); // todo
 
-         assert(wasColumnRemoved(idx_col));
-         assert(PIPSisZero(getSimpleVecFromColStochVec(x_vec, node_column)[column]));
+         assert(wasColumnRemoved(col));
+         assert(wasRowRemoved(row));
+
+         double& x_val = getSimpleVecFromColStochVec(x_vec, node_col)[col_index];
+         assert(PIPSisZero(x_val));
 
          /* mark column as set */
-         getSimpleVecFromColStochVec(*padding_origcol, node_column)[column] = 1;
-         getSimpleVecFromColStochVec(x_vec, node_column)[column] = 0;
+         getSimpleVecFromColStochVec(*padding_origcol, node_col)[col_index] = 1;
+         getSimpleVecFromRowStochVec(*padding_origrow_equality, node_row, linking_row)[row_index] = 1;
 
-         double value_row = row_storage.multRowTimesVec(node_row, stored_row_idx, linking_row, x_vec);
-         assert(std::abs(value_row) != std::numeric_limits<double>::infinity());
+         const double value_row = row_storage.multRowTimesVec( INDEX(ROW, node_row, stored_row_idx, linking_row, EQUALITY_SYSTEM), x_vec);
+         const double row_coeff = row_storage.getRowCoefficientAtColumn(row, col);
 
-         getSimpleVecFromColStochVec(x_vec, node_column)[column] = rhs - value_row;
+         assert(!PIPSisZero(row_coeff));
+         assert(std::abs(value_row) != INF_POS_PRES);
 
+         /* recover primal value */
+         x_val = (rhs - value_row) / row_coeff;
+
+         /* compute slacks and set duals for bounds to zero */
+         double& slack_lower = getSimpleVecFromColStochVec(v_vec, col.node)[col.index];
+         double& slack_upper = getSimpleVecFromColStochVec(w_vec, col.node)[col.index];
+
+         if( xlow == INF_NEG_PRES )
+            slack_lower = 0.0;
+         else
+         {
+            assert( PIPSisLE(xlow, x_val) );
+            slack_lower = xlow - x_val;
+         }
+
+         if( xupp == INF_POS_PRES )
+            slack_upper = 0.0;
+         else
+         {
+            assert( PIPSisLE(x_val, xupp) );
+            slack_upper = xupp - x_val;
+         }
+
+         getSimpleVecFromColStochVec(gamma_vec, node_col)[col_index] = 0.0;
+         getSimpleVecFromColStochVec(phi_vec, node_col)[col_index] = 0.0;
+
+         /* set dual of row */
+         getSimpleVecFromRowStochVec(y_vec, node_row, linking_row)[row_index] = obj_coeff / row_coeff;
+
+         assert( PIPSisZero(obj_coeff - getSimpleVecFromRowStochVec(y_vec, node_row, linking_row)[row_index] * row_coeff) );
+         assert( PIPSisZero(x_val * row_coeff + value_row - rhs) );
          break;
       }
       case PARALLEL_ROW_SUBSTITUTION:

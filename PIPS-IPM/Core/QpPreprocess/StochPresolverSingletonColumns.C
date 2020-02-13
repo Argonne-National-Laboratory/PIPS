@@ -137,9 +137,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
 
    if( implied_free && PIPSisEQ(obj, 0.0) )
    {
-      // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
-      // std::cout << node_col << "\taa\t" << col << std::endl;
-      presData.removeImpliedFreeColumnSingleton( row, col );
+      presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
       return true;
    }
 
@@ -149,9 +147,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
       /* (originally) free singleton columns just get deleted together with their row */
       if( implied_free )
       {
-         // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
-         // std::cout << node_col << "\tbb\t" << col << std::endl;
-         presData.removeImpliedFreeColumnSingleton( row, col );
+         presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
          return true;
       }
    }

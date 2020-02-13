@@ -8,6 +8,8 @@
 #ifndef PIPS_IPM_CORE_QPPREPROCESS_SYSTEMTYPE_H_
 #define PIPS_IPM_CORE_QPPREPROCESS_SYSTEMTYPE_H_
 
+#include <ostream>
+
 enum SystemType
 {
    EQUALITY_SYSTEM,
@@ -37,11 +39,29 @@ struct INDEX
    inline bool isRow() const { return index_type == ROW; };
    inline bool isCol() const { return index_type == COL; };
 
+   friend std::ostream& operator<< (std::ostream &out, const INDEX& i)
+   {
+      if(i.isRow())
+      {
+         out << "INDEX(ROW," << i.node << "," << i.index << "," << (i.linking ? "true" : "false") << "," << ((i.system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ")";
+      }
+      else if(i.isCol())
+      {
+         out << "INDEX(COL," << i.node << "," << i.index << ")";
+      }
+      else
+      {
+         out << "INDEX(EMPTY_INDEX)" << std::endl;
+      }
+      return out;
+   }
+
    const IndexType index_type;
    const int node;
    const int index;
    const bool linking;
    const SystemType system_type;
-} ;
+};
+
 
 #endif /* SYSTEMTYPE_H_ */

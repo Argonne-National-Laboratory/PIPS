@@ -2013,30 +2013,43 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 }
 
 // TODO : check this once more
-void PresolveData::removeImpliedFreeColumnSingleton( const INDEX& row, const INDEX& col)
+void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col)
 {
+   /* removing multiple linking variables in one run is possible since they get communicated only when the objective changes get communicated too
+    * thus no process will remove a linking variable as singleton column with outdated objective vector information
+    */
    assert( row.isRow() );
    assert( col.isCol() );
+   assert( row.system_type == EQUALITY_SYSTEM );
+   assert( !nodeIsDummy(row.node) );
+   assert( !row.linking );
+   assert( !wasRowRemoved(row) );
+   assert( !wasColumnRemoved(col) );
 
-   const SystemType system_type = row.system_type;
-   const int node_row = row.node;
    const int node_col = col.node;
-   const bool linking_row = row.linking;
    const int col_index = col.index;
-   const int row_index = row.index;
-
-   assert( system_type == EQUALITY_SYSTEM );
-   assert( !nodeIsDummy(node_row) );
-   assert( !linking_row );
 
    if( TRACK_COLUMN(node_col, col_index) )
      std::cout << "TRACKING: tracked column removed as (implied) free column singleton" << std::endl;
    if(TRACK_ROW(node_row, row_index, system_type, linking_row) )
       std::cout << "TRACKING: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
 
-   const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row )[row_index];
+   const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, row.node, row.linking )[row.index];
 
-   postsolver->notifyFreeColumnSingleton( row, rhs, col, getSystemMatrix(system_type));
+   const double obj_coeff = (node_col == -1) ? getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index] + (*objective_vec_chgs)[col_index] :
+         getSimpleVecFromColStochVec(*presProb->g, node_col)[col_index];
+
+   double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), node_col)[col_index];
+   double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node_col)[col_index];
+   double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node_col)[col_index];
+   double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node_col)[col_index];
+
+   if( PIPSisZero(ixlow) )
+      assert( xlow == INF_NEG_PRES );
+   if( PIPSisZero(ixupp) )
+      assert( xupp == INF_POS_PRES );
+
+   postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, xlow, xupp, getSystemMatrix(EQUALITY_SYSTEM));
 
    adaptObjectiveSubstitutedRow( row, col );
 
@@ -2044,16 +2057,15 @@ void PresolveData::removeImpliedFreeColumnSingleton( const INDEX& row, const IND
    removeRow( row );
 
    /* remove row and mark it for the fix empty columns presolver */
-   getSimpleVecFromColStochVec(*(presProb->ixlow), node_col)[col_index] = 0;
-   getSimpleVecFromColStochVec(*(presProb->blx), node_col)[col_index] = 0;
-   getSimpleVecFromColStochVec(*(presProb->ixupp), node_col)[col_index] = 0;
-   getSimpleVecFromColStochVec(*(presProb->bux), node_col)[col_index] = 0;
+   // todo : is this actually necessary?
+   ixlow = xlow = xupp = ixupp = 0;
 
    if(node_col == -1)
       outdated_linking_var_bounds = true;
 
    if(node_col == -1)
    {
+      assert( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col_index] + (*nnzs_col_chgs)[col_index] == 0 );
       assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, -1)[col_index] + (*objective_vec_chgs)[col_index]) );
    }
    else
