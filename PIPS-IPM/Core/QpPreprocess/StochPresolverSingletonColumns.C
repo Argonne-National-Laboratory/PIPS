@@ -49,10 +49,12 @@ void StochPresolverSingletonColumns::applyPresolving()
    while( !presData.getSingletonCols().empty() )
    {
       bool removed = false;
-      removed = removeSingletonColumn(presData.getSingletonCols().front().node, presData.getSingletonCols().front().index);
+      const INDEX& col = presData.getSingletonCols().front();
+      removed = removeSingletonColumn(col);
 
-      if( removed && (presData.getSingletonCols().front().node != -1 || my_rank == 0) )
+      if( removed && (col.node != -1 || my_rank == 0) )
          ++removed_cols_run;
+
       presData.getSingletonCols().pop();
    }
 
@@ -83,38 +85,43 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.verifyActivities());
 }
 
-bool StochPresolverSingletonColumns::removeSingletonColumn(const int &node_col, int col)
+bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
 {
-   assert(-1 <= node_col && node_col < nChildren);
-   assert(!presData.nodeIsDummy(node_col));
+   assert(col.isCol());
 
-   updatePointersForCurrentNode(node_col, EQUALITY_SYSTEM);
-   const SimpleVectorBase<int> &nnzs_col = (node_col == -1) ? *currNnzColParent : *currNnzColChild;
+   const int node = col.node;
+   const int col_index = col.index;
 
-   if( nnzs_col[col] == 0 )
+   assert( -1 <= node && node < nChildren );
+   assert( !presData.nodeIsDummy(node) );
+
+   updatePointersForCurrentNode(node, EQUALITY_SYSTEM);
+   const SimpleVectorBase<int> &nnzs_col = (node == -1) ? *currNnzColParent : *currNnzColChild;
+
+   if( nnzs_col[col_index] == 0 )
       return false;
-   assert(nnzs_col[col] == 1);
 
-   int node_row = -3;
-   int row = -3;
-   bool linking_row = false;
-   SystemType system_type = EQUALITY_SYSTEM;
+   assert(nnzs_col[col_index] == 1);
 
+   bool found = false;
    /* find the associated row via checking transposed matrices */
-   bool found = findRowForColumnSingleton(system_type, node_row, row, linking_row, node_col, col);
-
-   if( linking_row )
-      return false;
+   INDEX row = findRowForColumnSingleton(col, found);
 
    if( !found )
    {
       // TODO : singleton columns in linking parts need communication
-      assert(node_col == -1);
+      assert(row.index_type == EMPTY_INDEX);
+      assert( node == -1 );
       return false;
    }
+   assert(row.isRow());
 
-   assert(-1 <= node_row && node_row < nChildren);
-   updatePointersForCurrentNode(node_row, system_type);
+   // TODO : why - would this not be great?
+   if( row.linking )
+      return false;
+
+   assert(-1 <= row.node && row.node < nChildren);
+   updatePointersForCurrentNode(row.node, row.system_type);
 
    /* check whether col is free / implied free */
    bool lb_implied_free = false;
@@ -122,28 +129,29 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int &node_col, 
 
    // todo : pivot numerical limits
 
-   checkColImpliedFree(system_type, node_row, row, linking_row, node_col, col, lb_implied_free, ub_implied_free);
+   checkColImpliedFree(col, row, lb_implied_free, ub_implied_free);
    bool implied_free = lb_implied_free && ub_implied_free;
 
    /* if objective of variable is zero we can just remove it from the problem together with the containing row */
-   double obj = (node_col == -1) ? (*currgParent)[col] : (*currgChild)[col];
+   double obj = (node == -1) ? (*currgParent)[col_index] : (*currgChild)[col_index];
+
    if( implied_free && PIPSisEQ(obj, 0.0) )
    {
       // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
       // std::cout << node_col << "\taa\t" << col << std::endl;
-      presData.removeImpliedFreeColumnSingleton( INDEX(ROW, node_row, row, linking_row, system_type), INDEX(COL, node_col, col) );
+      presData.removeImpliedFreeColumnSingleton( row, col );
       return true;
    }
 
    /* equalitiy singleton variables */
-   if( system_type == EQUALITY_SYSTEM )
+   if( row.system_type == EQUALITY_SYSTEM )
    {
       /* (originally) free singleton columns just get deleted together with their row */
       if( implied_free )
       {
          // presData.writeRowLocalToStreamDense(std::cout, system_type, node_row, linking_row, row);
          // std::cout << node_col << "\tbb\t" << col << std::endl;
-         presData.removeImpliedFreeColumnSingleton( INDEX(ROW, node_row, row, linking_row, system_type), INDEX(COL, node_col, col) );
+         presData.removeImpliedFreeColumnSingleton( row, col );
          return true;
       }
    }
@@ -153,149 +161,131 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const int &node_col, 
    return false;
 }
 
-bool StochPresolverSingletonColumns::findRowForColumnSingleton(
-   SystemType &system_type,
-   int &node_row,
-   int &row,
-   bool &linking,
-   const int &node_col,
-   const int &col)
+INDEX StochPresolverSingletonColumns::findRowForColumnSingleton( const INDEX& col, bool& found )
 {
-   assert(-1 <= node_col && node_col < nChildren);
-   if( node_col == -1 )
-   {
-      if( findRowForLinkingSingleton(system_type, node_row, row, linking, col) )
-         return true;
-   }
-   else
-   {
-      node_row = node_col;
-      if( findRowForNonlinkingSingelton(system_type, row, linking, node_col, col) )
-         return true;
-   }
+   assert( col.isCol() );
+   assert(-1 <= col.node && col.node < nChildren);
 
-   return false;
+   if( col.node == -1 )
+      return findRowForLinkingSingleton(col.index, found);
+   else
+      return findRowForNonlinkingSingelton(col, found);
 }
 
-bool StochPresolverSingletonColumns::findRowForLinkingSingleton(
-   SystemType &system_type,
-   int &node_row,
-   int &row,
-   bool &linking,
-   const int &col)
+INDEX StochPresolverSingletonColumns::findRowForLinkingSingleton(int col, bool& found)
 {
    /* go through all children and check linking variables for the singleton row */
 
    /* equality part */
-   system_type = EQUALITY_SYSTEM;
-   if( findRowForLinkingSingletonInSystem(system_type, node_row, row, linking, col) )
-      return true;
+   INDEX row = findRowForLinkingSingletonInSystem(col, EQUALITY_SYSTEM, found);
+   if( found )
+      return row;
 
    /* inequality part */
-   system_type = INEQUALITY_SYSTEM;
-   if( findRowForLinkingSingletonInSystem(system_type, node_row, row, linking, col) )
-      return true;
-
-   return false;
+   return findRowForLinkingSingletonInSystem(col, INEQUALITY_SYSTEM, found);
 }
 
-bool StochPresolverSingletonColumns::findRowForNonlinkingSingelton(
-   SystemType &system_type,
-   int &row,
-   bool &linking,
-   const int &node_col,
-   const int &col)
+INDEX StochPresolverSingletonColumns::findRowForNonlinkingSingelton(const INDEX& col, bool& found)
 {
-   if( presData.nodeIsDummy(node_col) )
-      return false;
+   assert(col.isCol());
+   assert(col.node != -1);
+
+   if( presData.nodeIsDummy(col.node) )
+   {
+      found = false;
+      return INDEX();
+   }
 
    /* check Bmat and Blmat for the singleton row */
-   system_type = EQUALITY_SYSTEM;
-   linking = false;
+   SystemType row_system_type = EQUALITY_SYSTEM;
+   bool row_linking = false;
+   const int row_node = col.node;
+   int row_index = -1;
 
    /* equality part */
-   updatePointersForCurrentNode(node_col, system_type);
+   updatePointersForCurrentNode(row_node, row_system_type);
 
    /* Bmat */
    assert(currBmatTrans);
-   if( findRowForSingletonColumnInMatrix(*currBmatTrans, row, col) )
-      return true;
+
+   found = findRowForSingletonColumnInMatrix(*currBmatTrans, row_index, col.index);
+   if( found )
+      return INDEX(ROW, row_node, row_index, row_linking, row_system_type);
 
    /* Blmat */
    assert(currBlmatTrans);
-   if( findRowForSingletonColumnInMatrix(*currBlmatTrans, row, col) )
+   found = findRowForSingletonColumnInMatrix(*currBlmatTrans, row_index, col.index);
+   if( found )
    {
-      linking = true;
-      return true;
+      row_linking = true;
+      return INDEX(ROW, row_node, row_index, row_linking, row_system_type);
    }
 
    /* inequality part */
-   system_type = INEQUALITY_SYSTEM;
-   updatePointersForCurrentNode(node_col, system_type);
+   row_system_type = INEQUALITY_SYSTEM;
+   updatePointersForCurrentNode(row_node, row_system_type);
 
    /* Bmat */
    assert(currBmatTrans);
-   if( findRowForSingletonColumnInMatrix(*currBmatTrans, row, col) )
-      return true;
+   found = findRowForSingletonColumnInMatrix(*currBmatTrans, row_index, col.index);
+   if( found )
+      return INDEX(ROW, row_node, row_index, row_linking, row_system_type);
 
    /* Blmat */
    assert(currBlmatTrans);
-   if( findRowForSingletonColumnInMatrix(*currBlmatTrans, row, col) )
+   found = findRowForSingletonColumnInMatrix(*currBlmatTrans, row_index, col.index);
+   if( found )
    {
-      linking = true;
-      return true;
+      row_linking = true;
+      return INDEX(ROW, row_node, row_index, row_linking, row_system_type);
    }
 
-   return false;
+   return INDEX();
 }
 
-bool StochPresolverSingletonColumns::findRowForLinkingSingletonInSystem(
-   SystemType system_type,
-   int &node_row,
-   int &row,
-   bool &linking,
-   const int &col)
+INDEX StochPresolverSingletonColumns::findRowForLinkingSingletonInSystem(int col, SystemType system_type, bool& found)
 {
-   linking = false;
 
-   for( node_row = -1; node_row < nChildren; ++node_row )
+   for( int row_node = -1; row_node < nChildren; ++row_node )
    {
-      if( !presData.nodeIsDummy(node_row) )
+      if( !presData.nodeIsDummy(row_node) )
       {
-         updatePointersForCurrentNode(node_row, system_type);
+         int row_index = -1;
+         updatePointersForCurrentNode(row_node, system_type);
 
          /* check transposed for entry */
-         if( node_row == -1 )
+         if( row_node == -1 )
          {
             /* Bmat */
             assert(currBmatTrans);
-            if( findRowForSingletonColumnInMatrix(*currBmatTrans, row, col) )
-               return true;
+            found = findRowForSingletonColumnInMatrix(*currBmatTrans, row_index, col);
+            if( found )
+               return INDEX(ROW, row_node, row_index, false, system_type);
 
             /* Blmat */
             assert(currBlmatTrans);
-            if( findRowForSingletonColumnInMatrix(*currBlmatTrans, row, col) )
-            {
-               linking = true;
-               return true;
-            }
+            found = findRowForSingletonColumnInMatrix(*currBlmatTrans, row_index, col);
+            if( found )
+               return INDEX(ROW, row_node, row_index, true, system_type);
          }
          else
          {
             /* Amat */
             assert(currAmatTrans);
-            if( findRowForSingletonColumnInMatrix(*currAmatTrans, row, col) )
-               return true;
+            found = findRowForSingletonColumnInMatrix(*currAmatTrans, row_index, col);
+            if( found )
+               return INDEX(ROW, row_node, row_index, false, system_type);
          }
       }
    }
-   return false;
+   assert(found == false);
+   return INDEX();
 }
 
 bool StochPresolverSingletonColumns::findRowForSingletonColumnInMatrix(
    const SparseStorageDynamic &mat,
-   int &row,
-   const int &col)
+   int& row,
+   const int& col)
 {
    assert(col < mat.getM());
    if( mat.getRowPtr(col).start != mat.getRowPtr(col).end )
@@ -307,23 +297,20 @@ bool StochPresolverSingletonColumns::findRowForSingletonColumnInMatrix(
    return false;
 }
 
-void StochPresolverSingletonColumns::checkColImpliedFree(
-   SystemType system_type,
-   int node_row,
-   int row,
-   bool linking_row,
-   int node_col,
-   int col,
+void StochPresolverSingletonColumns::checkColImpliedFree(const INDEX& col, const INDEX& row,
    bool &lb_implied_free,
    bool &ub_implied_free)
 {
+   assert(col.isCol());
+   assert(row.isRow());
+
    ub_implied_free = lb_implied_free = false;
 
-   updatePointersForCurrentNode(node_row, system_type);
+   updatePointersForCurrentNode(row.node, row.system_type);
 
    /* check whether originally free */
-   const double ixupp_orig = getSimpleVecFromColStochVec(*origProb.ixupp, node_col)[col];
-   const double ixlow_orig = getSimpleVecFromColStochVec(*origProb.ixlow, node_col)[col];
+   const double ixupp_orig = getSimpleVecFromColStochVec(*origProb.ixupp, col.node)[col.index];
+   const double ixlow_orig = getSimpleVecFromColStochVec(*origProb.ixlow, col.node)[col.index];
 
    if( PIPSisZero(ixupp_orig) )
       ub_implied_free = true;
@@ -332,8 +319,8 @@ void StochPresolverSingletonColumns::checkColImpliedFree(
 
    /* check whether bound tightening found bounds from the variables row that make it implied free */
    ub_implied_free = ub_implied_free
-      || presData.varBoundImpliedFreeBy(true, INDEX(COL, node_col, col), INDEX(ROW, node_row, row, linking_row, system_type) );
+      || presData.varBoundImpliedFreeBy(true, col, row);
    lb_implied_free = lb_implied_free
-      || presData.varBoundImpliedFreeBy(false, INDEX(COL, node_col, col), INDEX(ROW, node_row, row, linking_row, system_type) );
+      || presData.varBoundImpliedFreeBy(false, col, row);
 
 }

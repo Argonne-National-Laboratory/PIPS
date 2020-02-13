@@ -19,21 +19,19 @@ public:
 
    ~StochPresolverSingletonColumns();
 
-   // remove singleton columns
    virtual void applyPresolving();
 
 private:
    long long removed_cols;
 
-   bool removeSingletonColumn(const int& node, int col);
-   bool findRowForColumnSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& node_col, const int& col );
-   bool findRowForLinkingSingleton( SystemType& system_type, int& node_row, int& row, bool& linking, const int& col);
-   bool findRowForLinkingSingletonInSystem( SystemType system_type, int& node_row, int& row, bool& linking, const int& col);
-   bool findRowForNonlinkingSingelton( SystemType& system_type, int& row, bool& linking, const int& node_col, const int& col);
-   bool findRowForSingletonColumnInMatrix( const SparseStorageDynamic& mat, int& row, const int& col);
+   bool removeSingletonColumn( const INDEX& col );
+   INDEX findRowForColumnSingleton( const INDEX& col, bool& found );
+   INDEX findRowForLinkingSingleton( int col, bool& found );
+   INDEX findRowForLinkingSingletonInSystem( int col, SystemType system_type, bool& found );
+   INDEX findRowForNonlinkingSingelton( const INDEX& col, bool& found );
+   bool findRowForSingletonColumnInMatrix( const SparseStorageDynamic& mat, int& row, const int& col );
 
-
-   void checkColImpliedFree( SystemType system_type, int node_row, int row, bool linking_row, int node_col, int col, bool& lb_implied_free, bool& ub_implied_free);
+   void checkColImpliedFree( const INDEX& col, const INDEX& row, bool& lb_implied_free, bool& ub_implied_free );
 };
 
 

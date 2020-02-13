@@ -22,10 +22,11 @@ enum BlockType
 };
 
 /* can point to a column or row of the problem - EQUALITY/INEQUALITY system has to be stored somewhere else */
-enum IndexType {COL, ROW};
+enum IndexType {COL, ROW, EMPTY_INDEX};
 
 struct INDEX
 {
+   INDEX() : index_type(EMPTY_INDEX), node(-2), index(-1), linking(false), system_type(EQUALITY_SYSTEM){};
    INDEX(IndexType index_type, int node, int index, bool linking = false, SystemType system_type = EQUALITY_SYSTEM) :
       index_type(index_type), node(node), index(index), linking(linking), system_type(system_type){};
 
