@@ -1042,7 +1042,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          assert(!linking_row); // todo
 
-         assert(wasColumnRemoved(col));
          assert(wasRowRemoved(row));
 
          double& x_val = getSimpleVecFromColStochVec(x_vec, node_col)[col_index];
