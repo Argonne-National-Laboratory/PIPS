@@ -43,6 +43,8 @@ void StochPresolverSingletonColumns::applyPresolving()
 #endif
    }
 
+   int removed_cols_run = 0;
+
    // main loop:
    while( !presData.getSingletonCols().empty() )
    {
@@ -50,15 +52,17 @@ void StochPresolverSingletonColumns::applyPresolving()
       removed = removeSingletonColumn(presData.getSingletonCols().front().node, presData.getSingletonCols().front().index);
 
       if( removed && (presData.getSingletonCols().front().node != -1 || my_rank == 0) )
-         ++removed_cols;
+         ++removed_cols_run;
       presData.getSingletonCols().pop();
    }
 
 #ifndef NDEBUG
+   PIPS_MPIgetSumInPlace(removed_cols_run, MPI_COMM_WORLD);
+   removed_cols += removed_cols_run;
    if( my_rank == 0 )
    {
       std::cout << "--- After singleton columns presolving:" << std::endl;
-      std::cout << "--- Removed " << removed_cols << " singleton columns" << std::endl;
+      std::cout << "\tRemoved columns during singleton column elimination: " << removed_cols << std::endl;
    }
    countRowsCols();
    if( my_rank == 0 )
