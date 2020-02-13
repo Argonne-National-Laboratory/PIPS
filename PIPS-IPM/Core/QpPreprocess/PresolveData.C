@@ -1118,16 +1118,57 @@ long PresolveData::resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig,
    return reset_bounds;
 }
 
-/* returns whether or not the current bound on col is implied by row */
+INDEX PresolveData::getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upper_bound)
+{
+   assert(col.isCol());
+
+   StochVectorBaseHandle<int>& by_node = upper_bound ? upper_bound_implied_by_node : lower_bound_implied_by_node;
+   StochVectorBaseHandle<int>& by_system = upper_bound ? upper_bound_implied_by_system : lower_bound_implied_by_system;
+   StochVectorBaseHandle<int>& by_row = upper_bound ? upper_bound_implied_by_row : lower_bound_implied_by_row;
+
+   const int row_node_int = getSimpleVecFromColStochVec( *by_node, col.node)[col.index];
+   const int system_type_int = getSimpleVecFromColStochVec( *by_system, col.node)[col.index];
+   const int row_index = getSimpleVecFromColStochVec( *by_row, col.node)[col.index];
+
+   if( row_node_int == -10 )
+   {
+      assert( system_type_int == -10 );
+      assert( row_index == -10 );
+      return INDEX();
+   }
+
+   assert( 0 <= row_index );
+   assert( -2 <= row_node_int && row_node_int < nChildren );
+   const int row_node = ( row_node_int == -2 ) ? -1 : row_node_int;
+   assert( 0 <= system_type_int && system_type_int <= 1 );
+   const SystemType system_type = ( system_type_int == 0 ) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
+   const bool linking = ( row_node_int == -2 ) ? true : false;
+
+   return INDEX(ROW, row_node, row_index, linking, system_type);
+}
+
+void PresolveData::markRowAsImplyingColumnBound(const INDEX& col, const INDEX& row, bool upper_bound)
+{
+   assert(row.isRow());
+   assert(col.isCol());
+
+   StochVectorBaseHandle<int>& by_node = upper_bound ? upper_bound_implied_by_node : lower_bound_implied_by_node;
+   StochVectorBaseHandle<int>& by_system = upper_bound ? upper_bound_implied_by_system : lower_bound_implied_by_system;
+   StochVectorBaseHandle<int>& by_row = upper_bound ? upper_bound_implied_by_row : lower_bound_implied_by_row;
+
+   getSimpleVecFromColStochVec( *by_node, col.node)[col.index] = (row.linking) ? -2 : row.node;
+   getSimpleVecFromColStochVec( *by_system, col.node)[col.index] = row.system_type;
+   getSimpleVecFromColStochVec( *by_row, col.node)[col.index] = row.index;
+}
+
+/** returns whether or not the current bound on column col is implied by row */
 bool PresolveData::varBoundImpliedFreeBy( bool upper, const INDEX& col, const INDEX& row)
 {
    assert(col.isCol());
    assert(row.isRow());
 
    const SystemType system_type = row.system_type;
-   const int node_col = col.node;
    const int node_row = row.node;
-   const int col_index = col.index;
    const int row_index = row.index;
    const bool linking_row = row.linking;
    // todo : not sure whether there is an instance that ever calls this
@@ -1136,30 +1177,21 @@ bool PresolveData::varBoundImpliedFreeBy( bool upper, const INDEX& col, const IN
    if( 0 == getSimpleVecFromRowStochVec( system_type == EQUALITY_SYSTEM ? *nnzs_row_A : *nnzs_row_C, node_row, linking_row)[row_index] )
       return false;
 
-   const int node_implied = ( !linking_row) ? node_row : -2;
-
    bool res = false;
    if( upper )
-   {
-      res = (getSimpleVecFromColStochVec( *upper_bound_implied_by_system, node_col)[col_index] == system_type &&
-         getSimpleVecFromColStochVec( *upper_bound_implied_by_node, node_col)[col_index] == node_implied &&
-         getSimpleVecFromColStochVec( *upper_bound_implied_by_row, node_col)[col_index] == row_index);
-   }
+      res = (row == getRowMarkedAsImplyingColumnBound(col, true));
    else
-   {
-      res = (getSimpleVecFromColStochVec( *lower_bound_implied_by_system, node_col)[col_index] == system_type &&
-         getSimpleVecFromColStochVec( *lower_bound_implied_by_node, node_col)[col_index] == node_implied &&
-         getSimpleVecFromColStochVec( *lower_bound_implied_by_row, node_col)[col_index] == row_index);
-   }
+      res = (row == getRowMarkedAsImplyingColumnBound(col, false));
 
+   /* check whether bounds is actually still implied by the row -- also checks whether col is still in that row */
    if( res == true )
    {
       bool upper_implied, lower_implied;
       varboundImpliedFreeFullCheck(upper_implied, lower_implied, col, row);
       if(upper)
-         assert(upper_implied);
+         return upper_implied;
       else
-         assert(lower_implied);
+         return lower_implied;
    }
 
    return res;
@@ -1168,6 +1200,8 @@ bool PresolveData::varBoundImpliedFreeBy( bool upper, const INDEX& col, const IN
 /* uses current activities (non-updated) to check whether said column's bounds are implied by row */
 void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, const INDEX& col, const INDEX& row) const
 {
+   assert(!outdated_activities);
+
    assert(col.isCol());
    assert(row.isRow());
 
@@ -1203,10 +1237,13 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
       int col_mat = mat.getJcolM(col_ptr);
       if( col_index == col_mat )
          break;
-
    }
-   /* assert something was found */
-   assert(col_ptr != row_end);
+
+   /* if nothing was found the column has already been removed from that row and nothing is implied anymore */
+   if(col_ptr == row_end)
+   {
+      return;
+   }
 
    /* coefficient of col in row */
    const double coeff = mat.getMat(col_ptr);
@@ -1452,10 +1489,7 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
       if( updateUpperBoundVariable( col, xupp_new) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
-         getSimpleVecFromColStochVec(*upper_bound_implied_by_system, node_col)[col_index] = system_type;
-         getSimpleVecFromColStochVec(*upper_bound_implied_by_row, node_col)[col_index] = row_index;
-         getSimpleVecFromColStochVec(*upper_bound_implied_by_node, node_col)[col_index] = (linking_row) ? -2 : node_row; // -2 for linking rows
-
+         markRowAsImplyingColumnBound(col, row, true);
          upper_bound_changed = true;
       }
    }
@@ -1467,10 +1501,7 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
       if( updateLowerBoundVariable(col, xlow_new) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
-         getSimpleVecFromColStochVec(*lower_bound_implied_by_system, node_col)[col_index] = system_type;
-         getSimpleVecFromColStochVec(*lower_bound_implied_by_row, node_col)[col_index] = row_index;
-         getSimpleVecFromColStochVec(*lower_bound_implied_by_node, node_col)[col_index] = (linking_row) ? -2 : node_row; // -2 for linking rows
-
+         markRowAsImplyingColumnBound(col, row, false);
          lower_bound_changed = true;
       }
    }

@@ -116,6 +116,7 @@ private:
       StochVectorBaseHandle<int> lower_bound_implied_by_row;
       StochVectorBaseHandle<int> lower_bound_implied_by_node;
 
+      // TODO a vector of INDEX would be nicer
       StochVectorBaseHandle<int> upper_bound_implied_by_system;
       StochVectorBaseHandle<int> upper_bound_implied_by_row;
       StochVectorBaseHandle<int> upper_bound_implied_by_node;
@@ -209,6 +210,9 @@ public :
 
       bool varBoundImpliedFreeBy( bool upper, const INDEX& col, const INDEX& row);
 private:
+      INDEX getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upper_bound);
+      void markRowAsImplyingColumnBound(const INDEX& col, const INDEX& row, bool upper_bound);
+
       void varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, const INDEX& col, const INDEX& row) const;
 
       /// methods for printing debug information
