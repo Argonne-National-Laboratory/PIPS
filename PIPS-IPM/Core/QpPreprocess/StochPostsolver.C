@@ -1039,6 +1039,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const double xupp = float_values.at(first_float_val + 3);
 
          const int stored_row_idx = int_values.at(first_int_val);
+         const INDEX stored_row(ROW, node_row, stored_row_idx, linking_row, EQUALITY_SYSTEM);
 
          assert(!linking_row); // todo
 
@@ -1051,8 +1052,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          getSimpleVecFromColStochVec(*padding_origcol, node_col)[col_index] = 1;
          getSimpleVecFromRowStochVec(*padding_origrow_equality, node_row, linking_row)[row_index] = 1;
 
-         const double value_row = row_storage.multRowTimesVec( INDEX(ROW, node_row, stored_row_idx, linking_row, EQUALITY_SYSTEM), x_vec);
-         const double row_coeff = row_storage.getRowCoefficientAtColumn(row, col);
+         assert(PIPSisZero(x_val));
+         const double value_row = row_storage.multRowTimesVec( stored_row, x_vec);
+         const double row_coeff = row_storage.getRowCoefficientAtColumn( stored_row, col);
 
          assert(!PIPSisZero(row_coeff));
          assert(std::abs(value_row) != INF_POS_PRES);
