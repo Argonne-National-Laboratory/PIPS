@@ -408,6 +408,7 @@ void StochPostsolver::markColumnRemoved(const INDEX& col )
 
 void StochPostsolver::markColumnAdded(const INDEX& col)
 {
+   assert(false);
    assert(col.isCol());
    assert(wasColumnRemoved(col));
    getSimpleVecFromColStochVec(*padding_origcol, col.node)[col.index] = 1;
@@ -435,6 +436,7 @@ void StochPostsolver::markRowRemoved(const INDEX& row)
 // todo use somehow?
 void StochPostsolver::markRowAdded(const INDEX& row)
 {
+   assert(false);
    assert(row.isRow());
    assert(wasRowRemoved(row));
    if(row.system_type == EQUALITY_SYSTEM)
@@ -759,7 +761,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert(wasColumnRemoved(idx_col));
 
          /* mark entry as set and set x value to fixation */
-         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1.0;
+         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
 
          /* set x value */
          getSimpleVecFromColStochVec(x_vec, node)[column] = value;
@@ -893,8 +895,10 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert(row.isRow());
          assert(row.system_type == EQUALITY_SYSTEM);
          assert(col.isCol());
-         assert(wasRowRemoved(row));
-         assert(wasColumnRemoved(col));
+
+         /* row should have been re-added by redundant row event by now - same for column by fix column event */
+         assert(!wasRowRemoved(row));
+         assert(!wasColumnRemoved(col));
 
          const double xlow_old = float_values.at(first_float_val);
          const double xupp_old = float_values.at(first_float_val + 1);
@@ -976,7 +980,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert(xlow_new == INF_NEG_PRES || xupp_new == INF_POS_PRES);
          assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
 
-         assert(wasRowRemoved(row));
+         /* should have been re-added by now */
+         assert( !wasColumnRemoved(col) );
+         assert( !wasRowRemoved(row) );
 
          bool lower_bound_changed = (xlow_new != INF_NEG_PRES);
 
@@ -1043,7 +1049,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          assert(!linking_row); // todo
 
-         assert(wasRowRemoved(row));
+         assert(wasRowRemoved(row)); // todo
 
          double& x_val = getSimpleVecFromColStochVec(x_vec, node_col)[col_index];
          assert(PIPSisZero(x_val));
@@ -1078,6 +1084,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             slack_upper = 0.0;
          else
          {
+            if(!PIPSisLE(x_val, xupp))
+               std::cout << col << "\n" << row << std::endl;
             assert( PIPSisLE(x_val, xupp) );
             slack_upper = xupp - x_val;
          }

@@ -304,19 +304,17 @@ void StochPresolverSingletonColumns::checkColImpliedFree(const INDEX& col, const
 
    updatePointersForCurrentNode(row.node, row.system_type);
 
-   /* check whether originally free */
-   const double ixupp_orig = getSimpleVecFromColStochVec(*origProb.ixupp, col.node)[col.index];
-   const double ixlow_orig = getSimpleVecFromColStochVec(*origProb.ixlow, col.node)[col.index];
+//   /* check whether free */
+   const double ixupp = getSimpleVecFromColStochVec(*presData.getPresProb().ixupp, col.node)[col.index];
+   const double ixlow = getSimpleVecFromColStochVec(*presData.getPresProb().ixlow, col.node)[col.index];
 
-   if( PIPSisZero(ixupp_orig) )
+   if( PIPSisZero(ixupp) )
       ub_implied_free = true;
-   if( PIPSisZero(ixlow_orig) )
+   if( PIPSisZero(ixlow) )
       lb_implied_free = true;
 
    /* check whether bound tightening found bounds from the variables row that make it implied free */
-   ub_implied_free = ub_implied_free
-      || presData.varBoundImpliedFreeBy(true, col, row);
-   lb_implied_free = lb_implied_free
-      || presData.varBoundImpliedFreeBy(false, col, row);
+   ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy(true, col, row);
+   lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy(false, col, row);
 
 }

@@ -25,17 +25,17 @@
 
 // #ifndef NDEBUG
 //   #define TRACK_C
-//   #define COLUMN_INDEX 82
-//   #define COL_NODE -1
+//   #define COLUMN_INDEX 6496
+//   #define COL_NODE 83
 // #endif
 
 // #ifndef NDEBUG
 //    #define TRACK_R
-//    #define ROW_INDEX 0
-//    #define ROW_NODE 60
+//    #define ROW_INDEX 4270
+//    #define ROW_NODE 93
 //    #define ROW_BLOCK B_MAT
 //    #define ROW_IS_LINK false
-//    #define ROW_SYS EQUALITY_SYSTEM
+//    #define ROW_SYS INEQUALITY_SYSTEM
 // #endif
 
 #ifdef TRACK_C
@@ -1423,7 +1423,6 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
    /* check for infeasibility of the newly found bounds */
    checkBoundsInfeasible(col, xlow_new, xupp_new);
 
-
    const double xlow_old = getSimpleVecFromColStochVec(*presProb->blx, col.node)[col.index];
    const double xupp_old = getSimpleVecFromColStochVec(*presProb->bux, col.node)[col.index];
 
@@ -1439,7 +1438,7 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
 
    /* remove redundant row */
    /* singleton linking rows will not get deleted here but later by model cleanup since they become redundant (for synchronization reasons) */
-   if(!row.linking)
+   if( !row.linking )
       removeRedundantRow( row );
 }
 
@@ -1956,7 +1955,6 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
 void PresolveData::removeRedundantRow( const INDEX& row )
 {
    assert(row.isRow());
-   assert(!postsolver->wasRowRemoved( row ));
 
    const int node = row.node;
    const SystemType system_type = row.system_type;
@@ -1965,6 +1963,8 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 
    if(postsolver)
    {
+      assert(!postsolver->wasRowRemoved( row ));
+
       const double rhs = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*presProb->bA, node, linking)[row_index] :
          getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row_index];
       const double lhs = (system_type == EQUALITY_SYSTEM) ? rhs : getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row_index];
@@ -2002,6 +2002,7 @@ void PresolveData::removeRedundantRow( const INDEX& row )
       assert( PIPSisLT(0.0, iclow + icupp) );
 
       postsolver->notifyRedundantRow(row, iclow, icupp, lhs, rhs, getSystemMatrix(system_type));
+      assert(postsolver->wasRowRemoved(row));
    }
  
    if( TRACK_ROW(node, row_index, system_type, linking) )
@@ -2030,9 +2031,12 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    const int col_index = col.index;
 
    if( TRACK_COLUMN(node_col, col_index) )
-     std::cout << "TRACKING: tracked column removed as (implied) free column singleton" << std::endl;
-   if(TRACK_ROW(node_row, row_index, system_type, linking_row) )
-      std::cout << "TRACKING: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
+     std::cout << "TRACKING_COLUMN: tracked column removed as (implied) free column singleton" << std::endl;
+   if(TRACK_ROW(row.node, row.index, row.system_type, row.linking) )
+   {
+      std::cout << "TRACKING_ROW: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
+      writeRowLocalToStreamDense(std::cout, row);
+   }
 
    const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, row.node, row.linking )[row.index];
 
