@@ -23,11 +23,11 @@
 
 /* can specify a cloumn here which bound changes we wanna track maybe */
 
-// #ifndef NDEBUG
-//   #define TRACK_C
-//   #define COLUMN_INDEX 6496
-//   #define COL_NODE 83
-// #endif
+ #ifndef NDEBUG
+   #define TRACK_C
+   #define COLUMN_INDEX 523
+   #define COL_NODE -1
+ #endif
 
 // #ifndef NDEBUG
 //    #define TRACK_R
@@ -1222,7 +1222,9 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
    getRowActivities(row, max_act, min_act, max_ubndd, min_ubndd);
 
    /* block in which column is located */
-   BlockType block_type = (linking) ? BL_MAT : ((col_node == -1 && row_node != -1) ? A_MAT : B_MAT);
+   BlockType block_type = (col_node != -1) ? B_MAT : A_MAT;
+   if( row_node == -1 )
+      block_type = linking ? BL_MAT : B_MAT;
 
    /* get matrix in order to get the coefficient of col in row */
    const SparseStorageDynamic& mat = getSparseGenMatrix(system_type, row_node, block_type)->getStorageDynamicRef();
@@ -2030,6 +2032,10 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    const int node_col = col.node;
    const int col_index = col.index;
 
+   assert( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col_index] <= 1);
+   if( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col_index] == 0 )
+      return;
+
    if( TRACK_COLUMN(node_col, col_index) )
      std::cout << "TRACKING_COLUMN: tracked column removed as (implied) free column singleton" << std::endl;
    if(TRACK_ROW(row.node, row.index, row.system_type, row.linking) )
@@ -2069,8 +2075,11 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
 
    if(node_col == -1)
    {
-      assert( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col_index] + (*nnzs_col_chgs)[col_index] == 0 );
-      assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, -1)[col_index] + (*objective_vec_chgs)[col_index]) );
+      if(my_rank == 0)
+      {
+         assert( getSimpleVecFromColStochVec(*nnzs_col, -1)[col_index] + (*nnzs_col_chgs)[col_index] == 0 );
+         assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, -1)[col_index] + (*objective_vec_chgs)[col_index]) );
+      }
    }
    else
    {
@@ -3287,7 +3296,7 @@ void PresolveData::writeRowLocalToStreamDense(std::ostream& out, const INDEX& ro
    if(nodeIsDummy(node))
       return;
 
-   if(node == -1 && !linking && my_rank != 0)
+   if( node == -1 && my_rank != 0)
       return;
 
    out << "SystemType: " << system_type << "\tnode: " << node << "\tLinkingCons: " << linking << "\trow: " << row_index << std::endl;

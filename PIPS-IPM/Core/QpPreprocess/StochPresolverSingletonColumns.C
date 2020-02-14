@@ -304,7 +304,7 @@ void StochPresolverSingletonColumns::checkColImpliedFree(const INDEX& col, const
 
    updatePointersForCurrentNode(row.node, row.system_type);
 
-//   /* check whether free */
+   /* check whether free */
    const double ixupp = getSimpleVecFromColStochVec(*presData.getPresProb().ixupp, col.node)[col.index];
    const double ixlow = getSimpleVecFromColStochVec(*presData.getPresProb().ixlow, col.node)[col.index];
 
