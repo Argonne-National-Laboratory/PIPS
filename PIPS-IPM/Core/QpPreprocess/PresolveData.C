@@ -3261,6 +3261,35 @@ void PresolveData::getRowActivities( const INDEX& row, double& max_act,
    }
 }
 
+double PresolveData::getRowCoeff( const INDEX& row, const INDEX& col ) const
+{
+   assert(row.isRow());
+   assert(col.isCol());
+
+   BlockType block_col = B_MAT;
+   if(row.linking)
+      block_col = BL_MAT;
+   else if(col.node == -1 && row.node != -1)
+      block_col = A_MAT;
+
+   assert( !nodeIsDummy(col.node) );
+
+   const SparseStorageDynamic& mat = getSparseGenMatrix(row.system_type, row.node, block_col)->getStorageDynamicRef();
+
+   const int row_start = mat.getRowPtr(row.index).start;
+   const int row_end = mat.getRowPtr(row.index).end;
+   assert(row_start != row_end);
+
+   for(int i = row_start; i < row_end; ++i)
+   {
+      if(mat.getJcolM(i) == col.index)
+         return mat.getMat(i);
+   }
+   assert(false && "could not find coefficient");
+   return 0.0;
+}
+
+
 StochGenMatrix& PresolveData::getSystemMatrix(SystemType system_type) const
 {
    if( system_type == EQUALITY_SYSTEM )

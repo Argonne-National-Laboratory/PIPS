@@ -136,7 +136,7 @@ public :
       int getNChildren() const { return nChildren; };
 
       void getRowActivities( const INDEX& row, double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
-
+      double getRowCoeff( const INDEX& row, const INDEX& col ) const;
 
       const StochVectorBase<int>& getNnzsRow(SystemType system_type) const { return (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C; }
       const StochVectorBase<int>& getNnzsRowA() const { return *nnzs_row_A; }; // todo maybe this is a problem - these counters might not be up to date

@@ -864,8 +864,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          else
             getSimpleVecFromColStochVec(w_vec, node)[column] = 0.0;
 
-         assert(PIPSisZero(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]));
-         assert(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]));
+         if(!PIPSisZero(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]))
+            std::cout << getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column] << std::endl;
+         if(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]))
+            std::cout << getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column] << std::endl;
+
+         assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]));
+         assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]));
          break;
       }
       case SUBSTITUTED_COLUMN:

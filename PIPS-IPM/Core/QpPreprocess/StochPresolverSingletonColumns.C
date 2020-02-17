@@ -139,6 +139,74 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    /* equalitiy singleton variables */
    else if( row.system_type == EQUALITY_SYSTEM && implied_free )
       presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
+   else if( row.system_type == INEQUALITY_SYSTEM )
+   {
+//      /* inequality singleton variables */
+//      const double coeff = 0.0;
+//      const double obj_coeff = getSimpleVecFromColStochVec( *presData.getPresProb().g, col.node )[col.index];
+//
+//      const double iclow = getSimpleVecFromRowStochVec( *presData.getPresProb().iclow, row.node, row.linking )[row.index];
+//      const double icupp = getSimpleVecFromRowStochVec( *presData.getPresProb().icupp, row.node, row.linking )[row.index];
+//      const double clow = getSimpleVecFromRowStochVec( *presData.getPresProb().bl, row.node, row.linking )[row.index];
+//      const double cupp = getSimpleVecFromRowStochVec( *presData.getPresProb().bu, row.node, row.linking )[row.index];
+//
+//      if( !PIPSisZero(clow) && !PIPSisZero(cupp) && PIPSisEQ(clow, cupp) )
+//         ;//TODO : singleton equality row..
+//      else if( !PIPSisZero(iclow) && !PIPSisZero(icupp) )
+//      {
+//         assert(!PIPSisEQ(clow, cupp));
+//         return false;
+//      }
+//      else
+//      {
+//         assert(!PIPSisEQ(iclow, icupp));
+//
+//         const double obj_coeff = getSimpleVecFromColStochVec( *presData.getPresProb().g, col.node)[col.index];
+//         const double coeff = presData.getRowCoeff(row, col);
+//
+//         assert(!PIPSisZero(coeff));
+//
+//         /* convert row to less equal row */
+//         const double obj_coeff_le_row = PIPSisZero(iclow) ? obj_coeff : -obj_coeff;
+//
+//         /* both positive */
+//         if( PIPSisLE(0.0, coeff) && PIPSisLE(0.0, obj_coeff) )
+//         {
+//            const double ixlow = getSimpleVecFromColStochVec(*(presData.getPresProb().ixlow), col.node)[col.index];
+//            if( PIPSisZero(ixlow) && PIPSisLT(0.0, obj_coeff) )
+//               PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found unbounded singleton column variable", "StochPresolverSingletonColumns.C", "removeSingletonColumn");
+//
+//            if( PIPSisZero(ixlow) && PIPSisZero(obj_coeff) )
+//               ; /* remove variable from whole system */
+//
+//            /* fix variable to lower bound */
+//            presData.fixSingletonInequalityColumn(col, value);
+//         }
+//         /* both negative */
+//         else if( PIPSisLE(coeff, 0.0 && PIPSisLE(obj_coeff, 0.0)) )
+//         {
+//            const double ixupp = getSimpleVecFromColStochVec(*(presData.getPresProb().ixupp), col.node)[col.index];
+//            if( PIPSisZero(ixupp) && PIPSisLT(obj_coeff, 0.0) )
+//               PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found unbounded singleton column variable", "StochPresolverSingletonColumns.C", "removeSingletonColumn");
+//
+//            if( PIPSisZero(ixupp) && PIPSisZero(obj_coeff) )
+//               ; /* remove variable and associated row from whole system */
+//
+//            /* fix variable to upper bound */
+//            fixSingletonInequalityColumn(col,value);
+//         }
+//      }
+////      double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node_col)[col_index];
+////      double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node_col)[col_index];
+////      double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node_col)[col_index];
+//
+////      const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, row.node, row.linking )[row.index];
+//
+//
+//      /* corresponding row has only rhs/lhs we can either fix the variable or see that the problem is infeasible */
+//      // TODO
+//
+   }
    else
       return false;
 
@@ -147,8 +215,6 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    else
       return false;
 
-   /* inequality singleton variables */
-   // TODO
 }
 
 INDEX StochPresolverSingletonColumns::findRowForColumnSingleton( const INDEX& col, bool& found )
