@@ -137,12 +137,8 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    if( implied_free && PIPSisEQ(obj, 0.0) )
       presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
    /* equalitiy singleton variables */
-   else if( row.system_type == EQUALITY_SYSTEM )
-   {
-      /* (originally) free singleton columns just get deleted together with their row */
-      if( implied_free )
-         presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
-   }
+   else if( row.system_type == EQUALITY_SYSTEM && implied_free )
+      presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
    else
       return false;
 
