@@ -58,6 +58,14 @@ void StochPresolverSingletonColumns::applyPresolving()
       presData.getSingletonCols().pop();
    }
 
+   //todo
+   presData.allreduceAndApplyBoundChanges();
+   presData.allreduceAndApplyNnzChanges();
+   presData.allreduceAndApplyLinkingRowActivities();
+   presData.allreduceLinkingVarBounds();
+   presData.allreduceAndApplyObjVecChanges();
+   presData.allreduceObjOffset();
+
 #ifndef NDEBUG
    PIPS_MPIgetSumInPlace(removed_cols_run, MPI_COMM_WORLD);
    removed_cols += removed_cols_run;
@@ -70,14 +78,6 @@ void StochPresolverSingletonColumns::applyPresolving()
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
-
-   //todo
-   presData.allreduceAndApplyBoundChanges();
-   presData.allreduceAndApplyNnzChanges();
-   presData.allreduceAndApplyLinkingRowActivities();
-   presData.allreduceLinkingVarBounds();
-   presData.allreduceAndApplyObjVecChanges();
-   presData.allreduceObjOffset();
 
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
