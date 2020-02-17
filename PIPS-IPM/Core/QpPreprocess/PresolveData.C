@@ -23,11 +23,11 @@
 
 /* can specify a cloumn here which bound changes we wanna track maybe */
 
- #ifndef NDEBUG
-   #define TRACK_C
-   #define COLUMN_INDEX 523
-   #define COL_NODE -1
- #endif
+// #ifndef NDEBUG
+//   #define TRACK_C
+//   #define COLUMN_INDEX 523
+//   #define COL_NODE -1
+// #endif
 
 // #ifndef NDEBUG
 //    #define TRACK_R

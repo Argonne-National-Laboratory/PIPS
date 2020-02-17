@@ -48,11 +48,10 @@ void StochPresolverSingletonColumns::applyPresolving()
    // main loop:
    while( !presData.getSingletonCols().empty() )
    {
-      bool removed = false;
       const INDEX& col = presData.getSingletonCols().front();
-      removed = removeSingletonColumn(col);
+      const bool removed = removeSingletonColumn(col);
 
-      if( removed && (col.node != -1 || my_rank == 0) )
+      if( removed )
          ++removed_cols_run;
 
       presData.getSingletonCols().pop();
@@ -136,25 +135,24 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    double obj = (node == -1) ? (*currgParent)[col_index] : (*currgChild)[col_index];
 
    if( implied_free && PIPSisEQ(obj, 0.0) )
-   {
       presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
-      return true;
-   }
-
    /* equalitiy singleton variables */
-   if( row.system_type == EQUALITY_SYSTEM )
+   else if( row.system_type == EQUALITY_SYSTEM )
    {
       /* (originally) free singleton columns just get deleted together with their row */
       if( implied_free )
-      {
          presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
-         return true;
-      }
    }
+   else
+      return false;
+
+   if( row.node != -1 || my_rank == 0 )
+      return true;
+   else
+      return false;
 
    /* inequality singleton variables */
    // TODO
-   return false;
 }
 
 INDEX StochPresolverSingletonColumns::findRowForColumnSingleton( const INDEX& col, bool& found )
