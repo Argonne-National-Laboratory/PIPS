@@ -950,7 +950,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          if(!PIPSisZero(error_in_reduced_costs))
          {
-            /* we use the coeff*dual_singleton_row to balance the error in th reduced costs */
+            /* we use the coeff*dual_singleton_row to balance the error in the reduced costs */
             double diff_dual_row = error_in_reduced_costs / coeff;
             dual_singelton_row += diff_dual_row;
             assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
@@ -1058,9 +1058,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          getSimpleVecFromColStochVec(*padding_origcol, node_col)[col_index] = 1;
          getSimpleVecFromRowStochVec(*padding_origrow_equality, node_row, linking_row)[row_index] = 1;
 
-         assert(PIPSisZero(x_val));
-         const double value_row = row_storage.multRowTimesVec( stored_row, x_vec);
-         const double row_coeff = row_storage.getRowCoefficientAtColumn( stored_row, col);
+         const double value_row = row_storage.multRowTimesVec( stored_row, x_vec );
+         const double row_coeff = row_storage.getRowCoefficientAtColumn( stored_row, col );
 
          assert(!PIPSisZero(row_coeff));
          assert(std::abs(value_row) != INF_POS_PRES);
