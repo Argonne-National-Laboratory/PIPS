@@ -84,6 +84,7 @@ private:
          FREE_COLUMN_SINGLETON_EQUALITY = 9,
          PARALLEL_ROW_SUBSTITUTION = 10,
          LINKING_VARS_SYNC_EVENT = 11,
+         COLUMN_SINGLETON_INEQUALITY = 12,
       };
 
       const unsigned int n_rows_original;

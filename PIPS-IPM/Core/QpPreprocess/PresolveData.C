@@ -2015,6 +2015,18 @@ void PresolveData::removeRedundantRow( const INDEX& row )
    removeRow( row );
 }
 
+void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value )
+{
+   assert(col.isCol());
+
+   if( postsolver )
+   {
+
+   }
+
+   removeColumn(col, value);
+}
+
 // TODO : check this once more
 void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col)
 {

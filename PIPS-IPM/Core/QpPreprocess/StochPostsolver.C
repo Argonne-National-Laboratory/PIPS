@@ -165,14 +165,21 @@ int StochPostsolver::storeColumn( const INDEX& col, const StochGenMatrix& matrix
    }
 }
 
-void StochPostsolver::notifySingletonEqualityRow( int node, int row, BlockType block_type, int col, double coeff, double rhs)
+void StochPostsolver::notifySingletonInequalityColumn( const INDEX& col, double value, double coeff )
 {
-   throw std::runtime_error("Not yet implemented");
-}
+   assert(col.isCol());
+   assert(!wasColumnRemoved(col));
 
-void StochPostsolver::notifySingletonIneqalityRow( int node, int row, BlockType block_type, int col, double coeff, double lhs, double rhs )
-{
-   throw std::runtime_error("Not yet implemented");
+   markColumnRemoved(col);
+
+   reductions.push_back(COLUMN_SINGLETON_INEQUALITY);
+
+   indices.push_back(col);
+
+   float_values.push_back(value);
+   float_values.push_back(coeff);
+
+   finishNotify();
 }
 
 void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row )
@@ -873,9 +880,42 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]));
          break;
       }
-      case SUBSTITUTED_COLUMN:
+      case COLUMN_SINGLETON_INEQUALITY:
       {
-         throw std::runtime_error("SUBSTITUTED_COLUMN not yet implemented");
+         assert(first_index + 1 == next_first_index);
+         assert(first_float_val + 2 == next_first_float_val);
+         assert(first_int_val == next_first_int_val);
+
+         const INDEX& col = indices.at(first_index);
+         assert(col.isCol());
+
+         const int node = col.node;
+         const int col_index = col.index;
+
+         assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
+         assert(wasColumnRemoved(col));
+
+         const double value = float_values.at(first_float_val);
+         const double coeff = float_values.at(first_float_val + 1);
+
+         /* set x value - bound is tight - compute slacks of x - set duals to zero */
+         getSimpleVecFromColStochVec(*padding_origcol, node)[col_index] = 1;
+         getSimpleVecFromColStochVec(x_vec, node)[col_index] = value;
+
+
+         /* set slacks for x bounds to zero (bounds were tight) */
+//         const double ixupp
+         // todo : get bounds before fixing
+//         if()
+         getSimpleVecFromColStochVec(v_vec, node)[col_index] = 0.0;
+         getSimpleVecFromColStochVec(w_vec, node)[col_index] = 0.0;
+
+         /* TODO don't think something needs to be done for the reduced costs */
+
+         /* set duals of bounds of x */
+         getSimpleVecFromColStochVec(gamma_vec, node)[col_index] = 0.0;
+         getSimpleVecFromColStochVec(phi_vec, node)[col_index] = 0.0;
+
          break;
       }
       case PARALLEL_COLUMN:
