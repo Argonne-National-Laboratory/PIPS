@@ -1479,7 +1479,7 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
    bool lower_bound_changed = false;
 
 
-   // TODO: Gurobi uses feastol*1e3 but that would leave singleton rows in the problem
+   // TODO: Gurobi uses feastol*1e3 but that would leave singleton rows in the problem -> not anymore
    const double min_impact_bound_change = feastol;
    // we do not tighten bounds if impact is too low or bound is bigger than threshold_bound_tightening
    // set lower bound
@@ -2015,13 +2015,31 @@ void PresolveData::removeRedundantRow( const INDEX& row )
    removeRow( row );
 }
 
-void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value )
+/** dual fixing for a singleton column */
+void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value, double coeff )
 {
    assert(col.isCol());
+   const int node = col.node;
+   const int col_index = col.index;
+
+   const int ixlow = PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, node)[col_index]) ? 0 : 1;
+   const int ixupp = PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, node)[col_index]) ? 0 : 1;
+   const double xlow = getSimpleVecFromColStochVec(*presProb->blx, node)[col_index];
+   const double xupp = getSimpleVecFromColStochVec(*presProb->bux, node)[col_index];
+
+   if(ixlow == 0)
+      assert(xlow == INF_NEG_PRES);
+   if(ixupp == 0)
+      assert(xupp == INF_POS_PRES);
+
+   assert( PIPSisLT(xlow, value) );
+   assert( PIPSisLT(value, xupp) );
+
+   assert( INF_NEG_PRES < value && value < INF_POS_PRES );
 
    if( postsolver )
    {
-
+      postsolver->notifySingletonInequalityColumn(col, value, coeff, xlow, xupp);
    }
 
    removeColumn(col, value);

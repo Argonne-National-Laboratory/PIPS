@@ -139,7 +139,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    /* equality singleton variables */
    else if( row.system_type == EQUALITY_SYSTEM && implied_free )
       presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
-   else if( row.system_type == INEQUALITY_SYSTEM )
+   else if( false && row.system_type == INEQUALITY_SYSTEM )
    {
       /* inequality singleton variables */
       const double coeff = 0.0;
@@ -181,7 +181,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
                ; /* remove variable from whole system */
 
             /* fix variable to lower bound */
-            presData.fixColumnInequalitySingleton(col, xlow);
+            presData.fixColumnInequalitySingleton(col, xlow, coeff);
          }
          /* both negative */
          else if( PIPSisLE(coeff, 0.0 && PIPSisLE(obj_coeff, 0.0)) )
@@ -195,7 +195,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
                ; /* remove variable and associated row from whole system */
 
             /* fix variable to upper bound */
-            presData.fixColumnInequalitySingleton(col, xupp);
+            presData.fixColumnInequalitySingleton(col, xupp, coeff);
          }
       }
 //      double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node_col)[col_index];

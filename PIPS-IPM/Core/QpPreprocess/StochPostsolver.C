@@ -165,7 +165,7 @@ int StochPostsolver::storeColumn( const INDEX& col, const StochGenMatrix& matrix
    }
 }
 
-void StochPostsolver::notifySingletonInequalityColumn( const INDEX& col, double value, double coeff )
+void StochPostsolver::notifySingletonInequalityColumn( const INDEX& col, double value, double coeff, double xlow_old, double xupp_old )
 {
    assert(col.isCol());
    assert(!wasColumnRemoved(col));
@@ -178,6 +178,8 @@ void StochPostsolver::notifySingletonInequalityColumn( const INDEX& col, double 
 
    float_values.push_back(value);
    float_values.push_back(coeff);
+   float_values.push_back(xlow_old);
+   float_values.push_back(xupp_old);
 
    finishNotify();
 }
@@ -855,10 +857,18 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          if(!PIPSisZero(obj_value))
          {
-            if( obj_value < 0 )
+            if( PIPSisLT(obj_value, 0.0) )
+            {
+               assert( ixupp );
+               assert( PIPSisEQ(value, ubx) );
                getSimpleVecFromColStochVec(gamma_vec, node)[column] = obj_value;
-            else
+            }
+            else if( PIPSisLT(0.0, obj_value) )
+            {
+               assert( ixlow );
+               assert( PIPSisEQ(value, lbx) );
                getSimpleVecFromColStochVec(phi_vec, node)[column] = obj_value;
+            }
          }
 
          if(ixlow == 1)
@@ -871,19 +881,15 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          else
             getSimpleVecFromColStochVec(w_vec, node)[column] = 0.0;
 
-         if(!PIPSisZero(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]))
-            std::cout << getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column] << std::endl;
-         if(PIPSisZero(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]))
-            std::cout << getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column] << std::endl;
-
          assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]));
          assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]));
          break;
       }
       case COLUMN_SINGLETON_INEQUALITY:
       {
+         assert(false);
          assert(first_index + 1 == next_first_index);
-         assert(first_float_val + 2 == next_first_float_val);
+         assert(first_float_val + 4 == next_first_float_val);
          assert(first_int_val == next_first_int_val);
 
          const INDEX& col = indices.at(first_index);
@@ -897,6 +903,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          const double value = float_values.at(first_float_val);
          const double coeff = float_values.at(first_float_val + 1);
+         const double xlow_old = float_values.at(first_float_val + 2);
+         const double xupp_old = float_values.at(first_float_val + 3);
 
          /* set x value - bound is tight - compute slacks of x - set duals to zero */
          getSimpleVecFromColStochVec(*padding_origcol, node)[col_index] = 1;

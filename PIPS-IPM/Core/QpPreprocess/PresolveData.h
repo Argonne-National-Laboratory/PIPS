@@ -188,7 +188,7 @@ public :
       void substituteVariableParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation);
       void removeRedundantRow( const INDEX& row );
       void removeParallelRow( const INDEX& row );
-      void fixColumnInequalitySingleton( const INDEX& col, double value );
+      void fixColumnInequalitySingleton( const INDEX& col, double value, double coeff );
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
 
       void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col );
