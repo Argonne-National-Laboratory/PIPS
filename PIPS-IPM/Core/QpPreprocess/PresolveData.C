@@ -1984,16 +1984,11 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 
       if(iclow)
       {
-         if(max_ubndd!=0)
-            writeRowLocalToStreamDense(std::cout, row);
-
          assert(min_ubndd == 0);
          assert(PIPSisLEFeas(lhs, min_act));
       }
       if(icupp)
       {
-         if(max_ubndd!=0)
-            writeRowLocalToStreamDense(std::cout, row);
          assert(max_ubndd == 0);
          assert(PIPSisLEFeas(max_act, rhs));
       }

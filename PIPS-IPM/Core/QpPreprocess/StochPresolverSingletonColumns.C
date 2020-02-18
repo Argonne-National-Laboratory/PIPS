@@ -203,11 +203,6 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
 //      double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node_col)[col_index];
 
 //      const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, row.node, row.linking )[row.index];
-
-
-      /* corresponding row has only rhs/lhs we can either fix the variable or see that the problem is infeasible */
-      // TODO
-
    }
    else
       return false;
