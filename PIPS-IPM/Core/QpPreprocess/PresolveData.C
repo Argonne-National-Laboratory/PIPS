@@ -2027,28 +2027,49 @@ void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value,
    if(ixupp == 0)
       assert(xupp == INF_POS_PRES);
 
-   assert( PIPSisLT(xlow, value) );
-   assert( PIPSisLT(value, xupp) );
+   assert( PIPSisLE(xlow, value) );
+   assert( PIPSisLE(value, xupp) );
 
    assert( INF_NEG_PRES < value && value < INF_POS_PRES );
 
    if( postsolver )
-   {
-      postsolver->notifySingletonInequalityColumn(col, value, coeff, xlow, xupp);
-   }
+      postsolver->notifyFixedSingletonFromInequalityColumn(col, value, coeff, xlow, xupp);
 
    removeColumn(col, value);
 }
 
+void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff )
+{
+   assert( row.isRow() );
+   assert( col.isCol() );
+   assert( row.system_type == INEQUALITY_SYSTEM );
+   assert( !wasColumnRemoved(col) );
+   assert( !wasRowRemoved(row) );
+   assert( !row.linking );
+
+   if( TRACK_COLUMN(col.node, col.index) )
+     std::cout << "TRACKING_COLUMN: tracked column removed as free column singleton" << std::endl;
+   if( TRACK_ROW(row.node, row.index, row.system_type, row.linking) )
+   {
+      std::cout << "TRACKING_ROW: removal of tracked row since it contained a free column singleton" << std::endl;
+      writeRowLocalToStreamDense(std::cout, row);
+   }
+
+   if( postsolver )
+      postsolver->notifyFreeColumnSingletonInequalityRow( row, col, lhsrhs, coeff, getSystemMatrix(row.system_type) );
+
+   removeRow(row);
+   removeColumn(col, 0.0);
+}
+
 // TODO : check this once more
-void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col)
+void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col )
 {
    /* removing multiple linking variables in one run is possible since they get communicated only when the objective changes get communicated too
     * thus no process will remove a linking variable as singleton column with outdated objective vector information
     */
    assert( row.isRow() );
    assert( col.isCol() );
-   assert( row.system_type == EQUALITY_SYSTEM );
    assert( !nodeIsDummy(row.node) );
    assert( !row.linking );
    assert( !wasRowRemoved(row) );
@@ -2069,7 +2090,20 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
       writeRowLocalToStreamDense(std::cout, row);
    }
 
-   const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, row.node, row.linking )[row.index];
+   if( row.system_type == INEQUALITY_SYSTEM)
+   {
+      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row.node, row.linking )[row.index];
+      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row.node, row.linking )[row.index];
+      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row.node, row.linking )[row.index];
+      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row.node, row.linking )[row.index];
+
+      assert( PIPSisEQ(clow, cupp) );
+      assert( !PIPSisZero(iclow) );
+      assert( !PIPSisZero(icupp) );
+   }
+
+   const double rhs = (row.system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, row.node, row.linking )[row.index] :
+      getSimpleVecFromRowStochVec( *presProb->bl, row.node, row.linking)[row.index];
 
    const double obj_coeff = (node_col == -1) ? getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index] + (*objective_vec_chgs)[col_index] :
          getSimpleVecFromColStochVec(*presProb->g, node_col)[col_index];
@@ -2084,7 +2118,7 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    if( PIPSisZero(ixupp) )
       assert( xupp == INF_POS_PRES );
 
-   postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, xlow, xupp, getSystemMatrix(EQUALITY_SYSTEM));
+   postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, xlow, xupp, getSystemMatrix(row.system_type));
 
    adaptObjectiveSubstitutedRow( row, col );
 
@@ -2126,7 +2160,6 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
    const int col_index = col.index;
    const bool linking_row = row.linking;
 
-   assert( system_type == EQUALITY_SYSTEM ); // TODO INEQUALITY ROWS
    assert( !linking_row );
    assert( -1 <= node_row && node_row < nChildren );
    assert( -1 <= node_col && node_col < nChildren );
@@ -2216,8 +2249,21 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
       }
    }
 
-   /* rhs */
-   const double rhs = getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row)[row_index];
+   /* rhs/clow==cupp */
+   if(row.system_type == INEQUALITY_SYSTEM)
+   {
+      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row.node, row.linking )[row.index];
+      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row.node, row.linking )[row.index];
+      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row.node, row.linking )[row.index];
+      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row.node, row.linking )[row.index];
+
+      assert( PIPSisEQ(clow, cupp) );
+      assert( !PIPSisZero(iclow) );
+      assert( !PIPSisZero(icupp) );
+   }
+   const double rhs = (row.system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row)[row_index] :
+      getSimpleVecFromRowStochVec( *presProb->bu, row.node, row.linking )[row.index];
+
    obj_offset_chgs += obj_coef * rhs / col_coef;
 
    if(node_col == -1 && block_col != B_MAT)

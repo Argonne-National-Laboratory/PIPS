@@ -35,7 +35,8 @@ public:
       void notifyFixedColumn( const INDEX& col, double value, double obj_coeff, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
       void notifyFixedEmptyColumn( const INDEX& col, double value, double obj_value, int ixlow, int ixupp, double lhs, double rhs);
       void notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
-      void notifySingletonInequalityColumn( const INDEX& col, double value, double coeff, double xlow_old, double xupp_old );
+      void notifyFixedSingletonFromInequalityColumn( const INDEX& col, double value, double coeff, double xlow_old, double xupp_old );
+      void notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff, const StochGenMatrix& matrix_row );
 
       void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
@@ -85,7 +86,8 @@ private:
          FREE_COLUMN_SINGLETON_EQUALITY = 9,
          PARALLEL_ROW_SUBSTITUTION = 10,
          LINKING_VARS_SYNC_EVENT = 11,
-         COLUMN_SINGLETON_INEQUALITY = 12,
+         FIXED_COLUMN_SINGLETON_FROM_INEQUALITY = 12,
+         FREE_COLUMN_SINGLETON_INEQUALITY_ROW = 13,
       };
 
       const unsigned int n_rows_original;
