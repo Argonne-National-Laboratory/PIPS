@@ -317,7 +317,7 @@ void StochPostsolver::notifyFixedColumn( const INDEX& col, double value, double 
    finishNotify();
 }
 
-void StochPostsolver::notifyFixedEmptyColumn( const INDEX& col, double value, double obj_value, int ixlow, int ixupp, double lbx, double ubx)
+void StochPostsolver::notifyFixedEmptyColumn( const INDEX& col, double value, double obj_coeff, int ixlow, int ixupp, double lbx, double ubx)
 {
    assert(col.isCol());
    assert(!wasColumnRemoved(col));
@@ -331,7 +331,7 @@ void StochPostsolver::notifyFixedEmptyColumn( const INDEX& col, double value, do
    reductions.push_back(FIXED_EMPTY_COLUMN);
    indices.push_back(col);
    float_values.push_back(value);
-   float_values.push_back(obj_value);
+   float_values.push_back(obj_coeff);
    float_values.push_back(lbx);
    float_values.push_back(ubx);
    int_values.push_back(ixlow);
@@ -855,7 +855,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int column = idx_col.index;
          const int node = idx_col.node;
          const double value = float_values.at(first_float_val);
-         const double obj_value = float_values.at(first_float_val + 1);
+         const double obj_coeff = float_values.at(first_float_val + 1);
          const double lbx = float_values.at(first_float_val + 2);
          const double ubx = float_values.at(first_float_val + 3);
          const int ixlow = int_values.at(first_int_val);
@@ -880,23 +880,23 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          getSimpleVecFromColStochVec(gamma_vec, node)[column] = 0.0;
          getSimpleVecFromColStochVec(phi_vec, node)[column] = 0.0;
 
-         if(!PIPSisZero(obj_value))
+         if(!PIPSisZero(obj_coeff))
          {
-            if( PIPSisLT(obj_value, 0.0) )
+            if( PIPSisLT(obj_coeff, 0.0) )
             {
                assert( ixupp );
                assert( PIPSisEQ(value, ubx) );
-               getSimpleVecFromColStochVec(gamma_vec, node)[column] = obj_value;
+               getSimpleVecFromColStochVec(phi_vec, node)[column] = obj_coeff;
             }
-            else if( PIPSisLT(0.0, obj_value) )
+            else if( PIPSisLT(0.0, obj_coeff) )
             {
                assert( ixlow );
                assert( PIPSisEQ(value, lbx) );
-               getSimpleVecFromColStochVec(phi_vec, node)[column] = obj_value;
+               getSimpleVecFromColStochVec(gamma_vec, node)[column] = obj_coeff;
             }
          }
 
-         if(ixlow == 1)
+         if( ixlow == 1 )
             getSimpleVecFromColStochVec(v_vec, node)[column] = value - lbx;
          else
             getSimpleVecFromColStochVec(v_vec, node)[column] = 0.0;
