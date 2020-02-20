@@ -2063,15 +2063,11 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
 }
 
 /* for linking rows and column this presolver must be called simultaneously - if row is linking but the singleton local to a process col should be an empty index */
-void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col )
+void PresolveData::removeImpliedFreeColumnSingletonEqualityRowSynced( const INDEX& row, const INDEX& col )
 {
-   /* removing multiple linking variables in one run is possible since they get communicated only when the objective changes get communicated too
-    * thus no process will remove a linking variable as singleton column with outdated objective vector information
-    */
-   assert( row.isRow() );
-   if(!row.getLinking() || col.getNode() == -1)
-      assert( col.isCol() );
-   assert( !nodeIsDummy(row.getNode()) );
+   assert(row.isRow());
+   assert(row.getLinking());
+   assert(col.isCol() || col.isEmpty());
    assert( !wasRowRemoved(row) );
    assert( !wasColumnRemoved(col) );
 
@@ -2111,23 +2107,23 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
 
    double obj_coeff = 0.0;
    double col_coeff = 0.0;
-   /* the case where we need communication */
-   if(row.getLinking() && col.getNode() != -1)
-   {
-      if(!nodeIsDummy(col.getNode()))
-      {
-         obj_coeff = (col.getNode() == -1) ? getSimpleVecFromColStochVec( *presProb->g, col.getNode())[col.getIndex()] + (*objective_vec_chgs)[col.getIndex()] :
-            getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
-         col_coeff = getRowCoeff(row, col);
-      }
 
-      // TODO: make more efficient
-      PIPS_MPIgetSumInPlace(col_coeff, MPI_COMM_WORLD);
-      PIPS_MPIgetSumInPlace(obj_coeff, MPI_COMM_WORLD);
-   }
-   else
+   if(!nodeIsDummy(col.getNode()))
+   {
       obj_coeff = (col.getNode() == -1) ? getSimpleVecFromColStochVec( *presProb->g, col.getNode())[col.getIndex()] + (*objective_vec_chgs)[col.getIndex()] :
          getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
+      col_coeff = getRowCoeff(row, col);
+   }
+
+   // TODO: make more efficient
+   PIPS_MPIgetSumInPlace(col_coeff, MPI_COMM_WORLD);
+   PIPS_MPIgetSumInPlace(obj_coeff, MPI_COMM_WORLD);
+
+   /* adapt objective from substitution */
+   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
+
+   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
+   removeRow( row );
 
    if(col.isCol())
    {
@@ -2143,7 +2139,7 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
 
       postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
 
-      /* remove row and mark it for the fix empty columns presolver */
+      /* remove col and mark it for the fix empty columns presolver */
       ixlow = xlow = xupp = ixupp = 0;
       if(col.getNode() == -1)
          outdated_linking_var_bounds = true;
@@ -2164,14 +2160,85 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    }
    else
       postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, INF_NEG_PRES, INF_POS_PRES, getSystemMatrix(row.getSystemType()) );
+}
 
+void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col )
+{
+   /* removing multiple linking variables in one run is possible since they get communicated only when the objective changes get communicated too
+    * thus no process will remove a linking variable as singleton column with outdated objective vector information
+    */
+   assert( row.isRow() );
+   assert( col.isCol() );
+   assert( !nodeIsDummy(row.getNode()) );
+   assert( !wasRowRemoved(row) );
+   assert( !wasColumnRemoved(col) );
+
+   if( TRACK_COLUMN(col.getNode(), col.getIndex()) )
+      std::cout << "TRACKING_COLUMN: tracked column removed as (implied) free column singleton" << std::endl;
+
+   if(TRACK_ROW(row.getNode(), row.getIndex(), row.getSystemType(), row.getLinking()) )
+   {
+      std::cout << "TRACKING_ROW: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
+      writeRowLocalToStreamDense(std::cout, row);
+   }
+
+   if( row.getSystemType() == INEQUALITY_SYSTEM)
+   {
+      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row.getNode(), row.getLinking() )[row.getIndex()];
+
+      assert( PIPSisEQ(clow, cupp) );
+      assert( !PIPSisZero(iclow) );
+      assert( !PIPSisZero(icupp) );
+   }
+
+   const double rhs = (row.getSystemType() == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, row.getNode(), row.getLinking() )[row.getIndex()] :
+      getSimpleVecFromRowStochVec( *presProb->bl, row.getNode(), row.getLinking())[row.getIndex()];
+   const double obj_coeff = (col.getNode() == -1) ? getSimpleVecFromColStochVec( *presProb->g, col.getNode())[col.getIndex()] + (*objective_vec_chgs)[col.getIndex()] :
+      getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
+   const double col_coeff = getRowCoeff(row, col);
+
+   /* adapt objective from substitution */
    adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
 
    /* remove row and mark column as empty - will be removed in model cleanup on all processes */
    removeRow( row );
+
+   double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col.getNode())[col.getIndex()];
+   double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col.getNode())[col.getIndex()];
+   double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), col.getNode())[col.getIndex()];
+   double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), col.getNode())[col.getIndex()];
+
+   if( PIPSisZero(ixlow) )
+      assert( xlow == INF_NEG_PRES );
+   if( PIPSisZero(ixupp) )
+      assert( xupp == INF_POS_PRES );
+
+   postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
+
+   /* remove col and mark it for the fix empty columns presolver */
+   ixlow = xlow = xupp = ixupp = 0;
+   if(col.getNode() == -1)
+      outdated_linking_var_bounds = true;
+
+   if(col.getNode() == -1)
+   {
+      if(my_rank == 0)
+      {
+         assert( getSimpleVecFromColStochVec(*nnzs_col, -1)[col.getIndex()] + (*nnzs_col_chgs)[col.getIndex()] == 0 );
+         assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, -1)[col.getIndex()] + (*objective_vec_chgs)[col.getIndex()]) );
+      }
+   }
+   else
+   {
+      assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col.getNode())[col.getIndex()]) );
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col.getNode())[col.getIndex()] == 0 );
+   }
 }
 
-/* column col getting substituted with row row */ 
+/* column col getting substituted with row row - must be called simultaneously for linking rows */
 void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff )
 {
    assert(row.isRow());
@@ -2188,6 +2255,8 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
       assert(linking_row);
    if(linking_row)
       assert(PIPS_MPIisValueEqual(row_index, MPI_COMM_WORLD));
+   if(node_col == -1 && node_row == -1 && !linking_row)
+      assert(PIPS_MPIisValueEqual(row_index, MPI_COMM_WORLD));
 
    assert( -1 <= node_row && node_row < nChildren );
    assert( -1 <= node_col && node_col < nChildren );
@@ -2201,10 +2270,10 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
    if(col.isCol())
    {
       const SparseStorageDynamic& col_mat_tp = getSparseGenMatrix(system_type, linking_row ? node_col : node_row, block_col)->getStorageDynamicTransposedRef();
-      assert(col_coeff == col_mat_tp.getMat(col_mat_tp.getRowPtr(col_index).start));
-      obj_coeff = getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index];
       assert( (col_mat_tp.getRowPtr(col_index).end - col_mat_tp.getRowPtr(col_index).start) == 1 );
       assert( row_index == col_mat_tp.getJcolM(col_mat_tp.getRowPtr(col_index).start) );
+      assert(col_coeff == col_mat_tp.getMat(col_mat_tp.getRowPtr(col_index).start));
+      obj_coeff = getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index];
    }
 
    assert( !PIPSisZero(col_coeff) );
@@ -2287,11 +2356,22 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
       assert( !PIPSisZero(iclow) );
       assert( !PIPSisZero(icupp) );
    }
+
    const double rhs = (row.getSystemType() == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row)[row_index] :
       getSimpleVecFromRowStochVec( *presProb->bu, row.getNode(), row.getLinking() )[row.getIndex()];
 
-   obj_offset_chgs += obj_coeff * rhs / col_coeff;
-   getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index] = 0;
+   /* this is the case where everyone removes the same row in parallel */
+   if( (node_col == -1 && node_row == -1) || linking_row )
+   {
+      if(my_rank == 0)
+         obj_offset_chgs += obj_coeff * rhs / col_coeff;
+   }
+   else
+      obj_offset_chgs += obj_coeff * rhs / col_coeff;
+
+
+   if(col.isCol())
+      getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index] = 0;
 }
 
 /* removes row from local system - sets rhs lhs and activities to zero */

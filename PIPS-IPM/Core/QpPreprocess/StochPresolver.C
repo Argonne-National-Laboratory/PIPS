@@ -87,12 +87,12 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-      presolverSR.applyPresolving();
+//      presolverSR.applyPresolving();
 //      presolverBS.applyPresolving();
 //      presolverParallelRow.applyPresolving();
       presolverSC.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverSR.applyPresolving();
+//      presolverColFix.applyPresolving();
+//      presolverSR.applyPresolving();
       presolverColFix.applyPresolving();
    }
    // presData.getPresProb().writeToStreamDense(std::cout);

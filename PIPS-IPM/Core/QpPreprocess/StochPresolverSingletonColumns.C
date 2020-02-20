@@ -66,7 +66,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    if(local_singletons)
    {
       /* allreduce local singleton columns and coeffs */
-
+      std::cout << "local singleton columns!" << std::endl;
       // TODO: change this - it should be the one that provides most numerical stability..
       /* allreduce the procs that found a local singleton column in a linking row - the lowest ranking one will get to remove the column */
       PIPS_MPIminArrayInPlace(local_linking_column_for_row_in_proc, MPI_COMM_WORLD);
@@ -85,12 +85,12 @@ void StochPresolverSingletonColumns::applyPresolving()
 
          if(my_rank == proc_that_removes)
          {
-            presData.removeImpliedFreeColumnSingletonEqualityRow( row, cols[i] );
+            presData.removeImpliedFreeColumnSingletonEqualityRowSynced( row, cols[i] );
             ++removed_cols_run;
          }
          else
          {
-            presData.removeImpliedFreeColumnSingletonEqualityRow( row, INDEX() );
+            presData.removeImpliedFreeColumnSingletonEqualityRowSynced( row, INDEX() );
          }
       }
    }
@@ -146,16 +146,11 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
 
    if( !found )
    {
-      // TODO : singleton columns in linking parts need communication
       assert(row.getType() == EMPTY_INDEX);
       assert( node == -1 );
       return false;
    }
    assert(row.isRow());
-
-   // TODO : why - would this not be great?
-   if( row.getLinking() )
-      return false;
 
    assert(-1 <= row.getNode() && row.getNode() < nChildren);
    updatePointersForCurrentNode(row.getNode(), row.getSystemType());

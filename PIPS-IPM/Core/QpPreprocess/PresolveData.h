@@ -190,6 +190,8 @@ public :
       void removeParallelRow( const INDEX& row );
       void fixColumnInequalitySingleton( const INDEX& col, double value, double coeff );
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
+      void removeImpliedFreeColumnSingletonEqualityRowSynced( const INDEX& row, const INDEX& col );
+
       void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff );
 
       void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
