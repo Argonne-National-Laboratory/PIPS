@@ -256,15 +256,15 @@ sData* PresolveData::finalize()
 
 int PresolveData::getNnzsRow(const INDEX& row) const
 {
-   assert(row.index_type == ROW);
-   return (row.system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*nnzs_row_A, row.node, row.linking)[row.index] :
-      getSimpleVecFromRowStochVec(*nnzs_row_C, row.node, row.linking)[row.index];
+   assert(row.isRow());
+   return (row.getSystemType() == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*nnzs_row_A, row.getNode(), row.getLinking())[row.getIndex()] :
+      getSimpleVecFromRowStochVec(*nnzs_row_C, row.getNode(), row.getLinking())[row.getIndex()];
 }
 
 int PresolveData::getNnzsCol(const INDEX& col) const
 {
-   assert(col.index_type == COL);
-   return getSimpleVecFromColStochVec(*nnzs_col, col.node)[col.index];
+   assert(col.isCol());
+   return getSimpleVecFromColStochVec(*nnzs_col, col.getNode())[col.getIndex()];
 }
 
 bool PresolveData::wasColumnRemoved( const INDEX& col ) const
@@ -1126,9 +1126,9 @@ INDEX PresolveData::getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upp
    StochVectorBaseHandle<int>& by_system = upper_bound ? upper_bound_implied_by_system : lower_bound_implied_by_system;
    StochVectorBaseHandle<int>& by_row = upper_bound ? upper_bound_implied_by_row : lower_bound_implied_by_row;
 
-   const int row_node_int = getSimpleVecFromColStochVec( *by_node, col.node)[col.index];
-   const int system_type_int = getSimpleVecFromColStochVec( *by_system, col.node)[col.index];
-   const int row_index = getSimpleVecFromColStochVec( *by_row, col.node)[col.index];
+   const int row_node_int = getSimpleVecFromColStochVec( *by_node, col.getNode())[col.getIndex()];
+   const int system_type_int = getSimpleVecFromColStochVec( *by_system, col.getNode())[col.getIndex()];
+   const int row_index = getSimpleVecFromColStochVec( *by_row, col.getNode())[col.getIndex()];
 
    if( row_node_int == -10 )
    {
@@ -1156,9 +1156,9 @@ void PresolveData::markRowAsImplyingColumnBound(const INDEX& col, const INDEX& r
    StochVectorBaseHandle<int>& by_system = upper_bound ? upper_bound_implied_by_system : lower_bound_implied_by_system;
    StochVectorBaseHandle<int>& by_row = upper_bound ? upper_bound_implied_by_row : lower_bound_implied_by_row;
 
-   getSimpleVecFromColStochVec( *by_node, col.node)[col.index] = (row.linking) ? -2 : row.node;
-   getSimpleVecFromColStochVec( *by_system, col.node)[col.index] = row.system_type;
-   getSimpleVecFromColStochVec( *by_row, col.node)[col.index] = row.index;
+   getSimpleVecFromColStochVec( *by_node, col.getNode())[col.getIndex()] = (row.getLinking()) ? -2 : row.getNode();
+   getSimpleVecFromColStochVec( *by_system, col.getNode())[col.getIndex()] = row.getSystemType();
+   getSimpleVecFromColStochVec( *by_row, col.getNode())[col.getIndex()] = row.getIndex();
 }
 
 /** returns whether or not the current bound on column col is implied by row */
@@ -1167,10 +1167,10 @@ bool PresolveData::varBoundImpliedFreeBy( bool upper, const INDEX& col, const IN
    assert(col.isCol());
    assert(row.isRow());
 
-   const SystemType system_type = row.system_type;
-   const int node_row = row.node;
-   const int row_index = row.index;
-   const bool linking_row = row.linking;
+   const SystemType system_type = row.getSystemType();
+   const int node_row = row.getNode();
+   const int row_index = row.getIndex();
+   const bool linking_row = row.getLinking();
    // todo : not sure whether there is an instance that ever calls this
    // todo : theoretically there might be nnzs changes in some buffers somewhere - should not happen but how to check?
    // todo : should this be only one method varBoundsImpliedFree?
@@ -1205,12 +1205,12 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
    assert(col.isCol());
    assert(row.isRow());
 
-   const bool linking = row.linking;
-   const int col_index = col.index;
-   const int row_index = row.index;
-   const int row_node = row.node;
-   const int col_node = col.node;
-   const SystemType system_type = row.system_type;
+   const bool linking = row.getLinking();
+   const int col_index = col.getIndex();
+   const int row_index = row.getIndex();
+   const int row_node = row.getNode();
+   const int col_node = col.getNode();
+   const SystemType system_type = row.getSystemType();
 
    upper_implied = false;
    lower_implied = false;
@@ -1317,8 +1317,8 @@ void PresolveData::fixEmptyColumn(const INDEX& col, double val)
 {
    assert(col.isCol());
 
-   const int node = col.node;
-   const int col_index = col.index;
+   const int node = col.getNode();
+   const int col_index = col.getIndex();
 
    assert(-1 <= node && node < nChildren);
    assert(0 <= col_index);
@@ -1348,27 +1348,27 @@ void PresolveData::fixEmptyColumn(const INDEX& col, double val)
 void PresolveData::fixColumn( const INDEX& col, double value)
 {
    assert( col.isCol() );
-   assert( -1 <= col.node && col.node < nChildren );
-   assert( 0 <= col.index );
+   assert( -1 <= col.getNode() && col.getNode() < nChildren );
+   assert( 0 <= col.getIndex() );
 
-   if( TRACK_COLUMN(col.node, col.index) )
+   if( TRACK_COLUMN(col.getNode(), col.getIndex()) )
    {
-      std::cout << "TRACKING_COLUMN: column " << col.index << " node " << col.node << " got fixed to " << value << std::endl;
+      std::cout << "TRACKING_COLUMN: column " << col.getIndex() << " node " << col.getNode() << " got fixed to " << value << std::endl;
    }
 
    
    /* current upper and lower bound as well as column - linking variables have to be done by all processes simultaneously because communication in postsolve is required */
    if(postsolver)
    {
-      const double obj_coeff = getSimpleVecFromColStochVec(*presProb->g, col.node)[col.index];
+      const double obj_coeff = getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
       postsolver->notifyFixedColumn(col, value, obj_coeff, getSystemMatrix(EQUALITY_SYSTEM), getSystemMatrix(INEQUALITY_SYSTEM));
    }
 
 #ifndef NDEBUG
-   double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, col.node)[col.index];
-   double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, col.node)[col.index];
-   double xlow = PIPSisEQ(ixupp, 1.0) ? getSimpleVecFromColStochVec(*presProb->blx, col.node)[col.index] : INF_NEG_PRES;
-   double xupp = PIPSisEQ(ixlow, 1.0) ? getSimpleVecFromColStochVec(*presProb->bux, col.node)[col.index] : INF_POS_PRES;
+   double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, col.getNode())[col.getIndex()];
+   double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, col.getNode())[col.getIndex()];
+   double xlow = PIPSisEQ(ixupp, 1.0) ? getSimpleVecFromColStochVec(*presProb->blx, col.getNode())[col.getIndex()] : INF_NEG_PRES;
+   double xupp = PIPSisEQ(ixlow, 1.0) ? getSimpleVecFromColStochVec(*presProb->bux, col.getNode())[col.getIndex()] : INF_POS_PRES;
    assert( PIPSisEQ(ixlow, 1.0) );
    assert( PIPSisEQ(ixupp, 1.0) );
    assert( PIPSisEQ(xlow, xupp, 1e-10) );
@@ -1377,13 +1377,13 @@ void PresolveData::fixColumn( const INDEX& col, double value)
 
    removeColumn(col, value);
 
-   if( col.node != -1)
-      assert( getSimpleVecFromColStochVec(*nnzs_col, col.node)[col.index] == 0 );
+   if( col.getNode() != -1)
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col.getNode())[col.getIndex()] == 0 );
 }
 
 bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var)
 {
-   assert( -1 <= row.node && row.node < nChildren );
+   assert( -1 <= row.getNode() && row.getNode() < nChildren );
 
 
    // TODO we still want to do tightenings that fix a variable
@@ -1411,25 +1411,25 @@ bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& c
 // todo : do we need to store that a bound was implied by a singleton row ? I don't think so since singletons get removed from the system anyway
 void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff)
 {
-   assert(!row.linking);
+   assert(!row.getLinking());
    assert(row.isRow());
    assert(col.isCol());
-   assert(-1 <= row.node && row.node < nChildren);
-   assert(-1 <= col.node && col.node < nChildren);
+   assert(-1 <= row.getNode() && row.getNode() < nChildren);
+   assert(-1 <= col.getNode() && col.getNode() < nChildren);
 
    assert(getNnzsRow(row) == 1);
    assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
-   assert( (row.system_type == EQUALITY_SYSTEM && xlow_new == xupp_new) ||
+   assert( (row.getSystemType() == EQUALITY_SYSTEM && xlow_new == xupp_new) ||
       (xlow_new == INF_NEG_PRES || xupp_new == INF_POS_PRES) );
 
    /* check for infeasibility of the newly found bounds */
    checkBoundsInfeasible(col, xlow_new, xupp_new);
 
-   const double xlow_old = getSimpleVecFromColStochVec(*presProb->blx, col.node)[col.index];
-   const double xupp_old = getSimpleVecFromColStochVec(*presProb->bux, col.node)[col.index];
+   const double xlow_old = getSimpleVecFromColStochVec(*presProb->blx, col.getNode())[col.getIndex()];
+   const double xupp_old = getSimpleVecFromColStochVec(*presProb->bux, col.getNode())[col.getIndex()];
 
-   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col.node)[col.index]) || xlow_old == INF_NEG_PRES );
-   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col.node)[col.index]) || xupp_old == INF_POS_PRES );
+   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col.getNode())[col.getIndex()]) || xlow_old == INF_NEG_PRES );
+   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col.getNode())[col.getIndex()]) || xupp_old == INF_POS_PRES );
 
    /* adjust bounds of column - singletons columns will always be used here since we want to remove the corresponding row */
    bool tightened = updateBoundsVariable(col, xlow_new, xupp_new);
@@ -1440,22 +1440,22 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
 
    /* remove redundant row */
    /* singleton linking rows will not get deleted here but later by model cleanup since they become redundant (for synchronization reasons) */
-   if( !row.linking )
+   if( !row.getLinking() )
       removeRedundantRow( row );
 }
 
 bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new)
 {
-   assert( -1 <= row.node && row.node< nChildren );
+   assert( -1 <= row.getNode() && row.getNode()< nChildren );
    assert(row.isRow());
    assert(col.isCol());
 
-   const int node_row = row.node;
-   const int node_col = col.node;
-   const int col_index = col.index;
-   const int row_index = row.index;
-   const bool linking_row = row.linking;
-   const SystemType system_type = row.system_type;
+   const int node_row = row.getNode();
+   const int node_col = col.getNode();
+   const int col_index = col.getIndex();
+   const int row_index = row.getIndex();
+   const bool linking_row = row.getLinking();
+   const SystemType system_type = row.getSystemType();
 
    assert( 0 <= col_index && col_index < getSimpleVecFromColStochVec( *presProb->ixlow, node_col ).n );
 
@@ -1539,9 +1539,9 @@ void PresolveData::checkBoundsInfeasible(const INDEX& col, double xlow_new, doub
 {
    assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
 
-   assert(col.index_type == COL);
-   const int col_idx = col.index;
-   const int col_node = col.node;
+   assert(col.isCol());
+   const int col_idx = col.getIndex();
+   const int col_node = col.getNode();
 
    /* get current bounds */
    const int ixlow = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col_node )[col_idx]) ) ? 0 : 1;
@@ -1773,8 +1773,8 @@ void PresolveData::removeColumn(const INDEX& col, double fixation)
 {
    assert(col.isCol());
 
-   const int col_index = col.index;
-   const int node = col.node;
+   const int col_index = col.getIndex();
+   const int node = col.getNode();
 
    assert( -1 <= node && node < nChildren );
 
@@ -1898,7 +1898,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
 // todo
 void PresolveData::removeParallelRow( const INDEX& row )
 {
-   if( TRACK_ROW(row.node, row.index, row.system_type, row.linking) )
+   if( TRACK_ROW(row.getNode(), row.getIndex(), row.getSystemType(), row.getLinking()) )
    {
       std::cout << "TRACKING_ROW: removal of tracked row as parallel row" << std::endl;
    }
@@ -1916,30 +1916,30 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
 {
    assert(row1.isRow() && row2.isRow());
    assert(col1.isCol() && col2.isCol());
-   assert(row1.node == row2.node);
+   assert(row1.getNode() == row2.getNode());
    // todo : track row
    
    postsolver->notifyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation);
 
    // delete the equality constraint which contained var2 (the substituted variable)
    removeRedundantRow( row2 );
-   assert( PIPSisZero(getSimpleVecFromColStochVec(*nnzs_col, col2.node)[col2.index]) );
+   assert( PIPSisZero(getSimpleVecFromColStochVec(*nnzs_col, col2.getNode())[col2.getIndex()]) );
    
-   const double obj_var2 = getSimpleVecFromColStochVec(*presProb->g, col2.node)[col2.index];
+   const double obj_var2 = getSimpleVecFromColStochVec(*presProb->g, col2.getNode())[col2.getIndex()];
    const double val_offset = translation * obj_var2;
    const double change_obj_var1 = scalar * obj_var2;
 
    removeColumn( col2, 0.0 );
 
-   if( col1.node != -1 )
+   if( col1.getNode() != -1 )
    {
-      getSimpleVecFromColStochVec(*presProb->g, row1.node)[col1.index] += change_obj_var1;
+      getSimpleVecFromColStochVec(*presProb->g, row1.getNode())[col1.getIndex()] += change_obj_var1;
       obj_offset_chgs += val_offset;
    }
-   else if( row1.node == -1 )
+   else if( row1.getNode() == -1 )
    {
       /* parallel rows in parent block - all processes should have detected this */
-      getSimpleVecFromColStochVec(*presProb->g, -1)[col1.index] += change_obj_var1;
+      getSimpleVecFromColStochVec(*presProb->g, -1)[col1.getIndex()] += change_obj_var1;
 
       // only add the objective offset for root as process ZERO:
       if( my_rank == 0 ) 
@@ -1948,7 +1948,7 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
    else
    {
       /* var1 is a linking variable - store objective adaptions and allreduce them */
-      (*objective_vec_chgs)[col1.index] += change_obj_var1;
+      (*objective_vec_chgs)[col1.getIndex()] += change_obj_var1;
       outdated_obj_vector = true; 
       obj_offset_chgs += val_offset;
    }
@@ -1958,10 +1958,10 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 {
    assert(row.isRow());
 
-   const int node = row.node;
-   const SystemType system_type = row.system_type;
-   const bool linking = row.linking;
-   const int row_index = row.index;
+   const int node = row.getNode();
+   const SystemType system_type = row.getSystemType();
+   const bool linking = row.getLinking();
+   const int row_index = row.getIndex();
 
    if(postsolver)
    {
@@ -2014,8 +2014,8 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value, double coeff )
 {
    assert(col.isCol());
-   const int node = col.node;
-   const int col_index = col.index;
+   const int node = col.getNode();
+   const int col_index = col.getIndex();
 
    const int ixlow = PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, node)[col_index]) ? 0 : 1;
    const int ixupp = PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, node)[col_index]) ? 0 : 1;
@@ -2042,125 +2042,153 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
 {
    assert( row.isRow() );
    assert( col.isCol() );
-   assert( row.system_type == INEQUALITY_SYSTEM );
+   assert( row.getSystemType() == INEQUALITY_SYSTEM );
    assert( !wasColumnRemoved(col) );
    assert( !wasRowRemoved(row) );
-   assert( !row.linking );
+   assert( !row.getLinking() );
 
-   if( TRACK_COLUMN(col.node, col.index) )
+   if( TRACK_COLUMN(col.getNode(), col.getIndex()) )
      std::cout << "TRACKING_COLUMN: tracked column removed as free column singleton" << std::endl;
-   if( TRACK_ROW(row.node, row.index, row.system_type, row.linking) )
+   if( TRACK_ROW(row.getNode(), row.getIndex(), row.getSystemType(), row.getLinking()) )
    {
       std::cout << "TRACKING_ROW: removal of tracked row since it contained a free column singleton" << std::endl;
       writeRowLocalToStreamDense(std::cout, row);
    }
 
    if( postsolver )
-      postsolver->notifyFreeColumnSingletonInequalityRow( row, col, lhsrhs, coeff, getSystemMatrix(row.system_type) );
+      postsolver->notifyFreeColumnSingletonInequalityRow( row, col, lhsrhs, coeff, getSystemMatrix(row.getSystemType()) );
 
    removeRow(row);
    removeColumn(col, 0.0);
 }
 
-// TODO : check this once more
+/* for linking rows and column this presolver must be called simultaneously - if row is linking but the singleton local to a process col should be an empty index */
 void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col )
 {
    /* removing multiple linking variables in one run is possible since they get communicated only when the objective changes get communicated too
     * thus no process will remove a linking variable as singleton column with outdated objective vector information
     */
    assert( row.isRow() );
-   assert( col.isCol() );
-   assert( !nodeIsDummy(row.node) );
-   assert( !row.linking );
+   if(!row.getLinking() || col.getNode() == -1)
+      assert( col.isCol() );
+   assert( !nodeIsDummy(row.getNode()) );
    assert( !wasRowRemoved(row) );
    assert( !wasColumnRemoved(col) );
 
-   const int node_col = col.node;
-   const int col_index = col.index;
+   if(row.getLinking())
+      assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
+   if(col.getNode() == -1)
+      assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
 
-   assert( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col_index] <= 1);
-   if( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col_index] == 0 )
-      return;
+   if(col.isCol())
+   {
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col.getNode())[col.getIndex()] == 1);
 
-   if( TRACK_COLUMN(node_col, col_index) )
-     std::cout << "TRACKING_COLUMN: tracked column removed as (implied) free column singleton" << std::endl;
-   if(TRACK_ROW(row.node, row.index, row.system_type, row.linking) )
+      if( TRACK_COLUMN(col.getNode(), col.getIndex()) )
+        std::cout << "TRACKING_COLUMN: tracked column removed as (implied) free column singleton" << std::endl;
+   }
+
+   if(TRACK_ROW(row.getNode(), row.getIndex(), row.getSystemType(), row.getLinking()) )
    {
       std::cout << "TRACKING_ROW: removal of tracked row since it contained an (implied) free column singleton" << std::endl;
       writeRowLocalToStreamDense(std::cout, row);
    }
 
-   if( row.system_type == INEQUALITY_SYSTEM)
+   if( row.getSystemType() == INEQUALITY_SYSTEM)
    {
-      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row.node, row.linking )[row.index];
-      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row.node, row.linking )[row.index];
-      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row.node, row.linking )[row.index];
-      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row.node, row.linking )[row.index];
+      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row.getNode(), row.getLinking() )[row.getIndex()];
 
       assert( PIPSisEQ(clow, cupp) );
       assert( !PIPSisZero(iclow) );
       assert( !PIPSisZero(icupp) );
    }
 
-   const double rhs = (row.system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, row.node, row.linking )[row.index] :
-      getSimpleVecFromRowStochVec( *presProb->bl, row.node, row.linking)[row.index];
+   const double rhs = (row.getSystemType() == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, row.getNode(), row.getLinking() )[row.getIndex()] :
+      getSimpleVecFromRowStochVec( *presProb->bl, row.getNode(), row.getLinking())[row.getIndex()];
 
-   const double obj_coeff = (node_col == -1) ? getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index] + (*objective_vec_chgs)[col_index] :
-         getSimpleVecFromColStochVec(*presProb->g, node_col)[col_index];
-
-   double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), node_col)[col_index];
-   double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node_col)[col_index];
-   double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), node_col)[col_index];
-   double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node_col)[col_index];
-
-   if( PIPSisZero(ixlow) )
-      assert( xlow == INF_NEG_PRES );
-   if( PIPSisZero(ixupp) )
-      assert( xupp == INF_POS_PRES );
-
-   postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, xlow, xupp, getSystemMatrix(row.system_type));
-
-   adaptObjectiveSubstitutedRow( row, col );
-
-   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
-   removeRow( row );
-
-   /* remove row and mark it for the fix empty columns presolver */
-   // todo : is this actually necessary?
-   ixlow = xlow = xupp = ixupp = 0;
-
-   if(node_col == -1)
-      outdated_linking_var_bounds = true;
-
-   if(node_col == -1)
+   double obj_coeff = 0.0;
+   double col_coeff = 0.0;
+   /* the case where we need communication */
+   if(row.getLinking() && col.getNode() != -1)
    {
-      if(my_rank == 0)
+      if(!nodeIsDummy(col.getNode()))
       {
-         assert( getSimpleVecFromColStochVec(*nnzs_col, -1)[col_index] + (*nnzs_col_chgs)[col_index] == 0 );
-         assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, -1)[col_index] + (*objective_vec_chgs)[col_index]) );
+         obj_coeff = (col.getNode() == -1) ? getSimpleVecFromColStochVec( *presProb->g, col.getNode())[col.getIndex()] + (*objective_vec_chgs)[col.getIndex()] :
+            getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
+         col_coeff = getRowCoeff(row, col);
+      }
+
+      // TODO: make more efficient
+      PIPS_MPIgetSumInPlace(col_coeff, MPI_COMM_WORLD);
+      PIPS_MPIgetSumInPlace(obj_coeff, MPI_COMM_WORLD);
+   }
+   else
+      obj_coeff = (col.getNode() == -1) ? getSimpleVecFromColStochVec( *presProb->g, col.getNode())[col.getIndex()] + (*objective_vec_chgs)[col.getIndex()] :
+         getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
+
+   if(col.isCol())
+   {
+      double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col.getNode())[col.getIndex()];
+      double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col.getNode())[col.getIndex()];
+      double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), col.getNode())[col.getIndex()];
+      double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), col.getNode())[col.getIndex()];
+
+      if( PIPSisZero(ixlow) )
+         assert( xlow == INF_NEG_PRES );
+      if( PIPSisZero(ixupp) )
+         assert( xupp == INF_POS_PRES );
+
+      postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
+
+      /* remove row and mark it for the fix empty columns presolver */
+      ixlow = xlow = xupp = ixupp = 0;
+      if(col.getNode() == -1)
+         outdated_linking_var_bounds = true;
+
+      if(col.getNode() == -1)
+      {
+         if(my_rank == 0)
+         {
+            assert( getSimpleVecFromColStochVec(*nnzs_col, -1)[col.getIndex()] + (*nnzs_col_chgs)[col.getIndex()] == 0 );
+            assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, -1)[col.getIndex()] + (*objective_vec_chgs)[col.getIndex()]) );
+         }
+      }
+      else
+      {
+         assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col.getNode())[col.getIndex()]) );
+         assert( getSimpleVecFromColStochVec(*nnzs_col, col.getNode())[col.getIndex()] == 0 );
       }
    }
    else
-   {
-      assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index]) );
-      assert( getSimpleVecFromColStochVec(*nnzs_col, node_col)[col_index] == 0 );
-   }
+      postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, INF_NEG_PRES, INF_POS_PRES, getSystemMatrix(row.getSystemType()) );
+
+   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
+
+   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
+   removeRow( row );
 }
 
 /* column col getting substituted with row row */ 
-void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col )
+void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff )
 {
    assert(row.isRow());
-   assert(col.isCol());
+   assert(col.isCol() || col.isEmpty());
 
-   const SystemType system_type = row.system_type;
-   const int node_row = row.node;
-   const int node_col = col.node;
-   const int row_index = row.index;
-   const int col_index = col.index;
-   const bool linking_row = row.linking;
+   const SystemType system_type = row.getSystemType();
+   const int node_row = row.getNode();
+   const int node_col = col.getNode();
+   const int row_index = row.getIndex();
+   const int col_index = col.getIndex();
+   const bool linking_row = row.getLinking();
 
-   assert( !linking_row );
+   if(col.isEmpty())
+      assert(linking_row);
+   if(linking_row)
+      assert(PIPS_MPIisValueEqual(row_index, MPI_COMM_WORLD));
+
    assert( -1 <= node_row && node_row < nChildren );
    assert( -1 <= node_col && node_col < nChildren );
 
@@ -2170,15 +2198,18 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
    else if( node_col == -1 && node_row != -1 )
       block_col = A_MAT;
 
-   const SparseStorageDynamic& col_mat_tp = getSparseGenMatrix(system_type, linking_row ? node_col : node_row, block_col)->getStorageDynamicTransposedRef();
-   const double col_coef = col_mat_tp.getMat(col_mat_tp.getRowPtr(col_index).start);
-   const double obj_coef = getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index];
+   if(col.isCol())
+   {
+      const SparseStorageDynamic& col_mat_tp = getSparseGenMatrix(system_type, linking_row ? node_col : node_row, block_col)->getStorageDynamicTransposedRef();
+      assert(col_coeff == col_mat_tp.getMat(col_mat_tp.getRowPtr(col_index).start));
+      obj_coeff = getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index];
+      assert( (col_mat_tp.getRowPtr(col_index).end - col_mat_tp.getRowPtr(col_index).start) == 1 );
+      assert( row_index == col_mat_tp.getJcolM(col_mat_tp.getRowPtr(col_index).start) );
+   }
 
-   assert( (col_mat_tp.getRowPtr(col_index).end - col_mat_tp.getRowPtr(col_index).start) == 1 );
-   assert( row_index == col_mat_tp.getJcolM(col_mat_tp.getRowPtr(col_index).start) );
-   assert( ! PIPSisZero(col_coef) );
+   assert( !PIPSisZero(col_coeff) );
    
-   if( PIPSisZero(obj_coef) )
+   if( PIPSisZero(obj_coeff) )
       return;
 
    if(!linking_row)
@@ -2192,7 +2223,7 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
 
          if(col_idx != col_index || block_col != B_MAT)
          {
-            getSimpleVecFromColStochVec( *presProb->g, node_row)[col_idx] -= obj_coef * b_mat.getMat(i) / col_coef;
+            getSimpleVecFromColStochVec( *presProb->g, node_row)[col_idx] -= obj_coeff * b_mat.getMat(i) / col_coeff;
          }
       }
 
@@ -2207,7 +2238,7 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
 
             if( col_idx != col_index || block_col != A_MAT )
             {
-               (*objective_vec_chgs)[col_idx] -= obj_coef * a_mat.getMat(i) / col_coef;
+               (*objective_vec_chgs)[col_idx] -= obj_coeff * a_mat.getMat(i) / col_coeff;
                outdated_obj_vector = true;
             }
          }
@@ -2220,13 +2251,10 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
       
       for(int i = bl0_mat.getRowPtr(row_index).start; i < bl0_mat.getRowPtr(row_index).end; ++i)
       {
-         const int col_idx = bl0_mat.getJcolM(i);
+         const int col_ptr = bl0_mat.getJcolM(i);
 
-         if( col_idx != col_index || node_col != -1 )
-         {
-            (*objective_vec_chgs)[col_idx] -= obj_coef * bl0_mat.getMat(i) / col_coef;
-            outdated_obj_vector = true;
-         }
+         if( col_ptr != col_index || node_col != -1 )
+            getSimpleVecFromColStochVec( *presProb->g, -1)[col_ptr] -= obj_coeff * bl0_mat.getMat(i) / col_coeff;
       }
 
       /* Bl_i */
@@ -2241,38 +2269,29 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
                const int col_ptr = bli_mat.getJcolM(i);
 
                if(col_ptr != col_index || node_col != node)
-               {
-                  getSimpleVecFromColStochVec( *presProb->g, node)[col_ptr] -= obj_coef * bli_mat.getMat(i) / col_coef;
-               }
+                  getSimpleVecFromColStochVec( *presProb->g, node)[col_ptr] -= obj_coeff * bli_mat.getMat(i) / col_coeff;
             }
          }
       }
    }
 
    /* rhs/clow==cupp */
-   if(row.system_type == INEQUALITY_SYSTEM)
+   if(row.getSystemType() == INEQUALITY_SYSTEM)
    {
-      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row.node, row.linking )[row.index];
-      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row.node, row.linking )[row.index];
-      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row.node, row.linking )[row.index];
-      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row.node, row.linking )[row.index];
+      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row.getNode(), row.getLinking() )[row.getIndex()];
+      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row.getNode(), row.getLinking() )[row.getIndex()];
 
       assert( PIPSisEQ(clow, cupp) );
       assert( !PIPSisZero(iclow) );
       assert( !PIPSisZero(icupp) );
    }
-   const double rhs = (row.system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row)[row_index] :
-      getSimpleVecFromRowStochVec( *presProb->bu, row.node, row.linking )[row.index];
+   const double rhs = (row.getSystemType() == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec( *presProb->bA, node_row, linking_row)[row_index] :
+      getSimpleVecFromRowStochVec( *presProb->bu, row.getNode(), row.getLinking() )[row.getIndex()];
 
-   obj_offset_chgs += obj_coef * rhs / col_coef;
-
-   if(node_col == -1 && block_col != B_MAT)
-   {
-      outdated_obj_vector = true;
-      (*objective_vec_chgs)[col_index] -= getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index];
-   }
-   else
-      getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index] = 0;
+   obj_offset_chgs += obj_coeff * rhs / col_coeff;
+   getSimpleVecFromColStochVec( *presProb->g, node_col)[col_index] = 0;
 }
 
 /* removes row from local system - sets rhs lhs and activities to zero */
@@ -2280,10 +2299,10 @@ void PresolveData::removeRow( const INDEX& row )
 {
    assert(row.isRow());
 
-   const int node = row.node;
-   const int row_index = row.index;
-   const SystemType system_type = row.system_type;
-   const bool linking_row = row.linking;
+   const int node = row.getNode();
+   const int row_index = row.getIndex();
+   const SystemType system_type = row.getSystemType();
+   const bool linking_row = row.getLinking();
 
    assert(-1 <= node && node < nChildren);
    assert(!nodeIsDummy(node));
@@ -2971,8 +2990,8 @@ bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, doub
 {
    assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
    assert(col.isCol());
-   const int node = col.node;
-   const int col_index = col.index;
+   const int node = col.getNode();
+   const int col_index = col.getIndex();
 
    double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), node)[col_index];
    double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), node)[col_index];
@@ -3026,7 +3045,7 @@ bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, doub
    else
    {
       if( TRACK_COLUMN(node, col_index) )
-         std::cout << "TRACKING_COLUMN: col " << col.index << " was not updated" << std::endl;
+         std::cout << "TRACKING_COLUMN: col " << col.getIndex() << " was not updated" << std::endl;
    }
 
 
@@ -3043,22 +3062,22 @@ bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, doub
 void PresolveData::updateRowActivities(const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old)
 {
    assert(col.isCol());
-   assert(-1 <= col.node && col.node < nChildren);
+   assert(-1 <= col.getNode() && col.getNode() < nChildren);
    assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
 
-   const int node = col.node;
-   const int col_index = col.index;
+   const int node = col.getNode();
+   const int col_index = col.getIndex();
 
    if( TRACK_COLUMN(node, col_index) )
    {
-      std::cout << "TRACKING_COLUMN: col " << col.index << " node " << node << " gets it's activities updated" << std::endl;
+      std::cout << "TRACKING_COLUMN: col " << col.getIndex() << " node " << node << " gets it's activities updated" << std::endl;
       std::cout << "\t bounds changed from [" << xlow_old << ", " << xupp_old << "] to [" << xlow_new << ", " << xupp_new << "]" << std::endl;
    }
 
    /* if node == -1 go through all linking var blocks of both systems */
    if( node == -1 )
    {
-      if( TRACK_COLUMN(node, col.index) )
+      if( TRACK_COLUMN(node, col.getIndex()) )
          std::cout << "TRACKING_COLUMN: the column is linking (root node)" << std::endl;
       /* A0/B0 and C0/D0block */
       updateRowActivitiesBlock(EQUALITY_SYSTEM, -1, B_MAT, col_index, xlow_new, xupp_new, xlow_old, xupp_old);
@@ -3280,10 +3299,10 @@ void PresolveData::getRowActivities( const INDEX& row, double& max_act,
       double& min_act, int& max_ubndd, int& min_ubndd) const
 {
    assert(row.isRow());
-   const int node = row.node;
-   const int row_index = row.index;
-   const bool linking = row.linking;
-   const SystemType system_type = row.system_type;
+   const int node = row.getNode();
+   const int row_index = row.getIndex();
+   const bool linking = row.getLinking();
+   const SystemType system_type = row.getSystemType();
 
    assert(!nodeIsDummy(node));
 
@@ -3338,22 +3357,22 @@ double PresolveData::getRowCoeff( const INDEX& row, const INDEX& col ) const
    assert(col.isCol());
 
    BlockType block_col = B_MAT;
-   if(row.linking)
+   if(row.getLinking())
       block_col = BL_MAT;
-   else if(col.node == -1 && row.node != -1)
+   else if(col.getNode() == -1 && row.getNode() != -1)
       block_col = A_MAT;
 
-   assert( !nodeIsDummy(col.node) );
+   assert( !nodeIsDummy(col.getNode()) );
 
-   const SparseStorageDynamic& mat = getSparseGenMatrix(row.system_type, row.node, block_col)->getStorageDynamicRef();
+   const SparseStorageDynamic& mat = getSparseGenMatrix(row.getSystemType(), row.getNode(), block_col)->getStorageDynamicRef();
 
-   const int row_start = mat.getRowPtr(row.index).start;
-   const int row_end = mat.getRowPtr(row.index).end;
+   const int row_start = mat.getRowPtr(row.getIndex()).start;
+   const int row_end = mat.getRowPtr(row.getIndex()).end;
    assert(row_start != row_end);
 
    for(int i = row_start; i < row_end; ++i)
    {
-      if(mat.getJcolM(i) == col.index)
+      if(mat.getJcolM(i) == col.getIndex())
          return mat.getMat(i);
    }
    assert(false && "could not find coefficient");
@@ -3388,10 +3407,10 @@ void PresolveData::writeRowLocalToStreamDense(std::ostream& out, const INDEX& ro
 {
    assert(row.isRow());
 
-   const int node = row.node;
-   const int row_index = row.index;
-   const SystemType system_type = row.system_type;
-   const bool linking = row.linking;
+   const int node = row.getNode();
+   const int row_index = row.getIndex();
+   const SystemType system_type = row.getSystemType();
+   const bool linking = row.getLinking();
 
    if(nodeIsDummy(node))
       return;

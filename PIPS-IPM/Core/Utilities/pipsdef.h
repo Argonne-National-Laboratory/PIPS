@@ -337,6 +337,7 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
 template <typename T>
 inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm)
 {
+   // todo make one vec and + - val
    const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
    const int min = PIPS_MPIgetMin(val, MPI_COMM_WORLD);
    return (max == min);

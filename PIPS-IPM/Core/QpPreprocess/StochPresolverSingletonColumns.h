@@ -23,6 +23,13 @@ public:
 
 private:
    long long removed_cols;
+   bool local_singletons;
+   const unsigned int n_linking_rows_eq;
+   const unsigned int n_linking_rows_ineq;
+
+   std::vector<int> local_linking_column_for_row_in_proc;
+   std::vector<INDEX> cols;
+
 
    bool removeSingletonColumn( const INDEX& col );
    INDEX findRowForColumnSingleton( const INDEX& col, bool& found );

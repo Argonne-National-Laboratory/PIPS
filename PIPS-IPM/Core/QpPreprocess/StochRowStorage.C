@@ -21,7 +21,7 @@ StochRowStorage::~StochRowStorage()
 int StochRowStorage::storeRow( const INDEX& row, const StochGenMatrix& matrix_row)
 {
    assert(row.isRow());
-   const int stored_row_index = row_storage->appendRow(matrix_row, row.node, row.index, row.linking);
+   const int stored_row_index = row_storage->appendRow(matrix_row, row.getNode(), row.getIndex(), row.getLinking());
    return stored_row_index;
 }
 
@@ -33,13 +33,13 @@ void StochRowStorage::axpyAtRow(double beta, StochVector &y, double alpha, const
    if(!PIPSisEQ(beta, 1.0))
       y.scale(beta);
 
-   row_storage->axpyWithRowAt(beta, y, row.node, row.index, row.linking);
+   row_storage->axpyWithRowAt(beta, y, row.getNode(), row.getIndex(), row.getLinking());
 }
 
 double StochRowStorage::multRowTimesVec( const INDEX& row, const StochVector& vec ) const
 {
    assert(row.isRow());
-   const double res = row_storage->localRowTimesVec(vec, row.node, row.index, row.linking);
+   const double res = row_storage->localRowTimesVec(vec, row.getNode(), row.getIndex(), row.getLinking());
    return res;
 }
 
@@ -54,19 +54,19 @@ double StochRowStorage::multLinkingRowTimesVecWithoutBl0( int row, const StochVe
 double StochRowStorage::getRowCoefficientAtColumn( const INDEX& row, const INDEX& col) const
 {
    BlockType block_col = B_MAT;
-   if( row.linking )
+   if( row.getLinking() )
       block_col = BL_MAT;
-   if( col.node == -1 && row.node != -1)
+   if( col.getNode() == -1 && row.getNode() != -1)
       block_col = A_MAT;
 
-   const SparseStorageDynamic& mat = *getSparseGenMatrixFromStochMat(*row_storage, row.node, block_col )->getStorageDynamic();
+   const SparseStorageDynamic& mat = *getSparseGenMatrixFromStochMat(*row_storage, row.getNode(), block_col )->getStorageDynamic();
 
-   const int row_start = mat.getRowPtr(row.index).start;
-   const int row_end = mat.getRowPtr(row.index).end;
+   const int row_start = mat.getRowPtr(row.getIndex()).start;
+   const int row_end = mat.getRowPtr(row.getIndex()).end;
 
    for(int i = row_start; i < row_end; ++i)
    {
-      if( mat.getJcolM(i) == col.index )
+      if( mat.getJcolM(i) == col.getIndex() )
          return mat.getMat(i);
    }
    return 0.0;

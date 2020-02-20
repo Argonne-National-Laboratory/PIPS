@@ -101,8 +101,8 @@ int StochColumnStorage::storeCol( const INDEX& col, const StochGenMatrix& matrix
    assert(col.isCol());
    assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
 
-   if( col.node == -1 )
-      return storeLinkingCol(col.index, matrix_eq_part, matrix_ineq_part);
+   if( col.getNode() == -1 )
+      return storeLinkingCol(col.getIndex(), matrix_eq_part, matrix_ineq_part);
    else
       return storeLocalCol(col, matrix_eq_part, matrix_ineq_part);
 }
@@ -171,8 +171,8 @@ int StochColumnStorage::storeLinkingCol(int col, const StochGenMatrix& matrix_eq
 
 int StochColumnStorage::storeLocalCol(const INDEX& col, const StochGenMatrix& matrix_eq_part, const StochGenMatrix& matrix_ineq_part)
 {
-   const int node = col.node;
-   const int col_index = col.index;
+   const int node = col.getNode();
+   const int col_index = col.getIndex();
 
    assert( 0 <= node && node < static_cast<int>(matrix_eq_part.children.size()) );
    assert( matrix_eq_part.children.size() == matrix_ineq_part.children.size() );
@@ -211,24 +211,24 @@ int StochColumnStorage::storeLocalCol(const INDEX& col, const StochGenMatrix& ma
 
 double StochColumnStorage::multColTimesVec( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
 {
-   assert(-1 <= col.node && col.node < static_cast<int>(nChildren));
+   assert(-1 <= col.getNode() && col.getNode() < static_cast<int>(nChildren));
    assert(nChildren == vec_eq.children.size());
    assert(nChildren == vec_ineq.children.size());
 
-   if(col.node == -1)
-      return multiplyLinkingColTimesVec(col.index, vec_eq, vec_ineq);
+   if(col.getNode() == -1)
+      return multiplyLinkingColTimesVec(col.getIndex(), vec_eq, vec_ineq);
    else
       return multiplyLocalColTimesVec(col, vec_eq, vec_ineq);
 }
 
 double StochColumnStorage::multColTimesVecWithoutRootNode( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
 {
-   assert(-1 <= col.node && col.node < static_cast<int>(nChildren));
+   assert(-1 <= col.getNode() && col.getNode() < static_cast<int>(nChildren));
    assert(nChildren == vec_eq.children.size());
    assert(nChildren == vec_ineq.children.size());
 
-   if(col.node == -1)
-      return multiplyLinkingColTimesVecWithoutRootNode(col.index, vec_eq, vec_ineq);
+   if(col.getNode() == -1)
+      return multiplyLinkingColTimesVecWithoutRootNode(col.getIndex(), vec_eq, vec_ineq);
    else
       return multiplyLocalColTimesVec(col, vec_eq, vec_ineq);
 }
@@ -308,8 +308,8 @@ double StochColumnStorage::multiplyLinkingColTimesVecWithoutRootNode(int col, co
 
 double StochColumnStorage::multiplyLocalColTimesVec( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq) const
 {
-   const int node = col.node;
-   const int col_index = col.index;
+   const int node = col.getNode();
+   const int col_index = col.getIndex();
    double res = 0.0;
 
    assert(0 <= node && node < static_cast<int>(nChildren));

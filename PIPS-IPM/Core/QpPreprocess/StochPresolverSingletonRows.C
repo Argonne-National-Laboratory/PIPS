@@ -52,7 +52,7 @@ void StochPresolverSingletonRows::applyPresolving()
 
       removed = removeSingletonRow( row );
       
-      if(removed && (row.node > 0 || my_rank == 0))
+      if(removed && (row.getNode() > 0 || my_rank == 0))
          ++removed_rows_local;
       presData.getSingletonRows().pop();
    }
@@ -98,7 +98,7 @@ void StochPresolverSingletonRows::applyPresolving()
  */
 bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
 {
-   assert( !presData.nodeIsDummy(row.node) );
+   assert( !presData.nodeIsDummy(row.getNode()) );
 
    if(presData.getNnzsRow(row) != 1)
       return false;
@@ -116,18 +116,18 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
    /* if the singleton entry was not found it was probably linking and someone else will remove it */
    if(node_col == -2 || col_idx == -1)
    {
-      assert(row.linking);
+      assert(row.getLinking());
       return false;
    }
 
    /* because of postsolve here we only remove correctly placed singleton rows */
-   if( row.node != -1 && node_col == -1)
+   if( row.getNode() != -1 && node_col == -1)
       return false;
 
    assert(!PIPSisZero(coeff));
    presData.removeSingletonRow(row, INDEX(COL, node_col, col_idx), xlow_new, xupp_new, coeff);
 
-   if( my_rank == 0 || !row.linking )
+   if( my_rank == 0 || !row.getLinking() )
       return true;
    else
       return false;
@@ -137,10 +137,10 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow(const INDEX& r
 {
    double coeff_singleton = 0.0;
 
-   const int node_row = row.node;
-   const int row_index = row.index;
-   const SystemType system_type = row.system_type;
-   const bool linking = row.linking;
+   const int node_row = row.getNode();
+   const int row_index = row.getIndex();
+   const SystemType system_type = row.getSystemType();
+   const bool linking = row.getLinking();
 
    node_col = -2;
    col_idx = -1;

@@ -192,7 +192,7 @@ public :
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
       void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff );
 
-      void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col );
+      void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
 
       // todo : hackish functions not properly working with presolve/postsolve
       void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);

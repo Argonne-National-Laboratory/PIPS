@@ -28,6 +28,7 @@ enum IndexType {COL, ROW, EMPTY_INDEX};
 
 struct INDEX
 {
+public:
    INDEX() : index_type(EMPTY_INDEX), node(-2), index(-1), linking(false), system_type(EQUALITY_SYSTEM){};
    INDEX(IndexType index_type, int node, int index, bool linking = false, SystemType system_type = EQUALITY_SYSTEM) :
       index_type(index_type), node(node), index(index), linking(linking), system_type(system_type){};
@@ -38,6 +39,7 @@ struct INDEX
 
    inline bool isRow() const { return index_type == ROW; };
    inline bool isCol() const { return index_type == COL; };
+   inline bool isEmpty() const { return index_type == EMPTY_INDEX; };
 
    friend std::ostream& operator<< (std::ostream &out, const INDEX& i)
    {
@@ -56,11 +58,18 @@ struct INDEX
       return out;
    }
 
-   const IndexType index_type;
-   const int node;
-   const int index;
-   const bool linking;
-   const SystemType system_type;
+   inline const IndexType& getType() const { return index_type; };
+   inline const int& getNode() const { return node; };
+   inline const int& getIndex() const { return index; };
+   inline const bool& getLinking() const { return linking; };
+   inline const SystemType& getSystemType() const { return system_type; };
+
+private:
+   IndexType index_type;
+   int node;
+   int index;
+   bool linking;
+   SystemType system_type;
 };
 
 
