@@ -122,9 +122,8 @@ void StochPresolverSingletonColumns::applyPresolving()
 
 bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
 {
-   assert(col.isCol());
-
-   assert( -1 <= col.getNode() && col.getNode() < nChildren );
+   assert( col.isCol() );
+   assert( col.hasValidNode(nChildren) );
    assert( !presData.nodeIsDummy(col.getNode()) );
 
    updatePointersForCurrentNode(col.getNode(), EQUALITY_SYSTEM);
@@ -147,8 +146,8 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
       return false;
    }
 
-   assert(row.isRow());
-   assert(-1 <= row.getNode() && row.getNode() < nChildren);
+   assert( row.isRow() );
+   assert( row.hasValidNode(nChildren) );
    updatePointersForCurrentNode(row.getNode(), row.getSystemType());
 
    /* check whether col is free/implied free */

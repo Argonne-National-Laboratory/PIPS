@@ -42,6 +42,7 @@ public:
    inline bool isEmpty() const { return index_type == EMPTY_INDEX; };
    inline bool isLinkingCol() const { assert(this->isCol()); return node == -1; };
    inline bool isLinkingRow() const { assert(this->isRow()); return linking; };
+   inline bool hasValidNode(int nChildren) const { return -1 <= index && index < nChildren; };
 
    friend std::ostream& operator<< (std::ostream &out, const INDEX& i)
    {
