@@ -58,8 +58,11 @@ else
    exit
 fi
 
-gams $gams_file --METHOD=PIPS > /dev/null
-../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks $gams_file.gdx > /dev/null
+rm -r run_$gams_file
+mkdir run_$gams_file
+cd run_$gams_file
+gams ../$gams_file --METHOD=PIPS > /dev/null
+../../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks $gams_file.gdx > /dev/null
 
 if [ "${stepLp,,}" = "true" ]; then
   stepLp="stepLp"
@@ -90,6 +93,6 @@ if [ "${memcheck,,}" = "true" ]; then
 else
   memcheck=""
 fi
-mpirun -np $np $memcheck $debug ../../../../build_pips/gmspips $nblocks $gams_file $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
+mpirun -np $np $memcheck $debug ../../../../../build_pips/gmspips $nblocks $gams_file $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
 
 
