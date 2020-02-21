@@ -2119,12 +2119,6 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRowSynced( const INDE
    PIPS_MPIgetSumInPlace(col_coeff, MPI_COMM_WORLD);
    PIPS_MPIgetSumInPlace(obj_coeff, MPI_COMM_WORLD);
 
-   /* adapt objective from substitution */
-   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
-
-   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
-   removeRow( row );
-
    if(col.isCol())
    {
       double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col.getNode())[col.getIndex()];
@@ -2160,6 +2154,12 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRowSynced( const INDE
    }
    else
       postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, INF_NEG_PRES, INF_POS_PRES, getSystemMatrix(row.getSystemType()) );
+
+   /* adapt objective from substitution */
+   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
+
+   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
+   removeRow( row );
 }
 
 void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col )

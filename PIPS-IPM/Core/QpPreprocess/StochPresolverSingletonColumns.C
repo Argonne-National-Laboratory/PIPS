@@ -95,7 +95,6 @@ void StochPresolverSingletonColumns::applyPresolving()
       }
    }
 
-   //todo
    presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyLinkingRowActivities();
