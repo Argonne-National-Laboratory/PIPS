@@ -218,8 +218,6 @@ void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const
 
    markRowRemoved(row);
    
-   // save dual postsolve info
-   // save row for primal postsolve info
    const int stored_row_idx = storeRow(row, matrix_row);
 
    reductions.push_back( FREE_COLUMN_SINGLETON_EQUALITY );
@@ -1109,15 +1107,11 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const INDEX& row = indices.at(first_index + 1);
 
          assert(row.isRow());
-         if(!row.getLinking())
-            assert(col.isCol());
 
-         const int col_index = col.getIndex();
-         const int node_col = col.getNode();
-
-         const bool linking_row = row.getLinking();
-         const int row_index = row.getIndex();
-         const int node_row = row.getNode();
+         if( !row.isLinkingRow() )
+            assert( col.isCol() );
+         if( !col.isCol() )
+            assert( row.isLinkingRow() );
 
          const double rhs = float_values.at(first_float_val);
          const double obj_coeff = float_values.at(first_float_val + 1);
@@ -1126,52 +1120,52 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const double xupp = float_values.at(first_float_val + 4);
 
          const int stored_row_idx = int_values.at(first_int_val);
-         const INDEX stored_row(ROW, node_row, stored_row_idx, linking_row, EQUALITY_SYSTEM);
+         const INDEX stored_row(ROW, row.getNode(), stored_row_idx, row.getLinking(), row.getSystemType());
 
-         const bool col_on_proc = (node_col == -1) ? true : !(x_vec.children[node_col]->isKindOf(kStochDummy));
+         const bool col_on_proc = (col.getNode() == -1) ? true : !(x_vec.children[col.getNode()]->isKindOf(kStochDummy));
 
-         assert(!PIPSisZero(col_coeff));
+         assert( !PIPSisZero(col_coeff) );
          assert( wasRowRemoved(row) );
 
          /* assert that linking columns and rows are done by all processes simultaneously */
-         if(node_col == -1)
-            assert(PIPS_MPIisValueEqual(col_index, MPI_COMM_WORLD));
+         if(col.isLinkingCol())
+            assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
 
-         if(linking_row)
-            assert(PIPS_MPIisValueEqual(row_index, MPI_COMM_WORLD));
+         if(row.isLinkingRow())
+            assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
 
          /* reintroduce row on all processes */
          if( row.getSystemType() == EQUALITY_SYSTEM )
-            getSimpleVecFromRowStochVec(*padding_origrow_equality, node_row, linking_row)[row_index] = 1;
+            getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = 1;
          else
-            getSimpleVecFromRowStochVec(*padding_origrow_inequality, node_row, linking_row)[row_index] = 1;
+            getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
 
          const double dual_value_row = obj_coeff / col_coeff;
          /* set duals of row depending on equality/inequality row */
          if( row.getSystemType() == EQUALITY_SYSTEM )
          {
-            getSimpleVecFromRowStochVec(y_vec, node_row, linking_row)[row_index] = dual_value_row;
-            assert( PIPSisZero(obj_coeff - getSimpleVecFromRowStochVec(y_vec, node_row, linking_row)[row_index] * col_coeff) );
+            getSimpleVecFromRowStochVec(y_vec, row) = dual_value_row;
+            assert( PIPSisZero(obj_coeff - getSimpleVecFromRowStochVec(y_vec, row) * col_coeff) );
          }
          else
          {
             /* cupp == clow so slacks must be zero */
-            getSimpleVecFromRowStochVec(s_vec, row.getNode(), row.getLinking())[row_index] = 0.0;
-            getSimpleVecFromRowStochVec(t_vec, row.getNode(), row.getLinking())[row_index] = 0.0;
-            getSimpleVecFromRowStochVec(u_vec, row.getNode(), row.getLinking())[row_index] = 0.0;
+            getSimpleVecFromRowStochVec(s_vec, row) = 0.0;
+            getSimpleVecFromRowStochVec(t_vec, row) = 0.0;
+            getSimpleVecFromRowStochVec(u_vec, row) = 0.0;
 
             /* set dual */
-            getSimpleVecFromRowStochVec(z_vec, node_row, linking_row)[row_index] = dual_value_row;
+            getSimpleVecFromRowStochVec(z_vec, row) = dual_value_row;
             if( PIPSisLT(0.0, dual_value_row) )
-               getSimpleVecFromRowStochVec(pi_vec, node_row, linking_row)[row_index] = dual_value_row;
+               getSimpleVecFromRowStochVec(pi_vec, row) = dual_value_row;
             else
-               getSimpleVecFromRowStochVec(lambda_vec, node_row, linking_row)[row_index] = -dual_value_row;
+               getSimpleVecFromRowStochVec(lambda_vec, row) = -dual_value_row;
          }
 
          /* synchronize value of row for x_val */
          double value_row = 0.0;
 
-         if(row.getLinking())
+         if( row.isLinkingRow() )
          {
             assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
 
@@ -1182,26 +1176,26 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
          }
          else
-            value_row = row_storage.multRowTimesVec(row, x_vec);
+            value_row = row_storage.multRowTimesVec(stored_row, x_vec);
 
          assert(std::abs(value_row) != INF_POS_PRES);
 
          /* reintroduce the removed column on process owning column */
          if(col_on_proc)
          {
-            double& x_val = getSimpleVecFromColStochVec(x_vec, node_col)[col_index];
+            double& x_val = getSimpleVecFromColStochVec(x_vec, col);
             assert(PIPSisZero(x_val));
 
             /* mark column as set */
-            getSimpleVecFromColStochVec(*padding_origcol, node_col)[col_index] = 1;
+            getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
 
             /* recover primal value */
             x_val = (rhs - value_row) / col_coeff;
             assert( PIPSisZero(x_val * col_coeff + value_row - rhs) );
 
             /* compute slacks and set duals for bounds to zero */
-            double& slack_lower = getSimpleVecFromColStochVec(v_vec, col.getNode())[col.getIndex()];
-            double& slack_upper = getSimpleVecFromColStochVec(w_vec, col.getNode())[col.getIndex()];
+            double& slack_lower = getSimpleVecFromColStochVec(v_vec, col);
+            double& slack_upper = getSimpleVecFromColStochVec(w_vec, col);
 
             if( xlow == INF_NEG_PRES )
                slack_lower = 0.0;
@@ -1219,8 +1213,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                slack_upper = xupp - x_val;
             }
 
-            getSimpleVecFromColStochVec(gamma_vec, node_col)[col_index] = 0.0;
-            getSimpleVecFromColStochVec(phi_vec, node_col)[col_index] = 0.0;
+            getSimpleVecFromColStochVec(gamma_vec, col) = 0.0;
+            getSimpleVecFromColStochVec(phi_vec, col) = 0.0;
          }
 
          break;
@@ -1371,13 +1365,24 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
    /* compute all s, t and u that have not yet been computed */
 
-#ifdef NDEBUG
+#ifndef NDEBUG
    /* assert that all primal variables have been set */
    double absmin_x;
    x_vec.absmin(absmin_x);
    assert( absmin_x < std::numeric_limits<double>::max() ); 
-   assert( x_vec->isRootNodeInSync() );
 #endif
+   assert( x_vec.isRootNodeInSync() );
+   assert( s_vec.isRootNodeInSync() );
+   assert( y_vec.isRootNodeInSync() );
+   assert( z_vec.isRootNodeInSync() );
+   assert( v_vec.isRootNodeInSync() );
+   assert( gamma_vec.isRootNodeInSync() );
+   assert( w_vec.isRootNodeInSync() );
+   assert( phi_vec.isRootNodeInSync() );
+   assert( t_vec.isRootNodeInSync() );
+   assert( lambda_vec.isRootNodeInSync() );
+   assert( u_vec.isRootNodeInSync() );
+   assert( pi_vec.isRootNodeInSync() );
 
    if( my_rank == 0 )
       std::cout << "finished postsolving... " << std::endl;

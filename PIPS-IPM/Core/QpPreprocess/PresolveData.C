@@ -2200,12 +2200,6 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
       getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
    const double col_coeff = getRowCoeff(row, col);
 
-   /* adapt objective from substitution */
-   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
-
-   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
-   removeRow( row );
-
    double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col.getNode())[col.getIndex()];
    double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col.getNode())[col.getIndex()];
    double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), col.getNode())[col.getIndex()];
@@ -2216,7 +2210,15 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    if( PIPSisZero(ixupp) )
       assert( xupp == INF_POS_PRES );
 
-   postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
+   if(postsolver)
+      postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
+
+   /* adapt objective from substitution */
+   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
+
+   /* remove row and mark column as empty - will be removed in model cleanup on all processes */
+   removeRow( row );
+
 
    /* remove col and mark it for the fix empty columns presolver */
    ixlow = xlow = xupp = ixupp = 0;

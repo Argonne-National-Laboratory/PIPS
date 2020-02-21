@@ -66,7 +66,27 @@ template <typename T>
 inline SimpleVectorBase<T>& getSimpleVecFromColStochVec(const OoqpVectorBase<T>& ooqpvec, int node)
    { return getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), node, false); }
 
+template <typename T>
+inline T& getSimpleVecFromRowStochVec(const OoqpVectorBase<T>& ooqpvec, const INDEX& row)
+{
+   assert(row.isRow());
+   SimpleVectorBase<T>& vec = getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), row.getNode(), row.getLinking());
+   const int index = row.getIndex();
+   assert(0 <= index && index < vec.n);
 
+   return vec[index];
+}
+
+template <typename T>
+inline T& getSimpleVecFromColStochVec(const OoqpVectorBase<T>& ooqpvec, const INDEX& col)
+{
+   assert(col.isCol());
+   SimpleVectorBase<T>& vec = getSimpleVecFromStochVec(dynamic_cast<const StochVectorBase<T>&>(ooqpvec), col.getNode(), false);
+   const int index = col.getIndex();
+   assert(0 <= index && index < vec.n);
+
+   return vec[index];
+}
 
 /// clone the structure of a StochVectorBase<T> into one of type U
 template<typename T, typename U>

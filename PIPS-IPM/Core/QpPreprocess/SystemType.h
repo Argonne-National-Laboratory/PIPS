@@ -40,6 +40,8 @@ public:
    inline bool isRow() const { return index_type == ROW; };
    inline bool isCol() const { return index_type == COL; };
    inline bool isEmpty() const { return index_type == EMPTY_INDEX; };
+   inline bool isLinkingCol() const { assert(this->isCol()); return node == -1; };
+   inline bool isLinkingRow() const { assert(this->isRow()); return linking; };
 
    friend std::ostream& operator<< (std::ostream &out, const INDEX& i)
    {

@@ -61,7 +61,7 @@ void StochPresolverSingletonColumns::applyPresolving()
       presData.getSingletonCols().pop();
    }
 
-   /* check for local singletons */
+   /* check for local singletons and communicate */
    PIPS_MPIgetLogicOrInPlace(local_singletons, MPI_COMM_WORLD);
    if(local_singletons)
    {
@@ -144,14 +144,15 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    /* find the associated row via checking transposed matrices */
    INDEX row = findRowForColumnSingleton(col, found);
 
+   /* the singleton is a linking variable located on another process */
    if( !found )
    {
-      assert(row.getType() == EMPTY_INDEX);
+      assert( row.getType() == EMPTY_INDEX );
       assert( node == -1 );
       return false;
    }
-   assert(row.isRow());
 
+   assert(row.isRow());
    assert(-1 <= row.getNode() && row.getNode() < nChildren);
    updatePointersForCurrentNode(row.getNode(), row.getSystemType());
 
@@ -169,7 +170,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
 
    if( implied_free && PIPSisEQ(obj, 0.0) )
    {
-      /* store local singleton cols for later */
+      /* store local singleton cols for later communication */
       if( row.getLinking() && col.getNode() != -1)
       {
          local_singletons = true;
@@ -196,6 +197,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
       else
          presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
    }
+   // TODO : singleton column located on other processes
    else if( row.getSystemType() == INEQUALITY_SYSTEM )
    {
       /* inequality singleton variables */
