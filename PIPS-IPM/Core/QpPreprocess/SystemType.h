@@ -43,6 +43,30 @@ public:
    inline bool isLinkingCol() const { assert(this->isCol()); return node == -1; };
    inline bool isLinkingRow() const { assert(this->isRow()); return linking; };
    inline bool hasValidNode(int nChildren) const { return -1 <= index && index < nChildren; };
+   inline bool inEqSys() const { return system_type == EQUALITY_SYSTEM; }
+   inline bool inInEqSys() const { return system_type == INEQUALITY_SYSTEM; }
+
+   BlockType getBlockOfColInRow( const INDEX& col ) const
+   {
+      assert(isRow());
+      assert(col.isCol());
+
+      /* linking row */
+      if(linking)
+         return BL_MAT;
+      else if( col.isLinkingCol() )
+      {
+         /* row node == -1 and col node == -1 and it is not linking -> B0_Mat */
+         if( node == -1 )
+            return B_MAT;
+         /* row node != -1 and col node == -1 -> some A_MAT */
+         else
+            return A_MAT;
+      }
+      /* not a linking row/col and not B0 -> B_MAT */
+      else
+         return B_MAT;
+   }
 
    friend std::ostream& operator<< (std::ostream &out, const INDEX& i)
    {
