@@ -1,4 +1,4 @@
-* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=./singletonEqualityColumn_Bl0Bl2 -PRESOLVE=true
+* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=./singletonEqualityColumn_B0B1A2 -PRESOLVE=true
 
 
 * if you wanna use this example please hack in useLinkStructure = true; in sData.C
@@ -149,7 +149,7 @@ $ifthen %METHOD%==PIPS
 
 
 *For creation of gdx files:
-$ echo jacobian singletonEqualityColumn_Bl0Bl2.gdx > convertd.opt
+$ echo jacobian singletonEqualityColumn_B0B1A2.gdx > convertd.opt
   option lp=convertd;
   m.optfile = 1;
   solve m use lp min z;

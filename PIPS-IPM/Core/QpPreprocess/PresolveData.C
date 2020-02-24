@@ -2226,12 +2226,12 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
    if(col.getNode() == -1)
       outdated_linking_var_bounds = true;
 
-   if( col.isLinkingCol() )
+   if( col.isLinkingCol() && my_rank == 0 )
    {
       assert( getSimpleVecFromColStochVec(*nnzs_col, col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
       assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, col) + (*objective_vec_chgs)[col.getIndex()]) );
    }
-   else
+   else if( !col.isLinkingCol() )
    {
       assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
       assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
