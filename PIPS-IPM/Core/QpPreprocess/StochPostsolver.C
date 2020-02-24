@@ -211,10 +211,12 @@ void StochPostsolver::notifyFreeColumnSingletonInequalityRow( const INDEX& row, 
 void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double col_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row )
 {
    assert(row.isRow());
-   assert(col.isCol());
+   assert(col.isCol() || col.isEmpty() );
+
+   if( col.isCol() )
+      assert(!wasColumnRemoved(col));
 
    assert(!wasRowRemoved(row));
-   assert(!wasColumnRemoved(col));
 
    markRowRemoved(row);
    
@@ -1122,27 +1124,26 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const int stored_row_idx = int_values.at(first_int_val);
          const INDEX stored_row(ROW, row.getNode(), stored_row_idx, row.getLinking(), row.getSystemType());
 
-         const bool col_on_proc = (col.getNode() == -1) ? true : !(x_vec.children[col.getNode()]->isKindOf(kStochDummy));
-
          assert( !PIPSisZero(col_coeff) );
          assert( wasRowRemoved(row) );
 
          /* assert that linking columns and rows are done by all processes simultaneously */
-         if( col.isLinkingCol() && row.getNode() == -1 )
-            assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
+         if( !col.isEmpty() )
+            if( col.isLinkingCol() && row.getNode() == -1 )
+               assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
 
          if( row.isLinkingRow() )
             assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
 
          /* reintroduce row on all processes */
-         if( row.getSystemType() == EQUALITY_SYSTEM )
+         if( row.inEqSys() )
             getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = 1;
          else
             getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
 
          const double dual_value_row = obj_coeff / col_coeff;
          /* set duals of row depending on equality/inequality row */
-         if( row.getSystemType() == EQUALITY_SYSTEM )
+         if( row.inEqSys() )
          {
             getSimpleVecFromRowStochVec(y_vec, row) = dual_value_row;
             assert( PIPSisZero(obj_coeff - getSimpleVecFromRowStochVec(y_vec, row) * col_coeff) );
@@ -1181,7 +1182,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert(std::abs(value_row) != INF_POS_PRES);
 
          /* reintroduce the removed column on process owning column */
-         if(col_on_proc)
+         if( col.isCol() )
          {
             double& x_val = getSimpleVecFromColStochVec(x_vec, col);
             assert(PIPSisZero(x_val));

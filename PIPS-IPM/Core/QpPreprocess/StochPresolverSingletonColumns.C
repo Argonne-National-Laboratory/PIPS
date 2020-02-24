@@ -66,7 +66,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    if(local_singletons)
    {
       /* allreduce local singleton columns and coeffs */
-      std::cout << "local singleton columns!" << std::endl;
+
       // TODO: change this - it should be the one that provides most numerical stability..
       /* allreduce the procs that found a local singleton column in a linking row - the lowest ranking one will get to remove the column */
       PIPS_MPImaxArrayInPlace(local_linking_column_for_row_in_proc, MPI_COMM_WORLD);
@@ -127,7 +127,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    assert( !presData.nodeIsDummy(col.getNode()) );
 
    updatePointersForCurrentNode(col.getNode(), EQUALITY_SYSTEM);
-   const SimpleVectorBase<int> &nnzs_col = (col.getNode() == -1) ? *currNnzColParent : *currNnzColChild;
+   const SimpleVectorBase<int> &nnzs_col = col.isLinkingCol() ? *currNnzColParent : *currNnzColChild;
 
    if( nnzs_col[col.getIndex()] == 0 )
       return false;
