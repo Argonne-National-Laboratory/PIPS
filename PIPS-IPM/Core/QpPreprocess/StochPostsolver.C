@@ -1128,10 +1128,10 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert( wasRowRemoved(row) );
 
          /* assert that linking columns and rows are done by all processes simultaneously */
-         if(col.isLinkingCol())
+         if( col.isLinkingCol() && row.getNode() == -1 )
             assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
 
-         if(row.isLinkingRow())
+         if( row.isLinkingRow() )
             assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
 
          /* reintroduce row on all processes */
