@@ -23,7 +23,9 @@ private:
   static
   void getMinMaxVec( bool getMin, bool initializeVec,
         const SparseStorage* storage, const OoqpVector* coScaleVec, OoqpVector& minmaxVec );
-
+  static
+  void getMinMaxVec( bool getMin, bool initializeVec,
+        const SparseStorageDynamic* storage_dynamic, const OoqpVector* coScaleVec, OoqpVector& minmaxVec );
 protected:
   SparseStorageHandle mStorage;
   SparseStorageDynamic* mStorageDynamic;

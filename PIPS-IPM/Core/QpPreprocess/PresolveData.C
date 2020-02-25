@@ -122,9 +122,6 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
 
    absmin_col->setToZero();
    absmax_col->setToZero();
-
-   initAbsminAbsmaxInCols(*absmin_col, *absmax_col);
-
    objective_vec_chgs->setToZero();
 
    presProb = sorigprob->cloneFull(true);
@@ -177,6 +174,8 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
 
    initSingletons();
    setUndefinedVarboundsTo(std::numeric_limits<double>::infinity());
+
+   initAbsminAbsmaxInCols(*absmin_col, *absmax_col);
 
 #ifdef TRACK_C
    if( I_TRACK_COLUMN )

@@ -124,6 +124,11 @@ public:
 
   SparseStorage* getStaticStorage(const int* rowNnz, const int* colNnz) const;
   SparseStorageDynamic* getTranspose() const;
+
+  void getRowMaxVec(const double* colScaleVec, double* vec) const;
+  void getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const;
+  void getRowMinVec(const double* colScaleVec, double* vec) const;
+
 };
 
 typedef SmartPointer<SparseStorageDynamic>  SparseStorageDynamicHandle;

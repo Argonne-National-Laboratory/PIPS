@@ -732,6 +732,95 @@ void SparseStorageDynamic::axpyWithRowAt( double alpha, double* y, int length, i
 }
 
 
+void SparseStorageDynamic::getRowMinVec(const double* colScaleVec, double* vec) const
+{
+   const bool coscale = (colScaleVec != nullptr);
+
+   if( coscale )
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double minval = vec[r];
+         assert(minval >= 0.0);
+
+         for( int i = rowptr[r].start; i < rowptr[r].end; i++ )
+         {
+            const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
+
+            if( absval < minval && absval > pips_eps )
+               minval = absval;
+         }
+         vec[r] = minval;
+      }
+   }
+   else
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double minval = vec[r];
+         assert(minval >= 0.0);
+
+         for( int i = rowptr[r].start; i < rowptr[r].end; i++ )
+         {
+            const double absval = std::abs(M[i]);
+
+            if( absval < minval && absval > pips_eps )
+               minval = absval;
+         }
+         vec[r] = minval;
+      }
+   }
+}
+
+void SparseStorageDynamic::getRowMaxVec(const double* colScaleVec, double* vec) const
+{
+   const bool coscale = (colScaleVec != nullptr);
+
+   if( coscale )
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double maxval = vec[r];
+         assert(maxval >= 0.0);
+
+         for( int i = rowptr[r].start; i < rowptr[r].end; i++ )
+         {
+            const double absval = std::abs(M[i] * colScaleVec[jcolM[i]]);
+
+            if( absval > maxval )
+               maxval = absval;
+         }
+         vec[r] = maxval;
+      }
+   }
+   else
+   {
+      for( int r = 0; r < m; r++ )
+      {
+         double maxval = vec[r];
+         assert(maxval >= 0.0);
+
+         for( int i = rowptr[r].start; i < rowptr[r].end; i++ )
+         {
+            const double absval = std::abs(M[i]);
+
+            if( absval > maxval )
+               maxval = absval;
+         }
+         vec[r] = maxval;
+      }
+   }
+}
+
+void SparseStorageDynamic::getRowMinMaxVec(bool getMin, const double* colScaleVec, double* vec) const
+{
+   if( getMin )
+      getRowMinVec(colScaleVec, vec);
+   else
+      getRowMaxVec(colScaleVec, vec);
+}
+
+
 SparseStorageDynamic::~SparseStorageDynamic()
 {
    delete[] jcolM;

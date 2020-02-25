@@ -642,6 +642,34 @@ SparseGenMatrix::addColSums(OoqpVector& sumVec)
 
 void
 SparseGenMatrix::getMinMaxVec( bool getMin, bool initializeVec,
+      const SparseStorageDynamic* storage_dynamic, const OoqpVector* coScaleVec, OoqpVector& minmaxVec )
+{
+   SimpleVector& mvec = dynamic_cast<SimpleVector&>(minmaxVec);
+
+   assert(mvec.length() == storage_dynamic->getM());
+
+   if( initializeVec )
+   {
+      if( getMin )
+         mvec.setToConstant(std::numeric_limits<double>::max());
+      else
+         mvec.setToConstant(0.0);
+   }
+
+   if( coScaleVec )
+   {
+      const SimpleVector* covec = dynamic_cast<const SimpleVector*>(coScaleVec);
+
+      storage_dynamic->getRowMinMaxVec(getMin, covec->elements(), mvec.elements());
+   }
+   else
+   {
+      storage_dynamic->getRowMinMaxVec(getMin, nullptr, mvec.elements());
+   }
+}
+
+void
+SparseGenMatrix::getMinMaxVec( bool getMin, bool initializeVec,
       const SparseStorage* storage, const OoqpVector* coScaleVec, OoqpVector& minmaxVec )
 {
    SimpleVector& mvec = dynamic_cast<SimpleVector&>(minmaxVec);
@@ -677,11 +705,21 @@ void SparseGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
 void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
       const OoqpVector* rowScaleVec, OoqpVector& minmaxVec)
 {
-   // we may need to form the transpose
-   if( !m_Mt )
-      initTransposed();
+   if( hasDynamicStorage() )
+   {
+      assert( getStorageDynamic() );
+      assert( getStorageDynamicTransposed() );
 
-   getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
+      getMinMaxVec(getMin, initializeVec, getStorageDynamicTransposed(), rowScaleVec, minmaxVec);
+   }
+   else
+   {
+      // we may need to form the transpose
+      if( !m_Mt )
+         initTransposed();
+
+      getMinMaxVec(getMin, initializeVec, m_Mt->mStorage, rowScaleVec, minmaxVec);
+   }
 }
 
 void SparseGenMatrix::initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>* colNnzVec)
