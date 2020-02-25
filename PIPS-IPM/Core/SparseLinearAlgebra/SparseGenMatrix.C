@@ -699,7 +699,10 @@ SparseGenMatrix::getMinMaxVec( bool getMin, bool initializeVec,
 void SparseGenMatrix::getRowMinMaxVec(bool getMin, bool initializeVec,
       const OoqpVector* colScaleVec, OoqpVector& minmaxVec)
 {
-   getMinMaxVec(getMin, initializeVec, mStorage, colScaleVec, minmaxVec);
+   if( hasDynamicStorage() )
+      getMinMaxVec(getMin, initializeVec, mStorageDynamic, colScaleVec, minmaxVec);
+   else
+      getMinMaxVec(getMin, initializeVec, mStorage, colScaleVec, minmaxVec);
 }
 
 void SparseGenMatrix::getColMinMaxVec(bool getMin, bool initializeVec,
