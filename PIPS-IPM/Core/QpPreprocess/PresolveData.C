@@ -1397,33 +1397,6 @@ void PresolveData::fixColumn( const INDEX& col, double value)
       assert( getSimpleVecFromColStochVec(*nnzs_col, col.getNode())[col.getIndex()] == 0 );
 }
 
-bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var)
-{
-   assert( -1 <= row.getNode() && row.getNode() < nChildren );
-
-
-   // TODO we still want to do tightenings that fix a variable
-   /* check for infeasibility of the newly found bounds */
-//   const int ixlow = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, node_var )[col]) ) ? 0 : 1;
-//   const double xlow = (ixlow) ? getSimpleVecFromColStochVec( *presProb->blx, node_var )[col] : -std::numeric_limits<double>::infinity();
-//   const int ixupp = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, node_var )[col]) ) ? 0 : 1;
-//   const double xupp = (ixupp) ? getSimpleVecFromColStochVec( *presProb->bux, node_var )[col] : std::numeric_limits<double>::infinity();
-//
-//   /* tightenings that fix a variable will still be done */
-//   if( PIPSisEQ(ubx, lbx) || PIPSisEQ(std::max(xlow, lbx), std::min(ubx, xupp)) )
-//      return rowPropagatedBounds( system_type, node_row, block_type, row, col, ubx, lbx);
-
-   /* we cannot tighten bounds with matrix entries that are too small - 1.0e-8 since eps_bounds_nontight == 1.0e-8 and 1.0e-16 is considered too small for an epslion*/
-   if(coeff_var < 1.0e-8)
-      return false;
-
-   /* adjust bounds so that they cannot be tight in the final solution and thus no dual postsolve should be necessary */
-   //lbx = lbx - (feastol + eps_bounds_nontight)/std::fabs(coeff_var);
-   //ubx = ubx + (feastol + eps_bounds_nontight)/std::fabs(coeff_var);
-
-   return rowPropagatedBounds( row, col, xlow_new, xupp_new);
-}
-
 // todo : do we need to store that a bound was implied by a singleton row ? I don't think so since singletons get removed from the system anyway
 void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff)
 {
@@ -1460,31 +1433,62 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
       removeRedundantRow( row );
 }
 
+bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var)
+{
+   assert( -1 <= row.getNode() && row.getNode() < nChildren );
+
+
+   // TODO we still want to do tightenings that fix a variable
+   /* check for infeasibility of the newly found bounds */
+   const int ixlow = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col ) ) ? 0 : 1;
+   const double xlow = ixlow ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG_PRES;
+   const int ixupp =  PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
+   const double xupp = ixupp ? getSimpleVecFromColStochVec( *presProb->bux, col) : INF_POS_PRES;
+
+   /* tightenings that fix a variable will still be done */
+   if( PIPSisEQ(std::max(xlow, xlow_new), std::min(xupp_new, xupp)) )
+      return rowPropagatedBounds( row, col, xlow_new, xupp_new);
+
+   /* we cannot tighten bounds with matrix entries that are too small - 1.0e-8 since eps_bounds_nontight == 1.0e-8 and 1.0e-16 is considered too small for an epslion */
+   if(coeff_var < 1.0e-8)
+      return false;
+
+   /* this is actually not so easy - relaxing the bounds so that a tight bound will definitely be infeasible is non-trivial since all equations (also bounds) only with feastol precision */
+
+   /* adjust bounds so that they cannot be tight in the final solution and thus no dual postsolve should be necessary */
+
+   xlow_new = xlow_new - (feastol + eps_bounds_nontight)/std::fabs(coeff_var);
+   xupp_new = xupp_new + (feastol + eps_bounds_nontight)/std::fabs(coeff_var);
+
+   if( !PIPSisLT(xlow, xlow_new) )
+      xlow_new = INF_NEG_PRES;
+
+   if( !PIPSisLT(xupp_new, xupp) )
+      xupp_new = INF_POS_PRES;
+
+   if( xlow_new == INF_NEG_PRES && xupp_new == INF_POS_PRES )
+      return false;
+
+   return rowPropagatedBounds( row, col, xlow_new, xupp_new);
+}
+
 bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new)
 {
-   assert( -1 <= row.getNode() && row.getNode()< nChildren );
    assert(row.isRow());
    assert(col.isCol());
 
-   const int node_row = row.getNode();
-   const int node_col = col.getNode();
-   const int col_index = col.getIndex();
-   const int row_index = row.getIndex();
-   const bool linking_row = row.getLinking();
-   const SystemType system_type = row.getSystemType();
+   assert( col.hasValidNode(nChildren) );
+   assert( row.hasValidNode(nChildren) );
 
-   assert( 0 <= col_index && col_index < getSimpleVecFromColStochVec( *presProb->ixlow, node_col ).n );
+   const int ixlow_old = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col ) ) ? 0 : 1;
+   const double xlow_old = ixlow_old ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG_PRES;
+   const int ixupp_old = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
+   const double xupp_old = ixupp_old ? getSimpleVecFromColStochVec( *presProb->bux, col ) : INF_POS_PRES;
 
-   const int ixlow_old = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, node_col )[col_index]) ) ? 0 : 1;
-   const double xlow_old = (ixlow_old) ? getSimpleVecFromColStochVec( *presProb->blx, node_col )[col_index] : INF_NEG_PRES;
-   const int ixupp_old = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, node_col )[col_index]) ) ? 0 : 1;
-   const double xupp_old = (ixupp_old) ? getSimpleVecFromColStochVec( *presProb->bux, node_col )[col_index] : INF_POS_PRES;
-
-   if( TRACK_COLUMN(node_col,col_index) )
+   if( TRACK_COLUMN(col.getNode(),col.getIndex()) )
    {
-      std::cout << "TRACKING_COLUMN: new bounds [" << xlow_new << ", " << xupp_new << "] propagated for column " <<
-         col_index << " from row " << row_index << " node " << node_row << " in " <<
-         ( (system_type == EQUALITY_SYSTEM) ? "EQU_SYS" : "INEQ_SYS") << ":" << std::endl;
+      std::cout << "TRACKING_COLUMN: new bounds [" << xlow_new << ", " << xupp_new << "] propagated for column " << col
+         << " from row " << row << ":" << std::endl;
       std::cout << "\tbounds were [" << xlow_old << ", " << xupp_old << "]" << std::endl;
    }
 
@@ -1501,8 +1505,8 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
    // set lower bound
    if( PIPSisLT(std::fabs(xupp_new), threshold_bound_tightening) && ( PIPSisZero(ixupp_old) || PIPSisLE(min_impact_bound_change, xupp_old - xupp_new) ) )
    {
-      assert(PIPSisLE(xupp_new, xupp_old));
       assert(xupp_new != INF_POS_PRES);
+      assert(PIPSisLE(xupp_new, xupp_old));
       if( updateUpperBoundVariable( col, xupp_new) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
@@ -1513,8 +1517,10 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
   // if( fabs(ubx) < 1e8 && (PIPSisZero(ixupp) || feastol * 1e3 <= fabs(xupp- ubx) ) )
    if( PIPSisLT(std::fabs(xlow_new), threshold_bound_tightening) && ( PIPSisZero(ixlow_old) || PIPSisLT(min_impact_bound_change, xlow_old - xlow_new)) )
    {
+      assert(xlow_new != INF_NEG_PRES);
+      if(!PIPSisLE(xlow_old, xlow_new))
+         std::cout << xlow_old << " " << xlow_new << std::endl;
       assert(PIPSisLE(xlow_old, xlow_new));
-      assert(xlow_new != -std::numeric_limits<double>::infinity());
       if( updateLowerBoundVariable(col, xlow_new) )
       {
          /* store node and row that implied the bound (necessary for resetting bounds later on) */
@@ -1530,16 +1536,16 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
    /// for linking variables we need to figure out a row that has been used for it's tightening
 
    /// every process should have the same root node data thus all of them should propagate their rows similarly
-   if( (lower_bound_changed || upper_bound_changed) && (node_row == -1 || node_col == -1) )
+   if( (lower_bound_changed || upper_bound_changed) && ( row.getNode() == -1 || col.isLinkingCol() ) )
       assert(outdated_linking_var_bounds == true);
 
    /// linking rows require a different postsolve event since propagatin linkin rows need to be stored by every process and need to be postsolved at the same time
-   if(!linking_row)
+   if( !row.isLinkingRow() )
    {
       if( lower_bound_changed )
-         postsolver->notifyRowPropagatedBound( row, col, ixlow_old, xlow_old, xlow_new, false, getSystemMatrix(system_type));
+         postsolver->notifyRowPropagatedBound( row, col, ixlow_old, xlow_old, xlow_new, false, getSystemMatrix(row.getSystemType()));
       if( upper_bound_changed )
-         postsolver->notifyRowPropagatedBound( row, col, ixupp_old, xupp_old, xupp_new, true, getSystemMatrix(system_type));
+         postsolver->notifyRowPropagatedBound( row, col, ixupp_old, xupp_old, xupp_new, true, getSystemMatrix(row.getSystemType()));
    }
    else if( lower_bound_changed || upper_bound_changed )
    {
@@ -1556,14 +1562,12 @@ void PresolveData::checkBoundsInfeasible(const INDEX& col, double xlow_new, doub
    assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
 
    assert(col.isCol());
-   const int col_idx = col.getIndex();
-   const int col_node = col.getNode();
 
    /* get current bounds */
-   const int ixlow = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col_node )[col_idx]) ) ? 0 : 1;
-   const double xlow = (ixlow) ? getSimpleVecFromColStochVec( *presProb->blx, col_node )[col_idx] : INF_NEG_PRES;
-   const int ixupp = ( PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col_node )[col_idx]) ) ? 0 : 1;
-   const double xupp = (ixupp) ? getSimpleVecFromColStochVec( *presProb->bux, col_node )[col_idx] : INF_POS_PRES;
+   const int ixlow = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col) ) ? 0 : 1;
+   const double xlow = ixlow ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG_PRES;
+   const int ixupp = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
+   const double xupp = ixupp ? getSimpleVecFromColStochVec( *presProb->bux, col) : INF_POS_PRES;
 
    if( !PIPSisLE( std::max(xlow_new,xlow), std::min(xupp_new, xupp)) )
    {
