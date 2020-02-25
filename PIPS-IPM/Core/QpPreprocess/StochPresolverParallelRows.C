@@ -432,7 +432,6 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    }
 }
 
-// todo check once
 void StochPresolverParallelRows::deleteNormalizedPointers(int node)
 {
    delete normNnzColParent;
@@ -494,8 +493,6 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
       delete normNnzColChild;
       delete singletonCoeffsColChild;
    }
-
-   // todo: set all to nullptr?
 }
 
 void StochPresolverParallelRows::setExtendedPointersToNull()
@@ -825,54 +822,42 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
       for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator it1 = row_coefficients_hashtable.begin(i);
             it1 != row_coefficients_hashtable.end(i); ++it1)
       {
+         const SystemType row1_system = (it1->id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
+         const int row1 = (row1_system == EQUALITY_SYSTEM) ? it1->id : it1->id - mA;
+         assert(0 <= row1 && row1 < mA);
+
+         /* if row1 has been removed in the meanwhile do not continue with it */
+         if( presData.wasRowRemoved( INDEX(ROW, node, row1, false, row1_system) ) )
+            continue;
+
          // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
          // Here: pairwise comparison: // todo make lexicographical
          boost::unordered_set<rowlib::rowWithEntries>::local_iterator it2 = it1;
          while ( ++it2 != row_coefficients_hashtable.end(i) )
          {
-            // When two parallel rows are found, check if they are both =, both <=, or = and <=
+            /* if at some point row1 was removed we gotta get a new row1 */
+            if( presData.wasRowRemoved( INDEX(ROW, node, row1, false, row1_system) ) )
+               break;
+
+            assert( it2->id != it1->id );
+            const SystemType row2_system = (it2->id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
+            const int row2 = (row2_system == EQUALITY_SYSTEM) ? it2->id : it2->id - mA;
+            assert(0 <= row2 && row2 < mA);
+            /* if row2 has been removed in the meanwhile do not continue with it */
+            if( presData.wasRowRemoved( INDEX(ROW, node, row2, false, row2_system) ) )
+               continue;
+
+            /* When two parallel rows are found, check if they are both =, both <=, or = and <= */
             if( checkRowsAreParallel( *it1, *it2) )
             {
-               if( it1->id < mA && it2->id < mA )
+               if( row1_system == EQUALITY_SYSTEM && row2_system == EQUALITY_SYSTEM )
                {
-                  int id1 = it1->id;
-                  int id2 = it2->id;
-                  // Case both constraints are equalities:
-                  // check if one of them contains a singleton variable:
-                  if( (*rowContainsSingletonVariableA)[id1] != -1
-                        || (*rowContainsSingletonVariableA)[id2] != -1 )
-                  {
-                     // nearly parallel case 1:
-                     // make sure that a_r2 != 0, otherwise switch ids.
-                     bool swapped = false;
-                     if( (*rowContainsSingletonVariableA)[id2] != -1 )
-                     {
-                        std::swap(id1, id2);
-                        swapped = true;
-                     }
-
-                     assert( (*rowContainsSingletonVariableA)[id2] != -1 );
-                     // if row id1 was already deleted, do not continue the procedure:
-                     if( (id1 < mA && (*currNnzRow)[id1]) == 0 )
-                        continue;
-
-                     // case two is basically case one
-                     doNearlyParallelRowCase1(id1, id2, node);
-                     
-                     /* got to next it1 since old one is no longer valid */
-                     if(swapped)
-                        break;
-                  }
+                  /* check if one constraint contains a singleton variable */
+                  if( (*rowContainsSingletonVariableA)[row1] != -1
+                        || (*rowContainsSingletonVariableA)[row2] != -1 )
+                     twoNearlyParallelEqualityRows(row1, row2, node);
                   else
-                  {
-                     if( !PIPSisEQ( (*norm_b)[id1], (*norm_b)[id2]) )
-                        PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel equality rows with non-compatible right hand sides",
-                           "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable"); 
-
-                     // TODO: should this be outside of the brackets?
-                     // delete row2 in the original system:
-                     presData.removeRedundantRow( INDEX(ROW, node, id2, false, EQUALITY_SYSTEM) );
-                  }
+                     twoParallelEqualityRows(row1, row2, node);
                }
                else if( it1->id >= mA && it2->id >= mA )
                {
@@ -1010,6 +995,107 @@ bool StochPresolverParallelRows::checkRowsAreParallel( rowlib::rowWithEntries ro
    return true;
 }
 
+void StochPresolverParallelRows::twoParallelEqualityRows(int row1, int row2, int node) const
+{
+   assert( -1 <= node && node < nChildren );
+   assert( row1 < mA && row2 < mA);
+
+   if( !PIPSisEQ( (*norm_b)[row1], (*norm_b)[row2]) )
+      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel equality rows with non-compatible right hand sides",
+         "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
+
+   /* one of the rows can be discarded */
+   presData.removeRedundantRow( INDEX(ROW, node, row2, false, EQUALITY_SYSTEM) );
+}
+
+/* returns true if row1 was removed */
+bool StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1, int row2, int node ) const
+{
+   assert( -1 <= node && node < nChildren );
+   assert( row1 < mA && row2 < mA );
+   assert( 0 <= row1 && 0 <= row2 );
+
+   /* make sure that row2 contains the singleton variable, otherwise switch row1 and row2 */
+   bool swapped = false;
+   if( (*rowContainsSingletonVariableA)[row2] != -1 )
+   {
+      std::swap(row1, row2);
+      swapped = true;
+   }
+   assert((*rowContainsSingletonVariableA)[row2] != -1);
+
+
+   /* get the singleton columns (if existent) */
+   const int col1_index = (*rowContainsSingletonVariableA)[row1];
+   const int col2_index = (*rowContainsSingletonVariableA)[row2];
+   const int node_var1 = (col1_index < nA) ? -1 : node;
+   const int node_var2 = (col2_index < nA) ? -1 : node;
+
+   const double a_col1 = getSingletonCoefficient(col1_index);
+   const double a_col2 = getSingletonCoefficient(col2_index);
+   /* we swapped the rows so this would hold */
+   assert( !PIPSisZero(a_col2) );
+
+   const int col1 = ( col1_index < nA ) ? col1_index : col1_index - nA;
+   const int col2 = ( col2_index < nA ) ? col2_index : col2_index - nA;
+   assert(-1 <= col1);
+   assert(0 <= col2);
+
+   /* we now can substitute the singleton column col2 out of the problem with x2 = t x1 + d where
+    *    t = a_col1 / (s * a_col2)
+    *    d = (b_row2 - b_row1/s)/a_col2
+    */
+
+   /* calculate t and d */
+   const double s = (*norm_factorA)[row1] / (*norm_factorA)[row2];
+   const double t = a_col1 / (a_col2 * s);
+   const double d = ( (*norm_b)[row2] - (*norm_b)[row1] )
+            * (*norm_factorA)[row2] / a_col2;
+
+   const SimpleVector* ixlow = (singleColIdx2 < nA) ? currIxlowParent : currIxlowChild;
+   const SimpleVector* ixupp = (singleColIdx2 < nA) ? currIxuppParent : currIxuppChild;
+   const SimpleVector* xlow = (singleColIdx2 < nA) ? currxlowParent : currxlowChild;
+   const SimpleVector* xupp = (singleColIdx2 < nA) ? currxuppParent : currxuppChild;
+
+   if( !PIPSisEQ(singleColIdx1, -1.0) )
+   {
+      // tighten the bounds of variable x_1:
+      double newxlow = INF_NEG_PRES;
+      double newxupp = INF_POS_PRES;
+
+      // calculate new bounds depending on the sign of t:
+      if( PIPSisLT(t, 0) )
+      {
+         std::swap(ixlow, ixupp);
+         std::swap(xlow, xupp);
+      }
+
+      if( PIPSisEQ( (*ixlow)[col2_idx], 1.0 ) )
+         newxlow = ((*xlow)[col2_idx] - d) / t;
+      if( PIPSisEQ( (*ixupp)[col2_idx], 1.0 ) )
+         newxupp = ((*xupp)[col2_idx] - d) / t;
+
+      presData.substituteVariableParallelRows( INDEX(ROW, node, row1, false, EQUALITY_SYSTEM), INDEX(ROW, node, row2, false, EQUALITY_SYSTEM),
+            INDEX(COL, node_var1, col1_idx), INDEX(COL, node_var2, col2_idx), t, d);
+      // effectively tighten bounds of variable x_id1:
+      const bool linking_row = false;
+      presData.rowPropagatedBounds(INDEX(ROW, node, row1, linking_row, EQUALITY_SYSTEM), INDEX(COL, node_var1, col1_idx), newxupp, newxlow);
+   }
+   else
+   {
+      /* row1 does not have a singleton variable - row2 does */
+      /* var2 = d */
+      assert( PIPSisZero(t) );
+      presData.fixColumn( INDEX(COL, node_var2, col2_idx), d );
+   }
+
+   /* got to next it1 since old one is no longer valid */
+   presData.removeRedundantRow( INDEX(ROW, node, row2, false, EQUALITY_SYSTEM) );
+
+   /* now id_2 can be discarded */
+   return swapped;
+}
+
 /**
  * Tightens the original lower and upper bounds of the first row, given the lower
  * and upper bounds of the second row. The normalized bounds are compared and the
@@ -1093,69 +1179,6 @@ double StochPresolverParallelRows::getSingletonCoefficient(int singleColIdx)
          (*singletonCoeffsColParent)[singleColIdx];
 }
 
-void StochPresolverParallelRows::doNearlyParallelRowCase1(int rowId1, int rowId2, int node)
-{
-   /* assert both rows are equality constraints */
-   assert( rowId1 != rowId2 );
-   assert( rowId1 >= 0 && rowId1 < mA );
-   assert( rowId2 >= 0 && rowId2 < mA );
-   assert( node >= -1 && node < nChildren );
-
-   // calculate t and d:
-   const int singleColIdx1 = (*rowContainsSingletonVariableA)[rowId1];
-   const int singleColIdx2 = (*rowContainsSingletonVariableA)[rowId2];
-   assert( !PIPSisEQ(singleColIdx2, -1) );
-
-   const double coeff_singleton1 = getSingletonCoefficient(singleColIdx1);
-   const double coeff_singleton2 = getSingletonCoefficient(singleColIdx2);
-   assert( !PIPSisZero(coeff_singleton2) );
-
-   const double s = (*norm_factorA)[rowId1] / (*norm_factorA)[rowId2];
-   const double t = coeff_singleton1 / coeff_singleton2 / s;
-   const double d = ( (*norm_b)[rowId2] - (*norm_b)[rowId1] )
-            * (*norm_factorA)[rowId2] / coeff_singleton2;
-
-   const int col1_idx = (singleColIdx1 < nA) ? singleColIdx1 : (singleColIdx1 - nA);
-   const int col2_idx = (singleColIdx2 < nA) ? singleColIdx2 : (singleColIdx2 - nA);
-   const int node_var1 = (singleColIdx1 < nA) ? -1 : node;
-   const int node_var2 = (singleColIdx2 < nA) ? -1 : node;
-   const SimpleVector* ixlow = (singleColIdx2 < nA) ? currIxlowParent : currIxlowChild;
-   const SimpleVector* ixupp = (singleColIdx2 < nA) ? currIxuppParent : currIxuppChild;
-   const SimpleVector* xlow = (singleColIdx2 < nA) ? currxlowParent : currxlowChild;
-   const SimpleVector* xupp = (singleColIdx2 < nA) ? currxuppParent : currxuppChild;
-
-   if( !PIPSisEQ(singleColIdx1, -1.0) )
-   {
-      // tighten the bounds of variable x_1:
-      double newxlow = -std::numeric_limits<double>::max();
-      double newxupp = std::numeric_limits<double>::max();
-
-      // calculate new bounds depending on the sign of t:
-      if( PIPSisLT(t, 0) )
-      {
-         std::swap(ixlow, ixupp);
-         std::swap(xlow, xupp);
-      }
-
-      if( PIPSisEQ( (*ixlow)[col2_idx], 1.0 ) )
-         newxlow = ((*xlow)[col2_idx] - d) / t;
-      if( PIPSisEQ( (*ixupp)[col2_idx], 1.0 ) )
-         newxupp = ((*xupp)[col2_idx] - d) / t;
-
-      presData.substituteVariableParallelRows( INDEX(ROW, node, rowId1, false, EQUALITY_SYSTEM), INDEX(ROW, node, rowId2, false, EQUALITY_SYSTEM),
-            INDEX(COL, node_var1, col1_idx), INDEX(COL, node_var2, col2_idx), t, d);
-      // effectively tighten bounds of variable x_id1:
-      const bool linking_row = false;
-      presData.rowPropagatedBounds(INDEX(ROW, node, rowId1, linking_row, EQUALITY_SYSTEM), INDEX(COL, node_var1, col1_idx), newxupp, newxlow);
-   }
-   else
-   {
-      /* row1 does not have a singleton variable - row2 does */
-      /* var2 = d */
-      assert( PIPSisZero(t) );
-      presData.fixColumn( INDEX(COL, node_var2, col2_idx), d );
-   }
-}
 /**
  * Executes the Nearly Parallel Row Case 3: Both constraints are inequalities and both contain
  * a singleton variable entry.

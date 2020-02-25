@@ -138,8 +138,15 @@ private:
 
    double getSingletonCoefficient(int singleColIdx);
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
-   void doNearlyParallelRowCase1(int rowId1, int rowId2, int node);
-   void doNearlyParallelRowCase3(int rowId1, int rowId2, int node);
+
+   void twoParallelEqualityRows(int row1, int row2, int node) const;
+   void parallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
+   void twoParallelInequalityRows(int row1, int row2, int node) const;
+
+   bool twoNearlyParallelEqualityRows(int row1, int row2, int node) const;
+   void nearlyParallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
+   void twoNearlyParallelInequalityRows(int row1, int row2, int node) const;
+
    void tightenLinkingVarsBounds();
 
 };
