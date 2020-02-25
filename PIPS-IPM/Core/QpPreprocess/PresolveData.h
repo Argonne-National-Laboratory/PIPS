@@ -125,6 +125,9 @@ private:
       int elements_deleted;
       int elements_deleted_transposed;
 
+      /* storing biggest and smallest absolute nonzero-coefficient in system matrix (including objective vector) */
+      StochVectorHandle absmin_col;
+      StochVectorHandle absmax_col;
 public :
 
       PresolveData(const sData* sorigprob, StochPostsolver* postsolver);
@@ -223,6 +226,8 @@ private:
       // initialize row and column nnz counter
       void initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorBase<int>& nnzs_row_C, StochVectorBase<int>& nnzs_col) const;
       void initSingletons();
+
+      void initAbsminAbsmaxInCols(StochVector& absmin, StochVector& absmax) const;
 
       void setUndefinedVarboundsTo(double value);
 

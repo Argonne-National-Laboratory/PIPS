@@ -5,8 +5,6 @@
  *      Author: bzfuslus
  */
 
-// todo : preallocate singleton rows and singleton columns?
-
 #include "PresolveData.h"
 #include "StochGenMatrix.h"
 #include "DoubleMatrixTypes.h"
@@ -108,7 +106,9 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       upper_bound_implied_by_system(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
       upper_bound_implied_by_row(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
       upper_bound_implied_by_node(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
-      elements_deleted(0), elements_deleted_transposed(0)
+      elements_deleted(0), elements_deleted_transposed(0),
+      absmin_col(dynamic_cast<StochVector*>(sorigprob->g->clone())),
+      absmax_col(dynamic_cast<StochVector*>(sorigprob->g->clone()))
 {
    std::memset(array_outdated_indicators, 0, length_array_outdated_indicators * sizeof(bool) );
    outdated_activities = true;
@@ -119,6 +119,11 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
    upper_bound_implied_by_system->setToConstant(-10);
    upper_bound_implied_by_row->setToConstant(-10);
    upper_bound_implied_by_node->setToConstant(-10);
+
+   absmin_col->setToZero();
+   absmax_col->setToZero();
+
+   initAbsminAbsmaxInCols(*absmin_col, *absmax_col);
 
    objective_vec_chgs->setToZero();
 
@@ -231,6 +236,15 @@ void PresolveData::setUndefinedVarboundsTo(double value)
          }
       }
    }
+}
+
+void PresolveData::initAbsminAbsmaxInCols(StochVector& absmin, StochVector& absmax) const
+{
+   getSystemMatrix(EQUALITY_SYSTEM).getColMinMaxVec(true, true, nullptr, absmin);
+   getSystemMatrix(INEQUALITY_SYSTEM).getColMinMaxVec(true, false, nullptr, absmin);
+
+   getSystemMatrix(EQUALITY_SYSTEM).getColMinMaxVec(false, true, nullptr, absmax);
+   getSystemMatrix(INEQUALITY_SYSTEM).getColMinMaxVec(false, false, nullptr, absmax);
 }
 
 sData* PresolveData::finalize()
