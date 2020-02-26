@@ -1433,10 +1433,10 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
       removeRedundantRow( row );
 }
 
-bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var)
+bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new )
 {
    assert( -1 <= row.getNode() && row.getNode() < nChildren );
-
+   // TODO : needs work for dual postsolve
 
    // TODO we still want to do tightenings that fix a variable
    /* check for infeasibility of the newly found bounds */
@@ -1450,6 +1450,7 @@ bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& c
       return rowPropagatedBounds( row, col, xlow_new, xupp_new);
 
    /* we cannot tighten bounds with matrix entries that are too small - 1.0e-8 since eps_bounds_nontight == 1.0e-8 and 1.0e-16 is considered too small for an epslion */
+   double coeff_var = 10;
    if(coeff_var < 1.0e-8)
       return false;
 
@@ -1915,43 +1916,59 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    // todo assert(transposed and normal matrix are in sync)
 }
 
-// todo
-void PresolveData::removeParallelRow( const INDEX& row )
+/* tighten bounds of col and remove row afterwards */
+void PresolveData::nearlyParallelRowImpliesBounds( const INDEX& row_eq, const INDEX& row_ineq, const INDEX& col, double xlow_new, double xupp_new )
 {
-   if( TRACK_ROW(row.getNode(), row.getIndex(), row.getSystemType(), row.getLinking()) )
+   assert( row_eq.isRow() );
+   assert( row_ineq.isRow() );
+   assert( !row_eq.isLinkingRow() );
+   assert( !row_ineq.isLinkingRow() );
+   assert( col.isCol() );
+   assert( row_eq.inEqSys() );
+   assert( row_ineq.inInEqSys() );
+
+   assert( !wasRowRemoved(row_eq) );
+   assert( !wasRowRemoved(row_ineq) );
+   assert( !wasColumnRemoved(col) );
+
+   if( xlow_new == INF_NEG_PRES && xupp_new == INF_POS_PRES )
+      return;
+
+   if( postsolver )
    {
-      std::cout << "TRACKING_ROW: removal of tracked row as parallel row" << std::endl;
+      // TODO
    }
 
-   throw std::runtime_error("Not yet implemented");
-//   if(postsolver)
-//      postsolver->notifyParallelRow()
-
-   removeRow( row );
+   /* adjust bounds and remove inequality row */
+   updateBoundsVariable(col, xlow_new, xupp_new);
+   removeRow(row_ineq);
 }
+
 
 /* a singleton variable is substituted out of the problem and then it's original row can be removed from the problem */
 void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2,
-   double scalar, double translation)
+   double scalar, double translation, double xlow_new, double xupp_new )
 {
    assert(row1.isRow() && row2.isRow());
-   assert(col1.isCol() && col2.isCol());
+   assert( (col1.isCol() || col1.isEmpty()) && col2.isCol());
    assert(row1.getNode() == row2.getNode());
+
    // todo : track row
-   
+   // todo : do the bound changes if there was a col1 and these do not come from two nearly parallel inequality rows
+   // todo :
    postsolver->notifyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation);
 
    // delete the equality constraint which contained var2 (the substituted variable)
    removeRedundantRow( row2 );
-   assert( PIPSisZero(getSimpleVecFromColStochVec(*nnzs_col, col2.getNode())[col2.getIndex()]) );
+   assert( PIPSisZero(getSimpleVecFromColStochVec(*nnzs_col, col2)) );
    
-   const double obj_var2 = getSimpleVecFromColStochVec(*presProb->g, col2.getNode())[col2.getIndex()];
+   const double obj_var2 = getSimpleVecFromColStochVec(*presProb->g, col2);
    const double val_offset = translation * obj_var2;
    const double change_obj_var1 = scalar * obj_var2;
 
    removeColumn( col2, 0.0 );
 
-   if( col1.getNode() != -1 )
+   if( !col1.isLinkingCol() )
    {
       getSimpleVecFromColStochVec(*presProb->g, row1.getNode())[col1.getIndex()] += change_obj_var1;
       obj_offset_chgs += val_offset;
@@ -1976,22 +1993,16 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
 
 void PresolveData::removeRedundantRow( const INDEX& row )
 {
-   assert(row.isRow());
-
-   const int node = row.getNode();
-   const SystemType system_type = row.getSystemType();
-   const bool linking = row.getLinking();
-   const int row_index = row.getIndex();
+   assert( row.isRow() );
 
    if(postsolver)
    {
       assert(!postsolver->wasRowRemoved( row ));
 
-      const double rhs = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*presProb->bA, node, linking)[row_index] :
-         getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row_index];
-      const double lhs = (system_type == EQUALITY_SYSTEM) ? rhs : getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row_index];
-      const int iclow = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromRowStochVec(*presProb->iclow, node, linking)[row_index];
-      const int icupp = (system_type == EQUALITY_SYSTEM) ? 1 : getSimpleVecFromRowStochVec(*presProb->icupp, node, linking)[row_index];
+      const double rhs = row.inEqSys() ? getSimpleVecFromRowStochVec(*presProb->bA, row) : getSimpleVecFromRowStochVec(*presProb->bu, row);
+      const double lhs = row.inEqSys() ? rhs : getSimpleVecFromRowStochVec(*presProb->bl, row);
+      const int iclow = row.inEqSys() ? 1 : getSimpleVecFromRowStochVec(*presProb->iclow, row);
+      const int icupp = row.inEqSys() ? 1 : getSimpleVecFromRowStochVec(*presProb->icupp, row);
 
 #ifndef NDEBUG
       double max_act = 0;
@@ -2018,7 +2029,7 @@ void PresolveData::removeRedundantRow( const INDEX& row )
       assert( PIPSisLE(0.0, icupp) );
       assert( PIPSisLT(0.0, iclow + icupp) );
 
-      postsolver->notifyRedundantRow(row, iclow, icupp, lhs, rhs, getSystemMatrix(system_type));
+      postsolver->notifyRedundantRow(row, iclow, icupp, lhs, rhs, getSystemMatrix( row.getSystemType() ));
       assert(postsolver->wasRowRemoved(row));
    }
  

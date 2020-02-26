@@ -185,12 +185,13 @@ public :
       void removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff);
 
       void syncPostsolveOfBoundsPropagatedByLinkingRows();
-      bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff_var);
+      bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new );
       bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
 
-      void substituteVariableParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation);
+      void substituteVariableParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation, double xlow_new, double xupp_new);
+      void nearlyParallelRowImpliesBounds( const INDEX& row_eq, const INDEX& row_ineq, const INDEX& col, double xlow_new, double xupp_new ) ;
+
       void removeRedundantRow( const INDEX& row );
-      void removeParallelRow( const INDEX& row );
       void fixColumnInequalitySingleton( const INDEX& col, double value, double coeff );
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
       void removeImpliedFreeColumnSingletonEqualityRowSynced( const INDEX& row, const INDEX& col );

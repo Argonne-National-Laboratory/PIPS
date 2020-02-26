@@ -132,18 +132,20 @@ private:
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
          SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVectorBase<int>* nnzRow );
    void compareRowsInCoeffHashTable(int& nRowElims, int it);
-   bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
+   bool checkRowsAreParallel( const rowlib::rowWithEntries& row1, const rowlib::rowWithEntries& row2);
 
-   void tightenOriginalBoundsOfRow1(SystemType system_type, int node, int rowId1, int rowId2);
+   void tightenOriginalBoundsOfRow1(SystemType system_type, int node, int rowId1, int rowId2) const;
 
-   double getSingletonCoefficient(int singleColIdx);
+   double getSingletonCoefficient(int singleton_index) const;
+   bool rowContainsSingletonVariable( int row_index ) const;
+
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
 
-   void twoParallelEqualityRows(int row1, int row2, int node) const;
+   void twoParallelEqualityRows(int row1_id, int row2_id, int node) const;
    void parallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
    void twoParallelInequalityRows(int row1, int row2, int node) const;
 
-   bool twoNearlyParallelEqualityRows(int row1, int row2, int node) const;
+   void twoNearlyParallelEqualityRows(int row1_id, int row2_id, int node) const;
    void nearlyParallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
    void twoNearlyParallelInequalityRows(int row1, int row2, int node) const;
 

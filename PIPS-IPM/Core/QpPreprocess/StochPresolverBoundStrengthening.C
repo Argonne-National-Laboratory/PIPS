@@ -264,7 +264,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
 //         bool row_propagated = presData.rowPropagatedBounds( INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
-         bool row_propagated = presData.rowPropagatedBoundsNonTight(INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new, a_ik);
+         bool row_propagated = presData.rowPropagatedBoundsNonTight(INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
 
          if(row_propagated && (node != -1 || my_rank == 0))
             ++tightenings;
