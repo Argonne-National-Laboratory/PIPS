@@ -272,6 +272,9 @@ void StochPostsolver::notifyParallelRowsBoundsTightened( const INDEX& row1, cons
    assert(row1.inInEqSys());
    assert(row2.inInEqSys());
 
+   assert(!wasRowRemoved(row1));
+   assert(!wasRowRemoved(row2));
+
    reductions.push_back(PARALLEL_ROWS_BOUNDS_TIGHTENED);
 
    indices.push_back(row1);
@@ -451,14 +454,14 @@ void StochPostsolver::finishNotify()
 bool StochPostsolver::wasColumnRemoved(const INDEX& col) const
 {
    assert(col.isCol());
-   return getSimpleVecFromColStochVec(*padding_origcol, col.getNode())[col.getIndex()] == -1;
+   return getSimpleVecFromColStochVec(*padding_origcol, col) == -1;
 }
 
 void StochPostsolver::markColumnRemoved(const INDEX& col )
 {
    assert(col.isCol());
    assert(!wasColumnRemoved(col));
-   getSimpleVecFromColStochVec(*padding_origcol, col.getNode())[col.getIndex()] = -1;
+   getSimpleVecFromColStochVec(*padding_origcol, col) = -1;
 }
 
 void StochPostsolver::markColumnAdded(const INDEX& col)
@@ -466,26 +469,26 @@ void StochPostsolver::markColumnAdded(const INDEX& col)
    assert(false);
    assert(col.isCol());
    assert(wasColumnRemoved(col));
-   getSimpleVecFromColStochVec(*padding_origcol, col.getNode())[col.getIndex()] = 1;
+   getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
 }
 
 bool StochPostsolver::wasRowRemoved( const INDEX& row ) const
 {
    assert(row.isRow());
-   if(row.getSystemType() == EQUALITY_SYSTEM)
-      return getSimpleVecFromRowStochVec(*padding_origrow_equality, row.getNode(), row.getLinking())[row.getIndex()] == -1;
+   if( row.inEqSys() )
+      return getSimpleVecFromRowStochVec(*padding_origrow_equality, row) == -1;
    else
-      return getSimpleVecFromRowStochVec(*padding_origrow_inequality, row.getNode(), row.getLinking())[row.getIndex()] == -1;
+      return getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) == -1;
 }
 
 void StochPostsolver::markRowRemoved(const INDEX& row)
 {
    assert(row.isRow());
    assert(!wasRowRemoved(row));
-   if(row.getSystemType() == EQUALITY_SYSTEM)
-      getSimpleVecFromRowStochVec(*padding_origrow_equality, row.getNode(), row.getLinking())[row.getIndex()] = -1;
+   if( row.inEqSys() )
+      getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = -1;
    else
-      getSimpleVecFromRowStochVec(*padding_origrow_inequality, row.getNode(), row.getLinking())[row.getIndex()] = -1;
+      getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = -1;
 }
 
 // todo use somehow?
@@ -494,10 +497,10 @@ void StochPostsolver::markRowAdded(const INDEX& row)
    assert(false);
    assert(row.isRow());
    assert(wasRowRemoved(row));
-   if(row.getSystemType() == EQUALITY_SYSTEM)
-      getSimpleVecFromRowStochVec(*padding_origrow_equality, row.getNode(), row.getLinking())[row.getIndex()] = 1;
+   if( row.inEqSys() )
+      getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = 1;
    else
-      getSimpleVecFromRowStochVec(*padding_origrow_inequality, row.getNode(), row.getLinking())[row.getIndex()] = 1;
+      getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
 }
 
 // todo : usage and check of padding origrow - can already be done - even without any dual postsolve stuff
@@ -1387,11 +1390,99 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case PARALLEL_ROWS_BOUNDS_TIGHTENED:
       {
+         assert(first_index + 2 == next_first_index);
+         assert(first_float_val + 5 == next_first_float_val);
+         assert(first_int_val == next_first_int_val);
+
+         const INDEX& row1 = indices.at(first_index);
+         const INDEX& row2 = indices.at(first_index + 1);
+
+         assert(row1.isRow());
+         assert(row2.isRow());
+         assert(row1.inInEqSys());
+         assert(row2.inInEqSys());
+
+         const double clow_old = float_values.at(first_float_val);
+         const double cupp_old = float_values.at(first_float_val + 1);
+         const double clow_new = float_values.at(first_float_val + 2);
+         const double cupp_new = float_values.at(first_float_val + 3);
+         const double factor = float_values.at(first_float_val + 4);
+
+         assert (!PIPSisZero(factor) );
+         assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row1) == 1 );
+         assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row2) == 1 );
+
+         /* recompute duals and slack of both rows - if one bound was tight and thus the dual non-zero we shift it to the row originally implying the bound */
+         double& z_row1 = getSimpleVecFromRowStochVec(z_vec, row1);
+         double& lambda_row1 = getSimpleVecFromRowStochVec(lambda_vec, row1);
+         double& pi_row1 = getSimpleVecFromRowStochVec(pi_vec, row1);
+
+         double& t_row1 = getSimpleVecFromRowStochVec(u_vec, row1);
+         double& u_row1 = getSimpleVecFromRowStochVec(t_vec, row1);
+
+         double& z_row2 = getSimpleVecFromRowStochVec(z_vec, row2);
+         double& lambda_row2 = getSimpleVecFromRowStochVec(lambda_vec, row2);
+         double& pi_row2 = getSimpleVecFromRowStochVec(pi_vec, row2);
+
+#ifndef NDEBUG
+         const double& t_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(u_vec, row2) : getSimpleVecFromRowStochVec(t_vec, row2);
+         const double& u_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(t_vec, row2) : getSimpleVecFromRowStochVec(u_vec, row2);
+#endif
+         assert( PIPSisZero(z_row2) );
+         assert( PIPSisZero(pi_row2) );
+         assert( PIPSisZero(lambda_row2) );
+
+         const bool clow_impied_by_row2 = (clow_old != clow_new);
+         const bool cupp_impied_by_row2 = (cupp_old != cupp_new);
+
+         if( PIPSisLT(factor, 0.0) )
+            std::swap(lambda_row2, pi_row2);
+
+         if(clow_impied_by_row2)
+         {
+            assert( PIPSisLT(clow_old, clow_new) );
+
+            /* adjust slacks */
+            if( clow_old == INF_NEG_PRES )
+               t_row1 = 0.0;
+            else
+               t_row1 += clow_new - clow_old;
+
+            /* clow is no longer tight on row1 but now on row2 - shift row1's multiplier to row2 */
+            z_row1 -= lambda_row1;
+            z_row2 += lambda_row1 * factor;
+
+            lambda_row2 = lambda_row1 * factor;
+            lambda_row1 = 0;
+
+            assert( PIPSisZero(t_row2 * lambda_row2) );
+         }
+
+         if(cupp_impied_by_row2)
+         {
+            assert( PIPSisLT(cupp_new, cupp_old) );
+
+            /* adjust slacks */
+            if( cupp_old == INF_POS_PRES )
+               u_row1 = 0.0;
+            else
+               u_row1 += cupp_old - cupp_new;
+
+            /* cupp is no longer tight on row1 but now on row2 - shift row1's multiplier to row2 */
+            z_row1 += pi_row1;
+            z_row2 -= pi_row1 * factor;
+
+            pi_row2 = pi_row1 * factor;
+            pi_row1 = 0.0;
+
+            assert( PIPSisZero(u_row2 * pi_row2) );
+         }
+
          break;
       }
       default:
       {
-         throw std::runtime_error("Tried to postsolve unknown reduction type");
+         throw std::runtime_error("Tried to postsolve not supported reduction type");
          break;
       }
 
