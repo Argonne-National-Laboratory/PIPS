@@ -237,7 +237,7 @@ void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const
    finishNotify();
 }
 
-/* substitute col2 with scalar*col1 + translation */
+/** substitute col2 with scalar*col1 + translation */
 void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation)
 {
    assert(row1.isRow());
@@ -263,6 +263,29 @@ void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const IND
 
    finishNotify();
 }
+
+/** tighten row1 bounds with row2 bounds - row1 = s * row2 */
+void StochPostsolver::notifyParallelRowsBoundsTightened( const INDEX& row1, const INDEX& row2, double clow_old, double cupp_old, double clow_new, double cupp_new, double factor )
+{
+   assert(row1.isRow());
+   assert(row2.isRow());
+   assert(row1.inInEqSys());
+   assert(row2.inInEqSys());
+
+   reductions.push_back(PARALLEL_ROWS_BOUNDS_TIGHTENED);
+
+   indices.push_back(row1);
+   indices.push_back(row2);
+
+   float_values.push_back(clow_old);
+   float_values.push_back(cupp_old);
+   float_values.push_back(clow_new);
+   float_values.push_back(cupp_new);
+   float_values.push_back(factor);
+
+   finishNotify();
+}
+
 
 /** bounds got tightened by propagating a singleton row - not necessary to store whole row */
 void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const INDEX& col, double xlow_old, double xupp_old, double xlow_new, double xupp_new, double coeff )
@@ -1300,7 +1323,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          const INDEX& row = indices.at(first_index);
          const INDEX& col = indices.at(first_index + 1);
-         assert( row.getSystemType() == INEQUALITY_SYSTEM );
+         assert( row.inInEqSys() );
 
          const int index_stored_row = int_values.at(first_int_val);
          const INDEX row_stored(ROW, row.getNode(), index_stored_row, row.getLinking(), row.getSystemType());
@@ -1311,56 +1334,59 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert( wasColumnRemoved(col) );
          assert( wasRowRemoved(row) );
 
-         getSimpleVecFromColStochVec(*padding_origcol, col.getNode())[col.getIndex()] = 1;
+         getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
 
-         getSimpleVecFromRowStochVec(*padding_origrow_inequality, row.getNode(), row.getLinking())[row.getIndex()] = 1;
+         getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
 
          /* set x value such that row is satisfied */
-         double& x_val = getSimpleVecFromColStochVec(x_vec, col.getNode())[col.getIndex()];
-         assert(PIPSisZero(x_val));
+         double& x_val = getSimpleVecFromColStochVec(x_vec, col);
+         assert( PIPSisZero(x_val) );
 
          x_val = (lhsrhs - row_storage.multRowTimesVec(row_stored, x_vec)) / coeff;
 
          /* duals of row and bounds are zero */
-         getSimpleVecFromRowStochVec(z_vec, row.getNode(), row.getLinking())[row.getIndex()] = 0;
-         getSimpleVecFromRowStochVec(lambda_vec, row.getNode(), row.getLinking())[row.getIndex()] = 0;
-         getSimpleVecFromRowStochVec(pi_vec, row.getNode(), row.getLinking())[col.getIndex()] = 0;
+         getSimpleVecFromRowStochVec(z_vec, row) = 0;
+         getSimpleVecFromRowStochVec(lambda_vec, row) = 0;
+         getSimpleVecFromRowStochVec(pi_vec, row) = 0;
 
-         getSimpleVecFromColStochVec(gamma_vec, col.getNode())[col.getIndex()] = 0;
-         getSimpleVecFromColStochVec(phi_vec, col.getNode())[col.getIndex()] = 0;
+         getSimpleVecFromColStochVec(gamma_vec, col) = 0;
+         getSimpleVecFromColStochVec(phi_vec, col) = 0;
 
          /* compute slacks for bounds and row */
          /* slack for row is zero by construction */
-         getSimpleVecFromRowStochVec(t_vec, row.getNode(), row.getLinking())[col.getIndex()] = 0;
-         getSimpleVecFromRowStochVec(u_vec, row.getNode(), row.getLinking())[col.getIndex()] = 0;
-         getSimpleVecFromRowStochVec(s_vec, row.getNode(), row.getLinking())[col.getIndex()] = 0;
+         getSimpleVecFromRowStochVec(t_vec, row) = 0;
+         getSimpleVecFromRowStochVec(u_vec, row) = 0;
+         getSimpleVecFromRowStochVec(s_vec, row) = 0;
 
-         const int ixlow = getSimpleVecFromColStochVec( *orig_problem_s.ixlow, col.getNode())[col.getIndex()];
-         const int ixupp = getSimpleVecFromColStochVec( *orig_problem_s.ixupp, col.getNode())[col.getIndex()];
-         const double xlow = getSimpleVecFromColStochVec( *orig_problem_s.blx, col.getNode())[col.getIndex()];
-         const double xupp = getSimpleVecFromColStochVec( *orig_problem_s.bux, col.getNode())[col.getIndex()];
+         const int ixlow = getSimpleVecFromColStochVec( *orig_problem_s.ixlow, col);
+         const int ixupp = getSimpleVecFromColStochVec( *orig_problem_s.ixupp, col);
+         const double xlow = getSimpleVecFromColStochVec( *orig_problem_s.blx, col);
+         const double xupp = getSimpleVecFromColStochVec( *orig_problem_s.bux, col);
 
 
          if(PIPSisZero(ixlow))
-            getSimpleVecFromColStochVec(v_vec, col.getNode())[col.getIndex()] = 0;
+            getSimpleVecFromColStochVec(v_vec, col) = 0;
          else
          {
-            getSimpleVecFromColStochVec(v_vec, col.getNode())[col.getIndex()] = x_val - xlow;
+            getSimpleVecFromColStochVec(v_vec, col) = x_val - xlow;
             assert( PIPSisLE(xlow, x_val) );
          }
 
          if(PIPSisZero(ixupp))
-            getSimpleVecFromColStochVec(w_vec, col.getNode())[col.getIndex()] = 0;
+            getSimpleVecFromColStochVec(w_vec, col) = 0;
          else
          {
-            getSimpleVecFromColStochVec(w_vec, col.getNode())[col.getIndex()] = xupp - x_val;
+            getSimpleVecFromColStochVec(w_vec, col) = xupp - x_val;
             assert( PIPSisLE(x_val, xupp) );
          }
 
-         getSimpleVecFromColStochVec(gamma_vec, col.getNode())[col.getIndex()] = 0.0;
-         getSimpleVecFromColStochVec(phi_vec, col.getNode())[col.getIndex()] = 0.0;
+         getSimpleVecFromColStochVec(gamma_vec, col) = 0.0;
+         getSimpleVecFromColStochVec(phi_vec, col) = 0.0;
 
-
+         break;
+      }
+      case PARALLEL_ROWS_BOUNDS_TIGHTENED:
+      {
          break;
       }
       default:

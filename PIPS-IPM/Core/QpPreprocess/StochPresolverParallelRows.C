@@ -737,7 +737,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
             (*clow)[row] /= absmax;
          if( !PIPSisZero((*icupp)[row]) )
             (*cupp)[row] /= absmax;
-         // if multiplied by a negative value, lhs and rhs have to be swapped:
+         // if multiplied by a negative value, lhs and rhs have to be swapped:row_B_start
          if(negate_row)
          {
             std::swap( (*clow)[row], (*cupp)[row] );
@@ -952,12 +952,10 @@ void StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int 
    assert( 0 <= row1 && 0 <= row2 );
 
    /* make sure that row2 contains the singleton variable, otherwise switch row1 and row2 */
-   bool swapped = false;
    if( (*rowContainsSingletonVariableA)[row2] != -1 )
       std::swap(row1, row2);
 
    assert((*rowContainsSingletonVariableA)[row2] != -1);
-
 
    /* get the singleton columns (if existent) */
    const int col1_index = (*rowContainsSingletonVariableA)[row1];
@@ -1050,7 +1048,8 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    assert( row1 < currCmat->getM() && row2 < currCmat->getM() );
    assert( norm_factorC && norm_factorC->n == currCmat->getM() );
 
-   const double factor = (*norm_factorC)[row1];
+   const double norm_factor_row1 = (*norm_factorC)[row1];
+   const double norm_factor_row2 = (*norm_factorC)[row2];
 
    const double norm_clow_row2 = PIPSisZero( (*norm_iclow)[row2] ) ? INF_NEG_PRES : (*norm_clow)[row2];
    const double norm_cupp_row2 = PIPSisZero( (*norm_icupp)[row2] ) ? INF_POS_PRES : (*norm_cupp)[row2];
@@ -1076,7 +1075,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
       norm_clow_row1 = norm_clow_row2;
       iclow_row1 = 1.0;
 
-      ( PIPSisLT( 0.0, factor) ) ? new_lhs = factor * norm_clow_row2 : new_rhs = factor * norm_clow_row2;
+      ( PIPSisLT( 0.0, norm_factor_row1) ) ? new_lhs = norm_factor_row1 * norm_clow_row2 : new_rhs = norm_factor_row1 * norm_clow_row2;
    }
 
    if( PIPSisLT( norm_cupp_row2, norm_cupp_row1) )
@@ -1085,12 +1084,13 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
       norm_cupp_row1 = norm_cupp_row2;
       icupp_row1 = 1.0;
 
-      ( PIPSisLT( 0.0, factor) ) ? new_rhs = factor * norm_cupp_row2 : new_lhs = factor * norm_cupp_row2;
+      ( PIPSisLT( 0.0, norm_factor_row1) ) ? new_rhs = norm_factor_row1 * norm_cupp_row2 : new_lhs = norm_factor_row1 * norm_cupp_row2;
    }
 
    assert( PIPSisLE( new_lhs, new_rhs) );
+   assert( !PIPSisZero( norm_factor_row1 / norm_factor_row2 ) );
 
-   presData.tightenRowBoundsParallelRow(INEQUALITY_SYSTEM, node, row1, new_lhs, new_rhs, false);
+   presData.tightenRowBoundsParallelRow( INDEX(ROW, node, row1, false, INEQUALITY_SYSTEM), INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM), new_lhs, new_rhs, norm_factor_row1 / norm_factor_row2);
 }
 
 /** Returns the matrix coefficient of the singleton variable with index singleColIdx.

@@ -1589,65 +1589,62 @@ void PresolveData::syncPostsolveOfBoundsPropagatedByLinkingRows()
    // todo sync postsolve events on the stack
 }
 
-void PresolveData::tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking)
+/** tightening row1 bounds with row2 where row1 = factor * row2 */
+void PresolveData::tightenRowBoundsParallelRow(const INDEX& row1, const INDEX& row2, double clow_new, double cupp_new, double factor)
 {
-   if( TRACK_ROW(node, row, system_type, linking) )
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( row1.hasValidNode(nChildren) );
+   assert( row2.hasValidNode(nChildren) );
+   assert( !row1.isLinkingRow() );
+   assert( !row2.isLinkingRow() );
+   assert( row1.inInEqSys() );
+   assert( row2.inInEqSys() );
+   assert( clow_new != INF_NEG_PRES || cupp_new != INF_POS_PRES );
+   assert( PIPSisLE(clow_new, cupp_new) );
+
+   if( TRACK_ROW(row1.getNode(), row1.getIndex(), row1.getSystem_type(), row1.getLinking()) )
    {
       std::cout << "TRACKING_ROW: before RHS LHS adjustment" << std::endl;
-      writeRowLocalToStreamDense(std::cout, INDEX(ROW, node, row, linking, system_type) );
+      writeRowLocalToStreamDense(std::cout, row1 );
    }
 
-   assert(-1 <= node && node < nChildren);
-   assert(!linking);
-   assert(system_type == INEQUALITY_SYSTEM);
 
+   const double clow = getSimpleVecFromRowStochVec(*presProb->bl, row1);
+   const double cupp = getSimpleVecFromRowStochVec(*presProb->bu, row1);
 
-   if( linking )
+   if( PIPSisZero( getSimpleVecFromRowStochVec(*presProb->iclow, row1) ) )
+      assert(clow == INF_NEG_PRES);
+
+   if( PIPSisZero( getSimpleVecFromRowStochVec(*presProb->icupp, row1) ) )
+      assert(cupp == INF_POS_PRES);
+
+   assert( PIPSisLT( std::max(clow, clow_new), std::min(cupp, cupp_new) ) );
+   if( clow_new != INF_NEG_PRES )
+      assert( PIPSisLT( clow, clow_new ) );
+
+   if( cupp_new != INF_POS_PRES )
+      assert( PIPSisLT( cupp_new, cupp ) );
+
+   if( postsolver )
+      postsolver->notifyParallelRowsBoundsTightened(row1, row2, clow, cupp, clow_new, cupp_new, factor);
+
+   if( clow_new != INF_NEG_PRES )
    {
-      assert(false);
-      //outdated_lhsrhs = true;
-      //(system_type == EQUALITY_SYSTEM) ? (*bound_chgs_A)[row] += value : (*bound_chgs_C)[row] += value;
-      return;
+      getSimpleVecFromRowStochVec(*presProb->iclow, row1) = 1.0;
+      getSimpleVecFromRowStochVec(*presProb->bl, row1) = clow_new;
    }
 
-   if(system_type == EQUALITY_SYSTEM)
+   if( cupp_new != INF_POS_PRES )
    {
-      assert(false);
-      //getSimpleVecFromRowStochVec(*presProb->bA, node, linking)[row] += value;
-   }
-   else
-   {
-      if( lhs != -std::numeric_limits<double>::infinity() )
-      {
-         if( !PIPSisEQ(getSimpleVecFromRowStochVec(*presProb->iclow, node, linking)[row], 1.0) )
-         {
-            getSimpleVecFromRowStochVec(*presProb->iclow, node, linking)[row] = 1.0;
-            getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row] = lhs;
-
-         }
-         else
-            getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row] = 
-               std::max(getSimpleVecFromRowStochVec(*presProb->bl, node, linking)[row], lhs);
-      }
-      if( rhs != std::numeric_limits<double>::infinity() )
-      {
-         if( !PIPSisEQ(getSimpleVecFromRowStochVec(*presProb->icupp, node, linking)[row], 1.0) )
-         {
-            getSimpleVecFromRowStochVec(*presProb->icupp, node, linking)[row] = 1.0;
-         }
-         else
-         {
-            getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row] = 
-               std::min(getSimpleVecFromRowStochVec(*presProb->bu, node, linking)[row], rhs);
-         }
-      }
-      // todo!
+      getSimpleVecFromRowStochVec(*presProb->icupp, row1) = 1.0;
+      getSimpleVecFromRowStochVec(*presProb->bu, row1) = cupp_new;
    }
 
-   if( TRACK_ROW(node, row, system_type, linking) )
+   if( TRACK_ROW(row1.getNode(), row1.getIndex(), row1.getSystem_type(), row1.getLinking()) )
    {
       std::cout << "TRACKING_ROW: after RHS LHS adjustment " << std::endl;
-      writeRowLocalToStreamDense(std::cout, INDEX(ROW, node, row, linking, system_type) );
+      writeRowLocalToStreamDense(std::cout, row1);
    }
 }
 

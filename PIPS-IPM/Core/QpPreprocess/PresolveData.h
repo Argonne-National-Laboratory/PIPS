@@ -200,8 +200,8 @@ public :
 
       void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
 
+      void tightenRowBoundsParallelRow( const INDEX& row_tightened, const INDEX& row_tightening, double clow_new, double cupp_new, double factor );
       // todo : hackish functions not properly working with presolve/postsolve
-      void tightenRowBoundsParallelRow(SystemType system_type, int node, int row, double lhs, double rhs, bool linking);
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
 
       /* call whenever a single entry has been deleted from the matrix */
