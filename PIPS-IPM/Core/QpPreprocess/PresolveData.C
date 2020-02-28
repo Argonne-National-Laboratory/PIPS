@@ -1953,21 +1953,42 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
    // todo : track row
    // todo : do the bound changes if there was a col1 and these do not come from two nearly parallel inequality rows
    // todo :
-   postsolver->notifyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation);
+
+
+   const double obj_col2 = getSimpleVecFromColStochVec(*presProb->g, col2);
+
+   if( postsolver )
+   {
+      const double xlow_col1 = getSimpleVecFromColStochVec(*presProb->blx, col1);
+      const double xupp_col1 = getSimpleVecFromColStochVec(*presProb->bux, col1);
+      const double xlow_col2 = getSimpleVecFromColStochVec(*presProb->blx, col2);
+      const double xupp_col2 = getSimpleVecFromColStochVec(*presProb->bux, col2);
+
+      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col1)) )
+         assert(xlow_col1 == INF_NEG_PRES);
+      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col1)) )
+         assert(xupp_col1 == INF_POS_PRES);
+      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col2)) )
+         assert(xlow_col2 == INF_NEG_PRES);
+      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col2)) )
+         assert(xupp_col2 == INF_POS_PRES);
+
+      postsolver->notifyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation, obj_col2, xlow_col1, xupp_col1, xlow_col2, xupp_col2);
+   }
+
 
    // delete the equality constraint which contained var2 (the substituted variable)
    removeRedundantRow( row2 );
    assert( PIPSisZero(getSimpleVecFromColStochVec(*nnzs_col, col2)) );
    
-   const double obj_var2 = getSimpleVecFromColStochVec(*presProb->g, col2);
-   const double val_offset = translation * obj_var2;
-   const double change_obj_var1 = scalar * obj_var2;
+   const double val_offset = translation * obj_col2;
+   const double change_obj_var1 = scalar * obj_col2;
 
    removeColumn( col2, 0.0 );
 
    if( !col1.isLinkingCol() )
    {
-      getSimpleVecFromColStochVec(*presProb->g, row1.getNode())[col1.getIndex()] += change_obj_var1;
+      getSimpleVecFromColStochVec(*presProb->g, col1) += change_obj_var1;
       obj_offset_chgs += val_offset;
    }
    else if( row1.getNode() == -1 )

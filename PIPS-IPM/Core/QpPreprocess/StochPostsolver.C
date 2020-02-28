@@ -238,12 +238,14 @@ void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const
 }
 
 /** substitute col2 with scalar*col1 + translation */
-void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation)
+void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation,
+   double obj_col2, double xlow_col1, double xupp_col1, double xlow_col2, double xupp_col2)
 {
-   assert(row1.isRow());
-   assert(row2.isRow());
-   assert(col1.isCol());
-   assert(col2.isCol());
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( row1.getNode() == row2.getNode() );
+   assert( col1.isCol() );
+   assert( col2.isCol() );
    // todo : linking rows are not possible yet
    assert( !wasColumnRemoved(col1) );
    assert( !wasColumnRemoved(col2) );
@@ -255,11 +257,18 @@ void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const IND
 
    indices.push_back( col2 );
    indices.push_back( col1 );
+   indices.push_back( row2 );
+   indices.push_back( row1 );
 
    markColumnRemoved(col2);
 
    float_values.push_back( scalar );
    float_values.push_back( translation );
+   float_values.push_back( obj_col2 );
+   float_values.push_back( xlow_col2 );
+   float_values.push_back( xupp_col2 );
+   float_values.push_back( xlow_col1 );
+   float_values.push_back( xupp_col1 );
 
    finishNotify();
 }
@@ -1257,32 +1266,75 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case PARALLEL_ROW_SUBSTITUTION:
       {
-         assert(first_index + 2 == next_first_index);
-         assert(first_float_val + 2 == next_first_float_val);
+         assert(first_index + 4 == next_first_index);
+         assert(first_float_val + 7 == next_first_float_val);
          assert(first_int_val == next_first_int_val);
 
          const INDEX& var_subst = indices.at(first_index);
          const INDEX& var_used_for_subst = indices.at(first_index + 1);
+         const INDEX& row_var_subst = indices.at(first_index + 2);
+         const INDEX& row_var_used_for_subst = indices.at(first_index + 3);
+
          assert(var_subst.isCol());
          assert(var_used_for_subst.isCol());
-
-         const int column_subst = var_subst.getIndex();
-         const int node_subst = var_subst.getNode();
-
-         const int column_used_for_subst = var_used_for_subst.getIndex();
-         const int node_used_for_subst = var_used_for_subst.getNode();
+         assert(row_var_subst.isRow());
+         assert(row_var_used_for_subst.isRow());
 
          const double scalar = float_values.at(first_float_val);
          const double translation = float_values.at(first_float_val + 1);
+         const double obj_subst_col = float_values.at(first_float_val + 2);
 
-         assert(wasColumnRemoved(var_subst));
+         const double xlow_col_subst = float_values.at(first_float_val + 3);
+         const double xupp_col_subst = float_values.at(first_float_val + 4);
+         const double xlow_col_for_subst = float_values.at(first_float_val + 5);
+         const double xupp_col_for_subst = float_values.at(first_float_val + 6);
 
-         assert(!wasColumnRemoved(var_used_for_subst));
+         double implied_lower_bound = PIPSisZero(translation) ? INF_NEG_PRES : (xlow_col_subst - scalar) / translation;
+         double implied_upper_bound = PIPSisZero(translation) ? INF_POS_PRES : (xupp_col_subst - scalar) / translation;
 
-         const double val_for_subst = getSimpleVecFromColStochVec(x_vec, node_used_for_subst)[column_used_for_subst];
+         if( PIPSisLT(translation, 0.0) )
+         {
+            std::swap(implied_lower_bound, implied_upper_bound);
+         }
 
-         getSimpleVecFromColStochVec(*padding_origcol, node_subst)[column_subst] = 1;
-         getSimpleVecFromColStochVec(x_vec, node_subst)[column_subst] = scalar * val_for_subst + translation;
+         const double xlow_curr = std::max(xlow_col_subst, implied_lower_bound);
+         const double xupp_curr = std::max(xupp_col_subst, implied_upper_bound);
+
+         assert( wasColumnRemoved(var_subst) );
+         assert( !wasColumnRemoved(var_used_for_subst) );
+         assert( !wasColumnRemoved(row_var_subst) );
+         assert( !wasColumnRemoved(row_var_used_for_subst) );
+
+
+         const double val_for_subst = getSimpleVecFromColStochVec(x_vec, var_used_for_subst);
+         const double obj_val_var_subst = scalar * val_for_subst + translation;
+         const double change_obj_var_var_for_subst = scalar * obj_subst_col;
+
+         /* primal postsolve */
+         getSimpleVecFromColStochVec(*padding_origcol, var_subst) = 1;
+         getSimpleVecFromColStochVec(x_vec, var_subst) = obj_val_var_subst;
+         assert( PIPSisLE( xlow_col_subst, obj_val_var_subst ) );
+         assert( PIPSisLE( obj_val_var_subst, xupp_col_subst ) );
+
+         /* slacks for bounds */
+         getSimpleVecFromColStochVec(v_vec, var_subst) = (xlow_col_subst == INF_NEG_PRES) ? 0 : obj_val_var_subst - xlow_col_subst;
+         getSimpleVecFromColStochVec(w_vec, var_subst) = (xupp_col_subst == INF_POS_PRES) ? 0 : xupp_col_subst - obj_val_var_subst;
+
+         /* dual postsolve */
+         /* the substitution itself needs no dual postsolve - the duals for the rows and the reduced costs stay valid */
+         /* postsolve becomes necessary when the substituted column and its row imply bounds on the substituting column */
+
+         // TODO: assert at most one dual is active
+         /* lower bound was implied by substituded var */
+         if( PIPSisEQ( val_for_subst, xlow_curr ) && !PIPSisEQ( xlow_curr, xlow_col_for_subst) )
+         {
+
+         }
+
+         if( PIPSisEQ( val_for_subst, xupp_curr ) && !PIPSisEQ( xupp_curr, xupp_col_for_subst ) )
+         {
+
+         }
 
          break;
       }
