@@ -239,7 +239,7 @@ void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const
 
 /** substitute col2 with scalar*col1 + translation */
 void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation,
-   double obj_col2, double xlow_col1, double xupp_col1, double xlow_col2, double xupp_col2)
+   double obj_col2, double xlow_col1, double xupp_col1, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2 )
 {
    assert( row1.isRow() );
    assert( row2.isRow() );
@@ -269,6 +269,8 @@ void StochPostsolver::notifyParallelRowSubstitution(const INDEX& row1, const IND
    float_values.push_back( xupp_col2 );
    float_values.push_back( xlow_col1 );
    float_values.push_back( xupp_col1 );
+   float_values.push_back( coeff_col1 );
+   float_values.push_back( coeff_col2 );
 
    finishNotify();
 }
@@ -1289,13 +1291,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const double xlow_col_for_subst = float_values.at(first_float_val + 5);
          const double xupp_col_for_subst = float_values.at(first_float_val + 6);
 
-         double implied_lower_bound = PIPSisZero(translation) ? INF_NEG_PRES : (xlow_col_subst - scalar) / translation;
-         double implied_upper_bound = PIPSisZero(translation) ? INF_POS_PRES : (xupp_col_subst - scalar) / translation;
+         const double coeff_col1 = float_values.at(first_float_val + 7);
+         const double coeff_col2 = float_values.at(first_float_val + 8);
 
-         if( PIPSisLT(translation, 0.0) )
-         {
-            std::swap(implied_lower_bound, implied_upper_bound);
-         }
+         const double implied_lower_bound = PIPSisZero(translation) ? INF_NEG_PRES : ( PIPSisLT(translation, 0.0) ?  (xupp_col_subst - scalar) / translation : (xlow_col_subst - scalar) / translation );
+         const double implied_upper_bound = PIPSisZero(translation) ? INF_POS_PRES : ( PIPSisLT(translation, 0.0) ? (xlow_col_subst - scalar) / translation : (xupp_col_subst - scalar) / translation );
+
+         assert( PIPSisLE( implied_lower_bound, implied_upper_bound ) );
 
          const double xlow_curr = std::max(xlow_col_subst, implied_lower_bound);
          const double xupp_curr = std::max(xupp_col_subst, implied_upper_bound);
@@ -1305,20 +1307,19 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert( !wasColumnRemoved(row_var_subst) );
          assert( !wasColumnRemoved(row_var_used_for_subst) );
 
-
          const double val_for_subst = getSimpleVecFromColStochVec(x_vec, var_used_for_subst);
-         const double obj_val_var_subst = scalar * val_for_subst + translation;
+         const double val_subst = scalar * val_for_subst + translation;
          const double change_obj_var_var_for_subst = scalar * obj_subst_col;
 
          /* primal postsolve */
          getSimpleVecFromColStochVec(*padding_origcol, var_subst) = 1;
-         getSimpleVecFromColStochVec(x_vec, var_subst) = obj_val_var_subst;
-         assert( PIPSisLE( xlow_col_subst, obj_val_var_subst ) );
-         assert( PIPSisLE( obj_val_var_subst, xupp_col_subst ) );
+         getSimpleVecFromColStochVec(x_vec, var_subst) = val_subst;
+         assert( PIPSisLE( xlow_col_subst, val_subst ) );
+         assert( PIPSisLE( val_subst, xupp_col_subst ) );
 
          /* slacks for bounds */
-         getSimpleVecFromColStochVec(v_vec, var_subst) = (xlow_col_subst == INF_NEG_PRES) ? 0 : obj_val_var_subst - xlow_col_subst;
-         getSimpleVecFromColStochVec(w_vec, var_subst) = (xupp_col_subst == INF_POS_PRES) ? 0 : xupp_col_subst - obj_val_var_subst;
+         getSimpleVecFromColStochVec(v_vec, var_subst) = (xlow_col_subst == INF_NEG_PRES) ? 0 : val_subst - xlow_col_subst;
+         getSimpleVecFromColStochVec(w_vec, var_subst) = (xupp_col_subst == INF_POS_PRES) ? 0 : xupp_col_subst - val_subst;
 
          /* dual postsolve */
          /* the substitution itself needs no dual postsolve - the duals for the rows and the reduced costs stay valid */
@@ -1328,7 +1329,16 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          /* lower bound was implied by substituded var */
          if( PIPSisEQ( val_for_subst, xlow_curr ) && !PIPSisEQ( xlow_curr, xlow_col_for_subst) )
          {
+            assert( PIPSisLT( xlow_col_for_subst, val_for_subst) );
+            assert( PIPSisEQ( val_subst, ))
 
+            double& dual = PIPSisLT(0.0, tran getSimpleVecFromColStochVec(gamma_vec, var_used_for_subst);
+            if( !PIPSisZero(dual) )
+            {
+               assert( PIPSisZero(getSimpleVecFromColStochVec(gamma_vec, var_used_for_subst)) );
+               const double dual_shift = dual/coeff_col1;
+
+            }
          }
 
          if( PIPSisEQ( val_for_subst, xupp_curr ) && !PIPSisEQ( xupp_curr, xupp_col_for_subst ) )
