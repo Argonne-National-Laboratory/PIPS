@@ -41,8 +41,11 @@ public:
       void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
-      void notifyParallelRowSubstitution( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation, double obj_col2,
-         double xlow_col1, double xupp_col1, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2, double parallelity );
+
+      void notifyNearlyParallelRowSubstitution( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation,
+         double obj_col2, double coeff_col1, double coeff_col2, double parallelity );
+      void notifyNearlyParallelRowBoundsTightened( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation, double obj_col2);
+
       void notifyParallelRowsBoundsTightened( const INDEX& row1, const INDEX& row2, double clow_old, double cupp_old, double clow_new, double cupp_new, double factor );
 
       bool wasColumnRemoved(const INDEX& col) const;
@@ -86,11 +89,12 @@ private:
          SINGLETON_INEQUALITY_ROW = 7,
          FIXED_EMPTY_COLUMN = 8,
          FREE_COLUMN_SINGLETON_EQUALITY = 9,
-         PARALLEL_ROW_SUBSTITUTION = 10,
+         NEARLY_PARALLEL_ROW_SUBSTITUTION = 10,
          LINKING_VARS_SYNC_EVENT = 11,
          FIXED_COLUMN_SINGLETON_FROM_INEQUALITY = 12,
          FREE_COLUMN_SINGLETON_INEQUALITY_ROW = 13,
          PARALLEL_ROWS_BOUNDS_TIGHTENED = 14,
+         NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED =15
       };
 
       const unsigned int n_rows_original;
