@@ -188,7 +188,8 @@ public :
       bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new );
       bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
 
-      void substituteVariableParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation, double xlow_new, double xupp_new);
+      void substituteVariableParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar,
+         double translation, double xlow_new, double xupp_new, double parallelity );
       void nearlyParallelRowImpliesBounds( const INDEX& row_eq, const INDEX& row_ineq, const INDEX& col, double xlow_new, double xupp_new ) ;
 
       void removeRedundantRow( const INDEX& row );

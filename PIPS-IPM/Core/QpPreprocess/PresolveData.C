@@ -1944,7 +1944,7 @@ void PresolveData::nearlyParallelRowImpliesBounds( const INDEX& row_eq, const IN
 
 /* a singleton variable is substituted out of the problem and then it's original row can be removed from the problem */
 void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2,
-   double scalar, double translation, double xlow_new, double xupp_new )
+   double scalar, double translation, double xlow_new, double xupp_new, double parallelity )
 {
    assert(row1.isRow() && row2.isRow());
    assert( (col1.isCol() || col1.isEmpty()) && col2.isCol());
@@ -1964,6 +1964,9 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
       const double xlow_col2 = getSimpleVecFromColStochVec(*presProb->blx, col2);
       const double xupp_col2 = getSimpleVecFromColStochVec(*presProb->bux, col2);
 
+      const double coeff_col1 = getRowCoeff(row1, col1);
+      const double coeff_col2 = getRowCoeff(row2, col2);
+
       if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col1)) )
          assert(xlow_col1 == INF_NEG_PRES);
       if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col1)) )
@@ -1973,7 +1976,8 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
       if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col2)) )
          assert(xupp_col2 == INF_POS_PRES);
 
-      postsolver->notifyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation, obj_col2, xlow_col1, xupp_col1, xlow_col2, xupp_col2);
+      postsolver->notifyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation, obj_col2, xlow_col1, xupp_col1,
+         xlow_col2, xupp_col2, coeff_col1, coeff_col2, parallelity );
    }
 
 

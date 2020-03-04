@@ -56,6 +56,11 @@ static inline double relativeDiff(double val1, double val2)
 #define PIPSdebugMessage      while( 0 ) /*lint -e{530}*/ printf
 #endif
 
+inline bool PIPSisEQFeas( double val1, double val2 )
+{
+   return (std::fabs(val1-val2) <= feastol);
+}
+
 inline bool PIPSisEQ(double val1, double val2, double eps = pips_eps)
 {
    return (std::fabs(val1 - val2) <= eps);
