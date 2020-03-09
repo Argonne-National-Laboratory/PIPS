@@ -141,13 +141,13 @@ private:
 
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
 
-   void twoParallelEqualityRows(int row1_id, int row2_id, int node) const;
-   void parallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
-   void twoParallelInequalityRows(int row1, int row2, int node) const;
+   bool twoParallelEqualityRows(int row1_id, int row2_id, int node) const;
+   bool parallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
+   bool twoParallelInequalityRows(int row1, int row2, int node) const;
 
-   void twoNearlyParallelEqualityRows(int row1_id, int row2_id, int node) const;
-   void nearlyParallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
-   void twoNearlyParallelInequalityRows(int row1, int row2, int node) const;
+   bool twoNearlyParallelEqualityRows(int row1_id, int row2_id, int node) const;
+   bool nearlyParallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
+   bool twoNearlyParallelInequalityRows(int row1, int row2, int node) const;
 
    void tightenLinkingVarsBounds();
 
