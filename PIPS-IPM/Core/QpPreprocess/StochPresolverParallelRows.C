@@ -988,10 +988,10 @@ void StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int 
    const double d = ( (*norm_b)[row2] - (*norm_b)[row1] )
             * (*norm_factorA)[row2] / a_col2;
 
-   double ixlow = (node_var2 == -1) ? (*currIxlowParent)[col2] : (*currIxlowChild)[col2];
-   double ixupp = (node_var2 == -1) ? (*currIxuppParent)[col2] : (*currIxuppChild)[col2];
-   double xlow = (node_var2 == -1) ? (*currxlowParent)[col2] : (*currxlowChild)[col2];
-   double xupp = (node_var2 == -1) ? (*currxuppParent)[col2] : (*currxuppChild)[col2];
+   double ixlow_col2 = (node_var2 == -1) ? (*currIxlowParent)[col2] : (*currIxlowChild)[col2];
+   double ixupp_col2 = (node_var2 == -1) ? (*currIxuppParent)[col2] : (*currIxuppChild)[col2];
+   double xlow_col2 = (node_var2 == -1) ? (*currxlowParent)[col2] : (*currxlowChild)[col2];
+   double xupp_col2 = (node_var2 == -1) ? (*currxuppParent)[col2] : (*currxuppChild)[col2];
 
    /* effectively tighten bounds of variable col2 */
    double xlow_new = INF_NEG_PRES;
@@ -1007,14 +1007,24 @@ void StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int 
       /* calculate new bounds depending on the sign of t */
       if( PIPSisLT(t, 0) )
       {
-         std::swap(ixlow, ixupp);
-         std::swap(xlow, xupp);
+         std::swap(ixlow_col2, ixupp_col2);
+         std::swap(xlow_col2, xupp_col2);
       }
 
-      if( PIPSisEQ( ixlow, 1.0 ) )
-         xlow_new = (xlow - d) / t;
-      if( PIPSisEQ( ixupp, 1.0 ) )
-         xupp_new = (xupp - d) / t;
+      if( !PIPSisZero( ixlow_col2 ) )
+         xlow_new = (xlow_col2 - d) / t;
+      if( !PIPSisZero( ixupp_col2 ) )
+         xupp_new = (xupp_col2 - d) / t;
+
+      const double ixlow_col1 = (node_var1 == -1) ? (*currIxlowParent)[col1] : (*currIxlowChild)[col1];
+      const double ixupp_col1 = (node_var1 == -1) ? (*currIxuppParent)[col1] : (*currIxuppChild)[col1];
+      const double xlow_col1 = (node_var1 == -1) ? (*currxlowParent)[col1] : (*currxlowChild)[col1];
+      const double xupp_col1 = (node_var1 == -1) ? (*currxuppParent)[col1] : (*currxuppChild)[col1];
+
+      if( !PIPSisZero( ixlow_col1 ) )
+         xlow_new = std::max(xlow_new, xlow_col1);
+      if( !PIPSisZero( ixupp_col1 ) )
+         xupp_new = std::max(xupp_new, xupp_col1);
    }
 
    const INDEX row1_INDEX(ROW, node, row1, false, EQUALITY_SYSTEM);
