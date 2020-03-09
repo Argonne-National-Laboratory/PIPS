@@ -1925,18 +1925,22 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
 
    if( row2.inInEqSys() )
    {
+      assert( col1.isCol() );
       assert(col2.isEmpty() );
       assert(scalar == INF_POS_PRES);
       assert(translation == INF_POS_PRES);
    }
    else
+   {
+      assert( col1.isCol() || col2.isEmpty() );
       assert( col2.isCol() );
-
-   assert( col1.isCol() );
+   }
 
    assert( !wasRowRemoved(row1) );
    assert( !wasRowRemoved(row2) );
-   assert( !wasColumnRemoved(col1) );
+
+   if( col1.isCol() )
+      assert( !wasColumnRemoved(col1) );
    if( col2.isCol() )
       assert( !wasColumnRemoved(col2) );
 
@@ -1945,8 +1949,8 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
 
    if( postsolver )
    {
-      const double xlow_col1 = getSimpleVecFromColStochVec(*presProb->blx, col1);
-      const double xupp_col1 = getSimpleVecFromColStochVec(*presProb->bux, col1);
+      const double xlow_col1 = col1.isCol() ? getSimpleVecFromColStochVec(*presProb->blx, col1) : INF_NEG_PRES;
+      const double xupp_col1 = col1.isCol() ? getSimpleVecFromColStochVec(*presProb->bux, col1) : INF_POS_PRES;
 
       const double xlow_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->blx, col2) : INF_NEG_PRES;
       const double xupp_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->bux, col2) : INF_POS_PRES;
@@ -1954,10 +1958,13 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
       assert( PIPSisLE(xlow_col1, xlow_new) );
       assert( PIPSisLE(xupp_new, xupp_col1) );
 
-      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col1)) )
-         assert(xlow_col1 == INF_NEG_PRES);
-      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col1)) )
-         assert(xupp_col1 == INF_POS_PRES);
+      if( col1.isCol() )
+      {
+         if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col1)) )
+            assert(xlow_col1 == INF_NEG_PRES);
+         if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col1)) )
+            assert(xupp_col1 == INF_POS_PRES);
+      }
       if( col2.isCol() )
       {
          if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col2)) )
@@ -1966,7 +1973,7 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
             assert(xupp_col1 == INF_POS_PRES);
       }
 
-      const double coeff_col1 = getRowCoeff(row1, col1);
+      const double coeff_col1 = col1.isCol() ? getRowCoeff(row1, col1) : 0.0;
       const double coeff_col2 = col2.isCol() ? getRowCoeff(row2, col2) : 0.0;
 
       if( col2.isCol() )

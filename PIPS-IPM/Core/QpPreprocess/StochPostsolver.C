@@ -313,21 +313,25 @@ void StochPostsolver::notifyNearlyParallelRowBoundsTightened( const INDEX& row1,
    assert( row1.isRow() );
    assert( row2.isRow() );
    assert( row1.inEqSys() );
-
    assert( col1.isCol() );
 
-   if(row2.inEqSys() )
+   if( row2.inEqSys() )
       assert( col2.isCol() );
    else
-      assert(col2.isEmpty() );
+      assert( col2.isEmpty() );
 
    assert( !wasRowRemoved(row1) );
    assert( !wasRowRemoved(row1) );
-
    assert( !wasColumnRemoved(col1) );
 
    if( col2.isCol() )
       assert( !wasColumnRemoved(col2) );
+   else
+   {
+      assert( PIPSisZero(coeff_col2) );
+      assert( xlow_col2 == INF_NEG_PRES );
+      assert( xupp_col2 == INF_POS_PRES );
+   }
 
    assert( !PIPSisZero(scalar) );
 
