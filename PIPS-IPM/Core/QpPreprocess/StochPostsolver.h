@@ -149,8 +149,6 @@ private:
       void setOriginalValuesFromReduced(SimpleVectorBase<T>& original_vector,
          const SimpleVectorBase<T>& reduced_vector,
          const SimpleVectorBase<int>& padding_original) const;
-
-
 };
 
 

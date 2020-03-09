@@ -201,8 +201,6 @@ public :
 
       void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff );
 
-      void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
-
       void tightenRowBoundsParallelRow( const INDEX& row_tightened, const INDEX& row_tightening, double clow_new, double cupp_new, double factor );
       // todo : hackish functions not properly working with presolve/postsolve
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
@@ -221,6 +219,9 @@ public :
 
       bool varBoundImpliedFreeBy( bool upper, const INDEX& col, const INDEX& row);
 private:
+      void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
+      void addCoeffColToRow( double coeff, const INDEX& col, const INDEX& row );
+
       INDEX getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upper_bound);
       void markRowAsImplyingColumnBound(const INDEX& col, const INDEX& row, bool upper_bound);
 
@@ -283,10 +284,17 @@ private:
       void removeColumn(const INDEX& col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow( const INDEX& row );
-      void removeRowFromMatrix(SystemType system_type, int node, BlockType block_type, int row);
+      void removeRowFromMatrix(const INDEX& row, BlockType block_type);
 
-      void reduceNnzCounterRow(SystemType system_type, int node, bool linking, int row_index, int amount);
-      void reduceNnzCounterColumn(int node, BlockType block_type, int col_index, int amount);
+      void reduceNnzCounterRowBy(const INDEX& row, int amount);
+      void increaseNnzCounterRowBy(const INDEX& row, int amount);
+
+      void changeNnzCounterRow(const INDEX& row, int amount);
+
+      void reduceNnzCounterColumnBy(const INDEX& col, int amount, bool at_root);
+      void increaseNnzCounterColumnBy(const INDEX& col, int amount, bool at_root);
+
+      void changeNnzCounterColumn(const INDEX& col, int amount, bool at_root);
 
       /// methods for querying the problem in order to get certain structures etc. todo: move?
       StochGenMatrix& getSystemMatrix(SystemType system_type) const;

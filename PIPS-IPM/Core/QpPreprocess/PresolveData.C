@@ -992,8 +992,7 @@ bool PresolveData::presDataInSync() const
 // also rhs lhs will be adjusted - this has to be reversed later - there will also be a problem with the reduced costs in than particular row ?
 // todo : postsolve if bounds adjusted because of deleted matrix entry simply reverse the adjustment - no changes in multipliers
 //- row stays active / inactive ? not true..
-void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block_type, int row,
-      int& col_idx, int& row_end)
+void PresolveData::deleteEntry( SystemType system_type, int node, BlockType block_type, int row, int& col_idx, int& row_end)
 {
    assert(-1 <= node && node < nChildren);
    assert(node != -1 || block_type != A_MAT);
@@ -1003,10 +1002,11 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    
    const double val = storage.getMat(col_idx);
    const int col = storage.getJcolM(col_idx);
+   const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
+   const bool at_root = ( node == -1 && node_col == -1 );
 
    if( postsolver )
    {
-      const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
       postsolver->notifyColModified( INDEX(COL, node_col, col) );
       postsolver->notifyRowModified( INDEX(ROW, node, row, linking, system_type) );
    }
@@ -1029,8 +1029,10 @@ void PresolveData::deleteEntry(SystemType system_type, int node, BlockType block
    adjustRowActivityFromDeletion(system_type, node, block_type, row, col, val);
 
    /* adjust nnz counters */
-   reduceNnzCounterRow(system_type, node, linking, row, 1);
-   reduceNnzCounterColumn(node, block_type, col, 1);
+   const INDEX row_INDEX( ROW, node, row, linking, system_type );
+   const INDEX col_INDEX( COL, node_col, col );
+   reduceNnzCounterRowBy( row_INDEX, 1 );
+   reduceNnzCounterColumnBy( col_INDEX, 1, at_root );
 }
 
 void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
@@ -1238,9 +1240,8 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
    getRowActivities(row, max_act, min_act, max_ubndd, min_ubndd);
 
    /* block in which column is located */
-   BlockType block_type = (col_node != -1) ? B_MAT : A_MAT;
-   if( row_node == -1 )
-      block_type = linking ? BL_MAT : B_MAT;
+
+   BlockType block_type = row.getBlockOfColInRow(col);
 
    /* get matrix in order to get the coefficient of col in row */
    const SparseStorageDynamic& mat = getSparseGenMatrix(system_type, row_node, block_type)->getStorageDynamicRef();
@@ -1723,63 +1724,99 @@ void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, 
    elements_deleted_transposed = 0;
 }
 
-void PresolveData::reduceNnzCounterRow(SystemType system_type, int node, bool linking, int row_index, int amount)
+void PresolveData::reduceNnzCounterRowBy(const INDEX& row, int amount)
 {
-   assert(-1 <= node && node < nChildren);
-   assert(0 <= amount);
+   assert( row.isRow() );
+   assert( row.hasValidNode(nChildren) );
+   assert( 0 <= amount );
+   changeNnzCounterRow(row, -amount);
+}
+
+void PresolveData::increaseNnzCounterRowBy(const INDEX& row, int amount)
+{
+   assert( row.isRow() );
+   assert( row.hasValidNode(nChildren) );
+   assert( 0 <= amount );
+   changeNnzCounterRow(row, amount);
+}
+
+void PresolveData::changeNnzCounterRow(const INDEX& row, int amount)
+{
+   assert( row.isRow() );
+   assert( row.hasValidNode(nChildren) );
 
    if(amount == 0)
       return;
 
    /* linking constraints get stored */
-   if( linking )
+   if( row.isLinkingRow() )
    {
-      if(my_rank == 0 || node != -1)
+      if(my_rank == 0 || row.getNode()!= -1)
       {
-         (system_type == EQUALITY_SYSTEM) ? ((*nnzs_row_A_chgs)[row_index] -= amount) : ((*nnzs_row_C_chgs)[row_index] -= amount);
+         int& chgs = (row.inEqSys() ? *nnzs_row_A_chgs : *nnzs_row_C_chgs)[row.getIndex()];
+
+         chgs += amount;
          outdated_nnzs = true;
+
+         const StochVectorBase<int>& nnzs_row = row.inEqSys() ? *nnzs_row_A : *nnzs_row_C;
+         assert( 0 <= getSimpleVecFromRowStochVec(nnzs_row, row) + chgs );
       }
    }
    else
    {
-      if(system_type == EQUALITY_SYSTEM)
-      {
-         getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking )[row_index] -= amount;
-         if( getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking )[row_index] == 1)
-            singleton_rows.push( INDEX(ROW, node, row_index, linking, system_type) );
-         assert( 0 <= getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking )[row_index] );
-      }
-      else
-      {
-         getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking )[row_index] -= amount;
-         if( getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking )[row_index] == 1)
-            singleton_rows.push( INDEX(ROW, node, row_index, linking, system_type) );
-         assert( 0 <= getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking )[row_index] );
-      }
+      int& nnzs_row = getSimpleVecFromRowStochVec(row.inEqSys() ? *nnzs_row_A : *nnzs_row_C, row);
+
+      nnzs_row += amount;
+      assert( 0 <= nnzs_row );
+
+      if( nnzs_row == 1 )
+         singleton_rows.push( row );
    }
 }
 
-void PresolveData::reduceNnzCounterColumn(int node, BlockType block_type, int col_index, int amount)
+void PresolveData::reduceNnzCounterColumnBy(const INDEX& col, int amount, bool at_root)
 {
-   assert(-1 <= node && node < nChildren);
-   if(amount == 0)
+   assert( col.isCol() );
+   assert( col.hasValidNode(nChildren) );
+   assert( 0 <= amount );
+   changeNnzCounterColumn(col, -amount, at_root);
+}
+
+void PresolveData::increaseNnzCounterColumnBy(const INDEX& col, int amount, bool at_root)
+{
+   assert( col.isCol() );
+   assert( col.hasValidNode(nChildren) );
+   assert( 0 <= amount );
+   changeNnzCounterColumn(col, amount, at_root);
+}
+
+void PresolveData::changeNnzCounterColumn(const INDEX& col, int amount, bool at_root)
+{
+   assert( col.isCol() );
+   assert( col.hasValidNode(nChildren) );
+
+   if( amount == 0 )
       return;
 
    /* linking constraints get stored */
-   if(node == -1 || block_type == A_MAT)
+   if( col.isLinkingCol() )
    {
-      if(my_rank == 0 || node != -1)
+      if(my_rank == 0 || !at_root)
       {
-         (*nnzs_col_chgs)[col_index] -= amount;
+         int& chgs = (*nnzs_col_chgs)[col.getIndex()];
+         chgs += amount;
+         assert( 0 <= getSimpleVecFromColStochVec(*nnzs_col, col) + chgs);
          outdated_nnzs = true;
       }
    }
    else
    {
-      getSimpleVecFromColStochVec( *nnzs_col, node )[col_index] -= amount;
-      if( getSimpleVecFromColStochVec( *nnzs_col, node )[col_index] == 1)
-         singleton_cols.push( INDEX(COL, node, col_index) );
-      assert(0 <= getSimpleVecFromColStochVec( *nnzs_col, node )[col_index] );
+      int& nnzs = getSimpleVecFromColStochVec( *nnzs_col, col );
+      nnzs += amount;
+      assert(0 <= nnzs );
+
+      if( nnzs == 1)
+         singleton_cols.push( col );
    }
 }
 
@@ -1848,6 +1885,9 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    assert(-1 <= node && node < nChildren);
    assert(node != -1 || block_type != A_MAT);
    const bool linking = (block_type == BL_MAT);
+   const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
+   const bool at_root = node == -1 && node_col == -1;
+
    SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
 
    SparseStorageDynamic& matrix = mat->getStorageDynamicRef();
@@ -1872,13 +1912,12 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
       /* remove the entry, adjust activity and row counters and rhs/lhs */
       if(postsolver)
       {
-         const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
          postsolver->notifyRowModified( INDEX(ROW, node, row, linking, system_type) );
          postsolver->notifyColModified( INDEX(COL, node_col, col) );
       }
       matrix.removeEntryAtRowCol(row, col);
 
-      reduceNnzCounterRow(system_type, node, linking, row, 1);
+      reduceNnzCounterRowBy( INDEX(ROW, node, row, linking, system_type), 1);
 
       adjustMatrixRhsLhsBy(system_type, node, linking, row, - coeff * fixation);
 
@@ -1905,7 +1944,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    }
 
    /* adjust column counters */
-   reduceNnzCounterColumn(node, block_type, col, matrix_transp.getRowPtr(col).end - matrix_transp.getRowPtr(col).start);
+   reduceNnzCounterColumnBy( INDEX(COL, node_col, col), matrix_transp.getRowPtr(col).end - matrix_transp.getRowPtr(col).start, at_root);
 
    /* update the transposed */
    matrix_transp.clearRow( col );
@@ -2036,8 +2075,26 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
       removeColumn( col2, translation );
    else
    {
-      // todo adjust rhs of row and add col1 to row
+      assert( col2.isCol() );
+      const double coeff_col2 = getRowCoeff(row2, col2);
 
+      /* add col1 with coefficient scalar * coeff_col2 to row */
+      const double coeff_col1_row2 = scalar * coeff_col2;
+      addCoeffColToRow( coeff_col1_row2, col1, row2 );
+
+      /* adjust right hand side / left hand side by  -d * coeff_col2 */
+      const double offset = translation * coeff_col2;
+      if( row2.inInEqSys() )
+      {
+         if( !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->iclow, row2)) )
+            getSimpleVecFromRowStochVec(*presProb->blx, row2) -= offset;
+         if( !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->icupp, row2)) )
+            getSimpleVecFromRowStochVec(*presProb->bux, row2) -= offset;
+      }
+      else
+         getSimpleVecFromRowStochVec(*presProb->bA, row2) -= offset;
+
+      removeColumn( col2, 0.0 );
       if( !col1.isLinkingCol() )
       {
          getSimpleVecFromColStochVec(*presProb->g, col1) += change_obj_var1;
@@ -2515,66 +2572,88 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
    }
 }
 
+/** adds coeff * col to row */
+void PresolveData::addCoeffColToRow( double coeff, const INDEX& col, const INDEX& row )
+{
+   assert( !PIPSisZero(coeff) );
+
+   assert( row.isRow() );
+   assert( col.isCol() );
+
+   assert( !row.isLinkingRow() );
+
+   BlockType block_type = row.getBlockOfColInRow(col);
+
+   SparseGenMatrix* sparse_mat = getSparseGenMatrixFromStochMat( getSystemMatrix( row.getSystemType() ), row.getNode(), block_type );
+   assert( sparse_mat );
+   assert( sparse_mat->hasDynamicStorage() );
+
+   SparseStorageDynamic& mat = sparse_mat->getStorageDynamicRef();
+
+   mat.addColToRow(coeff, col.getIndex(), row.getIndex() );
+
+   const bool at_root = row.getNode() == -1 && col.getNode() == -1;
+   increaseNnzCounterColumnBy(col, 1, at_root);
+   increaseNnzCounterRowBy(row, 1);
+}
+
 /* removes row from local system - sets rhs lhs and activities to zero */
 void PresolveData::removeRow( const INDEX& row )
 {
+   assert( row.isRow() );
+   assert( row.hasValidNode(nChildren) );
+   assert( !nodeIsDummy( row.getNode() ) );
+
    /* the postsolver must have been notified before the actual removal of the row! */
    if( postsolver )
       assert(wasRowRemoved(row));
-   assert(row.isRow());
 
-   const int node = row.getNode();
-   const int row_index = row.getIndex();
-   const SystemType system_type = row.getSystemType();
-   const bool linking_row = row.getLinking();
 
-   assert(-1 <= node && node < nChildren);
-   assert(!nodeIsDummy(node));
-
-   if(linking_row)
+   if( row.isLinkingRow() )
    {
-      assert(node == -1);
+      assert( row.getNode() == -1);
 
       /* Bl0 */
-      removeRowFromMatrix(system_type, -1, BL_MAT, row_index);
+      removeRowFromMatrix(row, BL_MAT);
 
       /* linking rows Bli */
       for(int child = 0; child < nChildren; ++child)
       {
          if(!nodeIsDummy(child))
-            removeRowFromMatrix(system_type, child, BL_MAT, row_index);
+            removeRowFromMatrix(row, BL_MAT);
       }
    }
    else
    {
       /* Bmat */
-      removeRowFromMatrix(system_type, node, B_MAT, row_index);
+      removeRowFromMatrix(row, B_MAT);
 
       /* Amat */
-      if(node != -1)
-         removeRowFromMatrix(system_type, node, A_MAT, row_index);
+      if(row.getNode() != -1)
+         removeRowFromMatrix(row, A_MAT);
    }
 
 
    /* set lhs rhs to zero */
-   if(system_type == EQUALITY_SYSTEM)
-      getSimpleVecFromRowStochVec(*presProb->bA, node, linking_row)[row_index] = 0.0;
+   if( row.inEqSys() )
+      getSimpleVecFromRowStochVec(*presProb->bA, row) = 0.0;
    else
    {
-      getSimpleVecFromRowStochVec(*presProb->bl, node, linking_row)[row_index] = 0.0;
-      getSimpleVecFromRowStochVec(*presProb->bu, node, linking_row)[row_index] = 0.0;
+      getSimpleVecFromRowStochVec(*presProb->bl, row) = 0.0;
+      getSimpleVecFromRowStochVec(*presProb->bu, row) = 0.0;
    }
 
    /* set activities and unbounded counters to zero */
-   if(system_type == EQUALITY_SYSTEM)
+   if( row.inEqSys() )
    {
-      getSimpleVecFromRowStochVec(*actmax_eq_part, node, linking_row)[row_index] = 0.0;
-      getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking_row)[row_index] = 0.0;
-      getSimpleVecFromRowStochVec(*actmax_eq_ubndd, node, linking_row)[row_index] = 0;
-      getSimpleVecFromRowStochVec(*actmin_eq_ubndd, node, linking_row)[row_index] = 0;
+      getSimpleVecFromRowStochVec(*actmax_eq_part, row) = 0.0;
+      getSimpleVecFromRowStochVec(*actmin_eq_part, row) = 0.0;
+      getSimpleVecFromRowStochVec(*actmax_eq_ubndd, row) = 0;
+      getSimpleVecFromRowStochVec(*actmin_eq_ubndd, row) = 0;
 
-      if(linking_row)
+      if( row.isLinkingRow() )
       {
+         const int row_index = row.getIndex();
          (*actmax_eq_chgs)[row_index] = 0.0;
          (*actmin_eq_chgs)[row_index] = 0.0;
          (*actmax_eq_ubndd_chgs)[row_index] = 0;
@@ -2583,13 +2662,14 @@ void PresolveData::removeRow( const INDEX& row )
    }
    else
    {
-      getSimpleVecFromRowStochVec(*actmax_ineq_part, node, linking_row)[row_index] = 0.0;
-      getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking_row)[row_index] = 0.0;
-      getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, node, linking_row)[row_index] = 0;
-      getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, node, linking_row)[row_index] = 0;
+      getSimpleVecFromRowStochVec(*actmax_ineq_part, row) = 0.0;
+      getSimpleVecFromRowStochVec(*actmin_ineq_part, row) = 0.0;
+      getSimpleVecFromRowStochVec(*actmax_ineq_ubndd, row) = 0;
+      getSimpleVecFromRowStochVec(*actmin_ineq_ubndd, row) = 0;
 
-      if(linking_row)
+      if( row.isLinkingRow() )
       {
+         const int row_index = row.getIndex();
          (*actmax_ineq_chgs)[row_index] = 0.0;
          (*actmin_ineq_chgs)[row_index] = 0.0;
          (*actmax_ineq_ubndd_chgs)[row_index] = 0;
@@ -2600,25 +2680,32 @@ void PresolveData::removeRow( const INDEX& row )
 
 #ifndef NDEBUG
    /* assert non-zero counters of row are zero - only works for non-linking rows */
-   if(system_type == EQUALITY_SYSTEM)
+   if( row.inEqSys() )
    {
-      if(!linking_row)
-         assert( getSimpleVecFromRowStochVec(*nnzs_row_A, node, linking_row)[row_index] == 0 );
+      if( !row.isLinkingRow() )
+         assert( getSimpleVecFromRowStochVec(*nnzs_row_A, row) == 0 );
    }
    else
    {
-      if(!linking_row)
-         assert( getSimpleVecFromRowStochVec(*nnzs_row_C, node, linking_row)[row_index] == 0 );
+      if( !row.isLinkingRow() )
+         assert( getSimpleVecFromRowStochVec(*nnzs_row_C, row) == 0 );
    }  
 #endif
 }
 
-void PresolveData::removeRowFromMatrix( SystemType system_type, int node, BlockType block_type, int row)
+void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type )
 {
-   assert(!nodeIsDummy(node));
-   assert(-1 <= node && node < nChildren);
-   assert(node != -1 || block_type != A_MAT);
-   SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
+   assert( row.isRow() );
+   assert( !nodeIsDummy(row.getNode()) );
+   assert( row.hasValidNode(nChildren) );
+   assert( !row.isLinkingRow() || block_type != A_MAT );
+   if( block_type == BL_MAT )
+      assert( row.isLinkingRow() );
+
+   const int node = row.getNode();
+   const int row_idx = row.getIndex();
+
+   SparseGenMatrix* mat = getSparseGenMatrix(row.getSystemType(), node, block_type);
 
    assert(mat);
    assert(mat->hasDynamicStorage());
@@ -2626,29 +2713,30 @@ void PresolveData::removeRowFromMatrix( SystemType system_type, int node, BlockT
    SparseStorageDynamic& mat_storage = mat->getStorageDynamicRef();
    SparseStorageDynamic& mat_transp_storage = mat->getStorageDynamicTransposedRef();
 
-   assert( 0 <= row && row < mat_storage.getM());
+   assert( 0 <= row_idx && row_idx < mat_storage.getM());
 
-   const bool linking = (block_type == BL_MAT);
-   const int row_start = mat_storage.getRowPtr(row).start;
-   const int row_end = mat_storage.getRowPtr(row).end;
+   const int row_start = mat_storage.getRowPtr(row_idx).start;
+   const int row_end = mat_storage.getRowPtr(row_idx).end;
 
-   reduceNnzCounterRow(system_type, node, linking, row, row_end - row_start);
+   reduceNnzCounterRowBy(row, row_end - row_start);
 
    for(int k = row_start; k < row_end; k++)
    {
-      const int col = mat_storage.getJcolM(k);
+      const int col_idx = mat_storage.getJcolM(k);
+      const int node_col = ( block_type == A_MAT || node == -1) ? -1 : node;
+      const bool at_root = (node == -1 && node_col == -1);
 
+      const INDEX col(COL, node_col, col_idx);
       if(postsolver)
       {
-         const int node_col = ( block_type == A_MAT || node == -1) ? -1 : node;
-         postsolver->notifyColModified( INDEX(COL, node_col, col) );
-         postsolver->notifyRowModified( INDEX(ROW, node, row, linking, system_type) );
+         postsolver->notifyColModified( col );
+         postsolver->notifyRowModified( row );
       }
-      mat_transp_storage.removeEntryAtRowCol(col, row);
-      reduceNnzCounterColumn(node, block_type, col, 1);
+      mat_transp_storage.removeEntryAtRowCol(col_idx, row_idx);
+      reduceNnzCounterColumnBy( col, 1, at_root );
    }
 
-   mat_storage.clearRow(row);
+   mat_storage.clearRow(row_idx);
 }
 
 bool PresolveData::verifyActivities() const

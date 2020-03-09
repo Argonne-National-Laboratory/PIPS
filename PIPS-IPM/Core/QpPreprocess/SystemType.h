@@ -30,8 +30,15 @@ struct INDEX
 {
 public:
    INDEX() : index_type(EMPTY_INDEX), node(-2), index(-1), linking(false), system_type(EQUALITY_SYSTEM){};
+
    INDEX(IndexType index_type, int node, int index, bool linking = false, SystemType system_type = EQUALITY_SYSTEM) :
-      index_type(index_type), node(node), index(index), linking(linking), system_type(system_type){};
+      index_type(index_type), node(node), index(index), linking(linking), system_type(system_type)
+   {
+      if(linking)
+         assert( node == -1 );
+      assert( 0 <= index );
+      assert( -1 <= node );
+   };
 
    bool operator==(const INDEX& i) const {
       return index_type == i.index_type && node == i.node && index == i.index && linking == i.linking && system_type == i.system_type;

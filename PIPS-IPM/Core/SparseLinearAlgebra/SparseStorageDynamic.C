@@ -484,8 +484,8 @@ void SparseStorageDynamic::removeEntryAtRowCol(int row, int col)
    assert(0 <= col && col < n);
 
    int i = -1;
-   int end = rowptr[row].end;
-   int start = rowptr[row].start;
+   const int end = rowptr[row].end;
+   const int start = rowptr[row].start;
 
    for( i = start; i < end; i++)
    {
@@ -495,6 +495,46 @@ void SparseStorageDynamic::removeEntryAtRowCol(int row, int col)
    assert( jcolM[i] == col);
 
    removeEntryAtIndex( row, i );
+}
+
+void SparseStorageDynamic::addColToRow( double coeff, int col, int row )
+{
+   assert(0 <= row && row < m);
+   assert(0 <= col && col < n);
+
+   int i = -1;
+   const int end = rowptr[row].end;
+   const int start = rowptr[row].start;
+
+   for(int i = start; i < end; ++i)
+   {
+      if( jcolM[i] == col )
+         break;
+   }
+
+   if( i != end )
+   {
+      assert( jcolM[i] == col );
+      M[i] += coeff;
+   }
+   else
+   {
+      /* extend storage if necessary */
+      if( len_free > 0 && rowptr[row].end == rowptr[row + 1].start )
+         compressStorageValues();
+      if( len_free == 0 || rowptr[row].end == rowptr[row + 1].start )
+         extendStorageValues();
+
+      assert( rowptr[row].end < rowptr[row + 1].start );
+      assert( len_free > 0 );
+
+      /* insert entry */
+      const int new_col_idx = rowptr[row].end;
+      ++rowptr[row].end;
+      jcolM[new_col_idx] = col;
+      M[new_col_idx] = coeff;
+      --len_free;
+   }
 }
 
 void SparseStorageDynamic::clearRow( int row )

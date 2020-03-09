@@ -103,6 +103,8 @@ public:
   void removeEntryAtIndex(int row, int col_idx);
   void removeEntryAtRowCol(int row, int col);
 
+  void addColToRow( double coeff, int col, int row );
+
   void clearRow( int row );
   void clearCol( int col );
 
