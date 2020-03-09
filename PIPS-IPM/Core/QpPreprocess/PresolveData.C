@@ -1913,47 +1913,90 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    // todo assert(transposed and normal matrix are in sync)
 }
 
-/* tighten bounds of col and remove row afterwards */
-void PresolveData::nearlyParallelRowImpliesBounds( const INDEX& row_eq, const INDEX& row_ineq, const INDEX& col, double xlow_new, double xupp_new )
+/* tighten bounds of singleton column col1 in row implied via singleton column col2 in row2 */
+void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double xlow_new, double xupp_new, double scalar,
+      double translation, double parallel_factor )
 {
-   assert( row_eq.isRow() );
-   assert( row_ineq.isRow() );
-   assert( !row_eq.isLinkingRow() );
-   assert( !row_ineq.isLinkingRow() );
-   assert( col.isCol() );
-   assert( row_eq.inEqSys() );
-   assert( row_ineq.inInEqSys() );
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( !row1.isLinkingRow() );
+   assert( !row2.isLinkingRow() );
+   assert( row1.inEqSys() );
 
-   assert( !wasRowRemoved(row_eq) );
-   assert( !wasRowRemoved(row_ineq) );
-   assert( !wasColumnRemoved(col) );
+   if( row2.inInEqSys() )
+   {
+      assert(col2.isEmpty() );
+      assert(scalar == INF_POS_PRES);
+      assert(translation == INF_POS_PRES);
+   }
+   else
+      assert( col2.isCol() );
+
+   assert( col1.isCol() );
+
+   assert( !wasRowRemoved(row1) );
+   assert( !wasRowRemoved(row2) );
+   assert( !wasColumnRemoved(col1) );
+   if( col2.isCol() )
+      assert( !wasColumnRemoved(col2) );
 
    if( xlow_new == INF_NEG_PRES && xupp_new == INF_POS_PRES )
       return;
 
    if( postsolver )
    {
-      // TODO
+      const double xlow_col1 = getSimpleVecFromColStochVec(*presProb->blx, col1);
+      const double xupp_col1 = getSimpleVecFromColStochVec(*presProb->bux, col1);
+
+      const double xlow_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->blx, col2) : INF_NEG_PRES;
+      const double xupp_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->bux, col2) : INF_POS_PRES;
+
+      assert( PIPSisLE(xlow_col1, xlow_new) );
+      assert( PIPSisLE(xupp_new, xupp_col1) );
+
+      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col1)) )
+         assert(xlow_col1 == INF_NEG_PRES);
+      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col1)) )
+         assert(xupp_col1 == INF_POS_PRES);
+      if( col2.isCol() )
+      {
+         if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col2)) )
+            assert(xlow_col2 == INF_NEG_PRES);
+         if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col2)) )
+            assert(xupp_col1 == INF_POS_PRES);
+      }
+
+      const double coeff_col1 = getRowCoeff(row1, col1);
+      const double coeff_col2 = col2.isCol() ? getRowCoeff(row2, col2) : 0.0;
+
+      if( col2.isCol() )
+         assert( !PIPSisZero(coeff_col2) );
+
+      const double rhs = row2.inInEqSys() ? getSimpleVecFromRowStochVec(*presProb->bA, row1) : 0.0;
+
+      const double clow = row2.inInEqSys() ? ( PIPSisZero(getSimpleVecFromRowStochVec(*presProb->iclow, row2)) ? INF_NEG_PRES : getSimpleVecFromRowStochVec(*presProb->bl, row2) )
+            : 0.0;
+      const double cupp = row2.inInEqSys() ? ( PIPSisZero(getSimpleVecFromRowStochVec(*presProb->icupp, row2)) ? INF_POS_PRES : getSimpleVecFromRowStochVec(*presProb->bu, row2) )
+            : 0.0;
+
+      postsolver->notifyNearlyParallelRowBoundsTightened(row1, row2, col1, col2, xlow_col1, xupp_col2, xlow_col2, xupp_col2, coeff_col1, coeff_col2, scalar,
+            translation, parallel_factor, rhs, clow, cupp);
    }
 
    /* adjust bounds and remove inequality row */
-   updateBoundsVariable(col, xlow_new, xupp_new);
-   removeRow(row_ineq);
+   updateBoundsVariable(col1, xlow_new, xupp_new);
 }
 
 
 /* a singleton variable is substituted out of the problem and then it's original row can be removed from the problem */
-void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2,
-   double scalar, double translation, double xlow_new, double xupp_new, double parallelity )
+void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2,
+   double scalar, double translation, double parallelity )
 {
    assert(row1.isRow() && row2.isRow());
    assert( (col1.isCol() || col1.isEmpty()) && col2.isCol());
    assert(row1.getNode() == row2.getNode());
 
    // todo : track row
-   // todo : do the bound changes if there was a col1 and these do not come from two nearly parallel inequality rows
-   // todo :
-
 
    const double obj_col2 = getSimpleVecFromColStochVec(*presProb->g, col2);
 
@@ -1976,19 +2019,14 @@ void PresolveData::substituteVariableParallelRows( const INDEX& row1, const INDE
       if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col2)) )
          assert(xupp_col2 == INF_POS_PRES);
 
-      postsolver->notifyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation, obj_col2, xlow_col1, xupp_col1,
-         xlow_col2, xupp_col2, coeff_col1, coeff_col2, parallelity );
+      postsolver->notifyNearlyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation, obj_col2, xlow_col2, xupp_col2, coeff_col1, coeff_col2, parallelity );
    }
 
-
-   // delete the equality constraint which contained var2 (the substituted variable)
-   removeRedundantRow( row2 );
-   assert( PIPSisZero(getSimpleVecFromColStochVec(*nnzs_col, col2)) );
-   
+   /* adapt the objective vector and the row2 */
    const double val_offset = translation * obj_col2;
    const double change_obj_var1 = scalar * obj_col2;
 
-   removeColumn( col2, 0.0 );
+   removeColumn( col2, 0.0 ); // TODO adjust whole row
 
    if( !col1.isLinkingCol() )
    {
