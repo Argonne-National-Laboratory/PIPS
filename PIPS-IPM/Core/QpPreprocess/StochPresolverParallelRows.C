@@ -59,10 +59,8 @@ namespace rowlib
 }
 
 StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb)
+      StochPresolverBase(presData, origProb), n_rows_removed(0), mA(0), nA(0)
 {
-   mA = 0;
-   nA = 0;
    setExtendedPointersToNull();
 }
 
@@ -92,7 +90,7 @@ void StochPresolverParallelRows::applyPresolving()
 #endif
 
    /// first hash support of all rows then per hashbucket hash coeffs to find (nearly) parallel rows
-   int nRowElims = 0;
+   int n_removed_run = 0;
 
    /// non-linking non-root part of matrices
    /// since we assume that all linking rows actually are pure linking rows we need not consider them here
@@ -137,7 +135,7 @@ void StochPresolverParallelRows::applyPresolving()
             }
 
             // Compare the rows in the final (from second hash) bin:
-            compareRowsInCoeffHashTable(nRowElims, node);
+            compareRowsInCoeffHashTable(n_removed_run, node);
 
             row_coefficients_hashtable.clear();
          }
@@ -153,6 +151,8 @@ void StochPresolverParallelRows::applyPresolving()
 
    row_support_hashtable.clear();
    row_coefficients_hashtable.clear();
+
+   int n_removed_linking_run = 0;
 
    // for the A_0 and C_0 blocks:
    setNormalizedPointers(-1);
@@ -177,7 +177,7 @@ void StochPresolverParallelRows::applyPresolving()
       }
 
       // Compare the rows in the final (from second hash) bin:
-      compareRowsInCoeffHashTable(nRowElims, -1);
+      compareRowsInCoeffHashTable(n_removed_linking_run, -1);
       row_coefficients_hashtable.clear();
    }
 
@@ -190,12 +190,16 @@ void StochPresolverParallelRows::applyPresolving()
    presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyObjVecChanges();
 
-   // TODO:add detection for linking constraints
+   // TODO: add detection for linking constraints
 
+   if(my_rank == 0)
+      n_removed_run += n_removed_linking_run;
 
-   nRowElims = PIPS_MPIgetMax(nRowElims, MPI_COMM_WORLD);
+   PIPS_MPIgetSumInPlace(n_removed_run, MPI_COMM_WORLD);
+
+   n_rows_removed += n_removed_run;
    if( my_rank == 0 )
-      std::cout << "Removed " << nRowElims << " Rows in Parallel Row Presolving." << std::endl;
+      std::cout << "\tRemoved rows during parallel row detection: " << n_rows_removed << std::endl;
 
 #ifndef NDEBUG
    if( my_rank == 0 )

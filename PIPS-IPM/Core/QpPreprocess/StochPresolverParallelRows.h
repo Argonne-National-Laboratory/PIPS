@@ -66,6 +66,8 @@ public:
    virtual void applyPresolving();
 
 private:
+   int n_rows_removed;
+
    /// extension to the pointer set from StochPresolverBase to point to C and A at the same moment rather than
    /// distinguishing between EQUALITY and INEQUALITY constraints
    const SparseStorageDynamic* currCmat;
