@@ -1955,8 +1955,6 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
       const double xlow_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->blx, col2) : INF_NEG_PRES;
       const double xupp_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->bux, col2) : INF_POS_PRES;
 
-      if(!PIPSisLE(xlow_col1, xlow_new))
-         std::cout << xlow_col1 << " " << xlow_new << std::endl;
       assert( PIPSisLE(xlow_col1, xlow_new) );
       assert( PIPSisLE(xupp_new, xupp_col1) );
 

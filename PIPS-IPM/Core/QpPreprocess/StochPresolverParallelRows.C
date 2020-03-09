@@ -1024,7 +1024,7 @@ void StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int 
       if( !PIPSisZero( ixlow_col1 ) )
          xlow_new = std::max(xlow_new, xlow_col1);
       if( !PIPSisZero( ixupp_col1 ) )
-         xupp_new = std::max(xupp_new, xupp_col1);
+         xupp_new = std::min(xupp_new, xupp_col1);
    }
 
    const INDEX row1_INDEX(ROW, node, row1, false, EQUALITY_SYSTEM);
