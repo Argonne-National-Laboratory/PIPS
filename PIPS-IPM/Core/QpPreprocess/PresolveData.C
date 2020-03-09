@@ -1992,9 +1992,13 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
 void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2,
    double scalar, double translation, double parallelity )
 {
-   assert(row1.isRow() && row2.isRow());
-   assert( (col1.isCol() || col1.isEmpty()) && col2.isCol());
-   assert(row1.getNode() == row2.getNode());
+   assert( row1.isRow() && row2.isRow() );
+   assert( col1.isCol() || (col1.isEmpty() && row1.inEqSys()) );
+   assert( col2.isCol() );
+   assert( row1.getNode() == row2.getNode() );
+
+   if( row1.inInEqSys() )
+      assert( PIPSisZero(translation) );
 
    // todo : track row
 
@@ -2002,18 +2006,12 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
 
    if( postsolver )
    {
-      const double xlow_col1 = getSimpleVecFromColStochVec(*presProb->blx, col1);
-      const double xupp_col1 = getSimpleVecFromColStochVec(*presProb->bux, col1);
       const double xlow_col2 = getSimpleVecFromColStochVec(*presProb->blx, col2);
       const double xupp_col2 = getSimpleVecFromColStochVec(*presProb->bux, col2);
 
-      const double coeff_col1 = getRowCoeff(row1, col1);
+      const double coeff_col1 = col1.isCol() ? getRowCoeff(row1, col1) : 0.0;
       const double coeff_col2 = getRowCoeff(row2, col2);
 
-      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col1)) )
-         assert(xlow_col1 == INF_NEG_PRES);
-      if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col1)) )
-         assert(xupp_col1 == INF_POS_PRES);
       if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col2)) )
          assert(xlow_col2 == INF_NEG_PRES);
       if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col2)) )
@@ -2026,28 +2024,34 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
    const double val_offset = translation * obj_col2;
    const double change_obj_var1 = scalar * obj_col2;
 
-   removeColumn( col2, 0.0 ); // TODO adjust whole row
-
-   if( !col1.isLinkingCol() )
-   {
-      getSimpleVecFromColStochVec(*presProb->g, col1) += change_obj_var1;
-      obj_offset_chgs += val_offset;
-   }
-   else if( row1.getNode() == -1 )
-   {
-      /* parallel rows in parent block - all processes should have detected this */
-      getSimpleVecFromColStochVec(*presProb->g, -1)[col1.getIndex()] += change_obj_var1;
-
-      // only add the objective offset for root as process ZERO:
-      if( my_rank == 0 ) 
-         obj_offset_chgs += val_offset;
-   }
+   /* fix col2 if coeff_col1 == 0 */
+   if( !col1.isCol() )
+      removeColumn( col2, translation );
    else
    {
-      /* var1 is a linking variable - store objective adaptions and allreduce them */
-      (*objective_vec_chgs)[col1.getIndex()] += change_obj_var1;
-      outdated_obj_vector = true; 
-      obj_offset_chgs += val_offset;
+      // todo adjust rhs of row and add col1 to row
+
+      if( !col1.isLinkingCol() )
+      {
+         getSimpleVecFromColStochVec(*presProb->g, col1) += change_obj_var1;
+         obj_offset_chgs += val_offset;
+      }
+      else if( row1.getNode() == -1 )
+      {
+         /* parallel rows in parent block - all processes should have detected this */
+         getSimpleVecFromColStochVec(*presProb->g, -1)[col1.getIndex()] += change_obj_var1;
+
+         // only add the objective offset for root as process ZERO:
+         if( my_rank == 0 )
+            obj_offset_chgs += val_offset;
+      }
+      else
+      {
+         /* var1 is a linking variable - store objective adaptions and allreduce them */
+         (*objective_vec_chgs)[col1.getIndex()] += change_obj_var1;
+         outdated_obj_vector = true;
+         obj_offset_chgs += val_offset;
+      }
    }
 }
 

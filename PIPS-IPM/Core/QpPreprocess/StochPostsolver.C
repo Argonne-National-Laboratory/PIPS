@@ -237,26 +237,46 @@ void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const
    finishNotify();
 }
 
-/** substitute col2 with scalar*col1 + translation */
+/** substitute col2 with scalar*col1 + translation
+ *
+ * this happens for:
+ *    two equality rows - coeff_col2 != 0
+ *    two inequality rows (lot's of prerequisites)
+ *
+ */
 void StochPostsolver::notifyNearlyParallelRowSubstitution(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation,
    double obj_col2, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2, double parallel_factor )
 {
    assert( row1.isRow() );
    assert( row2.isRow() );
    assert( row1.getNode() == row2.getNode() );
-   if( col2.isCol() )
-      assert( col1.isCol() );
-   assert( col2.isCol() );
 
    /* both rows must be in the same system */
    assert( ( row1.inEqSys() && row2.inEqSys() ) ||
       ( row1.inInEqSys() && row2.inInEqSys() ) );
 
+   assert( col2.isCol() );
+
+   if( row1.inInEqSys() )
+      assert( col1.isCol() );
+
+   assert( !PIPSisZero(coeff_col2) );
+
    if( row2.inInEqSys() )
+   {
+      assert( !PIPSisZero(coeff_col1) );
+      assert( PIPSisLT(0.0, coeff_col1 * coeff_col2) );
       assert( PIPSisZero(translation) );
+   }
 
    // todo : linking rows are not possible yet
-   assert( !wasColumnRemoved(col1) );
+   assert( !row1.isLinkingRow() && !row2.isLinkingRow() );
+
+   if( col1.isCol() )
+      assert( !wasColumnRemoved(col1) );
+   else
+      assert( PIPSisZero(coeff_col1) );
+
    assert( !wasColumnRemoved(col2) );
 
    assert( !wasRowRemoved(row1) );
@@ -1340,12 +1360,21 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const INDEX& row1 = indices.at(first_index + 2);
          const INDEX& row2 = indices.at(first_index + 3);
 
-         assert( col1.isCol() );
-         assert( col2.isCol() );
          assert( row1.isRow() );
          assert( row2.isRow() );
-         assert( ( row1.inEqSys() && row2.inEqSys() )
-            || ( row1.inInEqSys() && row2.inInEqSys() ) );
+         assert( row1.getNode() == row2.getNode() );
+         assert( ( row1.inEqSys() && row2.inEqSys() ) ||
+            ( row1.inInEqSys() && row2.inInEqSys() ) );
+         assert( col2.isCol() );
+         if( row1.inInEqSys() )
+            assert( col1.isCol() );
+
+         if( col1.isCol() )
+            assert( !wasColumnRemoved(col1) );
+         assert( wasColumnRemoved(col2) );
+
+         assert( !wasRowRemoved(row1) );
+         assert( !wasRowRemoved(row2) );
 
          const double scalar = float_values.at(first_float_val);
          const double translation = float_values.at(first_float_val + 1);
@@ -1362,16 +1391,14 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const double parallel_factor = float_values.at(first_float_val + 7);
 
          assert( !PIPSisZero(coeff_col2) );
-
-         assert( wasColumnRemoved(col2) );
-         assert( !wasColumnRemoved(col1) );
-         assert( !wasRowRemoved(row1) );
-         assert( !wasRowRemoved(row2) );
-
          if( row2.inInEqSys() )
+         {
+            assert( !PIPSisZero(coeff_col1) );
+            assert( PIPSisLT(0.0, coeff_col1 * coeff_col2) );
             assert( PIPSisZero(translation) );
+         }
 
-         const double val_col1 = getSimpleVecFromColStochVec(x_vec, col1);
+         const double val_col1 = col1.isCol() ? getSimpleVecFromColStochVec(x_vec, col1) : 0.0;
          const double val_col2 = scalar * val_col1 + translation;
 
          /* primal postsolve */
