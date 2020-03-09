@@ -940,7 +940,7 @@ void StochPresolverParallelRows::twoParallelEqualityRows(int row1_id, int row2_i
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
 
    /* one of the rows can be discarded */
-   presData.removeRedundantRow( INDEX(ROW, node, row2, false, EQUALITY_SYSTEM) );
+   presData.removeRedundantParallelRow( INDEX(ROW, node, row2, false, EQUALITY_SYSTEM), INDEX(ROW, node, row1, false, EQUALITY_SYSTEM) );
 }
 
 void StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int row2_id, int node ) const
@@ -1017,16 +1017,19 @@ void StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int 
          xupp_new = (xupp - d) / t;
    }
 
+   const INDEX row1_INDEX(ROW, node, row1, false, EQUALITY_SYSTEM);
+   const INDEX row2_INDEX(ROW, node, row2, false, EQUALITY_SYSTEM);
+
+   const INDEX col1_INDEX = (col1 == -1) ? INDEX() : INDEX(COL, node_var1, col1);
+   const INDEX col2_INDEX(COL, node_var2, col2);
    /* tighten bounds of x1 */
-   presData.tightenBoundsNearlyParallelRows( INDEX(ROW, node, row1, false, EQUALITY_SYSTEM), INDEX(ROW, node, row2, false, EQUALITY_SYSTEM), (col1 == -1) ? INDEX() :
-         INDEX(COL, node_var1, col1), INDEX(COL, node_var2, col2), xlow_new, xupp_new, t, d, s);
+   presData.tightenBoundsNearlyParallelRows( row1_INDEX, row2_INDEX, col1_INDEX, col2_INDEX, xlow_new, xupp_new, t, d, s);
 
    /* now variable substitution is possible */
-   presData.substituteVariableNearlyParallelRows( INDEX(ROW, node, row1, false, EQUALITY_SYSTEM), INDEX(ROW, node, row2, false, EQUALITY_SYSTEM),
-      (col1 == -1) ? INDEX() : INDEX(COL, node_var1, col1), INDEX(COL, node_var2, col2), t, d, s );
+   presData.substituteVariableNearlyParallelRows( row1_INDEX, row2_INDEX, col1_INDEX, col2_INDEX, t, d, s );
 
    /* now row2 is redundant and can be discarded */
-   presData.removeRedundantRow( INDEX(ROW, node, row2, false, EQUALITY_SYSTEM) ); // todo : move to presData method
+   presData.removeRedundantParallelRow( row2_INDEX, row1_INDEX );
 }
 
 void StochPresolverParallelRows::twoParallelInequalityRows(int row1, int row2, int node) const
@@ -1035,7 +1038,7 @@ void StochPresolverParallelRows::twoParallelInequalityRows(int row1, int row2, i
    tightenOriginalBoundsOfRow1( INEQUALITY_SYSTEM, node, row1, row2 );
 
     /* delete row2 in the original system */
-   presData.removeRedundantRow( INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM) );
+   presData.removeRedundantParallelRow( INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM), INDEX(ROW, node, row1, false, INEQUALITY_SYSTEM) );
 }
 
 /**
@@ -1147,7 +1150,7 @@ void StochPresolverParallelRows::parallelEqualityAndInequalityRow(int row_eq, in
       PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
 
-   presData.removeRedundantRow( INDEX(ROW, node, row_ineq, false, INEQUALITY_SYSTEM) );
+   presData.removeRedundantParallelRow( INDEX(ROW, node, row_ineq, false, INEQUALITY_SYSTEM), INDEX(ROW, node, row_eq, false, EQUALITY_SYSTEM) );
 }
 
 
@@ -1233,12 +1236,17 @@ void StochPresolverParallelRows::twoNearlyParallelInequalityRows(int row1, int r
    assert(!PIPSisZero(s * a_col2));
    const double t = a_col1 / (s * a_col2);
 
+   const INDEX row1_INDEX(ROW, node, row1, false, INEQUALITY_SYSTEM);
+   const INDEX row2_INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM);
+
+   const INDEX col1_INDEX(COL, node_col1, col1);
+   const INDEX col2_INDEX(COL, node_col2, col2);
+
    /* variable can be substituted */
-   presData.substituteVariableNearlyParallelRows( INDEX(ROW, node, row1, false, INEQUALITY_SYSTEM), INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM),
-         INDEX(COL, node_col1, col1), INDEX(COL, node_col2, col2), t, 0.0, s);
+   presData.substituteVariableNearlyParallelRows( row1_INDEX, row2_INDEX, col1_INDEX, col2_INDEX, t, 0.0, s);
 
    /* row2 is now redundant */
-   presData.removeRedundantRow( INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM) );
+   presData.removeRedundantParallelRow( row2_INDEX, row1_INDEX );
 
 }
 
@@ -1278,9 +1286,11 @@ void StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(int row_
    const int node_col = (col_idx > nA ) ? node : -1;
    const bool linking_row = false;
 
-   presData.tightenBoundsNearlyParallelRows( INDEX(ROW, node, linking_row, row_eq, EQUALITY_SYSTEM),
-      INDEX(ROW, node, linking_row, row_ineq, INEQUALITY_SYSTEM), INDEX(COL, node_col, col), INDEX(), xlow_new, xupp_new, INF_POS_PRES, INF_POS_PRES, s ) ;
+   const INDEX row1_INDEX(ROW, node, linking_row, row_eq, EQUALITY_SYSTEM);
+   const INDEX row2_INDEX(ROW, node, linking_row, row_ineq, INEQUALITY_SYSTEM);
 
-   presData.removeRedundantRow( INDEX(ROW, node, row_ineq, false, INEQUALITY_SYSTEM) );
+   presData.tightenBoundsNearlyParallelRows( row1_INDEX, row2_INDEX, INDEX(COL, node_col, col), INDEX(), xlow_new, xupp_new, INF_POS_PRES, INF_POS_PRES, s ) ;
+
+   presData.removeRedundantParallelRow( row2_INDEX, row1_INDEX );
 
 }

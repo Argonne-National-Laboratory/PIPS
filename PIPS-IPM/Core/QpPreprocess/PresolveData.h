@@ -193,6 +193,7 @@ public :
       void tightenBoundsNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double xlow_new, double xupp_new, double scalar,
             double translation, double parallel_factor );
 
+      void removeRedundantParallelRow( const INDEX& rm_row, const INDEX& par_row );
       void removeRedundantRow( const INDEX& row );
       void fixColumnInequalitySingleton( const INDEX& col, double value, double coeff );
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);

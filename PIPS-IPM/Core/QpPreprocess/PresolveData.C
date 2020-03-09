@@ -2062,13 +2062,43 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
    }
 }
 
+void PresolveData::removeRedundantParallelRow( const INDEX& rm_row, const INDEX& par_row )
+{
+   assert(rm_row.isRow());
+   assert(par_row.isRow());
+   assert( !wasRowRemoved(rm_row) );
+   assert( !wasRowRemoved(par_row) );
+
+   if(postsolver)
+   {
+      const double cupp_row1 = rm_row.inEqSys() ? getSimpleVecFromRowStochVec(*presProb->bA, rm_row) : getSimpleVecFromRowStochVec(*presProb->bu, rm_row);
+      const double clow_row1 = rm_row.inEqSys() ? cupp_row1 : getSimpleVecFromRowStochVec(*presProb->bl, rm_row);
+      const int iclow_row1 = rm_row.inEqSys() ? 1 : getSimpleVecFromRowStochVec(*presProb->iclow, rm_row);
+      const int icupp_row1 = rm_row.inEqSys() ? 1 : getSimpleVecFromRowStochVec(*presProb->icupp, rm_row);
+
+#ifndef NDEBUG
+      // TODO : assert that rows are actually parallel...
+#endif
+      postsolver->notifyRedundantRow(rm_row, iclow_row1, icupp_row1, clow_row1, cupp_row1, getSystemMatrix( rm_row.getSystemType() ));
+
+      assert( wasRowRemoved(rm_row) );
+   }
+
+   if( TRACK_ROW(rm_row.getNode(), rm_row.getIndex(), rm_row.getSystemType(), rm_row.getLinking()) )
+   {
+      std::cout << "TRACKING_ROW: removal of tracked row as parallel and redundant row to " << par_row << std::endl;
+   }
+
+   removeRow( rm_row );
+}
+
 void PresolveData::removeRedundantRow( const INDEX& row )
 {
    assert( row.isRow() );
 
    if(postsolver)
    {
-      assert(!postsolver->wasRowRemoved( row ));
+      assert(!wasRowRemoved( row ));
 
       const double rhs = row.inEqSys() ? getSimpleVecFromRowStochVec(*presProb->bA, row) : getSimpleVecFromRowStochVec(*presProb->bu, row);
       const double lhs = row.inEqSys() ? rhs : getSimpleVecFromRowStochVec(*presProb->bl, row);
