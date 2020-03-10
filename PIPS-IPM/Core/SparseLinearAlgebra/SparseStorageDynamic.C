@@ -512,13 +512,15 @@ void SparseStorageDynamic::addColToRow( double coeff, int col, int row )
          break;
    }
 
-   if( i != end )
+   if( i != end || i != -1 )
    {
       assert( jcolM[i] == col );
       M[i] += coeff;
    }
    else
    {
+      assert( i == end || end == start );
+
       /* extend storage if necessary */
       if( len_free > 0 && rowptr[row].end == rowptr[row + 1].start )
          compressStorageValues();
