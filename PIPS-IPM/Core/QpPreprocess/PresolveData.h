@@ -284,7 +284,7 @@ private:
       void removeColumn(const INDEX& col, double fixation);
       void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
       void removeRow( const INDEX& row );
-      void removeRowFromMatrix(const INDEX& row, BlockType block_type);
+      void removeRowFromMatrix(const INDEX& row, BlockType block_type, int node_col);
 
       void reduceNnzCounterRowBy(const INDEX& row, int amount);
       void increaseNnzCounterRowBy(const INDEX& row, int amount);

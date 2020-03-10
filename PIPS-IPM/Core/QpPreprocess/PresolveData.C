@@ -2614,23 +2614,23 @@ void PresolveData::removeRow( const INDEX& row )
       assert( row.getNode() == -1);
 
       /* Bl0 */
-      removeRowFromMatrix(row, BL_MAT);
+      removeRowFromMatrix(row, BL_MAT, -1);
 
       /* linking rows Bli */
       for(int child = 0; child < nChildren; ++child)
       {
          if(!nodeIsDummy(child))
-            removeRowFromMatrix(row, BL_MAT);
+            removeRowFromMatrix(row, BL_MAT, child);
       }
    }
    else
    {
       /* Bmat */
-      removeRowFromMatrix(row, B_MAT);
+      removeRowFromMatrix(row, B_MAT, row.getNode() );
 
       /* Amat */
       if(row.getNode() != -1)
-         removeRowFromMatrix(row, A_MAT);
+         removeRowFromMatrix(row, A_MAT, -1);
    }
 
 
@@ -2693,7 +2693,7 @@ void PresolveData::removeRow( const INDEX& row )
 #endif
 }
 
-void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type )
+void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type, int node_col )
 {
    assert( row.isRow() );
    assert( !nodeIsDummy(row.getNode()) );
@@ -2723,7 +2723,6 @@ void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type )
    for(int k = row_start; k < row_end; k++)
    {
       const int col_idx = mat_storage.getJcolM(k);
-      const int node_col = ( block_type == A_MAT || node == -1) ? -1 : node;
       const bool at_root = (node == -1 && node_col == -1);
 
       const INDEX col(COL, node_col, col_idx);
@@ -2732,6 +2731,7 @@ void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type )
          postsolver->notifyColModified( col );
          postsolver->notifyRowModified( row );
       }
+
       mat_transp_storage.removeEntryAtRowCol(col_idx, row_idx);
       reduceNnzCounterColumnBy( col, 1, at_root );
    }
