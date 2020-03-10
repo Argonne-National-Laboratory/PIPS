@@ -2707,7 +2707,8 @@ void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type, 
    const int node = row.getNode();
    const int row_idx = row.getIndex();
 
-   SparseGenMatrix* mat = getSparseGenMatrix(row.getSystemType(), node_col, block_type);
+
+   SparseGenMatrix* mat = getSparseGenMatrix(row.getSystemType(), (block_type == BL_MAT) ? node_col : node, block_type);
 
    assert(mat);
    assert(mat->hasDynamicStorage());
