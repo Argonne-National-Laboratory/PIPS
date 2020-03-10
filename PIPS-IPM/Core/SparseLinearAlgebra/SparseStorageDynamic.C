@@ -506,7 +506,9 @@ void SparseStorageDynamic::addColToRow( double coeff, int col, int row )
    const int end = rowptr[row].end;
    const int start = rowptr[row].start;
 
-   for(int i = start; i < end; ++i)
+   assert( start <= end );
+
+   for(i = start; i < end; ++i)
    {
       if( jcolM[i] == col )
          break;
