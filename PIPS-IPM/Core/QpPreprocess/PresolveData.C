@@ -2584,7 +2584,9 @@ void PresolveData::addCoeffColToRow( double coeff, const INDEX& col, const INDEX
 
    BlockType block_type = row.getBlockOfColInRow(col);
 
-   SparseGenMatrix* sparse_mat = getSparseGenMatrixFromStochMat( getSystemMatrix( row.getSystemType() ), col.getNode(), block_type );
+   const int node = row.isLinkingRow() ? col.getNode() : row.getNode();
+
+   SparseGenMatrix* sparse_mat = getSparseGenMatrixFromStochMat( getSystemMatrix( row.getSystemType() ), node, block_type );
    assert( sparse_mat );
    assert( sparse_mat->hasDynamicStorage() );
 
