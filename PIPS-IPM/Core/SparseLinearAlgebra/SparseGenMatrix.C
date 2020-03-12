@@ -914,3 +914,100 @@ double SparseGenMatrix::localRowTimesVec( const SimpleVector& vec, int row ) con
 
   return mStorageDynamic->rowTimesVec( vec.elements(), vec.length(), row);
 }
+
+void SparseGenMatrix::removeRow( int row )
+{
+   assert( hasDynamicStorage() );
+   if( hasTransposed() )
+   {
+      assert( m_Mt->getStorageDynamic() );
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+      removeRowUsingTransposed( row, m_Mt->getStorageDynamicRef() );
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+   }
+   else
+      mStorageDynamic->clearRow(row);
+}
+
+void SparseGenMatrix::removeRowUsingTransposed( int row, SparseStorageDynamic& mat_trans)
+{
+   assert( hasDynamicStorage() );
+
+   SparseStorageDynamic& mat = *mStorageDynamic;
+
+   const int start = mat.getRowPtr(row).start;
+   const int end = mat.getRowPtr(row).end;
+
+   for( int i = start; i < end; ++i )
+   {
+      const int col = mat.getJcolM(i);
+      mat_trans.removeEntryAtRowCol(col, row);
+   }
+
+   mat.clearRow(row);
+}
+
+void SparseGenMatrix::removeCol( int col )
+{
+   assert( hasDynamicStorage() );
+   if( hasTransposed() )
+   {
+      assert(m_Mt->getStorageDynamic());
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+      m_Mt->removeRowUsingTransposed( col, *mStorageDynamic);
+
+      m_Mt->removeRow( col );
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+   }
+   else
+      mStorageDynamic->clearCol(col);
+}
+
+void SparseGenMatrix::removeEntryAtRowCol( int row, int col )
+{
+   assert( hasDynamicStorage() );
+
+   if( hasTransposed() )
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+
+   mStorageDynamic->removeEntryAtRowCol(row, col);
+
+   if( hasTransposed() )
+   {
+      m_Mt->removeEntryAtRowCol(row, col);
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+   }
+}
+
+void SparseGenMatrix::removeEntryAtRowColIndex( int row, int col_index )
+{
+   assert( hasDynamicStorage() );
+
+   if( hasTransposed() )
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+
+   const int col = mStorageDynamic->getJcolM(col_index);
+   mStorageDynamic->removeEntryAtIndex(row, col_index);
+
+   if( hasTransposed() )
+   {
+      m_Mt->removeEntryAtRowCol(col, row);
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+   }
+}
+
+void SparseGenMatrix::addColToRow( double coeff, int col, int row )
+{
+   assert( hasDynamicStorage() );
+
+   if( hasTransposed() )
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+
+   mStorageDynamic->addColToRow(coeff, col, row);
+
+   if( hasTransposed() )
+   {
+      m_Mt->addColToRow(coeff, row, col);
+      assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
+   }
+}

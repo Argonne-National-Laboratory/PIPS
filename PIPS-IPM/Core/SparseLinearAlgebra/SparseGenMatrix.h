@@ -197,6 +197,16 @@ public:
   virtual double localRowTimesVec( const SimpleVector& vec, int row ) const;
   virtual void axpyWithRowAt(double alpha, SimpleVector& y, int row) const;
 
+  virtual void removeRow(int row);
+  virtual void removeCol( int col );
+
+  virtual void removeRowUsingTransposed( int row, SparseStorageDynamic& mat_trans);
+
+  virtual void removeEntryAtRowCol( int row, int col );
+  virtual void removeEntryAtRowColIndex( int row, int col_index );
+
+  virtual void addColToRow( double coeff, int col, int row );
+
   virtual ~SparseGenMatrix();
 };
 

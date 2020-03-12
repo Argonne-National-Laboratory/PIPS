@@ -52,14 +52,14 @@ private:
   void extendStorageValues();
 
   /* shifts all rows such that every row is again row + spareRatio length */ 
-  void compressStorageValues();
+  void rebuildSpareStructure(int guaranteed_spare = 0);
 
 public:
   static int instances;
 
   int getM() const { return m; };
-  int getN() const { return n; }; // todo check for n when inserting rows cols etc
-  //int getLen() const { return len; };
+  int getN() const { return n; };
+  int getNVals() const { return len-len_free; };
 
   const ROWPTRS* getRowPtr() const { return rowptr; };
   const ROWPTRS getRowPtr(int i) const;
@@ -103,7 +103,7 @@ public:
   void removeEntryAtIndex(int row, int col_idx);
   void removeEntryAtRowCol(int row, int col);
 
-  void addColToRow( double coeff, int col, int row );
+  bool addColToRow( double coeff, int col, int row );
 
   void clearRow( int row );
   void clearCol( int col );

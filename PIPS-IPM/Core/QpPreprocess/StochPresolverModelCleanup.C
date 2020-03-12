@@ -293,8 +293,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 
    const SparseStorageDynamic* storage = mat;
 
-   std::vector<std::pair<int, int> > eliminated_entries;
-
    /* for every row in row in matrix */
    for( int r = 0; r < storage->getM(); r++ )
    {
@@ -304,18 +302,19 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
       int end = storage->getRowPtr(r).end;
 
       /* for every nonzero column in that row */
-      for(int k = start; k < end; ++k )
+      for(int col_index = start; col_index < end; ++col_index )
       {
-         const int col = storage->getJcolM(k);
-         const double mat_entry = storage->getMat(k);
+         const int col = storage->getJcolM(col_index);
+         const double mat_entry = storage->getMat(col_index);
 
          /* remove all small entries */
          if( fabs( mat_entry ) < tol_matrix_entry )
          {
-            presData.deleteEntry(system_type, node, block_type, r, k, end);
+            presData.deleteEntry(system_type, node, block_type, r, col_index);
 
-            std::pair<int,int> entry(r, col);
-            eliminated_entries.push_back(entry);
+            /* since the current entry got deleted we have to step back one entry */
+            --col_index;
+            --end;
             ++n_elims;
          }
          /* remove entries where their corresponding variables have valid lower and upper bounds, that overall do not have a real influence though */
@@ -323,10 +322,11 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          {
             if( (fabs( mat_entry ) < tolerance1 && fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < tolerance2 * feastol ))
             {
-               presData.deleteEntry(system_type, node, block_type, r, k, end);
+               presData.deleteEntry(system_type, node, block_type, r, col_index);
 
-               std::pair<int,int> entry(r, col);
-               eliminated_entries.push_back(entry);
+               /* since the current entry got deleted we have to step back one entry */
+               --col_index;
+               --end;
                ++n_elims;
             }
          }
@@ -341,10 +341,11 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
                {
                   total_sum_modifications_row += fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col]);
 
-                  presData.deleteEntry(system_type, node, block_type, r, k, end);
+                  presData.deleteEntry(system_type, node, block_type, r, col_index);
 
-                  std::pair<int,int> entry(r, col);
-                  eliminated_entries.push_back(entry);
+                  /* since the current entry got deleted we have to step back one entry */
+                  --col_index;
+                  --end;
                   ++n_elims;
                }
             }
@@ -352,10 +353,6 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          /* not removed */
       }
    }
-
-   presData.updateTransposedSubmatrix( system_type, node, block_type, eliminated_entries);
-
-   assert(presData.elementsDeletedInTransposed());
 
    return n_elims;
 }

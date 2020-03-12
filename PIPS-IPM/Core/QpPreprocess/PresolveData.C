@@ -106,7 +106,6 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       upper_bound_implied_by_system(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
       upper_bound_implied_by_row(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
       upper_bound_implied_by_node(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
-      elements_deleted(0), elements_deleted_transposed(0),
       absmin_col(dynamic_cast<StochVector*>(sorigprob->g->clone())),
       absmax_col(dynamic_cast<StochVector*>(sorigprob->g->clone()))
 {
@@ -992,29 +991,28 @@ bool PresolveData::presDataInSync() const
 // also rhs lhs will be adjusted - this has to be reversed later - there will also be a problem with the reduced costs in than particular row ?
 // todo : postsolve if bounds adjusted because of deleted matrix entry simply reverse the adjustment - no changes in multipliers
 //- row stays active / inactive ? not true..
-void PresolveData::deleteEntry( SystemType system_type, int node, BlockType block_type, int row, int& col_idx, int& row_end)
+void PresolveData::deleteEntry( SystemType system_type, int node, BlockType block_type, int row, int col_index )
 {
    assert(-1 <= node && node < nChildren);
    assert(node != -1 || block_type != A_MAT);
    const bool linking = (block_type == BL_MAT);
 
-   SparseStorageDynamic& storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamicRef();
+   const SparseStorageDynamic& storage = getSparseGenMatrix(system_type, node , block_type)->getStorageDynamicRef();
    
-   const double val = storage.getMat(col_idx);
-   const int col = storage.getJcolM(col_idx);
+   const double val = storage.getMat(col_index);
+   const int col = storage.getJcolM(col_index);
    const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
    const bool at_root = ( node == -1 && node_col == -1 );
 
+   const INDEX col_INDEX( COL, node_col, col );
+   const INDEX row_INDEX( ROW, node, row, linking, system_type );
+
    if( postsolver )
    {
-      postsolver->notifyColModified( INDEX(COL, node_col, col) );
-      postsolver->notifyRowModified( INDEX(ROW, node, row, linking, system_type) );
+      postsolver->notifyColModified( col_INDEX );
+      postsolver->notifyRowModified( row_INDEX );
    }
-   storage.removeEntryAtIndex(row, col_idx);
-
-   --col_idx;
-   --row_end;
-   ++elements_deleted;
+   getSparseGenMatrix(system_type, node , block_type)->removeEntryAtRowColIndex(row, col_index);
 
    SimpleVector& xlower = getSimpleVecFromColStochVec(*presProb->blx, node);
 
@@ -1029,8 +1027,6 @@ void PresolveData::deleteEntry( SystemType system_type, int node, BlockType bloc
    adjustRowActivityFromDeletion(system_type, node, block_type, row, col, val);
 
    /* adjust nnz counters */
-   const INDEX row_INDEX( ROW, node, row, linking, system_type );
-   const INDEX col_INDEX( COL, node_col, col );
    reduceNnzCounterRowBy( row_INDEX, 1 );
    reduceNnzCounterColumnBy( col_INDEX, 1, at_root );
 }
@@ -1690,40 +1686,6 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, bool l
    }
 }
 
-
-// todo : make a finish block_deletion ? // todo - remove this and always update both matrices..
-void PresolveData::updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements)
-{
-   assert(-1 <= node && node < nChildren);
-   assert(node != -1 || block_type != A_MAT);
-   SparseStorageDynamic& transposed = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
-
-   for( size_t i = 0; i < elements.size(); ++i )
-   {
-      std::pair<int, int> entry = elements.at(i);
-      const int row_A = entry.first;
-      const int row_At = entry.second;
-
-      const int start = transposed.getRowPtr(row_At).start;
-      const int end = transposed.getRowPtr(row_At).end;
-      int col_At;
-
-      for( col_At = start; col_At < end; col_At++ )
-      {
-         if( transposed.getJcolM(col_At) == row_A )
-            break;
-      }
-
-      transposed.removeEntryAtIndex(row_At, col_At);
-
-      ++elements_deleted_transposed;
-   }
-
-   assert(elements_deleted == elements_deleted_transposed);
-   elements_deleted = 0;
-   elements_deleted_transposed = 0;
-}
-
 void PresolveData::reduceNnzCounterRowBy(const INDEX& row, int amount)
 {
    assert( row.isRow() );
@@ -1888,10 +1850,11 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
    const bool at_root = node == -1 && node_col == -1;
 
+   const INDEX col_INDEX(COL, node_col, col);
+
    SparseGenMatrix* mat = getSparseGenMatrix(system_type, node, block_type);
 
-   SparseStorageDynamic& matrix = mat->getStorageDynamicRef();
-   SparseStorageDynamic& matrix_transp = mat->getStorageDynamicTransposedRef();
+   const SparseStorageDynamic& matrix_transp = mat->getStorageDynamicTransposedRef();
 
    assert(0 <= col && col < matrix_transp.getM());
 
@@ -1900,24 +1863,21 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    {
       const int row = matrix_transp.getJcolM(j);
       const double coeff = matrix_transp.getMat(j);
+      const INDEX row_INDEX(ROW, node, row, linking, system_type);
 
       assert( !PIPSisEQ(0.0, coeff) );
 
       if( TRACK_ROW(node, row, system_type, linking) )
-      {
          std::cout << "TRACKING_ROW: fixation of column " << col << " in tracked row"<< std::endl;
-         writeRowLocalToStreamDense(std::cout, INDEX(ROW, node, row, linking, system_type) );
-      }
 
       /* remove the entry, adjust activity and row counters and rhs/lhs */
       if(postsolver)
       {
-         postsolver->notifyRowModified( INDEX(ROW, node, row, linking, system_type) );
-         postsolver->notifyColModified( INDEX(COL, node_col, col) );
+         postsolver->notifyRowModified( row_INDEX );
+         postsolver->notifyColModified( col_INDEX );
       }
-      matrix.removeEntryAtRowCol(row, col);
 
-      reduceNnzCounterRowBy( INDEX(ROW, node, row, linking, system_type), 1);
+      reduceNnzCounterRowBy( row_INDEX, 1);
 
       adjustMatrixRhsLhsBy(system_type, node, linking, row, - coeff * fixation);
 
@@ -1926,7 +1886,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
       if( TRACK_ROW(node, row, system_type, linking) )
       {
          std::cout << "TRACKING_ROW: after removal of column" << std::endl;
-         writeRowLocalToStreamDense(std::cout, INDEX(ROW, node, row, linking, system_type) );
+         writeRowLocalToStreamDense(std::cout, row_INDEX );
 
          const double act_min = (system_type == EQUALITY_SYSTEM) ? getSimpleVecFromRowStochVec(*actmin_eq_part, node, linking)[row] :
                getSimpleVecFromRowStochVec(*actmin_ineq_part, node, linking)[row];
@@ -1944,12 +1904,10 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    }
 
    /* adjust column counters */
-   reduceNnzCounterColumnBy( INDEX(COL, node_col, col), matrix_transp.getRowPtr(col).end - matrix_transp.getRowPtr(col).start, at_root);
+   reduceNnzCounterColumnBy( col_INDEX, matrix_transp.getRowPtr(col).end - matrix_transp.getRowPtr(col).start, at_root);
 
-   /* update the transposed */
-   matrix_transp.clearRow( col );
-
-   // todo assert(transposed and normal matrix are in sync)
+   /* delete col in matrix and transposed */
+   mat->removeCol( col );
 }
 
 /* tighten bounds of singleton column col1 in row implied via singleton column col2 in row2 */
@@ -2583,20 +2541,32 @@ void PresolveData::addCoeffColToRow( double coeff, const INDEX& col, const INDEX
    assert( !row.isLinkingRow() );
 
    BlockType block_type = row.getBlockOfColInRow(col);
-
    const int node = row.isLinkingRow() ? col.getNode() : row.getNode();
 
    SparseGenMatrix* sparse_mat = getSparseGenMatrixFromStochMat( getSystemMatrix( row.getSystemType() ), node, block_type );
    assert( sparse_mat );
-   assert( sparse_mat->hasDynamicStorage() );
 
-   SparseStorageDynamic& mat = sparse_mat->getStorageDynamicRef();
+   const SparseStorageDynamic& mat = sparse_mat->getStorageDynamicRef();
 
-   mat.addColToRow(coeff, col.getIndex(), row.getIndex() );
+   if( postsolver )
+   {
+      postsolver->notifyColModified(col);
+      postsolver->notifyRowModified(row);
+   }
 
-   const bool at_root = row.getNode() == -1 && col.getNode() == -1;
-   increaseNnzCounterColumnBy(col, 1, at_root);
-   increaseNnzCounterRowBy(row, 1);
+   const int row_start = mat.getRowPtr(row.getIndex()).start;
+   const int row_end = mat.getRowPtr(row.getIndex()).end;
+   const bool new_coeff_in_row = (std::find( mat.getJcolM() + row_start, mat.getJcolM() + row_end, col.getIndex() ) == mat.getJcolM() + row_end);
+
+   /* only increase non-zero counters if coeff has not been in the row before */
+   if( new_coeff_in_row )
+   {
+      const bool at_root = row.getNode() == -1 && col.getNode() == -1;
+      increaseNnzCounterColumnBy(col, 1, at_root);
+      increaseNnzCounterRowBy(row, 1);
+   }
+
+   sparse_mat->addColToRow( coeff, col.getIndex(), row.getIndex() );
 }
 
 /* removes row from local system - sets rhs lhs and activities to zero */
@@ -2609,7 +2579,6 @@ void PresolveData::removeRow( const INDEX& row )
    /* the postsolver must have been notified before the actual removal of the row! */
    if( postsolver )
       assert(wasRowRemoved(row));
-
 
    if( row.isLinkingRow() )
    {
@@ -2685,7 +2654,9 @@ void PresolveData::removeRow( const INDEX& row )
    if( row.inEqSys() )
    {
       if( !row.isLinkingRow() )
+      {
          assert( getSimpleVecFromRowStochVec(*nnzs_row_A, row) == 0 );
+      }
    }
    else
    {
@@ -2707,17 +2678,14 @@ void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type, 
    const int node = row.getNode();
    const int row_idx = row.getIndex();
 
-
    SparseGenMatrix* mat = getSparseGenMatrix(row.getSystemType(), (block_type == BL_MAT) ? node_col : node, block_type);
 
    assert(mat);
    assert(mat->hasDynamicStorage());
 
-   SparseStorageDynamic& mat_storage = mat->getStorageDynamicRef();
-   SparseStorageDynamic& mat_transp_storage = mat->getStorageDynamicTransposedRef();
+   const SparseStorageDynamic& mat_storage = mat->getStorageDynamicRef();
 
-   assert( 0 <= row_idx && row_idx < mat_storage.getM());
-
+   /* update non-zero counters and tell postsolver which rows/cols changed */
    const int row_start = mat_storage.getRowPtr(row_idx).start;
    const int row_end = mat_storage.getRowPtr(row_idx).end;
 
@@ -2734,12 +2702,10 @@ void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type, 
          postsolver->notifyColModified( col );
          postsolver->notifyRowModified( row );
       }
-
-      mat_transp_storage.removeEntryAtRowCol(col_idx, row_idx);
       reduceNnzCounterColumnBy( col, 1, at_root );
    }
 
-   mat_storage.clearRow(row_idx);
+   mat->removeRow( row.getIndex() );
 }
 
 bool PresolveData::verifyActivities() const
@@ -3160,7 +3126,7 @@ double PresolveData::computeLocalLinkingRowMinOrMaxActivity(SystemType system_ty
       const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
       /* get matrix */
-      SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, BL_MAT)->getStorageDynamicRef();
+      const SparseStorageDynamic& mat = getSparseGenMatrix(system_type, node, BL_MAT)->getStorageDynamicRef();
 
       for( int j = mat.getRowPtr(row).start; j < mat.getRowPtr(row).end; j++ )
       {
@@ -3224,7 +3190,7 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    const SimpleVector& xupp = getSimpleVecFromColStochVec(*(presProb->bux), node);
 
    /* get matrix */
-   SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, B_MAT)->getStorageDynamicRef();
+   const SparseStorageDynamic& Bmat = getSparseGenMatrix(system_type, node, B_MAT)->getStorageDynamicRef();
 
    /* get activity vector */
    SimpleVector* act_vec;
@@ -3270,7 +3236,7 @@ void PresolveData::computeRowMinOrMaxActivity(SystemType system_type, int node, 
    /* Amat */
    if( node != -1 )
    {
-      SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, A_MAT)->getStorageDynamicRef();
+      const SparseStorageDynamic& Amat = getSparseGenMatrix(system_type, node, A_MAT)->getStorageDynamicRef();
       for( int j = Amat.getRowPtr(row).start; j < Amat.getRowPtr(row).end; j++ )
       {
          const int col = Amat.getJcolM(j);
@@ -3456,7 +3422,7 @@ void PresolveData::updateRowActivitiesBlock(SystemType system_type, int node, Bl
    if( (upper && !PIPSisLT( bound, old_bound)) || (!upper && PIPSisLT(bound, old_bound)) )
       return;
 
-   SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
+   const SparseStorageDynamic& mat_transp = getSparseGenMatrix(system_type, node, block_type)->getStorageDynamicTransposedRef();
    const bool linking = ( block_type == BL_MAT );
 
    assert(col < mat_transp.getM() );

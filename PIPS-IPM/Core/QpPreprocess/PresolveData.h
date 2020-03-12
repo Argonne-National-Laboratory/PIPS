@@ -121,10 +121,6 @@ private:
       StochVectorBaseHandle<int> upper_bound_implied_by_row;
       StochVectorBaseHandle<int> upper_bound_implied_by_node;
 
-      // necessary ?
-      int elements_deleted;
-      int elements_deleted_transposed;
-
       /* storing biggest and smallest absolute nonzero-coefficient in system matrix (including objective vector) */
       StochVectorHandle absmin_col;
       StochVectorHandle absmax_col;
@@ -206,13 +202,11 @@ public :
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
 
       /* call whenever a single entry has been deleted from the matrix */
-      void deleteEntry(SystemType system_type, int node, BlockType block_type, int row, int& col_idx, int& row_end);
-      void updateTransposedSubmatrix( SystemType system_type, int node, BlockType block_type, std::vector<std::pair<int, int> >& elements);
+      void deleteEntry(SystemType system_type, int node, BlockType block_type, int row, int col_index);
 
       /* methods for verifying state of presData or querying the problem */
       bool verifyNnzcounters() const;
       bool verifyActivities() const;
-      bool elementsDeletedInTransposed() const { return elements_deleted == elements_deleted_transposed; };
 
       bool nodeIsDummy(int node) const;
       bool hasLinking(SystemType system_type) const;
