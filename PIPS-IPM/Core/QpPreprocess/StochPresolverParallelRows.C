@@ -108,14 +108,14 @@ void StochPresolverParallelRows::applyPresolving()
          assert(norm_Bmat);
          assert(normNnzRowA);
 
-         insertRowsIntoHashtable( row_support_hashtable, norm_Amat, norm_Bmat, EQUALITY_SYSTEM, normNnzRowA );
+         insertRowsIntoHashtable( row_support_hashtable, norm_Amat, norm_Bmat, EQUALITY_SYSTEM, normNnzRowA, currNnzRow );
          assert( static_cast<int>(row_support_hashtable.size()) <= mA );
 
          assert(norm_Cmat);
          assert(norm_Dmat);
          assert(normNnzRowC);
 
-         insertRowsIntoHashtable( row_support_hashtable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC );
+         insertRowsIntoHashtable( row_support_hashtable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC, currNnzRowC );
 
          assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Cmat->getM() );
 
@@ -158,10 +158,10 @@ void StochPresolverParallelRows::applyPresolving()
    setNormalizedPointers(-1);
    assert(norm_Bmat); assert(norm_Dmat);
    // First Hashing: Fill 'row_support_hashtable':
-   insertRowsIntoHashtable( row_support_hashtable, nullptr, norm_Bmat, EQUALITY_SYSTEM, normNnzRowA );
+   insertRowsIntoHashtable( row_support_hashtable, nullptr, norm_Bmat, EQUALITY_SYSTEM, normNnzRowA, currNnzRow );
    assert( static_cast<int>(row_support_hashtable.size()) <= mA );
 
-   insertRowsIntoHashtable( row_support_hashtable, nullptr, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC );
+   insertRowsIntoHashtable( row_support_hashtable, nullptr, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC, currNnzRowC );
    assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Dmat->getM());
    // Second Hashing: Per bucket, do Second Hashing:
    for( size_t i = 0; i < row_support_hashtable.bucket_count(); ++i )
@@ -758,7 +758,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
  */
 // todo : I think this is wrong or at least not complete - in theory we should sort the rows first (according to the colindices)
 void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-      SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat, SystemType system_type, SimpleVectorBase<int>* nnzRow )
+      const SparseStorageDynamic* a_mat, const SparseStorageDynamic* b_mat, SystemType system_type, const SimpleVectorBase<int>* nnz_row_norm, const SimpleVectorBase<int>* nnz_row_orig )
 {
    assert(b_mat);
    if(a_mat)
@@ -770,7 +770,7 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
       
    for(int row = 0; row < b_mat->getM(); row++)
    {
-      // ignore rows containing more than one singleton entry:
+      // ignore rows containing more than one singleton entry: // TODO: why? // TODO: this should not be an issue!
       if( system_type == EQUALITY_SYSTEM && (*rowContainsSingletonVariableA)[row] == -2 )
          continue;
       if( system_type == INEQUALITY_SYSTEM && (*rowContainsSingletonVariableC)[row] == -2 )
@@ -778,7 +778,11 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
 
       // calculate rowId including possible offset (for Inequality rows):
       int rowId = row;
-      if( (*nnzRow)[rowId] == 0 )
+      /* skip empty rows */
+      if( (*nnz_row_norm)[rowId] == 0 )
+         continue;
+      /* skip singleton rows */
+      if( (*nnz_row_orig)[rowId] == 1 )
          continue;
       if( system_type == INEQUALITY_SYSTEM )
          rowId += mA;
@@ -792,20 +796,20 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
          const int row_A_start = a_mat->getRowPtr(row).start;
          const int row_A_length = a_mat->getRowPtr(row).end - row_A_start;
 
-         if( row_B_length == 0 && row_A_length == 0 )
-            continue;
+         /* skip empty */
+         assert(row_B_length + row_A_length != 0 );
+
          // colIndices and normalized entries are set as pointers to the original data.
          // create and insert the new element:
-         rows.emplace(rowId, nA, row_B_length, &(b_mat->getJcolM()[row_B_start]), &(b_mat->getMat()[row_B_start]),
-               row_A_length, &(a_mat->getJcolM()[row_A_start]), &(a_mat->getMat()[row_A_start]));
+         rows.emplace(rowId, nA, row_B_length, b_mat->getJcolM() + row_B_start, b_mat->getMat() + row_B_start,
+               row_A_length, a_mat->getJcolM() + row_A_start, a_mat->getMat() + row_A_start);
       }
       else
       {
-         if(row_B_length == 0)
-            continue;
+         assert(row_B_length != 0);
 
-         rows.emplace(rowId, nA, row_B_length, &(b_mat->getJcolM()[row_B_start]),
-               &(b_mat->getMat()[row_B_start]), 0, nullptr, nullptr);
+         rows.emplace(rowId, nA, row_B_length, b_mat->getJcolM() + row_B_start,
+               b_mat->getMat() + row_B_start, 0, nullptr, nullptr);
       }
    }
 }

@@ -28,7 +28,7 @@ i11                                                               3     2    -1
 i12                                                               2    -2     4
 i13                                                              -1   0.5    -1
 i14        1     1     1      1     1     1     1     1           1     1     1
-i15        1     1 
+i15  1     1     1                  1                             1
 ; 
 *          1    -2    -2      1    -2    -2     1    -2    -2     1    -2    -2
 * expected values for x full determined by Ax=b
@@ -48,8 +48,8 @@ i10                                                         1
 i11                                                                           1
 i12                                                                     1     
 i13                                                                           1
-i14        1     1
-i15        1 
+i14        1     1                  1                       1
+i15        1                        1                 1
 ;
 
 Variables          x(j) / j2.lo -5 /

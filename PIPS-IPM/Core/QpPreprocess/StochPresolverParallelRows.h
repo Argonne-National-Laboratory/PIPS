@@ -132,7 +132,7 @@ private:
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
          SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow) const;
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVectorBase<int>* nnzRow );
+         const SparseStorageDynamic* Ablock, const SparseStorageDynamic* Bblock, SystemType system_type, const SimpleVectorBase<int>* nnz_row_norm, const SimpleVectorBase<int>* nnz_row_orig);
    void compareRowsInCoeffHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( const rowlib::rowWithEntries& row1, const rowlib::rowWithEntries& row2);
 
