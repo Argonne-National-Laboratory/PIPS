@@ -826,13 +826,12 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
       for (boost::unordered_set<rowlib::rowWithEntries>::local_iterator row_one_iter = row_coefficients_hashtable.begin(i);
          row_one_iter != row_coefficients_hashtable.end(i); ++row_one_iter)
       {
-         const SystemType row1_system = (row_one_iter->id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
-         const int row1 = (row1_system == EQUALITY_SYSTEM) ? row_one_iter->id : row_one_iter->id - mA;
          const int row1_id = row_one_iter->id;
-         assert(0 <= row1);
+         const INDEX row1(ROW, node, (row1_id < mA) ? row_one_iter->id : row_one_iter->id - mA,
+               false, (row1_id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM);
 
          /* if row1 has been removed in the meanwhile do not continue with it */
-         if( presData.wasRowRemoved( INDEX(ROW, node, row1, false, row1_system) ) )
+         if( presData.wasRowRemoved(row1) )
             continue;
 
          // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
@@ -841,62 +840,48 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
          while ( ++row_two_iter != row_coefficients_hashtable.end(i) )
          {
             /* if at some point row1 was removed we have to get a new row1 */
-            if( presData.wasRowRemoved( INDEX(ROW, node, row1, false, row1_system) ) )
+            if( presData.wasRowRemoved(row1) )
                break;
 
-            assert( row_two_iter->id != row_one_iter->id );
-            const SystemType row2_system = (row_two_iter->id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
-            const int row2 = (row2_system == EQUALITY_SYSTEM) ? row_two_iter->id : row_two_iter->id - mA;
             const int row2_id = row_two_iter->id;
-            assert(0 <= row2);
+            const INDEX row2(ROW, node, (row2_id < mA) ? row2_id : row2_id - mA, false, (row2_id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM );
+            assert( row2_id != row1_id );
 
             /* if row2 has been removed in the meanwhile do not continue with it */
-            if( presData.wasRowRemoved( INDEX(ROW, node, row2, false, row2_system) ) )
+            if( presData.wasRowRemoved( row2 ) )
                continue;
 
             bool removed = false;
             /* When two parallel rows are found, check if they are both =, both <=, or = and <= */
             if( checkRowsAreParallel( *row_one_iter, *row_two_iter) )
             {
-               if( row1_system == EQUALITY_SYSTEM && row2_system == EQUALITY_SYSTEM )
+               if( row1.inEqSys() && row2.inEqSys() )
                {
-                  assert(row1_id == row1);
-                  assert(row2_id == row2);
-
                   /* check if one constraint contains a singleton variable */
-                  if( rowContainsSingletonVariable(row1_id) || rowContainsSingletonVariable(row2_id) )
-                     removed = twoNearlyParallelEqualityRows(row1_id, row2_id, node);
+                  if( rowContainsSingletonVariable(row1) || rowContainsSingletonVariable(row2) )
+                     removed = twoNearlyParallelEqualityRows(row1, row2);
                   else
-                     removed = twoParallelEqualityRows(row1_id, row2_id, node);
+                     removed = twoParallelEqualityRows(row1, row2);
                }
-               else if( row1_system == INEQUALITY_SYSTEM && row2_system == INEQUALITY_SYSTEM )
+               else if( row1.inInEqSys() && row2.inInEqSys() )
                {
-                  assert( row1 == row1_id - mA);
-                  assert( row2 == row2_id - mA);
-
-                  if( rowContainsSingletonVariable(row1_id) && rowContainsSingletonVariable(row2_id) )
-                     removed = twoNearlyParallelInequalityRows(row1_id, row2_id, node);
-                  else if( !rowContainsSingletonVariable(row1_id) && !rowContainsSingletonVariable(row2_id) )
-                     removed = twoParallelInequalityRows(row1_id, row2_id, node);
+                  if( rowContainsSingletonVariable(row1) && rowContainsSingletonVariable(row2) )
+                     removed = twoNearlyParallelInequalityRows(row1, row2);
+                  else if( !rowContainsSingletonVariable(row1) && !rowContainsSingletonVariable(row2) )
+                     removed = twoParallelInequalityRows(row1, row2);
                }
                else
                {
-                  assert( (row1_system == EQUALITY_SYSTEM && row2_system == INEQUALITY_SYSTEM) ||
-                     (row1_system == INEQUALITY_SYSTEM && row2_system == EQUALITY_SYSTEM) );
-                  assert( (row1 == row1_id && row2 == row2_id - mA) ||
-                     (row1 == row1_id - mA && row2 == row2_id) );
+                  assert( (row1.inEqSys() && row2.inInEqSys()) ||
+                     (row1.inInEqSys() && row2.inEqSys()) );
 
-                  const int row_ineq_id = (row1_system == INEQUALITY_SYSTEM) ? row1_id : row2_id;
-                  const int row_ineq = (row1_system == INEQUALITY_SYSTEM) ? row1 : row2;
+                  const INDEX& row_ineq = row1.inInEqSys() ? row1 : row2;
+                  const INDEX& row_eq = row1.inEqSys() ? row1 : row2;
 
-                  const int row_eq_id = (row1_system == EQUALITY_SYSTEM) ? row1_id : row2_id;
-                  const int row_eq = (row1_system == EQUALITY_SYSTEM) ? row1 : row2;
-
-
-                  if( !rowContainsSingletonVariable(row_eq_id) && !rowContainsSingletonVariable(row_ineq_id) )
-                     removed = parallelEqualityAndInequalityRow(row_eq, row_ineq, node);
-                  else if( rowContainsSingletonVariable(row_eq_id) && !rowContainsSingletonVariable(row_ineq_id) )
-                     removed = nearlyParallelEqualityAndInequalityRow(row_eq, row_ineq, node);
+                  if( !rowContainsSingletonVariable(row_eq) && !rowContainsSingletonVariable(row_ineq) )
+                     removed = parallelEqualityAndInequalityRow(row_eq, row_ineq);
+                  else if( rowContainsSingletonVariable(row_eq) && !rowContainsSingletonVariable(row_ineq) )
+                     removed = nearlyParallelEqualityAndInequalityRow(row_eq, row_ineq);
                }
             }
 
@@ -936,55 +921,48 @@ bool StochPresolverParallelRows::checkRowsAreParallel( const rowlib::rowWithEntr
    return true;
 }
 
-bool StochPresolverParallelRows::twoParallelEqualityRows(int row1_id, int row2_id, int node) const
+bool StochPresolverParallelRows::twoParallelEqualityRows(const INDEX& row1, const INDEX& row2) const
 {
-   const int row1 = row1_id;
-   const int row2 = row2_id;
-   assert( -1 <= node && node < nChildren );
-   assert( row1 < mA && row2 < mA);
+   assert( row1.isRow() );
+   assert( row1.inEqSys() );
+   assert( row2.isRow() );
+   assert( row2.inEqSys() );
+   assert( row1.hasValidNode(nChildren) );
+   assert( row2.hasValidNode(nChildren) );
+   assert( row1.getIndex() < mA && row2.getIndex() < mA);
 
-   if( !PIPSisEQ( (*norm_b)[row1], (*norm_b)[row2]) )
+   if( !PIPSisEQ( (*norm_b)[row1.getIndex()], (*norm_b)[row2.getIndex()]) )
       PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel equality rows with non-compatible right hand sides",
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
 
    /* one of the rows can be discarded */
-   presData.removeRedundantParallelRow( INDEX(ROW, node, row2, false, EQUALITY_SYSTEM), INDEX(ROW, node, row1, false, EQUALITY_SYSTEM) );
+   presData.removeRedundantParallelRow( row2, row1) ;
    return true;
 }
 
-bool StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int row2_id, int node ) const
+bool StochPresolverParallelRows::twoNearlyParallelEqualityRows(const INDEX& row1, const INDEX& row2) const
 {
-   int row1 = row1_id;
-   int row2 = row2_id;
-   assert( -1 <= node && node < nChildren );
-   assert( row1 < mA && row2 < mA );
-   assert( 0 <= row1 && 0 <= row2 );
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( row1.inEqSys() && row2.inEqSys() );
 
    /* make sure that row2 contains the singleton variable, otherwise switch row1 and row2 */
-   if( (*rowContainsSingletonVariableA)[row2] != -1 )
-      std::swap(row1, row2);
+   const INDEX& row_singleton = rowContainsSingletonVariable( row2 ) ? row2 : row1;
+   const INDEX& row_other = rowContainsSingletonVariable( row2 ) ? row1 : row2;
 
-   assert((*rowContainsSingletonVariableA)[row2] != -1);
+   assert( rowContainsSingletonVariable(row_singleton) );
 
    /* get the singleton columns (if existent) */
-   const int col1_index = (*rowContainsSingletonVariableA)[row1];
-   const int col2_index = (*rowContainsSingletonVariableA)[row2];
-   const int node_var1 = (col1_index < nA) ? -1 : node;
-   const int node_var2 = (col2_index < nA) ? -1 : node;
+   const INDEX col_singleton = getRowSingletonVariable(row_singleton);
+   const INDEX col_other = getRowSingletonVariable(row_other);
 
-   const double a_col1 = getSingletonCoefficient(col1_index);
-   const double a_col2 = getSingletonCoefficient(col2_index);
+   assert( col_singleton.isCol() );
+
+   const double a_col_singleton = getSingletonCoefficient(col_singleton);
+   const double a_col_other = getSingletonCoefficient(col_other);
+
    /* we swapped the rows so this would hold */
-   assert( !PIPSisZero(a_col2) );
-
-   const int col1 = ( node_var1 == -1 ) ? col1_index : col1_index - nA;
-   const int col2 = ( node_var2 == -1 ) ? col2_index : col2_index - nA;
-   assert( -1 <= col1 );
-   assert( 0 <= col2 );
-   if( node_var1 == -1 )
-      assert( col1 < nA );
-   if( node_var2 == -1 )
-      assert( col2 < nA );
+   assert( !PIPSisZero(a_col_singleton) );
 
    /* we now can substitute the singleton column col2 out of the problem with x2 = t x1 + d where
     *    t = a_col1 / (s * a_col2)
@@ -992,22 +970,22 @@ bool StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int 
     */
 
    /* calculate t and d */
-   const double s = (*norm_factorA)[row1] / (*norm_factorA)[row2];
-   const double t = a_col1 / (a_col2 * s);
-   const double d = ( (*norm_b)[row2] - (*norm_b)[row1] )
-            * (*norm_factorA)[row2] / a_col2;
+   const double s = (*norm_factorA)[row_other.getIndex()] / (*norm_factorA)[row_singleton.getIndex()];
+   const double t = a_col_other / (a_col_singleton * s);
+   const double d = ( (*norm_b)[row_singleton.getIndex()] - (*norm_b)[row_other.getIndex()] )
+            * (*norm_factorA)[row_singleton.getIndex()] / a_col_singleton;
 
-   double ixlow_col2 = (node_var2 == -1) ? (*currIxlowParent)[col2] : (*currIxlowChild)[col2];
-   double ixupp_col2 = (node_var2 == -1) ? (*currIxuppParent)[col2] : (*currIxuppChild)[col2];
-   double xlow_col2 = (node_var2 == -1) ? (*currxlowParent)[col2] : (*currxlowChild)[col2];
-   double xupp_col2 = (node_var2 == -1) ? (*currxuppParent)[col2] : (*currxuppChild)[col2];
+   double ixlow_col_singleton = col_singleton.isLinkingCol() ? (*currIxlowParent)[col_singleton.getIndex()] : (*currIxlowChild)[col_singleton.getIndex()];
+   double ixupp_col_singleton = col_singleton.isLinkingCol() ? (*currIxuppParent)[col_singleton.getIndex()] : (*currIxuppChild)[col_singleton.getIndex()];
+   double xlow_col_singleton = col_singleton.isLinkingCol() ? (*currxlowParent)[col_singleton.getIndex()] : (*currxlowChild)[col_singleton.getIndex()];
+   double xupp_col_singleton = col_singleton.isLinkingCol() ? (*currxuppParent)[col_singleton.getIndex()] : (*currxuppChild)[col_singleton.getIndex()];
 
    /* effectively tighten bounds of variable col2 */
    double xlow_new = INF_NEG_PRES;
    double xupp_new = INF_POS_PRES;
 
-   /* no col1 singleton */
-   if( col1 == -1 )
+   /* no col_other singleton */
+   if( !rowContainsSingletonVariable(row_other) )
       assert( PIPSisZero(t) );
    else
    {
@@ -1016,50 +994,53 @@ bool StochPresolverParallelRows::twoNearlyParallelEqualityRows(int row1_id, int 
       /* calculate new bounds depending on the sign of t */
       if( PIPSisLT(t, 0) )
       {
-         std::swap(ixlow_col2, ixupp_col2);
-         std::swap(xlow_col2, xupp_col2);
+         std::swap(ixlow_col_singleton, ixupp_col_singleton);
+         std::swap(xlow_col_singleton, xupp_col_singleton);
       }
 
-      if( !PIPSisZero( ixlow_col2 ) )
-         xlow_new = (xlow_col2 - d) / t;
-      if( !PIPSisZero( ixupp_col2 ) )
-         xupp_new = (xupp_col2 - d) / t;
+      if( !PIPSisZero( ixlow_col_singleton ) )
+         xlow_new = (xlow_col_singleton - d) / t;
+      if( !PIPSisZero( ixupp_col_singleton ) )
+         xupp_new = (xupp_col_singleton - d) / t;
 
-      const double ixlow_col1 = (node_var1 == -1) ? (*currIxlowParent)[col1] : (*currIxlowChild)[col1];
-      const double ixupp_col1 = (node_var1 == -1) ? (*currIxuppParent)[col1] : (*currIxuppChild)[col1];
-      const double xlow_col1 = (node_var1 == -1) ? (*currxlowParent)[col1] : (*currxlowChild)[col1];
-      const double xupp_col1 = (node_var1 == -1) ? (*currxuppParent)[col1] : (*currxuppChild)[col1];
+      const double ixlow_col_other = col_other.isLinkingCol() ? (*currIxlowParent)[col_other.getIndex()] : (*currIxlowChild)[col_other.getIndex()];
+      const double ixupp_col_other = col_other.isLinkingCol() ? (*currIxuppParent)[col_other.getIndex()] : (*currIxuppChild)[col_other.getIndex()];
+      const double xlow_col_other = col_other.isLinkingCol() ? (*currxlowParent)[col_other.getIndex()] : (*currxlowChild)[col_other.getIndex()];
+      const double xupp_col_other = col_other.isLinkingCol() ? (*currxuppParent)[col_other.getIndex()] : (*currxuppChild)[col_other.getIndex()];
 
-      if( !PIPSisZero( ixlow_col1 ) )
-         xlow_new = std::max(xlow_new, xlow_col1);
-      if( !PIPSisZero( ixupp_col1 ) )
-         xupp_new = std::min(xupp_new, xupp_col1);
+      if( !PIPSisZero( ixlow_col_other) )
+         xlow_new = std::max(xlow_new, xlow_col_other);
+      if( !PIPSisZero( ixupp_col_other ) )
+         xupp_new = std::min(xupp_new, xupp_col_other);
    }
 
-   const INDEX row1_INDEX(ROW, node, row1, false, EQUALITY_SYSTEM);
-   const INDEX row2_INDEX(ROW, node, row2, false, EQUALITY_SYSTEM);
-
-   const INDEX col1_INDEX = (col1 == -1) ? INDEX() : INDEX(COL, node_var1, col1);
-   const INDEX col2_INDEX(COL, node_var2, col2);
    /* tighten bounds of x1 */
-   presData.tightenBoundsNearlyParallelRows( row1_INDEX, row2_INDEX, col1_INDEX, col2_INDEX, xlow_new, xupp_new, t, d, s);
+   presData.tightenBoundsNearlyParallelRows( row_other, row_singleton, col_other, col_singleton, xlow_new, xupp_new, t, d, s);
 
    /* now variable substitution is possible */
-   presData.substituteVariableNearlyParallelRows( row1_INDEX, row2_INDEX, col1_INDEX, col2_INDEX, t, d, s );
+   presData.substituteVariableNearlyParallelRows( row_other, row_singleton, col_other, col_singleton, t, d, s );
 
    /* now row2 is redundant and can be discarded */
-   presData.removeRedundantParallelRow( row2_INDEX, row1_INDEX );
+   presData.removeRedundantParallelRow( row_singleton, row_other );
 
    return true;
 }
 
-bool StochPresolverParallelRows::twoParallelInequalityRows(int row1, int row2, int node) const
+bool StochPresolverParallelRows::twoParallelInequalityRows(const INDEX& row1, const INDEX& row2) const
 {
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( row1.inInEqSys() );
+   assert( row2.inInEqSys() );
+
+   std::cout << row1 << row2 << std::endl;
+   presData.writeRowLocalToStreamDense(std::cout, row1);
+   presData.writeRowLocalToStreamDense(std::cout, row2);
     /* tighten bounds in original and normalized system */
-   tightenOriginalBoundsOfRow1( INEQUALITY_SYSTEM, node, row1, row2 );
+   tightenOriginalBoundsOfRow1( row1, row2 );
 
     /* delete row2 in the original system */
-   presData.removeRedundantParallelRow( INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM), INDEX(ROW, node, row1, false, INEQUALITY_SYSTEM) );
+   presData.removeRedundantParallelRow( row2, row1 );
 
    return true;
 }
@@ -1071,24 +1052,37 @@ bool StochPresolverParallelRows::twoParallelInequalityRows(int row1, int row2, i
  * which value. The normalized bounds of row1 are also updated.
  * Assumes that both rows are inequality constraints.
  */
-void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_type, int node, int row1, int row2) const
+void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, const INDEX& row2) const
 {
-   assert( system_type == INEQUALITY_SYSTEM);
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( row1.inInEqSys() );
+   assert( row2.inInEqSys() );
+
    assert( currCmat );
-   assert( 0 <= row1 && 0 <= row2 );
-   assert( row1 < currCmat->getM() && row2 < currCmat->getM() );
+   const int row1_index = row1.getIndex();
+   const int row2_index = row2.getIndex();
+
+   if( !(row1_index < currCmat->getM() && row2_index < currCmat->getM()) )
+   {
+      presData.writeRowLocalToStreamDense(std::cout, row1);
+      presData.writeRowLocalToStreamDense(std::cout, row2);
+      std::cout << row1 << " " << row2 << std::endl;
+   }
+
+   assert( row1_index < currCmat->getM() && row2_index < currCmat->getM() );
    assert( norm_factorC && norm_factorC->n == currCmat->getM() );
 
-   const double norm_factor_row1 = (*norm_factorC)[row1];
-   const double norm_factor_row2 = (*norm_factorC)[row2];
+   const double norm_factor_row1 = (*norm_factorC)[row1_index];
+   const double norm_factor_row2 = (*norm_factorC)[row2_index];
 
-   const double norm_clow_row2 = PIPSisZero( (*norm_iclow)[row2] ) ? INF_NEG_PRES : (*norm_clow)[row2];
-   const double norm_cupp_row2 = PIPSisZero( (*norm_icupp)[row2] ) ? INF_POS_PRES : (*norm_cupp)[row2];
+   const double norm_clow_row2 = PIPSisZero( (*norm_iclow)[row2_index] ) ? INF_NEG_PRES : (*norm_clow)[row2_index];
+   const double norm_cupp_row2 = PIPSisZero( (*norm_icupp)[row2_index] ) ? INF_POS_PRES : (*norm_cupp)[row2_index];
 
-   double& norm_clow_row1 = (*norm_clow)[row1];
-   double& norm_cupp_row1 = (*norm_cupp)[row1];
-   double& iclow_row1 = (*norm_iclow)[row1];
-   double& icupp_row1 = (*norm_icupp)[row1];
+   double& norm_clow_row1 = (*norm_clow)[row1_index];
+   double& norm_cupp_row1 = (*norm_cupp)[row1_index];
+   double& iclow_row1 = (*norm_iclow)[row1_index];
+   double& icupp_row1 = (*norm_icupp)[row1_index];
 
    /* test for infeasibility */
    if( ( !PIPSisZero(iclow_row1) && PIPSisLT( norm_cupp_row2, norm_clow_row1 ) )
@@ -1121,60 +1115,102 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(SystemType system_t
    assert( PIPSisLE( new_lhs, new_rhs) );
    assert( !PIPSisZero( norm_factor_row1 / norm_factor_row2 ) );
 
-   presData.tightenRowBoundsParallelRow( INDEX(ROW, node, row1, false, INEQUALITY_SYSTEM), INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM), new_lhs, new_rhs, norm_factor_row1 / norm_factor_row2);
+   presData.tightenRowBoundsParallelRow( row1, row2, new_lhs, new_rhs, norm_factor_row1 / norm_factor_row2);
 }
 
 /** Returns the matrix coefficient of the singleton variable with index singleColIdx.
  * This index is possibly offset by nA, if it is in a B- or D-block.
  * If singleColIdx == -1, then 0.0 is returned.
  */
-double StochPresolverParallelRows::getSingletonCoefficient(int singleton_index) const
+double StochPresolverParallelRows::getSingletonCoefficient( const INDEX& col) const
 {
-   assert( singleton_index >= -1);
-   if( singleton_index >= nA )
-   {
-      assert( singletonCoeffsColChild );
-      assert( singleton_index < nA + singletonCoeffsColChild->n );
-   }
-   else
-      assert( singletonCoeffsColParent );
+   assert( col.isCol() || col.isEmpty() );
 
-   if( singleton_index == -1 )
+   if( col.isEmpty() )
       return 0.0;
 
-   return ( singleton_index >= nA ) ? (*singletonCoeffsColChild)[singleton_index - nA] :
-         (*singletonCoeffsColParent)[singleton_index];
+   if( !col.isLinkingCol() )
+   {
+      assert( singletonCoeffsColChild );
+      assert( col.getIndex() < singletonCoeffsColChild->n );
+   }
+   else
+   {
+      assert( singletonCoeffsColParent );
+      assert( col.getIndex() < singletonCoeffsColParent->n );
+   }
+
+   return col.isLinkingCol() ? (*singletonCoeffsColParent)[col.getIndex()] :
+         (*singletonCoeffsColChild)[col.getIndex()];
 }
 
-bool StochPresolverParallelRows::rowContainsSingletonVariable( int row_index ) const
+INDEX StochPresolverParallelRows::getRowSingletonVariable( const INDEX& row ) const
 {
-   assert(0 <= row_index);
+   assert( row.isRow() );
+   const int row_index = row.getIndex();
 
-   if( row_index < mA )
+   if( row.inEqSys() )
    {
       assert( rowContainsSingletonVariableA );
+      assert( row_index < rowContainsSingletonVariableA->n );
+      const int col_index = (*rowContainsSingletonVariableA)[row_index];
+
+      if( col_index == -1 )
+         return INDEX();
+
+      if( col_index < nA )
+         return INDEX(COL, -1, col_index - nA );
+      else
+         return INDEX(COL, row.getNode(), col_index - nA );
+   }
+   else
+   {
+      assert( rowContainsSingletonVariableC );
+      assert( row_index < rowContainsSingletonVariableC->n );
+      const int col_index = (*rowContainsSingletonVariableC)[row_index];
+
+      if(col_index == -1)
+         return INDEX();
+
+      if( col_index < nA )
+         return INDEX(COL, -1, col_index - nA );
+      else
+         return INDEX(COL, row.getNode(), col_index - nA );
+   }
+}
+
+bool StochPresolverParallelRows::rowContainsSingletonVariable( const INDEX& row ) const
+{
+   assert( row.isRow() );
+
+   const int row_index = row.getIndex();
+
+   if( row.inEqSys() )
+   {
+      assert( rowContainsSingletonVariableA );
+      assert( row_index < rowContainsSingletonVariableA->n );
       return (*rowContainsSingletonVariableA)[row_index] != -1;
    }
    else
    {
       assert( rowContainsSingletonVariableC );
-      assert( row_index - mA < rowContainsSingletonVariableC->n );
-      return (*rowContainsSingletonVariableC)[row_index - mA] != -1;
+      assert( row_index < rowContainsSingletonVariableC->n );
+      return (*rowContainsSingletonVariableC)[row_index] != -1;
    }
 }
 
-bool StochPresolverParallelRows::parallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const
+bool StochPresolverParallelRows::parallelEqualityAndInequalityRow(const INDEX& row_eq, const INDEX& row_ineq) const
 {
    /* check for infeasibility */
-   if( !PIPSisZero( (*norm_iclow)[row_ineq] ) && PIPSisLT( (*norm_b)[row_eq], (*norm_clow)[row_ineq] ) )
+   if( !PIPSisZero( (*norm_iclow)[row_ineq.getIndex()] ) && PIPSisLT( (*norm_b)[row_eq.getIndex()], (*norm_clow)[row_ineq.getIndex()] ) )
       PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
-   if( !PIPSisZero( (*norm_icupp)[row_ineq] ) && PIPSisLT( (*norm_cupp)[row_ineq], (*norm_b)[row_eq] ) )
+   if( !PIPSisZero( (*norm_icupp)[row_ineq.getIndex()] ) && PIPSisLT( (*norm_cupp)[row_ineq.getIndex()], (*norm_b)[row_eq.getIndex()] ) )
       PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
 
    /* remove the inequality row from the system */
-   presData.removeRedundantParallelRow( INDEX(ROW, node, row_ineq, false, INEQUALITY_SYSTEM), INDEX(ROW, node, row_eq, false, EQUALITY_SYSTEM) );
+   presData.removeRedundantParallelRow( row_ineq, row_eq );
 
    return true;
 }
@@ -1183,66 +1219,69 @@ bool StochPresolverParallelRows::parallelEqualityAndInequalityRow(int row_eq, in
 /**
  * Executes the Nearly Parallel Row Case 3: Both constraints are inequalities and both contain
  * a singleton variable entry.
- * The row indices rowId1, rowId2 are already de-offset, so they should be in the range [0,Cmat->getM()).
  */
-bool StochPresolverParallelRows::twoNearlyParallelInequalityRows(int row1, int row2, int node) const
+bool StochPresolverParallelRows::twoNearlyParallelInequalityRows( const INDEX& row1, const INDEX& row2 ) const
 {
-   assert( 0 <= row1 && 0 <= row2 );
-   assert( rowContainsSingletonVariableC );
-   assert( row1 < rowContainsSingletonVariableC->n );
-   assert( row2 < rowContainsSingletonVariableC->n );
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( row1.inInEqSys() );
+   assert( row2.inInEqSys() );
+
    assert( norm_factorC );
-   assert( !PIPSisZero((*norm_factorC)[row2]) );
 
-   assert( rowContainsSingletonVariable( row1 + mA ) );
-   assert( rowContainsSingletonVariable( row2 + mA ) );
+   assert( rowContainsSingletonVariable( row1 ) );
+   assert( rowContainsSingletonVariable( row2 ) );
 
+   const int row1_index = row1.getIndex();
+   const int row2_index = row2.getIndex();
+
+   assert( !PIPSisZero((*norm_factorC)[row2_index]) );
    /* s > 0 */
-   const double s = (*norm_factorC)[row1] / (*norm_factorC)[row2];
+   const double s = (*norm_factorC)[row1_index] / (*norm_factorC)[row2_index];
 
    if( PIPSisLT(s, 0.0) )
       return false;
 
-   const int col1_idx = (*rowContainsSingletonVariableC)[row1];
-   const int col2_idx = (*rowContainsSingletonVariableC)[row2];
-   const int node_col1 = (col1_idx < nA) ? -1 : node;
-   const int node_col2 = (col2_idx < nA) ? -1 : node;
+   const INDEX col1 = getRowSingletonVariable(row1);
+   const INDEX col2 = getRowSingletonVariable(row2);
+   assert( col1.isCol() );
+   assert( col2.isCol() );
 
    /* a_col1 != 0.0, a_col2 != 0.0 */
-   const double a_col1 = getSingletonCoefficient(col1_idx);
-   const double a_col2 = getSingletonCoefficient(col2_idx);
+   const double a_col1 = getSingletonCoefficient(col1);
+   const double a_col2 = getSingletonCoefficient(col2);
 
    if( PIPSisZero(a_col1) || PIPSisZero(a_col2) )
       return false;
 
-   const int col1 = (col1_idx < nA) ? col1_idx : col1_idx - nA;
-   const int col2 = (col2_idx < nA) ? col2_idx : col2_idx - nA;
 
    /* clow_row1 = s * clow_row2 && clow_row1 = s * clow_row2 */
-   if( !PIPSisEQ( (*norm_iclow)[row1], (*norm_iclow)[row2] ) || !PIPSisEQ( (*norm_icupp)[row1], (*norm_icupp)[row2] ) )
+   if( !PIPSisEQ( (*norm_iclow)[row1_index], (*norm_iclow)[row2_index] ) || !PIPSisEQ( (*norm_icupp)[row1_index], (*norm_icupp)[row2_index] ) )
       return false;
-   if( !PIPSisZero( (*norm_iclow)[row1] ) && !PIPSisEQ( (*norm_clow)[row1], s * (*norm_clow)[row2] ) )
+   if( !PIPSisZero( (*norm_iclow)[row1_index] ) && !PIPSisEQ( (*norm_clow)[row1_index], s * (*norm_clow)[row2_index] ) )
       return false;
-   if( !PIPSisZero( (*norm_icupp)[row1] ) && !PIPSisEQ( (*norm_cupp)[row1], s * (*norm_cupp)[row2] ) )
+   if( !PIPSisZero( (*norm_icupp)[row1_index] ) && !PIPSisEQ( (*norm_cupp)[row1_index], s * (*norm_cupp)[row2_index] ) )
       return false;
 
+   const int col1_index = col1.getIndex();
+   const int col2_index = col2.getIndex();
    /* c_1 * c_2 >= 0 */
-   const double c1 = (node_col1 == -1) ? (*currgParent)[col1] : (*currgChild)[col1];
-   const double c2 = (node_col2 == -1) ? (*currgParent)[col2] : (*currgChild)[col2];
+   const double c1 = col1.isLinkingCol() ? (*currgParent)[col1_index] : (*currgChild)[col1_index];
+   const double c2 = col1.isLinkingCol() ? (*currgParent)[col2_index] : (*currgChild)[col2_index];
 
    if( PIPSisLT(c1 * c2, 0.0) )
       return false;
 
    /* lower and upper bounds matching */
-   const double ixlow_col1 = (node_col1 == -1) ? (*currIxlowParent)[col1] : (*currIxlowChild)[col1];
-   const double ixupp_col1 = (node_col1 == -1) ? (*currIxuppParent)[col1] : (*currIxuppChild)[col1];
-   const double ixlow_col2 = (node_col2 == -1) ? (*currIxlowParent)[col2] : (*currIxlowChild)[col2];
-   const double ixupp_col2 = (node_col2 == -1) ? (*currIxuppParent)[col2] : (*currIxuppChild)[col2];
+   const double ixlow_col1 = col1.isLinkingCol()? (*currIxlowParent)[col1_index] : (*currIxlowChild)[col1_index];
+   const double ixupp_col1 = col1.isLinkingCol() ? (*currIxuppParent)[col1_index] : (*currIxuppChild)[col1_index];
+   const double ixlow_col2 = col2.isLinkingCol() ? (*currIxlowParent)[col2_index] : (*currIxlowChild)[col2_index];
+   const double ixupp_col2 = col2.isLinkingCol() ? (*currIxuppParent)[col2_index] : (*currIxuppChild)[col2_index];
 
-   const double xlow_col1 = (node_col1 == -1) ? (*currxlowParent)[col1] : (*currxlowChild)[col1];
-   const double xupp_col1 = (node_col1 == -1) ? (*currxuppParent)[col1] : (*currxuppChild)[col1];
-   const double xlow_col2 = (node_col2 == -1) ? (*currxlowParent)[col2] : (*currxlowChild)[col2];
-   const double xupp_col2 = (node_col2 == -1) ? (*currxuppParent)[col2] : (*currxuppChild)[col2];
+   const double xlow_col1 = col1.isLinkingCol() ? (*currxlowParent)[col1_index] : (*currxlowChild)[col1_index];
+   const double xupp_col1 = col1.isLinkingCol() ? (*currxuppParent)[col1_index] : (*currxuppChild)[col1_index];
+   const double xlow_col2 = col2.isLinkingCol() ? (*currxlowParent)[col2_index] : (*currxlowChild)[col2_index];
+   const double xupp_col2 = col2.isLinkingCol() ? (*currxuppParent)[col2_index] : (*currxuppChild)[col2_index];
 
    /* a_col1 * xlow_col1 = s * a_col2 * xlow_col2 */
    if( !PIPSisEQ(ixlow_col1, ixlow_col2) )
@@ -1262,63 +1301,54 @@ bool StochPresolverParallelRows::twoNearlyParallelInequalityRows(int row1, int r
    assert(!PIPSisZero(s * a_col2));
    const double t = a_col1 / (s * a_col2);
 
-   const INDEX row1_INDEX(ROW, node, row1, false, INEQUALITY_SYSTEM);
-   const INDEX row2_INDEX(ROW, node, row2, false, INEQUALITY_SYSTEM);
-
-   const INDEX col1_INDEX(COL, node_col1, col1);
-   const INDEX col2_INDEX(COL, node_col2, col2);
-
    /* variable can be substituted */
-   presData.substituteVariableNearlyParallelRows( row1_INDEX, row2_INDEX, col1_INDEX, col2_INDEX, t, 0.0, s);
+   presData.substituteVariableNearlyParallelRows( row1, row2, col1, col2, t, 0.0, s);
 
    /* row2 is now redundant */
-   presData.removeRedundantParallelRow( row2_INDEX, row1_INDEX );
+   presData.removeRedundantParallelRow( row2, row1 );
 
    return true;
 }
 
-bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const
+bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const INDEX& row_eq, const INDEX& row_ineq) const
 {
-   assert( 0 <= row_eq && row_eq < mA );
    assert( rowContainsSingletonVariable(row_eq) );
-   assert( !rowContainsSingletonVariable( row_ineq + mA) );
+   assert( !rowContainsSingletonVariable( row_ineq) );
 
    /* compute the new variable bounds for row_eq */
-   const int col_idx = (*rowContainsSingletonVariableA)[row_eq];
-   const double a_col = getSingletonCoefficient(col_idx);
+   const INDEX col = getRowSingletonVariable(row_eq);
+   const double a_col = getSingletonCoefficient(col);
+
+   assert( col.isCol() );
    assert( !PIPSisZero(a_col) );
 
    double xlow_new = INF_NEG_PRES;
    double xupp_new = INF_POS_PRES;
 
-   const double s = (*norm_factorA)[row_eq] / (*norm_factorC)[row_ineq];
+   const int row_eq_index = row_eq.getIndex();
+   const int row_ineq_index = row_ineq.getIndex();
+
+   const double s = (*norm_factorA)[row_eq_index] / (*norm_factorC)[row_ineq_index];
    const double faq =  s * a_col;
 
    if( PIPSisLT(0, faq) )
    {
-      if( !PIPSisZero((*norm_iclow)[row_ineq]) )
-         xupp_new = ( (*norm_b)[row_eq] - (*norm_clow)[row_ineq] ) * (*norm_factorA)[row_eq] / a_col;
-      if( !PIPSisZero((*norm_icupp)[row_ineq]) )
-         xlow_new = ( (*norm_b)[row_eq] - (*norm_cupp)[row_ineq] ) * (*norm_factorA)[row_eq] / a_col ;
+      if( !PIPSisZero((*norm_iclow)[row_ineq_index]) )
+         xupp_new = ( (*norm_b)[row_eq_index] - (*norm_clow)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
+      if( !PIPSisZero((*norm_icupp)[row_ineq_index]) )
+         xlow_new = ( (*norm_b)[row_eq_index] - (*norm_cupp)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col ;
    }
    else if( PIPSisLT(faq, 0.0) )
    {
-      if( !PIPSisZero((*norm_iclow)[row_ineq]) )
-         xlow_new = ( (*norm_b)[row_eq] - (*norm_clow)[row_ineq] ) * (*norm_factorA)[row_eq] / a_col;
-      if( !PIPSisZero((*norm_icupp)[row_ineq]) )
-         xupp_new = ( (*norm_b)[row_eq] - (*norm_cupp)[row_ineq] ) * (*norm_factorA)[row_eq] / a_col;
+      if( !PIPSisZero((*norm_iclow)[row_ineq_index]) )
+         xlow_new = ( (*norm_b)[row_eq_index] - (*norm_clow)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
+      if( !PIPSisZero((*norm_icupp)[row_ineq_index]) )
+         xupp_new = ( (*norm_b)[row_eq_index] - (*norm_cupp)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
    }
 
-   const int col = (col_idx > nA ) ? (col_idx - nA) : col_idx;
-   const int node_col = (col_idx > nA ) ? node : -1;
-   const bool linking_row = false;
+   presData.tightenBoundsNearlyParallelRows( row_eq, row_ineq, col, INDEX(), xlow_new, xupp_new, INF_POS_PRES, INF_POS_PRES, s ) ;
 
-   const INDEX row1_INDEX(ROW, node, linking_row, row_eq, EQUALITY_SYSTEM);
-   const INDEX row2_INDEX(ROW, node, linking_row, row_ineq, INEQUALITY_SYSTEM);
-
-   presData.tightenBoundsNearlyParallelRows( row1_INDEX, row2_INDEX, INDEX(COL, node_col, col), INDEX(), xlow_new, xupp_new, INF_POS_PRES, INF_POS_PRES, s ) ;
-
-   presData.removeRedundantParallelRow( row2_INDEX, row1_INDEX );
+   presData.removeRedundantParallelRow( row_ineq, row_eq);
 
    return true;
 }

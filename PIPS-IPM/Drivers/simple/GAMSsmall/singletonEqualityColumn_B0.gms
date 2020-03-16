@@ -1,7 +1,5 @@
-* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=./singletonEqualityColumn_B0 -PRESOLVE=true
+* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=singletonEqualityColumn_B0 -PRESOLVE=true
 
-
-* if you wanna use this example please hack in useLinkStructure = true; in sData.C
 Set i rows    / i1*i15 /
 * subset of linking rows
     linkRows(i) / i13, i14 /
@@ -110,7 +108,7 @@ $ifthen %METHOD%==PIPS
 *  ge.stage('i12') = 4;
 *  ge.stage('i13') = 5;
 *  ge.stage('i14') = 5;
-  le.stage('i1') = 0;
+  le.stage('i1') = 1;
   le.stage('i2') = 1;
   le.stage('i3') = 1;
   le.stage('i4') = 1;

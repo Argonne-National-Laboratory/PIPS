@@ -136,20 +136,22 @@ private:
    void compareRowsInCoeffHashTable(int& nRowElims, int it);
    bool checkRowsAreParallel( const rowlib::rowWithEntries& row1, const rowlib::rowWithEntries& row2);
 
-   void tightenOriginalBoundsOfRow1(SystemType system_type, int node, int rowId1, int rowId2) const;
+   void tightenOriginalBoundsOfRow1(const INDEX& row1, const INDEX& row2) const;
 
-   double getSingletonCoefficient(int singleton_index) const;
-   bool rowContainsSingletonVariable( int row_index ) const;
+   double getSingletonCoefficient( const INDEX& col) const;
+
+   INDEX getRowSingletonVariable( const INDEX& row ) const;
+   bool rowContainsSingletonVariable( const INDEX& row ) const;
 
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
 
-   bool twoParallelEqualityRows(int row1_id, int row2_id, int node) const;
-   bool parallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
-   bool twoParallelInequalityRows(int row1, int row2, int node) const;
+   bool twoParallelEqualityRows( const INDEX& row1, const INDEX& row2 ) const;
+   bool parallelEqualityAndInequalityRow( const INDEX& row_eq, const INDEX& row_ineq) const;
+   bool twoParallelInequalityRows(const INDEX& row1, const INDEX& row2) const;
 
-   bool twoNearlyParallelEqualityRows(int row1_id, int row2_id, int node) const;
-   bool nearlyParallelEqualityAndInequalityRow(int row_eq, int row_ineq, int node) const;
-   bool twoNearlyParallelInequalityRows(int row1, int row2, int node) const;
+   bool twoNearlyParallelEqualityRows( const INDEX& row1, const INDEX& row2 ) const;
+   bool nearlyParallelEqualityAndInequalityRow( const INDEX& row_eq, const INDEX& row_ineq) const;
+   bool twoNearlyParallelInequalityRows( const INDEX& row1, const INDEX& row2) const;
 
    void tightenLinkingVarsBounds();
 
