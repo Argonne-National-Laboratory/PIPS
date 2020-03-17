@@ -1,12 +1,12 @@
 * ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=parallelEqualityRows_B0A2 -PRESOLVE=true
 
-Set i rows    / i1*i15 /
+Set i rows    / i1*i17 /
 * subset of linking rows
     linkRows(i) / i13, i14 /
     j columns / j1*j13 /;
 
 parameter g(j) obj coefficients / j1 0, j2 1, j3 1, j4 1, j5 1, j6 1, j7 1, j8 1, j9 1, j10 1, j11 1, j12 1, j13 1 /
-          bA(i) right hand side  / i1 -2, i2 1, i3 -2, i4 0, i5 1, i6 -2, i7 0, i8 1, i9 -2, i10 0, i11 1, i12 -2, i13 0, i14 -4, i15 -1 /
+          bA(i) right hand side  / i1 -2, i2 1, i3 -2, i4 0, i5 0, i6 -2, i7 0, i8 1, i9 -3, i10 -2, i11 -20, i12 -10, i13 1, i14 1, i15 -4, i16 -4, i17 -1 /
 *          clow(i) c left hand side    / i1 0, i2 1, i3 -1, i4 -100, i5 -100, i6 -100, i7 -100, i8 -100, i9 -100, i10 -100, i11 -100, i12 -100, i13 -100, i14 -100, i15 -100 /
           cupp(i) c right hand side   / i1 0, i2 100, i3 100, i4 100, i5 100, i6 100, i7 100, i8 100, i9 100, i10 100, i11 100, i12 100, i13 100, i14 100, i15 100 /
 
@@ -18,17 +18,19 @@ i1        -6    -4     2
 i2         3     2    -1
 i3         2    -2     4
 i4        -1   0.5    -1
-i5                            3     2    -1
+i5         1     1            3     2    -1
 i6                            2    -2     4
 i7                           -1   0.5    -1
 i8                                              3     2    -1
-i9                                              2    -2     4
-i10                                            -1   0.5    -1
-i11                                                               3     2    -1
-i12                                                               2    -2     4
-i13                                                              -1   0.5    -1
-i14                           1     1     1     1     1
-i15  1     1     1                  1                             1
+i9         1           1                        2    -2     4
+i10              1                             -1   0.5    -1
+i11             10                            -10     5   -10
+i12                                           -30   -20    10
+i13                                                               3     2    -1
+i14        1    -1                                                2    -2     4
+i15              1     1                                         -1   0.5    -1
+i16                           1     1     1     1     1
+i17  1     1     1                  1                             1
 ; 
 *    0     1    -2    -2      1    -2    -2     1    -2    -2     1    -2    -2
 * expected values for x full determined by Ax=b
@@ -89,11 +91,13 @@ $ifthen %METHOD%==PIPS
   e.stage('i8') = 3;
   e.stage('i9') = 3;
   e.stage('i10') = 3;
-  e.stage('i11') = 4;
-  e.stage('i12') = 4;
+  e.stage('i11') = 3;
+  e.stage('i12') = 3;
   e.stage('i13') = 4;
-  e.stage('i14') = 5;
-  e.stage('i15') = 5;
+  e.stage('i14') = 4;
+  e.stage('i15') = 4;
+  e.stage('i16') = 5;
+  e.stage('i17') = 5;
 *  ge.stage('i1') = 1;
 *  ge.stage('i2') = 1;
 *  ge.stage('i3') = 1;

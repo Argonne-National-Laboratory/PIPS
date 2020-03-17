@@ -851,6 +851,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
             const INDEX row2(ROW, node, (row2_id < mA) ? row2_id : row2_id - mA, false, (row2_id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM );
             assert( row2_id != row1_id );
 
+            std::cout << "checking pair " << row1 << " " << row2 << std::endl;
             /* if row2 has been removed in the meanwhile do not continue with it */
             if( presData.wasRowRemoved( row2 ) )
                continue;
