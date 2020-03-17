@@ -1038,9 +1038,6 @@ bool StochPresolverParallelRows::twoParallelInequalityRows(const INDEX& row1, co
    assert( row1.inInEqSys() );
    assert( row2.inInEqSys() );
 
-   std::cout << row1 << row2 << std::endl;
-   presData.writeRowLocalToStreamDense(std::cout, row1);
-   presData.writeRowLocalToStreamDense(std::cout, row2);
     /* tighten bounds in original and normalized system */
    tightenOriginalBoundsOfRow1( row1, row2 );
 
@@ -1068,13 +1065,6 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    const int row1_index = row1.getIndex();
    const int row2_index = row2.getIndex();
 
-   if( !(row1_index < currCmat->getM() && row2_index < currCmat->getM()) )
-   {
-      presData.writeRowLocalToStreamDense(std::cout, row1);
-      presData.writeRowLocalToStreamDense(std::cout, row2);
-      std::cout << row1 << " " << row2 << std::endl;
-   }
-
    assert( row1_index < currCmat->getM() && row2_index < currCmat->getM() );
    assert( norm_factorC && norm_factorC->n == currCmat->getM() );
 
@@ -1098,6 +1088,10 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
 
    double new_lhs = INF_NEG_PRES;
    double new_rhs = INF_POS_PRES;
+
+   /* if rows do actually not contain any new information */
+   if( PIPSisEQ( norm_clow_row1, norm_clow_row2 ) && PIPSisEQ( norm_cupp_row1, norm_cupp_row2) )
+      return;
 
    if( PIPSisLT( norm_clow_row1, norm_clow_row2) )
    {
