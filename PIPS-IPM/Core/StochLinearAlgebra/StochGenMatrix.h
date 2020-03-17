@@ -325,9 +325,12 @@ public:
   void writeToStream(ostream& out) const override {};
   void writeToStreamDense(ostream& out) const override {};
   void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const override {};
+
+ private:
   void writeToStreamDenseChild(stringstream& out, int offset) const override {};
   std::string writeToStreamDenseRowLink(int rowidx) const override { return 0; };
 
+ public:
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
    *  @param info zero if the operation succeeded. Otherwise, insufficient

@@ -1313,7 +1313,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
       }
 
    if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], m, MPI_INT, MPI_SUM, mpiComm);
+      PIPS_MPIsumArrayInPlace(linkCount, mpiComm);
 
    // set block identifier
    for( int i = 0; i < m; i++ )
@@ -1331,10 +1331,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
    {
       // find 2-links between different processes
 
-      int myrank, size;
-      MPI_Comm_rank(mpiComm, &myrank);
-      MPI_Comm_size(mpiComm, &size);
-
+      const int size = PIPS_MPIgetSize(mpiComm);
       assert(size > 0);
 
       // 1. allgather number of local 2-link candidates
@@ -1342,6 +1339,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
       std::vector<int> localCandsBlock;
       std::vector<int> candsPerProc(size, -1);
 
+      /* a local candidate is a linking row that appears in exactly two blocks, starts on this process but where the second block is not stored on this process */
       for( int i = 0; i < m; i++ )
          if( linkCount[i] == 2 && linkBlockStart[i] >= 0 && linkBlockEnd[i] == -1 )
          {
@@ -1353,9 +1351,9 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
             localCandsBlock.push_back(linkBlockStart[i]);
          }
 
-      int localcount = localCandsIdx.size();
+      const int localcount = localCandsIdx.size();
 
-      MPI_Allgather(&localcount, 1, MPI_INT, &candsPerProc[0], 1, MPI_INT, mpiComm);
+      PIPS_MPIallgather(&localcount, 1, &candsPerProc[0], 1, mpiComm);
 
 #ifndef NDEBUG
       for( size_t i = 0; i < candsPerProc.size(); i++ )
@@ -1364,12 +1362,11 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
 
       // 2. allgatherv 2-link candidates
       std::vector<int> displacements(size + 1, 0);
-      for( int i = 1; i < size; i++ )
+      for( int i = 1; i <= size; i++ )
          displacements[i] = candsPerProc[i - 1] + displacements[i - 1];
 
-      const int nAllCands = displacements[size - 1] + candsPerProc[size - 1];
+      const int nAllCands = displacements[size];
 
-      displacements[size] = nAllCands;
       std::vector<int> allCandsRow(nAllCands, -1);
       std::vector<int> allCandsBlock(nAllCands, -1);
 
@@ -1381,7 +1378,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
 
 #ifndef NDEBUG
       for( size_t i = 0; i < allCandsRow.size(); i++ )
-         assert(allCandsRow[i] >= 0 && allCandsRow[i] < m && allCandsBlock[i] >= 0 && allCandsBlock[i] < int(children.size()));
+         assert(allCandsRow[i] >= 0 && allCandsRow[i] < m && allCandsBlock[i] >= 0 && allCandsBlock[i] < static_cast<int>(children.size()));
 #endif
 
 
@@ -1398,18 +1395,20 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
          {
             assert(allCandsBlock[j] > 0);
             const int candRow = allCandsRow[j];
+            const int candBlock = allCandsBlock[j];
             if( blocksHash[candRow] >= 0 )
             {
-               assert(blocksHash[candRow] != allCandsBlock[j]);
+               assert(blocksHash[candRow] != candBlock);
 
-               const int startBlock = std::min(blocksHash[candRow], allCandsBlock[j]);
-               const int endBlock = std::max(blocksHash[candRow], allCandsBlock[j]);
+               const int startBlock = std::min(blocksHash[candRow], candBlock);
+               const int endBlock = std::max(blocksHash[candRow], candBlock);
 
                assert(startBlock >= 0 && endBlock >= 0);
 
                if( endBlock - startBlock != 1 )
                   continue;
 
+               assert( !is2link[candRow] );
                is2link[candRow] = true;
 
                // start block owned by this MPI process?
@@ -1438,7 +1437,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
          linkBlockStart[i] = -1;
 
    if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &linkBlockStart[0], m, MPI_INT, MPI_MAX, mpiComm);
+      PIPS_MPImaxArrayInPlace(linkBlockStart, mpiComm);
 
    return linkBlockStart;
 }

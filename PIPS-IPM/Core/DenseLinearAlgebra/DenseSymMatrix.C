@@ -213,6 +213,11 @@ void DenseSymMatrix::writeToStream(ostream& out) const
   }
 }
 
+void DenseSymMatrix::writeToStreamDense(std::ostream& out) const
+{
+   writeToStream(out);
+}
+
 
 void DenseSymMatrix:: randomizePSD(double * seed)
 {  

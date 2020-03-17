@@ -21,7 +21,7 @@ public:
   SparseSymMatrix();
   SparseSymMatrix( int size, int nnz, bool isLower = true );
   SparseSymMatrix( int size, int nnz,
-		   int krowM[], int jcolM[], double M[], int deleteElts=0, bool isLower = true);
+		   int krowM[], int jcolM[], double M[], int deleteElts = 0, bool isLower = true);
   //SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks); not needed anymore; cpetra
 
   SparseStorage&  getStorageRef() { return *mStorage; }
@@ -77,9 +77,10 @@ public:
 
   virtual double abmaxnorm();
 
-  virtual void writeToStream(ostream& out) const;
-
-  virtual void writeToStreamDense(ostream& out) const;
+  void writeToStream( std::ostream& out ) const override;
+  void writeToStreamDense( std::ostream& out ) const override;
+  virtual std::string writeToStreamDenseRow(int row) const;
+  virtual void writeToStreamDenseRow( std::stringstream& out, int row ) const;
 
   virtual void randomizePSD(double *);
 

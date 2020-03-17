@@ -78,7 +78,8 @@ public:
   virtual void scalarMult( double num);
 
   virtual double abmaxnorm();
-  virtual void writeToStream(ostream& out) const;
+  void writeToStream( std::ostream& out ) const override;
+  void writeToStreamDense( std::ostream& out ) const override;
   virtual void randomize( double alpha, double beta, double * seed );
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );

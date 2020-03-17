@@ -115,7 +115,9 @@ public:
   virtual double abmaxnorm() = 0;
 
   /** Write this element to a C++ stream */
-  virtual void writeToStream(ostream& out) const = 0;
+  virtual void writeToStream( std::ostream& out ) const = 0;
+
+  virtual void writeToStreamDense( std::ostream& out ) const = 0;
 
   /** Place the diagonal elements of this matrix in the vector vec */
   virtual void getDiagonal( OoqpVector& vec ) = 0;
@@ -203,7 +205,7 @@ public:
 /** Parent of all non-symmetric, possibly non-square, matrices.
  * @ingroup AbstractLinearAlgebra
  */
-class GenMatrix    : public DoubleMatrix {
+class GenMatrix : public DoubleMatrix {
 public:
   /** Put a submatrix of M into this matrix.
    *
@@ -248,8 +250,6 @@ public:
 
   /** C = this^T * inv(D) * this where D=diag(d) is a diagonal matrix. */
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
-
-  virtual void writeToStreamDense(ostream& out) const {}
 
   virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const {}
 

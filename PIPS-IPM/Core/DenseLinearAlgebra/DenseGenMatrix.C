@@ -215,7 +215,7 @@ double DenseGenMatrix::abmaxnorm()
 }
 
 
-void DenseGenMatrix::writeToStream(ostream& out) const
+void DenseGenMatrix::writeToStream( std::ostream& out ) const
 {
   int i, j;
   int m = mStorage->m, n = mStorage->n;
@@ -228,6 +228,11 @@ void DenseGenMatrix::writeToStream(ostream& out) const
     if ( j < n )     out << M[i][j];
     if ( i < m - 1 ) out << endl;
   }
+}
+
+void DenseGenMatrix::writeToStreamDense( std::ostream& out ) const
+{
+   writeToStream(out);
 }
 
 
@@ -267,19 +272,15 @@ void DenseGenMatrix::fromGetDense( int row, int col, double * A,
   mStorage->fromGetDense( row, col, A, lda, lrow, lcol );
 }
 
-
 void DenseGenMatrix::atPutDiagonal( int idiag, OoqpVector& v )
 {
   mStorage->atPutDiagonal( idiag, v );
 }
 
-
-
 void DenseGenMatrix::fromGetDiagonal( int idiag, OoqpVector& v )
 {
   mStorage->fromGetDiagonal( idiag, v );
 }
-
 
 void DenseGenMatrix::getRow ( int rowIndex, OoqpVector& v_in)
 {

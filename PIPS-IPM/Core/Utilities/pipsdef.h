@@ -367,6 +367,18 @@ inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
 }
 
 template <typename T>
+void PIPS_MPIgetMaxInPlace(T& max, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &max, 1, get_mpi_datatype(max), MPI_MAX, mpiComm);
+}
+
+template <typename T>
+void PIPS_MPIgetMinInPlace(T& min, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &min, 1, get_mpi_datatype(min), MPI_MIN, mpiComm);
+}
+
+template <typename T>
 inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
 {
    assert(length >= 0);

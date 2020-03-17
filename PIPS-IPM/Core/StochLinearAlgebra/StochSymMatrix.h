@@ -18,6 +18,7 @@ private:
 
   // note: also used for dummy class!
   virtual void deleteEmptyRowsCols(const OoqpVectorBase<int>& nnzVec, const OoqpVectorBase<int>* linkParent);
+  virtual void writeToStreamDenseChild(stringstream& out, int offset) const;
 
 public:
   /** Constructs a matrix with local size 'local_n' having 'local_nnz' local nonzeros
@@ -79,7 +80,9 @@ public:
   
   virtual double abmaxnorm();
   
-  virtual void writeToStream(ostream& out) const;
+  void writeToStream(ostream& out) const override;
+
+  void writeToStreamDense(std::ostream& out) const override;
 
   virtual void randomizePSD(double * seed);
   
@@ -111,7 +114,14 @@ public:
  * Dummy stochastic symmetric matrix
  */
 
-class StochSymDummyMatrix : public StochSymMatrix {
+class StochSymDummyMatrix : public StochSymMatrix
+{
+
+
+private:
+   void writeToStreamDenseChild(stringstream& out, int offset) const override {};
+
+
 protected:
 
 public:
@@ -161,7 +171,8 @@ public:
   
   double abmaxnorm() override {return 0.0;}
   
-  void writeToStream(ostream& out) const{};
+  void writeToStream(ostream& out) const override {};
+  void writeToStreamDense(std::ostream& out) const override {};
 
   void randomizePSD(double * seed) override {};
   

@@ -280,6 +280,89 @@ void StochSymMatrix::randomizePSD(double * seed)
   assert( "Not implemented" && 0 );
 }
 
+void StochSymMatrix::writeToStreamDense(std::ostream& out) const
+{
+   const int rank = PIPS_MPIgetRank(mpiComm);
+   const int world_size = PIPS_MPIgetSize(mpiComm);
+
+   int m, n;
+   int offset = 0;
+   std::stringstream sout;
+   MPI_Status status;
+   int l;
+
+   /* this is at the root node - thus there is no border */
+   assert(this->border->numberOfNonZeros() == 0);
+
+   if( iAmDistrib )
+      MPI_Barrier(mpiComm);
+
+   if( iAmDistrib && rank > 0 )  // receive offset from previous process
+      MPI_Recv(&offset, 1, MPI_INT, (rank - 1), 0, mpiComm, MPI_STATUS_IGNORE);
+   else  //  !iAmDistrib || (iAmDistrib && rank == 0)
+      this->diag->writeToStreamDense(out);
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->writeToStreamDenseChild(sout, offset);
+      children[it]->diag->getSize(m, n);
+      offset += n;
+   }
+
+   if( iAmDistrib && rank > 0 )
+   {
+      std::string str = sout.str();
+      // send string to rank ZERO to print it there:
+      MPI_Ssend(str.c_str(), str.length(), MPI_CHAR, 0, rank, mpiComm);
+      // send offset to next process:
+      if( rank < world_size - 1 )
+         MPI_Ssend(&offset, 1, MPI_INT, rank + 1, 0, mpiComm);
+   }
+   else if( !iAmDistrib )
+      out << sout.str();
+   else if( iAmDistrib && rank == 0 )
+   {
+      out << sout.str();
+      MPI_Ssend(&offset, 1, MPI_INT, rank + 1, 0, mpiComm);
+
+      for( int p = 1; p < world_size; p++ )
+      {
+         MPI_Probe(p, p, mpiComm, &status);
+         MPI_Get_count(&status, MPI_CHAR, &l);
+         char *buf = new char[l];
+         MPI_Recv(buf, l, MPI_CHAR, p, p, mpiComm, &status);
+         std::string rowPartFromP(buf, l);
+         out << rowPartFromP;
+         delete[] buf;
+      }
+   }
+
+   if( iAmDistrib )
+      MPI_Barrier(mpiComm);
+   std::cout << " done " << std::endl;
+}
+
+void StochSymMatrix::writeToStreamDenseChild(stringstream& out, int offset) const
+{
+   int m_diag, m_border, n;
+   this->diag->getSize(m_diag, n);
+   this->border->getSize(m_border, n);
+
+   assert( m_diag == m_border );
+
+   for(int r = 0; r < m_diag; r++)
+   {
+      this->border->writeToStreamDenseRow(out, r);
+
+      for(int i = 0; i < offset; i++)
+         out <<'\t';
+
+      this->diag->writeToStreamDenseRow(r);
+      out << std::endl;
+   }
+}
+
+
 
 void StochSymMatrix::getDiagonal( OoqpVector& vec_ )
 {

@@ -206,8 +206,7 @@ SparseGenMatrix::writeToStreamDenseRow(stringstream& out, int rowidx) const
    }
 }
 
-std::string
-SparseGenMatrix::writeToStreamDenseRow(int rowidx) const
+std::string SparseGenMatrix::writeToStreamDenseRow(int rowidx) const
 {
    stringstream out;
    if( mStorageDynamic != nullptr )

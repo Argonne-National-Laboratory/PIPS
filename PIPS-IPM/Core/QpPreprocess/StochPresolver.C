@@ -66,8 +66,6 @@ Data* StochPresolver::presolve()
    assert( sorigprob->isRootNodeInSync() );
    assert( presData.getPresProb().isRootNodeInSync() );
 
-   sorigprob->writeToStreamDense(std::cout);
-
    /* initialize all presolvers */
    StochPresolverBoundStrengthening presolverBS(presData, *sorigprob);
    StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);

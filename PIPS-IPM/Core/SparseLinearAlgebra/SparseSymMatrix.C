@@ -286,14 +286,37 @@ double SparseSymMatrix::abmaxnorm()
   return mStorage->abmaxnorm();
 }
 
-void SparseSymMatrix::writeToStream(ostream& out) const
+void SparseSymMatrix::writeToStream( std::ostream& out ) const
 {
   mStorage->writeToStream( out );
 }
 
-void SparseSymMatrix::writeToStreamDense(ostream& out) const
+void SparseSymMatrix::writeToStreamDense( std::ostream& out ) const
 {
   mStorage->writeToStreamDense( out );
+}
+
+
+void SparseSymMatrix::writeToStreamDenseRow( std::stringstream& out, int row ) const
+{
+   if( mStorage->n > 0 )
+   {
+      assert(row < mStorage->m);
+      mStorage->writeToStreamDenseRow(out, row);
+   }
+}
+
+std::string SparseSymMatrix::writeToStreamDenseRow( int row ) const
+{
+   std::stringstream out;
+
+   if( mStorage->n > 0 )
+   {
+      assert(row < mStorage->m);
+      mStorage->writeToStreamDenseRow(out, row);
+   }
+
+   return out.str();
 }
 
 void SparseSymMatrix::mult ( double beta,  double y[], int incy,
