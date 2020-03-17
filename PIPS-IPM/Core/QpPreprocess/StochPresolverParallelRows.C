@@ -1089,11 +1089,6 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    double new_lhs = INF_NEG_PRES;
    double new_rhs = INF_POS_PRES;
 
-   /* if rows do actually not contain any new information */
-   if( (PIPSisEQ( norm_clow_row1, norm_clow_row2 ) || (norm_clow_row1 == INF_NEG_PRES && norm_clow_row2 == INF_NEG_PRES )) &&
-         (PIPSisEQ( norm_cupp_row1, norm_cupp_row2) || ( norm_cupp_row1 == INF_POS_PRES && norm_cupp_row2 == INF_POS_PRES )) )
-      return;
-
    if( PIPSisLT( norm_clow_row1, norm_clow_row2) )
    {
       assert(norm_clow_row2 != INF_NEG_PRES);
@@ -1115,7 +1110,9 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    assert( PIPSisLE( new_lhs, new_rhs) );
    assert( !PIPSisZero( norm_factor_row1 / norm_factor_row2 ) );
 
-   presData.tightenRowBoundsParallelRow( row1, row2, new_lhs, new_rhs, norm_factor_row1 / norm_factor_row2);
+   /* if we have new info for the first row update its bounds */
+   if( new_lhs != INF_NEG_PRES || new_rhs != INF_POS_PRES )
+      presData.tightenRowBoundsParallelRow( row1, row2, new_lhs, new_rhs, norm_factor_row1 / norm_factor_row2);
 }
 
 /** Returns the matrix coefficient of the singleton variable with index singleColIdx.
