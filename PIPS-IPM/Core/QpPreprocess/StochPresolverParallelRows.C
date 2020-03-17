@@ -693,12 +693,13 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       int row_A_end = 0;
       if( a_mat )
       {
-    	 negate_row = false;
 
          row_A_start = a_mat->getRowPtr(row).start;
          row_A_end = a_mat->getRowPtr(row).end;
          if( row_A_start < row_A_end )
          {
+            negate_row = false;
+
             if( a_mat->getMat(row_A_start) < 0)
                negate_row = true;
 
@@ -728,7 +729,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
          b_mat->setMat(k, b_mat->getMat(k) / absmax);
 
       for(int k = row_A_start; k < row_A_end; k++)
-         a_mat->setMat(k, b_mat->getMat(k) / absmax);
+         a_mat->setMat(k, a_mat->getMat(k) / absmax);
 
       if( system_type == EQUALITY_SYSTEM )
       {
@@ -851,7 +852,6 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
             const INDEX row2(ROW, node, (row2_id < mA) ? row2_id : row2_id - mA, false, (row2_id < mA) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM );
             assert( row2_id != row1_id );
 
-            std::cout << "checking pair " << row1 << " " << row2 << std::endl;
             /* if row2 has been removed in the meanwhile do not continue with it */
             if( presData.wasRowRemoved( row2 ) )
                continue;
