@@ -96,7 +96,8 @@ void StochPresolverParallelRows::applyPresolving()
    /// since we assume that all linking rows actually are pure linking rows we need not consider them here
    for(int node = 0; node < nChildren; ++node)
    {
-      if( !presData.nodeIsDummy(node) )
+      // TODO: remove after node == -1 works properly
+      if( false && !presData.nodeIsDummy(node) )
       {
          /// copy and normalize A_i, B_i, C_i, D_i and b_i, clow_i, cupp_i
          setNormalizedPointers(node);
@@ -398,7 +399,7 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    setNormalizedReductionPointers(node);
 
    assert(norm_Bmat);
-   /* set mA, nA */ // todo what is this for?
+   /* set mA, nA */
    mA = (norm_Amat) ? norm_Amat->getM() : norm_Bmat->getM();
    nA = (norm_Amat) ? norm_Amat->getN() : norm_Bmat->getN();
 
@@ -679,6 +680,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
 
       if( row_B_start < row_B_end )
       {
+         assert( !PIPSisZero(b_mat->getMat(row_B_start)) );
          if( b_mat->getMat(row_B_start) < 0)
             negate_row = true;
 
@@ -700,6 +702,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
          {
             negate_row = false;
 
+            assert( !PIPSisZero(a_mat->getMat(row_A_start)) );
             if( a_mat->getMat(row_A_start) < 0)
                negate_row = true;
 
@@ -1089,7 +1092,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    double new_lhs = INF_NEG_PRES;
    double new_rhs = INF_POS_PRES;
 
-   if( PIPSisLT( norm_clow_row1, norm_clow_row2) )
+   if( PIPSisLT( norm_clow_row1, norm_clow_row2) || ( PIPSisZero(iclow_row1) && norm_clow_row2 != INF_NEG_PRES ) )
    {
       assert(norm_clow_row2 != INF_NEG_PRES);
       norm_clow_row1 = norm_clow_row2;
@@ -1098,7 +1101,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
       ( PIPSisLT( 0.0, norm_factor_row1) ) ? new_lhs = norm_factor_row1 * norm_clow_row2 : new_rhs = norm_factor_row1 * norm_clow_row2;
    }
 
-   if( PIPSisLT( norm_cupp_row2, norm_cupp_row1) )
+   if( PIPSisLT( norm_cupp_row2, norm_cupp_row1) || ( PIPSisZero(icupp_row1) && norm_cupp_row2 != INF_POS_PRES ) )
    {
       assert(norm_cupp_row2 != INF_POS_PRES);
       norm_cupp_row1 = norm_cupp_row2;

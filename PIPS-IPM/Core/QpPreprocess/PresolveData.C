@@ -1610,6 +1610,7 @@ void PresolveData::tightenRowBoundsParallelRow(const INDEX& row1, const INDEX& r
    const double clow = getSimpleVecFromRowStochVec(*presProb->bl, row1);
    const double cupp = getSimpleVecFromRowStochVec(*presProb->bu, row1);
 
+   // TODO : apparently we do not set bounds like that
    if( PIPSisZero( getSimpleVecFromRowStochVec(*presProb->iclow, row1) ) )
       assert(clow == INF_NEG_PRES);
 
