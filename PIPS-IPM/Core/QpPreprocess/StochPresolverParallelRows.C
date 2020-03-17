@@ -1090,7 +1090,8 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    double new_rhs = INF_POS_PRES;
 
    /* if rows do actually not contain any new information */
-   if( PIPSisEQ( norm_clow_row1, norm_clow_row2 ) && PIPSisEQ( norm_cupp_row1, norm_cupp_row2) )
+   if( (PIPSisEQ( norm_clow_row1, norm_clow_row2 ) || (norm_clow_row1 == INF_NEG_PRES && norm_clow_row2 == INF_NEG_PRES )) &&
+         (PIPSisEQ( norm_cupp_row1, norm_cupp_row2) || ( norm_cupp_row1 == INF_POS_PRES && norm_cupp_row2 == INF_POS_PRES )) )
       return;
 
    if( PIPSisLT( norm_clow_row1, norm_clow_row2) )
