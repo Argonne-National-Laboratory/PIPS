@@ -1835,9 +1835,11 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          if( PIPSisLT(factor, 0.0) )
             std::swap(lambda_row2, pi_row2);
 
-         if(clow_impied_by_row2)
+         /* if parallel row is tight on a bounds implied by another row we have to move the multipliers to the implying row */
+         if( clow_impied_by_row2 && PIPSisZero(t_row1) )
          {
             assert( PIPSisLT(clow_old, clow_new) );
+            assert( PIPSisZero(t_row2) );
 
             /* adjust slacks */
             if( clow_old == INF_NEG_PRES )
@@ -1852,12 +1854,13 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             lambda_row2 = lambda_row1 * factor;
             lambda_row1 = 0;
 
-            assert( PIPSisZero(t_row2 * lambda_row2) );
+            assert( PIPSisZeroFeas(t_row2 * lambda_row2) );
          }
 
-         if(cupp_impied_by_row2)
+         if( cupp_impied_by_row2 && PIPSisZero(u_row1) )
          {
             assert( PIPSisLT(cupp_new, cupp_old) );
+            assert( PIPSisZero(u_row2) );
 
             /* adjust slacks */
             if( cupp_old == INF_POS_PRES )
@@ -1872,7 +1875,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             pi_row2 = pi_row1 * factor;
             pi_row1 = 0.0;
 
-            assert( PIPSisZero(u_row2 * pi_row2) );
+            assert( PIPSisZeroFeas(u_row2 * pi_row2) );
          }
 
          break;
