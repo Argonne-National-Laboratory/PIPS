@@ -1,13 +1,14 @@
 * ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=parallelEqualityInequalityRowsMixed -PRESOLVE=true
 
-Set i rows    / i1*i17 /
+Set i rows    / i1*i19 /
 * subset of linking rows
-    linkRows(i) / i16, i17 /
     j columns / j1*j13 /;
 
 parameter g(j) obj coefficients / j1 0, j2 1, j3 1, j4 1, j5 1, j6 1, j7 1, j8 1, j9 1, j10 1, j11 1, j12 1, j13 1 /
-          bA(i) right hand side  / i1 -2, i2 1, i3 -2, i4 0, i5 0, i6 -2, i7 0, i8 1, i9 -3, i10 -2, i11 -20, i12 -10, i13 1, i14 1, i15 -4, i16 -4, i17 -1 /
-          cupp(i) c right hand side   / i1 0, i2 100, i3 100, i4 100, i5 100, i6 100, i7 100, i8 1000, i9 100, i10 100, i11 100, i12 100, i13 100, i14 100, i15 100, i16 100, i17 100 /
+          bA(i) right hand side  / i1 -2, i2 1, i3 -2, i4 0, i5 0, i6 -2, i7 0, i8 1, i9 -3, i10 -2, i11 -20,
+          i12 -10, i13 1, i14 1, i15 -4, i16 -4, i17 -1 /
+          cupp(i) c right hand side   / i1 0, i2 100, i3 100, i4 200, i5 100, i6 100, i7 100, i8 100, i9 1000, i10 100, i11 100,
+            i12 100, i13 100, i14 100, i15 100, i16 100, i17 200, i18 100, i19 100 /
 
 * in this example the parallel row presolver should detect two parallel equality rows - one in B0 and one in B2 and delete them from the system
 Table A(i,j)
@@ -37,21 +38,23 @@ Table C(i,j)
     j1    j2    j3     j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
 i1  -1
 i2         1     1    -2
-i3               1  
-i4        -4    -4     8
-i5         1                  1
-i6   1           1     1            1     
-i7                                        1
-i8        10    10                             20    30    40
-i9   1     1     1     1                              1
-i10                                           0.5   0.5   0.5
-i11                                             1     1     1
-i12        1     1                              2     3     4
-i13                                                                           1
-i14                                                                     1     
-i15                                                                           1
-i16        1     1                  1                       1
-i17        1                        1                 1
+i3               1
+i4        20   -20    40
+i5        -4    -4     8
+i6         1                  1
+i7   1           1     1            1     
+i8                                        1
+i9        10    10                             20    30    40
+i10  1     1     1     1                              1
+i11                                           0.5   0.5   0.5
+i12                                             1     1     1
+i13        1     1                              2     3     4
+i14                                                                           1
+i15                                                                     1     
+i16                                                                           1
+i17            -10   -10                                         10    -5    10
+i18        1     1                  1                       1
+i19        1                        1                 1
 ;
 
 Variables          x(j) / j2.lo -5 /
@@ -102,19 +105,21 @@ $ifthen %METHOD%==PIPS
   le.stage('i2') = 1;
   le.stage('i3') = 1;
   le.stage('i4') = 1;
-  le.stage('i5') = 2;
+  le.stage('i5') = 1;
   le.stage('i6') = 2;
   le.stage('i7') = 2;
-  le.stage('i8') = 3;
+  le.stage('i8') = 2;
   le.stage('i9') = 3;
   le.stage('i10') = 3;
   le.stage('i11') = 3;
   le.stage('i12') = 3;
-  le.stage('i13') = 4;
+  le.stage('i13') = 3;
   le.stage('i14') = 4;
   le.stage('i15') = 4;
-  le.stage('i16') = 5;
-  le.stage('i17') = 5;
+  le.stage('i16') = 4;
+  le.stage('i17') = 4;
+  le.stage('i18') = 5;
+  le.stage('i19') = 5;
   defobj.stage  = 5;
 
 
