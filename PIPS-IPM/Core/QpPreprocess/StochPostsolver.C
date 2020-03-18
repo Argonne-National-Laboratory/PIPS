@@ -1527,6 +1527,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert( col1.isCol() );
          assert( col2.isCol() || col2.isEmpty() );
 
+         if( col2.isCol() )
+            assert( row1.inEqSys() && row2.inInEqSys() );
+
          const double xlow_col1 = float_values.at(first_float_val);
          const double xupp_col1 = float_values.at(first_float_val + 1);
          const double xlow_col2 = float_values.at(first_float_val + 2);
@@ -1552,30 +1555,77 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert( PIPSisLEFeas( xlow_col1, val_col1 ) );
          assert( PIPSisLEFeas( val_col1, xupp_col1 ) );
 
-         double xlow_implied = 0.0;
-         double xupp_implied = 0.0;
+         double xlow_implied = INF_NEG_PRES;
+         double xupp_implied = INF_POS_PRES;
 
          /* two nearly parallel equality rows */
          if( col2.isCol() )
          {
-            xlow_implied = PIPSisLE(0.0, scalar) ? std::max(xlow_col1, (xlow_col2 - translation) / scalar) :
-                  std::max(xlow_col1, (xupp_col2 - translation) / scalar);
-            xupp_implied = PIPSisLE(0.0, scalar) ? std::min(xupp_col1, (xupp_col2 - translation) / scalar) :
-                  std::max(xupp_col1, (xlow_col2 - translation) / scalar);
+            assert( xlow_col2 != INF_NEG_PRES || xupp_col2 != INF_POS_PRES );
+
+            if( PIPSisLT(0.0, scalar) )
+            {
+               if( xlow_col2 != INF_NEG_PRES )
+                  xlow_implied = std::max(xlow_col1, (xlow_col2 - translation) / scalar);
+               else
+                  xlow_implied = xlow_col1;
+
+               if( xupp_col2 != INF_POS_PRES )
+                  xupp_implied = std::min(xupp_col1, (xupp_col2 - translation) / scalar);
+               else
+                  xupp_implied = xupp_col1;
+            }
+            else
+            {
+               if( xlow_col2 != INF_NEG_PRES )
+                  xupp_implied = std::min(xupp_col1, (xlow_col2 - translation) / scalar);
+               else
+                  xupp_implied = xupp_col1;
+
+               if( xupp_col2 != INF_POS_PRES )
+                  xlow_implied = std::max(xlow_col1, (xupp_col2 - translation) / scalar);
+               else
+                  xlow_implied = xlow_col1;
+            }
          }
          else
          {
+            assert( clow != INF_NEG_PRES || cupp != INF_POS_PRES );
             assert( !PIPSisZero(coeff_col1) );
             assert( !PIPSisZero(parallel_factor * coeff_col1) );
 
-            const double faq =  parallel_factor * coeff_col1;
+            const double faq = parallel_factor * coeff_col1;
 
-            xlow_implied = PIPSisLT( 0.0, faq) ? std::max(xlow_col1, (rhs - parallel_factor * cupp) / coeff_col1 ) :
-                  std::max(xlow_col1, (rhs - parallel_factor * clow) / coeff_col1);
-            xupp_implied = PIPSisLT( 0.0, faq ) ? std::min(xupp_col1, (rhs - parallel_factor * clow) / coeff_col1) :
-                  std::min(xupp_col1, (rhs - parallel_factor * cupp) / coeff_col1);
+            assert( !PIPSisZero(faq) );
+            if( PIPSisLT( 0.0, faq ) )
+            {
+               if( cupp != INF_POS_PRES )
+                  xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * cupp ) / coeff_col1 );
+               else
+                  xlow_implied = xlow_col1;
+
+               if( clow != INF_NEG_PRES )
+                  xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * clow) / coeff_col1 );
+               else
+                  xupp_implied = xupp_col1;
+            }
+
+            if( PIPSisLT( faq, 0.0 ) )
+            {
+               if( cupp != INF_POS_PRES )
+                  xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * cupp) / coeff_col1 );
+               else
+                  xupp_implied = xupp_col1;
+
+               if( clow != INF_NEG_PRES )
+                  xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * clow) / coeff_col1 );
+               else
+                  xlow_implied = xlow_col1;
+            }
          }
 
+         assert( xlow_implied != INF_NEG_PRES );
+         assert( xupp_implied != INF_POS_PRES );
          assert( PIPSisLEFeas(xlow_col1, xlow_implied) );
          assert( PIPSisLEFeas(xupp_implied, xupp_col1) );
 
