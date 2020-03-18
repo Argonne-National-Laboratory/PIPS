@@ -1814,8 +1814,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          double& lambda_row1 = getSimpleVecFromRowStochVec(lambda_vec, row1);
          double& pi_row1 = getSimpleVecFromRowStochVec(pi_vec, row1);
 
-         double& t_row1 = getSimpleVecFromRowStochVec(u_vec, row1);
-         double& u_row1 = getSimpleVecFromRowStochVec(t_vec, row1);
+         double& t_row1 = getSimpleVecFromRowStochVec(t_vec, row1);
+         double& u_row1 = getSimpleVecFromRowStochVec(u_vec, row1);
 
          double& z_row2 = getSimpleVecFromRowStochVec(z_vec, row2);
          double& lambda_row2 = getSimpleVecFromRowStochVec(lambda_vec, row2);

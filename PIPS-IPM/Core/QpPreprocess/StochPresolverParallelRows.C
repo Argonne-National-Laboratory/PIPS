@@ -97,7 +97,7 @@ void StochPresolverParallelRows::applyPresolving()
    for(int node = 0; node < nChildren; ++node)
    {
       // TODO: remove after node == -1 works properly
-      if( false && !presData.nodeIsDummy(node) )
+      if( !presData.nodeIsDummy(node) )
       {
          /// copy and normalize A_i, B_i, C_i, D_i and b_i, clow_i, cupp_i
          setNormalizedPointers(node);
@@ -596,7 +596,7 @@ void StochPresolverParallelRows::removeEntry(int col, SimpleVectorBase<int>& row
       bool parent)
 {
    assert( 0 <= col && col < matrixTrans.getM() );
-   assert( matrixTrans.getRowPtr(col).start + 1 == matrixTrans.getRowPtr(col).end);
+   assert( matrixTrans.getRowPtr(col).start + 1 == matrixTrans.getRowPtr(col).end );
    assert( nnzRow.n == matrix.getM() );
    assert( matrix.getN() == nnzCol.n );
    assert( nnzCol.n == matrixTrans.getM() );
@@ -623,7 +623,7 @@ void StochPresolverParallelRows::removeEntry(int col, SimpleVectorBase<int>& row
       rowContainsSingletonVar[row] = col + nA;
 
    // find row in matrix
-   assert(0 <= row && row < matrix.getM());
+   assert( 0 <= row && row < matrix.getM() );
    int i = -1;
    int end = matrix.getRowPtr(row).end;
    int start = matrix.getRowPtr(row).start;
