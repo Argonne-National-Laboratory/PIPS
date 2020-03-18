@@ -2294,8 +2294,7 @@ void sData::initDistMarker(int blocksStart, int blocksEnd)
    assert(isSCrowMyLocal.size() == 0);
 
    assert(linkStartBlockIdA.size() > 0 && linkStartBlockIdC.size() > 0);
-
-   assert(blocksStart >= 0 && blocksStart < blocksEnd); // && blocksEnd <= static_cast<int>(linkStartBlockIdA.size()));
+   assert(blocksStart >= 0 && blocksStart < blocksEnd && blocksEnd <= int(linkStartBlockLengthsA.size()));
 
    const int nx0 = getLocalnx();
    const int my0 = getLocalmy();
