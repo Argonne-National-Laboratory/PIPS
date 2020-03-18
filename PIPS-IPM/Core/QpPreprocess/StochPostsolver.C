@@ -1576,8 +1576,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                   std::min(xupp_col1, (rhs - parallel_factor * cupp) / coeff_col1);
          }
 
-         assert( PIPSisLE(xlow_col1, xlow_implied) );
-         assert( PIPSisLE(xupp_implied, xupp_col1) );
+         assert( PIPSisLEFeas(xlow_col1, xlow_implied) );
+         assert( PIPSisLEFeas(xupp_implied, xupp_col1) );
 
          /* lower bound was implied by substituted column + it's row */
          if( PIPSisEQ( val_col1, xlow_implied ) && !PIPSisEQ( xlow_implied, xlow_col1 ) )
