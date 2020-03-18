@@ -229,6 +229,10 @@ private:
       void initAbsminAbsmaxInCols(StochVector& absmin, StochVector& absmax) const;
 
       void setUndefinedVarboundsTo(double value);
+      void setUndefinedRowboundsTo(double value);
+      // TODO : this should probably go into StochVector and SimpleVector
+      void setNotIndicatedEntriesTo(StochVector& svec, StochVector& sivec, double value);
+
 
       void addActivityOfBlock( const SparseStorageDynamic& matrix, SimpleVector& min_partact, 
             SimpleVectorBase<int>& unbounded_min, SimpleVector& max_partact,

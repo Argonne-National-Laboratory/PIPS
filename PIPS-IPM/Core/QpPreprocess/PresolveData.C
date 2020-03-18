@@ -173,6 +173,7 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
 
    initSingletons();
    setUndefinedVarboundsTo(std::numeric_limits<double>::infinity());
+   setUndefinedRowboundsTo(std::numeric_limits<double>::infinity());
 
    initAbsminAbsmaxInCols(*absmin_col, *absmax_col);
 
@@ -215,22 +216,38 @@ void PresolveData::setUndefinedVarboundsTo(double value)
    StochVector& xupp = dynamic_cast<StochVector&>(*presProb->bux);
    StochVector& ixupp = dynamic_cast<StochVector&>(*presProb->ixupp);
 
+   setNotIndicatedEntriesTo(xlow, ixlow, -value);
+   setNotIndicatedEntriesTo(xupp, ixupp, value);
+}
+
+void PresolveData::setUndefinedRowboundsTo(double value)
+{
+   StochVector& clow = dynamic_cast<StochVector&>(*presProb->bl);
+   StochVector& iclow = dynamic_cast<StochVector&>(*presProb->iclow);
+   StochVector& cupp = dynamic_cast<StochVector&>(*presProb->bu);
+   StochVector& icupp = dynamic_cast<StochVector&>(*presProb->icupp);
+
+   setNotIndicatedEntriesTo(clow, iclow, -value);
+   setNotIndicatedEntriesTo(cupp, icupp, value);
+}
+
+void PresolveData::setNotIndicatedEntriesTo(StochVector& svec, StochVector& sivec, double value)
+{
+   assert(svec.children.size() == sivec.children.size());
+   assert(svec.children.size() == static_cast<unsigned int>(nChildren));
+
    for( int node = -1; node < nChildren; ++node )
    {
       if( !nodeIsDummy(node) )
       {
-         /* EQUALITY_SYSTEM */
-         SimpleVector& xlow_vec = getSimpleVecFromColStochVec(xlow, node);
-         SimpleVector& xupp_vec = getSimpleVecFromColStochVec(xupp, node);
-         const SimpleVector& ixlow_vec = getSimpleVecFromColStochVec(ixlow, node);
-         const SimpleVector& ixupp_vec = getSimpleVecFromColStochVec(ixupp, node);
+         SimpleVector& vec = getSimpleVecFromColStochVec(svec, node);
+         SimpleVector& ivec = getSimpleVecFromColStochVec(sivec, node);
 
-         for( int row = 0; row < xlow_vec.n; ++row )
+         assert(vec.n == ivec.n);
+         for( int row = 0; row < vec.n; ++row )
          {
-            if( PIPSisZero(ixlow_vec[row]) )
-               xlow_vec[row] = -value;
-            if( PIPSisZero(ixupp_vec[row]) )
-               xupp_vec[row] = value;
+            if( PIPSisZero( ivec[row] ) )
+               vec[row] = value;
          }
       }
    }
@@ -256,6 +273,7 @@ sData* PresolveData::finalize()
 
    /* theoretically it should not matter but there is an assert later which needs all these to be zero */
    setUndefinedVarboundsTo(0.0);
+   setUndefinedRowboundsTo(0.0);
 
    // this removes all columns and rows that are now empty from the problem
    presProb->cleanUpPresolvedData(*nnzs_row_A, *nnzs_row_C, *nnzs_col);
