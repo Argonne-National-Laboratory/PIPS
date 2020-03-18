@@ -1528,7 +1528,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert( col2.isCol() || col2.isEmpty() );
 
          if( col2.isCol() )
-            assert( row1.inEqSys() && row2.inInEqSys() );
+            assert( row1.inEqSys() && row2.inEqSys() );
 
          const double xlow_col1 = float_values.at(first_float_val);
          const double xupp_col1 = float_values.at(first_float_val + 1);
