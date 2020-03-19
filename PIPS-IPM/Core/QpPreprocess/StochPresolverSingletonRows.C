@@ -120,6 +120,7 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
       return false;
    }
 
+   // TODO : at some point we could extend this functionality
    /* because of postsolve here we only remove correctly placed singleton rows */
    if( row.getNode() != -1 && node_col == -1)
       return false;

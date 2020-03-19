@@ -1045,7 +1045,7 @@ void PresolveData::deleteEntry( SystemType system_type, int node, BlockType bloc
    adjustRowActivityFromDeletion(system_type, node, block_type, row, col, val);
 
    /* adjust nnz counters */
-   reduceNnzCounterRowBy( row_INDEX, 1 );
+   reduceNnzCounterRowBy( row_INDEX, 1, at_root );
    reduceNnzCounterColumnBy( col_INDEX, 1, at_root );
 }
 
@@ -1416,6 +1416,8 @@ void PresolveData::fixColumn( const INDEX& col, double value)
 void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff)
 {
    assert(!row.getLinking());
+   if( col.isLinkingCol() )
+      assert( row.getNode() == -1 );
    assert(row.isRow());
    assert(col.isCol());
    assert(-1 <= row.getNode() && row.getNode() < nChildren);
@@ -1429,11 +1431,11 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
    /* check for infeasibility of the newly found bounds */
    checkBoundsInfeasible(col, xlow_new, xupp_new);
 
-   const double xlow_old = getSimpleVecFromColStochVec(*presProb->blx, col.getNode())[col.getIndex()];
-   const double xupp_old = getSimpleVecFromColStochVec(*presProb->bux, col.getNode())[col.getIndex()];
+   const double xlow_old = getSimpleVecFromColStochVec(*presProb->blx, col);
+   const double xupp_old = getSimpleVecFromColStochVec(*presProb->bux, col);
 
-   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col.getNode())[col.getIndex()]) || xlow_old == INF_NEG_PRES );
-   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col.getNode())[col.getIndex()]) || xupp_old == INF_POS_PRES );
+   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col)) || xlow_old == INF_NEG_PRES );
+   assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col)) || xupp_old == INF_POS_PRES );
 
    /* adjust bounds of column - singletons columns will always be used here since we want to remove the corresponding row */
    bool tightened = updateBoundsVariable(col, xlow_new, xupp_new);
@@ -1448,17 +1450,24 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
       removeRedundantRow( row );
 }
 
+// TODO we still want to do tightenings that fix a variable
 bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new )
 {
-   assert( -1 <= row.getNode() && row.getNode() < nChildren );
-   // TODO : needs work for dual postsolve
-
-   // TODO we still want to do tightenings that fix a variable
-   /* check for infeasibility of the newly found bounds */
+   assert( row.hasValidNode(nChildren) );
+   /* infeasibility check is done in rowPropagatedBounds */
    const int ixlow = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col ) ) ? 0 : 1;
    const double xlow = ixlow ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG_PRES;
    const int ixupp =  PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixupp, col ) ) ? 0 : 1;
    const double xupp = ixupp ? getSimpleVecFromColStochVec( *presProb->bux, col) : INF_POS_PRES;
+
+   if( !PIPSisLT(xlow, xlow_new) )
+      xlow_new = INF_NEG_PRES;
+
+   if( !PIPSisLT(xupp_new, xupp) )
+      xupp_new = INF_POS_PRES;
+
+   if( xlow_new == INF_NEG_PRES && xupp_new == INF_POS_PRES )
+      return false;
 
    /* tightenings that fix a variable will still be done */
    if( PIPSisEQ(std::max(xlow, xlow_new), std::min(xupp_new, xupp)) )
@@ -1473,8 +1482,11 @@ bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& c
 
    /* adjust bounds so that they cannot be tight in the final solution and thus no dual postsolve should be necessary */
 
-   xlow_new = xlow_new - (feastol + eps_bounds_nontight)/std::fabs(coeff_var);
-   xupp_new = xupp_new + (feastol + eps_bounds_nontight)/std::fabs(coeff_var);
+   if( xlow_new != INF_NEG_PRES )
+      xlow_new = xlow_new - (feastol + eps_bounds_nontight) / std::fabs(coeff_var);
+
+   if( xupp_new != INF_POS_PRES )
+      xupp_new = xupp_new + (feastol + eps_bounds_nontight) / std::fabs(coeff_var);
 
    if( !PIPSisLT(xlow, xlow_new) )
       xlow_new = INF_NEG_PRES;
@@ -1552,10 +1564,10 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
    /// for linking variables we need to figure out a row that has been used for it's tightening
 
    /// every process should have the same root node data thus all of them should propagate their rows similarly
-   if( (lower_bound_changed || upper_bound_changed) && ( row.getNode() == -1 || col.isLinkingCol() ) )
+   if( (lower_bound_changed || upper_bound_changed) && col.isLinkingCol() )
       assert(outdated_linking_var_bounds == true);
 
-   /// linking rows require a different postsolve event since propagatin linkin rows need to be stored by every process and need to be postsolved at the same time
+   /// linking rows require a different postsolve event since propagating linking rows need to be stored by every process and need to be postsolved at the same time
    if( !row.isLinkingRow() )
    {
       if( lower_bound_changed )
@@ -1705,23 +1717,27 @@ void PresolveData::adjustMatrixRhsLhsBy(SystemType system_type, int node, bool l
    }
 }
 
-void PresolveData::reduceNnzCounterRowBy(const INDEX& row, int amount)
+void PresolveData::reduceNnzCounterRowBy(const INDEX& row, int amount, bool at_root)
 {
    assert( row.isRow() );
    assert( row.hasValidNode(nChildren) );
+   if( at_root )
+      assert( row.getNode() == -1 );
    assert( 0 <= amount );
-   changeNnzCounterRow(row, -amount);
+   changeNnzCounterRow(row, -amount, at_root);
 }
 
-void PresolveData::increaseNnzCounterRowBy(const INDEX& row, int amount)
+void PresolveData::increaseNnzCounterRowBy(const INDEX& row, int amount, bool at_root)
 {
    assert( row.isRow() );
    assert( row.hasValidNode(nChildren) );
+   if( at_root )
+      assert( row.getNode() == -1 );
    assert( 0 <= amount );
-   changeNnzCounterRow(row, amount);
+   changeNnzCounterRow(row, amount, at_root);
 }
 
-void PresolveData::changeNnzCounterRow(const INDEX& row, int amount)
+void PresolveData::changeNnzCounterRow(const INDEX& row, int amount, bool at_root)
 {
    assert( row.isRow() );
    assert( row.hasValidNode(nChildren) );
@@ -1732,7 +1748,7 @@ void PresolveData::changeNnzCounterRow(const INDEX& row, int amount)
    /* linking constraints get stored */
    if( row.isLinkingRow() )
    {
-      if(my_rank == 0 || row.getNode()!= -1)
+      if( my_rank == 0 || !at_root)
       {
          int& chgs = (row.inEqSys() ? *nnzs_row_A_chgs : *nnzs_row_C_chgs)[row.getIndex()];
 
@@ -1868,6 +1884,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    const bool linking = (block_type == BL_MAT);
    const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
    const bool at_root = node == -1 && node_col == -1;
+   const int node_row = block_type == BL_MAT ? -1 : node;
 
    const INDEX col_INDEX(COL, node_col, col);
 
@@ -1882,7 +1899,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
    {
       const int row = matrix_transp.getJcolM(j);
       const double coeff = matrix_transp.getMat(j);
-      const INDEX row_INDEX(ROW, node, row, linking, system_type);
+      const INDEX row_INDEX(ROW, node_row, row, linking, system_type);
 
       assert( !PIPSisEQ(0.0, coeff) );
 
@@ -1896,7 +1913,7 @@ void PresolveData::removeColumnFromMatrix(SystemType system_type, int node, Bloc
          postsolver->notifyColModified( col_INDEX );
       }
 
-      reduceNnzCounterRowBy( row_INDEX, 1);
+      reduceNnzCounterRowBy( row_INDEX, 1, at_root);
 
       adjustMatrixRhsLhsBy(system_type, node, linking, row, - coeff * fixation);
 
@@ -2582,7 +2599,7 @@ void PresolveData::addCoeffColToRow( double coeff, const INDEX& col, const INDEX
    {
       const bool at_root = row.getNode() == -1 && col.getNode() == -1;
       increaseNnzCounterColumnBy(col, 1, at_root);
-      increaseNnzCounterRowBy(row, 1);
+      increaseNnzCounterRowBy(row, 1, at_root);
    }
 
    sparse_mat->addColToRow( coeff, col.getIndex(), row.getIndex() );
@@ -2708,12 +2725,12 @@ void PresolveData::removeRowFromMatrix( const INDEX& row, BlockType block_type, 
    const int row_start = mat_storage.getRowPtr(row_idx).start;
    const int row_end = mat_storage.getRowPtr(row_idx).end;
 
-   reduceNnzCounterRowBy(row, row_end - row_start);
+   const bool at_root = (node == -1 && node_col == -1);
+   reduceNnzCounterRowBy(row, row_end - row_start, at_root);
 
    for(int k = row_start; k < row_end; k++)
    {
       const int col_idx = mat_storage.getJcolM(k);
-      const bool at_root = (node == -1 && node_col == -1);
 
       const INDEX col(COL, node_col, col_idx);
       if(postsolver)

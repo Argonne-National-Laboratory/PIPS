@@ -26,9 +26,7 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 void StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -86,9 +84,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyActivities());
-   assert(presData.verifyNnzcounters());
+   assert(presData.presDataInSync());
 }
 
 bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
@@ -161,10 +157,12 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    /* for every row in the current block and every entry in said row check if we can improve on the currently known bounds */
    for(int row = 0; row < mat->getM(); ++row)
    {
+      const INDEX row_INDEX(ROW, linking ? -1 : node, row, linking, system_type);
+
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
 
-      presData.getRowActivities( INDEX(ROW, node, row, linking, system_type), actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
+      presData.getRowActivities( row_INDEX, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       /* two or more unbounded variables make it impossible to derive new bounds so skip the row completely */
       if( actmin_ubndd >= 2 && actmax_ubndd >= 2)
@@ -264,7 +262,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
 //         bool row_propagated = presData.rowPropagatedBounds( INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
-         bool row_propagated = presData.rowPropagatedBoundsNonTight(INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
+         bool row_propagated = presData.rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
 
          if(row_propagated && (node != -1 || my_rank == 0))
             ++tightenings;

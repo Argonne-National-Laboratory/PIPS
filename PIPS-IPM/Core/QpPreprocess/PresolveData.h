@@ -284,10 +284,10 @@ private:
       void removeRow( const INDEX& row );
       void removeRowFromMatrix(const INDEX& row, BlockType block_type, int node_col);
 
-      void reduceNnzCounterRowBy(const INDEX& row, int amount);
-      void increaseNnzCounterRowBy(const INDEX& row, int amount);
+      void reduceNnzCounterRowBy(const INDEX& row, int amount, bool at_root);
+      void increaseNnzCounterRowBy(const INDEX& row, int amount, bool at_root);
 
-      void changeNnzCounterRow(const INDEX& row, int amount);
+      void changeNnzCounterRow(const INDEX& row, int amount, bool at_root);
 
       void reduceNnzCounterColumnBy(const INDEX& col, int amount, bool at_root);
       void increaseNnzCounterColumnBy(const INDEX& col, int amount, bool at_root);

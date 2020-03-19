@@ -393,6 +393,9 @@ void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const
    assert(row.isRow());
    assert(col.isCol());
    assert(!row.getLinking());
+   if( col.isLinkingCol() )
+      assert( row.getNode() == -1 );
+
    assert(PIPSisLE(xlow_new, xupp_new));
    assert(xupp_new != INF_POS_PRES || xlow_new != INF_NEG_PRES);
    assert(!PIPSisZero(coeff));
@@ -1117,9 +1120,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          assert(!PIPSisZero(coeff));
 
-         const double curr_x = getSimpleVecFromColStochVec(x_vec, col.getNode())[col.getIndex()];
-         double& slack_lower = getSimpleVecFromColStochVec(v_vec, col.getNode())[col.getIndex()];
-         double& slack_upper = getSimpleVecFromColStochVec(w_vec, col.getNode())[col.getIndex()];
+         const double curr_x = getSimpleVecFromColStochVec(x_vec, col);
+         double& slack_lower = getSimpleVecFromColStochVec(v_vec, col);
+         double& slack_upper = getSimpleVecFromColStochVec(w_vec, col);
 
          /* if bound is not tight only adjust slack v/w */
          if(xupp_old == INF_POS_PRES)
@@ -1127,7 +1130,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          else
          {
             slack_upper = xupp_old - curr_x;
-            assert(PIPSisLT(0.0, slack_upper));
+            assert(PIPSisLE(0.0, slack_upper));
             assert(std::fabs(slack_upper) != INF_POS_PRES);
          }
 
@@ -1140,9 +1143,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
             assert(std::fabs(slack_lower) != INF_POS_PRES);
          }
 
-         double& dual_singelton_row = getSimpleVecFromRowStochVec(y_vec, row.getNode(), row.getLinking())[row.getIndex()];
-         double& dual_lower = getSimpleVecFromColStochVec(gamma_vec, col.getNode())[col.getIndex()];
-         double& dual_upper = getSimpleVecFromColStochVec(phi_vec, col.getNode())[col.getIndex()];
+         double& dual_singelton_row = getSimpleVecFromRowStochVec(y_vec, row);
+         double& dual_lower = getSimpleVecFromColStochVec(gamma_vec, col);
+         double& dual_upper = getSimpleVecFromColStochVec(phi_vec, col);
 
          double error_in_reduced_costs = 0.0;
 

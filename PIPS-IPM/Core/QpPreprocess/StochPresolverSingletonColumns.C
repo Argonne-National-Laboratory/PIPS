@@ -28,7 +28,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
 
-   presData.putLinkingVarsSyncEvent();
+//   presData.putLinkingVarsSyncEvent();
 
 #ifndef NDEBUG
    if( my_rank == 0 )
