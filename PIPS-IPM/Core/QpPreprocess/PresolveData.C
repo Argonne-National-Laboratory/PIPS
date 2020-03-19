@@ -1391,15 +1391,15 @@ void PresolveData::fixColumn( const INDEX& col, double value)
    /* current upper and lower bound as well as column - linking variables have to be done by all processes simultaneously because communication in postsolve is required */
    if(postsolver)
    {
-      const double obj_coeff = getSimpleVecFromColStochVec(*presProb->g, col.getNode())[col.getIndex()];
+      const double obj_coeff = getSimpleVecFromColStochVec(*presProb->g, col);
       postsolver->notifyFixedColumn(col, value, obj_coeff, getSystemMatrix(EQUALITY_SYSTEM), getSystemMatrix(INEQUALITY_SYSTEM));
    }
 
 #ifndef NDEBUG
-   double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, col.getNode())[col.getIndex()];
-   double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, col.getNode())[col.getIndex()];
-   double xlow = PIPSisEQ(ixupp, 1.0) ? getSimpleVecFromColStochVec(*presProb->blx, col.getNode())[col.getIndex()] : INF_NEG_PRES;
-   double xupp = PIPSisEQ(ixlow, 1.0) ? getSimpleVecFromColStochVec(*presProb->bux, col.getNode())[col.getIndex()] : INF_POS_PRES;
+   double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, col);
+   double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, col);
+   double xlow = PIPSisEQ(ixupp, 1.0) ? getSimpleVecFromColStochVec(*presProb->blx, col) : INF_NEG_PRES;
+   double xupp = PIPSisEQ(ixlow, 1.0) ? getSimpleVecFromColStochVec(*presProb->bux, col) : INF_POS_PRES;
    assert( PIPSisEQ(ixlow, 1.0) );
    assert( PIPSisEQ(ixupp, 1.0) );
    assert( PIPSisEQ(xlow, xupp, 1e-10) );
@@ -1408,8 +1408,8 @@ void PresolveData::fixColumn( const INDEX& col, double value)
 
    removeColumn(col, value);
 
-   if( col.getNode() != -1)
-      assert( getSimpleVecFromColStochVec(*nnzs_col, col.getNode())[col.getIndex()] == 0 );
+   if( col.getNode() != -1 )
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
 }
 
 // todo : do we need to store that a bound was implied by a singleton row ? I don't think so since singletons get removed from the system anyway

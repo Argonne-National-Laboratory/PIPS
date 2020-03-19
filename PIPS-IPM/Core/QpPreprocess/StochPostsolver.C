@@ -1552,8 +1552,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          const double val_col2 = col2.isCol() ? getSimpleVecFromColStochVec(x_vec, col2) : 0.0;
 
          /* if the variable bound of col1 was actually implied via col2 we have to shift it's dual multipliers over via also adjusting the dual of row1 */
-         assert( PIPSisLEFeas( xlow_col1, val_col1 ) );
-         assert( PIPSisLEFeas( val_col1, xupp_col1 ) );
+         assert( PIPSisRelLEFeas( xlow_col1, val_col1 ) );
+         assert( PIPSisRelLEFeas( val_col1, xupp_col1 ) );
 
          double xlow_implied = INF_NEG_PRES;
          double xupp_implied = INF_POS_PRES;
@@ -1626,8 +1626,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          assert( xlow_implied != INF_NEG_PRES );
          assert( xupp_implied != INF_POS_PRES );
-         assert( PIPSisLEFeas(xlow_col1, xlow_implied) );
-         assert( PIPSisLEFeas(xupp_implied, xupp_col1) );
+         assert( PIPSisRelLEFeas(xlow_col1, xlow_implied) );
+         assert( PIPSisRelLEFeas(xupp_implied, xupp_col1) );
 
          /* lower bound was implied by substituted column + it's row */
          if( PIPSisEQ( val_col1, xlow_implied ) && !PIPSisEQ( xlow_implied, xlow_col1 ) )

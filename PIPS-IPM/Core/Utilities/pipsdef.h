@@ -90,6 +90,13 @@ inline bool PIPSisLEFeas(double val1, double val2)
    return (val1 <= val2 + feastol);
 }
 
+inline bool PIPSisRelLEFeas(double val1, double val2)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return reldiff <= -feastol;
+}
+
 inline bool PIPSisLT(double val1, double val2, double eps = pips_eps)
 {
    return (val1 < val2 - eps);
