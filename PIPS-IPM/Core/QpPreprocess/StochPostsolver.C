@@ -796,7 +796,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
          // TODO : merge slack computations of tight and non-tight == refactoring
          /* if bound is not tight only adjust v/w */
-         if( !PIPSisEQ(curr_x, new_bound ) )
+         if( true || !PIPSisEQ(curr_x, new_bound ) )
          {
             if(old_ixlowupp == 0)
             {

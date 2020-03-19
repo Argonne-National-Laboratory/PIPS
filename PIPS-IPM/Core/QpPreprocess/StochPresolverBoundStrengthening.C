@@ -209,7 +209,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
                actmax_row_without_curr = actmax_part;
          }
 
-         /* a singleton row has zero activity without the current column */
+         /* a singleton row has zero activity without the current column - we skip it here though - it will be left for the singleton row presolver */
          if(nnzs_row[row] == 1)
          {
             assert(actmin_ubndd <= 1);
@@ -218,6 +218,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             assert( PIPSisZero(actmax_row_without_curr, feastol) );
 
             actmin_row_without_curr = actmax_row_without_curr = 0;
+            continue;
          }
 
          double lbx_new = -std::numeric_limits<double>::infinity();
