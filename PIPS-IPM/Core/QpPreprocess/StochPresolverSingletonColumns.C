@@ -159,7 +159,6 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    bool ub_implied_free = false;
 
    // todo : we should not do anything if the coefficient of the column we are looking at is too small probably
-
    checkColImpliedFree(col, row, lb_implied_free, ub_implied_free);
    bool implied_free = lb_implied_free && ub_implied_free;
 
@@ -195,7 +194,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
       else
          presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
    }
-   // TODO : singleton column located on other processes
+   // TODO : singleton columns for linking inequality rows
    else if( row.getSystemType() == INEQUALITY_SYSTEM )
    {
       /* inequality singleton variables */

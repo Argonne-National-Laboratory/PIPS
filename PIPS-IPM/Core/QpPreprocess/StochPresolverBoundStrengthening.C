@@ -10,7 +10,6 @@
 #include <cmath>
 #include "pipsdef.h"
 
-// todo : make a list of fixed vars ? then variable fixing does not need to iterate the full matrix..
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData, const sData& origProb) :
       StochPresolverBase(presData, origProb), tightenings(0)
@@ -21,8 +20,6 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 {
 }
 
-// todo print variables bounds strengthened
-// todo print removed fixed cols
 void StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());
@@ -40,7 +37,8 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   int max_iter = 1; // todo
+   // TODO : proper max_rounds value - best would be something dynamic
+   int max_iter = 1;
    int iter = 0;
    bool tightened;
 
@@ -123,7 +121,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    // todo : if bound is too big we do not accept it
    // todo : if current entry is too small we assume that dividing by it is not numerically stable and skip it
    const double numeric_limit_entry = 1e-7;
-   const double numeric_limit_bounds = 1e12; // todo
+   const double numeric_limit_bounds = 1e12;
    bool tightened = false;
 
    const SimpleVector& xlow = (node == -1 || block_type == A_MAT) ? *currxlowParent : *currxlowChild;
@@ -224,7 +222,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          double lbx_new = -std::numeric_limits<double>::infinity();
          double ubx_new = std::numeric_limits<double>::infinity();
 
-         // todo : simplify the if else?
          if(system_type == EQUALITY_SYSTEM)
          {
             if( PIPSisLT(0.0, a_ik) )

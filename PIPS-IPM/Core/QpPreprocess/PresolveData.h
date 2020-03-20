@@ -174,7 +174,6 @@ public :
       bool wasRowRemoved( const INDEX& row ) const;
 
       /// interface methods called from the presolvers when they detect a possible modification
-      // todo make bool and give feedback or even better - return some enum maybe?
       void fixColumn( const INDEX& col, double value);
       void fixEmptyColumn( const INDEX& col, double val);
 
@@ -198,8 +197,6 @@ public :
       void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff );
 
       void tightenRowBoundsParallelRow( const INDEX& row_tightened, const INDEX& row_tightening, double clow_new, double cupp_new, double factor );
-      // todo : hackish functions not properly working with presolve/postsolve
-      void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
 
       /* call whenever a single entry has been deleted from the matrix */
       void deleteEntryAtIndex(const INDEX& row, const INDEX& col, int col_index);
@@ -230,6 +227,7 @@ private:
 
       void setUndefinedVarboundsTo(double value);
       void setUndefinedRowboundsTo(double value);
+
       // TODO : this should probably go into StochVector and SimpleVector
       void setNotIndicatedEntriesTo(StochVector& svec, StochVector& sivec, double value);
 
@@ -292,7 +290,7 @@ private:
 
       void changeNnzCounterColumn(const INDEX& col, int amount, bool at_root);
 
-      /// methods for querying the problem in order to get certain structures etc. todo: move?
+      /// methods for querying the problem in order to get certain structures etc.
       StochGenMatrix& getSystemMatrix(SystemType system_type) const;
       SparseGenMatrix* getSparseGenMatrix(const INDEX& row, const INDEX& col) const;
 
@@ -307,4 +305,3 @@ private:
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_PRESOLVEDATA_H_ */
-

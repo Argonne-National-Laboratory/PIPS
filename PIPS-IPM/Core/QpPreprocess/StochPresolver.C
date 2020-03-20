@@ -43,12 +43,10 @@
 StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullptr)
  : QpPresolver(prob, postsolver)
 {
-   // todo
 }
 
 StochPresolver::~StochPresolver()
 {
-   // todo
 }
 
 Data* StochPresolver::presolve()
@@ -63,6 +61,7 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
+//   sorigprob->writeToStreamDense(std::cout);
    assert( sorigprob->isRootNodeInSync() );
    assert( presData.getPresProb().isRootNodeInSync() );
 
@@ -86,12 +85,12 @@ Data* StochPresolver::presolve()
    for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
-//      presolverSR.applyPresolving();
+      presolverSR.applyPresolving();
       presolverParallelRow.applyPresolving();
-//      presolverSC.applyPresolving();
-//      presolverBS.applyPresolving();
-//      presolverColFix.applyPresolving();
-//      presolverSR.applyPresolving();
+      presolverSC.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverColFix.applyPresolving();
+      presolverSR.applyPresolving();
       presolverColFix.applyPresolving();
    }
    // presData.getPresProb().writeToStreamDense(std::cout);
@@ -127,14 +126,10 @@ Data* StochPresolver::presolve()
 
    sData* finalPresData = presData.finalize();
 
-//   sorigprob->writeToStreamDense(std::cout);
 //   finalPresData->writeToStreamDense(std::cout);
    
    assert( finalPresData );
    assert( finalPresData->isRootNodeInSync() );
-
-   // todo : verify presolver and postsolver have same amount of deleted rows and cols
-
 
    return finalPresData;
 }
