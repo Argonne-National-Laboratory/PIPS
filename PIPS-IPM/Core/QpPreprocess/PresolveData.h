@@ -202,7 +202,7 @@ public :
       void tightenVarBoundsParallelRow(SystemType system_type, int node, int row, int col, bool linking);
 
       /* call whenever a single entry has been deleted from the matrix */
-      void deleteEntry(SystemType system_type, int node, BlockType block_type, int row, int col_index);
+      void deleteEntryAtIndex(const INDEX& row, const INDEX& col, int col_index);
 
       /* methods for verifying state of presData or querying the problem */
       bool verifyNnzcounters() const;
@@ -242,9 +242,9 @@ private:
 
       long resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
 
-      void adjustMatrixRhsLhsBy(SystemType system_type, int node, bool linking, int row_index, double value);
+      void adjustMatrixRhsLhsBy(const INDEX& row, double value);
       /// methods for modifying the problem
-      void adjustRowActivityFromDeletion(SystemType system_type, int node, BlockType block_type, int row, int col, double coeff);
+      void adjustRowActivityFromDeletion(const INDEX& row, const INDEX& col, double coeff);
       /// set bounds if new bound is better than old bound
       bool updateUpperBoundVariable( const INDEX& col, double xupp_new)
       { return updateBoundsVariable( col, INF_NEG_PRES, xupp_new ); };
@@ -254,11 +254,9 @@ private:
       bool updateBoundsVariable( const INDEX& col, double xlow_new, double xupp_new );
       void updateRowActivities( const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
 
-      void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col,
-      		 double xlow_new, double xupp_new, double xlow_old, double xupp_old);
+      void updateRowActivitiesBlock( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
 
-      void updateRowActivitiesBlock(SystemType system_type, int node, BlockType block_type, int col, double bound,
-            double old_bound, bool upper);
+      void updateRowActivitiesBlock( const INDEX& row, const INDEX& col, double bound, double old_bound, bool upper);
 
       /* compute and update activities */
       void recomputeActivities() { recomputeActivities(false); }
@@ -276,13 +274,13 @@ private:
          StochVectorBase<int>& actmin_eq_ubndd, StochVector& actmax_ineq_part, StochVector& actmin_ineq_part, StochVectorBase<int>& actmax_ineq_ubndd,
          StochVectorBase<int>& actmin_ineq_ubndd) const;
 
-      double computeLocalLinkingRowMinOrMaxActivity(SystemType system_type, int row, bool upper) const;
-      void computeRowMinOrMaxActivity(SystemType system_type, int node, bool linking, int row, bool upper);
+      double computeLocalLinkingRowMinOrMaxActivity(const INDEX& row, bool upper) const;
+      void computeRowMinOrMaxActivity(const INDEX& row, bool upper);
 
       void removeColumn(const INDEX& col, double fixation);
-      void removeColumnFromMatrix(SystemType system_type, int node, BlockType block_type, int col, double fixation);
+      void removeColumnFromMatrix(const INDEX& row, const INDEX& col, double fixation);
       void removeRow( const INDEX& row );
-      void removeRowFromMatrix(const INDEX& row, BlockType block_type, int node_col);
+      void removeRowFromMatrix(const INDEX& row, const INDEX& col);
 
       void reduceNnzCounterRowBy(const INDEX& row, int amount, bool at_root);
       void increaseNnzCounterRowBy(const INDEX& row, int amount, bool at_root);
@@ -296,7 +294,7 @@ private:
 
       /// methods for querying the problem in order to get certain structures etc. todo: move?
       StochGenMatrix& getSystemMatrix(SystemType system_type) const;
-      SparseGenMatrix* getSparseGenMatrix(SystemType system_type, int node, BlockType block_type) const;
+      SparseGenMatrix* getSparseGenMatrix(const INDEX& row, const INDEX& col) const;
 
       void checkBoundsInfeasible(const INDEX& col, double xlow_new, double xupp_new) const;
 public:
@@ -305,10 +303,6 @@ private:
       void writeMatrixRowToStreamDense(std::ostream& out, const SparseGenMatrix& mat, int node, int row, const SimpleVector& ixupp, const SimpleVector& xupp,
             const SimpleVector& ixlow, const SimpleVector& xlow) const;
       void printVarBoundStatistics(std::ostream& out) const;
-
-      StochVectorHandle getRowAsStochVector(SystemType system_type, int node, int row, bool linking_row) const;
-      StochVectorHandle getColAsStochVector(SystemType system_type, int node, int col) const;
-
 
 };
 

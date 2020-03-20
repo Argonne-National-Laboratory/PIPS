@@ -291,6 +291,9 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 
    int n_elims = 0;
 
+   const bool linking_row = (block_type == BL_MAT);
+   const int node_row = linking_row ? -1 : node;
+   const int node_col = (block_type == A_MAT) ? -1 : node;
    const SparseStorageDynamic* storage = mat;
 
    /* for every row in row in matrix */
@@ -310,7 +313,9 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          /* remove all small entries */
          if( fabs( mat_entry ) < tol_matrix_entry )
          {
-            presData.deleteEntry(system_type, node, block_type, r, col_index);
+            const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
+            const INDEX col_INDEX(COL, node_col, col);
+            presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
 
             /* since the current entry got deleted we have to step back one entry */
             --col_index;
@@ -322,7 +327,9 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          {
             if( (fabs( mat_entry ) < tolerance1 && fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < tolerance2 * feastol ))
             {
-               presData.deleteEntry(system_type, node, block_type, r, col_index);
+               const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
+               const INDEX col_INDEX(COL, node_col, col);
+               presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
 
                /* since the current entry got deleted we have to step back one entry */
                --col_index;
@@ -340,8 +347,10 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
                if( total_sum_modifications_row + (fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col])) < 1.0e-1 * feastol)
                {
                   total_sum_modifications_row += fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col]);
+                  const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
+                  const INDEX col_INDEX(COL, node_col, col);
 
-                  presData.deleteEntry(system_type, node, block_type, r, col_index);
+                  presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
 
                   /* since the current entry got deleted we have to step back one entry */
                   --col_index;
