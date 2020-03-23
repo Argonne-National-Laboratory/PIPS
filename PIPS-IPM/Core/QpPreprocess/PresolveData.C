@@ -1288,9 +1288,6 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
    const double lhs = row.inEqSys() ? getSimpleVecFromRowStochVec(*presProb->bA, row) :
       getSimpleVecFromRowStochVec(*presProb->bl, row);
 
-   const double icupp = getSimpleVecFromRowStochVec(*presProb->icupp, row);
-   const double iclow = getSimpleVecFromRowStochVec(*presProb->iclow, row);
-
    /* check bound implied by row */
 
    /* calculate an check implied upper bound */
@@ -1298,13 +1295,13 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
    {
       if( 0.0 < coeff )
       {
-         assert( row.inEqSys() || !PIPSisZero(icupp));
+         assert( row.inEqSys() || !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->icupp, row)));
          const double implied_upperbound = (rhs - min_act) / coeff;
          upper_implied = PIPSisLE(implied_upperbound, xupp);
       }
       else
       {
-         assert( row.inEqSys() || !PIPSisZero(iclow));
+         assert( row.inEqSys() || !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->iclow, row)));
          const double implied_upperbound = (lhs - max_act) / coeff;
          upper_implied = PIPSisLE(implied_upperbound, xupp);
       }
@@ -1315,13 +1312,13 @@ void PresolveData::varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower
    {
       if( coeff < 0.0 )
       {
-         assert( row.inEqSys() || !PIPSisZero(iclow));
+         assert( row.inEqSys() || !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->iclow, row)));
          const double implied_lowerbound = (lhs - max_act) / coeff;
          lower_implied = PIPSisLE(xlow, implied_lowerbound);
       }
       else
       {
-         assert( row.inEqSys() || !PIPSisZero(icupp));
+         assert( row.inEqSys() || !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->icupp, row)));
          const double implied_lowerbound = (rhs - min_act) / coeff;
          lower_implied = PIPSisLE(xlow, implied_lowerbound);
       }
@@ -1739,8 +1736,7 @@ void PresolveData::changeNnzCounterRow(const INDEX& row, int amount, bool at_roo
          chgs += amount;
          outdated_nnzs = true;
 
-         const StochVectorBase<int>& nnzs_row = row.inEqSys() ? *nnzs_row_A : *nnzs_row_C;
-         assert( 0 <= getSimpleVecFromRowStochVec(nnzs_row, row) + chgs );
+         assert( 0 <= getSimpleVecFromRowStochVec(row.inEqSys() ? *nnzs_row_A : *nnzs_row_C, row) + chgs );
       }
    }
    else
@@ -1999,7 +1995,7 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
       const double cupp = row2.inInEqSys() ? ( PIPSisZero(getSimpleVecFromRowStochVec(*presProb->icupp, row2)) ? INF_POS_PRES : getSimpleVecFromRowStochVec(*presProb->bu, row2) )
             : 0.0;
 
-      postsolver->notifyNearlyParallelRowBoundsTightened(row1, row2, col1, col2, xlow_col1, xupp_col2, xlow_col2, xupp_col2, coeff_col1, coeff_col2, scalar,
+      postsolver->notifyNearlyParallelRowBoundsTightened(row1, row2, col1, col2, xlow_col1, xupp_col1, xlow_col2, xupp_col2, coeff_col1, coeff_col2, scalar,
             translation, parallel_factor, rhs, clow, cupp);
    }
 
@@ -2263,14 +2259,9 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRowSynced( const INDE
 
    if( row.inInEqSys() )
    {
-      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row);
-      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row);
-      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row);
-      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row);
-
-      assert( PIPSisEQ(clow, cupp) );
-      assert( !PIPSisZero(iclow) );
-      assert( !PIPSisZero(icupp) );
+      assert( PIPSisEQ(getSimpleVecFromRowStochVec( *presProb->bl, row), getSimpleVecFromRowStochVec( *presProb->bu, row)) );
+      assert( !PIPSisZero(getSimpleVecFromRowStochVec( *presProb->iclow, row)) );
+      assert( !PIPSisZero(getSimpleVecFromRowStochVec( *presProb->icupp, row)) );
    }
 
    const double rhs = row.inEqSys() ? getSimpleVecFromRowStochVec( *presProb->bA, row) :
@@ -2353,14 +2344,9 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
 
    if( row.inInEqSys() )
    {
-      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row);
-      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row);
-      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row);
-      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row);
-
-      assert( PIPSisEQ(clow, cupp) );
-      assert( !PIPSisZero(iclow) );
-      assert( !PIPSisZero(icupp) );
+      assert( PIPSisEQ(getSimpleVecFromRowStochVec( *presProb->bl, row), getSimpleVecFromRowStochVec( *presProb->bu, row)) );
+      assert( !PIPSisZero(getSimpleVecFromRowStochVec( *presProb->iclow, row)) );
+      assert( !PIPSisZero(getSimpleVecFromRowStochVec( *presProb->icupp, row)) );
    }
 
    const double rhs = row.inEqSys() ? getSimpleVecFromRowStochVec( *presProb->bA, row) : getSimpleVecFromRowStochVec( *presProb->bl, row);
@@ -2429,8 +2415,9 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
 
    if( col.isCol() )
    {
+#ifndef NDEBUG
       const SparseStorageDynamic& col_mat_tp = getSparseGenMatrix(row, col)->getStorageDynamicTransposedRef();
-
+#endif
       assert( (col_mat_tp.getRowPtr(col.getIndex()).end - col_mat_tp.getRowPtr(col.getIndex()).start) == 1 );
       assert( row.getIndex() == col_mat_tp.getJcolM(col_mat_tp.getRowPtr(col.getIndex()).start) );
       assert(col_coeff == col_mat_tp.getMat(col_mat_tp.getRowPtr(col.getIndex()).start));
@@ -2520,14 +2507,9 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
    /* rhs/clow == cupp */
    if( row.inInEqSys() )
    {
-      const double clow = getSimpleVecFromRowStochVec( *presProb->bl, row );
-      const double cupp = getSimpleVecFromRowStochVec( *presProb->bu, row );
-      const double iclow = getSimpleVecFromRowStochVec( *presProb->iclow, row );
-      const double icupp = getSimpleVecFromRowStochVec( *presProb->icupp, row );
-
-      assert( PIPSisEQ(clow, cupp) );
-      assert( !PIPSisZero(iclow) );
-      assert( !PIPSisZero(icupp) );
+      assert( PIPSisEQ(getSimpleVecFromRowStochVec( *presProb->bl, row), getSimpleVecFromRowStochVec( *presProb->bu, row)) );
+      assert( !PIPSisZero(getSimpleVecFromRowStochVec( *presProb->iclow, row)) );
+      assert( !PIPSisZero(getSimpleVecFromRowStochVec( *presProb->icupp, row)) );
    }
 
    const double rhs = row.inEqSys() ? getSimpleVecFromRowStochVec( *presProb->bA, row ) :

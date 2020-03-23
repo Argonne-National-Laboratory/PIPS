@@ -201,9 +201,9 @@ int StochColumnStorage::storeLocalCol(const INDEX& col, const StochGenMatrix& ma
    assert(Bli_index == Dli_index);
    assert(Bi_index == Bli_index);
 #else
-   Di_storage.appendCol(Di, col);
-   Bli_storage.appendCol(Bli, col);
-   Dli_storage.appendCol(Dli, col);
+   Di_storage.appendCol(Di, col_index);
+   Bli_storage.appendCol(Bli, col_index);
+   Dli_storage.appendCol(Dli, col_index);
 #endif
 
    return Bi_index;

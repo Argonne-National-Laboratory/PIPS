@@ -1552,12 +1552,11 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
          assert( !PIPSisZero(scalar) );
 
          const double val_col1 = getSimpleVecFromColStochVec(x_vec, col1);
-         const double val_col2 = col2.isCol() ? getSimpleVecFromColStochVec(x_vec, col2) : 0.0;
 
          /* if the variable bound of col1 was actually implied via col2 we have to shift it's dual multipliers over via also adjusting the dual of row1 */
-         // TODO : reactivate these once scaled termination criteria exist
-         //assert( PIPSisRelLEFeas( xlow_col1, val_col1 ) );
-         //assert( PIPSisRelLEFeas( val_col1, xupp_col1 ) );
+         // TODO : reactivate these once scaled termination criteria exist - found bug elsewhere - might be correct and maybe can be reactivated
+//         assert( PIPSisRelLEFeas( xlow_col1, val_col1 ) );
+//         assert( PIPSisRelLEFeas( val_col1, xupp_col1 ) );
 
          double xlow_implied = INF_NEG_PRES;
          double xupp_implied = INF_POS_PRES;
@@ -1671,8 +1670,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                if( col2.isCol() )
                {
                   /* assert bounds of substituted variable are tight as well */
-                  const double implying_bound = PIPSisLT(0.0, translation) ? xupp_col2 : xlow_col2;
-                  assert( PIPSisEQ(val_col2, implying_bound) );
+                  assert( PIPSisEQ(getSimpleVecFromColStochVec(x_vec, col2) , PIPSisLT(0.0, translation) ? xupp_col2 : xlow_col2) );
 
                   const double dual_shift_col2 = coeff_col2 * dual_shift_row2;
                   PIPSisLT(0.0, translation) ? assert( PIPSisLE(0.0, dual_shift_col2) ) : assert( PIPSisLE( dual_shift_col2, 0.0) );
@@ -1721,8 +1719,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
                if( col2.isCol() )
                {
                   /* assert bounds of substituted variable are tight as well */
-                  const double implying_bound = PIPSisLT(0.0, translation) ? xlow_col2 : xupp_col2;
-                  assert( PIPSisEQ(val_col2, implying_bound) );
+                  assert( PIPSisEQ(getSimpleVecFromColStochVec(x_vec, col2), PIPSisLT(0.0, translation) ? xlow_col2 : xupp_col2) );
 
                   double& dual_col2 = PIPSisLT(0.0, translation) ? getSimpleVecFromColStochVec(gamma_vec, col2) : getSimpleVecFromColStochVec(phi_vec, col2);
                   assert( PIPSisZero(dual_col2) );
