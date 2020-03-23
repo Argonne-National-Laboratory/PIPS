@@ -707,8 +707,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
 template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
-  int my_rank;
-  MPI_Comm_rank(comm,&my_rank);
+  const int my_rank = PIPS_MPIgetRank(comm);
 
   assert(origData);
   assert(data);
@@ -734,6 +733,9 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
     return;
   }
 
+  MPI_Barrier(comm);
+  const double t0_postsolve = MPI_Wtime();
+
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();
 
@@ -746,8 +748,15 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   postsolver->postsolve(*unscaleUnpermVars, *postsolvedVars);
 
   double obj_postsolved = origData->objectiveValue(postsolvedVars);
-  if( my_rank == 0)
-    std::cout << "Objective value after postsolve: " << obj_postsolved << std::endl;
+
+  MPI_Barrier(comm);
+  const double t_postsolve = MPI_Wtime();
+
+  if( my_rank == 0 )
+  {
+     std::cout << "---postsolve time (in sec.): " << t_postsolve - t0_postsolve << std::endl;
+     std::cout << "Objective value after postsolve: " << obj_postsolved << std::endl;
+  }
 
   /* compute residuals for postprocessed solution and check for feasibility */
   postsolvedResids->calcresids(origData, postsolvedVars);
