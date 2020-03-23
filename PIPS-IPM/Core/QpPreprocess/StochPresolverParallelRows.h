@@ -37,14 +37,14 @@ namespace rowlib
 
     struct rowWithEntries
     {
-       int id;
-       int offset_nA;
-       int lengthA;
-       int* colIndicesA;
-       double* norm_entriesA;
-       int lengthB;
-       int* colIndicesB;
-       double* norm_entriesB;
+       const int id;
+       const int offset_nA;
+       const int lengthA;
+       const int* colIndicesA;
+       const double* norm_entriesA;
+       const int lengthB;
+       const int* colIndicesB;
+       const double* norm_entriesB;
 
         rowWithEntries(int id, int offset, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
             : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
