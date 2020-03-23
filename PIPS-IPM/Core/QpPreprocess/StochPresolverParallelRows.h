@@ -46,7 +46,7 @@ namespace rowlib
        const int* colIndicesB;
        const double* norm_entriesB;
 
-        rowWithEntries(int id, int offset, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
+        rowWithEntries(int id, int offset, int lenA, const int* const colA, const double* const entA, int lenB, const int* const colB, const double* const entB)
             : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
               lengthB(lenB), colIndicesB(colB), norm_entriesB(entB) {}
     };
