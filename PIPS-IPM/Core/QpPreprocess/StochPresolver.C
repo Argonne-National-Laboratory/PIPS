@@ -90,8 +90,8 @@ Data* StochPresolver::presolve()
       //presolverSC.applyPresolving();
       presolverBS.applyPresolving();
       presolverColFix.applyPresolving();
-     /presolverSR.applyPresolving();
-     /presolverColFix.applyPresolving();
+      presolverSR.applyPresolving();
+      presolverColFix.applyPresolving();
    }
    // presData.getPresProb().writeToStreamDense(std::cout);
    // before the finalize call fix all empty rows and columns not yet fixed
