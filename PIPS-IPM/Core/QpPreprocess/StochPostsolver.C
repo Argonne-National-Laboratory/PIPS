@@ -674,76 +674,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case FIXED_EMPTY_COLUMN:
       {
-         /**
-          * recover primal value
-          * dual multiplies will be set to zero
-          * compute slack variables
-          * no special treatment for linking variables since all processes should fix them simultaneously and in the same order
-          *    -> assert is in place to check this
-          */
-         assert(first_index + 1 == next_first_index);
-         assert(first_float_val + 4 == next_first_float_val);
-         assert(first_int_val + 2 == next_first_int_val);
-
-         const INDEX& idx_col = indices.at(first_index);
-         assert(idx_col.isCol());
-
-         const int column = idx_col.getIndex();
-         const int node = idx_col.getNode();
-         const double value = float_values.at(first_float_val);
-         const double obj_coeff = float_values.at(first_float_val + 1);
-         const double lbx = float_values.at(first_float_val + 2);
-         const double ubx = float_values.at(first_float_val + 3);
-         const int ixlow = int_values.at(first_int_val);
-         const int ixupp = int_values.at(first_int_val + 1);
-         assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
-         assert(wasColumnRemoved(idx_col));
-
-         if(node == -1)
-            assert(PIPS_MPIisValueEqual(column, MPI_COMM_WORLD));
-
-         /* primal */
-         /* mark entry as set and set x value to fixation */
-         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
-         getSimpleVecFromColStochVec(x_vec, node)[column] = value;
-
-         if( ixlow == 1 )
-            assert(PIPSisLEFeas(lbx, value));
-         if( ixupp == 1 )
-            assert(PIPSisLEFeas(value, ubx));
-
-         /* dual */
-         getSimpleVecFromColStochVec(gamma_vec, node)[column] = 0.0;
-         getSimpleVecFromColStochVec(phi_vec, node)[column] = 0.0;
-
-         if(!PIPSisZero(obj_coeff))
-         {
-            if( PIPSisLT(obj_coeff, 0.0) )
-            {
-               assert( ixupp );
-               assert( PIPSisEQ(value, ubx) );
-               getSimpleVecFromColStochVec(phi_vec, node)[column] = obj_coeff;
-            }
-            else if( PIPSisLT(0.0, obj_coeff) )
-            {
-               assert( ixlow );
-               assert( PIPSisEQ(value, lbx) );
-               getSimpleVecFromColStochVec(gamma_vec, node)[column] = obj_coeff;
-            }
-         }
-
-         if( ixlow == 1 )
-            getSimpleVecFromColStochVec(v_vec, node)[column] = value - lbx;
-         else
-            getSimpleVecFromColStochVec(v_vec, node)[column] = 0.0;
-
-         if( ixupp == 1)
-            getSimpleVecFromColStochVec(w_vec, node)[column] = ubx - value;
-         else
-            getSimpleVecFromColStochVec(w_vec, node)[column] = 0.0;
-
-         assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(v_vec, node)[column] * getSimpleVecFromColStochVec(gamma_vec, node)[column]));
-         assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(w_vec, node)[column] * getSimpleVecFromColStochVec(phi_vec, node)[column]));
+         postsolve_success = postsolve_success && postsolveFixedEmptyColumn(stoch_original_sol, i);
          break;
       }
       case FIXED_COLUMN_SINGLETON_FROM_INEQUALITY:
@@ -2008,6 +1939,92 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
       gamma = reduced_costs;
 
    assert( PIPSisZeroFeas(reduced_costs - gamma + phi) );
+   return true;
+}
+
+/**
+ * recover primal value
+ * dual multiplies will be set to zero
+ * compute slack variables
+ * no special treatment for linking variables since all processes should fix them simultaneously and in the same order
+ *    -> assert is in place to check this
+ */
+bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const
+{
+   const int type = reductions.at(reduction_idx);
+   assert( type == FIXED_EMPTY_COLUMN );
+
+   const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+   const unsigned int first_index = start_idx_indices.at(reduction_idx);
+
+#ifndef NDEBUG
+   const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
+   const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
+   const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
+
+   assert(first_index + 1 == next_first_index);
+   assert(first_float_val + 4 == next_first_float_val);
+   assert(first_int_val + 2 == next_first_int_val);
+#endif
+
+   const INDEX& col = indices.at(first_index);
+   assert(col.isCol());
+   assert(wasColumnRemoved(col));
+
+   const double value = float_values.at(first_float_val);
+   const double obj_coeff = float_values.at(first_float_val + 1);
+   const double lbx = float_values.at(first_float_val + 2);
+   const double ubx = float_values.at(first_float_val + 3);
+   const int ixlow = int_values.at(first_int_val);
+   const int ixupp = int_values.at(first_int_val + 1);
+
+   if(col.isLinkingCol())
+      assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
+
+   /* primal */
+   /* mark entry as set and set x value to fixation */
+   getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
+   getSimpleVecFromColStochVec(original_vars.x, col) = value;
+
+   if( ixlow == 1 )
+      assert(PIPSisLEFeas(lbx, value));
+   if( ixupp == 1 )
+      assert(PIPSisLEFeas(value, ubx));
+
+   /* dual */
+   getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;
+   getSimpleVecFromColStochVec(original_vars.phi, col) = 0.0;
+
+   if(!PIPSisZero(obj_coeff))
+   {
+      if( PIPSisLT(obj_coeff, 0.0) )
+      {
+         assert( ixupp );
+         assert( PIPSisEQ(value, ubx) );
+         getSimpleVecFromColStochVec(original_vars.phi, col) = obj_coeff;
+      }
+      else if( PIPSisLT(0.0, obj_coeff) )
+      {
+         assert( ixlow );
+         assert( PIPSisEQ(value, lbx) );
+         getSimpleVecFromColStochVec(original_vars.gamma, col) = obj_coeff;
+      }
+   }
+
+   if( ixlow == 1 )
+      getSimpleVecFromColStochVec(original_vars.v, col) = value - lbx;
+   else
+      getSimpleVecFromColStochVec(original_vars.v, col)= 0.0;
+
+   if( ixupp == 1)
+      getSimpleVecFromColStochVec(original_vars.w, col) = ubx - value;
+   else
+      getSimpleVecFromColStochVec(original_vars.w, col) = 0.0;
+
+   assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(original_vars.v, col) * getSimpleVecFromColStochVec(original_vars.gamma, col)));
+   assert(PIPSisZeroFeas(getSimpleVecFromColStochVec(original_vars.w, col) * getSimpleVecFromColStochVec(original_vars.phi, col)));
+
    return true;
 }
 
