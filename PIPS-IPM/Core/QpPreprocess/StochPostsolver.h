@@ -148,6 +148,7 @@ private:
       bool postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx) const;
       bool postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const;
       bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, const sData& original_problem, int reduction_idx) const;
+      bool postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 

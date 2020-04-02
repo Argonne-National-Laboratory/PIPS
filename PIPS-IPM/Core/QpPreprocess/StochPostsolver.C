@@ -636,16 +636,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    /* post-solve the reductions in reverse order */
    for( int i = reductions.size() - 1; i >= 0; --i )
    {
-      const int type = reductions.at(i);
-      const unsigned int first_float_val = start_idx_float_values.at(i);
-      const unsigned int first_int_val = start_idx_int_values.at(i);
-      const unsigned int first_index = start_idx_indices.at(i);
-
-#ifndef NDEBUG
-      const unsigned int next_first_float_val = start_idx_float_values.at(i + 1);
-      const unsigned int next_first_int_val = start_idx_int_values.at(i + 1);
-      const unsigned int next_first_index = start_idx_indices.at(i + 1);
-#endif
+      const ReductionType type = reductions.at(i);
 
       switch( type )
       {
@@ -706,97 +697,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case PARALLEL_ROWS_BOUNDS_TIGHTENED:
       {
-         assert(first_index + 2 == next_first_index);
-         assert(first_float_val + 5 == next_first_float_val);
-         assert(first_int_val == next_first_int_val);
-
-         const INDEX& row1 = indices.at(first_index);
-         const INDEX& row2 = indices.at(first_index + 1);
-
-         assert(row1.isRow());
-         assert(row2.isRow());
-         assert(row1.inInEqSys());
-         assert(row2.inInEqSys());
-
-         const double clow_old = float_values.at(first_float_val);
-         const double cupp_old = float_values.at(first_float_val + 1);
-         const double clow_new = float_values.at(first_float_val + 2);
-         const double cupp_new = float_values.at(first_float_val + 3);
-         const double factor = float_values.at(first_float_val + 4);
-
-         assert (!PIPSisZero(factor) );
-         assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row1) == 1 );
-         assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row2) == 1 );
-
-         /* recompute duals and slack of both rows - if one bound was tight and thus the dual non-zero we shift it to the row originally implying the bound */
-         double& z_row1 = getSimpleVecFromRowStochVec(z_vec, row1);
-         double& lambda_row1 = getSimpleVecFromRowStochVec(lambda_vec, row1);
-         double& pi_row1 = getSimpleVecFromRowStochVec(pi_vec, row1);
-
-         double& t_row1 = getSimpleVecFromRowStochVec(t_vec, row1);
-         double& u_row1 = getSimpleVecFromRowStochVec(u_vec, row1);
-
-         double& z_row2 = getSimpleVecFromRowStochVec(z_vec, row2);
-         double& lambda_row2 = getSimpleVecFromRowStochVec(lambda_vec, row2);
-         double& pi_row2 = getSimpleVecFromRowStochVec(pi_vec, row2);
-
-#ifndef NDEBUG
-         const double& t_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(u_vec, row2) : getSimpleVecFromRowStochVec(t_vec, row2);
-         const double& u_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(t_vec, row2) : getSimpleVecFromRowStochVec(u_vec, row2);
-#endif
-         assert( PIPSisZero(z_row2) );
-         assert( PIPSisZero(pi_row2) );
-         assert( PIPSisZero(lambda_row2) );
-
-         const bool clow_impied_by_row2 = (clow_old != clow_new);
-         const bool cupp_impied_by_row2 = (cupp_old != cupp_new);
-
-         if( PIPSisLT(factor, 0.0) )
-            std::swap(lambda_row2, pi_row2);
-
-         /* if parallel row is tight on a bounds implied by another row we have to move the multipliers to the implying row */
-         if( clow_impied_by_row2 && PIPSisZero(t_row1) )
-         {
-            assert( PIPSisLT(clow_old, clow_new) );
-            assert( PIPSisZero(t_row2) );
-
-            /* adjust slacks */
-            if( clow_old == INF_NEG_PRES )
-               t_row1 = 0.0;
-            else
-               t_row1 += clow_new - clow_old;
-
-            /* clow is no longer tight on row1 but now on row2 - shift row1's multiplier to row2 */
-            z_row1 -= lambda_row1;
-            z_row2 += lambda_row1 * factor;
-
-            lambda_row2 = lambda_row1 * factor;
-            lambda_row1 = 0;
-
-            assert( PIPSisZeroFeas(t_row2 * lambda_row2) );
-         }
-
-         if( cupp_impied_by_row2 && PIPSisZero(u_row1) )
-         {
-            assert( PIPSisLT(cupp_new, cupp_old) );
-            assert( PIPSisZero(u_row2) );
-
-            /* adjust slacks */
-            if( cupp_old == INF_POS_PRES )
-               u_row1 = 0.0;
-            else
-               u_row1 += cupp_old - cupp_new;
-
-            /* cupp is no longer tight on row1 but now on row2 - shift row1's multiplier to row2 */
-            z_row1 += pi_row1;
-            z_row2 -= pi_row1 * factor;
-
-            pi_row2 = pi_row1 * factor;
-            pi_row1 = 0.0;
-
-            assert( PIPSisZeroFeas(u_row2 * pi_row2) );
-         }
-
+         postsolve_success = postsolve_success && postsolveParallelRowsBoundsTightened(stoch_original_sol, i);
          break;
       }
       default:
@@ -2106,6 +2007,117 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
 
    getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;
    getSimpleVecFromColStochVec(original_vars.phi, col) = 0.0;
+
+   return true;
+}
+
+bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const
+{
+   const int type = reductions.at(reduction_idx);
+   assert( type == FREE_COLUMN_SINGLETON_INEQUALITY_ROW );
+
+   const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+   const unsigned int first_index = start_idx_indices.at(reduction_idx);
+
+#ifndef NDEBUG
+   const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
+   const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
+   const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
+
+   assert(first_index + 2 == next_first_index);
+   assert(first_float_val + 5 == next_first_float_val);
+   assert(first_int_val == next_first_int_val);
+#endif
+
+   const INDEX& row1 = indices.at(first_index);
+   const INDEX& row2 = indices.at(first_index + 1);
+
+   assert(row1.isRow());
+   assert(row2.isRow());
+   assert(row1.inInEqSys());
+   assert(row2.inInEqSys());
+
+   const double clow_old = float_values.at(first_float_val);
+   const double cupp_old = float_values.at(first_float_val + 1);
+   const double clow_new = float_values.at(first_float_val + 2);
+   const double cupp_new = float_values.at(first_float_val + 3);
+   const double factor = float_values.at(first_float_val + 4);
+
+   assert (!PIPSisZero(factor) );
+   assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row1) == 1 );
+   assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row2) == 1 );
+
+   /* recompute duals and slack of both rows - if one bound was tight and thus the dual non-zero we shift it to the row originally implying the bound */
+   double& z_row1 = getSimpleVecFromRowStochVec(original_vars.z, row1);
+   double& lambda_row1 = getSimpleVecFromRowStochVec(original_vars.lambda, row1);
+   double& pi_row1 = getSimpleVecFromRowStochVec(original_vars.pi, row1);
+
+   double& t_row1 = getSimpleVecFromRowStochVec(original_vars.t, row1);
+   double& u_row1 = getSimpleVecFromRowStochVec(original_vars.u, row1);
+
+   double& z_row2 = getSimpleVecFromRowStochVec(original_vars.z, row2);
+   double& lambda_row2 = getSimpleVecFromRowStochVec(original_vars.lambda, row2);
+   double& pi_row2 = getSimpleVecFromRowStochVec(original_vars.pi, row2);
+
+#ifndef NDEBUG
+   const double& t_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(original_vars.u, row2) :
+         getSimpleVecFromRowStochVec(original_vars.t, row2);
+   const double& u_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(original_vars.t, row2) :
+         getSimpleVecFromRowStochVec(original_vars.u, row2);
+#endif
+   assert( PIPSisZero(z_row2) );
+   assert( PIPSisZero(pi_row2) );
+   assert( PIPSisZero(lambda_row2) );
+
+   const bool clow_impied_by_row2 = (clow_old != clow_new);
+   const bool cupp_impied_by_row2 = (cupp_old != cupp_new);
+
+   if( PIPSisLT(factor, 0.0) )
+      std::swap(lambda_row2, pi_row2);
+
+   /* if parallel row is tight on a bounds implied by another row we have to move the multipliers to the implying row */
+   if( clow_impied_by_row2 && PIPSisZero(t_row1) )
+   {
+      assert( PIPSisLT(clow_old, clow_new) );
+      assert( PIPSisZero(t_row2) );
+
+      /* adjust slacks */
+      if( clow_old == INF_NEG_PRES )
+         t_row1 = 0.0;
+      else
+         t_row1 += clow_new - clow_old;
+
+      /* clow is no longer tight on row1 but now on row2 - shift row1's multiplier to row2 */
+      z_row1 -= lambda_row1;
+      z_row2 += lambda_row1 * factor;
+
+      lambda_row2 = lambda_row1 * factor;
+      lambda_row1 = 0;
+
+      assert( PIPSisZeroFeas(t_row2 * lambda_row2) );
+   }
+
+   if( cupp_impied_by_row2 && PIPSisZero(u_row1) )
+   {
+      assert( PIPSisLT(cupp_new, cupp_old) );
+      assert( PIPSisZero(u_row2) );
+
+      /* adjust slacks */
+      if( cupp_old == INF_POS_PRES )
+         u_row1 = 0.0;
+      else
+         u_row1 += cupp_old - cupp_new;
+
+      /* cupp is no longer tight on row1 but now on row2 - shift row1's multiplier to row2 */
+      z_row1 += pi_row1;
+      z_row2 -= pi_row1 * factor;
+
+      pi_row2 = pi_row1 * factor;
+      pi_row1 = 0.0;
+
+      assert( PIPSisZeroFeas(u_row2 * pi_row2) );
+   }
 
    return true;
 }
