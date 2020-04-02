@@ -67,7 +67,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    {
       /* allreduce local singleton columns and coeffs */
 
-      // TODO: change this - it should be the one that provides most numerical stability..
+      // TODO: change this - it should be the process that provides most numerical stability..
       /* allreduce the procs that found a local singleton column in a linking row - the lowest ranking one will get to remove the column */
       PIPS_MPImaxArrayInPlace(local_linking_column_for_row_in_proc, MPI_COMM_WORLD);
 
@@ -158,7 +158,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    bool lb_implied_free = false;
    bool ub_implied_free = false;
 
-   // todo : we should not do anything if the coefficient of the column we are looking at is too small probably
+   // TODO : we should probably not do anything if the coefficient of the column we are looking at is too small
    checkColImpliedFree(col, row, lb_implied_free, ub_implied_free);
    bool implied_free = lb_implied_free && ub_implied_free;
 

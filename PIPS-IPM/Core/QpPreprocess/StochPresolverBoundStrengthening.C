@@ -37,8 +37,6 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   // TODO : proper max_rounds value - best would be something dynamic
-   int max_iter = 1;
    int iter = 0;
    bool tightened;
 
@@ -67,7 +65,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
       }
    /* update bounds on all processors */
    }
-   while( tightened && iter < max_iter );
+   while( tightened && iter < PRESOLVE_BOUND_STR_MAX_ITER );
 
    presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyLinkingRowActivities();
@@ -118,10 +116,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    assert( -1 <= node && node < nChildren );
    updatePointersForCurrentNode(node, system_type);
 
-   // todo : if bound is too big we do not accept it
-   // todo : if current entry is too small we assume that dividing by it is not numerically stable and skip it
-   const double numeric_limit_entry = 1e-7;
-   const double numeric_limit_bounds = 1e12;
    bool tightened = false;
 
    const SimpleVector& xlow = (node == -1 || block_type == A_MAT) ? *currxlowParent : *currxlowChild;
@@ -181,7 +175,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          const double a_ik = mat->getMat(j);
 
          assert( !PIPSisZero(a_ik) );
-         if( PIPSisLT(std::fabs(a_ik), numeric_limit_entry) )
+         if( PIPSisLT(std::fabs(a_ik), PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY) )
             continue;
 
          /* row activities without the entry currently in focus */
@@ -253,12 +247,13 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             }
          }
 
-         if( std::fabs(ubx_new) > numeric_limit_bounds )
+         if( std::fabs(ubx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
             ubx_new = INF_POS_PRES;
-         if( std::fabs(lbx_new) > numeric_limit_bounds )
+         if( std::fabs(lbx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
             lbx_new = INF_NEG_PRES;
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
+
 //         bool row_propagated = presData.rowPropagatedBounds( INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
          bool row_propagated = presData.rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
 

@@ -5,7 +5,7 @@
  *      Author: bzfuslus
  */
 
-// todo: should we ever decide to switch to a newer c++ standard - this can be optimized
+// TODO : should we ever decide to switch to a newer c++ standard - there is stuff that can be optimized
 
 //#define PIPS_DEBUG
 #include "pipsport.h"
@@ -66,7 +66,6 @@ StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, c
 
 StochPresolverParallelRows::~StochPresolverParallelRows()
 {
- // todo : check what this line does
    row_support_hashtable = boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> >();
    row_coefficients_hashtable  = boost::unordered_set<rowlib::rowWithEntries, boost::hash<rowlib::rowWithEntries> >();
 }
@@ -96,7 +95,6 @@ void StochPresolverParallelRows::applyPresolving()
    /// since we assume that all linking rows actually are pure linking rows we need not consider them here
    for(int node = 0; node < nChildren; ++node)
    {
-      // TODO: remove after node == -1 works properly
       if( !presData.nodeIsDummy(node) )
       {
          /// copy and normalize A_i, B_i, C_i, D_i and b_i, clow_i, cupp_i
@@ -184,7 +182,7 @@ void StochPresolverParallelRows::applyPresolving()
 
    deleteNormalizedPointers(-1);
 
-   // todo : not necessary?
+   // TODO: some not necessary?
    presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceAndApplyNnzChanges();
@@ -221,7 +219,7 @@ void StochPresolverParallelRows::applyPresolving()
  * Sets the pointers to currNnzRow, currNnzRowC, currNnzColChild, currRedColParent.
  * Sets mA and nA correctly.
  */
-// todo does not set Bl mat - maybe not needed
+// TODO : does not set Bl mat - needed when considering linking rows
 void StochPresolverParallelRows::setNormalizedPointersMatrices(int node)
 {
    assert(-1 <= node && node < nChildren);
@@ -285,7 +283,7 @@ void StochPresolverParallelRows::setNormalizedPointersMatrixBounds(int node)
    norm_iclow = dynamic_cast<SimpleVector*>(getSimpleVecFromRowStochVec(*presData.getPresProb().iclow, node, false).cloneFull());
 }
 
-// TODO : does not yet set any pointers for linking constraints of the other system - necessary?
+// TODO : does not yet set any pointers for linking constraints of the other system - necessary when trying to process parallel linking constraints
 /* sets an extended set of pointers for the current node*/
 void StochPresolverParallelRows::updateExtendedPointersForCurrentNode(int node)
 {
@@ -649,7 +647,7 @@ void StochPresolverParallelRows::removeEntry(int col, SimpleVectorBase<int>& row
 }
 
 
-// todo there seems to be no numerical threshold for the normalization below .. this should be fixed - rows with fairly different coefficients could be regarded equal
+// TODO : there seems to be no numerical threshold for the normalization below .. this should be fixed - rows with fairly different coefficients could be regarded equal
 /// cupp can be either the rhs for the equality system or upper bounds for inequalities
 void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
       SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
@@ -760,7 +758,7 @@ void StochPresolverParallelRows::normalizeBlocksRowwise( SystemType system_type,
  * Ablock and Bblock are supposed to be the two matrix blocks of a child.
  * If at root, Bblock should be nullptr.
  */
-// todo : I think this is wrong or at least not complete - in theory we should sort the rows first (according to the colindices)
+// TODO : I think this is wrong or at least not complete - in theory we should sort the rows first (according to the colindices)
 void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
       const SparseStorageDynamic* a_mat, const SparseStorageDynamic* b_mat, SystemType system_type, const SimpleVectorBase<int>* nnz_row_norm, const SimpleVectorBase<int>* nnz_row_orig )
 {
@@ -774,7 +772,7 @@ void StochPresolverParallelRows::insertRowsIntoHashtable( boost::unordered_set<r
       
    for(int row = 0; row < b_mat->getM(); row++)
    {
-      // ignore rows containing more than one singleton entry: // TODO: why? // TODO: this should not be an issue!
+      // ignore rows containing more than one singleton entry: // TODO: why? // TODO: this should not be an issue in my opinion
       if( system_type == EQUALITY_SYSTEM && (*rowContainsSingletonVariableA)[row] == -2 )
          continue;
       if( system_type == INEQUALITY_SYSTEM && (*rowContainsSingletonVariableC)[row] == -2 )
@@ -843,7 +841,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
             continue;
 
          // either pairwise comparison OR lexicographical sorting and then compare only neighbors.
-         // Here: pairwise comparison: // todo make lexicographical
+         // Here: pairwise comparison: // TODO : make order lexicographical
          boost::unordered_set<rowlib::rowWithEntries>::local_iterator row_two_iter = row_one_iter;
          while ( ++row_two_iter != row_coefficients_hashtable.end(i) )
          {
@@ -916,14 +914,14 @@ bool StochPresolverParallelRows::checkRowsAreParallel( const rowlib::rowWithEntr
    {
       if( row1.colIndicesA[i] != row2.colIndicesA[i] )
          return false;
-      if( !PIPSisEQ(row1.norm_entriesA[i], row2.norm_entriesA[i], tol_compare_double) )
+      if( !PIPSisEQ(row1.norm_entriesA[i], row2.norm_entriesA[i], PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES) )
          return false;
    }
    for( int i = 0; i < row1.lengthB; i++)
    {
       if( row1.colIndicesB[i] != row2.colIndicesB[i] )
          return false;
-      if( !PIPSisEQ(row1.norm_entriesB[i], row2.norm_entriesB[i], tol_compare_double) )
+      if( !PIPSisEQ(row1.norm_entriesB[i], row2.norm_entriesB[i], PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES) )
          return false;
    }
    return true;

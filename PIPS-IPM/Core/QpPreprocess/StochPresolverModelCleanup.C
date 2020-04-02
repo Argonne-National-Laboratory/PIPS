@@ -311,7 +311,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          const double mat_entry = storage->getMat(col_index);
 
          /* remove all small entries */
-         if( fabs( mat_entry ) < tol_matrix_entry )
+         if( fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY )
          {
             const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
             const INDEX col_INDEX(COL, node_col, col);
@@ -325,7 +325,8 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          /* remove entries where their corresponding variables have valid lower and upper bounds, that overall do not have a real influence though */
          else if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
          {
-            if( (fabs( mat_entry ) < tolerance1 && fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < tolerance2 * feastol ))
+            if( (fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT &&
+                  fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST * feastol ))
             {
                const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
                const INDEX col_INDEX(COL, node_col, col);
@@ -337,9 +338,9 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
                ++n_elims;
             }
          }
-         else if( false ) //todo if not linking constraints
+         else if( false ) //TODO if not linking constraints
          {
-            // todo third criterion? for linking constraints: call extra function to know whether we have linking cons
+            // TODO third criterion? for linking constraints: call extra function to know whether we have linking cons
             // that link only two blocks (not so urgent for linking)
             /* if valid lower and upper bounds */
             if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
