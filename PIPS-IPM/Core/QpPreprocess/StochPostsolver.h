@@ -145,6 +145,7 @@ private:
       bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx) const;
       bool postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveSingletonInequalityRow(sVars& original_vars, int reduction_idx) const;
+      bool postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 

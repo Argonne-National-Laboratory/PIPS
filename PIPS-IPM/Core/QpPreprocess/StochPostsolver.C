@@ -694,123 +694,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case FREE_COLUMN_SINGLETON_EQUALITY:
       {
-         assert(first_index + 2 == next_first_index);
-         assert(first_float_val + 5 == next_first_float_val);
-         assert(first_int_val + 1 == next_first_int_val);
-
-         const INDEX& col = indices.at(first_index);
-         const INDEX& row = indices.at(first_index + 1);
-
-         assert(row.isRow());
-
-         if( !row.isLinkingRow() )
-            assert( col.isCol() );
-         if( !col.isCol() )
-            assert( row.isLinkingRow() );
-
-         const double rhs = float_values.at(first_float_val);
-         const double obj_coeff = float_values.at(first_float_val + 1);
-         const double col_coeff = float_values.at(first_float_val + 2);
-         const double xlow = float_values.at(first_float_val + 3);
-         const double xupp = float_values.at(first_float_val + 4);
-
-         const int stored_row_idx = int_values.at(first_int_val);
-         const INDEX stored_row(ROW, row.getNode(), stored_row_idx, row.getLinking(), row.getSystemType());
-
-         assert( !PIPSisZero(col_coeff) );
-         assert( wasRowRemoved(row) );
-
-         /* assert that linking columns and rows are done by all processes simultaneously */
-         if( !col.isEmpty() )
-            if( col.isLinkingCol() && row.getNode() == -1 )
-               assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
-
-         if( row.isLinkingRow() )
-            assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
-
-         /* reintroduce row on all processes */
-         if( row.inEqSys() )
-            getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = 1;
-         else
-            getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
-
-         const double dual_value_row = obj_coeff / col_coeff;
-         /* set duals of row depending on equality/inequality row */
-         if( row.inEqSys() )
-         {
-            getSimpleVecFromRowStochVec(y_vec, row) = dual_value_row;
-            assert( PIPSisZero(obj_coeff - getSimpleVecFromRowStochVec(y_vec, row) * col_coeff) );
-         }
-         else
-         {
-            /* cupp == clow so slacks must be zero */
-            getSimpleVecFromRowStochVec(s_vec, row) = 0.0;
-            getSimpleVecFromRowStochVec(t_vec, row) = 0.0;
-            getSimpleVecFromRowStochVec(u_vec, row) = 0.0;
-
-            /* set dual */
-            getSimpleVecFromRowStochVec(z_vec, row) = dual_value_row;
-            if( PIPSisLT(0.0, dual_value_row) )
-               getSimpleVecFromRowStochVec(pi_vec, row) = dual_value_row;
-            else
-               getSimpleVecFromRowStochVec(lambda_vec, row) = -dual_value_row;
-         }
-
-         /* synchronize value of row for x_val */
-         double value_row = 0.0;
-
-         if( row.isLinkingRow() )
-         {
-            assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
-
-            if(my_rank == 0)
-               value_row = row_storage.multRowTimesVec( stored_row, x_vec );
-            else
-               value_row = row_storage.multLinkingRowTimesVecWithoutBl0( stored_row_idx, x_vec);
-            PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
-         }
-         else
-            value_row = row_storage.multRowTimesVec(stored_row, x_vec);
-
-         assert(std::abs(value_row) != INF_POS_PRES);
-
-         /* reintroduce the removed column on process owning column */
-         if( col.isCol() )
-         {
-            double& x_val = getSimpleVecFromColStochVec(x_vec, col);
-            assert(PIPSisZero(x_val));
-
-            /* mark column as set */
-            getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
-
-            /* recover primal value */
-            x_val = (rhs - value_row) / col_coeff;
-            assert( PIPSisZero(x_val * col_coeff + value_row - rhs) );
-
-            /* compute slacks and set duals for bounds to zero */
-            double& slack_lower = getSimpleVecFromColStochVec(v_vec, col);
-            double& slack_upper = getSimpleVecFromColStochVec(w_vec, col);
-
-            if( xlow == INF_NEG_PRES )
-               slack_lower = 0.0;
-            else
-            {
-               assert( PIPSisLE(xlow, x_val) );
-               slack_lower = xlow - x_val;
-            }
-
-            if( xupp == INF_POS_PRES )
-               slack_upper = 0.0;
-            else
-            {
-               assert( PIPSisLE(x_val, xupp) );
-               slack_upper = xupp - x_val;
-            }
-
-            getSimpleVecFromColStochVec(gamma_vec, col) = 0.0;
-            getSimpleVecFromColStochVec(phi_vec, col) = 0.0;
-         }
-
+         postsolve_success = postsolve_success && postsolveFreeColumnSingletonEquality(stoch_original_sol, i);
          break;
       }
       case NEARLY_PARALLEL_ROW_SUBSTITUTION:
@@ -2069,6 +1953,140 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
       double diff_dual_row = error_in_reduced_costs / coeff;
       dual_singelton_row += diff_dual_row;
       assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
+   }
+   return true;
+}
+
+bool StochPostsolver::postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx) const
+{
+   const int type = reductions.at(reduction_idx);
+   assert( type == FREE_COLUMN_SINGLETON_EQUALITY );
+
+   const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+   const unsigned int first_index = start_idx_indices.at(reduction_idx);
+
+#ifndef NDEBUG
+   const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
+   const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
+   const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
+
+   assert(first_index + 2 == next_first_index);
+   assert(first_float_val + 5 == next_first_float_val);
+   assert(first_int_val + 1 == next_first_int_val);
+#endif
+
+   const INDEX& col = indices.at(first_index);
+   const INDEX& row = indices.at(first_index + 1);
+
+   assert(row.isRow());
+
+   if( !row.isLinkingRow() )
+      assert( col.isCol() );
+   if( !col.isCol() )
+      assert( row.isLinkingRow() );
+
+   const double rhs = float_values.at(first_float_val);
+   const double obj_coeff = float_values.at(first_float_val + 1);
+   const double col_coeff = float_values.at(first_float_val + 2);
+   const double xlow = float_values.at(first_float_val + 3);
+   const double xupp = float_values.at(first_float_val + 4);
+
+   const int stored_row_idx = int_values.at(first_int_val);
+   const INDEX stored_row(ROW, row.getNode(), stored_row_idx, row.getLinking(), row.getSystemType());
+
+   assert( !PIPSisZero(col_coeff) );
+   assert( wasRowRemoved(row) );
+
+   /* assert that linking columns and rows are done by all processes simultaneously */
+   if( !col.isEmpty() )
+      if( col.isLinkingCol() && row.getNode() == -1 )
+         assert(PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD));
+
+   if( row.isLinkingRow() )
+      assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
+
+   /* reintroduce row on all processes */
+   if( row.inEqSys() )
+      getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = 1;
+   else
+      getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
+
+   const double dual_value_row = obj_coeff / col_coeff;
+   /* set duals of row depending on equality/inequality row */
+   if( row.inEqSys() )
+   {
+      getSimpleVecFromRowStochVec(original_vars.y, row) = dual_value_row;
+      assert( PIPSisZero(obj_coeff - getSimpleVecFromRowStochVec(original_vars.y, row) * col_coeff) );
+   }
+   else
+   {
+      /* cupp == clow so slacks must be zero */
+      getSimpleVecFromRowStochVec(original_vars.s, row) = 0.0;
+      getSimpleVecFromRowStochVec(original_vars.t, row) = 0.0;
+      getSimpleVecFromRowStochVec(original_vars.u, row) = 0.0;
+
+      /* set dual */
+      getSimpleVecFromRowStochVec(original_vars.z, row) = dual_value_row;
+      if( PIPSisLT(0.0, dual_value_row) )
+         getSimpleVecFromRowStochVec(original_vars.pi, row) = dual_value_row;
+      else
+         getSimpleVecFromRowStochVec(original_vars.lambda, row) = -dual_value_row;
+   }
+
+   /* synchronize value of row for x_val */
+   double value_row = 0.0;
+
+   if( row.isLinkingRow() )
+   {
+      assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
+
+      if(my_rank == 0)
+         value_row = row_storage.multRowTimesVec( stored_row, dynamic_cast<const StochVector&>(*original_vars.x));
+      else
+         value_row = row_storage.multLinkingRowTimesVecWithoutBl0( stored_row_idx, dynamic_cast<const StochVector&>(*original_vars.x));
+      PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
+   }
+   else
+      value_row = row_storage.multRowTimesVec(stored_row, dynamic_cast<const StochVector&>(*original_vars.x));
+
+   assert(std::abs(value_row) != INF_POS_PRES);
+
+   /* reintroduce the removed column on process owning column */
+   if( col.isCol() )
+   {
+      double& x_val = getSimpleVecFromColStochVec(original_vars.x, col);
+      assert(PIPSisZero(x_val));
+
+      /* mark column as set */
+      getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
+
+      /* recover primal value */
+      x_val = (rhs - value_row) / col_coeff;
+      assert( PIPSisZero(x_val * col_coeff + value_row - rhs) );
+
+      /* compute slacks and set duals for bounds to zero */
+      double& slack_lower = getSimpleVecFromColStochVec(original_vars.v, col);
+      double& slack_upper = getSimpleVecFromColStochVec(original_vars.w, col);
+
+      if( xlow == INF_NEG_PRES )
+         slack_lower = 0.0;
+      else
+      {
+         assert( PIPSisLE(xlow, x_val) );
+         slack_lower = xlow - x_val;
+      }
+
+      if( xupp == INF_POS_PRES )
+         slack_upper = 0.0;
+      else
+      {
+         assert( PIPSisLE(x_val, xupp) );
+         slack_upper = xupp - x_val;
+      }
+
+      getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;
+      getSimpleVecFromColStochVec(original_vars.phi, col) = 0.0;
    }
    return true;
 }
