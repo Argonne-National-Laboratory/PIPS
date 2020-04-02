@@ -669,62 +669,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case FIXED_COLUMN:
       {
-         assert(first_index + 1 == next_first_index);
-         assert(first_float_val + 2 == next_first_float_val);
-         assert(first_int_val + 1 == next_first_int_val);
-
-         const INDEX& idx_col = indices.at(first_index);
-         assert(idx_col.isCol());
-
-         const int column = idx_col.getIndex();
-         const int node = idx_col.getNode();
-         const int index_stored_col = int_values.at(first_int_val);
-         const double value = float_values.at(first_float_val);
-         const double obj_coeff = float_values.at(first_float_val + 1);
-
-         assert(-1 <= node && node < static_cast<int>(x_vec.children.size()));
-         assert(wasColumnRemoved(idx_col));
-
-         /* mark entry as set and set x value to fixation */
-         getSimpleVecFromColStochVec(*padding_origcol, node)[column] = 1;
-
-         /* set x value */
-         getSimpleVecFromColStochVec(x_vec, node)[column] = value;
-
-         /* set slacks for x bounds to zero (bounds were tight) */
-         getSimpleVecFromColStochVec(v_vec, node)[column] = 0.0;
-         getSimpleVecFromColStochVec(w_vec, node)[column] = 0.0;
-
-         /* set duals for bounds to satisfy reduced costs of reintroduced column times x */
-         double col_times_duals = 0.0;
-         if(node == -1)
-         {
-            /* we need to synchronize the column times duals in this case */
-            if(my_rank == 0)
-               col_times_duals = col_storage.multColTimesVec(INDEX(COL, node, index_stored_col), y_vec, z_vec);
-            else
-               col_times_duals = col_storage.multColTimesVecWithoutRootNode(INDEX(COL, node, index_stored_col), y_vec, z_vec);
-
-            PIPS_MPIgetSumInPlace(col_times_duals, MPI_COMM_WORLD);
-         }
-         else
-         {
-            col_times_duals = col_storage.multColTimesVec( INDEX(COL, node, index_stored_col), y_vec, z_vec);
-         }
-         const double reduced_costs = obj_coeff - col_times_duals;
-
-         /* set duals of bounds of x */
-         double& gamma = getSimpleVecFromColStochVec(gamma_vec, node)[column];
-         double& phi = getSimpleVecFromColStochVec(phi_vec, node)[column];
-
-         gamma = 0.0;
-         phi = 0.0;
-         if( PIPSisLT(reduced_costs, 0.0) )
-            phi = -reduced_costs;
-         else if( PIPSisLT(0.0, reduced_costs) )
-            gamma = reduced_costs;
-
-         assert( PIPSisZeroFeas(reduced_costs - gamma + phi) );
+         postsolve_success = postsolve_success && postsolveFixedColumn(stoch_original_sol, i);
          break;
       }
       case FIXED_EMPTY_COLUMN:
@@ -1858,10 +1803,8 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    const int index_stored_row = int_values[first_int_val + 2];
    const INDEX stored_row(ROW, row.getNode(), index_stored_row, row.getLinking(), EQUALITY_SYSTEM);
 
-
    const double old_bound = float_values[first_float_val];
    const double new_bound = float_values[first_float_val + 1];
-
 
    const double curr_x = getSimpleVecFromColStochVec(original_vars.x, col);
 
@@ -1989,6 +1932,82 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
          }
       }
    }
+   return true;
+}
+
+bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_idx) const
+{
+   const int type = reductions.at(reduction_idx);
+   assert( type == FIXED_COLUMN );
+
+   const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+   const unsigned int first_index = start_idx_indices.at(reduction_idx);
+
+#ifndef NDEBUG
+   const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
+   const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
+   const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
+
+   assert(first_index + 1 == next_first_index);
+   assert(first_float_val + 2 == next_first_float_val);
+   assert(first_int_val + 1 == next_first_int_val);
+#endif
+
+   const INDEX& col = indices.at(first_index);
+   assert(col.isCol());
+
+   const int index_stored_col = int_values.at(first_int_val);
+   const INDEX stored_col(COL, col.getNode(), index_stored_col);
+
+   const double value = float_values.at(first_float_val);
+   const double obj_coeff = float_values.at(first_float_val + 1);
+
+   assert(wasColumnRemoved(col));
+
+   /* mark entry as set and set x value to fixation */
+   getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
+
+   /* set x value */
+   getSimpleVecFromColStochVec(original_vars.x, col) = value;
+
+   /* set slacks for x bounds to zero (bounds were tight) */
+   getSimpleVecFromColStochVec(original_vars.v, col) = 0.0;
+   getSimpleVecFromColStochVec(original_vars.w, col) = 0.0;
+
+   /* set duals for bounds to satisfy reduced costs of reintroduced column times x */
+   double col_times_duals = 0.0;
+   if( col.isLinkingCol() )
+   {
+      /* we need to synchronize the column times duals in this case */
+      if(my_rank == 0)
+         col_times_duals = col_storage.multColTimesVec(stored_col, dynamic_cast<const StochVector&>(*original_vars.y),
+               dynamic_cast<const StochVector&>(*original_vars.z));
+      else
+         col_times_duals = col_storage.multColTimesVecWithoutRootNode(stored_col, dynamic_cast<const StochVector&>(*original_vars.y),
+               dynamic_cast<const StochVector&>(*original_vars.z));
+
+      PIPS_MPIgetSumInPlace(col_times_duals, MPI_COMM_WORLD);
+   }
+   else
+   {
+      col_times_duals = col_storage.multColTimesVec( stored_col, dynamic_cast<const StochVector&>(*original_vars.y),
+            dynamic_cast<const StochVector&>(*original_vars.z));
+   }
+   const double reduced_costs = obj_coeff - col_times_duals;
+
+   /* set duals of bounds of x */
+   double& gamma = getSimpleVecFromColStochVec(original_vars.gamma, col);
+   double& phi = getSimpleVecFromColStochVec(original_vars.phi, col);
+
+   gamma = 0.0;
+   phi = 0.0;
+   if( PIPSisLT(reduced_costs, 0.0) )
+      phi = -reduced_costs;
+   else if( PIPSisLT(0.0, reduced_costs) )
+      gamma = reduced_costs;
+
+   assert( PIPSisZeroFeas(reduced_costs - gamma + phi) );
    return true;
 }
 
