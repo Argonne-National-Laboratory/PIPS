@@ -704,224 +704,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED:
       {
-         /* col2 was substituted by col1 via col2 = t * col1 + d */
-         assert(first_index + 4 == next_first_index);
-         assert(first_float_val + 12 == next_first_float_val);
-         assert(first_int_val == next_first_int_val);
-
-         /* dual postsolve implied bounds */
-         const INDEX& row1 = indices.at(first_index);
-         const INDEX& row2 = indices.at(first_index + 1);
-         const INDEX& col1 = indices.at(first_index + 2);
-         const INDEX& col2 = indices.at(first_index + 3);
-
-         assert( row1.isRow() );
-         assert( row2.isRow() );
-         assert( col1.isCol() );
-         assert( col2.isCol() || col2.isEmpty() );
-
-         if( col2.isCol() )
-            assert( row1.inEqSys() && row2.inEqSys() );
-
-         const double xlow_col1 = float_values.at(first_float_val);
-         const double xupp_col1 = float_values.at(first_float_val + 1);
-         const double xlow_col2 = float_values.at(first_float_val + 2);
-         const double xupp_col2 = float_values.at(first_float_val + 3);
-
-         const double coeff_col1 = float_values.at(first_float_val + 4);
-         const double coeff_col2 = float_values.at(first_float_val + 5);
-
-         const double scalar = float_values.at(first_float_val + 6);
-         const double translation = float_values.at(first_float_val + 7);
-         const double parallel_factor = float_values.at(first_float_val + 8);
-
-         const double rhs = float_values.at(first_float_val + 9);
-         const double clow = float_values.at(first_float_val + 10);
-         const double cupp = float_values.at(first_float_val + 11);
-
-         assert( !PIPSisZero(scalar) );
-
-         const double val_col1 = getSimpleVecFromColStochVec(x_vec, col1);
-
-         /* if the variable bound of col1 was actually implied via col2 we have to shift it's dual multipliers over via also adjusting the dual of row1 */
-         // TODO : reactivate these once scaled termination criteria exist - found bug elsewhere - might be correct and maybe can be reactivated
-//         assert( PIPSisRelLEFeas( xlow_col1, val_col1 ) );
-//         assert( PIPSisRelLEFeas( val_col1, xupp_col1 ) );
-
-         double xlow_implied = INF_NEG_PRES;
-         double xupp_implied = INF_POS_PRES;
-
-         /* two nearly parallel equality rows */
-         if( col2.isCol() )
-         {
-            assert( xlow_col2 != INF_NEG_PRES || xupp_col2 != INF_POS_PRES );
-
-            if( PIPSisLT(0.0, scalar) )
-            {
-               if( xlow_col2 != INF_NEG_PRES )
-                  xlow_implied = std::max(xlow_col1, (xlow_col2 - translation) / scalar);
-               else
-                  xlow_implied = xlow_col1;
-
-               if( xupp_col2 != INF_POS_PRES )
-                  xupp_implied = std::min(xupp_col1, (xupp_col2 - translation) / scalar);
-               else
-                  xupp_implied = xupp_col1;
-            }
-            else
-            {
-               if( xlow_col2 != INF_NEG_PRES )
-                  xupp_implied = std::min(xupp_col1, (xlow_col2 - translation) / scalar);
-               else
-                  xupp_implied = xupp_col1;
-
-               if( xupp_col2 != INF_POS_PRES )
-                  xlow_implied = std::max(xlow_col1, (xupp_col2 - translation) / scalar);
-               else
-                  xlow_implied = xlow_col1;
-            }
-         }
-         else
-         {
-            assert( clow != INF_NEG_PRES || cupp != INF_POS_PRES );
-            assert( !PIPSisZero(coeff_col1) );
-            assert( !PIPSisZero(parallel_factor * coeff_col1) );
-
-            const double faq = parallel_factor * coeff_col1;
-
-            assert( !PIPSisZero(faq) );
-            if( PIPSisLT( 0.0, faq ) )
-            {
-               if( cupp != INF_POS_PRES )
-                  xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * cupp ) / coeff_col1 );
-               else
-                  xlow_implied = xlow_col1;
-
-               if( clow != INF_NEG_PRES )
-                  xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * clow) / coeff_col1 );
-               else
-                  xupp_implied = xupp_col1;
-            }
-
-            if( PIPSisLT( faq, 0.0 ) )
-            {
-               if( cupp != INF_POS_PRES )
-                  xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * cupp) / coeff_col1 );
-               else
-                  xupp_implied = xupp_col1;
-
-               if( clow != INF_NEG_PRES )
-                  xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * clow) / coeff_col1 );
-               else
-                  xlow_implied = xlow_col1;
-            }
-         }
-
-         assert( xlow_implied != INF_NEG_PRES );
-         assert( xupp_implied != INF_POS_PRES );
-         assert( PIPSisRelLEFeas(xlow_col1, xlow_implied) );
-         assert( PIPSisRelLEFeas(xupp_implied, xupp_col1) );
-
-         /* lower bound was implied by substituted column + it's row */
-         if( PIPSisEQ( val_col1, xlow_implied ) && !PIPSisEQ( xlow_implied, xlow_col1 ) )
-         {
-            assert( !PIPSisEQ(val_col1, xlow_col1) );
-            double& dual_col1 = getSimpleVecFromColStochVec(gamma_vec, col1);
-
-            if( !PIPSisZero(dual_col1) )
-            {
-               /* set the dual of col1 to zero, compensate for the error made with the dual of row1, compensate that error with the dual of col2
-                * and finally compensate the error in col2's row of the reduced costs with col2's dual
-                */
-
-               /* only one bound dual variable is non-zero */
-               assert( PIPSisZero(getSimpleVecFromColStochVec(phi_vec, col1)) );
-
-               /* dual to zero and compensate error */
-               const double dual_shift_row1 = dual_col1 / coeff_col1;
-               dual_col1 = 0;
-               assert( PIPSisEQ( -coeff_col1 * dual_shift_row1, -dual_col1 ) );
-
-               getSimpleVecFromRowStochVec(y_vec, row1) += dual_shift_row1;
-
-               /* compensate again and adjust dual of col2 */
-               const double dual_shift_row2 = -dual_shift_row1 * parallel_factor;
-
-               if( row2.inEqSys() )
-                  getSimpleVecFromRowStochVec(y_vec, row2) += dual_shift_row2;
-               else
-               {
-                  getSimpleVecFromRowStochVec(z_vec, row2) += dual_shift_row2;
-                  getSimpleVecFromRowStochVec(lambda_vec, row2) = std::max(0.0, getSimpleVecFromRowStochVec(z_vec, row2));
-                  getSimpleVecFromRowStochVec(pi_vec, row2) += std::min(0.0, getSimpleVecFromRowStochVec(z_vec, row2));
-               }
-
-               /* if we had two equality rows there was a singleton col in row2 an it's dual needs to be adjusted */
-               if( col2.isCol() )
-               {
-                  /* assert bounds of substituted variable are tight as well */
-                  assert( PIPSisEQ(getSimpleVecFromColStochVec(x_vec, col2) , PIPSisLT(0.0, translation) ? xupp_col2 : xlow_col2) );
-
-                  const double dual_shift_col2 = coeff_col2 * dual_shift_row2;
-                  PIPSisLT(0.0, translation) ? assert( PIPSisLE(0.0, dual_shift_col2) ) : assert( PIPSisLE( dual_shift_col2, 0.0) );
-
-                  double& dual_col2 = PIPSisLT(0.0, translation) ? getSimpleVecFromColStochVec(phi_vec, col2) : getSimpleVecFromColStochVec(gamma_vec, col2);
-                  assert( PIPSisZero(dual_col2) );
-                  dual_col2 += std::fabs(dual_shift_col2);
-               }
-            }
-         }
-
-         /* upper bound was implied by substituted column + it's row */
-         if( PIPSisEQ( val_col1, xupp_implied ) && !PIPSisEQ( xupp_implied, xupp_col1 ) )
-         {
-            assert( !PIPSisEQ(val_col1, xupp_col1) );
-            double& dual_col1 = getSimpleVecFromColStochVec(phi_vec, col1);
-
-            if( !PIPSisZero(dual_col1) )
-            {
-               /* set the dual of col1 to zero, compensate for the error made with the dual of row1, compensate that error with the dual of col2
-                * and finally compensate the error in col2's row of the reduced costs with col2's dual
-                */
-
-               /* only one bound dual variable is non-zero */
-               assert( PIPSisZero(getSimpleVecFromColStochVec(gamma_vec, col1)) );
-
-               /* dual to zero and compensate error */
-               const double dual_shift_row1 = dual_col1 / coeff_col1;
-               dual_col1 = 0;
-               assert( PIPSisEQ( -coeff_col1 * dual_shift_row1, -dual_col1 ) );
-
-               getSimpleVecFromRowStochVec(y_vec, row1) += dual_shift_row1;
-
-               /* compensate again and adjust dual of col2 */
-               const double dual_shift_row2 = -dual_shift_row1 * parallel_factor;
-
-               if( row2.inEqSys() )
-                  getSimpleVecFromRowStochVec(y_vec, row2) += dual_shift_row2;
-               else
-               {
-                  getSimpleVecFromRowStochVec(z_vec, row2) += dual_shift_row2;
-                  getSimpleVecFromRowStochVec(lambda_vec, row2) = std::max(0.0, getSimpleVecFromRowStochVec(z_vec, row2));
-                  getSimpleVecFromRowStochVec(pi_vec, row2) += std::min(0.0, getSimpleVecFromRowStochVec(z_vec, row2));
-               }
-
-               if( col2.isCol() )
-               {
-                  /* assert bounds of substituted variable are tight as well */
-                  assert( PIPSisEQ(getSimpleVecFromColStochVec(x_vec, col2), PIPSisLT(0.0, translation) ? xlow_col2 : xupp_col2) );
-
-                  double& dual_col2 = PIPSisLT(0.0, translation) ? getSimpleVecFromColStochVec(gamma_vec, col2) : getSimpleVecFromColStochVec(phi_vec, col2);
-                  assert( PIPSisZero(dual_col2) );
-
-                  const double dual_shift_col2 = coeff_col2 * dual_shift_row2;
-
-                  PIPSisLT(0.0, translation) ? assert( PIPSisLE(0.0, dual_shift_col2) ) : assert( PIPSisLE( dual_shift_col2, 0.0) );
-                  dual_col2 += std::fabs(dual_shift_col2);
-               }
-            }
-         }
-
+         postsolve_success = postsolve_success && postsolveNearlyParallelRowBoundsTightened(stoch_original_sol, i);
          break;
       }
       case LINKING_VARS_SYNC_EVENT:
@@ -2105,6 +1888,244 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
       assert( PIPSisZeroFeas(u_row1 * pi_row1) );
       assert( PIPSisZeroFeas(u_row2 * pi_row2) );
 #endif
+   }
+
+   return true;
+}
+
+bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const
+{
+   const int type = reductions.at(reduction_idx);
+   assert( type == NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED );
+
+   const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+   const unsigned int first_index = start_idx_indices.at(reduction_idx);
+
+#ifndef NDEBUG
+   const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
+   const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
+   const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
+
+   assert(first_index + 4 == next_first_index);
+   assert(first_float_val + 12 == next_first_float_val);
+   assert(first_int_val == next_first_int_val);
+#endif
+
+   /* col2 was substituted by col1 via col2 = t * col1 + d */
+   /* dual postsolve implied bounds */
+   const INDEX& row1 = indices.at(first_index);
+   const INDEX& row2 = indices.at(first_index + 1);
+   const INDEX& col1 = indices.at(first_index + 2);
+   const INDEX& col2 = indices.at(first_index + 3);
+
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( col1.isCol() );
+   assert( col2.isCol() || col2.isEmpty() );
+
+   if( col2.isCol() )
+      assert( row1.inEqSys() && row2.inEqSys() );
+
+   const double xlow_col1 = float_values.at(first_float_val);
+   const double xupp_col1 = float_values.at(first_float_val + 1);
+   const double xlow_col2 = float_values.at(first_float_val + 2);
+   const double xupp_col2 = float_values.at(first_float_val + 3);
+
+   const double coeff_col1 = float_values.at(first_float_val + 4);
+   const double coeff_col2 = float_values.at(first_float_val + 5);
+
+   const double scalar = float_values.at(first_float_val + 6);
+   const double translation = float_values.at(first_float_val + 7);
+   const double parallel_factor = float_values.at(first_float_val + 8);
+
+   const double rhs = float_values.at(first_float_val + 9);
+   const double clow = float_values.at(first_float_val + 10);
+   const double cupp = float_values.at(first_float_val + 11);
+
+   assert( !PIPSisZero(scalar) );
+
+   const double val_col1 = getSimpleVecFromColStochVec(original_vars.x, col1);
+
+   /* if the variable bound of col1 was actually implied via col2 we have to shift it's dual multipliers over via also adjusting the dual of row1 */
+   // TODO : reactivate these once scaled termination criteria exist - found bug elsewhere - might be correct and maybe can be reactivated
+//         assert( PIPSisRelLEFeas( xlow_col1, val_col1 ) );
+//         assert( PIPSisRelLEFeas( val_col1, xupp_col1 ) );
+
+   double xlow_implied = INF_NEG_PRES;
+   double xupp_implied = INF_POS_PRES;
+
+   /* two nearly parallel equality rows */
+   if( col2.isCol() )
+   {
+      assert( xlow_col2 != INF_NEG_PRES || xupp_col2 != INF_POS_PRES );
+
+      if( PIPSisLT(0.0, scalar) )
+      {
+         if( xlow_col2 != INF_NEG_PRES )
+            xlow_implied = std::max(xlow_col1, (xlow_col2 - translation) / scalar);
+         else
+            xlow_implied = xlow_col1;
+
+         if( xupp_col2 != INF_POS_PRES )
+            xupp_implied = std::min(xupp_col1, (xupp_col2 - translation) / scalar);
+         else
+            xupp_implied = xupp_col1;
+      }
+      else
+      {
+         if( xlow_col2 != INF_NEG_PRES )
+            xupp_implied = std::min(xupp_col1, (xlow_col2 - translation) / scalar);
+         else
+            xupp_implied = xupp_col1;
+
+         if( xupp_col2 != INF_POS_PRES )
+            xlow_implied = std::max(xlow_col1, (xupp_col2 - translation) / scalar);
+         else
+            xlow_implied = xlow_col1;
+      }
+   }
+   else
+   {
+      assert( clow != INF_NEG_PRES || cupp != INF_POS_PRES );
+      assert( !PIPSisZero(coeff_col1) );
+      assert( !PIPSisZero(parallel_factor * coeff_col1) );
+
+      const double faq = parallel_factor * coeff_col1;
+
+      assert( !PIPSisZero(faq) );
+      if( PIPSisLT( 0.0, faq ) )
+      {
+         if( cupp != INF_POS_PRES )
+            xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * cupp ) / coeff_col1 );
+         else
+            xlow_implied = xlow_col1;
+
+         if( clow != INF_NEG_PRES )
+            xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * clow) / coeff_col1 );
+         else
+            xupp_implied = xupp_col1;
+      }
+
+      if( PIPSisLT( faq, 0.0 ) )
+      {
+         if( cupp != INF_POS_PRES )
+            xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * cupp) / coeff_col1 );
+         else
+            xupp_implied = xupp_col1;
+
+         if( clow != INF_NEG_PRES )
+            xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * clow) / coeff_col1 );
+         else
+            xlow_implied = xlow_col1;
+      }
+   }
+
+   assert( xlow_implied != INF_NEG_PRES );
+   assert( xupp_implied != INF_POS_PRES );
+   assert( PIPSisRelLEFeas(xlow_col1, xlow_implied) );
+   assert( PIPSisRelLEFeas(xupp_implied, xupp_col1) );
+
+   /* lower bound was implied by substituted column + it's row */
+   if( PIPSisEQ( val_col1, xlow_implied ) && !PIPSisEQ( xlow_implied, xlow_col1 ) )
+   {
+      assert( !PIPSisEQ(val_col1, xlow_col1) );
+      double& dual_col1 = getSimpleVecFromColStochVec(original_vars.gamma, col1);
+
+      if( !PIPSisZero(dual_col1) )
+      {
+         /* set the dual of col1 to zero, compensate for the error made with the dual of row1, compensate that error with the dual of col2
+          * and finally compensate the error in col2's row of the reduced costs with col2's dual
+          */
+
+         /* only one bound dual variable is non-zero */
+         assert( PIPSisZero(getSimpleVecFromColStochVec(original_vars.phi, col1)) );
+
+         /* dual to zero and compensate error */
+         const double dual_shift_row1 = dual_col1 / coeff_col1;
+         dual_col1 = 0;
+         assert( PIPSisEQ( -coeff_col1 * dual_shift_row1, -dual_col1 ) );
+
+         getSimpleVecFromRowStochVec(original_vars.y, row1) += dual_shift_row1;
+
+         /* compensate again and adjust dual of col2 */
+         const double dual_shift_row2 = -dual_shift_row1 * parallel_factor;
+
+         if( row2.inEqSys() )
+            getSimpleVecFromRowStochVec(original_vars.y, row2) += dual_shift_row2;
+         else
+         {
+            getSimpleVecFromRowStochVec(original_vars.z, row2) += dual_shift_row2;
+            getSimpleVecFromRowStochVec(original_vars.lambda, row2) = std::max(0.0, getSimpleVecFromRowStochVec(original_vars.z, row2));
+            getSimpleVecFromRowStochVec(original_vars.pi, row2) += std::min(0.0, getSimpleVecFromRowStochVec(original_vars.z, row2));
+         }
+
+         /* if we had two equality rows there was a singleton col in row2 an it's dual needs to be adjusted */
+         if( col2.isCol() )
+         {
+            /* assert bounds of substituted variable are tight as well */
+            assert( PIPSisEQ(getSimpleVecFromColStochVec(original_vars.x, col2) , PIPSisLT(0.0, translation) ? xupp_col2 : xlow_col2) );
+
+            const double dual_shift_col2 = coeff_col2 * dual_shift_row2;
+            PIPSisLT(0.0, translation) ? assert( PIPSisLE(0.0, dual_shift_col2) ) : assert( PIPSisLE( dual_shift_col2, 0.0) );
+
+            double& dual_col2 = PIPSisLT(0.0, translation) ? getSimpleVecFromColStochVec(original_vars.phi, col2) :
+                  getSimpleVecFromColStochVec(original_vars.gamma, col2);
+            assert( PIPSisZero(dual_col2) );
+            dual_col2 += std::fabs(dual_shift_col2);
+         }
+      }
+   }
+
+   /* upper bound was implied by substituted column + it's row */
+   if( PIPSisEQ( val_col1, xupp_implied ) && !PIPSisEQ( xupp_implied, xupp_col1 ) )
+   {
+      assert( !PIPSisEQ(val_col1, xupp_col1) );
+      double& dual_col1 = getSimpleVecFromColStochVec(original_vars.phi, col1);
+
+      if( !PIPSisZero(dual_col1) )
+      {
+         /* set the dual of col1 to zero, compensate for the error made with the dual of row1, compensate that error with the dual of col2
+          * and finally compensate the error in col2's row of the reduced costs with col2's dual
+          */
+
+         /* only one bound dual variable is non-zero */
+         assert( PIPSisZero(getSimpleVecFromColStochVec(original_vars.gamma, col1)) );
+
+         /* dual to zero and compensate error */
+         const double dual_shift_row1 = dual_col1 / coeff_col1;
+         dual_col1 = 0;
+         assert( PIPSisEQ( -coeff_col1 * dual_shift_row1, -dual_col1 ) );
+
+         getSimpleVecFromRowStochVec(original_vars.y, row1) += dual_shift_row1;
+
+         /* compensate again and adjust dual of col2 */
+         const double dual_shift_row2 = -dual_shift_row1 * parallel_factor;
+
+         if( row2.inEqSys() )
+            getSimpleVecFromRowStochVec(original_vars.y, row2) += dual_shift_row2;
+         else
+         {
+            getSimpleVecFromRowStochVec(original_vars.z, row2) += dual_shift_row2;
+            getSimpleVecFromRowStochVec(original_vars.lambda, row2) = std::max(0.0, getSimpleVecFromRowStochVec(original_vars.z, row2));
+            getSimpleVecFromRowStochVec(original_vars.pi, row2) += std::min(0.0, getSimpleVecFromRowStochVec(original_vars.z, row2));
+         }
+
+         if( col2.isCol() )
+         {
+            /* assert bounds of substituted variable are tight as well */
+            assert( PIPSisEQ(getSimpleVecFromColStochVec(original_vars.x, col2), PIPSisLT(0.0, translation) ? xlow_col2 : xupp_col2) );
+
+            double& dual_col2 = PIPSisLT(0.0, translation) ? getSimpleVecFromColStochVec(original_vars.gamma, col2) :
+                  getSimpleVecFromColStochVec(original_vars.phi, col2);
+            assert( PIPSisZero(dual_col2) );
+
+            const double dual_shift_col2 = coeff_col2 * dual_shift_row2;
+
+            PIPSisLT(0.0, translation) ? assert( PIPSisLE(0.0, dual_shift_col2) ) : assert( PIPSisLE( dual_shift_col2, 0.0) );
+            dual_col2 += std::fabs(dual_shift_col2);
+         }
+      }
    }
    return true;
 }

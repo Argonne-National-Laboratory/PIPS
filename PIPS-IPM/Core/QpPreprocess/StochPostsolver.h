@@ -147,6 +147,7 @@ private:
       bool postsolveSingletonInequalityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx) const;
       bool postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx) const;
+      bool postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 
