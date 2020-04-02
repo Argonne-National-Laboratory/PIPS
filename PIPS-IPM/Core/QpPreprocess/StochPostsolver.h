@@ -91,7 +91,7 @@ private:
          FIXED_EMPTY_COLUMN = 8,
          FREE_COLUMN_SINGLETON_EQUALITY = 9,
          NEARLY_PARALLEL_ROW_SUBSTITUTION = 10,
-         LINKING_VARS_SYNC_EVENT = 11,
+         DUMMY3 = 11,
          FIXED_COLUMN_SINGLETON_FROM_INEQUALITY = 12,
          FREE_COLUMN_SINGLETON_INEQUALITY_ROW = 13,
          PARALLEL_ROWS_BOUNDS_TIGHTENED = 14,
@@ -147,6 +147,7 @@ private:
       bool postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx) const;
       bool postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx) const;
       bool postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const;
+      bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, const sData& original_problem, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 

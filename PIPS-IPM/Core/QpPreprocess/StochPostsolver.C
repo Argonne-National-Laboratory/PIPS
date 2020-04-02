@@ -701,72 +701,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case FREE_COLUMN_SINGLETON_INEQUALITY_ROW:
       {
-         assert(first_index + 2 == next_first_index);
-         assert(first_float_val + 2 == next_first_float_val);
-         assert(first_int_val + 1 == next_first_int_val);
-
-         const INDEX& row = indices.at(first_index);
-         const INDEX& col = indices.at(first_index + 1);
-         assert( row.inInEqSys() );
-
-         const int index_stored_row = int_values.at(first_int_val);
-         const INDEX row_stored(ROW, row.getNode(), index_stored_row, row.getLinking(), row.getSystemType());
-
-         const double lhsrhs = float_values.at(first_float_val);
-         const double coeff = float_values.at(first_float_val + 1);
-
-         assert( wasColumnRemoved(col) );
-         assert( wasRowRemoved(row) );
-
-         getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
-
-         getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
-
-         /* set x value such that row is satisfied */
-         double& x_val = getSimpleVecFromColStochVec(x_vec, col);
-         assert( PIPSisZero(x_val) );
-
-         x_val = (lhsrhs - row_storage.multRowTimesVec(row_stored, x_vec)) / coeff;
-
-         /* duals of row and bounds are zero */
-         getSimpleVecFromRowStochVec(z_vec, row) = 0;
-         getSimpleVecFromRowStochVec(lambda_vec, row) = 0;
-         getSimpleVecFromRowStochVec(pi_vec, row) = 0;
-
-         getSimpleVecFromColStochVec(gamma_vec, col) = 0;
-         getSimpleVecFromColStochVec(phi_vec, col) = 0;
-
-         /* compute slacks for bounds and row */
-         /* slack for row is zero by construction */
-         getSimpleVecFromRowStochVec(t_vec, row) = 0;
-         getSimpleVecFromRowStochVec(u_vec, row) = 0;
-         getSimpleVecFromRowStochVec(s_vec, row) = 0;
-
-         const int ixlow = getSimpleVecFromColStochVec( *orig_problem_s.ixlow, col);
-         const int ixupp = getSimpleVecFromColStochVec( *orig_problem_s.ixupp, col);
-         const double xlow = getSimpleVecFromColStochVec( *orig_problem_s.blx, col);
-         const double xupp = getSimpleVecFromColStochVec( *orig_problem_s.bux, col);
-
-
-         if(PIPSisZero(ixlow))
-            getSimpleVecFromColStochVec(v_vec, col) = 0;
-         else
-         {
-            getSimpleVecFromColStochVec(v_vec, col) = x_val - xlow;
-            assert( PIPSisLE(xlow, x_val) );
-         }
-
-         if(PIPSisZero(ixupp))
-            getSimpleVecFromColStochVec(w_vec, col) = 0;
-         else
-         {
-            getSimpleVecFromColStochVec(w_vec, col) = xupp - x_val;
-            assert( PIPSisLE(x_val, xupp) );
-         }
-
-         getSimpleVecFromColStochVec(gamma_vec, col) = 0.0;
-         getSimpleVecFromColStochVec(phi_vec, col) = 0.0;
-
+         postsolve_success = postsolve_success && postsolveFreeColumnSingletonInequalityRow(stoch_original_sol, orig_problem_s, i);
          break;
       }
       case PARALLEL_ROWS_BOUNDS_TIGHTENED:
@@ -2087,6 +2022,91 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
          }
       }
    }
+   return true;
+}
+
+bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original_vars, const sData& original_problem, int reduction_idx ) const
+{
+   const int type = reductions.at(reduction_idx);
+   assert( type == FREE_COLUMN_SINGLETON_INEQUALITY_ROW );
+
+   const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+   const unsigned int first_index = start_idx_indices.at(reduction_idx);
+
+#ifndef NDEBUG
+   const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
+   const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
+   const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
+
+   assert(first_index + 2 == next_first_index);
+   assert(first_float_val + 2 == next_first_float_val);
+   assert(first_int_val + 1 == next_first_int_val);
+#endif
+
+   const INDEX& row = indices.at(first_index);
+   const INDEX& col = indices.at(first_index + 1);
+   assert( row.inInEqSys() );
+
+   const int index_stored_row = int_values.at(first_int_val);
+   const INDEX row_stored(ROW, row.getNode(), index_stored_row, row.getLinking(), row.getSystemType());
+
+   const double lhsrhs = float_values.at(first_float_val);
+   const double coeff = float_values.at(first_float_val + 1);
+
+   assert( wasColumnRemoved(col) );
+   assert( wasRowRemoved(row) );
+
+   getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
+
+   getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
+
+   /* set x value such that row is satisfied */
+   double& x_val = getSimpleVecFromColStochVec(original_vars.x, col);
+   assert( PIPSisZero(x_val) );
+
+   x_val = (lhsrhs - row_storage.multRowTimesVec(row_stored, dynamic_cast<const StochVector&>(*original_vars.x))) / coeff;
+
+   /* duals of row and bounds are zero */
+   getSimpleVecFromRowStochVec(original_vars.z, row) = 0;
+   getSimpleVecFromRowStochVec(original_vars.lambda, row) = 0;
+   getSimpleVecFromRowStochVec(original_vars.pi, row) = 0;
+
+   getSimpleVecFromColStochVec(original_vars.gamma, col) = 0;
+   getSimpleVecFromColStochVec(original_vars.phi, col) = 0;
+
+   /* compute slacks for bounds and row */
+   /* slack for row is zero by construction */
+   getSimpleVecFromRowStochVec(original_vars.t, row) = 0;
+   getSimpleVecFromRowStochVec(original_vars.u, row) = 0;
+   getSimpleVecFromRowStochVec(original_vars.s, row) = 0;
+
+   // TODO : we should use the bounds that were stored at the time
+   const int ixlow = getSimpleVecFromColStochVec( *original_problem.ixlow, col);
+   const int ixupp = getSimpleVecFromColStochVec( *original_problem.ixupp, col);
+   const double xlow = getSimpleVecFromColStochVec( *original_problem.blx, col);
+   const double xupp = getSimpleVecFromColStochVec( *original_problem.bux, col);
+
+
+   if(PIPSisZero(ixlow))
+      getSimpleVecFromColStochVec(original_vars.v, col) = 0;
+   else
+   {
+      getSimpleVecFromColStochVec(original_vars.v, col) = x_val - xlow;
+      assert( PIPSisLE(xlow, x_val) );
+   }
+
+   if(PIPSisZero(ixupp))
+      getSimpleVecFromColStochVec(original_vars.w, col) = 0;
+   else
+   {
+      getSimpleVecFromColStochVec(original_vars.w, col) = xupp - x_val;
+      assert( PIPSisLE(x_val, xupp) );
+   }
+
+   getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;
+   getSimpleVecFromColStochVec(original_vars.phi, col) = 0.0;
+
    return true;
 }
 
