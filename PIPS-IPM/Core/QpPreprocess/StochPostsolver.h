@@ -83,8 +83,8 @@ private:
       {
          FIXED_COLUMN = 0,
          SUBSTITUTED_COLUMN = 1,
-         PARALLEL_COLUMN = 2,
-         DELETED_ROW = 3,
+         DUMMY1 = 2,
+         DUMMY2 = 3,
          REDUNDANT_ROW = 4,
          BOUNDS_TIGHTENED = 5,
          SINGLETON_EQUALITY_ROW = 6,
@@ -143,6 +143,7 @@ private:
       bool postsolveFixedColumn(sVars& original_vars, int reduction_idx) const;
       bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const;
       bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx) const;
+      bool postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 
