@@ -640,6 +640,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
    const sData& orig_problem_s = dynamic_cast<const sData&>(original_problem);
 
+   bool postsolve_success = true;
    /* post-solve the reductions in reverse order */
    for( int i = reductions.size() - 1; i >= 0; --i )
    {
@@ -658,97 +659,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       {
       case REDUNDANT_ROW:
       {
-         /**
-          * postsolve for this is simply to set all dual variables to zero - the row itself has no primal impact
-          * for linking rows:
-          *    all processes should have removed them in the same order
-          *       -> assert in place to check this
-          *    the current activity gets synchronized for slack computation
-          */
-
-         /* only dual postsolve */
-         assert(first_index + 1 == next_first_index);
-         assert(first_float_val + 2 == next_first_float_val);
-         assert(first_int_val + 3 == next_first_int_val);
-
-         const INDEX& row_idx = indices.at(first_index);
-         assert(row_idx.isRow());
-
-         const int row = row_idx.getIndex();
-         const int node = row_idx.getNode();
-         const bool linking_row = row_idx.getLinking();
-         const SystemType system_type = row_idx.getSystemType();
-
-         const double lhs = float_values.at(first_float_val);
-         const double rhs = float_values.at(first_float_val + 1);
-
-         const int index_stored_row = int_values.at(first_int_val);
-         const int iclow = int_values.at(first_int_val + 1);
-         const int icupp = int_values.at(first_int_val + 2);
-         assert(iclow + icupp >= 1);
-
-         double value_row = 0.0;
-
-         // TODO: this could be optimized - all linking rows will be after each other - we could wait with allreduce
-         // until the current boost of linking rows is processed and then allreduce all activities at once and unpate the slacks then only
-         /* get current row activity - redundant linking rows have to lie on the stack in the same order */
-         if(linking_row)
-         {
-            assert(node == -1);
-            assert(PIPS_MPIisValueEqual(row, MPI_COMM_WORLD));
-
-            if(my_rank == 0)
-               value_row = row_storage.multRowTimesVec( INDEX(ROW, node, index_stored_row, linking_row, EQUALITY_SYSTEM), x_vec );
-            else
-               value_row = row_storage.multLinkingRowTimesVecWithoutBl0(index_stored_row, x_vec);
-            /* this might get very expensive if there is many redundant linking rows */
-            PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
-         }
-         else
-            value_row = row_storage.multRowTimesVec( INDEX(ROW, node, index_stored_row, linking_row, EQUALITY_SYSTEM), x_vec );
-
-         if( system_type == EQUALITY_SYSTEM )
-         {
-            assert(-1 <= node && node < static_cast<int>(y_vec.children.size()));
-            assert(wasRowRemoved(row_idx));
-            assert(PIPSisEQ(lhs, rhs));
-            assert(PIPSisLEFeas(value_row, rhs));
-
-            /* set dual multiplier to zero and mark row as added */
-            getSimpleVecFromRowStochVec(*padding_origrow_equality, node, linking_row)[row] = 1;
-            getSimpleVecFromRowStochVec(y_vec, node, linking_row)[row] = 0;
-         }
-         else
-         {
-            assert(-1 <= node && node < static_cast<int>(z_vec.children.size()));
-            assert(wasRowRemoved(row_idx));
-
-            /* set dual multipliers to zero and mark row as added */
-            getSimpleVecFromRowStochVec(*padding_origrow_inequality, node, linking_row)[row] = 1;
-
-            /* dual of row is zero */
-            getSimpleVecFromRowStochVec(z_vec, node, linking_row)[row] = 0;
-            getSimpleVecFromRowStochVec(lambda_vec, node, linking_row)[row] = 0;
-            getSimpleVecFromRowStochVec(pi_vec, node, linking_row)[row] = 0;
-
-            getSimpleVecFromRowStochVec(s_vec, node, linking_row)[row] = value_row;
-
-            if( iclow == 1 )
-               assert(PIPSisLEFeas(lhs, value_row));
-            if( icupp == 1 )
-               assert(PIPSisLEFeas(value_row, rhs));
-
-            /* set correct slacks */
-            if( iclow == 1)
-               getSimpleVecFromRowStochVec(t_vec, node, linking_row)[row] = value_row - lhs;
-            else
-               getSimpleVecFromRowStochVec(t_vec, node, linking_row)[row] = 0;
-
-            if( icupp == 1)
-               getSimpleVecFromRowStochVec(u_vec, node, linking_row)[row] = rhs - value_row;
-            else
-               getSimpleVecFromRowStochVec(u_vec, node, linking_row)[row] = 0;
-         }
+         postsolve_success = postsolve_success && postsolveRedundantRow(stoch_original_sol, i);
          break;
       }
       case BOUNDS_TIGHTENED:
@@ -1966,6 +1877,125 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       std::cout << "finished postsolving... " << std::endl;
 
    return PRESOLVE_OK;
+}
+
+/**
+ * postsolve for a redundant row is to set all dual variables to zero - the row itself has no primal impact
+ * for linking rows:
+ *    all processes should have removed them in the same order
+ *       -> assert in place to check this
+ *    the current activity gets synchronized for slack computation
+ */
+bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_idx) const
+{
+   const int type = reductions.at(reduction_idx);
+   assert( type == REDUNDANT_ROW );
+
+   const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
+   const unsigned int first_index = start_idx_indices.at(reduction_idx);
+
+#ifndef NDEBUG
+   const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
+   const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
+   const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
+
+   assert(first_index + 1 == next_first_index);
+   assert(first_float_val + 2 == next_first_float_val);
+   assert(first_int_val + 3 == next_first_int_val);
+#endif
+
+   /* get stored data for postsolve */
+   const INDEX& row = indices.at(first_index);
+   assert(row.isRow());
+
+   const double lhs = float_values.at(first_float_val);
+   const double rhs = float_values.at(first_float_val + 1);
+
+   const int index_stored_row = int_values.at(first_int_val);
+   const int iclow = int_values.at(first_int_val + 1);
+   const int icupp = int_values.at(first_int_val + 2);
+   assert(iclow + icupp >= 1);
+
+   const INDEX stored_row(ROW, row.getNode(), index_stored_row, row.getLinking(), EQUALITY_SYSTEM);
+   double value_row = 0.0;
+
+   // TODO: this could be optimized - all linking rows will be after each other - we could wait with allreduce
+   // until the current boost of linking rows is processed and then allreduce all activities at once and unpate the slacks then only
+   /* get current row activity - redundant linking rows have to lie on the stack in the same order */
+
+   /* primal values */
+   StochVector& x_vec = dynamic_cast<StochVector&>(*original_vars.x);
+
+   if( row.isLinkingRow() )
+   {
+      assert(PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD));
+
+      if(my_rank == 0)
+         value_row = row_storage.multRowTimesVec( stored_row, x_vec );
+      else
+         value_row = row_storage.multLinkingRowTimesVecWithoutBl0(index_stored_row, x_vec);
+      /* this might get very expensive if there is many redundant linking rows */
+      PIPS_MPIgetSumInPlace(value_row, MPI_COMM_WORLD);
+   }
+   else
+      value_row = row_storage.multRowTimesVec( stored_row, x_vec );
+
+   if( row.inEqSys() )
+   {
+      assert(wasRowRemoved(row));
+      assert(PIPSisEQ(lhs, rhs));
+      assert(PIPSisEQFeas(value_row, rhs));
+
+      /* get row duals */
+      StochVector& y_vec = dynamic_cast<StochVector&>(*original_vars.y);
+
+      /* set dual multiplier to zero and mark row as added */
+      getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = 1;
+      getSimpleVecFromRowStochVec(y_vec, row) = 0;
+   }
+   else
+   {
+      assert(wasRowRemoved(row));
+
+      /* get row duals */
+      StochVector& z_vec = dynamic_cast<StochVector&>(*original_vars.z);
+      StochVector& lambda_vec = dynamic_cast<StochVector&>(*original_vars.lambda);
+      StochVector& pi_vec = dynamic_cast<StochVector&>(*original_vars.pi);
+
+      /* get row slacks */
+      StochVector& s_vec = dynamic_cast<StochVector&>(*original_vars.s);
+      StochVector& t_vec = dynamic_cast<StochVector&>(*original_vars.t);
+      StochVector& u_vec = dynamic_cast<StochVector&>(*original_vars.u);
+
+      /* set dual multipliers to zero and mark row as added */
+      getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
+
+      /* dual of row is zero */
+      getSimpleVecFromRowStochVec(z_vec, row) = 0;
+      getSimpleVecFromRowStochVec(lambda_vec, row) = 0;
+      getSimpleVecFromRowStochVec(pi_vec, row) = 0;
+
+      getSimpleVecFromRowStochVec(s_vec, row) = value_row;
+
+      if( iclow == 1 )
+         assert(PIPSisLEFeas(lhs, value_row));
+      if( icupp == 1 )
+         assert(PIPSisLEFeas(value_row, rhs));
+
+      /* set correct slacks */
+      if( iclow == 1)
+         getSimpleVecFromRowStochVec(t_vec, row) = value_row - lhs;
+      else
+         getSimpleVecFromRowStochVec(t_vec, row) = 0;
+
+      if( icupp == 1)
+         getSimpleVecFromRowStochVec(u_vec, row) = rhs - value_row;
+      else
+         getSimpleVecFromRowStochVec(u_vec, row) = 0;
+   }
+
+   return true;
 }
 
 void StochPostsolver::setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const

@@ -138,6 +138,8 @@ private:
       void finishNotify();
 
 /// postsolve operations
+      bool postsolveRedundantRow(sVars& original_vars, int reduction_idx) const;
+
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 
       template <typename T>
