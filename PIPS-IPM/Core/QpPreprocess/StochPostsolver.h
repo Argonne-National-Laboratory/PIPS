@@ -139,6 +139,7 @@ private:
 
 /// postsolve operations
       bool postsolveRedundantRow(sVars& original_vars, int reduction_idx) const;
+      bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 
