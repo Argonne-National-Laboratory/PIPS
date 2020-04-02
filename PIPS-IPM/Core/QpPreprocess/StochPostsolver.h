@@ -142,6 +142,7 @@ private:
       bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx) const;
       bool postsolveFixedColumn(sVars& original_vars, int reduction_idx) const;
       bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const;
+      bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
 
