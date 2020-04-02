@@ -527,14 +527,6 @@ void StochPostsolver::notifyDeletedRow( SystemType system_type, int node, int ro
    throw std::runtime_error("Not yet implemented");
 }
 
-void StochPostsolver::putLinkingVarsSyncEvent()
-{
-   reductions.push_back( LINKING_VARS_SYNC_EVENT );
-   /// dummy : todo change structure - actually we only need a reduction, nothing else..
-   indices.push_back( INDEX(COL, -2, -2 ) );
-   finishNotify();
-}
-
 void StochPostsolver::notifyParallelColumns()
 {
    throw std::runtime_error("Not yet implemented");
@@ -705,38 +697,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       case NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED:
       {
          postsolve_success = postsolve_success && postsolveNearlyParallelRowBoundsTightened(stoch_original_sol, i);
-         break;
-      }
-      case LINKING_VARS_SYNC_EVENT:
-      {
-         // todo : dual part of this
-         const int length_link_vars = x_vec.vec->length();
-         SimpleVector &link_vars = dynamic_cast<SimpleVector&>(*x_vec.vec);
-
-         double *copy_x_link_max = new double[length_link_vars];
-         double *copy_x_link_min = new double[length_link_vars];
-         std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_max);
-         std::copy(link_vars.elements(), link_vars.elements() + length_link_vars, copy_x_link_min);
-
-         PIPS_MPIminArrayInPlace(copy_x_link_min, length_link_vars, MPI_COMM_WORLD);
-         PIPS_MPImaxArrayInPlace(copy_x_link_max, length_link_vars, MPI_COMM_WORLD);
-
-         /* changing vars must have been set to 0 ! */
-         for( int j = 0; j < length_link_vars; ++j )
-         {
-            /* the second check is necessary for things like +- inf used by the postsolver */
-            if( !PIPSisEQ(copy_x_link_min[j], copy_x_link_max[j]) && copy_x_link_max[j] != copy_x_link_min[j] )
-            {
-               assert(PIPSisZero(copy_x_link_max[j]) || PIPSisZero(copy_x_link_min[j]));
-               assert(PIPSisEQ(link_vars[j], copy_x_link_min[j]) || PIPSisEQ(link_vars[j], copy_x_link_max[j]));
-
-               if( !PIPSisZero(copy_x_link_min[j]) )
-                  link_vars[j] = copy_x_link_min[j];
-               else
-                  link_vars[j] = copy_x_link_max[j];
-            }
-         }
-
          break;
       }
       case FREE_COLUMN_SINGLETON_INEQUALITY_ROW:

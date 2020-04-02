@@ -167,9 +167,6 @@ public :
       void allreduceAndApplyObjVecChanges();
       void allreduceObjOffset();
 
-      /// postsolve sync events that need to be set
-      void putLinkingVarsSyncEvent();
-
       bool wasColumnRemoved( const INDEX& col ) const;
       bool wasRowRemoved( const INDEX& row ) const;
 

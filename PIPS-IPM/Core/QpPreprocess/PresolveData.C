@@ -880,13 +880,6 @@ void PresolveData::allreduceObjOffset()
    obj_offset_chgs = 0;
 }
 
-void PresolveData::putLinkingVarsSyncEvent()
-{
-   assert( reductionsEmpty() );
-   postsolver->putLinkingVarsSyncEvent();
-}
-
-
 void PresolveData::initNnzCounter(StochVectorBase<int>& nnzs_row_A, StochVectorBase<int>& nnzs_row_C, StochVectorBase<int>& nnzs_col) const
 {
    StochGenMatrix& A = getSystemMatrix(EQUALITY_SYSTEM);

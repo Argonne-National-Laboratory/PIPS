@@ -71,7 +71,6 @@ private:
 
 public:
       /// synchronization events
-      void putLinkingVarsSyncEvent();
 
       PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const override;
 private:
