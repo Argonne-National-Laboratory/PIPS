@@ -163,7 +163,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       /* if the partial row activities (so the activities of all bounded variables) exceed some limit we skip the row since no useful
        * and numerically stable bounds will be obtained here
        */
-      if( (actmin_part <= -std::numeric_limits<double>::max() ) && (actmax_part >= std::numeric_limits<double>::max()) )
+      if( std::fabs(actmin_part) <= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY && std::fabs(actmax_part) >= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY )
          continue;
 
       for( int j = mat->getRowPtr(row).start; j < mat->getRowPtr(row).end; j++ )

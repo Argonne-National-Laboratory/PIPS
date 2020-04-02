@@ -37,6 +37,8 @@ static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
 static const int PRESOLVE_BOUND_STR_MAX_ITER = 1;
 /** min entry to devide by in order to derive a bound */
 static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY = 1e-7;
+/** max activity to be devided */
+static const double PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY = std::numeric_limits<double>::max();
 /** max bounds proposed from bounds strengthening presolver */
 static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS = 1e12;
 /// COLUMN FIXATION
