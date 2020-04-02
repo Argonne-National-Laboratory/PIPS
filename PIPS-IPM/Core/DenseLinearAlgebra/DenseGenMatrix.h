@@ -24,8 +24,8 @@ public:
 
   virtual int isKindOf( int matType ) const;
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
 
   virtual void atPutDense( int row, int col, double * A, int lda,
 			   int rowExtent, int colExtent );
@@ -52,15 +52,15 @@ public:
   virtual void putSparseTriple( int irow[], int len, int jcol[], double A[],
 				int& info );
 
-  virtual void mult ( double beta,  OoqpVector& y,
-		      double alpha, OoqpVector& x );
+  void mult ( double beta,  OoqpVector& y,
+		      double alpha, const OoqpVector& x ) const override;
   virtual void mult ( double beta,  double y[], int incy,
-		      double alpha, double x[], int incx );
+		      double alpha, const double x[], int incx ) const;
 
-  virtual void transMult ( double beta,  OoqpVector& y,
-			   double alpha, OoqpVector& x );
+  void transMult ( double beta,  OoqpVector& y,
+			   double alpha, const OoqpVector& x ) const override;
   virtual void transMult ( double beta,  double y[], int incy,
-			   double alpha, double x[], int incx );
+			   double alpha, const double x[], int incx ) const;
 
   virtual void matTransDMultMat(OoqpVector& d, SymMatrix** res);
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
@@ -78,7 +78,8 @@ public:
   virtual void scalarMult( double num);
 
   virtual double abmaxnorm();
-  virtual void writeToStream(ostream& out) const;
+  void writeToStream( std::ostream& out ) const override;
+  void writeToStreamDense( std::ostream& out ) const override;
   virtual void randomize( double alpha, double beta, double * seed );
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );

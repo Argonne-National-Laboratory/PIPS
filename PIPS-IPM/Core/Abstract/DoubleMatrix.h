@@ -37,7 +37,7 @@ public:
                              double A[], int lenA, int jcolA[], int& nnz,
                              int colExtent, int& info ) = 0;
 
-  virtual void getSize( int& m, int& n )  = 0;
+  virtual void getSize( int& m, int& n ) const = 0;
 
   virtual void getDiagonal( OoqpVector& vec ) = 0;
   virtual void setToDiagonal( OoqpVector& vec ) = 0;
@@ -104,18 +104,20 @@ public:
 
   /** y = beta * y + alpha * this * x */
   virtual void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x ) = 0;
+                      double alpha, const OoqpVector& x ) const = 0;
 
   /** y = beta * y + alpha * this^T * x */
   virtual void transMult ( double beta,   OoqpVector& y,
-                           double alpha,  OoqpVector& x ) = 0;
+                           double alpha,  const OoqpVector& x ) const = 0;
 
   /** the magnitude of the element in this matrix with largest absolute value.
    */
   virtual double abmaxnorm() = 0;
 
   /** Write this element to a C++ stream */
-  virtual void writeToStream(ostream& out) const = 0;
+  virtual void writeToStream( std::ostream& out ) const = 0;
+
+  virtual void writeToStreamDense( std::ostream& out ) const = 0;
 
   /** Place the diagonal elements of this matrix in the vector vec */
   virtual void getDiagonal( OoqpVector& vec ) = 0;
@@ -149,8 +151,8 @@ public:
   virtual void RowScale ( OoqpVector& vec ) = 0;
   virtual void scalarMult( double num) = 0;
 
-  virtual void getSize( long long& m, long long& n )  = 0;
-  virtual void getSize( int& m,       int& n )  = 0;
+  virtual void getSize( long long& m, long long& n ) const = 0;
+  virtual void getSize( int& m, int& n ) const = 0;
 
   virtual ~DoubleMatrix() {};
 };
@@ -158,7 +160,7 @@ public:
 /** Parent of all Symmetric matrices. 
  * @ingroup AbstractLinearAlgebra
  */
-class SymMatrix    : public DoubleMatrix {
+class SymMatrix : public DoubleMatrix {
 public:
 
   /** Put a submatrix of M into this matrix.
@@ -203,7 +205,7 @@ public:
 /** Parent of all non-symmetric, possibly non-square, matrices.
  * @ingroup AbstractLinearAlgebra
  */
-class GenMatrix    : public DoubleMatrix {
+class GenMatrix : public DoubleMatrix {
 public:
   /** Put a submatrix of M into this matrix.
    *
@@ -248,8 +250,6 @@ public:
 
   /** C = this^T * inv(D) * this where D=diag(d) is a diagonal matrix. */
   virtual void matTransDinvMultMat(OoqpVector& d, SymMatrix** res)=0;
-
-  virtual void writeToStreamDense(ostream& out) const {}
 
   virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const {}
 

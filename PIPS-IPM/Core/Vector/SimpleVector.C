@@ -866,6 +866,28 @@ void SimpleVectorBase<T>::selectNonZeros( const OoqpVectorBase<T>& select )
 }
 
 template<typename T>
+void SimpleVectorBase<T>::selectPositive()
+{
+   // TODO : std::transform and lambda for C++11
+   for( int i = 0; i < this->n; i++ )
+   {
+      if( v[i] <= 0.0 )
+         v[i] = 0.0;
+   }
+}
+
+template<typename T>
+void SimpleVectorBase<T>::selectNegative()
+{
+   // TODO : std::transform and lambda for C++11
+   for( int i = 0; i < this->n; i++ )
+   {
+      if( v[i] >= 0.0 )
+         v[i] = 0.0;
+   }
+}
+
+template<typename T>
 void SimpleVectorBase<T>::addSomeConstants( T c, const OoqpVectorBase<T>& select )
 {
   const SimpleVectorBase<T> & sselect = dynamic_cast<const SimpleVectorBase<T> &>(select);

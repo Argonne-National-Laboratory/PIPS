@@ -6,8 +6,8 @@
 #define SIMPLEVECTORHANDLE
 
 #include "OoqpVectorHandle.h"
-#include "SmartPointer.h"
 #include "SimpleVector_fwd.h"
+
 #include "pipsport.h"
 
 #ifndef PRE_CPP11

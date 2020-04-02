@@ -1620,8 +1620,7 @@ void sData::activateLinkStructureExploitation()
    useLinkStructure = true;
 
    const int nx0 = getLocalnx();
-   int myrank;
-   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+   const int myrank = PIPS_MPIgetRank(MPI_COMM_WORLD);
 
    const StochGenMatrix& Astoch = dynamic_cast<const StochGenMatrix&>(*A);
    const StochGenMatrix& Cstoch = dynamic_cast<const StochGenMatrix&>(*C);
@@ -1904,8 +1903,10 @@ std::vector<unsigned int> sData::getLinkConsIneqPermInv() const
 
 int sData::getLocalnx()
 {
-   StochSymMatrix& Qst = dynamic_cast<StochSymMatrix&>(*Q);
-   return Qst.diag->size();
+   long long my, nx;
+   StochGenMatrix& Ast = dynamic_cast<StochGenMatrix&>(*A);
+   Ast.Bmat->getSize(my, nx);
+   return nx;
 }
 
 int

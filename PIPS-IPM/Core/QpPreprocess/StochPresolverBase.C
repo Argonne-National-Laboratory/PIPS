@@ -11,12 +11,12 @@
 #include "SmartPointer.h"
 #include "pipsdef.h"
 #include "pipsport.h"
+#include "StochVectorUtilities.h"
 
 #include <algorithm>
 #include <cassert>
 #include <limits>
 #include <cmath> // std::isfinite
-
 
 StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& origProb) :
       my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
@@ -316,7 +316,7 @@ void StochPresolverBase::setPointersMatrices(const GenMatrixHandle mat, int node
    assert(-1 <= node && node < nChildren);
    const StochGenMatrix& smat = dynamic_cast<const StochGenMatrix&>(*mat);
 
-   /* in root node only A0 and Bl0 are present */
+   /* in root node only B0 and Bl0 are present */
    if( node == -1 )
    {
       currAmat = nullptr;

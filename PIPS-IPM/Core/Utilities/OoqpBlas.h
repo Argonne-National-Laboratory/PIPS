@@ -14,13 +14,13 @@
 extern "C"
 void dsymv_ ( char * uplo, int * n, double * alpha,
 	      double * A, int * lda, 
-	      double * x, int * incx,
+	      const double * x, int * incx,
 	      double * beta, double * y, int * incy );
 
 extern "C"
 void dgemv_ ( char * trans, int * m, int * n, 
 	      double * alpha, double * a, int * lda,
-	      double * x, int * incx,
+	      const double * x, int * incx,
               double * beta, double * y, int * incy );
 
 extern "C"

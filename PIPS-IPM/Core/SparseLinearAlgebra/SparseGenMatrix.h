@@ -10,6 +10,7 @@
 #include "SparseStorage.h"
 #include "SparseStorageDynamic.h"
 #include "SparseGenMatrixHandle.h"
+#include "SimpleVector.h"
 #include <vector>
 #include "pipsport.h"
 
@@ -22,7 +23,9 @@ private:
   static
   void getMinMaxVec( bool getMin, bool initializeVec,
         const SparseStorage* storage, const OoqpVector* coScaleVec, OoqpVector& minmaxVec );
-
+  static
+  void getMinMaxVec( bool getMin, bool initializeVec,
+        const SparseStorageDynamic* storage_dynamic, const OoqpVector* coScaleVec, OoqpVector& minmaxVec );
 protected:
   SparseStorageHandle mStorage;
   SparseStorageDynamic* mStorageDynamic;
@@ -32,7 +35,7 @@ protected:
 
 public:
 
-  SparseGenMatrix( );
+  SparseGenMatrix();
 
   void updateTransposed();
   void deleteTransposed();
@@ -41,12 +44,13 @@ public:
   SparseGenMatrix( int rows, int cols, int nnz,
 		   int krowM[], int jcolM[], double M[],
 		   int deleteElts=0);
-  //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
 
+  virtual SparseGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const;
+  virtual SparseGenMatrix* cloneEmptyRowsTransposed(bool switchToDynamicStorage = false) const;
   virtual SparseGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  virtual void getSize( long long& m, long long& n ) const;
+  virtual void getSize( int& m, int& n ) const;
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
@@ -79,8 +83,8 @@ public:
   virtual void getDiagonal( OoqpVector& vec );
   virtual void setToDiagonal( OoqpVector& vec );
 
-  virtual void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x );
+  void mult ( double beta,  OoqpVector& y,
+                      double alpha, const OoqpVector& x ) const override;
   virtual void mult ( double beta,  double y[], int incy,
                       double alpha, double x[], int incx );
 
@@ -90,8 +94,8 @@ public:
   virtual void transmultMatSymUpper( double beta, SymMatrix& y,
         double alpha, double x[], int yrowstart, int ycolstart ) const;
 
-  virtual void transMult( double beta,   OoqpVector& y,
-			  double alpha,  OoqpVector& x );
+  void transMult( double beta,   OoqpVector& y,
+			  double alpha,  const OoqpVector& x ) const override;
   virtual void transMult( double beta,  OoqpVector& y_in, int incy,
 			  double alpha, OoqpVector& x_in, int incx );
   virtual void transMult( double beta,  double y_in[], int incy,
@@ -186,8 +190,24 @@ public:
 
   void freeDynamicStorage();
 
-  virtual ~SparseGenMatrix();
+  virtual int appendRow( const SparseGenMatrix& matrix_row, int row );
+  /** appends col - need matrix_col to have a transposed! */
+  virtual int appendCol(const SparseGenMatrix& matrix_col, int col);
 
+  virtual double localRowTimesVec( const SimpleVector& vec, int row ) const;
+  virtual void axpyWithRowAt(double alpha, SimpleVector& y, int row) const;
+
+  virtual void removeRow(int row);
+  virtual void removeCol( int col );
+
+  virtual void removeRowUsingTransposed( int row, SparseStorageDynamic& mat_trans);
+
+  virtual void removeEntryAtRowCol( int row, int col );
+  virtual void removeEntryAtRowColIndex( int row, int col_index );
+
+  virtual void addColToRow( double coeff, int col, int row );
+
+  virtual ~SparseGenMatrix();
 };
 
 #endif

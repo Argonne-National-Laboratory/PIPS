@@ -14,11 +14,11 @@
 
 #include <vector>
 
-inline SparseGenMatrix* getSparseGenMatrixFromStochMat(const StochGenMatrix& sMat, int node, BlockType block_type)
+inline SparseGenMatrix* getSparseGenMatrixFromStochMat(const StochGenMatrix& sMat, int smat_node, BlockType block_type)
 {
-   assert( -1 <= node && node < static_cast<int>(sMat.children.size()) );
+   assert( -1 <= smat_node && smat_node < static_cast<int>(sMat.children.size()) );
 
-   if(node == -1)
+   if(smat_node == -1)
    {
       if(block_type == BL_MAT)
          return sMat.Blmat;
@@ -31,11 +31,11 @@ inline SparseGenMatrix* getSparseGenMatrixFromStochMat(const StochGenMatrix& sMa
    else
    {
       if(block_type == A_MAT)
-         return sMat.children[node]->Amat;
+         return sMat.children[smat_node]->Amat;
       else if(block_type == B_MAT)
-         return sMat.children[node]->Bmat;
+         return sMat.children[smat_node]->Bmat;
       else if(block_type == BL_MAT)
-         return sMat.children[node]->Blmat;
+         return sMat.children[smat_node]->Blmat;
    }
    return nullptr;
 }

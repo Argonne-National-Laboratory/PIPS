@@ -17,8 +17,6 @@ StochGenMatrix::StochGenMatrix(int id,
     mpiComm(mpiComm_), iAmDistrib(0),
     workPrimalVec(nullptr)
 {
-  //cout << "StochGenMatrix-> " << A_m << " " << A_n << " " << B_m << " " << B_n << " " << endl;
-
   Amat = new SparseGenMatrix(A_m, A_n, A_nnz);
   Bmat = new SparseGenMatrix(B_m, B_n, B_nnz);
   Blmat = new SparseGenMatrix(0, 0, 0);
@@ -68,8 +66,7 @@ StochGenMatrix::StochGenMatrix(int id,
 
 StochGenMatrix::~StochGenMatrix()
 {
-  //cout << "~~~~~~~~StochGenMatrix" << endl;
-  for(size_t it=0; it<children.size(); it++)
+  for(size_t it = 0; it < children.size(); it++)
     delete children[it];
 
   if (Amat)
@@ -98,9 +95,24 @@ StochGenMatrix* StochGenMatrix::cloneFull(bool switchToDynamicStorage) const
    for( size_t it = 0; it < children.size(); it++ )
       clone->children.push_back(children[it]->cloneFull(switchToDynamicStorage));
 
-   return clone;
+   return clone;	
 }
 
+/* creates an empty copy of the matrix with n = 0 for all submatrices and m (cols) as before */
+StochGenMatrix* StochGenMatrix::cloneEmptyRows(bool switchToDynamicStorage) const
+{
+   StochGenMatrix* clone = new StochGenMatrix(id, m, n, mpiComm);
+
+   // clone submatrices
+   clone->Amat = Amat->cloneEmptyRows(switchToDynamicStorage);
+   clone->Bmat = Bmat->cloneEmptyRows(switchToDynamicStorage);
+	 clone->Blmat = Blmat->cloneEmptyRows(switchToDynamicStorage);
+
+   for( size_t it = 0; it < children.size(); it++ )
+      clone->children.push_back(children[it]->cloneEmptyRows(switchToDynamicStorage));
+
+   return clone;
+}
 
 void StochGenMatrix::AddChild(StochGenMatrix* child)
 {
@@ -125,11 +137,11 @@ int StochGenDummyMatrix::isKindOf( int type ) const
 {
   return type == kStochGenDummyMatrix;
 }
-void StochGenMatrix::getSize( long long& m_out, long long& n_out )
+void StochGenMatrix::getSize( long long& m_out, long long& n_out ) const
 {
   m_out = m; n_out=n;
 }
-void StochGenMatrix::getSize( int& m_out, int& n_out )
+void StochGenMatrix::getSize( int& m_out, int& n_out ) const
 {
   m_out = m; n_out=n;
 }
@@ -216,7 +228,7 @@ void StochGenMatrix::scalarMult( double num)
   Bmat->scalarMult(num);
   Blmat->scalarMult(num);
 
-  for (size_t it=0; it<children.size(); it++) 
+  for (size_t it = 0; it < children.size(); it++) 
     children[it]->scalarMult(num);
 }
 
@@ -276,22 +288,22 @@ void StochGenMatrix::setToDiagonal( OoqpVector& vec_ )
 
 /* y = beta * y + alpha * this * x */
 void StochGenMatrix::mult( double beta,  OoqpVector& y_,
-			   double alpha, OoqpVector& x_ )
+			   double alpha, const OoqpVector& x_ ) const
 {
-  StochVector & x = dynamic_cast<StochVector&>(x_);
+  const StochVector & x = dynamic_cast<const StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
   //assert tree compatibility
   assert(y.children.size() - children.size() == 0);
   assert(x.children.size() - children.size() == 0);
 
-  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector& xvec = dynamic_cast<const SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
 
   if (0.0 == alpha) {
     y.vec->scale( beta );
 
-    for(size_t it=0; it<children.size(); it++)
+    for(size_t it = 0; it < children.size(); it++)
       children[it]->mult(beta, *y.children[it], alpha, *x.children[it]);
 
     return;
@@ -329,12 +341,12 @@ void StochGenMatrix::mult( double beta,  OoqpVector& y_,
 	else
 	  yvecl.setToZero();
 
-    for(size_t it=0; it<children.size(); it++)
+    for(size_t it = 0; it < children.size(); it++)
 	   children[it]->mult2(beta, *y.children[it], alpha, *x.children[it], yvecl);
 
 	if(iAmDistrib) {
 	  // sum up linking constraints vectors
-	  int locn=yvecl.length();
+	  int locn = yvecl.length();
 	  double* buffer = new double[locn];
 
 	  MPI_Allreduce(yvecl.elements(), buffer, locn, MPI_DOUBLE, MPI_SUM, mpiComm);
@@ -380,16 +392,16 @@ void StochGenMatrix::mult2( double beta,  OoqpVector& y_,
 
 
 void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
-				 double alpha,  OoqpVector& x_ )
+				 double alpha,  const OoqpVector& x_ ) const
 {
-  StochVector & x = dynamic_cast<StochVector&>(x_);
+  const StochVector & x = dynamic_cast<const StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
   // assert tree compatibility
   assert(y.children.size() == children.size());
   assert(x.children.size() == children.size());
 
-  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector& xvec = dynamic_cast<const SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
 
   int blm, bln;
@@ -399,7 +411,7 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
   if( blm > 0 )
   {
     assert(x.vecl);
-    SimpleVector& xvecl = dynamic_cast<SimpleVector&>(*x.vecl);
+    const SimpleVector& xvecl = dynamic_cast<const SimpleVector&>(*x.vecl);
 
     if( iAmSpecial(iAmDistrib, mpiComm) )
     {
@@ -417,7 +429,7 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
     //!opt alloc buffer here and send it through the tree to be used by
     //!children when MPI_Allreduce
     //let the children compute their contribution
-    for(size_t it=0; it<children.size(); it++) {
+    for(size_t it = 0; it < children.size(); it++) {
       children[it]->transMult2(beta, *y.children[it], alpha, *x.children[it], yvec, xvecl);
     }
   }
@@ -447,13 +459,13 @@ void StochGenMatrix::transMult ( double beta,   OoqpVector& y_,
 
 void StochGenMatrix::transMult2 ( double beta,   StochVector& y,
 				  double alpha,  StochVector& x,
-				  OoqpVector& yvecParent, OoqpVector& xvecl)
+				  OoqpVector& yvecParent, const OoqpVector& xvecl) const
 {
   //assert tree compatibility
   assert(y.children.size() - children.size() == 0);
   assert(x.children.size() - children.size() == 0);
 
-  SimpleVector& xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector& xvec = dynamic_cast<const SimpleVector&>(*x.vec);
   SimpleVector& yvec = dynamic_cast<SimpleVector&>(*y.vec);
 
 #ifdef STOCH_TESTING
@@ -1301,7 +1313,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
       }
 
    if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &linkCount[0], m, MPI_INT, MPI_SUM, mpiComm);
+      PIPS_MPIsumArrayInPlace(linkCount, mpiComm);
 
    // set block identifier
    for( int i = 0; i < m; i++ )
@@ -1319,10 +1331,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
    {
       // find 2-links between different processes
 
-      int myrank, size;
-      MPI_Comm_rank(mpiComm, &myrank);
-      MPI_Comm_size(mpiComm, &size);
-
+      const int size = PIPS_MPIgetSize(mpiComm);
       assert(size > 0);
 
       // 1. allgather number of local 2-link candidates
@@ -1330,6 +1339,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
       std::vector<int> localCandsBlock;
       std::vector<int> candsPerProc(size, -1);
 
+      /* a local candidate is a linking row that appears in exactly two blocks, starts on this process but where the second block is not stored on this process */
       for( int i = 0; i < m; i++ )
          if( linkCount[i] == 2 && linkBlockStart[i] >= 0 && linkBlockEnd[i] == -1 )
          {
@@ -1341,9 +1351,9 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
             localCandsBlock.push_back(linkBlockStart[i]);
          }
 
-      int localcount = localCandsIdx.size();
+      const int localcount = localCandsIdx.size();
 
-      MPI_Allgather(&localcount, 1, MPI_INT, &candsPerProc[0], 1, MPI_INT, mpiComm);
+      PIPS_MPIallgather(&localcount, 1, &candsPerProc[0], 1, mpiComm);
 
 #ifndef NDEBUG
       for( size_t i = 0; i < candsPerProc.size(); i++ )
@@ -1352,12 +1362,11 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
 
       // 2. allgatherv 2-link candidates
       std::vector<int> displacements(size + 1, 0);
-      for( int i = 1; i < size; i++ )
+      for( int i = 1; i <= size; i++ )
          displacements[i] = candsPerProc[i - 1] + displacements[i - 1];
 
-      const int nAllCands = displacements[size - 1] + candsPerProc[size - 1];
+      const int nAllCands = displacements[size];
 
-      displacements[size] = nAllCands;
       std::vector<int> allCandsRow(nAllCands, -1);
       std::vector<int> allCandsBlock(nAllCands, -1);
 
@@ -1369,7 +1378,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
 
 #ifndef NDEBUG
       for( size_t i = 0; i < allCandsRow.size(); i++ )
-         assert(allCandsRow[i] >= 0 && allCandsRow[i] < m && allCandsBlock[i] >= 0 && allCandsBlock[i] < int(children.size()));
+         assert(allCandsRow[i] >= 0 && allCandsRow[i] < m && allCandsBlock[i] >= 0 && allCandsBlock[i] < static_cast<int>(children.size()));
 #endif
 
 
@@ -1386,18 +1395,20 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
          {
             assert(allCandsBlock[j] > 0);
             const int candRow = allCandsRow[j];
+            const int candBlock = allCandsBlock[j];
             if( blocksHash[candRow] >= 0 )
             {
-               assert(blocksHash[candRow] != allCandsBlock[j]);
+               assert(blocksHash[candRow] != candBlock);
 
-               const int startBlock = std::min(blocksHash[candRow], allCandsBlock[j]);
-               const int endBlock = std::max(blocksHash[candRow], allCandsBlock[j]);
+               const int startBlock = std::min(blocksHash[candRow], candBlock);
+               const int endBlock = std::max(blocksHash[candRow], candBlock);
 
                assert(startBlock >= 0 && endBlock >= 0);
 
                if( endBlock - startBlock != 1 )
                   continue;
 
+               assert( !is2link[candRow] );
                is2link[candRow] = true;
 
                // start block owned by this MPI process?
@@ -1426,7 +1437,7 @@ std::vector<int> StochGenMatrix::get2LinkStartBlocks() const
          linkBlockStart[i] = -1;
 
    if( iAmDistrib )
-      MPI_Allreduce(MPI_IN_PLACE, &linkBlockStart[0], m, MPI_INT, MPI_MAX, mpiComm);
+      PIPS_MPImaxArrayInPlace(linkBlockStart, mpiComm);
 
    return linkBlockStart;
 }
@@ -1472,6 +1483,7 @@ void StochGenMatrix::updateTransposed()
 
 /* check whether root node date is same in all processes
  *
+ * todo: check this
  * todo: make better use of std::vector and iterators
  * root node data is Amat (empty), Bmat and Blmat of root node. Children not checked.
  */
@@ -1585,20 +1597,20 @@ bool StochGenMatrix::isRootNodeInSync() const
 
       /* dynamic storage */
       int bmat_dyn_len = 0;
-      for(int i = 0; i < Bmat_dyn.m; ++i)
-         bmat_dyn_len += (Bmat_dyn.rowptr[i].end - Bmat_dyn.rowptr[i].start);
+      for(int i = 0; i < Bmat_dyn.getM(); ++i)
+         bmat_dyn_len += (Bmat_dyn.getRowPtr(i).end - Bmat_dyn.getRowPtr(i).start);
 
       int blmat_dyn_len = 0;
-      for(int i = 0; i < Blmat_dyn.m; ++i)
-         blmat_dyn_len += (Blmat_dyn.rowptr[i].end - Blmat_dyn.rowptr[i].start);
+      for(int i = 0; i < Blmat_dyn.getM(); ++i)
+         blmat_dyn_len += (Blmat_dyn.getRowPtr(i).end - Blmat_dyn.getRowPtr(i).start);
 
       const int lenght_entries_bmat_dynamic = bmat_dyn_len;
       const int length_columns_bmat_dynamic = bmat_dyn_len;
-      const int lenght_rowoffest_bmat_dynamic = Bmat_dyn.m + 1;
+      const int lenght_rowoffest_bmat_dynamic = Bmat_dyn.getM() + 1;
 
       const int lenght_entries_blmat_dynamic = blmat_dyn_len;
       const int length_columns_blmat_dynamic = blmat_dyn_len;
-      const int lenght_rowoffest_blmat_dynamic = Blmat_dyn.m + 1;
+      const int lenght_rowoffest_blmat_dynamic = Blmat_dyn.getM() + 1;
 
       const long long count_row_cols_dyn = length_columns_bmat_dynamic + 2 * lenght_rowoffest_bmat_dynamic + length_columns_blmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic;
       const long long count_entries_dyn = lenght_entries_bmat_dynamic + lenght_entries_blmat_dynamic;
@@ -1613,16 +1625,16 @@ bool StochGenMatrix::isRootNodeInSync() const
       std::vector<int> recvbuf_row_coldynamic(count_row_cols_dyn, 0);;
 
       /* fill Bmat into send buffers */
-      const double * M = Bmat_dyn.M;
-      const int * jColM = Bmat_dyn.jcolM;
+      const double * M = Bmat_dyn.getMat();
+      const int * jColM = Bmat_dyn.getJcolM();
 
       int count_entries = 0;
       int count_row_col = 0;
 
       /* entries Bmat into double array */
-      for(int i = 0; i < Bmat_dyn.m; ++i)
+      for(int i = 0; i < Bmat_dyn.getM(); ++i)
       {
-         for(int j = Bmat_dyn.rowptr[i].start; j < Bmat_dyn.rowptr[i].end; ++j)
+         for(int j = Bmat_dyn.getRowPtr(i).start; j < Bmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_entries_dynamic[count_entries] = M[j];
             count_entries++;
@@ -1633,16 +1645,16 @@ bool StochGenMatrix::isRootNodeInSync() const
       /* row pointers Bmat into int array */
       for(int i = 0; i < lenght_rowoffest_bmat_dynamic; ++i)
       {
-         sendbuf_row_col_dynamic[count_row_col] = Bmat_dyn.rowptr->start;
-         sendbuf_row_col_dynamic[count_row_col + 1] = Bmat_dyn.rowptr->end;
+         sendbuf_row_col_dynamic[count_row_col] = Bmat_dyn.getRowPtr()->start;
+         sendbuf_row_col_dynamic[count_row_col + 1] = Bmat_dyn.getRowPtr()->end;
          count_row_col += 2;
       }
       assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic);
 
       /* col indices of Bmat into int array */
-      for(int i = 0; i < Bmat_dyn.m; ++i)
+      for(int i = 0; i < Bmat_dyn.getM(); ++i)
       {
-         for(int j = Bmat_dyn.rowptr[i].start; j < Bmat_dyn.rowptr[i].end; ++j)
+         for(int j = Bmat_dyn.getRowPtr(i).start; j < Bmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_row_col_dynamic[count_row_col] = jColM[j];
             count_row_col++;
@@ -1651,13 +1663,13 @@ bool StochGenMatrix::isRootNodeInSync() const
       assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic);
 
       /* fill Blmat into send buffers */
-      const double * Ml = Blmat_dyn.M;
-      const int * jColMl = Blmat_dyn.jcolM;
+      const double * Ml = Blmat_dyn.getMat();
+      const int * jColMl = Blmat_dyn.getJcolM();
 
       /* entries Blmat into double array */
-      for(int i = 0; i < Blmat_dyn.m; ++i)
+      for(int i = 0; i < Blmat_dyn.getM(); ++i)
       {
-         for(int j = Blmat_dyn.rowptr[i].start; j < Blmat_dyn.rowptr[i].end; ++j)
+         for(int j = Blmat_dyn.getRowPtr(i).start; j < Blmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_entries_dynamic[count_entries] = Ml[j];
             count_entries++;
@@ -1669,16 +1681,16 @@ bool StochGenMatrix::isRootNodeInSync() const
       for(int i = 0; i < lenght_rowoffest_blmat_dynamic; ++i)
       {
          assert(2 * lenght_rowoffest_bmat_dynamic + lenght_entries_bmat_dynamic + 2 * i + 1 < count_row_cols_dyn);
-         sendbuf_row_col_dynamic[count_row_col] = Blmat_dyn.rowptr->start;
-         sendbuf_row_col_dynamic[count_row_col + 1] = Blmat_dyn.rowptr->end;
+         sendbuf_row_col_dynamic[count_row_col] = Blmat_dyn.getRowPtr()->start;
+         sendbuf_row_col_dynamic[count_row_col + 1] = Blmat_dyn.getRowPtr()->end;
          count_row_col += 2;
       }
       assert(count_row_col == 2 * lenght_rowoffest_bmat_dynamic + length_columns_bmat_dynamic + 2 * lenght_rowoffest_blmat_dynamic);
 
       /* col indices of Bmat into int array */
-      for(int i = 0; i < Blmat_dyn.m; ++i)
+      for(int i = 0; i < Blmat_dyn.getM(); ++i)
       {
-         for(int j = Blmat_dyn.rowptr[i].start; j < Blmat_dyn.rowptr[i].end; ++j)
+         for(int j = Blmat_dyn.getRowPtr(i).start; j < Blmat_dyn.getRowPtr(i).end; ++j)
          {
             sendbuf_row_col_dynamic[count_row_col] = jColMl[j];
             count_row_col++;
@@ -1718,7 +1730,144 @@ bool StochGenMatrix::isRootNodeInSync() const
    return in_sync;
 }
 
+/* Find correct matrices to append row to
+ *  Can only be called in root node
+ *
+ *  Child -1 is parent
+ *
+ * @return rowindex (in specified block row) of newly appended row
+ */
+int StochGenMatrix::appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking ) 
+{
+  // todo: check that matrix is in correct format
+  assert( matrix_row.children.size() == children.size() );
+  assert( children.size() != 0 );
+  assert( -1 <= child && child <= (int) children.size() );
+
+  int index_row;
+
+  // append row to all matrices necessary
+  // todo maybe this can be done nicer - maybe we can just recursively call some method also on the dummies 
+  if(linking)
+  {
+    index_row = Blmat->appendRow( *matrix_row.Blmat, row );
+
+    for(unsigned int i = 0; i < children.size(); ++i)
+    { 
+      if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+      {
+        assert( !matrix_row.children[i]->isKindOf(kStochGenDummyMatrix) );
+        children[i]->Blmat->appendRow( *matrix_row.children[i]->Blmat, row);
+      }
+    }
+  }
+  else
+  {
+    if(child != -1)
+    {
+      index_row = children[child]->Amat->appendRow( *matrix_row.children[child]->Amat, row );
+#ifndef NDEBUG
+      const int index_row1 = children[child]->Bmat->appendRow( *matrix_row.children[child]->Bmat, row );
+#else
+      children[child]->Bmat->appendRow( *matrix_row.children[child]->Bmat, row );
+#endif
+      assert(index_row1 == index_row);
+    }
+    else
+    {
+      index_row = Bmat->appendRow( *matrix_row.Bmat, row );
+    }
+  }
+
+  return index_row;
+};
+
+/* y += alpha RowAt(child, row, linking) */
+void StochGenMatrix::axpyWithRowAt( double alpha, StochVector& y, int child, int row, bool linking) const
+{
+   assert(-1 <= child && child < static_cast<int>(children.size()));
+   assert(y.children.size() == children.size());
+
+   /* go through all available children and calculate y += alpha * rowAt(row) */
+   if( linking )
+   {
+      assert(Blmat);
+      assert(y.vec);
+      Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
+
+      for( unsigned int i = 0; i < children.size(); ++i )
+      {
+         if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+         {
+            assert(children[i]->Blmat);
+            assert(y.children[i]->vec);
+            children[i]->Blmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.children[i]->vec), row);
+         }
+      }
+   }
+   else
+   {
+      if( child == -1 )
+      {
+         assert(Bmat);
+         assert(y.vec);
+         Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
+      }
+      else
+      {
+         assert(children[child]->Amat);
+         assert(children[child]->Bmat);
+         assert(y.vec);
+         assert(y.children[child]->vec);
+         children[child]->Amat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.vec), row);
+         children[child]->Bmat->axpyWithRowAt(alpha, dynamic_cast<SimpleVector&>(*y.children[child]->vec), row);
+      }
+   }
+}
 
 
+double StochGenMatrix::localRowTimesVec(const StochVector &vec, int child, int row, bool linking) const
+{
+   assert(-1 <= child && child < static_cast<int>(children.size()));
+   assert(vec.children.size() == children.size());
 
+   double res = 0.0;
 
+   /* go through all available children and multiply the vec times row in submatrix */
+   if( linking )
+   {
+      assert(Blmat);
+      assert(vec.vec);
+      res += Blmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+
+      for( unsigned int i = 0; i < children.size(); ++i )
+      {
+         if( !children[i]->isKindOf(kStochGenDummyMatrix) )
+         {
+            assert(children[i]->Blmat);
+            assert(vec.children[i]->vec);
+            res += children[i]->Blmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.children[i]->vec), row);
+         }
+      }
+   }
+   else
+   {
+      if( child == -1 )
+      {
+         assert(Bmat);
+         assert(vec.vec);
+         res += Bmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+      }
+      else
+      {
+         assert(children[child]->Amat);
+         assert(children[child]->Bmat);
+         assert(vec.vec);
+         assert(vec.children[child]->vec);
+         res += children[child]->Amat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.vec), row);
+         res += children[child]->Bmat->localRowTimesVec(dynamic_cast<const SimpleVector&>(*vec.children[child]->vec), row);
+      }
+   }
+
+   return res;
+}

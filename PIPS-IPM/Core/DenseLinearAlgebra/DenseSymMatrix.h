@@ -26,20 +26,21 @@ public:
   virtual int isKindOf( int matrixType ) const;
 
   virtual void mult ( double beta,  double y[], int incy,
-		      double alpha, double x[], int incx );
+		      double alpha, const double x[], int incx ) const;
   virtual void mult ( double beta,  OoqpVector& y,
-		      double alpha, OoqpVector& x);
+		      double alpha, const OoqpVector& x) const;
 
   virtual void transMult ( double beta,  double y[], int incy,
-			   double alpha, double x[], int incx );
+			   double alpha, const double x[], int incx ) const;
   virtual void transMult ( double beta,  OoqpVector& y,
-			   double alpha, OoqpVector& x );
+			   double alpha, const OoqpVector& x ) const;
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
 
   virtual double abmaxnorm();
-  virtual void writeToStream(ostream& out) const;
+  void writeToStream(ostream& out) const override;
+  void writeToStreamDense(std::ostream& out) const override;
   virtual void randomizePSD(double * seed);
 
   virtual void fromGetDense( int row, int col, double * A, int lda,

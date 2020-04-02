@@ -10,7 +10,6 @@
 #include <cmath>
 #include "pipsdef.h"
 
-// todo : make a list of fixed vars ? then variable fixing does not need to iterate the full matrix..
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData, const sData& origProb) :
       StochPresolverBase(presData, origProb), tightenings(0)
@@ -21,14 +20,10 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 {
 }
 
-// todo print variables bounds strengthened
-// todo print removed fixed cols
 void StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyNnzcounters());
-   assert(presData.verifyActivities());
+   assert(presData.presDataInSync());
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -42,7 +37,6 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   int max_iter = 1; // todo
    int iter = 0;
    bool tightened;
 
@@ -71,8 +65,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
       }
    /* update bounds on all processors */
    }
-   while( tightened && iter < max_iter );
-
+   while( tightened && iter < PRESOLVE_BOUND_STR_MAX_ITER );
 
    presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyLinkingRowActivities();
@@ -87,9 +80,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
 #endif
 
    assert(presData.reductionsEmpty());
-   assert(presData.getPresProb().isRootNodeInSync());
-   assert(presData.verifyActivities());
-   assert(presData.verifyNnzcounters());
+   assert(presData.presDataInSync());
 }
 
 bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_type, int node)
@@ -125,10 +116,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    assert( -1 <= node && node < nChildren );
    updatePointersForCurrentNode(node, system_type);
 
-   // todo : if bound is too big we do not accept it
-   // todo : if current entry is too small we assume that dividing by it is not numerically stable and skip it
-   const double numeric_limit_entry = 1e-7;
-   const double numeric_limit_bounds = 1e12; // todo
    bool tightened = false;
 
    const SimpleVector& xlow = (node == -1 || block_type == A_MAT) ? *currxlowParent : *currxlowChild;
@@ -160,28 +147,35 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
    assert(mat);
 
    /* for every row in the current block and every entry in said row check if we can improve on the currently known bounds */
-   for(int row = 0; row < mat->m; ++row)
+   for(int row = 0; row < mat->getM(); ++row)
    {
+      const INDEX row_INDEX(ROW, linking ? -1 : node, row, linking, system_type);
+
       double actmin_part, actmax_part;
       int actmin_ubndd, actmax_ubndd;
 
-      presData.getRowActivities(system_type, node, linking, row, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
+      presData.getRowActivities( row_INDEX, actmax_part, actmin_part, actmax_ubndd, actmin_ubndd);
 
       /* two or more unbounded variables make it impossible to derive new bounds so skip the row completely */
       if( actmin_ubndd >= 2 && actmax_ubndd >= 2)
          continue;
 
-      /* for every entry of the current row check the associated variable for tighter bounds */
-      for( int j = mat->rowptr[row].start; j < mat->rowptr[row].end; j++ )
+      /* if the partial row activities (so the activities of all bounded variables) exceed some limit we skip the row since no useful
+       * and numerically stable bounds will be obtained here
+       */
+      if( std::fabs(actmin_part) >= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY && std::fabs(actmax_part) >= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY )
+         continue;
+
+      for( int j = mat->getRowPtr(row).start; j < mat->getRowPtr(row).end; j++ )
       {
-         assert( mat->rowptr[row].end - mat->rowptr[row].end < nnzs_row[row] );
+         assert( mat->getRowPtr(row).end - mat->getRowPtr(row).end < nnzs_row[row] );
 
          // compute the possible new bounds on variable x_colIdx:
-         const int col = mat->jcolM[j];
-         const double a_ik = mat->M[j];
+         const int col = mat->getJcolM(j);
+         const double a_ik = mat->getMat(j);
 
          assert( !PIPSisZero(a_ik) );
-         if( PIPSisLT(std::fabs(a_ik), numeric_limit_entry) )
+         if( PIPSisLT(std::fabs(a_ik), PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY) )
             continue;
 
          /* row activities without the entry currently in focus */
@@ -207,7 +201,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
                actmax_row_without_curr = actmax_part;
          }
 
-         /* a singleton row has zero activity without the current column */
+         /* a singleton row has zero activity without the current column - we skip it here though - it will be left for the singleton row presolver */
          if(nnzs_row[row] == 1)
          {
             assert(actmin_ubndd <= 1);
@@ -216,6 +210,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             assert( PIPSisZero(actmax_row_without_curr, feastol) );
 
             actmin_row_without_curr = actmax_row_without_curr = 0;
+            continue;
          }
 
          double lbx_new = -std::numeric_limits<double>::infinity();
@@ -252,12 +247,15 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             }
          }
 
-         if( std::fabs(ubx_new) > numeric_limit_bounds )
-            ubx_new = std::numeric_limits<double>::infinity();
-         if( std::fabs(lbx_new) > numeric_limit_bounds )
-            lbx_new = -std::numeric_limits<double>::infinity();
+         if( std::fabs(ubx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
+            ubx_new = INF_POS_PRES;
+         if( std::fabs(lbx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
+            lbx_new = INF_NEG_PRES;
 
-         bool row_propagated = presData.rowPropagatedBounds(system_type, node, block_type, row, col, ubx_new, lbx_new);
+         const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
+
+//         bool row_propagated = presData.rowPropagatedBounds( INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
+         bool row_propagated = presData.rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
 
          if(row_propagated && (node != -1 || my_rank == 0))
             ++tightenings;

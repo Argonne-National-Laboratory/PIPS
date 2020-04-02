@@ -6,6 +6,7 @@
  */
 
 #include "StochPresolver.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -34,7 +35,7 @@
 #include "StochPresolverModelCleanup.h"
 #include "StochPresolverColumnFixation.h"
 #include "StochPresolverSingletonRows.h"
-//#include "StochPresolverSingletonColumns.h"
+#include "StochPresolverSingletonColumns.h"
 #include "StochPresolverParallelRows.h"
 #include "pipschecks.h"
 #include "pipsport.h"
@@ -42,12 +43,10 @@
 StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullptr)
  : QpPresolver(prob, postsolver)
 {
-   // todo
 }
 
 StochPresolver::~StochPresolver()
 {
-   // todo
 }
 
 Data* StochPresolver::presolve()
@@ -62,6 +61,7 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
+//   sorigprob->writeToStreamDense(std::cout);
    assert( sorigprob->isRootNodeInSync() );
    assert( presData.getPresProb().isRootNodeInSync() );
 
@@ -71,13 +71,14 @@ Data* StochPresolver::presolve()
    StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
    StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
    StochPresolverSingletonRows presolverSR(presData, *sorigprob);
+   StochPresolverSingletonColumns presolverSC(presData, *sorigprob);
 
    if( my_rank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverCleanup.countRowsCols();
 
    // todo loop, and exhaustive
-   // some list holding all presolvers - eg one presolving run
+   // some list holding all presolvers - eg. one presolving run
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
    presolverCleanup.applyPresolving();
    
@@ -85,23 +86,27 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
       presolverSR.applyPresolving();
-      presolverBS.applyPresolving();
       presolverParallelRow.applyPresolving();
+      //presolverSC.applyPresolving();
+      presolverBS.applyPresolving();
+      presolverColFix.applyPresolving();
+      presolverSR.applyPresolving();
       presolverColFix.applyPresolving();
    }
-
+   // presData.getPresProb().writeToStreamDense(std::cout);
    // before the finalize call fix all empty rows and columns not yet fixed
    presolverCleanup.applyPresolving();
    
    if( my_rank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
+   if( my_rank == 0 )
+      std::cout << "Objective offset: " << presData.getObjOffset() << std::endl;
    assert( presData.getPresProb().isRootNodeInSync() );
-
    // exit(1);
 
 
-// todo : tell postsolver aboud released variables
+   // todo : tell postsolver about released variables
    char* env = getenv("PIPS_RESET_FREE_VARIABLES");
    if( env != nullptr )
    {
@@ -121,11 +126,10 @@ Data* StochPresolver::presolve()
 
    sData* finalPresData = presData.finalize();
 
+//   finalPresData->writeToStreamDense(std::cout);
+   
    assert( finalPresData );
    assert( finalPresData->isRootNodeInSync() );
-
-   // todo : verify presolver and postsolver have same amount of deleted rows and cols
-
 
    return finalPresData;
 }

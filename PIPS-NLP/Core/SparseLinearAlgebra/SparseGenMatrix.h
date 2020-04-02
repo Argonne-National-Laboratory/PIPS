@@ -31,8 +31,8 @@ public:
 		   int deleteElts=0);
   //SparseGenMatrix(const std::vector<SparseGenMatrix*> &blocks, bool diagonal); -- not needed anymore; cpetra
   
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that

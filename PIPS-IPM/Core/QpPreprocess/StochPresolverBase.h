@@ -30,6 +30,7 @@ public:
 
 protected:
    void updatePointersForCurrentNode(int node, SystemType system_type);
+
 private:
    void countRowsBlock(int& n_rows_total, int& n_rows_empty, int& n_rows_onesided, int& n_rows_boxed, int& n_rows_fixed, int& n_rows_singleton, SystemType system_type, 
       BlockType block_type) const; 
@@ -93,6 +94,7 @@ protected:
    int nChildren;
    /** number of entry eliminations on this process in the current elimination routine */
    int localNelims;
+
 };
 
 

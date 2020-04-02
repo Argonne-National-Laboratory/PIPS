@@ -1561,7 +1561,6 @@ int readBlock(const int numBlocks,       /** < total number of blocks n in probl
       cVal = (double *)malloc(gdxN*sizeof(double));
       cIdxUel = (int *)malloc(gdxN*sizeof(int));
    }
-
    GDXSAVECALLX(fGDX,gdxFindSymbol(fGDX, "A", &symNr));
    GDXSAVECALLX(fGDX,gdxDataReadRawStart(fGDX, symNr, &gdxNNZ));
    while ( gdxDataReadRaw(fGDX, keyInt, vals, &dimFirst) )

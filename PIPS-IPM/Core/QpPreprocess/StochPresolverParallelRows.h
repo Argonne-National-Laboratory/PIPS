@@ -21,13 +21,13 @@ namespace rowlib
         int id;
         int offset_nA;
         int lengthA;
-        int* colIndicesA;
-        double* norm_entriesA;
+        const int* const colIndicesA;
+        const double* const norm_entriesA;
         int lengthB;
-        int* colIndicesB;
-        double* norm_entriesB;
+        const int* const colIndicesB;
+        const double* const norm_entriesB;
 
-        rowWithColInd(int id, int offset, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
+        rowWithColInd(int id, int offset, int lenA, const int* const colA, const double* const entA, int lenB, const int* const colB, const double* const entB)
             : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
               lengthB(lenB), colIndicesB(colB), norm_entriesB(entB)  {}
     };
@@ -37,16 +37,16 @@ namespace rowlib
 
     struct rowWithEntries
     {
-       int id;
-       int offset_nA;
-       int lengthA;
-       int* colIndicesA;
-       double* norm_entriesA;
-       int lengthB;
-       int* colIndicesB;
-       double* norm_entriesB;
+       const int id;
+       const int offset_nA;
+       const int lengthA;
+       const int* const colIndicesA;
+       const double* const norm_entriesA;
+       const int lengthB;
+       const int* const colIndicesB;
+       const double* const norm_entriesB;
 
-        rowWithEntries(int id, int offset, int lenA, int* colA, double* entA, int lenB, int* colB, double* entB)
+        rowWithEntries(int id, int offset, int lenA, const int* const colA, const double* const entA, int lenB, const int* const colB, const double* const entB)
             : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
               lengthB(lenB), colIndicesB(colB), norm_entriesB(entB) {}
     };
@@ -66,6 +66,8 @@ public:
    virtual void applyPresolving();
 
 private:
+   int n_rows_removed;
+
    /// extension to the pointer set from StochPresolverBase to point to C and A at the same moment rather than
    /// distinguishing between EQUALITY and INEQUALITY constraints
    const SparseStorageDynamic* currCmat;
@@ -130,16 +132,27 @@ private:
    void normalizeBlocksRowwise( SystemType system_type, SparseStorageDynamic* a_mat, SparseStorageDynamic* b_mat,
          SimpleVector* cupp, SimpleVector* clow, SimpleVector* icupp, SimpleVector* iclow) const;
    void insertRowsIntoHashtable( boost::unordered_set<rowlib::rowWithColInd, boost::hash<rowlib::rowWithColInd> > &rows,
-         SparseStorageDynamic* Ablock, SparseStorageDynamic* Bblock, SystemType system_type, SimpleVectorBase<int>* nnzRow );
+         const SparseStorageDynamic* Ablock, const SparseStorageDynamic* Bblock, SystemType system_type, const SimpleVectorBase<int>* nnz_row_norm, const SimpleVectorBase<int>* nnz_row_orig);
    void compareRowsInCoeffHashTable(int& nRowElims, int it);
-   bool checkRowsAreParallel( rowlib::rowWithEntries row1, rowlib::rowWithEntries row2);
+   bool checkRowsAreParallel( const rowlib::rowWithEntries& row1, const rowlib::rowWithEntries& row2);
 
-   void tightenOriginalBoundsOfRow1(SystemType system_type, int node, int rowId1, int rowId2);
+   void tightenOriginalBoundsOfRow1(const INDEX& row1, const INDEX& row2) const;
 
-   double getSingletonCoefficient(int singleColIdx);
+   double getSingletonCoefficient( const INDEX& col) const;
+
+   INDEX getRowSingletonVariable( const INDEX& row ) const;
+   bool rowContainsSingletonVariable( const INDEX& row ) const;
+
    void tightenBoundsForSingleVar(int singleColIdx, double newxlow, double newxupp);
-   void doNearlyParallelRowCase1(int rowId1, int rowId2, int it);
-   void doNearlyParallelRowCase3(int rowId1, int rowId2, int it);
+
+   bool twoParallelEqualityRows( const INDEX& row1, const INDEX& row2 ) const;
+   bool parallelEqualityAndInequalityRow( const INDEX& row_eq, const INDEX& row_ineq) const;
+   bool twoParallelInequalityRows(const INDEX& row1, const INDEX& row2) const;
+
+   bool twoNearlyParallelEqualityRows( const INDEX& row1, const INDEX& row2 ) const;
+   bool nearlyParallelEqualityAndInequalityRow( const INDEX& row_eq, const INDEX& row_ineq) const;
+   bool twoNearlyParallelInequalityRows( const INDEX& row1, const INDEX& row2) const;
+
    void tightenLinkingVarsBounds();
 
 };

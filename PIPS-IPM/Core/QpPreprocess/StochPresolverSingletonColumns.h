@@ -15,21 +15,30 @@
 class StochPresolverSingletonColumns : public StochPresolverBase
 {
 public:
-   StochPresolverSingletonColumns(PresolveData& presData, const sData& origProb, StochPostsolver* postsolver);
+   StochPresolverSingletonColumns(PresolveData& presData, const sData& origProb);
 
    ~StochPresolverSingletonColumns();
 
-   // remove singleton columns
    virtual void applyPresolving();
 
 private:
-   void countSingletonColumns();
-   void initSingletonColumns(int& nSColEq, int& nSCIneq, int& nZeroCostSc, int& nLowerBound, int& nUpperBound,
-         int& nBothBounds, int& nNoBounds, int& nSColEqLinkRow, int& nSColIneqLinkrow, int& nSC);
-   void initSingletonColsBlock(int it, SimpleVector const * nnzColSimple, int& nSColEq, int& nSCIneq, int& nZeroCostSc,
-         int& nLowerBound, int& nUpperBound, int& nBothBounds, int& nNoBounds, int& nSColEqLinkRow, int& nSColIneqLinkrow, int& nSC);
-   void synchronizeSumSeveral(int& val0, int& val1, int& val2, int& val3, int& val4, int& val5, int& val6, int&val7, int& val8, int& val9 );
+   long long removed_cols;
+   bool local_singletons;
+   const unsigned int n_linking_rows_eq;
+   const unsigned int n_linking_rows_ineq;
 
+   std::vector<int> local_linking_column_for_row_in_proc;
+   std::vector<INDEX> cols;
+
+
+   bool removeSingletonColumn( const INDEX& col );
+   INDEX findRowForColumnSingleton( const INDEX& col, bool& found );
+   INDEX findRowForLinkingSingleton( int col, bool& found );
+   INDEX findRowForLinkingSingletonInSystem( int col, SystemType system_type, bool& found );
+   INDEX findRowForNonlinkingSingelton( const INDEX& col, bool& found );
+   bool findRowForSingletonColumnInMatrix( const SparseStorageDynamic& mat, int& row, const int& col );
+
+   void checkColImpliedFree( const INDEX& col, const INDEX& row, bool& lb_implied_free, bool& ub_implied_free );
 };
 
 

@@ -496,7 +496,6 @@ int main(int argc, char ** argv)
 
       std::vector<double> primalSolVec2 = pipsIpm.gatherPrimalSolution();
 
-
       if( printsol )
       {
          primalSolVec = pipsIpm.gatherPrimalSolution();

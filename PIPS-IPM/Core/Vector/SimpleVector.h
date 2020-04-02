@@ -5,13 +5,14 @@
 #ifndef SIMPLEVECTOR
 #define SIMPLEVECTOR
 
-
 #include "OoqpVector.h"
 #include "SimpleVector_fwd.h"
 #include "SimpleVectorHandle.h"
 #include "pipsdef.h"
 
 #include <vector>
+
+//#define RANGECHECKS
 
 /**
  * Simple sequential vectors with element access.
@@ -32,14 +33,14 @@ public:
    */
   T & operator[]( int i ) {
 #ifdef RANGECHECKS
-    assert( i >= 0 && i < n );
+    assert( i >= 0 && i < this->n );
 #endif
     return v[i];
  }
   const T & operator[]( int i ) const
   {
 #ifdef RANGECHECKS
-    assert( i >= 0 && i < n );
+    assert( i >= 0 && i < this->n );
 #endif
     return v[i];
   }
@@ -112,6 +113,8 @@ public:
 
   bool matchesNonZeroPattern( const OoqpVectorBase<T>& select ) const override;
   void selectNonZeros( const OoqpVectorBase<T>& select ) override;
+  void selectPositive() override;
+  void selectNegative() override;
   void addSomeConstants( T c, const OoqpVectorBase<T>& select ) override;
   void writefSomeToStream( std::ostream& out, const char format[],
 				   const OoqpVectorBase<T>& select ) const override;

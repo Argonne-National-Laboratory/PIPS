@@ -59,7 +59,7 @@ void DenseStorage::setToDiagonal( OoqpVector& vec )
 }
 
 
-void DenseStorage::getSize( int& m_, int& n_ )
+void DenseStorage::getSize( int& m_, int& n_ ) const
 {
   m_ = m;
   n_ = n;

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <limits>
 #include <math.h>
+#include "StochVector_fwd.h"
 
 template<typename T>
 StochVectorBase<T>::StochVectorBase(int n_, MPI_Comm mpiComm_, int isDistributed/*=-1*/)
@@ -1531,6 +1532,30 @@ void StochVectorBase<T>::selectNonZeros( const OoqpVectorBase<T>& select_ )
 }
 
 template<typename T>
+void StochVectorBase<T>::selectPositive()
+{
+   vec->selectPositive();
+
+   if( vecl )
+      vecl->selectPositive();
+
+   for(size_t it = 0; it < children.size(); it++)
+     children[it]->selectPositive();
+}
+
+template<typename T>
+void StochVectorBase<T>::selectNegative()
+{
+   vec->selectNegative();
+
+   if( vecl )
+      vecl->selectNegative();
+
+   for(size_t it = 0; it < children.size(); it++)
+     children[it]->selectNegative();
+}
+
+template<typename T>
 long long StochVectorBase<T>::numberOfNonzeros() const
 {
   //!opt - store the number of nnz to avoid communication
@@ -1819,7 +1844,7 @@ bool StochVectorBase<T>::isRootNodeInSync() const
 
    for( int i = 0; i < count; ++i )
    {
-      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) )
+      if( !PIPSisEQ(sendbuf[i], recvbuf[i]) && (sendbuf[i] != recvbuf[i]) )
       {
          /* someone else had a higher value here */
          in_sync = false;

@@ -64,7 +64,7 @@ public:
   void copyFrom(int * krowM_, int * jcolM_, double * M_) const;
 
   void shiftRows( int row, int shift, int& info );
-  virtual void getSize( int& m, int& n );
+  void getSize( int& m, int& n ) const override;
   int rows() { return m; }
   int cols() { return n; }
 
@@ -105,10 +105,10 @@ public:
 				int kpat[], int krowM[], int jcolM[] );
   virtual void getFromPat( double data[], int n, int kpat[] );
   virtual void mult( double beta,  double y[], int incy,
-		     double alpha, double x[], int incx );
+		     double alpha, const double x[], int incx ) const;
 
   virtual void transMult ( double beta,  double y[], int incy,
-			   double alpha, double x[], int incx );
+			   double alpha, const double x[], int incx ) const;
 
   virtual void atPutDiagonal( int idiag, OoqpVector& v );
   virtual void fromGetDiagonal( int idiag, OoqpVector& v );

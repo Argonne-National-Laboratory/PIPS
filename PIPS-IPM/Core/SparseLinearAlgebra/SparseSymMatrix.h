@@ -21,7 +21,7 @@ public:
   SparseSymMatrix();
   SparseSymMatrix( int size, int nnz, bool isLower = true );
   SparseSymMatrix( int size, int nnz,
-		   int krowM[], int jcolM[], double M[], int deleteElts=0, bool isLower = true);
+		   int krowM[], int jcolM[], double M[], int deleteElts = 0, bool isLower = true);
   //SparseSymMatrix(const std::vector<SparseSymMatrix*> &blocks); not needed anymore; cpetra
 
   SparseStorage&  getStorageRef() { return *mStorage; }
@@ -53,8 +53,8 @@ public:
 
   virtual void symPutZeroes();
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
   virtual long long size();
 
   virtual void getDiagonal( OoqpVector& vec );
@@ -65,21 +65,22 @@ public:
 				  int rowExtent, int colExtent );
 
   virtual void mult ( double beta,  double y[], int incy,
-		      double alpha, double x[], int incx );
+		      double alpha, const double x[], int incx ) const;
   virtual void transMult ( double beta,  double y[], int incy,
-			   double alpha, double x[], int incx );
+			   double alpha, const double x[], int incx ) const;
 
-  virtual void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x );
+  void mult ( double beta,  OoqpVector& y,
+                      double alpha, const OoqpVector& x ) const override;
 
-  virtual void transMult ( double beta,   OoqpVector& y,
-                           double alpha,  OoqpVector& x );
+  void transMult ( double beta,   OoqpVector& y,
+                           double alpha,  const OoqpVector& x ) const override;
 
   virtual double abmaxnorm();
 
-  virtual void writeToStream(ostream& out) const;
-
-  virtual void writeToStreamDense(ostream& out) const;
+  void writeToStream( std::ostream& out ) const override;
+  void writeToStreamDense( std::ostream& out ) const override;
+  virtual std::string writeToStreamDenseRow(int row) const;
+  virtual void writeToStreamDenseRow( std::stringstream& out, int row ) const;
 
   virtual void randomizePSD(double *);
 

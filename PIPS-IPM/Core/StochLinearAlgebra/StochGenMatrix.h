@@ -40,9 +40,9 @@ public:
        MPI_Comm mpiComm_);
 
   // constructor for combining scenarios
-  //StochGenMatrix(const vector<StochGenMatrix*> &blocks); -- not needed; cpetra
   virtual ~StochGenMatrix();
 
+  virtual StochGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const;
   virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const;
 
   virtual void AddChild(StochGenMatrix* child);
@@ -63,7 +63,7 @@ public:
   /** trans mult method for children with linking constraints */
   virtual void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent, OoqpVector& xvecl );
+		    OoqpVector& yvecParent, const OoqpVector& xvecl ) const;
 
   /** trans mult method for children; does not support linking constraints */
   virtual void transMult2 ( double beta,   StochVector& y,
@@ -111,8 +111,8 @@ public:
  public:
   virtual void updateTransposed();
 
-  virtual void getSize( long long& m, long long& n );
-  virtual void getSize( int& m, int& n );
+  void getSize( long long& m, long long& n ) const override;
+  void getSize( int& m, int& n ) const override;
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
@@ -120,45 +120,45 @@ public:
    */  
   virtual int numberOfNonZeros();
 
-  virtual int isKindOf( int matType ) const;
+  int isKindOf( int matType ) const override;
 
-  virtual void atPutDense( int row, int col, double * A, int lda,
-			   int rowExtent, int colExtent );
-  virtual void fromGetDense( int row, int col, double * A, int lda,
-			     int rowExtent, int colExtent );
-  virtual void ColumnScale( OoqpVector& vec );
-  virtual void RowScale( OoqpVector& vec );
-  virtual void SymmetricScale( OoqpVector &vec);
-  virtual void scalarMult( double num);
-  virtual void fromGetSpRow( int row, int col,
+  void atPutDense( int row, int col, double * A, int lda,
+			   int rowExtent, int colExtent ) override;
+  void fromGetDense( int row, int col, double * A, int lda,
+			     int rowExtent, int colExtent ) override;
+  void ColumnScale( OoqpVector& vec ) override;
+  void RowScale( OoqpVector& vec ) override;
+  void SymmetricScale( OoqpVector &vec) override;
+  void scalarMult( double num) override;
+  void fromGetSpRow( int row, int col,
 			     double A[], int lenA, int jcolA[], int& nnz,
-			     int colExtent, int& info );
-  virtual void atPutSubmatrix( int destRow, int destCol, DoubleMatrix& M,
+			     int colExtent, int& info ) override;
+  void atPutSubmatrix( int destRow, int destCol, DoubleMatrix& M,
 			       int srcRow, int srcCol,
-			       int rowExtent, int colExtent );
-  virtual void atPutSpRow( int col, double A[], int lenA, int jcolA[],
-			   int& info );
+			       int rowExtent, int colExtent ) override;
+  void atPutSpRow( int col, double A[], int lenA, int jcolA[],
+			   int& info ) override;
 
-  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[], 
-				int& info );
+  void putSparseTriple( int irow[], int len, int jcol[], double A[], 
+				int& info ) override;
 
-  virtual void getDiagonal( OoqpVector& vec );
-  virtual void setToDiagonal( OoqpVector& vec );
+  void getDiagonal( OoqpVector& vec ) override;
+  void setToDiagonal( OoqpVector& vec ) override;
 
   /** y = beta * y + alpha * this * x */
-  virtual void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x );
+  void mult ( double beta,  OoqpVector& y,
+                      double alpha, const OoqpVector& x ) const override;
 
-  virtual void transMult ( double beta,   OoqpVector& y,
-                           double alpha,  OoqpVector& x );
+  void transMult ( double beta,   OoqpVector& y,
+                           double alpha,  const OoqpVector& x ) const override;
 
-  virtual double abmaxnorm();
+  double abmaxnorm() override;
 
   virtual void getLinkVarsNnz(std::vector<int>& vec) const;
 
-  virtual void writeToStream(ostream& out) const;
-  virtual void writeToStreamDense(ostream& out) const;
-  virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const;
+  void writeToStream(ostream& out) const override;
+  void writeToStreamDense(ostream& out) const override;
+  void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const override;
 
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
@@ -167,16 +167,16 @@ public:
    */
   virtual void symmetrize( int& info );
 
-  virtual void randomize( double alpha, double beta, double * seed );
+  void randomize( double alpha, double beta, double * seed ) override;
 
   /** initialize (dynamic) transposed matrices for A, B, Bl */
   virtual void initTransposed(bool dynamic = false);
   virtual void deleteTransposed();
 
-  virtual void atPutDiagonal( int idiag, OoqpVector& v );
-  virtual void fromGetDiagonal( int idiag, OoqpVector& v );
-  void matTransDMultMat(OoqpVector& d, SymMatrix** res);
-  void matTransDinvMultMat(OoqpVector& d, SymMatrix** res);
+  void atPutDiagonal( int idiag, OoqpVector& v ) override;
+  void fromGetDiagonal( int idiag, OoqpVector& v ) override;
+  void matTransDMultMat(OoqpVector& d, SymMatrix** res) override;
+  void matTransDinvMultMat(OoqpVector& d, SymMatrix** res) override;
 
   void getNnzPerRow(OoqpVectorBase<int>& nnzVec) override
   {
@@ -189,15 +189,15 @@ public:
   };
 
   /** fill vector with absolute minimum/maximum value of each row */
-  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* colScaleVec, OoqpVector& minmaxVec )
+  void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec ) override
   {
      getRowMinMaxVec(getMin, initializeVec, colScaleVec, nullptr, minmaxVec, nullptr);
   };
 
   /** fill vector with absolute minimum/maximum value of each column */
-  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec )
+  void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ) override
   {
      getColMinMaxVec(getMin, initializeVec, rowScaleVec, nullptr, minmaxVec, nullptr);
   };
@@ -221,6 +221,18 @@ public:
   virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec);
 
   virtual bool isRootNodeInSync() const;
+
+  virtual int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking );
+
+  /** calculate vec^T * row where row is linking or not in child child and with row index row
+   *  for a linking row only the available blocks will be multiplied - currently only possible for dynamic storage! (since 
+   *  this was its foremost usecase)
+   */
+  virtual double localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const;
+
+  /* y += alpha * RowAt(child, row, linking) */
+  virtual void axpyWithRowAt( double alpha, StochVector& y, int child, int row, bool linking) const;
+
 };
 
 
@@ -239,101 +251,105 @@ public:
 
   virtual ~StochGenDummyMatrix(){};
 
-  virtual void AddChild(StochGenMatrix* child){};
+  void AddChild(StochGenMatrix* child) override {};
 
  public:
-  virtual void updateTransposed() {};
+  void updateTransposed() override {};
 
-  virtual void getSize( int& m, int& n ){m=0; n=0;}
-  virtual void getSize( long long& m, long long& n ){m=0; n=0;}
+  void getSize( int& m, int& n ) const override { m = 0; n = 0; }
+  void getSize( long long& m, long long& n ) const override { m = 0; n = 0; }
 
-  virtual StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const { return new StochGenDummyMatrix(id); };
+  StochGenMatrix* cloneEmptyRows(bool switchToDynamicStorage = false) const override { return new StochGenDummyMatrix(id); };
+  StochGenMatrix* cloneFull(bool switchToDynamicStorage = false) const  override { return new StochGenDummyMatrix(id); };
 
 
   /** The actual number of structural non-zero elements in this sparse
    *  matrix. This includes so-called "accidental" zeros, elements that
    *  are treated as non-zero even though their value happens to be zero.
    */  
-  virtual int numberOfNonZeros(){return 0;}
+  int numberOfNonZeros() override {return 0;} 
 
-  virtual int isKindOf( int matType ) const;
+  int isKindOf( int matType ) const override ;
 
-  virtual void atPutDense( int row, int col, double * A, int lda,
-			   int rowExtent, int colExtent ){};
-  virtual void fromGetDense( int row, int col, double * A, int lda,
-			     int rowExtent, int colExtent ){};
-  virtual void ColumnScale( OoqpVector& vec ){};
-  virtual void RowScale( OoqpVector& vec ){};
-  virtual void SymmetricScale( OoqpVector &vec){};
-  virtual void scalarMult( double num){};
-  virtual void fromGetSpRow( int row, int col,
+  void atPutDense( int row, int col, double * A, int lda,
+			   int rowExtent, int colExtent ) override {};
+  void fromGetDense( int row, int col, double * A, int lda,
+			     int rowExtent, int colExtent ) override {};
+  void ColumnScale( OoqpVector& vec ) override {};
+  void RowScale( OoqpVector& vec ) override {};
+  void SymmetricScale( OoqpVector &vec) override {};
+  void scalarMult( double num) override {};
+  void fromGetSpRow( int row, int col,
 			     double A[], int lenA, int jcolA[], int& nnz,
-			     int colExtent, int& info ){};
+			     int colExtent, int& info ) override {};
 
-  virtual void atPutSubmatrix( int destRow, int destCol, DoubleMatrix& M,
+  void atPutSubmatrix( int destRow, int destCol, DoubleMatrix& M,
 			       int srcRow, int srcCol,
-			       int rowExtent, int colExtent ){};
+			       int rowExtent, int colExtent ) override {};
 
-  virtual void atPutSpRow( int col, double A[], int lenA, int jcolA[],
-			   int& info ){};
+  void atPutSpRow( int col, double A[], int lenA, int jcolA[],
+			   int& info ) override {};
 
-  virtual void putSparseTriple( int irow[], int len, int jcol[], double A[], 
-				int& info ){};
+  void putSparseTriple( int irow[], int len, int jcol[], double A[], 
+				int& info ) override {};
 
-  virtual void getDiagonal( OoqpVector& vec ){};
-  virtual void setToDiagonal( OoqpVector& vec ){};
+  void getDiagonal( OoqpVector& vec ) override {};
+  void setToDiagonal( OoqpVector& vec ) override {};
 
   /** y = beta * y + alpha * this * x */
-  virtual void mult ( double beta,  OoqpVector& y,
-                      double alpha, OoqpVector& x ){};
+  void mult ( double beta,  OoqpVector& y,
+                      double alpha, const OoqpVector& x ) const override {};
 
   /** mult method for children; needed only for linking constraints */
-  virtual void mult2 ( double beta,  OoqpVector& y,
+  void mult2 ( double beta,  OoqpVector& y,
                         double alpha, OoqpVector& x,
-						   OoqpVector& yvecParent ){};
+						   OoqpVector& yvecParent ) override {};
 
-  virtual void transMult ( double beta,   OoqpVector& y,
-                           double alpha,  OoqpVector& x ){};
+  void transMult ( double beta,   OoqpVector& y,
+                           double alpha,  const OoqpVector& x ) const override {};
 
-  virtual void transMult2 ( double beta,   StochVector& y,
+  void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent, OoqpVector& xvecl ){};
+		    OoqpVector& yvecParent, const OoqpVector& xvecl ) const override {};
 
-  virtual void transMult2 ( double beta,   StochVector& y,
+  void transMult2 ( double beta,   StochVector& y,
 		    double alpha,  StochVector& x,
-		    OoqpVector& yvecParent ){};
+		    OoqpVector& yvecParent ) override {};
 
-  virtual double abmaxnorm(){ return 0.0; };
+  double abmaxnorm() override { return 0.0; };
 
-  virtual void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec) {};
-  virtual void getLinkVarsNnzChild(std::vector<int>& vec) const{};
+  void permuteLinkingVarsChild(const std::vector<unsigned int>& permvec)  override {};
+  void getLinkVarsNnzChild(std::vector<int>& vec) const override {};
 
-  virtual void getLinkVarsNnz(std::vector<int>& vec) const{};
-  virtual void writeToStream(ostream& out) const{};
-  virtual void writeToStreamDense(ostream& out) const{};
-  virtual void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const{};
-  virtual void writeToStreamDenseChild(stringstream& out, int offset) const{};
-  virtual std::string writeToStreamDenseRowLink(int rowidx) const{return 0;};
+  void getLinkVarsNnz(std::vector<int>& vec) const override {};
+  void writeToStream(ostream& out) const override {};
+  void writeToStreamDense(ostream& out) const override {};
+  void writeMPSformatRows(ostream& out, int rowType, OoqpVector* irhs) const override {};
 
+ private:
+  void writeToStreamDenseChild(stringstream& out, int offset) const override {};
+  std::string writeToStreamDenseRowLink(int rowidx) const override { return 0; };
+
+ public:
   /** Make the elements in this matrix symmetric. The elements of interest
    *  must be in the lower triangle, and the upper triangle must be empty.
    *  @param info zero if the operation succeeded. Otherwise, insufficient
    *  space was allocated to symmetrize the matrix.
    */
-  virtual void symmetrize( int& info ){};
+  void symmetrize( int& info ) override {};
 
-  virtual void randomize( double alpha, double beta, double * seed ){};
+  void randomize( double alpha, double beta, double * seed ) override {};
 
-  virtual void atPutDiagonal( int idiag, OoqpVector& v ){};
-  virtual void fromGetDiagonal( int idiag, OoqpVector& v ){};
+  void atPutDiagonal( int idiag, OoqpVector& v ) override {};
+  void fromGetDiagonal( int idiag, OoqpVector& v ) override {};
 
-  virtual void initTransposedChild(bool dynamic) {};
+  void initTransposedChild(bool dynamic) override {};
 
-  virtual void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec ){};
-  virtual void RowScale2( OoqpVector& vec, OoqpVector* linkingvec ){};
+  void ColumnScale2( OoqpVector& vec, OoqpVector& parentvec )override {};
+  void RowScale2( OoqpVector& vec, OoqpVector* linkingvec )override {};
 
-  virtual void initTransposed(bool dynamic = false) {};
-  virtual void deleteTransposed() {};
+  void initTransposed(bool dynamic = false) override {};
+  void deleteTransposed() override {};
 
   void getNnzPerRow(OoqpVectorBase<int>& nnzVec, OoqpVectorBase<int>* linkParent) override {};
 
@@ -343,38 +359,40 @@ public:
 
   void getNnzPerCol(OoqpVectorBase<int>& nnzVec) override {};
 
-  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent ){};
+  void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, const OoqpVector* colScaleParent, OoqpVector& minmaxVec, OoqpVector* linkParent )override {};
 
-  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent ){};
+  void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, const OoqpVector* rowScaleParent, OoqpVector& minmaxVec, OoqpVector* minmaxParent )override {};
 
-  virtual void getRowMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* colScaleVec, OoqpVector& minmaxVec ){};
+  void getRowMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* colScaleVec, OoqpVector& minmaxVec )override {};
 
-  virtual void getColMinMaxVec( bool getMin, bool initializeVec,
-        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec ){};
+  void getColMinMaxVec( bool getMin, bool initializeVec,
+        const OoqpVector* rowScaleVec, OoqpVector& minmaxVec )override {};
 
-  virtual void addRowSums( OoqpVector& sumVec, OoqpVector* linkParent ) {};
-  virtual void addColSums( OoqpVector& sumVec, OoqpVector* linkParent ) {};
-  virtual void addRowSums( OoqpVector& vec ) {};
-  virtual void addColSums( OoqpVector& vec ) {};
+  void addRowSums( OoqpVector& sumVec, OoqpVector* linkParent ) override {};
+  void addColSums( OoqpVector& sumVec, OoqpVector* linkParent ) override {};
+  void addRowSums( OoqpVector& vec ) override {};
+  void addColSums( OoqpVector& vec ) override {};
 
-  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec) {};
-  virtual void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, 
+  void freeDynamicStorage() override {};
+  void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec) {};
+  void initStaticStorageFromDynamic(const OoqpVectorBase<int>& rowNnzVec, const OoqpVectorBase<int>& colNnzVec, 
     const OoqpVectorBase<int>* rowLinkVec, const OoqpVectorBase<int>* colParentVec) {};
 
-  virtual void freeDynamicStorage() {};
+  std::vector<int> get2LinkStartBlocks() const override { return std::vector<int>(); };
 
-  virtual std::vector<int> get2LinkStartBlocks() const {return std::vector<int>();};
+  void updateKLinkVarsCount(std::vector<int>& linkCount) const  override{};
+  void updateKLinkConsCount(std::vector<int>& linkCount) const override {};
 
-  virtual void updateKLinkVarsCount(std::vector<int>& linkCount) const {};
-  virtual void updateKLinkConsCount(std::vector<int>& linkCount) const {};
+  void permuteLinkingVars(const std::vector<unsigned int>& permvec) override {};
+  void permuteLinkingCons(const std::vector<unsigned int>& permvec) override {};
 
-  virtual void permuteLinkingVars(const std::vector<unsigned int>& permvec) {};
-  virtual void permuteLinkingCons(const std::vector<unsigned int>& permvec) {};
+  bool isRootNodeInSync() const override { return true; };
 
-  virtual bool isRootNodeInSync() const { return true; };
+  int appendRow( const StochGenMatrix& matrix_row, int child, int row, bool linking ) override { assert("CANNOT APPEND ROW TO DUMMY MATRIX"); return -1; };
+  double localRowTimesVec( const StochVector& vec, int child, int row, bool linking ) const override { assert("CANNOT MULTIPLY ROW WITH DUMMY MATRIX"); return -1; };
 };
 
 

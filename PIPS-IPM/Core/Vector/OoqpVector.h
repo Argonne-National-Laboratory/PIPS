@@ -170,6 +170,14 @@ public:
    */
   virtual void selectNonZeros( const OoqpVectorBase<T>& select ) = 0;
   
+  /** Set all negative elements to zero.
+   */
+  virtual void selectPositive() = 0;
+
+  /** Set all positive elements to zero.
+   */
+  virtual void selectNegative() = 0;
+
   /** Add the constant c to some of the elements of this OoqpVector
    *  @param c The constant to be added
    *  @param select a mask OoqpVector. The constant c is added to an element

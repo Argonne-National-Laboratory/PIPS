@@ -29,7 +29,7 @@ public:
 
   virtual ~DenseStorage();
 
-  virtual void getSize( int& m, int& n );
+  void getSize( int& m, int& n ) const override;
 
 
 

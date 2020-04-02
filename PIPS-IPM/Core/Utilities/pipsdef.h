@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include <mpi.h>
+#include <limits>
 #include <assert.h>
 #include "pipsport.h"
 
@@ -23,15 +24,38 @@ const double pips_eps0 = 1e-40;
 
 static const double feastol = 1.0e-6; // was 1.0e-6
 static const double infinity = 1.0e30;
-// todo rename for more clarity
-static const double tolerance1 = 1.0e-3;  // for model cleanup // was 1.0e-3
-static const double tolerance2 = 1.0e-2;  // for model cleanup // was 1.0e-2
-static const double tol_matrix_entry = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
-static const double tolerance4 = 1.0e-12; // for variable fixing
-static const double limit1 = 1.0e3;   // for bound strengthening
-static const double limit2 = 1.0e8;   // for bound strengthening
-static const int maxIterSR = 10;
-static const double tol_compare_double = 1.0e-8;
+static const double eps_bounds_nontight = 1.0e-8;
+
+static const double INF_NEG_PRES = -std::numeric_limits<double>::infinity();
+static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
+
+/** all presolve/postsolve constants and settings */
+// TODO : many of these need adjustments/ have to be thought about
+
+/// BOUND STRENGTHENING
+/** limit for rounds of bound strengthening */
+static const int PRESOLVE_BOUND_STR_MAX_ITER = 1;
+/** min entry to devide by in order to derive a bound */
+static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY = 1e-7;
+/** max activity to be devided */
+static const double PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY = std::numeric_limits<double>::max();
+/** max bounds proposed from bounds strengthening presolver */
+static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS = 1e12;
+/// COLUMN FIXATION
+/** limit on the possible impact a column can have on the problem */
+static const double PRESOLVE_COLUMN_FIXATION_MAX_FIXING_IMPACT = 1.0e-12; // for variable fixing
+/// MODEL CLEANUP
+/** limit for the size of a matrix entry below which it will be removed from the problem */
+static const double PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
+/** max for the matrix entry when the impact of entry times (bux-blx) is considered */
+static const double PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT = 1.0e-3; // was 1.0e-3
+/** difference in orders between feastol and the impact of entry times (bux-blx) for an entry to get removed */
+static const double PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST = 1.0e-2;  // for model cleanup // was 1.0e-2
+/// PARALLEL ROWS
+/** tolerance for comparing two double values in two different rows and for them being considered equal */
+static const double PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES = 1.0e-8;
+/// PRESOLVE DATA
+static const double PRESOLVE_MAX_BOUND_ACCEPTED = 1e10;
 
 static inline double relativeDiff(double val1, double val2)
 {
@@ -48,6 +72,11 @@ static inline double relativeDiff(double val1, double val2)
 #define PIPSdebugMessage      while( 0 ) /*lint -e{530}*/ printf
 #endif
 
+inline bool PIPSisEQFeas( double val1, double val2 )
+{
+   return (std::fabs(val1-val2) <= feastol);
+}
+
 inline bool PIPSisEQ(double val1, double val2, double eps = pips_eps)
 {
    return (std::fabs(val1 - val2) <= eps);
@@ -60,14 +89,38 @@ inline bool PIPSisRelEQ(double val1, double val2, double eps = pips_eps)
    return (std::fabs(reldiff) <= eps);
 }
 
+inline bool PIPSisRelEQFeas(double val1, double val2)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return std::fabs(reldiff) <= feastol;
+}
+
 inline bool PIPSisLE(double val1, double val2, double eps = pips_eps)
 {
    return (val1 <= val2 + eps);
 }
 
+inline bool PIPSisLEFeas(double val1, double val2)
+{
+   return (val1 <= val2 + feastol);
+}
+
+inline bool PIPSisRelLEFeas(double val1, double val2)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return reldiff <= feastol;
+}
+
 inline bool PIPSisLT(double val1, double val2, double eps = pips_eps)
 {
    return (val1 < val2 - eps);
+}
+
+inline bool PIPSisLTFeas(double val1, double val2)
+{
+   return (val1 < val2 - feastol);
 }
 
 inline bool PIPSisRelLT(double val1, double val2, double eps = pips_eps)
@@ -77,9 +130,21 @@ inline bool PIPSisRelLT(double val1, double val2, double eps = pips_eps)
    return (reldiff < -eps);
 }
 
+inline bool PIPSisRelLTFeas(double val1, double val2)
+{
+   const double reldiff = relativeDiff(val1, val2);
+
+   return (reldiff < -feastol);
+}
+
 inline bool PIPSisZero(double val, double eps0 = pips_eps0)
 {
    return (std::fabs(val) < eps0);
+}
+
+inline bool PIPSisZeroFeas(double val)
+{
+   return (std::fabs(val) < feastol);
 }
 
 inline int PIPSgetnOMPthreads()
@@ -298,6 +363,15 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
 }
 
 template <typename T>
+inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm)
+{
+   // todo make one vec and + - val
+   const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
+   const int min = PIPS_MPIgetMin(val, MPI_COMM_WORLD);
+   return (max == min);
+}
+
+template <typename T>
 inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm)
 {
    T globalmin = 0.0;
@@ -313,6 +387,18 @@ inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
    MPI_Allreduce(&localmax, &globalmax, 1, get_mpi_datatype(localmax), MPI_MAX, mpiComm);
 
    return globalmax;
+}
+
+template <typename T>
+void PIPS_MPIgetMaxInPlace(T& max, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &max, 1, get_mpi_datatype(max), MPI_MAX, mpiComm);
+}
+
+template <typename T>
+void PIPS_MPIgetMinInPlace(T& min, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &min, 1, get_mpi_datatype(min), MPI_MIN, mpiComm);
 }
 
 template <typename T>

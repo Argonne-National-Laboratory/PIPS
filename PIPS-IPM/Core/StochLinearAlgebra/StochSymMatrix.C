@@ -124,12 +124,12 @@ void StochSymMatrix::fsymAtPutSpRow( int row,
   assert( "Not implemented" && 0 );
 }
 
-void StochSymMatrix::getSize( long long& m_, long long& n_ )
+void StochSymMatrix::getSize( long long& m_, long long& n_ ) const
 {
   m_=n; n_=n;
 }
 
-void StochSymMatrix::getSize( int& m_, int& n_ )
+void StochSymMatrix::getSize( int& m_, int& n_ ) const
 {
   m_=n; n_=n;
 }
@@ -171,10 +171,10 @@ void StochSymMatrix::atPutZeros( int row, int col, int rowExtent, int colExtent 
  * Here Qi are diagonal blocks, Ri are left bordering blocks
  */
 void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
-			    double alpha, OoqpVector& x_ )
+			    double alpha, const OoqpVector& x_ ) const
 {
 //   return;
-  StochVector & x = dynamic_cast<StochVector&>(x_);
+  const StochVector & x = dynamic_cast<const StochVector&>(x_);
   StochVector & y = dynamic_cast<StochVector&>(y_);
 
   //check the tree compatibility
@@ -187,7 +187,7 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
   assert(this->diag->size() == x.vec->length());
 
   SimpleVector & yvec = dynamic_cast<SimpleVector&>(*y.vec);
-  SimpleVector & xvec = dynamic_cast<SimpleVector&>(*x.vec);
+  const SimpleVector & xvec = dynamic_cast<const SimpleVector&>(*x.vec);
 
   if (0.0 == alpha) {
     yvec.scale( beta );
@@ -197,14 +197,14 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
     bool iAmRoot = (parent==nullptr);
     bool iAmSpecial = true; //the process that computes Q_0 * x_0
     int rank; MPI_Comm_rank(mpiComm, &rank);
-    if (rank>0) iAmSpecial = false;
+    if(rank > 0) iAmSpecial = false;
 
-    if (iAmRoot)
+    if(iAmRoot)
       // y0=beta*y0 + alpha * Q0*x0
-      if (iAmSpecial)
-	diag->mult( beta, yvec, alpha, xvec ); 
+      if(iAmSpecial)
+         diag->mult( beta, yvec, alpha, xvec );
       else
-	yvec.setToZero();
+         yvec.setToZero();
     else
       // yi=beta*yi + alpha * Qi*xi
       diag->mult( beta, yvec, alpha, xvec ); 
@@ -238,14 +238,14 @@ void StochSymMatrix::mult ( double beta,  OoqpVector& y_,
     }
   }
   // reccursively multiply the children
-  for (size_t it=0; it<nChildren; it++) {
+  for (size_t it = 0; it < nChildren; it++) {
     children[it]->mult(beta, *(y.children[it]), alpha, *(x.children[it]));
   }
 }
 
 /** y = beta * y + alpha * this^T * x */
 void StochSymMatrix::transMult ( double beta,  OoqpVector& y_,
-				 double alpha, OoqpVector& x_)
+				 double alpha, const OoqpVector& x_) const
 {
   // We are symmetric, this^T = this, therefore call 'mult' method
   this->mult(beta, y_, alpha, x_);
@@ -279,6 +279,89 @@ void StochSymMatrix::randomizePSD(double * seed)
 {
   assert( "Not implemented" && 0 );
 }
+
+void StochSymMatrix::writeToStreamDense(std::ostream& out) const
+{
+   const int rank = PIPS_MPIgetRank(mpiComm);
+   const int world_size = PIPS_MPIgetSize(mpiComm);
+
+   int m, n;
+   int offset = 0;
+   std::stringstream sout;
+   MPI_Status status;
+   int l;
+
+   /* this is at the root node - thus there is no border */
+   assert(this->border->numberOfNonZeros() == 0);
+
+   if( iAmDistrib )
+      MPI_Barrier(mpiComm);
+
+   if( iAmDistrib && rank > 0 )  // receive offset from previous process
+      MPI_Recv(&offset, 1, MPI_INT, (rank - 1), 0, mpiComm, MPI_STATUS_IGNORE);
+   else  //  !iAmDistrib || (iAmDistrib && rank == 0)
+      this->diag->writeToStreamDense(out);
+
+   for( size_t it = 0; it < children.size(); it++ )
+   {
+      children[it]->writeToStreamDenseChild(sout, offset);
+      children[it]->diag->getSize(m, n);
+      offset += n;
+   }
+
+   if( iAmDistrib && rank > 0 )
+   {
+      std::string str = sout.str();
+      // send string to rank ZERO to print it there:
+      MPI_Ssend(str.c_str(), str.length(), MPI_CHAR, 0, rank, mpiComm);
+      // send offset to next process:
+      if( rank < world_size - 1 )
+         MPI_Ssend(&offset, 1, MPI_INT, rank + 1, 0, mpiComm);
+   }
+   else if( !iAmDistrib )
+      out << sout.str();
+   else if( iAmDistrib && rank == 0 )
+   {
+      out << sout.str();
+      MPI_Ssend(&offset, 1, MPI_INT, rank + 1, 0, mpiComm);
+
+      for( int p = 1; p < world_size; p++ )
+      {
+         MPI_Probe(p, p, mpiComm, &status);
+         MPI_Get_count(&status, MPI_CHAR, &l);
+         char *buf = new char[l];
+         MPI_Recv(buf, l, MPI_CHAR, p, p, mpiComm, &status);
+         std::string rowPartFromP(buf, l);
+         out << rowPartFromP;
+         delete[] buf;
+      }
+   }
+
+   if( iAmDistrib )
+      MPI_Barrier(mpiComm);
+   std::cout << " done " << std::endl;
+}
+
+void StochSymMatrix::writeToStreamDenseChild(stringstream& out, int offset) const
+{
+   int m_diag, m_border, n;
+   this->diag->getSize(m_diag, n);
+   this->border->getSize(m_border, n);
+
+   assert( m_diag == m_border );
+
+   for(int r = 0; r < m_diag; r++)
+   {
+      this->border->writeToStreamDenseRow(out, r);
+
+      for(int i = 0; i < offset; i++)
+         out <<'\t';
+
+      this->diag->writeToStreamDenseRow(r);
+      out << std::endl;
+   }
+}
+
 
 
 void StochSymMatrix::getDiagonal( OoqpVector& vec_ )
