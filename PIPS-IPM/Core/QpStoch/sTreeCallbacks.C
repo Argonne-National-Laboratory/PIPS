@@ -227,7 +227,7 @@ void sTreeCallbacks::initPresolvedData(const StochSymMatrix& Q, const StochGenMa
    }
 
 
-   // todo
+   // todo needs to be changed for non-empty Q
    NNZQ_INACTIVE = 0;
 
    // are we at the root?
@@ -786,7 +786,7 @@ StochVector* sTreeCallbacks::createb() const
     }
 
     pos = 0;
-    // at root and with linking constraints? todo don't really know whether this is correct
+    // at root and with linking constraints?
     if (np == -1 && data->fbl) {
         assert(vDataLinkCons);
         scens[0]->fbl(scens[0]->user_data, scens[0]->id, vDataLinkCons, scens[0]->myl);
@@ -943,7 +943,7 @@ StochVector* sTreeCallbacks::createclow() const
       pos += scens[i]->mz;
     }
 
-    // at root and with linking constraints? todo don't really know whether this is correct
+    // at root and with linking constraints?
     if (np == -1 && data->fdllow)
     {
         assert(vDataLinkCons);
@@ -991,7 +991,7 @@ StochVector* sTreeCallbacks::createiclow() const
       pos += scens[i]->mz;
     }
 
-    // at root and with linking constraints? todo don't really know whether this is correct
+    // at root and with linking constraints?
     if (np == -1 && data->fidllow)
     {
         assert(vDataLinkCons);
@@ -1038,7 +1038,7 @@ StochVector* sTreeCallbacks::createcupp() const
       pos += scens[i]->mz;
     }
 
-    // at root and with linking constraints? todo don't really know whether this is correct
+    // at root and with linking constraints?
     if (np == -1 && data->fdlupp)
     {
       assert(vDataLinkCons);
@@ -1087,7 +1087,7 @@ StochVector* sTreeCallbacks::createicupp() const
       pos += scens[i]->mz;
     }
 
-    // at root and with linking constraints? todo don't really know whether this is correct
+    // at root and with linking constraints?
     if (np == -1 && data->fidlupp)
     {
       assert(vDataLinkCons);

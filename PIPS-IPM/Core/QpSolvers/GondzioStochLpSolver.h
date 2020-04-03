@@ -35,7 +35,9 @@ private:
 public:
 
   GondzioStochLpSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,
-        bool adaptive_linesearch = false ); // todo set to true
+        bool adaptive_linesearch = false );
+  	    // todo we want to have a paraamter for this one! also in parent class! should also be
+        // tested
 
   virtual ~GondzioStochLpSolver();
 
