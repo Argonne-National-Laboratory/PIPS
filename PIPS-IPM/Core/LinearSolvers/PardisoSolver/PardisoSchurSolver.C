@@ -83,7 +83,7 @@ extern "C" {
 }
 #endif
 
-#define SHRINK_SC
+#define SHRINK_SC  // shrink the Schur complement (i.e. remove empty rows/columns)
 
 PardisoSchurSolver::PardisoSchurSolver( SparseSymMatrix * sgm )
 {
@@ -676,10 +676,8 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
         SC0[c_org][r_org] += eltsSC[ci];
 
-#ifndef DENSE_USE_HALF
-        if( r_org != c_org )
-           SC0[r_org][c_org] += eltsSC[ci];
-#endif
+        // NOTE: we only save half of the matrix, so we don't need
+        // if( r_org != c_org ) SC0[r_org][c_org] += eltsSC[ci];
      }
   }
 #else
@@ -692,10 +690,6 @@ void PardisoSchurSolver::schur_solve(SparseGenMatrix& R,
 
         SC0[c][r] += eltsSC[ci];
 
-#ifndef DENSE_USE_HALF
-        if( r != c )
-           SC0[r][c] += eltsSC[ci];
-#endif
      }
   }
 #endif
