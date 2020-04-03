@@ -32,6 +32,9 @@ protected:
         vector.roundToPow2();
   }
 
+  // has scaling been applied
+  bool scaling_applied;
+
   // scaling vector
   OoqpVector* vec_rowscaleQ;
   OoqpVector* vec_rowscaleA;

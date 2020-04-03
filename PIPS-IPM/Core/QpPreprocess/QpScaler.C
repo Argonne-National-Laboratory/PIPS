@@ -17,7 +17,7 @@
 #include "pipsport.h"
 
 QpScaler::QpScaler(Data * prob, bool bitshifting)
-: Scaler(prob, bitshifting)
+: Scaler(prob, bitshifting), scaling_applied(false)
 {
    QpGenData* qpprob = dynamic_cast<QpGenData*>(prob);
 
@@ -44,7 +44,10 @@ double QpScaler::getObjUnscaled(double objval) const
    assert(vec_colscale != nullptr);
    assert(factor_objscale > 0.0);
 
-   return (objval / factor_objscale);
+   if( scaling_applied )
+      return (objval / factor_objscale);
+   else
+      return objval;
 }
 
 Variables* QpScaler::getVariablesUnscaled(const Variables& vars) const
@@ -65,6 +68,9 @@ Residuals* QpScaler::getResidualsUnscaled(const Residuals& resids) const
 
 void QpScaler::unscaleVars( Variables& vars ) const
 {
+   if( !scaling_applied )
+      return;
+
    // todo : Q
    assert(problem);
    assert(vec_colscale);
@@ -90,6 +96,9 @@ void QpScaler::unscaleVars( Variables& vars ) const
 
 void QpScaler::unscaleResids( Residuals& resids ) const
 {
+   if( !scaling_applied )
+      return;
+
    assert(problem);
    assert(vec_colscale);
    assert(vec_rowscaleA);
@@ -122,7 +131,8 @@ OoqpVector* QpScaler::getPrimalUnscaled(const OoqpVector& solprimal) const
    OoqpVector* unscaledprimal = solprimal.cloneFull();
 
    // unscale primal
-   unscaledprimal->componentMult(*vec_colscale);
+   if( scaling_applied )
+      unscaledprimal->componentMult(*vec_colscale);
 
    return unscaledprimal;
 }
@@ -133,7 +143,8 @@ OoqpVector* QpScaler::getDualEqUnscaled(const OoqpVector& soldual) const
    OoqpVector* unscaleddual = soldual.cloneFull();
 
    // unscale dual
-   unscaleddual->componentMult(*vec_rowscaleA);
+   if( scaling_applied )
+      unscaleddual->componentMult(*vec_rowscaleA);
 
    return unscaleddual;
 }
@@ -144,7 +155,8 @@ OoqpVector* QpScaler::getDualIneqUnscaled(const OoqpVector& soldual) const
    OoqpVector* unscaleddual = soldual.cloneFull();
 
    // unscale dual
-   unscaleddual->componentMult(*vec_rowscaleC);
+   if( scaling_applied )
+      unscaleddual->componentMult(*vec_rowscaleC);
 
    return unscaleddual;
 }
@@ -155,7 +167,8 @@ OoqpVector* QpScaler::getDualVarBoundsUppUnscaled(const OoqpVector& soldual) con
    OoqpVector* unscaleddual = soldual.cloneFull();
 
    // unscale primal
-   unscaleddual->componentDiv(*vec_colscale);
+   if( scaling_applied )
+      unscaleddual->componentDiv(*vec_colscale);
 
    return unscaleddual;
 }
@@ -166,7 +179,8 @@ OoqpVector* QpScaler::getDualVarBoundsLowUnscaled(const OoqpVector& soldual) con
    OoqpVector* unscaleddual = soldual.cloneFull();
 
    // unscale primal
-   unscaleddual->componentDiv(*vec_colscale);
+   if( scaling_applied )
+      unscaleddual->componentDiv(*vec_colscale);
 
    return unscaleddual;
 }
@@ -193,6 +207,7 @@ void QpScaler::applyScaling()
    bux->componentDiv(*vec_colscale);
    blx->componentDiv(*vec_colscale);
 
+   scaling_applied = true;
 }
 
 double QpScaler::maxRowRatio(OoqpVector& maxvecA, OoqpVector& maxvecC, OoqpVector& minvecA, OoqpVector& minvecC, const OoqpVector* colScalevec)
@@ -317,6 +332,8 @@ void QpScaler::scaleObjVector(double scaling_factor)
 
    if( factor_objscale != 1.0 )
       obj->scalarMult(factor_objscale);
+
+   scaling_applied = true;
 }
 
 QpScaler::~QpScaler()

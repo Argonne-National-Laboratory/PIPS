@@ -183,7 +183,8 @@ void GeoStochScaler::scale()
 
    if( !geoscale && !equilibrate )
    {
-      if( myRank == 0 ) std::cout<< "No geometric scaling done, improvement was not good enough..." << std::endl;
+      if( myRank == 0 )
+         std::cout<< "No geometric scaling done, improvement was not good enough..." << std::endl;
    }
    else
    {
@@ -243,6 +244,17 @@ void GeoStochScaler::scale()
       if( equilibrate )
          assert(A->abmaxnorm() <= 2.0 && C->abmaxnorm() <= 2.0);
    }
+
+   if( !scaling_applied )
+   {
+      setScalingVecsToOne();
+#ifndef NDEBUG
+      vec_rowscaleA->setToConstant(NAN);
+      vec_rowscaleC->setToConstant(NAN);
+      vec_colscale->setToConstant(NAN);
+#endif
+   }
+
    delete rowminA;
    delete rowminC;
    delete colmin;
