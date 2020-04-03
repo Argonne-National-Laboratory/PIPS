@@ -156,7 +156,6 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
       PresolverType presolver_type, std::string settings) : unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
 {
   PIPSfillParametersFromFile(settings);
-
   const bool postsolve = PIPSgetBoolParameter("postsolve");
 
   int mype;

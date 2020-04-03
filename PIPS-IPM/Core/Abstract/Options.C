@@ -66,6 +66,10 @@ void Options::fillParamsFromFile(const std::string& filename)
    std::string line;
    while( std::getline(params, line) )
    {
+      /* skip empty line */
+      if( line.compare("") == 0 )
+         continue;
+
       std::istringstream iss(line);
 
       std::string identifier;
