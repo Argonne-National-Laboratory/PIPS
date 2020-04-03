@@ -42,7 +42,7 @@ bool Options::getBoolParam(const std::string& identifier) const
       return it->second;
    else
    {
-      std::cout << "No element \"" << identifier << "\" of type double in options - using false instead" << std::endl;
+      std::cout << "No element \"" << identifier << "\" of type bool in options - using false instead" << std::endl;
       return false;
    }
 }

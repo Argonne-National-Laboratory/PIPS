@@ -157,7 +157,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 {
   PIPSfillParametersFromFile(settings);
 
-  const bool postsolve = PIPSgetBoolParameter("postolve");
+  const bool postsolve = PIPSgetBoolParameter("postsolve");
 
   int mype;
   MPI_Comm_rank(comm,&mype);
