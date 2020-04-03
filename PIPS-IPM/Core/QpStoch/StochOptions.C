@@ -7,9 +7,14 @@ StochOptions::StochOptions()
 
 void StochOptions::setDefaults()
 {
+   // TODO
+   /* default bool values */
+   bool_options["dummy"] = false;
+   bool_options["postsolve"] = true;
+
    /* default int values */
-   setIntParam("dummy", 1);
+   int_options["dummy"] = 1;
 
    /* default double values */
-   setDoubleParam("dummy", 1.0);
+   double_options["dummy"] = 1.0;
 }

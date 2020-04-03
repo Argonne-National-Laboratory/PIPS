@@ -1,5 +1,5 @@
 /*
- * Options.h
+ * Singleton.h
  *
  *  Created on: 03.04.2020
  *      Author: bzfkempk
@@ -14,9 +14,6 @@
  * The getInstance method must be specified in the BaseClasses,
  * thus for each base class there can only be exactly one instance.
  */
-
-
-
 
 class Singleton
 {
