@@ -28,6 +28,8 @@
 #include "sTreeCallbacks.h"
 #include "pipsport.h"
 
+#include "StochOptions.h"
+
 //#define PRESOLVE_POSTSOLVE_ONLY // will not call solve routine an just presolve and then postsolve the problem - for debugging presolve and postsolve operations
 
 template<class FORMULATION, class IPMSOLVER> 
@@ -74,7 +76,6 @@ class PIPSIpmInterface
   static bool isDistributed() { return true; }
 
  protected:
-
   FORMULATION * factory;
   PreprocessFactory * prefactory;
   sData *        data;       // possibly presolved data
@@ -148,7 +149,9 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
       PresolverType presolver_type) : unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
 {
   bool postsolve = true; // todo
+  const int bla = StochOptions::getInstance().getIntParam("dummy");
 
+  std::cout << "wuiiiiiiiiiiii " << bla << std::endl;
   int mype;
   MPI_Comm_rank(comm,&mype);
 
