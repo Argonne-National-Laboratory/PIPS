@@ -996,12 +996,10 @@ double QpGenLinsys::matXYZinfnorm(
 
    assert(data);
 
-   // todo might use extra vectors for A and C and compute them only one time
    solx.copyFromAbs(*dd);
 
    //std::cout << "infnorm dd=" << dd->infnorm() << std::endl;
    //std::cout << "infnorm nomegaInv=" << nomegaInv->infnorm() << std::endl;
-
 
    data->A->addColSums(solx);
    data->C->addColSums(solx);

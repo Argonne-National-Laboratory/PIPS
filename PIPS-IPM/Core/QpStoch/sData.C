@@ -852,15 +852,6 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
    const int nnz = getSchurCompMaxNnzDist(blocksStart, blocksEnd);
 
    assert(getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) == getSchurCompMaxNnz());
-
-   // todo deleteme
-   if( getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) != getSchurCompMaxNnz() )
-   {
-      std::cout << "fail" << std::endl;
-      std::cout << getSchurCompMaxNnzDist(0, linkStartBlockLengthsA.size()) << "!=" <<  getSchurCompMaxNnz() << std::endl;
-      exit(1);
-   }
-
    assert(blocksStart >= 0 && blocksStart < blocksEnd);
    assert(nnz > 0);
    assert(myl >= 0 && mzl >= 0);
@@ -990,10 +981,6 @@ SparseSymMatrix* sData::createSchurCompSymbSparseUpperDist(int blocksStart, int 
 
       krowM[i + 1] = nnzcount;
    }
-
-   // todo
-   if( nnz != nnzcount)
-      std::cout << "\n ... nnzcount=" << nnzcount << " nnzmax=" << nnz  << " " << blocksStart << " - " << blocksEnd << std::endl;
 
    assert(nnzcount == nnz);
 
@@ -1248,7 +1235,6 @@ void sData::writeMPSColumns(ostream& out)
 
    SimpleVector* gSimple = dynamic_cast<SimpleVector*>(gStoch.vec);
    n = gSimple->n;
-   // todo assert ASparseTrans has correct dimensions:
 
    std::stringstream sstmCol;
    std::stringstream sstmRow;

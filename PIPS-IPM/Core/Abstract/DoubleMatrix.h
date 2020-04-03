@@ -11,7 +11,6 @@
 
 #include <cstring>
 #include <iostream>
-// todo remove ?
 using namespace std;
 #include "OoqpVectorHandle.h"
 #include "DoubleMatrixHandle.h"

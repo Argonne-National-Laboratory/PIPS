@@ -1612,14 +1612,12 @@ void SparseStorage::deleteEmptyRowsCols(const int* nnzRowVec, const int* nnzColV
       if( nnzColVec[i] != 0.0 )
          colsmap[i] = n_new++;
 
-   assert(krowM[0] == 0);
+   assert(krowM[0] == 0 && "method not fully supported");
 
-   // todo
 #if 0
    int nnz = 0;
    int rowcount = 0;
    int len_new = 0;
-
 
    for( int r = 0; r < m; r++ )
    {
