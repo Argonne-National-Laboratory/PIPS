@@ -1355,7 +1355,7 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
 
    /* if bound is not tight only adjust slack v/w */
    if(std::fabs(old_bound) == INF_POS_PRES)
-      slack = 0;
+      slack = 0.0;
    else
    {
       slack = std::fabs(old_bound - curr_x);
@@ -1364,19 +1364,20 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
    }
 
    double& dual_singelton_row = getSimpleVecFromRowStochVec(original_vars.z, row);
+
    double& dual_bound = lower_bound_changed ? getSimpleVecFromColStochVec(original_vars.gamma, col) :
          getSimpleVecFromColStochVec(original_vars.phi, col);
 
    double error_in_reduced_costs = 0.0;
-   if(PIPSisZero(slack))
+   if( PIPSisZeroFeas(slack) )
    {
       error_in_reduced_costs = lower_bound_changed ? -dual_bound : dual_bound;
       dual_bound = 0.0;
    }
 
-   if(!PIPSisZero(error_in_reduced_costs))
+   if( !PIPSisZero(error_in_reduced_costs) )
    {
-      /* we use the coeff*dual_singleton_row to balance the error in th reduced costs */
+      /* we use the coeff*dual_singleton_row to balance the error in the reduced costs */
       double diff_dual_row = error_in_reduced_costs / coeff;
       dual_singelton_row += diff_dual_row;
       assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));

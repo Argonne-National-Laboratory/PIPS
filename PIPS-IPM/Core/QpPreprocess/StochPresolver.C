@@ -86,12 +86,12 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
       presolverSR.applyPresolving();
-      presolverParallelRow.applyPresolving();
+//      presolverParallelRow.applyPresolving();
       //presolverSC.applyPresolving();
-      presolverBS.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverColFix.applyPresolving();
+//      presolverBS.applyPresolving();
+//      presolverColFix.applyPresolving();
+//      presolverSR.applyPresolving();
+//      presolverColFix.applyPresolving();
    }
    // presData.getPresProb().writeToStreamDense(std::cout);
    // before the finalize call fix all empty rows and columns not yet fixed

@@ -707,6 +707,7 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
 template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
+//  const bool print_resudial = true; // TODO make PIPSoption
   const int my_rank = PIPS_MPIgetRank(comm);
 
   assert(origData);
@@ -736,6 +737,106 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   MPI_Barrier(comm);
   const double t0_postsolve = MPI_Wtime();
 
+  if( my_rank == 0 )
+     std::cout << std::endl << "Residuals before postsolve:" << std::endl;
+  resids->calcresids(data, vars, true);
+
+  /* complementarity residuals before postsolve */
+  OoqpVectorBase<double>* t_clone = vars->t->cloneFull();
+  OoqpVectorBase<double>* u_clone = vars->u->cloneFull();
+  OoqpVectorBase<double>* v_clone = vars->v->cloneFull();
+  OoqpVectorBase<double>* w_clone = vars->w->cloneFull();
+
+  t_clone->componentMult(*vars->lambda);
+  t_clone->selectNonZeros(*data->iclow);
+
+  u_clone->componentMult(*vars->pi);
+  u_clone->selectNonZeros(*data->icupp);
+
+  v_clone->componentMult(*vars->gamma);
+  v_clone->selectNonZeros(*data->ixlow);
+
+  w_clone->componentMult(*vars->phi);
+  w_clone->selectNonZeros(*data->ixupp);
+
+  const double rlambda_infnorm = t_clone->infnorm();
+  const double rpi_infnorm = u_clone->infnorm();
+  const double rgamma_infnorm = v_clone->infnorm();
+  const double rphi_infnorm = w_clone->infnorm();
+
+  delete t_clone;
+  delete u_clone;
+  delete v_clone;
+  delete w_clone;
+
+  if( my_rank == 0 )
+  {
+     std::cout << " rl norm = " << rlambda_infnorm << std::endl;
+     std::cout << " rp norm = " << rpi_infnorm << std::endl;
+     std::cout << " rg norm = " << rgamma_infnorm << std::endl;
+     std::cout << " rf norm = " << rphi_infnorm << std::endl;
+     std::cout << std::endl;
+  }
+
+  if( my_rank == 0 )
+     std::cout << "Residuals after unscaling:" << std::endl;
+
+  /* complementarity residuals before postsolve */
+  OoqpVectorBase<double>* t_unscale_clone = unscaleUnpermVars->t->cloneFull();
+  OoqpVectorBase<double>* u_unscale_clone = unscaleUnpermVars->u->cloneFull();
+  OoqpVectorBase<double>* v_unscale_clone = unscaleUnpermVars->v->cloneFull();
+  OoqpVectorBase<double>* w_unscale_clone = unscaleUnpermVars->w->cloneFull();
+
+  t_unscale_clone->componentMult(*unscaleUnpermVars->lambda);
+  t_unscale_clone->selectNonZeros(*data->iclow);
+
+  u_unscale_clone->componentMult(*unscaleUnpermVars->pi);
+  u_unscale_clone->selectNonZeros(*data->icupp);
+
+  v_unscale_clone->componentMult(*unscaleUnpermVars->gamma);
+  v_unscale_clone->selectNonZeros(*data->ixlow);
+
+  w_unscale_clone->componentMult(*unscaleUnpermVars->phi);
+  w_unscale_clone->selectNonZeros(*data->ixupp);
+
+  const double rQ_unscale_infnorm = unscaleUnpermResids->rQ->infnorm();
+  const double rQ_unscale_twonorm = unscaleUnpermResids->rQ->twonorm();
+  const double rA_unscale_infnorm = unscaleUnpermResids->rA->infnorm();
+  const double rC_unscale_infnorm = unscaleUnpermResids->rC->infnorm();
+  const double rt_unscale_infnorm = unscaleUnpermResids->rt->infnorm();
+  const double ru_unscale_infnorm = unscaleUnpermResids->ru->infnorm();
+  const double rz_unscale_infnorm = unscaleUnpermResids->rz->infnorm();
+  const double rv_unscale_infnorm = unscaleUnpermResids->rv->infnorm();
+  const double rw_unscale_infnorm = unscaleUnpermResids->rw->infnorm();
+
+  const double rlambda_unscale_infnorm = t_unscale_clone->infnorm();
+  const double rpi_unscale_infnorm = u_unscale_clone->infnorm();
+  const double rgamma_unscale_infnorm = v_unscale_clone->infnorm();
+  const double rphi_unscale_infnorm = w_unscale_clone->infnorm();
+
+  delete t_unscale_clone;
+  delete u_unscale_clone;
+  delete v_unscale_clone;
+  delete w_unscale_clone;
+
+  if( my_rank == 0 )
+  {
+     std::cout << " rQ infnorm = " << rQ_unscale_infnorm << " | twonorm = " << rQ_unscale_twonorm << std::endl;
+     std::cout << " rA norm = " << rA_unscale_infnorm << std::endl;
+     std::cout << " rC norm = " << rC_unscale_infnorm << std::endl;
+     std::cout << " rt norm = " << rt_unscale_infnorm << std::endl;
+     std::cout << " ru norm = " << ru_unscale_infnorm << std::endl;
+     std::cout << " rz norm = " << rz_unscale_infnorm << std::endl;
+     std::cout << " rv norm = " << rv_unscale_infnorm << std::endl;
+     std::cout << " rw norm = " << rw_unscale_infnorm << std::endl;
+     std::cout << "Norm residuals: TODO" << std::endl;
+     std::cout << " rl norm = " << rlambda_unscale_infnorm << std::endl;
+     std::cout << " rp norm = " << rpi_unscale_infnorm << std::endl;
+     std::cout << " rg norm = " << rgamma_unscale_infnorm << std::endl;
+     std::cout << " rf norm = " << rphi_unscale_infnorm << std::endl;
+     std::cout << std::endl;
+  }
+
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();
 
@@ -759,36 +860,46 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   }
 
   /* compute residuals for postprocessed solution and check for feasibility */
-  postsolvedResids->calcresids(origData, postsolvedVars);
-  
-  const double infnorm_rA_orig = resids->rA->infnorm();
-  const double infnorm_rC_orig = resids->rC->infnorm();
-  const double onenorm_rA_orig = resids->rA->onenorm();
-  const double onenorm_rC_orig = resids->rC->onenorm();
+  if( my_rank == 0 )
+     std::cout << std::endl << "Residuals after postsolve:" << std::endl;
+  postsolvedResids->calcresids(origData, postsolvedVars, true);
 
-  const double infnorm_rA = unscaleUnpermResids->rA->infnorm();
-  const double infnorm_rC = unscaleUnpermResids->rC->infnorm();
-  const double onenorm_rA = unscaleUnpermResids->rA->onenorm();
-  const double onenorm_rC = unscaleUnpermResids->rC->onenorm();
+  /* complementarity residuals after postsolve */
+  OoqpVectorBase<double>* t_post_clone = postsolvedVars->t->cloneFull();
+  OoqpVectorBase<double>* u_post_clone = postsolvedVars->u->cloneFull();
+  OoqpVectorBase<double>* v_post_clone = postsolvedVars->v->cloneFull();
+  OoqpVectorBase<double>* w_post_clone = postsolvedVars->w->cloneFull();
 
-  const double infnorm_rA_postsolved = postsolvedResids->rA->infnorm();
-  const double infnorm_rC_postsolved = postsolvedResids->rC->infnorm();
-  const double onenorm_rA_postsolved = postsolvedResids->rA->onenorm();
-  const double onenorm_rC_postsolved = postsolvedResids->rC->onenorm();
+  t_post_clone->componentMult(*postsolvedVars->lambda);
+  t_post_clone->selectNonZeros(*origData->iclow);
 
-  if( my_rank == 0)
+  u_post_clone->componentMult(*postsolvedVars->pi);
+  u_post_clone->selectNonZeros(*origData->icupp);
+
+  v_post_clone->componentMult(*postsolvedVars->gamma);
+  v_post_clone->selectNonZeros(*origData->ixlow);
+
+  w_post_clone->componentMult(*postsolvedVars->phi);
+  w_post_clone->selectNonZeros(*origData->ixupp);
+
+  const double rlambda_post_infnorm = t_post_clone->infnorm();
+  const double rpi_post_infnorm = u_post_clone->infnorm();
+  const double rgamma_post_infnorm = v_post_clone->infnorm();
+  const double rphi_post_infnorm = w_post_clone->infnorm();
+
+  delete t_post_clone;
+  delete u_post_clone;
+  delete v_post_clone;
+  delete w_post_clone;
+
+  if( my_rank == 0 )
   {
-    std::cout << "\t||.||_inf\t ||.||_1" << std::endl;
-    std::cout << "Residuals of reduced problem:" << std::endl;
-    std::cout << "rA:\t" << infnorm_rA_orig << "\t" << onenorm_rA_orig << std::endl;
-    std::cout << "rC:\t" << infnorm_rC_orig << "\t" << onenorm_rC_orig << std::endl;
-    std::cout << "Residuals after unscaling:" << std::endl;
-    std::cout << "rA:\t" << infnorm_rA << "\t" << onenorm_rA << std::endl;
-    std::cout << "rC:\t" << infnorm_rC << "\t" << onenorm_rC << std::endl; 
-    std::cout << "Residuals after postsolve:" << std::endl;
-    std::cout << "rA:\t" << infnorm_rA_postsolved << "\t" << onenorm_rA_postsolved << std::endl;
-    std::cout << "rC:\t" << infnorm_rC_postsolved << "\t" << onenorm_rC_postsolved << std::endl; 
+     std::cout << " rl norm = " << rlambda_post_infnorm << std::endl;
+     std::cout << " rp norm = " << rpi_post_infnorm << std::endl;
+     std::cout << " rg norm = " << rgamma_post_infnorm << std::endl;
+     std::cout << " rf norm = " << rphi_post_infnorm << std::endl;
+     std::cout << std::endl;
   }
-}
 
+}
 #endif
