@@ -65,12 +65,14 @@ public:
   virtual void componentDiv ( const OoqpVectorBase<T>& v ) = 0;
   /** Compare two vectors with tolerance tol and tell if the are different */
   virtual bool componentEqual( const OoqpVectorBase<T>& v, T tol ) const = 0;
-  /** Write the components of this OoqpVector, one element per line, to
-   *  the stream out.
-   */
+  /** Assert that elements in the vector are unequal value */
+  virtual bool componentNotEqual( const T val, const T tol = pips_eps0 ) const = 0;
   /** Multiply the components of this OoqpVector by num. */
   virtual void scalarMult( T num ) = 0;
 
+  /** Write the components of this OoqpVector, one element per line, to
+   *  the stream out.
+   */
   virtual void writeToStreamAll( std::ostream& out ) const {assert(0 && "not implemented here");};
   virtual void writeToStreamAllStringStream( std::stringstream& sout ) const {assert(0 && "not implemented here");};
   virtual void writeToStreamAllChild( std::stringstream& sout ) const {assert(0 && "not implemented here");};

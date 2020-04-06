@@ -325,6 +325,20 @@ bool SimpleVectorBase<T>::componentEqual( const OoqpVectorBase<T>& vec, T tol) c
 }
 
 template<typename T>
+bool SimpleVectorBase<T>::componentNotEqual( const T val, const T tol ) const
+{
+   for(int i = 0; i < this->n; ++i)
+   {
+      /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
+      if( PIPSisRelEQ(v[i], val, tol) || v[i] == val)
+      {
+         return false;
+      }
+   }
+   return true;
+}
+
+template<typename T>
 void SimpleVectorBase<T>::scalarMult( T num)
 {
   int i;

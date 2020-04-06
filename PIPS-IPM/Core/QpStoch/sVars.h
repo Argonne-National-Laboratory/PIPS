@@ -34,6 +34,7 @@ public:
 
   virtual ~sVars();
   
+  bool isRootNodeInSync() const;
   virtual void sync();
 protected:
   void createChildren();

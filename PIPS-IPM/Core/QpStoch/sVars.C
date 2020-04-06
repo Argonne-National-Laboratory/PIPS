@@ -218,3 +218,26 @@ void sVars::sync()
   //stochNode->syncDualZVector(dynamic_cast<StochVector&>(*));
 
 }
+
+bool sVars::isRootNodeInSync() const
+{
+   bool in_sync = true;
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*x).isRootNodeInSync();
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*s).isRootNodeInSync();
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*y).isRootNodeInSync();
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*z).isRootNodeInSync();
+
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*v).isRootNodeInSync();
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*gamma).isRootNodeInSync();
+
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*w).isRootNodeInSync();
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*phi).isRootNodeInSync();
+
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*t).isRootNodeInSync();
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*lambda).isRootNodeInSync();
+
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*u).isRootNodeInSync();
+   in_sync = in_sync && dynamic_cast<const StochVector&>(*pi).isRootNodeInSync();
+
+   return in_sync;
+}

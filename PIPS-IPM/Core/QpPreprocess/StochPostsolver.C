@@ -605,30 +605,8 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    const sVars& stoch_reduced_sol = dynamic_cast<const sVars&>(reduced_solution);
    sVars& stoch_original_sol = dynamic_cast<sVars&>(original_solution);
 
-   stoch_original_sol.x->setToConstant(std::numeric_limits<double>::infinity());
-
    /* original variables are now reduced vars padded with zeros */
    setOriginalVarsFromReduced(stoch_reduced_sol, stoch_original_sol);
-
-   /* primal variables */
-   StochVector& x_vec = dynamic_cast<StochVector&>(*stoch_original_sol.x);
-
-   /* dual variables */
-
-   StochVector& y_vec = dynamic_cast<StochVector&>(*stoch_original_sol.y);
-
-   StochVector& z_vec = dynamic_cast<StochVector&>(*stoch_original_sol.z);
-   StochVector& lambda_vec = dynamic_cast<StochVector&>(*stoch_original_sol.lambda);
-   StochVector& pi_vec = dynamic_cast<StochVector&>(*stoch_original_sol.pi);
-
-   StochVector& s_vec = dynamic_cast<StochVector&>(*stoch_original_sol.s);
-   StochVector& t_vec = dynamic_cast<StochVector&>(*stoch_original_sol.t);
-   StochVector& u_vec = dynamic_cast<StochVector&>(*stoch_original_sol.u);
-
-   StochVector& gamma_vec = dynamic_cast<StochVector&>(*stoch_original_sol.gamma);
-   StochVector& phi_vec = dynamic_cast<StochVector&>(*stoch_original_sol.phi);
-   StochVector& v_vec = dynamic_cast<StochVector&>(*stoch_original_sol.v);
-   StochVector& w_vec = dynamic_cast<StochVector&>(*stoch_original_sol.w);
 
    const sData& orig_problem_s = dynamic_cast<const sData&>(original_problem);
 
@@ -712,25 +690,9 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
 
    /* compute all s, t and u that have not yet been computed */
 
-#ifndef NDEBUG
-   /* assert that all primal variables have been set */
-   double absmin_x;
-   x_vec.absmin(absmin_x);
-   assert( absmin_x < std::numeric_limits<double>::max() ); 
-#endif
-   assert( x_vec.isRootNodeInSync() );
-   assert( s_vec.isRootNodeInSync() );
-   assert( y_vec.isRootNodeInSync() );
-   assert( z_vec.isRootNodeInSync() );
-   assert( v_vec.isRootNodeInSync() );
-   assert( gamma_vec.isRootNodeInSync() );
-   assert( w_vec.isRootNodeInSync() );
-   assert( phi_vec.isRootNodeInSync() );
-   assert( t_vec.isRootNodeInSync() );
-   assert( lambda_vec.isRootNodeInSync() );
-   assert( u_vec.isRootNodeInSync() );
-   assert( pi_vec.isRootNodeInSync() );
-
+   /* assert that all variables have been set */
+   assert( stoch_original_sol.isRootNodeInSync() );
+   assert( allVariablesSet(stoch_original_sol) );
    if( my_rank == 0 )
       std::cout << "finished postsolving... " << std::endl;
 
@@ -1258,7 +1220,7 @@ bool StochPostsolver::postsolveSingletonEqualityRow(sVars& original_vars, int re
 
    /* if bound is not tight only adjust slack v/w */
    if(xupp_old == INF_POS_PRES)
-      slack_upper = 0;
+      slack_upper = 0.0;
    else
    {
       slack_upper = xupp_old - curr_x;
@@ -1267,7 +1229,7 @@ bool StochPostsolver::postsolveSingletonEqualityRow(sVars& original_vars, int re
    }
 
    if(xlow_old == INF_NEG_PRES)
-      slack_lower = 0;
+      slack_lower = 0.0;
    else
    {
       slack_lower = curr_x - xlow_old;
@@ -1282,22 +1244,22 @@ bool StochPostsolver::postsolveSingletonEqualityRow(sVars& original_vars, int re
    double error_in_reduced_costs = 0.0;
 
    /* adjust duals if necessary */
-   if( !PIPSisZero(slack_lower) )
+   if( !PIPSisZeroFeas(slack_lower) )
    {
-      error_in_reduced_costs -= dual_lower;
+      error_in_reduced_costs = dual_lower;
       dual_lower = 0.0;
    }
 
-   if( !PIPSisZero(slack_upper) )
+   if( !PIPSisZeroFeas(slack_upper) )
    {
-      error_in_reduced_costs += dual_upper;
+      error_in_reduced_costs -= dual_upper;
       dual_upper = 0.0;
    }
 
-   if(!PIPSisZero(error_in_reduced_costs))
+   if( !PIPSisZero(error_in_reduced_costs) )
    {
-      /* we use the coeff*dual_singleton_row to balance the error in the reduced costs */
-      double diff_dual_row = error_in_reduced_costs / coeff;
+      /* we use the coeff * dual_singleton_row to balance the error in the reduced costs */
+      const double diff_dual_row = error_in_reduced_costs / coeff;
       dual_singelton_row += diff_dual_row;
       assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
    }
@@ -1351,11 +1313,20 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
 
    double& slack = lower_bound_changed ? getSimpleVecFromColStochVec(original_vars.v, col) :
          getSimpleVecFromColStochVec(original_vars.w, col);
+
+   double& dual_bound = lower_bound_changed ? getSimpleVecFromColStochVec(original_vars.gamma, col) :
+         getSimpleVecFromColStochVec(original_vars.phi, col);
+   double& dual_singelton_row = getSimpleVecFromRowStochVec(original_vars.z, row);
+   assert( PIPSisZero(dual_singelton_row) );
+
    const double old_bound = (xupp_new != INF_POS_PRES) ? xupp_old : xlow_old;
 
-   /* if bound is not tight only adjust slack v/w */
+
+   /* if bound is not tight only adjust slack */
    if(std::fabs(old_bound) == INF_POS_PRES)
+   {
       slack = 0.0;
+   }
    else
    {
       slack = std::fabs(old_bound - curr_x);
@@ -1363,23 +1334,23 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
       assert(std::fabs(slack) != INF_POS_PRES);
    }
 
-   double& dual_singelton_row = getSimpleVecFromRowStochVec(original_vars.z, row);
-
-   double& dual_bound = lower_bound_changed ? getSimpleVecFromColStochVec(original_vars.gamma, col) :
-         getSimpleVecFromColStochVec(original_vars.phi, col);
-
    double error_in_reduced_costs = 0.0;
    if( PIPSisZeroFeas(slack) )
    {
-      error_in_reduced_costs = lower_bound_changed ? -dual_bound : dual_bound;
+      error_in_reduced_costs = lower_bound_changed ? dual_bound : -dual_bound;
       dual_bound = 0.0;
    }
 
    if( !PIPSisZero(error_in_reduced_costs) )
    {
-      /* we use the coeff*dual_singleton_row to balance the error in the reduced costs */
-      double diff_dual_row = error_in_reduced_costs / coeff;
+      /* we use the coeff * dual_singleton_row to balance the error in the reduced costs */
+      const double diff_dual_row = error_in_reduced_costs / coeff;
       dual_singelton_row += diff_dual_row;
+      if( 0 < diff_dual_row )
+         getSimpleVecFromRowStochVec(original_vars.pi, row) += diff_dual_row;
+      else
+         getSimpleVecFromRowStochVec(original_vars.lambda, row) += diff_dual_row;
+
       assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
    }
    return true;
@@ -2128,62 +2099,177 @@ void StochPostsolver::setOriginalVarsFromReduced(const sVars& reduced_vars, sVar
    /* x */
    const StochVector &x_reduced = dynamic_cast<const StochVector&>(*reduced_vars.x);
    StochVector &x_orig = dynamic_cast<StochVector&>(*original_vars.x);
+   x_orig.setToConstant(NAN);
    setOriginalValuesFromReduced<>(x_orig, x_reduced, *padding_origcol);
 
    /* s */
    const StochVector &s_reduced = dynamic_cast<const StochVector&>(*reduced_vars.s);
    StochVector &s_orig = dynamic_cast<StochVector&>(*original_vars.s);
+   s_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(s_orig, s_reduced, *padding_origrow_inequality);
 
    /* y */
    const StochVector &y_reduced = dynamic_cast<const StochVector&>(*reduced_vars.y);
    StochVector &y_orig = dynamic_cast<StochVector&>(*original_vars.y);
+   y_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(y_orig, y_reduced, *padding_origrow_equality);
 
    /* z */
    const StochVector &z_reduced = dynamic_cast<const StochVector&>(*reduced_vars.z);
    StochVector &z_orig = dynamic_cast<StochVector&>(*original_vars.z);
+   z_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(z_orig, z_reduced, *padding_origrow_inequality);
 
    /* v */
    const StochVector &v_reduced = dynamic_cast<const StochVector&>(*reduced_vars.v);
    StochVector &v_orig = dynamic_cast<StochVector&>(*original_vars.v);
+   v_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(v_orig, v_reduced, *padding_origcol);
 
    /* gamma */
    const StochVector &gamma_reduced = dynamic_cast<const StochVector&>(*reduced_vars.gamma);
    StochVector &gamma_orig = dynamic_cast<StochVector&>(*original_vars.gamma);
+   gamma_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(gamma_orig, gamma_reduced, *padding_origcol);
 
    /* w */
    const StochVector &w_reduced = dynamic_cast<const StochVector&>(*reduced_vars.w);
    StochVector &w_orig = dynamic_cast<StochVector&>(*original_vars.w);
+   w_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(w_orig, w_reduced, *padding_origcol);
 
    /* phi */
    const StochVector &phi_reduced = dynamic_cast<const StochVector&>(*reduced_vars.phi);
    StochVector &phi_orig = dynamic_cast<StochVector&>(*original_vars.phi);
+   phi_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(phi_orig, phi_reduced, *padding_origcol);
 
    /* t */
    const StochVector &t_reduced = dynamic_cast<const StochVector&>(*reduced_vars.t);
    StochVector &t_orig = dynamic_cast<StochVector&>(*original_vars.t);
+   t_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(t_orig, t_reduced, *padding_origrow_inequality);
 
    /* lambda */
    const StochVector &lambda_reduced = dynamic_cast<const StochVector&>(*reduced_vars.lambda);
    StochVector &lambda_orig = dynamic_cast<StochVector&>(*original_vars.lambda);
+   lambda_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(lambda_orig, lambda_reduced, *padding_origrow_inequality);
 
    /* u */
    const StochVector &u_reduced = dynamic_cast<const StochVector&>(*reduced_vars.u);
    StochVector &u_orig = dynamic_cast<StochVector&>(*original_vars.u);
+   u_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(u_orig, u_reduced, *padding_origrow_inequality);
 
    /* pi */
    const StochVector &pi_reduced = dynamic_cast<const StochVector&>(*reduced_vars.pi);
    StochVector &pi_orig = dynamic_cast<StochVector&>(*original_vars.pi);
+   pi_orig.setToConstant(NAN);
    setOriginalValuesFromReduced(pi_orig, pi_reduced, *padding_origrow_inequality);
+}
+
+bool StochPostsolver::allVariablesSet(const sVars& vars) const
+{
+   bool all_set = true;
+
+   /* x */
+   if( !vars.x->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "x not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* s */
+   if( !vars.s->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "s not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* y */
+   if( !vars.y->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "y not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* z */
+   if( !vars.z->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "z not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* v */
+   if( !vars.v->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "v not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* gamma */
+   if( !vars.gamma->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "gamma not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* w */
+   if( !vars.w->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "w not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* phi */
+   if( !vars.phi->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "phi not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* t */
+   if( !vars.t->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "t not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* lambda */
+   if( !vars.phi->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "phi not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* u */
+   if( !vars.u->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "u not all set" << std::endl;
+      all_set = false;
+   }
+
+   /* pi */
+   if( !vars.pi->componentNotEqual(NAN) )
+   {
+      if( my_rank == 0 )
+         std::cout << "pi not all set" << std::endl;
+      all_set = false;
+   }
+
+   return all_set;
 }
 
 

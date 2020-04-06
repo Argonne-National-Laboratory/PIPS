@@ -151,6 +151,7 @@ private:
       bool postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
+      bool allVariablesSet(const sVars& vars) const;
 
       template <typename T>
       void setOriginalValuesFromReduced(StochVectorBase<T>& original_vector,

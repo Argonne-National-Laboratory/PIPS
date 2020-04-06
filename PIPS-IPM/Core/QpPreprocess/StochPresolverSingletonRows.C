@@ -50,6 +50,11 @@ void StochPresolverSingletonRows::applyPresolving()
       const INDEX& row = presData.getSingletonRows().front();
       assert(row.isRow());
 
+      if(row.inEqSys())
+      {
+         presData.getSingletonRows().pop();
+         continue;
+      }
       removed = removeSingletonRow( row );
       
       if(removed && (row.getNode() > 0 || my_rank == 0))

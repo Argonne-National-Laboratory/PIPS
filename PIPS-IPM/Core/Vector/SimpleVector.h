@@ -76,6 +76,7 @@ public:
   virtual void printSolutionToStdErr( OoqpVectorBase<T>& v );
   void componentDiv( const OoqpVectorBase<T>& v ) override;
   bool componentEqual( const OoqpVectorBase<T>& vec, T tol) const override;
+  bool componentNotEqual( const T val, const T tol ) const override;
   void writeToStream( std::ostream& out ) const override;
   void writeToStreamAll( std::ostream& out ) const override;
   void writeToStreamAllStringStream( std::stringstream& sout ) const override;
