@@ -828,6 +828,8 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    const INDEX& col = indices.at(first_index + 1);
    assert(row.isRow());
    assert(col.isCol());
+   assert(!wasRowRemoved(row));
+   assert(!wasColumnRemoved(col));
 
    const int old_ixlowupp = int_values[first_int_val];
    const bool is_upper_bound = (int_values[first_int_val + 1] == 1) ? true : false;
@@ -846,24 +848,26 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
 
    double& slack = is_upper_bound ? getSimpleVecFromColStochVec(original_vars.w, col) :
          getSimpleVecFromColStochVec(original_vars.v, col);
+   double& dual = is_upper_bound ? getSimpleVecFromColStochVec(original_vars.phi, col) :
+         getSimpleVecFromColStochVec(original_vars.gamma, col);
 
-   // TODO : merge slack computations of tight and non-tight == refactoring
    /* if bound is not tight only adjust v/w */
-   if( true || !PIPSisEQ(curr_x, new_bound ) )
+   if( !PIPSisEQ(curr_x, new_bound ) )
    {
       if(old_ixlowupp == 0)
       {
-         slack = 0;
+         slack = 0.0;
+         dual = 0.0;
       }
       else if(is_upper_bound)
       {
          assert(PIPSisLT(new_bound, old_bound));
-         slack += old_bound - new_bound;
+         slack = old_bound - curr_x;
       }
       else
       {
          assert(PIPSisLT(old_bound, new_bound));
-         slack += new_bound - old_bound;
+         slack = curr_x - old_bound;
       }
    }
    /* we always add an epsilon to bounds found so it cannot have been tight - bound was tight */
@@ -1975,7 +1979,7 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
 bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const
 {
    const int type = reductions.at(reduction_idx);
-   assert( type == FREE_COLUMN_SINGLETON_INEQUALITY_ROW );
+   assert( type == PARALLEL_ROWS_BOUNDS_TIGHTENED );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
    const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
