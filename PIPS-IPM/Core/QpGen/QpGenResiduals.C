@@ -130,8 +130,11 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
   if( print_resids )
   {
      const double rQtwonorm=rQ->twonorm();
-     if( 0 == myRank )  std::cout << " rQ infnorm = " << componentNorm
-           << " | twonorm = " << rQtwonorm << std::endl;
+     if( 0 == myRank )
+     {
+//        std::cout << gap << std::endl;
+        std::cout << " rQ infnorm = " << componentNorm << " | twonorm = " << rQtwonorm << std::endl;
+     }
   }
 
   if( componentNorm > norm ) norm = componentNorm;
@@ -148,7 +151,10 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
   if( print_resids )
   {
      if( 0 == myRank )
+     {
+//        std::cout << gap << std::endl;
         std::cout << " rA norm = " << componentNorm << std::endl;
+     }
   }
   if( componentNorm > norm ) norm = componentNorm;
 
@@ -185,7 +191,10 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
     if( print_resids )
     {
        if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
           std::cout << " rt norm = " << componentNorm << std::endl;
+       }
     }
     if( componentNorm > norm ) norm = componentNorm;
   }
@@ -208,8 +217,11 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
     componentNorm = ru->infnorm();
     if( print_resids )
     {
-    if( 0 == myRank )
-       std::cout << " ru norm = " << componentNorm << std::endl;
+       if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
+          std::cout << " ru norm = " << componentNorm << std::endl;
+       }
     }
     if( componentNorm > norm ) norm = componentNorm;
   }
@@ -235,7 +247,10 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
     if( print_resids )
     {
        if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
           std::cout << " rv norm = " << componentNorm << std::endl;
+       }
     }
     if( componentNorm > norm ) norm = componentNorm;
   }
@@ -252,7 +267,10 @@ void QpGenResiduals::calcresids(Data *prob_in, Variables *vars_in, bool print_re
     if( print_resids )
     {
        if( 0 == myRank )
+       {
+//          std::cout << gap << std::endl;
           std::cout << " rw norm = " << componentNorm << std::endl;
+       }
     }
     if( componentNorm > norm ) norm = componentNorm;
   }

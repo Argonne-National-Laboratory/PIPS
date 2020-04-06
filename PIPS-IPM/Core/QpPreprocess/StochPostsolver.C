@@ -1241,20 +1241,9 @@ bool StochPostsolver::postsolveSingletonEqualityRow(sVars& original_vars, int re
    double& dual_lower = getSimpleVecFromColStochVec(original_vars.gamma, col);
    double& dual_upper = getSimpleVecFromColStochVec(original_vars.phi, col);
 
-   double error_in_reduced_costs = 0.0;
-
-   /* adjust duals if necessary */
-   if( !PIPSisZeroFeas(slack_lower) )
-   {
-      error_in_reduced_costs = dual_lower;
-      dual_lower = 0.0;
-   }
-
-   if( !PIPSisZeroFeas(slack_upper) )
-   {
-      error_in_reduced_costs -= dual_upper;
-      dual_upper = 0.0;
-   }
+   /* adjust duals */
+   const double error_in_reduced_costs = dual_lower - dual_upper;
+   dual_lower = dual_upper = 0.0;
 
    if( !PIPSisZero(error_in_reduced_costs) )
    {
@@ -1347,9 +1336,9 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
       const double diff_dual_row = error_in_reduced_costs / coeff;
       dual_singelton_row += diff_dual_row;
       if( 0 < diff_dual_row )
-         getSimpleVecFromRowStochVec(original_vars.pi, row) += diff_dual_row;
+         getSimpleVecFromRowStochVec(original_vars.pi, row) = std::max(0.0, dual_singelton_row);
       else
-         getSimpleVecFromRowStochVec(original_vars.lambda, row) += diff_dual_row;
+         getSimpleVecFromRowStochVec(original_vars.lambda, row) = std::min(0.0, dual_singelton_row);
 
       assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
    }
