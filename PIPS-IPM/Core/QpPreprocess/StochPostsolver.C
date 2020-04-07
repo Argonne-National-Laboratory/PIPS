@@ -1311,9 +1311,12 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
          getSimpleVecFromColStochVec(original_vars.phi, col);
    double& dual_singelton_row = getSimpleVecFromRowStochVec(original_vars.z, row);
    assert( PIPSisZero(dual_singelton_row) );
+   assert( PIPSisZero(getSimpleVecFromRowStochVec(original_vars.lambda, row)) );
+   assert( PIPSisZero(getSimpleVecFromRowStochVec(original_vars.pi, row)) );
 
-   const double old_bound = (xupp_new != INF_POS_PRES) ? xupp_old : xlow_old;
-
+   const double old_bound = lower_bound_changed ? xlow_old : xupp_old;
+   const double new_bound = lower_bound_changed ? xlow_new : xupp_new;
+   assert( std::fabs(new_bound) < std::fabs(old_bound) );
 
    /* if bound is not tight only adjust slack */
    if(std::fabs(old_bound) == INF_POS_PRES)
@@ -1328,24 +1331,30 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
    }
 
    double error_in_reduced_costs = 0.0;
+   double error_in_optimality = 0.0;
+   /* if the slack is zero - thus the bound was tight - we shift the duals over to the singleton row */
    if( PIPSisZeroFeas(slack) )
    {
       error_in_reduced_costs = lower_bound_changed ? dual_bound : -dual_bound;
+      error_in_optimality = lower_bound_changed ? -dual_bound * old_bound : dual_bound * old_bound;
       dual_bound = 0.0;
    }
 
-   if( !PIPSisZero(error_in_reduced_costs) )
+   /* correct optimality conditions and reduced costs */
+   if( !PIPSisZero(error_in_reduced_costs) || !PIPSisZero(error_in_optimality) )
    {
       /* we use the coeff * dual_singleton_row to balance the error in the reduced costs */
       const double diff_dual_row = error_in_reduced_costs / coeff;
       dual_singelton_row += diff_dual_row;
-      if( 0 < diff_dual_row )
-         getSimpleVecFromRowStochVec(original_vars.pi, row) = std::max(0.0, dual_singelton_row);
-      else
-         getSimpleVecFromRowStochVec(original_vars.lambda, row) = std::min(0.0, dual_singelton_row);
 
+      getSimpleVecFromRowStochVec(original_vars.lambda, row) = std::max(0.0, dual_singelton_row);
+      getSimpleVecFromRowStochVec(original_vars.pi, row) = std::fabs(std::min(0.0, dual_singelton_row));
+
+      /* TODO: we need to adjust the duals of that row as well... */
       assert(PIPSisEQ(diff_dual_row * coeff, error_in_reduced_costs));
    }
+
+   assert(PIPSisZeroFeas(dual_bound * slack));
    return true;
 }
 

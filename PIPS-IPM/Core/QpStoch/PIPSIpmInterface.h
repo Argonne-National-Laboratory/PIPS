@@ -781,7 +781,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   if( my_rank == 0 )
      std::cout << "Residuals after unscaling:" << std::endl;
 
-  /* complementarity residuals before postsolve */
+  /* complementarity residuals after unscaling */
   OoqpVectorBase<double>* t_unscale_clone = unscaleUnpermVars->t->cloneFull();
   OoqpVectorBase<double>* u_unscale_clone = unscaleUnpermVars->u->cloneFull();
   OoqpVectorBase<double>* v_unscale_clone = unscaleUnpermVars->v->cloneFull();
@@ -809,6 +809,15 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   const double rv_unscale_infnorm = unscaleUnpermResids->rv->infnorm();
   const double rw_unscale_infnorm = unscaleUnpermResids->rw->infnorm();
 
+  const double norm_residuals1 = std::max(rQ_unscale_infnorm, rA_unscale_infnorm);
+  const double norm_residuals2 = std::max(rC_unscale_infnorm, rt_unscale_infnorm);
+  const double norm_residuals3 = std::max(ru_unscale_infnorm, rz_unscale_infnorm);
+  const double norm_residuals4 = std::max(rv_unscale_infnorm, rw_unscale_infnorm);
+  const double norm_residuals = std::max(std::max(norm_residuals1, norm_residuals2), std::max(norm_residuals3, norm_residuals4));
+
+  /* g.x - bA.y - bl.lambda + bu.pi - blx.gamma + bux.phi */
+//  double gap = 0.0; // TODO
+
   const double rlambda_unscale_infnorm = t_unscale_clone->infnorm();
   const double rpi_unscale_infnorm = u_unscale_clone->infnorm();
   const double rgamma_unscale_infnorm = v_unscale_clone->infnorm();
@@ -829,7 +838,7 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
      std::cout << " rz norm = " << rz_unscale_infnorm << std::endl;
      std::cout << " rv norm = " << rv_unscale_infnorm << std::endl;
      std::cout << " rw norm = " << rw_unscale_infnorm << std::endl;
-     std::cout << "Norm residuals: TODO" << std::endl;
+     std::cout << "Norm residuals: " << norm_residuals << "\tduality gap: " << std::endl;
      std::cout << " rl norm = " << rlambda_unscale_infnorm << std::endl;
      std::cout << " rp norm = " << rpi_unscale_infnorm << std::endl;
      std::cout << " rg norm = " << rgamma_unscale_infnorm << std::endl;
@@ -843,7 +852,6 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   factory->data = origData;
 
   postsolvedVars = dynamic_cast<sVars*>( factory->makeVariables( origData ) );
-
 
   postsolvedResids = dynamic_cast<sResiduals*>( factory->makeResiduals( origData ) );
   postsolver->postsolve(*unscaleUnpermVars, *postsolvedVars);
