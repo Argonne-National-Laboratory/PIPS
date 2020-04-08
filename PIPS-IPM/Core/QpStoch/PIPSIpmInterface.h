@@ -78,6 +78,7 @@ class PIPSIpmInterface
   FORMULATION * factory;
   PreprocessFactory * prefactory;
   sData *        data;       // possibly presolved data
+  sData *        dataUnperm; // data after presolve before permutation and scaling
   sData *        origData;   // original data
   sVars *        vars;
   sVars *        unscaleUnpermVars;
@@ -103,8 +104,9 @@ class PIPSIpmInterface
 
 
 template<class FORMULATION, class IPMSOLVER>
-PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) :  unscaleUnpermVars(nullptr), postsolvedVars(nullptr), 
-  unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
+PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, MPI_Comm comm) : prefactory(nullptr), dataUnperm(nullptr), origData(nullptr),
+   unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), presolver(nullptr),
+   postsolver(nullptr), comm(comm), ran_solver(false)
 {
 
 #ifdef TIMING
@@ -202,6 +204,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("data created\n");
 #endif
 
+  dataUnperm = data->cloneFull();
 #ifdef WITH_PARDISOINDEF
   data->activateLinkStructureExploitation();
 #endif
@@ -365,6 +368,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::~PIPSIpmInterface()
   delete postsolvedVars;
   delete unscaleUnpermVars;
   delete vars;
+  delete dataUnperm;
   delete data;
   delete postsolver;
   delete presolver;
@@ -394,18 +398,18 @@ template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getResidsUnscaledUnperm()
 {
   assert(unscaleUnpermResids == nullptr);
+  assert(dataUnperm);
 
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated residuals");
-
   if( scaler )
   {
     sResiduals* unscaled_resids = dynamic_cast<sResiduals*>(scaler->getResidualsUnscaled(*resids));
-    unscaleUnpermResids = data->getResidsUnperm(*unscaled_resids);
+    unscaleUnpermResids = data->getResidsUnperm(*unscaled_resids, *dataUnperm);
     delete unscaled_resids;
   }
   else
-    unscaleUnpermResids = data->getResidsUnperm(*resids);
+    unscaleUnpermResids = data->getResidsUnperm(*resids, *dataUnperm);
 }
 
 
@@ -779,7 +783,8 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   }
 
   if( my_rank == 0 )
-     std::cout << "Residuals after unscaling:" << std::endl;
+     std::cout << "Residuals after unscaling/permuting:" << std::endl;
+  unscaleUnpermResids->calcresids(dataUnperm, unscaleUnpermVars, true);
 
   /* complementarity residuals after unscaling */
   OoqpVectorBase<double>* t_unscale_clone = unscaleUnpermVars->t->cloneFull();
@@ -788,35 +793,16 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   OoqpVectorBase<double>* w_unscale_clone = unscaleUnpermVars->w->cloneFull();
 
   t_unscale_clone->componentMult(*unscaleUnpermVars->lambda);
-  t_unscale_clone->selectNonZeros(*data->iclow);
+  t_unscale_clone->selectNonZeros(*dataUnperm->iclow);
 
   u_unscale_clone->componentMult(*unscaleUnpermVars->pi);
-  u_unscale_clone->selectNonZeros(*data->icupp);
+  u_unscale_clone->selectNonZeros(*dataUnperm->icupp);
 
   v_unscale_clone->componentMult(*unscaleUnpermVars->gamma);
-  v_unscale_clone->selectNonZeros(*data->ixlow);
+  v_unscale_clone->selectNonZeros(*dataUnperm->ixlow);
 
   w_unscale_clone->componentMult(*unscaleUnpermVars->phi);
-  w_unscale_clone->selectNonZeros(*data->ixupp);
-
-  const double rQ_unscale_infnorm = unscaleUnpermResids->rQ->infnorm();
-  const double rQ_unscale_twonorm = unscaleUnpermResids->rQ->twonorm();
-  const double rA_unscale_infnorm = unscaleUnpermResids->rA->infnorm();
-  const double rC_unscale_infnorm = unscaleUnpermResids->rC->infnorm();
-  const double rt_unscale_infnorm = unscaleUnpermResids->rt->infnorm();
-  const double ru_unscale_infnorm = unscaleUnpermResids->ru->infnorm();
-  const double rz_unscale_infnorm = unscaleUnpermResids->rz->infnorm();
-  const double rv_unscale_infnorm = unscaleUnpermResids->rv->infnorm();
-  const double rw_unscale_infnorm = unscaleUnpermResids->rw->infnorm();
-
-  const double norm_residuals1 = std::max(rQ_unscale_infnorm, rA_unscale_infnorm);
-  const double norm_residuals2 = std::max(rC_unscale_infnorm, rt_unscale_infnorm);
-  const double norm_residuals3 = std::max(ru_unscale_infnorm, rz_unscale_infnorm);
-  const double norm_residuals4 = std::max(rv_unscale_infnorm, rw_unscale_infnorm);
-  const double norm_residuals = std::max(std::max(norm_residuals1, norm_residuals2), std::max(norm_residuals3, norm_residuals4));
-
-  /* g.x - bA.y - bl.lambda + bu.pi - blx.gamma + bux.phi */
-//  double gap = 0.0; // TODO
+  w_unscale_clone->selectNonZeros(*dataUnperm->ixupp);
 
   const double rlambda_unscale_infnorm = t_unscale_clone->infnorm();
   const double rpi_unscale_infnorm = u_unscale_clone->infnorm();
@@ -830,15 +816,6 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 
   if( my_rank == 0 )
   {
-     std::cout << " rQ infnorm = " << rQ_unscale_infnorm << " | twonorm = " << rQ_unscale_twonorm << std::endl;
-     std::cout << " rA norm = " << rA_unscale_infnorm << std::endl;
-     std::cout << " rC norm = " << rC_unscale_infnorm << std::endl;
-     std::cout << " rt norm = " << rt_unscale_infnorm << std::endl;
-     std::cout << " ru norm = " << ru_unscale_infnorm << std::endl;
-     std::cout << " rz norm = " << rz_unscale_infnorm << std::endl;
-     std::cout << " rv norm = " << rv_unscale_infnorm << std::endl;
-     std::cout << " rw norm = " << rw_unscale_infnorm << std::endl;
-     std::cout << "Norm residuals: " << norm_residuals << "\tduality gap: " << std::endl;
      std::cout << " rl norm = " << rlambda_unscale_infnorm << std::endl;
      std::cout << " rp norm = " << rpi_unscale_infnorm << std::endl;
      std::cout << " rg norm = " << rgamma_unscale_infnorm << std::endl;

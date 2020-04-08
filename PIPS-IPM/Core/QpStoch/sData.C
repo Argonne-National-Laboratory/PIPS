@@ -10,7 +10,7 @@
 #include "pipsport.h"
 
 static
-std::vector<unsigned int> getInversePermuation(const std::vector<unsigned int>& perm)
+std::vector<unsigned int> getInversePermutation(const std::vector<unsigned int>& perm)
 {
    size_t size = perm.size();
    std::vector<unsigned int> perm_inv(size, 0);
@@ -1577,13 +1577,13 @@ sVars* sData::getVarsUnperm(const sVars& vars) const
    return unperm_vars;
 }
 
-sResiduals* sData::getResidsUnperm(const sResiduals& resids) const
+sResiduals* sData::getResidsUnperm(const sResiduals& resids, const sData& unpermData) const
 {
    const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
 
-   sResiduals* unperm_resids = new sResiduals(resids);
+   sResiduals* unperm_resids = new sResiduals(resids, unpermData.ixlow, unpermData.ixupp, unpermData.iclow, unpermData.icupp );
 
    if( perm_inv_link_vars.size() != 0 )
    {
@@ -1602,9 +1602,9 @@ sResiduals* sData::getResidsUnperm(const sResiduals& resids) const
    if( perm_inv_link_cons_ineq.size() != 0 )
    {
       dynamic_cast<StochVector&>(*unperm_resids->rC).permuteLinkingEntries(perm_inv_link_cons_ineq); 
-      dynamic_cast<StochVector&>(*unperm_resids->rz).permuteLinkingEntries(perm_inv_link_cons_ineq);   
       dynamic_cast<StochVector&>(*unperm_resids->rt).permuteLinkingEntries(perm_inv_link_cons_ineq);   
       dynamic_cast<StochVector&>(*unperm_resids->ru).permuteLinkingEntries(perm_inv_link_cons_ineq);   
+      dynamic_cast<StochVector&>(*unperm_resids->rz).permuteLinkingEntries(perm_inv_link_cons_ineq);
       dynamic_cast<StochVector&>(*unperm_resids->rlambda).permuteLinkingEntries(perm_inv_link_cons_ineq);   
       dynamic_cast<StochVector&>(*unperm_resids->rpi).permuteLinkingEntries(perm_inv_link_cons_ineq);   
    }
@@ -1890,15 +1890,15 @@ std::vector<unsigned int> sData::getLinkVarsPerm() const
 }
 std::vector<unsigned int> sData::getLinkVarsPermInv() const
 {
-   return getInversePermuation(linkVarsPermutation);
+   return getInversePermutation(linkVarsPermutation);
 }
 std::vector<unsigned int> sData::getLinkConsEqPermInv() const
 {
-   return getInversePermuation(linkConsPermutationA);
+   return getInversePermutation(linkConsPermutationA);
 }
 std::vector<unsigned int> sData::getLinkConsIneqPermInv() const
 {
-   return getInversePermuation(linkConsPermutationC);
+   return getInversePermutation(linkConsPermutationC);
 }
 
 int sData::getLocalnx()
