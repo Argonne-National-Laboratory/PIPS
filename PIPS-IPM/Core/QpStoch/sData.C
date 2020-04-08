@@ -1542,13 +1542,13 @@ void sData::permuteLinkingVars()
 }
 
 
-sVars* sData::getVarsUnperm(const sVars& vars) const
+sVars* sData::getVarsUnperm(const sVars& vars, const sData& unpermData) const
 {
    const std::vector<unsigned int> perm_inv_link_vars = this->getLinkVarsPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_eq = this->getLinkConsEqPermInv();   
    const std::vector<unsigned int> perm_inv_link_cons_ineq = this->getLinkConsIneqPermInv();   
 
-   sVars* unperm_vars = new sVars(vars);
+   sVars* unperm_vars = new sVars(vars, unpermData.ixlow, unpermData.ixupp, unpermData.iclow, unpermData.icupp);
 
    if( perm_inv_link_vars.size() != 0 )
    {

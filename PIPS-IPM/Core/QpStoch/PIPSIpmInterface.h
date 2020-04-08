@@ -63,7 +63,9 @@ class PIPSIpmInterface
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
   void postsolveComputedSolution();
-
+private:
+  void printComplementarityResiduals(const sVars& vars) const;
+public:
   std::vector<double> gatherEqualityConsValues();
   std::vector<double> gatherInequalityConsValues();
 
@@ -381,16 +383,18 @@ template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::getVarsUnscaledUnperm()
 {
   assert(unscaleUnpermVars == nullptr);
+  assert(dataUnperm);
+
   if(!ran_solver)
     throw std::logic_error("Must call go() and start solution process before trying to retrieve unscaled unpermutated solution");
   if( scaler )
   {
     sVars* unscaled_vars = dynamic_cast<sVars*>(scaler->getVariablesUnscaled(*vars));
-    unscaleUnpermVars = data->getVarsUnperm(*unscaled_vars);
+    unscaleUnpermVars = data->getVarsUnperm(*unscaled_vars, *dataUnperm);
     delete unscaled_vars;
   }
   else
-    unscaleUnpermVars = data->getVarsUnperm(*vars);
+    unscaleUnpermVars = data->getVarsUnperm(*vars, *dataUnperm);
 
 }
 
@@ -709,6 +713,49 @@ std::vector<double> PIPSIpmInterface<FORMULATION, IPMSOLVER>::getSecondStageDual
 }
 
 template<class FORMULATION, class IPMSOLVER>
+void PIPSIpmInterface<FORMULATION, IPMSOLVER>::printComplementarityResiduals(const sVars& svars) const
+{
+  const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+
+  /* complementarity residuals before postsolve */
+  OoqpVectorBase<double>* t_clone = svars.t->cloneFull();
+  OoqpVectorBase<double>* u_clone = svars.u->cloneFull();
+  OoqpVectorBase<double>* v_clone = svars.v->cloneFull();
+  OoqpVectorBase<double>* w_clone = svars.w->cloneFull();
+
+  t_clone->componentMult(*svars.lambda);
+  t_clone->selectNonZeros(*svars.iclow);
+
+  u_clone->componentMult(*svars.pi);
+  u_clone->selectNonZeros(*svars.icupp);
+
+  v_clone->componentMult(*svars.gamma);
+  v_clone->selectNonZeros(*svars.ixlow);
+
+  w_clone->componentMult(*svars.phi);
+  w_clone->selectNonZeros(*svars.ixupp);
+
+  const double rlambda_infnorm = t_clone->infnorm();
+  const double rpi_infnorm = u_clone->infnorm();
+  const double rgamma_infnorm = v_clone->infnorm();
+  const double rphi_infnorm = w_clone->infnorm();
+
+  delete t_clone;
+  delete u_clone;
+  delete v_clone;
+  delete w_clone;
+
+  if( my_rank == 0 )
+  {
+     std::cout << " rl norm = " << rlambda_infnorm << std::endl;
+     std::cout << " rp norm = " << rpi_infnorm << std::endl;
+     std::cout << " rg norm = " << rgamma_infnorm << std::endl;
+     std::cout << " rf norm = " << rphi_infnorm << std::endl;
+     std::cout << std::endl;
+  }
+}
+
+template<class FORMULATION, class IPMSOLVER>
 void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
 {
 //  const bool print_resudial = true; // TODO make PIPSoption
@@ -744,84 +791,12 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   if( my_rank == 0 )
      std::cout << std::endl << "Residuals before postsolve:" << std::endl;
   resids->calcresids(data, vars, true);
-
-  /* complementarity residuals before postsolve */
-  OoqpVectorBase<double>* t_clone = vars->t->cloneFull();
-  OoqpVectorBase<double>* u_clone = vars->u->cloneFull();
-  OoqpVectorBase<double>* v_clone = vars->v->cloneFull();
-  OoqpVectorBase<double>* w_clone = vars->w->cloneFull();
-
-  t_clone->componentMult(*vars->lambda);
-  t_clone->selectNonZeros(*data->iclow);
-
-  u_clone->componentMult(*vars->pi);
-  u_clone->selectNonZeros(*data->icupp);
-
-  v_clone->componentMult(*vars->gamma);
-  v_clone->selectNonZeros(*data->ixlow);
-
-  w_clone->componentMult(*vars->phi);
-  w_clone->selectNonZeros(*data->ixupp);
-
-  const double rlambda_infnorm = t_clone->infnorm();
-  const double rpi_infnorm = u_clone->infnorm();
-  const double rgamma_infnorm = v_clone->infnorm();
-  const double rphi_infnorm = w_clone->infnorm();
-
-  delete t_clone;
-  delete u_clone;
-  delete v_clone;
-  delete w_clone;
-
-  if( my_rank == 0 )
-  {
-     std::cout << " rl norm = " << rlambda_infnorm << std::endl;
-     std::cout << " rp norm = " << rpi_infnorm << std::endl;
-     std::cout << " rg norm = " << rgamma_infnorm << std::endl;
-     std::cout << " rf norm = " << rphi_infnorm << std::endl;
-     std::cout << std::endl;
-  }
+  printComplementarityResiduals(*vars);
 
   if( my_rank == 0 )
      std::cout << "Residuals after unscaling/permuting:" << std::endl;
   unscaleUnpermResids->calcresids(dataUnperm, unscaleUnpermVars, true);
-
-  /* complementarity residuals after unscaling */
-  OoqpVectorBase<double>* t_unscale_clone = unscaleUnpermVars->t->cloneFull();
-  OoqpVectorBase<double>* u_unscale_clone = unscaleUnpermVars->u->cloneFull();
-  OoqpVectorBase<double>* v_unscale_clone = unscaleUnpermVars->v->cloneFull();
-  OoqpVectorBase<double>* w_unscale_clone = unscaleUnpermVars->w->cloneFull();
-
-  t_unscale_clone->componentMult(*unscaleUnpermVars->lambda);
-  t_unscale_clone->selectNonZeros(*dataUnperm->iclow);
-
-  u_unscale_clone->componentMult(*unscaleUnpermVars->pi);
-  u_unscale_clone->selectNonZeros(*dataUnperm->icupp);
-
-  v_unscale_clone->componentMult(*unscaleUnpermVars->gamma);
-  v_unscale_clone->selectNonZeros(*dataUnperm->ixlow);
-
-  w_unscale_clone->componentMult(*unscaleUnpermVars->phi);
-  w_unscale_clone->selectNonZeros(*dataUnperm->ixupp);
-
-  const double rlambda_unscale_infnorm = t_unscale_clone->infnorm();
-  const double rpi_unscale_infnorm = u_unscale_clone->infnorm();
-  const double rgamma_unscale_infnorm = v_unscale_clone->infnorm();
-  const double rphi_unscale_infnorm = w_unscale_clone->infnorm();
-
-  delete t_unscale_clone;
-  delete u_unscale_clone;
-  delete v_unscale_clone;
-  delete w_unscale_clone;
-
-  if( my_rank == 0 )
-  {
-     std::cout << " rl norm = " << rlambda_unscale_infnorm << std::endl;
-     std::cout << " rp norm = " << rpi_unscale_infnorm << std::endl;
-     std::cout << " rg norm = " << rgamma_unscale_infnorm << std::endl;
-     std::cout << " rf norm = " << rphi_unscale_infnorm << std::endl;
-     std::cout << std::endl;
-  }
+  printComplementarityResiduals(*unscaleUnpermVars);
 
   sTreeCallbacks& callbackTree = dynamic_cast<sTreeCallbacks&>(*origData->stochNode);
   callbackTree.switchToOriginalData();
@@ -848,43 +823,6 @@ void PIPSIpmInterface<FORMULATION, IPMSOLVER>::postsolveComputedSolution()
   if( my_rank == 0 )
      std::cout << std::endl << "Residuals after postsolve:" << std::endl;
   postsolvedResids->calcresids(origData, postsolvedVars, true);
-
-  /* complementarity residuals after postsolve */
-  OoqpVectorBase<double>* t_post_clone = postsolvedVars->t->cloneFull();
-  OoqpVectorBase<double>* u_post_clone = postsolvedVars->u->cloneFull();
-  OoqpVectorBase<double>* v_post_clone = postsolvedVars->v->cloneFull();
-  OoqpVectorBase<double>* w_post_clone = postsolvedVars->w->cloneFull();
-
-  t_post_clone->componentMult(*postsolvedVars->lambda);
-  t_post_clone->selectNonZeros(*origData->iclow);
-
-  u_post_clone->componentMult(*postsolvedVars->pi);
-  u_post_clone->selectNonZeros(*origData->icupp);
-
-  v_post_clone->componentMult(*postsolvedVars->gamma);
-  v_post_clone->selectNonZeros(*origData->ixlow);
-
-  w_post_clone->componentMult(*postsolvedVars->phi);
-  w_post_clone->selectNonZeros(*origData->ixupp);
-
-  const double rlambda_post_infnorm = t_post_clone->infnorm();
-  const double rpi_post_infnorm = u_post_clone->infnorm();
-  const double rgamma_post_infnorm = v_post_clone->infnorm();
-  const double rphi_post_infnorm = w_post_clone->infnorm();
-
-  delete t_post_clone;
-  delete u_post_clone;
-  delete v_post_clone;
-  delete w_post_clone;
-
-  if( my_rank == 0 )
-  {
-     std::cout << " rl norm = " << rlambda_post_infnorm << std::endl;
-     std::cout << " rp norm = " << rpi_post_infnorm << std::endl;
-     std::cout << " rg norm = " << rgamma_post_infnorm << std::endl;
-     std::cout << " rf norm = " << rphi_post_infnorm << std::endl;
-     std::cout << std::endl;
-  }
-
+  printComplementarityResiduals(*postsolvedVars);
 }
 #endif

@@ -143,6 +143,15 @@ sVars::sVars(const sVars& vars) : QpGenVars(vars)
   }
 }
 
+sVars::sVars(const sVars& vars, OoqpVectorHandle ixlow_, OoqpVectorHandle ixupp_,
+      OoqpVectorHandle iclow_, OoqpVectorHandle icupp_) : sVars(vars)
+{
+   ixlow = ixlow_;
+   ixupp = ixupp_;
+   iclow = iclow_;
+   icupp = icupp_;
+}
+
 sVars::~sVars()
 { 
   for (size_t c = 0; c < children.size(); c++)
