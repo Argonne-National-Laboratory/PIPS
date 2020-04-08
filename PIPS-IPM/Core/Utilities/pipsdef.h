@@ -24,7 +24,6 @@ const double pips_eps0 = 1e-40;
 
 static const double feastol = 1.0e-6; // was 1.0e-6
 static const double infinity = 1.0e30;
-static const double eps_bounds_nontight = 1.0e-8;
 
 static const double INF_NEG_PRES = -std::numeric_limits<double>::infinity();
 static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
@@ -55,7 +54,13 @@ static const double PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST = 1.0e-2
 /** tolerance for comparing two double values in two different rows and for them being considered equal */
 static const double PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES = 1.0e-8;
 /// PRESOLVE DATA
+/** maximal bound being accepted from any of the presolvers */
 static const double PRESOLVE_MAX_BOUND_ACCEPTED = 1e10;
+/** epsilon used for changing bounds found in bound tightening so that they will be non-tight in the final solution */
+static const double eps_bounds_nontight = 1e4 * feastol;
+/// POSTSOLVE
+static const double postsolve_tol = feastol;
+
 
 static inline double relativeDiff(double val1, double val2)
 {

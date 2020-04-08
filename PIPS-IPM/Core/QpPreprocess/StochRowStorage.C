@@ -33,7 +33,7 @@ void StochRowStorage::axpyAtRow(double beta, StochVector &y, double alpha, const
    if(!PIPSisEQ(beta, 1.0))
       y.scale(beta);
 
-   row_storage->axpyWithRowAt(beta, y, row.getNode(), row.getIndex(), row.getLinking());
+   row_storage->axpyWithRowAt(alpha, y, row.getNode(), row.getIndex(), row.getLinking());
 }
 
 double StochRowStorage::multRowTimesVec( const INDEX& row, const StochVector& vec ) const

@@ -28,7 +28,7 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
 
-//   presData.putLinkingVarsSyncEvent();
+   presData.startSingletonColumnPresolve();
 
 #ifndef NDEBUG
    if( my_rank == 0 )
@@ -163,7 +163,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    bool implied_free = lb_implied_free && ub_implied_free;
 
    /* if objective of variable is zero we can just remove it from the problem together with the containing row */
-   double obj = (col.getNode() == -1) ? (*currgParent)[col.getIndex()] : (*currgChild)[col.getIndex()];
+   double obj = col.isLinkingCol() ? (*currgParent)[col.getIndex()] : (*currgChild)[col.getIndex()];
 
    if( implied_free && PIPSisEQ(obj, 0.0) )
    {

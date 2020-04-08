@@ -167,7 +167,6 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
       }
       else
       {
-         assert(!presData.wasRowRemoved( row ));
          assert( PIPSisLT(0.0, iclow[row_index] + icupp[row_index]) );
 
          if( ( !PIPSisZero(iclow[row_index]) && (actmax_ubndd == 0 && PIPSisLTFeas(actmax_part, clow[row_index])) )
@@ -239,12 +238,9 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    return n_elims;
 }
 
-/** Removes tiny entries in storage and adapts the rhs accordingly.
- *  If block_type == LINKING_VARS_BLOCK, then block Amat is considered.
- *  If block_type == CHILD_BLOCK, then block Bmat is considered. */
-/* system type indicates matrix A or C, block_type indicates the block */
-// todo what is the proper order for criterion 1 to 3?
-// todo for criterion 3 - should ALL eliminations be considered?
+/** Removes tiny entries in storage and adapts the lhs/rhs accordingly.
+ * system type indicates matrix A or C, block_type indicates the block
+ */
 int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int node, BlockType block_type)
 {
    if(presData.nodeIsDummy(node))
@@ -308,10 +304,10 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
       for(int col_index = start; col_index < end; ++col_index )
       {
          const int col = storage->getJcolM(col_index);
-         const double mat_entry = storage->getMat(col_index);
+         const double mat_abs = std::fabs(storage->getMat(col_index));
 
          /* remove all small entries */
-         if( fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY )
+         if( mat_abs < PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY )
          {
             const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
             const INDEX col_INDEX(COL, node_col, col);
@@ -325,8 +321,12 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          /* remove entries where their corresponding variables have valid lower and upper bounds, that overall do not have a real influence though */
          else if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
          {
-            if( (fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT &&
-                  fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST * feastol ))
+            const double bux = (*x_upper)[col];
+            const double blx = (*x_lower)[col];
+            const int nnz = (*nnzRow)[r];
+
+            if( mat_abs < PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT &&
+                  mat_abs * ( bux - blx ) * nnz < PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST * feastol )
             {
                const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
                const INDEX col_INDEX(COL, node_col, col);
@@ -337,27 +337,22 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
                --end;
                ++n_elims;
             }
-         }
-         else if( false ) //TODO if not linking constraints
-         {
-            // TODO third criterion? for linking constraints: call extra function to know whether we have linking cons
-            // that link only two blocks (not so urgent for linking)
-            /* if valid lower and upper bounds */
-            if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
+            /* for linking constraints this is a slight modification of criterion three that does not require communication but is only a slight relaxation to
+             * criterion two
+             */
+            else if( ( block_type == BL_MAT && mat_abs * ( bux - blx ) * nnz < 1.0e-1 * feastol)
+                  || ( block_type != BL_MAT && total_sum_modifications_row + mat_abs * ( bux - blx ) < 1.0e-1 * feastol ) )
             {
-               if( total_sum_modifications_row + (fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col])) < 1.0e-1 * feastol)
-               {
-                  total_sum_modifications_row += fabs(mat_entry) * ((*x_upper)[col] - (*x_lower)[col]);
-                  const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
-                  const INDEX col_INDEX(COL, node_col, col);
+               total_sum_modifications_row += mat_abs * ((*x_upper)[col] - (*x_lower)[col]);
+               const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
+               const INDEX col_INDEX(COL, node_col, col);
 
-                  presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
+               presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
 
-                  /* since the current entry got deleted we have to step back one entry */
-                  --col_index;
-                  --end;
-                  ++n_elims;
-               }
+               /* since the current entry got deleted we have to step back one entry */
+               --col_index;
+               --end;
+               ++n_elims;
             }
          }
          /* not removed */
@@ -391,18 +386,20 @@ void StochPresolverModelCleanup::fixEmptyColumns()
       for(int col_index = 0; col_index < nnzs_col.n; ++col_index)
       {
          const INDEX col(COL, node, col_index);
-         /* column fixation candidate */
+
+         if( presData.wasColumnRemoved(col) )
+         {
+            assert( nnzs_col[col_index] == 0 );
+            assert( PIPSisZero(ixlow[col_index] ) );
+            assert( PIPSisZero(ixupp[col_index] ) );
+            assert( PIPSisZero(xlow[col_index] ) );
+            assert( PIPSisZero(xupp[col_index] ) );
+            assert( PIPSisZero(g[col_index] ) );
+            continue;
+         }
+            /* column fixation candidate */
          if( nnzs_col[col_index] == 0)
          {
-            /* check whether column was removed already */
-            if( PIPSisZero(ixlow[col_index]) && PIPSisZero(ixupp[col_index])
-               && PIPSisZero(xlow[col_index]) && PIPSisZero(xupp[col_index])
-               && PIPSisZero(g[col_index]))
-            {
-               if( presData.wasColumnRemoved(col) )
-                  continue;
-            }
-
             if( PIPSisLT( g[col_index], 0.0) )
             {
                if( !PIPSisZero(ixupp[col_index]) )

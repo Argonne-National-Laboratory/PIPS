@@ -1424,9 +1424,19 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
       removeRedundantRow( row );
 }
 
+void PresolveData::startBoundTightening()
+{
+   if( postsolver )
+   {
+      postsolver->beginBoundTightening();
+   }
+   in_bound_tightening = true;
+}
+
 // TODO we still want to do tightenings that fix a variable
 bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new )
 {
+   assert(in_bound_tightening);
    assert( row.hasValidNode(nChildren) );
    /* infeasibility check is done in rowPropagatedBounds */
    const int ixlow = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col ) ) ? 0 : 1;
@@ -1448,7 +1458,7 @@ bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& c
       return rowPropagatedBounds( row, col, xlow_new, xupp_new);
 
    /* we cannot tighten bounds with matrix entries that are too small - 1.0e-8 since eps_bounds_nontight == 1.0e-8 and 1.0e-16 is considered too small for an epslion */
-   double coeff_var = 10;
+   double coeff_var = getRowCoeff(row, col);
    if(coeff_var < 1.0e-8)
       return false;
 
@@ -1476,8 +1486,11 @@ bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& c
 
 bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new)
 {
+   assert(in_bound_tightening);
    assert(row.isRow());
    assert(col.isCol());
+   if(row.isLinkingRow())
+      return false;
 
    assert( col.hasValidNode(nChildren) );
    assert( row.hasValidNode(nChildren) );
@@ -1557,6 +1570,16 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
    }
 
    return (lower_bound_changed || upper_bound_changed);
+}
+
+void PresolveData::endBoundTightening()
+{
+   if( postsolver )
+   {
+      postsolver->endBoundTightening();
+   }
+
+   in_bound_tightening = false;
 }
 
 void PresolveData::checkBoundsInfeasible(const INDEX& col, double xlow_new, double xupp_new) const
@@ -2151,6 +2174,7 @@ void PresolveData::removeRedundantRow( const INDEX& row )
       assert( PIPSisLT(0.0, iclow + icupp) );
 
       postsolver->notifyRedundantRow(row, iclow, icupp, lhs, rhs, getSystemMatrix( row.getSystemType() ));
+
       assert(postsolver->wasRowRemoved(row));
    }
  
@@ -2160,6 +2184,12 @@ void PresolveData::removeRedundantRow( const INDEX& row )
    }
 
    removeRow( row );
+}
+
+void PresolveData::startSingletonColumnPresolve()
+{
+   if( postsolver )
+      postsolver->putLinkingVarsSyncEvent();
 }
 
 /** dual fixing for a singleton column */
@@ -2404,7 +2434,7 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
 
    assert( row.hasValidNode(nChildren) );
 
-   const BlockType block_type =  row.getBlockOfColInRow(col);
+   const BlockType block_type = row.isLinkingRow() ? BL_MAT : row.getBlockOfColInRow(col);
 
    if( col.isCol() )
    {
@@ -2413,16 +2443,12 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
 #endif
       assert( (col_mat_tp.getRowPtr(col.getIndex()).end - col_mat_tp.getRowPtr(col.getIndex()).start) == 1 );
       assert( row.getIndex() == col_mat_tp.getJcolM(col_mat_tp.getRowPtr(col.getIndex()).start) );
-      assert(col_coeff == col_mat_tp.getMat(col_mat_tp.getRowPtr(col.getIndex()).start));
-
-      obj_coeff = getSimpleVecFromColStochVec( *presProb->g, col);
+      assert( col_coeff == col_mat_tp.getMat(col_mat_tp.getRowPtr(col.getIndex()).start) );
+      assert( obj_coeff == getSimpleVecFromColStochVec( *presProb->g, col) );
    }
 
    assert( !PIPSisZero(col_coeff) );
    
-   if( PIPSisZero(obj_coeff) )
-      return;
-
    const int dummy_index = std::numeric_limits<int>::infinity();
 
    if( !row.isLinkingRow() )
@@ -2477,12 +2503,12 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
       }
 
       /* Bl_i */
-      for(int node = 0; node < nChildren; ++node)
+      for( int node = 0; node < nChildren; ++node )
       {
          if(!nodeIsDummy(node))
          {
-            const INDEX col_bi_mat(COL, node, dummy_index);
-            const SparseStorageDynamic& bli_mat = getSparseGenMatrix( row, col )->getStorageDynamicRef();
+            const INDEX col_bli_mat(COL, node, dummy_index);
+            const SparseStorageDynamic& bli_mat = getSparseGenMatrix( row, col_bli_mat )->getStorageDynamicRef();
 
             for(int i = bli_mat.getRowPtr(row.getIndex()).start ; i < bli_mat.getRowPtr(row.getIndex()).end; ++i)
             {

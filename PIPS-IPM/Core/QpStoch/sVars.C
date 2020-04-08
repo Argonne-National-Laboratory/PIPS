@@ -222,22 +222,83 @@ void sVars::sync()
 bool sVars::isRootNodeInSync() const
 {
    bool in_sync = true;
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*x).isRootNodeInSync();
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*s).isRootNodeInSync();
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*y).isRootNodeInSync();
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*z).isRootNodeInSync();
+   const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+   if( !dynamic_cast<const StochVector&>(*x).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "x not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*s).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "s not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*y).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "y not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*z).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "z not in sync" << std::endl;
+      in_sync = false;
+   }
 
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*v).isRootNodeInSync();
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*gamma).isRootNodeInSync();
+   if( !dynamic_cast<const StochVector&>(*v).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "v not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*gamma).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "gamma not in sync" << std::endl;
+      in_sync = false;
+   }
 
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*w).isRootNodeInSync();
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*phi).isRootNodeInSync();
+   if( !dynamic_cast<const StochVector&>(*w).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "w not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*phi).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "phi not in sync" << std::endl;
+      in_sync = false;
+   }
 
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*t).isRootNodeInSync();
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*lambda).isRootNodeInSync();
+   if( !dynamic_cast<const StochVector&>(*t).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "t not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*lambda).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "lambda not in sync" << std::endl;
+      in_sync = false;
+   }
 
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*u).isRootNodeInSync();
-   in_sync = in_sync && dynamic_cast<const StochVector&>(*pi).isRootNodeInSync();
+   if( !dynamic_cast<const StochVector&>(*u).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "u not in sync" << std::endl;
+      in_sync = false;
+   }
+   if( !dynamic_cast<const StochVector&>(*pi).isRootNodeInSync() )
+   {
+      if( my_rank == 0 )
+         std::cout << "pi not in sync" << std::endl;
+      in_sync = false;
+   }
 
    return in_sync;
 }

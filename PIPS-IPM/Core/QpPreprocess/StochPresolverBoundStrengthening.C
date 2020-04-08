@@ -37,6 +37,8 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
+   presData.startBoundTightening();
+
    int iter = 0;
    bool tightened;
 
@@ -78,6 +80,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
+   presData.endBoundTightening();
 
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
@@ -113,6 +116,9 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
  */
 bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type)
 {
+   if( node == -1 || block_type == A_MAT )
+      return false;
+
    assert( -1 <= node && node < nChildren );
    updatePointersForCurrentNode(node, system_type);
 
@@ -254,7 +260,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
 
-//         bool row_propagated = presData.rowPropagatedBounds( INDEX(ROW, node, row, linking, system_type), INDEX(COL, node_col, col), lbx_new, ubx_new);
          bool row_propagated = presData.rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
 
          if(row_propagated && (node != -1 || my_rank == 0))

@@ -124,6 +124,8 @@ private:
       /* storing biggest and smallest absolute nonzero-coefficient in system matrix (including objective vector) */
       StochVectorHandle absmin_col;
       StochVectorHandle absmax_col;
+
+      bool in_bound_tightening;
 public :
 
       PresolveData(const sData* sorigprob, StochPostsolver* postsolver);
@@ -177,8 +179,11 @@ public :
       void removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff);
 
       void syncPostsolveOfBoundsPropagatedByLinkingRows();
+
+      void startBoundTightening();
       bool rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new );
       bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
+      void endBoundTightening();
 
       void substituteVariableNearlyParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar,
          double translation, double parallelity );
@@ -187,6 +192,8 @@ public :
 
       void removeRedundantParallelRow( const INDEX& rm_row, const INDEX& par_row );
       void removeRedundantRow( const INDEX& row );
+
+      void startSingletonColumnPresolve();
       void fixColumnInequalitySingleton( const INDEX& col, double value, double coeff );
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
       void removeImpliedFreeColumnSingletonEqualityRowSynced( const INDEX& row, const INDEX& col );
