@@ -1386,19 +1386,68 @@ void PresolveData::fixColumn( const INDEX& col, double value)
       assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
 }
 
-// todo : do we need to store that a bound was implied by a singleton row ? I don't think so since singletons get removed from the system anyway
+/* an empty col indicates that a singleton row is being removed that is not on this process for Ai and Ci call the synced method */
 void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff)
 {
-   assert(!row.getLinking());
+   assert( row.isRow() );
+   assert( col.isCol() || col.isEmpty() );
+   assert( row.hasValidNode(nChildren) );
+   assert( col.hasValidNode(nChildren) );
+
+   if( row.isLinkingRow() )
+      assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
    if( col.isLinkingCol() )
       assert( row.getNode() == -1 );
-   assert(row.isRow());
-   assert(col.isCol());
-   assert(-1 <= row.getNode() && row.getNode() < nChildren);
-   assert(-1 <= col.getNode() && col.getNode() < nChildren);
 
-   assert(getNnzsRow(row) == 1);
-   assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
+   assert( getNnzsRow(row) == 1 );
+
+   if( !col.isEmpty() )
+   {
+      assert( xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES );
+      assert( (row.getSystemType() == EQUALITY_SYSTEM && xlow_new == xupp_new) ||
+         (xlow_new == INF_NEG_PRES || xupp_new == INF_POS_PRES) );
+
+      /* check for infeasibility of the newly found bounds */
+      checkBoundsInfeasible(col, xlow_new, xupp_new);
+
+      const double xlow_old = getSimpleVecFromColStochVec(*presProb->blx, col);
+      const double xupp_old = getSimpleVecFromColStochVec(*presProb->bux, col);
+
+      assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, col)) || xlow_old == INF_NEG_PRES );
+      assert( !PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col)) || xupp_old == INF_POS_PRES );
+
+      /* adjust bounds of column - singletons columns will always be used here since we want to remove the corresponding row */
+      bool tightened = updateBoundsVariable(col, xlow_new, xupp_new);
+
+      /* notify postsolver */
+      if(tightened && postsolver)
+         postsolver->notifySingletonRowBoundsTightened(row, col, xlow_old, xupp_old, xlow_new, xupp_new, coeff);
+   }
+
+   /* remove redundant row */
+   removeRedundantRow( row );
+}
+
+void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff)
+{
+   assert( row.isRow() || row.isEmpty() );
+   assert( col.isCol() );
+   assert( row.hasValidNode(nChildren) );
+   assert( col.hasValidNode(nChildren) );
+   assert( col.isLinkingCol() );
+   assert( !row.isLinkingRow() );
+
+   assert( PIPS_MPIisValueEqual( row.getIndex(), MPI_COMM_WORLD) );
+   assert( PIPS_MPIisValueEqual( col.getIndex(), MPI_COMM_WORLD) );
+   assert( PIPS_MPIisValueEqual( xlow_new, MPI_COMM_WORLD) );
+   assert( PIPS_MPIisValueEqual( xupp_new, MPI_COMM_WORLD) );
+
+   if( row.isRow() )
+      assert( getNnzsRow(row) == 1 );
+
+   assert( PIPS_MPIgetSum( row.isRow(), MPI_COMM_WORLD ) );
+
+   assert( xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES );
    assert( (row.getSystemType() == EQUALITY_SYSTEM && xlow_new == xupp_new) ||
       (xlow_new == INF_NEG_PRES || xupp_new == INF_POS_PRES) );
 
@@ -1419,10 +1468,10 @@ void PresolveData::removeSingletonRow(const INDEX& row, const INDEX& col, double
       postsolver->notifySingletonRowBoundsTightened(row, col, xlow_old, xupp_old, xlow_new, xupp_new, coeff);
 
    /* remove redundant row */
-   /* singleton linking rows will not get deleted here but later by model cleanup since they become redundant (for synchronization reasons) */
-   if( !row.getLinking() )
+   if( row.isRow() )
       removeRedundantRow( row );
 }
+
 
 void PresolveData::startBoundTightening()
 {

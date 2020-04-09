@@ -535,6 +535,26 @@ inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiC
 }
 
 template <typename T>
+inline void PIPS_MPImaxArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm)
+{
+   assert(source.size() <= dest.size() );
+   if(source.size() == 0)
+      return;
+
+   MPI_Allreduce(&source[0], &dest[0], source.size(), get_mpi_datatype(&source[0]), MPI_MAX, mpiComm);
+}
+
+template <typename T>
+inline void PIPS_MPIminArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm)
+{
+   assert(source.size() <= dest.size() );
+   if(source.size() == 0)
+      return;
+
+   MPI_Allreduce(&source[0], &dest[0], source.size(), get_mpi_datatype(&source[0]), MPI_MIN, mpiComm);
+}
+
+template <typename T>
 inline void PIPS_MPIgatherv(const T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, const int* recvoffsets, int root, MPI_Comm mpiComm)
 {
    assert(sendcnt >= 0);

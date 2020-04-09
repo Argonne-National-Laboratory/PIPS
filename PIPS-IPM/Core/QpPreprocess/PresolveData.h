@@ -177,6 +177,7 @@ public :
       void fixEmptyColumn( const INDEX& col, double val);
 
       void removeSingletonRow(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff);
+      void removeSingletonRowSynced(const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double coeff);
 
       void syncPostsolveOfBoundsPropagatedByLinkingRows();
 
