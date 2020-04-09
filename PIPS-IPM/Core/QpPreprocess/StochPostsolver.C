@@ -405,7 +405,6 @@ void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const
    assert( row.isRow() || row.isEmpty() );
    assert( col.isCol() );
 
-   assert( row.isLinkingRow() );
    if( row.isEmpty() )
       assert( col.isLinkingCol() );
 
