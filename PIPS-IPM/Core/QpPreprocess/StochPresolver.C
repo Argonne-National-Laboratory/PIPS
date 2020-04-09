@@ -86,7 +86,7 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
 //      presolverBS.applyPresolving();
-//      presolverSR.applyPresolving();
+      presolverSR.applyPresolving();
 //      presolverParallelRow.applyPresolving();
 //      presolverSC.applyPresolving();
 //      presolverColFix.applyPresolving();
@@ -95,7 +95,7 @@ Data* StochPresolver::presolve()
    }
    // presData.getPresProb().writeToStreamDense(std::cout);
    // before the finalize call fix all empty rows and columns not yet fixed
-//   presolverCleanup.applyPresolving();
+   presolverCleanup.applyPresolving();
    
    if( my_rank == 0 )
       std::cout << "--- After Presolving:" << std::endl;
