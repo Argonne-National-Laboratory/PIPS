@@ -48,6 +48,7 @@ public:
         virtual std::vector<double> getLinkRowUB(){ return std::vector<double>(); }
 	virtual std::vector<std::string> getFirstStageRowNames() = 0;
 	virtual bool isFirstStageColInteger(int col) = 0;
+	virtual bool isFirstStageColBinary(int col) = 0;
 
 	virtual std::vector<double> getSecondStageColLB(int scen) = 0;
 	virtual std::vector<double> getSecondStageColUB(int scen) = 0;
@@ -59,6 +60,7 @@ public:
 	virtual std::vector<std::string> getSecondStageRowNames(int scen) = 0;
 	virtual double scenarioProbability(int scen) = 0;
 	virtual bool isSecondStageColInteger(int scen, int col) = 0;
+	virtual bool isSecondStageColBinary(int scen, int col) = 0;
 
 	// returns the column-oriented first-stage constraint matrix (A matrix) 
 	virtual CoinPackedMatrix getFirstStageConstraints() = 0;

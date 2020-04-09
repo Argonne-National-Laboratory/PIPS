@@ -28,6 +28,8 @@ public:
 
 	void setPrimalTolerance(double val) { solver->setPrimalTolerance(val); }
 	void setDualTolerance(double val) { solver->setDualTolerance(val); }
+	double getPrimalTolerance() const { return solver->primalTol; }
+	double getDualTolerance() const { return solver->dualTol; }
 	double getObjective() const { return solver->objval; }
 	solverState getStatus() const { return solver->status; }
 
@@ -37,6 +39,7 @@ public:
 	std::vector<double> getSecondStageDualColSolution(int scen) const;
 	// these are the multipliers on the rows, not the reduced costs for
 	// the slacks corresponding to the rows. We need to reconcile this with Clp.
+	std::vector<double> getFirstStageDualRowSolution() const;
 	std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
         const denseBAVector& getPrimalSolution() const { return solver->getPrimalSolution(); }
@@ -70,6 +73,22 @@ public:
 
         const denseBAVector& getLB() const { return solver->myLB(); }
         const denseBAVector& getUB() const { return solver->myUB(); }
+	std::vector<double> getFirstStageColLB() const;
+	std::vector<double> getFirstStageColUB() const;
+	std::vector<double> getSecondStageColLB(int scen) const;
+	std::vector<double> getSecondStageColUB(int scen) const;
+
+	std::vector<double> getFirstStageRowLB() const;
+	std::vector<double> getFirstStageRowUB() const;
+	std::vector<double> getSecondStageRowLB(int scen) const;
+	std::vector<double> getSecondStageRowUB(int scen) const;
+
+	CoinPackedMatrix getFirstStageConstraints() const { return *(d.Acol); }
+	CoinPackedMatrix getSecondStageConstraints(int scen) const { return *(d.Wcol[scen]); }
+	CoinPackedMatrix getLinkingConstraints(int scen) const { return *(d.Tcol[scen]); }
+
+	int getNumFirstStageCons() const { return d.dims.numFirstStageCons(); }
+	int getNumSecondStageCons(int scen) const { return d.dims.numSecondStageCons(scen); }
 
         const denseBAVector& getVarObjective() const { return d.c; }
         const BAFlagVector<constraintType>& getVariableTypes() const {return d.vartype;}

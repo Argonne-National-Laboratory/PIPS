@@ -318,6 +318,10 @@ bool StructJuMPInput::isFirstStageColInteger(int col) {
 	return false;
 }
 
+bool StructJuMPInput::isFirstStageColBinary(int col) {
+	return false;
+}
+
 std::vector<double> StructJuMPInput::getSecondStageColLB(int scen) {
 	int nodeid = scen + 1;
 	std::map<int, std::vector<double> >::iterator it = collb_map.find(nodeid);
@@ -433,6 +437,10 @@ double StructJuMPInput::scenarioProbability(int scen) {
 	return 1.0 / scen;
 }
 bool StructJuMPInput::isSecondStageColInteger(int scen, int col) {
+	return false;
+}
+
+bool StructJuMPInput::isSecondStageColBinary(int scen, int col) {
 	return false;
 }
 

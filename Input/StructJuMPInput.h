@@ -63,6 +63,7 @@ public:
 	virtual std::vector<double> getFirstStageRowUB();
 	virtual std::vector<std::string> getFirstStageRowNames();
 	virtual bool isFirstStageColInteger(int col);
+	virtual bool isFirstStageColBinary(int col);
 
 	virtual std::vector<double> getSecondStageColLB(int scen);
 	virtual std::vector<double> getSecondStageColUB(int scen);
@@ -74,6 +75,7 @@ public:
 	virtual std::vector<std::string> getSecondStageRowNames(int scen);
 	virtual double scenarioProbability(int scen);
 	virtual bool isSecondStageColInteger(int scen, int col);
+	virtual bool isSecondStageColBinary(int scen, int col);
 
 
 	//to deal with constraints links first stage variables and second stage from scenario 1, 2 ...s 

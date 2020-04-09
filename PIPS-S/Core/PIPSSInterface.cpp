@@ -144,6 +144,12 @@ std::vector<double> PIPSSInterface::getSecondStageDualColSolution(int scen) cons
 	return std::vector<double>(&x[0],&x[nvar2real]);
 }
 
+std::vector<double> PIPSSInterface::getFirstStageDualRowSolution() const {
+	const sparseVector &x = solver->btranVec.getFirstStageVec();
+	int ncons1 = d.dims.inner.numFirstStageCons();
+	return std::vector<double>(&x[0],&x[ncons1]);
+}
+
 std::vector<double> PIPSSInterface::getSecondStageDualRowSolution(int scen) const {
 	assert(d.ctx.assignedScenario(scen));
 	const sparseVector &x = solver->btranVec.getSecondStageVec(scen);
@@ -223,6 +229,62 @@ void PIPSSInterface::setLB(const denseBAVector& lb) {
 void PIPSSInterface::setUB(const denseBAVector& ub) {
         d.u.copyFrom(ub);
         boundsChanged = true;
+}
+
+std::vector<double> PIPSSInterface::getFirstStageColLB() const {
+	const denseVector &x = solver->myLB().getFirstStageVec();
+	int nvar1real = d.dims.inner.numFirstStageVars();
+	return std::vector<double>(&x[0], &x[nvar1real]);
+}
+
+std::vector<double> PIPSSInterface::getFirstStageColUB() const {
+	const denseVector &x = solver->myUB().getFirstStageVec();
+	int nvar1real = d.dims.inner.numFirstStageVars();
+	return std::vector<double>(&x[0], &x[nvar1real]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageColLB(int scen) const {
+	const denseVector &x = solver->myLB().getSecondStageVec(scen);
+	int nvar2real = d.dims.inner.numSecondStageVars(scen);
+	return std::vector<double>(&x[0], &x[nvar2real]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageColUB(int scen) const {
+	const denseVector &x = solver->myUB().getSecondStageVec(scen);
+	int nvar2real = d.dims.inner.numSecondStageVars(scen);
+	return std::vector<double>(&x[0], &x[nvar2real]);
+}
+
+std::vector<double> PIPSSInterface::getFirstStageRowLB() const {
+	const denseBAVector &l      = d.l;
+	const denseVector   &x      = l.getFirstStageVec();
+	int                  nvar1  = d.dims.inner.numFirstStageVars();
+	int                  ncons1 = d.dims.inner.numFirstStageCons();
+	return std::vector<double>(&x[nvar1], &x[nvar1 + ncons1]);
+}
+
+std::vector<double> PIPSSInterface::getFirstStageRowUB() const {
+	const denseBAVector &u      = d.u;
+	const denseVector   &x      = u.getFirstStageVec();
+	int                  nvar1  = d.dims.inner.numFirstStageVars();
+	int                  ncons1 = d.dims.inner.numFirstStageCons();
+	return std::vector<double>(&x[nvar1], &x[nvar1 + ncons1]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageRowLB(int scen) const {
+	const denseBAVector &l      = d.l;
+	const denseVector   &x      = l.getSecondStageVec(scen);
+	int                  nvar2  = d.dims.inner.numSecondStageVars(scen);
+	int                  ncons2 = d.dims.inner.numSecondStageCons(scen);
+	return std::vector<double>(&x[nvar2], &x[nvar2 + ncons2]);
+}
+
+std::vector<double> PIPSSInterface::getSecondStageRowUB(int scen) const {
+	const denseBAVector &u      = d.u;
+	const denseVector   &x      = u.getSecondStageVec(scen);
+	int                  nvar2  = d.dims.inner.numSecondStageVars(scen);
+	int                  ncons2 = d.dims.inner.numSecondStageCons(scen);
+	return std::vector<double>(&x[nvar2], &x[nvar2 + ncons2]);
 }
 
 void PIPSSInterface::addRow(const std::vector<double>& elts1, const std::vector<double> &elts2, int scen, double lb, double ub) {
