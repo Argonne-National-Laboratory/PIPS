@@ -142,9 +142,9 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
          assert( PIPS_MPIgetSum(1, MPI_COMM_WORLD) == 1 );
       }
    }
-   else
+   else if( row.getLinking() )
    {
-      assert( PIPS_MPIisValueEqual(node_col, MPI_COMM_WORLD) );
+      assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
    }
 
    /* because of postsolve here we only remove correctly placed singleton rows
