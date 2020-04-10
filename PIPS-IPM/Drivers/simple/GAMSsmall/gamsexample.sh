@@ -63,7 +63,9 @@ fi
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 cd $file_path
-rm -r run_$gams_file
+if [ -d "run_$gams_file" ]; then
+   rm -r run_$gams_file
+fi
 mkdir run_$gams_file
 cd run_$gams_file
 gams ../$gams_file --METHOD=PIPS > /dev/null
