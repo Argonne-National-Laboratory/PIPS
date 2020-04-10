@@ -14,7 +14,7 @@ for i in "$@"
 do
 case $i in
     -GAMSFILE=*|--GAMSFILE=*)
-    gams_file="${i#*=}"
+    gams_file_full="${i#*=}"
     shift # past argument=value
     ;;
     -BLOCKS=*|--BLOCKS=*)
@@ -51,18 +51,24 @@ case $i in
 esac
 done
     
-if [ -f $gams_file.gms ]; then
+gams_file=$(basename $gams_file_full)
+file_path=$(dirname $gams_file_full)
+if [ -f $gams_file_full.gms ]; then
    echo "File $FILE exists."
 else
    echo "File $gams_file.gms does not exist. Please give a valid .gms file without the .gms extention. Exiting script."
    exit
 fi
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+cd $file_path
 rm -r run_$gams_file
 mkdir run_$gams_file
 cd run_$gams_file
 gams ../$gams_file --METHOD=PIPS > /dev/null
-../../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks $gams_file.gdx > /dev/null
+
+$DIR/../../../../build_pips/gmschk -g $GAMSSYSDIR -T -X $nblocks $gams_file.gdx > /dev/null
 
 if [ "${stepLp,,}" = "true" ]; then
   stepLp="stepLp"
@@ -93,6 +99,6 @@ if [ "${memcheck,,}" = "true" ]; then
 else
   memcheck=""
 fi
-mpirun -np $np $memcheck $debug ../../../../../build_pips/gmspips $nblocks $gams_file $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
+mpirun -np $np $memcheck $debug $DIR/../../../../build_pips/gmspips $nblocks $gams_file $GAMSSYSDIR $scale $stepLp $presolve 2>&1 | tee pips.out
 
 
