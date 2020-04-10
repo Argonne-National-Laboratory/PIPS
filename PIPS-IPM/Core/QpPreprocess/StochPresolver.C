@@ -61,7 +61,6 @@ Data* StochPresolver::presolve()
    /* initialize presolve data */
    PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
 
-//   sorigprob->writeToStreamDense(std::cout);
    assert( sorigprob->isRootNodeInSync() );
    assert( presData.getPresProb().isRootNodeInSync() );
 
@@ -72,6 +71,8 @@ Data* StochPresolver::presolve()
    StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
    StochPresolverSingletonRows presolverSR(presData, *sorigprob);
    StochPresolverSingletonColumns presolverSC(presData, *sorigprob);
+
+//   sorigprob->writeToStreamDense(std::cout);
 
    if( my_rank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;

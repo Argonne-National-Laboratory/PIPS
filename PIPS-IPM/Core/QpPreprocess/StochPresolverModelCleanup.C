@@ -209,8 +209,8 @@ int StochPresolverModelCleanup::removeTinyEntriesFromSystem(SystemType system_ty
    /* reductions in root node */
    /* process B0 and Bl0 */
    n_elims += removeTinyInnerLoop(system_type, -1, B_MAT);
-   if (presData.hasLinking(system_type))
-	n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
+   if (  presData.hasLinking(system_type) )
+      n_elims += removeTinyInnerLoop(system_type, -1, BL_MAT);
 
 
    /* count eliminations in B0 and Bl0 only once */
@@ -316,14 +316,21 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
             /* since the current entry got deleted we have to step back one entry */
             --col_index;
             --end;
-            ++n_elims;
+            if( my_rank == 0 || !(node_row == -1 && node_col == -1) )
+               ++n_elims;
          }
          /* remove entries where their corresponding variables have valid lower and upper bounds, that overall do not have a real influence though */
          else if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
          {
             const double bux = (*x_upper)[col];
             const double blx = (*x_lower)[col];
+
+            /* don't remove entries in rows that need to be fixed */
+            if( PIPSisEQ(bux, blx) )
+               continue;
+
             const int nnz = (*nnzRow)[r];
+            assert( nnz != 0 );
 
             if( mat_abs < PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT &&
                   mat_abs * ( bux - blx ) * nnz < PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST * feastol )
@@ -335,24 +342,25 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
                /* since the current entry got deleted we have to step back one entry */
                --col_index;
                --end;
-               ++n_elims;
+               if( my_rank == 0 || !(node_row == -1 && node_col == -1) )
+                  ++n_elims;
             }
             /* for linking constraints this is a slight modification of criterion three that does not require communication but is only a slight relaxation to
              * criterion two
              */
             else if( ( block_type == BL_MAT && mat_abs * ( bux - blx ) * nnz < 1.0e-1 * feastol)
-                  || ( block_type != BL_MAT && total_sum_modifications_row + mat_abs * ( bux - blx ) < 1.0e-1 * feastol ) )
+                  || ( block_type != BL_MAT && total_sum_modifications_row + mat_abs * ( bux - blx ) < 1.0e-1 * feastol / 2.0 ) )
             {
-               total_sum_modifications_row += mat_abs * ((*x_upper)[col] - (*x_lower)[col]);
+               total_sum_modifications_row += mat_abs * (bux - blx);
                const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
                const INDEX col_INDEX(COL, node_col, col);
-
                presData.deleteEntryAtIndex(row_INDEX, col_INDEX, col_index);
 
                /* since the current entry got deleted we have to step back one entry */
                --col_index;
                --end;
-               ++n_elims;
+               if( my_rank == 0 || !(node_row == -1 && node_col == -1) )
+                  ++n_elims;
             }
          }
          /* not removed */

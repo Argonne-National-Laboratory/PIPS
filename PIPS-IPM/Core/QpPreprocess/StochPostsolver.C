@@ -677,7 +677,6 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    {
       const ReductionType type = reductions.at(i);
 
-      std::cout << type << std::endl;
       switch( type )
       {
       case DELETED:
