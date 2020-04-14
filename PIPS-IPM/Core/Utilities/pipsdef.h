@@ -469,6 +469,21 @@ inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm)
 }
 
 template <typename T>
+inline void PIPS_MPIgetLogicAndInPlace(T& localval, MPI_Comm mpiComm)
+{
+   MPI_Allreduce(MPI_IN_PLACE, &localval, 1, get_mpi_datatype(localval), MPI_LAND, mpiComm);
+}
+
+template <typename T>
+inline T PIPS_MPIgetLogicAnd(const T& localval, MPI_Comm mpiComm)
+{
+   T land;
+   MPI_Allreduce(&localval, &land, 1, get_mpi_datatype(localval), MPI_LAND, mpiComm);
+
+   return land;
+}
+
+template <typename T>
 inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 {
    assert( length >= 0 );

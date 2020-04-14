@@ -167,6 +167,9 @@ private:
       bool complementarySlackVariablesMet(const sVars& vars, const INDEX& col) const;
       bool complementarySlackRowMet(const sVars& vars, const INDEX& row) const;
 
+      bool sameNonZeroPatternDistributed(const StochVector& svec) const; // TODO: move
+      bool sameNonZeroPatternDistributed(const SimpleVector& vec) const; // TODO: move
+
       template <typename T>
       void setOriginalValuesFromReduced(StochVectorBase<T>& original_vector,
          const StochVectorBase<T>& reduced_vector,

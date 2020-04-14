@@ -2344,12 +2344,10 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRowSynced( const INDE
 
    if( col.isCol() )
    {
-      if( !nodeIsDummy(col.getNode()) )
-      {
-         obj_coeff = col.isLinkingCol() ? getSimpleVecFromColStochVec( *presProb->g, col) + (*objective_vec_chgs)[col.getIndex()] :
+      assert( !nodeIsDummy(col.getNode()) );
+      obj_coeff = col.isLinkingCol() ? getSimpleVecFromColStochVec( *presProb->g, col) + (*objective_vec_chgs)[col.getIndex()] :
             getSimpleVecFromColStochVec(*presProb->g, col);
-         col_coeff = getRowCoeff(row, col);
-      }
+      col_coeff = getRowCoeff(row, col);
    }
 
    // TODO: make more efficient
@@ -2440,7 +2438,7 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
       postsolver->notifyFreeColumnSingletonEquality( row, col, rhs, obj_coeff, col_coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
 
    /* adapt objective from substitution */
-   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff);
+   adaptObjectiveSubstitutedRow( row, col, obj_coeff, col_coeff );
 
    /* remove row and mark column as empty - will be removed in model cleanup on all processes */
    removeRow( row );
@@ -2544,11 +2542,12 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
       for(int i = bl0_mat.getRowPtr(row.getIndex()).start; i < bl0_mat.getRowPtr(row.getIndex()).end; ++i)
       {
          const int col_ptr = bl0_mat.getJcolM(i);
+         const double aij = bl0_mat.getMat(i);
 
          if( col.isEmpty() )
-            getSimpleVecFromColStochVec( *presProb->g, -1)[col_ptr] -= obj_coeff * bl0_mat.getMat(i) / col_coeff;
+            getSimpleVecFromColStochVec( *presProb->g, -1)[col_ptr] -= obj_coeff * aij / col_coeff;
          else if( col_ptr != col.getIndex() || !col.isLinkingCol() )
-            getSimpleVecFromColStochVec( *presProb->g, -1)[col_ptr] -= obj_coeff * bl0_mat.getMat(i) / col_coeff;
+            getSimpleVecFromColStochVec( *presProb->g, -1)[col_ptr] -= obj_coeff * aij / col_coeff;
       }
 
       /* Bl_i */
@@ -2562,11 +2561,12 @@ void PresolveData::adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& 
             for(int i = bli_mat.getRowPtr(row.getIndex()).start ; i < bli_mat.getRowPtr(row.getIndex()).end; ++i)
             {
                const int col_ptr = bli_mat.getJcolM(i);
+               const double aij = bli_mat.getMat(i);
 
                if( col.isEmpty() )
-                  getSimpleVecFromColStochVec( *presProb->g, node)[col_ptr] -= obj_coeff * bli_mat.getMat(i) / col_coeff;
-               if(col_ptr != col.getIndex() || col.getNode() != node)
-                  getSimpleVecFromColStochVec( *presProb->g, node)[col_ptr] -= obj_coeff * bli_mat.getMat(i) / col_coeff;
+                  getSimpleVecFromColStochVec( *presProb->g, node)[col_ptr] -= obj_coeff * aij / col_coeff;
+               else if(col_ptr != col.getIndex() || col.getNode() != node)
+                  getSimpleVecFromColStochVec( *presProb->g, node)[col_ptr] -= obj_coeff * aij / col_coeff;
             }
          }
       }

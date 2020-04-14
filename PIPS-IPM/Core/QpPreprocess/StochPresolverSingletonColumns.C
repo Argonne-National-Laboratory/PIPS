@@ -84,6 +84,7 @@ void StochPresolverSingletonColumns::applyPresolving()
          const INDEX row(ROW, -1, row_index, true, system_type);
          if(my_rank == proc_that_removes)
          {
+            assert( !cols[i].isLinkingCol() );
             presData.removeImpliedFreeColumnSingletonEqualityRowSynced( row, cols[i] );
             ++removed_cols_run;
          }

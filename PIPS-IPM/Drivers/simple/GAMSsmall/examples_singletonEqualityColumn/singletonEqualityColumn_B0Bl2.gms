@@ -14,7 +14,7 @@ parameter g(j) obj coefficients / j1 -10, j2 0, j3 0, j4 0, j5 0, j6 0, j7 0, j8
 * in this example the singletonColumnPresolver should substitute j1 (free) and put it into the objective
 Table A(i,j)
     j1    j2    j3    j4    j5    j6    j7    j8    j9   j10   j11   j12   j13   j14
-i1   1    0.1   0.1   0.1
+i1   1    0.1   0.1
 i2        3     2    -1
 i3        2    -2     4
 i4       -1   0.5    -1
@@ -29,10 +29,10 @@ i12                                                                    2    -2  
 i13                                                                   -1   0.5    -1
 i14        1           1     1     1     1     1     1     1           1     1     1
 i15        1           1 
-i16                        0.1   0.1   0.1   0.1   0.1   0.1    2   0.1   0.1 
+i16                  0.1   0.1   0.1   0.1   0.1   0.1   0.1    2   0.1   0.1 
 ; 
 *          1    -2    -2     1    -2    -2     1    -2    -2           1    -2    -2
-* expected values for x full determined by Ax=b obj value expected = 14
+* expected values for x fully determined by Ax=b obj value expected = 14
 
 Table C(i,j)
     j1    j2    j3    j4     j5    j6    j7    j8    j9   j10   j11   j12   j13   j14
