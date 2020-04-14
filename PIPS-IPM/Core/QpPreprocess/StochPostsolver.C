@@ -172,16 +172,15 @@ int StochPostsolver::storeColumn( const INDEX& col, const StochGenMatrix& matrix
    }
 }
 
-void StochPostsolver::notifyFixedSingletonFromInequalityColumn( const INDEX& col, double value, double coeff, double xlow_old, double xupp_old )
+void StochPostsolver::notifyFixedSingletonFromInequalityColumn( const INDEX& col, const INDEX& row, double value, double coeff, double xlow_old, double xupp_old )
 {
    assert(col.isCol());
    assert(!wasColumnRemoved(col));
 
-   markColumnRemoved(col);
-
    reductions.push_back(FIXED_COLUMN_SINGLETON_FROM_INEQUALITY);
 
    indices.push_back(col);
+   indices.push_back(row);
 
    float_values.push_back(value);
    float_values.push_back(coeff);
@@ -1236,22 +1235,23 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
 
-   assert(first_index + 1 == next_first_index);
+   assert(first_index + 2 == next_first_index);
    assert(first_float_val + 4 == next_first_float_val);
    assert(first_int_val == next_first_int_val);
 #endif
 
    const INDEX& col = indices.at(first_index);
-   assert(col.isCol());
-   assert(wasColumnRemoved(col));
+   const INDEX& row = indices.at(first_index + 1);
+   assert( row.isRow() );
+   assert( col.isCol() );
+   assert( !wasColumnRemoved(col) );
 
    const double value = float_values.at(first_float_val);
-//         const double coeff = float_values.at(first_float_val + 1); TODO: not needed - remove
+   const double coeff = float_values.at(first_float_val + 1);
    const double xlow_old = float_values.at(first_float_val + 2);
    const double xupp_old = float_values.at(first_float_val + 3);
 
    /* set x value - bound is tight - compute slacks of x - set duals to zero */
-   getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
    getSimpleVecFromColStochVec(original_vars.x, col) = value;
 
    /* set slacks for x bounds */
@@ -1261,9 +1261,9 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
    getSimpleVecFromColStochVec(original_vars.v, col) = (xlow_old == INF_NEG_PRES) ? 0 : value - xlow_old;
    getSimpleVecFromColStochVec(original_vars.w, col) = (xupp_old == INF_POS_PRES) ? 0 : xupp_old - value;
 
-   /* TODO: don't think something needs to be done for the reduced costs */
-   getSimpleVecFromColStochVec(original_vars.phi, col) = 0.0;
-   getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;
+   /* adjust activity of row / slack of row */
+   const double val_times_coeff = value * coeff;
+   getSimpleVecFromRowStochVec(original_vars.s, row) += val_times_coeff;
 
    /* set duals of bounds of x */
    getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;

@@ -1,4 +1,4 @@
-* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=./singletonInequalityColumn_B0 -PRESOLVE=true
+* ./gamsexample.sh -NP=3 -BLOCKS=4 -GAMSFILE=./singletonInequalityColumn_A2 -PRESOLVE=true
 
 
 * if you wanna use this example please hack in useLinkStructure = true; in sData.C
@@ -9,7 +9,7 @@ Set i rows    / i1*i15 /
 parameter g(j) obj coefficients / j1 0, j2 1, j3 1, j4 1, j5 1, j6 1, j7 1, j8 1, j9 1, j10 1, j11 1, j12 1, j13 1, j14 1 /
           bA(i) right hand side  / i1 1, i2 -2, i3 0, i4 1, i5 -2, i6 0, i7 1, i8 -2, i9 0, i10 1, i11 -2, i12 0, i13 -10, i14 -3 /
 *          clow(i) c left hand side    / i1 0, i2 1, i3 -1, i4 -100, i5 -100, i6 -100, i7 -100, i8 -100, i9 -100, i10 -100, i11 -100, i12 -100, i13 -100, i14 -100, i15 -100 /
-          cupp(i) c right hand side   / i1 100, i2 1, i3 -1, i4 100, i5 100, i6 100, i7 100, i8 100, i9 100, i10 -1, i11 100, i12 0, i13 100, i14 100, i15 100 /
+          cupp(i) c right hand side   / i1 100, i2 1, i3 -1, i4 100, i5 100, i6 100, i7 100, i8 -1, i9 100, i10 -1, i11 100, i12 0, i13 100, i14 100, i15 100 /
 
 
 * in this example the singletonColumnPresolver should substitute j1 (free) and put it into the objective
@@ -27,19 +27,21 @@ i9                                                   -1   0.5    -1
 i10                                                                     3     2    -1
 i11                                                                     2    -2     4
 i12                                                                    -1   0.5    -1
-i13               1     1     1     1     1     1    1     1            1     1     1
+i13               1     1     1     1     1     1     1     1           1     1     1
 i14               1     1                 1
 ;       
-*      2          1    -2    -2     1    -2    -2    1    -2    -2     1    -2    -2
+*      2   -15    1    -2    -2     1    -2    -2     1    -2    -2     1    -2    -2
 * expected values for x full determined by Ax=b
 
 * the singletonInequalityRow i10:
-* -31 x1 + x8 - 10 x9 - 20 x10 <= -1
-* in the final solution x8 = 1, x9 = -2, x10 = -2 thus we get
-* -31 x1 + 1 + 20 + 40 <= -1 <=> -31 x1 <= -62 <=> x1 <= 2 -> making the objective coeff negative will lead to x1 = 2 
+* -31 x1 + x9 - 10 x10 - 20 x11 <= -1
+* in the final solution x9 = 1, x10 = -2, x11 = -2 thus we get
+* -31 x1 + 1 - 10 + 40 <= -1 <=> -31 x1 <= -62 <=> x1 <= 2 -> making the objective coeff negative will lead to x1 = 2 
 * we also have a fixing to do i8:
-* -0.5 j2 + j9 -3 j10 <= -1 -> in the final solution
-* -0.5 j2 <= -5 <=> 5 < -0.5 j2 <=> -10 >= j2 -> fix j2 at it's known lower bound (since the signums meet as well as it's objective direction)
+* 0.5 j2 + j9 -3 j10 <= -1 -> in the final solution
+* 0.5 j2 + 1 + 6 <= -1 
+* 0.5 j2 <= -8 <=> 8 < 0.5 j2 <=> -16 >= j2 -> fix j2 at it's known lower bound (since the signums meet as well as it's objective direction)
+* expected objective is -2
 Table C(i,j)
     j1    j2    j3    j4    j5    j6    j7    j8    j9   j10   j11   j12   j13   j14
 i1               1
@@ -49,7 +51,7 @@ i4                                 1     1
 i5                                       1     1
 i6                                       1     1
 i7                                                   1     1     1
-i8      -0.5                                               1    -3
+i8       0.5                                         1    -3
 i9                                                   1           1
 i10  -31                                             1   -10   -20
 i11                                                                    1     1     1
@@ -59,7 +61,7 @@ i14              1     1           1
 i15              1           1     1
 ;      
 
-Variables          x(j) / j2.lo -15 /
+Variables          x(j) / j2.lo -20 /
 Variable           z      objective variable
 Equations          e(i)   equality equations
 *                   ge(i)  greater than inequality equations

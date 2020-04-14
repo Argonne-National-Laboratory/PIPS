@@ -2245,20 +2245,18 @@ void PresolveData::startSingletonColumnPresolve()
 }
 
 /** dual fixing for a singleton column */
-void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value, double coeff )
+void PresolveData::fixColumnInequalitySingleton( const INDEX& col, const INDEX& row, double value, double coeff )
 {
-   assert(col.isCol());
-   const int node = col.getNode();
-   const int col_index = col.getIndex();
+   assert( col.isCol() );
 
-   const int ixlow = PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixlow, node)[col_index]) ? 0 : 1;
-   const int ixupp = PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, node)[col_index]) ? 0 : 1;
-   const double xlow = getSimpleVecFromColStochVec(*presProb->blx, node)[col_index];
-   const double xupp = getSimpleVecFromColStochVec(*presProb->bux, node)[col_index];
+   const double ixlow = getSimpleVecFromColStochVec(*presProb->ixlow, col);
+   const double ixupp = getSimpleVecFromColStochVec(*presProb->ixupp, col);
+   const double xlow = getSimpleVecFromColStochVec(*presProb->blx, col);
+   const double xupp = getSimpleVecFromColStochVec(*presProb->bux, col);
 
-   if(ixlow == 0)
+   if( PIPSisZero(ixlow) )
       assert(xlow == INF_NEG_PRES);
-   if(ixupp == 0)
+   if( PIPSisZero(ixupp) )
       assert(xupp == INF_POS_PRES);
 
    assert( PIPSisLE(xlow, value) );
@@ -2267,9 +2265,9 @@ void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value,
    assert( INF_NEG_PRES < value && value < INF_POS_PRES );
 
    if( postsolver )
-      postsolver->notifyFixedSingletonFromInequalityColumn(col, value, coeff, xlow, xupp);
+      postsolver->notifyFixedSingletonFromInequalityColumn(col, row, value, coeff, xlow, xupp);
 
-   removeColumn(col, value);
+   updateBoundsVariable(col, value, value);
 }
 
 void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double coeff )
@@ -2388,6 +2386,9 @@ void PresolveData::removeFreeColumnSingletonInequalityRowSynced( const INDEX& ro
 
       assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
       assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
+
+      if( col.isLinkingCol() )
+         outdated_linking_var_bounds = true;
    }
 }
 

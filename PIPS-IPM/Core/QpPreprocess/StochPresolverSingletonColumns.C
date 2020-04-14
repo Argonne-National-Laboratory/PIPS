@@ -251,7 +251,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
             {
                /* fix variable to lower bound */
                assert( xlow != INF_NEG_PRES );
-               presData.fixColumnInequalitySingleton(col, xlow, coeff);
+               presData.fixColumnInequalitySingleton(col, row, xlow, coeff);
             }
          }
          /* both negative */
@@ -281,7 +281,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
             {
                /* fix variable to upper bound */
                assert( xupp != INF_POS_PRES );
-               presData.fixColumnInequalitySingleton(col, xupp, coeff);
+               presData.fixColumnInequalitySingleton(col, row, xupp, coeff);
             }
          }
       }

@@ -195,7 +195,7 @@ public :
       void removeRedundantRow( const INDEX& row );
 
       void startSingletonColumnPresolve();
-      void fixColumnInequalitySingleton( const INDEX& col, double value, double coeff );
+      void fixColumnInequalitySingleton( const INDEX& col, const INDEX& row, double value, double coeff );
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
       void removeImpliedFreeColumnSingletonEqualityRowSynced( const INDEX& row, const INDEX& col );
 
