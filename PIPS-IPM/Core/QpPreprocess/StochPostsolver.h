@@ -38,7 +38,7 @@ public:
       void putLinkingVarsSyncEvent();
       void notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double col_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
       void notifyFixedSingletonFromInequalityColumn( const INDEX& col, double value, double coeff, double xlow_old, double xupp_old );
-      void notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff, const StochGenMatrix& matrix_row );
+      void notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double rhs, double coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
 
       void beginBoundTightening();
       void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);

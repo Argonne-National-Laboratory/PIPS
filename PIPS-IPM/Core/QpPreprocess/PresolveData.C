@@ -1868,7 +1868,10 @@ void PresolveData::changeNnzCounterColumn(const INDEX& col, int amount, bool at_
  */
 void PresolveData::removeColumn(const INDEX& col, double fixation)
 {
+
    assert( col.isCol() );
+   if( col.isLinkingCol() )
+      assert( PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD) );
    assert( col.hasValidNode(nChildren) );
    const int dummy_index = std::numeric_limits<int>::infinity();
 
@@ -2269,28 +2272,123 @@ void PresolveData::fixColumnInequalitySingleton( const INDEX& col, double value,
    removeColumn(col, value);
 }
 
-void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff )
+void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double coeff )
 {
    assert( row.isRow() );
    assert( col.isCol() );
-   assert( row.getSystemType() == INEQUALITY_SYSTEM );
+   assert( row.inInEqSys() );
    assert( !wasColumnRemoved(col) );
    assert( !wasRowRemoved(row) );
-   assert( !row.getLinking() );
+   assert( !row.isLinkingRow() );
+
+   const double clow = getSimpleVecFromRowStochVec(*presProb->bl, row);
+   const double cupp = getSimpleVecFromRowStochVec(*presProb->bu, row);
+
+   assert( clow != INF_NEG_PRES || cupp != INF_POS_PRES );
+   if( clow != INF_NEG_PRES )
+      assert( cupp == INF_POS_PRES);
+   if( cupp != INF_POS_PRES)
+      assert( clow == INF_NEG_PRES );
+
+   const double rhs = (clow != INF_NEG_PRES ) ? -clow : cupp;
 
    if( TRACK_COLUMN(col) )
      std::cout << "TRACKING_COLUMN: tracked column removed as free column singleton" << std::endl;
    if( TRACK_ROW(row) )
    {
       std::cout << "TRACKING_ROW: removal of " << row << " since it contained a free column singleton" << std::endl;
-      writeRowLocalToStreamDense(std::cout, row);
    }
 
+   double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col);
+   double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col);
+   double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), col);
+   double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), col);
+
+   if( PIPSisZero(ixlow) )
+      assert( xlow == INF_NEG_PRES );
+   if( PIPSisZero(ixupp) )
+      assert( xupp == INF_POS_PRES );
+
    if( postsolver )
-      postsolver->notifyFreeColumnSingletonInequalityRow( row, col, lhsrhs, coeff, getSystemMatrix(row.getSystemType()) );
+      postsolver->notifyFreeColumnSingletonInequalityRow( row, col, rhs, coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
 
    removeRow(row);
-   removeColumn(col, 0.0);
+
+
+   /* remove col and mark it for the fix empty columns presolver */
+   ixlow = xlow = xupp = ixupp = 0;
+   if( col.getNode() == -1 )
+      outdated_linking_var_bounds = true;
+
+   if( col.isLinkingCol() && my_rank == 0 )
+   {
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col) + (*nnzs_col_chgs)[col.getIndex()] == 0 );
+      assert( PIPSisZero(getSimpleVecFromColStochVec(*presProb->g, col) + (*objective_vec_chgs)[col.getIndex()]) );
+   }
+   else if( !col.isLinkingCol() )
+   {
+      assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
+   }
+}
+
+void PresolveData::removeFreeColumnSingletonInequalityRowSynced( const INDEX& row, const INDEX& col, double coeff )
+{
+   assert( row.isRow() );
+   assert( 1 == PIPS_MPIgetSum( !col.isEmpty(), MPI_COMM_WORLD) );
+   assert( !wasColumnRemoved(col) );
+   assert( !wasRowRemoved(row) );
+   assert( row.isLinkingRow() );
+   if( col.isEmpty() )
+      assert( coeff == 0.0 );
+
+   const double clow = getSimpleVecFromRowStochVec(*presProb->bl, row);
+   const double cupp = getSimpleVecFromRowStochVec(*presProb->bu, row);
+
+   assert( clow != INF_NEG_PRES || cupp != INF_POS_PRES );
+   if( clow != INF_NEG_PRES )
+      assert( cupp == INF_POS_PRES);
+   if( cupp != INF_POS_PRES)
+      assert( clow == INF_NEG_PRES );
+
+   const double rhs = (clow != INF_NEG_PRES ) ? -clow : cupp;
+
+   if( col.isCol() )
+   {
+      if( TRACK_COLUMN(col) )
+        std::cout << "TRACKING_COLUMN: tracked column removed as free column singleton" << std::endl;
+      if( TRACK_ROW(row) )
+      {
+         std::cout << "TRACKING_ROW: removal of " << row << " since it contained a free column singleton" << std::endl;
+      }
+   }
+
+   PIPS_MPIgetSumInPlace(coeff, MPI_COMM_WORLD);
+
+   double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col);
+   double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col);
+   double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), col);
+   double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), col);
+
+   if( PIPSisZero(ixlow) )
+      assert( xlow == INF_NEG_PRES );
+   if( PIPSisZero(ixupp) )
+      assert( xupp == INF_POS_PRES );
+
+   if( postsolver )
+      postsolver->notifyFreeColumnSingletonInequalityRow( row, col, rhs, coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
+
+   removeRow(row);
+
+   if( col.isCol() )
+   {
+
+      /* remove col and mark it for the fix empty columns presolver */
+      ixlow = xlow = xupp = ixupp = 0;
+
+      assert( PIPSisZero(getSimpleVecFromColStochVec( *presProb->g, col)) );
+      assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
+   }
 }
 
 /* for linking rows with non-linking singleton columns this presolver must be called simultaneously - if col is on another process col should an empty index */
@@ -2445,7 +2543,7 @@ void PresolveData::removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row
 
    /* remove col and mark it for the fix empty columns presolver */
    ixlow = xlow = xupp = ixupp = 0;
-   if(col.getNode() == -1)
+   if( col.getNode() == -1 )
       outdated_linking_var_bounds = true;
 
    if( col.isLinkingCol() && my_rank == 0 )

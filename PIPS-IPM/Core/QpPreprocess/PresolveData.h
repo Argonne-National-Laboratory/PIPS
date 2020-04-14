@@ -199,7 +199,8 @@ public :
       void removeImpliedFreeColumnSingletonEqualityRow( const INDEX& row, const INDEX& col);
       void removeImpliedFreeColumnSingletonEqualityRowSynced( const INDEX& row, const INDEX& col );
 
-      void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff );
+      void removeFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double coeff );
+      void removeFreeColumnSingletonInequalityRowSynced( const INDEX& row, const INDEX& col, double coeff );
 
       void tightenRowBoundsParallelRow( const INDEX& row_tightened, const INDEX& row_tightening, double clow_new, double cupp_new, double factor );
 

@@ -191,12 +191,13 @@ void StochPostsolver::notifyFixedSingletonFromInequalityColumn( const INDEX& col
    finishNotify();
 }
 
-void StochPostsolver::notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double lhsrhs, double coeff, const StochGenMatrix& matrix_row )
+void StochPostsolver::notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double rhs, double coeff, double xlow, double xupp, const StochGenMatrix& matrix_row )
 {
-   assert(col.isCol());
    assert(row.isRow());
+   assert(col.isCol() || col.isEmpty() );
+   if( col.isEmpty() )
+      assert( row.isLinkingRow() );
 
-   markColumnRemoved(col);
    markRowRemoved(row);
 
    reductions.push_back(FREE_COLUMN_SINGLETON_INEQUALITY_ROW);
@@ -208,8 +209,10 @@ void StochPostsolver::notifyFreeColumnSingletonInequalityRow( const INDEX& row, 
 
    int_values.push_back(index_stored_row);
 
-   float_values.push_back(lhsrhs);
+   float_values.push_back(rhs);
    float_values.push_back(coeff);
+   float_values.push_back(xlow);
+   float_values.push_back(xupp);
 
    finishNotify();
 }
@@ -2037,7 +2040,7 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
 
    assert(first_index + 2 == next_first_index);
-   assert(first_float_val + 2 == next_first_float_val);
+   assert(first_float_val + 4 == next_first_float_val);
    assert(first_int_val + 1 == next_first_int_val);
 #endif
 
@@ -2048,10 +2051,12 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
    const int index_stored_row = int_values.at(first_int_val);
    const INDEX row_stored(ROW, row.getNode(), index_stored_row, row.getLinking(), row.getSystemType());
 
-   const double lhsrhs = float_values.at(first_float_val);
+   const double rhs = float_values.at(first_float_val);
    const double coeff = float_values.at(first_float_val + 1);
+   const double xlow = float_values.at(first_float_val + 2);
+   const double xupp = float_values.at(first_float_val + 3);
 
-   assert( wasColumnRemoved(col) );
+   assert( !wasColumnRemoved(col) );
    assert( wasRowRemoved(row) );
 
    getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
@@ -2062,7 +2067,8 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
    double& x_val = getSimpleVecFromColStochVec(original_vars.x, col);
    assert( PIPSisZero(x_val) );
 
-   x_val = (lhsrhs - row_storage.multRowTimesVec(row_stored, dynamic_cast<const StochVector&>(*original_vars.x))) / coeff;
+   const double row_value = row_storage.multRowTimesVec(row_stored, dynamic_cast<const StochVector&>(*original_vars.x));
+   x_val = (rhs - row_value) / coeff;
 
    /* duals of row and bounds are zero */
    getSimpleVecFromRowStochVec(original_vars.z, row) = 0;
@@ -2076,16 +2082,9 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
    /* slack for row is zero by construction */
    getSimpleVecFromRowStochVec(original_vars.t, row) = 0;
    getSimpleVecFromRowStochVec(original_vars.u, row) = 0;
-   getSimpleVecFromRowStochVec(original_vars.s, row) = 0;
+   getSimpleVecFromRowStochVec(original_vars.s, row) = row_value + coeff * x_val;
 
-   // TODO : we should use the bounds that were stored at the time
-   const int ixlow = getSimpleVecFromColStochVec( *original_problem.ixlow, col);
-   const int ixupp = getSimpleVecFromColStochVec( *original_problem.ixupp, col);
-   const double xlow = getSimpleVecFromColStochVec( *original_problem.blx, col);
-   const double xupp = getSimpleVecFromColStochVec( *original_problem.bux, col);
-
-
-   if(PIPSisZero(ixlow))
+   if( xlow == INF_NEG_PRES )
       getSimpleVecFromColStochVec(original_vars.v, col) = 0;
    else
    {
@@ -2093,7 +2092,7 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
       assert( PIPSisLE(xlow, x_val) );
    }
 
-   if(PIPSisZero(ixupp))
+   if( xupp == INF_POS_PRES)
       getSimpleVecFromColStochVec(original_vars.w, col) = 0;
    else
    {

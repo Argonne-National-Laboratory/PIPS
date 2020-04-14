@@ -72,7 +72,7 @@ Data* StochPresolver::presolve()
    StochPresolverSingletonRows presolverSR(presData, *sorigprob);
    StochPresolverSingletonColumns presolverSC(presData, *sorigprob);
 
-//   sorigprob->writeToStreamDense(std::cout);
+   sorigprob->writeToStreamDense(std::cout);
 
    if( my_rank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
@@ -87,7 +87,7 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
 //      presolverBS.applyPresolving();
-      presolverSR.applyPresolving();
+//      presolverSR.applyPresolving();
 //      presolverParallelRow.applyPresolving();
       presolverSC.applyPresolving();
 //      presolverColFix.applyPresolving();
@@ -127,7 +127,7 @@ Data* StochPresolver::presolve()
 
    sData* finalPresData = presData.finalize();
 
-//   finalPresData->writeToStreamDense(std::cout);
+   finalPresData->writeToStreamDense(std::cout);
    
    assert( finalPresData );
    assert( finalPresData->isRootNodeInSync() );
