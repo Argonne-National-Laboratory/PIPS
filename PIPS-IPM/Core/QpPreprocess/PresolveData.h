@@ -246,9 +246,9 @@ private:
 
       long resetOriginallyFreeVarsBounds(const SimpleVector& ixlow_orig, const SimpleVector& ixupp_orig, int node);
 
-      void adjustMatrixRhsLhsBy(const INDEX& row, double value);
+      void adjustMatrixRhsLhsBy( const INDEX& row, double value, bool at_root );
       /// methods for modifying the problem
-      void adjustRowActivityFromDeletion(const INDEX& row, const INDEX& col, double coeff);
+      void adjustRowActivityFromDeletion( const INDEX& row, const INDEX& col, double coeff );
       /// set bounds if new bound is better than old bound
       bool updateUpperBoundVariable( const INDEX& col, double xupp_new)
       { return updateBoundsVariable( col, INF_NEG_PRES, xupp_new ); };

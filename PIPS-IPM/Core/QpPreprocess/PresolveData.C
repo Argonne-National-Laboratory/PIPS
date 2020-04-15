@@ -239,7 +239,7 @@ void PresolveData::setNotIndicatedEntriesTo(StochVector& svec, StochVector& sive
       if( !nodeIsDummy(node) )
       {
          SimpleVector& vec = getSimpleVecFromColStochVec(svec, node);
-         SimpleVector& ivec = getSimpleVecFromColStochVec(sivec, node);
+         const SimpleVector& ivec = getSimpleVecFromColStochVec(sivec, node);
 
          assert(vec.n == ivec.n);
          for( int row = 0; row < vec.n; ++row )
@@ -247,6 +247,19 @@ void PresolveData::setNotIndicatedEntriesTo(StochVector& svec, StochVector& sive
             if( PIPSisZero( ivec[row] ) )
                vec[row] = value;
          }
+      }
+   }
+
+   if( sivec.vecl )
+   {
+      assert( svec.vecl );
+      SimpleVector& vec = getSimpleVecFromRowStochVec(svec, -1, true );
+      const SimpleVector& ivec = getSimpleVecFromRowStochVec(sivec, -1, true);
+
+      for( int row = 0; row < vec.n; ++row )
+      {
+         if (PIPSisZero( ivec[row] ) )
+            vec[row] = value;
       }
    }
 }
@@ -1029,11 +1042,11 @@ void PresolveData::deleteEntryAtIndex( const INDEX& row, const INDEX& col, int c
       outdated_nnzs = true;
 
    /* adjust rhs and lhs */
-   adjustMatrixRhsLhsBy(row, -val * xlow);
+   adjustMatrixRhsLhsBy( row, -val * xlow, at_root );
 
    /* adjust activity */
    /* deletion of entry acts on activities like fixing it's value to zero */
-   adjustRowActivityFromDeletion(row, col, val);
+   adjustRowActivityFromDeletion( row, col, val );
 
    /* adjust nnz counters */
    reduceNnzCounterRowBy( row, 1, at_root );
@@ -1356,6 +1369,9 @@ void PresolveData::fixColumn( const INDEX& col, double value)
    assert( -1 <= col.getNode() && col.getNode() < nChildren );
    assert( 0 <= col.getIndex() );
 
+   if( col.isLinkingCol() )
+      assert( PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD) );
+
    if( TRACK_COLUMN(col) )
    {
       std::cout << "TRACKING_COLUMN: " << col << " got fixed to " << value << std::endl;
@@ -1382,7 +1398,7 @@ void PresolveData::fixColumn( const INDEX& col, double value)
 
    removeColumn(col, value);
 
-   if( col.getNode() != -1 )
+   if( !col.isLinkingCol() )
       assert( getSimpleVecFromColStochVec(*nnzs_col, col) == 0 );
 }
 
@@ -1723,7 +1739,7 @@ void PresolveData::tightenRowBoundsParallelRow(const INDEX& row1, const INDEX& r
 }
 
 /** this methods does not call any postsolve procedures but simply changes the bounds (lhs, rhs) of either A or B by value */
-void PresolveData::adjustMatrixRhsLhsBy(const INDEX& row, double value)
+void PresolveData::adjustMatrixRhsLhsBy(const INDEX& row, double value, bool at_root )
 {
    assert( row.isRow() );
    assert( row.hasValidNode(nChildren) );
@@ -1736,7 +1752,7 @@ void PresolveData::adjustMatrixRhsLhsBy(const INDEX& row, double value)
    if( PIPSisEQ(value, 0.0) )
       return;
 
-   if( row.isLinkingRow() )
+   if( row.isLinkingRow() && !at_root )
    {
       outdated_lhsrhs = true;
       row.inEqSys() ? (*bound_chgs_A)[row.getIndex()] += value : (*bound_chgs_C)[row.getIndex()] += value;
@@ -1792,17 +1808,14 @@ void PresolveData::changeNnzCounterRow(const INDEX& row, int amount, bool at_roo
       return;
 
    /* linking constraints get stored */
-   if( row.isLinkingRow() )
+   if( row.isLinkingRow() && !at_root )
    {
-      if( my_rank == 0 || !at_root)
-      {
-         int& chgs = (row.inEqSys() ? *nnzs_row_A_chgs : *nnzs_row_C_chgs)[row.getIndex()];
+      int& chgs = (row.inEqSys() ? *nnzs_row_A_chgs : *nnzs_row_C_chgs)[row.getIndex()];
 
-         chgs += amount;
-         outdated_nnzs = true;
+      chgs += amount;
+      outdated_nnzs = true;
 
-         assert( 0 <= getSimpleVecFromRowStochVec(row.inEqSys() ? *nnzs_row_A : *nnzs_row_C, row) + chgs );
-      }
+      assert( 0 <= getSimpleVecFromRowStochVec(row.inEqSys() ? *nnzs_row_A : *nnzs_row_C, row) + chgs );
    }
    else
    {
@@ -1841,15 +1854,12 @@ void PresolveData::changeNnzCounterColumn(const INDEX& col, int amount, bool at_
       return;
 
    /* linking constraints get stored */
-   if( col.isLinkingCol() )
+   if( col.isLinkingCol() && !at_root )
    {
-      if(my_rank == 0 || !at_root)
-      {
-         int& chgs = (*nnzs_col_chgs)[col.getIndex()];
-         chgs += amount;
-         assert( 0 <= getSimpleVecFromColStochVec(*nnzs_col, col) + chgs);
-         outdated_nnzs = true;
-      }
+      int& chgs = (*nnzs_col_chgs)[col.getIndex()];
+      chgs += amount;
+      assert( 0 <= getSimpleVecFromColStochVec(*nnzs_col, col) + chgs);
+      outdated_nnzs = true;
    }
    else
    {
@@ -1877,16 +1887,23 @@ void PresolveData::removeColumn(const INDEX& col, double fixation)
 
    if( col.isLinkingCol() )
    {
+      /* B0 */
       removeColumnFromMatrix( INDEX(ROW, -1, dummy_index, false, EQUALITY_SYSTEM), col, fixation);
+
+      /* D0 */
       removeColumnFromMatrix( INDEX(ROW, -1, dummy_index, false, INEQUALITY_SYSTEM), col, fixation);
 
+      /* Bl0 */
       if( hasLinking(EQUALITY_SYSTEM) )
          removeColumnFromMatrix( INDEX(ROW, -1, dummy_index, true, EQUALITY_SYSTEM), col, fixation);
+
+      /* Dl0 */
       if( hasLinking(INEQUALITY_SYSTEM) )
-         removeColumnFromMatrix( INDEX(ROW, -1, dummy_index, true, EQUALITY_SYSTEM), col, fixation);
+         removeColumnFromMatrix( INDEX(ROW, -1, dummy_index, true, INEQUALITY_SYSTEM), col, fixation);
 
       for(int i = 0; i < nChildren; ++i)
       {
+         /* Ai, Ci */
          if( !nodeIsDummy(i) )
          {
             removeColumnFromMatrix( INDEX(ROW, i, dummy_index, false, EQUALITY_SYSTEM), col, fixation);
@@ -1906,11 +1923,10 @@ void PresolveData::removeColumn(const INDEX& col, double fixation)
    }
 
    /* adjust objective function */
-   if( !col.isLinkingCol() || my_rank == 0)
+   if( !col.isLinkingCol() || my_rank == 0 )
    {
       double objective_factor = getSimpleVecFromColStochVec(*presProb->g, col);
       obj_offset_chgs += objective_factor * fixation;
-
    }
 
    /* mark column as removed */
@@ -1926,14 +1942,15 @@ void PresolveData::removeColumnFromMatrix(const INDEX& dummy_row, const INDEX& c
 {
    assert( dummy_row.isRow() );
    assert( dummy_row.getIndex() == std::numeric_limits<int>::infinity() );
-   assert( col.isCol() );
    assert( dummy_row.hasValidNode(nChildren) );
+   assert( col.isCol() );
    assert( col.hasValidNode(nChildren) );
+   const bool at_root = (dummy_row.getNode() == -1 && col.isLinkingCol());
 
-   const bool at_root = dummy_row.getNode() == -1 && col.getNode() == -1;
+   if( at_root )
+      assert( PIPS_MPIisValueEqual( col.getIndex(), MPI_COMM_WORLD ) );
 
    SparseGenMatrix* mat = getSparseGenMatrix(dummy_row, col);
-
    const SparseStorageDynamic& matrix_transp = mat->getStorageDynamicTransposedRef();
 
    assert( 0 <= col.getIndex() && col.getIndex() < matrix_transp.getM() );
@@ -1957,11 +1974,11 @@ void PresolveData::removeColumnFromMatrix(const INDEX& dummy_row, const INDEX& c
          postsolver->notifyColModified( col );
       }
 
-      reduceNnzCounterRowBy( row, 1, at_root);
+      reduceNnzCounterRowBy( row, 1, at_root );
 
-      adjustMatrixRhsLhsBy(row, - coeff * fixation);
+      adjustMatrixRhsLhsBy( row, - coeff * fixation, at_root );
 
-      adjustRowActivityFromDeletion( row, col, coeff);
+      adjustRowActivityFromDeletion( row, col, coeff );
 
       if( TRACK_ROW(row) )
       {
@@ -2277,14 +2294,16 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
    assert( row.inInEqSys() );
    assert( !wasColumnRemoved(col) );
    assert( !wasRowRemoved(row) );
-   assert( !row.isLinkingRow() );
+
+   if( row.isLinkingRow() )
+      assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
 
    const double clow = getSimpleVecFromRowStochVec(*presProb->bl, row);
    const double cupp = getSimpleVecFromRowStochVec(*presProb->bu, row);
 
    assert( clow != INF_NEG_PRES || cupp != INF_POS_PRES );
    if( clow != INF_NEG_PRES )
-      assert( cupp == INF_POS_PRES);
+      assert( cupp == INF_POS_PRES );
    if( cupp != INF_POS_PRES)
       assert( clow == INF_NEG_PRES );
 
@@ -2311,7 +2330,6 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
       postsolver->notifyFreeColumnSingletonInequalityRow( row, col, rhs, coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
 
    removeRow(row);
-
 
    /* remove col and mark it for the fix empty columns presolver */
    ixlow = xlow = xupp = ixupp = 0;
@@ -3182,7 +3200,7 @@ bool PresolveData::hasLinking(SystemType system_type) const
 /** adjusts unbounded counters of row as well as activity (if applicable) 
  *  assumes col has been fixed to coeff
  */ // todo refactor
-void PresolveData::adjustRowActivityFromDeletion( const INDEX& row, const INDEX& col, double coeff)
+void PresolveData::adjustRowActivityFromDeletion( const INDEX& row, const INDEX& col, double coeff )
 {
    assert( row.isRow() );
    assert( col.isCol() );
@@ -3192,6 +3210,8 @@ void PresolveData::adjustRowActivityFromDeletion( const INDEX& row, const INDEX&
    assert( !PIPSisZero(coeff) );
    assert( !nodeIsDummy(row.getNode()) );
    assert( !nodeIsDummy(col.getNode()) );
+
+   const bool local_linking_row = (row.isLinkingRow() && !col.isLinkingCol());
 
    /* get upper and lower bound on variable */
    const double ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col);
@@ -3209,7 +3229,7 @@ void PresolveData::adjustRowActivityFromDeletion( const INDEX& row, const INDEX&
    int actmax_ubndd_val = *actmax_ubndd;
    int actmin_ubndd_val = *actmin_ubndd;
 
-   if( row.isLinkingRow() && !col.isLinkingCol() )
+   if( local_linking_row )
    {
       actmax_ubndd = row.inEqSys() ? &(*actmax_eq_ubndd_chgs)[row.getIndex()]
             : &(*actmax_ineq_ubndd_chgs)[row.getIndex()];
@@ -3229,7 +3249,7 @@ void PresolveData::adjustRowActivityFromDeletion( const INDEX& row, const INDEX&
    double* actmin_part = row.inEqSys() ? &getSimpleVecFromRowStochVec(*actmin_eq_part, row)
          : &getSimpleVecFromRowStochVec(*actmin_ineq_part, row);
 
-   if( row.isLinkingRow() && !col.isLinkingCol() )
+   if( local_linking_row )
    {
       actmax_part = row.inEqSys() ? &(*actmax_eq_chgs)[row.getIndex()] : &(*actmax_ineq_chgs)[row.getIndex()];
       actmin_part = row.inEqSys() ? &(*actmin_eq_chgs)[row.getIndex()] : &(*actmin_ineq_chgs)[row.getIndex()];
@@ -3286,7 +3306,7 @@ void PresolveData::adjustRowActivityFromDeletion( const INDEX& row, const INDEX&
       }
    }
 
-   if( row.isLinkingRow() )
+   if( local_linking_row )
       outdated_activities = true;
 }
 
@@ -3461,8 +3481,8 @@ void PresolveData::computeRowMinOrMaxActivity(const INDEX& row, bool upper)
 /** updates the bounds on a variable as well as activities */
 bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, double xupp_new)
 {
-   assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
-   assert(col.isCol());
+   assert( xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES );
+   assert( col.isCol() );
 
    double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col);
    double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col);
@@ -3520,7 +3540,7 @@ bool PresolveData::updateBoundsVariable( const INDEX& col, double xlow_new, doub
    }
 
 
-   if( updated && col.getNode() == -1 )
+   if( updated && col.isLinkingCol() )
       outdated_linking_var_bounds = true;
 
    return updated;
