@@ -223,11 +223,12 @@ double StochColumnStorage::multColTimesVec( const INDEX& col, const StochVector&
 
 double StochColumnStorage::multColTimesVecWithoutRootNode( const INDEX& col, const StochVector& vec_eq, const StochVector& vec_ineq ) const
 {
-   assert(-1 <= col.getNode() && col.getNode() < static_cast<int>(nChildren));
+   assert( col.isCol() );
+   assert( col.hasValidNode(nChildren) );
    assert(nChildren == vec_eq.children.size());
    assert(nChildren == vec_ineq.children.size());
 
-   if(col.getNode() == -1)
+   if( col.isLinkingCol() )
       return multiplyLinkingColTimesVecWithoutRootNode(col.getIndex(), vec_eq, vec_ineq);
    else
       return multiplyLocalColTimesVec(col, vec_eq, vec_ineq);
@@ -285,7 +286,7 @@ double StochColumnStorage::multiplyLinkingColTimesVecWithoutRootNode(int col, co
    {
       if( !vec_eq.children[node]->isKindOf(kStochDummy) )
       {
-         assert(!vec_ineq.children[node]->isKindOf(kStochDummy));
+         assert( !vec_ineq.children[node]->isKindOf(kStochDummy) );
          assert( !stored_cols_eq->children[node]->isKindOf(kStochGenDummyMatrix) );
          assert( !stored_cols_ineq->children[node]->isKindOf(kStochGenDummyMatrix) );
 

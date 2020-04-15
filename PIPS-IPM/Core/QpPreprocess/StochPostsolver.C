@@ -1081,7 +1081,8 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
 #endif
 
    const INDEX& col = indices.at(first_index);
-   assert(col.isCol());
+   assert( col.isCol() );
+   assert( wasColumnRemoved(col) );
 
    const int index_stored_col = int_values.at(first_int_val);
    const INDEX stored_col(COL, col.getNode(), index_stored_col);
@@ -1089,7 +1090,6 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
    const double value = float_values.at(first_float_val);
    const double obj_coeff = float_values.at(first_float_val + 1);
 
-   assert(wasColumnRemoved(col));
 
    /* mark entry as set and set x value to fixation */
    getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
@@ -1106,7 +1106,7 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
    if( col.isLinkingCol() )
    {
       /* we need to synchronize the column times duals in this case */
-      if(my_rank == 0)
+      if( my_rank == 0 )
          col_times_duals = col_storage.multColTimesVec(stored_col, dynamic_cast<const StochVector&>(*original_vars.y),
                dynamic_cast<const StochVector&>(*original_vars.z));
       else
@@ -1125,9 +1125,9 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
    /* set duals of bounds of x */
    double& gamma = getSimpleVecFromColStochVec(original_vars.gamma, col);
    double& phi = getSimpleVecFromColStochVec(original_vars.phi, col);
-
    gamma = 0.0;
    phi = 0.0;
+
    if( PIPSisLT(reduced_costs, 0.0) )
       phi = -reduced_costs;
    else if( PIPSisLT(0.0, reduced_costs) )
@@ -1258,16 +1258,26 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
    assert( PIPSisLE(value, xupp_old) || xupp_old == INF_POS_PRES);
    assert( PIPSisLE(xlow_old, value) || xlow_old == INF_NEG_PRES);
 
-   getSimpleVecFromColStochVec(original_vars.v, col) = (xlow_old == INF_NEG_PRES) ? 0 : value - xlow_old;
-   getSimpleVecFromColStochVec(original_vars.w, col) = (xupp_old == INF_POS_PRES) ? 0 : xupp_old - value;
+   double& v = getSimpleVecFromColStochVec(original_vars.v, col);
+   double& w = getSimpleVecFromColStochVec(original_vars.w, col);
+   assert( PIPSisZero(v) && PIPSisZero(w) );
+   v = (xlow_old == INF_NEG_PRES) ? 0 : value - xlow_old;
+   w = (xupp_old == INF_POS_PRES) ? 0 : xupp_old - value;
+
+   /* one of the bounds has to stay active */
+   assert( PIPSisZero(v) || PIPSisZero(w) );
 
    /* adjust activity of row / slack of row */
    const double val_times_coeff = value * coeff;
    getSimpleVecFromRowStochVec(original_vars.s, row) += val_times_coeff;
 
-   /* set duals of bounds of x */
-   getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;
-   getSimpleVecFromColStochVec(original_vars.phi, col) = 0.0;
+   /* if a bound is no longer tight we do not have to adjust the respective duals since these should be zero anyway */
+   if( !PIPSisZero(v) )
+      getSimpleVecFromColStochVec(original_vars.gamma, col) = 0;
+   if( !PIPSisZero(w) )
+      getSimpleVecFromColStochVec(original_vars.phi, col) = 0;
+
+   assert( complementarySlackVariablesMet( original_vars, col) );
 
    return true;
 }
