@@ -36,6 +36,7 @@ public:
       void notifyFixedEmptyColumn( const INDEX& col, double value, double obj_coeff, int ixlow, int ixupp, double lhs, double rhs);
 
       void putLinkingVarsSyncEvent();
+      void putLinkingSlackSyncEvent();
       void notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double col_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
       void notifyFixedSingletonFromInequalityColumn( const INDEX& col, const INDEX& row, double value, double coeff, double xlow_old, double xupp_old );
       void notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double rhs, double coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
@@ -100,7 +101,8 @@ private:
          FREE_COLUMN_SINGLETON_INEQUALITY_ROW = 13,
          PARALLEL_ROWS_BOUNDS_TIGHTENED = 14,
          NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED = 15,
-         LINKING_VARS_SYNC_EVENT = 16
+         LINKING_VARS_SYNC_EVENT = 16,
+         LINKING_SLACK_SYNC_EVENT = 17
       };
 
       const unsigned int n_rows_original;
@@ -151,7 +153,7 @@ private:
       bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx, StochVector& phi, StochVector& gamma) const;
       bool postsolveFixedColumn(sVars& original_vars, int reduction_idx) const;
       bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const;
-      bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx) const;
+      bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const;
       bool postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveSingletonInequalityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx) const;
@@ -161,6 +163,7 @@ private:
       bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, const sData& original_problem, int reduction_idx) const;
 
       bool syncNewlySetLinkingVars(sVars& original_vars) const;
+      bool syncLinkingRowSlack(sVars& original_vars, SimpleVector& buffer_slacks) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
       bool allVariablesSet(const sVars& vars) const;

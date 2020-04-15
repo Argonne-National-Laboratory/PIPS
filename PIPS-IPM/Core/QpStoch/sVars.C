@@ -231,7 +231,7 @@ void sVars::sync()
 bool sVars::isRootNodeInSync() const
 {
    bool in_sync = true;
-   const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
+   const int my_rank = PIPS_MPIgetRank( MPI_COMM_WORLD );
    if( !dynamic_cast<const StochVector&>(*x).isRootNodeInSync() )
    {
       if( my_rank == 0 )
@@ -309,5 +309,6 @@ bool sVars::isRootNodeInSync() const
       in_sync = false;
    }
 
+   MPI_Barrier(MPI_COMM_WORLD);
    return in_sync;
 }

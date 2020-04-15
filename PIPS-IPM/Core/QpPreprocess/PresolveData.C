@@ -2258,7 +2258,10 @@ void PresolveData::removeRedundantRow( const INDEX& row )
 void PresolveData::startSingletonColumnPresolve()
 {
    if( postsolver )
+   {
       postsolver->putLinkingVarsSyncEvent();
+      postsolver->putLinkingSlackSyncEvent();
+   }
 }
 
 /** dual fixing for a singleton column */
@@ -2351,8 +2354,15 @@ void PresolveData::removeFreeColumnSingletonInequalityRow( const INDEX& row, con
 void PresolveData::removeFreeColumnSingletonInequalityRowSynced( const INDEX& row, const INDEX& col, double coeff )
 {
    assert( row.isRow() );
-   assert( 1 == PIPS_MPIgetSum( !col.isEmpty(), MPI_COMM_WORLD) );
-   assert( !wasColumnRemoved(col) );
+#ifndef NDEBUG
+   const int my_col = col.isCol();
+   assert( 1 == PIPS_MPIgetSum( my_col, MPI_COMM_WORLD ) );
+#endif
+   MPI_Barrier(MPI_COMM_WORLD);
+   assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
+
+   if( col.isCol() )
+      assert( !wasColumnRemoved(col) );
    assert( !wasRowRemoved(row) );
    assert( row.isLinkingRow() );
    if( col.isEmpty() )
@@ -2381,23 +2391,21 @@ void PresolveData::removeFreeColumnSingletonInequalityRowSynced( const INDEX& ro
 
    PIPS_MPIgetSumInPlace(coeff, MPI_COMM_WORLD);
 
-   double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col);
-   double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col);
-   double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), col);
-   double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), col);
-
-   if( PIPSisZero(ixlow) )
-      assert( xlow == INF_NEG_PRES );
-   if( PIPSisZero(ixupp) )
-      assert( xupp == INF_POS_PRES );
-
-   if( postsolver )
-      postsolver->notifyFreeColumnSingletonInequalityRow( row, col, rhs, coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
-
-   removeRow(row);
-
    if( col.isCol() )
    {
+      double& ixlow = getSimpleVecFromColStochVec(*(presProb->ixlow), col);
+      double& xlow = getSimpleVecFromColStochVec(*(presProb->blx), col);
+      double& ixupp = getSimpleVecFromColStochVec(*(presProb->ixupp), col);
+      double& xupp = getSimpleVecFromColStochVec(*(presProb->bux), col);
+
+      if( PIPSisZero(ixlow) )
+         assert( xlow == INF_NEG_PRES );
+      if( PIPSisZero(ixupp) )
+         assert( xupp == INF_POS_PRES );
+      if( postsolver )
+         postsolver->notifyFreeColumnSingletonInequalityRow( row, col, rhs, coeff, xlow, xupp, getSystemMatrix(row.getSystemType()) );
+
+      removeRow(row);
 
       /* remove col and mark it for the fix empty columns presolver */
       ixlow = xlow = xupp = ixupp = 0;
@@ -2407,6 +2415,13 @@ void PresolveData::removeFreeColumnSingletonInequalityRowSynced( const INDEX& ro
 
       if( col.isLinkingCol() )
          outdated_linking_var_bounds = true;
+   }
+   else
+   {
+      if( postsolver )
+         postsolver->notifyFreeColumnSingletonInequalityRow( row, col, rhs, coeff, INF_NEG_PRES, INF_POS_PRES, getSystemMatrix(row.getSystemType()) );
+
+      removeRow(row);
    }
 }
 

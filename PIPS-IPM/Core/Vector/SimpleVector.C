@@ -318,6 +318,7 @@ bool SimpleVectorBase<T>::componentEqual( const OoqpVectorBase<T>& vec, T tol) c
       /* two comparisons - a numerical one and one for stuff like infinity/nan/max/min */
       if( !PIPSisRelEQ(v[i], sv[i], tol) && v[i] != sv[i])
       {
+//         std::cout << v[i] << " != " << sv[i] << std::endl;
          return false;
       }
    }

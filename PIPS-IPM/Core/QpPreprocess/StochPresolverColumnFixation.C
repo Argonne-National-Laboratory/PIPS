@@ -123,10 +123,10 @@ void StochPresolverColumnFixation::applyPresolving()
    }
 
    /* communicate the local changes */
+   presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceObjOffset();
-
 
 #ifndef NDEBUG
    PIPS_MPIgetSumInPlace(fixed_columns_run, MPI_COMM_WORLD);

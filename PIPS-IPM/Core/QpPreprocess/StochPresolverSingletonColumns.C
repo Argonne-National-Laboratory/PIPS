@@ -83,21 +83,41 @@ void StochPresolverSingletonColumns::applyPresolving()
          const SystemType system_type = (i < n_linking_rows_eq) ? EQUALITY_SYSTEM : INEQUALITY_SYSTEM;
          const int row_index = (i < n_linking_rows_eq) ? i : i - n_linking_rows_eq;
          const INDEX row(ROW, -1, row_index, true, system_type);
-         if(my_rank == proc_that_removes)
+         if( my_rank == proc_that_removes )
          {
             assert( !cols[i].isLinkingCol() );
-            if( row.inEqSys() || coeffs.at(row_index) == INF_POS_PRES )
+            if( row.inEqSys() )
                presData.removeImpliedFreeColumnSingletonEqualityRowSynced( row, cols[i] );
             else
-               presData.removeFreeColumnSingletonInequalityRowSynced( row, cols[i], coeffs.at(row_index) );
+            {
+               const double iclow = getSimpleVecFromRowStochVec( *presData.getPresProb().iclow, row );
+               const double icupp = getSimpleVecFromRowStochVec( *presData.getPresProb().icupp, row );
+               const double clow = getSimpleVecFromRowStochVec( *presData.getPresProb().bl, row );
+               const double cupp = getSimpleVecFromRowStochVec( *presData.getPresProb().bu, row );
+
+               if( !PIPSisZero(iclow) && !PIPSisZero(icupp) && PIPSisEQ(clow, cupp) )
+                  presData.removeImpliedFreeColumnSingletonEqualityRowSynced( row, cols[i] );
+               else
+                  presData.removeFreeColumnSingletonInequalityRowSynced( row, cols[i], coeffs.at(row_index) );
+            }
             ++removed_cols_run;
          }
          else
          {
-            if( row.inEqSys() || coeffs.at(row_index) == INF_POS_PRES )
+            if( row.inEqSys() )
                presData.removeImpliedFreeColumnSingletonEqualityRowSynced( row, INDEX() );
             else
-               presData.removeFreeColumnSingletonInequalityRowSynced( row, INDEX(), 0.0 );
+            {
+               const double iclow = getSimpleVecFromRowStochVec( *presData.getPresProb().iclow, row );
+               const double icupp = getSimpleVecFromRowStochVec( *presData.getPresProb().icupp, row );
+               const double clow = getSimpleVecFromRowStochVec( *presData.getPresProb().bl, row );
+               const double cupp = getSimpleVecFromRowStochVec( *presData.getPresProb().bu, row );
+
+               if( !PIPSisZero(iclow) && !PIPSisZero(icupp) && PIPSisEQ(clow, cupp) )
+                  presData.removeImpliedFreeColumnSingletonEqualityRowSynced( row, INDEX() );
+               else
+                  presData.removeFreeColumnSingletonInequalityRowSynced( row, INDEX(), 0.0 );
+            }
          }
       }
    }
@@ -171,21 +191,23 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    bool implied_free = lb_implied_free && ub_implied_free;
 
    /* equality singleton variables */
-   if( row.getSystemType() == EQUALITY_SYSTEM && implied_free )
+   if( row.inEqSys() && implied_free )
    {
       /* store local singleton cols for later */
       if( row.isLinkingRow() && !col.isLinkingCol() )
       {
          local_singletons = true;
 
-         const int index_row = (row.getSystemType() == EQUALITY_SYSTEM) ? row.getIndex() : n_linking_rows_eq + row.getIndex();
+         const int index_row = row.getIndex();
          local_linking_column_for_row_in_proc.at(index_row) = my_rank;
          cols.at(index_row) = col;
+
+         return false;
       }
       else
          presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
    }
-   else if( row.getSystemType() == INEQUALITY_SYSTEM )
+   else if( row.inInEqSys() )
    {
       /* inequality singleton variables */
       const double iclow = getSimpleVecFromRowStochVec( *presData.getPresProb().iclow, row );
@@ -199,9 +221,10 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
          {
             local_singletons = true;
 
-            const int index_row = (row.getSystemType() == EQUALITY_SYSTEM) ? row.getIndex() : n_linking_rows_eq + row.getIndex();
+            const int index_row = n_linking_rows_eq + row.getIndex();
             local_linking_column_for_row_in_proc.at(index_row) = my_rank;
             cols.at(index_row) = col;
+            return false;
          }
          else
             presData.removeImpliedFreeColumnSingletonEqualityRow( row, col );
@@ -242,10 +265,11 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
                   local_linking_column_for_row_in_proc.at(index_row) = my_rank;
                   cols.at(index_row) = col;
                   coeffs.at(row.getIndex()) = coeff;
+                  return false;
                }
                else
                   /* remove variable and associated row from whole system */
-                  presData.removeFreeColumnSingletonInequalityRow( row, col, coeff);
+                  presData.removeFreeColumnSingletonInequalityRow( row, col, coeff );
             }
             else
             {
@@ -272,6 +296,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
                   local_linking_column_for_row_in_proc.at(index_row) = my_rank;
                   cols.at(index_row) = col;
                   coeffs.at(row.getIndex()) = coeff;
+                  return false;
                }
                else
                   /* remove variable and associated row from whole system */
@@ -289,7 +314,8 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
    else
       return false;
 
-   if( row.getNode() != -1 || my_rank == 0 )
+   const bool at_root = (row.getNode() == -1 && col.isLinkingCol());
+   if( !at_root || my_rank == 0 )
       return true;
    else
       return false;
