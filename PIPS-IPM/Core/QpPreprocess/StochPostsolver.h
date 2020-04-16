@@ -151,7 +151,7 @@ private:
       bool postsolveRedundantRow(sVars& original_vars, int reduction_idx) const;
       bool syncBoundsTightened(sVars& original_vars, int reduction_idx, StochVector& phi, StochVector& gamma) const;
       bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx, StochVector& phi, StochVector& gamma) const;
-      bool postsolveFixedColumn(sVars& original_vars, int reduction_idx) const;
+      bool postsolveFixedColumn(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks ) const;
       bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const;
       bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const;
       bool postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const;
@@ -160,7 +160,7 @@ private:
       bool postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const;
       bool postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const;
       bool postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx) const;
-      bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, const sData& original_problem, int reduction_idx) const;
+      bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const;
 
       bool syncNewlySetLinkingVars(sVars& original_vars) const;
       bool syncLinkingRowSlack(sVars& original_vars, SimpleVector& buffer_slacks) const;

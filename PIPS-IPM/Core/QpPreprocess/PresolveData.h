@@ -173,6 +173,7 @@ public :
       bool wasRowRemoved( const INDEX& row ) const;
 
       /// interface methods called from the presolvers when they detect a possible modification
+      void startColumnFixation();
       void fixColumn( const INDEX& col, double value);
       void fixEmptyColumn( const INDEX& col, double val);
 

@@ -38,6 +38,8 @@ void StochPresolverColumnFixation::applyPresolving()
    countRowsCols();
 #endif
 
+   presData.startColumnFixation();
+
    int fixed_columns_run = 0;
 
    /* remove fixed columns from system */

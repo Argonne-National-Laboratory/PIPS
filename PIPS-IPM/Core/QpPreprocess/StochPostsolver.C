@@ -452,8 +452,10 @@ void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const
 void StochPostsolver::notifyFixedColumn( const INDEX& col, double value, double obj_coeff, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat)
 {
    assert(col.isCol());
-   assert(!wasColumnRemoved(col));
+   assert( !wasColumnRemoved(col) );
    markColumnRemoved(col);
+   if( col.isLinkingCol() )
+      assert( PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD) );
 
    /* store current upper and lower bounds of x and the local column */
    const int col_index = col_storage.storeCol(col, eq_mat, ineq_mat);
@@ -714,7 +716,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case FIXED_COLUMN:
       {
-         postsolve_success = postsolve_success && postsolveFixedColumn(stoch_original_sol, i);
+         postsolve_success = postsolve_success && postsolveFixedColumn(stoch_original_sol, i, *linking_row_slacks_buffer);
          break;
       }
       case FIXED_EMPTY_COLUMN:
@@ -754,7 +756,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case FREE_COLUMN_SINGLETON_INEQUALITY_ROW:
       {
-         postsolve_success = postsolve_success && postsolveFreeColumnSingletonInequalityRow(stoch_original_sol, orig_problem_s, i);
+         postsolve_success = postsolve_success && postsolveFreeColumnSingletonInequalityRow(stoch_original_sol, i, *linking_row_slacks_buffer);
          break;
       }
       case PARALLEL_ROWS_BOUNDS_TIGHTENED:
@@ -1073,7 +1075,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    return true;
 }
 
-bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_idx) const
+bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const
 {
    const int type = reductions.at(reduction_idx);
    assert( type == FIXED_COLUMN );
@@ -1117,6 +1119,7 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
    double col_times_duals = 0.0;
    if( col.isLinkingCol() )
    {
+      assert( PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD) );
       /* we need to synchronize the column times duals in this case */
       if( my_rank == 0 )
          col_times_duals = col_storage.multColTimesVec(stored_col, dynamic_cast<const StochVector&>(*original_vars.y),
@@ -1133,6 +1136,14 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
             dynamic_cast<const StochVector&>(*original_vars.z));
    }
    const double reduced_costs = obj_coeff - col_times_duals;
+
+   /* adjust slacks in inequalities */
+   /* add col * value to slacks */
+   /* for linking rows we have to store the slack changes if they are not happening in the root node */
+   if( col.isLinkingCol() )
+      col_storage.axpyAtCol( 1.0, nullptr, &dynamic_cast<StochVector&>(*original_vars.s), nullptr, nullptr, value, stored_col );
+   else
+      col_storage.axpyAtCol( 1.0, nullptr, &dynamic_cast<StochVector&>(*original_vars.s), nullptr, &buffer_slacks, value, stored_col );
 
    /* set duals of bounds of x */
    double& gamma = getSimpleVecFromColStochVec(original_vars.gamma, col);
@@ -1265,6 +1276,7 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
    const double xupp_old = float_values.at(first_float_val + 3);
 
    /* set x value - bound is tight - compute slacks of x - set duals to zero */
+   assert( PIPSisEQ( getSimpleVecFromColStochVec(original_vars.x, col), value) );
    getSimpleVecFromColStochVec(original_vars.x, col) = value;
 
    /* set slacks for x bounds */
@@ -1281,12 +1293,12 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
    assert( PIPSisZero(v) || PIPSisZero(w) );
 
    /* adjust activity of row / slack of row */
-   const bool local_linking_row = row.isLinkingRow() && !col.isLinkingCol();
-   const double val_times_coeff = value * coeff;
-   if( local_linking_row )
-      buffer_slacks[row.getIndex()] += val_times_coeff;//store in buffer
-   else
-      getSimpleVecFromRowStochVec(original_vars.s, row) += val_times_coeff;
+//   const bool local_linking_row = row.isLinkingRow() && !col.isLinkingCol();
+//   const double val_times_coeff = value * coeff;
+//   if( local_linking_row )
+//      buffer_slacks[row.getIndex()] += val_times_coeff;//store in buffer
+//   else
+//      getSimpleVecFromRowStochVec(original_vars.s, row) += val_times_coeff;
 
    /* if a bound is no longer tight we do not have to adjust the respective duals since these should be zero anyway */
    if( !PIPSisZero(v) )
@@ -2052,7 +2064,7 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
    return true;
 }
 
-bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original_vars, const sData& original_problem, int reduction_idx ) const
+bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const
 {
    const int type = reductions.at(reduction_idx);
    assert( type == FREE_COLUMN_SINGLETON_INEQUALITY_ROW );
@@ -2101,7 +2113,7 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
    {
       assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
 
-      if( col.isCol() )
+      if( col.isCol() && (!col.isLinkingCol() || my_rank == 0) )
          row_value = row_storage.multRowTimesVec( row_stored, dynamic_cast<const StochVector&>(*original_vars.x) );
       else
          row_value = row_storage.multLinkingRowTimesVecWithoutBl0( index_stored_row, dynamic_cast<const StochVector&>(*original_vars.x) );
@@ -2147,18 +2159,26 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
 
       const double row_slack = row_value + coeff * x_val;
 
-      if( row.isLinkingRow() )
+      if( row.isLinkingRow() && !col.isLinkingCol() )
       {
          const double row_slack_recieve = PIPS_MPIgetSum( row_slack, MPI_COMM_WORLD );
          assert( row_slack_recieve == row_slack );
+
+         /* we just recomputed the slack */
+         buffer_slacks[row.getIndex()] = 0;
       }
 
       getSimpleVecFromRowStochVec(original_vars.s, row) = row_slack;
    }
    else
    {
+      assert( row.isLinkingRow() );
+
       const double row_slack = PIPS_MPIgetSum( 0.0, MPI_COMM_WORLD );
       getSimpleVecFromRowStochVec(original_vars.s, row) = row_slack;
+
+      /* we just recomputed the slack */
+      buffer_slacks[row.getIndex()] = 0;
    }
 
    /* compute slacks for bounds and row */

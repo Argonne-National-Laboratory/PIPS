@@ -1363,20 +1363,22 @@ void PresolveData::fixEmptyColumn(const INDEX& col, double val)
       assert( getSimpleVecFromColStochVec(*nnzs_col, node)[col_index] == 0 );
 }
 
+void PresolveData::startColumnFixation()
+{
+   if( postsolver )
+      postsolver->putLinkingSlackSyncEvent();
+}
+
 void PresolveData::fixColumn( const INDEX& col, double value)
 {
    assert( col.isCol() );
-   assert( -1 <= col.getNode() && col.getNode() < nChildren );
-   assert( 0 <= col.getIndex() );
+   assert( col.hasValidNode(nChildren) );
 
    if( col.isLinkingCol() )
       assert( PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD) );
 
    if( TRACK_COLUMN(col) )
-   {
       std::cout << "TRACKING_COLUMN: " << col << " got fixed to " << value << std::endl;
-   }
-
    
    /* current upper and lower bound as well as column - linking variables have to be done by all processes simultaneously because communication in postsolve is required */
    if(postsolver)
