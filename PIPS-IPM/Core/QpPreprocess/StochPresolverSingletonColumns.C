@@ -64,8 +64,6 @@ void StochPresolverSingletonColumns::applyPresolving()
       presData.getSingletonCols().pop();
    }
 
-   presData.getPresProb().writeToStreamDense(std::cout);
-
    /* check for local singletons and communicate */
    PIPS_MPIgetLogicOrInPlace(local_singletons, MPI_COMM_WORLD);
    if(local_singletons)
