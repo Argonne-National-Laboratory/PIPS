@@ -2178,8 +2178,8 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
 
 void PresolveData::removeRedundantParallelRow( const INDEX& rm_row, const INDEX& par_row )
 {
-   assert(rm_row.isRow());
-   assert(par_row.isRow());
+   assert( rm_row.isRow() );
+   assert( par_row.isRow() );
    assert( !wasRowRemoved(rm_row) );
    assert( !wasRowRemoved(par_row) );
 

@@ -10,7 +10,7 @@ parameter g(j) obj coefficients / j1 1, j2 1, j3 1, j4 1, j5 1, j6 1, j7 1, j8 1
           cupp(i) c right hand side   / i1 0, i2 100, i3 100, i4 100, i5 100, i6 100, i7 100, i8 1000, i9 100, i10 100, i11 100, i12 100, i13 100, i14 100, i15 100, i16 100, i17 100 /
 
 
-* in this example the parallel row presolver should detect two parallel equality rows - one in B0 and one in B2 and delete them from the system
+* in this example the parallel row presolver should detect 3 redundant inequality rows
 Table A(i,j)
     j1    j2    j3     j4    j5    j6    j7    j8    j9   j10   j11   j12   j13
 i1        -1   0.5    -1 
