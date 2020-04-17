@@ -75,77 +75,73 @@ void StochPostsolver::notifyRowModified( const INDEX& row )
 {
    assert(row.isRow());
    if(row.getSystemType() == EQUALITY_SYSTEM)
-      getSimpleVecFromRowStochVec(*eq_row_marked_modified, row.getNode(), row.getLinking())[row.getIndex()] = 1;
+      getSimpleVecFromRowStochVec(*eq_row_marked_modified, row) = 1;
    else
-      getSimpleVecFromRowStochVec(*ineq_row_marked_modified, row.getNode(), row.getLinking())[row.getIndex()] = 1;
+      getSimpleVecFromRowStochVec(*ineq_row_marked_modified, row) = 1;
 }
 
 void StochPostsolver::notifyColModified( const INDEX& col )
 {
    assert(col.isCol());
-   getSimpleVecFromColStochVec(*column_marked_modified, col.getNode())[col.getIndex()] = 1;
+   getSimpleVecFromColStochVec(*column_marked_modified, col) = 1;
 }
 
 bool StochPostsolver::isRowModified( const INDEX& row) const
 {
    assert(row.isRow());
    if(row.getSystemType() == EQUALITY_SYSTEM)
-      return getSimpleVecFromRowStochVec(*eq_row_marked_modified, row.getNode(), row.getLinking())[row.getIndex()] == 1;
+      return getSimpleVecFromRowStochVec(*eq_row_marked_modified, row) == 1;
    else
-      return getSimpleVecFromRowStochVec(*ineq_row_marked_modified, row.getNode(), row.getLinking())[row.getIndex()] == 1;
+      return getSimpleVecFromRowStochVec(*ineq_row_marked_modified, row) == 1;
 }
 
 void StochPostsolver::markRowClean( const INDEX& row )
 {
    assert(row.isRow());
    if(row.getSystemType() == EQUALITY_SYSTEM)
-      getSimpleVecFromRowStochVec(*eq_row_marked_modified, row.getNode(), row.getLinking())[row.getIndex()] = -1;
+      getSimpleVecFromRowStochVec(*eq_row_marked_modified, row) = -1;
    else
-      getSimpleVecFromRowStochVec(*ineq_row_marked_modified, row.getNode(), row.getLinking())[row.getIndex()] = -1;
+      getSimpleVecFromRowStochVec(*ineq_row_marked_modified, row) = -1;
 }
 
 void StochPostsolver::markColClean( const INDEX& col )
 {
    assert(col.isCol());
-   getSimpleVecFromColStochVec(*col_stored_last_at, col.getNode())[col.getIndex()] = -1;
+   getSimpleVecFromColStochVec(*col_stored_last_at, col) = -1;
 }
 
 bool StochPostsolver::isColModified( const INDEX& col) const
 {
    assert(col.isCol());
-   return getSimpleVecFromColStochVec(*column_marked_modified, col.getNode())[col.getIndex()] == 1;
+   return getSimpleVecFromColStochVec(*column_marked_modified, col) == 1;
 }
 
 int StochPostsolver::storeRow( const INDEX& row, const StochGenMatrix& matrix_row)
 {
    assert(row.isRow());
-   const int node = row.getNode();
-   const bool linking_row = row.getLinking();
-   const int row_index = row.getIndex();
-   const SystemType system_type = row.getSystemType();
 
    if( isRowModified(row) )
    {
       markRowClean(row);
 
       const int stored_at = row_storage.storeRow(row, matrix_row);
-      if( system_type == EQUALITY_SYSTEM )
-         getSimpleVecFromRowStochVec(*eq_row_stored_last_at, node, linking_row)[row_index] = stored_at;
+      if( row.inEqSys() )
+         getSimpleVecFromRowStochVec(*eq_row_stored_last_at, row) = stored_at;
       else
-         getSimpleVecFromRowStochVec(*ineq_row_stored_last_at, node, linking_row)[row_index] = stored_at;
+         getSimpleVecFromRowStochVec(*ineq_row_stored_last_at, row) = stored_at;
       return stored_at;
    }
    else
    {
-      if(system_type == EQUALITY_SYSTEM)
+      if( row.inEqSys() )
       {
-         assert(getSimpleVecFromRowStochVec(*eq_row_stored_last_at, node, linking_row)[row_index] != -1);
-         return getSimpleVecFromRowStochVec(*eq_row_stored_last_at, node, linking_row)[row_index];
+         assert(getSimpleVecFromRowStochVec(*eq_row_stored_last_at, row) != -1);
+         return getSimpleVecFromRowStochVec(*eq_row_stored_last_at, row);
       }
       else
       {
-         assert(getSimpleVecFromRowStochVec(*ineq_row_stored_last_at, node, linking_row)[row_index] != -1);
-         return getSimpleVecFromRowStochVec(*ineq_row_stored_last_at, node, linking_row)[row_index];
+         assert(getSimpleVecFromRowStochVec(*ineq_row_stored_last_at, row) != -1);
+         return getSimpleVecFromRowStochVec(*ineq_row_stored_last_at, row);
       }
    }
 }
@@ -153,22 +149,20 @@ int StochPostsolver::storeRow( const INDEX& row, const StochGenMatrix& matrix_ro
 int StochPostsolver::storeColumn( const INDEX& col, const StochGenMatrix& matrix_col_eq, const StochGenMatrix& matrix_col_ineq)
 {
    assert(col.isCol());
-   const int node = col.getNode();
-   const int col_index = col.getIndex();
 
    if( isColModified(col) )
    {
       markColClean(col);
       const int stored_at = col_storage.storeCol(col, matrix_col_eq, matrix_col_ineq);
 
-      getSimpleVecFromColStochVec(*col_stored_last_at, node)[col_index] = stored_at;
+      getSimpleVecFromColStochVec(*col_stored_last_at, col) = stored_at;
 
       return stored_at;
    }
    else
    {
-      assert(getSimpleVecFromColStochVec(*col_stored_last_at, node)[col_index] != -1);
-      return getSimpleVecFromColStochVec(*col_stored_last_at, node)[col_index];
+      assert(getSimpleVecFromColStochVec(*col_stored_last_at, col) != -1);
+      return getSimpleVecFromColStochVec(*col_stored_last_at, col);
    }
 }
 
@@ -2211,10 +2205,10 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
    const INDEX& row1 = indices.at(first_index);
    const INDEX& row2 = indices.at(first_index + 1);
 
-   assert(row1.isRow());
-   assert(row2.isRow());
-   assert(row1.inInEqSys());
-   assert(row2.inInEqSys());
+   assert( row1.isRow() );
+   assert( row2.isRow() );
+   assert( row1.inInEqSys() );
+   assert( row2.inInEqSys() );
 
    const double clow_old = float_values.at(first_float_val);
    const double cupp_old = float_values.at(first_float_val + 1);
@@ -2223,8 +2217,15 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
    const double factor = float_values.at(first_float_val + 4);
 
    assert (!PIPSisZero(factor) );
-   assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row1) == 1 );
-   assert( getSimpleVecFromRowStochVec(*padding_origrow_inequality, row2) == 1 );
+   assert( !wasRowRemoved(row1) );
+   assert( !wasRowRemoved(row2) );
+
+   bool clow_tightened_by_row2 = PIPSisLT( clow_old, clow_new );
+   bool cupp_tightened_by_row2 = PIPSisLT( cupp_new, cupp_old );
+   if( clow_old == INF_NEG_PRES && clow_new != INF_NEG_PRES )
+      assert( clow_tightened_by_row2 );
+   if( cupp_old == INF_POS_PRES && cupp_new != INF_POS_PRES )
+      assert( cupp_tightened_by_row2 );
 
    /* recompute duals and slack of both rows - if one bound was tight and thus the dual non-zero we shift it to the row originally implying the bound */
    double& z_row1 = getSimpleVecFromRowStochVec(original_vars.z, row1);
@@ -2248,17 +2249,13 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
    assert( PIPSisZero(pi_row2) );
    assert( PIPSisZero(lambda_row2) );
 
-   const bool clow_impied_by_row2 = (clow_old != clow_new);
-   const bool cupp_impied_by_row2 = (cupp_old != cupp_new);
-
    if( PIPSisLT(factor, 0.0) )
       std::swap(lambda_row2, pi_row2);
 
-   /* if parallel row is tight on a bounds implied by another row we have to move the multipliers to the implying row */
-   if( clow_impied_by_row2 && PIPSisZero(t_row1) )
+   /* if a bound was implied by row2 we have to shift the dual multiplies over to the implying row */
+   if( clow_tightened_by_row2 )
    {
       assert( PIPSisLT(clow_old, clow_new) );
-      assert( PIPSisZero(t_row2) );
 
       /* adjust slacks */
       if( clow_old == INF_NEG_PRES )
@@ -2271,15 +2268,14 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
       z_row2 += lambda_row1 * factor;
 
       lambda_row2 = lambda_row1 * factor;
-      lambda_row1 = 0;
+      lambda_row1 = 0.0;
 
       assert( PIPSisZeroFeas(t_row2 * lambda_row2) );
    }
 
-   if( cupp_impied_by_row2 && PIPSisZero(u_row1) )
+   if( cupp_tightened_by_row2 )
    {
       assert( PIPSisLT(cupp_new, cupp_old) );
-      assert( PIPSisZero(u_row2) );
 
       /* adjust slacks */
       if( cupp_old == INF_POS_PRES )
