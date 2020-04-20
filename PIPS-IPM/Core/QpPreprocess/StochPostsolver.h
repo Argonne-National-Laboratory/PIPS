@@ -168,7 +168,7 @@ private:
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
       bool allVariablesSet(const sVars& vars) const;
       bool complementarySlackVariablesMet(const sVars& vars, const INDEX& col) const;
-      bool complementarySlackRowMet(const sVars& vars, const INDEX& row) const;
+      bool complementarySlackRowMet(const sVars& vars, const INDEX& row, double tol = postsolve_tol ) const;
 
       bool sameNonZeroPatternDistributed(const StochVector& svec) const; // TODO: move
       bool sameNonZeroPatternDistributed(const SimpleVector& vec) const; // TODO: move

@@ -2269,10 +2269,6 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
 
       lambda_row2 = lambda_row1 * factor;
       lambda_row1 = 0.0;
-
-      if( !PIPSisZero(t_row2 * lambda_row2, postsolve_tol) )
-         std::cout << t_row2 << " " << lambda_row2 << " " << postsolve_tol << std::endl;
-//      assert( PIPSisZeroFeas(t_row2 * lambda_row2) );
    }
 
    if( cupp_tightened_by_row2 )
@@ -2291,13 +2287,10 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
 
       pi_row2 = pi_row1 * factor;
       pi_row1 = 0.0;
-
-      if( !PIPSisZero(u_row2 * pi_row2, postsolve_tol) )
-         std::cout << u_row2 << " " << pi_row2 << " " << postsolve_tol << std::endl;
-//      assert( PIPSisZeroFeas(u_row2 * pi_row2) );
    }
 
-   assert( complementarySlackRowMet(original_vars, row2) );
+   /* check slacks - these might have increased by the parallelity factor */
+   assert( complementarySlackRowMet(original_vars, row2, postsolve_tol * factor) );
    assert( complementarySlackRowMet(original_vars, row1) );
    return true;
 }
@@ -2596,7 +2589,7 @@ bool StochPostsolver::complementarySlackVariablesMet(const sVars& vars, const IN
    return std::fabs(v * gamma) < postsolve_tol && std::fabs(w * phi) < postsolve_tol ;
 }
 
-bool StochPostsolver::complementarySlackRowMet(const sVars& vars, const INDEX& row) const
+bool StochPostsolver::complementarySlackRowMet(const sVars& vars, const INDEX& row, double tol) const
 {
    assert( row.isRow() );
    assert( !wasRowRemoved(row) );
@@ -2606,7 +2599,7 @@ bool StochPostsolver::complementarySlackRowMet(const sVars& vars, const INDEX& r
    const double lambda = getSimpleVecFromRowStochVec(vars.lambda, row);
    const double pi = getSimpleVecFromRowStochVec(vars.pi, row);
 
-   return std::fabs(t * lambda) < postsolve_tol && std::fabs(u * pi) < postsolve_tol;
+   return std::fabs(t * lambda) < tol && std::fabs(u * pi) < tol;
 }
 
 /// fills vars_orig with vars_reduced padded with zeros - padding is done via the padding_map
