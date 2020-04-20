@@ -1157,7 +1157,7 @@ INDEX StochPresolverParallelRows::getRowSingletonVariable( const INDEX& row ) co
          return INDEX();
 
       if( col_index < nA )
-         return INDEX(COL, -1, col_index - nA );
+         return INDEX(COL, -1, col_index );
       else
          return INDEX(COL, row.getNode(), col_index - nA );
    }
@@ -1171,7 +1171,7 @@ INDEX StochPresolverParallelRows::getRowSingletonVariable( const INDEX& row ) co
          return INDEX();
 
       if( col_index < nA )
-         return INDEX(COL, -1, col_index - nA );
+         return INDEX(COL, -1, col_index );
       else
          return INDEX(COL, row.getNode(), col_index - nA );
    }
