@@ -2279,7 +2279,7 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
    }
 
    /* check slacks - these might have increased by the parallelity factor */
-   assert( complementarySlackRowMet(original_vars, row2, postsolve_tol * factor) );
+   assert( complementarySlackRowMet(original_vars, row2, postsolve_tol * std::fabs(factor) * 10) );
    assert( complementarySlackRowMet(original_vars, row1) );
    return true;
 }
@@ -2588,9 +2588,13 @@ bool StochPostsolver::complementarySlackRowMet(const sVars& vars, const INDEX& r
    const double lambda = getSimpleVecFromRowStochVec(vars.lambda, row);
    const double pi = getSimpleVecFromRowStochVec(vars.pi, row);
 
-   if( std::fabs(t * lambda) >= tol || std::fabs(u * pi) >= tol )
+   if( std::fabs(t * lambda) >= tol )
    {
       std::cout << t << " " << lambda << " " << t * lambda << " vs " << tol << std::endl;
+      return true;
+   }
+   if( std::fabs(u * pi) >= tol )
+   {
       std::cout << u << " " << pi << " " << u * pi << " vs " << tol << std::endl;
       return true;
    }
