@@ -2270,7 +2270,9 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
       lambda_row2 = lambda_row1 * factor;
       lambda_row1 = 0.0;
 
-      assert( PIPSisZeroFeas(t_row2 * lambda_row2) );
+      if( !PIPSisZero(t_row2 * lambda_row2, postsolve_tol) )
+         std::cout << t_row2 << " " << lambda_row2 << " " << postsolve_tol << std::endl;
+//      assert( PIPSisZeroFeas(t_row2 * lambda_row2) );
    }
 
    if( cupp_tightened_by_row2 )
@@ -2290,9 +2292,13 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
       pi_row2 = pi_row1 * factor;
       pi_row1 = 0.0;
 
-      assert( PIPSisZeroFeas(u_row2 * pi_row2) );
+      if( !PIPSisZero(u_row2 * pi_row2, postsolve_tol) )
+         std::cout << u_row2 << " " << pi_row2 << " " << postsolve_tol << std::endl;
+//      assert( PIPSisZeroFeas(u_row2 * pi_row2) );
    }
 
+   assert( complementarySlackRowMet(original_vars, row2) );
+   assert( complementarySlackRowMet(original_vars, row1) );
    return true;
 }
 
