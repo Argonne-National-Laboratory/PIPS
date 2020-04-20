@@ -2588,6 +2588,12 @@ bool StochPostsolver::complementarySlackRowMet(const sVars& vars, const INDEX& r
    const double lambda = getSimpleVecFromRowStochVec(vars.lambda, row);
    const double pi = getSimpleVecFromRowStochVec(vars.pi, row);
 
+   if( std::fabs(t * lambda) >= tol || std::fabs(u * pi) >= tol )
+   {
+      std::cout << t << " " << lambda << " " << t * lambda << " vs " << tol << std::endl;
+      std::cout << u << " " << pi << " " << u * pi << " vs " << tol << std::endl;
+      return true;
+   }
    return std::fabs(t * lambda) < tol && std::fabs(u * pi) < tol;
 }
 
