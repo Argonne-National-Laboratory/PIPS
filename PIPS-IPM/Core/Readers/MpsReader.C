@@ -854,7 +854,7 @@ void MpsReader::expectHeader( int lineType, const char expectName[],
 {
   ierr = 0;
   if( lineType == HEADERLINE ) {
-    char name[16];
+    char name[17];
     ierr = this->ParseHeaderLine( line, name ); 
     if( ierr == mpsok ) {
       if( !isLJustOf( name, expectName, 16 ) ) {
@@ -887,7 +887,7 @@ int MpsReader::acceptHeader( int lineType, const char acceptName[],
 			     char line[], int& ierr )
 {
   if( lineType == HEADERLINE ) {
-    char name[16];
+    char name[17];
     ierr = this->ParseHeaderLine( line, name );
     if( ierr != mpsok ) return 0;
     if( isLJustOf( name, acceptName, 16 ) ) {
@@ -1108,7 +1108,7 @@ void MpsReader::readProblemName2( char line[], int& iErr, int kindOfLine )
 {
     char *token;
     char *arrayOfTokens[2];
-    char tempLine[200];
+    char tempLine[201];
     char tag[6];
 
     if( HEADERLINE == kindOfLine ) {
@@ -1166,7 +1166,7 @@ void MpsReader::readObjectiveSense( char line[], int& iErr, int kindOfLine )
 {
     char *token;
     char *arrayOfTokens[1];
-    char tempLine[200];
+    char tempLine[201];
 
     if( DATALINE == kindOfLine ) {
         strncpy( tempLine, line, 200);
@@ -1952,7 +1952,7 @@ int MpsReader::ParseHeaderLine(char line[], char entry[] )
 int MpsReader::ParseHeaderLine2(char line[], char entry[] )
 {
     char *token;
-    char tempLine[200];
+    char tempLine[201];
 
     strncpy( tempLine, line, 200);
 
@@ -1960,9 +1960,9 @@ int MpsReader::ParseHeaderLine2(char line[], char entry[] )
     token = strtok( tempLine, " ");
 
     /* Copy the token into the input argument */
-    strcpy( entry, token);
+    strcpy( entry, token );
 
-    if( strlen( token) > 16 ) {
+    if( strlen(token) > 16 ) {
         fprintf( stderr,
                 "Extra characters outside prescribed fields at line %d.\n",
                 iline );
@@ -1977,7 +1977,7 @@ int MpsReader::ParseRowsLine2( char line[],  char code[], char name1[] )
 {
     char *token;
     char *arrayOfTokens[2];
-    char tempLine[200];
+    char tempLine[201];
 
     strncpy( tempLine, line, 200);
 
@@ -2118,7 +2118,7 @@ int MpsReader::ParseBoundsLine2( char line[], int& code, char name1[],
     char *token;
     char *arrayOfTokens[4];
     int ierr =0;
-    char tempLine[200];
+    char tempLine[201];
     char *endptr;
     char codeStr[4];
     bool boundsLabelPresent = false;
@@ -2381,7 +2381,7 @@ int MpsReader::ParseDataLine2( char line[],  char code[],
     char *token;
     char *arrayOfTokens[5];
     int ierr =0;
-    char tempLine[200];
+    char tempLine[201];
     char *endptr;
 
     *val1 = 0.0;
