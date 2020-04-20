@@ -796,8 +796,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
  */
 bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_idx) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == REDUNDANT_ROW );
+   assert( reductions.at(reduction_idx) == REDUNDANT_ROW );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
    const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
@@ -925,8 +924,7 @@ bool StochPostsolver::syncBoundsTightened(sVars& original_vars, int reduction_id
 
 bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reduction_idx, StochVector& phi, StochVector& gamma) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == BOUNDS_TIGHTENED );
+   assert( reductions.at(reduction_idx) == BOUNDS_TIGHTENED );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
    const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
@@ -955,7 +953,9 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    const INDEX stored_row(ROW, row.getNode(), index_stored_row, row.getLinking(), EQUALITY_SYSTEM);
 
    const double old_bound = float_values[first_float_val];
+#ifndef NDEBUG
    const double new_bound = float_values[first_float_val + 1];
+#endif
 
    const double curr_x = getSimpleVecFromColStochVec(original_vars.x, col);
 
@@ -1071,8 +1071,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
 
 bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == FIXED_COLUMN );
+   assert( reductions.at(reduction_idx) == FIXED_COLUMN );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
    const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
@@ -1163,8 +1162,7 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
  */
 bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == FIXED_EMPTY_COLUMN );
+   assert( reductions.at(reduction_idx) == FIXED_EMPTY_COLUMN );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
    const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
@@ -1240,14 +1238,13 @@ bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduct
 
 bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == FIXED_COLUMN_SINGLETON_FROM_INEQUALITY );
+   assert( reductions.at(reduction_idx) == FIXED_COLUMN_SINGLETON_FROM_INEQUALITY );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
-   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int first_index = start_idx_indices.at(reduction_idx);
 
 #ifndef NDEBUG
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
@@ -1258,14 +1255,14 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
 #endif
 
    const INDEX& col = indices.at(first_index);
-   const INDEX& row = indices.at(first_index + 1);
-   assert( row.isRow() );
-   assert( row.inInEqSys() );
+//   const INDEX& row = indices.at(first_index + 1); // TODO remove
+//   assert( row.isRow() );
+//   assert( row.inInEqSys() );
    assert( col.isCol() );
    assert( !wasColumnRemoved(col) );
 
    const double value = float_values.at(first_float_val);
-   const double coeff = float_values.at(first_float_val + 1);
+//   const double coeff = float_values.at(first_float_val + 1); // TODO : remove
    const double xlow_old = float_values.at(first_float_val + 2);
    const double xupp_old = float_values.at(first_float_val + 3);
 
@@ -1307,14 +1304,13 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
 
 bool StochPostsolver::postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == SINGLETON_EQUALITY_ROW );
+   assert( reductions.at(reduction_idx) == SINGLETON_EQUALITY_ROW );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
-   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int first_index = start_idx_indices.at(reduction_idx);
 
 #ifndef NDEBUG
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
@@ -1412,14 +1408,13 @@ bool StochPostsolver::postsolveSingletonEqualityRow(sVars& original_vars, int re
 
 bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int reduction_idx) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == SINGLETON_INEQUALITY_ROW );
+   assert( reductions.at(reduction_idx) == SINGLETON_INEQUALITY_ROW );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
-   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int first_index = start_idx_indices.at(reduction_idx);
 
 #ifndef NDEBUG
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
@@ -1442,7 +1437,9 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
    const double xlow_old = float_values.at(first_float_val);
    const double xupp_old = float_values.at(first_float_val + 1);
    const double xlow_new = float_values.at(first_float_val + 2);
+#ifndef NDEBUG
    const double xupp_new = float_values.at(first_float_val + 3);
+#endif
    const double coeff = float_values.at(first_float_val + 4);
 
    assert( !PIPSisZero(coeff) || coeff == NAN );
@@ -1458,7 +1455,9 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
          getSimpleVecFromColStochVec(original_vars.phi, col);
 
    const double old_bound = lower_bound_changed ? xlow_old : xupp_old;
-   const double new_bound = lower_bound_changed ? xlow_new : xupp_new;
+#ifndef NDEBUG
+   const double new_bound = lower_bound_changed ? xlow_new : xupp_new; // TODO : remove
+#endif
    assert( std::fabs(new_bound) < std::fabs(old_bound) );
 
    double error_in_reduced_costs = 0.0;
@@ -1511,8 +1510,7 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
 bool StochPostsolver::postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx) const
 {
    /* row can be an equality row but then it must have clow == cupp */
-   const int type = reductions.at(reduction_idx);
-   assert( type == FREE_COLUMN_SINGLETON_EQUALITY );
+   assert( reductions.at(reduction_idx) == FREE_COLUMN_SINGLETON_EQUALITY );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
    const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
@@ -1652,14 +1650,13 @@ bool StochPostsolver::postsolveFreeColumnSingletonEquality(sVars& original_vars,
 
 bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == NEARLY_PARALLEL_ROW_SUBSTITUTION );
+   assert( reductions.at(reduction_idx) == NEARLY_PARALLEL_ROW_SUBSTITUTION );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
-   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int first_index = start_idx_indices.at(reduction_idx);
 
 #ifndef NDEBUG
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
@@ -1823,14 +1820,13 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
 
 bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED );
+   assert( reductions.at(reduction_idx) == NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
-   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int first_index = start_idx_indices.at(reduction_idx);
 
 #ifndef NDEBUG
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
@@ -2060,8 +2056,7 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
 
 bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == FREE_COLUMN_SINGLETON_INEQUALITY_ROW );
+   assert( reductions.at(reduction_idx) == FREE_COLUMN_SINGLETON_INEQUALITY_ROW );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
    const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
@@ -2155,9 +2150,10 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
 
       if( row.isLinkingRow() && !col.isLinkingCol() )
       {
+#ifndef NDEBUG
          const double row_slack_recieve = PIPS_MPIgetSum( row_slack, MPI_COMM_WORLD );
          assert( row_slack_recieve == row_slack );
-
+#endif
          /* we just recomputed the slack */
          buffer_slacks[row.getIndex()] = 0;
       }
@@ -2185,14 +2181,13 @@ bool StochPostsolver::postsolveFreeColumnSingletonInequalityRow( sVars& original
 
 bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const
 {
-   const int type = reductions.at(reduction_idx);
-   assert( type == PARALLEL_ROWS_BOUNDS_TIGHTENED );
+   assert( reductions.at(reduction_idx) == PARALLEL_ROWS_BOUNDS_TIGHTENED );
 
    const unsigned int first_float_val = start_idx_float_values.at(reduction_idx);
-   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int first_index = start_idx_indices.at(reduction_idx);
 
 #ifndef NDEBUG
+   const unsigned int first_int_val = start_idx_int_values.at(reduction_idx);
    const unsigned int next_first_float_val = start_idx_float_values.at(reduction_idx + 1);
    const unsigned int next_first_int_val = start_idx_int_values.at(reduction_idx + 1);
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
@@ -2239,12 +2234,6 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
    double& lambda_row2 = getSimpleVecFromRowStochVec(original_vars.lambda, row2);
    double& pi_row2 = getSimpleVecFromRowStochVec(original_vars.pi, row2);
 
-#ifndef NDEBUG
-   const double& t_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(original_vars.u, row2) :
-         getSimpleVecFromRowStochVec(original_vars.t, row2);
-   const double& u_row2 = PIPSisLT(factor, 0.0) ? getSimpleVecFromRowStochVec(original_vars.t, row2) :
-         getSimpleVecFromRowStochVec(original_vars.u, row2);
-#endif
    assert( PIPSisZero(z_row2) );
    assert( PIPSisZero(pi_row2) );
    assert( PIPSisZero(lambda_row2) );
