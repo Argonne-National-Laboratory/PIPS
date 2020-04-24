@@ -881,7 +881,6 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                }
                else if( row1.inInEqSys() && row2.inInEqSys() )
                {
-                  continue;
                   if( rowContainsSingletonVariable(row1) && rowContainsSingletonVariable(row2) )
                      removed = twoNearlyParallelInequalityRows(row1, row2);
                   else if( !rowContainsSingletonVariable(row1) && !rowContainsSingletonVariable(row2) )
@@ -889,7 +888,6 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                }
                else
                {
-                  continue;
                   assert( (row1.inEqSys() && row2.inInEqSys()) ||
                      (row1.inInEqSys() && row2.inEqSys()) );
 
@@ -1332,16 +1330,16 @@ bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const IN
    assert( col.isCol() );
    assert( !PIPSisZero(a_col) );
 
-   double xlow_new = INF_NEG_PRES;
-   double xupp_new = INF_POS_PRES;
-
    const int row_eq_index = row_eq.getIndex();
    const int row_ineq_index = row_ineq.getIndex();
 
    const double s = (*norm_factorA)[row_eq_index] / (*norm_factorC)[row_ineq_index];
    const double faq =  s * a_col;
 
-   if( PIPSisLT(0, faq) )
+   double xlow_new = (s < 0) ? INF_POS_PRES : INF_NEG_PRES;
+   double xupp_new = (s < 0) ? INF_NEG_PRES : INF_POS_PRES;
+
+   if( PIPSisLT(0.0, faq) )
    {
       if( !PIPSisZero((*norm_iclow)[row_ineq_index]) )
          xupp_new = ( (*norm_b)[row_eq_index] - (*norm_clow)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
@@ -1355,6 +1353,10 @@ bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const IN
       if( !PIPSisZero((*norm_icupp)[row_ineq_index]) )
          xupp_new = ( (*norm_b)[row_eq_index] - (*norm_cupp)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
    }
+
+   /* if the normalization factor was smaller equal 0 bounds have to be swapped */
+   if( s < 0 )
+      std::swap(xupp_new, xlow_new);
 
    presData.tightenBoundsNearlyParallelRows( row_eq, row_ineq, col, INDEX(), xlow_new, xupp_new, INF_POS_PRES, INF_POS_PRES, s ) ;
 

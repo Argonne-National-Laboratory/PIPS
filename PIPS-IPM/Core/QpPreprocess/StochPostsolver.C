@@ -1987,8 +1987,7 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
       }
    }
 
-   assert( xlow_implied != INF_NEG_PRES );
-   assert( xupp_implied != INF_POS_PRES );
+   assert( xlow_implied != INF_NEG_PRES || xupp_implied != INF_POS_PRES );
    assert( PIPSisLE(xlow_col1, xlow_implied, postsolve_tol) );
    assert( PIPSisLE(xupp_implied, xupp_col1, postsolve_tol) );
 
@@ -1998,8 +1997,10 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
    const double old_slack_lower = getSimpleVecFromColStochVec(original_vars.v, col1);
    const double old_slack_upper = getSimpleVecFromColStochVec(original_vars.w, col1);
 #endif
+
    assert( complementarySlackVariablesMet(original_vars, col1, postsolve_tol) );
-   assert( complementarySlackVariablesMet(original_vars, col2, postsolve_tol) );
+   if( col2.isCol() )
+      assert( complementarySlackVariablesMet(original_vars, col2, postsolve_tol) );
 
    /* lower bound was implied by substituted column + it's row */
    if( PIPSisLT( xlow_col1, xlow_implied ) )
@@ -2158,7 +2159,8 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
       }
    }
 
-   assert( complementarySlackVariablesMet(original_vars, col2, postsolve_tol) );
+   if( col2.isCol() )
+      assert( complementarySlackVariablesMet(original_vars, col2, postsolve_tol) );
 
    return true;
 }

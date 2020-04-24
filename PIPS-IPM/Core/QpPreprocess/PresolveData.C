@@ -2067,8 +2067,8 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
       const double xlow_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->blx, col2) : INF_NEG_PRES;
       const double xupp_col2 = col2.isCol() ? getSimpleVecFromColStochVec(*presProb->bux, col2) : INF_POS_PRES;
 
-      assert( PIPSisLE(xlow_col1, xlow_new) );
-      assert( PIPSisLE(xupp_new, xupp_col1) );
+      /* one of the bounds has to be a tightening one */
+      assert( PIPSisLE(xlow_col1, xlow_new) || PIPSisLE(xupp_new, xupp_col1) );
 
       if( col1.isCol() )
       {
