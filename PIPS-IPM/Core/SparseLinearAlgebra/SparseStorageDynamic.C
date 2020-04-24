@@ -747,12 +747,12 @@ void SparseStorageDynamic::rebuildSpareStructure(int guaranteed_spare)
 
    assert( (len - len_free) * spareRatio + m * guaranteed_spare < std::numeric_limits<int>::max() );
 
-   const int size_for_spare = static_cast<int>((len - len_free) * spareRatio) + m * guaranteed_spare;
+   const int size_for_spare = static_cast<int>((len - len_free) * (1.0 + spareRatio) ) + m * guaranteed_spare;
 
    while( size_for_spare > len_free )
       extendStorageValues();
 
-   /* shit entries and restore the sparse storage pattern with spareRatio */
+   /* shift entries and restore the sparse storage pattern with spareRatio */
 
    /* copies of current arrays */
    const std::vector<double> M_copy(M, M + len);
