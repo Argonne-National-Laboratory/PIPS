@@ -2148,11 +2148,11 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
    const double val_offset = translation * obj_col2;
    const double change_obj_var1 = scalar * obj_col2;
 
-   bool col1_at_root = (col1.isLinkingCol() && row1.getNode() == -1);
+   bool col1_at_root = col1.isEmpty() ? false : (col1.isLinkingCol() && row1.getNode() == -1);
    bool col2_at_root = (col2.isLinkingCol() && row1.getNode() == -1);
 
    /* fix col2 if coeff_col1 == 0 */
-   if( !col1.isCol() )
+   if( col1.isEmpty() )
       updateBoundsVariable(col2, translation, translation);
    else
    {
@@ -2162,7 +2162,6 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
       /* add col1 with coefficient scalar * coeff_col2 to row */
       const double coeff_col1_row2 = scalar * coeff_col2;
       addCoeffColToRow( coeff_col1_row2, col1, row2 );
-
 
       /* remove old entry from matrix */
       const double offset = translation * coeff_col2;
