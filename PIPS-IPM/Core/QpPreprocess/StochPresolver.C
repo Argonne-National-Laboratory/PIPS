@@ -87,15 +87,15 @@ Data* StochPresolver::presolve()
    {
       /* singleton rows */
 //      presolverBS.applyPresolving();
-      presolverSR.applyPresolving();
+//      presolverSR.applyPresolving();
       presolverParallelRow.applyPresolving();
-      presolverSC.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverColFix.applyPresolving();
+//      presolverSC.applyPresolving();
+//      presolverColFix.applyPresolving();
+//      presolverSR.applyPresolving();
    }
    // presData.getPresProb().writeToStreamDense(std::cout);
    // before the finalize call fix all empty rows and columns not yet fixed
+   presolverColFix.applyPresolving();
    presolverCleanup.applyPresolving();
    
    if( my_rank == 0 )
@@ -127,7 +127,7 @@ Data* StochPresolver::presolve()
 
    sData* finalPresData = presData.finalize();
 
-//   finalPresData->writeToStreamDense(std::cout);
+   finalPresData->writeToStreamDense(std::cout);
    
    assert( finalPresData );
    assert( finalPresData->isRootNodeInSync() );

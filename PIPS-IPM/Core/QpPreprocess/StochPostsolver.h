@@ -36,7 +36,9 @@ public:
       void notifyFixedEmptyColumn( const INDEX& col, double value, double obj_coeff, int ixlow, int ixupp, double lhs, double rhs);
 
       void putLinkingVarsSyncEvent();
-      void putLinkingSlackSyncEvent();
+      void putLinkingRowIneqSyncEvent();
+      void putLinkingRowEqSyncEvent();
+
       void notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double col_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
       void notifyFixedSingletonFromInequalityColumn( const INDEX& col, const INDEX& row, double value, double coeff, double xlow_old, double xupp_old );
       void notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double rhs, double coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
@@ -77,7 +79,7 @@ private:
 public:
       /// synchronization events
 
-      PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) const override;
+      PostsolveStatus postsolve(const Variables& reduced_solution, Variables& original_solution) override;
 private:
 
       const int my_rank;
@@ -101,8 +103,9 @@ private:
          FREE_COLUMN_SINGLETON_INEQUALITY_ROW = 13,
          PARALLEL_ROWS_BOUNDS_TIGHTENED = 14,
          NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED = 15,
-         LINKING_VARS_SYNC_EVENT = 16,
-         LINKING_SLACK_SYNC_EVENT = 17
+         LINKING_INEQ_ROW_SYNC_EVENT = 16,
+         LINKIN_EQ_ROW_SYNC_EVENT = 17,
+         LINKING_VARS_SYNC_EVENT = 18
       };
 
       const unsigned int n_rows_original;
@@ -145,29 +148,62 @@ private:
       StochVectorBase<int>* last_upper_bound_tightened;
       StochVectorBase<int>* last_lower_bound_tightened;
 
+      /// stuff for synchronization in-between processes
+      const int length_array_outdated_indicators;
+      bool* array_outdated_indicators;
+
+      /* local changes in linking variables */
+      bool& outdated_linking_vars;
+      int length_array_linking_var_changes;
+      double* array_linking_var_changes;
+      SimpleVectorHandle x_changes;
+      SimpleVectorHandle v_changes;
+      SimpleVectorHandle w_changes;
+      SimpleVectorHandle gamma_changes;
+      SimpleVectorHandle phi_changes;
+
+      /* local changes in equality linking rows */
+      bool& outdated_equality_linking_rows;
+      int length_array_eq_linking_row_changes;
+      double* array_eq_linking_row_changes;
+      SimpleVectorHandle y_changes;
+
+      /* local changes in inequality rows */
+      bool& outdated_inequality_linking_rows;
+      int length_array_ineq_linking_row_changes;
+      double* array_ineq_linking_row_changes;
+      SimpleVectorHandle z_changes;
+      SimpleVectorHandle s_changes;
+      SimpleVectorHandle t_changes;
+      SimpleVectorHandle u_changes;
+
       void finishNotify();
 
 /// postsolve operations
       bool postsolveRedundantRow(sVars& original_vars, int reduction_idx) const;
-      bool syncBoundsTightened(sVars& original_vars, int reduction_idx, StochVector& phi, StochVector& gamma) const;
-      bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx, StochVector& phi, StochVector& gamma) const;
-      bool postsolveFixedColumn(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks ) const;
+      bool syncBoundsTightened(sVars& original_vars, int reduction_idx);
+      bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx);
+      bool postsolveFixedColumn(sVars& original_vars, int reduction_idx);
       bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const;
-      bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const;
+      bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx);
       bool postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveSingletonInequalityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx) const;
       bool postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const;
       bool postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const;
-      bool postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx) const;
-      bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, int reduction_idx, SimpleVector& buffer_slacks) const;
+      bool postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx);
+      bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, int reduction_idx);
 
-      bool syncNewlySetLinkingVars(sVars& original_vars) const;
-      bool syncLinkingRowSlack(sVars& original_vars, SimpleVector& buffer_slacks) const;
+      bool syncLinkingVarChanges(sVars& original_vars);
+      bool syncEqLinkingRowChanges(sVars& original_vars);
+      bool syncIneqLinkingRowChanges(sVars& original_vars);
+
+      void addIneqRowDual(double& z, double& lambda, double& pi, double value) const;
+      void addIneqRowSlack(double& s, double& t, double& u, double clow, double cupp, double value) const;
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
       bool allVariablesSet(const sVars& vars) const;
-      bool complementarySlackVariablesMet(const sVars& vars, const INDEX& col) const;
+      bool complementarySlackVariablesMet(const sVars& vars, const INDEX& col, double tol = postsolve_tol) const;
       bool complementarySlackRowMet(const sVars& vars, const INDEX& row, double tol = postsolve_tol ) const;
 
       bool sameNonZeroPatternDistributed(const StochVector& svec) const; // TODO: move

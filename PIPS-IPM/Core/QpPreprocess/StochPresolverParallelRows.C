@@ -88,6 +88,8 @@ void StochPresolverParallelRows::applyPresolving()
    countRowsCols();
 #endif
 
+   presData.startParallelRowPresolve();
+
    /// first hash support of all rows then per hashbucket hash coeffs to find (nearly) parallel rows
    int n_removed_run = 0;
 
@@ -188,6 +190,7 @@ void StochPresolverParallelRows::applyPresolving()
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyBoundChanges();
    presData.allreduceAndApplyObjVecChanges();
+   presData.allreduceObjOffset();
 
    // TODO: add detection for linking constraints
 

@@ -1001,7 +1001,21 @@ bool PresolveData::reductionsEmpty()
 
       recv = PIPS_MPIgetSum(obj_offset_chgs, MPI_COMM_WORLD);
    }
-   return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0) && !postsolve_linking_row_propagation_needed;
+   if( outdated_obj_vector && my_rank == 0 )
+      std::cout << "Error: objective vector is outdated!" << std::endl;
+   if( outdated_activities && my_rank == 0 )
+      std::cout << "Error: activities are outdated!" << std::endl;
+   if( outdated_lhsrhs && my_rank == 0 )
+      std::cout << "Error: lhs_rhs outdated!" << std::endl;
+   if( outdated_linking_var_bounds && my_rank == 0 )
+      std::cout << "Error: linking var bounds outdated!" << std::endl;
+   if( outdated_nnzs && my_rank == 0 )
+      std::cout << "Error: non-zeros outdated!" << std::endl;
+   if( recv != 0.0 && my_rank == 0 )
+      std::cout << "Error: objcetive offset not synced!" << std::endl;
+
+   MPI_Barrier(MPI_COMM_WORLD);
+   return !outdated_obj_vector && !outdated_activities && !outdated_lhsrhs && !outdated_linking_var_bounds && !outdated_nnzs && (recv == 0.0) && !postsolve_linking_row_propagation_needed;
 }
 
 bool PresolveData::presDataInSync() const
@@ -1355,18 +1369,20 @@ void PresolveData::fixEmptyColumn(const INDEX& col, double val)
          assert(PIPSisLE(val, ubx));
 
       postsolver->notifyFixedEmptyColumn(col, val, obj_value, ixlow, ixupp, lbx, ubx);
+      assert( postsolver->wasColumnRemoved(col) );
    }
 
    removeColumn(col, val);
 
    if( node != -1)
       assert( getSimpleVecFromColStochVec(*nnzs_col, node)[col_index] == 0 );
+
 }
 
 void PresolveData::startColumnFixation()
 {
    if( postsolver )
-      postsolver->putLinkingSlackSyncEvent();
+      postsolver->putLinkingRowIneqSyncEvent();
 }
 
 void PresolveData::fixColumn( const INDEX& col, double value)
@@ -1806,7 +1822,7 @@ void PresolveData::changeNnzCounterRow(const INDEX& row, int amount, bool at_roo
    assert( row.isRow() );
    assert( row.hasValidNode(nChildren) );
 
-   if(amount == 0)
+   if( amount == 0 )
       return;
 
    /* linking constraints get stored */
@@ -2090,6 +2106,11 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
    updateBoundsVariable(col1, xlow_new, xupp_new);
 }
 
+void PresolveData::startParallelRowPresolve()
+{
+   if( postsolver )
+      postsolver->putLinkingVarsSyncEvent();
+}
 
 /* a singleton variable is substituted out of the problem and then it's original row can be removed from the problem */
 void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2,
@@ -2127,9 +2148,12 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
    const double val_offset = translation * obj_col2;
    const double change_obj_var1 = scalar * obj_col2;
 
+   bool col1_at_root = (col1.isLinkingCol() && row1.getNode() == -1);
+   bool col2_at_root = (col2.isLinkingCol() && row1.getNode() == -1);
+
    /* fix col2 if coeff_col1 == 0 */
    if( !col1.isCol() )
-      removeColumn( col2, translation );
+      updateBoundsVariable(col2, translation, translation);
    else
    {
       assert( col2.isCol() );
@@ -2139,8 +2163,15 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
       const double coeff_col1_row2 = scalar * coeff_col2;
       addCoeffColToRow( coeff_col1_row2, col1, row2 );
 
-      /* adjust right hand side / left hand side by  -d * coeff_col2 */
+
+      /* remove old entry from matrix */
       const double offset = translation * coeff_col2;
+
+      getSparseGenMatrix(row2, col2)->removeEntryAtRowCol(row2.getIndex(), col2.getIndex());
+      reduceNnzCounterRowBy( row2, 1, false );
+      reduceNnzCounterColumnBy( col2, 1, col2_at_root );
+
+      /* adjust right hand side / left hand side by  -d * coeff_col2 */
       if( row2.inInEqSys() )
       {
          if( !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->iclow, row2)) )
@@ -2151,27 +2182,27 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
       else
          getSimpleVecFromRowStochVec(*presProb->bA, row2) -= offset;
 
-      removeColumn( col2, 0.0 );
-      if( !col1.isLinkingCol() )
+
+      if( !col1.isLinkingCol() || col1_at_root )
       {
          getSimpleVecFromColStochVec(*presProb->g, col1) += change_obj_var1;
-         obj_offset_chgs += val_offset;
-      }
-      else if( row1.getNode() == -1 )
-      {
-         /* parallel rows in parent block - all processes should have detected this */
-         getSimpleVecFromColStochVec(*presProb->g, -1)[col1.getIndex()] += change_obj_var1;
-
-         // only add the objective offset for root as process ZERO:
-         if( my_rank == 0 )
-            obj_offset_chgs += val_offset;
+         objOffset += val_offset;
       }
       else
       {
-         /* var1 is a linking variable - store objective adaptions and allreduce them */
+         /* var1 is a linking variable - store objective adaption and allreduce them */
          (*objective_vec_chgs)[col1.getIndex()] += change_obj_var1;
          outdated_obj_vector = true;
          obj_offset_chgs += val_offset;
+      }
+
+      if( !col2.isLinkingCol() || col2_at_root )
+         getSimpleVecFromColStochVec(*presProb->g, col2) = 0.0;
+      else
+      {
+         (*objective_vec_chgs)[col2.getIndex()] -= getSimpleVecFromColStochVec(*presProb->g, col2);
+         assert( PIPSisZero( (*objective_vec_chgs)[col2.getIndex()] + getSimpleVecFromColStochVec(*presProb->g, col2) ) );
+         outdated_obj_vector = true;
       }
    }
 }
@@ -2262,7 +2293,7 @@ void PresolveData::startSingletonColumnPresolve()
    if( postsolver )
    {
       postsolver->putLinkingVarsSyncEvent();
-      postsolver->putLinkingSlackSyncEvent();
+      postsolver->putLinkingRowIneqSyncEvent();
    }
 }
 
@@ -2872,9 +2903,7 @@ void PresolveData::removeRow( const INDEX& row )
    if( row.inEqSys() )
    {
       if( !row.isLinkingRow() )
-      {
          assert( getSimpleVecFromRowStochVec(*nnzs_row_A, row) == 0 );
-      }
    }
    else
    {
@@ -3957,7 +3986,7 @@ void PresolveData::writeRowLocalToStreamDense(std::ostream& out, const INDEX& ro
    {
       if(node != -1)
       {
-         writeMatrixRowToStreamDense(out, *getSparseGenMatrix(row, INDEX(COL, -1, dummy_index)), node, row_index, getSimpleVecFromColStochVec(*presProb->ixupp, -1),
+         writeMatrixRowToStreamDense(out, *getSparseGenMatrix(row, INDEX(COL, -1, dummy_index)), -1, row_index, getSimpleVecFromColStochVec(*presProb->ixupp, -1),
             getSimpleVecFromColStochVec(*presProb->bux, -1), getSimpleVecFromColStochVec(*presProb->ixlow, -1), getSimpleVecFromColStochVec(*presProb->blx, -1));
       }
 

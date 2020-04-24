@@ -435,7 +435,6 @@ void StochPresolverModelCleanup::fixEmptyColumns()
             else
             {
                assert( PIPSisEQ( g[col_index], 0.0) );
-
                if( !PIPSisZero(ixlow[col_index]) )
                   presData.fixEmptyColumn(col, xlow[col_index]);
                else if( !PIPSisZero(ixlow[col_index]) )

@@ -973,7 +973,7 @@ void SparseGenMatrix::removeEntryAtRowCol( int row, int col )
 
    if( hasTransposed() )
    {
-      m_Mt->removeEntryAtRowCol(row, col);
+      m_Mt->removeEntryAtRowCol(col, row);
       assert( mStorageDynamic->getNVals() == m_Mt->getStorageDynamic()->getNVals() );
    }
 }

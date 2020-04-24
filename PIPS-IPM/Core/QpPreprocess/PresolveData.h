@@ -187,6 +187,7 @@ public :
       bool rowPropagatedBounds( const INDEX& row, const INDEX& col, double ubx, double lbx);
       void endBoundTightening();
 
+      void startParallelRowPresolve();
       void substituteVariableNearlyParallelRows(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar,
          double translation, double parallelity );
       void tightenBoundsNearlyParallelRows( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double xlow_new, double xupp_new, double scalar,
