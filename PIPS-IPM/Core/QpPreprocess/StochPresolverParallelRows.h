@@ -30,6 +30,42 @@ namespace rowlib
         rowWithColInd(int id, int offset, int lenA, const int* const colA, const double* const entA, int lenB, const int* const colB, const double* const entB)
             : id(id), offset_nA(offset), lengthA(lenA), colIndicesA(colA), norm_entriesA(entA),
               lengthB(lenB), colIndicesB(colB), norm_entriesB(entB)  {}
+
+        friend std::ostream& operator<< (std::ostream &out, const rowWithColInd& row)
+        {
+           out << "ID: " << row.id << ",offset_nA: " << row.offset_nA << ", A_col[";
+           for( int i = 0; i < row.lengthA; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.colIndicesA[i];
+           }
+           out << "], A_entr[";
+           for( int i = 0; i < row.lengthA; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.norm_entriesA[i];
+           }
+           out << "], B_col[";
+           for( int i = 0; i < row.lengthB; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.colIndicesB[i];
+           }
+           out << "], B_entr[";
+           for( int i = 0; i < row.lengthB; ++i )
+           {
+              if(i != 0 )
+                 out << ",";
+              out << row.norm_entriesB[i];
+           }
+           out << "]";
+           return out;
+        }
+
+
     };
 
     bool operator==(rowWithColInd const& a, rowWithColInd const& b);
@@ -119,6 +155,7 @@ private:
    void setNormalizedSingletonFlags(int node);
    void setNormalizedReductionPointers(int node);
    void updateExtendedPointersForCurrentNode(int node);
+   void deleteNormalizedTransposedMatrices(int node);
    void deleteNormalizedPointers(int node);
 
    void setExtendedPointersToNull();

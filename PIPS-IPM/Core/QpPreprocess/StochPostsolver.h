@@ -188,8 +188,8 @@ private:
       bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx);
       bool postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveSingletonInequalityRow(sVars& original_vars, int reduction_idx) const;
-      bool postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx) const;
-      bool postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx) const;
+      bool postsolveNearlyParallelRowSubstitution(sVars& original_vars, int reduction_idx);
+      bool postsolveNearlyParallelRowBoundsTightened(sVars& original_vars, int reduction_idx);
       bool postsolveParallelRowsBoundsTightened(sVars& original_vars, int reduction_idx) const;
       bool postsolveFreeColumnSingletonEquality(sVars& original_vars, int reduction_idx);
       bool postsolveFreeColumnSingletonInequalityRow(sVars& original_vars, int reduction_idx);

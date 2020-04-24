@@ -23,7 +23,7 @@ namespace rowlib
    std::size_t hash_value(rowWithColInd const& row)
    {
       std::size_t seed = 0;
-      boost::hash_combine(seed, (row.lengthA+row.lengthB) );
+      boost::hash_combine(seed, (row.lengthA + row.lengthB) );
       for( int i = 0; i < row.lengthA; i++ )
          boost::hash_combine(seed, row.colIndicesA[i]);
       for( int i = 0; i < row.lengthB; i++ )
@@ -115,7 +115,6 @@ void StochPresolverParallelRows::applyPresolving()
          assert(norm_Cmat);
          assert(norm_Dmat);
          assert(normNnzRowC);
-
          insertRowsIntoHashtable( row_support_hashtable, norm_Cmat, norm_Dmat, INEQUALITY_SYSTEM, normNnzRowC, currNnzRowC );
 
          assert( static_cast<int>(row_support_hashtable.size()) <= mA + norm_Cmat->getM() );
@@ -149,7 +148,6 @@ void StochPresolverParallelRows::applyPresolving()
    presData.allreduceAndApplyLinkingRowActivities();
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceAndApplyBoundChanges();
-
    row_support_hashtable.clear();
    row_coefficients_hashtable.clear();
 
@@ -407,6 +405,12 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    /* remove singleton columns before normalization */
    removeSingletonVars();
 
+   /* the transposed matrices are only used for finding the singleton vars and for their removal - they don't need order restoration */
+   deleteNormalizedTransposedMatrices(node);
+   if( norm_Amat )
+      norm_Amat->restoreOrder();
+   norm_Bmat->restoreOrder();
+
    /* normalization of all rows */
    if( !presData.nodeIsDummy(node) )
    {
@@ -438,6 +442,22 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    }
 }
 
+void StochPresolverParallelRows::deleteNormalizedTransposedMatrices(int node)
+{
+   if( node == -1 )
+   {
+      delete norm_BmatTrans;
+      delete norm_DmatTrans;
+   }
+   else if( !presData.nodeIsDummy(node) )
+   {
+      delete norm_AmatTrans;
+      delete norm_BmatTrans;
+      delete norm_CmatTrans;
+      delete norm_DmatTrans;
+   }
+}
+
 void StochPresolverParallelRows::deleteNormalizedPointers(int node)
 {
    delete normNnzColParent;
@@ -447,11 +467,9 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
    {
       assert( norm_Bmat && norm_b );
       delete norm_Bmat;
-      delete norm_BmatTrans;
       delete norm_b;
       assert( norm_Dmat && norm_cupp && norm_clow && norm_icupp && norm_iclow );
       delete norm_Dmat;
-      delete norm_DmatTrans;
       delete norm_cupp;
       delete norm_clow;
       delete norm_icupp;
@@ -462,20 +480,13 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
       delete normNnzRowC;
       delete rowContainsSingletonVariableA;
       delete rowContainsSingletonVariableC;
-
-      return;
    }
-
+   else if( !presData.nodeIsDummy(node) )
    /* node != -1 */
-   bool childExists = false;
-   if( !presData.nodeIsDummy(node) )
    {
-      childExists = true;
       assert( norm_Amat && norm_Bmat && norm_b );
       delete norm_Amat;
-      delete norm_AmatTrans;
       delete norm_Bmat;
-      delete norm_BmatTrans;
       delete norm_b;
       delete norm_factorA;
       delete normNnzRowA;
@@ -483,9 +494,7 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
 
       assert( norm_Cmat && norm_Dmat && norm_cupp && norm_clow && norm_icupp && norm_iclow );
       delete norm_Cmat;
-      delete norm_CmatTrans;
       delete norm_Dmat;
-      delete norm_DmatTrans;
       delete norm_cupp;
       delete norm_clow;
       delete norm_icupp;
@@ -493,9 +502,7 @@ void StochPresolverParallelRows::deleteNormalizedPointers(int node)
       delete norm_factorC;
       delete normNnzRowC;
       delete rowContainsSingletonVariableC;
-   }
-   if( childExists )
-   {
+
       delete normNnzColChild;
       delete singletonCoeffsColChild;
    }
@@ -874,6 +881,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                }
                else if( row1.inInEqSys() && row2.inInEqSys() )
                {
+                  continue;
                   if( rowContainsSingletonVariable(row1) && rowContainsSingletonVariable(row2) )
                      removed = twoNearlyParallelInequalityRows(row1, row2);
                   else if( !rowContainsSingletonVariable(row1) && !rowContainsSingletonVariable(row2) )
@@ -881,6 +889,7 @@ void StochPresolverParallelRows::compareRowsInCoeffHashTable(int& nRowElims, int
                }
                else
                {
+                  continue;
                   assert( (row1.inEqSys() && row2.inInEqSys()) ||
                      (row1.inInEqSys() && row2.inEqSys()) );
 

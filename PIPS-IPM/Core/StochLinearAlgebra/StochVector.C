@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <iomanip>
 #include <limits>
 #include <math.h>
 #include "StochVector_fwd.h"
@@ -1878,6 +1879,9 @@ bool StochVectorBase<T>::isRootNodeInSync() const
    {
       if( !PIPSisEQ(sendbuf[i], recvbuf[i]) && (sendbuf[i] != recvbuf[i]) && !(std::isnan(sendbuf[i]) && std::isnan(recvbuf[i])) )
       {
+//         std::cout << std::setprecision(16);
+//         std::cout << sendbuf[i] << " != " << recvbuf[i] << std::endl;
+
          /* someone else had a higher value here */
          in_sync = false;
       }

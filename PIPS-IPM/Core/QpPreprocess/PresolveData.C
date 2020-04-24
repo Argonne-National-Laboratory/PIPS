@@ -2038,13 +2038,13 @@ void PresolveData::tightenBoundsNearlyParallelRows( const INDEX& row1, const IND
    if( row2.inInEqSys() )
    {
       assert( col1.isCol() );
-      assert(col2.isEmpty() );
+      assert( col2.isEmpty() );
       assert(scalar == INF_POS_PRES);
       assert(translation == INF_POS_PRES);
    }
    else
    {
-      assert( col1.isCol() || col2.isEmpty() );
+      assert( col1.isCol() || col1.isEmpty() );
       assert( col2.isCol() );
    }
 
