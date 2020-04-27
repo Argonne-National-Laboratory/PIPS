@@ -50,7 +50,7 @@ public:
       void notifyParallelColumns();
 
       void notifyNearlyParallelRowSubstitution( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation,
-            double obj_col2, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2, double parallel_factor );
+            double obj_col1, double obj_col2, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2, double parallel_factor );
       void notifyNearlyParallelRowBoundsTightened( const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double xlow_col1,
             double xupp_col1, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2, double scalar, double translation, double parallel_factor, double rhs,
             double clow, double cupp);
@@ -180,7 +180,7 @@ private:
       void finishNotify();
 
 /// postsolve operations
-      bool postsolveRedundantRow(sVars& original_vars, int reduction_idx) const;
+      bool postsolveRedundantRow(sVars& original_vars, int reduction_idx);
       bool syncBoundsTightened(sVars& original_vars, int reduction_idx);
       bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx);
       bool postsolveFixedColumn(sVars& original_vars, int reduction_idx);

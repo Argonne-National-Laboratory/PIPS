@@ -54,6 +54,7 @@ namespace rowlib
          value_to_hash += 10*( (int)trunc(mantisse*10000) );
          boost::hash_combine(seed, value_to_hash);
       }
+
       return seed;
    }
 }
@@ -152,7 +153,6 @@ void StochPresolverParallelRows::applyPresolving()
    row_coefficients_hashtable.clear();
 
    int n_removed_linking_run = 0;
-
    // for the A_0 and C_0 blocks:
    setNormalizedPointers(-1);
    assert(norm_Bmat); assert(norm_Dmat);
@@ -410,6 +410,10 @@ void StochPresolverParallelRows::setNormalizedPointers(int node)
    if( norm_Amat )
       norm_Amat->restoreOrder();
    norm_Bmat->restoreOrder();
+
+   if( norm_Cmat )
+      norm_Cmat->restoreOrder();
+   norm_Dmat->restoreOrder();
 
    /* normalization of all rows */
    if( !presData.nodeIsDummy(node) )
@@ -1239,7 +1243,6 @@ bool StochPresolverParallelRows::twoNearlyParallelInequalityRows( const INDEX& r
 
    assert( rowContainsSingletonVariable( row1 ) );
    assert( rowContainsSingletonVariable( row2 ) );
-
    const int row1_index = row1.getIndex();
    const int row2_index = row2.getIndex();
 
@@ -1262,13 +1265,12 @@ bool StochPresolverParallelRows::twoNearlyParallelInequalityRows( const INDEX& r
    if( PIPSisZero(a_col1) || PIPSisZero(a_col2) )
       return false;
 
-
-   /* clow_row1 = s * clow_row2 && clow_row1 = s * clow_row2 */
+   /* norm_clow_row1 = norm_clow_row2 && norm_clow_row1 = norm_clow_row2 */
    if( !PIPSisEQ( (*norm_iclow)[row1_index], (*norm_iclow)[row2_index] ) || !PIPSisEQ( (*norm_icupp)[row1_index], (*norm_icupp)[row2_index] ) )
       return false;
-   if( !PIPSisZero( (*norm_iclow)[row1_index] ) && !PIPSisEQ( (*norm_clow)[row1_index], s * (*norm_clow)[row2_index] ) )
+   if( !PIPSisZero( (*norm_iclow)[row1_index] ) && !PIPSisEQ( (*norm_clow)[row1_index], (*norm_clow)[row2_index] ) )
       return false;
-   if( !PIPSisZero( (*norm_icupp)[row1_index] ) && !PIPSisEQ( (*norm_cupp)[row1_index], s * (*norm_cupp)[row2_index] ) )
+   if( !PIPSisZero( (*norm_icupp)[row1_index] ) && !PIPSisEQ( (*norm_cupp)[row1_index], (*norm_cupp)[row2_index] ) )
       return false;
 
    const int col1_index = col1.getIndex();
@@ -1294,15 +1296,13 @@ bool StochPresolverParallelRows::twoNearlyParallelInequalityRows( const INDEX& r
    /* a_col1 * xlow_col1 = s * a_col2 * xlow_col2 */
    if( !PIPSisEQ(ixlow_col1, ixlow_col2) )
       return false;
-   if( !PIPSisZero(ixlow_col1) && !PIPSisZero(ixlow_col2) &&
-         !PIPSisEQ(a_col1 * xlow_col1, s * a_col2 * xlow_col2) )
+   if( !PIPSisZero(ixlow_col1) && !PIPSisEQ(a_col1 * xlow_col1, s * a_col2 * xlow_col2) )
       return false;
 
    /* a_col1 * xupp_col1 = s * a_col2 * xupp_col2 */
    if( !PIPSisEQ(ixupp_col1, ixupp_col2) )
       return false;
-   if( !PIPSisZero(ixupp_col1) && !PIPSisZero(ixupp_col2) &&
-         !PIPSisEQ(a_col1 * xupp_col1, s * a_col2 * xupp_col2) )
+   if( !PIPSisZero(ixupp_col1) && !PIPSisEQ(a_col1 * xupp_col1, s * a_col2 * xupp_col2) )
       return false;
 
    /* aggregate x_2: adapt objectiveCost(x_1) */

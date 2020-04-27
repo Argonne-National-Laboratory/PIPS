@@ -2126,6 +2126,7 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
 
    // todo : track row
 
+   const double obj_col1 = getSimpleVecFromColStochVec(*presProb->g, col1);
    const double obj_col2 = getSimpleVecFromColStochVec(*presProb->g, col2);
 
    if( postsolver )
@@ -2141,7 +2142,7 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
       if( PIPSisZero(getSimpleVecFromColStochVec(*presProb->ixupp, col2)) )
          assert(xupp_col2 == INF_POS_PRES);
 
-      postsolver->notifyNearlyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation, obj_col2, xlow_col2, xupp_col2, coeff_col1, coeff_col2, parallelity );
+      postsolver->notifyNearlyParallelRowSubstitution(row1, row2, col1, col2, scalar, translation, obj_col1, obj_col2, xlow_col2, xupp_col2, coeff_col1, coeff_col2, parallelity );
    }
 
    /* adapt the objective vector and the row2 */

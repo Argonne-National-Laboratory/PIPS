@@ -311,7 +311,7 @@ void StochPostsolver::notifyFreeColumnSingletonEquality( const INDEX& row, const
  *
  */
 void StochPostsolver::notifyNearlyParallelRowSubstitution(const INDEX& row1, const INDEX& row2, const INDEX& col1, const INDEX& col2, double scalar, double translation,
-   double obj_col2, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2, double parallel_factor )
+   double obj_col1, double obj_col2, double xlow_col2, double xupp_col2, double coeff_col1, double coeff_col2, double parallel_factor )
 {
    assert( row1.isRow() );
    assert( row2.isRow() );
@@ -357,6 +357,7 @@ void StochPostsolver::notifyNearlyParallelRowSubstitution(const INDEX& row1, con
 
    float_values.push_back( scalar );
    float_values.push_back( translation );
+   float_values.push_back( obj_col1 );
    float_values.push_back( obj_col2 );
 
    float_values.push_back( xlow_col2 );
@@ -836,7 +837,7 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
  *       -> assert in place to check this
  *    the current activity gets synchronized for slack computation
  */
-bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_idx) const
+bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_idx)
 {
    assert( reductions.at(reduction_idx) == REDUNDANT_ROW );
 
@@ -893,24 +894,20 @@ bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_
       value_row = row_storage.multRowTimesVec( stored_row, x_vec );
 
    assert( wasRowRemoved(row) );
+   markRowAdded(row);
    if( row.inEqSys() )
    {
       assert(PIPSisEQ(lhs, rhs));
       if( !PIPSisEQFeas(value_row, rhs) )
          PIPSdebugMessage("Postsolve Warning: when reintroducing a redundant equality row it did not meet its rhs with feastol: %f != %f", value_row, rhs);
-      if( !PIPSisEQ(value_row, rhs, postsolve_tol) )
-         std::cout << value_row << " " << rhs << " " << postsolve_tol << " " << row << std::endl;
       assert( PIPSisEQ(value_row, rhs, postsolve_tol) );
 
       /* set dual multiplier to zero and mark row as added */
-      getSimpleVecFromRowStochVec(*padding_origrow_equality, row) = 1;
       getSimpleVecFromRowStochVec(original_vars.y, row) = 0;
    }
    else
    {
       /* set dual multipliers to zero and mark row as added */
-      getSimpleVecFromRowStochVec(*padding_origrow_inequality, row) = 1;
-
       /* dual of row is zero */
       getSimpleVecFromRowStochVec(original_vars.z, row) = 0;
       getSimpleVecFromRowStochVec(original_vars.lambda, row) = 0;
@@ -943,6 +940,8 @@ bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_
       else
          getSimpleVecFromRowStochVec(original_vars.u, row) = 0;
    }
+
+   assert( complementarySlackRowMet(original_vars, row) );
 
    return true;
 }
@@ -1704,7 +1703,7 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
    const unsigned int next_first_index = start_idx_indices.at(reduction_idx + 1);
 
    assert(first_index + 4 == next_first_index);
-   assert(first_float_val + 8 == next_first_float_val);
+   assert(first_float_val + 9 == next_first_float_val);
    assert(first_int_val == next_first_int_val);
 #endif
 
@@ -1735,17 +1734,17 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
 
    const double scalar = float_values.at(first_float_val);
    const double translation = float_values.at(first_float_val + 1);
-   const double obj_col1 = 0.0;
-   const double obj_col2 = float_values.at(first_float_val + 2);
+   const double obj_col1 = float_values.at(first_float_val + 2);
+   const double obj_col2 = float_values.at(first_float_val + 3);
 
-   const double xlow_col2 = float_values.at(first_float_val + 3);
-   const double xupp_col2 = float_values.at(first_float_val + 4);
+   const double xlow_col2 = float_values.at(first_float_val + 4);
+   const double xupp_col2 = float_values.at(first_float_val + 5);
 
-   const double coeff_col1 = float_values.at(first_float_val + 5);
-   const double coeff_col2 = float_values.at(first_float_val + 6);
+   const double coeff_col1 = float_values.at(first_float_val + 6);
+   const double coeff_col2 = float_values.at(first_float_val + 7);
 
    /* row1 = parallel_factor * row2 */
-   const double parallel_factor = float_values.at(first_float_val + 7);
+   const double parallel_factor = float_values.at(first_float_val + 8);
 
    assert( !PIPSisZero(coeff_col2) );
    if( row2.inInEqSys() )
@@ -1769,23 +1768,19 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
    assert( PIPSisLEFeas( xlow_col2, val_col2 ) );
    assert( PIPSisLEFeas( val_col2, xupp_col2 ) );
 
+   assert( PIPSisZero(getSimpleVecFromColStochVec(original_vars.phi, col2)) );
+   assert( PIPSisZero(getSimpleVecFromColStochVec(original_vars.gamma, col2)) );
    /* slacks for bounds */
    /* bound duals to zero */
    if( local_linking_col2 )
    {
       (*v_changes)[col2.getIndex()] += (xlow_col2 == INF_NEG_PRES) ? -getSimpleVecFromColStochVec(original_vars.v, col2) : (*x_changes)[col2.getIndex()];
       (*w_changes)[col2.getIndex()] -= (xupp_col2 == INF_POS_PRES) ? getSimpleVecFromColStochVec(original_vars.w, col2) : (*x_changes)[col2.getIndex()];
-
-      (*phi_changes)[col2.getIndex()] += getSimpleVecFromColStochVec(original_vars.phi, col2);
-      (*gamma_changes)[col2.getIndex()] += getSimpleVecFromColStochVec(original_vars.gamma, col2);
    }
    else
    {
       getSimpleVecFromColStochVec(original_vars.v, col2) = (xlow_col2 == INF_NEG_PRES) ? 0 : val_col2 - xlow_col2;
       getSimpleVecFromColStochVec(original_vars.w, col2) = (xupp_col2 == INF_POS_PRES) ? 0 : xupp_col2 - val_col2;
-
-      getSimpleVecFromColStochVec(original_vars.phi, col2) = 0.0;
-      getSimpleVecFromColStochVec(original_vars.gamma, col2) = 0.0;
    }
 
    /* dual postsolve substitution */
@@ -1812,13 +1807,19 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
    else
    {
       /* objective coefficients had the same sign */
-      assert( !PIPSisZero(parallel_factor) );
-      assert( !PIPSisZero(coeff_col2) );
-
-      const double change_objective_row1 = obj_col2 * coeff_col1 / parallel_factor / coeff_col2;
+      assert( row1.inInEqSys() );
+      assert( row2.inInEqSys() );
+      assert( !PIPSisZero( parallel_factor ) );
+      assert( !PIPSisZero( coeff_col2 ) );
+      assert( PIPSisEQ( scalar, coeff_col1 / ( parallel_factor * coeff_col2 ) ) );
+      assert( PIPSisLE( 0.0, scalar ) );
+      /* if the bound were tight we have to shift their duals - else we have to shift the row duals */
+      const double change_objective_row1 = obj_col2 * scalar;
 
       assert( !PIPSisZero(obj_col1 + change_objective_row1) );
-      const double change_factor_obj_row1 = change_objective_row1 / (obj_col1 + change_objective_row1);
+
+      /* scale row 1 by factor_row1 */
+      const double factor_row1 = obj_col1 / (obj_col1 + change_objective_row1);
 
       /* shift duals from row1 to row2 */
       double& z_row1 = getSimpleVecFromRowStochVec(original_vars.z, row1);
@@ -1829,30 +1830,63 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
       double& lambda_row2 = getSimpleVecFromRowStochVec(original_vars.lambda, row2);
       double& pi_row2 = getSimpleVecFromRowStochVec(original_vars.pi, row2);
 
-      /* z = lambda - pi */
-      z_row2 = (1 - change_factor_obj_row1) * parallel_factor * z_row1;
-      pi_row2 = (1 - change_factor_obj_row1) * parallel_factor * pi_row1;
-      lambda_row2 = (1 - change_factor_obj_row1) * parallel_factor * lambda_row1;
+      assert( PIPSisZero( z_row2 ) );
+      assert( PIPSisZero( pi_row2 ) );
+      assert( PIPSisZero( lambda_row2 ) );
 
-      z_row1 *= change_factor_obj_row1;
-      pi_row1 *= change_factor_obj_row1;
-      lambda_row1 *= change_factor_obj_row1;
-
-      /* shift bound duals */
+      /* bound duals */
       double& gamma_row1 = getSimpleVecFromRowStochVec(original_vars.gamma, row1);
       double& phi_row1 = getSimpleVecFromRowStochVec(original_vars.phi, row1);
 
       double& gamma_row2 = getSimpleVecFromRowStochVec(original_vars.gamma, row2);
       double& phi_row2 = getSimpleVecFromRowStochVec(original_vars.phi, row2);
 
-      gamma_row2 = (1 - change_factor_obj_row1) * gamma_row1;
-      phi_row2 = (1 - change_factor_obj_row1) * phi_row1;
+      assert( PIPSisZero(gamma_row2) );
+      assert( PIPSisZero(phi_row2) );
 
-      gamma_row1 *= change_factor_obj_row1;
-      phi_row1 *= change_factor_obj_row1;
+      /* z = lambda - pi */
+      const double delta_z_row1 = (factor_row1 - 1) * z_row1;
+      const double delta_z_row2 = - parallel_factor * delta_z_row1;
+      const double row2_bound_duals = obj_col2 - coeff_col2 * delta_z_row2;
+
+      z_row2 = delta_z_row2;
+      pi_row2 = std::min(0.0, delta_z_row2);
+      lambda_row2 = std::max(0.0, delta_z_row2);
+
+      /* row1 dual */
+      z_row1 *= factor_row1;
+      pi_row1 *= factor_row1;
+      lambda_row1 *= factor_row1;
+
+      /* row1 bound duals */
+      if( local_linking_col2 )
+      {
+         const int col2_idx = col2.getIndex();
+         (*gamma_changes)[col2_idx] = std::max(0.0, row2_bound_duals);
+         (*phi_changes)[col2_idx] = std::min(0.0, row2_bound_duals);
+      }
+      else
+      {
+         gamma_row2 = std::max(0.0, row2_bound_duals);
+         phi_row2 = std::min(0.0, row2_bound_duals);
+      }
+
+      if( local_linking_col1 )
+      {
+         const int col1_idx = col1.getIndex();
+         (*gamma_changes)[col1_idx] = (factor_row1 - 1) * gamma_row1;
+         (*phi_changes)[col1_idx] = (factor_row1 - 1) * phi_row1;
+      }
+      else
+      {
+         gamma_row1 *= factor_row1;
+         phi_row1 *= factor_row1;
+      }
 
       assert( complementarySlackVariablesMet(original_vars, col1) );
       assert( complementarySlackVariablesMet(original_vars, col2) );
+      assert( complementarySlackRowMet( original_vars, row1) );
+      assert( complementarySlackRowMet( original_vars, row2) );
    }
    return true;
 }
