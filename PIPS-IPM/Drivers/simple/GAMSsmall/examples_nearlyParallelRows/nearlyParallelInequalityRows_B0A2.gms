@@ -58,7 +58,6 @@ i14                                                                             
 i15                                1     1                 1                       1
 i16                                1                       1                 1
 ;
-* j3.up 0.5
 Variables          x(j) / j1.lo -10, j2.lo -0.5, j1.up 36, j2.up 1.8, j3.up 1, j4.up 50, j5.lo 0, j5.up 11, j12.lo 0, j12.up 22 /
 Variable           z      objective variable
 Equations          e(i)   equality equations

@@ -1761,7 +1761,10 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
 
    /* reintroduce the substituted column */
    if( local_linking_col2 )
+   {
       (*x_changes)[col2.getIndex()] += val_col2 - getSimpleVecFromColStochVec(original_vars.x, col2);
+      outdated_linking_vars = true;
+   }
    else
       getSimpleVecFromColStochVec(original_vars.x, col2) = val_col2;
 
@@ -1776,6 +1779,7 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
    {
       (*v_changes)[col2.getIndex()] += (xlow_col2 == INF_NEG_PRES) ? -getSimpleVecFromColStochVec(original_vars.v, col2) : (*x_changes)[col2.getIndex()];
       (*w_changes)[col2.getIndex()] -= (xupp_col2 == INF_POS_PRES) ? getSimpleVecFromColStochVec(original_vars.w, col2) : (*x_changes)[col2.getIndex()];
+      outdated_linking_vars = true;
    }
    else
    {
@@ -1813,6 +1817,7 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
       assert( !PIPSisZero( coeff_col2 ) );
       assert( PIPSisEQ( scalar, coeff_col1 / ( parallel_factor * coeff_col2 ) ) );
       assert( PIPSisLE( 0.0, scalar ) );
+
       /* if the bound were tight we have to shift their duals - else we have to shift the row duals */
       const double change_objective_row1 = obj_col2 * scalar;
 
@@ -1841,22 +1846,26 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
       double& gamma_row2 = getSimpleVecFromRowStochVec(original_vars.gamma, row2);
       double& phi_row2 = getSimpleVecFromRowStochVec(original_vars.phi, row2);
 
+#ifndef NDEBUG
       assert( PIPSisZero(gamma_row2) );
       assert( PIPSisZero(phi_row2) );
+      assert( PIPSisZero(z_row1 - lambda_row1 + pi_row1, postsolve_tol) );
+      assert( PIPSisZero(z_row2 - lambda_row2 + pi_row2, postsolve_tol) );
+
+      assert( PIPSisZero( (obj_col1 + scalar * obj_col2) - coeff_col1 * z_row1 - gamma_row1 + phi_row1, postsolve_tol ) );
+      const double gamma_row1_old = gamma_row1;
+      const double phi_row1_old = phi_row1;
+#endif
 
       /* z = lambda - pi */
       const double delta_z_row1 = (factor_row1 - 1) * z_row1;
       const double delta_z_row2 = - parallel_factor * delta_z_row1;
       const double row2_bound_duals = obj_col2 - coeff_col2 * delta_z_row2;
 
-      z_row2 = delta_z_row2;
-      pi_row2 = std::min(0.0, delta_z_row2);
-      lambda_row2 = std::max(0.0, delta_z_row2);
+      assert( PIPSisZero( delta_z_row1 + delta_z_row2 / parallel_factor, postsolve_tol ) );
 
-      /* row1 dual */
-      z_row1 *= factor_row1;
-      pi_row1 *= factor_row1;
-      lambda_row1 *= factor_row1;
+      addIneqRowDual(z_row2, lambda_row2, pi_row2, delta_z_row2);
+      addIneqRowDual(z_row1, lambda_row1, pi_row1, delta_z_row1);
 
       /* row1 bound duals */
       if( local_linking_col2 )
@@ -1864,11 +1873,16 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
          const int col2_idx = col2.getIndex();
          (*gamma_changes)[col2_idx] = std::max(0.0, row2_bound_duals);
          (*phi_changes)[col2_idx] = std::min(0.0, row2_bound_duals);
+         outdated_linking_vars = true;
+
+         assert( PIPSisZero( obj_col2 - coeff_col2 * z_row2 - (gamma_row2 + (*gamma_changes)[col2_idx]) + (phi_row2 + (*phi_changes)[col2_idx]), postsolve_tol ) );
       }
       else
       {
          gamma_row2 = std::max(0.0, row2_bound_duals);
          phi_row2 = std::min(0.0, row2_bound_duals);
+
+         assert( PIPSisZero( obj_col2 - coeff_col2 * z_row2 - gamma_row2 + phi_row2, postsolve_tol ) );
       }
 
       if( local_linking_col1 )
@@ -1876,12 +1890,20 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
          const int col1_idx = col1.getIndex();
          (*gamma_changes)[col1_idx] = (factor_row1 - 1) * gamma_row1;
          (*phi_changes)[col1_idx] = (factor_row1 - 1) * phi_row1;
+         outdated_linking_vars = true;
+
+         assert( PIPSisZero( obj_col1 - coeff_col1 * z_row1 - (gamma_row1 + (*gamma_changes)[col1_idx]) + (phi_row1 + (*phi_changes)[col1_idx]), postsolve_tol ) );
       }
       else
       {
          gamma_row1 *= factor_row1;
          phi_row1 *= factor_row1;
+
+         assert( PIPSisZero( obj_col1 - coeff_col1 * z_row1 - gamma_row1 + phi_row1, postsolve_tol ) );
       }
+
+      assert( PIPSisZero( obj_col1 - coeff_col1 * z_row1 - gamma_row1_old * factor_row1 + phi_row1_old * factor_row1, postsolve_tol ) );
+      assert( PIPSisZero( obj_col2 - coeff_col2 * z_row2 - row2_bound_duals, postsolve_tol ) );
 
       assert( complementarySlackVariablesMet(original_vars, col1) );
       assert( complementarySlackVariablesMet(original_vars, col2) );
