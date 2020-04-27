@@ -939,9 +939,10 @@ bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_
          getSimpleVecFromRowStochVec(original_vars.u, row) = rhs - value_row;
       else
          getSimpleVecFromRowStochVec(original_vars.u, row) = 0;
+
+      assert( complementarySlackRowMet(original_vars, row) );
    }
 
-   assert( complementarySlackRowMet(original_vars, row) );
 
    return true;
 }
@@ -2048,8 +2049,6 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
    assert( PIPSisLE(xupp_implied, xupp_col1, postsolve_tol) );
 
 #ifndef NDEBUG
-   const double old_compslack_lower = getSimpleVecFromColStochVec(original_vars.gamma, col1) * getSimpleVecFromColStochVec(original_vars.v, col1);
-   const double old_compslack_upper = getSimpleVecFromColStochVec(original_vars.phi, col1) * getSimpleVecFromColStochVec(original_vars.w, col1);
    const double old_slack_lower = getSimpleVecFromColStochVec(original_vars.v, col1);
    const double old_slack_upper = getSimpleVecFromColStochVec(original_vars.w, col1);
 #endif
@@ -2921,6 +2920,11 @@ bool StochPostsolver::complementarySlackVariablesMet(const sVars& vars, const IN
    const double gamma = col.isLinkingCol() ? getSimpleVecFromColStochVec(vars.gamma, col) + (*gamma_changes)[index] : getSimpleVecFromColStochVec(vars.gamma, col);
    const double phi = col.isLinkingCol() ? getSimpleVecFromColStochVec(vars.phi, col) + (*phi_changes)[index] : getSimpleVecFromColStochVec(vars.phi, col);
 
+   assert(!std::isnan(v));
+   assert(!std::isnan(w));
+   assert(!std::isnan(gamma));
+   assert(!std::isnan(phi));
+
    if( std::fabs(v * gamma) >= tol )
    {
       std::cout << "rv " << v << " " << gamma << " " << v * gamma << " vs " << tol << std::endl;
@@ -2945,16 +2949,30 @@ bool StochPostsolver::complementarySlackRowMet(const sVars& vars, const INDEX& r
    const double lambda = getSimpleVecFromRowStochVec(vars.lambda, row);
    const double pi = getSimpleVecFromRowStochVec(vars.pi, row);
 
+   assert(!std::isnan(t));
+   assert(!std::isnan(u));
+   assert(!std::isnan(lambda));
+   assert(!std::isnan(pi));
+
    if( std::fabs(t * lambda) >= tol )
    {
       std::cout << "rt " << t << " " << lambda << " " << t * lambda << " vs " << tol << std::endl;
       return true;
    }
+   if( !(std::fabs(t * lambda) < tol) )
+   {
+      std::cout << t * lambda << " " << std::fabs(t * lambda) << " " << tol << std::endl;
+      std::cout << "|t * lambda| >= tol => false: " << (std::fabs(t * lambda) >= tol) << std::endl;
+      std::cout << "|t * lambda| < tol => false??: " << (std::fabs(t * lambda) < tol) << std::endl;
+   }
+   assert( std::fabs(t * lambda) < tol );
    if( std::fabs(u * pi) >= tol )
    {
       std::cout << "ru " << u << " " << pi << " " << u * pi << " vs " << tol << std::endl;
       return true;
    }
+   assert( std::fabs( u * pi) < tol );
+
    return std::fabs(t * lambda) < tol && std::fabs(u * pi) < tol;
 }
 
