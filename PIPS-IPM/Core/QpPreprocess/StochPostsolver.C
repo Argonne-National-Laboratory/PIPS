@@ -1141,7 +1141,7 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
 
 
    /* mark entry as set and set x value to fixation */
-   getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
+   markColumnAdded(col);
 
    /* set x value */
    getSimpleVecFromColStochVec(original_vars.x, col) = value;
@@ -1205,7 +1205,7 @@ bool StochPostsolver::postsolveFixedColumn(sVars& original_vars, int reduction_i
  * no special treatment for linking variables since all processes should fix them simultaneously and in the same order
  *    -> assert is in place to check this
  */
-bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const
+bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx)
 {
    assert( reductions.at(reduction_idx) == FIXED_EMPTY_COLUMN );
 
@@ -1238,7 +1238,7 @@ bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduct
 
    /* primal */
    /* mark entry as set and set x value to fixation */
-   getSimpleVecFromColStochVec(*padding_origcol, col) = 1;
+   markColumnAdded(col);
    getSimpleVecFromColStochVec(original_vars.x, col) = value;
 
    if( ixlow == 1 )
@@ -1819,7 +1819,7 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
       assert( PIPSisEQ( scalar, coeff_col1 / ( parallel_factor * coeff_col2 ) ) );
       assert( PIPSisLE( 0.0, scalar ) );
 
-      /* if the bound were tight we have to shift their duals - else we have to shift the row duals */
+      /* if the bounds were tight we have to shift their duals - else we have to shift the row duals */
       const double change_objective_row1 = obj_col2 * scalar;
 
       assert( !PIPSisZero(obj_col1 + change_objective_row1) );

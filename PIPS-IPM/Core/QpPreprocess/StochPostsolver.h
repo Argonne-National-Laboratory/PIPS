@@ -184,7 +184,7 @@ private:
       bool syncBoundsTightened(sVars& original_vars, int reduction_idx);
       bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx);
       bool postsolveFixedColumn(sVars& original_vars, int reduction_idx);
-      bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx) const;
+      bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx);
       bool postsolveFixedColumnSingletonFromInequality(sVars& original_vars, int reduction_idx);
       bool postsolveSingletonEqualityRow(sVars& original_vars, int reduction_idx) const;
       bool postsolveSingletonInequalityRow(sVars& original_vars, int reduction_idx) const;

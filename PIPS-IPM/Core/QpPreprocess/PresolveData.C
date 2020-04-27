@@ -2124,9 +2124,9 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
    if( row1.inInEqSys() )
       assert( PIPSisZero(translation) );
 
-   // todo : track row
+   // TODO: track row
 
-   const double obj_col1 = getSimpleVecFromColStochVec(*presProb->g, col1);
+   const double obj_col1 = col1.isCol() ? getSimpleVecFromColStochVec(*presProb->g, col1) : INF_POS_PRES;
    const double obj_col2 = getSimpleVecFromColStochVec(*presProb->g, col2);
 
    if( postsolver )
@@ -2152,37 +2152,36 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
    bool col1_at_root = col1.isEmpty() ? false : (col1.isLinkingCol() && row1.getNode() == -1);
    bool col2_at_root = (col2.isLinkingCol() && row1.getNode() == -1);
 
-   /* fix col2 if coeff_col1 == 0 */
-   if( col1.isEmpty() )
-      updateBoundsVariable(col2, translation, translation);
-   else
-   {
-      assert( col2.isCol() );
-      const double coeff_col2 = getRowCoeff(row2, col2);
+   assert( col2.isCol() );
+   const double coeff_col2 = getRowCoeff(row2, col2);
 
-      /* add col1 with coefficient scalar * coeff_col2 to row */
+   /* add col1 with coefficient scalar * coeff_col2 to row */
+   if( col1.isCol() )
+   {
       const double coeff_col1_row2 = scalar * coeff_col2;
       addCoeffColToRow( coeff_col1_row2, col1, row2 );
+   }
 
-      /* remove old entry from matrix */
-      const double offset = translation * coeff_col2;
+   /* remove old entry from matrix */
+   const double offset = translation * coeff_col2;
 
-      getSparseGenMatrix(row2, col2)->removeEntryAtRowCol(row2.getIndex(), col2.getIndex());
-      reduceNnzCounterRowBy( row2, 1, false );
-      reduceNnzCounterColumnBy( col2, 1, col2_at_root );
+   getSparseGenMatrix(row2, col2)->removeEntryAtRowCol(row2.getIndex(), col2.getIndex());
+   reduceNnzCounterRowBy( row2, 1, false );
+   reduceNnzCounterColumnBy( col2, 1, col2_at_root );
 
-      /* adjust right hand side / left hand side by  -d * coeff_col2 */
-      if( row2.inInEqSys() )
-      {
-         if( !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->iclow, row2)) )
-            getSimpleVecFromRowStochVec(*presProb->blx, row2) -= offset;
-         if( !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->icupp, row2)) )
-            getSimpleVecFromRowStochVec(*presProb->bux, row2) -= offset;
-      }
-      else
-         getSimpleVecFromRowStochVec(*presProb->bA, row2) -= offset;
+   /* adjust right hand side / left hand side by  -d * coeff_col2 */
+   if( row2.inInEqSys() )
+   {
+      if( !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->iclow, row2)) )
+         getSimpleVecFromRowStochVec(*presProb->blx, row2) -= offset;
+      if( !PIPSisZero(getSimpleVecFromRowStochVec(*presProb->icupp, row2)) )
+         getSimpleVecFromRowStochVec(*presProb->bux, row2) -= offset;
+   }
+   else
+      getSimpleVecFromRowStochVec(*presProb->bA, row2) -= offset;
 
-
+   if( col1.isCol() )
+   {
       if( !col1.isLinkingCol() || col1_at_root )
       {
          getSimpleVecFromColStochVec(*presProb->g, col1) += change_obj_var1;
@@ -2195,15 +2194,15 @@ void PresolveData::substituteVariableNearlyParallelRows( const INDEX& row1, cons
          outdated_obj_vector = true;
          obj_offset_chgs += val_offset;
       }
+   }
 
-      if( !col2.isLinkingCol() || col2_at_root )
-         getSimpleVecFromColStochVec(*presProb->g, col2) = 0.0;
-      else
-      {
-         (*objective_vec_chgs)[col2.getIndex()] -= getSimpleVecFromColStochVec(*presProb->g, col2);
-         assert( PIPSisZero( (*objective_vec_chgs)[col2.getIndex()] + getSimpleVecFromColStochVec(*presProb->g, col2) ) );
-         outdated_obj_vector = true;
-      }
+   if( !col2.isLinkingCol() || col2_at_root )
+      getSimpleVecFromColStochVec(*presProb->g, col2) = 0.0;
+   else
+   {
+      (*objective_vec_chgs)[col2.getIndex()] -= getSimpleVecFromColStochVec(*presProb->g, col2);
+      assert( PIPSisZero( (*objective_vec_chgs)[col2.getIndex()] + getSimpleVecFromColStochVec(*presProb->g, col2) ) );
+      outdated_obj_vector = true;
    }
 }
 
