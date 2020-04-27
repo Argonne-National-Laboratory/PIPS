@@ -59,7 +59,7 @@ static const double PRESOLVE_MAX_BOUND_ACCEPTED = 1e10;
 /** epsilon used for changing bounds found in bound tightening so that they will be non-tight in the final solution */
 static const double eps_bounds_nontight = 1e4 * feastol;
 /// POSTSOLVE
-static const double postsolve_tol = feastol;
+static const double postsolve_tol = feastol * 100;
 
 
 static inline double relativeDiff(double val1, double val2)
