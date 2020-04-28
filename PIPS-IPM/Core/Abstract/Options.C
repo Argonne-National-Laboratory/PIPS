@@ -47,7 +47,7 @@ bool Options::getBoolParam(const std::string& identifier) const
    }
 }
 
-void Options::fillParamsFromFile(const std::string& filename)
+void Options::fillOptionsFromFile(const std::string& filename)
 {
    std::ifstream params;
    params.open(filename, std::ios::in);

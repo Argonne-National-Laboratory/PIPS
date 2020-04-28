@@ -155,8 +155,8 @@ template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type,
       PresolverType presolver_type, std::string settings) : unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
 {
-  PIPSfillParametersFromFile(settings);
-  const bool postsolve = PIPSgetBoolParameter("postsolve");
+  pips_options::setOptions(settings);
+  const bool postsolve = pips_options::getBoolParameter("postsolve");
 
   int mype;
   MPI_Comm_rank(comm,&mype);

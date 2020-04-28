@@ -27,11 +27,6 @@ enum OptionType
 
 class Options : public Singleton
 {
-public:
-   int getIntParam(const std::string& identifier) const;
-   double getDoubleParam(const std::string& identifier) const;
-   bool getBoolParam(const std::string& identifier) const;
-
 private:
    virtual void setDefaults() = 0;
 
@@ -44,8 +39,13 @@ protected:
    Options() {};
    virtual ~Options() {};
 
-   void fillParamsFromFile(const std::string& filename);
    bool isIdentifierUnique( const std::string& identifier ) const;
+
+   void fillOptionsFromFile(const std::string& filename);
+
+   int getIntParam(const std::string& identifier) const;
+   double getDoubleParam(const std::string& identifier) const;
+   bool getBoolParam(const std::string& identifier) const;
 };
 
 #endif /* PIPS_IPM_CORE_ABSTRACT_OPTIONS_H_ */

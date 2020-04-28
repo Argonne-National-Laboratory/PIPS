@@ -18,25 +18,28 @@
  * Defines default options for StochPIPS.
  */
 
-static int PIPSgetIntParameter(const std::string& identifier);
-static double PIPSgetDoubleParameter(const std::string& identifier);
-static bool PIPSgetBoolParameter(const std::string& identifier);
-static void PIPSfillParametersFromFile(const std::string& filename);
+namespace pips_options
+{
+   void setOptions(std::string opt_file);
+   int getIntParameter(std::string identifier);
+   double getDoubleParameter(std::string identifier);
+   bool getBoolParameter(std::string identifier);
+}
 
 class StochOptions : public Options
 {
 
 private:
+   friend void pips_options::setOptions(std::string opt_file);
+   friend int pips_options::getIntParameter(std::string identifier);
+   friend double pips_options::getDoubleParameter(std::string identifier);
+   friend bool pips_options::getBoolParameter(std::string identifier);
+
    static StochOptions& getInstance()
    {
       static StochOptions opt;
       return opt;
    }
-
-   friend int PIPSgetIntParameter(const std::string& identifier);
-   friend double PIPSgetDoubleParameter(const std::string& identifier);
-   friend bool PIPSgetBoolParameter(const std::string& identifier);
-   friend void PIPSfillParametersFromFile(const std::string& filename);
 
    void setDefaults() override;
    StochOptions();
@@ -44,36 +47,29 @@ private:
    virtual ~StochOptions() {};
 };
 
-inline int PIPSgetIntParameter(const std::string& identifier)
+
+namespace pips_options
 {
-   const StochOptions& opt = StochOptions::getInstance();
+   inline void setOptions(std::string opt_file)
+   {
+      return StochOptions::getInstance().fillOptionsFromFile(opt_file);
+   }
 
-   assert(opt.isIdentifierUnique(identifier));
+   inline int getIntParameter(std::string identifier)
+   {
+      return StochOptions::getInstance().getIntParam(identifier);
+   }
 
-   return opt.getIntParam(identifier);
+   inline bool getBoolParameter(std::string identifier)
+   {
+      return StochOptions::getInstance().getBoolParam(identifier);
+   }
+
+   inline double getDoubleParameter(std::string identifier)
+   {
+      return StochOptions::getInstance().getDoubleParam(identifier);
+   }
 }
 
-inline double PIPSgetDoubleParameter(const std::string& identifier)
-{
-   const StochOptions& opt = StochOptions::getInstance();
-
-   assert(opt.isIdentifierUnique(identifier));
-
-   return opt.getDoubleParam(identifier);
-}
-
-inline bool PIPSgetBoolParameter(const std::string& identifier)
-{
-   const StochOptions& opt = StochOptions::getInstance();
-
-   assert(opt.isIdentifierUnique(identifier));
-
-   return opt.getBoolParam(identifier);
-}
-
-inline void PIPSfillParametersFromFile(const std::string& filename)
-{
-   StochOptions::getInstance().fillParamsFromFile(filename);
-}
 
 #endif /* PIPS_IPM_CORE_QPSTOCH_STOCHOPTIONS_H_ */
