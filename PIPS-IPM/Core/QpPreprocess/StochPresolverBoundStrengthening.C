@@ -69,6 +69,15 @@ void StochPresolverBoundStrengthening::applyPresolving()
    }
    while( tightened && iter < PRESOLVE_BOUND_STR_MAX_ITER );
 
+   // TODO : only one process should propagate bounds for linking variables - one of the ones that found the best bounds
+   // should be four mpi allreduces .. get best bounds - check locally whether we found it - sign up if found locally - allreduce again to the proc with lowest id that found the respective bound
+
+   // TODO : for bounds found via linking rows - ideas : a separate linking row session to find bounds - maybe not best - simply store a copy of all linking conss? probably expensive.. maybe not?
+   // and then, in postsolve locally all procs know what the multiplier changes of this and that row must be for their local reductions - sum them up and then do the dual shifting
+
+   // TODO : can one only always undo the last bound-tightening of a variable? seems cheapest..
+   // if I found some bound on a var, then found a better one which is tight -> i hope that all bounds found with the earlier are not tight - but that will not help for the comp slackness conditions..
+
    presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyLinkingRowActivities();
 
@@ -260,7 +269,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
 
-         bool row_propagated = presData.rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
+         bool row_propagated = presData.rowPropagatedBounds(row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);//rowPropagatedBoundsNonTight( row_INDEX, INDEX(COL, node_col, col), lbx_new, ubx_new);
 
          if(row_propagated && (node != -1 || my_rank == 0))
             ++tightenings;

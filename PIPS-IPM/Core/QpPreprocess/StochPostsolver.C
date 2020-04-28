@@ -984,10 +984,10 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
 
    const INDEX& row = indices.at(first_index);
    const INDEX& col = indices.at(first_index + 1);
-   assert(row.isRow());
-   assert(col.isCol());
-   assert(!wasRowRemoved(row));
-   assert(!wasColumnRemoved(col));
+   assert( row.isRow());
+   assert( col.isCol());
+   assert( !wasRowRemoved(row) );
+   assert( !wasColumnRemoved(col) );
 
    const int old_ixlowupp = int_values[first_int_val];
    const bool is_upper_bound = (int_values[first_int_val + 1] == 1) ? true : false;

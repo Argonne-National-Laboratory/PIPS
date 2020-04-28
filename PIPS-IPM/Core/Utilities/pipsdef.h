@@ -33,7 +33,7 @@ static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
 
 /// BOUND STRENGTHENING
 /** limit for rounds of bound strengthening */
-static const int PRESOLVE_BOUND_STR_MAX_ITER = 1;
+static const int PRESOLVE_BOUND_STR_MAX_ITER = 100;
 /** min entry to devide by in order to derive a bound */
 static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY = 1e-7;
 /** max activity to be devided */
