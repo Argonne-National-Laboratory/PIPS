@@ -353,14 +353,14 @@ MPI_Datatype get_mpi_datatype(const T* arg) {
    return get_mpi_datatype_t<T>::value;
 }
 
-inline int PIPS_MPIgetRank(MPI_Comm mpiComm)
+inline int PIPS_MPIgetRank(MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    int myrank;
    MPI_Comm_rank(mpiComm, &myrank);
    return myrank;
 }
 
-inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
+inline int PIPS_MPIgetSize(MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    int mysize;
    MPI_Comm_size(mpiComm, &mysize);
@@ -368,7 +368,7 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm)
+inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    // todo make one vec and + - val
    const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
@@ -377,7 +377,7 @@ inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm)
+inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T globalmin = 0.0;
    MPI_Allreduce(&localmin, &globalmin, 1, get_mpi_datatype(localmin), MPI_MIN, mpiComm);
@@ -386,7 +386,7 @@ inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
+inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T globalmax = 0.0;
    MPI_Allreduce(&localmax, &globalmax, 1, get_mpi_datatype(localmax), MPI_MAX, mpiComm);
@@ -395,19 +395,19 @@ inline T PIPS_MPIgetMax(const T& localmax, MPI_Comm mpiComm)
 }
 
 template <typename T>
-void PIPS_MPIgetMaxInPlace(T& max, MPI_Comm mpiComm)
+void PIPS_MPIgetMaxInPlace(T& max, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &max, 1, get_mpi_datatype(max), MPI_MAX, mpiComm);
 }
 
 template <typename T>
-void PIPS_MPIgetMinInPlace(T& min, MPI_Comm mpiComm)
+void PIPS_MPIgetMinInPlace(T& min, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &min, 1, get_mpi_datatype(min), MPI_MIN, mpiComm);
 }
 
 template <typename T>
-inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
    if(length == 0)
@@ -417,7 +417,7 @@ inline void PIPS_MPImaxArrayInPlace(T* localmax, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPImaxArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if(elements.size() == 0)
       return;
@@ -426,7 +426,7 @@ inline void PIPS_MPImaxArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
    if(length == 0)
@@ -436,7 +436,7 @@ inline void PIPS_MPIminArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIminArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPIminArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if(elements.size() == 0)
       return;
@@ -445,7 +445,7 @@ inline void PIPS_MPIminArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
+inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T sum;
    MPI_Allreduce(&localsummand, &sum, 1, get_mpi_datatype(localsummand), MPI_SUM, mpiComm);
@@ -454,13 +454,13 @@ inline T PIPS_MPIgetSum(const T& localsummand, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIgetLogicOrInPlace(T& localval, MPI_Comm mpiComm)
+inline void PIPS_MPIgetLogicOrInPlace(T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &localval, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
 }
 
 template <typename T>
-inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm)
+inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T lor;
    MPI_Allreduce(&localval, &lor, 1, get_mpi_datatype(localval), MPI_LOR, mpiComm);
@@ -469,13 +469,13 @@ inline T PIPS_MPIgetLogicOr(const T& localval, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIgetLogicAndInPlace(T& localval, MPI_Comm mpiComm)
+inline void PIPS_MPIgetLogicAndInPlace(T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &localval, 1, get_mpi_datatype(localval), MPI_LAND, mpiComm);
 }
 
 template <typename T>
-inline T PIPS_MPIgetLogicAnd(const T& localval, MPI_Comm mpiComm)
+inline T PIPS_MPIgetLogicAnd(const T& localval, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    T land;
    MPI_Allreduce(&localval, &land, 1, get_mpi_datatype(localval), MPI_LAND, mpiComm);
@@ -484,7 +484,7 @@ inline T PIPS_MPIgetLogicAnd(const T& localval, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert( length >= 0 );
    if(length == 0)
@@ -494,7 +494,7 @@ inline void PIPS_MPIlogicOrArrayInPlace(T* elements, int length, MPI_Comm mpiCom
 }
 
 template <typename T>
-inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if(elements.size() == 0)
       return;
@@ -503,14 +503,14 @@ inline void PIPS_MPIlogicOrArrayInPlace(std::vector<T>& elements, MPI_Comm mpiCo
 }
 
 template <typename T>
-inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm)
+inline void PIPS_MPIgetSumInPlace(T& sum, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &sum, 1, get_mpi_datatype(sum), MPI_SUM, mpiComm);
 }
 
 template <typename T>
 
-inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
+inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
 
@@ -521,7 +521,7 @@ inline void PIPS_MPIsumArrayInPlace(T* elements, int length, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIsumArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
+inline void PIPS_MPIsumArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    if( elements.size() == 0 )
       return;
@@ -530,7 +530,7 @@ inline void PIPS_MPIsumArrayInPlace(std::vector<T>& elements, MPI_Comm mpiComm)
 }
 
 template <typename T>
-inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiComm )
+inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
 
@@ -541,7 +541,7 @@ inline void PIPS_MPIsumArray(const T* source, T* dest, int length, MPI_Comm mpiC
 }
 
 template <typename T>
-inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(length >= 0);
    if(length == 0)
@@ -550,7 +550,7 @@ inline void PIPS_MPImaxArray(const T* source, T* dest, int length, MPI_Comm mpiC
 }
 
 template <typename T>
-inline void PIPS_MPImaxArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm)
+inline void PIPS_MPImaxArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(source.size() <= dest.size() );
    if(source.size() == 0)
@@ -560,24 +560,24 @@ inline void PIPS_MPImaxArray(const std::vector<T>& source, std::vector<T>& dest,
 }
 
 template <typename T>
-inline void PIPS_MPIminArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm)
+inline void PIPS_MPIminArray(const std::vector<T>& source, std::vector<T>& dest, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(source.size() <= dest.size() );
    if(source.size() == 0)
       return;
 
-   MPI_Allreduce(&source[0], &dest[0], source.size(), get_mpi_datatype(&source[0]), MPI_MIN, mpiComm);
+   MPI_Allreduce(&source[0], &dest[0], source.size(), get_mpi_datatype(&source[0]), MPI_MIN, mpiComm = MPI_COMM_WORLD);
 }
 
 template <typename T>
-inline void PIPS_MPIgatherv(const T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, const int* recvoffsets, int root, MPI_Comm mpiComm)
+inline void PIPS_MPIgatherv(const T* sendbuf, int sendcnt, T* recvbuf, int* recvcnts, const int* recvoffsets, int root, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(sendcnt >= 0);
-   MPI_Gatherv(sendbuf, sendcnt, get_mpi_datatype(sendbuf), recvbuf, recvcnts, recvoffsets, get_mpi_datatype(recvbuf), root, mpiComm);
+   MPI_Gatherv(sendbuf, sendcnt, get_mpi_datatype(sendbuf), recvbuf, recvcnts, recvoffsets, get_mpi_datatype(recvbuf), root, mpiComm = MPI_COMM_WORLD);
 }
 
 template <typename T>
-inline void PIPS_MPIallgather( const T* sendbuf, int sendcnt, T* recvbuf, int recvcnt, MPI_Comm mpiComm)
+inline void PIPS_MPIallgather( const T* sendbuf, int sendcnt, T* recvbuf, int recvcnt, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    assert(sendcnt >= 0);
    assert(recvcnt >= 0);
