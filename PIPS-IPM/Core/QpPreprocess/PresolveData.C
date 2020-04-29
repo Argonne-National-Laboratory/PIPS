@@ -1513,6 +1513,7 @@ void PresolveData::startBoundTightening()
    {
       postsolver->beginBoundTightening();
    }
+
    in_bound_tightening = true;
 }
 
@@ -1570,18 +1571,33 @@ bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& c
 bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new)
 {
    assert( in_bound_tightening );
-   assert( row.isRow() );
+   assert( row.isRow() || row.isEmpty() );
    assert( col.isCol() );
 
+   const bool at_root_node = row.isEmpty() ? false : col.isLinkingCol() && row.getNode() == -1;
+
+   if( col.isLinkingCol() && at_root_node )
+   {
+      PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD);
+      PIPS_MPIisValueEqual(xlow_new, MPI_COMM_WORLD);
+      PIPS_MPIisValueEqual(xupp_new, MPI_COMM_WORLD);
+#ifndef NDEBUG
+      const int my_tightening = row.isEmpty() ? 0 : 1;
+#endif
+      assert( PIPS_MPIgetSum(my_tightening, MPI_COMM_WORLD) == 1);
+   }
+
    /* TODO */
-   if( row.isLinkingRow() )
+   if( !row.isEmpty() && row.isLinkingRow() )
       return false;
 
    if( xlow_new == INF_NEG_PRES && xupp_new == INF_POS_PRES )
       return false;
 
    assert( col.hasValidNode(nChildren) );
-   assert( row.hasValidNode(nChildren) );
+
+   if( row.isRow() )
+      assert( row.hasValidNode(nChildren) );
 
    const int ixlow_old = PIPSisZero(getSimpleVecFromColStochVec( *presProb->ixlow, col ) ) ? 0 : 1;
    const double xlow_old = ixlow_old ? getSimpleVecFromColStochVec( *presProb->blx, col ) : INF_NEG_PRES;
@@ -1636,10 +1652,9 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
       }
    }
 
+
    /// if a linking variable was tightened (with a row that is not in B0) it's dual has to be comunicated in postsolve
-
    /// if a linking row was used to tighten a bound it has to be stored on all processes and used for postsolve by all processes (if the bound was tight)
-
    /// for linking variables we need to figure out a row that has been used for it's tightening
 
    /// every process should have the same root node data thus all of them should propagate their rows similarly
@@ -1647,7 +1662,7 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
       assert(outdated_linking_var_bounds == true);
 
    /// linking rows require a different postsolve event since propagating linking rows need to be stored by every process and need to be postsolved at the same time
-   if( !row.isLinkingRow() )
+   if( row.isEmpty() || !row.isLinkingRow() )
    {
       if( lower_bound_changed )
          postsolver->notifyRowPropagatedBound( row, col, ixlow_old, xlow_old, xlow_new, false, getSystemMatrix(row.getSystemType()));

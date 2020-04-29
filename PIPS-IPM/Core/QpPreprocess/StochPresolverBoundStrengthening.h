@@ -22,6 +22,17 @@ public:
 private:
    long long tightenings;
 
+   bool local_bound_tightenings;
+   const unsigned int n_linking_vars;
+
+   std::vector<double> ub_linking_var;
+   std::vector<double> lb_linking_var;
+   std::vector<INDEX> rows_ub;
+   std::vector<INDEX> rows_lb;
+
+   void resetArrays();
+   void communicateLinkingVarBounds();
+
    bool strenghtenBoundsInNode(SystemType system_type, int node);
    bool strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type);
 };

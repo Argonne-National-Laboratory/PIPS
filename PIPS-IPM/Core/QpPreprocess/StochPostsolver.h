@@ -89,8 +89,8 @@ private:
       {
          FIXED_COLUMN = 0,
          SUBSTITUTED_COLUMN = 1,
-         BOUND_TIGHTENING_START = 2,
-         BOUND_TIGHTENING_END = 3,
+         DUMMY1 = 2,
+         DUMMY2 = 3,
          REDUNDANT_ROW = 4,
          BOUNDS_TIGHTENED = 5,
          SINGLETON_EQUALITY_ROW = 6,

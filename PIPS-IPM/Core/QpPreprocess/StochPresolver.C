@@ -83,14 +83,14 @@ Data* StochPresolver::presolve()
    // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
    presolverCleanup.applyPresolving();
    
-   for( int i = 0; i < 2; ++i )
+   for( int i = 0; i < 1; ++i )
    {
       /* singleton rows */
       presolverBS.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverParallelRow.applyPresolving();
-      presolverSC.applyPresolving();
-      presolverColFix.applyPresolving();
+//      presolverSR.applyPresolving();
+//      presolverParallelRow.applyPresolving();
+//      presolverSC.applyPresolving();
+//      presolverColFix.applyPresolving();
    }
    // presData.getPresProb().writeToStreamDense(std::cout);
    // before the finalize call fix all empty rows and columns not yet fixed
