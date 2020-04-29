@@ -256,6 +256,12 @@ void StochPostsolver::notifyFreeColumnSingletonInequalityRow( const INDEX& row, 
    finishNotify();
 }
 
+void StochPostsolver::putBoundTighteningLinkingRowSyncEvent()
+{
+   reductions.push_back(BOUND_TIGHTENING_LINKING_ROW_SYNC_EVENT);
+   finishNotify();
+}
+
 void StochPostsolver::putLinkingVarsSyncEvent()
 {
    reductions.push_back(LINKING_VARS_SYNC_EVENT);
@@ -575,6 +581,7 @@ void StochPostsolver::notifyRedundantRow( const INDEX& row, int iclow, int icupp
 
 void StochPostsolver::beginBoundTightening()
 {
+   putBoundTighteningLinkingRowSyncEvent();
    putLinkingVarsSyncEvent();
 }
 
@@ -797,6 +804,11 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       case LINKIN_EQ_ROW_SYNC_EVENT:
       {
          postsolve_success = postsolve_success && syncEqLinkingRowChanges(stoch_original_sol);
+         break;
+      }
+      case BOUND_TIGHTENING_LINKING_ROW_SYNC_EVENT:
+      {
+         postsolve_success = postsolve_success && syncLinkingRowsAfterBoundTightening(stoch_original_sol);
          break;
       }
       default:
@@ -2624,6 +2636,14 @@ bool StochPostsolver::syncIneqLinkingRowChanges(sVars& original_vars)
    assert( dynamic_cast<const StochVector&>(*original_vars.lambda).isRootNodeInSync() );
 
    return true;
+}
+
+bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars)
+{
+   /* gather all z and y changes if any */
+   // TODO
+
+   /* use stored linking rows to adjust variable duals */
 }
 
 void StochPostsolver::addIneqRowDual(double& z, double& lambda, double& pi, double value) const

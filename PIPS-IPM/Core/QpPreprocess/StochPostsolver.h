@@ -38,6 +38,7 @@ public:
       void putLinkingVarsSyncEvent();
       void putLinkingRowIneqSyncEvent();
       void putLinkingRowEqSyncEvent();
+      void putBoundTighteningLinkingRowSyncEvent();
 
       void notifyFreeColumnSingletonEquality( const INDEX& row, const INDEX& col, double rhs, double obj_coeff, double col_coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
       void notifyFixedSingletonFromInequalityColumn( const INDEX& col, const INDEX& row, double value, double coeff, double xlow_old, double xupp_old );
@@ -105,7 +106,8 @@ private:
          NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED = 15,
          LINKING_INEQ_ROW_SYNC_EVENT = 16,
          LINKIN_EQ_ROW_SYNC_EVENT = 17,
-         LINKING_VARS_SYNC_EVENT = 18
+         LINKING_VARS_SYNC_EVENT = 18,
+         BOUND_TIGHTENING_LINKING_ROW_SYNC_EVENT = 19
       };
 
       const unsigned int n_rows_original;
@@ -197,6 +199,7 @@ private:
       bool syncLinkingVarChanges(sVars& original_vars);
       bool syncEqLinkingRowChanges(sVars& original_vars);
       bool syncIneqLinkingRowChanges(sVars& original_vars);
+      bool syncLinkingRowsAfterBoundTightening(sVars& original_vars);
 
       void addIneqRowDual(double& z, double& lambda, double& pi, double value) const;
       void addIneqRowSlack(double& s, double& t, double& u, double clow, double cupp, double value) const;

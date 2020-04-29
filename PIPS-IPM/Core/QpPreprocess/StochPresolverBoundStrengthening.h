@@ -24,11 +24,17 @@ private:
 
    bool local_bound_tightenings;
    const unsigned int n_linking_vars;
+   const unsigned int n_eq_linking_rows;
+   const unsigned int n_ineq_linking_rows;
 
+   /// vectors for syncing linking variable tightenings
    std::vector<double> ub_linking_var;
    std::vector<double> lb_linking_var;
    std::vector<INDEX> rows_ub;
    std::vector<INDEX> rows_lb;
+
+   std::vector<bool> used_linking_eq_row;
+   std::vector<bool> used_linking_ineq_row;
 
    void resetArrays();
    void communicateLinkingVarBounds();

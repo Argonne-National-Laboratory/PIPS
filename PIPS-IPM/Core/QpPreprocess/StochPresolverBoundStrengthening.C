@@ -16,10 +16,14 @@ StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       tightenings(0),
       local_bound_tightenings(false),
       n_linking_vars( dynamic_cast<const StochVector&>(*origProb.g).vec->length() ),
+      n_eq_linking_rows( dynamic_cast<const StochVector&>(*origProb.bA).vecl->length() ),
+      n_ineq_linking_rows( dynamic_cast<const StochVector&>(*origProb.bl).vecl->length() ),
       ub_linking_var(n_linking_vars),
       lb_linking_var(n_linking_vars),
       rows_ub(n_linking_vars),
-      rows_lb(n_linking_vars)
+      rows_lb(n_linking_vars),
+      used_linking_eq_row(n_eq_linking_rows),
+      used_linking_ineq_row(n_ineq_linking_rows)
 {
 }
 
@@ -34,6 +38,8 @@ void StochPresolverBoundStrengthening::resetArrays()
    std::fill( lb_linking_var.begin(), lb_linking_var.end(), INF_NEG_PRES );
    std::fill( rows_ub.begin(), rows_ub.end(), INDEX() );
    std::fill( rows_lb.begin(), rows_lb.end(), INDEX() );
+   std::fill( used_linking_eq_row.begin(), used_linking_eq_row.end(), false );
+   std::fill( used_linking_eq_row.begin(), used_linking_eq_row.end(), false );
 }
 
 void StochPresolverBoundStrengthening::applyPresolving()
@@ -90,11 +96,8 @@ void StochPresolverBoundStrengthening::applyPresolving()
    }
    while( tightened && iter < PRESOLVE_BOUND_STR_MAX_ITER );
 
-   // TODO : only one process should propagate bounds for linking variables - one of the ones that found the best bounds
-   // should be four mpi allreduces .. get best bounds - check locally whether we found it - sign up if found locally - allreduce again to the proc with lowest id that found the respective bound
-
-   // TODO : for bounds found via linking rows - ideas : a separate linking row session to find bounds - maybe not best - simply store a copy of all linking conss? probably expensive.. maybe not?
-   // and then, in postsolve locally all procs know what the multiplier changes of this and that row must be for their local reductions - sum them up and then do the dual shifting
+   // TODO : bounds found with linking_rows: mark all rows that need to be stored by all procs and store them after tightening in the postsolver
+   // later when postsolving and syncing the linking row multipliers use these rows to adjust all var bounds duals
 
    // TODO : can one only always undo the last bound-tightening of a variable? seems cheapest..
    // if I found some bound on a var, then found a better one which is tight -> i hope that all bounds found with the earlier are not tight - but that will not help for the comp slackness conditions..
