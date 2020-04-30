@@ -1092,28 +1092,17 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
       std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
 
    /* add -dz/dy * row to gamma/phi */
-   StochVectorHandle tmp_pos(dynamic_cast<StochVector*>(original_vars.gamma->clone()));
-
-   /* calculate multiplier_change times row */
-   row_storage.axpyAtRow(0.0, *tmp_pos, -change_dual_row, stored_row );
-   StochVectorHandle tmp_neg(dynamic_cast<StochVector*>(tmp_pos->cloneFull()));
-
-   tmp_pos->selectPositive();
-   tmp_neg->selectNegative();
-
    /* store linking variable changes and allreduce them later except when using a row from D/B0 or D/Bl0 */
+   StochVector& gamma = dynamic_cast<StochVector&>(*original_vars.gamma);
+   StochVector& phi = dynamic_cast<StochVector&>(*original_vars.phi);
+
    if( !at_root_node )
    {
-      gamma_changes->axpy(1.0, *tmp_pos->vec);
-      phi_changes->axpy(-1.0, *tmp_neg->vec);
+      row_storage.axpyAtRowPosNeg(1.0, &gamma, &(*gamma_changes), &phi, &(*phi_changes), -change_dual_row, stored_row );
       outdated_linking_vars = true;
-
-      tmp_pos->vec->setToZero();
-      tmp_neg->vec->setToZero();
    }
-
-   original_vars.gamma->axpy(1.0, *tmp_pos);
-   original_vars.phi->axpy(-1.0, *tmp_neg);
+   else
+      row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
 
    assert( PIPSisLE(slack * dual_bound, old_complementarity) );
 
@@ -2644,6 +2633,7 @@ bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars)
    // TODO
 
    /* use stored linking rows to adjust variable duals */
+
 }
 
 void StochPostsolver::addIneqRowDual(double& z, double& lambda, double& pi, double value) const
