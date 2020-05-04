@@ -1754,8 +1754,9 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
 
    const double xlow_col2 = float_values.at(first_float_val + 4);
    const double xupp_col2 = float_values.at(first_float_val + 5);
-
+#ifndef NDEBUG
    const double coeff_col1 = float_values.at(first_float_val + 6);
+#endif
    const double coeff_col2 = float_values.at(first_float_val + 7);
 
    /* row1 = parallel_factor * row2 */
@@ -1981,8 +1982,9 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
    const double cupp = float_values.at(first_float_val + 11);
 
    assert( !PIPSisZero(scalar) );
-
+#ifndef NDEBUG
    const double val_col1 = getSimpleVecFromColStochVec(original_vars.x, col1);
+#endif
 
    /* if the variable bound of col1 was actually implied via col2 we have to shift it's dual multipliers over via also adjusting the dual of row1 */
    assert( PIPSisLE( xlow_col1, val_col1, postsolve_tol ) );
@@ -2637,7 +2639,7 @@ bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars)
    // TODO
 
    /* use stored linking rows to adjust variable duals */
-
+   return false;
 }
 
 void StochPostsolver::addIneqRowDual(double& z, double& lambda, double& pi, double value) const
