@@ -102,8 +102,8 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
    if(presData.getNnzsRow(row) != 1)
       return false;
 
-   double xlow_new = INF_NEG_PRES;
-   double xupp_new = INF_POS_PRES;
+   double xlow_new = INF_NEG;
+   double xupp_new = INF_POS;
 
    double coeff = 0.0;
 

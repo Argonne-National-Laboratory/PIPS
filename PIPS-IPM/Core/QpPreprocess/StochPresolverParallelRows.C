@@ -995,8 +995,8 @@ bool StochPresolverParallelRows::twoNearlyParallelEqualityRows(const INDEX& row1
    double xupp_col_singleton = col_singleton.isLinkingCol() ? (*currxuppParent)[col_singleton.getIndex()] : (*currxuppChild)[col_singleton.getIndex()];
 
    /* effectively tighten bounds of variable col2 */
-   double xlow_new = INF_NEG_PRES;
-   double xupp_new = INF_POS_PRES;
+   double xlow_new = INF_NEG;
+   double xupp_new = INF_POS;
 
    /* no col_other singleton */
    if( !rowContainsSingletonVariable(row_other) )
@@ -1080,8 +1080,8 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    const double norm_factor_row1 = (*norm_factorC)[row1_index];
    const double norm_factor_row2 = (*norm_factorC)[row2_index];
 
-   const double norm_clow_row2 = PIPSisZero( (*norm_iclow)[row2_index] ) ? INF_NEG_PRES : (*norm_clow)[row2_index];
-   const double norm_cupp_row2 = PIPSisZero( (*norm_icupp)[row2_index] ) ? INF_POS_PRES : (*norm_cupp)[row2_index];
+   const double norm_clow_row2 = PIPSisZero( (*norm_iclow)[row2_index] ) ? INF_NEG : (*norm_clow)[row2_index];
+   const double norm_cupp_row2 = PIPSisZero( (*norm_icupp)[row2_index] ) ? INF_POS : (*norm_cupp)[row2_index];
 
    double& norm_clow_row1 = (*norm_clow)[row1_index];
    double& norm_cupp_row1 = (*norm_cupp)[row1_index];
@@ -1095,21 +1095,21 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
       PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
    }
 
-   double new_lhs = INF_NEG_PRES;
-   double new_rhs = INF_POS_PRES;
+   double new_lhs = INF_NEG;
+   double new_rhs = INF_POS;
 
-   if( PIPSisLT( norm_clow_row1, norm_clow_row2) || ( PIPSisZero(iclow_row1) && norm_clow_row2 != INF_NEG_PRES ) )
+   if( PIPSisLT( norm_clow_row1, norm_clow_row2) || ( PIPSisZero(iclow_row1) && norm_clow_row2 != INF_NEG ) )
    {
-      assert(norm_clow_row2 != INF_NEG_PRES);
+      assert(norm_clow_row2 != INF_NEG);
       norm_clow_row1 = norm_clow_row2;
       iclow_row1 = 1.0;
 
       ( PIPSisLT( 0.0, norm_factor_row1) ) ? new_lhs = norm_factor_row1 * norm_clow_row2 : new_rhs = norm_factor_row1 * norm_clow_row2;
    }
 
-   if( PIPSisLT( norm_cupp_row2, norm_cupp_row1) || ( PIPSisZero(icupp_row1) && norm_cupp_row2 != INF_POS_PRES ) )
+   if( PIPSisLT( norm_cupp_row2, norm_cupp_row1) || ( PIPSisZero(icupp_row1) && norm_cupp_row2 != INF_POS ) )
    {
-      assert(norm_cupp_row2 != INF_POS_PRES);
+      assert(norm_cupp_row2 != INF_POS);
       norm_cupp_row1 = norm_cupp_row2;
       icupp_row1 = 1.0;
 
@@ -1120,7 +1120,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    assert( !PIPSisZero( norm_factor_row1 / norm_factor_row2 ) );
 
    /* if we have new info for the first row update its bounds */
-   if( new_lhs != INF_NEG_PRES || new_rhs != INF_POS_PRES )
+   if( new_lhs != INF_NEG || new_rhs != INF_POS )
       presData.tightenRowBoundsParallelRow( row1, row2, new_lhs, new_rhs, norm_factor_row1 / norm_factor_row2);
 }
 
@@ -1328,8 +1328,8 @@ bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const IN
    assert( col.isCol() );
    assert( !PIPSisZero(a_col) );
 
-   double xlow_new = INF_NEG_PRES;
-   double xupp_new = INF_POS_PRES;
+   double xlow_new = INF_NEG;
+   double xupp_new = INF_POS;
 
    const int row_eq_index = row_eq.getIndex();
    const int row_ineq_index = row_ineq.getIndex();
@@ -1352,7 +1352,7 @@ bool StochPresolverParallelRows::nearlyParallelEqualityAndInequalityRow(const IN
          xupp_new = ( (*norm_b)[row_eq_index] - (*norm_cupp)[row_ineq_index] ) * (*norm_factorA)[row_eq_index] / a_col;
    }
 
-   presData.tightenBoundsNearlyParallelRows( row_eq, row_ineq, col, INDEX(), xlow_new, xupp_new, INF_POS_PRES, INF_POS_PRES, s ) ;
+   presData.tightenBoundsNearlyParallelRows( row_eq, row_ineq, col, INDEX(), xlow_new, xupp_new, INF_POS, INF_POS, s ) ;
 
    presData.removeRedundantParallelRow( row_ineq, row_eq);
 

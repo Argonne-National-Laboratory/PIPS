@@ -26,9 +26,6 @@ static const double feastol = 1.0e-6; // was 1.0e-6
 static const double infinity = 1.0e30;
 static const double eps_bounds_nontight = 1.0e-8;
 
-static const double INF_NEG_PRES = -std::numeric_limits<double>::infinity();
-static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
-
 static inline double relativeDiff(double val1, double val2)
 {
    const double val1Abs = std::fabs(val1);

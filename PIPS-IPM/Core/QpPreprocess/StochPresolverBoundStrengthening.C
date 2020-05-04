@@ -257,9 +257,9 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          }
 
          if( std::fabs(ubx_new) > limit_bounds )
-            ubx_new = INF_POS_PRES;
+            ubx_new = INF_POS;
          if( std::fabs(lbx_new) > limit_bounds )
-            lbx_new = INF_NEG_PRES;
+            lbx_new = INF_NEG;
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
 

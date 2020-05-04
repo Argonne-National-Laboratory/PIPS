@@ -23,6 +23,7 @@ namespace pips_options
 
       /** all presolve/postsolve constants and settings */
       // TODO : many of these need adjustments/ have to be thought about
+      double_options["PRESOLVE_INFINITY"] = std::numeric_limits<double>::infinity();
 
       /// STOCH PRESOLVER
       /** limit for max rounds to apply all presolvers */

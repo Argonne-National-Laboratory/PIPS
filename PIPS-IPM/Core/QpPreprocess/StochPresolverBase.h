@@ -42,10 +42,14 @@ private:
    void setPointersVarBounds(int node);
    void setPointersObjective(int node);
    void setReductionPointers(SystemType system_type, int node);
+   void setPointersToNull();
 
 protected:
    const int my_rank;
    const bool distributed;
+
+   const double INF_NEG;
+   const double INF_POS;
 
    /* not owned by the class itself - given from the outside */
    PresolveData& presData;

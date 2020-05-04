@@ -78,6 +78,10 @@ private:
       const int my_rank;
       const bool distributed;
 
+      const double INF_NEG;
+      const double INF_POS;
+
+
       enum ReductionType
       {
          FIXED_COLUMN = 0,

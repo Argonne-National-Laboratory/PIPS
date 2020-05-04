@@ -5,8 +5,9 @@
  *      Author: Nils-Christian Kempke
  */
 
-#include "OoqpVector.h"
 #include "StochPostsolver.h"
+#include "OoqpVector.h"
+#include "StochOptions.h"
 #include "pipsdef.h"
 #include "pipsport.h"
 #include "StochVectorUtilities.h"
@@ -19,6 +20,8 @@ StochPostsolver::StochPostsolver(const sData& original_problem) :
    QpPostsolver(original_problem),
    my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
    distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
+   INF_NEG( -pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
+   INF_POS( pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
    n_rows_original(original_problem.my + original_problem.mz),
    n_cols_original(original_problem.nx),
    padding_origcol( cloneStochVector<double, int>(*original_problem.g) ),
@@ -329,8 +332,8 @@ void StochPostsolver::notifyNearlyParallelRowBoundsTightened( const INDEX& row1,
    else
    {
       assert( PIPSisZero(coeff_col2) );
-      assert( xlow_col2 == INF_NEG_PRES );
-      assert( xupp_col2 == INF_POS_PRES );
+      assert( xlow_col2 == INF_NEG );
+      assert( xupp_col2 == INF_POS );
    }
 
    assert( !PIPSisZero(scalar) );
@@ -397,7 +400,7 @@ void StochPostsolver::notifySingletonRowBoundsTightened( const INDEX& row, const
       assert( row.getNode() == -1 );
 
    assert(PIPSisLE(xlow_new, xupp_new));
-   assert(xupp_new != INF_POS_PRES || xlow_new != INF_NEG_PRES);
+   assert(xupp_new != INF_POS || xlow_new != INF_NEG);
    assert(!PIPSisZero(coeff));
 
    assert(!wasRowRemoved(row));
@@ -1199,11 +1202,11 @@ bool StochPostsolver::postsolveFixedColumnSingletonFromInequality(sVars& origina
    getSimpleVecFromColStochVec(original_vars.x, col) = value;
 
    /* set slacks for x bounds */
-   assert( PIPSisLE(value, xupp_old) || xupp_old == INF_POS_PRES);
-   assert( PIPSisLE(xlow_old, value) || xlow_old == INF_NEG_PRES);
+   assert( PIPSisLE(value, xupp_old) || xupp_old == INF_POS);
+   assert( PIPSisLE(xlow_old, value) || xlow_old == INF_NEG);
 
-   getSimpleVecFromColStochVec(original_vars.v, col) = (xlow_old == INF_NEG_PRES) ? 0 : value - xlow_old;
-   getSimpleVecFromColStochVec(original_vars.w, col) = (xupp_old == INF_POS_PRES) ? 0 : xupp_old - value;
+   getSimpleVecFromColStochVec(original_vars.v, col) = (xlow_old == INF_NEG) ? 0 : value - xlow_old;
+   getSimpleVecFromColStochVec(original_vars.w, col) = (xupp_old == INF_POS) ? 0 : xupp_old - value;
 
    /* TODO: don't think something needs to be done for the reduced costs */
    getSimpleVecFromColStochVec(original_vars.phi, col) = 0.0;
@@ -1257,22 +1260,22 @@ bool StochPostsolver::postsolveSingletonEqualityRow(sVars& original_vars, int re
    double& slack_upper = getSimpleVecFromColStochVec(original_vars.w, col);
 
    /* if bound is not tight only adjust slack v/w */
-   if(xupp_old == INF_POS_PRES)
+   if(xupp_old == INF_POS)
       slack_upper = 0;
    else
    {
       slack_upper = xupp_old - curr_x;
       assert(PIPSisLE(0.0, slack_upper));
-      assert(std::fabs(slack_upper) != INF_POS_PRES);
+      assert(std::fabs(slack_upper) != INF_POS);
    }
 
-   if(xlow_old == INF_NEG_PRES)
+   if(xlow_old == INF_NEG)
       slack_lower = 0;
    else
    {
       slack_lower = curr_x - xlow_old;
       assert(PIPSisLE(0.0, slack_lower));
-      assert(std::fabs(slack_lower) != INF_POS_PRES);
+      assert(std::fabs(slack_lower) != INF_POS);
    }
 
    double& dual_singelton_row = getSimpleVecFromRowStochVec(original_vars.y, row);
@@ -1338,29 +1341,29 @@ bool StochPostsolver::postsolveSingletonInequalityRow(sVars& original_vars, int 
    const double coeff = float_values.at(first_float_val + 4);
 
    assert(!PIPSisZero(coeff));
-   assert(xlow_new == INF_NEG_PRES || xupp_new == INF_POS_PRES);
-   assert(xlow_new != INF_NEG_PRES || xupp_new != INF_POS_PRES);
+   assert(xlow_new == INF_NEG || xupp_new == INF_POS);
+   assert(xlow_new != INF_NEG || xupp_new != INF_POS);
 
    /* should have been re-added by now */
    assert( !wasColumnRemoved(col) );
    assert( !wasRowRemoved(row) );
 
-   bool lower_bound_changed = (xlow_new != INF_NEG_PRES);
+   bool lower_bound_changed = (xlow_new != INF_NEG);
 
    const double curr_x = getSimpleVecFromColStochVec(original_vars.x, col);
 
    double& slack = lower_bound_changed ? getSimpleVecFromColStochVec(original_vars.v, col) :
          getSimpleVecFromColStochVec(original_vars.w, col);
-   const double old_bound = (xupp_new != INF_POS_PRES) ? xupp_old : xlow_old;
+   const double old_bound = (xupp_new != INF_POS) ? xupp_old : xlow_old;
 
    /* if bound is not tight only adjust slack v/w */
-   if(std::fabs(old_bound) == INF_POS_PRES)
+   if(std::fabs(old_bound) == INF_POS)
       slack = 0;
    else
    {
       slack = std::fabs(old_bound - curr_x);
       assert(PIPSisLT(0.0, slack));
-      assert(std::fabs(slack) != INF_POS_PRES);
+      assert(std::fabs(slack) != INF_POS);
    }
 
    double& dual_singelton_row = getSimpleVecFromRowStochVec(original_vars.z, row);
@@ -1477,7 +1480,7 @@ bool StochPostsolver::postsolveFreeColumnSingletonEquality(sVars& original_vars,
    else
       value_row = row_storage.multRowTimesVec(stored_row, dynamic_cast<const StochVector&>(*original_vars.x));
 
-   assert(std::abs(value_row) != INF_POS_PRES);
+   assert(std::abs(value_row) != INF_POS);
 
    /* reintroduce the removed column on process owning column */
    if( col.isCol() )
@@ -1496,7 +1499,7 @@ bool StochPostsolver::postsolveFreeColumnSingletonEquality(sVars& original_vars,
       double& slack_lower = getSimpleVecFromColStochVec(original_vars.v, col);
       double& slack_upper = getSimpleVecFromColStochVec(original_vars.w, col);
 
-      if( xlow == INF_NEG_PRES )
+      if( xlow == INF_NEG )
          slack_lower = 0.0;
       else
       {
@@ -1504,7 +1507,7 @@ bool StochPostsolver::postsolveFreeColumnSingletonEquality(sVars& original_vars,
          slack_lower = xlow - x_val;
       }
 
-      if( xupp == INF_POS_PRES )
+      if( xupp == INF_POS )
          slack_upper = 0.0;
       else
       {
@@ -1593,8 +1596,8 @@ bool StochPostsolver::postsolveNearlyParallelRowSubstitution(sVars& original_var
    assert( PIPSisLEFeas( val_col2, xupp_col2 ) );
 
    /* slacks for bounds */
-   getSimpleVecFromColStochVec(original_vars.v, col2) = (xlow_col2 == INF_NEG_PRES) ? 0 : val_col2 - xlow_col2;
-   getSimpleVecFromColStochVec(original_vars.w, col2) = (xupp_col2 == INF_POS_PRES) ? 0 : xupp_col2 - val_col2;
+   getSimpleVecFromColStochVec(original_vars.v, col2) = (xlow_col2 == INF_NEG) ? 0 : val_col2 - xlow_col2;
+   getSimpleVecFromColStochVec(original_vars.w, col2) = (xupp_col2 == INF_POS) ? 0 : xupp_col2 - val_col2;
 
    /* bound duals to zero */
    getSimpleVecFromColStochVec(original_vars.phi, col2) = 0.0;
@@ -1748,34 +1751,34 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
 //         assert( PIPSisRelLEFeas( xlow_col1, val_col1 ) );
 //         assert( PIPSisRelLEFeas( val_col1, xupp_col1 ) );
 
-   double xlow_implied = INF_NEG_PRES;
-   double xupp_implied = INF_POS_PRES;
+   double xlow_implied = INF_NEG;
+   double xupp_implied = INF_POS;
 
    /* two nearly parallel equality rows */
    if( col2.isCol() )
    {
-      assert( xlow_col2 != INF_NEG_PRES || xupp_col2 != INF_POS_PRES );
+      assert( xlow_col2 != INF_NEG || xupp_col2 != INF_POS );
 
       if( PIPSisLT(0.0, scalar) )
       {
-         if( xlow_col2 != INF_NEG_PRES )
+         if( xlow_col2 != INF_NEG )
             xlow_implied = std::max(xlow_col1, (xlow_col2 - translation) / scalar);
          else
             xlow_implied = xlow_col1;
 
-         if( xupp_col2 != INF_POS_PRES )
+         if( xupp_col2 != INF_POS )
             xupp_implied = std::min(xupp_col1, (xupp_col2 - translation) / scalar);
          else
             xupp_implied = xupp_col1;
       }
       else
       {
-         if( xlow_col2 != INF_NEG_PRES )
+         if( xlow_col2 != INF_NEG )
             xupp_implied = std::min(xupp_col1, (xlow_col2 - translation) / scalar);
          else
             xupp_implied = xupp_col1;
 
-         if( xupp_col2 != INF_POS_PRES )
+         if( xupp_col2 != INF_POS )
             xlow_implied = std::max(xlow_col1, (xupp_col2 - translation) / scalar);
          else
             xlow_implied = xlow_col1;
@@ -1783,7 +1786,7 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
    }
    else
    {
-      assert( clow != INF_NEG_PRES || cupp != INF_POS_PRES );
+      assert( clow != INF_NEG || cupp != INF_POS );
       assert( !PIPSisZero(coeff_col1) );
       assert( !PIPSisZero(parallel_factor * coeff_col1) );
 
@@ -1792,12 +1795,12 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
       assert( !PIPSisZero(faq) );
       if( PIPSisLT( 0.0, faq ) )
       {
-         if( cupp != INF_POS_PRES )
+         if( cupp != INF_POS )
             xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * cupp ) / coeff_col1 );
          else
             xlow_implied = xlow_col1;
 
-         if( clow != INF_NEG_PRES )
+         if( clow != INF_NEG )
             xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * clow) / coeff_col1 );
          else
             xupp_implied = xupp_col1;
@@ -1805,20 +1808,20 @@ bool StochPostsolver::postsolveNearlyParallelRowBoundsTightened(sVars& original_
 
       if( PIPSisLT( faq, 0.0 ) )
       {
-         if( cupp != INF_POS_PRES )
+         if( cupp != INF_POS )
             xupp_implied = std::min( xupp_col1, (rhs - parallel_factor * cupp) / coeff_col1 );
          else
             xupp_implied = xupp_col1;
 
-         if( clow != INF_NEG_PRES )
+         if( clow != INF_NEG )
             xlow_implied = std::max( xlow_col1, (rhs - parallel_factor * clow) / coeff_col1 );
          else
             xlow_implied = xlow_col1;
       }
    }
 
-   assert( xlow_implied != INF_NEG_PRES );
-   assert( xupp_implied != INF_POS_PRES );
+   assert( xlow_implied != INF_NEG );
+   assert( xupp_implied != INF_POS );
    assert( PIPSisRelLEFeas(xlow_col1, xlow_implied) );
    assert( PIPSisRelLEFeas(xupp_implied, xupp_col1) );
 
@@ -2083,7 +2086,7 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
       assert( PIPSisZero(t_row2) );
 
       /* adjust slacks */
-      if( clow_old == INF_NEG_PRES )
+      if( clow_old == INF_NEG )
          t_row1 = 0.0;
       else
          t_row1 += clow_new - clow_old;
@@ -2104,7 +2107,7 @@ bool StochPostsolver::postsolveParallelRowsBoundsTightened(sVars& original_vars,
       assert( PIPSisZero(u_row2) );
 
       /* adjust slacks */
-      if( cupp_old == INF_POS_PRES )
+      if( cupp_old == INF_POS )
          u_row1 = 0.0;
       else
          u_row1 += cupp_old - cupp_new;
