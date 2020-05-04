@@ -24,6 +24,21 @@ namespace pips_options
       /** all presolve/postsolve constants and settings */
       // TODO : many of these need adjustments/ have to be thought about
 
+      /// STOCH PRESOLVER
+      /** limit for max rounds to apply all presolvers */
+      int_options["PRESOLVE_MAX_ROUNDS"] = 1;
+      /** should the problem be written to std::cout before and after presolve */
+      bool_options["PRESOLVE_PRINT_PROBLEM"] = false;
+      /** should free variables' bounds be reset after presolve (given the row implying these bounds was not removed */
+      bool_options["PRESOLVE_RESET_FREE_VARIABLES"] = false;
+
+      /** turn respective presolvers on/off */
+      bool_options["PRESOLVE_BOUND_STRENGTHENING"] = true;
+      bool_options["PRESOLVE_PARALLEL_ROWS"] = true;
+      bool_options["PRESOLVE_COLUMN_FIXATION"] = true;
+      bool_options["PRESOLVE_SINGLETON_ROWS"] = true;
+      bool_options["PRESOLVE_SINGLETON_COLUMNS"] = true;
+
       /// BOUND STRENGTHENING
       /** limit for rounds of bound strengthening per call of presolver */
       int_options["PRESOLVE_BOUND_STR_MAX_ITER"] = 1;

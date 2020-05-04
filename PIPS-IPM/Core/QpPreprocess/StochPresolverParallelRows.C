@@ -75,7 +75,7 @@ StochPresolverParallelRows::~StochPresolverParallelRows()
 
 /// presolve assumes that all rows are in their correct blocks -> linking rows are not pure local/linking rows with one singleton column cannot be local up to that singleton column
 /// linking variables not in A0/C0 cannot be completely in the linking vars block etc.
-void StochPresolverParallelRows::applyPresolving()
+bool StochPresolverParallelRows::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -215,6 +215,11 @@ void StochPresolverParallelRows::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
+
+   if( n_removed_run != 0 )
+      return true;
+   else
+      return false;
 }
 
 /** If it is no dummy child, sets normalized pointers:

@@ -27,7 +27,7 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 {
 }
 
-void StochPresolverBoundStrengthening::applyPresolving()
+bool StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
@@ -85,6 +85,8 @@ void StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
+
+   return tightened;
 
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());

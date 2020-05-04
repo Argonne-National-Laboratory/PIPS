@@ -63,7 +63,7 @@ public:
    ~StochPresolverParallelRows();
 
    // remove parallel rows
-   virtual void applyPresolving();
+   bool applyPresolving() override;
 
 private:
 

@@ -17,7 +17,7 @@ public:
 
    virtual ~StochPresolverBoundStrengthening();
 
-   virtual void applyPresolving();
+   bool applyPresolving() override;
 
 private:
    /** limit for rounds of bound strengthening per call of presolver */

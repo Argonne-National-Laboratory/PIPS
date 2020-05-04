@@ -18,6 +18,8 @@
 #include <cstdlib>
 #include <ctype.h>
 
+#include "StochOptions.h"
+#include "PresolveData.h"
 #include "StochVector.h"
 #include "StochGenMatrix.h"
 #include "SmartPointer.h"
@@ -29,7 +31,6 @@
 #include "StochGenMatrix.h"
 #include "sTreeCallbacks.h"
 #include "DoubleMatrixTypes.h"
-#include "PresolveData.h"
 #include "StochPostsolver.h"
 #include "StochPresolverBoundStrengthening.h"
 #include "StochPresolverModelCleanup.h"
@@ -41,59 +42,69 @@
 #include "pipsport.h"
 
 StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullptr)
- : QpPresolver(prob, postsolver)
+ : QpPresolver(prob, postsolver), my_rank( PIPS_MPIgetRank(MPI_COMM_WORLD) ),
+   limit_max_rounds( pips_options::getIntParameter("PRESOLVE_MAX_ROUNDS") ),
+   reset_free_variables_after_presolve( pips_options::getBoolParameter("PRESOLVE_RESET_FREE_VARIABLES") ),
+   print_problem( pips_options::getBoolParameter("PRESOLVE_PRINT_PROBLEM") ),
+   presData( new PresolveData(dynamic_cast<const sData*>(origprob), dynamic_cast<StochPostsolver*>(postsolver)) )
 {
+   const sData* sorigprob = dynamic_cast<const sData*>(origprob);
+
+   if( pips_options::getBoolParameter("PRESOLVE_SINGLETON_ROWS") )
+      presolvers.push_back( new StochPresolverSingletonRows(*presData, *sorigprob) );
+
+   if( pips_options::getBoolParameter("PRESOLVE_PARALLEL_ROWS") )
+      presolvers.push_back( new StochPresolverParallelRows(*presData, *sorigprob) );
+
+   if( pips_options::getBoolParameter("PRESOLVE_SINGLETON_COLUMNS") )
+      presolvers.push_back( new StochPresolverSingletonColumns(*presData, *sorigprob) );
+
+   if( pips_options::getBoolParameter("PRESOLVE_BOUND_STRENGTHENING") )
+      presolvers.push_back( new StochPresolverBoundStrengthening(*presData, *sorigprob) );
+
+   if( pips_options::getBoolParameter("PRESOLVE_COLUMN_FIXATION") )
+      presolvers.push_back( new StochPresolverColumnFixation(*presData, *sorigprob) );
 }
 
 StochPresolver::~StochPresolver()
 {
+   for( unsigned int i = 0; i < presolvers.size(); ++i )
+      delete presolvers[i];
+   delete presData;
 }
 
 Data* StochPresolver::presolve()
 {
-   const int my_rank = PIPS_MPIgetRank(MPI_COMM_WORLD);
-
    if( my_rank == 0 )
       std::cout << "start stoch presolving" << std::endl;
 
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
-
-   /* initialize presolve data */
-   PresolveData presData(sorigprob, dynamic_cast<StochPostsolver*>(postsolver));
-
-//   sorigprob->writeToStreamDense(std::cout);
    assert( sorigprob->isRootNodeInSync() );
-   assert( presData.getPresProb().isRootNodeInSync() );
+   assert( presData->getPresProb().isRootNodeInSync() );
 
-   /* initialize all presolvers */
-   StochPresolverBoundStrengthening presolverBS(presData, *sorigprob);
-   StochPresolverParallelRows presolverParallelRow(presData, *sorigprob);
-   StochPresolverModelCleanup presolverCleanup(presData, *sorigprob);
-   StochPresolverColumnFixation presolverColFix(presData, *sorigprob);
-   StochPresolverSingletonRows presolverSR(presData, *sorigprob);
-   StochPresolverSingletonColumns presolverSC(presData, *sorigprob);
+   if( print_problem)
+      sorigprob->writeToStreamDense(std::cout);
+
+   /* initialize model clean up (necessary presolver) */
+   StochPresolverModelCleanup presolverCleanup(*presData, *sorigprob);
 
    if( my_rank == 0 )
       std::cout <<"--- Before Presolving: " << std::endl;
    presolverCleanup.countRowsCols();
 
-   // todo loop, and exhaustive
-   // some list holding all presolvers - eg. one presolving run
-   // some while iterating over the list over and over until either every presolver says im done or some iterlimit is reached?
+   // some while iterating over the list over and over until either every presolver says I'm done or some iterlimit is reached?
    presolverCleanup.applyPresolving();
-   
-   for( int i = 0; i < 1; ++i )
+
+   for( int i = 0; i < limit_max_rounds; ++i )
    {
-      /* singleton rows */
-      presolverSR.applyPresolving();
-      presolverParallelRow.applyPresolving();
-      //presolverSC.applyPresolving();
-      presolverBS.applyPresolving();
-      presolverColFix.applyPresolving();
-      presolverSR.applyPresolving();
-      presolverColFix.applyPresolving();
+      bool success = false;
+      for( unsigned int i = 0; i < presolvers.size(); ++i )
+      {
+         bool presolver_success = presolvers[i]->applyPresolving();
+         success = success || presolver_success;
+      }
    }
-   // presData.getPresProb().writeToStreamDense(std::cout);
+
    // before the finalize call fix all empty rows and columns not yet fixed
    presolverCleanup.applyPresolving();
    
@@ -101,35 +112,28 @@ Data* StochPresolver::presolve()
       std::cout << "--- After Presolving:" << std::endl;
    presolverCleanup.countRowsCols();
    if( my_rank == 0 )
-      std::cout << "Objective offset: " << presData.getObjOffset() << std::endl;
-   assert( presData.getPresProb().isRootNodeInSync() );
-   // exit(1);
+      std::cout << "Objective offset: " << presData->getObjOffset() << std::endl;
+   assert( presData->getPresProb().isRootNodeInSync() );
 
+   if( reset_free_variables_after_presolve )
+      resetFreeVariables();
 
-   // todo : tell postsolver about released variables
-   char* env = getenv("PIPS_RESET_FREE_VARIABLES");
-   if( env != nullptr )
-   {
-      std::string reset_vars(env);
-      for(unsigned int i = 0; i < reset_vars.length(); ++i)
-         reset_vars[i] = std::tolower(reset_vars[i]);
-      //std::transform(reset_vars.begin(), reset_vars.end(), reset_vars.begin(), [](unsigned char c){ return std::tolower(c); }); 
-      if(reset_vars == "true")
-      {
-          if( my_rank == 0 )
-             std::cout << "Resetting bounds found in bound strengthening" << std::endl;
-
-          presData.resetOriginallyFreeVarsBounds(*sorigprob);
-          presolverCleanup.countRowsCols();
-      }
-   }   
-
-   sData* finalPresData = presData.finalize();
-
-//   finalPresData->writeToStreamDense(std::cout);
-   
+   sData* finalPresData = presData->finalize();
    assert( finalPresData );
    assert( finalPresData->isRootNodeInSync() );
 
+   if( print_problem )
+      finalPresData->writeToStreamDense(std::cout);
+
    return finalPresData;
+}
+
+void StochPresolver::resetFreeVariables()
+{
+   if( my_rank == 0 )
+      std::cout << "Resetting bounds found in bound strengthening" << std::endl;
+
+   const sData* sorigprob = dynamic_cast<const sData*>(origprob);
+
+   presData->resetOriginallyFreeVarsBounds(*sorigprob);
 }

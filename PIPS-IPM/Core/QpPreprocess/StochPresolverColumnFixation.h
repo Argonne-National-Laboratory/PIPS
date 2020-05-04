@@ -18,7 +18,7 @@ class StochPresolverColumnFixation: public StochPresolverBase
 
       virtual ~StochPresolverColumnFixation();
 
-      void applyPresolving() override;
+      bool applyPresolving() override;
 
    private:
       /** limit on the possible impact a column can have on the problem */

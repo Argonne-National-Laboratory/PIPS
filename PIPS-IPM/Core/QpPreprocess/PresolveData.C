@@ -1045,11 +1045,14 @@ void PresolveData::deleteEntryAtIndex( const INDEX& row, const INDEX& col, int c
 
 void PresolveData::resetOriginallyFreeVarsBounds(const sData& orig_prob)
 {
+   // todo : tell postsolver about released variables
+   assert( 0 && "not yet properly implemented" );
 
 #ifndef NDEBUG
    if(my_rank == 0)
       std::cout << "Resetting all presolved variable bounds of originally free variables" <<::endl; 
 #endif
+
    long long n = 0;
    for( int node = -1; node < nChildren; ++node )
    {

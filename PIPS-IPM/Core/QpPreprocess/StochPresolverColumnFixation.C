@@ -25,7 +25,7 @@ StochPresolverColumnFixation::~StochPresolverColumnFixation()
 }
 
 /* scan through columns and fix those that have tight bounds */
-void StochPresolverColumnFixation::applyPresolving()
+bool StochPresolverColumnFixation::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -130,10 +130,10 @@ void StochPresolverColumnFixation::applyPresolving()
    presData.allreduceAndApplyNnzChanges();
    presData.allreduceObjOffset();
 
-
-#ifndef NDEBUG
    PIPS_MPIgetSumInPlace(fixed_columns_run, MPI_COMM_WORLD);
    fixed_columns += fixed_columns_run;
+
+#ifndef NDEBUG
    if( my_rank == 0 )
       std::cout << "\tFixed columns during column fixation: " << fixed_columns << std::endl;
    if( my_rank == 0 )
@@ -147,4 +147,9 @@ void StochPresolverColumnFixation::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyActivities());
    assert(presData.verifyNnzcounters());
+
+   if( fixed_columns_run != 0)
+      return true;
+   else
+      return false;
 }

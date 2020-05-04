@@ -19,6 +19,7 @@ StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, c
      limit_max_matrix_entry_impact( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT") ),
      limit_matrix_entry_impact_feasdist( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST") ),
      removed_entries_total(0),
+     fixed_empty_cols_total(0),
      removed_rows_total(0)
 {
 }
@@ -28,7 +29,7 @@ StochPresolverModelCleanup::~StochPresolverModelCleanup()
 }
 
 
-void StochPresolverModelCleanup::applyPresolving()
+bool StochPresolverModelCleanup::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
@@ -42,8 +43,10 @@ void StochPresolverModelCleanup::applyPresolving()
    countRowsCols();
 #endif
 
-   int n_removed_entries = 0;
-   int n_removed_rows = 0;
+   std::vector<int> counts(3, 0);
+   int& n_removed_entries = counts[0];
+   int& n_fixed_empty_columns = counts[1];
+   int& n_removed_rows = counts[2];
 
    // removal of redundant constraints
    int n_removed_rows_eq = removeRedundantRows(EQUALITY_SYSTEM);
@@ -57,7 +60,7 @@ void StochPresolverModelCleanup::applyPresolving()
 
    presData.allreduceAndApplyNnzChanges();
 
-   fixEmptyColumns();
+   n_fixed_empty_columns = fixEmptyColumns();
 
    // update all nnzCounters - set reductionStochvecs to zero afterwards
    presData.allreduceAndApplyBoundChanges();
@@ -65,10 +68,9 @@ void StochPresolverModelCleanup::applyPresolving()
    presData.allreduceAndApplyLinkingRowActivities();
 
    if( distributed )
-   {
-      PIPS_MPIgetSumInPlace( n_removed_entries, MPI_COMM_WORLD);
-      PIPS_MPIgetSumInPlace( n_removed_rows, MPI_COMM_WORLD);
-   }
+      PIPS_MPIsumArrayInPlace( counts, MPI_COMM_WORLD);
+
+   fixed_empty_cols_total += n_fixed_empty_columns;
    removed_entries_total += n_removed_entries;
    removed_rows_total += n_removed_rows;
 
@@ -87,6 +89,11 @@ void StochPresolverModelCleanup::applyPresolving()
 
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
+
+   if( n_removed_entries != 0 || n_removed_rows != 0 || n_fixed_empty_columns != 0 )
+      return true;
+   else
+      return false;
 }
 
 /** Remove redundant rows in the constraint system. Compares the minimal and maximal row activity
@@ -378,8 +385,9 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
 /* Go through columns and fix all empty ones to the current variables lower/upper bound (depending on objective)
  * Might detect unboundedness of problem.
  */
-void StochPresolverModelCleanup::fixEmptyColumns()
+int StochPresolverModelCleanup::fixEmptyColumns()
 {
+   int fixations = 0;
 
    for(int node = -1; node < nChildren; ++node)
    {
@@ -402,12 +410,15 @@ void StochPresolverModelCleanup::fixEmptyColumns()
          if( nnzs_col[col_index] == 0)
          {
             /* check whether column was removed already */
-            if( PIPSisZero(ixlow[col_index]) && PIPSisZero(ixupp[col_index])
-               && PIPSisZero(xlow[col_index]) && PIPSisZero(xupp[col_index])
-               && PIPSisZero(g[col_index]))
+            if( presData.wasColumnRemoved(col) )
             {
-               if( presData.wasColumnRemoved(col) )
-                  continue;
+               assert( PIPSisZero(ixlow[col_index]) );
+               assert( PIPSisZero(ixupp[col_index]) );
+               assert( PIPSisZero(xlow[col_index]) );
+               assert( PIPSisZero(xupp[col_index]) );
+               assert( PIPSisZero(g[col_index]) );
+
+               continue;
             }
 
             if( PIPSisLT( g[col_index], 0.0) )
@@ -445,9 +456,14 @@ void StochPresolverModelCleanup::fixEmptyColumns()
                else
                   presData.fixEmptyColumn(col, 0.0);
             }
+
+            if( my_rank == 0 || !col.isLinkingCol() )
+               ++fixations;
          }
       }
    }
+
+   return fixations;
 }
 
 

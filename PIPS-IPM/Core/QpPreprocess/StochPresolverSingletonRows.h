@@ -20,7 +20,7 @@ public:
    ~StochPresolverSingletonRows();
 
    // remove singleton rows
-   virtual void applyPresolving();
+   bool applyPresolving() override;
 
 private:
    long long removed_rows; 

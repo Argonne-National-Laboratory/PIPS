@@ -21,7 +21,7 @@ StochPresolverSingletonColumns::~StochPresolverSingletonColumns()
 {
 }
 
-void StochPresolverSingletonColumns::applyPresolving()
+bool StochPresolverSingletonColumns::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -101,9 +101,10 @@ void StochPresolverSingletonColumns::applyPresolving()
    presData.allreduceAndApplyObjVecChanges();
    presData.allreduceObjOffset();
 
-#ifndef NDEBUG
    PIPS_MPIgetSumInPlace(removed_cols_run, MPI_COMM_WORLD);
    removed_cols += removed_cols_run;
+
+#ifndef NDEBUG
    if( my_rank == 0 )
    {
       std::cout << "--- After singleton columns presolving:" << std::endl;
@@ -118,6 +119,11 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
+
+   if( removed_cols_run != 0 )
+      return true;
+   else
+      return false;
 }
 
 bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)

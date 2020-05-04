@@ -24,8 +24,7 @@ public:
    StochPresolverBase(PresolveData& presData, const sData& origProb);
    virtual ~StochPresolverBase();
 
-   // todo return bool whether enough eliminations
-   virtual void applyPresolving() = 0;
+   virtual bool applyPresolving() = 0;
    void countRowsCols(); // theoretically const but sets pointers
 
 protected:

@@ -19,7 +19,7 @@ class StochPresolverModelCleanup : public StochPresolverBase
       virtual ~StochPresolverModelCleanup();
 
       // remove small matrix entries
-      void applyPresolving() override;
+      bool applyPresolving() override;
 
    private:
       /** limit for the size of a matrix entry below which it will be removed from the problem */
@@ -30,6 +30,7 @@ class StochPresolverModelCleanup : public StochPresolverBase
       const double limit_matrix_entry_impact_feasdist;
 
       int removed_entries_total;
+      int fixed_empty_cols_total;
       int removed_rows_total;
 
       int removeRedundantRows(SystemType system_type);
@@ -37,7 +38,7 @@ class StochPresolverModelCleanup : public StochPresolverBase
       int removeRedundantRows(SystemType system_type, int node, bool linking);
       int removeTinyEntriesFromSystem(SystemType system_type);
       int removeTinyInnerLoop(SystemType system_type, int node, BlockType block_type);
-      void fixEmptyColumns();
+      int fixEmptyColumns();
 };
 
 #endif /* PIPS_IPM_CORE_QPPREPROCESS_STOCHPRESOLVERMODELCLEANUP_H_ */

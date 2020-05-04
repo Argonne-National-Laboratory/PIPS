@@ -22,7 +22,7 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
 {
 }
  
-void StochPresolverSingletonRows::applyPresolving()
+bool StochPresolverSingletonRows::applyPresolving()
 {
    assert(presData.presDataInSync());
    assert(presData.reductionsEmpty());
@@ -34,12 +34,6 @@ void StochPresolverSingletonRows::applyPresolving()
       std::cout << "--- Before singleton Row Presolving:" << std::endl;
    }
    countRowsCols();
-
-   if( presData.getSingletonRows().size() == 0 )
-   {
-      if( my_rank == 0)
-         std::cout << "No more singletons left - exiting" << std::endl;
-   }
 #endif
 
    int removed_rows_local = 0;
@@ -86,6 +80,11 @@ void StochPresolverSingletonRows::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
+
+   if( removed_rows_local != 0 )
+      return true;
+   else
+      return false;
 }
 
 /** Does one round of singleton row presolving for system A or C
