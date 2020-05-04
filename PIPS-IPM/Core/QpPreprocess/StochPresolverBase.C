@@ -24,7 +24,7 @@ StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& orig
       my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
       distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
       INF_NEG( -pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
-      INF_POS( -pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
+      INF_POS( pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
       presData(presData), origProb(origProb)
 {
    localNelims = 0;
