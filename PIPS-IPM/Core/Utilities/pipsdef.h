@@ -133,7 +133,7 @@ inline int PIPSgetnOMPthreads()
 }
 
 
-inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    bool iAmSpecial = true;
 
@@ -149,12 +149,12 @@ inline bool PIPS_MPIiAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
    return iAmSpecial;
 }
 
-inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm)
+inline bool iAmSpecial(int iAmDistrib, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    return PIPS_MPIiAmSpecial(iAmDistrib, mpiComm);
 }
 
-inline bool PIPS_MPIgetDistributed(MPI_Comm comm)
+inline bool PIPS_MPIgetDistributed(MPI_Comm comm = MPI_COMM_WORLD)
 {
    int world_size;
    MPI_Comm_size(comm, &world_size);
@@ -165,7 +165,7 @@ inline bool PIPS_MPIgetDistributed(MPI_Comm comm)
       return false;
 }
 
-void inline PIPS_MPIabortInfeasible(MPI_Comm comm, std::string message, std::string file, std::string function)
+void inline PIPS_MPIabortInfeasible(std::string message, std::string file, std::string function, MPI_Comm comm = MPI_COMM_WORLD)
 {
    std::cerr << "Infesibility detected in " << file << " function " << function << "!" << std::endl;
    std::cerr << "Message: " << message << std::endl;
@@ -330,14 +330,6 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm = MPI_COMM_WORLD)
    return mysize;
 }
 
-template <typename T>
-inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm = MPI_COMM_WORLD)
-{
-   // todo make one vec and + - val
-   const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
-   const int min = PIPS_MPIgetMin(val, MPI_COMM_WORLD);
-   return (max == min);
-}
 
 template <typename T>
 inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
@@ -367,6 +359,15 @@ template <typename T>
 void PIPS_MPIgetMinInPlace(T& min, MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
    MPI_Allreduce(MPI_IN_PLACE, &min, 1, get_mpi_datatype(min), MPI_MIN, mpiComm);
+}
+
+template <typename T>
+inline bool PIPS_MPIisValueEqual(const T& val, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   // todo make one vec and + - val
+   const int max = PIPS_MPIgetMax(val, MPI_COMM_WORLD);;
+   const int min = PIPS_MPIgetMin(val, MPI_COMM_WORLD);
+   return (max == min);
 }
 
 template <typename T>

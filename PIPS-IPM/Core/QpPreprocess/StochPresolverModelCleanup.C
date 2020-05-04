@@ -170,7 +170,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
          if( (PIPSisLT( rhs_eq[row_index], actmin_part, feastol) && actmin_ubndd == 0)  || (PIPSisLT(actmax_part, rhs_eq[row_index], feastol) && actmax_ubndd == 0))
          {
-            PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
+            PIPS_MPIabortInfeasible("Found row that cannot meet it's rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          }
          else if( PIPSisLE(rhs_eq[row_index], actmin_part, feastol) && PIPSisLE(actmax_part, rhs_eq[row_index], feastol) )
@@ -185,7 +185,7 @@ int StochPresolverModelCleanup::removeRedundantRows(SystemType system_type, int 
 
          if( ( !PIPSisZero(iclow[row_index]) && (actmax_ubndd == 0 && PIPSisLTFeas(actmax_part, clow[row_index])) )
                || ( !PIPSisZero(icupp[row_index]) && (actmin_ubndd == 0 && PIPSisLTFeas(cupp[row_index], actmin_part)) ) )
-            PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
+            PIPS_MPIabortInfeasible("Found row that cannot meet it's lhs or rhs with it's computed activities", "StochPresolverModelCleanup.C",
                   "removeRedundantRows");
          else if( ( PIPSisZero(iclow[row_index]) || PIPSisLE(clow[row_index], -infinity) ) &&
                ( PIPSisZero(icupp[row_index]) || PIPSisLE(infinity, cupp[row_index])) )
@@ -432,7 +432,7 @@ int StochPresolverModelCleanup::fixEmptyColumns()
                }
                else
                {
-                  PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!", 
+                  PIPS_MPIabortInfeasible("Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!",
                      "StochPresolverModelCleanup.C", "fixEmptyColumns");
                }
             } 
@@ -444,7 +444,7 @@ int StochPresolverModelCleanup::fixEmptyColumns()
                }
                else
                {
-                  PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!", 
+                  PIPS_MPIabortInfeasible("Found empty column with non-zero objective vector and no bounds in objective direction! Unbounded!",
                      "StochPresolverModelCleanup.C", "fixEmptyColumns");
                }
             }

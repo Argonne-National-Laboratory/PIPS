@@ -960,7 +960,7 @@ bool StochPresolverParallelRows::twoParallelEqualityRows(const INDEX& row1, cons
    assert( row1.getIndex() < mA && row2.getIndex() < mA);
 
    if( !PIPSisEQ( (*norm_b)[row1.getIndex()], (*norm_b)[row2.getIndex()]) )
-      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel equality rows with non-compatible right hand sides",
+      PIPS_MPIabortInfeasible("Found parallel equality rows with non-compatible right hand sides",
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
 
    /* one of the rows can be discarded */
@@ -1106,7 +1106,7 @@ void StochPresolverParallelRows::tightenOriginalBoundsOfRow1(const INDEX& row1, 
    if( ( !PIPSisZero(iclow_row1) && PIPSisLT( norm_cupp_row2, norm_clow_row1 ) )
          || ( !PIPSisZero(iclow_row1) && PIPSisLT( norm_cupp_row1, norm_clow_row2) ) )
    {
-      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
+      PIPS_MPIabortInfeasible("Found incompatible row rhs/lhs", "StochPresolverParallelRows.C", "tightenOriginalBoundsOfRow1");
    }
 
    double new_lhs = INF_NEG;
@@ -1223,10 +1223,10 @@ bool StochPresolverParallelRows::parallelEqualityAndInequalityRow(const INDEX& r
 {
    /* check for infeasibility */
    if( !PIPSisZero( (*norm_iclow)[row_ineq.getIndex()] ) && PIPSisLT( (*norm_b)[row_eq.getIndex()], (*norm_clow)[row_ineq.getIndex()] ) )
-      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
+      PIPS_MPIabortInfeasible("Found parallel inequality and equality rows where rhs/lhs do not match",
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
    if( !PIPSisZero( (*norm_icupp)[row_ineq.getIndex()] ) && PIPSisLT( (*norm_cupp)[row_ineq.getIndex()], (*norm_b)[row_eq.getIndex()] ) )
-      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found parallel inequality and equality rows where rhs/lhs do not match",
+      PIPS_MPIabortInfeasible("Found parallel inequality and equality rows where rhs/lhs do not match",
          "StochPresolverParallelRows.C", "compareRowsInCoeffHashTable");
 
    /* remove the inequality row from the system */

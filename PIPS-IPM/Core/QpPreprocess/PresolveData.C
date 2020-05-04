@@ -1713,7 +1713,7 @@ void PresolveData::checkBoundsInfeasible(const INDEX& col, double xlow_new, doub
    if( !PIPSisLE( std::max(xlow_new,xlow), std::min(xupp_new, xupp)) )
    {
       std::cout << "[" << xlow_new << ", " << xupp_new << "] not in [" << xlow << ", " << xupp << "]" << std::endl;
-      PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Detected infeasible new bounds!", "PresolveData.C", "checkBoundsInfeasible");
+      PIPS_MPIabortInfeasible("Detected infeasible new bounds!", "PresolveData.C", "checkBoundsInfeasible");
    }
 }
 

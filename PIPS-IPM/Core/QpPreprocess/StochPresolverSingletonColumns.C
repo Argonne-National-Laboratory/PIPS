@@ -261,7 +261,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
             const double ixlow = getSimpleVecFromColStochVec( *presData.getPresProb().ixlow, col );
             const double xlow = getSimpleVecFromColStochVec( *presData.getPresProb().blx, col);
             if( PIPSisZero(ixlow) && PIPSisLT(0.0, obj_coeff) )
-               PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found unbounded singleton column variable", "StochPresolverSingletonColumns.C", "removeSingletonColumn");
+               PIPS_MPIabortInfeasible("Found unbounded singleton column variable", "StochPresolverSingletonColumns.C", "removeSingletonColumn");
 
             if( PIPSisZero(ixlow) && PIPSisZero(obj_coeff) )
             {
@@ -292,7 +292,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
             const double ixupp = getSimpleVecFromColStochVec(*presData.getPresProb().ixupp, col);
             const double xupp = getSimpleVecFromColStochVec( *presData.getPresProb().bux, col);
             if( PIPSisZero(ixupp) && PIPSisLT(obj_coeff, 0.0) )
-               PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found unbounded singleton column variable", "StochPresolverSingletonColumns.C", "removeSingletonColumn");
+               PIPS_MPIabortInfeasible("Found unbounded singleton column variable", "StochPresolverSingletonColumns.C", "removeSingletonColumn");
 
             if( PIPSisZero(ixupp) && PIPSisZero(obj_coeff) )
             {

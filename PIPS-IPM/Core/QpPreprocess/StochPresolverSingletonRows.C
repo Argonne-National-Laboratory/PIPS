@@ -154,7 +154,7 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
       assert( !row.isLinkingRow() );
 
       if( PIPSisLT(xupp_new, buffer_xlows[col_idx]) || PIPSisLT( xlow_new, buffer_xupps[col_idx] ) )
-         PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonVar");
+         PIPS_MPIabortInfeasible("Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonVar");
 
       /* if we already found a row - keep the better one */
       if( row.inEqSys() )
@@ -356,7 +356,7 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
       const double my_xupp = buffer_xupps[i];
 
       if( PIPSisLT(best_xupp, best_xlow) )
-         PIPS_MPIabortInfeasible(MPI_COMM_WORLD, "Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonLinkingColssSynced");
+         PIPS_MPIabortInfeasible("Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonLinkingColssSynced");
 
       const int i_found_eq = buffer_found_singleton_equality.at(i);
       const int was_eq_found = was_singleton_equality_found.at(i);
