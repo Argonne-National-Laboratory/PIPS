@@ -115,6 +115,16 @@ void EquiStochScaler::scale()
    PIPSdebugMessage("colratio after scaling %f \n", xcolratio);
 #endif
 
+   if( !scaling_applied )
+   {
+      //setScalingVecsToOne();
+#ifndef NDEBUG
+      vec_rowscaleA->setToConstant(NAN);
+      vec_rowscaleC->setToConstant(NAN);
+      vec_colscale->setToConstant(NAN);
+#endif
+   }
+
    assert(A->abmaxnorm() <= 2.0 && C->abmaxnorm() <= 2.0);
 }
 
