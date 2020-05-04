@@ -20,7 +20,7 @@
 #endif
 
 
-#if defined(DENSE_USE_HALF) && defined(TIMING)
+#if defined(TIMING)
 #include "mpi.h"
 #endif
 
@@ -108,21 +108,12 @@ void DeSymIndefSolver::matrixChanged()
     }
   }
 
-#ifdef DENSE_USE_HALF
-#if 0
-#ifdef WITH_PARDISOINDEF
-  for( int i = 0; i < n; i++ )
-     for( int j = 0; j < n; j++ )
-        assert(j <= i || mStorage->M[i][j] == 0.0);
-#endif
-#endif
 #ifdef TIMING
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
   if( myrank == 0 )
-     std::cout << "DENSE_USE_HALF: starting factorization" << std::endl;
-#endif
+     std::cout << "DENSE_SYM_INDEF: starting factorization" << std::endl;
 #endif
 
   //query the size of workspace

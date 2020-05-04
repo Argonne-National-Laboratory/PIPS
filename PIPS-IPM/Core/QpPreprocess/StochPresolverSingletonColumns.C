@@ -23,7 +23,7 @@ StochPresolverSingletonColumns::~StochPresolverSingletonColumns()
 {
 }
 
-void StochPresolverSingletonColumns::applyPresolving()
+bool StochPresolverSingletonColumns::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.getPresProb().isRootNodeInSync());
@@ -131,9 +131,10 @@ void StochPresolverSingletonColumns::applyPresolving()
    presData.allreduceAndApplyObjVecChanges();
    presData.allreduceObjOffset();
 
-#ifndef NDEBUG
    PIPS_MPIgetSumInPlace(removed_cols_run, MPI_COMM_WORLD);
    removed_cols += removed_cols_run;
+
+#ifndef NDEBUG
    if( my_rank == 0 )
    {
       std::cout << "--- After singleton columns presolving:" << std::endl;
@@ -148,6 +149,11 @@ void StochPresolverSingletonColumns::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
+
+   if( removed_cols_run != 0 )
+      return true;
+   else
+      return false;
 }
 
 bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
@@ -276,7 +282,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
             else
             {
                /* fix variable to lower bound */
-               assert( xlow != INF_NEG_PRES );
+               assert( xlow != INF_NEG );
                presData.fixColumnInequalitySingleton(col, row, xlow, coeff);
             }
          }
@@ -307,7 +313,7 @@ bool StochPresolverSingletonColumns::removeSingletonColumn(const INDEX& col)
             else
             {
                /* fix variable to upper bound */
-               assert( xupp != INF_POS_PRES );
+               assert( xupp != INF_POS );
                presData.fixColumnInequalitySingleton(col, row, xupp, coeff);
             }
          }
@@ -490,5 +496,5 @@ void StochPresolverSingletonColumns::resetArrays()
 {
    std::fill( local_linking_column_for_row_in_proc.begin(), local_linking_column_for_row_in_proc.end(), -1);
    std::fill( cols.begin(), cols.end(), INDEX() );
-   std::fill( coeffs.begin(), coeffs.end(), INF_POS_PRES );
+   std::fill( coeffs.begin(), coeffs.end(), INF_POS );
 }

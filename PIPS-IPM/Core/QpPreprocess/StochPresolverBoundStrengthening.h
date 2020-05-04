@@ -17,9 +17,18 @@ public:
 
    virtual ~StochPresolverBoundStrengthening();
 
-   virtual void applyPresolving();
+   bool applyPresolving() override;
 
 private:
+   /** limit for rounds of bound strengthening per call of presolver */
+   const int limit_iter;
+   /** min entry to devide by in order to derive a bound */
+   const double limit_entry;
+   /** max activity to be devided */
+   const double limit_partial_activity;
+   /** max bounds proposed from bounds strengthening presolver */
+   const double limit_bounds;
+
    long long tightenings;
 
    bool local_bound_tightenings;

@@ -46,9 +46,6 @@ endif()
 #with testing of (selected) executables
 option(WITH_MAKETEST "Enable 'make test'" ON)
 
-#with memory transfer reduction
-option(WITH_MEMREDUCE "Reduce memory transfer and copying" ON)
-
 #use mkl_pardiso solver instead of schenk solver
 option(WITH_MKL_PARDISO "Use mkl_pardiso from Intel for PIPS-IPM" OFF)
 message(STATUS "WITH_MKL_PARDISO=${WITH_MKL_PARDISO}")
@@ -87,11 +84,6 @@ message(STATUS "WITH_PARDISO_BLOCKSC=${WITH_PARDISO_BLOCKSC}")
 
 option(BUILD_GDX_SOURCE "Build GDX Source" OFF)
 message(STATUS "BUILD_GDX_SOURCE=${BUILD_GDX_SOURCE}")
-
-if(WITH_MEMREDUCE)
-  add_definitions(-DDENSE_USE_HALF)
-endif(WITH_MEMREDUCE)
-message(STATUS "WITH_MEMREDUCE=${WITH_MEMREDUCE}")
 
 
 #with timing for PIPS-IPM

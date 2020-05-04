@@ -28,6 +28,8 @@
 #include "sTreeCallbacks.h"
 #include "pipsport.h"
 
+#include "StochOptions.h"
+
 //#define PRESOLVE_POSTSOLVE_ONLY // will not call solve routine an just presolve and then postsolve the problem - for debugging presolve and postsolve operations
 
 template<class FORMULATION, class IPMSOLVER> 
@@ -36,7 +38,7 @@ class PIPSIpmInterface
  public:
   PIPSIpmInterface(stochasticInput &in, MPI_Comm = MPI_COMM_WORLD);
   PIPSIpmInterface(StochInputTree* in, MPI_Comm = MPI_COMM_WORLD,
-        ScalerType scaler_type = SCALER_NONE, PresolverType presolver_type = PRESOLVER_NONE);
+        ScalerType scaler_type = SCALER_NONE, PresolverType presolver_type = PRESOLVER_NONE, std::string settings = "PIPSIPMpp.opt");
   ~PIPSIpmInterface();
 
   void go();
@@ -57,9 +59,7 @@ class PIPSIpmInterface
 
   std::vector<double> getFirstStagePrimalColSolution() const;
   std::vector<double> getSecondStagePrimalColSolution(int scen) const;
-  //std::vector<double> getFirstStageDualColSolution() const{};
   std::vector<double> getFirstStageDualRowSolution() const;
-  //std::vector<double> getSecondStageDualColSolution(int scen) const{};
   std::vector<double> getSecondStageDualRowSolution(int scen) const;
 
   void postsolveComputedSolution();
@@ -76,7 +76,6 @@ public:
   static bool isDistributed() { return true; }
 
  protected:
-
   FORMULATION * factory;
   PreprocessFactory * prefactory;
   sData *        data;       // possibly presolved data
@@ -95,7 +94,6 @@ public:
   Scaler *      scaler;
   IPMSOLVER *   solver;
 
-  PIPSIpmInterface() {};
   MPI_Comm comm;
   bool ran_solver;
 };
@@ -110,7 +108,6 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
    unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), presolver(nullptr),
    postsolver(nullptr), comm(comm), ran_solver(false)
 {
-
 #ifdef TIMING
   int mype;
   MPI_Comm_rank(comm,&mype);
@@ -119,6 +116,15 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
   factory = new FORMULATION( in, comm);
 #ifdef TIMING
   if(mype==0) printf("factory created\n");
+#endif
+
+  prefactory = nullptr;
+  origData = nullptr;
+  postsolver = nullptr;
+  presolver = nullptr;
+
+#ifdef TIMING
+  if(mype==0) printf("prefactory created\n");
 #endif
 
   data   = dynamic_cast<sData*>     ( factory->makeData() );
@@ -149,9 +155,10 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
 
 template<class FORMULATION, class IPMSOLVER>
 PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, MPI_Comm comm, ScalerType scaler_type,
-      PresolverType presolver_type) : unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
+      PresolverType presolver_type, std::string settings) : unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
 {
-  bool postsolve = true; // todo
+  pips_options::setOptions(settings);
+  const bool postsolve = pips_options::getBoolParameter("POSTSOLVE");
 
   int mype;
   MPI_Comm_rank(comm,&mype);
@@ -165,11 +172,13 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
 #endif
 
   prefactory = new PreprocessFactory();
+#ifdef TIMING
+  if(mype==0) printf("prefactory created\n");
+#endif
 
   // presolving activated?
   if( presolver_type != PRESOLVER_NONE )
   {
-
      origData = dynamic_cast<sData*>(factory->makeData());
 
      MPI_Barrier(comm);

@@ -7,6 +7,8 @@
 
 //#define PIPS_DEBUG
 #include "StochPresolverBase.h"
+
+#include "StochOptions.h"
 #include "DoubleMatrixTypes.h"
 #include "SmartPointer.h"
 #include "pipsdef.h"
@@ -21,14 +23,30 @@
 StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& origProb) :
       my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
       distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
+      INF_NEG( -pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
+      INF_POS( pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
       presData(presData), origProb(origProb)
 {
    localNelims = 0;
    nChildren = presData.getNChildren();
+
+   setPointersToNull();
 }
 
 StochPresolverBase::~StochPresolverBase()
 {
+}
+
+void StochPresolverBase::setPointersToNull()
+{
+   currAmat = currAmatTrans = currBmat = currBmatTrans = currBlmat = currBlmatTrans = nullptr;
+
+   currxlowParent = currIxlowParent = currxuppParent = currIxuppParent = currxlowChild =
+         currIxlowChild = currxuppChild = currIxuppChild = currEqRhs = currIneqLhs = currIclow =
+               currIneqRhs = currIcupp = currEqRhsLink = currIneqLhsLink = currIclowLink = currIneqRhsLink =
+                     currIcuppLink = currgParent = currgChild = nullptr;
+
+   currNnzRow = currNnzRowLink = currNnzColParent = currNnzColChild = nullptr;
 }
 
 void StochPresolverBase::countRowsCols()// method is const but changes pointers

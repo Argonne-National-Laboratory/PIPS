@@ -6,12 +6,14 @@
 #include "VectorUtilities.h"
 #include "SimpleVector.h"
 #include "OoqpBlas.h"
+#include <pipsdef.h>
 #include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <limits>
 #include <iomanip>
 #include <algorithm>
+
 
 template <typename T>
 long long SimpleVectorBase<T>::numberOfNonzeros() const
@@ -945,30 +947,16 @@ void SimpleVectorBase<T>::divideSome( const OoqpVectorBase<T>& div, const OoqpVe
   T * q   = sdiv.v;
   assert( this->n == div.length() && this->n == select.length() );
 
-  // todo Daniel Rehfeldt: this expects non-aliasing; think there is no need for pointer arithmetic
-  // as the run-time is dominated by the division.
-#if 0
-  T * lmap = map + this->n;
-  T * w = v;
-  while( map < lmap ) {
-    if( 0 != *map ) {
-      *w  /= *q;
-    }
-    map++;
-    w++;
-    q++;
-  }
-#else
   for( int i = 0; i < this->n; i++ )
   {
      if( 0.0 != map[i] )
      {
-        assert(q[i] != 0.0);
+        assert(!PIPSisZero(map[i]));
+        assert(!PIPSisZero(q[i]));
+
         v[i] /= q[i];
      }
   }
-#endif
-
 }
 
 template<typename T>

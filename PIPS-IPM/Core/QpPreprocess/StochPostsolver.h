@@ -86,6 +86,11 @@ private:
       const int my_rank;
       const bool distributed;
 
+      const double postsolve_tol;
+      const double INF_NEG;
+      const double INF_POS;
+
+
       enum ReductionType
       {
          FIXED_COLUMN = 0,
@@ -206,8 +211,8 @@ private:
 
       void setOriginalVarsFromReduced(const sVars& reduced_vars, sVars& original_vars) const;
       bool allVariablesSet(const sVars& vars) const;
-      bool complementarySlackVariablesMet(const sVars& vars, const INDEX& col, double tol = postsolve_tol) const;
-      bool complementarySlackRowMet(const sVars& vars, const INDEX& row, double tol = postsolve_tol ) const;
+      bool complementarySlackVariablesMet(const sVars& vars, const INDEX& col, double tol) const;
+      bool complementarySlackRowMet(const sVars& vars, const INDEX& row, double tol) const;
 
       bool sameNonZeroPatternDistributed(const StochVector& svec) const; // TODO: move
       bool sameNonZeroPatternDistributed(const SimpleVector& vec) const; // TODO: move

@@ -13,6 +13,7 @@ set(LIBRARY_OOQPSTOCH_SOURCES sFactory.C
    sLinsysLeafSchurSlv.C
    sVars.C
    StochMonitor.C
+   StochOptions.C
    sResiduals.C
    sTree.C
    sTreeImpl.C

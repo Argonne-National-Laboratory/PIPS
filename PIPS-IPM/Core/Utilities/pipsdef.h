@@ -25,43 +25,6 @@ const double pips_eps0 = 1e-40;
 static const double feastol = 1.0e-6; // was 1.0e-6
 static const double infinity = 1.0e30;
 
-static const double INF_NEG_PRES = -std::numeric_limits<double>::infinity();
-static const double INF_POS_PRES = std::numeric_limits<double>::infinity();
-
-/** all presolve/postsolve constants and settings */
-// TODO : many of these need adjustments/ have to be thought about
-
-/// BOUND STRENGTHENING
-/** limit for rounds of bound strengthening */
-static const int PRESOLVE_BOUND_STR_MAX_ITER = 100;
-/** min entry to devide by in order to derive a bound */
-static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY = 1e-7;
-/** max activity to be devided */
-static const double PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY = std::numeric_limits<double>::max();
-/** max bounds proposed from bounds strengthening presolver */
-static const double PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS = 1e12;
-/// COLUMN FIXATION
-/** limit on the possible impact a column can have on the problem */
-static const double PRESOLVE_COLUMN_FIXATION_MAX_FIXING_IMPACT = 1.0e-12; // for variable fixing
-/// MODEL CLEANUP
-/** limit for the size of a matrix entry below which it will be removed from the problem */
-static const double PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY = 1.0e-10;//1.0e-10; // for model cleanup // was 1.0e-10
-/** max for the matrix entry when the impact of entry times (bux-blx) is considered */
-static const double PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT = 1.0e-3; // was 1.0e-3
-/** difference in orders between feastol and the impact of entry times (bux-blx) for an entry to get removed */
-static const double PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST = 1.0e-2;  // for model cleanup // was 1.0e-2
-/// PARALLEL ROWS
-/** tolerance for comparing two double values in two different rows and for them being considered equal */
-static const double PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES = 1.0e-8;
-/// PRESOLVE DATA
-/** maximal bound being accepted from any of the presolvers */
-static const double PRESOLVE_MAX_BOUND_ACCEPTED = 1e10;
-/** epsilon used for changing bounds found in bound tightening so that they will be non-tight in the final solution */
-static const double eps_bounds_nontight = 1e4 * feastol;
-/// POSTSOLVE
-static const double postsolve_tol = feastol * 100;
-
-
 static inline double relativeDiff(double val1, double val2)
 {
    const double val1Abs = std::fabs(val1);

@@ -9,10 +9,16 @@
 #include <limits>
 #include <cmath>
 #include "pipsdef.h"
+#include "StochOptions.h"
+
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData, const sData& origProb) :
       StochPresolverBase(presData, origProb),
+      limit_iter( pips_options::getIntParameter("PRESOLVE_BOUND_STR_MAX_ITER") ),
+      limit_entry( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY") ),
+      limit_partial_activity( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY") ),
+      limit_bounds( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS") ),
       tightenings(0),
       local_bound_tightenings(false),
       n_linking_vars( dynamic_cast<const StochVector&>(*origProb.g).vec->length() ),
@@ -34,15 +40,15 @@ StochPresolverBoundStrengthening::~StochPresolverBoundStrengthening()
 void StochPresolverBoundStrengthening::resetArrays()
 {
    /* upper bounds are stored inverted */
-   std::fill( ub_linking_var.begin(), ub_linking_var.end(), INF_NEG_PRES );
-   std::fill( lb_linking_var.begin(), lb_linking_var.end(), INF_NEG_PRES );
+   std::fill( ub_linking_var.begin(), ub_linking_var.end(), INF_NEG );
+   std::fill( lb_linking_var.begin(), lb_linking_var.end(), INF_NEG );
    std::fill( rows_ub.begin(), rows_ub.end(), INDEX() );
    std::fill( rows_lb.begin(), rows_lb.end(), INDEX() );
    std::fill( used_linking_eq_row.begin(), used_linking_eq_row.end(), false );
    std::fill( used_linking_eq_row.begin(), used_linking_eq_row.end(), false );
 }
 
-void StochPresolverBoundStrengthening::applyPresolving()
+bool StochPresolverBoundStrengthening::applyPresolving()
 {
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
@@ -94,7 +100,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
       communicateLinkingVarBounds();
       resetArrays();
    }
-   while( tightened && iter < PRESOLVE_BOUND_STR_MAX_ITER );
+   while( tightened && iter < limit_iter );
 
    // TODO : bounds found with linking_rows: mark all rows that need to be stored by all procs and store them after tightening in the postsolver
    // later when postsolving and syncing the linking row multipliers use these rows to adjust all var bounds duals
@@ -117,6 +123,8 @@ void StochPresolverBoundStrengthening::applyPresolving()
 
    assert(presData.reductionsEmpty());
    assert(presData.presDataInSync());
+
+   return tightened;
 }
 
 void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
@@ -158,13 +166,13 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    {
       if( best_proc_lbx_ubx[i] == my_rank )
       {
-         const bool propagated = presData.rowPropagatedBounds(rows_lb[i], INDEX(COL, -1, i), lb_linking_var[i], INF_POS_PRES);
+         const bool propagated = presData.rowPropagatedBounds(rows_lb[i], INDEX(COL, -1, i), lb_linking_var[i], INF_POS);
          if( propagated )
             ++tightenings;
       }
       else if( best_proc_lbx_ubx[i] != -1 )
       {
-         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), lb_linking_var[i], INF_POS_PRES);
+         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), lb_linking_var[i], INF_POS);
          if( propagated )
             ++tightenings;
       }
@@ -174,13 +182,13 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    {
       if( best_proc_lbx_ubx[ n_linking_vars + i ] == my_rank )
       {
-         const bool propagated = presData.rowPropagatedBounds(rows_ub[i], INDEX(COL, -1, i), INF_NEG_PRES, ub_linking_var[i]);
+         const bool propagated = presData.rowPropagatedBounds(rows_ub[i], INDEX(COL, -1, i), INF_NEG, ub_linking_var[i]);
          if( propagated )
             ++tightenings;
       }
       else if( best_proc_lbx_ubx[ n_linking_vars + i ] != -1 )
       {
-         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), INF_NEG_PRES, ub_linking_var[i]);
+         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), INF_NEG, ub_linking_var[i]);
          if( propagated )
             ++tightenings;
       }
@@ -272,7 +280,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       /* if the partial row activities (so the activities of all bounded variables) exceed some limit we skip the row since no useful
        * and numerically stable bounds will be obtained here
        */
-      if( std::fabs(actmin_part) >= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY && std::fabs(actmax_part) >= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY )
+      if( std::fabs(actmin_part) >= limit_partial_activity && std::fabs(actmax_part) >= limit_partial_activity )
          continue;
 
       for( int j = mat->getRowPtr(row).start; j < mat->getRowPtr(row).end; j++ )
@@ -284,7 +292,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          const double a_ik = mat->getMat(j);
 
          assert( !PIPSisZero(a_ik) );
-         if( PIPSisLT(std::fabs(a_ik), PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY) )
+         if( PIPSisLT(std::fabs(a_ik), limit_entry ) )
             continue;
 
          /* row activities without the entry currently in focus */
@@ -356,10 +364,10 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             }
          }
 
-         if( std::fabs(ubx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
-            ubx_new = INF_POS_PRES;
-         if( std::fabs(lbx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
-            lbx_new = INF_NEG_PRES;
+         if( std::fabs(ubx_new) > limit_bounds )
+            ubx_new = INF_POS;
+         if( std::fabs(lbx_new) > limit_bounds )
+            lbx_new = INF_NEG;
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;
 
@@ -370,7 +378,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             assert( node_col == -1 );
 
             /* store found upper bound if better */
-            if( ubx_new != INF_POS_PRES )
+            if( ubx_new != INF_POS )
             {
                /* we store upper bound inverted so that MPI communication can simple do a min over all entries */
                if( (PIPSisLT(ubx_new, cupp[row]) || PIPSisZero(icupp[row])) && PIPSisLT(ub_linking_var[col], -ubx_new) )
@@ -382,7 +390,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             }
 
             /* store found lower bound if better */
-            if( lbx_new != INF_NEG_PRES )
+            if( lbx_new != INF_NEG )
             {
                if( (PIPSisLT(clow[row], lbx_new) || PIPSisZero(iclow[row])) && PIPSisLT(lbx_new, lb_linking_var[col]) )
                {

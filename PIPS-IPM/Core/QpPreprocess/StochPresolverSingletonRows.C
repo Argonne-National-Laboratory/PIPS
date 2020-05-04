@@ -33,7 +33,7 @@ StochPresolverSingletonRows::~StochPresolverSingletonRows()
 {
 }
  
-void StochPresolverSingletonRows::applyPresolving()
+bool StochPresolverSingletonRows::applyPresolving()
 {
    assert(presData.presDataInSync());
    assert(presData.reductionsEmpty());
@@ -45,12 +45,6 @@ void StochPresolverSingletonRows::applyPresolving()
       std::cout << "--- Before singleton Row Presolving:" << std::endl;
    }
    countRowsCols();
-
-   if( presData.getSingletonRows().size() == 0 )
-   {
-      if( my_rank == 0)
-         std::cout << "No more singletons left - exiting" << std::endl;
-   }
 #endif
 
    int removed_rows_local = 0;
@@ -99,6 +93,11 @@ void StochPresolverSingletonRows::applyPresolving()
    assert(presData.getPresProb().isRootNodeInSync());
    assert(presData.verifyNnzcounters());
    assert(presData.verifyActivities());
+
+   if( removed_rows_local != 0 )
+      return true;
+   else
+      return false;
 }
 
 /** Does one round of singleton row presolving for system A or C
@@ -116,8 +115,8 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
    if( presData.getNnzsRow(row) != 1 )
       return false;
 
-   double xlow_new = INF_NEG_PRES;
-   double xupp_new = INF_POS_PRES;
+   double xlow_new = INF_NEG;
+   double xupp_new = INF_POS;
 
    double coeff = 0.0;
 
@@ -339,8 +338,8 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
    PIPS_MPImaxArray(buffer_found_singleton_equality, was_singleton_equality_found, MPI_COMM_WORLD);
 
    /* get best found bounds */
-   std::vector<double> best_xlows(n_linking_vars, INF_NEG_PRES);
-   std::vector<double> best_xupps(n_linking_vars, INF_POS_PRES);
+   std::vector<double> best_xlows(n_linking_vars, INF_NEG);
+   std::vector<double> best_xupps(n_linking_vars, INF_POS);
 
    PIPS_MPImaxArray(buffer_xlows, best_xlows, MPI_COMM_WORLD);
    PIPS_MPIminArray(buffer_xupps, best_xupps, MPI_COMM_WORLD);
@@ -430,11 +429,11 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
             {
                assert( buffer_xlows[i] == best_xlows[i] );
 
-               presData.removeSingletonRowSynced(buffer_rows_lower[i], col, best_xlows[i], INF_POS_PRES, buffer_coeffs_lower[i]);
+               presData.removeSingletonRowSynced(buffer_rows_lower[i], col, best_xlows[i], INF_POS, buffer_coeffs_lower[i]);
             }
             else
             {
-               presData.removeSingletonRowSynced(INDEX(), col, best_xlows[i], INF_POS_PRES, NAN);
+               presData.removeSingletonRowSynced(INDEX(), col, best_xlows[i], INF_POS, NAN);
 
                // if i found a row that is now redundant - remove it as redundant
                if( !buffer_rows_lower[i].isEmpty() )
@@ -448,11 +447,11 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
             {
                assert( buffer_xupps[i] == best_xupps[i] );
 
-               presData.removeSingletonRowSynced(buffer_rows_upper[i], col, INF_NEG_PRES, best_xupps[i], buffer_coeffs_upper[i]);
+               presData.removeSingletonRowSynced(buffer_rows_upper[i], col, INF_NEG, best_xupps[i], buffer_coeffs_upper[i]);
             }
             else
             {
-               presData.removeSingletonRowSynced(INDEX(), col, INF_NEG_PRES, best_xupps[i], NAN);
+               presData.removeSingletonRowSynced(INDEX(), col, INF_NEG, best_xupps[i], NAN);
 
                // if i found a row that is now redundant - remove it as redundant
                if( !buffer_rows_upper[i].isEmpty() )
@@ -470,8 +469,8 @@ void StochPresolverSingletonRows::resetBuffers()
    std::fill(buffer_rows_lower.begin(), buffer_rows_lower.end(), INDEX());
    std::fill(buffer_rows_upper.begin(), buffer_rows_upper.end(), INDEX());
 
-   std::fill(buffer_xlows.begin(), buffer_xlows.end(), INF_NEG_PRES);
-   std::fill(buffer_xupps.begin(), buffer_xupps.end(), INF_NEG_PRES);
+   std::fill(buffer_xlows.begin(), buffer_xlows.end(), INF_NEG);
+   std::fill(buffer_xupps.begin(), buffer_xupps.end(), INF_NEG);
 
    std::fill(buffer_coeffs_lower.begin(), buffer_coeffs_lower.end(), NAN);
    std::fill(buffer_coeffs_upper.begin(), buffer_coeffs_upper.end(), NAN);

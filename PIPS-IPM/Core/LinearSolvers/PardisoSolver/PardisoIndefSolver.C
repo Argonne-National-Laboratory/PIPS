@@ -19,6 +19,8 @@
 #include "mpi.h"
 #include "omp.h"
 #include "pipsport.h"
+#include "pipsdef.h"
+
 
 #define CHECK_PARDISO
 
@@ -490,18 +492,17 @@ void PardisoIndefSolver::factorizeFromDense()
 
    assert(mStorage);
 
-#ifdef DENSE_USE_HALF
 #ifndef NDEBUG
   for( int i = 0; i < n; i++ )
+  {
      for( int j = 0; j < n; j++ )
-        assert(j <= i || mStorage->M[i][j] == 0.0);
+        assert(j <= i || PIPSisZero(mStorage->M[i][j]));
+  }
 #endif
 #ifdef TIMING
   if( myrank == 0 )
-     std::cout << "DENSE_USE_HALF: starting factorization" << std::endl;
+     std::cout << "from dense, starting factorization" << std::endl;
 #endif
-#endif
-
 
    assert(mStorage->n == mStorage->m);
    int nnz = 0;

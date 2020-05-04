@@ -27,6 +27,9 @@ private:
 
       StochPostsolver* const postsolver;
 
+      const double limit_max_bound_accepted;
+      const double eps_bounds_nontight;
+
       const int length_array_outdated_indicators;
       bool* array_outdated_indicators;
       bool& outdated_lhsrhs;
@@ -102,6 +105,9 @@ private:
 
       const int my_rank;
       const bool distributed;
+
+      const double INF_NEG;
+      const double INF_POS;
 
       // number of children
       const int nChildren;
@@ -253,9 +259,9 @@ private:
       void adjustRowActivityFromDeletion( const INDEX& row, const INDEX& col, double coeff );
       /// set bounds if new bound is better than old bound
       bool updateUpperBoundVariable( const INDEX& col, double xupp_new)
-      { return updateBoundsVariable( col, INF_NEG_PRES, xupp_new ); };
+      { return updateBoundsVariable( col, INF_NEG, xupp_new ); };
       bool updateLowerBoundVariable( const INDEX& col, double xlow_new)
-      { return updateBoundsVariable( col, xlow_new, INF_POS_PRES); };
+      { return updateBoundsVariable( col, xlow_new, INF_POS); };
 
       bool updateBoundsVariable( const INDEX& col, double xlow_new, double xupp_new );
       void updateRowActivities( const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
