@@ -8,9 +8,10 @@
 // TODO : should we ever decide to switch to a newer c++ standard - there is stuff that can be optimized
 
 //#define PIPS_DEBUG
-#include "pipsport.h"
 #include "StochPresolverParallelRows.h"
+
 #include "pipsport.h"
+#include "StochOptions.h"
 #include "StochVectorUtilities.h"
 
 namespace rowlib
@@ -59,7 +60,9 @@ namespace rowlib
 }
 
 StochPresolverParallelRows::StochPresolverParallelRows(PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb), n_rows_removed(0), mA(0), nA(0)
+      StochPresolverBase(presData, origProb),
+      limit_tol_compare_entries( pips_options::getDoubleParameter( "PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES") ),
+      n_rows_removed(0), mA(0), nA(0)
 {
    setExtendedPointersToNull();
 }
@@ -914,14 +917,14 @@ bool StochPresolverParallelRows::checkRowsAreParallel( const rowlib::rowWithEntr
    {
       if( row1.colIndicesA[i] != row2.colIndicesA[i] )
          return false;
-      if( !PIPSisEQ(row1.norm_entriesA[i], row2.norm_entriesA[i], PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES) )
+      if( !PIPSisEQ(row1.norm_entriesA[i], row2.norm_entriesA[i], limit_tol_compare_entries) )
          return false;
    }
    for( int i = 0; i < row1.lengthB; i++)
    {
       if( row1.colIndicesB[i] != row2.colIndicesB[i] )
          return false;
-      if( !PIPSisEQ(row1.norm_entriesB[i], row2.norm_entriesB[i], PRESOLVE_PARALLEL_ROWS_TOL_COMPARE_ENTRIES) )
+      if( !PIPSisEQ(row1.norm_entriesB[i], row2.norm_entriesB[i], limit_tol_compare_entries) )
          return false;
    }
    return true;

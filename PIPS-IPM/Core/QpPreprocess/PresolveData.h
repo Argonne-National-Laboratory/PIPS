@@ -27,6 +27,8 @@ private:
 
       StochPostsolver* const postsolver;
 
+      const double limit_max_bound_accepted;
+
       const int length_array_outdated_indicators;
       bool* array_outdated_indicators;
       bool& outdated_lhsrhs;

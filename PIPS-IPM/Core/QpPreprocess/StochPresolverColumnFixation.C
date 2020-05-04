@@ -4,16 +4,19 @@
  *  Created on: 15.05.2019
  *      Author: bzfkempk
  */
+#include "StochPresolverColumnFixation.h"
 
 #include "pipsdef.h"
-#include "StochPresolverColumnFixation.h"
+#include "StochOptions.h"
 
 #include <cmath>
 #include <limits>
 
 StochPresolverColumnFixation::StochPresolverColumnFixation(
       PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb), fixed_columns(0)
+      StochPresolverBase(presData, origProb),
+      limit_fixation_max_fixing_impact( pips_options::getDoubleParameter( "PRESOLVE_COLUMN_FIXATION_MAX_FIXING_IMPACT" ) ),
+      fixed_columns(0)
 {
 }
 
@@ -63,7 +66,7 @@ void StochPresolverColumnFixation::applyPresolving()
 
          assert(PIPSisLE(0.0, (*currxuppParent)[col] - (*currxlowParent)[col]));
 
-         if( PIPSisLT( fabs((*currxuppParent)[col] - (*currxlowParent)[col]) * absmax_row, PRESOLVE_COLUMN_FIXATION_MAX_FIXING_IMPACT) )
+         if( PIPSisLT( fabs((*currxuppParent)[col] - (*currxlowParent)[col]) * absmax_row, limit_fixation_max_fixing_impact ) )
          {
             // verify if one of the bounds is integer:
             double intpart = 0.0;
@@ -104,7 +107,7 @@ void StochPresolverColumnFixation::applyPresolving()
          {
             assert(PIPSisLE(0.0, (*currxuppChild)[col] - (*currxlowChild)[col]));
 
-            if( PIPSisLT( ((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, PRESOLVE_COLUMN_FIXATION_MAX_FIXING_IMPACT) )
+            if( PIPSisLT( ((*currxuppChild)[col] - (*currxlowChild)[col]) * absmax_row, limit_fixation_max_fixing_impact) )
             {
                // verify if one of the bounds is integer:
                double intpart = 0.0;

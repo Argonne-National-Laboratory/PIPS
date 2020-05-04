@@ -6,13 +6,20 @@
  */
 
 #include "StochPresolverModelCleanup.h"
+
+#include "StochOptions.h"
 #include <cmath>
 #include <utility>
 #include <vector>
 #include <string>
 
 StochPresolverModelCleanup::StochPresolverModelCleanup(PresolveData& presData, const sData& origProb)
-   : StochPresolverBase(presData, origProb), removed_entries_total(0), removed_rows_total(0)
+   : StochPresolverBase(presData, origProb),
+     limit_min_mat_entry( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY") ),
+     limit_max_matrix_entry_impact( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT") ),
+     limit_matrix_entry_impact_feasdist( pips_options::getDoubleParameter("PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST") ),
+     removed_entries_total(0),
+     removed_rows_total(0)
 {
 }
 
@@ -311,7 +318,7 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          const double mat_entry = storage->getMat(col_index);
 
          /* remove all small entries */
-         if( fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MIN_MATRIX_ENTRY )
+         if( fabs( mat_entry ) < limit_min_mat_entry )
          {
             const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
             const INDEX col_INDEX(COL, node_col, col);
@@ -325,8 +332,8 @@ int StochPresolverModelCleanup::removeTinyInnerLoop( SystemType system_type, int
          /* remove entries where their corresponding variables have valid lower and upper bounds, that overall do not have a real influence though */
          else if( !PIPSisZero((*x_upper_idx)[col]) && !PIPSisZero((*x_lower_idx)[col]) )
          {
-            if( (fabs( mat_entry ) < PRESOLVE_MODEL_CLEANUP_MAX_MATRIX_ENTRY_IMPACT &&
-                  fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < PRESOLVE_MODEL_CLEANUP_MATRIX_ENTRY_IMPACT_FEASDIST * feastol ))
+            if( (fabs( mat_entry ) < limit_max_matrix_entry_impact &&
+                  fabs( mat_entry ) * ( (*x_upper)[col] - (*x_lower)[col]) * (*nnzRow)[r] < limit_matrix_entry_impact_feasdist * feastol ))
             {
                const INDEX row_INDEX(ROW, node_row, r, linking_row, system_type);
                const INDEX col_INDEX(COL, node_col, col);

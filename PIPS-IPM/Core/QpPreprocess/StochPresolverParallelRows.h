@@ -66,6 +66,9 @@ public:
    virtual void applyPresolving();
 
 private:
+
+   /** tolerance for comparing two double values in two different rows and for them being considered equal */
+   const double limit_tol_compare_entries;
    int n_rows_removed;
 
    /// extension to the pointer set from StochPresolverBase to point to C and A at the same moment rather than

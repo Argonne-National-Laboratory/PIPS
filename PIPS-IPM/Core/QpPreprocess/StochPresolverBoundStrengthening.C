@@ -9,10 +9,17 @@
 #include <limits>
 #include <cmath>
 #include "pipsdef.h"
+#include "StochOptions.h"
+
 
 StochPresolverBoundStrengthening::StochPresolverBoundStrengthening(
       PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb), tightenings(0)
+      StochPresolverBase(presData, origProb),
+      limit_iter( pips_options::getIntParameter("PRESOLVE_BOUND_STR_MAX_ITER") ),
+      limit_entry( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY") ),
+      limit_partial_activity( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY") ),
+      limit_bounds( pips_options::getDoubleParameter("PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS") ),
+      tightenings(0)
 {
 }
 
@@ -65,7 +72,7 @@ void StochPresolverBoundStrengthening::applyPresolving()
       }
    /* update bounds on all processors */
    }
-   while( tightened && iter < PRESOLVE_BOUND_STR_MAX_ITER );
+   while( tightened && iter < limit_iter );
 
    presData.allreduceLinkingVarBounds();
    presData.allreduceAndApplyLinkingRowActivities();
@@ -163,7 +170,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
       /* if the partial row activities (so the activities of all bounded variables) exceed some limit we skip the row since no useful
        * and numerically stable bounds will be obtained here
        */
-      if( std::fabs(actmin_part) >= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY && std::fabs(actmax_part) >= PRESOLVE_BOUND_STR_MAX_PARTIAL_ACTIVITY )
+      if( std::fabs(actmin_part) >= limit_partial_activity && std::fabs(actmax_part) >= limit_partial_activity )
          continue;
 
       for( int j = mat->getRowPtr(row).start; j < mat->getRowPtr(row).end; j++ )
@@ -175,7 +182,7 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
          const double a_ik = mat->getMat(j);
 
          assert( !PIPSisZero(a_ik) );
-         if( PIPSisLT(std::fabs(a_ik), PRESOLVE_BOUND_STR_NUMERIC_LIMIT_ENTRY) )
+         if( PIPSisLT(std::fabs(a_ik), limit_entry ) )
             continue;
 
          /* row activities without the entry currently in focus */
@@ -247,9 +254,9 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             }
          }
 
-         if( std::fabs(ubx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
+         if( std::fabs(ubx_new) > limit_bounds )
             ubx_new = INF_POS_PRES;
-         if( std::fabs(lbx_new) > PRESOLVE_BOUND_STR_NUMERIC_LIMIT_BOUNDS )
+         if( std::fabs(lbx_new) > limit_bounds )
             lbx_new = INF_NEG_PRES;
 
          const int node_col = (block_type == A_MAT || node == -1) ? -1 : node;

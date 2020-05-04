@@ -105,7 +105,6 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(stochasticInput &in, 
    unscaleUnpermVars(nullptr), postsolvedVars(nullptr),
   unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
 {
-
 #ifdef TIMING
   int mype;
   MPI_Comm_rank(comm,&mype);
@@ -156,7 +155,7 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
       PresolverType presolver_type, std::string settings) : unscaleUnpermVars(nullptr), postsolvedVars(nullptr), unscaleUnpermResids(nullptr), postsolvedResids(nullptr), comm(comm), ran_solver(false)
 {
   pips_options::setOptions(settings);
-  const bool postsolve = pips_options::getBoolParameter("postsolve");
+  const bool postsolve = pips_options::getBoolParameter("POSTSOLVE");
 
   int mype;
   MPI_Comm_rank(comm,&mype);

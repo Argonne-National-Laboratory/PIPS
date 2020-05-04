@@ -24,7 +24,6 @@ namespace pips_options
    int getIntParameter(std::string identifier);
    double getDoubleParameter(std::string identifier);
    bool getBoolParameter(std::string identifier);
-}
 
 class StochOptions : public Options
 {
@@ -47,9 +46,6 @@ private:
    virtual ~StochOptions() {};
 };
 
-
-namespace pips_options
-{
    inline void setOptions(std::string opt_file)
    {
       return StochOptions::getInstance().fillOptionsFromFile(opt_file);
@@ -70,6 +66,5 @@ namespace pips_options
       return StochOptions::getInstance().getDoubleParam(identifier);
    }
 }
-
 
 #endif /* PIPS_IPM_CORE_QPSTOCH_STOCHOPTIONS_H_ */

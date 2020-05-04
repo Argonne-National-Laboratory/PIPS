@@ -22,6 +22,13 @@ class StochPresolverModelCleanup : public StochPresolverBase
       void applyPresolving() override;
 
    private:
+      /** limit for the size of a matrix entry below which it will be removed from the problem */
+      const double limit_min_mat_entry;
+      /** max for the matrix entry when the impact of entry times (bux-blx) is considered */
+      const double limit_max_matrix_entry_impact;
+      /** difference in orders between feastol and the impact of entry times (bux-blx) for an entry to get removed */
+      const double limit_matrix_entry_impact_feasdist;
+
       int removed_entries_total;
       int removed_rows_total;
 

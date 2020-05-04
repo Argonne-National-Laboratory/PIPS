@@ -21,6 +21,9 @@ class StochPresolverColumnFixation: public StochPresolverBase
       void applyPresolving() override;
 
    private:
+      /** limit on the possible impact a column can have on the problem */
+      const double limit_fixation_max_fixing_impact;
+
       int fixed_columns;
 
 };
