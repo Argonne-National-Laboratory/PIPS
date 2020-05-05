@@ -737,82 +737,98 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case REDUNDANT_ROW:
       {
-         postsolve_success = postsolve_success && postsolveRedundantRow(stoch_original_sol, i);
+         const bool success = postsolveRedundantRow(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case BOUNDS_TIGHTENED:
       {
-         postsolve_success = postsolve_success && postsolveBoundsTightened(stoch_original_sol, i);
+         const bool success = postsolveBoundsTightened(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case FIXED_COLUMN:
       {
-         postsolve_success = postsolve_success && postsolveFixedColumn(stoch_original_sol, i);
+         const bool success = postsolveFixedColumn(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case FIXED_EMPTY_COLUMN:
       {
-         postsolve_success = postsolve_success && postsolveFixedEmptyColumn(stoch_original_sol, i);
+         const bool success = postsolveFixedEmptyColumn(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case FIXED_COLUMN_SINGLETON_FROM_INEQUALITY:
       {
-         postsolve_success = postsolve_success && postsolveFixedColumnSingletonFromInequality(stoch_original_sol, i);
+         const bool success = postsolveFixedColumnSingletonFromInequality(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case SINGLETON_EQUALITY_ROW:
       {
-         postsolve_success = postsolve_success && postsolveSingletonEqualityRow(stoch_original_sol, i);
+         const bool success = postsolveSingletonEqualityRow(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case SINGLETON_INEQUALITY_ROW:
       {
-         postsolve_success = postsolve_success && postsolveSingletonInequalityRow(stoch_original_sol, i);
+         const bool success = postsolveSingletonInequalityRow(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case FREE_COLUMN_SINGLETON_EQUALITY:
       {
-         postsolve_success = postsolve_success && postsolveFreeColumnSingletonEquality(stoch_original_sol, i);
+         const bool success = postsolveFreeColumnSingletonEquality(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case NEARLY_PARALLEL_ROW_SUBSTITUTION:
       {
-         postsolve_success = postsolve_success && postsolveNearlyParallelRowSubstitution(stoch_original_sol, i);
+         const bool success = postsolveNearlyParallelRowSubstitution(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case NEARLY_PARALLEL_ROW_BOUNDS_TIGHTENED:
       {
-         postsolve_success = postsolve_success && postsolveNearlyParallelRowBoundsTightened(stoch_original_sol, i);
+         const bool success = postsolveNearlyParallelRowBoundsTightened(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case FREE_COLUMN_SINGLETON_INEQUALITY_ROW:
       {
-         postsolve_success = postsolve_success && postsolveFreeColumnSingletonInequalityRow(stoch_original_sol, i);
+         const bool success = postsolveFreeColumnSingletonInequalityRow(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case PARALLEL_ROWS_BOUNDS_TIGHTENED:
       {
-         postsolve_success = postsolve_success && postsolveParallelRowsBoundsTightened(stoch_original_sol, i);
+         const bool success = postsolveParallelRowsBoundsTightened(stoch_original_sol, i);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case LINKING_VARS_SYNC_EVENT:
       {
-         postsolve_success = postsolve_success && syncLinkingVarChanges(stoch_original_sol);
+         const bool success = syncLinkingVarChanges(stoch_original_sol);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case LINKING_INEQ_ROW_SYNC_EVENT:
       {
-         postsolve_success = postsolve_success && syncIneqLinkingRowChanges(stoch_original_sol);
+         const bool success = syncIneqLinkingRowChanges(stoch_original_sol);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case LINKIN_EQ_ROW_SYNC_EVENT:
       {
-         postsolve_success = postsolve_success && syncEqLinkingRowChanges(stoch_original_sol);
+         const bool success = syncEqLinkingRowChanges(stoch_original_sol);
+         postsolve_success = postsolve_success && success;
          break;
       }
       case BOUND_TIGHTENING_LINKING_ROW_SYNC_EVENT:
       {
-         postsolve_success = postsolve_success && syncLinkingRowsAfterBoundTightening(stoch_original_sol);
+         const bool success = syncLinkingRowsAfterBoundTightening(stoch_original_sol);
+         postsolve_success = postsolve_success && success;
          break;
       }
       default:
@@ -831,7 +847,10 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
    if( my_rank == 0 )
       std::cout << "finished postsolving... " << std::endl;
 
-   return PRESOLVE_OK;
+   if( postsolve_success )
+      return PRESOLVE_OK;
+   else
+      return PRESOLVE_FAIL;
 }
 
 /**
@@ -875,7 +894,7 @@ bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_
 
    const INDEX stored_row(ROW, row.getNode(), index_stored_row, row.getLinking(), EQUALITY_SYSTEM);
 
-   // TODO: this could be optimized - all linking rows will be after each other - we could wait with allreduce --- acutally not sure whether this would ever happen or not - multiple redundant linking rows...
+   // TODO: this could be optimized - all linking rows will be after each other - we could wait with allreduce --- actually not sure whether this would ever happen or not - multiple redundant linking rows...
    // until the current boost of linking rows is processed and then allreduce all activities at once and unpate the slacks then only
    /* get current row activity - redundant linking rows have to lie on the stack in the same order */
 
@@ -2639,7 +2658,7 @@ bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars)
    // TODO
 
    /* use stored linking rows to adjust variable duals */
-   return false;
+   return true;
 }
 
 void StochPostsolver::addIneqRowDual(double& z, double& lambda, double& pi, double value) const

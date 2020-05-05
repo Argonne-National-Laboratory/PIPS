@@ -67,6 +67,10 @@ if [ -d "run_$gams_file" ]; then
    rm -r run_$gams_file
 fi
 mkdir run_$gams_file
+if [ -f $file_path/PIPSIPMpp.opt ]; then
+   cp $file_path/PIPSIPMpp.opt run_$gams_file/
+fi
+
 cd run_$gams_file
 gams ../$gams_file --METHOD=PIPS > /dev/null
 
