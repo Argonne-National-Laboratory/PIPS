@@ -1111,8 +1111,8 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    /* set z/y of corresponding row such that -c_i * delta_z // -a_i * delta_y = error_reduced_costs */
    assert( !PIPSisZero(coeff) );
    const double change_dual_row = is_upper_bound ? (diff_dual_bound / coeff) : (-diff_dual_bound / coeff);
-   if(coeff < 1e-13)
-      std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
+//   if(coeff < 1e-13)
+//      std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
 
    /* add -dz/dy * row to gamma/phi */
    /* store linking variable changes and allreduce them later except when using a row from D/B0 or D/Bl0 */
