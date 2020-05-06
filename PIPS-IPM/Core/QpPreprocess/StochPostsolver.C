@@ -949,8 +949,8 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
             /* set z/y of corresponding row such that c_i* deltaz//a_i* deltay = phi */
             assert(!PIPSisZero(coeff));
             const double change_dual_row = old_phi/coeff;
-            if(coeff < 1e-13)
-               std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
+            //if(coeff < 1e-13)
+            //   std::cout << "Potential numerical issues in postsolve of BoundTightening caused by small coefficient" << std::endl;
 
             /* add z/y * row to gamma/phi */
             StochVectorHandle tmp_pos(dynamic_cast<StochVector*>(original_vars.gamma->clone()));
