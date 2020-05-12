@@ -21,6 +21,7 @@
 #include "StochTree.h"
 #include "QpGenStoch.h"
 #include "StochResourcesMonitor.h"
+#include "StochOptions.h"
 
 #include "sVars.h"
 #include "sData.h"
@@ -66,12 +67,35 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
    StepFactor0 = 0.3;
    StepFactor1 = 1.5;
 
-#ifdef REDUCED_ACCURACY
-   artol = 1.e-3;
-   mutol = 1.e-5;
-#else
-   mutol = 1.e-6; // todo parameter
-#endif
+   // todo the parameters should be read in Solver.c
+   if( pips_options::getBoolParameter("IP_STEPLENGTH_CONSERVATIVE") )
+   {
+      steplength_factor = 0.99;
+      gamma_f = 0.95;
+   }
+   else
+   {
+      steplength_factor = 0.99999999;
+      gamma_f = 0.99;
+   }
+   gamma_a = 1.0 / (1.0 - gamma_f);
+
+   if( pips_options::getBoolParameter("IP_ACCURACY_REDUCED")  )
+   {
+	  artol = 1.e-3;
+	  mutol = 1.e-5;
+   }
+   else
+   {
+	  artol = 1.e-4;
+      mutol = 1.e-6;
+   }
+
+   if( pips_options::getBoolParameter("IP_PRINT_TIMESTAMP") )
+   {
+      printTimeStamp = true;
+      startTime = MPI_Wtime();
+   }
 
    temp_step = factory->makeVariables(prob);
 }

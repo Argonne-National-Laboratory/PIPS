@@ -36,6 +36,9 @@ protected:
  /** termination parameters */
   double     mutol, artol;
 
+  /** number in (0,1) with which the step length is multiplied */
+  double steplength_factor;
+
   /** parameters associated with the step length heuristic */
   double gamma_f, gamma_a;
 

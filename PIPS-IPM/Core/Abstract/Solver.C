@@ -12,6 +12,7 @@
 #include "Residuals.h"
 #include "LinearSystem.h"
 #include "OoqpStartStrategy.h"
+#include "StochOptions.h"
 #include <cmath>
 #include <limits>
 
@@ -47,33 +48,17 @@ int gInnerSCsolve=0;
 int gInnerStg2solve=3;
 
 Solver::Solver() : itsMonitors(0), status(0), startStrategy(0), dnorm(0.0),
-		   mutol(1.e-6), artol(1e-4), phi(0.0), maxit(0), mu_history(0), rnorm_history(0),
+		   mutol(1.e-6), artol(1.e-4), phi(0.0), maxit(0), mu_history(0), rnorm_history(0),
 		   phi_history(0), phi_min_history(0), iter(0), sys(0)
 {
   // define parameters associated with the step length heuristic
-#ifdef STEPLENGTH_CONSERVATIVE
-  gamma_f = 0.95;
-#else
-  gamma_f = 0.99;
-#endif
-  gamma_a = 1.0 / (1.0 - gamma_f);
 
+  steplength_factor = 0.99999999;
+  gamma_f = 0.99;
+  gamma_a = 1.0 / (1.0 - gamma_f);
 
   printTimeStamp = false;
   startTime = 0.0;
-
-  // todo proper parameter
-  char* var = getenv("PARDISO_PRINT_TIMESTAMP");
-  if( var != nullptr )
-  {
-     int use;
-     sscanf(var, "%d", &use);
-     if( use == 1 )
-     {
-        printTimeStamp = true;
-        startTime = MPI_Wtime();
-     }
-  }
 }
 
 void Solver::start( ProblemFormulation * formulation,
@@ -224,11 +209,7 @@ double Solver::finalStepLength( Variables *iterate, Variables *step )
 	if( alpha < gamma_f * maxAlpha ) alpha = gamma_f * maxAlpha;
 
 	// back off just a touch (or a bit more)
-#ifdef STEPLENGTH_CONSERVATIVE
-	alpha *= 0.99;
-#else
-	alpha *= .99999999;
-#endif
+	alpha *= steplength_factor;
 
 	assert(alpha < 1.0);
 
@@ -308,17 +289,11 @@ void Solver::finalStepLength_PD( Variables *iterate, Variables *step,
 	if( alpha_primal < gamma_f * maxAlpha_p ) alpha_primal = gamma_f * maxAlpha_p;
 	if( alpha_dual < gamma_f * maxAlpha_d ) alpha_dual = gamma_f * maxAlpha_d;
 
-	// back off just a touch (or a bit more)
-	#ifdef STEPLENGTH_CONSERVATIVE
-		alpha_primal *= 0.99;
-		alpha_dual *= 0.99;
-	#else
-		alpha_primal *= .99999999;
-		alpha_dual *= .99999999;
-	#endif
+	alpha_primal *= steplength_factor;
+	alpha_dual *= steplength_factor;
 
 	assert(alpha_primal < 1.0 && alpha_dual < 1.0);
-	assert(alpha_primal >= 0 && alpha_dual >= 0 );
+	assert(alpha_primal >= 0 && alpha_dual >= 0);
 }
 
 

@@ -212,9 +212,8 @@ PIPSIpmInterface<FORMULATION, IPMSOLVER>::PIPSIpmInterface(StochInputTree* in, M
   if(mype==0) printf("data created\n");
 #endif
 
-#ifdef WITH_PARDISOINDEF
-  data->activateLinkStructureExploitation();
-#endif
+  if( pips_options::getBoolParameter("PARDISO_FOR_GLOBAL_SC") )
+     data->activateLinkStructureExploitation();
 
   vars   = dynamic_cast<sVars*>( factory->makeVariables( data ) );
 #ifdef TIMING

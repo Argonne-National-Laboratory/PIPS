@@ -8,6 +8,7 @@ namespace pips_options
       setDefaults();
    }
 
+   // todo maybe split this up into several submethods?
    void StochOptions::setDefaults()
    {
       // TODO
@@ -68,5 +69,18 @@ namespace pips_options
 
       /// PRESOLVE DATA
       double_options["PRESOLVE_MAX_BOUND_ACCEPTED"] = 1e10;
+
+      /// LINEAR SOLVERS
+      bool_options["PARDISO_FOR_GLOBAL_SC"] = true;
+
+      /// PRECONDITIONERS
+      bool_options["PRECONDITION_DISTRIBUTED"] = true;
+      bool_options["PRECONDITION_SPARSE"] = true;
+
+      /// INTERIOR-POINT ALGORITHM
+      bool_options["IP_ACCURACY_REDUCED"] = false;
+      bool_options["IP_PRINT_TIMESTAMP"] = false;
+      bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
+
    }
 }

@@ -8,6 +8,7 @@
 #include "sData.h"
 #include "sDummyLinsys.h"
 #include "sLinsysLeaf.h"
+#include "StochOptions.h"
 #include "math.h"
 
 #include "pipsport.h"
@@ -70,11 +71,7 @@ sLinsysRoot::sLinsysRoot(sFactory * factory_, sData * prob_)
     sol2 = res2 = res3 = res4 = res5 = nullptr;
   }
 
-#ifdef DIST_PRECOND
-  usePrecondDist = true;
-#else
-  usePrecondDist = false;
-#endif
+  usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
 
   // use sparse KKT if link structure is present
   hasSparseKkt = prob_->exploitingLinkStructure();
@@ -124,11 +121,7 @@ sLinsysRoot::sLinsysRoot(sFactory* factory_,
       sol2 = res2 = res3 = res4 = res5 = nullptr;
   }
 
-#ifdef DIST_PRECOND
-  usePrecondDist = true;
-#else
-  usePrecondDist = false;
-#endif
+  usePrecondDist = pips_options::getBoolParameter("PRECONDITION_DISTRIBUTED");
 
   // use sparse KKT if (enough) 2 links are present
   hasSparseKkt = prob_->exploitingLinkStructure();
