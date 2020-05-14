@@ -1585,7 +1585,7 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
 
    const bool at_root_node = row.isEmpty() ? false : col.isLinkingCol() && row.getNode() == -1;
 
-   if( col.isLinkingCol() && at_root_node )
+   if( col.isLinkingCol() && !at_root_node )
    {
       PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD);
       PIPS_MPIisValueEqual(xlow_new, MPI_COMM_WORLD);
@@ -1595,10 +1595,6 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
 #endif
       assert( PIPS_MPIgetSum(my_tightening, MPI_COMM_WORLD) == 1);
    }
-
-   /* TODO */
-   if( !row.isEmpty() && row.isLinkingRow() )
-      return false;
 
    if( xlow_new == INF_NEG && xupp_new == INF_POS )
       return false;
@@ -1627,7 +1623,6 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
    bool lower_bound_changed = false;
 
 
-   // TODO: Gurobi uses feastol * 1e3 but that would leave singleton rows in the problem -> not anymore
    const double min_impact_bound_change = feastol;
    // we do not tighten bounds if impact is too low or bound is bigger than threshold_bound_tightening
    // set lower bound

@@ -134,12 +134,15 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    if( !local_bound_tightenings )
       return;
 
+   std::cout << "LOCALS!!" << std::endl;
    // TODO : make vector bool
    std::vector<double> lbx_ubx( 2 * n_linking_vars );
    std::copy( lb_linking_var.begin(), lb_linking_var.end(), lbx_ubx.begin() );
    std::copy( ub_linking_var.begin(), ub_linking_var.end(), lbx_ubx.begin() + n_linking_vars );
 
-   PIPS_MPIminArrayInPlace(lbx_ubx, MPI_COMM_WORLD);
+   PIPS_MPIminArrayInPlace(lbx_ubx);
+
+   std::vector<std::pair<double,int>> minloc = PIPS_MPIminlocArray(lbx_ubx);
 
    std::vector<int> best_proc_lbx_ubx( 2 * n_linking_vars, -1 );
    /* check lower bounds */
@@ -166,12 +169,16 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    {
       if( best_proc_lbx_ubx[i] == my_rank )
       {
+         assert(best_proc_lbx_ubx[i] == minloc[i].second);
+         assert(lb_linking_var[i] == minloc[i].first);
          const bool propagated = presData.rowPropagatedBounds(rows_lb[i], INDEX(COL, -1, i), lb_linking_var[i], INF_POS);
          if( propagated )
             ++tightenings;
       }
       else if( best_proc_lbx_ubx[i] != -1 )
       {
+         assert(best_proc_lbx_ubx[i] != minloc[i].second);
+         assert(lb_linking_var[i] == minloc[i].first);
          const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), lb_linking_var[i], INF_POS);
          if( propagated )
             ++tightenings;
@@ -182,13 +189,17 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    {
       if( best_proc_lbx_ubx[ n_linking_vars + i ] == my_rank )
       {
-         const bool propagated = presData.rowPropagatedBounds(rows_ub[i], INDEX(COL, -1, i), INF_NEG, ub_linking_var[i]);
+         assert(best_proc_lbx_ubx[i] == minloc[i].second);
+         assert(lb_linking_var[i] == minloc[i].first);
+         const bool propagated = presData.rowPropagatedBounds(rows_ub[i], INDEX(COL, -1, i), INF_NEG, -ub_linking_var[i]);
          if( propagated )
             ++tightenings;
       }
       else if( best_proc_lbx_ubx[ n_linking_vars + i ] != -1 )
       {
-         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), INF_NEG, ub_linking_var[i]);
+         assert(best_proc_lbx_ubx[i] != minloc[i].second);
+         assert(lb_linking_var[i] == minloc[i].first);
+         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), INF_NEG, -ub_linking_var[i]);
          if( propagated )
             ++tightenings;
       }
@@ -227,9 +238,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInNode(SystemType system_
  */
 bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType system_type, int node, BlockType block_type)
 {
-   if( node == -1 || block_type == A_MAT )
-      return false;
-
    assert( -1 <= node && node < nChildren );
    updatePointersForCurrentNode(node, system_type);
 
