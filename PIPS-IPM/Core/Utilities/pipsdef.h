@@ -312,9 +312,61 @@ MPI_Datatype get_mpi_datatype(T* arg) {
 }
 
 template <typename T>
-MPI_Datatype get_mpi_datatype(const T* arg) {
+MPI_Datatype get_mpi_datatype(const T* const arg) {
    return get_mpi_datatype_t<T>::value;
 }
+
+template <typename T>
+struct get_mpi_locdatatype_t;
+
+template <>
+struct get_mpi_locdatatype_t<float> {
+      static constexpr MPI_Datatype value = MPI_FLOAT_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<double> {
+      static constexpr MPI_Datatype value = MPI_DOUBLE_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<long> {
+      static constexpr MPI_Datatype value = MPI_LONG_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<int> {
+      static constexpr MPI_Datatype value = MPI_2INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<short> {
+      static constexpr MPI_Datatype value = MPI_SHORT_INT;
+};
+
+template <>
+struct get_mpi_locdatatype_t<long double> {
+      static constexpr MPI_Datatype value = MPI_LONG_DOUBLE_INT;
+};
+
+template <typename T>
+MPI_Datatype get_mpi_locdatatype(const T& arg)
+{
+   return get_mpi_locdatatype_t<T>::value;
+}
+
+template <typename T>
+MPI_Datatype get_mpi_locdatatype(const T* const arg)
+{
+   return get_mpi_locdatatype_t<T>::value;
+}
+
+template <typename T>
+MPI_Datatype get_mpi_locdatatype(T* arg)
+{
+   return get_mpi_locdatatype_t<T>::value;
+}
+
 
 inline int PIPS_MPIgetRank(MPI_Comm mpiComm = MPI_COMM_WORLD)
 {
@@ -330,6 +382,85 @@ inline int PIPS_MPIgetSize(MPI_Comm mpiComm = MPI_COMM_WORLD)
    return mysize;
 }
 
+template <typename T>
+inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const T* localmin, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   if( length <= 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(length);
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmin[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], length, get_mpi_locdatatype(localmin), MPI_MINLOC, mpiComm);
+
+   return pairs;
+}
+
+template <typename T>
+inline std::vector<std::pair<T, int>> PIPS_MPIminlocArray(const std::vector<T>& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   if( localmin.size() == 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(localmin.size());
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmin[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], localmin.size(), get_mpi_locdatatype(localmin[0]), MPI_MINLOC, mpiComm);
+
+   return pairs;
+}
+
+template <typename T>
+inline std::vector<std::pair<T, int>> PIPS_MPImaxlocArray(const T* localmax, int length, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   if( length <= 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(length);
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmax[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], length, get_mpi_locdatatype(localmax), MPI_MAXLOC, mpiComm);
+
+   return pairs;
+}
+
+template <typename T>
+inline std::vector<std::pair<T, int>> PIPS_MPImaxlocArray(const std::vector<T>& localmax, MPI_Comm mpiComm = MPI_COMM_WORLD)
+{
+   if( localmax.size() == 0 )
+      return std::vector<std::pair<T, int>>();
+
+   const int my_rank = PIPS_MPIgetRank(mpiComm);
+   std::vector<std::pair<T,int>> pairs(localmax.size());
+
+   for(unsigned int i = 0; i < pairs.size(); ++i)
+   {
+      pairs[i].first = localmax[i];
+      pairs[i].second = my_rank;
+   }
+
+   MPI_Allreduce(MPI_IN_PLACE, &pairs[0], localmax.size(), get_mpi_locdatatype(localmax[0]), MPI_MAXLOC, mpiComm);
+
+   return pairs;
+}
 
 template <typename T>
 inline T PIPS_MPIgetMin(const T& localmin, MPI_Comm mpiComm = MPI_COMM_WORLD)
