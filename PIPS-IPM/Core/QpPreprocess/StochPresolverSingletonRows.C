@@ -154,7 +154,10 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
       assert( !row.isLinkingRow() );
 
       if( PIPSisLT(xupp_new, buffer_xlows[col_idx]) || PIPSisLT( xlow_new, buffer_xupps[col_idx] ) )
+      {
+         std::cout << "[" << xlow_new << ", " << xupp_new << "] !C [" << buffer_xlows[col_idx] << ", " << buffer_xupps[col_idx] << "]" << std::endl;
          PIPS_MPIabortInfeasible("Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonVar");
+      }
 
       /* if we already found a row - keep the better one */
       if( row.inEqSys() )
