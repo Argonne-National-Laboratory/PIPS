@@ -155,6 +155,9 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
 
       if( PIPSisLT(xupp_new, buffer_xlows[col_idx]) || PIPSisLT( xlow_new, buffer_xupps[col_idx] ) )
       {
+         if(my_rank == 0)
+            presData.writeRowLocalToStreamDense(std::cout, row);
+         MPI_Barrier(MPI_COMM_WORLD);
          std::cout << "[" << xlow_new << ", " << xupp_new << "] !C [" << buffer_xlows[col_idx] << ", " << buffer_xupps[col_idx] << "]" << std::endl;
          PIPS_MPIabortInfeasible("Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonVar");
       }
