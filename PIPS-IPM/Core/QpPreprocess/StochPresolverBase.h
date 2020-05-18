@@ -51,6 +51,10 @@ protected:
    const double INF_NEG;
    const double INF_POS;
 
+   const int n_linking_vars;
+   const int n_linking_rows_eq;
+   const int n_linking_rows_ineq;
+
    /* not owned by the class itself - given from the outside */
    PresolveData& presData;
 

@@ -25,6 +25,9 @@ StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& orig
       distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
       INF_NEG( -pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
       INF_POS( pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
+      n_linking_vars( dynamic_cast<const StochVector&>(*origProb.g).vec->length() ),
+      n_linking_rows_eq( dynamic_cast<const StochVector&>(*origProb.bA).vecl ? dynamic_cast<const StochVector&>(*origProb.bA).vecl->length() : 0),
+      n_linking_rows_ineq( dynamic_cast<const StochVector&>(*origProb.iclow).vecl ? dynamic_cast<const StochVector&>(*origProb.iclow).vecl->length() : 0),
       presData(presData), origProb(origProb)
 {
    localNelims = 0;
