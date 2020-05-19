@@ -14,19 +14,15 @@
 #include <algorithm>
 
 StochPresolverSingletonRows::StochPresolverSingletonRows(PresolveData& presData, const sData& origProb) :
-      StochPresolverBase(presData, origProb), removed_rows(0)
+      StochPresolverBase(presData, origProb), removed_rows(0),
+   buffer_found_singleton_equality( n_linking_vars ),
+   buffer_rows_lower( n_linking_vars ),
+   buffer_rows_upper( n_linking_vars ),
+   buffer_xlows( n_linking_vars ),
+   buffer_xupps( n_linking_vars ),
+   buffer_coeffs_lower( n_linking_vars ),
+   buffer_coeffs_upper( n_linking_vars )
 {
-   const int n_linking_vars = dynamic_cast<const StochVector&>(*origProb.g).vec->length();
-
-   buffer_found_singleton_equality.reserve( n_linking_vars );
-
-   buffer_rows_lower.reserve( n_linking_vars );
-   buffer_rows_upper.reserve( n_linking_vars );
-   buffer_coeffs_lower.reserve( n_linking_vars );
-   buffer_coeffs_upper.reserve( n_linking_vars );
-
-   buffer_xlows.reserve( n_linking_vars );
-   buffer_xupps.reserve( n_linking_vars );
 }
 
 StochPresolverSingletonRows::~StochPresolverSingletonRows()
@@ -133,22 +129,13 @@ bool StochPresolverSingletonRows::removeSingletonRow( const INDEX& row )
    if( row.getLinking() && node_col != -1 )
    {
       if(node_col == -2 || col_idx == -1)
-      {
-         assert( PIPS_MPIgetSum(0, MPI_COMM_WORLD) == 1 );
-      }
+         assert( PIPS_MPIgetSum(0) == 1 );
       else
-      {
-         assert( PIPS_MPIgetSum(1, MPI_COMM_WORLD) == 1 );
-      }
+         assert( PIPS_MPIgetSum(1) == 1 );
    }
    else if( row.getLinking() )
-   {
-      assert( PIPS_MPIisValueEqual(row.getIndex(), MPI_COMM_WORLD) );
-   }
+      assert( PIPS_MPIisValueEqual(row.getIndex()) );
 
-   /* because of postsolve here we only remove correctly placed singleton rows
-    * singletons in Ai blocks need to be stored here and communicated later on
-    */
    if( row.getNode() != -1 && node_col == -1 )
    {
       assert( !row.isLinkingRow() );
@@ -336,88 +323,50 @@ void StochPresolverSingletonRows::getBoundsAndColFromSingletonRow(const INDEX& r
 
 void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
 {
-   const int n_linking_vars = buffer_xlows.size();
    /* if two procs found bounds on a variable then the better bound and after that the lower process index gets to tighten the variable */
 
-   /* if some processes found fixations for a variable only these will compete (with their rank) for applying the tightening */
+   /* sync procs that found the best equality singleton rows */
    std::vector<int> was_singleton_equality_found(n_linking_vars, 0);
-   PIPS_MPImaxArray(buffer_found_singleton_equality, was_singleton_equality_found, MPI_COMM_WORLD);
+   std::vector<std::pair<int,int>> maxloc_singleton_eqrows = PIPS_MPImaxlocArray(buffer_found_singleton_equality);
 
-   /* get best found bounds */
-   std::vector<double> best_xlows(n_linking_vars, INF_NEG);
-   std::vector<double> best_xupps(n_linking_vars, INF_POS);
+   std::vector<std::pair<double, int>> minloc_xlows = PIPS_MPIminlocArray(buffer_xlows);
+   std::vector<std::pair<double, int>> maxloc_xupps = PIPS_MPImaxlocArray(buffer_xupps);
 
-   PIPS_MPImaxArray(buffer_xlows, best_xlows, MPI_COMM_WORLD);
-   PIPS_MPIminArray(buffer_xupps, best_xupps, MPI_COMM_WORLD);
-
-   std::vector<int> proc_lower(n_linking_vars, -1);
-   std::vector<int> proc_upper(n_linking_vars, -1);
-
+   /* check for infeasibility and remove the corresponding rows synced */
    for( int i = 0; i < n_linking_vars; ++i )
    {
-      const double best_xlow = best_xlows[i];
-      const double best_xupp = best_xupps[i];
+      const double best_xlow = minloc_xlows[i].first;
+      const double best_xupp = maxloc_xupps[i].first;
 
-      const double my_xlow = buffer_xlows[i];
-      const double my_xupp = buffer_xupps[i];
-
-      if( PIPSisLT(best_xupp, best_xlow) )
-         PIPS_MPIabortInfeasible("Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonLinkingColssSynced");
-
-      const int i_found_eq = buffer_found_singleton_equality.at(i);
-      const int was_eq_found = was_singleton_equality_found.at(i);
-
-      if( was_eq_found )
-         assert( best_xlow == best_xupp );
-      if( i_found_eq )
-      {
-         assert( best_xlow == best_xupp );
-         assert( my_xlow == my_xupp );
-         assert( best_xlow == my_xlow );
-      }
-
-      if( i_found_eq == was_eq_found )
-      {
-         if( my_xlow == best_xlow )
-            proc_lower[i] = my_rank;
-
-         if( my_xupp == best_xupp )
-            proc_upper[i] = my_rank;
-      }
-   }
-
-   /* find the best ranking process to use its row */
-   PIPS_MPIminArrayInPlace(proc_lower, MPI_COMM_WORLD);
-   PIPS_MPIminArrayInPlace(proc_upper, MPI_COMM_WORLD);
-
-   for( int i = 0; i < n_linking_vars; ++i )
-   {
-      const int proc_l = proc_lower[i];
-      const int proc_u = proc_upper[i];
-
-      if( proc_l == -1 && proc_u == -1 )
+      if( best_xlow == INF_NEG && best_xupp == INF_POS )
          continue;
 
       const INDEX col(COL, -1, i);
-      /* equality row */
-      if( proc_l == proc_u && was_singleton_equality_found[i] == 1 )
+      /* check for feasibility */
+      if( PIPSisLT(best_xupp, best_xlow) )
+         PIPS_MPIabortInfeasible("Found non-matching bounds on linking variables", "StochPresolverSingletonRows.C", "removeSingletonLinkingColssSynced");
+
+      assert( maxloc_singleton_eqrows[i].first == 1 || maxloc_singleton_eqrows[i].first == 0 );
+      const bool eq_row_found = (maxloc_singleton_eqrows[i].first == 1);
+
+      if( eq_row_found )
+         assert( PIPSisEQ(best_xlow, best_xupp) );
+
+      if( eq_row_found )
       {
-         if( proc_l == my_rank )
+         const bool i_tighten_bound = maxloc_singleton_eqrows[i].second == my_rank;
+         assert( PIPS_MPIgetSum( i_tighten_bound ? 1 : 0 ) == 1 );
+
+         if( i_tighten_bound )
          {
-            assert( buffer_rows_lower[i] == buffer_rows_upper[i] );
+            assert( buffer_coeffs_lower[i] == buffer_coeffs_upper[i] );
 
             const INDEX& row = buffer_rows_lower[i];
-
-            assert( buffer_coeffs_lower[i] == buffer_coeffs_upper[i] );
-            assert( buffer_xlows[i] == best_xlows[i]);
-            assert( buffer_xupps[i] == best_xupps[i]);
-            assert( best_xlows[i] == best_xupps[i]);
-
-            presData.removeSingletonRowSynced(row, col, best_xlows[i], best_xupps[i], buffer_coeffs_upper[i]);
+            presData.removeSingletonRowSynced(row, col, best_xlow, best_xupp, buffer_coeffs_upper[i]);
          }
          else
          {
-            presData.removeSingletonRowSynced(INDEX(), col, best_xlows[i], best_xupps[i], NAN);
+            presData.removeSingletonRowSynced(INDEX(), col, best_xlow, best_xupp, NAN);
 
             // if i found a row that is now redundant - remove it as redundant
             if( !buffer_rows_lower[i].isEmpty() )
@@ -428,42 +377,49 @@ void StochPresolverSingletonRows::removeSingletonLinkingColsSynced()
       }
       else
       {
-         /* inequality for lower bound */
-         if( proc_l != -1 )
-         {
-            if( proc_l == my_rank )
-            {
-               assert( buffer_xlows[i] == best_xlows[i] );
+         const bool i_tighten_lower = minloc_xlows[i].second == my_rank;
+         const bool i_tighten_upper = maxloc_xupps[i].second == my_rank;
+         assert( PIPS_MPIgetSum( i_tighten_lower ? 1 : 0 ) <= 1 );
+         assert( PIPS_MPIgetSum( i_tighten_upper ? 1 : 0 ) <= 1 );
 
-               presData.removeSingletonRowSynced(buffer_rows_lower[i], col, best_xlows[i], INF_POS, buffer_coeffs_lower[i]);
+         if( best_xlow != INF_NEG )
+         {
+            if( i_tighten_lower )
+            {
+               assert( buffer_xlows[i] == best_xlow );
+
+               const INDEX& row = buffer_rows_lower[i];
+               presData.removeSingletonRowSynced(row, col, best_xlow, INF_POS, buffer_coeffs_lower[i]);
             }
             else
             {
-               presData.removeSingletonRowSynced(INDEX(), col, best_xlows[i], INF_POS, NAN);
+               presData.removeSingletonRowSynced(INDEX(), col, best_xlow, INF_POS, NAN);
 
                // if i found a row that is now redundant - remove it as redundant
                if( !buffer_rows_lower[i].isEmpty() )
                   presData.removeRedundantRow( buffer_rows_lower[i] );
             }
          }
-         /* inequality for upper bound */
-         if( proc_u != -1 )
-         {
-            if( proc_u == my_rank )
-            {
-               assert( buffer_xupps[i] == best_xupps[i] );
 
-               presData.removeSingletonRowSynced(buffer_rows_upper[i], col, INF_NEG, best_xupps[i], buffer_coeffs_upper[i]);
+         if( best_xupp != INF_POS )
+         {
+            if( i_tighten_upper )
+            {
+               assert( buffer_xupps[i] == best_xupp );
+
+               const INDEX& row = buffer_rows_upper[i];
+               presData.removeSingletonRowSynced(row, col, INF_NEG, best_xupp, buffer_coeffs_upper[i]);
             }
             else
             {
-               presData.removeSingletonRowSynced(INDEX(), col, INF_NEG, best_xupps[i], NAN);
+               presData.removeSingletonRowSynced(INDEX(), col, INF_NEG, best_xupp, NAN);
 
                // if i found a row that is now redundant - remove it as redundant
                if( !buffer_rows_upper[i].isEmpty() )
                   presData.removeRedundantRow( buffer_rows_upper[i] );
             }
          }
+
       }
    }
 }
@@ -476,7 +432,7 @@ void StochPresolverSingletonRows::resetBuffers()
    std::fill(buffer_rows_upper.begin(), buffer_rows_upper.end(), INDEX());
 
    std::fill(buffer_xlows.begin(), buffer_xlows.end(), INF_NEG);
-   std::fill(buffer_xupps.begin(), buffer_xupps.end(), INF_NEG);
+   std::fill(buffer_xupps.begin(), buffer_xupps.end(), INF_POS);
 
    std::fill(buffer_coeffs_lower.begin(), buffer_coeffs_lower.end(), NAN);
    std::fill(buffer_coeffs_upper.begin(), buffer_coeffs_upper.end(), NAN);
