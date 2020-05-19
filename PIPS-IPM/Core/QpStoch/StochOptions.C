@@ -39,6 +39,8 @@ namespace pips_options
       int_options["PRESOLVE_MAX_ROUNDS"] = 2;
       /** should the problem be written to std::cout before and after presolve */
       bool_options["PRESOLVE_PRINT_PROBLEM"] = false;
+      /** should the presolved problem be written out in MPS format */
+      bool_options["PRESOLVE_WRITE_PRESOLVED_PROBLEM_MPS"] = false;
       /** should free variables' bounds be reset after presolve (given the row implying these bounds was not removed */
       bool_options["PRESOLVE_RESET_FREE_VARIABLES"] = false;
 

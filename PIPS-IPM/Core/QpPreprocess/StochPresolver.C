@@ -46,6 +46,7 @@ StochPresolver::StochPresolver(const Data* prob, Postsolver* postsolver = nullpt
    limit_max_rounds( pips_options::getIntParameter("PRESOLVE_MAX_ROUNDS") ),
    reset_free_variables_after_presolve( pips_options::getBoolParameter("PRESOLVE_RESET_FREE_VARIABLES") ),
    print_problem( pips_options::getBoolParameter("PRESOLVE_PRINT_PROBLEM") ),
+   write_presolved_problem( pips_options::getBoolParameter("PRESOLVE_WRITE_PRESOLVED_PROBLEM_MPS") ),
    presData( new PresolveData(dynamic_cast<const sData*>(origprob), dynamic_cast<StochPostsolver*>(postsolver)) )
 {
    const sData* sorigprob = dynamic_cast<const sData*>(origprob);
@@ -124,6 +125,17 @@ Data* StochPresolver::presolve()
 
    if( print_problem )
       finalPresData->writeToStreamDense(std::cout);
+
+   if( write_presolved_problem )
+   {
+      std::ofstream of("presolved.mps");
+
+      if( of.is_open() )
+         finalPresData->writeMPSformat(of);
+      else
+         if( my_rank == 0 )
+            std::cout << "Could not open presolved.mps to write out presolved problem!!" << std::endl;
+   }
 
    return finalPresData;
 }
