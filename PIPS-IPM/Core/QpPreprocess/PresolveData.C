@@ -1475,10 +1475,10 @@ void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, 
 {
    assert( row.isRow() || row.isEmpty() );
    assert( col.isCol() );
-   assert( row.hasValidNode(nChildren) );
+   assert( row.isEmpty() || row.hasValidNode(nChildren) );
    assert( col.hasValidNode(nChildren) );
    assert( col.isLinkingCol() );
-   assert( !row.isLinkingRow() );
+   assert( row.isEmpty() || !row.isLinkingRow() );
 
    assert( PIPS_MPIisValueEqual( row.getIndex(), MPI_COMM_WORLD) );
    assert( PIPS_MPIisValueEqual( col.getIndex(), MPI_COMM_WORLD) );
@@ -1486,13 +1486,15 @@ void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, 
    assert( PIPS_MPIisValueEqual( xupp_new, MPI_COMM_WORLD) );
 
    if( row.isRow() )
+   {
       assert( getNnzsRow(row) == 1 );
+      assert( (row.getSystemType() == EQUALITY_SYSTEM && xlow_new == xupp_new) ||
+         (xlow_new == INF_NEG || xupp_new == INF_POS) );
+   }
 
-   assert( PIPS_MPIgetSum( row.isRow(), MPI_COMM_WORLD ) );
+   assert( PIPS_MPIgetSum( row.isRow() ? 1 : 0, MPI_COMM_WORLD ) == 1 );
 
    assert( xlow_new != INF_NEG || xupp_new != INF_POS );
-   assert( (row.getSystemType() == EQUALITY_SYSTEM && xlow_new == xupp_new) ||
-      (xlow_new == INF_NEG || xupp_new == INF_POS) );
 
    /* check for infeasibility of the newly found bounds */
    checkBoundsInfeasible(col, xlow_new, xupp_new);

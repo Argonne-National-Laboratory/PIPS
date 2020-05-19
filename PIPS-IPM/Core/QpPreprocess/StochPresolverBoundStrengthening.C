@@ -140,69 +140,37 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    std::copy( lb_linking_var.begin(), lb_linking_var.end(), lbx_ubx.begin() );
    std::copy( ub_linking_var.begin(), ub_linking_var.end(), lbx_ubx.begin() + n_linking_vars );
 
-   PIPS_MPIminArrayInPlace(lbx_ubx);
-
-   std::vector<std::pair<double,int>> minloc = PIPS_MPIminlocArray(lbx_ubx);
-
-   std::vector<int> best_proc_lbx_ubx( 2 * n_linking_vars, -1 );
-   /* check lower bounds */
-   for( unsigned int i = 0; i < n_linking_vars; ++i )
-   {
-      if( PIPSisEQ( lbx_ubx[i], lb_linking_var[i] ) )
-      {
-         best_proc_lbx_ubx[i] = my_rank;
-      }
-   }
-
-   for( unsigned int i = 0; i < n_linking_vars; ++i )
-   {
-      if( PIPSisEQ( lbx_ubx[ n_linking_vars + i], ub_linking_var[i] ) )
-      {
-         best_proc_lbx_ubx[ n_linking_vars + i] = my_rank;
-      }
-   }
-
-   PIPS_MPIminArrayInPlace(best_proc_lbx_ubx, MPI_COMM_WORLD);
+   std::vector<std::pair<double,int>> maxloc_bounds = PIPS_MPImaxlocArray(lbx_ubx);
 
    /* now that the best bounds and the respective processes are determined actually tighten the bounds */
-   for( unsigned int i = 0; i < n_linking_vars; ++i )
+   for( unsigned int i = 0; i < 2 * n_linking_vars; ++i )
    {
-      if( best_proc_lbx_ubx[i] == my_rank )
-      {
-         assert(best_proc_lbx_ubx[i] == minloc[i].second);
-         assert(lb_linking_var[i] == minloc[i].first);
-         const bool propagated = presData.rowPropagatedBounds(rows_lb[i], INDEX(COL, -1, i), lb_linking_var[i], INF_POS);
-         if( propagated )
-            ++tightenings;
-      }
-      else if( best_proc_lbx_ubx[i] != -1 )
-      {
-         assert(best_proc_lbx_ubx[i] != minloc[i].second);
-         assert(lb_linking_var[i] == minloc[i].first);
-         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), lb_linking_var[i], INF_POS);
-         if( propagated )
-            ++tightenings;
-      }
-   }
+      const bool is_lower_bound = (i < n_linking_vars );
+      const int best_rank = maxloc_bounds[i].second;
+      const double best_bound = maxloc_bounds[i].first;
+      const INDEX col = is_lower_bound ? INDEX(COL, -1, i) : INDEX(COL, -1, i - n_linking_vars);
 
-   for( unsigned int i = 0; i < n_linking_vars; ++i )
-   {
-      if( best_proc_lbx_ubx[ n_linking_vars + i ] == my_rank )
+      /* do nothing if not bound was found */
+      if( best_bound == INF_NEG )
       {
-         assert(best_proc_lbx_ubx[i] == minloc[i].second);
-         assert(lb_linking_var[i] == minloc[i].first);
-         const bool propagated = presData.rowPropagatedBounds(rows_ub[i], INDEX(COL, -1, i), INF_NEG, -ub_linking_var[i]);
+         assert(PIPS_MPIisValueEqual(maxloc_bounds[i].second) );
+      }
+      else if( best_rank == my_rank )
+      {
+         is_lower_bound ? assert( lb_linking_var[i] == best_bound ) : assert( ub_linking_var[i - n_linking_vars] == best_bound );
+         const INDEX& row = is_lower_bound ? rows_lb[i] : rows_ub[i - n_linking_vars];
+         const bool propagated = presData.rowPropagatedBounds(row, col, is_lower_bound ? best_bound : INF_NEG, is_lower_bound ? INF_POS : -best_bound);
          if( propagated )
             ++tightenings;
       }
-      else if( best_proc_lbx_ubx[ n_linking_vars + i ] != -1 )
+      else if( best_rank != -1 )
       {
-         assert(best_proc_lbx_ubx[i] != minloc[i].second);
-         assert(lb_linking_var[i] == minloc[i].first);
-         const bool propagated = presData.rowPropagatedBounds(INDEX(), INDEX(COL, -1, i), INF_NEG, -ub_linking_var[i]);
+         const bool propagated = presData.rowPropagatedBounds(INDEX(), col, is_lower_bound ? best_bound : INF_NEG, is_lower_bound ? INF_POS : -best_bound);
          if( propagated )
             ++tightenings;
       }
+      else
+         assert(false && "This cannot happen!");
    }
 
    local_bound_tightenings = false;
@@ -333,8 +301,6 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             assert(actmax_ubndd <= 1);
             assert( PIPSisZero(actmin_row_without_curr, feastol) );
             assert( PIPSisZero(actmax_row_without_curr, feastol) );
-
-            actmin_row_without_curr = actmax_row_without_curr = 0;
             continue;
          }
 
@@ -389,22 +355,22 @@ bool StochPresolverBoundStrengthening::strenghtenBoundsInBlock( SystemType syste
             if( ubx_new != INF_POS )
             {
                /* we store upper bound inverted so that MPI communication can simple do a min over all entries */
-               if( (PIPSisLT(ubx_new, cupp[row]) || PIPSisZero(icupp[row])) && PIPSisLT(ub_linking_var[col], -ubx_new) )
+               if( (PIPSisLT(ubx_new, xupp[col]) || PIPSisZero(ixupp[col])) && PIPSisLT(ub_linking_var[col], -ubx_new) )
                {
                   local_bound_tightenings = true;
                   ub_linking_var[col] = -ubx_new;
-                  rows_ub[col] = INDEX(COL, node_col, col);
+                  rows_ub[col] = row_INDEX;
                }
             }
 
             /* store found lower bound if better */
             if( lbx_new != INF_NEG )
             {
-               if( (PIPSisLT(clow[row], lbx_new) || PIPSisZero(iclow[row])) && PIPSisLT(lbx_new, lb_linking_var[col]) )
+               if( (PIPSisLT(xlow[row], lbx_new) || PIPSisZero(ixlow[row])) && PIPSisLT(lbx_new, lb_linking_var[col]) )
                {
                   local_bound_tightenings = true;
                   lb_linking_var[col] = lbx_new;
-                  rows_lb[col] = INDEX(COL, node_col, col);
+                  rows_lb[col] = row_INDEX;
                }
             }
          }
