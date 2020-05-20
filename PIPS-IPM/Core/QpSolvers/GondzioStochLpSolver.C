@@ -204,9 +204,12 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
       double rmax = sigma * mu * beta_max;
 
       NumberGondzioCorrections = 0;
+      NumberSmallCorrectors = 0;
+      bool do_small_pairs_correction = false;
 
       // enter the Gondzio correction loop:
       while( NumberGondzioCorrections < maximum_correctors
+            && NumberSmallCorrectors < max_additional_correctors
             && (PIPSisLT(alpha_pri, 1.0) || PIPSisLT(alpha_dual, 1.0)) )
       {
          corrector_step->copy(iterate);
@@ -225,7 +228,10 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
          corrector_resid->set_r3_xz_alpha(corrector_step, 0.0);
 
          // do the projection operation
-         corrector_resid->project_r3(rmin, rmax);
+         if( do_small_pairs_correction )
+            corrector_resid->project_r3(rmin, std::numeric_limits<double>::infinity());
+         else
+            corrector_resid->project_r3(rmin, rmax);
 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step); // corrector_step is now delta_m
@@ -245,6 +251,9 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
             alpha_pri = alpha_pri_enhanced;
             alpha_dual = alpha_dual_enhanced;
+
+            if( do_small_pairs_correction )
+               NumberSmallCorrectors++;
             NumberGondzioCorrections++;
 
             // exit Gondzio correction loop
@@ -262,6 +271,9 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
             alpha_pri = alpha_pri_enhanced;
             alpha_dual = alpha_dual_enhanced;
+
+            if( do_small_pairs_correction )
+               NumberSmallCorrectors++;
             NumberGondzioCorrections++;
          }
          else if( alpha_pri_enhanced >= (1.0 + AcceptTol) * alpha_pri )
@@ -271,6 +283,9 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             step->saxpy_pd(corrector_step, weight_primal_candidate, 0.0);
 
             alpha_pri = alpha_pri_enhanced;
+
+            if( do_small_pairs_correction )
+               NumberSmallCorrectors++;
             NumberGondzioCorrections++;
          }
          else if( alpha_dual_enhanced >= (1.0 + AcceptTol) * alpha_dual )
@@ -280,18 +295,26 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
             step->saxpy_pd(corrector_step, 0.0, weight_dual_candidate);
 
             alpha_dual = alpha_dual_enhanced;
+
+            if( do_small_pairs_correction )
+               NumberSmallCorrectors++;
             NumberGondzioCorrections++;
          }
-         else if( additional_correctors_small_comp_pairs && rmax != std::numeric_limits<double>::infinity() &&
-               (alpha_pri < 0.9 || alpha_dual < 0.9) )
+         else if( additional_correctors_small_comp_pairs && !do_small_pairs_correction)
          {
-            // try and center small pairs
-            rmax = std::numeric_limits<double>::infinity();
-            if( PIPS_MPIgetRank(MPI_COMM_WORLD) == 0 )
+            if( alpha_pri < 0.9 || alpha_dual < 0.9 )
             {
-               std::cout << "Switching to small push " << std::endl;
-               std::cout << "Alpha when switching: " << alpha_pri << " " << alpha_dual << std::endl;
+               // try and center small pairs
+               do_small_pairs_correction = true;
+               if( PIPS_MPIgetRank(MPI_COMM_WORLD) == 0 )
+               {
+                  std::cout << "Switching to small push " << std::endl;
+                  std::cout << "Alpha when switching: " << alpha_pri << " " << alpha_dual << std::endl;
+               }
             }
+            else
+               // exit Gondzio correction loop
+               break;
          }
          else
          {

@@ -34,8 +34,11 @@ protected:
   Variables* temp_step;
 
   /** should additional corrector steps for small complementarity pairs be applied */
-  bool additional_correctors_small_comp_pairs;
+  const bool additional_correctors_small_comp_pairs;
+  /** should additional corrector steps for small complementarity pairs be applied */
+  const int max_additional_correctors;
 
+  int NumberSmallCorrectors;
 public:
 
   GondzioStochSolver( ProblemFormulation * of, Data * prob, unsigned int n_linesearch_points = 10,

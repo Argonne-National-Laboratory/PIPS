@@ -49,8 +49,11 @@ extern bool ipStartFound;
 GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points,
       bool adaptive_linesearch )
   : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points),
-    additional_correctors_small_comp_pairs( pips_options::getBoolParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS") )
+    additional_correctors_small_comp_pairs( pips_options::getBoolParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS") ),
+    max_additional_correctors( pips_options::getIntParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_MAX") ),
+    NumberSmallCorrectors(0)
 {
+   assert(max_additional_correctors > 0);
    assert(n_linesearch_points > 0);
 
    if( adaptive_linesearch )
@@ -233,8 +236,11 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
       NumberGondzioCorrections = 0;
 
+      NumberSmallCorrectors = 0;
+      bool do_small_pairs_correction = false;
+
       // enter the Gondzio correction loop:
-      while( NumberGondzioCorrections < maximum_correctors && PIPSisLT(alpha, 1.0) )
+      while( NumberGondzioCorrections < maximum_correctors && NumberSmallCorrectors < max_additional_correctors && PIPSisLT(alpha, 1.0) )
       {
 
          // copy current variables into corrector_step
@@ -253,7 +259,10 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          corrector_resid->set_r3_xz_alpha(corrector_step, 0.0);
 
          // do the projection operation
-         corrector_resid->project_r3(rmin, rmax);
+         if( do_small_pairs_correction )
+            corrector_resid->project_r3(rmin, std::numeric_limits<double>::infinity());
+         else
+            corrector_resid->project_r3(rmin, rmax);
 
          // solve for corrector direction
          sys->solve(prob, iterate, corrector_resid, corrector_step);	// corrector_step is now delta_m
@@ -267,6 +276,10 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
          {
             step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
+
+            if( do_small_pairs_correction )
+               NumberSmallCorrectors++;
+
             NumberGondzioCorrections++;
 
             // exit Gondzio correction loop
@@ -279,22 +292,30 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             // keep correcting
             step->saxpy(corrector_step, weight_candidate);
             alpha = alpha_enhanced;
+
+            if( do_small_pairs_correction )
+               NumberSmallCorrectors++;
+
             NumberGondzioCorrections++;
          }
-         else if( additional_correctors_small_comp_pairs && rmax != std::numeric_limits<double>::infinity() &&
-               alpha < 0.9 )
+         else if( additional_correctors_small_comp_pairs && !do_small_pairs_correction )
          {
-            // try and center small pairs
-            rmax = std::numeric_limits<double>::infinity();
-            if( myRank == 0 )
+            if( alpha < 0.9 )
             {
-               std::cout << "Switching to small push " << std::endl;
-               std::cout << "Alpha when switching: " << alpha << std::endl;
+               do_small_pairs_correction = true;
+               if( myRank == 0 )
+               {
+                  std::cout << "Switching to small push " << std::endl;
+                  std::cout << "Alpha when switching: " << alpha << std::endl;
+               }
             }
+            else
+               // exit Gondzio correction loop
+               break;
          }
          else
          {
-         // exit Gondzio correction loop
+            // exit Gondzio correction loop
             break;
          }
       }

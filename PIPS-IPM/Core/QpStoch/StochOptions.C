@@ -81,6 +81,9 @@ namespace pips_options
       bool_options["IP_ACCURACY_REDUCED"] = false;
       bool_options["IP_PRINT_TIMESTAMP"] = false;
       bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
+      /** should additional corrector steps for small complementarity pairs be applied */
       bool_options["IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS"] = true;
+      /** how many additional steps should be applied at most (in addition to the still existing gondzio corrector limit) */
+      int_options["IP_GONDZIO_ADDITIONAL_CORRECTORS_MAX"] = 3;
    }
 }
