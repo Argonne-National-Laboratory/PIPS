@@ -201,7 +201,7 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
       // calculate the target box:
       const double rmin = sigma * mu * beta_min;
-      const double rmax = sigma * mu * beta_max;
+      double rmax = sigma * mu * beta_max;
 
       NumberGondzioCorrections = 0;
 
@@ -281,6 +281,17 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
 
             alpha_dual = alpha_dual_enhanced;
             NumberGondzioCorrections++;
+         }
+         else if( additional_correctors_small_comp_pairs && rmax != std::numeric_limits<double>::infinity() &&
+               (alpha_pri < 0.9 || alpha_dual < 0.9) )
+         {
+            // try and center small pairs
+            rmax = std::numeric_limits<double>::infinity();
+            if( PIPS_MPIgetRank(MPI_COMM_WORLD) == 0 )
+            {
+               std::cout << "Switching to small push " << std::endl;
+               std::cout << "Alpha when switching: " << alpha_pri << " " << alpha_dual << std::endl;
+            }
          }
          else
          {

@@ -48,7 +48,8 @@ extern bool ipStartFound;
 
 GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, unsigned int n_linesearch_points,
       bool adaptive_linesearch )
-  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points)
+  : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points),
+    additional_correctors_small_comp_pairs( pips_options::getBoolParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS") )
 {
    assert(n_linesearch_points > 0);
 
@@ -280,9 +281,20 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
             alpha = alpha_enhanced;
             NumberGondzioCorrections++;
          }
+         else if( additional_correctors_small_comp_pairs && rmax != std::numeric_limits<double>::infinity() &&
+               alpha < 0.9 )
+         {
+            // try and center small pairs
+            rmax = std::numeric_limits<double>::infinity();
+            if( myRank == 0 )
+            {
+               std::cout << "Switching to small push " << std::endl;
+               std::cout << "Alpha when switching: " << alpha << std::endl;
+            }
+         }
          else
          {
-            // exit Gondzio correction loop
+         // exit Gondzio correction loop
             break;
          }
       }

@@ -28,7 +28,7 @@ namespace pips_options
 
       /// STOCH PRESOLVER
       /** limit for max rounds to apply all presolvers */
-      int_options["PRESOLVE_MAX_ROUNDS"] = 1;
+      int_options["PRESOLVE_MAX_ROUNDS"] = 2;
       /** should the problem be written to std::cout before and after presolve */
       bool_options["PRESOLVE_PRINT_PROBLEM"] = false;
       /** should free variables' bounds be reset after presolve (given the row implying these bounds was not removed */
@@ -81,6 +81,6 @@ namespace pips_options
       bool_options["IP_ACCURACY_REDUCED"] = false;
       bool_options["IP_PRINT_TIMESTAMP"] = false;
       bool_options["IP_STEPLENGTH_CONSERVATIVE"] = false;
-
+      bool_options["IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS"] = true;
    }
 }
