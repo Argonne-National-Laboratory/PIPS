@@ -68,7 +68,7 @@ fi
 
 mkdir $built_dir
 cd $built_dir
-
+cp ../../../../build_pips/PIPSIPMpp.opt ./
 
 nblocks=$(echo "8760 * $to * (60/$mins) / $tbsize + ((8760*${to}) % ${tbsize} > 0) + 1" | bc)
 echo "$nblocks"

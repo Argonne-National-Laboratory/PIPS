@@ -51,9 +51,13 @@ GondzioStochSolver::GondzioStochSolver( ProblemFormulation * opt, Data * prob, u
   : GondzioSolver(opt, prob), n_linesearch_points(n_linesearch_points),
     additional_correctors_small_comp_pairs( pips_options::getBoolParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS") ),
     max_additional_correctors( pips_options::getIntParameter("IP_GONDZIO_ADDITIONAL_CORRECTORS_MAX") ),
+    first_iter_small_correctors( pips_options::getIntParameter("IP_GONDZIO_FIRST_ITER_SMALL_CORRECTORS") ),
+    max_alpha_small_correctors( pips_options::getDoubleParameter("IP_GONDZIO_MAX_ALPHA_SMALL_CORRECTORS") ),
     NumberSmallCorrectors(0)
 {
    assert(max_additional_correctors > 0);
+   assert(first_iter_small_correctors >= 0);
+   assert(0 < max_alpha_small_correctors && max_alpha_small_correctors < 1);
    assert(n_linesearch_points > 0);
 
    if( adaptive_linesearch )
@@ -298,9 +302,9 @@ int GondzioStochSolver::solve(Data *prob, Variables *iterate, Residuals * resid 
 
             NumberGondzioCorrections++;
          }
-         else if( additional_correctors_small_comp_pairs && !do_small_pairs_correction )
+         else if( additional_correctors_small_comp_pairs && !do_small_pairs_correction && iter >= first_iter_small_correctors )
          {
-            if( alpha < 0.9 )
+            if( alpha < max_alpha_small_correctors )
             {
                do_small_pairs_correction = true;
                if( myRank == 0 )

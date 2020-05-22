@@ -85,5 +85,9 @@ namespace pips_options
       bool_options["IP_GONDZIO_ADDITIONAL_CORRECTORS_SMALL_VARS"] = true;
       /** how many additional steps should be applied at most (in addition to the still existing gondzio corrector limit) */
       int_options["IP_GONDZIO_ADDITIONAL_CORRECTORS_MAX"] = 3;
+      /** first iteration at which to look for small corrector steps */
+      int_options["IP_GONDZIO_FIRST_ITER_SMALL_CORRECTORS"] = 15;
+      /** alpha must be lower equal to this value for the IPM to try and apply small corrector steps */
+      double_options["IP_GONDZIO_MAX_ALPHA_SMALL_CORRECTORS"] = 0.8;
    }
 }

@@ -300,9 +300,9 @@ int GondzioStochLpSolver::solve(Data *prob, Variables *iterate, Residuals * resi
                NumberSmallCorrectors++;
             NumberGondzioCorrections++;
          }
-         else if( additional_correctors_small_comp_pairs && !do_small_pairs_correction)
+         else if( additional_correctors_small_comp_pairs && !do_small_pairs_correction && iter >= first_iter_small_correctors)
          {
-            if( alpha_pri < 0.9 || alpha_dual < 0.9 )
+            if( alpha_pri < max_alpha_small_correctors || alpha_dual < max_alpha_small_correctors )
             {
                // try and center small pairs
                do_small_pairs_correction = true;

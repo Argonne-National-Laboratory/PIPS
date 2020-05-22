@@ -37,6 +37,10 @@ protected:
   const bool additional_correctors_small_comp_pairs;
   /** should additional corrector steps for small complementarity pairs be applied */
   const int max_additional_correctors;
+  /** first iteration at which to look for small corrector steps */
+  const int first_iter_small_correctors;
+  /** alpha must be lower equal to this value for the IPM to try and apply small corrector steps */
+  const double max_alpha_small_correctors;
 
   int NumberSmallCorrectors;
 public:
