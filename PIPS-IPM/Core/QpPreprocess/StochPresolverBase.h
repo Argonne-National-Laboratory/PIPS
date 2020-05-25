@@ -48,6 +48,8 @@ protected:
    const int my_rank;
    const bool distributed;
 
+   const int verbosity;
+
    const double INF_NEG;
    const double INF_POS;
 

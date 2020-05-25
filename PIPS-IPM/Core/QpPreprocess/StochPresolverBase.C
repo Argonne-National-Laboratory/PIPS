@@ -23,6 +23,7 @@
 StochPresolverBase::StochPresolverBase(PresolveData& presData, const sData& origProb) :
       my_rank(PIPS_MPIgetRank(MPI_COMM_WORLD)),
       distributed(PIPS_MPIgetDistributed(MPI_COMM_WORLD)),
+      verbosity( pips_options::getIntParameter("PRESOLVE_VERBOSITY") ),
       INF_NEG( -pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
       INF_POS( pips_options::getDoubleParameter("PRESOLVE_INFINITY") ),
       n_linking_vars( dynamic_cast<const StochVector&>(*origProb.g).vec->length() ),
@@ -54,6 +55,9 @@ void StochPresolverBase::setPointersToNull()
 
 void StochPresolverBase::countRowsCols()// method is const but changes pointers
 {
+   if( verbosity <= 1 )
+      return;
+
    std::vector<int> count(17, 0);
 
    int zero_dummy = 0; 

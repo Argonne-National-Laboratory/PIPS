@@ -43,6 +43,8 @@ namespace pips_options
       bool_options["PRESOLVE_WRITE_PRESOLVED_PROBLEM_MPS"] = false;
       /** should free variables' bounds be reset after presolve (given the row implying these bounds was not removed */
       bool_options["PRESOLVE_RESET_FREE_VARIABLES"] = false;
+      /** verbosity */
+      int_options["PRESOLVE_VERBOSITY"] = 1;
 
       /** turn respective presolvers on/off */
       bool_options["PRESOLVE_BOUND_STRENGTHENING"] = true;
