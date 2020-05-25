@@ -65,20 +65,22 @@ bool StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
-   resetArrays();
-   presData.startBoundTightening();
 
    int iter = 0;
    bool tightened = false;
 
    do
    {
+      resetArrays();
+      presData.startBoundTightening();
+
       ++iter;
       tightened = false;
       /* root nodes */
       /* it is important to do the root nodes first - we later communicate around bounds we found in A_MAT and want to get all the tightenings we can get from the root node before */
       if( strenghtenBoundsInNode( EQUALITY_SYSTEM, -1) )
         tightened = true;
+      MPI_Barrier(MPI_COMM_WORLD);
       if( strenghtenBoundsInNode( INEQUALITY_SYSTEM, -1) )
         tightened = true;
 
@@ -99,17 +101,18 @@ bool StochPresolverBoundStrengthening::applyPresolving()
       /* update bounds on all processors */
       communicateLinkingVarBounds();
       resetArrays();
+
+      presData.endBoundTightening();
+      presData.allreduceAndApplyLinkingRowActivities();
+      PIPS_MPIgetLogicAndInPlace(tightened);
+
+      assert(presData.reductionsEmpty());
+      assert(presData.presDataInSync());
    }
    while( tightened && iter < limit_iter );
 
    // TODO : bounds found with linking_rows: mark all rows that need to be stored by all procs and store them after tightening in the postsolver
    // later when postsolving and syncing the linking row multipliers use these rows to adjust all var bounds duals
-
-   // TODO : can one only always undo the last bound-tightening of a variable? seems cheapest..
-   // if I found some bound on a var, then found a better one which is tight -> i hope that all bounds found with the earlier are not tight - but that will not help for the comp slackness conditions..
-
-//   presData.allreduceLinkingVarBounds();
-   presData.allreduceAndApplyLinkingRowActivities();
 
 #ifndef NDEBUG
    tightenings = PIPS_MPIgetSum(tightenings, MPI_COMM_WORLD);
@@ -119,10 +122,7 @@ bool StochPresolverBoundStrengthening::applyPresolving()
    if( my_rank == 0 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
-   presData.endBoundTightening();
 
-   assert(presData.reductionsEmpty());
-   assert(presData.presDataInSync());
 
    return tightened;
 }
@@ -172,7 +172,7 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
       else
          assert(false && "This cannot happen!");
    }
-
+   std::cout << "DOOOONEEEE" << std::endl;
    local_bound_tightenings = false;
 }
 

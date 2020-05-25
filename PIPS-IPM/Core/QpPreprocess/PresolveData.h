@@ -132,6 +132,9 @@ private:
       StochVectorHandle absmax_col;
 
       bool in_bound_tightening;
+      std::vector<int> store_linking_row_boundTightening_A;
+      std::vector<int> store_linking_row_boundTightening_C;
+
 public :
 
       PresolveData(const sData* sorigprob, StochPostsolver* postsolver);

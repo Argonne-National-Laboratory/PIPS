@@ -46,7 +46,8 @@ public:
 
       void beginBoundTightening();
       void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
-      void endBoundTightening();
+      void endBoundTightening( const std::vector<int>& store_linking_rows_A, const std::vector<int>& store_linking_rows_C,
+            const StochGenMatrix& mat_A, const StochGenMatrix& mat_C );
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);
       void notifyParallelColumns();
 
@@ -95,7 +96,7 @@ private:
       {
          FIXED_COLUMN = 0,
          SUBSTITUTED_COLUMN = 1,
-         DUMMY1 = 2,
+         STORE_BOUND_TIGHTENING_LINKING_ROWS = 2,
          DUMMY2 = 3,
          REDUNDANT_ROW = 4,
          BOUNDS_TIGHTENED = 5,
@@ -188,7 +189,6 @@ private:
 
 /// postsolve operations
       bool postsolveRedundantRow(sVars& original_vars, int reduction_idx);
-      bool syncBoundsTightened(sVars& original_vars, int reduction_idx);
       bool postsolveBoundsTightened(sVars& original_vars, int reduction_idx);
       bool postsolveFixedColumn(sVars& original_vars, int reduction_idx);
       bool postsolveFixedEmptyColumn(sVars& original_vars, int reduction_idx);
@@ -204,7 +204,8 @@ private:
       bool syncLinkingVarChanges(sVars& original_vars);
       bool syncEqLinkingRowChanges(sVars& original_vars);
       bool syncIneqLinkingRowChanges(sVars& original_vars);
-      bool syncLinkingRowsAfterBoundTightening(sVars& original_vars);
+      bool syncLinkingRowsAfterBoundTightening(sVars& original_vars, int i);
+      int findNextRowInStored(int pos_reduction, unsigned int& start, const INDEX& row) const;
 
       void addIneqRowDual(double& z, double& lambda, double& pi, double value) const;
       void addIneqRowSlack(double& s, double& t, double& u, double clow, double cupp, double value) const;

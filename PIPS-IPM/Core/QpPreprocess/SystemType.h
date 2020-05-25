@@ -44,6 +44,10 @@ public:
       return index_type == i.index_type && node == i.node && index == i.index && linking == i.linking && system_type == i.system_type;
    }
 
+   bool operator!=(const INDEX& i) const {
+      return index_type != i.index_type || node != i.node || index != i.index || linking != i.linking || system_type != i.system_type;
+   }
+
    inline bool isRow() const { return index_type == ROW; };
    inline bool isCol() const { return index_type == COL; };
    inline bool isEmpty() const { return index_type == EMPTY_INDEX; };

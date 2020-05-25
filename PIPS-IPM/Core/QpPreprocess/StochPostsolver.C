@@ -67,7 +67,7 @@ StochPostsolver::StochPostsolver(const sData& original_problem) :
    array_eq_linking_row_changes = new double[length_array_eq_linking_row_changes];
    std::memset(array_eq_linking_row_changes, 0, length_array_eq_linking_row_changes * sizeof(double));
 
-   y_changes = SimpleVectorHandle(new SimpleVector(array_eq_linking_row_changes, n_linking_vars));
+   y_changes = SimpleVectorHandle(new SimpleVector(array_eq_linking_row_changes, n_linking_A));
 
    assert( 4.0 * n_linking_C < std::numeric_limits<int>::max() );
 
@@ -263,6 +263,7 @@ void StochPostsolver::notifyFreeColumnSingletonInequalityRow( const INDEX& row, 
 void StochPostsolver::putBoundTighteningLinkingRowSyncEvent()
 {
    reductions.push_back(BOUND_TIGHTENING_LINKING_ROW_SYNC_EVENT);
+
    finishNotify();
 }
 
@@ -589,9 +590,34 @@ void StochPostsolver::beginBoundTightening()
    putLinkingVarsSyncEvent();
 }
 
-void StochPostsolver::endBoundTightening()
+void StochPostsolver::endBoundTightening( const std::vector<int>& store_linking_rows_A, const std::vector<int>& store_linking_rows_C,
+      const StochGenMatrix& mat_A, const StochGenMatrix& mat_C )
 {
-   // TODO : assert bound tightening started
+   reductions.push_back(STORE_BOUND_TIGHTENING_LINKING_ROWS);
+   for( unsigned int i = 0; i < store_linking_rows_A.size(); ++i)
+   {
+      if( store_linking_rows_A[i] != 0 )
+      {
+         const INDEX row(ROW, -1, i, true, EQUALITY_SYSTEM);
+         const int index = row_storage.storeRow(row, mat_A);
+
+         indices.push_back(row);
+         int_values.push_back(index);
+      }
+   }
+   for( unsigned int i = 0; i < store_linking_rows_C.size(); ++i)
+   {
+      if( store_linking_rows_C[i] != 0 )
+      {
+         const INDEX row(ROW, -1, i, true, INEQUALITY_SYSTEM);
+         const int index = row_storage.storeRow(row, mat_C);
+
+         indices.push_back(row);
+         int_values.push_back(index);
+      }
+   }
+
+   finishNotify();
 }
 
 void StochPostsolver::notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row)
@@ -827,8 +853,12 @@ PostsolveStatus StochPostsolver::postsolve(const Variables& reduced_solution, Va
       }
       case BOUND_TIGHTENING_LINKING_ROW_SYNC_EVENT:
       {
-         const bool success = syncLinkingRowsAfterBoundTightening(stoch_original_sol);
+         const bool success = syncLinkingRowsAfterBoundTightening(stoch_original_sol, i);
          postsolve_success = postsolve_success && success;
+         break;
+      }
+      case STORE_BOUND_TIGHTENING_LINKING_ROWS:
+      {
          break;
       }
       default:
@@ -970,23 +1000,6 @@ bool StochPostsolver::postsolveRedundantRow(sVars& original_vars, int reduction_
    return true;
 }
 
-bool StochPostsolver::syncBoundsTightened(sVars& original_vars, int reduction_idx)
-{
-//   PIPS_MPIsumArrayInPlace(phi_changes->elements(), phi_vec.length(), MPI_COMM_WORLD);
-//   PIPS_MPIsumArrayInPlace(gamma_changes_vec.elements(), gamma_vec.length(), MPI_COMM_WORLD);
-//
-//   original_vars.gamma->axpy(1.0, gamma);
-//   original_vars.phi->axpy(1.0, phi);
-//
-//   assert( dynamic_cast<const StochVector&>(*original_vars.gamma).isRootNodeInSync() );
-//   assert( dynamic_cast<const StochVector&>(*original_vars.phi).isRootNodeInSync() );
-//
-//   gamma.setToZero();
-//   phi.setToZero();
-
-   return true;
-}
-
 bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reduction_idx)
 {
    assert( reductions.at(reduction_idx) == BOUNDS_TIGHTENED );
@@ -1012,14 +1025,11 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    assert( col.isCol());
 
    if( row.isRow() )
-   {
-      assert( !row.isLinkingRow() );
       assert( !wasRowRemoved(row) );
-   }
    assert( !wasColumnRemoved(col) );
 
    const bool at_root_node = row.isEmpty() ? false : row.getNode() == -1 && col.isLinkingCol();
-   if( at_root_node )
+   if( col.isLinkingCol() )
    {
       assert( PIPS_MPIisValueEqual( col.getIndex() ) );
 #ifndef NDEBUG
@@ -1119,13 +1129,34 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    StochVector& gamma = dynamic_cast<StochVector&>(*original_vars.gamma);
    StochVector& phi = dynamic_cast<StochVector&>(*original_vars.phi);
 
+
+   /* linking rows not at root - so far we changed the slacks for the variable - missing is dual for the row and resulting corrections */
+   if( !at_root_node && row.isLinkingRow() )
+   {
+      if( row.inEqSys() )
+      {
+         (*y_changes)[row.getIndex()] += change_dual_row;
+         outdated_equality_linking_rows= true;
+      }
+      else
+      {
+         (*z_changes)[row.getIndex()] += change_dual_row;
+         outdated_inequality_linking_rows= true;
+      }
+      return true;
+   }
+
    if( !at_root_node )
    {
       row_storage.axpyAtRowPosNeg(1.0, &gamma, &(*gamma_changes), &phi, &(*phi_changes), -change_dual_row, stored_row );
       outdated_linking_vars = true;
    }
    else
+   {
+      assert( PIPS_MPIisValueEqual(change_dual_row) );
+      assert( PIPS_MPIisValueEqual(row.getIndex()) );
       row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
+   }
 
    assert( PIPSisLE(slack * dual_bound, old_complementarity) );
 
@@ -2652,13 +2683,110 @@ bool StochPostsolver::syncIneqLinkingRowChanges(sVars& original_vars)
    return true;
 }
 
-bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars)
+bool StochPostsolver::syncLinkingRowsAfterBoundTightening(sVars& original_vars, int i)
 {
-   /* gather all z and y changes if any */
-   // TODO
+   assert( dynamic_cast<const StochVector&>(*original_vars.y).isRootNodeInSync() );
+   assert( dynamic_cast<const StochVector&>(*original_vars.z).isRootNodeInSync() );
+   assert( dynamic_cast<const StochVector&>(*original_vars.lambda).isRootNodeInSync() );
+   assert( dynamic_cast<const StochVector&>(*original_vars.pi).isRootNodeInSync() );
 
-   /* use stored linking rows to adjust variable duals */
+   PIPS_MPIgetLogicOrInPlace(outdated_equality_linking_rows);
+   PIPS_MPIgetLogicOrInPlace(outdated_inequality_linking_rows);
+
+   if( !outdated_equality_linking_rows && !outdated_inequality_linking_rows )
+      return true;
+
+   /* find STORE_BOUND_TIGHTENING_LINKING_ROWS event - there all linking rows have been stored (after bound tightening so it is actually down the stack and has already been processed */
+   while( reductions[i] != STORE_BOUND_TIGHTENING_LINKING_ROWS )
+   {
+      ++i;
+      assert( static_cast<unsigned int>(i) < reductions.size() );
+   }
+
+   unsigned int current_pos = start_idx_indices.at(i);
+   StochVector& gamma = dynamic_cast<StochVector&>(*original_vars.gamma);
+   StochVector& phi = dynamic_cast<StochVector&>(*original_vars.phi);
+
+   /* gather all z and y changes if any */
+   if( outdated_equality_linking_rows )
+   {
+      PIPS_MPIsumArrayInPlace(array_eq_linking_row_changes, length_array_eq_linking_row_changes);
+
+      for( int row = 0; row < y_changes->length(); ++row )
+      {
+         const double change_dual_row = (*y_changes)[row];
+         (*y_changes)[row] = 0.0;
+         if( !PIPSisZero( change_dual_row ) )
+         {
+            const INDEX row_INDEX(ROW, -1, row, true, EQUALITY_SYSTEM);
+            const int row_stored = findNextRowInStored(i, current_pos, row_INDEX);
+
+            const INDEX stored_row(ROW, -1, row_stored, true, EQUALITY_SYSTEM);
+            /// adjust duals of rows and bounds
+            row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
+            getSimpleVecFromRowStochVec(original_vars.y, row_INDEX) += change_dual_row;
+         }
+      }
+   }
+
+   if( outdated_inequality_linking_rows )
+   {
+      PIPS_MPIsumArrayInPlace(array_ineq_linking_row_changes, length_array_ineq_linking_row_changes);
+
+      for( int row = 0; row < z_changes->length(); ++row )
+      {
+         const double change_dual_row = (*z_changes)[row];
+         (*z_changes)[row] = 0.0;
+
+         if( !PIPSisZero( change_dual_row ) )
+         {
+            const INDEX row_INDEX(ROW, -1, row, true, INEQUALITY_SYSTEM);
+            const int row_stored = findNextRowInStored(i, current_pos, row_INDEX);
+
+            const INDEX stored_row(ROW, -1, row_stored, true, EQUALITY_SYSTEM);
+            /// adjust duals of rows and bounds
+            row_storage.axpyAtRowPosNeg(1.0, &gamma, nullptr, &phi, nullptr, -change_dual_row, stored_row );
+
+            /* adjust the row dual */
+            double& z = getSimpleVecFromRowStochVec(original_vars.z, row_INDEX);
+            double& lambda = getSimpleVecFromRowStochVec(original_vars.lambda, row_INDEX);
+            double& pi = getSimpleVecFromRowStochVec(original_vars.pi, row_INDEX);
+
+            addIneqRowDual(z, lambda, pi, change_dual_row);
+         }
+      }
+   }
+   assert( dynamic_cast<const StochVector&>(*original_vars.y).isRootNodeInSync() );
+   assert( dynamic_cast<const StochVector&>(*original_vars.z).isRootNodeInSync() );
+   assert( dynamic_cast<const StochVector&>(*original_vars.lambda).isRootNodeInSync() );
+   assert( dynamic_cast<const StochVector&>(*original_vars.pi).isRootNodeInSync() );
+
+   outdated_equality_linking_rows = false;
+   outdated_inequality_linking_rows = false;
+
    return true;
+}
+
+int StochPostsolver::findNextRowInStored(int pos_reduction, unsigned int& start, const INDEX& row) const
+{
+   assert( reductions[pos_reduction] == STORE_BOUND_TIGHTENING_LINKING_ROWS );
+   assert( start_idx_indices.at(pos_reduction) <= start );
+   assert( start_idx_indices.at(pos_reduction + 1) > start );
+   assert( start_idx_indices[pos_reduction + 1] - start_idx_indices[pos_reduction] ==
+         start_idx_int_values[pos_reduction + 1] - start_idx_int_values[pos_reduction]);
+
+   while( indices[start] != row )
+   {
+      start++;
+      assert( start < start_idx_indices.at(pos_reduction + 1) );
+   }
+
+   assert(indices[start] == row);
+
+   const int dist = start - start_idx_indices[pos_reduction];
+   const int pos_stored_index = start_idx_int_values.at(pos_reduction) + dist;
+
+   return int_values[pos_stored_index];
 }
 
 void StochPostsolver::addIneqRowDual(double& z, double& lambda, double& pi, double value) const

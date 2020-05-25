@@ -85,7 +85,7 @@ double StochRowStorage::getRowCoefficientAtColumn( const INDEX& row, const INDEX
    if( col.getNode() == -1 && row.getNode() != -1)
       block_col = A_MAT;
 
-   const SparseStorageDynamic& mat = *getSparseGenMatrixFromStochMat(*row_storage, row.getNode(), block_col )->getStorageDynamic();
+   const SparseStorageDynamic& mat = *getSparseGenMatrixFromStochMat(*row_storage, block_col == BL_MAT ? col.getNode() : row.getNode(), block_col )->getStorageDynamic();
 
    const int row_start = mat.getRowPtr(row.getIndex()).start;
    const int row_end = mat.getRowPtr(row.getIndex()).end;

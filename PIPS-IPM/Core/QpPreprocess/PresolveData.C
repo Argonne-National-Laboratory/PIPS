@@ -111,7 +111,10 @@ PresolveData::PresolveData(const sData* sorigprob, StochPostsolver* postsolver) 
       upper_bound_implied_by_row(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
       upper_bound_implied_by_node(dynamic_cast<StochVectorBase<int>*>(nnzs_col->clone())),
       absmin_col(dynamic_cast<StochVector*>(sorigprob->g->clone())),
-      absmax_col(dynamic_cast<StochVector*>(sorigprob->g->clone()))
+      absmax_col(dynamic_cast<StochVector*>(sorigprob->g->clone())),
+      in_bound_tightening(false),
+      store_linking_row_boundTightening_A(nnzs_row_A->vecl->length(), 0),
+      store_linking_row_boundTightening_C(nnzs_row_C->vecl->length(), 0)
 {
    std::memset(array_outdated_indicators, 0, length_array_outdated_indicators * sizeof(bool) );
    outdated_activities = true;
@@ -1521,9 +1524,7 @@ void PresolveData::removeSingletonRowSynced(const INDEX& row, const INDEX& col, 
 void PresolveData::startBoundTightening()
 {
    if( postsolver )
-   {
       postsolver->beginBoundTightening();
-   }
 
    in_bound_tightening = true;
 }
@@ -1531,6 +1532,7 @@ void PresolveData::startBoundTightening()
 // TODO we still want to do tightenings that fix a variable
 bool PresolveData::rowPropagatedBoundsNonTight( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new )
 {
+   assert(false);
    assert(in_bound_tightening);
    assert( row.hasValidNode(nChildren) );
    /* infeasibility check is done in rowPropagatedBounds */
@@ -1587,6 +1589,7 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
 
    const bool at_root_node = row.isEmpty() ? false : col.isLinkingCol() && row.getNode() == -1;
 
+
    if( col.isLinkingCol() && !at_root_node )
    {
       PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD);
@@ -1596,6 +1599,13 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
       const int my_tightening = row.isEmpty() ? 0 : 1;
 #endif
       assert( PIPS_MPIgetSum(my_tightening, MPI_COMM_WORLD) == 1);
+   }
+
+   if( col.isLinkingCol() && at_root_node )
+   {
+      PIPS_MPIisValueEqual(col.getIndex(), MPI_COMM_WORLD);
+      PIPS_MPIisValueEqual(xlow_new, MPI_COMM_WORLD);
+      PIPS_MPIisValueEqual(xupp_new, MPI_COMM_WORLD);
    }
 
    if( xlow_new == INF_NEG && xupp_new == INF_POS )
@@ -1668,18 +1678,23 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
       assert(outdated_linking_var_bounds == true);
 
    /// linking rows require a different postsolve event since propagating linking rows need to be stored by every process and need to be postsolved at the same time
-   if( postsolver && (row.isEmpty() || !row.isLinkingRow()) )
+   if( postsolver )
    {
       if( lower_bound_changed )
          postsolver->notifyRowPropagatedBound( row, col, ixlow_old, xlow_old, xlow_new, false, getSystemMatrix(row.getSystemType()));
       if( upper_bound_changed )
          postsolver->notifyRowPropagatedBound( row, col, ixupp_old, xupp_old, xupp_new, true, getSystemMatrix(row.getSystemType()));
    }
-   else if( lower_bound_changed || upper_bound_changed )
+
+   if( (lower_bound_changed || upper_bound_changed) && row.isLinkingRow() && !at_root_node )
    {
-      // postsolve_linking_row_propagation_needed = true;
-      // todo store which row propagated
-      // sync when syncing the bounds
+      postsolve_linking_row_propagation_needed = true;
+
+      if( row.inEqSys() )
+         store_linking_row_boundTightening_A[row.getIndex()] = 1;
+      else
+         store_linking_row_boundTightening_C[row.getIndex()] = 1;
+
    }
 
    return (lower_bound_changed || upper_bound_changed);
@@ -1687,10 +1702,13 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
 
 void PresolveData::endBoundTightening()
 {
+   syncPostsolveOfBoundsPropagatedByLinkingRows();
+
    if( postsolver )
-   {
-      postsolver->endBoundTightening();
-   }
+      postsolver->endBoundTightening(store_linking_row_boundTightening_A, store_linking_row_boundTightening_C, getSystemMatrix(EQUALITY_SYSTEM), getSystemMatrix(INEQUALITY_SYSTEM));
+
+   std::fill(store_linking_row_boundTightening_A.begin(), store_linking_row_boundTightening_A.end(), 0);
+   std::fill(store_linking_row_boundTightening_C.begin(), store_linking_row_boundTightening_C.end(), 0);
 
    in_bound_tightening = false;
 }
@@ -1722,8 +1740,10 @@ void PresolveData::syncPostsolveOfBoundsPropagatedByLinkingRows()
       return;
 
    // sync array of rows that propagated
-   // one by one put them and their bounds on the presolve stack
-   // todo sync postsolve events on the stack
+   PIPS_MPIsumArrayInPlace(store_linking_row_boundTightening_A);
+   PIPS_MPIsumArrayInPlace(store_linking_row_boundTightening_C);
+
+   postsolve_linking_row_propagation_needed = false;
 }
 
 /** tightening row1 bounds with row2 where row1 = factor * row2 */
