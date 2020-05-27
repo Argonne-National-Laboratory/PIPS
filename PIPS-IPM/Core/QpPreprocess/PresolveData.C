@@ -1694,9 +1694,9 @@ bool PresolveData::rowPropagatedBounds( const INDEX& row, const INDEX& col, doub
          store_linking_row_boundTightening_A[row.getIndex()] = 1;
       else
          store_linking_row_boundTightening_C[row.getIndex()] = 1;
-
    }
 
+   outdated_linking_var_bounds = false;
    return (lower_bound_changed || upper_bound_changed);
 }
 

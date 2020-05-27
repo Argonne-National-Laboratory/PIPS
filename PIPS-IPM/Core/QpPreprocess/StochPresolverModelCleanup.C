@@ -35,7 +35,7 @@ bool StochPresolverModelCleanup::applyPresolving()
    assert(presData.presDataInSync());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before model cleanup:" << std::endl;
@@ -75,15 +75,18 @@ bool StochPresolverModelCleanup::applyPresolving()
    removed_rows_total += n_removed_rows;
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "\tRemoved redundant rows in model cleanup: " << removed_rows_total << std::endl;
       std::cout << "\tRemoved tiny entries in model cleanup: " << removed_entries_total << std::endl;
+      std::cout << "\tFixed empty columns in model cleanup: " << fixed_empty_cols_total << std::endl;
       std::cout << "--- After model cleanup:" << std::endl;
    }
+   else if( my_rank == 0 && verbosity == 1)
+      std::cout << "Clean:\t removed " << removed_rows_total << " rows, " << fixed_empty_cols_total << " cols" << std::endl;
 
    countRowsCols();
-   if(my_rank == 0)
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 

@@ -35,7 +35,7 @@ bool StochPresolverSingletonRows::applyPresolving()
    assert(presData.reductionsEmpty());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before singleton Row Presolving:" << std::endl;
@@ -75,13 +75,14 @@ bool StochPresolverSingletonRows::applyPresolving()
 
 
 #ifndef NDEBUG
-   if(my_rank == 0)
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "\tRemoved singleton rows during singleton row elimination: " << removed_rows << std::endl;
-
-   if( my_rank == 0 )
+   else if( my_rank == 0 && verbosity == 1 )
+      std::cout << "SinRow:\t removed " << removed_rows_local << " rows" << std::endl;
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "--- After singleton row presolving:" << std::endl;
    countRowsCols();
-   if(my_rank == 0)
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 

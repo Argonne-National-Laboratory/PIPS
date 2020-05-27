@@ -38,6 +38,8 @@ private:
    /** should the presolved problem be written out in MPS format */
    const bool write_presolved_problem;
 
+   const int verbosity;
+
    PresolveData* presData;
    std::vector<StochPresolverBase*> presolvers;
 

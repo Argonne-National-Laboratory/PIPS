@@ -84,7 +84,7 @@ bool StochPresolverParallelRows::applyPresolving()
    assert(presData.verifyActivities());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before parallel row presolving:" << std::endl;
@@ -201,14 +201,16 @@ bool StochPresolverParallelRows::applyPresolving()
    PIPS_MPIgetSumInPlace(n_removed_run, MPI_COMM_WORLD);
 
    n_rows_removed += n_removed_run;
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "\tRemoved rows during parallel row detection: " << n_rows_removed << std::endl;
+   else if( my_rank == 0 && verbosity == 1)
+      std::cout << "ParRow:\t removed " << n_rows_removed << " rows" << std::endl;
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "--- After parallel row presolving:" << std::endl;
    countRowsCols();
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 

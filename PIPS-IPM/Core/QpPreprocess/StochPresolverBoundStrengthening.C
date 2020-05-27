@@ -54,7 +54,7 @@ bool StochPresolverBoundStrengthening::applyPresolving()
    assert(presData.presDataInSync());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before Bound Strengthening Presolving:" << std::endl;
@@ -62,7 +62,7 @@ bool StochPresolverBoundStrengthening::applyPresolving()
    countRowsCols();
 #endif
 
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "Start Bound Strengthening Presolving..." << std::endl;
 
 
@@ -116,10 +116,10 @@ bool StochPresolverBoundStrengthening::applyPresolving()
 
 #ifndef NDEBUG
    tightenings = PIPS_MPIgetSum(tightenings, MPI_COMM_WORLD);
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "--- After " << iter << " rounds of bound strengthening and " << tightenings << " times of tightening bounds:" << std::endl;
    countRowsCols();
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
@@ -134,7 +134,6 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
    if( !local_bound_tightenings )
       return;
 
-   std::cout << "LOCALS!!" << std::endl;
    // TODO : make vector bool
    std::vector<double> lbx_ubx( 2 * n_linking_vars );
    std::copy( lb_linking_var.begin(), lb_linking_var.end(), lbx_ubx.begin() );
@@ -153,7 +152,7 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
       /* do nothing if not bound was found */
       if( best_bound == INF_NEG )
       {
-         assert(PIPS_MPIisValueEqual(maxloc_bounds[i].second) );
+         assert( PIPS_MPIisValueEqual(maxloc_bounds[i].second) );
       }
       else if( best_rank == my_rank )
       {
@@ -172,7 +171,6 @@ void StochPresolverBoundStrengthening::communicateLinkingVarBounds()
       else
          assert(false && "This cannot happen!");
    }
-   std::cout << "DOOOONEEEE" << std::endl;
    local_bound_tightenings = false;
 }
 

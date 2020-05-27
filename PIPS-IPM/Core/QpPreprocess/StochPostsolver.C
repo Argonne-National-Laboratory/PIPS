@@ -1029,7 +1029,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    assert( !wasColumnRemoved(col) );
 
    const bool at_root_node = row.isEmpty() ? false : row.getNode() == -1 && col.isLinkingCol();
-   if( col.isLinkingCol() )
+   if( col.isLinkingCol() && !at_root_node )
    {
       assert( PIPS_MPIisValueEqual( col.getIndex() ) );
 #ifndef NDEBUG

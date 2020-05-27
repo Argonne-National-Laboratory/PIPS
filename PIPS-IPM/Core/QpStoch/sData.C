@@ -2349,13 +2349,6 @@ int sData::n2linkRowsIneq() const
 // is root node data of sData object same on all procs?
 bool sData::isRootNodeInSync() const
 {
-   int my_rank, world_size;
-   MPI_Comm_rank( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &my_rank);
-   MPI_Comm_size( dynamic_cast<const StochGenMatrix&>(*A).mpiComm, &world_size);
-
-   if(my_rank == 0)
-      std::cout << "checking if root node data over all processes is in sync" << std::endl;
-
    bool in_sync = true;
 
    /* matrix Q */
@@ -2447,9 +2440,6 @@ bool sData::isRootNodeInSync() const
 
    /* sacle sc */
    // todo
-
-   if(my_rank == 0 && in_sync)
-      std::cout << "root node data over all processes is in sync" << std::endl;
 
    return in_sync;
 }

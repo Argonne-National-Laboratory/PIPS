@@ -34,7 +34,7 @@ bool StochPresolverSingletonColumns::applyPresolving()
    presData.startSingletonColumnPresolve();
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before singleton columns presolving:" << std::endl;
@@ -42,13 +42,13 @@ bool StochPresolverSingletonColumns::applyPresolving()
    countRowsCols();
 #endif
 
-   if( presData.getSingletonCols().size() == 0 )
-   {
 #ifndef NDEBUG
-      if( my_rank == 0 )
+   if( presData.getSingletonCols().empty() )
+   {
+      if( my_rank == 0 && verbosity > 1 )
          std::cout << "No more singletons left - exiting" << std::endl;
-#endif
    }
+#endif
 
    int removed_cols_run = 0;
 
@@ -135,13 +135,16 @@ bool StochPresolverSingletonColumns::applyPresolving()
    removed_cols += removed_cols_run;
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
    {
       std::cout << "--- After singleton columns presolving:" << std::endl;
       std::cout << "\tRemoved columns during singleton column elimination: " << removed_cols << std::endl;
    }
+   else if( my_rank == 0 && verbosity == 1 )
+      std::cout << "SinCol:\t removed " << removed_cols << " cols" << std::endl;
+
    countRowsCols();
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1 )
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
@@ -489,7 +492,8 @@ void StochPresolverSingletonColumns::checkColImpliedFree(const INDEX& col, const
    /* check whether bound tightening found bounds from the variables row that make it implied free */
    ub_implied_free = ub_implied_free || presData.varBoundImpliedFreeBy(true, col, row);
    lb_implied_free = lb_implied_free || presData.varBoundImpliedFreeBy(false, col, row);
-
+   if( ub_implied_free && lb_implied_free )
+      std::cout << "implied freeeeee" << std::endl;
 }
 
 void StochPresolverSingletonColumns::resetArrays()

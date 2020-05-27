@@ -33,7 +33,7 @@ bool StochPresolverColumnFixation::applyPresolving()
    assert(presData.verifyNnzcounters());
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
    {
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
       std::cout << "--- Before column fixation presolving:" << std::endl;
@@ -137,12 +137,15 @@ bool StochPresolverColumnFixation::applyPresolving()
    fixed_columns += fixed_columns_run;
 
 #ifndef NDEBUG
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "\tFixed columns during column fixation: " << fixed_columns << std::endl;
-   if( my_rank == 0 )
+   else if( my_rank == 0 && verbosity == 1)
+      std::cout << "Colfix:\t removed " << fixed_columns << " columns" << std::endl;
+
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "--- After column fixation presolving:" << std::endl;
    countRowsCols();
-   if( my_rank == 0 )
+   if( my_rank == 0 && verbosity > 1)
       std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 #endif
 
