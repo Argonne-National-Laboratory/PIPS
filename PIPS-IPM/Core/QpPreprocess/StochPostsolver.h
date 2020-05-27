@@ -33,7 +33,7 @@ public:
       void notifySingletonRowBoundsTightened( const INDEX& row, const INDEX& col, double xlow_old, double xupp_old, double xlow_new, double xupp_new, double coeff);
       void notifyRedundantRow( const INDEX& row, int iclow, int icupp, double lhs, double rhs, const StochGenMatrix& matrix_row);
       void notifyFixedColumn( const INDEX& col, double value, double obj_coeff, const StochGenMatrix& eq_mat, const StochGenMatrix& ineq_mat );
-      void notifyFixedEmptyColumn( const INDEX& col, double value, double obj_coeff, int ixlow, int ixupp, double lhs, double rhs);
+      void notifyFixedEmptyColumn( const INDEX& col, double value, double obj_coeff, double xlow, double xupp);
 
       void putLinkingVarsSyncEvent();
       void putLinkingRowIneqSyncEvent();
@@ -45,7 +45,7 @@ public:
       void notifyFreeColumnSingletonInequalityRow( const INDEX& row, const INDEX& col, double rhs, double coeff, double xlow, double xupp, const StochGenMatrix& matrix_row );
 
       void beginBoundTightening();
-      void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
+      void notifyRowPropagatedBound( const INDEX& row, const INDEX& col, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row);
       void endBoundTightening( const std::vector<int>& store_linking_rows_A, const std::vector<int>& store_linking_rows_C,
             const StochGenMatrix& mat_A, const StochGenMatrix& mat_C );
       void notifyDeletedRow( SystemType system_type, int node, int row, bool linking_constraint);

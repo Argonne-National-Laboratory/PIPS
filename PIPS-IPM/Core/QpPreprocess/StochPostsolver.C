@@ -528,7 +528,7 @@ void StochPostsolver::notifyFixedColumn( const INDEX& col, double value, double 
    finishNotify();
 }
 
-void StochPostsolver::notifyFixedEmptyColumn( const INDEX& col, double value, double obj_coeff, int ixlow, int ixupp, double lbx, double ubx)
+void StochPostsolver::notifyFixedEmptyColumn( const INDEX& col, double value, double obj_coeff, double xlow, double xupp)
 {
    assert(col.isCol());
    assert( !wasColumnRemoved(col) );
@@ -537,19 +537,15 @@ void StochPostsolver::notifyFixedEmptyColumn( const INDEX& col, double value, do
 
    markColumnRemoved(col);
 
-   if(ixlow == 1)
-      assert(PIPSisLEFeas(lbx, value));
-   if(ixupp == 1)
-      assert(PIPSisLEFeas(value, ubx));
+   assert(PIPSisLEFeas(xlow, value));
+   assert(PIPSisLEFeas(value, xupp));
 
    reductions.push_back(FIXED_EMPTY_COLUMN);
    indices.push_back(col);
    float_values.push_back(value);
    float_values.push_back(obj_coeff);
-   float_values.push_back(lbx);
-   float_values.push_back(ubx);
-   int_values.push_back(ixlow);
-   int_values.push_back(ixupp);
+   float_values.push_back(xlow);
+   float_values.push_back(xupp);
 
    finishNotify();
 }
@@ -620,7 +616,7 @@ void StochPostsolver::endBoundTightening( const std::vector<int>& store_linking_
    finishNotify();
 }
 
-void StochPostsolver::notifyRowPropagatedBound( const INDEX& row, const INDEX& col, int old_ixlowupp, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row)
+void StochPostsolver::notifyRowPropagatedBound( const INDEX& row, const INDEX& col, double old_bound, double new_bound, bool is_upper_bound, const StochGenMatrix& matrix_row)
 {
    assert(!PIPSisEQ(old_bound, new_bound));
    assert(row.isRow());
@@ -637,8 +633,7 @@ void StochPostsolver::notifyRowPropagatedBound( const INDEX& row, const INDEX& c
    {
       reductions.at(index_last) = DELETED;
       /* copy old old_bounds */
-      old_ixlowupp = int_values.at(start_idx_int_values.at(index_last));
-      assert(int_values.at(start_idx_int_values.at(index_last) + 1) == is_upper_bound);
+      assert(int_values.at(start_idx_int_values.at(index_last)) == is_upper_bound);
       old_bound = float_values.at(start_idx_float_values.at(index_last));
       if( is_upper_bound )
          assert( PIPSisLT( new_bound, float_values.at(start_idx_float_values.at(index_last) + 1) ) );
@@ -654,7 +649,6 @@ void StochPostsolver::notifyRowPropagatedBound( const INDEX& row, const INDEX& c
 
    int index_stored_row = storeRow( row, matrix_row );
 
-   int_values.push_back(old_ixlowupp);
    int_values.push_back(is_upper_bound);
    int_values.push_back(index_stored_row);
 
@@ -1015,7 +1009,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
 
    assert(first_index + 2 == next_first_index);
    assert(first_float_val + 2 == next_first_float_val);
-   assert(first_int_val + 3 == next_first_int_val);
+   assert(first_int_val + 2 == next_first_int_val);
 #endif
 
    const INDEX& row = indices.at(first_index);
@@ -1038,9 +1032,8 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
       assert( PIPS_MPIgetSum(my_tightening) == 1);
    }
 
-   const int old_ixlowupp = int_values[first_int_val];
-   const bool is_upper_bound = (int_values[first_int_val + 1] == 1) ? true : false;
-   const int index_stored_row = int_values[first_int_val + 2];
+   const bool is_upper_bound = (int_values[first_int_val] == 1) ? true : false;
+   const int index_stored_row = int_values[first_int_val + 1];
 
    const double old_bound = float_values[first_float_val];
 #ifndef NDEBUG
@@ -1079,7 +1072,7 @@ bool StochPostsolver::postsolveBoundsTightened(sVars& original_vars, int reducti
    const double old_complementarity = slack * dual_bound;
 
    /* adjust slack v/w */
-   if( old_ixlowupp == 0 )
+   if( std::fabs(old_bound) == INF_POS )
    {
       slack = 0;
    }
@@ -1284,7 +1277,7 @@ bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduct
 
    assert(first_index + 1 == next_first_index);
    assert(first_float_val + 4 == next_first_float_val);
-   assert(first_int_val + 2 == next_first_int_val);
+   assert(first_int_val == next_first_int_val);
 #endif
 
    const INDEX& col = indices.at(first_index);
@@ -1295,20 +1288,16 @@ bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduct
 
    const double value = float_values.at(first_float_val);
    const double obj_coeff = float_values.at(first_float_val + 1);
-   const double lbx = float_values.at(first_float_val + 2);
-   const double ubx = float_values.at(first_float_val + 3);
-   const int ixlow = int_values.at(first_int_val);
-   const int ixupp = int_values.at(first_int_val + 1);
+   const double xlow = float_values.at(first_float_val + 2);
+   const double xupp = float_values.at(first_float_val + 3);
 
    /* primal */
    /* mark entry as set and set x value to fixation */
    markColumnAdded(col);
    getSimpleVecFromColStochVec(original_vars.x, col) = value;
 
-   if( ixlow == 1 )
-      assert( PIPSisLEFeas(lbx, value) );
-   if( ixupp == 1 )
-      assert( PIPSisLEFeas(value, ubx) );
+   assert( PIPSisLEFeas(xlow, value) );
+   assert( PIPSisLEFeas(value, xupp) );
 
    /* dual */
    getSimpleVecFromColStochVec(original_vars.gamma, col) = 0.0;
@@ -1318,25 +1307,25 @@ bool StochPostsolver::postsolveFixedEmptyColumn(sVars& original_vars, int reduct
    {
       if( PIPSisLT(obj_coeff, 0.0) )
       {
-         assert( ixupp );
-         assert( PIPSisEQ(value, ubx) );
+         assert( xupp != INF_POS );
+         assert( PIPSisEQ(value, xupp) );
          getSimpleVecFromColStochVec(original_vars.phi, col) = obj_coeff;
       }
       else if( PIPSisLT(0.0, obj_coeff) )
       {
-         assert( ixlow );
-         assert( PIPSisEQ(value, lbx) );
+         assert( xlow != INF_NEG );
+         assert( PIPSisEQ(value, xlow) );
          getSimpleVecFromColStochVec(original_vars.gamma, col) = obj_coeff;
       }
    }
 
-   if( ixlow == 1 )
-      getSimpleVecFromColStochVec(original_vars.v, col) = value - lbx;
+   if( xlow != INF_NEG )
+      getSimpleVecFromColStochVec(original_vars.v, col) = value - xlow;
    else
-      getSimpleVecFromColStochVec(original_vars.v, col)= 0.0;
+      getSimpleVecFromColStochVec(original_vars.v, col) = 0.0;
 
-   if( ixupp == 1)
-      getSimpleVecFromColStochVec(original_vars.w, col) = ubx - value;
+   if( xupp != INF_POS )
+      getSimpleVecFromColStochVec(original_vars.w, col) = xupp - value;
    else
       getSimpleVecFromColStochVec(original_vars.w, col) = 0.0;
 

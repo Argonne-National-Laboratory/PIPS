@@ -145,6 +145,10 @@ public :
       int getNChildren() const { return nChildren; };
 
       void getRowActivities( const INDEX& row, double& max_act, double& min_act, int& max_ubndd, int& min_ubndd) const;
+      void getRowBounds( const INDEX& row, double& lhs, double& rhs) const;
+      void getColBounds( const INDEX& col, double& xlow, double& xupp) const;
+
+
       double getRowCoeff( const INDEX& row, const INDEX& col ) const;
 
       const StochVectorBase<int>& getNnzsRow(SystemType system_type) const { return (system_type == EQUALITY_SYSTEM) ? *nnzs_row_A : *nnzs_row_C; }
@@ -229,11 +233,36 @@ private:
       bool iTrackColumn() const;
       bool iTrackRow() const;
 
+      void setRowBounds( const INDEX& row, double clow, double cupp);
+      bool updateColBounds( const INDEX& col, double xlow, double xupp);
+
+      void setRowUpperBound( const INDEX& row, double rhs )
+      {
+         row.inEqSys() ? setRowBounds( row, rhs, rhs ) : setRowBounds( row, INF_NEG, rhs );
+      }
+
+      void setRowLowerBound( const INDEX& row, double lhs )
+      {
+         row.inEqSys() ? setRowBounds( row, lhs, lhs ) : setRowBounds( row, lhs, INF_POS );
+      }
+
+      bool updateColLowerBound( const INDEX& col, double xlow )
+      {
+         return updateColBounds( col, xlow, INF_POS );
+      }
+
+      bool updateColUpperBound( const INDEX& col, double xupp )
+      {
+         return updateColBounds( col, INF_NEG, xupp );
+      }
+
       void adaptObjectiveSubstitutedRow( const INDEX& row, const INDEX& col, double obj_coeff, double col_coeff );
       void addCoeffColToRow( double coeff, const INDEX& col, const INDEX& row );
 
       INDEX getRowMarkedAsImplyingColumnBound(const INDEX& col, bool upper_bound);
       void markRowAsImplyingColumnBound(const INDEX& col, const INDEX& row, bool upper_bound);
+
+      void markColumnRemoved( const INDEX& col );
 
       void varboundImpliedFreeFullCheck(bool& upper_implied, bool& lower_implied, const INDEX& col, const INDEX& row) const;
 
@@ -263,12 +292,6 @@ private:
       /// methods for modifying the problem
       void adjustRowActivityFromDeletion( const INDEX& row, const INDEX& col, double coeff );
       /// set bounds if new bound is better than old bound
-      bool updateUpperBoundVariable( const INDEX& col, double xupp_new)
-      { return updateBoundsVariable( col, INF_NEG, xupp_new ); };
-      bool updateLowerBoundVariable( const INDEX& col, double xlow_new)
-      { return updateBoundsVariable( col, xlow_new, INF_POS); };
-
-      bool updateBoundsVariable( const INDEX& col, double xlow_new, double xupp_new );
       void updateRowActivities( const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
 
       void updateRowActivitiesBlock( const INDEX& row, const INDEX& col, double xlow_new, double xupp_new, double xlow_old, double xupp_old);
